@@ -1,59 +1,52 @@
 "use client"
 
 import { useTranslations } from "next-intl"
-import { useState, useTransition } from "react"
-import { writeEmail } from "@/modules/db/account/write-email"
+import { useState } from "react"
+import { useAccount, useChangeEmail } from "@/hooks/account"
+import { useEmailForm } from "@/hooks/rhf"
 import { AccountEmailBase } from "./component"
 
-/** Props for the connected email card. */
-interface AccountEmailProps {
-    /** The address now on the account. */
-    readonly email: string
-    /** True while the page loads: the card keeps its labels and shows skeletons. */
-    readonly isLoading?: boolean
-}
-
 /** The connected email card: sends the confirmation link for a new address; the address changes only after the link is opened. */
-export const AccountEmail = (props: AccountEmailProps) => {
+export const AccountEmail = () => {
     const t = useTranslations("account")
+    const { data, isLoading } = useAccount()
+    const { send, isPending, error } = useChangeEmail()
+    const form = useEmailForm()
     const [isEditing, setEditing] = useState(false)
-    const [value, setValue] = useState("")
-    const [error, setError] = useState<string>()
-    const [done, setDone] = useState<string>()
-    const [isPending, startTransition] = useTransition()
 
-    const submit = () => {
-        setError(undefined)
-        setDone(undefined)
-        startTransition(async () => {
-            const sent = await writeEmail(value)
-            if (sent.kind !== "ok") return setError(sent.code === "email-same" ? t("errEmailSame") : t("errEmail"))
-            setDone(t("emailSent"))
-            setEditing(false)
-            setValue("")
-        })
-    }
+    const submit = form.handleSubmit(async (values) => {
+        if (!(await send(values.email))) return
+        setEditing(false)
+        form.reset()
+    })
 
     return (
         <AccountEmailBase
             props={{
                 title: t("emailTitle"),
                 currentLabel: t("emailCurrent"),
-                email: props.email,
+                email: data?.email ?? "",
                 hint: t("emailHint"),
                 changeLabel: t("changeEmail"),
                 newEmailLabel: t("newEmail"),
                 sendLabel: t("sendConfirm"),
                 cancelLabel: t("cancel"),
                 failTitle: t("failTitle"),
-                value,
+                value: form.watch("email"),
                 isEditing,
                 isPending,
-                isLoading: props.isLoading ?? false,
-                error,
-                done,
+                isLoading,
+                error: form.formState.errors.email?.message ?? error,
             }}
-            on={{ setValue, submit, startEdit: () => setEditing(true), cancel: () => setEditing(false) }}
+            on={{
+                setValue: (value) => form.setValue("email", value, { shouldValidate: form.formState.isSubmitted }),
+                submit: () => void submit(),
+                startEdit: () => setEditing(true),
+                cancel: () => {
+                    setEditing(false)
+                    form.reset()
+                },
+            }}
         />
     )
 }

@@ -1,2 +1,33 @@
-export { isUnauthenticatedFailure } from "./graphql/failure"
+export { isForbiddenFailure, isNotFoundFailure, isUnauthenticatedFailure } from "./graphql/failure"
 export type { GraphQLResponse } from "./graphql/types"
+export type {
+    AgentChatTurnStatusType,
+    AutomationCardType,
+    AutomationGoogleAccountType,
+    AutomationRunType,
+    AutomationsOverviewType,
+    BrainEvidenceType,
+    BrainExtractionType,
+    BrainFactType,
+    BrainGapType,
+    BrainLensType,
+    BrainLessonType,
+    DashboardType,
+    DocumentPassageType,
+    InboundSimulationStatusType,
+    KnowledgeSourceTextType,
+    KnowledgeSourceType,
+    KnowledgeSuggestionContextType,
+    LessonMiningStatusType,
+    LocalizedTextType,
+    MissingRequirementType,
+    ModuleInstallationType,
+    NivoEntryType,
+    PreviewSampleType,
+    RetrievedPassageType,
+    RunStepType,
+    SimulateInboundType,
+    TemplateDefinitionType,
+    TemplateSettingType,
+} from "./graphql/__generated__/schema"
+export { putPresigned } from "./rest/uploads/put-presigned"

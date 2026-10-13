@@ -5,19 +5,11 @@ import { GUIDES } from "@/hooks/connection-guides"
 import { PROVIDERS, providerKey } from "@/hooks/connection-providers"
 import { agentChoicesOf, guideScreensOf, useCopyLabels, verifyHelpOf } from "@/hooks/connection-wizard"
 import { bankOptions, MONEY_STEPS, useMoneyWizard } from "@/hooks/money-wizard"
-import type { AccountForm } from "@/hooks/money-wizard"
-import { writeMoneyResume } from "@/modules/db/channel-connections/write-money-resume"
-import { writeMoneyStart } from "@/modules/db/channel-connections/write-money-start"
-import { writeMoneyUpdate } from "@/modules/db/channel-connections/write-money-update"
-import { writeProviderKeys } from "@/modules/db/channel-connections/write-provider-keys"
-import { writeConnectionAgents } from "@/modules/db/connections/write-connection-agents"
-import { writeFirstEvent } from "@/modules/db/connections/write-first-event"
 import type { AgentOption, FirstEvent, MoneyProvider } from "@/modules/types"
 import { MoneyWizardBase } from "./component"
 
 /** What the board hands the bank and payment wizard. */
 interface MoneyWizardProps {
-    readonly workspaceId: string
     readonly provider: MoneyProvider
     /** Continue this unfinished connection instead of creating a new one. */
     readonly resumeId?: string
@@ -27,41 +19,17 @@ interface MoneyWizardProps {
     readonly onClose: (changed: boolean) => void
 }
 
-/** The fields of an account form as the api names them. */
-const accountBody = (form: AccountForm) => ({
-    environment: form.environment,
-    name: form.name,
-    bankCode: form.bank,
-    accountNumber: form.account,
-    holder: form.holder,
-})
-
 /** The guided setup for a bank or payment provider (SePay, payOS, Casso), driven by the provider registry. */
 export const MoneyWizard = (props: MoneyWizardProps) => {
     const tw = useTranslations("connectionWizard")
     const tc = useTranslations("connections")
     const format = useFormatter()
     const copy = useCopyLabels()
-    const { workspaceId } = props
     const wizard = useMoneyWizard({
         provider: props.provider,
         resumeId: props.resumeId,
         agents: props.agents,
         onClose: props.onClose,
-        actions: {
-            start: (provider, form) => writeMoneyStart({ workspaceId, provider, ...accountBody(form) }),
-            update: (connectionId, form, apiKey) =>
-                writeMoneyUpdate({
-                    workspaceId,
-                    connectionId,
-                    ...accountBody(form),
-                    ...(apiKey === undefined ? {} : { apiKey }),
-                }),
-            resume: (connectionId) => writeMoneyResume({ workspaceId, connectionId }),
-            saveKeys: (connectionId, values) => writeProviderKeys({ workspaceId, connectionId, values }),
-            setAgents: (connectionId, agents) => writeConnectionAgents({ workspaceId, connectionId, agents }),
-            checkFirstEvent: (connectionId) => writeFirstEvent({ workspaceId, connectionId }),
-        },
     })
     const def = PROVIDERS[props.provider]
     const { form, follow, conn, flags } = wizard

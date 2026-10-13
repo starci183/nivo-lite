@@ -1,9 +1,13 @@
 import { useTranslations } from "next-intl"
-import { useEffect, useState, useTransition } from "react"
-import { allAgentIds, useChannelReason, useFirstEvent, useLatest } from "@/hooks/connection-wizard"
+import { useState, useTransition } from "react"
+import { allAgentIds } from "@/hooks/connection-wizard"
+import { zaloWizardOf } from "@/hooks/connection-wire"
+import { useFirstEvent, useSetConnectionAgents } from "@/hooks/connections"
+import { useQueryZaloConnectionSwr } from "@/hooks/swr/api/graphql/queries/useQueryZaloConnectionSwr"
 import type { AgentOption, WizardNote, ZaloWizardConnection } from "@/modules/types"
 import { canSaveOaSecret, ZALO_STEPS, zaloFailureOf, zaloStartStepOf } from "./zalo-wizard.shared"
-import type { ZaloActions, ZaloFields } from "./zalo-wizard.shared"
+import type { ZaloFields } from "./zalo-wizard.shared"
+import { useZaloCommands } from "./useZaloCommands"
 
 /** What the Zalo wizard needs from its drawer. */
 interface ZaloWizardInput {
@@ -12,7 +16,6 @@ interface ZaloWizardInput {
     /** How the Zalo sign-in ended when the browser came back: ok, denied, failed or expired. */
     readonly returned: string | undefined
     readonly agents: ReadonlyArray<AgentOption>
-    readonly actions: ZaloActions
     /** `changed` is true when something was saved, so the list should refresh. */
     readonly onClose: (changed: boolean) => void
 }
@@ -23,56 +26,43 @@ interface ZaloWizardInput {
  */
 export const useZaloWizard = (input: ZaloWizardInput) => {
     const tw = useTranslations("connectionWizard")
-    const reasonOf = useChannelReason()
+    const commands = useZaloCommands()
+    const setAgentsOf = useSetConnectionAgents()
     const [index, setIndex] = useState(0)
     const [fields, setFields] = useState<ZaloFields>({ name: "", appId: "", appSecret: "", oaSecret: "" })
     const [conn, setConn] = useState<ZaloWizardConnection | null>(null)
     const [agentIds, setAgentIds] = useState<ReadonlyArray<string>>(allAgentIds(input.agents))
     const [note, setNote] = useState<WizardNote | null>(null)
-    const [resumed, setResumed] = useState(false)
     const [isPending, startTransition] = useTransition()
-    const actions = useLatest(input.actions)
+    const resume = useQueryZaloConnectionSwr(input.resumeId, { revalidateOnFocus: false, shouldRetryOnError: false })
     const step = ZALO_STEPS[index] ?? "app"
-    const watch = useFirstEvent({
-        connectionId: conn === null ? null : conn.id,
-        isActive: step === "verify",
-        check: input.actions.checkFirstEvent,
-    })
+    const watch = useFirstEvent({ connectionId: conn === null ? null : conn.id, isActive: step === "verify" })
     const firstEvent = watch.event ?? (conn === null ? null : conn.firstEvent)
+    const resumeFailure = resume.error instanceof Error ? resume.error.message : undefined
+    const [adopted, setAdopted] = useState<typeof resume.data>(undefined)
 
-    useEffect(() => {
-        if (input.resumeId === undefined) return undefined
-        const connectionId = input.resumeId
-        let live = true
-        startTransition(async () => {
-            const answer = await actions.current.resume(connectionId)
-            if (!live) return
-            if (answer.kind !== "ok") setNote({ tone: "negative", text: reasonOf(answer.code) })
-            else {
-                const failure = zaloFailureOf(input.returned, tw)
-                setConn(answer.value)
-                if (answer.value.agentIds.length > 0) setAgentIds(answer.value.agentIds)
-                if (failure !== null) setNote({ tone: "negative", text: failure })
-                setIndex(zaloStartStepOf(answer.value, failure !== null))
-            }
-            setResumed(true)
-        })
-        return () => {
-            live = false
-        }
-    }, [input.resumeId, input.returned, actions, reasonOf, tw])
+    // The stored connection arrives once: adopt it while rendering (derived state), not from an effect.
+    if (resume.data !== undefined && resume.data !== adopted) {
+        const stored = zaloWizardOf(resume.data)
+        const failure = zaloFailureOf(input.returned, tw)
+        setAdopted(resume.data)
+        setConn(stored)
+        if (stored.agentIds.length > 0) setAgentIds(stored.agentIds)
+        if (failure !== null) setNote({ tone: "negative", text: failure })
+        setIndex(zaloStartStepOf(stored, failure !== null))
+    }
 
     const go = (to: number) => {
         setNote(null)
         setIndex(to)
     }
-    const fail = (code: string) => setNote({ tone: "negative", text: reasonOf(code) })
+    const fail = (message: string) => setNote({ tone: "negative", text: message })
 
     const create = () => {
         if (conn !== null) return go(1)
         startTransition(async () => {
-            const answer = await input.actions.start(fields)
-            if (answer.kind !== "ok") return fail(answer.code)
+            const answer = await commands.start(fields)
+            if (answer.kind !== "ok") return fail(answer.message)
             setConn(answer.value)
             go(1)
         })
@@ -82,9 +72,9 @@ export const useZaloWizard = (input: ZaloWizardInput) => {
         if (conn === null) return
         if (conn.oaSecretSaved && fields.oaSecret.trim() === "") return go(2)
         startTransition(async () => {
-            const answer = await input.actions.saveOaSecret(conn.id, fields.oaSecret)
-            if (answer.kind !== "ok") return fail(answer.code)
-            setConn({ ...conn, oaSecretSaved: true })
+            const answer = await commands.saveOaSecret(conn.id, fields.oaSecret)
+            if (answer.kind !== "ok") return fail(answer.message)
+            setConn(answer.value)
             setFields((current) => ({ ...current, oaSecret: "" }))
             go(2)
         })
@@ -93,17 +83,17 @@ export const useZaloWizard = (input: ZaloWizardInput) => {
     const authorize = () => {
         if (conn === null) return
         startTransition(async () => {
-            const answer = await input.actions.authorize(conn.id)
-            if (answer.kind !== "ok") return fail(answer.code)
-            window.location.assign(answer.value.url)
+            const answer = await commands.authorize(conn.id)
+            if (answer.kind !== "ok") return fail(answer.message)
+            window.location.assign(answer.value)
         })
     }
 
     const finish = () => {
         if (conn === null) return input.onClose(false)
         startTransition(async () => {
-            const answer = await input.actions.setAgents(conn.id, agentIds)
-            if (answer.kind !== "ok") return fail(answer.code)
+            const answer = await setAgentsOf(conn.id, agentIds)
+            if (answer.kind !== "ok") return fail(answer.message)
             input.onClose(true)
         })
     }
@@ -113,9 +103,9 @@ export const useZaloWizard = (input: ZaloWizardInput) => {
         step,
         fields,
         conn,
-        note,
+        note: note ?? (resumeFailure === undefined ? null : ({ tone: "negative", text: resumeFailure } as const)),
         isPending,
-        isLoading: input.resumeId !== undefined && !resumed,
+        isLoading: input.resumeId !== undefined && resume.data === undefined && resume.error === undefined,
         firstEvent,
         agentIds,
         canSaveSecret: canSaveOaSecret(conn, fields),

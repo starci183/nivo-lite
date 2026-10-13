@@ -1,52 +1,17 @@
 import "server-only"
 
 import type { GovernanceRows } from "@/lib/flow-queries"
-import type { Agent, EventRow, Lead, Message, ResponsibilityWithLead } from "@/lib/types"
+import type { Agent, Lead, Message, ResponsibilityWithLead } from "@/lib/types"
 import {
     isRecord,
     recordsOf,
     textOf,
     toAgents,
-    toEvent,
     toLead,
     toMessage,
     toResponsibilityWithLead,
 } from "../overview/overview.mapper"
 import type { DbRecord } from "../overview/overview.mapper"
-
-/** The pipeline stages a dashboard lead row carries. */
-type DashboardLeadStage = "new" | "qualified" | "proposal" | "won" | "lost"
-
-/** What the executive dashboard reads, in one payload (the `dashboard_data` function). */
-export interface DashboardPayload {
-    readonly responsibilities: Array<ResponsibilityWithLead>
-    readonly agents: Array<Agent>
-    readonly events: Array<EventRow>
-    readonly leads: Array<{
-        id: string
-        stage: DashboardLeadStage
-        created_at: string
-        contact_name: string | null
-        company: string | null
-    }>
-    readonly pending: Array<{ id: string; responsibility_id: string; created_at: string; lead_id: string | null }>
-    readonly promo: DashboardPromo
-    readonly governance: GovernanceRows
-    readonly exceptions: Array<unknown>
-}
-
-/** The campaign facts of the dashboard payload. */
-export interface DashboardPromo {
-    readonly chatbot: { id: string; knowledge: string } | null
-    readonly is_founding_member: boolean
-    readonly website_leads: Array<{ id: string; created_at: string }>
-    readonly first_events: Array<{ lead_id: string; at: string }>
-    readonly has_customer_conversation: boolean
-    readonly has_lead_conversation: boolean
-    readonly approved_count: number
-    readonly has_won: boolean
-    readonly invoice_approved: boolean
-}
 
 /** What the Office page reads, in one payload (the `office_data` function). */
 export interface OfficePayload {
@@ -92,11 +57,6 @@ const textOrNullOf = (record: DbRecord, key: string): string | null => {
 }
 const flagOf = (record: DbRecord, key: string): boolean => record[key] === true
 
-const stageOf = (value: string): DashboardLeadStage => {
-    if (value === "qualified" || value === "proposal" || value === "won" || value === "lost") return value
-    return "new"
-}
-
 /** The governance rows of a payload; a missing section is an empty one. */
 const toGovernanceRows = (value: unknown): GovernanceRows => {
     const record = isRecord(value) ? value : {}
@@ -121,59 +81,11 @@ const toGovernanceRows = (value: unknown): GovernanceRows => {
     }
 }
 
-const toPromo = (value: unknown): DashboardPromo => {
-    const record = isRecord(value) ? value : {}
-    const chatbot = isRecord(record.chatbot) ? record.chatbot : null
-    return {
-        chatbot: chatbot === null ? null : { id: textOf(chatbot, "id"), knowledge: textOf(chatbot, "knowledge") },
-        is_founding_member: flagOf(record, "is_founding_member"),
-        website_leads: recordsOf(record.website_leads).map((lead) => ({
-            id: textOf(lead, "id"),
-            created_at: textOf(lead, "created_at"),
-        })),
-        first_events: recordsOf(record.first_events).map((event) => ({
-            lead_id: textOf(event, "lead_id"),
-            at: textOf(event, "at"),
-        })),
-        has_customer_conversation: flagOf(record, "has_customer_conversation"),
-        has_lead_conversation: flagOf(record, "has_lead_conversation"),
-        approved_count: numberOf(record, "approved_count"),
-        has_won: flagOf(record, "has_won"),
-        invoice_approved: flagOf(record, "invoice_approved"),
-    }
-}
-
 const responsibilitiesOf = (value: unknown): Array<ResponsibilityWithLead> =>
     recordsOf(value).flatMap((record) => {
         const row = toResponsibilityWithLead(record)
         return row === null ? [] : [row]
     })
-
-/** The dashboard payload as typed data. A payload that is not an object is not a dashboard. */
-export const toDashboardPayload = (json: unknown): DashboardPayload | null => {
-    if (!isRecord(json)) return null
-    return {
-        responsibilities: responsibilitiesOf(json.responsibilities),
-        agents: toAgents(recordsOf(json.agents)),
-        events: recordsOf(json.events).map(toEvent),
-        leads: recordsOf(json.leads).map((lead) => ({
-            id: textOf(lead, "id"),
-            stage: stageOf(textOf(lead, "stage")),
-            created_at: textOf(lead, "created_at"),
-            contact_name: textOrNullOf(lead, "contact_name"),
-            company: textOrNullOf(lead, "company"),
-        })),
-        pending: recordsOf(json.pending).map((row) => ({
-            id: textOf(row, "id"),
-            responsibility_id: textOf(row, "responsibility_id"),
-            created_at: textOf(row, "created_at"),
-            lead_id: textOrNullOf(row, "lead_id"),
-        })),
-        promo: toPromo(json.promo),
-        governance: toGovernanceRows(json.governance),
-        exceptions: listOf(json.exceptions),
-    }
-}
 
 const roleOf = (value: string): "owner" | "manager" | "staff" => {
     if (value === "owner" || value === "manager") return value

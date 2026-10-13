@@ -2,7 +2,7 @@ import "server-only"
 
 import type { EmailOtpType } from "@supabase/supabase-js"
 import type { NextRequest, NextResponse } from "next/server"
-import { getPrincipal, principalFromClaims } from "../principal"
+import { principalFromClaims } from "../principal"
 import type { Principal } from "../principal"
 import { createRequestDbClient, createServerDbClient } from "../server"
 import { dbFailure, toOutcome } from "../outcome"
@@ -11,9 +11,6 @@ import type { DbOutcome } from "../outcome"
 const EMAIL_LINK_TYPES: readonly EmailOtpType[] = ["signup", "recovery", "invite", "email_change", "magiclink", "email"]
 
 const emailLinkTypeOf = (value: string): EmailOtpType | undefined => EMAIL_LINK_TYPES.find((type) => type === value)
-
-/** Reads the verified principal of the current server request. */
-export const readSession = (): Promise<DbOutcome<Principal>> => getPrincipal()
 
 /** Exchanges the one-time PKCE code and lets the server client write the resulting cookies. */
 export const exchangeAuthCode = async (code: string) => {

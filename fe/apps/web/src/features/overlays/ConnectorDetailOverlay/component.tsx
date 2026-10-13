@@ -44,7 +44,6 @@ export interface DetailWords {
 export interface ConnectorDetailOverlayBaseProps {
     readonly props: {
         readonly entry: DetailEntry | null
-        readonly workspaceId: string
         readonly words: DetailWords
         readonly rows: ReadonlyArray<DetailRow>
         readonly agents: ReadonlyArray<AgentOption>
@@ -66,7 +65,7 @@ const bodyOf = (props: ConnectorDetailOverlayBaseProps, entry: DetailEntry) => {
                 <Text size="sm" tone="muted">
                     {detail.words.soon}
                 </Text>
-                <ConnectionInterestButton workspaceId={detail.workspaceId} connectorId={entry.id} />
+                <ConnectionInterestButton connectorId={entry.id} />
             </>
         )
     }

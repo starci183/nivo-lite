@@ -1,5 +1,6 @@
 import useSWR from "swr"
 import type { SWRConfiguration } from "swr"
+import { useAppSelector } from "@/redux/hooks"
 
 /** What one GraphQL query answers: the typed payload, or nothing when the back end sent no data. */
 interface GraphqlAnswer {
@@ -16,13 +17,15 @@ export const useGraphqlQuerySwr = <TRequest, TAnswer extends GraphqlAnswer, TOut
     run: (request: TRequest) => Promise<TAnswer>,
     select: (data: NonNullable<TAnswer["data"]>) => TOut,
     config?: SWRConfiguration,
-) =>
-    useSWR<TOut>(
-        request === null ? null : [key, request],
-        async ([, input]: readonly [string, TRequest]) => {
+) => {
+    const workspaceId = useAppSelector((state) => state.workspace.activeWorkspaceId)
+    return useSWR<TOut>(
+        request === null || workspaceId === undefined ? null : [key, workspaceId, request],
+        async ([, , input]: readonly [string, string, TRequest]) => {
             const result = await run(input)
             if (result.data === undefined || result.data === null) throw new Error(`${key} answered no data`)
             return select(result.data)
         },
         config,
     )
+}

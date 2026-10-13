@@ -62,7 +62,6 @@ export type {
     AgentOption,
     Connection,
     ConnectionCheck,
-    ConnectionGrant,
     ConnectionStatus,
     ConnectorAudience,
     ConnectorCategory,
@@ -71,7 +70,6 @@ export type {
     Environment,
     FirstEvent,
     FirstEventState,
-    GoogleConsent,
     MetaCheckSummary,
     Provider,
     ProviderGroup,
@@ -110,10 +108,9 @@ export type {
     WebhookView,
     WizardConnection,
     WizardNote,
-    ZaloAuthorizeUrl,
     ZaloWizardConnection,
 } from "./connection-wizard"
-export type { MetaAuthorization, MetaCheck, MetaWizardConnection } from "./connection-wizard"
+export type { MetaCheck, MetaWizardConnection } from "./connection-wizard"
 export type { DataSlot, SlotLabels } from "./slot"
 export type {
     InventorySay,
@@ -154,16 +151,41 @@ export type {
 } from "./inventory-commands"
 export type {
     AccountsView,
+    AutomationCardView,
+    AutomationGateKind,
+    AutomationIconWord,
+    AutomationRunStatus,
+    AutomationRunView,
     AutomationTone,
     AutomationsBoardView,
     AutomationsLanguage,
     AutomationsTranslator,
+    Capability,
     CardView,
+    ChannelNeed,
+    ConfigValue,
+    ConnectionNeed,
+    ContentMode,
     DetailView,
+    FieldDef,
+    GateAction,
     GateView,
+    GoogleAccount,
+    L,
     MessageView,
+    Missing,
+    ModuleScope,
+    PipelineConfig,
+    PreviewSample,
+    Requires,
     RunRowView,
+    RunStep,
     SettingFieldView,
+    ShopContext,
+    TemplateDef,
+    TemplateExecutor,
+    TemplateKey,
+    TemplatePack,
 } from "./automations"
 export type { DeciderKind, DecisionKind, DecisionOutcome, DecisionRecord, GateReason } from "./decisions"
 export type {

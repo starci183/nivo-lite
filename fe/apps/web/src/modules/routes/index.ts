@@ -18,7 +18,10 @@ export { workspaceBillingPath, workspacePaymentPath } from "./workspace-routes"
 export {
     AGENTS_ROUTE,
     CONSOLE_ROUTES,
+    agentChatConversationHref,
     agentChatHref,
+    agentSetupHref,
+    leadFlowHref,
     leadHref,
     responsibilitiesHref,
     teamInviteHref,

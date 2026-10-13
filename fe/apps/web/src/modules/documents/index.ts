@@ -1,5 +1,3 @@
-export { commandErrorKey, runCommand } from "./commands"
-export type { CommandActions, CommandCall } from "./commands"
 export { DOCUMENT_IDEAS, ideasFor, pairsToText } from "./ideas"
 export type { QaLabels } from "./ideas"
 export { instanceOptions } from "./instances"
@@ -23,6 +21,16 @@ export {
 export type { AgentModule } from "./status"
 export { readArchive } from "./zip"
 export { isArchiveName } from "./zip-names"
-export { passagesOf } from "./passages"
 export type { RetrievedPassage } from "./passages"
+export {
+    isKnowledgeId,
+    toDocumentPassage,
+    toWireInstallation,
+    toKnowledgeDocument,
+    toKnowledgeDocumentDetail,
+    toNivoEntry,
+    toRetrievedPassage,
+    toSuggestionContext,
+} from "./knowledge.mapper"
+export type { SuggestionContext } from "./knowledge.mapper"
 export { itemOfFile, itemOfLink, itemsOfZip } from "./queue-items"

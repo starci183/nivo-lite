@@ -2,7 +2,7 @@ export {
     FAILED_KEYS,
     INBOX_FILTERS,
     SENT_KEYS,
-    channelLabelOf,
+    chatChannelLabelOf,
     channelLineOf,
     chipsOf,
     clockOf,
@@ -19,4 +19,7 @@ export {
     type ChatbotTranslator,
     type InboxFilter,
 } from "./chatbot.shared"
-export { useChatbotRealtime } from "./useChatbotRealtime"
+export { useChatbotActions } from "./useChatbotActions"
+export { useChatbotGaps } from "./useChatbotGaps"
+export type { ChatbotGapsView } from "./useChatbotGaps"
+export { useChatbotThread } from "./useChatbotThread"

@@ -1,29 +1,11 @@
 import { useTranslations } from "next-intl"
 import { useState, useTransition } from "react"
 import type { RowBusy, RowConfirm } from "@/hooks/connection-rows"
-import type { DbOutcome } from "@/modules/db/outcome"
-import { navigation } from "@/modules/i18n"
-import type {
-    Connection,
-    ConnectionCheck,
-    GoogleConsent,
-    MetaCheckSummary,
-    RowNote,
-    SepayKeys,
-    WebhookTestVerdict,
-} from "@/modules/types"
+import type { Settled } from "@/hooks/connection-wizard"
+import type { Connection, RowNote, SepayKeys } from "@/modules/types"
+import { useConnectionRowCommands } from "./useConnectionRowCommands"
+import { useConnectionsRefresh } from "./useConnectionsRefresh"
 import { useLegacyConnectionCommands } from "./useLegacyConnectionCommands"
-
-/** The commands one connection row can run: the connected block binds the server actions to its connection and hands them in. */
-export interface RowCommands {
-    readonly check: () => Promise<DbOutcome<ConnectionCheck>>
-    readonly checkMeta: () => Promise<DbOutcome<MetaCheckSummary>>
-    readonly testWebhook: () => Promise<DbOutcome<WebhookTestVerdict>>
-    readonly sepayKeys: () => Promise<DbOutcome<SepayKeys>>
-    readonly reconnectGoogle: (returnTo: string) => Promise<DbOutcome<GoogleConsent>>
-    readonly disconnect: () => Promise<DbOutcome<true>>
-    readonly remove: () => Promise<DbOutcome<true>>
-}
 
 /** The state and commands of one connection row. */
 export interface ConnectionRowActions {
@@ -44,11 +26,12 @@ export interface ConnectionRowActions {
 
 /**
  * Runs a row's commands one at a time and keeps what the row shows afterwards: the busy control, the result line, the revealed
- * SePay keys and the pending confirmation. A failure arrives as the catalog key of its sentence, read here in the reader's language.
+ * SePay keys and the pending confirmation. A failure arrives as the back end message, already in the reader's language.
  */
-export const useConnectionRowActions = (connection: Connection, commands: RowCommands): ConnectionRowActions => {
+export const useConnectionRowActions = (connection: Connection): ConnectionRowActions => {
     const t = useTranslations("connections")
-    const router = navigation.useRouter()
+    const commands = useConnectionRowCommands(connection.id)
+    const refresh = useConnectionsRefresh()
     const legacy = useLegacyConnectionCommands()
     const [, startTransition] = useTransition()
     const [busy, setBusy] = useState<RowBusy>(null)
@@ -56,7 +39,6 @@ export const useConnectionRowActions = (connection: Connection, commands: RowCom
     const [keys, setKeys] = useState<SepayKeys | null>(null)
     const [confirm, setConfirm] = useState<RowConfirm>(null)
 
-    const sentence = (code: string): string => t(code, { agent: "", connection: "" })
     const run = (kind: Exclude<RowBusy, null>, work: () => Promise<void>) => {
         setBusy(kind)
         setNote(null)
@@ -71,16 +53,15 @@ export const useConnectionRowActions = (connection: Connection, commands: RowCom
 
     const checkMeta = async () => {
         const result = await commands.checkMeta()
-        if (result.kind !== "ok") return setNote({ tone: "negative", text: sentence(result.code) })
+        if (result.kind !== "ok") return setNote({ tone: "negative", text: result.message })
         const verdict = result.value
         if (verdict.ok)
             setNote({ tone: "affirmative", text: t("metaRowCheckOk", { fields: verdict.page.fields.join(", ") }) })
         else setNote({ tone: "negative", text: verdict.tokenOk ? t("metaRowCheckBad") : t("metaTestToken") })
-        router.refresh()
     }
     const checkProvider = async () => {
         const result = await commands.check()
-        if (result.kind !== "ok") return setNote({ tone: "negative", text: sentence(result.code) })
+        if (result.kind !== "ok") return setNote({ tone: "negative", text: result.message })
         const check = result.value
         if (check.provider === "zalo_oa") return setNote({ tone: "affirmative", text: t("zaloCheckOk") })
         if (check.provider !== "telegram") return setNote({ tone: "informative", text: t("checkNothing") })
@@ -93,38 +74,36 @@ export const useConnectionRowActions = (connection: Connection, commands: RowCom
             tone: check.webhookOk && check.lastError === null ? "affirmative" : "negative",
             text: parts.filter(Boolean).join(" "),
         })
-        router.refresh()
     }
     const sendTest = async () => {
         const result = await commands.testWebhook()
-        if (result.kind !== "ok") return setNote({ tone: "negative", text: sentence(result.code) })
+        if (result.kind !== "ok") return setNote({ tone: "negative", text: result.message })
         const sent = result.value
         if (sent.ok) setNote({ tone: "affirmative", text: t("webhookTestOk", { status: sent.status ?? "" }) })
         else setNote({ tone: "negative", text: `${t("webhookTestFailed")}. ${sent.error ?? ""}`.trim() })
     }
     const reconnectGoogle = async () => {
         const result = await commands.reconnectGoogle("/connections")
-        if (result.kind !== "ok") return setNote({ tone: "negative", text: sentence(result.code) })
-        window.location.assign(result.value.url)
+        if (result.kind !== "ok") return setNote({ tone: "negative", text: result.message })
+        window.location.assign(result.value)
     }
     const sync = async () => {
         const result = await legacy.syncNow(connection.id)
         if (!result.ok) return setNote({ tone: "negative", text: result.error })
         setNote({ tone: "affirmative", text: t("syncDone", { rows: result.data.rows }) })
-        router.refresh()
+        await refresh()
     }
     const showKeys = async () => {
         const result = await commands.sepayKeys()
-        if (result.kind !== "ok") return setNote({ tone: "negative", text: sentence(result.code) })
+        if (result.kind !== "ok") return setNote({ tone: "negative", text: result.message })
         setKeys(result.value)
     }
-    const finish = async (kind: "disconnect" | "remove", work: () => Promise<DbOutcome<true>>) => {
+    const finish = async (kind: "disconnect" | "remove", work: () => Promise<Settled<true>>) => {
         setBusy(kind)
         const result = await work()
         setBusy(null)
         setConfirm(null)
-        if (result.kind === "ok") router.refresh()
-        else setNote({ tone: "negative", text: sentence(result.code) })
+        if (result.kind !== "ok") setNote({ tone: "negative", text: result.message })
     }
 
     return {

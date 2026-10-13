@@ -35,3 +35,16 @@ export const teamInviteHref = (staffId: string): string => `/team?invite_staff=$
 
 /** The page that lists the agents to add. */
 export const AGENTS_ROUTE = "/agents"
+
+/** The setup page of one module agent. */
+export const agentSetupHref = (agentId: string): string => `${CONSOLE_ROUTES.modules}/${agentId}`
+
+/** The work flow of one lead, where a handed-over customer chat leads. */
+export const leadFlowHref = (leadId: string): string => `${leadHref(leadId)}#flow`
+
+/** The chat page of one module agent opened on one tab and, when given, on one conversation. */
+export const agentChatConversationHref = (agentId: string, tab: string, conversationId: string | null): string => {
+    const query = new URLSearchParams({ tab })
+    if (conversationId !== null) query.set("c", conversationId)
+    return `${agentChatHref(agentId)}?${query.toString()}`
+}

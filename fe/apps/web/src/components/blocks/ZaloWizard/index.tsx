@@ -5,18 +5,11 @@ import { GUIDES } from "@/hooks/connection-guides"
 import { PROVIDERS, providerKey } from "@/hooks/connection-providers"
 import { agentChoicesOf, EMPTY_GUIDE_CONTEXT, guideScreensOf, useCopyLabels } from "@/hooks/connection-wizard"
 import { useZaloWizard, ZALO_STEPS } from "@/hooks/zalo-wizard"
-import { writeZaloAuthorize } from "@/modules/db/channel-connections/write-zalo-authorize"
-import { writeZaloOaSecret } from "@/modules/db/channel-connections/write-zalo-oa-secret"
-import { writeZaloResume } from "@/modules/db/channel-connections/write-zalo-resume"
-import { writeZaloStart } from "@/modules/db/channel-connections/write-zalo-start"
-import { writeConnectionAgents } from "@/modules/db/connections/write-connection-agents"
-import { writeFirstEvent } from "@/modules/db/connections/write-first-event"
 import type { AgentOption } from "@/modules/types"
 import { ZaloWizardBase } from "./component"
 
 /** What the board hands the Zalo wizard. */
 interface ZaloWizardProps {
-    readonly workspaceId: string
     /** Continue this unfinished connection instead of creating a new one. */
     readonly resumeId?: string
     /** How the Zalo sign-in ended when the browser came back: ok, denied, failed or expired. */
@@ -34,20 +27,11 @@ export const ZaloWizard = (props: ZaloWizardProps) => {
     const tw = useTranslations("connectionWizard")
     const tc = useTranslations("connections")
     const copy = useCopyLabels()
-    const { workspaceId } = props
     const wizard = useZaloWizard({
         resumeId: props.resumeId,
         returned: props.returned,
         agents: props.agents,
         onClose: props.onClose,
-        actions: {
-            start: (fields) => writeZaloStart({ workspaceId, ...fields }),
-            resume: (connectionId) => writeZaloResume({ workspaceId, connectionId }),
-            saveOaSecret: (connectionId, oaSecret) => writeZaloOaSecret({ workspaceId, connectionId, oaSecret }),
-            authorize: (connectionId) => writeZaloAuthorize({ workspaceId, connectionId }),
-            setAgents: (connectionId, agents) => writeConnectionAgents({ workspaceId, connectionId, agents }),
-            checkFirstEvent: (connectionId) => writeFirstEvent({ workspaceId, connectionId }),
-        },
     })
     const def = PROVIDERS.zalo_oa
     const { conn, fields, firstEvent } = wizard

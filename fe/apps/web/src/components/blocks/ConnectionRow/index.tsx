@@ -1,14 +1,6 @@
 "use client"
 
 import { useConnectionRowView } from "@/hooks/connections"
-import { writeCheck } from "@/modules/db/connections/write-check"
-import { writeDelete } from "@/modules/db/connections/write-delete"
-import { writeDisconnect } from "@/modules/db/connections/write-disconnect"
-import { writeGoogleAuthorize } from "@/modules/db/connections/write-google-authorize"
-import { writeGrant } from "@/modules/db/connections/write-grant"
-import { writeMetaCheck } from "@/modules/db/connections/write-meta-check"
-import { writeSepayKey } from "@/modules/db/connections/write-sepay-key"
-import { writeWebhookTest } from "@/modules/db/connections/write-webhook-test"
 import type { AgentOption, Connection } from "@/modules/types"
 import { ConnectionRowBase } from "./component"
 
@@ -30,7 +22,6 @@ type ConnectionRowProps = {
 /** One connection as a list row with its commands: check, edit, reveal keys, disconnect, remove, and who may use it. */
 export const ConnectionRow = (props: ConnectionRowProps) => {
     const { connection } = props
-    const target = { workspaceId: connection.workspaceId, connectionId: connection.id }
     const { view, on } = useConnectionRowView({
         connection,
         agentNames: props.agentNames,
@@ -38,16 +29,6 @@ export const ConnectionRow = (props: ConnectionRowProps) => {
         ownerEmail: props.ownerEmail ?? "",
         agents: props.agents ?? [],
         canManage: props.canManage ?? false,
-        commands: {
-            check: () => writeCheck(target),
-            checkMeta: () => writeMetaCheck(target),
-            testWebhook: () => writeWebhookTest(target),
-            sepayKeys: () => writeSepayKey(target),
-            reconnectGoogle: (returnTo) => writeGoogleAuthorize({ workspaceId: connection.workspaceId, returnTo }),
-            disconnect: () => writeDisconnect(target),
-            remove: () => writeDelete(target),
-        },
-        setGrant: (agentId, access) => writeGrant({ ...target, agentId, access }),
     })
     return <ConnectionRowBase props={view} on={on} />
 }

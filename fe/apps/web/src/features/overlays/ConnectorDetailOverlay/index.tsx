@@ -11,7 +11,6 @@ import type { DetailEntry } from "./component"
 
 /** What the page that read the workspace hands the connector detail drawer. */
 type ConnectorDetailOverlayProps = {
-    readonly workspaceId: string
     readonly items: ReadonlyArray<Connection>
     /** Agent id -> name, for the "used by" line of each row. */
     readonly agentNames: Readonly<Record<string, string>>
@@ -56,7 +55,6 @@ export const ConnectorDetailOverlay = (props: ConnectorDetailOverlayProps) => {
         <ConnectorDetailOverlayBase
             props={{
                 entry,
-                workspaceId: props.workspaceId,
                 words: {
                     closeLabel: t("close"),
                     brings: t("detailBrings"),

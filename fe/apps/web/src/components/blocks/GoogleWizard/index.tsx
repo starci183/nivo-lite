@@ -4,8 +4,7 @@ import { useTranslations } from "next-intl"
 import { useSearchParams } from "next/navigation"
 import { useState, useTransition } from "react"
 import { providerKey } from "@/hooks/connection-providers"
-import { writeGoogleAuthorize } from "@/modules/db/connections/write-google-authorize"
-import { messageKeyOf } from "@/modules/db/connections/command.mapper"
+import { useAuthorizeGoogle } from "@/hooks/connections"
 import { GoogleWizardBase } from "./component"
 
 /** The reasons the callback puts in the return address, with the sentence of each. */
@@ -18,7 +17,6 @@ const FAILURE_KEYS = {
 
 /** What the board hands the Google wizard. */
 interface GoogleWizardProps {
-    readonly workspaceId: string
     /** `changed` is true when something was saved, so the list should refresh. */
     readonly onClose: (changed: boolean) => void
 }
@@ -29,6 +27,7 @@ export const GoogleWizard = (props: GoogleWizardProps) => {
     const tw = useTranslations("connectionWizard")
     const tc = useTranslations("connections")
     const params = useSearchParams()
+    const authorize = useAuthorizeGoogle()
     const result = params.get("google")
     const reason = params.get("reason") ?? ""
     const [error, setError] = useState<string | null>(null)
@@ -36,12 +35,9 @@ export const GoogleWizard = (props: GoogleWizardProps) => {
     const connect = () =>
         startTransition(async () => {
             setError(null)
-            const answer = await writeGoogleAuthorize({ workspaceId: props.workspaceId, returnTo: "/connections" })
-            if (answer.kind !== "ok") {
-                const key = messageKeyOf(answer.code)
-                return setError(key === "errNotConfigured" ? t("errNotConfigured") : t("errStart"))
-            }
-            window.location.assign(answer.value.url)
+            const answer = await authorize("/connections")
+            if (answer.kind !== "ok") return setError(answer.message)
+            window.location.assign(answer.value)
         })
     const failure =
         result === "error"

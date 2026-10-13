@@ -6,15 +6,6 @@ import type { Connection } from "@/lib/channels"
 import { APP_ROUTES } from "@/modules/routes"
 import { HEAD_CLASS, PAGE_CLASS, STACK_CLASS } from "./classNames"
 
-interface ApiKeyItem {
-    readonly id: string
-    readonly name: string
-    readonly prefix: string
-    readonly createdAt: string
-    readonly lastUsedAt: string | null
-    readonly revokedAt: string | null
-}
-
 /** Props for {@link DevelopersPageBase}. */
 export interface DevelopersPageBaseProps {
     readonly props: {
@@ -26,11 +17,8 @@ export interface DevelopersPageBaseProps {
         readonly backLabel: string
         readonly eventsTitle: string
         readonly eventsBody: string
-        readonly workspaceId: string
         readonly webhooks: ReadonlyArray<Connection>
         readonly canManageWebhooks: boolean
-        readonly keys: ReadonlyArray<ApiKeyItem>
-        readonly keysFailed: boolean
         readonly apiBase: string
     }
 }
@@ -72,11 +60,7 @@ export const DevelopersPageBase = (props: DevelopersPageBaseProps) => (
                     canManage={props.props.canManageWebhooks}
                 />
             </div>
-            <ApiKeysSection
-                workspaceId={props.props.workspaceId}
-                items={props.props.keys}
-                loadFailed={props.props.keysFailed}
-            />
+            <ApiKeysSection />
             <ApiQuickStart base={props.props.apiBase} />
         </div>
     </PageContainer>

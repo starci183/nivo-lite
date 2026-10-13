@@ -8,8 +8,8 @@ export const createAttachWorkspaceIdLink = () =>
         const workspaceId = LocalStorage.get<string>(StorageId.ActiveWorkspaceId)
         return {
             headers: {
-                ...previous.headers,
                 ...(workspaceId === undefined ? {} : { [GraphQLHeadersKey.XWorkspaceId]: workspaceId }),
+                ...previous.headers,
             },
         }
     })

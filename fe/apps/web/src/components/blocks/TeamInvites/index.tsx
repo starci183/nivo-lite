@@ -1,19 +1,11 @@
 "use client"
 
 import { useFormatter, useTranslations } from "next-intl"
-import { useState, useTransition } from "react"
-import { ROLE_KEYS, outcomeErrorKey, useInviteCommands } from "@/hooks/team"
-import type { InviteCall, InviteSentView, TeamInviteView } from "@/hooks/team"
-import { navigation } from "@/modules/i18n"
+import { useState } from "react"
+import { useMember } from "@/hooks/member"
+import { ROLE_KEYS, isTeamManager, useCopyInviteLink, useInviteCommands, useTeam } from "@/hooks/team"
+import type { InviteSentView } from "@/hooks/team"
 import { TeamInvitesBase } from "./component"
-
-/** Props for the connected invitations list. */
-interface TeamInvitesProps {
-    readonly workspaceId: string
-    readonly invites: ReadonlyArray<TeamInviteView>
-    /** True while the page loads: the heading stays and the list is skeleton rows. */
-    readonly isLoading?: boolean
-}
 
 /** The link just issued for one invitation. */
 interface Shown {
@@ -23,40 +15,30 @@ interface Shown {
     readonly isCopied: boolean
 }
 
-/** The connected invitations list: resend, copy a fresh link (which replaces the old one) and revoke, through the back end api. */
-export const TeamInvites = (props: TeamInvitesProps) => {
+/** The connected invitations list: resend, copy a fresh link (which replaces the old one) and revoke, through the back end GraphQL API. */
+export const TeamInvites = () => {
     const t = useTranslations("team")
     const format = useFormatter()
-    const router = navigation.useRouter()
-    const commands = useInviteCommands(props.workspaceId)
-    const [isPending, startTransition] = useTransition()
+    const member = useMember()
+    const isAllowed = member !== null && isTeamManager(member.role)
+    const { views, isLoading } = useTeam(member?.workspaceId ?? "", isAllowed)
+    const commands = useInviteCommands()
+    const copyToClipboard = useCopyInviteLink()
     const [busyId, setBusyId] = useState<string>()
-    const [error, setError] = useState<string>()
-    const [notice, setNotice] = useState<string>()
     const [shown, setShown] = useState<Shown>()
 
     const when = (iso: string): string => format.dateTime(new Date(iso), { dateStyle: "medium", timeStyle: "short" })
 
-    const run = <R,>(id: string, job: () => Promise<InviteCall<R>>, after: (value: R) => void) => {
-        setError(undefined)
-        setNotice(undefined)
+    const run = async <R,>(id: string, job: () => Promise<R | undefined>, after: (value: R) => void) => {
         setBusyId(id)
-        startTransition(async () => {
-            const result = await job()
-            setBusyId(undefined)
-            if (result.kind !== "ok") return setError(t(outcomeErrorKey(result)))
-            after(result.value)
-            router.refresh()
-        })
+        const result = await job()
+        setBusyId(undefined)
+        if (result !== undefined) after(result)
     }
 
     const copy = async (link: string): Promise<void> => {
-        try {
-            await navigator.clipboard.writeText(link)
+        if (await copyToClipboard(link))
             setShown((current) => (current === undefined ? current : { ...current, isCopied: true }))
-        } catch {
-            setError(t("errGeneric"))
-        }
     }
 
     const resend = (id: string) =>
@@ -64,7 +46,6 @@ export const TeamInvites = (props: TeamInvitesProps) => {
             id,
             () => commands.resend(id),
             (result: InviteSentView) => {
-                setNotice(t("inviteResent", { email: result.email }))
                 setShown({ id, email: result.email, link: result.link, isCopied: false })
             },
         )
@@ -77,16 +58,14 @@ export const TeamInvites = (props: TeamInvitesProps) => {
                 void copy(result.link)
             },
         )
-    const revoke = (id: string) =>
-        run(
-            id,
-            () => commands.revoke(id),
-            () => {
-                setNotice(t("inviteRevoked"))
-                setShown(undefined)
-            },
-        )
+    const revoke = async (id: string) => {
+        setBusyId(id)
+        const revoked = await commands.revoke(id)
+        setBusyId(undefined)
+        if (revoked) setShown(undefined)
+    }
 
+    if (!isAllowed) return null
     return (
         <TeamInvitesBase
             props={{
@@ -99,14 +78,14 @@ export const TeamInvites = (props: TeamInvitesProps) => {
                 copiedLabel: t("inviteCopied"),
                 revokeLabel: t("inviteRevoke"),
                 rotateNote: t("inviteRotateNote"),
-                rows: ((props.isLoading ?? false) ? [] : props.invites).map((invite) => ({
+                rows: (isLoading ? [] : views.invites).map((invite) => ({
                     id: invite.id,
                     email: invite.email,
                     expiry: t(invite.isExpired ? "inviteExpired" : "inviteExpires", { date: when(invite.expiresAt) }),
                     staffNote: invite.staffName === null ? undefined : t("inviteStaffFor", { name: invite.staffName }),
                     roleLabel: t(ROLE_KEYS[invite.role]),
                     isExpired: invite.isExpired,
-                    isBusy: isPending && busyId === invite.id,
+                    isBusy: commands.isPending && busyId === invite.id,
                     link:
                         shown?.id === invite.id
                             ? {
@@ -116,14 +95,12 @@ export const TeamInvites = (props: TeamInvitesProps) => {
                               }
                             : undefined,
                 })),
-                isSkeleton: props.isLoading ?? false,
-                error,
-                notice,
+                isSkeleton: isLoading,
             }}
             on={{
-                resend,
-                copyLink,
-                revoke,
+                resend: (id) => void resend(id),
+                copyLink: (id) => void copyLink(id),
+                revoke: (id) => void revoke(id),
                 linkCopied: () =>
                     setShown((current) => (current === undefined ? current : { ...current, isCopied: true })),
             }}

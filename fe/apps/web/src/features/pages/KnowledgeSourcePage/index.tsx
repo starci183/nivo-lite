@@ -1,9 +1,7 @@
 import type { Metadata } from "next"
 import { notFound } from "next/navigation"
 import { getTranslations } from "next-intl/server"
-import { isManagerRole } from "@/lib/members-shared"
-import { getSession } from "@/lib/session"
-import { isKnowledgeId, readKnowledgeSource } from "@/modules/db"
+import { isKnowledgeId } from "@/modules/documents"
 import { CONSOLE_ROUTES, KNOWLEDGE_ROUTES } from "@/modules/routes"
 import { KnowledgeSourcePageBase } from "./component"
 import type { KnowledgeSourcePageBaseProps } from "./component"
@@ -21,10 +19,11 @@ interface KnowledgeSourcePageProps {
 
 type Translate = Awaited<ReturnType<typeof getTranslations<"knowledge">>>
 
+/** The props of the connected body: the localized copy and the title the skeleton carries. */
+type ClientCopy = Omit<KnowledgeSourcePageBaseProps["props"], "sourceId">
+
 /** The words of the page that do not depend on its data. */
-const copyOf = (
-    t: Translate,
-): Omit<KnowledgeSourcePageBaseProps["props"], "workspaceId" | "canWrite" | "source" | "chunks" | "title"> => ({
+const copyOf = (t: Translate): ClientCopy => ({
     crumbLabel: t("crumbLabel"),
     crumbHome: t("crumbHome"),
     homeHref: CONSOLE_ROUTES.dashboard,
@@ -34,35 +33,18 @@ const copyOf = (
     documentsHref: KNOWLEDGE_ROUTES.library,
     eyebrow: t("crumbBrain"),
     description: t("passagesHint"),
+    title: t("title"),
 })
 
-/** One document with its passages: read under RLS; a document that is not in the workspace is not found. */
+/** One document with its passages: the connected body reads it through GraphQL; a bad id is not found. */
 export const KnowledgeSourcePage = async (props: KnowledgeSourcePageProps) => {
-    const [t, session] = await Promise.all([getTranslations("knowledge"), getSession()])
+    const t = await getTranslations("knowledge")
     if (!isKnowledgeId(props.sourceId)) notFound()
-    const found = await readKnowledgeSource(session.workspace.id, props.sourceId)
-    if (found.kind === "not-found") notFound()
-    if (found.kind !== "ok") throw new Error(`knowledge: ${found.kind} ${found.code}`)
-    return (
-        <KnowledgeSourcePageBase
-            props={{
-                ...copyOf(t),
-                title: found.value.source.title,
-                workspaceId: session.workspace.id,
-                canWrite: isManagerRole(session.member.role),
-                source: found.value.source,
-                chunks: found.value.chunks,
-            }}
-        />
-    )
+    return <KnowledgeSourcePageBase props={{ ...copyOf(t), sourceId: props.sourceId }} />
 }
 
-/** The same page while its data loads. */
+/** The same page while it loads: the overview draws its own skeleton. */
 export const KnowledgeSourceLoadingPage = async () => {
     const t = await getTranslations("knowledge")
-    return (
-        <KnowledgeSourcePageBase
-            props={{ ...copyOf(t), title: t("title"), workspaceId: "", canWrite: false, source: null, chunks: [] }}
-        />
-    )
+    return <KnowledgeSourcePageBase props={{ ...copyOf(t), sourceId: undefined }} />
 }

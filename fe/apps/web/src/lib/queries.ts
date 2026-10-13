@@ -8,12 +8,11 @@ import {
     readLeads,
     readMessages,
     readOpenResponsibilities,
-    readRecentEvents,
     readResponsibilities,
 } from "@/modules/db"
 import type { DbOutcome } from "@/modules/db"
 import { getSession } from "./session"
-import type { Agent, EventRow, Lead, LeadDetail, Message, ResponsibilityWithLead } from "./types"
+import type { Agent, Lead, LeadDetail, Message, ResponsibilityWithLead } from "./types"
 
 /**
  * Legacy shim of the console readers (agents, leads, responsibilities, Office lines, evidence events). The reads live in
@@ -94,8 +93,3 @@ export const listMessages = cache(async (limit = 100): Promise<Message[]> => {
     return unwrap(await readMessages(session.workspace.id, limit))
 })
 
-/** The newest evidence events. */
-export const listRecentEvents = cache(async (limit = 20): Promise<EventRow[]> => {
-    const session = await getSession()
-    return unwrap(await readRecentEvents(session.workspace.id, limit))
-})

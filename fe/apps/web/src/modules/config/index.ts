@@ -35,3 +35,6 @@ export const graphqlTuning = {
     retryMaxDelayMs: 3_000,
     retryMaxAttempts: 3,
 } as const
+
+/** The public origin of the site (providers call back to it); `undefined` when it is not set. */
+export const webSiteOrigin = (): string | undefined => process.env.NEXT_PUBLIC_SITE_URL

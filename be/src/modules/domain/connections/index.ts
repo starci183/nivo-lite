@@ -32,6 +32,7 @@ export type {
     ListByProviderOptions,
     Provider,
     RecordedEvent,
+    SyncSchedule,
     WizardSettlement,
 } from "./connections.contracts"
 export { ConnectionsModule } from "./connections.module"

@@ -60,3 +60,11 @@ export interface HealthCandidateRow {
     /** The recorded health state, empty when none. */
     readonly health: string
 }
+
+/** The sync schedule columns of a connection. */
+export interface SyncScheduleRow {
+    /** Minutes between two scheduled syncs; null is manual only. */
+    readonly sync_every_minutes: number | null
+    /** When the last sync finished, ISO 8601 text; null when none did. */
+    readonly last_sync_at: string | null
+}

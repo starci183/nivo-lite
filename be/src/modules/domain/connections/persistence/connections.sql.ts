@@ -95,3 +95,64 @@ export const SETTLE_WIZARD = sql`UPDATE public.connections
 SET public_meta = public_meta || $3::jsonb,
     updated_at = now()
 WHERE id = $1 AND public_meta -> 'wizard' ->> 'ticket' = $2`
+
+/** The sync schedule of a connection of a workspace ($1 workspace, $2 connection). */
+export const FIND_SYNC_SCHEDULE = sql`SELECT sync_every_minutes, to_char(last_sync_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') AS last_sync_at
+FROM public.connections
+WHERE workspace_id = $1 AND id = $2
+LIMIT 1`
+
+/** Sets how often a connection syncs by itself; null is manual only and the first scheduled sync is due now ($1 workspace, $2 connection, $3 minutes). */
+export const SET_SYNC_SCHEDULE = sql`UPDATE public.connections
+SET sync_every_minutes = $3::int,
+    next_sync_at = CASE WHEN $3::int IS NULL THEN NULL ELSE now() END,
+    updated_at = now()
+WHERE workspace_id = $1 AND id = $2
+RETURNING id`
+
+/** A sync finished: the connection works, the next one is scheduled and the new public facts join the old ones ($1 connection, $2 facts to merge). */
+export const MARK_SYNCED = sql`UPDATE public.connections
+SET status = 'connected',
+    last_error = NULL,
+    last_sync_at = now(),
+    last_event_at = now(),
+    next_sync_at = CASE WHEN sync_every_minutes IS NULL THEN NULL ELSE now() + make_interval(mins => sync_every_minutes) END,
+    public_meta = public_meta || $2::jsonb,
+    updated_at = now()
+WHERE id = $1`
+
+/** A sync failed: the reason is shown to the owner and the retry waits at least a quarter of an hour ($1 connection, $2 reason). */
+export const MARK_SYNC_FAILED = sql`UPDATE public.connections
+SET status = 'error',
+    last_error = $2,
+    next_sync_at = CASE WHEN sync_every_minutes IS NULL THEN NULL ELSE now() + make_interval(mins => GREATEST(sync_every_minutes, 15)) END,
+    updated_at = now()
+WHERE id = $1`
+
+/** Claims the connections of the given providers whose scheduled sync is due: their next sync moves half an hour on, so a second tick does not queue them again, and the sync itself sets the real time ($1 providers, $2 page size). */
+export const CLAIM_DUE_SYNCS = sql`WITH due AS (
+    SELECT id
+    FROM public.connections
+    WHERE provider = ANY($1::text[]) AND status <> 'disconnected' AND next_sync_at IS NOT NULL AND next_sync_at <= now()
+    ORDER BY next_sync_at
+    LIMIT $2
+    FOR UPDATE SKIP LOCKED
+), claimed AS (
+    UPDATE public.connections AS c
+    SET next_sync_at = now() + interval '30 minutes'
+    FROM due
+    WHERE c.id = due.id
+    RETURNING c.id, c.workspace_id
+)
+SELECT id, workspace_id FROM claimed`
+
+/** Makes one SMTP connection the workspace default and every other one a spare ($1 workspace, $2 connection). */
+export const SET_DEFAULT_SMTP = sql`UPDATE public.connections
+SET is_default = (id = $2), updated_at = now()
+WHERE workspace_id = $1 AND provider = 'smtp' AND (is_default OR id = $2)`
+
+/** The id of the connected default SMTP connection of a workspace, if any ($1 workspace). */
+export const FIND_DEFAULT_SMTP = sql`SELECT id
+FROM public.connections
+WHERE workspace_id = $1 AND provider = 'smtp' AND is_default AND status <> 'disconnected'
+LIMIT 1`

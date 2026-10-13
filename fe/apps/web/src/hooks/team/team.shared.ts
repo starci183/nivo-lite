@@ -1,5 +1,34 @@
-import type { DbOutcome } from "@/modules/db/outcome"
-import type { TeamRoster } from "@/modules/db/team/team.mapper"
+import { mutate } from "swr"
+import { QUERY_WORKSPACE_INVITES_SWR_KEY } from "@/hooks/swr/api/graphql/queries/useQueryWorkspaceInvitesSwr"
+import { QUERY_WORKSPACE_MEMBERS_SWR_KEY } from "@/hooks/swr/api/graphql/queries/useQueryWorkspaceMembersSwr"
+import { QUERY_WORKSPACE_STAFF_SWR_KEY } from "@/hooks/swr/api/graphql/queries/useQueryWorkspaceStaffSwr"
+
+/** One member as the back end lists them. */
+interface MemberListing {
+    readonly userId: string
+    readonly displayName: string
+    readonly email: string
+    readonly role: string
+    readonly status: string
+    readonly staffId?: string | null
+    readonly lastSignInAt?: string | null
+}
+
+/** One open invitation as the back end lists it. */
+interface PendingInvite {
+    readonly id: string
+    readonly email: string
+    readonly role: string
+    readonly staffId?: string | null
+    readonly expiresAt: string
+}
+
+/** One staff row as the back end lists it. */
+interface StaffOption {
+    readonly id: string
+    readonly name: string
+    readonly role: string
+}
 
 /** What a member may do in a workspace. */
 export type TeamRole = "owner" | "manager" | "staff"
@@ -48,33 +77,6 @@ export interface InviteSentView {
     readonly delivery: "invited" | "existing" | "none"
 }
 
-/** The catalog keys (`team` namespace) of the failure sentences. */
-export type TeamErrorKey =
-    | "errEmail"
-    | "errAlreadyMember"
-    | "errStaffTaken"
-    | "errLastOwner"
-    | "errSelf"
-    | "errNotAllowed"
-    | "errNotFound"
-    | "errGeneric"
-
-const ERROR_KEYS: Readonly<Record<string, TeamErrorKey>> = {
-    WORKSPACE_INVITES_EMAIL_INVALID: "errEmail",
-    WORKSPACE_INVITES_ALREADY_MEMBER: "errAlreadyMember",
-    WORKSPACE_INVITES_STAFF_TAKEN: "errStaffTaken",
-    WORKSPACE_INVITES_NOT_FOUND: "errNotFound",
-    WORKSPACE_MEMBERS_ROLE_FORBIDDEN: "errNotAllowed",
-    last_owner: "errLastOwner",
-    errSelf: "errSelf",
-    errNotAllowed: "errNotAllowed",
-    member: "errNotFound",
-    "not-changed": "errNotAllowed",
-}
-
-/** The sentence that explains a failure code of the back end api or of a member command. */
-export const teamErrorKey = (code: string): TeamErrorKey => ERROR_KEYS[code] ?? "errGeneric"
-
 /** The roles the person may give: an owner any, a manager only manager and staff. */
 export const roleChoices = (selfRole: TeamRole): ReadonlyArray<TeamRole> =>
     selfRole === "owner" ? ["owner", "manager", "staff"] : ["manager", "staff"]
@@ -83,11 +85,29 @@ export const roleChoices = (selfRole: TeamRole): ReadonlyArray<TeamRole> =>
 export const canManageMember = (selfRole: TeamRole, member: TeamMemberView): boolean =>
     member.role !== "owner" || selfRole === "owner"
 
-/** The sentence that explains a failed call to the back end api. */
-export const outcomeErrorKey = (outcome: Exclude<DbOutcome<unknown>, { readonly kind: "ok" }>): TeamErrorKey =>
-    teamErrorKey(outcome.code)
+/** Whether the role runs the business (owner and manager see the team). */
+export const isTeamManager = (role: TeamRole): boolean => role === "owner" || role === "manager"
 
-/** What the team page draws, built from the roster and the staff rows. */
+const roleOf = (role: string): TeamRole => (role === "owner" || role === "manager" ? role : "staff")
+
+const deliveryOf = (delivery: string): InviteSentView["delivery"] =>
+    delivery === "invited" || delivery === "existing" ? delivery : "none"
+
+/** The invitation result of the back end. */
+interface InviteResultShape {
+    readonly email: string
+    readonly link: string
+    readonly delivery: string
+}
+
+/** The invitation result of the back end as the blocks draw it. */
+export const inviteSentOf = (result: InviteResultShape): InviteSentView => ({
+    email: result.email,
+    link: result.link,
+    delivery: deliveryOf(result.delivery),
+})
+
+/** What the team page draws, built from the members, the open invitations and the staff rows. */
 export interface TeamViews {
     readonly members: ReadonlyArray<TeamMemberView>
     readonly invites: ReadonlyArray<TeamInviteView>
@@ -95,34 +115,52 @@ export interface TeamViews {
     readonly staffChoices: ReadonlyArray<StaffChoiceView>
 }
 
-/** Joins the roster with the staff rows: linked staff names, and the staff nobody is linked to. */
-export const teamViews = (roster: TeamRoster, staff: ReadonlyArray<StaffChoiceView>): TeamViews => {
+/** Joins the members with the invitations and the staff rows: linked staff names, and the staff nobody is linked to. */
+export const teamViews = (
+    members: ReadonlyArray<MemberListing>,
+    invites: ReadonlyArray<PendingInvite>,
+    staff: ReadonlyArray<StaffOption>,
+    now: number,
+): TeamViews => {
     const nameOf = new Map(staff.map((row) => [row.id, row.name]))
-    const live = roster.invites.filter((invite) => !invite.isExpired)
+    const inviteViews = invites.map((invite): TeamInviteView => ({
+        id: invite.id,
+        email: invite.email,
+        role: invite.role === "manager" ? "manager" : "staff",
+        staffName:
+            invite.staffId === null || invite.staffId === undefined ? null : (nameOf.get(invite.staffId) ?? null),
+        expiresAt: invite.expiresAt,
+        isExpired: Date.parse(invite.expiresAt) <= now,
+    }))
+    const live = invites.filter((_invite, index) => !inviteViews[index]?.isExpired)
     const linked = new Set<string>(
-        [...roster.members, ...live].flatMap((row) => (row.staffId === null ? [] : [row.staffId])),
+        [...members, ...live].flatMap((row) =>
+            row.staffId === null || row.staffId === undefined ? [] : [row.staffId],
+        ),
     )
     return {
-        members: roster.members.map((member): TeamMemberView => ({
+        members: members.map((member): TeamMemberView => ({
             userId: member.userId,
             displayName: member.displayName,
             email: member.email,
-            role: member.role,
+            role: roleOf(member.role),
             isActive: member.status === "active",
-            staffName: member.staffId === null ? null : (nameOf.get(member.staffId) ?? null),
-            lastSignInAt: member.lastSignInAt,
+            staffName:
+                member.staffId === null || member.staffId === undefined ? null : (nameOf.get(member.staffId) ?? null),
+            lastSignInAt: member.lastSignInAt ?? null,
         })),
-        invites: roster.invites.map((invite): TeamInviteView => ({
-            id: invite.id,
-            email: invite.email,
-            role: invite.role,
-            staffName: invite.staffId === null ? null : (nameOf.get(invite.staffId) ?? null),
-            expiresAt: invite.expiresAt,
-            isExpired: invite.isExpired,
-        })),
+        invites: inviteViews,
         staffChoices: staff.filter((row) => !linked.has(row.id)),
     }
 }
 
-/** What a call to the back end api about an invitation answers. */
-export type InviteCall<T> = DbOutcome<T>
+const TEAM_KEYS: ReadonlySet<string> = new Set([
+    QUERY_WORKSPACE_MEMBERS_SWR_KEY,
+    QUERY_WORKSPACE_INVITES_SWR_KEY,
+    QUERY_WORKSPACE_STAFF_SWR_KEY,
+])
+
+/** Revalidates the members, the invitations and the staff rows after a change to the team. */
+export const refreshTeam = async (): Promise<void> => {
+    await mutate((key) => Array.isArray(key) && typeof key[0] === "string" && TEAM_KEYS.has(key[0]))
+}

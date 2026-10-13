@@ -1,16 +1,11 @@
-import { getTranslations } from "next-intl/server"
-import type { ActivityModel } from "@/features/responsibilities/format"
-import { isModuleKey, moduleDef } from "@/lib/module-registry"
-import type { Agent } from "@/lib/types"
+"use client"
+
+import { useTranslations } from "next-intl"
+import { useOverviewRail } from "@/hooks/overview"
+import { MODULE_REGISTRY } from "@/modules/catalog"
 import { CONSOLE_ROUTES, agentChatHref, leadHref } from "@/modules/routes"
 import type { IconName } from "@/components/leaves/Icon"
 import { OverviewRailBase } from "./component"
-
-/** The agents, the recent activity and the onboarding steps the rail shows. */
-interface OverviewRailProps {
-    readonly agents: ReadonlyArray<Agent>
-    readonly activity: ReadonlyArray<ActivityModel>
-}
 
 /** The glyph of each kind of activity. */
 const KIND_ICONS: Readonly<Record<string, IconName>> = {
@@ -25,10 +20,12 @@ const KIND_ICONS: Readonly<Record<string, IconName>> = {
     "agent.updated": "agentos",
 }
 
-/** The overview rail with its copy resolved on the server. */
-export const OverviewRail = async (props: OverviewRailProps) => {
-    const t = await getTranslations("overview")
-    const hasChatbot = props.agents.some((agent) => agent.module === "chatbot")
+/** The overview rail with its copy resolved in the browser. */
+export const OverviewRail = () => {
+    const t = useTranslations("overview")
+    const data = useOverviewRail()
+    if (data === undefined) return null
+    const hasChatbot = data.agents.some((agent) => agent.module === "chatbot")
     return (
         <OverviewRailBase
             props={{
@@ -38,13 +35,13 @@ export const OverviewRail = async (props: OverviewRailProps) => {
                 chatLabel: t("chat"),
                 buyChatbotLabel: hasChatbot ? null : t("buyChatbot"),
                 buyChatbotHref: CONSOLE_ROUTES.newChatbot,
-                agents: props.agents.map((agent) => ({
+                agents: data.agents.map((agent) => ({
                     id: agent.id,
                     module: agent.module,
-                    glyph: isModuleKey(agent.module) ? moduleDef(agent.module).glyph : moduleDef("chatbot").glyph,
+                    glyph: MODULE_REGISTRY[agent.module].glyph,
                     name: agent.name,
-                    isActive: agent.status === "active",
-                    statusLabel: agent.status === "active" ? t("active") : t("paused"),
+                    isActive: agent.isActive,
+                    statusLabel: agent.isActive ? t("active") : t("paused"),
                     chatHref: agentChatHref(agent.id),
                 })),
                 activityTitle: t("activity"),
@@ -52,7 +49,7 @@ export const OverviewRail = async (props: OverviewRailProps) => {
                 activityEmptyBody: t("activityEmptyDesc"),
                 viewAllLabel: t("viewAll"),
                 viewAllHref: CONSOLE_ROUTES.responsibilities,
-                activity: props.activity.map((item) => ({
+                activity: data.activity.map((item) => ({
                     id: item.id,
                     icon: KIND_ICONS[item.kind] ?? "notification",
                     actor: item.actor,

@@ -1,13 +1,12 @@
 "use client"
 
-import { RouteError } from "@/components/blocks/RouteError"
-import { useT } from "@/i18n/client"
-import { authority } from "@/i18n/dict/authority"
+import { AuthorityErrorPage } from "@/features/pages/AuthorityErrorPage"
 
-/** STATE-8 case-4: Authority keeps its trail and heading when its data fails, with one Alert and a retry. */
-const AuthorityError = ({ reset }: { readonly reset: () => void }) => {
-  const t = useT(authority)
-  return <RouteError crumbs={[{ id: "home", label: t("crumbHome"), href: "/dashboard" }, { id: "authority", label: t("title") }]} title={t("title")} message={t("loadFailBody")} onRetry={reset} />
+interface ErrorProps {
+    readonly reset: () => void
 }
 
-export default AuthorityError
+/** The authority error boundary slot. */
+const ErrorBoundary = (props: ErrorProps) => <AuthorityErrorPage onRetry={props.reset} />
+
+export default ErrorBoundary

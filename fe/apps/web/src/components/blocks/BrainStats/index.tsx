@@ -1,43 +1,19 @@
 "use client"
 
 import { useTranslations } from "next-intl"
-import { useBrainCommand } from "@/hooks/brain"
-import type { BrainFigures } from "@/hooks/brain"
-import { useKnowledgeRealtime } from "@/hooks/knowledge"
-import type { CommandActions } from "@/hooks/knowledge"
-import { writeCommandWait } from "@/modules/db/knowledge/write-command-wait"
-import { writeCommand } from "@/modules/db/knowledge/write-command"
-import { navigation } from "@/modules/i18n"
+import { useBrainCommand, useBrainStats } from "@/hooks/brain"
 import { BrainStatsBase } from "./component"
 
-/** Props for the connected Second Brain figures. */
-interface BrainStatsProps {
-    readonly workspaceId: string
-    readonly figures: BrainFigures
-    /** Whether a scheduled value is due or a value in force has ended, and the person may bring the brain up to date. */
-    readonly isMaintenanceDue: boolean
-    /** True while the page loads: the labels stay and the values are skeletons. */
-    readonly isLoading?: boolean
-}
-
-const ACTIONS: CommandActions = { write: writeCommand, wait: writeCommandWait }
-
-/** The connected Second Brain figures: follows the workers live and offers to bring the brain up to date when something is due. */
-export const BrainStats = (props: BrainStatsProps) => {
+/** The connected Second Brain figures: offers to bring the brain up to date when something is due. */
+export const BrainStats = () => {
     const t = useTranslations("brain")
-    const router = navigation.useRouter()
-    const command = useBrainCommand(props.workspaceId, ACTIONS)
-    useKnowledgeRealtime(
-        props.workspaceId,
-        ["knowledge_sources", "brain_facts", "brain_lessons", "knowledge_gaps", "brain_extractions"],
-        () => router.refresh(),
-    )
-    const { figures } = props
+    const command = useBrainCommand()
+    const { figures, isMaintenanceDue, isLoading } = useBrainStats()
     return (
         <BrainStatsBase
             props={{
                 label: t("statsLabel"),
-                isSkeleton: props.isLoading ?? false,
+                isSkeleton: isLoading,
                 figures: [
                     {
                         id: "docs",
@@ -69,11 +45,11 @@ export const BrainStats = (props: BrainStatsProps) => {
                     figures.processing > 0
                         ? { title: t("processingTitle", { count: figures.processing }), body: t("processingBody") }
                         : undefined,
-                maintain: props.isMaintenanceDue
+                maintain: isMaintenanceDue
                     ? { title: t("maintainTitle"), body: t("maintainBody"), actionLabel: t("maintainAction") }
                     : undefined,
             }}
-            on={{ maintain: () => command.send("brain.maintain", {}) }}
+            on={{ maintain: () => command.send("brain.maintain", undefined) }}
         />
     )
 }

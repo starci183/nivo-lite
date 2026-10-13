@@ -2,20 +2,21 @@
 
 import { useTranslations } from "next-intl"
 import { navigation } from "@/modules/i18n"
-import { useConsoleNav } from "@/hooks/console"
+import { useConsoleNav, useConsoleShell } from "@/hooks/console"
 import { ConsoleNavigationBase } from "./component"
 
-/** The role and the real count the rail needs. */
+/** The role and the workspace the rail reads its count for. */
 type ConsoleNavigationProps = {
     readonly role: "owner" | "manager" | "staff"
-    readonly pendingCount: number
+    readonly workspaceId: string
 }
 
 /** The connected wide rail: destinations by role, the current route highlighted and the pending count on the Office. */
 export const ConsoleNavigation = (props: ConsoleNavigationProps) => {
     const t = useTranslations("shell")
     const router = navigation.useRouter()
-    const items = useConsoleNav(props.role, props.pendingCount)
+    const { pendingCount } = useConsoleShell(props.workspaceId)
+    const items = useConsoleNav(props.role, pendingCount)
     return (
         <ConsoleNavigationBase
             props={{

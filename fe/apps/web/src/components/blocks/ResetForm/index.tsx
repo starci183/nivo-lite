@@ -2,14 +2,8 @@
 
 import { useState, useTransition } from "react"
 import { useTranslations } from "next-intl"
-import {
-    PASSWORD_MIN_LENGTH,
-    authErrorKey,
-    isLinkInvalid,
-    passwordStrength,
-    strengthKey,
-    useAuthActions,
-} from "@/hooks/auth"
+import { authErrorKey, isLinkInvalid, passwordStrength, strengthKey, useAuthActions, useAuthUser } from "@/hooks/auth"
+import { useResetForm } from "@/hooks/rhf"
 import { navigation } from "@/modules/i18n"
 import { AUTH_ROUTES, loginResetPath } from "@/modules/routes"
 import { ResetFormBase } from "./component"
@@ -17,39 +11,36 @@ import { ResetFormBase } from "./component"
 /** What the reset page tells the card: whether the recovery link is already unusable. */
 type ResetFormProps = { readonly expired: boolean }
 
-type Errors = { readonly password?: string; readonly confirm?: string }
-
 /** Reset password: new password and confirmation, or a clear "link expired" state with a way to request another. */
 export const ResetForm = (props: ResetFormProps) => {
     const auth = useAuthActions()
     const t = useTranslations("auth")
     const router = navigation.useRouter()
-    const [password, setPassword] = useState("")
-    const [confirm, setConfirm] = useState("")
-    const [errors, setErrors] = useState<Errors>({})
+    const form = useResetForm()
     const [failure, setFailure] = useState<{ readonly text: string; readonly expired: boolean }>()
     const [isPending, startTransition] = useTransition()
+    const [isDone, setDone] = useState(false)
+    const { data: user } = useAuthUser()
 
-    const submit = () => {
-        const found: { password?: string; confirm?: string } = {}
-        if (password.length < PASSWORD_MIN_LENGTH) found.password = t("errPasswordShort")
-        if (confirm !== password) found.confirm = t("errPasswordMismatch")
-        setErrors(found)
+    const password = form.watch("password")
+    const confirm = form.watch("confirm")
+    const errors = form.formState.errors
+    const submit = form.handleSubmit((values) => {
         setFailure(undefined)
-        if (Object.keys(found).length > 0) return
         startTransition(async () => {
-            const outcome = await auth.updatePassword({ password })
+            const outcome = await auth.updatePassword({ password: values.password })
             if (outcome.kind === "ok") {
+                setDone(true)
                 router.push(loginResetPath())
                 return
             }
             setFailure({ text: t(authErrorKey(outcome.code)), expired: isLinkInvalid(outcome.code) })
         })
-    }
+    })
 
     return (
         <ResetFormBase
-            state={props.expired || failure?.expired === true ? "expired" : "form"}
+            state={props.expired || failure?.expired === true || (user === null && !isDone) ? "expired" : "form"}
             props={{
                 title: t("resetTitle"),
                 text: t("resetText"),
@@ -62,8 +53,8 @@ export const ResetForm = (props: ResetFormProps) => {
                 submitLabel: t("resetSubmit"),
                 password,
                 confirm,
-                passwordError: errors.password,
-                confirmError: errors.confirm,
+                passwordError: errors.password?.message,
+                confirmError: errors.confirm?.message,
                 isPending,
                 expiredTitle: t("resetExpiredTitle"),
                 expiredText: t("resetExpiredText"),
@@ -72,7 +63,12 @@ export const ResetForm = (props: ResetFormProps) => {
                 backLabel: t("backToSignIn"),
                 backHref: AUTH_ROUTES.login,
             }}
-            on={{ setPassword, setConfirm, submit }}
+            on={{
+                setPassword: (value) =>
+                    form.setValue("password", value, { shouldValidate: form.formState.isSubmitted }),
+                setConfirm: (value) => form.setValue("confirm", value, { shouldValidate: form.formState.isSubmitted }),
+                submit: () => void submit(),
+            }}
         />
     )
 }

@@ -4,15 +4,13 @@ import { useTranslations } from "next-intl"
 import { useSearchParams } from "next/navigation"
 import { purposeFor } from "@/hooks/connection-access"
 import { PROVIDERS, providerKey } from "@/hooks/connection-providers"
-import { moneyProviderOf, useConnectionOverlays, wizardTargetOf } from "@/hooks/connections"
-import { navigation } from "@/modules/i18n"
+import { moneyProviderOf, useConnectionOverlays, useConnectionsRefresh, wizardTargetOf } from "@/hooks/connections"
 import type { AgentOption, Connection } from "@/modules/types"
 import { ConnectionWizardOverlayBase } from "./component"
 import type { WizardTargetView } from "./component"
 
 /** What the page that read the workspace hands the wizard drawer. */
 type ConnectionWizardOverlayProps = {
-    readonly workspaceId: string
     readonly items: ReadonlyArray<Connection>
     /** The workspace agents (any module); each provider offers the ones of its own module. */
     readonly agents: ReadonlyArray<AgentOption>
@@ -26,7 +24,7 @@ type ConnectionWizardOverlayProps = {
  */
 export const ConnectionWizardOverlay = (props: ConnectionWizardOverlayProps) => {
     const t = useTranslations("connections")
-    const router = navigation.useRouter()
+    const refreshConnections = useConnectionsRefresh()
     const params = useSearchParams()
     const overlays = useConnectionOverlays()
     const found = wizardTargetOf((name) => params.get(name), props.items)
@@ -40,14 +38,13 @@ export const ConnectionWizardOverlay = (props: ConnectionWizardOverlayProps) => 
             : props.agents.filter((agent) => purposeFor(agent.module, target.provider) !== null)
     const close = (changed: boolean) => {
         overlays.closeWizard()
-        if (changed) router.refresh()
+        if (changed) void refreshConnections()
     }
     return (
         <ConnectionWizardOverlayBase
             props={{
                 title: def === null ? "" : t(providerKey(def.id, "title")),
                 closeLabel: t("close"),
-                workspaceId: props.workspaceId,
                 ownerEmail: props.ownerEmail,
                 target,
                 agents: props.agents,

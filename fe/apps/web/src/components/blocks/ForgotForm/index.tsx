@@ -2,7 +2,8 @@
 
 import { useState, useTransition } from "react"
 import { useTranslations } from "next-intl"
-import { EMAIL_PATTERN, authErrorKey, useResendEmail, useAuthActions } from "@/hooks/auth"
+import { authErrorKey, useResendEmail, useAuthActions } from "@/hooks/auth"
+import { useForgotForm } from "@/hooks/rhf"
 import { AUTH_ROUTES } from "@/modules/routes"
 import { ForgotFormBase } from "./component"
 
@@ -13,8 +14,7 @@ type ForgotFormProps = { readonly initialEmail?: string }
 export const ForgotForm = (props: ForgotFormProps) => {
     const auth = useAuthActions()
     const t = useTranslations("auth")
-    const [email, setEmail] = useState(props.initialEmail ?? "")
-    const [error, setError] = useState<string>()
+    const form = useForgotForm(props.initialEmail)
     const [failure, setFailure] = useState<string>()
     const [sentTo, setSentTo] = useState<string | null>(null)
     const [isPending, startTransition] = useTransition()
@@ -27,23 +27,18 @@ export const ForgotForm = (props: ForgotFormProps) => {
         waitLabel: (seconds) => t("resendWait", { seconds }),
     })
 
-    const submit = () => {
+    const submit = form.handleSubmit((values) => {
         setFailure(undefined)
-        if (!EMAIL_PATTERN.test(email.trim())) {
-            setError(t("errEmail"))
-            return
-        }
-        setError(undefined)
         startTransition(async () => {
-            const outcome = await auth.requestPasswordReset({ email })
+            const outcome = await auth.requestPasswordReset({ email: values.email })
             if (outcome.kind === "ok") {
-                setSentTo(email.trim().toLowerCase())
+                setSentTo(values.email.trim().toLowerCase())
                 resending.arm()
                 return
             }
             setFailure(t(authErrorKey(outcome.code)))
         })
-    }
+    })
 
     return (
         <ForgotFormBase
@@ -57,8 +52,8 @@ export const ForgotForm = (props: ForgotFormProps) => {
                 submitLabel: t("forgotSubmit"),
                 backLabel: t("backToSignIn"),
                 loginHref: AUTH_ROUTES.login,
-                email,
-                emailError: error,
+                email: form.watch("email"),
+                emailError: form.formState.errors.email?.message,
                 isPending,
                 sentTitle: t("forgotSentTitle"),
                 check: {
@@ -72,7 +67,10 @@ export const ForgotForm = (props: ForgotFormProps) => {
                     },
                 },
             }}
-            on={{ setEmail, submit }}
+            on={{
+                setEmail: (value) => form.setValue("email", value, { shouldValidate: form.formState.isSubmitted }),
+                submit: () => void submit(),
+            }}
         />
     )
 }

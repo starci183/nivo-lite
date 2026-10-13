@@ -1,6 +1,7 @@
 "use client"
 
 import { useTranslations } from "next-intl"
+import { useAuthActions } from "@/hooks/auth"
 import { navigation } from "@/modules/i18n"
 import { useState } from "react"
 import type { DropdownMenuEntry } from "@starci/grammar/common"
@@ -8,14 +9,13 @@ import {
     LEADS_ROUTE,
     OFFICE_ROUTE,
     ROLE_LABELS,
+    useConsoleShell,
     useSignOut,
     useSwitchWorkspace,
     workspaceEntries,
 } from "@/hooks/console"
 import { useLocaleSwitch } from "@/hooks/locale"
-import { writeSignOut } from "@/modules/db/auth/write-sign-out"
-import { writeSwitchWorkspace } from "@/modules/db/shell/write-switch-workspace"
-import type { ConsolePending, ConsoleWorkspace } from "@/modules/types"
+import type { ConsoleWorkspace } from "@/modules/types"
 import { ConsoleHeaderBase } from "./component"
 
 /** What the console layout reads for the top bar: plain session facts and the real counts. */
@@ -27,20 +27,17 @@ type ConsoleHeaderProps = {
     readonly role: "owner" | "manager" | "staff"
     readonly workspaces: ReadonlyArray<ConsoleWorkspace>
     readonly currentWorkspaceId: string
-    readonly pending: ReadonlyArray<ConsolePending>
-    readonly pendingCount: number
-    /** The installed Chatbot agent, when there is one: the New menu then offers to test it instead of buying it. */
-    readonly chatbotAgentId: string | null
-    readonly isFoundingMember: boolean
 }
 
 /** The connected console top bar: workspace, search, New menu, language, notifications and the account menu. */
 export const ConsoleHeader = (props: ConsoleHeaderProps) => {
+    const auth = useAuthActions()
+    const shell = useConsoleShell(props.currentWorkspaceId)
     const t = useTranslations("shell")
     const tPromo = useTranslations("promo")
     const router = navigation.useRouter()
-    const signOut = useSignOut(writeSignOut)
-    const switchWorkspace = useSwitchWorkspace(props.currentWorkspaceId, writeSwitchWorkspace)
+    const signOut = useSignOut(auth.endSession)
+    const switchWorkspace = useSwitchWorkspace(props.currentWorkspaceId)
     const language = useLocaleSwitch()
     const [query, setQuery] = useState("")
     const [isNotificationsOpen, setNotificationsOpen] = useState(false)
@@ -63,8 +60,8 @@ export const ConsoleHeader = (props: ConsoleHeaderProps) => {
     const newEntries: ReadonlyArray<DropdownMenuEntry> = [
         { id: "new-lead", label: t("newLead"), href: `${LEADS_ROUTE}?new=1` },
         { id: "add-module", label: t("addModule"), href: "/agents" },
-        props.chatbotAgentId
-            ? { id: "test-chatbot", label: t("testChatbot"), href: `/modules/${props.chatbotAgentId}/chat` }
+        shell.chatbotAgentId
+            ? { id: "test-chatbot", label: t("testChatbot"), href: `/modules/${shell.chatbotAgentId}/chat` }
             : { id: "buy-chatbot", label: t("buyChatbot"), href: "/modules/new?module=chatbot" },
     ]
     return (
@@ -76,7 +73,7 @@ export const ConsoleHeader = (props: ConsoleHeaderProps) => {
                 avatarUrl: props.avatarUrl ?? undefined,
                 roleLabel,
                 isStaff: props.role === "staff",
-                isFoundingMember: props.isFoundingMember,
+                isFoundingMember: shell.isFoundingMember,
                 foundingLabel: tPromo("foundingMember"),
                 workspaceEntries: workspaces,
                 accountEntries,
@@ -89,15 +86,15 @@ export const ConsoleHeader = (props: ConsoleHeaderProps) => {
                 locale: language.locale,
                 isLocalePending: language.isPending,
                 localeOptions: language.options,
-                pending: props.pending,
-                pendingCount: props.pendingCount,
+                pending: shell.pending,
+                pendingCount: shell.pendingCount,
                 isNotificationsOpen,
                 notificationsCopy: {
                     bell: t("notifications"),
                     title:
-                        props.pendingCount === 0
+                        shell.pendingCount === 0
                             ? t("notifications")
-                            : t("pendingTitle", { count: props.pendingCount }),
+                            : t("pendingTitle", { count: shell.pendingCount }),
                     nothingWaiting: t("nothingWaiting"),
                     openOffice: t("openOffice"),
                 },

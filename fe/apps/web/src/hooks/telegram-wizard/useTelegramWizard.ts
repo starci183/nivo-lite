@@ -1,14 +1,14 @@
 import { useTranslations } from "next-intl"
 import { useState, useTransition } from "react"
-import { allAgentIds, useChannelReason } from "@/hooks/connection-wizard"
+import { allAgentIds } from "@/hooks/connection-wizard"
+import { useSetConnectionAgents } from "@/hooks/connections"
 import type { AgentOption, WizardNote } from "@/modules/types"
 import { checkNoteOf, TELEGRAM_STEPS } from "./telegram-wizard.shared"
-import type { TelegramActions } from "./telegram-wizard.shared"
+import { useTelegramCommands } from "./useTelegramCommands"
 
 /** What the Telegram wizard needs from its drawer. */
 interface TelegramWizardInput {
     readonly agents: ReadonlyArray<AgentOption>
-    readonly actions: TelegramActions
     /** `changed` is true when something was saved, so the list should refresh. */
     readonly onClose: (changed: boolean) => void
 }
@@ -19,7 +19,8 @@ interface TelegramWizardInput {
  */
 export const useTelegramWizard = (input: TelegramWizardInput) => {
     const tc = useTranslations("connections")
-    const reasonOf = useChannelReason()
+    const commands = useTelegramCommands()
+    const setAgentsOf = useSetConnectionAgents()
     const [index, setIndex] = useState(0)
     const [form, setForm] = useState({ name: "", token: "" })
     const [connectionId, setConnectionId] = useState<string | null>(null)
@@ -37,18 +38,14 @@ export const useTelegramWizard = (input: TelegramWizardInput) => {
     const runCheck = (id: string) =>
         startChecking(async () => {
             setCheck(null)
-            const answer = await input.actions.check(id)
-            setCheck(
-                answer.kind === "ok"
-                    ? checkNoteOf(answer.value, tc)
-                    : { tone: "negative", text: reasonOf(answer.code) },
-            )
+            const answer = await commands.check(id)
+            setCheck(answer.kind === "ok" ? checkNoteOf(answer.value, tc) : { tone: "negative", text: answer.message })
         })
 
     const connect = () =>
         startTransition(async () => {
-            const answer = await input.actions.connect(form)
-            if (answer.kind !== "ok") return setError(reasonOf(answer.code))
+            const answer = await commands.connect(form)
+            if (answer.kind !== "ok") return setError(answer.message)
             setConnectionId(answer.value.connection.id)
             go(2)
             runCheck(answer.value.connection.id)
@@ -57,8 +54,8 @@ export const useTelegramWizard = (input: TelegramWizardInput) => {
     const finish = () =>
         startTransition(async () => {
             if (connectionId === null) return input.onClose(false)
-            const answer = await input.actions.setAgents(connectionId, agentIds)
-            if (answer.kind !== "ok") return setError(reasonOf(answer.code))
+            const answer = await setAgentsOf(connectionId, agentIds)
+            if (answer.kind !== "ok") return setError(answer.message)
             input.onClose(true)
         })
 

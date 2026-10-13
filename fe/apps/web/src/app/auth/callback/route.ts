@@ -2,8 +2,8 @@ import "server-only"
 
 import { NextResponse, type NextRequest } from "next/server"
 import { requestOrigin } from "@/lib/request-origin"
-import { exchangeAuthCode, readPostAuthPath, verifyEmailLink } from "@/modules/db"
-import { APP_ROUTES, safeNextPath } from "@/modules/routes"
+import { exchangeAuthCode, verifyEmailLink } from "@/modules/db"
+import { APP_ROUTES, AUTH_ROUTES, safeNextPath } from "@/modules/routes"
 
 const EMAIL_LINK_ROUTES: ReadonlySet<string> = new Set(["/auth/confirm", APP_ROUTES.authCallback])
 
@@ -20,7 +20,7 @@ const unwrapNext = (raw: string | null, origin: string): string | null => {
  * The one auth return route, in every shape Supabase sends people back in (`/auth/confirm` is rewritten to it, so mailed links keep working):
  * - a PKCE `code` (OAuth, Supabase's own templates);
  * - `token_hash` + `type` (NIVO's e-mail templates), with `next` that may itself be this route's URL.
- * The credential becomes a session cookie, then: recovery -> /reset-password, anything else -> `next` or the console.
+ * The credential becomes a session cookie, then: recovery -> /reset-password, anything else -> `next` or the workspaces home.
  */
 export const GET = async (request: NextRequest): Promise<NextResponse> => {
     const { searchParams } = request.nextUrl
@@ -45,5 +45,5 @@ export const GET = async (request: NextRequest): Promise<NextResponse> => {
         return fail(type === null ? "missing_code" : "link_expired")
     }
     if (isRecovery) return to("/reset-password")
-    return to(await readPostAuthPath(next, origin))
+    return to(next ?? AUTH_ROUTES.workspaces)
 }
