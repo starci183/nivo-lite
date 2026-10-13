@@ -85,7 +85,7 @@ export const requestPasswordReset = async (input: unknown): Promise<AuthOutcome<
         redirectTo: confirmUrl(window.location.origin, AUTH_ROUTES.resetPassword),
     })
     const failed = failureOf(error)
-    return failed !== undefined && isRateLimited(failed.code) ? failed : authOk(true)
+    return failed !== undefined && isRateLimited(failed.error ?? "") ? failed : authOk(true)
 }
 
 /** Sets a new password for the person who arrived through the recovery link, then ends every session so they sign in again. */
