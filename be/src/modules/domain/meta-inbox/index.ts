@@ -1,4 +1,4 @@
-export { META_INBOUND_QUEUE } from "./meta-inbox.contracts"
+export { META_INBOUND_QUEUE, isMetaInboundJob } from "./meta-inbox.contracts"
 export type { MetaInboundJob } from "./meta-inbox.contracts"
 export { MetaInboxModule } from "./meta-inbox.module"
 export type { MetaInboxOptions } from "./meta-inbox.options"

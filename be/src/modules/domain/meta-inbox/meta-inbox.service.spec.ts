@@ -1,6 +1,8 @@
 import { fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
+import { isTransactionManager } from "@starci/jest-preset/entity-manager"
 import { Test } from "@nestjs/testing"
 import { ConnectionsService } from "@modules/domain/connections"
+import { ConversationsService } from "@modules/domain/conversations"
 import { META_CLIENT } from "@modules/integrations/meta"
 import type { MetaClient, MetaEvent } from "@modules/integrations/meta"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
@@ -8,6 +10,7 @@ import { QUEUE_OUTBOX } from "@modules/platform/queue"
 import type { QueueOutbox } from "@modules/platform/queue"
 import { MetaInboxError, MetaInboxErrorCode } from "./errors/meta-inbox.error"
 import { META_INBOUND_QUEUE } from "./meta-inbox.contracts"
+import type { MetaInboundJob } from "./meta-inbox.contracts"
 import { MetaInboxService } from "./meta-inbox.service"
 import {
     COMPLETE_META_INBOX,
@@ -62,6 +65,7 @@ const build = async (events: ReadonlyArray<MetaEvent> = [], claimed = [{ id: "in
     meta.verifyDelivery.mockReturnValue(true)
     meta.parse.mockReturnValue([...events])
     const outbox = mock<QueueOutbox>()
+    const conversations = mock<ConversationsService>()
     const moduleRef = await Test.createTestingModule({
         providers: [
             MetaInboxService,
@@ -69,9 +73,10 @@ const build = async (events: ReadonlyArray<MetaEvent> = [], claimed = [{ id: "in
             { provide: META_CLIENT, useValue: meta },
             { provide: QUEUE_OUTBOX, useValue: outbox },
             { provide: ConnectionsService, useValue: connections },
+            { provide: ConversationsService, useValue: conversations },
         ],
     }).compile()
-    return { service: moduleRef.get(MetaInboxService), tx, meta, connections, outbox }
+    return { service: moduleRef.get(MetaInboxService), tx, meta, connections, outbox, conversations }
 }
 
 describe("MetaInboxService", () => {
@@ -307,5 +312,114 @@ describe("MetaInboxService", () => {
             [INSERT_META_INBOX, ["meta", DELIVERY_ID, JSON.stringify(BODY)]],
             [TOUCH_META_THREAD, ["connection-1", "facebook", "person-1", AT]],
         ])
+    })
+
+    describe("deliver", () => {
+        it.each([
+            {
+                name: "a Facebook DM with its PSID taking precedence",
+                inbound: event({ sender_igsid: "other-person" }),
+                personId: "person-1",
+                visitor: "Lan",
+            },
+            {
+                name: "an Instagram DM with its IGSID and a null visitor",
+                inbound: event({
+                    platform: "instagram",
+                    sender_psid: null,
+                    sender_igsid: "ig-person-1",
+                    sender_name: null,
+                    text: "Instagram hello",
+                    event_key: "dm:instagram-message-1",
+                }),
+                personId: "ig-person-1",
+                visitor: null,
+            },
+        ])("delivers $name in one transaction", async ({ inbound, personId, visitor }) => {
+            const { service, tx, conversations, connections, outbox } = await build()
+            const job: MetaInboundJob = { connectionId: "connection-1", workspaceId: "workspace-1", event: inbound }
+
+            await expect(service.deliver(job)).resolves.toBeUndefined()
+
+            const manager = conversations.acceptMeta.mock.calls[0]?.[2]
+            expect(isTransactionManager(manager)).toBe(true)
+            expect(manager).not.toBe(tx.em)
+            expect(conversations.acceptMeta.mock.calls).toEqual([
+                [
+                    "connection-1",
+                    {
+                        platform: inbound.platform,
+                        personId,
+                        visitor,
+                        text: inbound.text,
+                        eventId: inbound.event_key,
+                    },
+                    manager,
+                ],
+            ])
+            expect(tx.commits).toBe(1)
+            expect(tx.rollbacks).toBe(0)
+            expect(tx.em.transaction).toHaveBeenCalledTimes(1)
+            expect(tx.em.query).not.toHaveBeenCalled()
+            expect(connections.findLiveByMeta).not.toHaveBeenCalled()
+            expect(outbox.write).not.toHaveBeenCalled()
+        })
+
+        it.each([
+            { name: "a postback", inbound: event({ kind: "postback" }) },
+            { name: "a comment", inbound: event({ kind: "comment" }) },
+            { name: "a mention", inbound: event({ kind: "mention" }) },
+            { name: "a lead ad", inbound: event({ kind: "leadgen" }) },
+            { name: "a DM without a person", inbound: event({ sender_psid: null, sender_igsid: null }) },
+            { name: "a DM without text", inbound: event({ text: null }) },
+            { name: "a DM with empty text", inbound: event({ text: "" }) },
+        ])("leaves $name alone", async ({ inbound }) => {
+            const { service, tx, conversations } = await build()
+
+            await expect(
+                service.deliver({ connectionId: "connection-1", workspaceId: "workspace-1", event: inbound }),
+            ).resolves.toBeUndefined()
+
+            expect(conversations.acceptMeta).not.toHaveBeenCalled()
+            expect(tx.em.transaction).not.toHaveBeenCalled()
+            expect(tx.outcomes).toEqual([])
+        })
+
+        it("normalizes omitted runtime text before handing the DM to conversations", async () => {
+            const { service, tx, conversations } = await build()
+            const incompleteEvent = { ...event(), text: undefined } as unknown as MetaEvent
+
+            await service.deliver({
+                connectionId: "connection-1",
+                workspaceId: "workspace-1",
+                event: incompleteEvent,
+            })
+
+            const manager = conversations.acceptMeta.mock.calls[0]?.[2]
+            expect(isTransactionManager(manager)).toBe(true)
+            expect(manager).not.toBe(tx.em)
+            expect(conversations.acceptMeta.mock.calls).toEqual([
+                [
+                    "connection-1",
+                    { platform: "facebook", personId: "person-1", visitor: "Lan", text: "", eventId: "dm:message-1" },
+                    manager,
+                ],
+            ])
+            expect(tx.commits).toBe(1)
+        })
+
+        it("rolls back and propagates a failure from the conversation", async () => {
+            const { service, tx, conversations } = await build()
+            const failure = new Error("conversation failed")
+            conversations.acceptMeta.mockRejectedValue(failure)
+
+            await expect(
+                service.deliver({ connectionId: "connection-1", workspaceId: "workspace-1", event: event() }),
+            ).rejects.toBe(failure)
+
+            expect(conversations.acceptMeta).toHaveBeenCalledTimes(1)
+            expect(tx.rollbacks).toBe(1)
+            expect(tx.commits).toBe(0)
+        })
     })
 })

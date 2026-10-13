@@ -12,6 +12,7 @@ export type {
     ChatTurnProposal,
     ChatTurnRuntime,
     CustomerOutcomes,
+    MetaInbound,
     RuntimeAnswer,
     TelegramInbound,
     TurnVerdict,

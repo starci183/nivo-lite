@@ -2,6 +2,7 @@ import { createHash } from "node:crypto"
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { ConnectionsService } from "@modules/domain/connections"
+import { ConversationsService } from "@modules/domain/conversations"
 import { InjectMetaClient } from "@modules/integrations/meta"
 import type { MetaClient, MetaEvent } from "@modules/integrations/meta"
 import { acceptWebhookDelivery, InjectPrimaryEntityManager } from "@modules/platform/database"
@@ -29,6 +30,7 @@ export class MetaInboxService {
         @InjectMetaClient() private readonly meta: MetaClient,
         @InjectQueueOutbox() private readonly outbox: QueueOutbox,
         private readonly connections: ConnectionsService,
+        private readonly conversations: ConversationsService,
     ) {}
 
     /** Verifies and records the delivery; a delivery that carries no event of ours is acknowledged and dropped. */
@@ -48,6 +50,30 @@ export class MetaInboxService {
             payload: body as object,
             process: (manager) => this.process(events, manager),
         })
+    }
+
+    /**
+     * Hands one queued event to the conversation of its customer: a direct message is stored and answered by the front-door agent bound
+     * to the connection (in one transaction with its chat-turn job). Postbacks, comments, mentions and lead ads are the business of the
+     * lead-flow lanes and are left alone here.
+     */
+    async deliver(job: MetaInboundJob): Promise<void> {
+        const { event } = job
+        const person = event.sender_psid ?? event.sender_igsid
+        if (event.kind !== "dm" || person === null || event.text === null || event.text === "") return
+        await this.entityManager.transaction((manager) =>
+            this.conversations.acceptMeta(
+                job.connectionId,
+                {
+                    platform: event.platform,
+                    personId: person,
+                    visitor: event.sender_name,
+                    text: event.text ?? "",
+                    eventId: event.event_key,
+                },
+                manager,
+            ),
+        )
     }
 
     private readJson(rawBody: Buffer): unknown {

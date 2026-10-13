@@ -261,13 +261,8 @@ import {
     WEBHOOK_DELIVERY_MESSAGES,
     WebhookDeliveryModule,
 } from "@modules/integrations/webhook-delivery"
-import { ConnectionsHttpModule } from "@features/api/connections"
-import { ConnectionGrantsHttpModule } from "@features/api/connection-grants"
-import { ChannelConnectionsHttpModule } from "@features/api/channel-connections"
-import { WebhookConnectionsHttpModule } from "@features/api/webhook-connections"
 import { GoogleConnectionsHttpModule } from "@features/api/google-connections"
 import { MetaConnectionsHttpModule } from "@features/api/meta-connections"
-import { ConnectionLifecycleHttpModule } from "@features/api/connection-lifecycle"
 import { CONTENT_MESSAGES, ContentModule } from "@modules/domain/content"
 import { CONTENT_ITEMS_ERROR_KINDS, CONTENT_ITEMS_MESSAGES, ContentItemsModule } from "@modules/domain/content-items"
 import { ContentSettingsModule } from "@modules/domain/content-settings"
@@ -280,6 +275,7 @@ import { TTS_ERROR_KINDS, TTS_MESSAGES, TtsModule } from "@modules/integrations/
 import { CONTENT_TICK_EVERY_MS, CONTENT_TICK_QUEUE, CONTENT_TICK_SCHEDULER } from "@modules/queues/content-tick"
 import { RendersHttpModule } from "@features/api/renders"
 import { PublishContentQueueModule } from "@features/jobs/publish-content"
+import { AcceptMetaEventQueueModule } from "@features/jobs/accept-meta-event"
 import { IssueInviteQueueModule } from "@features/jobs/issue-invite"
 import { RenderVideoQueueModule } from "@features/jobs/render-video"
 import { ConnectionCommandsQueueModule } from "@features/jobs/connection-commands"
@@ -519,6 +515,7 @@ export class AppModule {
                 RenderVideoQueueModule,
                 RequestRenderQueueModule,
                 PublishContentQueueModule,
+                AcceptMetaEventQueueModule,
                 ConnectionCommandsQueueModule,
                 RendersHttpModule,
                 LivenessModule.register({ isGlobal: true }),
@@ -619,13 +616,8 @@ export class AppModule {
                 LoyaltyHttpModule,
                 LoyaltyTillHttpModule,
                 WorkspacesHttpModule,
-                ConnectionsHttpModule,
-                ConnectionGrantsHttpModule,
-                ChannelConnectionsHttpModule,
-                WebhookConnectionsHttpModule,
                 GoogleConnectionsHttpModule,
                 MetaConnectionsHttpModule,
-                ConnectionLifecycleHttpModule,
                 AdminHttpModule,
             ],
             providers: [
