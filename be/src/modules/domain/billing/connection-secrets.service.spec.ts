@@ -1,6 +1,6 @@
 import { createCipheriv, randomBytes } from "node:crypto"
 import { Test } from "@nestjs/testing"
-import { mock, mockEntityManager } from "@starci/jest-preset"
+import { builder, mock, mockEntityManager } from "@starci/jest-preset"
 import { Secret } from "@modules/platform/config"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { LOGGER } from "@modules/platform/logging"
@@ -20,21 +20,21 @@ const encrypt = (plain: string): string => {
     return Buffer.concat([iv, cipher.getAuthTag(), body]).toString("base64")
 }
 
-const optionsWith = (channelTokenKey: Secret | undefined): BillingOptions => ({
+const OPTIONS: BillingOptions = {
     sepayApiKey: undefined,
     bankAccount: { account: "", bank: "", holder: "" },
     simulatedBank: { secret: undefined, workspaceId: undefined },
-    channelTokenKey,
-})
+    channelTokenKey: new Secret(KEY),
+}
 
-const build = async (rows: Array<object>, options: BillingOptions = optionsWith(new Secret(KEY))) => {
+const build = async (rows: Array<object>, options: Partial<BillingOptions> = {}) => {
     const em = mockEntityManager({ query: [SELECT_CONNECTION_SECRET, rows] })
     const logger = mock<Logger>()
     const moduleRef = await Test.createTestingModule({
         providers: [
             ConnectionSecretsService,
             { provide: PRIMARY_ENTITY_MANAGER, useValue: em },
-            { provide: BILLING_OPTIONS, useValue: options },
+            { provide: BILLING_OPTIONS, useValue: builder<BillingOptions>(OPTIONS)(options) },
             { provide: LOGGER, useValue: logger },
         ],
     }).compile()
@@ -80,8 +80,8 @@ describe("ConnectionSecretsService", () => {
     })
 
     it("answers null and logs when the credential cannot be decrypted", async () => {
-        const wrongKey = await build([row()], optionsWith(new Secret(randomBytes(32).toString("base64"))))
-        const noKey = await build([row()], optionsWith(undefined))
+        const wrongKey = await build([row()], { channelTokenKey: new Secret(randomBytes(32).toString("base64")) })
+        const noKey = await build([row()], { channelTokenKey: undefined })
 
         await expect(wrongKey.secrets.load(CONNECTION_ID, "casso")).resolves.toBeNull()
         await expect(noKey.secrets.load(CONNECTION_ID, "casso")).resolves.toBeNull()

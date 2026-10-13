@@ -72,6 +72,24 @@ describe("ConnectionCommandsService", () => {
         expect(errors.describe).not.toHaveBeenCalled()
     })
 
+    it("runs the command a claimed job payload names", async () => {
+        const entityManager = mockEntityManager({ query: [FIND_COMMAND, []] })
+        const { service } = await build(entityManager)
+
+        await service.runPayload({ commandId: "command-9", workspaceId: "workspace-1" })
+
+        expect(entityManager.query.mock.calls).toEqual([[FIND_COMMAND, ["command-9"]]])
+    })
+
+    it("leaves a claimed job payload that names no command alone", async () => {
+        const entityManager = mockEntityManager({ query: [FIND_COMMAND, []] })
+        const { service } = await build(entityManager)
+
+        await expect(service.runPayload({ workspaceId: "workspace-1" })).resolves.toBeUndefined()
+
+        expect(entityManager.query).not.toHaveBeenCalled()
+    })
+
     it("does not run a command that is already done", async () => {
         const entityManager = mockEntityManager({ query: [FIND_COMMAND, [{ ...row, status: "done" }]] })
         const { service, connections, errors } = await build(entityManager)

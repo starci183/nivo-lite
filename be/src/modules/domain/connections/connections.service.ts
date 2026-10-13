@@ -1,6 +1,8 @@
-import { Inject, Injectable } from "@nestjs/common"
+import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
+import { InjectLogger } from "@modules/platform/logging"
+import type { Logger } from "@modules/platform/logging"
 import { ok, refused } from "@modules/platform/primitives"
 import type { Outcome } from "@modules/platform/primitives"
 import { decodeChannelKey, decryptSecret, encryptSecret, randomSecret } from "./connection-cipher.policy"
@@ -8,6 +10,7 @@ import { cleanConnectionName } from "./connection-name.policy"
 import { isPlannedConnector } from "./connector-catalog.policy"
 import { publicSiteUrl, webhookUrlFor } from "./connection-url.policy"
 import type {
+    ConfiguredUrl,
     ConnectionActor,
     ConnectionOwner,
     ConnectionEvent,
@@ -15,7 +18,6 @@ import type {
     ConnectionPatch,
     ConnectionRecord,
     ConnectionRole,
-    ConnectionSecret,
     CreateConnectionInput,
     FirstEvent,
     FirstEventState,
@@ -23,13 +25,21 @@ import type {
     HealthMark,
     IntakeConnection,
     ListByProviderOptions,
+    OptionalConnectionId,
+    OptionalConnectionOwner,
+    OptionalConnectionRecord,
+    OptionalConnectionSecret,
+    OptionalPublicOrigin,
+    OptionalRecordedEvent,
     Provider,
-    RecordedEvent,
+    SyncFacts,
+    SyncInterval,
     SyncSchedule,
     WizardSettlement,
 } from "./connections.contracts"
 import { toConnectionRecord } from "./connections.mapper"
-import { MODULE_OPTIONS_TOKEN } from "./connections.module-definition"
+import { InjectConnectionsOptions } from "./connections.decorators"
+import { ConnectionsLogEvent } from "./connections.log-events"
 import type { ConnectionsOptions } from "./connections.options"
 import { ConnectionsError, ConnectionsErrorCode } from "./errors/connections.error"
 import type {
@@ -87,7 +97,8 @@ export class ConnectionsService {
 
     constructor(
         @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
-        @Inject(MODULE_OPTIONS_TOKEN) options: ConnectionsOptions,
+        @InjectConnectionsOptions() options: ConnectionsOptions,
+        @InjectLogger() private readonly logger: Logger,
     ) {
         const key = decodeChannelKey(options.channelTokenKey.reveal())
         if (key === null) throw new ConnectionsError({ code: ConnectionsErrorCode.KeyInvalid })
@@ -97,7 +108,7 @@ export class ConnectionsService {
     }
 
     /** The webhook address a provider must call for a connection (built from the site url even on localhost, for display). */
-    webhookUrl(provider: Provider, connectionId: string, origin: string | undefined = this.providerUrl): string {
+    webhookUrl(provider: Provider, connectionId: string, origin: ConfiguredUrl = this.providerUrl): string {
         return webhookUrlFor(provider, connectionId, origin)
     }
 
@@ -107,7 +118,7 @@ export class ConnectionsService {
     }
 
     /** The public https origin providers can reach, or null on localhost, plain http or when unset. */
-    publicOrigin(): string | null {
+    publicOrigin(): OptionalPublicOrigin {
         return publicSiteUrl(this.providerUrl)
     }
 
@@ -128,7 +139,7 @@ export class ConnectionsService {
         workspaceId: string,
         id: string,
         manager: EntityManager = this.entityManager,
-    ): Promise<ConnectionRecord | null> {
+    ): Promise<OptionalConnectionRecord> {
         const [row] = await manager.query<Array<ConnectionSelectRow>>(FIND_CONNECTION, [workspaceId, id])
         return row === undefined ? null : toConnectionRecord(row)
     }
@@ -156,7 +167,7 @@ export class ConnectionsService {
         key: string,
         value: string,
         manager: EntityManager = this.entityManager,
-    ): Promise<ConnectionOwner | null> {
+    ): Promise<OptionalConnectionOwner> {
         const [row] = await manager.query<Array<{ id: string; workspace_id: string }>>(FIND_LIVE_BY_META, [
             provider,
             key,
@@ -198,7 +209,7 @@ export class ConnectionsService {
      * Creates a connection and its sealed secret in one transaction (inside the caller transaction when one is handed in), so
      * a secret that cannot be stored leaves no connection behind. Answers the id.
      */
-    async create(input: CreateConnectionInput, manager?: EntityManager): Promise<string> {
+    create(input: CreateConnectionInput, manager?: EntityManager): Promise<string> {
         const name = cleanConnectionName(input.name)
         if (name === null) throw new ConnectionsError({ code: ConnectionsErrorCode.NameInvalid })
         const write = async (tx: EntityManager): Promise<string> => {
@@ -239,12 +250,13 @@ export class ConnectionsService {
     }
 
     /** Opens the stored secret of a connection; null when there is none or it cannot be opened with the current key. */
-    async readSecret(connectionId: string): Promise<ConnectionSecret | null> {
+    async readSecret(connectionId: string): Promise<OptionalConnectionSecret> {
         const [row] = await this.entityManager.query<Array<SecretRow>>(FIND_SECRET, [connectionId])
         if (row === undefined) return null
         try {
             return { plain: decryptSecret(this.key, row.ciphertext), webhookSecret: row.webhook_secret }
-        } catch {
+        } catch (cause) {
+            this.logger.error(ConnectionsLogEvent.SecretUnreadable, cause, { connectionId })
             return null
         }
     }
@@ -274,7 +286,7 @@ export class ConnectionsService {
      * Remembers that an authenticated event reached the connection: pending or error becomes connected, the time is kept,
      * and the first event is stored once. Answers the connection name and environment, or null when it does not exist.
      */
-    async recordEvent(connectionId: string, event: ConnectionEvent): Promise<RecordedEvent | null> {
+    async recordEvent(connectionId: string, event: ConnectionEvent): Promise<OptionalRecordedEvent> {
         const first = {
             amount: Math.round(event.amount),
             content: event.content,
@@ -384,7 +396,7 @@ export class ConnectionsService {
     }
 
     /** Sets how often a connection syncs by itself (null is manual only); the first scheduled sync is due at once. */
-    async setSchedule(workspaceId: string, id: string, everyMinutes: number | null): Promise<void> {
+    async setSchedule(workspaceId: string, id: string, everyMinutes: SyncInterval): Promise<void> {
         const rows = await this.entityManager.query<Array<{ id: string }>>(SET_SYNC_SCHEDULE, [
             workspaceId,
             id,
@@ -394,7 +406,7 @@ export class ConnectionsService {
     }
 
     /** A sync finished: the connection works, the next sync is scheduled and the given public facts join the old ones. */
-    async markSynced(connectionId: string, facts: Readonly<Record<string, string>>): Promise<void> {
+    async markSynced(connectionId: string, facts: SyncFacts): Promise<void> {
         await this.entityManager.query(MARK_SYNCED, [connectionId, JSON.stringify(facts)])
     }
 
@@ -418,7 +430,7 @@ export class ConnectionsService {
     }
 
     /** The id of the workspace default SMTP connection, or null when it has none. */
-    async defaultSmtpId(workspaceId: string): Promise<string | null> {
+    async defaultSmtpId(workspaceId: string): Promise<OptionalConnectionId> {
         const [row] = await this.entityManager.query<Array<{ id: string }>>(FIND_DEFAULT_SMTP, [workspaceId])
         return row === undefined ? null : row.id
     }

@@ -63,16 +63,17 @@ const build = async (em: MockEntityManager, found: ReadonlyArray<ConnectionRecor
     return { service: moduleRef.get(ConnectionGrantsService), tx, connections }
 }
 
-const lookups = (grants: ReadonlyArray<{ agent_id: string; connection_id: string; access: string }> = []) =>
-    mockEntityManager({
-        query: [
-            [FIND_AGENTS, [AGENT]],
-            [FIND_GRANTS, grants],
-            [UPSERT_GRANT, []],
-            [DELETE_GRANT, []],
-            [INSERT_ACCESS_LOG, []],
-        ],
-    })
+type QueryStubs = ReadonlyArray<readonly [string, unknown]>
+
+const lookups = (
+    grants: ReadonlyArray<{ agent_id: string; connection_id: string; access: string }> = [],
+): QueryStubs => [
+    [FIND_AGENTS, [AGENT]],
+    [FIND_GRANTS, grants],
+    [UPSERT_GRANT, []],
+    [DELETE_GRANT, []],
+    [INSERT_ACCESS_LOG, []],
+]
 
 describe("ConnectionGrantsService", () => {
     describe("candidates", () => {
@@ -118,7 +119,7 @@ describe("ConnectionGrantsService", () => {
 
     describe("setGrant", () => {
         it("gives an agent access, writes the grant with its purpose and logs who changed what", async () => {
-            const { service, tx, connections } = await build(lookups())
+            const { service, tx, connections } = await build(mockEntityManager({ query: lookups() }))
 
             await service.setGrant(actor, "c1", "a1", "auto")
 
@@ -139,7 +140,7 @@ describe("ConnectionGrantsService", () => {
         })
 
         it("starts an unknown level at ask", async () => {
-            const { service, tx } = await build(lookups())
+            const { service, tx } = await build(mockEntityManager({ query: lookups() }))
 
             await service.setGrant(actor, "c1", "a1", "bogus")
 
@@ -147,7 +148,9 @@ describe("ConnectionGrantsService", () => {
         })
 
         it("removes an access and logs the level it had", async () => {
-            const { service, tx } = await build(lookups([{ agent_id: "a1", connection_id: "c1", access: "read" }]))
+            const { service, tx } = await build(
+                mockEntityManager({ query: lookups([{ agent_id: "a1", connection_id: "c1", access: "read" }]) }),
+            )
 
             await service.setGrant(actor, "c1", "a1", null)
 
@@ -156,7 +159,9 @@ describe("ConnectionGrantsService", () => {
         })
 
         it("writes nothing when the level is already the one asked", async () => {
-            const { service, tx } = await build(lookups([{ agent_id: "a1", connection_id: "c1", access: "ask" }]))
+            const { service, tx } = await build(
+                mockEntityManager({ query: lookups([{ agent_id: "a1", connection_id: "c1", access: "ask" }]) }),
+            )
 
             await service.setGrant(actor, "c1", "a1", "ask")
 
@@ -165,7 +170,9 @@ describe("ConnectionGrantsService", () => {
         })
 
         it("refuses a module that cannot use the provider", async () => {
-            const { service, tx } = await build(lookups(), [connection({ provider: "sepay", name: "Bank" })])
+            const { service, tx } = await build(mockEntityManager({ query: lookups() }), [
+                connection({ provider: "sepay", name: "Bank" }),
+            ])
 
             await expect(service.setGrant(actor, "c1", "a1", "ask")).rejects.toMatchObject({
                 code: ConnectionGrantsErrorCode.PairRefused,
@@ -175,7 +182,9 @@ describe("ConnectionGrantsService", () => {
         })
 
         it("refuses a first grant on a disconnected connection", async () => {
-            const { service } = await build(lookups(), [connection({ status: "disconnected" })])
+            const { service } = await build(mockEntityManager({ query: lookups() }), [
+                connection({ status: "disconnected" }),
+            ])
 
             await expect(service.setGrant(actor, "c1", "a1", "ask")).rejects.toMatchObject({
                 code: ConnectionGrantsErrorCode.ConnectionDisconnected,
@@ -184,9 +193,10 @@ describe("ConnectionGrantsService", () => {
         })
 
         it("lets an existing grant on a disconnected connection change level", async () => {
-            const { service, tx } = await build(lookups([{ agent_id: "a1", connection_id: "c1", access: "read" }]), [
-                connection({ status: "disconnected" }),
-            ])
+            const { service, tx } = await build(
+                mockEntityManager({ query: lookups([{ agent_id: "a1", connection_id: "c1", access: "read" }]) }),
+                [connection({ status: "disconnected" })],
+            )
 
             await service.setGrant(actor, "c1", "a1", "auto")
 
@@ -202,7 +212,7 @@ describe("ConnectionGrantsService", () => {
                     ],
                 }),
             )
-            const noConnection = await build(lookups(), [])
+            const noConnection = await build(mockEntityManager({ query: lookups() }), [])
 
             await expect(noAgent.service.setGrant(actor, "c1", "a1", "ask")).rejects.toMatchObject({
                 code: ConnectionsErrorCode.NotFound,
@@ -215,7 +225,7 @@ describe("ConnectionGrantsService", () => {
         })
 
         it("stops before any write when the caller is not the owner", async () => {
-            const { service, tx, connections } = await build(lookups())
+            const { service, tx, connections } = await build(mockEntityManager({ query: lookups() }))
             const refused = new Error("CONNECTIONS_FORBIDDEN")
             connections.authorize.mockRejectedValue(refused)
 

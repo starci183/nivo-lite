@@ -12,10 +12,17 @@ import type { MessageCatalog } from "@modules/platform/i18n"
 import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import type { ChatTurnPayload } from "@modules/queues/chat-turn"
-import { ChatTurnExtensionsService } from "./chat-turn-extensions.service"
 import { ChatTurnService } from "./chat-turn.service"
 import { CHAT_TURN_EXTENSIONS } from "./conversations.decorators"
-import type { ChatTurn, ChatTurnProposal, ChatTurnRuntime, CustomerOutcomes } from "./conversations.contracts"
+import type {
+    ChatTurn,
+    ChatTurnExtensions,
+    ChatTurnProposal,
+    ChatTurnRuntime,
+    CustomerOutcomes,
+    RegisteredOutcomes,
+    RegisteredRuntime,
+} from "./conversations.contracts"
 import { FIND_HOLDING_SETTING } from "./persistence/conversations.sql"
 
 const NOW = Date.parse("2026-10-12T10:00:00.000Z")
@@ -83,8 +90,19 @@ const build = async (setup: Setup = {}) => {
     delivery.showTyping.mockResolvedValue(undefined)
     delivery.customerName.mockResolvedValue(setup.name ?? "")
     const logger = mock<Logger>()
-    const extensions = new ChatTurnExtensionsService()
-    const catalog: MessageCatalog = { get: (key) => `<${key}>` }
+    let runtime: RegisteredRuntime = undefined
+    let outcomes: RegisteredOutcomes = undefined
+    const extensions = mock<ChatTurnExtensions>({
+        useRuntime: (next) => {
+            runtime = next
+        },
+        useOutcomes: (next) => {
+            outcomes = next
+        },
+        runtime: () => runtime,
+        outcomes: () => outcomes,
+    })
+    const catalog = mock<MessageCatalog>({ get: (key) => `<${key}>` })
     const moduleRef = await Test.createTestingModule({
         providers: [
             ChatTurnService,

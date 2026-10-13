@@ -237,3 +237,38 @@ export interface SyncSchedule {
     /** When the last sync finished, ISO 8601; null when none did. */
     readonly lastSyncAt: string | null
 }
+
+/** A configured site or API url as the deployment gave it; undefined when it sets none. */
+export type ConfiguredUrl = string | undefined
+
+/** A public https origin providers can reach; null when the site is local, plain http or unset. */
+export type OptionalPublicOrigin = string | null
+
+/** The AES key that seals connection secrets; null when the configured value is not exactly 32 bytes. */
+export type OptionalChannelKey = Buffer | null
+
+/** A connection name fit to store; null when too little of it remains after trimming. */
+export type OptionalConnectionName = string | null
+
+/** A connection of the workspace; null when it does not exist there. */
+export type OptionalConnectionRecord = ConnectionRecord | null
+
+/** The connection that owns a public fact; null when no live connection claims it. */
+export type OptionalConnectionOwner = ConnectionOwner | null
+
+/** An opened connection secret; null when none is stored or it cannot be opened with the current key. */
+export type OptionalConnectionSecret = ConnectionSecret | null
+
+/** What recording an event answers; null when the connection does not exist. */
+export type OptionalRecordedEvent = RecordedEvent | null
+
+/** Minutes between two scheduled syncs; null switches the connection to manual syncs only. */
+export type SyncInterval = number | null
+
+/** Public facts a finished sync adds to a connection (row counts, sheet names), merged over the old ones. */
+export interface SyncFacts {
+    readonly [fact: string]: string
+}
+
+/** The id of a workspace's default SMTP connection; null when it has none. */
+export type OptionalConnectionId = string | null

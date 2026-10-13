@@ -1,4 +1,5 @@
 import type { ZaloPkce, ZaloSecret } from "@modules/integrations/channel-setup"
+import { parseJsonText } from "@modules/platform/primitives"
 
 type Json = Readonly<Record<string, unknown>>
 
@@ -16,12 +17,9 @@ const pkceOf = (value: unknown): ZaloPkce | undefined => {
 
 /** The Zalo credential kept in a sealed secret, or null when the text is not one (a corrupt or foreign secret). */
 export const parseZaloSecret = (plain: string): ZaloSecret | null => {
-    let parsed: unknown
-    try {
-        parsed = JSON.parse(plain)
-    } catch {
-        return null
-    }
+    const read = parseJsonText(plain)
+    if (!read.ok) return null
+    const parsed = read.value
     if (!isJson(parsed) || typeof parsed.appId !== "string" || typeof parsed.appSecret !== "string") return null
     const pkce = pkceOf(parsed.pkce)
     const accessToken = textOf(parsed.accessToken)

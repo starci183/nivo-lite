@@ -1,4 +1,8 @@
+import { Test } from "@nestjs/testing"
 import { FakeClock, mock } from "@starci/jest-preset"
+import { CLOCK } from "@modules/platform/clock"
+import { MESSAGE_CATALOG } from "@modules/platform/i18n"
+import { LOGGER } from "@modules/platform/logging"
 import { AutomationPipelinesService } from "@modules/domain/automation-pipelines"
 import { AutomationRunsService } from "@modules/domain/automation-runs"
 import { AutomationTemplatesService } from "@modules/domain/automation-templates"
@@ -21,6 +25,7 @@ import {
     buildShop,
     buildTemplate,
 } from "@tests/fixtures/builders/automations.builder"
+import { AUTOMATION_OFFICE, AUTOMATION_TEXT } from "./automations.decorators"
 import { AutomationsLogEvent } from "./automations.log-events"
 import { AutomationsService } from "./automations.service"
 import { AutomationsErrorCode } from "./errors/automations.error"
@@ -45,7 +50,7 @@ const message = (): TemplateDefinition =>
         contentMode: "fixed",
     })
 
-const build = (def: TemplateDefinition = message(), withText = false) => {
+const build = async (def: TemplateDefinition = message()) => {
     const clock = new FakeClock(NOW)
     const catalog = mock<MessageCatalog>()
     catalog.get.mockImplementation((key, params) => `${key}${JSON.stringify(params)}`)
@@ -53,6 +58,7 @@ const build = (def: TemplateDefinition = message(), withText = false) => {
     const office = mock<AutomationOffice>()
     office.logEvidence.mockResolvedValue()
     const text = mock<AutomationText>()
+    text.generate.mockResolvedValue(null)
     const templates = mock<AutomationTemplatesService>()
     templates.templateOf.mockResolvedValue(def)
     templates.listTemplates.mockResolvedValue([def])
@@ -79,28 +85,32 @@ const build = (def: TemplateDefinition = message(), withText = false) => {
     extensions.googleAccounts.mockResolvedValue([{ id: "g-1", email: "a@b.c", status: "active" }])
     const n8nRuns = mock<N8nRunsService>()
     const engine = mock<AutomationEngineService>()
-    const service = new AutomationsService(
-        clock,
-        catalog,
-        logger,
-        office,
-        withText ? text : undefined,
-        templates,
-        pipelines,
-        runs,
-        shop,
-        members,
-        extensions,
-        n8nRuns,
-        engine,
-    )
+    const moduleRef = await Test.createTestingModule({
+        providers: [
+            AutomationsService,
+            { provide: CLOCK, useValue: clock },
+            { provide: MESSAGE_CATALOG, useValue: catalog },
+            { provide: LOGGER, useValue: logger },
+            { provide: AUTOMATION_OFFICE, useValue: office },
+            { provide: AUTOMATION_TEXT, useValue: text },
+            { provide: AutomationTemplatesService, useValue: templates },
+            { provide: AutomationPipelinesService, useValue: pipelines },
+            { provide: AutomationRunsService, useValue: runs },
+            { provide: AutomationShopService, useValue: shop },
+            { provide: WorkspaceMembersService, useValue: members },
+            { provide: AutomationExtensionsService, useValue: extensions },
+            { provide: N8nRunsService, useValue: n8nRuns },
+            { provide: AutomationEngineService, useValue: engine },
+        ],
+    }).compile()
+    const service = moduleRef.get(AutomationsService)
     return { service, logger, office, text, templates, pipelines, runs, shop, members, extensions, n8nRuns, engine }
 }
 
 describe("AutomationsService", () => {
     describe("overview", () => {
         it("assembles the cards, the history, the shop and the sample for an owner or manager", async () => {
-            const { service, members } = build()
+            const { service, members } = await build()
 
             const overview = await service.overview("u-1", "ws-1")
 
@@ -114,7 +124,7 @@ describe("AutomationsService", () => {
 
     describe("history", () => {
         it("lists the runs of the workspace, or of a template that has a pipeline", async () => {
-            const { service, runs } = build()
+            const { service, runs } = await build()
 
             const all = await service.history("u-1", "ws-1", "")
             const one = await service.history("u-1", "ws-1", "thank_payment")
@@ -130,7 +140,7 @@ describe("AutomationsService", () => {
         })
 
         it("lists nothing for a template that was never switched", async () => {
-            const { service, runs } = build()
+            const { service, runs } = await build()
 
             await expect(service.history("u-1", "ws-1", "other_template")).resolves.toEqual([])
 
@@ -140,7 +150,7 @@ describe("AutomationsService", () => {
 
     describe("update", () => {
         it("refuses a request that changes nothing", async () => {
-            const { service } = build()
+            const { service } = await build()
 
             await expect(service.update("u-1", "ws-1", "thank_payment", {})).rejects.toMatchObject({
                 code: AutomationsErrorCode.NothingToChange,
@@ -148,7 +158,7 @@ describe("AutomationsService", () => {
         })
 
         it("saves the settings and the wording and writes the audit lines", async () => {
-            const { service, pipelines, office } = build()
+            const { service, pipelines, office } = await build()
 
             const card = await service.update("u-1", "ws-1", "thank_payment", {
                 values: { days: 7 },
@@ -176,7 +186,7 @@ describe("AutomationsService", () => {
         })
 
         it("hides a template", async () => {
-            const { service, pipelines } = build()
+            const { service, pipelines } = await build()
 
             await service.update("u-1", "ws-1", "thank_payment", { dismissed: true })
 
@@ -193,7 +203,7 @@ describe("AutomationsService", () => {
                 key: "sheet_orders",
                 requires: { modules: [], channels: [], connections: ["google"], capabilities: [] },
             })
-            const { service, pipelines } = build(sheet)
+            const { service, pipelines } = await build(sheet)
 
             await service.update("u-1", "ws-1", "sheet_orders", { googleConnectionId: "g-1" })
 
@@ -206,7 +216,7 @@ describe("AutomationsService", () => {
         })
 
         it("answers an offer of sending by itself and records it", async () => {
-            const { service, pipelines, office } = build()
+            const { service, pipelines, office } = await build()
             pipelines.findPipeline.mockResolvedValue(
                 buildPipelineRow({ trust_offered_at: "2026-10-01T00:00:00.000Z", approval_streak: 20 }),
             )
@@ -230,7 +240,7 @@ describe("AutomationsService", () => {
         })
 
         it("switches a template on once the shop meets what it needs, and lets the extensions prepare it", async () => {
-            const { service, pipelines, extensions, office } = build()
+            const { service, pipelines, extensions, office } = await build()
             extensions.prepareEnable.mockResolvedValue({ days: 3, spreadsheetId: "s-1" })
 
             await service.update("u-1", "ws-1", "thank_payment", { enabled: true })
@@ -252,7 +262,7 @@ describe("AutomationsService", () => {
             const needs = buildTemplate({
                 requires: { modules: ["booking"], channels: [], connections: [], capabilities: [] },
             })
-            const { service } = build(needs)
+            const { service } = await build(needs)
 
             await expect(service.update("u-1", "ws-1", "thank_payment", { enabled: true })).rejects.toMatchObject({
                 code: AutomationsErrorCode.RequirementMissing,
@@ -260,7 +270,7 @@ describe("AutomationsService", () => {
         })
 
         it("switches a template off without checking anything", async () => {
-            const { service, pipelines, extensions } = build()
+            const { service, pipelines, extensions } = await build()
 
             await service.update("u-1", "ws-1", "thank_payment", { enabled: false })
 
@@ -274,7 +284,7 @@ describe("AutomationsService", () => {
         })
 
         it("logs an audit line that cannot be written and still answers", async () => {
-            const { service, office, logger } = build()
+            const { service, office, logger } = await build()
             const failure = new Error("office down")
             office.logEvidence.mockRejectedValue(failure)
 
@@ -288,7 +298,7 @@ describe("AutomationsService", () => {
         })
 
         it("fails when the card that was just saved is not in the gallery", async () => {
-            const { service, templates } = build()
+            const { service, templates } = await build()
             templates.listTemplates.mockResolvedValue([])
 
             await expect(service.update("u-1", "ws-1", "thank_payment", { dismissed: false })).rejects.toMatchObject({
@@ -299,7 +309,7 @@ describe("AutomationsService", () => {
 
     describe("emit", () => {
         it("lets any member tell the engine what happened", async () => {
-            const { service, members, engine } = build()
+            const { service, members, engine } = await build()
 
             await service.emit("u-1", "ws-1", { event: "payment.received", dedupe: "d-1", data: { a: 1 } })
 
@@ -315,7 +325,7 @@ describe("AutomationsService", () => {
 
     describe("googleAccounts", () => {
         it("lists the accounts the extensions know", async () => {
-            const { service } = build()
+            const { service } = await build()
 
             await expect(service.googleAccounts("u-1", "ws-1")).resolves.toEqual([
                 { id: "g-1", email: "a@b.c", status: "active" },
@@ -325,7 +335,7 @@ describe("AutomationsService", () => {
 
     describe("suggestFor", () => {
         it("proposes the applicable templates of a module that are off and not hidden", async () => {
-            const { service } = build()
+            const { service } = await build()
 
             await expect(service.suggestFor("u-1", "ws-1", "sales")).resolves.toEqual([
                 { key: "thank_payment", name: TEXT, reason: TEXT },
@@ -334,21 +344,21 @@ describe("AutomationsService", () => {
 
         it("proposes the workspace-wide templates when no module is named, and nothing for another module", async () => {
             const wide = buildTemplate({ moduleKey: null })
-            const { service } = build(wide)
+            const { service } = await build(wide)
 
             await expect(service.suggestFor("u-1", "ws-1", "")).resolves.toHaveLength(1)
             await expect(service.suggestFor("u-1", "ws-1", "booking")).resolves.toEqual([])
         })
 
         it("leaves out what is on, hidden, coming soon or missing a requirement", async () => {
-            const on = build()
+            const on = await build()
             on.shop.overviewRows.mockResolvedValue(buildOverviewRows({ pipelines: [buildPipelineRow()] }))
-            const hidden = build()
+            const hidden = await build()
             hidden.shop.overviewRows.mockResolvedValue(
                 buildOverviewRows({ pipelines: [buildPipelineRow({ enabled: false, dismissed: true })] }),
             )
-            const soon = build(buildTemplate({ executor: "definition" }))
-            const missing = build(
+            const soon = await build(buildTemplate({ executor: "definition" }))
+            const missing = await build(
                 buildTemplate({ requires: { modules: ["booking"], channels: [], connections: [], capabilities: [] } }),
             )
 
@@ -360,7 +370,7 @@ describe("AutomationsService", () => {
 
     describe("proposeBody", () => {
         it("uses the text the model wrote when it keeps the blanks and is plain", async () => {
-            const { service, text } = build(message(), true)
+            const { service, text } = await build()
             text.generate.mockResolvedValue('"Chao {ten_khach}, rat vui duoc phuc vu"')
 
             await expect(service.proposeBody("u-1", "ws-1", "thank_payment")).resolves.toEqual({
@@ -374,14 +384,12 @@ describe("AutomationsService", () => {
             )
         })
 
-        it("gives the standard wording when no model is bound, none answered or the text is not usable", async () => {
-            const bare = build()
-            const silent = build(message(), true)
-            silent.text.generate.mockResolvedValue(null)
-            const dropped = build(message(), true)
+        it("gives the standard wording when the model answers nothing or the text is not usable", async () => {
+            const silent = await build()
+            const dropped = await build()
             dropped.text.generate.mockResolvedValue("no blank here")
 
-            for (const { service } of [bare, silent, dropped]) {
+            for (const { service } of [silent, dropped]) {
                 await expect(service.proposeBody("u-1", "ws-1", "thank_payment")).resolves.toEqual({
                     body: BODY,
                     generated: false,
@@ -391,7 +399,7 @@ describe("AutomationsService", () => {
         })
 
         it("refuses a template that sends no message", async () => {
-            const { service } = build(buildTemplate())
+            const { service } = await build(buildTemplate())
 
             await expect(service.proposeBody("u-1", "ws-1", "thank_payment")).rejects.toMatchObject({
                 code: AutomationsErrorCode.NoMessage,
@@ -409,7 +417,7 @@ describe("AutomationsService", () => {
             })
 
         it("starts a daily workflow for today", async () => {
-            const { service, pipelines, n8nRuns } = build(scheduled("schedule.daily"))
+            const { service, pipelines, n8nRuns } = await build(scheduled("schedule.daily"))
             pipelines.findPipeline.mockResolvedValue(buildPipelineRow({ config: { time: "08:00" }, body: "Mine" }))
             n8nRuns.startRun.mockResolvedValue("run-1")
 
@@ -426,7 +434,7 @@ describe("AutomationsService", () => {
         })
 
         it("starts a monthly workflow for the month before, without a body the owner did not approve", async () => {
-            const { service, pipelines, n8nRuns } = build(scheduled("schedule.monthly"))
+            const { service, pipelines, n8nRuns } = await build(scheduled("schedule.monthly"))
             pipelines.findPipeline.mockResolvedValue(buildPipelineRow({ config: {} }))
             n8nRuns.startRun.mockResolvedValue("run-1")
 
@@ -438,9 +446,11 @@ describe("AutomationsService", () => {
         })
 
         it("refuses a template that cannot be run on demand", async () => {
-            const notN8n = build()
-            const notScheduled = build(buildTemplate({ executor: "n8n", n8n: { webhook: "w", audience: "owner" } }))
-            const noWebhook = build(
+            const notN8n = await build()
+            const notScheduled = await build(
+                buildTemplate({ executor: "n8n", n8n: { webhook: "w", audience: "owner" } }),
+            )
+            const noWebhook = await build(
                 buildTemplate({ executor: "n8n", trigger: { kind: "schedule", event: "schedule.daily", line: TEXT } }),
             )
 
@@ -452,8 +462,8 @@ describe("AutomationsService", () => {
         })
 
         it("refuses when the pipeline is off or was never switched", async () => {
-            const never = build(scheduled("schedule.daily"))
-            const off = build(scheduled("schedule.daily"))
+            const never = await build(scheduled("schedule.daily"))
+            const off = await build(scheduled("schedule.daily"))
             off.pipelines.findPipeline.mockResolvedValue(buildPipelineRow({ enabled: false }))
 
             await expect(never.service.runNow("u-1", "ws-1", "x")).rejects.toMatchObject({
@@ -465,7 +475,7 @@ describe("AutomationsService", () => {
         })
 
         it("fails when the run could not be queued", async () => {
-            const { service, pipelines, n8nRuns } = build(scheduled("schedule.daily"))
+            const { service, pipelines, n8nRuns } = await build(scheduled("schedule.daily"))
             pipelines.findPipeline.mockResolvedValue(buildPipelineRow())
             n8nRuns.startRun.mockResolvedValue(null)
 
