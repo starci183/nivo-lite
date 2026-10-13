@@ -13,7 +13,7 @@ import type {
 import { InboundEventsService } from "@modules/domain/inbound-events"
 import type { OptionalInboundEvent } from "@modules/domain/inbound-events"
 import { LeadRecordsService, contactParts } from "@modules/domain/leads"
-import type { LeadRecord } from "@modules/domain/leads"
+import type { LeadRecordRow } from "@modules/domain/leads"
 import { OrdersService } from "@modules/domain/orders"
 import type { OptionalOrder } from "@modules/domain/orders"
 import { ResponsibilityJournalService } from "@modules/domain/responsibilities"
@@ -25,7 +25,7 @@ import { firstText, leadHref, numberOf, textOf } from "./performer.policy"
 
 @Injectable()
 /** `confirm_order`: Sales confirms the order of an input (the order is drafted first, so the owner sees its number); the deal is won. */
-export class ConfirmOrderPerformer implements WorkPerformer {
+export class ConfirmOrderPerformerService implements WorkPerformer {
     constructor(
         private readonly kit: PerformerKitService,
         private readonly orders: OrdersService,
@@ -139,7 +139,7 @@ export class ConfirmOrderPerformer implements WorkPerformer {
         ctx: WorkContext,
         item: WorkItem,
         event: OptionalInboundEvent,
-        lead: LeadRecord,
+        lead: LeadRecordRow,
         items: string,
         amount: number | null,
     ) {
@@ -166,7 +166,7 @@ export class ConfirmOrderPerformer implements WorkPerformer {
         item: WorkItem,
         event: OptionalInboundEvent,
         need: string,
-    ): Promise<LeadRecord> {
+    ): Promise<LeadRecordRow> {
         if (item.lead_id !== null) return this.leads.require(ctx.workspaceId, item.lead_id)
         const { phone, email } = contactParts(event?.sender_contact ?? null)
         const channel = event === null ? "" : this.kit.text(ctx, `channel.${event.channel}`)

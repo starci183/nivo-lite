@@ -6,7 +6,7 @@ import { leadHref, textOf } from "./performer.policy"
 
 @Injectable()
 /** `reply_customer`: the answer the owner approved is stored in the customer's conversation and pushed to their channel. */
-export class ReplyCustomerPerformer implements WorkPerformer {
+export class ReplyCustomerPerformerService implements WorkPerformer {
     constructor(
         private readonly kit: PerformerKitService,
         private readonly delivery: CustomerDeliveryService,

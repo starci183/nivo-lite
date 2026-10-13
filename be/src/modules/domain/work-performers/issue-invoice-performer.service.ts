@@ -23,7 +23,7 @@ import { WorkPerformersLogEvent } from "./work-performers.log-events"
 
 @Injectable()
 /** `issue_invoice`: Accounting issues the internal payment record of a confirmed order (one per order) and, for a live Telegram customer, sends the payment instructions. */
-export class IssueInvoicePerformer implements WorkPerformer {
+export class IssueInvoicePerformerService implements WorkPerformer {
     constructor(
         @InjectLogger() private readonly logger: Logger,
         private readonly kit: PerformerKitService,

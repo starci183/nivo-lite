@@ -1,5 +1,5 @@
 /** public.leads as the lead records read it. */
-export interface LeadRecord {
+export interface LeadRecordRow {
     /** The lead id. */
     readonly id: string
     /** The workspace. */

@@ -60,3 +60,6 @@ export interface ResponsibilityScope {
     /** The language of the generated text. */
     readonly locale: Locale
 }
+
+/** A responsibility, or null when the workspace has no such responsibility. */
+export type OptionalResponsibility = ResponsibilityRecord | null

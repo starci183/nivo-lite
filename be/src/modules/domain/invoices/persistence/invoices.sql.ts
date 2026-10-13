@@ -28,6 +28,9 @@ ON CONFLICT DO NOTHING
 RETURNING id, workspace_id, order_id, lead_id, invoice_no, amount_vnd::float8 AS amount_vnd, status, origin, issued_by, paid_at::text AS paid_at`
 
 /** Marks an invoice paid and answers it ($1 workspace, $2 invoice, $3 payment time). */
-export const MARK_INVOICE_PAID = sql`UPDATE public.invoices SET status = 'paid', paid_at = $3::timestamptz
-WHERE workspace_id = $1::uuid AND id = $2::uuid
-RETURNING id, workspace_id, order_id, lead_id, invoice_no, amount_vnd::float8 AS amount_vnd, status, origin, issued_by, paid_at::text AS paid_at`
+export const MARK_INVOICE_PAID = sql`WITH changed AS (
+    UPDATE public.invoices SET status = 'paid', paid_at = $3::timestamptz
+    WHERE workspace_id = $1::uuid AND id = $2::uuid
+    RETURNING id, workspace_id, order_id, lead_id, invoice_no, amount_vnd, status, origin, issued_by, paid_at
+)
+SELECT id, workspace_id, order_id, lead_id, invoice_no, amount_vnd::float8 AS amount_vnd, status, origin, issued_by, paid_at::text AS paid_at FROM changed`

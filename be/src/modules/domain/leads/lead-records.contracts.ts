@@ -1,7 +1,7 @@
-import type { LeadRecord } from "./persistence/lead-records.rows"
+import type { LeadRecordRow } from "./persistence/lead-records.rows"
 
 /** A lead, or null when the workspace has no such lead. */
-export type OptionalLeadRecord = LeadRecord | null
+export type OptionalLeadRecord = LeadRecordRow | null
 
 /** What identifies the customer an input belongs to. */
 export interface LeadMatch {
@@ -49,10 +49,22 @@ export interface LeadClassification {
     readonly contextSummary: string | null
 }
 
-/** The name of a lead. */
+/** Who a lead is by name, for the labels of invoices and payments that point at it. */
 export interface LeadName {
     /** The lead id. */
     readonly id: string
     /** The customer's name. */
     readonly contact_name: string
+}
+
+/** The contact a known lead was missing. */
+export interface ContactFill {
+    /** The workspace. */
+    readonly workspaceId: string
+    /** The lead. */
+    readonly leadId: string
+    /** The normalised phone, or null. */
+    readonly phone: string | null
+    /** The normalised email, or null. */
+    readonly email: string | null
 }

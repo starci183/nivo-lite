@@ -38,4 +38,5 @@ WHERE workspace_id = $1::uuid AND id = $2::uuid AND stage <> 'lost'`
 
 /** The names of several leads ($1 workspace, $2 lead ids). */
 export const FIND_LEAD_NAMES = sql`SELECT id, contact_name
-FROM public.leads WHERE workspace_id = $1::uuid AND id = ANY($2::uuid[])`
+FROM public.leads WHERE workspace_id = $1::uuid AND id = ANY($2::uuid[])
+LIMIT 200`

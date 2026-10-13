@@ -10,7 +10,7 @@ import type {
     BankPaymentRecorded,
     InboundInput,
     OptionalEventStatus,
-    OptionalId,
+    OptionalLeadRef,
     OptionalInboundEvent,
     UnroutedMessage,
 } from "./inbound-events.contracts"
@@ -83,7 +83,12 @@ export class InboundEventsService {
     }
 
     /** Sets where an event stands (null keeps it) and links the customer the engine found (null keeps it). */
-    async mark(workspaceId: string, eventId: string, status: OptionalEventStatus, leadId: OptionalId): Promise<void> {
+    async mark(
+        workspaceId: string,
+        eventId: string,
+        status: OptionalEventStatus,
+        leadId: OptionalLeadRef,
+    ): Promise<void> {
         await this.entityManager.query(MARK_INBOUND_EVENT, [workspaceId, eventId, status, leadId])
     }
 

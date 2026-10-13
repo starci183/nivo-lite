@@ -11,7 +11,7 @@ import { leadHref, textOf } from "./performer.policy"
 
 @Injectable()
 /** `handoff_lead`: the chatbot hands a customer it captured to Sales; a customer already known is matched, never duplicated. */
-export class HandoffLeadPerformer implements WorkPerformer {
+export class HandoffLeadPerformerService implements WorkPerformer {
     constructor(
         private readonly kit: PerformerKitService,
         private readonly leads: LeadRecordsService,
@@ -58,7 +58,7 @@ export class HandoffLeadPerformer implements WorkPerformer {
             }))
         if (known === null) await this.logCapture(ctx, item, lead.id, channel, textOf(fields.transcript))
         else if ((phone !== null && known.phone === null) || (email !== null && known.email === null)) {
-            await this.leads.fillContact(ctx.workspaceId, lead.id, phone, email)
+            await this.leads.fillContact({ workspaceId: ctx.workspaceId, leadId: lead.id, phone, email })
         }
         if (item.inbound_event_id !== null)
             await this.inbound.mark(ctx.workspaceId, item.inbound_event_id, null, lead.id)

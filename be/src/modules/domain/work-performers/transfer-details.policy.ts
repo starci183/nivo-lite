@@ -1,7 +1,10 @@
-// The Vietnamese label the owner writes in the business notes is spelled with escapes to keep the source ASCII.
-const LABEL = "thông tin chuyển khoản"
+/** The Vietnamese label of the bank details line, assembled from code points so the source stays ASCII. */
+const VIETNAMESE_LABEL = ["th", 0xf4, "ng tin chuy", 0x1ec3, "n kho", 0x1ea3, "n"]
+    .map((part) => (typeof part === "string" ? part : String.fromCodePoint(part)))
+    .join("")
+
 const DETAILS_LINE = new RegExp(
-    `^\\s*[-*\\u2022]?\\s*(?:${LABEL}|bank transfer details|payment details)\\s*[:\\uff1a]\\s*(.+?)\\s*$`,
+    `^\\s*[-*\\u2022]?\\s*(?:${VIETNAMESE_LABEL}|bank transfer details|payment details)\\s*[:\\uff1a]\\s*(.+?)\\s*$`,
     "iu",
 )
 

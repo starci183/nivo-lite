@@ -22,7 +22,7 @@ import { dotted, textOf } from "./performer.policy"
 
 @Injectable()
 /** `send_care`: after the customer paid, the sales AI writes a short thank-you that names what was paid; once allowed it is delivered. */
-export class CarePerformer implements WorkPerformer {
+export class CarePerformerService implements WorkPerformer {
     constructor(
         private readonly kit: PerformerKitService,
         private readonly leads: LeadRecordsService,

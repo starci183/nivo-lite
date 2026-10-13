@@ -19,7 +19,7 @@ const DEFAULT_SHOP = "NIVO"
  * purpose, refs = JSON, draft = the plain body). Only this performer may send customer mail: it hands the work item id to the mail
  * service as proof the gate approved it.
  */
-export class SendEmailPerformer implements WorkPerformer {
+export class SendEmailPerformerService implements WorkPerformer {
     constructor(
         @InjectLogger() private readonly logger: Logger,
         private readonly kit: PerformerKitService,

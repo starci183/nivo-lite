@@ -2,7 +2,7 @@ import { Injectable } from "@nestjs/common"
 import { AuthorityService } from "@modules/domain/authority"
 import { ModuleCatalogService, formatVnd } from "@modules/domain/decisions"
 import type { WorkContext } from "@modules/domain/decisions"
-import type { LeadRecord } from "@modules/domain/leads"
+import type { LeadRecordRow } from "@modules/domain/leads"
 import { authorityBrief } from "@modules/integrations/deepseek"
 import type { DeepseekScope, LeadInput } from "@modules/integrations/deepseek"
 import { InjectMessageCatalog } from "@modules/platform/i18n"
@@ -38,7 +38,7 @@ export class PerformerKitService {
     }
 
     /** The lead as a prompt reads it. */
-    leadInput(lead: LeadRecord): LeadInput {
+    leadInput(lead: LeadRecordRow): LeadInput {
         return { contact_name: lead.contact_name, company: lead.company, channel: lead.channel, need: lead.need }
     }
 

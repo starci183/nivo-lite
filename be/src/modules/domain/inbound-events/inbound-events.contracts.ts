@@ -53,7 +53,7 @@ export type EventStatus = "received" | "processed" | "needs_decision" | "failed"
 export type OptionalEventStatus = EventStatus | null
 
 /** An id, or null when there is none. */
-export type OptionalId = string | null
+export type OptionalLeadRef = string | null
 
 /** An inbound event, or null when the workspace has no such event. */
 export type OptionalInboundEvent = InboundEventRow | null

@@ -26,7 +26,7 @@ import { leadHref, textOf } from "./performer.policy"
  * `send_follow_up`: the sales AI drafts the next message of a customer's responsibility; once allowed it is delivered, the approval card
  * is settled and the responsibility is done. A rejection reopens the responsibility.
  */
-export class FollowUpPerformer implements WorkPerformer {
+export class FollowUpPerformerService implements WorkPerformer {
     constructor(
         private readonly kit: PerformerKitService,
         private readonly leads: LeadRecordsService,

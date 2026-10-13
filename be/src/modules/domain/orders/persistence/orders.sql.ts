@@ -6,7 +6,8 @@ FROM public.orders WHERE workspace_id = $1::uuid AND id = $2::uuid LIMIT 1`
 
 /** The number and items of several orders ($1 workspace, $2 order ids). */
 export const FIND_ORDER_LABELS = sql`SELECT id, order_no, items
-FROM public.orders WHERE workspace_id = $1::uuid AND id = ANY($2::uuid[])`
+FROM public.orders WHERE workspace_id = $1::uuid AND id = ANY($2::uuid[])
+LIMIT 200`
 
 /** How many orders carry a number that starts with the prefix ($1 workspace, $2 prefix). */
 export const COUNT_ORDERS_WITH_PREFIX = sql`SELECT count(*)::int AS n
@@ -19,15 +20,21 @@ ON CONFLICT (workspace_id, order_no) DO NOTHING
 RETURNING id, workspace_id, lead_id, inbound_event_id, order_no, items, amount_vnd::float8 AS amount_vnd, status, origin, confirmed_by`
 
 /** Confirms a draft order and answers it; no row when it is not a draft ($1 workspace, $2 order, $3 amount, $4 items, $5 confirmer, $6 time). */
-export const CONFIRM_ORDER = sql`UPDATE public.orders
-SET status = 'confirmed', amount_vnd = $3::bigint, items = $4, confirmed_by = $5, confirmed_at = $6::timestamptz
-WHERE workspace_id = $1::uuid AND id = $2::uuid AND status = 'draft'
-RETURNING id, workspace_id, lead_id, inbound_event_id, order_no, items, amount_vnd::float8 AS amount_vnd, status, origin, confirmed_by`
+export const CONFIRM_ORDER = sql`WITH changed AS (
+    UPDATE public.orders
+    SET status = 'confirmed', amount_vnd = $3::bigint, items = $4, confirmed_by = $5, confirmed_at = $6::timestamptz
+    WHERE workspace_id = $1::uuid AND id = $2::uuid AND status = 'draft'
+    RETURNING id, workspace_id, lead_id, inbound_event_id, order_no, items, amount_vnd, status, origin, confirmed_by
+)
+SELECT id, workspace_id, lead_id, inbound_event_id, order_no, items, amount_vnd::float8 AS amount_vnd, status, origin, confirmed_by FROM changed`
 
 /** Cancels a draft order and answers it; no row when it is not a draft ($1 workspace, $2 order). */
-export const CANCEL_ORDER = sql`UPDATE public.orders SET status = 'cancelled'
-WHERE workspace_id = $1::uuid AND id = $2::uuid AND status = 'draft'
-RETURNING id, workspace_id, lead_id, inbound_event_id, order_no, items, amount_vnd::float8 AS amount_vnd, status, origin, confirmed_by`
+export const CANCEL_ORDER = sql`WITH changed AS (
+    UPDATE public.orders SET status = 'cancelled'
+    WHERE workspace_id = $1::uuid AND id = $2::uuid AND status = 'draft'
+    RETURNING id, workspace_id, lead_id, inbound_event_id, order_no, items, amount_vnd, status, origin, confirmed_by
+)
+SELECT id, workspace_id, lead_id, inbound_event_id, order_no, items, amount_vnd::float8 AS amount_vnd, status, origin, confirmed_by FROM changed`
 
 /** Moves an order that is past its draft to a later status ($1 workspace, $2 order, $3 status). */
 export const SET_ORDER_STATUS = sql`UPDATE public.orders SET status = $3

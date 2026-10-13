@@ -12,6 +12,7 @@ import type { MessageCatalog } from "@modules/platform/i18n"
 import { ResponsibilitiesError, ResponsibilitiesErrorCode } from "./errors/responsibilities.error"
 import type {
     NewResponsibility,
+    OptionalResponsibility,
     ResponsibilityListing,
     ResponsibilityRecord,
     ResponsibilityScope,
@@ -121,7 +122,7 @@ export class ResponsibilityJournalService {
     }
 
     /** One responsibility of the workspace, or null when there is none with that id. */
-    async find(workspaceId: string, responsibilityId: string): Promise<ResponsibilityRecord | null> {
+    async find(workspaceId: string, responsibilityId: string): Promise<OptionalResponsibility> {
         const rows = await this.entityManager.query<Array<ResponsibilityRecord>>(FIND_RESPONSIBILITY, [
             workspaceId,
             responsibilityId,

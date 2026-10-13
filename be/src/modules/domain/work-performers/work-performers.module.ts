@@ -1,26 +1,26 @@
 import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
-import { CarePerformer } from "./care.performer"
-import { ClassifyLeadPerformer } from "./classify-lead.performer"
-import { ConfirmOrderPerformer } from "./confirm-order.performer"
+import { CarePerformerService } from "./care-performer.service"
+import { ClassifyLeadPerformerService } from "./classify-lead-performer.service"
+import { ConfirmOrderPerformerService } from "./confirm-order-performer.service"
 import { ConversationLeadsService } from "./conversation-leads.service"
 import { HandoffToolService } from "./handoff-tool.service"
 import { InboundStatusService } from "./inbound-status.service"
 import { LeadWriterService } from "./lead-writer.service"
 import { OutboundAccessService } from "./outbound-access.service"
 import { CustomerDeliveryService } from "./customer-delivery.service"
-import { FollowUpPerformer } from "./follow-up.performer"
-import { HandoffLeadPerformer } from "./handoff-lead.performer"
-import { IssueInvoicePerformer } from "./issue-invoice.performer"
+import { FollowUpPerformerService } from "./follow-up-performer.service"
+import { HandoffLeadPerformerService } from "./handoff-lead-performer.service"
+import { IssueInvoicePerformerService } from "./issue-invoice-performer.service"
 import { PaymentInstructionsService } from "./payment-instructions.service"
 import { PerformerKitService } from "./performer-kit.service"
-import { QuotePerformer } from "./quote.performer"
-import { ReconcilePaymentPerformer } from "./reconcile-payment.performer"
-import { ReplyCustomerPerformer } from "./reply-customer.performer"
-import { SendEmailPerformer } from "./send-email.performer"
+import { QuotePerformerService } from "./quote-performer.service"
+import { ReconcilePaymentPerformerService } from "./reconcile-payment-performer.service"
+import { ReplyCustomerPerformerService } from "./reply-customer-performer.service"
+import { SendEmailPerformerService } from "./send-email-performer.service"
 import { PROMPT_WRITER } from "./work-performers.decorators"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./work-performers.module-definition"
-import { WorkPerformersRegistrar } from "./work-performers.registrar"
+import { WorkPerformersRegistrarService } from "./work-performers-registrar.service"
 
 @Module({})
 /**
@@ -39,17 +39,17 @@ export class WorkPerformersModule extends ConfigurableModuleClass {
                 PerformerKitService,
                 CustomerDeliveryService,
                 PaymentInstructionsService,
-                HandoffLeadPerformer,
-                ClassifyLeadPerformer,
-                FollowUpPerformer,
-                QuotePerformer,
-                CarePerformer,
-                ConfirmOrderPerformer,
-                IssueInvoicePerformer,
-                ReconcilePaymentPerformer,
-                ReplyCustomerPerformer,
-                SendEmailPerformer,
-                WorkPerformersRegistrar,
+                HandoffLeadPerformerService,
+                ClassifyLeadPerformerService,
+                FollowUpPerformerService,
+                QuotePerformerService,
+                CarePerformerService,
+                ConfirmOrderPerformerService,
+                IssueInvoicePerformerService,
+                ReconcilePaymentPerformerService,
+                ReplyCustomerPerformerService,
+                SendEmailPerformerService,
+                WorkPerformersRegistrarService,
                 ConversationLeadsService,
                 HandoffToolService,
                 InboundStatusService,

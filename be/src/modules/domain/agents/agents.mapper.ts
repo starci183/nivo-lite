@@ -1,4 +1,4 @@
-import type { AgentPersona, AgentProfile, AgentRef, AgentSummary } from "./agents.contracts"
+import type { AgentPersona, AgentProfile, AgentRef, AgentSummary, OptionalAgentProfile } from "./agents.contracts"
 import type { AgentRow } from "./persistence/agents.rows"
 
 /** An agent row as the instance list shows it. */
@@ -12,8 +12,7 @@ export const summaryOf = (row: AgentRow): AgentSummary => ({
     createdAt: row.created_at,
 })
 
-/** An agent row as the profile a prompt speaks as. */
-export const profileOf = (row: AgentRow): AgentProfile => ({
+const profileOf = (row: AgentRow): AgentProfile => ({
     id: row.id,
     name: row.name,
     handle: row.handle,
@@ -35,3 +34,9 @@ export const personaOf = (row: AgentRow): AgentPersona => ({
     knowledge: row.knowledge === "" ? null : row.knowledge,
     approvalRule: row.approval_rule === "" ? null : row.approval_rule,
 })
+
+/** The profile of the first agent row a query answered; null when it answered none. */
+export const firstProfileOf = (rows: ReadonlyArray<AgentRow>): OptionalAgentProfile => {
+    const [row] = rows
+    return row === undefined ? null : profileOf(row)
+}

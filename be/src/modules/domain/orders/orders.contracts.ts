@@ -1,4 +1,4 @@
-import type { OrderRow } from "./persistence/orders.rows"
+import type { SalesOrderRow } from "./persistence/orders.rows"
 
 /** Where an order stands. */
 export type OrderStatus = "draft" | "confirmed" | "invoiced" | "paid" | "cancelled"
@@ -7,7 +7,7 @@ export type OrderStatus = "draft" | "confirmed" | "invoiced" | "paid" | "cancell
 export type OrderOrigin = "live" | "simulated"
 
 /** An order, or null when the workspace has no such order. */
-export type OptionalOrder = OrderRow | null
+export type OptionalOrder = SalesOrderRow | null
 
 /** What a new draft order takes. */
 export interface NewOrderDraft {

@@ -24,7 +24,7 @@ import type {
 } from "./agents.contracts"
 import { InjectInstallations, InjectKnowledge } from "./agents.decorators"
 import { AgentsLogEvent } from "./agents.log-events"
-import { profileOf, refOf, summaryOf } from "./agents.mapper"
+import { firstProfileOf, refOf, summaryOf } from "./agents.mapper"
 import type { InstallationDirectory, KnowledgeLens, OptionalInstallation } from "./agents.port"
 import {
     GAP_LIMIT,
@@ -100,18 +100,15 @@ export class AgentsService {
     }
 
     /** The profile of one agent of the workspace, whatever its status; null when there is none. */
-    profileOf(workspaceId: string, agentId: string): Promise<OptionalAgentProfile> {
-        return this.profileFrom(FIND_AGENT, [agentId, workspaceId])
+    async profileOf(workspaceId: string, agentId: string): Promise<OptionalAgentProfile> {
+        return firstProfileOf(await this.entityManager.query<Array<AgentRow>>(FIND_AGENT, [agentId, workspaceId]))
     }
 
     /** The profile of the active agent that speaks for a department; null when it has none. */
-    profileOfDepartment(workspaceId: string, department: string): Promise<OptionalAgentProfile> {
-        return this.profileFrom(FIND_FIRST_ACTIVE_AGENT, [workspaceId, department])
-    }
-
-    private async profileFrom(statement: string, params: ReadonlyArray<string>): Promise<OptionalAgentProfile> {
-        const [row] = await this.entityManager.query<Array<AgentRow>>(statement, [...params])
-        return row === undefined ? null : profileOf(row)
+    async profileOfDepartment(workspaceId: string, department: string): Promise<OptionalAgentProfile> {
+        return firstProfileOf(
+            await this.entityManager.query<Array<AgentRow>>(FIND_FIRST_ACTIVE_AGENT, [workspaceId, department]),
+        )
     }
 
     /** The common regions of one module's agent dashboard. Every region is read on its own and fails on its own. */

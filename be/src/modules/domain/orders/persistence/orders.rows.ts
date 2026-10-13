@@ -1,5 +1,5 @@
 /** public.orders as the statements select it. */
-export interface OrderRow {
+export interface SalesOrderRow {
     /** The order id. */
     readonly id: string
     /** The workspace. */

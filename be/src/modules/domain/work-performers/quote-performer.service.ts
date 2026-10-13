@@ -15,7 +15,7 @@ import { PerformerKitService } from "./performer-kit.service"
 
 @Injectable()
 /** `send_quote`: the quote the owner approved (amount and text) is delivered to the customer. */
-export class QuotePerformer implements WorkPerformer {
+export class QuotePerformerService implements WorkPerformer {
     constructor(
         private readonly kit: PerformerKitService,
         private readonly leads: LeadRecordsService,

@@ -31,7 +31,7 @@ const ISSUED_WINDOW = 50
  * `reconcile_payment`: Accounting matches an incoming payment (a bank credit or a customer's "I paid") to the invoice it settles. Only a
  * transfer content that names exactly one invoice of the same amount is clear; otherwise the owner chooses among the candidates.
  */
-export class ReconcilePaymentPerformer implements WorkPerformer {
+export class ReconcilePaymentPerformerService implements WorkPerformer {
     constructor(
         private readonly kit: PerformerKitService,
         private readonly transactions: TransactionsService,

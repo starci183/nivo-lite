@@ -2,8 +2,15 @@ import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { LeadsError, LeadsErrorCode } from "./errors/leads.error"
-import type { LeadClassification, LeadMatch, LeadName, NewLead, OptionalLeadRecord } from "./lead-records.contracts"
-import type { LeadRecord } from "./persistence/lead-records.rows"
+import type {
+    ContactFill,
+    LeadClassification,
+    LeadMatch,
+    LeadName,
+    NewLead,
+    OptionalLeadRecord,
+} from "./lead-records.contracts"
+import type { LeadRecordRow } from "./persistence/lead-records.rows"
 import {
     APPLY_CLASSIFICATION,
     FILL_LEAD_CONTACT,
@@ -21,12 +28,12 @@ export class LeadRecordsService {
 
     /** The lead of the workspace, or null when there is none with that id. */
     async find(workspaceId: string, leadId: string): Promise<OptionalLeadRecord> {
-        const rows = await this.entityManager.query<Array<LeadRecord>>(FIND_LEAD, [workspaceId, leadId])
+        const rows = await this.entityManager.query<Array<LeadRecordRow>>(FIND_LEAD, [workspaceId, leadId])
         return rows[0] ?? null
     }
 
     /** The lead of the workspace; refused when there is none. */
-    async require(workspaceId: string, leadId: string): Promise<LeadRecord> {
+    async require(workspaceId: string, leadId: string): Promise<LeadRecordRow> {
         const lead = await this.find(workspaceId, leadId)
         if (lead === null) throw new LeadsError({ code: LeadsErrorCode.NotFound, params: { id: leadId } })
         return lead
@@ -35,7 +42,7 @@ export class LeadRecordsService {
     /** The customer an input belongs to: by phone, then email, then exact name and channel when the input has no contact at all. */
     async match(match: LeadMatch): Promise<OptionalLeadRecord> {
         const name = match.name?.trim() ?? ""
-        const rows = await this.entityManager.query<Array<LeadRecord>>(MATCH_LEAD, [
+        const rows = await this.entityManager.query<Array<LeadRecordRow>>(MATCH_LEAD, [
             match.workspaceId,
             match.phone,
             match.email,
@@ -46,8 +53,8 @@ export class LeadRecordsService {
     }
 
     /** Captures a new customer. */
-    async capture(lead: NewLead): Promise<LeadRecord> {
-        const rows = await this.entityManager.query<Array<LeadRecord>>(INSERT_LEAD, [
+    async capture(lead: NewLead): Promise<LeadRecordRow> {
+        const rows = await this.entityManager.query<Array<LeadRecordRow>>(INSERT_LEAD, [
             lead.workspaceId,
             lead.contactName,
             lead.company,
@@ -63,8 +70,8 @@ export class LeadRecordsService {
     }
 
     /** Adds the phone or the email the lead was missing; one it already has is kept. */
-    async fillContact(workspaceId: string, leadId: string, phone: string | null, email: string | null): Promise<void> {
-        await this.entityManager.query(FILL_LEAD_CONTACT, [workspaceId, leadId, phone, email])
+    async fillContact(fill: ContactFill): Promise<void> {
+        await this.entityManager.query(FILL_LEAD_CONTACT, [fill.workspaceId, fill.leadId, fill.phone, fill.email])
     }
 
     /** Stores what the sales AI learned: the stage of an open deal and a context brief the lead did not have. */

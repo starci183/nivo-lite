@@ -17,7 +17,7 @@ const CLEAR_CONFIDENCE = 0.6
 
 @Injectable()
 /** `classify_lead`: the sales AI reads the customer's history, sets the stage of an open deal and keeps a context brief. */
-export class ClassifyLeadPerformer implements WorkPerformer {
+export class ClassifyLeadPerformerService implements WorkPerformer {
     constructor(
         private readonly kit: PerformerKitService,
         private readonly leads: LeadRecordsService,
