@@ -1,7 +1,6 @@
 import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
 import { APP_FILTER, APP_GUARD } from "@nestjs/core"
-import { InventoryHttpModule } from "@features/api/inventory"
 import { AgentToolsHttpModule } from "@features/api/agent-tools"
 import { AgentsHttpModule } from "@features/api/agents"
 import { DecisionsHttpModule } from "@features/api/decisions"
@@ -65,9 +64,7 @@ import { CREDITS_ERROR_KINDS, CREDITS_MESSAGES, CreditsModule } from "@modules/d
 import { AiUsageEventsModule } from "@modules/domain/ai-usage-events"
 import { SepayTransactionsModule } from "@modules/domain/sepay-transactions"
 import { WorkspacesHttpModule } from "@features/api/workspaces"
-import { DeductOrderQueueModule } from "@features/jobs/deduct-order"
-import { InventoryCommandQueueModule } from "@features/jobs/inventory-command"
-import { ReplenishStockQueueModule } from "@features/jobs/replenish-stock"
+import { OperationsJobsQueueModule } from "@features/jobs/operations-jobs"
 import {
     AGENT_CONNECTIONS_ERROR_KINDS,
     AGENT_CONNECTIONS_MESSAGES,
@@ -166,6 +163,7 @@ import {
     createSupabaseAccessTokenVerifier,
 } from "@modules/integrations/supabase"
 import { INVENTORY_ERROR_KINDS, INVENTORY_MESSAGES, InventoryModule } from "@modules/domain/inventory"
+import { SHIFTS_ERROR_KINDS, SHIFTS_MESSAGES, ShiftsModule } from "@modules/domain/shifts"
 import { MODULE_OPS_ERROR_KINDS, MODULE_OPS_MESSAGES, ModuleOpsModule } from "@modules/domain/module-ops"
 import { HttpModule, HTTP_ERROR_KINDS, HTTP_MESSAGES } from "@modules/platform/http"
 import { MAIL_ERROR_KINDS, MAIL_MESSAGES, MailModule } from "@modules/integrations/mail"
@@ -292,6 +290,7 @@ export class AppModule {
                         HTTP_SECURITY_MESSAGES,
                         IDENTITY_MESSAGES,
                         INVENTORY_MESSAGES,
+                        SHIFTS_MESSAGES,
                         JOBS_MESSAGES,
                         MODULE_OPS_MESSAGES,
                         PLATFORM_ADMIN_MESSAGES,
@@ -358,6 +357,7 @@ export class AppModule {
                         QUEUE_ERROR_KINDS,
                         IDENTITY_ERROR_KINDS,
                         INVENTORY_ERROR_KINDS,
+                        SHIFTS_ERROR_KINDS,
                         MODULE_OPS_ERROR_KINDS,
                         PLATFORM_ADMIN_ERROR_KINDS,
                         MODULES_ERROR_KINDS,
@@ -438,6 +438,9 @@ export class AppModule {
                 VideoProjectsModule.register({ isGlobal: true }),
                 VideoProjectVersionsModule.register({ isGlobal: true }),
                 VideoModule.register({ isGlobal: true, ...options.video }),
+                InventoryModule.register({ isGlobal: true }),
+                ShiftsModule.register({ isGlobal: true }),
+                OperationsJobsQueueModule,
                 ContentItemsModule.register({ isGlobal: true }),
                 ContentSettingsModule.register({ isGlobal: true }),
                 ContentModule.register({ isGlobal: true }),
@@ -449,11 +452,6 @@ export class AppModule {
                 RendersHttpModule,
                 LivenessModule.register({ isGlobal: true }),
                 ModuleOpsModule.register({ isGlobal: true }),
-                InventoryModule.register({ isGlobal: true }),
-                InventoryHttpModule,
-                ReplenishStockQueueModule,
-                DeductOrderQueueModule,
-                InventoryCommandQueueModule,
                 BookingsModule.register({ isGlobal: true }),
                 LeadsHttpModule,
                 PlatformAuditModule.register({ isGlobal: true }),
