@@ -13,6 +13,8 @@ export enum BillingErrorCode {
     PlanNotFound = "BILLING_PLAN_NOT_FOUND",
     /** The plan is a contract plan that is never bought in the app. */
     PlanCustom = "BILLING_PLAN_CUSTOM",
+    /** The payment order does not exist in the workspace. */
+    OrderNotFound = "BILLING_ORDER_NOT_FOUND",
     /** A webhook delivery did not prove who sent it. */
     WebhookUnauthorized = "BILLING_WEBHOOK_UNAUTHORIZED",
     /** A webhook delivery body cannot be used. */
@@ -29,6 +31,7 @@ export const BILLING_ERROR_KINDS: Record<BillingErrorCode, ErrorKind> = {
     [BillingErrorCode.NotMember]: "forbidden",
     [BillingErrorCode.WorkspaceNotFound]: "not-found",
     [BillingErrorCode.PlanNotFound]: "not-found",
+    [BillingErrorCode.OrderNotFound]: "not-found",
     [BillingErrorCode.PlanCustom]: "conflict",
     [BillingErrorCode.WebhookUnauthorized]: "unauthenticated",
     [BillingErrorCode.WebhookInvalid]: "invalid",

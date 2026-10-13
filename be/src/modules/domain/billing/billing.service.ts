@@ -4,7 +4,7 @@ import { PaymentOrdersService } from "@modules/domain/payment-orders"
 import type { PaymentOrder } from "@modules/domain/payment-orders"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { InjectBillingOptions } from "./billing.decorators"
-import type { BillingOptions } from "./billing.options"
+import type { BankAccountOptions, BillingOptions } from "./billing.options"
 import type {
     PayableOrder,
     Plan,
@@ -75,6 +75,18 @@ export class BillingService {
         if (role === null || !MANAGER_ROLES.includes(role)) throw new BillingError({ code: BillingErrorCode.Forbidden })
     }
 
+    /** Whether the caller may pay for the workspace (owner or manager); refuses anyone who is not an active member. */
+    async canManage(userId: string, workspaceId: string): Promise<boolean> {
+        const role = await this.roleOf(userId, workspaceId)
+        if (role === null) throw new BillingError({ code: BillingErrorCode.NotMember })
+        return MANAGER_ROLES.includes(role)
+    }
+
+    /** The bank account customers pay into. */
+    bankAccount(): BankAccountOptions {
+        return this.options.bankAccount
+    }
+
     /** "Renew": a new payment order for the current plan of the workspace (owner or manager). */
     async renew(userId: string, params: RenewalParams): Promise<PayableOrder> {
         await this.requireManager(userId, params.workspaceId)
@@ -89,6 +101,21 @@ export class BillingService {
     async orderPlan(userId: string, params: PlanOrderParams): Promise<PayableOrder> {
         await this.requireManager(userId, params.workspaceId)
         return this.orderPlanOf(userId, params.workspaceId, params.planCode)
+    }
+
+    /** One payment order of the workspace with its QR, for a member of the workspace. */
+    async getOrder(userId: string, workspaceId: string, orderId: string): Promise<PayableOrder> {
+        await this.requireMember(userId, workspaceId)
+        const order = await this.orders.findById(workspaceId, orderId)
+        if (order === null) throw new BillingError({ code: BillingErrorCode.OrderNotFound })
+        return this.payable(order)
+    }
+
+    /** The newest plan payment of the workspace that can still be paid, for a member of the workspace; null when there is none. */
+    async findOpenOrder(userId: string, workspaceId: string): Promise<PayableOrder | null> {
+        await this.requireMember(userId, workspaceId)
+        const order = await this.orders.findOpenPlan(workspaceId)
+        return order === null ? null : this.payable(order)
     }
 
     /** An order together with the VietQR image and the bank account that pay it. */
