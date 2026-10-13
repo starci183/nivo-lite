@@ -36,6 +36,5 @@ export type {
     OptionalAgentRef,
     Processor,
 } from "./agents.contracts"
-export { UnboundInstallationsService } from "./unbound-installations.service"
 export { UnboundKnowledgeLensService } from "./unbound-knowledge-lens.service"
 export { UnboundModuleProfilesService } from "./unbound-module-profiles.service"

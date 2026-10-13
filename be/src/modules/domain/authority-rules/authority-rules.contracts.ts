@@ -53,3 +53,15 @@ export type OptionalRuleInstallation = string | null
 
 /** The operating mode of the handling instance, when it is known. */
 export type OptionalOperatingMode = string | null | undefined
+
+/** The rule a module grants to an action when it is installed. */
+export interface DefaultRule {
+    /** The action key. */
+    readonly action: string
+    /** The default mode. */
+    readonly mode: RuleMode
+    /** The default amount limit, VND; null for none. */
+    readonly limit_vnd: number | null
+    /** Fields that must be present. */
+    readonly required_fields: ReadonlyArray<string>
+}

@@ -38,11 +38,18 @@ import type { SetAgentTextsInput } from "./dto/set-agent-texts.input"
 /** Maps the workspace of the request to the engine status request. */
 export const toWorkspaceRequest = (workspaceId: string): GetEngineStatusRequest => ({ workspaceId })
 
+/** Maps one agent to the GraphQL type. */
+export const toAgentType = (agent: AgentSummary): AgentSummaryType => ({ ...agent })
+
 /** Maps the listing of the GraphQL input, with the workspace it names, to the query request. */
 export const toListAgentsRequest = (workspaceId: string, input: ListAgentsInput): ListAgentsRequest => ({
     workspaceId,
     ...input,
 })
+
+/** Maps the agents to the GraphQL type. */
+export const toAgentsType = (agents: ReadonlyArray<AgentSummary>): Array<AgentSummaryType> =>
+    agents.map((agent) => ({ ...agent }))
 
 /** Maps the dashboard input, with the workspace it names, to the query request. */
 export const toDashboardRequest = (workspaceId: string, input: AgentDashboardInput): GetAgentDashboardRequest => ({
@@ -50,11 +57,18 @@ export const toDashboardRequest = (workspaceId: string, input: AgentDashboardInp
     ...input,
 })
 
+/** Maps the engine status to the GraphQL type. */
+export const toAgentEngineStatusType = (status: EngineStatus): AgentEngineStatusType => ({ ...status })
+
 /** Maps the agent of the GraphQL input, with the workspace it names, to the connections query request. */
 export const toListAgentConnectionsRequest = (
     workspaceId: string,
     input: AgentIdInput,
 ): ListAgentConnectionsRequest => ({ workspaceId, ...input })
+
+/** Maps the connections granted to an agent to the GraphQL type. */
+export const toAgentConnectionsType = (connections: ReadonlyArray<BoundConnection>): Array<AgentConnectionType> =>
+    connections.map((connection) => ({ ...connection }))
 
 /** Maps the new agent of the GraphQL input, with the workspace it names, to the command request. */
 export const toCreateAgentRequest = (workspaceId: string, input: CreateAgentInput): CreateAgentRequest => ({
@@ -62,10 +76,18 @@ export const toCreateAgentRequest = (workspaceId: string, input: CreateAgentInpu
     ...input,
 })
 
+/** Maps the dashboard regions to the GraphQL type. */
+export const toAgentDashboardType = (result: AgentDashboardData): AgentDashboardType => ({ ...result })
+
 /** Maps the rename of the GraphQL input, with the workspace it names, to the command request. */
 export const toRenameAgentRequest = (workspaceId: string, input: RenameAgentInput): RenameAgentRequest => ({
     workspaceId,
     ...input,
+})
+
+/** Maps what queueing a text answered to the GraphQL type. */
+export const toAgentGenerationRequestedType = (result: GenerationRequested): AgentGenerationRequestedType => ({
+    ...result,
 })
 
 /** Maps the status change of the GraphQL input, with the workspace it names, to the command request. */
@@ -74,11 +96,17 @@ export const toSetAgentStatusRequest = (workspaceId: string, input: SetAgentStat
     ...input,
 })
 
+/** Maps the status of a queued text to the GraphQL type. */
+export const toAgentGenerationStatusType = (status: GenerationStatus): AgentGenerationStatusType => ({ ...status })
+
 /** Maps the texts of the GraphQL input, with the workspace it names, to the command request. */
 export const toSetAgentTextsRequest = (workspaceId: string, input: SetAgentTextsInput): SetAgentTextsRequest => ({
     workspaceId,
     ...input,
 })
+
+/** The answer of a mutation that returns nothing else. */
+export const toAgentAckType = (): AgentAckType => ({ ok: true })
 
 /** Maps the sync request of the GraphQL input, with the workspace it names, to the command request. */
 export const toRequestAgentSyncRequest = (
@@ -98,23 +126,6 @@ export const toRevokeAgentConnectionRequest = (
     input: RevokeAgentConnectionInput,
 ): RevokeAgentConnectionRequest => ({ workspaceId, ...input })
 
-/** Maps one agent to the GraphQL type. */
-export const toAgentType = (agent: AgentSummary): AgentSummaryType => ({ ...agent })
-
-/** Maps the agents to the GraphQL type. */
-export const toAgentsType = (agents: ReadonlyArray<AgentSummary>): Array<AgentSummaryType> =>
-    agents.map((agent) => ({ ...agent }))
-
-/** Maps the engine status to the GraphQL type. */
-export const toAgentEngineStatusType = (status: EngineStatus): AgentEngineStatusType => ({ ...status })
-
-/** Maps the connections granted to an agent to the GraphQL type. */
-export const toAgentConnectionsType = (connections: ReadonlyArray<BoundConnection>): Array<AgentConnectionType> =>
-    connections.map((connection) => ({ ...connection }))
-
-/** Maps the dashboard regions to the GraphQL type. */
-export const toAgentDashboardType = (result: AgentDashboardData): AgentDashboardType => ({ ...result })
-
 /** The answer of a mutation that returns nothing else. */
 /** Maps the generation request of the GraphQL input, with the workspace and the locale, to the command request. */
 export const toRequestGenerationRequest = (
@@ -128,14 +139,3 @@ export const toGetGenerationStatusRequest = (
     workspaceId: string,
     input: AgentGenerationIdInput,
 ): GetGenerationStatusRequest => ({ workspaceId, ...input })
-
-/** Maps what queueing a text answered to the GraphQL type. */
-export const toAgentGenerationRequestedType = (result: GenerationRequested): AgentGenerationRequestedType => ({
-    ...result,
-})
-
-/** Maps the status of a queued text to the GraphQL type. */
-export const toAgentGenerationStatusType = (status: GenerationStatus): AgentGenerationStatusType => ({ ...status })
-
-/** The answer of a mutation that returns nothing else. */
-export const toAgentAckType = (): AgentAckType => ({ ok: true })

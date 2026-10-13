@@ -5,6 +5,7 @@ export type { AiGenerationsOptions } from "./ai-generations.options"
 export { AI_GENERATIONS_USAGE, InjectUsage } from "./ai-generations.decorators"
 export { AiGenerationsModule } from "./ai-generations.module"
 export type { OptionalQuotaBlock, QuotaBlock, UsageGate, UsageRecord } from "./ai-generations.port"
+export { DirectGenerationService } from "./direct-generation.service"
 export { GenerationRunnerService } from "./generation-runner.service"
 export { GenerationsService } from "./generations.service"
 export type {

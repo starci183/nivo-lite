@@ -52,6 +52,9 @@ export interface GenerationSuccess {
 /** Why a generation did not produce text. */
 export type GenerationFailureReason = "quota" | "engine_offline" | "timeout" | "error" | "not_configured"
 
+/** A refusal to write a text, or null when the text can be written. */
+export type OptionalGenerationFailure = GenerationFailure | null
+
 /** A generation that did not produce text. */
 export interface GenerationFailure {
     /** Discriminant of the failure half. */

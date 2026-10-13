@@ -34,3 +34,10 @@ export const UPSERT_RULE = sql`
     SET mode = excluded.mode, limit_vnd = excluded.limit_vnd, required_fields = excluded.required_fields, updated_at = now()
     RETURNING id, workspace_id, department, action, mode, limit_vnd::float8 AS limit_vnd, required_fields, note,
               to_json(updated_at) #>> '{}' AS updated_at`
+
+/** Grants the default rules of a module, never overwriting a rule the owner already set ($1 workspace, $2 module, $3 defaults JSON). */
+export const SEED_DEFAULT_RULES = sql`
+    INSERT INTO public.authority_rules (workspace_id, department, action, mode, limit_vnd, required_fields)
+    SELECT $1, $2, d.action, d.mode, d.limit_vnd, ARRAY(SELECT jsonb_array_elements_text(d.required_fields))
+    FROM jsonb_to_recordset($3::jsonb) AS d(action text, mode text, limit_vnd bigint, required_fields jsonb)
+    ON CONFLICT (workspace_id, department, action) DO NOTHING`

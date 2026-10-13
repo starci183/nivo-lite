@@ -17,6 +17,7 @@ import type {
     GenerationOutcome,
     GenerationRequested,
     GenerationStatus,
+    OptionalGenerationFailure,
     OptionalGenerationProgress,
     PollVerdict,
 } from "./ai-generations.contracts"
@@ -59,16 +60,26 @@ export class GenerationsService {
         private readonly members: WorkspaceMembersService,
     ) {}
 
-    /** Writes one text and answers with it, or with the reason there is none. */
-    async generate(params: GenerateParams): Promise<GenerationOutcome> {
+    /** Why a text cannot be written now: the quota of the workspace is used up, or the engine is off; null when it can. */
+    async refusalOf(params: GenerateParams): Promise<OptionalGenerationFailure> {
         const locale = params.locale ?? "vi"
-        const busy = this.catalog.get("generation.busy", {}, locale)
         const blocked = await this.usage.blockedBy(params.workspaceId, params.kind, locale)
         if (blocked !== null) return failure("quota", blocked.message)
         const availability = this.engine.availability()
-        if (availability !== "ready") {
-            return failure(availability === "offline" ? "engine_offline" : "not_configured", busy)
-        }
+        if (availability === "ready") return null
+        return failure(availability === "offline" ? "engine_offline" : "not_configured", this.busyText(params))
+    }
+
+    /** The sentence shown when a text could not be written, in the language of the request. */
+    busyText(params: GenerateParams): string {
+        return this.catalog.get("generation.busy", {}, params.locale ?? "vi")
+    }
+
+    /** Writes one text and answers with it, or with the reason there is none. */
+    async generate(params: GenerateParams): Promise<GenerationOutcome> {
+        const refusal = await this.refusalOf(params)
+        if (refusal !== null) return refusal
+        const busy = this.busyText(params)
         return this.run(params, busy).catch((cause: unknown) => {
             this.logger.error(AiGenerationsLogEvent.GenerationFailed, cause, { purpose: params.purpose })
             return failure("error", busy)
@@ -84,14 +95,8 @@ export class GenerationsService {
     /** Queues a text a signed-in member asks for and answers its id at once (or why it was not queued); the text is read with `statusFor`. */
     async requestFor(userId: string, params: GenerateParams): Promise<GenerationRequested> {
         await this.members.require(userId, params.workspaceId)
-        const locale = params.locale ?? "vi"
-        const busy = this.catalog.get("generation.busy", {}, locale)
-        const blocked = await this.usage.blockedBy(params.workspaceId, params.kind, locale)
-        if (blocked !== null) return failure("quota", blocked.message)
-        const availability = this.engine.availability()
-        if (availability !== "ready") {
-            return failure(availability === "offline" ? "engine_offline" : "not_configured", busy)
-        }
+        const refusal = await this.refusalOf(params)
+        if (refusal !== null) return refusal
         const generationId = await this.enqueue(params, clampTimeout(params.timeoutMs))
         return { ok: true, generationId }
     }

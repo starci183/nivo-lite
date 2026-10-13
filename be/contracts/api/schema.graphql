@@ -173,6 +173,14 @@ type AgentSummaryType {
   status: String!
 }
 
+type AgentSyncStatusType {
+  activeVersion: Int
+  checkedAt: String
+  error: String
+  state: String!
+  syncedVersion: Int
+}
+
 input AgentTextsInput {
   instructions: String!
   knowledge: String!
@@ -233,6 +241,28 @@ type AuthoritySheetType {
   rules: [AuthorityRuleType!]!
 }
 
+input CardDecisionInput {
+  attributeLabel: String
+  decision: String!
+  limitVnd: Int
+  mode: String
+  onlyThisAgent: Boolean
+  resolution: String
+  scope: String
+  situation: String
+  subjectLabel: String
+  value: String
+}
+
+type ContextVersionType {
+  appliedAt: String!
+  appliedBy: String!
+  id: ID!
+  installationId: ID!
+  snapshot: JsonObject!
+  version: Int!
+}
+
 input CreateAgentInput {
   handle: String!
   instructions: String!
@@ -257,6 +287,11 @@ input DecideExecutionInput {
   decision: String!
   editedDraft: String
   executionId: ID!
+}
+
+input DecideSetupCardInput {
+  cardId: ID!
+  change: CardDecisionInput!
 }
 
 input DecideWorkItemInput {
@@ -293,6 +328,12 @@ input GrantAgentConnectionInput {
   agentId: ID!
   connectionId: ID!
   purpose: String!
+}
+
+input InstallModuleInput {
+  moduleKey: String!
+  name: String = null
+  newInstance: Boolean = false
 }
 
 scalar JsonObject
@@ -423,6 +464,34 @@ type ModuleGateWriteType {
   subjectType: String
 }
 
+type ModuleInstallResultType {
+  agentId: ID
+  created: Boolean!
+  installationId: ID!
+}
+
+input ModuleInstallationIdInput {
+  installationId: ID!
+}
+
+type ModuleInstallationType {
+  activeContextVersionId: ID
+  activeVersion: Int
+  agentHandle: String!
+  agentId: ID
+  agentName: String!
+  createdAt: String!
+  id: ID!
+  isMulti: Boolean!
+  liveEnabled: Boolean!
+  moduleKey: String!
+  name: String!
+  operatingMode: String!
+  settings: JsonObject!
+  status: String!
+  workspaceId: ID!
+}
+
 input ModuleKeyInput {
   key: String!
 }
@@ -438,24 +507,35 @@ type ModulesCatalogType {
 }
 
 type Mutation {
+  applySetup(input: ModuleInstallationIdInput!): SetupApplyResultType!
   cancelOfficeCommand(input: OfficeCandidateIdInput!): OfficeAckType!
   confirmOfficeCommand(input: OfficeCandidateIdInput!): OfficeConfirmResultType!
   createAgent(input: CreateAgentInput!): AgentSummaryType!
   createResponsibility(input: CreateResponsibilityInput!): ResponsibilityType!
   createWorkspace(input: CreateWorkspaceInput!): CreateWorkspaceType!
   decideExecution(input: DecideExecutionInput!): ApprovalExecutionType!
+  decideSetupCard(input: DecideSetupCardInput!): SetupCardType!
   decideWorkItem(input: DecideWorkItemInput!): WorkItemType!
   grantAgentConnection(input: GrantAgentConnectionInput!): AgentAckType!
+  installModule(input: InstallModuleInput!): ModuleInstallResultType!
   postOfficeMessage(input: PostOfficeMessageInput!): OfficeMessageType!
+  postSetupMessage(input: PostSetupMessageInput!): SetupMessageType!
   proposeOfficeCommand(input: ProposeOfficeCommandInput!): OfficeProposeOutcomeType!
   renameAgent(input: RenameAgentInput!): AgentAckType!
+  renameInstallationAgent(input: RenameInstallationAgentInput!): ModuleInstallationType!
+  renameModuleInstallation(input: RenameModuleInstallationInput!): ModuleInstallationType!
   requestAgentGeneration(input: RequestAgentGenerationInput!): AgentGenerationRequestedType!
   requestAgentSync(input: RequestAgentSyncInput!): AgentAckType!
   revokeAgentConnection(input: RevokeAgentConnectionInput!): AgentAckType!
   saveAuthorityRule(input: SaveAuthorityRuleInput!): AuthorityRuleType!
+  saveHoldingMessage(input: SaveHoldingMessageInput!): ModuleInstallationType!
+  saveReplyTimeout(input: SaveReplyTimeoutInput!): ModuleInstallationType!
   sendAgentCommand(input: SendAgentCommandInput!): AgentCommandResultType!
   setAgentStatus(input: SetAgentStatusInput!): AgentAckType!
   setAgentTexts(input: SetAgentTextsInput!): AgentAckType!
+  setModuleLive(input: SetModuleLiveInput!): ModuleInstallationType!
+  setOperatingMode(input: SetOperatingModeInput!): ModuleInstallationType!
+  setSetupGate(input: SetSetupGateInput!): SetupSessionType!
   updateAuthority(input: UpdateAuthorityInput!): AuthorityProfileType!
   updateResponsibilityStatus(input: UpdateResponsibilityStatusInput!): ResponsibilityType!
 }
@@ -558,6 +638,11 @@ input PostOfficeMessageInput {
   body: String!
 }
 
+input PostSetupMessageInput {
+  setupSessionId: ID!
+  text: String!
+}
+
 type ProposalCandidateType {
   amount_vnd: Float!
   id: ID!
@@ -583,10 +668,13 @@ type Query {
   agentDashboard(input: AgentDashboardInput!): AgentDashboardType!
   agentEngineStatus: AgentEngineStatusType!
   agentGenerationStatus(input: AgentGenerationIdInput!): AgentGenerationStatusType!
+  agentSyncStatus(input: ModuleInstallationIdInput!): AgentSyncStatusType!
   agents(input: ListAgentsInput!): [AgentSummaryType!]!
   authority: AuthoritySheetType!
   decisionHistory(input: ListDecisionHistoryInput!): [DecisionRecordType!]!
   moduleDefinition(input: ModuleKeyInput!): ModuleDefinitionType!
+  moduleInstallation(input: ModuleInstallationIdInput!): ModuleInstallationType!
+  moduleInstallations: [ModuleInstallationType!]!
   modulesCatalog: ModulesCatalogType!
   myWorkspaces: [MembershipType!]!
   officeCommandCandidates: [OfficeCandidateType!]!
@@ -594,12 +682,24 @@ type Query {
   officeMessages(input: ListOfficeMessagesInput!): OfficeMessagePageType!
   officePendingApprovals: [OfficeApprovalType!]!
   responsibilities: [ResponsibilityListingType!]!
+  setupState(input: ModuleInstallationIdInput!): SetupStateType!
+  setupVersions(input: ModuleInstallationIdInput!): SetupVersionsType!
   workItem(input: WorkItemIdInput!): WorkItemType!
   workItems(input: ListWorkItemsInput!): WorkItemPageType!
 }
 
 input RenameAgentInput {
   agentId: ID!
+  name: String!
+}
+
+input RenameInstallationAgentInput {
+  installationId: ID!
+  name: String!
+}
+
+input RenameModuleInstallationInput {
+  installationId: ID!
   name: String!
 }
 
@@ -655,6 +755,16 @@ input SaveAuthorityRuleInput {
   change: AuthorityRuleChangeInput!
 }
 
+input SaveHoldingMessageInput {
+  installationId: ID!
+  value: String!
+}
+
+input SaveReplyTimeoutInput {
+  installationId: ID!
+  value: Int!
+}
+
 input SendAgentCommandInput {
   command: String!
   fields: [FieldValueInput!]
@@ -673,6 +783,97 @@ input SetAgentStatusInput {
 input SetAgentTextsInput {
   agentId: ID!
   texts: AgentTextsInput!
+}
+
+input SetModuleLiveInput {
+  installationId: ID!
+  live: Boolean!
+}
+
+input SetOperatingModeInput {
+  installationId: ID!
+  mode: String!
+}
+
+input SetSetupGateInput {
+  action: String!
+  evidence: String = ""
+  gateKey: String!
+  setupSessionId: ID!
+}
+
+type SetupApplyResultType {
+  version: Int!
+}
+
+type SetupCardType {
+  createdAt: String!
+  decidedBy: String
+  gateKey: String!
+  id: ID!
+  kind: String!
+  payload: JsonObject!
+  result: JsonObject
+  setupSessionId: ID!
+  sourceMessageId: ID
+  status: String!
+  targetKey: String!
+  workspaceId: ID!
+}
+
+type SetupCardViewType {
+  card: SetupCardType!
+  current: JsonObject
+}
+
+type SetupDraftType {
+  facts: [SetupFactType!]!
+  summary: String!
+}
+
+type SetupFactType {
+  key: String!
+  text: String!
+}
+
+type SetupMessageType {
+  author: String!
+  body: String!
+  createdAt: String!
+  id: ID!
+  role: String!
+  setupSessionId: ID!
+}
+
+type SetupRevisionType {
+  id: ID!
+  revision: Int!
+  status: String!
+}
+
+type SetupSessionType {
+  createdAt: String!
+  draft: SetupDraftType!
+  gateEvidence: JsonObject!
+  id: ID!
+  installationId: ID!
+  revision: Int!
+  status: String!
+  workspaceId: ID!
+}
+
+type SetupStateType {
+  cards: [SetupCardViewType!]!
+  installation: ModuleInstallationType!
+  messages: [SetupMessageType!]!
+  revisions: [SetupRevisionType!]!
+  session: SetupSessionType!
+  turnPending: Boolean!
+}
+
+type SetupVersionsType {
+  activeVersionId: ID
+  versions: [ContextVersionType!]!
 }
 
 input UpdateAuthorityInput {

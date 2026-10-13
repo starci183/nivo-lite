@@ -15,6 +15,7 @@ import { AgentToolsHttpModule } from "@features/api/agent-tools"
 import { AgentsGraphqlModule, AgentsHttpModule } from "@features/api/agents"
 import { DecisionsGraphqlModule, DecisionsHttpModule } from "@features/api/decisions"
 import { RunDecisionsQueueModule } from "@features/jobs/run-decisions"
+import { RunSetupTurnQueueModule } from "@features/jobs/run-setup-turn"
 import { GenerateWithAgentQueueModule } from "@features/jobs/generate-with-agent"
 import { SyncAgentsQueueModule } from "@features/jobs/sync-agents"
 import { BookingHttpModule } from "@features/api/booking"
@@ -112,7 +113,6 @@ import {
     AGENTS_SYNC_FRESH_MS,
     AgentsModule,
     AgentsService,
-    UnboundInstallationsService,
     UnboundKnowledgeLensService,
     UnboundModuleProfilesService,
 } from "@modules/domain/agents"
@@ -256,6 +256,7 @@ import {
     MODULE_CATEGORIES,
     MODULES_ERROR_KINDS,
     MODULES_MESSAGES,
+    InstallationDirectoryService,
     ModulesModule,
 } from "@modules/domain/modules"
 import { PUBLIC_API_ERROR_KINDS, PUBLIC_API_MESSAGES, PublicApiModule } from "@modules/domain/public-api"
@@ -432,7 +433,6 @@ export class AppModule {
                         TELEGRAM_MESSAGES,
                         ZALO_MESSAGES,
                         ERRORS_MESSAGES,
-                        HTTP_MESSAGES,
                         HTTP_SECURITY_MESSAGES,
                         IDENTITY_MESSAGES,
                         PLATFORM_ADMIN_MESSAGES,
@@ -519,7 +519,6 @@ export class AppModule {
                         CONFIG_ERROR_KINDS,
                         DATABASE_ERROR_KINDS,
                         DOCUMENTS_ERROR_KINDS,
-                        HTTP_ERROR_KINDS,
                         HTTP_SECURITY_ERROR_KINDS,
                         JOBS_ERROR_KINDS,
                         BRAIN_ERROR_KINDS,
@@ -666,7 +665,7 @@ export class AppModule {
                 AgentsModule.register({
                     isGlobal: true,
                     ports: {
-                        installations: UnboundInstallationsService,
+                        installations: InstallationDirectoryService,
                         knowledge: UnboundKnowledgeLensService,
                         modules: UnboundModuleProfilesService,
                     },
@@ -711,6 +710,7 @@ export class AppModule {
                 SyncAgentsQueueModule,
                 GenerateWithAgentQueueModule,
                 RunDecisionsQueueModule,
+                RunSetupTurnQueueModule,
                 AgentsHttpModule,
                 AgentsGraphqlModule,
                 AgentToolsHttpModule,
