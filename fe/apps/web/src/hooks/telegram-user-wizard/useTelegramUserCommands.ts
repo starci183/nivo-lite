@@ -4,12 +4,14 @@ import { useCallback, useMemo } from "react"
 import { useSettledGraphQL } from "@/hooks/connection-wizard"
 import type { Settled } from "@/hooks/connection-wizard"
 import { useConnectionsRefresh } from "@/hooks/connections"
-import { useMutateCancelTelegramLoginSwr } from "@/hooks/swr/api/graphql/mutations/useMutateCancelTelegramLoginSwr"
-import { useMutateResendTelegramCodeSwr } from "@/hooks/swr/api/graphql/mutations/useMutateResendTelegramCodeSwr"
-import { useMutateSaveTelegramUserSetupSwr } from "@/hooks/swr/api/graphql/mutations/useMutateSaveTelegramUserSetupSwr"
-import { useMutateStartTelegramLoginSwr } from "@/hooks/swr/api/graphql/mutations/useMutateStartTelegramLoginSwr"
-import { useMutateSubmitTelegramCodeSwr } from "@/hooks/swr/api/graphql/mutations/useMutateSubmitTelegramCodeSwr"
-import { useMutateSubmitTelegramPasswordSwr } from "@/hooks/swr/api/graphql/mutations/useMutateSubmitTelegramPasswordSwr"
+import {
+    useMutateCancelTelegramLoginSwr,
+    useMutateResendTelegramCodeSwr,
+    useMutateSaveTelegramUserSetupSwr,
+    useMutateStartTelegramLoginSwr,
+    useMutateSubmitTelegramCodeSwr,
+    useMutateSubmitTelegramPasswordSwr,
+} from "@/hooks/swr"
 import type { PickedChat, SinceDays } from "./telegram-user-wizard.shared"
 
 /** What starting a login takes. */

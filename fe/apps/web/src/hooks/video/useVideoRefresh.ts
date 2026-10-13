@@ -1,10 +1,12 @@
 import { useCallback } from "react"
 import { mutate } from "swr"
-import { QUERY_AGENT_DASHBOARD_SWR_KEY } from "@/hooks/swr/api/graphql/queries/useQueryAgentDashboardSwr"
-import { QUERY_VIDEO_BRAND_SWR_KEY } from "@/hooks/swr/api/graphql/queries/useQueryVideoBrandSwr"
-import { QUERY_VIDEO_FIGURES_SWR_KEY } from "@/hooks/swr/api/graphql/queries/useQueryVideoFiguresSwr"
-import { QUERY_VIDEO_PROJECT_SWR_KEY } from "@/hooks/swr/api/graphql/queries/useQueryVideoProjectSwr"
-import { QUERY_VIDEO_PROJECTS_SWR_KEY } from "@/hooks/swr/api/graphql/queries/useQueryVideoProjectsSwr"
+import {
+    QUERY_AGENT_DASHBOARD_SWR_KEY,
+    QUERY_VIDEO_BRAND_SWR_KEY,
+    QUERY_VIDEO_FIGURES_SWR_KEY,
+    QUERY_VIDEO_PROJECT_SWR_KEY,
+    QUERY_VIDEO_PROJECTS_SWR_KEY,
+} from "@/hooks/swr"
 import { useActiveWorkspace } from "@/hooks/workspaces"
 import { useGraphQLWithToast } from "@/modules/toast"
 

@@ -1,4 +1,4 @@
-import { useQueryMyWorkspacesSwr } from "@/hooks/swr/api/graphql/queries/useQueryMyWorkspacesSwr"
+import { useQueryMyWorkspacesSwr } from "@/hooks/swr"
 import { workspaceRoleOf, workspaceStateOf } from "./workspaces.shared"
 import type { WorkspaceCardView } from "./workspaces.shared"
 

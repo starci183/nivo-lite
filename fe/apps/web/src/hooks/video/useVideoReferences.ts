@@ -1,9 +1,7 @@
 import { useFormatter, useTranslations } from "next-intl"
 import { useMemo } from "react"
 import type { DescriptionListStatItem } from "@starci/grammar/common"
-import { useQueryVideoFiguresSwr } from "@/hooks/swr/api/graphql/queries/useQueryVideoFiguresSwr"
-import { useQueryVideoMediaSwr } from "@/hooks/swr/api/graphql/queries/useQueryVideoMediaSwr"
-import { useQueryVideoSourcesSwr } from "@/hooks/swr/api/graphql/queries/useQueryVideoSourcesSwr"
+import { useQueryVideoFiguresSwr, useQueryVideoMediaSwr, useQueryVideoSourcesSwr } from "@/hooks/swr"
 import { mediaItemOf } from "./video.shared"
 import type { SourceChoice } from "./video.shared"
 

@@ -1,7 +1,6 @@
 import { useTranslations } from "next-intl"
 import { mutate } from "swr"
-import { useMutateCreateVideoMediaUploadSwr } from "@/hooks/swr/api/graphql/mutations/useMutateCreateVideoMediaUploadSwr"
-import { QUERY_VIDEO_MEDIA_SWR_KEY } from "@/hooks/swr/api/graphql/queries/useQueryVideoMediaSwr"
+import { useMutateCreateVideoMediaUploadSwr, QUERY_VIDEO_MEDIA_SWR_KEY } from "@/hooks/swr"
 import { useActiveWorkspace } from "@/hooks/workspaces"
 import { putPresigned } from "@/modules/api"
 import { useGraphQLWithToast, useRestWithToast } from "@/modules/toast"
