@@ -1,8 +1,10 @@
+import { CONTEXT_NOTES_MESSAGES } from "@modules/domain/module-context-notes"
 import type { MessageBundle } from "@modules/platform/i18n"
 
-/** Display text of the modules codes, Vietnamese and English. */
+/** Display text of the modules codes, Vietnamese and English, including the context-note codes. */
 export const MODULES_MESSAGES: MessageBundle = {
     vi: {
+        ...CONTEXT_NOTES_MESSAGES.vi,
         "errors.MODULES_NOT_FOUND": "Không tìm thấy agent {{key}}.",
         "errors.MODULES_CATALOG_INVALID": "Danh mục agent không hợp lệ: {{problems}}",
         "errors.MODULES_INSTANCE_NAME_INVALID": "Tên agent cần từ 1 đến 80 ký tự.",
@@ -35,6 +37,7 @@ export const MODULES_MESSAGES: MessageBundle = {
         "setup.ownerAddress": "bạn",
     },
     en: {
+        ...CONTEXT_NOTES_MESSAGES.en,
         "errors.MODULES_NOT_FOUND": "The agent {{key}} was not found.",
         "errors.MODULES_CATALOG_INVALID": "The agent catalogue is invalid: {{problems}}",
         "errors.MODULES_INSTANCE_NAME_INVALID": "The agent name needs 1 to 80 characters.",

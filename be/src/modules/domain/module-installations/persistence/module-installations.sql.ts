@@ -1,5 +1,25 @@
 import { sql } from "@modules/platform/database"
 
+/**
+ * The installation that owns a record, when the row says so ($1 workspace, $2 record). A record lives in one of
+ * work_items, agent_conversations, bookings, lead_flows or leads; this only reads the installation column.
+ */
+export const INSTALLATION_OF_RECORD = sql`
+    SELECT installation_id AS "installationId"
+    FROM (
+        SELECT installation_id FROM public.work_items WHERE workspace_id = $1 AND id = $2
+        UNION ALL
+        SELECT installation_id FROM public.agent_conversations WHERE workspace_id = $1 AND id = $2
+        UNION ALL
+        SELECT installation_id FROM public.bookings WHERE workspace_id = $1 AND id = $2
+        UNION ALL
+        SELECT installation_id FROM public.lead_flows WHERE workspace_id = $1 AND id = $2
+        UNION ALL
+        SELECT installation_id FROM public.leads WHERE workspace_id = $1 AND id = $2
+    ) found
+    WHERE installation_id IS NOT NULL
+    LIMIT 1`
+
 /** Every installation of a workspace, oldest first, with its agent and its active version. */
 export const LIST_INSTALLATIONS = sql`
     SELECT i.id, i.workspace_id AS "workspaceId", i.module_key AS "moduleKey", i.name, i.is_multi AS "isMulti",

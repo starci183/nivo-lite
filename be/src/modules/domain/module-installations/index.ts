@@ -2,6 +2,7 @@ export type {
     AgentSyncStatus,
     InstallationMode,
     InstallationRecord,
+    RecordInstallation,
     OptionalRowId,
     OptionalInstallationRecord,
     RequirementFacts,

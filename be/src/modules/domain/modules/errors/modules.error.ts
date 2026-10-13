@@ -1,3 +1,4 @@
+import { MODULE_CONTEXT_NOTES_ERROR_KINDS } from "@modules/domain/module-context-notes"
 import { DomainError } from "@modules/platform/errors"
 import type { ErrorKind } from "@modules/platform/errors"
 
@@ -49,6 +50,7 @@ export enum ModulesErrorCode {
 
 /** How each modules code travels. */
 export const MODULES_ERROR_KINDS: Record<ModulesErrorCode, ErrorKind> = {
+    ...MODULE_CONTEXT_NOTES_ERROR_KINDS,
     [ModulesErrorCode.NotFound]: "not-found",
     [ModulesErrorCode.CatalogInvalid]: "internal",
     [ModulesErrorCode.InstanceNameInvalid]: "invalid",

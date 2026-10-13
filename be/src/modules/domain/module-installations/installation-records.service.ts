@@ -10,6 +10,7 @@ import type {
     InstanceName,
     NewInstallation,
     OpenclawInstallation,
+    RecordInstallation,
     OptionalAgentSyncStatus,
     OptionalRowId,
     OptionalInstallationRecord,
@@ -19,6 +20,7 @@ import type { IdRow, SyncStatusRow } from "./persistence/module-installations.ro
 import {
     ACTIVATE_VERSION,
     FIND_FIRST_OF_MODULE,
+    INSTALLATION_OF_RECORD,
     FIND_INSTALLATION,
     FIND_INSTALLATION_BY_ID,
     FIND_OF_AGENT,
@@ -36,6 +38,7 @@ import {
 } from "./persistence/module-installations.sql"
 
 const UNIQUE_VIOLATION = "23505"
+const RECORD_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 const isUniqueViolation = (cause: unknown): boolean =>
     typeof cause === "object" && cause !== null && "code" in cause && cause.code === UNIQUE_VIOLATION
@@ -51,6 +54,19 @@ export class InstallationRecordsService {
     /** Every installation of a workspace, oldest first. */
     list(workspaceId: string): Promise<ReadonlyArray<InstallationRecord>> {
         return this.entityManager.query<Array<InstallationRecord>>(LIST_INSTALLATIONS, [workspaceId])
+    }
+
+    /**
+     * The installation that owns a work item, conversation, booking, lead flow or lead of the workspace.
+     * Null when the id is not one of those rows, or the row names no installation.
+     */
+    async installationOfRecord(workspaceId: string, recordId: string): Promise<RecordInstallation> {
+        if (!RECORD_ID.test(recordId)) return { installationId: null }
+        const [row] = await this.entityManager.query<Array<RecordInstallation>>(INSTALLATION_OF_RECORD, [
+            workspaceId,
+            recordId,
+        ])
+        return { installationId: row?.installationId ?? null }
     }
 
     /** One installation of a workspace by id; null when there is none. */

@@ -2,8 +2,11 @@ import { Module } from "@nestjs/common"
 import { ModulesApiModule } from "../../modules.module"
 import { AgentSyncStatusResolver } from "./agent-sync-status.resolver"
 import { ApplySetupResolver } from "./apply-setup.resolver"
+import { ContextNotesResolver } from "./context-notes.resolver"
+import { DismissContextNoteResolver } from "./dismiss-context-note.resolver"
 import { DecideSetupCardResolver } from "./decide-setup-card.resolver"
 import { InstallModuleResolver } from "./install-module.resolver"
+import { InstanceOfRecordResolver } from "./instance-of-record.resolver"
 import { ModuleDefinitionResolver } from "./module-definition.resolver"
 import { ModuleInstallationResolver } from "./module-installation.resolver"
 import { ModuleInstallationsResolver } from "./module-installations.resolver"
@@ -30,6 +33,7 @@ import { SetupVersionsResolver } from "./setup-versions.resolver"
         AgentSyncStatusResolver,
         ModuleRequirementFactsResolver,
         InstallModuleResolver,
+        InstanceOfRecordResolver,
         RenameModuleInstallationResolver,
         RenameInstallationAgentResolver,
         SetOperatingModeResolver,
@@ -41,6 +45,8 @@ import { SetupVersionsResolver } from "./setup-versions.resolver"
         PostSetupMessageResolver,
         SetSetupGateResolver,
         ApplySetupResolver,
+        ContextNotesResolver,
+        DismissContextNoteResolver,
         DecideSetupCardResolver,
     ],
 })
