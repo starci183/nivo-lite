@@ -154,5 +154,6 @@
   "errNotReady": "Chưa dùng được điều chỉnh: dữ liệu của workspace cần được cập nhật trước.",
   "evidenceLog": "Đã ghi nhận chứng từ thủ công: {amount} VND ngày {date}",
   "adjustLog": "Đã thêm điều chỉnh: {note}",
-  "adjustLogAmount": "Đã thêm điều chỉnh: {note} (số đúng là {amount} VND)"
+  "adjustLogAmount": "Đã thêm điều chỉnh: {note} (số đúng là {amount} VND)",
+  "loadRefused": "Bạn không có quyền xem Kế toán của không gian làm việc này."
 }

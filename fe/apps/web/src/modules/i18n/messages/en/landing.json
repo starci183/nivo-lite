@@ -107,5 +107,6 @@
   "chForm": "Web form",
   "chFormText": "Form submissions arrive in the same lead list.",
   "connectNote": "Only the Chatbot is available today. Other channels are on the roadmap and have no date yet.",
-  "connectCta": "Try NIVO OS"
+  "connectCta": "Try NIVO OS",
+  "flowAiMark": "AI"
 }

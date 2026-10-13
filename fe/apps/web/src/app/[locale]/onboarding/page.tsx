@@ -1,6 +1,6 @@
-import { redirect } from "next/navigation";
+import { OnboardingRedirectPage } from "@/features/pages/OnboardingRedirectPage"
 
-/** Old entry point: the workspaces area replaced it. */
-const OnboardingPage = () => redirect("/workspaces");
+/** The old entry point: the workspaces area replaced it. */
+const Page = () => <OnboardingRedirectPage target="/workspaces" />
 
-export default OnboardingPage;
+export default Page

@@ -2,7 +2,11 @@ import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
 import { APP_FILTER, APP_GUARD } from "@nestjs/core"
 import { LeadsHttpModule } from "@features/api/leads"
+import { AdminHttpModule } from "@features/api/admin"
+import { ModulesHttpModule } from "@features/api/modules"
+import { ExternalApiHttpModule } from "@features/api/external-api"
 import { SystemHealthHttpModule } from "@features/api/system-health"
+import { API_KEYS_ERROR_KINDS, API_KEYS_MESSAGES, ApiKeysModule } from "@modules/domain/api-keys"
 import { WorkspacesHttpModule } from "@features/api/workspaces"
 import { AuthGuard, IDENTITY_ERROR_KINDS, IDENTITY_MESSAGES, IdentityModule } from "@modules/domain/identity"
 import {
@@ -21,6 +25,22 @@ import {
     RESPONSIBILITIES_MESSAGES,
     ResponsibilitiesModule,
 } from "@modules/domain/responsibilities"
+import { AiQuotaOverridesModule } from "@modules/domain/ai-quota-overrides"
+import {
+    PLATFORM_ADMIN_ERROR_KINDS,
+    PLATFORM_ADMIN_MESSAGES,
+    PlatformAdminModule,
+} from "@modules/domain/platform-admin"
+import { PlatformAuditModule } from "@modules/domain/platform-audit"
+import { AuthorityActionsModule } from "@modules/domain/authority-actions"
+import {
+    MODULE_CATALOG,
+    MODULE_CATEGORIES,
+    MODULES_ERROR_KINDS,
+    MODULES_MESSAGES,
+    ModulesModule,
+} from "@modules/domain/modules"
+import { PUBLIC_API_ERROR_KINDS, PUBLIC_API_MESSAGES, PublicApiModule } from "@modules/domain/public-api"
 import { EventsModule } from "@modules/domain/events"
 import {
     WORKSPACE_INVITES_ERROR_KINDS,
@@ -65,13 +85,17 @@ export class AppModule {
                 I18nModule.register({
                     isGlobal: true,
                     bundles: [
+                        API_KEYS_MESSAGES,
                         ERRORS_MESSAGES,
                         HTTP_SECURITY_MESSAGES,
                         IDENTITY_MESSAGES,
+                        PLATFORM_ADMIN_MESSAGES,
                         JOBS_MESSAGES,
                         LEADS_MESSAGES,
                         RESPONSIBILITIES_MESSAGES,
                         CONTRACTS_MESSAGES,
+                        MODULES_MESSAGES,
+                        PUBLIC_API_MESSAGES,
                         QUEUE_MESSAGES,
                         WORKSPACE_INVITES_MESSAGES,
                         WORKSPACE_MEMBERS_MESSAGES,
@@ -81,12 +105,16 @@ export class AppModule {
                 ErrorsModule.register({
                     isGlobal: true,
                     kinds: [
+                        API_KEYS_ERROR_KINDS,
                         CONFIG_ERROR_KINDS,
                         DATABASE_ERROR_KINDS,
                         HTTP_SECURITY_ERROR_KINDS,
                         JOBS_ERROR_KINDS,
                         QUEUE_ERROR_KINDS,
                         IDENTITY_ERROR_KINDS,
+                        PLATFORM_ADMIN_ERROR_KINDS,
+                        MODULES_ERROR_KINDS,
+                        PUBLIC_API_ERROR_KINDS,
                         SUPABASE_ERROR_KINDS,
                         LEADS_ERROR_KINDS,
                         RESPONSIBILITIES_ERROR_KINDS,
@@ -131,8 +159,18 @@ export class AppModule {
                 }),
                 LivenessModule.register({ isGlobal: true }),
                 LeadsHttpModule,
+                PlatformAuditModule.register({ isGlobal: true }),
+                AiQuotaOverridesModule.register({ isGlobal: true }),
+                PlatformAdminModule.register({ isGlobal: true, ...options.platformAdmin }),
+                AuthorityActionsModule.register({ isGlobal: true }),
+                ModulesModule.register({ isGlobal: true, categories: MODULE_CATEGORIES, catalog: MODULE_CATALOG }),
+                ModulesHttpModule,
+                ApiKeysModule.register({ isGlobal: true }),
+                PublicApiModule.register({ isGlobal: true }),
+                ExternalApiHttpModule,
                 SystemHealthHttpModule,
                 WorkspacesHttpModule,
+                AdminHttpModule,
             ],
             providers: [
                 { provide: SUPABASE_ACCESS_TOKEN_VERIFIER, useValue: verifyAccessToken },

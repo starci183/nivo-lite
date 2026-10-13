@@ -1,108 +1,101 @@
-import "server-only";
-import { cache } from "react";
-import { getSession } from "./session";
-import { supabaseServer } from "./supabase/server";
-import type { Agent, EventRow, Execution, Lead, LeadDetail, Message, Responsibility, ResponsibilityWithLead } from "./types";
+import "server-only"
+import { cache } from "react"
+import {
+    readAgent,
+    readAgents,
+    readInstanceNames,
+    readLeadDetail,
+    readLeads,
+    readMessages,
+    readOpenResponsibilities,
+    readRecentEvents,
+    readResponsibilities,
+} from "@/modules/db"
+import type { DbOutcome } from "@/modules/db"
+import { getSession } from "./session"
+import type { Agent, EventRow, Lead, LeadDetail, Message, ResponsibilityWithLead } from "./types"
 
-const ctx = async () => ({ session: await getSession(), supabase: await supabaseServer() });
+/**
+ * Legacy shim of the console readers (agents, leads, responsibilities, Office lines, evidence events). The reads live in
+ * `modules/db/overview`; a failed read fails the page (the route error boundary) instead of showing an empty list.
+ * Removed with the pages that still import it.
+ */
 
+/** The value of a read, or a thrown failure that names its kind and code. */
+const unwrap = <Value>(outcome: DbOutcome<Value>): Value => {
+    if (outcome.kind !== "ok") throw new Error(`read failed: ${outcome.kind} ${outcome.code}`)
+    return outcome.value
+}
+
+/** The agents of the signed-in workspace. */
 export const listAgents = cache(async (): Promise<Agent[]> => {
-  const { session, supabase } = await ctx();
-  const { data } = await supabase.from("agents").select("*").eq("workspace_id", session.workspace.id).order("created_at");
-  return withInstanceNames((data ?? []) as Agent[]);
-});
+    const session = await getSession()
+    return withInstanceNames(unwrap(await readAgents(session.workspace.id)))
+})
 
 /**
  * Agents with the name of the instance each one drives, for a multi-instance type (several Chatbots, one per branch or Fanpage): lists,
- * Office members and mentions can then tell "Chatbot – Chi nhánh Q1" from "Chatbot – Chi nhánh Q7". Never throws (names are a courtesy).
+ * Office members and mentions can then tell the branches apart. Names are a courtesy: a failed name read leaves the agents as they are.
  */
 export const withInstanceNames = async (agents: ReadonlyArray<Agent>): Promise<Array<Agent>> => {
-  if (agents.length === 0) return [];
-  try {
-    const { supabase } = await ctx();
-    const { data } = await supabase.from("module_installations").select("agent_id, name, is_multi").in("agent_id", agents.map((a) => a.id));
-    const byAgent = new Map(((data ?? []) as Array<{ agent_id: string; name: string; is_multi: boolean }>).filter((r) => r.is_multi).map((r) => [r.agent_id, r.name]));
-    return agents.map((a) => ({ ...a, instance_name: byAgent.get(a.id) ?? null }));
-  } catch {
-    return [...agents];
-  }
-};
+    if (agents.length === 0) return []
+    const names = await readInstanceNames(agents.map((agent) => agent.id))
+    if (names.kind !== "ok") return [...agents]
+    return agents.map((agent) => ({ ...agent, instance_name: names.value.get(agent.id) ?? null }))
+}
 
+/** One agent by id, or null when it is not found. */
 export const getAgent = async (id: string): Promise<Agent | null> => {
-  const { supabase } = await ctx();
-  const { data } = await supabase.from("agents").select("*").eq("id", id).maybeSingle<Agent>();
-  return data;
-};
+    const outcome = await readAgent(id)
+    if (outcome.kind === "not-found") return null
+    return unwrap(outcome)
+}
 
-export type LeadRow = Lead & { owner_name: string | null; next_action: string | null };
+/** A lead with the owner and next action of its open responsibility. */
+export type LeadRow = Lead & { owner_name: string | null; next_action: string | null }
 
+/** The leads of the signed-in workspace with their owner and next action. */
 export const listLeads = cache(async (): Promise<LeadRow[]> => {
-  const { session, supabase } = await ctx();
-  const [{ data: leads }, { data: resp }] = await Promise.all([
-    supabase.from("leads").select("*").eq("workspace_id", session.workspace.id).order("created_at", { ascending: false }),
-    supabase.from("responsibilities").select("lead_id, owner_name, next_action, status").eq("workspace_id", session.workspace.id).neq("status", "done"),
-  ]);
-  return leadRowsFrom(leads ?? [], resp ?? []);
-});
+    const session = await getSession()
+    const [leads, open] = await Promise.all([
+        readLeads(session.workspace.id),
+        readOpenResponsibilities(session.workspace.id),
+    ])
+    return leadRowsFrom(unwrap(leads), unwrap(open))
+})
 
 /** Leads with the owner and next action of their open responsibility, from rows already read. */
-export const leadRowsFrom = (leads: ReadonlyArray<unknown>, resp: ReadonlyArray<{ lead_id: string; owner_name: string | null; next_action: string | null }>): LeadRow[] =>
-  (leads as Lead[]).map((l) => {
-    const r = resp.find((x) => x.lead_id === l.id);
-    return { ...l, owner_name: r?.owner_name ?? null, next_action: r?.next_action ?? null };
-  });
+export const leadRowsFrom = (
+    leads: ReadonlyArray<Lead>,
+    resp: ReadonlyArray<{ lead_id: string; owner_name: string | null; next_action: string | null }>,
+): LeadRow[] =>
+    leads.map((lead) => {
+        const open = resp.find((row) => row.lead_id === lead.id)
+        return { ...lead, owner_name: open?.owner_name ?? null, next_action: open?.next_action ?? null }
+    })
 
+/** Every responsibility of the signed-in workspace with its lead. */
 export const listResponsibilities = cache(async (): Promise<ResponsibilityWithLead[]> => {
-  const { session, supabase } = await ctx();
-  const { data } = await supabase
-    .from("responsibilities")
-    .select("*, lead:leads(id, contact_name, company, stage)")
-    .eq("workspace_id", session.workspace.id)
-    .order("due_at", { ascending: true, nullsFirst: false });
-  return (data ?? []) as ResponsibilityWithLead[];
-});
+    const session = await getSession()
+    return unwrap(await readResponsibilities(session.workspace.id))
+})
 
+/** One lead with everything around it, or null when it is not found. */
 export const getLeadDetail = async (leadId: string): Promise<LeadDetail | null> => {
-  const { session, supabase } = await ctx();
-  const { data: lead } = await supabase.from("leads").select("*").eq("id", leadId).maybeSingle<Lead>();
-  if (!lead) return null;
-  const [r, ev, a] = await Promise.all([
-    supabase.from("responsibilities").select("*").eq("lead_id", leadId).order("created_at"),
-    supabase.from("events").select("*").eq("lead_id", leadId).order("created_at", { ascending: false }),
-    supabase.from("agents").select("*").eq("workspace_id", session.workspace.id).order("created_at"),
-  ]);
-  const responsibilities = (r.data ?? []) as Responsibility[];
-  const ids = responsibilities.map((x) => x.id);
-  const e = ids.length
-    ? await supabase.from("executions").select("*").in("responsibility_id", ids).order("created_at")
-    : { data: [] };
-  return {
-    lead,
-    responsibilities,
-    executions: (e.data ?? []) as Execution[],
-    events: (ev.data ?? []) as EventRow[],
-    agents: (a.data ?? []) as Agent[],
-  };
-};
+    const session = await getSession()
+    const outcome = await readLeadDetail(session.workspace.id, leadId)
+    if (outcome.kind === "not-found") return null
+    return unwrap(outcome)
+}
 
+/** The newest Office messages, oldest first. */
 export const listMessages = cache(async (limit = 100): Promise<Message[]> => {
-  const { session, supabase } = await ctx();
-  const { data } = await supabase
-    .from("messages")
-    .select("*")
-    .eq("workspace_id", session.workspace.id)
-    .order("created_at", { ascending: false })
-    .limit(limit);
-  return ((data ?? []) as Message[]).reverse();
-});
+    const session = await getSession()
+    return unwrap(await readMessages(session.workspace.id, limit))
+})
 
+/** The newest evidence events. */
 export const listRecentEvents = cache(async (limit = 20): Promise<EventRow[]> => {
-  const { session, supabase } = await ctx();
-  const { data } = await supabase
-    .from("events")
-    .select("*")
-    .eq("workspace_id", session.workspace.id)
-    .order("created_at", { ascending: false })
-    .limit(limit);
-  return (data ?? []) as EventRow[];
-});
+    const session = await getSession()
+    return unwrap(await readRecentEvents(session.workspace.id, limit))
+})

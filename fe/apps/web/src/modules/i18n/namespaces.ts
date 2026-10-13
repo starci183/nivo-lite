@@ -1,6 +1,7 @@
 /** Every message catalog namespace: one `messages/<locale>/<namespace>.json` per entry, loaded together by the request config. */
 export const NAMESPACES = [
     "access",
+    "admin",
     "app",
     "account",
     "agentChat",
@@ -28,6 +29,7 @@ export const NAMESPACES = [
     "googleWizard",
     "governance",
     "guide",
+    "guideMap",
     "inbox",
     "invite",
     "knowledge",
@@ -35,6 +37,7 @@ export const NAMESPACES = [
     "landingBottom",
     "lead",
     "leads",
+    "legal",
     "login",
     "loyalty",
     "loyaltyPublic",

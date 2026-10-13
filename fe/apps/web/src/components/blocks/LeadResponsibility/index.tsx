@@ -69,7 +69,7 @@ export const LeadResponsibility = (props: LeadResponsibilityProps) => {
         if (mode === "add") return commands.addResponsibility(loaded.lead.id, fields.title.trim(), step)
         if (active === null) return null
         const nextAction = mode === "due" ? active.next_action : step.nextAction
-        return commands.assignResponsibility(active.id, { ...step, nextAction }, null)
+        return commands.assignResponsibility(active.id, { ...step, nextAction })
     }
     const submit = () => {
         if (detail === null) return

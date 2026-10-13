@@ -1,19 +1,10 @@
-import { loadWorkspaceList } from "@/features/admin/queries";
-import { Shell } from "@/features/admin/Shell";
-import { WorkspacesView, type WorkspaceFilter } from "@/features/admin/WorkspacesView";
-import { audit, requirePlatformAdmin } from "@/lib/platform-admin";
+import { AdminWorkspacesPage } from "@/features/pages/AdminWorkspacesPage"
 
-const FILTERS: ReadonlyArray<WorkspaceFilter> = ["attention", "unpaid", "idle"];
+export { adminWorkspacesMetadata as generateMetadata } from "@/features/pages/AdminWorkspacesPage"
 
-/** /admin: every customer workspace with status, modules, connections and activity. */
-const Page = async ({ searchParams }: { searchParams: Promise<{ f?: string; q?: string }> }) => {
-  const admin = await requirePlatformAdmin();
-  const { f, q } = await searchParams;
-  const filter = FILTERS.find((x) => x === f) ?? "all";
-  const query = (q ?? "").slice(0, 120);
-  await audit(admin, "view.workspaces", null, { filter, q: query });
-  const items = await loadWorkspaceList();
-  return <Shell email={admin.email} current="workspaces"><WorkspacesView items={items} filter={filter} q={query} now={Date.now()} /></Shell>;
-};
+type PageProps = { readonly searchParams: Promise<{ readonly f?: string; readonly q?: string }> }
 
-export default Page;
+/** Admin area: every customer workspace with status, agents, connections and activity. */
+const Page = (props: PageProps) => <AdminWorkspacesPage searchParams={props.searchParams} />
+
+export default Page

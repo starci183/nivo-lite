@@ -1,0 +1,77 @@
+import { Alert, Button, Input, SurfaceCard, Text } from "@starci/grammar/common"
+import { AgentMark } from "../../leaves/AgentMark"
+import { ACTIONS, GROW, ROW, STACK } from "./classNames"
+
+/** Copy and state of the name card of an agent. */
+export interface AgentIdentityCardBaseProps {
+    readonly props: {
+        readonly title: string
+        readonly glyph: string
+        readonly module: string
+        readonly markLabel: string
+        readonly nameLabel: string
+        readonly nameHint: string
+        readonly name: string
+        readonly maxLength: number
+        readonly line: string
+        readonly saveLabel: string
+        readonly canSave: boolean
+        readonly isDisabled: boolean
+        readonly isPending: boolean
+        readonly isLoading: boolean
+        readonly noteTitle: string
+        readonly noteTone: "idle" | "saved" | "refused"
+        readonly noteText: string
+    }
+    readonly on: { readonly name: (value: string) => void; readonly save: () => void }
+}
+
+/** Draws the name card of an agent: its mark, the one name field and its save, and the result of the last save. */
+export const AgentIdentityCardBase = (props: AgentIdentityCardBaseProps) => (
+    <SurfaceCard label={props.props.title} headingLevel={2}>
+        <div className={STACK}>
+            <div className={ROW}>
+                <AgentMark
+                    glyph={props.props.glyph}
+                    module={props.props.module}
+                    label={props.props.markLabel}
+                    size="lg"
+                />
+                <div className={GROW}>
+                    <Input
+                        id="module-name"
+                        name="name"
+                        label={props.props.nameLabel}
+                        variant="secondary"
+                        hint={props.props.nameHint}
+                        value={props.props.name}
+                        isSkeleton={props.props.isLoading}
+                        isDisabled={props.props.isDisabled}
+                        onValueChange={(value) => props.on.name(value.slice(0, props.props.maxLength))}
+                    />
+                </div>
+            </div>
+            <Text size="sm" tone="muted" isSkeleton={props.props.isLoading}>
+                {props.props.line}
+            </Text>
+            <div className={ACTIONS}>
+                <Button
+                    variant="secondary"
+                    isSkeleton={props.props.isLoading}
+                    isPending={props.props.isPending}
+                    isDisabled={!props.props.canSave}
+                    onPress={props.on.save}
+                >
+                    {props.props.saveLabel}
+                </Button>
+            </div>
+            {props.props.noteTone === "idle" ? null : (
+                <Alert
+                    title={props.props.noteTone === "saved" ? props.props.noteText : props.props.noteTitle}
+                    description={props.props.noteTone === "saved" ? undefined : props.props.noteText}
+                    tone={props.props.noteTone === "saved" ? "affirmative" : "negative"}
+                />
+            )}
+        </div>
+    </SurfaceCard>
+)

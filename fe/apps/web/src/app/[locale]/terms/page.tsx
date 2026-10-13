@@ -1,10 +1,9 @@
-import type { Metadata } from "next";
-import { LegalPage } from "@/features/legal/LegalPage";
-import { termsDoc } from "@/features/legal/terms";
+import { LegalPage, legalMetadata } from "@/features/pages/LegalPage"
 
-export const metadata: Metadata = { title: "Điều khoản sử dụng - NIVO OS" };
+/** The document title of the terms of service. */
+export const generateMetadata = () => legalMetadata("terms")
 
 /** Public terms of service (listed in src/proxy.ts PUBLIC_PATHS). */
-const TermsPage = () => <LegalPage build={termsDoc} />;
+const Page = () => <LegalPage doc="terms" />
 
-export default TermsPage;
+export default Page

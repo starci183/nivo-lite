@@ -6,7 +6,7 @@ import { LeadsHeading } from "@/components/blocks/LeadsHeading"
 import { LeadsPageLayout } from "@/components/composites/LeadsPageLayout"
 import { LeadsPromoRow } from "@/features/promo-ads/LeadsPromoRow"
 import { getSession } from "@/lib/session"
-import { CHANNEL_KEYS, readLeads } from "@/modules/db"
+import { CHANNEL_KEYS, readLeadBoard } from "@/modules/db"
 import { toSlot } from "@/modules/slot"
 
 /** What the route passes: the query the page was opened with. */
@@ -26,7 +26,7 @@ export const leadsPageMetadata = async (): Promise<Metadata> => {
 /** The Leads page: every lead of the active workspace with its owner, stage and next action. A failed read reaches the route error boundary. */
 export const LeadsPage = async (props: LeadsPageProps) => {
     const session = await getSession()
-    const leads = await readLeads(session.workspace.id)
+    const leads = await readLeadBoard(session.workspace.id)
     if (leads.kind !== "ok") throw new Error(`leads: ${leads.kind} ${leads.code}`)
     return (
         <LeadsPageLayout

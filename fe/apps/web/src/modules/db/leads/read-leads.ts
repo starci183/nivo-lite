@@ -11,7 +11,7 @@ const LEADS_LIMIT = 500
 const OPEN_STEPS_LIMIT = 1000
 
 /** Reads every lead of the workspace, newest first, with the owner and next action of its open step; RLS limits the rows to the caller. */
-export const readLeads = cache(async (workspaceId: string): Promise<DbOutcome<ReadonlyArray<LeadListItem>>> => {
+export const readLeadBoard = cache(async (workspaceId: string): Promise<DbOutcome<ReadonlyArray<LeadListItem>>> => {
     const client = await createServerDbClient()
     const [leadsResult, stepsResult] = await Promise.all([
         client
