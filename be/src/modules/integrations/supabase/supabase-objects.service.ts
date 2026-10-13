@@ -8,6 +8,7 @@ import { InjectSupabaseAdminClient } from "./supabase.decorators"
 import { SupabaseLogEvent } from "./supabase.log-events"
 import type {
     ListedObjectsOutcome,
+    RemovedObjectsOutcome,
     SignedObjectUrlsOutcome,
     SignedUploadOutcome,
     StoredObjectOutcome,
@@ -88,5 +89,16 @@ export class SupabaseObjectsService implements SupabaseObjectsPort {
                     : [],
             ),
         )
+    }
+
+    /** Removes the objects at the paths of `bucket` in one Storage request; answers how many were removed. */
+    async remove(bucket: string, paths: ReadonlyArray<string>): Promise<RemovedObjectsOutcome> {
+        if (paths.length === 0) return ok(0)
+        const removed = await this.admin.storage.from(bucket).remove([...paths])
+        if (removed.error !== null) {
+            this.logger.error(SupabaseLogEvent.StorageFailed, removed.error, { bucket })
+            return refused(SupabaseErrorCode.ProviderUnavailable)
+        }
+        return ok(removed.data.length)
     }
 }

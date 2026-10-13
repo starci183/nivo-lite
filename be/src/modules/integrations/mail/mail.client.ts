@@ -9,7 +9,8 @@ import { InjectMailOptions } from "./mail.decorators"
 import type { AcceptedInfo, EmailLayoutInput, MailMessage, SentMail, SmtpConfig } from "./mail.contracts"
 import type { MailOptions } from "./mail.options"
 import { classifySmtpFailure } from "./smtp-error.policy"
-import { isPrivateAddress, isValidPort, isWellFormedHost, PUBLIC_MAIL_PORTS } from "./smtp-target.policy"
+import { isPrivateAddress, isWellFormedHost } from "@modules/platform/primitives"
+import { isValidPort, PUBLIC_MAIL_PORTS } from "./smtp-target.policy"
 
 /** The attachments in the shape nodemailer takes. */
 const attachmentsOf = (message: MailMessage) => message.attachments?.map((attachment) => ({ ...attachment }))

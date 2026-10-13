@@ -1,4 +1,3 @@
-import type { EntityManager } from "typeorm"
 import { DatabaseError, DatabaseErrorCode } from "./errors/database.error"
 
 declare const sqlTextBrand: unique symbol
@@ -41,19 +40,4 @@ export const ident = (name: string, allowed: ReadonlyArray<string>): SqlIdent =>
     }
     assertSqlIdent(name)
     return name
-}
-
-type NotFoundFactory = () => never
-
-/** Requires the row selected by an id-and-owner statement and lets the capability own its typed not-found error. */
-export const requireOwnedRow = async <T>(
-    entityManager: EntityManager,
-    statement: SqlText,
-    id: string,
-    ownerId: string,
-    notFound: NotFoundFactory,
-): Promise<T> => {
-    const row = (await entityManager.query<Array<T>>(statement, [id, ownerId]))[0]
-    if (row === undefined) return notFound()
-    return row
 }

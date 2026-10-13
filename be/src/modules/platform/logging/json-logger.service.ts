@@ -3,6 +3,7 @@ import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
 import { InjectLogErr, InjectLogOut } from "./logging.decorators"
 import type { LogFields, Logger } from "./logging.port"
+import { redactFields } from "./redact.policy"
 
 type Level = "info" | "warn" | "error"
 
@@ -33,8 +34,10 @@ export class JsonLoggerService implements Logger {
         this.write("error", this.err, event, { ...detail, ...fields })
     }
 
+    /** Every line is scrubbed of credentials (tokens, keys, passwords) before it is written: logs never carry a secret. */
     private write(level: Level, sink: Writable, event: string, fields?: LogFields): void {
-        sink.write(`${JSON.stringify({ level, event, time: this.clock.now().toISOString(), ...fields })}\n`)
+        const safe = fields === undefined ? {} : redactFields(fields)
+        sink.write(`${JSON.stringify({ level, event, time: this.clock.now().toISOString(), ...safe })}\n`)
     }
 }
 

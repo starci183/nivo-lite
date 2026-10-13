@@ -31,3 +31,21 @@ export interface ErrorDescription {
     /** Values for the placeholders of the display text. */
     readonly params: ErrorParams
 }
+
+/** Where a failure happened: the workspace (or a connection that names it) and a few plain facts, never a request body or header. */
+export interface ErrorReportContext {
+    /** The workspace the failure belongs to, when the caller knows it. */
+    readonly workspaceId?: string | null
+    /** A connection whose workspace the failure belongs to (a webhook route), when the workspace itself is unknown. */
+    readonly connectionId?: string | null
+    /** Further plain facts (route, method, job, attempt). */
+    readonly [fact: string]: unknown
+}
+
+/** The scope and context a transport describes a failure in, so an unhandled one is recorded where it happened. */
+export interface FailureSite {
+    /** `graphql`, `http`, `job.<queue>`. */
+    readonly scope: string
+    /** Where it happened. */
+    readonly context?: ErrorReportContext
+}

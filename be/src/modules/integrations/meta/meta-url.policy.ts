@@ -1,4 +1,5 @@
 import { META_SCOPES } from "./meta.contracts"
+import type { MetaSite } from "./meta.contracts"
 import type { MetaOptions } from "./meta.options"
 
 /** The oldest Graph API major version this client speaks. */
@@ -44,7 +45,7 @@ export const webhookUrl = (options: Pick<MetaOptions, "siteUrl">): string | null
     options.siteUrl ? `${trimSlashes(options.siteUrl)}/api/connections/meta/webhook` : null
 
 /** True when the site url is a public https origin Meta can call back (not localhost, not plain http). */
-export const isPublicSite = (options: Pick<MetaOptions, "siteUrl">): boolean => {
+export const isPublicSite = (options: MetaSite): boolean => {
     const site = options.siteUrl
     if (site === undefined || !URL.canParse(site)) return false
     const url = new URL(site)
