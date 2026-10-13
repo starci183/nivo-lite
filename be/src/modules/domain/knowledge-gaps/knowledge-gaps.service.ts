@@ -12,17 +12,20 @@ import type {
     GapRecorded,
     GapStatus,
     MaybeGapRecorded,
+    ModuleGaps,
 } from "./knowledge-gaps.contracts"
 import type { KnowledgeGapRow, OpenCountRow } from "./persistence/knowledge-gaps.rows"
 import {
     ANSWER_GAP,
     BUMP_GAP,
     COUNT_OPEN_GAPS,
+    COUNT_OPEN_GAPS_OF_MODULE,
     DISMISS_GAP,
     INSERT_GAP,
     SELECT_GAPS,
     SELECT_GAP_CANDIDATES,
     SELECT_OPEN_GAPS,
+    SELECT_OPEN_GAPS_OF_MODULE,
 } from "./persistence/knowledge-gaps.sql"
 
 /** The longest question kept. */
@@ -133,5 +136,18 @@ export class KnowledgeGapsService {
     async countOpen(workspaceId: string): Promise<number> {
         const [row] = await this.entityManager.query<Array<OpenCountRow>>(COUNT_OPEN_GAPS, [workspaceId])
         return row?.total ?? 0
+    }
+
+    /** The open gaps of one agent, the most asked first, and how many it has in all. */
+    async openOfModule(workspaceId: string, module: string, limit: number): Promise<ModuleGaps> {
+        const [rows, counted] = await Promise.all([
+            this.entityManager.query<Array<KnowledgeGapRow>>(SELECT_OPEN_GAPS_OF_MODULE, [
+                workspaceId,
+                module,
+                Math.min(limit, LIST_MAX),
+            ]),
+            this.entityManager.query<Array<OpenCountRow>>(COUNT_OPEN_GAPS_OF_MODULE, [workspaceId, module]),
+        ])
+        return { openCount: counted[0]?.total ?? 0, items: rows.map(toGapRecord) }
     }
 }

@@ -1,5 +1,5 @@
 import type { AvailabilityWindow, Slot } from "../hiring.contracts"
-import { addDays, vnInstant, vnParts } from "./vn-time.policy"
+import { addDays, vnInstant, vnClockParts } from "./vn-time.policy"
 
 const MINUTES_PER_HOUR = 60
 const STEP_MIN = 30
@@ -25,7 +25,7 @@ const daySlots = (
     day: Date,
     earliest: number,
 ): Array<Slot> => {
-    const parts = vnParts(day)
+    const parts = vnClockParts(day)
     return windows
         .filter((window) => window.weekday === parts.weekday)
         .flatMap((window) => {

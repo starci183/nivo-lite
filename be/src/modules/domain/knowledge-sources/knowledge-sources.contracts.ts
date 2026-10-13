@@ -207,3 +207,36 @@ export interface SourceDetail extends SourceSummary {
     /** The text (the address of a link source until it is read). */
     readonly content: string
 }
+
+/** Who may read a document: anyone (public) or the team only (internal); a customer-facing view never counts internal ones. */
+export type DocumentVisibility = "public" | "internal"
+
+/** The view of one agent over the documents: its workspace, module, instance and audience. */
+export interface ReadableScope {
+    /** The workspace. */
+    readonly workspaceId: string
+    /** The module of the agent. */
+    readonly module: string
+    /** The agent instance, or null for the shared documents only. */
+    readonly installationId: string | null
+    /** customer reads public documents only; internal reads both. */
+    readonly audience: "customer" | "internal"
+}
+
+/** An indexed document an agent may read, with its text. */
+export interface ReadableSource {
+    /** The source id. */
+    readonly id: string
+    /** The title. */
+    readonly title: string
+    /** The topic, or null. */
+    readonly topic: string | null
+    /** The kind of source. */
+    readonly kind: string
+    /** Who may see it. */
+    readonly visibility: "public" | "internal"
+    /** When it last changed, ISO 8601. */
+    readonly updatedAt: string
+    /** The text. */
+    readonly content: string
+}

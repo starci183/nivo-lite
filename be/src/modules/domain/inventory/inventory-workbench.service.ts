@@ -7,8 +7,7 @@ import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { InventoryLogEvent } from "./inventory.log-events"
-import { INVENTORY_TEMPLATES } from "./inventory-templates"
-import type { InventoryTemplateInfo, InventoryWorkbenchView } from "./inventory-workbench.contracts"
+import type { InventoryWorkbenchView } from "./inventory-workbench.contracts"
 import {
     SELECT_WORKBENCH_ITEMS,
     SELECT_WORKBENCH_LEVELS,
@@ -42,7 +41,7 @@ const STOCK_OUT_DAYS = 7
 const DAY_MS = 86_400_000
 
 @Injectable()
-/** Reads the whole inventory workbench of a workspace and the starter sets a new shop can pick. */
+/** Reads the whole inventory workbench of a workspace. */
 export class InventoryWorkbenchService {
     constructor(
         @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
@@ -95,10 +94,5 @@ export class InventoryWorkbenchService {
                 defaultLocationId: locations[0]?.id ?? null,
             },
         )
-    }
-
-    /** The starter sets a new shop can pick. */
-    templates(): ReadonlyArray<InventoryTemplateInfo> {
-        return INVENTORY_TEMPLATES
     }
 }

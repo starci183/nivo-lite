@@ -56,3 +56,12 @@ export const SELECT_OPEN_GAPS = sql`SELECT id, module, keywords, question FROM p
 
 /** How many gaps wait for an answer ($1 workspace). */
 export const COUNT_OPEN_GAPS = sql`SELECT count(*)::int AS total FROM public.knowledge_gaps WHERE workspace_id = $1 AND status = 'open'`
+
+/** The open gaps of one agent, the most asked first ($1 workspace, $2 module, $3 limit). */
+export const SELECT_OPEN_GAPS_OF_MODULE = sql`SELECT id, module, question, question_key, keywords, topic, attribute_guess, count, first_seen_at, last_seen_at,
+    example_conversation_id, status, reopened_count
+FROM public.knowledge_gaps WHERE workspace_id = $1 AND module = $2 AND status = 'open'
+ORDER BY count DESC, last_seen_at DESC LIMIT $3`
+
+/** How many gaps of one agent wait for an answer ($1 workspace, $2 module). */
+export const COUNT_OPEN_GAPS_OF_MODULE = sql`SELECT count(*)::int AS total FROM public.knowledge_gaps WHERE workspace_id = $1 AND module = $2 AND status = 'open'`
