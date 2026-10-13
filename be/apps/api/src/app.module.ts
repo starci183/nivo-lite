@@ -4,7 +4,9 @@ import { APP_FILTER, APP_GUARD } from "@nestjs/core"
 import { KnowledgeHttpModule } from "@features/api/knowledge"
 import { IndexKnowledgeSourceQueueModule } from "@features/jobs/index-knowledge-source"
 import { ReembedKnowledgeQueueModule } from "@features/jobs/reembed-knowledge"
+import { ExternalApiHttpModule } from "@features/api/external-api"
 import { SystemHealthHttpModule } from "@features/api/system-health"
+import { API_KEYS_ERROR_KINDS, API_KEYS_MESSAGES, ApiKeysModule } from "@modules/domain/api-keys"
 import { WorkspacesHttpModule } from "@features/api/workspaces"
 import { AuthGuard, IDENTITY_ERROR_KINDS, IDENTITY_MESSAGES, IdentityModule } from "@modules/domain/identity"
 import { KnowledgeChunksModule } from "@modules/domain/knowledge-chunks"
@@ -27,6 +29,7 @@ import {
     createSupabaseAccessTokenVerifier,
 } from "@modules/integrations/supabase"
 import { LivenessModule } from "@modules/domain/liveness"
+import { PUBLIC_API_ERROR_KINDS, PUBLIC_API_MESSAGES, PublicApiModule } from "@modules/domain/public-api"
 import { EventsModule } from "@modules/domain/events"
 import {
     WORKSPACE_INVITES_ERROR_KINDS,
@@ -76,6 +79,7 @@ export class AppModule {
                     isGlobal: true,
                     bundles: [
                         DOCUMENTS_MESSAGES,
+                        API_KEYS_MESSAGES,
                         ERRORS_MESSAGES,
                         HTTP_MESSAGES,
                         HTTP_SECURITY_MESSAGES,
@@ -83,6 +87,7 @@ export class AppModule {
                         JOBS_MESSAGES,
                         KNOWLEDGE_MESSAGES,
                         KNOWLEDGE_SOURCES_MESSAGES,
+                        PUBLIC_API_MESSAGES,
                         QUEUE_MESSAGES,
                         WORKSPACE_INVITES_MESSAGES,
                         WORKSPACE_MEMBERS_MESSAGES,
@@ -92,6 +97,7 @@ export class AppModule {
                 ErrorsModule.register({
                     isGlobal: true,
                     kinds: [
+                        API_KEYS_ERROR_KINDS,
                         CONFIG_ERROR_KINDS,
                         DATABASE_ERROR_KINDS,
                         DOCUMENTS_ERROR_KINDS,
@@ -102,6 +108,7 @@ export class AppModule {
                         KNOWLEDGE_SOURCES_ERROR_KINDS,
                         QUEUE_ERROR_KINDS,
                         IDENTITY_ERROR_KINDS,
+                        PUBLIC_API_ERROR_KINDS,
                         SUPABASE_ERROR_KINDS,
                         WORKSPACE_INVITES_ERROR_KINDS,
                         WORKSPACE_MEMBERS_ERROR_KINDS,
@@ -145,6 +152,9 @@ export class AppModule {
                 KnowledgeChunksModule.register({ isGlobal: true }),
                 NivoKnowledgeModule.register({ isGlobal: true }),
                 KnowledgeModule.register({ isGlobal: true, driveAccess: NO_DRIVE_ACCESS }),
+                ApiKeysModule.register({ isGlobal: true }),
+                PublicApiModule.register({ isGlobal: true }),
+                ExternalApiHttpModule,
                 SystemHealthHttpModule,
                 WorkspacesHttpModule,
                 KnowledgeHttpModule,
