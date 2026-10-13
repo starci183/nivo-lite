@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { onPublicOrigin } from "./lib/request-origin"
 import { PERF_ENABLED, PERF_PATH_HEADER, PERF_RID_HEADER } from "./lib/supabase/perf"
 import { sessionCookieOptions } from "./modules/config"
-import { endGatedSession, readMemberGate, refreshSession } from "./modules/db"
+import { refreshSession } from "./modules/db"
 import { routing } from "./modules/i18n"
 import { APP_ROUTES } from "./modules/routes"
 
@@ -76,7 +76,7 @@ const incomingOf = (request: NextRequest): NextRequest => {
     return new NextRequest(request, { headers })
 }
 
-/** Refreshes the session, applies the locale rewrite, gates private paths with verified claims and turns away disabled members. */
+/** Refreshes the session, applies the locale rewrite, gates private paths with verified claims (a disabled seat is refused by the back end). */
 export const proxy = async (original: NextRequest): Promise<NextResponse> => {
     const request = incomingOf(original)
     const { pathname } = request.nextUrl
@@ -121,14 +121,6 @@ export const proxy = async (original: NextRequest): Promise<NextResponse> => {
         return redirectTo(next ? new URL(next, request.nextUrl.origin) : url)
     }
 
-    // A disabled member loses access immediately: sign out and send them to /login?reason=disabled.
-    const gated = !isPublic && !pathname.startsWith("/api/")
-    if (gated && (await readMemberGate(request, response, principal.value.id)) === "off") {
-        await endGatedSession(request, response)
-        const url = loginUrl()
-        url.searchParams.set("reason", "disabled")
-        return redirectTo(url)
-    }
     return response
 }
 

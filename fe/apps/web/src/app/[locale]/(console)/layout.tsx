@@ -1,7 +1,5 @@
 import type { ReactNode } from "react"
-import { GuideBubble } from "@/features/overlays/assistant"
 import { ConsoleLayout } from "@/features/layouts/ConsoleLayout"
-import { isManagerRole } from "@/lib/members-shared"
 import { getSession } from "@/lib/session"
 
 type LayoutProps = { readonly children: ReactNode }
@@ -16,6 +14,7 @@ const Layout = async ({ children }: LayoutProps) => {
             email={session.email}
             avatarUrl={session.avatarUrl}
             member={{
+                workspaceId: session.workspace.id,
                 userId: session.member.userId,
                 name: session.member.displayName,
                 role: session.member.role,
@@ -25,7 +24,6 @@ const Layout = async ({ children }: LayoutProps) => {
             currentWorkspaceId={session.workspace.id}
         >
             {children}
-            <GuideBubble isManager={isManagerRole(session.member.role)} />
         </ConsoleLayout>
     )
 }

@@ -3300,6 +3300,7 @@
     "usedTitle": "This invitation was already used",
     "usedBody": "If that was you, just sign in.",
     "goSignIn": "Go to sign in",
+    "joined": "You joined the workspace.",
     "failed": "Could not join. Please try again."
   },
   "knowledge": {
@@ -6105,6 +6106,10 @@
     "inviteLinkLabel": "Invite link for {email}",
     "inviteResent": "Invitation sent again to {email}.",
     "inviteRevoked": "Invitation revoked.",
+    "roleChanged": "Role updated.",
+    "memberEnabled": "Access enabled.",
+    "memberDisabled": "Access disabled.",
+    "memberRemoved": "Member removed.",
     "formTitle": "Invite someone",
     "formDesc": "They get an email with a link to join. You can also copy the link and send it yourself.",
     "fieldEmail": "Work email",

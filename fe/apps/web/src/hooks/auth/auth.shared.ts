@@ -66,27 +66,6 @@ export const authErrorKey = (code: string): AuthErrorKey => {
 /** Whether a failure code means the recovery link is no longer usable. */
 export const isLinkInvalid = (code: string): boolean => authErrorKey(code) === "errLinkInvalid"
 
-/** Catalog keys (`invite` namespace) of the reasons an acceptance can fail. */
-export type InviteErrorKey = "invalidTitle" | "revokedTitle" | "usedTitle" | "expiredTitle" | "mismatchTitle" | "failed"
-
-/** Maps the failure code of an acceptance to its catalog key. */
-export const inviteErrorKey = (code: string): InviteErrorKey => {
-    switch (code) {
-        case "invite_invalid":
-            return "invalidTitle"
-        case "invite_revoked":
-            return "revokedTitle"
-        case "invite_used":
-            return "usedTitle"
-        case "invite_expired":
-            return "expiredTitle"
-        case "invite_email_mismatch":
-            return "mismatchTitle"
-        default:
-            return "failed"
-    }
-}
-
 /** The destination for an invite token, so sign-up and sign-in lead back to the invitation page. */
 export const inviteNext = (token: string | null | undefined): string | undefined =>
     token !== null && token !== undefined && /^[\w-]{6,200}$/u.test(token) ? `/invite/${token}` : undefined

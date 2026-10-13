@@ -1,42 +1,20 @@
 "use client"
 
 import { useTranslations } from "next-intl"
-import { useState, useTransition } from "react"
-import { NAME_MIN } from "@/hooks/account"
-import { writeProfile } from "@/modules/db/account/write-profile"
-import { navigation } from "@/modules/i18n"
+import { useAccount, useAccountCommands } from "@/hooks/account"
+import { useProfileForm } from "@/hooks/rhf"
 import { AccountProfileBase } from "./component"
 
-const { useRouter } = navigation
-
-/** Props for the connected profile card. */
-interface AccountProfileProps {
-    /** The display name now saved. */
-    readonly name: string
-    /** True while the page loads: the card keeps its labels and shows skeletons. */
-    readonly isLoading?: boolean
-}
-
-/** The connected display-name card: saves the name through a Server Action, then refreshes the page data. */
-export const AccountProfile = (props: AccountProfileProps) => {
+/** The connected display-name card: reads the account from the back end GraphQL API and saves the name through it (outcome toasted). */
+export const AccountProfile = () => {
     const t = useTranslations("account")
-    const router = useRouter()
-    const [name, setName] = useState(props.name)
-    const [error, setError] = useState<string>()
-    const [done, setDone] = useState<string>()
-    const [isPending, startTransition] = useTransition()
+    const { data, isLoading } = useAccount()
+    const { saveProfile, isSaving } = useAccountCommands()
+    const form = useProfileForm(data?.name ?? "")
 
-    const submit = () => {
-        setError(undefined)
-        setDone(undefined)
-        if (name.trim().length < NAME_MIN) return setError(t("errName"))
-        startTransition(async () => {
-            const saved = await writeProfile(name)
-            if (saved.kind !== "ok") return setError(t("unknownError"))
-            setDone(t("profileSaved"))
-            router.refresh()
-        })
-    }
+    const submit = form.handleSubmit(async (values) => {
+        await saveProfile(values.name)
+    })
 
     return (
         <AccountProfileBase
@@ -46,13 +24,15 @@ export const AccountProfile = (props: AccountProfileProps) => {
                 nameHint: t("displayNameHint"),
                 saveLabel: t("saveProfile"),
                 failTitle: t("failTitle"),
-                name,
-                isPending,
-                isLoading: props.isLoading ?? false,
-                error,
-                done,
+                name: form.watch("name"),
+                isPending: isSaving,
+                isLoading,
+                error: form.formState.errors.name?.message,
             }}
-            on={{ setName, submit }}
+            on={{
+                setName: (value) => form.setValue("name", value, { shouldValidate: form.formState.isSubmitted }),
+                submit: () => void submit(),
+            }}
         />
     )
 }

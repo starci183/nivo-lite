@@ -1,12 +1,16 @@
-import { useMemo } from "react"
-import type { DbOutcome } from "@/modules/db/outcome"
-import type { InviteResultItem } from "@/modules/db/team/team.mapper"
-import {
-    writeInviteCreate,
-    writeInviteLink,
-    writeInviteResend,
-    writeInviteRevoke,
-} from "@/modules/db/team/write-invites"
+"use client"
+
+import { useTranslations } from "next-intl"
+import { useCallback } from "react"
+import { useMutateCopyInviteLinkSwr } from "@/hooks/swr/api/graphql/mutations/useMutateCopyInviteLinkSwr"
+import { useMutateCreateInviteSwr } from "@/hooks/swr/api/graphql/mutations/useMutateCreateInviteSwr"
+import { useMutateResendInviteSwr } from "@/hooks/swr/api/graphql/mutations/useMutateResendInviteSwr"
+import { useMutateRevokeInviteSwr } from "@/hooks/swr/api/graphql/mutations/useMutateRevokeInviteSwr"
+import { toast, useGraphQLWithToast } from "@/modules/toast"
+import { inviteSentOf, refreshTeam } from "./team.shared"
+import type { InviteSentView } from "./team.shared"
+
+const SENT_KEYS = { invited: "sentEmail", existing: "sentNoticeExisting", none: "sentNoEmail" } as const
 
 /** What a person types to invite someone. */
 export interface InviteInput {
@@ -16,22 +20,74 @@ export interface InviteInput {
     readonly staffId: string | null
 }
 
-/** The calls the invitation blocks make to the database. */
+/** The invitation commands. A failure was toasted with the back end words and answers `undefined` (`false` for revoke). */
 export interface InviteCommands {
-    readonly create: (input: InviteInput) => Promise<DbOutcome<InviteResultItem>>
-    readonly resend: (inviteId: string) => Promise<DbOutcome<InviteResultItem>>
-    readonly copyLink: (inviteId: string) => Promise<DbOutcome<InviteResultItem>>
-    readonly revoke: (inviteId: string) => Promise<DbOutcome<null>>
+    readonly create: (input: InviteInput) => Promise<InviteSentView | undefined>
+    readonly resend: (inviteId: string) => Promise<InviteSentView | undefined>
+    readonly copyLink: (inviteId: string) => Promise<InviteSentView | undefined>
+    readonly revoke: (inviteId: string) => Promise<boolean>
+    readonly isPending: boolean
 }
 
-/** The invitation commands of one workspace, run as Server Actions; the database proves the role. */
-export const useInviteCommands = (workspaceId: string): InviteCommands =>
-    useMemo<InviteCommands>(
-        () => ({
-            create: (input) => writeInviteCreate(workspaceId, input),
-            resend: (inviteId) => writeInviteResend(workspaceId, inviteId),
-            copyLink: (inviteId) => writeInviteLink(workspaceId, inviteId),
-            revoke: (inviteId) => writeInviteRevoke(workspaceId, inviteId),
-        }),
-        [workspaceId],
+/** The invitation commands of the active workspace through the back end, toasted, with the team revalidated on success. */
+export const useInviteCommands = (): InviteCommands => {
+    const t = useTranslations("team")
+    const tToast = useTranslations("toast")
+    const runGraphQL = useGraphQLWithToast()
+    const creation = useMutateCreateInviteSwr()
+    const resending = useMutateResendInviteSwr()
+    const linking = useMutateCopyInviteLinkSwr()
+    const revoking = useMutateRevokeInviteSwr()
+    const create = useCallback(
+        async (input: InviteInput): Promise<InviteSentView | undefined> => {
+            const result = await runGraphQL(
+                () => creation.trigger({ email: input.email, role: input.role, staffId: input.staffId }),
+                { showSuccessToast: false },
+            )
+            if (result === undefined) return undefined
+            const sent = inviteSentOf(result)
+            toast.success(tToast("successTitle"), {
+                description: t(SENT_KEYS[sent.delivery], { email: sent.email }),
+            })
+            await refreshTeam()
+            return sent
+        },
+        [runGraphQL, creation, t, tToast],
     )
+    const resend = useCallback(
+        async (inviteId: string): Promise<InviteSentView | undefined> => {
+            const result = await runGraphQL(() => resending.trigger({ inviteId }), { showSuccessToast: false })
+            if (result === undefined) return undefined
+            const sent = inviteSentOf(result)
+            toast.success(tToast("successTitle"), { description: t("inviteResent", { email: sent.email }) })
+            await refreshTeam()
+            return sent
+        },
+        [runGraphQL, resending, t, tToast],
+    )
+    const copyLink = useCallback(
+        async (inviteId: string): Promise<InviteSentView | undefined> => {
+            const result = await runGraphQL(() => linking.trigger({ inviteId }), { showSuccessToast: false })
+            if (result === undefined) return undefined
+            await refreshTeam()
+            return inviteSentOf(result)
+        },
+        [runGraphQL, linking],
+    )
+    const revoke = useCallback(
+        async (inviteId: string): Promise<boolean> => {
+            const done = await runGraphQL(() => revoking.trigger({ inviteId }), { successMessage: t("inviteRevoked") })
+            if (done === undefined) return false
+            await refreshTeam()
+            return true
+        },
+        [runGraphQL, revoking, t],
+    )
+    return {
+        create,
+        resend,
+        copyLink,
+        revoke,
+        isPending: creation.isMutating || resending.isMutating || linking.isMutating || revoking.isMutating,
+    }
+}

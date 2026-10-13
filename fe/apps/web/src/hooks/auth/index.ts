@@ -3,7 +3,6 @@ export {
     NAME_MIN_LENGTH,
     PASSWORD_MIN_LENGTH,
     authErrorKey,
-    inviteErrorKey,
     inviteNext,
     inviteOfNext,
     isLinkInvalid,
@@ -12,4 +11,5 @@ export {
 } from "./auth.shared"
 export { useResendEmail } from "./useResendEmail"
 export { useAuthUser } from "./useAuthUser"
+export { useRedirectWhenSignedIn } from "./useRedirectWhenSignedIn"
 export { useAuthActions } from "./useAuthActions"

@@ -2,7 +2,8 @@
 
 import { useState, useTransition } from "react"
 import { useTranslations } from "next-intl"
-import { EMAIL_PATTERN, authErrorKey, inviteOfNext, useAuthActions } from "@/hooks/auth"
+import { authErrorKey, inviteOfNext, useAuthActions } from "@/hooks/auth"
+import { useLoginForm } from "@/hooks/rhf"
 import { navigation } from "@/modules/i18n"
 import { AUTH_ROUTES, signupPath } from "@/modules/routes"
 import { LoginFormBase } from "./component"
@@ -18,7 +19,6 @@ type LoginFormProps = {
 }
 
 type Feedback = { readonly error?: string; readonly info?: string; readonly canResend: boolean }
-type FieldErrors = { readonly email?: string; readonly password?: string }
 
 /** The sentences for a failure a finished /auth route left in the URL. */
 type InitialErrors = { readonly expired: string; readonly missing: string; readonly generic: string }
@@ -40,9 +40,7 @@ export const LoginForm = (props: LoginFormProps) => {
     const t = useTranslations("login")
     const a = useTranslations("auth")
     const router = navigation.useRouter()
-    const [email, setEmail] = useState("")
-    const [password, setPassword] = useState("")
-    const [fieldErrors, setFieldErrors] = useState<FieldErrors>({})
+    const form = useLoginForm()
     const [feedback, setFeedback] = useState<Feedback>(() => ({
         canResend: false,
         error: initialError(props.errorCode, {
@@ -61,15 +59,14 @@ export const LoginForm = (props: LoginFormProps) => {
         const key = authErrorKey(code)
         setFeedback({ error: a(key), canResend: key === "errEmailNotConfirmed" })
     }
-    const submit = () => {
+    const submit = form.handleSubmit((values) => {
         setFeedback({ canResend: false })
-        const found: { email?: string; password?: string } = {}
-        if (!EMAIL_PATTERN.test(email.trim())) found.email = a("errEmail")
-        if (password === "") found.password = a("errPasswordRequired")
-        setFieldErrors(found)
-        if (Object.keys(found).length > 0) return
         startPassword(async () => {
-            const outcome = await auth.signInWithPassword({ email: email.trim(), password, next: props.next })
+            const outcome = await auth.signInWithPassword({
+                email: values.email,
+                password: values.password,
+                next: props.next,
+            })
             if (outcome.kind === "ok") {
                 router.push(outcome.value.path)
                 router.refresh()
@@ -77,7 +74,7 @@ export const LoginForm = (props: LoginFormProps) => {
             }
             fail(outcome.code)
         })
-    }
+    })
     const google = () => {
         setFeedback({ canResend: false })
         setGooglePending(true)
@@ -90,11 +87,9 @@ export const LoginForm = (props: LoginFormProps) => {
             setGooglePending(false)
         })
     }
-    const resend = () => {
-        if (!EMAIL_PATTERN.test(email.trim())) {
-            setFieldErrors({ email: a("errEmail") })
-            return
-        }
+    const resend = async () => {
+        if (!(await form.trigger("email"))) return
+        const email = form.getValues("email")
         startResend(async () => {
             const outcome = await auth.resendConfirmation({ email, next: props.next })
             if (outcome.kind === "ok") setFeedback({ info: t("confirmSent"), canResend: false })
@@ -122,17 +117,24 @@ export const LoginForm = (props: LoginFormProps) => {
                 noAccountLabel: t("noAccount"),
                 signUpLabel: t("signUpLink"),
                 signUpHref: signupPath(invite),
-                email,
-                password,
-                emailError: fieldErrors.email,
-                passwordError: fieldErrors.password,
+                email: form.watch("email"),
+                password: form.watch("password"),
+                emailError: form.formState.errors.email?.message,
+                passwordError: form.formState.errors.password?.message,
                 error: feedback.error,
                 notice: feedback.info,
                 canResend: feedback.canResend,
                 isPasswordPending,
                 isGooglePending,
             }}
-            on={{ setEmail, setPassword, submit, google, resend }}
+            on={{
+                setEmail: (value) => form.setValue("email", value, { shouldValidate: form.formState.isSubmitted }),
+                setPassword: (value) =>
+                    form.setValue("password", value, { shouldValidate: form.formState.isSubmitted }),
+                submit: () => void submit(),
+                google,
+                resend: () => void resend(),
+            }}
         />
     )
 }
