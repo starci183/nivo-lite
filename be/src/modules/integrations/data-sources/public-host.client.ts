@@ -6,7 +6,7 @@ import type { HttpClient, HttpRequest, HttpResponse } from "@modules/platform/ht
 import { InjectDataSourcesOptions } from "./data-sources.decorators"
 import type { DataSourcesOptions } from "./data-sources.options"
 import { DataSourcesError, DataSourcesErrorCode } from "./errors/data-sources.error"
-import { isPrivateAddress, isWellFormedHost } from "./public-host.policy"
+import { isPrivateAddress, isWellFormedHost } from "@modules/platform/primitives"
 import { PUBLIC_HOST_TEXT } from "./messages/public-host.messages"
 
 /** The address a connection is opened to: connect to THIS address, not the name, so the answer cannot change between check and use. */

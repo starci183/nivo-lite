@@ -8,7 +8,7 @@ import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { MESSAGE_CATALOG } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
 import { VideoRenderQueue } from "@modules/queues/video-render"
-import { VideoErrorCode } from "./errors/video.error"
+import { VideoError, VideoErrorCode } from "./errors/video.error"
 import { VideoService } from "./video.service"
 
 const WORKSPACE = "0a1b2c3d-0a1b-4c3d-8a1b-0a1b2c3d4e5f"
@@ -52,8 +52,8 @@ const build = async () => {
             { provide: VideoProjectsService, useValue: projects },
             { provide: VideoProjectVersionsService, useValue: versions },
             { provide: VideoRendersService, useValue: renders },
-            { provide: VideoRenderQueue, useValue: queue },
             { provide: MESSAGE_CATALOG, useValue: catalog },
+            { provide: VideoRenderQueue, useValue: queue },
         ],
     }).compile()
     return { video: moduleRef.get(VideoService), tx, members, projects, versions, renders, queue }
@@ -92,9 +92,10 @@ describe("VideoService", () => {
                 renderId: "render-1",
                 spec,
             })
+            const manager = renders.open.mock.calls[0]?.[0]
             expect(queue.enqueueRenderVideo).toHaveBeenCalledWith(
                 { renderId: "render-1", workspaceId: WORKSPACE },
-                tx.em,
+                manager,
             )
             expect(tx.commits).toBe(1)
         })
@@ -115,7 +116,7 @@ describe("VideoService", () => {
         it("refuses anyone who does not manage the workspace", async () => {
             const { video, projects, members, renders, queue } = await build()
             projects.forRender.mockResolvedValue(projectOf())
-            const refusal = new Error("not a manager")
+            const refusal = new VideoError({ code: VideoErrorCode.NotApproved })
             members.require.mockRejectedValue(refusal)
 
             await expect(video.requestRender("person-1", "project-1")).rejects.toBe(refusal)
@@ -196,7 +197,7 @@ describe("VideoService", () => {
         it("writes nothing when the workspace has the most renders open", async () => {
             const { video, tx, projects, versions, renders, queue } = await build()
             projects.forRender.mockResolvedValue(projectOf())
-            const full = new Error("too many")
+            const full = new VideoError({ code: VideoErrorCode.ProjectBusy, params: { projectId: "project-1" } })
             renders.open.mockRejectedValue(full)
 
             await expect(video.requestRender("person-1", "project-1")).rejects.toBe(full)
@@ -210,7 +211,7 @@ describe("VideoService", () => {
         it("rolls everything back when the job cannot be enqueued", async () => {
             const { video, tx, projects, queue } = await build()
             projects.forRender.mockResolvedValue(projectOf())
-            const failure = new Error("queue missing")
+            const failure = new VideoError({ code: VideoErrorCode.StorageFailed, params: { path: "queue" } })
             queue.enqueueRenderVideo.mockRejectedValue(failure)
 
             await expect(video.requestRender("person-1", "project-1")).rejects.toBe(failure)

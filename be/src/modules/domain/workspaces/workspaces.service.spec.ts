@@ -23,7 +23,7 @@ const rowOf = builder<MembershipRow>({
     business_type: "cafe",
 })
 
-const build = async (entityManager: MockEntityManager, overrides?: Partial<WorkspacesOptions>) => {
+const build = async (entityManager: MockEntityManager, overrides: Partial<WorkspacesOptions> = {}) => {
     const moduleRef = await Test.createTestingModule({
         providers: [
             WorkspacesService,

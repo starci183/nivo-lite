@@ -12,6 +12,7 @@ import { VideoScriptingContextService } from "./video-scripting-context.service"
 import { VideoScriptingService } from "./video-scripting.service"
 import { VideoScriptingCompletionService } from "./video-scripting-completion.service"
 import { RendererService } from "./renderer.service"
+import { VideoRenderCommandsService } from "./video-render-commands.service"
 import { VideoRenderService } from "./video-render.service"
 import { VideoService } from "./video.service"
 import { VIDEO_ASSETS } from "./video.decorators"
@@ -41,6 +42,7 @@ export class VideoModule extends ConfigurableModuleClass {
                 VideoScriptingService,
                 VideoScriptingCompletionService,
                 VideoScriptingContextService,
+                VideoRenderCommandsService,
             ],
             exports: [
                 VIDEO_ASSETS,
@@ -54,6 +56,7 @@ export class VideoModule extends ConfigurableModuleClass {
                 VideoSharingService,
                 VideoScriptingService,
                 VideoScriptingCompletionService,
+                VideoRenderCommandsService,
             ],
         }
     }

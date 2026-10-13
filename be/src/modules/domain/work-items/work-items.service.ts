@@ -9,6 +9,7 @@ import {
     ATTACH_WORK_ITEM_EXECUTION,
     HOLD_WORK_ITEM,
     CLAIM_WORK_ITEM,
+    FIND_LATEST_WORK_ITEM_OF_KEY,
     FIND_WORK_ITEM_BY_DEDUPE,
     INSERT_WORK_ITEM,
     LIST_LEAD_ITEMS,
@@ -119,6 +120,17 @@ export class WorkItemsService {
     async findByDedupe(workspaceId: string, dedupeKey: string): Promise<OptionalWorkItem> {
         return this.first(
             await this.entityManager.query<Array<WorkItemRow>>(FIND_WORK_ITEM_BY_DEDUPE, [workspaceId, dedupeKey]),
+        )
+    }
+
+    /** The newest item of an action whose dedupe key is `baseKey` or one of its `baseKey:<suffix>` repeats. */
+    async latestOfKey(workspaceId: string, action: string, baseKey: string): Promise<OptionalWorkItem> {
+        return this.first(
+            await this.entityManager.query<Array<WorkItemRow>>(FIND_LATEST_WORK_ITEM_OF_KEY, [
+                workspaceId,
+                action,
+                baseKey,
+            ]),
         )
     }
 
