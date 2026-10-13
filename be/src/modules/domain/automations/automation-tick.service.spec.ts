@@ -18,10 +18,12 @@ const SHIPMENT: ShipmentEventPayload = {
 }
 
 const build = async () => {
-    const engine = mock<AutomationEngineService>({
-        tickNow: jest.fn(() => Promise.resolve({ pipelines: 0, runs: 0 })),
-    })
-    const automations = mock<AutomationsService>({ emit: jest.fn(() => Promise.resolve()) })
+    const engine = mock<AutomationEngineService>()
+    engine.onBusinessEvent.mockResolvedValue(undefined)
+    engine.startPaymentReceipt.mockResolvedValue(undefined)
+    engine.tickNow.mockResolvedValue({ pipelines: 0, runs: 0 })
+    const automations = mock<AutomationsService>()
+    automations.emit.mockResolvedValue(undefined)
     const moduleRef = await Test.createTestingModule({
         providers: [
             AutomationTickService,
@@ -75,5 +77,33 @@ describe("AutomationTickService", () => {
 
         expect(engine.tickNow.mock.calls).toEqual([[]])
         expect(automations.emit).not.toHaveBeenCalled()
+    })
+
+    it("hands a queued business event to the engine under its name", async () => {
+        const { tick, engine } = await build()
+        const data = { work_item_id: "wi-1", outcome: "rejected" }
+
+        await expect(
+            tick.run({
+                kind: "business_event",
+                event: "decision.made",
+                workspaceId: "ws-1",
+                dedupe: "decision.made:wi-1:rejected",
+                data,
+            }),
+        ).resolves.toBeUndefined()
+
+        expect(engine.onBusinessEvent.mock.calls).toEqual([
+            [{ workspaceId: "ws-1", event: "decision.made", dedupe: "decision.made:wi-1:rejected", data }],
+        ])
+        expect(engine.tickNow.mock.calls).toEqual([])
+    })
+
+    it("starts the receipt pipeline for a queued payment receipt", async () => {
+        const { tick, engine } = await build()
+
+        await tick.run({ kind: "payment_receipt", workspaceId: "ws-1", transactionId: "tx-1", invoiceId: null })
+
+        expect(engine.startPaymentReceipt.mock.calls).toEqual([["ws-1", "tx-1", null]])
     })
 })

@@ -1,5 +1,6 @@
 import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
+import { AutomationBusinessEventsService } from "./automation-business-events.service"
 import { AutomationCareExecutorsService } from "./automation-care-executors.service"
 import { AutomationEngineService } from "./automation-engine.service"
 import { AutomationExtensionsService } from "./automation-extensions.service"
@@ -26,6 +27,7 @@ export class AutomationsModule extends ConfigurableModuleClass {
             providers: [
                 ...(base.providers ?? []),
                 AutomationShopService,
+                AutomationBusinessEventsService,
                 AutomationScansService,
                 AutomationExtensionsService,
                 AutomationMessagesService,
@@ -37,6 +39,7 @@ export class AutomationsModule extends ConfigurableModuleClass {
                 BusinessEventsService,
             ],
             exports: [
+                AutomationBusinessEventsService,
                 AutomationsService,
                 AutomationEngineService,
                 AutomationExtensionsService,

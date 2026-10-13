@@ -31,8 +31,6 @@ export enum AutomationsErrorCode {
     NothingToChange = "AUTOMATIONS_NOTHING_TO_CHANGE",
     /** The authority gate could not send the message; the cause says why. */
     MessageNotSent = "AUTOMATIONS_MESSAGE_NOT_SENT",
-    /** A port another capability has to bind is not bound yet. */
-    PortPending = "AUTOMATIONS_PORT_PENDING",
 }
 
 /** How each automations code travels. */
@@ -51,7 +49,6 @@ export const AUTOMATIONS_ERROR_KINDS: Record<AutomationsErrorCode, ErrorKind> = 
     [AutomationsErrorCode.NotSaved]: "internal",
     [AutomationsErrorCode.NothingToChange]: "invalid",
     [AutomationsErrorCode.MessageNotSent]: "unavailable",
-    [AutomationsErrorCode.PortPending]: "unavailable",
 }
 
 /** The one error class of the automations capability. */

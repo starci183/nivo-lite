@@ -13,6 +13,7 @@ import { BookingSetupService } from "./booking-setup.service"
 import { BookingEffectsService } from "./booking-effects.service"
 import { BookingModelService } from "./booking-model.service"
 import { BookingOverviewService } from "./booking-overview.service"
+import { BookingChatLookupService } from "./booking-chat-lookup.service"
 import { BookingPublicService } from "./booking-public.service"
 import { BookingReservationService } from "./booking-reservation.service"
 import type { BookingNotifier } from "./bookings.contracts"
@@ -28,6 +29,7 @@ export class BookingsModule extends ConfigurableModuleClass {
     /** Registers the capability once in the API app, with the delivery of booking notices. */
     static register(options: typeof OPTIONS_TYPE): DynamicModule {
         const base = super.register(options)
+        const waitlist = BookingWaitlistModule.register({})
         return {
             ...base,
             imports: [
@@ -38,7 +40,7 @@ export class BookingsModule extends ConfigurableModuleClass {
                 BookingHoursModule.register({}),
                 BookingExceptionsModule.register({}),
                 BookingSettingsModule.register({}),
-                BookingWaitlistModule.register({}),
+                waitlist,
             ],
             providers: [
                 ...(base.providers ?? []),
@@ -51,8 +53,11 @@ export class BookingsModule extends ConfigurableModuleClass {
                 BookingEffectsService,
                 BookingBoardService,
                 BookingSetupService,
+                BookingChatLookupService,
             ],
             exports: [
+                BookingChatLookupService,
+                waitlist,
                 BookingPublicService,
                 BookingDeskService,
                 BookingOverviewService,
