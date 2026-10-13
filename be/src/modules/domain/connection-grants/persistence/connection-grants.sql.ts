@@ -20,3 +20,6 @@ export const UPSERT_GRANT = sql`INSERT INTO public.agent_connections (agent_id, 
 
 /** Logs one change of access: who, when, before, after. */
 export const INSERT_ACCESS_LOG = sql`INSERT INTO public.agent_access_log (workspace_id, connection_id, agent_id, connection_name, agent_name, before_access, after_access, changed_by, changed_by_name) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`
+
+/** Every grant of the workspace. */
+export const LIST_WORKSPACE_GRANTS = sql`SELECT agent_id, connection_id, access FROM public.agent_connections WHERE workspace_id = $1 ORDER BY created_at LIMIT 500`

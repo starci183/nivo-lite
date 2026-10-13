@@ -2,6 +2,7 @@ import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./content-settings.module-definition"
 import { ContentSettingsService } from "./content-settings.service"
+import { ContentConfigurationService } from "./content-configuration.service"
 
 @Module({})
 /** The content-settings capability over the primary Supabase PostgreSQL connection: which automations a workspace switched on and their dedupe marks. */
@@ -11,8 +12,8 @@ export class ContentSettingsModule extends ConfigurableModuleClass {
         const base = super.register(options)
         return {
             ...base,
-            providers: [...(base.providers ?? []), ContentSettingsService],
-            exports: [ContentSettingsService],
+            providers: [...(base.providers ?? []), ContentSettingsService, ContentConfigurationService],
+            exports: [ContentSettingsService, ContentConfigurationService],
         }
     }
 }

@@ -9,7 +9,7 @@ import { checkContract } from "./contract.policy"
 import type { ContractResult, SaveContractParams } from "./contracts.contracts"
 import { ContractsError, ContractsErrorCode } from "./errors/contracts.error"
 import type { ContractsRow } from "./persistence/contracts.rows"
-import { INSERT_CONTRACT, UPDATE_CONTRACT } from "./persistence/contracts.sql"
+import { INSERT_CONTRACT, LIST_CONTRACTS, UPDATE_CONTRACT } from "./persistence/contracts.sql"
 
 type SavedContract = Pick<
     ContractsRow,
@@ -26,6 +26,23 @@ export class ContractsService {
         private readonly members: WorkspaceMembersService,
         private readonly events: EventsService,
     ) {}
+
+    /** Lists recurring contracts after proving the caller belongs to their workspace. */
+    async list(workspaceId: string, userId: string): Promise<Array<ContractResult>> {
+        await this.members.require(userId, workspaceId)
+        const rows = await this.entityManager.query<Array<ContractsRow>>(LIST_CONTRACTS, [workspaceId])
+        return rows.map((row) => ({
+            id: row.id,
+            leadId: row.lead_id,
+            customerName: row.customer_name,
+            plan: row.plan,
+            startsOn: row.starts_on,
+            endsOn: row.ends_on,
+            amountVnd: row.amount_vnd,
+            status: row.status,
+            note: row.note,
+        }))
+    }
 
     /**
      * Adds or edits a recurring contract (the renewal automation reads these). The contract is judged first; a linked lead

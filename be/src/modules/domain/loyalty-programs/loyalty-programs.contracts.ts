@@ -119,3 +119,13 @@ export type NextTierMatch = NextTier | null
 
 /** The key of a tier, or null for none. */
 export type TierKey = string | null
+
+/** The fields an owner may change in a programme. */
+export interface ProgramPatch {
+    /** The customer-facing name, when changed. */
+    readonly name?: string
+    /** Whether the programme is on, when changed. */
+    readonly enabled?: boolean
+    /** The complete rules, when changed. */
+    readonly config?: LoyaltyConfig
+}

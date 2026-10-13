@@ -80,6 +80,7 @@ export class ChannelDeliveryService {
     }
 
     private async send(target: ConversationTarget, text: string): Promise<DeliveryResult> {
+        if (target.channel === "website") return DELIVERED
         if (target.channel === "zalo") return this.sendZalo(target, text)
         const sender = this.senders.get(target.channel)
         if (sender !== undefined) return { delivered: await sender.send(target, text), failure: null }

@@ -35,3 +35,37 @@ export interface InvoiceListingRow extends InvoiceRow {
     /** The customer's name, or null. */
     readonly contact_name: string | null
 }
+
+/** The order an invoice bills, as the accounting book reads it. */
+export interface InvoiceAccountingOrderRow {
+    /** The order number. */
+    readonly order_no: string
+    /** The ordered items. */
+    readonly items: string
+    /** The amount, VND. */
+    readonly amount_vnd: number | null
+    /** The order status. */
+    readonly status: string
+}
+
+/** The customer an invoice bills. */
+export interface InvoiceAccountingLeadRow {
+    /** The contact's name. */
+    readonly contact_name: string
+    /** The company. */
+    readonly company: string
+}
+
+/** An invoice with its dates and related records for the accounting book. */
+export interface InvoiceAccountingRow extends InvoiceRow {
+    /** When it was issued, ISO text. */
+    readonly issued_at: string | null
+    /** When it is due, ISO text. */
+    readonly due_at: string | null
+    /** When it was written, ISO text. */
+    readonly created_at: string
+    /** The order, when it still exists in this workspace. */
+    readonly order: InvoiceAccountingOrderRow | null
+    /** The customer, when it still exists in this workspace. */
+    readonly lead: InvoiceAccountingLeadRow | null
+}

@@ -1,4 +1,7 @@
-import type { ExecutionRow } from "./persistence/executions.rows"
+import type { ExecutionRecordRow, ExecutionRow } from "./persistence/executions.rows"
+
+/** A complete approval card, or null when the workspace has no such card. */
+export type OptionalExecutionRecord = ExecutionRecordRow | null
 
 /** What an approval card is made of. */
 export interface NewExecution {
@@ -32,4 +35,14 @@ export interface ExecutionSettlement {
     readonly decidedBy: string
     /** The draft the person edited, when they did. */
     readonly editedDraft: string | null
+}
+
+/** Filters and bounds an approval-card read. */
+export interface ExecutionListFilter {
+    /** Restricts cards to these responsibilities; an empty list selects none. */
+    readonly responsibilityIds?: ReadonlyArray<string>
+    /** Selects undecided legacy cards that are not attached to a work item. */
+    readonly pendingLegacy?: boolean
+    /** The maximum number of cards the caller needs. */
+    readonly limit: number
 }

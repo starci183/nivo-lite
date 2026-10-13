@@ -3,6 +3,7 @@ import type { EntityManager } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import type {
     AuthorityRuleRecord,
+    DefaultRule,
     OptionalAuthorityRule,
     OptionalRuleInstallation,
     RuleChange,
@@ -11,7 +12,13 @@ import type {
 import { AuthorityRulesError, AuthorityRulesErrorCode } from "./errors/authority-rules.error"
 import { applyOperatingMode } from "./operating-mode.policy"
 import type { OperatingModeRow, RuleRecordRow, RuleRow } from "./persistence/authority-rules.rows"
-import { FIND_OPERATING_MODE, FIND_RULE, LIST_RULES, UPSERT_RULE } from "./persistence/authority-rules.sql"
+import {
+    FIND_OPERATING_MODE,
+    FIND_RULE,
+    LIST_RULES,
+    SEED_DEFAULT_RULES,
+    UPSERT_RULE,
+} from "./persistence/authority-rules.sql"
 
 @Injectable()
 /** What the owner granted each action: the only owner of the authority_rules table. */
@@ -63,5 +70,10 @@ export class AuthorityRulesService {
             })
         }
         return saved
+    }
+
+    /** Grants the default rules of a module to the workspace; a rule the owner already set is never overwritten. */
+    async seedDefaults(workspaceId: string, department: string, rules: ReadonlyArray<DefaultRule>): Promise<void> {
+        await this.entityManager.query(SEED_DEFAULT_RULES, [workspaceId, department, JSON.stringify(rules)])
     }
 }

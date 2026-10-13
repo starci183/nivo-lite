@@ -46,7 +46,7 @@ export class ReconcilePaymentPerformerService implements WorkPerformer {
         const event = await this.eventOf(ctx, item)
         const transaction = await this.transactionOf(ctx, item, event)
         const amount = event?.amount_vnd ?? transaction.amount_vnd
-        const issued = await this.matchables(ctx)
+        const issued = await this.matchables(ctx, item.origin)
         const match = matchPayment(issued, `${transaction.reference ?? ""} ${event?.body ?? ""}`, amount)
         const bank = event === null ? null : bankNameOf(event.channel, event.event_id)
         const payer =
@@ -89,7 +89,7 @@ export class ReconcilePaymentPerformerService implements WorkPerformer {
         if (chosen === undefined || proposal.candidates?.length !== 1) {
             throw new DecisionsError({ code: DecisionsErrorCode.ChooseCandidate })
         }
-        const invoice = await this.invoices.markPaid(ctx.workspaceId, chosen.id)
+        const invoice = await this.invoices.markPaid(ctx.workspaceId, chosen.id, item.origin)
         // A customer's "I paid" claim has no bank transaction of its own (its subject is the invoice).
         if (item.subject_type === "transaction" && item.subject_id !== null) {
             await this.transactions.match(ctx.workspaceId, item.subject_id, invoice.id)
@@ -179,8 +179,8 @@ export class ReconcilePaymentPerformerService implements WorkPerformer {
     }
 
     /** The newest issued invoices with the order number and the customer's name a payment is matched on. */
-    private async matchables(ctx: WorkContext): Promise<Array<MatchableInvoice>> {
-        const issued = await this.invoices.listIssued(ctx.workspaceId, ISSUED_WINDOW)
+    private async matchables(ctx: WorkContext, origin: string): Promise<Array<MatchableInvoice>> {
+        const issued = await this.invoices.listIssued(ctx.workspaceId, ISSUED_WINDOW, origin)
         return issued.map((invoice) => ({
             id: invoice.id,
             invoiceNo: invoice.invoice_no,

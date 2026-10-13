@@ -28,3 +28,6 @@ export const FINISH_EXTRACTION = sql`WITH changed AS (
     WHERE workspace_id = $1 AND source_id = $2 RETURNING source_id
 )
 SELECT source_id FROM changed`
+
+/** Where the reading of each document of a workspace stands ($1 workspace). */
+export const LIST_EXTRACTIONS = sql`SELECT source_id, status FROM public.brain_extractions WHERE workspace_id = $1 LIMIT 500`

@@ -1,6 +1,18 @@
 import type { RunUsage } from "@modules/integrations/openclaw"
 import type { Locale } from "@modules/platform/i18n"
 
+/** Trusted application metadata stored with a queued generation. */
+export interface GenerationContext {
+    /** Context fields are interpreted only by the requesting domain capability. */
+    readonly [name: string]: unknown
+}
+
+/** A durable application result applied after text generation. */
+export interface GenerationResult {
+    /** The result fields of the owning domain capability. */
+    readonly [name: string]: unknown
+}
+
 /** Who speaks a line of a generation prompt. */
 export type GenMessageRole = "system" | "user" | "assistant"
 
@@ -35,6 +47,9 @@ export interface GenerateParams {
     readonly locale?: Locale
 }
 
+/** The generation a fenced job may run, or null when usage or engine availability requires its fallback. */
+export type PreparedGenerationId = string | null
+
 /** A generation that produced text. */
 export interface GenerationSuccess {
     /** Discriminant of the success half. */
@@ -51,6 +66,9 @@ export interface GenerationSuccess {
 
 /** Why a generation did not produce text. */
 export type GenerationFailureReason = "quota" | "engine_offline" | "timeout" | "error" | "not_configured"
+
+/** A refusal to write a text, or null when the text can be written. */
+export type OptionalGenerationFailure = GenerationFailure | null
 
 /** A generation that did not produce text. */
 export interface GenerationFailure {
@@ -74,6 +92,45 @@ export interface GenerationInput {
     /** The deadline of the caller, ms. */
     readonly timeoutMs: number
 }
+
+/** A queued request returned immediately, before the agent runs. */
+export interface GenerationEnqueued {
+    /** The generation to poll. */
+    readonly id: string
+    /** The initial state. */
+    readonly status: "queued"
+}
+
+/** A workspace-scoped generation with application context and a durable result. */
+export interface GenerationState {
+    /** The generation. */
+    readonly id: string
+    /** The workspace that owns it. */
+    readonly workspaceId: string
+    /** The purpose recorded by the requesting application. */
+    readonly purpose: string
+    /** queued, running, done, error, or cancelled. */
+    readonly status: string
+    /** The generated text, once available. */
+    readonly text: string | null
+    /** A stored failure code, when available. */
+    readonly errorCode: string | null
+    /** Prompt and trusted application context. */
+    readonly input: Record<string, unknown>
+    /** Text and any application result applied by the completion step. */
+    readonly output: Record<string, unknown>
+    /** Named timing marks, in milliseconds. */
+    readonly timings: Readonly<Record<string, number>>
+    /** Creation instant. */
+    readonly createdAt: string
+    /** Completion instant, if the engine ended. */
+    readonly finishedAt: string | null
+    /** The validated prompt messages used by a retry. */
+    readonly messages: ReadonlyArray<GenMessage>
+}
+
+/** No state is returned when the generation is absent from the selected workspace. */
+export type OptionalGenerationState = GenerationState | null
 
 /** A queued generation as the runner reads it. */
 export interface QueuedGeneration {
@@ -127,4 +184,29 @@ export interface TurnAttempt {
     readonly timings: Readonly<Record<string, number>>
     /** Why there is no text; an empty text when there is one. */
     readonly reason: string
+}
+
+/** A text that was queued: the id to poll. */
+export interface GenerationQueued {
+    /** Discriminant of the success half. */
+    readonly ok: true
+    /** The ai_generations row. */
+    readonly generationId: string
+}
+
+/** What asking for a text without waiting answered: its id, or the reason it was not queued. */
+export type GenerationRequested = GenerationQueued | GenerationFailure
+
+/** Where a queued text stands: `queued` and `running` are working, `done` carries the text, `failed` is final. */
+export interface GenerationStatus {
+    /** The ai_generations row. */
+    readonly generationId: string
+    /** `queued`, `running`, `done` or `failed`. */
+    readonly status: "queued" | "running" | "done" | "failed"
+    /** The generated text; present when done. */
+    readonly output: string | null
+    /** What the run cost; null when the gateway reported none or the text is not done. */
+    readonly usage: RunUsage | null
+    /** Milliseconds from the start of the run to each named mark. */
+    readonly timings: Readonly<Record<string, number>>
 }

@@ -8,4 +8,14 @@ export { PaymentProofService } from "./payment-proof.service"
 export { sepayPayloadOf } from "./sepay.policy"
 export { parseJsonObject } from "./webhook-body.policy"
 export type { BankAccountOptions, BillingOptions } from "./billing.options"
-export type { PayableOrder, Plan, SepayDelivery, SepayPayload, WorkspaceBilling } from "./billing.contracts"
+export type {
+    BillingWorkspace,
+    PayableOrder,
+    Plan,
+    SepayDelivery,
+    SepayPayload,
+    WorkspaceBilling,
+} from "./billing.contracts"
+
+export { BillingReadService } from "./billing-read.service"
+export type { BillingPaymentOrder, BillingPaymentOrderLookup } from "./billing.contracts"

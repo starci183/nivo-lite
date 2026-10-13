@@ -26,6 +26,9 @@ import {
     FIND_RESPONSIBILITY,
     INSERT_RESPONSIBILITY,
     LIST_RESPONSIBILITIES,
+    LIST_LEAD_RESPONSIBILITIES,
+    LIST_OPEN_RESPONSIBILITIES,
+    LIST_BOARD_RESPONSIBILITIES,
     UPDATE_RESPONSIBILITY_NEXT_ACTION,
     UPDATE_RESPONSIBILITY_STATUS,
 } from "./persistence/responsibility-journal.sql"
@@ -78,18 +81,41 @@ export class ResponsibilityJournalService {
         return this.entityManager.query<Array<ResponsibilityListing>>(LIST_RESPONSIBILITIES, [workspaceId])
     }
 
-    /** Adds a responsibility for a customer of the workspace, owned by the caller or by one of the workspace's agents. */
-    async create(principalId: string, workspaceId: string, input: NewResponsibility): Promise<ResponsibilityRecord> {
+    /** The steps of a workspace's customer in journey order, after membership is proved by the reader. */
+    listForLead(workspaceId: string, leadId: string): Promise<Array<ResponsibilityRecord>> {
+        return this.entityManager.query<Array<ResponsibilityRecord>>(LIST_LEAD_RESPONSIBILITIES, [workspaceId, leadId])
+    }
+
+    /** The open follow-ups of the workspace, earliest due first, after membership is proved by the reader. */
+    listOpen(workspaceId: string): Promise<Array<ResponsibilityRecord>> {
+        return this.entityManager.query<Array<ResponsibilityRecord>>(LIST_OPEN_RESPONSIBILITIES, [workspaceId])
+    }
+
+    /** The oldest open steps used to choose the next action displayed on each lead of the board. */
+    listForBoard(workspaceId: string): Promise<Array<ResponsibilityRecord>> {
+        return this.entityManager.query<Array<ResponsibilityRecord>>(LIST_BOARD_RESPONSIBILITIES, [workspaceId])
+    }
+
+    /** Adds a responsibility and its evidence, inside the caller's transaction when one is supplied. */
+    async create(
+        principalId: string,
+        workspaceId: string,
+        input: NewResponsibility,
+        manager: EntityManager = this.entityManager,
+    ): Promise<ResponsibilityRecord> {
         const member = await this.members.require(principalId, workspaceId)
-        const agent = input.owner === "human" ? null : await this.agentOf(workspaceId, input.owner)
-        const created = await this.insert(workspaceId, input, agent?.name ?? member.displayName)
-        await this.events.record({
-            workspaceId,
-            kind: "responsibility.assigned",
-            actor: member.displayName,
-            summary: `${created.owner_name}: ${created.next_action}`,
-            leadId: input.lead_id,
-        })
+        const agent = input.owner === "human" ? null : await this.agentOf(workspaceId, input.owner, manager)
+        const created = await this.insert(workspaceId, input, agent?.name ?? member.displayName, manager)
+        await this.events.record(
+            {
+                workspaceId,
+                kind: "responsibility.assigned",
+                actor: member.displayName,
+                summary: `${created.owner_name}: ${created.next_action}`,
+                leadId: input.lead_id,
+            },
+            manager,
+        )
         return created
     }
 
@@ -122,8 +148,12 @@ export class ResponsibilityJournalService {
     }
 
     /** One responsibility of the workspace, or null when there is none with that id. */
-    async find(workspaceId: string, responsibilityId: string): Promise<OptionalResponsibility> {
-        const rows = await this.entityManager.query<Array<ResponsibilityRecord>>(FIND_RESPONSIBILITY, [
+    async find(
+        workspaceId: string,
+        responsibilityId: string,
+        manager: EntityManager = this.entityManager,
+    ): Promise<OptionalResponsibility> {
+        const rows = await manager.query<Array<ResponsibilityRecord>>(FIND_RESPONSIBILITY, [
             workspaceId,
             responsibilityId,
         ])
@@ -131,8 +161,13 @@ export class ResponsibilityJournalService {
     }
 
     /** Moves a responsibility to a status on the engine's behalf; the engine already proved who may act. */
-    async setStatus(scope: ResponsibilityScope, responsibilityId: string, status: ResponsibilityStatus): Promise<void> {
-        await this.entityManager.query(UPDATE_RESPONSIBILITY_STATUS, [scope.workspaceId, responsibilityId, status])
+    async setStatus(
+        scope: ResponsibilityScope,
+        responsibilityId: string,
+        status: ResponsibilityStatus,
+        manager: EntityManager = this.entityManager,
+    ): Promise<void> {
+        await manager.query(UPDATE_RESPONSIBILITY_STATUS, [scope.workspaceId, responsibilityId, status])
     }
 
     /** Sets the next step of a responsibility. */
@@ -144,8 +179,12 @@ export class ResponsibilityJournalService {
         ])
     }
 
-    private async agentOf(workspaceId: string, agentId: string): Promise<AgentNameRow> {
-        const agent = (await this.entityManager.query<Array<AgentNameRow>>(FIND_AGENT_NAME, [workspaceId, agentId]))[0]
+    private async agentOf(
+        workspaceId: string,
+        agentId: string,
+        manager: EntityManager = this.entityManager,
+    ): Promise<AgentNameRow> {
+        const agent = (await manager.query<Array<AgentNameRow>>(FIND_AGENT_NAME, [workspaceId, agentId]))[0]
         if (agent === undefined) throw new ResponsibilitiesError({ code: ResponsibilitiesErrorCode.NotFound })
         return agent
     }
@@ -154,10 +193,11 @@ export class ResponsibilityJournalService {
         workspaceId: string,
         input: NewResponsibility,
         ownerName: string,
+        manager: EntityManager = this.entityManager,
     ): Promise<ResponsibilityRecord> {
         const ownerAgentId = input.owner === "human" ? null : input.owner
         const row = (
-            await this.entityManager.query<Array<ResponsibilityRecord>>(INSERT_RESPONSIBILITY, [
+            await manager.query<Array<ResponsibilityRecord>>(INSERT_RESPONSIBILITY, [
                 workspaceId,
                 input.lead_id,
                 input.title,

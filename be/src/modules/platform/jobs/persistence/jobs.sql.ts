@@ -31,3 +31,9 @@ export const FAIL_JOB = sql`WITH changed AS (UPDATE public.jobs SET status = 'fa
     WHERE id = $1 AND fencing_token = $2 AND status = 'running'
        RETURNING id)
     SELECT id FROM changed`
+
+/** Locks the live job fence while its domain effects run; a replacement claim waits until the effects and progress are recorded. */
+export const LOCK_JOB_FENCE = sql`SELECT id FROM public.jobs WHERE id = $1 AND fencing_token = $2 AND status = 'running' LIMIT 1 FOR UPDATE`
+/** Locks a delivery only when its latest claim failed; a successor claim makes this return no row. */
+export const LOCK_FAILED_JOB_FENCE = sql`SELECT id, fencing_token FROM public.jobs
+    WHERE job_key = $1 AND status = 'failed' LIMIT 1 FOR UPDATE`

@@ -6,6 +6,8 @@ export {
     isDecideExecutionPayload,
     isDecideWorkPayload,
     isProposeCommandPayload,
+    isRunWorkPayload,
+    isSimulateInboundPayload,
 } from "./decisions.contracts"
 export type {
     ConfirmCommandPayload,
@@ -13,8 +15,8 @@ export type {
     DecideWorkPayload,
     DecisionsJobScope,
     ProposeCommandPayload,
-    QueuedEdits,
-    QueuedField,
+    RunWorkPayload,
+    SimulateInboundPayload,
 } from "./decisions.contracts"
 export { DecisionsQueueModule } from "./decisions.module"
 export { DecisionsQueue } from "./decisions.queue"

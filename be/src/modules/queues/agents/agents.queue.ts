@@ -3,7 +3,7 @@ import type { EntityManager } from "typeorm"
 import { InjectQueueOutbox } from "@modules/platform/queue"
 import type { QueueOutbox } from "@modules/platform/queue"
 import { AGENTS_QUEUE, AgentsJob, agentsDedupeKey, syncSubjectOf } from "./agents.contracts"
-import type { GenerateWithAgentPayload, SyncAgentsPayload } from "./agents.contracts"
+import type { GenerateWithAgentPayload, SetupTurnPayload, SyncAgentsPayload } from "./agents.contracts"
 
 @Injectable()
 /** The typed producer of the agents queue: the one way a sync or a generation job starts from the back end. */
@@ -23,6 +23,14 @@ export class AgentsQueue {
         return this.outbox.write(tx, AGENTS_QUEUE, payload, {
             job: AgentsJob.Generate,
             dedupeKey: agentsDedupeKey(AgentsJob.Generate, payload.generationId),
+        })
+    }
+
+    /** Enqueues the answer to an owner message of the setup chat in the caller's transaction: one job per message. */
+    enqueueSetupTurn(payload: SetupTurnPayload, tx: EntityManager): Promise<void> {
+        return this.outbox.write(tx, AGENTS_QUEUE, payload, {
+            job: AgentsJob.SetupTurn,
+            dedupeKey: agentsDedupeKey(AgentsJob.SetupTurn, payload.messageId),
         })
     }
 }

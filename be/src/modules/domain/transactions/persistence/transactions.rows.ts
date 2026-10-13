@@ -19,3 +19,27 @@ export interface TransactionRow {
     /** `live` or `simulated`. */
     readonly origin: string
 }
+
+/** The input that delivered a payment, as the accounting book reads it. */
+export interface TransactionAccountingInboundRow {
+    /** The source channel. */
+    readonly channel: string
+    /** The channel's own event id. */
+    readonly event_id: string | null
+    /** The source text. */
+    readonly body: string
+    /** The sender's name. */
+    readonly sender_name: string | null
+}
+
+/** A payment with its dates and source for the accounting book. */
+export interface TransactionAccountingRow extends TransactionRow {
+    /** The payment channel. */
+    readonly channel: string
+    /** When the payment occurred, ISO text. */
+    readonly occurred_at: string
+    /** When it was written, ISO text. */
+    readonly created_at: string
+    /** The input, when it still exists in this workspace. */
+    readonly inbound: TransactionAccountingInboundRow | null
+}

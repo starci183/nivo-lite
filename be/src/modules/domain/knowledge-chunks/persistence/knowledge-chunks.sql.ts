@@ -21,3 +21,7 @@ ORDER BY created_at LIMIT $3`
 export const UPDATE_CHUNK_VECTORS = sql`UPDATE public.knowledge_chunks c SET embedding = t.embedding::extensions.vector, embedding_model = $4
 FROM unnest($2::uuid[], $3::text[]) AS t(id, embedding)
 WHERE c.id = t.id AND c.workspace_id = $1`
+
+/** The passages of a source in order, without their vectors ($1 workspace, $2 source). */
+export const LIST_PASSAGES = sql`SELECT id, ord, content, (embedding IS NOT NULL) AS has_embedding FROM public.knowledge_chunks
+WHERE workspace_id = $1 AND source_id = $2 ORDER BY ord LIMIT 500`

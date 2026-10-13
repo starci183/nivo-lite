@@ -1,9 +1,10 @@
 import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
-import { JOB_CLAIMS, JOB_PROCESSOR_REGISTRY, JOBS_MANAGERS } from "./jobs.decorators"
+import { JOB_CLAIMS, JOB_FENCE, JOB_PROCESSOR_REGISTRY, JOBS_MANAGERS } from "./jobs.decorators"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./jobs.module-definition"
 import { JobClaimService } from "./job-claim.service"
+import { JobFenceService } from "./job-fence.service"
 import { JobRunnerService } from "./job-runner.service"
 
 @Module({})
@@ -22,11 +23,13 @@ export class JobsModule extends ConfigurableModuleClass {
                     inject: [options.connection],
                 },
                 JobClaimService,
+                JobFenceService,
                 JobRunnerService,
                 { provide: JOB_CLAIMS, useExisting: JobClaimService },
+                { provide: JOB_FENCE, useExisting: JobFenceService },
                 { provide: JOB_PROCESSOR_REGISTRY, useExisting: JobRunnerService },
             ],
-            exports: [JOB_CLAIMS, JOB_PROCESSOR_REGISTRY],
+            exports: [JOB_CLAIMS, JOB_FENCE, JOB_PROCESSOR_REGISTRY],
         }
     }
 }

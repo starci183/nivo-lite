@@ -1,19 +1,19 @@
 import { Injectable } from "@nestjs/common"
-import { AutomationEngineService } from "@modules/domain/automations"
+import { AutomationTickService } from "@modules/domain/automations"
 import { InjectJobClaims } from "@modules/platform/jobs"
 import type { ClaimedJob, JobClaims, JobStep } from "@modules/platform/jobs"
 
 @Injectable()
-/** The one effect of the job: one pass of the engine over the due runs. */
+/** Runs the fenced tick through the automation capability. */
 export class RunAutomationTickStep implements JobStep {
     constructor(
-        private readonly engine: AutomationEngineService,
+        private readonly tick: AutomationTickService,
         @InjectJobClaims() private readonly claims: JobClaims,
     ) {}
 
-    /** Records the step with the token this worker holds FIRST, so a stale token stops here before any effect; then runs the pass. */
+    /** Records the fenced step before the capability dispatches the queued payload. */
     async run(job: ClaimedJob): Promise<void> {
         await this.claims.advance({ jobId: job.jobId, expectedFencingToken: job.fencingToken, step: "tick" })
-        await this.engine.tickNow()
+        await this.tick.run(job.payload)
     }
 }

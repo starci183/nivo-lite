@@ -3,7 +3,7 @@ import type { AddBookingParamsRequest, AddBookingBodyRequest } from "./dto/add-b
 import type { AddBookingResponse } from "./dto/add-booking.response"
 
 /** Maps the HTTP input of add-booking to the command request. */
-export const toAddBookingRequest = (
+export const toHttpAddBookingRequest = (
     params: AddBookingParamsRequest,
     body: AddBookingBodyRequest,
 ): AddBookingRequest => ({

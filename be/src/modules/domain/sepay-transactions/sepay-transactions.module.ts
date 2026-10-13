@@ -1,6 +1,7 @@
 import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./sepay-transactions.module-definition"
+import { SepayReviewService } from "./sepay-review.service"
 import { SepayTransactionsService } from "./sepay-transactions.service"
 
 @Module({})
@@ -11,8 +12,8 @@ export class SepayTransactionsModule extends ConfigurableModuleClass {
         const base = super.register(options)
         return {
             ...base,
-            providers: [...(base.providers ?? []), SepayTransactionsService],
-            exports: [SepayTransactionsService],
+            providers: [...(base.providers ?? []), SepayTransactionsService, SepayReviewService],
+            exports: [SepayTransactionsService, SepayReviewService],
         }
     }
 }

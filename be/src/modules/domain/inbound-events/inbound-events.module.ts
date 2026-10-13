@@ -2,6 +2,8 @@ import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./inbound-events.module-definition"
 import { InboundEventsService } from "./inbound-events.service"
+import { InboxFeedService } from "./inbox-feed.service"
+import { InboundSimulationStoreService } from "./inbound-simulation-store.service"
 
 @Module({})
 /** The inbound-events capability over the primary Supabase connection. */
@@ -11,8 +13,13 @@ export class InboundEventsModule extends ConfigurableModuleClass {
         const base = super.register(options)
         return {
             ...base,
-            providers: [...(base.providers ?? []), InboundEventsService],
-            exports: [InboundEventsService],
+            providers: [
+                ...(base.providers ?? []),
+                InboundEventsService,
+                InboxFeedService,
+                InboundSimulationStoreService,
+            ],
+            exports: [InboundEventsService, InboxFeedService, InboundSimulationStoreService],
         }
     }
 }

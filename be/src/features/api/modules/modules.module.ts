@@ -1,7 +1,44 @@
 import { Module } from "@nestjs/common"
+import { ApplySetupHandler } from "./application/apply-setup.handler"
+import { DecideSetupCardHandler } from "./application/decide-setup-card.handler"
+import { GetAgentSyncStatusHandler } from "./application/get-agent-sync-status.handler"
 import { GetCatalogHandler } from "./application/get-catalog.handler"
+import { GetInstallationHandler } from "./application/get-installation.handler"
 import { GetModuleHandler } from "./application/get-module.handler"
+import { GetRequirementFactsHandler } from "./application/get-requirement-facts.handler"
+import { GetSetupStateHandler } from "./application/get-setup-state.handler"
+import { InstallModuleHandler } from "./application/install-module.handler"
+import { ListInstallationsHandler } from "./application/list-installations.handler"
+import { ListSetupVersionsHandler } from "./application/list-setup-versions.handler"
+import { PostSetupMessageHandler } from "./application/post-setup-message.handler"
+import { RenameInstallationAgentHandler } from "./application/rename-installation-agent.handler"
+import { RenameInstallationHandler } from "./application/rename-installation.handler"
+import { SaveInstallationSettingHandler } from "./application/save-installation-setting.handler"
+import { SetModuleLiveHandler } from "./application/set-module-live.handler"
+import { SetOperatingModeHandler } from "./application/set-operating-mode.handler"
+import { SetSetupGateHandler } from "./application/set-setup-gate.handler"
 
-@Module({ providers: [GetCatalogHandler, GetModuleHandler] })
-/** The modules feature: the handlers that read the catalogue of installable agents. */
+@Module({
+    providers: [
+        ApplySetupHandler,
+        DecideSetupCardHandler,
+        GetAgentSyncStatusHandler,
+        GetCatalogHandler,
+        GetInstallationHandler,
+        GetModuleHandler,
+        GetRequirementFactsHandler,
+        GetSetupStateHandler,
+        InstallModuleHandler,
+        ListInstallationsHandler,
+        ListSetupVersionsHandler,
+        PostSetupMessageHandler,
+        RenameInstallationAgentHandler,
+        RenameInstallationHandler,
+        SaveInstallationSettingHandler,
+        SetModuleLiveHandler,
+        SetOperatingModeHandler,
+        SetSetupGateHandler,
+    ],
+})
+/** The modules feature: the handlers that read the catalogue and run the lifecycle and the setup chat of the installed agents. */
 export class ModulesApiModule {}

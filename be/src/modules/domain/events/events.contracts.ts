@@ -23,3 +23,17 @@ export interface EventLine {
     /** The evidence behind it, or null. */
     readonly evidence: string | null
 }
+
+/** Filters and bounds a workspace's evidence-log read. */
+export interface EventListFilter {
+    /** Restricts the history to one lead, when provided. */
+    readonly leadId?: string
+    /** Restricts the history to one event kind, when provided. */
+    readonly kind?: string
+    /** Restricts the history to these work items; an empty list selects none. */
+    readonly workItemIds?: ReadonlyArray<string>
+    /** The maximum number of lines the caller needs. */
+    readonly limit: number
+    /** Reads the oldest lines first instead of the most recent lines. */
+    readonly oldestFirst?: boolean
+}

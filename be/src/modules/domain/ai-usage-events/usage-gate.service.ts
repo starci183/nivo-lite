@@ -1,5 +1,5 @@
 import { Injectable } from "@nestjs/common"
-import type { OptionalQuotaBlock, UsageGate, UsageRecord } from "@modules/domain/ai-generations"
+import type { OptionalQuotaBlock, UsageGate, GenerationUsageRecord } from "@modules/domain/ai-generations"
 import { InjectMessageCatalog } from "@modules/platform/i18n"
 import type { Locale, MessageCatalog } from "@modules/platform/i18n"
 import { AiUsageEventsService } from "./ai-usage-events.service"
@@ -23,7 +23,7 @@ export class UsageGateService implements UsageGate {
     }
 
     /** Meters one finished generation. */
-    record(entry: UsageRecord): Promise<void> {
+    record(entry: GenerationUsageRecord): Promise<void> {
         const run = entry.usage
         return this.usage.record({
             workspaceId: entry.workspaceId,

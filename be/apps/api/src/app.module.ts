@@ -17,13 +17,15 @@ import { OperationsGraphqlModule } from "@features/api/operations"
 import { OverviewGraphqlModule } from "@features/api/overview"
 import { DecisionsGraphqlModule, DecisionsHttpModule } from "@features/api/decisions"
 import { RunDecisionsQueueModule } from "@features/jobs/run-decisions"
+import { RunSetupTurnQueueModule } from "@features/jobs/run-setup-turn"
 import { GenerateWithAgentQueueModule } from "@features/jobs/generate-with-agent"
 import { SyncAgentsQueueModule } from "@features/jobs/sync-agents"
-import { BookingHttpModule } from "@features/api/booking"
-import { LoyaltyHttpModule } from "@features/api/loyalty"
+import { DraftLoyaltyCampaignQueueModule } from "@features/jobs/draft-loyalty-campaign"
+import { BookingGraphqlModule, BookingHttpModule } from "@features/api/booking"
+import { LoyaltyGraphqlModule, LoyaltyHttpModule } from "@features/api/loyalty"
 import { LoyaltyTillHttpModule } from "@features/api/loyalty-till"
-import { PublicBookingHttpModule } from "@features/api/public-booking"
-import { PublicLoyaltyHttpModule } from "@features/api/public-loyalty"
+import { PublicBookingGraphqlModule, PublicBookingHttpModule } from "@features/api/public-booking"
+import { PublicLoyaltyGraphqlModule, PublicLoyaltyHttpModule } from "@features/api/public-loyalty"
 import { CheckConnectionHealthQueueModule } from "@features/jobs/check-connection-health"
 import { CompleteZaloAuthorizationQueueModule } from "@features/jobs/complete-zalo-authorization"
 import { RefreshZaloTokensQueueModule } from "@features/jobs/refresh-zalo-tokens"
@@ -31,10 +33,26 @@ import { RunZaloWizardQueueModule } from "@features/jobs/run-zalo-wizard"
 import { RunChatTurnQueueModule } from "@features/jobs/run-chat-turn"
 import { TelegramHttpModule } from "@features/webhooks/telegram"
 import { ZaloHttpModule } from "@features/webhooks/zalo"
-import { LeadsHttpModule } from "@features/api/leads"
+import { LeadsGraphqlModule, LeadsHttpModule } from "@features/api/leads"
+import { LeadQueriesGraphqlModule } from "@features/api/lead-queries"
+import { LeadActionsGraphqlModule } from "@features/api/lead-actions"
+import { SalesGraphqlModule } from "@features/api/sales"
+import { SalesWorkbenchGraphqlModule } from "@features/api/sales-workbench"
+import { RunLeadActionQueueModule } from "@features/jobs/run-lead-action"
+import { LEAD_ACTIONS_ERROR_KINDS, LEAD_ACTIONS_MESSAGES, LeadActionsModule } from "@modules/domain/lead-actions"
+import { SalesModule } from "@modules/domain/sales"
+import { SalesWorkbenchModule } from "@modules/domain/sales-workbench"
+import { LeadViewsModule } from "@modules/domain/lead-views"
 import { AdminGraphqlModule, AdminHttpModule } from "@features/api/admin"
 import { ModulesGraphqlModule, ModulesHttpModule } from "@features/api/modules"
 import { OfficeGraphqlModule, OfficeHttpModule } from "@features/api/office"
+import { PromoGraphqlModule } from "@features/api/promo"
+import { LeadGenGraphqlModule } from "@features/api/leadgen"
+import { ChatbotGraphqlModule } from "@features/api/chatbot"
+import { ChatReplyGraphqlModule } from "@features/api/chatreply"
+import { PromoModule } from "@modules/domain/promo"
+import { ChatbotWorkbenchModule } from "@modules/domain/chatbot-workbench"
+import { CHATREPLY_ERROR_KINDS, CHATREPLY_MESSAGES, ChatReplyModule } from "@modules/domain/chatreply"
 import { ExternalApiHttpModule } from "@features/api/external-api"
 import { SystemHealthHttpModule } from "@features/api/system-health"
 import { BOOKINGS_ERROR_KINDS, BOOKINGS_MESSAGES, BookingsModule } from "@modules/domain/bookings"
@@ -53,7 +71,12 @@ import {
 import { LOYALTY_OTPS_ERROR_KINDS, LOYALTY_OTPS_MESSAGES, LoyaltyOtpsModule } from "@modules/domain/loyalty-otps"
 import { LoyaltyProgramsModule } from "@modules/domain/loyalty-programs"
 import { LoyaltyRewardsModule } from "@modules/domain/loyalty-rewards"
-import { LOYALTY_ERROR_KINDS, LOYALTY_MESSAGES, LoyaltyModule } from "@modules/domain/loyalty"
+import {
+    LOYALTY_ERROR_KINDS,
+    LOYALTY_MESSAGES,
+    LoyaltyCodeDeliveryService,
+    LoyaltyModule,
+} from "@modules/domain/loyalty"
 import { API_KEYS_ERROR_KINDS, API_KEYS_MESSAGES, ApiKeysModule } from "@modules/domain/api-keys"
 import { OverviewModule } from "@modules/domain/overview"
 import { CassoHttpModule } from "@features/webhooks/casso"
@@ -63,7 +86,11 @@ import { SepayFeedHttpModule } from "@features/webhooks/sepay-feed"
 import { VietcombankHttpModule } from "@features/webhooks/vietcombank"
 import { ReconcileBankCreditQueueModule } from "@features/jobs/reconcile-bank-credit"
 import { CreatePaymentOrderQueueModule } from "@features/jobs/create-payment-order"
-import { PaymentOrderRequestsModule } from "@modules/domain/payment-order-requests"
+import {
+    PAYMENT_ORDER_REQUESTS_ERROR_KINDS,
+    PAYMENT_ORDER_REQUESTS_MESSAGES,
+    PaymentOrderRequestsModule,
+} from "@modules/domain/payment-order-requests"
 import { BILLING_ERROR_KINDS, BILLING_MESSAGES, BillingModule } from "@modules/domain/billing"
 import {
     INBOUND_EVENTS_ERROR_KINDS,
@@ -78,10 +105,33 @@ import {
 import { CREDITS_ERROR_KINDS, CREDITS_MESSAGES, CreditsModule } from "@modules/domain/credits"
 import { AI_USAGE_EVENTS_MESSAGES, AiUsageEventsModule, UsageGateService } from "@modules/domain/ai-usage-events"
 import { SepayTransactionsModule } from "@modules/domain/sepay-transactions"
+import { OrdersGraphqlModule } from "@features/api/orders"
+import { BillingGraphqlModule } from "@features/api/billing"
+import { CreditsGraphqlModule } from "@features/api/credits"
+import { AccountingGraphqlModule } from "@features/api/accounting"
+import { AdjustmentsGraphqlModule } from "@features/api/adjustments"
+import { AccountingModule } from "@modules/domain/accounting"
+import { StaffModule } from "@modules/domain/staff"
+import {
+    ACCOUNTING_ADJUSTMENTS_ERROR_KINDS,
+    ACCOUNTING_ADJUSTMENTS_MESSAGES,
+    AccountingAdjustmentsModule,
+} from "@modules/domain/accounting-adjustments"
 import { WorkspacesGraphqlModule, WorkspacesHttpModule } from "@features/api/workspaces"
+import { InboxGraphqlModule } from "@features/api/inbox"
+import { AgentChatGraphqlModule } from "@features/api/agentchat"
+import { InboxSimulationGraphqlModule } from "@features/api/inbox-simulation"
+import { AGENT_CHAT_ERROR_KINDS, AGENT_CHAT_MESSAGES, AgentChatModule } from "@modules/domain/agent-chat"
+import {
+    INBOX_SIMULATION_ERROR_KINDS,
+    INBOX_SIMULATION_MESSAGES,
+    InboxSimulationModule,
+} from "@modules/domain/inbox-simulation"
 import { OperationsJobsQueueModule } from "@features/jobs/operations-jobs"
 import { AccountGraphqlModule } from "@features/api/account"
 import { ShellGraphqlModule } from "@features/api/shell"
+import { KnowledgeGraphqlModule } from "@features/api/knowledge"
+import { EvidenceGraphqlModule } from "@features/api/evidence"
 import {
     EMAIL_MESSAGES_ERROR_KINDS,
     EMAIL_MESSAGES_MESSAGES,
@@ -118,7 +168,6 @@ import {
     AGENTS_SYNC_FRESH_MS,
     AgentsModule,
     AgentsService,
-    UnboundInstallationsService,
     UnboundKnowledgeLensService,
     UnboundModuleProfilesService,
 } from "@modules/domain/agents"
@@ -192,6 +241,7 @@ import { BRAIN_FACTS_ERROR_KINDS, BRAIN_FACTS_MESSAGES, BrainFactsModule } from 
 import { BRAIN_LESSONS_ERROR_KINDS, BRAIN_LESSONS_MESSAGES, BrainLessonsModule } from "@modules/domain/brain-lessons"
 import { KnowledgeChunksModule } from "@modules/domain/knowledge-chunks"
 import { KnowledgeGapsModule } from "@modules/domain/knowledge-gaps"
+import { KnowledgeSuggestionStateModule } from "@modules/domain/knowledge-suggestion-state"
 import { KNOWLEDGE_ERROR_KINDS, KNOWLEDGE_MESSAGES, KnowledgeModule } from "@modules/domain/knowledge"
 import {
     KNOWLEDGE_SOURCES_ERROR_KINDS,
@@ -264,6 +314,7 @@ import {
     MODULE_CATEGORIES,
     MODULES_ERROR_KINDS,
     MODULES_MESSAGES,
+    InstallationDirectoryService,
     ModulesModule,
 } from "@modules/domain/modules"
 import { PUBLIC_API_ERROR_KINDS, PUBLIC_API_MESSAGES, PublicApiModule } from "@modules/domain/public-api"
@@ -341,9 +392,35 @@ import {
 } from "@modules/integrations/webhook-delivery"
 import { GoogleConnectionsHttpModule } from "@features/api/google-connections"
 import { MetaConnectionsHttpModule } from "@features/api/meta-connections"
+import { ConnectionsGraphqlModule } from "@features/api/connections"
 import { CONTENT_MESSAGES, ContentModule } from "@modules/domain/content"
 import { CONTENT_ITEMS_ERROR_KINDS, CONTENT_ITEMS_MESSAGES, ContentItemsModule } from "@modules/domain/content-items"
-import { ContentSettingsModule } from "@modules/domain/content-settings"
+import {
+    CONTENT_SETTINGS_ERROR_KINDS,
+    CONTENT_SETTINGS_MESSAGES,
+    ContentSettingsModule,
+} from "@modules/domain/content-settings"
+import { CONTENT_PLANS_ERROR_KINDS, CONTENT_PLANS_MESSAGES, ContentPlansModule } from "@modules/domain/content-plans"
+import { ContentPillarsModule } from "@modules/domain/content-pillars"
+import { ContentCadenceModule } from "@modules/domain/content-cadence"
+import {
+    CONTENT_AI_ERROR_KINDS,
+    CONTENT_AI_MESSAGES,
+    ContentAiModule,
+    ContentGenerationCompletionService,
+} from "@modules/domain/content-ai"
+import {
+    CONTENT_PUBLISHING_ERROR_KINDS,
+    CONTENT_PUBLISHING_MESSAGES,
+    ContentPublishingModule,
+} from "@modules/domain/content-publishing"
+import { CONTENT_MEDIA_ERROR_KINDS, CONTENT_MEDIA_MESSAGES, ContentMediaModule } from "@modules/domain/content-media"
+import { ContentGraphqlModule } from "@features/api/content"
+import { ContentSettingsGraphqlModule } from "@features/api/content-settings"
+import { ContentAiGraphqlModule } from "@features/api/content-ai"
+import { ContentPublishingGraphqlModule } from "@features/api/content-publishing"
+import { ContentMediaGraphqlModule } from "@features/api/content-media"
+import { VideoGraphqlModule } from "@features/api/video"
 import { VIDEO_ERROR_KINDS, VIDEO_MESSAGES, VideoModule } from "@modules/domain/video"
 import { VideoProjectVersionsModule } from "@modules/domain/video-project-versions"
 import { VideoProjectsModule } from "@modules/domain/video-projects"
@@ -351,7 +428,7 @@ import { VIDEO_RENDERS_ERROR_KINDS, VIDEO_RENDERS_MESSAGES, VideoRendersModule }
 import { FFMPEG_ERROR_KINDS, FFMPEG_MESSAGES, FfmpegModule } from "@modules/integrations/ffmpeg"
 import { TTS_ERROR_KINDS, TTS_MESSAGES, TtsModule } from "@modules/integrations/tts"
 import { CONTENT_TICK_EVERY_MS, CONTENT_TICK_QUEUE, CONTENT_TICK_SCHEDULER } from "@modules/queues/content-tick"
-import { RendersHttpModule } from "@features/api/renders"
+import { RendersGraphqlModule, RendersHttpModule } from "@features/api/renders"
 import { ApplyBookingStatusQueueModule } from "@features/jobs/apply-booking-status"
 import { PublishContentQueueModule } from "@features/jobs/publish-content"
 import { AcceptMetaEventQueueModule } from "@features/jobs/accept-meta-event"
@@ -375,6 +452,7 @@ export class AppModule {
                     isGlobal: true,
                     bundles: [
                         DOCUMENTS_MESSAGES,
+                        CHATREPLY_MESSAGES,
                         CONNECTIONS_MESSAGES,
                         CONNECTION_GRANTS_MESSAGES,
                         CHANNEL_CONNECTIONS_MESSAGES,
@@ -415,6 +493,11 @@ export class AppModule {
                         AGENT_CONVERSATIONS_MESSAGES,
                         AGENT_MESSAGES_MESSAGES,
                         BILLING_MESSAGES,
+                        LEAD_ACTIONS_MESSAGES,
+                        AGENT_CHAT_MESSAGES,
+                        INBOX_SIMULATION_MESSAGES,
+                        ACCOUNTING_ADJUSTMENTS_MESSAGES,
+                        PAYMENT_ORDER_REQUESTS_MESSAGES,
                         CREDITS_MESSAGES,
                         INBOUND_EVENTS_MESSAGES,
                         PAYMENT_ORDERS_MESSAGES,
@@ -433,7 +516,6 @@ export class AppModule {
                         JOBS_MESSAGES,
                         MODULE_OPS_MESSAGES,
                         PLATFORM_ADMIN_MESSAGES,
-                        JOBS_MESSAGES,
                         BRAIN_FACTS_MESSAGES,
                         BRAIN_LESSONS_MESSAGES,
                         BRAIN_MESSAGES,
@@ -461,12 +543,18 @@ export class AppModule {
                         VIDEO_RENDERS_MESSAGES,
                         CONTENT_MESSAGES,
                         CONTENT_ITEMS_MESSAGES,
+                        CONTENT_SETTINGS_MESSAGES,
+                        CONTENT_AI_MESSAGES,
+                        CONTENT_PLANS_MESSAGES,
+                        CONTENT_PUBLISHING_MESSAGES,
+                        CONTENT_MEDIA_MESSAGES,
                     ],
                 }),
                 ErrorsModule.register({
                     isGlobal: true,
                     kinds: [
                         CONNECTIONS_ERROR_KINDS,
+                        CHATREPLY_ERROR_KINDS,
                         CONNECTION_GRANTS_ERROR_KINDS,
                         CHANNEL_CONNECTIONS_ERROR_KINDS,
                         WEBHOOK_CONNECTIONS_ERROR_KINDS,
@@ -504,6 +592,11 @@ export class AppModule {
                         AGENT_CONVERSATIONS_ERROR_KINDS,
                         AGENT_MESSAGES_ERROR_KINDS,
                         BILLING_ERROR_KINDS,
+                        LEAD_ACTIONS_ERROR_KINDS,
+                        AGENT_CHAT_ERROR_KINDS,
+                        INBOX_SIMULATION_ERROR_KINDS,
+                        ACCOUNTING_ADJUSTMENTS_ERROR_KINDS,
+                        PAYMENT_ORDER_REQUESTS_ERROR_KINDS,
                         CREDITS_ERROR_KINDS,
                         INBOUND_EVENTS_ERROR_KINDS,
                         PAYMENT_ORDERS_ERROR_KINDS,
@@ -551,6 +644,11 @@ export class AppModule {
                         VIDEO_ERROR_KINDS,
                         VIDEO_RENDERS_ERROR_KINDS,
                         CONTENT_ITEMS_ERROR_KINDS,
+                        CONTENT_SETTINGS_ERROR_KINDS,
+                        CONTENT_AI_ERROR_KINDS,
+                        CONTENT_PLANS_ERROR_KINDS,
+                        CONTENT_PUBLISHING_ERROR_KINDS,
+                        CONTENT_MEDIA_ERROR_KINDS,
                     ],
                 }),
                 CqrsModule.register({ isGlobal: true }),
@@ -631,6 +729,18 @@ export class AppModule {
                 OperationsJobsQueueModule,
                 ContentItemsModule.register({ isGlobal: true }),
                 ContentSettingsModule.register({ isGlobal: true }),
+                ContentPillarsModule.register({ isGlobal: true }),
+                ContentCadenceModule.register({ isGlobal: true }),
+                ContentAiModule.register({ isGlobal: true }),
+                ContentPlansModule.register({ isGlobal: true }),
+                ContentPublishingModule.register({ isGlobal: true }),
+                ContentMediaModule.register({ isGlobal: true, storage: SUPABASE_OBJECTS }),
+                ContentGraphqlModule,
+                ContentSettingsGraphqlModule,
+                ContentAiGraphqlModule,
+                ContentPublishingGraphqlModule,
+                ContentMediaGraphqlModule,
+                VideoGraphqlModule,
                 ContentModule.register({ isGlobal: true }),
                 AppCommandsModule.register({ isGlobal: true }),
                 IssueInviteQueueModule,
@@ -640,12 +750,14 @@ export class AppModule {
                 AcceptMetaEventQueueModule,
                 ConnectionCommandsQueueModule,
                 RendersHttpModule,
+                RendersGraphqlModule,
                 LivenessModule.register({ isGlobal: true }),
                 ModuleOpsModule.register({ isGlobal: true }),
                 LlmModule.register({ isGlobal: true, ...options.llm }),
                 DocumentsModule.register({ isGlobal: true, ...options.documents }),
                 KnowledgeSourcesModule.register({ isGlobal: true, storage: SUPABASE_OBJECTS }),
                 KnowledgeChunksModule.register({ isGlobal: true }),
+                KnowledgeSuggestionStateModule.register({ isGlobal: true }),
                 NivoKnowledgeModule.register({
                     isGlobal: true,
                     folders: [CORE_FOLDER, ...MODULE_CATALOG.map((module) => module.knowledgeFolder)],
@@ -661,6 +773,23 @@ export class AppModule {
                 BrainModule.register({ isGlobal: true, corrections: { recent: () => Promise.resolve([]) } }),
                 BookingsModule.register({ isGlobal: true }),
                 LeadsHttpModule,
+                LeadsGraphqlModule,
+                LeadQueriesGraphqlModule,
+                LeadActionsGraphqlModule,
+                RunLeadActionQueueModule,
+                SalesGraphqlModule,
+                SalesWorkbenchGraphqlModule,
+                LeadActionsModule.register({ isGlobal: true }),
+                LeadViewsModule.register({ isGlobal: true }),
+                SalesModule.register({ isGlobal: true }),
+                SalesWorkbenchModule.register({ isGlobal: true }),
+                PromoModule.register({ isGlobal: true }),
+                ChatReplyModule.register({ isGlobal: true }),
+                PromoGraphqlModule,
+                LeadGenGraphqlModule,
+                ChatbotWorkbenchModule.register({ isGlobal: true }),
+                ChatbotGraphqlModule,
+                ChatReplyGraphqlModule,
                 PlatformAuditModule.register({ isGlobal: true }),
                 AiQuotaOverridesModule.register({ isGlobal: true }),
                 PlatformAdminModule.register({ isGlobal: true, ...options.platformAdmin }),
@@ -670,7 +799,7 @@ export class AppModule {
                 AgentsModule.register({
                     isGlobal: true,
                     ports: {
-                        installations: UnboundInstallationsService,
+                        installations: InstallationDirectoryService,
                         knowledge: UnboundKnowledgeLensService,
                         modules: UnboundModuleProfilesService,
                     },
@@ -681,6 +810,7 @@ export class AppModule {
                     isGlobal: true,
                     usage: UsageGateService,
                     pollMs: AI_GENERATIONS_POLL_MS,
+                    completion: ContentGenerationCompletionService,
                 }),
                 OpenclawAgentSyncModule.register({ isGlobal: true, reloadSettleMs: OPENCLAW_RELOAD_SETTLE_MS }),
                 AgentToolsModule.register({
@@ -707,6 +837,12 @@ export class AppModule {
                     },
                 }),
                 OrdersModule.register({ isGlobal: true }),
+                OrdersGraphqlModule,
+                StaffModule.register({ isGlobal: true }),
+                AccountingAdjustmentsModule.register({ isGlobal: true }),
+                AccountingModule.register({ isGlobal: true }),
+                AccountingGraphqlModule,
+                AdjustmentsGraphqlModule,
                 InvoicesModule.register({ isGlobal: true }),
                 TransactionsModule.register({ isGlobal: true }),
                 EmailMessagesModule.register({ isGlobal: true }),
@@ -715,6 +851,7 @@ export class AppModule {
                 SyncAgentsQueueModule,
                 GenerateWithAgentQueueModule,
                 RunDecisionsQueueModule,
+                RunSetupTurnQueueModule,
                 AgentsHttpModule,
                 AgentsGraphqlModule,
                 AgentToolsHttpModule,
@@ -730,10 +867,13 @@ export class AppModule {
                 PublicApiModule.register({ isGlobal: true }),
                 PaymentOrdersModule.register({ isGlobal: true }),
                 BillingModule.register({ isGlobal: true, ...options.billing }),
+                BillingGraphqlModule,
                 SepayTransactionsModule.register({ isGlobal: true }),
                 AiUsageEventsModule.register({ isGlobal: true }),
                 CreditsModule.register({ isGlobal: true }),
+                CreditsGraphqlModule,
                 ApplyBookingStatusQueueModule,
+                DraftLoyaltyCampaignQueueModule,
                 PaymentOrderRequestsModule.register({ isGlobal: true }),
                 ReconcileBankCreditQueueModule,
                 CreatePaymentOrderQueueModule,
@@ -758,11 +898,15 @@ export class AppModule {
                 LoyaltyLedgerModule.register({ isGlobal: true }),
                 LoyaltyCampaignsModule.register({ isGlobal: true }),
                 LoyaltyOtpsModule.register({ isGlobal: true, pepper: options.supabase.serviceRoleKey.reveal() }),
-                LoyaltyModule.register({ isGlobal: true, delivery: { deliver: () => Promise.resolve(false) } }),
+                LoyaltyModule.register({ isGlobal: true, delivery: LoyaltyCodeDeliveryService }),
                 PublicBookingHttpModule,
+                PublicBookingGraphqlModule,
                 BookingHttpModule,
+                BookingGraphqlModule,
                 PublicLoyaltyHttpModule,
+                PublicLoyaltyGraphqlModule,
                 LoyaltyHttpModule,
+                LoyaltyGraphqlModule,
                 LoyaltyTillHttpModule,
                 WorkspacesHttpModule,
                 WorkspacesGraphqlModule,
@@ -771,6 +915,14 @@ export class AppModule {
                 OverviewGraphqlModule,
                 AccountGraphqlModule,
                 ShellGraphqlModule,
+                ConnectionsGraphqlModule,
+                InboxGraphqlModule,
+                AgentChatGraphqlModule,
+                InboxSimulationGraphqlModule,
+                InboxSimulationModule.register({ isGlobal: true }),
+                AgentChatModule.register({ isGlobal: true }),
+                KnowledgeGraphqlModule,
+                EvidenceGraphqlModule,
                 ExtractKnowledgeFactsQueueModule,
                 RunBrainCommandQueueModule,
                 IndexKnowledgeSourceQueueModule,

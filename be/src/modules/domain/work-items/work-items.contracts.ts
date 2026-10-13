@@ -46,7 +46,15 @@ export interface Proposal {
 
 /** The kind of record a work item is about. */
 export type SubjectType =
-    "lead" | "order" | "invoice" | "transaction" | "conversation" | "inbound" | "purchase_order" | "stock"
+    | "lead"
+    | "order"
+    | "invoice"
+    | "transaction"
+    | "conversation"
+    | "inbound"
+    | "purchase_order"
+    | "stock"
+    | "video_project"
 
 /** What a performer reported it did. */
 export interface WorkResult {

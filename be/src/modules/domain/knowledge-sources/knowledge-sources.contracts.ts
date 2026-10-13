@@ -167,3 +167,43 @@ export type MaybeUploadedFile = UploadedFile | null
 
 /** The code storage answers for an object that is not there. */
 export const STORAGE_OBJECT_MISSING = "SUPABASE_OBJECT_NOT_FOUND"
+
+/** A source as the Knowledge page lists it: everything but the text. */
+export interface SourceSummary {
+    /** The source id. */
+    readonly id: string
+    /** The owning workspace. */
+    readonly workspaceId: string
+    /** The module, or null for every module. */
+    readonly module: string | null
+    /** The agent instance, or null for every instance. */
+    readonly installationId: string | null
+    /** text, faq, file or url. */
+    readonly kind: string
+    /** The topic. */
+    readonly topic: string | null
+    /** The tags. */
+    readonly tags: ReadonlyArray<string>
+    /** public or internal. */
+    readonly visibility: string
+    /** The title. */
+    readonly title: string
+    /** Where the source stands. */
+    readonly status: string
+    /** A stored code or note, or null. */
+    readonly error: string | null
+    /** How many passages are stored. */
+    readonly chunkCount: number
+    /** 0-100 while a worker is on it. */
+    readonly progress: number
+    /** Creation instant, ISO 8601. */
+    readonly createdAt: string
+    /** Last change, ISO 8601. */
+    readonly updatedAt: string
+}
+
+/** A source with its text. */
+export interface SourceDetail extends SourceSummary {
+    /** The text (the address of a link source until it is read). */
+    readonly content: string
+}

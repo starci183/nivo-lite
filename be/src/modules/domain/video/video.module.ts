@@ -1,6 +1,16 @@
 import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
+import { VideoBrandKitsModule } from "@modules/domain/video-brand-kits"
 import { VideoRenderModule } from "@modules/queues/video-render"
+import { VideoMediaService } from "./video-media.service"
+import { VideoWorkbenchService } from "./video-workbench.service"
+import { VideoProjectEditorService } from "./video-project-editor.service"
+import { VideoApprovalService } from "./video-approval.service"
+import { VideoApprovalPerformerService } from "./video-approval-performer.service"
+import { VideoSharingService } from "./video-sharing.service"
+import { VideoScriptingContextService } from "./video-scripting-context.service"
+import { VideoScriptingService } from "./video-scripting.service"
+import { VideoScriptingCompletionService } from "./video-scripting-completion.service"
 import { RendererService } from "./renderer.service"
 import { VideoRenderService } from "./video-render.service"
 import { VideoService } from "./video.service"
@@ -15,15 +25,36 @@ export class VideoModule extends ConfigurableModuleClass {
         const base = super.register(options)
         return {
             ...base,
-            imports: [...(base.imports ?? []), VideoRenderModule],
+            imports: [...(base.imports ?? []), VideoRenderModule, VideoBrandKitsModule.register({ isGlobal: false })],
             providers: [
                 ...(base.providers ?? []),
                 { provide: VIDEO_ASSETS, useExisting: options.assets },
                 RendererService,
                 VideoService,
                 VideoRenderService,
+                VideoMediaService,
+                VideoWorkbenchService,
+                VideoProjectEditorService,
+                VideoApprovalService,
+                VideoApprovalPerformerService,
+                VideoSharingService,
+                VideoScriptingService,
+                VideoScriptingCompletionService,
+                VideoScriptingContextService,
             ],
-            exports: [VIDEO_ASSETS, VideoService, VideoRenderService],
+            exports: [
+                VIDEO_ASSETS,
+                VideoService,
+                VideoRenderService,
+                VideoMediaService,
+                VideoWorkbenchService,
+                VideoProjectEditorService,
+                VideoApprovalService,
+                VideoApprovalPerformerService,
+                VideoSharingService,
+                VideoScriptingService,
+                VideoScriptingCompletionService,
+            ],
         }
     }
 }

@@ -52,3 +52,23 @@ export interface NivoSeedResult {
     /** Items given a vector. */
     readonly embedded: number
 }
+
+/** One item of the base knowledge as the Knowledge page lists it. */
+export interface NivoEntry {
+    /** The item id. */
+    readonly id: string
+    /** The module folder, or core. */
+    readonly module: string
+    /** The stable slug. */
+    readonly slug: string
+    /** The title. */
+    readonly title: string
+    /** The markdown body. */
+    readonly body: string
+    /** playbook, authority, escalation, setup_checklist or tone. */
+    readonly kind: string
+    /** The version of the text. */
+    readonly version: number
+    /** Last change, ISO 8601. */
+    readonly updatedAt: string
+}
