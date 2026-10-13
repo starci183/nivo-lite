@@ -1,7 +1,7 @@
 import { useState } from "react"
 import { FACT_SCOPES } from "@/modules/types"
 import type { FactScope, FlowRuleMode } from "@/modules/types"
-import type { Resolution, SetupWrite, WriteDecision } from "@/lib/module-setup-writes"
+import type { SetupResolution, SetupWrite, SetupWriteDecision } from "@/modules/types"
 import { SetupWriteView } from "@/components/leaves/SetupWriteView"
 import type { SetupWriteDecided, SetupWriteInstance, SetupWriteWords } from "@/modules/types"
 
@@ -12,7 +12,7 @@ type Draft = {
     readonly scope: FactScope
     readonly mode: FlowRuleMode
     readonly limit: number | null
-    readonly resolution: Resolution
+    readonly resolution: SetupResolution
     readonly situation: string
     /** Shared by every instance of the type unless the owner keeps it for this one. */
     readonly onlyThis: boolean
@@ -25,12 +25,12 @@ type SetupWriteCardProps = {
     /** The card is being settled: its commands wait. */
     readonly isBusy: boolean
     /** Sends the decision of the owner. */
-    readonly onDecide: (id: string, change: WriteDecision) => void
+    readonly onDecide: (id: string, change: SetupWriteDecision) => void
     readonly instance: SetupWriteInstance | null
 }
 
 const MODES: ReadonlyArray<FlowRuleMode> = ["auto", "ask", "never"]
-const RESOLUTIONS: ReadonlyArray<Resolution> = ["replace", "keep", "both"]
+const RESOLUTIONS: ReadonlyArray<SetupResolution> = ["replace", "keep", "both"]
 const FOR_ALL = "all"
 const FOR_THIS = "this"
 
@@ -98,7 +98,7 @@ export const SetupWriteCard = (props: SetupWriteCardProps) => {
     const [draft, setDraft] = useState<Draft>(startOf(write))
     const patch = (change: Partial<Draft>) => setDraft((current) => ({ ...current, ...change }))
     const rules = write.kind === "rule" ? words.actionRules(write.payload.action) : null
-    const decide = (change: WriteDecision) => props.onDecide(write.id, change)
+    const decide = (change: SetupWriteDecision) => props.onDecide(write.id, change)
     // The value in force is the shared one: a value kept for this instance only sits beside it and never conflicts with it.
     const isConflict =
         write.kind === "fact" &&

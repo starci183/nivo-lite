@@ -1,16 +1,15 @@
-import { useQueryMyWorkspacesSwr } from "@/hooks/swr/api/graphql/queries/useQueryMyWorkspacesSwr"
 import { useActiveWorkspace } from "@/hooks/workspaces"
-import { isManagerRole } from "@/lib/members-shared"
-import type { Role } from "@/lib/members-shared"
+import type { ConsoleWorkspace } from "@/modules/types"
+import { useQueryMyWorkspacesSwr } from "@/hooks/swr"
 
-const roleOf = (value: string): Role => (value === "owner" || value === "manager" ? value : "staff")
+const roleOf = (value: string): ConsoleWorkspace["role"] => (value === "owner" || value === "manager" ? value : "staff")
 
 /** What the membership of the active workspace gives a block. */
 interface WorkspaceMember {
     /** The workspace the person works in; undefined until the store restores it and `myWorkspaces` answers. */
     readonly workspaceId: string | undefined
     readonly workspaceName: string
-    readonly role: Role
+    readonly role: ConsoleWorkspace["role"]
     /** Owners and managers write; everyone reads. */
     readonly canWrite: boolean
     readonly isLoading: boolean
@@ -29,7 +28,7 @@ export const useWorkspaceMember = (): WorkspaceMember => {
         workspaceId: membership?.workspace.id,
         workspaceName: membership?.workspace.name ?? "",
         role,
-        canWrite: isManagerRole(role),
+        canWrite: role !== "staff",
         isLoading,
         error,
     }

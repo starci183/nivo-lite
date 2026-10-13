@@ -271,7 +271,18 @@ export type {
     OfficeThreadProps,
 } from "./office-slots"
 
-export type { SetupWriteDecided, SetupWriteInstance, SetupWriteProposal, SetupWriteWords } from "./setup-write"
+export type {
+    SetupFactWrite,
+    SetupResolution,
+    SetupRuleWrite,
+    SetupWrite,
+    SetupWriteDecided,
+    SetupWriteDecision,
+    SetupWriteInstance,
+    SetupWriteProposal,
+    SetupWriteStatus,
+    SetupWriteWords,
+} from "./setup-write"
 export type {
     DbEngine,
     DbEntity,

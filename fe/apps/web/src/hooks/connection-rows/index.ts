@@ -2,12 +2,11 @@ export {
     alertsOf,
     canReopen,
     dialogOf,
-    factsOf,
-    isBankFeed,
+    connectionFactsOf,
     menuOf,
     notesOf,
     primaryOf,
     showsBankLogo,
     usesAgents,
 } from "./connection-rows.shared"
-export type { RowBusy, RowConfirm, Translate } from "./connection-rows.shared"
+export type { RowBusy, RowConfirm } from "./connection-rows.shared"

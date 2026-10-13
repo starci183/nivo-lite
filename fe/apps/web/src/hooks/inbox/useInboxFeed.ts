@@ -1,11 +1,11 @@
 "use client"
 
 import { useFormatter, useNow, useTranslations } from "next-intl"
-import { useQueryInboundEventsSwr } from "@/hooks/swr/api/graphql/queries/useQueryInboundEventsSwr"
 import { useActiveWorkspace } from "@/hooks/workspaces"
-import { bankConnectionOf } from "@/lib/bank"
+import { bankConnectionOf } from "@/hooks/banks"
 import { CONSOLE_ROUTES, leadHref } from "@/modules/routes"
 import { errorMessage } from "./inbox.shared"
+import { useQueryInboundEventsSwr } from "@/hooks/swr"
 
 /** The tone each input status wears; a status that is not listed is neutral. */
 const STATUS_TONES = {

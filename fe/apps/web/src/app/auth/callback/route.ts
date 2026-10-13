@@ -2,9 +2,8 @@ import "server-only"
 
 import { cookies } from "next/headers"
 import { NextResponse, type NextRequest } from "next/server"
-import { requestOrigin } from "@/lib/request-origin"
 import { exchangeAuthCode, verifyEmailLink } from "@/modules/auth"
-import { APP_ROUTES, AUTH_ROUTES, safeNextPath } from "@/modules/routes"
+import { APP_ROUTES, AUTH_ROUTES, requestOrigin, safeNextPath } from "@/modules/routes"
 
 const EMAIL_LINK_ROUTES: ReadonlySet<string> = new Set(["/auth/confirm", APP_ROUTES.authCallback])
 

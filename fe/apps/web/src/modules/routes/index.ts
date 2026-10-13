@@ -28,10 +28,10 @@ export {
     agentSetupHref,
     leadFlowHref,
     leadHref,
-    policyLogHref,
     responsibilitiesHref,
     teamInviteHref,
     workItemHref,
 } from "./console-routes"
 export { AUTOMATION_ROUTES, automationFocusPath, newModulePath } from "./automations-routes"
 export { KNOWLEDGE_ROUTES, knowledgeSourceHref } from "./knowledge-routes"
+export { onPublicOrigin, requestOrigin } from "./request-origin"

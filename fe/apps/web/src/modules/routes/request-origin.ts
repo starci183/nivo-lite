@@ -1,4 +1,11 @@
 import type { NextRequest } from "next/server"
+import { webSiteOrigin } from "@/modules/config"
+
+/** A bind address the standalone server reports instead of the public host. */
+const isBindAddress = (host: string): boolean => host.startsWith("0.0.0.0") || host.startsWith("[::]")
+/** A host of the local machine (served over plain http). */
+const isLocalHost = (host: string): boolean =>
+    host.startsWith("localhost") || host.startsWith("127.") || host.startsWith("[::1]")
 
 /**
  * The public origin the browser used for this request. Behind the Traefik edge the standalone Next server reports its own bind address
@@ -14,7 +21,7 @@ export const requestOrigin = (request: NextRequest): string => {
         return `${proto}://${host}`
     }
     try {
-        return new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "").origin
+        return new URL(webSiteOrigin() ?? "").origin
     } catch {
         return request.nextUrl.origin
     }
@@ -23,7 +30,3 @@ export const requestOrigin = (request: NextRequest): string => {
 /** The same URL (path, query) moved onto the public origin. */
 export const onPublicOrigin = (request: NextRequest, url: URL): URL =>
     new URL(`${url.pathname}${url.search}`, requestOrigin(request))
-
-const isBindAddress = (host: string): boolean => host.startsWith("0.0.0.0") || host.startsWith("[::]")
-const isLocalHost = (host: string): boolean =>
-    host.startsWith("localhost") || host.startsWith("127.") || host.startsWith("[::1]")

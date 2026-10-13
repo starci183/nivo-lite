@@ -1,6 +1,6 @@
 import type { BadgeTone } from "@starci/grammar/common"
 import { useFormatter, useTranslations } from "next-intl"
-import { moduleDef } from "@/lib/module-registry"
+import { MODULE_REGISTRY } from "@/modules/catalog"
 import type { AgentRecord, ResponsibilityRecord } from "@/modules/types"
 import { daysUntil, STATUS_KEYS, STATUS_TONES } from "./leads.shared"
 
@@ -49,7 +49,7 @@ export const useStepView = (agents: ReadonlyArray<AgentRecord>): ((step: Respons
             due: dueOf(step.due_at),
             isDone: step.status === "done",
             isAgent,
-            agentGlyph: isAgent ? moduleDef("chatbot").glyph : "",
+            agentGlyph: isAgent ? MODULE_REGISTRY.chatbot.glyph : "",
         }
     }
 }

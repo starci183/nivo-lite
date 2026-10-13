@@ -1,11 +1,9 @@
 import createMiddleware from "next-intl/middleware"
 import { NextRequest, NextResponse } from "next/server"
-import { onPublicOrigin } from "./lib/request-origin"
-import { PERF_ENABLED, PERF_PATH_HEADER, PERF_RID_HEADER } from "./lib/supabase/perf"
 import { sessionCookieOptions } from "./modules/config"
 import { refreshSession } from "./modules/auth"
 import { routing } from "./modules/i18n"
-import { APP_ROUTES } from "./modules/routes"
+import { APP_ROUTES, onPublicOrigin } from "./modules/routes"
 
 // Reachable without a session. Webhooks (Telegram, bank connection) are each verified by their own secret header; /api/engine by an HMAC (ENGINE_SHARED_SECRET), /api/n8n by a per-run bearer token (hash stored with an expiry).
 const PUBLIC_PATHS = [
@@ -63,15 +61,11 @@ const carryCookie = (target: NextResponse, cookie: ResponseCookie): void => {
 
 /**
  * The request the proxy and the locale negotiation see: no Accept-Language (a first visit stays Vietnamese-first, the reader opts
- * into English with the switch), plus the perf stamp when PERF_LOG=1.
+ * into English with the switch).
  */
 const incomingOf = (request: NextRequest): NextRequest => {
     const headers = new Headers(request.headers)
     headers.delete("accept-language")
-    if (PERF_ENABLED) {
-        headers.set(PERF_RID_HEADER, crypto.randomUUID().slice(0, 8))
-        headers.set(PERF_PATH_HEADER, request.nextUrl.pathname)
-    }
     return new NextRequest(request, { headers })
 }
 

@@ -1,5 +1,6 @@
 "use client"
 
+import { useBankName } from "@/hooks/banks"
 import { useFormatter, useTranslations } from "next-intl"
 import { GUIDES } from "@/hooks/connection-guides"
 import { PROVIDERS, providerKey } from "@/hooks/connection-providers"
@@ -21,6 +22,7 @@ interface MoneyWizardProps {
 
 /** The guided setup for a bank or payment provider (SePay, payOS, Casso), driven by the provider registry. */
 export const MoneyWizard = (props: MoneyWizardProps) => {
+    const bankName = useBankName()
     const tw = useTranslations("connectionWizard")
     const tc = useTranslations("connections")
     const format = useFormatter()
@@ -72,7 +74,7 @@ export const MoneyWizard = (props: MoneyWizardProps) => {
                 isLocked: conn !== null,
                 isTest: form.environment === "test",
                 needsBank: def.needsBank,
-                bankOptions: bankOptions(),
+                bankOptions: bankOptions(bankName),
                 form,
                 accountHint:
                     conn !== null && conn.account !== "" ? tw("accountKeep", { account: conn.account }) : undefined,
