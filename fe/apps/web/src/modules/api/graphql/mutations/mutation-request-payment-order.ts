@@ -1,12 +1,12 @@
 import { gql, type TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
-import type { InputVariables, MutateParams } from "../types"
-import type { Mutation, MutationRequestPaymentOrderArgs } from "../__generated__/schema"
+import type { InputVariables, MutateParams, WireInput } from "../types"
+import type { RequestPaymentOrderMutation, RequestPaymentOrderMutationVariables } from "../__generated__/graphql"
 
 /** The input of the `requestPaymentOrder` mutation. */
-export type MutateRequestPaymentOrderRequest = MutationRequestPaymentOrderArgs["input"]
+export type MutateRequestPaymentOrderRequest = WireInput<RequestPaymentOrderMutationVariables["input"]>
 
-type MutateRequestPaymentOrderResponse = Pick<Mutation, "requestPaymentOrder">
+type MutateRequestPaymentOrderResponse = RequestPaymentOrderMutation
 
 const mutation1: TypedDocumentNode<
     MutateRequestPaymentOrderResponse,

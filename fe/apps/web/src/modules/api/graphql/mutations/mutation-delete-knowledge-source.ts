@@ -1,14 +1,14 @@
 import { gql } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
-import type { InputVariables, MutateParams } from "../types"
-import type { Mutation, MutationDeleteKnowledgeSourceArgs } from "../__generated__/schema"
+import type { InputVariables, MutateParams, WireInput } from "../types"
+import type { DeleteKnowledgeSourceMutation, DeleteKnowledgeSourceMutationVariables } from "../__generated__/graphql"
 
 /** The response of the `deleteKnowledgeSource` mutation: the typed payload straight from the back end contract. */
-type MutateDeleteKnowledgeSourceResponse = Pick<Mutation, "deleteKnowledgeSource">
+type MutateDeleteKnowledgeSourceResponse = DeleteKnowledgeSourceMutation
 
 /** The input of the `deleteKnowledgeSource` mutation. */
-export type MutateDeleteKnowledgeSourceRequest = MutationDeleteKnowledgeSourceArgs["input"]
+export type MutateDeleteKnowledgeSourceRequest = WireInput<DeleteKnowledgeSourceMutationVariables["input"]>
 
 const mutation1: TypedDocumentNode<
     MutateDeleteKnowledgeSourceResponse,

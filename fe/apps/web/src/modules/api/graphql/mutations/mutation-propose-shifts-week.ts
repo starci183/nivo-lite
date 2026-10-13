@@ -1,14 +1,14 @@
 import { gql } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
-import type { InputVariables, MutateParams } from "../types"
-import type { Mutation, MutationProposeShiftsWeekArgs } from "../__generated__/schema"
+import type { InputVariables, MutateParams, WireInput } from "../types"
+import type { ProposeShiftsWeekMutation, ProposeShiftsWeekMutationVariables } from "../__generated__/graphql"
 
 /** The input of the `proposeShiftsWeek` mutation. */
-export type MutateProposeShiftsWeekRequest = MutationProposeShiftsWeekArgs["input"]
+export type MutateProposeShiftsWeekRequest = WireInput<ProposeShiftsWeekMutationVariables["input"]>
 
 /** The response of the `proposeShiftsWeek` mutation. */
-type MutateProposeShiftsWeekResponse = Pick<Mutation, "proposeShiftsWeek">
+type MutateProposeShiftsWeekResponse = ProposeShiftsWeekMutation
 
 const mutation1: TypedDocumentNode<
     MutateProposeShiftsWeekResponse,

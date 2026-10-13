@@ -1,14 +1,14 @@
 import { gql } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
-import type { InputVariables, MutateParams } from "../types"
-import type { Mutation, MutationEnqueueKnowledgeSourceArgs } from "../__generated__/schema"
+import type { InputVariables, MutateParams, WireInput } from "../types"
+import type { EnqueueKnowledgeSourceMutation, EnqueueKnowledgeSourceMutationVariables } from "../__generated__/graphql"
 
 /** The response of the `enqueueKnowledgeSource` mutation: the typed payload straight from the back end contract. */
-type MutateEnqueueKnowledgeSourceResponse = Pick<Mutation, "enqueueKnowledgeSource">
+type MutateEnqueueKnowledgeSourceResponse = EnqueueKnowledgeSourceMutation
 
 /** The input of the `enqueueKnowledgeSource` mutation. */
-export type MutateEnqueueKnowledgeSourceRequest = MutationEnqueueKnowledgeSourceArgs["input"]
+export type MutateEnqueueKnowledgeSourceRequest = WireInput<EnqueueKnowledgeSourceMutationVariables["input"]>
 
 const mutation1: TypedDocumentNode<
     MutateEnqueueKnowledgeSourceResponse,

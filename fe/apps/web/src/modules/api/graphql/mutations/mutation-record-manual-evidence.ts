@@ -1,14 +1,14 @@
 import { gql } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
-import type { InputVariables, MutateParams } from "../types"
-import type { Mutation, MutationRecordManualEvidenceArgs } from "../__generated__/schema"
+import type { InputVariables, MutateParams, WireInput } from "../types"
+import type { RecordManualEvidenceMutation, RecordManualEvidenceMutationVariables } from "../__generated__/graphql"
 
 /** The response of the `recordManualEvidence` mutation: the typed payload straight from the back end contract. */
-type MutateRecordManualEvidenceResponse = Pick<Mutation, "recordManualEvidence">
+type MutateRecordManualEvidenceResponse = RecordManualEvidenceMutation
 
 /** The input of the `recordManualEvidence` mutation. */
-export type MutateRecordManualEvidenceRequest = MutationRecordManualEvidenceArgs["input"]
+export type MutateRecordManualEvidenceRequest = WireInput<RecordManualEvidenceMutationVariables["input"]>
 
 const mutation1: TypedDocumentNode<
     MutateRecordManualEvidenceResponse,

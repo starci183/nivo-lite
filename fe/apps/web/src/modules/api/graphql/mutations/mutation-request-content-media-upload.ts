@@ -1,14 +1,17 @@
 import { gql } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
-import type { InputVariables, MutateParams } from "../types"
-import type { Mutation, MutationRequestContentMediaUploadArgs } from "../__generated__/schema"
+import type { InputVariables, MutateParams, WireInput } from "../types"
+import type {
+    RequestContentMediaUploadMutation,
+    RequestContentMediaUploadMutationVariables,
+} from "../__generated__/graphql"
 
 /** The input of the `requestContentMediaUpload` mutation. */
-type MutateRequestContentMediaUploadRequest = MutationRequestContentMediaUploadArgs["input"]
+type MutateRequestContentMediaUploadRequest = WireInput<RequestContentMediaUploadMutationVariables["input"]>
 
 /** The generated payload of the `requestContentMediaUpload` mutation. */
-type MutateRequestContentMediaUploadResponse = Pick<Mutation, "requestContentMediaUpload">
+type MutateRequestContentMediaUploadResponse = RequestContentMediaUploadMutation
 
 type Document = TypedDocumentNode<
     MutateRequestContentMediaUploadResponse,

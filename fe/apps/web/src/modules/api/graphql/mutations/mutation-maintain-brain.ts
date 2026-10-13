@@ -2,10 +2,10 @@ import { gql } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
 import type { MutateParams } from "../types"
-import type { Mutation } from "../__generated__/schema"
+import type { MaintainBrainMutation } from "../__generated__/graphql"
 
 /** The response of the `maintainBrain` mutation: the typed payload straight from the back end contract. */
-type MutateMaintainBrainResponse = Pick<Mutation, "maintainBrain">
+type MutateMaintainBrainResponse = MaintainBrainMutation
 
 const mutation1: TypedDocumentNode<MutateMaintainBrainResponse> = gql`
     mutation MaintainBrain {

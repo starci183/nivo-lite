@@ -1,14 +1,14 @@
 import { gql } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
-import type { InputVariables, MutateParams } from "../types"
-import type { Mutation, MutationRemoveMemberArgs } from "../__generated__/schema"
+import type { InputVariables, MutateParams, WireInput } from "../types"
+import type { RemoveMemberMutation, RemoveMemberMutationVariables } from "../__generated__/graphql"
 
 /** The input of the `removeMember` mutation. */
-type MutateRemoveMemberRequest = MutationRemoveMemberArgs["input"]
+type MutateRemoveMemberRequest = WireInput<RemoveMemberMutationVariables["input"]>
 
 /** The response of the `removeMember` mutation: the typed payload straight from the back end contract. */
-type MutateRemoveMemberResponse = Pick<Mutation, "removeMember">
+type MutateRemoveMemberResponse = RemoveMemberMutation
 
 type Document = TypedDocumentNode<MutateRemoveMemberResponse, InputVariables<MutateRemoveMemberRequest>>
 

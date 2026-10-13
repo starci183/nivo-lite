@@ -1,14 +1,14 @@
 import { gql } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
-import type { InputVariables, MutateParams } from "../types"
-import type { Mutation, MutationDisconnectConnectionArgs } from "../__generated__/schema"
+import type { InputVariables, MutateParams, WireInput } from "../types"
+import type { DisconnectConnectionMutation, DisconnectConnectionMutationVariables } from "../__generated__/graphql"
 
 /** The input of the `disconnectConnection` mutation. */
-export type MutateDisconnectConnectionRequest = MutationDisconnectConnectionArgs["input"]
+type MutateDisconnectConnectionRequest = WireInput<DisconnectConnectionMutationVariables["input"]>
 
 /** The response of the `disconnectConnection` mutation. */
-type MutateDisconnectConnectionResponse = Pick<Mutation, "disconnectConnection">
+type MutateDisconnectConnectionResponse = DisconnectConnectionMutation
 
 const mutation1: TypedDocumentNode<
     MutateDisconnectConnectionResponse,
