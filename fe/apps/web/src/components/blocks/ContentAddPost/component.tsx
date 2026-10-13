@@ -1,4 +1,5 @@
-import { Alert, Button, CheckboxGroup, Dialog, Input, Select } from "@starci/grammar/common"
+import { Button, CheckboxGroup, Dialog, Input, Select } from "@starci/grammar/common"
+import { ContentCommandNote } from "@/components/composites/ContentSettingsCard"
 import type { ContentChannel, ContentNote, ContentT } from "@/hooks/content"
 import { FORM_CLASS_NAME } from "./classNames"
 
@@ -20,6 +21,7 @@ export interface ContentAddPostBaseProps {
     readonly on: {
         readonly open: () => void
         readonly close: () => void
+        readonly openChange: (open: boolean) => void
         readonly title: (v: string) => void
         readonly date: (v: string) => void
         readonly time: (v: string) => void
@@ -40,9 +42,7 @@ export const ContentAddPostBase = (props: ContentAddPostBaseProps) => {
             </Button>
             <Dialog
                 isOpen={props.props.isOpen}
-                onOpenChange={(open) => {
-                    if (!open && !isPending) props.on.close()
-                }}
+                onOpenChange={props.on.openChange}
                 size="md"
                 title={t("addTitle")}
                 closeLabel={t("close")}
@@ -111,14 +111,11 @@ export const ContentAddPostBase = (props: ContentAddPostBaseProps) => {
                         isDisabled={isPending}
                         onValueChange={props.on.channels}
                     />
-                    {props.props.note ? (
-                        <Alert
-                            title={props.props.note.text}
-                            tone={props.props.note.tone === "ok" ? "affirmative" : "negative"}
-                            dismissLabel={t("close")}
-                            onDismiss={props.on.dismissNote}
-                        />
-                    ) : null}
+                    <ContentCommandNote
+                        note={props.props.note}
+                        closeLabel={t("close")}
+                        onDismiss={props.on.dismissNote}
+                    />
                 </div>
             </Dialog>
         </>

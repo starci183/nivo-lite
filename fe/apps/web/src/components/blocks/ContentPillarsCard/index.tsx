@@ -3,6 +3,7 @@
 import { useTranslations } from "next-intl"
 import { useApplyContentPillarPresets, useSaveContentPillars, useContentData } from "@/hooks/content"
 import { useContentPillarsForm } from "@/hooks/rhf"
+import { getContentSettingsError } from "@/components/composites/ContentSettingsCard"
 import { ContentPillarsCardBase } from "./component"
 
 /** The editable theme list, with validation and GraphQL saves. */
@@ -14,11 +15,7 @@ export const ContentPillarsCard = () => {
     const presets = useApplyContentPillarPresets()
     const rows = form.watch("rows")
     const errors = form.formState.errors.rows
-    const error =
-        errors?.message ??
-        errors?.root?.message ??
-        errors?.find?.((row) => row?.name?.message)?.name?.message ??
-        (errors ? t("err_input") : undefined)
+    const error = getContentSettingsError(errors, errors?.find?.((row) => row?.name?.message)?.name?.message, t)
     return (
         <ContentPillarsCardBase
             props={{

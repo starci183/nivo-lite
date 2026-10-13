@@ -1,4 +1,10 @@
-import { Alert, Button, CheckboxGroup, Dialog, Text, Textarea } from "@starci/grammar/common"
+import { Button, CheckboxGroup, Dialog, Textarea } from "@starci/grammar/common"
+import {
+    ContentCommandNote,
+    getContentCommandProgressProps,
+    renderContentCommandProgress,
+} from "@/components/composites/ContentSettingsCard"
+import { SlotView } from "@/components/composites/SlotView"
 import type { ContentChannel, ContentNote, ContentT } from "@/hooks/content"
 import { FORM_CLASS_NAME } from "./classNames"
 
@@ -16,6 +22,7 @@ export interface ContentQuickIdeaBaseProps {
     readonly on: {
         readonly open: () => void
         readonly close: () => void
+        readonly openChange: (open: boolean) => void
         readonly topic: (topic: string) => void
         readonly channels: (values: ReadonlyArray<string>) => void
         readonly run: () => void
@@ -33,9 +40,7 @@ export const ContentQuickIdeaBase = (props: ContentQuickIdeaBaseProps) => {
             </Button>
             <Dialog
                 isOpen={props.props.isOpen}
-                onOpenChange={(open) => {
-                    if (!open && !isPending) props.on.close()
-                }}
+                onOpenChange={props.on.openChange}
                 size="md"
                 title={t("quickTitle")}
                 description={t("quickBody")}
@@ -76,19 +81,14 @@ export const ContentQuickIdeaBase = (props: ContentQuickIdeaBaseProps) => {
                         isDisabled={isPending}
                         onValueChange={props.on.channels}
                     />
-                    {isPending ? (
-                        <Text size="sm" live="polite">
-                            {t("quickRunning")}
-                        </Text>
-                    ) : null}
-                    {props.props.note ? (
-                        <Alert
-                            title={props.props.note.text}
-                            tone={props.props.note.tone === "ok" ? "affirmative" : "negative"}
-                            dismissLabel={t("close")}
-                            onDismiss={props.on.dismissNote}
-                        />
-                    ) : null}
+                    <SlotView {...getContentCommandProgressProps(isPending, t("quickRunning"))}>
+                        {renderContentCommandProgress}
+                    </SlotView>
+                    <ContentCommandNote
+                        note={props.props.note}
+                        closeLabel={t("close")}
+                        onDismiss={props.on.dismissNote}
+                    />
                 </div>
             </Dialog>
         </>

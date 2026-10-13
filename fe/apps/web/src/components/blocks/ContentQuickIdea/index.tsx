@@ -31,6 +31,7 @@ export const ContentQuickIdea = () => {
         await job.request(values)
     })
     const error = form.formState.errors.topic?.message ?? form.formState.errors.channels?.message
+    const isPending = form.formState.isSubmitting || job.isPending
     return (
         <ContentQuickIdeaBase
             props={{
@@ -39,12 +40,15 @@ export const ContentQuickIdea = () => {
                 topic: form.watch("topic"),
                 channels: form.watch("channels"),
                 channelOptions: CHANNEL_RULES.map((rule) => ({ value: rule.key, label: rule.label })),
-                isPending: form.formState.isSubmitting || job.isPending,
+                isPending,
                 note: error ? { tone: "error", text: error } : null,
             }}
             on={{
                 open: () => setOpen(true),
                 close: () => setOpen(false),
+                openChange: (open) => {
+                    if (!open && !isPending) setOpen(false)
+                },
                 topic: (topic) => form.setValue("topic", topic, { shouldValidate: form.formState.isSubmitted }),
                 channels: (values) =>
                     form.setValue(

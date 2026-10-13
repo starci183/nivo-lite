@@ -1,4 +1,10 @@
-import { Alert, Button, Dialog, Select, Text } from "@starci/grammar/common"
+import { Button, Dialog, Select, Text } from "@starci/grammar/common"
+import {
+    ContentCommandNote,
+    getContentCommandProgressProps,
+    renderContentCommandProgress,
+} from "@/components/composites/ContentSettingsCard"
+import { SlotView } from "@/components/composites/SlotView"
 import type { ContentNote, ContentT } from "@/hooks/content"
 import { FORM_CLASS_NAME } from "./classNames"
 
@@ -16,6 +22,7 @@ export interface ContentPlanActionBaseProps {
     readonly on: {
         readonly open: () => void
         readonly close: () => void
+        readonly openChange: (open: boolean) => void
         readonly month: (id: string) => void
         readonly run: () => void
         readonly dismissNote: () => void
@@ -32,9 +39,7 @@ export const ContentPlanActionBase = (props: ContentPlanActionBaseProps) => {
             </Button>
             <Dialog
                 isOpen={props.props.isOpen}
-                onOpenChange={(open) => {
-                    if (!open && !isPending) props.on.close()
-                }}
+                onOpenChange={props.on.openChange}
                 size="md"
                 title={t("planTitle")}
                 description={t("planBody")}
@@ -62,24 +67,19 @@ export const ContentPlanActionBase = (props: ContentPlanActionBaseProps) => {
                             if (id) props.on.month(id)
                         }}
                     />
-                    {isPending ? (
-                        <Text size="sm" live="polite">
-                            {t("planRunning")}
-                        </Text>
-                    ) : null}
+                    <SlotView {...getContentCommandProgressProps(isPending, t("planRunning"))}>
+                        {renderContentCommandProgress}
+                    </SlotView>
                     {props.props.lastPlan ? (
                         <Text size="xs" tone="muted">
                             {props.props.lastPlan}
                         </Text>
                     ) : null}
-                    {props.props.note ? (
-                        <Alert
-                            title={props.props.note.text}
-                            tone={props.props.note.tone === "ok" ? "affirmative" : "negative"}
-                            dismissLabel={t("close")}
-                            onDismiss={props.on.dismissNote}
-                        />
-                    ) : null}
+                    <ContentCommandNote
+                        note={props.props.note}
+                        closeLabel={t("close")}
+                        onDismiss={props.on.dismissNote}
+                    />
                 </div>
             </Dialog>
         </>
