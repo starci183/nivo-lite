@@ -1,4 +1,4 @@
-// migrations-sha256: 685759ed6e81e119b006da83a5a850f1fef4d564a6bdaa4c710c1a3e7da58640
+// migrations-sha256: 7a28d8617a481e65db1df1c39b1677df232965d7aa5ccb22c2336dde8728061d
 
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[]
 
@@ -883,6 +883,25 @@ isOneToOne: false
       foreignKeyName: "channel_receipts_workspace_id_fkey"
       columns: ["workspace_id"]
 isOneToOne: false
+      referencedRelation: "workspaces"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"connection_commands": {
+                  Row: {
+                    "created_at": string,"finished_at": string | null,"id": string,"input": Json,"kind": string,"outcome": Json | null,"status": string,"user_id": string,"workspace_id": string
+                  }
+                  Insert: {
+                    "created_at"?: string,"finished_at"?: string | null,"id"?: string,"input"?: Json,"kind": string,"outcome"?: Json | null,"status"?: string,"user_id": string,"workspace_id": string
+                  }
+                  Update: {
+                    "created_at"?: string,"finished_at"?: string | null,"id"?: string,"input"?: Json,"kind"?: string,"outcome"?: Json | null,"status"?: string,"user_id"?: string,"workspace_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "connection_commands_workspace_id_fkey"
+      columns: ["workspace_id"]
+      isOneToOne: false
       referencedRelation: "workspaces"
       referencedColumns: ["id"]
     }
@@ -3648,6 +3667,12 @@ isOneToOne: false
                            },
 "booking_reserve":
 { Args: { "p": Json,"p_force"?: boolean }; Returns: string
+                           },
+"connection_command_submit":
+{ Args: { "p_input": Json,"p_kind": string,"p_workspace": string }; Returns: string
+                           },
+"connection_command_take":
+{ Args: { "p_id": string }; Returns: Json
                            },
 "content_tick":
 { Args: Record<PropertyKey, never>; Returns: boolean

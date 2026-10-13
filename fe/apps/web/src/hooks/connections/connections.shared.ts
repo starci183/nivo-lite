@@ -113,3 +113,11 @@ export const moneyProviderOf = (provider: Provider): MoneyProviderId | null => {
     if (provider === "sepay" || provider === "payos" || provider === "casso") return provider
     return null
 }
+
+/** True when providers cannot reach the site: no address, plain http, or a local host (a webhook cannot be registered there). */
+export const isLocalOnly = (siteUrl: string | undefined): boolean => {
+    if (siteUrl === undefined || !URL.canParse(siteUrl)) return true
+    const url = new URL(siteUrl)
+    const local = url.hostname === "localhost" || url.hostname.endsWith(".localhost") || url.hostname === "127.0.0.1" || url.hostname === "[::1]"
+    return url.protocol !== "https:" || local
+}

@@ -2,6 +2,7 @@ export {
     attentionConnections,
     CONNECTION_ROUTES,
     GROUP_TITLE_KEY,
+    isLocalOnly,
     liveConnections,
     moneyProviderOf,
     sortRows,

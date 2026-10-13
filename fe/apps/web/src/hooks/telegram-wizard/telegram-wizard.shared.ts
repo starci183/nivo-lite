@@ -1,4 +1,4 @@
-import type { Outcome } from "@/modules/api/outcome"
+import type { DbOutcome } from "@/modules/db/outcome"
 import type { ConnectionCheck, TelegramConnected, WizardNote } from "@/modules/types"
 import type { CatalogReader } from "@/hooks/connection-wizard"
 
@@ -7,9 +7,9 @@ export const TELEGRAM_STEPS = ["bot", "token", "check", "agent"] as const
 
 /** The commands the connected entry hands the Telegram wizard (each one already knows the active workspace). */
 export interface TelegramActions {
-    readonly connect: (form: { readonly name: string; readonly token: string }) => Promise<Outcome<TelegramConnected>>
-    readonly check: (connectionId: string) => Promise<Outcome<ConnectionCheck>>
-    readonly setAgents: (connectionId: string, agents: ReadonlyArray<string>) => Promise<Outcome<true>>
+    readonly connect: (form: { readonly name: string; readonly token: string }) => Promise<DbOutcome<TelegramConnected>>
+    readonly check: (connectionId: string) => Promise<DbOutcome<ConnectionCheck>>
+    readonly setAgents: (connectionId: string, agents: ReadonlyArray<string>) => Promise<DbOutcome<true>>
 }
 
 /** What a Telegram check says, as one note: local site, webhook registered, or what Telegram last complained about. */

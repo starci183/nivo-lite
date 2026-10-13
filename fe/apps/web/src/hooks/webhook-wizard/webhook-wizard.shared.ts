@@ -1,4 +1,4 @@
-import type { Outcome } from "@/modules/api/outcome"
+import type { DbOutcome } from "@/modules/db/outcome"
 import type { WebhookTestVerdict, WebhookView } from "@/modules/types"
 
 /** The steps of the webhook wizard, in order. */
@@ -9,7 +9,7 @@ export interface WebhookActions {
     readonly start: (
         form: { readonly name: string; readonly url: string },
         events: ReadonlyArray<string>,
-    ) => Promise<Outcome<WebhookView>>
-    readonly test: (connectionId: string) => Promise<Outcome<WebhookTestVerdict>>
-    readonly finish: (connectionId: string) => Promise<Outcome<true>>
+    ) => Promise<DbOutcome<WebhookView>>
+    readonly test: (connectionId: string) => Promise<DbOutcome<WebhookTestVerdict>>
+    readonly finish: (connectionId: string) => Promise<DbOutcome<true>>
 }

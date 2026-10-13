@@ -1,12 +1,12 @@
 "use server"
 
 import { getTranslations } from "next-intl/server"
-import { writeAgentConnections } from "@/modules/api/connections/write-agent-connections"
-import { writeCheck } from "@/modules/api/connections/write-check"
-import { writeConnectionAgents } from "@/modules/api/connections/write-connection-agents"
-import { writeFirstEvent } from "@/modules/api/connections/write-first-event"
-import { writeGrant } from "@/modules/api/connections/write-grant"
-import type { Outcome as ApiOutcome } from "@/modules/api/outcome"
+import { writeAgentConnections } from "@/modules/db/connections/write-agent-connections"
+import { writeCheck } from "@/modules/db/connections/write-check"
+import { writeConnectionAgents } from "@/modules/db/connections/write-connection-agents"
+import { writeFirstEvent } from "@/modules/db/connections/write-first-event"
+import { writeGrant } from "@/modules/db/connections/write-grant"
+import type { DbOutcome } from "@/modules/db/outcome"
 import type { Access, ConnectionCheck, FirstEventState } from "@/modules/types"
 import { getCurrentMember } from "./members"
 import type { Outcome } from "./types"
@@ -20,10 +20,10 @@ import type { Outcome } from "./types"
 export type { ConnectionCheck, FirstEventState }
 
 /** A failed write carries the catalog key of its sentence in `code`; this reads it in the language of the request. */
-const sentenceOf = async <T>(outcome: ApiOutcome<T>): Promise<Outcome<T>> => {
+const sentenceOf = async <T>(outcome: DbOutcome<T>): Promise<Outcome<T>> => {
     if (outcome.kind === "ok") return { ok: true, data: outcome.value }
     const t = await getTranslations("connections")
-    return { ok: false, error: t(outcome.fault.code, { agent: "", connection: "" }) }
+    return { ok: false, error: t(outcome.code, { agent: "", connection: "" }) }
 }
 
 /** One agent's access to one connection (null removes it). Saved at once from either picker. */

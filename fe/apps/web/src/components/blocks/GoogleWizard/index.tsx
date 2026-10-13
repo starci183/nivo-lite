@@ -4,8 +4,8 @@ import { useTranslations } from "next-intl"
 import { useSearchParams } from "next/navigation"
 import { useState, useTransition } from "react"
 import { providerKey } from "@/hooks/connection-providers"
-import { writeGoogleAuthorize } from "@/modules/api/connections/write-google-authorize"
-import { messageKeyOf } from "@/modules/api/connections/connections.mapper"
+import { writeGoogleAuthorize } from "@/modules/db/connections/write-google-authorize"
+import { messageKeyOf } from "@/modules/db/connections/command.mapper"
 import { GoogleWizardBase } from "./component"
 
 /** The reasons the callback puts in the return address, with the sentence of each. */
@@ -38,7 +38,7 @@ export const GoogleWizard = (props: GoogleWizardProps) => {
             setError(null)
             const answer = await writeGoogleAuthorize({ workspaceId: props.workspaceId, returnTo: "/connections" })
             if (answer.kind !== "ok") {
-                const key = messageKeyOf(answer.fault.code)
+                const key = messageKeyOf(answer.code)
                 return setError(key === "errNotConfigured" ? t("errNotConfigured") : t("errStart"))
             }
             window.location.assign(answer.value.url)

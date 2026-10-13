@@ -1,7 +1,7 @@
 import { useTranslations } from "next-intl"
 import { useState, useTransition } from "react"
 import { ACCESS_LEVELS, purposeFor } from "@/hooks/connection-access"
-import type { Outcome } from "@/modules/api/outcome"
+import type { DbOutcome } from "@/modules/db/outcome"
 import { navigation } from "@/modules/i18n"
 import type { Access, AccessView, AgentOption, Connection } from "@/modules/types"
 
@@ -14,7 +14,7 @@ export interface AgentAccess {
 const NONE = "none"
 
 /** Gives one agent a level through the connection, or removes its access (null); the connected row binds the server action. */
-export type GrantCommand = (agentId: string, access: Access | null) => Promise<Outcome<true>>
+export type GrantCommand = (agentId: string, access: Access | null) => Promise<DbOutcome<true>>
 
 /**
  * "Which agents work through this connection, and how far": each pick is saved at once with the same grant the agent's own
@@ -53,7 +53,7 @@ export const useAgentAccess = (
             if (result.kind === "ok") return router.refresh()
             setLocal((previous) => ({ ...previous, [agentId]: before }))
             const agent = agents.find((candidate) => candidate.id === agentId)
-            onError(t(result.fault.code, { agent: agent?.name ?? "", connection: connection.name }))
+            onError(t(result.code, { agent: agent?.name ?? "", connection: connection.name }))
         })
     }
 

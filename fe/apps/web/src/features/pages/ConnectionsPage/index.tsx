@@ -5,11 +5,11 @@ import {
     attentionConnections,
     CONNECTION_ROUTES,
     GROUP_TITLE_KEY,
+    isLocalOnly,
     liveConnections,
     sortRows,
     URL_PARAMS,
 } from "@/hooks/connections"
-import { publicSiteUrl } from "@/lib/channels"
 import { getCurrentMember, isManagerRole } from "@/lib/members"
 import { getSession } from "@/lib/session"
 import { readAgents } from "@/modules/db/connections/read-agents"
@@ -114,7 +114,7 @@ export const ConnectionsPage = async (props: ConnectionsPageProps) => {
                 workspaceId: me.workspaceId,
                 ownerEmail: session.email,
                 canManage: me.role === "owner",
-                localOnly: publicSiteUrl() === null,
+                localOnly: isLocalOnly(process.env.NEXT_PUBLIC_SITE_URL),
                 items,
                 agents: everyAgent.filter((agent) => agent.status === "active"),
                 agentNames,

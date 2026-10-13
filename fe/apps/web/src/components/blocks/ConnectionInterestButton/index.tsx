@@ -2,7 +2,7 @@
 
 import { useTranslations } from "next-intl"
 import { useState, useTransition } from "react"
-import { writeConnectorInterest } from "@/modules/api/connections/write-connector-interest"
+import { writeConnectorInterest } from "@/modules/db/connections/write-connector-interest"
 import { ConnectionInterestButtonBase } from "./component"
 
 /** What the detail of a planned connector hands the command. */
@@ -23,7 +23,7 @@ export const ConnectionInterestButton = (props: ConnectionInterestButtonProps) =
                 workspaceId: props.workspaceId,
                 connectorId: props.connectorId,
             })
-            setNote(result.kind === "ok" ? t("detailWanted") : t(result.fault.code))
+            setNote(result.kind === "ok" ? t("detailWanted") : t(result.code))
             if (result.kind === "ok") setWanted(true)
         })
     return (

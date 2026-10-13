@@ -1,7 +1,7 @@
 "use server"
 
 import { getTranslations } from "next-intl/server"
-import { writeGoogleAuthorize } from "@/modules/api/connections/write-google-authorize"
+import { writeGoogleAuthorize } from "@/modules/db/connections/write-google-authorize"
 import { getCurrentMember } from "./members"
 import type { Outcome } from "./types"
 
@@ -15,5 +15,5 @@ export const startGoogleConnect = async (returnTo: string): Promise<Outcome<{ ur
     const answer = await writeGoogleAuthorize({ workspaceId: member.workspaceId, returnTo })
     if (answer.kind === "ok") return { ok: true, data: { url: answer.value.url } }
     const t = await getTranslations("connections")
-    return { ok: false, error: t(answer.fault.code) }
+    return { ok: false, error: t(answer.code) }
 }

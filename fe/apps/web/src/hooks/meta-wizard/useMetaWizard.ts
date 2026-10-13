@@ -49,7 +49,7 @@ export const useMetaWizard = (input: MetaWizardInput) => {
         startTransition(async () => {
             const answer = await actions.current.resume(connectionId)
             if (!live) return
-            if (answer.kind !== "ok") setNote({ tone: "negative", text: reasonOf(answer.fault.code) })
+            if (answer.kind !== "ok") setNote({ tone: "negative", text: reasonOf(answer.code) })
             else {
                 const failure = metaFailureOf(input.returned, tm)
                 setConn(answer.value)
@@ -77,7 +77,7 @@ export const useMetaWizard = (input: MetaWizardInput) => {
         if (conn === null) return
         startChecking(async () => {
             const answer = await input.actions.check(conn.id, repair)
-            if (answer.kind !== "ok") return fail(answer.fault.code)
+            if (answer.kind !== "ok") return fail(answer.code)
             setCheck(answer.value)
         })
     }
@@ -86,7 +86,7 @@ export const useMetaWizard = (input: MetaWizardInput) => {
         startTransition(async () => {
             setNote(null)
             const answer = await input.actions.authorize(conn === null ? undefined : conn.id)
-            if (answer.kind !== "ok") return fail(answer.fault.code)
+            if (answer.kind !== "ok") return fail(answer.code)
             window.location.assign(answer.value.url)
         })
 
@@ -94,7 +94,7 @@ export const useMetaWizard = (input: MetaWizardInput) => {
         if (conn === null || pageId === "") return setNote({ tone: "negative", text: tm("pickPick") })
         startTransition(async () => {
             const answer = await input.actions.choosePage(conn.id, pageId)
-            if (answer.kind !== "ok") return fail(answer.fault.code)
+            if (answer.kind !== "ok") return fail(answer.code)
             setConn(answer.value)
             go(2)
         })
@@ -104,7 +104,7 @@ export const useMetaWizard = (input: MetaWizardInput) => {
         if (conn === null) return go(3)
         startTransition(async () => {
             const answer = await input.actions.setAgents(conn.id, agentIds)
-            if (answer.kind !== "ok") return fail(answer.fault.code)
+            if (answer.kind !== "ok") return fail(answer.code)
             go(3)
             runCheck(false)
         })

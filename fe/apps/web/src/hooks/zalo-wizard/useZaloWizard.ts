@@ -47,7 +47,7 @@ export const useZaloWizard = (input: ZaloWizardInput) => {
         startTransition(async () => {
             const answer = await actions.current.resume(connectionId)
             if (!live) return
-            if (answer.kind !== "ok") setNote({ tone: "negative", text: reasonOf(answer.fault.code) })
+            if (answer.kind !== "ok") setNote({ tone: "negative", text: reasonOf(answer.code) })
             else {
                 const failure = zaloFailureOf(input.returned, tw)
                 setConn(answer.value)
@@ -72,7 +72,7 @@ export const useZaloWizard = (input: ZaloWizardInput) => {
         if (conn !== null) return go(1)
         startTransition(async () => {
             const answer = await input.actions.start(fields)
-            if (answer.kind !== "ok") return fail(answer.fault.code)
+            if (answer.kind !== "ok") return fail(answer.code)
             setConn(answer.value)
             go(1)
         })
@@ -83,7 +83,7 @@ export const useZaloWizard = (input: ZaloWizardInput) => {
         if (conn.oaSecretSaved && fields.oaSecret.trim() === "") return go(2)
         startTransition(async () => {
             const answer = await input.actions.saveOaSecret(conn.id, fields.oaSecret)
-            if (answer.kind !== "ok") return fail(answer.fault.code)
+            if (answer.kind !== "ok") return fail(answer.code)
             setConn({ ...conn, oaSecretSaved: true })
             setFields((current) => ({ ...current, oaSecret: "" }))
             go(2)
@@ -94,7 +94,7 @@ export const useZaloWizard = (input: ZaloWizardInput) => {
         if (conn === null) return
         startTransition(async () => {
             const answer = await input.actions.authorize(conn.id)
-            if (answer.kind !== "ok") return fail(answer.fault.code)
+            if (answer.kind !== "ok") return fail(answer.code)
             window.location.assign(answer.value.url)
         })
     }
@@ -103,7 +103,7 @@ export const useZaloWizard = (input: ZaloWizardInput) => {
         if (conn === null) return input.onClose(false)
         startTransition(async () => {
             const answer = await input.actions.setAgents(conn.id, agentIds)
-            if (answer.kind !== "ok") return fail(answer.fault.code)
+            if (answer.kind !== "ok") return fail(answer.code)
             input.onClose(true)
         })
     }
