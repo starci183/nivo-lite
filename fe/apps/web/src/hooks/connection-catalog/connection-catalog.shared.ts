@@ -1,0 +1,142 @@
+import { PROVIDERS, providerKey } from "@/hooks/connection-providers"
+import type { ConnectorAudience, ConnectorCategory, ConnectorGlyph, ConnectorStatus, Provider } from "@/modules/types"
+
+/** One connector of the library as data. Its words are catalog keys (`catalogKey`), never strings. */
+export interface CatalogEntry {
+    readonly id: string
+    readonly category: ConnectorCategory
+    readonly status: ConnectorStatus
+    readonly audience: ReadonlyArray<ConnectorAudience>
+    /** Higher first in "Popular". */
+    readonly popularity: number
+    /** Set when the app can set it up today. */
+    readonly provider?: Provider
+    readonly glyph: ConnectorGlyph
+    /** Artwork for a connector that is not a provider yet (a provider logo comes from the provider registry). */
+    readonly logo?: string
+}
+
+/** The categories, in display order. */
+export const CATEGORIES: ReadonlyArray<ConnectorCategory> = [
+    "payments",
+    "chat",
+    "commerce",
+    "accounting",
+    "data",
+    "email",
+    "productivity",
+    "automation",
+]
+
+/** The agents a connector can be for, in display order (`any` is not a filter value). */
+export const AUDIENCES: ReadonlyArray<Exclude<ConnectorAudience, "any">> = ["chatbot", "sales", "accounting"]
+
+const real = (
+    provider: Provider,
+    category: ConnectorCategory,
+    audience: ReadonlyArray<ConnectorAudience>,
+    popularity: number,
+    glyph: ConnectorGlyph,
+): CatalogEntry => ({
+    id: provider,
+    category,
+    status: PROVIDERS[provider].earlyAccess === true ? "early" : "official",
+    audience,
+    popularity,
+    provider,
+    glyph,
+})
+
+const soon = (
+    id: string,
+    category: ConnectorCategory,
+    audience: ReadonlyArray<ConnectorAudience>,
+    popularity: number,
+    glyph: ConnectorGlyph,
+    logo?: string,
+): CatalogEntry => ({
+    id,
+    category,
+    status: "soon",
+    audience,
+    popularity,
+    glyph,
+    ...(logo === undefined ? {} : { logo }),
+})
+
+/** Every connector of the library. Adding the next one is one line here and its words in the catalog. */
+export const CATALOG: ReadonlyArray<CatalogEntry> = [
+    real("sepay", "payments", ["accounting"], 100, "wallet"),
+    real("payos", "payments", ["accounting"], 70, "wallet"),
+    real("casso", "payments", ["accounting"], 60, "wallet"),
+    real("telegram", "chat", ["chatbot", "sales"], 95, "community"),
+    real("zalo_oa", "chat", ["chatbot", "sales"], 98, "community"),
+    real("meta", "chat", ["chatbot", "sales"], 97, "community"),
+    real("telegram_user", "chat", ["any"], 55, "community"),
+    real("database", "data", ["any"], 65, "servers"),
+    real("openapi", "data", ["any"], 62, "code"),
+    real("csv_import", "data", ["any"], 90, "apps"),
+    real("imap", "email", ["any"], 75, "email"),
+    real("smtp", "email", ["accounting", "sales"], 58, "email"),
+    real("google", "productivity", ["sales"], 80, "apps"),
+    real("webhook", "automation", ["any"], 50, "trigger"),
+    soon("tiktok_chat", "chat", ["chatbot"], 60, "community"),
+    soon("shopee", "commerce", ["sales", "accounting"], 96, "cart"),
+    soon("tiktok_shop", "commerce", ["sales", "accounting"], 88, "cart"),
+    soon("lazada", "commerce", ["sales", "accounting"], 70, "cart"),
+    soon("kiotviet", "commerce", ["sales", "accounting"], 85, "cart"),
+    soon("sapo", "commerce", ["sales", "accounting"], 78, "cart"),
+    soon("haravan", "commerce", ["sales", "accounting"], 66, "cart"),
+    soon("shopify", "commerce", ["sales", "accounting"], 55, "cart"),
+    soon("woocommerce", "commerce", ["sales", "accounting"], 45, "cart"),
+    soon("misa_amis", "accounting", ["accounting"], 84, "wallet"),
+    soon("misa_meinvoice", "accounting", ["accounting"], 80, "wallet"),
+    soon("viettel_sinvoice", "accounting", ["accounting"], 62, "wallet"),
+    soon("vnpay", "payments", ["accounting"], 64, "wallet"),
+    soon("momo", "payments", ["accounting"], 63, "wallet"),
+    soon("ghn", "commerce", ["sales"], 58, "cart"),
+    soon("ghtk", "commerce", ["sales"], 57, "cart"),
+    soon("google_calendar", "productivity", ["any"], 52, "apps", "/logos/connectors/calendar.svg"),
+    soon("google_drive", "productivity", ["any"], 61, "apps", "/logos/connectors/google_drive_generic.svg"),
+    soon("notion", "productivity", ["any"], 50, "apps", "/logos/connectors/notion_generic.svg"),
+    soon("slack", "productivity", ["any"], 40, "apps", "/logos/connectors/slack_generic.svg"),
+    soon("airtable", "data", ["any"], 38, "servers", "/logos/connectors/airtable_generic.svg"),
+]
+
+/** Finds a connector by id. */
+export const entryById = (id: string): CatalogEntry | undefined => CATALOG.find((entry) => entry.id === id)
+
+/** The catalog key of one text of a connector: a provider connector reuses the provider words. */
+export const catalogKey = (entry: CatalogEntry, part: "name" | "blurb" | "brings" | "keywords"): string => {
+    if (entry.provider !== undefined && part === "name") return providerKey(entry.provider, "title")
+    if (entry.provider !== undefined && part === "blurb") return providerKey(entry.provider, "blurb")
+    return `catalog_${entry.id}_${part}`
+}
+
+/** Lower-cases a text and drops accents so a search ignores them. */
+const foldText = (text: string): string =>
+    text
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/\u0111/g, "d")
+        .replace(/\u0110/g, "d")
+        .toLowerCase()
+
+/** The words of a search (accents ignored). */
+export const searchWords = (text: string): ReadonlyArray<string> => foldText(text).split(/\s+/u).filter(Boolean)
+
+/** Whether a connector passes the category and agent filters. */
+export const passesFilters = (
+    entry: CatalogEntry,
+    category: ConnectorCategory | "all",
+    audience: Exclude<ConnectorAudience, "any"> | "all",
+): boolean => {
+    if (category !== "all" && entry.category !== category) return false
+    return audience === "all" || entry.audience.includes(audience) || entry.audience.includes("any")
+}
+
+/** Whether every search word appears in the connector text (name, blurb and keywords joined). */
+export const matchesWords = (haystack: string, words: ReadonlyArray<string>): boolean => {
+    const folded = foldText(haystack)
+    return words.every((word) => folded.includes(word))
+}

@@ -1,6 +1,6 @@
-import { ConnectionsView } from "@/features/connections/ConnectionsView"
+import { ConnectionsLoadingPage } from "@/features/pages/ConnectionsLoadingPage"
 
-/** STATE-8: the Connections page itself, with no data yet - heading and tab labels real, the connection lists as skeletons. */
-const ConnectionsLoading = () => <ConnectionsView isLoading items={[]} agentNames={{}} agents={[]} localOnly={false} ownerEmail="" />
+/** The Connections route's loading slot. */
+const Loading = () => <ConnectionsLoadingPage />
 
-export default ConnectionsLoading
+export default Loading
