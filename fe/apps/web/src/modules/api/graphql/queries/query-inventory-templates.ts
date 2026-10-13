@@ -2,10 +2,10 @@ import { gql } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
 import type { QueryParams } from "../types"
-import type { Query } from "../__generated__/schema"
+import type { InventoryTemplatesQuery } from "../__generated__/graphql"
 
 /** The response of the `inventoryTemplates` query. */
-type QueryInventoryTemplatesResponse = Pick<Query, "inventoryTemplates">
+type QueryInventoryTemplatesResponse = InventoryTemplatesQuery
 
 const query1: TypedDocumentNode<QueryInventoryTemplatesResponse> = gql`
     query InventoryTemplates {

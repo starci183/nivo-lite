@@ -2,10 +2,10 @@ import { gql } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
 import type { QueryParams } from "../types"
-import type { Query } from "../__generated__/schema"
+import type { ChatbotGapsQuery } from "../__generated__/graphql"
 
 /** The response of the `chatbotGaps` query. */
-type QueryChatbotGapsResponse = Pick<Query, "chatbotGaps">
+type QueryChatbotGapsResponse = ChatbotGapsQuery
 
 type Document = TypedDocumentNode<QueryChatbotGapsResponse>
 

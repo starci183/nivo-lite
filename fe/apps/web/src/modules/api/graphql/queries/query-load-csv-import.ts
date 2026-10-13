@@ -1,14 +1,14 @@
 import { gql } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
-import type { InputVariables, QueryParams } from "../types"
-import type { Query, QueryLoadCsvImportArgs } from "../__generated__/schema"
+import type { InputVariables, QueryParams, WireInput } from "../types"
+import type { LoadCsvImportQuery, LoadCsvImportQueryVariables } from "../__generated__/graphql"
 
 /** The variables of the `loadCsvImport` query. */
-type QueryLoadCsvImportRequest = QueryLoadCsvImportArgs["input"]
+type QueryLoadCsvImportRequest = WireInput<LoadCsvImportQueryVariables["input"]>
 
 /** The response of the `loadCsvImport` query: the typed payload straight from the back end contract. */
-type QueryLoadCsvImportResponse = Pick<Query, "loadCsvImport">
+type QueryLoadCsvImportResponse = LoadCsvImportQuery
 
 const query1: TypedDocumentNode<QueryLoadCsvImportResponse, InputVariables<QueryLoadCsvImportRequest>> = gql`
     query LoadCsvImport($input: LoadCsvImportInput!) {

@@ -1,14 +1,14 @@
 import { gql } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
-import type { InputVariables, QueryParams } from "../types"
-import type { Query, QueryDataSyncRunArgs } from "../__generated__/schema"
+import type { InputVariables, QueryParams, WireInput } from "../types"
+import type { DataSyncRunQuery, DataSyncRunQueryVariables } from "../__generated__/graphql"
 
 /** The variables of the `dataSyncRun` query. */
-type QueryDataSyncRunRequest = QueryDataSyncRunArgs["input"]
+type QueryDataSyncRunRequest = WireInput<DataSyncRunQueryVariables["input"]>
 
 /** The response of the `dataSyncRun` query. */
-type QueryDataSyncRunResponse = Pick<Query, "dataSyncRun">
+type QueryDataSyncRunResponse = DataSyncRunQuery
 
 const query1: TypedDocumentNode<QueryDataSyncRunResponse, InputVariables<QueryDataSyncRunRequest>> = gql`
     query DataSyncRun($input: DataSyncRunInput!) {
@@ -42,7 +42,11 @@ interface QueryDataSyncRunParams extends QueryParams<QueryDataSyncRun, QueryData
 }
 
 /** How one sync run of a data connection is going. Rejects with the back end failure. */
-export const queryDataSyncRun = async ({ query = QueryDataSyncRun.Query1, request, signal }: QueryDataSyncRunParams) => {
+export const queryDataSyncRun = async ({
+    query = QueryDataSyncRun.Query1,
+    request,
+    signal,
+}: QueryDataSyncRunParams) => {
     const apollo = createAuthApolloClient({ signal })
     return apollo.query({
         query: queryMap[query],

@@ -1,14 +1,14 @@
 import { gql } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
-import type { InputVariables, QueryParams } from "../types"
-import type { Query, QueryContentMediaArgs } from "../__generated__/schema"
+import type { InputVariables, QueryParams, WireInput } from "../types"
+import type { ContentMediaQuery, ContentMediaQueryVariables } from "../__generated__/graphql"
 
 /** The input of the `contentMedia` query. */
-export type QueryContentMediaRequest = QueryContentMediaArgs["input"]
+export type QueryContentMediaRequest = WireInput<ContentMediaQueryVariables["input"]>
 
 /** The generated payload of the `contentMedia` query. */
-type QueryContentMediaResponse = Pick<Query, "contentMedia">
+type QueryContentMediaResponse = ContentMediaQuery
 
 type Document = TypedDocumentNode<QueryContentMediaResponse, InputVariables<QueryContentMediaRequest>>
 

@@ -1,14 +1,14 @@
 import { gql } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
-import type { InputVariables, QueryParams } from "../types"
-import type { Query, QueryLeadActionStatusArgs } from "../__generated__/schema"
+import type { InputVariables, QueryParams, WireInput } from "../types"
+import type { LeadActionStatusQuery, LeadActionStatusQueryVariables } from "../__generated__/graphql"
 
 /** Generated input of the leadActionStatus query. */
-type QueryLeadActionStatusRequest = QueryLeadActionStatusArgs["input"]
+type QueryLeadActionStatusRequest = WireInput<LeadActionStatusQueryVariables["input"]>
 
 /** Generated response of the leadActionStatus query. */
-type QueryLeadActionStatusResponse = Pick<Query, "leadActionStatus">
+type QueryLeadActionStatusResponse = LeadActionStatusQuery
 
 type Document = TypedDocumentNode<QueryLeadActionStatusResponse, InputVariables<QueryLeadActionStatusRequest>>
 

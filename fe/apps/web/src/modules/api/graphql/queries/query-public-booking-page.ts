@@ -1,18 +1,32 @@
+import type { PublicBookingPageQuery, PublicBookingPageQueryVariables } from "../__generated__/graphql"
 import { gql } from "@apollo/client"
 import type { DocumentNode } from "graphql"
 import { createNoAuthApolloClient } from "../clients"
-import type { InputVariables, QueryParams } from "../types"
-import type { QueryPublicBookingPageRequest, QueryPublicBookingPageResponse } from "./types/public-booking-page"
+import type { InputVariables, QueryParams, WireInput } from "../types"
+
+/** The input of the `publicBookingPage` query. */
+type QueryPublicBookingPageRequest = WireInput<PublicBookingPageQueryVariables["input"]>
 
 const query1 = gql`
     query PublicBookingPage($input: PublicBookingPageInput!) {
         publicBookingPage(input: $input) {
-            address note services { description durationMin id name priceVnd } shop slug timezone
+            address
+            note
+            services {
+                description
+                durationMin
+                id
+                name
+                priceVnd
+            }
+            shop
+            slug
+            timezone
         }
     }
 `
 
-export enum QueryPublicBookingPage {
+enum QueryPublicBookingPage {
     Query1 = "query1",
 }
 
@@ -21,12 +35,18 @@ const queryMap: Record<QueryPublicBookingPage, DocumentNode> = {
 }
 
 /** Apollo params for {@link queryPublicBookingPage}. */
-export type QueryPublicBookingPageParams = QueryParams<QueryPublicBookingPage, QueryPublicBookingPageRequest> & { request: QueryPublicBookingPageRequest }
+type QueryPublicBookingPageParams = QueryParams<QueryPublicBookingPage, QueryPublicBookingPageRequest> & {
+    request: QueryPublicBookingPageRequest
+}
 
 /** The public booking page of one shop slug (anonymous: no token, no workspace). */
-export const queryPublicBookingPage = async ({ query = QueryPublicBookingPage.Query1, request, signal }: QueryPublicBookingPageParams) => {
+export const queryPublicBookingPage = async ({
+    query = QueryPublicBookingPage.Query1,
+    request,
+    signal,
+}: QueryPublicBookingPageParams) => {
     const apollo = createNoAuthApolloClient({ signal })
-    return apollo.query<QueryPublicBookingPageResponse, InputVariables<QueryPublicBookingPageRequest>>({
+    return apollo.query<PublicBookingPageQuery, InputVariables<QueryPublicBookingPageRequest>>({
         query: queryMap[query],
         variables: { input: request },
     })

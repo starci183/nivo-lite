@@ -2,9 +2,9 @@ import { gql } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
 import type { QueryParams } from "../types"
-import type { Query } from "../__generated__/schema"
+import type { OfficeCommandCandidatesQuery } from "../__generated__/graphql"
 
-type QueryOfficeCommandCandidatesResponse = Pick<Query, "officeCommandCandidates">
+type QueryOfficeCommandCandidatesResponse = OfficeCommandCandidatesQuery
 
 const query1: TypedDocumentNode<QueryOfficeCommandCandidatesResponse, Record<string, never>> = gql`
     query OfficeCommandCandidates {

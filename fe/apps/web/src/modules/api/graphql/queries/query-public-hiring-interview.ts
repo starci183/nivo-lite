@@ -1,14 +1,14 @@
 import { gql } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createNoAuthApolloClient } from "../clients"
-import type { InputVariables, QueryParams } from "../types"
-import type { Query, QueryPublicHiringInterviewArgs } from "../__generated__/schema"
+import type { InputVariables, QueryParams, WireInput } from "../types"
+import type { PublicHiringInterviewQuery, PublicHiringInterviewQueryVariables } from "../__generated__/graphql"
 
 /** The input of the `publicHiringInterview` query. */
-export type QueryPublicHiringInterviewRequest = QueryPublicHiringInterviewArgs["input"]
+export type QueryPublicHiringInterviewRequest = WireInput<PublicHiringInterviewQueryVariables["input"]>
 
 /** The response of the `publicHiringInterview` query. */
-type QueryPublicHiringInterviewResponse = Pick<Query, "publicHiringInterview">
+type QueryPublicHiringInterviewResponse = PublicHiringInterviewQuery
 
 const query1: TypedDocumentNode<
     QueryPublicHiringInterviewResponse,
