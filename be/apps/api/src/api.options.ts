@@ -44,7 +44,6 @@ import {
 } from "@modules/domain/agent-knowledge"
 import { CustomerOutcomesService, CustomerTurnRuntimeService } from "@modules/domain/customer-turns"
 import { InstallationDirectoryService } from "@modules/domain/modules"
-import { UnboundBookingToolsService } from "@modules/domain/agent-tools"
 import {
     ApprovalRequesterService,
     UnboundDecisionEventsService,
@@ -53,6 +52,7 @@ import {
 } from "@modules/domain/decisions"
 import { LeadReadService } from "@modules/domain/leads"
 import {
+    BookingToolsService,
     ConversationLeadsService,
     HandoffToolService,
     InboundStatusService,
@@ -172,7 +172,7 @@ export const G19_PORTS = {
 export const AGENT_TOOLS_PORTS = {
     knowledgeSearch: KnowledgeSearchToolService,
     leadWriter: LeadWriterService,
-    bookingTools: UnboundBookingToolsService,
+    bookingTools: BookingToolsService,
     approvalRequester: ApprovalRequesterService,
     handoffTool: HandoffToolService,
     conversationLeads: ConversationLeadsService,

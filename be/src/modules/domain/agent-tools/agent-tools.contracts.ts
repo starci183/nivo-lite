@@ -25,8 +25,8 @@ export interface ToolContext {
 
 /** One tool OpenClaw may call. */
 export interface ToolManifestEntry {
-    /** The dotted tool name. */
-    readonly name: string
+    /** The supported dotted name used to dispatch this tool to its capability. */
+    readonly name: ToolName
     /** What the tool does, for the model. */
     readonly description: string
     /** Argument name to type text; a trailing question mark marks an optional argument. */
@@ -34,7 +34,58 @@ export interface ToolManifestEntry {
 }
 
 /** The booking tools served by the booking lane. */
-export type BookingToolName = "booking.find_slots" | "booking.request"
+export type BookingToolName = "booking.find_slots" | "booking.request" | "booking.cancel"
+
+/** The supported tool names used to validate calls before dispatching them to a capability. */
+export type ToolName =
+    "knowledge.search" | "lead.create_or_update" | "approval.request" | "handoff.to_person" | BookingToolName
+
+/** Sanitised slot-search arguments used to query a workspace's booking availability. */
+export interface BookingFindSlotsArgs {
+    /** The service name to resolve among the workspace's active services. */
+    readonly service: string
+    /** The requested local day, or null to use today in the shop's time zone. */
+    readonly date: string | null
+    /** The party size whose available appointment times are requested. */
+    readonly party: number
+}
+
+/** Sanitised appointment arguments used to place a customer's chat booking. */
+export interface BookingRequestArgs {
+    /** The service name to resolve among the workspace's active services. */
+    readonly service: string
+    /** The requested ISO appointment start to validate before placement. */
+    readonly start: string
+    /** The customer name to attach to the booking. */
+    readonly name: string
+    /** The customer phone used for booking contact and later cancellation lookup. */
+    readonly phone: string
+    /** The party size whose appointment capacity must be reserved. */
+    readonly party: number
+    /** The customer's optional note to retain with the booking. */
+    readonly note: string
+}
+
+/** Sanitised cancellation arguments used to locate a booking and request an owner's decision. */
+export interface BookingCancelArgs {
+    /** The customer phone used to find their next cancellable booking. */
+    readonly phone: string
+    /** The customer's optional reason to include in the owner's cancellation request. */
+    readonly reason: string
+}
+
+/** The service facts needed to resolve a chat selection before the bookings capability places it. */
+export interface BookingServiceCandidate {
+    /** The service identifier to pass to workspace booking placement. */
+    readonly id: string
+    /** The service name to match against the customer's selection. */
+    readonly name: string
+    /** Whether the workspace currently offers the service. */
+    readonly active: boolean
+}
+
+/** The validation refusals a chat booking can answer before placing a request. */
+export type BookingRequestInvalidCode = "name_required" | "phone_invalid" | "start_invalid" | "service_unavailable"
 
 /** One public knowledge citation. */
 export interface KnowledgeCitation {

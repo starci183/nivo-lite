@@ -1,7 +1,10 @@
-import type { BookingToolName, ToolManifestEntry } from "./agent-tools.contracts"
+import type { BookingToolName, ToolManifestEntry, ToolName } from "./agent-tools.contracts"
+
+/** The supported names used by manifest callers and dispatch policies. */
+export type { ToolName } from "./agent-tools.contracts"
 
 /** The tools the app exposes to OpenClaw. Each one runs for the job's own workspace and conversation. */
-export const TOOL_MANIFEST = [
+export const TOOL_MANIFEST: ReadonlyArray<ToolManifestEntry> = [
     {
         name: "knowledge.search",
         description: "Search the business public knowledge for passages that answer a question.",
@@ -31,16 +34,25 @@ export const TOOL_MANIFEST = [
     {
         name: "booking.request",
         description: "Request an appointment slot for the customer; the business confirms it afterwards.",
-        args: { slot: "string", contact_name: "string", contact: "string?", note: "string?" },
+        args: {
+            slot: "string",
+            contact_name: "string",
+            contact: "string?",
+            service: "string?",
+            party_size: "number?",
+            note: "string?",
+        },
     },
-] as const satisfies ReadonlyArray<ToolManifestEntry>
-
-/** The name of a tool in the manifest. */
-export type ToolName = (typeof TOOL_MANIFEST)[number]["name"]
+    {
+        name: "booking.cancel",
+        description: "Ask the owner to cancel the customer's next appointment booked with their phone number.",
+        args: { contact: "string", reason: "string?" },
+    },
+]
 
 /** True when the text names a tool of the manifest. */
 export const isToolName = (value: string): value is ToolName => TOOL_MANIFEST.some((tool) => tool.name === value)
 
-/** True for the two booking tools, which the booking lane serves. */
+/** True for the booking tools, which the booking lane serves. */
 export const isBookingTool = (tool: ToolName): tool is BookingToolName =>
-    tool === "booking.find_slots" || tool === "booking.request"
+    tool === "booking.find_slots" || tool === "booking.request" || tool === "booking.cancel"

@@ -1,6 +1,7 @@
 import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
 import { N8N_MAILER } from "@modules/domain/n8n-runs"
+import { BookingToolsService } from "./booking-tools.service"
 import { CarePerformerService } from "./care-performer.service"
 import { ClassifyLeadPerformerService } from "./classify-lead-performer.service"
 import { ConfirmOrderPerformerService } from "./confirm-order-performer.service"
@@ -37,6 +38,7 @@ export class WorkPerformersModule extends ConfigurableModuleClass {
             ...base,
             providers: [
                 ...(base.providers ?? []),
+                BookingToolsService,
                 { provide: PROMPT_WRITER, useExisting: options.writer },
                 PerformerKitService,
                 CustomerDeliveryService,
@@ -61,6 +63,7 @@ export class WorkPerformersModule extends ConfigurableModuleClass {
                 { provide: N8N_MAILER, useExisting: WorkspaceMailerService },
             ],
             exports: [
+                BookingToolsService,
                 PerformerKitService,
                 ConversationLeadsService,
                 HandoffToolService,

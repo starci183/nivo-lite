@@ -6,11 +6,12 @@ import { BookingModelService } from "./booking-model.service"
 import { BookingPublicService } from "./booking-public.service"
 import { BookingRemindersService } from "@modules/domain/booking-reminders"
 import { BookingReservationService } from "./booking-reservation.service"
-import type { BookingModel, PublicBookParams, TakenSpan } from "./bookings.contracts"
+import type { BookingModel, PublicBookParams, TakenSpan, WorkspaceBookParams } from "./bookings.contracts"
 import { BookingsErrorCode } from "./errors/bookings.error"
 import { SELECT_PAGE_BY_SLUG } from "./persistence/booking-model.sql"
-import { SELECT_BOOKING_BY_KEY } from "./persistence/booking-write.sql"
+import { SELECT_BOOKING_BY_KEY, SELECT_NEXT_CANCELLABLE_BOOKING } from "./persistence/booking-write.sql"
 import { DEFAULT_SETTINGS } from "./persistence/booking.rows"
+import type { CancellableBookingRow, KeyedBookingRow } from "./persistence/booking.rows"
 
 const WORKSPACE = "ws-1"
 const PAGE = {
@@ -65,6 +66,18 @@ const requestOf = builder<PublicBookParams>({
     token: "",
     website: "",
 })
+const workspaceRequestOf = builder<WorkspaceBookParams>({
+    workspaceId: WORKSPACE,
+    serviceId: "s1",
+    start: MONDAY_NINE,
+    name: " Mai ",
+    phone: "0912 345 678",
+    email: "",
+    party: 1,
+    note: " first visit ",
+    token: `chat:job-1:${MONDAY_NINE}`,
+    sourceChannel: "chat",
+})
 const TAKEN_NINE: TakenSpan = {
     id: "b9",
     resourceId: "r1",
@@ -76,7 +89,8 @@ const TAKEN_NINE: TakenSpan = {
 const build = async (
     options: {
         page?: boolean
-        keyed?: Array<{ id: string; status: string; holds_slot: boolean }>
+        keyed?: Array<KeyedBookingRow>
+        cancellable?: ReadonlyArray<CancellableBookingRow>
         model?: BookingModel
         spans?: ReadonlyArray<TakenSpan>
     } = {},
@@ -86,6 +100,7 @@ const build = async (
             query: [
                 [SELECT_PAGE_BY_SLUG, options.page === false ? [] : [PAGE]],
                 [SELECT_BOOKING_BY_KEY, options.keyed ?? []],
+                [SELECT_NEXT_CANCELLABLE_BOOKING, options.cancellable ?? []],
             ],
         }),
     )
@@ -182,21 +197,83 @@ describe("BookingPublicService", () => {
         })
     })
 
+    describe("freeTimesIn", () => {
+        it("reads the workspace calendar when no public page is published", async () => {
+            const { service, models, tx } = await build({ page: false, spans: [TAKEN_NINE] })
+
+            const result = await service.freeTimesIn({
+                workspaceId: WORKSPACE,
+                service: "s1",
+                date: "2026-10-12",
+                party: 1,
+            })
+
+            expect(result.times).toHaveLength(8)
+            expect(result.times[0]).toBe("2026-10-12T03:00:00.000Z")
+            expect(result.times).not.toContain(MONDAY_NINE)
+            expect(models.model).toHaveBeenCalledWith(WORKSPACE)
+            expect(tx.em.query).not.toHaveBeenCalled()
+        })
+    })
+
+    describe("requestIn", () => {
+        it("confirms a chat request without a page and keeps the complete chat idempotency key", async () => {
+            const { service, reservation, reminders, tx } = await build({ page: false })
+            const request = workspaceRequestOf()
+
+            const result = await service.requestIn(request)
+
+            expect(result).toMatchObject({ ok: true, state: "confirmed", serviceName: "Cut", bookingId: "b1" })
+            expect(reservation.reserve).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    booking: expect.objectContaining({
+                        workspaceId: WORKSPACE,
+                        customerName: "Mai",
+                        customerPhone: "84912345678",
+                        customerEmail: null,
+                        sourceChannel: "chat",
+                        idempotencyKey: `chat:job-1:${MONDAY_NINE}`,
+                        status: "confirmed",
+                        holdsSlot: true,
+                    }),
+                }),
+            )
+            expect(reminders.schedule).toHaveBeenCalledTimes(1)
+            expect(tx.commits).toBe(1)
+        })
+    })
+
+    describe("nextCancellable", () => {
+        it("returns the next booking for a normalised phone scoped to the workspace", async () => {
+            const { service } = await build({
+                cancellable: [
+                    {
+                        id: "b-next",
+                        lead_id: "lead-1",
+                        customer_name: "Mai",
+                        service_name: "Cut",
+                        start_ms: Date.parse(MONDAY_NINE),
+                    },
+                ],
+            })
+
+            await expect(service.nextCancellable(WORKSPACE, "0912 345 678", NOW)).resolves.toEqual({
+                id: "b-next",
+                leadId: "lead-1",
+                customerName: "Mai",
+                serviceName: "Cut",
+                startIso: MONDAY_NINE,
+            })
+        })
+    })
+
     describe("book", () => {
         it("confirms a free time at once, plans the reminders and tells the page", async () => {
             const { service, reservation, reminders, tx } = await build()
 
             const result = await service.book(requestOf())
 
-            expect(result).toEqual({
-                ok: true,
-                state: "confirmed",
-                code: "confirmed",
-                serviceName: "Cut",
-                startIso: MONDAY_NINE,
-                alternatives: [],
-                bookingId: "b1",
-            })
+            expect(result).toMatchObject({ ok: true, state: "confirmed", serviceName: "Cut", bookingId: "b1" })
             expect(reservation.reserve).toHaveBeenCalledWith({
                 manager: expect.anything(),
                 force: false,
