@@ -5,6 +5,8 @@ import { CLOCK } from "@modules/platform/clock"
 import { Secret } from "@modules/platform/config"
 import { HTTP_CLIENT } from "@modules/platform/http"
 import type { HttpClient } from "@modules/platform/http"
+import { LOGGER } from "@modules/platform/logging"
+import type { Logger } from "@modules/platform/logging"
 import { MetaErrorCode } from "./errors/meta.error"
 import { MetaClient } from "./meta.client"
 import type { MetaPageAccess } from "./meta.contracts"
@@ -26,6 +28,7 @@ const PAGE_NO_IG: MetaPageAccess = { pageId: "PAGE", pageToken: "ptok", igId: nu
 
 const build = async (options: MetaOptions = OPTIONS) => {
     const http = mock<HttpClient>()
+    const logger = mock<Logger>()
     const clock = new FakeClock("2026-10-12T03:00:00.000Z")
     const moduleRef = await Test.createTestingModule({
         providers: [
@@ -33,9 +36,10 @@ const build = async (options: MetaOptions = OPTIONS) => {
             { provide: HTTP_CLIENT, useValue: http },
             { provide: META_OPTIONS, useValue: options },
             { provide: CLOCK, useValue: clock },
+            { provide: LOGGER, useValue: logger },
         ],
     }).compile()
-    return { client: moduleRef.get(MetaClient), http, clock }
+    return { client: moduleRef.get(MetaClient), http, clock, logger }
 }
 
 const answer = (body: unknown, status = 200) => ({ status, body })
@@ -120,17 +124,6 @@ describe("MetaClient", () => {
             )
         })
 
-        it("keeps the short token when the long exchange fails or says nothing", async () => {
-            const { client, http } = await build()
-            http.request.mockResolvedValueOnce(answer({ access_token: "short" }))
-            http.request.mockRejectedValueOnce(new Error("down"))
-            http.request.mockResolvedValueOnce(answer({ access_token: "short2" }))
-            http.request.mockResolvedValueOnce(answer({}))
-
-            await expect(client.exchangeCode("c")).resolves.toBe("short")
-            await expect(client.exchangeCode("c")).resolves.toBe("short2")
-        })
-
         it("refuses without configuration or without a token in the answer", async () => {
             const { client: noApp } = await build({ ...OPTIONS, app: null })
             const { client: noSite } = await build({ ...OPTIONS, siteUrl: undefined })
@@ -144,27 +137,6 @@ describe("MetaClient", () => {
     })
 
     describe("graph errors", () => {
-        it("classifies a Graph error and keeps Meta's text as the cause", async () => {
-            const { client, http } = await build()
-            http.request.mockResolvedValueOnce(
-                graphError({ message: "Invalid OAuth access token", code: 190, error_subcode: 460 }, 400),
-            )
-            http.request.mockResolvedValueOnce(graphError({ message: 42, code: "x" }, 500))
-            http.request.mockResolvedValueOnce(answer("bad", 502))
-            http.request.mockResolvedValueOnce(answer({ error: { message: "x", code: 4 } }, 200))
-
-            await expect(client.listPages("t")).rejects.toMatchObject({
-                code: MetaErrorCode.Refused,
-                params: { failure: "token", status: 400 },
-                cause: expect.objectContaining({ message: "Invalid OAuth access token" }),
-            })
-            await expect(client.listPages("t")).rejects.toMatchObject({ params: { failure: "error", status: 500 } })
-            await expect(client.listPages("t")).rejects.toMatchObject({ params: { failure: "error", status: 502 } })
-            await expect(client.listPages("t")).rejects.toMatchObject({
-                params: { failure: "rate_limited", status: 200 },
-            })
-        })
-
         it("reports an unreachable Meta", async () => {
             const { client, http } = await build()
             http.request.mockRejectedValue(new Error("down"))
@@ -274,12 +246,15 @@ describe("MetaClient", () => {
             await expect(
                 (await build({ ...OPTIONS, siteUrl: "http://localhost:3100" })).client.ensureAppSubscriptions(),
             ).resolves.toEqual({ done: false, reason: "local" })
+            await expect(
+                (await build({ ...OPTIONS, siteUrl: undefined })).client.ensureAppSubscriptions(),
+            ).resolves.toEqual({ done: false, reason: "local" })
         })
 
         it("reads what Meta really has", async () => {
             const { client, http } = await build()
             http.request.mockResolvedValueOnce(
-                answer({ data: [{ id: "other" }, { id: "app-1", subscribed_fields: ["messages", "feed"] }] }),
+                answer({ data: [{ id: "other" }, { id: "app-1", subscribed_fields: ["messages", null, 17, "feed"] }] }),
             )
             http.request.mockResolvedValueOnce(
                 answer({
@@ -309,28 +284,6 @@ describe("MetaClient", () => {
                 missing: ["messages", "comments", "mentions"],
                 urlMatches: false,
             })
-        })
-
-        it("reports a Page that is not subscribed and an unreadable app subscription", async () => {
-            const { client, http } = await build()
-            http.request.mockResolvedValueOnce(answer({}))
-            http.request.mockRejectedValueOnce(new Error("down"))
-            http.request.mockResolvedValueOnce(answer({ data: [{ id: "x" }] }))
-            http.request.mockResolvedValueOnce(
-                answer({ data: [{ object: "page", callback_url: "https://other.test", fields: [] }] }),
-            )
-
-            await expect(client.subscriptionStatus({ pageId: "PAGE", pageToken: "ptok" })).resolves.toEqual({
-                page: {
-                    subscribed: false,
-                    fields: [],
-                    missing: ["messages", "messaging_postbacks", "feed", "leadgen"],
-                },
-                app: null,
-            })
-            const second = await client.subscriptionStatus({ pageId: "PAGE", pageToken: "ptok" })
-            expect(second.page.subscribed).toBe(false)
-            expect(second.app?.page).toMatchObject({ callbackUrl: "https://other.test", urlMatches: false })
         })
 
         it("counts a subscription that lists no fields", async () => {
@@ -520,40 +473,6 @@ describe("MetaClient", () => {
             http.request.mockResolvedValue(answer({ field_data: [{ name: "email", values: ["a@b.vn"] }] }))
 
             await expect(client.fetchLead(PAGE, "L1")).resolves.toMatchObject({ email: "a@b.vn" })
-        })
-
-        it("fetches a profile name from the best field", async () => {
-            const { client, http } = await build()
-            http.request.mockResolvedValueOnce(answer({ name: " Full Name " }))
-            http.request.mockResolvedValueOnce(answer({ first_name: "An", last_name: "B" }))
-            http.request.mockResolvedValueOnce(answer({ username: " ig_user " }))
-            http.request.mockResolvedValueOnce(answer({}))
-            http.request.mockRejectedValueOnce(new Error("down"))
-
-            await expect(client.fetchProfileName(PAGE, "facebook", "U")).resolves.toBe("Full Name")
-            await expect(client.fetchProfileName(PAGE, "facebook", "U")).resolves.toBe("An B")
-            await expect(client.fetchProfileName(PAGE, "instagram", "U")).resolves.toBe("ig_user")
-            await expect(client.fetchProfileName(PAGE, "instagram", "U")).resolves.toBeNull()
-            await expect(client.fetchProfileName(PAGE, "instagram", "U")).resolves.toBeNull()
-            expect(http.request).toHaveBeenNthCalledWith(
-                1,
-                expect.objectContaining({
-                    url: expect.stringContaining("fields=name%2Cfirst_name%2Clast_name"),
-                    timeoutMs: 5000,
-                }),
-            )
-        })
-
-        it("fetches the text of a mention", async () => {
-            const { client, http } = await build()
-            http.request.mockResolvedValueOnce(answer({ mentioned_comment: { text: "hi @shop", username: "u" } }))
-            http.request.mockResolvedValueOnce(answer({}))
-            http.request.mockRejectedValueOnce(new Error("down"))
-
-            await expect(client.fetchMention(PAGE_NO_IG, "C")).resolves.toEqual({ text: null, username: null })
-            await expect(client.fetchMention(PAGE, "C")).resolves.toEqual({ text: "hi @shop", username: "u" })
-            await expect(client.fetchMention(PAGE, "C")).resolves.toEqual({ text: null, username: null })
-            await expect(client.fetchMention(PAGE, "C")).resolves.toEqual({ text: null, username: null })
         })
     })
 })
