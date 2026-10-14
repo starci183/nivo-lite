@@ -64,6 +64,11 @@ describe("bankNameOf", () => {
         expect(bankNameOf("bank", "other:evt-1")).toBeNull()
     })
 
+    it("answers nothing for an empty provider, with or without an event suffix", () => {
+        expect(bankNameOf("bank", "")).toBeNull()
+        expect(bankNameOf("bank", ":evt-1")).toBeNull()
+    })
+
     it("answers nothing when the channel is not a bank feed", () => {
         expect(bankNameOf("zalo", "vietcombank:evt-1")).toBeNull()
     })

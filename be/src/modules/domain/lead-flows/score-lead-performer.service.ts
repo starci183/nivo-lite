@@ -16,10 +16,25 @@ import type { FlowFields } from "./lead-flow-fields.policy"
 import { contactIn } from "./lead-flow-identity.policy"
 import { LeadFlowKitService } from "./lead-flow-kit.service"
 import { cleanSignals, handoffReady, mergeSignals, scoreLead } from "./lead-flow-score.policy"
-import { effectiveConfidence, escalationOf, nextStep, parseAnalysis, recordAnswer } from "./lead-flow-steps.policy"
+import {
+    effectiveConfidence,
+    escalationFromText,
+    escalationOf,
+    nextStep,
+    parseAnalysis,
+    recordAnswer,
+} from "./lead-flow-steps.policy"
 import { LeadFlowTurnService } from "./lead-flow-turn.service"
 import { sourceKindOf } from "./lead-flow.mapper"
-import type { Analysis, FlowSetup, LeadFlow, LeadFlowPatch, Signals, SourceKind } from "./lead-flows.contracts"
+import type {
+    Analysis,
+    EscalationReason,
+    FlowSetup,
+    LeadFlow,
+    LeadFlowPatch,
+    Signals,
+    SourceKind,
+} from "./lead-flows.contracts"
 
 /** What score_lead decides: a step of the state machine, or `comment` (answer in public and in private). */
 type Plan = "comment" | "escalate" | "greet" | "ask" | "ask_contact" | "handoff" | "follow_up" | "close" | "hold"
@@ -89,16 +104,18 @@ export class ScoreLeadPerformerService implements WorkPerformer, OnModuleInit {
             comment_id: field(fields, "comment_id"),
             post_id: field(fields, "post_id"),
         }
-        const reason = escalationOf({ text, flags: read.analysis?.flags ?? null, confidence, aiFailed: read.aiFailed })
-        if (reason !== null || read.analysis === null) {
-            const why = reason ?? "unreadable"
-            await this.kit.escalate(ctx, { flow, reason: why, text, turn, item, notify: kind === "dm" })
-            const summary = this.kit.text(ctx.locale, "score.escalate", {
-                name: this.kit.nameOf(ctx, flow),
-                reason: this.kit.reasonText(ctx.locale, why),
-            })
-            return this.proposal(item, summary, { ...fields, ...base, step: "escalate", escalation: why, confidence })
-        }
+        if (read.analysis === null)
+            return this.escalateProposal(
+                ctx,
+                item,
+                context,
+                { ...fields, ...base },
+                escalationFromText(text) ?? "unreadable",
+                confidence,
+            )
+        const reason = escalationOf({ text, flags: read.analysis.flags, confidence, aiFailed: read.aiFailed })
+        if (reason !== null)
+            return this.escalateProposal(ctx, item, context, { ...fields, ...base }, reason, confidence)
         return this.decide(ctx, item, context, read.analysis, { ...fields, ...base, confidence })
     }
 
@@ -245,6 +262,24 @@ export class ScoreLeadPerformerService implements WorkPerformer, OnModuleInit {
 
     private proposal(item: WorkItem, summary: string, fields: FlowFields): Prepared {
         return { proposal: { ...item.proposal, summary, fields } }
+    }
+
+    /** Shares the unchanged escalation effects between a failed reading and a readable turn requiring a person. */
+    private async escalateProposal(
+        ctx: WorkContext,
+        item: WorkItem,
+        context: TurnContext,
+        fields: FlowFields,
+        reason: EscalationReason,
+        confidence: number,
+    ): Promise<Prepared> {
+        const { flow, kind, turn, text } = context
+        await this.kit.escalate(ctx, { flow, reason, text, turn, item, notify: kind === "dm" })
+        const summary = this.kit.text(ctx.locale, "score.escalate", {
+            name: this.kit.nameOf(ctx, flow),
+            reason: this.kit.reasonText(ctx.locale, reason),
+        })
+        return this.proposal(item, summary, { ...fields, step: "escalate", escalation: reason, confidence })
     }
 
     private storedSignals(flow: LeadFlow, raw: string): Signals {

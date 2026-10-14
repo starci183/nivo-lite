@@ -77,7 +77,8 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
 
 const record = (value: unknown): Record<string, unknown> => (isRecord(value) ? value : {})
 
-const iso = (value: Date | string): string => {
+const iso = (value: Date | string | null | undefined): string => {
+    if (value === null || value === undefined) return ""
     if (typeof value === "string") return value
     return value.toISOString()
 }

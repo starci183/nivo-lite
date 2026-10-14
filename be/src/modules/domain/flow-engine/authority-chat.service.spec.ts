@@ -307,6 +307,44 @@ describe("AuthorityChatService", () => {
         )
     })
 
+    it.each([
+        ["en", { vi: "Xac nhan don" }, "saved_order"],
+        ["en", { vi: "Xac nhan don", en: null }, "saved_order"],
+        ["vi", { en: "Confirm order" }, "saved_order"],
+        ["vi", { vi: null, en: "Confirm order" }, "saved_order"],
+        ["en", { vi: "Xac nhan don", en: "" }, ""],
+        ["vi", { vi: "", en: "Confirm order" }, ""],
+    ] as const)("preserves the %s database label result for %s", async (locale, label, expected) => {
+        const { service, parseAuthorityChat, saveRule, catalog, actionCatalog } = await build()
+        actionCatalog.list.mockResolvedValue([Object.assign(actionOf(), { label })])
+        parseAuthorityChat.mockResolvedValue({ ...NOTHING, rules: [{ action: "confirm_order", mode: "never" }] })
+        saveRule.mockResolvedValue(ruleOf({ action: "saved_order", mode: "never", limit_vnd: null }))
+
+        await expect(service.apply(member, "order", locale)).resolves.toEqual({
+            summary: "flowEngine.authoritySaved",
+            authority: null,
+            rules: [ruleOf()],
+        })
+
+        expect(catalog.get).toHaveBeenCalledWith(
+            "flowEngine.rule",
+            { dept: "Sales", action: expected, mode: "flowEngine.mode.never" },
+            locale,
+        )
+    })
+
+    it("formats the saved action key when a rule line has no plan", async () => {
+        const { service, catalog } = await build()
+
+        await expect(service["ruleLine"](ruleOf(), undefined, "en")).resolves.toBe("flowEngine.rule")
+
+        expect(catalog.get).toHaveBeenCalledWith(
+            "flowEngine.rule",
+            { dept: "Sales", action: "confirm_order", mode: "flowEngine.mode.ask" },
+            "en",
+        )
+    })
+
     it("uses the stated amount for an explicit rule and retains required fields in the audit", async () => {
         const { service, parseAuthorityChat, rules, saveRule, decide, catalog } = await build()
         const before = ruleOf({ mode: "auto", limit_vnd: 1000, required_fields: ["address"] })

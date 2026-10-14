@@ -1,5 +1,6 @@
 import { Test } from "@nestjs/testing"
 import { fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
+import type { WorkContext } from "@modules/domain/decisions"
 import type { LeadRecordRow } from "@modules/domain/leads"
 import { LeadRecordsService } from "@modules/domain/leads"
 import { ResponsibilityJournalService } from "@modules/domain/responsibilities"
@@ -20,6 +21,7 @@ import { LeadActionsError, LeadActionsErrorCode } from "./errors/lead-actions.er
 import { LeadActionAiService } from "./lead-action-ai.service"
 import { LeadActionFlowService } from "./lead-action-flow.service"
 import { LeadActionsService } from "./lead-actions.service"
+import type { LeadActionInput } from "./lead-actions.contracts"
 import type { LeadActionRunRow } from "./persistence/lead-actions.rows"
 import {
     BEGIN_LEAD_ACTION,
@@ -312,6 +314,47 @@ describe("LeadActionsService", () => {
             7,
             JSON.stringify(result),
         ])
+    })
+
+    it.each([
+        ["refresh-context", undefined],
+        ["refresh-context", null],
+        ["refresh-context", ""],
+        ["suggest-owner", undefined],
+        ["suggest-owner", null],
+        ["suggest-owner", ""],
+    ] as const)("passes an empty lead id to %s for a raw %s value", async (action, leadId) => {
+        const { actions, ai } = await build()
+        const input: LeadActionInput = {}
+        Object.defineProperty(input, "leadId", { value: leadId })
+        const row: LeadActionRunRow = { ...running, action, input }
+        const ctx: WorkContext = { workspaceId: "ws-1", actor: "Lan", locale: "vi" }
+        const result = { leadId: "", contextSummary: "No lead" }
+        ai.refreshContext.mockResolvedValue(result)
+        ai.suggestOwner.mockResolvedValue(result)
+
+        await expect(actions["execute"](ctx, row)).resolves.toEqual(result)
+        const selected = action === "refresh-context" ? ai.refreshContext : ai.suggestOwner
+        const args = action === "refresh-context" ? [ctx, ""] : [ctx, "user-1", ""]
+        expect(selected).toHaveBeenCalledWith(...args)
+    })
+
+    it.each([
+        ["refresh-context", "leadId", undefined],
+        ["refresh-context", "leadId", null],
+        ["refresh-context", "leadId", ""],
+        ["draft-execution", "responsibilityId", undefined],
+        ["draft-execution", "responsibilityId", null],
+        ["draft-execution", "responsibilityId", ""],
+    ] as const)("checks %s with an empty %s for a raw %s value", async (action, field, value) => {
+        const { actions, leads, responsibilities } = await build()
+        const input: LeadActionInput = {}
+        Object.defineProperty(input, field, { value })
+        responsibilities.find.mockResolvedValue(mock<ResponsibilityRecord>({ id: RESPONSIBILITY, lead_id: LEAD }))
+
+        await expect(actions["requireTarget"]("ws-1", action, input)).resolves.toBeUndefined()
+        const selected = action === "draft-execution" ? responsibilities.find : leads.require
+        expect(selected).toHaveBeenCalledWith("ws-1", "")
     })
 
     it("records invalid persisted input as a domain refusal without executing", async () => {

@@ -152,6 +152,7 @@ describe("ConfirmOrderPerformerService", () => {
             writer,
             evidence,
             events,
+            automationEvents,
         }
     }
 
@@ -279,6 +280,50 @@ describe("ConfirmOrderPerformerService", () => {
 
             expect(prepared.patch?.subject_id).toBe("ord-2")
         })
+
+        it("drafts an order directly when the item has no subject id", async () => {
+            const { service, orders } = await build()
+
+            const prepared = await service.prepare(ctx, itemOf({ subject_id: null }))
+
+            expect(prepared.patch).toEqual({ subject_type: "order", subject_id: "ord-2", lead_id: "lead-1" })
+            expect(orders.find).not.toHaveBeenCalled()
+            expect(orders.draft).toHaveBeenCalledWith({
+                workspaceId: "ws-1",
+                leadId: "lead-1",
+                inboundEventId: null,
+                orderNo: null,
+                items: "2 tea boxes",
+                amountVnd: 300000,
+                origin: "live",
+            })
+        })
+
+        it("captures an empty input without model extraction or message evidence", async () => {
+            const { service, inbound, writer, evidence } = await build()
+            inbound.find.mockResolvedValue(eventOf({ body: "" }))
+
+            const prepared = await service.prepare(
+                ctx,
+                itemOf({
+                    subject_type: "inbound",
+                    lead_id: null,
+                    inbound_event_id: "ev-1",
+                    proposal: { summary: "Order", fields: {} },
+                }),
+            )
+
+            expect(prepared.patch).toEqual({ subject_type: "order", subject_id: "ord-2", lead_id: "lead-2" })
+            expect(writer.extractOrder).not.toHaveBeenCalled()
+            expect(evidence.log).toHaveBeenCalledWith(ctx, {
+                lead_id: "lead-2",
+                work_item_id: "item-1",
+                kind: "lead.captured",
+                actor: "Chatbot",
+                summary: "capturedFrom|channel.zalo",
+                evidence: null,
+            })
+        })
     })
 
     describe("perform", () => {
@@ -357,6 +402,61 @@ describe("ConfirmOrderPerformerService", () => {
             await expect(
                 service.perform(ctx, itemOf({ subject_id: null }), proposalOf({}), { name: "Mai" }),
             ).rejects.toMatchObject({ code: WorkPerformersErrorCode.SubjectMissing })
+        })
+
+        it("publishes the confirmed order and won deal with the stored customer details", async () => {
+            const { service, orders, leads, automationEvents } = await build()
+            orders.confirm.mockResolvedValue(orderOf({ status: "confirmed" }))
+            leads.find.mockResolvedValue(leadOf())
+
+            await expect(
+                service.perform(
+                    ctx,
+                    itemOf(),
+                    proposalOf({ customer: "Proposal name", items: "2 tea boxes" }, 300000),
+                    {
+                        name: "Mai",
+                    },
+                ),
+            ).resolves.toEqual({
+                summary: "orderConfirmed|SO-1|300000 VND",
+                evidence: "captured",
+                href: "/leads/lead-1",
+                lead_id: "lead-1",
+            })
+            expect(leads.find).toHaveBeenCalledWith("ws-1", "lead-1")
+            expect(automationEvents.publish.mock.calls).toEqual([
+                [
+                    "ws-1",
+                    "order.confirmed",
+                    {
+                        order_id: "ord-1",
+                        order_no: "SO-1",
+                        lead_id: "lead-1",
+                        customer: "Lan",
+                        items: "2 tea boxes",
+                        amount_vnd: 300000,
+                        channel: "Telegram",
+                        confirmed_by: "Mai",
+                        status: "confirmed",
+                    },
+                    "order.confirmed:ord-1",
+                ],
+                [
+                    "ws-1",
+                    "deal.won",
+                    {
+                        lead_id: "lead-1",
+                        name: "Lan",
+                        company: "Hue Tea",
+                        channel: "Telegram",
+                        need: "tea",
+                        order_no: "SO-1",
+                        amount_vnd: 300000,
+                    },
+                    "deal.won:lead-1",
+                ],
+            ])
         })
     })
 

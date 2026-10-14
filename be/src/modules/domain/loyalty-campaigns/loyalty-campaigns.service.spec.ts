@@ -11,9 +11,18 @@ import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { MESSAGE_CATALOG } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
 import { LoyaltyCampaignsErrorCode } from "./errors/loyalty-campaigns.error"
-import type { CampaignParams, Segment } from "./loyalty-campaigns.contracts"
+import type { CampaignParams, LoyaltyCampaignView, Segment } from "./loyalty-campaigns.contracts"
 import { LoyaltyCampaignsService } from "./loyalty-campaigns.service"
-import { COUNT_SENT_SINCE, INSERT_CAMPAIGN } from "./persistence/loyalty-campaigns.sql"
+import type { LoyaltyCampaignRow } from "./persistence/loyalty-campaigns.rows"
+import {
+    ATTACH_CAMPAIGN_DECISION,
+    COUNT_SENT_SINCE,
+    FAIL_CAMPAIGN_DRAFT,
+    FINISH_CAMPAIGN_DRAFT,
+    INSERT_CAMPAIGN,
+    INSERT_WAITING_CAMPAIGN,
+    LIST_CAMPAIGNS,
+} from "./persistence/loyalty-campaigns.sql"
 
 const NOW = Date.UTC(2026, 9, 12)
 const ANY: Segment = { tiers: [], inactiveDays: 0, birthdayThisMonth: false, minSpendVnd: 0 }
@@ -32,6 +41,42 @@ const memberOf = builder<LoyaltyMember>({
     note: "",
 })
 const paramsOf = builder<CampaignParams>({ workspaceId: "ws-1", name: "", segment: ANY, brief: "", createdBy: "Owner" })
+const rowOf = builder<LoyaltyCampaignRow>({
+    id: "k1",
+    name: "Autumn",
+    segment: ANY,
+    draft: "Hello {ten_khach}",
+    status: "draft",
+    work_item_id: "decision-1",
+    recipients: 3,
+    sent: 1,
+    queued: 1,
+    failed: 0,
+    skipped: 1,
+    draft_ms: 40,
+    created_by: "Owner",
+    created_at: new Date(NOW),
+    finished_at: null,
+})
+const CAMPAIGN: LoyaltyCampaignView = {
+    id: "k1",
+    name: "Autumn",
+    segment: ANY,
+    messageDraft: "Hello {ten_khach}",
+    draft: "Hello {ten_khach}",
+    status: "draft",
+    workItemId: "decision-1",
+    recipients: 3,
+    sent: 1,
+    queued: 1,
+    failed: 0,
+    skipped: 1,
+    draftMs: 40,
+    createdBy: "Owner",
+    createdAt: "2026-10-12T00:00:00.000Z",
+    finishedAt: null,
+    errorCode: null,
+}
 const catalog = mock<MessageCatalog>({
     get: (key, params) =>
         `${key}|${Object.entries(params)
@@ -201,6 +246,118 @@ describe("LoyaltyCampaignsService", () => {
             const { service } = await build({ members: [], entityManager })
 
             await expect(service.sentSince("ws-1", "2026-09-12T00:00:00.000Z")).resolves.toBe(6)
+        })
+    })
+
+    describe("prepare", () => {
+        it("writes the waiting draft through the producer's transaction", async () => {
+            const { service, entityManager } = await build({ members: [memberOf()] })
+            const tx = mockEntityManager({ query: [INSERT_WAITING_CAMPAIGN, [{ id: "waiting-1" }]] })
+
+            await expect(
+                service.prepare(paramsOf({ name: " Autumn ", brief: " 10 percent off " }), tx),
+            ).resolves.toEqual({
+                campaignId: "waiting-1",
+                status: "waiting",
+                recipients: 1,
+                draft: "loyalty.promo.template|shop=Spa,offer=10 percent off",
+            })
+
+            expect(tx.query).toHaveBeenCalledWith(INSERT_WAITING_CAMPAIGN, [
+                "ws-1",
+                "Autumn",
+                JSON.stringify(ANY),
+                "loyalty.promo.template|shop=Spa,offer=10 percent off",
+                1,
+                "Owner",
+            ])
+            expect(entityManager.query).not.toHaveBeenCalled()
+        })
+    })
+
+    describe("list", () => {
+        it("reads the latest twenty campaigns with their delivery counts", async () => {
+            const entityManager = mockEntityManager({ query: [LIST_CAMPAIGNS, [rowOf()]] })
+            const { service } = await build({ members: [], entityManager })
+
+            await expect(service.list("ws-1")).resolves.toEqual([CAMPAIGN])
+
+            expect(entityManager.query).toHaveBeenCalledWith(LIST_CAMPAIGNS, ["ws-1", null, 20])
+        })
+
+        it.each([
+            [0, 1],
+            [35, 35],
+            [101, 100],
+        ])("clamps requested list limit %i to %i", async (requested, expected) => {
+            const entityManager = mockEntityManager({ query: [LIST_CAMPAIGNS, []] })
+            const { service } = await build({ members: [], entityManager })
+
+            await expect(service.list("ws-1", requested)).resolves.toEqual([])
+
+            expect(entityManager.query).toHaveBeenCalledWith(LIST_CAMPAIGNS, ["ws-1", null, expected])
+        })
+    })
+
+    describe("get", () => {
+        it("reads the campaign only within the selected workspace", async () => {
+            const entityManager = mockEntityManager({ query: [LIST_CAMPAIGNS, [rowOf()]] })
+            const { service } = await build({ members: [], entityManager })
+
+            await expect(service.get("ws-1", "k1")).resolves.toEqual(CAMPAIGN)
+
+            expect(entityManager.query).toHaveBeenCalledWith(LIST_CAMPAIGNS, ["ws-1", "k1", 1])
+        })
+
+        it("rejects a campaign absent from the selected workspace", async () => {
+            const entityManager = mockEntityManager({ query: [LIST_CAMPAIGNS, []] })
+            const { service } = await build({ members: [], entityManager })
+
+            await expect(service.get("ws-2", "k1")).rejects.toMatchObject({
+                code: LoyaltyCampaignsErrorCode.NotFound,
+            })
+
+            expect(entityManager.query).toHaveBeenCalledWith(LIST_CAMPAIGNS, ["ws-2", "k1", 1])
+        })
+    })
+
+    describe("draft settlement", () => {
+        it("finishes a waiting draft through the fenced writer's transaction", async () => {
+            const { service, entityManager } = await build({ members: [] })
+            const tx = mockEntityManager({ query: [FINISH_CAMPAIGN_DRAFT, [{ id: "k1" }]] })
+
+            await expect(service.finishDraft(tx, "ws-1", "k1", "{ten_khach} thanks", 40)).resolves.toBeUndefined()
+
+            expect(tx.query).toHaveBeenCalledWith(FINISH_CAMPAIGN_DRAFT, ["ws-1", "k1", "{ten_khach} thanks", 40])
+            expect(entityManager.query).not.toHaveBeenCalled()
+        })
+
+        it("fails an exhausted campaign through the workspace-scoped statement", async () => {
+            const entityManager = mockEntityManager({ query: [FAIL_CAMPAIGN_DRAFT, []] })
+            const { service } = await build({ members: [], entityManager })
+
+            await expect(service.failDraft("ws-1", "k1")).resolves.toBeUndefined()
+
+            expect(entityManager.query).toHaveBeenCalledWith(FAIL_CAMPAIGN_DRAFT, ["ws-1", "k1"])
+        })
+    })
+
+    describe("attachDecision", () => {
+        it.each([
+            { rows: [{ id: "k1" }], attached: true },
+            { rows: [], attached: false },
+        ])("reports whether the decision attached: $attached", async ({ rows, attached }) => {
+            const entityManager = mockEntityManager({ query: [ATTACH_CAMPAIGN_DECISION, rows] })
+            const { service } = await build({ members: [], entityManager })
+
+            await expect(service.attachDecision("ws-1", "k1", "decision-1", "approval")).resolves.toBe(attached)
+
+            expect(entityManager.query).toHaveBeenCalledWith(ATTACH_CAMPAIGN_DECISION, [
+                "ws-1",
+                "k1",
+                "decision-1",
+                "approval",
+            ])
         })
     })
 })
