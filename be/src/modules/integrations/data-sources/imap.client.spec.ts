@@ -252,6 +252,19 @@ describe("ImapClient", () => {
             await expect(client.listFolders(login)).rejects.toBe(failure)
             expect(logger.warn).toHaveBeenCalledWith(ImapLogEvent.LogoutFailed, { reason: IMAP_TEXT.generic })
         })
+
+        it("propagates cleanup failure when listing folders also fails", async () => {
+            const { client, logger } = await build()
+            const failure = new DataSourcesError({ code: DataSourcesErrorCode.Unavailable })
+            mockImap.listError = new Error("list unavailable")
+            mockImap.logoutError = new Error("logout unavailable")
+            logger.warn.mockImplementation(() => {
+                throw failure
+            })
+
+            await expect(client.listFolders(login)).rejects.toBe(failure)
+            expect(logger.warn).toHaveBeenCalledWith(ImapLogEvent.LogoutFailed, { reason: IMAP_TEXT.generic })
+        })
     })
 
     describe("pull", () => {
@@ -458,6 +471,20 @@ describe("ImapClient", () => {
             expect(mockImap.searches).toEqual([
                 { query: { since: new Date("2026-01-01T00:00:00.000Z") }, options: { uid: true } },
             ])
+        })
+
+        it("propagates a lock release failure when delivery also fails", async () => {
+            const { client } = await build()
+            const failure = new DataSourcesError({ code: DataSourcesErrorCode.Unavailable })
+            mockImap.releaseError = failure
+            mockImap.searchResult = [1]
+            mockImap.messages = [messageOf(1, "2026-01-02T00:00:00.000Z", "raw")]
+            const delivery = mock<{ write: ImapPullRequest["deliver"] }>()
+            delivery.write.mockRejectedValue(new Error("delivery unavailable"))
+
+            await expect(client.pull(login, pull({ deliver: delivery.write }))).rejects.toBe(failure)
+            expect(delivery.write).toHaveBeenCalledTimes(1)
+            expect(mockImap.released).toBe(true)
         })
     })
 })

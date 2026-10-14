@@ -66,13 +66,15 @@ export class DatabaseClient {
         } catch (error) {
             throw toDatabaseError(error)
         }
+        let outcome: T
         try {
-            return await run(session)
+            outcome = await run(session)
         } catch (error) {
-            throw toDatabaseError(error)
-        } finally {
             await session.close()
+            throw toDatabaseError(error)
         }
+        await session.close()
+        return outcome
     }
 
     private open(target: DatabaseTarget, address: string): Promise<DatabaseSession> {

@@ -138,4 +138,49 @@ describe("DatabaseClient", () => {
         expect(session.close).toHaveBeenCalledTimes(1)
         expect(session.query).not.toHaveBeenCalled()
     })
+
+    it("propagates a public-host resolution failure before opening a database session", async () => {
+        const { client, publicHost } = await build()
+        const failure = new Error("host unavailable")
+        publicHost.resolve.mockRejectedValue(failure)
+        const postgres = jest.spyOn(drivers, "openPostgres")
+        const mysql = jest.spyOn(drivers, "openMysql")
+        const mssql = jest.spyOn(drivers, "openMssql")
+
+        await expect(client.listTables(target("postgres"))).rejects.toBe(failure)
+        expect(publicHost.resolve).toHaveBeenCalledWith("db.example")
+        expect(postgres).not.toHaveBeenCalled()
+        expect(mysql).not.toHaveBeenCalled()
+        expect(mssql).not.toHaveBeenCalled()
+    })
+
+    it("maps a table read failure and closes the session", async () => {
+        const { client } = await build()
+        const session = sessionOf("postgres")
+        const failure = new Error("query denied")
+        session.query.mockRejectedValue(failure)
+        jest.spyOn(drivers, "openPostgres").mockResolvedValue(session)
+
+        await expect(
+            client.read(target("postgres"), (reader) => reader.readTable(selection, { limit: 10 })),
+        ).rejects.toMatchObject({ code: DataSourcesErrorCode.Rejected, cause: failure })
+        expect(session.query).toHaveBeenCalledWith(
+            'SELECT "id", "title", "updated_at", "note", ("updated_at")::text AS "__nivo_cursor" FROM "public"."orders" ORDER BY "updated_at" ASC LIMIT 10',
+            [],
+        )
+        expect(session.close).toHaveBeenCalledTimes(1)
+    })
+
+    it("propagates a cleanup failure when the read callback also rejects", async () => {
+        const { client } = await build()
+        const session = sessionOf("postgres")
+        const readFailure = new Error("read failed")
+        const cleanupFailure = new Error("cleanup failed")
+        session.close.mockRejectedValue(cleanupFailure)
+        jest.spyOn(drivers, "openPostgres").mockResolvedValue(session)
+
+        await expect(client.read(target("postgres"), () => Promise.reject(readFailure))).rejects.toBe(cleanupFailure)
+        expect(session.close).toHaveBeenCalledTimes(1)
+        expect(session.query).not.toHaveBeenCalled()
+    })
 })

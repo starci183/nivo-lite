@@ -60,17 +60,19 @@ export class ImapClient {
     /** Logs in and lists the selectable folder paths, INBOX first. */
     async listFolders(login: ImapLogin): Promise<Array<string>> {
         const client = await this.open(login)
+        let paths: Array<string>
         try {
             const list = await client.list()
-            return list
+            paths = list
                 .filter((box) => !box.flags.has(String.raw`\Noselect`) && !box.flags.has(String.raw`\NonExistent`))
                 .map((box) => box.path)
                 .sort(compareFolders)
         } catch (error) {
-            throw toError(error)
-        } finally {
             await this.close(client)
+            throw toError(error)
         }
+        await this.close(client)
+        return paths
     }
 
     /** Reads the new messages of the folders, hands them to `deliver` folder by folder and answers the new cursors. */
@@ -148,13 +150,9 @@ export class ImapClient {
         } catch (error) {
             return failed(error)
         }
-        try {
-            return await this.readOpenFolder(client, folder, request)
-        } catch (error) {
-            return failed(error)
-        } finally {
-            lock.release()
-        }
+        const outcome = await this.readOpenFolder(client, folder, request).catch((error: unknown) => failed(error))
+        lock.release()
+        return outcome
     }
 
     private async newUids(client: ImapFlow, known: number, since: Date): Promise<Array<number>> {

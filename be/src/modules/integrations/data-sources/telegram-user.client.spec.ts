@@ -456,4 +456,34 @@ describe("TelegramUserClient", () => {
         expect(logger.error).toHaveBeenCalledWith(TelegramUserLogEvent.CloseFailed, mockTg.destroyError, {})
         expect(mockTg.destroyed).toBe(true)
     })
+
+    it("propagates a cleanup logger failure after the connection fails", async () => {
+        const { client, logger } = await build()
+        const failure = new DataSourcesError({ code: DataSourcesErrorCode.Unavailable })
+        mockTg.connectError = { errorMessage: "PHONE_CODE_INVALID" }
+        mockTg.destroyError = new Error("destroy unavailable")
+        logger.error.mockImplementation(() => {
+            throw failure
+        })
+
+        await expect(client.sendCode("+841234")).rejects.toBe(failure)
+        expect(logger.error).toHaveBeenCalledWith(TelegramUserLogEvent.CloseFailed, mockTg.destroyError, {})
+        expect(mockTg.destroyed).toBe(true)
+    })
+
+    it("propagates a synchronous failure when destroying the Telegram client", async () => {
+        const { client, logger } = await build()
+        const failure = new DataSourcesError({ code: DataSourcesErrorCode.Unavailable })
+        const session = mock<StringSession>({ save: () => "saved-session" })
+        const connection = mock<TelegramClient>({ session })
+        connection.connect.mockResolvedValue(true)
+        connection.sendCode.mockResolvedValue({ phoneCodeHash: "hash-1", isCodeViaApp: true })
+        connection.destroy.mockImplementation(() => {
+            throw failure
+        })
+        clientSpy.mockReturnValue(connection)
+
+        await expect(client.sendCode("+841234")).rejects.toBe(failure)
+        expect(logger.error).not.toHaveBeenCalled()
+    })
 })
