@@ -5,6 +5,7 @@ import { AgentConversationsErrorCode } from "@modules/domain/agent-conversations
 import { KnowledgeGapsService } from "@modules/domain/knowledge-gaps"
 import type { GapRecord } from "@modules/domain/knowledge-gaps"
 import { MODULE_CATALOG, MODULE_CATEGORIES, ModulesService } from "@modules/domain/modules"
+import type { ModuleDefinition } from "@modules/domain/modules"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import type { WorkspaceMember } from "@modules/domain/workspace-members"
 import { CLOCK } from "@modules/platform/clock"
@@ -121,7 +122,7 @@ const build = async (em: MockEntityManager) => {
             { provide: ModulesService, useValue: modules },
         ],
     }).compile()
-    return { service: moduleRef.get(ChatbotWorkbenchService), members, knowledgeGaps }
+    return { service: moduleRef.get(ChatbotWorkbenchService), members, knowledgeGaps, modules }
 }
 
 const EMPTY_METRICS = { today: 0, waiting: 0, p50FirstResponseMin: null, sample: 0, leadsCaptured7d: 0 }
@@ -414,6 +415,24 @@ describe("ChatbotWorkbenchService", () => {
     })
 
     describe("gaps", () => {
+        it.each([{ key: "chatbot" }, { key: "chatbot", audience: undefined }, { key: "chatbot", audience: null }])(
+            "defaults a catalog lens with a missing or nullish audience to internal: %p",
+            async (definition) => {
+                const em = mockEntityManager({ query: [LIST_CHATBOT_LENSES, [{ module: "chatbot", name: "Mai" }]] })
+                const { service, modules } = await build(em)
+                const module = Object.assign({ ...mock<ModuleDefinition>({ key: "chatbot" }) }, definition)
+                modules.catalog.mockResolvedValue({
+                    categories: MODULE_CATEGORIES,
+                    modules: [module],
+                })
+
+                await expect(service.gaps("u-1", "ws-1")).resolves.toEqual({
+                    gaps: [GAP],
+                    lenses: [{ module: "chatbot", name: "Mai", audience: "internal" }],
+                })
+            },
+        )
+
         it("answers the open gaps and one lens per known module", async () => {
             const em = mockEntityManager({
                 query: [

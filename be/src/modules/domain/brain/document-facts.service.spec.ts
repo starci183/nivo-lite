@@ -270,23 +270,27 @@ describe("DocumentFactsService", () => {
         expect(sources.ready).not.toHaveBeenCalled()
     })
 
-    it("closes the third busy-model attempt as failed and keeps the source ready", async () => {
-        const { service, llm, extractions, sources } = await build()
-        llm.complete.mockResolvedValue(null)
-        extractions.get.mockResolvedValue(extractionOf({ attempts: 2 }))
+    it.each([ExtractionNote.ModelBusy, ExtractionNote.AnswerUnreadable])(
+        "closes the third %s attempt",
+        async (note) => {
+            const { service, llm, json, extractions, sources } = await build()
+            if (note === ExtractionNote.ModelBusy) llm.complete.mockResolvedValue(null)
+            else json.jsonOf.mockReturnValue({ other: [] })
+            extractions.get.mockResolvedValue(extractionOf({ attempts: 2 }))
 
-        await expect(service.run(PAYLOAD)).resolves.toBe("failed")
+            await expect(service.run(PAYLOAD)).resolves.toBe("failed")
 
-        expect(extractions.save).toHaveBeenCalledWith(WS, SOURCE, {
-            status: "failed",
-            windowsDone: 0,
-            factsProposed: 0,
-            windowsTotal: 1,
-            error: ExtractionNote.ModelBusy,
-            attempts: 3,
-        })
-        expect(sources.ready).toHaveBeenCalledWith(WS, SOURCE, StoredNote.FactsUnread)
-    })
+            expect(extractions.save).toHaveBeenCalledWith(WS, SOURCE, {
+                status: "failed",
+                windowsDone: 0,
+                factsProposed: 0,
+                windowsTotal: 1,
+                error: note,
+                attempts: 3,
+            })
+            expect(sources.ready).toHaveBeenCalledWith(WS, SOURCE, StoredNote.FactsUnread)
+        },
+    )
 
     it("charges an unreadable answer and retries with the unreadable note", async () => {
         const { service, json, usage, extractions } = await build()
@@ -314,22 +318,15 @@ describe("DocumentFactsService", () => {
         })
     })
 
-    it("closes the third malformed-answer attempt", async () => {
-        const { service, json, extractions, sources } = await build()
-        json.jsonOf.mockReturnValue({ other: [] })
-        extractions.get.mockResolvedValue(extractionOf({ attempts: 2 }))
-
-        await expect(service.run(PAYLOAD)).resolves.toBe("failed")
-
-        expect(extractions.save).toHaveBeenCalledWith(WS, SOURCE, {
-            status: "failed",
-            windowsDone: 0,
-            factsProposed: 0,
-            windowsTotal: 1,
-            error: ExtractionNote.AnswerUnreadable,
-            attempts: 3,
-        })
-        expect(sources.ready).toHaveBeenCalledWith(WS, SOURCE, StoredNote.FactsUnread)
+    it.each([null, undefined, ""])("keeps the original result for a provider model %s", async (model) => {
+        const { service, llm, extractions } = await build(sourceOf({ content: `${"a".repeat(3500)}b` }))
+        extractions.get.mockResolvedValue(null)
+        const answer = { text: "answer", model: "m1", usage: USAGE }
+        Object.defineProperty(answer, "model", { value: model })
+        llm.complete.mockResolvedValueOnce({ text: "answer", model: "m1", usage: USAGE }).mockResolvedValueOnce(answer)
+        await expect(service.run(PAYLOAD)).resolves.toBe("done")
+        expect(llm.complete).toHaveBeenCalledTimes(2)
+        expect(extractions.finish).toHaveBeenCalledWith(WS, SOURCE, model === "" ? "" : "m1")
     })
 
     it("files public facts with document evidence and preserves owner review and instance scope", async () => {
