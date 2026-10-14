@@ -17,10 +17,8 @@ import { AutomationScansService } from "./automation-scans.service"
 import { AutomationShopService } from "./automation-shop.service"
 import { buildPipelineRow, buildShop, buildTemplate } from "@tests/fixtures/builders/automations.builder"
 import { AutomationsLogEvent } from "./automations.log-events"
-
 const NOW = "2026-10-12T10:00:00.000Z"
 const DONE = { status: "done" as const, steps: [] }
-
 const build = async ({ pipelines, templates }: ReturnType<typeof setupOf>) => {
     const clock = new FakeClock(NOW)
     const catalog = mock<MessageCatalog>()
@@ -66,25 +64,20 @@ const build = async ({ pipelines, templates }: ReturnType<typeof setupOf>) => {
     const services = { logger, office, pipelineService, runs, shop, scans, care, operations }
     return { engine, clock, ...services, extensions, n8nRuns, n8nData }
 }
-
 const template = (key: string, overrides: Partial<TemplateDefinition> = {}) => buildTemplate({ key, ...overrides })
 const pipeline = (key: string, overrides: Partial<PipelineRow> = {}) =>
     buildPipelineRow({ id: `p-${key}`, template_key: key, ...overrides })
-
 const setupOf = (...keys: ReadonlyArray<string>) => ({
     pipelines: keys.map((key) => pipeline(key)),
     templates: keys.map((key) => template(key)),
 })
-
 const n8nSetup = (key: string, definition: Partial<TemplateDefinition> = {}, row: Partial<PipelineRow> = {}) => ({
     pipelines: [pipeline(key, row)],
     templates: [template(key, { executor: "n8n", ...definition })],
 })
-
 const expectPartialCall = (call: unknown, fields: object, ...args: ReadonlyArray<unknown>): void => {
     expect(call).toHaveBeenCalledWith(expect.objectContaining(fields), ...args)
 }
-
 describe("AutomationEngineService", () => {
     const event = {
         workspaceId: "ws-1",
@@ -94,7 +87,6 @@ describe("AutomationEngineService", () => {
     }
     describe("onBusinessEvent", () => {
         const thank = setupOf("thank_payment")
-
         it("starts the run an event plans for a pipeline that is on, later when the plan says so", async () => {
             const { engine, care, runs } = await build(thank)
             const executor: Executor = jest.fn().mockResolvedValue(DONE)
@@ -179,18 +171,37 @@ describe("AutomationEngineService", () => {
             })
             expect(runs.beginRun).toHaveBeenCalledTimes(2)
         })
-
         describe("the payment receipt workflow", () => {
             const receiptSetup = () =>
                 n8nSetup(
                     "email-payment-receipt",
-                    {
-                        trigger: { kind: "event", event: "payment.received", line: { vi: "a", en: "b" } },
-                        n8n: { webhook: "nivo/receipt", audience: "customer" },
-                    },
+                    { n8n: { webhook: "nivo/receipt", audience: "customer" } },
                     { body: "Dear {ten_khach}" },
                 )
-
+            it.each([
+                ["t-1", "i-1"],
+                [null, "i-1"],
+                [null, null],
+            ] as const)("starts only the receipt for %s/%s", async (transactionId, invoiceId) => {
+                const receipt = receiptSetup()
+                const { engine, n8nData, n8nRuns, runs, care } = await build({
+                    pipelines: [...receipt.pipelines, pipeline("thank_payment")],
+                    templates: [...receipt.templates, template("thank_payment")],
+                })
+                care.executors.mockReturnValue({ thank_payment: jest.fn().mockResolvedValue(DONE) })
+                n8nData.paymentReceipt.mockResolvedValue({ dedupe: "receipt:from-data", data: { to: "a@b.c" } })
+                await engine.startPaymentReceipt("ws-1", transactionId, invoiceId)
+                expect(n8nData.paymentReceipt).toHaveBeenCalledWith("ws-1", transactionId ?? "", invoiceId ?? "")
+                expect(n8nRuns.startRun).toHaveBeenCalledWith({
+                    workspaceId: "ws-1",
+                    templateKey: "email-payment-receipt",
+                    webhookPath: "nivo/receipt",
+                    config: { body: "Dear {ten_khach}" },
+                    data: { to: "a@b.c" },
+                    dedupe: "receipt:from-data",
+                })
+                expect(runs.beginRun).not.toHaveBeenCalled()
+            })
             it("starts a run of the shared workflow with the wording and the settings", async () => {
                 const { engine, n8nData, n8nRuns } = await build(receiptSetup())
                 n8nData.paymentReceipt.mockResolvedValue({ dedupe: "receipt:t-1", data: { to: "a@b.c" } })
@@ -235,7 +246,6 @@ describe("AutomationEngineService", () => {
                 expectPartialCall(n8nRuns.startRun, { webhookPath: "email-payment-receipt", config: {} })
             })
         })
-
         describe("a customer's reply after a review request", () => {
             const reviewSetup = () => setupOf("ask_review")
             const reply = {
@@ -244,7 +254,6 @@ describe("AutomationEngineService", () => {
                 data: { lead_id: "l-1", text: "bad" },
                 dedupe: "d-2",
             }
-
             it("checks the feedback of the last finished review request of the week", async () => {
                 const { engine, runs, care } = await build(reviewSetup())
                 runs.latestDoneRun.mockResolvedValue({ id: "r-1", attempts: 0, payload: { lead_id: "l-1" } })
@@ -282,7 +291,6 @@ describe("AutomationEngineService", () => {
             })
         })
     })
-
     describe("a decision of the owner", () => {
         const decision = (data: Record<string, unknown>) => ({ ...event, event: "decision.made", data })
         const waiting = {
@@ -293,7 +301,6 @@ describe("AutomationEngineService", () => {
                 { label: "Cho", status: "waiting" as const },
             ],
         }
-
         it("ends the run that waited and moves the trust ladder", async () => {
             const { engine, runs, pipelineService, office } = await build(setupOf())
             runs.waitingRunsFor.mockResolvedValue([waiting])
@@ -344,7 +351,6 @@ describe("AutomationEngineService", () => {
             expect(runs.waitingRunsFor).toHaveBeenCalledTimes(1)
         })
     })
-
     describe("fireTemplate", () => {
         const request = {
             workspaceId: "ws-1",
@@ -353,7 +359,6 @@ describe("AutomationEngineService", () => {
             triggerRef: "t-1",
             payload: { a: 1 },
         }
-
         it("writes a run for later when the pipeline is on", async () => {
             const { engine, care, runs, pipelineService } = await build(setupOf("thank_payment"))
             care.executors.mockReturnValue({ thank_payment: jest.fn() })
@@ -372,10 +377,8 @@ describe("AutomationEngineService", () => {
             expect(runs.beginRun).not.toHaveBeenCalled()
         })
     })
-
     describe("runTick", () => {
         const now = new Date(NOW)
-
         it("executes the runs that are due and counts them", async () => {
             const { engine, care, runs, extensions } = await build(setupOf("thank_payment", "ask_review"))
             care.executors.mockReturnValue({ thank_payment: jest.fn().mockResolvedValue(DONE) })
@@ -442,7 +445,6 @@ describe("AutomationEngineService", () => {
             await engine.runTick(now)
             expect(shop.shopOf).toHaveBeenCalledTimes(1)
         })
-
         describe("the scheduled n8n workflows", () => {
             const scheduled = (time = "17:00") =>
                 n8nSetup(
@@ -455,7 +457,6 @@ describe("AutomationEngineService", () => {
                     },
                     { config: { time } },
                 )
-
             it("starts the run that is due and counts it", async () => {
                 const { engine, n8nRuns } = await build(scheduled())
                 n8nRuns.startRun.mockResolvedValue("run-1")
@@ -489,7 +490,6 @@ describe("AutomationEngineService", () => {
             })
         })
     })
-
     describe("tickNow", () => {
         it("runs the tick at the current instant", async () => {
             const { engine, pipelineService } = await build(setupOf())
