@@ -150,13 +150,14 @@ export class ShiftsScheduleService {
             return { warnings: [] }
         }
         const setup = await this.data.loadSetup(workspaceId, false)
-        if (!setup.staff.some((item) => item.id === staffId && item.active)) {
+        const person = setup.staff.find((item) => item.id === staffId && item.active)
+        if (person === undefined) {
             throw new ShiftsError({ code: ShiftsErrorCode.StaffNotFound })
         }
         await this.entityManager.query(REASSIGN_SHIFT, [workspaceId, request.shiftId, staffId])
         const env = await this.data.loadEnv(workspaceId, row.week_start, setup)
         const shifts = await this.data.scheduleShifts(workspaceId, row.schedule_id)
-        return { warnings: this.warningsOf(setup, env, shifts, request.shiftId, staffId) }
+        return { warnings: this.warningsOf(setup, env, shifts, request.shiftId, person.name) }
     }
 
     /** Adds a shift to a draft schedule. */
@@ -251,16 +252,15 @@ export class ShiftsScheduleService {
         env: Env,
         shifts: ReadonlyArray<Shift>,
         shiftId: string,
-        staffId: string,
+        name: string,
     ): Array<string> {
-        const person = setup.staff.find((item) => item.id === staffId)
         const shift = shifts.find((item) => item.id === shiftId)
         const position = setup.positions.find((item) => item.id === shift?.positionId)?.name ?? ""
         const found = violationsOfShifts(env, shifts).get(shiftId) ?? []
         return this.words.findings(
             found.map((item) => ({
                 code: findingCode(item.kind),
-                params: { name: person?.name ?? "", position },
+                params: { name, position },
             })),
         )
     }

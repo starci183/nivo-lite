@@ -13,6 +13,23 @@ describe("baseStaffHandle", () => {
 })
 
 describe("staffHandles", () => {
+    it("reserves NIVO by default and advances past reserved numeric suffixes", () => {
+        expect([...staffHandles([{ id: "n", name: "NIVO" }])]).toEqual([["n", "nivo2"]])
+        expect([
+            ...staffHandles(
+                [
+                    { id: "a", name: "abcdefghijklmnopq" },
+                    { id: "b", name: "abcdefghijklmnopr" },
+                ],
+                ["ABCDEFGHIJKLMNOP", "abcdefghijklmnop2"],
+            ),
+        ]).toEqual([
+            ["a", "abcdefghijklmnop3"],
+            ["b", "abcdefghijklmnop4"],
+        ])
+        expect([...staffHandles([])]).toEqual([])
+    })
+
     it("numbers a repeated name and keeps clear of the reserved handles", () => {
         const handles = staffHandles(
             [

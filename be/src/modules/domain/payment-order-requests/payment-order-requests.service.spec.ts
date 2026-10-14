@@ -1,13 +1,24 @@
 import { Test } from "@nestjs/testing"
-import { mock, mockEntityManager } from "@starci/jest-preset"
+import { fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { BillingError, BillingErrorCode, BillingService } from "@modules/domain/billing"
 import type { PayableOrder } from "@modules/domain/billing"
 import { CreditsError, CreditsErrorCode, CreditsService } from "@modules/domain/credits"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
+import { PaymentOrderRequestsErrorCode } from "./errors/payment-order-requests.error"
+import { PAYMENT_ORDER_REQUEST_QUEUE } from "./payment-order-requests.contracts"
+import type { PaymentOrderRequestParams, PaymentOrderRequestStatus } from "./payment-order-requests.contracts"
 import { PaymentOrderRequestsService } from "./payment-order-requests.service"
-import type { RequestRow } from "./persistence/payment-order-requests.rows"
-import { MARK_REQUEST_DONE, MARK_REQUEST_FAILED, SELECT_REQUEST } from "./persistence/payment-order-requests.sql"
+import type { RequestRow, RequestStatusRow } from "./persistence/payment-order-requests.rows"
+import {
+    ENQUEUE_REQUEST,
+    INSERT_REQUEST,
+    MARK_EXHAUSTED_REQUEST_FAILED,
+    MARK_REQUEST_DONE,
+    MARK_REQUEST_FAILED,
+    SELECT_REQUEST,
+    SELECT_REQUEST_STATUS,
+} from "./persistence/payment-order-requests.sql"
 
 const PAYLOAD = { requestId: "request-1", workspaceId: "ws-1" }
 const REQUEST: RequestRow = {
@@ -68,6 +79,177 @@ const expectAnswered = (entityManager: MockEntityManager) => {
 }
 
 describe("PaymentOrderRequestsService", () => {
+    it.each<{
+        params: PaymentOrderRequestParams
+        values: Array<string | number | null>
+        plan: string | null
+        packs: boolean
+    }>([
+        {
+            params: { workspaceId: "ws-1", kind: "plan", target: "team", cycle: "annual", tierCredits: 500, seats: 3 },
+            values: ["plan", "team", "annual", 500, 3],
+            plan: "team",
+            packs: false,
+        },
+        {
+            params: { workspaceId: "ws-1", kind: "renew" },
+            values: ["renew", null, null, null, null],
+            plan: null,
+            packs: false,
+        },
+        {
+            params: { workspaceId: "ws-1", kind: "topup", target: "credits_1000" },
+            values: ["topup", "credits_1000", null, null, null],
+            plan: null,
+            packs: true,
+        },
+        {
+            params: { workspaceId: "ws-1", kind: "credit_pack", target: "500" },
+            values: ["credit_pack", "500", null, null, null],
+            plan: null,
+            packs: false,
+        },
+    ])(
+        "queues an authorized $params.kind request and job in one transaction",
+        async ({ params, values, plan, packs }) => {
+            const em = mockEntityManager({
+                query: [
+                    [INSERT_REQUEST, [{ id: "request-1" }]],
+                    [ENQUEUE_REQUEST, []],
+                ],
+            })
+            const tx = fakeTransaction(em)
+            const { requests, billing, credits } = await build(em)
+            credits.listPacks.mockResolvedValue([{ code: "credits_1000", credits: 1000, priceVnd: 299000, sort: 1 }])
+
+            await expect(requests.request("person-1", params)).resolves.toEqual({ id: "request-1", status: "queued" })
+
+            expect(billing.requireManager.mock.calls).toEqual([["person-1", "ws-1"]])
+            expect(billing.requirePlan.mock.calls).toEqual(plan === null ? [] : [[plan]])
+            expect(credits.listPacks).toHaveBeenCalledTimes(packs ? 1 : 0)
+            expect(em.query.mock.calls).toEqual([
+                [INSERT_REQUEST, ["ws-1", "person-1", ...values]],
+                [ENQUEUE_REQUEST, ["ws-1", PAYMENT_ORDER_REQUEST_QUEUE, "request-1"]],
+            ])
+            expect(tx.outcomes).toEqual(["commit"])
+        },
+    )
+
+    it("rolls back without queuing when insertion does not produce a request id", async () => {
+        const em = mockEntityManager({ query: [INSERT_REQUEST, []] })
+        const tx = fakeTransaction(em)
+        const { requests } = await build(em)
+
+        await expect(requests.request("person-1", { workspaceId: "ws-1", kind: "renew" })).rejects.toMatchObject({
+            code: PaymentOrderRequestsErrorCode.NotCreated,
+        })
+
+        expect(em.query.mock.calls).toEqual([[INSERT_REQUEST, ["ws-1", "person-1", "renew", null, null, null, null]]])
+        expect(tx.outcomes).toEqual(["rollback"])
+        expect(tx.committedWrites).toEqual([])
+    })
+
+    it("refuses an unknown top-up pack before opening a transaction", async () => {
+        const em = mockEntityManager({})
+        const { requests, credits } = await build(em)
+        credits.listPacks.mockResolvedValue([{ code: "other", credits: 1000, priceVnd: 299000, sort: 1 }])
+
+        await expect(
+            requests.request("person-1", { workspaceId: "ws-1", kind: "topup", target: "missing" }),
+        ).rejects.toMatchObject({
+            code: CreditsErrorCode.PackNotFound,
+        })
+
+        expect(credits.listPacks.mock.calls).toEqual([[]])
+        expect(em.transaction).not.toHaveBeenCalled()
+        expect(em.query).not.toHaveBeenCalled()
+    })
+
+    it.each<{ rows: Array<RequestStatusRow>; expected: PaymentOrderRequestStatus | null }>([
+        { rows: [], expected: null },
+        {
+            rows: [{ id: "request-1", status: "pending", order_id: null, fault: null }],
+            expected: { id: "request-1", status: "queued", resultId: null, errorCode: null },
+        },
+        {
+            rows: [{ id: "request-1", status: "done", order_id: "order-1", fault: null }],
+            expected: { id: "request-1", status: "succeeded", resultId: "order-1", errorCode: null },
+        },
+        {
+            rows: [{ id: "request-1", status: "failed", order_id: null, fault: "BILLING_FORBIDDEN" }],
+            expected: { id: "request-1", status: "failed", resultId: null, errorCode: "BILLING_FORBIDDEN" },
+        },
+    ])("looks up only the manager's request and maps its stored status: $expected", async ({ rows, expected }) => {
+        const em = mockEntityManager({ query: [SELECT_REQUEST_STATUS, rows] })
+        const { requests, billing } = await build(em)
+
+        await expect(requests.status("person-1", "ws-1", "request-1")).resolves.toEqual(expected)
+
+        expect(billing.requireManager.mock.calls).toEqual([["person-1", "ws-1"]])
+        expect(em.query.mock.calls).toEqual([[SELECT_REQUEST_STATUS, ["request-1", "ws-1", "person-1"]]])
+    })
+
+    it("ignores an unrelated terminal failure payload", async () => {
+        const em = mockEntityManager({})
+        const { requests } = await build(em)
+
+        await expect(requests.fail(null, new Error("queue failure"))).resolves.toBeUndefined()
+
+        expect(em.query).not.toHaveBeenCalled()
+    })
+
+    it.each([
+        { cause: new BillingError({ code: BillingErrorCode.Forbidden }), code: BillingErrorCode.Forbidden },
+        { cause: new Error("queue failure"), code: PaymentOrderRequestsErrorCode.JobFailed },
+    ])("records the terminal failure's stable code $code", async ({ cause, code }) => {
+        const em = mockEntityManager({ query: [MARK_EXHAUSTED_REQUEST_FAILED, []] })
+        const { requests } = await build(em)
+
+        await expect(requests.fail(PAYLOAD, cause)).resolves.toBeUndefined()
+
+        expect(em.query.mock.calls).toEqual([[MARK_EXHAUSTED_REQUEST_FAILED, ["request-1", "ws-1", code]]])
+    })
+
+    it("uses the stored annual selection when answering a plan request", async () => {
+        const em = mockEntityManager({
+            query: [
+                [SELECT_REQUEST, [{ ...REQUEST, cycle: "annual", tier_credits: 500, seats: 3 }]],
+                [MARK_REQUEST_DONE, []],
+            ],
+        })
+        const { requests, billing } = await build(em)
+
+        await expect(requests.answer(PAYLOAD)).resolves.toBe("ordered")
+
+        expect(billing.orderPlan.mock.calls).toEqual([
+            [
+                "person-1",
+                {
+                    workspaceId: "ws-1",
+                    planCode: "starter",
+                    selection: { cycle: "annual", tierCredits: 500, seats: 3 },
+                },
+            ],
+        ])
+        expectAnswered(em)
+    })
+
+    it("converts the stored add-on credit target into the ordered credits", async () => {
+        const em = mockEntityManager({
+            query: [
+                [SELECT_REQUEST, [{ ...REQUEST, kind: "credit_pack", target: "500" }]],
+                [MARK_REQUEST_DONE, []],
+            ],
+        })
+        const { requests, credits } = await build(em)
+        credits.creditPack.mockResolvedValue(PAYABLE)
+
+        await expect(requests.answer(PAYLOAD)).resolves.toBe("ordered")
+
+        expect(credits.creditPack.mock.calls).toEqual([["person-1", { workspaceId: "ws-1", credits: 500 }]])
+        expectAnswered(em)
+    })
+
     it("ignores a payload from another job without reading the database", async () => {
         const em = mockEntityManager({})
         const { requests, billing, credits } = await build(em)

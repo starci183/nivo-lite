@@ -38,11 +38,10 @@ const byDayThenEnd = (a: Seg, b: Seg): number => {
     return a.date < b.date ? -1 : 1
 }
 
-const restViolation = (chrono: ReadonlyArray<Placed>, at: number, minRest: number): Array<Violation> => {
-    const seg = chrono[at]?.seg
+const restViolation = (chrono: ReadonlyArray<Placed>, at: number, seg: Seg, minRest: number): Array<Violation> => {
     const before = chrono.slice(0, at).reverse()
-    const previous = before.find((placed) => placed.seg.date !== seg?.date)
-    if (seg === undefined || previous === undefined) return []
+    const previous = before.find((placed) => placed.seg.date !== seg.date)
+    if (previous === undefined) return []
     const gap = dayDiff(previous.seg.date, seg.date) * DAY_MIN + seg.s - previous.seg.e
     return gap < minRest * 60 ? [{ kind: "rest", detail: `${(gap / 60).toFixed(1)}h` }] : []
 }
@@ -93,7 +92,7 @@ export const violationsForSegs = (env: Env, staffId: string, segs: ReadonlyArray
         days.set(placed.seg.date, day)
         out[placed.index] = [
             ...violationsOfOne(env, staff, placed, ordered, day, week),
-            ...restViolation(chrono, at, staff.minRest),
+            ...restViolation(chrono, at, placed.seg, staff.minRest),
         ]
     })
     return out
@@ -112,7 +111,7 @@ export const violationsOfShifts = (env: Env, shifts: ReadonlyArray<Shift>): Map<
     shiftsByStaff(shifts).forEach((list, staffId) => {
         const found = violationsForSegs(env, staffId, list.map(segOf))
         list.forEach((shift, index) => {
-            const mine = found[index] ?? []
+            const mine = found.slice(index, index + 1).flat()
             if (mine.length > 0) out.set(shift.id, mine)
         })
     })

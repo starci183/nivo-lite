@@ -1,6 +1,6 @@
 import { Test } from "@nestjs/testing"
 import { FakeClock, builder, fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
-import { GenerationsService } from "@modules/domain/ai-generations"
+import { AiGenerationsError, GenerationsService } from "@modules/domain/ai-generations"
 import type { GenerationState } from "@modules/domain/ai-generations"
 import { EventsService } from "@modules/domain/events"
 import { VideoProjectScriptingService } from "@modules/domain/video-projects"
@@ -267,6 +267,157 @@ describe("VideoScriptingCompletionService", () => {
             await expect(completion.complete(WS, "generation-1")).rejects.toBe(failure)
             expect(projectWriter.start).not.toHaveBeenCalled()
             expect(tx.rollbacks).toBe(1)
+        })
+
+        it("fails a done generation whose text is null", async () => {
+            const { completion, tx, projectWriter, generations } = await build(stateOf({ text: null }))
+
+            await completion.complete(WS, "generation-1")
+
+            const manager = projectWriter.fail.mock.calls[0]?.[0]
+            expect(projectWriter.fail).toHaveBeenCalledWith(manager, {
+                workspaceId: WS,
+                projectId: "project-1",
+                generationId: "generation-1",
+                code: "code:VIDEO_SCRIPT_FAILED",
+                meta: JSON.stringify({ ...META, finished_at: NOW }),
+            })
+            expect(generations.recordFailure).toHaveBeenCalledWith(WS, "generation-1", "VIDEO_SCRIPT_FAILED", manager)
+            expect(generations.request).not.toHaveBeenCalled()
+            expect(tx.commits).toBe(1)
+        })
+
+        it("keeps an untitled answer's project title and supplies null media without a start time", async () => {
+            const meta = { ...META, started_at: null }
+            const { completion, projectWriter, events } = await build(
+                stateOf({ text: JSON.stringify({ scenes: [{ caption: "First" }, { caption: "Last" }] }) }),
+                projectOf({ inputs: {}, script_meta: meta }),
+            )
+
+            await completion.complete(WS, "generation-1")
+
+            const manager = projectWriter.finish.mock.calls[0]?.[0]
+            expect(projectWriter.finish).toHaveBeenCalledWith(manager, {
+                workspaceId: WS,
+                projectId: "project-1",
+                generationId: "generation-1",
+                script: JSON.stringify([
+                    { id: "generation-1-1", role: "hook", caption: "First", voiceover: "", visual: "", media: null },
+                    { id: "generation-1-2", role: "cta", caption: "Last", voiceover: "", visual: "", media: null },
+                ]),
+                durationMs: 0,
+                title: null,
+                meta: JSON.stringify({ ...meta, timings: { total_ms: 5 }, finished_at: NOW }),
+            })
+            expect(events.record).toHaveBeenCalledWith(
+                {
+                    workspaceId: WS,
+                    kind: "video.script_generated",
+                    actor: "OpenClaw",
+                    summary: 'video.script.generated:{"title":"Draft","scenes":2}',
+                    evidence: "1. First\n2. Last",
+                },
+                manager,
+            )
+        })
+
+        it.each(["not a date", "2026-10-13T09:00:02.000Z"])(
+            "reports zero duration for an invalid or future start time: %s",
+            async (startedAt) => {
+                const meta = { ...META, started_at: startedAt }
+                const { completion, projectWriter } = await build(stateOf(), projectOf({ script_meta: meta }))
+
+                await completion.complete(WS, "generation-1")
+
+                expect(projectWriter.finish.mock.calls[0]?.[1]).toMatchObject({
+                    workspaceId: WS,
+                    projectId: "project-1",
+                    generationId: "generation-1",
+                    durationMs: 0,
+                    title: "Spring sale",
+                    meta: JSON.stringify({ ...meta, timings: { total_ms: 5 }, finished_at: NOW }),
+                })
+            },
+        )
+
+        it("retains only string-content conversation messages when queuing a correction", async () => {
+            const { completion, generations, projectWriter } = await build(
+                stateOf({
+                    text: "invalid answer",
+                    input: {
+                        context: { projectId: "project-1" },
+                        messages: [
+                            null,
+                            { role: "user", content: 42 },
+                            { role: "assistant", content: "Previous answer" },
+                            { role: "user", content: "Use approved facts" },
+                        ],
+                    },
+                }),
+            )
+
+            await completion.complete(WS, "generation-1")
+
+            const manager = projectWriter.start.mock.calls[0]?.[0]
+            expect(generations.request).toHaveBeenCalledWith(
+                {
+                    workspaceId: WS,
+                    purpose: "video_script",
+                    module: "video",
+                    kind: "engine",
+                    responseFormat: "json",
+                    timeoutMs: 110_000,
+                    messages: [
+                        { role: "assistant", content: "Previous answer" },
+                        { role: "user", content: "Use approved facts" },
+                        { role: "user", content: VIDEO_SCRIPT_RETRY },
+                    ],
+                },
+                { projectId: "project-1", requestId: "generation-1" },
+                manager,
+            )
+            expect(projectWriter.start).toHaveBeenCalledWith(
+                manager,
+                WS,
+                "project-1",
+                JSON.stringify({ ...META, generation_id: "generation-2", attempts: 2 }),
+            )
+        })
+
+        it("records a format failure when the generation engine refuses the correction", async () => {
+            const { completion, tx, generations, projectWriter } = await build(
+                stateOf({ text: "invalid answer", input: { context: { projectId: "project-1" }, messages: null } }),
+            )
+            const failure = mock<AiGenerationsError>()
+            Object.setPrototypeOf(failure, AiGenerationsError.prototype)
+            generations.request.mockRejectedValue(failure)
+
+            await completion.complete(WS, "generation-1")
+
+            const manager = projectWriter.fail.mock.calls[0]?.[0]
+            expect(generations.request).toHaveBeenCalledWith(
+                {
+                    workspaceId: WS,
+                    purpose: "video_script",
+                    module: "video",
+                    kind: "engine",
+                    responseFormat: "json",
+                    timeoutMs: 110_000,
+                    messages: [{ role: "user", content: VIDEO_SCRIPT_RETRY }],
+                },
+                { projectId: "project-1", requestId: "generation-1" },
+                manager,
+            )
+            expect(projectWriter.fail).toHaveBeenCalledWith(manager, {
+                workspaceId: WS,
+                projectId: "project-1",
+                generationId: "generation-1",
+                code: "code:VIDEO_SCRIPT_FORMAT",
+                meta: JSON.stringify({ ...META, finished_at: NOW }),
+            })
+            expect(generations.recordFailure).toHaveBeenCalledWith(WS, "generation-1", "VIDEO_SCRIPT_FORMAT", manager)
+            expect(projectWriter.start).not.toHaveBeenCalled()
+            expect(tx.commits).toBe(1)
         })
     })
 })

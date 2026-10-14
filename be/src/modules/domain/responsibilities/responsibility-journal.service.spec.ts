@@ -22,8 +22,13 @@ import {
     FIND_LEAD_NAME,
     FIND_OPEN_RESPONSIBILITY,
     FIND_OPEN_TITLED_RESPONSIBILITY,
+    FIND_RESPONSIBILITY,
     INSERT_RESPONSIBILITY,
+    LIST_BOARD_RESPONSIBILITIES,
+    LIST_LEAD_RESPONSIBILITIES,
+    LIST_OPEN_RESPONSIBILITIES,
     LIST_RESPONSIBILITIES,
+    UPDATE_RESPONSIBILITY_NEXT_ACTION,
     UPDATE_RESPONSIBILITY_STATUS,
 } from "./persistence/responsibility-journal.sql"
 import { ResponsibilityJournalService } from "./responsibility-journal.service"
@@ -324,5 +329,120 @@ describe("ResponsibilityJournalService", () => {
             await expect(service.openNamed("ws-1", task)).resolves.toBe(false)
             expect(em.query).not.toHaveBeenCalledWith(INSERT_RESPONSIBILITY, expect.anything())
         })
+    })
+
+    describe("journey and board readers", () => {
+        it("returns the customer's journey in the query's order", async () => {
+            const rows = [rowOf(), rowOf({ id: "resp-2", status: "done" })]
+            const em = mockEntityManager({ query: [LIST_LEAD_RESPONSIBILITIES, rows] })
+            const { service } = await build(em)
+
+            await expect(service.listForLead("ws-1", "lead-1")).resolves.toEqual(rows)
+            expect(em.query).toHaveBeenCalledWith(LIST_LEAD_RESPONSIBILITIES, ["ws-1", "lead-1"])
+        })
+
+        it("returns the workspace's open follow-ups", async () => {
+            const em = mockEntityManager({ query: [LIST_OPEN_RESPONSIBILITIES, [rowOf()]] })
+            const { service } = await build(em)
+
+            await expect(service.listOpen("ws-1")).resolves.toEqual([rowOf()])
+            expect(em.query).toHaveBeenCalledWith(LIST_OPEN_RESPONSIBILITIES, ["ws-1"])
+        })
+
+        it("returns the oldest open steps for the board", async () => {
+            const em = mockEntityManager({ query: [LIST_BOARD_RESPONSIBILITIES, [rowOf()]] })
+            const { service } = await build(em)
+
+            await expect(service.listForBoard("ws-1")).resolves.toEqual([rowOf()])
+            expect(em.query).toHaveBeenCalledWith(LIST_BOARD_RESPONSIBILITIES, ["ws-1"])
+        })
+    })
+
+    describe("engine updates", () => {
+        it("finds a responsibility with the primary manager", async () => {
+            const em = mockEntityManager({ query: [FIND_RESPONSIBILITY, [rowOf()]] })
+            const { service } = await build(em)
+
+            await expect(service.find("ws-1", "resp-1")).resolves.toEqual(rowOf())
+            expect(em.query).toHaveBeenCalledWith(FIND_RESPONSIBILITY, ["ws-1", "resp-1"])
+        })
+
+        it("returns null for a missing responsibility using the caller's transaction", async () => {
+            const em = mockEntityManager()
+            const transaction = mockEntityManager({ query: [FIND_RESPONSIBILITY, []] })
+            const { service } = await build(em)
+
+            await expect(service.find("ws-2", "missing", transaction)).resolves.toBeNull()
+            expect(transaction.query).toHaveBeenCalledWith(FIND_RESPONSIBILITY, ["ws-2", "missing"])
+            expect(em.query).not.toHaveBeenCalled()
+        })
+
+        it("sets a status through the primary manager", async () => {
+            const em = mockEntityManager({ query: [UPDATE_RESPONSIBILITY_STATUS, []] })
+            const { service } = await build(em)
+
+            await expect(service.setStatus(ctx, "resp-1", "done")).resolves.toBeUndefined()
+            expect(em.query).toHaveBeenCalledWith(UPDATE_RESPONSIBILITY_STATUS, ["ws-1", "resp-1", "done"])
+        })
+
+        it("sets a status inside the supplied transaction", async () => {
+            const em = mockEntityManager()
+            const transaction = mockEntityManager({ query: [UPDATE_RESPONSIBILITY_STATUS, []] })
+            const { service } = await build(em)
+
+            await expect(service.setStatus(ctx, "resp-1", "waiting_approval", transaction)).resolves.toBeUndefined()
+            expect(transaction.query).toHaveBeenCalledWith(UPDATE_RESPONSIBILITY_STATUS, [
+                "ws-1",
+                "resp-1",
+                "waiting_approval",
+            ])
+            expect(em.query).not.toHaveBeenCalled()
+        })
+
+        it("sets the responsibility's next action", async () => {
+            const em = mockEntityManager({ query: [UPDATE_RESPONSIBILITY_NEXT_ACTION, []] })
+            const { service } = await build(em)
+
+            await expect(service.setNextAction(ctx, "resp-1", "Send quote")).resolves.toBeUndefined()
+            expect(em.query).toHaveBeenCalledWith(UPDATE_RESPONSIBILITY_NEXT_ACTION, ["ws-1", "resp-1", "Send quote"])
+        })
+    })
+
+    it("creates and records an agent assignment in the caller's transaction", async () => {
+        const em = mockEntityManager()
+        const transaction = mockEntityManager({
+            query: [
+                [FIND_AGENT_NAME, [{ id: "agent-1", name: "Sales Agent" }]],
+                [INSERT_RESPONSIBILITY, [rowOf()]],
+            ],
+        })
+        const { service, members, events } = await build(em)
+
+        await expect(service.create("user-1", "ws-1", inputOf({ owner: "agent-1" }), transaction)).resolves.toEqual(
+            rowOf(),
+        )
+        expect(members.require).toHaveBeenCalledWith("user-1", "ws-1")
+        expect(transaction.query).toHaveBeenCalledWith(FIND_AGENT_NAME, ["ws-1", "agent-1"])
+        expect(transaction.query).toHaveBeenCalledWith(INSERT_RESPONSIBILITY, [
+            "ws-1",
+            "lead-1",
+            "Call Binh",
+            "agent",
+            "agent-1",
+            "Sales Agent",
+            "Call",
+            null,
+        ])
+        expect(events.record).toHaveBeenCalledWith(
+            {
+                workspaceId: "ws-1",
+                kind: "responsibility.assigned",
+                actor: "An",
+                summary: "Sales Agent: Classify",
+                leadId: "lead-1",
+            },
+            transaction,
+        )
+        expect(em.query).not.toHaveBeenCalled()
     })
 })

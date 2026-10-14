@@ -126,6 +126,30 @@ describe("VideoProjectEditorService", () => {
             expect(events.record).not.toHaveBeenCalled()
             expect(tx.rollbacks).toBe(1)
         })
+
+        it("records the supplied title and reads the newly created draft", async () => {
+            const { editor, tx, writer, events, workbench } = await build()
+            writer.create.mockResolvedValue("project-2")
+
+            await expect(
+                editor.create("person-1", WS, { title: "Spring", goal: "offer", aspect: "9:16", targetSeconds: 30 }),
+            ).resolves.toEqual(projectOf({ id: "project-2" }))
+            const manager = writer.create.mock.calls[0]?.[0]
+            expect(manager).not.toBe(tx.em)
+            expect(writer.create).toHaveBeenCalledWith(manager, WS, "person-1", {
+                title: "Spring",
+                goal: "offer",
+                aspect: "9:16",
+                targetSeconds: 30,
+                inputs: { sourceIds: [], notes: "", media: [], auto: false },
+            })
+            expect(events.record).toHaveBeenCalledWith(
+                { workspaceId: WS, kind: "video.project_created", actor: "Lan", summary: "Spring" },
+                manager,
+            )
+            expect(workbench.get).toHaveBeenCalledWith("person-1", WS, "project-2")
+            expect(tx.commits).toBe(1)
+        })
     })
 
     describe("update", () => {
@@ -156,6 +180,29 @@ describe("VideoProjectEditorService", () => {
                 code: VideoErrorCode.ProjectBusy,
                 params: { projectId: "project-1" },
             })
+        })
+
+        it("cleans changed source references and media without adding a script patch", async () => {
+            const { editor, members, writer, workbench } = await build()
+            writer.update.mockResolvedValue(true)
+
+            await expect(
+                editor.update("person-1", WS, "project-1", {
+                    inputs: {
+                        sourceIds: [SOURCE, "invalid"],
+                        notes: "  Owner notes  ",
+                        media: [`${WS}/photo.png`, "other/photo.png"],
+                        auto: true,
+                    },
+                }),
+            ).resolves.toEqual(projectOf())
+            expect(members.require).toHaveBeenCalledWith("person-1", WS, ["owner", "manager"])
+            expect(writer.update).toHaveBeenCalledWith(WS, "project-1", {
+                inputs: { sourceIds: [SOURCE], notes: "Owner notes", media: [`${WS}/photo.png`], auto: true },
+            })
+            expect(workbench.get).toHaveBeenCalledTimes(2)
+            expect(workbench.get).toHaveBeenNthCalledWith(1, "person-1", WS, "project-1")
+            expect(workbench.get).toHaveBeenNthCalledWith(2, "person-1", WS, "project-1")
         })
     })
 

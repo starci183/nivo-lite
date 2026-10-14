@@ -174,4 +174,50 @@ describe("import text policy", () => {
             "#e67700",
         ])
     })
+
+    it("prefers the existing accented position spelling and rejects empty tokens in day lists", () => {
+        expect(
+            parseImport(
+                {
+                    positions: "B\u00c1N H\u00c0NG",
+                    staff: "Lan; ban hang;12,5k;7,5",
+                    coverage: "T6,T2-T3 7h30-8:45 ban hang 1 cao \u0111i\u1ec3m\nT2,,CN 7-8 ban hang 1",
+                },
+                ["B\u00e1n h\u00e0ng"],
+            ),
+        ).toEqual({
+            positions: ["B\u00c1N H\u00c0NG"],
+            staff: [{ name: "Lan", positions: ["B\u00e1n h\u00e0ng"], wage: 12500, maxWeek: 7.5 }],
+            blocks: [
+                {
+                    weekday: 0,
+                    start: "07:30",
+                    end: "08:45",
+                    position: "B\u00e1n h\u00e0ng",
+                    min: 1,
+                    ideal: 1,
+                    peak: true,
+                },
+                {
+                    weekday: 1,
+                    start: "07:30",
+                    end: "08:45",
+                    position: "B\u00e1n h\u00e0ng",
+                    min: 1,
+                    ideal: 1,
+                    peak: true,
+                },
+                {
+                    weekday: 4,
+                    start: "07:30",
+                    end: "08:45",
+                    position: "B\u00e1n h\u00e0ng",
+                    min: 1,
+                    ideal: 1,
+                    peak: true,
+                },
+            ],
+            errors: [{ code: "coverage-days", line: 2, subject: "t2,,cn" }],
+        })
+    })
 })

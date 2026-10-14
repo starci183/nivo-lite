@@ -36,7 +36,7 @@ export const baseStaffHandle = (name: string): string => {
         .filter((word) => word !== "")
     const named = words.filter((word) => !HONORIFICS.has(word))
     const pick = named.at(-1) ?? words.at(-1) ?? "staff"
-    return pick.slice(0, 16) || "staff"
+    return pick.slice(0, 16)
 }
 
 /** One staff member a handle is made for. */

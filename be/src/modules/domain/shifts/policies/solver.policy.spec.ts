@@ -430,4 +430,32 @@ describe("schedule solver policy", () => {
             }),
         })
     })
+
+    it("stops filling at sixty heads and does not ask an available person to waive a rule", () => {
+        const staff = Array.from({ length: 61 }, (_, index) =>
+            person({ id: `p-${String(index).padStart(2, "0")}`, name: `Person ${String(index).padStart(2, "0")}` }),
+        )
+        const assigned = staff.slice(0, 60).map((p, index) => shift({ id: `new-${index}`, staffId: p.id }))
+
+        expect(solveWeek(inputOf({ staff, blocks: [block({ min: 61, ideal: 61 })] }))).toEqual({
+            shifts: [...assigned, shift({ id: "new-60", staffId: null })],
+            report: report({
+                costVnd: 7200000,
+                shiftCount: 60,
+                openCount: 1,
+                shortages: [
+                    {
+                        blockId: "block-1",
+                        date: "2026-10-12",
+                        positionId: "bar",
+                        start: "07:00",
+                        end: "11:00",
+                        missing: 1,
+                    },
+                ],
+                hoursByStaff: staff.slice(0, 60).map((p) => ({ staffId: p.id, hours: 4 })),
+                askCandidates: [],
+            }),
+        })
+    })
 })

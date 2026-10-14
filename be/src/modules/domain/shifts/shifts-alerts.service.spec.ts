@@ -24,6 +24,7 @@ import { ShiftsDataService } from "./shifts-data.service"
 import { ShiftsMonthCloseService } from "./shifts-month-close.service"
 import { ShiftsNotifyService } from "./shifts-notify.service"
 import { ShiftsTextService } from "./shifts-text.service"
+import { ShiftsLogEvent } from "./shifts.log-events"
 
 /** 07:00 in Vietnam on 2026-10-14: one hour before the 08:00 shift. */
 const NOW = "2026-10-14T00:00:00.000Z"
@@ -84,10 +85,12 @@ const build = async (em: MockEntityManager, now = NOW) => {
     gate.request.mockResolvedValue({ status: "done", workItemId: "wi-1" })
     const office = mock<OfficeLog>()
     office.logEvidence.mockResolvedValue(undefined)
-    const workspaces = mock<WorkspacesService>({ nameOf: () => Promise.resolve("Spa") })
+    const workspaces = mock<WorkspacesService>()
+    workspaces.nameOf.mockResolvedValue("Spa")
     const data = mock<ShiftsDataService>({ loadSetup: () => Promise.resolve(SETUP) })
     const monthClose = mock<ShiftsMonthCloseService>()
     monthClose.tick.mockResolvedValue(0)
+    const logger = mock<Logger>()
     const notify = mock<ShiftsNotifyService>()
     notify.toStaff.mockResolvedValue({ office: true, telegram: true, zalo: null })
     notify.toManagers.mockResolvedValue(undefined)
@@ -101,7 +104,7 @@ const build = async (em: MockEntityManager, now = NOW) => {
             ShiftsAlertsService,
             { provide: PRIMARY_ENTITY_MANAGER, useValue: em },
             { provide: QUEUE_OUTBOX, useValue: outbox },
-            { provide: LOGGER, useValue: mock<Logger>() },
+            { provide: LOGGER, useValue: logger },
             { provide: CLOCK, useValue: new FakeClock(now) },
             { provide: ActionPerformerRegistry, useValue: registry },
             { provide: ApprovalGate, useValue: gate },
@@ -113,7 +116,17 @@ const build = async (em: MockEntityManager, now = NOW) => {
             { provide: ShiftsTextService, useValue: words },
         ],
     }).compile()
-    return { service: moduleRef.get(ShiftsAlertsService), outbox, registry, gate, office, monthClose, notify }
+    return {
+        service: moduleRef.get(ShiftsAlertsService),
+        outbox,
+        registry,
+        gate,
+        office,
+        monthClose,
+        notify,
+        logger,
+        workspaces,
+    }
 }
 
 const context = (fields: PerformContext["fields"]): PerformContext => ({
@@ -125,6 +138,79 @@ const context = (fields: PerformContext["fields"]): PerformContext => ({
 })
 
 describe("ShiftsAlertsService", () => {
+    it("runs the registered performer and accepts rejection without sending a reminder", async () => {
+        const em = mockEntityManager()
+        answer(em, [])
+        const { service, registry, notify } = await build(em)
+        service.onModuleInit()
+        const performer = registry.add.mock.calls[0]?.[0]
+
+        expect(performer?.action).toBe("remind_shift")
+        await expect(performer?.perform(context({ shift_id: "s-1" }))).resolves.toEqual({
+            summary: "shifts.remindInactive",
+            evidence: "pending",
+        })
+        await expect(performer?.reject?.(context({}))).resolves.toBeUndefined()
+        expect(notify.toStaff).not.toHaveBeenCalled()
+    })
+
+    describe("scan", () => {
+        it("returns zero counts without opening a transaction when no alerts are due", async () => {
+            const em = mockEntityManager()
+            answer(em, [row({ reminded: true, checked_in: true })])
+            const { service, outbox } = await build(em)
+
+            await expect(service.scan(new Date(NOW))).resolves.toEqual({ reminders: 0, noShows: 0 })
+            expect(em.query).toHaveBeenCalledWith(SELECT_ALERT_SHIFTS, ["ws-1", "2026-10-13", "2026-10-15"])
+            expect(em.transaction).not.toHaveBeenCalled()
+            expect(outbox.jobs).toEqual([])
+        })
+
+        it("logs a failed workspace and queues both alert kinds for the next workspace", async () => {
+            const em = fakeTransaction(mockEntityManager()).em
+            const failure = new TypeError("workspace query failed")
+            em.query.mockImplementation((sql: string, params?: Array<unknown>) => {
+                if (sql === SELECT_REMINDER_WORKSPACES)
+                    return Promise.resolve([
+                        { workspace_id: "failed", config: null, remind_minutes: 60, noshow_minutes: 10 },
+                        { workspace_id: "ws-1", config: null, remind_minutes: 60, noshow_minutes: 10 },
+                    ])
+                if (params?.[0] === "failed") return Promise.reject(failure)
+                return Promise.resolve([
+                    row({ id: "reminder", staff_id: null, start_time: "09:00:00" }),
+                    row({ id: "noshow", reminded: true }),
+                ])
+            })
+            const { service, outbox, logger } = await build(em)
+            const write = jest.spyOn(outbox, "write")
+
+            await expect(service.scan(new Date("2026-10-14T01:15:00.000Z"))).resolves.toEqual({
+                reminders: 1,
+                noShows: 1,
+            })
+            expect(logger.error).toHaveBeenCalledWith(ShiftsLogEvent.AlertScanFailed, failure, {
+                workspaceId: "failed",
+            })
+            expect(outbox.jobs).toEqual([
+                { queue: "shifts_alerts", payload: { kind: "remind", workspaceId: "ws-1", shiftId: "reminder" } },
+                { queue: "shifts_alerts", payload: { kind: "noshow", workspaceId: "ws-1", shiftId: "noshow" } },
+            ])
+            expect(outbox.allInTransaction).toBe(true)
+            expect(write).toHaveBeenCalledWith(
+                expect.anything(),
+                "shifts_alerts",
+                { kind: "remind", workspaceId: "ws-1", shiftId: "reminder" },
+                { job: "shifts.remind", dedupeKey: "shifts.remind:reminder:" },
+            )
+            expect(write).toHaveBeenCalledWith(
+                expect.anything(),
+                "shifts_alerts",
+                { kind: "noshow", workspaceId: "ws-1", shiftId: "noshow" },
+                { job: "shifts.noshow", dedupeKey: "shifts.noshow:noshow:p-1" },
+            )
+        })
+    })
+
     it("registers the remind_shift performer", async () => {
         const { service, registry } = await build(mockEntityManager())
 
@@ -206,6 +292,34 @@ describe("ShiftsAlertsService", () => {
     })
 
     describe("remind", () => {
+        it("returns the gate verdict with the exact reminder request", async () => {
+            const em = mockEntityManager()
+            answer(em, [row()])
+            const { service, gate } = await build(em)
+            gate.request.mockResolvedValue({ status: "pending", workItemId: "wi-pending" })
+
+            await expect(service.remind("ws-1", "s-1")).resolves.toBe("pending")
+            expect(gate.request).toHaveBeenCalledWith({
+                workspaceId: "ws-1",
+                actor: "NIVO",
+                action: "remind_shift",
+                subjectType: "shift",
+                subjectId: "s-1",
+                dedupeKey: "remind_shift:s-1:p-1",
+                summary: 'shifts.remindAskSummary{"name":"Lan","line":"line"}',
+                fields: { shift_id: "s-1", staff_id: "p-1" },
+            })
+        })
+
+        it("skips an unassigned shift without asking the gate", async () => {
+            const em = mockEntityManager()
+            answer(em, [row({ staff_id: null })])
+            const { service, gate } = await build(em)
+
+            await expect(service.remind("ws-1", "s-1")).resolves.toBe("skipped: shift not active")
+            expect(gate.request).not.toHaveBeenCalled()
+        })
+
         it("skips when the automation is off, the shift is gone or the person was reminded", async () => {
             const off = mockEntityManager()
             answer(off, [row()], false)
@@ -222,6 +336,50 @@ describe("ShiftsAlertsService", () => {
     })
 
     describe("noShow", () => {
+        it.each([{ rows: [] }, { rows: [row({ staff_id: null })] }])(
+            "skips inactive shift rows %p",
+            async ({ rows }) => {
+                const em = mockEntityManager()
+                answer(em, rows)
+                const { service, notify, office } = await build(em)
+
+                await expect(service.noShow("ws-1", "s-1", new Date(NOW))).resolves.toBe("skipped: shift not active")
+                expect(notify.toManagers).not.toHaveBeenCalled()
+                expect(office.logEvidence).not.toHaveBeenCalled()
+            },
+        )
+
+        it("skips when the enabled query has no row", async () => {
+            const em = mockEntityManager()
+            em.query.mockResolvedValue([])
+            const { service, notify } = await build(em)
+
+            await expect(service.noShow("ws-1", "s-1", new Date(NOW))).resolves.toBe("skipped: automation off")
+            expect(em.query).toHaveBeenCalledTimes(1)
+            expect(em.query).toHaveBeenCalledWith(SELECT_REMINDER_ON, ["ws-1"])
+            expect(notify.toManagers).not.toHaveBeenCalled()
+        })
+
+        it("records the exact no-show notice and evidence", async () => {
+            const em = mockEntityManager()
+            answer(em, [row()])
+            const { service, notify, office } = await build(em)
+
+            await expect(service.noShow("ws-1", "s-1", new Date("2026-10-14T01:15:00.000Z"))).resolves.toBe("alerted")
+            expect(notify.toManagers).toHaveBeenCalledWith(
+                "ws-1",
+                'shifts.noShowOffice{"name":"Lan","minutes":15,"line":"line"}',
+                "no_show",
+                { shiftId: "s-1" },
+            )
+            expect(office.logEvidence).toHaveBeenCalledWith("ws-1", {
+                kind: "shifts.no_show",
+                actor: "NIVO",
+                summary: 'shifts.noShowEvidence{"name":"Lan","start":"08:00","end":"12:00","date":"2026-10-14"}',
+                evidence: "s-1",
+            })
+        })
+
         it.each([
             ["a checked-in person", row({ checked_in: true }), "2026-10-14T01:15:00.000Z", "checked in"],
             ["an alert already sent", row({ alerted: true }), "2026-10-14T01:15:00.000Z", "already alerted"],
@@ -237,6 +395,60 @@ describe("ShiftsAlertsService", () => {
     })
 
     describe("performRemind", () => {
+        it.each([
+            { telegram: false, zalo: true, key: "shifts.remindDoneZalo" },
+            { telegram: null, zalo: null, key: "shifts.remindDoneOffice" },
+        ])("uses fallback labels and reports delivery %p", async ({ telegram, zalo, key }) => {
+            const em = mockEntityManager()
+            em.query.mockImplementation((sql: string) =>
+                Promise.resolve(sql === SELECT_ALERT_SHIFT ? [row({ position_id: "missing" })] : []),
+            )
+            const { service, notify, workspaces } = await build(em)
+            workspaces.nameOf.mockResolvedValue("")
+            notify.toStaff.mockResolvedValue({ office: true, telegram, zalo })
+
+            await expect(service.performRemind(context({ shift_id: "s-1" }))).resolves.toEqual({
+                summary: `${key}{"name":"Lan","start":"08:00","end":"12:00"}`,
+                evidence: "captured",
+            })
+            expect(notify.toStaff).toHaveBeenCalledWith("ws-1", {
+                staffId: "p-1",
+                kind: "reminder",
+                shiftId: "s-1",
+                workItemId: "wi-1",
+                body: 'shifts.remindBody{"position":"shifts.remindPosition","start":"08:00","end":"12:00","shop":"shifts.remindShop","mates":""}',
+            })
+            expect(em.query).toHaveBeenCalledWith(SELECT_DAY_MATES, ["ws-1", "2026-10-14", "p-1"])
+            expect(workspaces.nameOf).toHaveBeenCalledWith("ws-1")
+        })
+
+        it("returns a pending result for a person removed from setup", async () => {
+            const em = mockEntityManager()
+            answer(em, [row({ staff_id: "removed" })])
+            const { service, notify } = await build(em)
+
+            await expect(service.performRemind(context({ shift_id: "s-1" }))).resolves.toEqual({
+                summary: "shifts.remindNoPerson",
+                evidence: "pending",
+            })
+            expect(notify.toStaff).not.toHaveBeenCalled()
+        })
+
+        it.each<PerformContext["fields"]>([{}, { shift_id: "s-1" }])(
+            "does not send an unassigned reminder for fields %p",
+            async (fields) => {
+                const em = mockEntityManager()
+                answer(em, [row({ staff_id: null })])
+                const { service, notify } = await build(em)
+
+                await expect(service.performRemind(context(fields))).resolves.toEqual({
+                    summary: "shifts.remindInactive",
+                    evidence: "pending",
+                })
+                expect(notify.toStaff).not.toHaveBeenCalled()
+            },
+        )
+
         it("reminds the person with the others on duty and says where it went", async () => {
             const em = mockEntityManager()
             answer(em, [row()])

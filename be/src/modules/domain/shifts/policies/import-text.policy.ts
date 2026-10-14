@@ -73,8 +73,6 @@ export interface ParsedImport {
     readonly errors: ReadonlyArray<ImportError>
 }
 
-const LAST_WEEKDAY = 6
-
 const WEEK_ALL: ReadonlyArray<number> = [0, 1, 2, 3, 4, 5, 6]
 
 const DAY_TOKENS: Readonly<Record<string, number>> = { t2: 0, t3: 1, t4: 2, t5: 3, t6: 4, t7: 5, cn: 6 }
@@ -106,20 +104,20 @@ const parseDays = (raw: string): Array<number> | null => {
     const days = new Set<number>()
     for (const part of text.split(",")) {
         const match = /^(t[2-7]|cn)(?:-(t[2-7]|cn))?$/u.exec(part)
-        const from = DAY_TOKENS[match?.[1] ?? ""]
-        const to = match?.[2] === undefined ? from : DAY_TOKENS[match[2]]
-        if (from === undefined || to === undefined || to < from) return null
-        for (let day = from; day <= to && day <= LAST_WEEKDAY; day++) days.add(day)
+        if (match === null) return null
+        const from = Number(DAY_TOKENS[String(match[1])])
+        const to = match[2] === undefined ? from : Number(DAY_TOKENS[match[2]])
+        if (to < from) return null
+        for (let day = from; day <= to; day++) days.add(day)
     }
-    return days.size > 0 ? [...days].sort() : null
+    return [...days].sort()
 }
 
-/** An HH:MM time from 7, 07:00, 7h or 7h30; null when it is not a time. */
+/** An HH:MM time from the coverage line's clock tokens; null when outside a day. */
 const parseClock = (raw: string): string | null => {
-    const match = /^(\d{1,2})(?:[:h](\d{2})?)?$/u.exec(raw.trim().toLowerCase())
-    if (match === null) return null
-    const hours = Number(match[1])
-    const minutes = match[2] === undefined ? 0 : Number(match[2])
+    const [hour, minute] = raw.split(/[:h]/u)
+    const hours = Number(hour)
+    const minutes = minute === undefined ? 0 : Number(minute)
     if (hours >= HOURS_PER_DAY || minutes >= MINUTES_PER_HOUR) return null
     return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`
 }
@@ -128,7 +126,7 @@ const parseClock = (raw: string): string | null => {
 export const parseWage = (raw: string): number | null => {
     const text = raw.toLowerCase().replace(/\s|\u0111|vnd|\/h|\/gio/gu, "")
     const thousands = /^(\d+(?:[.,]\d+)?)k$/u.exec(text)
-    if (thousands !== null) return Math.round(Number((thousands[1] ?? "0").replace(",", ".")) * THOUSAND)
+    if (thousands !== null) return Math.round(Number(text.slice(0, -1).replace(",", ".")) * THOUSAND)
     const value = Number(text.replace(/[.,](?=\d{3}\b)/gu, ""))
     return Number.isFinite(value) && value >= 0 ? Math.round(value) : null
 }
@@ -140,15 +138,15 @@ interface Known {
 
 const knownOf = (names: ReadonlyArray<string>): Known => ({
     has: (name) => names.some((known) => fold(known) === fold(name)),
-    canon: (name) => names.find((known) => fold(known) === fold(name)) ?? name,
+    canon: (name) => String(names.find((known) => fold(known) === fold(name))),
 })
 
 const parseStaffLine = (line: string, number: number, known: Known): ParsedStaff | ImportError => {
     const parts = line.split(/[;|\t]/u).map((x) => x.trim())
-    const name = parts[0] ?? ""
+    const name = String(parts[0])
     const failed = (code: ImportErrorCode, subject = name): ImportError => ({ code, line: number, subject })
     if (parts.length < 2 || name === "") return failed("staff-format", "")
-    const positions = (parts[1] ?? "")
+    const positions = String(parts[1])
         .split(",")
         .map((x) => x.trim())
         .filter((x) => x !== "")
@@ -174,20 +172,21 @@ const parseCoverageLine = (line: string, number: number, known: Known): Array<Pa
             body,
         )
     if (match === null) return failed("coverage-format")
-    const days = parseDays(match[1] ?? "")
-    const start = parseClock(match[2] ?? "")
-    const end = parseClock(match[3] ?? "")
-    const position = match[4] ?? ""
+    const daysText = String(match[1])
+    const days = parseDays(daysText)
+    const start = parseClock(String(match[2]))
+    const end = parseClock(String(match[3]))
+    const position = String(match[4])
     const min = Number(match[5])
     const ideal = match[6] === undefined ? min : Number(match[6])
-    if (days === null) return failed("coverage-days", match[1] ?? "")
+    if (days === null) return failed("coverage-days", daysText)
     if (start === null || end === null || start >= end) return failed("coverage-times")
     if (!known.has(position)) return failed("coverage-position", position)
     if (ideal < min) return failed("coverage-ideal")
     return days.map((weekday) => ({ weekday, start, end, position: known.canon(position), min, ideal, peak }))
 }
 
-const isError = (value: unknown): value is ImportError => typeof value === "object" && value !== null && "code" in value
+const isError = (value: ParsedStaff | ImportError | Array<ParsedBlock>): value is ImportError => "code" in value
 
 /**
  * Reads the quick import text into positions, people and coverage blocks. Pure: the screen previews it and the back end applies it.
@@ -211,7 +210,7 @@ export const parseImport = (input: ImportText, knownPositions: ReadonlyArray<str
     return {
         positions,
         staff: staffResults.flatMap((r) => (isError(r) ? [] : [r])),
-        blocks: blockResults.flatMap((r) => (isError(r) || !Array.isArray(r) ? [] : r)),
+        blocks: blockResults.flatMap((r) => (isError(r) ? [] : r)),
         errors: [...staffResults, ...blockResults].flatMap((r) => (isError(r) ? [r] : [])),
     }
 }

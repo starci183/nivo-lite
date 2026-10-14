@@ -93,6 +93,17 @@ describe("VideoMediaService", () => {
                 params: { path: WS },
             })
         })
+
+        it("retains a listed file without a preview when storage returns no link", async () => {
+            const { media, storage } = await build(mockEntityManager({}))
+            storage.list.mockResolvedValue(ok([{ name: "cake.png", createdAt: null }]))
+            storage.signedUrls.mockResolvedValue(ok([]))
+
+            await expect(media.list("person-1", WS)).resolves.toEqual([
+                { path: `${WS}/cake.png`, name: "cake.png", kind: "image", url: null },
+            ])
+            expect(storage.signedUrls).toHaveBeenCalledWith("media", [`${WS}/cake.png`], 3600)
+        })
     })
 
     describe("createUpload", () => {
@@ -201,6 +212,24 @@ describe("VideoMediaService", () => {
                 videoUrl: null,
                 posterUrl: null,
             })
+        })
+
+        it("links a completed poster even when no video output was stored", async () => {
+            const { media, storage } = await build(mockEntityManager({}))
+
+            await expect(media.render({ ...DONE, output_path: null }, WS, "Poster")).resolves.toEqual({
+                id: "render-1",
+                status: "done",
+                progress: 100,
+                stage: null,
+                durationMs: 15_000,
+                sizeBytes: 2048,
+                errorCode: null,
+                videoUrl: null,
+                downloadUrl: null,
+                posterUrl: `https://cdn/${WS}/render-1/poster.jpg?token=1`,
+            })
+            expect(storage.signedUrls).toHaveBeenCalledWith("videos", [DONE.poster_path], 3600)
         })
     })
 

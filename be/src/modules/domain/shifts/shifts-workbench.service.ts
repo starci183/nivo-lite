@@ -61,15 +61,14 @@ const GAP_DAYS = 14
 /** Matches no person; filters the requests of a member without a shifts profile. */
 const UNLINKED_STAFF = "00000000-0000-0000-0000-000000000000"
 
-const iso = (value: Date | string | null): string | null => {
-    if (value === null) return null
+const iso = (value: Date | string): string => {
     if (typeof value === "string") return value
     return value.toISOString()
 }
 
 /** The summary sentence of a proposal or result json, or null. */
-const summaryOf = (value: unknown): string | null => {
-    if (typeof value !== "object" || value === null || !("summary" in value)) return null
+const summaryOf = (value: Readonly<Record<string, unknown>> | null): string | null => {
+    if (value === null || !("summary" in value)) return null
     const summary = value.summary
     return typeof summary === "string" ? summary : null
 }
@@ -92,7 +91,7 @@ const availView = (row: WorkbenchAvailabilityRow): ShiftsAvailabilityView => ({
     available: row.available,
     note: row.note,
     status: row.status,
-    createdAt: iso(row.created_at) ?? "",
+    createdAt: iso(row.created_at),
 })
 
 const shiftOf = (row: WorkbenchShiftRow): Shift => ({
@@ -234,8 +233,8 @@ export class ShiftsWorkbenchService {
             version: row.version,
             status: row.status,
             costVnd: Number(row.cost_vnd) || 0,
-            createdAt: iso(row.created_at) ?? "",
-            publishedAt: iso(row.published_at),
+            createdAt: iso(row.created_at),
+            publishedAt: row.published_at === null ? null : iso(row.published_at),
         }))
         const currentRow =
             scheduleRows.find((row) => row.status === "draft") ??
@@ -263,7 +262,7 @@ export class ShiftsWorkbenchService {
             current,
             shifts: isManager || staffSees ? shifts : [],
             publishItem: currentRow?.work_item_id ? (items.get(currentRow.work_item_id) ?? null) : null,
-            checkins: attendance.map((row) => ({ shiftId: row.shift_id, checkedInAt: iso(row.checked_in_at) ?? "" })),
+            checkins: attendance.map((row) => ({ shiftId: row.shift_id, checkedInAt: iso(row.checked_in_at) })),
             approvedAvail: env.avail,
             approvedLeaves: env.leaves,
             prior: [...(env.prior ?? new Map()).entries()].map(([staffId, segs]) => ({ staffId, segs })),
@@ -283,8 +282,8 @@ export class ShiftsWorkbenchService {
             summary: isManager ? (row.summary ?? {}) : {},
             evidence: isManager ? (row.evidence ?? {}) : {},
             workItemId: row.work_item_id,
-            createdAt: iso(row.created_at) ?? "",
-            publishedAt: iso(row.published_at),
+            createdAt: iso(row.created_at),
+            publishedAt: row.published_at === null ? null : iso(row.published_at),
         }
     }
 
@@ -332,7 +331,7 @@ export class ShiftsWorkbenchService {
             reason: row.reason,
             status: row.status,
             workItemId: row.work_item_id,
-            createdAt: iso(row.created_at) ?? "",
+            createdAt: iso(row.created_at),
             item: row.work_item_id ? (items.get(row.work_item_id) ?? null) : null,
         }
     }
@@ -353,7 +352,7 @@ export class ShiftsWorkbenchService {
             status: row.status,
             checks: row.checks ?? [],
             workItemId: row.work_item_id,
-            createdAt: iso(row.created_at) ?? "",
+            createdAt: iso(row.created_at),
             item: row.work_item_id ? (items.get(row.work_item_id) ?? null) : null,
             shiftLine: shiftLine(swapShifts.get(row.shift_id), positions),
         }

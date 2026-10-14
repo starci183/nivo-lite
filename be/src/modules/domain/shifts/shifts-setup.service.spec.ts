@@ -133,6 +133,27 @@ describe("ShiftsSetupService", () => {
                 setup.savePosition("user-1", "ws-1", { id: "missing", name: "Bar", color: "#000000" }),
             ).rejects.toMatchObject({ code: ShiftsErrorCode.StaffNotFound })
         })
+
+        it("uses the default colour and refuses a position save returning no row", async () => {
+            const em = mockEntityManager({ query: [SAVE_POSITION, []] })
+            const { setup } = await build(em)
+            await expect(setup.savePosition("user-1", "ws-1", { name: " Bar " })).rejects.toMatchObject({
+                code: ShiftsErrorCode.StaffNotFound,
+            })
+            expect(em.query.mock.calls).toEqual([[SAVE_POSITION, ["ws-1", null, "Bar", "#2f6fed"]]])
+        })
+
+        it.each([
+            { color: undefined, expected: "#2f6fed" },
+            { color: " #123456 ", expected: "#123456" },
+        ])("saves the position with colour $color as $expected", async ({ color, expected }) => {
+            const em = mockEntityManager({ query: [SAVE_POSITION, [{ id: "position-1" }]] })
+            const { setup } = await build(em)
+            await expect(
+                setup.savePosition("user-1", "ws-1", { id: "position-1", name: " Bar ", color }),
+            ).resolves.toEqual({ id: "position-1" })
+            expect(em.query.mock.calls).toEqual([[SAVE_POSITION, ["ws-1", "position-1", "Bar", expected]]])
+        })
     })
 
     describe("removePosition and removeCoverage and removeAvailability", () => {
@@ -199,6 +220,28 @@ describe("ShiftsSetupService", () => {
                 ],
                 [UPSERT_PAY, ["ws-1", "profile-1", 30001]],
             ])
+        })
+
+        it("saves explicit profile fields with trimmed external chat ids", async () => {
+            const em = mockEntityManager({ query: [SAVE_STAFF_PROFILE, [{ id: "profile-1" }]] })
+            const { setup } = await build(em)
+            const request = {
+                id: "profile-1",
+                name: " Lan ",
+                positionIds: ["position-1"],
+                staffRowId: "staff-row-1",
+                phone: " 0901 ",
+                telegramChatId: " tg-1 ",
+                zaloUserId: " zalo-1 ",
+                maxWeek: 0,
+                maxDay: 0,
+                minRest: 0,
+                active: false,
+            }
+            const profile =
+                '{"name":"Lan","staffRowId":"staff-row-1","phone":"0901","telegramChatId":"tg-1","zaloUserId":"zalo-1","positionIds":["position-1"],"maxWeek":0,"maxDay":0,"minRest":0,"active":false}'
+            await expect(setup.saveStaff("user-1", "ws-1", request)).resolves.toEqual({ id: "profile-1" })
+            expect(em.query.mock.calls).toEqual([[SAVE_STAFF_PROFILE, ["ws-1", "profile-1", profile]]])
         })
 
         it("leaves the pay alone without a wage and never stores a negative one", async () => {

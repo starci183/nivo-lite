@@ -8,6 +8,7 @@ import { EventsService } from "@modules/domain/events"
 import { ExecutionsService } from "@modules/domain/executions"
 import { InvoicesService } from "@modules/domain/invoices"
 import { LeadReadService } from "@modules/domain/leads"
+import type { LeadView } from "@modules/domain/leads"
 import { OrdersService } from "@modules/domain/orders"
 import { ResponsibilityJournalService } from "@modules/domain/responsibilities"
 import { StaffDirectoryService } from "@modules/domain/staff"
@@ -15,9 +16,23 @@ import { WorkItemsService } from "@modules/domain/work-items"
 import type { WorkItem } from "@modules/domain/work-items"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { CLOCK } from "@modules/platform/clock"
+import * as mapper from "./sales-workbench.mapper"
 import { SalesWorkbenchService } from "./sales-workbench.service"
 
 const NOW = "2026-10-13T02:00:00.000Z"
+
+const leadOf = builder<LeadView>({
+    id: "lead-1",
+    contact_name: "Mai",
+    company: "Company",
+    channel: "Zalo",
+    need: "A quote",
+    stage: "new",
+    context_summary: null,
+    origin: "live",
+    installation_id: "inst-1",
+    created_at: "2026-10-12T10:00:00.000Z",
+})
 
 const itemOf = builder<WorkItem>({
     id: "item-1",
@@ -160,6 +175,46 @@ describe("SalesWorkbenchService", () => {
             await workbench.read("user-1", "ws-1")
 
             expect(messages.listForConversations).toHaveBeenCalledWith("ws-1", ["conv-1", "conv-2"], { limit: 800 })
+        })
+
+        it("excludes UAT and debug names from conversion while retaining ordinary customers", async () => {
+            const { workbench, leads } = await build()
+            leads.list.mockResolvedValue([
+                leadOf(),
+                leadOf({ id: "lead-2", contact_name: "UAT customer", company: "Company" }),
+                leadOf({ id: "lead-3", contact_name: "Lan", company: "DBG company" }),
+            ])
+
+            const data = await workbench.read("user-1", "ws-1")
+
+            expect(data.metrics.conversion).toEqual({
+                windowDays: 90,
+                leads: 1,
+                won: 0,
+                sources: [{ source: "Zalo", leads: 1, won: 0 }],
+            })
+            expect(data.deals.map((deal) => deal.leadId)).toEqual(["lead-1", "lead-2", "lead-3"])
+        })
+
+        it("provides a test-name policy that accepts absent names and finds markers in any name", async () => {
+            const { workbench } = await build()
+            const original = mapper.buildSalesWorkbench
+            const buildWorkbench = jest.spyOn(mapper, "buildSalesWorkbench").mockImplementation((rows) => {
+                expect(rows.isTestRun(null, undefined, "Mai", "Company")).toBe(false)
+                expect(rows.isTestRun(null, "UAT customer")).toBe(true)
+                expect(rows.isTestRun("Mai", undefined, "DBG company")).toBe(true)
+                return original(rows)
+            })
+
+            try {
+                await expect(workbench.read("user-1", "ws-1")).resolves.toMatchObject({
+                    nowIso: NOW,
+                    metrics: { conversion: { windowDays: 90, leads: 0, won: 0, sources: [] } },
+                })
+                expect(buildWorkbench).toHaveBeenCalledTimes(1)
+            } finally {
+                buildWorkbench.mockRestore()
+            }
         })
     })
 })

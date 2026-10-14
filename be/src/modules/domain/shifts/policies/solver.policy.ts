@@ -91,7 +91,7 @@ const haveFor = (state: State, slot: Slot): number => {
         }
         counts.push(people)
     }
-    return counts.length === 0 ? 0 : Math.min(...counts)
+    return Math.min(...counts)
 }
 
 /** The slots of a block: a block longer than one working day is cut into pieces the same person can still take back to back. */
@@ -150,7 +150,7 @@ export const solveWeek = (input: SolveInput): SolveOutput => {
             ).length,
         ]),
     )
-    const hard = (slot: Slot): number => hardness.get(slot) ?? 0
+    const hard = (slot: Slot): number => Number(hardness.get(slot))
 
     const tryAdd = (state: State, person: ShiftStaff, seg: Seg): Candidate | null => {
         const cur = state.get(person.id) ?? []
@@ -223,7 +223,7 @@ export const solveWeek = (input: SolveInput): SolveOutput => {
             if (slot.block.peak) idealGap += Math.max(0, slot.block.ideal - have) * hours
         }
         const worked = staff.map((p) => state.get(p.id) ?? [])
-        const cost = staff.reduce((sum, p, i) => sum + weekCost(p, worked[i] ?? [], env.overtimeHoursWeek), 0)
+        const cost = staff.reduce((sum, p) => sum + weekCost(p, state.get(p.id) ?? [], env.overtimeHoursWeek), 0)
         const minutes = worked.filter((segs) => segs.length > 0).map(minutesOf)
         const spread = minutes.length > 0 ? Math.max(...minutes) - Math.min(...minutes) : 0
         return { state, short, idealGap, cost, spread }
@@ -257,9 +257,7 @@ export const solveWeek = (input: SolveInput): SolveOutput => {
     let iterations = 1
     for (let k = 1; k < input.starts && input.nowMs() - startedAt < input.budgetMs; k++) {
         const rand = generator(1000 + k * 7919)
-        const order = [...slots].sort(
-            (a, b) => hard(a) - hard(b) + (rand() - 0.5) * 3 || Number(b.block.peak) - Number(a.block.peak),
-        )
+        const order = [...slots].sort((a, b) => hard(a) - hard(b) + (rand() - 0.5) * 3)
         const result = run(order, rand, START_NOISE)
         iterations += 1
         if (better(result, best) < 0) best = result

@@ -177,6 +177,41 @@ const build = async (answers: Answers, member: WorkspaceMember = memberOf()) => 
 const PROFILE = [SELECT_PROFILE_OF_MEMBER, [{ id: "profile-1" }]] as const
 
 describe("ShiftsWorkbenchService", () => {
+    it("maps a published manager week and requests whose optional details are missing", async () => {
+        const item = { id: "item-1", status: "done", proposal: { summary: 1 }, result: {}, decided_path: null }
+        const published = new Date("2026-10-13T02:00:00.000Z")
+        const schedule = scheduleOf({ status: "published", cost_vnd: 0, summary: null, evidence: null })
+        const missingLeave = leaveOf({ id: "leave-2", work_item_id: "absent" })
+        const missingSwap = swapOf({ id: "swap-2", shift_id: "absent", work_item_id: "absent" })
+        const { workbench } = await build(
+            new Map<string, ReadonlyArray<object>>([
+                [SELECT_WEEK_SCHEDULES, [{ ...schedule, work_item_id: "absent", published_at: published }]],
+                [SELECT_LEAVES, [leaveOf({ work_item_id: null }), missingLeave]],
+                [SELECT_SWAPS, [swapOf({ work_item_id: "item-1", checks: ["Notice short"] }), missingSwap]],
+                [SELECT_SHIFTS_BY_IDS, [shiftRowOf({ position_id: "absent" })]],
+                [SELECT_WORK_ITEMS, [item]],
+            ]),
+        )
+
+        const view = await workbench.bench("user-1", "ws-1")
+
+        expect(view.week.current).toMatchObject({ costVnd: 0, summary: {}, evidence: {} })
+        expect(view.week.current?.publishedAt).toBe("2026-10-13T02:00:00.000Z")
+        expect(view.week.versions[0]?.publishedAt).toBe("2026-10-13T02:00:00.000Z")
+        expect(view.week.publishItem).toBeNull()
+        expect(view.requests.leaves.map((row) => row.item)).toEqual([null, null])
+        expect(view.requests.swaps[0]?.checks).toEqual(["Notice short"])
+        expect(view.requests.swaps[0]?.item).toEqual({
+            id: "item-1",
+            status: "done",
+            summary: "",
+            resultSummary: null,
+            decidedPath: null,
+        })
+        expect(view.requests.swaps[1]?.item).toBeNull()
+        expect(view.requests.swaps.map((row) => row.shiftLine)).toEqual(["14/10 08:00\u201310:00", "\u2014"])
+    })
+
     describe("bench", () => {
         it("refuses a week that is not a day before reading anything", async () => {
             const { workbench, members } = await build(new Map())
