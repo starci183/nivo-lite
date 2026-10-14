@@ -20,13 +20,30 @@
 #   secrets VPS_SSH_KEY (CI-only deploy key), VPS_KNOWN_HOSTS (pinned host keys), SOPS_AGE_KEY (the age identity of .sops.yaml; the ONLY way
 #           application secrets reach the job)
 # The VPS holds no age identity and no plaintext secret file: Swarm secrets are encrypted in Raft and mounted in memory at /run/secrets.
+# Select operation=rollback in the same manual workflow to restore a stored release or the previous compose model.
 name: Deploy stack
 
 on:
   workflow_dispatch:
     inputs:
+      operation:
+        description: "Deploy a new release or roll back to a stored release or the previous compose model"
+        type: choice
+        required: true
+        default: deploy
+        options:
+          - deploy
+          - rollback
       retire_compose:
         description: "Cutover window: stop the previous compose model (edge, api, web) right before the stack deploy. Owner-approved runs only."
+        type: boolean
+        default: false
+      release:
+        description: "Rollback only: release digest (16 hex) to deploy again; empty = the previous accepted release"
+        type: string
+        default: ""
+      restore_compose:
+        description: "Rollback only: remove the stack and start the previous compose model again"
         type: boolean
         default: false
 
@@ -40,6 +57,7 @@ permissions:
 
 jobs:
   release:
+    if: ${{ inputs.operation != 'rollback' }}
     runs-on: ubuntu-latest
     environment: production
     timeout-minutes: 60
@@ -226,5 +244,82 @@ jobs:
         if: always()
         run: |
           rm -rf "$RUNNER_TEMP/release" "$RUNNER_TEMP/previous"
+          ssh -O exit vps 2>/dev/null || true
+          rm -f ~/.ssh/deploy_key
+
+  # Rolls the production Swarm stack back to a stored release (default: the previous accepted one) by redeploying its stored stack bytes.
+  # Runs by hand only. Canon: "Rollback cannot undo data effects": this restores service specifications and images; it cannot revert a schema
+  # change (migrations are forward-only, be/docs/runbooks/cutover.md) or recreate a removed secret (the secret versions of the current and the
+  # previous accepted release are always kept). A data restore is a separate, higher-impact action.
+  #
+  #   release          the 16-hex digest under /srv/nivo/releases/ (empty = the `previous` pointer)
+  #   restore_compose  instead of redeploying a Swarm release: remove the stack and start the previous compose model from the folders left on the
+  #                    VPS (deploy/swarm/cutover/restore-compose.sh). Only for the cutover rollback; after that the old workflows of the rollback
+  #                    tag (pre-lite-cutover) are the way to deploy compose again.
+  # Environment "production": the same vars and secrets as Deploy stack (SOPS_AGE_KEY is not needed here).
+  rollback:
+    if: ${{ inputs.operation == 'rollback' }}
+    permissions:
+      contents: read
+      packages: read
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 30
+    env:
+      STACK: nivo
+      NIVO_SSH_HOST: vps
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - uses: docker/login-action@184bdaa0721073962dff0199f1fb9940f07167d1 # v3.5.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: SSH setup
+        env:
+          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+          VPS_KNOWN_HOSTS: ${{ secrets.VPS_KNOWN_HOSTS }}
+        run: |
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$VPS_SSH_KEY" > ~/.ssh/deploy_key && chmod 600 ~/.ssh/deploy_key
+          printf '%s\n' "$VPS_KNOWN_HOSTS" > ~/.ssh/known_hosts && chmod 644 ~/.ssh/known_hosts
+          cat >> ~/.ssh/config <<EOF
+          Host vps
+            HostName ${{ vars.VPS_HOST }}
+            User ${{ vars.VPS_USER }}
+            IdentityFile ~/.ssh/deploy_key
+            StrictHostKeyChecking yes
+            BatchMode yes
+            ConnectTimeout 20
+            ControlMaster auto
+            ControlPath ~/.ssh/cm-%C
+            ControlPersist 10m
+          EOF
+          echo "DOCKER_HOST=ssh://vps" >> "$GITHUB_ENV"
+
+      - name: Restore the compose model (cutover rollback)
+        if: ${{ inputs.restore_compose }}
+        run: ssh vps "bash -s -- --execute" < deploy/swarm/cutover/restore-compose.sh
+
+      - name: Redeploy the stored release
+        if: ${{ !inputs.restore_compose }}
+        run: |
+          target="${{ inputs.release }}"
+          [ -n "$target" ] || target="$(deploy/swarm/release.sh previous)"
+          [ -n "$target" ] || { echo "::error::no previous accepted release is recorded; use restore_compose for the cutover rollback"; exit 1; }
+          deploy/swarm/release.sh fetch "$target" "$RUNNER_TEMP/target"
+          since="$(date -u -d '-30 seconds' +%FT%TZ)"
+          docker stack deploy --prune --with-registry-auth --resolve-image always --detach=true -c "$RUNNER_TEMP/target/stack.yaml" "$STACK"
+          node deploy/swarm/converge.mjs --stack "$STACK" --since "$since" --timeout 600
+          node deploy/swarm/verify.mjs --retry 180
+          deploy/swarm/release.sh accept "$target"
+          echo "rolled back to release $target"
+
+      - name: Remove local credentials
+        if: always()
+        run: |
+          rm -rf "$RUNNER_TEMP/target"
           ssh -O exit vps 2>/dev/null || true
           rm -f ~/.ssh/deploy_key
