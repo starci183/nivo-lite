@@ -12,21 +12,21 @@ import { mkdirSync, writeFileSync } from "node:fs"
 import { spawnSync } from "node:child_process"
 import { join, resolve } from "node:path"
 import { COMPOSE_DIR, ROOT, STACK, configObjects, fail, loadSealed, parseConf, sha } from "./lib.mjs"
+import { hasPlaceholderDigest, isImageReference } from "./digest.mjs"
 
 const args = process.argv.slice(2)
 const flag = (name) => {
     const at = args.indexOf(name)
     return at < 0 ? undefined : args[at + 1]
 }
-const DIGEST_REF = /^[a-z0-9./_-]+(?::[A-Za-z0-9._-]+)?@sha256:[0-9a-f]{64}$/u
 // --allow-unpinned and --extra-compose exist for a local throwaway swarm (stand-in images); a production render never uses them.
 const allowUnpinned = args.includes("--allow-unpinned")
 const extraCompose = args.flatMap((arg, index, all) => (all[index - 1] === "--extra-compose" ? [resolve(arg)] : []))
 const apiImage = flag("--api-image")
 const webImage = flag("--web-image")
-if (!apiImage || !(allowUnpinned || DIGEST_REF.test(apiImage)))
+if (!isImageReference(apiImage, allowUnpinned))
     fail("--api-image must be a registry reference pinned by @sha256 digest")
-if (!webImage || !(allowUnpinned || DIGEST_REF.test(webImage)))
+if (!isImageReference(webImage, allowUnpinned))
     fail("--web-image must be a registry reference pinned by @sha256 digest")
 const out = resolve(flag("--out") ?? fail("--out <dir> is required"))
 const secretsDir = resolve(flag("--secrets-dir") ?? join(ROOT, ".starcistacks", "production", "secrets"))
@@ -108,6 +108,7 @@ if (rendered.error) fail(`cannot run docker (${rendered.error.message})`)
 if (rendered.status !== 0)
     fail(`docker stack config failed: ${rendered.stderr.trim().split("\n").slice(0, 6).join(" | ")}`)
 const stackBytes = rendered.stdout
+if (hasPlaceholderDigest(stackBytes)) fail("rendered stack still carries a placeholder digest")
 writeFileSync(join(out, "stack.yaml"), stackBytes)
 
 const releaseDigest = sha(stackBytes)

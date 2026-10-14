@@ -201,13 +201,13 @@ The VPS runs the previous model as three Compose projects (`nivo-edge` Traefik o
 
 How the running compose stack is stopped and replaced (all inside the **Deploy stack** run started with `retire_compose: true`, which the owner approves as the `production` reviewer):
 
-Before starting that run, the owner signs in to the VPS as the deploy user, runs `crontab -e`, removes only the line containing `nivo-engine-watchdog`, saves, and verifies with `crontab -l` that the line is gone. Keep every unrelated entry. The deploy scripts never read or write host crontabs. Retirement also renames `~/nivo-engine/deploy/watchdog.sh` to `watchdog.sh.retired` before stopping Compose, so a leftover cron entry cannot restart the old model; if that backup already exists alongside an active script, preserve it and retire the active script manually before retrying. Leave the watchdog retired during a Compose rollback and monitor the restored services manually. Old workflows run from `pre-lite-cutover` may reinstall it: repeat the manual removal and file retirement after such a redeploy.
+Before starting that run, the owner signs in to the VPS as the deploy user, runs `crontab -e`, removes only the line containing `nivo-engine-watchdog`, saves, and verifies with `crontab -l` that the line is gone. Keep every unrelated entry. The deploy scripts never read or write host crontabs. Retirement also renames `~/nivo-engine/deploy/watchdog.sh` to `watchdog.sh.retired` before stopping Compose, so a leftover cron entry cannot restart the old model; if that backup already exists alongside an active script, preserve it and retire the active script manually before retrying. Leave the watchdog retired until Compose has restored successfully, then follow the owner's manual watchdog recovery steps in Rollback; monitor the services until those steps are complete. Old workflows run from `pre-lite-cutover` may reinstall it: repeat the manual removal and file retirement after such a redeploy.
 
 1. Build and push the api and web images to GHCR; render the stack with their digests; create the versioned secrets and configs (values piped from SOPS, never printed); store the release record; **pre-pull every image** on the manager. The compose model still serves traffic during all of this.
 2. `deploy/swarm/cutover/retire-compose.sh --execute` (needs `NIVO_RETIRE_COMPOSE_APPROVED=1`, set by the workflow only for this input): checks the node is a swarm manager, retires the watchdog file, then `docker compose down` (no `-v`) for `nivo-web`, `nivo-engine` and `nivo-edge` in that order. Containers and project networks go; volumes, images and the release folders `~/nivo-edge`, `~/nivo-engine`, `~/nivo-web` stay. **The public door is down from here.**
 3. `docker stack deploy --prune --with-registry-auth`: the stack starts; the ingress binds 80 and 443 and serves the certificates already in `nivo-edge_acme`; the openclaw task starts its relay, the api reaches it as `openclaw:18790`.
 4. `converge.mjs` (desired versus running replicas, no failed task) and `verify.mjs` (`api.nivo.vn` health and readiness, the GraphQL probe, `nivo.vn` and `www.nivo.vn` `/health/live`, OpenClaw by service DNS, the job tooling). Then the release is accepted (the `current` pointer moves).
-5. **If the first Swarm release fails**, the workflow runs `restore-compose.sh --execute`: it removes the stack and starts edge, engine and web again from the folders left in place (same volumes and sealed-secret files). The legacy watchdog remains retired; monitor the restored services manually. The window then is the time the stack needed to fail plus the compose start.
+5. **If the first Swarm release fails**, the workflow runs `restore-compose.sh --execute`: it removes the stack and starts edge, engine and web again from the folders left in place (same volumes and sealed-secret files). The legacy watchdog remains retired until the owner completes the manual recovery steps in Rollback; monitor the restored services until then. The window then is the time the stack needed to fail plus the compose start.
 6. `namnivo-web` (the container of `nguyentuannam.org`, its own repository) must join the attachable overlay network `nivo-edge-swarm` with the alias `namnivo-web`: change its compose file to `networks: {edge: {external: true, name: nivo-edge-swarm, aliases: [namnivo-web]}}`, or once run `docker network connect --alias namnivo-web nivo-edge-swarm <container>`. Until then only that host answers 502.
 7. After the owner accepts the cutover, delete the old release folders and images by hand. The compose files are no longer in this branch; the old workflows live on the tag `pre-lite-cutover`.
 
@@ -236,6 +236,20 @@ The fe build: `fe/apps/web/next.config.ts` sets `output: "standalone"`; the Dock
 ## Rollback
 
 Two cases. **A bad Swarm release after the cutover**: run **Deploy stack** with `operation: rollback` (default: the previous accepted release; its stored stack bytes and secret versions are kept), optionally supplying `release`, or fix forward with `operation: deploy`. From the CLI: `gh workflow run stack-deploy.yml --ref main -f operation=rollback`. **Going back to the old model** (the cutover is called off): add `-f restore_compose=true` to that command (removes the stack, starts the compose projects again from the folders left on the VPS, leaves the watchdog retired), or, when those folders are gone, `node $C/08-rollback.mjs --execute --legacy-layers --layer all`, which first runs `deploy/swarm/vps.sh down` and then the OLD workflows from the tag `pre-lite-cutover` (the old workflows build the old code and recreate the compose projects on the same volumes). Repeat the manual watchdog retirement after an old workflow redeploy. The old web does not call the new api, so each layer can be reverted on its own. The rollback cannot undo a data effect or a schema change.
+
+After a successful Compose restore, including the workflow's automatic restore after a failed first Swarm release, the owner restores the legacy watchdog manually. Monitor the restored services until this is complete. Sign in to the VPS as the deploy user. If `watchdog.sh` is absent, run `mv -n "$HOME/nivo-engine/deploy/watchdog.sh.retired" "$HOME/nivo-engine/deploy/watchdog.sh"` without overwriting an existing script, then verify `test -x "$HOME/nivo-engine/deploy/watchdog.sh"`. The exact legacy cron line from `58d85833:deploy/swarm/cutover/restore-compose.sh` is:
+
+```cron
+* * * * * $HOME/nivo-engine/deploy/watchdog.sh # nivo-engine-watchdog
+```
+
+The old installer expanded `$HOME` to the deploy user's absolute home directory. Run this owner command on the VPS to print that exact expanded line:
+
+```bash
+printf '* * * * * %s/nivo-engine/deploy/watchdog.sh # nivo-engine-watchdog\n' "$HOME"
+```
+
+Run `crontab -e`, add the printed line once, preserve every unrelated entry, save, and verify it with `crontab -l`. `08-rollback.mjs --to-compose` prints these manual steps; no deploy or rollback script runs them or edits a crontab.
 
 Layers of the old model, for the second case: after the api deploy the old web was still live, after the edge only the `/api/` paths moved, after the web everything moved; roll back in the reverse order:
 

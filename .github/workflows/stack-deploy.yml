@@ -171,6 +171,10 @@ jobs:
           echo "previous=$previous" >> "$GITHUB_OUTPUT"
           out="$RUNNER_TEMP/release"
           node deploy/swarm/render.mjs --api-image "$API_REF" --web-image "$WEB_REF" --source-sha "$GITHUB_SHA" --previous "$previous" --out "$out"
+          if grep -Eq '@sha256:0{64}' "$out/stack.yaml"; then
+            echo "::error::rendered stack still carries a placeholder digest"
+            exit 1
+          fi
           digest="$(sha256sum "$out/stack.yaml" | cut -c1-16)"
           echo "digest16=$digest" >> "$GITHUB_OUTPUT"
           echo "::notice::release $digest, previous accepted: ${previous:-none}"
@@ -305,8 +309,11 @@ jobs:
 
       - name: Redeploy the stored release
         if: ${{ !inputs.restore_compose }}
+        env:
+          RELEASE: ${{ inputs.release }}
         run: |
-          target="${{ inputs.release }}"
+          [[ -z "$RELEASE" || "$RELEASE" =~ ^[0-9a-f]{16}$ ]] || { echo "::error::release must be empty or exactly 16 lowercase hex characters"; exit 1; }
+          target="$RELEASE"
           [ -n "$target" ] || target="$(deploy/swarm/release.sh previous)"
           [ -n "$target" ] || { echo "::error::no previous accepted release is recorded; use restore_compose for the cutover rollback"; exit 1; }
           deploy/swarm/release.sh fetch "$target" "$RUNNER_TEMP/target"
