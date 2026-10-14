@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Runs ON the VPS (piped over ssh by .github/workflows/web-deploy.yml): starts nivo-web:$1, health-checks it, rolls back to the previous tag if unhealthy.
-# Expects ~/nivo-web/{docker-compose.yml,.env} already uploaded and the image already loaded.
+# Expects ~/nivo-web/docker-compose.yml already uploaded and the image already loaded.
 set -euo pipefail
 NEW="${1:?usage: remote-deploy.sh <tag>}"
 cd ~/nivo-web
