@@ -1,4 +1,4 @@
-import { Injectable, Optional } from "@nestjs/common"
+import { Injectable } from "@nestjs/common"
 import { AutomationPipelinesService } from "@modules/domain/automation-pipelines"
 import type { PipelineWrite } from "@modules/domain/automation-pipelines"
 import { AutomationRunsService } from "@modules/domain/automation-runs"
@@ -63,7 +63,7 @@ export class AutomationsService {
         @InjectMessageCatalog() private readonly catalog: MessageCatalog,
         @InjectLogger() private readonly logger: Logger,
         @InjectAutomationOffice() private readonly office: AutomationOffice,
-        @Optional() @InjectAutomationText() private readonly text: AutomationText | undefined,
+        @InjectAutomationText() private readonly text: AutomationText,
         private readonly templates: AutomationTemplatesService,
         private readonly pipelines: AutomationPipelinesService,
         private readonly runs: AutomationRunsService,
@@ -137,15 +137,12 @@ export class AutomationsService {
             this.shop.contextFor(workspaceId, def.moduleKey),
             this.shop.shopOf(workspaceId),
         ])
-        const raw =
-            this.text === undefined
-                ? null
-                : await this.text.generate({
-                      workspaceId,
-                      purpose: "personalize",
-                      system: proposalSystem(def, base),
-                      prompt: `${shopBlock(shop, context.text)}\n\nTemplate to rewrite:\n${base}`,
-                  })
+        const raw = await this.text.generate({
+            workspaceId,
+            purpose: "personalize",
+            system: proposalSystem(def, base),
+            prompt: `${shopBlock(shop, context.text)}\n\nTemplate to rewrite:\n${base}`,
+        })
         const proposal = raw === null ? "" : stripQuotes(raw)
         return acceptableProposal(proposal, def, base)
             ? { body: proposal, generated: true, contextVersion: context.version }

@@ -81,6 +81,10 @@ describe("GenerationRunnerService", () => {
         })
         const { runner, claims, completion } = await build(em)
         const job = { jobId: "job-1", kind: "generate", fencingToken: 4, currentStep: null, payload: PAYLOAD }
+        claims.advance.mockImplementation(() => {
+            expect(completion.completeGeneration).not.toHaveBeenCalled()
+            return Promise.resolve()
+        })
 
         await expect(runner.runJob(job)).resolves.toBeUndefined()
 
