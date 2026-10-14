@@ -4,5 +4,5 @@ import { LiveController } from "./live.controller"
 import { ProbeAliasController } from "./probe-alias.controller"
 
 @Module({ imports: [SystemHealthModule], controllers: [LiveController, ProbeAliasController] })
-/** The HTTP transport of the health feature: the liveness door and the legacy probe paths that alias it. */
+/** The HTTP transport of the health feature: liveness and readiness probes on the established paths. */
 export class SystemHealthHttpModule {}

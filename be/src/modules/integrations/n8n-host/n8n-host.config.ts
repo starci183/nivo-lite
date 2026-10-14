@@ -1,7 +1,9 @@
 import type { EnvSource } from "@modules/platform/config"
 import type { N8nHostOptions } from "./n8n-host.options"
 
-const DEFAULT_CONTAINER = "nivo-engine-n8n-1"
+/** The running task of the Swarm service nivo_n8n: Swarm names the container per task, so the shell on the VPS resolves it when the command runs. */
+const DEFAULT_CONTAINER =
+    "$(docker ps -q --filter label=com.docker.swarm.service.name=nivo_n8n --filter status=running | head -n 1)"
 
 /** Reads where the n8n container runs from the environment. */
 export const parseN8nHostConfig = (env: EnvSource): N8nHostOptions => ({

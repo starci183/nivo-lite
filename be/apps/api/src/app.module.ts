@@ -247,8 +247,8 @@ import { N8N_RUNS_ERROR_KINDS, N8N_RUNS_MESSAGES, N8nRunsModule } from "@modules
 import { MAIL_ERROR_KINDS, MAIL_MESSAGES, MailModule } from "@modules/integrations/mail"
 import { TELEGRAM_ERROR_KINDS, TELEGRAM_MESSAGES, TelegramModule } from "@modules/integrations/telegram"
 import { ZALO_ERROR_KINDS, ZALO_MESSAGES, ZaloModule } from "@modules/integrations/zalo"
-import { CONTRACTS_ERROR_KINDS, CONTRACTS_MESSAGES, ContractsModule } from "@modules/domain/contracts"
-import { LivenessModule } from "@modules/domain/liveness"
+import { CONTRACTS_ERROR_KINDS, CONTRACTS_MESSAGES } from "@modules/domain/contracts"
+import { JOB_OPS_ERROR_KINDS, JobOpsModule } from "@modules/domain/job-ops"
 import { MessagesModule } from "@modules/domain/messages"
 import {
     RESPONSIBILITIES_ERROR_KINDS,
@@ -257,7 +257,6 @@ import {
     ResponsibilitiesModule,
 } from "@modules/domain/responsibilities"
 import { AiQuotaOverridesModule } from "@modules/domain/ai-quota-overrides"
-import { AppCommandsModule } from "@modules/domain/app-commands"
 import {
     PLATFORM_ADMIN_ERROR_KINDS,
     PLATFORM_ADMIN_MESSAGES,
@@ -389,6 +388,7 @@ import {
     AGENT_TOOLS_PORTS,
     API_JOB_QUEUES,
     API_SCHEDULERS,
+    API_SYSTEM_CAPABILITIES,
     DECISIONS_PORTS,
     G19_PORTS,
     LEAD_LANE,
@@ -524,6 +524,7 @@ export class AppModule {
                         CHANNEL_SETUP_ERROR_KINDS,
                         WEBHOOK_DELIVERY_ERROR_KINDS,
                         HTTP_ERROR_KINDS,
+                        JOB_OPS_ERROR_KINDS,
                         AUTOMATION_PIPELINES_ERROR_KINDS,
                         AUTOMATION_TEMPLATES_ERROR_KINDS,
                         ...G19_PORTS.errorKinds,
@@ -618,9 +619,9 @@ export class AppModule {
                     ...options.queue,
                 }),
                 JobsModule.register({ isGlobal: true, connection: PRIMARY_ENTITY_MANAGER, ...options.jobs }),
+                JobOpsModule.register({ isGlobal: true, alerts: options.jobsAlert }),
                 SupabaseModule.register({ isGlobal: true, ...options.supabase }),
                 IdentityModule.register({ isGlobal: true, verifyAccessToken }),
-                ContractsModule.register({ isGlobal: true }),
                 ...LEAD_LANE.capabilities.map((capability) => capability.register({ isGlobal: true })),
                 MessagesModule.register({ isGlobal: true, agentDirectory: AgentsService }),
                 ResponsibilitiesModule.register({ isGlobal: true, agentDirectory: AgentsService }),
@@ -698,9 +699,8 @@ export class AppModule {
                 ContentMediaGraphqlModule,
                 VideoGraphqlModule,
                 ContentModule.register({ isGlobal: true }),
-                AppCommandsModule.register({ isGlobal: true }),
                 RendersGraphqlModule,
-                LivenessModule.register({ isGlobal: true }),
+                ...API_SYSTEM_CAPABILITIES.map((capability) => capability.register({ isGlobal: true })),
                 ModuleOpsModule.register({ isGlobal: true, ports: G19_PORTS.moduleOps }),
                 LlmModule.register({ isGlobal: true, ...options.llm }),
                 DocumentsModule.register({ isGlobal: true, ...options.documents }),

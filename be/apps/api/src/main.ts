@@ -6,7 +6,9 @@ import { EnvSource, parseServerConfig } from "@modules/platform/config"
 import { parsePrimaryDatabaseConfig } from "@modules/platform/database"
 import { parseHttpSecurityConfig, RequestValidationService } from "@modules/platform/http-security"
 import { createJsonLogger, LoggingLogEvent } from "@modules/platform/logging"
+import { DomainError } from "@modules/platform/errors"
 import { parseJobsConfig } from "@modules/platform/jobs"
+import { parseJobsAlertConfig } from "@modules/domain/job-ops"
 import { parseQueueConfig } from "@modules/platform/queue"
 import { parseChannelsConfig } from "@modules/domain/channels"
 import { parseConnectionSecretsConfig } from "@modules/domain/connection-secrets"
@@ -69,6 +71,7 @@ const bootstrap = async (): Promise<void> => {
         dataSources: parseDataSourcesConfig(env),
         queue: parseQueueConfig(env),
         jobs: parseJobsConfig(env),
+        jobsAlert: parseJobsAlertConfig(env),
         connections: parseConnectionsConfig(env),
         webhookConnections: parseWebhookConnectionsConfig(env),
         google: parseGoogleConfig(env),
@@ -94,6 +97,11 @@ const bootstrap = async (): Promise<void> => {
 }
 
 bootstrap().catch((error: unknown) => {
-    createJsonLogger(new SystemClockService()).error(LoggingLogEvent.StartupFailed, error, { service: "api" })
+    createJsonLogger(new SystemClockService()).error(LoggingLogEvent.StartupFailed, error, {
+        service: "api",
+        ...(error instanceof DomainError && typeof error.params.key === "string"
+            ? { configField: error.params.key }
+            : {}),
+    })
     process.exitCode = 1
 })
