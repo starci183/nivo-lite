@@ -32,20 +32,6 @@ const CircleIcon = (props: SVGProps<SVGSVGElement>) => (
     </svg>
 )
 
-/** The exact regular Phosphor SidebarSimple drawing used by the StarCi rail owner. */
-const SidebarSimpleIcon = (props: SVGProps<SVGSVGElement>) => (
-    <svg
-        xmlns="http://www.w3.org/2000/svg"
-        viewBox="0 0 256 256"
-        fill="currentColor"
-        aria-hidden="true"
-        data-slot="icon"
-        {...props}
-    >
-        <path d="M216,40H40A16,16,0,0,0,24,56V200a16,16,0,0,0,16,16H216a16,16,0,0,0,16-16V56A16,16,0,0,0,216,40ZM40,56H80V200H40ZM216,200H96V56H216V200Z" />
-    </svg>
-)
-
 /** Google's mark: a static asset, because the provider's own colours may not be redrawn as source colours. */
 const GoogleMark = (props: SVGProps<SVGSVGElement>) => (
     <Image src="/brand/google-mark.svg" alt="" width={24} height={24} className={GOOGLE_MARK} aria-hidden="true" />
@@ -118,7 +104,7 @@ const ICON_SOURCES = {
     domains: cuts(Outline.GlobeAmericasIcon, Solid.GlobeAmericasIcon),
     wallet: cuts(Outline.WalletIcon, Solid.WalletIcon),
     support: cuts(Outline.LifebuoyIcon, Solid.LifebuoyIcon),
-    sidebar: cuts(SidebarSimpleIcon, SidebarSimpleIcon),
+    sidebar: cuts(Outline.ViewColumnsIcon, Solid.ViewColumnsIcon),
     copy: cuts(Outline.DocumentDuplicateIcon, Outline.DocumentDuplicateIcon),
     copied: cuts(Outline.CheckIcon, Outline.CheckIcon),
     google: cuts(GoogleMark, GoogleMark),
