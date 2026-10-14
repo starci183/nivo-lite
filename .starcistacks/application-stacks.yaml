@@ -177,7 +177,7 @@ services:
       container: starci-sonarqube
       publishedBy: cloudflared.yaml
     auth: token
-    qualityGate: starci-quality
+    qualityGate: starci-quality-lite
     projects:
       - { repository: nivo-lite, key: nivo-lite }
     ci:

@@ -6,16 +6,17 @@
 #     --build-arg NEXT_PUBLIC_API_URL=http://localhost:8787 \
 #     --build-arg NEXT_PUBLIC_DEVELOPER_API_URL=http://localhost:8787 \
 #     --build-arg NEXT_PUBLIC_SITE_URL=http://localhost:3000 .
-# Push both images and export their digest references as NIVO_DEV_API_IMAGE and NIVO_DEV_WEB_IMAGE.
+# Push both images, then write their digest references into a Compose override (services: api: {image: <ref>@sha256:...}, web: {image: ...});
+# the digests in this file are placeholders that the override replaces.
 # With Supabase running, supply the same local api.dev.env as before, then deploy from the root:
-#   docker stack config -c .starcistacks/dev/infra/swarm/stack.yaml | docker stack deploy -c - nivo-dev
+#   docker stack config -c .starcistacks/dev/infra/swarm/stack.yaml -c dev.images.override.yaml | docker stack deploy -c - nivo-dev
 # The sole ingress preserves http://localhost:8787 (api) and http://localhost:3000 (web).
 # Use a local single-manager Swarm; the Supabase URLs must be reachable from its containers.
 version: "3.8"
 
 services:
   api:
-    image: ${NIVO_DEV_API_IMAGE:?export the built API image pinned by its registry sha256 digest}
+    image: ghcr.io/starci183/nivo-lite-api@sha256:0000000000000000000000000000000000000000000000000000000000000000
     env_file:
       - ../../api.dev.env
     environment:
@@ -51,7 +52,7 @@ services:
       restart_policy: { condition: any, delay: 5s }
 
   web:
-    image: ${NIVO_DEV_WEB_IMAGE:?export the built web image pinned by its registry sha256 digest}
+    image: ghcr.io/starci183/nivo-lite-web@sha256:0000000000000000000000000000000000000000000000000000000000000000
     healthcheck:
       test:
         [

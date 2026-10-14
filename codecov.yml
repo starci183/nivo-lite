@@ -109,6 +109,7 @@ component_management:
         - "be/src/modules/domain/inbox-simulation/**"
         - "be/src/modules/domain/inventory/**"
         - "be/src/modules/domain/invoices/**"
+        - "be/src/modules/domain/job-ops/**"
         - "be/src/modules/domain/knowledge-chunks/**"
         - "be/src/modules/domain/knowledge-gaps/**"
         - "be/src/modules/domain/knowledge-sources/**"

@@ -57,7 +57,8 @@ for (const key of Object.keys(apiEnvironment)) apiEnvironment[key] = escapeDolla
 const model = settings.OPENCLAW_MODEL ?? "openrouter/deepseek/deepseek-v4-flash"
 const override = {
     services: {
-        api: { environment: apiEnvironment, secrets: grant(sealed.grants.api) },
+        api: { image: apiImage, environment: apiEnvironment, secrets: grant(sealed.grants.api) },
+        web: { image: webImage },
         openclaw: { environment: { OPENCLAW_MODEL: escapeDollar(model) }, secrets: grant(sealed.grants.openclaw) },
         n8n: { secrets: grant(sealed.grants.n8n) },
     },

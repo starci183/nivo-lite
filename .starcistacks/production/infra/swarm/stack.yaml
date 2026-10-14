@@ -77,7 +77,7 @@ services:
       restart_policy: { condition: any, delay: 5s }
 
   web:
-    image: ${NIVO_WEB_IMAGE:?set NIVO_WEB_IMAGE to the registry reference with an @sha256 digest}
+    image: ghcr.io/starci183/nivo-lite-web@sha256:0000000000000000000000000000000000000000000000000000000000000000
     environment:
       PORT: "3000"
       HOSTNAME: 0.0.0.0
@@ -109,7 +109,7 @@ services:
       restart_policy: { condition: any, delay: 5s }
 
   api:
-    image: ${NIVO_API_IMAGE:?set NIVO_API_IMAGE to the registry reference with an @sha256 digest}
+    image: ghcr.io/starci183/nivo-lite-api@sha256:0000000000000000000000000000000000000000000000000000000000000000
     # environment, `<KEY>_FILE` pointers and the versioned secret grants are added by the generated override (render.mjs).
     networks:
       edge:
