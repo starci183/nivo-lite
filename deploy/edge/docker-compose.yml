@@ -13,9 +13,11 @@ services:
       - --providers.file.directory=/etc/traefik/dynamic
       - --providers.file.watch=true
       - --entrypoints.web.address=:80
+      - --entrypoints.web.forwardedHeaders.insecure=false
       - --entrypoints.web.http.redirections.entryPoint.to=websecure
       - --entrypoints.web.http.redirections.entryPoint.scheme=https
       - --entrypoints.websecure.address=:443
+      - --entrypoints.websecure.forwardedHeaders.insecure=false
       - --entrypoints.websecure.http.tls.certResolver=le
       - --certificatesResolvers.le.acme.storage=/acme/acme.json
       - --certificatesResolvers.le.acme.httpChallenge.entryPoint=web
