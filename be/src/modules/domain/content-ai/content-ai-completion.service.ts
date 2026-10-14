@@ -65,21 +65,24 @@ export class ContentAiCompletionService {
                     return
                 }
                 if (state.status !== "done" || state.text === null) return
-                if (
-                    parseContentJson(state.text) === null &&
-                    (await this.askAgainAfterUnreadable(state, root, childContext, context, tx))
-                )
+                if (parseContentJson(state.text) === null) {
+                    await this.askAgainAfterUnreadable(state, root, childContext, context, tx)
                     return
+                }
                 const states = await Promise.all(
                     idsOf(context).map((id) => this.generations.state(workspaceId, id, tx)),
                 )
-                if (states.some((item) => item === null || item.status === "error" || item.status === "cancelled"))
+                if (
+                    !states.every(
+                        (item): item is GenerationState =>
+                            item !== null && item.status !== "error" && item.status !== "cancelled",
+                    )
+                )
                     throw new ContentAiError({ code: ContentAiErrorCode.Failed })
-                if (states.some((item) => item?.status !== "done")) return
-                const finished = states.filter((item): item is GenerationState => item !== null)
+                if (states.some((item) => item.status !== "done")) return
                 const result =
                     context.operation === "plan"
-                        ? await this.applyPlan(root, context, finished, tx)
+                        ? await this.applyPlan(root, context, states, tx)
                         : await this.applyDraft(root, context, tx)
                 await this.generations.recordResult(workspaceId, rootId, result, tx)
             })
@@ -105,7 +108,7 @@ export class ContentAiCompletionService {
         child: Record<string, unknown>,
         context: Record<string, unknown>,
         tx: EntityManager,
-    ): Promise<boolean> {
+    ): Promise<void> {
         if (numeric(child.attempt) === 2) throw new ContentAiError({ code: ContentAiErrorCode.InvalidAnswer })
         const messages = state.messages
         const request = await this.generations.request(
@@ -127,7 +130,6 @@ export class ContentAiCompletionService {
             { ...context, generationIds: idsOf(context).map((id) => (id === state.id ? request.id : id)) },
             tx,
         )
-        return true
     }
 
     private async applyDraft(
@@ -135,7 +137,7 @@ export class ContentAiCompletionService {
         context: Record<string, unknown>,
         tx: EntityManager,
     ): Promise<Record<string, unknown>> {
-        const state = await this.generations.state(root.workspaceId, idsOf(context)[0] ?? root.id, tx)
+        const state = await this.generations.state(root.workspaceId, idsOf(context).slice(0, 1).join(""), tx)
         const parsed = parseContentJson(state?.text ?? "")
         if (parsed === null) throw new ContentAiError({ code: ContentAiErrorCode.InvalidAnswer })
         await this.requireDrafting(root.workspaceId)
@@ -172,10 +174,9 @@ export class ContentAiCompletionService {
                 ),
                 media: [
                     ...item.media.filter((file) => !file.suggested),
-                    ...picked.flatMap((number) => {
-                        const file = library[number - 1]
-                        return file === undefined ? [] : [{ ...file, suggested: true }]
-                    }),
+                    ...picked.flatMap((number) =>
+                        library.slice(number - 1, number).map((file) => ({ ...file, suggested: true })),
+                    ),
                 ],
                 channels: [...new Set([...item.channels, ...channels])],
                 ...(pillar === undefined ? {} : { pillarId: trimmedText(pillar.id) }),

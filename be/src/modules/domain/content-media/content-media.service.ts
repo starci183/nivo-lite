@@ -88,7 +88,10 @@ export class ContentMediaService {
                 ...filesSigned.value.map((file) => ({
                     key: file.path,
                     view: file.signedUrl,
-                    download: withDownloadUrl(file.signedUrl, displayName(file.path.split("/").pop() ?? "file")),
+                    download: withDownloadUrl(
+                        file.signedUrl,
+                        displayName(file.path.slice(file.path.lastIndexOf("/") + 1)),
+                    ),
                 })),
                 ...videosSigned.value.flatMap((file) => {
                     const video = videoByPath.get(file.path)

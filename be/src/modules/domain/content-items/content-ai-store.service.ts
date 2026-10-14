@@ -40,7 +40,7 @@ export class ContentAiStoreService {
         const member = await this.members.require(userId, workspaceId, ["owner", "manager"])
         const [row] = await (tx ?? this.entityManager).query<Array<ContentQuickIdeaRow>>(INSERT_QUICK_IDEA, [
             workspaceId,
-            (input.topic.split("\n")[0] ?? input.topic).slice(0, 80),
+            input.topic.split("\n", 1).join("").slice(0, 80),
             input.topic,
             [...input.channels],
             member.displayName || userId,

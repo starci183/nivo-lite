@@ -240,4 +240,64 @@ describe("ContentMediaService", () => {
             code: ContentMediaErrorCode.StorageUnavailable,
         })
     })
+
+    it("filters listable files with unsafe workspace paths", async () => {
+        const { service, storage } = await build()
+        storage.list.mockResolvedValue(
+            ok([
+                { name: "../outside.png", createdAt: null },
+                { name: "encoded%2fphoto.png", createdAt: null },
+                { name: STORED_PHOTO, createdAt: null },
+            ]),
+        )
+
+        await expect(service.library("user-1", "ws-1", 3)).resolves.toEqual([
+            { kind: "media", path: PHOTO_PATH, name: "photo.png" },
+        ])
+        expect(storage.list).toHaveBeenCalledWith("media", "ws-1", 3)
+    })
+
+    it("keeps video titles and discards signed videos not returned by the render lookup", async () => {
+        const { service, storage, renders } = await build()
+        const video: CompletedRenderMedia = { ...CLIP, title: "Summer & sun", durationMs: 1_234 }
+        storage.list.mockResolvedValue(ok([]))
+        renders.listCompletedMedia.mockResolvedValue([video])
+        renders.findCompletedMedia.mockResolvedValue([video])
+        storage.signedUrls.mockResolvedValueOnce(ok([])).mockResolvedValueOnce(
+            ok([
+                { path: video.outputPath, signedUrl: "https://cdn.example/clip?token=one" },
+                { path: "ws-1/unrequested.mp4", signedUrl: "https://cdn.example/unrequested" },
+            ]),
+        )
+
+        await expect(service.read("user-1", "ws-1", { paths: [], videoIds: [video.id], limit: 2 })).resolves.toEqual({
+            library: [],
+            videos: [{ id: "video-1", name: "Summer & sun", createdAt: CLIP.createdAt, durationMs: 1_234 }],
+            urls: [
+                {
+                    key: "video:video-1",
+                    view: "https://cdn.example/clip?token=one",
+                    download: "https://cdn.example/clip?token=one&download=Summer%20%26%20sun.mp4",
+                },
+            ],
+        })
+        expect(renders.listCompletedMedia).toHaveBeenCalledWith("ws-1", 10)
+        expect(renders.findCompletedMedia).toHaveBeenCalledWith("ws-1", [video.id])
+        expect(storage.signedUrls).toHaveBeenNthCalledWith(1, "media", [], 3600)
+        expect(storage.signedUrls).toHaveBeenNthCalledWith(2, "videos", [video.outputPath], 3600)
+    })
+
+    it("refuses when media signing succeeds but video signing fails", async () => {
+        const { service, storage, renders } = await build()
+        storage.list.mockResolvedValue(ok([]))
+        renders.listCompletedMedia.mockResolvedValue([])
+        renders.findCompletedMedia.mockResolvedValue([])
+        storage.signedUrls.mockResolvedValueOnce(ok([])).mockResolvedValueOnce(refused("SUPABASE_PROVIDER_UNAVAILABLE"))
+
+        await expect(service.read("user-1", "ws-1", { paths: [], videoIds: [], limit: 1 })).rejects.toMatchObject({
+            code: ContentMediaErrorCode.StorageUnavailable,
+        })
+        expect(storage.signedUrls).toHaveBeenNthCalledWith(1, "media", [], 3600)
+        expect(storage.signedUrls).toHaveBeenNthCalledWith(2, "videos", [], 3600)
+    })
 })

@@ -7,14 +7,18 @@ import { CONNECTION_SECRETS_OPTIONS } from "./connection-secrets.decorators"
 import { ConnectionSecretsService } from "./connection-secrets.service"
 import { ConnectionSecretsErrorCode } from "./errors/connection-secrets.error"
 import {
+    DELETE_STORED_SECRET,
     FIND_CONNECTION_SECRET,
+    FIND_STORED_SECRET,
+    INSERT_STORED_SECRET,
     LIST_ZALO_CONNECTIONS_DUE,
     RELEASE_REFRESH_LEASE,
     SAVE_SECRET,
     SAVE_SECRET_WITH_EXPIRY,
     TRY_REFRESH_LEASE,
+    UPSERT_STORED_SECRET,
 } from "./persistence/connection-secrets.sql"
-import { sealSecret } from "./secret-cipher.policy"
+import { openSecret, sealSecret } from "./secret-cipher.policy"
 
 const KEY = randomBytes(32)
 const options = { tokenKey: new Secret(KEY.toString("base64")) }
@@ -38,6 +42,10 @@ const build = async (answers: Record<string, unknown> = {}) => {
             [TRY_REFRESH_LEASE]: [{ connection_id: "c-1" }],
             [RELEASE_REFRESH_LEASE]: [],
             [LIST_ZALO_CONNECTIONS_DUE]: [],
+            [INSERT_STORED_SECRET]: [],
+            [FIND_STORED_SECRET]: [],
+            [UPSERT_STORED_SECRET]: [],
+            [DELETE_STORED_SECRET]: [],
             ...answers,
         }).map(([text, rows]): [string, unknown] => [text, rows]),
     })
@@ -197,6 +205,75 @@ describe("ConnectionSecretsService", () => {
 
             await expect(service.dueZalo(horizon)).resolves.toEqual(["c-1", "c-2"])
             expect(em.query).toHaveBeenCalledWith(LIST_ZALO_CONNECTIONS_DUE, [horizon])
+        })
+    })
+
+    describe("stored credentials", () => {
+        it("seals new credentials using the default manager", async () => {
+            const { service, em } = await build()
+
+            await expect(service.create("c-1", "new-token", "new-hook")).resolves.toBeUndefined()
+
+            const sealed = String(em.query.mock.calls[0]?.[1]?.[1])
+            expect(openSecret(KEY, sealed)).toBe("new-token")
+            expect(em.query.mock.calls).toEqual([[INSERT_STORED_SECRET, ["c-1", sealed, "new-hook"]]])
+        })
+
+        it("inserts credentials through the caller's transaction manager", async () => {
+            const { service, em } = await build()
+            const inside = mockEntityManager({ query: [INSERT_STORED_SECRET, []] })
+
+            await expect(service.create("c-2", "inside-token", "inside-hook", inside)).resolves.toBeUndefined()
+
+            const sealed = String(inside.query.mock.calls[0]?.[1]?.[1])
+            expect(openSecret(KEY, sealed)).toBe("inside-token")
+            expect(inside.query.mock.calls).toEqual([[INSERT_STORED_SECRET, ["c-2", sealed, "inside-hook"]]])
+            expect(em.query).not.toHaveBeenCalled()
+        })
+
+        it("reads the opened credential and webhook secret, or null when absent", async () => {
+            const found = await build({
+                [FIND_STORED_SECRET]: [{ ciphertext: sealSecret(KEY, "stored-token"), webhook_secret: "hook" }],
+            })
+            const missing = await build()
+
+            await expect(found.service.read("c-1")).resolves.toEqual({ plain: "stored-token", webhookSecret: "hook" })
+            await expect(missing.service.read("c-9")).resolves.toBeNull()
+            expect(found.em.query).toHaveBeenCalledWith(FIND_STORED_SECRET, ["c-1"])
+            expect(missing.em.query).toHaveBeenCalledWith(FIND_STORED_SECRET, ["c-9"])
+        })
+
+        it("writes a sealed credential and explicitly replaces a provided webhook secret", async () => {
+            const { service, em } = await build()
+
+            await expect(service.write("c-1", "replacement", "hook-replacement")).resolves.toBeUndefined()
+
+            const sealed = String(em.query.mock.calls[0]?.[1]?.[1])
+            expect(openSecret(KEY, sealed)).toBe("replacement")
+            expect(em.query.mock.calls).toEqual([[UPSERT_STORED_SECRET, ["c-1", sealed, "hook-replacement", true]]])
+        })
+
+        it("generates a webhook secret for a new row while preserving an existing one when omitted", async () => {
+            const { service, em } = await build()
+
+            await expect(service.write("c-1", "replacement")).resolves.toBeUndefined()
+
+            const sealed = String(em.query.mock.calls[0]?.[1]?.[1])
+            expect(openSecret(KEY, sealed)).toBe("replacement")
+            expect(em.query).toHaveBeenCalledWith(UPSERT_STORED_SECRET, [
+                "c-1",
+                sealed,
+                expect.stringMatching(/^[a-f0-9]{64}$/u),
+                false,
+            ])
+        })
+
+        it("deletes only the credential of the requested connection", async () => {
+            const { service, em } = await build()
+
+            await expect(service.wipe("c-1")).resolves.toBeUndefined()
+
+            expect(em.query.mock.calls).toEqual([[DELETE_STORED_SECRET, ["c-1"]]])
         })
     })
 })

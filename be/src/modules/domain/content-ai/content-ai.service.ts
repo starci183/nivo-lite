@@ -120,7 +120,7 @@ export class ContentAiService {
             throw new ContentAiError({ code: ContentAiErrorCode.InvalidInput })
         const item: DraftItem = {
             id: "00000000-0000-0000-0000-000000000000",
-            title: (topic.split("\n")[0] ?? topic).slice(0, 80),
+            title: topic.split("\n", 1).join("").slice(0, 80),
             brief: topic,
             channels,
             pillarId: null,
@@ -212,12 +212,16 @@ export class ContentAiService {
                 )
                 ids.push(request.id)
             })
-            const rootId = ids[0]
-            if (rootId === undefined) throw new ContentAiError({ code: ContentAiErrorCode.NoSlots })
+            const rootId = ids.slice(0, 1).join("")
             await this.generations.setContext(
                 workspaceId,
                 rootId,
-                { ...context, rootId, generationIds: ids, allowedSlots: (chunks[0] ?? []).map((slot) => slot.n) },
+                {
+                    ...context,
+                    rootId,
+                    generationIds: ids,
+                    allowedSlots: planned.slots.slice(0, CHUNK).map((slot) => slot.n),
+                },
                 tx,
             )
             return { id: rootId, status: "queued", itemId: null }
