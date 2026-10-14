@@ -77,6 +77,15 @@ describe("presentedRole", () => {
     ] as const)("presents %s as %s", (role, expected) => {
         expect(presentedRole(role)).toBe(expected)
     })
+
+    it.each(["", "administrator", "constructor", "toString", "__proto__", undefined, null, 0, {}, ["owner"]])(
+        "presents malformed runtime role %p as staff",
+        (role) => {
+            const member = memberOf()
+            Object.assign(member, { role })
+            expect(presentedRole(member.role)).toBe(PresentedRole.Staff)
+        },
+    )
 })
 
 describe("judgeSeatChange", () => {
