@@ -196,4 +196,41 @@ describe("carryMapping", () => {
         expect(Object.keys(carried.kinds)).toEqual(["__proto__", "Note"])
         expect(carried.kinds.Note).toBe("text")
     })
+
+    it("uses fresh kinds for missing or null saved entries, including text for empty cells", () => {
+        const kinds: CsvConfig["kinds"] = {}
+        Reflect.set(kinds, "Qty", null)
+        expect(
+            carryMapping(
+                { ...saved, idColumn: null, titleColumn: null, dateColumn: null, kinds },
+                { headers: ["Qty", "Note"], rows: [["42"]] },
+            ),
+        ).toEqual({
+            idColumn: null,
+            titleColumn: "Note",
+            dateColumn: null,
+            kinds: { Qty: "number", Note: "text" },
+            columns: ["Qty", "Note"],
+        })
+    })
+
+    it("uses text for a header the provider adds after the fresh mapping was built", () => {
+        let reads = 0
+        const changing = {
+            get headers(): Array<string> {
+                reads += 1
+                return reads === 1 ? ["Qty"] : ["Note"]
+            },
+            rows: [["42"]],
+        }
+        expect(
+            carryMapping({ ...saved, idColumn: null, titleColumn: null, dateColumn: null, kinds: {} }, changing),
+        ).toEqual({
+            idColumn: null,
+            titleColumn: "Qty",
+            dateColumn: null,
+            kinds: { Note: "text" },
+            columns: ["Note"],
+        })
+    })
 })

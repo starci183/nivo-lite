@@ -167,15 +167,37 @@ describe("recordFromDocument", () => {
     })
 
     it("uses the first line when there is no heading, and omits pages", () => {
-        expect(recordFromDocument("notes/plain.txt", { text: "  First line\nsecond" }).data).toEqual({
-            text: "First line\nsecond",
-            source: "upload",
-            fileName: "plain.txt",
+        expect(recordFromDocument("notes/plain.txt", { text: "  First line\nsecond" })).toEqual({
+            externalId: "plain.txt",
+            title: "First line",
+            data: { text: "First line\nsecond", source: "upload", fileName: "plain.txt" },
         })
+    })
+
+    it.each([
+        ["\n \n  First non-empty line\nSecond line", "First non-empty line"],
+        ["Intro\n\n## Later heading\nBody", "Later heading"],
+        ["###\nBody", "Body"],
+        ["x".repeat(121), "x".repeat(120)],
+    ])("chooses the title from uploaded text %p", (text, title) => {
+        expect(recordFromDocument("plain.txt", { text }).title).toBe(title)
     })
 
     it("falls back to the file name when the heading is only marks", () => {
         expect(recordFromDocument("marks.md", { text: "###" }).title).toBe("marks.md")
+    })
+
+    it("structurally preserves the file name for a synthetic missing title line", () => {
+        const split = jest.spyOn(String.prototype, "split").mockReturnValueOnce([])
+        try {
+            expect(recordFromDocument("notes/plain.txt", { text: "Body" })).toEqual({
+                externalId: "plain.txt",
+                title: "plain.txt",
+                data: { text: "Body", source: "upload", fileName: "plain.txt" },
+            })
+        } finally {
+            split.mockRestore()
+        }
     })
 
     it("marks a document that was cut and refuses one with no text", () => {
@@ -210,6 +232,27 @@ describe("recordFromGoogleDoc", () => {
                 params: { detail: CSV_COPY.googleDocEmpty },
             }),
         )
+    })
+
+    it.each([
+        ["\uFEFF\n \n  First non-empty line\nSecond line", "First non-empty line"],
+        ["Intro\n\n## Later heading\nBody", "Later heading"],
+        ["###\nBody", "Body"],
+    ])("chooses the title from a Google export %p", (text, title) => {
+        expect(recordFromGoogleDoc("document-1234", text).title).toBe(title)
+    })
+
+    it("structurally preserves the Google default for a synthetic missing title line", () => {
+        const split = jest.spyOn(String.prototype, "split").mockReturnValueOnce([])
+        try {
+            expect(recordFromGoogleDoc("document-1234", "Body")).toEqual({
+                externalId: "document-1234",
+                title: "Google Docs document",
+                data: { text: "Body", source: "google_docs", docId: "document-1234" },
+            })
+        } finally {
+            split.mockRestore()
+        }
     })
 
     it("marks a Google Doc that was cut", () => {

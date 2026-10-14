@@ -102,4 +102,17 @@ describe("parseDateLoose", () => {
         expect(parseDateLoose("2026-10-14T09:30Z")).toBe("2026-10-14T09:30:00.000Z")
         expect(parseDateLoose("2026-10-14T09:30+0700")).toBe("2026-10-14T02:30:00.000Z")
     })
+
+    it("structurally rejects a local date match with no year capture", () => {
+        // A native successful local match always has a year; simulate a malformed intermediate explicitly.
+        const raw = "14/10/2026"
+        const captures: [string, string, string] = [raw, "14", "10"]
+        const malformed: RegExpExecArray = Object.assign(captures, { index: 0, input: raw })
+        const exec = jest.spyOn(RegExp.prototype, "exec").mockReturnValueOnce(null).mockReturnValueOnce(malformed)
+        try {
+            expect(parseDateLoose(raw)).toBeNull()
+        } finally {
+            exec.mockRestore()
+        }
+    })
 })

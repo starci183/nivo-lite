@@ -22,6 +22,18 @@ describe("pricesInKnowledge", () => {
         const overflow = "9".repeat(400)
         expect(pricesInKnowledge(`${overflow} trieu; ${overflow}k; 0.001; 0,999`)).toEqual([])
     })
+
+    it("structurally preserves an empty result when a scaled match has no amount capture", () => {
+        // Real patterns require this capture; inject a malformed intermediate to pin the defensive fallback.
+        const captures: [string] = ["5 trieu"]
+        const malformed: RegExpExecArray = Object.assign(captures, { index: 0, input: "5 trieu" })
+        const matchAll = jest.spyOn(String.prototype, "matchAll").mockImplementation(() => [malformed].values())
+        try {
+            expect(pricesInKnowledge("5 trieu")).toEqual([])
+        } finally {
+            matchAll.mockRestore()
+        }
+    })
 })
 
 describe("isKnownPrice", () => {
