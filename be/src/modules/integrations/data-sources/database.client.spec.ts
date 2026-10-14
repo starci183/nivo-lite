@@ -125,4 +125,17 @@ describe("DatabaseClient", () => {
         })
         expect(session.close).toHaveBeenCalledTimes(1)
     })
+
+    it("propagates a session cleanup failure after a successful read", async () => {
+        const { client } = await build()
+        const session = sessionOf("postgres")
+        const cause = new Error("cleanup failed")
+        session.close.mockRejectedValue(cause)
+        const open = jest.spyOn(drivers, "openPostgres").mockResolvedValue(session)
+
+        await expect(client.read(target("postgres"), () => Promise.resolve("done"))).rejects.toBe(cause)
+        expect(open).toHaveBeenCalledWith(target("postgres"), "203.0.113.5")
+        expect(session.close).toHaveBeenCalledTimes(1)
+        expect(session.query).not.toHaveBeenCalled()
+    })
 })

@@ -112,6 +112,33 @@ describe("LlmClient", () => {
             })
         })
 
+        it("sorts missing and non-numeric indexes as zero before positive indexes", async () => {
+            const { client, http } = await build()
+            http.request.mockResolvedValue(
+                answer({
+                    data: [
+                        { index: 2, embedding: vector(2) },
+                        { embedding: vector(3) },
+                        { index: "1", embedding: vector(4) },
+                    ],
+                }),
+            )
+
+            await expect(client.embed(["a", "b", "c"], 5000)).resolves.toEqual({
+                vectors: [vector(3), vector(4), vector(2)],
+                usage: { promptTokens: null, completionTokens: null, totalTokens: null, costUsd: null },
+            })
+        })
+
+        it("rejects a non-numeric entry in a vector of the required dimensions", async () => {
+            const { client, http, logger } = await build()
+            http.request.mockResolvedValue(answer({ data: [{ embedding: ["x", ...vector(1).slice(1)] }] }))
+
+            await expect(client.embed(["a"], 5000)).resolves.toBeNull()
+
+            expect(logger.warn).toHaveBeenCalledWith(LlmLogEvent.EmbeddingFailed, { reason: "unexpected-shape" })
+        })
+
         it("reads only usage numbers that are valid", async () => {
             const { client, http } = await build()
             http.request.mockResolvedValue(
