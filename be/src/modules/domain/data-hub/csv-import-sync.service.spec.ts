@@ -3,53 +3,71 @@ import { mock } from "@starci/jest-preset"
 import { DataRecordsService } from "@modules/domain/data-records"
 import type { Table, TableClient } from "@modules/integrations/data-sources"
 import { TABLE } from "@modules/integrations/data-sources"
+import type { CsvConfig } from "./csv-import.contracts"
 import { CsvImportSyncService } from "./csv-import-sync.service"
-import type { DataConnection, DataSyncContext } from "./data-hub.contracts"
+import type { DataSyncContext } from "./data-hub.contracts"
 import { DataHubErrorCode } from "./errors/data-hub.error"
 import { CSV_COPY } from "./messages/csv-import.messages"
 
-const connection = (meta: DataConnection["meta"]): DataConnection => ({
-    id: "connection-1",
-    workspaceId: "ws-1",
-    provider: "csv_import",
-    name: "Customers",
-    status: "connected",
-    lastError: null,
-    meta,
-    everyMinutes: 60,
-    lastSyncAt: null,
-})
-
-const sheet: Table = {
-    headers: ["id", "name"],
-    rows: [
-        ["KH1", "Lan"],
-        ["KH2", "Minh"],
-    ],
-    sheets: ["Customers"],
-    sheet: "Customers",
-    delimiter: ",",
-}
-
-const saved = {
-    v: 1,
-    source: "sheet",
-    entity: "customer",
-    idColumn: "id",
-    titleColumn: "name",
-    dateColumn: null,
-    kinds: { id: "text", name: "text" },
-    columns: ["id", "name"],
-    link: "https://docs.google.com/spreadsheets/d/sheet-1",
-}
-
 describe("CsvImportSyncService", () => {
-    const build = async () => {
+    const config: CsvConfig = {
+        v: 1,
+        source: "sheet",
+        entity: "customer",
+        idColumn: "id",
+        titleColumn: "name",
+        dateColumn: null,
+        kinds: { id: "text", name: "text", email: "email" },
+        columns: ["id", "name", "email"],
+        link: "https://docs.google.com/spreadsheets/d/sheet-1",
+    }
+    const source: Table = {
+        headers: ["id", "name", "email"],
+        rows: [
+            [" customer-1 ", " Alice ", " ALICE@EXAMPLE.COM "],
+            ["customer-2", "Bob", "bob@example.com"],
+            ["", "Missing id", ""],
+        ],
+        sheets: [],
+        sheet: "",
+        delimiter: ",",
+    }
+    const recordsToWrite = [
+        {
+            externalId: "customer-1",
+            title: "Alice",
+            occurredAt: null,
+            data: { id: "customer-1", name: "Alice", email: "alice@example.com" },
+        },
+        {
+            externalId: "customer-2",
+            title: "Bob",
+            occurredAt: null,
+            data: { id: "customer-2", name: "Bob", email: "bob@example.com" },
+        },
+    ]
+
+    const build = async (meta: Readonly<Record<string, string>> = { config: JSON.stringify(config) }) => {
         const records = mock<DataRecordsService>()
         const table = mock<TableClient>()
+        const context = mock<DataSyncContext>({
+            connection: {
+                id: "connection-1",
+                workspaceId: "workspace-1",
+                provider: "csv_import",
+                name: "Customers",
+                status: "connected",
+                lastError: null,
+                meta,
+                everyMinutes: 60,
+                lastSyncAt: null,
+            },
+            credential: "{}",
+        })
         records.countExisting.mockResolvedValue(1)
-        records.count.mockResolvedValue(4)
-        table.readSheetLink.mockResolvedValue(sheet)
+        records.count.mockResolvedValue(1234)
+        table.readSheetLink.mockResolvedValue(source)
+        context.upsert.mockResolvedValue(2)
         const moduleRef = await Test.createTestingModule({
             providers: [
                 CsvImportSyncService,
@@ -57,67 +75,135 @@ describe("CsvImportSyncService", () => {
                 { provide: TABLE, useValue: table },
             ],
         }).compile()
-        return { sync: moduleRef.get(CsvImportSyncService), records, table }
+        return { service: moduleRef.get(CsvImportSyncService), records, table, context }
     }
 
-    it("serves the csv import provider", async () => {
-        const { sync } = await build()
-        expect(sync.provider).toBe("csv_import")
-    })
+    it("re-reads the saved sheet and upserts its mapped rows with an exact summary", async () => {
+        const { service, records, table, context } = await build()
 
-    it("re-reads the saved sheet, upserts the rows and reports how many were new", async () => {
-        const { sync, records, table } = await build()
-        const upsert = jest.fn().mockResolvedValue(2)
-        const context: DataSyncContext = {
-            connection: connection({ config: JSON.stringify(saved) }),
-            credential: "{}",
-            upsert,
-            isExpired: () => false,
-        }
-
-        await expect(sync.sync(context)).resolves.toEqual({
+        await expect(service.sync(context)).resolves.toEqual({
             rows: 2,
             note: CSV_COPY.syncNote(1, 1),
-            meta: { summary: `${CSV_COPY.entity.customer} · 4 ${CSV_COPY.rowUnit}` },
+            meta: { summary: `${CSV_COPY.entity.customer} \u00b7 1.234 ${CSV_COPY.rowUnit}` },
         })
-        expect(table.readSheetLink).toHaveBeenCalledWith(saved.link)
-        expect(records.countExisting).toHaveBeenCalledWith("connection-1", "customer", ["KH1", "KH2"])
-        expect(upsert).toHaveBeenCalledWith("customer", [
-            { externalId: "KH1", title: "Lan", occurredAt: null, data: { id: "KH1", name: "Lan" } },
-            { externalId: "KH2", title: "Minh", occurredAt: null, data: { id: "KH2", name: "Minh" } },
-        ])
+        expect(service.provider).toBe("csv_import")
+        expect(table.readSheetLink).toHaveBeenCalledWith("https://docs.google.com/spreadsheets/d/sheet-1")
+        expect(records.countExisting).toHaveBeenCalledWith("connection-1", "customer", ["customer-1", "customer-2"])
+        expect(context.upsert).toHaveBeenCalledWith("customer", recordsToWrite)
         expect(records.count).toHaveBeenCalledWith("connection-1")
     })
 
-    it.each([
-        ["a missing config", {}],
-        ["a damaged config", { config: "{" }],
-        ["a file import", { config: JSON.stringify({ ...saved, source: "file" }) }],
-        ["a sheet with no link", { config: JSON.stringify({ ...saved, link: undefined }) }],
-    ])("asks for a new upload when the connection is %s", async (_label, meta) => {
-        const { sync, table } = await build()
-        const context: DataSyncContext = {
-            connection: connection(meta),
-            credential: "{}",
-            upsert: jest.fn(),
-            isExpired: () => false,
-        }
-        await expect(sync.sync(context)).resolves.toEqual({ rows: 0, note: CSV_COPY.uploadAgain })
+    it("asks for another upload when the saved configuration is missing", async () => {
+        const { service, records, table, context } = await build({})
+
+        await expect(service.sync(context)).resolves.toEqual({ rows: 0, note: CSV_COPY.uploadAgain })
         expect(table.readSheetLink).not.toHaveBeenCalled()
+        expect(records.countExisting).not.toHaveBeenCalled()
+        expect(context.upsert).not.toHaveBeenCalled()
+        expect(records.count).not.toHaveBeenCalled()
     })
 
-    it("refuses a sheet that lost a mapped column", async () => {
-        const { sync, table } = await build()
-        table.readSheetLink.mockResolvedValue({ ...sheet, headers: ["name"], rows: [["Lan"]] })
-        const context: DataSyncContext = {
-            connection: connection({ config: JSON.stringify(saved) }),
-            credential: "{}",
-            upsert: jest.fn(),
-            isExpired: () => false,
-        }
-        await expect(sync.sync(context)).rejects.toMatchObject({
-            code: DataHubErrorCode.Invalid,
-            params: { detail: CSV_COPY.sheetChanged("id") },
+    it("asks for another upload when the saved configuration is damaged", async () => {
+        const { service, table, context } = await build({ config: "{" })
+
+        await expect(service.sync(context)).resolves.toEqual({ rows: 0, note: CSV_COPY.uploadAgain })
+        expect(table.readSheetLink).not.toHaveBeenCalled()
+        expect(context.upsert).not.toHaveBeenCalled()
+    })
+
+    it.each(["file", "manual", "document"] as const)(
+        "asks for another upload when the saved source is %s",
+        async (savedSource) => {
+            const { service, table, context } = await build({
+                config: JSON.stringify({ ...config, source: savedSource }),
+            })
+
+            await expect(service.sync(context)).resolves.toEqual({ rows: 0, note: CSV_COPY.uploadAgain })
+            expect(table.readSheetLink).not.toHaveBeenCalled()
+            expect(context.upsert).not.toHaveBeenCalled()
+        },
+    )
+
+    it("asks for another upload when the saved sheet has no link", async () => {
+        const { service, table, context } = await build({
+            config: JSON.stringify({ ...config, link: undefined }),
         })
+
+        await expect(service.sync(context)).resolves.toEqual({ rows: 0, note: CSV_COPY.uploadAgain })
+        expect(table.readSheetLink).not.toHaveBeenCalled()
+        expect(context.upsert).not.toHaveBeenCalled()
+    })
+
+    it("refuses a changed sheet and names every missing mapped column", async () => {
+        const { service, records, table, context } = await build({
+            config: JSON.stringify({ ...config, dateColumn: "joined_at" }),
+        })
+        table.readSheetLink.mockResolvedValue({ ...source, headers: ["email"] })
+
+        await expect(service.sync(context)).rejects.toMatchObject({
+            code: DataHubErrorCode.Invalid,
+            params: { detail: CSV_COPY.sheetChanged("id, name, joined_at") },
+        })
+        expect(records.countExisting).not.toHaveBeenCalled()
+        expect(context.upsert).not.toHaveBeenCalled()
+        expect(records.count).not.toHaveBeenCalled()
+    })
+
+    it("upserts an empty sheet and summarizes the existing total", async () => {
+        const { service, records, table, context } = await build()
+        table.readSheetLink.mockResolvedValue({ ...source, rows: [] })
+        records.countExisting.mockResolvedValue(0)
+        records.count.mockResolvedValue(7)
+        context.upsert.mockResolvedValue(0)
+
+        await expect(service.sync(context)).resolves.toEqual({
+            rows: 0,
+            note: CSV_COPY.syncNote(0, 0),
+            meta: { summary: `${CSV_COPY.entity.customer} \u00b7 7 ${CSV_COPY.rowUnit}` },
+        })
+        expect(records.countExisting).toHaveBeenCalledWith("connection-1", "customer", [])
+        expect(context.upsert).toHaveBeenCalledWith("customer", [])
+        expect(records.count).toHaveBeenCalledWith("connection-1")
+    })
+
+    it("propagates a sheet read failure before looking up existing records", async () => {
+        const { service, records, table, context } = await build()
+        const cause = new Error("sheet unavailable")
+        table.readSheetLink.mockRejectedValue(cause)
+
+        await expect(service.sync(context)).rejects.toBe(cause)
+        expect(records.countExisting).not.toHaveBeenCalled()
+        expect(context.upsert).not.toHaveBeenCalled()
+        expect(records.count).not.toHaveBeenCalled()
+    })
+
+    it("propagates an existing-record count failure before writing rows", async () => {
+        const { service, records, context } = await build()
+        const cause = new Error("existing count failed")
+        records.countExisting.mockRejectedValue(cause)
+
+        await expect(service.sync(context)).rejects.toBe(cause)
+        expect(context.upsert).not.toHaveBeenCalled()
+        expect(records.count).not.toHaveBeenCalled()
+    })
+
+    it("propagates an upsert failure before counting the saved total", async () => {
+        const { service, records, context } = await build()
+        const cause = new Error("write failed")
+        context.upsert.mockRejectedValue(cause)
+
+        await expect(service.sync(context)).rejects.toBe(cause)
+        expect(context.upsert).toHaveBeenCalledWith("customer", recordsToWrite)
+        expect(records.count).not.toHaveBeenCalled()
+    })
+
+    it("propagates a total-count failure after writing the mapped rows", async () => {
+        const { service, records, context } = await build()
+        const cause = new Error("total count failed")
+        records.count.mockRejectedValue(cause)
+
+        await expect(service.sync(context)).rejects.toBe(cause)
+        expect(context.upsert).toHaveBeenCalledWith("customer", recordsToWrite)
+        expect(records.count).toHaveBeenCalledWith("connection-1")
     })
 })
