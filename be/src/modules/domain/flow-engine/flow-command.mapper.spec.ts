@@ -50,6 +50,11 @@ describe("flow command payloads", () => {
         expect(noteOf({ basis: "approved by owner" }, "basis")).toBe("approved by owner")
     })
 
+    it.each([undefined, null])("keeps the blank invalid field for a malformed note name %p", (name) => {
+        const readNote = jest.fn().mockImplementation(noteOf)
+        expectInvalid(() => readNote({ undefined: 7, null: 7 }, name), "")
+    })
+
     it("patches only present authority fields and rounds numeric goals", () => {
         expect(authorityPatchOf({})).toEqual({})
         expect(

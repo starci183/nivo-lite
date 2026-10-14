@@ -107,6 +107,12 @@ describe("OwnerChatService", () => {
         expect(decide).not.toHaveBeenCalled()
     })
 
+    it("has no decision example when the first waiting view is absent", async () => {
+        const { service } = await build([])
+        expect(service["example"]("approve", undefined, "en")).toBe("")
+        expect(service["example"]("duyet", undefined, "vi")).toBe("")
+    })
+
     it("never approves a payment reconciliation by chat", async () => {
         const { service, decide } = await build([itemOf({ action: "reconcile_payment" })])
 

@@ -31,10 +31,10 @@ const isRecord = (value: unknown): value is FlowPayload =>
 const pick = (payload: FlowPayload, names: ReadonlyArray<string>): unknown =>
     names.map((name) => payload[name]).find((value) => value !== undefined)
 
-const optionalText = (payload: FlowPayload, ...names: [string, ...Array<string>]): string | null => {
+const optionalText = (payload: FlowPayload, ...names: Array<string>): string | null => {
     const value = pick(payload, names)
     if (value === undefined || value === null) return null
-    if (typeof value !== "string") throw invalid(names[0])
+    if (typeof value !== "string") throw invalid(names[0] ?? "")
     return value
 }
 
