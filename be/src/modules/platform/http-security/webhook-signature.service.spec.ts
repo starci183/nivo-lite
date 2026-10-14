@@ -14,6 +14,7 @@ const SECRET = "calendar-secret"
 const BODY = Buffer.from(JSON.stringify({ eventId: "evt-1", status: "confirmed" }))
 
 const OPTIONS: HttpSecurityOptions = {
+    trustedProxyHops: 1,
     allowedOrigins: [],
     rateLimit: { windowMs: 60_000, defaultLimit: 600, strictLimit: 30 },
     webhooks: { calendar: { secret: new Secret(SECRET), toleranceMs: 300_000 } },

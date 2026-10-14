@@ -10,6 +10,7 @@ import type { HttpSecurityOptions } from "./http-security.options"
 import { RateLimit, RateLimitGuard, RateTier } from "./rate-limit.guard"
 
 const options = builder<HttpSecurityOptions>({
+    trustedProxyHops: 1,
     allowedOrigins: [],
     rateLimit: { windowMs: 60_000, defaultLimit: 3, strictLimit: 1 },
     webhooks: {},
