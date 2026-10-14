@@ -217,9 +217,11 @@ describe("ConfirmOrderPerformerService", () => {
             expect(inbound.mark).toHaveBeenCalledWith("ws-1", "ev-1", null, "lead-1")
         })
 
-        it("captures an unnamed sender as a new customer and logs the capture", async () => {
+        it.each([null, "", undefined])("captures unnamed sender %p and logs it", async (senderName) => {
             const { service, orders, leads, inbound, agents, responsibilities, evidence, events } = await build()
-            inbound.find.mockResolvedValue(eventOf({ sender_name: null, sender_contact: null, amount_vnd: 150000 }))
+            inbound.find.mockResolvedValue(
+                eventOf({ sender_name: senderName, sender_contact: null, amount_vnd: 150000 }),
+            )
             agents.agentOfDepartment.mockResolvedValue({ id: "agent-1", name: "Mai" })
             const item = itemOf({
                 subject_type: "inbound",
@@ -267,6 +269,7 @@ describe("ConfirmOrderPerformerService", () => {
 
             expect(writer.extractOrder).not.toHaveBeenCalled()
             expect(prepared.proposal.summary).toBe("orderSummary|SO-2|notShared|—|no amount")
+            expect(leads.capture.mock.calls[0]?.[0].contactName).toBe("notShared")
             expect(leads.capture.mock.calls[0]?.[0]).toMatchObject({ channel: "—", need: "—" })
             expect(evidence.log.mock.calls[0]?.[1]).toMatchObject({ actor: "Chatbot", evidence: null })
             expect(orders.draft.mock.calls[0]?.[0]).toMatchObject({ orderNo: null, items: "", amountVnd: null })
@@ -300,7 +303,7 @@ describe("ConfirmOrderPerformerService", () => {
         })
 
         it("captures an empty input without model extraction or message evidence", async () => {
-            const { service, inbound, writer, evidence } = await build()
+            const { service, inbound, leads, writer, evidence } = await build()
             inbound.find.mockResolvedValue(eventOf({ body: "" }))
 
             const prepared = await service.prepare(
@@ -314,6 +317,7 @@ describe("ConfirmOrderPerformerService", () => {
             )
 
             expect(prepared.patch).toEqual({ subject_type: "order", subject_id: "ord-2", lead_id: "lead-2" })
+            expect(leads.capture.mock.calls[0]?.[0].contactName).toBe("Lan")
             expect(writer.extractOrder).not.toHaveBeenCalled()
             expect(evidence.log).toHaveBeenCalledWith(ctx, {
                 lead_id: "lead-2",
