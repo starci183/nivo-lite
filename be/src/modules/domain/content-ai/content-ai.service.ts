@@ -166,9 +166,10 @@ export class ContentAiService {
         const planned = planSlots(month, configuration.cadence, configuration.pillars, this.clock.now())
         if (planned.slots.length === 0) throw new ContentAiError({ code: ContentAiErrorCode.NoSlots })
         const brand = buildBrand(material, configuration.settings)
-        const chunks = Array.from({ length: Math.ceil(planned.slots.length / CHUNK) }, (_, index) =>
-            planned.slots.slice(index * CHUNK, (index + 1) * CHUNK),
-        )
+        const firstChunk = planned.slots.slice(0, CHUNK)
+        const chunks = [firstChunk]
+        for (let start = CHUNK; start < planned.slots.length; start += CHUNK)
+            chunks.push(planned.slots.slice(start, start + CHUNK))
         const context = {
             operation: "plan",
             month,
@@ -217,7 +218,7 @@ export class ContentAiService {
             await this.generations.setContext(
                 workspaceId,
                 rootId,
-                { ...context, rootId, generationIds: ids, allowedSlots: (chunks[0] ?? []).map((slot) => slot.n) },
+                { ...context, rootId, generationIds: ids, allowedSlots: firstChunk.map((slot) => slot.n) },
                 tx,
             )
             return { id: rootId, status: "queued", itemId: null }

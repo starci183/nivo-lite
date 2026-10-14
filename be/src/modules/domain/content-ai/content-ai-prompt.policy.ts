@@ -422,11 +422,11 @@ export const claimWarnings = (text: string, knowledge?: string): Array<ClaimWarn
     })
     if (knowledge === undefined) return promises
     const facts = knowledge.replace(/\s+/gu, "").toLowerCase()
-    const figures = [...text.matchAll(new RegExp(CONTENT_AI_CLAIMS.figure, "giu"))].flatMap((match) => {
-        const capture = match[1]
-        if (capture === undefined) return []
+    const figures: Array<ClaimWarning> = []
+    text.replace(new RegExp(CONTENT_AI_CLAIMS.figure, "giu"), (match: string, capture: string) => {
         const figure = capture.replace(/\s+/gu, "").toLowerCase()
-        return facts.includes(figure) ? [] : [{ kind: "figure" as const, figure: capture.trim() }]
+        if (!facts.includes(figure)) figures.push({ kind: "figure", figure: capture.trim() })
+        return match
     })
     return [...promises, ...figures]
 }
