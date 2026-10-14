@@ -1,3 +1,5 @@
+"use client"
+
 import { useCallback } from "react"
 import { LocalStorage, StorageId, rememberWorkspaceCookie } from "@/modules/storage"
 import { useAppDispatch, useAppSelector, setActiveWorkspaceId } from "@/redux"

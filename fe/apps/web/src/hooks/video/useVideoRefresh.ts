@@ -1,3 +1,5 @@
+"use client"
+
 import { useCallback } from "react"
 import { mutate } from "swr"
 import {

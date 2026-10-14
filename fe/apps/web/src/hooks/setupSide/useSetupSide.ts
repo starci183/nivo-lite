@@ -1,3 +1,5 @@
+"use client"
+
 import { useFormatter, useLocale, useTranslations } from "next-intl"
 import { mapSlot } from "@/hooks/slot"
 import { useModuleCatalog } from "@/hooks/moduleCatalog"

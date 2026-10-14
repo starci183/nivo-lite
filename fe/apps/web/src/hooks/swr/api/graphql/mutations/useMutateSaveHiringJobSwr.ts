@@ -1,3 +1,5 @@
+"use client"
+
 import useSWRMutation from "swr/mutation"
 import { mutateSaveHiringJob } from "@/modules/api/graphql/mutations/mutation-save-hiring-job"
 import type { MutateSaveHiringJobRequest } from "@/modules/api/graphql/mutations/mutation-save-hiring-job"

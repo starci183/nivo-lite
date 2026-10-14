@@ -1,3 +1,5 @@
+"use client"
+
 import useSWRMutation from "swr/mutation"
 import { mutateDecideBrainLesson } from "@/modules/api/graphql/mutations/mutation-decide-brain-lesson"
 import type { MutateDecideBrainLessonRequest } from "@/modules/api/graphql/mutations/mutation-decide-brain-lesson"

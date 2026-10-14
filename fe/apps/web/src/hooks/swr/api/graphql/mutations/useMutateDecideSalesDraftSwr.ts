@@ -1,3 +1,5 @@
+"use client"
+
 import useSWRMutation from "swr/mutation"
 import { mutateDecideSalesDraft } from "@/modules/api/graphql/mutations/mutation-decide-sales-draft"
 import type { MutateDecideSalesDraftRequest } from "@/modules/api/graphql/mutations/mutation-decide-sales-draft"

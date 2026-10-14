@@ -1,3 +1,5 @@
+"use client"
+
 import useSWRMutation from "swr/mutation"
 import { mutateRenameModuleInstallation } from "@/modules/api/graphql/mutations/mutation-rename-module-installation"
 import type { MutateRenameModuleInstallationRequest } from "@/modules/api/graphql/mutations/mutation-rename-module-installation"

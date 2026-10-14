@@ -1,3 +1,5 @@
+"use client"
+
 import { useSearchParams } from "next/navigation"
 import { useCallback } from "react"
 import { navigation } from "@/modules/i18n"

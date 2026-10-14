@@ -1,3 +1,5 @@
+"use client"
+
 import { useMemo } from "react"
 import { useQueryModuleRequirementFactsSwr } from "@/hooks/swr"
 import { MODULE_REGISTRY } from "@/modules/catalog"

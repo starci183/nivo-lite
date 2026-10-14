@@ -1,3 +1,5 @@
+"use client"
+
 import { useTranslations } from "next-intl"
 import { useState, useTransition } from "react"
 import type { RowBusy, RowConfirm } from "@/hooks/connection-rows"

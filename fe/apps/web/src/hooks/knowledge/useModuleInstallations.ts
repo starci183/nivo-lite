@@ -1,3 +1,5 @@
+"use client"
+
 import { useMemo } from "react"
 import { useQueryModuleInstallationsSwr } from "@/hooks/swr"
 import { toWireInstallation } from "@/modules/documents"

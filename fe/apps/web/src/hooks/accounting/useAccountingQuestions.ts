@@ -1,3 +1,5 @@
+"use client"
+
 import { useFormatter, useTranslations } from "next-intl"
 import { useEffect, useMemo, useRef, useState } from "react"
 import { useWatch } from "react-hook-form"

@@ -1,3 +1,5 @@
+"use client"
+
 import { useState } from "react"
 import type { ClipboardEvent } from "react"
 import { linkProblemOf, nextId, splitLinks } from "@/modules/documents"

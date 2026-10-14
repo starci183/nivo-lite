@@ -1,3 +1,5 @@
+"use client"
+
 import useSWRMutation from "swr/mutation"
 import { mutateHandoffToAccounting } from "@/modules/api/graphql/mutations/mutation-handoff-to-accounting"
 import type { MutateHandoffToAccountingRequest } from "@/modules/api/graphql/mutations/mutation-handoff-to-accounting"

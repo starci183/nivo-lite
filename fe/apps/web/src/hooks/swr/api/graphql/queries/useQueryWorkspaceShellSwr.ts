@@ -1,3 +1,5 @@
+"use client"
+
 import useSWR from "swr"
 import { queryWorkspaceShell } from "@/modules/api/graphql/queries/query-workspace-shell"
 import type { QueryWorkspaceShellRequest } from "@/modules/api/graphql/queries/query-workspace-shell"

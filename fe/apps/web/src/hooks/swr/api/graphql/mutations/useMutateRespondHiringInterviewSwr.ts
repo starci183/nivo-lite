@@ -1,3 +1,5 @@
+"use client"
+
 import useSWRMutation from "swr/mutation"
 import { mutateRespondHiringInterview } from "@/modules/api/graphql/mutations/mutation-respond-hiring-interview"
 import type { MutateRespondHiringInterviewRequest } from "@/modules/api/graphql/mutations/mutation-respond-hiring-interview"

@@ -1,3 +1,5 @@
+"use client"
+
 import { useFormatter, useLocale, useTranslations } from "next-intl"
 import { useModuleCatalog } from "@/hooks/moduleCatalog"
 import { useQueryCreditUsageSummarySwr } from "@/hooks/swr"

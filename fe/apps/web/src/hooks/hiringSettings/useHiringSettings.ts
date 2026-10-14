@@ -1,3 +1,5 @@
+"use client"
+
 import { useTranslations } from "next-intl"
 import type { UseFormReturn } from "react-hook-form"
 import { useHiringRun } from "@/hooks/hiring"

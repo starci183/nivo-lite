@@ -1,3 +1,5 @@
+"use client"
+
 import { useCallback, useState } from "react"
 import { useMutatePostOfficeMessageSwr, useMutateProposeOfficeCommandSwr } from "@/hooks/swr"
 import { useGraphQLWithToast } from "@/modules/toast"

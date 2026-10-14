@@ -1,3 +1,5 @@
+"use client"
+
 import { useMemo } from "react"
 import { useQueryPublicHiringInterviewSwr } from "@/hooks/swr"
 import { toPublicInterview } from "./hiringPublic.shared"

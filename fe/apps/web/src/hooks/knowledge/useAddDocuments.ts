@@ -1,3 +1,5 @@
+"use client"
+
 import { useState } from "react"
 import { canRetry, linkProblemOf, pairsToText, typedLinks } from "@/modules/documents"
 import type { InstanceOption, QaLabels, QueueActions } from "@/modules/documents"

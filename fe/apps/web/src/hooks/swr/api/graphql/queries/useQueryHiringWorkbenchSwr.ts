@@ -1,3 +1,5 @@
+"use client"
+
 import useSWR from "swr"
 import { queryHiringWorkbench } from "@/modules/api/graphql/queries/query-hiring-workbench"
 

@@ -1,3 +1,5 @@
+"use client"
+
 import { useSyncExternalStore } from "react"
 import { readDismissed, subscribeDismissed, writeDismissed } from "@/modules/dismissals"
 

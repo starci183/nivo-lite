@@ -1,3 +1,5 @@
+"use client"
+
 import useSWRMutation from "swr/mutation"
 import { mutateCreateApiKey } from "@/modules/api/graphql/mutations/mutation-create-api-key"
 import type { MutateCreateApiKeyRequest } from "@/modules/api/graphql/mutations/mutation-create-api-key"

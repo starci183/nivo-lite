@@ -1,3 +1,5 @@
+"use client"
+
 import { useTranslations } from "next-intl"
 import { useCallback, useMemo } from "react"
 import { isDataConnector, purposeFor } from "@/hooks/connection-access"

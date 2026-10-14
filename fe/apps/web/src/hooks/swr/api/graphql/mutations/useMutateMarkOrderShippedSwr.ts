@@ -1,3 +1,5 @@
+"use client"
+
 import useSWRMutation from "swr/mutation"
 import { mutateMarkOrderShipped } from "@/modules/api/graphql/mutations/mutation-mark-order-shipped"
 import type { MutateMarkOrderShippedRequest } from "@/modules/api/graphql/mutations/mutation-mark-order-shipped"

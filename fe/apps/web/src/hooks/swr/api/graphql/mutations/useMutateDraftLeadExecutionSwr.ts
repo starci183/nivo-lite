@@ -1,3 +1,5 @@
+"use client"
+
 import useSWRMutation from "swr/mutation"
 import { mutateDraftLeadExecution } from "@/modules/api/graphql/mutations/mutation-draft-lead-execution"
 import type { MutateDraftLeadExecutionRequest } from "@/modules/api/graphql/mutations/mutation-draft-lead-execution"

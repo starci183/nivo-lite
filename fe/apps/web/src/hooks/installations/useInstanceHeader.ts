@@ -1,3 +1,5 @@
+"use client"
+
 import { useLocale } from "next-intl"
 import { useModuleCatalog } from "@/hooks/moduleCatalog"
 import { MODULE_REGISTRY, pickCopy } from "@/modules/catalog"

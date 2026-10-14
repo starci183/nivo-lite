@@ -1,3 +1,5 @@
+"use client"
+
 import { useMemo } from "react"
 import { useQueryVideoBrandSwr, useQueryVideoProjectsSwr, useQueryVideoScopeSwr } from "@/hooks/swr"
 import { useVideoReferences } from "./useVideoReferences"

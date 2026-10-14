@@ -1,3 +1,5 @@
+"use client"
+
 import useSWRMutation from "swr/mutation"
 import { mutateCancelHiringOffer } from "@/modules/api/graphql/mutations/mutation-cancel-hiring-offer"
 import type { MutateCancelHiringOfferRequest } from "@/modules/api/graphql/mutations/mutation-cancel-hiring-offer"

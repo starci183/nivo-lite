@@ -1,3 +1,5 @@
+"use client"
+
 import useSWR from "swr"
 import { queryAccountingWorkbench } from "@/modules/api/graphql/queries/query-accounting-workbench"
 import { accountingWorkbenchOf } from "@/modules/utils"

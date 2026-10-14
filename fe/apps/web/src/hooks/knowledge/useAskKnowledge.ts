@@ -1,3 +1,5 @@
+"use client"
+
 import { useState, useTransition } from "react"
 import { queryAskKnowledge } from "@/modules/api/graphql/queries/query-ask-knowledge"
 import { AGENT_MODULES, toRetrievedPassage } from "@/modules/documents"

@@ -1,3 +1,5 @@
+"use client"
+
 import { useTranslations } from "next-intl"
 import { useMutateRequestContentDraftSwr } from "@/hooks/swr"
 import type { ContentAiStatusType } from "@/modules/api"

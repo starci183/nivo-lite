@@ -1,3 +1,5 @@
+"use client"
+
 import { useEffect, useState } from "react"
 
 /** The time left until an instant, split into the units a countdown shows. */

@@ -1,3 +1,5 @@
+"use client"
+
 import useSWRMutation from "swr/mutation"
 import { mutateStopFailedStep } from "@/modules/api/graphql/mutations/mutation-stop-failed-step"
 import type { MutateStopFailedStepRequest } from "@/modules/api/graphql/mutations/mutation-stop-failed-step"

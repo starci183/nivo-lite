@@ -1,3 +1,5 @@
+"use client"
+
 import { useCallback, useReducer, useSyncExternalStore } from "react"
 
 const WIDE_INFO_QUERY = "(min-width: 80rem)"

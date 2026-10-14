@@ -1,3 +1,5 @@
+"use client"
+
 import useSWR from "swr"
 import { queryDataSyncRun } from "@/modules/api/graphql/queries/query-data-sync-run"
 import type { DataSyncRunType } from "@/modules/api"

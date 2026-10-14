@@ -1,3 +1,5 @@
+"use client"
+
 import { useTranslations } from "next-intl"
 import { useMutateRequestContentMonthPlanSwr } from "@/hooks/swr"
 import { useContentAiJob } from "./useContentAiJob"

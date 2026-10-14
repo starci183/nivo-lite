@@ -1,3 +1,5 @@
+"use client"
+
 import useSWR from "swr"
 import { queryChatbotGaps } from "@/modules/api/graphql/queries/query-chatbot-gaps"
 

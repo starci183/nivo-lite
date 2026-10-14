@@ -1,3 +1,5 @@
+"use client"
+
 import { useEffect } from "react"
 import { useQueryAgentsSwr } from "@/hooks/swr"
 import { isModuleKey } from "@/modules/catalog"

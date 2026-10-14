@@ -1,3 +1,5 @@
+"use client"
+
 import useSWRMutation from "swr/mutation"
 import { mutateRefreshLeadContext } from "@/modules/api/graphql/mutations/mutation-refresh-lead-context"
 import type { MutateRefreshLeadContextRequest } from "@/modules/api/graphql/mutations/mutation-refresh-lead-context"

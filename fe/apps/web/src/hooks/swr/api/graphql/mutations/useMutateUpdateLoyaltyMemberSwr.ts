@@ -1,3 +1,5 @@
+"use client"
+
 import useSWRMutation from "swr/mutation"
 import { mutateUpdateLoyaltyMember } from "@/modules/api/graphql/mutations/mutation-update-loyalty-member"
 import type { MutateUpdateLoyaltyMemberRequest } from "@/modules/api/graphql/mutations/types/update-loyalty-member"

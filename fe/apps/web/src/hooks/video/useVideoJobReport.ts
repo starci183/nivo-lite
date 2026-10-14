@@ -1,3 +1,5 @@
+"use client"
+
 import { useTranslations } from "next-intl"
 import { useCallback, useRef } from "react"
 import { useActiveWorkspace } from "@/hooks/workspaces"

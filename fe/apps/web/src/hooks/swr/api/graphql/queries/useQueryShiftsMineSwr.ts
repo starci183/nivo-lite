@@ -1,3 +1,5 @@
+"use client"
+
 import useSWR from "swr"
 import { queryShiftsMine } from "@/modules/api/graphql/queries/query-shifts-mine"
 

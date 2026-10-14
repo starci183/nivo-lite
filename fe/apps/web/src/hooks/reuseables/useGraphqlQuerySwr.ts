@@ -1,3 +1,5 @@
+"use client"
+
 import useSWR from "swr"
 import type { SWRConfiguration } from "swr"
 import { useAppSelector } from "@/redux"

@@ -1,3 +1,5 @@
+"use client"
+
 import useSWRMutation from "swr/mutation"
 import { mutateToggleHiringOnboarding } from "@/modules/api/graphql/mutations/mutation-toggle-hiring-onboarding"
 import type { MutateToggleHiringOnboardingRequest } from "@/modules/api/graphql/mutations/mutation-toggle-hiring-onboarding"

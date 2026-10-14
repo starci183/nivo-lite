@@ -1,3 +1,5 @@
+"use client"
+
 import useSWR from "swr"
 import { queryInventoryWorkbench } from "@/modules/api/graphql/queries/query-inventory-workbench"
 

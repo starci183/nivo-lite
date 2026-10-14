@@ -1,3 +1,5 @@
+"use client"
+
 import useSWRMutation from "swr/mutation"
 import { mutateAddLoyaltyPresetRewards } from "@/modules/api/graphql/mutations/mutation-add-loyalty-preset-rewards"
 

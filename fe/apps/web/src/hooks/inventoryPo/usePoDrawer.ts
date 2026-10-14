@@ -1,3 +1,5 @@
+"use client"
+
 import { useTranslations } from "next-intl"
 import { useDrawer, useInventoryFormat, useInventoryRun, useSay } from "@/hooks/inventory"
 import type { InventoryDecisions } from "@/hooks/inventory"

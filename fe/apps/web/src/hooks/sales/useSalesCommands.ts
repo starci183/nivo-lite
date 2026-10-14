@@ -1,3 +1,5 @@
+"use client"
+
 import { useTranslations } from "next-intl"
 import { useMutateMarkOrderShippedSwr, useMutateSaveContractSwr, useMutateStopFailedStepSwr } from "@/hooks/swr"
 import type { MarkOrderShippedRequest, SaveContractRequest, StopFailedStepRequest } from "@/modules/api"

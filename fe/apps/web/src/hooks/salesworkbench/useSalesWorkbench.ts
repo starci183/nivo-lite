@@ -1,3 +1,5 @@
+"use client"
+
 import { useMemo } from "react"
 import { useQuerySalesWorkbenchSwr } from "@/hooks/swr"
 import { useActiveWorkspace } from "@/hooks/workspaces"

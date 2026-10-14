@@ -1,3 +1,5 @@
+"use client"
+
 import useSWR from "swr"
 
 /** What a caller may follow while a status is polled. */

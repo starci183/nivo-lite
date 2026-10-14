@@ -1,3 +1,5 @@
+"use client"
+
 import { useMemo, useState } from "react"
 import { useHiringCopy, useHiringRun } from "@/hooks/hiring"
 import type { HiringWorkbenchData } from "@/hooks/hiringWire"

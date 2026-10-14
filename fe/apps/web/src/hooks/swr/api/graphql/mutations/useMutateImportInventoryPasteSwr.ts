@@ -1,3 +1,5 @@
+"use client"
+
 import useSWRMutation from "swr/mutation"
 import { mutateImportInventoryPaste } from "@/modules/api/graphql/mutations/mutation-import-inventory-paste"
 import type { MutateImportInventoryPasteRequest } from "@/modules/api/graphql/mutations/mutation-import-inventory-paste"

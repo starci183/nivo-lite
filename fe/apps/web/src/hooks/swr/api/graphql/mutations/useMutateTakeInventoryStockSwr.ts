@@ -1,3 +1,5 @@
+"use client"
+
 import useSWRMutation from "swr/mutation"
 import { mutateTakeInventoryStock } from "@/modules/api/graphql/mutations/mutation-take-inventory-stock"
 import type { MutateTakeInventoryStockRequest } from "@/modules/api/graphql/mutations/mutation-take-inventory-stock"

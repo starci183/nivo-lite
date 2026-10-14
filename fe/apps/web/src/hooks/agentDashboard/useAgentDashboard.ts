@@ -1,3 +1,5 @@
+"use client"
+
 import { useMemo } from "react"
 import { useActiveWorkspace } from "@/hooks/workspaces"
 import { slotOfSwr } from "@/hooks/slot"

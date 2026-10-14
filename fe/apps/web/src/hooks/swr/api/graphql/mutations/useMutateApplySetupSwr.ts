@@ -1,3 +1,5 @@
+"use client"
+
 import useSWRMutation from "swr/mutation"
 import { mutateApplySetup } from "@/modules/api/graphql/mutations/mutation-apply-setup"
 import type { MutateApplySetupRequest } from "@/modules/api/graphql/mutations/mutation-apply-setup"

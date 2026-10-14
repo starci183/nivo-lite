@@ -1,3 +1,5 @@
+"use client"
+
 import { useTranslations } from "next-intl"
 import { navigation } from "@/modules/i18n"
 import type { ConsoleNavItem } from "@/modules/types"

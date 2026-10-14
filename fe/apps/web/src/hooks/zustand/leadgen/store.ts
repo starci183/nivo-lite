@@ -1,3 +1,5 @@
+"use client"
+
 import { create } from "zustand"
 
 /** An approval stays locked across workbench remounts until the backend reports its terminal result. */

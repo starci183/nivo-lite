@@ -1,3 +1,5 @@
+"use client"
+
 import useSWRMutation from "swr/mutation"
 import { mutateDeleteInventoryRecipe } from "@/modules/api/graphql/mutations/mutation-delete-inventory-recipe"
 import type { MutateDeleteInventoryRecipeRequest } from "@/modules/api/graphql/mutations/mutation-delete-inventory-recipe"

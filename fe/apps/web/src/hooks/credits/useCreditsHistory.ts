@@ -1,3 +1,5 @@
+"use client"
+
 import type { CreditsHistoryRow } from "@/modules/types"
 import { useFormatter, useLocale, useTranslations } from "next-intl"
 import { useRequireActiveWorkspace } from "@/hooks/workspaces"

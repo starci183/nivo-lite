@@ -1,3 +1,5 @@
+"use client"
+
 import { useTranslations } from "next-intl"
 import { mutate } from "swr"
 import { useMutateCreateVideoMediaUploadSwr, QUERY_VIDEO_MEDIA_SWR_KEY } from "@/hooks/swr"

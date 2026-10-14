@@ -1,3 +1,5 @@
+"use client"
+
 import useSWR from "swr"
 import type { LessonMiningStatusType } from "@/modules/api"
 import { useWorkspaceKey } from "@/hooks/workspaceKey"

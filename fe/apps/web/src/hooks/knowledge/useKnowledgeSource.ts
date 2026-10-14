@@ -1,3 +1,5 @@
+"use client"
+
 import { useMemo } from "react"
 import { isNotFoundFailure } from "@/modules/api"
 import { useQueryKnowledgeSourceSwr } from "@/hooks/swr"

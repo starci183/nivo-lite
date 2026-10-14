@@ -1,3 +1,5 @@
+"use client"
+
 import useSWR from "swr"
 import { queryChatbotThread } from "@/modules/api/graphql/queries/query-chatbot-thread"
 

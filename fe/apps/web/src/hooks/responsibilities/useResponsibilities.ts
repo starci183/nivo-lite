@@ -1,3 +1,5 @@
+"use client"
+
 import { useTranslations } from "next-intl"
 import { useQueryAgentsSwr, useQueryResponsibilitiesSwr } from "@/hooks/swr"
 import { slotOfSwr } from "@/hooks/slot"

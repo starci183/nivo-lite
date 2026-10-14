@@ -1,3 +1,5 @@
+"use client"
+
 import useSWR from "swr"
 import { queryAdminHealth } from "@/modules/api/graphql/queries/query-admin-health"
 

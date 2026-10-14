@@ -1,3 +1,5 @@
+"use client"
+
 import useSWRMutation from "swr/mutation"
 import { mutateReassignShiftsShift } from "@/modules/api/graphql/mutations/mutation-reassign-shifts-shift"
 import type { MutateReassignShiftsShiftRequest } from "@/modules/api/graphql/mutations/mutation-reassign-shifts-shift"

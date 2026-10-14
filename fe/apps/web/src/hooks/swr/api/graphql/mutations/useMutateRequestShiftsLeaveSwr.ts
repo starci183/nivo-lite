@@ -1,3 +1,5 @@
+"use client"
+
 import useSWRMutation from "swr/mutation"
 import { mutateRequestShiftsLeave } from "@/modules/api/graphql/mutations/mutation-request-shifts-leave"
 import type { MutateRequestShiftsLeaveRequest } from "@/modules/api/graphql/mutations/mutation-request-shifts-leave"

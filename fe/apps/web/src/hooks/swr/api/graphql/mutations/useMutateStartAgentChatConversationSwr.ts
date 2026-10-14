@@ -1,3 +1,5 @@
+"use client"
+
 import useSWRMutation from "swr/mutation"
 import { mutateStartAgentChatConversation } from "@/modules/api/graphql/mutations/mutation-start-agent-chat-conversation"
 import type { MutateStartAgentChatConversationRequest } from "@/modules/api/graphql/mutations/mutation-start-agent-chat-conversation"

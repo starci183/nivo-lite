@@ -1,3 +1,5 @@
+"use client"
+
 import useSWR from "swr"
 import type { SWRConfiguration } from "swr"
 import { queryLoyaltyCampaign } from "@/modules/api/graphql/queries/query-loyalty-campaign"

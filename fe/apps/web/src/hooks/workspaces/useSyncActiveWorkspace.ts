@@ -1,3 +1,5 @@
+"use client"
+
 import { useEffect } from "react"
 import { LocalStorage, StorageId, rememberWorkspaceCookie } from "@/modules/storage"
 import { useAppDispatch, setActiveWorkspaceId } from "@/redux"

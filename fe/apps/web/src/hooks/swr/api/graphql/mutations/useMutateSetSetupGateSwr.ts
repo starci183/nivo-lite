@@ -1,3 +1,5 @@
+"use client"
+
 import useSWRMutation from "swr/mutation"
 import { mutateSetSetupGate } from "@/modules/api/graphql/mutations/mutation-set-setup-gate"
 import type { MutateSetSetupGateRequest } from "@/modules/api/graphql/mutations/mutation-set-setup-gate"

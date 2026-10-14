@@ -1,3 +1,5 @@
+"use client"
+
 import useSWRMutation from "swr/mutation"
 import { mutateSetKnowledgeSuggestionState } from "@/modules/api/graphql/mutations/mutation-set-knowledge-suggestion-state"
 import type { MutateSetKnowledgeSuggestionStateRequest } from "@/modules/api/graphql/mutations/mutation-set-knowledge-suggestion-state"

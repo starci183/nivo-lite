@@ -1,3 +1,5 @@
+"use client"
+
 import { mutate } from "swr"
 import { canDecideItem } from "@/hooks/member"
 import type { ShellMember } from "@/hooks/member"

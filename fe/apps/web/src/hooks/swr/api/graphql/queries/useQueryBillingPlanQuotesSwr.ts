@@ -1,3 +1,5 @@
+"use client"
+
 import useSWR from "swr"
 import { queryBillingPlanQuote } from "@/modules/api/graphql/queries/query-billing-plan-quote"
 import type { QueryBillingPlanQuoteRequest } from "@/modules/api/graphql/queries/query-billing-plan-quote"

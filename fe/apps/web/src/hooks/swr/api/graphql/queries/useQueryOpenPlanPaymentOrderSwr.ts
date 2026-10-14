@@ -1,3 +1,5 @@
+"use client"
+
 import useSWR from "swr"
 import { queryOpenPlanPaymentOrder } from "@/modules/api/graphql/queries/query-open-plan-payment-order"
 

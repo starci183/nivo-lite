@@ -1,3 +1,5 @@
+"use client"
+
 import { useFormatter, useTranslations } from "next-intl"
 import type { DescriptionListStatItem } from "@starci/grammar/common"
 import { PRODUCT_TIME_ZONE } from "@/modules/i18n"

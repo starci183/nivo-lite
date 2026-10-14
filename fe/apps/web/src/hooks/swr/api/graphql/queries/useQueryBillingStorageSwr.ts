@@ -1,3 +1,5 @@
+"use client"
+
 import useSWR from "swr"
 import { queryBillingStorage } from "@/modules/api/graphql/queries/query-billing-storage"
 

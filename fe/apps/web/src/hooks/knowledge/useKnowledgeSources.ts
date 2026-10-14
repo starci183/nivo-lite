@@ -1,3 +1,5 @@
+"use client"
+
 import { useMemo } from "react"
 import { useQueryKnowledgeSourcesSwr } from "@/hooks/swr"
 import { toKnowledgeDocument } from "@/modules/documents"

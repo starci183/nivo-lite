@@ -1,3 +1,5 @@
+"use client"
+
 import useSWR, { type SWRConfiguration } from "swr"
 import { isForbiddenFailure, isUnauthenticatedFailure } from "@/modules/api"
 import { queryPaymentOrderRequestStatus } from "@/modules/api/graphql/queries/query-payment-order-request-status"

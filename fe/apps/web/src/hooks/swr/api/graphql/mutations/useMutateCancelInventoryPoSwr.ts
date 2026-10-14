@@ -1,3 +1,5 @@
+"use client"
+
 import useSWRMutation from "swr/mutation"
 import { mutateCancelInventoryPo } from "@/modules/api/graphql/mutations/mutation-cancel-inventory-po"
 import type { MutateCancelInventoryPoRequest } from "@/modules/api/graphql/mutations/mutation-cancel-inventory-po"

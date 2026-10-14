@@ -1,3 +1,5 @@
+"use client"
+
 import useSWR from "swr"
 import { mutatePreviewLoyaltySegment } from "@/modules/api/graphql/mutations/mutation-preview-loyalty-segment"
 import type { MutatePreviewLoyaltySegmentRequest } from "@/modules/api/graphql/mutations/types/preview-loyalty-segment"

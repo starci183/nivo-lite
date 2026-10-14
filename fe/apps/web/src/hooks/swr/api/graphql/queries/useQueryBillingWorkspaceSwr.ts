@@ -1,3 +1,5 @@
+"use client"
+
 import useSWR from "swr"
 import { queryBillingWorkspace } from "@/modules/api/graphql/queries/query-billing-workspace"
 

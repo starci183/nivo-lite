@@ -1,3 +1,5 @@
+"use client"
+
 import { navigation } from "@/modules/i18n"
 import { useTransition } from "react"
 import { APP_ROUTES } from "@/modules/routes"

@@ -1,3 +1,5 @@
+"use client"
+
 import useSWR from "swr"
 import { queryInvitePreview } from "@/modules/api/graphql/queries/query-invite-preview"
 import type { QueryInvitePreviewRequest } from "@/modules/api/graphql/queries/query-invite-preview"

@@ -1,3 +1,5 @@
+"use client"
+
 import { useState, useTransition } from "react"
 import { RESEND_COOLDOWN_SECONDS, authErrorKey } from "./auth.shared"
 import type { AuthErrorKey } from "./auth.shared"

@@ -1,3 +1,5 @@
+"use client"
+
 import useSWRMutation from "swr/mutation"
 import { mutateMaintainBrain } from "@/modules/api/graphql/mutations/mutation-maintain-brain"
 

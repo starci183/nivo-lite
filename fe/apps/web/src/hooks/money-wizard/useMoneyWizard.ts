@@ -1,3 +1,5 @@
+"use client"
+
 import { useTranslations } from "next-intl"
 import { useCallback, useState, useTransition } from "react"
 import { PROVIDERS } from "@/hooks/connection-providers"

@@ -1,3 +1,5 @@
+"use client"
+
 import { useTranslations } from "next-intl"
 import { useCallback, useEffect, useRef, useState } from "react"
 import { useMutateAskGuideSwr, useQueryAgentGenerationStatusSwr } from "@/hooks/swr"

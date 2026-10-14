@@ -1,3 +1,5 @@
+"use client"
+
 import { useMemo } from "react"
 import { slotOfSwr } from "@/hooks/slot"
 import { useQueryModuleInstallationsSwr } from "@/hooks/swr"

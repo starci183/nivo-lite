@@ -1,3 +1,5 @@
+"use client"
+
 import { useMemo } from "react"
 import { useQueryContentConfigurationSwr, useQueryContentMediaSwr, useQueryContentWorkbenchSwr } from "@/hooks/swr"
 import { contentWorkbenchView } from "@/modules/content"

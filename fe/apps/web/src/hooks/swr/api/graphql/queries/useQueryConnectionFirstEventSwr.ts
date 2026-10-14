@@ -1,3 +1,5 @@
+"use client"
+
 import { useKeyedQuerySwr } from "@/hooks/reuseables"
 import type { SWRConfiguration } from "swr"
 import { queryConnectionFirstEvent } from "@/modules/api/graphql/queries/query-connection-first-event"

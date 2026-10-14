@@ -1,3 +1,5 @@
+"use client"
+
 import { useTranslations } from "next-intl"
 import { modeOf, SMTP_PRESETS } from "@/modules/mail"
 import type { SmtpPreset } from "@/modules/mail"

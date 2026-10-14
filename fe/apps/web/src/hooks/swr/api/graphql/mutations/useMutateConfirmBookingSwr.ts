@@ -1,3 +1,5 @@
+"use client"
+
 import useSWRMutation from "swr/mutation"
 import { mutateConfirmBooking } from "@/modules/api/graphql/mutations/mutation-confirm-booking"
 import type { MutateConfirmBookingRequest } from "@/modules/api/graphql/mutations/types/confirm-booking"

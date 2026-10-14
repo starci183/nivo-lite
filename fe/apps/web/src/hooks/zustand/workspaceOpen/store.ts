@@ -1,3 +1,5 @@
+"use client"
+
 import { create } from "zustand"
 
 /** Feature-local state of the workspace list: which card is being opened right now. */

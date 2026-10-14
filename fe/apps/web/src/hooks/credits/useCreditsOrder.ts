@@ -1,3 +1,5 @@
+"use client"
+
 import { useCallback, useEffect, useLayoutEffect, useRef } from "react"
 import { useTranslations } from "next-intl"
 import { useRequestPaymentOrder } from "@/hooks/billing"

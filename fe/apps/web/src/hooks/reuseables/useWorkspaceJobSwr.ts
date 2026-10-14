@@ -1,3 +1,5 @@
+"use client"
+
 import type { SWRConfiguration } from "swr"
 import { useWorkspaceQuerySwr } from "./useWorkspaceQuerySwr"
 

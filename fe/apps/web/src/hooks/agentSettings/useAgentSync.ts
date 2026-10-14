@@ -1,3 +1,5 @@
+"use client"
+
 import { useTranslations } from "next-intl"
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { useMutateRequestAgentSyncSwr, useQueryAgentSyncStatusSwr } from "@/hooks/swr"

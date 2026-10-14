@@ -1,3 +1,5 @@
+"use client"
+
 import { useTranslations } from "next-intl"
 import type { FieldOf } from "@/hooks/hiring"
 import { useState } from "react"

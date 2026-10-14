@@ -1,3 +1,5 @@
+"use client"
+
 import useSWRMutation from "swr/mutation"
 import { mutateSimulateInbound } from "@/modules/api/graphql/mutations/mutation-simulate-inbound"
 import type { MutateSimulateInboundRequest } from "@/modules/api/graphql/mutations/mutation-simulate-inbound"

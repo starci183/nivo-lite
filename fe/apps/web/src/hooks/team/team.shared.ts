@@ -1,3 +1,5 @@
+"use client"
+
 import { mutate } from "swr"
 import {
     QUERY_WORKSPACE_INVITES_SWR_KEY,

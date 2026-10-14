@@ -1,3 +1,5 @@
+"use client"
+
 import { useEffect, useRef } from "react"
 import { useNow, useTranslations } from "next-intl"
 import { useQueryPaymentOrderSwr } from "@/hooks/swr"

@@ -1,3 +1,5 @@
+"use client"
+
 import { useMemo } from "react"
 import { useQueryNivoKnowledgeSwr } from "@/hooks/swr"
 import { toNivoEntry } from "@/modules/documents"

@@ -1,3 +1,5 @@
+"use client"
+
 import { useCallback } from "react"
 import { mutate } from "swr"
 import { QUERY_MODULE_INSTALLATIONS_SWR_KEY, QUERY_SETUP_STATE_SWR_KEY } from "@/hooks/swr"

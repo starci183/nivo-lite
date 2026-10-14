@@ -1,3 +1,5 @@
+"use client"
+
 import type { SWRConfiguration } from "swr"
 import { jobPolling, noData, useWorkspaceArgSwr } from "@/hooks/workspaceread"
 import { queryLeadActionStatus } from "@/modules/api/graphql/queries/query-lead-action-status"

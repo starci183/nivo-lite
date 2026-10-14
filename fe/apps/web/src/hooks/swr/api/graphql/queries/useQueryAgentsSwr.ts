@@ -1,3 +1,5 @@
+"use client"
+
 import type { SWRConfiguration } from "swr"
 import { useGraphqlQuerySwr } from "@/hooks/reuseables"
 import { queryAgents } from "@/modules/api/graphql/queries/query-agents"

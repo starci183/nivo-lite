@@ -1,3 +1,5 @@
+"use client"
+
 import { useCallback, useState, useSyncExternalStore } from "react"
 import { readDismissed, subscribeDismissed, writeDismissed } from "@/modules/dismissals"
 import { dismissKey } from "@/modules/promo"

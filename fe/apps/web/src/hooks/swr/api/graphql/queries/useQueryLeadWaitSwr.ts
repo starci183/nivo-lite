@@ -1,3 +1,5 @@
+"use client"
+
 import useSWR from "swr"
 import { queryLeadWait } from "@/modules/api/graphql/queries/query-lead-wait"
 

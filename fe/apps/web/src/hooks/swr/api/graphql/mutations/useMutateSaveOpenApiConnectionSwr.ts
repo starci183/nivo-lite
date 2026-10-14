@@ -1,3 +1,5 @@
+"use client"
+
 import useSWRMutation from "swr/mutation"
 import { mutateSaveOpenApiConnection } from "@/modules/api/graphql/mutations/mutation-save-open-api-connection"
 import type { MutateSaveOpenApiConnectionRequest } from "@/modules/api/graphql/mutations/mutation-save-open-api-connection"

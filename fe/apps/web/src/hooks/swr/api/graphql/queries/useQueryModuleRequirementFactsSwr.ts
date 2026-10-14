@@ -1,3 +1,5 @@
+"use client"
+
 import useSWR from "swr"
 import type { SWRConfiguration } from "swr"
 import { queryModuleRequirementFacts } from "@/modules/api/graphql/queries/query-module-requirement-facts"

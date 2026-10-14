@@ -1,3 +1,5 @@
+"use client"
+
 import { mutate } from "swr"
 import { QUERY_SHIFTS_MINE_SWR_KEY, QUERY_SHIFTS_WORKBENCH_SWR_KEY } from "@/hooks/swr"
 

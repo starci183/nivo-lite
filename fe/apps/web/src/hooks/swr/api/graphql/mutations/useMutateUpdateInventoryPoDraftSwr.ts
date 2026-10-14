@@ -1,3 +1,5 @@
+"use client"
+
 import useSWRMutation from "swr/mutation"
 import { mutateUpdateInventoryPoDraft } from "@/modules/api/graphql/mutations/mutation-update-inventory-po-draft"
 import type { MutateUpdateInventoryPoDraftRequest } from "@/modules/api/graphql/mutations/mutation-update-inventory-po-draft"

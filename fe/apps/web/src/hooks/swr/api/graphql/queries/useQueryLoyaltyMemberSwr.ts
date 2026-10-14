@@ -1,3 +1,5 @@
+"use client"
+
 import useSWR from "swr"
 import { queryLoyaltyMember } from "@/modules/api/graphql/queries/query-loyalty-member"
 import type { QueryLoyaltyMemberRequest } from "@/modules/api/graphql/queries/types/loyalty-member"

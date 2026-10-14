@@ -1,3 +1,5 @@
+"use client"
+
 import useSWR from "swr"
 import type { SWRConfiguration } from "swr"
 import { queryPublicBookingTimes } from "@/modules/api/graphql/queries/query-public-booking-times"

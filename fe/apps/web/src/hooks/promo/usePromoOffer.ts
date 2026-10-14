@@ -1,3 +1,5 @@
+"use client"
+
 import { useSyncExternalStore } from "react"
 import { FOUNDING_OFFER, isOfferLive } from "@/modules/promo"
 
