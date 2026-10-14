@@ -4,7 +4,13 @@ import { InjectImap } from "@modules/integrations/data-sources"
 import type { ImapClient } from "@modules/integrations/data-sources"
 import { DataHubService } from "./data-hub.service"
 import type { ImapInput, ImapView } from "./imap-connection.contracts"
-import { credentialFromInput, metaFromSettings, parseConfig, parseCredential, settingsFromInput } from "./imap-connection.policy"
+import {
+    credentialFromInput,
+    metaFromSettings,
+    parseConfig,
+    parseCredential,
+    settingsFromInput,
+} from "./imap-connection.policy"
 
 @Injectable()
 /** The wizard operations of the owner mailboxes. */
@@ -29,7 +35,9 @@ export class ImapWizardService {
         await this.hub.owner(actor)
         const settings = settingsFromInput(input)
         const existing =
-            input.connectionId === undefined || input.connectionId === null ? null : await this.hub.own(actor.workspaceId, input.connectionId, "imap")
+            input.connectionId === undefined || input.connectionId === null
+                ? null
+                : await this.hub.own(actor.workspaceId, input.connectionId, "imap")
         const credential = JSON.stringify(
             credentialFromInput(input, await this.savedPassword(existing === null ? undefined : existing.id)),
         )

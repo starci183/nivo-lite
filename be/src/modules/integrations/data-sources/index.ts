@@ -2,6 +2,11 @@ export { DATA_SOURCES_ERROR_KINDS, DataSourcesError, DataSourcesErrorCode } from
 export { DATA_SOURCES_MESSAGES } from "./messages/data-sources.messages"
 export { parseDataSourcesConfig } from "./data-sources.config"
 export {
+    DATABASE,
+    IMAP,
+    OPENAPI,
+    PUBLIC_HOST,
+    TABLE,
     InjectDatabase,
     InjectImap,
     InjectOpenApi,
@@ -23,7 +28,6 @@ export { DOCUMENT_MAX_TEXT, TABLE_MAX_BYTES, TABLE_MAX_ROWS } from "./table-shap
 export type { Table, UploadedDocumentText } from "./table-shapes.contracts"
 export { DATABASE_ENGINES, DATABASE_MAX_COLUMNS, DATABASE_MAX_ROWS } from "./database-session.contracts"
 export type {
-    DatabaseEngine,
     DatabasePreview,
     DatabaseReader,
     DatabaseSelection,
@@ -32,17 +36,7 @@ export type {
 } from "./database-session.contracts"
 export { isUsableIdentifier } from "./database-sql.policy"
 export { OPENAPI_AUTH_TYPES, OPENAPI_METHODS, OPENAPI_PULL_ENTITIES } from "./openapi.contracts"
-export type {
-    OpenApiAuth,
-    OpenApiAuthType,
-    OpenApiConfig,
-    OpenApiMethod,
-    OpenApiOperation,
-    OpenApiParam,
-    OpenApiPull,
-    OpenApiPullEntity,
-    OpenApiSpec,
-} from "./openapi.contracts"
+export type { OpenApiAuth, OpenApiConfig, OpenApiOperation, OpenApiPull, OpenApiSpec } from "./openapi.contracts"
 export {
     detectItems,
     getPath,

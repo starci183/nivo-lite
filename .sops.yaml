@@ -1,3 +1,5 @@
 # Lite secrets have encrypted twins only under .starcistacks/<environment>/secrets.
-# Set a project-owned age recipient before encrypting the first secret.
-creation_rules: []
+# Project-owned age recipient. The private key lives outside the repo, in %APPDATA%\sops\age\keys.txt on the owner's machine. Back it up.
+creation_rules:
+  - path_regex: \.starcistacks[/\\][^/\\]+[/\\]secrets[/\\][^/\\]+\.enc$
+    age: age173qfq7f776syam9tpkyfej0h2jjt6rc4ha7r38ez40n5mn0lwyaqp9ejt7

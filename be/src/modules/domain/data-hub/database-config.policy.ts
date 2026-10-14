@@ -1,9 +1,11 @@
 import { DATABASE_ENGINES, DATABASE_MAX_COLUMNS, isUsableIdentifier } from "@modules/integrations/data-sources"
-import type { DatabaseEngine, DatabaseSelection, DatabaseTarget } from "@modules/integrations/data-sources"
+import type { DatabaseSelection, DatabaseTarget } from "@modules/integrations/data-sources"
 import { DATABASE_ENTITIES, DATABASE_MAX_TABLES } from "./database-config.contracts"
 import type { DatabaseConfig, DatabaseEntity, JsonOutcome, TableMapping } from "./database-config.contracts"
 import { DataHubError, DataHubErrorCode } from "./errors/data-hub.error"
 import { DATABASE_WIZARD_COPY as COPY } from "./messages/database.messages"
+
+type DatabaseEngine = DatabaseTarget["engine"]
 
 const DEFAULT_PORT: Readonly<Record<DatabaseEngine, number>> = { postgres: 5432, mysql: 3306, mssql: 1433 }
 const ENGINE_LABEL: Readonly<Record<DatabaseEngine, string>> = {

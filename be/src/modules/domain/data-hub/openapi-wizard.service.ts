@@ -16,7 +16,15 @@ import type { OpenApiAuth, OpenApiClient, PublicHostClient } from "@modules/inte
 import { OPENAPI_WIZARD_TEXT } from "./messages/openapi.messages"
 import { DataHubService } from "./data-hub.service"
 import { DataHubError, DataHubErrorCode } from "./errors/data-hub.error"
-import { cleanAuth, credentialOf, mergeAuth, normalizeConfig, parseAuth, parseConfig, summaryOf } from "./openapi-config.policy"
+import {
+    cleanAuth,
+    credentialOf,
+    mergeAuth,
+    normalizeConfig,
+    parseAuth,
+    parseConfig,
+    summaryOf,
+} from "./openapi-config.policy"
 import type {
     OpenApiConnectionDraft,
     OpenApiConnectionView,
@@ -132,7 +140,9 @@ export class OpenApiWizardService {
             throw invalid(OPENAPI_WIZARD_TEXT.pickOne)
         }
         const existing =
-            draft.connectionId === null || draft.connectionId === undefined ? null : await this.hub.own(actor.workspaceId, draft.connectionId, "openapi")
+            draft.connectionId === null || draft.connectionId === undefined
+                ? null
+                : await this.hub.own(actor.workspaceId, draft.connectionId, "openapi")
         const auth = await this.resolveAuth(actor.workspaceId, cleanAuth(draft.auth), existing?.id ?? null)
         if (config.authType !== "none" && !(auth.value || auth.user || auth.password)) {
             throw invalid(OPENAPI_WIZARD_TEXT.authRequired)
@@ -157,7 +167,11 @@ export class OpenApiWizardService {
     }
 
     /** The auth the owner typed, with blank secrets filled from the stored credential when the type is unchanged. */
-    private async resolveAuth(workspaceId: string, typed: OpenApiAuth, connectionId: string | null): Promise<OpenApiAuth> {
+    private async resolveAuth(
+        workspaceId: string,
+        typed: OpenApiAuth,
+        connectionId: string | null,
+    ): Promise<OpenApiAuth> {
         if (connectionId === null) return typed
         const connection = await this.hub.own(workspaceId, connectionId, "openapi")
         return mergeAuth(typed, parseAuth((await this.hub.credentialOf(connection.id)) ?? ""))

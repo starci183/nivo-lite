@@ -245,7 +245,9 @@ export class CsvImportWizardService {
         } else {
             await this.hub.own(workspaceId, connectionId, PROVIDER)
         }
-        const run = await this.entityManager.transaction((tx) => this.runs.open(tx, workspaceId, connectionId, "upload"))
+        const run = await this.entityManager.transaction((tx) =>
+            this.runs.open(tx, workspaceId, connectionId, "upload"),
+        )
         try {
             const updated = created
                 ? 0

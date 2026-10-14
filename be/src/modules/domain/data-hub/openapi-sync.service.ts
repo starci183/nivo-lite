@@ -1,5 +1,11 @@
 import { Injectable } from "@nestjs/common"
-import { DataSourcesError, InjectOpenApi, itemsOf, openApiFailure, parseJsonBody } from "@modules/integrations/data-sources"
+import {
+    DataSourcesError,
+    InjectOpenApi,
+    itemsOf,
+    openApiFailure,
+    parseJsonBody,
+} from "@modules/integrations/data-sources"
 import type {
     OpenApiAuth,
     OpenApiClient,
