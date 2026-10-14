@@ -1,7 +1,7 @@
 import { Test } from "@nestjs/testing"
 import { builder, mock } from "@starci/jest-preset"
 import { ContextVersionsService } from "@modules/domain/module-context-versions"
-import type { ContextVersionRecord } from "@modules/domain/module-context-versions"
+import type { ContextVersionRecord, GateEntry } from "@modules/domain/module-context-versions"
 import { InstallationRecordsService } from "@modules/domain/module-installations"
 import type { InstallationRecord } from "@modules/domain/module-installations"
 import { ACCOUNTING_MODULE } from "./accounting.contracts"
@@ -167,6 +167,34 @@ describe("InstallationDirectoryService", () => {
             expect(versions.find).toHaveBeenCalledWith("version-1")
             expect(installations.findById).toHaveBeenCalledWith("inst-1")
         })
+
+        it.each([undefined, null])(
+            "keeps empty evidence for a confirmed database gate with %p evidence",
+            async (evidence) => {
+                const { service, versions, installations, catalog } = await build()
+                const scope: GateEntry = { status: "confirmed", evidence: "Placeholder" }
+                const version = versionOf({
+                    snapshot: {
+                        summary: "Imported setup",
+                        facts: [],
+                        gates: { scope },
+                    },
+                })
+                if (evidence === undefined) Reflect.deleteProperty(scope, "evidence")
+                else Object.defineProperty(scope, "evidence", { value: evidence })
+                versions.find.mockResolvedValue(version)
+                installations.findById.mockResolvedValue(recordOf())
+                catalog.find.mockResolvedValue(ACCOUNTING_MODULE)
+
+                await expect(service.contextVersionOf("version-1")).resolves.toEqual({
+                    version: 3,
+                    summary: "Imported setup",
+                    gates: [{ label: ACCOUNTING_MODULE.gates[0]?.label_vi, evidence: "" }],
+                    facts: [],
+                    toneEvidence: "",
+                })
+            },
+        )
 
         it("lists no gate when the installation is gone, and no tone when none was confirmed", async () => {
             const { service, versions, installations, catalog } = await build()

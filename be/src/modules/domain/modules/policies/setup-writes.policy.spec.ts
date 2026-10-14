@@ -1,6 +1,6 @@
 import { ACCOUNTING_MODULE } from "../accounting.contracts"
 import type { RuleCardPayload } from "@modules/domain/module-setup-writes"
-import type { AuthorityActionDefinition, ModuleDefinition, ModuleGate } from "../modules.contracts"
+import type { AuthorityActionDefinition, FactWrite, ModuleDefinition, ModuleGate } from "../modules.contracts"
 import { cardOf, gateWritesOf, sanitizeWrites, targetKeyOf, vndOf, writeSpecLines } from "./setup-writes.policy"
 import type { OpenGap, ProposedFact, ProposedRule } from "./setup-writes.policy"
 
@@ -79,6 +79,8 @@ describe("vndOf", () => {
         [Number.POSITIVE_INFINITY, null],
         [null, null],
         [{}, null],
+        ["", null],
+        [" ", null],
         ["not an amount", null],
         [".. tri\u1ec7u", null],
         ["9".repeat(400), null],
@@ -215,6 +217,35 @@ describe("sanitizeWrites", () => {
             },
         ])
     })
+
+    it.each([undefined, null, "", "unrecognized"])(
+        "defaults a malformed declared subject type %s to other",
+        (subjectType) => {
+            const write: FactWrite = {
+                kind: "fact",
+                subjectType: "product",
+                attributeLabel: "Price",
+                scope: "public",
+            }
+            Object.defineProperty(write, "subjectType", { value: subjectType })
+            const module = { ...MODULE, gates: [gateOf("product", [write])] }
+            expect(
+                sanitizeWrites(module, [{ gate: "product", kind: "fact", subject: "Tea", value: "50" }], [], "Shop"),
+            ).toEqual([
+                {
+                    gateKey: "product",
+                    kind: "fact",
+                    payload: {
+                        subjectType: "other",
+                        subjectLabel: "Tea",
+                        attributeLabel: "Price",
+                        value: "50",
+                        scope: "public",
+                    },
+                },
+            ])
+        },
+    )
 
     it("keeps valid modes and a positive amount while leaving the other half of a rule unset", () => {
         expect(

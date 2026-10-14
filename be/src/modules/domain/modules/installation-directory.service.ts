@@ -71,10 +71,9 @@ export class InstallationDirectoryService implements InstallationDirectory {
         return {
             version: version.version,
             summary,
-            gates: (module?.gates ?? []).flatMap((gate) => {
-                const entry = gates[gate.key]
-                return entry?.status === "confirmed" ? [{ label: gate.label_vi, evidence: entry.evidence }] : []
-            }),
+            gates: (module?.gates ?? [])
+                .filter((gate) => gates[gate.key]?.status === "confirmed")
+                .map((gate) => ({ label: gate.label_vi, evidence: gates[gate.key]?.evidence ?? "" })),
             facts: facts.map((fact) => fact.text),
             toneEvidence: gates[TONE_GATE]?.evidence ?? "",
         }

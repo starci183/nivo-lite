@@ -42,6 +42,36 @@ describe("nivoItemOf", () => {
         })
     })
 
+    it("refuses an empty front matter block as a missing kind", () => {
+        expect(nivoItemOf({ path: "core/empty.md", text: "---\n\n---" }, ["core"])).toEqual({
+            kind: "refused",
+            code: NivoKnowledgeErrorCode.KindUnknown,
+            params: { file: "core/empty.md" },
+        })
+    })
+
+    it.each([
+        { path: "core/", folders: ["core"], module: "core", slug: "" },
+        { path: "/tone.md", folders: [""], module: "", slug: "tone" },
+        { path: "/", folders: [""], module: "", slug: "" },
+    ])("preserves empty path components: $path", ({ path, folders, module, slug }) => {
+        expect(nivoItemOf({ path, text: "---\ntitle: Voice\nkind: tone\n---" }, folders)).toEqual({
+            kind: "ok",
+            value: { module, slug, title: "Voice", kind: "tone", body: "" },
+        })
+    })
+
+    it("trims metadata whitespace that includes Unicode line separators", () => {
+        expect(
+            nivoItemOf({ path: "core/tone.md", text: "---\ntitle:\u2028\u2029Voice  \nkind:\u000btone\u000c\n---" }, [
+                "core",
+            ]),
+        ).toEqual({
+            kind: "ok",
+            value: { module: "core", slug: "tone", title: "Voice", kind: "tone", body: "" },
+        })
+    })
+
     it.each([
         { closing: "---# Care", body: "# Care" },
         { closing: "---\n# Care\n---\nStill the body.\n", body: "# Care\n---\nStill the body." },
@@ -93,14 +123,17 @@ describe("nivoItemOf", () => {
         },
     )
 
-    it.each(["kind: tone", "kind: tone\ntitle: ", "kind: tone\ntitle: ''"])(
-        "refuses a missing or empty title: %s",
-        (header) => {
-            expect(nivoItemOf({ path: "core/voice.md", text: `---\n${header}\n---\nHi` }, ["core"])).toEqual({
-                kind: "refused",
-                code: NivoKnowledgeErrorCode.TitleMissing,
-                params: { file: "core/voice.md" },
-            })
-        },
-    )
+    it.each([
+        "kind: tone",
+        "kind: tone\ntitle: ",
+        "kind: tone\ntitle: ''",
+        "kind: tone\ntitle: One\u2028Two",
+        "kind: tone\ntitle: Voice\u2029",
+    ])("refuses a missing or empty title: %s", (header) => {
+        expect(nivoItemOf({ path: "core/voice.md", text: `---\n${header}\n---\nHi` }, ["core"])).toEqual({
+            kind: "refused",
+            code: NivoKnowledgeErrorCode.TitleMissing,
+            params: { file: "core/voice.md" },
+        })
+    })
 })

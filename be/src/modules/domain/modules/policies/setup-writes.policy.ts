@@ -1,6 +1,6 @@
 import type { RuleMode } from "@modules/domain/authority-rules"
-import { keyOf } from "@modules/domain/brain-facts"
-import type { Scope } from "@modules/domain/brain-facts"
+import { SUBJECT_TYPES, keyOf } from "@modules/domain/brain-facts"
+import type { BrainSubjectType, Scope } from "@modules/domain/brain-facts"
 import type { FactCardPayload, ProposedCardRecord } from "@modules/domain/module-setup-writes"
 import type { AuthorityActionDefinition, ModuleDefinition, ModuleGate, GateWrite } from "../modules.contracts"
 
@@ -73,6 +73,8 @@ const isObject = (value: unknown): value is Record<string, unknown> =>
 
 const clean = (value: unknown, max: number): string => (typeof value === "string" ? value.trim().slice(0, max) : "")
 
+const FACT_SUBJECTS: ReadonlyArray<BrainSubjectType> = SUBJECT_TYPES
+
 /** The key that makes two cards the same target: one waiting card per target. */
 export const targetKeyOf = (write: ProposedWrite): string =>
     write.kind === "fact"
@@ -91,8 +93,7 @@ export const vndOf = (value: unknown): number | null => {
         .match(/^([\d.,]+)\s*(ty|trieu|tr|m|k|nghin|ngan)?/u)
     if (found === null) return null
     const unit = found[2] ?? ""
-    const matchedDigits = found.slice(1, 2).join("")
-    const digits = unit === "" ? matchedDigits.replace(/[.,]/g, "") : matchedDigits.replace(",", ".")
+    const digits = unit === "" ? (found[1] ?? "").replace(/[.,]/g, "") : (found[1] ?? "").replace(",", ".")
     const amount = Number(digits)
     if (!Number.isFinite(amount)) return null
     return Math.round(amount * (UNIT_MULTIPLIER[unit] ?? 1))
@@ -151,7 +152,7 @@ const factOfGate = (
         gateKey,
         kind: "fact",
         payload: {
-            subjectType: spec.subjectType,
+            subjectType: FACT_SUBJECTS.includes(spec.subjectType) ? spec.subjectType : "other",
             subjectLabel: subject,
             attributeLabel: spec.attributeLabel,
             value,

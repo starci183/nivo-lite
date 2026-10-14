@@ -142,6 +142,10 @@ describe("attachmentsOf", () => {
 })
 
 describe("renderTemplate", () => {
+    it.each(["", "{missing}", "{{ missing }}"])("renders an empty substituted template for %p", (template) => {
+        expect(renderTemplate(template, {})).toBe("")
+    })
+
     it("fills single and double braces and empties unknown names", () => {
         expect(renderTemplate("Hi {name}, {{ day }} {missing}!", { name: "Lan", day: 3 })).toBe("Hi Lan, 3 !")
     })

@@ -19,6 +19,7 @@ import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { CLOCK } from "@modules/platform/clock"
 import { ACCOUNTING_MODULE } from "./accounting.contracts"
 import { ModulesErrorCode } from "./errors/modules.error"
+import type { CardDecision } from "./module-setup.contracts"
 import { ModulesService } from "./modules.service"
 import { SetupCardsService } from "./setup-cards.service"
 const NOW = "2026-10-13T02:00:00.000Z"
@@ -368,10 +369,12 @@ describe("SetupCardsService", () => {
                 )
             }
         })
-        it("writes a confirmed fact as a statement of the owner and asks for a sync", async () => {
+        it.each([undefined, null, "", "private", 0, {}, []])("keeps the fact scope for edit %p", async (scope) => {
             const { service, writes, facts, sync, installations, messages, gaps, closed } = await build()
             writes.find.mockResolvedValue(factCard({ scope: "restricted" }))
-            await service.decide("u1", "ws-1", "card-1", { decision: "confirm", onlyThisAgent: true }, "en")
+            const edit: CardDecision = { decision: "confirm", onlyThisAgent: true }
+            if (scope !== undefined) Object.defineProperty(edit, "scope", { value: scope })
+            await service.decide("u1", "ws-1", "card-1", edit, "en")
             expect(facts.propose).toHaveBeenCalledWith("ws-1", {
                 subjectType: "business",
                 subjectLabel: "Shop",
@@ -392,9 +395,11 @@ describe("SetupCardsService", () => {
                 installationId: "inst-1",
             })
             expect(sync.requestNow).toHaveBeenCalledWith({ workspaceId: "ws-1", installationId: null, force: false })
-            expect(writes.close.mock.calls[0]?.[2]).toMatchObject({
+            expect(writes.close.mock.calls[0]?.[2]).toEqual({
                 status: "applied",
+                payload: { ...FACT, scope: "restricted" },
                 result: { outcome: "applied", factId: "fact-1" },
+                decidedBy: "Lan",
             })
             writes.find.mockResolvedValue({ ...factCard({ gapId: "g1" }), sourceMessageId: null })
             installations.find.mockResolvedValue(installationOf({ isMulti: false }))
@@ -432,17 +437,12 @@ describe("SetupCardsService", () => {
             expect(gaps.answer).toHaveBeenCalledWith("ws-1", "g1", "fact:fact-1")
             expect(messages.find).toHaveBeenCalledTimes(1)
         })
-        it("refuses a fact left empty by the edits", async () => {
+        it.each([{ value: "  " }, { subjectLabel: " " }, { attributeLabel: " " }])("empty %p", async (edit) => {
             const { service, writes } = await build()
             writes.find.mockResolvedValue(factCard())
             await expect(
-                service.decide("u1", "ws-1", "card-1", { decision: "confirm", value: "  " }, "en"),
+                service.decide("u1", "ws-1", "card-1", { decision: "confirm", ...edit }, "en"),
             ).rejects.toMatchObject({ code: ModulesErrorCode.CardFactIncomplete })
-            for (const edit of [{ subjectLabel: " " }, { attributeLabel: " " }]) {
-                await expect(
-                    service.decide("u1", "ws-1", "card-1", { decision: "confirm", ...edit }, "en"),
-                ).rejects.toMatchObject({ code: ModulesErrorCode.CardFactIncomplete })
-            }
         })
         it("asks how to resolve a different value in force, and keeps the current one on request", async () => {
             const { service, writes, facts } = await build()
