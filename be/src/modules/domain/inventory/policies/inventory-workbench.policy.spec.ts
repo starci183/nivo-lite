@@ -67,6 +67,13 @@ const poOf = (id: string, overrides: Partial<WorkbenchPoRow> = {}): WorkbenchPoR
 })
 
 describe("buildInventoryWorkbench", () => {
+    it.each([null, undefined])("keeps empty strings for nullable or missing database dates (%s)", (date) => {
+        const po = Object.assign(poOf("po-1"), { created_at: date, expected_at: undefined })
+        const result = buildInventoryWorkbench(rowsOf({ pos: [po] }), context)
+        expect(result.pos[0]?.createdAt).toBe("")
+        expect(result.pos[0]?.expectedAt).toBe("")
+    })
+
     it("returns an empty workbench with caller context and unavailable stock history", () => {
         expect(
             buildInventoryWorkbench(rowsOf({ stockOutItemIds: null }), {
