@@ -45,7 +45,7 @@ describe("describeSpec", () => {
         ])
     })
 
-    it("cleans operation ids, numbers duplicates, and falls back to the description", () => {
+    it("cleans operation ids, numbers duplicates, and falls back to the method/path and description", () => {
         const spec = describeSpec(
             {
                 openapi: "3.0.3",
@@ -62,7 +62,7 @@ describe("describeSpec", () => {
         )
 
         expect(spec.title).toBe("T".repeat(80))
-        expect(spec.ops.map((op) => op.id)).toEqual(["List_Orders", "List_Orders_2", "put_orders"])
+        expect(spec.ops.map((op) => op.id)).toEqual(["List_Orders", "List_Orders_2", "put__orders"])
         expect(spec.ops[0]?.summary).toBe("d".repeat(120))
         expect(spec.ops[0]?.suggest).toBeUndefined()
         expect(spec.ops[1]?.hasBody).toBe(true)
@@ -80,7 +80,7 @@ describe("describeSpec", () => {
         expect(spec.ops[499]?.id).toBe("op499")
     })
 
-    it("reads parameters, a body parameter, and skips a parameter that cannot be used", () => {
+    it("lets operation parameters override shared parameters, reads a body, and skips unusable parameters", () => {
         const spec = describeSpec(
             {
                 swagger: "2.0",
@@ -93,6 +93,7 @@ describe("describeSpec", () => {
                             { $ref: "#/parameters/missing" },
                             { name: "id", in: "path" },
                             { name: "limit", in: "query", required: true },
+                            { name: "offset", in: "query", required: true },
                             { name: "q", in: "query" },
                             { name: "", in: "query" },
                             { name: "body", in: "body" },
@@ -125,7 +126,8 @@ describe("describeSpec", () => {
             hasBody: true,
             params: [
                 { name: "id", in: "path", required: true },
-                { name: "limit", in: "query", required: true },
+                { name: "limit", in: "query", required: false },
+                { name: "offset", in: "query", required: true },
                 { name: "q", in: "query", required: false },
                 { name: "X-Shop", in: "header", required: false },
             ],
@@ -179,6 +181,84 @@ describe("describeSpec", () => {
 
         expect(spec.baseUrl).toBe("https://api.example/v1")
         expect(spec.ops[0]?.suggest).toEqual({ itemsPath: "data.items", idField: "sku", titleField: "title" })
+    })
+
+    it("ignores external references while keeping usable local operations and parameters", () => {
+        const spec = describeSpec(
+            {
+                openapi: "3.0.0",
+                paths: {
+                    "/external": { $ref: "https://other.example/paths.json#/orders" },
+                    "/orders/{id}": get("getOrder", {
+                        parameters: [
+                            { $ref: "https://other.example/parameters.json#/limit" },
+                            { name: "id", in: "path" },
+                        ],
+                        responses: { "200": { $ref: "https://other.example/responses.json#/Order" } },
+                    }),
+                },
+            },
+            "https://api.example/spec.json",
+        )
+
+        expect(spec.ops).toEqual([
+            {
+                id: "getOrder",
+                method: "GET",
+                path: "/orders/{id}",
+                summary: "",
+                params: [{ name: "id", in: "path", required: true }],
+                hasBody: false,
+            },
+        ])
+    })
+
+    it.each<[string, Record<string, unknown>]>([
+        ["missing responses", { responses: undefined }],
+        ["an array without an item schema", { responses: { "200": { schema: { type: "array" } } } }],
+        [
+            "an unresolved array item reference",
+            { responses: { "200": { schema: { type: "array", items: { $ref: "#/components/schemas/Missing" } } } } },
+        ],
+        ["empty response content", { responses: { "200": { content: {} } } }],
+    ])("keeps the operation without field suggestions for %s", (_label, extra) => {
+        const spec = describeSpec(
+            { openapi: "3.0.0", paths: { "/orders": get("listOrders", extra) } },
+            "https://api.example/spec.json",
+        )
+
+        expect(spec.ops).toEqual([
+            {
+                id: "listOrders",
+                method: "GET",
+                path: "/orders",
+                summary: "",
+                params: [],
+                hasBody: false,
+            },
+        ])
+    })
+
+    it("locates a primitive array without suggesting nonexistent item fields", () => {
+        const spec = describeSpec(
+            {
+                openapi: "3.0.0",
+                paths: {
+                    "/tags": get("listTags", {
+                        responses: {
+                            "200": {
+                                content: {
+                                    "application/json": { schema: { type: "array", items: { type: "string" } } },
+                                },
+                            },
+                        },
+                    }),
+                },
+            },
+            "https://api.example/spec.json",
+        )
+
+        expect(spec.ops[0]?.suggest).toEqual({ itemsPath: "", idField: "", titleField: "" })
     })
 
     it("fills an empty server variable, stops past two levels, and follows a json pointer escape", () => {
@@ -324,5 +404,22 @@ describe("describeSpec", () => {
         expect(describeSpec({ openapi: "3.0.0", servers: "nope", paths: { "/ping": get("ping") } }, "").baseUrl).toBe(
             "",
         )
+    })
+
+    it("keeps an absolute HTTP server URL when the spec URL cannot be parsed", () => {
+        const spec = describeSpec(
+            { openapi: "3.0.0", servers: [{ url: "https://api.example/v1/" }], paths: { "/ping": get("ping") } },
+            "not-a-url",
+        )
+
+        expect(spec.baseUrl).toBe("https://api.example/v1")
+    })
+
+    it("defaults a missing entry in an in-memory Swagger scheme list to HTTPS", () => {
+        const schemes: Array<string> = []
+        schemes.length = 1
+        const spec = describeSpec({ swagger: "2.0", schemes, host: "api.example", paths: { "/ping": get("ping") } }, "")
+
+        expect(spec.baseUrl).toBe("https://api.example")
     })
 })

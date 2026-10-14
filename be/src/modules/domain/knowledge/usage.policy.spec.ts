@@ -98,7 +98,7 @@ describe("figuresOf", () => {
 
 describe("quotaStatusOf", () => {
     it("is ok and unlimited when there are no allowances, and derives credits from the cost", () => {
-        expect(quotaStatusOf(rowOf({ cost_usd: "0.2" }))).toEqual(statusOf({ creditsUsed: 50 }))
+        expect(quotaStatusOf(rowOf({ cost_usd: "0.2" }))).toEqual(statusOf({ creditsUsed: 177 }))
     })
 
     it("reads the numbers PostgreSQL sends as text", () => {

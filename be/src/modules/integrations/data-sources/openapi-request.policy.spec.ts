@@ -125,11 +125,12 @@ describe("buildRequest", () => {
         expect(posted.body).toBe('{"id":1}')
         expect(posted.headers["content-type"]).toBe("application/json")
         expect(raw.body).toBe("already")
+        expect(raw.headers).toEqual({ accept: "application/json", "content-type": "application/json" })
         expect(
             buildRequest(call({ op: operation({ method: "GET" }), input: { id: "1", body: { id: 1 } } })).body,
         ).toBeUndefined()
         expect(linked.url.toString()).toBe("https://api.example/v1/orders?page=2")
-        expect(linked.headers).toEqual({ accept: "application/json" })
+        expect(linked.headers).toEqual({ accept: "application/json", "content-type": "application/json" })
         expect(linked.body).toBe('{"id":1}')
     })
 })
