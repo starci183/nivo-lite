@@ -28,21 +28,22 @@ END
 $$;
 
 -- 2. The engine functions and the pg_net refresh tick (the engine job functions return rows of engine_jobs, so they go first).
-DO $$
-DECLARE
-    fn record;
-BEGIN
-    FOR fn IN
-        SELECT p.oid::regprocedure AS signature
-        FROM pg_proc p
-        JOIN pg_namespace n ON n.oid = p.pronamespace
-        WHERE n.nspname = 'public'
-          AND (p.proname LIKE 'engine\_%' OR p.proname = 'zalo_refresh_tick')
-    LOOP
-        EXECUTE format('DROP FUNCTION IF EXISTS %s', fn.signature);
-    END LOOP;
-END
-$$;
+DROP FUNCTION IF EXISTS public.engine_claim_jobs(text, text[], integer, integer);
+DROP FUNCTION IF EXISTS public.engine_complete_job(uuid, text, jsonb);
+DROP FUNCTION IF EXISTS public.engine_enqueue(uuid, text, jsonb, text, timestamp with time zone, integer);
+DROP FUNCTION IF EXISTS public.engine_enqueue_agent_sync(uuid, boolean);
+DROP FUNCTION IF EXISTS public.engine_enqueue_workspace_sync(uuid);
+DROP FUNCTION IF EXISTS public.engine_fail_job(uuid, text, text, integer, boolean);
+DROP FUNCTION IF EXISTS public.engine_heartbeat_job(uuid, text, integer);
+DROP FUNCTION IF EXISTS public.engine_mark_connection_health(uuid, uuid, jsonb);
+DROP FUNCTION IF EXISTS public.engine_release_job(uuid, text);
+DROP FUNCTION IF EXISTS public.engine_schedule_agent_sync();
+DROP FUNCTION IF EXISTS public.engine_schedule_connection_health();
+DROP FUNCTION IF EXISTS public.engine_status();
+DROP FUNCTION IF EXISTS public.engine_sweep_authorized(text);
+DROP FUNCTION IF EXISTS public.engine_sweep_claim();
+DROP FUNCTION IF EXISTS public.engine_worker_heartbeat(text, text, text[], jsonb);
+DROP FUNCTION IF EXISTS public.zalo_refresh_tick();
 
 -- 3. The engine tables and the cron target list (the HTTP endpoints and secret the old pg_net ticks used).
 DROP TABLE IF EXISTS public.engine_jobs;
