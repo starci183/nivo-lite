@@ -125,6 +125,38 @@ describe("ContentAiStoreService writes", () => {
         ).rejects.toMatchObject({ code: ContentItemsErrorCode.NotWritten })
     })
 
+    it("uses the bounded topic when splitting supplies no first line", async () => {
+        const { service, entityManager, members } = await build()
+        members.require.mockResolvedValue(member)
+        entityManager.query.mockResolvedValue([{ id: "idea-fallback", updated_at: "2026-01-03T00:00:00Z" }])
+        const topic = `Fallback ${"b".repeat(90)}`
+        const originalSplit = String.prototype.split
+        const split = jest.spyOn(String.prototype, "split").mockImplementation(function (
+            this: string,
+            separator,
+            limit,
+        ) {
+            const requestedSeparator: unknown = separator
+            if (this === topic && requestedSeparator === "\n") return []
+            return originalSplit.call(this, separator, limit)
+        })
+        try {
+            await expect(service.createQuickIdea("user-1", "workspace-1", { topic, channels: [] })).resolves.toEqual({
+                id: "idea-fallback",
+                updatedAt: "2026-01-03T00:00:00.000Z",
+            })
+            expect(entityManager.query).toHaveBeenCalledWith(INSERT_QUICK_IDEA, [
+                "workspace-1",
+                `Fallback ${"b".repeat(71)}`,
+                topic,
+                [],
+                "Mai",
+            ])
+        } finally {
+            split.mockRestore()
+        }
+    })
+
     it("applies a minimal draft using null optional values and empty evidence", async () => {
         const { service, entityManager } = await build()
         entityManager.query.mockResolvedValue([{ id: "idea-1" }])

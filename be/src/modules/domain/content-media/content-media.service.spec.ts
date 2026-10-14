@@ -218,6 +218,44 @@ describe("ContentMediaService", () => {
         })
     })
 
+    it("uses the default filename when the provider path has no final segment", async () => {
+        const { service, storage, renders } = await build()
+        storage.list.mockResolvedValue(ok([]))
+        renders.listCompletedMedia.mockResolvedValue([])
+        renders.findCompletedMedia.mockResolvedValue([])
+        storage.signedUrls
+            .mockResolvedValueOnce(ok([{ path: "ws-1/photo.png", signedUrl: "https://cdn.example/file" }]))
+            .mockResolvedValueOnce(ok([]))
+        const originalSplit = String.prototype.split
+        const split = jest.spyOn(String.prototype, "split").mockImplementation(function (
+            this: string,
+            separator,
+            limit,
+        ) {
+            const requestedSeparator: unknown = separator
+            if (this === "ws-1/photo.png" && requestedSeparator === "/") return []
+            return originalSplit.call(this, separator, limit)
+        })
+
+        const data = await service
+            .read("user-1", "ws-1", { paths: [], videoIds: [], limit: 1 })
+            .finally(() => split.mockRestore())
+
+        expect(data).toEqual({
+            library: [],
+            videos: [],
+            urls: [
+                {
+                    key: "ws-1/photo.png",
+                    view: "https://cdn.example/file",
+                    download: "https://cdn.example/file?download=file",
+                },
+            ],
+        })
+        expect(storage.signedUrls).toHaveBeenNthCalledWith(1, "media", [], 3600)
+        expect(storage.signedUrls).toHaveBeenNthCalledWith(2, "videos", [], 3600)
+    })
+
     it("issues an upload address for an accepted file", async () => {
         const entityManager = mockEntityManager({ query: [NEW_CONTENT_MEDIA_UPLOAD_ID, [{ id: "upload-1" }]] })
         const { service, storage, members, entitlements } = await build(entityManager)

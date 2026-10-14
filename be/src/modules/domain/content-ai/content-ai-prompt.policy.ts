@@ -442,12 +442,13 @@ export const draftVariants = (
     const warnings: Array<ChannelWarning> = []
     for (const channel of channels) {
         const raw = written[channel]
-        const text = isJsonObject(raw) ? trimmedText(raw.text) : ""
+        if (!isJsonObject(raw)) continue
+        const text = trimmedText(raw.text)
         if (text === "") continue
         variants[channel] = {
             text,
-            hashtags: channelHashtags(channel, isJsonObject(raw) ? raw.hashtags : [], brand.brandHashtags),
-            note: isJsonObject(raw) ? trimmedText(raw.note) : "",
+            hashtags: channelHashtags(channel, raw.hashtags, brand.brandHashtags),
+            note: trimmedText(raw.note),
         }
         const max = channelRule(channel).maxChars
         if (text.length > max * 1.25) warnings.push({ channel, warning: { kind: "length", length: text.length, max } })
