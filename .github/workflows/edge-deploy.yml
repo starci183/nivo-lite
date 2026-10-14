@@ -6,6 +6,10 @@
 # Environment "production": vars VPS_HOST, VPS_USER; secrets VPS_SSH_KEY, VPS_KNOWN_HOSTS. Touches only ~/nivo-edge and the nivo-edge docker network.
 name: Deploy edge
 
+# Least privilege: the jobs only read the repository; everything else is done over SSH with the environment secrets.
+permissions:
+  contents: read
+
 on:
   workflow_dispatch:
 

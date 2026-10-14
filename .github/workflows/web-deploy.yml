@@ -13,6 +13,10 @@
 # Only ~/nivo-web and the "nivo-web" compose project are touched.
 name: Deploy web
 
+# Least privilege: the jobs only read the repository; everything else is done over SSH with the environment secrets.
+permissions:
+  contents: read
+
 on:
   workflow_dispatch:
 

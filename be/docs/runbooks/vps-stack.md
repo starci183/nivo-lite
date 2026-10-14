@@ -11,7 +11,7 @@ One Ubuntu VPS runs four Compose projects, each with its own deploy workflow so 
 
 The stack project keeps the name `nivo-engine` from the time the api was the engine: Compose prefixes volume names with the project name
 (`nivo-engine_openclaw-data`, `nivo-engine_n8n-db`, ...), and renaming it would orphan them. Nothing in the repository runs on the machine by
-itself: the workflows are started by hand, and the one-time steps below are done once when the VPS is first set up.
+itself (the one exception today is the `watchdog.sh` line that Deploy api installs in the `nivo` crontab; the lite/swarm migration removes it, see `stack-deploy.yml` on that branch): the workflows are started by hand, and the one-time steps below are done once when the VPS is first set up.
 
 ## 0. What you provide
 
@@ -90,13 +90,14 @@ job queues (pgmq, the outbox and the claims) are in Supabase and covered by its 
 
 ```bash
 cd ~/nivo-engine/deploy
-BACKUP_DIR=/var/backups/nivo-engine ./backup.sh            # pg_dump of n8n + tar of the n8n and OpenClaw volumes, keeps 14 days
+BACKUP_DIR=/var/backups/nivo-engine ./backup.sh            # encrypted pg_dump of n8n + encrypted tar of the n8n and OpenClaw volumes, keeps 14 days
 # nightly cron at 02:30:
 # 30 2 * * * cd ~/nivo-engine/deploy && BACKUP_DIR=/var/backups/nivo-engine ./backup.sh >> /var/log/nivo-backup.log 2>&1
 ```
 
-The same VPS is not an independent backup: **copy `BACKUP_DIR` elsewhere** (rclone to object storage, or another machine). The age identity (`secret.env`) is the only other thing to keep safe: every secret is rebuilt from the sealed files. Restore: bring up a new stack,
-`docker compose stop n8n`, load `pg_restore -U n8n -d n8n --clean` into `n8n-db`, unpack the tarballs into the matching volumes, then `up -d`. **Try a restore on a test machine before you trust a backup.**
+Every backup is encrypted with `age` to the project recipient (`deploy/stack/backup.recipient`, the public key of `.sops.yaml`) while it is produced: the data flows from `pg_dump` / `tar` straight through `age` into `*.age` files, so no plaintext dump or tarball is ever written on the VPS, and a failed dump leaves no file. Install `age` once (`sudo apt install age`). The private identity (`SOPS_AGE_KEY` in the owner's `.claude/secret.env`) is never on the VPS, so only the owner can open a backup; losing that key loses the backups, exactly like the sealed secrets.
+
+The same VPS is not an independent backup: **copy `BACKUP_DIR` elsewhere** (rclone to object storage, or another machine; the files are safe to copy). The age identity (`secret.env`) is the only other thing to keep safe: every secret is rebuilt from the sealed files. Restore on the owner's machine with the identity loaded in the environment: `age -d -i <(printf '%s' "$SOPS_AGE_KEY") n8n-db-<stamp>.dump.age`, pipe it into `pg_restore -U n8n -d n8n --clean` in `n8n-db` (after `docker compose stop n8n`), unpack the volume archives the same way into the matching volumes, then `up -d`. **Try a restore on a test machine before you trust a backup.**
 
 ## 7. Update and roll back
 
