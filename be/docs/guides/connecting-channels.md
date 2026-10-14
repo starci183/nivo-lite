@@ -42,7 +42,7 @@ With SePay, NIVO generates the API key and you paste it into SePay. No key has t
 5. For real use: repeat the steps with the **Production** environment (`my.sepay.vn/webhook`), then transfer a small real amount to check.
 
 The SePay account that collects the NIVO plan fee (the payment page shown when a workspace is created) is a separate configuration shared by the whole platform. It uses the variables
-`SEPAY_WEBHOOK_API_KEY`, `SEPAY_BANK_*` and `SEPAY_ACCOUNT_NAME`, kept in `secrets.env` and pushed to production with `node scripts/env-sync.mjs`.
+`SEPAY_WEBHOOK_API_KEY`, `SEPAY_BANK_*` and `SEPAY_ACCOUNT_NAME`, sealed in `.starcistacks/production/secrets/api.enc` (`starci app secret set production api --key <KEY>`) and delivered to the api at deploy time.
 These variables already have values.
 
 ## 3. Zalo OA (at the "early test" level, not yet tried with a real OA)
@@ -71,6 +71,6 @@ Note: Zalo may require the application to be reviewed or the OA to be verified b
 
 ## When something fails
 
-- The Connections page says "only works over https": production does not have `NEXT_PUBLIC_SITE_URL=https://nivo.vn`. `env-sync` sets it.
+- The Connections page says "only works over https": the web image was built without `NEXT_PUBLIC_SITE_URL=https://nivo.vn` (the web workflow sets it as a build argument); redeploy the web.
 - The error "cannot decrypt credentials": `CHANNEL_TOKEN_KEY` in production changed. The credentials of the connections have to be entered again.
 - Application errors are written to the `app_errors` table, and credentials are masked before they are written. See `/admin/health`.

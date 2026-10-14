@@ -1,31 +1,25 @@
-# DNS: VPS cutover and rollback (nivo.vn)
+# DNS for nivo.vn (Tino): cutover and rollback
 
-The app runs on the VPS (Docker: Traefik edge `~/nivo-edge` -> `~/nivo-web`) and on Netlify (hot fallback, reachable at `https://nivo-os.netlify.app`).
-Zone `nivo.vn` is on Cloudflare. Token: `CLOUDFLARE_API_TOKEN` in `secrets.env` section `[cloudflare]`.
+The zone `nivo.vn` is hosted at **Tino** (nameservers `ns1.tino.vn`, `ns2.tino.vn`), not at Cloudflare. DNS is edited by hand in the Tino panel by the owner; there is no script, API token or credential for it in this repository, and none may be added for a provider the zone is not on.
 
-## State before the cutover (recorded 2026-10-02)
+## Records the product needs
 
-| Type  | Name            | Content             | Proxied | TTL  |
-| ----- | --------------- | ------------------- | ------- | ---- |
-| A     | nivo.vn         | 75.2.60.5 (Netlify) | yes     | auto |
-| CNAME | www.nivo.vn     | nivo.vn             | yes     | auto |
-| CNAME | webmail.nivo.vn | nivo.vn             | yes     | auto |
+| Type       | Name          | Content                    | Notes                                                                     |
+| ---------- | ------------- | -------------------------- | ------------------------------------------------------------------------- |
+| A          | `nivo.vn`     | `103.142.27.9`             | the VPS (Traefik edge); TTL 300 or lower during a cutover                 |
+| A or CNAME | `www.nivo.vn` | `103.142.27.9` / `nivo.vn` | served by the same edge router                                            |
+| A          | `api.nivo.vn` | `103.142.27.9`             | the API host; **add it before the cutover** (manual, Tino panel); TTL 300 |
 
-Added for the VPS (DNS only, TTL 60): `app-vps.nivo.vn`, `n8n.nivo.vn`, `engine.nivo.vn` -> 103.142.27.9.
-Note: `*.nivo.vn` -> 180.93.136.138 is a wildcard that other systems use; explicit records win over it.
-`webmail.nivo.vn` is a proxied CNAME to the apex: after the cutover it follows the apex to the VPS (it is not served by the app).
+`app-vps.nivo.vn`, `engine.nivo.vn` and `n8n.nivo.vn` do not exist and are optional (not required by any config; `n8n.` stays a commented entry in the edge routes). `*.nivo.vn` may resolve to another address for other systems; explicit records win over a wildcard.
 
-## Cutover (what was done)
+## Before the cutover: write the current values down
 
-1. `node scripts/with-secrets.mjs node deploy/stack/dns-rollback.mjs --forward`: A nivo.vn -> 103.142.27.9, DNS only, TTL 60.
-2. Add `nivo.vn` and `www.nivo.vn` to the `web` router in `deploy/edge/dynamic/routes.yml` (Traefik hot-reloads and gets the certificates by HTTP-01).
-3. The apex is NOT proxied through Cloudflare (proxying would need an SSL-mode check first). `www` is a CNAME to `nivo.vn`, so it is DNS only after the flip is complete.
+In the Tino panel record, outside git (password manager or the owner's notes), the current content and TTL of the apex A record and of `www`. These are the rollback values. Keep the Tino account and its 2FA custody outside git as well.
 
-## Rollback (one command, ~1 minute plus the resolver cache)
+## Cutover
 
-```
-node scripts/with-secrets.mjs node deploy/stack/dns-rollback.mjs
-```
+The apex already points at the VPS. The one record to add is **`api.nivo.vn` A `103.142.27.9`** in the Tino panel (owner step; nothing is scripted for DNS), then wait until `nslookup api.nivo.vn 1.1.1.1` answers; the edge obtains the certificate on the first request. No other DNS change (the edge serves the new routes after **Deploy edge**). If a record has to change: edit it in the Tino panel, set a short TTL first (300 s) and wait for the old TTL to expire before the switch.
 
-sets A nivo.vn back to 75.2.60.5, proxied (the table above). Netlify keeps deploying every push, so it is always current.
-By hand: Cloudflare dashboard > DNS > the A record `nivo.vn` > content 75.2.60.5, Proxied on, TTL Auto.
+## Rollback
+
+DNS is only part of a rollback if the VPS itself is lost. In the Tino panel set the apex A record (and `www`) back to the values written down before the cutover; resolvers follow after the TTL. The previous hot fallback (Netlify) builds nothing after auto publishing was stopped: use "Publish deploy" on its last pre-cutover deploy. Verify with `nslookup nivo.vn 1.1.1.1` and `curl -I https://nivo.vn`.

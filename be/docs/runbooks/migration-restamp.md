@@ -89,3 +89,7 @@ Rows where only the name changed need no repair (the version key is the timestam
 `20261012102500_be-platform.sql` is new (the app_be role, public.queue, public.jobs). It is idempotent, so a database that already holds those objects accepts it. Apply it on prod with `supabase db push` after the repair above; set the `app_be` password once with `alter role app_be password ...` (never in a migration).
 
 A local dev stack started before the conversion holds the OLD versions in `supabase_migrations.schema_migrations`; run the same repair there or `supabase db reset`.
+
+## Order of the baseline pair and the forward migrations
+
+The cutover branch carries three migrations: `20261013142504_lite-baseline.sql`, `20261013142505_lite-baseline-standard.sql` and the forward migration `20261020110000_drop-engine-schema.sql` (it retires the dead engine schema; it is idempotent and a no-op on a database that never had it). When the integrator re-stamps the baseline pair so that it sorts after the newest migration on `origin/main` (`20261020100000`), the new stamps must stay **between `20261020100000` and `20261020110000`** (for example `20261020100001` and `20261020100002`); otherwise the drop migration would sort before the baseline on a fresh database and the baseline would recreate the engine tables. Regenerate the types with `npm run contract:emit` after the re-stamp so the stamp digest follows.

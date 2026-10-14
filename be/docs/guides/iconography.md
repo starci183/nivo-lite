@@ -4,7 +4,7 @@ This file answers “which icon represents this feature?” Read it before addin
 `IconName`. The table maps PRODUCT MEANINGS, not screens: when the same feature appears in
 navigation, a card and an empty state, every placement reuses the same meaning and Heroicon.
 
-The same table is mirrored in `.claude/fe/canon/patterns/icon.md`. A feature-to-glyph decision
+The same rule is the canon pattern `knowledge/patterns/fe/icon.yaml`. A feature-to-glyph decision
 changes both copies together: canon carries the cross-repository law, while this source copy stays
 beside the code so an author or AI cannot miss it while choosing an icon.
 
