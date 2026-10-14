@@ -8,6 +8,9 @@ import { ConfigurableModuleClass, MODULE_OPTIONS_TOKEN, OPTIONS_TYPE } from "./b
 import { PaymentSecretsService } from "./payment-secrets.service"
 import { EntitlementsService } from "./entitlements.service"
 import { PaymentProofService } from "./payment-proof.service"
+import { CassoProofService } from "./casso-proof.service"
+import { PayosProofService } from "./payos-proof.service"
+import { VietcombankProofService } from "./vietcombank-proof.service"
 @Module({})
 /** The billing capability over the primary Supabase connection: plans, payment orders, SePay settlement and the payment feeds. */
 export class BillingModule extends ConfigurableModuleClass {
@@ -23,6 +26,9 @@ export class BillingModule extends ConfigurableModuleClass {
                 BillingReadService,
                 EntitlementsService,
                 PaymentProofService,
+                CassoProofService,
+                PayosProofService,
+                VietcombankProofService,
                 PaymentSecretsService,
                 BankFeedService,
             ],

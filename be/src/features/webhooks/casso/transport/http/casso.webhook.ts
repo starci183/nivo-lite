@@ -3,7 +3,8 @@ import type { RawBodyRequest } from "@nestjs/common"
 import type { Request } from "express"
 import { BankFeedService } from "@modules/domain/billing"
 import { Public, PublicReason } from "@modules/domain/identity"
-import { RateLimit, RateTier } from "@modules/platform/http-security"
+import { InjectWebhookSignature, RateLimit, RateTier } from "@modules/platform/http-security"
+import type { WebhookSignatureService } from "@modules/platform/http-security"
 
 @Controller("api/connections/casso")
 /**
@@ -12,9 +13,12 @@ import { RateLimit, RateTier } from "@modules/platform/http-security"
  * `secure-token`. The proven delivery goes to one feed intake that books each positive transaction once per Casso transaction id.
  */
 export class CassoWebhook {
-    constructor(private readonly feed: BankFeedService) {}
+    constructor(
+        @InjectWebhookSignature() private readonly signature: WebhookSignatureService,
+        private readonly feed: BankFeedService,
+    ) {}
 
-    /** Answers HTTP 200 with `{"success": true, "accepted": n}`. */
+    /** Proves the delivery before intake and acknowledges accepted deliveries with HTTP 200 and an empty body. */
     @Post(":connectionId")
     @HttpCode(HttpStatus.OK)
     @Public({ reason: PublicReason.SignedWebhook })
@@ -25,6 +29,14 @@ export class CassoWebhook {
         @Headers("x-casso-signature") signature: string | undefined,
         @Headers("secure-token") secureToken: string | undefined,
     ): Promise<void> {
+        await this.signature.verify({
+            provider: "casso",
+            scope: connectionId,
+            rawBody: request.rawBody,
+            signature,
+            // The V1 token rides the timestamp slot because the proof request has no second header slot.
+            timestamp: secureToken,
+        })
         await this.feed.acceptCassoDelivery({ connectionId, rawBody: request.rawBody, signature, secureToken })
     }
 }
