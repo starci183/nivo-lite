@@ -81,8 +81,8 @@ interface Judged {
     readonly reply: string
     /** True when a person must answer. */
     readonly needsHuman: boolean
-    /** Why a person decides when the reply needs one. */
-    readonly reason: HumanReason
+    /** Why, or null. */
+    readonly reason: HumanReason | null
     /** The order to record, or null. */
     readonly order: CapturedOrder | null
     /** The open invoice the customer says they paid, or null. */
@@ -213,13 +213,7 @@ export class CustomerOutcomesService implements CustomerOutcomes {
         const asked = reply.paymentClaim ? null : reply.order
         const knownPrice = asked === null || isKnownPrice(conversation.agent.knowledge, asked.amountVnd)
         const base: Judged = knownPrice
-            ? {
-                  reply: reply.reply,
-                  needsHuman: reply.needsHuman,
-                  reason: reply.reason ?? "unclear_outcome",
-                  order: asked,
-                  claimOpen: null,
-              }
+            ? { reply: reply.reply, needsHuman: reply.needsHuman, reason: reply.reason, order: asked, claimOpen: null }
             : {
                   reply: this.text("orderPriceUnknownReply", {}),
                   needsHuman: true,
@@ -368,7 +362,7 @@ export class CustomerOutcomesService implements CustomerOutcomes {
             dedupeKey: `reply_customer:message:${turn.messageId}`,
             question,
             draft: reply.proposedAnswer ?? reply.reply,
-            forceAsk: judged.reason,
+            forceAsk: judged.reason ?? "unclear_outcome",
             leadId,
         })
         if (existed) return []

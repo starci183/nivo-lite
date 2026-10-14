@@ -14,7 +14,7 @@ const PLAIN_MIN = 1000
 
 const scaled = (text: string, pattern: RegExp, factor: number): ReadonlyArray<number> =>
     [...text.matchAll(pattern)]
-        .map((match) => Math.round(Number(String(match[1]).replace(",", ".")) * factor))
+        .map((match) => Math.round(Number((match[1] ?? "").replace(",", ".")) * factor))
         .filter((value) => Number.isFinite(value) && value > 0)
 
 /**

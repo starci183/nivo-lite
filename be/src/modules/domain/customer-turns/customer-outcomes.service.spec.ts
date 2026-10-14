@@ -16,6 +16,7 @@ import type { MessageCatalog } from "@modules/platform/i18n"
 import { LOGGER } from "@modules/platform/logging"
 import { CustomerOutcomesService } from "./customer-outcomes.service"
 import { CustomerTurnsLogEvent } from "./customer-turns.log-events"
+import { findingsOf } from "./reply-reading.policy"
 import { StaffEscalationService } from "./staff-escalation.service"
 import { TurnModulesService } from "./turn-modules.service"
 import { TurnPurchasesService } from "./turn-purchases.service"
@@ -147,6 +148,17 @@ const build = async () => {
 }
 
 describe("CustomerOutcomesService", () => {
+    it("keeps a null judged reason and defaults it when opening a human reply", async () => {
+        const { outcomes, engine } = await build()
+        const turn = turnOf()
+        const reply = { ...findingsOf({}), reply: "Thanks!", needsHuman: true, reason: null, proposedAnswer: null }
+        const judged = await outcomes["judge"](turn.conversation, reply)
+        expect(judged).toEqual({ reply: "Thanks!", needsHuman: true, reason: null, order: null, claimOpen: null })
+        const lines = await outcomes["askPerson"](outcomes["ctxOf"](turn), turn, reply, judged, null)
+        expect(lines).toEqual(["conversations.chatNeedsHuman"])
+        expect(engine.runWork.mock.calls[0]?.[1]?.forceAsk).toBe("unclear_outcome")
+    })
+
     it.each([
         ["done", false, undefined],
         ["waiting_decision", true, "Lan"],
@@ -357,23 +369,18 @@ describe("CustomerOutcomesService", () => {
         expect(verdict).toEqual({ reply: "Thanks!", send: true, lines: ["conversations.chatNeedsHuman"] })
     })
 
-    it("stores a chat application and replaces the reply when hiring refuses it", async () => {
-        const stored = await build()
-        stored.hiring.registerChatApplication.mockResolvedValue({ ok: true })
+    it.each([
+        [true, "customerTurns.applicationStored", "Thanks!"],
+        [false, "customerTurns.applicationNotStored", "customerTurns.applicationRefusedReply"],
+    ])("stores a chat application when hiring accepts it: %s", async (ok, line, reply) => {
+        const { outcomes, hiring } = await build()
+        const register = hiring.registerChatApplication
+        register.mockResolvedValue(ok ? { ok: true } : { ok: false, message: "closed" })
         const application = { job: "barista", name: "Lan", phone: "0912", email: "", consent: true }
-        const saved = await stored.outcomes.settle(turnOf(), proposalOf({ application }))
-        expect(saved.lines).toContain("customerTurns.applicationStored")
-        expect(stored.hiring.registerChatApplication).toHaveBeenCalledWith(
-            WS,
-            "c1",
-            expect.objectContaining({ job: "barista" }),
-        )
-
-        const refused = await build()
-        refused.hiring.registerChatApplication.mockResolvedValue({ ok: false, message: "closed" })
-        const verdict = await refused.outcomes.settle(turnOf(), proposalOf({ application }))
-        expect(verdict.reply).toBe("customerTurns.applicationRefusedReply")
-        expect(verdict.lines).toContain("customerTurns.applicationNotStored")
+        const verdict = await outcomes.settle(turnOf(), proposalOf({ application }))
+        expect(verdict.lines).toContain(line)
+        expect(register).toHaveBeenCalledWith(WS, "c1", expect.objectContaining({ job: "barista" }))
+        expect(verdict.reply).toBe(reply)
     })
 
     it("holds the reply for approval when the connection access is ask", async () => {

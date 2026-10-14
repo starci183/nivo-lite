@@ -93,9 +93,9 @@ const clip = (text: string): ClippedText => {
 /** The first heading ("# Title") or the first non-empty line, else the fallback. */
 const titleFrom = (text: string, fallback: string): string => {
     const heading = /^\s{0,3}#{1,6}\s+(.+)$/mu.exec(text)?.[1]
-    const line = heading ?? text.split("\n", 1).join("")
+    const line = heading ?? text.split("\n").find((candidate) => candidate.trim() !== "")
     return (
-        line
+        (line ?? fallback)
             .trim()
             .replace(/^#+\s*/u, "")
             .slice(0, 120) || fallback
