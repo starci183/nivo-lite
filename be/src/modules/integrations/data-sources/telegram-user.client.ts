@@ -233,16 +233,21 @@ export class TelegramUserClient {
             appVersion: "1.0",
         })
         client.setLogLevel(LogLevel.NONE)
+        let result: T
         try {
             await client.connect()
-            return await work(client, app)
+            result = await work(client, app)
         } catch (error) {
-            throw this.translate(error)
-        } finally {
-            await client
-                .destroy()
-                .catch((cause: unknown) => this.logger.error(TelegramUserLogEvent.CloseFailed, cause, {}))
+            const translated = this.translate(error)
+            await this.destroy(client)
+            throw translated
         }
+        await this.destroy(client)
+        return result
+    }
+
+    private async destroy(client: TelegramClient): Promise<void> {
+        await client.destroy().catch((cause: unknown) => this.logger.error(TelegramUserLogEvent.CloseFailed, cause, {}))
     }
 
     private translate(error: unknown): DataSourcesError {
