@@ -4,7 +4,7 @@ All three connections are made in the app, on the **Connections** page (`/connec
 When a connection is saved, the app checks the credentials, encrypts them with AES-256-GCM under `CHANNEL_TOKEN_KEY` and writes them to the `connection_secrets` table. Only the service role can read this table.
 The app never returns credentials to the browser, so no credential file or import script is needed. If credentials were written to a file for a moment, delete that file once the connection is saved.
 
-The webhook and callback URLs below keep their public paths across the lite cutover: the edge sends every `/api/` path of the product hosts to the api (`deploy/edge/dynamic/routes.yml`), so nothing has to be changed on the provider side.
+The webhook and callback URLs below keep their public paths across the lite cutover: the edge sends every `/api/` path of the product hosts to the api (`.starcistacks/production/infra/swarm/edge/routes.yml`), so nothing has to be changed on the provider side.
 
 ## 0. Preparation (once)
 

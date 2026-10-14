@@ -20,7 +20,7 @@ TypeScript everywhere, NestJS in `be/`, Next.js with next-intl in `fe/`, Supabas
 - `.starcistacks/`: value-free environment metadata and encrypted-secret custody only.
 - `.starciwork/`: the lite workspace record (`workspace.yaml`) and the brand references.
 - `scripts/`: the contract and type codegen (`codegen.mjs`).
-- `deploy/`: the VPS side of the delivery: the edge routes, the api and OpenClaw stack, the web container and `materialize.mjs`, which turns the sealed secrets into per-key files at deploy time (see `be/docs/runbooks/vps-stack.md`).
+- `deploy/swarm/`: the tools of the production Docker Swarm release (render, versioned secrets, convergence, verification, operator commands); the stack itself is `.starcistacks/production/infra/swarm/stack.yaml` (see `be/docs/runbooks/vps-stack.md` and `.starcistacks/production/README.md`).
 
 ## Development
 
@@ -34,9 +34,9 @@ npm run build:be
 npm run build:fe
 ```
 
-The API reads `PORT`, `HTTP_SECURITY_ALLOWED_ORIGINS`, `PRIMARY_DB_URL`, `PRIMARY_DB_SCHEMA`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `CHANNEL_TOKEN_KEY`, `SITE_URL` and `N8N_SIGNING_SECRET`; the queue tunables `QUEUE_ENABLED`, `QUEUE_CONCURRENCY`, `QUEUE_WORKSPACE_CONCURRENCY`, `QUEUE_POLL_INTERVAL`, `QUEUE_VISIBILITY_TIMEOUT`, `QUEUE_SHUTDOWN_GRACE`, `JOBS_LEASE` and `JOBS_WORKER_ID` are optional (`deploy/stack/api.env.example` lists every name with required or optional). The web app reads `NEXT_PUBLIC_SITE_URL`, `NEXT_PUBLIC_API_URL` (the origin of the API, `https://api.nivo.vn` in production), `NEXT_PUBLIC_DEVELOPER_API_URL`, `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY`. A missing required key stops the process with the key's name; no template supplies credential defaults.
+The API reads `PORT`, `HTTP_SECURITY_ALLOWED_ORIGINS`, `PRIMARY_DB_URL`, `PRIMARY_DB_SCHEMA`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `CHANNEL_TOKEN_KEY`, `SITE_URL` and `N8N_SIGNING_SECRET`; the queue tunables `QUEUE_ENABLED`, `QUEUE_CONCURRENCY`, `QUEUE_WORKSPACE_CONCURRENCY`, `QUEUE_POLL_INTERVAL`, `QUEUE_VISIBILITY_TIMEOUT`, `QUEUE_SHUTDOWN_GRACE`, `JOBS_LEASE` and `JOBS_WORKER_ID` are optional (`.starcistacks/production/infra/swarm/api.env.example` lists every name with required or optional). The web app reads `NEXT_PUBLIC_SITE_URL`, `NEXT_PUBLIC_API_URL` (the origin of the API, `https://api.nivo.vn` in production), `NEXT_PUBLIC_DEVELOPER_API_URL`, `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY`. A missing required key stops the process with the key's name; no template supplies credential defaults.
 
-Secrets: the only custody is the sealed files `.starcistacks/<env>/secrets/<slug>.enc` (sops dotenv, age recipient in `.sops.yaml`; the age identity is `SOPS_AGE_KEY` in the StarCi runtime `.claude/secret.env`, which the owner backs up). There is no `.env` or `secrets.env`. A process receives a secret as `<NAME>_FILE=<path>` (the API's `EnvSource` reads the file first); a deploy writes one file per key with `deploy/materialize.mjs` (plain sops; `starci app secret materialize` replaces it after the canon repin). Seal or read a value with `starci app secret set|show|list`.
+Secrets: the only custody is the sealed files `.starcistacks/<env>/secrets/<slug>.enc` (sops dotenv, age recipient in `.sops.yaml`; the age identity is `SOPS_AGE_KEY` in the StarCi runtime `.claude/secret.env`, which the owner backs up). There is no `.env` or `secrets.env`. A process receives a secret as `<NAME>_FILE=<path>` (the API's `EnvSource` reads the file first); a deploy decrypts each key in memory and creates a versioned Docker Swarm secret from it (`deploy/swarm/provision.mjs`), mounted at `/run/secrets/<NAME>`. Seal or read a value with `starci app secret set|show|list`.
 
 Run it locally:
 

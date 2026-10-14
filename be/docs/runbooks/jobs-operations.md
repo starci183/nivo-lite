@@ -15,14 +15,13 @@ in `be/docs/runbooks/vps-stack.md`.
 Order matters: **apply the migrations to Supabase before the api deploy** (`supabase db push`, or the database deploy workflow). An api without
 the queue objects of the platform migration is not ready and the deploy rolls back.
 
-What the workflow does, in order:
+What the **Deploy stack** workflow does, in order (the api is one service of the Swarm stack `nivo`; `be/docs/runbooks/vps-stack.md`):
 
-1. Builds the api image on the runner from `be/apps/api/Dockerfile` (this runs the build and the type gate) and ships it with `docker save | ssh docker load`.
-2. Decrypts the sealed files in the job (`deploy/materialize.mjs`, `SOPS_AGE_KEY`) and uploads `deploy/stack/` to `~/nivo-engine.new/deploy` with the per-key secret files, `api.env` (pointers), `openclaw.env` and `.env` (settings plus `API_TAG=<sha>`).
-3. Swaps folders (the old release stays as `~/nivo-engine.prev`), `docker compose up -d --remove-orphans` (this also removes a container of a service
-   that left the stack, such as the old `engine`).
-4. Health: the api container is `healthy` and `/readyz` returns 200 inside it.
-5. Unhealthy: logs are printed, the previous release is restored, and the run is marked failed. Healthy: older images are pruned and the watchdog cron line is (re)installed.
+1. Builds the api and web images on the runner (the api build runs the type gate) and pushes them to GHCR; the deploy uses their digests.
+2. Renders the stack, decrypts the sealed files in memory with `SOPS_AGE_KEY` and creates one versioned Swarm secret per key; the api reads `/run/secrets/<KEY>` through `<KEY>_FILE`.
+3. `docker stack deploy --prune`: the api updates start-first, so the old task serves until the new one is healthy (`/healthz`, liveness).
+4. Observes convergence (desired versus running replicas, no failed task) and verifies `/readyz` (the database answers), a GraphQL probe, OpenClaw by service DNS and `jobs watchdog`.
+5. Unhealthy: the update rolls itself back and the workflow deploys the previous accepted release again. Healthy: the release is accepted and superseded secrets are removed.
 
 ### Secrets and variables to set before the first api deploy
 
@@ -34,28 +33,26 @@ GitHub environment `production`:
 | secret | `VPS_SSH_KEY`, `VPS_KNOWN_HOSTS` | same as the web deploy (CI deploy key, pinned host keys)                                                       |
 | secret | `SOPS_AGE_KEY`                   | the age identity of `.sops.yaml`; the only way the application secrets reach the job (protect the environment) |
 
-The application secrets are in `.starcistacks/production/secrets/{api,auth,stack}.enc`; names and meaning are in `deploy/stack/api.env.example` and `.starcistacks/production/README.md`. `api.enc` must hold `PRIMARY_DB_URL`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `CHANNEL_TOKEN_KEY` (it decrypts stored Drive tokens) and `N8N_SIGNING_SECRET`; the knowledge keys are `OPENROUTER_API_KEY`, `EMBEDDING_MODEL` (optionally `EMBEDDING_BASE_URL`, `EMBEDDING_API_KEY`), `GOOGLE_OAUTH_CLIENT_ID`, `GOOGLE_OAUTH_CLIENT_SECRET`. Optional tunables: `QUEUE_CONCURRENCY`, `QUEUE_POLL_INTERVAL`, `QUEUE_VISIBILITY_TIMEOUT`, `JOBS_LEASE`. Watchdog thresholds live in the sealed `stack` file: `JOBS_FAILED_ALERT` (20) and `JOBS_STALE_SECONDS` (300). Set a value with `starci app secret set production api --key <KEY>`.
+The application secrets are in `.starcistacks/production/secrets/{api,auth,stack}.enc`; names and meaning are in `.starcistacks/production/infra/swarm/api.env.example` and `.starcistacks/production/README.md`. `api.enc` must hold `PRIMARY_DB_URL`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `CHANNEL_TOKEN_KEY` (it decrypts stored Drive tokens) and `N8N_SIGNING_SECRET`; the knowledge keys are `OPENROUTER_API_KEY`, `EMBEDDING_MODEL` (optionally `EMBEDDING_BASE_URL`, `EMBEDDING_API_KEY`), `GOOGLE_OAUTH_CLIENT_ID`, `GOOGLE_OAUTH_CLIENT_SECRET`. Optional tunables: `QUEUE_CONCURRENCY`, `QUEUE_POLL_INTERVAL`, `QUEUE_VISIBILITY_TIMEOUT`, `JOBS_LEASE`. Watchdog thresholds live in the sealed `stack` file: `JOBS_FAILED_ALERT` (20) and `JOBS_STALE_SECONDS` (300). Set a value with `starci app secret set production api --key <KEY>`.
 
 ## Watch
 
-`deploy/stack/watchdog.sh` runs every minute from the `nivo` crontab and writes `~/nivo-engine/watchdog.log`. Besides the api/OpenClaw coupling check
-it asks `job_stats()` in Postgres (through the be CLI, `jobs watchdog`, on the `app_be` connection) and:
+The api watches its own jobs; there is no host crontab and no watchdog script. An in-process monitor of the api (not a queue job, so it still fires when the queue consumer is stuck) reads `job_stats()` every `JOBS_ALERT_INTERVAL` (default 5 minutes) and, per kind at most once every 30 minutes:
 
-- logs `ALERT failed-jobs` when more than `JOBS_FAILED_ALERT` jobs failed in the last 24 h;
-- logs `ALERT jobs-stale` when a job has been queued longer than `JOBS_STALE_SECONDS` (the api is not consuming, or a workspace is saturated).
+- `job-ops.alert.failed-jobs`: more than `JOBS_ALERT_FAILED_MAX` jobs (default 20) failed in the last 24 h;
+- `job-ops.alert.jobs-stale`: a job has been queued longer than `JOBS_ALERT_STALE_SECONDS` (default 300; the api is not consuming, or a workspace is saturated).
 
-Each kind alerts at most once per 30 minutes. Alerts are log lines, the same channel as the `recreating api` entries:
-`grep ALERT ~/nivo-engine/watchdog.log`.
+Each alert is one structured error log event and one `app_errors` row (scope `jobs.alert`, shown in the team console `/admin/health`). The limits come from the sealed `stack` member (`JOBS_FAILED_ALERT`, `JOBS_STALE_SECONDS`) at deploy time. Read them with `deploy/swarm/vps.sh logs api --since 1h | grep job-ops.alert`. If the api itself is down, Swarm reschedules the task and the convergence check of the deploy reports it.
 
 ## Read failed jobs
 
-On the VPS, in `~/nivo-engine/deploy` (each command runs `cli jobs ...` inside the api container, on the `app_be` connection):
+On the VPS manager, or anywhere with `DOCKER_HOST=ssh://<user>@<vps>` (each command resolves the running api task and runs `cli jobs ...` inside it, on the `app_be` connection):
 
 ```bash
-./jobs.sh stats            # job_stats(): depth and oldest age per queue, running, failed in 24 h, oldest queued
-./jobs.sh failed           # last 20 failed jobs: outbox id | name | attempts | finished_at | last_error (no payload)
-./jobs.sh failed 100
-./jobs.sh open             # the oldest queued / running jobs
+deploy/swarm/jobs.sh stats            # job_stats(): depth and oldest age per queue, running, failed in 24 h, oldest queued
+deploy/swarm/jobs.sh failed           # last 20 failed jobs: outbox id | name | attempts | finished_at | last_error (no payload)
+deploy/swarm/jobs.sh failed 100
+deploy/swarm/jobs.sh open             # the oldest queued / running jobs
 ```
 
 The same from the Supabase SQL editor:
@@ -66,15 +63,15 @@ select id, name, attempts, finished_at, last_error from job_outbox where state =
 select msg_id, read_ct, archived_at, message->>'name', message->>'dedupe' from pgmq.a_knowledge order by archived_at desc limit 20;
 ```
 
-The api log has the handler error with the dedupe key: `docker compose --env-file .env logs --tail 200 api | grep '<dedupe key>'`.
+The api log has the handler error with the dedupe key: `deploy/swarm/vps.sh logs api --since 1h | grep '<dedupe key>'`.
 
 There is no `GET /admin/jobs/failed` endpoint: the SQL above needs no endpoint and no admin guard.
 
 ## Retry
 
 ```bash
-./jobs.sh retry <outbox-id>      # send one failed job again (job_requeue: new message, attempts reset)
-./jobs.sh retry-failed [hours]   # every job that failed in the last <hours> (default 24)
+deploy/swarm/jobs.sh retry <outbox-id>      # send one failed job again (job_requeue: new message, attempts reset)
+deploy/swarm/jobs.sh retry-failed [hours]   # every job that failed in the last <hours> (default 24)
 ```
 
 Safe: handlers are idempotent, so a retried job whose subject is already done is a no-op. Fix the cause first (a bad key, a revoked Drive
