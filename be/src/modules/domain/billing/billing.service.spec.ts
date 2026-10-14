@@ -186,13 +186,14 @@ describe("BillingService", () => {
 
     describe("renew", () => {
         const WORKSPACE = [WORKSPACE_ROW]
-        const priced = (plan: typeof PLAN_ROW = PLAN_ROW) => [
-            [SELECT_MEMBER_ROLE, [{ role: "owner" }]],
-            [SELECT_WORKSPACE_BILLING, WORKSPACE],
-            [SELECT_PLAN, [plan]],
-            [SELECT_PLAN_TIERS, []],
-            [SELECT_PROMO_HISTORY, []],
-        ]
+        const priced = (plan: typeof PLAN_ROW = PLAN_ROW) =>
+            [
+                [SELECT_MEMBER_ROLE, [{ role: "owner" }]],
+                [SELECT_WORKSPACE_BILLING, WORKSPACE],
+                [SELECT_PLAN, [plan]],
+                [SELECT_PLAN_TIERS, []],
+                [SELECT_PROMO_HISTORY, []],
+            ] as const
 
         it("orders the current plan of the workspace at its price", async () => {
             const { billing, orders } = await build(mockEntityManager({ query: priced() }))
