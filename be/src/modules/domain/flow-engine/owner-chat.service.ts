@@ -11,7 +11,7 @@ import { AuthorityChatService, moneyOf } from "./authority-chat.service"
 import type { ChatVerdict, OwnerChatAnswer, WaitingView } from "./flow-engine.contracts"
 import {
     amountOf,
-    customerOf,
+    waitingCustomerOf,
     isAddressed,
     matchWaiting,
     namesOtherHandle,
@@ -132,7 +132,7 @@ export class OwnerChatService {
         )
         return items.map((item: WorkItem) => ({
             item,
-            customer: customerOf(item, item.lead_id === null ? "" : (names.get(item.lead_id) ?? "")),
+            customer: waitingCustomerOf(item, item.lead_id === null ? "" : (names.get(item.lead_id) ?? "")),
             ref: refOf(item),
             amount: amountOf(item),
         }))

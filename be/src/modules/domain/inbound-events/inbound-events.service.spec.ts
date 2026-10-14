@@ -1,13 +1,15 @@
 import { Test } from "@nestjs/testing"
-import { FakeClock, fakeTransaction, mockEntityManager } from "@starci/jest-preset"
+import { FakeClock, fakeInbox, fakeTransaction, mockEntityManager } from "@starci/jest-preset"
 import { CLOCK } from "@modules/platform/clock"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
+import { INBOX } from "@modules/platform/inbox"
 import { InboundEventsErrorCode } from "./errors/inbound-events.error"
 import { InboundEventsService } from "./inbound-events.service"
 import {
     BUMP_DUPLICATE_EVENT,
     HOLD_EVENT_FOR_OWNER,
     INSERT_BANK_EVENT,
+    INSERT_INPUT_EVENT,
     INSERT_ORDER_HANDOFF,
     INSERT_UNROUTED_EVENT,
 } from "./persistence/inbound-events.sql"
@@ -16,14 +18,16 @@ const NOW = "2026-10-12T10:00:00.000Z"
 
 const build = async (stubs: ReadonlyArray<readonly [string, unknown]>) => {
     const tx = fakeTransaction(mockEntityManager({ query: stubs }))
+    const inbox = fakeInbox()
     const moduleRef = await Test.createTestingModule({
         providers: [
             InboundEventsService,
             { provide: PRIMARY_ENTITY_MANAGER, useValue: tx.em },
             { provide: CLOCK, useValue: new FakeClock(NOW) },
+            { provide: INBOX, useValue: inbox },
         ],
     }).compile()
-    return { events: moduleRef.get(InboundEventsService), tx }
+    return { events: moduleRef.get(InboundEventsService), tx, inbox }
 }
 
 const eventOf = (manager: ReturnType<typeof mockEntityManager>) => ({
@@ -120,6 +124,49 @@ describe("InboundEventsService", () => {
             await events.holdForOwnerCheck("event-1")
 
             expect(tx.em.query).toHaveBeenCalledWith(HOLD_EVENT_FOR_OWNER, ["event-1"])
+        })
+    })
+
+    describe("recordInput", () => {
+        const input = {
+            workspaceId: "ws-1",
+            channel: "zalo",
+            kind: "lead",
+            origin: "live" as const,
+            senderName: "Mai",
+            senderContact: null,
+            body: "Haircut",
+            externalRef: null,
+            eventId: "evt-1",
+        }
+
+        it("records a new channel input after claiming the event", async () => {
+            const { events, tx, inbox } = await build([[INSERT_INPUT_EVENT, [{ id: "event-1" }]]])
+
+            await expect(events.recordInput(input)).resolves.toEqual({ duplicate: false, inboundEventId: "event-1" })
+
+            expect(inbox.claims).toEqual([{ source: "zalo", eventId: "evt-1" }])
+            expect(tx.em.query).toHaveBeenCalledWith(INSERT_INPUT_EVENT, [
+                "ws-1",
+                "zalo",
+                "lead",
+                "live",
+                "Mai",
+                null,
+                "Haircut",
+                null,
+                null,
+                "evt-1",
+                "zalo:lead:evt-1",
+            ])
+        })
+
+        it("still records on the domain row when the inbox already holds the event", async () => {
+            const { events, inbox } = await build([[INSERT_INPUT_EVENT, [{ id: "event-1" }]]])
+            inbox.seen("zalo", "evt-1")
+
+            await expect(events.recordInput(input)).resolves.toEqual({ duplicate: false, inboundEventId: "event-1" })
+            expect(inbox.claims).toEqual([{ source: "zalo", eventId: "evt-1" }])
         })
     })
 

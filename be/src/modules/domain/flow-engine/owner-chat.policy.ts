@@ -140,7 +140,7 @@ const textField = (item: WorkItem, key: string): string => {
 }
 
 /** The customer of a waiting item: the lead's name, else the customer or payer the proposal names. */
-export const customerOf = (item: WorkItem, leadName: string): string =>
+export const waitingCustomerOf = (item: WorkItem, leadName: string): string =>
     (leadName || textField(item, "customer") || textField(item, "payer")).trim()
 
 /** The order, invoice or bank reference of a waiting item, or blank. */

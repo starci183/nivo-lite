@@ -4,4 +4,4 @@ import type { Origin } from "@modules/domain/work-items"
 export const AUTOMATION_LOCALE = "vi"
 
 /** The origin of a work item from the origin an automation names: anything but `simulated` is live. */
-export const originOf = (origin: string): Origin => (origin === "simulated" ? "simulated" : "live")
+export const workOriginOf = (origin: string): Origin => (origin === "simulated" ? "simulated" : "live")

@@ -3,6 +3,8 @@ import type { EntityManager } from "typeorm"
 import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
+import { InjectInbox } from "@modules/platform/inbox"
+import type { Inbox } from "@modules/platform/inbox"
 import { InboundEventsError, InboundEventsErrorCode } from "./errors/inbound-events.error"
 import { bankDedupeKey, eventDedupeKey } from "./inbound-dedupe.policy"
 import type {
@@ -33,6 +35,7 @@ export class InboundEventsService {
     constructor(
         @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
         @InjectClock() private readonly clock: Clock,
+        @InjectInbox() private readonly inbox: Inbox,
     ) {}
 
     /**
@@ -94,8 +97,16 @@ export class InboundEventsService {
         await this.entityManager.query(MARK_INBOUND_EVENT, [workspaceId, eventId, status, leadId])
     }
 
-    /** Records an input a channel delivered (a customer lead, say); the same event id twice is one input and counts as a repeat. */
+    /**
+     * Records an input a channel delivered (a customer lead, say); the same event id twice is one input and counts as a repeat.
+     * The inbox claim is first. A repeat still resolves on the domain row, which is what answers the existing event id.
+     */
     async recordInput(input: InboundInput): Promise<BankPaymentRecorded> {
+        if (!(await this.inbox.claim(input.channel, input.eventId))) return this.writeInput(input)
+        return this.writeInput(input)
+    }
+
+    private async writeInput(input: InboundInput): Promise<BankPaymentRecorded> {
         const key = eventDedupeKey(input.channel, input.kind, input.eventId)
         const [created] = await this.entityManager.query<Array<EventIdRow>>(INSERT_INPUT_EVENT, [
             input.workspaceId,
