@@ -2,7 +2,7 @@ import { Injectable } from "@nestjs/common"
 import { AuthorityRulesService } from "@modules/domain/authority-rules"
 import type { AuthorityRuleRecord } from "@modules/domain/authority-rules"
 import { BrainFactsService, keyOf, sameValue } from "@modules/domain/brain-facts"
-import type { Evidence, Scope } from "@modules/domain/brain-facts"
+import type { Evidence } from "@modules/domain/brain-facts"
 import { EventsService } from "@modules/domain/events"
 import { InstallationRecordsService } from "@modules/domain/module-installations"
 import type { InstallationRecord } from "@modules/domain/module-installations"
@@ -30,7 +30,6 @@ import { cardOf } from "./policies/setup-writes.policy"
 import type { OpenGap, ProposedWrite } from "./policies/setup-writes.policy"
 
 const GOVERNORS: ReadonlyArray<WorkspaceRole> = ["owner", "manager"]
-const SCOPES: ReadonlyArray<Scope> = ["public", "internal", "restricted"]
 const GAPS_PER_TURN = 5
 
 /** The rule of an action as it stands: the stored row, else what installing the module grants. */
@@ -217,7 +216,7 @@ export class SetupCardsService {
     ): Promise<CardRecord> {
         const base = card.payload
         const value = (change.value ?? base.value).trim()
-        const scope = change.scope !== undefined && SCOPES.includes(change.scope) ? change.scope : base.scope
+        const scope = change.scope ?? base.scope
         const subjectLabel = (change.subjectLabel ?? base.subjectLabel).trim()
         const baseAttribute = (change.attributeLabel ?? base.attributeLabel).trim()
         if (value === "" || subjectLabel === "" || baseAttribute === "") {

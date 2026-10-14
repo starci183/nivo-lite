@@ -24,8 +24,16 @@ export type NivoItemOutcome = Outcome<NivoItemInput, NivoKnowledgeErrorCode>
 const metaOf = (block: string): ReadonlyMap<string, string> => {
     const meta = new Map<string, string>()
     block.split("\n").forEach((line) => {
-        const match = /^(\w+):\s*(.*)$/.exec(line)
-        if (match !== null) meta.set(match[1] ?? "", (match[2] ?? "").trim().replace(/^["']|["']$/g, ""))
+        if (/^\w+:\s*.*$/.test(line)) {
+            const colon = line.indexOf(":")
+            meta.set(
+                line.slice(0, colon),
+                line
+                    .slice(colon + 1)
+                    .trim()
+                    .replace(/^["']|["']$/g, ""),
+            )
+        }
     })
     return meta
 }
@@ -36,18 +44,20 @@ const metaOf = (block: string): ReadonlyMap<string, string> => {
  */
 export const nivoItemOf = (file: NivoFile, folders: ReadonlyArray<string>): NivoItemOutcome => {
     const raw = file.text.replace(/\r\n/g, "\n")
-    const match = /^---\n([\s\S]*?)\n---\n?([\s\S]*)$/.exec(raw)
-    if (match === null) return refused(NivoKnowledgeErrorCode.FrontMatterMissing, { file: file.path })
-    const meta = metaOf(match[1] ?? "")
-    const parts = file.path.split("/")
-    const module = parts[0] ?? ""
-    if (parts.length < 2 || !folders.includes(module)) {
+    if (!/^---\n[\s\S]*?\n---\n?[\s\S]*$/.test(raw)) {
+        return refused(NivoKnowledgeErrorCode.FrontMatterMissing, { file: file.path })
+    }
+    const frontMatterEnd = raw.indexOf("\n---", 4)
+    const meta = metaOf(raw.slice(4, frontMatterEnd))
+    const firstSlash = file.path.indexOf("/")
+    const module = file.path.slice(0, firstSlash)
+    if (firstSlash < 0 || !folders.includes(module)) {
         return refused(NivoKnowledgeErrorCode.ModuleUnknown, { file: file.path })
     }
     const kind = meta.get("kind") ?? ""
     if (!KINDS.includes(kind)) return refused(NivoKnowledgeErrorCode.KindUnknown, { file: file.path })
     const title = meta.get("title") ?? ""
     if (title === "") return refused(NivoKnowledgeErrorCode.TitleMissing, { file: file.path })
-    const name = parts[parts.length - 1] ?? ""
-    return ok({ module, slug: name.replace(/\.md$/, ""), title, kind, body: (match[2] ?? "").trim() })
+    const name = file.path.slice(file.path.lastIndexOf("/") + 1)
+    return ok({ module, slug: name.replace(/\.md$/, ""), title, kind, body: raw.slice(frontMatterEnd + 4).trim() })
 }

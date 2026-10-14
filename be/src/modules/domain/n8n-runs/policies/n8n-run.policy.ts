@@ -104,7 +104,7 @@ export const attachmentsOf = (value: unknown): ReadonlyArray<N8nAttachment> =>
 /** Fills `{name}` (or `{{name}}`) from the variables; an unknown name becomes empty and control characters never survive. */
 export const renderTemplate = (template: string, variables: EmailVariables): string =>
     [...template.replace(/\{\{?\s*([a-z0-9_]+)\s*\}?\}/gi, (_whole, name: string) => String(variables[name] ?? ""))]
-        .filter((character) => !isControl(character.codePointAt(0) ?? 0))
+        .filter((character) => !isControl(Number(character.codePointAt(0))))
         .join("")
 
 /** True for the control characters a mail must not carry; tab, line feed and carriage return are allowed. */

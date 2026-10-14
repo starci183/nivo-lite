@@ -1,6 +1,6 @@
 import type { RuleMode } from "@modules/domain/authority-rules"
-import { SUBJECT_TYPES, keyOf } from "@modules/domain/brain-facts"
-import type { BrainSubjectType, Scope } from "@modules/domain/brain-facts"
+import { keyOf } from "@modules/domain/brain-facts"
+import type { Scope } from "@modules/domain/brain-facts"
 import type { FactCardPayload, ProposedCardRecord } from "@modules/domain/module-setup-writes"
 import type { AuthorityActionDefinition, ModuleDefinition, ModuleGate, GateWrite } from "../modules.contracts"
 
@@ -73,8 +73,6 @@ const isObject = (value: unknown): value is Record<string, unknown> =>
 
 const clean = (value: unknown, max: number): string => (typeof value === "string" ? value.trim().slice(0, max) : "")
 
-const FACT_SUBJECTS: ReadonlyArray<BrainSubjectType> = SUBJECT_TYPES
-
 /** The key that makes two cards the same target: one waiting card per target. */
 export const targetKeyOf = (write: ProposedWrite): string =>
     write.kind === "fact"
@@ -93,7 +91,8 @@ export const vndOf = (value: unknown): number | null => {
         .match(/^([\d.,]+)\s*(ty|trieu|tr|m|k|nghin|ngan)?/u)
     if (found === null) return null
     const unit = found[2] ?? ""
-    const digits = unit === "" ? (found[1] ?? "").replace(/[.,]/g, "") : (found[1] ?? "").replace(",", ".")
+    const matchedDigits = found.slice(1, 2).join("")
+    const digits = unit === "" ? matchedDigits.replace(/[.,]/g, "") : matchedDigits.replace(",", ".")
     const amount = Number(digits)
     if (!Number.isFinite(amount)) return null
     return Math.round(amount * (UNIT_MULTIPLIER[unit] ?? 1))
@@ -145,14 +144,14 @@ const factOfGate = (
     const spec =
         declared.find((write) => keyOf(write.attributeLabel) === keyOf(asked)) ??
         (declared.length === 1 && asked === "" ? declared[0] : undefined)
-    if (spec === undefined || spec.kind !== "fact") return null
+    if (spec === undefined) return null
     const subject = subjectLabel || (spec.subjectType === "business" ? businessLabel : "")
     if (subject === "") return null
     return {
         gateKey,
         kind: "fact",
         payload: {
-            subjectType: FACT_SUBJECTS.includes(spec.subjectType) ? spec.subjectType : "other",
+            subjectType: spec.subjectType,
             subjectLabel: subject,
             attributeLabel: spec.attributeLabel,
             value,
@@ -163,8 +162,10 @@ const factOfGate = (
 
 const ruleOfGate = (module: ModuleDefinition, item: Record<string, unknown>, gateKey: string): ProposedRule | null => {
     const action = clean(item.action, 60)
-    const spec = gateWritesOf(module, gateKey).find((write) => write.kind === "rule" && write.action === action)
-    if (spec === undefined || spec.kind !== "rule") return null
+    const spec = gateWritesOf(module, gateKey)
+        .filter((write) => write.kind === "rule")
+        .find((write) => write.action === action)
+    if (spec === undefined) return null
     const definition = actionOf(module, spec.action)
     if (definition === undefined) return null
     if (spec.field === "mode") {
