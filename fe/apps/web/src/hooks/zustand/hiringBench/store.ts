@@ -1,3 +1,5 @@
+"use client"
+
 import { create } from "zustand"
 
 /** Feature-local state shared by the Hiring tabs: the job the candidates tab filters on and the candidate whose drawer is open. */

@@ -1,3 +1,5 @@
+"use client"
+
 import { create } from "zustand"
 
 /** A workbench action that holds the workspace's delivery lock. */

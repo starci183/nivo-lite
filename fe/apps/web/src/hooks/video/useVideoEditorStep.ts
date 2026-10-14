@@ -1,3 +1,5 @@
+"use client"
+
 import { useMemo } from "react"
 import { useQueryVideoProjectSwr } from "@/hooks/swr"
 import { isUuid, projectViewOf, stepFor } from "./video.shared"

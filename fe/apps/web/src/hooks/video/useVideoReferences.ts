@@ -1,3 +1,5 @@
+"use client"
+
 import { useFormatter, useTranslations } from "next-intl"
 import { useMemo } from "react"
 import type { DescriptionListStatItem } from "@starci/grammar/common"
