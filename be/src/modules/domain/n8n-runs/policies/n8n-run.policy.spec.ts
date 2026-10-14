@@ -157,6 +157,10 @@ describe("renderTemplate", () => {
     it("drops form feed and preserves characters beyond the control range, including emoji", () => {
         expect(renderTemplate("\u000c\u000d\u000e\u0020\u007f\u{1f642}", {})).toBe("\r \u007f\u{1f642}")
     })
+
+    it("preserves astral characters and lone surrogates while dropping adjacent controls", () => {
+        expect(renderTemplate("\u{1f642}\u0000\ud800x\udfff\u001f", {})).toBe("\u{1f642}\ud800x\udfff")
+    })
 })
 
 describe("oneLine", () => {

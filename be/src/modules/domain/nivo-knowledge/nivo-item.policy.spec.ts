@@ -1,7 +1,49 @@
-import { NivoKnowledgeErrorCode } from "./errors/nivo-knowledge.error"
-import { nivoItemOf } from "./nivo-item.policy"
+import { MODULE_CATALOG } from "@modules/domain/modules"
+import { NivoKnowledgeError, NivoKnowledgeErrorCode } from "./errors/nivo-knowledge.error"
+import { CORE_FOLDER, nivoItemOf } from "./nivo-item.policy"
+import fixtures from "./nivo-item.policy.fixtures.json"
+import { NIVO_KNOWLEDGE_FILES } from "./nivo-knowledge.templates"
 
 describe("nivoItemOf", () => {
+    // Generated once by running the policy at 5da5cdf4^1, including its private metadata map.
+    // The lint canon forbids source reads in unit specs, so the fixture embeds the shipped virtual Markdown files.
+    it("preserves all 55 shipped inputs and the folders passed by the seed service", () => {
+        expect([CORE_FOLDER, ...MODULE_CATALOG.map((module) => module.knowledgeFolder)]).toEqual(fixtures.folders)
+        expect([...NIVO_KNOWLEDGE_FILES].sort((a, b) => a.path.localeCompare(b.path))).toEqual(
+            fixtures.templates.map(({ file }) => file),
+        )
+        expect(fixtures.templates).toHaveLength(55)
+    })
+
+    it.each(fixtures.templates)("equals the old parser for shipped template $file.path", ({ file, expected }) => {
+        const shipped = NIVO_KNOWLEDGE_FILES.find((candidate) => candidate.path === file.path)
+        if (shipped === undefined) {
+            throw new NivoKnowledgeError({
+                code: NivoKnowledgeErrorCode.FrontMatterMissing,
+                params: { file: file.path },
+            })
+        }
+        const metadata = jest.spyOn(Map.prototype, "set")
+        try {
+            const outcome = nivoItemOf(shipped, fixtures.folders)
+            expect(outcome).toEqual(expected.outcome)
+            expect(metadata.mock.calls).toEqual(expected.meta)
+        } finally {
+            metadata.mockRestore()
+        }
+    })
+
+    it.each(fixtures.edges)("equals the old parser for edge case: $name", ({ file, folders, expected }) => {
+        const metadata = jest.spyOn(Map.prototype, "set")
+        try {
+            const outcome = nivoItemOf(file, folders)
+            expect(outcome).toEqual(expected.outcome)
+            expect(metadata.mock.calls).toEqual(expected.meta)
+        } finally {
+            metadata.mockRestore()
+        }
+    })
+
     it.each(["playbook", "authority", "escalation", "setup_checklist", "tone"])(
         "reads the %s kind with the title, final filename and trimmed markdown body",
         (kind) => {

@@ -104,11 +104,15 @@ export const attachmentsOf = (value: unknown): ReadonlyArray<N8nAttachment> =>
 /** Fills `{name}` (or `{{name}}`) from the variables; an unknown name becomes empty and control characters never survive. */
 export const renderTemplate = (template: string, variables: EmailVariables): string =>
     [...template.replace(/\{\{?\s*([a-z0-9_]+)\s*\}?\}/gi, (_whole, name: string) => String(variables[name] ?? ""))]
-        .filter((character) => !isControl(character.codePointAt(0) ?? 0))
+        .filter((character) => !isControl(character))
         .join("")
 
 /** True for the control characters a mail must not carry; tab, line feed and carriage return are allowed. */
-const isControl = (code: number): boolean => code <= 8 || code === 11 || code === 12 || (code >= 14 && code <= 31)
+const isControl = (character: string): boolean =>
+    character <= "\u0008" ||
+    character === "\u000b" ||
+    character === "\u000c" ||
+    (character >= "\u000e" && character <= "\u001f")
 
 /** A subject is one line of at most `max` characters. */
 export const oneLine = (text: string, max = 200): string =>
