@@ -18,7 +18,7 @@ import { ContentAiService } from "./content-ai.service"
 import type { ContentAiStatus } from "./content-ai.contracts"
 import { ContentBrandService } from "./content-brand.service"
 import { ContentAiErrorCode } from "./errors/content-ai.error"
-
+const errorOf = (code: ContentAiErrorCode) => ({ code })
 const MEMBER: WorkspaceMember = {
     userId: "user-1",
     workspaceId: "ws-1",
@@ -164,16 +164,12 @@ const build = async (root: GenerationState | null = null, children: ReadonlyArra
     const dependencies = { brand, members, generations, completion, rules, editor, store, configuration, media }
     return { service: moduleRef.get(ContentAiService), ...dependencies, tx }
 }
-
 describe("ContentAiService", () => {
     it("returns the public brand material after proving membership", async () => {
         const { service, brand } = await build()
-
         await expect(service.brandFor("user-1", "ws-1")).resolves.toEqual(MATERIAL)
-
         expect(brand.material).toHaveBeenCalledWith("ws-1")
     })
-
     it("authorizes rule and recent-title reads and delegates completion", async () => {
         const { service, members, rules, store, completion } = await build()
         await expect(service.draftingBlockedFor("user-1", "ws-1")).resolves.toBe(false)
@@ -198,21 +194,21 @@ describe("ContentAiService", () => {
             required_fields: [],
         })
         await expect(service.draftingBlockedFor("user-1", "ws-1")).resolves.toBe(true)
-        await expect(service.requestDraft("user-1", "ws-1", { id: "item-1" })).rejects.toMatchObject({
-            code: ContentAiErrorCode.DraftingBlocked,
-        })
+        await expect(service.requestDraft("user-1", "ws-1", { id: "item-1" })).rejects.toMatchObject(
+            errorOf(ContentAiErrorCode.DraftingBlocked),
+        )
         expect(editor.get).not.toHaveBeenCalled()
         expect(generations.request).not.toHaveBeenCalled()
     })
     it("rejects an uneditable post and a post with no supported channels", async () => {
         const { service, editor, generations } = await build()
         editor.get.mockResolvedValueOnce(itemOf({ status: "approved" })).mockResolvedValueOnce(itemOf({ channels: [] }))
-        await expect(service.requestDraft("user-1", "ws-1", { id: "item-1" })).rejects.toMatchObject({
-            code: ContentAiErrorCode.InvalidInput,
-        })
-        await expect(service.requestDraft("user-1", "ws-1", { id: "item-1", hint: "shorter" })).rejects.toMatchObject({
-            code: ContentAiErrorCode.InvalidInput,
-        })
+        await expect(service.requestDraft("user-1", "ws-1", { id: "item-1" })).rejects.toMatchObject(
+            errorOf(ContentAiErrorCode.InvalidInput),
+        )
+        await expect(service.requestDraft("user-1", "ws-1", { id: "item-1", hint: "shorter" })).rejects.toMatchObject(
+            errorOf(ContentAiErrorCode.InvalidInput),
+        )
         expect(generations.request).not.toHaveBeenCalled()
     })
     it("enqueues a rewrite with the matched theme, holiday, library and optimistic timestamp", async () => {
@@ -272,9 +268,9 @@ describe("ContentAiService", () => {
         { topic: "Coffee", channels: ["myspace"] },
     ])("rejects invalid quick-draft input %#", async (input) => {
         const { service, generations, store } = await build()
-        await expect(service.requestQuickDraft("user-1", "ws-1", input)).rejects.toMatchObject({
-            code: ContentAiErrorCode.InvalidInput,
-        })
+        await expect(service.requestQuickDraft("user-1", "ws-1", input)).rejects.toMatchObject(
+            errorOf(ContentAiErrorCode.InvalidInput),
+        )
         expect(store.createQuickIdea).not.toHaveBeenCalled()
         expect(generations.request).not.toHaveBeenCalled()
     })
@@ -282,14 +278,21 @@ describe("ContentAiService", () => {
         { topic: "  Coffee\nFresh beans  ", normalized: "Coffee\nFresh beans", title: "Coffee" },
         { topic: "\n Coffee \n", normalized: "Coffee", title: "Coffee" },
         { topic: `${"x".repeat(81)}\nDetails`, normalized: `${"x".repeat(81)}\nDetails`, title: "x".repeat(80) },
+        { topic: "Coffee\nDetails", normalized: "Coffee\nDetails", title: "Coffee\nDetails", missingFirstLine: true },
     ])("creates and enqueues a quick idea with normalized channels, title and row timestamp %#", async (entry) => {
         const { service, generations, store, tx } = await build()
-        await expect(
-            service.requestQuickDraft("user-1", "ws-1", {
-                topic: entry.topic,
-                channels: ["facebook", "facebook", "myspace", "zalo"],
-            }),
-        ).resolves.toEqual({ id: "g-1", status: "queued", itemId: "quick-1" })
+        const split = jest.spyOn(String.prototype, "split")
+        if ("missingFirstLine" in entry) split.mockReturnValueOnce([])
+        try {
+            await expect(
+                service.requestQuickDraft("user-1", "ws-1", {
+                    topic: entry.topic,
+                    channels: ["facebook", "facebook", "myspace", "zalo"],
+                }),
+            ).resolves.toEqual({ id: "g-1", status: "queued", itemId: "quick-1" })
+        } finally {
+            split.mockRestore()
+        }
         expect(store.createQuickIdea.mock.calls[0]?.slice(0, 3)).toEqual([
             "user-1",
             "ws-1",
@@ -333,9 +336,7 @@ describe("ContentAiService", () => {
     ])("rejects a monthly plan that cannot be scheduled: $code", async (entry) => {
         const { service, configuration, generations } = await build()
         configuration.readAuthorizedConfiguration.mockResolvedValue(entry.configuration)
-        await expect(service.requestMonthPlan("user-1", "ws-1", entry.month)).rejects.toMatchObject({
-            code: entry.code,
-        })
+        await expect(service.requestMonthPlan("user-1", "ws-1", entry.month)).rejects.toMatchObject(errorOf(entry.code))
         expect(generations.request).not.toHaveBeenCalled()
     })
     it("rolls back a plan when the first generation response omits its id", async () => {
@@ -399,9 +400,9 @@ describe("ContentAiService status", () => {
         "hides missing, unrelated and child generations %#",
         async (root) => {
             const { service, generations } = await build(root)
-            await expect(service.status("user-1", "ws-1", "g-1")).rejects.toMatchObject({
-                code: ContentAiErrorCode.NotFound,
-            })
+            await expect(service.status("user-1", "ws-1", "g-1")).rejects.toMatchObject(
+                errorOf(ContentAiErrorCode.NotFound),
+            )
             expect(generations.state).toHaveBeenCalledTimes(1)
         },
     )

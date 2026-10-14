@@ -328,6 +328,18 @@ describe("model response parsing", () => {
         expect(claimWarnings("Fresh roses", "Fresh roses")).toEqual([])
     })
 
+    it.each(["12 %", "30 K", "45 ngh\u00ecn", "2 tri\u1ec7u", "3 TR", "1,000 k", "1.000 k"])(
+        "preserves the complete offer figure %s and accepts its normalized verified fact",
+        (figure) => {
+            expect(claimWarnings(`sale ${figure}.`, "Fresh roses")).toEqual([{ kind: "figure", figure }])
+            expect(claimWarnings(`sale ${figure}.`, figure.replace(/\s+/gu, "").toLowerCase())).toEqual([])
+        },
+    )
+
+    it("keeps offers without figures and figures across a sentence or newline out of review warnings", () => {
+        expect(claimWarnings("sale roses; sale. 30 K; sale\n40 K", "Fresh roses")).toEqual([])
+    })
+
     it("ignores malformed and empty variants", () => {
         expect(draftVariants({ variants: [] }, ["facebook"], BRAND)).toEqual({ variants: {}, warnings: [] })
         expect(
