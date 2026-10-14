@@ -1,4 +1,4 @@
-import { Test } from "@nestjs/testing"
+﻿import { Test } from "@nestjs/testing"
 import { FakeClock, builder, fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
 import { GenerationsService } from "@modules/domain/ai-generations"
 import type { GenerationState } from "@modules/domain/ai-generations"
@@ -109,7 +109,7 @@ const build = async (states: ReadonlyArray<GenerationState>) => {
         ],
     }).compile()
     const service = moduleRef.get(ContentAiCompletionService)
-    return { service, tx, logger, generations, rules, store, plans, evidence, events }
+    return { service, tx, logger, generations, rules, editor, store, plans, evidence, events }
 }
 
 /** The arguments of a call without its trailing transaction manager. */
@@ -133,23 +133,17 @@ const PLAN_CONTEXT = {
 
 const planRoot = stateOf({ id: "g-1", status: "running", input: { context: PLAN_CONTEXT } })
 
-const draftRoot = stateOf({
-    id: "g-1",
-    purpose: "content_draft",
-    status: "running",
-    input: {
-        context: {
-            operation: "draft",
-            generationIds: ["g-2"],
-            itemId: "item-1",
-            channels: ["facebook", "myspace"],
-            brand: BRAND,
-            library: [{ kind: "image", name: "hoa-hong.jpg", path: "ws-1/hoa-hong.jpg" }],
-            pillars: [],
-            expectedUpdatedAt: "2026-10-12T00:00:00.000Z",
-        },
-    },
-})
+const DRAFT_CONTEXT = {
+    operation: "draft",
+    generationIds: ["g-2"],
+    itemId: "item-1",
+    channels: ["facebook", "myspace"],
+    brand: BRAND,
+    library: [{ kind: "image", name: "hoa-hong.jpg", path: "ws-1/hoa-hong.jpg" }],
+    pillars: [],
+    expectedUpdatedAt: "2026-10-12T00:00:00.000Z",
+}
+const draftRoot = stateOf({ id: "g-1", purpose: "content_draft", status: "running", input: { context: DRAFT_CONTEXT } })
 
 const draftChild = stateOf({
     purpose: "content_draft",
@@ -358,5 +352,149 @@ describe("ContentAiCompletionService", () => {
         expect(withoutManager(generations.recordFailure.mock.calls)).toEqual([
             ["ws-1", "g-1", ContentAiErrorCode.EmptyAnswer],
         ])
+    })
+
+    it("ignores missing, terminal, unrelated and unfinished operations", async () => {
+        const inactive = [
+            [],
+            [draftChild],
+            [stateOf({ ...planRoot, status: "error" }), draftChild],
+            [stateOf({ ...planRoot, status: "cancelled" }), draftChild],
+            [stateOf({ ...planRoot, input: { context: {} } }), draftChild],
+            [planRoot, stateOf({ status: "queued" })],
+            [planRoot, stateOf()],
+        ]
+        for (const states of inactive) {
+            const { service, generations } = await build(states)
+            await service.complete("ws-1", "g-2")
+            expect(generations.recordResult).not.toHaveBeenCalled()
+            expect(generations.recordFailure).not.toHaveBeenCalled()
+        }
+    })
+    it("uses its own id when the root id is absent", async () => {
+        const { service, generations } = await build([
+            stateOf({ status: "queued", input: { context: { generationIds: ["g-2"] } } }),
+        ])
+        await service.complete("ws-1", "g-2")
+        expect(generations.state.mock.calls.map((call) => call.slice(0, 2))).toEqual([
+            ["ws-1", "g-2"],
+            ["ws-1", "g-2"],
+        ])
+    })
+    it.each([null, "error", "cancelled"])("records a missing or failed sibling: %s", async (status) => {
+        const root = stateOf({ ...planRoot, input: { context: { ...PLAN_CONTEXT, generationIds: ["g-2", "g-4"] } } })
+        const states = [root, stateOf({ text: "{}" })]
+        if (status !== null) states.push(stateOf({ id: "g-4", status }))
+        const { service, generations } = await build(states)
+        await service.complete("ws-1", "g-2")
+        expect(generations.recordFailure.mock.calls[0]?.[2]).toBe(ContentAiErrorCode.Failed)
+        const cancelled = await build([planRoot, stateOf({ status: "cancelled" })])
+        await cancelled.service.complete("ws-1", "g-2")
+        expect(cancelled.generations.recordFailure.mock.calls[0]?.[2]).toBe(ContentAiErrorCode.Failed)
+    })
+    it("normalizes collaborator failures and retries unreadable output with default timeout", async () => {
+        const failed = await build([draftRoot, draftChild])
+        failed.store.applyDraft.mockRejectedValue({ reason: "storage failed" })
+        await failed.service.complete("ws-1", "g-2")
+        expect(failed.generations.recordFailure.mock.calls[0]?.[2]).toBe(ContentAiErrorCode.Failed)
+        const root = stateOf({ ...planRoot, input: { context: { ...PLAN_CONTEXT, generationIds: ["g-2", "g-4"] } } })
+        const retry = await build([root, stateOf({ text: "bad" })])
+        await retry.service.complete("ws-1", "g-2")
+        expect(retry.generations.request.mock.calls[0]?.[0].timeoutMs).toBe(120000)
+        expect(retry.generations.setContext.mock.calls[0]?.[2]).toMatchObject({ generationIds: ["g-3", "g-4"] })
+    })
+    it("rejects a vanished finished draft and invalid draft metadata", async () => {
+        const vanished = await build([])
+        vanished.generations.state
+            .mockResolvedValueOnce(draftChild)
+            .mockResolvedValueOnce(draftRoot)
+            .mockResolvedValueOnce(draftChild)
+            .mockResolvedValueOnce(null)
+        await vanished.service.complete("ws-1", "g-2")
+        expect(vanished.generations.recordFailure.mock.calls[0]?.[2]).toBe(ContentAiErrorCode.InvalidAnswer)
+        for (const change of [{ brand: null }, { channels: undefined }, { channels: [] }]) {
+            const context = { ...DRAFT_CONTEXT, ...change }
+            const { service, generations } = await build([stateOf({ ...draftRoot, input: { context } }), draftChild])
+            await service.complete("ws-1", "g-2")
+            expect(generations.recordFailure.mock.calls[0]?.[2]).toBe(
+                "brand" in change ? ContentAiErrorCode.InvalidAnswer : ContentAiErrorCode.EmptyAnswer,
+            )
+        }
+    })
+    it("matches a theme, trims the quick title, validates media and retains manual attachments", async () => {
+        const context = {
+            ...DRAFT_CONTEXT,
+            expectedUpdatedAt: undefined,
+            library: [{ kind: "image", name: "rose.jpg" }],
+            pillars: [{ ...PILLAR, name: "Other" }, PILLAR],
+        }
+        const child = stateOf({
+            ...draftChild,
+            text: JSON.stringify({
+                variants: { facebook: { text: "Roses" } },
+                media: [1, 0, 1.5, "bad", 7],
+                hashtags: ["roses", 5],
+                pillar: "products",
+                title: "R".repeat(250),
+            }),
+        })
+        const { service, editor, store } = await build([stateOf({ ...draftRoot, input: { context } }), child])
+        editor.get.mockResolvedValue(
+            itemOf({ pillarId: null, source: "quick", media: [{ kind: "image", name: "manual.jpg" }] }),
+        )
+        await service.complete("ws-1", "g-2")
+        expect(store.applyDraft.mock.calls[0]?.[2]).toMatchObject({
+            pillarId: "pl-1",
+            title: "R".repeat(200),
+            hashtags: ["#roses"],
+            expectedUpdatedAt: undefined,
+            media: [
+                { kind: "image", name: "manual.jpg" },
+                { kind: "image", name: "rose.jpg", suggested: true },
+            ],
+        })
+    })
+    it("defaults optional draft lists and keeps existing hashtags without a quick title", async () => {
+        const context = { ...DRAFT_CONTEXT, library: undefined, pillars: undefined }
+        const child = stateOf({ ...draftChild, text: JSON.stringify({ variants: { facebook: { text: "Roses" } } }) })
+        const { service, editor, store } = await build([stateOf({ ...draftRoot, input: { context } }), child])
+        editor.get.mockResolvedValue(itemOf({ pillarId: null, source: "quick", hashtags: ["saved"] }))
+        await service.complete("ws-1", "g-2")
+        expect(store.applyDraft.mock.calls[0]?.[2]).toMatchObject({ hashtags: ["#saved"], media: [] })
+        expect(store.applyDraft.mock.calls[0]?.[2]).not.toHaveProperty("title")
+    })
+    it("rejects malformed plan siblings and missing scheduling metadata", async () => {
+        for (const slots of [undefined, PLAN_CONTEXT.slots]) {
+            const root = stateOf({ ...planRoot, input: { context: { ...PLAN_CONTEXT, slots } } })
+            const { service, generations } = await build([
+                root,
+                stateOf({ text: '{"ideas":[{"slot":1,"title":"Roses"}]}' }),
+            ])
+            await service.complete("ws-1", "g-2")
+            expect(generations.recordFailure.mock.calls[0]?.[2]).toBe(ContentAiErrorCode.EmptyAnswer)
+        }
+        const root = stateOf({ ...planRoot, input: { context: { ...PLAN_CONTEXT, generationIds: ["g-2", "g-4"] } } })
+        const { service, generations } = await build([root, stateOf({ text: "{}" }), stateOf({ id: "g-4" })])
+        await service.complete("ws-1", "g-2")
+        expect(generations.recordFailure.mock.calls[0]?.[2]).toBe(ContentAiErrorCode.InvalidAnswer)
+    })
+
+    it("applies a pinned holiday and defaults the skipped-past count", async () => {
+        const holiday = { key: "new_year", name: "New Year", date: "2027-01-01", angle: "Wishes" }
+        const slots = PLAN_CONTEXT.slots.map((slot) => ({ ...slot, holiday }))
+        const root = stateOf({ ...planRoot, input: { context: { ...PLAN_CONTEXT, skippedPast: null, slots } } })
+        const child = stateOf({
+            text: '{"ideas":[{"slot":1,"title":"Roses"}]}',
+            input: { context: { rootId: "g-1", allowedSlots: [1] } },
+        })
+        const { service, generations, plans } = await build([root, child])
+        await service.complete("ws-1", "g-2")
+        expect(plans.apply.mock.calls[0]?.[1].items[0]?.holidayKey).toBe("new_year")
+        expect(generations.recordResult.mock.calls[0]?.[2]).toEqual({
+            planId: "p-1",
+            ideas: 1,
+            seconds: 30,
+            skippedPast: 0,
+        })
     })
 })
