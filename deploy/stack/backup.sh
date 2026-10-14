@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Backup of the stack state, run ON THE VPS from the stack folder (cron-friendly):
 #   BACKUP_DIR=/var/backups/nivo-engine ./backup.sh
-# Writes, with the date in the name: a pg_dump of the n8n database and tarballs of the n8n, OpenClaw and Caddy volumes.
+# Writes, with the date in the name: a pg_dump of the n8n database and tarballs of the n8n and OpenClaw volumes.
 # The job queues (pgmq) live in Supabase Postgres and are covered by its backups; the api keeps no job state on this machine.
 # It keeps the last KEEP_DAYS days (default 14). It does NOT copy .env (keep that in your password manager) and it does NOT move the
 # files off this machine: copy BACKUP_DIR to storage in another failure domain (rclone, another VPS, object storage).
@@ -18,7 +18,7 @@ echo "==> n8n database"
 docker compose --env-file .env exec -T n8n-db pg_dump -U n8n -d n8n --format=custom > "$BACKUP_DIR/n8n-db-$stamp.dump"
 
 # Volume names are prefixed with the compose project name (nivo-engine).
-for vol in n8n-data openclaw-data caddy-data; do
+for vol in n8n-data openclaw-data; do
   echo "==> volume $vol"
   docker run --rm -v "nivo-engine_${vol}:/src:ro" -v "$BACKUP_DIR:/out" alpine:3 tar czf "/out/${vol}-${stamp}.tgz" -C /src .
 done

@@ -5,7 +5,7 @@
 #   - the api cannot reach 127.0.0.1:18789 from inside its own container, or
 #   - the api container is not running / not healthy, or
 #   - the openclaw container was (re)started after the api started.
-# It also watches the background jobs (check_jobs below), from job_stats() in Postgres (asked through the api container's own Supabase client, nothing is printed but two numbers): jobs failed in the last 24 h (JOBS_FAILED_ALERT, default 20) and the oldest job still queued (JOBS_STALE_SECONDS, default 300).
+# It also watches the background jobs (check_jobs below), from job_stats() in Postgres (asked through the api container's be jobs CLI on the app_be primary connection, nothing is printed but two numbers): jobs failed in the last 24 h (JOBS_FAILED_ALERT, default 20) and the oldest job still queued (JOBS_STALE_SECONDS, default 300).
 # Those are ALERT lines in the same log, at most one per kind every 30 minutes; they never restart the api.
 # Touches nothing else: not the edge, not n8n, not other compose projects. Log: ~/nivo-engine/watchdog.log (rotated at 512 KB, 3 files).
 set -u
@@ -43,13 +43,7 @@ alert() {
 check_jobs() {
   # "<failed24h> <oldestQueuedAgeSeconds>" from job_stats(), or "-1 -1" when the api or the database does not answer (the recreate logic below handles the api).
   local out failed age
-  out=$(docker exec "$API" node -e "
-    const { createClient } = require('@supabase/supabase-js');
-    const db = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY, { auth: { persistSession: false } });
-    db.rpc('job_stats').then(({ data, error }) => {
-      const s = (!error && data) || {};
-      console.log((s.checkedAt ? s.failed24h : -1) + ' ' + (s.checkedAt ? s.oldestQueuedAgeSeconds : -1));
-    }).catch(() => console.log('-1 -1'))" 2>/dev/null | tr -d '\r')
+  out=$(docker exec "$API" node be/dist/apps/cli/src/main.js jobs watchdog 2>/dev/null | tr -d '\r')
   read -r failed age <<<"${out:--1 -1}"
   [ "${failed:--1}" -gt "$FAILED_MAX" ] 2>/dev/null && alert failed-jobs "$failed jobs failed in 24 h (limit $FAILED_MAX): be/docs/runbooks/jobs-operations.md, './jobs.sh failed'"
   [ "${age:--1}" -gt "$STALE_MAX" ] 2>/dev/null && alert jobs-stale "a job has waited ${age}s (limit ${STALE_MAX}s): is the api consuming? './jobs.sh open'"
