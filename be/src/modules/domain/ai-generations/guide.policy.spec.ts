@@ -1,6 +1,13 @@
 import { builder } from "@starci/jest-preset"
 import type { GuideAsk, GuideWords } from "./ai-generations.contracts"
-import { GUIDE_HISTORY_TURNS, GUIDE_QUESTION_MAX, guideAskerKey, guidePrompt } from "./guide.policy"
+import {
+    GUIDE_HISTORY_TURNS,
+    GUIDE_PATH_MAX,
+    GUIDE_QUESTION_MAX,
+    GUIDE_TURN_MAX,
+    guideAskerKey,
+    guidePrompt,
+} from "./guide.policy"
 
 const askOf = builder<GuideAsk>({
     workspaceId: "w1",
@@ -42,6 +49,54 @@ describe("guidePrompt", () => {
         expect(system?.role).toBe("system")
         expect(system?.content).toContain("[guide.audienceStaff]")
         expect(system?.content).toContain("[guide.replyFormat]")
+    })
+
+    it("labels guide turns and clips only history longer than the turn limit", () => {
+        const bounded = "u".repeat(GUIDE_TURN_MAX)
+        const long = `${"g".repeat(GUIDE_TURN_MAX - 2)} ${"x".repeat(10)}`
+        const line = userLine(
+            askOf({
+                history: [
+                    { role: "user", text: bounded },
+                    { role: "guide", text: long },
+                ],
+                question: "  Where next?  ",
+            }),
+            false,
+        )
+
+        expect(line.split("CONVERSATION SO FAR:\n")[1]).toBe(
+            `User: ${bounded}\nGuide: ${"g".repeat(GUIDE_TURN_MAX - 2)}...\n\nQUESTION: Where next?`,
+        )
+    })
+
+    it("bounds an unknown current path and omits the empty conversation", () => {
+        const path = `/${"x".repeat(GUIDE_PATH_MAX + 20)}`
+        const line = userLine(askOf({ path, question: "  Help  " }), false)
+
+        expect(line.split("CURRENT PAGE: ")[1]).toBe(`${path.slice(0, GUIDE_PATH_MAX)}\n\nQUESTION: Help`)
+        expect(line).not.toContain("CONVERSATION SO FAR")
+    })
+
+    it("identifies an exact connection page and gives managers the full system instructions", () => {
+        const [system, user] = guidePrompt(askOf({ path: "/connections" }), true, WORDS)
+
+        expect(system).toEqual({
+            role: "system",
+            content: [
+                "[guide.systemIntro]",
+                "[guide.systemStyle]",
+                "[guide.rulesTitle]",
+                "[guide.rules]",
+                "- [guide.audienceManager]",
+                "[guide.replyFormat]",
+            ].join("\n"),
+        })
+        expect(user?.role).toBe("user")
+        expect(user?.content).toContain("CURRENT PAGE: connections ([guide.page.connections.title])")
+        expect(user?.content).toContain(
+            "- connections.sepay | [guide.page.connections.sepay.title] | [guide.page.connections.sepay.what] | [guide.page.connections.sepay.how]",
+        )
     })
 })
 

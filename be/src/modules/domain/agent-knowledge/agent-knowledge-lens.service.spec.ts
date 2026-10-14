@@ -1,5 +1,6 @@
 import { Test } from "@nestjs/testing"
 import { mock } from "@starci/jest-preset"
+import type { FactRecord, Scope } from "@modules/domain/brain-facts"
 import { KnowledgeGapsService } from "@modules/domain/knowledge-gaps"
 import { KnowledgeSourcesService } from "@modules/domain/knowledge-sources"
 import { NivoKnowledgeService } from "@modules/domain/nivo-knowledge"
@@ -7,6 +8,35 @@ import { AgentKnowledgeLensService } from "./agent-knowledge-lens.service"
 import { KnowledgeRecallService } from "./knowledge-recall.service"
 
 const WS = "11111111-1111-4111-8111-111111111111"
+
+const factOf = (scope: Scope): FactRecord => ({
+    id: scope,
+    subjectType: "policy",
+    subjectKey: "delivery",
+    subjectLabel: "Delivery",
+    attribute: "days",
+    attributeLabel: "Days",
+    value: "Sunday",
+    valueNumber: null,
+    unit: null,
+    scope,
+    modules: [],
+    installationId: null,
+    status: "active",
+    sourceKind: "owner",
+    trust: 100,
+    validFrom: null,
+    validTo: null,
+    supersedesId: null,
+    conflictWith: null,
+    proposalKind: "set",
+    evidence: [],
+    proposedBy: "owner",
+    proposedAt: "2026-10-01T00:00:00.000Z",
+    decidedBy: null,
+    decidedAt: null,
+    decisionNote: null,
+})
 
 const nivoItem = (module: string, slug: string, kind: string) => ({
     id: slug,
@@ -20,9 +50,15 @@ const nivoItem = (module: string, slug: string, kind: string) => ({
 })
 
 const build = async () => {
-    const sources = { readableFor: jest.fn().mockResolvedValue([]), countReadable: jest.fn().mockResolvedValue(2) }
-    const recall = { standingMemory: jest.fn().mockResolvedValue(""), factsInView: jest.fn().mockResolvedValue([]) }
-    const nivo = {
+    const sources = mock<KnowledgeSourcesService>({
+        readableFor: jest.fn().mockResolvedValue([]),
+        countReadable: jest.fn().mockResolvedValue(2),
+    })
+    const recall = mock<KnowledgeRecallService>({
+        standingMemory: jest.fn().mockResolvedValue(""),
+        factsInView: jest.fn().mockResolvedValue([]),
+    })
+    const nivo = mock<NivoKnowledgeService>({
         list: jest
             .fn()
             .mockResolvedValue([
@@ -30,18 +66,18 @@ const build = async () => {
                 nivoItem("chatbot", "b-bot", "escalation"),
                 nivoItem("chatbot", "c-play", "playbook"),
             ]),
-    }
-    const gaps = { openOfModule: jest.fn() }
+    })
+    const gaps = mock<KnowledgeGapsService>({ openOfModule: jest.fn() })
     const moduleRef = await Test.createTestingModule({
         providers: [
             AgentKnowledgeLensService,
-            { provide: KnowledgeSourcesService, useValue: mock<KnowledgeSourcesService>(sources) },
-            { provide: KnowledgeRecallService, useValue: mock<KnowledgeRecallService>(recall) },
-            { provide: NivoKnowledgeService, useValue: mock<NivoKnowledgeService>(nivo) },
-            { provide: KnowledgeGapsService, useValue: mock<KnowledgeGapsService>(gaps) },
+            { provide: KnowledgeSourcesService, useValue: sources },
+            { provide: KnowledgeRecallService, useValue: recall },
+            { provide: NivoKnowledgeService, useValue: nivo },
+            { provide: KnowledgeGapsService, useValue: gaps },
         ],
     }).compile()
-    return { lens: moduleRef.get(AgentKnowledgeLensService), sources, gaps }
+    return { lens: moduleRef.get(AgentKnowledgeLensService), sources, recall, nivo, gaps }
 }
 
 describe("AgentKnowledgeLensService", () => {
@@ -73,4 +109,117 @@ describe("AgentKnowledgeLensService", () => {
         gaps.openOfModule.mockRejectedValueOnce(new Error("boom"))
         await expect(lens.openGapsOf(WS, "chatbot", 5)).rejects.toThrow("boom")
     })
+
+    it("projects readable documents and passes the instance's internal view to the source reader", async () => {
+        const { lens, sources } = await build()
+        const document = {
+            title: "Delivery policy",
+            topic: "Delivery",
+            kind: "faq",
+            visibility: "internal" as const,
+            updatedAt: "2026-10-02T10:00:00.000Z",
+            content: "Sunday deliveries need approval.",
+        }
+        sources.readableFor.mockResolvedValueOnce([{ id: "source-1", ...document }])
+        await expect(lens.sourcesFor(WS, "accounting", "installation-1", 3)).resolves.toEqual([document])
+        expect(sources.readableFor).toHaveBeenCalledWith(
+            { workspaceId: WS, module: "accounting", audience: "internal", installationId: "installation-1" },
+            3,
+        )
+    })
+
+    it("returns the standing memory for the exact customer view", async () => {
+        const { lens, recall } = await build()
+        recall.standingMemory.mockResolvedValueOnce("### Delivery\n- Days: Sunday")
+        await expect(lens.memoryFor(WS, "chatbot", null)).resolves.toBe("### Delivery\n- Days: Sunday")
+        expect(recall.standingMemory).toHaveBeenCalledWith({
+            workspaceId: WS,
+            module: "chatbot",
+            audience: "customer",
+            installationId: null,
+        })
+    })
+
+    it("sorts rules by folder order and then slug, including tone and rejecting unrelated folders", async () => {
+        const { lens, nivo } = await build()
+        nivo.list.mockResolvedValueOnce([
+            nivoItem("core", "a-core", "authority"),
+            nivoItem("chatbot", "z-tone", "tone"),
+            nivoItem("content", "a-content", "authority"),
+            nivoItem("chatbot", "a-escalation", "escalation"),
+            nivoItem("chatbot", "b-playbook", "playbook"),
+        ])
+        await expect(lens.baseRulesOf(["chatbot", "core"])).resolves.toEqual([
+            { title: "a-escalation", body: "a-escalation body", kind: "escalation" },
+            { title: "z-tone", body: "z-tone body", kind: "tone" },
+            { title: "a-core", body: "a-core body", kind: "authority" },
+        ])
+        expect(nivo.list).toHaveBeenCalledTimes(1)
+        await expect(lens.baseRulesOf([])).resolves.toEqual([])
+    })
+
+    it("counts public, internal and restricted facts with the same view and a 500 fact limit", async () => {
+        const { lens, sources, recall } = await build()
+        const view = { workspaceId: WS, module: "accounting", audience: "internal", installationId: "instance-1" }
+        sources.countReadable.mockResolvedValueOnce(7).mockResolvedValueOnce(4)
+        recall.factsInView.mockResolvedValueOnce([
+            factOf("public"),
+            factOf("internal"),
+            factOf("restricted"),
+            factOf("public"),
+        ])
+        await expect(lens.countsFor(WS, "accounting", "instance-1")).resolves.toEqual({
+            audience: "internal",
+            documents: { public: 7, internal: 4 },
+            facts: { public: 2, internal: 1, restricted: 1 },
+        })
+        expect(sources.countReadable).toHaveBeenNthCalledWith(1, view, "public")
+        expect(sources.countReadable).toHaveBeenNthCalledWith(2, view, "internal")
+        expect(recall.factsInView).toHaveBeenCalledWith(view, 500)
+    })
+
+    it("returns open gap counts and only the fields used by the lens", async () => {
+        const { lens, gaps } = await build()
+        const gap = {
+            id: "gap-1",
+            question: "Sunday delivery?",
+            count: 6,
+            lastSeenAt: "2026-10-02T10:00:00.000Z",
+        }
+        gaps.openOfModule.mockResolvedValueOnce({
+            openCount: 8,
+            items: [
+                {
+                    ...gap,
+                    module: "chatbot",
+                    topic: "Delivery",
+                    attributeGuess: "Days",
+                    firstSeenAt: "2026-10-01T10:00:00.000Z",
+                    exampleConversationId: "conversation-1",
+                    status: "open",
+                    reopenedCount: 0,
+                },
+            ],
+        })
+        await expect(lens.openGapsOf(WS, "chatbot", 3)).resolves.toEqual({ openCount: 8, items: [gap] })
+        expect(gaps.openOfModule).toHaveBeenCalledWith(WS, "chatbot", 3)
+    })
+
+    it.each([{ code: "42P01" }, { driverError: null, code: "42P01" }, { driverError: "driver", code: "42P01" }])(
+        "returns null for a missing table reported without a driver object: %j",
+        async (cause) => {
+            const { lens, gaps } = await build()
+            gaps.openOfModule.mockRejectedValueOnce(cause)
+            await expect(lens.openGapsOf(WS, "chatbot", 5)).resolves.toBeNull()
+        },
+    )
+
+    it.each([null, "network unavailable", { driverError: { code: "40001" }, code: "42P01" }])(
+        "preserves failures that do not report a missing table: %j",
+        async (cause) => {
+            const { lens, gaps } = await build()
+            gaps.openOfModule.mockRejectedValueOnce(cause)
+            await expect(lens.openGapsOf(WS, "chatbot", 5)).rejects.toBe(cause)
+        },
+    )
 })

@@ -8,7 +8,13 @@ import type { QuotaStatus, UsageInput, UsageKind } from "./ai-usage-events.contr
 import { AiUsageEventsLogEvent } from "./ai-usage-events.log-events"
 import { AiUsageEventsService } from "./ai-usage-events.service"
 import type { QuotaRow } from "./persistence/ai-usage-events.rows"
-import { INSERT_USAGE_EVENT, POST_USAGE_NOTICE, SELECT_QUOTA_STATUS } from "./persistence/ai-usage-events.sql"
+import {
+    INSERT_USAGE_EVENT,
+    POST_USAGE_NOTICE,
+    SELECT_MONTHLY_USAGE,
+    SELECT_QUOTA_STATUS,
+    SELECT_RECENT_COST,
+} from "./persistence/ai-usage-events.sql"
 
 const ROW: QuotaRow = {
     period_start: "2026-10-01",
@@ -68,6 +74,59 @@ const build = async (entityManager: MockEntityManager) => {
 }
 
 describe("AiUsageEventsService", () => {
+    it("reads the browser quota without swallowing database failures", async () => {
+        const em = mockEntityManager()
+        const failure = new Error("quota read failed")
+        em.query.mockResolvedValueOnce([ROW]).mockResolvedValueOnce([]).mockRejectedValueOnce(failure)
+        const { usage, logger } = await build(em)
+
+        await expect(usage.readQuotaStatus("ws-1")).resolves.toEqual(STATUS)
+        await expect(usage.readQuotaStatus("ws-2")).resolves.toBeNull()
+        await expect(usage.readQuotaStatus("ws-3")).rejects.toBe(failure)
+        expect(em.query.mock.calls).toEqual([
+            [SELECT_QUOTA_STATUS, ["ws-1"]],
+            [SELECT_QUOTA_STATUS, ["ws-2"]],
+            [SELECT_QUOTA_STATUS, ["ws-3"]],
+        ])
+        expect(logger.error).not.toHaveBeenCalled()
+    })
+
+    it("maps monthly rollups with the quota into the billing summary", async () => {
+        const em = mockEntityManager({
+            query: [
+                [SELECT_QUOTA_STATUS, [ROW]],
+                [
+                    SELECT_MONTHLY_USAGE,
+                    [{ day: "2026-10-02", module: "sales", calls: 2, tokens: 40, cost_usd: 0.00113 }],
+                ],
+            ],
+        })
+        const { usage } = await build(em)
+
+        await expect(usage.usageSummary("ws-1")).resolves.toEqual({
+            status: STATUS,
+            byModule: [{ module: "sales", calls: 2, tokens: 40, costUsd: 0.00113, credits: 1 }],
+            daily: [{ day: "2026-10-02", tokens: 40, credits: 1 }],
+        })
+        expect(em.query.mock.calls).toEqual([
+            [SELECT_QUOTA_STATUS, ["ws-1"]],
+            [SELECT_MONTHLY_USAGE, ["ws-1"]],
+        ])
+    })
+
+    it("reads recent cost from the requested day and defaults an absent row to zero", async () => {
+        const em = mockEntityManager()
+        em.query.mockResolvedValueOnce([{ cost_usd: 0.42 }]).mockResolvedValueOnce([])
+        const { usage } = await build(em)
+
+        await expect(usage.recentCostUsd("ws-1", "2026-10-01")).resolves.toBe(0.42)
+        await expect(usage.recentCostUsd("ws-2", "2026-10-02")).resolves.toBe(0)
+        expect(em.query.mock.calls).toEqual([
+            [SELECT_RECENT_COST, ["ws-1", "2026-10-01"]],
+            [SELECT_RECENT_COST, ["ws-2", "2026-10-02"]],
+        ])
+    })
+
     describe("record", () => {
         it("books provider figures, truncates the model name and posts the monthly warning", async () => {
             const em = mockEntityManager({

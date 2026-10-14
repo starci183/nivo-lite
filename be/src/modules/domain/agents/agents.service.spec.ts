@@ -16,6 +16,7 @@ import { AgentsErrorCode } from "./errors/agents.error"
 import type { AgentRow } from "./persistence/agents.rows"
 import {
     FIND_ACTIVE_AGENT,
+    FIND_AGENT,
     FIND_FIRST_ACTIVE_AGENT,
     INSERT_AGENT,
     LIST_AGENTS,
@@ -126,6 +127,55 @@ const build = async (entityManager: MockEntityManager, member: WorkspaceMember =
 }
 
 describe("AgentsService", () => {
+    describe("profiles", () => {
+        it("reads the complete profile of an agent regardless of its status", async () => {
+            const em = mockEntityManager({ query: [FIND_AGENT, [{ ...AGENT, status: "paused" }]] })
+            const { service, members } = await build(em)
+
+            await expect(service.profileOf("w1", "a1")).resolves.toEqual({
+                id: "a1",
+                name: "Bot",
+                handle: "bot",
+                role: "Front desk",
+                instructions: "Be kind",
+                knowledge: "",
+                approval_rule: "",
+            })
+            expect(em.query).toHaveBeenCalledWith(FIND_AGENT, ["a1", "w1"])
+            expect(members.require).not.toHaveBeenCalled()
+        })
+
+        it("answers no profile when the agent is absent", async () => {
+            const em = mockEntityManager({ query: [FIND_AGENT, []] })
+            const { service } = await build(em)
+
+            await expect(service.profileOf("w1", "ghost")).resolves.toBeNull()
+            expect(em.query).toHaveBeenCalledWith(FIND_AGENT, ["ghost", "w1"])
+        })
+
+        it("reads the department's first active agent profile", async () => {
+            const em = mockEntityManager({ query: [FIND_FIRST_ACTIVE_AGENT, [AGENT]] })
+            const { service } = await build(em)
+
+            await expect(service.profileOfDepartment("w1", "chatbot")).resolves.toEqual({
+                id: "a1",
+                name: "Bot",
+                handle: "bot",
+                role: "Front desk",
+                instructions: "Be kind",
+                knowledge: "",
+                approval_rule: "",
+            })
+            expect(em.query).toHaveBeenCalledWith(FIND_FIRST_ACTIVE_AGENT, ["w1", "chatbot"])
+        })
+
+        it("answers no department profile when it has no active agent", async () => {
+            const { service } = await build(mockEntityManager({ query: [FIND_FIRST_ACTIVE_AGENT, []] }))
+
+            await expect(service.profileOfDepartment("w1", "chatbot")).resolves.toBeNull()
+        })
+    })
+
     describe("list", () => {
         it("lists the agents of the workspace for a member", async () => {
             const em = mockEntityManager({ query: [LIST_AGENTS, [AGENT]] })
@@ -358,6 +408,17 @@ describe("AgentsService", () => {
 
             await expect(service.create("u1", agent)).rejects.toBe(failure)
         })
+
+        it.each([null, "connection lost", { code: "23503" }])(
+            "preserves a non-unique rejection: %p",
+            async (failure) => {
+                const em = mockEntityManager({ query: [INSERT_AGENT, []] })
+                em.query.mockRejectedValueOnce(failure)
+                const { service } = await build(em)
+
+                await expect(service.create("u1", agent)).rejects.toBe(failure)
+            },
+        )
 
         it("refuses when the insert answers no row", async () => {
             const { service } = await build(mockEntityManager({ query: [INSERT_AGENT, []] }))

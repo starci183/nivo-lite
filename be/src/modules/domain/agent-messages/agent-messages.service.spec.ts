@@ -10,10 +10,13 @@ import {
     INSERT_AGENT_REPLY,
     INSERT_CUSTOMER_MESSAGE,
     INSERT_GREETING_MESSAGE,
+    INSERT_HUMAN_MESSAGE,
     INSERT_SYSTEM_LINE,
+    LIST_CHAT_MESSAGES,
     LIST_TRANSCRIPT,
     MARK_MESSAGE_DELIVERY,
 } from "./persistence/agent-messages.sql"
+import { LIST_CONVERSATION_MESSAGES } from "./persistence/conversation-messages.sql"
 
 const build = async (answers: Record<string, ReadonlyArray<unknown>> = {}) => {
     const em = mockEntityManager({
@@ -38,6 +41,119 @@ const build = async (answers: Record<string, ReadonlyArray<unknown>> = {}) => {
 }
 
 describe("AgentMessagesService", () => {
+    describe("listForConversations", () => {
+        it("does not query when no conversations were selected", async () => {
+            const { service, em } = await build()
+
+            await expect(service.listForConversations("ws-1", [], { limit: 20 })).resolves.toEqual([])
+
+            expect(em.query).not.toHaveBeenCalled()
+        })
+
+        it("scopes the conversation list and supplies optional filters and ordering", async () => {
+            const rows = [{ conversation_id: "conv-1", role: "user", body: "Hello", created_at: "2026-10-12" }]
+            const { service, em } = await build({ [LIST_CONVERSATION_MESSAGES]: rows })
+
+            await expect(service.listForConversations("ws-1", ["conv-1", "conv-2"], { limit: 20 })).resolves.toEqual(
+                rows,
+            )
+            await expect(
+                service.listForConversations("ws-1", ["conv-1"], {
+                    since: "2026-10-12T10:00:00.000Z",
+                    oldestFirst: true,
+                    limit: 5,
+                }),
+            ).resolves.toEqual(rows)
+
+            expect(em.query).toHaveBeenNthCalledWith(1, LIST_CONVERSATION_MESSAGES, [
+                "ws-1",
+                ["conv-1", "conv-2"],
+                null,
+                false,
+                20,
+            ])
+            expect(em.query).toHaveBeenNthCalledWith(2, LIST_CONVERSATION_MESSAGES, [
+                "ws-1",
+                ["conv-1"],
+                "2026-10-12T10:00:00.000Z",
+                true,
+                5,
+            ])
+        })
+    })
+
+    describe("listChat", () => {
+        it("maps customer and system roles directly and other speakers to the agent", async () => {
+            const { service, em } = await build({
+                [LIST_CHAT_MESSAGES]: [
+                    { id: "m-1", role: "user", body: "Hello", created_at: "2026-10-12T17:00:00+07:00" },
+                    { id: "m-2", role: "system", body: "Handed over", created_at: "2026-10-12T10:01:00Z" },
+                    { id: "m-3", role: "human", body: "Welcome", created_at: "2026-10-12T10:02:00Z" },
+                ],
+            })
+
+            await expect(service.listChat("ws-1", "conv-1")).resolves.toEqual([
+                { id: "m-1", role: "user", body: "Hello", createdAt: "2026-10-12T10:00:00.000Z" },
+                { id: "m-2", role: "system", body: "Handed over", createdAt: "2026-10-12T10:01:00.000Z" },
+                { id: "m-3", role: "agent", body: "Welcome", createdAt: "2026-10-12T10:02:00.000Z" },
+            ])
+            expect(em.query).toHaveBeenCalledWith(LIST_CHAT_MESSAGES, ["ws-1", "conv-1"])
+        })
+    })
+
+    describe("storeHuman and storeHumanMessage", () => {
+        it("writes a person's reply through the caller's transaction", async () => {
+            const { service, em } = await build()
+            const inside = mockEntityManager({ query: [INSERT_HUMAN_MESSAGE, [{ id: "human-1" }]] })
+
+            await expect(service.storeHuman("ws-1", "conv-1", "Welcome", "Mai", inside)).resolves.toBe("human-1")
+
+            expect(inside.query).toHaveBeenCalledWith(INSERT_HUMAN_MESSAGE, [null, "ws-1", "conv-1", "Welcome", "Mai"])
+            expect(em.query).not.toHaveBeenCalled()
+        })
+
+        it("uses the primary manager for a new reply and reuses an approved message id on retry", async () => {
+            const { service, em } = await build({ [INSERT_HUMAN_MESSAGE]: [{ id: "human-1" }] })
+            const inside = mockEntityManager({ query: [INSERT_HUMAN_MESSAGE, []] })
+
+            await expect(service.storeHumanMessage("ws-1", "conv-1", "Welcome", "Mai")).resolves.toBe("human-1")
+            await expect(
+                service.storeHumanMessage("ws-1", "conv-1", "Approved", "Mai", inside, "approved-1"),
+            ).resolves.toBe("approved-1")
+
+            expect(em.query).toHaveBeenCalledWith(INSERT_HUMAN_MESSAGE, [null, "ws-1", "conv-1", "Welcome", "Mai"])
+            expect(inside.query).toHaveBeenCalledWith(INSERT_HUMAN_MESSAGE, [
+                "approved-1",
+                "ws-1",
+                "conv-1",
+                "Approved",
+                "Mai",
+            ])
+        })
+
+        it("requires an inserted row when the reply has no stable approval id", async () => {
+            const { service, em } = await build({ [INSERT_HUMAN_MESSAGE]: [] })
+
+            await expect(service.storeHumanMessage("ws-1", "conv-1", "Welcome", "Mai")).rejects.toMatchObject({
+                code: AgentMessagesErrorCode.NotStored,
+            })
+            expect(em.query).toHaveBeenCalledWith(INSERT_HUMAN_MESSAGE, [null, "ws-1", "conv-1", "Welcome", "Mai"])
+        })
+    })
+
+    describe("storeAgentMessage", () => {
+        it("stores an unsolicited agent message and requires the insert's id", async () => {
+            const stored = await build({ [INSERT_GREETING_MESSAGE]: [{ id: "agent-1" }] })
+            const missing = await build({ [INSERT_GREETING_MESSAGE]: [] })
+
+            await expect(stored.service.storeAgentMessage("ws-1", "conv-1", "Welcome")).resolves.toBe("agent-1")
+            await expect(missing.service.storeAgentMessage("ws-1", "conv-1", "Welcome")).rejects.toMatchObject({
+                code: AgentMessagesErrorCode.NotStored,
+            })
+            expect(stored.em.query).toHaveBeenCalledWith(INSERT_GREETING_MESSAGE, ["ws-1", "conv-1", "Welcome"])
+        })
+    })
+
     describe("storeCustomer and storeGreeting", () => {
         it("store through the given transaction and answer the message id", async () => {
             const { service } = await build()
@@ -123,6 +239,16 @@ describe("AgentMessagesService", () => {
             await service.storeLine("ws-1", "conv-1", "Lead handed over")
 
             expect(em.query).toHaveBeenCalledWith(INSERT_SYSTEM_LINE, ["ws-1", "conv-1", "Lead handed over"])
+        })
+
+        it("uses the supplied transaction to write a system line", async () => {
+            const { service, em } = await build()
+            const inside = mockEntityManager({ query: [INSERT_SYSTEM_LINE, []] })
+
+            await service.storeLine("ws-1", "conv-1", "Lead handed over", inside)
+
+            expect(inside.query).toHaveBeenCalledWith(INSERT_SYSTEM_LINE, ["ws-1", "conv-1", "Lead handed over"])
+            expect(em.query).not.toHaveBeenCalled()
         })
     })
 

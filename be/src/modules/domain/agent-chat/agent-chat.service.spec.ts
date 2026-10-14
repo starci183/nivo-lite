@@ -1,6 +1,6 @@
 import { Test } from "@nestjs/testing"
 import { FakeClock, fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
-import { AgentConversationsService } from "@modules/domain/agent-conversations"
+import { AgentConversationsErrorCode, AgentConversationsService } from "@modules/domain/agent-conversations"
 import type { ChatConversation, ConversationTarget } from "@modules/domain/agent-conversations"
 import { AgentMessagesService } from "@modules/domain/agent-messages"
 import type { AgentThreadMessage } from "@modules/domain/agent-messages"
@@ -435,5 +435,56 @@ describe("AgentChatService", () => {
                 code: AgentChatErrorCode.TurnNotFound,
             })
         })
+    })
+
+    it.each([
+        { kind: "test", visitorName: "Lan" },
+        { kind: "customer", visitorName: null },
+    ] as const)("defaults a nameless $kind chat to $visitorName", async ({ kind, visitorName }) => {
+        const { service, tx, conversations, messages } = await build([[FIND_CHAT_AGENT, [AGENT]]])
+        conversations.openChat.mockResolvedValue(CONVERSATION)
+        await expect(service.start("u1", { workspaceId: "w1", agentId: "a1", kind, visitorName: null })).resolves.toBe(
+            "c1",
+        )
+        const manager = conversations.openChat.mock.calls[0]?.[1]
+        expect(manager).toBeDefined()
+        expect(manager).not.toBe(tx.em)
+        expect(conversations.openChat).toHaveBeenCalledWith(
+            { workspaceId: "w1", agentId: "a1", kind, visitorName },
+            manager,
+        )
+        expect(messages.storeGreeting).toHaveBeenCalledWith("w1", "c1", "Welcome", manager)
+        expect(tx.commits).toBe(1)
+    })
+
+    it("refuses a thread that the conversation owner reports as missing", async () => {
+        const { service, members, conversations, messages } = await build()
+        conversations.targetOf.mockResolvedValue({ kind: "refused", code: AgentConversationsErrorCode.NotFound })
+        await expect(service.listMessages("u1", THREAD_REQUEST)).rejects.toMatchObject({
+            code: AgentChatErrorCode.ConversationNotFound,
+        })
+        expect(members.require).toHaveBeenCalledWith("u1", "w1")
+        expect(conversations.targetOf).toHaveBeenCalledWith("c1")
+        expect(messages.listChat).not.toHaveBeenCalled()
+    })
+
+    it.each([
+        ["failed", "failed", "CHAT_DELIVERY_FAILED"],
+        ["sent", "succeeded", null],
+    ] as const)("reports a completed external turn whose reply delivery is %s", async (delivery, status, errorCode) => {
+        const row: ChatTurnMessageRow = { ...TURN, channel: "telegram", reply_delivery_status: delivery }
+        const { service, tx, members, queueStatus } = await build([[FIND_CHAT_TURN_MESSAGE, [row]]])
+        queueStatus.status.mockResolvedValue({ id: "job-1", state: "done", attempts: 2 })
+        await expect(service.turnStatus("u1", { workspaceId: "w1", id: "m1" })).resolves.toEqual({
+            id: "m1",
+            jobId: "job-1",
+            conversationId: "c1",
+            status,
+            resultMessageId: "r1",
+            errorCode,
+        })
+        expect(members.require).toHaveBeenCalledWith("u1", "w1")
+        expect(tx.em.query).toHaveBeenCalledWith(FIND_CHAT_TURN_MESSAGE, ["w1", "m1"])
+        expect(queueStatus.status).toHaveBeenCalledWith("w1", "chat_turn", "chat-turn.turn:m1")
     })
 })

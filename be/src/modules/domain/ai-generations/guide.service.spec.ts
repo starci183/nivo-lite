@@ -1,6 +1,7 @@
 import { Test } from "@nestjs/testing"
 import { FakeClock, fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
 import type { FakeTransaction } from "@starci/jest-preset"
+import { isTransactionManager } from "@starci/jest-preset/entity-manager"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import type { WorkspaceMember } from "@modules/domain/workspace-members"
 import { CLOCK } from "@modules/platform/clock"
@@ -10,19 +11,19 @@ import type { MessageCatalog } from "@modules/platform/i18n"
 import type { GuideAsk } from "./ai-generations.contracts"
 import { AiGenerationsErrorCode } from "./errors/ai-generations.error"
 import { GenerationsService } from "./generations.service"
-import { GUIDE_ASKS_PER_WINDOW } from "./guide.policy"
+import { GUIDE_ASKS_PER_WINDOW, GUIDE_TIMEOUT_MS, guidePrompt } from "./guide.policy"
 import { GuideService } from "./guide.service"
 import { COUNT_GUIDE_ASKS, LOCK_GUIDE_ASKER } from "./persistence/ai-generations.sql"
 
 const NOW = new Date("2026-10-13T10:00:00.000Z")
 const ASK: GuideAsk = { workspaceId: "w1", question: "Where are my leads?", path: "/chat", history: [], locale: "vi" }
 
-const build = async (asked: number, role: WorkspaceMember["role"] = "staff") => {
+const build = async (asked: number | undefined, role: WorkspaceMember["role"] = "staff") => {
     const tx: FakeTransaction = fakeTransaction(
         mockEntityManager({
             query: [
                 [LOCK_GUIDE_ASKER, [{}]],
-                [COUNT_GUIDE_ASKS, [{ asked: String(asked) }]],
+                [COUNT_GUIDE_ASKS, asked === undefined ? [] : [{ asked: String(asked) }]],
             ],
         }),
     )
@@ -52,7 +53,7 @@ const build = async (asked: number, role: WorkspaceMember["role"] = "staff") => 
             { provide: PRIMARY_ENTITY_MANAGER, useValue: tx.em },
         ],
     }).compile()
-    return { service: moduleRef.get(GuideService), tx, generations, members }
+    return { service: moduleRef.get(GuideService), tx, generations, members, catalog }
 }
 
 describe("GuideService", () => {
@@ -90,5 +91,44 @@ describe("GuideService", () => {
 
         await expect(service.ask("u1", ASK)).rejects.toMatchObject({ code: AiGenerationsErrorCode.GuideRateLimited })
         expect(generations.request).not.toHaveBeenCalled()
+    })
+
+    it("treats an absent count row as zero and sends the localized staff prompt in the locked transaction", async () => {
+        const { service, generations, tx, catalog } = await build(undefined)
+
+        await expect(service.ask("u1", ASK)).resolves.toEqual({ id: "g1", status: "queued" })
+
+        expect(generations.request).toHaveBeenCalledWith(
+            {
+                workspaceId: "w1",
+                purpose: "guide",
+                messages: guidePrompt(ASK, false, { text: (key) => `[${key}]` }),
+                responseFormat: "json",
+                timeoutMs: GUIDE_TIMEOUT_MS,
+                kind: "guide",
+                module: "other",
+                locale: "vi",
+            },
+            { requestedBy: "u1" },
+            expect.anything(),
+        )
+        expect(isTransactionManager(generations.request.mock.calls[0]?.[2])).toBe(true)
+        expect(tx.outcomes).toEqual(["commit"])
+        expect(catalog.get).toHaveBeenCalledWith("guide.audienceStaff", {}, "vi")
+        expect(catalog.get).not.toHaveBeenCalledWith("guide.page.billing.title", {}, "vi")
+    })
+
+    it("allows the last question below the limit and includes manager pages for an owner", async () => {
+        const { service, generations, catalog } = await build(GUIDE_ASKS_PER_WINDOW - 1, "owner")
+
+        await expect(service.ask("u1", ASK)).resolves.toEqual({ id: "g1", status: "queued" })
+
+        expect(generations.request).toHaveBeenCalledWith(
+            expect.objectContaining({ messages: guidePrompt(ASK, true, { text: (key) => `[${key}]` }) }),
+            { requestedBy: "u1" },
+            expect.anything(),
+        )
+        expect(catalog.get).toHaveBeenCalledWith("guide.audienceManager", {}, "vi")
+        expect(catalog.get).toHaveBeenCalledWith("guide.page.billing.title", {}, "vi")
     })
 })
