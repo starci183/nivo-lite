@@ -187,6 +187,7 @@ import { DATA_HUB_ERROR_KINDS, DATA_HUB_MESSAGES, DataHubModule } from "@modules
 import { DataRecordsModule } from "@modules/domain/data-records"
 import { DataSyncRunsModule } from "@modules/domain/data-sync-runs"
 import { DATA_SOURCES_ERROR_KINDS, DataSourcesModule } from "@modules/integrations/data-sources"
+import { TelegramUserModule } from "@modules/integrations/telegram-user"
 import { CONVERSATIONS_ERROR_KINDS, CONVERSATIONS_MESSAGES, ConversationsModule } from "@modules/domain/conversations"
 import { TelegramInboxModule } from "@modules/domain/telegram-inbox"
 import { ZaloInboxModule } from "@modules/domain/zalo-inbox"
@@ -393,6 +394,7 @@ import {
     G19_PORTS,
     LEAD_LANE,
     type ApiOptions,
+    TELEGRAM_USER_ERRORS,
 } from "./api.options"
 @Module({}) /** Every capability is registered once and the three guards run in a fixed order. */
 export class AppModule {
@@ -613,11 +615,7 @@ export class AppModule {
                 HttpSecurityModule.register({ isGlobal: true, ...options.httpSecurity }),
                 DatabaseModule.register({ isGlobal: true, connections: [options.database] }),
                 AppErrorsModule.register({ isGlobal: true }),
-                QueueModule.register({
-                    isGlobal: true,
-                    schedulers: API_SCHEDULERS,
-                    ...options.queue,
-                }),
+                QueueModule.register({ isGlobal: true, schedulers: API_SCHEDULERS, ...options.queue }),
                 JobsModule.register({ isGlobal: true, connection: PRIMARY_ENTITY_MANAGER, ...options.jobs }),
                 JobOpsModule.register({ isGlobal: true, alerts: options.jobsAlert }),
                 SupabaseModule.register({ isGlobal: true, ...options.supabase }),
@@ -636,6 +634,7 @@ export class AppModule {
                 ConnectionsModule.register({ isGlobal: true, ...options.connections }),
                 ConnectionGrantsModule.register({ isGlobal: true }),
                 DataSourcesModule.register({ isGlobal: true, ...options.dataSources }),
+                TelegramUserModule.register({ isGlobal: true, ...options.telegramUser, errors: TELEGRAM_USER_ERRORS }),
                 DataRecordsModule.register({ isGlobal: true }),
                 DataSyncRunsModule.register({ isGlobal: true }),
                 DataHubModule.register({ isGlobal: true }),

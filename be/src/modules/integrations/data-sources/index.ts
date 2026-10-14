@@ -12,7 +12,6 @@ export {
     InjectOpenApi,
     InjectPublicHost,
     InjectTable,
-    InjectTelegramUser,
 } from "./data-sources.decorators"
 export { DataSourcesModule } from "./data-sources.module"
 export type { DataSourcesOptions } from "./data-sources.options"
@@ -21,9 +20,6 @@ export type { ImapClient } from "./imap.client"
 export type { OpenApiClient } from "./openapi.client"
 export type { PublicHostClient } from "./public-host.client"
 export type { TableClient } from "./table.client"
-export type { TelegramUserClient } from "./telegram-user.client"
-export type { TelegramChatChoice, TelegramChatKind, TelegramRawMessage } from "./telegram-user.contracts"
-export { TELEGRAM_NOT_CONFIGURED_MESSAGE, TELEGRAM_REVOKED_MESSAGE } from "./telegram-user-errors.policy"
 export { DOCUMENT_MAX_TEXT, TABLE_MAX_BYTES, TABLE_MAX_ROWS } from "./table-shapes.contracts"
 export type { Table, UploadedDocumentText } from "./table-shapes.contracts"
 export { DATABASE_ENGINES, DATABASE_MAX_COLUMNS, DATABASE_MAX_ROWS } from "./database-session.contracts"

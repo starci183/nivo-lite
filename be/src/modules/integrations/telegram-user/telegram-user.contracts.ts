@@ -1,3 +1,15 @@
+import type { DomainError } from "@modules/platform/errors"
+
+/** The error family the app uses for failures while reading a personal Telegram account. */
+export interface TelegramUserErrors {
+    /** Builds an error for a request the account or Telegram rejected. */
+    readonly rejected: (detail: string, cause?: unknown) => DomainError<string>
+    /** Builds an error for an unavailable deployment or Telegram service. */
+    readonly unavailable: (detail: string, cause?: unknown) => DomainError<string>
+    /** Recognizes an error already translated by this family. */
+    readonly isError: (error: unknown) => error is DomainError<string>
+}
+
 /** What kind of chat a dialog is. */
 export type TelegramChatKind = "user" | "group" | "channel"
 

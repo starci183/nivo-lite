@@ -1,4 +1,4 @@
-import type { TelegramRawMessage } from "@modules/integrations/data-sources"
+import type { TelegramRawMessage } from "@modules/integrations/telegram-user"
 import { TELEGRAM_WIZARD_TEXT } from "./messages/telegram-user-wizard.messages"
 import {
     accountLabel,

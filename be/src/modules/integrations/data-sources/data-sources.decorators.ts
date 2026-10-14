@@ -6,7 +6,6 @@ import type { ImapClient } from "./imap.client"
 import type { OpenApiClient } from "./openapi.client"
 import type { PublicHostClient } from "./public-host.client"
 import type { TableClient } from "./table.client"
-import type { TelegramUserClient } from "./telegram-user.client"
 
 /** Token of the options of the data-sources integration, exported so a spec can provide it. */
 export const DATA_SOURCES_OPTIONS: unique symbol = Symbol("integrations.data-sources.options")
@@ -22,9 +21,6 @@ export const DATABASE: unique symbol = Symbol("integrations.data-sources.databas
 
 /** Token of the OpenAPI client. */
 export const OPENAPI: unique symbol = Symbol("integrations.data-sources.openapi")
-
-/** Token of the personal Telegram client. */
-export const TELEGRAM_USER: unique symbol = Symbol("integrations.data-sources.telegram-user")
 
 /** Token of the table and document reader. */
 export const TABLE: unique symbol = Symbol("integrations.data-sources.table")
@@ -44,10 +40,6 @@ export const InjectDatabase = (): TypedParameterDecorator<DatabaseClient> => inj
 
 /** Injects the OpenAPI client. Parameter type: OpenApiClient. */
 export const InjectOpenApi = (): TypedParameterDecorator<OpenApiClient> => injector<OpenApiClient>(OPENAPI)
-
-/** Injects the personal Telegram client. Parameter type: TelegramUserClient. */
-export const InjectTelegramUser = (): TypedParameterDecorator<TelegramUserClient> =>
-    injector<TelegramUserClient>(TELEGRAM_USER)
 
 /** Injects the table and document reader. Parameter type: TableClient. */
 export const InjectTable = (): TypedParameterDecorator<TableClient> => injector<TableClient>(TABLE)

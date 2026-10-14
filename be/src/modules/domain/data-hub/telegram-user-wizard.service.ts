@@ -5,8 +5,8 @@ import {
     InjectTelegramUser,
     TELEGRAM_NOT_CONFIGURED_MESSAGE,
     TELEGRAM_REVOKED_MESSAGE,
-} from "@modules/integrations/data-sources"
-import type { TelegramChatChoice, TelegramUserClient } from "@modules/integrations/data-sources"
+} from "@modules/integrations/telegram-user"
+import type { TelegramChatChoice, TelegramUserClient } from "@modules/integrations/telegram-user"
 import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
 import { eachInOrder } from "@modules/platform/primitives"
