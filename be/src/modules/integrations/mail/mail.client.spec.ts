@@ -48,17 +48,20 @@ const build = async (options: MailOptions) => {
 
 const transportAnswering = (answer: Partial<SMTPTransport.SentMessageInfo> | Error) => {
     const transport = mock<Transporter<SMTPTransport.SentMessageInfo, SMTPTransport.Options>>()
-    if (answer instanceof Error) transport.sendMail.mockRejectedValue(answer)
+    // nodemailer 10 types `sendMail` as overloads whose last one is the callback form, so the promise answer is given by implementation.
+    if (answer instanceof Error) transport.sendMail.mockImplementation(() => Promise.reject(answer))
     else {
-        transport.sendMail.mockResolvedValue({
-            envelope: { from: "owner@example.com", to: ["a@b.vn"] },
-            accepted: [],
-            rejected: [],
-            pending: [],
-            response: "250 accepted",
-            messageId: "<default>",
-            ...answer,
-        })
+        transport.sendMail.mockImplementation(() =>
+            Promise.resolve({
+                envelope: { from: "owner@example.com", to: ["a@b.vn"] },
+                accepted: [],
+                rejected: [],
+                pending: [],
+                response: "250 accepted",
+                messageId: "<default>",
+                ...answer,
+            }),
+        )
     }
     createTransport.mockReturnValue(transport)
     return transport
