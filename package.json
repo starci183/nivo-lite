@@ -89,7 +89,7 @@
     "docker:build": "npm run docker:build:api && npm run docker:build:cli",
     "docker:build:api": "docker build -f be/apps/api/Dockerfile -t nivo-lite/api:dev .",
     "docker:build:cli": "docker build -f be/apps/cli/Dockerfile -t nivo-lite/cli:dev .",
-    "build:be": "node scripts/build-be.mjs",
+    "build:be": "cd be && tsc -p tsconfig.build.json && tsc-alias -p tsconfig.build.json",
     "build:fe": "npm run codegen --silent && turbo run build --filter=./fe/apps/*",
     "codegen": "node scripts/codegen.mjs",
     "codegen:graphql": "node scripts/codegen.mjs --graphql",
