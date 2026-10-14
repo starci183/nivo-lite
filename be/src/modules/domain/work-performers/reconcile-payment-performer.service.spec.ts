@@ -166,6 +166,8 @@ describe("ReconcilePaymentPerformerService", () => {
             inbound,
             workItems,
             evidence,
+            leads,
+            events,
         }
     }
 
@@ -234,6 +236,40 @@ describe("ReconcilePaymentPerformerService", () => {
 
             expect(prepared.proposal.outcome).toBe("clear")
             expect(prepared.patch).toEqual({ subject_type: "transaction", subject_id: "tx-1" })
+        })
+
+        it("reopens a missing transaction using a non-bank input's facts and leaves an empty candidate pool", async () => {
+            const { service, transactions, invoices, inbound } = await build()
+            transactions.find.mockResolvedValue(null)
+            transactions.open.mockResolvedValue(transactionOf({ id: "tx-2", reference: null, payer: "Mai" }))
+            invoices.listIssued.mockResolvedValue([])
+            inbound.find.mockResolvedValue(
+                eventOf({ channel: "zalo", amount_vnd: null, external_ref: "CLAIM-9", sender_name: "Mai" }),
+            )
+            const item = itemOf({
+                inbound_event_id: "ev-1",
+                proposal: { summary: "Paid", amount_vnd: 450000, fields: {} },
+            })
+
+            await expect(service.prepare(ctx, item)).resolves.toEqual({
+                proposal: {
+                    summary: "reconcileSummary|450000 VND|Mai|reconcileNoRef",
+                    amount_vnd: 450000,
+                    outcome: "unclear",
+                    candidates: [],
+                    fields: { amount_vnd: 450000, reference: null, payer: "Mai" },
+                },
+                patch: { subject_type: "transaction", subject_id: "tx-2" },
+            })
+            expect(transactions.find).toHaveBeenCalledWith("ws-1", "tx-1")
+            expect(transactions.open).toHaveBeenCalledWith({
+                workspaceId: "ws-1",
+                inboundEventId: "ev-1",
+                amountVnd: 450000,
+                reference: "CLAIM-9",
+                payer: "Mai",
+                origin: "live",
+            })
         })
     })
 
@@ -340,6 +376,105 @@ describe("ReconcilePaymentPerformerService", () => {
                 code: DecisionsErrorCode.ChooseCandidate,
             })
             expect(invoices.markPaid).not.toHaveBeenCalled()
+        })
+
+        it("publishes the settled invoice with its known customer and order", async () => {
+            const { service, leads, orders, events } = await build()
+            leads.find.mockResolvedValue({
+                id: "lead-1",
+                workspace_id: "ws-1",
+                contact_name: "Mai",
+                company: "Tea",
+                channel: "Zalo",
+                need: "Tea",
+                stage: "won",
+                context_summary: null,
+                phone: null,
+                email: null,
+                origin: "live",
+            })
+            orders.find.mockResolvedValue({
+                id: "ord-1",
+                workspace_id: "ws-1",
+                lead_id: "lead-1",
+                inbound_event_id: null,
+                order_no: "SO-9",
+                items: "Tea",
+                amount_vnd: 450000,
+                status: "paid",
+                origin: "live",
+                confirmed_by: "Lan",
+                confirmed_at: null,
+                created_at: "2026-10-12T09:00:00.000Z",
+                shipped_at: null,
+                carrier: null,
+                tracking_code: null,
+            })
+
+            const performed = await service.perform(ctx, itemOf(), proposalOf(), { name: "Mai" })
+
+            expect(performed.summary).toBe("paymentMatched|450000 VND|INV-1")
+            expect(leads.find).toHaveBeenCalledWith("ws-1", "lead-1")
+            expect(orders.find).toHaveBeenCalledWith("ws-1", "ord-1")
+            expect(events.publish).toHaveBeenCalledWith(
+                "ws-1",
+                "payment.received",
+                {
+                    invoice_id: "inv-1",
+                    transaction_id: "tx-1",
+                    invoice_no: "INV-1",
+                    order_id: "ord-1",
+                    order_no: "SO-9",
+                    lead_id: "lead-1",
+                    customer: "Mai",
+                    amount_vnd: 450000,
+                    paid_at: "2026-10-12T10:00:00.000Z",
+                    channel: "Zalo",
+                },
+                "payment.received:inv-1",
+            )
+        })
+
+        it("publishes an invoice-only receipt with proposal payer and invoice amount when records are missing", async () => {
+            const { service, leads, orders, events, evidence } = await build()
+            leads.find.mockResolvedValue(null)
+            orders.find.mockResolvedValue(null)
+            const proposal = proposalOf({ amount_vnd: null, fields: { payer: "Customer", reference: "TRANSFER-9" } })
+
+            await expect(
+                service.perform(ctx, itemOf({ subject_type: "invoice" }), proposal, { name: "Mai" }),
+            ).resolves.toEqual({
+                summary: "paymentMatched|no amount|INV-1",
+                evidence: "verified",
+                href: "/leads/lead-1",
+                lead_id: "lead-1",
+                detail: null,
+            })
+            expect(evidence.log).toHaveBeenCalledWith(ctx, {
+                lead_id: "lead-1",
+                work_item_id: "item-1",
+                kind: "payment.matched",
+                actor: "Mai",
+                summary: "paymentMatched|no amount|INV-1",
+                evidence: "TRANSFER-9",
+            })
+            expect(events.publish).toHaveBeenCalledWith(
+                "ws-1",
+                "payment.received",
+                {
+                    invoice_id: "inv-1",
+                    transaction_id: null,
+                    invoice_no: "INV-1",
+                    order_id: "ord-1",
+                    order_no: null,
+                    lead_id: "lead-1",
+                    customer: "Customer",
+                    amount_vnd: 450000,
+                    paid_at: "2026-10-12T10:00:00.000Z",
+                    channel: null,
+                },
+                "payment.received:inv-1",
+            )
         })
     })
 

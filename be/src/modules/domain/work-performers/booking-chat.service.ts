@@ -62,7 +62,7 @@ export class BookingChatService {
             date: request.date,
             party: request.partySize,
         })
-        if (request.intent === "waitlist") return this.joinWaitlist(turn, service.id, service.name, zone)
+        if (request.intent === "waitlist") return this.joinWaitlist(turn, service.id, service.name, request.date, zone)
         if (request.intent === "availability" || request.time === null) {
             const offered = offeredTimes(
                 times.filter((iso) => withinPeriod(localHhmm(Date.parse(iso), zone), request.from, request.to)),
@@ -107,10 +107,10 @@ export class BookingChatService {
         turn: BookingChatTurn,
         serviceId: string,
         serviceName: string,
+        date: string,
         zone: string,
     ): Promise<BookingChatAnswer> {
         const { request } = turn
-        const date = request.date ?? ""
         const windowStart = bookingIsoOf(zonedMs(date, request.from ?? "00:00", zone))
         const windowEnd =
             request.to === null
