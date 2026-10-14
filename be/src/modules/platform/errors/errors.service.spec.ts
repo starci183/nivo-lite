@@ -23,16 +23,18 @@ const CALENDARS_ERROR_KINDS: ErrorKindTable = { CALENDARS_NOT_FOUND: "not-found"
 const build = async (kinds: ReadonlyArray<ErrorKindTable>) => {
     const catalog = mock<MessageCatalog>()
     const logger = mock<Logger>()
+    const reporter = mock<ErrorReporter>()
+    reporter.report.mockResolvedValue(undefined)
     const moduleRef = await Test.createTestingModule({
         providers: [
             ErrorsService,
             { provide: ERRORS_OPTIONS, useValue: { kinds } },
             { provide: MESSAGE_CATALOG, useValue: catalog },
             { provide: LOGGER, useValue: logger },
-            { provide: ERROR_REPORTER, useValue: mock<ErrorReporter>({ report: () => Promise.resolve() }) },
+            { provide: ERROR_REPORTER, useValue: reporter },
         ],
     }).compile()
-    return { errors: moduleRef.get(ErrorsService), catalog, logger }
+    return { errors: moduleRef.get(ErrorsService), catalog, logger, reporter }
 }
 
 describe("ErrorsService", () => {
@@ -83,19 +85,10 @@ describe("ErrorsService", () => {
         })
 
         it("records an unhandled failure with the reporter under the site the transport names", async () => {
-            const reporter = mock<ErrorReporter>({ report: () => Promise.resolve() })
-            const moduleRef = await Test.createTestingModule({
-                providers: [
-                    ErrorsService,
-                    { provide: ERRORS_OPTIONS, useValue: { kinds: [] } },
-                    { provide: MESSAGE_CATALOG, useValue: mock<MessageCatalog>() },
-                    { provide: LOGGER, useValue: mock<Logger>() },
-                    { provide: ERROR_REPORTER, useValue: reporter },
-                ],
-            }).compile()
+            const { errors, reporter } = await build([])
             const failure = new Error("boom")
 
-            moduleRef.get(ErrorsService).describe(failure, { scope: "http", context: { route: "/v1/hooks" } })
+            errors.describe(failure, { scope: "http", context: { route: "/v1/hooks" } })
 
             expect(reporter.report).toHaveBeenCalledWith("http", failure, { route: "/v1/hooks" })
         })

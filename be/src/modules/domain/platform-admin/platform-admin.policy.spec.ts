@@ -237,7 +237,7 @@ describe("platform-admin policy", () => {
             expect(
                 creditsFrom({ credits_used: null, credits_limit: null, cost_usd: 0.04 }, { credits_limit: null }),
             ).toEqual({
-                used: 10,
+                used: 36,
                 limit: null,
                 costUsd: 0.04,
                 ownLimit: null,

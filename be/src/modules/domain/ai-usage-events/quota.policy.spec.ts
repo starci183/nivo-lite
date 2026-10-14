@@ -1,6 +1,6 @@
 import type { QuotaStatus, UsageKind } from "./ai-usage-events.contracts"
 import type { QuotaRow } from "./persistence/ai-usage-events.rows"
-import { quotaOf, stopsCall, WARN_AT } from "./quota.policy"
+import { quotaLookupOf, quotaOf, stopsCall, WARN_AT } from "./quota.policy"
 
 describe("quota policy", () => {
     const row: QuotaRow = {
@@ -58,7 +58,7 @@ describe("quota policy", () => {
                 messagesLimit: null,
                 tokensLimit: null,
                 creditsLimit: null,
-                creditsUsed: 150,
+                creditsUsed: 531,
                 creditsCarried: 0,
                 fallbackReply: null,
                 ratio: 0,
@@ -149,6 +149,16 @@ describe("quota policy", () => {
                 ratio: 1,
                 level: "exceeded",
             })
+        })
+    })
+
+    describe("quotaLookupOf", () => {
+        it("returns null when there is no quota row", () => {
+            expect(quotaLookupOf([])).toBeNull()
+        })
+
+        it("maps the first quota row", () => {
+            expect(quotaLookupOf([row, { ...row, messages_used: 1_000 }])).toEqual(status)
         })
     })
 

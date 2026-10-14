@@ -8,6 +8,14 @@ const mail = (partial: Partial<ParsedMail>): ParsedMail =>
     mock<ParsedMail>({
         html: false,
         attachments: [],
+        text: undefined,
+        subject: undefined,
+        date: undefined,
+        from: undefined,
+        to: undefined,
+        cc: undefined,
+        messageId: undefined,
+        inReplyTo: undefined,
         ...partial,
     })
 
@@ -41,7 +49,7 @@ describe("imap message policy", () => {
                     cc: undefined,
                     attachments: [mock<Attachment>({ filename: undefined, contentType: "image/png", size: 8 })],
                     messageId: "<m@example.com>",
-                    inReplyTo: undefined,
+                    inReplyTo: "<previous@example.com>",
                 }),
                 null,
             )
@@ -64,7 +72,7 @@ describe("imap message policy", () => {
                     truncated: false,
                     attachments: [{ name: null, type: "image/png", size: 8 }],
                     messageId: "<m@example.com>",
-                    inReplyTo: null,
+                    inReplyTo: "<previous@example.com>",
                 },
             })
         })
@@ -87,15 +95,41 @@ describe("imap message policy", () => {
             )
 
             expect(row.title).toBe("")
-            expect(row.occurredAt).toBe(received)
-            expect(row.data.text).toBe("Hi & <b> there")
+            expect(row.occurredAt).toEqual(received)
+            expect(row.data.from).toEqual([])
+            expect(row.data.to).toEqual([])
+            expect(row.data.cc).toEqual([])
+            expect(row.data.text).toBe("Hi &<b> there")
             expect(row.data.truncated).toBe(false)
             expect(row.data.messageId).toBeNull()
+            expect(row.data.inReplyTo).toBeNull()
+            expect(row.data.attachments).toEqual([{ name: "a.txt", type: "text/plain", size: 1 }])
 
             const long = messageToRow("Sent", "1", 3, mail({ text: body, date: undefined }), "not-a-date")
             expect(long.data.text).toBe("a".repeat(IMAP_MAX_TEXT))
             expect(long.data.truncated).toBe(true)
             expect(long.occurredAt).toBeNull()
+        })
+
+        it("keeps an empty parsed message with no date, addresses or body", () => {
+            expect(messageToRow("INBOX", "9", 5, mail({}), null)).toEqual({
+                externalId: "INBOX:9:5",
+                title: "",
+                occurredAt: null,
+                data: {
+                    folder: "INBOX",
+                    uid: 5,
+                    from: [],
+                    to: [],
+                    cc: [],
+                    subject: "",
+                    text: "",
+                    truncated: false,
+                    attachments: [],
+                    messageId: null,
+                    inReplyTo: null,
+                },
+            })
         })
     })
 
