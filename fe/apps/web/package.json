@@ -21,7 +21,7 @@
     "@starci/heroicons": "0.3.4",
     "@supabase/ssr": "0.12.7",
     "@supabase/supabase-js": "2.117.2",
-    "@xyflow/react": "^12.11.6",
+    "@xyflow/react": "12.11.6",
     "axios": "1.15.2",
     "dayjs": "1.11.21",
     "fflate": "0.8.3",
