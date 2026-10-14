@@ -11,4 +11,4 @@ import { WatchdogJobsCli } from "./subs/watchdog.cli"
     providers: [JobsCli, StatsJobsCli, FailedJobsCli, OpenJobsCli, RetryJobsCli, RetryFailedJobsCli, WatchdogJobsCli],
 })
 /** The jobs group and its six commands over the job operations capability. */
-export class JobsModule {}
+export class CliJobsModule {}
