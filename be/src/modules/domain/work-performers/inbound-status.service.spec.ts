@@ -8,7 +8,7 @@ const ctx: WorkContext = { workspaceId: "ws-1", actor: "Lan", locale: "vi" }
 
 describe("InboundStatusService", () => {
     const build = async () => {
-        const events = mock<InboundEventsService>()
+        const events = mock<InboundEventsService>({ mark: jest.fn().mockResolvedValue(undefined) })
         const moduleRef = await Test.createTestingModule({
             providers: [InboundStatusService, { provide: InboundEventsService, useValue: events }],
         }).compile()

@@ -24,7 +24,7 @@ const build = async () => {
     const moduleRef = await Test.createTestingModule({
         providers: [
             NivoSeedService,
-            { provide: NIVO_KNOWLEDGE_OPTIONS, useValue: { folders: ["core", "chatbot"], dir: "/knowledge" } },
+            { provide: NIVO_KNOWLEDGE_OPTIONS, useValue: { folders: ["core", "chatbot"] } },
             { provide: LLM, useValue: llm },
             { provide: NivoKnowledgeService, useValue: nivo },
             { provide: NivoFolderClient, useValue: folder },
@@ -34,7 +34,7 @@ const build = async () => {
 }
 
 describe("NivoSeedService", () => {
-    it("publishes the files of the default folder and removes the items no file gives any more", async () => {
+    it("publishes the shipped files and removes the items no file gives any more", async () => {
         const { service, nivo, folder } = await build()
 
         await expect(service.seedFolder(undefined)).resolves.toEqual({
@@ -43,7 +43,7 @@ describe("NivoSeedService", () => {
             removed: 3,
             embedded: 0,
         })
-        expect(folder.read).toHaveBeenCalledWith("/knowledge")
+        expect(folder.read).toHaveBeenCalledWith(undefined)
         expect(nivo.upsert).toHaveBeenCalledWith([
             { module: "core", slug: "core-tone", title: "Tone", kind: "tone", body: "Warm and short." },
             { module: "chatbot", slug: "chatbot-care", title: "Care", kind: "playbook", body: "Answer fast." },
@@ -52,7 +52,7 @@ describe("NivoSeedService", () => {
     })
 
     it("embeds the items without a vector, batch after batch, until none is left", async () => {
-        const { service, llm, nivo } = await build()
+        const { service, llm, nivo, folder } = await build()
         nivo.unembedded
             .mockResolvedValueOnce([
                 { id: "n1", text: "Tone" },
@@ -65,6 +65,7 @@ describe("NivoSeedService", () => {
         })
 
         await expect(service.seedFolder("/other")).resolves.toMatchObject({ embedded: 2 })
+        expect(folder.read).toHaveBeenCalledWith("/other")
         expect(nivo.setVectors).toHaveBeenCalledWith({
             model: "embed-1",
             ids: ["n1", "n2"],

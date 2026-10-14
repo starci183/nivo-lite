@@ -40,7 +40,7 @@ const CARD_BASE: Omit<CardRecord, "kind" | "payload"> = {
     setupSessionId: "s-1",
     sourceMessageId: "m-1",
     gateKey: "scope",
-    targetKey: "fact:shop|opening_hours",
+    targetKey: "fact:shop|opening-hours",
     status: "proposed",
     result: null,
     decidedBy: null,
@@ -78,7 +78,7 @@ const factOf = builder<FactRecord>({
     subjectType: "business",
     subjectKey: "shop",
     subjectLabel: "Shop",
-    attribute: "opening_hours",
+    attribute: "opening-hours",
     attributeLabel: "Opening hours",
     value: "7 to 21",
     valueNumber: null,
@@ -252,7 +252,7 @@ describe("SetupCardsService", () => {
                     "s-1",
                     "m-1",
                     [
-                        { gate_key: "scope", kind: "fact", target_key: "fact:shop|opening_hours", payload: FACT },
+                        { gate_key: "scope", kind: "fact", target_key: "fact:shop|opening-hours", payload: FACT },
                         {
                             gate_key: "limits",
                             kind: "rule",

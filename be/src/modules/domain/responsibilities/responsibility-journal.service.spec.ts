@@ -206,13 +206,16 @@ describe("ResponsibilityJournalService", () => {
                 "Call",
                 null,
             ])
-            expect(events.record).toHaveBeenCalledWith({
-                workspaceId: "ws-1",
-                kind: "responsibility.assigned",
-                actor: "An",
-                summary: "An: Call",
-                leadId: "lead-1",
-            })
+            expect(events.record).toHaveBeenCalledWith(
+                {
+                    workspaceId: "ws-1",
+                    kind: "responsibility.assigned",
+                    actor: "An",
+                    summary: "An: Call",
+                    leadId: "lead-1",
+                },
+                em,
+            )
         })
 
         it("adds a responsibility owned by one of the workspace's agents", async () => {

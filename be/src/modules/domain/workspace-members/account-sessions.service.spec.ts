@@ -109,6 +109,7 @@ describe("AccountSessionsService", () => {
             await expect(service.overview("user-1")).resolves.toEqual({
                 name: "",
                 email: "",
+                avatarUrl: null,
                 providers: [],
                 sessions: [
                     {

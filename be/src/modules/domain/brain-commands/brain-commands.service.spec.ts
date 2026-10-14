@@ -17,32 +17,37 @@ import {
 
 const build = async (entityManager: MockEntityManager) => {
     const tx = fakeTransaction(entityManager)
+    const primary = mockEntityManager()
+    primary.query.mockImplementation(entityManager.query)
+    primary.transaction.mockImplementation(tx.em.transaction)
     const members = mock<WorkspaceMembersService>()
     const outbox = recordingQueueOutbox()
     const moduleRef = await Test.createTestingModule({
         providers: [
             BrainCommandsService,
-            { provide: PRIMARY_ENTITY_MANAGER, useValue: tx.em },
+            { provide: PRIMARY_ENTITY_MANAGER, useValue: primary },
             { provide: WorkspaceMembersService, useValue: members },
             { provide: QUEUE_OUTBOX, useValue: outbox },
         ],
     }).compile()
-    return { commands: moduleRef.get(BrainCommandsService), tx, members, outbox }
+    return { commands: moduleRef.get(BrainCommandsService), tx, primary, members, outbox }
 }
 
 describe("BrainCommandsService", () => {
     describe("request", () => {
         it("writes the command and its job in one transaction and answers its id", async () => {
-            const { commands, tx, members, outbox } = await build(
+            const { commands, tx, primary, members, outbox } = await build(
                 mockEntityManager({ query: [INSERT_COMMAND, [{ id: "cmd-1" }]] }),
             )
 
             await expect(commands.request("user-1", "ws-1", "reindex", { source: "s-1" })).resolves.toBe("cmd-1")
 
             expect(members.require).toHaveBeenCalledWith("user-1", "ws-1")
-            expect(tx.committedWrites).toEqual([
-                { method: "query", args: [INSERT_COMMAND, ["ws-1", "user-1", "reindex", '{"source":"s-1"}']] },
+            expect(tx.em.query.mock.calls).toEqual([
+                [INSERT_COMMAND, ["ws-1", "user-1", "reindex", '{"source":"s-1"}']],
             ])
+            expect(primary.query).not.toHaveBeenCalled()
+            expect(tx.outcomes).toEqual(["commit"])
             expect(outbox.jobsOf(KNOWLEDGE_QUEUE)).toEqual([
                 { queue: KNOWLEDGE_QUEUE, payload: { commandId: "cmd-1", workspaceId: "ws-1" } },
             ])

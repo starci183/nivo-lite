@@ -132,7 +132,10 @@ describe("OverviewService", () => {
             expect(em.query).toHaveBeenCalledWith(DASHBOARD_EXCEPTIONS, ["ws-1"])
         })
 
-        it("reads an empty answer as empty lists and the blank promo and governance", async () => {
+        it.each([
+            { label: "a missing promo field", promo: [{}] },
+            { label: "no promo row", promo: [] },
+        ])("reads empty answers with $label as empty lists and blank promo and governance", async ({ promo }) => {
             const em = mockEntityManager({
                 query: [
                     [DASHBOARD_RESPONSIBILITIES, []],
@@ -140,8 +143,8 @@ describe("OverviewService", () => {
                     [DASHBOARD_EVENTS, [{ rows: null }]],
                     [DASHBOARD_LEADS, [{ rows: [] }]],
                     [DASHBOARD_PENDING, []],
-                    [DASHBOARD_PROMO, [{}]],
-                    [DASHBOARD_GOVERNANCE, [{ governance: null }]],
+                    [DASHBOARD_PROMO, promo],
+                    [DASHBOARD_GOVERNANCE, []],
                     [DASHBOARD_EXCEPTIONS, []],
                 ],
             })
