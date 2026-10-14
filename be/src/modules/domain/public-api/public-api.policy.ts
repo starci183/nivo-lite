@@ -68,7 +68,7 @@ export const visibilityOf = (params: AcceptKnowledgeParams): "internal" | "publi
     params.visibility === "public" ? "public" : "internal"
 
 /** Trims a string value and reads a number as its digits, as the public API always did; anything else is left alone. */
-export const trimmed = (value: unknown): unknown => {
+export const trimmedField = (value: unknown): unknown => {
     if (typeof value === "string") return value.trim()
     return typeof value === "number" ? String(value) : value
 }

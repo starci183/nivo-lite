@@ -209,18 +209,19 @@ export class ShiftsPerformersService implements OnModuleInit {
 
     /** The owner refused a swap: the shift stays where it was and the person is told. */
     async rejectSwap(context: PerformContext): Promise<void> {
-        const { workspaceId } = context
-        const request = await this.data.swapRow(workspaceId, fieldText(context.fields, "swap_id"))
-        if (request === undefined || request.status !== "pending") return
+        const request = await this.openRequest(context, "swap_id", (workspaceId, id) =>
+            this.data.swapRow(workspaceId, id),
+        )
+        if (request === undefined) return
         await this.entityManager.query(DECIDE_SWAP, [
-            workspaceId,
+            context.workspaceId,
             request.id,
             "declined",
             context.actor,
             null,
             context.workItemId,
         ])
-        await this.notify.toStaff(workspaceId, {
+        await this.notify.toStaff(context.workspaceId, {
             staffId: request.from_staff_id ?? request.to_staff_id,
             kind: "swap",
             body: this.words.text("shifts.swapDeclined"),
@@ -275,23 +276,33 @@ export class ShiftsPerformersService implements OnModuleInit {
 
     /** The owner refused leave: the person keeps their shifts and is told. */
     async rejectLeave(context: PerformContext): Promise<void> {
-        const { workspaceId } = context
-        const request = await this.data.leaveRow(workspaceId, fieldText(context.fields, "leave_id"))
-        if (request === undefined || request.status !== "pending") return
+        const request = await this.openRequest(context, "leave_id", (workspaceId, id) =>
+            this.data.leaveRow(workspaceId, id),
+        )
+        if (request === undefined) return
+        const range = this.words.range(request.from_date, request.to_date)
         await this.entityManager.query(DECIDE_LEAVE, [
-            workspaceId,
+            context.workspaceId,
             request.id,
             "declined",
             context.actor,
             context.workItemId,
             "",
         ])
-        await this.notify.toStaff(workspaceId, {
+        await this.notify.toStaff(context.workspaceId, {
             staffId: request.staff_id,
             kind: "leave",
-            body: this.words.text("shifts.leaveDeclined", {
-                range: this.words.range(request.from_date, request.to_date),
-            }),
+            body: this.words.text("shifts.leaveDeclined", { range }),
         })
+    }
+
+    /** A pending request of one field, or nothing when it is missing or already settled. */
+    private async openRequest<T extends { readonly status: string }>(
+        context: PerformContext,
+        field: string,
+        load: (workspaceId: string, id: string) => Promise<T | undefined>,
+    ): Promise<T | undefined> {
+        const request = await load(context.workspaceId, fieldText(context.fields, field))
+        return request !== undefined && request.status === "pending" ? request : undefined
     }
 }

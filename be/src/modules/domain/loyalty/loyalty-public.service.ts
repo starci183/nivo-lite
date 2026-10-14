@@ -88,7 +88,7 @@ export class LoyaltyPublicService {
         )
         const shop = await this.programs.shopName(workspaceId)
         const text = this.messages.get("loyalty.otp.message", { shop, code: issued.code }, STORED_LOCALE)
-        const delivered = await this.delivery.deliver({ workspaceId, conversationId: target.id, text })
+        const delivered = await this.delivery.send({ workspaceId, conversationId: target.id, text })
         if (!delivered) await this.otps.discard(issued.id)
         return SAME_ANSWER
     }
