@@ -42,12 +42,12 @@ export class ReadinessService {
             if (rows[0]?.stats?.checkedAt == null) {
                 throw new LivenessError({ code: LivenessErrorCode.ReadinessUnavailable })
             }
+            cleanup.abort()
             return { status: "ready", checks: { database: "ok", jobs: "ok" } }
         } catch (cause) {
+            cleanup.abort()
             this.logger.error(ReadinessLogEvent.CheckFailed, cause)
             throw new LivenessError({ code: LivenessErrorCode.ReadinessUnavailable, cause })
-        } finally {
-            cleanup.abort()
         }
     }
 }
