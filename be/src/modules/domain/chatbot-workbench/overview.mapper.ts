@@ -27,7 +27,8 @@ const median = (values: ReadonlyArray<number>): number | null => {
     if (values.length === 0) return null
     const sorted = [...values].sort((a, b) => a - b)
     const mid = Math.floor(sorted.length / 2)
-    return sorted.length % 2 === 1 ? (sorted[mid] ?? null) : ((sorted[mid - 1] ?? 0) + (sorted[mid] ?? 0)) / 2
+    const middle = sorted.slice(Math.floor((sorted.length - 1) / 2), mid + 1)
+    return middle.reduce((sum, value) => sum + value, 0) / middle.length
 }
 
 const firstResponseMinutes = (lines: ReadonlyArray<MessageBriefRow>): number | null => {

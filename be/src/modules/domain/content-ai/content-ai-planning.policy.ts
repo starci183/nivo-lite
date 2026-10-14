@@ -111,38 +111,7 @@ export interface MonthRange {
     readonly to: string
 }
 
-interface FixedEventDate {
-    /** Plan month formatted YYYY-MM. */
-    readonly month: number
-    /** Day of the calendar month. */
-    readonly day: number
-}
-
-interface NthEventDate {
-    /** Plan month formatted YYYY-MM. */
-    readonly month: number
-    /** Weekday with Sunday = 0 for nth-weekday observances. */
-    readonly weekday: number
-    /** One-based slot number preserved in model responses. */
-    readonly n: number
-}
-
-interface CalendarEvent {
-    /** Stable calendar occasion key persisted on the post. */
-    readonly key: string
-    /** Human-readable name used in the planning instructions. */
-    readonly name: string
-    /** Permitted editorial angle without an implied promotion. */
-    readonly angle: string
-    /** Preparation window before the occasion, in days. */
-    readonly leadDays: number
-    /** Fixed Gregorian calendar date of the occasion. */
-    readonly fixed?: FixedEventDate
-    /** Nth-weekday calendar rule for the occasion. */
-    readonly nth?: NthEventDate
-    /** Known Gregorian dates of lunar occasions, indexed by year. */
-    readonly dates?: Readonly<Record<string, string>>
-}
+type CalendarEvent = (typeof CONTENT_AI_CALENDAR)[number]
 
 interface ChannelSlot {
     /** Social channel whose cadence is being scheduled. */
@@ -193,13 +162,13 @@ const dayNumber = (iso: string): number => {
 }
 
 const eventDate = (event: CalendarEvent, year: number): string | null => {
-    if (event.fixed !== undefined) return `${year}-${pad2(event.fixed.month)}-${pad2(event.fixed.day)}`
-    if (event.nth !== undefined) {
+    if ("fixed" in event) return `${year}-${pad2(event.fixed.month)}-${pad2(event.fixed.day)}`
+    if ("nth" in event) {
         const first = new Date(Date.UTC(year, event.nth.month - 1, 1)).getUTCDay()
         const day = 1 + ((event.nth.weekday - first + 7) % 7) + (event.nth.n - 1) * 7
         return `${year}-${pad2(event.nth.month)}-${pad2(day)}`
     }
-    return Object.entries(event.dates ?? {}).find(([name]) => name === String(year))?.[1] ?? null
+    return Object.entries(event.dates).find(([name]) => name === String(year))?.[1] ?? null
 }
 
 /** Month occasions plus the next month's occasions whose capped preparation window overlaps this month. */
