@@ -1,3 +1,5 @@
+"use client"
+
 import { useTranslations } from "next-intl"
 import { useCopyLeadLink } from "./useCopyLeadLink"
 import { useDraftExecution } from "./useDraftExecution"

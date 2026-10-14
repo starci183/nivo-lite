@@ -1,3 +1,5 @@
+"use client"
+
 import { useMemo, useState } from "react"
 import { ALL_OWNERS, groupRowsByOwner, narrowRows } from "@/modules/responsibilities"
 import type { DueKey, OwnerGroupView, ResponsibilityRowView, RowStatus, SortKey } from "@/modules/responsibilities"

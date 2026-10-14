@@ -1,3 +1,5 @@
+"use client"
+
 import { useMemo } from "react"
 import { useMember } from "@/hooks/member"
 import { contextOf } from "@/hooks/office"

@@ -1,3 +1,5 @@
+"use client"
+
 import useSWRMutation from "swr/mutation"
 import { mutateAddResponsibility } from "@/modules/api/graphql/mutations/mutation-add-responsibility"
 import type { MutateAddResponsibilityRequest } from "@/modules/api/graphql/mutations/mutation-add-responsibility"

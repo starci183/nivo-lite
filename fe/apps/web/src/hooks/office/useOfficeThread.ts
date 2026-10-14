@@ -1,3 +1,5 @@
+"use client"
+
 import { useCallback, useState } from "react"
 import useSWRMutation from "swr/mutation"
 import { queryOfficeMessages } from "@/modules/api/graphql/queries/query-office-messages"

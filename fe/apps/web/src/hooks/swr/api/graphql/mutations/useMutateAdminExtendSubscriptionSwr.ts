@@ -1,3 +1,5 @@
+"use client"
+
 import useSWRMutation from "swr/mutation"
 import { mutateAdminExtendSubscription } from "@/modules/api/graphql/mutations/mutation-admin-extend-subscription"
 import type { MutateAdminExtendSubscriptionRequest } from "@/modules/api/graphql/mutations/mutation-admin-extend-subscription"

@@ -1,3 +1,5 @@
+"use client"
+
 import useSWRMutation from "swr/mutation"
 import { mutateCancelOfficeCommand } from "@/modules/api/graphql/mutations/mutation-cancel-office-command"
 import type { MutateCancelOfficeCommandRequest } from "@/modules/api/graphql/mutations/mutation-cancel-office-command"

@@ -1,3 +1,5 @@
+"use client"
+
 import useSWRMutation from "swr/mutation"
 import { mutateApplyContentPillarPresets } from "@/modules/api/graphql/mutations/mutation-apply-content-pillar-presets"
 

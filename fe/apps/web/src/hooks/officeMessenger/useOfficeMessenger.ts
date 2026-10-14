@@ -1,3 +1,5 @@
+"use client"
+
 import { useCallback } from "react"
 import { isManager, useMember } from "@/hooks/member"
 import { useOfficeBoard, useOfficeDecisions, useOfficeSend, useOfficeThread, useOfficeWords } from "@/hooks/office"

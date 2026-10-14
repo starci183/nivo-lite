@@ -1,3 +1,5 @@
+"use client"
+
 import useSWRMutation from "swr/mutation"
 
 /** What the SWR mutation trigger hands the fetcher. */

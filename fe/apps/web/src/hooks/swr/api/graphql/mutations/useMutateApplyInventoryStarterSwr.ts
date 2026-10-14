@@ -1,3 +1,5 @@
+"use client"
+
 import useSWRMutation from "swr/mutation"
 import { mutateApplyInventoryStarter } from "@/modules/api/graphql/mutations/mutation-apply-inventory-starter"
 import type { MutateApplyInventoryStarterRequest } from "@/modules/api/graphql/mutations/mutation-apply-inventory-starter"

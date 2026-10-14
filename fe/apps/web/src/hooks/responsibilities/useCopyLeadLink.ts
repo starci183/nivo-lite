@@ -1,3 +1,5 @@
+"use client"
+
 import { useCallback, useEffect, useState } from "react"
 import { leadHref } from "@/modules/routes"
 import { useGraphQLWithToast } from "@/modules/toast"

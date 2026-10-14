@@ -1,3 +1,5 @@
+"use client"
+
 import useSWRMutation from "swr/mutation"
 import { mutateCheckInShifts } from "@/modules/api/graphql/mutations/mutation-check-in-shifts"
 import type { MutateCheckInShiftsRequest } from "@/modules/api/graphql/mutations/mutation-check-in-shifts"

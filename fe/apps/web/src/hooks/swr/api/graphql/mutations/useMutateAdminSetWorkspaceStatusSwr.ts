@@ -1,3 +1,5 @@
+"use client"
+
 import useSWRMutation from "swr/mutation"
 import { mutateAdminSetWorkspaceStatus } from "@/modules/api/graphql/mutations/mutation-admin-set-workspace-status"
 import type { MutateAdminSetWorkspaceStatusRequest } from "@/modules/api/graphql/mutations/mutation-admin-set-workspace-status"

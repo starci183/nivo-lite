@@ -1,3 +1,5 @@
+"use client"
+
 import useSWRMutation from "swr/mutation"
 import { mutateAddShiftsAvailability } from "@/modules/api/graphql/mutations/mutation-add-shifts-availability"
 import type { MutateAddShiftsAvailabilityRequest } from "@/modules/api/graphql/mutations/mutation-add-shifts-availability"
