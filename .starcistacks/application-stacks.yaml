@@ -1,0 +1,195 @@
+# NIVO (nivo-lite) application stack, schema starci/application-stacks@1.
+#
+# dev        docker-compose: the local Supabase (supabase CLI) with the be and the fe in containers.
+# production docker-swarm on ONE Ubuntu VPS (single-manager swarm: orchestration without manager failover). The Supabase Cloud project is the
+#            external datastore. Runbook: .starcistacks/production/README.md (the seven commands, the release flow, the cutover window).
+#
+# Facts the schema has no field for, stated here and in the production runbook so a reader of the manifest finds them:
+#   Secret custody   sealed members .starcistacks/production/secrets/<slug>.enc (sops, age recipient in .sops.yaml). The deploy decrypts them in
+#                    memory on the runner with SOPS_AGE_KEY (GitHub environment `production`) and pipes each value into
+#                    `docker secret create nivo-<key>-v<keyed hash>` on the manager; the rendered stack keeps {external: true, name: <runtimeName>}.
+#                    The logical name -> runtime name map is each release's release.json (/srv/nivo/releases/<digest>/).
+#   Owner actions    (1) DNS at Tino: A records for nivo.vn, www.nivo.vn and api.nivo.vn -> the VPS (nothing scripts DNS; receipt: nslookup).
+#                    (2) Approve `docker swarm init` on the VPS once (deploy/swarm/vps.sh prepare --init-swarm, NIVO_SWARM_INIT_APPROVED=1).
+#                    (3) Keep the age identity backed up; set the GitHub environment secret SOPS_AGE_KEY and the reviewers of `production`.
+#   Platform         Ubuntu Server 24.04 LTS amd64 (22.04 LTS amd64 is a candidate); Docker Engine from Docker's signed apt repository.
+#   Runbook          .starcistacks/production/README.md; cutover: be/docs/runbooks/cutover.md; VPS: be/docs/runbooks/vps-stack.md.
+schema: starci/application-stacks@1
+sources:
+  - repository: nivo-lite
+components:
+  supabase:
+    role: stateful
+    purpose: The local Supabase stack (supabase start) with Postgres, Auth, Storage, Studio. Started by the Supabase CLI, not by the compose file; production uses the Supabase Cloud project instead.
+    required: true
+  api:
+    role: service
+    image: ghcr.io/starci183/nivo-lite-api
+    compose: infra/swarm/stack.yaml
+    purpose: The Nest api (GraphQL, provider webhooks, OAuth callbacks, the pgmq workers and schedulers, the job alert monitor). Liveness /healthz, readiness /readyz.
+    required: true
+  web:
+    role: service
+    image: ghcr.io/starci183/nivo-lite-web
+    compose: infra/swarm/stack.yaml
+    purpose: The Next.js app (standalone output); no runtime secret, its public values are build arguments. Liveness /health/live.
+    required: true
+  ingress:
+    role: ingress
+    image: traefik:v3.6@sha256:31267173a15b4944e797a76ffd9c419707c8d8b32fe5b610f80cd0cfa05f372d
+    compose: infra/swarm/stack.yaml
+    purpose: Traefik (declared ingress; owner ruling 2026-10-14 keeps it, it is live and holds the persisted certificates), the only service that publishes ports (80/443, host mode). TLS for nivo.vn, www.nivo.vn and api.nivo.vn; routes in infra/swarm/edge/routes.yml.
+    required: true
+  openclaw:
+    role: stateful
+    image: ghcr.io/openclaw/openclaw:2026.7.1@sha256:6a31d44b2944e7adcd2b582bf6fb463111264ebca97a0201795b799135bd102c
+    compose: infra/swarm/stack.yaml
+    purpose: The OpenClaw agent gateway. Private network only; the api reaches it by service DNS through the loopback relay of the entrypoint wrapper.
+    required: true
+  n8n:
+    role: stateful
+    image: docker.n8n.io/n8nio/n8n:1.64.3@sha256:4d9116228d426ce24c442a744e9c11ee7c1187713f93f21dd5a34a12584708c1
+    compose: infra/swarm/stack.yaml
+    purpose: n8n automation editor and webhook runner; private (operator tunnel only), reached by the api as n8n:5678. Its database is SQLite (DB_TYPE=sqlite) on the persisted named volume nivo-engine_n8n-data; no self-hosted Postgres (owner ruling 2026-10-14).
+    required: true
+environments:
+  dev:
+    status: supported
+    runtime: docker-compose
+    composeFiles:
+      - compose.yaml
+    components:
+      supabase:
+        port: 54321
+      api:
+        port: 8787
+      web:
+        port: 3000
+    runbook: README.md
+    # Local development holds no sealed secret: the local Supabase prints its own demo credentials (`supabase status -o env`), which
+    # `README.md` prepare writes to the untracked .starcistacks/dev/api.dev.env.
+    secrets: []
+  production:
+    status: supported
+    runtime: docker-swarm
+    composeFiles:
+      - infra/swarm/stack.yaml
+    components:
+      api:
+        replicas: 1
+        port: 8787
+      web:
+        replicas: 1
+        port: 3000
+      ingress:
+        replicas: 1
+        port: 443
+        httpPort: 80
+      openclaw:
+        replicas: 1
+        port: 18790
+      n8n:
+        replicas: 1
+        port: 5678
+    runbook: README.md
+    secrets:
+      - name: api
+        where: secrets/api
+        recipientPolicy: SOPS/age to the project recipient in .sops.yaml (creation rule for .starcistacks/*/secrets/*.enc); the same recipient seals every member. Each key becomes one Swarm secret named nivo-<key>-v<keyed hash of the value>; rotation seals a new value, which creates a new name, updates the grant, waits for convergence, then removes the old name.
+        keyCustody: The age identity is SOPS_AGE_KEY in the runtime .claude/secret.env on the owner machine (backed up by the owner; docs/host-secrets.md) and the GitHub environment secret SOPS_AGE_KEY of `production`. The VPS never holds it.
+      - name: auth
+        where: secrets/auth
+        recipientPolicy: SOPS/age to the project recipient in .sops.yaml; granted to the api like the api member.
+        keyCustody: The age identity is SOPS_AGE_KEY in the runtime .claude/secret.env on the owner machine and the GitHub environment secret SOPS_AGE_KEY of `production`.
+      - name: stack
+        where: secrets/stack
+        recipientPolicy: SOPS/age to the project recipient in .sops.yaml; granted to openclaw and n8n (secrets) and read as configuration (OPENCLAW_MODEL, N8N_ALLOWED_HOSTS, job alert limits).
+        keyCustody: The age identity is SOPS_AGE_KEY in the runtime .claude/secret.env on the owner machine and the GitHub environment secret SOPS_AGE_KEY of `production`.
+      - name: web
+        where: secrets/web
+        recipientPolicy: SOPS/age to the project recipient in .sops.yaml; holds the two public NEXT_PUBLIC_SUPABASE_* build values only (no runtime grant).
+        keyCustody: The age identity is SOPS_AGE_KEY in the runtime .claude/secret.env on the owner machine and the GitHub environment secret SOPS_AGE_KEY of `production`.
+      - name: app-be-db
+        where: secrets/app-be-db
+        recipientPolicy: SOPS/age to the project recipient in .sops.yaml; used once by the cutover owner scripts to set the app_be role password and build PRIMARY_DB_URL.
+        keyCustody: The age identity is SOPS_AGE_KEY in the runtime .claude/secret.env on the owner machine; never sent to GitHub or the VPS.
+      - name: ops
+        where: secrets/ops
+        recipientPolicy: SOPS/age to the project recipient in .sops.yaml; operator and cutover script settings, never granted to a service.
+        keyCustody: The age identity is SOPS_AGE_KEY in the runtime .claude/secret.env on the owner machine.
+      - name: test-accounts
+        where: secrets/test-accounts
+        recipientPolicy: SOPS/age to the project recipient in .sops.yaml; smoke-test accounts, never granted to a service.
+        keyCustody: The age identity is SOPS_AGE_KEY in the runtime .claude/secret.env on the owner machine.
+      - name: ci-ssh-key
+        where: secrets/ci-ssh-key
+        recipientPolicy: SOPS/age to the project recipient in .sops.yaml; JSON envelope of the CI deploy key material, set as the GitHub environment secret VPS_SSH_KEY.
+        keyCustody: The age identity is SOPS_AGE_KEY in the runtime .claude/secret.env on the owner machine.
+      - name: vps-ssh-key
+        where: secrets/vps-ssh-key
+        recipientPolicy: SOPS/age to the project recipient in .sops.yaml; JSON envelope of the operator SSH key for the VPS.
+        keyCustody: The age identity is SOPS_AGE_KEY in the runtime .claude/secret.env on the owner machine.
+      - name: vps-known-hosts
+        where: secrets/vps-known-hosts
+        recipientPolicy: SOPS/age to the project recipient in .sops.yaml; the pinned SSH host keys of the VPS (set as the GitHub environment secret VPS_KNOWN_HOSTS); first contact was owner-verified.
+        keyCustody: The age identity is SOPS_AGE_KEY in the runtime .claude/secret.env on the owner machine.
+k8s:
+  status: deferred
+  reason: Whole-package Kubernetes deployment is deferred; production is a single-manager Docker Swarm on one VPS, dev is Docker Compose.
+# The services block is NOT active yet. CI calls sonar and ghcr, and the gate (scripts/gates/starcistacks.mjs) refuses a sonar entry whose admin
+# credential is not in custody (the host sonar admin token .enc is not on this machine), so activating it is the planned follow-up
+# workspace.manage mode stacks: a Kernel seals/verifies the sonar custody, then uncomment the block below as is (container-registry is complete).
+# services:
+#   container-registry:
+#     provider: ghcr
+#     mode: hosted
+#     purpose: The api and web images of every release, pushed by the stack-deploy workflow; the Swarm deploy pulls them by digest with --with-registry-auth.
+#     host:
+#       public: https://ghcr.io
+#     auth: github-token
+#     projects:
+#       - {repository: nivo-lite, key: ghcr.io/starci183/nivo-lite-api}
+#       - {repository: nivo-lite, key: ghcr.io/starci183/nivo-lite-web}
+#     ci:
+#       workflow: .github/workflows/stack-deploy.yml
+#       wiring: required
+#       permissions: ['packages: write']
+#       secrets: []
+#       vars: []
+#       provisioning: >-
+#         docker/login-action with the automatic GITHUB_TOKEN of the workflow; nothing is stored. The packages are private. The deploy job passes the same short-lived
+#         token to the Swarm manager with docker stack deploy --with-registry-auth (packages: write on the build, packages: read on a rollback).
+#     ownerAction: none
+#   sonar:
+#     provider: sonarqube
+#     mode: local
+#     purpose: Static analysis and the quality gate for every commit an implement op proves; CI scans on release tags when the project token exists.
+#     host:
+#       local: http://localhost:9010
+#       public: https://sonar.starci.org
+#     stack:
+#       owner: host
+#       root: .claude/ext/sonar
+#       environment: dev
+#       compose: compose.yaml
+#       container: starci-sonarqube
+#       publishedBy: cloudflared.yaml
+#     auth: token
+#     qualityGate: starci-quality
+#     projects:
+#       - {repository: nivo-lite, key: nivo-lite}
+#     credentials:
+#       - id: admin
+#         purpose: Project creation and per-project token minting by scripts/gates/sonar-local.mjs (ensure-project --with-token); never handed to CI.
+#         env: SONAR_TOKEN
+#         custody: {repository: starci-academy-backend, path: .claude/ext/sonar/secrets/sonarqube-admin-token.key}
+#     ci:
+#       workflow: .github/workflows/ci.yml
+#       wiring: optional-follow-up
+#       secrets: []
+#       vars:
+#         - {name: SONAR_HOST_URL, value: https://sonar.starci.org}
+#       provisioning: >-
+#         ci.yml scans on release tags only when the repository secret SONAR_TOKEN exists; a Kernel mints the nivo-lite project token with the admin
+#         credential (sonar-local.mjs ensure-project --with-token) and sets SONAR_TOKEN and the variable SONAR_HOST_URL from custody; never the owner.
+#     ownerAction: none

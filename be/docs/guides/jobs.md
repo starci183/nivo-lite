@@ -14,7 +14,7 @@ The design is the StarCi queue pattern: the job commits with the business row, w
 | The job itself: processor, steps under the claimed token, transport to the queue     | `be/src/features/jobs/<job>/{steps,transport/queue}`                                                                                           |
 | Which queues run and which schedulers are registered                                 | `be/apps/api/src/api.options.ts` (`API_JOB_QUEUES`, `API_SCHEDULERS`)                                                                          |
 | The SQL: `pgmq.create` per queue, `job_*` functions, `job_outbox`, `job_slots`       | `supabase/migrations/20261013142504_lite-baseline.sql`                                                                                         |
-| Operator commands                                                                    | `be/src/features/cli/jobs` (`cli jobs stats\|failed\|open\|retry\|retry-failed\|watchdog`) and `deploy/stack/jobs.sh`                          |
+| Operator commands                                                                    | `be/src/features/cli/jobs` (`cli jobs stats\|failed\|open\|retry\|retry-failed\|watchdog`) and `deploy/swarm/jobs.sh`                          |
 
 ## Architecture
 
@@ -103,7 +103,7 @@ A job can be delivered more than once (a visibility timeout ran out, a lost ack,
 
 ## Operations
 
-Health: `GET /healthz` (liveness, never waits on Supabase) and `GET /readyz` (the database answered and `job_stats` worked; the deploy gates on it). The watchdog (`deploy/stack/watchdog.sh`) alerts on `failed24h > JOBS_FAILED_ALERT` and `oldestQueuedAgeSeconds > JOBS_STALE_SECONDS`.
+Health: `GET /healthz` (liveness, never waits on Supabase) and `GET /readyz` (readiness: the database answers within a bounded time; the ingress and the deploy gate on it, a restart never does). The api raises its own alerts (an in-process monitor, no host cron): `failed24h > JOBS_ALERT_FAILED_MAX` and `oldestQueuedAgeSeconds > JOBS_ALERT_STALE_SECONDS` become a `job-ops.alert.*` log event and an `app_errors` row.
 
 SQL (Supabase SQL editor or `psql`):
 
@@ -116,7 +116,7 @@ select public.job_requeue('<outbox id>');           -- send a failed job again
 select knowledge_retry_source('<sourceId>');        -- or retry a document the owner's way
 ```
 
-On the VPS, `deploy/stack/jobs.sh` wraps `cli jobs ...` inside the api container (`stats`, `failed`, `open`, `retry`, `retry-failed`); see `be/docs/runbooks/jobs-operations.md`.
+On the VPS, `deploy/swarm/jobs.sh` resolves the api task of the Swarm stack and wraps `cli jobs ...` inside the api container (`stats`, `failed`, `open`, `retry`, `retry-failed`); see `be/docs/runbooks/jobs-operations.md`.
 
 Settings (api environment, all optional):
 
