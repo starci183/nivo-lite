@@ -1,19 +1,20 @@
 import { Injectable } from "@nestjs/common"
 import { LeadFlowContinuationService } from "@modules/domain/lead-flows"
-import { InjectJobClaims } from "@modules/platform/jobs"
-import type { ClaimedJob, JobClaims, JobStep } from "@modules/platform/jobs"
+import { AdvancingJobStepPolicy, InjectJobClaims } from "@modules/platform/jobs"
+import type { JobClaims, JobStep } from "@modules/platform/jobs"
 
 @Injectable()
 /** The fenced step of one lead generation continuation: the next command of the flow, then the steps its input queued. */
-export class ContinueLeadGenStep implements JobStep {
+export class ContinueLeadGenStep extends AdvancingJobStepPolicy implements JobStep {
     constructor(
         private readonly continuation: LeadFlowContinuationService,
-        @InjectJobClaims() private readonly claims: JobClaims,
-    ) {}
+        @InjectJobClaims() claims: JobClaims,
+    ) {
+        super(claims, "continue")
+    }
 
-    /** Proves the worker fence before any effect; every command it sends is idempotent by its dedupe key. */
-    async run(job: ClaimedJob): Promise<void> {
-        await this.claims.advance({ jobId: job.jobId, expectedFencingToken: job.fencingToken, step: "continue" })
-        await this.continuation.continue(job.payload)
+    /** Continues the flow after the claim is checked; every command is idempotent by its dedupe key. */
+    protected perform(payload: object): Promise<unknown> {
+        return this.continuation.continue(payload)
     }
 }
