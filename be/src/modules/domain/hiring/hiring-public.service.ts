@@ -107,7 +107,7 @@ export class HiringPublicService {
         const dot = request.fileName.lastIndexOf(".")
         const extension = dot < 0 ? "" : request.fileName.slice(dot + 1).toLowerCase()
         if (!CV_EXTENSIONS.includes(extension)) throw new HiringError({ code: HiringErrorCode.PublicNotFound })
-        const name = slugify(dot < 0 ? request.fileName : request.fileName.slice(0, dot), CV_NAME_MAX) || "cv"
+        const name = slugify(request.fileName.slice(0, dot), CV_NAME_MAX) || "cv"
         const path = `${workspaceId}/${job.id}/${await this.data.newToken()}/${name}.${extension}`
         const token = await this.storage.signedUpload(path)
         if (token === null) throw new HiringError({ code: HiringErrorCode.PublicNotFound })
