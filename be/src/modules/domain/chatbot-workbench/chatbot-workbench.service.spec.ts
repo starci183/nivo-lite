@@ -448,5 +448,24 @@ describe("ChatbotWorkbenchService", () => {
             await expect(service.gaps("u-1", "ws-1")).rejects.toBe(refused)
             expect(knowledgeGaps.list).not.toHaveBeenCalled()
         })
+
+        it("preserves the gaps when every active agent belongs to a retired module", async () => {
+            const em = mockEntityManager({
+                query: [
+                    LIST_CHATBOT_LENSES,
+                    [
+                        { module: "retired", name: "Old" },
+                        { module: "retired", name: "Old duplicate" },
+                    ],
+                ],
+            })
+            const { service, members, knowledgeGaps } = await build(em)
+
+            await expect(service.gaps("u-1", "ws-1")).resolves.toEqual({ gaps: [GAP], lenses: [] })
+
+            expect(members.require.mock.calls).toEqual([["u-1", "ws-1", ["owner", "manager"]]])
+            expect(knowledgeGaps.list.mock.calls).toEqual([["ws-1", ["open"], 50]])
+            expect(em.query.mock.calls).toEqual([[LIST_CHATBOT_LENSES, ["ws-1"]]])
+        })
     })
 })

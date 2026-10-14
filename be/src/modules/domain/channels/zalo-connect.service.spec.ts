@@ -345,6 +345,25 @@ describe("ZaloConnectService", () => {
             expect(connections.markFailing).not.toHaveBeenCalled()
         })
 
+        it.each([
+            ["c-plain", "c-plain"],
+            ["c-1.nonce.with.dots", "c-1"],
+            [".nonce", ""],
+        ])("uses the state prefix of %s when recording a refusal", async (state, connectionId) => {
+            const { service, credentials, connections, logger } = await build()
+            const cause = new ChannelsError({ code: ChannelsErrorCode.ZaloStateRejected })
+            credentials.completeAuthorization.mockRejectedValue(cause)
+
+            await expect(service.finishAuthorization(actor, returned(state))).rejects.toBe(cause)
+
+            expect(logger.error.mock.calls).toEqual([
+                [ChannelsLogEvent.ZaloAuthorizationRefused, cause, { connectionId }],
+            ])
+            expect(connections.find.mock.calls).toEqual([["ws-1", connectionId]])
+            expect(connections.markFailing).not.toHaveBeenCalled()
+            expect(connections.get).not.toHaveBeenCalled()
+        })
+
         it.each([new Error("storage down"), new ZaloError({ code: ZaloErrorCode.Unavailable })])(
             "rethrows a failure that is not a refused authorization",
             async (cause) => {

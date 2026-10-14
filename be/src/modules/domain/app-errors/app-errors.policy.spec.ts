@@ -22,6 +22,12 @@ describe("messageOf", () => {
         expect(messageOf("plain")).toBe("plain")
         expect(messageOf({ code: 7, password: "p" })).toBe('{"code":7,"password":"[redacted]"}')
     })
+
+    it("falls back to text when redaction has no JSON representation", () => {
+        expect(messageOf(undefined)).toBe("undefined")
+        expect(messageOf(Symbol("failed"))).toBe("Symbol(failed)")
+        expect(messageOf(null)).toBe("null")
+    })
 })
 
 describe("uuidOrNull", () => {

@@ -101,7 +101,7 @@ export class ZaloConnectService {
             .completeAuthorization(actor.workspaceId, input)
             .catch(async (cause: unknown) => {
                 if (cause instanceof ChannelsError || isZaloRefusal(cause)) {
-                    const failing = input.state.split(".")[0] ?? ""
+                    const failing = input.state.split(".", 1).join("")
                     this.logger.error(ChannelsLogEvent.ZaloAuthorizationRefused, cause, { connectionId: failing })
                     const own = await this.connections.find(actor.workspaceId, failing)
                     if (own !== null) await this.connections.markFailing(own.id, ZALO_AUTHORIZATION_FAILED_REASON)

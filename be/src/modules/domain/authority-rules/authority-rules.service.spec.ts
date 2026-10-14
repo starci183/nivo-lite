@@ -6,7 +6,13 @@ import { AuthorityRulesService } from "./authority-rules.service"
 import type { RuleChange } from "./authority-rules.contracts"
 import { AuthorityRulesErrorCode } from "./errors/authority-rules.error"
 import type { OperatingModeRow, RuleRecordRow, RuleRow } from "./persistence/authority-rules.rows"
-import { FIND_OPERATING_MODE, FIND_RULE, LIST_RULES, UPSERT_RULE } from "./persistence/authority-rules.sql"
+import {
+    FIND_OPERATING_MODE,
+    FIND_RULE,
+    LIST_RULES,
+    SEED_DEFAULT_RULES,
+    UPSERT_RULE,
+} from "./persistence/authority-rules.sql"
 
 const scope = { workspaceId: "ws-1" }
 
@@ -134,6 +140,25 @@ describe("AuthorityRulesService", () => {
                 code: AuthorityRulesErrorCode.UnknownAction,
                 params: { action: "send_follow_up" },
             })
+        })
+    })
+
+    describe("seedDefaults", () => {
+        it("passes the module defaults to the database as JSON without changing their fields", async () => {
+            const rules = [
+                { action: "send_follow_up", mode: "ask" as const, limit_vnd: 1000, required_fields: ["contact"] },
+                { action: "reply", mode: "auto" as const, limit_vnd: null, required_fields: [] },
+            ]
+            const em = mockEntityManager({ query: [SEED_DEFAULT_RULES, []] })
+            const service = await build(em)
+
+            await expect(service.seedDefaults("ws-1", "sales", rules)).resolves.toBeUndefined()
+            expect(em.query).toHaveBeenCalledTimes(1)
+            expect(em.query).toHaveBeenCalledWith(SEED_DEFAULT_RULES, [
+                "ws-1",
+                "sales",
+                '[{"action":"send_follow_up","mode":"ask","limit_vnd":1000,"required_fields":["contact"]},{"action":"reply","mode":"auto","limit_vnd":null,"required_fields":[]}]',
+            ])
         })
     })
 })

@@ -114,6 +114,36 @@ describe("EntitlementsService", () => {
     })
 
     describe("requireRoomForMember", () => {
+        it("does not impose membership limits when the workspace has no billing row", async () => {
+            const em = mockEntityManager()
+            const { entitlements, billing } = await build(em)
+            billing.findWorkspaceBilling.mockResolvedValue(null)
+
+            await expect(entitlements.requireRoomForMember("ws-1")).resolves.toBeUndefined()
+
+            expect(billing.findWorkspaceBilling).toHaveBeenCalledWith("ws-1")
+            expect(billing.findPlan).not.toHaveBeenCalled()
+            expect(em.query).not.toHaveBeenCalled()
+        })
+
+        it("refuses membership on an individual plan before counting members", async () => {
+            const em = mockEntityManager()
+            const { entitlements } = await build(em, planOf({ individual: true }))
+
+            await expect(entitlements.requireRoomForMember("ws-1")).rejects.toMatchObject({
+                code: BillingErrorCode.PlanIndividualOnly,
+            })
+            expect(em.query).not.toHaveBeenCalled()
+        })
+
+        it("does not limit members on a plan without tracked seats", async () => {
+            const em = mockEntityManager()
+            const { entitlements } = await build(em, planOf(), workspaceOf({ seatCount: null }))
+
+            await expect(entitlements.requireRoomForMember("ws-1")).resolves.toBeUndefined()
+            expect(em.query).not.toHaveBeenCalled()
+        })
+
         it("refuses a new member once the members fill the paid seats", async () => {
             const { entitlements } = await build(
                 mockEntityManager({ query: [SELECT_ACTIVE_MEMBER_COUNT, [{ count: 3 }]] }),
@@ -177,5 +207,48 @@ describe("EntitlementsService", () => {
 
             await expect(entitlements.storageOf("user-1", "ws-1")).resolves.toEqual({ usedBytes: 0, quotaBytes: null })
         })
+
+        it("does not query storage when membership is refused", async () => {
+            const em = mockEntityManager()
+            const { entitlements, billing } = await build(em)
+            const failure = { code: BillingErrorCode.NotMember }
+            billing.requireMember.mockRejectedValue(failure)
+
+            await expect(entitlements.storageOf("user-1", "ws-1")).rejects.toBe(failure)
+            expect(billing.requireMember).toHaveBeenCalledWith("user-1", "ws-1")
+            expect(em.query).not.toHaveBeenCalled()
+        })
+    })
+
+    it("treats absent member and invitation counts as zero", async () => {
+        const em = mockEntityManager({
+            query: [
+                [SELECT_ACTIVE_MEMBER_COUNT, []],
+                [SELECT_PENDING_INVITE_COUNT, []],
+            ],
+        })
+        const { entitlements } = await build(em)
+
+        await expect(entitlements.requireRoomForInvite("ws-1")).resolves.toBeUndefined()
+        expect(em.query).toHaveBeenCalledWith(SELECT_ACTIVE_MEMBER_COUNT, ["ws-1"])
+        expect(em.query).toHaveBeenCalledWith(SELECT_PENDING_INVITE_COUNT, ["ws-1", NOW])
+    })
+
+    it("does not limit invitations when a workspace stops tracking paid seats", async () => {
+        const em = mockEntityManager()
+        const { entitlements, billing } = await build(em)
+        billing.findWorkspaceBilling.mockResolvedValueOnce(workspaceOf()).mockResolvedValueOnce(null)
+
+        await expect(entitlements.requireRoomForInvite("ws-1")).resolves.toBeUndefined()
+        expect(billing.findWorkspaceBilling).toHaveBeenCalledTimes(2)
+        expect(em.query).not.toHaveBeenCalled()
+    })
+
+    it("accepts an upload that exactly fills the quota", async () => {
+        const em = mockEntityManager({ query: [SELECT_STORAGE_BYTES, [{ bytes: 5 * GB - 10 }]] })
+        const { entitlements } = await build(em)
+
+        await expect(entitlements.requireStorageFor("ws-1", 10)).resolves.toBeUndefined()
+        expect(em.query).toHaveBeenCalledWith(SELECT_STORAGE_BYTES, ["ws-1"])
     })
 })
