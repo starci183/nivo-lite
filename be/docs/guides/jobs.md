@@ -1,155 +1,109 @@
 # Background jobs
 
-> Status at the lite cutover. This guide records the queue design as it ran in production on the engine (file names below are the engine's).
-> The api implements the same semantics on the lite ports: `be/src/modules/platform/queue` (outbox, relay, pgmq transport, worker) and
-> `be/src/modules/platform/jobs` (claim and fencing), with the knowledge jobs under `be/src/features/jobs`. When a name here and the code disagree, the code wins; the
-> lanes that move a piece (queue, knowledge) update its rows. The engine is retired by `be/docs/runbooks/cutover.md`.
+Heavy work (reading a document, chunking, embedding, reading facts, re-embedding, rendering a video, running an automation tick) does not run inside a web request. The request writes a row and returns; a worker does the work and the UI follows the row. Owner rulings (2026-10-12): "fire, don't sit and wait", built the standard way even for lite; and a lite app has NO self-hosted infra (monorepo + Supabase only), so the transport is **Supabase Queues (pgmq)** in the project's own Postgres, not Redis/BullMQ.
 
-Heavy work (reading a document, chunking, embedding, reading facts, re-embedding) does not run inside a web request. The request writes a
-row and returns; a worker does the work and the UI follows the row through Supabase realtime. Owner rulings (2026-10-12): "fire, don't
-sit and wait", built the standard way even for lite; and a lite app has NO self-hosted infra (monorepo + Supabase only), so the transport is
-**Supabase Queues (pgmq)** in the project's own Postgres, not Redis/BullMQ.
+The design is the StarCi queue pattern: the job commits with the business row, workers with a retry policy, idempotent handlers and typed job contracts. Only the transport is pgmq. When this page and the code disagree, the code wins.
 
-The design is the StarCi queue pattern (knowledge `patterns/be/queues.yaml`): the job commits with the business row, workers with a retry
-policy, idempotent handlers and typed job contracts. Only the transport is pgmq.
+## Where things live (be)
+
+| Piece                                                                                | Path                                                                                                                                           |
+| ------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| The queue capability: outbox, pgmq transport, worker loops, schedulers, status       | `be/src/modules/platform/queue` (`QueueOutbox`, `QueueWorkerRegistry`, `PgmqQueueTransportClient`, `QueueWorkerService`, `QueueStatusService`) |
+| The fenced claim of a running job (a fencing token per claim) and the processor base | `be/src/modules/platform/jobs` (`FencedProcessor`, `JobClaimService`, `JobFenceService`, `JobRunnerService`; table `public.jobs`)              |
+| Queue contracts: job names, payloads, dedupe keys, the typed producer, schedulers    | `be/src/modules/queues/<queue>/` (27 queues; `modules/queues/knowledge` is the reference)                                                      |
+| The job itself: processor, steps under the claimed token, transport to the queue     | `be/src/features/jobs/<job>/{steps,transport/queue}`                                                                                           |
+| Which queues run and which schedulers are registered                                 | `be/apps/api/src/api.options.ts` (`API_JOB_QUEUES`, `API_SCHEDULERS`)                                                                          |
+| The SQL: `pgmq.create` per queue, `job_*` functions, `job_outbox`, `job_slots`       | `supabase/migrations/20261013142504_lite-baseline.sql`                                                                                         |
+| Operator commands                                                                    | `be/src/features/cli/jobs` (`cli jobs stats\|failed\|open\|retry\|retry-failed\|watchdog`) and `deploy/stack/jobs.sh`                          |
 
 ## Architecture
 
 ```
- browser ──upload──▶ Storage (knowledge-uploads, private)
-    │
-    └─ RPC knowledge_enqueue_source ───────┐   ONE transaction:
-                                           ├─ knowledge_sources row (status queued)
-                                           ├─ job_outbox row (dedupe_key knowledge.index:<sourceId>, state queued)
-                                           └─ pgmq.send('knowledge', {name, payload, dedupe, outbox_id})
-                                                    │
- engine (Nest) ─────────────────────────────────┼────────────────────────────────────────────
-   JobRegistry poll loop (every 1.5 s, at once after a job ends)
-        │  job_read('knowledge', vt 60 s, free slots, ws limit 2)   pgmq.read skips locked rows; a workspace already running 2 jobs is
-        │                                                         deferred 3-4 s (job_slots), not counted as an attempt
+ request ──► application handler ───────┐   ONE transaction (QueueOutbox.write(tx, queue, payload, { job, dedupeKey })):
+                                        ├─ the business row (for example knowledge_sources, status queued)
+                                        ├─ job_outbox row (dedupe_key knowledge.index:<sourceId>, state queued)
+                                        └─ pgmq.send('knowledge', {name, payload, dedupe, outbox_id})
+                                                 │
+ api (Nest) ─────────────────────────────┼──────────────────────────────────────────────────
+   one worker loop per registered queue (QUEUE_POLL_INTERVAL, at once after a job ends)
+        │  job_read(queue, vt, free slots, ws limit)   pgmq.read skips locked rows; a workspace already running
+        │                                              QUEUE_WORKSPACE_CONCURRENCY jobs is deferred (job_slots), not counted as an attempt
         ▼
-   handler by job name (features/knowledge-jobs): knowledge.index → (JobProducer) knowledge.facts, knowledge.reembed follow-ups
-        │  job_touch every 20 s (extends the visibility timeout and the slot lease)
+   FencedProcessor of the job name (features/jobs/<job>): steps advance under the claimed fence token; chained jobs through the typed producer
+        │  job_touch every third of the visibility timeout (extends the timeout and the slot lease)
         │  success → job_ack     retryable error → job_fail (5 s, 10 s, 20 s)     final / unrecoverable → onFailed + job_archive
-        │  writes knowledge_sources.status / progress / error
         ▼
- Supabase realtime on knowledge_sources ──▶ Badge per row, "Processing N documents" + Progress on /brain and /knowledge
+ the business row carries the status / progress / error the UI shows
 ```
 
-Why no relay: `job_enqueue` (and the knowledge RPCs that call it) writes the outbox row and sends the pgmq message in the same transaction
-as the business row. A rolled-back insert never starts work; a committed source always has its message. Supabase JS cannot run a
-multi-statement transaction, so every "row + job" pair is one SQL function (RPC).
+Why no relay: `job_enqueue` writes the outbox row and sends the pgmq message in the same transaction as the business row. A rolled-back insert never starts work; a committed row always has its message. Why `job_outbox` stays: pgmq has no dedupe, and chained jobs need one; the same row is the audit trail (`state` queued → running → done | failed, `attempts`, `last_error`) that operators and the watchdog read with plain SQL.
 
-Why `job_outbox` stays: pgmq has no dedupe, and the chained jobs need one (a re-run of `knowledge.index` must not send a second
-`knowledge.facts`). The unique `dedupe_key` gives that; the same row is the audit trail (`state` queued → running → done | failed,
-`attempts`, `last_error`) that operators and the watchdog read with plain SQL. A dedupe column on `knowledge_sources` would not cover the
-chained jobs, so it is not simpler.
-
-Where things live:
-
-| Piece                                              | File                                                                                   |
-| -------------------------------------------------- | -------------------------------------------------------------------------------------- |
-| Outbox table, knowledge RPCs, bucket, realtime     | `supabase/migrations/20261012102200_job-outbox.sql`                                    |
-| pgmq queue, job RPCs, slots, enqueue without relay | `supabase/migrations/20261012102300_pgmq-transport.sql`                                |
-| Job contracts (the source)                         | `src/lib/jobs/contracts.ts`                                                            |
-| Job contracts (engine copy, GENERATED)             | `engine/src/platform/pgmq/contracts.ts` (`node engine/dev/sync-shared.mjs`)            |
-| Consumer, policy, producer                         | `engine/src/platform/pgmq/` (`JobsModule`: `JobRegistry`, `JobProducer`, `JobHandler`) |
-| Knowledge handlers                                 | `engine/src/features/knowledge-jobs/`                                                  |
-
-The old `engine_jobs` queue (`engine/src/platform/queue`) is separate and still carries the OpenClaw work (chat turns, generate, agent
-sync, video render). It is not replaced. `ENGINE_WORKER_ENABLED=0` turns that worker off (for local runs against real data).
+Recurring ticks (automation, shifts, agents sync, decisions drain, content tick, connection health, zalo refresh, data sync) are `QueueSchedulerDefinition`s in `API_SCHEDULERS`: at boot the api upserts each as a pg_cron job by id (`SELECT pgmq.send(...)`), so a pool of replicas fires each tick once per interval. Four other pg_cron jobs belong to the baseline (`ai-generations-prune`, `hiring-apply-hits-prune`, `hiring-tick`, `video-renders-reap`). The migration `20261020110000_drop-engine-schema.sql` removed the legacy HTTP ticks of the engine.
 
 ## Database contract
 
-`job_outbox` (RLS on, service role only): `id`, `workspace_id`, `queue`, `name`, `payload jsonb`, `dedupe_key text unique`, `msg_id`
-(the pgmq message), `state` (`queued` | `running` | `done` | `failed`), `attempts` (real starts), `created_at`, `sent_at`, `started_at`,
-`finished_at`, `last_error`.
+`job_outbox` (RLS on, closed to browser roles): `id`, `workspace_id`, `queue`, `name`, `payload jsonb`, `dedupe_key text unique`, `msg_id` (the pgmq message), `state` (`queued` | `running` | `done` | `failed`), `attempts` (real starts), `created_at`, `sent_at`, `started_at`, `finished_at`, `last_error`.
 
-`job_slots` (service role only): `(queue, msg_id)` → `workspace_id`, `lease_until`. One row per running job; the per-workspace limit counts
-them under an advisory lock per workspace, so two engines never both take the last slot. A crashed engine's slot ends with its lease.
+`job_slots`: `(queue, msg_id)` → `workspace_id`, `lease_until`. One row per running job; the per-workspace limit counts them under an advisory lock per workspace, so two replicas never both take the last slot. A crashed worker's slot ends with its lease.
 
-pgmq: queue `knowledge` (`pgmq.q_knowledge`, archive `pgmq.a_knowledge`). The engine never calls the `pgmq` schema directly; it calls:
+The api never calls the `pgmq` schema directly; the role `app_be` holds execute on exactly these functions:
 
-| RPC                                                                  | Caller                                         | Does                                                                                          |
-| -------------------------------------------------------------------- | ---------------------------------------------- | --------------------------------------------------------------------------------------------- |
-| `job_enqueue(ws, queue, name, payload, dedupe)`                      | service role (engine, server code, other RPCs) | outbox row + `pgmq.send`, idempotent on `dedupe`                                              |
-| `job_read(queue, vt, qty, ws_limit)`                                 | engine                                         | `pgmq.read` + workspace slot + attempt count; returns `msg_id, attempt, enqueued_at, message` |
-| `job_touch(queue, msg_id, vt)`                                       | engine                                         | `pgmq.set_vt` + slot lease renewal while a handler runs                                       |
-| `job_ack(queue, msg_id)`                                             | engine                                         | `pgmq.delete`, slot freed, outbox `done`                                                      |
-| `job_fail(queue, msg_id, delay_s, error)`                            | engine                                         | `pgmq.set_vt(delay)`, slot freed, outbox back to `queued` with the error                      |
-| `job_archive(queue, msg_id, error)`                                  | engine                                         | `pgmq.archive`, slot freed, outbox `failed`                                                   |
-| `job_requeue(outbox_id)`                                             | operators (`jobs.sh retry`)                    | a failed job sent again, attempts reset                                                       |
-| `job_stats()`                                                        | engine (`/healthz`, readiness), watchdog       | per-queue depth and oldest age, running, failed in 24 h, oldest queued                        |
-| `knowledge_enqueue_source(ws, kind, title, storage_path, url, meta)` | owner/manager (browser), service role          | source row + `knowledge.index` job                                                            |
-| `knowledge_retry_source(source)`                                     | owner/manager, service role                    | a `failed` / `blocked_credits` source back to `queued` with a new job (`:retry:<ms>` key)     |
-
-Every `job_*` RPC is `security definer`, revoked from `anon` / `authenticated`, granted to `service_role`.
+| Function                                        | Caller                                                                   | Does                                                                     |
+| ----------------------------------------------- | ------------------------------------------------------------------------ | ------------------------------------------------------------------------ |
+| `job_enqueue(ws, queue, name, payload, dedupe)` | `QueueOutbox` (in the caller's transaction)                              | outbox row + `pgmq.send`, idempotent on `dedupe`                         |
+| `job_read(queue, vt, qty, ws_limit)`            | the worker                                                               | `pgmq.read` + workspace slot + attempt count                             |
+| `job_touch(queue, msg_id, vt)`                  | the worker                                                               | `pgmq.set_vt` + slot lease renewal while a handler runs                  |
+| `job_ack(queue, msg_id)`                        | the worker                                                               | `pgmq.delete`, slot freed, outbox `done`                                 |
+| `job_fail(queue, msg_id, delay_s, error)`       | the worker                                                               | `pgmq.set_vt(delay)`, slot freed, outbox back to `queued` with the error |
+| `job_archive(queue, msg_id, error)`             | the worker                                                               | `pgmq.archive`, slot freed, outbox `failed`                              |
+| `job_requeue(outbox_id)`                        | operators (`cli jobs retry`)                                             | a failed job sent again, attempts reset                                  |
+| `job_stats()`                                   | `QueueStatusService` (`/healthz`, `/readyz`), `cli jobs stats\|watchdog` | per-queue depth and oldest age, running, failed in 24 h, oldest queued   |
 
 ## Job contracts
 
-`src/lib/jobs/contracts.ts` is the one list of queues, job names and payloads (`JobPayloads`, `JOB_QUEUE`), the source statuses and the
-upload bucket. The engine gets a generated copy (the engine image is built from `engine/` alone). Payloads carry ids, never rows: the
-handler re-reads the current state.
+Each queue's `contracts.ts` is the one list of its job names, payloads and dedupe keys. Payloads carry ids, never rows: the handler re-reads the current state. The knowledge queue:
 
-| Job                 | Payload                     | Does                                                                                                 |
-| ------------------- | --------------------------- | ---------------------------------------------------------------------------------------------------- |
-| `knowledge.index`   | `{ sourceId, workspaceId }` | read (storage / link / Drive / text) → chunk → embed → `extracting_facts`, enqueue `knowledge.facts` |
-| `knowledge.facts`   | `{ sourceId, workspaceId }` | read facts window by window into `brain_facts` proposals → `ready`                                   |
-| `knowledge.reembed` | `{ workspaceId, model? }`   | re-embed chunks made by another model; hands over to a follow-up job after 100 batches               |
+| Job                 | Payload                      | Does                                                                                                 |
+| ------------------- | ---------------------------- | ---------------------------------------------------------------------------------------------------- |
+| `knowledge.index`   | `{ sourceId, workspaceId }`  | read (storage / link / Drive / text) → chunk → embed → `extracting_facts`, enqueue `knowledge.facts` |
+| `knowledge.facts`   | `{ sourceId, workspaceId }`  | read facts window by window into `brain_facts` proposals → `ready`                                   |
+| `knowledge.reembed` | `{ workspaceId, model? }`    | re-embed chunks made by another model; hands over to a follow-up job after 100 batches               |
+| `brain.command`     | `{ commandId, workspaceId }` | carries out a command asked on the Second Brain or Knowledge page                                    |
 
-`knowledge_sources.status`: `queued → reading → indexing → extracting_facts → ready`, or `failed` / `blocked_credits`. A source in
-`extracting_facts` already has every passage indexed: agents read it (`lensSources`, `lensPassages`) like a `ready` one.
+`knowledge_sources.status`: `queued → reading → indexing → extracting_facts → ready`, or `failed` / `blocked_credits`.
 
 ## Retry policy
 
-`engine/src/platform/pgmq/jobs.types.ts`:
+`modules/platform/queue/queue.policy.ts`:
 
 - 4 attempts; after a failed one the message comes back after 5 s, 10 s, 20 s (`job_fail` sets the visibility timeout).
-- Attempts are `job_outbox.attempts`, counted when a message really starts. pgmq's own `read_ct` also counts the deferrals of a busy
-  workspace, so it is not used.
-- A message read but not finished (engine crashed) becomes visible again when its visibility timeout (60 s, extended every 20 s while the
-  handler runs) runs out, and counts as one more attempt.
-- `PermanentJobError` (bad payload, missing subject) and `BlockedCreditsError` (the workspace has no credits) end the job at once.
-  Credits: the source becomes `blocked_credits` with the Vietnamese reason; nothing retries on its own, the owner tops up and presses
-  Retry (`knowledge_retry_source`).
-- A handler's `onFailed(ctx, error)` runs once when the job ends as failed (the last attempt or an unrecoverable error). The knowledge
-  handlers write the failure themselves on their last attempt (`ctx.isFinalAttempt`), so they do not need it.
+- Attempts are `job_outbox.attempts`, counted when a message really starts (pgmq's `read_ct` also counts the deferrals of a busy workspace, so it is not used).
+- A message read but not finished (worker crashed) becomes visible again when its visibility timeout runs out, and counts as one more attempt.
+- `QueueError` code `QUEUE_UNRECOVERABLE` (bad payload, missing subject, no credits: reason `blocked_credits`) ends the job at once; `QUEUE_RETRY_AFTER` retries after the seconds it carries. Nothing retries a blocked-credits source on its own: the owner tops up and presses Retry.
+- `onFailed(delivery, cause)` of the processor runs once when the job ends as failed.
 - A job aborted by shutdown is handed back (`job_fail` with delay 0); it is not final.
-- Failed messages stay in `pgmq.a_knowledge` and their outbox rows in `state = 'failed'`.
+- Failed messages stay in `pgmq.a_<queue>` and their outbox rows in `state = 'failed'`.
 
 ## Idempotency
 
-A job can be delivered more than once (a visibility timeout ran out, a lost ack, a retry). Rules for handlers:
+A job can be delivered more than once (a visibility timeout ran out, a lost ack, a retry). Handlers:
 
 - Re-running on a subject that is already done is a no-op. `knowledge.index` on a source already `ready` / `extracting_facts` returns.
-- Write results by replacing, not appending: `knowledge.index` deletes the source's chunks before inserting the new ones (and keeps
-  vectors already made with the current model), `knowledge.facts` resumes from `brain_extractions.windows_done`.
-- A chained job uses `JobProducer.enqueue(name, payload, dedupe, workspaceId)` (RPC `job_enqueue`) with a dedupe key that names the subject
-  and the parent job (`knowledge.facts:<sourceId>:<parent dedupe key>`), so a re-run of the parent does not double the child.
-- Credits are metered inside the job with the same `withUsage` / `recordUsage` the web app uses, and `blockedBy` is checked before spending.
+- Write results by replacing, not appending (the index step deletes the source's chunks before inserting new ones; the facts job resumes from `brain_extractions.windows_done`).
+- A chained job uses the typed producer with a dedupe key that names the subject and the parent job, so a re-run of the parent does not double the child.
+- Credits are metered inside the job and `blockedBy` is checked before spending.
 
 ## How to add a job
 
-1. Add the name and payload to `JobPayloads` and `JOB_QUEUE` in `src/lib/jobs/contracts.ts`, then `node engine/dev/sync-shared.mjs`.
-   A new queue goes into `QUEUES` and needs `select pgmq.create('<queue>');` in a migration.
-2. Produce it in the same transaction as the change that needs it:
-   - with a business row: a SQL function (RPC) that inserts the row and calls `public.job_enqueue(...)` (see `knowledge_enqueue_source`);
-   - from server code with nothing else to commit: `rpc("job_enqueue", …)` with the service-role client;
-   - from another job in the engine: `JobProducer.enqueue(...)`.
-3. Write the handler in an engine feature module: a `JobHandler<"your.job">` (`name`, `handle(ctx)`, optional `onFailed`) registered with
-   the injected `JobRegistry` in `onModuleInit`. Make it idempotent (above). Throw `PermanentJobError` for errors a retry cannot fix and
-   `BlockedCreditsError` when the workspace has no credits.
-4. Import the feature module in `engine/src/app.module.ts`. The poll loop covers every queue that has a handler.
+1. In `modules/queues/<queue>/` add the job name, payload and dedupe-key builder to the contracts, and the typed producer. A new queue needs `select pgmq.create('<queue>')` in a forward migration and an entry in `API_JOB_QUEUES`.
+2. Produce it in the same transaction as the change that needs it: from the application handler with `outbox.write(tx, ...)`, or from another job step through the typed producer.
+3. Write the processor in `features/jobs/<job>/`: a `FencedProcessor` with `queue` and `job`, steps that advance under the claimed token, and the queue module that hands the processor to the `JobProcessorRegistry`. Make it idempotent. Throw a `QueueError` for errors a retry cannot fix.
+4. Register the queue module in the api composition (`be/apps/api/src/app.module.ts`). A recurring tick is a `QueueSchedulerDefinition` in `API_SCHEDULERS`.
+5. A "retry" action exposed to a user (GraphQL) must enqueue the owning job through the outbox, never run the work inline.
 
 ## Operations
 
-Health:
-
-- `GET /healthz` (liveness, never waits on Supabase): `jobs.stats` (`job_stats()`, refreshed every 10 s: per-queue `depth` and
-  `oldestAgeSeconds`, `running`, `failed24h`, `oldestQueuedAgeSeconds`), the registered handlers and the last read.
-- `GET /readyz`: the last `engine_jobs` poll reached the database (when that worker is on), `job_stats` answered and the last `job_read`
-  worked. The deploy gates on it.
-- The watchdog (`engine/deploy/watchdog.sh`) alerts on `failed24h > JOBS_FAILED_ALERT` and `oldestQueuedAgeSeconds > JOBS_STALE_SECONDS`.
+Health: `GET /healthz` (liveness, never waits on Supabase) and `GET /readyz` (the database answered and `job_stats` worked; the deploy gates on it). The watchdog (`deploy/stack/watchdog.sh`) alerts on `failed24h > JOBS_FAILED_ALERT` and `oldestQueuedAgeSeconds > JOBS_STALE_SECONDS`.
 
 SQL (Supabase SQL editor or `psql`):
 
@@ -162,26 +116,18 @@ select public.job_requeue('<outbox id>');           -- send a failed job again
 select knowledge_retry_source('<sourceId>');        -- or retry a document the owner's way
 ```
 
-On the VPS, `engine/deploy/jobs.sh` wraps the same (`stats`, `failed`, `open`, `retry`, `retry-failed`); see `docs/OPERATIONS-JOBS.md`.
+On the VPS, `deploy/stack/jobs.sh` wraps `cli jobs ...` inside the api container (`stats`, `failed`, `open`, `retry`, `retry-failed`); see `be/docs/runbooks/jobs-operations.md`.
 
-Settings (engine env, all optional):
+Settings (api environment, all optional):
 
-| Variable                     | Default | Meaning                                                           |
-| ---------------------------- | ------- | ----------------------------------------------------------------- |
-| `JOBS_ENABLED`               | `1`     | `0` = do not consume (producers still enqueue; messages wait)     |
-| `JOBS_CONCURRENCY`           | `4`     | jobs one engine runs at a time                                    |
-| `JOBS_WORKSPACE_CONCURRENCY` | `2`     | jobs of one workspace running at a time across all engines        |
-| `JOBS_POLL_MS`               | `1500`  | pause between empty polls                                         |
-| `JOBS_VT_SECONDS`            | `60`    | visibility timeout of a read message (extended every third of it) |
-| `ENGINE_SHUTDOWN_GRACE_MS`   | `30000` | time running jobs get on shutdown                                 |
-| `ENGINE_WORKER_ENABLED`      | `1`     | the old `engine_jobs` worker; `0` = off                           |
+| Variable                       | Default         | Meaning                                                           |
+| ------------------------------ | --------------- | ----------------------------------------------------------------- |
+| `QUEUE_ENABLED`                | `true`          | `false` = do not consume (producers still enqueue; messages wait) |
+| `QUEUE_CONCURRENCY`            | `4`             | jobs one api runs at a time per queue                             |
+| `QUEUE_WORKSPACE_CONCURRENCY`  | `2`             | jobs of one workspace running at a time across all replicas       |
+| `QUEUE_POLL_INTERVAL`          | `500ms`         | pause between empty polls                                         |
+| `QUEUE_VISIBILITY_TIMEOUT`     | `60s`           | visibility timeout of a read message (extended every third of it) |
+| `QUEUE_SHUTDOWN_GRACE`         | `30s`           | time running jobs get on shutdown                                 |
+| `JOBS_LEASE`, `JOBS_WORKER_ID` | `60s`, `worker` | the fenced claim's lease and the worker name                      |
 
-Local: `npm run dev:stack` (engine in watch mode against the local Supabase stack, env from `secrets.env` or `NIVO_SECRETS=<file>`;
-`DEV_ENGINE_PORT` changes the port). The local Supabase image ships pgmq; apply the migrations and nothing else is needed.
-
-## Later candidates
-
-Not moved yet, but blocking or long enough to belong here: agent performers (`module-*-performers.ts`), the automations tick
-(`automation-tick.ts`), the module ticks (booking, content, hiring, shifts) and connection health sweeps. A recurring task becomes a
-`pg_cron` schedule that calls `job_enqueue` with a dedupe key per period, so it fires once however many engines run. `pg_net` is not needed
-for the knowledge jobs: polling every 1.5 s is enough.
+Local: `npm run db:start` (the local Supabase image ships pgmq; the migrations are all that is needed), then `npm run dev:be` with the API's environment exported in your shell (README.md).

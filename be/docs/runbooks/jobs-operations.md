@@ -18,8 +18,7 @@ the queue objects of the platform migration is not ready and the deploy rolls ba
 What the workflow does, in order:
 
 1. Builds the api image on the runner from `be/apps/api/Dockerfile` (this runs the build and the type gate) and ships it with `docker save | ssh docker load`.
-2. Uploads `deploy/stack/` to `~/nivo-engine.new/deploy`, writes `deploy/.env` from the `ENGINE_ENV` secret plus `API_TAG=<sha>`, and `deploy/api.env`
-   from the `API_ENV` secret (both mode 600).
+2. Decrypts the sealed files in the job (`deploy/materialize.mjs`, `SOPS_AGE_KEY`) and uploads `deploy/stack/` to `~/nivo-engine.new/deploy` with the per-key secret files, `api.env` (pointers), `openclaw.env` and `.env` (settings plus `API_TAG=<sha>`).
 3. Swaps folders (the old release stays as `~/nivo-engine.prev`), `docker compose up -d --remove-orphans` (this also removes a container of a service
    that left the stack, such as the old `engine`).
 4. Health: the api container is `healthy` and `/readyz` returns 200 inside it.
@@ -29,23 +28,18 @@ What the workflow does, in order:
 
 GitHub environment `production`:
 
-| Kind   | Name                             | Notes                                                                                                                                                      |
-| ------ | -------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| var    | `VPS_HOST`, `VPS_USER`           | same as the web deploy                                                                                                                                     |
-| secret | `VPS_SSH_KEY`, `VPS_KNOWN_HOSTS` | same as the web deploy (CI deploy key, pinned host keys)                                                                                                   |
-| secret | `ENGINE_ENV`                     | the stack `deploy/.env` (OpenClaw, n8n, binds, watchdog thresholds); push it with `node scripts/env-sync.mjs` (reads the `[stack]` block of `secrets.env`) |
-| secret | `API_ENV`                        | the api runtime `deploy/api.env` (database role, Supabase, origins, provider and knowledge keys); the same script pushes it from the `[api]` block         |
+| Kind   | Name                             | Notes                                                                                                          |
+| ------ | -------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| var    | `VPS_HOST`, `VPS_USER`           | same as the web deploy                                                                                         |
+| secret | `VPS_SSH_KEY`, `VPS_KNOWN_HOSTS` | same as the web deploy (CI deploy key, pinned host keys)                                                       |
+| secret | `SOPS_AGE_KEY`                   | the age identity of `.sops.yaml`; the only way the application secrets reach the job (protect the environment) |
 
-`API_ENV` must include `PRIMARY_DB_URL`, `PRIMARY_DB_SCHEMA`, `HTTP_SECURITY_ALLOWED_ORIGINS`, `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`, and the
-knowledge keys: `OPENROUTER_API_KEY`, `EMBEDDING_MODEL` (optionally `EMBEDDING_BASE_URL`, `EMBEDDING_API_KEY`), `CHANNEL_TOKEN_KEY` (it decrypts stored Drive
-tokens), `GOOGLE_OAUTH_CLIENT_ID`, `GOOGLE_OAUTH_CLIENT_SECRET`. Optional tunables: `QUEUE_CONCURRENCY`, `QUEUE_POLL_INTERVAL`, `QUEUE_VISIBILITY_TIMEOUT`,
-`JOBS_LEASE`. Watchdog thresholds live in the stack env: `JOBS_FAILED_ALERT` (20) and `JOBS_STALE_SECONDS` (300). `env-sync` fills the knowledge keys from the
-`[app]` block when `[api]` leaves them empty and warns (names only) about anything still missing.
+The application secrets are in `.starcistacks/production/secrets/{api,auth,stack}.enc`; names and meaning are in `deploy/stack/api.env.example` and `.starcistacks/production/README.md`. `api.enc` must hold `PRIMARY_DB_URL`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `CHANNEL_TOKEN_KEY` (it decrypts stored Drive tokens) and `N8N_SIGNING_SECRET`; the knowledge keys are `OPENROUTER_API_KEY`, `EMBEDDING_MODEL` (optionally `EMBEDDING_BASE_URL`, `EMBEDDING_API_KEY`), `GOOGLE_OAUTH_CLIENT_ID`, `GOOGLE_OAUTH_CLIENT_SECRET`. Optional tunables: `QUEUE_CONCURRENCY`, `QUEUE_POLL_INTERVAL`, `QUEUE_VISIBILITY_TIMEOUT`, `JOBS_LEASE`. Watchdog thresholds live in the sealed `stack` file: `JOBS_FAILED_ALERT` (20) and `JOBS_STALE_SECONDS` (300). Set a value with `starci app secret set production api --key <KEY>`.
 
 ## Watch
 
 `deploy/stack/watchdog.sh` runs every minute from the `nivo` crontab and writes `~/nivo-engine/watchdog.log`. Besides the api/OpenClaw coupling check
-it asks `job_stats()` in Postgres (through the api container's own Supabase client) and:
+it asks `job_stats()` in Postgres (through the be CLI, `jobs watchdog`, on the `app_be` connection) and:
 
 - logs `ALERT failed-jobs` when more than `JOBS_FAILED_ALERT` jobs failed in the last 24 h;
 - logs `ALERT jobs-stale` when a job has been queued longer than `JOBS_STALE_SECONDS` (the api is not consuming, or a workspace is saturated).
@@ -55,7 +49,7 @@ Each kind alerts at most once per 30 minutes. Alerts are log lines, the same cha
 
 ## Read failed jobs
 
-On the VPS, in `~/nivo-engine/deploy` (it runs through the api container's Supabase client):
+On the VPS, in `~/nivo-engine/deploy` (each command runs `cli jobs ...` inside the api container, on the `app_be` connection):
 
 ```bash
 ./jobs.sh stats            # job_stats(): depth and oldest age per queue, running, failed in 24 h, oldest queued
@@ -87,7 +81,7 @@ Safe: handlers are idempotent, so a retried job whose subject is already done is
 grant, a provider outage), then retry; retrying into the same error only fails again. A document the owner sees as failed is better retried
 the owner's way (`select knowledge_retry_source('<sourceId>')` or the Retry button), which also resets its status.
 
-To stop consuming without losing anything: the worker switch of the api (see the queue settings in `be/docs/guides/jobs.md`) in `deploy/api.env`, then recreate the api; messages wait in the queue.
+To stop consuming without losing anything: the worker switch of the api (see the queue settings in `be/docs/guides/jobs.md`) (`QUEUE_ENABLED=false` in the sealed `api` file), then redeploy; messages wait in the queue.
 
 ## A stuck job
 
@@ -99,6 +93,6 @@ To stop consuming without losing anything: the worker switch of the api (see the
 ## Local development
 
 ```bash
-npm run db:start        # local Supabase (pgmq ships in the image); put its URL and service key in secrets.env
-npm run dev:be          # the api in watch mode (ts-node-dev) against the local stack, env from secrets.env (node scripts/with-secrets.mjs npm run dev:be)
+npm run db:start        # local Supabase (pgmq ships in the image); it prints the URL and the keys
+npm run dev:be          # the api in watch mode (ts-node-dev) against the local stack, env exported in your shell (see README.md)
 ```
