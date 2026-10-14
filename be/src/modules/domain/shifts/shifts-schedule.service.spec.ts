@@ -20,9 +20,7 @@ import { ShiftsScheduleService } from "./shifts-schedule.service"
 import type { ProposeWeekOutput } from "./shifts-operations.contracts"
 import { ShiftsTextService } from "./shifts-text.service"
 import type { Block, Env, Setup, Shift, ShiftStaff } from "./shifts.contracts"
-
 const text = (key: string, params: Record<string, string | number> = {}): string => `${key}${JSON.stringify(params)}`
-
 const staffOf = builder<ShiftStaff>({
     id: "staff-1",
     name: "Alex",
@@ -85,7 +83,6 @@ const shiftOf = builder<Shift>({
     staffId: "staff-1",
     status: "draft",
 })
-
 const proposalOf = builder<ProposeWeekOutput>({
     scheduleId: "schedule-1",
     version: 3,
@@ -96,12 +93,10 @@ const proposalOf = builder<ProposeWeekOutput>({
     ms: 0,
     iterations: 6,
 })
-
 const savedCoverage =
     '{"coverage":[{"blockId":"block-1","date":"2026-10-12","positionId":"position-1","start":"08:00","end":"10:00","min":1,"ideal":1,"peak":false,"have":1,"status":"ok"}],"hours":[{"staffId":"staff-1","hours":2}]}'
 const savedSolver =
     '{"solver":{"ms":0,"iterations":6,"costVnd":60000,"shiftCount":1,"openCount":0,"shortages":[],"hoursByStaff":[{"staffId":"staff-1","hours":2}],"askCandidates":[]}}'
-
 const emptyExplanation = text("shifts.explain.fallback", {
     week: "week:2026-10-12",
     version: 1,
@@ -122,7 +117,6 @@ const shortageShiftParams = [
     "solver",
 ]
 const shortageInsertion = [ADD_SHIFTS, shortageShiftParams]
-
 const build = async (entityManager: MockEntityManager) => {
     const members = mock<WorkspaceMembersService>()
     members.require.mockResolvedValue({
@@ -163,7 +157,6 @@ const build = async (entityManager: MockEntityManager) => {
     }).compile()
     return { service: moduleRef.get(ShiftsScheduleService), members, data, words, generator, gate }
 }
-
 const shiftRowOf = builder<ShiftsShiftRow>({
     id: "shift-1",
     schedule_id: "schedule-1",
@@ -184,7 +177,6 @@ const addRequest = {
     positionId: "position-1",
     staffId: "staff-1",
 }
-
 /** The service with a draft shift on file, an empty week around it and no staff in its environment. */
 const buildEdits = async (entityManager: MockEntityManager) => {
     const built = await build(entityManager)
@@ -193,7 +185,6 @@ const buildEdits = async (entityManager: MockEntityManager) => {
     built.data.loadEnv.mockResolvedValue(envOf({ staff: new Map() }))
     return built
 }
-
 describe("ShiftsScheduleService", () => {
     it("proposeWeek: solves and saves the containing week with exact shifts and evidence", async () => {
         const em = mockEntityManager({
@@ -206,9 +197,7 @@ describe("ShiftsScheduleService", () => {
         const { service, members, data, generator } = await build(em)
         data.loadEnv.mockResolvedValue(envOf({ prior: new Map() }))
         generator.generate.mockResolvedValue({ ok: true, output: "  A balanced week.  " })
-
         await expect(service.proposeWeek("user-1", "ws-1", { week: "2026-10-15" })).resolves.toEqual(proposalOf())
-
         expect(members.require.mock.calls).toEqual([["user-1", "ws-1", ["owner", "manager"]]])
         expect(data.loadSetup.mock.calls).toEqual([["ws-1", true]])
         expect(data.loadEnv.mock.calls).toEqual([["ws-1", "2026-10-12", setupOf()]])
@@ -240,7 +229,6 @@ describe("ShiftsScheduleService", () => {
             ],
         ])
     })
-
     it.each([
         { empty: true, min: 0, output: proposalOf({ version: 1, shifts: 0, costVnd: 0 }) },
         { empty: false, min: 2, output: proposalOf({ open: 1, short: 1 }) },
@@ -396,27 +384,19 @@ describe("ShiftsScheduleService", () => {
         })
     })
 
-    it.each(["missing", "inactive-1"])("reassignShift: refuses unavailable staff profile %s", async (staffId) => {
+    it.each<["reassignShift" | "addDraftShift", string]>([
+        ["reassignShift", "missing"],
+        ["reassignShift", "inactive-1"],
+        ["addDraftShift", "missing"],
+    ])("%s: refuses unavailable staff profile %s", async (method, staffId) => {
         const em = mockEntityManager({})
         const { service } = await buildEdits(em)
-
-        await expect(service.reassignShift("user-1", "ws-1", { shiftId: "shift-1", staffId })).rejects.toMatchObject({
+        await expect(
+            service[method]("user-1", "ws-1", { ...addRequest, shiftId: "shift-1", staffId }),
+        ).rejects.toMatchObject({
             code: ShiftsErrorCode.StaffNotFound,
         })
-
         expect(em.query).not.toHaveBeenCalled()
-    })
-
-    it("reassignShift: keeps the assignment and returns the rule the person breaks", async () => {
-        const em = mockEntityManager({ query: [REASSIGN_SHIFT, []] })
-        const { service, data, words } = await buildEdits(em)
-        data.loadEnv.mockResolvedValue(envOf())
-        data.scheduleShifts.mockResolvedValue([shiftOf({ positionId: "other" })])
-        words.findings.mockImplementation((list: ReadonlyArray<{ code: string }>) => list.map((item) => item.code))
-
-        await expect(
-            service.reassignShift("user-1", "ws-1", { shiftId: "shift-1", staffId: "staff-1" }),
-        ).resolves.toEqual({ warnings: ["position"] })
     })
 
     it.each(["staff-1", null])("addDraftShift: inserts a manual draft shift for staff %s", async (staffId) => {
@@ -450,21 +430,40 @@ describe("ShiftsScheduleService", () => {
         },
     )
 
-    it("addDraftShift refuses a missing staff profile", async () => {
-        const { service } = await buildEdits(mockEntityManager({}))
-        const result = service.addDraftShift("user-1", "ws-1", { ...addRequest, staffId: "missing" })
-        await expect(result).rejects.toMatchObject({ code: ShiftsErrorCode.StaffNotFound })
-    })
-
-    it("reassignShift names the position in an overlap warning", async () => {
-        const { service, data } = await build(mockEntityManager({ query: [REASSIGN_SHIFT, []] }))
-        data.shiftRow.mockResolvedValue(shiftRowOf())
-        data.scheduleShifts.mockResolvedValue([shiftOf(), shiftOf({ id: "shift-2" })])
-        const result = service.reassignShift("user-1", "ws-1", { shiftId: "shift-1", staffId: "staff-1" })
-        await expect(result).resolves.toEqual({
-            warnings: [text("shifts.finding.rule-overlap", { name: "Alex", position: "Cashier" })],
-        })
-    })
+    it.each<[boolean, boolean, string | null | undefined]>([
+        [true, false, "Alex"],
+        [false, false, "Alex"],
+        [false, true, "Alex"],
+        [false, false, null],
+        [false, false, undefined],
+    ])(
+        "reassignShift returns exact warning labels (position rule=%s, missing person=%s, name=%s)",
+        async (positionRule, missingPerson, name) => {
+            const { service, data, words } = await buildEdits(mockEntityManager({ query: [REASSIGN_SHIFT, []] }))
+            // The provider fixture intentionally keeps malformed persisted names.
+            const staff = [Object.assign(staffOf(), { name })]
+            data.loadSetup.mockResolvedValue(setupOf({ staff }))
+            data.loadEnv.mockImplementation(() => {
+                if (missingPerson) staff.length = 0
+                return Promise.resolve(envOf())
+            })
+            data.scheduleShifts.mockResolvedValue(
+                positionRule ? [shiftOf({ positionId: "other" })] : [shiftOf(), shiftOf({ id: "shift-2" })],
+            )
+            if (positionRule)
+                words.findings.mockImplementation((list: ReadonlyArray<{ code: string }>) =>
+                    list.map((item) => item.code),
+                )
+            const result = service.reassignShift("user-1", "ws-1", { shiftId: "shift-1", staffId: "staff-1" })
+            const params = { name: missingPerson ? "" : (name ?? ""), position: positionRule ? "" : "Cashier" }
+            await expect(result).resolves.toEqual({
+                warnings: [positionRule ? "position" : text("shifts.finding.rule-overlap", params)],
+            })
+            expect(words.findings.mock.calls).toEqual([
+                [[{ code: positionRule ? "position" : "rule-overlap", params }]],
+            ])
+        },
+    )
 
     it("removeDraftShift checks membership and its schedule before removal", async () => {
         const em = mockEntityManager({ query: [REMOVE_SHIFT, []] })

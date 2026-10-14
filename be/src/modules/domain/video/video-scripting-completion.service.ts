@@ -45,13 +45,13 @@ export class VideoScriptingCompletionService {
             const meta = videoRecord(project.script_meta)
             if (meta.generation_id !== generationId || typeof meta.script_request_id !== "string") return
             if (state.status !== "done" || state.text === null) {
-                await this.fail(tx, workspaceId, project, state, meta, meta.script_request_id, "VIDEO_SCRIPT_FAILED")
+                await this.fail(tx, workspaceId, project, state, meta, "VIDEO_SCRIPT_FAILED")
                 return
             }
             const parsed = parseVideoScript(state.text, generationId, workspaceId)
             if (parsed === null) {
                 if (meta.attempts === 1 && (await this.retry(tx, workspaceId, project, state, meta))) return
-                await this.fail(tx, workspaceId, project, state, meta, meta.script_request_id, "VIDEO_SCRIPT_FORMAT")
+                await this.fail(tx, workspaceId, project, state, meta, "VIDEO_SCRIPT_FORMAT")
                 return
             }
             const media = videoInputsOf(project.inputs, workspaceId).media
@@ -134,9 +134,9 @@ export class VideoScriptingCompletionService {
         project: VideoScriptingRow,
         state: GenerationState,
         meta: Record<string, unknown>,
-        requestId: string,
         code: string,
     ): Promise<void> {
+        if (typeof meta.script_request_id !== "string") return
         await this.projectWriter.fail(tx, {
             workspaceId,
             projectId: project.id,
@@ -144,6 +144,6 @@ export class VideoScriptingCompletionService {
             code: `code:${code}`,
             meta: JSON.stringify({ ...meta, finished_at: this.clock.now().toISOString() }),
         })
-        await this.generations.recordFailure(workspaceId, requestId, code, tx)
+        await this.generations.recordFailure(workspaceId, meta.script_request_id, code, tx)
     }
 }

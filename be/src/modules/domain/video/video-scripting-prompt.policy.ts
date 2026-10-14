@@ -33,19 +33,14 @@ export const videoScriptMessages = (
     const inputs = videoInputsOf(project.inputs, workspaceId)
     const count = Math.min(8, Math.max(3, Math.round(project.target_seconds / 6)))
     const voiceChars = Math.max(40, Math.round((project.target_seconds / count - 0.8) * 14))
-    const bodies = goal.scenes.filter((scene) => scene.role === "body").map((scene) => scene.brief)
+    const bodies = goal.scenes.filter((scene) => scene.role === "body")
     const outline = Array.from({ length: count }, (_, index) => {
         const role = videoScriptRoleAt(index, count)
-        const bodyIndex = (index - 1) % bodies.length
         const brief =
             role === "body"
-                ? bodies.slice(bodyIndex, bodyIndex + 1).join("")
-                : goal.scenes
-                      .filter((scene) => scene.role === role)
-                      .slice(0, 1)
-                      .map((scene) => scene.brief)
-                      .join("")
-        return `${index + 1}. ${role.toUpperCase()}: ${brief}`
+                ? bodies[(index - 1) % Math.max(1, bodies.length)]?.brief
+                : goal.scenes.find((scene) => scene.role === role)?.brief
+        return `${index + 1}. ${role.toUpperCase()}: ${brief ?? ""}`
     }).join("\n")
     return [
         { role: "system", content: `${VIDEO_SCRIPT_SYSTEM}\n\nPUBLIC SHOP CONTEXT:\n${publicFacts}` },

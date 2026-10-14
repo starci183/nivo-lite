@@ -1,7 +1,7 @@
 import { builder } from "@starci/jest-preset"
 import type { VideoScriptingRow } from "./persistence/video-scripting.rows"
 import { videoScriptMessages, videoScriptSourcesText } from "./video-scripting-prompt.policy"
-import { VIDEO_SCRIPT_SYSTEM } from "./video-scripting.templates"
+import { VIDEO_SCRIPT_GOALS, VIDEO_SCRIPT_SYSTEM } from "./video-scripting.templates"
 
 const WS = "workspace-1"
 const projectOf = builder<VideoScriptingRow>({
@@ -50,6 +50,50 @@ describe("videoScriptSourcesText", () => {
 })
 
 describe("videoScriptMessages", () => {
+    afterEach(() => jest.restoreAllMocks())
+
+    it.each([
+        { label: "empty outline", scenes: [], outline: "1. HOOK: \n2. BODY: \n3. CTA: " },
+        {
+            label: "missing body",
+            scenes: [
+                { role: "hook", brief: "Open" },
+                { role: "cta", brief: "Visit" },
+            ],
+            outline: "1. HOOK: Open\n2. BODY: \n3. CTA: Visit",
+        },
+        {
+            label: "missing ends",
+            scenes: [{ role: "body", brief: "Main message" }],
+            outline: "1. HOOK: \n2. BODY: Main message\n3. CTA: ",
+        },
+    ])("uses an empty brief for a template with $label", ({ scenes, outline }) => {
+        jest.replaceProperty(VIDEO_SCRIPT_GOALS, "custom", {
+            label: { vi: "Audit goal" },
+            hint: { vi: "Use supplied brief." },
+            scenes,
+        })
+
+        expect(
+            videoScriptMessages(projectOf({ goal: "custom", target_seconds: 6, inputs: {} }), WS, "", "Facts"),
+        ).toEqual([
+            { role: "system", content: `${VIDEO_SCRIPT_SYSTEM}\n\nPUBLIC SHOP CONTEXT:\nFacts` },
+            {
+                role: "user",
+                content: [
+                    "SHOP: Bread shop",
+                    "GOAL: Audit goal. Use supplied brief.",
+                    "FORMAT: 9:16, about 6 seconds in total.",
+                    "SCENES: exactly 3. Each voiceover about 40 characters, never above 70.",
+                    `OUTLINE:\n${outline}`,
+                    "No selected public facts: keep claims general.",
+                    "The owner supplied 0 images or clips. Suggest what to show in each scene.",
+                    "Return the JSON object now.",
+                ].join("\n\n"),
+            },
+        ])
+    })
+
     it("builds the offer outline with public context, owner notes and workspace media", () => {
         expect(videoScriptMessages(projectOf(), WS, "Bread 20k", "Warm shop voice")).toEqual([
             { role: "system", content: `${VIDEO_SCRIPT_SYSTEM}\n\nPUBLIC SHOP CONTEXT:\nWarm shop voice` },

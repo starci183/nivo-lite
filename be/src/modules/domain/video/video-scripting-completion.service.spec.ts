@@ -419,5 +419,35 @@ describe("VideoScriptingCompletionService", () => {
             expect(projectWriter.start).not.toHaveBeenCalled()
             expect(tx.commits).toBe(1)
         })
+
+        it.each([undefined, null, 42])(
+            "writes nothing when the request changes to %p during a refused retry",
+            async (requestId) => {
+                const meta: Record<string, unknown> = { ...META }
+                const { completion, tx, generations, projectWriter, events } = await build(
+                    stateOf({ text: "invalid answer" }),
+                    projectOf({ script_meta: meta }),
+                )
+                const failure = mock<AiGenerationsError>()
+                Object.setPrototypeOf(failure, AiGenerationsError.prototype)
+                generations.request.mockImplementationOnce(() => {
+                    meta.script_request_id = requestId
+                    return Promise.reject(failure)
+                })
+
+                await expect(completion.complete(WS, "generation-1")).resolves.toBeUndefined()
+
+                expect(generations.request).toHaveBeenCalledTimes(1)
+                expect(meta.script_request_id).toBe(requestId)
+                expect(projectWriter.fail.mock.calls).toEqual([])
+                expect(projectWriter.start.mock.calls).toEqual([])
+                expect(projectWriter.finish.mock.calls).toEqual([])
+                expect(generations.recordFailure.mock.calls).toEqual([])
+                expect(generations.recordResult.mock.calls).toEqual([])
+                expect(events.record.mock.calls).toEqual([])
+                expect(tx.commits).toBe(1)
+                expect(tx.rollbacks).toBe(0)
+            },
+        )
     })
 })

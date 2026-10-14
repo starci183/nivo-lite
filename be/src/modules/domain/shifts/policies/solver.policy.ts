@@ -150,7 +150,7 @@ export const solveWeek = (input: SolveInput): SolveOutput => {
             ).length,
         ]),
     )
-    const hard = (slot: Slot): number => Number(hardness.get(slot))
+    const hard = (slot: Slot): number => hardness.get(slot) ?? 0
 
     const tryAdd = (state: State, person: ShiftStaff, seg: Seg): Candidate | null => {
         const cur = state.get(person.id) ?? []

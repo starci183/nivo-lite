@@ -104,20 +104,20 @@ const parseDays = (raw: string): Array<number> | null => {
     const days = new Set<number>()
     for (const part of text.split(",")) {
         const match = /^(t[2-7]|cn)(?:-(t[2-7]|cn))?$/u.exec(part)
-        if (match === null) return null
-        const from = Number(DAY_TOKENS[String(match[1])])
-        const to = match[2] === undefined ? from : Number(DAY_TOKENS[match[2]])
-        if (to < from) return null
+        const from = DAY_TOKENS[match?.[1] ?? ""]
+        const to = match?.[2] === undefined ? from : DAY_TOKENS[match[2]]
+        if (from === undefined || to === undefined || to < from) return null
         for (let day = from; day <= to; day++) days.add(day)
     }
     return [...days].sort()
 }
 
-/** An HH:MM time from the coverage line's clock tokens; null when outside a day. */
+/** An HH:MM time from 7, 07:00, 7h or 7h30; null when it is not a time. */
 const parseClock = (raw: string): string | null => {
-    const [hour, minute] = raw.split(/[:h]/u)
-    const hours = Number(hour)
-    const minutes = minute === undefined ? 0 : Number(minute)
+    const match = /^(\d{1,2})(?:[:h](\d{2})?)?$/u.exec(raw.trim().toLowerCase())
+    if (match === null) return null
+    const hours = Number(match[1])
+    const minutes = match[2] === undefined ? 0 : Number(match[2])
     if (hours >= HOURS_PER_DAY || minutes >= MINUTES_PER_HOUR) return null
     return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`
 }
@@ -138,15 +138,15 @@ interface Known {
 
 const knownOf = (names: ReadonlyArray<string>): Known => ({
     has: (name) => names.some((known) => fold(known) === fold(name)),
-    canon: (name) => String(names.find((known) => fold(known) === fold(name))),
+    canon: (name) => names.find((known) => fold(known) === fold(name)) ?? name,
 })
 
 const parseStaffLine = (line: string, number: number, known: Known): ParsedStaff | ImportError => {
     const parts = line.split(/[;|\t]/u).map((x) => x.trim())
-    const name = String(parts[0])
+    const name = parts[0] ?? ""
     const failed = (code: ImportErrorCode, subject = name): ImportError => ({ code, line: number, subject })
     if (parts.length < 2 || name === "") return failed("staff-format", "")
-    const positions = String(parts[1])
+    const positions = (parts[1] ?? "")
         .split(",")
         .map((x) => x.trim())
         .filter((x) => x !== "")
@@ -172,14 +172,13 @@ const parseCoverageLine = (line: string, number: number, known: Known): Array<Pa
             body,
         )
     if (match === null) return failed("coverage-format")
-    const daysText = String(match[1])
-    const days = parseDays(daysText)
-    const start = parseClock(String(match[2]))
-    const end = parseClock(String(match[3]))
-    const position = String(match[4])
+    const days = parseDays(match[1] ?? "")
+    const start = parseClock(match[2] ?? "")
+    const end = parseClock(match[3] ?? "")
+    const position = match[4] ?? ""
     const min = Number(match[5])
     const ideal = match[6] === undefined ? min : Number(match[6])
-    if (days === null) return failed("coverage-days", daysText)
+    if (days === null) return failed("coverage-days", match[1] ?? "")
     if (start === null || end === null || start >= end) return failed("coverage-times")
     if (!known.has(position)) return failed("coverage-position", position)
     if (ideal < min) return failed("coverage-ideal")

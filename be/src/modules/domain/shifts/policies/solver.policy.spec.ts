@@ -79,6 +79,17 @@ describe("schedule solver policy", () => {
         })
     })
 
+    it.each([
+        ["07:00", "07:00"],
+        ["11:00", "07:00"],
+        ["invalid", "invalid"],
+    ])("creates no coverage cells for the empty block %s-%s", (start, end) => {
+        expect(solveWeek(inputOf({ blocks: [block({ start, end })], starts: 2 }))).toEqual({
+            shifts: [],
+            report: report({ iterations: 2, costVnd: 0, shiftCount: 0, hoursByStaff: [] }),
+        })
+    })
+
     it("fills busy windows to ideal and breaks equal costs by flexibility then name", () => {
         const staff = [
             person({ id: "flexible", name: "Aaron", positionIds: ["bar", "cash"] }),

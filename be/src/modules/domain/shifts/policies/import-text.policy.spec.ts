@@ -34,6 +34,39 @@ describe("import text policy", () => {
         })
     })
 
+    it.each([
+        ["", "T2, 7-8 Barista 1", "coverage-days", "t2,"],
+        ["", ",CN 7-8 Barista 1", "coverage-days", ",cn"],
+        ["", "T2-,CN 7-8 Barista 1", "coverage-days", "t2-,cn"],
+        ["", "CN-T2 7-8 Barista 1", "coverage-days", "cn-t2"],
+        ["", "T2 7h-8 Barista 1", "coverage-format", ""],
+        ["", "T2 7:5-8 Barista 1", "coverage-format", ""],
+        ["", "T2 NaN-8 Barista 1", "coverage-format", ""],
+        ["", "T2 7-24h00 Barista 1", "coverage-times", ""],
+        ["|||", "", "staff-format", ""],
+        ["No positions;;30k;40", "", "staff-position-missing", "No positions"],
+    ])("keeps the original malformed-input result for staff %p and coverage %p", (staff, coverage, code, subject) => {
+        expect(parseImport({ positions: "", staff, coverage }, ["Barista"])).toEqual({
+            positions: [],
+            staff: [],
+            blocks: [],
+            errors: [{ code, line: 1, subject }],
+        })
+    })
+
+    it("keeps missing optional staff fields and coverage ideals at their original defaults", () => {
+        expect(parseImport({ positions: "", staff: "Lan;Barista", coverage: "T2 0-1 Barista 0" }, ["Barista"])).toEqual(
+            {
+                positions: [],
+                staff: [{ name: "Lan", positions: ["Barista"], wage: 0, maxWeek: null }],
+                blocks: [
+                    { weekday: 0, start: "00:00", end: "01:00", position: "Barista", min: 0, ideal: 0, peak: false },
+                ],
+                errors: [],
+            },
+        )
+    })
+
     it("deduplicates new positions and canonicalises known staff positions", () => {
         expect(
             parseImport(

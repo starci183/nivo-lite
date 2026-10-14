@@ -71,6 +71,14 @@ describe("work rules policy", () => {
         expect(violationsForSegs(envOf(), "a", [])).toEqual([])
     })
 
+    it("keeps violation alignment for several shifts of an unknown person", () => {
+        const unknown = [shift({ staffId: "unknown" }), shift({ id: "unknown-2", staffId: "unknown" })]
+
+        expect(violationsForSegs(envOf(), "unknown", unknown.map(segOf))).toEqual([[], []])
+        expect(violationsOfShifts(envOf(), unknown)).toEqual(new Map())
+        expect(violationsOfShifts(envOf(), [])).toEqual(new Map())
+    })
+
     it("returns every broken rule in input order with exact cumulative hours", () => {
         const env = envOf({
             staff: new Map([["a", person({ maxDay: 3, maxWeek: 5 })]]),

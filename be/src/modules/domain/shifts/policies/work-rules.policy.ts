@@ -111,7 +111,7 @@ export const violationsOfShifts = (env: Env, shifts: ReadonlyArray<Shift>): Map<
     shiftsByStaff(shifts).forEach((list, staffId) => {
         const found = violationsForSegs(env, staffId, list.map(segOf))
         list.forEach((shift, index) => {
-            const mine = found.slice(index, index + 1).flat()
+            const mine = found[index] ?? []
             if (mine.length > 0) out.set(shift.id, mine)
         })
     })
