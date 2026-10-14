@@ -65,6 +65,7 @@ The scripts below run: preflight, merge, database, owner secrets steps, platform
 | 11  | C   | `node $C/07-smoke.mjs` (optional `--login`)                                                                        | health, GraphQL `{__typename}`, unauthenticated refusal, `/api/v1`, `select public.job_stats()` as `app_be`                                        |
 | 12  | O   | the manual smoke list (section "Verify")                                                                           | watch one hour, then enable the nightly backup                                                                                                     |
 | R   | C   | `node $C/08-rollback.mjs --execute` (`--layer web\|edge\|engine\|all`)                                             | the old workflows from the tag `pre-lite-cutover`; the schema is never rolled back                                                                 |
+| 13  | C   | `node $C/09-post-cutover.mjs --execute` (days later)                                                               | applies the held-back `drop-engine-schema`; refuses until 48 h after a green smoke or `--owner-confirms-old-app-gone`; irreversible for the old app |
 
 Steps 5 and 6 need the schema of step 4 (role `app_be` exists after the baseline) and come before step 9. `o3` and `envmap.mjs` were reduced to this delivery (no `*_ENV` blob is pushed). Step 13 (`09-post-cutover.mjs`) is NOT part of the cutover day: see the Database section.
 
