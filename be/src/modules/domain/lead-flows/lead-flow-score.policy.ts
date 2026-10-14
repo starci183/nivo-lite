@@ -189,7 +189,7 @@ export const scoreLead = (signals: Signals, criteria: Criteria = DEFAULT_CRITERI
     const missing = [...missingAll, ...(anyOk ? [] : criteria.hot.any.slice(0, 1))]
     const warmOk = criteria.warm.all.every((requirement) => HAS[requirement](signals)) || signals.interest === "high"
     if (warmOk && signals.interest !== "low")
-        return { level: "warm", reasons: [`missing for hot: ${missing.join(", ") || "-"}`], missing }
+        return { level: "warm", reasons: [`missing for hot: ${missing.join(", ")}`], missing }
     return { level: "cold", reasons: [signals.interest === "low" ? "low interest" : "no clear need yet"], missing }
 }
 

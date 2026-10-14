@@ -62,7 +62,7 @@ export class LeadActionsService {
     ): Promise<LeadActionQueued> {
         await this.members.require(userId, workspaceId)
         const normalized = unwrapOutcome(inputOf(action, input), LeadActionsError)
-        await this.requireTarget(workspaceId, action, normalized)
+        await this.requireTarget(workspaceId, action, normalized.leadId ?? normalized.responsibilityId ?? "")
         return this.entityManager.transaction(async (manager) => {
             const [run] = await manager.query<Array<{ id: string }>>(INSERT_LEAD_ACTION, [
                 workspaceId,
@@ -101,7 +101,7 @@ export class LeadActionsService {
             const member = await this.members.require(run.requested_by, run.workspace_id)
             const stored = { ...run, input: unwrapOutcome(inputOf(run.action, run.input), LeadActionsError) }
             const ctx = { workspaceId: run.workspace_id, actor: member.displayName, locale: run.locale }
-            const result = await this.execute(ctx, stored)
+            const result = await this.execute(ctx, stored, stored.input.leadId ?? "")
             this.requireOwned(
                 await this.entityManager.query<Array<{ id: string }>>(SUCCEED_LEAD_ACTION, [
                     ...write,
@@ -135,14 +135,14 @@ export class LeadActionsService {
         })
     }
 
-    private execute(ctx: WorkContext, run: LeadActionRunRow): Promise<LeadActionResult> {
+    private execute(ctx: WorkContext, run: LeadActionRunRow, leadId: string): Promise<LeadActionResult> {
         switch (run.action) {
             case "create":
                 return this.flow.create(ctx, run)
             case "refresh-context":
-                return this.ai.refreshContext(ctx, run.input.leadId ?? "")
+                return this.ai.refreshContext(ctx, leadId)
             case "suggest-owner":
-                return this.ai.suggestOwner(ctx, run.requested_by, run.input.leadId ?? "")
+                return this.ai.suggestOwner(ctx, run.requested_by, leadId)
             case "draft-execution":
                 return this.flow.draft(ctx, run)
             case "settle-won":
@@ -154,14 +154,14 @@ export class LeadActionsService {
         if (rows.length === 0) throw new LeadActionsError({ code: LeadActionsErrorCode.NotFound })
     }
 
-    private async requireTarget(workspaceId: string, action: LeadAction, input: LeadActionInput): Promise<void> {
+    private async requireTarget(workspaceId: string, action: LeadAction, targetId: string): Promise<void> {
         if (action === "create") return
         if (action === "draft-execution") {
-            const target = await this.responsibilities.find(workspaceId, input.responsibilityId ?? "")
+            const target = await this.responsibilities.find(workspaceId, targetId)
             if (target === null) throw new LeadActionsError({ code: LeadActionsErrorCode.NotFound })
             return
         }
-        const lead = await this.leads.require(workspaceId, input.leadId ?? "")
+        const lead = await this.leads.require(workspaceId, targetId)
         if (action === "settle-won" && lead.stage !== "won")
             throw new LeadActionsError({ code: LeadActionsErrorCode.NotWon })
     }
