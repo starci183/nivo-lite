@@ -1,8 +1,9 @@
 # Routes of the NIVO edge (Traefik file provider; reloaded on change, no restart). Each host gets its own Let's Encrypt certificate.
-# The product is served on nivo.vn and www.nivo.vn, the only hosts that have DNS (the zone is at Tino; see be/docs/runbooks/dns-rollback.md).
-# Lite cutover: the Nest api replaced the engine and the Next route handlers. It answers the /api/, /graphql and /healthz paths of those hosts.
-# Hosts without DNS (api., n8n., engine., app-vps.) have no router: Traefik could never obtain a certificate for them. The api. and n8n.
-# routers below are kept commented as optional entries; enable one only after its DNS record exists.
+# The product is served on nivo.vn and www.nivo.vn (web) and api.nivo.vn (the api). The zone is at Tino: every host needs its A record there
+# (be/docs/runbooks/dns-rollback.md) before Traefik can obtain its certificate.
+# Lite cutover: the Nest api replaced the engine and the Next route handlers. It answers api.nivo.vn, and keeps answering the /api/, /graphql and
+# /healthz paths of nivo.vn and www.nivo.vn so every webhook URL customers configured with the old host keeps working.
+# Optional hosts without DNS today (n8n., engine., app-vps.) have no router; the n8n one is kept commented below.
 http:
   middlewares:
     secure-headers:
@@ -21,7 +22,7 @@ http:
     # (/api/telegram/..., /api/sepay/webhook, /api/connections/..., /api/v1/..., /api/b/...) and now land on the api, not on Next.
     # The explicit priority makes this router win over the catch-all `web` router above; the path is forwarded unchanged.
     # The GraphQL endpoint (/graphql) and the probe aliases (/healthz; /health/live stays the web container's own) are the back end too, so the web app can call
-    # its own origin (NEXT_PUBLIC_API_URL=https://nivo.vn) and nothing depends on api.nivo.vn existing in DNS.
+    # its own origin (compatibility with the previous same-origin setup).
     api-paths:
       rule: (Host(`nivo.vn`) || Host(`www.nivo.vn`)) && (PathPrefix(`/api/`) || Path(`/graphql`) || Path(`/healthz`))
       priority: 100
@@ -29,14 +30,13 @@ http:
       service: api
       middlewares: [secure-headers]
       tls: { certResolver: le }
-    # OPTIONAL, off until `api.nivo.vn` has an A record at Tino: a dedicated host for the public API and the webhooks (optional later switch in
-    # be/docs/runbooks/cutover.md). Uncomment together with PUBLIC_API_URL / NEXT_PUBLIC_API_URL when switching.
-    # api:
-    #   rule: Host(`api.nivo.vn`)
-    #   entryPoints: [websecure]
-    #   service: api
-    #   middlewares: [secure-headers]
-    #   tls: { certResolver: le }
+    # api.nivo.vn: the host of the API (GraphQL, public API, webhooks, OAuth callbacks). Its A record at Tino must point here before a certificate can be issued.
+    api:
+      rule: Host(`api.nivo.vn`)
+      entryPoints: [websecure]
+      service: api
+      middlewares: [secure-headers]
+      tls: { certResolver: le }
     # nguyentuannam.org (repo namnivo-lite): its own compose project ~/namnivo-web, reached as namnivo-web:3000 on the nivo-edge network.
     namnivo:
       rule: Host(`nguyentuannam.org`) || Host(`www.nguyentuannam.org`) || Host(`app.nguyentuannam.org`)

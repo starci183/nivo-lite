@@ -7,9 +7,8 @@
 #   vars    VPS_HOST, VPS_USER
 #   secrets VPS_SSH_KEY, VPS_KNOWN_HOSTS (as for the api), SOPS_AGE_KEY (reads the two public build values from the sealed `web` member:
 #           NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY; deploy/materialize.mjs public)
-#   vars    NEXT_PUBLIC_API_URL (optional, default https://nivo.vn): the origin the browser calls for GraphQL (same origin as the site; the edge
-#           routes /graphql to the api; api.nivo.vn has no DNS)
-#           NEXT_PUBLIC_DEVELOPER_API_URL (optional, default https://nivo.vn): the public API host the Developers page shows (the web app never calls it)
+#   vars    NEXT_PUBLIC_API_URL (optional, default https://api.nivo.vn): the origin the browser calls for GraphQL
+#           NEXT_PUBLIC_DEVELOPER_API_URL (optional, default https://api.nivo.vn): the public API host the Developers page shows (the web app never calls it)
 # The web app has no runtime secret and no env file: its values are public build arguments baked into the image.
 # Only ~/nivo-web and the "nivo-web" compose project are touched.
 name: Deploy web
@@ -59,8 +58,8 @@ jobs:
           build-args: |
             ${{ steps.public.outputs.args }}
             NEXT_PUBLIC_SITE_URL=https://nivo.vn
-            NEXT_PUBLIC_API_URL=${{ vars.NEXT_PUBLIC_API_URL || 'https://nivo.vn' }}
-            NEXT_PUBLIC_DEVELOPER_API_URL=${{ vars.NEXT_PUBLIC_DEVELOPER_API_URL || 'https://nivo.vn' }}
+            NEXT_PUBLIC_API_URL=${{ vars.NEXT_PUBLIC_API_URL || 'https://api.nivo.vn' }}
+            NEXT_PUBLIC_DEVELOPER_API_URL=${{ vars.NEXT_PUBLIC_DEVELOPER_API_URL || 'https://api.nivo.vn' }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
