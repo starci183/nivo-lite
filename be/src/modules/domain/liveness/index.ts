@@ -1,3 +1,7 @@
 export type { LivenessReport } from "./liveness.contracts"
 export { LivenessModule } from "./liveness.module"
 export { LivenessService } from "./liveness.service"
+export { LIVENESS_ERROR_KINDS } from "./errors/liveness.error"
+export { LIVENESS_MESSAGES } from "./messages/liveness.messages"
+export type { ReadinessReport } from "./readiness.contracts"
+export { ReadinessService } from "./readiness.service"

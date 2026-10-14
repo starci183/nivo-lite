@@ -248,7 +248,7 @@ import { MAIL_ERROR_KINDS, MAIL_MESSAGES, MailModule } from "@modules/integratio
 import { TELEGRAM_ERROR_KINDS, TELEGRAM_MESSAGES, TelegramModule } from "@modules/integrations/telegram"
 import { ZALO_ERROR_KINDS, ZALO_MESSAGES, ZaloModule } from "@modules/integrations/zalo"
 import { CONTRACTS_ERROR_KINDS, CONTRACTS_MESSAGES, ContractsModule } from "@modules/domain/contracts"
-import { LivenessModule } from "@modules/domain/liveness"
+import { LIVENESS_ERROR_KINDS, LIVENESS_MESSAGES, LivenessModule } from "@modules/domain/liveness"
 import { MessagesModule } from "@modules/domain/messages"
 import {
     RESPONSIBILITIES_ERROR_KINDS,
@@ -485,7 +485,7 @@ export class AppModule {
                         LOYALTY_OTPS_MESSAGES,
                         ...LEAD_LANE.messages,
                         RESPONSIBILITIES_MESSAGES,
-                        CONTRACTS_MESSAGES,
+                        ...[CONTRACTS_MESSAGES, LIVENESS_MESSAGES],
                         MODULES_MESSAGES,
                         NIVO_KNOWLEDGE_MESSAGES,
                         PUBLIC_API_MESSAGES,
@@ -592,7 +592,7 @@ export class AppModule {
                         LOYALTY_LEDGER_ERROR_KINDS,
                         LOYALTY_OTPS_ERROR_KINDS,
                         ...LEAD_LANE.kinds,
-                        CONTRACTS_ERROR_KINDS,
+                        ...[CONTRACTS_ERROR_KINDS, LIVENESS_ERROR_KINDS],
                         WORKSPACE_INVITES_ERROR_KINDS,
                         WORKSPACE_MEMBERS_ERROR_KINDS,
                         WORKSPACES_ERROR_KINDS,
