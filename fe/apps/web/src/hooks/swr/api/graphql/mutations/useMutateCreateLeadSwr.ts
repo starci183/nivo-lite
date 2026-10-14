@@ -1,3 +1,5 @@
+"use client"
+
 import useSWRMutation from "swr/mutation"
 import { mutateCreateLead } from "@/modules/api/graphql/mutations/mutation-create-lead"
 import type { MutateCreateLeadRequest } from "@/modules/api/graphql/mutations/mutation-create-lead"

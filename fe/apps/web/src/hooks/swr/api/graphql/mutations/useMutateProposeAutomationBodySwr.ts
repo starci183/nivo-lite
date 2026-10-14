@@ -1,3 +1,5 @@
+"use client"
+
 import useSWRMutation from "swr/mutation"
 import { mutateProposeAutomationBody } from "@/modules/api/graphql/mutations/mutation-propose-automation-body"
 import type { MutateProposeAutomationBodyRequest } from "@/modules/api/graphql/mutations/mutation-propose-automation-body"

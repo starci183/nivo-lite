@@ -1,3 +1,5 @@
+"use client"
+
 import useSWRMutation from "swr/mutation"
 import { mutateDismissKnowledgeGap } from "@/modules/api/graphql/mutations/mutation-dismiss-knowledge-gap"
 import type { MutateDismissKnowledgeGapRequest } from "@/modules/api/graphql/mutations/mutation-dismiss-knowledge-gap"

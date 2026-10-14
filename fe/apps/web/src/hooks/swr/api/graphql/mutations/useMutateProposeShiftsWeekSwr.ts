@@ -1,3 +1,5 @@
+"use client"
+
 import useSWRMutation from "swr/mutation"
 import { mutateProposeShiftsWeek } from "@/modules/api/graphql/mutations/mutation-propose-shifts-week"
 import type { MutateProposeShiftsWeekRequest } from "@/modules/api/graphql/mutations/mutation-propose-shifts-week"

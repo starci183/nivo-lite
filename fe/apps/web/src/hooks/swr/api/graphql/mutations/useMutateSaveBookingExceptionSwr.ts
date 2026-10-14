@@ -1,3 +1,5 @@
+"use client"
+
 import useSWRMutation from "swr/mutation"
 import { mutateSaveBookingException } from "@/modules/api/graphql/mutations/mutation-save-booking-exception"
 import type { MutateSaveBookingExceptionRequest } from "@/modules/api/graphql/mutations/types/save-booking-exception"

@@ -1,3 +1,5 @@
+"use client"
+
 import useSWRMutation from "swr/mutation"
 import { mutateConfirmOfficeCommand } from "@/modules/api/graphql/mutations/mutation-confirm-office-command"
 import type { MutateConfirmOfficeCommandRequest } from "@/modules/api/graphql/mutations/mutation-confirm-office-command"

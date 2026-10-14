@@ -1,3 +1,5 @@
+"use client"
+
 import useSWRMutation from "swr/mutation"
 import { mutateCreateHiringCvUpload } from "@/modules/api/graphql/mutations/mutation-create-hiring-cv-upload"
 import type { MutateCreateHiringCvUploadRequest } from "@/modules/api/graphql/mutations/mutation-create-hiring-cv-upload"

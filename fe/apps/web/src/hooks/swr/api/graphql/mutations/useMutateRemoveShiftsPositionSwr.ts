@@ -1,3 +1,5 @@
+"use client"
+
 import useSWRMutation from "swr/mutation"
 import { mutateRemoveShiftsPosition } from "@/modules/api/graphql/mutations/mutation-remove-shifts-position"
 import type { MutateRemoveShiftsPositionRequest } from "@/modules/api/graphql/mutations/mutation-remove-shifts-position"

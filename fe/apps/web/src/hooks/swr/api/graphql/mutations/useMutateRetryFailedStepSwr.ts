@@ -1,3 +1,5 @@
+"use client"
+
 import useSWRMutation from "swr/mutation"
 import { mutateRetryFailedStep } from "@/modules/api/graphql/mutations/mutation-retry-failed-step"
 import type { MutateRetryFailedStepRequest } from "@/modules/api/graphql/mutations/mutation-retry-failed-step"

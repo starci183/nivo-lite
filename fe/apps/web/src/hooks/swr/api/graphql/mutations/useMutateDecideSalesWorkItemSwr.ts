@@ -1,3 +1,5 @@
+"use client"
+
 import useSWRMutation from "swr/mutation"
 import { mutateDecideSalesWorkItem } from "@/modules/api/graphql/mutations/mutation-decide-sales-work-item"
 import type { MutateDecideSalesWorkItemRequest } from "@/modules/api/graphql/mutations/mutation-decide-sales-work-item"

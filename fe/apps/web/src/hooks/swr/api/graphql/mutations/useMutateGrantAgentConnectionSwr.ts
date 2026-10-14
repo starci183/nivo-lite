@@ -1,3 +1,5 @@
+"use client"
+
 import useSWRMutation from "swr/mutation"
 import { mutateGrantAgentConnection } from "@/modules/api/graphql/mutations/mutation-grant-agent-connection"
 import type { MutateGrantAgentConnectionRequest } from "@/modules/api/graphql/mutations/mutation-grant-agent-connection"

@@ -1,3 +1,5 @@
+"use client"
+
 import useSWRMutation from "swr/mutation"
 import { mutateRequestAgentSync } from "@/modules/api/graphql/mutations/mutation-request-agent-sync"
 import type { MutateRequestAgentSyncRequest } from "@/modules/api/graphql/mutations/mutation-request-agent-sync"

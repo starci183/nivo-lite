@@ -1,3 +1,5 @@
+"use client"
+
 import useSWRMutation from "swr/mutation"
 import { mutateRemoveBookingService } from "@/modules/api/graphql/mutations/mutation-remove-booking-service"
 import type { MutateRemoveBookingServiceRequest } from "@/modules/api/graphql/mutations/types/remove-booking-service"

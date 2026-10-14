@@ -1,3 +1,5 @@
+"use client"
+
 import useSWRMutation from "swr/mutation"
 import { mutatePostSetupMessage } from "@/modules/api/graphql/mutations/mutation-post-setup-message"
 import type { MutatePostSetupMessageRequest } from "@/modules/api/graphql/mutations/mutation-post-setup-message"

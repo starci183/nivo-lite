@@ -1,3 +1,5 @@
+"use client"
+
 import useSWRMutation from "swr/mutation"
 import { mutateReindexKnowledgeSource } from "@/modules/api/graphql/mutations/mutation-reindex-knowledge-source"
 import type { MutateReindexKnowledgeSourceRequest } from "@/modules/api/graphql/mutations/mutation-reindex-knowledge-source"

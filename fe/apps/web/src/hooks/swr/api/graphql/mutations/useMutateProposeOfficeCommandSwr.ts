@@ -1,3 +1,5 @@
+"use client"
+
 import useSWRMutation from "swr/mutation"
 import { mutateProposeOfficeCommand } from "@/modules/api/graphql/mutations/mutation-propose-office-command"
 import type { MutateProposeOfficeCommandRequest } from "@/modules/api/graphql/mutations/mutation-propose-office-command"

@@ -1,3 +1,5 @@
+"use client"
+
 import useSWRMutation from "swr/mutation"
 import { mutateCreateKnowledgeUpload } from "@/modules/api/graphql/mutations/mutation-create-knowledge-upload"
 import type { MutateCreateKnowledgeUploadRequest } from "@/modules/api/graphql/mutations/mutation-create-knowledge-upload"

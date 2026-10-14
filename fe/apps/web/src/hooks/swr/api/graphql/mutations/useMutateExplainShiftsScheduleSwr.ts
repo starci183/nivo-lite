@@ -1,3 +1,5 @@
+"use client"
+
 import useSWRMutation from "swr/mutation"
 import { mutateExplainShiftsSchedule } from "@/modules/api/graphql/mutations/mutation-explain-shifts-schedule"
 import type { MutateExplainShiftsScheduleRequest } from "@/modules/api/graphql/mutations/mutation-explain-shifts-schedule"

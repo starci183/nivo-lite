@@ -1,3 +1,5 @@
+"use client"
+
 import useSWRMutation from "swr/mutation"
 import { mutateGenerateHiringAd } from "@/modules/api/graphql/mutations/mutation-generate-hiring-ad"
 import type { MutateGenerateHiringAdRequest } from "@/modules/api/graphql/mutations/mutation-generate-hiring-ad"

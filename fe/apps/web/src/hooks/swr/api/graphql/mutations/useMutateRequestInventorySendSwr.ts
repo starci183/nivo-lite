@@ -1,3 +1,5 @@
+"use client"
+
 import useSWRMutation from "swr/mutation"
 import { mutateRequestInventorySend } from "@/modules/api/graphql/mutations/mutation-request-inventory-send"
 import type { MutateRequestInventorySendRequest } from "@/modules/api/graphql/mutations/mutation-request-inventory-send"

@@ -1,3 +1,5 @@
+"use client"
+
 import useSWRMutation from "swr/mutation"
 import { mutateRevokeAgentConnection } from "@/modules/api/graphql/mutations/mutation-revoke-agent-connection"
 import type { MutateRevokeAgentConnectionRequest } from "@/modules/api/graphql/mutations/mutation-revoke-agent-connection"

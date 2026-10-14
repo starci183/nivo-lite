@@ -1,3 +1,5 @@
+"use client"
+
 import useSWRMutation from "swr/mutation"
 import { mutateRecordOutcome } from "@/modules/api/graphql/mutations/mutation-record-outcome"
 import type { MutateRecordOutcomeRequest } from "@/modules/api/graphql/mutations/mutation-record-outcome"

@@ -1,3 +1,5 @@
+"use client"
+
 import useSWRMutation from "swr/mutation"
 import { mutateLinkHiringStaff } from "@/modules/api/graphql/mutations/mutation-link-hiring-staff"
 import type { MutateLinkHiringStaffRequest } from "@/modules/api/graphql/mutations/mutation-link-hiring-staff"

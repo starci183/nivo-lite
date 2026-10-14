@@ -1,3 +1,5 @@
+"use client"
+
 import useSWRMutation from "swr/mutation"
 import { mutateDecideExecution } from "@/modules/api/graphql/mutations/mutation-decide-execution"
 import type { MutateDecideExecutionRequest } from "@/modules/api/graphql/mutations/mutation-decide-execution"

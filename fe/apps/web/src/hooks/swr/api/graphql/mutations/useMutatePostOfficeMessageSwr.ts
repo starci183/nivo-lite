@@ -1,3 +1,5 @@
+"use client"
+
 import useSWRMutation from "swr/mutation"
 import { mutatePostOfficeMessage } from "@/modules/api/graphql/mutations/mutation-post-office-message"
 import type { MutatePostOfficeMessageRequest } from "@/modules/api/graphql/mutations/mutation-post-office-message"

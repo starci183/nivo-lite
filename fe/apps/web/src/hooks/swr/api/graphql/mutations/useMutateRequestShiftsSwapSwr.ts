@@ -1,3 +1,5 @@
+"use client"
+
 import useSWRMutation from "swr/mutation"
 import { mutateRequestShiftsSwap } from "@/modules/api/graphql/mutations/mutation-request-shifts-swap"
 import type { MutateRequestShiftsSwapRequest } from "@/modules/api/graphql/mutations/mutation-request-shifts-swap"

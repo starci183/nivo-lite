@@ -1,3 +1,5 @@
+"use client"
+
 import useSWRMutation from "swr/mutation"
 import { mutateDeleteKnowledgeSource } from "@/modules/api/graphql/mutations/mutation-delete-knowledge-source"
 import type { MutateDeleteKnowledgeSourceRequest } from "@/modules/api/graphql/mutations/mutation-delete-knowledge-source"

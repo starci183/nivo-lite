@@ -1,3 +1,5 @@
+"use client"
+
 import useSWRMutation from "swr/mutation"
 import { mutateCreateWorkspace } from "@/modules/api/graphql/mutations/mutation-create-workspace"
 import type { MutateCreateWorkspaceRequest } from "@/modules/api/graphql/mutations/mutation-create-workspace"

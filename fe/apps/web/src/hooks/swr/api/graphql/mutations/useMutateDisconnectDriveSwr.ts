@@ -1,3 +1,5 @@
+"use client"
+
 import useSWRMutation from "swr/mutation"
 import { mutateDisconnectDrive } from "@/modules/api/graphql/mutations/mutation-disconnect-drive"
 

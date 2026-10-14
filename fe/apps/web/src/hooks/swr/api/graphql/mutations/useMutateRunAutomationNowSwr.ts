@@ -1,3 +1,5 @@
+"use client"
+
 import useSWRMutation from "swr/mutation"
 import { mutateRunAutomationNow } from "@/modules/api/graphql/mutations/mutation-run-automation-now"
 import type { MutateRunAutomationNowRequest } from "@/modules/api/graphql/mutations/mutation-run-automation-now"

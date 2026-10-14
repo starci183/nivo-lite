@@ -1,3 +1,5 @@
+"use client"
+
 import useSWRMutation from "swr/mutation"
 import { mutateRecordManualEvidence } from "@/modules/api/graphql/mutations/mutation-record-manual-evidence"
 import type { MutateRecordManualEvidenceRequest } from "@/modules/api/graphql/mutations/mutation-record-manual-evidence"
