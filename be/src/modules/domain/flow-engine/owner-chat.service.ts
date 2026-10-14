@@ -85,7 +85,7 @@ export class OwnerChatService {
                 n: match.pool.length,
                 verb,
                 list: await this.listOf(shown, locale),
-                example: this.example(verb, shown[0], locale),
+                example: this.example(verb, shown, locale),
             }
             const key = match.pool.length === 0 ? "flowEngine.noMatch" : "flowEngine.which"
             return this.answer(this.catalog.get(key, params, locale))
@@ -158,9 +158,11 @@ export class OwnerChatService {
         return `${shown}; ${this.catalog.get("flowEngine.moreWaiting", { n: views.length - LISTED }, locale)}`
     }
 
-    private example(verb: string, view: WaitingView | undefined, locale: Locale): string {
-        if (view === undefined) return ""
-        return `${verb} ${view.ref || view.customer || moneyOf(view.amount ?? 0, locale)}`
+    private example(verb: string, views: ReadonlyArray<WaitingView>, locale: Locale): string {
+        return views
+            .slice(0, 1)
+            .map((view) => `${verb} ${view.ref || view.customer || moneyOf(view.amount ?? 0, locale)}`)
+            .join("")
     }
 
     private answer(reply: string): OwnerChatAnswer {

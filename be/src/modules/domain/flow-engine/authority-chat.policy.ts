@@ -5,6 +5,9 @@ import { fold, hasWord } from "./owner-chat.policy"
 /** The modes a rule can take. */
 export const RULE_MODES: ReadonlyArray<RuleMode> = ["auto", "ask", "never"]
 
+/** The words that name the order action. */
+const ORDER_WORDS: ReadonlyArray<string> = ["don", "order"]
+
 /**
  * Words that name each action in the owner's message, Vietnamese without accents and English; a rule change needs one of them.
  * The message is folded the same way before it is matched.
@@ -15,7 +18,7 @@ const ACTION_WORDS: Readonly<Record<string, ReadonlyArray<string>>> = {
     classify_lead: ["phan loai", "classify"],
     send_follow_up: ["follow-up", "follow up", "followup", "theo doi", "nhan lai", "cham soc lai"],
     send_quote: ["bao gia", "quote"],
-    confirm_order: ["don", "order"],
+    confirm_order: ORDER_WORDS,
     send_care: ["cham soc", "care"],
     issue_invoice: ["hoa don", "invoice", "xuat hd"],
     reconcile_payment: ["doi soat", "thanh toan", "chuyen khoan", "payment", "reconcile"],
@@ -49,8 +52,7 @@ export const namesAction = (said: string, record: AuthorityActionRecord): boolea
     wordsOf(record).some((word) => hasWord(said, word))
 
 /** Whether the message names the order action by its words, without the registry. */
-export const namesOrder = (said: string): boolean =>
-    (ACTION_WORDS.confirm_order ?? []).some((word) => hasWord(said, word))
+export const namesOrder = (said: string): boolean => ORDER_WORDS.some((word) => hasWord(said, word))
 
 /** Whether the message states "over <amount> ask me". */
 export const isThresholdSaid = (said: string): boolean => THRESHOLD.test(said)

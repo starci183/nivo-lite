@@ -11,6 +11,12 @@ import { HiringSettingsService } from "./hiring-settings.service"
 import { HiringWorkbenchService } from "./hiring-workbench.service"
 import type { CandidateRecord, HiringSettings } from "./hiring.contracts"
 import type { CandidateCvOutput } from "./hiring-operations.contracts"
+import type {
+    WorkbenchCandidateRow,
+    WorkbenchInterviewRow,
+    WorkbenchJobRow,
+    WorkbenchOfferRow,
+} from "./persistence/hiring-workbench.rows"
 import {
     COUNT_WAITING_APPROVALS,
     SELECT_ALL_AVAILABILITY,
@@ -317,5 +323,162 @@ describe("HiringWorkbenchService", () => {
 
             await expect(service.candidateDetail("u-1", "ws-1", "cand-1")).resolves.toEqual({ events: [], cv: null })
         })
+    })
+})
+
+const job: WorkbenchJobRow = {
+    id: "job-1",
+    workspace_id: "ws-1",
+    slug: "cashier",
+    title: "Cashier",
+    position: "Counter",
+    employment_type: "part_time",
+    schedule: "Evenings",
+    pay_min_vnd: "30000",
+    pay_max_vnd: 40000,
+    pay_unit: "hour",
+    location: "Market",
+    headcount: 2,
+    description: "Serve customers",
+    requirements: {
+        skills: ["POS"],
+        experience_years: 1,
+        experience_note: "Retail",
+        availability: ["Evenings"],
+        must_have: ["Payments"],
+        nice_to_have: ["Stock"],
+    },
+    questions: [{ id: "q-1", text: "POS?", type: "yesno", required: true, expect: "yes" }],
+    status: "open",
+    channels: ["page"],
+    ad_variants: { page: "Join us" },
+    closes_at: null,
+    created_at: new Date(NOW),
+    updated_at: NOW,
+}
+const candidate: WorkbenchCandidateRow = {
+    id: "cand-1",
+    workspace_id: "ws-1",
+    job_id: "job-1",
+    name: "Minh",
+    phone: "0901000000",
+    email: "minh@example.test",
+    source: "page",
+    conversation_id: null,
+    cv_path: "ws-1/cv.pdf",
+    cv_name: "cv.pdf",
+    cv_mime: "application/pdf",
+    cv_size: 123,
+    answers: [{ question_id: "q-1", question: "POS?", answer: "yes" }],
+    availability: "Evenings",
+    score: 90,
+    score_label: "fit",
+    score_reasons: [{ criterion: "POS", status: "met", note: "Yes" }],
+    score_summary: "Ready",
+    screened_at: NOW,
+    stage: "shortlisted",
+    stage_changed_at: new Date(NOW),
+    rejected_reason: null,
+    notes: "Call",
+    staff_id: null,
+    created_at: NOW,
+}
+const interview: WorkbenchInterviewRow = {
+    id: "int-1",
+    workspace_id: "ws-1",
+    candidate_id: "cand-1",
+    job_id: "job-1",
+    interviewer_user_id: "u-1",
+    interviewer_name: "Lan",
+    mode: "online",
+    location: "https://meet.test",
+    duration_min: 30,
+    proposed_slots: [{ start: NOW, end: "2026-10-15T03:30:00.000Z" }],
+    slot_start: NOW,
+    slot_end: "2026-10-15T03:30:00.000Z",
+    status: "confirmed",
+    token: "token-1",
+    work_item_id: "work-1",
+    reminder_sent_at: new Date(NOW),
+    note: "Bring CV",
+    created_at: NOW,
+}
+const offer: WorkbenchOfferRow = {
+    id: "offer-1",
+    workspace_id: "ws-1",
+    candidate_id: "cand-1",
+    job_id: "job-1",
+    terms: { title: "Cashier", pay: "40000/hour", start_date: "2026-11-01", probation: "1 month", note: "Welcome" },
+    draft: "Offer letter",
+    status: "accepted",
+    token: "offer-token",
+    work_item_id: "work-2",
+    sent_via: "email",
+    sent_at: NOW,
+    expires_at: "2026-11-01T03:00:00.000Z",
+    responded_at: new Date(NOW),
+    created_at: NOW,
+}
+
+describe("HiringWorkbenchService populated views", () => {
+    it.each([true, false])("maps additional workbench fields with reasons=%s", async (screened) => {
+        const em = mockEntityManager({
+            query: [
+                [SELECT_WORKBENCH_JOBS, [job]],
+                [
+                    SELECT_WORKBENCH_CANDIDATES,
+                    [{ ...candidate, score_reasons: screened ? candidate.score_reasons : null }],
+                ],
+                [SELECT_WORKBENCH_INTERVIEWS, [interview]],
+                [SELECT_WORKBENCH_OFFERS, [offer]],
+                [SELECT_WORKBENCH_ONBOARDING, []],
+                [SELECT_WORKBENCH_MEMBERS, []],
+                [SELECT_ALL_AVAILABILITY, []],
+                [COUNT_WAITING_APPROVALS, []],
+                [SELECT_FIGURES, []],
+            ],
+        })
+        const { service, links } = await build(em)
+        links.job.mockReturnValue("https://nivo.vn/tiem-ca-phe/cashier")
+
+        const bench = await service.bench("u-1", "ws-1")
+
+        expect(bench.jobs).toEqual([
+            expect.objectContaining({
+                id: "job-1",
+                adVariants: { page: "Join us" },
+                createdAt: NOW,
+                updatedAt: NOW,
+                publicUrl: "https://nivo.vn/tiem-ca-phe/cashier",
+            }),
+        ])
+        expect(bench.candidates).toEqual([
+            expect.objectContaining({
+                id: "cand-1",
+                cvSize: 123,
+                score: 90,
+                scoreLabel: "fit",
+                scoreReasons: screened ? [{ criterion: "POS", status: "met", note: "Yes" }] : [],
+                scoreSummary: "Ready",
+                screenedAt: NOW,
+                stageChangedAt: NOW,
+                rejectedReason: null,
+                notes: "Call",
+                createdAt: NOW,
+            }),
+        ])
+        expect(bench.interviews).toEqual([
+            expect.objectContaining({ id: "int-1", reminderSentAt: NOW, createdAt: NOW }),
+        ])
+        expect(bench.offers).toEqual([
+            expect.objectContaining({
+                id: "offer-1",
+                sentVia: "email",
+                sentAt: NOW,
+                respondedAt: NOW,
+                createdAt: NOW,
+            }),
+        ])
+        expect(links.job.mock.calls).toEqual([["tiem-ca-phe", "cashier"]])
     })
 })

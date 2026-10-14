@@ -6,7 +6,6 @@ import type { PerformContext } from "@modules/domain/module-ops"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { CLOCK } from "@modules/platform/clock"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
-import type { MessageCatalog } from "@modules/platform/i18n"
 import { HiringErrorCode } from "./errors/hiring.error"
 import type { CandidateRecord, InterviewRecord, Slot } from "./hiring.contracts"
 import type { RequestInterviewParams, SetInterviewStatusParams } from "./hiring-operations.contracts"
@@ -98,7 +97,6 @@ const gateOf = builder<ApprovalRequest>({
     fields,
 })
 const roleCall = ["user-1", "ws-1", ["owner", "manager"]]
-const head = { title: "Barista", position: "Barista", location: "Main Street" }
 const when = `when:${slot.start}`
 const confirmArgs = [TOKEN, slot.start, slot.end, text("hiring.event.interviewConfirmed", { when })]
 const defaultSlots = [
@@ -112,10 +110,8 @@ const declaredSlots = [
     { start: "2026-10-26T02:00:00.000Z", end: "2026-10-26T02:30:00.000Z" },
 ]
 const build = async (entityManager: MockEntityManager = mockEntityManager()) => {
-    const catalog = mock<MessageCatalog>()
-    catalog.get.mockImplementation((key, params) => text(key, params))
     const words = mock<HiringTextService>()
-    words.text.mockImplementation((key, params) => catalog.get(key, params ?? {}, "vi"))
+    words.text.mockImplementation(text)
     words.when.mockImplementation((instant) => `when:${String(instant)}`)
     const members = mock<WorkspaceMembersService>()
     members.require.mockResolvedValue({
@@ -135,7 +131,7 @@ const build = async (entityManager: MockEntityManager = mockEntityManager()) => 
     data.memberName.mockResolvedValue({ user_id: "interviewer-1", display_name: "Bob" })
     data.interviewers.mockResolvedValue([{ userId: "interviewer-1", name: "Bob", isOwner: true }])
     data.askAttempts.mockResolvedValue(2)
-    data.jobHead.mockResolvedValue(head)
+    data.jobHead.mockResolvedValue({ title: "Barista", position: "Barista", location: "Main Street" })
     data.availability.mockResolvedValue([{ weekday: 1, startMin: 540, endMin: 570 }])
     data.busy.mockResolvedValue([])
     data.newToken.mockResolvedValue(TOKEN)
@@ -201,6 +197,11 @@ describe("HiringInterviewsService", () => {
             duration_min: expected,
             contact: "alice@example.com",
         }
+        expect(gate.request.mock.calls).toEqual([[gateOf({ fields: expectedFields })]])
+        candidates.requireOpenCandidate.mockResolvedValue(candidateOf({ email: "" }))
+        gate.request.mockClear()
+        expectedFields.contact = "0901234567"
+        await service.request("user-1", "ws-1", request)
         expect(gate.request.mock.calls).toEqual([[gateOf({ fields: expectedFields })]])
     })
 

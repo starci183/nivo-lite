@@ -175,12 +175,12 @@ const nameHitsOf = (folded: string, waiting: ReadonlyArray<WaitingView>): Map<st
 const mentionsOf = (text: string, folded: string): Set<string> => {
     const mentions = new Set<string>()
     for (const match of folded.matchAll(PERSON_CUE)) {
-        const word = match[1] ?? ""
+        const word = String(match[1])
         if (word.length >= 2 && !NOT_NAME.has(word) && !HONOR_WORDS.has(word)) mentions.add(word)
     }
     let first = true
     for (const match of text.matchAll(WORD_RE)) {
-        const word = match[2] ?? ""
+        const word = String(match[2])
         const isStart = first || match[1] !== undefined
         first = false
         if (isStart || /\d/.test(word) || !/^\p{Lu}/u.test(word)) continue

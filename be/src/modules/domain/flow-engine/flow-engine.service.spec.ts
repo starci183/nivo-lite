@@ -27,21 +27,46 @@ const build = async () => {
     const setHandling = jest.fn().mockResolvedValue({ conversationId: "conv-1", handledBy: "An" })
     const request = jest.fn().mockResolvedValue({ id: "event-1", status: "queued", duplicate: false })
     const reply = jest.fn().mockResolvedValue({ handled: true, reply: "ok", posted: false })
+    const updateAuthority = jest.fn().mockResolvedValue({ policies: "check limits" })
+    const save = jest.fn().mockResolvedValue({ id: "staff-1", name: "An" })
+    const assign = jest.fn().mockResolvedValue({ id: "item-1", assigned_staff_id: "staff-1" })
+    const requestReply = jest.fn().mockResolvedValue({ id: "reply-1", status: "queued" })
+    const apply = jest.fn().mockResolvedValue({ summary: "saved", authority: null, rules: [] })
     const simulator = mock<SimulatedInputs>({ request })
+    const decisions = mock<DecisionsService>({ saveRule, updateAuthority })
+    const work = mock<WorkDecisionService>({ decide })
+    const placement = mock<WorkPlacementService>({ hold, assign })
+    const staff = mock<StaffService>({ save })
+    const chats = mock<ChatReplyService>({ setHandling, requestReply })
+    const authorityChat = mock<AuthorityChatService>({ apply })
+    const ownerChat = mock<OwnerChatService>({ reply })
     const moduleRef = await Test.createTestingModule({
         providers: [
             FlowEngineService,
-            { provide: DecisionsService, useValue: mock<DecisionsService>({ saveRule }) },
-            { provide: WorkDecisionService, useValue: mock<WorkDecisionService>({ decide }) },
-            { provide: WorkPlacementService, useValue: mock<WorkPlacementService>({ hold }) },
-            { provide: StaffService, useValue: mock<StaffService>({}) },
+            { provide: DecisionsService, useValue: decisions },
+            { provide: WorkDecisionService, useValue: work },
+            { provide: WorkPlacementService, useValue: placement },
+            { provide: StaffService, useValue: staff },
             { provide: FLOW_SIMULATED_INPUTS, useValue: simulator },
-            { provide: ChatReplyService, useValue: mock<ChatReplyService>({ setHandling }) },
-            { provide: AuthorityChatService, useValue: mock<AuthorityChatService>({}) },
-            { provide: OwnerChatService, useValue: mock<OwnerChatService>({ reply }) },
+            { provide: ChatReplyService, useValue: chats },
+            { provide: AuthorityChatService, useValue: authorityChat },
+            { provide: OwnerChatService, useValue: ownerChat },
         ],
     }).compile()
-    return { service: moduleRef.get(FlowEngineService), decide, hold, saveRule, setHandling, request, reply }
+    return {
+        service: moduleRef.get(FlowEngineService),
+        decide,
+        hold,
+        saveRule,
+        setHandling,
+        request,
+        reply,
+        updateAuthority,
+        save,
+        assign,
+        requestReply,
+        apply,
+    }
 }
 
 describe("FlowEngineService", () => {
@@ -131,5 +156,110 @@ describe("FlowEngineService", () => {
 
         expect(reply).toHaveBeenCalledWith(member, "@nivo ok", "vi")
         expect(result.data).toEqual({ handled: true, reply: "ok", posted: false })
+    })
+
+    it("saves the mapped authority patch as the requesting member", async () => {
+        const { service, updateAuthority } = await build()
+
+        const result = await service.run({
+            kind: "save_authority",
+            workspaceId: "ws-1",
+            member,
+            payload: { policies: "check limits", goal_revenue_vnd: 100.6 },
+        })
+
+        expect(updateAuthority).toHaveBeenCalledWith("user-1", "ws-1", {
+            policies: "check limits",
+            goal_revenue_vnd: 101,
+        })
+        expect(result).toEqual({ data: { policies: "check limits" } })
+    })
+
+    it("saves a staff member in the command workspace", async () => {
+        const { service, save } = await build()
+
+        const result = await service.run({
+            kind: "save_staff",
+            workspaceId: "ws-2",
+            member,
+            payload: { name: "An", active: false },
+        })
+
+        expect(save).toHaveBeenCalledWith({
+            workspaceId: "ws-2",
+            id: null,
+            name: "An",
+            role: "",
+            email: null,
+            active: false,
+        })
+        expect(result).toEqual({ data: { id: "staff-1", name: "An" } })
+    })
+
+    it.each([
+        { payload: { note: "wait", locale: "en" }, note: "wait", locale: "en" },
+        { payload: {}, note: "", locale: "vi" },
+    ])("holds work with optional note and selected locale %p", async ({ payload, note, locale }) => {
+        const { service, hold } = await build()
+
+        const result = await service.run({
+            kind: "hold",
+            workspaceId: "ws-1",
+            member,
+            payload: { workItemId: "item-1", ...payload },
+        })
+
+        expect(hold).toHaveBeenCalledWith("user-1", "ws-1", { workItemId: "item-1", note, locale })
+        expect(result).toEqual({ data: { id: "item-1", status: "waiting_decision" } })
+    })
+
+    it("assigns the work item through placement", async () => {
+        const { service, assign } = await build()
+
+        const result = await service.run({
+            kind: "assign",
+            workspaceId: "ws-1",
+            member,
+            payload: { work_item_id: "item-1", staff_id: "staff-1", locale: "en" },
+        })
+
+        expect(assign).toHaveBeenCalledWith("user-1", "ws-1", {
+            workItemId: "item-1",
+            staffId: "staff-1",
+            locale: "en",
+        })
+        expect(result).toEqual({ data: { id: "item-1", assigned_staff_id: "staff-1" } })
+    })
+
+    it("requests a human reply using the legacy conversation and text names", async () => {
+        const { service, requestReply } = await build()
+
+        const result = await service.run({
+            kind: "send_as_human",
+            workspaceId: "ws-1",
+            member,
+            payload: { conversation_id: "conv-1", body: "Thanks", locale: "en" },
+        })
+
+        expect(requestReply).toHaveBeenCalledWith("user-1", "ws-1", {
+            conversationId: "conv-1",
+            body: "Thanks",
+            locale: "en",
+        })
+        expect(result).toEqual({ data: { id: "reply-1", status: "queued" } })
+    })
+
+    it("applies authority chat with the member in the command workspace", async () => {
+        const { service, apply } = await build()
+
+        const result = await service.run({
+            kind: "authority_from_chat",
+            workspaceId: "ws-2",
+            member,
+            payload: { text: "Ask before quoting", locale: "en" },
+        })
+
+        expect(apply).toHaveBeenCalledWith({ ...member, workspaceId: "ws-2" }, "Ask before quoting", "en")
+        expect(result).toEqual({ data: { summary: "saved", authority: null, rules: [] } })
     })
 })

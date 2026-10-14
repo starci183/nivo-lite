@@ -212,9 +212,11 @@ export class AuthorityChatService {
                 code: FlowEngineErrorCode.ModeCapped,
                 params: { action: capped.record.action },
             })
-        const saved = await Promise.all(plans.map((plan) => this.saveRule(member.workspaceId, plan)))
-        parts.push(...(await Promise.all(saved.map((rule, index) => this.ruleLine(rule, plans[index], locale)))))
-        return saved
+        const saved = await Promise.all(
+            plans.map(async (plan) => ({ rule: await this.saveRule(member.workspaceId, plan), plan })),
+        )
+        parts.push(...(await Promise.all(saved.map(({ rule, plan }) => this.ruleLine(rule, plan, locale)))))
+        return saved.map(({ rule }) => rule)
     }
 
     private saveRule(workspaceId: string, plan: PlannedRule): Promise<AuthorityRuleRecord> {
@@ -228,12 +230,12 @@ export class AuthorityChatService {
         })
     }
 
-    private async ruleLine(rule: AuthorityRuleRecord, plan: PlannedRule | undefined, locale: Locale): Promise<string> {
+    private async ruleLine(rule: AuthorityRuleRecord, plan: PlannedRule, locale: Locale): Promise<string> {
         const line = this.catalog.get(
             "flowEngine.rule",
             {
                 dept: await this.modules.nameOf(rule.department, locale),
-                action: plan?.record.label[locale] ?? rule.action,
+                action: plan.record.label[locale],
                 mode: this.catalog.get(`flowEngine.mode.${rule.mode}`, {}, locale),
             },
             locale,

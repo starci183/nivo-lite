@@ -11,7 +11,7 @@ import { InventoryCatalogService } from "./inventory-catalog.service"
 import { InventoryImportService } from "./inventory-import.service"
 import { InventoryLocationsService } from "./inventory-locations.service"
 import { InventoryMovementsService } from "./inventory-movements.service"
-import { INVENTORY_TEMPLATES } from "./inventory.templates"
+import { INVENTORY_TEMPLATES, inventoryStarterOf } from "./inventory.templates"
 import { savedId } from "./policies/saved-id.policy"
 import type { IdRow } from "./policies/saved-id.policy"
 import {
@@ -159,6 +159,90 @@ describe("InventoryImportService", () => {
         const { service } = await build(mockEntityManager())
 
         await expect(service.listTemplates()).resolves.toBe(INVENTORY_TEMPLATES)
+    })
+
+    it("applies a named starter while preserving every existing supplier, item and recipe", async () => {
+        const starter = inventoryStarterOf("cafe")
+        const em = mockEntityManager({
+            query: [
+                [
+                    SELECT_SUPPLIER_NAMES,
+                    starter.suppliers.map((supplier) => ({ id: supplier.name, name: supplier.name })),
+                ],
+                [SELECT_ITEM_REFS, starter.items.map((item) => ({ id: item.sku, sku: item.sku, name: item.name }))],
+                [SELECT_RECIPE_NAMES, starter.recipes.map((recipe) => ({ name: recipe.name }))],
+            ],
+        })
+        const { service, catalogue, movements, office } = await build(em)
+
+        await expect(service.applyStarterKey("user-1", "ws-1", "cafe")).resolves.toEqual({
+            items: 0,
+            suppliers: 0,
+            recipes: 0,
+        })
+        expect(catalogue.writeSupplier).not.toHaveBeenCalled()
+        expect(movements.apply).not.toHaveBeenCalled()
+        expect(office.logEvidence).toHaveBeenCalledWith("ws-1", {
+            kind: "inventory.template",
+            actor: "Lan",
+            summary: text("inventory.starterSummary", { name: starter.name, items: 0, suppliers: 0, recipes: 0 }),
+        })
+        expect(() => service.applyStarterKey("user-1", "ws-1", "missing")).toThrow(
+            expect.objectContaining({ code: InventoryErrorCode.StarterUnknown }),
+        )
+    })
+
+    it("stores a starter item without a supplier and records the exact import summary", async () => {
+        const em = mockEntityManager({
+            query: [
+                [SELECT_SUPPLIER_NAMES, []],
+                [SELECT_ITEM_REFS, []],
+                [SAVE_ITEM, [{ id: "item-1" }]],
+                [SELECT_RECIPE_NAMES, []],
+            ],
+        })
+        const { service, movements, office } = await build(em)
+
+        await expect(
+            service.applyStarter("user-1", "ws-1", {
+                name: "Bare",
+                suppliers: [],
+                recipes: [],
+                items: [
+                    {
+                        sku: "TEA",
+                        name: "Tea",
+                        unit: "kg",
+                        category: "Pantry",
+                        costVnd: 2,
+                        reorderPoint: 0,
+                        reorderQty: 0,
+                        qty: 0,
+                    },
+                ],
+            }),
+        ).resolves.toEqual({ items: 1, suppliers: 0, recipes: 0 })
+        expect(em.query).toHaveBeenCalledWith(SAVE_ITEM, [
+            "ws-1",
+            null,
+            "TEA",
+            "Tea",
+            "kg",
+            "[]",
+            "Pantry",
+            2,
+            null,
+            0,
+            0,
+            null,
+            [],
+        ])
+        expect(movements.apply).not.toHaveBeenCalled()
+        expect(office.logEvidence).toHaveBeenCalledWith("ws-1", {
+            kind: "inventory.template",
+            actor: "Lan",
+            summary: text("inventory.starterSummary", { name: "Bare", items: 1, suppliers: 0, recipes: 0 }),
+        })
     })
 
     describe("applyStarter", () => {

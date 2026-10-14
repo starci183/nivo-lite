@@ -180,7 +180,7 @@ export const findFairnessViolations = (text: string, field = ""): Array<Fairness
             const from = rule.on === "fold" ? (map[start] ?? start) : start
             const to =
                 rule.on === "fold"
-                    ? (map[Math.min(start + match[0].length, map.length - 1)] ?? 0)
+                    ? Number(map[Math.min(start + match[0].length, map.length - 1)])
                     : start + match[0].length
             const key = `${rule.category}:${from}`
             if (!legal && !found.has(key)) {

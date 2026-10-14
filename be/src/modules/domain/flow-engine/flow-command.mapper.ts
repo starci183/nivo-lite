@@ -31,37 +31,41 @@ const isRecord = (value: unknown): value is FlowPayload =>
 const pick = (payload: FlowPayload, names: ReadonlyArray<string>): unknown =>
     names.map((name) => payload[name]).find((value) => value !== undefined)
 
-const optionalText = (payload: FlowPayload, ...names: Array<string>): string | null => {
+const optionalText = (payload: FlowPayload, ...names: [string, ...Array<string>]): string | null => {
     const value = pick(payload, names)
     if (value === undefined || value === null) return null
-    if (typeof value !== "string") throw invalid(names[0] ?? "")
+    if (typeof value !== "string") throw invalid(names[0])
     return value
 }
 
-const text = (payload: FlowPayload, ...names: Array<string>): string => {
+const text = (payload: FlowPayload, ...names: [string, ...Array<string>]): string => {
     const value = optionalText(payload, ...names)
-    if (value === null) throw invalid(names[0] ?? "")
+    if (value === null) throw invalid(names[0])
     return value
 }
 
-const optionalNumber = (payload: FlowPayload, ...names: Array<string>): number | null => {
+const optionalNumber = (payload: FlowPayload, ...names: [string, ...Array<string>]): number | null => {
     const value = pick(payload, names)
     if (value === undefined || value === null) return null
-    if (typeof value !== "number" || !Number.isFinite(value) || value < 0) throw invalid(names[0] ?? "")
+    if (typeof value !== "number" || !Number.isFinite(value) || value < 0) throw invalid(names[0])
     return value
 }
 
-const optionalBoolean = (payload: FlowPayload, ...names: Array<string>): boolean | null => {
+const optionalBoolean = (payload: FlowPayload, ...names: [string, ...Array<string>]): boolean | null => {
     const value = pick(payload, names)
     if (value === undefined || value === null) return null
-    if (typeof value !== "boolean") throw invalid(names[0] ?? "")
+    if (typeof value !== "boolean") throw invalid(names[0])
     return value
 }
 
-const oneOf = <T extends string>(payload: FlowPayload, allowed: ReadonlyArray<T>, ...names: Array<string>): T => {
+const oneOf = <T extends string>(
+    payload: FlowPayload,
+    allowed: ReadonlyArray<T>,
+    ...names: [string, ...Array<string>]
+): T => {
     const value = pick(payload, names)
     const found = allowed.find((option) => option === value)
-    if (found === undefined) throw invalid(names[0] ?? "")
+    if (found === undefined) throw invalid(names[0])
     return found
 }
 
