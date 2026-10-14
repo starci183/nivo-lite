@@ -1,7 +1,7 @@
 # Deploys the public door of the NIVO VPS: Traefik in Docker (~/nivo-edge, project "nivo-edge"), owner of 80/443 and the Let's Encrypt certificates.
 # Routes (deploy/edge/dynamic/routes.yml) are hot-reloaded by Traefik; compose changes recreate the container. Idempotent.
-# Lite cutover: runs by hand only, FIRST in the order edge -> api -> web (be/docs/runbooks/cutover.md). The new routes send api.nivo.vn and
-# every /api/ path of the product hosts to the api, and Traefik keeps a router whose upstream is down answering 502, so the edge goes live
+# Lite cutover: runs by hand only, FIRST in the order edge -> api -> web (be/docs/runbooks/cutover.md). The routes send the /api/, /graphql
+# and /healthz paths of nivo.vn and www.nivo.vn to the api, and Traefik keeps a router whose upstream is down answering 502, so the edge goes live
 # before the api only if nothing calls those paths yet: the runbook deploys the api right after, then the web.
 # Environment "production": vars VPS_HOST, VPS_USER; secrets VPS_SSH_KEY, VPS_KNOWN_HOSTS. Touches only ~/nivo-edge and the nivo-edge docker network.
 name: Deploy edge
@@ -19,7 +19,7 @@ jobs:
     environment: production
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
       - name: SSH setup
         env:

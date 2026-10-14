@@ -1,7 +1,7 @@
 # The public door of the NIVO VPS: Traefik v3 in Docker owns 80/443 and gets Let's Encrypt certificates itself.
-# Its own compose project (~/nivo-edge), so engine / web deploys never recreate it. Routes live in dynamic/routes.yml (file provider),
-# so the Docker socket is NOT mounted. The web container joins the external network "nivo-edge"; n8n and the engine are reached on the
-# docker bridge address 172.29.0.1 (N8N_BIND / ENGINE_BIND in the engine's deploy/.env), because the engine lives in openclaw's network namespace.
+# Its own compose project (~/nivo-edge), so api / web deploys never recreate it. Routes live in dynamic/routes.yml (file provider),
+# so the Docker socket is NOT mounted. The web container joins the external network "nivo-edge"; the api is reached on the
+# docker bridge address 172.29.0.1 (API_BIND, default in the stack's compose), because the api lives in openclaw's network namespace.
 # One-time: docker network create nivo-edge
 name: nivo-edge
 

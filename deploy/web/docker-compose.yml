@@ -1,13 +1,13 @@
 # The Next.js app on the NIVO VPS: its own compose project (~/nivo-web), separate from the api stack so neither deploy recreates the other.
 # No public port: the Traefik edge (~/nivo-edge, deploy/edge/) reaches it as nivo-web:3000 over the external docker network "nivo-edge".
 # 127.0.0.1:3000 is published for on-box debugging only. The image is built on the GitHub runner and loaded with docker load.
+# The web app has no runtime secret: every value it reads is a public NEXT_PUBLIC_* build argument baked into the image.
 name: nivo-web
 
 services:
   web:
     image: nivo-web:${WEB_TAG:?set WEB_TAG}
     restart: unless-stopped
-    env_file: .env
     ports:
       - "127.0.0.1:3000:3000"
     mem_limit: 600m

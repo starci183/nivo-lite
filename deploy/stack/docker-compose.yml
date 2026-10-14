@@ -1,15 +1,20 @@
-# NIVO stack for ONE Ubuntu VPS: the api + openclaw + n8n (+ its own postgres), and an optional caddy (TLS).
+# NIVO stack for ONE Ubuntu VPS: the api + openclaw + n8n (+ its own postgres). The Traefik edge (deploy/edge) owns 80/443.
 # Read be/docs/runbooks/vps-stack.md first. Run from this folder:  API_TAG=<tag> docker compose --env-file .env up -d
 #
+# Secrets: nothing secret is in .env or in this file's rendered environment. The deploy job runs deploy/materialize.mjs (sops, SOPS_AGE_KEY
+# from the protected GitHub environment) and ships one file per secret to ./secrets/api and ./secrets/stack, mounted read-only at /run/secrets;
+# services read `<NAME>_FILE`. (After the canon repin `starci app secret materialize` replaces the script.)
+#
 # Network layout (this is deliberate):
-#   caddy      publishes 80/443. Everything else is private to the compose network.
 #   openclaw   OpenClaw gateway, raw WebSocket on 18789. Published ONLY on 127.0.0.1 (reach it with an SSH tunnel for its Control UI).
 #   api        network_mode: service:openclaw  -> it shares openclaw network namespace, so it reaches the gateway on 127.0.0.1:18789.
 #              That is not a convenience: the gateway honours the scopes a client declares ONLY for a loopback peer using a shared
 #              secret (docs/OPENCLAW-GATEWAY-PROTOCOL.md in nivo-backend). From any other address the scopes are cleared and
-#              sessions.send is refused. Consequences: the api listens inside openclaw namespace (caddy reaches it as openclaw:8787),
-#              and recreating openclaw recreates the api too (compose does this for you).
-#   n8n        behind caddy at n8n.<domain>; talks to its own postgres (n8n-db).
+#              sessions.send is refused. Consequences: the api listens inside the openclaw namespace (the edge reaches it on the docker
+#              bridge address, API_BIND), and recreating openclaw recreates the api too (compose does this for you).
+#   n8n        private: published on 127.0.0.1 only (SSH tunnel for the editor), reached by the api as n8n:5678. It has no public host.
+#              To expose it later: add an n8n.<domain> DNS record, uncomment the n8n router in deploy/edge/dynamic/routes.yml and set
+#              N8N_HOST, N8N_PROTOCOL=https, WEBHOOK_URL and N8N_SECURE_COOKIE=true below.
 # Background jobs (be/docs/guides/jobs.md) run on Supabase Queues (pgmq) in the app's Supabase Postgres: no queue service in this stack.
 
 # The project name stays nivo-engine on purpose: compose prefixes the volume names with it (openclaw-data, n8n-db, ...), and renaming it would orphan them.
@@ -20,29 +25,6 @@ x-logging: &logging
   options: { max-size: "10m", max-file: "5" }
 
 services:
-  caddy:
-    # Optional public door. Off by default (profile "public"): on a host where another ingress already owns 80/443
-    # (the Traefik edge in deploy/edge) the stack runs without it; the api needs no inbound port at all.
-    profiles: ["public"]
-    image: caddy:2-alpine
-    restart: unless-stopped
-    ports:
-      - "80:80"
-      - "443:443"
-      - "443:443/udp"
-    environment:
-      DOMAIN: ${DOMAIN:-}
-      ACME_EMAIL: ${ACME_EMAIL:-}
-      N8N_ALLOWED_CIDRS: ${N8N_ALLOWED_CIDRS:-0.0.0.0/0 ::/0}
-    volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile:ro
-      - caddy-data:/data
-      - caddy-config:/config
-    depends_on:
-      - n8n
-      - openclaw
-    logging: *logging
-
   openclaw-init:
     # Writes the gateway settings the stack relies on into openclaw.json before the gateway starts (idempotent merge: other
     # keys, agents and plugins OpenClaw or an operator added are kept). Loopback bind + token auth: only the api, which
@@ -57,7 +39,7 @@ services:
         c.agents = c.agents || {}; c.agents.defaults = { ...(c.agents.defaults || {}), skipBootstrap: true }; // the api writes each agent workspace itself (openclaw.sync_agent): no first-run ritual
         c.session = { ...(c.session || {}), maintenance: { ...((c.session || {}).maintenance || {}), mode: "enforce", pruneAfter: "7d", maxEntries: 400, maxDiskBytes: "400mb" } };
         c.gateway = { ...(c.gateway || {}), mode: "local", bind: "loopback", port: 18789,
-          auth: { ...((c.gateway || {}).auth || {}), mode: "token", token: process.env.OPENCLAW_GATEWAY_TOKEN } };
+          auth: { ...((c.gateway || {}).auth || {}), mode: "token", token: fs.readFileSync(process.env.OPENCLAW_GATEWAY_TOKEN_FILE, "utf8") } };
         const model = process.env.OPENCLAW_MODEL;
         if (model) { c.agents = c.agents || {}; c.agents.defaults = c.agents.defaults || {};
           c.agents.defaults.model = { ...(c.agents.defaults.model || {}), primary: model };
@@ -68,10 +50,11 @@ services:
         fs.writeFileSync(p, JSON.stringify(c, null, 2), { mode: 0o600 });
         console.log("openclaw.json ready (gateway local/loopback/token" + (model ? ", model " + model : "") + ")");
     environment:
-      OPENCLAW_GATEWAY_TOKEN: ${OPENCLAW_GATEWAY_TOKEN:?set OPENCLAW_GATEWAY_TOKEN in .env}
+      OPENCLAW_GATEWAY_TOKEN_FILE: /run/secrets/OPENCLAW_GATEWAY_TOKEN
       OPENCLAW_MODEL: ${OPENCLAW_MODEL:-openrouter/deepseek/deepseek-v4-flash}
     volumes:
       - openclaw-data:/home/node/.openclaw
+      - ./secrets/stack:/run/secrets:ro
     logging: *logging
 
   openclaw:
@@ -79,20 +62,17 @@ services:
     # was measured against 2026.7.1. VERIFY the default start command of your tag (docker run --rm <image> --help) before first deploy.
     image: ${OPENCLAW_IMAGE:-ghcr.io/openclaw/openclaw}:${OPENCLAW_TAG:-2026.7.1}
     restart: unless-stopped
-    environment:
-      # Gateway credential: the api presents the same value (OPENCLAW_GATEWAY_TOKEN below).
-      OPENCLAW_GATEWAY_TOKEN: ${OPENCLAW_GATEWAY_TOKEN:?set OPENCLAW_GATEWAY_TOKEN in .env}
-      # Model provider keys: set whichever provider your OpenClaw agents are configured for (empty ones are ignored).
-      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
-      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
-      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+    # The one exception to `*_FILE`: the OpenClaw image reads the gateway token and the model provider keys from its process environment, so
+    # materialize.mjs writes ONLY those (whichever exist) to openclaw.env on this host (mode 0600, never GitHub, never rendered by `config -q`).
+    # openclaw-init writes the same token into openclaw.json from the mounted file; the api presents it from its own OPENCLAW_GATEWAY_TOKEN_FILE.
+    env_file: openclaw.env
     depends_on:
       openclaw-init:
         condition: service_completed_successfully
     # The api lives in this network namespace, so its port is published here. Bind to the Docker bridge address
-    # (API_BIND=172.29.0.1) to let the Traefik edge reach it; the edge routes api.nivo.vn and every /api/ path of the product hosts.
+    # (API_BIND, default 172.29.0.1 = the bridge of this host) so the Traefik edge can reach it; the edge routes the /api/, /graphql and /healthz paths of nivo.vn and www.nivo.vn.
     ports:
-      - "${API_BIND:-${ENGINE_BIND:-127.0.0.1}}:8787:8787"
+      - "${API_BIND:-172.29.0.1}:8787:8787"
     volumes:
       - openclaw-data:/home/node/.openclaw
     healthcheck:
@@ -118,31 +98,35 @@ services:
     depends_on:
       openclaw:
         condition: service_healthy
-    # api.env is the runtime environment of the api only (PRIMARY_DB_URL, SUPABASE_*, HTTP_SECURITY_*, the provider and queue keys): the
-    # stack .env (n8n encryption key, database password, ...) never reaches this container. The values below are the stack facts.
-    env_file: api.env
+    # api-public.conf is the committed, non-secret production configuration (origins, public URLs); api.env is generated by the deploy and holds
+    # only `<KEY>_FILE` pointers into /run/secrets (PRIMARY_DB_URL, SUPABASE_*, provider keys, ...). The n8n and database secrets never reach this
+    # container. The values below are the stack facts.
+    env_file:
+      - api-public.conf
+      - api.env
     environment:
       PORT: "8787"
       OPENCLAW_GATEWAY_URL: ws://127.0.0.1:18789
-      OPENCLAW_GATEWAY_TOKEN: ${OPENCLAW_GATEWAY_TOKEN}
       OPENCLAW_CONFIG_DIR: /openclaw-state
       OPENCLAW_GATEWAY_STATE_DIR: /home/node/.openclaw
       N8N_ALLOWED_HOSTS: ${N8N_ALLOWED_HOSTS:-n8n}
     volumes:
+      - ./secrets/api:/run/secrets:ro
       - openclaw-data:/openclaw-state
       - video-cache:/var/cache/nivo-video # voiceover clips by text hash: re-rendering the same script costs no TTS call
     stop_grace_period: 45s # running jobs finish or are handed back before the container stops
     logging: *logging
 
   n8n-db:
-    image: postgres:16-alpine
+    image: postgres:16.9-alpine
     restart: unless-stopped
     environment:
       POSTGRES_USER: n8n
       POSTGRES_DB: n8n
-      POSTGRES_PASSWORD: ${N8N_DB_PASSWORD:?set N8N_DB_PASSWORD in .env}
+      POSTGRES_PASSWORD_FILE: /run/secrets/N8N_DB_PASSWORD
     volumes:
       - n8n-db:/var/lib/postgresql/data
+      - ./secrets/stack:/run/secrets:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U n8n -d n8n"]
       interval: 10s
@@ -162,14 +146,14 @@ services:
       DB_POSTGRESDB_HOST: n8n-db
       DB_POSTGRESDB_DATABASE: n8n
       DB_POSTGRESDB_USER: n8n
-      DB_POSTGRESDB_PASSWORD: ${N8N_DB_PASSWORD}
-      N8N_ENCRYPTION_KEY: ${N8N_ENCRYPTION_KEY:?set N8N_ENCRYPTION_KEY in .env}
-      N8N_HOST: ${N8N_HOST:-localhost}
-      N8N_PROTOCOL: ${N8N_PROTOCOL:-http}
+      DB_POSTGRESDB_PASSWORD_FILE: /run/secrets/N8N_DB_PASSWORD
+      N8N_ENCRYPTION_KEY_FILE: /run/secrets/N8N_ENCRYPTION_KEY
+      N8N_HOST: localhost
+      N8N_PROTOCOL: http
       N8N_PORT: "5678"
-      WEBHOOK_URL: ${N8N_WEBHOOK_URL:-http://localhost:5678/}
+      WEBHOOK_URL: http://localhost:5678/
       N8N_PROXY_HOPS: "1"
-      N8N_SECURE_COOKIE: ${N8N_SECURE_COOKIE:-false}
+      N8N_SECURE_COOKIE: "false"
       N8N_DIAGNOSTICS_ENABLED: "false"
       N8N_PERSONALIZATION_ENABLED: "false"
       N8N_VERSION_NOTIFICATIONS_ENABLED: "false"
@@ -177,17 +161,21 @@ services:
       TZ: Asia/Ho_Chi_Minh
       EXECUTIONS_DATA_PRUNE: "true"
       EXECUTIONS_DATA_MAX_AGE: "336"
-    # N8N_BIND=127.0.0.1 keeps it private (SSH tunnel); N8N_BIND=172.29.0.1 lets the Traefik edge serve it at https://n8n.nivo.vn.
     ports:
-      - "${N8N_BIND:-127.0.0.1}:5678:5678"
+      - "127.0.0.1:5678:5678"
     volumes:
       - n8n-data:/home/node/.n8n
+      - ./secrets/stack:/run/secrets:ro
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:5678/healthz >/dev/null 2>&1 || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
     logging: *logging
 
 volumes:
   video-cache:
-  caddy-data:
-  caddy-config:
   openclaw-data:
   n8n-data:
   n8n-db:
