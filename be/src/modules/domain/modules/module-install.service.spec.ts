@@ -374,3 +374,126 @@ describe("ModuleInstallService", () => {
         })
     })
 })
+
+describe("ModuleInstallService lifecycle and reads", () => {
+    it("creates the first agent with the module's default name when every legacy agent is bound", async () => {
+        const { service, installations, members, agents, events } = await build()
+        installations.firstOfModule.mockResolvedValue(null)
+        installations.instanceNames.mockResolvedValue([])
+        installations.boundAgentIds.mockResolvedValue(["agent-1"])
+        agents.list.mockResolvedValue([agentOf()])
+        agents.create.mockResolvedValue(agentOf({ id: "agent-2" }))
+        installations.insert.mockResolvedValue("inst-2")
+
+        await expect(service.install("u1", requestOf({ name: "  Branch  desk  ", locale: "vi" }))).resolves.toEqual({
+            installationId: "inst-2",
+            agentId: "agent-2",
+            created: true,
+        })
+        expect(members.require).toHaveBeenCalledWith("u1", "ws-1", ["owner", "manager"])
+        expect(agents.list).toHaveBeenNthCalledWith(1, "u1", "ws-1", "chatbot")
+        expect(agents.list).toHaveBeenNthCalledWith(2, "u1", "ws-1")
+        expect(agents.create).toHaveBeenCalledWith("u1", {
+            workspaceId: "ws-1",
+            module: "chatbot",
+            name: CHATBOT_MODULE.agent.name,
+            handle: "chatbot-2",
+            role: CHATBOT_MODULE.agent.role.vi,
+            instructions: CHATBOT_MODULE.agent.instructions.vi,
+        })
+        expect(installations.insert).toHaveBeenCalledWith({
+            workspaceId: "ws-1",
+            moduleKey: "chatbot",
+            name: "Branch desk",
+            agentId: "agent-2",
+            operatingMode: "assist",
+        })
+        expect(events.record).toHaveBeenCalledWith({
+            workspaceId: "ws-1",
+            kind: "module.installed",
+            actor: "Lan",
+            summary: `Lan: ${CHATBOT_MODULE.name.vi} - Branch desk`,
+        })
+    })
+    it("reports the name taken when a first-instance insert loses a race without a surviving installation", async () => {
+        const { service, installations, agents, events, rules, sync } = await build()
+        installations.firstOfModule.mockResolvedValue(null)
+        installations.instanceNames.mockResolvedValue([])
+        installations.boundAgentIds.mockResolvedValue([])
+        agents.list.mockResolvedValue([agentOf()])
+        installations.insert.mockResolvedValue(null)
+
+        await expect(service.install("u1", requestOf())).rejects.toMatchObject({
+            code: ModulesErrorCode.InstanceNameTaken,
+        })
+        expect(installations.firstOfModule).toHaveBeenCalledTimes(2)
+        expect(installations.firstOfModule).toHaveBeenLastCalledWith("ws-1", "chatbot")
+        expect(events.record).not.toHaveBeenCalled()
+        expect(rules.seedDefaults).not.toHaveBeenCalled()
+        expect(sync.requestNow).not.toHaveBeenCalled()
+    })
+    it("rejects a blank instance rename before reading or writing the installation", async () => {
+        const { service, installations, members } = await build()
+
+        await expect(service.rename("u1", "ws-1", "inst-1", " \t ")).rejects.toMatchObject({
+            code: ModulesErrorCode.InstanceNameInvalid,
+        })
+        expect(members.require).toHaveBeenCalledWith("u1", "ws-1", ["owner", "manager"])
+        expect(installations.find).not.toHaveBeenCalled()
+        expect(installations.rename).not.toHaveBeenCalled()
+    })
+    it("reports an instance name taken by a concurrent rename", async () => {
+        const { service, installations } = await build()
+        installations.find.mockResolvedValue(recordOf())
+        installations.instanceNames.mockResolvedValue([{ id: "inst-2", name: "Night desk" }])
+        installations.rename.mockResolvedValue("taken")
+
+        await expect(service.rename("u1", "ws-1", "inst-1", " Lobby ")).rejects.toMatchObject({
+            code: ModulesErrorCode.InstanceNameTaken,
+        })
+        expect(installations.instanceNames).toHaveBeenCalledWith("ws-1", "chatbot", "inst-1")
+        expect(installations.rename).toHaveBeenCalledWith("ws-1", "inst-1", "Lobby")
+        expect(installations.find).toHaveBeenCalledTimes(1)
+    })
+    it("writes the operating mode and reads the updated installation", async () => {
+        const { service, installations, members } = await build()
+        installations.setOperatingMode.mockResolvedValue("done")
+        const updated = recordOf({ operatingMode: "autopilot" })
+        installations.find.mockResolvedValue(updated)
+
+        await expect(service.setOperatingMode("u1", "ws-1", "inst-1", "autopilot")).resolves.toEqual(updated)
+        expect(members.require).toHaveBeenCalledWith("u1", "ws-1", ["owner", "manager"])
+        expect(installations.setOperatingMode).toHaveBeenCalledWith("ws-1", "inst-1", "autopilot")
+        expect(installations.find).toHaveBeenCalledWith("ws-1", "inst-1")
+    })
+    it("pauses an installation with neither an agent nor an applied version", async () => {
+        const { service, installations, agents } = await build()
+        const paused = recordOf({ agentId: null, activeContextVersionId: null, status: "paused" })
+        installations.find.mockResolvedValue(paused)
+        installations.setLive.mockResolvedValue("done")
+
+        await expect(service.setLive("u1", "ws-1", "inst-1", false)).resolves.toEqual(paused)
+        expect(installations.setLive).toHaveBeenCalledWith("ws-1", "inst-1", false)
+        expect(agents.setStatus).not.toHaveBeenCalled()
+        expect(installations.find).toHaveBeenCalledTimes(2)
+    })
+    it("answers record ownership after checking workspace membership", async () => {
+        const { service, installations, members } = await build()
+        installations.installationOfRecord.mockResolvedValue({ installationId: "inst-1" })
+
+        await expect(service.installationOfRecord("u1", "ws-1", "record-1")).resolves.toEqual({
+            installationId: "inst-1",
+        })
+        expect(members.require).toHaveBeenCalledWith("u1", "ws-1")
+        expect(installations.installationOfRecord).toHaveBeenCalledWith("ws-1", "record-1")
+    })
+    it("answers requirement facts after checking workspace membership", async () => {
+        const { service, installations, members } = await build()
+        const facts = { providers: ["meta"], chatAgents: 2, staff: 3, members: 4 }
+        installations.requirementFacts.mockResolvedValue(facts)
+
+        await expect(service.requirementFacts("u1", "ws-1")).resolves.toEqual(facts)
+        expect(members.require).toHaveBeenCalledWith("u1", "ws-1")
+        expect(installations.requirementFacts).toHaveBeenCalledWith("ws-1")
+    })
+})

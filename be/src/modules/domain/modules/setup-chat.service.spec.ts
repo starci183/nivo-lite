@@ -138,6 +138,7 @@ const build = async () => {
         events,
         sync,
         cards,
+        catalog,
     }
 }
 
@@ -353,5 +354,85 @@ describe("SetupChatService", () => {
                 activeVersionId: "v-1",
             })
         })
+    })
+
+    it.each([
+        { items: [] },
+        { items: [lineOf({ setupSessionId: "older" })] },
+        { items: [lineOf({ role: "assistant" })] },
+    ])("has no pending turn when this draft has no unanswered user message: %p", async ({ items }) => {
+        const { service, sessions, messages, cards } = await build()
+        sessions.revisions.mockResolvedValue([{ id: "s-1", revision: 1, status: "draft" }])
+        messages.ofInstallation.mockResolvedValue(items)
+        cards.viewsOf.mockResolvedValue([])
+
+        expect((await service.state("u1", "ws-1", "inst-1", "en")).turnPending).toBe(false)
+        expect(cards.viewsOf).toHaveBeenCalledWith("ws-1", ["s-1"])
+    })
+
+    it.each([true, false])("welcomes a first draft with the localized module name (multi: %p)", async (isMulti) => {
+        const { service, sessions, catalog } = await build()
+        sessions.latest.mockResolvedValue(null)
+        sessions.open.mockResolvedValue(sessionOf())
+
+        await expect(service.openDraft(installationOf({ isMulti }), "vi")).resolves.toEqual(sessionOf())
+        expect(catalog.get).toHaveBeenCalledWith(
+            "setup.welcome",
+            { module: isMulti ? `${ACCOUNTING_MODULE.name.vi} - Books` : ACCOUNTING_MODULE.name.vi },
+            "vi",
+        )
+    })
+
+    it("refuses a missing draft after a competing open returned no session", async () => {
+        const { service, sessions } = await build()
+        sessions.latest.mockResolvedValue(null)
+        sessions.open.mockResolvedValue(null)
+
+        await expect(service.openDraft(installationOf(), "en")).rejects.toMatchObject({
+            code: ModulesErrorCode.InstallationNotFound,
+        })
+        expect(sessions.latest).toHaveBeenCalledTimes(2)
+    })
+
+    it("refuses a missing session before posting or enqueueing a message", async () => {
+        const { service, sessions, messages, queue } = await build()
+        sessions.find.mockResolvedValue(null)
+
+        await expect(service.postMessage("u1", "ws-1", "missing", "Hello", "en")).rejects.toMatchObject({
+            code: ModulesErrorCode.SetupSessionClosed,
+        })
+        expect(messages.post).not.toHaveBeenCalled()
+        expect(queue.enqueueSetupTurn).not.toHaveBeenCalled()
+    })
+
+    it("replaces old setup blocks when applying a changed active draft to an installing agent", async () => {
+        const { service, sessions, versions, installations, agents } = await build()
+        installations.find.mockResolvedValue(
+            installationOf({ agentId: "agent-1", status: "installing", activeContextVersionId: "v-1" }),
+        )
+        sessions.latest.mockResolvedValue(
+            sessionOf({ draft: { summary: "New bakery.", facts: [] }, gateEvidence: CONFIRMED }),
+        )
+        versions.latest.mockResolvedValue(versionOf())
+        versions.insert.mockResolvedValue(versionOf({ id: "v-2", version: 2 }))
+        agents.profileOf.mockResolvedValue({
+            id: "agent-1",
+            name: "Books",
+            handle: "books",
+            role: "Accounting",
+            approval_rule: "",
+            instructions: "Keep these rules.\n\n### NIVO setup v1\nOld rules\n### end NIVO setup",
+            knowledge: "Keep these notes.\n\n### NIVO setup v1\nOld notes\n### end NIVO setup",
+        })
+        const rules = ACCOUNTING_MODULE.gates.map((gate) => `- ${gate.label_en}: About ${gate.key}`).join("\n")
+
+        await expect(service.apply("u1", "ws-1", "inst-1", "en")).resolves.toBe(2)
+        expect(installations.activateVersion).toHaveBeenCalledWith("ws-1", "inst-1", "v-2", "ready")
+        expect(agents.profileOf).toHaveBeenCalledWith("ws-1", "agent-1")
+        expect(agents.setTexts).toHaveBeenCalledWith("u1", "ws-1", "agent-1", {
+            instructions: `Keep these rules.\n\n### NIVO setup v2\nConfirmed by the owner. Follow these rules exactly; when something is not covered, say a team member will confirm.\n${rules}\n### end NIVO setup`,
+            knowledge: `Keep these notes.\n\n### NIVO setup v2\nNew bakery.\n\n${rules}\n### end NIVO setup`,
+        })
+        expect(sessions.close).toHaveBeenCalledWith("s-1")
     })
 })

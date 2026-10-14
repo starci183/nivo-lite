@@ -135,6 +135,10 @@ describe("attachmentsOf", () => {
         expect(attachmentsOf([null, { filename: 1, content: "x" }, { filename: "a", content: 2 }])).toEqual([])
         expect(attachmentsOf("no")).toEqual([])
     })
+
+    it("drops attachments whose filename is text but whose content is not", () => {
+        expect(attachmentsOf([{ filename: "a.txt", content: 2 }])).toEqual([])
+    })
 })
 
 describe("renderTemplate", () => {
@@ -144,6 +148,10 @@ describe("renderTemplate", () => {
 
     it("keeps line breaks and tabs and drops other control characters", () => {
         expect(renderTemplate("a\tb\nc\r\u0001\u000b\u001fd", {})).toBe("a\tb\nc\rd")
+    })
+
+    it("drops form feed and preserves characters beyond the control range, including emoji", () => {
+        expect(renderTemplate("\u000c\u000d\u000e\u0020\u007f\u{1f642}", {})).toBe("\r \u007f\u{1f642}")
     })
 })
 

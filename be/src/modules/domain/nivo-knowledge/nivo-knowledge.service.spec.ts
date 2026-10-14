@@ -6,6 +6,7 @@ import { NivoKnowledgeService } from "./nivo-knowledge.service"
 import {
     COUNT_NIVO_FOR_MODULES,
     DELETE_STALE_NIVO_ITEMS,
+    LIST_NIVO_ITEMS,
     SELECT_NIVO_UNEMBEDDED,
     UPDATE_NIVO_VECTORS,
     UPSERT_NIVO_ITEM,
@@ -68,6 +69,86 @@ describe("NivoKnowledgeService", () => {
             const service = await build(em)
 
             await expect(service.countFor(["core"])).resolves.toBe(0)
+        })
+    })
+
+    describe("countForModule", () => {
+        it.each([
+            { module: "chatbot", folders: ["chatbot", "core"] },
+            { module: "core", folders: ["core"] },
+        ])("counts $module together with shared knowledge only once", async ({ module, folders }) => {
+            const em = mockEntityManager({ query: [COUNT_NIVO_FOR_MODULES, [{ count: 7 }]] })
+            const service = await build(em)
+
+            await expect(service.countForModule(module)).resolves.toBe(7)
+
+            expect(em.query).toHaveBeenCalledWith(COUNT_NIVO_FOR_MODULES, [folders])
+            expect(em.query).toHaveBeenCalledTimes(1)
+        })
+    })
+
+    describe("list", () => {
+        it("maps every stored field and serializes string and Date timestamps as UTC ISO strings", async () => {
+            const em = mockEntityManager({
+                query: [
+                    LIST_NIVO_ITEMS,
+                    [
+                        {
+                            id: "n1",
+                            module: "core",
+                            slug: "voice",
+                            title: "Voice",
+                            body: "Warm.",
+                            kind: "tone",
+                            version: 2,
+                            updated_at: "2026-04-01T10:30:00+07:00",
+                        },
+                        {
+                            id: "n2",
+                            module: "chatbot",
+                            slug: "care",
+                            title: "Care",
+                            body: "Answer fast.",
+                            kind: "playbook",
+                            version: 1,
+                            updated_at: new Date("2026-04-02T01:02:03.456Z"),
+                        },
+                    ],
+                ],
+            })
+            const service = await build(em)
+
+            await expect(service.list()).resolves.toEqual([
+                {
+                    id: "n1",
+                    module: "core",
+                    slug: "voice",
+                    title: "Voice",
+                    body: "Warm.",
+                    kind: "tone",
+                    version: 2,
+                    updatedAt: "2026-04-01T03:30:00.000Z",
+                },
+                {
+                    id: "n2",
+                    module: "chatbot",
+                    slug: "care",
+                    title: "Care",
+                    body: "Answer fast.",
+                    kind: "playbook",
+                    version: 1,
+                    updatedAt: "2026-04-02T01:02:03.456Z",
+                },
+            ])
+            expect(em.query).toHaveBeenCalledWith(LIST_NIVO_ITEMS)
+        })
+
+        it("returns an empty list when no items exist", async () => {
+            const em = mockEntityManager({ query: [LIST_NIVO_ITEMS, []] })
+            const service = await build(em)
+
+            await expect(service.list()).resolves.toEqual([])
+            expect(em.query).toHaveBeenCalledWith(LIST_NIVO_ITEMS)
         })
     })
 

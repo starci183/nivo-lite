@@ -135,6 +135,39 @@ describe("InstallationDirectoryService", () => {
             expect(catalog.find).toHaveBeenCalledWith("accounting")
         })
 
+        it("keeps empty confirmed evidence and uses catalog order rather than snapshot insertion order", async () => {
+            const { service, versions, installations, catalog } = await build()
+            versions.find.mockResolvedValue(
+                versionOf({
+                    snapshot: {
+                        summary: "Confirmed setup",
+                        facts: [],
+                        gates: {
+                            currency_tax: { status: "confirmed", evidence: "VND" },
+                            scope: { status: "confirmed", evidence: "" },
+                            source_evidence: { status: "proposed", evidence: "Review invoices" },
+                            tone: { status: "confirmed", evidence: "" },
+                        },
+                    },
+                }),
+            )
+            installations.findById.mockResolvedValue(recordOf())
+            catalog.find.mockResolvedValue(ACCOUNTING_MODULE)
+
+            await expect(service.contextVersionOf("version-1")).resolves.toEqual({
+                version: 3,
+                summary: "Confirmed setup",
+                gates: [
+                    { label: ACCOUNTING_MODULE.gates[0]?.label_vi, evidence: "" },
+                    { label: ACCOUNTING_MODULE.gates[1]?.label_vi, evidence: "VND" },
+                ],
+                facts: [],
+                toneEvidence: "",
+            })
+            expect(versions.find).toHaveBeenCalledWith("version-1")
+            expect(installations.findById).toHaveBeenCalledWith("inst-1")
+        })
+
         it("lists no gate when the installation is gone, and no tone when none was confirmed", async () => {
             const { service, versions, installations, catalog } = await build()
             versions.find.mockResolvedValue(
