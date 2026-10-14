@@ -345,6 +345,25 @@ describe("ZaloConnectService", () => {
             expect(connections.markFailing).not.toHaveBeenCalled()
         })
 
+        it("defaults to an empty connection id when the state split has no fields", async () => {
+            const { service, credentials, connections, logger } = await build()
+            const cause = new ChannelsError({ code: ChannelsErrorCode.ZaloStateRejected })
+            credentials.completeAuthorization.mockRejectedValue(cause)
+            const split = jest.spyOn(String.prototype, "split").mockReturnValueOnce([])
+            try {
+                await expect(service.finishAuthorization(actor, returned("missing-prefix"))).rejects.toBe(cause)
+            } finally {
+                split.mockRestore()
+            }
+
+            expect(logger.error.mock.calls).toEqual([
+                [ChannelsLogEvent.ZaloAuthorizationRefused, cause, { connectionId: "" }],
+            ])
+            expect(connections.find.mock.calls).toEqual([["ws-1", ""]])
+            expect(connections.markFailing).not.toHaveBeenCalled()
+            expect(connections.get).not.toHaveBeenCalled()
+        })
+
         it.each([
             ["c-plain", "c-plain"],
             ["c-1.nonce.with.dots", "c-1"],

@@ -244,8 +244,11 @@ export class ChannelConnectionsService {
         const origin = this.connections.publicOrigin()
         let confirmed = false
         if (connection.provider === "payos" && origin !== null) {
-            const clientId = String(stored.clientId)
-            const apiKey = String(stored.apiKey)
+            const clientId = stored.clientId
+            const apiKey = stored.apiKey
+            if (clientId === undefined || apiKey === undefined) {
+                throw new ChannelConnectionsError({ code: ChannelConnectionsErrorCode.KeysInvalid })
+            }
             try {
                 await this.setup.payosConfirmWebhook(
                     { clientId, apiKey },
