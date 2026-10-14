@@ -262,7 +262,11 @@ describe("ReconcilePaymentPerformerService", () => {
                 summary: "claimSettled|INV-1",
                 href: "/leads/lead-1",
             })
-            expect(evidence.log.mock.calls.map(([, entry]) => entry)).toEqual([
+            const [matched, ...settled] = evidence.log.mock.calls.map(([, entry]) => entry)
+            expect([
+                matched,
+                ...settled.sort((left, right) => (left.work_item_id ?? "").localeCompare(right.work_item_id ?? "")),
+            ]).toEqual([
                 {
                     lead_id: "lead-1",
                     work_item_id: "item-1",

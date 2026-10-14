@@ -129,7 +129,7 @@ describe("SendEmailPerformerService", () => {
             lang: "en",
         })
 
-        const performed = await service.perform(ctx, itemOf(), proposalOf({ purpose: null }, undefined))
+        const performed = await service.perform(ctx, itemOf(), { ...proposalOf({ purpose: null }), draft: undefined })
 
         expect(performed.detail).toBeNull()
         expect(mail.send.mock.calls[0]?.[0]).toMatchObject({

@@ -8,7 +8,7 @@ import { ModuleOpsLogEvent } from "./module-ops.log-events"
 
 describe("LoggingOfficeLogService", () => {
     const build = async () => {
-        const events = mock<EventsService>()
+        const events = mock<EventsService>({ record: jest.fn().mockResolvedValue(undefined) })
         const logger = mock<Logger>()
         const moduleRef = await Test.createTestingModule({
             providers: [
