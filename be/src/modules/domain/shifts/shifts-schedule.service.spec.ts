@@ -151,6 +151,9 @@ const build = async (entityManager: MockEntityManager) => {
     const words = mock<ShiftsTextService>()
     words.text.mockImplementation(text)
     words.week.mockImplementation((monday) => `week:${monday}`)
+    words.findings.mockImplementation((list) =>
+        list.map((item) => text(`shifts.finding.${item.code}`, { ...item.params })),
+    )
     const generator = mock<ModuleTextGenerator>()
     generator.generate.mockResolvedValue({ ok: false, output: "" })
     const gate = mock<ApprovalGate>()

@@ -74,10 +74,13 @@ const build = async (em: MockEntityManager) => {
         accountOf: () =>
             Promise.resolve({ kind: "ok", value: { email: "owner@shop.test", lastSignInAt: null, displayName: "O" } }),
     })
-    const office = mock<OfficeLog>({ logEvidence: () => Promise.resolve() })
-    const mail = mock<OutboundMail>({ send: () => Promise.resolve({ status: "sent" }) })
+    const office = mock<OfficeLog>()
+    office.logEvidence.mockResolvedValue(undefined)
+    const mail = mock<OutboundMail>()
+    mail.send.mockResolvedValue({ status: "sent" })
     const data = mock<ShiftsDataService>({ loadSetup: () => Promise.resolve(SETUP) })
-    const notify = mock<ShiftsNotifyService>({ toManagers: () => Promise.resolve() })
+    const notify = mock<ShiftsNotifyService>()
+    notify.toManagers.mockResolvedValue(undefined)
     const words = mock<ShiftsTextService>({ text: (key: string) => key })
     const moduleRef = await Test.createTestingModule({
         providers: [

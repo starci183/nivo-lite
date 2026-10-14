@@ -80,15 +80,17 @@ const answer = (em: MockEntityManager, rows: ReadonlyArray<AlertShiftRow>, enabl
 const build = async (em: MockEntityManager, now = NOW) => {
     const outbox = recordingQueueOutbox()
     const registry = mock<ActionPerformerRegistry>()
-    const gate = mock<ApprovalGate>({ request: () => Promise.resolve({ status: "done", workItemId: "wi-1" }) })
-    const office = mock<OfficeLog>({ logEvidence: () => Promise.resolve() })
+    const gate = mock<ApprovalGate>()
+    gate.request.mockResolvedValue({ status: "done", workItemId: "wi-1" })
+    const office = mock<OfficeLog>()
+    office.logEvidence.mockResolvedValue(undefined)
     const workspaces = mock<WorkspacesService>({ nameOf: () => Promise.resolve("Spa") })
     const data = mock<ShiftsDataService>({ loadSetup: () => Promise.resolve(SETUP) })
-    const monthClose = mock<ShiftsMonthCloseService>({ tick: () => Promise.resolve(0) })
-    const notify = mock<ShiftsNotifyService>({
-        toStaff: () => Promise.resolve({ office: true, telegram: true, zalo: null }),
-        toManagers: () => Promise.resolve(),
-    })
+    const monthClose = mock<ShiftsMonthCloseService>()
+    monthClose.tick.mockResolvedValue(0)
+    const notify = mock<ShiftsNotifyService>()
+    notify.toStaff.mockResolvedValue({ office: true, telegram: true, zalo: null })
+    notify.toManagers.mockResolvedValue(undefined)
     const words = mock<ShiftsTextService>({
         text: (key: string, params?: Record<string, string | number>) =>
             `${key}${params ? JSON.stringify(params) : ""}`,

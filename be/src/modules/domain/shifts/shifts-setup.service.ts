@@ -243,7 +243,7 @@ export class ShiftsSetupService {
         decider: string | null,
     ): Promise<SaveShiftsAvailabilityOutput> {
         const day = request.date ?? null
-        const weekday = day === null ? request.weekday : null
+        const weekday = request.weekday
         if ((day === null) === (weekday === null || weekday === undefined)) {
             throw new ShiftsError({ code: ShiftsErrorCode.AvailabilityInvalid })
         }

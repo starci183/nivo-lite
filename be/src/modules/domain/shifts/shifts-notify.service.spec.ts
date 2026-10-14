@@ -59,9 +59,11 @@ const answer = (em: MockEntityManager, person: Person | null, agent: boolean) =>
 }
 
 const build = async (em: MockEntityManager) => {
-    const office = mock<OfficeLog>({ postOffice: () => Promise.resolve() })
+    const office = mock<OfficeLog>()
+    office.postOffice.mockResolvedValue(undefined)
     const bindings = mock<AgentBindingsService>()
-    const delivery = mock<ChannelDeliveryService>({ sendToPerson: () => Promise.resolve() })
+    const delivery = mock<ChannelDeliveryService>()
+    delivery.sendToPerson.mockResolvedValue(undefined)
     const words = mock<ShiftsTextService>({ text: (key: string) => key })
     const moduleRef = await Test.createTestingModule({
         providers: [
