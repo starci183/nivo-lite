@@ -3,7 +3,8 @@ import type { RawBodyRequest } from "@nestjs/common"
 import type { Request } from "express"
 import { BankFeedService } from "@modules/domain/billing"
 import { Public, PublicReason } from "@modules/domain/identity"
-import { RateLimit, RateTier } from "@modules/platform/http-security"
+import { InjectWebhookSignature, RateLimit, RateTier } from "@modules/platform/http-security"
+import type { WebhookSignatureService } from "@modules/platform/http-security"
 
 @Controller("api/connections/payos")
 /**
@@ -12,14 +13,24 @@ import { RateLimit, RateTier } from "@modules/platform/http-security"
  * booked. The proven delivery goes to one feed intake that books a paid order once per payOS reference.
  */
 export class PayosWebhook {
-    constructor(private readonly feed: BankFeedService) {}
+    constructor(
+        @InjectWebhookSignature() private readonly signature: WebhookSignatureService,
+        private readonly feed: BankFeedService,
+    ) {}
 
-    /** Answers HTTP 200 with `{"success": true}` and what the delivery came to. */
+    /** Proves the body signature before intake and acknowledges accepted deliveries with HTTP 200 and an empty body. */
     @Post(":connectionId")
     @HttpCode(HttpStatus.OK)
     @Public({ reason: PublicReason.SignedWebhook })
     @RateLimit(RateTier.Strict)
     async receive(@Req() request: RawBodyRequest<Request>, @Param("connectionId") connectionId: string): Promise<void> {
+        await this.signature.verify({
+            provider: "payos",
+            scope: connectionId,
+            rawBody: request.rawBody,
+            signature: undefined,
+            timestamp: undefined,
+        })
         await this.feed.acceptPayosDelivery({ connectionId, rawBody: request.rawBody })
     }
 }
