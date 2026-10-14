@@ -1,3 +1,5 @@
+"use client"
+
 import useSWRMutation from "swr/mutation"
 import { mutateSaveContract } from "@/modules/api/graphql/mutations/mutation-save-contract"
 import type { MutateSaveContractRequest } from "@/modules/api/graphql/mutations/mutation-save-contract"

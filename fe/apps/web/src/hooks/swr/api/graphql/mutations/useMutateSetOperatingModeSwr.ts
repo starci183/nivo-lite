@@ -1,3 +1,5 @@
+"use client"
+
 import useSWRMutation from "swr/mutation"
 import { mutateSetOperatingMode } from "@/modules/api/graphql/mutations/mutation-set-operating-mode"
 import type { MutateSetOperatingModeRequest } from "@/modules/api/graphql/mutations/mutation-set-operating-mode"

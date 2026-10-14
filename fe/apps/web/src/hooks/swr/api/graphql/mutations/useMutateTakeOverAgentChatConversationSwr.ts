@@ -1,3 +1,5 @@
+"use client"
+
 import useSWRMutation from "swr/mutation"
 import { mutateTakeOverAgentChatConversation } from "@/modules/api/graphql/mutations/mutation-take-over-agent-chat-conversation"
 import type { MutateTakeOverAgentChatConversationRequest } from "@/modules/api/graphql/mutations/mutation-take-over-agent-chat-conversation"

@@ -1,3 +1,5 @@
+"use client"
+
 import useSWR from "swr"
 import type { AgentChatTurnStatusType } from "@/modules/api"
 import { queryAgentChatTurnStatus } from "@/modules/api/graphql/queries/query-agent-chat-turn-status"

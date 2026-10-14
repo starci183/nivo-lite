@@ -1,3 +1,5 @@
+"use client"
+
 import useSWRMutation from "swr/mutation"
 import { mutateSettleWonDeal } from "@/modules/api/graphql/mutations/mutation-settle-won-deal"
 import type { MutateSettleWonDealRequest } from "@/modules/api/graphql/mutations/mutation-settle-won-deal"

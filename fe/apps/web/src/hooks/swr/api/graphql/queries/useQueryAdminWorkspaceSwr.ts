@@ -1,3 +1,5 @@
+"use client"
+
 import useSWR from "swr"
 import { queryAdminWorkspace } from "@/modules/api/graphql/queries/query-admin-workspace"
 import type { QueryAdminWorkspaceRequest } from "@/modules/api/graphql/queries/query-admin-workspace"

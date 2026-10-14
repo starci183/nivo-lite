@@ -1,3 +1,5 @@
+"use client"
+
 import useSWR from "swr"
 import { queryBillingReviewTransactions } from "@/modules/api/graphql/queries/query-billing-review-transactions"
 

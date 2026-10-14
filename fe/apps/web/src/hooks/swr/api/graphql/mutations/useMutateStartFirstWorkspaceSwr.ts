@@ -1,3 +1,5 @@
+"use client"
+
 import useSWR, { useSWRConfig } from "swr"
 import { mutateStartFirstWorkspace } from "@/modules/api/graphql/mutations/mutation-start-first-workspace"
 import { QUERY_MY_WORKSPACES_SWR_KEY } from "../queries/useQueryMyWorkspacesSwr"

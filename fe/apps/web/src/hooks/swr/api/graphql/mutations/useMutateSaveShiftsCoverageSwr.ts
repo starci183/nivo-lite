@@ -1,3 +1,5 @@
+"use client"
+
 import useSWRMutation from "swr/mutation"
 import { mutateSaveShiftsCoverage } from "@/modules/api/graphql/mutations/mutation-save-shifts-coverage"
 import type { MutateSaveShiftsCoverageRequest } from "@/modules/api/graphql/mutations/mutation-save-shifts-coverage"

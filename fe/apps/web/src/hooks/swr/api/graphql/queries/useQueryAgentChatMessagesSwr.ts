@@ -1,3 +1,5 @@
+"use client"
+
 import useSWR from "swr"
 import { queryAgentChatMessages } from "@/modules/api/graphql/queries/query-agent-chat-messages"
 

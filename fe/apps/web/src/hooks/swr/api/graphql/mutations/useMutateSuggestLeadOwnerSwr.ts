@@ -1,3 +1,5 @@
+"use client"
+
 import useSWRMutation from "swr/mutation"
 import { mutateSuggestLeadOwner } from "@/modules/api/graphql/mutations/mutation-suggest-lead-owner"
 import type { MutateSuggestLeadOwnerRequest } from "@/modules/api/graphql/mutations/mutation-suggest-lead-owner"

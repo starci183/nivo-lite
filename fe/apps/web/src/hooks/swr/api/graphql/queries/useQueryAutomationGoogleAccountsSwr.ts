@@ -1,3 +1,5 @@
+"use client"
+
 import useSWR from "swr"
 import { queryAutomationGoogleAccounts } from "@/modules/api/graphql/queries/query-automation-google-accounts"
 import { googleAccountViewOf } from "@/modules/automations"

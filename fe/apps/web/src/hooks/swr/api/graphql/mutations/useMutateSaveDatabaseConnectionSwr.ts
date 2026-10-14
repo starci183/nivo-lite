@@ -1,3 +1,5 @@
+"use client"
+
 import useSWRMutation from "swr/mutation"
 import { mutateSaveDatabaseConnection } from "@/modules/api/graphql/mutations/mutation-save-database-connection"
 import type { MutateSaveDatabaseConnectionRequest } from "@/modules/api/graphql/mutations/mutation-save-database-connection"

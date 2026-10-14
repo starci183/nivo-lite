@@ -1,3 +1,5 @@
+"use client"
+
 import useSWRMutation from "swr/mutation"
 import { mutateUpdateKnowledgeSource } from "@/modules/api/graphql/mutations/mutation-update-knowledge-source"
 import type { MutateUpdateKnowledgeSourceRequest } from "@/modules/api/graphql/mutations/mutation-update-knowledge-source"

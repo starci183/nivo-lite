@@ -1,3 +1,5 @@
+"use client"
+
 import useSWRMutation from "swr/mutation"
 import { mutateSaveInventoryLocation } from "@/modules/api/graphql/mutations/mutation-save-inventory-location"
 import type { MutateSaveInventoryLocationRequest } from "@/modules/api/graphql/mutations/mutation-save-inventory-location"

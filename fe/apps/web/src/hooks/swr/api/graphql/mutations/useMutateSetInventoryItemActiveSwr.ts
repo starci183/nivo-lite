@@ -1,3 +1,5 @@
+"use client"
+
 import useSWRMutation from "swr/mutation"
 import { mutateSetInventoryItemActive } from "@/modules/api/graphql/mutations/mutation-set-inventory-item-active"
 import type { MutateSetInventoryItemActiveRequest } from "@/modules/api/graphql/mutations/mutation-set-inventory-item-active"

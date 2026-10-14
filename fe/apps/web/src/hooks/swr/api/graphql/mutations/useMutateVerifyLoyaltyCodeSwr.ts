@@ -1,3 +1,5 @@
+"use client"
+
 import useSWRMutation from "swr/mutation"
 import { mutateVerifyLoyaltyCode } from "@/modules/api/graphql/mutations/mutation-verify-loyalty-code"
 import type { MutateVerifyLoyaltyCodeRequest } from "@/modules/api/graphql/mutations/types/verify-loyalty-code"

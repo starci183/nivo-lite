@@ -1,3 +1,5 @@
+"use client"
+
 import useSWRMutation from "swr/mutation"
 import { mutateSaveShiftsStaff } from "@/modules/api/graphql/mutations/mutation-save-shifts-staff"
 import type { MutateSaveShiftsStaffRequest } from "@/modules/api/graphql/mutations/mutation-save-shifts-staff"

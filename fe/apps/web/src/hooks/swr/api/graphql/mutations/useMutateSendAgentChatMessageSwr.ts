@@ -1,3 +1,5 @@
+"use client"
+
 import useSWRMutation from "swr/mutation"
 import { mutateSendAgentChatMessage } from "@/modules/api/graphql/mutations/mutation-send-agent-chat-message"
 import type { MutateSendAgentChatMessageRequest } from "@/modules/api/graphql/mutations/mutation-send-agent-chat-message"

@@ -1,3 +1,5 @@
+"use client"
+
 import useSWRMutation from "swr/mutation"
 import { mutateSaveHoldingMessage } from "@/modules/api/graphql/mutations/mutation-save-holding-message"
 import type { MutateSaveHoldingMessageRequest } from "@/modules/api/graphql/mutations/mutation-save-holding-message"

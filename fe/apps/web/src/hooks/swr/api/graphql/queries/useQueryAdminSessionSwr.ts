@@ -1,3 +1,5 @@
+"use client"
+
 import useSWR from "swr"
 import { queryAdminSession } from "@/modules/api/graphql/queries/query-admin-session"
 

@@ -1,3 +1,5 @@
+"use client"
+
 import useSWR from "swr"
 import { queryAutomations } from "@/modules/api/graphql/queries/query-automations"
 import { automationsOverviewOf } from "@/modules/automations"
