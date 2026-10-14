@@ -34,8 +34,8 @@ const build = async (listings: ReadonlyArray<string>, files: ReadonlyArray<unkno
                 useValue: {
                     host: undefined,
                     user: "nivo",
-                    keyPath: "/k",
-                    knownHostsPath: undefined,
+                    sshKey: undefined,
+                    knownHosts: undefined,
                     container: "n8n-1",
                 },
             },

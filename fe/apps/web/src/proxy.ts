@@ -5,7 +5,7 @@ import { refreshSession } from "./modules/auth"
 import { routing } from "./modules/i18n"
 import { APP_ROUTES, onPublicOrigin } from "./modules/routes"
 
-// Reachable without a session. Webhooks (Telegram, bank connection) are each verified by their own secret header; /api/engine by an HMAC (ENGINE_SHARED_SECRET), /api/n8n by a per-run bearer token (hash stored with an expiry).
+// Reachable without a session. Webhooks (Telegram, bank connection) are each verified by their own secret header; /api/n8n by a per-run bearer token (hash stored with an expiry).
 const PUBLIC_PATHS = [
     "/login",
     "/signup",

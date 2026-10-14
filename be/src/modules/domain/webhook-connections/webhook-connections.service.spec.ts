@@ -43,7 +43,7 @@ const record = (overrides: Partial<ConnectionRecord> = {}): ConnectionRecord => 
 })
 
 const build = async (signing = true, origin: string | null = "https://nivo.vn") => {
-    const options = { engineSharedSecret: signing ? SECRET : undefined }
+    const options = { signingSecret: signing ? SECRET : undefined }
     const connections = mock<ConnectionsService>()
     connections.authorize.mockResolvedValue({ role: "owner", displayName: "Lan" })
     connections.publicOrigin.mockReturnValue(origin)

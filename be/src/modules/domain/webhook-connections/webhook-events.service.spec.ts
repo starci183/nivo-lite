@@ -24,8 +24,8 @@ import { WebhookEventsService } from "./webhook-events.service"
 
 const NOW = new Date("2026-10-13T03:00:00.000Z")
 const TARGET = "https://receiver.test/hook"
-const OPTIONS: WebhookConnectionsOptions = { engineSharedSecret: new Secret("engine-secret") }
-const SIGNING_OFF: WebhookConnectionsOptions = { engineSharedSecret: undefined }
+const OPTIONS: WebhookConnectionsOptions = { signingSecret: new Secret("engine-secret") }
+const SIGNING_OFF: WebhookConnectionsOptions = { signingSecret: undefined }
 const DATA = { work_item_id: "wi-1", outcome: "approved" }
 const JOB: N8nWebhookPayload = {
     workspaceId: "ws-1",

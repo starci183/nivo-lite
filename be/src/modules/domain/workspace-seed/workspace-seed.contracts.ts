@@ -4,7 +4,7 @@ export interface SeedAccount {
     readonly email: string
     /** The display name. */
     readonly name: string
-    /** The password to set; the command keeps it in the operator's secrets file, never in output. */
+    /** The password to set; the command shows it once to the operator and never stores it. */
     readonly password: string
 }
 

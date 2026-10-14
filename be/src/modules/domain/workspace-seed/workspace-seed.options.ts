@@ -96,22 +96,10 @@ export interface SeedAuth {
     updateUserById(id: string, update: SeedUserUpdate): Promise<SeedUserUpdated>
 }
 
-/** Where the operator keeps the passwords of the demo accounts: a file, never the log. */
-export interface SeedSecretsStore {
-    /** Where the secrets are kept, for the report. */
-    readonly location: string
-    /** The stored text; empty when nothing was stored yet. */
-    read(): Promise<string>
-    /** Replaces the stored text. */
-    write(text: string): Promise<void>
-}
-
 /** What the workspace seed takes from the app root. */
 export interface WorkspaceSeedOptions {
     /** The provider token of the Auth administration (a `SeedAuth`) in the app. */
     readonly auth: InjectionToken
-    /** The operator's secrets file. */
-    readonly secrets: SeedSecretsStore
-    /** Writes one line of the report to the operator's terminal. */
+    /** Writes one credential, guidance or report line to the operator's terminal. */
     readonly print: (line: string) => void
 }

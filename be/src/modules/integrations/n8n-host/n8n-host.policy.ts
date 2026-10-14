@@ -49,11 +49,16 @@ export const importDocument = (plan: ReadonlyArray<PlannedWorkflow>): string =>
     JSON.stringify(plan.map(({ workflow, id }) => ({ ...workflow, ...(id ? { id } : {}), active: false })))
 
 /** The ssh arguments that reach the host and run the command there. */
-export const sshArguments = (target: N8nHostOptions, command: string): ReadonlyArray<string> => {
-    const known = target.knownHostsPath === undefined ? [] : ["-o", `UserKnownHostsFile=${target.knownHostsPath}`]
+export const sshArguments = (
+    target: Pick<N8nHostOptions, "host" | "user">,
+    command: string,
+    keyPath: string,
+    knownHostsPath: string | undefined,
+): ReadonlyArray<string> => {
+    const known = knownHostsPath === undefined ? [] : ["-o", `UserKnownHostsFile=${knownHostsPath}`]
     return [
         "-i",
-        target.keyPath,
+        keyPath,
         "-o",
         "BatchMode=yes",
         "-o",

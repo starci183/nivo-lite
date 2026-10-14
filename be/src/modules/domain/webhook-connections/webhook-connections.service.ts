@@ -27,7 +27,7 @@ const SAMPLE_LEAD = "00000000-0000-0000-0000-000000000000"
 @Injectable()
 /**
  * The n8n / Webhook connection (provider webhook): the owner enters a URL and picks events; NIVO shows the signing secret (derived
- * per workspace, the key the engine signs deliveries with) and can send a signed sample event. The URL is stored sealed, the picked
+ * per workspace, the key the console signs deliveries with) and can send a signed sample event. The URL is stored sealed, the picked
  * events in the public facts.
  */
 export class WebhookConnectionsService {
@@ -151,7 +151,7 @@ export class WebhookConnectionsService {
     }
 
     private requireSigning(workspaceId: string): string {
-        const shared = this.options.engineSharedSecret
+        const shared = this.options.signingSecret
         if (shared === undefined) {
             throw new WebhookConnectionsError({ code: WebhookConnectionsErrorCode.SigningUnavailable })
         }

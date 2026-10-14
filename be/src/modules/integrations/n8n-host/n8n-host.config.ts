@@ -1,19 +1,13 @@
-import { homedir } from "node:os"
-import { join } from "node:path"
 import type { EnvSource } from "@modules/platform/config"
 import type { N8nHostOptions } from "./n8n-host.options"
 
-const HOME_MARK = "~"
 const DEFAULT_CONTAINER = "nivo-engine-n8n-1"
-
-/** Expands a leading `~` to the home directory. */
-const expand = (path: string): string => (path.startsWith(HOME_MARK) ? join(homedir(), path.slice(1)) : path)
 
 /** Reads where the n8n container runs from the environment. */
 export const parseN8nHostConfig = (env: EnvSource): N8nHostOptions => ({
     host: env.optional("VPS_HOST"),
     user: env.optional("VPS_USER") ?? "nivo",
-    keyPath: expand(env.optional("VPS_SSH_KEY") ?? "~/.nivo-lite/vps_ed25519"),
-    knownHostsPath: env.has("VPS_KNOWN_HOSTS") ? expand(env.string("VPS_KNOWN_HOSTS")) : undefined,
+    sshKey: env.has("VPS_SSH_KEY") ? env.secret("VPS_SSH_KEY") : undefined,
+    knownHosts: env.optional("VPS_KNOWN_HOSTS"),
     container: env.optional("N8N_CONTAINER") ?? DEFAULT_CONTAINER,
 })
