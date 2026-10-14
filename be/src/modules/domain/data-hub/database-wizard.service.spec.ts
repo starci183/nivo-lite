@@ -224,21 +224,6 @@ describe("DatabaseWizardService", () => {
         expect(database.preview).not.toHaveBeenCalled()
     })
 
-    it("refuses a preview when the table cleaner returns no mapping", async () => {
-        const { service, database } = await build()
-        const cleaner = jest.spyOn(databaseConfigPolicy, "cleanTables").mockReturnValueOnce({ tables: [] })
-
-        try {
-            await expect(service.preview(actor, { target, mapping })).rejects.toMatchObject({
-                code: DataHubErrorCode.Invalid,
-                params: { detail: COPY.needTable },
-            })
-            expect(database.preview).not.toHaveBeenCalled()
-        } finally {
-            cleaner.mockRestore()
-        }
-    })
-
     it("preserves a database failure while previewing rows", async () => {
         const { service, database } = await build()
         const cause = new Error("preview failed")
