@@ -2,10 +2,12 @@ import { Test } from "@nestjs/testing"
 import { mock } from "@starci/jest-preset"
 import type { MailNotice } from "@modules/domain/module-ops"
 import { WorkspacesService } from "@modules/domain/workspaces"
+import { renderEmail } from "@modules/integrations/mail"
 import { MESSAGE_CATALOG } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
 import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
+import { EmailMessagesLogEvent } from "./email-messages.log-events"
 import { ModuleOutboundMailService } from "./module-outbound-mail.service"
 import { WorkspaceMailService } from "./workspace-mail.service"
 
@@ -23,14 +25,20 @@ const notice: MailNotice = {
 const setup = async (
     send: jest.Mock,
     nameOf: jest.Mock = jest.fn().mockResolvedValue("Shop A"),
+    error: jest.Mock = jest.fn(),
+    get: jest.Mock = jest.fn(() => "footer"),
 ): Promise<ModuleOutboundMailService> => {
+    const mail = mock<WorkspaceMailService>({ send })
+    const workspaces = mock<WorkspacesService>({ nameOf })
+    const catalog = mock<MessageCatalog>({ get })
+    const logger = mock<Logger>({ error })
     const moduleRef = await Test.createTestingModule({
         providers: [
             ModuleOutboundMailService,
-            { provide: WorkspaceMailService, useValue: mock<WorkspaceMailService>({ send }) },
-            { provide: WorkspacesService, useValue: mock<WorkspacesService>({ nameOf }) },
-            { provide: MESSAGE_CATALOG, useValue: mock<MessageCatalog>({ get: jest.fn(() => "footer") }) },
-            { provide: LOGGER, useValue: mock<Logger>({ error: jest.fn() }) },
+            { provide: WorkspaceMailService, useValue: mail },
+            { provide: WorkspacesService, useValue: workspaces },
+            { provide: MESSAGE_CATALOG, useValue: catalog },
+            { provide: LOGGER, useValue: logger },
         ],
     }).compile()
     return moduleRef.get(ModuleOutboundMailService)
@@ -86,5 +94,52 @@ describe("ModuleOutboundMailService", () => {
         await subject.send(notice)
 
         expect(send).toHaveBeenCalledWith(expect.not.objectContaining({ attachments: expect.anything() }))
+    })
+
+    it("renders the default shop, supplies empty references and forwards the approved work item", async () => {
+        const send = jest.fn().mockResolvedValue({ status: "sent" })
+        const nameOf = jest.fn().mockResolvedValue("")
+        const get = jest.fn().mockReturnValue("NIVO footer")
+        const subject = await setup(send, nameOf, jest.fn(), get)
+        const rendered = renderEmail({
+            shopName: "NIVO",
+            title: notice.title,
+            body: notice.body,
+            footer: "NIVO footer",
+            lang: "vi",
+        })
+
+        await expect(subject.send({ ...notice, refs: undefined, workItemId: "work-1" })).resolves.toEqual({
+            status: "sent",
+        })
+
+        expect(nameOf).toHaveBeenCalledWith("w1")
+        expect(get).toHaveBeenCalledWith("email.notice_footer", { shop: "NIVO" }, "vi")
+        expect(send).toHaveBeenCalledWith({
+            workspaceId: "w1",
+            to: "owner@shop.vn",
+            subject: "Shifts",
+            html: rendered.html,
+            text: rendered.text,
+            purpose: "shifts_schedule",
+            refs: {},
+            audience: "owner",
+            workItemId: "work-1",
+        })
+    })
+
+    it("uses the delivery status when the mail path has no failure code", async () => {
+        const subject = await setup(jest.fn().mockResolvedValue({ status: "blocked" }))
+
+        await expect(subject.send(notice)).resolves.toEqual({ status: "failed", error: "blocked" })
+    })
+
+    it("logs the purpose and original cause when sending fails unexpectedly", async () => {
+        const cause = new Error("record failed")
+        const error = jest.fn()
+        const subject = await setup(jest.fn().mockRejectedValue(cause), jest.fn().mockResolvedValue("Shop"), error)
+
+        await expect(subject.send(notice)).resolves.toEqual({ status: "failed", error: "error" })
+        expect(error).toHaveBeenCalledWith(EmailMessagesLogEvent.NoticeFailed, cause, { purpose: "shifts_schedule" })
     })
 })

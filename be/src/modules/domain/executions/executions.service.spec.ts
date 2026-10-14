@@ -6,7 +6,13 @@ import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { ExecutionsErrorCode } from "./errors/executions.error"
 import type { NewExecution } from "./executions.contracts"
 import { ExecutionsService } from "./executions.service"
-import { FIND_EXECUTION, INSERT_EXECUTION, SETTLE_EXECUTION } from "./persistence/executions.sql"
+import {
+    FIND_EXECUTION,
+    FIND_EXECUTION_RECORD,
+    INSERT_EXECUTION,
+    LIST_EXECUTIONS,
+    SETTLE_EXECUTION,
+} from "./persistence/executions.sql"
 
 const card: NewExecution = {
     workspaceId: "ws-1",
@@ -53,6 +59,50 @@ describe("ExecutionsService", () => {
         expect(await (await build(mockEntityManager({ query: [FIND_EXECUTION, []] }))).find("ws-1", "x")).toBeNull()
     })
 
+    it("finds the complete card using the default manager", async () => {
+        const row = {
+            id: "exec-1",
+            workspace_id: "ws-1",
+            responsibility_id: "resp-1",
+            agent_id: null,
+            status: "pending_approval",
+            kind: "message",
+            work_item_id: "item-1",
+            draft: "Hello",
+            decided_by: null,
+            decided_at: null,
+            created_at: "2026-10-12T09:00:00.000Z",
+        }
+        const em = mockEntityManager({ query: [FIND_EXECUTION_RECORD, [row]] })
+
+        expect(await (await build(em)).findRecord("ws-1", "exec-1")).toEqual(row)
+        expect(em.query).toHaveBeenCalledWith(FIND_EXECUTION_RECORD, ["ws-1", "exec-1"])
+    })
+
+    it("reads a missing complete card through the caller's transaction", async () => {
+        const em = mockEntityManager()
+        const manager = mockEntityManager({ query: [FIND_EXECUTION_RECORD, []] })
+
+        expect(await (await build(em)).findRecord("ws-1", "missing", manager)).toBeNull()
+        expect(manager.query).toHaveBeenCalledWith(FIND_EXECUTION_RECORD, ["ws-1", "missing"])
+        expect(em.query).not.toHaveBeenCalled()
+    })
+
+    it.each([
+        [{ limit: 25 }, ["ws-1", null, false, 25]],
+        [
+            { responsibilityIds: ["resp-1", "resp-2"], pendingLegacy: true, limit: 10 },
+            ["ws-1", ["resp-1", "resp-2"], true, 10],
+        ],
+        [{ responsibilityIds: [], pendingLegacy: false, limit: 0 }, ["ws-1", [], false, 0]],
+    ] as const)("lists approval cards with the requested filters: %j", async (filter, parameters) => {
+        const rows = [{ id: "exec-1" }]
+        const em = mockEntityManager({ query: [LIST_EXECUTIONS, rows] })
+
+        expect(await (await build(em)).list("ws-1", filter)).toEqual(rows)
+        expect(em.query).toHaveBeenCalledWith(LIST_EXECUTIONS, parameters)
+    })
+
     it("settles a waiting card at the clock time", async () => {
         const row = { id: "exec-1", status: "approved", work_item_id: "item-1", draft: "Edited" }
         const em = mockEntityManager({ query: [SETTLE_EXECUTION, [row]] })
@@ -87,5 +137,34 @@ describe("ExecutionsService", () => {
                 editedDraft: null,
             }),
         ).toBeNull()
+    })
+
+    it("settles through the supplied transaction manager", async () => {
+        const em = mockEntityManager()
+        const row = { id: "exec-1", status: "rejected", work_item_id: null, draft: "Hello" }
+        const manager = mockEntityManager({ query: [SETTLE_EXECUTION, [row]] })
+        const service = await build(em)
+
+        expect(
+            await service.settle(
+                {
+                    workspaceId: "ws-1",
+                    executionId: "exec-1",
+                    decision: "rejected",
+                    decidedBy: "An",
+                    editedDraft: null,
+                },
+                manager,
+            ),
+        ).toEqual(row)
+        expect(manager.query).toHaveBeenCalledWith(SETTLE_EXECUTION, [
+            "ws-1",
+            "exec-1",
+            "rejected",
+            "An",
+            null,
+            "2026-10-12T10:00:00.000Z",
+        ])
+        expect(em.query).not.toHaveBeenCalled()
     })
 })

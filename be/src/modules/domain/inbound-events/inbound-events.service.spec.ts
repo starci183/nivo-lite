@@ -7,11 +7,13 @@ import { InboundEventsErrorCode } from "./errors/inbound-events.error"
 import { InboundEventsService } from "./inbound-events.service"
 import {
     BUMP_DUPLICATE_EVENT,
+    FIND_INBOUND_EVENT,
     HOLD_EVENT_FOR_OWNER,
     INSERT_BANK_EVENT,
     INSERT_INPUT_EVENT,
     INSERT_ORDER_HANDOFF,
     INSERT_UNROUTED_EVENT,
+    MARK_INBOUND_EVENT,
 } from "./persistence/inbound-events.sql"
 
 const NOW = "2026-10-12T10:00:00.000Z"
@@ -167,6 +169,62 @@ describe("InboundEventsService", () => {
 
             await expect(events.recordInput(input)).resolves.toEqual({ duplicate: false, inboundEventId: "event-1" })
             expect(inbox.claims).toEqual([{ source: "zalo", eventId: "evt-1" }])
+        })
+
+        it.each([
+            [[{ id: "event-previous" }], "event-previous"],
+            [[], ""],
+        ] as const)("counts a repeated input and returns its readable id: %j", async (rows, inboundEventId) => {
+            const { events, tx } = await build([
+                [INSERT_INPUT_EVENT, []],
+                [BUMP_DUPLICATE_EVENT, rows],
+            ])
+
+            await expect(events.recordInput(input)).resolves.toEqual({ duplicate: true, inboundEventId })
+            expect(tx.em.query).toHaveBeenCalledWith(BUMP_DUPLICATE_EVENT, ["ws-1", "zalo:lead:evt-1", new Date(NOW)])
+        })
+    })
+
+    describe("find", () => {
+        it("returns the inbound event of the workspace", async () => {
+            const row = {
+                id: "event-1",
+                workspace_id: "ws-1",
+                channel: "zalo",
+                kind: "lead",
+                origin: "live",
+                sender_name: "Mai",
+                sender_contact: null,
+                body: "Haircut",
+                amount_vnd: null,
+                external_ref: null,
+                event_id: "evt-1",
+                lead_id: null,
+                status: "received",
+            }
+            const { events, tx } = await build([[FIND_INBOUND_EVENT, [row]]])
+
+            await expect(events.find("ws-1", "event-1")).resolves.toEqual(row)
+            expect(tx.em.query).toHaveBeenCalledWith(FIND_INBOUND_EVENT, ["ws-1", "event-1"])
+        })
+
+        it("returns null when the workspace has no such event", async () => {
+            const { events, tx } = await build([[FIND_INBOUND_EVENT, []]])
+
+            await expect(events.find("ws-1", "missing")).resolves.toBeNull()
+            expect(tx.em.query).toHaveBeenCalledWith(FIND_INBOUND_EVENT, ["ws-1", "missing"])
+        })
+    })
+
+    describe("mark", () => {
+        it.each([
+            ["processed", "lead-1"],
+            [null, null],
+        ] as const)("sets the event status and lead while passing null through: %s, %s", async (status, leadId) => {
+            const { events, tx } = await build([[MARK_INBOUND_EVENT, []]])
+
+            await expect(events.mark("ws-1", "event-1", status, leadId)).resolves.toBeUndefined()
+            expect(tx.em.query).toHaveBeenCalledWith(MARK_INBOUND_EVENT, ["ws-1", "event-1", status, leadId])
         })
     })
 

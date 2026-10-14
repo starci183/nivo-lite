@@ -3,7 +3,7 @@ import { builder, mock } from "@starci/jest-preset"
 import { ConnectionsService } from "@modules/domain/connections"
 import type { ConnectionActor, ConnectionRecord } from "@modules/domain/connections"
 import { WorkspacesService } from "@modules/domain/workspaces"
-import { MAIL, renderEmail } from "@modules/integrations/mail"
+import { MAIL, MAIL_ERROR_KINDS, MailError, renderEmail } from "@modules/integrations/mail"
 import type { MailClient } from "@modules/integrations/mail"
 import { MESSAGE_CATALOG } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
@@ -186,6 +186,81 @@ describe("SmtpWizardService", () => {
             expect(connections.setDefaultSmtp).not.toHaveBeenCalled()
         })
 
+        it("replaces an existing default when the owner asks", async () => {
+            const { service, connections } = await build()
+            connections.defaultSmtpId.mockResolvedValue("smtp-0")
+
+            await expect(
+                service.sendTest(actor, { connectionId: "smtp-1", to: "lan@example.test", makeDefault: true }),
+            ).resolves.toEqual({ to: "lan@example.test", isDefault: true })
+            expect(connections.setDefaultSmtp).toHaveBeenCalledWith("ws-1", "smtp-1")
+        })
+
+        it("reports the existing default without changing it again", async () => {
+            const { service, connections } = await build()
+            connections.defaultSmtpId.mockResolvedValue("smtp-1")
+
+            await expect(
+                service.sendTest(actor, { connectionId: "smtp-1", to: "lan@example.test", makeDefault: false }),
+            ).resolves.toEqual({ to: "lan@example.test", isDefault: true })
+            expect(connections.setDefaultSmtp).not.toHaveBeenCalled()
+        })
+
+        it("uses NIVO as the shop name when the workspace has no name", async () => {
+            const { service, mail, workspaces } = await build()
+            workspaces.nameOf.mockResolvedValue("")
+
+            await expect(
+                service.sendTest(actor, { connectionId: "smtp-1", to: "lan@example.test", makeDefault: false }),
+            ).resolves.toEqual({ to: "lan@example.test", isDefault: true })
+
+            const rendered = renderEmail({
+                shopName: "NIVO",
+                title: "[email.test_subject]",
+                body: "[email.test_body]",
+                footer: "[email.test_footer]",
+                lang: "vi",
+            })
+            expect(workspaces.nameOf).toHaveBeenCalledWith("ws-1")
+            expect(mail.sendThroughSmtp).toHaveBeenCalledWith(SMTP_CONFIG, {
+                to: "lan@example.test",
+                subject: "[email.test_subject]",
+                html: rendered.html,
+                text: rendered.text,
+            })
+        })
+
+        it("records the translated mail integration error and rethrows it", async () => {
+            const { service, mail, connections, log } = await build()
+            const authCode = Object.keys(MAIL_ERROR_KINDS).find(
+                (code): code is MailError["code"] => code === "MAIL_AUTH",
+            )
+            expect(authCode).toBe("MAIL_AUTH")
+            if (authCode === undefined) return
+            const failure = new MailError({ code: authCode })
+            mail.sendThroughSmtp.mockRejectedValue(failure)
+
+            await expect(
+                service.sendTest(actor, { connectionId: "smtp-1", to: "lan@example.test", makeDefault: false }),
+            ).rejects.toBe(failure)
+            expect(log.record).toHaveBeenCalledWith({
+                workspaceId: "ws-1",
+                connectionId: "smtp-1",
+                to: "lan@example.test",
+                subject: "[email.test_subject]",
+                purpose: "test",
+                status: "failed",
+                via: "workspace",
+                providerMessageId: null,
+                error: "[errors.MAIL_AUTH]",
+                refs: {},
+            })
+            expect(connections.patch).toHaveBeenCalledWith("ws-1", "smtp-1", {
+                status: "pending",
+                lastError: "[errors.MAIL_AUTH]",
+            })
+        })
+
         it("keeps a failed send's reason on a connected connection and rethrows", async () => {
             const { service, mail, connections, log } = await build(connectionOf({ status: "connected" }))
             const failure = new Error("socket hang up")
@@ -284,6 +359,15 @@ describe("SmtpWizardService", () => {
                 code: EmailMessagesErrorCode.SmtpPassword,
             })
             expect(connections.writeSecret).not.toHaveBeenCalled()
+        })
+
+        it("trims passwords without stripping internal spaces when no preset is stored", async () => {
+            const { service, connections } = await build(connectionOf({ meta: {} }))
+
+            await service.changePassword(actor, "smtp-1", "  word one two  ")
+
+            expect(connections.writeSecret).toHaveBeenCalledWith("smtp-1", JSON.stringify({ password: "word one two" }))
+            expect(connections.patch).toHaveBeenCalledWith("ws-1", "smtp-1", { status: "pending", lastError: null })
         })
     })
 

@@ -68,7 +68,7 @@ const build = async () => {
             { provide: GoogleTokensService, useValue: tokenStore },
         ],
     }).compile()
-    return { service: moduleRef.get(DriveGrantService), connections, google }
+    return { service: moduleRef.get(DriveGrantService), connections, google, tokenStore }
 }
 
 describe("DriveGrantService", () => {
@@ -89,6 +89,15 @@ describe("DriveGrantService", () => {
             await expect(service.grant(actor)).resolves.toEqual({ state: "none", email: "" })
             connections.listByProvider.mockResolvedValueOnce([record({ status: "error", lastError: "invalid_grant" })])
             await expect(service.grant(actor)).resolves.toEqual({ state: "lost", email: "shop@example.test" })
+        })
+
+        it("treats a pending consent as absent and an account without email as connected", async () => {
+            const { service, connections } = await build()
+            connections.listByProvider.mockResolvedValueOnce([record({ status: "pending" })])
+
+            await expect(service.grant(actor)).resolves.toEqual({ state: "none", email: "" })
+            connections.listByProvider.mockResolvedValueOnce([record({ meta: {} })])
+            await expect(service.grant(actor)).resolves.toEqual({ state: "connected", email: "" })
         })
 
         it("signs the drive purpose and asks for the Drive read scope", async () => {
@@ -152,6 +161,29 @@ describe("DriveGrantService", () => {
             )
         })
 
+        it("stores a generic Drive name and blank metadata when Google does not identify the account", async () => {
+            const { service, connections, google, tokenStore } = await build()
+            google.accountEmail.mockResolvedValue(null)
+
+            await expect(service.complete("ws-1", "owner-1", "code-without-email")).resolves.toBeUndefined()
+            expect(google.exchangeCode).toHaveBeenCalledWith("code-without-email")
+            expect(tokenStore.save).toHaveBeenCalledWith({
+                workspaceId: "ws-1",
+                userId: "owner-1",
+                row: record(),
+                provider: "google_drive",
+                name: "Google Drive",
+                meta: { email: "" },
+                tokens: { access_token: "access-new", refresh_token: "refresh-new", expires_at: EXPIRES },
+            })
+            expect(connections.patch).toHaveBeenCalledWith("ws-1", "d1", {
+                name: "Google Drive",
+                status: "connected",
+                lastError: null,
+                meta: { email: "" },
+            })
+        })
+
         it("refuses a consent without the Drive scope and one without any refresh token", async () => {
             const { service, connections, google } = await build()
             google.exchangeCode.mockResolvedValueOnce({ ...tokens, scope: "openid email" })
@@ -187,6 +219,49 @@ describe("DriveGrantService", () => {
             expect(use).toHaveBeenLastCalledWith("access-new")
         })
 
+        it("refreshes once when Google answers an unauthorized token", async () => {
+            const { service, google, tokenStore } = await build()
+            const use = jest
+                .fn()
+                .mockRejectedValueOnce(new GoogleError({ code: GoogleErrorCode.Refused, params: { status: 401 } }))
+                .mockResolvedValueOnce("retried listing")
+
+            await expect(service.forWorkspace("ws-1").withToken(use)).resolves.toBe("retried listing")
+            expect(use.mock.calls).toEqual([["access-old"], ["access-new"]])
+            expect(tokenStore.accessToken.mock.calls).toEqual([
+                [{ row: record(), force: false }],
+                [{ row: record(), force: true }],
+            ])
+            expect(google.refreshAccessToken).toHaveBeenCalledTimes(1)
+        })
+
+        it.each([
+            new DocumentsError({ code: DocumentsErrorCode.DriveNoAccess }),
+            new GoogleError({ code: GoogleErrorCode.Refused, params: { status: 403 } }),
+            new GoogleConnectionsError({ code: GoogleConnectionsErrorCode.NotConfigured }),
+        ])("propagates a listing failure that a refreshed token cannot fix: %s", async (failure) => {
+            const { service, google } = await build()
+            const use = jest.fn().mockRejectedValue(failure)
+
+            await expect(service.forWorkspace("ws-1").withToken(use)).rejects.toBe(failure)
+            expect(use).toHaveBeenCalledTimes(1)
+            expect(use).toHaveBeenCalledWith("access-old")
+            expect(google.refreshAccessToken).not.toHaveBeenCalled()
+        })
+
+        it.each([
+            new GoogleError({ code: GoogleErrorCode.Unreachable }),
+            new GoogleConnectionsError({ code: GoogleConnectionsErrorCode.NotConfigured }),
+        ])("preserves an access-token failure other than a lost grant: %s", async (failure) => {
+            const { service, tokenStore } = await build()
+            tokenStore.accessToken.mockRejectedValue(failure)
+            const use = jest.fn()
+
+            await expect(service.forWorkspace("ws-1").withToken(use)).rejects.toBe(failure)
+            expect(tokenStore.accessToken).toHaveBeenCalledWith({ row: record(), force: false })
+            expect(use).not.toHaveBeenCalled()
+        })
+
         it("marks a revoked grant lost", async () => {
             const { service, connections, google } = await build()
             connections.readSecret.mockResolvedValue({
@@ -214,6 +289,19 @@ describe("DriveGrantService", () => {
             await expect(service.forWorkspace("ws-1").withToken(jest.fn())).rejects.toEqual(
                 new DocumentsError({ code: DocumentsErrorCode.DriveGrantMissing }),
             )
+        })
+
+        it.each([
+            { status: "pending", code: DocumentsErrorCode.DriveGrantMissing },
+            { status: "error", code: DocumentsErrorCode.DriveGrantLost },
+        ] as const)("refuses to use a $status grant", async ({ status, code }) => {
+            const { service, connections, tokenStore } = await build()
+            connections.listByProvider.mockResolvedValue([record({ status })])
+            const use = jest.fn()
+
+            await expect(service.forWorkspace("ws-1").withToken(use)).rejects.toEqual(new DocumentsError({ code }))
+            expect(tokenStore.accessToken).not.toHaveBeenCalled()
+            expect(use).not.toHaveBeenCalled()
         })
     })
 })
