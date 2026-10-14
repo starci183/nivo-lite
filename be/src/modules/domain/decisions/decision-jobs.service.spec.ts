@@ -1,7 +1,7 @@
 import { Test } from "@nestjs/testing"
 import { mock } from "@starci/jest-preset"
 import type { ExecutionRow } from "@modules/domain/executions"
-import type { DecideExecutionPayload, DecideWorkPayload } from "@modules/queues/decisions"
+import type { DecideExecutionPayload, DecideWorkPayload, RunWorkPayload } from "@modules/queues/decisions"
 import { DecisionJobsService } from "./decision-jobs.service"
 import type { WorkItem } from "./decisions.contracts"
 import { WorkDecisionService } from "./work-decision.service"
@@ -156,5 +156,22 @@ describe("DecisionJobsService", () => {
         await expect(service.decideExecution(payload)).rejects.toBe(refusal)
 
         expect(decisions.decide).not.toHaveBeenCalled()
+    })
+
+    it("runs queued work for the user, workspace, item, locale and intent", async () => {
+        const { service, decisions } = await build()
+        const payload: RunWorkPayload = {
+            userId: "user-1",
+            workspaceId: "workspace-1",
+            workItemId: "work-1",
+            locale: "vi",
+            intent: "retry",
+            requestId: "request-1",
+        }
+
+        await expect(service.runWork(payload)).resolves.toBeUndefined()
+
+        expect(decisions.runQueued).toHaveBeenCalledTimes(1)
+        expect(decisions.runQueued).toHaveBeenCalledWith("user-1", "workspace-1", "work-1", "vi", "retry")
     })
 })

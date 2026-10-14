@@ -140,19 +140,23 @@ const build = async (setup: Setup = {}) => {
     leads.require.mockResolvedValue({ id: "lead-1", contact_name: "Minh", channel: "zalo" })
     const office = mock<MessagesService>()
     office.postSystem.mockResolvedValue(undefined)
+    const catalog = mock<MessageCatalog>({ get: jest.fn((key: string) => `${key}()`) })
+    const members = mock<WorkspaceMembersService>({ require })
+    const bus = mock<CommandBusService>({ sendCommand })
+    const decisions = mock<DecisionsService>({ getWorkItem })
+    const engine = mock<WorkEngineService>({ resumeWork })
+    const executions = mock<ExecutionsService>({ find, findRecord, settle })
+    const evidence = mock<EvidenceService>({ log })
     const moduleRef = await Test.createTestingModule({
         providers: [
             WorkDecisionService,
-            {
-                provide: MESSAGE_CATALOG,
-                useValue: mock<MessageCatalog>({ get: jest.fn((key: string) => `${key}()`) }),
-            },
-            { provide: WorkspaceMembersService, useValue: mock<WorkspaceMembersService>({ require }) },
-            { provide: CommandBusService, useValue: mock<CommandBusService>({ sendCommand }) },
-            { provide: DecisionsService, useValue: mock<DecisionsService>({ getWorkItem }) },
-            { provide: WorkEngineService, useValue: mock<WorkEngineService>({ resumeWork }) },
-            { provide: ExecutionsService, useValue: mock<ExecutionsService>({ find, findRecord, settle }) },
-            { provide: EvidenceService, useValue: mock<EvidenceService>({ log }) },
+            { provide: MESSAGE_CATALOG, useValue: catalog },
+            { provide: WorkspaceMembersService, useValue: members },
+            { provide: CommandBusService, useValue: bus },
+            { provide: DecisionsService, useValue: decisions },
+            { provide: WorkEngineService, useValue: engine },
+            { provide: ExecutionsService, useValue: executions },
+            { provide: EvidenceService, useValue: evidence },
             { provide: PRIMARY_ENTITY_MANAGER, useValue: tx.em },
             { provide: ResponsibilityJournalService, useValue: responsibilities },
             { provide: LEAD_DIRECTORY, useValue: leads },
@@ -371,6 +375,26 @@ describe("WorkDecisionService", () => {
 
     describe("decideExecution of a legacy card", () => {
         const legacyCard = cardOf({ work_item_id: null })
+
+        it("saves the edited legacy draft with the decision in the transaction", async () => {
+            const settled = cardOf({ status: "approved", work_item_id: null, draft: "Edited legacy" })
+            const { service, settle, tx } = await build({ card: legacyCard, settled })
+
+            await expect(
+                service.decideExecution("user-1", "ws-1", cardRequestOf({ editedDraft: "Edited legacy" })),
+            ).resolves.toBe(settled)
+            expect(settle).toHaveBeenCalledWith(
+                {
+                    workspaceId: "ws-1",
+                    executionId: "exec-1",
+                    decision: "approved",
+                    decidedBy: "An",
+                    editedDraft: "Edited legacy",
+                },
+                expect.anything(),
+            )
+            expect(tx.commits).toBe(1)
+        })
 
         it("settles the card, closes the responsibility, logs and posts the decision in one transaction", async () => {
             const settled = cardOf({ status: "approved", work_item_id: null, draft: "Hi Minh" })
