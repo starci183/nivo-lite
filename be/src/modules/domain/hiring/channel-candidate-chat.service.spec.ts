@@ -20,7 +20,8 @@ const TARGET: ConversationTarget = {
 
 const build = async () => {
     const conversations = mock<AgentConversationsService>()
-    const messages = mock<AgentMessagesService>({ storeAgentMessage: () => Promise.resolve("msg-1") })
+    const messages = mock<AgentMessagesService>()
+    messages.storeAgentMessage.mockResolvedValue("msg-1")
     const delivery = mock<ChannelDeliveryService>()
     const logger = mock<Logger>()
     const moduleRef = await Test.createTestingModule({

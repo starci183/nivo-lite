@@ -9,7 +9,7 @@ import { CLOCK } from "@modules/platform/clock"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { CreditsService } from "./credits.service"
 import { CreditsError, CreditsErrorCode } from "./errors/credits.error"
-import { SELECT_ACTIVE_PACKS } from "./persistence/credits.sql"
+import { SELECT_ACTIVE_PACKS, SELECT_MONTH_PACK_PURCHASES, SELECT_TOPUP_LOTS } from "./persistence/credits.sql"
 
 const NOW = "2026-10-12T10:00:00.000Z"
 const PAID_UNTIL = "2026-10-27T10:00:00.000Z"
@@ -104,6 +104,7 @@ const build = async (
     const orders = mock<PaymentOrdersService>()
     orders.findOpenTopup.mockResolvedValue(null)
     orders.findOpenUpgrade.mockResolvedValue(null)
+    orders.findOpenCreditPack.mockResolvedValue(null)
     orders.create.mockResolvedValue(ORDER)
     const moduleRef = await Test.createTestingModule({
         providers: [
@@ -212,6 +213,17 @@ describe("CreditsService", () => {
             expect(orders.create).not.toHaveBeenCalled()
         })
 
+        it("refuses a listed plan, which buys add-on packs instead of the old catalogue", async () => {
+            const { credits, billing, orders } = await build()
+            billing.findPlan.mockResolvedValue({ ...CURRENT, listed: true })
+
+            await expect(credits.topup("person-1", TOPUP)).rejects.toEqual(
+                new CreditsError({ code: CreditsErrorCode.UsePacks }),
+            )
+            expect(orders.findOpenTopup).not.toHaveBeenCalled()
+            expect(orders.create).not.toHaveBeenCalled()
+        })
+
         it("propagates the manager refusal before reading the catalogue", async () => {
             const em = mockEntityManager()
             const { credits, billing, orders } = await build(em)
@@ -269,22 +281,64 @@ describe("CreditsService", () => {
         })
 
         it.each([
-            { current: CURRENT, target: null },
-            { current: { ...CURRENT, isCustom: true }, target: TARGET },
-            { current: CURRENT, target: { ...TARGET, isCustom: true } },
-            { current: CURRENT, target: { ...TARGET, sort: 0 } },
-            { current: CURRENT, target: { ...TARGET, sort: 1 } },
-            { current: CURRENT, target: { ...TARGET, priceVnd: 989000 } },
-            { current: CURRENT, target: { ...TARGET, priceVnd: 990000 } },
-        ])("refuses a target that is not a higher self-serve plan: %p", async ({ current, target }) => {
+            { current: CURRENT, target: null, reads: 1 },
+            { current: { ...CURRENT, isCustom: true }, target: TARGET, reads: 1 },
+            { current: CURRENT, target: { ...TARGET, isCustom: true }, reads: 1 },
+            { current: CURRENT, target: { ...TARGET, listed: false }, reads: 1 },
+            { current: CURRENT, target: { ...TARGET, perSeat: true }, reads: 1 },
+            { current: CURRENT, target: { ...TARGET, sort: 0 }, reads: 2 },
+            { current: CURRENT, target: { ...TARGET, sort: 1 }, reads: 2 },
+            { current: CURRENT, target: { ...TARGET, priceVnd: 989000 }, reads: 2 },
+            { current: CURRENT, target: { ...TARGET, priceVnd: 990000 }, reads: 2 },
+        ])("refuses a target that is not a higher self-serve plan: %p", async ({ current, target, reads }) => {
             const { credits, billing, orders } = await build()
             billing.findPlan.mockResolvedValueOnce(current).mockResolvedValueOnce(target)
 
             await expect(credits.upgrade("person-1", UPGRADE)).rejects.toEqual(
                 new CreditsError({ code: CreditsErrorCode.NotUpgrade }),
             )
-            expect(billing.findWorkspaceBilling).toHaveBeenCalledTimes(1)
+            expect(billing.findWorkspaceBilling).toHaveBeenCalledTimes(reads)
             expect(orders.findOpenUpgrade).not.toHaveBeenCalled()
+            expect(orders.create).not.toHaveBeenCalled()
+        })
+
+        it("prices the upgrade from the monthly amount the workspace was billed, not the catalogue", async () => {
+            const { credits, billing, orders } = await build()
+            billing.findWorkspaceBilling.mockResolvedValue({ ...WORKSPACE, billedMonthlyVnd: 1200000 })
+            billing.payable.mockReturnValue(UPGRADE_PAYABLE)
+            orders.create.mockResolvedValue(UPGRADE_ORDER)
+
+            await expect(credits.upgrade("person-1", UPGRADE)).resolves.toEqual({
+                payable: UPGRADE_PAYABLE,
+                quote: { amount: 1390000, credit: 600000, daysLeft: 15, fromCode: "starter" },
+            })
+            expect(orders.create).toHaveBeenCalledWith({
+                workspaceId: "ws-1",
+                userId: "person-1",
+                planCode: "growth",
+                amountVnd: 1390000,
+                kind: "upgrade",
+                packCode: null,
+                detail: {
+                    from: "starter",
+                    to: "growth",
+                    fromPrice: 1200000,
+                    toPrice: 1990000,
+                    credit: 600000,
+                    daysLeft: 15,
+                    paidUntil: PAID_UNTIL,
+                },
+            })
+        })
+
+        it("refuses an upgrade that does not beat the monthly amount already billed", async () => {
+            const { credits, billing, orders } = await build()
+            billing.findWorkspaceBilling.mockResolvedValue({ ...WORKSPACE, billedMonthlyVnd: 1990000 })
+
+            await expect(credits.upgrade("person-1", UPGRADE)).rejects.toEqual(
+                new CreditsError({ code: CreditsErrorCode.NotUpgrade }),
+            )
+            expect(billing.findWorkspaceBilling).toHaveBeenCalledTimes(2)
             expect(orders.create).not.toHaveBeenCalled()
         })
 
@@ -323,6 +377,99 @@ describe("CreditsService", () => {
                 new CreditsError({ code: CreditsErrorCode.ZeroAmount }),
             )
             expect(orders.findOpenUpgrade).not.toHaveBeenCalled()
+            expect(orders.create).not.toHaveBeenCalled()
+        })
+    })
+
+    describe("topupLots", () => {
+        const row = {
+            credits: 1000,
+            price_vnd: 299000,
+            purchased_at: NOW,
+            expires_at: PAID_UNTIL,
+            credits_remaining: 800,
+        }
+
+        it("lists the purchased lots for a manager", async () => {
+            const em = mockEntityManager({ query: [SELECT_TOPUP_LOTS, [row]] })
+            const { credits, billing } = await build(em)
+
+            await expect(credits.topupLots("person-1", "ws-1")).resolves.toEqual([
+                {
+                    credits: 1000,
+                    priceVnd: 299000,
+                    purchasedAt: NOW,
+                    expiresAt: PAID_UNTIL,
+                    creditsRemaining: 800,
+                },
+            ])
+            expect(billing.requireManager).toHaveBeenCalledWith("person-1", "ws-1")
+            expect(em.query).toHaveBeenCalledWith(SELECT_TOPUP_LOTS, ["ws-1"])
+        })
+    })
+
+    describe("packsBought", () => {
+        it("lists the add-on packs paid this month for a member", async () => {
+            const em = mockEntityManager({
+                query: [SELECT_MONTH_PACK_PURCHASES, [{ credits: 1000, price_vnd: 299000, purchased_at: NOW }]],
+            })
+            const { credits, billing } = await build(em)
+
+            await expect(credits.packsBought("person-1", "ws-1")).resolves.toEqual([
+                { credits: 1000, priceVnd: 299000, purchasedAt: NOW },
+            ])
+            expect(billing.requireMember).toHaveBeenCalledWith("person-1", "ws-1")
+            expect(em.query).toHaveBeenCalledWith(SELECT_MONTH_PACK_PURCHASES, ["ws-1"])
+        })
+    })
+
+    describe("creditPack", () => {
+        const PACK_PLAN: Plan = {
+            ...CURRENT,
+            listed: true,
+            packs: [{ creditsPerMonth: 1000, priceVnd: 299000, perSeat: false }],
+        }
+        const ASK = { workspaceId: "ws-1", credits: 1000 }
+
+        it("orders the add-on pack listed on the workspace plan", async () => {
+            const { credits, billing, orders } = await build()
+            billing.findPlan.mockResolvedValue(PACK_PLAN)
+
+            await expect(credits.creditPack("person-1", ASK)).resolves.toEqual(PAYABLE)
+            expect(orders.findOpenCreditPack).toHaveBeenCalledWith({
+                workspaceId: "ws-1",
+                target: "1000",
+                amountVnd: 299000,
+            })
+            expect(orders.create).toHaveBeenCalledWith({
+                workspaceId: "ws-1",
+                userId: "person-1",
+                planCode: "starter",
+                amountVnd: 299000,
+                kind: "credit_pack",
+                packCode: null,
+                detail: { credits: 1000 },
+            })
+            expect(billing.payable).toHaveBeenCalledWith(ORDER)
+        })
+
+        it("answers the existing open pack order", async () => {
+            const { credits, billing, orders } = await build()
+            billing.findPlan.mockResolvedValue(PACK_PLAN)
+            orders.findOpenCreditPack.mockResolvedValue(ORDER)
+
+            await expect(credits.creditPack("person-1", ASK)).resolves.toEqual(PAYABLE)
+            expect(billing.payable).toHaveBeenCalledWith(ORDER)
+            expect(orders.create).not.toHaveBeenCalled()
+        })
+
+        it("refuses a pack size the plan does not sell", async () => {
+            const { credits, billing, orders } = await build()
+            billing.findPlan.mockResolvedValue(PACK_PLAN)
+
+            await expect(credits.creditPack("person-1", { ...ASK, credits: 50 })).rejects.toEqual(
+                new CreditsError({ code: CreditsErrorCode.PackNotFound }),
+            )
             expect(orders.create).not.toHaveBeenCalled()
         })
     })

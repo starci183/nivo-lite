@@ -127,15 +127,25 @@ describe("ChannelDeliveryService", () => {
             expect(secrets.botToken).not.toHaveBeenCalled()
         })
 
-        it("sends nothing for a website conversation or a Telegram one without an external id", async () => {
+        it("counts a website conversation as delivered on the page and sends nothing for a Telegram one without an external id", async () => {
             const website = await build(target({ channel: "website" }))
             const anonymous = await build(target({ externalId: null }))
 
-            await expect(website.service.deliver(request)).resolves.toEqual({ delivered: false, failure: null })
+            await expect(website.service.deliver(request)).resolves.toEqual({ delivered: true, failure: null })
             await expect(anonymous.service.deliver(request)).resolves.toEqual({ delivered: false, failure: null })
             expect(website.telegram.sendMessage).not.toHaveBeenCalled()
             expect(anonymous.telegram.sendMessage).not.toHaveBeenCalled()
+            expect(website.messages.markDelivery).toHaveBeenCalledWith("msg-1", true, undefined)
+            expect(anonymous.messages.markDelivery).toHaveBeenCalledWith("msg-1", false, undefined)
         })
+    })
+
+    it("sends nothing for a channel that has no sender", async () => {
+        const { service, telegram, senders } = await build(target({ channel: "sms" }))
+
+        await expect(service.deliver(request)).resolves.toEqual({ delivered: false, failure: null })
+        expect(senders.get).toHaveBeenCalledWith("sms")
+        expect(telegram.sendMessage).not.toHaveBeenCalled()
     })
 
     describe("other channels", () => {
@@ -251,6 +261,43 @@ describe("ChannelDeliveryService", () => {
             credentials.accessToken.mockRejectedValue(new ChannelsError({ code: ChannelsErrorCode.ConnectionNotFound }))
 
             await expect(service.deliver(request)).resolves.toEqual({ delivered: false, failure: "zalo_error" })
+        })
+    })
+
+    describe("sendToPerson", () => {
+        const person = {
+            workspaceId: "ws-1",
+            connectionId: "c-1",
+            recipientId: "555",
+            text: "Shift starts",
+        }
+
+        it("sends a Telegram chat through the workspace bot", async () => {
+            const { service, telegram, secrets } = await build()
+            secrets.botToken.mockResolvedValue({ kind: "ok", value: "123:token" })
+
+            await service.sendToPerson({ ...person, provider: "telegram" })
+
+            expect(secrets.botToken).toHaveBeenCalledWith("ws-1", "c-1")
+            expect(telegram.sendMessage).toHaveBeenCalledWith("123:token", "555", "Shift starts")
+        })
+
+        it("throws when the Telegram bot is gone", async () => {
+            const { service, secrets } = await build()
+            secrets.botToken.mockResolvedValue(refusedToken)
+
+            await expect(service.sendToPerson({ ...person, provider: "telegram" })).rejects.toMatchObject({
+                code: ChannelsErrorCode.ConnectionNotFound,
+            })
+        })
+
+        it("sends a Zalo user through the OA without a conversation window", async () => {
+            const { service, zalo, credentials } = await build()
+            credentials.accessToken.mockResolvedValue("access-1")
+
+            await service.sendToPerson({ ...person, provider: "zalo_oa", recipientId: "user-1" })
+
+            expect(zalo.sendCsText).toHaveBeenCalledWith("access-1", "user-1", "Shift starts")
         })
     })
 
