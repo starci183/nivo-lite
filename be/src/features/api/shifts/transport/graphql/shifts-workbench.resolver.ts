@@ -18,7 +18,7 @@ export class ShiftsWorkbenchResolver {
     async shiftsWorkbench(
         @CurrentPrincipal() principal: Principal,
         @WorkspaceId() workspaceId: string,
-        @Args("week", { type: () => String, nullable: true }) week?: string,
+        @Args({ name: "week", type: () => String, nullable: true }) week?: string,
     ): Promise<ShiftsBenchType> {
         const result = await this.queryBus.execute(
             new ShiftsWorkbenchQuery({ request: toShiftsWorkbenchRequest(workspaceId, week), principal }),
