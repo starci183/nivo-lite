@@ -1,3 +1,5 @@
+"use client"
+
 import { useMemo, useState } from "react"
 import type { DragEvent } from "react"
 import { useHiringRun } from "@/hooks/hiring"

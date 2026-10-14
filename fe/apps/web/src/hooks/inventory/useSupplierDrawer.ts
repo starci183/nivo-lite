@@ -1,3 +1,5 @@
+"use client"
+
 import { useTranslations } from "next-intl"
 import type { SupplierView } from "@/modules/types"
 import type { SupplierFormField, SupplierFormValues } from "./inventory.shared"

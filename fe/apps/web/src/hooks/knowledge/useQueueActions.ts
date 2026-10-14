@@ -1,3 +1,5 @@
+"use client"
+
 import { mutate } from "swr"
 import {
     QUERY_KNOWLEDGE_SOURCES_SWR_KEY,

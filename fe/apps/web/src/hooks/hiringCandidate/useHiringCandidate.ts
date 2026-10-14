@@ -1,3 +1,5 @@
+"use client"
+
 import { useTranslations } from "next-intl"
 import { useMemo, useState } from "react"
 import { CLOSED_STAGES, OPEN_INTERVIEW_STATUSES, OPEN_OFFER_STATUSES, useHiringRun } from "@/hooks/hiring"

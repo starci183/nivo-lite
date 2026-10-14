@@ -1,3 +1,5 @@
+"use client"
+
 import { useState } from "react"
 
 /** The open/closed state of one drawer: `state` is null while it is closed. */

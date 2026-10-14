@@ -1,3 +1,5 @@
+"use client"
+
 import { useTranslations } from "next-intl"
 import type { ItemView, RecipeView } from "@/modules/types"
 import { changeAt } from "./inventory.shared"

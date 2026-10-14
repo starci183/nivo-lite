@@ -1,3 +1,5 @@
+"use client"
+
 import { useTranslations } from "next-intl"
 import type { ItemView, LocationView } from "@/modules/types"
 import { isSmallAdjustment, num } from "./inventory.shared"

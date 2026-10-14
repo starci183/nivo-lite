@@ -1,3 +1,5 @@
+"use client"
+
 import { useLocale } from "next-intl"
 import { useEffect } from "react"
 import { useModuleCatalog } from "@/hooks/moduleCatalog"

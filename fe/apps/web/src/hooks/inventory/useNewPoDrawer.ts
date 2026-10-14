@@ -1,3 +1,5 @@
+"use client"
+
 import { useTranslations } from "next-intl"
 import type { InventoryWorkbenchData } from "@/modules/types"
 import { changeAt } from "./inventory.shared"

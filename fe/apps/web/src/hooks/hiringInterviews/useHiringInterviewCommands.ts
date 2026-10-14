@@ -1,3 +1,5 @@
+"use client"
+
 import { useMemo } from "react"
 import { useMutateSetHiringInterviewStatusSwr } from "@/hooks/swr"
 

@@ -1,3 +1,5 @@
+"use client"
+
 import { useState } from "react"
 import { AGENT_MODULES } from "@/modules/documents"
 import type { AgentModule, BatchMeta, InstanceOption } from "@/modules/documents"

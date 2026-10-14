@@ -1,3 +1,5 @@
+"use client"
+
 import { useFormatter } from "next-intl"
 
 /** The number and date forms of the inventory screens, in the reader language. */

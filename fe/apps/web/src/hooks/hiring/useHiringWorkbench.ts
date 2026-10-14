@@ -1,3 +1,5 @@
+"use client"
+
 import { useMemo } from "react"
 import { EMPTY_BOARD, toHiringWorkbenchData } from "@/hooks/hiringMap"
 import { useQueryHiringWorkbenchSwr } from "@/hooks/swr"

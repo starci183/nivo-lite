@@ -1,3 +1,5 @@
+"use client"
+
 import { useState } from "react"
 import { useHiringRun } from "@/hooks/hiring"
 import { REASON_MIN } from "./hiringPipeline.shared"

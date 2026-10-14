@@ -1,3 +1,5 @@
+"use client"
+
 import { useSyncExternalStore } from "react"
 
 /** What is left until a deadline, split into the four units the countdown shows. */

@@ -1,3 +1,5 @@
+"use client"
+
 import { useEffect } from "react"
 import type { ModuleKey } from "@/modules/catalog"
 import { navigation } from "@/modules/i18n"

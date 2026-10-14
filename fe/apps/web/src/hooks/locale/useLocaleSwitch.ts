@@ -1,3 +1,5 @@
+"use client"
+
 import { useLocale, useTranslations } from "next-intl"
 import { LOCALE_COOKIE, appLocaleOf, navigation } from "@/modules/i18n"
 import { useTransition } from "react"

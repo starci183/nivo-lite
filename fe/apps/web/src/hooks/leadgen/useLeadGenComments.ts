@@ -1,3 +1,5 @@
+"use client"
+
 import { useFormatter, useTranslations } from "next-intl"
 import { commentsViewOf } from "@/hooks/leadgenView"
 import { useLeadGenCommentForm } from "@/hooks/rhf"
