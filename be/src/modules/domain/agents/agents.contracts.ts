@@ -136,7 +136,7 @@ export interface ConnectionItem {
 }
 
 /** Who the agent talks to: customers or the team. */
-export type Audience = "customer" | "internal"
+export type AgentAudience = "customer" | "internal"
 
 /** How many documents the agent can read, by visibility. */
 export interface DocumentCounts {
@@ -159,7 +159,7 @@ export interface FactCounts {
 /** What the agent can read: document and fact counts by visibility. */
 export interface LensCounts {
     /** The audience of the lens. */
-    readonly audience: Audience
+    readonly audience: AgentAudience
     /** Documents by visibility. */
     readonly documents: DocumentCounts
     /** Facts by visibility. */
@@ -244,7 +244,7 @@ export interface AgentBundle {
     /** The active context version, or null. */
     readonly contextVersion: number | null
     /** Who the agent talks to. */
-    readonly audience: Audience
+    readonly audience: AgentAudience
     /** AGENTS.md, SOUL.md and knowledge/*.md. */
     readonly files: ReadonlyArray<SyncFile>
 }
@@ -285,7 +285,7 @@ export interface AgentsMdInput {
     /** The module key. */
     readonly module: string
     /** Who the agent talks to. */
-    readonly audience: Audience
+    readonly audience: AgentAudience
     /** The persona, or null when the installation has no agent row. */
     readonly persona: OptionalAgentPersona
     /** The authority and escalation rules, already trimmed to their budget. */
@@ -335,7 +335,7 @@ export interface ToolListing {
 export type OptionalId = string | null
 
 /** A text, or null when there is none. */
-export type OptionalText = string | null
+export type OptionalAgentText = string | null
 
 /** The settings of an installation: a free-form bag the modules lane owns. */
 export interface InstallationSettings {

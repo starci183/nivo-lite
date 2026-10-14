@@ -1,3 +1,4 @@
+import type { Type } from "@nestjs/common"
 import type { Secret } from "@modules/platform/config"
 
 /** What a delivery to the webhook answered. */
@@ -18,8 +19,14 @@ export interface SimulationDelivery {
     readonly body: string
 }
 
-/** Posts one delivery (the cli passes a fetch-based one). */
+/** Posts one delivery. */
 export type SimulationPost = (delivery: SimulationDelivery) => Promise<SimulationReply>
+
+/** The integration transport the composition root supplies for a simulated delivery. */
+export interface SimulationPoster {
+    /** Posts the serialized webhook and returns the api's status and response text. */
+    readonly post: SimulationPost
+}
 
 /** The simulated SePay delivery: the key SePay would sign with, the account it reports and where it posts. */
 export interface SepaySimulationOptions {
@@ -35,4 +42,10 @@ export interface SepaySimulationOptions {
     readonly post: SimulationPost
     /** Prints one line to the operator. */
     readonly print: (line: string) => void
+}
+
+/** The runtime settings and transport class the cli composition root registers. */
+export interface SepaySimulationRegistration extends Omit<SepaySimulationOptions, "post"> {
+    /** The integration class that implements the simulated delivery transport. */
+    readonly poster: Type<SimulationPoster>
 }

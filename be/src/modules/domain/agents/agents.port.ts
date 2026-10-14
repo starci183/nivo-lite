@@ -1,4 +1,4 @@
-import type { Audience, LensCounts, OptionalId, OptionalOpenGaps, OptionalText } from "./agents.contracts"
+import type { AgentAudience, LensCounts, OptionalId, OptionalOpenGaps, OptionalAgentText } from "./agents.contracts"
 
 /** A module installation (an agent instance) as the agents capability needs it. Owned by the modules lane (module_installations). */
 export interface Installation {
@@ -107,7 +107,7 @@ export interface BaseRule {
  */
 export interface KnowledgeLens {
     /** Who the module talks to. */
-    audienceOf(module: string): Audience
+    audienceOf(module: string): AgentAudience
     /** Up to `limit` documents the lens of the module (and instance) may read. */
     sourcesFor(
         workspaceId: string,
@@ -131,9 +131,9 @@ export interface KnowledgeLens {
  */
 export interface ModuleProfiles {
     /** The knowledge folder of a module key, or null when the key is not a module. */
-    knowledgeFolderOf(module: string): OptionalText
+    knowledgeFolderOf(module: string): OptionalAgentText
     /** The reply contract of the module given the base customer contract: the base itself (chatbot), the base with the module addendum (booking, loyalty), its own contract (hiring) or null. */
-    replyContractOf(module: string, base: string): OptionalText
+    replyContractOf(module: string, base: string): OptionalAgentText
     /** The chat-intake clause of the hiring application that the base contract embeds ("" when none). */
     applicationClause(): string
     /** The JSON member of the hiring application that the base contract embeds ("" when none). */

@@ -9,3 +9,4 @@ export {
     WebhookDeliveryErrorCode,
 } from "./errors/webhook-delivery.error"
 export { WEBHOOK_DELIVERY_MESSAGES } from "./messages/webhook-delivery.messages"
+export { SimulationPostClient } from "./simulation-post.client"

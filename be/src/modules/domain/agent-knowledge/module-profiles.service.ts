@@ -1,5 +1,5 @@
 import { Injectable } from "@nestjs/common"
-import type { ModuleProfiles, OptionalText } from "@modules/domain/agents"
+import type { ModuleProfiles, OptionalAgentText } from "@modules/domain/agents"
 import { InjectMessageCatalog } from "@modules/platform/i18n"
 import type { Locale, MessageCatalog } from "@modules/platform/i18n"
 import { knowledgeFolderOf } from "./knowledge-view.policy"
@@ -16,12 +16,12 @@ export class ModuleProfilesService implements ModuleProfiles {
     constructor(@InjectMessageCatalog() private readonly catalog: MessageCatalog) {}
 
     /** The knowledge folder of a module key, or null when the key is not a module. */
-    knowledgeFolderOf(module: string): OptionalText {
+    knowledgeFolderOf(module: string): OptionalAgentText {
         return knowledgeFolderOf(module)
     }
 
     /** The reply contract of the module given the base customer contract. */
-    replyContractOf(module: string, base: string): OptionalText {
+    replyContractOf(module: string, base: string): OptionalAgentText {
         if (module === "chatbot") return base
         if (module === "booking") return `${base}\n${this.text("bundle.bookingAddendum")}`
         if (module === "loyalty") return `${base}\n${this.text("bundle.loyaltyContract")}`
