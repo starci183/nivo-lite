@@ -2,7 +2,7 @@ export type { EventListItem, LeadListItem, LeadStage } from "./public-api.contra
 export { LEAD_STAGES } from "./public-api.contracts"
 export { PUBLIC_API_ERROR_KINDS } from "./errors/public-api.error"
 export { PUBLIC_API_MESSAGES } from "./messages/public-api.messages"
-export { trimmed } from "./public-api.policy"
+export { trimmedField } from "./public-api.policy"
 export { PublicApiModule } from "./public-api.module"
 export { PublicEventsService } from "./public-events.service"
 export { PublicKnowledgeService } from "./public-knowledge.service"

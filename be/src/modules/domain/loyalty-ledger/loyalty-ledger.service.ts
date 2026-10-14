@@ -77,13 +77,12 @@ export class LoyaltyLedgerService {
 
     /** Every customer of a workspace with the balance, newest first. */
     async members(workspaceId: string): Promise<ReadonlyArray<LoyaltyMember>> {
-        const rows = await this.entityManager.query<Array<MemberRow>>(SELECT_MEMBERS, [workspaceId])
-        return rows.map(toMember)
+        return (await this.memberRows(SELECT_MEMBERS, [workspaceId])).map(toMember)
     }
 
     /** One customer with the balance, or null. */
     async member(workspaceId: string, customerId: string): Promise<MemberMatch> {
-        const [row] = await this.entityManager.query<Array<MemberRow>>(SELECT_MEMBER, [workspaceId, customerId])
+        const row = (await this.memberRows(SELECT_MEMBER, [workspaceId, customerId])).at(0)
         return row === undefined ? null : toMember(row)
     }
 
@@ -111,5 +110,10 @@ export class LoyaltyLedgerService {
     async totalsSince(workspaceId: string, sinceIso: string): Promise<ReadonlyArray<LedgerTotal>> {
         const rows = await this.entityManager.query<Array<TotalRow>>(SELECT_TOTALS_SINCE, [workspaceId, sinceIso])
         return rows.map(toTotal)
+    }
+
+    /** The member rows of one statement. */
+    private memberRows(statement: typeof SELECT_MEMBERS, params: ReadonlyArray<string>): Promise<Array<MemberRow>> {
+        return this.entityManager.query<Array<MemberRow>>(statement, [...params])
     }
 }

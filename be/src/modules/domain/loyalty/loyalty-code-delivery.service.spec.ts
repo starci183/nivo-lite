@@ -25,10 +25,10 @@ const build = async () => {
 }
 
 describe("LoyaltyCodeDeliveryService", () => {
-    describe("deliver", () => {
-        it("deliver has its first case written", async () => {
+    describe("send", () => {
+        it("send has its first case written", async () => {
             const { service } = await build()
-            expect(service.deliver).toBeInstanceOf(Function)
+            expect(service.send).toBeInstanceOf(Function)
         })
     })
 })

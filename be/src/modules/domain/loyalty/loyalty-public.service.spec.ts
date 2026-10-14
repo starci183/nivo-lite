@@ -108,7 +108,7 @@ const build = async (options: Options = {}) => {
     ledger.expiryEntries.mockResolvedValue([])
     const rewards = mock<LoyaltyRewardsService>()
     rewards.list.mockResolvedValue([rewardOf(), rewardOf({ id: "r2", pointsCost: 5000 })])
-    const delivery = mock<CodeDelivery>({ deliver: jest.fn().mockResolvedValue(options.delivered ?? true) })
+    const delivery = mock<CodeDelivery>({ send: jest.fn().mockResolvedValue(options.delivered ?? true) })
     const moduleRef = await Test.createTestingModule({
         providers: [
             LoyaltyPublicService,
@@ -162,7 +162,7 @@ describe("LoyaltyPublicService", () => {
             await expect(service.requestCode(request)).resolves.toEqual({ ok: true, code: "none" })
 
             expect(otps.issue).toHaveBeenCalledWith("ws-1", "c1", new Date(NOW + 600_000).toISOString())
-            expect(delivery.deliver).toHaveBeenCalledWith({
+            expect(delivery.send).toHaveBeenCalledWith({
                 workspaceId: "ws-1",
                 conversationId: "v1",
                 text: "loyalty.otp.message|Spa Anna|123456",
@@ -186,7 +186,7 @@ describe("LoyaltyPublicService", () => {
 
             for (const world of [stranger, often, none, noChannel, website]) {
                 await expect(world.service.requestCode(request)).resolves.toEqual({ ok: true, code: "none" })
-                expect(world.delivery.deliver).not.toHaveBeenCalled()
+                expect(world.delivery.send).not.toHaveBeenCalled()
             }
         })
 

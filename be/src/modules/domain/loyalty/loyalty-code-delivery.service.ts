@@ -19,8 +19,8 @@ export class LoyaltyCodeDeliveryService implements CodeDelivery {
         private readonly channels: ChannelDeliveryService,
     ) {}
 
-    /** Stores and delivers only to a supported conversation owned by the programme's workspace. */
-    async deliver(params: CodeDeliveryParams): Promise<boolean> {
+    /** Stores and sends only to a supported conversation owned by the programme's workspace. */
+    async send(params: CodeDeliveryParams): Promise<boolean> {
         const target = await this.conversations.targetOf(params.conversationId)
         if (
             target.kind !== "ok" ||

@@ -166,7 +166,7 @@ export interface CodeDeliveryParams {
 /** Carries a message to a customer through the channel of their own chat; the chat lanes provide it. */
 export interface CodeDelivery {
     /** Sends the message; true when the channel accepted it. */
-    deliver(params: CodeDeliveryParams): Promise<boolean>
+    send(params: CodeDeliveryParams): Promise<boolean>
 }
 
 /** Which page is asked about. */

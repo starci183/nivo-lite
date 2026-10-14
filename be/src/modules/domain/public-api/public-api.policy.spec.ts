@@ -10,7 +10,7 @@ import {
     leadFacts,
     messageDedupeSuffix,
     normaliseContact,
-    trimmed,
+    trimmedField,
     visibilityOf,
 } from "./public-api.policy"
 
@@ -169,12 +169,12 @@ describe("public-api policy", () => {
         })
     })
 
-    describe("trimmed", () => {
+    describe("trimmedField", () => {
         it("trims a string, reads a number as its digits and leaves anything else alone", () => {
-            expect(trimmed("  a b ")).toBe("a b")
-            expect(trimmed(901234567)).toBe("901234567")
-            expect(trimmed(true)).toBe(true)
-            expect(trimmed(undefined)).toBeUndefined()
+            expect(trimmedField("  a b ")).toBe("a b")
+            expect(trimmedField(901234567)).toBe("901234567")
+            expect(trimmedField(true)).toBe(true)
+            expect(trimmedField(undefined)).toBeUndefined()
         })
     })
 })

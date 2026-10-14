@@ -16,15 +16,13 @@ export interface BankCreditPayload {
     readonly amountVnd: number
 }
 
+const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === "object" && value !== null
+
 /** True when a job payload is the payload of a reconcile-bank-credit job. */
 export const isBankCreditPayload = (value: unknown): value is BankCreditPayload =>
-    typeof value === "object" &&
-    value !== null &&
-    "workspaceId" in value &&
+    isRecord(value) &&
     typeof value.workspaceId === "string" &&
-    "inboundEventId" in value &&
     typeof value.inboundEventId === "string" &&
-    "amountVnd" in value &&
     typeof value.amountVnd === "number"
 
 @Injectable()

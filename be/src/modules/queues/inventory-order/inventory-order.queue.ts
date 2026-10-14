@@ -18,18 +18,17 @@ export interface DeductOrderPayload {
     readonly items: string
 }
 
+const ORDER_TEXT = ["workspaceId", "orderId", "orderNo", "items"] as const
+
+const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === "object" && value !== null
+
+/** True when every named field of a record is text. */
+const textFields = (value: Record<string, unknown>, keys: ReadonlyArray<string>): boolean =>
+    keys.every((key) => typeof value[key] === "string")
+
 /** True when a job payload is the payload of a deduct-order job. */
 export const isDeductOrderPayload = (value: unknown): value is DeductOrderPayload =>
-    typeof value === "object" &&
-    value !== null &&
-    "workspaceId" in value &&
-    typeof value.workspaceId === "string" &&
-    "orderId" in value &&
-    typeof value.orderId === "string" &&
-    "orderNo" in value &&
-    typeof value.orderNo === "string" &&
-    "items" in value &&
-    typeof value.items === "string"
+    isRecord(value) && textFields(value, ORDER_TEXT)
 
 @Injectable()
 /** The typed producer of the inventory-order queue: the one way a deduct-order job starts. */
