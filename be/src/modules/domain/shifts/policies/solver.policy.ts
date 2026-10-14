@@ -139,18 +139,15 @@ export const solveWeek = (input: SolveInput): SolveOutput => {
     }
     const dates = weekDates(input.monday)
     const slots = input.blocks.flatMap((block) => slotsOf(block, dates))
-    const hardness = new Map(
-        slots.map((slot) => [
-            slot,
-            staff.filter(
-                (p) =>
-                    p.positionIds.includes(slot.block.positionId) &&
-                    !onLeave(env.leaves, p.id, slot.date) &&
-                    isAvailable(env.avail, p.id, slot.date, slot.s, slot.e),
-            ).length,
-        ]),
-    )
-    const hard = (slot: Slot): number => hardness.get(slot) ?? 0
+    const slotsWithHardness = slots.map((slot) => ({
+        slot,
+        hardness: staff.filter(
+            (p) =>
+                p.positionIds.includes(slot.block.positionId) &&
+                !onLeave(env.leaves, p.id, slot.date) &&
+                isAvailable(env.avail, p.id, slot.date, slot.s, slot.e),
+        ).length,
+    }))
 
     const tryAdd = (state: State, person: ShiftStaff, seg: Seg): Candidate | null => {
         const cur = state.get(person.id) ?? []
@@ -246,18 +243,22 @@ export const solveWeek = (input: SolveInput): SolveOutput => {
 
     const better = (a: Result, b: Result): number =>
         a.short - b.short || a.idealGap - b.idealGap || a.cost - b.cost || a.spread - b.spread
-    const baseOrder = [...slots].sort(
-        (a, b) =>
-            hard(a) - hard(b) ||
-            Number(b.block.peak) - Number(a.block.peak) ||
-            a.date.localeCompare(b.date) ||
-            a.s - b.s,
-    )
+    const baseOrder = [...slotsWithHardness]
+        .sort(
+            ({ slot: a, hardness: aHard }, { slot: b, hardness: bHard }) =>
+                aHard - bHard ||
+                Number(b.block.peak) - Number(a.block.peak) ||
+                a.date.localeCompare(b.date) ||
+                a.s - b.s,
+        )
+        .map(({ slot }) => slot)
     let best = run(baseOrder, () => 0.5, 0)
     let iterations = 1
     for (let k = 1; k < input.starts && input.nowMs() - startedAt < input.budgetMs; k++) {
         const rand = generator(1000 + k * 7919)
-        const order = [...slots].sort((a, b) => hard(a) - hard(b) + (rand() - 0.5) * 3)
+        const order = [...slotsWithHardness]
+            .sort((a, b) => a.hardness - b.hardness + (rand() - 0.5) * 3)
+            .map(({ slot }) => slot)
         const result = run(order, rand, START_NOISE)
         iterations += 1
         if (better(result, best) < 0) best = result

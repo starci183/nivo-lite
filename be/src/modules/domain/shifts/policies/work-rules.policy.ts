@@ -12,6 +12,11 @@ const OVERTIME_FACTOR = 1.5
 interface Placed {
     readonly seg: Seg
     readonly index: number
+    readonly violations: Array<Violation>
+}
+
+interface Checked<T> extends Placed {
+    readonly item: T
 }
 
 /** The piece of work a shift stands for, in minutes. */
@@ -71,16 +76,19 @@ const violationsOfOne = (
     return found.map(([kind, detail]) => ({ kind, detail }))
 }
 
-/**
- * Every rule broken by one person's work of the week, aligned to `segs` (index i holds the violations of segs[i]).
- * The cumulative rules (hours per day and per week) mark the pieces that push the total over the limit.
- */
-export const violationsForSegs = (env: Env, staffId: string, segs: ReadonlyArray<Seg>): Array<Array<Violation>> => {
-    const out: Array<Array<Violation>> = segs.map(() => [])
+const violationsForItems = <T>(
+    env: Env,
+    staffId: string,
+    items: ReadonlyArray<T>,
+    selectSeg: (item: T) => Seg,
+): Array<Checked<T>> => {
+    const out = items.map((item, index): Checked<T> => ({ item, seg: selectSeg(item), index, violations: [] }))
     const staff = env.staff.get(staffId)
     if (staff === undefined) return out
-    const ordered = segs.map((seg, index): Placed => ({ seg, index })).sort(byDayThenStart)
-    const prior = [...(env.prior?.get(staffId) ?? [])].sort(byDayThenEnd).map((seg): Placed => ({ seg, index: -1 }))
+    const ordered = out.slice().sort(byDayThenStart)
+    const prior = [...(env.prior?.get(staffId) ?? [])]
+        .sort(byDayThenEnd)
+        .map((seg): Placed => ({ seg, index: -1, violations: [] }))
     const chrono = [...prior, ...ordered]
     const days = new Map<string, number>()
     let week = 0
@@ -90,13 +98,20 @@ export const violationsForSegs = (env: Env, staffId: string, segs: ReadonlyArray
         week += length
         const day = (days.get(placed.seg.date) ?? 0) + length
         days.set(placed.seg.date, day)
-        out[placed.index] = [
+        placed.violations.push(
             ...violationsOfOne(env, staff, placed, ordered, day, week),
             ...restViolation(chrono, at, placed.seg, staff.minRest),
-        ]
+        )
     })
     return out
 }
+
+/**
+ * Every rule broken by one person's work of the week, aligned to `segs` (index i holds the violations of segs[i]).
+ * The cumulative rules (hours per day and per week) mark the pieces that push the total over the limit.
+ */
+export const violationsForSegs = (env: Env, staffId: string, segs: ReadonlyArray<Seg>): Array<Array<Violation>> =>
+    violationsForItems(env, staffId, segs, (seg) => seg).map(({ violations }) => violations)
 
 /** Groups the live shifts by person. */
 export const shiftsByStaff = (shifts: ReadonlyArray<Shift>): Map<string, Array<Shift>> =>
@@ -109,9 +124,7 @@ export const shiftsByStaff = (shifts: ReadonlyArray<Shift>): Map<string, Array<S
 export const violationsOfShifts = (env: Env, shifts: ReadonlyArray<Shift>): Map<string, Array<Violation>> => {
     const out = new Map<string, Array<Violation>>()
     shiftsByStaff(shifts).forEach((list, staffId) => {
-        const found = violationsForSegs(env, staffId, list.map(segOf))
-        list.forEach((shift, index) => {
-            const mine = found[index] ?? []
+        violationsForItems(env, staffId, list, segOf).forEach(({ item: shift, violations: mine }) => {
             if (mine.length > 0) out.set(shift.id, mine)
         })
     })

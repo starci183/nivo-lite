@@ -67,6 +67,20 @@ describe("import text policy", () => {
         )
     })
 
+    it("keeps repeated positions and ignores staff fields after weekly hours", () => {
+        expect(
+            parseImport(
+                { positions: "", staff: "Lan;barista, BARISTA;30k;40;ignored|extra", coverage: "CN 7–8 Barista 1–2" },
+                ["Barista", "BARISTA"],
+            ),
+        ).toEqual({
+            positions: [],
+            staff: [{ name: "Lan", positions: ["Barista", "Barista"], wage: 30000, maxWeek: 40 }],
+            blocks: [{ weekday: 6, start: "07:00", end: "08:00", position: "Barista", min: 1, ideal: 2, peak: false }],
+            errors: [],
+        })
+    })
+
     it("deduplicates new positions and canonicalises known staff positions", () => {
         expect(
             parseImport(

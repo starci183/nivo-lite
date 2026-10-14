@@ -159,6 +159,37 @@ describe("work rules policy", () => {
         ).toEqual(new Map([["invalid", [{ kind: "position", detail: "position" }]]]))
     })
 
+    it("keeps finding order and duplicate shift ids across staff groups", () => {
+        const env = envOf({
+            staff: new Map([
+                ["a", person({ maxDay: 1, maxWeek: 2, minRest: 0 })],
+                ["b", person({ id: "b", minRest: 0 })],
+            ]),
+        })
+
+        const shifts = [
+            shift({ id: "shared", start: "12:00", end: "13:00" }),
+            shift({ id: "b-finding", staffId: "b", positionId: "cash", end: "08:00" }),
+            shift({ id: "shared", end: "08:00" }),
+            shift({ id: "shared", date: "2026-10-13", end: "08:00" }),
+            shift({ id: "a-finding", date: "2026-10-13", start: "12:00", end: "13:00", positionId: "cash" }),
+            shift({ id: "shared", staffId: "b", date: "2026-10-13", end: "08:00" }),
+        ]
+
+        expect([...violationsOfShifts(env, shifts)]).toEqual([
+            ["shared", [{ kind: "max_week", detail: "3.0h" }]],
+            [
+                "a-finding",
+                [
+                    { kind: "position", detail: "position" },
+                    { kind: "max_day", detail: "2.0h" },
+                    { kind: "max_week", detail: "4.0h" },
+                ],
+            ],
+            ["b-finding", [{ kind: "position", detail: "position" }]],
+        ])
+    })
+
     it("totals minutes and pays overtime at one and a half times the wage", () => {
         const segs = [segment("2026-10-12", 420, 900), segment("2026-10-13", 420, 900)]
 

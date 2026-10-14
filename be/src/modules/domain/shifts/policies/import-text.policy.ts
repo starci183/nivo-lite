@@ -75,7 +75,39 @@ export interface ParsedImport {
 
 const WEEK_ALL: ReadonlyArray<number> = [0, 1, 2, 3, 4, 5, 6]
 
-const DAY_TOKENS: Readonly<Record<string, number>> = { t2: 0, t3: 1, t4: 2, t5: 3, t6: 4, t7: 5, cn: 6 }
+type DayToken = "t2" | "t3" | "t4" | "t5" | "t6" | "t7" | "cn"
+
+const DAY_TOKENS: Readonly<Record<DayToken, number>> = { t2: 0, t3: 1, t4: 2, t5: 3, t6: 4, t7: 5, cn: 6 }
+
+interface DayCaptures {
+    readonly from: DayToken
+    readonly to: DayToken | undefined
+}
+
+interface DayRange {
+    readonly from: number
+    readonly to: number
+}
+
+interface DayRangeResult {
+    range: DayRange | null
+}
+
+interface ClockCaptures {
+    readonly hours: string
+    readonly minutes: string | undefined
+}
+
+interface CoverageCaptures {
+    readonly days: string
+    readonly startHours: string
+    readonly startMinutes: string | undefined
+    readonly endHours: string
+    readonly endMinutes: string | undefined
+    readonly position: string
+    readonly minimum: string
+    readonly ideal: string | undefined
+}
 
 const EVERY_DAY: ReadonlyArray<string> = ["moingay", "hangngay", "t2-cn", "t2-t7-cn"]
 
@@ -103,21 +135,33 @@ const parseDays = (raw: string): Array<number> | null => {
     if (EVERY_DAY.includes(text)) return [...WEEK_ALL]
     const days = new Set<number>()
     for (const part of text.split(",")) {
-        const match = /^(t[2-7]|cn)(?:-(t[2-7]|cn))?$/u.exec(part)
-        const from = DAY_TOKENS[match?.[1] ?? ""]
-        const to = match?.[2] === undefined ? from : DAY_TOKENS[match[2]]
-        if (from === undefined || to === undefined || to < from) return null
+        const parsed: DayRangeResult = { range: null }
+        part.replace(
+            /^(?<from>t[2-7]|cn)(?:-(?<to>t[2-7]|cn))?$/u,
+            (
+                _match: string,
+                _from: string,
+                _to: string | undefined,
+                _offset: number,
+                _text: string,
+                { from, to }: DayCaptures,
+            ) => {
+                parsed.range = { from: DAY_TOKENS[from], to: to === undefined ? DAY_TOKENS[from] : DAY_TOKENS[to] }
+                return ""
+            },
+        )
+        if (parsed.range === null) return null
+        const { from, to } = parsed.range
+        if (to < from) return null
         for (let day = from; day <= to; day++) days.add(day)
     }
     return [...days].sort()
 }
 
-/** An HH:MM time from 7, 07:00, 7h or 7h30; null when it is not a time. */
-const parseClock = (raw: string): string | null => {
-    const match = /^(\d{1,2})(?:[:h](\d{2})?)?$/u.exec(raw.trim().toLowerCase())
-    if (match === null) return null
-    const hours = Number(match[1])
-    const minutes = match[2] === undefined ? 0 : Number(match[2])
+/** An HH:MM time from the coverage pattern's numeric captures; null when out of range. */
+const parseClock = (captures: ClockCaptures): string | null => {
+    const hours = Number(captures.hours)
+    const minutes = captures.minutes === undefined ? 0 : Number(captures.minutes)
     if (hours >= HOURS_PER_DAY || minutes >= MINUTES_PER_HOUR) return null
     return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`
 }
@@ -131,27 +175,35 @@ export const parseWage = (raw: string): number | null => {
     return Number.isFinite(value) && value >= 0 ? Math.round(value) : null
 }
 
-interface Known {
-    readonly has: (name: string) => boolean
-    readonly canon: (name: string) => string
-}
+type Known = (name: string) => string | undefined
 
-const knownOf = (names: ReadonlyArray<string>): Known => ({
-    has: (name) => names.some((known) => fold(known) === fold(name)),
-    canon: (name) => names.find((known) => fold(known) === fold(name)) ?? name,
-})
+const knownOf =
+    (names: ReadonlyArray<string>): Known =>
+    (name) =>
+        names.find((known) => fold(known) === fold(name))
 
 const parseStaffLine = (line: string, number: number, known: Known): ParsedStaff | ImportError => {
     const parts = line.split(/[;|\t]/u).map((x) => x.trim())
-    const name = parts[0] ?? ""
+    let name = ""
+    let positionText = ""
+    parts.forEach((part, index) => {
+        if (index === 0) name = part
+        if (index === 1) positionText = part
+    })
     const failed = (code: ImportErrorCode, subject = name): ImportError => ({ code, line: number, subject })
     if (parts.length < 2 || name === "") return failed("staff-format", "")
-    const positions = (parts[1] ?? "")
+    const requested = positionText
         .split(",")
         .map((x) => x.trim())
         .filter((x) => x !== "")
-    const unknown = positions.filter((p) => !known.has(p))
-    if (positions.length === 0) return failed("staff-position-missing")
+    const positions: Array<string> = []
+    const unknown: Array<string> = []
+    requested.forEach((position) => {
+        const canonical = known(position)
+        if (canonical === undefined) unknown.push(position)
+        else positions.push(canonical)
+    })
+    if (requested.length === 0) return failed("staff-position-missing")
     if (unknown.length > 0) return failed("staff-position-unknown", unknown.join(", "))
     const wage = parts[2] ? parseWage(parts[2]) : 0
     if (wage === null) return failed("staff-wage")
@@ -159,7 +211,7 @@ const parseStaffLine = (line: string, number: number, known: Known): ParsedStaff
     if (maxWeek !== null && (!Number.isFinite(maxWeek) || maxWeek <= 0 || maxWeek > MAX_WEEK_HOURS)) {
         return failed("staff-hours")
     }
-    return { name, positions: positions.map(known.canon), wage, maxWeek }
+    return { name, positions, wage, maxWeek }
 }
 
 const parseCoverageLine = (line: string, number: number, known: Known): Array<ParsedBlock> | ImportError => {
@@ -167,22 +219,41 @@ const parseCoverageLine = (line: string, number: number, known: Known): Array<Pa
     const peak = /(cao diem|peak)\s*$/u.test(folded)
     const body = folded.replace(/(cao diem|peak)\s*$/u, "").trim()
     const failed = (code: ImportErrorCode, subject = ""): ImportError => ({ code, line: number, subject })
-    const match =
-        /^(.+?)\s+(\d{1,2}(?:[:h]\d{2})?)\s*[-–]\s*(\d{1,2}(?:[:h]\d{2})?)\s+(.+?)\s+(\d{1,2})(?:\s*[-–]\s*(\d{1,2}))?$/u.exec(
-            body,
-        )
-    if (match === null) return failed("coverage-format")
-    const days = parseDays(match[1] ?? "")
-    const start = parseClock(match[2] ?? "")
-    const end = parseClock(match[3] ?? "")
-    const position = match[4] ?? ""
-    const min = Number(match[5])
-    const ideal = match[6] === undefined ? min : Number(match[6])
-    if (days === null) return failed("coverage-days", match[1] ?? "")
-    if (start === null || end === null || start >= end) return failed("coverage-times")
-    if (!known.has(position)) return failed("coverage-position", position)
-    if (ideal < min) return failed("coverage-ideal")
-    return days.map((weekday) => ({ weekday, start, end, position: known.canon(position), min, ideal, peak }))
+    const read = (captures: CoverageCaptures): Array<ParsedBlock> | ImportError => {
+        const days = parseDays(captures.days)
+        const start = parseClock({ hours: captures.startHours, minutes: captures.startMinutes })
+        const end = parseClock({ hours: captures.endHours, minutes: captures.endMinutes })
+        const min = Number(captures.minimum)
+        const ideal = captures.ideal === undefined ? min : Number(captures.ideal)
+        if (days === null) return failed("coverage-days", captures.days)
+        if (start === null || end === null || start >= end) return failed("coverage-times")
+        const position = known(captures.position)
+        if (position === undefined) return failed("coverage-position", captures.position)
+        if (ideal < min) return failed("coverage-ideal")
+        return days.map((weekday) => ({ weekday, start, end, position, min, ideal, peak }))
+    }
+    let parsed: Array<ParsedBlock> | ImportError = failed("coverage-format")
+    body.replace(
+        /^(?<days>.+?)\s+(?<startHours>\d{1,2})(?:[:h](?<startMinutes>\d{2}))?\s*[-–]\s*(?<endHours>\d{1,2})(?:[:h](?<endMinutes>\d{2}))?\s+(?<position>.+?)\s+(?<minimum>\d{1,2})(?:\s*[-–]\s*(?<ideal>\d{1,2}))?$/u,
+        (
+            _match: string,
+            _days: string,
+            _startHours: string,
+            _startMinutes: string | undefined,
+            _endHours: string,
+            _endMinutes: string | undefined,
+            _position: string,
+            _minimum: string,
+            _ideal: string | undefined,
+            _offset: number,
+            _text: string,
+            captures: CoverageCaptures,
+        ) => {
+            parsed = read(captures)
+            return ""
+        },
+    )
+    return parsed
 }
 
 const isError = (value: ParsedStaff | ImportError | Array<ParsedBlock>): value is ImportError => "code" in value
