@@ -1,3 +1,4 @@
+// Checks of the digest rules used by render.mjs. Run: node --test deploy/swarm/digest.verify.mjs (named .verify so it is not a canon spec).
 import assert from "node:assert/strict"
 import { spawnSync } from "node:child_process"
 import { test } from "node:test"
