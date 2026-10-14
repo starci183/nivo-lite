@@ -25,13 +25,13 @@ const PROBE_AGENT = "probe"
  */
 export class EngineStatusService {
     constructor(
-        @InjectAgentsOptions() private readonly options: AgentsOptions,
-        @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
-        @InjectClock() private readonly clock: Clock,
+        private readonly members: WorkspaceMembersService,
         @InjectInstallations() private readonly installations: InstallationDirectory,
         @InjectOpenclawGateway() private readonly gateway: GatewayClient,
         @InjectOpenclawAgentRegistry() private readonly registry: AgentRegistryService,
-        private readonly members: WorkspaceMembersService,
+        @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
+        @InjectClock() private readonly clock: Clock,
+        @InjectAgentsOptions() private readonly options: AgentsOptions,
     ) {}
 
     /** Whether a text can be generated now: no gateway, a gateway without a writable workspace, or ready. */

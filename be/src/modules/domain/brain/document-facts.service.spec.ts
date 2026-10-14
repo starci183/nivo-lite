@@ -1,19 +1,20 @@
+import { Test } from "@nestjs/testing"
 import { builder, mock } from "@starci/jest-preset"
-import type { BrainExtractionsService } from "@modules/domain/brain-extractions"
-import { ExtractionNote } from "@modules/domain/brain-extractions"
-import type { BrainFactsService } from "@modules/domain/brain-facts"
-import type { KnowledgeGapsService } from "@modules/domain/knowledge-gaps"
-import { DOC_ANSWERS } from "@modules/domain/knowledge-gaps"
-import type { KnowledgeIndexingService, UsageMeterService } from "@modules/domain/knowledge"
-import type { KnowledgeSourcesService, SourceRecord } from "@modules/domain/knowledge-sources"
-import { StoredNote } from "@modules/domain/knowledge-sources"
+import { BrainExtractionsService, ExtractionNote } from "@modules/domain/brain-extractions"
+import { BrainFactsService } from "@modules/domain/brain-facts"
+import { DOC_ANSWERS, KnowledgeGapsService } from "@modules/domain/knowledge-gaps"
+import { KnowledgeIndexingService, UsageMeterService } from "@modules/domain/knowledge"
+import type { SourceRecord } from "@modules/domain/knowledge-sources"
+import { KnowledgeSourcesService, StoredNote } from "@modules/domain/knowledge-sources"
+import { LLM } from "@modules/integrations/llm"
 import type { LlmPort } from "@modules/integrations/llm"
+import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { BrainLogEvent } from "./brain.log-events"
 import { DocumentFactsService } from "./document-facts.service"
 import { BrainErrorCode } from "./errors/brain.error"
 import { MAX_FACTS_PER_DOC, PROMPT_VERSION, SYSTEM_PROMPT } from "./extraction.policy"
-import type { ModelJsonService } from "./model-json.service"
+import { ModelJsonService } from "./model-json.service"
 
 const WS = "11111111-1111-4111-8111-111111111111"
 const SOURCE = "22222222-2222-4222-8222-222222222222"
@@ -54,7 +55,7 @@ const extractionOf = builder<ExtractionRecord>({
     orphanFactIds: [],
 })
 
-const build = (source = sourceOf()) => {
+const build = async (source = sourceOf()) => {
     const llm = mock<LlmPort>()
     const logger = mock<Logger>()
     const facts = mock<BrainFactsService>()
@@ -69,13 +70,37 @@ const build = (source = sourceOf()) => {
     usage.blockedBy.mockResolvedValue(false)
     llm.complete.mockResolvedValue({ text: "answer", model: "m1", usage: USAGE })
     json.jsonOf.mockReturnValue({ facts: [] })
-    const service = new DocumentFactsService(llm, logger, facts, gaps, extractions, indexing, sources, usage, json)
-    return { service, llm, logger, facts, gaps, extractions, indexing, sources, usage, json }
+    const moduleRef = await Test.createTestingModule({
+        providers: [
+            DocumentFactsService,
+            { provide: LLM, useValue: llm },
+            { provide: LOGGER, useValue: logger },
+            { provide: BrainFactsService, useValue: facts },
+            { provide: KnowledgeGapsService, useValue: gaps },
+            { provide: BrainExtractionsService, useValue: extractions },
+            { provide: KnowledgeIndexingService, useValue: indexing },
+            { provide: KnowledgeSourcesService, useValue: sources },
+            { provide: UsageMeterService, useValue: usage },
+            { provide: ModelJsonService, useValue: json },
+        ],
+    }).compile()
+    return {
+        service: moduleRef.get(DocumentFactsService),
+        llm,
+        logger,
+        facts,
+        gaps,
+        extractions,
+        indexing,
+        sources,
+        usage,
+        json,
+    }
 }
 
 describe("DocumentFactsService", () => {
     it("drops a malformed job payload and skips a source no longer waiting for facts", async () => {
-        const { service, logger, indexing, extractions } = build()
+        const { service, logger, indexing, extractions } = await build()
 
         await expect(service.run({ sourceId: SOURCE })).resolves.toBe("skipped")
         expect(logger.warn).toHaveBeenCalledWith(BrainLogEvent.PayloadRefused, { job: "facts" })
@@ -88,7 +113,7 @@ describe("DocumentFactsService", () => {
     })
 
     it("marks an exhausted valid job ready with an unread-facts note", async () => {
-        const { service, sources } = build()
+        const { service, sources } = await build()
 
         await service.giveUp({})
         expect(sources.ready).not.toHaveBeenCalled()
@@ -97,7 +122,7 @@ describe("DocumentFactsService", () => {
     })
 
     it("withdraws a deleted source and finalizes its unsupported facts with the deletion evidence", async () => {
-        const { service, facts } = build()
+        const { service, facts } = await build()
         facts.withdrawSource.mockResolvedValue(["f1"])
 
         await service.withdraw(WS, SOURCE, "Menu")
@@ -111,7 +136,7 @@ describe("DocumentFactsService", () => {
     })
 
     it("logs a failed withdrawal while allowing deletion to complete", async () => {
-        const { service, facts, logger } = build()
+        const { service, facts, logger } = await build()
         const cause = new Error("withdraw failed")
         facts.withdrawSource.mockRejectedValue(cause)
 
@@ -122,7 +147,7 @@ describe("DocumentFactsService", () => {
     })
 
     it("does not read a document already completed with this text and prompt", async () => {
-        const { service, extractions, sources, llm } = build()
+        const { service, extractions, sources, llm } = await build()
         extractions.get.mockResolvedValue(extractionOf({ status: "done" }))
 
         await expect(service.run(PAYLOAD)).resolves.toBe("skipped")
@@ -133,7 +158,7 @@ describe("DocumentFactsService", () => {
     })
 
     it("starts a new extraction without withdrawing and defaults a missing resumed record", async () => {
-        const { service, extractions, facts, usage, sources, llm } = build()
+        const { service, extractions, facts, usage, sources, llm } = await build()
         extractions.get.mockResolvedValue(null)
         usage.blockedBy.mockResolvedValue(true)
 
@@ -162,7 +187,7 @@ describe("DocumentFactsService", () => {
     })
 
     it("restarts changed text, merging old and newly orphaned facts once", async () => {
-        const { service, extractions, facts, usage } = build()
+        const { service, extractions, facts, usage } = await build()
         extractions.get.mockResolvedValueOnce(extractionOf({ contentHash: "old", orphanFactIds: ["f1", "f2"] }))
         extractions.get.mockResolvedValueOnce(
             extractionOf({ attempts: 2, factsProposed: 3, orphanFactIds: ["f1", "f2", "f3"] }),
@@ -192,7 +217,7 @@ describe("DocumentFactsService", () => {
     })
 
     it("restarts the same text when the prompt version changed", async () => {
-        const { service, extractions, facts } = build()
+        const { service, extractions, facts } = await build()
         extractions.get.mockResolvedValueOnce(extractionOf({ promptVersion: 0 }))
         extractions.get.mockResolvedValueOnce(extractionOf({ windowsDone: 1, orphanFactIds: ["f1"] }))
         facts.withdrawSource.mockResolvedValue([])
@@ -216,7 +241,7 @@ describe("DocumentFactsService", () => {
     })
 
     it("finishes an internal document already at its fact limit without resolving customer gaps", async () => {
-        const { service, extractions, gaps, sources, usage } = build(sourceOf({ visibility: "internal" }))
+        const { service, extractions, gaps, sources, usage } = await build(sourceOf({ visibility: "internal" }))
         extractions.get.mockResolvedValue(extractionOf({ factsProposed: MAX_FACTS_PER_DOC }))
 
         await expect(service.run(PAYLOAD)).resolves.toBe("done")
@@ -227,7 +252,7 @@ describe("DocumentFactsService", () => {
     })
 
     it("retries a busy model without charging usage", async () => {
-        const { service, llm, usage, extractions, sources } = build()
+        const { service, llm, usage, extractions, sources } = await build()
         llm.complete.mockResolvedValue(null)
 
         await expect(service.run(PAYLOAD)).rejects.toMatchObject({ code: BrainErrorCode.ModelUnavailable })
@@ -246,7 +271,7 @@ describe("DocumentFactsService", () => {
     })
 
     it("closes the third busy-model attempt as failed and keeps the source ready", async () => {
-        const { service, llm, extractions, sources } = build()
+        const { service, llm, extractions, sources } = await build()
         llm.complete.mockResolvedValue(null)
         extractions.get.mockResolvedValue(extractionOf({ attempts: 2 }))
 
@@ -264,7 +289,7 @@ describe("DocumentFactsService", () => {
     })
 
     it("charges an unreadable answer and retries with the unreadable note", async () => {
-        const { service, json, usage, extractions } = build()
+        const { service, json, usage, extractions } = await build()
         json.jsonOf.mockReturnValue(null)
 
         await expect(service.run(PAYLOAD)).rejects.toMatchObject({ code: BrainErrorCode.ModelUnavailable })
@@ -290,7 +315,7 @@ describe("DocumentFactsService", () => {
     })
 
     it("closes the third malformed-answer attempt", async () => {
-        const { service, json, extractions, sources } = build()
+        const { service, json, extractions, sources } = await build()
         json.jsonOf.mockReturnValue({ other: [] })
         extractions.get.mockResolvedValue(extractionOf({ attempts: 2 }))
 
@@ -308,7 +333,7 @@ describe("DocumentFactsService", () => {
     })
 
     it("files public facts with document evidence and preserves owner review and instance scope", async () => {
-        const { service, json, facts, extractions, gaps, sources } = build()
+        const { service, json, facts, extractions, gaps, sources } = await build()
         extractions.get.mockResolvedValue(extractionOf({ attempts: 2 }))
         json.jsonOf.mockReturnValue({
             facts: [
@@ -373,7 +398,7 @@ describe("DocumentFactsService", () => {
         { visibility: "public", scope: "internal" },
         { visibility: "internal", scope: "public" },
     ])("keeps the existing audience for $scope facts from a $visibility document", async ({ visibility, scope }) => {
-        const { service, json, facts } = build(sourceOf({ visibility, installationId: null }))
+        const { service, json, facts } = await build(sourceOf({ visibility, installationId: null }))
         json.jsonOf.mockReturnValue({
             facts: [{ subjectLabel: "Shop", attributeLabel: "Price", value: "20 USD", scope }],
         })
@@ -407,7 +432,7 @@ describe("DocumentFactsService", () => {
     })
 
     it("continues filing after a rejected fact and counts only successful proposals", async () => {
-        const { service, json, facts, extractions, logger } = build()
+        const { service, json, facts, extractions, logger } = await build()
         const cause = new Error("first fact")
         facts.propose.mockRejectedValueOnce(cause)
         json.jsonOf.mockReturnValue({
@@ -432,7 +457,7 @@ describe("DocumentFactsService", () => {
     })
 
     it("files only the room left under the document limit", async () => {
-        const { service, json, facts, extractions } = build()
+        const { service, json, facts, extractions } = await build()
         extractions.get.mockResolvedValue(extractionOf({ factsProposed: 199 }))
         json.jsonOf.mockReturnValue({
             facts: [
@@ -455,7 +480,7 @@ describe("DocumentFactsService", () => {
     })
 
     it("finishes public text without a topic even when answering its gaps fails", async () => {
-        const { service, gaps, logger, sources } = build(sourceOf({ topic: null, module: null }))
+        const { service, gaps, logger, sources } = await build(sourceOf({ topic: null, module: null }))
         const cause = new Error("gaps")
         gaps.resolve.mockRejectedValue(cause)
 

@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import type {
-    Audience,
+    AgentAudience,
     BaseRule,
     KnowledgeDocument,
     KnowledgeLens,
@@ -45,7 +45,7 @@ export class AgentKnowledgeLensService implements KnowledgeLens {
     ) {}
 
     /** Who the module talks to. */
-    audienceOf(module: string): Audience {
+    audienceOf(module: string): AgentAudience {
         return audienceOfModule(module)
     }
 

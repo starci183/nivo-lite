@@ -1,10 +1,14 @@
+import { Test } from "@nestjs/testing"
 import { FakeClock, builder, mock } from "@starci/jest-preset"
 import { BrainEvalCasesService } from "@modules/domain/brain-eval-cases"
 import { BrainLessonsService } from "@modules/domain/brain-lessons"
 import type { LessonRecord } from "@modules/domain/brain-lessons"
 import { UsageMeterService } from "@modules/domain/knowledge"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
+import { LLM } from "@modules/integrations/llm"
 import type { LlmPort } from "@modules/integrations/llm"
+import { CLOCK } from "@modules/platform/clock"
+import { BRAIN_OPTIONS } from "./brain.decorators"
 import type { Correction, CorrectionSource } from "./brain.contracts"
 import { BrainLearningService } from "./brain-learning.service"
 import { LEARN_SYSTEM } from "./learn.policy"
@@ -42,7 +46,7 @@ const corrections = () => [
     correctionOf({ decisionId: "d3" }),
 ]
 
-const build = (list: ReadonlyArray<Correction> = corrections()) => {
+const build = async (list: ReadonlyArray<Correction> = corrections()) => {
     const source = mock<CorrectionSource>()
     source.recent.mockResolvedValue(list)
     const members = mock<WorkspaceMembersService>()
@@ -59,17 +63,20 @@ const build = (list: ReadonlyArray<Correction> = corrections()) => {
     const usage = mock<UsageMeterService>()
     const json = mock<ModelJsonService>()
     json.jsonOf.mockReturnValue({ lessons: [] })
-    const service = new BrainLearningService(
-        { corrections: source },
-        llm,
-        members,
-        lessons,
-        cases,
-        usage,
-        json,
-        new FakeClock(AT),
-    )
-    return { service, source, members, lessons, cases, llm, usage, json }
+    const moduleRef = await Test.createTestingModule({
+        providers: [
+            BrainLearningService,
+            { provide: BRAIN_OPTIONS, useValue: { corrections: source } },
+            { provide: LLM, useValue: llm },
+            { provide: WorkspaceMembersService, useValue: members },
+            { provide: BrainLessonsService, useValue: lessons },
+            { provide: BrainEvalCasesService, useValue: cases },
+            { provide: UsageMeterService, useValue: usage },
+            { provide: ModelJsonService, useValue: json },
+            { provide: CLOCK, useValue: new FakeClock(AT) },
+        ],
+    }).compile()
+    return { service: moduleRef.get(BrainLearningService), source, members, lessons, cases, llm, usage, json }
 }
 
 describe("BrainLearningService", () => {
@@ -78,7 +85,7 @@ describe("BrainLearningService", () => {
     })
 
     it("requires a manager before reading any corrections", async () => {
-        const { service, source, members, cases, llm } = build()
+        const { service, source, members, cases, llm } = await build()
         const error = new Error("forbidden")
         members.require.mockRejectedValue(error)
 
@@ -92,7 +99,7 @@ describe("BrainLearningService", () => {
 
     it("keeps regression cases but skips learning below three corrections", async () => {
         const list = corrections().slice(0, 2)
-        const { service, source, members, cases, lessons, llm, usage } = build(list)
+        const { service, source, members, cases, lessons, llm, usage } = await build(list)
 
         await expect(service.mine("u1", "ws1", "chatbot")).resolves.toEqual({
             corrections: 2,
@@ -121,7 +128,7 @@ describe("BrainLearningService", () => {
     })
 
     it("keeps an empty corrections window without invoking the model", async () => {
-        const { service, cases, llm } = build([])
+        const { service, cases, llm } = await build([])
         cases.keep.mockResolvedValue(0)
 
         await expect(service.mine("u1", "ws1", "chatbot")).resolves.toEqual({
@@ -136,7 +143,7 @@ describe("BrainLearningService", () => {
     })
 
     it("reports model unavailability without recording usage or parsing a result", async () => {
-        const { service, llm, usage, json, lessons } = build()
+        const { service, llm, usage, json, lessons } = await build()
         llm.complete.mockResolvedValue(null)
 
         await expect(service.mine("u1", "ws1", "chatbot")).resolves.toEqual({
@@ -153,7 +160,7 @@ describe("BrainLearningService", () => {
     })
 
     it("meters the model call, includes applicable lessons and proposes only lessons supported by two distinct known decisions", async () => {
-        const { service, llm, usage, json, lessons } = build()
+        const { service, llm, usage, json, lessons } = await build()
         lessons.list.mockResolvedValue([
             lessonOf(),
             lessonOf({ id: "l2", module: null, title: "Universal", body: "Be clear", status: "proposed" }),
@@ -223,7 +230,7 @@ describe("BrainLearningService", () => {
     it("uses the decision id as evidence if a known correction cannot be retrieved", async () => {
         const list = corrections()
         jest.spyOn(list, "find").mockReturnValueOnce(undefined)
-        const { service, json, lessons } = build(list)
+        const { service, json, lessons } = await build(list)
         json.jsonOf.mockReturnValue({
             lessons: [{ title: "Review", body: "Review the draft", decisions: ["d1", "d2"] }],
         })
@@ -249,7 +256,7 @@ describe("BrainLearningService", () => {
     })
 
     it("records usage even when the parsed model answer has no lessons", async () => {
-        const { service, json, usage, lessons } = build()
+        const { service, json, usage, lessons } = await build()
         json.jsonOf.mockReturnValue(null)
 
         await expect(service.mine("u1", "ws1", "chatbot")).resolves.toEqual({
