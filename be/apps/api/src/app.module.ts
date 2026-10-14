@@ -797,7 +797,7 @@ export class AppModule {
                 LoyaltyRewardsModule.register({ isGlobal: true }),
                 LoyaltyLedgerModule.register({ isGlobal: true }),
                 LoyaltyCampaignsModule.register({ isGlobal: true }),
-                LoyaltyOtpsModule.register({ isGlobal: true, pepper: options.supabase.serviceRoleKey.reveal() }),
+                LoyaltyOtpsModule.register({ isGlobal: true, ...options.loyaltyOtps }),
                 LoyaltyModule.register({ isGlobal: true, delivery: LoyaltyCodeDeliveryService }),
                 PublicBookingGraphqlModule,
                 BookingGraphqlModule,
