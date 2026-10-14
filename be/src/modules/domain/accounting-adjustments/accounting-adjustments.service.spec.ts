@@ -1,10 +1,12 @@
 import { Test } from "@nestjs/testing"
 import { builder, fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
+import { isTransactionManager } from "@starci/jest-preset/entity-manager"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { EventsService } from "@modules/domain/events"
 import { InvoicesService } from "@modules/domain/invoices"
 import type { InvoiceRow } from "@modules/domain/invoices"
 import { TransactionsService } from "@modules/domain/transactions"
+import type { OptionalTransaction } from "@modules/domain/transactions"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import type { WorkspaceMember } from "@modules/domain/workspace-members"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
@@ -92,6 +94,27 @@ describe("AccountingAdjustmentsService", () => {
 
             await expect(service.history(WORKSPACE)).rejects.toBe(failure)
         })
+
+        it.each([null, "connection reset", { code: "23505" }, { driverError: null }])(
+            "preserves a non-migration database failure: %p",
+            async (failure) => {
+                const em = mockEntityManager({ query: [LIST_ADJUSTMENTS, []] })
+                em.query.mockRejectedValueOnce(failure)
+                const { service } = await build(em)
+
+                await expect(service.history(WORKSPACE)).rejects.toBe(failure)
+                expect(em.query).toHaveBeenCalledWith(LIST_ADJUSTMENTS, [WORKSPACE])
+            },
+        )
+
+        it("recognizes PostgreSQL's missing-table code directly", async () => {
+            const em = mockEntityManager({ query: [LIST_ADJUSTMENTS, []] })
+            em.query.mockRejectedValueOnce({ code: "42P01" })
+            const { service } = await build(em)
+
+            await expect(service.history(WORKSPACE)).resolves.toEqual({ items: [], ready: false })
+            expect(em.query).toHaveBeenCalledWith(LIST_ADJUSTMENTS, [WORKSPACE])
+        })
     })
 
     describe("create", () => {
@@ -151,6 +174,55 @@ describe("AccountingAdjustmentsService", () => {
             ).rejects.toMatchObject({ code: AccountingAdjustmentsErrorCode.NotCreated })
             expect(tx.rollbacks).toBe(1)
             expect(events.record).not.toHaveBeenCalled()
+        })
+
+        it("records a transaction note without a lead or corrected amount", async () => {
+            const adjustment = adjustmentOf({ target_type: "transaction", corrected_amount_vnd: null })
+            const { service, tx, invoices, transactions, events } = await build(
+                mockEntityManager({ query: [INSERT_ADJUSTMENT, [adjustment]] }),
+            )
+            const transaction: OptionalTransaction = {
+                id: TARGET,
+                workspace_id: WORKSPACE,
+                inbound_event_id: null,
+                amount_vnd: 100000,
+                reference: "Payment reference",
+                payer: "Mai",
+                invoice_id: null,
+                status: "unmatched",
+                origin: "live",
+            }
+            transactions.find.mockResolvedValueOnce(transaction)
+
+            await expect(
+                service.create(USER, WORKSPACE, {
+                    targetType: "transaction",
+                    targetId: TARGET,
+                    note: "  Customer   paid less ",
+                }),
+            ).resolves.toEqual(adjustment)
+
+            expect(transactions.find).toHaveBeenCalledWith(WORKSPACE, TARGET)
+            expect(invoices.find).not.toHaveBeenCalled()
+            expect(tx.commits).toBe(1)
+            expect(tx.committedWrites).toEqual([
+                {
+                    method: "query",
+                    args: [INSERT_ADJUSTMENT, [WORKSPACE, "transaction", TARGET, "Customer paid less", null, "Lan"]],
+                },
+            ])
+            expect(events.record).toHaveBeenCalledWith(
+                {
+                    workspaceId: WORKSPACE,
+                    leadId: null,
+                    kind: "accounting.adjustment",
+                    actor: "Lan",
+                    summary: "Customer paid less",
+                    evidence: "Customer paid less",
+                },
+                expect.any(Object),
+            )
+            expect(isTransactionManager(events.record.mock.calls[0]?.[1])).toBe(true)
         })
     })
 })

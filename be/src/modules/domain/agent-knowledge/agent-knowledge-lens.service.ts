@@ -75,10 +75,7 @@ export class AgentKnowledgeLensService implements KnowledgeLens {
 
     /** The authority, escalation and tone rules of the folders, the module's own before core, then by slug. */
     async baseRulesOf(folders: ReadonlyArray<string>): Promise<ReadonlyArray<BaseRule>> {
-        const rank = (module: string): number => {
-            const at = folders.indexOf(module)
-            return at === -1 ? folders.length : at
-        }
+        const rank = (module: string): number => folders.indexOf(module)
         const items = await this.nivo.list()
         const rules = items.filter((item) => folders.includes(item.module) && RULE_KINDS.has(item.kind))
         return [...rules]

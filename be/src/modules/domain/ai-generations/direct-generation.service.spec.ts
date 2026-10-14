@@ -92,6 +92,41 @@ describe("DirectGenerationService", () => {
         await expect(service.run(paramsOf())).resolves.toEqual({ ok: false, reason: "error", message: BUSY })
     })
 
+    it("answers the busy sentence when the generation disappeared after running", async () => {
+        const em = mockEntityManager({
+            query: [
+                [INSERT_GENERATION, [{ id: "g1" }]],
+                [FIND_GENERATION_PROGRESS, []],
+            ],
+        })
+        const { service, generations, logger, runner } = await build(em)
+        const params = paramsOf()
+
+        await expect(service.run(params)).resolves.toEqual({ ok: false, reason: "error", message: BUSY })
+
+        expect(runner.run).toHaveBeenCalledWith({ generationId: "g1", workspaceId: "w1" })
+        expect(em.query).toHaveBeenLastCalledWith(FIND_GENERATION_PROGRESS, ["g1", "w1"])
+        expect(generations.busyText).toHaveBeenCalledWith(params)
+        expect(logger.error).not.toHaveBeenCalled()
+    })
+
+    it("answers the busy sentence when the stored generation is still running", async () => {
+        const em = mockEntityManager({
+            query: [
+                [INSERT_GENERATION, [{ id: "g1" }]],
+                [FIND_GENERATION_PROGRESS, [{ status: "running", output: null, usage: null, timings: {} }]],
+            ],
+        })
+        const { service, generations, logger } = await build(em)
+        const params = paramsOf()
+
+        await expect(service.run(params)).resolves.toEqual({ ok: false, reason: "error", message: BUSY })
+
+        expect(em.query).toHaveBeenLastCalledWith(FIND_GENERATION_PROGRESS, ["g1", "w1"])
+        expect(generations.busyText).toHaveBeenCalledWith(params)
+        expect(logger.error).not.toHaveBeenCalled()
+    })
+
     it("logs a failed insert and answers the busy sentence", async () => {
         const em = mockEntityManager({ query: [INSERT_GENERATION, []] })
         const { service, logger, runner } = await build(em)

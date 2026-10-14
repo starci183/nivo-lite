@@ -75,6 +75,38 @@ describe("AgentBindingsService", () => {
     })
 
     describe("connectionsFor", () => {
+        it("includes pending read grants with the default options", async () => {
+            const rows = [
+                {
+                    id: "c1",
+                    provider: "telegram",
+                    name: "Pending bot",
+                    bot_username: "shop_bot",
+                    account_masked: null,
+                    status: "pending",
+                    created_at: "2026-10-01T00:00:00.000Z",
+                    access: "read",
+                    purpose: "outbound_chat",
+                },
+            ]
+            const em = mockEntityManager({ query: [LIST_CONNECTIONS_OF_AGENT, rows] })
+            const { service } = await build(em)
+
+            await expect(service.connectionsFor("a1", "outbound_chat")).resolves.toEqual([
+                {
+                    id: "c1",
+                    provider: "telegram",
+                    name: "Pending bot",
+                    botUsername: "shop_bot",
+                    accountMasked: null,
+                    status: "pending",
+                    access: "read",
+                    purpose: "outbound_chat",
+                },
+            ])
+            expect(em.query).toHaveBeenCalledWith(LIST_CONNECTIONS_OF_AGENT, ["a1", ["outbound_chat"]])
+        })
+
         it("lists the connected connections of an agent", async () => {
             const rows = [
                 {
@@ -209,6 +241,64 @@ describe("AgentBindingsService", () => {
 
             await expect(service.grant("u1", grant)).rejects.toBe(refusal)
             expect(em.query).not.toHaveBeenCalled()
+        })
+    })
+
+    describe("writeGrant", () => {
+        const grant = {
+            workspaceId: "w1",
+            agentId: "a1",
+            connectionId: "c1",
+            purpose: "tool" as const,
+            access: "auto" as const,
+        }
+
+        it("writes the proved grant with the primary manager by default", async () => {
+            const em = mockEntityManager({ query: [UPSERT_BINDING, []] })
+            const { service, members } = await build(em)
+
+            await expect(service.writeGrant(grant)).resolves.toBeUndefined()
+
+            expect(em.query).toHaveBeenCalledWith(UPSERT_BINDING, ["a1", "c1", "w1", "tool", "auto"])
+            expect(members.require).not.toHaveBeenCalled()
+        })
+
+        it("writes the proved grant with the caller's transaction manager", async () => {
+            const em = mockEntityManager()
+            const manager = mockEntityManager({ query: [UPSERT_BINDING, []] })
+            const { service, members } = await build(em)
+
+            await expect(service.writeGrant(grant, manager)).resolves.toBeUndefined()
+
+            expect(manager.query).toHaveBeenCalledWith(UPSERT_BINDING, ["a1", "c1", "w1", "tool", "auto"])
+            expect(em.query).not.toHaveBeenCalled()
+            expect(members.require).not.toHaveBeenCalled()
+        })
+    })
+
+    describe("removeGrant", () => {
+        const target = { workspaceId: "w1", agentId: "a1", connectionId: "c1" }
+
+        it("removes the proved grant with the primary manager by default", async () => {
+            const em = mockEntityManager({ query: [DELETE_BINDING, []] })
+            const { service, members } = await build(em)
+
+            await expect(service.removeGrant(target)).resolves.toBeUndefined()
+
+            expect(em.query).toHaveBeenCalledWith(DELETE_BINDING, ["a1", "c1", "w1"])
+            expect(members.require).not.toHaveBeenCalled()
+        })
+
+        it("removes the proved grant with the caller's transaction manager", async () => {
+            const em = mockEntityManager()
+            const manager = mockEntityManager({ query: [DELETE_BINDING, []] })
+            const { service, members } = await build(em)
+
+            await expect(service.removeGrant(target, manager)).resolves.toBeUndefined()
+
+            expect(manager.query).toHaveBeenCalledWith(DELETE_BINDING, ["a1", "c1", "w1"])
+            expect(em.query).not.toHaveBeenCalled()
+            expect(members.require).not.toHaveBeenCalled()
         })
     })
 

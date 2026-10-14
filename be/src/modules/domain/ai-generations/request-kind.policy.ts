@@ -3,7 +3,7 @@
  * module it names. A module may only meter text under the kinds it owns; `guide` (and any other kind NIVO pays for) is never on the
  * list: the NIVO guide has its own door that builds its prompt on the be and limits each member.
  */
-const REQUESTABLE_KINDS: Readonly<Record<string, ReadonlyArray<string>>> = {
+const REQUESTABLE_KINDS = {
     accounting: ["engine"],
     booking: ["engine"],
     brain: ["brain"],
@@ -20,8 +20,12 @@ const REQUESTABLE_KINDS: Readonly<Record<string, ReadonlyArray<string>>> = {
     setup: ["setup"],
     shifts: ["engine"],
     video: ["engine"],
-}
+} satisfies Readonly<Record<string, ReadonlyArray<string>>>
+
+/** Narrows a module to an own entry in the fixed map, whose kinds are always present. */
+const isRequestableModule = (module: string): module is keyof typeof REQUESTABLE_KINDS =>
+    Object.hasOwn(REQUESTABLE_KINDS, module)
 
 /** Whether a caller of a generic text door may meter a text under this kind for this module. */
 export const isRequestableKind = (module: string, kind: string): boolean =>
-    Object.hasOwn(REQUESTABLE_KINDS, module) && (REQUESTABLE_KINDS[module] ?? []).includes(kind)
+    isRequestableModule(module) && REQUESTABLE_KINDS[module].includes(kind)

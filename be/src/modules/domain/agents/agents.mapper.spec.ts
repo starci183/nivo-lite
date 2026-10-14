@@ -1,5 +1,5 @@
 import { builder } from "@starci/jest-preset"
-import { personaOf, refOf, summaryOf } from "./agents.mapper"
+import { firstProfileOf, personaOf, refOf, summaryOf } from "./agents.mapper"
 import type { AgentRow } from "./persistence/agents.rows"
 
 const rowOf = builder<AgentRow>({
@@ -17,6 +17,22 @@ const rowOf = builder<AgentRow>({
 })
 
 describe("agents mapper", () => {
+    it("maps only the first queried row to its complete profile", () => {
+        expect(firstProfileOf([rowOf(), rowOf({ id: "a2", name: "Other bot" })])).toEqual({
+            id: "a1",
+            name: "Bot",
+            handle: "bot",
+            role: "Front desk",
+            instructions: "Be kind",
+            knowledge: "Open 9-5",
+            approval_rule: "Ask first",
+        })
+    })
+
+    it("answers no profile when the query has no row", () => {
+        expect(firstProfileOf([])).toBeNull()
+    })
+
     it("maps a row to the instance list entry", () => {
         expect(summaryOf(rowOf())).toEqual({
             id: "a1",

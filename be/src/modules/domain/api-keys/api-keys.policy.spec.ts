@@ -1,5 +1,14 @@
 import { ApiKeysErrorCode } from "./errors/api-keys.error"
-import { RATE_LIMIT_PER_MINUTE, admitKey, bearerKey, hashKey, secondsToRenewal } from "./api-keys.policy"
+import {
+    RATE_LIMIT_PER_MINUTE,
+    admitKey,
+    bearerKey,
+    buildKey,
+    cleanName,
+    hashKey,
+    mayManageKeys,
+    secondsToRenewal,
+} from "./api-keys.policy"
 
 const NOW = new Date("2026-10-12T10:00:20.000Z")
 
@@ -13,6 +22,30 @@ const answer = (overrides: Record<string, unknown> = {}) => ({
 })
 
 describe("api-keys policy", () => {
+    it("builds a recognizable URL-safe secret and the stored SHA-256 from entropy", () => {
+        expect(buildKey(Uint8Array.from([251, 255, 239, 255, 255, 255, 255, 255, 255]))).toEqual({
+            key: "nvk_-__v________",
+            prefix: "nvk_-__v____",
+            hash: "c8efd6a8de1f8c5587b3bd8ca172e9f826700f44e5c8df2b074f37d8660fd146",
+        })
+    })
+
+    it("cleans, bounds and rejects short key names", () => {
+        expect(cleanName("  my\n  automation  ")).toEqual({ kind: "ok", value: "my automation" })
+        expect(cleanName("x".repeat(61))).toEqual({ kind: "ok", value: "x".repeat(60) })
+        expect(cleanName(" a ")).toEqual({ kind: "refused", code: ApiKeysErrorCode.NameTooShort })
+        expect(cleanName(" ab ")).toEqual({ kind: "ok", value: "ab" })
+    })
+
+    it.each([
+        ["owner", true],
+        ["manager", true],
+        ["member", false],
+        [undefined, false],
+    ])("allows key management for role %s: %s", (role, expected) => {
+        expect(mayManageKeys(role)).toBe(expected)
+    })
+
     describe("hashKey", () => {
         it("is the SHA-256 hex of the key", () => {
             expect(hashKey("abc")).toBe("ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad")
