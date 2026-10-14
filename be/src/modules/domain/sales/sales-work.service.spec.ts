@@ -136,11 +136,11 @@ const build = async () => {
 }
 
 describe("SalesWorkService", () => {
-    describe("retry", () => {
+    describe("reopenFailedStep", () => {
         it("reopens the failed step, queues its work and logs the retry in one transaction", async () => {
             const { service, tx, items, queue, status, evidence } = await build()
 
-            await expect(service.retry("user-1", request)).resolves.toEqual(ACTION)
+            await expect(service.reopenFailedStep("user-1", request)).resolves.toEqual(ACTION)
 
             expect(tx.commits).toBe(1)
             expect(items.retry.mock.calls[0]?.slice(0, 3)).toEqual(["ws-1", "item-1", ["failed"]])
@@ -170,7 +170,7 @@ describe("SalesWorkService", () => {
             const { service, tx, decisions } = await build()
             decisions.getWorkItem.mockResolvedValue(itemOf({ status: "queued" }))
 
-            await expect(service.retry("user-1", request)).rejects.toMatchObject({
+            await expect(service.reopenFailedStep("user-1", request)).rejects.toMatchObject({
                 code: DecisionsErrorCode.NotFailed,
             })
             expect(tx.outcomes).toEqual([])
@@ -181,7 +181,7 @@ describe("SalesWorkService", () => {
             members.require.mockResolvedValue(memberOf({ role: "staff", staffId: "staff-1" }))
             decisions.getWorkItem.mockResolvedValue(itemOf({ assigned_staff_id: "staff-2" }))
 
-            await expect(service.retry("user-1", request)).rejects.toMatchObject({
+            await expect(service.reopenFailedStep("user-1", request)).rejects.toMatchObject({
                 code: DecisionsErrorCode.NotAllowed,
             })
         })
@@ -190,7 +190,7 @@ describe("SalesWorkService", () => {
             const { service, tx, items, queue } = await build()
             items.retry.mockResolvedValue(null)
 
-            await expect(service.retry("user-1", request)).rejects.toMatchObject({
+            await expect(service.reopenFailedStep("user-1", request)).rejects.toMatchObject({
                 code: DecisionsErrorCode.StateChanged,
             })
             expect(tx.outcomes).toEqual(["rollback"])

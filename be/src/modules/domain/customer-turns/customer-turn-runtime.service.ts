@@ -1,19 +1,14 @@
 import { Injectable } from "@nestjs/common"
 import { KnowledgeRecallService, ModuleProfilesService, viewOf } from "@modules/domain/agent-knowledge"
 import { InjectInstallations, replyTimeoutSec } from "@modules/domain/agents"
-import type { Installation, InstallationDirectory } from "@modules/domain/agents"
+import type { InstallationDirectory } from "@modules/domain/agents"
 import { UsageGateService } from "@modules/domain/ai-usage-events"
 import { AuthorityService } from "@modules/domain/authority"
 import type { CustomerTurn, ChatTurnProposal, ChatTurnRuntime, RuntimeAnswer } from "@modules/domain/conversations"
 import { HiringPublicService } from "@modules/domain/hiring"
 import { AgentSyncService } from "@modules/domain/openclaw-agent-sync"
 import { authorityBrief } from "@modules/integrations/deepseek"
-import {
-    InjectOpenclawAgentRegistry,
-    InjectOpenclawGateway,
-    agentIdFor,
-    threadKeyFor,
-} from "@modules/integrations/openclaw"
+import { InjectOpenclawAgentRegistry, InjectOpenclawGateway } from "@modules/integrations/openclaw"
 import type { AgentRegistryService, GatewayClient } from "@modules/integrations/openclaw"
 import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
@@ -21,6 +16,7 @@ import { InjectMessageCatalog } from "@modules/platform/i18n"
 import type { Locale, MessageCatalog } from "@modules/platform/i18n"
 import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
+import { CustomerTurnGatewayService } from "./customer-turn-gateway.service"
 import { CustomerTurnsLogEvent } from "./customer-turns.log-events"
 import { detailOf, readCustomerReply } from "./reply-reading.policy"
 import { TurnModulesService } from "./turn-modules.service"
@@ -36,8 +32,6 @@ const NOT_CONFIGURED = "openclaw_not_configured"
 const QUOTA = "quota_exceeded"
 /** Why a turn falls back when the gateway failed or was too slow. */
 const UNAVAILABLE = "openclaw_unavailable"
-/** The socket gets a little longer than the turn, so the gateway's own timeout answers first. */
-const ABORT_GRACE_MS = 5000
 
 @Injectable()
 /**
@@ -48,43 +42,38 @@ const ABORT_GRACE_MS = 5000
  * failed turn answers the reason instead, and the customer gets the holding line.
  */
 export class CustomerTurnRuntimeService implements ChatTurnRuntime {
+    private readonly turnGateway: CustomerTurnGatewayService
+
     constructor(
-        @InjectOpenclawGateway() private readonly gateway: GatewayClient,
-        @InjectOpenclawAgentRegistry() private readonly registry: AgentRegistryService,
+        @InjectOpenclawGateway() gateway: GatewayClient,
+        @InjectOpenclawAgentRegistry() registry: AgentRegistryService,
         @InjectInstallations() private readonly installations: InstallationDirectory,
         @InjectMessageCatalog() private readonly catalog: MessageCatalog,
-        @InjectClock() private readonly clock: Clock,
+        @InjectClock() clock: Clock,
         @InjectLogger() private readonly logger: Logger,
-        private readonly sync: AgentSyncService,
+        sync: AgentSyncService,
         private readonly usage: UsageGateService,
         private readonly authority: AuthorityService,
         private readonly recall: KnowledgeRecallService,
         private readonly hiring: HiringPublicService,
         private readonly profiles: ModuleProfilesService,
         private readonly modules: TurnModulesService,
-    ) {}
+    ) {
+        this.turnGateway = new CustomerTurnGatewayService(gateway, registry, sync, clock, this.logger)
+    }
 
     /** Proposes the reply of one turn, or answers why it could not. */
     async propose(turn: CustomerTurn): Promise<RuntimeAnswer> {
         const { conversation } = turn
         const workspaceId = conversation.workspaceId
-        if (!this.gateway.enabled) return NOT_CONFIGURED
+        if (!this.turnGateway.configured()) return NOT_CONFIGURED
         if ((await this.usage.blockedBy(workspaceId, USAGE_KIND, LOCALE)) !== null) return QUOTA
         const installation = await this.installations.ofAgent(workspaceId, conversation.agent.id)
         const timeoutMs = replyTimeoutSec(installation?.settings ?? null) * 1000
         try {
-            const agentId = await this.agentFor(workspaceId, conversation.agent.module, installation)
+            const agentId = await this.turnGateway.agentFor(workspaceId, conversation.agent.module, installation)
             const message = turnMessageOf(await this.systemOf(turn), turn.transcript, turn.body)
-            const result = await this.gateway.runTurn(
-                {
-                    agentId,
-                    threadKey: threadKeyFor(agentId, conversation.id),
-                    message,
-                    idempotencyKey: `chat-${turn.messageId}-${this.clock.now().getTime()}`,
-                    timeoutMs,
-                },
-                AbortSignal.timeout(timeoutMs + ABORT_GRACE_MS),
-            )
+            const result = await this.turnGateway.run(turn, conversation, agentId, message, timeoutMs)
             await this.usage.record({
                 workspaceId,
                 kind: USAGE_KIND,
@@ -108,24 +97,6 @@ export class CustomerTurnRuntimeService implements ChatTurnRuntime {
             proposedAnswer: reply.proposedAnswer ?? "",
             detail: detailOf(reply),
         }
-    }
-
-    /**
-     * The module's own agent when OpenClaw already knows it; otherwise its copy is built now (first turn after an install, a fresh
-     * gateway). When that cannot be done the turn runs on the workspace's internal agent: the context of every turn is complete anyway.
-     */
-    private async agentFor(workspaceId: string, module: string, installation: Installation | null): Promise<string> {
-        const own = agentIdFor(workspaceId, module)
-        if (this.registry.has(own)) return own
-        if (installation !== null) {
-            try {
-                const synced = await this.sync.syncInstallation(workspaceId, installation.id, true)
-                if (synced !== null) return synced.agentId
-            } catch (cause) {
-                this.logger.error(CustomerTurnsLogEvent.AgentSyncFailed, cause, { installationId: installation.id })
-            }
-        }
-        return this.sync.ensureInternalAgent(workspaceId)
     }
 
     /** The authoritative context of the turn; a block that cannot be read is left out, never the turn. */

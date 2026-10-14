@@ -1,19 +1,20 @@
 import { Injectable } from "@nestjs/common"
 import { KnowledgeJobsService } from "@modules/domain/knowledge"
-import { InjectJobClaims } from "@modules/platform/jobs"
-import type { ClaimedJob, JobClaims, JobStep } from "@modules/platform/jobs"
+import { AdvancingJobStepPolicy, InjectJobClaims } from "@modules/platform/jobs"
+import type { JobClaims, JobStep } from "@modules/platform/jobs"
 
 @Injectable()
 /** The one effect of the job: the source of the claimed job is read, cut into passages, embedded and stored. */
-export class IndexSourceStep implements JobStep {
+export class IndexSourceStep extends AdvancingJobStepPolicy implements JobStep {
     constructor(
         private readonly knowledge: KnowledgeJobsService,
-        @InjectJobClaims() private readonly claims: JobClaims,
-    ) {}
+        @InjectJobClaims() claims: JobClaims,
+    ) {
+        super(claims, "index")
+    }
 
-    /** Records the step with the token this worker holds FIRST, so a stale token stops here before any effect; then indexes. */
-    async run(job: ClaimedJob): Promise<void> {
-        await this.claims.advance({ jobId: job.jobId, expectedFencingToken: job.fencingToken, step: "index" })
-        await this.knowledge.index(job.payload)
+    /** Indexes the source after the worker's claim has been checked. */
+    protected perform(payload: object): Promise<unknown> {
+        return this.knowledge.index(payload)
     }
 }

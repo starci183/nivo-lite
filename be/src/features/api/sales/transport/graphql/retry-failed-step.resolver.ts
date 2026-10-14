@@ -18,7 +18,7 @@ export class RetryFailedStepResolver {
 
     /** Queues a retry of one failed Sales step. */
     @Mutation(() => SalesActionType, { name: "retryFailedStep" })
-    async retryFailedStep(
+    async reopenFailedStep(
         @CurrentPrincipal() principal: Principal,
         @WorkspaceId() workspaceId: string,
         @AcceptedLocale() locale: Locale,
