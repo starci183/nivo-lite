@@ -9,6 +9,8 @@ import type { DeepseekScope } from "./deepseek.contracts"
 import { DEEPSEEK_OPTIONS, DEEPSEEK_TEXT_GENERATOR } from "./deepseek.decorators"
 import type { DeepseekTextGenerator } from "./deepseek.port"
 import { DeepseekErrorCode } from "./errors/deepseek.error"
+import { leadTurnPrompt } from "./lead-turn-prompt.policy"
+import type { LeadTurnInput } from "./lead-turn-prompt.policy"
 
 const scope: DeepseekScope = { workspaceId: "ws-1", locale: "vi" }
 const lead = { contact_name: "Lan", company: "ACME", channel: "telegram", need: "A quote" }
@@ -136,6 +138,36 @@ describe("DeepseekClient", () => {
     })
 
     describe("json prompts", () => {
+        it("reads a lead turn as raw JSON with the catalog voice and lead generation metering", async () => {
+            const { client, generator, catalog } = await build()
+            const input: LeadTurnInput = {
+                agentName: "Mai",
+                agentInstructions: "Be kind",
+                kind: "dm",
+                text: "Can I book tomorrow?",
+                name: "Lan",
+                pendingQuestion: null,
+                criteriaText: "Bookings are hot",
+                first: true,
+                voice: "",
+                brief: "BUSINESS KNOWLEDGE: Bookings open at nine.",
+            }
+            const reading = { reply: "Bookings open at nine.", signals: { wants_meeting: true }, confidence: 0.9 }
+            generator.generate.mockResolvedValue(JSON.stringify(reading))
+
+            await expect(client.readLeadTurn(scope, input)).resolves.toEqual(reading)
+
+            expect(catalog.get).toHaveBeenCalledWith("prompts.leadVoice", {}, "vi")
+            expect(generator.generate).toHaveBeenCalledWith({
+                workspaceId: "ws-1",
+                purpose: "lead_gen:chat_reply",
+                messages: leadTurnPrompt(input, "[prompts.leadVoice]"),
+                json: true,
+                kind: "chat_reply",
+                module: "lead_gen",
+            })
+        })
+
         it("proposes a responsibility", async () => {
             const { client, generator } = await build()
             generator.generate.mockResolvedValue(

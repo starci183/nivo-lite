@@ -1,12 +1,19 @@
 import { Test } from "@nestjs/testing"
-import { FakeClock, mockEntityManager } from "@starci/jest-preset"
+import { FakeClock, fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { CLOCK } from "@modules/platform/clock"
 import { JobsError, JobsErrorCode } from "./errors/jobs.error"
-import type { ClaimedJob } from "./jobs.contracts"
+import type { ClaimedJob, FailedJobEffect, JobEffect } from "./jobs.contracts"
 import { JOBS_MANAGERS } from "./jobs.decorators"
 import { JobClaimService } from "./job-claim.service"
-import { ADVANCE_JOB, CLAIM_JOB, COMPLETE_JOB, FAIL_JOB } from "./persistence/jobs.sql"
+import {
+    ADVANCE_JOB,
+    CLAIM_JOB,
+    COMPLETE_JOB,
+    FAIL_JOB,
+    LOCK_FAILED_JOB_FENCE,
+    LOCK_JOB_FENCE,
+} from "./persistence/jobs.sql"
 
 const AT = "2026-02-03T04:05:06.000Z"
 
@@ -133,6 +140,102 @@ describe("JobClaimService", () => {
 
             expect(() => claims.runKey(claimed, "send:twice")).toThrow(JobsError)
             expect(() => claims.runKey(claimed, "send:twice")).toThrow(JobsErrorCode.RunKeyInvalid)
+        })
+    })
+
+    describe("withFence", () => {
+        it("returns the domain effect result while holding the live token in a committed transaction", async () => {
+            const manager = mockEntityManager({ query: [LOCK_JOB_FENCE, [{ id: "j-1" }]] })
+            const transaction = fakeTransaction(manager)
+            const { claims } = await build(manager)
+            const effect = mock<{ run: JobEffect<string> }>()
+            effect.run.mockResolvedValue("sent")
+
+            await expect(claims.withFence(claimed, effect.run)).resolves.toBe("sent")
+
+            expect(manager.query).toHaveBeenCalledWith(LOCK_JOB_FENCE, ["j-1", 3])
+            expect(effect.run).toHaveBeenCalledTimes(1)
+            expect(effect.run).toHaveBeenCalledWith()
+            expect(transaction.outcomes).toEqual(["commit"])
+        })
+
+        it("rejects a stale token before calling the effect and rolls the transaction back", async () => {
+            const manager = mockEntityManager({ query: [LOCK_JOB_FENCE, []] })
+            const transaction = fakeTransaction(manager)
+            const { claims } = await build(manager)
+            const effect = mock<{ run: JobEffect<string> }>()
+
+            await expect(claims.withFence(claimed, effect.run)).rejects.toMatchObject({
+                name: "JobsError",
+                code: JobsErrorCode.FencedOut,
+                params: { jobId: "j-1", token: 3 },
+            })
+
+            expect(manager.query).toHaveBeenCalledWith(LOCK_JOB_FENCE, ["j-1", 3])
+            expect(effect.run).not.toHaveBeenCalled()
+            expect(transaction.outcomes).toEqual(["rollback"])
+        })
+
+        it("propagates a failed effect and rolls the live fence transaction back", async () => {
+            const manager = mockEntityManager({ query: [LOCK_JOB_FENCE, [{ id: "j-1" }]] })
+            const transaction = fakeTransaction(manager)
+            const { claims } = await build(manager)
+            const effect = mock<{ run: JobEffect<string> }>()
+            const failure = new TypeError("delivery failed")
+            effect.run.mockRejectedValue(failure)
+
+            await expect(claims.withFence(claimed, effect.run)).rejects.toBe(failure)
+
+            expect(effect.run).toHaveBeenCalledTimes(1)
+            expect(transaction.outcomes).toEqual(["rollback"])
+        })
+    })
+
+    describe("withFailedFence", () => {
+        it("passes the failed claim and its numeric token to the terminal effect", async () => {
+            const manager = mockEntityManager({
+                query: [LOCK_FAILED_JOB_FENCE, [{ id: "j-failed", fencing_token: "7" }]],
+            })
+            const transaction = fakeTransaction(manager)
+            const { claims } = await build(manager)
+            const effect = mock<{ run: FailedJobEffect }>()
+            effect.run.mockResolvedValue(undefined)
+
+            await expect(claims.withFailedFence("failed-delivery", effect.run)).resolves.toBeUndefined()
+
+            expect(manager.query).toHaveBeenCalledWith(LOCK_FAILED_JOB_FENCE, ["failed-delivery"])
+            expect(effect.run).toHaveBeenCalledTimes(1)
+            expect(effect.run).toHaveBeenCalledWith({ jobId: "j-failed", expectedFencingToken: 7 })
+            expect(transaction.outcomes).toEqual(["commit"])
+        })
+
+        it("commits without a terminal effect when no failed claim remains", async () => {
+            const manager = mockEntityManager({ query: [LOCK_FAILED_JOB_FENCE, []] })
+            const transaction = fakeTransaction(manager)
+            const { claims } = await build(manager)
+            const effect = mock<{ run: FailedJobEffect }>()
+
+            await expect(claims.withFailedFence("failed-delivery", effect.run)).resolves.toBeUndefined()
+
+            expect(manager.query).toHaveBeenCalledWith(LOCK_FAILED_JOB_FENCE, ["failed-delivery"])
+            expect(effect.run).not.toHaveBeenCalled()
+            expect(transaction.outcomes).toEqual(["commit"])
+        })
+
+        it("propagates a terminal effect failure and rolls the failed fence back", async () => {
+            const manager = mockEntityManager({
+                query: [LOCK_FAILED_JOB_FENCE, [{ id: "j-failed", fencing_token: "7" }]],
+            })
+            const transaction = fakeTransaction(manager)
+            const { claims } = await build(manager)
+            const effect = mock<{ run: FailedJobEffect }>()
+            const failure = new TypeError("terminal delivery failed")
+            effect.run.mockRejectedValue(failure)
+
+            await expect(claims.withFailedFence("failed-delivery", effect.run)).rejects.toBe(failure)
+
+            expect(effect.run).toHaveBeenCalledWith({ jobId: "j-failed", expectedFencingToken: 7 })
+            expect(transaction.outcomes).toEqual(["rollback"])
         })
     })
 
