@@ -15,6 +15,10 @@
 # This workflow only touches ~/nivo-engine and the "nivo-engine" compose project (the project name is kept so the volumes keep their names).
 name: Deploy api
 
+# Least privilege: the jobs only read the repository; everything else is done over SSH with the environment secrets.
+permissions:
+  contents: read
+
 on:
   workflow_dispatch:
 
