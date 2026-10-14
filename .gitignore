@@ -67,25 +67,5 @@ next-env.d.ts
 !.starcistacks/**/*.enc
 # <<< starci app sync <<<
 
-node_modules/
-.next/
-.netlify/
-.shots/
-*.tsbuildinfo
-next-env.d.ts
-.env*
-supabase/.temp/
-supabase/.branches/
-.accounts-contract-ready
-.modules-contract-ready
-*.log
-!.env.example
-!**/.env.example
-
-# The ONE secrets file and SSH keys live at the repo root for convenience. NEVER commit them.
-/secrets.env
-/.secrets/
-scripts/.render-check.mjs
-
 # Jest coverage output written next to the root by per-suite runs; generated, never tracked.
 coverage-*/
