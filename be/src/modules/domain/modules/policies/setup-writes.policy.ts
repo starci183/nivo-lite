@@ -85,15 +85,17 @@ export const targetKeyOf = (write: ProposedWrite): string =>
 export const vndOf = (value: unknown): number | null => {
     if (typeof value === "number") return Number.isFinite(value) && value >= 0 ? Math.round(value) : null
     if (typeof value !== "string") return null
-    const found = value
+    const normalized = value
         .toLowerCase()
         .normalize("NFD")
         .replace(/\p{Diacritic}/gu, "")
         .replace(/\s+/g, " ")
-        .match(/^([\d.,]+)\s*(ty|trieu|tr|m|k|nghin|ngan)?/u)
+    const found = normalized.match(/^([\d.,]+)\s*(ty|trieu|tr|m|k|nghin|ngan)?/u)
     if (found === null) return null
     const unit = found[2] ?? ""
-    const digits = unit === "" ? (found[1] ?? "").replace(/[.,]/g, "") : (found[1] ?? "").replace(",", ".")
+    // The successful anchored match guarantees this maximal numeric prefix is nonempty.
+    const prefix = normalized.replace(/[^\d.,][\s\S]*$/u, "")
+    const digits = unit === "" ? prefix.replace(/[.,]/g, "") : prefix.replace(",", ".")
     const amount = Number(digits)
     if (!Number.isFinite(amount)) return null
     return Math.round(amount * (UNIT_MULTIPLIER[unit] ?? 1))

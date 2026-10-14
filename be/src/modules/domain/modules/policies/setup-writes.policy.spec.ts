@@ -96,6 +96,18 @@ describe("vndOf", () => {
     ])("reads %s as VND", (raw, expected) => {
         expect(vndOf(raw)).toBe(expected)
     })
+
+    it.each([
+        ["1,5k ignored\nbody", 1500],
+        ["1.5\u{1f642}\nbody", 15],
+        [".k", null],
+        [",k", null],
+        ["1,2,3k", null],
+        ["1..2\nbody", 12],
+        ["24k:notes", 24000],
+    ])("preserves the numeric prefix and unit before trailing text: %s", (raw, expected) => {
+        expect(vndOf(raw)).toBe(expected)
+    })
 })
 
 describe("gateWritesOf, targetKeyOf and cardOf", () => {
