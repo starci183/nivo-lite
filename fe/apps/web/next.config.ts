@@ -6,8 +6,6 @@ import { resolve } from "node:path"
 const withNextIntl = createNextIntlPlugin("./src/modules/i18n/request.ts")
 
 const nextConfig: NextConfig = {
-    // Data connector drivers (database, mailbox, personal Telegram) stay plain Node modules on the server, never bundled.
-    serverExternalPackages: ["pg", "mysql2", "mssql", "imapflow", "mailparser", "telegram", "mammoth", "unpdf"],
     transpilePackages: ["@starci/grammar"],
     poweredByHeader: false,
     experimental: {
