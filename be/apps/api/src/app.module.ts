@@ -1,25 +1,25 @@
 import { Module, type DynamicModule } from "@nestjs/common"
 import { APP_FILTER, APP_GUARD } from "@nestjs/core"
-import { AutomationsGraphqlModule, AutomationsHttpModule } from "@features/api/automations"
-import { FlowsGraphqlModule, FlowsHttpModule } from "@features/api/flows"
+import { AutomationsGraphqlModule } from "@features/api/automations"
+import { FlowsGraphqlModule } from "@features/api/flows"
 import { N8nPipelinesHttpModule } from "@features/api/n8n-pipelines"
 import { AgentToolsHttpModule } from "@features/api/agent-tools"
-import { AgentsGraphqlModule, AgentsHttpModule } from "@features/api/agents"
+import { AgentsGraphqlModule } from "@features/api/agents"
 import { ApiKeysGraphqlModule } from "@features/api/api-keys"
 import { DataHubGraphqlModule } from "@features/api/data-hub"
 import { HiringGraphqlModule } from "@features/api/hiring"
 import { InventoryGraphqlModule } from "@features/api/inventory"
 import { ShiftsGraphqlModule } from "@features/api/shifts"
 import { OverviewGraphqlModule } from "@features/api/overview"
-import { DecisionsGraphqlModule, DecisionsHttpModule } from "@features/api/decisions"
-import { BookingGraphqlModule, BookingHttpModule } from "@features/api/booking"
-import { LoyaltyGraphqlModule, LoyaltyHttpModule } from "@features/api/loyalty"
+import { DecisionsGraphqlModule } from "@features/api/decisions"
+import { BookingGraphqlModule } from "@features/api/booking"
+import { LoyaltyGraphqlModule } from "@features/api/loyalty"
 import { LoyaltyTillHttpModule } from "@features/api/loyalty-till"
-import { PublicBookingGraphqlModule, PublicBookingHttpModule } from "@features/api/public-booking"
-import { PublicLoyaltyGraphqlModule, PublicLoyaltyHttpModule } from "@features/api/public-loyalty"
+import { PublicBookingGraphqlModule } from "@features/api/public-booking"
+import { PublicLoyaltyGraphqlModule } from "@features/api/public-loyalty"
 import { TelegramHttpModule } from "@features/webhooks/telegram"
 import { ZaloHttpModule } from "@features/webhooks/zalo"
-import { LeadsGraphqlModule, LeadsHttpModule } from "@features/api/leads"
+import { LeadsGraphqlModule } from "@features/api/leads"
 import { LeadQueriesGraphqlModule } from "@features/api/lead-queries"
 import { LeadActionsGraphqlModule } from "@features/api/lead-actions"
 import { SalesGraphqlModule } from "@features/api/sales"
@@ -28,9 +28,9 @@ import { LEAD_ACTIONS_ERROR_KINDS, LEAD_ACTIONS_MESSAGES, LeadActionsModule } fr
 import { SalesModule } from "@modules/domain/sales"
 import { SalesWorkbenchModule } from "@modules/domain/sales-workbench"
 import { LeadViewsModule } from "@modules/domain/lead-views"
-import { AdminGraphqlModule, AdminHttpModule } from "@features/api/admin"
-import { ModulesGraphqlModule, ModulesHttpModule } from "@features/api/modules"
-import { OfficeGraphqlModule, OfficeHttpModule } from "@features/api/office"
+import { AdminGraphqlModule } from "@features/api/admin"
+import { ModulesGraphqlModule } from "@features/api/modules"
+import { OfficeGraphqlModule } from "@features/api/office"
 import { PromoGraphqlModule } from "@features/api/promo"
 import { LeadGenGraphqlModule } from "@features/api/leadgen"
 import { ChatbotGraphqlModule } from "@features/api/chatbot"
@@ -100,7 +100,7 @@ import {
     ACCOUNTING_ADJUSTMENTS_MESSAGES,
     AccountingAdjustmentsModule,
 } from "@modules/domain/accounting-adjustments"
-import { WorkspacesGraphqlModule, WorkspacesHttpModule } from "@features/api/workspaces"
+import { WorkspacesGraphqlModule } from "@features/api/workspaces"
 import { InboxGraphqlModule } from "@features/api/inbox"
 import { AgentChatGraphqlModule } from "@features/api/agentchat"
 import { InboxSimulationGraphqlModule } from "@features/api/inbox-simulation"
@@ -383,7 +383,7 @@ import { VideoProjectsModule } from "@modules/domain/video-projects"
 import { VIDEO_RENDERS_ERROR_KINDS, VIDEO_RENDERS_MESSAGES, VideoRendersModule } from "@modules/domain/video-renders"
 import { FFMPEG_ERROR_KINDS, FFMPEG_MESSAGES, FfmpegModule } from "@modules/integrations/ffmpeg"
 import { TTS_ERROR_KINDS, TTS_MESSAGES, TtsModule } from "@modules/integrations/tts"
-import { RendersGraphqlModule, RendersHttpModule } from "@features/api/renders"
+import { RendersGraphqlModule } from "@features/api/renders"
 import { CUSTOMER_TURNS_MESSAGES, CustomerTurnsModule } from "@modules/domain/customer-turns"
 import {
     AGENT_TOOLS_PORTS,
@@ -699,7 +699,6 @@ export class AppModule {
                 VideoGraphqlModule,
                 ContentModule.register({ isGlobal: true }),
                 AppCommandsModule.register({ isGlobal: true }),
-                RendersHttpModule,
                 RendersGraphqlModule,
                 LivenessModule.register({ isGlobal: true }),
                 ModuleOpsModule.register({ isGlobal: true, ports: G19_PORTS.moduleOps }),
@@ -721,7 +720,6 @@ export class AppModule {
                 BrainEvalCasesModule.register({ isGlobal: true }),
                 BrainModule.register({ isGlobal: true, corrections: { recent: () => Promise.resolve([]) } }),
                 BookingsModule.register({ isGlobal: true }),
-                LeadsHttpModule,
                 LeadsGraphqlModule,
                 LeadQueriesGraphqlModule,
                 LeadActionsGraphqlModule,
@@ -767,15 +765,11 @@ export class AppModule {
                 EmailMessagesModule.register({ isGlobal: true }),
                 WorkPerformersModule.register({ isGlobal: true, writer: DeepseekClient }),
                 OfficeCommandCandidatesModule.register({ isGlobal: true, reader: DeepseekClient }),
-                AgentsHttpModule,
                 AgentsGraphqlModule,
                 AgentToolsHttpModule,
-                DecisionsHttpModule,
                 DecisionsGraphqlModule,
-                OfficeHttpModule,
                 OfficeGraphqlModule,
                 ModulesModule.register({ isGlobal: true, categories: MODULE_CATEGORIES, catalog: MODULE_CATALOG }),
-                ModulesHttpModule,
                 ModulesGraphqlModule,
                 ApiKeysModule.register({ isGlobal: true }),
                 OverviewModule.register({ isGlobal: true }),
@@ -805,16 +799,11 @@ export class AppModule {
                 LoyaltyCampaignsModule.register({ isGlobal: true }),
                 LoyaltyOtpsModule.register({ isGlobal: true, pepper: options.supabase.serviceRoleKey.reveal() }),
                 LoyaltyModule.register({ isGlobal: true, delivery: LoyaltyCodeDeliveryService }),
-                PublicBookingHttpModule,
                 PublicBookingGraphqlModule,
-                BookingHttpModule,
                 BookingGraphqlModule,
-                PublicLoyaltyHttpModule,
                 PublicLoyaltyGraphqlModule,
-                LoyaltyHttpModule,
                 LoyaltyGraphqlModule,
                 LoyaltyTillHttpModule,
-                WorkspacesHttpModule,
                 WorkspacesGraphqlModule,
                 ApiKeysGraphqlModule,
                 InventoryGraphqlModule,
@@ -834,12 +823,9 @@ export class AppModule {
                 EvidenceGraphqlModule,
                 GoogleConnectionsHttpModule,
                 MetaConnectionsHttpModule,
-                AutomationsHttpModule,
                 AutomationsGraphqlModule,
-                FlowsHttpModule,
                 FlowsGraphqlModule,
                 N8nPipelinesHttpModule,
-                AdminHttpModule,
                 AdminGraphqlModule,
             ],
             providers: [
