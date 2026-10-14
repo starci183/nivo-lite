@@ -107,6 +107,7 @@ import type { ServerOptions } from "@modules/platform/config"
 import type { DatabaseConnectionOptions } from "@modules/platform/database"
 import type { ChannelsOptions } from "@modules/domain/channels"
 import type { ConnectionSecretsOptions } from "@modules/domain/connection-secrets"
+import type { LoyaltyOtpsOptions } from "@modules/domain/loyalty-otps"
 import type { PlatformAdminOptions } from "@modules/domain/platform-admin"
 import type { WorkspaceInvitesOptions } from "@modules/domain/workspace-invites"
 import type { WorkspacesOptions } from "@modules/domain/workspaces"
@@ -144,6 +145,8 @@ export interface ApiOptions {
     readonly deepseek: DeepseekOptions
     /** The key that seals the credentials of the connections. */
     readonly connectionSecrets: ConnectionSecretsOptions
+    /** The dedicated secret mixed into loyalty one-time code hashes. */
+    readonly loyaltyOtps: LoyaltyOtpsOptions
     /** The public origin of the web app, for provider return addresses. */
     readonly channels: ChannelsOptions
     /** The Telegram Bot API host. */

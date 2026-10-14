@@ -3,6 +3,7 @@ import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
+import type { Secret } from "@modules/platform/config"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { LoyaltyOtpsError, LoyaltyOtpsErrorCode } from "./errors/loyalty-otps.error"
 import { InjectOtpPepper } from "./loyalty-otps.decorators"
@@ -26,7 +27,7 @@ export class LoyaltyOtpsService {
     constructor(
         @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
         @InjectClock() private readonly clock: Clock,
-        @InjectOtpPepper() private readonly pepper: string,
+        @InjectOtpPepper() private readonly pepper: Secret,
     ) {}
 
     /** How many codes a workspace issued since an instant. */
@@ -53,7 +54,7 @@ export class LoyaltyOtpsService {
         const [row] = await this.entityManager.query<Array<{ id: string }>>(INSERT_CODE, [
             workspaceId,
             customerId,
-            codeHash(this.pepper, customerId, code),
+            this.hashCode(customerId, code),
             expiresIso,
         ])
         if (row === undefined) throw new LoyaltyOtpsError({ code: LoyaltyOtpsErrorCode.NotIssued })
@@ -73,11 +74,15 @@ export class LoyaltyOtpsService {
             [customerId, nowIso],
         )
         if (open === undefined || open.attempts >= OTP_MAX_ATTEMPTS) return "rejected"
-        if (!sameHash(open.code_hash, codeHash(this.pepper, customerId, code))) {
+        if (!sameHash(open.code_hash, this.hashCode(customerId, code))) {
             await this.entityManager.query(BUMP_ATTEMPTS, [open.id])
             return "rejected"
         }
         await this.entityManager.query(MARK_USED, [open.id, nowIso])
         return "accepted"
+    }
+
+    private hashCode(customerId: string, code: string): string {
+        return codeHash(this.pepper.reveal(), customerId, code)
     }
 }

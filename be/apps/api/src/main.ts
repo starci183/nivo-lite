@@ -10,6 +10,7 @@ import { parseJobsConfig } from "@modules/platform/jobs"
 import { parseQueueConfig } from "@modules/platform/queue"
 import { parseChannelsConfig } from "@modules/domain/channels"
 import { parseConnectionSecretsConfig } from "@modules/domain/connection-secrets"
+import { parseLoyaltyOtpsConfig } from "@modules/domain/loyalty-otps"
 import { parseDataSourcesConfig } from "@modules/integrations/data-sources"
 import { parseMailConfig } from "@modules/integrations/mail"
 import { parseTelegramConfig } from "@modules/integrations/telegram"
@@ -62,6 +63,7 @@ const bootstrap = async (): Promise<void> => {
         openclaw: parseOpenclawConfig(env),
         deepseek: parseDeepseekConfig(env),
         connectionSecrets: parseConnectionSecretsConfig(env),
+        loyaltyOtps: parseLoyaltyOtpsConfig(env),
         channels: parseChannelsConfig(env),
         telegram: parseTelegramConfig(env),
         zalo: parseZaloConfig(env),
