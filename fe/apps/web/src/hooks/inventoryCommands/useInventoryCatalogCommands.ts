@@ -25,7 +25,7 @@ export const useInventoryCatalogCommands = (): InventoryCatalogCommands => {
                 return null
             },
             saveSupplier: (input) => saveSupplierTrigger(input),
-            saveRecipe: async (input) => saveRecipeTrigger({ ...input, lines: [...input.lines] }),
+            saveRecipe: async (input) => await saveRecipeTrigger({ ...input, lines: [...input.lines] }),
             deleteRecipe: async (id) => {
                 await deleteRecipeTrigger({ id })
                 return null

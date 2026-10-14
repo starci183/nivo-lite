@@ -1,4 +1,5 @@
 import { useTranslations } from "next-intl"
+import { APP_ROUTES } from "@/modules/routes"
 import { CreditsErrorPageBase } from "./component"
 
 /** What the failed credits route gives the page. */
@@ -10,9 +11,17 @@ type CreditsErrorPageProps = {
 /** The credits page keeps its trail and heading when its data fails, with one Alert and a retry. */
 export const CreditsErrorPage = (props: CreditsErrorPageProps) => {
     const t = useTranslations("credits")
+    const title = t("title")
     return (
         <CreditsErrorPageBase
-            props={{ crumbHome: t("crumbHome"), title: t("title"), message: t("errorText") }}
+            props={{
+                crumbs: [
+                    { id: "home", label: t("crumbHome"), href: APP_ROUTES.dashboard },
+                    { id: "credits", label: title },
+                ],
+                title,
+                message: t("errorText"),
+            }}
             on={{ retry: props.onRetry }}
         />
     )
