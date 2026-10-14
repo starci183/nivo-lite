@@ -1,5 +1,6 @@
 import { useLocale } from "next-intl"
-import { MODULE_CATEGORIES, MODULE_KEYS, MODULE_REGISTRY, pickCopy, pickCopyList } from "@/modules/catalog"
+import { useModuleCatalog } from "@/hooks/moduleCatalog"
+import { MODULE_KEYS, MODULE_REGISTRY, pickCopy, pickCopyList } from "@/modules/catalog"
 import type { ModuleKey } from "@/modules/catalog"
 import { AGENT_STATUS_TONE, agentHref, agentStatusOf, foldText, instancesOf } from "@/modules/installations"
 import type { DataSlot } from "@/modules/types"
@@ -27,15 +28,18 @@ interface CatalogEntry {
 export const useCatalogEntries = (): {
     readonly entries: ReadonlyArray<CatalogEntry>
     readonly categories: ReadonlyArray<{ readonly key: string; readonly label: string }>
-    readonly slot: DataSlot<ReadonlyArray<unknown>>
+    readonly slot: DataSlot<boolean>
+    readonly reload: () => void
 } => {
     const locale = useLocale() === "en" ? "en" : "vi"
-    const { slot, installations } = useInstallations()
+    const { slot: installationsSlot, installations, reload: reloadInstallations } = useInstallations()
+    const catalog = useModuleCatalog()
     const entries = MODULE_KEYS.map((key): CatalogEntry => {
         const def = MODULE_REGISTRY[key]
+        const copy = catalog.modules[key]
         const installation = installations === undefined ? undefined : instancesOf(installations, key)[0]
         const status = agentStatusOf(installation)
-        const category = MODULE_CATEGORIES.find((entry) => entry.key === def.category)
+        const category = catalog.categories.find((entry) => entry.key === def.category)
         return {
             key,
             categoryKey: def.category,
@@ -43,30 +47,50 @@ export const useCatalogEntries = (): {
             isEarly: def.status === "early",
             searchText: foldText(
                 [
-                    def.name.vi,
-                    def.name.en,
-                    def.shortName.vi,
-                    def.shortName.en,
-                    def.description.vi,
-                    def.description.en,
-                    ...def.points.vi,
-                    ...def.points.en,
+                    copy?.name.vi ?? "",
+                    copy?.name.en ?? "",
+                    copy?.shortName.vi ?? "",
+                    copy?.shortName.en ?? "",
+                    copy?.description.vi ?? "",
+                    copy?.description.en ?? "",
+                    ...(copy?.points.vi ?? []),
+                    ...(copy?.points.en ?? []),
                     category?.label.vi ?? "",
                     category?.label.en ?? "",
                 ].join(" "),
             ),
-            name: pickCopy(def.name, locale),
-            description: pickCopy(def.description, locale),
-            points: pickCopyList(def.points, locale),
+            name: copy === undefined ? "" : pickCopy(copy.name, locale),
+            description: copy === undefined ? "" : pickCopy(copy.description, locale),
+            points: copy === undefined ? [] : pickCopyList(copy.points, locale),
             mascot: def.mascot,
             status,
             statusTone: AGENT_STATUS_TONE[status],
             openHref: installation === undefined ? null : agentHref(key, null),
         }
     })
-    const categories = MODULE_CATEGORIES.map((category) => ({
-        key: category.key,
-        label: pickCopy(category.label, locale),
-    }))
-    return { entries, categories, slot }
+    const categories =
+        catalog.slot.isLoading === true
+            ? Array.from(new Set(MODULE_KEYS.map((key) => MODULE_REGISTRY[key].category))).map((key) => ({
+                  key,
+                  label: "",
+              }))
+            : catalog.categories.map((category) => ({
+                  key: category.key,
+                  label: pickCopy(category.label, locale),
+              }))
+    const slot: DataSlot<boolean> = {
+        isLoading: installationsSlot.isLoading === true || catalog.slot.isLoading === true,
+        isError: installationsSlot.isError === true || catalog.slot.isError === true,
+        isForbidden: installationsSlot.isForbidden === true || catalog.slot.isForbidden === true,
+        items: catalog.slot.items === undefined || installationsSlot.items === undefined ? undefined : true,
+    }
+    return {
+        entries,
+        categories,
+        slot,
+        reload: () => {
+            reloadInstallations()
+            catalog.reload()
+        },
+    }
 }

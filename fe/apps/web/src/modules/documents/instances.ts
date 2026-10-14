@@ -1,5 +1,4 @@
-import { agentTypeName } from "@/modules/catalog"
-import type { CopyLocale, ModuleKey } from "@/modules/catalog"
+import type { ModuleKey } from "@/modules/catalog"
 import type { Installation } from "@/modules/installations"
 
 /** One agent instance a document may be kept for: "<type> - <instance>". */
@@ -19,12 +18,12 @@ const labelOf = (type: string, name: string): string => {
 /** The agent instances a document may be kept for: only types with several instances have anything to choose. */
 export const instanceOptions = (
     installations: ReadonlyArray<Installation>,
-    locale: CopyLocale,
+    moduleNames: Readonly<Partial<Record<ModuleKey, string>>>,
 ): ReadonlyArray<InstanceOption> =>
     installations
         .filter((one) => one.isMulti && installations.filter((other) => other.moduleKey === one.moduleKey).length > 1)
         .map((one) => ({
             id: one.id,
             moduleKey: one.moduleKey,
-            label: labelOf(agentTypeName(one.moduleKey, locale), one.name),
+            label: labelOf(moduleNames[one.moduleKey] ?? one.moduleKey, one.name),
         }))

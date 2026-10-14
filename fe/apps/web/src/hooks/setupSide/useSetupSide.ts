@@ -1,7 +1,8 @@
 import { useFormatter, useLocale, useTranslations } from "next-intl"
 import { mapSlot } from "@/hooks/slot"
+import { useModuleCatalog } from "@/hooks/moduleCatalog"
 import { MODULE_KEYS, isModuleKey } from "@/modules/catalog"
-import { gateEntry, gateHint, gateLabel, gatesOf } from "@/modules/installations"
+import { gateEntry, gateHint, gateLabel } from "@/modules/installations"
 import type { ContextVersion } from "@/modules/installations"
 import { KNOWLEDGE_ROUTES } from "@/modules/routes"
 import type { DataSlot } from "@/modules/types"
@@ -28,11 +29,12 @@ export const useSetupSide = (module: string, installationId: string) => {
     const locale = useLocale() === "en" ? "en" : "vi"
     const format = useFormatter()
     const moduleKey = isModuleKey(module) ? module : MODULE_KEYS[0]
+    const catalog = useModuleCatalog()
     const { slot, reload } = useSetupState(installationId)
     const versionsSlot = useSetupVersions(installationId)
     const unmet = useSetupRequirements(moduleKey)
     const counts = useSetupKnowledge(moduleKey)
-    const isLoading = slot.items === undefined
+    const isLoading = slot.items === undefined || catalog.slot.items === undefined
     const session = slot.items?.session ?? LOADING_SESSION
     const gatesState = useSetupGates(session.id, installationId)
     const versions = versionsSlot.items?.versions ?? NO_VERSIONS
@@ -69,7 +71,7 @@ export const useSetupSide = (module: string, installationId: string) => {
             progressLabel: t("gatesProgress", { done: progress.confirmed, total: progress.total }),
             confirmed: progress.confirmed,
             total: progress.total,
-            gates: gatesOf(moduleKey).map((gate) => {
+            gates: (catalog.modules[moduleKey]?.gates ?? []).map((gate) => {
                 const entry = gateEntry(session.gateEvidence, gate.key)
                 return {
                     key: gate.key,
@@ -127,11 +129,15 @@ export const useSetupSide = (module: string, installationId: string) => {
             isLoading: versionsSlot.items === undefined,
         },
     }
-    const sideSlot: DataSlot<SetupSideView> = mapSlot(slot, () => view)
+    const sideSlot: DataSlot<SetupSideView> =
+        slot.items === undefined ? mapSlot(slot, () => view) : mapSlot(catalog.slot, () => view)
     return {
         slot: sideSlot,
         placeholder: view,
-        reload,
+        reload: () => {
+            reload()
+            catalog.reload()
+        },
         on: {
             editText: gatesState.setEditText,
             gate: (gateKey: string, action: "confirm" | "reopen" | "edit", evidence?: string) =>

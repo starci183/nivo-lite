@@ -7,6 +7,7 @@ import type {
     PreviewSample,
     ShopContext,
 } from "@/modules/types"
+import type { ModuleKey } from "@/modules/catalog"
 import { automationCardOf, automationEmptyText, automationFilterLabel } from "./cards"
 import type { CardContext } from "./cards"
 import { automationDetailOf } from "./detail"
@@ -18,6 +19,7 @@ import type { AutomationFilterKey } from "./status"
 export interface BoardInput {
     readonly t: AutomationsTranslator
     readonly locale: AutomationsLanguage
+    readonly moduleNames: Readonly<Partial<Record<ModuleKey, string>>>
     readonly when: (iso: string) => string
     readonly isNested: boolean
     /** Every card of the workspace, and the ones of this board's scope that pass the filter. */
@@ -65,7 +67,7 @@ export const automationBoardOf = (input: BoardInput): AutomationsBoardView => {
     return {
         filters: {
             label: t("filtersLabel"),
-            items: filters.map((key) => ({ id: key, label: automationFilterLabel(key, t, locale) })),
+            items: filters.map((key) => ({ id: key, label: automationFilterLabel(key, t, input.moduleNames) })),
             selectedId: input.filter,
         },
         ...(input.errorText !== undefined && current === null

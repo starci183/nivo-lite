@@ -1,5 +1,4 @@
-// The catalogue of installable agents as the front end reads it synchronously. The source of truth is the typed catalogue of the back end
-// (be/src/modules/domain/modules, served by GET /modules); this mirror stays until every consumer reads the api (Wave 3).
+// Stable frontend route and action identifiers. Catalogue copy is read from backend GraphQL.
 
 /** The module keys in display order. */
 export const MODULE_KEYS = [

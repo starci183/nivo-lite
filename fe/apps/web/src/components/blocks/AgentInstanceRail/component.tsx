@@ -8,6 +8,7 @@ export interface AgentInstanceRailItem {
     readonly id: string
     readonly href: string
     readonly name: string
+    readonly isNameLoading: boolean
     readonly mascot: string
     readonly isCurrent: boolean
     readonly statusLabel: string
@@ -40,6 +41,7 @@ export const AgentInstanceRailBase = (props: AgentInstanceRailBaseProps) => (
                 href={item.href}
                 appearance="route"
                 isCurrent={item.isCurrent}
+                isSkeleton={item.isNameLoading}
                 startContent={
                     <IconTile
                         source={nivoIconSource("apps", "leading")}

@@ -24,6 +24,7 @@ export const AgentInstanceRail = (props: AgentInstanceRailProps) => {
                     id: item.id,
                     href: item.href,
                     name: item.name,
+                    isNameLoading: item.isNameLoading,
                     mascot: item.mascot,
                     isCurrent: item.isCurrent,
                     statusLabel: t(`status_${item.status}`),

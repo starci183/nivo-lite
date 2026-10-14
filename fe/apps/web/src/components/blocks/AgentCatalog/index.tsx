@@ -4,13 +4,15 @@ import { useTranslations } from "next-intl"
 import { useCatalogEntries, useInstallAgent } from "@/hooks/installations"
 import { isManager, useMember } from "@/hooks/member"
 import { ALL_CATEGORIES, useCatalogView } from "@/hooks/modules"
+import { useSlotLabels } from "@/hooks/slot"
 import { AgentCatalogBase } from "./component"
 
 /** The connected agent catalogue: reads the installed agents in the browser; search, category and status filters kept in the URL; install opens the new agent. */
 export const AgentCatalog = () => {
     const t = useTranslations("modulesCore")
     const member = useMember()
-    const { entries, categories, slot } = useCatalogEntries()
+    const { entries, categories, slot, reload } = useCatalogEntries()
+    const slotLabels = useSlotLabels()
     const installing = useInstallAgent()
     const isLoading = slot.isLoading === true
     const items = entries.map((entry) => ({
@@ -58,8 +60,8 @@ export const AgentCatalog = () => {
                 emptyTitle: t("emptyTitle"),
                 emptyHint: t("emptyHint"),
                 emptyAction: view.filters.isFiltered ? t("emptyAction") : undefined,
-                errorTitle: t("catalogTitle"),
-                error: slot.isError === true ? t("loadFailed") : undefined,
+                slot,
+                slotLabels: { ...slotLabels(t("emptyTitle")), error: t("loadFailed") },
                 busyKey: installing.busyKey,
                 isLoading,
             }}
@@ -68,6 +70,7 @@ export const AgentCatalog = () => {
                 category: view.filters.setCategory,
                 status: view.filters.setStatus,
                 clear: view.filters.clear,
+                retry: reload,
                 install: (key) => {
                     const entry = entries.find((candidate) => candidate.key === key)
                     if (entry !== undefined) void installing.install(entry.key)

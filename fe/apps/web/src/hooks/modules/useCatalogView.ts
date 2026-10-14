@@ -46,7 +46,7 @@ export const useCatalogView = <Card>(
             (isLoading || filters.status !== "installed" || entry.installed) &&
             (isLoading || filters.status !== "notInstalled" || !entry.installed) &&
             (filters.status !== "early" || entry.isEarly) &&
-            tokens.every((token) => entry.searchText.includes(token)),
+            (isLoading || tokens.every((token) => entry.searchText.includes(token))),
     )
     const groups = categories
         .map((category) => ({

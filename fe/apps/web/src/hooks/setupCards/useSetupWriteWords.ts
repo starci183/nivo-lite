@@ -1,4 +1,5 @@
 import { useFormatter, useLocale, useTranslations } from "next-intl"
+import { useModuleCatalog } from "@/hooks/moduleCatalog"
 import { sameValue } from "@/modules/brain"
 import type { FactScope, FlowRuleMode } from "@/modules/types"
 import { actionDef, isActionKey, pickCopy } from "@/modules/catalog"
@@ -10,6 +11,8 @@ export const useSetupWriteWords = (): SetupWriteWords => {
     const t = useTranslations("moduleSetup")
     const locale = useLocale() === "en" ? "en" : "vi"
     const format = useFormatter()
+    const { modules, slot } = useModuleCatalog()
+    const actionCopies = Object.values(modules).flatMap((module) => module?.authorityActions ?? [])
     return {
         factTitle: t("wFactTitle"),
         ruleTitle: t("wRuleTitle"),
@@ -44,7 +47,12 @@ export const useSetupWriteWords = (): SetupWriteWords => {
             amount === null
                 ? t("wLimitNone")
                 : format.number(amount, { style: "currency", currency: "VND", maximumFractionDigits: 0 }),
-        actionLabel: (action: string) => (isActionKey(action) ? pickCopy(actionDef(action).label, locale) : action),
+        actionLabel: (action: string) => {
+            if (!isActionKey(action)) return action
+            const copy = actionCopies.find((entry) => entry.action === action)
+            const fallbackLabel = slot.isError === true ? action : ""
+            return copy === undefined ? fallbackLabel : pickCopy(copy.label, locale)
+        },
         actionRules: (action: string) =>
             isActionKey(action)
                 ? { hasLimit: actionDef(action).amountLimit, allowsAuto: actionDef(action).maxMode === null }

@@ -5,13 +5,15 @@ import { useAgentRights } from "@/hooks/agentSettings"
 import { useSetupChat, useSetupState, useSetupThread, useSetupVersions, useThreadScroll } from "@/hooks/agentSetup"
 import { mapSlot, useSlotLabels } from "@/hooks/slot"
 import { useSetupWriteWords } from "@/hooks/setupCards"
+import { useModuleName } from "@/hooks/installations"
+import type { ModuleKey } from "@/hooks/installations"
 import { AgentSetupChatBase } from "./component"
 import type { AgentSetupChatContent } from "./component"
 
-/** What the Setup page hands the chat: the instance of the url and the short name of its type. */
+/** What the Setup page hands the chat: the instance and catalogue key of the url. */
 type AgentSetupChatProps = {
     readonly installationId: string
-    readonly typeName: string
+    readonly module: ModuleKey
 }
 
 const NO_VERSIONS: ReadonlyArray<never> = []
@@ -19,6 +21,7 @@ const NO_VERSIONS: ReadonlyArray<never> = []
 /** The connected private chat with NIVO: the owner writes, NIVO answers in the background, and the confirm cards sit under its replies. */
 export const AgentSetupChat = (props: AgentSetupChatProps) => {
     const t = useTranslations("moduleSetup")
+    const typeName = useModuleName(props.module, "shortName")
     const access = useTranslations("access")
     const format = useFormatter()
     const slotLabels = useSlotLabels()
@@ -61,7 +64,7 @@ export const AgentSetupChat = (props: AgentSetupChatProps) => {
                 cards,
             })),
         })),
-        instance: state?.instance.isMulti === true ? { name: state.instance.name, typeName: props.typeName } : null,
+        instance: state?.instance.isMulti === true ? { name: state.instance.name, typeName } : null,
         sendingLabel: t("sending"),
         isSending: chat.isSending,
         composerLabel: t("chatPlaceholder"),

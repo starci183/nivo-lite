@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { useMutateAuthorizeGoogleSwr } from "@/hooks/swr"
+import { useModuleCatalog } from "@/hooks/moduleCatalog"
 import {
     automationBoardOf,
     automationFiltersFor,
@@ -12,6 +13,7 @@ import {
     visibleAutomations,
 } from "@/modules/automations"
 import type { AutomationFilterKey, AutomationStatus } from "@/modules/automations"
+import { pickCopy } from "@/modules/catalog"
 import { isForbiddenFailure } from "@/modules/api"
 import { navigation } from "@/modules/i18n"
 import { automationFocusPath } from "@/modules/routes"
@@ -39,6 +41,10 @@ export const useAutomationsBoard = (input: AutomationsBoardInput): AutomationsBo
     const runGraphQL = useGraphQLWithToast()
     const authorize = useMutateAuthorizeGoogleSwr()
     const automations = useAutomations()
+    const catalog = useModuleCatalog()
+    const moduleNames = Object.fromEntries(
+        Object.entries(catalog.modules).map(([key, module]) => [key, pickCopy(module.name, locale)]),
+    )
     const [filter, setFilter] = useState<AutomationFilterKey>("all")
     const [selected, setSelected] = useState<string | null>(input.focus ?? null)
     const [awaiting, setAwaiting] = useState<string | null>(null)
@@ -106,11 +112,12 @@ export const useAutomationsBoard = (input: AutomationsBoardInput): AutomationsBo
     }
 
     const view =
-        automations.data === undefined
+        automations.data === undefined || catalog.slot.items === undefined
             ? undefined
             : automationBoardOf({
                   t,
                   locale,
+                  moduleNames,
                   when: input.when,
                   isNested,
                   cards,
@@ -166,8 +173,8 @@ export const useAutomationsBoard = (input: AutomationsBoardInput): AutomationsBo
     return {
         view,
         on,
-        isLoading: automations.isLoading,
-        error: automations.error,
+        isLoading: automations.isLoading || catalog.slot.isLoading === true,
+        error: automations.error ?? catalog.error,
         isForbidden: isForbiddenFailure(automations.error),
     }
 }

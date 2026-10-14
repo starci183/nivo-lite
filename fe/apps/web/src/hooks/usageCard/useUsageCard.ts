@@ -1,6 +1,7 @@
 import { useFormatter, useLocale, useTranslations } from "next-intl"
+import { useModuleCatalog } from "@/hooks/moduleCatalog"
 import { useQueryCreditUsageSummarySwr } from "@/hooks/swr"
-import { MODULE_KEYS, MODULE_REGISTRY, pickCopy } from "@/modules/catalog"
+import { MODULE_KEYS, pickCopy } from "@/modules/catalog"
 import { dayjs, productCalendarDay } from "@/modules/dayjs"
 import { navigation } from "@/modules/i18n"
 import { creditsPath } from "@/modules/routes"
@@ -14,10 +15,16 @@ export const useUsageCard = (workspaceId: string | undefined): UsageCardView => 
     const format = useFormatter()
     const router = navigation.useRouter()
     const query = useQueryCreditUsageSummarySwr(workspaceId)
+    const catalog = useModuleCatalog()
     const usage = query.data
     const status = usage?.status ?? null
     const moduleLabels: Record<string, string> = {
-        ...Object.fromEntries(MODULE_KEYS.map((key) => [key, pickCopy(MODULE_REGISTRY[key].shortName, locale)])),
+        ...Object.fromEntries(
+            MODULE_KEYS.map((key) => {
+                const copy = catalog.modules[key]
+                return [key, copy === undefined ? "" : pickCopy(copy.shortName, locale)]
+            }),
+        ),
         setup: t("modSetup"),
         office: t("modOffice"),
         knowledge: t("modKnowledge"),
@@ -25,8 +32,9 @@ export const useUsageCard = (workspaceId: string | undefined): UsageCardView => 
     }
     let error: string | undefined
     if (query.error) error = query.error instanceof Error ? query.error.message : t("errGeneric")
+    if (catalog.slot.isError === true) error ??= t("errGeneric")
     return {
-        state: { isLoading: usage === undefined && error === undefined, error },
+        state: { isLoading: error === undefined && (usage === undefined || catalog.slot.isLoading === true), error },
         props: {
             title: t("usageTitle"),
             description: t("usageText"),

@@ -1,8 +1,8 @@
 import type { Metadata } from "next"
-import { getLocale } from "next-intl/server"
+import { getTranslations } from "next-intl/server"
 import { notFound } from "next/navigation"
 import { carriedQuery } from "@/hooks/installations"
-import { MODULE_REGISTRY, isModuleKey, pickCopy } from "@/modules/catalog"
+import { isModuleKey } from "@/modules/catalog"
 import { AgentTypePageBase } from "./component"
 
 /** What the route hands the page: the type of the url and its query. */
@@ -16,8 +16,8 @@ type AgentTypeMetadataProps = { readonly module: string }
 
 /** The document title of the list of the instances of a type. */
 export const agentTypeMetadata = async (props: AgentTypeMetadataProps): Promise<Metadata> => {
-    const locale = (await getLocale()) === "en" ? "en" : "vi"
-    return { title: isModuleKey(props.module) ? pickCopy(MODULE_REGISTRY[props.module].name, locale) : "" }
+    const t = await getTranslations("modulesCore")
+    return { title: isModuleKey(props.module) ? t("catalogTitle") : "" }
 }
 
 /**

@@ -1,5 +1,4 @@
 import {
-    Alert,
     EmptyNotice,
     Heading,
     Region,
@@ -11,6 +10,8 @@ import {
 } from "@starci/grammar/common"
 import { AgentCatalogCard } from "@/components/composites/AgentCatalogCard"
 import type { AgentCatalogCardProps } from "@/components/composites/AgentCatalogCard"
+import { SlotView } from "@/components/composites/SlotView"
+import type { DataSlot, SlotLabels } from "@/modules/types"
 import {
     CATEGORY,
     GRID,
@@ -50,8 +51,8 @@ export interface AgentCatalogBaseProps {
         readonly emptyTitle: string
         readonly emptyHint: string
         readonly emptyAction: string | undefined
-        readonly errorTitle: string
-        readonly error: string | undefined
+        readonly slot: DataSlot<boolean>
+        readonly slotLabels: SlotLabels
         readonly busyKey: string | null
         readonly isLoading: boolean
     }
@@ -60,6 +61,7 @@ export interface AgentCatalogBaseProps {
         readonly category: (value: string | null) => void
         readonly status: (value: string) => void
         readonly clear: () => void
+        readonly retry: () => void
         readonly install: (key: string) => void
     }
 }
@@ -67,9 +69,6 @@ export interface AgentCatalogBaseProps {
 /** Draws the catalogue: toolbar, the categories with their cards, or the empty notice when nothing matches. */
 export const AgentCatalogBase = (props: AgentCatalogBaseProps) => (
     <div className={REGIONS}>
-        {props.props.error === undefined ? null : (
-            <Alert title={props.props.errorTitle} description={props.props.error} tone="negative" />
-        )}
         <div className={TOOLBAR}>
             <div className={TOOLBAR_ROW}>
                 <div className={TOOLBAR_SEARCH}>
@@ -108,34 +107,40 @@ export const AgentCatalogBase = (props: AgentCatalogBaseProps) => (
                 </Text>
             </div>
         </div>
-        {props.props.groups.length === 0 ? (
-            <SurfaceCard ariaLabel={props.props.emptyTitle}>
-                <EmptyNotice
-                    message={props.props.emptyTitle}
-                    description={props.props.emptyHint}
-                    {...(props.props.emptyAction === undefined
-                        ? {}
-                        : { actionLabel: props.props.emptyAction, onAction: props.on.clear })}
-                />
-            </SurfaceCard>
-        ) : null}
-        {props.props.groups.map((group) => (
-            <Region key={group.key} label={group.label}>
-                <div className={CATEGORY}>
-                    <Heading level={2}>{group.label}</Heading>
-                    <div className={GRID}>
-                        {group.cards.map((entry) => (
-                            <AgentCatalogCard
-                                key={entry.key}
-                                {...entry.card}
-                                isInstalling={props.props.busyKey === entry.key}
-                                isBlocked={props.props.busyKey !== null}
-                                onInstall={() => props.on.install(entry.key)}
+        <SlotView slot={props.props.slot} placeholder={false} labels={props.props.slotLabels} onRetry={props.on.retry}>
+            {(_, isSkeleton) => (
+                <>
+                    {props.props.groups.length === 0 && !isSkeleton ? (
+                        <SurfaceCard ariaLabel={props.props.emptyTitle}>
+                            <EmptyNotice
+                                message={props.props.emptyTitle}
+                                description={props.props.emptyHint}
+                                {...(props.props.emptyAction === undefined
+                                    ? {}
+                                    : { actionLabel: props.props.emptyAction, onAction: props.on.clear })}
                             />
-                        ))}
-                    </div>
-                </div>
-            </Region>
-        ))}
+                        </SurfaceCard>
+                    ) : null}
+                    {props.props.groups.map((group) => (
+                        <Region key={group.key} label={group.label}>
+                            <div className={CATEGORY}>
+                                <Heading level={2}>{group.label}</Heading>
+                                <div className={GRID}>
+                                    {group.cards.map((entry) => (
+                                        <AgentCatalogCard
+                                            key={entry.key}
+                                            {...entry.card}
+                                            isInstalling={props.props.busyKey === entry.key}
+                                            isBlocked={props.props.busyKey !== null}
+                                            onInstall={() => props.on.install(entry.key)}
+                                        />
+                                    ))}
+                                </div>
+                            </div>
+                        </Region>
+                    ))}
+                </>
+            )}
+        </SlotView>
     </div>
 )

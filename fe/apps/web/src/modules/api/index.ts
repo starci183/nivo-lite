@@ -1,6 +1,7 @@
 export { graphQLErrorCode } from "./graphql/index"
 export { isForbiddenFailure, isNotFoundFailure, isRefusedByBackend, isUnauthenticatedFailure } from "./graphql/index"
 export type {
+    ModulesCatalogQuery,
     AdminHealthQuery,
     AdminWorkspaceQuery,
     AdminWorkspacesQuery,

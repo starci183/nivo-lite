@@ -1,6 +1,7 @@
-import { useLocale, useTranslations } from "next-intl"
+import { useTranslations } from "next-intl"
 import { useParams } from "next/navigation"
-import { agentTypeName, isModuleKey } from "@/modules/catalog"
+import { useModuleName } from "@/hooks/installations"
+import { isModuleKey } from "@/modules/catalog"
 import { agentHref } from "@/modules/installations"
 import { AGENTS_ROUTE, APP_ROUTES } from "@/modules/routes"
 import { AgentsErrorPageBase } from "./component"
@@ -17,10 +18,10 @@ type AgentsErrorPageProps = {
 export const AgentsErrorPage = (props: AgentsErrorPageProps) => {
     const t = useTranslations("modulesCore")
     const ts = useTranslations("shell")
-    const locale = useLocale() === "en" ? "en" : "vi"
     const { module } = useParams<{ module?: string }>()
     const known = isModuleKey(module) ? module : null
-    const typeName = known === null ? t("catalogTitle") : agentTypeName(known, locale)
+    const moduleName = useModuleName(known)
+    const typeName = moduleName || t("catalogTitle")
     const home = { id: "home", label: ts("crumbHome"), href: APP_ROUTES.dashboard }
     const agents = { id: "modules", label: t("catalogTitle"), href: AGENTS_ROUTE }
     const titles = {

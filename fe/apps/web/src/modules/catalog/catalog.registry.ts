@@ -13,7 +13,7 @@ import { ACTION_KEYS, MODULE_KEYS } from "./catalog.keys"
 import type { ActionKey, ModuleKey } from "./catalog.keys"
 import type { ModuleDef, RegistryAction } from "./catalog.types"
 
-/** Every module of the catalogue by key. */
+/** The routing, visuals and behavior of every module by key. */
 export const MODULE_REGISTRY: Readonly<Record<ModuleKey, ModuleDef>> = {
     chatbot: CHATBOT,
     lead_gen: LEAD_GEN,

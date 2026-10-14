@@ -1,4 +1,6 @@
 import { useLocale } from "next-intl"
+import { useModuleCatalog } from "@/hooks/moduleCatalog"
+import { pickCopy } from "@/modules/catalog"
 import { instanceOptions } from "@/modules/documents"
 import type { InstanceOption } from "@/modules/documents"
 import { useModuleInstallations } from "./useModuleInstallations"
@@ -14,11 +16,15 @@ interface AddInstances {
 
 /** The membership and the agent instances the add documents drawer is built from. */
 export const useAddInstances = (): AddInstances => {
-    const locale = useLocale()
+    const { modules, slot } = useModuleCatalog()
+    const locale = useLocale() === "en" ? "en" : "vi"
+    const moduleNames = Object.fromEntries(
+        Object.entries(modules).map(([key, module]) => [key, pickCopy(module.name, locale)]),
+    )
     const member = useWorkspaceMember()
     const { installations } = useModuleInstallations()
     return {
         canWrite: member.canWrite,
-        instances: instanceOptions(installations ?? [], locale === "en" ? "en" : "vi"),
+        instances: slot.isLoading === true ? [] : instanceOptions(installations ?? [], moduleNames),
     }
 }

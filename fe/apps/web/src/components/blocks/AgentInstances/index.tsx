@@ -41,7 +41,10 @@ export const AgentInstances = (props: AgentInstancesProps) => {
                 eyebrow: t("eyebrow"),
                 title: list.typeName,
                 description: list.isMulti ? t("instancesDescription", { type: list.typeShort }) : list.typeDescription,
-                addLabel: isManager(member) && list.isMulti ? t("instanceAdd", { type: list.typeShort }) : null,
+                addLabel:
+                    list.isCopyReady && isManager(member) && list.isMulti
+                        ? t("instanceAdd", { type: list.typeShort })
+                        : null,
                 listLabel: t("instancesListLabel", { type: list.typeShort }),
                 openLabel: t("openModule"),
                 rows: list.rows.map((row) => ({

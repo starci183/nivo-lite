@@ -1,4 +1,6 @@
 import { useLocale } from "next-intl"
+import { useEffect } from "react"
+import { useModuleCatalog } from "@/hooks/moduleCatalog"
 import { MODULE_REGISTRY, pickCopy } from "@/modules/catalog"
 import type { ModuleKey } from "@/modules/catalog"
 import { AGENT_STATUS_TONE, agentHref, agentStatusOf, nextInstanceName } from "@/modules/installations"
@@ -12,17 +14,34 @@ export const useInstanceList = (module: ModuleKey, query: string, mode: TypeRout
     const route = useTypeRoute(module, "setup", query, mode)
     const channelsOf = useInstanceChannels()
     const def = MODULE_REGISTRY[module]
-    const typeShort = pickCopy(def.shortName, locale)
+    const catalog = useModuleCatalog()
+    const copy = catalog.modules[module]
+    const typeShort = copy === undefined ? "" : pickCopy(copy.shortName, locale)
     const instances = route.slot.items ?? []
     const names = instances.map((instance) => instance.name)
+    useEffect(() => {
+        if (copy === undefined) return
+        const previousTitle = document.title
+        const title = pickCopy(copy.name, locale)
+        document.title = title
+        return () => {
+            if (document.title === title) document.title = previousTitle
+        }
+    }, [copy, locale])
     return {
-        slot: route.slot,
-        typeName: pickCopy(def.name, locale),
+        slot: {
+            isLoading: route.slot.isLoading === true || catalog.slot.isLoading === true,
+            isError: route.slot.isError === true || catalog.slot.isError === true,
+            isForbidden: route.slot.isForbidden === true || catalog.slot.isForbidden === true,
+            items: catalog.slot.items === undefined ? undefined : route.slot.items,
+        },
+        typeName: copy === undefined ? "" : pickCopy(copy.name, locale),
         typeShort,
-        typeDescription: pickCopy(def.description, locale),
+        typeDescription: copy === undefined ? "" : pickCopy(copy.description, locale),
+        isCopyReady: copy !== undefined,
         isMulti: def.multiInstance,
         names,
-        defaultName: nextInstanceName(typeShort, names),
+        defaultName: copy === undefined ? "" : nextInstanceName(typeShort, names),
         rows: instances.map((instance) => {
             const status = agentStatusOf(instance)
             return {

@@ -1,4 +1,4 @@
-import { MODULE_REGISTRY } from "@/modules/catalog"
+import type { ModuleKey } from "@/modules/catalog"
 import { AUTOMATION_ROUTES } from "@/modules/routes"
 import {
     automationStatusOf,
@@ -129,12 +129,12 @@ export const automationCardOf = (card: AutomationCardView, ctx: CardContext): Ca
 export const automationFilterLabel = (
     key: AutomationFilterKey,
     t: AutomationsTranslator,
-    locale: AutomationsLanguage,
+    moduleNames: Readonly<Partial<Record<ModuleKey, string>>>,
 ): string => {
     const known = FILTER_LABEL[key]
     if (known !== undefined) return t(known)
     const module = moduleOfAutomationFilter(key)
-    return module === null ? key : automationText(MODULE_REGISTRY[module].name, locale)
+    return module === null ? key : (moduleNames[module] ?? module)
 }
 
 /** Why the collection is empty, or undefined when it is not. */

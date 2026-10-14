@@ -1,4 +1,5 @@
 import { useLocale } from "next-intl"
+import { useModuleCatalog } from "@/hooks/moduleCatalog"
 import { MODULE_REGISTRY, pickCopy } from "@/modules/catalog"
 import type { ModuleKey } from "@/modules/catalog"
 import { AGENT_STATUS_TONE, agentListHref, agentStatusOf } from "@/modules/installations"
@@ -10,11 +11,14 @@ export const useInstanceHeader = (module: ModuleKey, installationId: string) => 
     const guard = useInstanceGuard(module, installationId)
     const installation = guard.installation
     const def = MODULE_REGISTRY[module]
+    const catalog = useModuleCatalog()
+    const copy = catalog.modules[module]
+    const fallbackName = catalog.slot.isError === true ? module : ""
     const status = agentStatusOf(installation)
     const multiName = installation?.isMulti === true ? installation.name : null
     return {
-        isLoading: installation === undefined,
-        typeName: pickCopy(def.name, locale),
+        isLoading: installation === undefined || catalog.slot.isLoading === true,
+        typeName: copy === undefined ? fallbackName : pickCopy(copy.name, locale),
         mascot: def.mascot,
         isEarly: def.status === "early",
         multiName,

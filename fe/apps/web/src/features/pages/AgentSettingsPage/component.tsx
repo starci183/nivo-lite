@@ -6,16 +6,15 @@ import { LoyaltyProgramSettings } from "@/components/blocks/LoyaltyProgramSettin
 import { AgentModeCard } from "@/components/blocks/AgentModeCard"
 import { AgentReplyCard } from "@/components/blocks/AgentReplyCard"
 import { AgentSyncCard } from "@/components/blocks/AgentSyncCard"
+import type { ModuleKey } from "@/modules/catalog"
 import { COLUMN, GRID } from "./classNames"
 
 /** The facts of the type and the instance the settings cards read. */
 export interface AgentSettingsPageBaseProps {
     readonly props: {
-        readonly module: string
+        readonly module: ModuleKey
         readonly installationId: string
         readonly glyph: string
-        /** The short name of the type, for the note that its authority is shared. */
-        readonly typeName: string
         /** The extra card of the type, by its catalogue key; null when it has none. */
         readonly extrasKey: string | null
     }
@@ -28,7 +27,7 @@ export const AgentSettingsPageBase = (props: AgentSettingsPageBaseProps) => {
         <div className={GRID}>
             <div className={COLUMN}>
                 <AgentIdentityCard installationId={installationId} module={module} glyph={props.props.glyph} />
-                <AgentModeCard installationId={installationId} module={module} typeName={props.props.typeName} />
+                <AgentModeCard installationId={installationId} module={module} />
             </div>
             <div className={COLUMN}>
                 <AgentLiveCard installationId={installationId} module={module} />

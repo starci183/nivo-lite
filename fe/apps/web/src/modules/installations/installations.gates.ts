@@ -3,7 +3,8 @@ import type { ModuleKey, RegistryGate } from "@/modules/catalog"
 import type { ContextSnapshot, DraftSnapshot, GateEntry, GateEvidence } from "./installations.types"
 
 /** What a module must know before it may act. Every gate is required to apply a setup. */
-export const gatesOf = (moduleKey: ModuleKey): ReadonlyArray<RegistryGate> => MODULE_REGISTRY[moduleKey].gates
+export const gatesOf = (moduleKey: ModuleKey): ReadonlyArray<Pick<RegistryGate, "key">> =>
+    MODULE_REGISTRY[moduleKey].gates
 
 /** Gate state, defaulting to missing. */
 export const gateEntry = (evidence: GateEvidence, key: string): GateEntry =>
