@@ -130,4 +130,33 @@ describe("ModuleApprovalGateService", () => {
             subject.decide({ workspaceId: "ws-1", workItemId: "item-1", decision: "rejected", decidedBy: MEMBER_ID }),
         ).resolves.toEqual({ status: "done", workItemId: "item-1" })
     })
+
+    it("rethrows a failure that is not a decisions error", async () => {
+        const cause = new Error("down")
+        const resumeWork = jest.fn().mockRejectedValue(cause)
+        const subject = await setup({ resumeWork })
+
+        await expect(
+            subject.decide({ workspaceId: "ws-1", workItemId: "item-1", decision: "rejected", decidedBy: MEMBER_ID }),
+        ).rejects.toBe(cause)
+    })
+
+    it("rethrows a decisions error other than not waiting", async () => {
+        const cause = new DecisionsError({ code: DecisionsErrorCode.NotFound })
+        const resumeWork = jest.fn().mockRejectedValue(cause)
+        const subject = await setup({ resumeWork })
+
+        await expect(
+            subject.decide({ workspaceId: "ws-1", workItemId: "item-1", decision: "rejected", decidedBy: MEMBER_ID }),
+        ).rejects.toBe(cause)
+    })
+
+    it("answers not found when an item no longer waiting is also missing", async () => {
+        const resumeWork = jest.fn().mockRejectedValue(new DecisionsError({ code: DecisionsErrorCode.NotWaiting }))
+        const subject = await setup({ resumeWork })
+
+        await expect(
+            subject.decide({ workspaceId: "ws-1", workItemId: "item-1", decision: "rejected", decidedBy: MEMBER_ID }),
+        ).rejects.toMatchObject({ code: DecisionsErrorCode.NotFound })
+    })
 })

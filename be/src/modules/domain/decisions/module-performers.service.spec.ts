@@ -101,4 +101,14 @@ describe("ModulePerformersService", () => {
 
         expect(reject).toHaveBeenCalledWith(expect.objectContaining({ workItemId: "item-1", actor: "Binh" }))
     })
+
+    it("prepares the item's own proposal", async () => {
+        const { subject, engine } = await setup()
+        subject.add({ action: "send_offer", perform: jest.fn() })
+        const item = itemOf()
+
+        const prepared = await engine()?.prepare(ctx, item)
+
+        expect(prepared).toEqual({ proposal: item.proposal })
+    })
 })
