@@ -1,8 +1,10 @@
 import { useTranslations } from "next-intl"
 import { useState, useTransition } from "react"
+import { useSettledGraphQL } from "@/hooks/connection-wizard"
 import { useSmtpRowPasswordForm, useSmtpRowTestForm } from "@/hooks/rhf"
-import { useSmtpCommands } from "@/hooks/smtp-wizard"
+import { useMutateChangeSmtpPasswordSwr, useMutateSendSmtpTestSwr, useMutateSetDefaultSmtpSwr } from "@/hooks/swr"
 import type { Connection, RowSmtpView } from "@/modules/types"
+import { useConnectionsRefresh } from "./useConnectionsRefresh"
 
 /** The SMTP part of a row: what it shows and the commands behind its buttons. */
 export interface SmtpRowPanel {
@@ -16,10 +18,18 @@ export interface SmtpRowPanel {
     readonly makeDefault: () => void
 }
 
-/** The panel state (which form is open, its fields, its result) and the three mailbox commands of an SMTP connection row. */
+/**
+ * The panel state (which form is open, its fields, its result) and the three mailbox commands of an SMTP connection row.
+ * The row calls those mutations itself. The outgoing-email wizard keeps its own copy for the connect flow, so the two
+ * hook domains do not import each other.
+ */
 export const useSmtpRowPanel = (connection: Connection, ownerEmail: string): SmtpRowPanel => {
     const t = useTranslations("connections")
-    const commands = useSmtpCommands()
+    const settle = useSettledGraphQL()
+    const refresh = useConnectionsRefresh()
+    const { trigger: sendTest } = useMutateSendSmtpTestSwr()
+    const { trigger: changePassword } = useMutateChangeSmtpPasswordSwr()
+    const { trigger: setDefault } = useMutateSetDefaultSmtpSwr()
     const testForm = useSmtpRowTestForm(ownerEmail)
     const passwordForm = useSmtpRowPasswordForm()
     const [isPending, startTransition] = useTransition()
@@ -36,8 +46,11 @@ export const useSmtpRowPanel = (connection: Connection, ownerEmail: string): Smt
         (values) =>
             startTransition(async () => {
                 setNote(null)
-                const result = await commands.sendTest(connection.id, values.to, false)
+                const result = await settle(() =>
+                    sendTest({ connectionId: connection.id, to: values.to, makeDefault: false }),
+                )
                 if (result.kind !== "ok") return setNote({ tone: "negative", text: result.message })
+                await refresh()
                 setNote({ tone: "affirmative", text: t("smtpTestOk", { to: result.value.to }) })
             }),
         (errors) => setNote({ tone: "negative", text: errors.to?.message ?? "" }),
@@ -46,8 +59,11 @@ export const useSmtpRowPanel = (connection: Connection, ownerEmail: string): Smt
         (values) =>
             startTransition(async () => {
                 setNote(null)
-                const result = await commands.changePassword(connection.id, values.password)
+                const result = await settle(() =>
+                    changePassword({ connectionId: connection.id, password: values.password }),
+                )
                 if (result.kind !== "ok") return setNote({ tone: "negative", text: result.message })
+                await refresh()
                 close()
                 setNote({ tone: "affirmative", text: t("smtpPasswordChanged") })
             }),
@@ -56,8 +72,9 @@ export const useSmtpRowPanel = (connection: Connection, ownerEmail: string): Smt
     const makeDefault = () =>
         startTransition(async () => {
             setNote(null)
-            const result = await commands.setDefault(connection.id)
+            const result = await settle(() => setDefault({ connectionId: connection.id }))
             if (result.kind !== "ok") return setNote({ tone: "negative", text: result.message })
+            await refresh()
         })
 
     return {

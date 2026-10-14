@@ -1,5 +1,5 @@
 import { Input, Label, Region, Select, SurfaceCard, Switch, Text } from "@starci/grammar/common"
-import { WizardCopyGlyphs } from "@/components/leaves/WizardCopyGlyphs"
+import { WizardCopyGlyphs } from "@/components/branches/WizardCopyGlyphs"
 import type { CopyLabels, GuideField, GuideScreen } from "@/modules/types"
 import { wizardGuideViewClassNames as classNames } from "./classNames"
 

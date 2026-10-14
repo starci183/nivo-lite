@@ -1,5 +1,5 @@
 import { Badge, Button, EmptyNotice, SearchField, Select, SurfaceCard, TagGroup, Text } from "@starci/grammar/common"
-import { ProviderLogo } from "@/components/leaves/ProviderLogo"
+import { ProviderLogo } from "@/components/branches/ProviderLogo"
 import type { ConnectorGlyph } from "@/modules/types"
 import { connectionLibraryClassNames as classNames } from "./classNames"
 

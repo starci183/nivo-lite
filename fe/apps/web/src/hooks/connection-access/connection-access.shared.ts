@@ -3,9 +3,6 @@ import type { Access, Purpose } from "@/modules/types"
 /** Lowest to highest. A new grant starts at `ask`; `auto` is never a default. */
 export const ACCESS_LEVELS: ReadonlyArray<Access> = ["read", "ask", "auto"]
 
-/** Whether a value is one of the three access levels. */
-export const isAccess = (value: unknown): value is Access => value === "read" || value === "ask" || value === "auto"
-
 /** module:provider -> purpose. A pair that is not listed cannot be granted (the picker shows it disabled with the reason). */
 const PURPOSE: Readonly<Record<string, Purpose>> = {
     "chatbot:telegram": "inbound_chat",
