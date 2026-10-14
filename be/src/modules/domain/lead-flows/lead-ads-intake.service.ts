@@ -97,7 +97,7 @@ export class LeadAdsIntakeService {
                     source_kind: "leadgen",
                     form_id: event.form_id ?? "",
                     ad_id: event.ad_id ?? "",
-                    leadgen_id: event.leadgen_id,
+                    leadgen_id: event.leadgen_id ?? "",
                     connection_id: job.connectionId,
                     phone: lead.phone ?? "",
                     email: lead.email ?? "",

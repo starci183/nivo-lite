@@ -281,6 +281,17 @@ describe("lead flow score policy", () => {
             })
         })
 
+        it("keeps the placeholder when a sparse alternative supplies no requirement text", () => {
+            const alternatives: Array<Requirement> = []
+            alternatives.length = 1
+            const criteria: Criteria = { hot: { all: [], any: alternatives }, warm: { all: [] }, areaMatters: false }
+            expect(scoreLead(EMPTY_SIGNALS, criteria)).toStrictEqual({
+                level: "warm",
+                reasons: ["missing for hot: -"],
+                missing: [undefined],
+            })
+        })
+
         it("gives cold scores for low interest or no clear need with exact missing signals", () => {
             expect(scoreLead({ ...EMPTY_SIGNALS, need: "a quote", interest: "low" })).toEqual({
                 level: "cold",
