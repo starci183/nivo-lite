@@ -2,11 +2,11 @@
 
 The production environment of nivo-lite: the Supabase Cloud project, the api container on the VPS and the web container.
 
-Its secrets are kept in ONE plaintext file outside the repository, `secrets.env`, never committed: `~/.nivo-lite/secrets.env`, which `scripts/set-secrets.ps1` writes (point `NIVO_SECRETS` at it; without it the scripts read a gitignored `secrets.env` at the repository root). `scripts/with-secrets.mjs` runs a command with it loaded, `scripts/set-secrets.ps1` sets the sensitive keys without echoing them, and `scripts/env-sync.mjs` pushes its blocks to the GitHub environment `production` (`[stack]` to `ENGINE_ENV`, `[api]` plus the server-side keys of `[app]` to `API_ENV`, the public `NEXT_PUBLIC_*` values of `[app]` to `WEB_ENV` and the web build args).
+Its secrets are kept ONLY as sops-encrypted dotenv files in `.starcistacks/production/secrets/<slug>.enc` (age recipient in `.sops.yaml`; the age key is `%APPDATA%\sops\age\keys.txt` and must be backed up by the owner). No `.env*` and no plaintext `secrets.env` is kept: decrypt in memory with `sops -d --input-type dotenv --output-type dotenv <file>`, or push straight to the GitHub environment `production` (`sops -d ... | gh secret set API_ENV --env production`). The slugs are `app-be-db` (the generated `app_be` password), `api`, `web`, `stack`, `vps`, `cloudflare` and `accounts`. The authoritative list of names the be and the fe read, with required or optional marked, is in `be/docs/runbooks/cutover.md` (section Secrets); names only, values are never written down. The old `scripts/with-secrets.mjs`, `scripts/set-secrets.ps1` and `scripts/env-sync.mjs` belong to the retired plaintext custody.
 
-## Template of secrets.env
+## Names per sealed file
 
-Copy this block to `secrets.env` and fill it in; keep the section headers, `env-sync` reads them.
+The blocks below are the dotenv layout of the sealed files (the section headers map to the slugs). Fill the values only inside `sops`, never in a plaintext file.
 
 ```ini
 
@@ -16,6 +16,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=
 SUPABASE_SERVICE_ROLE_KEY=
 NEXT_PUBLIC_SITE_URL=https://nivo.vn
 NEXT_PUBLIC_API_URL=https://api.nivo.vn
+NEXT_PUBLIC_DEVELOPER_API_URL=https://api.nivo.vn
 CHANNEL_TOKEN_KEY=
 NIVO_PLATFORM_ADMINS=
 DEEPSEEK_API_KEY=
@@ -68,19 +69,24 @@ N8N_SECURE_COOKIE=true
 JOBS_FAILED_ALERT=20
 JOBS_STALE_SECONDS=300
 
-# ---------- [api] runtime environment of the api container (this block + the server-side keys of [app] = GitHub secret API_ENV, api.env on the VPS)
+# ---------- [api] runtime environment of the api container (this block + the server-side keys of [app] = GitHub secret API_ENV, api.env on the VPS; file api.enc)
 # env-sync inherits the [app] server-side keys, the Supabase and OpenClaw keys, the embedding and Google keys when they are not set here.
-# Required: PRIMARY_DB_URL (role app_be; set its password once with: alter role app_be password '...'), SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY.
+# Required: PRIMARY_DB_URL (role app_be via the session pooler; its password is sealed in app-be-db.enc and set once with: alter role app_be password), SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY.
 PRIMARY_DB_URL=
 PRIMARY_DB_SCHEMA=public
+PORT=8787
+SITE_URL=https://nivo.vn
+PUBLIC_SITE_URL=https://nivo.vn
+PUBLIC_API_URL=https://api.nivo.vn
+N8N_SIGNING_SECRET=
 HTTP_SECURITY_ALLOWED_ORIGINS=https://nivo.vn,https://www.nivo.vn
 SUPABASE_URL=
 SUPABASE_SERVICE_ROLE_KEY=
-N8N_DEFAULT_WEBHOOK_URL=http://n8n:5678/webhook/nivo-events
-OPENCLAW_TURN_TIMEOUT_MS=90000
+N8N_WEBHOOK_BASE=http://n8n:5678/webhook/nivo-events
+OPENCLAW_TURN_TIMEOUT=90000
 OPENCLAW_MANAGE_AGENTS=1
 # Queues and jobs (pgmq in this project's Supabase). Optional tunables with literal defaults in the code:
-# QUEUE_RELAY_INTERVAL, QUEUE_RELAY_BATCH, QUEUE_CONCURRENCY, QUEUE_POLL_INTERVAL, QUEUE_VISIBILITY_TIMEOUT, JOBS_LEASE, JOBS_WORKER_ID
+# QUEUE_ENABLED, QUEUE_CONCURRENCY, QUEUE_WORKSPACE_CONCURRENCY, QUEUE_POLL_INTERVAL, QUEUE_VISIBILITY_TIMEOUT, QUEUE_SHUTDOWN_GRACE, JOBS_LEASE, JOBS_WORKER_ID
 # Knowledge keys: leave empty to inherit (CHANNEL_TOKEN_KEY, the Google OAuth client from SUPABASE_AUTH_EXTERNAL_GOOGLE_*, OPENROUTER_API_KEY from DEEPSEEK_API_KEY).
 EMBEDDING_MODEL=qwen/qwen3-embedding-8b
 EMBEDDING_BASE_URL=https://openrouter.ai/api/v1
