@@ -116,16 +116,16 @@ export class ChatbotWorkbenchService {
         ])
         const definitions = new Map(catalog.modules.map((module) => [module.key, module]))
         const unique = agents.filter(
-            (agent, index, all) =>
-                definitions.has(agent.module) && all.findIndex((other) => other.module === agent.module) === index,
+            (agent, index, all) => all.findIndex((other) => other.module === agent.module) === index,
         )
         return {
             gaps,
-            lenses: unique.map((agent) => ({
-                module: agent.module,
-                name: agent.name,
-                audience: definitions.get(agent.module)?.audience ?? "internal",
-            })),
+            lenses: unique.flatMap((agent) => {
+                const definition = definitions.get(agent.module)
+                return definition === undefined
+                    ? []
+                    : [{ module: agent.module, name: agent.name, audience: definition.audience }]
+            }),
         }
     }
 

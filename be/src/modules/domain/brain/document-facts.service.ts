@@ -149,7 +149,8 @@ export class DocumentFactsService {
                 completionChars: answer.text.length,
             })
         }
-        const parsed = answer === null ? null : parseFacts(this.json.jsonOf(answer.text), text)
+        const parsed =
+            answer === null ? null : { ...parseFacts(this.json.jsonOf(answer.text), text), model: answer.model }
         if (parsed === null || !parsed.valid) {
             const attempts = state.attempts + 1
             const note = answer === null ? ExtractionNote.ModelBusy : ExtractionNote.AnswerUnreadable
@@ -167,7 +168,7 @@ export class DocumentFactsService {
             done: state.done + 1,
             filed: state.filed + filed,
             attempts: 0,
-            model: answer?.model ?? state.model,
+            model: parsed.model,
         }
         await this.extractions.save(workspaceId, source.id, {
             status: "running",
