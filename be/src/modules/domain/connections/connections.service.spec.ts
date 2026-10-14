@@ -292,10 +292,10 @@ describe("ConnectionsService", () => {
 
         it("refuses a name that is too short and writes nothing", async () => {
             const em = mockEntityManager()
-
-            await expect((await build(em)).create({ ...input, name: " a " })).rejects.toMatchObject({
-                code: ConnectionsErrorCode.NameInvalid,
-            })
+            const service = await build(em)
+            expect(() => service.create({ ...input, name: " a " })).toThrow(
+                expect.objectContaining({ code: ConnectionsErrorCode.NameInvalid }),
+            )
         })
 
         it("fails when the insert answers no row", async () => {

@@ -3,7 +3,6 @@ import { sql } from "@modules/platform/database"
 /** The plans on sale in display order: active and listed (a plan only its old subscribers keep is not offered). */
 export const SELECT_ACTIVE_PLANS = sql`SELECT code, name_vi, name_en, price_vnd::float8 AS price_vnd, period, seats, features, sort,
     ai_credits_per_month::float8 AS ai_credits_per_month, is_custom, price_annual_vnd::float8 AS price_annual_vnd, annual_discount_pct,
-    promo_price_vnd::float8 AS promo_price_vnd, promo_months, storage_gb, individual, per_seat, listed, price_annual_vnd::float8 AS price_annual_vnd, annual_discount_pct,
     promo_price_vnd::float8 AS promo_price_vnd, promo_months, storage_gb, individual, per_seat, listed
 FROM public.plans
 WHERE active AND listed
@@ -18,7 +17,8 @@ LIMIT 500`
 
 /** One active plan by its code ($1). */
 export const SELECT_PLAN = sql`SELECT code, name_vi, name_en, price_vnd::float8 AS price_vnd, period, seats, features, sort,
-    ai_credits_per_month::float8 AS ai_credits_per_month, is_custom
+    ai_credits_per_month::float8 AS ai_credits_per_month, is_custom, price_annual_vnd::float8 AS price_annual_vnd, annual_discount_pct,
+    promo_price_vnd::float8 AS promo_price_vnd, promo_months, storage_gb, individual, per_seat, listed
 FROM public.plans
 WHERE code = $1 AND active
 LIMIT 1`

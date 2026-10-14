@@ -1,4 +1,5 @@
 import { fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
+import { isTransactionManager } from "@starci/jest-preset/entity-manager"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { Test } from "@nestjs/testing"
 import { AgentAccessLogService } from "@modules/domain/agent-access-log"
@@ -14,6 +15,7 @@ import {
     FIND_AGENTS,
     FIND_CONNECTION_GRANTS,
     FIND_GRANTS,
+    LIST_WORKSPACE_GRANTS,
 } from "./persistence/connection-grants.sql"
 
 const actor: ConnectionActor = { principalId: "owner-1", workspaceId: "ws-1" }
@@ -78,6 +80,12 @@ const lookups = (
     [FIND_GRANTS, grants],
 ]
 
+/** A grant write receives the transaction view, which is not the outer manager. */
+const expectInTransaction = (spy: jest.Mock, payload: object): void => {
+    expect(spy).toHaveBeenCalledWith(payload, expect.anything())
+    expect(isTransactionManager(spy.mock.calls[0]?.[1])).toBe(true)
+}
+
 describe("ConnectionGrantsService", () => {
     describe("candidates", () => {
         const agentId = "11111111-1111-4111-8111-111111111111"
@@ -110,6 +118,53 @@ describe("ConnectionGrantsService", () => {
             expect(connections.list).toHaveBeenCalledWith("ws-1")
         })
 
+        it("refuses an id that is not an agent id before reading anything", async () => {
+            const em = mockEntityManager()
+            const { service } = await build(em)
+
+            await expect(service.candidates("owner-1", "ws-1", "not-an-id")).rejects.toMatchObject({
+                code: ConnectionsErrorCode.NotFound,
+                params: { id: "not-an-id" },
+            })
+            expect(em.query).not.toHaveBeenCalled()
+        })
+
+        it("treats a blank public fact as absent, an unknown level as auto, and no grant as none", async () => {
+            const em = mockEntityManager({
+                query: [
+                    [FIND_AGENTS, [AGENT]],
+                    [FIND_AGENT_GRANTS, [{ agent_id: agentId, connection_id: "c1", access: "nope" }]],
+                ],
+            })
+            const { service } = await build(em, [
+                connection({ id: "c1", meta: { bot_username: "  ", account_masked: "****1234" } }),
+                connection({ id: "c2" }),
+            ])
+
+            await expect(service.candidates("owner-1", "ws-1", agentId)).resolves.toEqual([
+                {
+                    id: "c1",
+                    name: "Shop bot",
+                    provider: "telegram",
+                    botUsername: null,
+                    accountMasked: "****1234",
+                    status: "connected",
+                    purpose: "inbound_chat",
+                    access: "auto",
+                },
+                {
+                    id: "c2",
+                    name: "Shop bot",
+                    provider: "telegram",
+                    botUsername: null,
+                    accountMasked: null,
+                    status: "connected",
+                    purpose: "inbound_chat",
+                    access: null,
+                },
+            ])
+        })
+
         it("refuses an agent that is not in the workspace", async () => {
             const em = mockEntityManager({ query: [FIND_AGENTS, []] })
             const { service } = await build(em)
@@ -129,50 +184,51 @@ describe("ConnectionGrantsService", () => {
             await service.setGrant(actor, "c1", "a1", "auto")
 
             expect(connections.authorize).toHaveBeenCalledWith(actor, ["owner"])
-            expect(bindings.writeGrant).toHaveBeenCalledWith(
-                { workspaceId: "ws-1", agentId: "a1", connectionId: "c1", purpose: "inbound_chat", access: "auto" },
-                tx.em,
-            )
-            expect(accessLog.record).toHaveBeenCalledWith(
-                {
-                    workspaceId: "ws-1",
-                    connectionId: "c1",
-                    agentId: "a1",
-                    connectionName: "Shop bot",
-                    agentName: "Bot",
-                    before: null,
-                    after: "auto",
-                    changedBy: "owner-1",
-                    changedByName: "Lan",
-                },
-                tx.em,
-            )
+            expectInTransaction(bindings.writeGrant, {
+                workspaceId: "ws-1",
+                agentId: "a1",
+                connectionId: "c1",
+                purpose: "inbound_chat",
+                access: "auto",
+            })
+            expectInTransaction(accessLog.record, {
+                workspaceId: "ws-1",
+                connectionId: "c1",
+                agentId: "a1",
+                connectionName: "Shop bot",
+                agentName: "Bot",
+                before: null,
+                after: "auto",
+                changedBy: "owner-1",
+                changedByName: "Lan",
+            })
             expect(tx.commits).toBe(1)
         })
 
         it("starts an unknown level at ask", async () => {
-            const { service, tx, bindings } = await build(mockEntityManager({ query: lookups() }))
+            const { service, bindings } = await build(mockEntityManager({ query: lookups() }))
 
             await service.setGrant(actor, "c1", "a1", "bogus")
 
-            expect(bindings.writeGrant).toHaveBeenCalledWith(
-                { workspaceId: "ws-1", agentId: "a1", connectionId: "c1", purpose: "inbound_chat", access: "ask" },
-                tx.em,
-            )
+            expectInTransaction(bindings.writeGrant, {
+                workspaceId: "ws-1",
+                agentId: "a1",
+                connectionId: "c1",
+                purpose: "inbound_chat",
+                access: "ask",
+            })
         })
 
         it("removes an access and logs the level it had", async () => {
-            const { service, tx, bindings, accessLog } = await build(
+            const { service, bindings, accessLog } = await build(
                 mockEntityManager({ query: lookups([{ agent_id: "a1", connection_id: "c1", access: "read" }]) }),
             )
 
             await service.setGrant(actor, "c1", "a1", null)
 
-            expect(bindings.removeGrant).toHaveBeenCalledWith(
-                { workspaceId: "ws-1", agentId: "a1", connectionId: "c1" },
-                tx.em,
-            )
+            expectInTransaction(bindings.removeGrant, { workspaceId: "ws-1", agentId: "a1", connectionId: "c1" })
             expect(accessLog.record.mock.calls[0]?.[0]).toMatchObject({ before: "read", after: null })
+            expect(isTransactionManager(accessLog.record.mock.calls[0]?.[1])).toBe(true)
         })
 
         it("writes nothing when the level is already the one asked", async () => {
@@ -210,17 +266,20 @@ describe("ConnectionGrantsService", () => {
         })
 
         it("lets an existing grant on a disconnected connection change level", async () => {
-            const { service, tx, bindings } = await build(
+            const { service, bindings } = await build(
                 mockEntityManager({ query: lookups([{ agent_id: "a1", connection_id: "c1", access: "read" }]) }),
                 [connection({ status: "disconnected" })],
             )
 
             await service.setGrant(actor, "c1", "a1", "auto")
 
-            expect(bindings.writeGrant).toHaveBeenCalledWith(
-                { workspaceId: "ws-1", agentId: "a1", connectionId: "c1", purpose: "inbound_chat", access: "auto" },
-                tx.em,
-            )
+            expectInTransaction(bindings.writeGrant, {
+                workspaceId: "ws-1",
+                agentId: "a1",
+                connectionId: "c1",
+                purpose: "inbound_chat",
+                access: "auto",
+            })
         })
 
         it("answers not found for an agent or a connection of another workspace", async () => {
@@ -256,7 +315,7 @@ describe("ConnectionGrantsService", () => {
 
     describe("setConnectionAgents", () => {
         it("makes exactly these agents use the connection", async () => {
-            const { service, tx, connections, bindings } = await build(
+            const { service, connections, bindings } = await build(
                 mockEntityManager({
                     query: [
                         [FIND_CONNECTION_GRANTS, [{ agent_id: "gone", connection_id: "c1", access: "ask" }]],
@@ -269,14 +328,15 @@ describe("ConnectionGrantsService", () => {
             await service.setConnectionAgents(actor, "c1", [{ agentId: "a1" }])
 
             expect(connections.get).toHaveBeenCalledWith("ws-1", "c1", expect.anything())
-            expect(bindings.writeGrant).toHaveBeenCalledWith(
-                { workspaceId: "ws-1", agentId: "a1", connectionId: "c1", purpose: "inbound_chat", access: "ask" },
-                tx.em,
-            )
-            expect(bindings.removeGrant).toHaveBeenCalledWith(
-                { workspaceId: "ws-1", agentId: "gone", connectionId: "c1" },
-                tx.em,
-            )
+            expect(isTransactionManager(connections.get.mock.calls[0]?.[2])).toBe(true)
+            expectInTransaction(bindings.writeGrant, {
+                workspaceId: "ws-1",
+                agentId: "a1",
+                connectionId: "c1",
+                purpose: "inbound_chat",
+                access: "ask",
+            })
+            expectInTransaction(bindings.removeGrant, { workspaceId: "ws-1", agentId: "gone", connectionId: "c1" })
         })
 
         it("does nothing for a connection without agents when none are wanted", async () => {
@@ -311,7 +371,7 @@ describe("ConnectionGrantsService", () => {
         })
 
         it("adds a connection at the level the caller picks", async () => {
-            const { service, tx, bindings } = await build(
+            const { service, bindings } = await build(
                 mockEntityManager({
                     query: [
                         [FIND_AGENT_GRANTS, []],
@@ -323,10 +383,47 @@ describe("ConnectionGrantsService", () => {
 
             await service.setAgentConnections(actor, "a1", [{ connectionId: "c1", access: "read" }])
 
-            expect(bindings.writeGrant).toHaveBeenCalledWith(
-                { workspaceId: "ws-1", agentId: "a1", connectionId: "c1", purpose: "inbound_chat", access: "read" },
-                tx.em,
-            )
+            expectInTransaction(bindings.writeGrant, {
+                workspaceId: "ws-1",
+                agentId: "a1",
+                connectionId: "c1",
+                purpose: "inbound_chat",
+                access: "read",
+            })
+        })
+    })
+
+    describe("board", () => {
+        it("lists every connection with the agents that use it", async () => {
+            const shop = connection({ meta: { bot_username: "shop_bot" } })
+            const bank = connection({ id: "c2", provider: "sepay", name: "Bank", meta: { account_masked: "" } })
+            const em = mockEntityManager({
+                query: [
+                    LIST_WORKSPACE_GRANTS,
+                    [
+                        { agent_id: "a1", connection_id: "c1", access: "read" },
+                        { agent_id: "a2", connection_id: "c1", access: "nope" },
+                        { agent_id: "a3", connection_id: "missing", access: "ask" },
+                    ],
+                ],
+            })
+            const { service, connections } = await build(em, [shop, bank])
+
+            await expect(service.board(actor)).resolves.toEqual([
+                {
+                    connection: shop,
+                    botUsername: "shop_bot",
+                    accountMasked: null,
+                    grants: [
+                        { agentId: "a1", access: "read" },
+                        { agentId: "a2", access: "auto" },
+                    ],
+                },
+                { connection: bank, botUsername: null, accountMasked: null, grants: [] },
+            ])
+            expect(connections.authorize).toHaveBeenCalledWith(actor, ["owner", "manager"])
+            expect(connections.list).toHaveBeenCalledWith("ws-1")
+            expect(em.query).toHaveBeenCalledWith(LIST_WORKSPACE_GRANTS, ["ws-1"])
         })
     })
 })
