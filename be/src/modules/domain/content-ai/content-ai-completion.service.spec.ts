@@ -157,9 +157,7 @@ const draftChild = stateOf({
 describe("ContentAiCompletionService", () => {
     it("ignores a generation that is not a content generation", async () => {
         const { service, tx, generations } = await build([stateOf({ purpose: "chat_reply" })])
-
         await service.complete("ws-1", "g-2")
-
         expect(tx.outcomes).toEqual([])
         expect(generations.recordResult).not.toHaveBeenCalled()
     })
@@ -176,9 +174,7 @@ describe("ContentAiCompletionService", () => {
             }),
         })
         const { service, tx, generations, plans, events } = await build([planRoot, child])
-
         await service.complete("ws-1", "g-2")
-
         expect(withoutManager(plans.apply.mock.calls)).toEqual([
             [
                 "ws-1",
@@ -213,9 +209,7 @@ describe("ContentAiCompletionService", () => {
 
     it("writes the draft variants, suggested media, evidence and event for a finished draft", async () => {
         const { service, generations, store, evidence, events } = await build([draftRoot, draftChild])
-
         await service.complete("ws-1", "g-2")
-
         expect(withoutManager(store.applyDraft.mock.calls)).toEqual([
             [
                 "ws-1",
@@ -259,9 +253,7 @@ describe("ContentAiCompletionService", () => {
             limit_vnd: null,
             required_fields: [],
         })
-
         await service.complete("ws-1", "g-2")
-
         expect(store.applyDraft).not.toHaveBeenCalled()
         expect(withoutManager(generations.recordFailure.mock.calls)).toEqual([
             ["ws-1", "g-1", ContentAiErrorCode.DraftingBlocked],
@@ -271,23 +263,10 @@ describe("ContentAiCompletionService", () => {
         expect(tx.outcomes).toEqual(["rollback", "commit"])
     })
 
-    it("records a failure on the root when a child generation failed", async () => {
-        const { service, generations } = await build([planRoot, stateOf({ status: "error" })])
-
-        await service.complete("ws-1", "g-2")
-
-        expect(withoutManager(generations.recordFailure.mock.calls)).toEqual([
-            ["ws-1", "g-1", ContentAiErrorCode.Failed],
-        ])
-        expect(generations.recordResult).not.toHaveBeenCalled()
-    })
-
     it("asks once more for an unreadable answer and swaps the child in the root context", async () => {
         const unreadable = stateOf({ text: "not json", input: { context: { rootId: "g-1" }, timeout_ms: 60000 } })
         const { service, generations, plans } = await build([planRoot, unreadable])
-
         await service.complete("ws-1", "g-2")
-
         const [request, context] = generations.request.mock.calls[0] ?? []
         expect(request).toEqual({
             workspaceId: "ws-1",
@@ -301,18 +280,6 @@ describe("ContentAiCompletionService", () => {
         expect(context).toEqual({ rootId: "g-1", attempt: 2 })
         expect(generations.setContext.mock.calls[0]?.[2]).toMatchObject({ generationIds: ["g-3"], operation: "plan" })
         expect(plans.apply).not.toHaveBeenCalled()
-    })
-
-    it("fails the root when the retried answer is unreadable too", async () => {
-        const retried = stateOf({ text: "still not json", input: { context: { rootId: "g-1", attempt: 2 } } })
-        const { service, generations } = await build([planRoot, retried])
-
-        await service.complete("ws-1", "g-2")
-
-        expect(generations.request).not.toHaveBeenCalled()
-        expect(withoutManager(generations.recordFailure.mock.calls)).toEqual([
-            ["ws-1", "g-1", ContentAiErrorCode.InvalidAnswer],
-        ])
     })
 
     it("leaves a root that already has its result", async () => {
@@ -340,36 +307,40 @@ describe("ContentAiCompletionService", () => {
         expect(generations.recordFailure).not.toHaveBeenCalled()
     })
 
-    it("fails a plan whose ideas fit no slot as an empty answer", async () => {
-        const child = stateOf({
-            input: { context: { rootId: "g-1", allowedSlots: [1] } },
-            text: JSON.stringify({ ideas: [{ slot: 2, title: "Wrong slot", brief: "" }] }),
-        })
+    it.each([
+        [stateOf({ status: "error" }), ContentAiErrorCode.Failed],
+        [
+            stateOf({ text: "still not json", input: { context: { rootId: "g-1", attempt: 2 } } }),
+            ContentAiErrorCode.InvalidAnswer,
+        ],
+        [
+            stateOf({
+                input: { context: { rootId: "g-1", allowedSlots: [1] } },
+                text: JSON.stringify({ ideas: [{ slot: 2, title: "Wrong slot", brief: "" }] }),
+            }),
+            ContentAiErrorCode.EmptyAnswer,
+        ],
+    ])("records the child failure or invalid answer as %s / %s", async (child, code) => {
         const { service, generations } = await build([planRoot, child])
-
         await service.complete("ws-1", "g-2")
-
-        expect(withoutManager(generations.recordFailure.mock.calls)).toEqual([
-            ["ws-1", "g-1", ContentAiErrorCode.EmptyAnswer],
-        ])
+        expect(generations.request).not.toHaveBeenCalled()
+        expect(withoutManager(generations.recordFailure.mock.calls)).toEqual([["ws-1", "g-1", code]])
+        expect(generations.recordResult).not.toHaveBeenCalled()
     })
 
-    it("ignores missing, terminal, unrelated and unfinished operations", async () => {
-        const inactive = [
-            [],
-            [draftChild],
-            [stateOf({ ...planRoot, status: "error" }), draftChild],
-            [stateOf({ ...planRoot, status: "cancelled" }), draftChild],
-            [stateOf({ ...planRoot, input: { context: {} } }), draftChild],
-            [planRoot, stateOf({ status: "queued" })],
-            [planRoot, stateOf()],
-        ]
-        for (const states of inactive) {
-            const { service, generations } = await build(states)
-            await service.complete("ws-1", "g-2")
-            expect(generations.recordResult).not.toHaveBeenCalled()
-            expect(generations.recordFailure).not.toHaveBeenCalled()
-        }
+    it.each([
+        [],
+        [draftChild],
+        [stateOf({ ...planRoot, status: "error" }), draftChild],
+        [stateOf({ ...planRoot, status: "cancelled" }), draftChild],
+        [stateOf({ ...planRoot, input: { context: {} } }), draftChild],
+        [planRoot, stateOf({ status: "queued" })],
+        [planRoot, stateOf()],
+    ])("ignores missing, terminal, unrelated and unfinished operations: %s", async (...states) => {
+        const { service, generations } = await build(states)
+        await service.complete("ws-1", "g-2")
+        expect(generations.recordResult).not.toHaveBeenCalled()
+        expect(generations.recordFailure).not.toHaveBeenCalled()
     })
     it("uses its own id when the root id is absent", async () => {
         const { service, generations } = await build([
@@ -454,14 +425,43 @@ describe("ContentAiCompletionService", () => {
             ],
         })
     })
-    it("defaults optional draft lists and keeps existing hashtags without a quick title", async () => {
-        const context = { ...DRAFT_CONTEXT, library: undefined, pillars: undefined }
-        const child = stateOf({ ...draftChild, text: JSON.stringify({ variants: { facebook: { text: "Roses" } } }) })
-        const { service, editor, store } = await build([stateOf({ ...draftRoot, input: { context } }), child])
-        editor.get.mockResolvedValue(itemOf({ pillarId: null, source: "quick", hashtags: ["saved"] }))
+    it.each([undefined, null, []])(
+        "defaults draft lists (%s) and keeps existing hashtags without a title",
+        async (library) => {
+            const context = { ...DRAFT_CONTEXT, library, pillars: undefined }
+            const child = stateOf({
+                ...draftChild,
+                text: JSON.stringify({
+                    variants: { facebook: { text: "Roses" } },
+                    media: library === undefined ? undefined : [0, 1, 1.5, 7],
+                }),
+            })
+            const { service, editor, store } = await build([stateOf({ ...draftRoot, input: { context } }), child])
+            editor.get.mockResolvedValue(itemOf({ pillarId: null, source: "quick", hashtags: ["saved"] }))
+            await service.complete("ws-1", "g-2")
+            expect(store.applyDraft.mock.calls[0]?.[2]).toMatchObject({ hashtags: ["#saved"], media: [] })
+            expect(store.applyDraft.mock.calls[0]?.[2]).not.toHaveProperty("title")
+        },
+    )
+    it("uses the root id when the shared generation context becomes empty while awaiting a child", async () => {
+        const context = { ...DRAFT_CONTEXT, generationIds: ["g-2"] }
+        const root = stateOf({ ...draftRoot, text: draftChild.text, input: { context } })
+        const { service, generations, store } = await build([root, draftChild])
+        generations.state
+            .mockResolvedValueOnce(draftChild)
+            .mockResolvedValueOnce(root)
+            .mockImplementationOnce(() => {
+                context.generationIds = []
+                return Promise.resolve(draftChild)
+            })
         await service.complete("ws-1", "g-2")
-        expect(store.applyDraft.mock.calls[0]?.[2]).toMatchObject({ hashtags: ["#saved"], media: [] })
-        expect(store.applyDraft.mock.calls[0]?.[2]).not.toHaveProperty("title")
+        expect(generations.state.mock.calls.map((call) => call[1])).toEqual(["g-2", "g-1", "g-2", "g-1"])
+        expect(store.applyDraft.mock.calls[0]?.[2].media).toEqual([
+            { kind: "image", name: "hoa-hong.jpg", path: "ws-1/hoa-hong.jpg", suggested: true },
+        ])
+        expect(withoutManager(generations.recordResult.mock.calls)).toEqual([
+            ["ws-1", "g-1", { itemId: "item-1", seconds: 30, warnings: [] }],
+        ])
     })
     it("rejects malformed plan siblings and missing scheduling metadata", async () => {
         for (const slots of [undefined, PLAN_CONTEXT.slots]) {

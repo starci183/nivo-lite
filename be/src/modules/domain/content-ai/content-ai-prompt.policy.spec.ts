@@ -339,6 +339,32 @@ describe("model response parsing", () => {
         ).toEqual({ variants: {}, warnings: [] })
     })
 
+    it.each([undefined, null, [], "model text", 9, false, {}, { text: null }, { text: {} }, { text: " " }])(
+        "ignores a missing or malformed selected variant %p",
+        (facebook) => {
+            expect(draftVariants({ variants: { facebook } }, ["facebook"], BRAND)).toEqual({
+                variants: {},
+                warnings: [],
+            })
+        },
+    )
+
+    it("keeps valid text when model hashtags and notes are missing or malformed", () => {
+        expect(
+            draftVariants(
+                { variants: { facebook: { text: " Roses ", hashtags: {}, note: 9 }, instagram: { text: " Stems " } } },
+                ["facebook", "instagram"],
+                BRAND,
+            ),
+        ).toEqual({
+            variants: {
+                facebook: { text: "Roses", hashtags: [], note: "" },
+                instagram: { text: "Stems", hashtags: ["#flowers"], note: "" },
+            },
+            warnings: [],
+        })
+    })
+
     it("preserves text and notes, attributes warnings, and flags lengths only above the allowance", () => {
         const text = "x".repeat(376)
         expect(

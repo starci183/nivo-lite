@@ -1,7 +1,7 @@
 import { Test } from "@nestjs/testing"
 import { FakeClock, builder, fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
 import { GenerationsService } from "@modules/domain/ai-generations"
-import type { GenerationState } from "@modules/domain/ai-generations"
+import type { GenerationEnqueued, GenerationState } from "@modules/domain/ai-generations"
 import { AuthorityRulesService } from "@modules/domain/authority-rules"
 import { ContentAiStoreService, ContentEditorService } from "@modules/domain/content-items"
 import type { ContentItem } from "@modules/domain/content-items"
@@ -15,6 +15,7 @@ import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { ContentAiCompletionService } from "./content-ai-completion.service"
 import type { BrandMaterial } from "./content-ai-prompt.policy"
 import { ContentAiService } from "./content-ai.service"
+import type { ContentAiStatus } from "./content-ai.contracts"
 import { ContentBrandService } from "./content-brand.service"
 import { ContentAiErrorCode } from "./errors/content-ai.error"
 
@@ -104,6 +105,19 @@ const stateOf = builder<GenerationState>({
     finishedAt: null,
     messages: [],
 })
+const statusOf = builder<ContentAiStatus>({
+    id: "g-1",
+    status: "queued",
+    progress: 0,
+    itemId: "item-1",
+    planId: null,
+    resultId: null,
+    ideas: null,
+    seconds: null,
+    skippedPast: null,
+    warnings: [],
+    errorCode: null,
+})
 const build = async (root: GenerationState | null = null, children: ReadonlyArray<GenerationState> = []) => {
     const em = mockEntityManager()
     const tx = fakeTransaction(em)
@@ -147,19 +161,8 @@ const build = async (root: GenerationState | null = null, children: ReadonlyArra
             { provide: ContentBrandService, useValue: brand },
         ],
     }).compile()
-    return {
-        service: moduleRef.get(ContentAiService),
-        brand,
-        members,
-        generations,
-        completion,
-        rules,
-        editor,
-        store,
-        configuration,
-        media,
-        tx,
-    }
+    const dependencies = { brand, members, generations, completion, rules, editor, store, configuration, media }
+    return { service: moduleRef.get(ContentAiService), ...dependencies, tx }
 }
 
 describe("ContentAiService", () => {
@@ -222,11 +225,8 @@ describe("ContentAiService", () => {
                 holidayKey: "vn_women_day",
             }),
         )
-        await expect(service.requestDraft("user-1", "ws-1", { id: "item-1", hint: "  Shorter  " })).resolves.toEqual({
-            id: "g-1",
-            status: "queued",
-            itemId: "item-1",
-        })
+        const request = await service.requestDraft("user-1", "ws-1", { id: "item-1", hint: "  Shorter  " })
+        expect(request).toEqual({ id: "g-1", status: "queued", itemId: "item-1" })
         expect(members.require).toHaveBeenCalledWith("user-1", "ws-1", ["owner", "manager"])
         expect(media.library).toHaveBeenCalledWith("user-1", "ws-1", 40)
         expect(generations.request.mock.calls[0]?.[0]).toMatchObject({
@@ -238,10 +238,8 @@ describe("ContentAiService", () => {
             timeoutMs: 90000,
         })
         const messages = generations.request.mock.calls[0]?.[0].messages
-        expect(messages?.[1]?.content).toContain("Shorter")
-        expect(messages?.[1]?.content).toContain("Coffee")
-        expect(messages?.[1]?.content).toContain("beans.jpg")
-        expect(messages?.[1]?.content).toContain("Vietnamese Women's Day 20/10")
+        for (const text of ["Shorter", "Coffee", "beans.jpg", "Vietnamese Women's Day 20/10"])
+            expect(messages?.[1]?.content).toContain(text)
         expect(generations.setContext.mock.calls[0]?.slice(0, 3)).toEqual([
             "ws-1",
             "g-1",
@@ -261,16 +259,14 @@ describe("ContentAiService", () => {
             ...CONFIGURATION,
             pillars: [PILLAR, { ...PILLAR, id: "inactive", name: "Hidden theme", active: false }],
         })
-        await expect(service.requestDraft("user-1", "ws-1", { id: "item-1" })).resolves.toEqual({
-            id: "g-1",
-            status: "queued",
-            itemId: "item-1",
-        })
+        const request = await service.requestDraft("user-1", "ws-1", { id: "item-1" })
+        expect(request).toEqual({ id: "g-1", status: "queued", itemId: "item-1" })
         expect(generations.request.mock.calls[0]?.[0].messages?.[1]?.content).toContain("Choose one theme: Coffee")
         expect(generations.request.mock.calls[0]?.[0].messages?.[1]?.content).not.toContain("Hidden theme")
         expect(generations.request.mock.calls[0]?.[0].messages?.[1]?.content).not.toContain("Owner hint:")
     })
     it.each([
+        { topic: " \n ", channels: ["facebook"] },
         { topic: "ab", channels: ["facebook"] },
         { topic: "x".repeat(12001), channels: ["facebook"] },
         { topic: "Coffee", channels: ["myspace"] },
@@ -282,19 +278,25 @@ describe("ContentAiService", () => {
         expect(store.createQuickIdea).not.toHaveBeenCalled()
         expect(generations.request).not.toHaveBeenCalled()
     })
-    it("creates and enqueues a quick idea with normalized channels and the created row timestamp", async () => {
+    it.each([
+        { topic: "  Coffee\nFresh beans  ", normalized: "Coffee\nFresh beans", title: "Coffee" },
+        { topic: "\n Coffee \n", normalized: "Coffee", title: "Coffee" },
+        { topic: `${"x".repeat(81)}\nDetails`, normalized: `${"x".repeat(81)}\nDetails`, title: "x".repeat(80) },
+    ])("creates and enqueues a quick idea with normalized channels, title and row timestamp %#", async (entry) => {
         const { service, generations, store, tx } = await build()
         await expect(
             service.requestQuickDraft("user-1", "ws-1", {
-                topic: "  Coffee\nFresh beans  ",
+                topic: entry.topic,
                 channels: ["facebook", "facebook", "myspace", "zalo"],
             }),
         ).resolves.toEqual({ id: "g-1", status: "queued", itemId: "quick-1" })
         expect(store.createQuickIdea.mock.calls[0]?.slice(0, 3)).toEqual([
             "user-1",
             "ws-1",
-            { topic: "Coffee\nFresh beans", channels: ["facebook", "zalo"] },
+            { topic: entry.normalized, channels: ["facebook", "zalo"] },
         ])
+        const prompt = generations.request.mock.calls[0]?.[0].messages?.[1]?.content
+        expect(prompt?.split("\n\n")[0]).toBe(`Idea: ${entry.title}`)
         expect(generations.request.mock.calls[0]?.[1]).toMatchObject({
             itemId: "quick-1",
             source: "quick",
@@ -336,6 +338,17 @@ describe("ContentAiService", () => {
         })
         expect(generations.request).not.toHaveBeenCalled()
     })
+    it("rolls back a plan when the first generation response omits its id", async () => {
+        const { service, generations, tx } = await build()
+        generations.request.mockResolvedValueOnce(mock<GenerationEnqueued>({ id: undefined, status: "queued" }))
+        await expect(service.requestMonthPlan("user-1", "ws-1", "2026-11")).rejects.toMatchObject({
+            code: "CONTENT_AI_NO_SLOTS",
+            message: "CONTENT_AI_NO_SLOTS",
+            params: {},
+        })
+        expect(generations.setContext).not.toHaveBeenCalled()
+        expect(tx.outcomes).toEqual(["rollback"])
+    })
     it("enqueues successive twelve-slot chunks and stores the complete root context", async () => {
         const { service, editor, generations, tx } = await build()
         editor.list.mockResolvedValue([
@@ -347,11 +360,8 @@ describe("ContentAiService", () => {
             .mockResolvedValueOnce({ id: "g-1", status: "queued" })
             .mockResolvedValueOnce({ id: "g-2", status: "queued" })
             .mockResolvedValueOnce({ id: "g-3", status: "queued" })
-        await expect(service.requestMonthPlan("user-1", "ws-1", "2026-11")).resolves.toEqual({
-            id: "g-1",
-            status: "queued",
-            itemId: null,
-        })
+        const request = await service.requestMonthPlan("user-1", "ws-1", "2026-11")
+        expect(request).toEqual({ id: "g-1", status: "queued", itemId: null })
         expect(editor.list).toHaveBeenCalledWith("user-1", "ws-1", {
             from: "2026-10-31T17:00:00.000Z",
             to: "2026-11-30T17:00:00.000Z",
@@ -379,6 +389,7 @@ describe("ContentAiService", () => {
             month: "2026-11",
             quota: [{ pillar: "Coffee", count: 30 }],
             skippedPast: 0,
+            allowedSlots: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
         })
         expect(tx.commits).toBe(1)
     })
@@ -399,19 +410,7 @@ describe("ContentAiService status", () => {
             stateOf({ id: "g-2" }),
             stateOf({ id: "g-3" }),
         ])
-        await expect(service.status("user-1", "ws-1", "g-1")).resolves.toEqual({
-            id: "g-1",
-            status: "queued",
-            progress: 0,
-            itemId: "item-1",
-            planId: null,
-            resultId: null,
-            ideas: null,
-            seconds: null,
-            skippedPast: null,
-            warnings: [],
-            errorCode: null,
-        })
+        await expect(service.status("user-1", "ws-1", "g-1")).resolves.toEqual(statusOf())
         expect(members.require).toHaveBeenCalledWith("user-1", "ws-1")
         expect(completion.complete).not.toHaveBeenCalled()
     })
@@ -462,24 +461,23 @@ describe("ContentAiService status", () => {
                 },
             }),
         )
-        await expect(service.status("user-1", "ws-1", "g-1")).resolves.toEqual({
-            id: "g-1",
-            status: "succeeded",
-            progress: 100,
-            itemId: "draft-1",
-            planId: null,
-            resultId: "draft-1",
-            ideas: 2,
-            seconds: 3,
-            skippedPast: 4,
-            warnings: [
-                {
-                    channel: "facebook",
-                    warning: { kind: "promise", phrase: "100%", figure: null, length: null, max: null },
-                },
-            ],
-            errorCode: null,
-        })
+        await expect(service.status("user-1", "ws-1", "g-1")).resolves.toEqual(
+            statusOf({
+                status: "succeeded",
+                progress: 100,
+                itemId: "draft-1",
+                resultId: "draft-1",
+                ideas: 2,
+                seconds: 3,
+                skippedPast: 4,
+                warnings: [
+                    {
+                        channel: "facebook",
+                        warning: { kind: "promise", phrase: "100%", figure: null, length: null, max: null },
+                    },
+                ],
+            }),
+        )
     })
     it("returns a saved plan identifier with no related item", async () => {
         const { service } = await build(

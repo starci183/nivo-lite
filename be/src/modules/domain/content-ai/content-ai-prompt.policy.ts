@@ -423,7 +423,8 @@ export const claimWarnings = (text: string, knowledge?: string): Array<ClaimWarn
     if (knowledge === undefined) return promises
     const facts = knowledge.replace(/\s+/gu, "").toLowerCase()
     const figures = [...text.matchAll(new RegExp(CONTENT_AI_CLAIMS.figure, "giu"))].flatMap((match) => {
-        const capture = String(match[1])
+        const capture = match[1]
+        if (capture === undefined) return []
         const figure = capture.replace(/\s+/gu, "").toLowerCase()
         return facts.includes(figure) ? [] : [{ kind: "figure" as const, figure: capture.trim() }]
     })
@@ -441,13 +442,12 @@ export const draftVariants = (
     const warnings: Array<ChannelWarning> = []
     for (const channel of channels) {
         const raw = written[channel]
-        if (!isJsonObject(raw)) continue
-        const text = trimmedText(raw.text)
+        const text = isJsonObject(raw) ? trimmedText(raw.text) : ""
         if (text === "") continue
         variants[channel] = {
             text,
-            hashtags: channelHashtags(channel, raw.hashtags, brand.brandHashtags),
-            note: trimmedText(raw.note),
+            hashtags: channelHashtags(channel, isJsonObject(raw) ? raw.hashtags : [], brand.brandHashtags),
+            note: isJsonObject(raw) ? trimmedText(raw.note) : "",
         }
         const max = channelRule(channel).maxChars
         if (text.length > max * 1.25) warnings.push({ channel, warning: { kind: "length", length: text.length, max } })
