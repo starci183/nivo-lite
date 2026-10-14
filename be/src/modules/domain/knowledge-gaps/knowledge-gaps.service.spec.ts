@@ -8,11 +8,13 @@ import {
     ANSWER_GAP,
     BUMP_GAP,
     COUNT_OPEN_GAPS,
+    COUNT_OPEN_GAPS_OF_MODULE,
     DISMISS_GAP,
     INSERT_GAP,
     SELECT_GAPS,
     SELECT_GAP_CANDIDATES,
     SELECT_OPEN_GAPS,
+    SELECT_OPEN_GAPS_OF_MODULE,
 } from "./persistence/knowledge-gaps.sql"
 
 const WS = "11111111-1111-4111-8111-111111111111"
@@ -302,6 +304,45 @@ describe("KnowledgeGapsService", () => {
             [ANSWER_GAP, [WS, "g1", "document:d1"]],
             [SELECT_OPEN_GAPS, [WS, 300]],
         ])
+    })
+
+    describe("openOfModule", () => {
+        it("returns the total and mapped open gaps of the requested module with a capped limit", async () => {
+            const em = mockEntityManager({
+                query: [
+                    [SELECT_OPEN_GAPS_OF_MODULE, [rowOf()]],
+                    [COUNT_OPEN_GAPS_OF_MODULE, [{ total: 7 }]],
+                ],
+            })
+            const service = await build(em)
+
+            await expect(service.openOfModule(WS, "chatbot", 250)).resolves.toEqual({
+                openCount: 7,
+                items: [gap],
+            })
+
+            expect(em.query.mock.calls).toEqual([
+                [SELECT_OPEN_GAPS_OF_MODULE, [WS, "chatbot", 200]],
+                [COUNT_OPEN_GAPS_OF_MODULE, [WS, "chatbot"]],
+            ])
+        })
+
+        it("defaults a missing total to zero and keeps a smaller requested limit", async () => {
+            const em = mockEntityManager({
+                query: [
+                    [SELECT_OPEN_GAPS_OF_MODULE, []],
+                    [COUNT_OPEN_GAPS_OF_MODULE, []],
+                ],
+            })
+            const service = await build(em)
+
+            await expect(service.openOfModule(WS, "sales", 10)).resolves.toEqual({ openCount: 0, items: [] })
+
+            expect(em.query.mock.calls).toEqual([
+                [SELECT_OPEN_GAPS_OF_MODULE, [WS, "sales", 10]],
+                [COUNT_OPEN_GAPS_OF_MODULE, [WS, "sales"]],
+            ])
+        })
     })
 
     it("returns the open count or zero when the database returns no count row", async () => {

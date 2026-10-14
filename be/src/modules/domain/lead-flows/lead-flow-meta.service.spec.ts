@@ -162,4 +162,167 @@ describe("LeadFlowMetaService", () => {
 
         expect(meta.privateMessage).not.toHaveBeenCalled()
     })
+
+    it("ignores absent and other-provider connections and unreadable credentials", async () => {
+        const { service, connections } = await build()
+        connections.find.mockResolvedValueOnce(null)
+        connections.find.mockResolvedValueOnce({ ...CONNECTION, provider: "google" })
+
+        await expect(service.pageOf("ws-1", "missing")).resolves.toBeNull()
+        await expect(service.pageOf("ws-1", "google-1")).resolves.toBeNull()
+        expect(connections.readSecret).not.toHaveBeenCalled()
+
+        connections.readSecret.mockResolvedValueOnce(null)
+        await expect(service.pageOf("ws-1", "connection-1")).resolves.toBeNull()
+        connections.find.mockResolvedValueOnce({ ...CONNECTION, meta: {} })
+        await expect(service.pageOf("ws-1", "connection-1")).resolves.toEqual({ ...PAGE, igId: null })
+        expect(connections.readSecret).toHaveBeenCalledWith("connection-1")
+    })
+
+    it("reads lead details, mentions and names through the supplied Page", async () => {
+        const { service, meta } = await build()
+        const lead = {
+            name: "Lan",
+            phone: "84123456789",
+            email: "lan@example.com",
+            fields: { need: "Tea" },
+            ad_id: "ad-1",
+            form_id: "form-1",
+            created_at: NOW,
+        }
+        meta.fetchLead.mockResolvedValue(lead)
+        meta.fetchMention.mockResolvedValue({ text: "@hue Tea please", username: "lan" })
+        meta.fetchProfileName.mockResolvedValue("Lan")
+
+        await expect(service.fetchLead(PAGE, "submission-1")).resolves.toBe(lead)
+        await expect(service.mentionOf(PAGE, "mention-1")).resolves.toEqual({
+            text: "@hue Tea please",
+            username: "lan",
+        })
+        await expect(service.profileName(PAGE, "instagram", "ig-person")).resolves.toBe("Lan")
+
+        expect(meta.fetchLead).toHaveBeenCalledWith(PAGE, "submission-1")
+        expect(meta.fetchMention).toHaveBeenCalledWith(PAGE, "mention-1")
+        expect(meta.fetchProfileName).toHaveBeenCalledWith(PAGE, "instagram", "ig-person")
+    })
+
+    it.each([
+        { ...FLOW, connection_id: null },
+        { ...FLOW, platform: null },
+        { ...FLOW, psid: null },
+    ])("closes the message window for an incomplete target %j", async (flow) => {
+        const { service, threads } = await build()
+
+        await expect(service.windowOf(flow)).resolves.toEqual({ status: "closed", msLeft: 0 })
+
+        expect(threads.lastUserAt).not.toHaveBeenCalled()
+    })
+
+    it("sends a person's Instagram reply inside the window as a standard message", async () => {
+        const { service, meta, threads } = await build()
+        const flow: DmTarget = { ...FLOW, platform: "instagram", igsid: "ig-person" }
+        threads.lastUserAt.mockResolvedValue(Date.parse(NOW) - HOUR_MS)
+        meta.deliverMessage.mockResolvedValue({ ok: true, ids: ["mid-2"] })
+
+        await expect(service.windowOf(flow)).resolves.toEqual({ status: "open", msLeft: 23 * HOUR_MS })
+        await expect(service.sendToFlow("ws-1", flow, "A human reply", true)).resolves.toEqual({
+            ok: true,
+            reason: null,
+            detail: null,
+        })
+
+        expect(threads.lastUserAt).toHaveBeenCalledWith({
+            connectionId: "connection-1",
+            platform: "instagram",
+            userId: "ig-person",
+        })
+        expect(meta.deliverMessage).toHaveBeenCalledWith(PAGE, "instagram", "ig-person", "A human reply", "standard")
+    })
+
+    it("refuses closed windows and a missing Page before delivering", async () => {
+        const { service, meta, threads, connections } = await build()
+        threads.lastUserAt.mockResolvedValue(Date.parse(NOW) - 8 * 24 * HOUR_MS)
+
+        await expect(service.sendToFlow("ws-1", { ...FLOW, platform: null }, "Hello", false)).resolves.toEqual({
+            ok: false,
+            reason: "window",
+            detail: null,
+        })
+        await expect(service.sendToFlow("ws-1", FLOW, "Hello", true)).resolves.toEqual({
+            ok: false,
+            reason: "window",
+            detail: null,
+        })
+        threads.lastUserAt.mockResolvedValue(Date.parse(NOW) - HOUR_MS)
+        connections.find.mockResolvedValue(null)
+        await expect(service.sendToFlow("ws-1", FLOW, "Hello", false)).resolves.toEqual({
+            ok: false,
+            reason: "not_connected",
+            detail: null,
+        })
+
+        expect(meta.deliverMessage).not.toHaveBeenCalled()
+    })
+
+    it("answers publicly with the Page and reports delivery without a recipient", async () => {
+        const { service, meta, connections } = await build()
+        meta.publicReply.mockResolvedValueOnce({ ok: true, ids: ["comment-reply-1"] })
+        meta.publicReply.mockResolvedValueOnce({ ok: false, reason: "permission" })
+
+        await expect(service.publicReply(COMMENT, "Thank you")).resolves.toEqual({
+            ok: true,
+            failure: null,
+            recipientId: null,
+        })
+        await expect(service.publicReply(COMMENT, "Another reply")).resolves.toEqual({
+            ok: false,
+            failure: "permission",
+            recipientId: null,
+        })
+        connections.find.mockResolvedValue(null)
+        await expect(service.publicReply(COMMENT, "No Page")).resolves.toBeNull()
+
+        expect(meta.publicReply.mock.calls).toEqual([
+            [PAGE, "facebook", "comment-1", "Thank you"],
+            [PAGE, "facebook", "comment-1", "Another reply"],
+        ])
+    })
+
+    it("does not claim a private reply without a Page or available rate-limit slot", async () => {
+        const { service, meta, connections, comments } = await build()
+        connections.find.mockResolvedValueOnce(null)
+
+        await expect(service.privateReply(COMMENT, "Hi")).resolves.toBeNull()
+        expect(comments.replyState).not.toHaveBeenCalled()
+
+        comments.replyState.mockResolvedValue({ commentAt: Date.parse(NOW), replied: false })
+        meta.takePrivateReplySlots.mockReturnValue(false)
+        await expect(service.privateReply(COMMENT, "Hi")).resolves.toEqual({
+            ok: false,
+            failure: "rate_limited",
+            recipientId: null,
+        })
+
+        expect(meta.takePrivateReplySlots).toHaveBeenCalledWith("page-1")
+        expect(comments.claim).not.toHaveBeenCalled()
+        expect(meta.privateMessage).not.toHaveBeenCalled()
+    })
+
+    it("retains the claim when Meta says a private reply was already sent", async () => {
+        const { service, meta, comments } = await build()
+        comments.replyState.mockResolvedValue({ commentAt: Date.parse(NOW), replied: false })
+        comments.claim.mockResolvedValue(true)
+        meta.takePrivateReplySlots.mockReturnValue(true)
+        meta.privateMessage.mockResolvedValue({ ok: false, reason: "already_replied" })
+
+        await expect(service.privateReply(COMMENT, "Hi")).resolves.toEqual({
+            ok: false,
+            failure: "already_replied",
+            recipientId: null,
+        })
+
+        expect(comments.replyState).toHaveBeenCalledWith({ connectionId: "connection-1", commentId: "comment-1" })
+        expect(meta.privateMessage).toHaveBeenCalledWith(PAGE, "facebook", "comment-1", "Hi")
+        expect(comments.release).not.toHaveBeenCalled()
+    })
 })

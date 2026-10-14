@@ -2,8 +2,8 @@ import { Test } from "@nestjs/testing"
 import { mock, mockEntityManager } from "@starci/jest-preset"
 import { AgentBindingsService } from "@modules/domain/agent-connections"
 import { AgentConversationsErrorCode, AgentConversationsService } from "@modules/domain/agent-conversations"
-import type { ConversationRef } from "@modules/domain/agent-conversations"
-import { AgentMessagesService } from "@modules/domain/agent-messages"
+import type { ConversationRef, TurnConversation } from "@modules/domain/agent-conversations"
+import { AgentMessagesErrorCode, AgentMessagesService } from "@modules/domain/agent-messages"
 import { AgentsService } from "@modules/domain/agents"
 import type { AgentProfile } from "@modules/domain/agents"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
@@ -22,6 +22,16 @@ const PROFILE: AgentProfile = {
 }
 
 const REF: ConversationRef = { id: "conv-1", agentId: "agent-1", leadId: null, handledBy: null, visitorName: "Lan" }
+
+const TURN: TurnConversation = {
+    ...REF,
+    workspaceId: "ws-1",
+    channel: "facebook",
+    externalId: "person-1",
+    connectionId: "connection-1",
+    installationId: null,
+    agent: { ...PROFILE, module: "lead_gen", approvalRule: "", greeting: "" },
+}
 
 const TARGET: FlowConversationTarget = {
     workspaceId: "ws-1",
@@ -158,5 +168,158 @@ describe("LeadFlowConversationService", () => {
 
         expect(conversations.turnOf).toHaveBeenCalledTimes(1)
         expect(conversations.handToPerson).toHaveBeenCalledWith("ws-1", "conv-1", LEAD_GEN_ACTOR)
+    })
+
+    it("uses the first bound agent's profile and falls back when it is absent or no connection is supplied", async () => {
+        const { service, bindings, agents } = await build()
+        bindings.agentsFor.mockResolvedValue([
+            { id: "bound-1", name: "Linh", module: "lead_gen", access: "auto", purpose: "lead_source" },
+            { id: "bound-2", name: "Mai", module: "lead_gen", access: "auto", purpose: "lead_source" },
+        ])
+        agents.profileOf.mockResolvedValueOnce(PROFILE).mockResolvedValueOnce(null)
+        agents.profileOfDepartment.mockResolvedValue(PROFILE)
+
+        await expect(service.leadGenAgent("ws-1", "connection-1")).resolves.toBe(PROFILE)
+        expect(agents.profileOfDepartment).not.toHaveBeenCalled()
+        await expect(service.leadGenAgent("ws-1", "connection-1")).resolves.toBe(PROFILE)
+        await expect(service.leadGenAgent("ws-1", null)).resolves.toBe(PROFILE)
+
+        expect(agents.profileOf.mock.calls).toEqual([
+            ["ws-1", "bound-1"],
+            ["ws-1", "bound-1"],
+        ])
+        expect(bindings.agentsFor).toHaveBeenCalledTimes(2)
+        expect(agents.profileOfDepartment.mock.calls).toEqual([
+            ["ws-1", "lead_gen"],
+            ["ws-1", "lead_gen"],
+        ])
+    })
+
+    it("keeps an existing agent and lead, and does not attach an absent flow lead", async () => {
+        const { service, conversations } = await build()
+        conversations.find.mockResolvedValueOnce(ok({ ...REF, leadId: "existing-lead" })).mockResolvedValueOnce(ok(REF))
+
+        await expect(service.ensure(TARGET)).resolves.toBe("conv-1")
+        await expect(service.ensure({ ...TARGET, flow: { ...TARGET.flow, lead_id: null } })).resolves.toBe("conv-1")
+
+        expect(conversations.rebind).not.toHaveBeenCalled()
+        expect(conversations.attachLead).not.toHaveBeenCalled()
+        expect(conversations.open).not.toHaveBeenCalled()
+        expect(conversations.find.mock.calls).toEqual([
+            ["ws-1", "facebook", "connection-1", "person-1"],
+            ["ws-1", "facebook", "connection-1", "person-1"],
+        ])
+    })
+
+    it("requires a person id and defaults an unnamed new conversation to Facebook without attaching an absent lead", async () => {
+        const { service, conversations, entityManager } = await build()
+        conversations.find.mockResolvedValue(refused(AgentConversationsErrorCode.NotFound))
+        conversations.open.mockResolvedValue(REF)
+
+        await expect(service.ensure({ ...TARGET, externalId: "" })).resolves.toBeNull()
+        expect(conversations.find).not.toHaveBeenCalled()
+        await expect(
+            service.ensure({ ...TARGET, flow: { ...TARGET.flow, platform: null, name: null, lead_id: null } }),
+        ).resolves.toBe("conv-1")
+
+        expect(conversations.find).toHaveBeenCalledWith("ws-1", "facebook", "connection-1", "person-1")
+        expect(conversations.open).toHaveBeenCalledWith(
+            {
+                workspaceId: "ws-1",
+                agentId: "agent-1",
+                channel: "facebook",
+                customerId: "person-1",
+                visitor: "",
+                connectionId: "connection-1",
+            },
+            entityManager,
+        )
+        expect(conversations.attachLead).not.toHaveBeenCalled()
+    })
+
+    it("stores an agent line without delivery and omits a null delivery error, while ignoring a missing conversation", async () => {
+        const { service, messages } = await build()
+        const line = { workspaceId: "ws-1", conversationId: "conv-1", role: "agent" as const, body: "Hi!" }
+        messages.storeAgentMessage.mockResolvedValue("message-1")
+
+        await service.say({ ...line, conversationId: null, delivery: null })
+        expect(messages.storeAgentMessage).not.toHaveBeenCalled()
+        await service.say({ ...line, delivery: null })
+        expect(messages.markDelivery).not.toHaveBeenCalled()
+        await service.say({ ...line, delivery: { sent: true, error: null } })
+
+        expect(messages.storeAgentMessage.mock.calls).toEqual([
+            ["ws-1", "conv-1", "Hi!"],
+            ["ws-1", "conv-1", "Hi!"],
+        ])
+        expect(messages.markDelivery).toHaveBeenCalledWith("message-1", true, undefined)
+        expect(messages.storeCustomer).not.toHaveBeenCalled()
+        expect(messages.storeLine).not.toHaveBeenCalled()
+    })
+
+    it("stores a work item under its stable id and reports sent, failed and missing delivery records", async () => {
+        const { service, messages, entityManager } = await build()
+        messages.storeHumanMessage.mockResolvedValue("item-1")
+        messages.find
+            .mockResolvedValueOnce(ok({ id: "item-1", role: "agent", body: "Hello", deliveryStatus: "sent" }))
+            .mockResolvedValueOnce(ok({ id: "item-1", role: "agent", body: "Hello", deliveryStatus: "failed" }))
+            .mockResolvedValueOnce(refused(AgentMessagesErrorCode.NotFound))
+
+        await expect(service.stableLine("ws-1", "conv-1", "Hello", "Linh", "item-1")).resolves.toEqual({
+            id: "item-1",
+            sent: true,
+        })
+        await expect(service.stableLine("ws-1", "conv-1", "Hello", "Linh", "item-1")).resolves.toEqual({
+            id: "item-1",
+            sent: false,
+        })
+        await expect(service.stableLine("ws-1", "conv-1", "Hello", "Linh", "item-1")).resolves.toEqual({
+            id: "item-1",
+            sent: false,
+        })
+
+        expect(messages.storeHumanMessage).toHaveBeenCalledTimes(3)
+        expect(messages.storeHumanMessage).toHaveBeenCalledWith(
+            "ws-1",
+            "conv-1",
+            "Hello",
+            "Linh",
+            entityManager,
+            "item-1",
+        )
+        expect(messages.find.mock.calls).toEqual([
+            ["item-1", "conv-1"],
+            ["item-1", "conv-1"],
+            ["item-1", "conv-1"],
+        ])
+    })
+
+    it("passes delivery failures through and omits a null error on success", async () => {
+        const { service, messages } = await build()
+
+        await service.markDelivery("message-1", false, "meta_token")
+        await service.markDelivery("message-2", true, null)
+
+        expect(messages.markDelivery.mock.calls).toEqual([
+            ["message-1", false, "meta_token"],
+            ["message-2", true, undefined],
+        ])
+    })
+
+    it("checks every nonempty conversation and treats missing or agent-held turns as free", async () => {
+        const { service, conversations } = await build()
+        conversations.turnOf
+            .mockResolvedValueOnce(refused(AgentConversationsErrorCode.NotFound))
+            .mockResolvedValueOnce(ok(TURN))
+            .mockResolvedValueOnce(ok({ ...TURN, id: "held-1", handledBy: "Mai" }))
+
+        await expect(
+            service.heldByPerson({ state: "escalated", conversation_id: "conv-1" }, null, "", "conv-2"),
+        ).resolves.toBe(false)
+        await expect(service.heldByPerson({ state: "escalated", conversation_id: null }, "", "held-1")).resolves.toBe(
+            true,
+        )
+
+        expect(conversations.turnOf.mock.calls).toEqual([["conv-1"], ["conv-2"], ["held-1"]])
     })
 })

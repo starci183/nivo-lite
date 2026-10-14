@@ -5,6 +5,7 @@ import type { WorkContext, WorkItem, WorkPerformerRegistry } from "@modules/doma
 import { AskQualifyingPerformerService } from "./ask-qualifying-performer.service"
 import { LeadFlowsError, LeadFlowsErrorCode } from "./errors/lead-flows.error"
 import { LeadFlowConversationService } from "./lead-flow-conversation.service"
+import type { FlowFields } from "./lead-flow-fields.policy"
 import { LeadFlowKitService } from "./lead-flow-kit.service"
 import { LeadFlowMetaService } from "./lead-flow-meta.service"
 import { LeadFlowStoreService } from "./lead-flow-store.service"
@@ -192,5 +193,68 @@ describe("AskQualifyingPerformerService", () => {
         await expect(performer.perform(ctx, itemOf(), asking)).resolves.toMatchObject({ summary: "tag.proposed" })
 
         expect(store.patch).not.toHaveBeenCalled()
+    })
+
+    it.each<{ fields: FlowFields; index: number; draft: string; kind: string }>([
+        {
+            fields: { index: "1", reply: "Here is the answer", question: "Your budget?" },
+            index: 1,
+            draft: "Here is the answer\n\nYour budget?",
+            kind: "",
+        },
+        { fields: { index: "invalid" }, index: 1, draft: "line.thanks\n\nWhen?", kind: "" },
+        { fields: { index: "" }, index: 1, draft: "line.thanks\n\nWhen?", kind: "" },
+        { fields: { index: "7" }, index: 7, draft: "", kind: "" },
+        { fields: { question_kind: "contact" }, index: 1, draft: "line.thanks\n\nline.ask-contact", kind: "contact" },
+    ])(
+        "prepares the explicit question, next question or contact request: $fields",
+        async ({ fields, index, draft, kind }) => {
+            const { performer, kit } = await build(flowOf({ asked: 1 }))
+
+            await expect(performer.prepare(ctx, itemOf({ proposal: { summary: "", fields } }))).resolves.toEqual({
+                proposal: { summary: "ask.summary", draft, fields: { ...fields, index, question_kind: kind } },
+            })
+
+            expect(kit.text).toHaveBeenCalledWith("en", "ask.summary", { name: "Lan", n: 2 })
+        },
+    )
+
+    it("asks for contact despite a pending question and keeps the original greeting time", async () => {
+        const flow = flowOf({ asked: 1, pending_question: 0, greeted_at: NOW })
+        const { performer, kit, store } = await build(flow)
+        const proposal = { summary: "", fields: { question_kind: "contact" }, draft: "Share your contact" }
+        kit.dmOrExplain.mockResolvedValue({ sent: true, line: "" })
+
+        await expect(performer.perform(ctx, itemOf(), proposal)).resolves.toEqual({
+            summary: "ask.done",
+            evidence: "captured",
+            lead_id: "lead-1",
+            detail: "Share your contact",
+        })
+
+        expect(store.patch).toHaveBeenCalledWith(flow, {
+            state: "qualifying",
+            asked: 2,
+            pending_question: null,
+            contact_asked_at: NOW,
+        })
+    })
+
+    it.each<{ fields: FlowFields; pending: number }>([
+        { fields: { index: 2 }, pending: 2 },
+        { fields: {}, pending: 0 },
+    ])("records the question index $pending when the proposal has no question label", async ({ fields, pending }) => {
+        const flow = flowOf({ greeted_at: NOW })
+        const { performer, kit, store } = await build(flow)
+        kit.dmOrExplain.mockResolvedValue({ sent: true, line: "" })
+
+        await expect(performer.perform(ctx, itemOf(), { summary: "", fields, draft: "When?" })).resolves.toEqual({
+            summary: "ask.done",
+            evidence: "captured",
+            lead_id: "lead-1",
+            detail: "When?",
+        })
+
+        expect(store.patch).toHaveBeenCalledWith(flow, { state: "qualifying", asked: 1, pending_question: pending })
     })
 })
