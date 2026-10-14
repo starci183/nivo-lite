@@ -16,7 +16,7 @@ export class ReconcileDetailsResolver {
 
     /** The payment and the candidate invoices, with customer, order and invoice status. */
     @Query(() => ReconcileDetailsType, { name: "reconcileDetails" })
-    async reconcileDetails(
+    async getReconcileDetails(
         @CurrentPrincipal() principal: Principal,
         @WorkspaceId() workspaceId: string,
         @Args() args: ReconcileDetailsArgs,

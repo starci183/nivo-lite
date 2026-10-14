@@ -16,6 +16,7 @@ import { StaffModule } from "@modules/domain/staff"
 import { WorkspaceMembersModule } from "@modules/domain/workspace-members"
 import { WorkspacesModule } from "@modules/domain/workspaces"
 import { SepaySimulationModule } from "@modules/domain/sepay-simulation"
+import { SepaySimulationHttpModule } from "@modules/integrations/sepay-simulation-http"
 import { SeedSecretsFileClient, WorkspaceSeedModule } from "@modules/domain/workspace-seed"
 import { CORE_FOLDER, NIVO_KNOWLEDGE_MESSAGES, NivoKnowledgeModule } from "@modules/domain/nivo-knowledge"
 import { VideoMusicModule } from "@modules/domain/video-music"
@@ -80,6 +81,7 @@ export class AppModule {
                 ChannelSetupModule.register({ isGlobal: true, ...options.channelSetup }),
                 ChannelConnectionsModule.register({ isGlobal: true }),
                 ChannelProvisioningModule.register({ isGlobal: true, ...options.channelProvisioning }),
+                SepaySimulationHttpModule.register({ isGlobal: true, ...options.sepaySimulationHttp }),
                 SepaySimulationModule.register({ isGlobal: true, ...options.sepaySimulation }),
                 ModulesModule.register({
                     isGlobal: true,

@@ -1,6 +1,8 @@
 import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./sepay-simulation.module-definition"
+import { SEPAY_SIMULATION_OPTIONS } from "./sepay-simulation.decorators"
+import type { SepaySimulationOptions, SimulationPost } from "./sepay-simulation.options"
 import { SepaySimulationService } from "./sepay-simulation.service"
 
 @Module({})
@@ -11,7 +13,21 @@ export class SepaySimulationModule extends ConfigurableModuleClass {
         const base = super.register(options)
         return {
             ...base,
-            providers: [...(base.providers ?? []), SepaySimulationService],
+            providers: [
+                {
+                    provide: SEPAY_SIMULATION_OPTIONS,
+                    useFactory: (post: SimulationPost): SepaySimulationOptions => ({
+                        apiKey: options.apiKey,
+                        bankCode: options.bankCode,
+                        bankAccount: options.bankAccount,
+                        url: options.url,
+                        print: options.print,
+                        post,
+                    }),
+                    inject: [options.post],
+                },
+                SepaySimulationService,
+            ],
             exports: [SepaySimulationService],
         }
     }
