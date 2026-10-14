@@ -7,16 +7,12 @@ import {
 } from "@modules/integrations/data-sources"
 import type { OpenApiAuthDraft } from "./openapi-wizard.contracts"
 import { apiSummary } from "./messages/openapi.messages"
-import type {
-    OpenApiAuth,
-    OpenApiAuthType,
-    OpenApiConfig,
-    OpenApiMethod,
-    OpenApiOperation,
-    OpenApiParam,
-    OpenApiPull,
-    OpenApiPullEntity,
-} from "@modules/integrations/data-sources"
+import type { OpenApiAuth, OpenApiConfig, OpenApiOperation, OpenApiPull } from "@modules/integrations/data-sources"
+
+type OpenApiAuthType = OpenApiAuth["type"]
+type OpenApiMethod = OpenApiOperation["method"]
+type OpenApiParam = OpenApiOperation["params"][number]
+type OpenApiPullEntity = OpenApiPull["entity"]
 
 const clip = (value: unknown, max = 500): string => (typeof value === "string" ? value.trim().slice(0, max) : "")
 

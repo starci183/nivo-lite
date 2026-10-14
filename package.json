@@ -112,6 +112,9 @@
     "contract:emit": "starci app emit"
   },
   "overrides": {
+    "tedious": {
+      "@types/node": "$@types/node"
+    },
     "axios": "1.15.2",
     "dayjs": "1.11.21",
     "@xyflow/react": {

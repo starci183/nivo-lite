@@ -64,10 +64,12 @@ export class DatabaseSyncService implements DataConnector {
                 cursor: context.connection.meta[`cursor:${tableKey(mapping)}`],
             })
             .then((page) =>
-                context.upsert(
-                    mapping.entity,
-                    page.records.map((record) => ({ ...record })),
-                ).then((rows): TableOutcome => ({ ok: true, rows, cursor: page.cursor })),
+                context
+                    .upsert(
+                        mapping.entity,
+                        page.records.map((record) => ({ ...record })),
+                    )
+                    .then((rows): TableOutcome => ({ ok: true, rows, cursor: page.cursor })),
             )
             .then(
                 (outcome) => outcome,
