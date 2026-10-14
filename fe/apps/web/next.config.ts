@@ -1,5 +1,6 @@
 import type { NextConfig } from "next"
 import createNextIntlPlugin from "next-intl/plugin"
+import { resolve } from "node:path"
 
 /** The request config lives in this app's i18n module. */
 const withNextIntl = createNextIntlPlugin("./src/modules/i18n/request.ts")
@@ -10,8 +11,6 @@ const nextConfig: NextConfig = {
     transpilePackages: ["@starci/grammar"],
     poweredByHeader: false,
     experimental: {
-        // Excel / CSV / document uploads go through server actions (10 MB files).
-        serverActions: { bodySizeLimit: "12mb" },
         optimizePackageImports: ["@heroui/react"],
     },
     // The catalogue moved from /m to /agents ("modules" are now "agents" to the user). Old links, bookmarks and stored hrefs keep working.
@@ -27,6 +26,7 @@ const nextConfig: NextConfig = {
     },
     // The runtime stage of the Dockerfile ships the standalone output.
     output: "standalone",
+    outputFileTracingRoot: resolve(__dirname, "../../.."),
 }
 
 export default withNextIntl(nextConfig)

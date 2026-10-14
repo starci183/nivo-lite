@@ -37,7 +37,6 @@ const AUTHORIZATION_TTL_MS = 15 * 60_000
 const CALLBACK_PATH = "/connections/zalo/callback"
 /** Seven hours: a token that ends within this time is renewed when the tick carries no horizon of its own. */
 const DEFAULT_WITHIN_MS = 7 * 3_600_000
-const DEV_SITE = "http://localhost:3100"
 
 const isZaloSecret = (value: unknown): value is ZaloSecret =>
     typeof value === "object" &&
@@ -63,7 +62,7 @@ export class ZaloCredentialsService {
 
     /** The address to register on the Zalo app: Zalo sends the browser back here with code, oa_id and state. */
     callbackUrl(): string {
-        return `${this.options.siteUrl ?? DEV_SITE}${CALLBACK_PATH}`
+        return `${this.options.siteUrl}${CALLBACK_PATH}`
     }
 
     /** The credential of a connected Zalo connection, or a refusal when it is missing, disconnected or unreadable. */
