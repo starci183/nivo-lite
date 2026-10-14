@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # Cutover window, step "stop the compose model": runs ON the VPS (the workflow pipes it over ssh: `ssh vps bash -s -- --execute < retire-compose.sh`).
-# It stops the three compose projects of the previous model and removes the host crontab line of the old watchdog. It removes containers and
+# It stops the three compose projects of the previous model and retires the old watchdog file. The operator removes its host cron entry first
+# (be/docs/runbooks/cutover.md). It removes containers and
 # networks of those projects ONLY: no volume (-v is never passed), no image, no folder. The release folders ~/nivo-engine, ~/nivo-edge and
-# ~/nivo-web stay as they are, which is what restore-compose.sh needs to bring the old model back.
+# ~/nivo-web stay in place, which is what restore-compose.sh needs to bring the old model back. The watchdog is not restored.
 # Order: web, engine (api + openclaw + n8n), edge last, so the public door answers until the rest is down. The Swarm stack must be deployed right
 # after (the images were pulled and the secrets provisioned BEFORE this step, so the window is the start time of the tasks, about a minute or two).
 # Dry run unless `--execute` AND NIVO_RETIRE_COMPOSE_APPROVED=1 (the owner's go for the cutover window).
@@ -17,11 +18,13 @@ fi
 state="$(docker info --format '{{.Swarm.LocalNodeState}} {{.Swarm.ControlAvailable}}')"
 [ "$state" = "active true" ] || { echo "retire-compose: this node is not a swarm manager ($state); initialize the swarm first (vps.sh prepare --init-swarm)" >&2; exit 1; }
 
-# the old watchdog (host crontab) must not outlive the model it watched
-if crontab -l 2>/dev/null | grep -q "nivo-engine-watchdog"; then
-  echo "removing the nivo-engine-watchdog crontab line"
-  if [ "$exec_mode" = 1 ]; then crontab -l | grep -v "nivo-engine-watchdog" | crontab - || true; fi
+# Retire the executable too, so a leftover host cron entry cannot restart the compose model.
+watchdog="$HOME/nivo-engine/deploy/watchdog.sh"
+if [ -e "$watchdog" ]; then
+    [ ! -e "$watchdog.retired" ] && [ ! -L "$watchdog.retired" ] || { echo "retire-compose: $watchdog.retired already exists; preserve it and retire $watchdog manually first" >&2; exit 1; }
+    run mv "$watchdog" "$watchdog.retired"
 fi
+echo "retire-compose: the operator must remove the legacy watchdog host cron entry as documented in be/docs/runbooks/cutover.md"
 
 for project in "nivo-web:$HOME/nivo-web" "nivo-engine:$HOME/nivo-engine/deploy" "nivo-edge:$HOME/nivo-edge"; do
   name="${project%%:*}"; dir="${project#*:}"

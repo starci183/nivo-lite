@@ -47,6 +47,10 @@ Images: `npm run docker:build` builds the API and command line images; the web i
 
 Guides and runbooks live in `be/docs`: `guides` for how the system works (jobs, second brain, connecting channels, adding an agent module) and `runbooks` for operating it (cutover, VPS stack, job operations, DNS at Tino, lite baseline, migration re-stamp map).
 
+## Work
+
+The workspace record and brand references live in `.starciwork/` (`workspace.yaml` and `brand/`).
+
 ## Accounts and sessions
 
 Every person has their own sign-in (email and password, or Google) and a role in the workspace: `owner`, `manager` or `staff`. People join through an invite from the Team page; the invite link creates the account (or signs in) and accepts the membership. The account page shows the profile, password change and active sessions with per-session and "all other devices" sign-out. Invite emails go over SMTP (`SMTP_URL`); "Copy invite link" works without email.

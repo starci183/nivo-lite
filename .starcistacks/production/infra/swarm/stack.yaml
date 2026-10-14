@@ -14,7 +14,7 @@
 # (/readyz: the database answers) gates traffic at the ingress (Traefik health check in routes.yml) and the deploy acceptance, never a restart.
 # Stateful services update stop-first (one writer per volume); stateless ones start-first with rollback on failure.
 
-x-logging: &logging
+x-logging:
   driver: json-file
   options: { max-size: "10m", max-file: "5" }
 
@@ -51,12 +51,22 @@ services:
       - acme:/acme
     networks: [edge]
     healthcheck:
-      test: ["CMD", "traefik", "healthcheck", "--ping", "--ping.entryPoint=ping", "--entrypoints.ping.address=127.0.0.1:8082"]
+      test:
+        [
+          "CMD",
+          "traefik",
+          "healthcheck",
+          "--ping",
+          "--ping.entryPoint=ping",
+          "--entrypoints.ping.address=127.0.0.1:8082",
+        ]
       interval: 15s
       timeout: 5s
       retries: 4
       start_period: 20s
-    logging: *logging
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "5" }
     deploy:
       replicas: 1
       placement: { constraints: [node.role == manager] }
@@ -76,16 +86,25 @@ services:
       edge:
         aliases: [nivo-web]
     healthcheck:
-      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/health/live',{signal:AbortSignal.timeout(4000)}).then(r=>process.exit(r.status<500?0:1)).catch(()=>process.exit(1))"]
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:3000/health/live',{signal:AbortSignal.timeout(4000)}).then(r=>process.exit(r.status<500?0:1)).catch(()=>process.exit(1))",
+        ]
       interval: 15s
       timeout: 5s
       retries: 3
       start_period: 40s
-    logging: *logging
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "5" }
     deploy:
       replicas: 1
       resources: { limits: { memory: 600M } }
-      update_config: { parallelism: 1, order: start-first, failure_action: rollback, monitor: 30s, max_failure_ratio: 0, delay: 5s }
+      update_config:
+        { parallelism: 1, order: start-first, failure_action: rollback, monitor: 30s, max_failure_ratio: 0, delay: 5s }
       rollback_config: { parallelism: 1, order: start-first, monitor: 30s }
       restart_policy: { condition: any, delay: 5s }
 
@@ -101,18 +120,27 @@ services:
       - openclaw-data:/openclaw-state
       - video-cache:/var/cache/nivo-video # voiceover clips by text hash: re-rendering the same script costs no TTS call
     healthcheck:
-      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:'+process.env.PORT+'/healthz',{signal:AbortSignal.timeout(4000)}).then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:'+process.env.PORT+'/healthz',{signal:AbortSignal.timeout(4000)}).then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
       interval: 15s
       timeout: 5s
       retries: 3
       start_period: 60s
     stop_grace_period: 45s # running jobs finish or are handed back to the queue before the task stops
-    logging: *logging
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "5" }
     deploy:
       replicas: 1
       # openclaw-data and video-cache are single-host volumes: the placement is explicit, a replica is not high availability.
       placement: { constraints: [node.role == manager] }
-      update_config: { parallelism: 1, order: start-first, failure_action: rollback, monitor: 45s, max_failure_ratio: 0, delay: 5s }
+      update_config:
+        { parallelism: 1, order: start-first, failure_action: rollback, monitor: 45s, max_failure_ratio: 0, delay: 5s }
       rollback_config: { parallelism: 1, order: start-first, monitor: 45s }
       restart_policy: { condition: any, delay: 5s }
 
@@ -131,13 +159,21 @@ services:
       - openclaw-data:/home/node/.openclaw
     networks: [agents]
     healthcheck:
-      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:18790/health',{signal:AbortSignal.timeout(4000)}).then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:18790/health',{signal:AbortSignal.timeout(4000)}).then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
       interval: 15s
       timeout: 5s
       retries: 5
       start_period: 60s
     stop_grace_period: 30s
-    logging: *logging
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "5" }
     deploy:
       replicas: 1
       placement: { constraints: [node.role == manager] }
@@ -173,7 +209,9 @@ services:
       timeout: 5s
       retries: 5
       start_period: 60s
-    logging: *logging
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "5" }
     deploy:
       replicas: 1
       placement: { constraints: [node.role == manager] }

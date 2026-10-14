@@ -1,0 +1,115 @@
+# NIVO local development: Supabase stays under the Supabase CLI; this Swarm runs the be and fe.
+# Build the two images from the repository root before deploying (Swarm never builds images):
+#   docker build -f be/apps/api/Dockerfile -t <registry>/nivo-lite-api:dev .
+#   docker build -f fe/apps/web/Dockerfile -t <registry>/nivo-lite-web:dev \
+#     --build-arg NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321 --build-arg NEXT_PUBLIC_SUPABASE_ANON_KEY \
+#     --build-arg NEXT_PUBLIC_API_URL=http://localhost:8787 \
+#     --build-arg NEXT_PUBLIC_DEVELOPER_API_URL=http://localhost:8787 \
+#     --build-arg NEXT_PUBLIC_SITE_URL=http://localhost:3000 .
+# Push both images and export their digest references as NIVO_DEV_API_IMAGE and NIVO_DEV_WEB_IMAGE.
+# With Supabase running, supply the same local api.dev.env as before, then deploy from the root:
+#   docker stack config -c .starcistacks/dev/infra/swarm/stack.yaml | docker stack deploy -c - nivo-dev
+# The sole ingress preserves http://localhost:8787 (api) and http://localhost:3000 (web).
+# Use a local single-manager Swarm; the Supabase URLs must be reachable from its containers.
+version: "3.8"
+
+services:
+  api:
+    image: ${NIVO_DEV_API_IMAGE:?export the built API image pinned by its registry sha256 digest}
+    env_file:
+      - ../../api.dev.env
+    environment:
+      PORT: "8787"
+      PRIMARY_DB_SCHEMA: public
+      SITE_URL: http://localhost:3000
+      HTTP_SECURITY_ALLOWED_ORIGINS: http://localhost:3000,http://127.0.0.1:3000
+      QUEUE_ENABLED: "true"
+    extra_hosts:
+      - host.docker.internal:host-gateway
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:8787/healthz').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+    deploy:
+      replicas: 1
+      labels:
+        traefik.enable: "true"
+        traefik.http.routers.dev-api.entrypoints: api
+        traefik.http.routers.dev-api.rule: PathPrefix(`/`)
+        traefik.http.routers.dev-api.service: dev-api
+        traefik.http.services.dev-api.loadbalancer.server.port: "8787"
+      update_config: { order: start-first, failure_action: rollback, monitor: 60s }
+      rollback_config: { order: start-first, monitor: 60s }
+      restart_policy: { condition: any, delay: 5s }
+
+  web:
+    image: ${NIVO_DEV_WEB_IMAGE:?export the built web image pinned by its registry sha256 digest}
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:3000/health/live').then(r=>process.exit(r.status<500?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+    deploy:
+      replicas: 1
+      labels:
+        traefik.enable: "true"
+        traefik.http.routers.dev-web.entrypoints: web
+        traefik.http.routers.dev-web.rule: PathPrefix(`/`)
+        traefik.http.routers.dev-web.service: dev-web
+        traefik.http.services.dev-web.loadbalancer.server.port: "3000"
+      update_config: { order: start-first, failure_action: rollback, monitor: 60s }
+      rollback_config: { order: start-first, monitor: 60s }
+      restart_policy: { condition: any, delay: 5s }
+
+  ingress:
+    image: traefik:v3.6@sha256:31267173a15b4944e797a76ffd9c419707c8d8b32fe5b610f80cd0cfa05f372d
+    command:
+      - --providers.swarm.endpoint=unix:///var/run/docker.sock
+      - --providers.swarm.exposedbydefault=false
+      - --providers.swarm.network=nivo-dev_default
+      - --entrypoints.api.address=:8787
+      - --entrypoints.web.address=:3000
+      - --ping=true
+      - --ping.entryPoint=ping
+      - --entrypoints.ping.address=127.0.0.1:8082
+      - --api.dashboard=false
+    ports:
+      - { target: 8787, published: 8787, protocol: tcp, mode: host }
+      - { target: 3000, published: 3000, protocol: tcp, mode: host }
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "traefik",
+          "healthcheck",
+          "--ping",
+          "--ping.entryPoint=ping",
+          "--entrypoints.ping.address=127.0.0.1:8082",
+        ]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    deploy:
+      replicas: 1
+      placement: { constraints: [node.role == manager] }
+      update_config: { order: stop-first, failure_action: rollback, monitor: 30s }
+      rollback_config: { order: stop-first, monitor: 30s }
+      restart_policy: { condition: any, delay: 5s }

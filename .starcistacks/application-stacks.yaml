@@ -1,6 +1,6 @@
 # NIVO (nivo-lite) application stack, schema starci/application-stacks@1.
 #
-# dev        docker-compose: the local Supabase (supabase CLI) with the be and the fe in containers.
+# dev        docker-swarm: the local Supabase (supabase CLI) with the be and the fe in containers.
 # production docker-swarm on ONE Ubuntu VPS (single-manager swarm: orchestration without manager failover). The Supabase Cloud project is the
 #            external datastore. Runbook: .starcistacks/production/README.md (the seven commands, the release flow, the cutover window).
 #
@@ -18,10 +18,6 @@ schema: starci/application-stacks@1
 sources:
   - repository: nivo-lite
 components:
-  supabase:
-    role: stateful
-    purpose: The local Supabase stack (supabase start) with Postgres, Auth, Storage, Studio. Started by the Supabase CLI, not by the compose file; production uses the Supabase Cloud project instead.
-    required: true
   api:
     role: service
     image: ghcr.io/starci183/nivo-lite-api
@@ -38,7 +34,7 @@ components:
     role: ingress
     image: traefik:v3.6@sha256:31267173a15b4944e797a76ffd9c419707c8d8b32fe5b610f80cd0cfa05f372d
     compose: infra/swarm/stack.yaml
-    purpose: Traefik (declared ingress; owner ruling 2026-10-14 keeps it, it is live and holds the persisted certificates), the only service that publishes ports (80/443, host mode). TLS for nivo.vn, www.nivo.vn and api.nivo.vn; routes in infra/swarm/edge/routes.yml.
+    purpose: Traefik, the only service that publishes ports (8787/3000 locally; 80/443 in production). Production retains its persisted certificates and routes in infra/swarm/edge/routes.yml.
     required: true
   openclaw:
     role: stateful
@@ -52,22 +48,30 @@ components:
     compose: infra/swarm/stack.yaml
     purpose: n8n automation editor and webhook runner; private (operator tunnel only), reached by the api as n8n:5678. Its database is SQLite (DB_TYPE=sqlite) on the persisted named volume nivo-engine_n8n-data; no self-hosted Postgres (owner ruling 2026-10-14).
     required: true
+backing:
+  supabase:
+    provider: supabase
+    managed: true
 environments:
   dev:
     status: supported
-    runtime: docker-compose
+    runtime: docker-swarm
     composeFiles:
-      - compose.yaml
+      - infra/swarm/stack.yaml
     components:
-      supabase:
-        port: 54321
       api:
+        replicas: 1
         port: 8787
       web:
+        replicas: 1
         port: 3000
+      ingress:
+        replicas: 1
+        port: 3000
+        httpPort: 8787
     runbook: README.md
-    # Local development holds no sealed secret: the local Supabase prints its own demo credentials (`supabase status -o env`), which
-    # `README.md` prepare writes to the untracked .starcistacks/dev/api.dev.env.
+    # Local development holds no sealed secret: the Supabase CLI owns the local backing stack and the operator supplies its
+    # development configuration through the untracked .starcistacks/dev/api.dev.env. It is not a deployed Swarm component.
     secrets: []
   production:
     status: supported
@@ -135,61 +139,54 @@ environments:
         keyCustody: The age identity is SOPS_AGE_KEY in the runtime .claude/secret.env on the owner machine.
 k8s:
   status: deferred
-  reason: Whole-package Kubernetes deployment is deferred; production is a single-manager Docker Swarm on one VPS, dev is Docker Compose.
-# The services block is NOT active yet. CI calls sonar and ghcr, and the gate (scripts/gates/starcistacks.mjs) refuses a sonar entry whose admin
-# credential is not in custody (the host sonar admin token .enc is not on this machine), so activating it is the planned follow-up
-# workspace.manage mode stacks: a Kernel seals/verifies the sonar custody, then uncomment the block below as is (container-registry is complete).
-# services:
-#   container-registry:
-#     provider: ghcr
-#     mode: hosted
-#     purpose: The api and web images of every release, pushed by the stack-deploy workflow; the Swarm deploy pulls them by digest with --with-registry-auth.
-#     host:
-#       public: https://ghcr.io
-#     auth: github-token
-#     projects:
-#       - {repository: nivo-lite, key: ghcr.io/starci183/nivo-lite-api}
-#       - {repository: nivo-lite, key: ghcr.io/starci183/nivo-lite-web}
-#     ci:
-#       workflow: .github/workflows/stack-deploy.yml
-#       wiring: required
-#       permissions: ['packages: write']
-#       secrets: []
-#       vars: []
-#       provisioning: >-
-#         docker/login-action with the automatic GITHUB_TOKEN of the workflow; nothing is stored. The packages are private. The deploy job passes the same short-lived
-#         token to the Swarm manager with docker stack deploy --with-registry-auth (packages: write on the build, packages: read on a rollback).
-#     ownerAction: none
-#   sonar:
-#     provider: sonarqube
-#     mode: local
-#     purpose: Static analysis and the quality gate for every commit an implement op proves; CI scans on release tags when the project token exists.
-#     host:
-#       local: http://localhost:9010
-#       public: https://sonar.starci.org
-#     stack:
-#       owner: host
-#       root: .claude/ext/sonar
-#       environment: dev
-#       compose: compose.yaml
-#       container: starci-sonarqube
-#       publishedBy: cloudflared.yaml
-#     auth: token
-#     qualityGate: starci-quality
-#     projects:
-#       - {repository: nivo-lite, key: nivo-lite}
-#     credentials:
-#       - id: admin
-#         purpose: Project creation and per-project token minting by scripts/gates/sonar-local.mjs (ensure-project --with-token); never handed to CI.
-#         env: SONAR_TOKEN
-#         custody: {repository: starci-academy-backend, path: .claude/ext/sonar/secrets/sonarqube-admin-token.key}
-#     ci:
-#       workflow: .github/workflows/ci.yml
-#       wiring: optional-follow-up
-#       secrets: []
-#       vars:
-#         - {name: SONAR_HOST_URL, value: https://sonar.starci.org}
-#       provisioning: >-
-#         ci.yml scans on release tags only when the repository secret SONAR_TOKEN exists; a Kernel mints the nivo-lite project token with the admin
-#         credential (sonar-local.mjs ensure-project --with-token) and sets SONAR_TOKEN and the variable SONAR_HOST_URL from custody; never the owner.
-#     ownerAction: none
+  reason: Whole-package Kubernetes deployment is deferred; production is a single-manager Docker Swarm on one VPS, and dev uses a local Docker Swarm with Supabase CLI backing.
+# Ownership is declared here; this does not provision Sonar or change the conditional CI scan.
+services:
+  #   container-registry:
+  #     provider: ghcr
+  #     mode: hosted
+  #     purpose: The api and web images of every release, pushed by the stack-deploy workflow; the Swarm deploy pulls them by digest with --with-registry-auth.
+  #     host:
+  #       public: https://ghcr.io
+  #     auth: github-token
+  #     projects:
+  #       - {repository: nivo-lite, key: ghcr.io/starci183/nivo-lite-api}
+  #       - {repository: nivo-lite, key: ghcr.io/starci183/nivo-lite-web}
+  #     ci:
+  #       workflow: .github/workflows/stack-deploy.yml
+  #       wiring: required
+  #       permissions: ['packages: write']
+  #       secrets: []
+  #       vars: []
+  #       provisioning: >-
+  #         docker/login-action with the automatic GITHUB_TOKEN of the workflow; nothing is stored. The packages are private. The deploy job passes the same short-lived
+  #         token to the Swarm manager with docker stack deploy --with-registry-auth (packages: write on the build, packages: read on a rollback).
+  #     ownerAction: none
+  sonar:
+    provider: sonarqube
+    mode: local
+    purpose: Static analysis and the quality gate; CI scans on release tags when the project token exists.
+    host:
+      local: http://localhost:9010
+      public: https://sonar.starci.org
+    stack:
+      owner: host
+      root: .claude/ext/sonar
+      environment: dev
+      compose: compose.yaml
+      container: starci-sonarqube
+      publishedBy: cloudflared.yaml
+    auth: token
+    qualityGate: starci-quality
+    projects:
+      - { repository: nivo-lite, key: nivo-lite }
+    ci:
+      workflow: .github/workflows/ci.yml
+      wiring: optional-follow-up
+      secrets: []
+      vars:
+        - { name: SONAR_HOST_URL, value: https://sonar.starci.org }
+      provisioning: >-
+        ci.yml scans on release tags only when SONAR_TOKEN exists. The host owns Sonar provisioning and token custody;
+        declaring its ownership here does not create credentials or enable scanning.
+    ownerAction: none

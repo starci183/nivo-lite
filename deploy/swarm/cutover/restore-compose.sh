@@ -26,7 +26,6 @@ docker network inspect nivo-edge >/dev/null 2>&1 || run docker network create ni
 run bash -c "cd '$HOME/nivo-engine/deploy' && docker compose --env-file .env up -d"
 run bash -c "cd '$HOME/nivo-web' && WEB_TAG=\"\$(cat .tag)\" docker compose up -d"
 run bash -c "cd '$HOME/nivo-edge' && docker compose up -d"
-if [ -x "$HOME/nivo-engine/deploy/watchdog.sh" ] && [ "$exec_mode" = 1 ]; then
-  { crontab -l 2>/dev/null | grep -v "nivo-engine-watchdog" || true; echo "* * * * * $HOME/nivo-engine/deploy/watchdog.sh # nivo-engine-watchdog"; } | crontab -
-fi
+# The legacy host watchdog stays retired even when the compose model is restored.
+echo "restore-compose: the legacy host watchdog remains retired; monitor the restored compose services manually"
 echo "restore-compose: done$([ "$exec_mode" = 1 ] || echo ' (dry run)')"
