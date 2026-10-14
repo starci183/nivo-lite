@@ -1,3 +1,5 @@
+"use client"
+
 import type { SWRConfiguration } from "swr"
 import { queryVideoScriptStatus } from "@/modules/api/graphql/queries/query-video-script-status"
 import { useWorkspaceJobSwr } from "@/hooks/reuseables"

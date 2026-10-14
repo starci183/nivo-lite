@@ -1,3 +1,5 @@
+"use client"
+
 import useSWR from "swr"
 import { queryNivoKnowledge } from "@/modules/api/graphql/queries/query-nivo-knowledge"
 

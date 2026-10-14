@@ -1,3 +1,5 @@
+"use client"
+
 import useSWR from "swr"
 import { queryDriveGrant } from "@/modules/api/graphql/queries/query-drive-grant"
 

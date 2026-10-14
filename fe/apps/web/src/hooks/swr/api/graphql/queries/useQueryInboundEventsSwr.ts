@@ -1,3 +1,5 @@
+"use client"
+
 import useSWR from "swr"
 import { queryInboundEvents } from "@/modules/api/graphql/queries/query-inbound-events"
 

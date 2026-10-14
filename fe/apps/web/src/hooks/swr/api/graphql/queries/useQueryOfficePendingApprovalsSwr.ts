@@ -1,3 +1,5 @@
+"use client"
+
 import useSWR from "swr"
 import type { SWRConfiguration } from "swr"
 import { queryOfficePendingApprovals } from "@/modules/api/graphql/queries/query-office-pending-approvals"

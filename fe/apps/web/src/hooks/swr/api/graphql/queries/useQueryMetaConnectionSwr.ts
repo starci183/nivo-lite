@@ -1,3 +1,5 @@
+"use client"
+
 import { useKeyedQuerySwr } from "@/hooks/reuseables"
 import type { SWRConfiguration } from "swr"
 import { queryMetaConnection } from "@/modules/api/graphql/queries/query-meta-connection"

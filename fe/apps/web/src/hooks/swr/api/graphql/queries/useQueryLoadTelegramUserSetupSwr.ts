@@ -1,3 +1,5 @@
+"use client"
+
 import { useKeyedQuerySwr } from "@/hooks/reuseables"
 import type { SWRConfiguration } from "swr"
 import { queryLoadTelegramUserSetup } from "@/modules/api/graphql/queries/query-load-telegram-user-setup"

@@ -1,3 +1,5 @@
+"use client"
+
 import useSWR from "swr"
 import { queryConnectionAgents } from "@/modules/api/graphql/queries/query-connection-agents"
 

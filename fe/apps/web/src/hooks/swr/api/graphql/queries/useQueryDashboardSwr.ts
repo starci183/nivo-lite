@@ -1,3 +1,5 @@
+"use client"
+
 import useSWR from "swr"
 import { queryDashboard } from "@/modules/api/graphql/queries/query-dashboard"
 

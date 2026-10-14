@@ -1,3 +1,5 @@
+"use client"
+
 import useSWR from "swr"
 import { queryCreditRecentCostUsd } from "@/modules/api/graphql/queries/query-credit-recent-cost-usd"
 

@@ -1,3 +1,5 @@
+"use client"
+
 import useSWR from "swr"
 import { queryPromoChatbotState } from "@/modules/api/graphql/queries/query-promo-chatbot-state"
 

@@ -1,3 +1,5 @@
+"use client"
+
 import useSWR from "swr"
 import { useWorkspaceKey } from "@/hooks/workspaceKey"
 import { queryKnowledgeSource } from "@/modules/api/graphql/queries/query-knowledge-source"

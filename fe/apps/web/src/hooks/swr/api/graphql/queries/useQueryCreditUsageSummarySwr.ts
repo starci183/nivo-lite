@@ -1,3 +1,5 @@
+"use client"
+
 import useSWR from "swr"
 import { queryCreditUsageSummary } from "@/modules/api/graphql/queries/query-credit-usage-summary"
 

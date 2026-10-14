@@ -1,3 +1,5 @@
+"use client"
+
 import useSWR from "swr"
 import { queryWorkspaceMembers } from "@/modules/api/graphql/queries/query-workspace-members"
 

@@ -1,3 +1,5 @@
+"use client"
+
 import useSWR from "swr"
 import { queryPublicLoyaltyPage } from "@/modules/api/graphql/queries/query-public-loyalty-page"
 import type { QueryPublicLoyaltyPageRequest } from "@/modules/api/graphql/queries/types/public-loyalty-page"

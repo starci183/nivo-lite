@@ -1,3 +1,5 @@
+"use client"
+
 import useSWR from "swr"
 import type { SWRConfiguration } from "swr"
 import { queryLoadOpenApiSpec } from "@/modules/api/graphql/queries/query-load-open-api-specification"

@@ -1,3 +1,5 @@
+"use client"
+
 import useSWR from "swr"
 import { queryLoyaltyBoard } from "@/modules/api/graphql/queries/query-loyalty-board"
 

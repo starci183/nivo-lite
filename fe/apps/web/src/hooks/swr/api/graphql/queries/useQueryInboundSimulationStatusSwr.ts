@@ -1,3 +1,5 @@
+"use client"
+
 import useSWR from "swr"
 import type { InboundSimulationStatusType } from "@/modules/api"
 import { queryInboundSimulationStatus } from "@/modules/api/graphql/queries/query-inbound-simulation-status"

@@ -1,3 +1,5 @@
+"use client"
+
 import useSWR from "swr"
 import { queryLeadGenWorkbench } from "@/modules/api/graphql/queries/query-lead-gen-workbench"
 import { toLeadGenWorkbenchData } from "@/modules/utils"

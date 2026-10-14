@@ -1,3 +1,5 @@
+"use client"
+
 import useSWR from "swr"
 import { queryChatbotOverview } from "@/modules/api/graphql/queries/query-chatbot-overview"
 

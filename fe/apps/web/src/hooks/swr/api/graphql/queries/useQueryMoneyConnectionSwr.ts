@@ -1,3 +1,5 @@
+"use client"
+
 import { useKeyedQuerySwr } from "@/hooks/reuseables"
 import type { SWRConfiguration } from "swr"
 import { queryMoneyConnection } from "@/modules/api/graphql/queries/query-money-connection"

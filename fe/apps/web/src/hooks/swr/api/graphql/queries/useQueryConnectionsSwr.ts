@@ -1,3 +1,5 @@
+"use client"
+
 import useSWR from "swr"
 import { queryConnections } from "@/modules/api/graphql/queries/query-connections"
 
