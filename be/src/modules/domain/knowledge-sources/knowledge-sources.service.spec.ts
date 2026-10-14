@@ -17,6 +17,7 @@ import { KnowledgeSourcesLogEvent } from "./knowledge-sources.log-events"
 import { KnowledgeSourcesService } from "./knowledge-sources.service"
 import type { KnowledgeSourcesRow } from "./persistence/knowledge-sources.rows"
 import {
+    COUNT_READABLE_SOURCES,
     DELETE_SOURCE,
     INSERT_SOURCE,
     MARK_BLOCKED,
@@ -46,6 +47,7 @@ const build = async (em: MockEntityManager) => {
     const queue = mock<KnowledgeQueue>()
     const storage = mock<SupabaseObjectsPort>()
     const logger = mock<Logger>()
+    const entitlements = mock<EntitlementsService>()
     const moduleRef = await Test.createTestingModule({
         providers: [
             KnowledgeSourcesService,
@@ -54,7 +56,7 @@ const build = async (em: MockEntityManager) => {
             { provide: KNOWLEDGE_STORAGE, useValue: storage },
             { provide: WorkspaceMembersService, useValue: members },
             { provide: KnowledgeQueue, useValue: queue },
-            { provide: EntitlementsService, useValue: mock<EntitlementsService>() },
+            { provide: EntitlementsService, useValue: entitlements },
             { provide: LOGGER, useValue: logger },
         ],
     }).compile()
@@ -62,6 +64,22 @@ const build = async (em: MockEntityManager) => {
 }
 
 describe("KnowledgeSourcesService", () => {
+    it("counts documents allowed for each audience and defaults an absent count to zero", async () => {
+        const em = mockEntityManager({ query: [COUNT_READABLE_SOURCES, [{ count: 3 }]] })
+        const { service } = await build(em)
+        const scope = { workspaceId: WS, module: "chatbot", installationId: null, audience: "customer" as const }
+
+        await expect(service.countReadable(scope, "internal")).resolves.toBe(0)
+        await expect(service.countReadable(scope, "public")).resolves.toBe(3)
+        await expect(service.countReadable({ ...scope, audience: "internal" }, "internal")).resolves.toBe(3)
+        em.query.mockResolvedValueOnce([])
+        await expect(service.countReadable(scope, "public")).resolves.toBe(0)
+
+        expect(em.query).toHaveBeenCalledTimes(3)
+        expect(em.query).toHaveBeenCalledWith(COUNT_READABLE_SOURCES, [WS, "chatbot", null, "public"])
+        expect(em.query).toHaveBeenCalledWith(COUNT_READABLE_SOURCES, [WS, "chatbot", null, "internal"])
+    })
+
     describe("addSource", () => {
         it("writes the queued source and its indexing job in one transaction after proving the caller manages the workspace", async () => {
             const tx = fakeTransaction(mockEntityManager({ query: [INSERT_SOURCE, [{ id: "s1" }]] }))

@@ -163,4 +163,35 @@ describe("GreetProspectPerformerService", () => {
         expect(kit.dmOrExplain).toHaveBeenCalledTimes(1)
         expect(store.patch).not.toHaveBeenCalled()
     })
+
+    it("uses the plain greeting for an unnamed prospect and preserves an existing draft", async () => {
+        const { performer, kit } = await build(flowOf({ name: null }))
+
+        await expect(performer.prepare(ctx, itemOf())).resolves.toEqual({
+            proposal: { summary: "greet.summary", fields: {}, draft: "line.greet" },
+        })
+        await expect(
+            performer.prepare(ctx, itemOf({ proposal: { summary: "", fields: {}, draft: "Welcome back" } })),
+        ).resolves.toEqual({
+            proposal: { summary: "greet.summary", fields: {}, draft: "Welcome back" },
+        })
+
+        expect(kit.text).toHaveBeenCalledWith("en", "line.greet")
+    })
+
+    it("preserves qualifying state when a greeting proposal has no draft", async () => {
+        const flow = flowOf({ state: "qualifying" })
+        const { performer, kit, store } = await build(flow)
+        kit.dmOrExplain.mockResolvedValue({ sent: true, line: "" })
+
+        await expect(performer.perform(ctx, itemOf(), { summary: "", fields: {} })).resolves.toEqual({
+            summary: "greet.done",
+            evidence: "captured",
+            lead_id: "lead-1",
+            detail: "",
+        })
+
+        expect(kit.dmOrExplain).toHaveBeenCalledWith(ctx, itemOf(), flow, "", true)
+        expect(store.patch).toHaveBeenCalledWith(flow, { state: "qualifying", greeted_at: NOW })
+    })
 })

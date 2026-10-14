@@ -6,6 +6,7 @@ import type { ChunkDraft } from "./knowledge-chunks.contracts"
 import {
     DELETE_CHUNKS,
     INSERT_CHUNKS,
+    LIST_PASSAGES,
     SELECT_EMBEDDED_CHUNKS,
     SELECT_STALE_CHUNKS,
     UPDATE_CHUNK_VECTORS,
@@ -118,6 +119,28 @@ describe("KnowledgeChunksService", () => {
             await service.replace(write([]))
 
             expect(tx.em.query).not.toHaveBeenCalledWith(INSERT_CHUNKS, expect.anything())
+        })
+    })
+
+    describe("passagesOf", () => {
+        it("returns the ordered passage content and embedding flags for the requested source", async () => {
+            const em = mockEntityManager({
+                query: [
+                    LIST_PASSAGES,
+                    [
+                        { id: "c1", ord: 0, content: "Tea", has_embedding: true },
+                        { id: "c2", ord: 1, content: "Coffee", has_embedding: false },
+                    ],
+                ],
+            })
+            const service = await build(em)
+
+            await expect(service.passagesOf(WS, "s1")).resolves.toEqual([
+                { id: "c1", order: 0, content: "Tea", hasEmbedding: true },
+                { id: "c2", order: 1, content: "Coffee", hasEmbedding: false },
+            ])
+
+            expect(em.query).toHaveBeenCalledWith(LIST_PASSAGES, [WS, "s1"])
         })
     })
 

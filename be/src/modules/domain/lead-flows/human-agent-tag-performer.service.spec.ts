@@ -159,4 +159,16 @@ describe("HumanAgentTagPerformerService", () => {
 
         expect(kit.metaRefused).toHaveBeenCalledWith("not_connected")
     })
+
+    it("passes an empty draft and reports the Meta failure detail", async () => {
+        const { performer, kit } = await build()
+        kit.dm.mockResolvedValue({ ok: false, reason: "failed", detail: "expired token" })
+
+        await expect(performer.perform(ctx, itemOf(), { summary: "", fields: {} })).rejects.toEqual(
+            new LeadFlowsError({ code: LeadFlowsErrorCode.MetaRefused, params: { failure: "expired token" } }),
+        )
+
+        expect(kit.dm).toHaveBeenCalledWith(ctx, flowOf(), "", true)
+        expect(kit.metaRefused).toHaveBeenCalledWith("expired token")
+    })
 })
