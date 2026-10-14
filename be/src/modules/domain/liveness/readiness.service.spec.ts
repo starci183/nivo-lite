@@ -166,6 +166,31 @@ describe("ReadinessService", () => {
         })
 
         it.each([
+            [null, "Cannot read properties of null (reading '0')"],
+            [undefined, "Cannot read properties of undefined (reading '0')"],
+        ])("wraps an invalid %s job query result in the unavailable error", async (rows, causeMessage) => {
+            const entityManager = mockEntityManager()
+            entityManager.query.mockResolvedValueOnce(DATABASE_ROWS).mockResolvedValueOnce(rows)
+            const { readiness, logger } = await build(entityManager)
+
+            const check = readiness.check()
+
+            await expect(check).rejects.toBeInstanceOf(LivenessError)
+            await expect(check).rejects.toMatchObject({ code: LivenessErrorCode.ReadinessUnavailable })
+            await expect(check).rejects.toHaveProperty("params", {})
+            await expect(check).rejects.toHaveProperty("cause", expect.any(TypeError))
+            await expect(check).rejects.toHaveProperty("cause.message", causeMessage)
+            expect(entityManager.query).toHaveBeenCalledTimes(2)
+            expect(entityManager.query).toHaveBeenCalledWith(CHECK_READINESS_DATABASE)
+            expect(entityManager.query).toHaveBeenCalledWith(CHECK_READINESS_JOBS)
+            expect(logger.error).toHaveBeenCalledTimes(1)
+            expect(logger.error).toHaveBeenCalledWith(
+                ReadinessLogEvent.CheckFailed,
+                expect.objectContaining({ name: "TypeError", message: causeMessage }),
+            )
+        })
+
+        it.each([
             ["database", 0],
             ["job statistics", 1],
         ])("times out the %s query at three seconds", async (_dependency, timedOutQuery) => {
