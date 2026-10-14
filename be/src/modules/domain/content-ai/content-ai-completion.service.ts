@@ -137,7 +137,7 @@ export class ContentAiCompletionService {
         context: Record<string, unknown>,
         tx: EntityManager,
     ): Promise<Record<string, unknown>> {
-        const state = await this.generations.state(root.workspaceId, idsOf(context).slice(0, 1).join(""), tx)
+        const state = await this.generations.state(root.workspaceId, idsOf(context)[0] ?? root.id, tx)
         const parsed = parseContentJson(state?.text ?? "")
         if (parsed === null) throw new ContentAiError({ code: ContentAiErrorCode.InvalidAnswer })
         await this.requireDrafting(root.workspaceId)
@@ -174,9 +174,10 @@ export class ContentAiCompletionService {
                 ),
                 media: [
                     ...item.media.filter((file) => !file.suggested),
-                    ...picked.flatMap((number) =>
-                        library.slice(number - 1, number).map((file) => ({ ...file, suggested: true })),
-                    ),
+                    ...picked.flatMap((number) => {
+                        const file = library[number - 1]
+                        return file === undefined ? [] : [{ ...file, suggested: true }]
+                    }),
                 ],
                 channels: [...new Set([...item.channels, ...channels])],
                 ...(pillar === undefined ? {} : { pillarId: trimmedText(pillar.id) }),

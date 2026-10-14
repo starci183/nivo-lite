@@ -191,6 +191,23 @@ describe("OpenApiSyncService", () => {
         expect(client.call).toHaveBeenCalledTimes(1)
     })
 
+    it("discards a malformed stored link while preserving the saved page", async () => {
+        const paged = operation({ params: [{ name: "page", in: "query", required: false }] })
+        const { service, client, context } = await build(config({ ops: [paged] }), {
+            "cursor.customers": JSON.stringify({ page: 3, link: "://broken" }),
+        })
+        client.call.mockResolvedValue({ status: 200, headers: {}, text: '{"items":[]}' })
+        await expect(service.sync(context)).resolves.toEqual({ rows: 0, meta: { "cursor.customers": "" } })
+        expect(client.call).toHaveBeenCalledWith({
+            baseUrl: "https://owner.example/api",
+            op: paged,
+            auth,
+            input: { page: 4 },
+            fixedQuery: "active=true",
+        })
+        expect(context.upsert).not.toHaveBeenCalled()
+    })
+
     it("reports unstarted operations when the time budget has already expired", async () => {
         const { service, client, context } = await build()
         context.isExpired.mockReturnValue(true)

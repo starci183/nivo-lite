@@ -1,5 +1,6 @@
 import { Test } from "@nestjs/testing"
 import { builder, mock } from "@starci/jest-preset"
+import type { AgentProfile } from "@modules/domain/agents"
 import { BusinessEventsService } from "@modules/domain/automations"
 import { WORK_PERFORMER_REGISTRY } from "@modules/domain/decisions"
 import type { WorkContext, WorkItem, WorkPerformerRegistry } from "@modules/domain/decisions"
@@ -10,6 +11,7 @@ import { ResponsibilityJournalService } from "@modules/domain/responsibilities"
 import { CaptureLeadPerformerService } from "./capture-lead-performer.service"
 import { LeadFlowsError, LeadFlowsErrorCode } from "./errors/lead-flows.error"
 import { LeadFlowConversationService } from "./lead-flow-conversation.service"
+import type { FlowFields } from "./lead-flow-fields.policy"
 import { LeadFlowKitService } from "./lead-flow-kit.service"
 import { LeadFlowMetaService } from "./lead-flow-meta.service"
 import { LeadFlowStoreService } from "./lead-flow-store.service"
@@ -146,6 +148,7 @@ const build = async (flow: LeadFlow = flowOf({ phone: "84912345678", psid: null 
     store.requireByLead.mockResolvedValue(flow)
     kit.sourceLine.mockReturnValue("Facebook form")
     const leads = mock<LeadRecordsService>()
+    leads.capture.mockResolvedValue(leadOf())
     const inbound = mock<InboundEventsService>()
     const responsibilities = mock<ResponsibilityJournalService>()
     const events = mock<BusinessEventsService>()
@@ -169,6 +172,7 @@ const build = async (flow: LeadFlow = flowOf({ phone: "84912345678", psid: null 
         registry,
         kit,
         store,
+        transcript,
         leads,
         inbound,
         responsibilities,
@@ -264,5 +268,230 @@ describe("CaptureLeadPerformerService", () => {
         )
 
         expect(store.patch).not.toHaveBeenCalled()
+    })
+
+    const captured = { summary: "capture.done", evidence: "captured", lead_id: "lead-1", detail: null }
+    const merged = { ...captured, summary: "capture.merged" }
+
+    it("uses source defaults without identity, and explicit details with email identity", async () => {
+        const { performer, leads, kit } = await build()
+        leads.capture.mockResolvedValue(leadOf())
+        leads.match.mockResolvedValue(null)
+        await expect(performer.prepare(ctx, itemOf())).resolves.toEqual({
+            proposal: { summary: "capture.summary", fields: {} },
+        })
+        expect(kit.text).toHaveBeenCalledWith("en", "capture.summary", {
+            name: "guest.facebook",
+            source: "Facebook form",
+        })
+        await expect(performer.perform(ctx, itemOf(), { summary: "", fields: {} })).resolves.toEqual(captured)
+        expect(leads.match).not.toHaveBeenCalled()
+        expect(leads.capture).toHaveBeenLastCalledWith({
+            workspaceId: "ws-1",
+            contactName: "guest.facebook",
+            company: "not-shared",
+            channel: "channel.lead-ads",
+            need: "Facebook form",
+            phone: null,
+            email: null,
+            origin: "live",
+        })
+        expect(kit.log).toHaveBeenCalledWith(
+            ctx,
+            { lead_id: "lead-1" },
+            "item-1",
+            "lead.captured",
+            "capture.created",
+            "want tea",
+        )
+        const incoming = {
+            contact_name: "Minh",
+            company: "Tea Shop",
+            channel_label: "Owner channel",
+            need: "Owner need",
+            email: "minh@example.com",
+        }
+        await expect(performer.perform(ctx, itemOf(), { summary: "", fields: incoming })).resolves.toEqual(captured)
+        expect(leads.capture).toHaveBeenLastCalledWith({
+            workspaceId: "ws-1",
+            contactName: "Minh",
+            company: "Tea Shop",
+            channel: "Owner channel",
+            need: "Owner need",
+            phone: null,
+            email: "minh@example.com",
+            origin: "live",
+        })
+        expect(leads.match).toHaveBeenCalledWith({
+            workspaceId: "ws-1",
+            phone: null,
+            email: "minh@example.com",
+            name: null,
+            channel: null,
+            origin: "live",
+        })
+    })
+
+    it("uses the matching flow's existing lead and preserves its completed contact", async () => {
+        const flow = flowOf({ phone: "84912345678", psid: null, email: "minh@example.com" })
+        const { performer, store, leads } = await build(flow)
+        store.candidates.mockResolvedValue([flow])
+        leads.find.mockResolvedValue(leadOf({ email: "minh@example.com" }))
+        await expect(
+            performer.perform(ctx, itemOf(), { summary: "", fields: { ...fields, email: "minh@example.com" } }),
+        ).resolves.toEqual(merged)
+        expect(leads.find).toHaveBeenCalledWith("ws-1", "lead-1")
+        expect(leads.match).not.toHaveBeenCalled()
+        expect(leads.fillContact).not.toHaveBeenCalled()
+        expect(store.byLead).not.toHaveBeenCalled()
+        expect(store.open).not.toHaveBeenCalled()
+    })
+
+    it("links an unassigned matching flow and fills its missing email and metadata", async () => {
+        const flow = flowOf({
+            lead_id: null,
+            phone: "84912345678",
+            psid: null,
+            platform: null,
+            name: null,
+            connection_id: null,
+        })
+        const { performer, store, leads } = await build(flow)
+        store.candidates.mockResolvedValue([flow])
+        leads.match.mockResolvedValue(leadOf())
+        await expect(
+            performer.perform(ctx, itemOf(), { summary: "", fields: { ...fields, email: "minh@example.com" } }),
+        ).resolves.toEqual({ ...merged, lead_id: null })
+        expect(leads.find).not.toHaveBeenCalled()
+        expect(leads.fillContact).toHaveBeenCalledWith({
+            workspaceId: "ws-1",
+            leadId: "lead-1",
+            phone: "84912345678",
+            email: "minh@example.com",
+        })
+        expect(store.patch).toHaveBeenCalledWith(flow, {
+            email: "minh@example.com",
+            touches: [SOURCE],
+            lead_id: "lead-1",
+            connection_id: "connection-1",
+            platform: "facebook",
+            name: "Lan",
+        })
+    })
+
+    it("matches email when a flow's previous lead is missing and metadata is absent", async () => {
+        const flow = flowOf({ psid: null, email: "minh@example.com", name: null, connection_id: null })
+        const { performer, store, leads } = await build(flow)
+        store.candidates.mockResolvedValue([flow])
+        leads.find.mockResolvedValue(null)
+        leads.match.mockResolvedValue(leadOf({ email: "minh@example.com" }))
+        const incoming = { email: "minh@example.com" }
+        await expect(performer.perform(ctx, itemOf(), { summary: "", fields: incoming })).resolves.toEqual(merged)
+        expect(leads.match).toHaveBeenCalledWith({
+            workspaceId: "ws-1",
+            phone: null,
+            email: "minh@example.com",
+            name: null,
+            channel: null,
+            origin: "live",
+        })
+        expect(leads.fillContact).not.toHaveBeenCalled()
+        expect(store.patch).toHaveBeenCalledWith(flow, { touches: [{ ...SOURCE, form_id: null }] })
+    })
+
+    it.each<readonly [LeadSource["kind"], LeadSource["platform"], string, string, string, string | null]>([
+        ["dm", "facebook", "person-1", "", "attachment", "conv-1"],
+        ["dm", "instagram", "instagram-1", "want tea", "want tea", null],
+        ["comment", "facebook", "comment-1", "", "", "conv-1"],
+    ])("records a %s transcript on %s", async (kind, platform, person, text, body, conversationId) => {
+        const flow = flowOf({
+            platform,
+            psid: platform === "facebook" ? person : null,
+            igsid: platform === "instagram" ? person : null,
+        })
+        const { performer, store, transcript } = await build(flow)
+        const agent = mock<AgentProfile>({ id: "agent-1" })
+        transcript.leadGenAgent.mockResolvedValue(agent)
+        transcript.ensure.mockResolvedValue(conversationId)
+        const commentId = kind === "comment" ? person : null
+        const source: LeadSource = { ...SOURCE, kind, platform, form_id: null, comment_id: commentId }
+        const incoming = {
+            source_kind: kind,
+            platform,
+            psid: flow.psid,
+            igsid: flow.igsid,
+            comment_id: commentId,
+            text,
+        }
+        await expect(performer.perform(ctx, itemOf(), { summary: "", fields: incoming })).resolves.toEqual(captured)
+        expect(store.open).toHaveBeenCalledWith({
+            workspaceId: "ws-1",
+            leadId: "lead-1",
+            connectionId: null,
+            platform,
+            identity: { psid: flow.psid, igsid: flow.igsid, phone: null, email: null },
+            name: null,
+            source,
+            lastUserAt: kind === "dm" ? NOW : null,
+            lastUserText: kind === "dm" ? text : null,
+        })
+        expect(store.patch).toHaveBeenCalledWith(flow, {
+            touches: [source],
+            ...(kind === "dm" ? { last_user_at: NOW, last_user_text: text } : {}),
+        })
+        expect(transcript.leadGenAgent).toHaveBeenCalledWith("ws-1", "connection-1")
+        expect(transcript.ensure).toHaveBeenCalledWith({
+            workspaceId: "ws-1",
+            flow,
+            externalId: kind === "comment" ? "comment:comment-1" : person,
+            agentId: "agent-1",
+        })
+        expect(transcript.say).toHaveBeenCalledWith({
+            workspaceId: "ws-1",
+            conversationId,
+            role: "user",
+            body,
+            delivery: null,
+        })
+        expect(store.patch.mock.calls).toHaveLength(conversationId === null ? 1 : 2)
+        if (conversationId !== null) expect(store.patch).toHaveBeenCalledWith(flow, { conversation_id: conversationId })
+    })
+
+    it.each<readonly [string, string | null, boolean]>([
+        ["dm", "person-1", false],
+        ["dm", null, true],
+        ["comment", "person-1", true],
+    ])("keeps %s flows without an agent or usable thread identity", async (kind, person, hasAgent) => {
+        const flow = flowOf({ psid: person })
+        const { performer, store, transcript } = await build(flow)
+        const agent = mock<AgentProfile>({ id: "agent-1" })
+        transcript.leadGenAgent.mockResolvedValue(hasAgent ? agent : null)
+        await expect(performer.perform(ctx, itemOf(), { summary: "", fields: { source_kind: kind } })).resolves.toEqual(
+            captured,
+        )
+        expect(transcript.ensure).not.toHaveBeenCalled()
+        expect(transcript.say).not.toHaveBeenCalled()
+        expect(store.patch).toHaveBeenCalledTimes(1)
+    })
+
+    it.each<{ identity: FlowFields; concurrent: LeadFlow }>([
+        { identity: {}, concurrent: flowOf() },
+        { identity: { psid: "messenger-1" }, concurrent: flowOf({ lead_id: "other-lead", psid: "messenger-1" }) },
+        {
+            identity: { igsid: "instagram-1" },
+            concurrent: flowOf({ lead_id: "other-lead", psid: null, igsid: "instagram-1" }),
+        },
+    ])("uses a concurrent flow matching the lead or platform identity: $identity", async ({ identity, concurrent }) => {
+        const { performer, store, leads } = await build()
+        leads.capture.mockResolvedValue(leadOf())
+        store.open.mockResolvedValue(null)
+        store.candidates.mockResolvedValueOnce([])
+        store.candidates.mockResolvedValueOnce([
+            flowOf({ lead_id: "unrelated", psid: "different", igsid: "different" }),
+            concurrent,
+        ])
+        await expect(performer.perform(ctx, itemOf(), { summary: "", fields: identity })).resolves.toEqual(captured)
+        expect(store.candidates).toHaveBeenCalledTimes(2)
+        expect(store.patch).toHaveBeenCalledWith(concurrent, { touches: [{ ...SOURCE, form_id: null }] })
     })
 })

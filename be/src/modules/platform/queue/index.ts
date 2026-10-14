@@ -14,3 +14,5 @@ export {
 export { QueueModule } from "./queue.module"
 export { QueueStatusService } from "./queue-status.service"
 export type { QueueOutbox, QueueWorkerRegistry } from "./queue.port"
+export type { LocalTimer } from "./queue-timer.policy"
+export { startLocalInterval } from "./queue-timer.policy"

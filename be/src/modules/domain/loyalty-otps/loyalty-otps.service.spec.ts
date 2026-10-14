@@ -1,7 +1,8 @@
 import { Test } from "@nestjs/testing"
-import { FakeClock, mockEntityManager } from "@starci/jest-preset"
+import { FakeClock, mock, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { CLOCK } from "@modules/platform/clock"
+import type { Secret } from "@modules/platform/config"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { LoyaltyOtpsErrorCode } from "./errors/loyalty-otps.error"
 import { LOYALTY_OTP_PEPPER } from "./loyalty-otps.decorators"
@@ -18,15 +19,17 @@ import {
 import { codeHash } from "./policies/otp.policy"
 
 const NOW = Date.UTC(2026, 9, 12)
-const PEPPER = "pepper"
+const PEPPER = "p".repeat(32)
 
 const build = async (entityManager: MockEntityManager) => {
+    const pepper = mock<Secret>()
+    pepper.reveal.mockReturnValue(PEPPER)
     const moduleRef = await Test.createTestingModule({
         providers: [
             LoyaltyOtpsService,
             { provide: PRIMARY_ENTITY_MANAGER, useValue: entityManager },
             { provide: CLOCK, useValue: new FakeClock(NOW) },
-            { provide: LOYALTY_OTP_PEPPER, useValue: PEPPER },
+            { provide: LOYALTY_OTP_PEPPER, useValue: pepper },
         ],
     }).compile()
     return moduleRef.get(LoyaltyOtpsService)

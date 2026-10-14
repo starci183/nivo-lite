@@ -10,7 +10,7 @@ import type { MessageCatalog, RequestLocale } from "@modules/platform/i18n"
 import type { SaveContractParams } from "./contracts.contracts"
 import { ContractsService } from "./contracts.service"
 import { ContractsErrorCode } from "./errors/contracts.error"
-import { ATTACH_CONTRACT_LEAD, INSERT_CONTRACT, UPDATE_CONTRACT } from "./persistence/contracts.sql"
+import { ATTACH_CONTRACT_LEAD, INSERT_CONTRACT, LIST_CONTRACTS, UPDATE_CONTRACT } from "./persistence/contracts.sql"
 
 const paramsOf = builder<SaveContractParams>({
     workspaceId: "ws-1",
@@ -178,6 +178,40 @@ describe("ContractsService", () => {
             await expect(contracts.attachLead("ws-1", "contract-1", "lead-9")).resolves.toBeUndefined()
             expect(em.query).toHaveBeenCalledWith(ATTACH_CONTRACT_LEAD, ["ws-1", "contract-1", "lead-9"])
             expect(members.require).not.toHaveBeenCalled()
+        })
+    })
+
+    describe("list", () => {
+        it("lists the workspace contracts after proving membership", async () => {
+            const em = mockEntityManager({ query: [LIST_CONTRACTS, [ROW, { ...ROW, id: "contract-2", lead_id: null }]] })
+            const { contracts, members } = await build(em)
+
+            await expect(contracts.list("ws-1", "user-1")).resolves.toEqual([
+                {
+                    id: "contract-1",
+                    leadId: "lead-1",
+                    customerName: "Anh Minh",
+                    plan: "Monthly",
+                    startsOn: "2026-10-01",
+                    endsOn: "2027-09-30",
+                    amountVnd: 5_000_000,
+                    status: "active",
+                    note: "",
+                },
+                {
+                    id: "contract-2",
+                    leadId: null,
+                    customerName: "Anh Minh",
+                    plan: "Monthly",
+                    startsOn: "2026-10-01",
+                    endsOn: "2027-09-30",
+                    amountVnd: 5_000_000,
+                    status: "active",
+                    note: "",
+                },
+            ])
+            expect(members.require).toHaveBeenCalledWith("user-1", "ws-1")
+            expect(em.query).toHaveBeenCalledWith(LIST_CONTRACTS, ["ws-1"])
         })
     })
 })

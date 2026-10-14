@@ -16,12 +16,14 @@ export class RetryKnowledgeSourceResolver {
 
     /** Puts a failed or credit-blocked document back on the queue. */
     @Mutation(() => SourceRefType, { name: "retryKnowledgeSource" })
-    async retryKnowledgeSource(
+    async requeueKnowledgeSource(
         @CurrentPrincipal() principal: Principal,
         @WorkspaceId() workspaceId: string,
         @Args("input") input: RetryKnowledgeSourceInput,
     ): Promise<SourceRefType> {
-        const result = await this.commandBus.execute(new RetryKnowledgeSourceCommand({ request: toRetryKnowledgeSourceRequest(workspaceId, input), principal }))
+        const result = await this.commandBus.execute(
+            new RetryKnowledgeSourceCommand({ request: toRetryKnowledgeSourceRequest(workspaceId, input), principal }),
+        )
         return toRetryKnowledgeSourceType(result)
     }
 }

@@ -10,6 +10,7 @@ import { ConnectionsModule } from "@modules/domain/connections"
 import { AutomationTemplatesModule } from "@modules/domain/automation-templates"
 import { N8nHostModule } from "@modules/integrations/n8n-host"
 import { EventsModule } from "@modules/domain/events"
+import { JobOpsModule } from "@modules/domain/job-ops"
 import { StaffModule } from "@modules/domain/staff"
 import { WorkspaceMembersModule } from "@modules/domain/workspace-members"
 import { WorkspacesModule } from "@modules/domain/workspaces"
@@ -58,6 +59,7 @@ export class AppModule {
                 SupabaseModule.register({ isGlobal: true, ...options.supabase }),
                 VideoMusicModule.register({ isGlobal: true, store: SUPABASE_STORAGE }),
                 EventsModule.register({ isGlobal: true }),
+                JobOpsModule.register({ isGlobal: true }),
                 StaffModule.register({ isGlobal: true }),
                 WorkspaceMembersModule.register({ isGlobal: true, accounts: SUPABASE_AUTH }),
                 WorkspacesModule.register({ isGlobal: true, allowFreeWorkspace: true }),

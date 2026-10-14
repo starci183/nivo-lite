@@ -1,0 +1,5 @@
+export { JobOpsModule } from "./job-ops.module"
+export { JobOpsConsoleService } from "./job-ops-console.service"
+export { JOB_OPS_ERROR_KINDS } from "./errors/job-ops.error"
+export { parseJobsAlertConfig } from "./job-ops.config"
+export type { JobsAlertOptions } from "./job-ops.options"

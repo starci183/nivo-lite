@@ -46,7 +46,6 @@ export class DatabaseWizardService {
         await this.hub.owner(actor)
         const target = await this.resolveTarget(actor.workspaceId, draft)
         const [mapping] = cleanTables([draft.mapping]).tables
-        if (mapping === undefined) throw invalid(COPY.needTable)
         return this.database.preview(target, mapping)
     }
 

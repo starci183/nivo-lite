@@ -133,8 +133,11 @@ const tablesOutcome = (raw: unknown): TablesOutcome => {
     return { tables }
 }
 
+/** A valid singleton produces exactly one mapping; an invalid entry is refused. */
+export function cleanTables(raw: readonly [unknown]): { readonly tables: readonly [TableMapping] }
+export function cleanTables(raw: unknown): DatabaseConfig
 /** Validates a list of mapped tables that came from the browser; returns a clean copy or a plain refusal. */
-export const cleanTables = (raw: unknown): DatabaseConfig => {
+export function cleanTables(raw: unknown): DatabaseConfig {
     const outcome = tablesOutcome(raw)
     if ("problem" in outcome) throw invalid(outcome.problem)
     return { tables: outcome.tables }

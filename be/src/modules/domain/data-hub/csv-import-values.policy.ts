@@ -1,7 +1,7 @@
 const char = (code: number): string => String.fromCodePoint(code)
 const COMBINING_MARKS = new RegExp(`[${char(0x300)}-${char(0x36f)}]`, "gu")
 const D_STROKE = new RegExp(`[${char(0x110)}${char(0x111)}]`, "gu")
-const CURRENCY_MARKS = new RegExp(`(vn${char(0x111)}|vnd|${char(0x111)}|${char(0x20ab)}|\$|usd|%)`, "giu")
+const CURRENCY_MARKS = new RegExp(`(vn${char(0x111)}|vnd|${char(0x111)}|${char(0x20ab)}|\\$|usd|%)`, "giu")
 
 /** Lower-case, accent-free text for matching headers, so a Vietnamese phone heading becomes "so dien thoai". */
 export const fold = (text: string): string =>

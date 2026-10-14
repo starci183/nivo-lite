@@ -38,7 +38,7 @@ export const baseHandleOf = (name: string): string => {
         .split(/[^a-z0-9]+/u)
         .filter((word) => word !== "")
     const named = words.filter((word) => !HONORIFICS.has(word))
-    return (named.at(-1) ?? words.at(-1) ?? "staff").slice(0, HANDLE_MAX) || "staff"
+    return (named.at(-1) ?? words.at(-1) ?? "staff").slice(0, HANDLE_MAX)
 }
 
 /** The handle of one staff member among the staff in the order every screen uses: a second "Ha" becomes ha2, and nivo is reserved. */

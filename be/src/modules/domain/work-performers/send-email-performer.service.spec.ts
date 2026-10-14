@@ -173,4 +173,32 @@ describe("SendEmailPerformerService", () => {
             params: { reason: "no_smtp" },
         })
     })
+
+    it("captures a simulated email with no draft without looking up the shop", async () => {
+        const { service, mail, workspaces } = await build()
+
+        await expect(
+            service.perform(ctx, itemOf({ origin: "simulated", lead_id: null }), { summary: "Receipt", fields: {} }),
+        ).resolves.toEqual({
+            summary: "simulatedDelivery|email",
+            evidence: "captured",
+            lead_id: null,
+            detail: null,
+        })
+        expect(workspaces.nameOf).not.toHaveBeenCalled()
+        expect(mail.send).not.toHaveBeenCalled()
+    })
+
+    it.each(["null", '"invoice-1"', "42", "true"])("sends without references when JSON is %s", async (refs) => {
+        const { service, mail, logger } = await build()
+
+        await expect(service.perform(ctx, itemOf(), proposalOf({ refs }))).resolves.toEqual({
+            summary: "emailSent|lan@huetea.vn|Your receipt",
+            evidence: "captured",
+            lead_id: "lead-1",
+            detail: "Thanks for paying",
+        })
+        expect(mail.send.mock.calls[0]?.[0].refs).toEqual({})
+        expect(logger.error).not.toHaveBeenCalled()
+    })
 })

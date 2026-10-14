@@ -100,13 +100,13 @@ export class KnowledgeRecallService {
 
     private factSection(facts: ReadonlyArray<FactRecord>, budget: number): string {
         if (facts.length === 0) return ""
-        const subjects = facts.reduce<ReadonlyMap<string, readonly [FactRecord, ...Array<FactRecord>]>>(
+        const subjects = facts.reduce<ReadonlyMap<string, ReadonlyArray<FactRecord>>>(
             (groups, fact) => new Map([...groups, [fact.subjectKey, [...(groups.get(fact.subjectKey) ?? []), fact]]]),
             new Map(),
         )
         const blocks = [...subjects.values()].map(
             (group) =>
-                `### ${group[0].subjectLabel}\n${group.map((fact) => `- ${fact.attributeLabel}: ${fact.value}`).join("\n")}`,
+                `### ${group[0]?.subjectLabel ?? ""}\n${group.map((fact) => `- ${fact.attributeLabel}: ${fact.value}`).join("\n")}`,
         )
         return this.catalog.get(
             "bundle.memoryFacts",

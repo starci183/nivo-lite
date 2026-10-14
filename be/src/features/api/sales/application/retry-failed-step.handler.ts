@@ -17,6 +17,6 @@ export class RetryFailedStepHandler extends ICQRSHandler<RetryFailedStepCommand,
     }
 
     protected override process(command: RetryFailedStepCommand): Promise<SalesAction> {
-        return this.sales.retry(command.params.principal.id, command.params.request)
+        return this.sales.reopenFailedStep(command.params.principal.id, command.params.request)
     }
 }

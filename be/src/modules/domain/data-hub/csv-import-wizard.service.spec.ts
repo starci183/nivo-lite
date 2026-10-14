@@ -4,6 +4,7 @@ import { ConnectionsService } from "@modules/domain/connections"
 import type { ConnectionActor } from "@modules/domain/connections"
 import { DataRecordsService } from "@modules/domain/data-records"
 import { DataSyncRunsService } from "@modules/domain/data-sync-runs"
+import type { DataSyncRun } from "@modules/domain/data-sync-runs"
 import type { Table, TableClient } from "@modules/integrations/data-sources"
 import { TABLE } from "@modules/integrations/data-sources"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
@@ -25,6 +26,26 @@ describe("CsvImportWizardService", () => {
         dateColumn: null,
         kinds: { id: "text", name: "text" },
         columns: ["id", "name"],
+    }
+    const documentsConfig: CsvConfig = {
+        ...config,
+        source: "document",
+        entity: "document",
+        idColumn: null,
+        titleColumn: null,
+        dateColumn: null,
+        kinds: {},
+        columns: [],
+    }
+    const uploadRun: DataSyncRun = {
+        id: "run-1",
+        connectionId: "connection-1",
+        trigger: "upload",
+        state: "running",
+        rows: 0,
+        error: null,
+        startedAt: "2026-10-14T00:00:00.000Z",
+        finishedAt: null,
     }
     const source: Table = {
         headers: ["id", "name"],
@@ -108,6 +129,12 @@ describe("CsvImportWizardService", () => {
         expect(hub.owner).toHaveBeenCalledWith(actor)
         expect(hub.own).toHaveBeenCalledWith("workspace-1", "connection-1", "csv_import")
         expect(hub.agentIds).toHaveBeenCalledWith("workspace-1", "connection-1")
+        hub.own.mockResolvedValue({ ...connection, everyMinutes: 60, meta: { config: JSON.stringify(config) } })
+        await expect(service.load(actor, "connection-1")).resolves.toMatchObject({
+            file: "",
+            summary: "",
+            scheduleMinutes: 60,
+        })
     })
 
     it("refuses a saved import whose configuration is missing", async () => {
@@ -175,15 +202,13 @@ describe("CsvImportWizardService", () => {
 
     it("decodes an uploaded table and forwards its selected sheet", async () => {
         const { service, table } = await build()
+        const file = { name: "customers.xlsx", contentBase64: "YWJj" }
 
-        await service.preview(actor, {
-            kind: "file",
-            entity: "customer",
-            file: { name: "customers.xlsx", contentBase64: "YWJj" },
-            sheet: "Customers",
-        })
+        await service.preview(actor, { kind: "file", entity: "customer", file, sheet: "Customers" })
 
         expect(table.readFile).toHaveBeenCalledWith("customers.xlsx", Buffer.from("abc"), "Customers")
+        await service.preview(actor, { kind: "file", entity: "customer", file })
+        expect(table.readFile).toHaveBeenCalledWith("customers.xlsx", Buffer.from("abc"), undefined)
     })
 
     it("does not read a source when the caller fails the owner check", async () => {
@@ -197,16 +222,7 @@ describe("CsvImportWizardService", () => {
 
     it("creates a manual import, writes mapped rows and settles its upload run", async () => {
         const { service, hub, records, runs, connections, transaction } = await build()
-        runs.open.mockResolvedValue({
-            id: "run-1",
-            connectionId: "connection-1",
-            trigger: "upload",
-            state: "running",
-            rows: 0,
-            error: null,
-            startedAt: "2026-10-14T00:00:00.000Z",
-            finishedAt: null,
-        })
+        runs.open.mockResolvedValue(uploadRun)
 
         await expect(service.importTable(actor, request)).resolves.toEqual({
             connectionId: "connection-1",
@@ -305,22 +321,19 @@ describe("CsvImportWizardService", () => {
         const { service, table, records, hub } = await build()
         table.readDocumentFile.mockResolvedValue({ text: "# Uploaded\nBody", pages: 2 })
         table.readDocumentLink.mockResolvedValue({ id: "document-1", text: "# Linked\nBody" })
-        const documentConfig: CsvConfig = {
-            v: 1,
-            source: "document",
-            entity: "document",
-            idColumn: null,
-            titleColumn: null,
-            dateColumn: null,
-            kinds: {},
-            columns: [],
-            link: "https://docs.google.com/document/d/document-1",
+        const files = [{ name: "guide.pdf", contentBase64: "YWJj" }]
+        const uploadedRecord = {
+            externalId: "guide.pdf",
+            title: "Uploaded",
+            data: { text: "# Uploaded\nBody", source: "upload", fileName: "guide.pdf", pages: 2 },
         }
+        const documentLink = "https://docs.google.com/document/d/document-1"
+        const documentConfig: CsvConfig = { ...documentsConfig, link: documentLink }
 
         await expect(
             service.importDocuments(actor, {
                 name: "Documents",
-                files: [{ name: "guide.pdf", contentBase64: "YWJj" }],
+                files,
                 link: " https://docs.google.com/document/d/document-1 ",
             }),
         ).resolves.toEqual({
@@ -334,11 +347,7 @@ describe("CsvImportWizardService", () => {
         expect(table.readDocumentFile).toHaveBeenCalledWith("guide.pdf", Buffer.from("abc"))
         expect(table.readDocumentLink).toHaveBeenCalledWith("https://docs.google.com/document/d/document-1")
         expect(records.upsert).toHaveBeenCalledWith("workspace-1", "connection-1", "document", [
-            {
-                externalId: "guide.pdf",
-                title: "Uploaded",
-                data: { text: "# Uploaded\nBody", source: "upload", fileName: "guide.pdf", pages: 2 },
-            },
+            uploadedRecord,
             {
                 externalId: "document-1",
                 title: "Linked",
@@ -352,18 +361,33 @@ describe("CsvImportWizardService", () => {
             credential: "{}",
             everyMinutes: null,
         })
+        await service.importDocuments(actor, { name: "Documents", files })
+        expect(records.upsert).toHaveBeenLastCalledWith("workspace-1", "connection-1", "document", [uploadedRecord])
+        expect(hub.create).toHaveBeenLastCalledWith(actor, {
+            provider: "csv_import",
+            name: "Documents",
+            meta: { config: JSON.stringify(documentsConfig), summary: "", file: "guide.pdf" },
+            credential: "{}",
+            everyMinutes: null,
+        })
+        expect(table.readDocumentLink).toHaveBeenCalledTimes(1)
     })
 
     it("refuses documents added to an existing table import", async () => {
-        const { service, table } = await build()
+        const { service, table, hub } = await build()
+        const documentError = { code: DataHubErrorCode.Invalid, params: { detail: CSV_COPY.notDocumentImport } }
 
         await expect(
             service.importDocuments(actor, {
                 connectionId: "connection-1",
                 files: [{ name: "guide.txt", contentBase64: "YWJj" }],
             }),
-        ).rejects.toMatchObject({ code: DataHubErrorCode.Invalid, params: { detail: CSV_COPY.notDocumentImport } })
+        ).rejects.toMatchObject(documentError)
         expect(table.readDocumentFile).not.toHaveBeenCalled()
+        hub.own.mockResolvedValue({ ...connection, meta: { config: "damaged" } })
+        await expect(service.importDocuments(actor, { connectionId: "connection-1" })).rejects.toMatchObject(
+            documentError,
+        )
     })
 
     it("removes a newly created connection after the first write fails", async () => {
@@ -380,19 +404,96 @@ describe("CsvImportWizardService", () => {
         const { service, records, hub, runs } = await build()
         const cause = new Error("write failed")
         records.upsert.mockRejectedValue(cause)
-        runs.open.mockResolvedValue({
-            id: "run-1",
-            connectionId: "connection-1",
-            trigger: "upload",
-            state: "running",
-            rows: 0,
-            error: null,
-            startedAt: "2026-10-14T00:00:00.000Z",
-            finishedAt: null,
-        })
+        runs.open.mockResolvedValue(uploadRun)
 
         await expect(service.importTable(actor, { ...request, connectionId: "connection-1" })).rejects.toBe(cause)
         expect(hub.remove).not.toHaveBeenCalled()
         expect(runs.finish).toHaveBeenCalledWith("run-1", "failed", 0, "Error: write failed")
+    })
+
+    it("refuses an unknown source, an empty file, and a re-upload with no saved setup", async () => {
+        const { service, table, hub } = await build()
+        await expect(service.preview(actor, { kind: "other", entity: "customer" })).rejects.toMatchObject({
+            code: DataHubErrorCode.Invalid,
+            params: { detail: CSV_COPY.invalidSource },
+        })
+        await expect(
+            service.preview(actor, { kind: "file", entity: "customer", file: { name: "a.csv", contentBase64: "" } }),
+        ).rejects.toMatchObject({ params: { detail: CSV_COPY.chooseFile } })
+        expect(table.readFile).not.toHaveBeenCalled()
+
+        await service.preview(actor, {
+            kind: "file",
+            entity: "customer",
+            file: { name: "customers.xlsx", contentBase64: "YWJj" },
+            sheet: "",
+        })
+        expect(table.readFile).toHaveBeenCalledWith("customers.xlsx", Buffer.from("abc"), undefined)
+
+        hub.own.mockResolvedValue({ ...connection, meta: {} })
+        await expect(service.importTable(actor, { ...request, connectionId: "connection-1" })).rejects.toMatchObject({
+            params: { detail: CSV_COPY.noSavedSetup },
+        })
+    })
+
+    it("creates a sheet import on the named tab with a manual schedule", async () => {
+        const { service, hub, table } = await build()
+        table.readSheetLink.mockResolvedValue({ ...source, sheet: "Customers" })
+        const sheetRequest: CsvImportRequest = {
+            kind: "sheet",
+            entity: "customer",
+            name: "Customers",
+            link: "https://docs.google.com/spreadsheets/d/sheet-1",
+            mapping: config,
+        }
+        await service.importTable(actor, sheetRequest)
+        expect(hub.create).toHaveBeenCalledWith(
+            actor,
+            expect.objectContaining({
+                everyMinutes: null,
+                meta: expect.objectContaining({
+                    config: expect.stringContaining('"sheet":"Customers"'),
+                }),
+            }),
+        )
+        await service.preview(actor, { kind: "sheet", entity: "customer" })
+        expect(table.readSheetLink).toHaveBeenCalledWith("")
+        await service.importTable(actor, { ...sheetRequest, schedule: 1440 })
+        expect(hub.create).toHaveBeenLastCalledWith(actor, expect.objectContaining({ everyMinutes: 1440 }))
+    })
+
+    it("adds documents to a saved document import and ignores an empty upload", async () => {
+        const { service, hub, table, records } = await build()
+        hub.own.mockResolvedValue({ ...connection, meta: { config: JSON.stringify(documentsConfig) } })
+        table.readDocumentLink.mockResolvedValue({ id: "document-1", text: "# Linked\nBody" })
+        await expect(
+            service.importDocuments(actor, {
+                connectionId: "connection-1",
+                files: [{ name: "empty.txt", contentBase64: "" }],
+                link: "https://docs.google.com/document/d/document-1",
+            }),
+        ).resolves.toMatchObject({ connectionId: "connection-1", skipped: 0 })
+        expect(table.readDocumentFile).not.toHaveBeenCalled()
+        expect(records.upsert).toHaveBeenCalledWith("workspace-1", "connection-1", "document", [
+            expect.objectContaining({ externalId: "document-1" }),
+        ])
+        expect(hub.create).not.toHaveBeenCalled()
+    })
+
+    it("refuses a document import with nothing to read", async () => {
+        const { service } = await build()
+        await expect(service.importDocuments(actor, { name: "Docs" })).rejects.toMatchObject({
+            params: { detail: CSV_COPY.chooseDocuments },
+        })
+    })
+
+    it("keeps an existing import when the upload run was not opened and the write fails", async () => {
+        const { service, records, hub, runs } = await build()
+        records.upsert.mockRejectedValue("write failed")
+        await expect(service.importTable(actor, { ...request, connectionId: "connection-1" })).rejects.toBe(
+            "write failed",
+        )
+        expect(hub.remove).not.toHaveBeenCalled()
+        expect(runs.finish).not.toHaveBeenCalled()
     })
 })

@@ -1,7 +1,7 @@
 import { Test } from "@nestjs/testing"
 import { FakeClock, mock } from "@starci/jest-preset"
 import type { AgentRegistryService, GatewayClient } from "@modules/integrations/openclaw"
-import type { InstallationDirectory } from "@modules/domain/agents"
+import type { Installation, InstallationDirectory } from "@modules/domain/agents"
 import type { Logger } from "@modules/platform/logging"
 import { KnowledgeRecallService, ModuleProfilesService } from "@modules/domain/agent-knowledge"
 import { AGENTS_INSTALLATIONS } from "@modules/domain/agents"
@@ -20,7 +20,18 @@ import { CustomerTurnsLogEvent } from "./customer-turns.log-events"
 import { TurnModulesService } from "./turn-modules.service"
 
 const WS = "11111111-1111-4111-8111-111111111111"
-const catalog: MessageCatalog = { get: (key: string) => key }
+const catalog = mock<MessageCatalog>({ get: (key: string) => key })
+const installationOf = (settings: Installation["settings"] = {}): Installation => ({
+    id: "inst-1",
+    workspaceId: WS,
+    module: "chatbot",
+    name: "Bot",
+    isMulti: false,
+    agentId: "a1",
+    operatingMode: "assist",
+    settings,
+    activeContextVersionId: null,
+})
 
 const turn: CustomerTurn = {
     conversation: {
@@ -54,66 +65,69 @@ const turn: CustomerTurn = {
 const build = async (
     options: { readonly enabled?: boolean; readonly blocked?: boolean; readonly text?: string } = {},
 ) => {
-    const gateway = {
+    const gateway = mock<GatewayClient>({
         enabled: options.enabled ?? true,
         runTurn: jest.fn().mockResolvedValue({
             text: options.text ?? '{"reply":"50k","needs_human":false}',
             usage: null,
             timings: {},
         }),
-    }
-    const usage = {
+    })
+    const usage = mock<UsageGateService>({
         blockedBy: jest.fn().mockResolvedValue(options.blocked === true ? { message: "over" } : null),
         record: jest.fn().mockResolvedValue(undefined),
-    }
-    const modules = { briefs: jest.fn().mockResolvedValue([]) }
-    const logger = { info: jest.fn(), warn: jest.fn(), error: jest.fn() }
+    })
+    const modules = mock<TurnModulesService>({ briefs: jest.fn().mockResolvedValue([]) })
+    const logger = mock<Logger>({ info: jest.fn(), warn: jest.fn(), error: jest.fn() })
+    const registry = mock<AgentRegistryService>({ has: jest.fn().mockReturnValue(true) })
+    const installations = mock<InstallationDirectory>({ ofAgent: jest.fn().mockResolvedValue(null) })
+    const sync = mock<AgentSyncService>({
+        syncInstallation: jest.fn().mockResolvedValue(null),
+        ensureInternalAgent: jest.fn().mockResolvedValue("ws-internal"),
+    })
+    const authority = mock<AuthorityService>({ load: jest.fn().mockResolvedValue(null) })
+    const hiring = mock<HiringPublicService>({ chatBrief: jest.fn().mockResolvedValue("") })
+    const profiles = mock<ModuleProfilesService>({
+        applicationClause: jest.fn().mockReturnValue(""),
+        applicationShape: jest.fn().mockReturnValue(""),
+        replyContractOf: jest.fn().mockImplementation((_module: string, base: string) => base),
+    })
+    const recall = mock<KnowledgeRecallService>({
+        recall: jest.fn().mockResolvedValue({ brief: "KNOW", passages: [] }),
+    })
+    const clock = new FakeClock("2026-10-13T10:00:00.000Z")
     const moduleRef = await Test.createTestingModule({
         providers: [
             CustomerTurnRuntimeService,
-            { provide: OPENCLAW_GATEWAY, useValue: mock<GatewayClient>(gateway) },
-            {
-                provide: OPENCLAW_AGENT_REGISTRY,
-                useValue: mock<AgentRegistryService>({ has: jest.fn().mockReturnValue(true) }),
-            },
-            {
-                provide: AGENTS_INSTALLATIONS,
-                useValue: mock<InstallationDirectory>({ ofAgent: jest.fn().mockResolvedValue(null) }),
-            },
-            { provide: MESSAGE_CATALOG, useValue: mock<MessageCatalog>(catalog) },
-            { provide: CLOCK, useValue: new FakeClock("2026-10-13T10:00:00.000Z") },
-            { provide: LOGGER, useValue: mock<Logger>(logger) },
-            {
-                provide: AgentSyncService,
-                useValue: mock<AgentSyncService>({ syncInstallation: jest.fn(), ensureInternalAgent: jest.fn() }),
-            },
-            { provide: UsageGateService, useValue: mock<UsageGateService>(usage) },
-            {
-                provide: AuthorityService,
-                useValue: mock<AuthorityService>({ load: jest.fn().mockResolvedValue(null) }),
-            },
-            {
-                provide: KnowledgeRecallService,
-                useValue: mock<KnowledgeRecallService>({
-                    recall: jest.fn().mockResolvedValue({ brief: "KNOW", passages: [] }),
-                }),
-            },
-            {
-                provide: HiringPublicService,
-                useValue: mock<HiringPublicService>({ chatBrief: jest.fn().mockResolvedValue("") }),
-            },
-            {
-                provide: ModuleProfilesService,
-                useValue: mock<ModuleProfilesService>({
-                    applicationClause: () => "",
-                    applicationShape: () => "",
-                    replyContractOf: (_module: string, base: string) => base,
-                }),
-            },
-            { provide: TurnModulesService, useValue: mock<TurnModulesService>(modules) },
+            { provide: OPENCLAW_GATEWAY, useValue: gateway },
+            { provide: OPENCLAW_AGENT_REGISTRY, useValue: registry },
+            { provide: AGENTS_INSTALLATIONS, useValue: installations },
+            { provide: MESSAGE_CATALOG, useValue: catalog },
+            { provide: CLOCK, useValue: clock },
+            { provide: LOGGER, useValue: logger },
+            { provide: AgentSyncService, useValue: sync },
+            { provide: UsageGateService, useValue: usage },
+            { provide: AuthorityService, useValue: authority },
+            { provide: KnowledgeRecallService, useValue: recall },
+            { provide: HiringPublicService, useValue: hiring },
+            { provide: ModuleProfilesService, useValue: profiles },
+            { provide: TurnModulesService, useValue: modules },
         ],
     }).compile()
-    return { runtime: moduleRef.get(CustomerTurnRuntimeService), gateway, usage, modules, logger }
+    return {
+        runtime: moduleRef.get(CustomerTurnRuntimeService),
+        gateway,
+        usage,
+        modules,
+        logger,
+        registry,
+        installations,
+        sync,
+        authority,
+        hiring,
+        profiles,
+        recall,
+    }
 }
 
 describe("CustomerTurnRuntimeService", () => {
@@ -330,5 +344,70 @@ describe("CustomerTurnRuntimeService", () => {
             },
         })
         expect(gateway.runTurn).toHaveBeenCalledTimes(1)
+    })
+
+    it("falls back when the gateway fails and builds the internal agent when the module agent is unknown", async () => {
+        const { runtime, gateway, logger, registry, sync } = await build()
+        const cause = new Error("gateway down")
+        gateway.runTurn.mockRejectedValue(cause)
+        registry.has.mockReturnValue(false)
+        await expect(runtime.propose(turn)).resolves.toBe("openclaw_unavailable")
+        expect(logger.error).toHaveBeenCalledWith(CustomerTurnsLogEvent.TurnFailed, cause, { conversationId: "c1" })
+        expect(sync.ensureInternalAgent).toHaveBeenCalledWith(WS)
+    })
+
+    it("uses a freshly synced agent and the installation timeout", async () => {
+        const { runtime, gateway, registry, installations, sync } = await build()
+        registry.has.mockReturnValue(false)
+        installations.ofAgent.mockResolvedValue(installationOf({ openclawTimeoutSec: 10 }))
+        sync.syncInstallation.mockResolvedValue({
+            agentId: "synced-agent",
+            contextVersion: null,
+            changed: true,
+            written: 1,
+            removed: 0,
+            registered: true,
+            files: 1,
+            contentHash: "synced-hash",
+        })
+        await expect(runtime.propose(turn)).resolves.toMatchObject({ reply: "50k" })
+        expect(gateway.runTurn.mock.calls[0]?.[0]).toEqual(
+            expect.objectContaining({ agentId: "synced-agent", timeoutMs: 10_000 }),
+        )
+        expect(gateway.runTurn.mock.calls[0]?.[1]).toBeInstanceOf(AbortSignal)
+    })
+
+    it("keeps going on the internal agent when the sync fails or returns nothing", async () => {
+        const failed = await build()
+        failed.registry.has.mockReturnValue(false)
+        failed.installations.ofAgent.mockResolvedValue(installationOf())
+        const cause = new Error("sync failed")
+        failed.sync.syncInstallation.mockRejectedValue(cause)
+        await expect(failed.runtime.propose(turn)).resolves.toMatchObject({ reply: "50k" })
+        expect(failed.logger.error).toHaveBeenCalledWith(CustomerTurnsLogEvent.AgentSyncFailed, cause, {
+            installationId: "inst-1",
+        })
+        expect(failed.gateway.runTurn.mock.calls[0]?.[0]?.agentId).toBe("ws-internal")
+
+        const empty = await build()
+        empty.registry.has.mockReturnValue(false)
+        empty.installations.ofAgent.mockResolvedValue(installationOf())
+        empty.sync.syncInstallation.mockResolvedValue(null)
+        await empty.runtime.propose(turn)
+        expect(empty.sync.ensureInternalAgent).toHaveBeenCalledWith(WS)
+    })
+
+    it("leaves out an authority or hiring block that cannot be read and uses the base contract", async () => {
+        const { runtime, gateway, authority, hiring, profiles, logger } = await build()
+        const cause = new Error("authority down")
+        authority.load.mockRejectedValue(cause)
+        hiring.chatBrief.mockRejectedValue(new Error("hiring down"))
+        profiles.replyContractOf.mockReturnValue(null)
+        await expect(runtime.propose(turn)).resolves.toMatchObject({ reply: "50k" })
+        expect(logger.error).toHaveBeenCalledWith(CustomerTurnsLogEvent.ContextPartFailed, cause, {
+            workspaceId: WS,
+            part: "authority",
+        })
+        expect(gateway.runTurn.mock.calls[0]?.[0]?.message).toContain("bundle.replyContract")
     })
 })

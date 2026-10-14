@@ -62,6 +62,28 @@ describe("tableFromRows and tableFromGrid", () => {
         })
     })
 
+    it("keeps a leading blank header while trimming only blanks after the last named column", () => {
+        expect(
+            tableFromRows(
+                [
+                    ["", "Name", "", ""],
+                    ["1", "An"],
+                ],
+                {
+                    delimiter: ",",
+                    sheets: [],
+                    sheet: "",
+                },
+            ),
+        ).toEqual({
+            headers: [TABLE_COPY.columnName(1), "Name"],
+            rows: [["1", "An"]],
+            delimiter: ",",
+            sheets: [],
+            sheet: "",
+        })
+    })
+
     it("refuses a sheet with no data, an empty header, or too many columns or rows", () => {
         expect(() => tableFromRows([["", ""]], { delimiter: "", sheets: [], sheet: "" })).toThrow(
             expect.objectContaining({ params: { detail: TABLE_COPY.noData } }),

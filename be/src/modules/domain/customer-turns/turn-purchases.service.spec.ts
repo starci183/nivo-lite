@@ -7,6 +7,7 @@ import type { WorkContext } from "@modules/domain/decisions"
 import { InboundEventsService } from "@modules/domain/inbound-events"
 import type { InvoiceRow } from "@modules/domain/invoices"
 import { OrdersService } from "@modules/domain/orders"
+import type { WorkItem } from "@modules/domain/work-items"
 import { MESSAGE_CATALOG } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
 import type { CustomerReply } from "./customer-turns.contracts"
@@ -79,24 +80,21 @@ const build = async (openOrders: ReadonlyArray<object> = [], created = true) => 
         mark: jest.fn().mockResolvedValue(undefined),
     })
     const claims = mock<PaymentClaimsService>({ start: jest.fn().mockResolvedValue({ created }) })
+    const orders = mock<OrdersService>({ listForLead: jest.fn().mockResolvedValue(openOrders) })
+    const conversations = mock<AgentConversationsService>({ attachLead: jest.fn() })
+    const catalog = mock<MessageCatalog>({ get: jest.fn((key: string) => key) })
     const moduleRef = await Test.createTestingModule({
         providers: [
             TurnPurchasesService,
-            { provide: MESSAGE_CATALOG, useValue: mock<MessageCatalog>({ get: jest.fn((key: string) => key) }) },
+            { provide: MESSAGE_CATALOG, useValue: catalog },
             { provide: WorkEngineService, useValue: engine },
             { provide: InboundEventsService, useValue: inbound },
-            {
-                provide: OrdersService,
-                useValue: mock<OrdersService>({ listForLead: jest.fn().mockResolvedValue(openOrders) }),
-            },
-            {
-                provide: AgentConversationsService,
-                useValue: mock<AgentConversationsService>({ attachLead: jest.fn() }),
-            },
+            { provide: OrdersService, useValue: orders },
+            { provide: AgentConversationsService, useValue: conversations },
             { provide: PaymentClaimsService, useValue: claims },
         ],
     }).compile()
-    return { purchases: moduleRef.get(TurnPurchasesService), engine, inbound }
+    return { purchases: moduleRef.get(TurnPurchasesService), engine, inbound, orders, conversations, claims }
 }
 
 describe("TurnPurchasesService", () => {
@@ -126,5 +124,112 @@ describe("TurnPurchasesService", () => {
         const { purchases } = await build([], false)
         const settled = await purchases.recordClaim(ctx, turn, invoice, channel)
         expect(settled).toEqual({ lines: [], changed: false, leadId: null })
+    })
+
+    it("does nothing when the reply has no order", async () => {
+        const { purchases, inbound } = await build()
+        await expect(purchases.recordOrder(ctx, turn, { reply, order: null, channel, leadId: null })).resolves.toEqual({
+            lines: [],
+            changed: false,
+            leadId: null,
+        })
+        expect(inbound.recordInput).not.toHaveBeenCalled()
+    })
+
+    it("ignores a repeated order input", async () => {
+        const { purchases, inbound, engine } = await build()
+        inbound.recordInput.mockResolvedValue({ duplicate: true, inboundEventId: "e1" })
+        await expect(
+            purchases.recordOrder(ctx, turn, {
+                reply,
+                order: { items: "Tra sua", amountVnd: 50_000 },
+                channel,
+                leadId: null,
+            }),
+        ).resolves.toEqual({ lines: [], changed: false, leadId: null })
+        expect(engine.startOrderWork).not.toHaveBeenCalled()
+    })
+
+    it("names the sender from the lead phone, then the email, and does not attach a lead the order already has", async () => {
+        const phone = { ...reply, lead: { contactName: "Minh", company: "", need: "tea", phone: "0912", email: null } }
+        const { purchases, inbound, conversations, engine } = await build()
+        const item = mock<WorkItem>({ id: "w2", status: "done", lead_id: null })
+        engine.startOrderWork.mockResolvedValue(item)
+        await purchases.recordOrder(ctx, turn, {
+            reply: phone,
+            order: { items: "Tra sua", amountVnd: 50_000 },
+            channel,
+            leadId: "l1",
+        })
+        expect(inbound.recordInput).toHaveBeenCalledWith(
+            expect.objectContaining({ senderName: "Minh", senderContact: "0912" }),
+        )
+        expect(conversations.attachLead).not.toHaveBeenCalled()
+
+        const email = {
+            ...reply,
+            lead: { contactName: "Minh", company: "", need: "tea", phone: null, email: "m@e.com" },
+        }
+        await purchases.recordOrder(ctx, turn, {
+            reply: email,
+            order: { items: "Tra sua", amountVnd: 40_000 },
+            channel,
+            leadId: null,
+        })
+        expect(inbound.recordInput).toHaveBeenLastCalledWith(expect.objectContaining({ senderContact: "m@e.com" }))
+    })
+
+    it("orders again when the open order is paid, a different amount, or a different item", async () => {
+        const { purchases, engine, inbound } = await build([
+            { status: "paid", amount_vnd: 50_000, items: "Tra sua" },
+            { status: "confirmed", amount_vnd: 10, items: "Tra sua" },
+            { status: "draft", amount_vnd: 50_000, items: "Tra da" },
+        ])
+        const settled = await purchases.recordOrder(ctx, turn, {
+            reply,
+            order: { items: "Tra sua", amountVnd: 50_000 },
+            channel,
+            leadId: "l1",
+        })
+        expect(settled.changed).toBe(true)
+        expect(engine.startOrderWork).toHaveBeenCalled()
+        expect(inbound.mark).not.toHaveBeenCalled()
+    })
+
+    it("marks a repeated claim handled and records a new one", async () => {
+        const { purchases, inbound } = await build()
+        inbound.recordInput.mockResolvedValueOnce({ duplicate: true, inboundEventId: "e1" })
+        await expect(purchases.recordClaim(ctx, turn, invoice, channel)).resolves.toEqual({
+            lines: [],
+            changed: false,
+            leadId: null,
+        })
+        expect(inbound.mark).not.toHaveBeenCalled()
+
+        inbound.recordInput.mockResolvedValueOnce({ duplicate: false, inboundEventId: "e2" })
+        const created = await purchases.recordClaim(ctx, turn, invoice, channel)
+        expect(created).toEqual({ lines: ["customerTurns.claimRecorded"], changed: true, leadId: null })
+        expect(inbound.mark).not.toHaveBeenCalled()
+    })
+
+    it("ignores a payment claim with no invoice", async () => {
+        const { purchases, inbound } = await build()
+        await expect(purchases.recordClaim(ctx, turn, null, channel)).resolves.toEqual({
+            lines: [],
+            changed: false,
+            leadId: null,
+        })
+        expect(inbound.recordInput).not.toHaveBeenCalled()
+    })
+
+    it("marks the input processed when the open order is the same item", async () => {
+        const { purchases, inbound } = await build([{ status: "invoiced", amount_vnd: 50_000, items: "Tra sua" }])
+        await purchases.recordOrder(ctx, turn, {
+            reply,
+            order: { items: "Tra sua", amountVnd: 50_000 },
+            channel,
+            leadId: "l1",
+        })
+        expect(inbound.mark).toHaveBeenCalledWith(WS, "e1", "processed", "l1")
     })
 })

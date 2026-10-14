@@ -222,4 +222,275 @@ describe("LeadFlowKitService", () => {
         })
         expect(meta.sendToFlow).toHaveBeenCalledWith("ws-1", held, "lead-flows.line.handover", false)
     })
+
+    it("uses names and localized source labels, including the default message source", async () => {
+        const { kit, catalog } = await build()
+
+        expect(kit.nameOf(ctx, flowOf())).toBe("Lan")
+        expect(kit.nameOf(ctx, null, "prospect")).toBe("lead-flows.prospect")
+        expect(kit.sourceLine("en", null)).toBe("Facebook · lead-flows.kind.dm")
+        expect(
+            kit.sourceLine("en", {
+                platform: "instagram",
+                kind: "leadgen",
+                form_id: "form-1",
+                ad_id: "ad-1",
+                post_id: "post-1",
+                comment_id: null,
+                leadgen_id: "submission-1",
+                referral: null,
+                at: NOW,
+            }),
+        ).toBe(
+            "Instagram · lead-flows.kind.leadgen · lead-flows.word.form form-1 · lead-flows.word.ad ad-1 · lead-flows.word.post post-1",
+        )
+        expect(catalog.get).toHaveBeenCalledWith("lead-flows.kind.leadgen", {}, "en")
+    })
+
+    it.each([null, "", "x".repeat(401)])("stores bounded evidence for %s", async (value) => {
+        const { kit, evidence } = await build()
+
+        await kit.log(ctx, flowOf(), "item-2", "lead_gen.test", "Recorded", value)
+
+        expect(evidence.log).toHaveBeenCalledWith(ctx, {
+            lead_id: "lead-1",
+            work_item_id: "item-2",
+            kind: "lead_gen.test",
+            actor: LEAD_GEN_ACTOR,
+            summary: "Recorded",
+            evidence: value ? "x".repeat(400) : null,
+        })
+    })
+
+    it("records successful tagged delivery and a failure without a detail", async () => {
+        const { kit, meta, transcript } = await build()
+        meta.sendToFlow.mockResolvedValueOnce({ ok: true, reason: null, detail: null })
+        meta.sendToFlow.mockResolvedValueOnce({ ok: false, reason: "failed", detail: null })
+
+        await expect(kit.dm(ctx, flowOf(), "A person replied", true)).resolves.toEqual({
+            ok: true,
+            reason: null,
+            detail: null,
+        })
+        await expect(kit.dm(ctx, flowOf(), "Retry")).resolves.toEqual({ ok: false, reason: "failed", detail: null })
+
+        expect(meta.sendToFlow).toHaveBeenNthCalledWith(1, "ws-1", flowOf(), "A person replied", true)
+        expect(transcript.say.mock.calls).toEqual([
+            [
+                {
+                    workspaceId: "ws-1",
+                    conversationId: "conv-1",
+                    role: "agent",
+                    body: "A person replied",
+                    delivery: { sent: true, error: null },
+                },
+            ],
+            [
+                {
+                    workspaceId: "ws-1",
+                    conversationId: "conv-1",
+                    role: "agent",
+                    body: "Retry",
+                    delivery: { sent: false, error: "meta_error" },
+                },
+            ],
+        ])
+    })
+
+    it("prepares closing lines from a trimmed reply and omits empty proposal text", async () => {
+        const { kit, store, catalog } = await build()
+        store.requireByLead.mockResolvedValue(flowOf())
+        const item = itemOf({ proposal: { summary: "Before", fields: { reply: "  Thank you  ", keep: 1 } } })
+
+        await expect(kit.lineProposal(ctx, item, "line.close", "close.summary")).resolves.toEqual({
+            proposal: {
+                summary: "lead-flows.close.summary",
+                fields: item.proposal.fields,
+                draft: "Thank you\n\nlead-flows.line.close",
+            },
+        })
+        catalog.get.mockImplementation((key) => (key === "lead-flows.line.close" ? "" : key))
+        await expect(kit.lineProposal(ctx, itemOf(), "line.close", "close.summary")).resolves.toEqual({
+            proposal: { summary: "lead-flows.close.summary", fields: {}, draft: "" },
+        })
+
+        expect(store.requireByLead).toHaveBeenCalledWith("ws-1", "lead-1")
+        expect(catalog.get).toHaveBeenCalledWith("lead-flows.close.summary", { name: "Lan" }, "en")
+    })
+
+    it("returns successful delivery and explains a disconnected or unoffered tagged reply", async () => {
+        const { kit, meta, commands } = await build()
+        meta.sendToFlow.mockResolvedValueOnce({ ok: true, reason: null, detail: null })
+        meta.sendToFlow.mockResolvedValueOnce({ ok: false, reason: "not_connected", detail: null })
+        meta.sendToFlow.mockResolvedValueOnce({ ok: false, reason: "tag_only", detail: null })
+
+        await expect(kit.dmOrExplain(ctx, itemOf(), flowOf(), "Hello", true)).resolves.toEqual({ sent: true, line: "" })
+        await expect(kit.dmOrExplain(ctx, itemOf(), flowOf(), "Hello", true)).resolves.toEqual({
+            sent: false,
+            line: "lead-flows.not-sent.no-page",
+        })
+        await expect(kit.dmOrExplain(ctx, itemOf(), flowOf(), "Hello", false)).resolves.toEqual({
+            sent: false,
+            line: "lead-flows.not-sent.window",
+        })
+        expect(kit.metaRefused(null)).toMatchObject({
+            code: LeadFlowsErrorCode.MetaRefused,
+            params: { failure: "error" },
+        })
+        expect(kit.metaRefused("token").params).toEqual({ failure: "token" })
+        expect(commands.sendCommand).not.toHaveBeenCalled()
+    })
+
+    it.each([
+        {
+            phone: "84123456789",
+            email: "person@example.com",
+            psid: "person-1",
+            igsid: "ig-person",
+            contact: "84123456789",
+        },
+        {
+            phone: null,
+            email: "person@example.com",
+            psid: "person-1",
+            igsid: "ig-person",
+            contact: "person@example.com",
+        },
+        { phone: null, email: null, psid: null, igsid: "ig-person", contact: "ig-person" },
+        { phone: null, email: null, psid: null, igsid: null, contact: "" },
+    ])("proposes tagged replies with contact $contact and an item chain fallback", async ({ contact, ...identity }) => {
+        const { kit, meta, commands } = await build()
+        const flow = flowOf({ ...identity, conversation_id: null })
+        meta.sendToFlow.mockResolvedValue({ ok: false, reason: "tag_only", detail: null })
+
+        await expect(kit.dmOrExplain(ctx, itemOf({ chain_id: null }), flow, "Hello", true)).resolves.toEqual({
+            sent: false,
+            line: "lead-flows.tag.proposed",
+        })
+
+        expect(commands.sendCommand).toHaveBeenCalledWith(ctx, {
+            from: "lead_gen",
+            to: "lead_gen",
+            command: "message_with_human_agent_tag",
+            reason: "outside_24h",
+            parentId: "item-1",
+            chainId: "item-1",
+            origin: "live",
+            inboundEventId: null,
+            queue: true,
+            dedupeKey: "message_with_human_agent_tag:item-1",
+            payload: { subject_type: "lead", subject_id: "lead-1", lead_id: "lead-1", contact, conversation_id: "" },
+            seed: { summary: "lead-flows.tag.summary", draft: "Hello" },
+        })
+    })
+
+    it.each([
+        {
+            state: "escalated" as const,
+            resume_state: "greeted" as const,
+            escalated_at: "2026-10-11T00:00:00.000Z",
+            notify: true,
+        },
+        { state: "qualifying" as const, resume_state: null, escalated_at: null, notify: false },
+    ])("holds a $state flow without a conversation or another notification", async ({ notify, ...state }) => {
+        const { kit, store, meta, transcript, evidence } = await build()
+        const flow = flowOf({ ...state, conversation_id: null })
+        const held = flowOf({ state: "escalated" })
+        store.patch.mockResolvedValue(held)
+
+        await expect(
+            kit.holdForPerson(ctx, { flow, reason: "angry", itemId: "item-2", question: "", notify }),
+        ).resolves.toBe(held)
+
+        expect(store.patch).toHaveBeenCalledWith(flow, {
+            state: "escalated",
+            resume_state: state.state === "escalated" ? "greeted" : "qualifying",
+            escalated_at: state.state === "escalated" ? state.escalated_at : NOW,
+            escalation_reason: "angry",
+        })
+        expect(evidence.log).toHaveBeenCalledWith(ctx, {
+            lead_id: "lead-1",
+            work_item_id: "item-2",
+            kind: "lead_gen.escalated",
+            actor: LEAD_GEN_ACTOR,
+            summary: "lead-flows.escalate.evidence",
+            evidence: null,
+        })
+        expect(transcript.handToPerson).not.toHaveBeenCalled()
+        expect(transcript.say).not.toHaveBeenCalled()
+        expect(meta.sendToFlow).not.toHaveBeenCalled()
+    })
+
+    it.each([
+        { conversationId: "conv-1", chainId: "chain-1", text: `  ${"x".repeat(130)}  `, question: "x".repeat(130) },
+        { conversationId: null, chainId: null, text: "   ", question: "lead-flows.no-text" },
+    ])(
+        "escalates a turn for conversation $conversationId with a bounded question summary",
+        async ({ conversationId, chainId, text, question }) => {
+            const { kit, store, engine, catalog } = await build()
+            const flow = flowOf({ conversation_id: conversationId })
+            const held = flowOf({ state: "escalated" })
+            engine.runWork.mockResolvedValue(itemOf({ id: "ask-1" }))
+            store.patch.mockResolvedValue(held)
+
+            await expect(
+                kit.escalate(ctx, {
+                    flow,
+                    reason: "real_person",
+                    item: itemOf({ chain_id: chainId }),
+                    text,
+                    turn: "turn-1",
+                    notify: false,
+                }),
+            ).resolves.toBe(held)
+
+            expect(engine.runWork).toHaveBeenCalledWith(ctx, {
+                action: "reply_customer",
+                subject_type: conversationId === null ? "lead" : "conversation",
+                subject_id: conversationId ?? "lead-1",
+                lead_id: "lead-1",
+                parent_id: "item-1",
+                chainId: chainId ?? "item-1",
+                origin: "live",
+                dedupeKey: "reply_customer:lead_gen:flow-1:turn-1",
+                preset: true,
+                noChain: true,
+                forceAsk: "unclear_outcome",
+                seed: {
+                    summary: "lead-flows.escalate.item",
+                    draft: "",
+                    fields: {
+                        question,
+                        escalation: "real_person",
+                        ...(conversationId === null ? {} : { conversation_id: conversationId }),
+                    },
+                },
+            })
+            expect(catalog.get).toHaveBeenCalledWith(
+                "lead-flows.escalate.item",
+                {
+                    name: "Lan",
+                    reason: "lead-flows.reason.real_person",
+                    question: question.slice(0, 120),
+                },
+                "en",
+            )
+        },
+    )
+
+    it.each(["greeted" as const, null])("resumes an escalated flow from %s", async (resumeState) => {
+        const { kit, store } = await build()
+        const flow = flowOf({ state: "escalated", resume_state: resumeState })
+        const resumed = flowOf({ state: resumeState ?? "qualifying" })
+        store.patch.mockResolvedValue(resumed)
+
+        await expect(kit.resume(flow)).resolves.toBe(resumed)
+
+        expect(store.patch).toHaveBeenCalledWith(flow, {
+            state: resumeState ?? "qualifying",
+            resume_state: null,
+            escalated_at: null,
+            escalation_reason: null,
+        })
+    })
 })

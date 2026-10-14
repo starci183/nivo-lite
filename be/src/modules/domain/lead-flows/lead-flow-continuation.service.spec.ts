@@ -123,4 +123,163 @@ describe("LeadFlowContinuationService", () => {
         expect(commands.sendCommand).not.toHaveBeenCalled()
         expect(engine.runInboundQueued).not.toHaveBeenCalled()
     })
+
+    it("scores a capture with its item id as the turn when none was supplied", async () => {
+        const { continuation, commands } = await build()
+
+        await continuation.continue(payloadOf(stepOf({ chainId: null })))
+
+        expect(commands.sendCommand).toHaveBeenCalledWith(ctx, {
+            from: "lead_gen",
+            to: "lead_gen",
+            command: "score_lead",
+            reason: "lead_captured",
+            parentId: "item-1",
+            chainId: "item-1",
+            origin: "live",
+            inboundEventId: null,
+            dedupeKey: "score_lead:lead-1:item-1",
+            payload: { subject_type: "lead", subject_id: "lead-1", lead_id: "lead-1" },
+        })
+    })
+
+    it.each([
+        {
+            plan: "handoff",
+            command: "handoff_to_sales",
+            reason: "hot_lead",
+            dedupeKey: "handoff_to_sales:lead-1",
+            extra: { contact: "0912", need: "tea", score: "hot" },
+        },
+        {
+            plan: "greet",
+            command: "greet_prospect",
+            reason: "first_reply",
+            dedupeKey: "greet_prospect:lead-1",
+            extra: {},
+        },
+        {
+            plan: "ask_contact",
+            command: "ask_qualifying",
+            reason: "ask_contact",
+            dedupeKey: "ask_qualifying:lead-1:contact",
+            extra: { index: 0, question_kind: "contact" },
+        },
+        {
+            plan: "follow_up",
+            command: "follow_up_lead",
+            reason: "warm_lead",
+            dedupeKey: "follow_up_lead:lead-1:t:2",
+            extra: {},
+        },
+        { plan: "close", command: "close_lead", reason: "cold_lead", dedupeKey: "close_lead:lead-1:t:2", extra: {} },
+        {
+            plan: "comment",
+            command: "reply_comment_public",
+            reason: "comment",
+            dedupeKey: "reply_comment_public:comment:comment-1",
+            extra: {
+                public_reply: "Hello",
+                private_reply: "In your inbox",
+                negative: "0",
+                text: "Question",
+                connection_id: "connection-1",
+            },
+        },
+    ])("runs the $plan plan chosen by a score", async ({ plan, command, reason, dedupeKey, extra }) => {
+        const { continuation, commands, engine } = await build()
+        const base = {
+            turn: "t:2",
+            conversation_id: "conv-1",
+            reply: "A reply",
+            comment_id: "comment-1",
+            post_id: "post-1",
+            source_kind: "comment",
+            score: "warm",
+        }
+        const fields = {
+            ...base,
+            step: plan,
+            index: null,
+            contact: "0912",
+            need: "tea",
+            public_reply: "Hello",
+            private_reply: "In your inbox",
+            negative: "0",
+            text: "Question",
+            connection_id: "connection-1",
+        }
+
+        await continuation.continue(payloadOf(stepOf({ action: "score_lead", fields })))
+
+        expect(commands.sendCommand.mock.calls).toEqual([
+            [
+                ctx,
+                {
+                    from: "lead_gen",
+                    to: "lead_gen",
+                    command,
+                    reason,
+                    parentId: "item-1",
+                    chainId: "chain-1",
+                    origin: "live",
+                    inboundEventId: null,
+                    dedupeKey,
+                    payload: {
+                        subject_type: "lead",
+                        subject_id: "lead-1",
+                        lead_id: "lead-1",
+                        ...(plan === "handoff" ? {} : base),
+                        ...extra,
+                    },
+                },
+            ],
+        ])
+        expect(engine.runInboundQueued).not.toHaveBeenCalled()
+    })
+
+    it("sends a negative comment's public reply without a private reply plan", async () => {
+        const { continuation, commands } = await build()
+
+        await continuation.continue(
+            payloadOf(
+                stepOf({ action: "score_lead", fields: { step: "comment", negative: "1", comment_id: "comment-1" } }),
+            ),
+        )
+
+        expect(commands.sendCommand.mock.calls).toEqual([
+            [
+                ctx,
+                {
+                    from: "lead_gen",
+                    to: "lead_gen",
+                    command: "reply_comment_public",
+                    reason: "negative_comment",
+                    parentId: "item-1",
+                    chainId: "chain-1",
+                    origin: "live",
+                    inboundEventId: null,
+                    dedupeKey: "reply_comment_public:comment:comment-1",
+                    payload: {
+                        subject_type: "lead",
+                        subject_id: "lead-1",
+                        lead_id: "lead-1",
+                        comment_id: "comment-1",
+                        score: "",
+                        negative: "1",
+                        connection_id: "",
+                    },
+                },
+            ],
+        ])
+    })
+
+    it("waits for a message when scoring has no next plan, and still drains the input", async () => {
+        const { continuation, commands, engine } = await build()
+
+        await continuation.continue(payloadOf(stepOf({ action: "score_lead", fields: {} }), "event-1"))
+
+        expect(commands.sendCommand).not.toHaveBeenCalled()
+        expect(engine.runInboundQueued).toHaveBeenCalledWith(ctx, "event-1", 10)
+    })
 })

@@ -1,19 +1,20 @@
 import { Injectable } from "@nestjs/common"
 import { WebhookEventsService } from "@modules/domain/webhook-connections"
-import { InjectJobClaims } from "@modules/platform/jobs"
-import type { ClaimedJob, JobClaims, JobStep } from "@modules/platform/jobs"
+import { AdvancingJobStepPolicy, InjectJobClaims } from "@modules/platform/jobs"
+import type { JobClaims, JobStep } from "@modules/platform/jobs"
 
 @Injectable()
 /** The one effect of the job: the signed delivery of one business event to one webhook connection. */
-export class EmitWebhookEventStep implements JobStep {
+export class EmitWebhookEventStep extends AdvancingJobStepPolicy implements JobStep {
     constructor(
         private readonly webhooks: WebhookEventsService,
-        @InjectJobClaims() private readonly claims: JobClaims,
-    ) {}
+        @InjectJobClaims() claims: JobClaims,
+    ) {
+        super(claims, "deliver")
+    }
 
-    /** Records the step with the token this worker holds FIRST, so a stale token stops here before any effect; then delivers the event. */
-    async run(job: ClaimedJob): Promise<void> {
-        await this.claims.advance({ jobId: job.jobId, expectedFencingToken: job.fencingToken, step: "deliver" })
-        await this.webhooks.deliver(job.payload)
+    /** Delivers the event after the worker's claim has been checked. */
+    protected perform(payload: object): Promise<unknown> {
+        return this.webhooks.deliver(payload)
     }
 }

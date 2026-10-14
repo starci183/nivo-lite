@@ -38,7 +38,7 @@ export class SalesWorkService {
     ) {}
 
     /** Reopens a failed step and atomically queues its gated work with the retry evidence. */
-    async retry(principalId: string, request: SalesItemRequest): Promise<SalesAction> {
+    async reopenFailedStep(principalId: string, request: SalesItemRequest): Promise<SalesAction> {
         const item = await this.decisions.getWorkItem(principalId, request.workspaceId, request.id)
         const member = await this.requireDecide(principalId, request.workspaceId, item)
         if (item.status !== "failed") throw new DecisionsError({ code: DecisionsErrorCode.NotFailed })

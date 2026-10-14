@@ -4,12 +4,19 @@ import type { NestExpressApplication } from "@nestjs/platform-express"
 import { SystemClockService } from "@modules/platform/clock"
 import { EnvSource, parseServerConfig } from "@modules/platform/config"
 import { parsePrimaryDatabaseConfig } from "@modules/platform/database"
-import { parseHttpSecurityConfig, RequestValidationService } from "@modules/platform/http-security"
+import {
+    parseHttpSecurityConfig,
+    RequestValidationService,
+    securityHeadersMiddleware,
+} from "@modules/platform/http-security"
 import { createJsonLogger, LoggingLogEvent } from "@modules/platform/logging"
+import { DomainError } from "@modules/platform/errors"
 import { parseJobsConfig } from "@modules/platform/jobs"
+import { parseJobsAlertConfig } from "@modules/domain/job-ops"
 import { parseQueueConfig } from "@modules/platform/queue"
 import { parseChannelsConfig } from "@modules/domain/channels"
 import { parseConnectionSecretsConfig } from "@modules/domain/connection-secrets"
+import { parseLoyaltyOtpsConfig } from "@modules/domain/loyalty-otps"
 import { parseDataSourcesConfig } from "@modules/integrations/data-sources"
 import { parseMailConfig } from "@modules/integrations/mail"
 import { parseTelegramConfig } from "@modules/integrations/telegram"
@@ -38,9 +45,6 @@ import type { ApiOptions } from "./api.options"
 /** The largest JSON body: a ten megabyte file the browser sends as base64 inside a GraphQL mutation (the data import wizards). */
 const JSON_BODY_LIMIT = "14mb"
 
-/** Proxy hops in front of the API (the Traefik edge): the rate limit keys on the real client address, not on the proxy. */
-const TRUSTED_PROXY_HOPS = 1
-
 /** Reads the environment once, composes the API from parsed options and serves until a shutdown signal. */
 const bootstrap = async (): Promise<void> => {
     const env = EnvSource.fromProcess()
@@ -62,6 +66,7 @@ const bootstrap = async (): Promise<void> => {
         openclaw: parseOpenclawConfig(env),
         deepseek: parseDeepseekConfig(env),
         connectionSecrets: parseConnectionSecretsConfig(env),
+        loyaltyOtps: parseLoyaltyOtpsConfig(env),
         channels: parseChannelsConfig(env),
         telegram: parseTelegramConfig(env),
         zalo: parseZaloConfig(env),
@@ -69,6 +74,7 @@ const bootstrap = async (): Promise<void> => {
         dataSources: parseDataSourcesConfig(env),
         queue: parseQueueConfig(env),
         jobs: parseJobsConfig(env),
+        jobsAlert: parseJobsAlertConfig(env),
         connections: parseConnectionsConfig(env),
         webhookConnections: parseWebhookConnectionsConfig(env),
         google: parseGoogleConfig(env),
@@ -81,7 +87,9 @@ const bootstrap = async (): Promise<void> => {
         video: parseVideoConfig(env),
     }
     const app = await NestFactory.create<NestExpressApplication>(AppModule.register(options), { rawBody: true })
-    app.set("trust proxy", TRUSTED_PROXY_HOPS)
+    app.set("trust proxy", options.httpSecurity.trustedProxyHops)
+    app.disable("x-powered-by")
+    app.use(securityHeadersMiddleware())
     app.useBodyParser("json", { limit: JSON_BODY_LIMIT })
     app.enableCors({ origin: [...options.httpSecurity.allowedOrigins] })
     app.enableShutdownHooks()
@@ -94,6 +102,11 @@ const bootstrap = async (): Promise<void> => {
 }
 
 bootstrap().catch((error: unknown) => {
-    createJsonLogger(new SystemClockService()).error(LoggingLogEvent.StartupFailed, error, { service: "api" })
+    createJsonLogger(new SystemClockService()).error(LoggingLogEvent.StartupFailed, error, {
+        service: "api",
+        ...(error instanceof DomainError && typeof error.params.key === "string"
+            ? { configField: error.params.key }
+            : {}),
+    })
     process.exitCode = 1
 })

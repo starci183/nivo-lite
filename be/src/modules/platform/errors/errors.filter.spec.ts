@@ -67,4 +67,44 @@ describe("ErrorsFilter", () => {
             params: { orderId: "order-1" },
         })
     })
+
+    it.each([
+        ["a named connection", { connectionId: "connection-1" }, "connection-1"],
+        ["an absent name", {}, null],
+        ["a non-string name", { connectionId: 17 }, null],
+        ["null parameters", null, null],
+        ["a non-object parameter", "connection-1", null],
+    ])("describes the request context with %s", async (_name, params, connectionId) => {
+        const { filter, errors, requestLocale } = await build()
+        const failure = new TypeError("invalid delivery")
+        const request = mock<Request>({ path: "/connections/delivery", method: "POST", headers: {} })
+        Object.defineProperty(request, "params", { value: params })
+        const response = mock<Response>()
+        response.status.mockReturnValue(response)
+        const http = mock<ReturnType<ArgumentsHost["switchToHttp"]>>()
+        http.getRequest.mockReturnValue(request)
+        http.getResponse.mockReturnValue(response)
+        const host = mock<ArgumentsHost>()
+        host.getType.mockReturnValue("http")
+        host.switchToHttp.mockReturnValue(http)
+        errors.describe.mockReturnValue({ code: "DELIVERY_INVALID", kind: "invalid", status: 400, params: {} })
+        requestLocale.of.mockReturnValue("en")
+        errors.text.mockReturnValue("The delivery is invalid")
+
+        expect(filter.catch(failure, host)).toBeUndefined()
+
+        expect(errors.describe).toHaveBeenCalledWith(failure, {
+            scope: "http",
+            context: { route: "/connections/delivery", method: "POST", connectionId },
+        })
+        expect(requestLocale.of).toHaveBeenCalledWith(undefined)
+        expect(errors.text).toHaveBeenCalledWith("DELIVERY_INVALID", {}, "en")
+        expect(response.status).toHaveBeenCalledWith(400)
+        expect(response.json).toHaveBeenCalledWith({
+            code: "DELIVERY_INVALID",
+            kind: "invalid",
+            message: "The delivery is invalid",
+            params: {},
+        })
+    })
 })

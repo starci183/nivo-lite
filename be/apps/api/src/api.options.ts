@@ -107,6 +107,7 @@ import type { ServerOptions } from "@modules/platform/config"
 import type { DatabaseConnectionOptions } from "@modules/platform/database"
 import type { ChannelsOptions } from "@modules/domain/channels"
 import type { ConnectionSecretsOptions } from "@modules/domain/connection-secrets"
+import type { LoyaltyOtpsOptions } from "@modules/domain/loyalty-otps"
 import type { PlatformAdminOptions } from "@modules/domain/platform-admin"
 import type { WorkspaceInvitesOptions } from "@modules/domain/workspace-invites"
 import type { WorkspacesOptions } from "@modules/domain/workspaces"
@@ -116,7 +117,20 @@ import type { TelegramOptions } from "@modules/integrations/telegram"
 import type { ZaloOptions } from "@modules/integrations/zalo"
 import type { HttpSecurityOptions } from "@modules/platform/http-security"
 import type { JobsConfig } from "@modules/platform/jobs"
+import type { JobsAlertOptions } from "@modules/domain/job-ops"
 import type { QueueConfig } from "@modules/platform/queue"
+import { AppCommandsModule } from "@modules/domain/app-commands"
+import { CONTRACTS_ERROR_KINDS, CONTRACTS_MESSAGES, ContractsModule } from "@modules/domain/contracts"
+import { LIVENESS_ERROR_KINDS, LIVENESS_MESSAGES, LivenessModule } from "@modules/domain/liveness"
+
+/** System capabilities whose only app option is their global registration. */
+export const API_SYSTEM_CAPABILITIES = [AppCommandsModule, ContractsModule, LivenessModule]
+
+/** Message bundles and error kinds of the system capabilities above. */
+export const API_SYSTEM = {
+    messages: [CONTRACTS_MESSAGES, LIVENESS_MESSAGES],
+    kinds: [CONTRACTS_ERROR_KINDS, LIVENESS_ERROR_KINDS],
+} as const
 
 /** Everything the API needs from its environment, parsed once by `main.ts` and handed to `AppModule.register`. */
 export interface ApiOptions {
@@ -144,6 +158,8 @@ export interface ApiOptions {
     readonly deepseek: DeepseekOptions
     /** The key that seals the credentials of the connections. */
     readonly connectionSecrets: ConnectionSecretsOptions
+    /** The dedicated secret mixed into loyalty one-time code hashes. */
+    readonly loyaltyOtps: LoyaltyOtpsOptions
     /** The public origin of the web app, for provider return addresses. */
     readonly channels: ChannelsOptions
     /** The Telegram Bot API host. */
@@ -160,6 +176,8 @@ export interface ApiOptions {
     readonly queue: QueueConfig
     /** Who this worker is and how long a job claim lasts. */
     readonly jobs: JobsConfig
+    /** The independent monitor of failed jobs and stale queued work. */
+    readonly jobsAlert: JobsAlertOptions
     /** The channel token key that seals provider credentials, and the public site address. */
     readonly connections: ConnectionsOptions
     /** The signing key behind outgoing webhooks. */

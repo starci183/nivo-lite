@@ -6,6 +6,7 @@ import { AuthorityActionsService } from "@modules/domain/authority-actions"
 import type { AuthorityActionRecord } from "@modules/domain/authority-actions"
 import type { AuthorityProfile } from "@modules/domain/authority"
 import { InvoicesService } from "@modules/domain/invoices"
+import type { ReconcileInvoiceRow } from "@modules/domain/invoices"
 import { TransactionsService } from "@modules/domain/transactions"
 import { AuthorityRulesService } from "@modules/domain/authority-rules"
 import type { AuthorityRuleRecord, RuleChange } from "@modules/domain/authority-rules"
@@ -13,12 +14,13 @@ import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import type { WorkspaceMember } from "@modules/domain/workspace-members"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import type { WorkItem } from "./decisions.contracts"
-import type { ListWorkItemsQuery } from "./decisions-views.contracts"
+import type { DecisionHistoryKind, DecisionRecord, ListWorkItemsQuery } from "./decisions-views.contracts"
 import { DecisionsService } from "./decisions.service"
 import { DecisionsErrorCode } from "./errors/decisions.error"
 import { EvidenceService } from "./evidence.service"
+import { LIST_DECISION_HISTORY } from "./persistence/decision-history.sql"
 import type { WorkItemViewRow } from "./persistence/work-item-views.rows"
-import { FIND_WORK_ITEM_VIEW, LIST_WORK_ITEMS } from "./persistence/work-item-views.sql"
+import { FIND_WORK_ITEM_VIEW, LIST_ACCOUNTING_WAITING_WORK, LIST_WORK_ITEMS } from "./persistence/work-item-views.sql"
 
 const CURSOR_AT = "2026-10-12T10:00:00.123456+00:00"
 
@@ -111,11 +113,27 @@ const actionOf = builder<AuthorityActionRecord>({
 
 const queryOf = builder<ListWorkItemsQuery>({ statuses: ["waiting_decision"], action: null, after: null, limit: 2 })
 
+const invoiceOf = builder<ReconcileInvoiceRow>({
+    id: "invoice-1",
+    invoice_no: "INV-1",
+    amount_vnd: 2500,
+    status: "issued",
+    customer: "Minh",
+    company: "Tea",
+    order_no: "ORDER-1",
+    order_items: "Tea",
+    order_status: "confirmed",
+    issued_at: CURSOR_AT,
+    due_at: null,
+})
+
 const build = async (entityManager: MockEntityManager) => {
     const members = mock<WorkspaceMembersService>({ require: jest.fn().mockResolvedValue(memberOf()) })
     const evidence = mock<EvidenceService>({ log: jest.fn().mockResolvedValue(undefined) })
     const authority = mock<AuthorityService>({ profileOf: jest.fn(), save: jest.fn() })
     const rules = mock<AuthorityRulesService>({ list: jest.fn(), save: jest.fn() })
+    const invoices = mock<InvoicesService>({ listForReconcile: jest.fn().mockResolvedValue([]) })
+    const transactions = mock<TransactionsService>({ momentOf: jest.fn().mockResolvedValue(null) })
     const actions = mock<AuthorityActionsService>({
         list: jest
             .fn()
@@ -130,14 +148,59 @@ const build = async (entityManager: MockEntityManager) => {
             { provide: AuthorityService, useValue: authority },
             { provide: AuthorityRulesService, useValue: rules },
             { provide: AuthorityActionsService, useValue: actions },
-            { provide: InvoicesService, useValue: mock<InvoicesService>() },
-            { provide: TransactionsService, useValue: mock<TransactionsService>() },
+            { provide: InvoicesService, useValue: invoices },
+            { provide: TransactionsService, useValue: transactions },
         ],
     }).compile()
-    return { service: moduleRef.get(DecisionsService), members, evidence, authority, rules }
+    return { service: moduleRef.get(DecisionsService), members, evidence, authority, rules, invoices, transactions }
 }
 
 describe("DecisionsService", () => {
+    describe("listAccountingWaiting", () => {
+        it.each([undefined, 12])(
+            "reads waiting accounting work with limit %s and normalizes proposals",
+            async (limit) => {
+                const row = {
+                    ...itemOf(),
+                    proposal: { summary: "Legacy" },
+                    lead: { id: "lead-1", contact_name: "Minh", company: "Tea", channel: "zalo" },
+                    assigned_staff_name: "Binh",
+                }
+                const em = mockEntityManager({ query: [LIST_ACCOUNTING_WAITING_WORK, [row]] })
+                const { service, members } = await build(em)
+
+                await expect(service.listAccountingWaiting("user-1", "ws-1", limit)).resolves.toEqual([
+                    { ...row, proposal: { summary: "Legacy", fields: {} } },
+                ])
+                expect(members.require).toHaveBeenCalledWith("user-1", "ws-1")
+                expect(em.query).toHaveBeenCalledWith(LIST_ACCOUNTING_WAITING_WORK, ["ws-1", limit ?? 500])
+            },
+        )
+    })
+
+    describe("listDecisionHistory", () => {
+        it.each<{
+            kind: DecisionHistoryKind
+            deciders: Array<string> | null
+            outcome: string | null
+        }>([
+            { kind: "all", deciders: null, outcome: null },
+            { kind: "human", deciders: ["owner", "staff"], outcome: null },
+            { kind: "policy", deciders: ["policy"], outcome: null },
+            { kind: "rejected", deciders: null, outcome: "rejected" },
+        ])("filters $kind history with a bounded page size", async ({ kind, deciders, outcome }) => {
+            const rows: Array<DecisionRecord> = []
+            const em = mockEntityManager({ query: [LIST_DECISION_HISTORY, rows] })
+            const { service, members } = await build(em)
+
+            await expect(
+                service.listDecisionHistory("user-1", "ws-1", { kind, department: "sales", limit: 1000 }),
+            ).resolves.toBe(rows)
+            expect(members.require).toHaveBeenCalledWith("user-1", "ws-1")
+            expect(em.query).toHaveBeenCalledWith(LIST_DECISION_HISTORY, ["ws-1", deciders, outcome, "sales", 100])
+        })
+    })
+
     describe("listWorkItems", () => {
         it("answers a page and the cursor of the next one", async () => {
             const em = mockEntityManager({ query: [LIST_WORK_ITEMS, [viewOf("a"), viewOf("b"), viewOf("c")]] })
@@ -160,6 +223,26 @@ describe("DecisionsService", () => {
                 service.listWorkItems("user-1", "ws-1", queryOf({ statuses: [], after, limit: 1000 })),
             ).resolves.toEqual({ items: [itemOf({ id: "z" })], next: null })
             expect(em.query).toHaveBeenCalledWith(LIST_WORK_ITEMS, ["ws-1", [], "2026-10-12T00:00:00Z", "y", 101, null])
+        })
+
+        it("passes an action filter to the workspace query", async () => {
+            const em = mockEntityManager({ query: [LIST_WORK_ITEMS, []] })
+            const { service } = await build(em)
+
+            await expect(
+                service.listWorkItems("user-1", "ws-1", queryOf({ action: "issue_invoice" })),
+            ).resolves.toEqual({
+                items: [],
+                next: null,
+            })
+            expect(em.query).toHaveBeenCalledWith(LIST_WORK_ITEMS, [
+                "ws-1",
+                ["waiting_decision"],
+                null,
+                null,
+                3,
+                "issue_invoice",
+            ])
         })
     })
 
@@ -215,6 +298,20 @@ describe("DecisionsService", () => {
     })
 
     describe("saveRule", () => {
+        it("allows automatic decisions for an uncapped action", async () => {
+            const { service, rules, evidence } = await build(mockEntityManager())
+            const change = changeOf({ mode: "auto", limit_vnd: null })
+            const saved = ruleOf({ mode: "auto", limit_vnd: null })
+            rules.save.mockResolvedValue(saved)
+
+            await expect(service.saveRule("user-1", "ws-1", change)).resolves.toBe(saved)
+            expect(rules.save).toHaveBeenCalledWith("ws-1", change)
+            expect(evidence.log).toHaveBeenCalledWith(
+                { workspaceId: "ws-1", actor: "An", locale: "en" },
+                { kind: "authority.rule_updated", actor: "An", summary: "sales.confirm_order -> auto" },
+            )
+        })
+
         it("saves the rule and logs it with its limit", async () => {
             const { service, rules, evidence } = await build(mockEntityManager())
             rules.save.mockResolvedValue(ruleOf())
@@ -270,5 +367,69 @@ describe("DecisionsService", () => {
             await expect(service.saveRule("user-1", "ws-1", capped)).resolves.toEqual(ruleOf())
             expect(rules.save).toHaveBeenCalledTimes(1)
         })
+    })
+
+    describe("reconcileDetails", () => {
+        it("prefers the stored transaction and returns existing candidates in proposal order", async () => {
+            const candidates = ["invoice-2", "missing", "invoice-1"].map((id) => ({ id, label: id, amount_vnd: 1000 }))
+            const item = itemOf({
+                subject_type: "transaction",
+                subject_id: "tx-1",
+                proposal: {
+                    summary: "Match",
+                    fields: { payer: "Claimant", claim: "Claim" },
+                    amount_vnd: 1000,
+                    candidates,
+                },
+            })
+            const em = mockEntityManager({ query: [FIND_WORK_ITEM_VIEW, [{ ...item, cursor_at: CURSOR_AT }]] })
+            const { service, invoices, transactions, members } = await build(em)
+            const moment = { amount_vnd: 2500, payer: "Payer", reference: "TRANSFER-1", occurred_at: CURSOR_AT }
+            transactions.momentOf.mockResolvedValue(moment)
+            invoices.listForReconcile.mockResolvedValue([invoiceOf(), invoiceOf({ id: "invoice-2" })])
+
+            await expect(service.reconcileDetails("user-1", "ws-1", "item-1")).resolves.toEqual({
+                payment: moment,
+                candidates: [invoiceOf({ id: "invoice-2" }), invoiceOf()],
+            })
+            expect(members.require).toHaveBeenCalledTimes(2)
+            expect(transactions.momentOf).toHaveBeenCalledWith("ws-1", "tx-1")
+            expect(invoices.listForReconcile).toHaveBeenCalledWith("ws-1", ["invoice-2", "missing", "invoice-1"])
+        })
+
+        it("uses an invoice claim's amount, text fields and creation time when no transaction applies", async () => {
+            const item = itemOf({
+                subject_type: "invoice",
+                proposal: { summary: "Claim", amount_vnd: 1200, fields: { payer: "Minh", claim: "Paid cash" } },
+            })
+            const em = mockEntityManager({ query: [FIND_WORK_ITEM_VIEW, [{ ...item, cursor_at: CURSOR_AT }]] })
+            const { service, invoices, transactions } = await build(em)
+
+            await expect(service.reconcileDetails("user-1", "ws-1", "item-1")).resolves.toEqual({
+                payment: { amount_vnd: 1200, payer: "Minh", reference: "Paid cash", occurred_at: CURSOR_AT },
+                candidates: [],
+            })
+            expect(transactions.momentOf).not.toHaveBeenCalled()
+            expect(invoices.listForReconcile).toHaveBeenCalledWith("ws-1", [])
+        })
+
+        it.each(["tx-1", null])(
+            "answers null payment fields for missing transaction %s and nontext claims",
+            async (subject_id) => {
+                const item = itemOf({
+                    subject_type: "transaction",
+                    subject_id,
+                    proposal: { summary: "Match", fields: { payer: 9, claim: null } },
+                })
+                const em = mockEntityManager({ query: [FIND_WORK_ITEM_VIEW, [{ ...item, cursor_at: CURSOR_AT }]] })
+                const { service, transactions } = await build(em)
+
+                await expect(service.reconcileDetails("user-1", "ws-1", "item-1")).resolves.toEqual({
+                    payment: { amount_vnd: null, payer: null, reference: null, occurred_at: null },
+                    candidates: [],
+                })
+                expect(transactions.momentOf).toHaveBeenCalledTimes(subject_id === null ? 0 : 1)
+            },
+        )
     })
 })

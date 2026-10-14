@@ -182,6 +182,29 @@ describe("VideoScriptingService", () => {
             expect(projectWriter.start).not.toHaveBeenCalled()
         })
 
+        it.each([
+            ["no active generation identity", { script_request_id: "generation-1", started_at: RECENT }, []],
+            [
+                "an active generation that is gone",
+                { script_request_id: "generation-1", generation_id: "generation-2", started_at: RECENT },
+                [[WS, "generation-2", expect.anything()]],
+            ],
+        ])("keeps a fresh request running with %s", async (_label, scriptMeta, stateCalls) => {
+            const { scripting, generations, projectWriter } = await build(
+                projectOf({ status: "scripting", script_meta: scriptMeta }),
+            )
+            generations.state.mockResolvedValue(null)
+
+            await expect(scripting.request("person-1", WS, "project-1")).resolves.toEqual({
+                id: "generation-1",
+                projectId: "project-1",
+                status: "running",
+            })
+            expect(generations.request).not.toHaveBeenCalled()
+            expect(projectWriter.start).not.toHaveBeenCalled()
+            expect(generations.state.mock.calls).toEqual(stateCalls)
+        })
+
         it("times out a stale operation and its retry before queuing a fresh one", async () => {
             const stale = projectOf({
                 status: "scripting",
@@ -298,6 +321,30 @@ describe("VideoScriptingService", () => {
                 status: "running",
                 progress: 50,
             })
+        })
+
+        it("reports a running correction when its generation row is unavailable", async () => {
+            const { scripting, generations, projectWriter } = await build(
+                projectOf({
+                    status: "scripting",
+                    script_meta: { script_request_id: "generation-1", generation_id: "generation-2" },
+                }),
+            )
+            generations.state.mockResolvedValueOnce(stateOf()).mockResolvedValueOnce(null)
+
+            await expect(scripting.status("person-1", WS, "generation-1")).resolves.toEqual({
+                id: "generation-1",
+                projectId: "project-1",
+                status: "running",
+                progress: 50,
+                resultId: null,
+                errorCode: null,
+            })
+            expect(generations.state.mock.calls).toEqual([
+                [WS, "generation-1"],
+                [WS, "generation-2"],
+            ])
+            expect(projectWriter.start).not.toHaveBeenCalled()
         })
     })
 

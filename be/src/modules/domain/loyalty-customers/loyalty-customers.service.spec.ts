@@ -10,6 +10,7 @@ import {
     SELECT_CUSTOMER_BY_PHONE,
     SELECT_LEAD_CONTACTS,
     UPDATE_CUSTOMER_TIER,
+    UPDATE_CUSTOMER_PROFILE,
 } from "./persistence/loyalty-customers.sql"
 
 const ROW = {
@@ -191,6 +192,62 @@ describe("LoyaltyCustomersService", () => {
             const customers = await build(mockEntityManager())
 
             await expect(customers.createFromLeads(manager, "ws-1", [])).resolves.toBe(0)
+        })
+    })
+
+    describe("updateProfile", () => {
+        it("trims and bounds profile fields and saves a valid birthday", async () => {
+            const manager = mockEntityManager({ query: [UPDATE_CUSTOMER_PROFILE, [{ id: "c1" }]] })
+            const customers = await build(manager)
+
+            await expect(
+                customers.updateProfile("ws-1", "c1", {
+                    name: `  ${"M".repeat(121)}  `,
+                    birthday: "1990-05-01",
+                    note: `  ${"N".repeat(501)}  `,
+                }),
+            ).resolves.toBe(true)
+            expect(manager.query).toHaveBeenCalledWith(UPDATE_CUSTOMER_PROFILE, [
+                "ws-1",
+                "c1",
+                "M".repeat(120),
+                true,
+                "1990-05-01",
+                "N".repeat(500),
+            ])
+        })
+
+        it("leaves omitted fields untouched and reports an unmatched customer", async () => {
+            const manager = mockEntityManager({ query: [UPDATE_CUSTOMER_PROFILE, []] })
+            const customers = await build(manager)
+
+            await expect(customers.updateProfile("ws-1", "missing", {})).resolves.toBe(false)
+            expect(manager.query).toHaveBeenCalledWith(UPDATE_CUSTOMER_PROFILE, [
+                "ws-1",
+                "missing",
+                null,
+                false,
+                null,
+                null,
+            ])
+        })
+
+        it("keeps a blank name and explicitly clears the birthday and note", async () => {
+            const manager = mockEntityManager({ query: [UPDATE_CUSTOMER_PROFILE, [{ id: "c1" }]] })
+            const customers = await build(manager)
+
+            await expect(
+                customers.updateProfile("ws-1", "c1", { name: "  ", birthday: null, note: "  " }),
+            ).resolves.toBe(true)
+            expect(manager.query).toHaveBeenCalledWith(UPDATE_CUSTOMER_PROFILE, ["ws-1", "c1", null, true, null, ""])
+        })
+
+        it("turns an invalid birthday into an explicit clear", async () => {
+            const manager = mockEntityManager({ query: [UPDATE_CUSTOMER_PROFILE, [{ id: "c1" }]] })
+            const customers = await build(manager)
+
+            await expect(customers.updateProfile("ws-1", "c1", { birthday: "2025-02-29" })).resolves.toBe(true)
+            expect(manager.query).toHaveBeenCalledWith(UPDATE_CUSTOMER_PROFILE, ["ws-1", "c1", null, true, null, null])
         })
     })
 })

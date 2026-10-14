@@ -1,0 +1,230 @@
+# Deploys NIVO to the production Docker Swarm (one Ubuntu VPS, single-manager swarm): api, web, ingress, openclaw, n8n. Canon: docs/application-stacks.md,
+# "Docker Swarm on a VPS". Runs by hand only (Actions > Deploy stack > Run workflow); it has no push trigger.
+# It replaces the three compose workflows (api-deploy, edge-deploy, web-deploy), which stay reachable ONLY from the rollback tag pre-lite-cutover.
+#
+# One release = one run:
+#   1 build and push   the api and web images to GHCR (GITHUB_TOKEN); the deploy below uses their immutable digests, never a tag
+#   2 render           deploy/swarm/render.mjs: stack.yaml (docker stack config), release.json (digests, secret/config runtime names, config digest)
+#   3 provision        versioned Swarm secrets, decrypted in memory with SOPS_AGE_KEY and piped into `docker secret create` (never printed), and configs
+#   4 pre-pull         the images are pulled on the manager so the update window is only the start time of the tasks
+#   5 (optional)       retire_compose: stop the previous compose model (cutover window only; needs the owner's approval of the run)
+#   6 deploy           docker stack deploy --prune --with-registry-auth (the deployment step never builds)
+#   7 converge         desired versus running replicas, update state, no failed task (deploy/swarm/converge.mjs)
+#   8 verify           readiness and caller journeys on the public hosts, OpenClaw by service DNS, the job tooling (deploy/swarm/verify.mjs)
+#   9 accept           the release record /srv/nivo/releases/<digest>/ and the `current` pointer move only now; superseded secrets are pruned
+# On failure the previous accepted release is deployed again from its stored record (its secret versions still exist). With retire_compose and no
+# previous release the compose model is started again (deploy/swarm/cutover/restore-compose.sh). A rollback cannot undo a data effect.
+# Environment "production" (protect it with required reviewers):
+#   vars    VPS_HOST, VPS_USER, ACME_EMAIL (optional, the Let's Encrypt contact),
+#           NEXT_PUBLIC_API_URL / NEXT_PUBLIC_DEVELOPER_API_URL (optional, default https://api.nivo.vn)
+#   secrets VPS_SSH_KEY (CI-only deploy key), VPS_KNOWN_HOSTS (pinned host keys), SOPS_AGE_KEY (the age identity of .sops.yaml; the ONLY way
+#           application secrets reach the job)
+# The VPS holds no age identity and no plaintext secret file: Swarm secrets are encrypted in Raft and mounted in memory at /run/secrets.
+name: Deploy stack
+
+on:
+  workflow_dispatch:
+    inputs:
+      retire_compose:
+        description: "Cutover window: stop the previous compose model (edge, api, web) right before the stack deploy. Owner-approved runs only."
+        type: boolean
+        default: false
+
+concurrency:
+  group: stack-deploy
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 60
+    env:
+      STACK: nivo
+      NIVO_SSH_HOST: vps
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - name: Names
+        id: names
+        run: |
+          owner="${GITHUB_REPOSITORY_OWNER,,}"
+          echo "api=ghcr.io/${owner}/nivo-lite-api" >> "$GITHUB_OUTPUT"
+          echo "web=ghcr.io/${owner}/nivo-lite-web" >> "$GITHUB_OUTPUT"
+
+      - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3.12.0
+
+      - uses: docker/login-action@184bdaa0721073962dff0199f1fb9940f07167d1 # v3.5.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install sops (built from source; the Go module checksum database verifies it)
+        run: |
+          go install github.com/getsops/sops/v3/cmd/sops@v3.13.2
+          echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
+
+      - name: Read the public build values from the sealed web member
+        id: public
+        env:
+          SOPS_AGE_KEY: ${{ secrets.SOPS_AGE_KEY }}
+        run: |
+          values="$(node deploy/swarm/public.mjs)"
+          while IFS='=' read -r key value; do echo "::add-mask::$value"; done <<< "$values"
+          { echo 'args<<PUBLIC_ARGS_END'; printf '%s\n' "$values"; echo 'PUBLIC_ARGS_END'; } >> "$GITHUB_OUTPUT"
+
+      - name: Build and push the api image
+        id: api
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
+        with:
+          context: .
+          file: be/apps/api/Dockerfile
+          push: true
+          provenance: false
+          tags: ${{ steps.names.outputs.api }}:${{ github.sha }}
+          cache-from: type=gha,scope=api
+          cache-to: type=gha,scope=api,mode=max
+
+      - name: Build and push the web image
+        id: web
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
+        with:
+          context: .
+          file: fe/apps/web/Dockerfile
+          push: true
+          provenance: false
+          tags: ${{ steps.names.outputs.web }}:${{ github.sha }}
+          build-args: |
+            ${{ steps.public.outputs.args }}
+            NEXT_PUBLIC_SITE_URL=https://nivo.vn
+            NEXT_PUBLIC_API_URL=${{ vars.NEXT_PUBLIC_API_URL || 'https://api.nivo.vn' }}
+            NEXT_PUBLIC_DEVELOPER_API_URL=${{ vars.NEXT_PUBLIC_DEVELOPER_API_URL || 'https://api.nivo.vn' }}
+          cache-from: type=gha,scope=web
+          cache-to: type=gha,scope=web,mode=max
+
+      - name: SSH setup (pinned host key, key login, one multiplexed connection)
+        env:
+          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+          VPS_KNOWN_HOSTS: ${{ secrets.VPS_KNOWN_HOSTS }}
+        run: |
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$VPS_SSH_KEY" > ~/.ssh/deploy_key && chmod 600 ~/.ssh/deploy_key
+          printf '%s\n' "$VPS_KNOWN_HOSTS" > ~/.ssh/known_hosts && chmod 644 ~/.ssh/known_hosts
+          cat >> ~/.ssh/config <<EOF
+          Host vps
+            HostName ${{ vars.VPS_HOST }}
+            User ${{ vars.VPS_USER }}
+            IdentityFile ~/.ssh/deploy_key
+            StrictHostKeyChecking yes
+            BatchMode yes
+            ConnectTimeout 20
+            ServerAliveInterval 30
+            ControlMaster auto
+            ControlPath ~/.ssh/cm-%C
+            ControlPersist 15m
+          EOF
+          # from here on every docker call (stack, secret, service, pull) talks to the VPS manager over the pinned ssh session
+          echo "DOCKER_HOST=ssh://vps" >> "$GITHUB_ENV"
+
+      - name: Preflight (swarm state, never initialized here)
+        run: |
+          state="$(docker info --format '{{.Swarm.LocalNodeState}} {{.Swarm.ControlAvailable}}')"
+          if [ "$state" != "active true" ]; then
+            echo "::error::The VPS is not a swarm manager ($state). Creating the swarm is an owner-approved effect: deploy/swarm/vps.sh prepare --init-swarm (be/docs/runbooks/vps-stack.md)."
+            exit 1
+          fi
+          ssh vps 'test -d /srv/nivo/releases && test -w /srv/nivo/releases' || { echo "::error::/srv/nivo/releases is missing or not writable by the deploy user (vps-stack.md, one-time setup)"; exit 1; }
+          docker volume inspect nivo-engine_openclaw-data nivo-engine_n8n-data nivo-edge_acme >/dev/null || { echo "::error::an external volume is missing: deploy/swarm/vps.sh prepare"; exit 1; }
+
+      - name: Render the release
+        id: render
+        env:
+          SOPS_AGE_KEY: ${{ secrets.SOPS_AGE_KEY }}
+          ACME_EMAIL: ${{ vars.ACME_EMAIL }}
+          API_REF: ${{ steps.names.outputs.api }}@${{ steps.api.outputs.digest }}
+          WEB_REF: ${{ steps.names.outputs.web }}@${{ steps.web.outputs.digest }}
+        run: |
+          previous="$(deploy/swarm/release.sh current)"
+          echo "previous=$previous" >> "$GITHUB_OUTPUT"
+          out="$RUNNER_TEMP/release"
+          node deploy/swarm/render.mjs --api-image "$API_REF" --web-image "$WEB_REF" --source-sha "$GITHUB_SHA" --previous "$previous" --out "$out"
+          digest="$(sha256sum "$out/stack.yaml" | cut -c1-16)"
+          echo "digest16=$digest" >> "$GITHUB_OUTPUT"
+          echo "::notice::release $digest, previous accepted: ${previous:-none}"
+          # the review model, secret VALUES excluded: names and digests only
+          { echo '### Rendered stack'; echo; echo "release \`$digest\` of \`$GITHUB_SHA\`"; echo; echo '```yaml'; cat "$out/stack.yaml"; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Create the versioned secrets and configs (values piped, never printed)
+        env:
+          SOPS_AGE_KEY: ${{ secrets.SOPS_AGE_KEY }}
+        run: node deploy/swarm/provision.mjs --release "$RUNNER_TEMP/release/release.json"
+
+      - name: Store the release record (the pointer does not move yet) and pre-pull the images
+        run: |
+          deploy/swarm/release.sh store "$RUNNER_TEMP/release" "${{ steps.render.outputs.digest16 }}"
+          grep -E '^\s+image: ' "$RUNNER_TEMP/release/stack.yaml" | awk '{print $2}' | sort -u | while read -r image; do docker pull --quiet "$image" >/dev/null; echo "pulled $image"; done
+
+      - name: Cutover window - stop the previous compose model
+        id: retire
+        if: ${{ inputs.retire_compose }}
+        env:
+          NIVO_RETIRE_COMPOSE_APPROVED: "1"
+        run: |
+          echo "retired=1" >> "$GITHUB_OUTPUT"
+          ssh vps "NIVO_RETIRE_COMPOSE_APPROVED=1 bash -s -- --execute" < deploy/swarm/cutover/retire-compose.sh
+
+      - name: Deploy the stack
+        id: deploy
+        run: |
+          echo "since=$(date -u -d '-60 seconds' +%FT%TZ)" >> "$GITHUB_OUTPUT"
+          echo "started=1" >> "$GITHUB_OUTPUT"
+          docker stack deploy --prune --with-registry-auth --resolve-image always --detach=true -c "$RUNNER_TEMP/release/stack.yaml" "$STACK"
+
+      - name: Observe convergence
+        run: node deploy/swarm/converge.mjs --stack "$STACK" --since "${{ steps.deploy.outputs.since }}" --timeout 900
+
+      - name: Verify the application
+        run: node deploy/swarm/verify.mjs --retry 240
+
+      - name: Accept the release
+        run: |
+          deploy/swarm/release.sh accept "${{ steps.render.outputs.digest16 }}"
+          previous="${{ steps.render.outputs.previous }}"
+          keep=(--keep "$RUNNER_TEMP/release/release.json")
+          if [ -n "$previous" ]; then
+            deploy/swarm/release.sh fetch "$previous" "$RUNNER_TEMP/previous"
+            keep+=(--keep "$RUNNER_TEMP/previous/release.json")
+          fi
+          node deploy/swarm/prune.mjs "${keep[@]}" || echo "prune failed (non-fatal; superseded objects stay until the next release)"
+          docker image prune -f >/dev/null || true
+
+      - name: Roll back to the previous accepted release
+        if: ${{ failure() && steps.deploy.outputs.started == '1' }}
+        run: |
+          previous="${{ steps.render.outputs.previous }}"
+          docker service ls --filter "label=com.docker.stack.namespace=$STACK" --format 'table {{.Name}}\t{{.Replicas}}\t{{.Image}}' || true
+          docker stack ps "$STACK" --no-trunc --format 'table {{.Name}}\t{{.CurrentState}}\t{{.Error}}' | head -30 || true
+          if [ -n "$previous" ]; then
+            echo "ROLLING BACK to the previous accepted release $previous"
+            deploy/swarm/release.sh fetch "$previous" "$RUNNER_TEMP/previous"
+            since="$(date -u -d '-30 seconds' +%FT%TZ)"
+            docker stack deploy --prune --with-registry-auth --resolve-image always --detach=true -c "$RUNNER_TEMP/previous/stack.yaml" "$STACK"
+            node deploy/swarm/converge.mjs --stack "$STACK" --since "$since" --timeout 600 && echo "rollback converged on $previous" || echo "ROLLBACK DID NOT CONVERGE: follow be/docs/runbooks/cutover.md, Rollback"
+          elif [ "${{ steps.retire.outputs.retired }}" = "1" ]; then
+            echo "no previous Swarm release: starting the previous compose model again"
+            ssh vps "bash -s -- --execute" < deploy/swarm/cutover/restore-compose.sh
+          else
+            echo "no previous accepted release; the services were rolled back by update_config where they had a previous spec"
+          fi
+
+      - name: Remove local credentials
+        if: always()
+        run: |
+          rm -rf "$RUNNER_TEMP/release" "$RUNNER_TEMP/previous"
+          ssh -O exit vps 2>/dev/null || true
+          rm -f ~/.ssh/deploy_key

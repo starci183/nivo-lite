@@ -137,6 +137,17 @@ describe("booking tool arguments", () => {
         expect(policy.bookingDateIn(instant, "America/Los_Angeles")).toBe("2026-10-11")
     })
 
+    it("leaves missing calendar parts empty when the formatter supplies none", () => {
+        const instant = Date.UTC(2026, 9, 11, 18, 30)
+        const formatParts = jest.spyOn(Intl.DateTimeFormat.prototype, "formatToParts").mockReturnValue([])
+        try {
+            expect(policy.bookingDateIn(instant, "Asia/Ho_Chi_Minh")).toBe("--")
+            expect(formatParts).toHaveBeenCalledWith(new Date(instant))
+        } finally {
+            formatParts.mockRestore()
+        }
+    })
+
     it("prefers an exact folded name even when an earlier active name contains it", () => {
         const containing = serviceOf({ id: "long", name: "Luxury Cut" })
         const exact = serviceOf({ id: "exact", name: "CUT" })

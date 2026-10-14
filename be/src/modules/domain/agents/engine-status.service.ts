@@ -10,12 +10,10 @@ import type { EngineAvailability, EngineStatus, Processor } from "./agents.contr
 import { InjectAgentsOptions, InjectInstallations } from "./agents.decorators"
 import type { AgentsOptions } from "./agents.options"
 import type { InstallationDirectory } from "./agents.port"
+import { EngineReadinessService } from "./engine-readiness.service"
 import { isFresh, processorFromSettings } from "./engine-status.policy"
 import type { SyncCheckRow } from "./persistence/sync-check.rows"
 import { FIND_LAST_SYNC_CHECK } from "./persistence/sync-check.sql"
-
-/** Any agent id works for the probe: only whether a config directory is set matters. */
-const PROBE_AGENT = "probe"
 
 @Injectable()
 /**
@@ -24,20 +22,23 @@ const PROBE_AGENT = "probe"
  * liveness signal that remains (a scheduled sync touches it every few minutes).
  */
 export class EngineStatusService {
+    private readonly readiness: EngineReadinessService
+
     constructor(
         private readonly members: WorkspaceMembersService,
         @InjectInstallations() private readonly installations: InstallationDirectory,
-        @InjectOpenclawGateway() private readonly gateway: GatewayClient,
-        @InjectOpenclawAgentRegistry() private readonly registry: AgentRegistryService,
+        @InjectOpenclawGateway() gateway: GatewayClient,
+        @InjectOpenclawAgentRegistry() registry: AgentRegistryService,
         @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
         @InjectClock() private readonly clock: Clock,
         @InjectAgentsOptions() private readonly options: AgentsOptions,
-    ) {}
+    ) {
+        this.readiness = new EngineReadinessService(gateway, registry)
+    }
 
     /** Whether a text can be generated now: no gateway, a gateway without a writable workspace, or ready. */
     availability(): EngineAvailability {
-        if (!this.gateway.enabled) return "not_configured"
-        return this.registry.workspaceDirs(PROBE_AGENT) === null ? "offline" : "ready"
+        return this.readiness.availability()
     }
 
     /** Who answers a module's customers in a workspace (its first installation; OpenClaw when it has none). */
@@ -52,8 +53,8 @@ export class EngineStatusService {
         const [row] = await this.entityManager.query<Array<SyncCheckRow>>(FIND_LAST_SYNC_CHECK, [workspaceId])
         const lastSyncCheckAt = row?.checked_at ?? null
         return {
-            gatewayConfigured: this.gateway.enabled,
-            workspaceWritable: this.registry.workspaceDirs(PROBE_AGENT) !== null,
+            gatewayConfigured: this.readiness.configured(),
+            workspaceWritable: this.readiness.writable(),
             lastSyncCheckAt,
             syncFresh: isFresh(lastSyncCheckAt, this.clock.now().getTime(), this.options.syncFreshMs),
         }

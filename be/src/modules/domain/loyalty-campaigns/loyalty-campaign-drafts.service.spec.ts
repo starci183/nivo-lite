@@ -171,6 +171,41 @@ describe("LoyaltyCampaignDraftsService", () => {
             expect(campaigns.finishDraft).toHaveBeenCalledWith(entityManager, "ws-1", "k1", "Hello {ten_khach}", 0)
         })
 
+        it.each([null, { status: "running", text: "{ten_khach} unfinished", usage: null, timings: {} }])(
+            "keeps the template when generation progress is unavailable or unfinished: %j",
+            async (progress) => {
+                const { service, entityManager, campaigns, generations, runner } = await build()
+                campaigns.get.mockResolvedValue(viewOf())
+                runner.run.mockResolvedValue("dropped")
+                generations.progress.mockResolvedValue(progress)
+
+                await expect(service.run(jobOf(PAYLOAD))).resolves.toBeUndefined()
+
+                expect(runner.run).toHaveBeenCalledWith({ workspaceId: "ws-1", generationId: "gen-1" })
+                expect(generations.progress).toHaveBeenCalledWith("ws-1", "gen-1")
+                expect(campaigns.finishDraft).toHaveBeenCalledWith(entityManager, "ws-1", "k1", "Hello {ten_khach}", 0)
+            },
+        )
+
+        it("stores zero duration when the clock moves backwards during generation", async () => {
+            const { service, clock, entityManager, campaigns, generations, runner } = await build()
+            campaigns.get.mockResolvedValue(viewOf())
+            runner.run.mockImplementation(() => {
+                clock.advance(-40)
+                return Promise.resolve("done")
+            })
+            generations.progress.mockResolvedValue({
+                status: "done",
+                text: "{ten_khach} thanks",
+                usage: null,
+                timings: {},
+            })
+
+            await expect(service.run(jobOf(PAYLOAD))).resolves.toBeUndefined()
+
+            expect(campaigns.finishDraft).toHaveBeenCalledWith(entityManager, "ws-1", "k1", "{ten_khach} thanks", 0)
+        })
+
         it("does nothing for a payload that is not a campaign or a campaign that is not waiting", async () => {
             const { service, campaigns, runner } = await build()
             campaigns.get.mockResolvedValue(viewOf({ status: "draft" }))

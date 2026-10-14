@@ -100,6 +100,22 @@ describe("ContentAiStoreService writes", () => {
         expect(entityManager.query).not.toHaveBeenCalled()
     })
 
+    it.each([
+        { topic: "\nFull brief", title: "" },
+        { topic: "Launch\nFull brief", title: "Launch" },
+        { topic: "Launch", title: "Launch" },
+    ])("preserves the first line of $topic as the title", async ({ topic, title }) => {
+        const { service, entityManager, members } = await build()
+        members.require.mockResolvedValue(member)
+        entityManager.query.mockResolvedValue([{ id: "idea-1", updated_at: "2026-01-01T00:00:00Z" }])
+
+        await expect(service.createQuickIdea("user-1", "workspace-1", { topic, channels: [] })).resolves.toEqual({
+            id: "idea-1",
+            updatedAt: "2026-01-01T00:00:00.000Z",
+        })
+        expect(entityManager.query).toHaveBeenCalledWith(INSERT_QUICK_IDEA, ["workspace-1", title, topic, [], "Mai"])
+    })
+
     it("refuses a quick idea insert that returns no row", async () => {
         const { service, entityManager, members } = await build()
         members.require.mockResolvedValue(member)

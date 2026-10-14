@@ -25,7 +25,7 @@ const build = async (workspaces: ReadonlyArray<string>, clock = new FakeClock(AT
             { provide: WorkEngineService, useValue: engine },
         ],
     }).compile()
-    return { service: moduleRef.get(WorkDrainService), items, engine, logger }
+    return { service: moduleRef.get(WorkDrainService), items, engine, logger, clock }
 }
 
 describe("WorkDrainService", () => {
@@ -56,5 +56,19 @@ describe("WorkDrainService", () => {
         await expect(service.drainAll()).resolves.toBe(0)
 
         expect(engine.runQueued).not.toHaveBeenCalled()
+    })
+
+    it("stops once the drain budget is spent and leaves the next workspace queued", async () => {
+        const clock = new FakeClock(AT)
+        const { service, engine } = await build(["ws-1", "ws-2"], clock)
+        engine.runQueued.mockImplementation(() => {
+            clock.advance(40_000)
+            return Promise.resolve(2)
+        })
+
+        await expect(service.drainAll()).resolves.toBe(2)
+
+        expect(engine.runQueued).toHaveBeenCalledTimes(1)
+        expect(engine.runQueued).toHaveBeenCalledWith({ workspaceId: "ws-1", actor: "NIVO", locale: "vi" }, 4)
     })
 })

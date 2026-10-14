@@ -6,5 +6,6 @@ export { InjectJobClaims, InjectJobProcessorRegistry, InjectJobFence, JOB_CLAIMS
 export { JobsModule } from "./jobs.module"
 export type { JobClaims, JobProcessorRegistry, JobStep } from "./jobs.port"
 export { FencedProcessor } from "./fenced.processor"
+export { AdvancingJobStepPolicy } from "./advancing.policy"
 export { JobFenceService } from "./job-fence.service"
 export { JOBS_MESSAGES } from "./messages/jobs.messages"

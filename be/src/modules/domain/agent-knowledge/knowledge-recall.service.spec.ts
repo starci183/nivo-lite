@@ -234,6 +234,15 @@ describe("KnowledgeRecallService", () => {
         expect(lessons.forModule).toHaveBeenCalledWith(view.workspaceId, "chatbot")
     })
 
+    it.each([null, undefined, ""])("keeps an empty heading for provider subject label %s", async (subjectLabel) => {
+        const { recall, facts, messages } = await build()
+        facts.forView.mockResolvedValue([Object.assign({}, fact, { subjectLabel })])
+        messages.get.mockImplementation((_key, params) => `facts: ${String(params?.body)}`)
+
+        await expect(recall.standingMemory(view)).resolves.toBe("facts: ### \n- Price: 50k")
+        expect(messages.get).toHaveBeenCalledWith("bundle.memoryFacts", { body: "### \n- Price: 50k" }, "vi")
+    })
+
     it("includes conditional lessons after facts and omits a condition for blank applicability", async () => {
         const { recall, lessons, messages } = await build()
         lessons.forModule.mockResolvedValue([lesson("Size", "Size missing"), lesson("Always", " \t ")])

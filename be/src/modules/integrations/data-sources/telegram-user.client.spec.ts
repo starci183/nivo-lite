@@ -14,7 +14,7 @@ import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { DATA_SOURCES_OPTIONS } from "./data-sources.decorators"
 import type { DataSourcesOptions } from "./data-sources.options"
-import { DataSourcesErrorCode } from "./errors/data-sources.error"
+import { DataSourcesError, DataSourcesErrorCode } from "./errors/data-sources.error"
 import { TELEGRAM_USER_TEXT } from "./messages/telegram-user.messages"
 import { TelegramUserClient } from "./telegram-user.client"
 import type { TelegramReadRequest } from "./telegram-user.contracts"
@@ -32,6 +32,7 @@ class MockTelegram {
     queries: Array<string> = []
     level = ""
     destroyed = false
+    me = new Api.User({ id: returnBigInt(1), firstName: "Ada", lastName: "", username: "ada" })
 }
 
 const mockTg = new MockTelegram()
@@ -42,6 +43,7 @@ const ada = (): Api.User =>
 const senderOf = (kind: string): Entity | undefined => {
     if (kind === "user") return ada()
     if (kind === "bare") return new Api.User({ id: returnBigInt(2), firstName: "", lastName: "", username: "ada" })
+    if (kind === "nameless") return new Api.User({ id: returnBigInt(2) })
     if (kind === "chat") {
         return new Api.Chat({
             id: returnBigInt(3),
@@ -142,9 +144,7 @@ const clientOf = (session: StringSession): TelegramClient => {
         return state.destroyError === undefined ? Promise.resolve() : Promise.reject(state.destroyError)
     })
     client.sendCode.mockResolvedValue({ phoneCodeHash: "hash-1", isCodeViaApp: true })
-    client.getMe.mockImplementation(() =>
-        Promise.resolve(new Api.User({ id: returnBigInt(1), firstName: "Ada", lastName: "", username: "ada" })),
-    )
+    client.getMe.mockImplementation(() => Promise.resolve(state.me))
     client.invoke.mockImplementation(answerOf)
     client.checkAuthorization.mockImplementation(() => Promise.resolve(state.authorized))
     client.iterDialogs.mockImplementation(() =>
@@ -370,5 +370,90 @@ describe("TelegramUserClient", () => {
         mockTg.mode = "down"
         await expect(client.logOut("session-1")).resolves.toBeUndefined()
         expect(logger.error).toHaveBeenCalledWith(TelegramUserLogEvent.LogOutFailed, expect.any(Error), {})
+    })
+
+    it("keeps missing account names and usernames empty, and logs out a valid session", async () => {
+        const { client } = await build()
+        mockTg.me = new Api.User({ id: returnBigInt(1) })
+
+        await expect(client.checkPassword({ session: "session-1", password: "pw" })).resolves.toEqual({
+            session: "saved-session",
+            account: { displayName: "", username: null },
+        })
+        await expect(client.logOut("session-1")).resolves.toBeUndefined()
+        expect(mockTg.queries).toEqual(["account.GetPassword", "auth.CheckPassword", "auth.LogOut"])
+        expect(mockTg.destroyed).toBe(true)
+    })
+
+    it("uses a dialog name or id when the title is missing", async () => {
+        const { client } = await build()
+        mockTg.dialogs = [dialogOf({ id: "10", name: "Ada" }), dialogOf({ id: "11" })]
+
+        await expect(client.listDialogs("session-1", 5)).resolves.toEqual([
+            { id: "10", title: "Ada", kind: "channel", unread: 0 },
+            { id: "11", title: "11", kind: "channel", unread: 0 },
+        ])
+    })
+
+    it("skips unusable dialog entities and empty messages but keeps pure media", async () => {
+        const { client } = await build()
+        mockTg.dialogs = [
+            dialogOf({ id: undefined, entityKind: "user" }),
+            dialogOf({ id: "20", entityKind: "user" }),
+            dialogOf({ id: "10" }),
+            dialogOf({ id: "10", entityKind: "user" }),
+        ]
+        mockTg.messages = [
+            messageOf({ id: 5, className: "Message", message: "", date: 1 }),
+            messageOf({
+                id: 6,
+                className: "Message",
+                message: "",
+                date: 2,
+                senderKind: "nameless",
+                media: new Api.MessageMediaPhoto({}),
+            }),
+        ]
+
+        await expect(client.readChats(read({ chatIds: ["10", "11"], perChatLimit: 3 }))).resolves.toEqual([
+            {
+                chatId: "10",
+                maxId: 6,
+                capped: false,
+                messages: [{ id: 6, date: 2, text: "", senderName: "", replyToId: null, hasMedia: true }],
+            },
+        ])
+        expect(mockTg.windows).toEqual([{ reverse: true, offsetId: 4, limit: 3 }])
+    })
+
+    it("stops before fetching messages when the deadline expires after discovering entities", async () => {
+        const { client } = await build()
+        mockTg.dialogs = [dialogOf({ id: "10", entityKind: "user" })]
+        let checks = 0
+
+        await expect(
+            client.readChats(
+                read({
+                    isExpired: () => {
+                        checks += 1
+                        return checks > 1
+                    },
+                }),
+            ),
+        ).resolves.toEqual([])
+        expect(mockTg.windows).toEqual([])
+    })
+
+    it("propagates a cleanup logger failure after sending a code succeeds", async () => {
+        const { client, logger } = await build()
+        const failure = new DataSourcesError({ code: DataSourcesErrorCode.Unavailable })
+        mockTg.destroyError = new Error("destroy unavailable")
+        logger.error.mockImplementation(() => {
+            throw failure
+        })
+
+        await expect(client.sendCode("+841234")).rejects.toBe(failure)
+        expect(logger.error).toHaveBeenCalledWith(TelegramUserLogEvent.CloseFailed, mockTg.destroyError, {})
+        expect(mockTg.destroyed).toBe(true)
     })
 })

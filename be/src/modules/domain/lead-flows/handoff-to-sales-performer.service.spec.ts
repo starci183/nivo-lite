@@ -3,6 +3,7 @@ import { builder, mock } from "@starci/jest-preset"
 import { WORK_PERFORMER_REGISTRY } from "@modules/domain/decisions"
 import type { WorkContext, WorkItem, WorkPerformerRegistry } from "@modules/domain/decisions"
 import { LeadRecordsService } from "@modules/domain/leads"
+import type { LeadRecordRow } from "@modules/domain/leads"
 import { LeadFlowsError, LeadFlowsErrorCode } from "./errors/lead-flows.error"
 import { HandoffToSalesPerformerService } from "./handoff-to-sales-performer.service"
 import { LeadFlowConversationService } from "./lead-flow-conversation.service"
@@ -86,6 +87,20 @@ const hotFlow = flowOf({
     score_reasons: ["asked price"],
     phone: "84912345678",
     signals: { ...EMPTY_SIGNALS, need: "Wholesale tea" },
+})
+
+const leadOf = builder<LeadRecordRow>({
+    id: "lead-1",
+    workspace_id: "ws-1",
+    contact_name: "Minh",
+    company: "Hue Tea",
+    channel: "Lead Ads",
+    need: "Recorded need",
+    stage: "new",
+    context_summary: null,
+    phone: null,
+    email: null,
+    origin: "live",
 })
 
 const build = async (flow: LeadFlow = hotFlow) => {
@@ -187,5 +202,97 @@ describe("HandoffToSalesPerformerService", () => {
         })
 
         expect(leads.handOver).not.toHaveBeenCalled()
+    })
+
+    it("defaults a missing score to cold when neither the lead nor its flow exists", async () => {
+        const { performer, store, kit, leads } = await build()
+        store.byLead.mockResolvedValue(null)
+
+        await expect(performer.prepare(ctx, itemOf({ lead_id: null }))).resolves.toEqual({
+            proposal: {
+                summary: "handoff.ask",
+                outcome: "unclear",
+                fields: { contact: "", need: "", score: "" },
+            },
+        })
+
+        expect(kit.text).toHaveBeenCalledWith("en", "handoff.ask", { name: "", level: "level.cold" })
+        expect(leads.find).not.toHaveBeenCalled()
+    })
+
+    it("uses the recorded lead's name and need when the flow has neither", async () => {
+        const { performer, store, kit, leads } = await build()
+        store.byLead.mockResolvedValue(flowOf({ name: null, psid: null }))
+        leads.find.mockResolvedValue(leadOf())
+
+        await expect(
+            performer.prepare(ctx, itemOf({ proposal: { summary: "", fields: { score: "warm" } } })),
+        ).resolves.toEqual({
+            proposal: {
+                summary: "handoff.ask",
+                outcome: "unclear",
+                fields: { contact: "", need: "Recorded need", score: "warm" },
+            },
+        })
+
+        expect(kit.text).toHaveBeenCalledWith("en", "handoff.ask", { name: "Minh", level: "level.warm" })
+    })
+
+    it("retains the proposal's contact and need over values from a nameless flow", async () => {
+        const { performer, store, kit, leads } = await build()
+        store.byLead.mockResolvedValue({ ...hotFlow, name: null })
+        leads.find.mockResolvedValue(null)
+
+        await expect(
+            performer.prepare(
+                ctx,
+                itemOf({
+                    proposal: { summary: "", fields: { contact: "owner@example.com", need: "Owner supplied need" } },
+                }),
+            ),
+        ).resolves.toEqual({
+            proposal: {
+                summary: "handoff.hot",
+                fields: { contact: "owner@example.com", need: "Owner supplied need", score: "hot" },
+            },
+        })
+
+        expect(kit.text).toHaveBeenCalledWith("en", "handoff.hot", { name: "" })
+    })
+
+    it("uses an empty need when the flow and recorded lead have no need", async () => {
+        const { performer, store, leads } = await build()
+        store.byLead.mockResolvedValue(flowOf({ psid: null }))
+        leads.find.mockResolvedValue(null)
+
+        await expect(performer.prepare(ctx, itemOf())).resolves.toEqual({
+            proposal: {
+                summary: "handoff.ask",
+                outcome: "unclear",
+                fields: { contact: "", need: "", score: "" },
+            },
+        })
+    })
+
+    it("logs and closes an unlinked flow with the default hot score and no need", async () => {
+        const flow = flowOf({ lead_id: null })
+        const { performer, kit, store, leads } = await build(flow)
+        const pack = "label.score: hot ()\nlabel.source: Facebook dm"
+
+        await expect(performer.perform(ctx, itemOf({ lead_id: null }), { summary: "", fields: {} })).resolves.toEqual({
+            summary: "handoff.done",
+            evidence: "captured",
+            lead_id: null,
+            detail: null,
+        })
+
+        expect(leads.handOver).not.toHaveBeenCalled()
+        expect(store.patch).toHaveBeenCalledWith(flow, {
+            state: "handed_off",
+            handed_off_at: NOW,
+            pending_question: null,
+        })
+        expect(kit.text).toHaveBeenCalledWith("en", "handoff.evidence", { level: "hot" })
+        expect(kit.log).toHaveBeenCalledWith(ctx, flow, "item-1", "lead_gen.handoff", "handoff.evidence", pack)
     })
 })

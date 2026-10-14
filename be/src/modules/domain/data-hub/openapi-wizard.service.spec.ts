@@ -1,7 +1,13 @@
 import { Test } from "@nestjs/testing"
 import { mock } from "@starci/jest-preset"
 import type { ConnectionActor } from "@modules/domain/connections"
-import { OPENAPI, PUBLIC_HOST, openApiFailure } from "@modules/integrations/data-sources"
+import {
+    DataSourcesError,
+    DataSourcesErrorCode,
+    OPENAPI,
+    PUBLIC_HOST,
+    openApiFailure,
+} from "@modules/integrations/data-sources"
 import type {
     OpenApiClient,
     OpenApiConfig,
@@ -425,5 +431,61 @@ describe("OpenApiWizardService", () => {
 
         await expect(service.save(actor, draft)).rejects.toBe(refusal)
         expect(hub.create).not.toHaveBeenCalled()
+    })
+
+    it("reports an integration body failure without detail as an empty error", async () => {
+        const { service, client } = await build()
+        const failure = new DataSourcesError({ code: DataSourcesErrorCode.Rejected })
+        client.call.mockResolvedValue({
+            status: 200,
+            headers: {},
+            get text(): string {
+                throw failure
+            },
+        })
+        await expect(service.testOperation(actor, operationTest)).resolves.toEqual({
+            status: 200,
+            itemCount: 0,
+            itemsPath: "",
+            idField: "",
+            titleField: "",
+            sampleKeys: [],
+            error: "",
+        })
+    })
+
+    it("propagates an unexpected failure while reading the response body", async () => {
+        const { service, client } = await build()
+        const failure = new DataHubError({ code: DataHubErrorCode.Invalid, params: { detail: "Body unavailable" } })
+        client.call.mockResolvedValue({
+            status: 200,
+            headers: {},
+            get text(): string {
+                throw failure
+            },
+        })
+        await expect(service.testOperation(actor, operationTest)).rejects.toBe(failure)
+    })
+
+    it("tests an existing connection when its stored credential is absent", async () => {
+        const { service, client, hub } = await build()
+        hub.credentialOf.mockResolvedValue(null)
+        await expect(service.testOperation(actor, { ...operationTest, connectionId: "api-1" })).resolves.toEqual({
+            status: 200,
+            itemCount: 2,
+            itemsPath: "data.items",
+            idField: "id",
+            titleField: "name",
+            sampleKeys: ["id", "name"],
+            error: null,
+        })
+        expect(client.call).toHaveBeenCalledWith({
+            baseUrl: "https://api.example.com",
+            op,
+            auth,
+            input: {},
+            fixedQuery: "limit=2",
+        })
+        expect(hub.credentialOf).toHaveBeenCalledWith("api-1")
     })
 })

@@ -3,7 +3,8 @@ import type { RawBodyRequest } from "@nestjs/common"
 import type { Request } from "express"
 import { BankFeedService } from "@modules/domain/billing"
 import { Public, PublicReason } from "@modules/domain/identity"
-import { RateLimit, RateTier } from "@modules/platform/http-security"
+import { InjectWebhookSignature, RateLimit, RateTier } from "@modules/platform/http-security"
+import type { WebhookSignatureService } from "@modules/platform/http-security"
 
 @Controller("api/bank/vietcombank")
 /**
@@ -13,9 +14,12 @@ import { RateLimit, RateTier } from "@modules/platform/http-security"
  * Body: { amount_vnd: number, content: string, sender_name?: string, event_id: string }.
  */
 export class VietcombankWebhook {
-    constructor(private readonly feed: BankFeedService) {}
+    constructor(
+        @InjectWebhookSignature() private readonly signature: WebhookSignatureService,
+        private readonly feed: BankFeedService,
+    ) {}
 
-    /** Answers HTTP 200 with the event the credit became. */
+    /** Proves the shared secret before intake and acknowledges accepted credits with HTTP 200 and an empty body. */
     @Post()
     @HttpCode(HttpStatus.OK)
     @Public({ reason: PublicReason.SignedWebhook })
@@ -24,6 +28,13 @@ export class VietcombankWebhook {
         @Req() request: RawBodyRequest<Request>,
         @Headers("x-nivo-bank-secret") secret: string | undefined,
     ): Promise<void> {
+        await this.signature.verify({
+            provider: "vietcombank",
+            scope: "platform",
+            rawBody: request.rawBody,
+            signature: secret,
+            timestamp: undefined,
+        })
         await this.feed.acceptSimulatedCredit({ secret, rawBody: request.rawBody })
     }
 }

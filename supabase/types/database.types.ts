@@ -1,4 +1,4 @@
-// migrations-sha256: c6fa62c19b283a033dafce1d903f01bea11a9d7a06c44ff7851b2475cfad5501
+// migrations-sha256: 4cc8f87f8f07cfff8657e57947b73c986d0e9296ac5475077f5ee72d4d2f437d
 
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[]
 
@@ -4170,8 +4170,18 @@ isOneToOne: false
 "job_fail":
 { Args: { "p_delay_s": number,"p_error"?: string,"p_msg_id": number,"p_queue": string }; Returns: boolean
                            },
+"job_failed":
+{ Args: { "p_limit"?: number }; Returns: {
+              "attempts": number,"finished_at": string,"id": string,"last_error": string,"name": string
+            }[]
+                           },
 "job_message":
 { Args: { "p_dedupe": string,"p_name": string,"p_outbox": string,"p_payload": Json }; Returns: Json
+                           },
+"job_open":
+{ Args: { "p_limit"?: number }; Returns: {
+              "attempts": number,"created_at": string,"id": string,"last_error": string,"name": string,"state": string
+            }[]
                            },
 "job_read":
 { Args: { "p_qty": number,"p_queue": string,"p_vt": number,"p_ws_limit"?: number }; Returns: {
@@ -4180,6 +4190,9 @@ isOneToOne: false
                            },
 "job_requeue":
 { Args: { "p_outbox": string }; Returns: number
+                           },
+"job_requeue_failed":
+{ Args: { "p_hours"?: number }; Returns: Json
                            },
 "job_stats":
 { Args: Record<PropertyKey, never>; Returns: Json

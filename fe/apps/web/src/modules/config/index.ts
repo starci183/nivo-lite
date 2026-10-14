@@ -1,6 +1,7 @@
 /** The only process-environment reader of the web app's modules. */
 const required = (name: string, value: string | undefined): string => {
-    if (value === undefined || value === "") throw new Error(`${name} is not set (see secrets.example.env)`)
+    if (value === undefined || value === "")
+        throw new Error(`${name} is not set (provide it as a build argument / GitHub environment variable)`)
     return value
 }
 

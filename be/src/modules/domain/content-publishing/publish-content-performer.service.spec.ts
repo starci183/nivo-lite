@@ -57,7 +57,7 @@ const build = async () => {
             { provide: MESSAGE_CATALOG, useValue: catalog },
         ],
     }).compile()
-    return { service: moduleRef.get(PublishContentPerformerService), store, registry }
+    return { service: moduleRef.get(PublishContentPerformerService), store, registry, catalog }
 }
 
 describe("PublishContentPerformerService", () => {
@@ -83,5 +83,62 @@ describe("PublishContentPerformerService", () => {
             code: ContentPublishingErrorCode.WrongStatus,
         })
         expect(store.approve).not.toHaveBeenCalled()
+    })
+
+    it("refuses a named automation actor carrying a nonhuman kind", async () => {
+        const { service, store } = await build()
+        const actor = { name: "bot", kind: "policy" }
+
+        await expect(service.perform(CTX, ITEM, PROPOSAL, actor)).rejects.toMatchObject({
+            code: ContentPublishingErrorCode.WrongStatus,
+        })
+        expect(store.approve).not.toHaveBeenCalled()
+    })
+
+    it("registers itself for publish_post", async () => {
+        const { service, registry } = await build()
+        service.onModuleInit()
+        expect(registry.add).toHaveBeenCalledWith("publish_post", service)
+    })
+
+    it("approves when a staff member decides and keeps a missing draft as null", async () => {
+        const { service, store, catalog } = await build()
+        const proposal: Proposal = { summary: "Publish", fields: {} }
+
+        await expect(service.perform(CTX, ITEM, proposal, { kind: "staff", name: "Minh" })).resolves.toEqual({
+            summary: "Lan approved work-1",
+            evidence: "reviewed",
+        })
+        expect(catalog.get).toHaveBeenCalledWith("contentPublishing.approved", { who: "Minh", id: "work-1" }, "en")
+        expect(store.approve).toHaveBeenCalledWith("ws-1", "item-1", "work-1", "Minh", null, {
+            at: AT,
+            kind: "approved",
+            by: "Minh",
+            text: "Lan approved work-1",
+        })
+    })
+
+    it.each([
+        ["another workspace", { ...ITEM, workspace_id: "ws-2" }],
+        ["no subject", { ...ITEM, subject_id: null }],
+        ["another action", { ...ITEM, action: "reply_customer" }],
+    ])("refuses a work item from %s", async (_label, item) => {
+        const { service, store } = await build()
+        await expect(service.perform(CTX, item, PROPOSAL, { kind: "owner", name: "Lan" })).rejects.toMatchObject({
+            code: ContentPublishingErrorCode.WrongStatus,
+        })
+        expect(store.approve).not.toHaveBeenCalled()
+    })
+
+    it("returns a rejected post to draft", async () => {
+        const { service, store, catalog } = await build()
+        await expect(service.onReject(CTX, ITEM, PROPOSAL, { kind: "staff", name: "Minh" })).resolves.toBeUndefined()
+        expect(catalog.get).toHaveBeenCalledWith("contentPublishing.rejected", { who: "Minh" }, "en")
+        expect(store.reject).toHaveBeenCalledWith("ws-1", "item-1", "work-1", {
+            at: AT,
+            kind: "rejected",
+            by: "Minh",
+            text: "Lan approved work-1",
+        })
     })
 })

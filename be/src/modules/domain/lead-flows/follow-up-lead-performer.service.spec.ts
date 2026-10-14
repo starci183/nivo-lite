@@ -198,4 +198,61 @@ describe("FollowUpLeadPerformerService", () => {
 
         expect(kit.dm).not.toHaveBeenCalled()
     })
+
+    it("sends a later follow-up without changing the first follow-up time", async () => {
+        const flow = flowOf({ followed_up_at: "2026-10-11T10:00:00.000Z" })
+        const { performer, kit, store, commands } = await build(flow)
+        kit.dm.mockResolvedValue({ ok: true, reason: null, detail: null })
+
+        await expect(performer.perform(ctx, itemOf(), { ...proposal, draft: "  Still keen?  " })).resolves.toEqual({
+            summary: "follow.done",
+            evidence: "captured",
+            lead_id: "lead-1",
+            detail: "Still keen?",
+        })
+
+        expect(kit.dm).toHaveBeenCalledWith(ctx, flow, "Still keen?")
+        expect(store.patch).toHaveBeenCalledWith(flow, { state: "nurturing" })
+        expect(commands.sendCommand).not.toHaveBeenCalled()
+    })
+
+    it("keeps the existing chain when Sales receives the first follow-up", async () => {
+        const { performer, kit, commands } = await build()
+        kit.dm.mockResolvedValue({ ok: false, reason: "window", detail: null })
+
+        await expect(performer.perform(ctx, itemOf(), proposal)).resolves.toEqual({
+            summary: "follow.to-sales",
+            evidence: "captured",
+            lead_id: "lead-1",
+            detail: null,
+        })
+
+        expect(commands.sendCommand).toHaveBeenCalledWith(ctx, {
+            from: "lead_gen",
+            to: "sales",
+            command: "send_follow_up",
+            reason: "warm_lead_outside_window",
+            parentId: "item-1",
+            chainId: "chain-1",
+            origin: "live",
+            inboundEventId: null,
+            queue: true,
+            dedupeKey: "send_follow_up:lead_gen:flow-1",
+            payload: { subject_type: "lead", subject_id: "lead-1", lead_id: "lead-1" },
+        })
+    })
+
+    it("does nothing when the proposal omits its draft", async () => {
+        const { performer, kit, store } = await build()
+
+        await expect(performer.perform(ctx, itemOf(), { summary: "", fields: {} })).resolves.toEqual({
+            summary: "follow.already",
+            evidence: "captured",
+            lead_id: "lead-1",
+            detail: null,
+        })
+
+        expect(kit.dm).not.toHaveBeenCalled()
+        expect(store.patch).not.toHaveBeenCalled()
+    })
 })
