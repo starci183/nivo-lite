@@ -20,11 +20,7 @@ RUN npm ci --ignore-scripts
 
 COPY be/tsconfig.json be/tsconfig.build.json be/
 COPY be/src be/src
-COPY supabase/types supabase/types
 COPY be/apps/cli be/apps/cli
-# scripts/build-be.mjs flattens the output (the generated database types under supabase/types widen the compiler root), so the entry
-# sits where the canon says (be/dist/apps/<app>/src/main.js) for this image and for `npm run start:api` alike.
-COPY scripts/build-be.mjs scripts/
 RUN npm run build:be
 
 FROM node:22.14.0-alpine3.21 AS runtime
