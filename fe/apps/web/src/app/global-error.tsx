@@ -2,6 +2,7 @@
 
 import { AppGlobalErrorPage } from "@/features/pages/AppGlobalErrorPage"
 import "./globals.css"
+import "@/modules/brand"
 
 type GlobalErrorProps = { readonly reset: () => void }
 
