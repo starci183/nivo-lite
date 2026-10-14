@@ -1,7 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import Papa from "papaparse"
-import readXlsxFile from "read-excel-file/universal"
-import { InjectPublicHost } from "./data-sources.decorators"
+import { InjectPublicHost, InjectWorkbookReader } from "./data-sources.decorators"
 import { DataSourcesError, DataSourcesErrorCode } from "./errors/data-sources.error"
 import type { PublicHostClient } from "./public-host.client"
 import { TABLE_COPY } from "./messages/table.messages"
@@ -20,13 +19,17 @@ import {
 } from "./table-rows.policy"
 import { TABLE_MAX_BYTES } from "./table-shapes.contracts"
 import type { GoogleDocumentText, Table, UploadedDocumentText } from "./table-shapes.contracts"
+import type { WorkbookReader } from "./workbook-reader.contracts"
 
 const GOOGLE_TIMEOUT_MS = 20_000
 
 @Injectable()
 /** The client that reads tables and documents from files, public Google links and pasted text. */
 export class TableClient {
-    constructor(@InjectPublicHost() private readonly publicHost: PublicHostClient) {}
+    constructor(
+        @InjectPublicHost() private readonly publicHost: PublicHostClient,
+        @InjectWorkbookReader() private readonly workbookReader: WorkbookReader,
+    ) {}
 
     /** Delimited text (comma, semicolon, tab or pipe, detected) to a table. */
     readText(text: string): Table {
@@ -56,7 +59,7 @@ export class TableClient {
             return this.readText(decodeText(bytes))
         }
         if (!isZip(bytes)) throw rejected(TABLE_COPY.badXlsx)
-        const sheets = await readXlsxFile(new Blob([new Uint8Array(bytes)])).catch((cause: unknown) => {
+        const sheets = await this.workbookReader.read(bytes).catch((cause: unknown) => {
             throw rejected(TABLE_COPY.unreadableExcel, cause)
         })
         const chosen = sheets.find((candidate) => candidate.sheet === sheet) ?? sheets[0]
