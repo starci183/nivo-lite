@@ -131,7 +131,7 @@ const imapSpy = jest.spyOn(imapflow, "ImapFlow")
 const parserSpy = jest.spyOn(mailparser, "simpleParser")
 
 const login: ImapLogin = { host: "mail.example", port: 993, secure: true, user: "ada", password: "secret" }
-const options = (allowPrivateHosts: boolean): DataSourcesOptions => ({ allowPrivateHosts, telegramUser: null })
+const options = (allowPrivateHosts: boolean): DataSourcesOptions => ({ allowPrivateHosts })
 
 const build = async (allowPrivateHosts = false) => {
     const logger = mock<Logger>()

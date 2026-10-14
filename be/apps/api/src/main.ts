@@ -18,6 +18,7 @@ import { parseChannelsConfig } from "@modules/domain/channels"
 import { parseConnectionSecretsConfig } from "@modules/domain/connection-secrets"
 import { parseLoyaltyOtpsConfig } from "@modules/domain/loyalty-otps"
 import { parseDataSourcesConfig } from "@modules/integrations/data-sources"
+import { parseTelegramUserConfig } from "@modules/integrations/telegram-user"
 import { parseMailConfig } from "@modules/integrations/mail"
 import { parseTelegramConfig } from "@modules/integrations/telegram"
 import { parseZaloConfig } from "@modules/integrations/zalo"
@@ -72,6 +73,7 @@ const bootstrap = async (): Promise<void> => {
         zalo: parseZaloConfig(env),
         mail: parseMailConfig(env),
         dataSources: parseDataSourcesConfig(env),
+        telegramUser: parseTelegramUserConfig(env),
         queue: parseQueueConfig(env),
         jobs: parseJobsConfig(env),
         jobsAlert: parseJobsAlertConfig(env),

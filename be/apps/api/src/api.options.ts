@@ -111,7 +111,9 @@ import type { LoyaltyOtpsOptions } from "@modules/domain/loyalty-otps"
 import type { PlatformAdminOptions } from "@modules/domain/platform-admin"
 import type { WorkspaceInvitesOptions } from "@modules/domain/workspace-invites"
 import type { WorkspacesOptions } from "@modules/domain/workspaces"
+import { DataSourcesError, DataSourcesErrorCode } from "@modules/integrations/data-sources"
 import type { DataSourcesOptions } from "@modules/integrations/data-sources"
+import type { TelegramUserErrors, TelegramUserOptions } from "@modules/integrations/telegram-user"
 import type { MailOptions } from "@modules/integrations/mail"
 import type { TelegramOptions } from "@modules/integrations/telegram"
 import type { ZaloOptions } from "@modules/integrations/zalo"
@@ -122,6 +124,15 @@ import type { QueueConfig } from "@modules/platform/queue"
 import { AppCommandsModule } from "@modules/domain/app-commands"
 import { CONTRACTS_ERROR_KINDS, CONTRACTS_MESSAGES, ContractsModule } from "@modules/domain/contracts"
 import { LIVENESS_ERROR_KINDS, LIVENESS_MESSAGES, LivenessModule } from "@modules/domain/liveness"
+
+/** The existing data-sources error family used by the personal Telegram integration. */
+export const TELEGRAM_USER_ERRORS: TelegramUserErrors = {
+    rejected: (detail, cause) =>
+        new DataSourcesError({ code: DataSourcesErrorCode.Rejected, params: { detail }, cause }),
+    unavailable: (detail, cause) =>
+        new DataSourcesError({ code: DataSourcesErrorCode.Unavailable, params: { detail }, cause }),
+    isError: (error): error is DataSourcesError => error instanceof DataSourcesError,
+}
 
 /** System capabilities whose only app option is their global registration. */
 export const API_SYSTEM_CAPABILITIES = [AppCommandsModule, ContractsModule, LivenessModule]
@@ -168,8 +179,10 @@ export interface ApiOptions {
     readonly zalo: ZaloOptions
     /** Outgoing mail: the platform sender and the private-host policy. */
     readonly mail: MailOptions
-    /** The owner own systems the data hub reads: the private-host policy and the personal Telegram app. */
+    /** The private-host policy for the owner's systems the data hub reads. */
     readonly dataSources: DataSourcesOptions
+    /** The personal Telegram app used for account login and read-only chat sync. */
+    readonly telegramUser: Omit<TelegramUserOptions, "errors">
     /** The platform team that may use the console. */
     readonly platformAdmin: PlatformAdminOptions
     /** How the pgmq workers run. */

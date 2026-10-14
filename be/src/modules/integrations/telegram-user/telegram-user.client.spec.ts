@@ -12,12 +12,12 @@ import type { Dialog } from "telegram/tl/custom/dialog"
 import { Secret } from "@modules/platform/config"
 import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
-import { DATA_SOURCES_OPTIONS } from "./data-sources.decorators"
-import type { DataSourcesOptions } from "./data-sources.options"
-import { DataSourcesError, DataSourcesErrorCode } from "./errors/data-sources.error"
+import { DataSourcesError, DataSourcesErrorCode } from "@modules/integrations/data-sources"
+import { TELEGRAM_USER_OPTIONS } from "./telegram-user.decorators"
+import type { TelegramUserOptions } from "./telegram-user.options"
 import { TELEGRAM_USER_TEXT } from "./messages/telegram-user.messages"
 import { TelegramUserClient } from "./telegram-user.client"
-import type { TelegramReadRequest } from "./telegram-user.contracts"
+import type { TelegramReadRequest, TelegramUserErrors } from "./telegram-user.contracts"
 import { TelegramUserLogEvent } from "./telegram-user.log-events"
 
 /** How the fake Telegram answers the requests of a test. */
@@ -165,17 +165,24 @@ const clientSpy = jest.spyOn(telegram, "TelegramClient")
 const sessionSpy = jest.spyOn(sessions, "StringSession")
 const checkSpy = jest.spyOn(password, "computeCheck")
 
-const configured: DataSourcesOptions = {
-    allowPrivateHosts: false,
-    telegramUser: { apiId: 100, apiHash: new Secret(" hash ") },
+const errors: TelegramUserErrors = {
+    rejected: (detail, cause) =>
+        new DataSourcesError({ code: DataSourcesErrorCode.Rejected, params: { detail }, cause }),
+    unavailable: (detail, cause) =>
+        new DataSourcesError({ code: DataSourcesErrorCode.Unavailable, params: { detail }, cause }),
+    isError: (error): error is DataSourcesError => error instanceof DataSourcesError,
 }
 
-const build = async (options: DataSourcesOptions = configured) => {
+const configured: Omit<TelegramUserOptions, "errors"> = {
+    app: { apiId: 100, apiHash: new Secret(" hash ") },
+}
+
+const build = async (options: Omit<TelegramUserOptions, "errors"> = configured) => {
     const logger = mock<Logger>()
     const moduleRef = await Test.createTestingModule({
         providers: [
             TelegramUserClient,
-            { provide: DATA_SOURCES_OPTIONS, useValue: options },
+            { provide: TELEGRAM_USER_OPTIONS, useValue: { ...options, errors } },
             { provide: LOGGER, useValue: logger },
         ],
     }).compile()
@@ -208,7 +215,7 @@ describe("TelegramUserClient", () => {
 
     it("reports whether the deployment has credentials", async () => {
         const ready = await build()
-        const missing = await build({ allowPrivateHosts: false, telegramUser: null })
+        const missing = await build({ app: null })
 
         expect(ready.client.configured()).toBe(true)
         expect(missing.client.configured()).toBe(false)

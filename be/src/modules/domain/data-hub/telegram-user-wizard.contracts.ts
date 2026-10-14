@@ -1,4 +1,4 @@
-import type { TelegramChatKind } from "@modules/integrations/data-sources"
+import type { TelegramChatKind } from "@modules/integrations/telegram-user"
 import type { DataConnection } from "./data-hub.contracts"
 
 /** A chat the owner ticked. */
