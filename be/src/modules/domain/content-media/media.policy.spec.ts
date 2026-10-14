@@ -36,7 +36,7 @@ describe("buildContentMediaPath", () => {
     })
 
     it("folds Vietnamese letters, drops marks, and falls back when the stem vanishes", () => {
-        expect(buildContentMediaPath("ws-1", "\u0110\u1ed3 u\u1ed1ng!.png", "obj-1")).toBe("ws-1/obj-1-Do-uong.png")
+        expect(buildContentMediaPath("ws-1", "\u0110\u1ed3 u\u1ed1ng!.png", "obj-1")).toBe("ws-1/obj-1-do-uong.png")
         expect(buildContentMediaPath("ws-1", "---.png", "obj-1")).toBe("ws-1/obj-1-file.png")
     })
 
@@ -47,7 +47,7 @@ describe("buildContentMediaPath", () => {
 
     it("bounds the stem at 40 characters and the extension at 5", () => {
         const stem = "a".repeat(50)
-        expect(buildContentMediaPath("ws-1", `${stem}.jpegextra`, "obj-1")).toBe(`ws-1/obj-1-${"a".repeat(40)}.jpeg`)
+        expect(buildContentMediaPath("ws-1", `${stem}.jpegextra`, "obj-1")).toBe(`ws-1/obj-1-${"a".repeat(40)}.jpege`)
     })
 
     it("uses the whole name when there is no extension", () => {

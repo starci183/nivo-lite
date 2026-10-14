@@ -19,7 +19,8 @@ describe("clipText", () => {
 
 describe("sameItems", () => {
     it("treats case, spacing and composed letters as the same item", () => {
-        expect(sameItems("Tr\u00e0  s\u1eefa", "tra\u0300 sua")).toBe(true)
+        expect(sameItems("Tr\u00e0  s\u1eefa", "tra\u0300 su\u031b\u0303a")).toBe(true)
+        expect(sameItems("Tr\u00e0  s\u1eefa", "tra\u0300 sua")).toBe(false)
         expect(sameItems("Tra sua", "Tra da")).toBe(false)
     })
 })

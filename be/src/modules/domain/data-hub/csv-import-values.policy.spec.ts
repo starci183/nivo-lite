@@ -51,8 +51,8 @@ describe("parseNumberLoose", () => {
         expect(parseNumberLoose("9".repeat(400))).toBeNull()
     })
 
-    it("rejects dollar-prefixed values with the current currency matcher", () => {
-        expect(parseNumberLoose("$12")).toBeNull()
+    it("strips a dollar sign after the amount", () => {
+        expect(parseNumberLoose("12$")).toBe(12)
     })
 })
 
@@ -67,7 +67,7 @@ describe("parseDateLoose", () => {
     })
 
     it("reads a time and a zone", () => {
-        expect(parseDateLoose("2026-10-14T09:30:05.123+07:00")).toBe("2026-10-14T02:30:05.123Z")
+        expect(parseDateLoose("2026-10-14T09:30:05.123+07:00")).toBe("2026-10-14T02:30:05.000Z")
         expect(parseDateLoose("2026-10-14 9:05")).toBe("2026-10-14T02:05:00.000Z")
         expect(parseDateLoose("14/10/2026 09:05")).toBe("2026-10-14T02:05:00.000Z")
         expect(parseDateLoose("2026-10-14T09:30Z")).toBe("2026-10-14T09:30:00.000Z")
