@@ -4,9 +4,12 @@ import { Secret } from "@modules/platform/config"
 import { CLOCK } from "@modules/platform/clock"
 import { HTTP_CLIENT } from "@modules/platform/http"
 import type { HttpClient } from "@modules/platform/http"
+import { LOGGER } from "@modules/platform/logging"
+import type { Logger } from "@modules/platform/logging"
 import { GoogleErrorCode } from "./errors/google.error"
 import { GoogleClient } from "./google.client"
 import { GOOGLE_OPTIONS } from "./google.decorators"
+import { GoogleLogEvent } from "./google.log-events"
 import type { GoogleOptions } from "./google.options"
 import { ordersTab } from "./google-sheet.policy"
 
@@ -22,15 +25,17 @@ const OPTIONS: GoogleOptions = {
 const build = async (options: GoogleOptions = OPTIONS) => {
     const http = mock<HttpClient>()
     const clock = new FakeClock("2026-10-12T03:00:00.000Z")
+    const logger = mock<Logger>()
     const moduleRef = await Test.createTestingModule({
         providers: [
             GoogleClient,
             { provide: HTTP_CLIENT, useValue: http },
             { provide: GOOGLE_OPTIONS, useValue: options },
             { provide: CLOCK, useValue: clock },
+            { provide: LOGGER, useValue: logger },
         ],
     }).compile()
-    return { client: moduleRef.get(GoogleClient), http, clock }
+    return { client: moduleRef.get(GoogleClient), http, clock, logger }
 }
 
 const answer = (body: unknown, status = 200) => ({ status, body })
@@ -134,6 +139,7 @@ describe("GoogleClient", () => {
             http.request.mockResolvedValueOnce(answer({ error: "invalid_grant" }, 400))
             http.request.mockResolvedValueOnce(answer({ error: { status: "PERMISSION_DENIED" } }, 403))
             http.request.mockResolvedValueOnce(answer("not an object", 500))
+            http.request.mockResolvedValueOnce(answer({ error: { status: 123 } }, 199))
 
             await expect(client.refreshAccessToken("rt")).rejects.toMatchObject({
                 code: GoogleErrorCode.Refused,
@@ -143,6 +149,10 @@ describe("GoogleClient", () => {
                 params: { status: 403, reason: "PERMISSION_DENIED" },
             })
             await expect(client.refreshAccessToken("rt")).rejects.toMatchObject({ params: { status: 500, reason: "" } })
+            await expect(client.refreshAccessToken("rt")).rejects.toMatchObject({
+                code: GoogleErrorCode.Refused,
+                params: { status: 199, reason: "" },
+            })
         })
 
         it("reports an unreachable Google", async () => {
@@ -174,7 +184,10 @@ describe("GoogleClient", () => {
                 "u@b.vn",
             )
             await expect(client.accountEmail({ idToken: idTokenOf("text"), accessToken: "at" })).resolves.toBe("u@b.vn")
+            await expect(client.accountEmail({ idToken: idTokenOf(null), accessToken: "at" })).resolves.toBe("u@b.vn")
+            await expect(client.accountEmail({ idToken: idTokenOf([]), accessToken: "at" })).resolves.toBe("u@b.vn")
             await expect(client.accountEmail({ idToken: "garbage", accessToken: "at" })).resolves.toBe("u@b.vn")
+            expect(http.request).toHaveBeenCalledTimes(6)
             expect(http.request).toHaveBeenCalledWith(
                 expect.objectContaining({
                     url: "https://openidconnect.googleapis.com/v1/userinfo",
@@ -184,12 +197,19 @@ describe("GoogleClient", () => {
         })
 
         it("answers null when nothing names the account", async () => {
-            const { client, http } = await build()
+            const { client, http, logger } = await build()
+            const cause = new Error("down")
             http.request.mockResolvedValueOnce(answer({}))
-            http.request.mockRejectedValueOnce(new Error("down"))
+            http.request.mockRejectedValueOnce(cause)
 
             await expect(client.accountEmail({ idToken: null, accessToken: "at" })).resolves.toBeNull()
+            expect(logger.error).not.toHaveBeenCalled()
             await expect(client.accountEmail({ idToken: null, accessToken: "at" })).resolves.toBeNull()
+            expect(logger.error).toHaveBeenCalledTimes(1)
+            expect(logger.error).toHaveBeenCalledWith(
+                GoogleLogEvent.EmailUnavailable,
+                expect.objectContaining({ code: GoogleErrorCode.Unreachable, cause }),
+            )
         })
     })
 

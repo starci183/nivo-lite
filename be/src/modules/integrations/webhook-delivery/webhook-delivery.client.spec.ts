@@ -3,6 +3,8 @@ import type { LookupAddress, LookupAllOptions } from "node:dns"
 import { Test } from "@nestjs/testing"
 import { FakeClock, mock } from "@starci/jest-preset"
 import { CLOCK } from "@modules/platform/clock"
+import { HTTP_CLIENT, HttpError, HttpErrorCode } from "@modules/platform/http"
+import type { HttpClient } from "@modules/platform/http"
 import { WebhookDeliveryError, WebhookDeliveryErrorCode } from "./errors/webhook-delivery.error"
 import { WebhookDeliveryClient } from "./webhook-delivery.client"
 import { WEBHOOK_DELIVERY_OPTIONS } from "./webhook-delivery.decorators"
@@ -16,14 +18,16 @@ const NOW = "2026-10-12T03:00:00.000Z"
 
 const build = async () => {
     const clock = new FakeClock(NOW)
+    const http = mock<HttpClient>()
     const moduleRef = await Test.createTestingModule({
         providers: [
             WebhookDeliveryClient,
             { provide: WEBHOOK_DELIVERY_OPTIONS, useValue: { timeoutMs: 4000 } },
             { provide: CLOCK, useValue: clock },
+            { provide: HTTP_CLIENT, useValue: http },
         ],
     }).compile()
-    return { client: moduleRef.get(WebhookDeliveryClient), clock }
+    return { client: moduleRef.get(WebhookDeliveryClient), clock, http }
 }
 
 describe("WebhookDeliveryClient", () => {
@@ -134,69 +138,69 @@ describe("WebhookDeliveryClient", () => {
 
     describe("post", () => {
         it.each([200, 299, 302, 503])("posts once and reports HTTP %i with the elapsed time", async (status) => {
-            const { client, clock } = await build()
-            const signal = new AbortController().signal
-            const timeout = jest.spyOn(AbortSignal, "timeout").mockImplementation(() => {
+            const { client, clock, http } = await build()
+            http.request.mockImplementation(() => {
                 clock.advance(43)
-                return signal
+                return Promise.resolve({ status, body: "" })
             })
-            const fetchSpy = jest.spyOn(globalThis, "fetch").mockResolvedValue(mock<Response>({ status }))
             const url = new URL("https://receiver.test/hook")
             const body = '{"event":"lead.created"}'
 
             await expect(
                 client.post({ url, body, headers: { "x-nivo-event": "lead.created", "x-nivo-signature": "signed" } }),
             ).resolves.toEqual({ status, failure: null, durationMs: 43 })
-            expect(timeout).toHaveBeenCalledTimes(1)
-            expect(timeout).toHaveBeenCalledWith(4000)
-            expect(fetchSpy).toHaveBeenCalledTimes(1)
-            expect(fetchSpy).toHaveBeenCalledWith(url, {
+            expect(http.request).toHaveBeenCalledTimes(1)
+            expect(http.request).toHaveBeenCalledWith({
                 method: "POST",
+                url: url.href,
                 redirect: "manual",
-                signal,
+                timeoutMs: 4000,
                 headers: {
                     "content-type": "application/json",
                     "x-nivo-event": "lead.created",
                     "x-nivo-signature": "signed",
                 },
-                body,
+                bytes: Buffer.from(body),
+                read: "text",
             })
         })
 
         it("lets the supplied headers override the default JSON content type", async () => {
-            const { client } = await build()
-            const signal = new AbortController().signal
-            jest.spyOn(AbortSignal, "timeout").mockReturnValue(signal)
-            const fetchSpy = jest.spyOn(globalThis, "fetch").mockResolvedValue(mock<Response>({ status: 204 }))
+            const { client, http } = await build()
+            http.request.mockResolvedValue({ status: 204, body: "" })
             const url = new URL("https://receiver.test/hook")
             const body = "{}"
 
             await expect(
                 client.post({ url, body, headers: { "content-type": "application/custom+json" } }),
             ).resolves.toEqual({ status: 204, failure: null, durationMs: 0 })
-            expect(fetchSpy).toHaveBeenCalledWith(url, {
+            expect(http.request).toHaveBeenCalledTimes(1)
+            expect(http.request).toHaveBeenCalledWith({
                 method: "POST",
+                url: url.href,
                 redirect: "manual",
-                signal,
+                timeoutMs: 4000,
                 headers: { "content-type": "application/custom+json" },
-                body,
+                bytes: Buffer.from(body),
+                read: "text",
             })
         })
 
         it.each([
-            { cause: Object.assign(new Error("deadline"), { name: "TimeoutError" }), failure: "timeout" },
-            { cause: Object.assign(new Error("aborted"), { name: "AbortError" }), failure: "timeout" },
+            { cause: new HttpError({ code: HttpErrorCode.Timeout }), failure: "timeout" },
+            { cause: new HttpError({ code: HttpErrorCode.Network }), failure: "unreachable" },
+            { cause: new HttpError({ code: HttpErrorCode.BodyUnreadable }), failure: "unreachable" },
+            { cause: Object.assign(new Error("deadline"), { name: "TimeoutError" }), failure: "unreachable" },
+            { cause: Object.assign(new Error("aborted"), { name: "AbortError" }), failure: "unreachable" },
             { cause: new Error("connection refused"), failure: "unreachable" },
             { cause: "offline", failure: "unreachable" },
             { cause: null, failure: "unreachable" },
         ])("reports $failure for $cause and preserves elapsed time", async ({ cause, failure }) => {
-            const { client, clock } = await build()
-            const signal = new AbortController().signal
-            jest.spyOn(AbortSignal, "timeout").mockImplementation(() => {
+            const { client, clock, http } = await build()
+            http.request.mockImplementation(() => {
                 clock.advance(71)
-                return signal
+                return Promise.reject(cause)
             })
-            const fetchSpy = jest.spyOn(globalThis, "fetch").mockRejectedValue(cause)
             const url = new URL("https://receiver.test/hook")
             const body = "{}"
 
@@ -205,13 +209,15 @@ describe("WebhookDeliveryClient", () => {
                 failure,
                 durationMs: 71,
             })
-            expect(fetchSpy).toHaveBeenCalledTimes(1)
-            expect(fetchSpy).toHaveBeenCalledWith(url, {
+            expect(http.request).toHaveBeenCalledTimes(1)
+            expect(http.request).toHaveBeenCalledWith({
                 method: "POST",
+                url: url.href,
                 redirect: "manual",
-                signal,
+                timeoutMs: 4000,
                 headers: { "content-type": "application/json" },
-                body,
+                bytes: Buffer.from(body),
+                read: "text",
             })
         })
     })
