@@ -6,6 +6,8 @@ import type {
     ToolArgs,
 } from "@modules/domain/agent-tools"
 
+export { isPlausibleBookingPhone, normaliseBookingPhone } from "@modules/domain/bookings"
+
 const DATE_TEXT = /^\d{4}-\d{2}-\d{2}$/u
 const ISO_START =
     /^\d{4}-\d{2}-\d{2}T(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:\.\d+)?)?(?:Z|[+-](?:[01]\d|2[0-3]):[0-5]\d)$/u
@@ -40,18 +42,6 @@ const serviceText = (value: string): string =>
         .replace(/\p{M}/gu, "")
         .toLowerCase()
         .replace(/\u0111/gu, "d")
-
-/** Reads the same phone digits stored by booking placement, including local and international Vietnamese prefixes. */
-export const normaliseBookingPhone = (raw: string): string | null => {
-    const digits = raw.replace(/\D/gu, "")
-    if (digits === "") return null
-    if (digits.startsWith("0")) return `84${digits.slice(1)}`
-    return !digits.startsWith("84") && digits.length === 9 ? `84${digits}` : digits
-}
-
-/** Checks the digit-count bounds used by booking placement before asking the capability to reserve a slot. */
-export const isPlausibleBookingPhone = (phone: string | null): phone is string =>
-    phone !== null && phone.length >= 8 && phone.length <= 15
 
 /** Reads today's calendar date in the shop's timezone when a slot search omits its date. */
 export const bookingDateIn = (nowMs: number, timezone: string): string => {

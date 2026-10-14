@@ -4,7 +4,7 @@ import type { WorkContext, WorkItem } from "@modules/domain/decisions"
 import type { AutomationGate, GateOutcome, GateSubmission } from "@modules/domain/automations"
 import { InjectMessageCatalog } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
-import { AUTOMATION_LOCALE, originOf } from "./automation-ports.policy"
+import { AUTOMATION_LOCALE, workOriginOf } from "./automation-ports.policy"
 
 /** The only reason to wait that "send by itself" may approve: the owner's rule for the action asks. */
 const RULE_REASON = "over_authority"
@@ -41,7 +41,7 @@ export class AutomationGateService implements AutomationGate {
             subject_id: submission.subject.id,
             lead_id: submission.leadId,
             dedupeKey: submission.dedupeKey,
-            origin: originOf(submission.origin),
+            origin: workOriginOf(submission.origin),
             preset: true,
             noChain: true,
             ...(submission.forceAsk ? { forceAsk: RULE_REASON } : {}),

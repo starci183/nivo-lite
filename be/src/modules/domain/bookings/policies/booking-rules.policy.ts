@@ -72,6 +72,15 @@ export const normalisePhone = (raw: string): string | null => {
 export const isPlausiblePhone = (phone: string | null): phone is string =>
     phone !== null && phone.length >= 8 && phone.length <= 15
 
+/** A booking phone as digits, or nothing when the text had no digits. */
+export type OptionalBookingPhone = string | null
+
+/** The phone digits a chat booking stores: the same normalisation the desk uses. */
+export const normaliseBookingPhone = (raw: string): OptionalBookingPhone => normalisePhone(raw)
+
+/** Whether those digits are a plausible phone. */
+export const isPlausibleBookingPhone = (phone: OptionalBookingPhone): phone is string => isPlausiblePhone(phone)
+
 /** A lower-case email of at most 120 characters, or null when it is not an address. */
 export const normaliseEmail = (raw: string): string | null => {
     const value = raw.trim()

@@ -14,8 +14,8 @@ export const LEAD_GEN_ACTOR = "NIVO · Lead Gen"
 /** Who speaks a transcript line. */
 export type LineRole = "user" | "agent" | "system"
 
-/** One line of the transcript. */
-export interface TranscriptLine {
+/** One line of the prospect transcript a flow stores. */
+export interface FlowTranscriptLine {
     /** The workspace. */
     readonly workspaceId: string
     /** The conversation, or null when the flow has none (nothing is stored). */
@@ -110,7 +110,7 @@ export class LeadFlowConversationService {
     }
 
     /** Stores one line of the transcript; an empty line or a flow without a conversation stores nothing. */
-    async say(line: TranscriptLine): Promise<void> {
+    async say(line: FlowTranscriptLine): Promise<void> {
         if (line.conversationId === null || line.body.trim() === "") return
         if (line.role === "user") {
             await this.messages.storeCustomer(line.workspaceId, line.conversationId, line.body, this.entityManager)

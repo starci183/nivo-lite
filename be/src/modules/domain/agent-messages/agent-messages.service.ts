@@ -71,7 +71,7 @@ export class AgentMessagesService {
     }
 
     /** Stores a person's customer reply in the transaction that queues its delivery. */
-    async storeHuman(
+    storeHuman(
         workspaceId: string,
         conversationId: string,
         body: string,
