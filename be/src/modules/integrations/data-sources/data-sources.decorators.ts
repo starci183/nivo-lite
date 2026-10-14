@@ -7,6 +7,7 @@ import type { OpenApiClient } from "./openapi.client"
 import type { PublicHostClient } from "./public-host.client"
 import type { TableClient } from "./table.client"
 import type { TelegramUserClient } from "./telegram-user.client"
+import type { WorkbookReader } from "./workbook-reader.contracts"
 
 /** Token of the options of the data-sources integration, exported so a spec can provide it. */
 export const DATA_SOURCES_OPTIONS: unique symbol = Symbol("integrations.data-sources.options")
@@ -28,6 +29,9 @@ export const TELEGRAM_USER: unique symbol = Symbol("integrations.data-sources.te
 
 /** Token of the table and document reader. */
 export const TABLE: unique symbol = Symbol("integrations.data-sources.table")
+
+/** Token of the internal workbook reader. */
+export const WORKBOOK_READER: unique symbol = Symbol("integrations.data-sources.workbook-reader")
 
 /** Injects the options of the data-sources integration. Parameter type: DataSourcesOptions. */
 export const InjectDataSourcesOptions = (): TypedParameterDecorator<DataSourcesOptions> =>
@@ -51,3 +55,7 @@ export const InjectTelegramUser = (): TypedParameterDecorator<TelegramUserClient
 
 /** Injects the table and document reader. Parameter type: TableClient. */
 export const InjectTable = (): TypedParameterDecorator<TableClient> => injector<TableClient>(TABLE)
+
+/** Injects the internal workbook reader. Parameter type: WorkbookReader. */
+export const InjectWorkbookReader = (): TypedParameterDecorator<WorkbookReader> =>
+    injector<WorkbookReader>(WORKBOOK_READER)
