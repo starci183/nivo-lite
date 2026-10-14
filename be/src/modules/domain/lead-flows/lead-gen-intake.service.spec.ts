@@ -4,6 +4,7 @@ import { AgentBindingsService } from "@modules/domain/agent-connections"
 import type { BoundAgent } from "@modules/domain/agent-connections"
 import type { AgentProfile } from "@modules/domain/agents"
 import { CommandBusService } from "@modules/domain/decisions"
+import type { WorkContext } from "@modules/domain/decisions"
 import { InboundEventsService } from "@modules/domain/inbound-events"
 import type { MetaInboundJob } from "@modules/domain/meta-inbox"
 import type { MetaEvent, MetaPageAccess } from "@modules/integrations/meta"
@@ -19,7 +20,7 @@ import type { FlowState, LeadFlow, LeadFlowPatch, MentionRead } from "./lead-flo
 const AT_ISO = "2026-10-12T10:00:00.000Z"
 const AT = Date.parse(AT_ISO)
 const PAGE: MetaPageAccess = { pageId: "page-1", pageToken: "page-token", igId: null }
-const ctx = { workspaceId: "ws-1", actor: "Facebook", locale: "vi" }
+const ctx: WorkContext = { workspaceId: "ws-1", actor: "Facebook", locale: "vi" }
 type InboundEvent = NonNullable<Awaited<ReturnType<InboundEventsService["find"]>>>
 
 const PROFILE: AgentProfile = {
@@ -128,27 +129,21 @@ const build = async () => {
             { provide: LeadAdsIntakeService, useValue: leadAds },
         ],
     }).compile()
-    return {
-        intake: moduleRef.get(LeadGenIntakeService),
-        store,
-        transcript,
-        bindings,
-        inbound,
-        commands,
-        leadAds,
-        meta,
-    }
+    const intake = moduleRef.get(LeadGenIntakeService)
+    return { intake, store, transcript, bindings, inbound, commands, leadAds, meta }
 }
 
 describe("LeadGenIntakeService", () => {
-    it("gives a lead form to Lead Ads", async () => {
-        const { intake, leadAds, inbound } = await build()
+    it("gives a lead form to Lead Ads and rejects it from direct-message routing", async () => {
+        const { intake, leadAds, inbound, bindings } = await build()
         const form = jobOf(eventOf({ kind: "leadgen", event_key: "leadgen:1" }))
 
         await expect(intake.take(form)).resolves.toBe(true)
 
         expect(leadAds.accept).toHaveBeenCalledWith(form)
         expect(inbound.recordInput).not.toHaveBeenCalled()
+        await expect(intake["leadGenFor"](form)).resolves.toBeNull()
+        expect(bindings.routeInbound).not.toHaveBeenCalled()
     })
 
     it("leaves the event to the chatbot front door when no lead_gen agent listens", async () => {
@@ -210,14 +205,40 @@ describe("LeadGenIntakeService", () => {
         expect(inbound.mark).toHaveBeenCalledWith("ws-1", "event-1", "processed", null)
     })
 
-    it("keeps a known person's message and scores the turn", async () => {
-        const flow = flowOf()
+    it.each<readonly [boolean, string | null, string]>([
+        [false, "lead-1", "score_lead:lead-1:t:dm:mid-1"],
+        [false, null, "score_lead:flow-1:t:dm:mid-1"],
+        [true, "lead-1", ""],
+    ])("keeps a known turn held=%s lead=%s", async (held, leadId, dedupeKey) => {
+        const flow = held
+            ? flowOf({ lead_id: leadId, state: "escalated", resume_state: "qualifying" })
+            : flowOf({ lead_id: leadId })
         const { intake, store, transcript, commands } = await build()
         store.candidates.mockResolvedValue([flow])
         transcript.ensure.mockResolvedValue("conv-1")
-        transcript.heldByPerson.mockResolvedValue(false)
+        transcript.heldByPerson.mockResolvedValue(held)
 
-        await expect(intake.take(jobOf())).resolves.toBe(true)
+        if (leadId === null)
+            await expect(
+                intake["turnOf"](
+                    ctx,
+                    { job: jobOf(), agent: PROFILE, eventId: "event-1", name: "Lan", text: "Hello" },
+                    flow,
+                    "t:dm:mid-1",
+                ),
+            ).resolves.toBeUndefined()
+        else await expect(intake.take(jobOf())).resolves.toBe(true)
+
+        expect(store.patch).toHaveBeenCalledWith(flow, {
+            last_user_at: AT_ISO,
+            last_user_text: "Hello",
+            conversation_id: "conv-1",
+            ...(held ? {} : { state: "nurturing" }),
+        })
+        if (held) {
+            expect(commands.sendCommand).not.toHaveBeenCalled()
+            return
+        }
 
         expect(transcript.say).toHaveBeenCalledWith({
             workspaceId: "ws-1",
@@ -226,12 +247,6 @@ describe("LeadGenIntakeService", () => {
             body: "Hello",
             delivery: null,
         })
-        expect(store.patch).toHaveBeenCalledWith(flow, {
-            last_user_at: AT_ISO,
-            last_user_text: "Hello",
-            conversation_id: "conv-1",
-            state: "nurturing",
-        })
         expect(commands.sendCommand).toHaveBeenCalledWith(ctx, {
             from: "inbound",
             to: "lead_gen",
@@ -239,11 +254,11 @@ describe("LeadGenIntakeService", () => {
             reason: "customer_turn",
             origin: "live",
             inboundEventId: "event-1",
-            dedupeKey: "score_lead:lead-1:t:dm:mid-1",
+            dedupeKey,
             payload: {
                 subject_type: "lead",
-                subject_id: "lead-1",
-                lead_id: "lead-1",
+                subject_id: leadId,
+                lead_id: leadId,
                 turn: "t:dm:mid-1",
                 text: "Hello",
                 source_kind: "dm",
@@ -252,23 +267,6 @@ describe("LeadGenIntakeService", () => {
             },
         })
         expect(commands.sendCommandItem).not.toHaveBeenCalled()
-    })
-
-    it("keeps the message silently while a person holds the conversation", async () => {
-        const flow = flowOf({ state: "escalated", resume_state: "qualifying" })
-        const { intake, store, transcript, commands } = await build()
-        store.candidates.mockResolvedValue([flow])
-        transcript.ensure.mockResolvedValue("conv-1")
-        transcript.heldByPerson.mockResolvedValue(true)
-
-        await intake.take(jobOf())
-
-        expect(store.patch).toHaveBeenCalledWith(flow, {
-            last_user_at: AT_ISO,
-            last_user_text: "Hello",
-            conversation_id: "conv-1",
-        })
-        expect(commands.sendCommand).not.toHaveBeenCalled()
     })
 
     it.each<Array<readonly [boolean, boolean, FlowState | null, boolean, boolean]>[number]>([

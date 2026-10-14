@@ -164,7 +164,7 @@ export class ScoreLeadPerformerService implements WorkPerformer, OnModuleInit {
         if ((kind === "comment" || kind === "mention") && text === "") {
             analysis = parseAnalysis({ confidence: 1 }, turn)
         } else if (kind === "leadgen" && text === "") {
-            const need = field(fields, "need").split("\n", 1).join("")
+            const need = field(fields, "need").split("\n")[0] ?? ""
             analysis = parseAnalysis(
                 {
                     signals: { need: need === "" ? null : need, contact: field(fields, "contact"), interest: "medium" },
@@ -208,7 +208,7 @@ export class ScoreLeadPerformerService implements WorkPerformer, OnModuleInit {
         const { flow, kind, setup } = context
         const given = contactIn(field(fields, "contact"))
         const merged = mergeSignals(flow.signals, analysis.signals)
-        const firstNeed = field(fields, "need").split("\n", 1).join("")
+        const firstNeed = field(fields, "need").split("\n")[0] ?? ""
         const signals: Signals = {
             ...merged,
             contact: merged.contact ?? given.phone ?? given.email ?? flow.phone ?? flow.email,

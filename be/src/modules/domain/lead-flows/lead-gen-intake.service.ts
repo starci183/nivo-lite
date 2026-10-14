@@ -107,6 +107,7 @@ export class LeadGenIntakeService implements MetaEventTaker {
         const agent = await this.kit.transcript.leadGenAgent(job.workspaceId, job.connectionId)
         if (agent === null) return null
         if (event.kind === "comment" || event.kind === "mention") return agent
+        if (event.kind !== "dm" && event.kind !== "postback") return null
         const front = (await this.bindings.routeInbound(job.connectionId)).front
         if (front === null) return agent
         const id = identityOf(event)
@@ -241,7 +242,7 @@ export class LeadGenIntakeService implements MetaEventTaker {
             reason: "customer_turn",
             origin: "live",
             inboundEventId: heard.eventId,
-            dedupeKey: `score_lead:${flow.lead_id}:${turn}`,
+            dedupeKey: `score_lead:${flow.lead_id ?? flow.id}:${turn}`,
             payload: {
                 subject_type: "lead",
                 subject_id: flow.lead_id,

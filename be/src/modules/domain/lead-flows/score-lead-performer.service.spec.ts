@@ -1,7 +1,7 @@
 import { Test } from "@nestjs/testing"
 import { builder, mock } from "@starci/jest-preset"
 import { WORK_PERFORMER_REGISTRY } from "@modules/domain/decisions"
-import type { WorkContext, WorkItem, WorkPerformerRegistry } from "@modules/domain/decisions"
+import type { Prepared, WorkContext, WorkItem, WorkPerformerRegistry } from "@modules/domain/decisions"
 import { LeadRecordsService } from "@modules/domain/leads"
 import { LeadFlowsError, LeadFlowsErrorCode } from "./errors/lead-flows.error"
 import { LeadFlowConversationService } from "./lead-flow-conversation.service"
@@ -14,10 +14,8 @@ import { LeadFlowTurnService } from "./lead-flow-turn.service"
 import type { Analysis, LeadFlow, LeadFlowPatch } from "./lead-flows.contracts"
 import type { FlowFields } from "./lead-flow-fields.policy"
 import { ScoreLeadPerformerService } from "./score-lead-performer.service"
-
 const NOW = "2026-10-12T10:00:00.000Z"
 const ctx: WorkContext = { workspaceId: "ws-1", actor: "Lan", locale: "en" }
-
 const flowOf = builder<LeadFlow>({
     id: "flow-1",
     workspace_id: "ws-1",
@@ -52,7 +50,6 @@ const flowOf = builder<LeadFlow>({
     escalated_at: null,
     escalation_reason: null,
 })
-
 const itemOf = builder<WorkItem>({
     id: "item-1",
     workspace_id: "ws-1",
@@ -82,9 +79,7 @@ const itemOf = builder<WorkItem>({
     completed_at: null,
     installation_id: null,
 })
-
 const DOT = String.fromCodePoint(0x00b7)
-
 const build = async (flow: LeadFlow = flowOf()) => {
     const registry = mock<WorkPerformerRegistry>()
     const store = mock<LeadFlowStoreService>()
@@ -126,17 +121,13 @@ const build = async (flow: LeadFlow = flowOf()) => {
     }).compile()
     return { performer: moduleRef.get(ScoreLeadPerformerService), registry, kit, store, meta, transcript, turns, leads }
 }
-
 const turnItem = (text: string) =>
     itemOf({ proposal: { summary: "", fields: { turn: "t:1", source_kind: "dm", text } } })
-
 describe("ScoreLeadPerformerService", () => {
     it("registers score_lead at boot and says nothing while a person holds the lead", async () => {
         const { performer, registry, transcript, turns } = await build(flowOf({ state: "escalated" }))
         transcript.heldByPerson.mockResolvedValue(true)
-
         performer.onModuleInit()
-
         expect(registry.add).toHaveBeenCalledWith("score_lead", performer)
         await expect(performer.prepare(ctx, turnItem("Hello"))).resolves.toEqual({
             proposal: {
@@ -146,16 +137,13 @@ describe("ScoreLeadPerformerService", () => {
         })
         expect(turns.read).not.toHaveBeenCalled()
     })
-
     it("reads a first message once and decides to greet", async () => {
         const flow = flowOf()
         const { performer, kit, store, meta, turns } = await build(flow)
         const analysis = parseAnalysis({ confidence: 0.9, reply: "Hi Lan", signals: { need: "tea" } }, "t:1")
         turns.read.mockResolvedValue({ analysis, keywordReason: null })
         meta.windowOf.mockResolvedValue({ status: "open", msLeft: 1000 })
-
         const prepared = await performer.prepare(ctx, turnItem("Hello, I need tea"))
-
         expect(prepared.proposal.fields).toMatchObject({ step: "greet", reply: "Hi Lan", handoff: "", negative: "" })
         expect(turns.read).toHaveBeenCalledWith(ctx, {
             agent: null,
@@ -170,14 +158,12 @@ describe("ScoreLeadPerformerService", () => {
         expect(store.patch).toHaveBeenCalledWith(flow, { analysis })
         expect(kit.escalate).not.toHaveBeenCalled()
     })
-
     it("hands an angry or refund turn to a person instead of scoring it", async () => {
         const flow = flowOf()
         const { performer, kit, turns } = await build(flow)
         const analysis = parseAnalysis({ confidence: 1, sentiment: "negative" }, "t:1")
         turns.read.mockResolvedValue({ analysis, keywordReason: "refund" })
         const item = turnItem("I want a refund")
-
         await expect(performer.prepare(ctx, item)).resolves.toEqual({
             proposal: {
                 summary: "score.escalate",
@@ -195,7 +181,6 @@ describe("ScoreLeadPerformerService", () => {
                 },
             },
         })
-
         expect(kit.escalate).toHaveBeenCalledWith(ctx, {
             flow,
             reason: "refund",
@@ -205,7 +190,6 @@ describe("ScoreLeadPerformerService", () => {
             notify: true,
         })
     })
-
     it("stores the score and the answer to the pending question", async () => {
         const flow = flowOf({ pending_question: 0, state: "qualifying" })
         const answers = [{ i: 0, question: "When?", answer: "Next week", at: NOW }]
@@ -219,11 +203,9 @@ describe("ScoreLeadPerformerService", () => {
             answer: "Next week",
             signals: JSON.stringify({ need: "tea" }),
         }
-
         await expect(performer.perform(ctx, itemOf(), { summary: "Warm lead", fields })).resolves.toMatchObject({
             summary: "Warm lead",
         })
-
         expect(store.patch).toHaveBeenCalledWith(flow, {
             signals: { ...EMPTY_SIGNALS, need: "tea" },
             score: "warm",
@@ -242,10 +224,8 @@ describe("ScoreLeadPerformerService", () => {
             `need ${DOT} score.answers`,
         )
     })
-
     it("stores nothing for an escalated turn and refuses a lead without a flow", async () => {
         const { performer, store } = await build()
-
         await expect(
             performer.perform(ctx, itemOf(), { summary: "Escalated", fields: { step: "escalate" } }),
         ).resolves.toMatchObject({ summary: "Escalated" })
@@ -253,10 +233,8 @@ describe("ScoreLeadPerformerService", () => {
         await expect(performer.perform(ctx, itemOf(), { summary: "", fields: {} })).rejects.toMatchObject({
             code: LeadFlowsErrorCode.NoFlow,
         })
-
         expect(store.patch).not.toHaveBeenCalled()
     })
-
     it.each([
         ["", "", "warm"],
         ["broken JSON", "unknown", null],
@@ -277,7 +255,6 @@ describe("ScoreLeadPerformerService", () => {
         })
         expect(kit.log).toHaveBeenCalledWith(ctx, flow, "item-1", "lead_gen.scored", "Scored", "")
     })
-
     it.each<readonly [string, string | null, string | null, string | null, LeadFlow["state"], LeadFlowPatch]>([
         ["84901234567", null, null, "lead-1", "new", { phone: "84901234567", state: "scored" }],
         ["lan@example.com", null, null, "lead-1", "new", { email: "lan@example.com", state: "scored" }],
@@ -313,7 +290,6 @@ describe("ScoreLeadPerformerService", () => {
                 })
         },
     )
-
     it.each([null, ""])("clears an unanswered question: %s", async (last_user_text) => {
         const flow = flowOf({ pending_question: 0, last_user_text })
         const { performer, store } = await build(flow)
@@ -328,7 +304,6 @@ describe("ScoreLeadPerformerService", () => {
             pending_question: null,
         })
     })
-
     it("answers a missing setup question from the user's last message", async () => {
         const previous = { i: 0, question: "When?", answer: "Tomorrow", at: NOW }
         const flow = flowOf({ pending_question: 2, last_user_text: "  Green tea  ", answers: [previous] })
@@ -348,7 +323,6 @@ describe("ScoreLeadPerformerService", () => {
             answers: [previous, { i: 2, question: "", answer: "Green tea", at: NOW }],
         })
     })
-
     const cold = parseAnalysis({ confidence: 1 }, "manual:item-1")
     const warm = parseAnalysis({ confidence: 1, signals: { need: "Tea" } }, "manual:item-1")
     const emptyForm = parseAnalysis(
@@ -356,6 +330,7 @@ describe("ScoreLeadPerformerService", () => {
         "manual:item-1",
     )
     const filledForm = { ...emptyForm, signals: { ...emptyForm.signals, need: "Tea" } }
+    const coffeeForm = { ...emptyForm, signals: { ...emptyForm.signals, need: "Coffee" } }
     const answered = { ...warm, answer: "Tomorrow" }
     const hot = parseAnalysis(
         {
@@ -388,6 +363,7 @@ describe("ScoreLeadPerformerService", () => {
         reading?: Analysis | null,
         stored?: Analysis,
         resume?: LeadFlow,
+        emptySplit?: boolean,
     ]
     const unread: Partial<LeadFlow> = { analysis: null }
     const pending: Partial<LeadFlow> = { ...unread, state: "qualifying", last_user_text: "Tomorrow" }
@@ -398,6 +374,12 @@ describe("ScoreLeadPerformerService", () => {
     const hotHold = { step: "hold", score: "hot", handoff: "", negative: "" }
     const form = { source_kind: "leadgen", need: "Tea\nCoffee" }
     const formResult = { step: "follow_up", need: "Tea", confidence: 1, score: "warm" }
+    const coffeeResult = { ...formResult, need: "Coffee" }
+    const blankForm = { source_kind: "leadgen" }
+    const nullForm = { ...blankForm, need: null }
+    const numericForm = { ...blankForm, need: 12 }
+    const newlineForm = { ...blankForm, need: "\nCoffee" }
+    const blankResult = { step: "close", need: "", confidence: 1, score: "cold" }
     const noChannel: Partial<LeadFlow> = { ...unread, connection_id: null, conversation_id: null }
     const held: Partial<LeadFlow> = { state: "handed_off", asked: 2, contact_asked_at: NOW, greeted_at: NOW }
     const resumed = flowOf({ analysis: cold, state: "qualifying", source })
@@ -406,6 +388,11 @@ describe("ScoreLeadPerformerService", () => {
         ["empty mention", unread, { source_kind: "mention" }, { step: "hold", confidence: 1 }, undefined, cold],
         ["empty form", unread, { ...form, need: "" }, { step: "close", need: "", confidence: 1 }, undefined, emptyForm],
         ["form need", unread, form, formResult, undefined, filledForm],
+        ["missing need", unread, blankForm, blankResult, undefined, emptyForm],
+        ["null need", unread, nullForm, blankResult, undefined, emptyForm],
+        ["numeric need", unread, numericForm, blankResult, undefined, emptyForm],
+        ["leading newline", unread, newlineForm, coffeeResult, undefined, coffeeForm],
+        ["empty split", unread, form, blankResult, undefined, emptyForm, undefined, true],
         ["empty DM", noChannel, {}, { ...unreadable, connection_id: "", conversation_id: "" }],
         [
             "pending question",
@@ -448,7 +435,7 @@ describe("ScoreLeadPerformerService", () => {
     ]
     it.each(cases.map((row) => ({ name: row[0], row })))(
         "prepares $name",
-        async ({ row: [_name, patch, fields, expected, reading, stored, resume] }) => {
+        async ({ row: [_name, patch, fields, expected, reading, stored, resume, emptySplit] }) => {
             const flow = flowOf({ analysis: cold, ...patch })
             const { performer, kit, turns, store, transcript, meta } = await build(flow)
             transcript.heldByPerson.mockResolvedValue(false)
@@ -456,8 +443,19 @@ describe("ScoreLeadPerformerService", () => {
             if (reading !== undefined) turns.read.mockResolvedValue({ analysis: reading, keywordReason: null })
             meta.windowOf.mockResolvedValue({ status: flow.state === "handed_off" ? "closed" : "open", msLeft: 0 })
             const item = itemOf({ proposal: { summary: "Before", fields } })
-            const prepared = await performer.prepare(ctx, item)
+            // Native split returns an element; fault injection checks both retained empty-array fallbacks.
+            const split = emptySplit ? jest.spyOn(String.prototype, "split") : undefined
+            split?.mockReturnValueOnce([]).mockReturnValueOnce([])
+            let prepared: Prepared
+            try {
+                prepared = await performer.prepare(ctx, item)
+                if (split !== undefined) expect(split.mock.calls).toEqual([["\n"], ["\n"]])
+            } finally {
+                split?.mockRestore()
+            }
             expect(prepared.proposal.fields).toMatchObject(expected)
+            if (expected === blankResult)
+                expect(prepared.proposal.fields.signals).toBe(JSON.stringify(emptyForm.signals))
             if (reading === undefined) expect(turns.read).not.toHaveBeenCalled()
             else
                 expect(turns.read).toHaveBeenCalledWith(ctx, {
