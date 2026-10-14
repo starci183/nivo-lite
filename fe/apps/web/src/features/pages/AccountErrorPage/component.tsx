@@ -1,10 +1,9 @@
 import { RouteError } from "@/components/blocks/RouteError"
-import { APP_ROUTES } from "@/modules/routes"
 
 /** Copy and retry the failed account route supplies. */
 export interface AccountErrorPageBaseProps {
     readonly props: {
-        readonly crumbHome: string
+        readonly crumbs: ReadonlyArray<{ readonly id: string; readonly label: string; readonly href?: string }>
         readonly title: string
         readonly message: string
     }
@@ -14,10 +13,7 @@ export interface AccountErrorPageBaseProps {
 /** Draws the account page's trail and heading with one alert and a retry. */
 export const AccountErrorPageBase = (props: AccountErrorPageBaseProps) => (
     <RouteError
-        crumbs={[
-            { id: "home", label: props.props.crumbHome, href: APP_ROUTES.dashboard },
-            { id: "account", label: props.props.title },
-        ]}
+        crumbs={props.props.crumbs}
         title={props.props.title}
         message={props.props.message}
         onRetry={props.on.retry}

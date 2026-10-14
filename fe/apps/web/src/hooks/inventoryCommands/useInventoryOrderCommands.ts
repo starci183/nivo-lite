@@ -17,7 +17,7 @@ export const useInventoryOrderCommands = (): InventoryOrderCommands => {
     const { trigger: receivePoTrigger } = useMutateReceiveInventoryPoSwr()
     return useMemo<InventoryOrderCommands>(
         () => ({
-            createPo: async (input) => createPoTrigger({ ...input, lines: [...input.lines] }),
+            createPo: async (input) => await createPoTrigger({ ...input, lines: [...input.lines] }),
             updatePoDraft: async (input) => {
                 await updatePoDraftTrigger({ ...input, lines: [...input.lines] })
                 return null
