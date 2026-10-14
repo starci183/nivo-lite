@@ -1,7 +1,7 @@
 const char = (code: number): string => String.fromCodePoint(code)
 const COMBINING_MARKS = new RegExp(`[${char(0x300)}-${char(0x36f)}]`, "gu")
 const D_STROKE = new RegExp(`[${char(0x110)}${char(0x111)}]`, "gu")
-const CURRENCY_MARKS = new RegExp(`(vn${char(0x111)}|vnd|${char(0x111)}|${char(0x20ab)}|\$|usd|%)`, "giu")
+const CURRENCY_MARKS = new RegExp(`(vn${char(0x111)}|vnd|${char(0x111)}|${char(0x20ab)}|\\$|usd|%)`, "giu")
 
 /** Lower-case, accent-free text for matching headers, so a Vietnamese phone heading becomes "so dien thoai". */
 export const fold = (text: string): string =>
@@ -79,7 +79,7 @@ const datePartsOf = (text: string): DateParts | null => {
     if (iso !== null) return { year: Number(iso[1]), month: Number(iso[2]), day: Number(iso[3]), rest: iso[4] ?? "" }
     const local = /^(\d{1,2})[-/.](\d{1,2})[-/.](\d{2}|\d{4})(?:[T\s]+(.*))?$/u.exec(text)
     if (local === null) return null
-    const year = fullYear(local[3] ?? "")
+    const year = fullYear(String(local[3]))
     return { year, month: Number(local[2]), day: Number(local[1]), rest: local[4] ?? "" }
 }
 
