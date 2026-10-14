@@ -389,13 +389,21 @@ describe("AutomationsService", () => {
             const dropped = await build()
             dropped.text.generate.mockResolvedValue("no blank here")
 
-            for (const { service } of [silent, dropped]) {
+            for (const { service, text } of [silent, dropped]) {
                 await expect(service.proposeBody("u-1", "ws-1", "thank_payment")).resolves.toEqual({
                     body: BODY,
                     generated: false,
                     contextVersion: 2,
                 })
+                expect(text.generate).toHaveBeenCalledTimes(1)
             }
+
+            const deterministic = await build(message())
+            await expect(deterministic.service.proposeBody("u-1", "ws-1", "thank_payment")).resolves.toEqual({
+                body: BODY,
+                generated: false,
+                contextVersion: 2,
+            })
         })
 
         it("refuses a template that sends no message", async () => {

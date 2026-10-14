@@ -1,4 +1,4 @@
-import { Injectable, Optional } from "@nestjs/common"
+import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { InjectOpenclawGateway, threadKeyFor } from "@modules/integrations/openclaw"
 import type { GatewayClient } from "@modules/integrations/openclaw"
@@ -15,7 +15,6 @@ import type { GenerationRunStatus, QueuedGeneration, TurnAttempt } from "./ai-ge
 import { InjectGenerationCompletion, InjectUsage } from "./ai-generations.decorators"
 import { AiGenerationsLogEvent } from "./ai-generations.log-events"
 import type { GenerationCompletion, UsageGate } from "./ai-generations.port"
-import { AiGenerationsError, AiGenerationsErrorCode } from "./errors/ai-generations.error"
 import { composeTurn, failureTextOf, isWaiting, queuedOf, turnTimeoutOf } from "./generation.policy"
 import type { FinishedGenerationRow, GenerationRow } from "./persistence/ai-generations.rows"
 import { FAIL_GENERATION, FIND_GENERATION, FINISH_GENERATION, START_GENERATION } from "./persistence/ai-generations.sql"
@@ -38,21 +37,16 @@ export class GenerationRunnerService {
         @InjectUsage() private readonly usage: UsageGate,
         @InjectOpenclawGateway() private readonly gateway: GatewayClient,
         private readonly sync: AgentSyncService,
-        @Optional() @InjectJobClaims() private readonly claims?: JobClaims,
-        @Optional() @InjectGenerationCompletion() private readonly completion?: GenerationCompletion,
+        @InjectJobClaims() private readonly claims: JobClaims,
+        @InjectGenerationCompletion() private readonly completion: GenerationCompletion,
     ) {}
 
     /** Runs a generation and fences its application effects before the job is acknowledged. */
     async runJob(job: ClaimedJob): Promise<void> {
         await this.run(job.payload)
         if (!isGenerateWithAgentPayload(job.payload)) return
-        if (this.claims === undefined)
-            throw new AiGenerationsError({
-                code: AiGenerationsErrorCode.GenerationFailed,
-                params: { reason: "job_claims", message: "" },
-            })
         await this.claims.advance({ jobId: job.jobId, expectedFencingToken: job.fencingToken, step: "apply-result" })
-        await this.completion?.completeGeneration(job.payload.workspaceId, job.payload.generationId)
+        await this.completion.completeGeneration(job.payload.workspaceId, job.payload.generationId)
     }
 
     /** Runs the generation the job names; the row's own workspace is the tenant, whatever else the payload says. */
