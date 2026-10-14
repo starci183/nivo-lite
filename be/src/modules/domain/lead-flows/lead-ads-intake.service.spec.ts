@@ -144,6 +144,39 @@ describe("LeadAdsIntakeService", () => {
         expect(inbound.mark).toHaveBeenCalledWith("ws-1", "event-1", "processed", null)
     })
 
+    it("keeps the empty lead id in a captured submission when the queued event omits it", async () => {
+        const { intake, meta, bindings, inbound, commands } = await build()
+        const event = eventOf()
+        Reflect.deleteProperty(event, "leadgen_id")
+        bindings.agentsFor.mockResolvedValue([agentOf()])
+
+        await intake.accept({ ...job, event })
+
+        expect(meta.fetchLead).toHaveBeenCalledWith(PAGE, undefined)
+        expect(inbound.recordInput.mock.calls[0]?.[0].externalRef).toBeUndefined()
+        expect(commands.sendCommandItem.mock.calls[0]?.[1].payload).toEqual({
+            subject_type: "inbound",
+            subject_id: "event-1",
+            contact_name: "Lan",
+            company: "",
+            need: NEED,
+            contact: "+84912345678",
+            channel_label: "channel.lead-ads",
+            platform: "facebook",
+            source_kind: "leadgen",
+            form_id: "form-1",
+            ad_id: "",
+            leadgen_id: "",
+            connection_id: "connection-1",
+            phone: "+84912345678",
+            email: "",
+            turn: "t:leadgen:leadgen-1",
+            message_at: AT,
+            text: "budget range: 10m",
+        })
+        expect(inbound.mark).toHaveBeenCalledWith("ws-1", "event-1", "processed", null)
+    })
+
     it("hands the submission to Sales when no lead_gen agent listens", async () => {
         const { intake, bindings, commands, engine } = await build()
         bindings.agentsFor.mockResolvedValue([agentOf({ module: "sales" })])
