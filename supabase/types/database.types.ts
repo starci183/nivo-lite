@@ -1,4 +1,4 @@
-// migrations-sha256: 13b746153e03fd9a328e3b7cb8b8572ab6c9c87cdcb44860f34c415988b41ebd
+// migrations-sha256: c6fa62c19b283a033dafce1d903f01bea11a9d7a06c44ff7851b2475cfad5501
 
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[]
 
@@ -1253,19 +1253,6 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
-                },"cron_targets": {
-                  Row: {
-                    "name": string,"secret": string,"updated_at": string,"url": string
-                  }
-                  Insert: {
-                    "name": string,"secret": string,"updated_at"?: string,"url": string
-                  }
-                  Update: {
-                    "name"?: string,"secret"?: string,"updated_at"?: string,"url"?: string
-                  }
-                  Relationships: [
-
-                  ]
                 },"data_records": {
                   Row: {
                     "connection_id": string,"data": NonNullable<Json>,"entity": string,"external_id": string,"id": string,"occurred_at": string | null,"synced_at": string,"title": string,"workspace_id": string
@@ -1371,38 +1358,6 @@ isOneToOne: false
       referencedRelation: "workspaces"
       referencedColumns: ["id"]
     }
-                  ]
-                },"engine_jobs": {
-                  Row: {
-                    "attempts": number,"created_at": string,"dedupe_key": string | null,"error": string | null,"finished_at": string | null,"id": string,"kind": string,"locked_by": string | null,"locked_until": string | null,"max_attempts": number,"payload": NonNullable<Json>,"result": Json | null,"run_at": string,"status": string,"workspace_id": string | null
-                  }
-                  Insert: {
-                    "attempts"?: number,"created_at"?: string,"dedupe_key"?: string | null,"error"?: string | null,"finished_at"?: string | null,"id"?: string,"kind": string,"locked_by"?: string | null,"locked_until"?: string | null,"max_attempts"?: number,"payload"?: NonNullable<Json>,"result"?: Json | null,"run_at"?: string,"status"?: string,"workspace_id"?: string | null
-                  }
-                  Update: {
-                    "attempts"?: number,"created_at"?: string,"dedupe_key"?: string | null,"error"?: string | null,"finished_at"?: string | null,"id"?: string,"kind"?: string,"locked_by"?: string | null,"locked_until"?: string | null,"max_attempts"?: number,"payload"?: NonNullable<Json>,"result"?: Json | null,"run_at"?: string,"status"?: string,"workspace_id"?: string | null
-                  }
-                  Relationships: [
-                    {
-      foreignKeyName: "engine_jobs_workspace_id_fkey"
-      columns: ["workspace_id"]
-isOneToOne: false
-      referencedRelation: "workspaces"
-      referencedColumns: ["id"]
-    }
-                  ]
-                },"engine_workers": {
-                  Row: {
-                    "info": NonNullable<Json>,"kinds": (string)[],"last_heartbeat_at": string,"started_at": string,"version": string,"worker_id": string
-                  }
-                  Insert: {
-                    "info"?: NonNullable<Json>,"kinds"?: (string)[],"last_heartbeat_at"?: string,"started_at"?: string,"version"?: string,"worker_id": string
-                  }
-                  Update: {
-                    "info"?: NonNullable<Json>,"kinds"?: (string)[],"last_heartbeat_at"?: string,"started_at"?: string,"version"?: string,"worker_id"?: string
-                  }
-                  Relationships: [
-
                   ]
                 },"events": {
                   Row: {
@@ -4002,95 +3957,6 @@ isOneToOne: false
 "display_name_of":
 { Args: { "uid": string }; Returns: string
                            },
-"engine_claim_jobs":
-{ Args: { "p_kinds": (string)[],"p_lease_seconds"?: number,"p_limit"?: number,"p_worker": string }; Returns: {
-              "attempts": number,
-"created_at": string,
-"dedupe_key": string | null,
-"error": string | null,
-"finished_at": string | null,
-"id": string,
-"kind": string,
-"locked_by": string | null,
-"locked_until": string | null,
-"max_attempts": number,
-"payload": NonNullable<Json>,
-"result": Json | null,
-"run_at": string,
-"status": string,
-"workspace_id": string | null
-            }[]
-                          SetofOptions: {
-        from: "*"
-        to: "engine_jobs"
-        isOneToOne: false
-        isSetofReturn: true
-      } },
-"engine_complete_job":
-{ Args: { "p_job": string,"p_result"?: Json,"p_worker": string }; Returns: boolean
-                           },
-"engine_enqueue":
-{ Args: { "p_dedupe_key"?: string,"p_kind": string,"p_max_attempts"?: number,"p_payload"?: Json,"p_run_at"?: string,"p_workspace": string }; Returns: string
-                           },
-"engine_enqueue_agent_sync":
-{ Args: { "p_force"?: boolean,"p_installation": string }; Returns: string
-                           },
-"engine_enqueue_workspace_sync":
-{ Args: { "p_workspace": string }; Returns: number
-                           },
-"engine_fail_job":
-{ Args: { "p_error": string,"p_job": string,"p_permanent"?: boolean,"p_retry_after_seconds"?: number,"p_worker": string }; Returns: string
-                           },
-"engine_heartbeat_job":
-{ Args: { "p_job": string,"p_lease_seconds"?: number,"p_worker": string }; Returns: boolean
-                           },
-"engine_mark_connection_health":
-{ Args: { "p_connection": string,"p_health": Json,"p_workspace": string }; Returns: boolean
-                           },
-"engine_release_job":
-{ Args: { "p_job": string,"p_worker": string }; Returns: boolean
-                           },
-"engine_schedule_agent_sync":
-{ Args: Record<PropertyKey, never>; Returns: number
-                           },
-"engine_schedule_connection_health":
-{ Args: Record<PropertyKey, never>; Returns: number
-                           },
-"engine_status":
-{ Args: Record<PropertyKey, never>; Returns: {
-              "last_heartbeat_at": string,"online": boolean,"workers": number
-            }[]
-                           },
-"engine_sweep_authorized":
-{ Args: { "p_secret": string }; Returns: boolean
-                           },
-"engine_sweep_claim":
-{ Args: Record<PropertyKey, never>; Returns: {
-              "attempts": number,
-"created_at": string,
-"dedupe_key": string | null,
-"error": string | null,
-"finished_at": string | null,
-"id": string,
-"kind": string,
-"locked_by": string | null,
-"locked_until": string | null,
-"max_attempts": number,
-"payload": NonNullable<Json>,
-"result": Json | null,
-"run_at": string,
-"status": string,
-"workspace_id": string | null
-            }[]
-                          SetofOptions: {
-        from: "*"
-        to: "engine_jobs"
-        isOneToOne: false
-        isSetofReturn: true
-      } },
-"engine_worker_heartbeat":
-{ Args: { "p_info"?: Json,"p_kinds": (string)[],"p_version": string,"p_worker": string }; Returns: undefined
-                           },
 "exception_rows":
 { Args: { "ws": string }; Returns: Json
                            },
@@ -4566,9 +4432,6 @@ isOneToOne: false
                            },
 "zalo_authorization_return":
 { Args: { "p_code": string,"p_oa_id"?: string,"p_state": string }; Returns: string
-                           },
-"zalo_refresh_tick":
-{ Args: Record<PropertyKey, never>; Returns: number
                            },
 "zalo_wizard_begin":
 { Args: { "p_connection": string }; Returns: string
