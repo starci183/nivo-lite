@@ -1,7 +1,6 @@
 import type { ConfiguredUrl, OptionalPublicOrigin, Provider } from "./connections.contracts"
 
 const LOCAL_HOSTS: ReadonlySet<string> = new Set(["localhost", "127.0.0.1", "[::1]"])
-const DEFAULT_ORIGIN = "http://localhost:3100"
 
 /** The public https origin providers can reach, or null on localhost, plain http or when unset. */
 export const publicSiteUrl = (siteUrl: ConfiguredUrl): OptionalPublicOrigin => {
@@ -15,8 +14,8 @@ export const publicSiteUrl = (siteUrl: ConfiguredUrl): OptionalPublicOrigin => {
 export const isLocalOnly = (siteUrl: ConfiguredUrl): boolean => publicSiteUrl(siteUrl) === null
 
 /** The webhook URL a provider must call for a connection, built from the site url even on localhost for display. */
-export const webhookUrlFor = (provider: Provider, connectionId: string, siteUrl: ConfiguredUrl): string => {
-    const base = (siteUrl ?? DEFAULT_ORIGIN).replace(/\/$/, "")
+export const webhookUrlFor = (provider: Provider, connectionId: string, siteUrl: string): string => {
+    const base = siteUrl.replace(/\/$/, "")
     // Meta has ONE webhook for the whole app (the Page id inside each event finds the connection).
     if (provider === "meta") return `${base}/api/connections/meta/webhook`
     if (provider === "telegram") return `${base}/api/telegram/${connectionId}`

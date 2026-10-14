@@ -7,7 +7,8 @@
 #   vars    VPS_HOST, VPS_USER
 #   secrets VPS_SSH_KEY, VPS_KNOWN_HOSTS (as for the engine), WEB_ENV (runtime env file), WEB_NEXT_PUBLIC_SUPABASE_URL,
 #           WEB_NEXT_PUBLIC_SUPABASE_ANON_KEY, WEB_NEXT_PUBLIC_DEMO_LOGIN (build args). All pushed by: node scripts/env-sync.mjs
-#   vars    NEXT_PUBLIC_DEVELOPER_API_URL (optional, default https://api.nivo.vn): the public API host the Developers page shows (the web app never calls it)
+#   vars    NEXT_PUBLIC_API_URL (optional, default https://api.nivo.vn): the origin the browser calls for GraphQL
+#           NEXT_PUBLIC_DEVELOPER_API_URL (optional, default https://api.nivo.vn): the public API host the Developers page shows (the web app never calls it)
 # Only ~/nivo-web and the "nivo-web" compose project are touched.
 name: Deploy web
 
@@ -41,6 +42,7 @@ jobs:
             NEXT_PUBLIC_SUPABASE_URL=${{ secrets.WEB_NEXT_PUBLIC_SUPABASE_URL }}
             NEXT_PUBLIC_SUPABASE_ANON_KEY=${{ secrets.WEB_NEXT_PUBLIC_SUPABASE_ANON_KEY }}
             NEXT_PUBLIC_SITE_URL=https://nivo.vn
+            NEXT_PUBLIC_API_URL=${{ vars.NEXT_PUBLIC_API_URL || 'https://api.nivo.vn' }}
             NEXT_PUBLIC_DEVELOPER_API_URL=${{ vars.NEXT_PUBLIC_DEVELOPER_API_URL || 'https://api.nivo.vn' }}
             NEXT_PUBLIC_DEMO_LOGIN=${{ secrets.WEB_NEXT_PUBLIC_DEMO_LOGIN }}
             NEXT_PUBLIC_GOOGLE_CLIENT_ID=${{ secrets.WEB_NEXT_PUBLIC_GOOGLE_CLIENT_ID }}

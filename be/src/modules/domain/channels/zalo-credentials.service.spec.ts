@@ -42,7 +42,7 @@ const sealedJson = (sealed: string): object => {
     }
 }
 const missing = refused(ConnectionSecretsErrorCode.NotFound)
-const build = async (siteUrl: string | null = "https://nivo.test") => {
+const build = async (siteUrl: string = "https://nivo.test") => {
     const secrets = mock<ConnectionSecretsService>()
     secrets.seal.mockImplementation((plain) => `sealed:${plain}`)
     secrets.save.mockResolvedValue(undefined)
@@ -72,9 +72,8 @@ const zaloRefusal = (zaloCode: number) =>
 const tokens = { accessToken: "access-2", refreshToken: "refresh-2", expiresInSeconds: 3600 }
 describe("ZaloCredentialsService", () => {
     describe("callbackUrl", () => {
-        it("is on the public site, or on the development site when none is configured", async () => {
+        it("uses the required configured site", async () => {
             expect((await build()).service.callbackUrl()).toBe("https://nivo.test/connections/zalo/callback")
-            expect((await build(null)).service.callbackUrl()).toBe("http://localhost:3100/connections/zalo/callback")
         })
     })
 

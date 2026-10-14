@@ -36,8 +36,10 @@ describe("connection url policy", () => {
             expect(webhookUrlFor("meta", "c1", site)).toBe("https://app.example.com/api/connections/meta/webhook")
         })
 
-        it("falls back to the local origin when the site url is unset", () => {
-            expect(webhookUrlFor("casso", "c1", undefined)).toBe("http://localhost:3100/api/connections/casso/c1")
+        it("builds the webhook address from the configured site", () => {
+            expect(webhookUrlFor("casso", "c1", "https://site.example.com")).toBe(
+                "https://site.example.com/api/connections/casso/c1",
+            )
         })
     })
 })

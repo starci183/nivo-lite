@@ -52,17 +52,17 @@ const ROW: ConnectionSelectRow = {
 }
 const OWNER = [FIND_ACTIVE_MEMBER, [{ role: "owner", display_name: "Lan" }]] as const
 
-type Urls = Partial<Pick<ConnectionsOptions, "publicSiteUrl" | "publicApiUrl">>
-
+type Urls = Partial<Pick<ConnectionsOptions, "siteUrl" | "publicSiteUrl" | "publicApiUrl">>
 const buildWith = async (entityManager: MockEntityManager, urls: Urls = {}) => {
     const secrets = mock<ConnectionSecretsService>()
     const interest = mock<ConnectorInterestService>()
     const logger = mock<Logger>()
+    const options = { channelTokenKey: new Secret("k"), siteUrl: "https://site.example.com", ...urls }
     const moduleRef = await Test.createTestingModule({
         providers: [
             ConnectionsService,
             { provide: PRIMARY_ENTITY_MANAGER, useValue: entityManager },
-            { provide: CONNECTIONS_OPTIONS, useValue: { channelTokenKey: new Secret("k"), ...urls } },
+            { provide: CONNECTIONS_OPTIONS, useValue: options },
             { provide: LOGGER, useValue: logger },
             { provide: ConnectionSecretsService, useValue: secrets },
             { provide: ConnectorInterestService, useValue: interest },
@@ -95,23 +95,23 @@ const buildIntake = async (found?: ReadonlyArray<unknown>, batch?: ReadonlyArray
 
 describe("ConnectionsService", () => {
     describe("addresses", () => {
-        it("uses the local site origin by default and trims every trailing slash", async () => {
-            expect((await build(mockEntityManager())).siteBase()).toBe("http://localhost:3100")
-
-            const trimmed = await build(mockEntityManager(), { publicSiteUrl: "https://nivo.vn/app///" })
-
+        it("uses the required site URL and trims every trailing slash", async () => {
+            const service = await build(mockEntityManager())
+            expect(service.siteBase()).toBe("https://site.example.com")
+            expect(service.webhookUrl("telegram", "c1")).toBe("https://site.example.com/api/telegram/c1")
+            expect(service.publicOrigin()).toBeNull()
+            const trimmed = await build(mockEntityManager(), { siteUrl: "https://nivo.vn/app///" })
             expect(trimmed.siteBase()).toBe("https://nivo.vn/app")
         })
-
-        it("builds the webhook address of a connection and the public origin from the site url", async () => {
-            const service = await build(mockEntityManager(), { publicSiteUrl: "https://nivo.vn/app" })
-
-            expect(service.webhookUrl("telegram", "c1")).toBe("https://nivo.vn/app/api/telegram/c1")
+        it.each([undefined, "https://api.nivo.vn/app"])("uses public URL precedence: %s", async (publicApiUrl) => {
+            const service = await build(mockEntityManager(), { publicSiteUrl: "https://nivo.vn/app", publicApiUrl })
+            const provider = publicApiUrl ?? "https://nivo.vn/app"
+            expect(service.siteBase()).toBe("https://nivo.vn/app")
+            expect(service.webhookUrl("telegram", "c1")).toBe(`${provider}/api/telegram/c1`)
             expect(service.webhookUrl("sepay", "c1", "https://other.test")).toBe(
                 "https://other.test/api/connections/sepay/c1",
             )
-            expect(service.publicOrigin()).toBe("https://nivo.vn")
-            expect((await build(mockEntityManager())).publicOrigin()).toBeNull()
+            expect(service.publicOrigin()).toBe(new URL(provider).origin)
         })
     })
 

@@ -12,7 +12,6 @@ import { cleanConnectionName } from "./connection-name.policy"
 import { isPlannedConnector } from "./connector-catalog.policy"
 import { publicSiteUrl, webhookUrlFor } from "./connection-url.policy"
 import type {
-    ConfiguredUrl,
     ConnectionActor,
     ConnectionOwner,
     ConnectionEvent,
@@ -84,7 +83,7 @@ const NIL_UUID = "00000000-0000-0000-0000-000000000000"
 @Injectable()
 /** The connections of a workspace and their sealed secrets, reached only through the primary EntityManager. */
 export class ConnectionsService {
-    private readonly siteUrl: string | undefined
+    private readonly siteUrl: string
     private readonly providerUrl: string | undefined
 
     constructor(
@@ -94,18 +93,18 @@ export class ConnectionsService {
         private readonly secrets: ConnectionSecretsService,
         private readonly interest: ConnectorInterestService,
     ) {
-        this.siteUrl = options.publicSiteUrl
+        this.siteUrl = options.publicSiteUrl ?? options.siteUrl
         this.providerUrl = options.publicApiUrl ?? options.publicSiteUrl
     }
 
     /** The webhook address a provider must call for a connection (built from the site url even on localhost, for display). */
-    webhookUrl(provider: Provider, connectionId: string, origin: ConfiguredUrl = this.providerUrl): string {
+    webhookUrl(provider: Provider, connectionId: string, origin: string = this.providerUrl ?? this.siteUrl): string {
         return webhookUrlFor(provider, connectionId, origin)
     }
 
-    /** The site origin browsers are sent back to (no trailing slash); the local development origin when none is configured. */
+    /** The configured site origin browsers are sent back to, with no trailing slash. */
     siteBase(): string {
-        return (this.siteUrl ?? "http://localhost:3100").replace(/\/+$/u, "")
+        return this.siteUrl.replace(/\/+$/u, "")
     }
 
     /** The public https origin providers can reach, or null on localhost, plain http or when unset. */

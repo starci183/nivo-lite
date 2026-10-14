@@ -3,7 +3,7 @@
 #
 #   docker build -f fe/apps/web/Dockerfile -t nivo-lite/web:<tag> .
 #
-# Pass the public values with --build-arg: NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY, NEXT_PUBLIC_DEVELOPER_API_URL (default https://api.nivo.vn),
+# Pass the public values with --build-arg: NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY, NEXT_PUBLIC_API_URL (default https://api.nivo.vn), NEXT_PUBLIC_DEVELOPER_API_URL (default https://api.nivo.vn),
 # NEXT_PUBLIC_SITE_URL (default https://nivo.vn) and the optional demo-login and Google Picker values.
 #
 # NEXT_PUBLIC_* values are published to every browser by design, so they are the one kind of build argument; every server-only
@@ -20,6 +20,7 @@ FROM node:22.14.0-alpine3.21 AS build
 WORKDIR /app
 ARG NEXT_PUBLIC_SUPABASE_URL
 ARG NEXT_PUBLIC_SUPABASE_ANON_KEY
+ARG NEXT_PUBLIC_API_URL=https://api.nivo.vn
 ARG NEXT_PUBLIC_DEVELOPER_API_URL=https://api.nivo.vn
 ARG NEXT_PUBLIC_SITE_URL=https://nivo.vn
 ARG NEXT_PUBLIC_DEMO_LOGIN=
@@ -63,5 +64,5 @@ COPY --from=build --chown=node:node /app/fe/apps/web/public ./fe/apps/web/public
 
 USER node
 EXPOSE 3000
-HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 CMD node -e "fetch('http://127.0.0.1:'+process.env.PORT+'/login').then(r=>process.exit(r.status<500?0:1)).catch(()=>process.exit(1))"
+HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 CMD node -e "fetch('http://127.0.0.1:'+process.env.PORT+'/health/live').then(r=>process.exit(r.status<500?0:1)).catch(()=>process.exit(1))"
 CMD ["node", "fe/apps/web/server.js"]
