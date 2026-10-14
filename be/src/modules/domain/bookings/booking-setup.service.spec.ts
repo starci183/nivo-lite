@@ -332,4 +332,144 @@ describe("BookingSetupService", () => {
             ).rejects.toMatchObject({ code: BookingsErrorCode.InvalidInput })
         })
     })
+
+    describe("additional setup outcomes", () => {
+        it("updates a service with its explicit resource kind, no price and a follow-up", async () => {
+            const { setup, services } = await build()
+            const params = serviceOf({ id: RESOURCE, priceVnd: null, resourceKind: " room ", followupDays: 1 })
+
+            await expect(setup.saveService(USER, params)).resolves.toEqual({ id: "svc-1" })
+            expect(services.save).toHaveBeenCalledWith({
+                ...params,
+                name: "Haircut",
+                description: "Wash and cut",
+                resourceKind: "room",
+            })
+        })
+
+        it.each([serviceOf({ durationMin: 5.5 }), serviceOf({ name: "x".repeat(161) })])(
+            "refuses invalid service fields %j",
+            async (params) => {
+                const { setup, services } = await build()
+
+                await expect(setup.saveService(USER, params)).rejects.toMatchObject({
+                    code: BookingsErrorCode.InvalidInput,
+                })
+                expect(services.save).not.toHaveBeenCalled()
+            },
+        )
+
+        it("preserves an explicit kind when updating an unlinked resource", async () => {
+            const { setup, resources, hours } = await build()
+            const params = resourceOf({ id: RESOURCE, kind: " room " })
+
+            await expect(setup.saveResource(USER, params)).resolves.toEqual({ id: RESOURCE })
+            expect(resources.save).toHaveBeenCalledWith({ ...params, name: "Anna", kind: "room" }, expect.anything())
+            expect(resources.lockStaff).not.toHaveBeenCalled()
+            expect(hours.defaults).not.toHaveBeenCalled()
+        })
+
+        it("removes an unused service after checking its history, and removes an owned exception", async () => {
+            const { setup, services, exceptions, tx } = await build()
+            services.lock.mockResolvedValue([{ id: RESOURCE }])
+            services.used.mockResolvedValue(false)
+            services.remove.mockResolvedValue([{ id: RESOURCE }])
+            exceptions.remove.mockResolvedValue([{ id: "ex-1" }])
+
+            await expect(setup.removeService(USER, { workspaceId: WORKSPACE, id: RESOURCE })).resolves.toEqual({
+                id: RESOURCE,
+            })
+            await expect(setup.removeException(USER, { workspaceId: WORKSPACE, id: RESOURCE })).resolves.toEqual({
+                id: "ex-1",
+            })
+            expect(services.lock).toHaveBeenCalledWith(WORKSPACE, RESOURCE, expect.anything())
+            expect(services.used).toHaveBeenCalledWith(WORKSPACE, RESOURCE, expect.anything())
+            expect(services.remove).toHaveBeenCalledWith(WORKSPACE, RESOURCE, false, expect.anything())
+            expect(exceptions.remove).toHaveBeenCalledWith(WORKSPACE, RESOURCE)
+            expect(tx.commits).toBe(1)
+        })
+
+        it("validates sorted multi-day hours while preserving the submitted order", async () => {
+            const { setup, hours } = await build()
+            const rows = [
+                { weekday: 3, start: "09:00", end: "12:00" },
+                { weekday: 1, start: "13:00", end: "17:00" },
+                { weekday: 1, start: "09:00", end: "13:00" },
+            ]
+
+            await expect(
+                setup.saveHours(USER, { workspaceId: WORKSPACE, resourceId: RESOURCE, rows }),
+            ).resolves.toEqual({ id: RESOURCE })
+            expect(hours.replace).toHaveBeenCalledWith(WORKSPACE, RESOURCE, rows, expect.anything())
+        })
+
+        it("rejects more than 56 weekly opening windows", async () => {
+            const { setup, hours } = await build()
+            const rows = Array.from({ length: 57 }, () => ({ weekday: 1, start: "09:00", end: "10:00" }))
+
+            await expect(
+                setup.saveHours(USER, { workspaceId: WORKSPACE, resourceId: RESOURCE, rows }),
+            ).rejects.toMatchObject({ code: BookingsErrorCode.InvalidInput })
+            expect(hours.replace).not.toHaveBeenCalled()
+        })
+
+        it("writes an open exception for the whole workspace without locking a resource", async () => {
+            const { setup, resources, exceptions } = await build()
+            const params = exceptionOf({ resourceId: null, closed: false })
+
+            await expect(setup.saveException(USER, params)).resolves.toEqual({ id: "ex-1" })
+            expect(exceptions.create).toHaveBeenCalledWith({ ...params, note: "Holiday" }, expect.anything())
+            expect(resources.lock).not.toHaveBeenCalled()
+        })
+
+        it.each(["tomorrow", "2026-99-01"])("refuses malformed or unparseable exception date %s", async (date) => {
+            const { setup, exceptions } = await build()
+
+            await expect(setup.saveException(USER, exceptionOf({ date }))).rejects.toMatchObject({
+                code: BookingsErrorCode.InvalidInput,
+            })
+            expect(exceptions.create).not.toHaveBeenCalled()
+        })
+
+        it.each([policyOf({ timezone: " " }), policyOf({ timezone: "x".repeat(101) })])(
+            "refuses an empty or overlong timezone %j",
+            async (params) => {
+                const { setup, settings } = await build()
+
+                await expect(setup.savePolicy(USER, params)).rejects.toMatchObject({
+                    code: BookingsErrorCode.InvalidInput,
+                })
+                expect(settings.savePolicy).not.toHaveBeenCalled()
+            },
+        )
+
+        it("clears the slug of an unpublished page", async () => {
+            const { setup, settings } = await build()
+
+            await expect(
+                setup.savePublicPage(USER, { workspaceId: WORKSPACE, enabled: false, slug: " ", note: " Closed " }),
+            ).resolves.toEqual({ workspaceId: WORKSPACE })
+            expect(settings.slugOwner).toHaveBeenCalledWith(WORKSPACE, null)
+            expect(settings.savePublicPage).toHaveBeenCalledWith({
+                workspaceId: WORKSPACE,
+                enabled: false,
+                slug: null,
+                note: "Closed",
+                updatedAt: NOW,
+            })
+        })
+
+        it.each([null, "offline", {}, { code: "40001" }, { driverError: { code: "40001" } }])(
+            "preserves a public-page persistence failure unrelated to unique slugs %j",
+            async (cause) => {
+                const { setup, settings } = await build()
+                settings.savePublicPage.mockRejectedValue(cause)
+
+                await expect(
+                    setup.savePublicPage(USER, { workspaceId: WORKSPACE, enabled: true, slug: "our-shop", note: "" }),
+                ).rejects.toBe(cause)
+                expect(settings.savePublicPage).toHaveBeenCalledTimes(1)
+            },
+        )
+    })
 })

@@ -480,7 +480,7 @@ describe("DocumentFactsService", () => {
     })
 
     it("finishes public text without a topic even when answering its gaps fails", async () => {
-        const { service, gaps, logger, sources } = await build(sourceOf({ topic: null, module: null }))
+        const { service, gaps, logger, sources, extractions } = await build(sourceOf({ topic: null, module: null }))
         const cause = new Error("gaps")
         gaps.resolve.mockRejectedValue(cause)
 
@@ -494,5 +494,7 @@ describe("DocumentFactsService", () => {
         })
         expect(logger.error).toHaveBeenCalledWith(BrainLogEvent.GapsFailed, cause, { sourceId: SOURCE })
         expect(sources.ready).toHaveBeenCalledWith(WS, SOURCE, null)
+        extractions.get.mockResolvedValue(extractionOf({ windowsDone: -1 }))
+        await expect(service.run(PAYLOAD)).resolves.toBe("done")
     })
 })

@@ -211,6 +211,7 @@ describe("BookingPublicService", () => {
     describe("page", () => {
         it("shows the shop with its active services only", async () => {
             const { service } = await build()
+            expect(await service.catalogIn(WORKSPACE)).toEqual({ timezone: PAGE.timezone, services: [serviceOf()] })
             await expect(service.page({ slug: "spa-anna" })).resolves.toEqual({
                 shop: "Spa Anna",
                 slug: "spa-anna",
@@ -279,6 +280,7 @@ describe("BookingPublicService", () => {
     describe("nextCancellable", () => {
         it("returns the next booking for a normalised phone scoped to the workspace", async () => {
             const { service, tx } = await build({ cancellable: [NEXT_ROW] })
+            await expect(service.nextCancellable(WORKSPACE, "", NOW)).resolves.toBeNull()
             await expect(service.nextCancellable(WORKSPACE, "0912 345 678", NOW)).resolves.toEqual(
                 nextReplyOf("lead-1"),
             )

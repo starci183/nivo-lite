@@ -7,6 +7,7 @@ import { BrainExtractionsService } from "./brain-extractions.service"
 import type { BrainExtractionRow } from "./persistence/brain-extractions.rows"
 import {
     FINISH_EXTRACTION,
+    LIST_EXTRACTIONS,
     SAVE_PROGRESS,
     SELECT_EXTRACTION,
     UPSERT_EXTRACTION,
@@ -35,6 +36,35 @@ const row: BrainExtractionRow = {
 }
 
 describe("BrainExtractionsService", () => {
+    describe("states", () => {
+        it("lists each document and its reading status in database order", async () => {
+            const em = mockEntityManager({
+                query: [
+                    LIST_EXTRACTIONS,
+                    [
+                        { source_id: "s1", status: "running" },
+                        { source_id: "s2", status: "done" },
+                    ],
+                ],
+            })
+            const service = await build(em)
+
+            await expect(service.states(WS)).resolves.toEqual([
+                { sourceId: "s1", status: "running" },
+                { sourceId: "s2", status: "done" },
+            ])
+            expect(em.query.mock.calls).toEqual([[LIST_EXTRACTIONS, [WS]]])
+        })
+
+        it("answers an empty list for a workspace with no readings", async () => {
+            const em = mockEntityManager({ query: [LIST_EXTRACTIONS, []] })
+            const service = await build(em)
+
+            await expect(service.states(WS)).resolves.toEqual([])
+            expect(em.query.mock.calls).toEqual([[LIST_EXTRACTIONS, [WS]]])
+        })
+    })
+
     describe("get", () => {
         it("names every column of the stored reading and preserves its orphan facts", async () => {
             const em = mockEntityManager({ query: [SELECT_EXTRACTION, [row]] })

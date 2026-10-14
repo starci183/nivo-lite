@@ -129,6 +129,35 @@ describe("BankFeedService", () => {
             expect(outbox.jobs).toEqual([])
             expect(events.record).not.toHaveBeenCalled()
         })
+
+        it.each([undefined, "Anh Minh"])(
+            "books payer %p without a note and leaves empty evidence empty",
+            async (payer) => {
+                const { feed, inbound, events } = await build([])
+
+                await expect(
+                    feed.acceptManualCredit("user-1", "ws-1", { amount: 10.6, date: "2026-10-12", content: "", payer }),
+                ).resolves.toBe(false)
+
+                expect(inbound.recordBankPayment).toHaveBeenCalledWith({
+                    manager: expect.anything(),
+                    workspaceId: "ws-1",
+                    origin: "simulated",
+                    sender: payer ?? null,
+                    body: 'vi:billing.bankEventBody:{"bank":"vi:billing.manualBank:{}","content":"—"}',
+                    amountVnd: 11,
+                    externalRef: null,
+                    providerRef: "manual:2026-10-12:11:",
+                })
+                expect(events.record.mock.calls[0]?.[0]).toEqual({
+                    workspaceId: "ws-1",
+                    kind: "accounting.manual_evidence",
+                    actor: "Lan",
+                    summary: 'vi:billing.manualEvidenceLog:{"amount":11,"date":"2026-10-12"}',
+                    evidence: "",
+                })
+            },
+        )
     })
 
     describe("acceptSimulatedCredit", () => {

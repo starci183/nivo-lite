@@ -195,5 +195,21 @@ describe("BookingBoardService", () => {
             await expect(service.board(USER, { workspaceId: WORKSPACE })).rejects.toBe(refusal)
             expect(em.query).not.toHaveBeenCalled()
         })
+
+        it.each([
+            { from: "tomorrow" },
+            { from: "2026-13-01" },
+            { from: "2026-10-14", to: "tomorrow" },
+            { from: "9999-12-31", to: "9999-12-31" },
+        ])("rejects an invalid or unbounded calendar window %j before reading rows", async (range) => {
+            const em = mockEntityManager()
+            const { service, overview } = await build(em)
+
+            await expect(service.board(USER, { workspaceId: WORKSPACE, ...range })).rejects.toMatchObject({
+                code: BookingsErrorCode.InvalidInput,
+            })
+            expect(em.query).not.toHaveBeenCalled()
+            expect(overview.overview).not.toHaveBeenCalled()
+        })
     })
 })
