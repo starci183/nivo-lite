@@ -1,7 +1,7 @@
 import { Alert, Badge, Button, Drawer, ListRow, SurfaceListCard, Text } from "@starci/grammar/common"
 import { ConnectionInterestButton } from "@/components/blocks/ConnectionInterestButton"
 import { ConnectionRow } from "@/components/blocks/ConnectionRow"
-import { ProviderLogo } from "@/components/leaves/ProviderLogo"
+import { ProviderLogo } from "@/components/branches/ProviderLogo"
 import type { AgentOption, Connection, ConnectorGlyph, Provider } from "@/modules/types"
 import { connectorDetailClassNames as classNames } from "./classNames"
 

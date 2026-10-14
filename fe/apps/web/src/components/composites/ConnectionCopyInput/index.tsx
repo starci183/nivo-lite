@@ -1,5 +1,5 @@
 import { Input } from "@starci/grammar/common"
-import { WizardCopyGlyphs } from "@/components/leaves/WizardCopyGlyphs"
+import { WizardCopyGlyphs } from "@/components/branches/WizardCopyGlyphs"
 import type { RowCopyLabels } from "@/modules/types"
 
 /** A read-only value the owner copies in place; a secret also shows or hides. */

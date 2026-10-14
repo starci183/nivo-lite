@@ -1,5 +1,5 @@
 import { Badge, Breadcrumbs, Button, ListRow, SectionHeader, SurfaceListCard, TextAction } from "@starci/grammar/common"
-import { ProviderLogo } from "@/components/leaves/ProviderLogo"
+import { ProviderLogo } from "@/components/branches/ProviderLogo"
 import { APP_ROUTES } from "@/modules/routes"
 import { HEAD_CLASS, STACK_CLASS } from "./classNames"
 

@@ -1,1 +1,1 @@
-export { ACCESS_LEVELS, isAccess, isDataConnector, purposeFor } from "./connection-access.shared"
+export { ACCESS_LEVELS, isDataConnector, purposeFor } from "./connection-access.shared"
