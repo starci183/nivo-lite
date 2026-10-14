@@ -79,7 +79,7 @@ const datePartsOf = (text: string): DateParts | null => {
     if (iso !== null) return { year: Number(iso[1]), month: Number(iso[2]), day: Number(iso[3]), rest: iso[4] ?? "" }
     const local = /^(\d{1,2})[-/.](\d{1,2})[-/.](\d{2}|\d{4})(?:[T\s]+(.*))?$/u.exec(text)
     if (local === null) return null
-    const year = fullYear(String(local[3]))
+    const year = fullYear(local[3] ?? "")
     return { year, month: Number(local[2]), day: Number(local[1]), rest: local[4] ?? "" }
 }
 
