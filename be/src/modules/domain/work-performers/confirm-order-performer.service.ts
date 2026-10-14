@@ -226,10 +226,10 @@ export class ConfirmOrderPerformerService implements WorkPerformer {
             origin: item.origin,
         })
         if (known !== null) return known
+        const contactName = event?.sender_name ?? ""
         const lead = await this.leads.capture({
             workspaceId: ctx.workspaceId,
-            contactName:
-                (event?.sender_name ?? "") === "" ? this.kit.text(ctx, "notShared") : (event?.sender_name ?? ""),
+            contactName: contactName === "" ? this.kit.text(ctx, "notShared") : contactName,
             company: this.kit.text(ctx, "notShared"),
             channel: channel === "" ? "—" : channel,
             need: need === "" ? "—" : need,

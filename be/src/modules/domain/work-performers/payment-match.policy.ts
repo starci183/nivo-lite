@@ -58,8 +58,9 @@ export const mentionsCode = (content: string | null | undefined, code: string | 
 /** The bank a stored bank event came from (by its event id prefix), or null for a channel that is not a bank feed. */
 export const bankNameOf = (channel: string, eventId: string | null): string | null => {
     if (channel !== "bank" || eventId === null) return null
-    const [provider] = eventId.split(":")
-    return provider === undefined ? null : (BANKS[provider] ?? null)
+    const separator = eventId.indexOf(":")
+    const provider = separator < 0 ? eventId : eventId.slice(0, separator)
+    return BANKS[provider] ?? null
 }
 
 /**

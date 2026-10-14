@@ -13,18 +13,14 @@ export enum PresentedRole {
     Staff = "staff",
 }
 
-const PRESENTED = new Map<WorkspaceRole, PresentedRole>([
-    ["owner", PresentedRole.Owner],
-    ["manager", PresentedRole.Manager],
-    ["staff", PresentedRole.Staff],
-])
+const PRESENTED: Readonly<Record<WorkspaceRole, PresentedRole>> = {
+    owner: PresentedRole.Owner,
+    manager: PresentedRole.Manager,
+    staff: PresentedRole.Staff,
+}
 
 /** The console name of a membership role. */
-export const presentedRole = (role: WorkspaceRole): PresentedRole => {
-    const presented = PRESENTED.get(role)
-    if (presented === undefined) return PresentedRole.Staff
-    return presented
-}
+export const presentedRole = (role: WorkspaceRole): PresentedRole => PRESENTED[role]
 
 /** True for owner and manager. */
 export const isManagerRole = (role: WorkspaceRole): boolean => role === "owner" || role === "manager"
