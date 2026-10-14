@@ -1,13 +1,20 @@
-import { builder, mockEntityManager } from "@starci/jest-preset"
+import { builder, fakeTransaction, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { Test } from "@nestjs/testing"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { WorkspacesErrorCode } from "./errors/workspaces.error"
 import type { MembershipRow } from "./persistence/workspaces.rows"
-import { INSERT_FREE_WORKSPACE, LIST_MEMBERSHIPS } from "./persistence/workspaces.sql"
+import {
+    FIND_WORKSPACE_NAME,
+    HAS_ANY_WORKSPACE,
+    INSERT_FREE_WORKSPACE,
+    LIST_MEMBERSHIPS,
+    LOCK_FIRST_WORKSPACE,
+} from "./persistence/workspaces.sql"
 import type { WorkspacesOptions } from "./workspaces.options"
 import { WORKSPACES_OPTIONS } from "./workspaces.port"
 import { WorkspacesService } from "./workspaces.service"
+import { FIRST_WORKSPACE_NAME } from "./workspaces.templates"
 
 const rowOf = builder<MembershipRow>({
     workspace_id: "ws-1",
@@ -38,6 +45,22 @@ const build = async (entityManager: MockEntityManager, overrides: Partial<Worksp
 }
 
 describe("WorkspacesService", () => {
+    describe("nameOf", () => {
+        it("answers the stored workspace name", async () => {
+            const em = mockEntityManager({ query: [FIND_WORKSPACE_NAME, [{ name: "Quan Ca Phe" }]] })
+
+            await expect((await build(em)).nameOf("ws-1")).resolves.toBe("Quan Ca Phe")
+            expect(em.query).toHaveBeenCalledWith(FIND_WORKSPACE_NAME, ["ws-1"])
+        })
+
+        it("answers empty text for a missing workspace", async () => {
+            const em = mockEntityManager({ query: [FIND_WORKSPACE_NAME, []] })
+
+            await expect((await build(em)).nameOf("ws-missing")).resolves.toBe("")
+            expect(em.query).toHaveBeenCalledWith(FIND_WORKSPACE_NAME, ["ws-missing"])
+        })
+    })
+
     describe("memberships", () => {
         it("maps each membership with its workspace", async () => {
             const em = mockEntityManager({ query: [LIST_MEMBERSHIPS, [rowOf()]] })
@@ -82,6 +105,60 @@ describe("WorkspacesService", () => {
                 code: WorkspacesErrorCode.SignupDisabled,
             })
             expect(em.query).not.toHaveBeenCalled()
+        })
+    })
+
+    describe("startFirst", () => {
+        it("creates nothing where free signup is disabled", async () => {
+            const em = mockEntityManager()
+
+            await expect((await build(em)).startFirst("user-1")).resolves.toEqual({ id: null })
+            expect(em.transaction).not.toHaveBeenCalled()
+            expect(em.query).not.toHaveBeenCalled()
+        })
+
+        it("locks the person's first load and keeps their existing workspace", async () => {
+            const em = mockEntityManager({
+                query: [
+                    [LOCK_FIRST_WORKSPACE, []],
+                    [HAS_ANY_WORKSPACE, [{ taken: true }]],
+                ],
+            })
+            const transaction = fakeTransaction(em)
+            const service = await build(em, { allowFreeWorkspace: true })
+
+            await expect(service.startFirst("user-1")).resolves.toEqual({ id: null })
+            expect(em.query.mock.calls).toEqual([
+                [LOCK_FIRST_WORKSPACE, ["user-1"]],
+                [HAS_ANY_WORKSPACE, ["user-1"]],
+            ])
+            expect(transaction.commits).toBe(1)
+            expect(transaction.committedWrites).toEqual([])
+        })
+
+        it.each([
+            { label: "the check has no row", rows: [] },
+            { label: "the check says untaken", rows: [{ taken: false }] },
+        ])("creates the first workspace when $label", async ({ rows }) => {
+            const em = mockEntityManager({
+                query: [
+                    [LOCK_FIRST_WORKSPACE, []],
+                    [HAS_ANY_WORKSPACE, rows],
+                    [INSERT_FREE_WORKSPACE, [{ id: "ws-first" }]],
+                ],
+            })
+            const transaction = fakeTransaction(em)
+            const service = await build(em, { allowFreeWorkspace: true })
+
+            await expect(service.startFirst("user-1")).resolves.toEqual({ id: "ws-first" })
+            expect(em.query.mock.calls).toEqual([
+                [LOCK_FIRST_WORKSPACE, ["user-1"]],
+                [HAS_ANY_WORKSPACE, ["user-1"]],
+                [INSERT_FREE_WORKSPACE, ["user-1", FIRST_WORKSPACE_NAME]],
+            ])
+            expect(transaction.commits).toBe(1)
+            expect(transaction.rollbacks).toBe(0)
+            expect(em.transaction).toHaveBeenCalledTimes(1)
         })
     })
 })

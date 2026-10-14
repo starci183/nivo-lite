@@ -393,5 +393,27 @@ describe("BookingChatService", () => {
                 }),
             )
         })
+
+        it("uses the requested calendar date for an open waitlist period across the year boundary", async () => {
+            const { service, bookings, waitlist } = await build()
+            await expect(
+                service.apply(turnOf({ request: requestOf({ intent: "waitlist", date: "2026-12-31" }) })),
+            ).resolves.toEqual({
+                reply: "performers.chatBooking.waitlisted|Haircut|2026-12-31",
+                state: "waitlisted",
+            })
+            expect(bookings.freeTimesIn).toHaveBeenCalledWith({
+                workspaceId: "ws-1",
+                service: "service-1",
+                date: "2026-12-31",
+                party: 2,
+            })
+            expect(waitlist.join).toHaveBeenCalledWith(
+                waitlistEntryOf({
+                    windowStart: "2026-12-30T17:00:00.000Z",
+                    windowEnd: "2026-12-31T17:00:00.000Z",
+                }),
+            )
+        })
     })
 })
