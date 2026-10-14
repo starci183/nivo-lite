@@ -17,6 +17,6 @@ export class CompleteAuthorizationStep implements JobStep {
     /** Records the step with the token this worker holds FIRST; then completes the authorization the payload names. */
     async run(job: ClaimedJob): Promise<void> {
         await this.claims.advance({ jobId: job.jobId, expectedFencingToken: job.fencingToken, step: "complete" })
-        await this.credentials.completeFromJob(job.payload)
+        return this.credentials.completeFromJob(job.payload)
     }
 }

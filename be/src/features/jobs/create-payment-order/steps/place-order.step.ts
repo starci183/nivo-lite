@@ -13,7 +13,8 @@ export class PlaceOrderStep implements JobStep {
 
     /** Records the step with the token this worker holds FIRST, so a stale token stops here before any effect; then answers the request. */
     async run(job: ClaimedJob): Promise<void> {
-        await this.claims.advance({ jobId: job.jobId, expectedFencingToken: job.fencingToken, step: "place" })
+        const { jobId, fencingToken: expectedFencingToken } = job
+        await this.claims.advance({ jobId, expectedFencingToken, step: "place" })
         await this.requests.answer(job.payload)
     }
 }
