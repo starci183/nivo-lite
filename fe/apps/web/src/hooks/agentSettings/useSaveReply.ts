@@ -1,3 +1,5 @@
+"use client"
+
 import { useTranslations } from "next-intl"
 import { useCallback } from "react"
 import { useMutateSaveHoldingMessageSwr, useMutateSaveReplyTimeoutSwr } from "@/hooks/swr"

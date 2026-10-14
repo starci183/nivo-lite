@@ -1,3 +1,5 @@
+"use client"
+
 import type { AccountingWorkbenchData } from "@/modules/types"
 import { useFormatter, useTranslations } from "next-intl"
 import { useState } from "react"

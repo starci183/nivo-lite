@@ -1,3 +1,5 @@
+"use client"
+
 import { useEffect } from "react"
 import { navigation } from "@/modules/i18n"
 import { AUTH_ROUTES } from "@/modules/routes"

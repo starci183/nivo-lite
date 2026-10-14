@@ -1,3 +1,5 @@
+"use client"
+
 import { useTranslations } from "next-intl"
 import { useState, useTransition } from "react"
 import { useSettledGraphQL } from "@/hooks/connection-wizard"

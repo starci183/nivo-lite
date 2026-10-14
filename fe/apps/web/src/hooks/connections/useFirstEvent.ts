@@ -1,3 +1,5 @@
+"use client"
+
 import { useState } from "react"
 import { POLL_MS } from "@/hooks/connection-wizard"
 import { useQueryConnectionFirstEventSwr } from "@/hooks/swr"

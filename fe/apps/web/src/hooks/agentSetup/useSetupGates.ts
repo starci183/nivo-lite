@@ -1,3 +1,5 @@
+"use client"
+
 import { useCallback, useState } from "react"
 import { mutate } from "swr"
 import { useRefreshInstallation } from "@/hooks/agentSettings"

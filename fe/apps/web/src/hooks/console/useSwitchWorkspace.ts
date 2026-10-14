@@ -1,3 +1,5 @@
+"use client"
+
 import { useTransition } from "react"
 import { useActiveWorkspace } from "@/hooks/workspaces"
 import { navigation } from "@/modules/i18n"

@@ -1,3 +1,5 @@
+"use client"
+
 import { useMemo } from "react"
 import { useInstallations } from "@/hooks/installations"
 import type { Installation } from "@/modules/installations"

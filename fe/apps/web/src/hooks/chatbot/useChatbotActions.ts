@@ -1,3 +1,5 @@
+"use client"
+
 import { useLocale, useTranslations } from "next-intl"
 import { useCallback } from "react"
 import { useSWRConfig } from "swr"

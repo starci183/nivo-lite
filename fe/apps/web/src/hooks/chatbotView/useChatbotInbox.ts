@@ -1,3 +1,5 @@
+"use client"
+
 import { useFormatter, useTranslations } from "next-intl"
 import { useState, useTransition } from "react"
 import { isInboxFilter, matchesInboxFilter, useChatbotActions, useChatbotThread } from "@/hooks/chatbot"

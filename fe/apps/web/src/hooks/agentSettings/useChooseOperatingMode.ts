@@ -1,3 +1,5 @@
+"use client"
+
 import { useTranslations } from "next-intl"
 import { useCallback } from "react"
 import { useMutateSetOperatingModeSwr } from "@/hooks/swr"

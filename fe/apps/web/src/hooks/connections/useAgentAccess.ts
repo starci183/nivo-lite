@@ -1,3 +1,5 @@
+"use client"
+
 import { useTranslations } from "next-intl"
 import { useState, useTransition } from "react"
 import { ACCESS_LEVELS, purposeFor } from "@/hooks/connection-access"

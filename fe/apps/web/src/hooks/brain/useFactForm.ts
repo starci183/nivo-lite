@@ -1,3 +1,5 @@
+"use client"
+
 import { useState } from "react"
 import type { MutateSaveBrainFactRequest } from "@/modules/api/graphql/mutations/mutation-save-brain-fact"
 import { dayInstant } from "@/modules/brain"

@@ -1,3 +1,5 @@
+"use client"
+
 import { useTranslations } from "next-intl"
 import { useQueryAccountingWorkbenchSwr } from "@/hooks/swr"
 import { useRequireActiveWorkspace } from "@/hooks/workspaces"

@@ -1,3 +1,5 @@
+"use client"
+
 import { useCallback, useEffect } from "react"
 import { useQueryBillingWorkspaceSwr } from "@/hooks/swr"
 import { useCatalogWithCurrent } from "@/hooks/billing"

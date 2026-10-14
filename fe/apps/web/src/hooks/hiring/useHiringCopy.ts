@@ -1,3 +1,5 @@
+"use client"
+
 import { useCallback, useState } from "react"
 
 /** Copies a link to the clipboard and remembers which row it was for, so that row can say "copied". */

@@ -1,3 +1,5 @@
+"use client"
+
 import { useTranslations } from "next-intl"
 import { useMutateCreateContentItemSwr, useMutateMoveContentItemSwr, useMutateDecideWorkItemSwr } from "@/hooks/swr"
 import type { MutateCreateContentItemRequest } from "@/modules/api/graphql/mutations/mutation-create-content-item"

@@ -1,3 +1,5 @@
+"use client"
+
 import { mutate } from "swr"
 import { QUERY_BRAIN_SWR_KEY } from "@/hooks/swr"
 import { useGraphQLWithToast } from "@/modules/toast"

@@ -1,3 +1,5 @@
+"use client"
+
 import { useTranslations } from "next-intl"
 import { useMemo } from "react"
 import { useQueryWorkspaceShellSwr } from "@/hooks/swr"

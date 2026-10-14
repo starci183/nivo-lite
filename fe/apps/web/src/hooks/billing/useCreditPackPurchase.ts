@@ -1,3 +1,5 @@
+"use client"
+
 import { useEffect } from "react"
 import { useQueryBillingPlanSwr, useQueryBillingWorkspaceSwr } from "@/hooks/swr"
 import { navigation } from "@/modules/i18n"

@@ -1,3 +1,5 @@
+"use client"
+
 import { useFormatter, useTranslations } from "next-intl"
 import type { BadgeTone } from "@starci/grammar/common"
 import { useModuleName } from "@/hooks/installations"

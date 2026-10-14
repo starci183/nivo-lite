@@ -1,3 +1,5 @@
+"use client"
+
 import { useCallback, useEffect, useState } from "react"
 
 /** A resend cooldown: `start()` begins a countdown from `seconds`; `left` is 0 when ready. */

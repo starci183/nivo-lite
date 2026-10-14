@@ -1,3 +1,5 @@
+"use client"
+
 import { useCallback, useMemo, useState } from "react"
 import { useFormatter, useTranslations } from "next-intl"
 import { useQueryAgentChatPageSwr, useQueryAgentChatConversationsSwr, useQueryAgentChatMessagesSwr } from "@/hooks/swr"

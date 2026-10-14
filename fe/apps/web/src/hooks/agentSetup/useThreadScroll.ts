@@ -1,3 +1,5 @@
+"use client"
+
 import { useLayoutEffect } from "react"
 
 const SCROLL_OWNER = "[data-grammar-chat-workspace-scroll-owner]"
