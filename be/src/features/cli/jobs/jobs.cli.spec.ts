@@ -2,7 +2,7 @@ import { Test } from "@nestjs/testing"
 import { mock } from "@starci/jest-preset"
 import { JobOpsConsoleService } from "@modules/domain/job-ops"
 import { JobsCli } from "./jobs.cli"
-import { JobsModule } from "./jobs.module"
+import { CliJobsModule } from "./jobs.module"
 import { FailedJobsCli } from "./subs/failed.cli"
 import { OpenJobsCli } from "./subs/open.cli"
 import { RetryJobsCli } from "./subs/retry.cli"
@@ -24,7 +24,7 @@ describe("JobsCli", () => {
 
     it("makes the group and all six commands available with the console capability", async () => {
         const jobs = mock<JobOpsConsoleService>()
-        const moduleRef = await Test.createTestingModule({ imports: [JobsModule] })
+        const moduleRef = await Test.createTestingModule({ imports: [CliJobsModule] })
             .useMocker((provider) => (provider === JobOpsConsoleService ? jobs : undefined))
             .compile()
 

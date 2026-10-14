@@ -1,6 +1,6 @@
 import { Module } from "@nestjs/common"
 import { ConnectChannelModule } from "./connect-channel/connect-channel.module"
-import { JobsModule } from "./jobs/jobs.module"
+import { CliJobsModule } from "./jobs/jobs.module"
 import { MigrateModule } from "./migrate/migrate.module"
 import { PruneWorkspacesModule } from "./prune-workspaces/prune-workspaces.module"
 import { SeedModule } from "./seed/seed.module"
@@ -15,7 +15,7 @@ import { SimulateSepayModule } from "./simulate-sepay/simulate-sepay.module"
 @Module({
     imports: [
         ConnectChannelModule,
-        JobsModule,
+        CliJobsModule,
         MigrateModule,
         PruneWorkspacesModule,
         SeedModule,
