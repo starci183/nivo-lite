@@ -43,7 +43,7 @@ export class WebhookEventsService {
      * one. `dedupe` names the occurrence: publishing it twice queues nothing twice. Nothing is queued while signing is off.
      */
     async publish(publication: WebhookPublication, manager: EntityManager = this.entityManager): Promise<void> {
-        if (this.options.engineSharedSecret === undefined) return
+        if (this.options.signingSecret === undefined) return
         const { workspaceId, event, data, dedupe } = publication
         const subscribed = (
             await this.connections.listByProvider(workspaceId, "webhook", { includeDisconnected: false })
@@ -72,7 +72,7 @@ export class WebhookEventsService {
     async deliver(job: object): Promise<void> {
         if (!isN8nWebhookPayload(job)) return
         const connection = await this.connections.find(job.workspaceId, job.connectionId)
-        const shared = this.options.engineSharedSecret
+        const shared = this.options.signingSecret
         const url = connection === null ? null : await this.urlOf(connection)
         if (connection === null || connection.status !== "connected" || shared === undefined || url === null) {
             this.logger.warn(WebhookConnectionsLogEvent.DeliveryDropped, { connectionId: job.connectionId })

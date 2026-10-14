@@ -30,9 +30,9 @@ export class EnvSource {
     /** Reads the process environment once, resolving every `<KEY>_FILE` into `<KEY>`. */
     static fromProcess(): EnvSource {
         const values: Record<string, string | undefined> = { ...process.env }
-        for (const [key, path] of Object.entries(process.env)) {
-            if (key.endsWith(FILE_SUFFIX) && path)
-                values[key.slice(0, -FILE_SUFFIX.length)] = readFileSync(path, "utf8").trim()
+        for (const [key, path] of Object.entries(values)) {
+            if (key.endsWith(FILE_SUFFIX) && path !== undefined)
+                values[key.slice(0, -FILE_SUFFIX.length)] = readFileSync(path, "utf8")
         }
         return new EnvSource(values)
     }

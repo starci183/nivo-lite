@@ -2,12 +2,9 @@ import { N8nHostErrorCode } from "./errors/n8n-host.error"
 import type { N8nHostOptions } from "./n8n-host.options"
 import { idsByName, importDocument, isWorkflowFile, sshArguments, workflowsOf } from "./n8n-host.policy"
 
-const TARGET: N8nHostOptions = {
+const TARGET: Pick<N8nHostOptions, "host" | "user"> = {
     host: "vps.example",
     user: "nivo",
-    keyPath: "/keys/id",
-    knownHostsPath: undefined,
-    container: "n8n-1",
 }
 
 describe("isWorkflowFile", () => {
@@ -72,7 +69,7 @@ describe("importDocument", () => {
 
 describe("sshArguments", () => {
     it("reaches the host with the key and runs the command", () => {
-        expect(sshArguments(TARGET, "docker ps")).toEqual([
+        expect(sshArguments(TARGET, "docker ps", "/keys/id", undefined)).toEqual([
             "-i",
             "/keys/id",
             "-o",
@@ -85,12 +82,10 @@ describe("sshArguments", () => {
     })
 
     it("adds the known-hosts file when one is set", () => {
-        expect(sshArguments({ ...TARGET, knownHostsPath: "/keys/known" }, "ls")).toContain(
-            "UserKnownHostsFile=/keys/known",
-        )
+        expect(sshArguments(TARGET, "ls", "/keys/id", "/keys/known")).toContain("UserKnownHostsFile=/keys/known")
     })
 
     it("leaves the host part empty when none is configured", () => {
-        expect(sshArguments({ ...TARGET, host: undefined }, "ls")).toContain("nivo@")
+        expect(sshArguments({ ...TARGET, host: undefined }, "ls", "/keys/id", undefined)).toContain("nivo@")
     })
 })

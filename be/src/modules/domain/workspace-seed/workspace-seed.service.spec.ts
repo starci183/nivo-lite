@@ -4,7 +4,12 @@ import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { WorkspacesService } from "@modules/domain/workspaces"
 import type { WorkspaceMembership } from "@modules/domain/workspaces"
 import { WorkspaceSeedErrorCode } from "./errors/workspace-seed.error"
-import { SEED_OWNER, SEED_STAFF, SEED_WORKSPACE_NAME } from "./messages/workspace-seed.messages"
+import {
+    SEED_CREDENTIALS_GUIDANCE,
+    SEED_OWNER,
+    SEED_STAFF,
+    SEED_WORKSPACE_NAME,
+} from "./messages/workspace-seed.messages"
 import type { SeedRequest } from "./workspace-seed.contracts"
 import { SEED_AUTH, WORKSPACE_SEED_OPTIONS } from "./workspace-seed.decorators"
 import type { SeedAuth, SeedAuthUser, SeedNewUser } from "./workspace-seed.options"
@@ -36,18 +41,13 @@ const usersPage = (count: number, prefix: string): Array<SeedAuthUser> =>
         ...(index === 0 ? {} : { email: `${prefix}${index}@x.vn` }),
     }))
 
-const build = async (change: Partial<Record<keyof SeedAuth, jest.Mock>> = {}, stored = "") => {
+const build = async (change: Partial<Record<keyof SeedAuth, jest.Mock>> = {}) => {
     const auth = mock<SeedAuth>({
         listUsers: jest.fn().mockResolvedValue(noUsers),
         createUser: jest.fn().mockImplementation(created),
         updateUserById: jest.fn().mockResolvedValue({ error: null }),
         ...change,
     })
-    const secrets = {
-        location: "/home/op/.nivo-lite/secrets.env",
-        read: jest.fn().mockResolvedValue(stored),
-        write: jest.fn().mockResolvedValue(undefined),
-    }
     const print = jest.fn()
     const workspaces = mock<WorkspacesService>()
     workspaces.memberships.mockResolvedValue([])
@@ -56,13 +56,13 @@ const build = async (change: Partial<Record<keyof SeedAuth, jest.Mock>> = {}, st
     const moduleRef = await Test.createTestingModule({
         providers: [
             WorkspaceSeedService,
-            { provide: WORKSPACE_SEED_OPTIONS, useValue: { auth: "x", secrets, print } },
+            { provide: WORKSPACE_SEED_OPTIONS, useValue: { auth: "x", print } },
             { provide: SEED_AUTH, useValue: auth },
             { provide: WorkspacesService, useValue: workspaces },
             { provide: WorkspaceMembersService, useValue: members },
         ],
     }).compile()
-    return { seed: moduleRef.get(WorkspaceSeedService), auth, secrets, print, workspaces, members }
+    return { seed: moduleRef.get(WorkspaceSeedService), auth, print, workspaces, members }
 }
 
 describe("WorkspaceSeedService", () => {
@@ -194,41 +194,88 @@ describe("WorkspaceSeedService", () => {
     })
 
     describe("seedOperator", () => {
-        it("generates and stores the passwords of a first run before touching Auth, then prints the report", async () => {
-            const { seed, auth, secrets, print } = await build()
+        it("seeds with fresh passwords and prints the credentials once, guidance and report after seeding", async () => {
+            const { seed, auth, members, print } = await build()
 
             const report = await seed.seedOperator()
+            const owner = auth.createUser.mock.calls[0]?.[0]
+            const staff = auth.createUser.mock.calls[1]?.[0]
 
-            expect(secrets.write.mock.calls[0]?.[0]).toMatch(
-                /^READY_OWNER_EMAIL=mai@nivo.vn\nREADY_OWNER_PASSWORD=[\w-]{24}\nREADY_STAFF_EMAIL=ha@nivo.vn\nREADY_STAFF_PASSWORD=[\w-]{24}\n$/,
+            expect(owner).toEqual({
+                email: SEED_OWNER.email,
+                password: expect.stringMatching(/^[\w-]{24}$/),
+                email_confirm: true,
+                user_metadata: { full_name: SEED_OWNER.name },
+            })
+            expect(staff).toEqual({
+                email: SEED_STAFF.email,
+                password: expect.stringMatching(/^[\w-]{24}$/),
+                email_confirm: true,
+                user_metadata: { full_name: SEED_STAFF.name },
+            })
+            expect(staff?.password).not.toBe(owner?.password)
+            expect(print.mock.calls.map(([line]) => line)).toEqual([
+                `READY_OWNER_EMAIL=${SEED_OWNER.email}`,
+                `READY_OWNER_PASSWORD=${owner?.password}`,
+                `READY_STAFF_EMAIL=${SEED_STAFF.email}`,
+                `READY_STAFF_PASSWORD=${staff?.password}`,
+                SEED_CREDENTIALS_GUIDANCE,
+                ...report.lines,
+            ])
+            expect(SEED_CREDENTIALS_GUIDANCE).toBe(
+                "Shown once and not stored. Seal them with `starci app secret set dev test-accounts` (see .starcistacks) before closing this terminal; the next run sets new passwords.",
             )
-            expect(secrets.write.mock.invocationCallOrder[0]).toBeLessThan(
-                auth.listUsers.mock.invocationCallOrder[0] ?? 0,
-            )
-            expect(report.lines[0]).toBe("credentials kept in /home/op/.nivo-lite/secrets.env")
-            expect(print.mock.calls.map(([line]) => line)).toEqual(report.lines)
+            expect(print.mock.invocationCallOrder[0]).toBeGreaterThan(members.join.mock.invocationCallOrder[0] ?? 0)
+            expect(report.workspaceId).toBe("ws-new")
             expect(report.lines.join("\n")).not.toMatch(/READY_|PASSWORD/)
         })
 
-        it("keeps the stored password of an account and replaces one that is too short", async () => {
-            const stored = [
-                "OTHER=1",
-                `READY_OWNER_EMAIL=${SEED_OWNER.email}`,
-                "READY_OWNER_PASSWORD=owner-password-0123456789",
-                `READY_STAFF_EMAIL=${SEED_STAFF.email}`,
-                "READY_STAFF_PASSWORD=short",
-                "",
-            ].join("\n")
-            const { seed, auth } = await build({}, stored)
+        it("sets a new password for both existing accounts on every run", async () => {
+            const { seed, auth, print } = await build({
+                listUsers: jest.fn().mockResolvedValue({
+                    data: {
+                        users: [
+                            { id: "u-owner", email: SEED_OWNER.email },
+                            { id: "u-staff", email: SEED_STAFF.email },
+                        ],
+                    },
+                    error: null,
+                }),
+            })
 
             await seed.seedOperator()
+            await seed.seedOperator()
 
-            expect(auth.createUser).toHaveBeenCalledWith(
-                expect.objectContaining({ password: "owner-password-0123456789" }),
-            )
-            expect(auth.createUser).toHaveBeenCalledWith(
-                expect.objectContaining({ email: SEED_STAFF.email, password: expect.stringMatching(/^[\w-]{24}$/) }),
-            )
+            expect(auth.updateUserById).toHaveBeenCalledTimes(4)
+            const passwords = auth.updateUserById.mock.calls.map(([, update]) => update.password)
+            for (const password of passwords) expect(password).toMatch(/^[\w-]{24}$/)
+            expect(new Set(passwords).size).toBe(4)
+            expect(auth.updateUserById.mock.calls.map(([id]) => id)).toEqual([
+                "u-owner",
+                "u-staff",
+                "u-owner",
+                "u-staff",
+            ])
+            expect(auth.createUser).not.toHaveBeenCalled()
+            expect(print.mock.calls.map(([line]) => line).filter((line) => line.startsWith("READY_"))).toEqual([
+                `READY_OWNER_EMAIL=${SEED_OWNER.email}`,
+                `READY_OWNER_PASSWORD=${passwords[0]}`,
+                `READY_STAFF_EMAIL=${SEED_STAFF.email}`,
+                `READY_STAFF_PASSWORD=${passwords[1]}`,
+                `READY_OWNER_EMAIL=${SEED_OWNER.email}`,
+                `READY_OWNER_PASSWORD=${passwords[2]}`,
+                `READY_STAFF_EMAIL=${SEED_STAFF.email}`,
+                `READY_STAFF_PASSWORD=${passwords[3]}`,
+            ])
+        })
+
+        it("prints no credentials when seeding fails", async () => {
+            const { seed, print } = await build({
+                createUser: jest.fn().mockResolvedValue({ data: { user: null }, error: { message: "create down" } }),
+            })
+
+            await expect(seed.seedOperator()).rejects.toMatchObject({ code: WorkspaceSeedErrorCode.AuthFailed })
+            expect(print).not.toHaveBeenCalled()
         })
     })
 })
