@@ -11,7 +11,8 @@ import { LeadFlowStoreService } from "./lead-flow-store.service"
 import { DEFAULT_CRITERIA, EMPTY_SIGNALS } from "./lead-flow-score.policy"
 import { parseAnalysis } from "./lead-flow-steps.policy"
 import { LeadFlowTurnService } from "./lead-flow-turn.service"
-import type { LeadFlow } from "./lead-flows.contracts"
+import type { Analysis, LeadFlow, LeadFlowPatch } from "./lead-flows.contracts"
+import type { FlowFields } from "./lead-flow-fields.policy"
 import { ScoreLeadPerformerService } from "./score-lead-performer.service"
 
 const NOW = "2026-10-12T10:00:00.000Z"
@@ -255,4 +256,244 @@ describe("ScoreLeadPerformerService", () => {
 
         expect(store.patch).not.toHaveBeenCalled()
     })
+
+    it.each([
+        ["", "", "warm"],
+        ["broken JSON", "unknown", null],
+        ["null", "cold", "cold"],
+        ["{}", "hot", "hot"],
+    ])("retains signals and normalizes score %s / %s", async (raw, score, expectedScore) => {
+        const signals = { ...EMPTY_SIGNALS, need: "tea" }
+        const flow = flowOf({ signals, score: "warm" })
+        const { performer, store, kit } = await build(flow)
+        await expect(
+            performer.perform(ctx, itemOf(), { summary: "Scored", fields: { signals: raw, score, source_kind: "dm" } }),
+        ).resolves.toMatchObject({ summary: "Scored" })
+        expect(store.patch).toHaveBeenCalledWith(flow, {
+            signals,
+            score: expectedScore,
+            score_reasons: [],
+            scored_at: NOW,
+        })
+        expect(kit.log).toHaveBeenCalledWith(ctx, flow, "item-1", "lead_gen.scored", "Scored", "")
+    })
+
+    it.each<readonly [string, string | null, string | null, string | null, LeadFlow["state"], LeadFlowPatch]>([
+        ["84901234567", null, null, "lead-1", "new", { phone: "84901234567", state: "scored" }],
+        ["lan@example.com", null, null, "lead-1", "new", { email: "lan@example.com", state: "scored" }],
+        ["84901234567", "84987654321", null, "lead-1", "new", { state: "scored" }],
+        ["lan@example.com", null, "old@example.com", "lead-1", "new", { state: "scored" }],
+        ["lan@example.com", null, null, null, "qualifying", { email: "lan@example.com" }],
+    ])(
+        "fills contact without replacing identity: %s / %s / %s / %s / %s",
+        async (contact, phone, email, lead_id, state, patch) => {
+            const flow = flowOf({ phone, email, lead_id, state })
+            const { performer, store, leads } = await build(flow)
+            const signals = { ...EMPTY_SIGNALS, contact }
+            await expect(
+                performer.perform(ctx, itemOf(), {
+                    summary: "Scored",
+                    fields: { step: "hold", signals: JSON.stringify(signals) },
+                }),
+            ).resolves.toMatchObject({ summary: "Scored", lead_id })
+            expect(store.patch).toHaveBeenCalledWith(flow, {
+                signals,
+                score: null,
+                score_reasons: [],
+                scored_at: NOW,
+                ...patch,
+            })
+            if (lead_id === null) expect(leads.fillContact).not.toHaveBeenCalled()
+            else
+                expect(leads.fillContact).toHaveBeenCalledWith({
+                    workspaceId: "ws-1",
+                    leadId: "lead-1",
+                    phone: contact.includes("@") ? null : contact,
+                    email: contact.includes("@") ? contact : null,
+                })
+        },
+    )
+
+    it.each([null, ""])("clears an unanswered question: %s", async (last_user_text) => {
+        const flow = flowOf({ pending_question: 0, last_user_text })
+        const { performer, store } = await build(flow)
+        await expect(
+            performer.perform(ctx, itemOf(), { summary: "Scored", fields: { source_kind: "dm" } }),
+        ).resolves.toMatchObject({ summary: "Scored" })
+        expect(store.patch).toHaveBeenCalledWith(flow, {
+            signals: EMPTY_SIGNALS,
+            score: null,
+            score_reasons: [],
+            scored_at: NOW,
+            pending_question: null,
+        })
+    })
+
+    it("answers a missing setup question from the user's last message", async () => {
+        const previous = { i: 0, question: "When?", answer: "Tomorrow", at: NOW }
+        const flow = flowOf({ pending_question: 2, last_user_text: "  Green tea  ", answers: [previous] })
+        const { performer, store } = await build(flow)
+        await expect(
+            performer.perform(ctx, itemOf(), {
+                summary: "Scored",
+                fields: { source_kind: "dm", score_reasons: "one; two" },
+            }),
+        ).resolves.toMatchObject({ summary: "Scored" })
+        expect(store.patch).toHaveBeenCalledWith(flow, {
+            signals: EMPTY_SIGNALS,
+            score: null,
+            score_reasons: ["one", "two"],
+            scored_at: NOW,
+            pending_question: null,
+            answers: [previous, { i: 2, question: "", answer: "Green tea", at: NOW }],
+        })
+    })
+
+    const cold = parseAnalysis({ confidence: 1 }, "manual:item-1")
+    const warm = parseAnalysis({ confidence: 1, signals: { need: "Tea" } }, "manual:item-1")
+    const emptyForm = parseAnalysis(
+        { confidence: 1, signals: { need: null, contact: "", interest: "medium" } },
+        "manual:item-1",
+    )
+    const filledForm = { ...emptyForm, signals: { ...emptyForm.signals, need: "Tea" } }
+    const answered = { ...warm, answer: "Tomorrow" }
+    const hot = parseAnalysis(
+        {
+            confidence: 1,
+            signals: { need: "Tea", contact: "lan@example.com", asks_price_or_schedule: true },
+            sentiment: "negative",
+        },
+        "manual:item-1",
+    )
+    const gap = parseAnalysis(
+        { confidence: 1, knowledge_gap: { question: "Does it ship?", topic: "delivery" } },
+        "manual:item-1",
+    )
+    const source = {
+        kind: "mention",
+        platform: "instagram",
+        at: NOW,
+        post_id: null,
+        ad_id: null,
+        form_id: null,
+        comment_id: null,
+        leadgen_id: null,
+        referral: null,
+    } as const
+    type PrepareCase = readonly [
+        name: string,
+        flow: Partial<LeadFlow>,
+        fields: FlowFields,
+        expected: FlowFields,
+        reading?: Analysis | null,
+        stored?: Analysis,
+        resume?: LeadFlow,
+    ]
+    const unread: Partial<LeadFlow> = { analysis: null }
+    const pending: Partial<LeadFlow> = { ...unread, state: "qualifying", last_user_text: "Tomorrow" }
+    const gapFields = { source_kind: "comment", text: "Does it ship?" }
+    const unreadable = { step: "escalate", escalation: "unreadable", confidence: 0 }
+    const lowConfidence = { step: "escalate", escalation: "low_confidence", confidence: 0.6 - 0.05 }
+    const hotComment = { step: "comment", score: "hot", handoff: "1", negative: "1" }
+    const hotHold = { step: "hold", score: "hot", handoff: "", negative: "" }
+    const form = { source_kind: "leadgen", need: "Tea\nCoffee" }
+    const formResult = { step: "follow_up", need: "Tea", confidence: 1, score: "warm" }
+    const noChannel: Partial<LeadFlow> = { ...unread, connection_id: null, conversation_id: null }
+    const held: Partial<LeadFlow> = { state: "handed_off", asked: 2, contact_asked_at: NOW, greeted_at: NOW }
+    const resumed = flowOf({ analysis: cold, state: "qualifying", source })
+    const cases: ReadonlyArray<PrepareCase> = [
+        ["empty comment", unread, { source_kind: "comment" }, { step: "comment", confidence: 1 }, undefined, cold],
+        ["empty mention", unread, { source_kind: "mention" }, { step: "hold", confidence: 1 }, undefined, cold],
+        ["empty form", unread, { ...form, need: "" }, { step: "close", need: "", confidence: 1 }, undefined, emptyForm],
+        ["form need", unread, form, formResult, undefined, filledForm],
+        ["empty DM", noChannel, {}, { ...unreadable, connection_id: "", conversation_id: "" }],
+        [
+            "pending question",
+            { ...pending, pending_question: 0 },
+            {},
+            { step: "ask", question: "When?", answer: "Tomorrow" },
+            answered,
+        ],
+        [
+            "missing pending question",
+            { ...pending, pending_question: 3 },
+            {},
+            { step: "ask", question: "When?", answer: "Tomorrow" },
+            answered,
+        ],
+        ["gap", unread, gapFields, lowConfidence, gap],
+        ["gap without conversation", { ...unread, conversation_id: null }, gapFields, lowConfidence, gap],
+        ["model failure", unread, { source_kind: "mention", text: "A question" }, unreadable, null],
+        ["refund model failure", unread, { text: "refund" }, { ...unreadable, escalation: "refund" }, null],
+        ["given phone", {}, { contact: "0901234567" }, { contact: "84901234567", step: "greet" }],
+        ["given email", {}, { contact: "Lan@Example.com" }, { contact: "lan@example.com", step: "greet" }],
+        ["flow phone", { phone: "84987654321", email: "old@example.com" }, {}, { contact: "84987654321" }],
+        ["flow email", { email: "old@example.com" }, {}, { contact: "old@example.com" }],
+        ["no contact", { psid: null }, {}, { contact: "", need: "" }],
+        ["hot comment", { analysis: hot }, { source_kind: "comment" }, hotComment],
+        ["hot mention", { analysis: hot }, { source_kind: "mention" }, hotHold],
+        ["hot DM", { analysis: hot }, {}, { ...hotHold, step: "handoff" }],
+        ["cached form need", {}, form, formResult],
+        ["missing question", { state: "qualifying", asked: -1 }, {}, { step: "ask", index: -1, question: "" }],
+        ["handed off", held, {}, { step: "hold", index: 2, question: "" }],
+        [
+            "released source",
+            { state: "escalated" },
+            {},
+            { step: "hold", source_kind: "mention", confidence: 1 },
+            undefined,
+            undefined,
+            resumed,
+        ],
+    ]
+    it.each(cases.map((row) => ({ name: row[0], row })))(
+        "prepares $name",
+        async ({ row: [_name, patch, fields, expected, reading, stored, resume] }) => {
+            const flow = flowOf({ analysis: cold, ...patch })
+            const { performer, kit, turns, store, transcript, meta } = await build(flow)
+            transcript.heldByPerson.mockResolvedValue(false)
+            if (resume !== undefined) kit.resume.mockResolvedValue(resume)
+            if (reading !== undefined) turns.read.mockResolvedValue({ analysis: reading, keywordReason: null })
+            meta.windowOf.mockResolvedValue({ status: flow.state === "handed_off" ? "closed" : "open", msLeft: 0 })
+            const item = itemOf({ proposal: { summary: "Before", fields } })
+            const prepared = await performer.prepare(ctx, item)
+            expect(prepared.proposal.fields).toMatchObject(expected)
+            if (reading === undefined) expect(turns.read).not.toHaveBeenCalled()
+            else
+                expect(turns.read).toHaveBeenCalledWith(ctx, {
+                    agent: null,
+                    turn: "manual:item-1",
+                    kind: fields.source_kind ?? "dm",
+                    text: fields.text ?? flow.last_user_text,
+                    name: "Lan",
+                    pendingQuestion: flow.pending_question === 0 ? "When?" : null,
+                    criteriaText: "",
+                    first: flow.state === "new" && (fields.source_kind ?? "dm") === "dm",
+                })
+            const storedAnalysis = stored ?? reading
+            if (storedAnalysis === undefined || storedAnalysis === null) expect(store.patch).not.toHaveBeenCalled()
+            else expect(store.patch).toHaveBeenCalledWith(flow, { analysis: storedAnalysis })
+            if (expected.step === "escalate")
+                expect(kit.escalate).toHaveBeenCalledWith(ctx, {
+                    flow,
+                    reason: expected.escalation,
+                    text: fields.text ?? flow.last_user_text ?? "",
+                    turn: "manual:item-1",
+                    item,
+                    notify: (fields.source_kind ?? "dm") === "dm",
+                })
+            else expect(kit.escalate).not.toHaveBeenCalled()
+            if (
+                reading?.knowledge_gap !== null &&
+                reading?.knowledge_gap !== undefined &&
+                flow.conversation_id !== null
+            )
+                expect(turns.noteGap).toHaveBeenCalledWith("ws-1", {
+                    ...reading.knowledge_gap,
+                    conversationId: flow.conversation_id,
+                })
+            else expect(turns.noteGap).not.toHaveBeenCalled()
+            if (resume !== undefined) expect(kit.resume).toHaveBeenCalledWith(flow)
+        },
+    )
 })

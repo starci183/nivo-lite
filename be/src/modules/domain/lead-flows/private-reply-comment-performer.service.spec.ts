@@ -211,4 +211,106 @@ describe("PrivateReplyCommentPerformerService", () => {
             code: LeadFlowsErrorCode.MetaRefused,
         })
     })
+
+    it.each([
+        { name: null, draft: undefined, expected: "line.private-greet" },
+        { name: "Lan", draft: undefined, expected: "line.private-greet-named" },
+        { name: "Lan", draft: "An existing draft", expected: "An existing draft" },
+    ])("prepares the greeting or draft for $expected", async ({ name, draft, expected }) => {
+        const { performer, kit, store } = await build(flowOf({ name }))
+        const item = itemOf({ proposal: { summary: "Original", fields: {}, draft } })
+
+        await expect(performer.prepare(ctx, item)).resolves.toEqual({
+            proposal: { summary: "private.summary", fields: {}, draft: expected },
+        })
+
+        expect(store.requireByLead).toHaveBeenCalledWith("ws-1", "lead-1")
+        expect(kit.nameOf).toHaveBeenCalledWith(ctx, flowOf({ name }), "commenter")
+        if (name === null) expect(kit.text).toHaveBeenCalledWith("en", "line.private-greet")
+        else expect(kit.text).toHaveBeenCalledWith("en", "line.private-greet-named", { name: "Lan" })
+    })
+
+    it("uses the proposal connection and conversation and an empty absent draft", async () => {
+        const flow = flowOf({ platform: "instagram", igsid: null, state: "qualifying" })
+        const { performer, meta, store, transcript } = await build(flow)
+        meta.privateReply.mockResolvedValue(sentTo("instagram-person"))
+        const custom = {
+            summary: "",
+            fields: { comment_id: "comment-2", connection_id: "other-page", conversation_id: "other-chat" },
+        }
+
+        await expect(performer.perform(ctx, itemOf(), custom)).resolves.toEqual({
+            summary: "private.done",
+            evidence: "captured",
+            lead_id: "lead-1",
+            detail: "",
+        })
+
+        expect(meta.privateReply).toHaveBeenCalledWith(
+            { workspaceId: "ws-1", connectionId: "other-page", platform: "instagram", commentId: "comment-2" },
+            "",
+        )
+        expect(store.patch).toHaveBeenCalledWith(flow, { greeted_at: NOW, igsid: "instagram-person" })
+        expect(transcript.say).toHaveBeenCalledWith({
+            workspaceId: "ws-1",
+            conversationId: "other-chat",
+            role: "agent",
+            body: "",
+            delivery: { sent: true, error: null },
+        })
+    })
+
+    it.each([
+        { platform: "facebook" as const, psid: "known-person", igsid: null, recipientId: "replacement" },
+        { platform: "instagram" as const, psid: null, igsid: "known-person", recipientId: "replacement" },
+        { platform: "facebook" as const, psid: null, igsid: null, recipientId: null },
+    ])(
+        "retains an existing $platform identity or an absent recipient",
+        async ({ platform, psid, igsid, recipientId }) => {
+            const flow = flowOf({ platform, psid, igsid, state: "greeted" })
+            const { performer, meta, store } = await build(flow)
+            meta.privateReply.mockResolvedValue(sentTo(recipientId))
+
+            await expect(performer.perform(ctx, itemOf(), proposal)).resolves.toEqual({
+                summary: "private.done",
+                evidence: "captured",
+                lead_id: "lead-1",
+                detail: "Hi, here are the details",
+            })
+
+            expect(store.patch).toHaveBeenCalledTimes(1)
+            expect(store.patch).toHaveBeenCalledWith(flow, { greeted_at: NOW })
+        },
+    )
+
+    it("treats an unknown comment age as expired without greeting or storing a line", async () => {
+        const { performer, meta, store, transcript } = await build()
+        meta.privateReply.mockResolvedValue({ ok: false, failure: "comment_age_unknown", recipientId: null })
+
+        await expect(performer.perform(ctx, itemOf(), proposal)).resolves.toEqual({
+            summary: "private.expired",
+            evidence: "captured",
+            lead_id: "lead-1",
+            detail: null,
+        })
+
+        expect(store.patch).not.toHaveBeenCalled()
+        expect(transcript.say).not.toHaveBeenCalled()
+    })
+
+    it("refuses a missing Page result or an unspecified Meta failure", async () => {
+        const { performer, meta, kit, transcript } = await build()
+        meta.privateReply.mockResolvedValueOnce(null)
+        meta.privateReply.mockResolvedValueOnce({ ok: false, failure: null, recipientId: null })
+
+        await expect(performer.perform(ctx, itemOf(), proposal)).rejects.toEqual(
+            new LeadFlowsError({ code: LeadFlowsErrorCode.NoPage }),
+        )
+        await expect(performer.perform(ctx, itemOf(), proposal)).rejects.toEqual(
+            new LeadFlowsError({ code: LeadFlowsErrorCode.MetaRefused, params: { failure: "error" } }),
+        )
+
+        expect(kit.metaRefused).toHaveBeenCalledWith(null)
+        expect(transcript.say).not.toHaveBeenCalled()
+    })
 })

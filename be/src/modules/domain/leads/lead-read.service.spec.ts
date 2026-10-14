@@ -68,4 +68,21 @@ describe("LeadReadService", () => {
             params: { id: "missing" },
         })
     })
+
+    it("requires the requested lead within its workspace", async () => {
+        const { leads, em } = await build()
+
+        await expect(leads.require("ws-1", "lead-1")).resolves.toEqual(LEAD)
+
+        expect(em.query).toHaveBeenCalledWith(FIND_LEAD_VIEW, ["ws-1", "lead-1"])
+    })
+
+    it("scopes a bounded id lookup to the workspace and requested ids", async () => {
+        const { leads, em } = await build()
+        const ids = ["lead-1", "lead-older"]
+
+        await expect(leads.listByIds("ws-1", ids)).resolves.toEqual([LEAD])
+
+        expect(em.query).toHaveBeenCalledWith(LIST_LEAD_VIEWS_BY_IDS, ["ws-1", ids])
+    })
 })

@@ -8,6 +8,8 @@ import {
     SELECT_PROGRAM,
     SELECT_PROGRAM_BY_SLUG,
     SELECT_SHOP_NAME,
+    INSERT_PROGRAM,
+    UPDATE_PROGRAM,
 } from "./persistence/loyalty-programs.sql"
 import { DEFAULT_CONFIG } from "./policies/loyalty-config.policy"
 
@@ -121,6 +123,169 @@ describe("LoyaltyProgramsService", () => {
 
             await expect(found.shopName("ws-1")).resolves.toBe("Spa Anna")
             await expect(gone.shopName("ws-1")).resolves.toBe("")
+        })
+    })
+
+    describe("save", () => {
+        const expected = {
+            workspaceId: "ws-1",
+            slug: "spa-anna",
+            name: "Spa Anna",
+            enabled: true,
+            config: DEFAULT_CONFIG,
+            createdAt: "2026-10-01T00:00:00.000Z",
+        }
+
+        it("updates supplied fields with the bounded name and resolved rules", async () => {
+            const config = { ...DEFAULT_CONFIG, earn: { ...DEFAULT_CONFIG.earn, perThousandVnd: -3 } }
+            const resolved = { ...DEFAULT_CONFIG, earn: { ...DEFAULT_CONFIG.earn, perThousandVnd: 0 } }
+            const manager = mockEntityManager({
+                query: [UPDATE_PROGRAM, [{ ...ROW, name: "N".repeat(80), enabled: false, config: resolved }]],
+            })
+            const programs = await build(manager)
+
+            await expect(
+                programs.save("ws-1", { name: `  ${"N".repeat(81)}  `, enabled: false, config }),
+            ).resolves.toEqual({ ...expected, name: "N".repeat(80), enabled: false, config: resolved })
+            expect(manager.query).toHaveBeenCalledTimes(1)
+            expect(manager.query).toHaveBeenCalledWith(UPDATE_PROGRAM, [
+                "ws-1",
+                "N".repeat(80),
+                false,
+                JSON.stringify(resolved),
+            ])
+        })
+
+        it("creates a programme from the shop name and default rules for an empty patch", async () => {
+            const manager = mockEntityManager({
+                query: [
+                    [UPDATE_PROGRAM, []],
+                    [SELECT_SHOP_NAME, [{ name: "Spa Anna" }]],
+                    [INSERT_PROGRAM, [ROW]],
+                ],
+            })
+            const programs = await build(manager)
+
+            await expect(programs.save("ws-1", {})).resolves.toEqual(expected)
+            expect(manager.query).toHaveBeenCalledTimes(3)
+            expect(manager.query).toHaveBeenNthCalledWith(1, UPDATE_PROGRAM, ["ws-1", null, null, null])
+            expect(manager.query).toHaveBeenNthCalledWith(2, SELECT_SHOP_NAME, ["ws-1"])
+            expect(manager.query).toHaveBeenNthCalledWith(3, INSERT_PROGRAM, [
+                "ws-1",
+                "spa-anna",
+                "Spa Anna",
+                null,
+                null,
+                JSON.stringify(DEFAULT_CONFIG),
+                false,
+            ])
+        })
+
+        it("uses supplied programme fields and resolved rules on creation", async () => {
+            const config = { ...DEFAULT_CONFIG, earn: { ...DEFAULT_CONFIG.earn, perThousandVnd: -3 } }
+            const resolved = { ...DEFAULT_CONFIG, earn: { ...DEFAULT_CONFIG.earn, perThousandVnd: 0 } }
+            const manager = mockEntityManager({
+                query: [
+                    [UPDATE_PROGRAM, []],
+                    [SELECT_SHOP_NAME, [{ name: "Spa Anna" }]],
+                    [INSERT_PROGRAM, [{ ...ROW, name: "N".repeat(80), enabled: false, config: resolved }]],
+                ],
+            })
+            const programs = await build(manager)
+
+            await expect(
+                programs.save("ws-1", { name: `  ${"N".repeat(81)}  `, enabled: false, config }),
+            ).resolves.toEqual({ ...expected, name: "N".repeat(80), enabled: false, config: resolved })
+            expect(manager.query).toHaveBeenCalledWith(INSERT_PROGRAM, [
+                "ws-1",
+                "spa-anna",
+                "Spa Anna",
+                "N".repeat(80),
+                false,
+                JSON.stringify(resolved),
+                false,
+            ])
+        })
+
+        it("updates the programme that another request created before the insert", async () => {
+            const manager = mockEntityManager({
+                query: [
+                    [UPDATE_PROGRAM, []],
+                    [UPDATE_PROGRAM, [ROW]],
+                    [SELECT_SHOP_NAME, [{ name: "Spa Anna" }]],
+                    [INSERT_PROGRAM, []],
+                ],
+            })
+            const programs = await build(manager)
+
+            await expect(programs.save("ws-1", {})).resolves.toEqual(expected)
+            expect(manager.query).toHaveBeenCalledTimes(4)
+            expect(manager.query).toHaveBeenNthCalledWith(4, UPDATE_PROGRAM, ["ws-1", null, null, null])
+        })
+
+        it("retries a conflicting slug with a suffix after finding no raced programme", async () => {
+            const manager = mockEntityManager({
+                query: [
+                    [UPDATE_PROGRAM, []],
+                    [SELECT_SHOP_NAME, [{ name: "Spa Anna" }]],
+                    [INSERT_PROGRAM, []],
+                    [INSERT_PROGRAM, [{ ...ROW, slug: "spa-anna-abcdefgh" }]],
+                ],
+            })
+            const programs = await build(manager)
+
+            await expect(programs.save("ws-1", {})).resolves.toEqual({ ...expected, slug: "spa-anna-abcdefgh" })
+            expect(manager.query).toHaveBeenCalledTimes(5)
+            expect(manager.query).toHaveBeenNthCalledWith(3, INSERT_PROGRAM, [
+                "ws-1",
+                "spa-anna",
+                "Spa Anna",
+                null,
+                null,
+                JSON.stringify(DEFAULT_CONFIG),
+                false,
+            ])
+            expect(manager.query).toHaveBeenNthCalledWith(4, UPDATE_PROGRAM, ["ws-1", null, null, null])
+            expect(manager.query).toHaveBeenNthCalledWith(5, INSERT_PROGRAM, [
+                "ws-1",
+                "spa-anna",
+                "Spa Anna",
+                null,
+                null,
+                JSON.stringify(DEFAULT_CONFIG),
+                true,
+            ])
+        })
+
+        it("answers null after five failed inserts, checking for a raced programme after each", async () => {
+            const manager = mockEntityManager({
+                query: [
+                    [UPDATE_PROGRAM, []],
+                    [SELECT_SHOP_NAME, []],
+                    [INSERT_PROGRAM, []],
+                ],
+            })
+            const programs = await build(manager)
+
+            await expect(programs.save("ws-1", {})).resolves.toBeNull()
+            expect(manager.query).toHaveBeenCalledTimes(12)
+            for (let attempt = 0; attempt < 5; attempt += 1) {
+                expect(manager.query).toHaveBeenNthCalledWith(3 + attempt * 2, INSERT_PROGRAM, [
+                    "ws-1",
+                    "cua-hang",
+                    "",
+                    null,
+                    null,
+                    JSON.stringify(DEFAULT_CONFIG),
+                    attempt > 0,
+                ])
+                expect(manager.query).toHaveBeenNthCalledWith(4 + attempt * 2, UPDATE_PROGRAM, [
+                    "ws-1",
+                    null,
+                    null,
+                    null,
+                ])
+            }
         })
     })
 })

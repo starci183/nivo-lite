@@ -203,4 +203,106 @@ describe("ReplyCommentPublicPerformerService", () => {
 
         expect(transcript.stableLine).not.toHaveBeenCalled()
     })
+
+    it.each([
+        { text: "Owner text", last: "Previous text", question: "Owner text" },
+        { text: "", last: null, question: "" },
+    ])("uses the negative comment text and retains an existing draft: $question", async ({ text, last, question }) => {
+        const flow = flowOf({ last_user_text: last })
+        const { performer, kit } = await build(flow)
+        const item = itemOf({
+            proposal: { summary: "Before", draft: "Owner's reply", fields: { negative: "1", text } },
+        })
+
+        await expect(performer.prepare(ctx, item)).resolves.toEqual({
+            proposal: {
+                summary: "public.negative",
+                draft: "Owner's reply",
+                fields: { negative: "1", text },
+                outcome: "unclear",
+            },
+        })
+        expect(kit.holdForPerson).toHaveBeenCalledWith(ctx, {
+            flow,
+            reason: "negative_comment",
+            itemId: "item-1",
+            question,
+            notify: false,
+        })
+    })
+
+    it.each([undefined, "", "   "])("refuses a missing or blank draft: %s", async (draft) => {
+        const { performer, meta, transcript } = await build()
+
+        await expect(performer.perform(ctx, itemOf(), { ...proposal, draft }, by)).rejects.toMatchObject({
+            code: LeadFlowsErrorCode.NoComment,
+        })
+        expect(meta.publicReply).not.toHaveBeenCalled()
+        expect(transcript.stableLine).not.toHaveBeenCalled()
+    })
+
+    it("requires a page before creating a transcript line", async () => {
+        const { performer, meta, transcript } = await build(flowOf({ connection_id: null }))
+
+        await expect(performer.perform(ctx, itemOf(), proposal, by)).rejects.toMatchObject({
+            code: LeadFlowsErrorCode.NoPage,
+        })
+        expect(meta.publicReply).not.toHaveBeenCalled()
+        expect(transcript.stableLine).not.toHaveBeenCalled()
+    })
+
+    it("uses explicit channel fields and trims the reply without requiring a conversation", async () => {
+        const { performer, meta, transcript, kit } = await build(flowOf({ connection_id: null, conversation_id: null }))
+        meta.publicReply.mockResolvedValue({ ok: true, failure: null, recipientId: null })
+        const explicit = {
+            summary: "Reply",
+            draft: "  Thanks!  ",
+            fields: { comment_id: "comment-2", connection_id: "connection-2", platform: "instagram" },
+        }
+
+        await expect(performer.perform(ctx, itemOf(), explicit, by)).resolves.toEqual({
+            summary: "public.done",
+            evidence: "captured",
+            lead_id: "lead-1",
+            detail: "Thanks!",
+        })
+        expect(meta.publicReply).toHaveBeenCalledWith(
+            { workspaceId: "ws-1", connectionId: "connection-2", platform: "instagram", commentId: "comment-2" },
+            "Thanks!",
+        )
+        expect(kit.text).toHaveBeenCalledWith("en", "public.done", { name: "Lan" })
+        expect(transcript.stableLine).not.toHaveBeenCalled()
+        expect(transcript.markDelivery).not.toHaveBeenCalled()
+    })
+
+    it("uses the explicit conversation and rejects an unavailable Meta page", async () => {
+        const { performer, meta, transcript } = await build(flowOf({ conversation_id: null }))
+        transcript.stableLine.mockResolvedValue({ id: "line-2", sent: false })
+        meta.publicReply.mockResolvedValue(null)
+
+        await expect(
+            performer.perform(
+                ctx,
+                itemOf(),
+                { ...proposal, fields: { comment_id: "comment-1", conversation_id: "conv-2" } },
+                by,
+            ),
+        ).rejects.toMatchObject({ code: LeadFlowsErrorCode.NoPage })
+        expect(transcript.stableLine).toHaveBeenCalledWith("ws-1", "conv-2", "public.line", "Mai", "item-1")
+        expect(transcript.markDelivery).not.toHaveBeenCalled()
+    })
+
+    it("records a failed delivery before surfacing Meta's refusal", async () => {
+        const { performer, kit, meta, transcript } = await build()
+        transcript.stableLine.mockResolvedValue({ id: "line-1", sent: false })
+        meta.publicReply.mockResolvedValue({ ok: false, failure: null, recipientId: null })
+
+        await expect(performer.perform(ctx, itemOf(), proposal, by)).rejects.toMatchObject({
+            code: LeadFlowsErrorCode.MetaRefused,
+            params: { failure: "error" },
+        })
+        expect(transcript.markDelivery).toHaveBeenCalledWith("line-1", false, null)
+        expect(kit.metaRefused).toHaveBeenCalledWith(null)
+        expect(kit.done).not.toHaveBeenCalled()
+    })
 })
