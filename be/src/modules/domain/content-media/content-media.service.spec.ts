@@ -177,6 +177,33 @@ describe("ContentMediaService", () => {
         expect(storage.signedUrls).toHaveBeenNthCalledWith(1, "media", paths.slice(0, 80), 3600)
     })
 
+    it.each([
+        { path: "", download: "https://cdn.example/file?download=" },
+        { path: "ws-1/", download: "https://cdn.example/file?download=" },
+        { path: "standalone.png", download: "https://cdn.example/file?download=standalone.png" },
+    ])("keeps the final filename segment of the provider path $path", async ({ path, download }) => {
+        const { service, storage, renders } = await build()
+        storage.list.mockResolvedValue(ok([]))
+        renders.listCompletedMedia.mockResolvedValue([])
+        renders.findCompletedMedia.mockResolvedValue([])
+        storage.signedUrls
+            .mockResolvedValueOnce(ok([{ path, signedUrl: "https://cdn.example/file" }]))
+            .mockResolvedValueOnce(ok([]))
+
+        await expect(service.read("user-1", "ws-1", { paths: [], videoIds: [], limit: 1 })).resolves.toEqual({
+            library: [],
+            videos: [],
+            urls: [
+                {
+                    key: path,
+                    view: "https://cdn.example/file",
+                    download,
+                },
+            ],
+        })
+        expect(storage.signedUrls).toHaveBeenNthCalledWith(1, "media", [], 3600)
+    })
+
     it("refuses when a signed address cannot be issued", async () => {
         const { service, storage, renders } = await build()
         storage.list.mockResolvedValue(ok([]))

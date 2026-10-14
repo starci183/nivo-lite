@@ -46,7 +46,6 @@ export const tableFromRows = (
     if (head === undefined) throw rejected(TABLE_COPY.noData)
     let width = head.length
     while (width > 0 && !head[width - 1]) width -= 1
-    if (width === 0) throw rejected(TABLE_COPY.headerRow)
     if (width > TABLE_MAX_COLUMNS) throw rejected(TABLE_COPY.tooManyColumns(TABLE_MAX_COLUMNS))
     const headers = cleanHeaders(head.slice(0, width))
     const rows = all

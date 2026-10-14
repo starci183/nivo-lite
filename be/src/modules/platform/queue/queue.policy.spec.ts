@@ -1,3 +1,4 @@
+import { DomainError } from "@modules/platform/errors"
 import { QueueError, QueueErrorCode } from "./errors/queue.error"
 import type { QueueHandler } from "./queue.contracts"
 import {
@@ -18,6 +19,8 @@ import {
 } from "./queue.policy"
 
 const WORKSPACE = "3f0c7a52-8d1e-4b6a-9c2d-5e7f10a4b8c6"
+class CapabilityError extends DomainError<"CAPABILITY_FAILED"> {}
+
 const signal = new AbortController().signal
 const queueError = (code: QueueErrorCode, params: Record<string, string | number> = {}): QueueError =>
     new QueueError({ code, params })
@@ -45,6 +48,36 @@ describe("queue policy", () => {
     })
 
     describe("failures", () => {
+        it("ends a domain failure only when the owning capability explicitly marks it unrecoverable", () => {
+            expect([
+                isUnrecoverable(new CapabilityError({ code: "CAPABILITY_FAILED", params: { unrecoverable: 1 } })),
+                isUnrecoverable(new CapabilityError({ code: "CAPABILITY_FAILED", params: { unrecoverable: 0 } })),
+                isUnrecoverable(new CapabilityError({ code: "CAPABILITY_FAILED", params: { unrecoverable: "1" } })),
+                isUnrecoverable(new CapabilityError({ code: "CAPABILITY_FAILED" })),
+            ]).toEqual([true, false, false, false])
+        })
+
+        it("honors finite domain retry hints within one to 3600 seconds and rounds the pause up", () => {
+            expect(
+                [1, 7.2, "30", 3599.2, 3600].map((retryAfterSeconds) =>
+                    retryAfterSecondsOf(
+                        new CapabilityError({ code: "CAPABILITY_FAILED", params: { retryAfterSeconds } }),
+                    ),
+                ),
+            ).toEqual([1, 8, 30, 3600, 3600])
+        })
+
+        it("ignores missing, non-finite and out-of-range domain retry hints", () => {
+            expect([
+                retryAfterSecondsOf(new CapabilityError({ code: "CAPABILITY_FAILED" })),
+                ...["soon", Infinity, 0, 0.9, 3600.1].map((retryAfterSeconds) =>
+                    retryAfterSecondsOf(
+                        new CapabilityError({ code: "CAPABILITY_FAILED", params: { retryAfterSeconds } }),
+                    ),
+                ),
+            ]).toEqual([undefined, undefined, undefined, undefined, undefined, undefined])
+        })
+
         it("ends a job at once on an unrecoverable error or a job nobody handles, and on nothing else", () => {
             expect([
                 isUnrecoverable(queueError(QueueErrorCode.Unrecoverable)),

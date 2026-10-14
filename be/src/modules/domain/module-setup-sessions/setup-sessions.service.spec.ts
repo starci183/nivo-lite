@@ -165,4 +165,70 @@ describe("SetupSessionsService", () => {
 
         expect(em.query).toHaveBeenCalledWith(CLOSE_SESSION, ["ses-1"])
     })
+
+    it("does not drop a fact when the installation has no session", async () => {
+        const em = mockEntityManager({ query: [FIND_LATEST_SESSION, []] })
+        const service = await build(em)
+
+        await expect(service.dropFact("inst-1", "city")).resolves.toBeUndefined()
+
+        expect(em.query).toHaveBeenCalledTimes(1)
+        expect(em.query).toHaveBeenCalledWith(FIND_LATEST_SESSION, ["inst-1"])
+    })
+
+    it.each(["applied", "discarded"] as const)("leaves facts on a %s session unchanged", async (status) => {
+        const em = mockEntityManager({ query: [FIND_LATEST_SESSION, [{ ...session, status }]] })
+        const service = await build(em)
+
+        await expect(service.dropFact("inst-1", "city")).resolves.toBeUndefined()
+
+        expect(em.query).toHaveBeenCalledTimes(1)
+        expect(em.query).toHaveBeenCalledWith(FIND_LATEST_SESSION, ["inst-1"])
+    })
+
+    it("leaves the draft unchanged when the requested fact is absent", async () => {
+        const em = mockEntityManager({ query: [FIND_LATEST_SESSION, [session]] })
+        const service = await build(em)
+
+        await expect(service.dropFact("inst-1", "missing")).resolves.toBeUndefined()
+
+        expect(em.query).toHaveBeenCalledTimes(1)
+        expect(em.query).toHaveBeenCalledWith(FIND_LATEST_SESSION, ["inst-1"])
+    })
+
+    it("removes matching facts while retaining the other facts, draft summary and evidence", async () => {
+        const current = {
+            ...session,
+            draft: {
+                summary: "Tea shop in Hue",
+                facts: [
+                    { key: "city", text: "Hue" },
+                    { key: "hours", text: "9 to 5" },
+                    { key: "city", text: "Old city" },
+                ],
+            },
+        }
+        const em = mockEntityManager({
+            query: [
+                [FIND_LATEST_SESSION, [current]],
+                [SAVE_TURN, [session]],
+            ],
+        })
+        const service = await build(em)
+
+        await expect(service.dropFact("inst-1", "city")).resolves.toBeUndefined()
+
+        expect(em.query).toHaveBeenCalledTimes(2)
+        expect(em.query).toHaveBeenNthCalledWith(1, FIND_LATEST_SESSION, ["inst-1"])
+        expect(em.query).toHaveBeenNthCalledWith(2, SAVE_TURN, [
+            "ses-1",
+            '{"summary":"Tea shop in Hue","facts":[{"key":"hours","text":"9 to 5"}]}',
+            '{"tone":{"status":"proposed","evidence":"warm"}}',
+        ])
+        expect(current.draft.facts).toEqual([
+            { key: "city", text: "Hue" },
+            { key: "hours", text: "9 to 5" },
+            { key: "city", text: "Old city" },
+        ])
+    })
 })

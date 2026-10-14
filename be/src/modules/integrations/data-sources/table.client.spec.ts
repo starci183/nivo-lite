@@ -1,6 +1,7 @@
 import { Test } from "@nestjs/testing"
 import { mock } from "@starci/jest-preset"
 import mammoth from "mammoth"
+import Papa from "papaparse"
 import unpdf from "unpdf"
 import { PUBLIC_HOST } from "./data-sources.decorators"
 import { DataSourcesError, DataSourcesErrorCode } from "./errors/data-sources.error"
@@ -8,6 +9,12 @@ import { TABLE_COPY } from "./messages/table.messages"
 import { TABLE_MAX_BYTES } from "./table-shapes.contracts"
 import { TableClient } from "./table.client"
 import type { PublicHostClient, PublicResponse } from "./public-host.client"
+
+interface TextParser {
+    parse(text: string, config: Papa.ParseConfig<Array<string>>): Papa.ParseResult<Array<string>>
+}
+
+const textParser: TextParser = Papa
 
 class MockWord {
     text = "word"
@@ -53,6 +60,19 @@ const TWO_SHEETS = Buffer.from(
         "GgAAAAAAAAAAAAAAgAHjAgAAeGwvX3JlbHMvd29ya2Jvb2sueG1sLnJlbHNQSwECFAAUAAAACAARp01dDplOvLIAAAAWAQAAGAAA",
         "AAAAAAAAAAAAgAHOAwAAeGwvd29ya3NoZWV0cy9zaGVldDEueG1sUEsBAhQAFAAAAAgAEadNXfnframzAAAAFgEAABgAAAAAAAAA",
         "AAAAAIABtgQAAHhsL3dvcmtzaGVldHMvc2hlZXQyLnhtbFBLBQYAAAAABgAGAIsBAACfBQAAAAA=",
+    ].join(""),
+    "base64",
+)
+
+/** A ZIP workbook with an empty sheets list and its workbook relationships. */
+const NO_SHEETS = Buffer.from(
+    [
+        "UEsDBBQAAAAIAJGITl2FoDfkVAAAAGAAAAAPAAAAeGwvd29ya2Jvb2sueG1sNYxBCoAgEAC/Ej2glQ4dwvyL1Zah64q7UM9Pgo4z",
+        "A2NvrnFljt1DKcvSB9UyA8gWkLwMXDC3cnAlrw3rCVIq+l0ColKC0ZgJyF+5d/ZzAs7Cf3UvUEsDBBQAAAAIAJGITl013cuD",
+        "SwAAAFUAAAAaAAAAeGwvX3JlbHMvd29ya2Jvb2sueG1sLnJlbHOzCUrNSSzJzM8rzsgsKFaoyM3JK7ZVyigpKbDS1y9OzkjN",
+        "TSzWyy9IzQPKpOUX5SaWALlF6foFicnZiemp+kYGBmb6RchmKOnbAQBQSwECFAAUAAAACACRiE5dhaA35FQAAABgAAAADwAA",
+        "AAAAAAAAAAAAAAAAAAAAeGwvd29ya2Jvb2sueG1sUEsBAhQAFAAAAAgAkYhOXTXdy4NLAAAAVQAAABoAAAAAAAAAAAAAAAAAgQAA",
+        "AHhsL19yZWxzL3dvcmtib29rLnhtbC5yZWxzUEsFBgAAAAACAAIAhQAAAAQBAAAAAA==",
     ].join(""),
     "base64",
 )
@@ -128,6 +148,40 @@ describe("TableClient", () => {
                 expect.objectContaining({ params: { detail: TABLE_COPY.noData } }),
             )
         })
+
+        it("refuses unterminated quotes when the parser has no usable rows", async () => {
+            const { client } = await build()
+
+            expect(() => client.readText('"')).toThrow(
+                expect.objectContaining({
+                    code: DataSourcesErrorCode.Rejected,
+                    params: { detail: TABLE_COPY.brokenQuotes },
+                }),
+            )
+        })
+
+        it("defaults to a comma when the parser reports an empty delimiter", async () => {
+            const { client } = await build()
+            const parsed: Papa.ParseResult<Array<string>> = {
+                data: [["Name"], ["An"]],
+                errors: [],
+                meta: { delimiter: "", linebreak: "\n", aborted: false, truncated: false, cursor: 7 },
+            }
+            const parseSpy = jest.spyOn(textParser, "parse").mockReturnValueOnce(parsed)
+
+            expect(client.readText("Name\nAn")).toEqual({
+                headers: ["Name"],
+                rows: [["An"]],
+                delimiter: ",",
+                sheets: [],
+                sheet: "",
+            })
+            expect(parseSpy).toHaveBeenCalledWith("Name\nAn", {
+                delimitersToGuess: [",", ";", "\t", "|"],
+                skipEmptyLines: "greedy",
+            })
+            parseSpy.mockRestore()
+        })
     })
 
     describe("readFile", () => {
@@ -171,6 +225,21 @@ describe("TableClient", () => {
             await expect(client.readFile("orders.xlsx", zip)).rejects.toMatchObject({
                 params: { detail: TABLE_COPY.unreadableExcel },
             })
+        })
+
+        it("preserves the reader failure for a workbook with no sheets", async () => {
+            const { client } = await build()
+            const answer = client.readFile("empty.xlsx", NO_SHEETS)
+
+            await expect(answer).rejects.toMatchObject({
+                code: DataSourcesErrorCode.Rejected,
+                params: { detail: TABLE_COPY.unreadableExcel },
+                cause: expect.objectContaining({
+                    name: "TypeError",
+                    message: "readFiles(...).then is not a function",
+                }),
+            })
+            await expect(answer).rejects.toHaveProperty("cause", expect.any(TypeError))
         })
     })
 

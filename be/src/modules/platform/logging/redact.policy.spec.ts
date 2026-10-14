@@ -24,6 +24,20 @@ describe("redactString", () => {
 
         expect(redactString(text)).toBe(text)
     })
+
+    it("replaces mixed-case base64-looking runs containing digits", () => {
+        const credential = ["aB3", "xY9".repeat(11), "=="].join("")
+
+        expect(redactString(`encoded ${credential} end`)).toBe(`encoded ${REDACTED} end`)
+    })
+
+    it.each([
+        ["lowercase and digits", "x3".repeat(18)],
+        ["uppercase and digits", "X3".repeat(18)],
+        ["mixed case without digits", "xY".repeat(18)],
+    ])("preserves long runs of %s", (_name, input) => {
+        expect(redactString(input)).toBe(input)
+    })
 })
 
 describe("isSecretKey", () => {
@@ -57,6 +71,42 @@ describe("redactValue", () => {
             name: "TypeError",
             message: `bad apikey=${REDACTED}`,
         })
+    })
+
+    it.each([
+        ["null", null, null],
+        ["undefined", undefined, undefined],
+        ["a number", 23, 23],
+        ["a boolean", false, false],
+        ["a bigint", BigInt("12345678901234567890"), "12345678901234567890"],
+        ["a function", () => "unused", undefined],
+        ["a symbol", Symbol("unused"), undefined],
+    ])("scrubs %s into its safe primitive form", (_name, input, expected) => {
+        expect(redactValue(input)).toBe(expected)
+    })
+
+    it("serializes dates in their ISO form", () => {
+        expect(redactValue(new Date("2026-02-03T04:05:06.000Z"))).toBe("2026-02-03T04:05:06.000Z")
+    })
+
+    it("truncates objects after eight levels of nesting", () => {
+        expect(redactValue({ a: { b: { c: { d: { e: { f: { g: { h: { note: "hidden" } } } } } } } } })).toEqual({
+            a: { b: { c: { d: { e: { f: { g: { h: "[truncated]" } } } } } } },
+        })
+    })
+
+    it("bounds arrays to sixty entries and scrubs each retained value", () => {
+        const input = Array.from({ length: 61 }, (_value, index) => ({ index, password: `value-${index}` }))
+        const expected = Array.from({ length: 60 }, (_value, index) => ({ index, password: REDACTED }))
+
+        expect(redactValue(input)).toEqual(expected)
+    })
+
+    it("bounds records to their first sixty entries", () => {
+        const input = Object.fromEntries(Array.from({ length: 61 }, (_value, index) => [`field${index}`, index]))
+        const expected = Object.fromEntries(Array.from({ length: 60 }, (_value, index) => [`field${index}`, index]))
+
+        expect(redactValue(input)).toEqual(expected)
     })
 })
 

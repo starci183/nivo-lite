@@ -145,7 +145,7 @@ const factOfGate = (
     const spec =
         declared.find((write) => keyOf(write.attributeLabel) === keyOf(asked)) ??
         (declared.length === 1 && asked === "" ? declared[0] : undefined)
-    if (spec === undefined || spec.kind !== "fact") return null
+    if (spec === undefined) return null
     const subject = subjectLabel || (spec.subjectType === "business" ? businessLabel : "")
     if (subject === "") return null
     return {
@@ -163,8 +163,10 @@ const factOfGate = (
 
 const ruleOfGate = (module: ModuleDefinition, item: Record<string, unknown>, gateKey: string): ProposedRule | null => {
     const action = clean(item.action, 60)
-    const spec = gateWritesOf(module, gateKey).find((write) => write.kind === "rule" && write.action === action)
-    if (spec === undefined || spec.kind !== "rule") return null
+    const spec = gateWritesOf(module, gateKey)
+        .filter((write) => write.kind === "rule")
+        .find((write) => write.action === action)
+    if (spec === undefined) return null
     const definition = actionOf(module, spec.action)
     if (definition === undefined) return null
     if (spec.field === "mode") {

@@ -1,3 +1,4 @@
+import { mock } from "@starci/jest-preset"
 import type { DatabaseRow, DatabaseSelection } from "./database-session.contracts"
 import { DATABASE_COPY } from "./messages/database.messages"
 import { cursorOf, isPlainObject, plainValue, previewCells, toRecord, toRows } from "./database-values.policy"
@@ -94,6 +95,32 @@ describe("database values", () => {
                 toRecord(selection(), { id: "a-1", updated_at: new Date("2026-03-04T00:00:00.000Z") })?.occurredAt,
             ).toBe("2026-03-04T00:00:00.000Z")
         })
+
+        it("keeps missing and null update times empty", () => {
+            const expected = {
+                externalId: "a-1",
+                title: "a-1",
+                occurredAt: null,
+                data: { note: null },
+            }
+
+            expect(toRecord(selection(), { id: "a-1", updated_at: null })).toEqual(expected)
+            expect(toRecord(selection(), { id: "a-1" })).toEqual(expected)
+        })
+
+        it("uses empty title text when a value stops producing JSON after inspection", () => {
+            const serializer = mock<{ serialize(): unknown }>()
+            serializer.serialize.mockReturnValueOnce({ label: "first" }).mockReturnValueOnce(undefined)
+            const title = { toJSON: serializer.serialize }
+
+            expect(toRecord(selection(), { id: "a-1", title })).toEqual({
+                externalId: "a-1",
+                title: "",
+                occurredAt: null,
+                data: { note: null },
+            })
+            expect(serializer.serialize).toHaveBeenCalledTimes(2)
+        })
     })
 
     describe("cursorOf and previewCells", () => {
@@ -113,6 +140,13 @@ describe("database values", () => {
                 ["z".repeat(80), ""],
                 ["4", ""],
             ])
+        })
+
+        it("skips an absent row at the end of a sparse cursor page", () => {
+            const rows = new Array<DatabaseRow>(2)
+            rows[0] = { __nivo_cursor: "older" }
+
+            expect(cursorOf(rows)).toBe("older")
         })
     })
 })

@@ -2,6 +2,8 @@ import { Test } from "@nestjs/testing"
 import { builder, fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
+import { ERROR_REPORTER } from "@modules/platform/errors"
+import type { ErrorReporter } from "@modules/platform/errors"
 import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { QueueError, QueueErrorCode } from "./errors/queue.error"
@@ -62,15 +64,17 @@ const script = (
 
 const build = async (manager: MockEntityManager = mockEntityManager(), options: Partial<QueueOptions> = {}) => {
     const logger = mock<Logger>()
+    const reporter = mock<ErrorReporter>()
     const moduleRef = await Test.createTestingModule({
         providers: [
             PgmqQueueTransportClient,
             { provide: QUEUE_OPTIONS, useValue: optionsOf(options) },
             { provide: PRIMARY_ENTITY_MANAGER, useValue: manager },
             { provide: LOGGER, useValue: logger },
+            { provide: ERROR_REPORTER, useValue: reporter },
         ],
     }).compile()
-    return { client: moduleRef.get(PgmqQueueTransportClient), manager, logger }
+    return { client: moduleRef.get(PgmqQueueTransportClient), manager, logger, reporter }
 }
 
 /** The client over a scripted manager (see `script`). */
@@ -180,6 +184,27 @@ describe("PgmqQueueTransportClient", () => {
     })
 
     describe("work", () => {
+        it("reports a dead-lettered failure with its workspace, job and exhausted attempt", async () => {
+            const message = messageOf({
+                msg_id: "7",
+                attempt: 4,
+                message: { name: "knowledge.index", payload: { workspaceId: WORKSPACE }, outbox_id: "row-7" },
+            })
+            const cause = new Error("provider unavailable")
+            const { client, manager, reporter } = await buildScripted([[message]])
+            const { handler } = handlerOf({ "row-7": cause })
+
+            await runUntilFirstPause(client, handler)
+
+            expect(reporter.report).toHaveBeenCalledTimes(1)
+            expect(reporter.report).toHaveBeenCalledWith("job.knowledge", cause, {
+                workspaceId: WORKSPACE,
+                job: "knowledge.index",
+                attempt: 4,
+            })
+            expect(manager.query).toHaveBeenCalledWith(JOB_ARCHIVE, ["knowledge", "7", "provider unavailable"])
+        })
+
         it("reads the free slots with the visibility timeout and the workspace limit, runs the batch and acknowledges what completed", async () => {
             const { client, manager } = await buildScripted([[messageOf(), messageOf({ msg_id: "2" })]])
             const { handler, handle } = handlerOf()
