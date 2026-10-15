@@ -201,8 +201,9 @@ environments:
           - {name: api liveness, url: "https://api.nivo.vn/healthz", status: 200, json: {status: ok}, retry: true}
           - {name: api readiness, url: "https://api.nivo.vn/readyz", status: 200, retry: true}
           - {name: api graphql, url: "https://api.nivo.vn/graphql", method: POST, body: '{"query":"{__typename}"}', status: 200, contains: __typename, retry: true}
-          - {name: web health on the apex, url: "https://nivo.vn/health/live", status: 200, retry: true}
-          - {name: web health on www, url: "https://www.nivo.vn/health/live", status: 200, retry: true}
+          - {name: landing health on the apex, url: "https://nivo.vn/health/live", status: 200, retry: true}
+          - {name: landing health on www, url: "https://www.nivo.vn/health/live", status: 200, retry: true}
+          - {name: console health on app, url: "https://app.nivo.vn/health/live", status: 200, retry: true}
           - {name: legacy webhook path reaches the api, url: "https://nivo.vn/healthz", status: 200, retry: true}
         exec:
           - name: jobs watchdog prints two non-negative integers
@@ -252,6 +253,7 @@ environments:
         verify:
           - {host: nivo.vn, path: /, status: 200}
           - {host: www.nivo.vn, path: /, status: 200}
+          - {host: app.nivo.vn, path: /health/live, status: 200}
           - {host: n8n.nivo.vn, path: /, status: 200}
           - {host: nguyentuannam.org, path: /, status: 200}
           - {host: www.nguyentuannam.org, path: /, status: 200}

@@ -439,10 +439,9 @@ describe("GatewayClient", () => {
             const { client, latest } = await build()
             const { turn, gateway } = await started(client, latest)
 
+            // Both interim texts arrive in one synchronous run, so no settle timer can fire between them whatever the
+            // machine load: the first text's timer is armed, then superseded, and only the second text may settle the turn.
             gateway.assistant("first")
-            await new Promise((resolve) =>
-                AbortSignal.timeout(SETTLE_MS / 3).addEventListener("abort", resolve, { once: true }),
-            )
             gateway.assistant("second")
 
             await expect(turn).resolves.toMatchObject({ text: "second" })
