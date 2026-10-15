@@ -5,11 +5,6 @@
 # configured with the old host keeps working.
 http:
   middlewares:
-    app-vps-redirect:
-      redirectRegex:
-        regex: '^https?://app-vps\.nivo\.vn/(.*)'
-        replacement: "https://nivo.vn/${1}"
-        permanent: true
     secure-headers:
       headers:
         stsSeconds: 31536000
@@ -36,13 +31,6 @@ http:
       entryPoints: [websecure]
       service: api
       middlewares: [secure-headers]
-      tls: { certResolver: le }
-    # The retired app-vps host keeps a certificate in the shared store and 308-redirects to the product host (to app.nivo.vn once the split ships).
-    app-vps:
-      rule: Host(`app-vps.nivo.vn`)
-      entryPoints: [websecure]
-      service: web
-      middlewares: [app-vps-redirect]
       tls: { certResolver: le }
     # The n8n editor and its webhooks: the swarm n8n (SQLite on the persisted volume) is the real one; the old compose n8n is retired at the cutover.
     n8n:

@@ -231,15 +231,13 @@ environments:
           - {name: academy-judge0, hosts: [judge0.academy.starci.org], container: academy-judge0-server, aliases: [academy-judge0-server], port: 2358}
           - {name: academy-keycloak, hosts: [keycloak.starci.org], container: academy-keycloak, aliases: [academy-keycloak], port: 8080}
           - {name: academy-minio, hosts: [minio.starci.org, console.minio.starci.org], container: academy-minio, aliases: [academy-minio], port: 9000}
-        drop: [engine.nivo.vn]
-        redirects:
-          - {host: app-vps.nivo.vn, to: nivo.vn, status: 308}
+        # engine.nivo.vn (old engine health) and app-vps.nivo.vn (a temporary hostname while nivo.vn was on Netlify, no public DNS any more) are dropped
+        drop: [engine.nivo.vn, app-vps.nivo.vn]
         backup: {dir: /var/backups/nivo}
         verify:
           - {host: nivo.vn, path: /, status: 200}
           - {host: www.nivo.vn, path: /, status: 200}
           - {host: n8n.nivo.vn, path: /, status: 200}
-          - {host: app-vps.nivo.vn, path: /, status: 308}
           - {host: nguyentuannam.org, path: /, status: 200}
           - {host: www.nguyentuannam.org, path: /, status: 200}
           - {host: app.nguyentuannam.org, path: /, status: 307}
