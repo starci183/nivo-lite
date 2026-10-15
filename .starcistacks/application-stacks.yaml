@@ -201,7 +201,7 @@ environments:
       backup:
         image: alpine:3.21@sha256:ce64758a109eb420d874a118f87920e625e12d3634e03b4a5573fd9f6e5d3507
         keepDays: 14
-        dir: /var/backups/nivo
+        dir: /srv/nivo/backups
         volumes:
           - {name: n8n-data, volume: nivo-engine_n8n-data}
           - {name: openclaw-data, volume: nivo-engine_openclaw-data}
@@ -233,7 +233,7 @@ environments:
           - {name: academy-minio, hosts: [minio.starci.org, console.minio.starci.org], container: academy-minio, aliases: [academy-minio], port: 9000}
         # engine.nivo.vn (old engine health) and app-vps.nivo.vn (a temporary hostname while nivo.vn was on Netlify, no public DNS any more) are dropped
         drop: [engine.nivo.vn, app-vps.nivo.vn]
-        backup: {dir: /var/backups/nivo}
+        backup: {dir: /srv/nivo/backups}
         verify:
           - {host: nivo.vn, path: /, status: 200}
           - {host: www.nivo.vn, path: /, status: 200}
