@@ -268,6 +268,18 @@ environments:
           - {host: api.academy.starci.org, path: /, status: 404}
           - {host: judge0.academy.starci.org, path: /, status: 200}
           - {host: keycloak.starci.org, path: /, status: 302}
+# Release gates for `starci app release gate`. The landing reads its public origins at build time (next.config redirects), so
+# build-fe gets the production public URLs; they are the same values as the image build arguments, none of them is a secret.
+release:
+  gates:
+    - {name: app-check, command: [npx, starci, app, check]}
+    - {name: typecheck, command: [npm, run, typecheck]}
+    - {name: build-be, command: [npm, run, build:be]}
+    - {name: lint, command: [npm, run, lint]}
+    - name: build-fe
+      command: [npm, run, build:fe]
+      env: {NEXT_PUBLIC_SITE_URL: "https://nivo.vn", NEXT_PUBLIC_APP_URL: "https://app.nivo.vn"}
+    - {name: test, command: [npm, run, test], summary: jest}
 # Database history for `starci app db migrate` / `post-cutover` (the 24 restamped versions come from be/docs/runbooks/migration-restamp.md).
 database:
   migrationsDir: supabase/migrations
