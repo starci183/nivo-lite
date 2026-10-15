@@ -216,6 +216,8 @@ environments:
       ingress:
         name: ingress
         service: ingress
+        # the same pinned Traefik binary the live edge runs; its static arguments are read from the live edge container by `ingress create`
+        image: traefik:v3.6@sha256:31267173a15b4944e797a76ffd9c419707c8d8b32fe5b610f80cd0cfa05f372d
         network: nivo-edge-swarm
         acmeVolume: nivo-edge_acme
         legacy:
