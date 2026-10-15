@@ -1,4 +1,4 @@
-// migrations-sha256: 0b6b4feda3b32a5e9a76414e321eb7f96f826acaf6a7941c13ca760e850de4ab
+// migrations-sha256: cf9faa7b9d66c6cbd31726f854abe04b453fffb3bae9ab75302e04ba3246a0da
 
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[]
 
@@ -4193,6 +4193,9 @@ isOneToOne: false
                            },
 "job_requeue_failed":
 { Args: { "p_hours"?: number }; Returns: Json
+                           },
+"job_schedule":
+{ Args: { "p_message": string,"p_name": string,"p_queue": string,"p_schedule": string }; Returns: number
                            },
 "job_stats":
 { Args: Record<PropertyKey, never>; Returns: Json
