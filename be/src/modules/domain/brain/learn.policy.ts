@@ -26,21 +26,16 @@ export interface ProposedLesson {
 }
 
 /** A text cut to `max` characters with an ellipsis. */
-const clip = (text: string, max: number): string => (text.length > max ? `${text.slice(0, max - 1)}...` : text)
+const clip = (text: string, max: number): string => (text.length > max ? `${text.slice(0, max - 1)}…` : text)
 
 /** What changed in one correction, as a short readable block (draft before and after, changed fields, the owner's note). */
 export const describe = (correction: Correction): string => {
-    const lines: Array<string> = [`Action: ${correction.action} - ${correction.outcome}`]
+    const lines: Array<string> = [`Action: ${correction.action} · ${correction.outcome}`]
     const before = correction.before ?? {}
     const after = correction.after ?? {}
-    if (
-        correction.outcome === "edited" &&
-        before.draft !== undefined &&
-        after.draft !== undefined &&
-        before.draft !== after.draft
-    ) {
+    if (correction.outcome === "edited" && before.draft && after.draft && before.draft !== after.draft) {
         lines.push(`AI draft: ${clip(before.draft, 600)}`, `Owner's version: ${clip(after.draft, 600)}`)
-    } else if (before.draft !== undefined) {
+    } else if (before.draft) {
         lines.push(`AI draft: ${clip(before.draft, 600)}`)
     }
     const names = new Set([...Object.keys(before.fields ?? {}), ...Object.keys(after.fields ?? {})])
@@ -49,7 +44,7 @@ export const describe = (correction: Correction): string => {
         const now = JSON.stringify((after.fields ?? {})[name] ?? null)
         if (was !== now) lines.push(`Field ${name}: ${clip(was, 120)} -> ${clip(now, 120)}`)
     })
-    if (correction.note !== null) lines.push(`Owner's note: ${clip(correction.note, 300)}`)
+    if (correction.note) lines.push(`Owner's note: ${clip(correction.note, 300)}`)
     return lines.join("\n")
 }
 

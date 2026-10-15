@@ -6,6 +6,10 @@ export type { ExecutorContext, ExecutorPayload } from "./automation-ports.contra
 export type {
     AutomationGate,
     AutomationOffice,
+    AutomationOwnerChat,
+    AutomationText,
+    AutomationTextRequest,
+    GeneratedText,
     AutomationRecords,
     AutomationEvidenceEntry,
     FollowUp,
@@ -28,7 +32,13 @@ export type {
     BusinessEventInput,
     PipelinePatch,
 } from "./automations.contracts"
-export { AUTOMATION_GATE, AUTOMATION_OFFICE, AUTOMATION_RECORDS } from "./automations.decorators"
+export {
+    AUTOMATION_GATE,
+    AUTOMATION_OFFICE,
+    AUTOMATION_OWNER_CHAT,
+    AUTOMATION_RECORDS,
+    AUTOMATION_TEXT,
+} from "./automations.decorators"
 export { AutomationsModule } from "./automations.module"
 export { AutomationsService } from "./automations.service"
 export { BusinessEventsService } from "./business-events.service"

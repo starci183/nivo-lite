@@ -4,6 +4,7 @@ import { BrainCommandRunnerService } from "./brain-command-runner.service"
 import { BrainLearningService } from "./brain-learning.service"
 import { BrainPageService } from "./brain-page.service"
 import { BrainService } from "./brain.service"
+import { BRAIN_CORRECTIONS } from "./brain.decorators"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./brain.module-definition"
 import { DocumentFactsService } from "./document-facts.service"
 import { ModelJsonService } from "./model-json.service"
@@ -18,6 +19,7 @@ export class BrainModule extends ConfigurableModuleClass {
             ...base,
             providers: [
                 ...(base.providers ?? []),
+                { provide: BRAIN_CORRECTIONS, useClass: options.corrections },
                 BrainPageService,
                 BrainService,
                 BrainLearningService,

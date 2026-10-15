@@ -16,12 +16,8 @@ import { BookingOverviewService } from "./booking-overview.service"
 import { BookingChatLookupService } from "./booking-chat-lookup.service"
 import { BookingPublicService } from "./booking-public.service"
 import { BookingReservationService } from "./booking-reservation.service"
-import type { BookingNotifier } from "./bookings.contracts"
 import { BOOKINGS_NOTIFIER } from "./bookings.decorators"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./bookings.module-definition"
-
-/** Notifier used until the app root provides one: nothing reaches the customer, the other effects are unaffected. */
-const NO_NOTICE: BookingNotifier = { notify: () => Promise.resolve(false) }
 
 @Module({})
 /** The bookings capability over the primary Supabase PostgreSQL connection: calendar rules, the public page and the owner desk. */
@@ -44,7 +40,7 @@ export class BookingsModule extends ConfigurableModuleClass {
             ],
             providers: [
                 ...(base.providers ?? []),
-                { provide: BOOKINGS_NOTIFIER, useValue: options.notifier ?? NO_NOTICE },
+                { provide: BOOKINGS_NOTIFIER, useClass: options.notifier },
                 BookingModelService,
                 BookingReservationService,
                 BookingPublicService,

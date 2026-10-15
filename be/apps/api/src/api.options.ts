@@ -53,6 +53,7 @@ import {
     ApprovalRequesterService,
     DECISIONS_ERROR_KINDS,
     DECISIONS_MESSAGES,
+    DecisionCorrectionsService,
     ModuleApprovalGateService,
     ModulePerformersService,
 } from "@modules/domain/decisions"
@@ -85,6 +86,7 @@ import { ModuleOutboundMailService } from "@modules/domain/email-messages"
 import { MODULE_OPS_ERROR_KINDS, MODULE_OPS_MESSAGES } from "@modules/domain/module-ops"
 import type { ModuleOpsPorts } from "@modules/domain/module-ops"
 import { AUTOMATION_PORTS_MESSAGES } from "@modules/domain/automation-ports"
+import { BOOKING_PORTS_MESSAGES, BookingNotifierService } from "@modules/domain/booking-ports"
 import { FLOW_ENGINE_ERROR_KINDS, FLOW_ENGINE_MESSAGES } from "@modules/domain/flow-engine"
 import { DriveGrantService } from "@modules/domain/google-connections"
 import type { DocumentsOptions } from "@modules/integrations/documents"
@@ -221,6 +223,9 @@ export const MODULE_OPS_PORTS: ModuleOpsPorts = {
     textGenerator: ModuleTextGeneratorService,
 }
 
+/** The delivery of booking notices through the customer's existing conversation and channel. */
+export const BOOKING_PORTS = { notifier: BookingNotifierService }
+
 /**
  * The ports G19 plugs in: the installations, knowledge lens and module profiles the agents capability reads, the AI step and
  * outcome handler of every customer chat turn, and the connection points of the automations, business modules and decisions.
@@ -232,12 +237,16 @@ export const G19_PORTS = {
         modules: ModuleProfilesService,
     },
     chatTurn: { runtime: CustomerTurnRuntimeService, outcomes: CustomerOutcomesService },
-    /** The message bundles of the automations, decisions, module-ops, automation ports and flow engine. */
+    /** The decisions source the brain studies for corrections. */
+    brain: { corrections: DecisionCorrectionsService },
+    bookings: BOOKING_PORTS,
+    /** The message bundles of automations, decisions, module-ops, automation ports, booking ports and flow engine. */
     messages: [
         AUTOMATIONS_MESSAGES,
         DECISIONS_MESSAGES,
         MODULE_OPS_MESSAGES,
         AUTOMATION_PORTS_MESSAGES,
+        BOOKING_PORTS_MESSAGES,
         FLOW_ENGINE_MESSAGES,
     ],
     /** Their error kind tables. */
