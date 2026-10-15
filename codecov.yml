@@ -63,6 +63,7 @@ component_management:
         - "be/src/modules/domain/automation-templates/**"
         - "be/src/modules/domain/automations/**"
         - "be/src/modules/domain/billing/**"
+        - "be/src/modules/domain/booking-ports/**"
         - "be/src/modules/domain/bookings/**"
         - "be/src/modules/domain/brain-commands/**"
         - "be/src/modules/domain/brain-eval-cases/**"
