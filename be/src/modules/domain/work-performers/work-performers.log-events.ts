@@ -6,4 +6,6 @@ export enum WorkPerformersLogEvent {
     RefsUnreadable = "work_performers.refs_unreadable",
     /** The member could not be told about a redeemed reward in the chat; the redemption stands. */
     RedeemNoticeFailed = "work_performers.redeem_notice_failed",
+    /** A booking reminder could not be sent; its row is marked failed. */
+    ReminderFailed = "work_performers.reminder_failed",
 }

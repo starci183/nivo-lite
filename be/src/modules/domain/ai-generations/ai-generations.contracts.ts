@@ -184,6 +184,8 @@ export interface TurnAttempt {
     readonly timings: Readonly<Record<string, number>>
     /** Why there is no text; an empty text when there is one. */
     readonly reason: string
+    /** True when the deadline of the request passed before the text did. */
+    readonly timedOut: boolean
 }
 
 /** A text that was queued: the id to poll. */

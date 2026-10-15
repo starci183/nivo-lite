@@ -1,4 +1,4 @@
-export { N8N_MAILER } from "./n8n-runs.decorators"
+export { InjectN8nMailer, N8N_MAILER } from "./n8n-runs.decorators"
 export { N8N_RUNS_ERROR_KINDS } from "./errors/n8n-runs.error"
 export { N8N_RUNS_MESSAGES } from "./messages/n8n-runs.messages"
 export { N8nDoorService } from "./n8n-door.service"

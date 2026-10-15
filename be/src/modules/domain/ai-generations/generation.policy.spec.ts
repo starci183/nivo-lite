@@ -7,12 +7,14 @@ import {
     failureTextOf,
     inputJsonOf,
     inputOf,
+    isTimeoutCause,
     isWaiting,
     progressOf,
     purposeOf,
     queuedOf,
     timingsOf,
     turnTimeoutOf,
+    untilAborted,
     usageOf,
     verdictOf,
 } from "./generation.policy"
@@ -40,6 +42,68 @@ describe("generation policy", () => {
         it("gives the turn the deadline less a margin, at least five seconds", () => {
             expect(turnTimeoutOf(45_000)).toBe(42_000)
             expect(turnTimeoutOf(5000)).toBe(5000)
+        })
+
+        it("recognizes timeout and abort errors only", () => {
+            const timeout = new Error("deadline passed")
+            timeout.name = "TimeoutError"
+            const abort = new Error("request aborted")
+            abort.name = "AbortError"
+
+            expect(isTimeoutCause(timeout)).toBe(true)
+            expect(isTimeoutCause(abort)).toBe(true)
+            expect(isTimeoutCause(new Error("ordinary failure"))).toBe(false)
+            expect(isTimeoutCause({ name: "TimeoutError" })).toBe(false)
+            expect(isTimeoutCause(null)).toBe(false)
+        })
+    })
+
+    describe("untilAborted", () => {
+        it("resolves with the work and removes its abort listener", async () => {
+            const controller = new AbortController()
+            const addListener = jest.spyOn(controller.signal, "addEventListener")
+            const removeListener = jest.spyOn(controller.signal, "removeEventListener")
+
+            await expect(untilAborted(Promise.resolve("delivered"), controller.signal)).resolves.toBe("delivered")
+
+            expect(addListener.mock.calls).toEqual([["abort", expect.any(Function), { once: true }]])
+            expect(removeListener.mock.calls).toEqual([["abort", addListener.mock.calls[0]?.[1]]])
+        })
+
+        it("rejects with the work's error and removes its abort listener", async () => {
+            const controller = new AbortController()
+            const addListener = jest.spyOn(controller.signal, "addEventListener")
+            const removeListener = jest.spyOn(controller.signal, "removeEventListener")
+            const failure = new Error("work failed")
+
+            await expect(untilAborted(Promise.reject(failure), controller.signal)).rejects.toBe(failure)
+
+            expect(addListener.mock.calls).toEqual([["abort", expect.any(Function), { once: true }]])
+            expect(removeListener.mock.calls).toEqual([["abort", addListener.mock.calls[0]?.[1]]])
+        })
+
+        it("rejects with the reason of an already aborted signal without attaching a listener", async () => {
+            const controller = new AbortController()
+            const addListener = jest.spyOn(controller.signal, "addEventListener")
+            const removeListener = jest.spyOn(controller.signal, "removeEventListener")
+            const reason = new Error("deadline already passed")
+            controller.abort(reason)
+
+            await expect(untilAborted(Promise.resolve("too late"), controller.signal)).rejects.toBe(reason)
+
+            expect(addListener).not.toHaveBeenCalled()
+            expect(removeListener).not.toHaveBeenCalled()
+        })
+
+        it("rejects with the signal's reason when it aborts while the work remains pending", async () => {
+            const controller = new AbortController()
+            const work = new Promise<string>(() => undefined)
+            const pending = untilAborted(work, controller.signal)
+            const reason = { message: "deadline passed" }
+
+            controller.abort(reason)
+
+            await expect(pending).rejects.toBe(reason)
         })
     })
 

@@ -1,3 +1,4 @@
+import type { BookingNoticeKind } from "../booking-notice.contracts"
 import type {
     BookingEffects,
     BookingEventKind,
@@ -11,8 +12,8 @@ const HOUR_MS = 3_600_000
 /** Reasons an owner gives when cancelling: the customer owes nothing for these. */
 const OWNER_REASONS: ReadonlyArray<string> = ["owner", "owner_cancelled"]
 
-/** The kinds of notice a customer gets. */
-export type NoticeKind = "confirmed" | "moved" | "cancelled"
+/** The kinds of notice a booking change earns (a reminder comes from the clock). */
+export type NoticeKind = Exclude<BookingNoticeKind, "reminder">
 
 /** Whether a cancellation came too close to the start (inside the cancel window). */
 export const isLateCancel = (startMs: number, cancelledMs: number | null, windowHours: number): boolean =>
@@ -28,6 +29,7 @@ export const cancelFeeOf = (row: CancelFeeFacts, windowHours: number, feePct: nu
 /** Which notice an event earns, or null when the customer is not told. */
 export const noticeOf = (kind: BookingEventKind, status: string): NoticeKind | null => {
     if (status === "cancelled") return "cancelled"
+    if (status === "no_show") return "no_show"
     if (kind === "moved" || status === "rescheduled") return "moved"
     return status === "confirmed" ? "confirmed" : null
 }

@@ -4,10 +4,10 @@ import type { MessageBundle } from "@modules/platform/i18n"
 export const BOOKING_PORTS_MESSAGES: MessageBundle = {
     vi: {
         "bookingPorts.delivered": "Đã nhắn khách qua {{channel}}",
-        "bookingPorts.failed": "Chưa nhắn được khách",
+        "bookingPorts.failed": "Không có kênh để nhắn khách",
     },
     en: {
         "bookingPorts.delivered": "Notified the customer through {{channel}}",
-        "bookingPorts.failed": "Could not notify the customer",
+        "bookingPorts.failed": "No channel to message the customer",
     },
 }

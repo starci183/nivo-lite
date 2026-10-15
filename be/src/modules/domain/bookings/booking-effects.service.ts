@@ -9,7 +9,9 @@ import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { InjectMessageCatalog } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
 import { BookingModelService } from "./booking-model.service"
-import type { BookingEffects, BookingEvent, BookingNotifier, BookingSettings } from "./bookings.contracts"
+import { BookingNoticesService } from "./booking-notices.service"
+import type { BookingNotifier } from "./booking-notice.contracts"
+import type { BookingEffects, BookingEvent, BookingSettings } from "./bookings.contracts"
 import { InjectBookingNotifier } from "./bookings.decorators"
 import {
     CLAIM_EFFECT,
@@ -20,7 +22,6 @@ import {
 import type { EffectsRow } from "./persistence/booking.rows"
 import { feeOf, noticeMark, noticeOf, remindersOf } from "./policies/booking-effects.policy"
 import type { NoticeKind } from "./policies/booking-effects.policy"
-import { localDate, localHhmm } from "./policies/zoned-time.policy"
 
 const STORED_LOCALE = "vi"
 const NO_EFFECTS: BookingEffects = { found: false, reminders: "none", feeVnd: 0, handedOff: false, notified: false }
@@ -45,6 +46,7 @@ export class BookingEffectsService {
         @InjectMessageCatalog() private readonly messages: MessageCatalog,
         @InjectBookingNotifier() private readonly notifier: BookingNotifier,
         private readonly models: BookingModelService,
+        private readonly notices: BookingNoticesService,
         private readonly reminders: BookingRemindersService,
         private readonly events: EventsService,
         private readonly inbound: InboundEventsService,
@@ -56,7 +58,7 @@ export class BookingEffectsService {
         const settings = await this.models.settings(event.workspaceId)
         const applied = await this.entityManager.transaction((manager) => this.inTransaction(manager, event, settings))
         if (applied === null) return NO_EFFECTS
-        const notified = await this.tell(event, applied.row, settings)
+        const notified = await this.tell(event, applied.row, settings, applied.effects.feeVnd)
         return { ...applied.effects, notified }
     }
 
@@ -154,9 +156,14 @@ export class BookingEffectsService {
         )
     }
 
-    private async tell(event: BookingEvent, row: EffectsRow, settings: BookingSettings): Promise<boolean> {
+    private async tell(
+        event: BookingEvent,
+        row: EffectsRow,
+        settings: BookingSettings,
+        feeVnd: number,
+    ): Promise<boolean> {
         const notice: NoticeKind | null = noticeOf(event.kind, row.status)
-        if (notice === null || row.conversation_id === null) return false
+        if (notice === null) return false
         const mark = noticeMark(notice, row.reschedule_count)
         const claimed = await this.entityManager.query<Array<{ id: string }>>(CLAIM_EFFECT, [
             event.workspaceId,
@@ -164,25 +171,24 @@ export class BookingEffectsService {
             mark,
         ])
         if (claimed.length === 0) return false
-        const zone = settings.timezone
-        const text = this.messages.get(
-            `bookings.notice.${notice}`,
-            {
-                service: row.service_name,
-                when: `${localHhmm(row.start_ms, zone)} ${localDate(row.start_ms, zone)}`,
-            },
-            STORED_LOCALE,
-        )
-        let delivered = false
+        let kept = false
         try {
-            delivered = await this.notifier.notify({
+            const facts = await this.notices.factsOf(event.workspaceId, row, settings, feeVnd)
+            const result = await this.notifier.notify({
                 workspaceId: event.workspaceId,
+                bookingId: event.bookingId,
+                kind: notice,
+                leadId: row.lead_id,
                 conversationId: row.conversation_id,
-                text,
+                email: row.customer_email,
+                subject: this.notices.subjectOf(notice, row.service_name),
+                text: this.notices.textOf(notice, facts),
+                dedupeKey: `${event.bookingId}:${mark}`,
             })
-            return delivered
+            kept = result.kept
+            return result.delivered
         } finally {
-            if (!delivered) await this.entityManager.query(RELEASE_EFFECT, [event.workspaceId, event.bookingId, mark])
+            if (!kept) await this.entityManager.query(RELEASE_EFFECT, [event.workspaceId, event.bookingId, mark])
         }
     }
 }

@@ -11,6 +11,8 @@ export enum WorkPerformersErrorCode {
     EmailNotSent = "WORK_PERFORMERS_EMAIL_NOT_SENT",
     /** The booking could not be moved to the time asked (taken, closed or not movable). */
     BookingNotMoved = "WORK_PERFORMERS_BOOKING_NOT_MOVED",
+    /** The reminder has no text to send. */
+    ReminderEmpty = "WORK_PERFORMERS_REMINDER_EMPTY",
 }
 
 /** How each work-performers code travels. */
@@ -19,6 +21,7 @@ export const WORK_PERFORMERS_ERROR_KINDS: Record<WorkPerformersErrorCode, ErrorK
     [WorkPerformersErrorCode.OrderUnavailable]: "not-found",
     [WorkPerformersErrorCode.EmailNotSent]: "unavailable",
     [WorkPerformersErrorCode.BookingNotMoved]: "conflict",
+    [WorkPerformersErrorCode.ReminderEmpty]: "invalid",
 }
 
 /** The one error class of the work-performers capability. */

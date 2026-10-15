@@ -61,7 +61,14 @@ describe("booking-effects.policy", () => {
             expect(noticeOf("created", "confirmed")).toBe("confirmed")
         })
 
-        it.each(["requested", "done", "no_show", "unknown"])("does not announce the status %s", (status) => {
+        it.each<BookingEventKind>(["created", "status", "moved"])(
+            "gives a no-show priority over the event %s",
+            (kind) => {
+                expect(noticeOf(kind, "no_show")).toBe("no_show")
+            },
+        )
+
+        it.each(["requested", "done", "unknown"])("does not announce the status %s", (status) => {
             expect(noticeOf("status", status)).toBeNull()
         })
     })
@@ -72,6 +79,7 @@ describe("booking-effects.policy", () => {
             expect(noticeMark("moved", 3)).toBe("notice:moved:3")
             expect(noticeMark("confirmed", 3)).toBe("notice:confirmed")
             expect(noticeMark("cancelled", 3)).toBe("notice:cancelled")
+            expect(noticeMark("no_show", 3)).toBe("notice:no_show")
         })
     })
 

@@ -65,6 +65,28 @@ describe("toConnectionRecord", () => {
         expect(mapped.firstEvent).toEqual(firstEvent)
     })
 
+    it("reads a finite numeric owner chat id as text while dropping other numeric facts", () => {
+        const mapped = toConnectionRecord({
+            ...row,
+            public_meta: { owner_chat_id: 123456789, count: 3, bad: Number.NaN },
+        })
+
+        expect(mapped.meta).toEqual({ owner_chat_id: "123456789" })
+    })
+
+    it.each([Number.NaN, Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY])(
+        "drops a non-finite numeric owner chat id: %p",
+        (ownerChatId) => {
+            expect(toConnectionRecord({ ...row, public_meta: { owner_chat_id: ownerChatId } }).meta).toEqual({})
+        },
+    )
+
+    it("keeps an owner chat id that is already text", () => {
+        expect(toConnectionRecord({ ...row, public_meta: { owner_chat_id: "123456789" } }).meta).toEqual({
+            owner_chat_id: "123456789",
+        })
+    })
+
     it.each([
         undefined,
         null,

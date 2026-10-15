@@ -1,12 +1,10 @@
 import { Injectable } from "@nestjs/common"
+import { GenerationsService } from "@modules/domain/ai-generations"
 import { BrainEvalCasesService } from "@modules/domain/brain-eval-cases"
 import { BrainLessonsService } from "@modules/domain/brain-lessons"
 import type { LessonEvidence } from "@modules/domain/brain-lessons"
-import { UsageMeterService } from "@modules/domain/knowledge"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import type { WorkspaceRole } from "@modules/domain/workspace-members"
-import { InjectLlm } from "@modules/integrations/llm"
-import type { LlmPort } from "@modules/integrations/llm"
 import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
 import { eachInOrder } from "@modules/platform/primitives"
@@ -31,17 +29,16 @@ const LEARN_TIMEOUT_MS = 60_000
 /**
  * Self-learning, the reviewed way. The model never changes itself: what changes is the brain. Every correction the owner made of an
  * agent's work is kept as a regression case, and recurring patterns across the corrections are filed as PROPOSED lessons, each citing its
- * decisions. Nothing reaches an agent until an owner or manager approves the lesson. The model call is NIVO's: metered, never billed
+ * decisions. Nothing reaches an agent until an owner or manager approves the lesson. The model call is NIVO's: metered as `guide`, never billed
  * to the workspace allowance.
  */
 export class BrainLearningService {
     constructor(
         @InjectCorrectionSource() private readonly corrections: CorrectionSource,
-        @InjectLlm() private readonly llm: LlmPort,
+        private readonly generations: GenerationsService,
         private readonly members: WorkspaceMembersService,
         private readonly lessons: BrainLessonsService,
         private readonly cases: BrainEvalCasesService,
-        private readonly usage: UsageMeterService,
         private readonly json: ModelJsonService,
         @InjectClock() private readonly clock: Clock,
     ) {}
@@ -66,20 +63,23 @@ export class BrainLearningService {
             .filter((lesson) => lesson.module === module || lesson.module === null)
             .map((lesson) => `- ${lesson.title}: ${lesson.body}`)
         const prompt = learnPrompt(existing, list)
-        const answer = await this.llm.complete({ system: LEARN_SYSTEM, prompt, timeoutMs: LEARN_TIMEOUT_MS })
-        if (answer === null) return { corrections: list.length, newCases, proposed: 0, reason: "model_unavailable" }
-        await this.usage.record({
+        // The same door every text goes through: it writes the `ai_generations` row and meters the delivered text as `guide` (NIVO's call).
+        const answer = await this.generations.generate({
             workspaceId,
+            purpose: "brain_lessons",
             kind: "guide",
             module: "other",
-            model: answer.model,
-            usage: answer.usage,
-            promptChars: LEARN_SYSTEM.length + prompt.length,
-            completionChars: answer.text.length,
+            responseFormat: "json",
+            timeoutMs: LEARN_TIMEOUT_MS,
+            messages: [
+                { role: "system", content: LEARN_SYSTEM },
+                { role: "user", content: prompt },
+            ],
         })
+        if (!answer.ok) return { corrections: list.length, newCases, proposed: 0, reason: "model_unavailable" }
         const known = new Set(list.map((item) => item.decisionId))
         let proposed = 0
-        await eachInOrder(parseLessons(this.json.jsonOf(answer.text)), async (lesson) => {
+        await eachInOrder(parseLessons(this.json.jsonOf(answer.output)), async (lesson) => {
             // A lesson must stand on at least two real corrections.
             const ids = [...new Set(lesson.decisions)].filter((id) => known.has(id))
             if (ids.length < 2) return

@@ -1,7 +1,7 @@
 import { sql } from "@modules/platform/database"
 
 /** The reminder offsets the owner customised on the appointment reminder card ($1 workspace). */
-export const SELECT_REMINDER_CARD = sql`SELECT config
+export const SELECT_REMINDER_CARD = sql`SELECT config, body
 FROM public.automation_pipelines
 WHERE workspace_id = $1 AND template_key = 'appointment_reminder' AND enabled
 LIMIT 1`
@@ -21,3 +21,22 @@ WHERE booking_id = $1 AND status = 'scheduled' AND due_at <= $2::timestamptz`
 export const CANCEL_OPEN_REMINDERS = sql`UPDATE public.booking_reminders
 SET status = 'cancelled', note = $2
 WHERE booking_id = $1 AND status IN ('scheduled', 'waiting')`
+
+/** Takes the reminders that are due, once: a scheduled row turns `waiting` and is returned to the one tick that took it ($1 now, $2 limit, $3 note). */
+export const CLAIM_DUE_REMINDERS = sql`WITH due AS (
+    SELECT id FROM public.booking_reminders
+    WHERE status = 'scheduled' AND due_at <= $1::timestamptz
+    ORDER BY due_at
+    LIMIT $2::int
+    FOR UPDATE SKIP LOCKED
+)
+UPDATE public.booking_reminders r
+SET status = 'waiting', note = $3
+FROM due
+WHERE r.id = due.id
+RETURNING r.id, r.workspace_id, r.booking_id, r.kind, (extract(epoch FROM r.due_at) * 1000)::float8 AS due_ms`
+
+/** Writes where a taken reminder ended ($1 reminder, $2 status, $3 work item or null, $4 sent instant or null, $5 note). */
+export const SETTLE_REMINDER = sql`UPDATE public.booking_reminders
+SET status = $2, work_item_id = $3::uuid, sent_at = $4::timestamptz, note = $5
+WHERE id = $1::uuid`

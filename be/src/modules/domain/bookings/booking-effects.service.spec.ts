@@ -10,7 +10,9 @@ import { MESSAGE_CATALOG } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
 import { BookingEffectsService } from "./booking-effects.service"
 import { BookingModelService } from "./booking-model.service"
-import type { BookingEffects, BookingEvent, BookingNotifier, BookingSettings } from "./bookings.contracts"
+import type { BookingNotice, BookingNotifier } from "./booking-notice.contracts"
+import { BookingNoticesService } from "./booking-notices.service"
+import type { BookingEffects, BookingEvent, BookingSettings } from "./bookings.contracts"
 import { BOOKINGS_NOTIFIER } from "./bookings.decorators"
 import {
     CLAIM_EFFECT,
@@ -20,6 +22,7 @@ import {
 } from "./persistence/booking-effects.sql"
 import { DEFAULT_SETTINGS } from "./persistence/booking.rows"
 import type { EffectsRow } from "./persistence/booking.rows"
+import type { NoticeFacts } from "./policies/booking-notice-text.policy"
 
 const WORKSPACE = "ws-1"
 const BOOKING_ID = "b1"
@@ -28,12 +31,47 @@ const START = Date.UTC(2026, 9, 15, 2, 30)
 const HOUR = 3_600_000
 const CLAIMED = [CLAIM_EFFECT, [{ id: BOOKING_ID }]] as const
 const ALREADY_CLAIMED = [CLAIM_EFFECT, []] as const
+const SELECTED = [SELECT_BOOKING_FOR_EFFECTS, [WORKSPACE, BOOKING_ID]] as const
+const claimOf = (mark: string) => [CLAIM_EFFECT, [WORKSPACE, BOOKING_ID, mark]] as const
+const releaseOf = (mark: string) => [RELEASE_EFFECT, [WORKSPACE, BOOKING_ID, mark]] as const
 const NO_EFFECTS: BookingEffects = { found: false, reminders: "none", feeVnd: 0, handedOff: false, notified: false }
 const effectsOf = builder<BookingEffects>({ ...NO_EFFECTS, found: true })
 const eventOf = builder<BookingEvent>({ workspaceId: WORKSPACE, bookingId: BOOKING_ID, kind: "status" })
 const settingsOf = builder<BookingSettings>(DEFAULT_SETTINGS)
+const evidenceOf = builder<Parameters<EventsService["record"]>[0]>({
+    workspaceId: WORKSPACE,
+    kind: "booking.done",
+    actor: "vi:bookings.evidence.actor:{}",
+    summary: 'vi:bookings.evidence.done:{"service":"Cut","customer":"Mai"}',
+    leadId: "lead-1",
+})
+const noticeOf = builder<BookingNotice>({
+    workspaceId: WORKSPACE,
+    bookingId: BOOKING_ID,
+    kind: "confirmed",
+    leadId: "lead-1",
+    conversationId: "conversation-1",
+    email: "mai@example.com",
+    subject: "Notice subject",
+    text: "Notice text",
+    dedupeKey: `${BOOKING_ID}:notice:confirmed`,
+})
+const FACTS: NoticeFacts = {
+    shop: "Shop",
+    customer: "Mai",
+    service: "Cut",
+    resource: "An",
+    startMs: START,
+    timezone: "Asia/Ho_Chi_Minh",
+    address: "1 Main Street",
+    depositVnd: 50_000,
+    cancelWindowHours: 24,
+    fromMs: null,
+    feeVnd: 0,
+}
 const rowOf = builder<EffectsRow>({
     id: BOOKING_ID,
+    workspace_id: WORKSPACE,
     status: "confirmed",
     lead_id: "lead-1",
     conversation_id: "conversation-1",
@@ -48,6 +86,10 @@ const rowOf = builder<EffectsRow>({
     cancel_fee_vnd: 0,
     start_ms: START,
     cancelled_ms: null,
+    resource_name: "An",
+    deposit_vnd: 50_000,
+    from_ms: null,
+    holds_slot: true,
 })
 const build = async (stubs: ReadonlyArray<readonly [string, unknown]> = [], settings = settingsOf()) => {
     const tx = fakeTransaction(mockEntityManager({ query: stubs }))
@@ -61,7 +103,11 @@ const build = async (stubs: ReadonlyArray<readonly [string, unknown]> = [], sett
     const inbound = mock<InboundEventsService>()
     inbound.handOffOrder.mockResolvedValue(true)
     const notifier = mock<BookingNotifier>()
-    notifier.notify.mockResolvedValue(true)
+    notifier.notify.mockResolvedValue({ delivered: true, kept: true, via: "email" })
+    const notices = mock<BookingNoticesService>()
+    notices.factsOf.mockResolvedValue(FACTS)
+    notices.textOf.mockReturnValue("Notice text")
+    notices.subjectOf.mockReturnValue("Notice subject")
     const messages = mock<MessageCatalog>()
     messages.get.mockImplementation((key, params, locale) => `${locale}:${key}:${JSON.stringify(params)}`)
     const moduleRef = await Test.createTestingModule({
@@ -72,12 +118,14 @@ const build = async (stubs: ReadonlyArray<readonly [string, unknown]> = [], sett
             { provide: MESSAGE_CATALOG, useValue: messages },
             { provide: BOOKINGS_NOTIFIER, useValue: notifier },
             { provide: BookingModelService, useValue: models },
+            { provide: BookingNoticesService, useValue: notices },
             { provide: BookingRemindersService, useValue: reminders },
             { provide: EventsService, useValue: events },
             { provide: InboundEventsService, useValue: inbound },
         ],
     }).compile()
-    return { service: moduleRef.get(BookingEffectsService), tx, models, reminders, events, inbound, notifier, messages }
+    const service = moduleRef.get(BookingEffectsService)
+    return { service, tx, models, notices, reminders, events, inbound, notifier, messages }
 }
 
 describe("BookingEffectsService", () => {
@@ -109,7 +157,7 @@ describe("BookingEffectsService", () => {
         await expect(service.apply(eventOf())).resolves.toEqual(NO_EFFECTS)
 
         expect(models.settings.mock.calls).toEqual([[WORKSPACE]])
-        expect(tx.em.query.mock.calls).toEqual([[SELECT_BOOKING_FOR_EFFECTS, [WORKSPACE, BOOKING_ID]]])
+        expect(tx.em.query.mock.calls).toEqual([SELECTED])
         expect(tx.outcomes).toEqual(["commit"])
         expect(reminders.schedule).not.toHaveBeenCalled()
         expect(reminders.cancel).not.toHaveBeenCalled()
@@ -125,7 +173,7 @@ describe("BookingEffectsService", () => {
 
         await expect(service.apply(eventOf({ kind: "created" }))).resolves.toEqual(effectsOf())
 
-        expect(tx.em.query.mock.calls).toEqual([[SELECT_BOOKING_FOR_EFFECTS, [WORKSPACE, BOOKING_ID]]])
+        expect(tx.em.query.mock.calls).toEqual([SELECTED])
         expect(reminders.schedule).not.toHaveBeenCalled()
         expect(reminders.cancel).not.toHaveBeenCalled()
         expect(events.record).not.toHaveBeenCalled()
@@ -135,40 +183,19 @@ describe("BookingEffectsService", () => {
     })
 
     it.each([
-        {
-            status: "confirmed",
-            kind: "status",
-            count: 0,
-            timezone: "Asia/Ho_Chi_Minh",
-            hours: [24, 2],
-            notice: "confirmed",
-            mark: "notice:confirmed",
-            when: "09:30 2026-10-15",
-            delivered: true,
-        },
-        {
-            status: "rescheduled",
-            kind: "moved",
-            count: 3,
-            timezone: "UTC",
-            hours: [12, 1],
-            notice: "moved",
-            mark: "notice:moved:3",
-            when: "02:30 2026-10-15",
-            delivered: false,
-        },
-    ] as const)("plans $status reminders and handles a delivered=$delivered notice after commit", async (test) => {
-        const { service, tx, reminders, notifier, messages, events, inbound } = await build(
-            [
-                [SELECT_BOOKING_FOR_EFFECTS, [rowOf({ status: test.status, reschedule_count: test.count })]],
-                CLAIMED,
-                [RELEASE_EFFECT, []],
-            ],
-            settingsOf({ timezone: test.timezone, reminderHours: test.hours }),
-        )
+        ["confirmed", "status", 0, "Asia/Ho_Chi_Minh", [24, 2], "confirmed", "notice:confirmed", true],
+        ["rescheduled", "moved", 3, "UTC", [12, 1], "moved", "notice:moved:3", false],
+    ] as const)("plans %s reminders and processes its notice after commit", async (...values) => {
+        const [status, kind, count, timezone, hours, notice, mark, delivered] = values
+        const test = { status, kind, count, timezone, hours, notice, mark, delivered }
+        const row = rowOf({ status: test.status, reschedule_count: test.count })
+        const settings = settingsOf({ timezone: test.timezone, reminderHours: test.hours })
+        const stubs = [[SELECT_BOOKING_FOR_EFFECTS, [row]], CLAIMED, [RELEASE_EFFECT, []]] as const
+        const { service, tx, reminders, notices, notifier, messages, events, inbound } = await build(stubs, settings)
         notifier.notify.mockImplementation(() => {
             expect(tx.outcomes).toEqual(["commit"])
-            return Promise.resolve(test.delivered)
+            expect(tx.em.query.mock.calls).toEqual([SELECTED, claimOf(test.mark)])
+            return Promise.resolve({ delivered: test.delivered, kept: test.delivered, via: "email" })
         })
 
         await expect(service.apply(eventOf({ kind: test.kind }))).resolves.toEqual(
@@ -177,34 +204,26 @@ describe("BookingEffectsService", () => {
 
         const manager = reminders.schedule.mock.calls[0]?.[0].manager
         expect(isTransactionManager(manager)).toBe(true)
-        expect(reminders.schedule.mock.calls).toEqual([
-            [
-                {
-                    manager,
-                    workspaceId: WORKSPACE,
-                    bookingId: BOOKING_ID,
-                    startMs: START,
-                    nowMs: NOW,
-                    defaultHours: test.hours,
-                },
-            ],
-        ])
+        const plan = {
+            manager,
+            workspaceId: WORKSPACE,
+            bookingId: BOOKING_ID,
+            startMs: START,
+            nowMs: NOW,
+            defaultHours: test.hours,
+        }
+        expect(reminders.schedule.mock.calls).toEqual([[plan]])
         expect(tx.em.query.mock.calls).toEqual([
-            [SELECT_BOOKING_FOR_EFFECTS, [WORKSPACE, BOOKING_ID]],
-            [CLAIM_EFFECT, [WORKSPACE, BOOKING_ID, test.mark]],
-            ...(!test.delivered ? [[RELEASE_EFFECT, [WORKSPACE, BOOKING_ID, test.mark]]] : []),
+            SELECTED,
+            claimOf(test.mark),
+            ...(!test.delivered ? [releaseOf(test.mark)] : []),
         ])
-        expect(messages.get.mock.calls).toEqual([
-            [`bookings.notice.${test.notice}`, { service: "Cut", when: test.when }, "vi"],
-        ])
+        expect(notices.factsOf.mock.calls).toEqual([[WORKSPACE, row, settings, 0]])
+        expect(notices.textOf.mock.calls).toEqual([[test.notice, FACTS]])
+        expect(notices.subjectOf.mock.calls).toEqual([[test.notice, "Cut"]])
+        expect(messages.get).not.toHaveBeenCalled()
         expect(notifier.notify.mock.calls).toEqual([
-            [
-                {
-                    workspaceId: WORKSPACE,
-                    conversationId: "conversation-1",
-                    text: `vi:bookings.notice.${test.notice}:{"service":"Cut","when":"${test.when}"}`,
-                },
-            ],
+            [noticeOf({ kind: test.notice, dedupeKey: `${BOOKING_ID}:${test.mark}` })],
         ])
         expect(reminders.cancel).not.toHaveBeenCalled()
         expect(events.record).not.toHaveBeenCalled()
@@ -221,27 +240,64 @@ describe("BookingEffectsService", () => {
         notifier.notify.mockRejectedValueOnce(failure)
 
         await expect(service.apply(eventOf())).rejects.toBe(failure)
-        expect(tx.em.query.mock.calls).toEqual([
-            [SELECT_BOOKING_FOR_EFFECTS, [WORKSPACE, BOOKING_ID]],
-            [CLAIM_EFFECT, [WORKSPACE, BOOKING_ID, "notice:confirmed"]],
-            [RELEASE_EFFECT, [WORKSPACE, BOOKING_ID, "notice:confirmed"]],
-        ])
+        expect(tx.em.query.mock.calls).toEqual([SELECTED, claimOf("notice:confirmed"), releaseOf("notice:confirmed")])
         expect(tx.outcomes).toEqual(["commit"])
 
         await expect(service.apply(eventOf())).resolves.toEqual(effectsOf({ reminders: "planned", notified: true }))
         expect(notifier.notify).toHaveBeenCalledTimes(2)
         expect(tx.em.query.mock.calls).toEqual([
-            [SELECT_BOOKING_FOR_EFFECTS, [WORKSPACE, BOOKING_ID]],
-            [CLAIM_EFFECT, [WORKSPACE, BOOKING_ID, "notice:confirmed"]],
-            [RELEASE_EFFECT, [WORKSPACE, BOOKING_ID, "notice:confirmed"]],
-            [SELECT_BOOKING_FOR_EFFECTS, [WORKSPACE, BOOKING_ID]],
-            [CLAIM_EFFECT, [WORKSPACE, BOOKING_ID, "notice:confirmed"]],
+            SELECTED,
+            claimOf("notice:confirmed"),
+            releaseOf("notice:confirmed"),
+            SELECTED,
+            claimOf("notice:confirmed"),
         ])
         expect(tx.outcomes).toEqual(["commit", "commit"])
     })
 
-    it.each([true, false])("plans reminders without a notice when conversation exists=%s", async (conversation) => {
-        const { service, tx, reminders, notifier, messages } = await build([
+    it("keeps a queued notice mark even when the customer has not received the notice", async () => {
+        const { service, tx, notifier } = await build([
+            [SELECT_BOOKING_FOR_EFFECTS, [rowOf()]],
+            CLAIMED,
+            ALREADY_CLAIMED,
+        ])
+        notifier.notify.mockResolvedValue({ delivered: false, kept: true, via: "email" })
+
+        await expect(service.apply(eventOf())).resolves.toEqual(effectsOf({ reminders: "planned" }))
+        await expect(service.apply(eventOf())).resolves.toEqual(effectsOf({ reminders: "planned" }))
+
+        expect(notifier.notify.mock.calls).toEqual([[noticeOf()]])
+        const claim = claimOf("notice:confirmed")
+        expect(tx.em.query.mock.calls).toEqual([SELECTED, claim, SELECTED, claim])
+        expect(tx.outcomes).toEqual(["commit", "commit"])
+    })
+
+    it.each([
+        { lead_id: "lead-1", customer_email: "mai@example.com" },
+        { lead_id: null, customer_email: null },
+    ])("notifies a public-page booking with lead=$lead_id and email=$customer_email", async (contact) => {
+        const row = rowOf({ ...contact, conversation_id: null })
+        const { service, tx, notices, notifier } = await build([[SELECT_BOOKING_FOR_EFFECTS, [row]], CLAIMED])
+
+        await expect(service.apply(eventOf())).resolves.toEqual(effectsOf({ reminders: "planned", notified: true }))
+
+        expect(notices.factsOf.mock.calls).toEqual([[WORKSPACE, row, settingsOf(), 0]])
+        expect(notices.textOf.mock.calls).toEqual([["confirmed", FACTS]])
+        expect(notices.subjectOf.mock.calls).toEqual([["confirmed", "Cut"]])
+        expect(notifier.notify.mock.calls).toEqual([
+            [
+                noticeOf({
+                    leadId: contact.lead_id,
+                    conversationId: null,
+                    email: contact.customer_email,
+                }),
+            ],
+        ])
+        expect(tx.em.query.mock.calls).toEqual([SELECTED, claimOf("notice:confirmed")])
+    })
+
+    it.each([true, false])("skips an already claimed notice when conversation exists=%s", async (conversation) => {
+        const { service, tx, reminders, notifier, messages, notices } = await build([
             [SELECT_BOOKING_FOR_EFFECTS, [rowOf({ conversation_id: conversation ? "conversation-1" : null })]],
             ALREADY_CLAIMED,
         ])
@@ -249,12 +305,12 @@ describe("BookingEffectsService", () => {
         await expect(service.apply(eventOf())).resolves.toEqual(effectsOf({ reminders: "planned" }))
 
         expect(reminders.schedule).toHaveBeenCalledTimes(1)
-        expect(tx.em.query.mock.calls).toEqual([
-            [SELECT_BOOKING_FOR_EFFECTS, [WORKSPACE, BOOKING_ID]],
-            ...(conversation ? [[CLAIM_EFFECT, [WORKSPACE, BOOKING_ID, "notice:confirmed"]]] : []),
-        ])
+        expect(tx.em.query.mock.calls).toEqual([SELECTED, claimOf("notice:confirmed")])
         expect(notifier.notify).not.toHaveBeenCalled()
         expect(messages.get).not.toHaveBeenCalled()
+        expect(notices.factsOf).not.toHaveBeenCalled()
+        expect(notices.textOf).not.toHaveBeenCalled()
+        expect(notices.subjectOf).not.toHaveBeenCalled()
     })
 
     it.each([
@@ -265,31 +321,28 @@ describe("BookingEffectsService", () => {
         { status: "no_show", fee: 0, recorded: 1700, previous: 1700, changed: false },
         { status: "done", fee: 0, recorded: 1700, previous: 1700, changed: false },
     ])("stops $status reminders and retains or records fee $recorded (policy=$fee)", async (test) => {
-        const { service, tx, reminders, events, messages, notifier, inbound } = await build(
-            [
-                [
-                    SELECT_BOOKING_FOR_EFFECTS,
-                    [
-                        rowOf({
-                            status: test.status,
-                            conversation_id: null,
-                            cancelled_ms: START - HOUR,
-                            cancel_fee_vnd: test.previous,
-                        }),
-                    ],
-                ],
-                [SET_BOOKING_FEE, test.changed ? [{ id: BOOKING_ID }] : []],
-                CLAIMED,
-            ],
-            settingsOf({
-                cancelWindowHours: 2,
-                lateCancelFeePct: test.fee === 0 ? 0 : 37,
-                noShowFeeVnd: test.fee === 0 ? 0 : 35000,
-            }),
+        const row = rowOf({
+            status: test.status,
+            conversation_id: null,
+            cancelled_ms: START - HOUR,
+            cancel_fee_vnd: test.previous,
+        })
+        const settings = settingsOf({
+            cancelWindowHours: 2,
+            lateCancelFeePct: test.fee === 0 ? 0 : 37,
+            noShowFeeVnd: test.fee === 0 ? 0 : 35000,
+        })
+        const { service, tx, reminders, events, messages, notifier, notices, inbound } = await build(
+            [[SELECT_BOOKING_FOR_EFFECTS, [row]], [SET_BOOKING_FEE, test.changed ? [{ id: BOOKING_ID }] : []], CLAIMED],
+            settings,
         )
+        notifier.notify.mockImplementation(() => {
+            expect(tx.outcomes).toEqual(["commit"])
+            return Promise.resolve({ delivered: true, kept: true, via: "email" })
+        })
 
         await expect(service.apply(eventOf())).resolves.toEqual(
-            effectsOf({ reminders: "stopped", feeVnd: test.recorded }),
+            effectsOf({ reminders: "stopped", feeVnd: test.recorded, notified: test.status !== "done" }),
         )
 
         const manager = reminders.cancel.mock.calls[0]?.[0]
@@ -297,27 +350,37 @@ describe("BookingEffectsService", () => {
         expect(reminders.cancel.mock.calls).toEqual([[manager, BOOKING_ID, `booking_${test.status}`]])
         expect(reminders.schedule).not.toHaveBeenCalled()
         expect(tx.em.query.mock.calls).toEqual([
-            [SELECT_BOOKING_FOR_EFFECTS, [WORKSPACE, BOOKING_ID]],
+            SELECTED,
             ...(test.fee > 0 ? [[SET_BOOKING_FEE, [WORKSPACE, BOOKING_ID, test.fee]]] : []),
-            [CLAIM_EFFECT, [WORKSPACE, BOOKING_ID, `evidence:${test.status}`]],
+            claimOf(`evidence:${test.status}`),
+            ...(test.status !== "done" ? [claimOf(`notice:${test.status}`)] : []),
         ])
-        expect(events.record.mock.calls).toEqual([
-            [
-                {
-                    workspaceId: WORKSPACE,
-                    kind: `booking.${test.status}`,
-                    actor: "vi:bookings.evidence.actor:{}",
-                    summary: `vi:bookings.evidence.${test.status}:{"service":"Cut","customer":"Mai"}`,
-                    leadId: "lead-1",
-                },
-                manager,
-            ],
-        ])
+        const evidence = evidenceOf({
+            kind: `booking.${test.status}`,
+            summary: `vi:bookings.evidence.${test.status}:{"service":"Cut","customer":"Mai"}`,
+        })
+        expect(events.record.mock.calls).toEqual([[evidence, manager]])
         expect(messages.get.mock.calls).toEqual([
             ["bookings.evidence.actor", {}, "vi"],
             [`bookings.evidence.${test.status}`, { service: "Cut", customer: "Mai" }, "vi"],
         ])
-        expect(notifier.notify).not.toHaveBeenCalled()
+        if (test.status === "done") {
+            expect(notifier.notify).not.toHaveBeenCalled()
+            expect(notices.factsOf).not.toHaveBeenCalled()
+        } else {
+            expect(notices.factsOf.mock.calls).toEqual([[WORKSPACE, row, settings, test.recorded]])
+            expect(notices.textOf.mock.calls).toEqual([[test.status, FACTS]])
+            expect(notices.subjectOf.mock.calls).toEqual([[test.status, "Cut"]])
+            expect(notifier.notify.mock.calls).toEqual([
+                [
+                    noticeOf({
+                        kind: test.status === "no_show" ? "no_show" : "cancelled",
+                        conversationId: null,
+                        dedupeKey: `${BOOKING_ID}:notice:${test.status}`,
+                    }),
+                ],
+            ])
+        }
         expect(inbound.handOffOrder).not.toHaveBeenCalled()
     })
 
@@ -333,34 +396,19 @@ describe("BookingEffectsService", () => {
 
         const manager = reminders.cancel.mock.calls[0]?.[0]
         expect(isTransactionManager(manager)).toBe(true)
-        expect(events.record.mock.calls).toEqual([
-            [
-                {
-                    workspaceId: WORKSPACE,
-                    kind: "booking.done",
-                    actor: "vi:bookings.evidence.actor:{}",
-                    summary: 'vi:bookings.evidence.done:{"service":"Cut","customer":"Mai"}',
-                    leadId: null,
-                },
-                manager,
-            ],
-        ])
+        expect(events.record.mock.calls).toEqual([[evidenceOf({ leadId: null }), manager]])
         expect(messages.get.mock.calls).toEqual([
             ["bookings.evidence.actor", {}, "vi"],
             ["bookings.evidence.done", { service: "Cut", customer: "Mai" }, "vi"],
         ])
-        expect(tx.em.query.mock.calls).toEqual([
-            [SELECT_BOOKING_FOR_EFFECTS, [WORKSPACE, BOOKING_ID]],
-            [CLAIM_EFFECT, [WORKSPACE, BOOKING_ID, "evidence:done"]],
-            [SELECT_BOOKING_FOR_EFFECTS, [WORKSPACE, BOOKING_ID]],
-            [CLAIM_EFFECT, [WORKSPACE, BOOKING_ID, "evidence:done"]],
-        ])
+        expect(tx.em.query.mock.calls).toEqual([SELECTED, claimOf("evidence:done"), SELECTED, claimOf("evidence:done")])
         expect(tx.outcomes).toEqual(["commit", "commit"])
     })
 
     it("tells the customer about a cancellation whose evidence was already recorded", async () => {
-        const { service, tx, reminders, notifier, messages, events } = await build([
-            [SELECT_BOOKING_FOR_EFFECTS, [rowOf({ status: "cancelled" })]],
+        const row = rowOf({ status: "cancelled" })
+        const { service, tx, reminders, notifier, notices, messages, events } = await build([
+            [SELECT_BOOKING_FOR_EFFECTS, [row]],
             ALREADY_CLAIMED,
             CLAIMED,
         ])
@@ -370,23 +418,14 @@ describe("BookingEffectsService", () => {
         const manager = reminders.cancel.mock.calls[0]?.[0]
         expect(isTransactionManager(manager)).toBe(true)
         expect(reminders.cancel.mock.calls).toEqual([[manager, BOOKING_ID, "booking_cancelled"]])
-        expect(tx.em.query.mock.calls).toEqual([
-            [SELECT_BOOKING_FOR_EFFECTS, [WORKSPACE, BOOKING_ID]],
-            [CLAIM_EFFECT, [WORKSPACE, BOOKING_ID, "evidence:cancelled"]],
-            [CLAIM_EFFECT, [WORKSPACE, BOOKING_ID, "notice:cancelled"]],
-        ])
+        expect(tx.em.query.mock.calls).toEqual([SELECTED, claimOf("evidence:cancelled"), claimOf("notice:cancelled")])
         expect(events.record).not.toHaveBeenCalled()
-        expect(messages.get.mock.calls).toEqual([
-            ["bookings.notice.cancelled", { service: "Cut", when: "09:30 2026-10-15" }, "vi"],
-        ])
+        expect(messages.get).not.toHaveBeenCalled()
+        expect(notices.factsOf.mock.calls).toEqual([[WORKSPACE, row, settingsOf(), 0]])
+        expect(notices.textOf.mock.calls).toEqual([["cancelled", FACTS]])
+        expect(notices.subjectOf.mock.calls).toEqual([["cancelled", "Cut"]])
         expect(notifier.notify.mock.calls).toEqual([
-            [
-                {
-                    workspaceId: WORKSPACE,
-                    conversationId: "conversation-1",
-                    text: 'vi:bookings.notice.cancelled:{"service":"Cut","when":"09:30 2026-10-15"}',
-                },
-            ],
+            [noticeOf({ kind: "cancelled", dedupeKey: `${BOOKING_ID}:notice:cancelled` })],
         ])
     })
 
@@ -395,21 +434,14 @@ describe("BookingEffectsService", () => {
         { phone: null, email: "mai@example.com", contact: "mai@example.com", handedOff: false },
         { phone: null, email: null, contact: null, handedOff: true },
     ])("hands a finished booking to inbound events with contact=$contact", async (test) => {
+        const row = rowOf({
+            status: "done",
+            customer_phone: test.phone,
+            customer_email: test.email,
+            conversation_id: null,
+        })
         const { service, tx, reminders, inbound, messages, events } = await build(
-            [
-                [
-                    SELECT_BOOKING_FOR_EFFECTS,
-                    [
-                        rowOf({
-                            status: "done",
-                            customer_phone: test.phone,
-                            customer_email: test.email,
-                            conversation_id: null,
-                        }),
-                    ],
-                ],
-                ALREADY_CLAIMED,
-            ],
+            [[SELECT_BOOKING_FOR_EFFECTS, [row]], ALREADY_CLAIMED],
             settingsOf({ handoffOrder: true }),
         )
         inbound.handOffOrder.mockImplementation(() => {
@@ -439,10 +471,7 @@ describe("BookingEffectsService", () => {
             ],
         ])
         expect(messages.get.mock.calls).toEqual([["bookings.handoff.body", { service: "Cut" }, "vi"]])
-        expect(tx.em.query.mock.calls).toEqual([
-            [SELECT_BOOKING_FOR_EFFECTS, [WORKSPACE, BOOKING_ID]],
-            [CLAIM_EFFECT, [WORKSPACE, BOOKING_ID, "evidence:done"]],
-        ])
+        expect(tx.em.query.mock.calls).toEqual([SELECTED, claimOf("evidence:done")])
         expect(events.record).not.toHaveBeenCalled()
         expect(tx.outcomes).toEqual(["commit"])
     })
@@ -462,9 +491,6 @@ describe("BookingEffectsService", () => {
 
         expect(inbound.handOffOrder).not.toHaveBeenCalled()
         expect(messages.get).not.toHaveBeenCalled()
-        expect(tx.em.query.mock.calls).toEqual([
-            [SELECT_BOOKING_FOR_EFFECTS, [WORKSPACE, BOOKING_ID]],
-            [CLAIM_EFFECT, [WORKSPACE, BOOKING_ID, "evidence:done"]],
-        ])
+        expect(tx.em.query.mock.calls).toEqual([SELECTED, claimOf("evidence:done")])
     })
 })

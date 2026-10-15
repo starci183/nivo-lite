@@ -3,6 +3,7 @@ import { Test } from "@nestjs/testing"
 import { WORK_PERFORMER_REGISTRY } from "@modules/domain/decisions"
 import type { WorkPerformer, WorkPerformerRegistry } from "@modules/domain/decisions"
 import { BookingPerformerService } from "./booking-performer.service"
+import { BookingRemindPerformerService } from "./booking-remind-performer.service"
 import { CarePerformerService } from "./care-performer.service"
 import { ClassifyLeadPerformerService } from "./classify-lead-performer.service"
 import { ConfirmOrderPerformerService } from "./confirm-order-performer.service"
@@ -17,7 +18,7 @@ import { SendEmailPerformerService } from "./send-email-performer.service"
 import { WorkPerformersRegistrarService } from "./work-performers-registrar.service"
 
 describe("WorkPerformersRegistrarService", () => {
-    it("registers sales, booking and reward performers at boot", async () => {
+    it("registers sales, booking, reminder and reward performers at boot", async () => {
         const registry = mock<WorkPerformerRegistry>()
         const handoff = mock<HandoffLeadPerformerService>()
         const classify = mock<ClassifyLeadPerformerService>()
@@ -30,6 +31,7 @@ describe("WorkPerformersRegistrarService", () => {
         const reply = mock<ReplyCustomerPerformerService>()
         const email = mock<SendEmailPerformerService>()
         const booking = mock<BookingPerformerService>()
+        const remind = mock<BookingRemindPerformerService>()
         const redeem = mock<RedeemRewardPerformerService>()
         const moduleRef = await Test.createTestingModule({
             providers: [
@@ -46,6 +48,7 @@ describe("WorkPerformersRegistrarService", () => {
                 { provide: ReplyCustomerPerformerService, useValue: reply },
                 { provide: SendEmailPerformerService, useValue: email },
                 { provide: BookingPerformerService, useValue: booking },
+                { provide: BookingRemindPerformerService, useValue: remind },
                 { provide: RedeemRewardPerformerService, useValue: redeem },
             ],
         }).compile()
@@ -72,6 +75,7 @@ describe("WorkPerformersRegistrarService", () => {
             "cancel_with_fee",
             "confirm_booking",
             "reschedule",
+            "remind_booking",
             "redeem_reward",
         ])
         expect(registered.get("handoff_lead")).toBe(handoff)
@@ -88,12 +92,14 @@ describe("WorkPerformersRegistrarService", () => {
         expect(registered.get("cancel_with_fee")).toBe(booking)
         expect(registered.get("confirm_booking")).toBe(booking)
         expect(registered.get("reschedule")).toBe(booking)
+        expect(registered.get("remind_booking")).toBe(remind)
         expect(registered.get("redeem_reward")).toBe(redeem)
-        expect(registry.add).toHaveBeenCalledTimes(15)
+        expect(registry.add).toHaveBeenCalledTimes(16)
         expect(registry.add).toHaveBeenCalledWith("cancel_booking", booking)
         expect(registry.add).toHaveBeenCalledWith("cancel_with_fee", booking)
         expect(registry.add).toHaveBeenCalledWith("confirm_booking", booking)
         expect(registry.add).toHaveBeenCalledWith("reschedule", booking)
+        expect(registry.add).toHaveBeenCalledWith("remind_booking", remind)
         expect(registry.add).toHaveBeenCalledWith("redeem_reward", redeem)
     })
 })

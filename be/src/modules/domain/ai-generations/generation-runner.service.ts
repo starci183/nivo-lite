@@ -16,12 +16,27 @@ import { InjectGenerationCompletion, InjectUsage } from "./ai-generations.decora
 import { AiGenerationsLogEvent } from "./ai-generations.log-events"
 import type { GenerationCompletion, UsageGate } from "./ai-generations.port"
 import { AiGenerationsError, AiGenerationsErrorCode } from "./errors/ai-generations.error"
-import { composeTurn, failureTextOf, isWaiting, queuedOf, turnTimeoutOf } from "./generation.policy"
+import {
+    composeTurn,
+    failureTextOf,
+    isTimeoutCause,
+    isWaiting,
+    queuedOf,
+    turnTimeoutOf,
+    untilAborted,
+} from "./generation.policy"
 import type { FinishedGenerationRow, GenerationRow } from "./persistence/ai-generations.rows"
-import { FAIL_GENERATION, FIND_GENERATION, FINISH_GENERATION, START_GENERATION } from "./persistence/ai-generations.sql"
+import {
+    CANCEL_GENERATION,
+    FAIL_GENERATION,
+    FIND_GENERATION,
+    FINISH_GENERATION,
+    START_GENERATION,
+} from "./persistence/ai-generations.sql"
 
 const NOT_CONFIGURED = "openclaw_not_configured"
 const EMPTY_ANSWER = "empty answer"
+const TIMEOUT = "timeout"
 
 @Injectable()
 /**
@@ -74,9 +89,12 @@ export class GenerationRunnerService {
     }
 
     private async attempt(generation: QueuedGeneration, startedAt: number): Promise<TurnAttempt> {
-        if (!this.gateway.enabled) return { text: null, usage: null, timings: {}, reason: NOT_CONFIGURED }
+        if (!this.gateway.enabled)
+            return { text: null, usage: null, timings: {}, reason: NOT_CONFIGURED, timedOut: false }
+        // One deadline for the whole call: the agent set-up counts against it as much as the turn does.
+        const signal = AbortSignal.timeout(generation.input.timeoutMs)
         try {
-            const agentId = await this.sync.ensureInternalAgent(generation.workspaceId)
+            const agentId = await untilAborted(this.sync.ensureInternalAgent(generation.workspaceId), signal)
             const readyMs = this.clock.now().getTime() - startedAt
             const turn = await this.gateway.runTurn(
                 {
@@ -84,9 +102,9 @@ export class GenerationRunnerService {
                     threadKey: threadKeyFor(agentId, `explicit:model-run-${generation.id}`),
                     message: composeTurn(generation.input),
                     idempotencyKey: `gen-${generation.id}`,
-                    timeoutMs: turnTimeoutOf(generation.input.timeoutMs),
+                    timeoutMs: turnTimeoutOf(Math.max(0, generation.input.timeoutMs - readyMs)),
                 },
-                AbortSignal.timeout(generation.input.timeoutMs),
+                signal,
             )
             const blank = turn.text.trim() === ""
             return {
@@ -94,10 +112,18 @@ export class GenerationRunnerService {
                 usage: turn.usage,
                 timings: { ...turn.timings, ready_ms: readyMs },
                 reason: blank ? EMPTY_ANSWER : "",
+                timedOut: false,
             }
         } catch (cause) {
             this.logger.error(AiGenerationsLogEvent.GenerationFailed, cause, { purpose: generation.purpose })
-            return { text: null, usage: null, timings: {}, reason: failureTextOf(cause) }
+            const timedOut = signal.aborted || isTimeoutCause(cause)
+            return {
+                text: null,
+                usage: null,
+                timings: {},
+                reason: timedOut ? TIMEOUT : failureTextOf(cause),
+                timedOut,
+            }
         }
     }
 
@@ -132,6 +158,15 @@ export class GenerationRunnerService {
         attempt: TurnAttempt,
         startedAt: number,
     ): Promise<GenerationRunStatus> {
+        // A deadline that passed is a cancelled request with the reason `timeout`, as it is when the caller gives up first.
+        if (attempt.timedOut) {
+            await this.entityManager.query(CANCEL_GENERATION, [
+                generation.id,
+                generation.workspaceId,
+                this.clock.now().toISOString(),
+            ])
+            return "error"
+        }
         await this.entityManager.query(FAIL_GENERATION, [
             generation.id,
             generation.workspaceId,

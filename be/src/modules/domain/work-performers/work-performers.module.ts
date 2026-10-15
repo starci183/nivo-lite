@@ -4,6 +4,8 @@ import { N8N_MAILER } from "@modules/domain/n8n-runs"
 import { BookingChatChangesService } from "./booking-chat-changes.service"
 import { BookingChatService } from "./booking-chat.service"
 import { BookingPerformerService } from "./booking-performer.service"
+import { BookingReminderTickService } from "./booking-reminder-tick.service"
+import { BookingRemindPerformerService } from "./booking-remind-performer.service"
 import { BookingToolsService } from "./booking-tools.service"
 import { CarePerformerService } from "./care-performer.service"
 import { ClassifyLeadPerformerService } from "./classify-lead-performer.service"
@@ -58,6 +60,8 @@ export class WorkPerformersModule extends ConfigurableModuleClass {
                 ReplyCustomerPerformerService,
                 SendEmailPerformerService,
                 BookingPerformerService,
+                BookingRemindPerformerService,
+                BookingReminderTickService,
                 BookingChatService,
                 BookingChatChangesService,
                 RedeemRewardPerformerService,

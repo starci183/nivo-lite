@@ -1,16 +1,31 @@
 import { sql } from "@modules/platform/database"
 
-/** One booking of a workspace with its service name, locked for the rest of the transaction ($1 workspace, $2 booking). */
-export const SELECT_BOOKING_FOR_EFFECTS = sql`SELECT b.id, b.status, b.lead_id, b.conversation_id, b.customer_name, b.customer_phone, b.customer_email, b.origin,
-       b.cancel_reason, b.reschedule_count, s.name AS service_name,
-       b.price_vnd::float8 AS price_vnd, b.cancel_fee_vnd::float8 AS cancel_fee_vnd,
+/** One booking of a workspace with its service and resource names, locked for the rest of the transaction ($1 workspace, $2 booking). */
+export const SELECT_BOOKING_FOR_EFFECTS = sql`SELECT b.id, b.workspace_id, b.status, b.lead_id, b.conversation_id, b.customer_name, b.customer_phone, b.customer_email, b.origin,
+       b.cancel_reason, b.reschedule_count, b.holds_slot, s.name AS service_name, COALESCE(r.name, '') AS resource_name,
+       b.price_vnd::float8 AS price_vnd, b.cancel_fee_vnd::float8 AS cancel_fee_vnd, b.deposit_vnd::float8 AS deposit_vnd,
        (extract(epoch FROM b.start_at) * 1000)::float8 AS start_ms,
-       (extract(epoch FROM b.cancelled_at) * 1000)::float8 AS cancelled_ms
+       (extract(epoch FROM b.cancelled_at) * 1000)::float8 AS cancelled_ms,
+       (extract(epoch FROM b.rescheduled_from) * 1000)::float8 AS from_ms
 FROM public.bookings b
 JOIN public.booking_services s ON s.id = b.service_id
+LEFT JOIN public.booking_resources r ON r.id = b.resource_id
 WHERE b.workspace_id = $1 AND b.id = $2
 LIMIT 1
 FOR UPDATE OF b`
+
+/** The same booking read without a lock, for the notice and the reminder that follow ($1 workspace, $2 booking). */
+export const SELECT_BOOKING_FOR_NOTICE = sql`SELECT b.id, b.workspace_id, b.status, b.lead_id, b.conversation_id, b.customer_name, b.customer_phone, b.customer_email, b.origin,
+       b.cancel_reason, b.reschedule_count, b.holds_slot, s.name AS service_name, COALESCE(r.name, '') AS resource_name,
+       b.price_vnd::float8 AS price_vnd, b.cancel_fee_vnd::float8 AS cancel_fee_vnd, b.deposit_vnd::float8 AS deposit_vnd,
+       (extract(epoch FROM b.start_at) * 1000)::float8 AS start_ms,
+       (extract(epoch FROM b.cancelled_at) * 1000)::float8 AS cancelled_ms,
+       (extract(epoch FROM b.rescheduled_from) * 1000)::float8 AS from_ms
+FROM public.bookings b
+JOIN public.booking_services s ON s.id = b.service_id
+LEFT JOIN public.booking_resources r ON r.id = b.resource_id
+WHERE b.workspace_id = $1 AND b.id = $2
+LIMIT 1`
 
 /** Takes a mark on a booking once: answers a row the first time and nothing after ($1 workspace, $2 booking, $3 mark). */
 export const CLAIM_EFFECT = sql`WITH claimed AS (
