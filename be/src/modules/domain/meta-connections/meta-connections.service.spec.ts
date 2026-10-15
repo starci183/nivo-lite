@@ -679,11 +679,11 @@ describe("MetaConnectionsService", () => {
     describe("answerChallenge and release", () => {
         it("delegates the verification query and returns its exact challenge", async () => {
             const { service, meta } = await build()
-            const query = { mode: "subscribe", verifyToken: "verify-1", challenge: "challenge-1" }
-            meta.challenge.mockReturnValue("challenge-1")
+            const query = { "hub.mode": "subscribe", "hub.verify_token": "v-1", "hub.challenge": "c-1" }
+            meta.challenge.mockReturnValue("c-1")
 
-            await expect(service.respondToChallenge(query)).resolves.toBe("challenge-1")
-            expect(meta.challenge).toHaveBeenCalledWith(query)
+            await expect(service.respondToChallenge(query)).resolves.toBe("c-1")
+            expect(meta.challenge).toHaveBeenCalledWith({ mode: "subscribe", verifyToken: "v-1", challenge: "c-1" })
         })
 
         it("refuses a rejected challenge", async () => {

@@ -21,6 +21,7 @@ import { KnowledgeGraphqlModule } from "@features/api/knowledge"
 import { EvidenceGraphqlModule } from "@features/api/evidence"
 import { GoogleConnectionsHttpModule } from "@features/api/google-connections"
 import { MetaConnectionsHttpModule } from "@features/api/meta-connections"
+import { MetaHttpModule } from "@features/webhooks/meta"
 import { ConnectionsGraphqlModule } from "@features/api/connections"
 /** The api area of the API, in registration order. */
 export const apiModules = (): NonNullable<ModuleMetadata["imports"]> => [
@@ -43,6 +44,7 @@ export const apiModules = (): NonNullable<ModuleMetadata["imports"]> => [
     EvidenceGraphqlModule,
     GoogleConnectionsHttpModule,
     MetaConnectionsHttpModule,
+    MetaHttpModule,
     AutomationsGraphqlModule,
     FlowsGraphqlModule,
     N8nPipelinesHttpModule,
