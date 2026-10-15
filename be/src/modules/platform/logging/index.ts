@@ -1,3 +1,4 @@
+export { createCliFailureHandlers } from "./cli-failure.policy"
 export { createJsonLogger } from "./json-logger.service"
 export { InjectLogger, LOGGER } from "./logging.decorators"
 export { LoggingLogEvent } from "./logging.log-events"

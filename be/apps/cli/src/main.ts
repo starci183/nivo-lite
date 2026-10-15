@@ -2,7 +2,7 @@ import "reflect-metadata"
 import { CommandFactory } from "nest-commander"
 import { SystemClockService } from "@modules/platform/clock"
 import { EnvSource } from "@modules/platform/config"
-import { createJsonLogger, LoggingLogEvent } from "@modules/platform/logging"
+import { createCliFailureHandlers, createJsonLogger, LoggingLogEvent } from "@modules/platform/logging"
 import { AppModule } from "./app.module"
 import { readCliEnv } from "./cli.env"
 
@@ -11,14 +11,11 @@ async function bootstrap(): Promise<void> {
     const logger = createJsonLogger(new SystemClockService())
     await CommandFactory.run(AppModule.register(readCliEnv(EnvSource.fromProcess())), {
         logger: false,
-        errorHandler: (error: Error) => {
-            logger.error(LoggingLogEvent.StartupFailed, error, { service: "cli" })
-            process.exit(1)
-        },
+        ...createCliFailureHandlers(logger),
     })
 }
 
 bootstrap().catch((error: unknown) => {
     createJsonLogger(new SystemClockService()).error(LoggingLogEvent.StartupFailed, error, { service: "cli" })
-    process.exit(1)
+    process.exitCode = 1
 })
