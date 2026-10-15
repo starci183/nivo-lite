@@ -9,12 +9,9 @@ import { AutomationOperationsExecutorsService } from "./automation-operations-ex
 import { AutomationScansService } from "./automation-scans.service"
 import { AutomationShopService } from "./automation-shop.service"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./automations.module-definition"
-import { AUTOMATION_OWNER_CHAT, AUTOMATION_TEXT } from "./automations.decorators"
 import { AutomationsService } from "./automations.service"
 import { AutomationTickService } from "./automation-tick.service"
 import { BusinessEventsService } from "./business-events.service"
-import { NullAutomationOwnerChat } from "./null-automation-owner-chat.service"
-import { NullAutomationText } from "./null-automation-text.service"
 
 @Module({})
 /**
@@ -29,8 +26,6 @@ export class AutomationsModule extends ConfigurableModuleClass {
             ...base,
             providers: [
                 ...(base.providers ?? []),
-                { provide: AUTOMATION_TEXT, useClass: NullAutomationText },
-                { provide: AUTOMATION_OWNER_CHAT, useClass: NullAutomationOwnerChat },
                 AutomationShopService,
                 AutomationBusinessEventsService,
                 AutomationScansService,
