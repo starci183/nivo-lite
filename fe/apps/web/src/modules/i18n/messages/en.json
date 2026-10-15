@@ -4339,7 +4339,6 @@
     "statusPaused": "Paused",
     "chat": "Chat",
     "copyFailed": "The handle could not be copied.",
-    "added": "Added {time}",
     "stepTest": "Test",
     "addToWorkspace": "Add to workspace",
     "fieldName": "Name",
