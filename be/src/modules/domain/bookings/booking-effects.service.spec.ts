@@ -211,6 +211,35 @@ describe("BookingEffectsService", () => {
         expect(inbound.handOffOrder).not.toHaveBeenCalled()
     })
 
+    it("releases a failed notice claim before retrying a rejected delivery", async () => {
+        const { service, tx, notifier } = await build([
+            [SELECT_BOOKING_FOR_EFFECTS, [rowOf()]],
+            CLAIMED,
+            [RELEASE_EFFECT, []],
+        ])
+        const failure = new Error("Channel delivery is unavailable")
+        notifier.notify.mockRejectedValueOnce(failure)
+
+        await expect(service.apply(eventOf())).rejects.toBe(failure)
+        expect(tx.em.query.mock.calls).toEqual([
+            [SELECT_BOOKING_FOR_EFFECTS, [WORKSPACE, BOOKING_ID]],
+            [CLAIM_EFFECT, [WORKSPACE, BOOKING_ID, "notice:confirmed"]],
+            [RELEASE_EFFECT, [WORKSPACE, BOOKING_ID, "notice:confirmed"]],
+        ])
+        expect(tx.outcomes).toEqual(["commit"])
+
+        await expect(service.apply(eventOf())).resolves.toEqual(effectsOf({ reminders: "planned", notified: true }))
+        expect(notifier.notify).toHaveBeenCalledTimes(2)
+        expect(tx.em.query.mock.calls).toEqual([
+            [SELECT_BOOKING_FOR_EFFECTS, [WORKSPACE, BOOKING_ID]],
+            [CLAIM_EFFECT, [WORKSPACE, BOOKING_ID, "notice:confirmed"]],
+            [RELEASE_EFFECT, [WORKSPACE, BOOKING_ID, "notice:confirmed"]],
+            [SELECT_BOOKING_FOR_EFFECTS, [WORKSPACE, BOOKING_ID]],
+            [CLAIM_EFFECT, [WORKSPACE, BOOKING_ID, "notice:confirmed"]],
+        ])
+        expect(tx.outcomes).toEqual(["commit", "commit"])
+    })
+
     it.each([true, false])("plans reminders without a notice when conversation exists=%s", async (conversation) => {
         const { service, tx, reminders, notifier, messages } = await build([
             [SELECT_BOOKING_FOR_EFFECTS, [rowOf({ conversation_id: conversation ? "conversation-1" : null })]],
