@@ -157,8 +157,12 @@ environments:
         web:
           app: web
           buildArgs:
-            values: {NEXT_PUBLIC_SITE_URL: "https://nivo.vn", NEXT_PUBLIC_API_URL: "https://api.nivo.vn", NEXT_PUBLIC_DEVELOPER_API_URL: "https://api.nivo.vn"}
+            values: {NEXT_PUBLIC_SITE_URL: "https://app.nivo.vn", NEXT_PUBLIC_LANDING_URL: "https://nivo.vn", NEXT_PUBLIC_API_URL: "https://api.nivo.vn", NEXT_PUBLIC_DEVELOPER_API_URL: "https://api.nivo.vn"}
             sealed: {member: web, keys: [NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY]}
+        landing:
+          app: landing
+          buildArgs:
+            values: {NEXT_PUBLIC_SITE_URL: "https://nivo.vn", NEXT_PUBLIC_APP_URL: "https://app.nivo.vn"}
       volumes: [nivo-engine_openclaw-data, nivo-engine_video-cache, nivo-engine_n8n-data, nivo-edge_acme]
       secrets:
         grants:
