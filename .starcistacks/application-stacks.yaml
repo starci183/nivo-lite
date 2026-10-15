@@ -137,6 +137,159 @@ environments:
         where: secrets/vps-known-hosts
         recipientPolicy: SOPS/age to the project recipient in .sops.yaml; the pinned SSH host keys of the VPS (set as the GitHub environment secret VPS_KNOWN_HOSTS); first contact was owner-verified.
         keyCustody: The age identity is SOPS_AGE_KEY in the runtime .claude/secret.env on the owner machine.
+    # Shared VPS ingress and the verbs of the canon (starci app stack ...): the data below is the only app-specific deploy configuration.
+    deploy:
+      stack: nivo
+      remote:
+        host: vps
+        releasesBase: /srv/nivo
+        sealed: {ops: ops, sshKey: vps-ssh-key, knownHosts: vps-known-hosts}
+      images:
+        api: {app: api}
+        web:
+          app: web
+          buildArgs:
+            values: {NEXT_PUBLIC_SITE_URL: "https://nivo.vn", NEXT_PUBLIC_API_URL: "https://api.nivo.vn", NEXT_PUBLIC_DEVELOPER_API_URL: "https://api.nivo.vn"}
+            sealed: {member: web, keys: [NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY]}
+      volumes: [nivo-engine_openclaw-data, nivo-engine_video-cache, nivo-engine_n8n-data, nivo-edge_acme]
+      secrets:
+        grants:
+          - service: api
+            filePointers: true
+            from:
+              - {member: api}
+              - {member: auth}
+              - {member: stack, keys: [OPENCLAW_GATEWAY_TOKEN, OPENCLAW_MANAGE_AGENTS], fill: true}
+          - service: openclaw
+            from:
+              - {member: stack, keys: [OPENCLAW_GATEWAY_TOKEN], required: true}
+              - {member: stack, keys: [OPENROUTER_API_KEY, ANTHROPIC_API_KEY, OPENAI_API_KEY]}
+              - {member: api, keys: [OPENROUTER_API_KEY, ANTHROPIC_API_KEY, OPENAI_API_KEY]}
+          - service: n8n
+            from:
+              - {member: stack, keys: [N8N_ENCRYPTION_KEY], required: true}
+        settings: {member: stack, keys: [OPENCLAW_MODEL, N8N_ALLOWED_HOSTS, JOBS_FAILED_ALERT, JOBS_STALE_SECONDS]}
+      environment:
+        api:
+          files: [infra/swarm/api-public.conf]
+          values:
+            PORT: "8787"
+            OPENCLAW_GATEWAY_URL: "ws://openclaw:18790"
+            OPENCLAW_CONFIG_DIR: /openclaw-state
+            OPENCLAW_GATEWAY_STATE_DIR: /home/node/.openclaw
+          settings:
+            N8N_ALLOWED_HOSTS: {key: N8N_ALLOWED_HOSTS, default: n8n}
+            JOBS_ALERT_FAILED_MAX: {key: JOBS_FAILED_ALERT, default: "20"}
+            JOBS_ALERT_STALE_SECONDS: {key: JOBS_STALE_SECONDS, default: "300"}
+        openclaw:
+          settings:
+            OPENCLAW_MODEL: {key: OPENCLAW_MODEL, default: openrouter/deepseek/deepseek-v4-flash}
+      configs:
+        - {name: routes, file: infra/swarm/edge/routes.yml, env: NIVO_CFG_ROUTES}
+        - {name: openclaw-entrypoint, file: infra/swarm/openclaw/entrypoint.sh, env: NIVO_CFG_OPENCLAW_ENTRYPOINT}
+        - {name: openclaw-init, file: infra/swarm/openclaw/openclaw-init.mjs, env: NIVO_CFG_OPENCLAW_INIT}
+        - {name: openclaw-relay, file: infra/swarm/openclaw/openclaw-relay.mjs, env: NIVO_CFG_OPENCLAW_RELAY}
+      passEnv: [ACME_EMAIL]
+      verify:
+        http:
+          - {name: api liveness, url: "https://api.nivo.vn/healthz", status: 200, json: {status: ok}, retry: true}
+          - {name: api readiness, url: "https://api.nivo.vn/readyz", status: 200, retry: true}
+          - {name: api graphql, url: "https://api.nivo.vn/graphql", method: POST, body: '{"query":"{__typename}"}', status: 200, contains: __typename, retry: true}
+          - {name: web health on the apex, url: "https://nivo.vn/health/live", status: 200, retry: true}
+          - {name: web health on www, url: "https://www.nivo.vn/health/live", status: 200, retry: true}
+          - {name: legacy webhook path reaches the api, url: "https://nivo.vn/healthz", status: 200, retry: true}
+        exec:
+          - name: jobs watchdog prints two non-negative integers
+            service: api
+            command: [node, be/dist/apps/cli/src/main.js, jobs, watchdog]
+            stdout: '^\d+ \d+\r?\n?$'
+      jobs: {service: api, command: [node, be/dist/apps/cli/src/main.js, jobs]}
+      backup:
+        image: alpine:3.21@sha256:ce64758a109eb420d874a118f87920e625e12d3634e03b4a5573fd9f6e5d3507
+        keepDays: 14
+        dir: /var/backups/nivo
+        volumes:
+          - {name: n8n-data, volume: nivo-engine_n8n-data}
+          - {name: openclaw-data, volume: nivo-engine_openclaw-data}
+      # The swarm Traefik is the SHARED ingress of VPS 103.142.27.9 (INGRESS-INVENTORY.md): nivo plus the compose tenants, which are
+      # reached over the attachable overlay. Tenant route files (academy.yml, tayson.yml) stay in the legacy dynamic directory.
+      ingress:
+        name: ingress
+        service: ingress
+        network: nivo-edge-swarm
+        acmeVolume: nivo-edge_acme
+        legacy:
+          dir: /home/nivo/nivo-edge
+          dynamicDir: /home/nivo/nivo-edge/dynamic
+          container: nivo-edge-traefik-1
+        routes: infra/swarm/edge/routes.yml
+        upstreams:
+          - {name: nivo-web, hosts: [nivo.vn, www.nivo.vn], container: nivo-web-web-1, aliases: [nivo-web], port: 3000}
+          - {name: namnivo, hosts: [nguyentuannam.org, www.nguyentuannam.org, app.nguyentuannam.org], container: namnivo-web-web-1, aliases: [namnivo-web], port: 3000}
+          - {name: n8n-editor, hosts: [n8n.nivo.vn], hostAddress: 172.29.0.1, port: 5678}
+          - {name: tayson-web, hosts: [doanhnghieptayson.vn, www.doanhnghieptayson.vn], container: tayson-web, aliases: [tayson-web], port: 3073}
+          - {name: tayson-api, container: tayson-api, aliases: [tayson-api], port: 3074}
+          - {name: tayson-crm, hosts: [crm.doanhnghieptayson.vn], container: tayson-crm, aliases: [tayson-crm], port: 3173}
+          - {name: academy-core, hosts: [api.academy.starci.org], container: academy-core, aliases: [academy-core], port: 20860}
+          - {name: academy-judge0, hosts: [judge0.academy.starci.org], container: academy-judge0-server, aliases: [academy-judge0-server], port: 2358}
+          - {name: academy-keycloak, hosts: [keycloak.starci.org], container: academy-keycloak, aliases: [academy-keycloak], port: 8080}
+          - {name: academy-minio, hosts: [minio.starci.org, console.minio.starci.org], container: academy-minio, aliases: [academy-minio], port: 9000}
+        drop: [engine.nivo.vn]
+        redirects:
+          - {host: app-vps.nivo.vn, to: nivo.vn, status: 308}
+        backup: {dir: /var/backups/nivo}
+        verify:
+          - {host: nivo.vn, path: /, status: 200}
+          - {host: www.nivo.vn, path: /, status: 200}
+          - {host: n8n.nivo.vn, path: /, status: 200}
+          - {host: app-vps.nivo.vn, path: /, status: 308}
+          - {host: nguyentuannam.org, path: /, status: 200}
+          - {host: www.nguyentuannam.org, path: /, status: 200}
+          - {host: app.nguyentuannam.org, path: /, status: 307}
+          - {host: doanhnghieptayson.vn, path: /, status: 200}
+          - {host: www.doanhnghieptayson.vn, path: /, status: 301}
+          - {host: crm.doanhnghieptayson.vn, path: /, status: 200}
+          - {host: api.academy.starci.org, path: /, status: 404}
+          - {host: judge0.academy.starci.org, path: /, status: 200}
+          - {host: keycloak.starci.org, path: /, status: 302}
+# Database history for `starci app db migrate` / `post-cutover` (the 24 restamped versions come from be/docs/runbooks/migration-restamp.md).
+database:
+  migrationsDir: supabase/migrations
+  archiveDir: supabase/migrations/_archive
+  baseline: lite-baseline
+  standard: lite-baseline-standard
+  heldBack: [drop-engine-schema]
+  projectRef: lytjlbytgqqykenajhgr
+  restamp:
+    - {from: "20261013100000", to: "20261012100100"}
+    - {from: "20261014100000", to: "20261012100200"}
+    - {from: "20261015100000", to: "20261012100300"}
+    - {from: "20261016100000", to: "20261012100400"}
+    - {from: "20261017100000", to: "20261012100500"}
+    - {from: "20261018100000", to: "20261012100600"}
+    - {from: "20261019100000", to: "20261012100700"}
+    - {from: "20261020100000", to: "20261012100800"}
+    - {from: "20261021100000", to: "20261012100900"}
+    - {from: "20261021110000", to: "20261012101000"}
+    - {from: "20261021120000", to: "20261012101100"}
+    - {from: "20261021130000", to: "20261012101200"}
+    - {from: "20261022100000", to: "20261012101300"}
+    - {from: "20261022110000", to: "20261012101400"}
+    - {from: "20261022120000", to: "20261012101500"}
+    - {from: "20261022130000", to: "20261012101600"}
+    - {from: "20261022140000", to: "20261012101700"}
+    - {from: "20261022150000", to: "20261012101800"}
+    - {from: "20261023100000", to: "20261012101900"}
+    - {from: "20261023110000", to: "20261012102000"}
+    - {from: "20261024100000", to: "20261012102100"}
+    - {from: "20261025100000", to: "20261012102200"}
+    - {from: "20261025110000", to: "20261012102300"}
+    - {from: "20261025120000", to: "20261012102400"}
+  postCutover:
+    schema: public
+    functionPrefixes: [engine_]
+    functionNames: [zalo_refresh_tick]
+    minAgeHours: 48
 k8s:
   status: deferred
   reason: Whole-package Kubernetes deployment is deferred; production is a single-manager Docker Swarm on one VPS, and dev uses a local Docker Swarm with Supabase CLI backing.
