@@ -52,7 +52,7 @@ http:
     # is liveness). web has only its liveness route; the api's /readyz answers 200 only while its database answers.
     web:
       loadBalancer:
-        servers: [{ url: "http://nivo-web:3000" }]
+        servers: [{ url: "http://nivo-web-swarm:3000" }]
         healthCheck: { path: /health/live, interval: 10s, timeout: 3s }
     api:
       loadBalancer:

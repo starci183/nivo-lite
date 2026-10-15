@@ -28,5 +28,8 @@ export const JOB_FAIL = sql`SELECT public.job_fail($1, $2::bigint, $3, $4) AS fa
 /** Failed for good: moves the message to the archive of its queue and keeps the reason on the outbox row ($1 queue, $2 message id, $3 reason). */
 export const JOB_ARCHIVE = sql`SELECT public.job_archive($1, $2::bigint, $3) AS archived`
 
-/** Creates or replaces the pg_cron job $1 that sends the message $4 to the queue $3 on the schedule $2. */
-export const CRON_SCHEDULE = sql`SELECT cron.schedule($1, $2, format('SELECT pgmq.send(%L, %L::jsonb)', $3::text, $4::text)) AS job_id`
+/**
+ * Creates or replaces the pg_cron job $1 that sends the message $4 to the queue $3 on the schedule $2. app_be has no privilege on the cron
+ * schema, so the call goes through the definer function `job_schedule`, which builds the one statement a scheduled job may run.
+ */
+export const CRON_SCHEDULE = sql`SELECT public.job_schedule($1, $2, $3::text, $4::text) AS job_id`
