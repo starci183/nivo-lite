@@ -123,3 +123,13 @@ export interface MetaChallengeQuery {
     /** `hub.challenge`, echoed back when the request is ours. */
     readonly challenge: string | undefined
 }
+
+/** The subscription proof exactly as Meta sends its webhook query parameters. */
+export interface MetaWebhookChallengeQuery {
+    /** The subscription mode; only `subscribe` is answered. */
+    readonly "hub.mode"?: string
+    /** The token configured on the Meta app. */
+    readonly "hub.verify_token"?: string
+    /** The text echoed after the subscription proof succeeds. */
+    readonly "hub.challenge"?: string
+}

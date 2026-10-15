@@ -14,6 +14,7 @@ import type {
     MetaChallengeQuery,
     MetaCheck,
     MetaSecret,
+    MetaWebhookChallengeQuery,
     MetaWizardConnection,
     ResumedConnectionId,
 } from "./meta-connections.contracts"
@@ -234,9 +235,15 @@ export class MetaConnectionsService {
         return answer
     }
 
-    /** Answers the webhook verification request the way a handler awaits it; a request without our verify token is refused. */
-    respondToChallenge(query: MetaChallengeQuery): Promise<string> {
-        return Promise.resolve(this.answerChallenge(query))
+    /** Maps Meta's subscription query to its proof; a request without our verify token is refused. */
+    respondToChallenge(query: MetaWebhookChallengeQuery): Promise<string> {
+        return Promise.resolve(
+            this.answerChallenge({
+                mode: query["hub.mode"],
+                verifyToken: query["hub.verify_token"],
+                challenge: query["hub.challenge"],
+            }),
+        )
     }
 
     /** Stops a disconnecting Page from sending its events to the app (best effort: a dead token has nothing to cancel). */
