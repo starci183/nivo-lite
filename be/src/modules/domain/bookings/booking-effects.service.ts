@@ -173,12 +173,16 @@ export class BookingEffectsService {
             },
             STORED_LOCALE,
         )
-        const delivered = await this.notifier.notify({
-            workspaceId: event.workspaceId,
-            conversationId: row.conversation_id,
-            text,
-        })
-        if (!delivered) await this.entityManager.query(RELEASE_EFFECT, [event.workspaceId, event.bookingId, mark])
-        return delivered
+        let delivered = false
+        try {
+            delivered = await this.notifier.notify({
+                workspaceId: event.workspaceId,
+                conversationId: row.conversation_id,
+                text,
+            })
+            return delivered
+        } finally {
+            if (!delivered) await this.entityManager.query(RELEASE_EFFECT, [event.workspaceId, event.bookingId, mark])
+        }
     }
 }
