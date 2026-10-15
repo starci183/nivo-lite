@@ -3,14 +3,16 @@ import { FakeClock, builder, mock } from "@starci/jest-preset"
 import { BrainEvalCasesService } from "@modules/domain/brain-eval-cases"
 import { BrainLessonsService } from "@modules/domain/brain-lessons"
 import type { LessonRecord } from "@modules/domain/brain-lessons"
+import { DecisionCorrectionsService } from "@modules/domain/decisions"
 import { UsageMeterService } from "@modules/domain/knowledge"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { LLM } from "@modules/integrations/llm"
 import type { LlmPort } from "@modules/integrations/llm"
 import { CLOCK } from "@modules/platform/clock"
-import { BRAIN_OPTIONS } from "./brain.decorators"
+import { BRAIN_CORRECTIONS } from "./brain.decorators"
 import type { Correction, CorrectionSource } from "./brain.contracts"
 import { BrainLearningService } from "./brain-learning.service"
+import { BrainModule } from "./brain.module"
 import { LEARN_SYSTEM } from "./learn.policy"
 import { ModelJsonService } from "./model-json.service"
 
@@ -66,7 +68,7 @@ const build = async (list: ReadonlyArray<Correction> = corrections()) => {
     const moduleRef = await Test.createTestingModule({
         providers: [
             BrainLearningService,
-            { provide: BRAIN_OPTIONS, useValue: { corrections: source } },
+            { provide: BRAIN_CORRECTIONS, useValue: source },
             { provide: LLM, useValue: llm },
             { provide: WorkspaceMembersService, useValue: members },
             { provide: BrainLessonsService, useValue: lessons },
@@ -180,7 +182,7 @@ describe("BrainLearningService", () => {
         })
         const prompt = [
             "EXISTING LESSONS:\n- Relevant: Keep replies short\n- Universal: Be clear",
-            "CORRECTIONS (newest first):\n[d1]\nAction: send - edited\nAI draft: Draft one\nOwner's version: Owner one\nOwner's note: Short\n\n[d2]\nAction: refund - rejected\n\n[d3]\nAction: send - edited",
+            "CORRECTIONS (newest first):\n[d1]\nAction: send · edited\nAI draft: Draft one\nOwner's version: Owner one\nOwner's note: Short\n\n[d2]\nAction: refund · rejected\n\n[d3]\nAction: send · edited",
         ].join("\n\n")
 
         await expect(service.mine("u1", "ws1", "chatbot")).resolves.toEqual({
@@ -267,5 +269,12 @@ describe("BrainLearningService", () => {
 
         expect(usage.record).toHaveBeenCalledTimes(1)
         expect(lessons.propose).not.toHaveBeenCalled()
+    })
+
+    it("registers the decisions correction source for learning", () => {
+        expect(BrainModule.register({ corrections: DecisionCorrectionsService }).providers).toContainEqual({
+            provide: BRAIN_CORRECTIONS,
+            useClass: DecisionCorrectionsService,
+        })
     })
 })

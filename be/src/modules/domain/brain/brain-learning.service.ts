@@ -10,9 +10,8 @@ import type { LlmPort } from "@modules/integrations/llm"
 import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
 import { eachInOrder } from "@modules/platform/primitives"
-import { InjectBrainOptions } from "./brain.decorators"
-import type { BrainOptions } from "./brain.options"
-import type { MineResult } from "./brain.contracts"
+import { InjectCorrectionSource } from "./brain.decorators"
+import type { CorrectionSource, MineResult } from "./brain.contracts"
 import { ModelJsonService } from "./model-json.service"
 import { LEARN_SYSTEM, MIN_CORRECTIONS, learnPrompt, parseLessons } from "./learn.policy"
 
@@ -37,7 +36,7 @@ const LEARN_TIMEOUT_MS = 60_000
  */
 export class BrainLearningService {
     constructor(
-        @InjectBrainOptions() private readonly options: BrainOptions,
+        @InjectCorrectionSource() private readonly corrections: CorrectionSource,
         @InjectLlm() private readonly llm: LlmPort,
         private readonly members: WorkspaceMembersService,
         private readonly lessons: BrainLessonsService,
@@ -51,7 +50,7 @@ export class BrainLearningService {
     async mine(userId: string, workspaceId: string, module: string): Promise<MineResult> {
         await this.members.require(userId, workspaceId, MANAGERS)
         const since = new Date(this.clock.now().getTime() - WINDOW_DAYS * 86_400_000)
-        const list = await this.options.corrections.recent(workspaceId, module, since, MAX_CORRECTIONS)
+        const list = await this.corrections.recent(workspaceId, module, since, MAX_CORRECTIONS)
         const newCases = await this.cases.keep(
             workspaceId,
             module,

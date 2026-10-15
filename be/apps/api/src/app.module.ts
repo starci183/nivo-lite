@@ -718,7 +718,7 @@ export class AppModule {
                 BrainExtractionsModule.register({ isGlobal: true }),
                 BrainCommandsModule.register({ isGlobal: true }),
                 BrainEvalCasesModule.register({ isGlobal: true }),
-                BrainModule.register({ isGlobal: true, corrections: { recent: () => Promise.resolve([]) } }),
+                BrainModule.register({ isGlobal: true, ...G19_PORTS.brain }),
                 BookingsModule.register({ isGlobal: true }),
                 LeadsGraphqlModule,
                 LeadQueriesGraphqlModule,

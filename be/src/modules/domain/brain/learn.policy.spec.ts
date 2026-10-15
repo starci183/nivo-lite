@@ -37,14 +37,14 @@ describe("learn policy", () => {
                     }),
                 ),
             ).toBe(
-                'Action: reply - edited\nAI draft: Hello\nOwner\'s version: Welcome\nField price: 10 -> 12\nField removed: "old" -> null\nField added: null -> "new"\nOwner\'s note: Use the new price',
+                'Action: reply · edited\nAI draft: Hello\nOwner\'s version: Welcome\nField price: 10 -> 12\nField removed: "old" -> null\nField added: null -> "new"\nOwner\'s note: Use the new price',
             )
         })
 
         it("describes absent bodies and does not invent a draft", () => {
-            expect(describeCorrection(correctionOf())).toBe("Action: reply - edited")
+            expect(describeCorrection(correctionOf())).toBe("Action: reply · edited")
             expect(describeCorrection(correctionOf({ before: {}, after: { draft: "Welcome" } }))).toBe(
-                "Action: reply - edited",
+                "Action: reply · edited",
             )
         })
 
@@ -53,13 +53,27 @@ describe("learn policy", () => {
                 describeCorrection(
                     correctionOf({ outcome: "rejected", before: { draft: "Hello" }, after: { draft: "Welcome" } }),
                 ),
-            ).toBe("Action: reply - rejected\nAI draft: Hello")
+            ).toBe("Action: reply · rejected\nAI draft: Hello")
             expect(describeCorrection(correctionOf({ before: { draft: "Hello" }, after: { draft: "Hello" } }))).toBe(
-                "Action: reply - edited\nAI draft: Hello",
+                "Action: reply · edited\nAI draft: Hello",
             )
             expect(describeCorrection(correctionOf({ before: { draft: "Hello" }, after: {} }))).toBe(
-                "Action: reply - edited\nAI draft: Hello",
+                "Action: reply · edited\nAI draft: Hello",
             )
+        })
+
+        it("skips empty drafts and notes while retaining whitespace text", () => {
+            expect(
+                describeCorrection(
+                    correctionOf({ before: { draft: "" }, after: { draft: "Owner version" }, note: "" }),
+                ),
+            ).toBe("Action: reply · edited")
+            expect(describeCorrection(correctionOf({ before: { draft: "AI draft" }, after: { draft: "" } }))).toBe(
+                "Action: reply · edited\nAI draft: AI draft",
+            )
+            expect(
+                describeCorrection(correctionOf({ before: { draft: " " }, after: { draft: "  " }, note: " " })),
+            ).toBe("Action: reply · edited\nAI draft:  \nOwner's version:   \nOwner's note:  ")
         })
 
         it("clips long drafts, fields and notes with their exact ellipses", () => {
@@ -72,7 +86,7 @@ describe("learn policy", () => {
                     }),
                 ),
             ).toBe(
-                `Action: reply - edited\nAI draft: ${"a".repeat(599)}...\nOwner's version: ${"c".repeat(599)}...\nField text: "${"b".repeat(118)}... -> "${"d".repeat(118)}...\nOwner's note: ${"e".repeat(299)}...`,
+                `Action: reply · edited\nAI draft: ${"a".repeat(599)}…\nOwner's version: ${"c".repeat(599)}…\nField text: "${"b".repeat(118)}… -> "${"d".repeat(118)}…\nOwner's note: ${"e".repeat(299)}…`,
             )
         })
 
@@ -86,13 +100,13 @@ describe("learn policy", () => {
                     }),
                 ),
             ).toBe(
-                `Action: reply - edited\nAI draft: ${"a".repeat(600)}\nField text: "${"b".repeat(118)}" -> null\nOwner's note: ${"c".repeat(300)}`,
+                `Action: reply · edited\nAI draft: ${"a".repeat(600)}\nField text: "${"b".repeat(118)}" -> null\nOwner's note: ${"c".repeat(300)}`,
             )
             expect(describeCorrection(correctionOf({ after: { fields: { price: 10 } } }))).toBe(
-                "Action: reply - edited\nField price: null -> 10",
+                "Action: reply · edited\nField price: null -> 10",
             )
             expect(describeCorrection(correctionOf({ before: { fields: { price: 10 } } }))).toBe(
-                "Action: reply - edited\nField price: 10 -> null",
+                "Action: reply · edited\nField price: 10 -> null",
             )
         })
     })
@@ -105,7 +119,7 @@ describe("learn policy", () => {
                 [correctionOf({ decisionId: "d2" }), correctionOf({ outcome: "rejected" })],
             ),
         ).toBe(
-            "EXISTING LESSONS:\nUse the new price\nBe brief\n\nCORRECTIONS (newest first):\n[d2]\nAction: reply - edited\n\n[d1]\nAction: reply - rejected",
+            "EXISTING LESSONS:\nUse the new price\nBe brief\n\nCORRECTIONS (newest first):\n[d2]\nAction: reply · edited\n\n[d1]\nAction: reply · rejected",
         )
     })
 

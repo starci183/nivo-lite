@@ -53,6 +53,7 @@ import {
     ApprovalRequesterService,
     DECISIONS_ERROR_KINDS,
     DECISIONS_MESSAGES,
+    DecisionCorrectionsService,
     ModuleApprovalGateService,
     ModulePerformersService,
 } from "@modules/domain/decisions"
@@ -219,6 +220,8 @@ export const G19_PORTS = {
         modules: ModuleProfilesService,
     },
     chatTurn: { runtime: CustomerTurnRuntimeService, outcomes: CustomerOutcomesService },
+    /** The decisions source the brain studies for corrections. */
+    brain: { corrections: DecisionCorrectionsService },
     /** The message bundles of the automations, decisions, module-ops, automation ports and flow engine. */
     messages: [
         AUTOMATIONS_MESSAGES,
