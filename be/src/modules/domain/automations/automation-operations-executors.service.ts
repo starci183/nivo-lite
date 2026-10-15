@@ -1,4 +1,4 @@
-import { Injectable, Optional } from "@nestjs/common"
+import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import type { RunResult, RunStep } from "@modules/domain/automation-runs"
 import { InjectClock } from "@modules/platform/clock"
@@ -43,7 +43,7 @@ export class AutomationOperationsExecutorsService {
         @InjectClock() private readonly clock: Clock,
         @InjectAutomationOffice() private readonly office: AutomationOffice,
         @InjectAutomationRecords() private readonly records: AutomationRecords,
-        @Optional() @InjectAutomationOwnerChat() private readonly ownerChat: AutomationOwnerChat | undefined,
+        @InjectAutomationOwnerChat() private readonly ownerChat: AutomationOwnerChat,
         private readonly messages: AutomationMessagesService,
     ) {}
 
@@ -85,8 +85,7 @@ export class AutomationOperationsExecutorsService {
         await this.office.postLine(context.workspaceId, text, null)
         const steps: Array<RunStep> = [{ label: say("report.posted"), status: "done", message: text }]
         if (context.config.toOwnerChat === true) {
-            const reached =
-                this.ownerChat === undefined ? false : await this.ownerChat.sendToOwner(context.workspaceId, text)
+            const reached = await this.ownerChat.sendToOwner(context.workspaceId, text)
             steps.push(
                 reached
                     ? { label: say("report.chatSent"), status: "done" }

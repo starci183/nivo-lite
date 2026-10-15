@@ -178,6 +178,7 @@ component_management:
         - "be/src/modules/integrations/n8n/**"
         - "be/src/modules/integrations/openclaw/**"
         - "be/src/modules/integrations/supabase/**"
+        - "be/src/modules/integrations/telegram-user/**"
         - "be/src/modules/integrations/telegram/**"
         - "be/src/modules/integrations/tts/**"
         - "be/src/modules/integrations/webhook-delivery/**"

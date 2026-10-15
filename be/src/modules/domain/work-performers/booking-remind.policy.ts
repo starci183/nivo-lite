@@ -12,7 +12,7 @@ export const settlementOf = (status: WorkItem["status"]): "sent" | "waiting" | "
 }
 
 /** The origin of a work item from the origin of a booking: anything but `simulated` is live. */
-export const originOf = (origin: string): Origin => (origin === "simulated" ? "simulated" : "live")
+export const reminderOriginOf = (origin: string): Origin => (origin === "simulated" ? "simulated" : "live")
 
 /** How the owner reaches the customer on the card: the phone, else the email, else the chat. */
 export const contactOf = (phone: string | null, email: string | null, chat: string): string => phone ?? email ?? chat

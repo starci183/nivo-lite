@@ -8,9 +8,9 @@ import type { Dialog } from "telegram/tl/custom/dialog"
 import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { eachInOrder } from "@modules/platform/primitives"
-import { InjectDataSourcesOptions } from "./data-sources.decorators"
-import type { DataSourcesOptions } from "./data-sources.options"
-import { DataSourcesError, DataSourcesErrorCode } from "./errors/data-sources.error"
+import type { DomainError } from "@modules/platform/errors"
+import { InjectTelegramUserOptions } from "./telegram-user.decorators"
+import type { TelegramUserOptions } from "./telegram-user.options"
 import type {
     TelegramAccount,
     TelegramChatChoice,
@@ -25,6 +25,7 @@ import type {
     TelegramRawMessage,
     TelegramReadRequest,
     TelegramSignInResult,
+    TelegramUserErrors,
 } from "./telegram-user.contracts"
 import { TelegramUserLogEvent } from "./telegram-user.log-events"
 import { TELEGRAM_USER_TEXT } from "./messages/telegram-user.messages"
@@ -65,8 +66,7 @@ const accountOf = (me: Api.User): TelegramAccount => ({
     username: me.username ?? null,
 })
 
-const revoked = (): DataSourcesError =>
-    new DataSourcesError({ code: DataSourcesErrorCode.Rejected, params: { detail: TELEGRAM_REVOKED_MESSAGE } })
+const revoked = (errors: TelegramUserErrors): DomainError<string> => errors.rejected(TELEGRAM_REVOKED_MESSAGE)
 
 @Injectable()
 /**
@@ -75,13 +75,13 @@ const revoked = (): DataSourcesError =>
  */
 export class TelegramUserClient {
     constructor(
-        @InjectDataSourcesOptions() private readonly options: DataSourcesOptions,
+        @InjectTelegramUserOptions() private readonly options: TelegramUserOptions,
         @InjectLogger() private readonly logger: Logger,
     ) {}
 
     /** True when the deployment has the Telegram app credentials. */
     configured(): boolean {
-        return this.options.telegramUser !== null
+        return this.options.app !== null
     }
 
     /** Sends the login code to a phone number (E.164). */
@@ -121,10 +121,7 @@ export class TelegramUserClient {
                     }),
                 )
                 if (result instanceof Api.auth.AuthorizationSignUpRequired) {
-                    throw new DataSourcesError({
-                        code: DataSourcesErrorCode.Rejected,
-                        params: { detail: TELEGRAM_USER_TEXT.noAccount },
-                    })
+                    throw this.options.errors.rejected(TELEGRAM_USER_TEXT.noAccount)
                 }
             } catch (error) {
                 if (telegramErrorCode(error) !== SESSION_PASSWORD_NEEDED) throw error
@@ -160,7 +157,7 @@ export class TelegramUserClient {
     /** Reads the new messages of the picked chats, oldest first, from each chat's cursor (or the window start). */
     readChats(request: TelegramReadRequest): Promise<ReadonlyArray<TelegramChatRead>> {
         return this.run(request.session, async (client) => {
-            if (!(await client.checkAuthorization())) throw revoked()
+            if (!(await client.checkAuthorization())) throw revoked(this.options.errors)
             const wanted = new Set(request.chatIds)
             // Dialogs fill the entity cache (access hashes) that a fresh StringSession does not carry.
             const entities = new Map<string, Entity>()
@@ -219,12 +216,9 @@ export class TelegramUserClient {
         session: string,
         work: (client: TelegramClient, app: AppCredentials) => Promise<T>,
     ): Promise<T> {
-        const options = this.options.telegramUser
+        const options = this.options.app
         if (options === null) {
-            throw new DataSourcesError({
-                code: DataSourcesErrorCode.Unavailable,
-                params: { detail: TELEGRAM_NOT_CONFIGURED_MESSAGE },
-            })
+            throw this.options.errors.unavailable(TELEGRAM_NOT_CONFIGURED_MESSAGE)
         }
         const app: AppCredentials = { apiId: options.apiId, apiHash: options.apiHash.reveal().trim() }
         const client = new TelegramClient(new StringSession(session), app.apiId, app.apiHash, {
@@ -250,12 +244,10 @@ export class TelegramUserClient {
         await client.destroy().catch((cause: unknown) => this.logger.error(TelegramUserLogEvent.CloseFailed, cause, {}))
     }
 
-    private translate(error: unknown): DataSourcesError {
-        if (error instanceof DataSourcesError) return error
-        return new DataSourcesError({
-            code: isKnownTelegramError(error) ? DataSourcesErrorCode.Rejected : DataSourcesErrorCode.Unavailable,
-            params: { detail: explainTelegramError(error) },
-            cause: error,
-        })
+    private translate(error: unknown): DomainError<string> {
+        if (this.options.errors.isError(error)) return error
+        const known = isKnownTelegramError(error)
+        const detail = explainTelegramError(error)
+        return known ? this.options.errors.rejected(detail, error) : this.options.errors.unavailable(detail, error)
     }
 }

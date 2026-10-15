@@ -1,4 +1,4 @@
-import type { TelegramChatKind, TelegramRawMessage } from "@modules/integrations/data-sources"
+import type { TelegramChatKind, TelegramRawMessage } from "@modules/integrations/telegram-user"
 import { isRecord } from "@modules/platform/primitives"
 import type { DataRecordInput } from "./data-hub.contracts"
 import { readJson } from "./telegram-user-json.policy"

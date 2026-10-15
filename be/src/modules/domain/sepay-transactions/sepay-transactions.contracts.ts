@@ -1,3 +1,6 @@
+/** The SePay API-key authorization header, absent when the delivery provides no proof. */
+export type SepayAuthorization = string | undefined
+
 /** What the SQL settlement made of a transfer for the order it named. */
 export type SettleOutcome = "paid" | "underpaid" | "expired" | "unmatched" | "ignored"
 

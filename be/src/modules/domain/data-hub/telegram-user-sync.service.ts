@@ -1,11 +1,7 @@
 import { Injectable } from "@nestjs/common"
-import {
-    DataSourcesError,
-    DataSourcesErrorCode,
-    InjectTelegramUser,
-    TELEGRAM_REVOKED_MESSAGE,
-} from "@modules/integrations/data-sources"
-import type { TelegramUserClient } from "@modules/integrations/data-sources"
+import { DataSourcesError, DataSourcesErrorCode } from "@modules/integrations/data-sources"
+import { InjectTelegramUser, TELEGRAM_REVOKED_MESSAGE } from "@modules/integrations/telegram-user"
+import type { TelegramUserClient } from "@modules/integrations/telegram-user"
 import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
 import { eachInOrder } from "@modules/platform/primitives"

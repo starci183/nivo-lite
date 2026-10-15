@@ -174,10 +174,11 @@ export class ContentAiCompletionService {
                 ),
                 media: [
                     ...item.media.filter((file) => !file.suggested),
-                    ...picked.flatMap((number) => {
-                        const file = library[number - 1]
-                        return file === undefined ? [] : [{ ...file, suggested: true }]
-                    }),
+                    ...picked.flatMap((number) =>
+                        library
+                            .filter((_file, index) => index + 1 === number)
+                            .map((file) => ({ ...file, suggested: true })),
+                    ),
                 ],
                 channels: [...new Set([...item.channels, ...channels])],
                 ...(pillar === undefined ? {} : { pillarId: trimmedText(pillar.id) }),

@@ -10,10 +10,7 @@ const isDevelopmentSite = (siteUrl: string | undefined): boolean => {
     )
 }
 
-/** Reads the data-sources options: a private target is allowed on a development site or by an explicit flag; Telegram is all-or-nothing. */
+/** Reads the data-sources options: a private target is allowed on a development site or by an explicit flag. */
 export const parseDataSourcesConfig = (env: EnvSource): DataSourcesOptions => ({
     allowPrivateHosts: isDevelopmentSite(env.optional("SITE_URL")) || env.bool("DATA_ALLOW_PRIVATE_HOSTS", false),
-    telegramUser: env.anyDeclared(["TELEGRAM_API_ID", "TELEGRAM_API_HASH"])
-        ? { apiId: env.int("TELEGRAM_API_ID"), apiHash: env.secret("TELEGRAM_API_HASH") }
-        : null,
 })

@@ -3,12 +3,14 @@ import { mock } from "@starci/jest-preset"
 import mammoth from "mammoth"
 import Papa from "papaparse"
 import unpdf from "unpdf"
-import { PUBLIC_HOST } from "./data-sources.decorators"
+import { PUBLIC_HOST, WORKBOOK_READER } from "./data-sources.decorators"
 import { DataSourcesError, DataSourcesErrorCode } from "./errors/data-sources.error"
 import { TABLE_COPY } from "./messages/table.messages"
 import { TABLE_MAX_BYTES } from "./table-shapes.contracts"
 import { TableClient } from "./table.client"
 import type { PublicHostClient, PublicResponse } from "./public-host.client"
+import { WorkbookReaderClient } from "./workbook-reader.client"
+import type { WorkbookReader } from "./workbook-reader.contracts"
 
 interface TextParser {
     parse(text: string, config: Papa.ParseConfig<Array<string>>): Papa.ParseResult<Array<string>>
@@ -83,10 +85,17 @@ const docx = new Uint8Array([0x50, 0x4b, 0x03, 0x04])
 
 const build = async () => {
     const publicHost = mock<PublicHostClient>()
+    const workbookReader = mock<WorkbookReader>()
     const moduleRef = await Test.createTestingModule({
-        providers: [TableClient, { provide: PUBLIC_HOST, useValue: publicHost }],
+        providers: [
+            TableClient,
+            WorkbookReaderClient,
+            { provide: PUBLIC_HOST, useValue: publicHost },
+            { provide: WORKBOOK_READER, useValue: workbookReader },
+        ],
     }).compile()
-    return { client: moduleRef.get(TableClient), publicHost }
+    workbookReader.read.mockImplementation((bytes) => moduleRef.get(WorkbookReaderClient).read(bytes))
+    return { client: moduleRef.get(TableClient), publicHost, workbookReader }
 }
 
 const google = (partial: Partial<PublicResponse>): PublicResponse => ({
@@ -240,6 +249,17 @@ describe("TableClient", () => {
                 }),
             })
             await expect(answer).rejects.toHaveProperty("cause", expect.any(TypeError))
+        })
+
+        it("refuses a workbook when the reader returns no sheets", async () => {
+            const { client, workbookReader } = await build()
+            workbookReader.read.mockResolvedValue([])
+
+            await expect(client.readFile("empty.xlsx", zip)).rejects.toMatchObject({
+                code: DataSourcesErrorCode.Rejected,
+                params: { detail: TABLE_COPY.noSheets },
+            })
+            expect(workbookReader.read).toHaveBeenCalledWith(zip)
         })
     })
 

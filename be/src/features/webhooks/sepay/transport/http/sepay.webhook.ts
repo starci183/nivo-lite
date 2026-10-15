@@ -6,9 +6,7 @@ import { Public, PublicReason } from "@modules/domain/identity"
 import { RateLimit, RateTier } from "@modules/platform/http-security"
 
 /** What SePay counts as a delivered webhook: HTTP 200 or 201 with `{"success": true}`; it retries every other answer. */
-export interface SepayAck {
-    success: true
-}
+export const PROVIDER_ACK = { success: true } as const
 
 @Controller("api/sepay/webhook")
 /**
@@ -27,8 +25,9 @@ export class SepayWebhook {
     async receive(
         @Req() request: RawBodyRequest<Request>,
         @Headers("authorization") authorization: string | undefined,
-    ): Promise<SepayAck> {
+    ): Promise<typeof PROVIDER_ACK> {
+        this.settlement.verifySepayDelivery(authorization)
         await this.settlement.acceptSepayDelivery({ authorization, rawBody: request.rawBody })
-        return { success: true }
+        return PROVIDER_ACK
     }
 }

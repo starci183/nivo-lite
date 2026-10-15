@@ -56,13 +56,13 @@ const runner =
     (key: string, ctx: ExecutorContext, payload: ExecutorPayload): Promise<RunResult> =>
         executors[key]?.(ctx, payload) ?? Promise.reject(new TypeError(`no executor for ${key}`))
 
-const build = async (em: MockEntityManager = mockEntityManager()) => {
+const build = async (em: MockEntityManager = mockEntityManager(), useNullChat = false) => {
     const office = mock<AutomationOffice>()
     office.openFollowUp.mockResolvedValue(true)
     const records = mock<AutomationRecords>()
     records.createLead.mockResolvedValue("l-new")
     const chat = mock<AutomationOwnerChat>()
-    chat.sendToOwner.mockResolvedValue(true)
+    chat.sendToOwner.mockResolvedValue(!useNullChat)
     const messages = mock<AutomationMessagesService>()
     messages.say.mockImplementation((key, params) => `${key}${JSON.stringify(params ?? {})}`)
     messages.actorOf.mockReturnValue("actor")
@@ -156,6 +156,20 @@ describe("AutomationOperationsExecutorsService", () => {
 
             const result = await unreachable.run("daily_report", context({ toOwnerChat: true }), {})
 
+            expect(result.steps[1]).toEqual({
+                label: "report.chatSkipped{}",
+                status: "skipped",
+                detail: "report.chatSkippedDetail{}",
+            })
+        })
+
+        it("keeps the report in Office when the null chat adapter is registered", async () => {
+            const em = mockEntityManager({ query: [SELECT_DAY_FIGURES, [figures]] })
+            const { run, office } = await build(em, true)
+
+            const result = await run("daily_report", context({ toOwnerChat: true }), {})
+
+            expect(office.postLine).toHaveBeenCalledWith("ws-1", expect.stringContaining("report.title"), null)
             expect(result.steps[1]).toEqual({
                 label: "report.chatSkipped{}",
                 status: "skipped",

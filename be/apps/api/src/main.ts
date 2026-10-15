@@ -1,46 +1,12 @@
-import { parseBillingConfig } from "@modules/domain/billing"
 import { NestFactory } from "@nestjs/core"
 import type { NestExpressApplication } from "@nestjs/platform-express"
 import { SystemClockService } from "@modules/platform/clock"
-import { EnvSource, parseServerConfig } from "@modules/platform/config"
-import { parsePrimaryDatabaseConfig } from "@modules/platform/database"
-import {
-    parseHttpSecurityConfig,
-    RequestValidationService,
-    securityHeadersMiddleware,
-} from "@modules/platform/http-security"
+import { EnvSource } from "@modules/platform/config"
+import { RequestValidationService, securityHeadersMiddleware } from "@modules/platform/http-security"
 import { createJsonLogger, LoggingLogEvent } from "@modules/platform/logging"
 import { DomainError } from "@modules/platform/errors"
-import { parseJobsConfig } from "@modules/platform/jobs"
-import { parseJobsAlertConfig } from "@modules/domain/job-ops"
-import { parseQueueConfig } from "@modules/platform/queue"
-import { parseChannelsConfig } from "@modules/domain/channels"
-import { parseConnectionSecretsConfig } from "@modules/domain/connection-secrets"
-import { parseLoyaltyOtpsConfig } from "@modules/domain/loyalty-otps"
-import { parseDataSourcesConfig } from "@modules/integrations/data-sources"
-import { parseMailConfig } from "@modules/integrations/mail"
-import { parseTelegramConfig } from "@modules/integrations/telegram"
-import { parseZaloConfig } from "@modules/integrations/zalo"
-import { parsePlatformAdminConfig } from "@modules/domain/platform-admin"
-import { parseWorkspaceInvitesConfig } from "@modules/domain/workspace-invites"
-import { parseWorkspacesConfig } from "@modules/domain/workspaces"
-import { parseDocumentsConfig } from "@modules/integrations/documents"
-import { parseLlmConfig } from "@modules/integrations/llm"
-import { parseN8nConfig } from "@modules/integrations/n8n"
-import { parseDeepseekConfig } from "@modules/integrations/deepseek"
-import { parseOpenclawConfig } from "@modules/integrations/openclaw"
-import { parseVideoConfig } from "@modules/domain/video"
-import { parseFfmpegConfig } from "@modules/integrations/ffmpeg"
-import { parseSupabaseConfig } from "@modules/integrations/supabase"
-import { parseConnectionsConfig } from "@modules/domain/connections"
-import { parseWebhookConnectionsConfig } from "@modules/domain/webhook-connections"
-import { parseChannelSetupConfig } from "@modules/integrations/channel-setup"
-import { parseGoogleConfig } from "@modules/integrations/google"
-import { parseMetaConfig } from "@modules/integrations/meta"
-import { parseWebhookDeliveryConfig } from "@modules/integrations/webhook-delivery"
-import { parseTtsConfig } from "@modules/integrations/tts"
 import { AppModule } from "./app.module"
-import type { ApiOptions } from "./api.options"
+import { readApiEnv } from "./api.env"
 
 /** The largest JSON body: a ten megabyte file the browser sends as base64 inside a GraphQL mutation (the data import wizards). */
 const JSON_BODY_LIMIT = "14mb"
@@ -48,44 +14,7 @@ const JSON_BODY_LIMIT = "14mb"
 /** Reads the environment once, composes the API from parsed options and serves until a shutdown signal. */
 const bootstrap = async (): Promise<void> => {
     const env = EnvSource.fromProcess()
-    const options: ApiOptions = {
-        server: parseServerConfig(env),
-        httpSecurity: {
-            ...parseHttpSecurityConfig(env),
-            // One entry per inbound provider, e.g. stripe: parseWebhookProviderConfig(env, "STRIPE"); lanes register theirs here.
-            webhooks: {},
-        },
-        database: parsePrimaryDatabaseConfig(env),
-        supabase: parseSupabaseConfig(env),
-        llm: parseLlmConfig(env),
-        documents: parseDocumentsConfig(env),
-        platformAdmin: parsePlatformAdminConfig(env),
-        workspaces: parseWorkspacesConfig(env),
-        workspaceInvites: parseWorkspaceInvitesConfig(env),
-        billing: parseBillingConfig(env),
-        openclaw: parseOpenclawConfig(env),
-        deepseek: parseDeepseekConfig(env),
-        connectionSecrets: parseConnectionSecretsConfig(env),
-        loyaltyOtps: parseLoyaltyOtpsConfig(env),
-        channels: parseChannelsConfig(env),
-        telegram: parseTelegramConfig(env),
-        zalo: parseZaloConfig(env),
-        mail: parseMailConfig(env),
-        dataSources: parseDataSourcesConfig(env),
-        queue: parseQueueConfig(env),
-        jobs: parseJobsConfig(env),
-        jobsAlert: parseJobsAlertConfig(env),
-        connections: parseConnectionsConfig(env),
-        webhookConnections: parseWebhookConnectionsConfig(env),
-        google: parseGoogleConfig(env),
-        meta: parseMetaConfig(env),
-        channelSetup: parseChannelSetupConfig(env),
-        webhookDelivery: parseWebhookDeliveryConfig(env),
-        n8n: parseN8nConfig(env),
-        ffmpeg: parseFfmpegConfig(env),
-        tts: parseTtsConfig(env),
-        video: parseVideoConfig(env),
-    }
+    const options = readApiEnv(env)
     const app = await NestFactory.create<NestExpressApplication>(AppModule.register(options), { rawBody: true })
     app.set("trust proxy", options.httpSecurity.trustedProxyHops)
     app.disable("x-powered-by")

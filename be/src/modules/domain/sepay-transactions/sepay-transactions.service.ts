@@ -4,7 +4,7 @@ import { PaymentProofService, parseJsonObject, sepayPayloadOf } from "@modules/d
 import type { SepayDelivery, SepayPayload } from "@modules/domain/billing"
 import { orderCodesIn } from "@modules/domain/payment-orders"
 import { acceptWebhookDelivery, InjectPrimaryEntityManager } from "@modules/platform/database"
-import type { ReviewTransaction, SettleOutcome } from "./sepay-transactions.contracts"
+import type { ReviewTransaction, SepayAuthorization, SettleOutcome } from "./sepay-transactions.contracts"
 import { transactionStatus } from "./sepay-transactions.policy"
 import {
     COMPLETE_SEPAY_TRANSACTION,
@@ -44,6 +44,11 @@ export class SepayTransactionsService {
             receivedAt: new Date(row.received_at).toISOString(),
             content: row.content,
         }))
+    }
+
+    /** Proves the SePay billing API key before the HTTP door passes the delivery to settlement intake. */
+    verifySepayDelivery(authorization: SepayAuthorization): void {
+        this.proof.verifyBillingKey(authorization)
     }
 
     /**

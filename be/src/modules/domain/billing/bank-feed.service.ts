@@ -170,6 +170,11 @@ export class BankFeedService {
         })
     }
 
+    /** Proves a workspace's SePay feed key against its connection's stored digest before the HTTP door admits intake. */
+    async verifySepayFeedDelivery(delivery: SepayFeedDelivery): Promise<void> {
+        await this.proof.proveSepayFeed(delivery)
+    }
+
     /** A delivery of a workspace's own SePay feed: an incoming transfer with an amount is a credit. */
     async acceptSepayFeedDelivery(delivery: SepayFeedDelivery): Promise<void> {
         const proven = await this.proof.proveSepayFeed(delivery)

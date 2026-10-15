@@ -1,4 +1,4 @@
-import { Injectable, Optional } from "@nestjs/common"
+import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import type { RunResult, RunStep } from "@modules/domain/automation-runs"
 import type { TemplateDefinition } from "@modules/domain/automation-templates"
@@ -36,7 +36,7 @@ export class AutomationMessagesService {
         @InjectMessageCatalog() private readonly catalog: MessageCatalog,
         @InjectAutomationGate() private readonly gate: AutomationGate,
         @InjectAutomationOffice() private readonly office: AutomationOffice,
-        @Optional() @InjectAutomationText() private readonly text: AutomationText | undefined,
+        @InjectAutomationText() private readonly text: AutomationText,
     ) {}
 
     /** The Vietnamese text of a key; the runs the owner reads are stored in Vietnamese. */
@@ -214,7 +214,6 @@ export class AutomationMessagesService {
         if (!text) return false
         this.negative ??= new RegExp(this.say("pattern.negative"), "i")
         if (this.negative.test(text)) return true
-        if (this.text === undefined) return false
         const raw = await this.text.generate({
             workspaceId,
             purpose: "classify",
@@ -230,8 +229,7 @@ export class AutomationMessagesService {
         caseNote: string,
     ): Promise<{ readonly text: string; readonly generated: boolean }> {
         const filled = fillBody(context.body, variables, this.neutral())
-        if (context.def.contentMode !== "ai_per_case" || this.text === undefined)
-            return { text: filled, generated: false }
+        if (context.def.contentMode !== "ai_per_case") return { text: filled, generated: false }
         const raw = await this.text.generate({
             workspaceId: context.workspaceId,
             purpose: "per_case",

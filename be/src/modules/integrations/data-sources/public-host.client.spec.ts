@@ -15,7 +15,7 @@ const lookupMock = jest.mocked<(hostname: string, options: LookupAllOptions) => 
     dns.lookup,
 )
 
-const options = (allowPrivateHosts: boolean): DataSourcesOptions => ({ allowPrivateHosts, telegramUser: null })
+const options = (allowPrivateHosts: boolean): DataSourcesOptions => ({ allowPrivateHosts })
 
 const build = async (allowPrivateHosts = false) => {
     const http = mock<HttpClient>()

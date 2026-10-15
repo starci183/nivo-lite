@@ -15,7 +15,7 @@ export type {
     TelegramLoginStarted,
     TelegramSetupState,
 } from "./telegram-user-wizard.contracts"
-export type { TelegramChatChoice } from "@modules/integrations/data-sources"
+export type { TelegramChatChoice } from "@modules/integrations/telegram-user"
 export type {
     CsvConfig,
     CsvImportRequest,

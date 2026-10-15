@@ -1,121 +1,92 @@
-"use client"
+import { Alert, EmptyNotice, PageContainer, SectionHeader, Skeleton, TextAction } from "@starci/grammar/common"
+import type { ReactNode } from "react"
+import { ConnectionsHead } from "@/components/composites/ConnectionsHead"
+import { connectionsPageClassNames as classNames } from "./classNames"
+import { ConnectionsLists } from "./component"
+import type { ConnectionsOverviewProps } from "./component"
 
-import { useTranslations } from "next-intl"
-import { useAuthUser } from "@/hooks/auth"
-import { PROVIDER_GROUPS, providerKey } from "@/hooks/connection-providers"
-import {
-    attentionConnections,
-    CONNECTION_ROUTES,
-    GROUP_TITLE_KEY,
-    isLocalOnly,
-    liveConnections,
-    sortRows,
-    useConnectionsData,
-} from "@/hooks/connections"
-import { useActiveWorkspace, useWorkspaceCards } from "@/hooks/workspaces"
-import { webSiteOrigin } from "@/modules/config"
-import { ConnectionsOverviewBase } from "./component"
-import type { PageGroup, PageWords } from "./component"
-
-/** What the Connections page tells the overview. */
-interface ConnectionsOverviewProps {
-    /** The `tab` of the address: `library`, `connected` or none. */
-    readonly tab?: string | undefined
-}
-
-/** What decides which face the overview shows. */
-interface ModeInput {
-    readonly isLoading: boolean
-    readonly manager: boolean
-    readonly failed: boolean
-}
-
-const modeOf = (input: ModeInput): "loading" | "ready" | "forbidden" | "failed" => {
-    if (input.isLoading) return "loading"
-    if (!input.manager) return "forbidden"
-    return input.failed ? "failed" : "ready"
-}
+const headOf = (props: ConnectionsOverviewProps["props"], withSummary: boolean) => (
+    <ConnectionsHead
+        crumbLabel={props.words.crumbLabel}
+        homeLabel={props.words.crumbHome}
+        homeHref={props.words.homeHref}
+        title={props.words.title}
+        description={props.words.description}
+        {...(withSummary ? { meta: props.words.summary } : {})}
+    />
+)
 
 /**
- * The connected Connections overview (owner | manager): the grouped board of what is connected, or the connector library. It reads the
- * connections and the agents from the back end GraphQL API through SWR and hands plain data and words to the pure drawing; the wizard
- * and the connector detail open as drawers driven by the URL.
+ * The Connections page: the trail and heading, the first connection that needs attention, the Connected / Library tabs, then either
+ * the library or the provider lists grouped by what they bring in. The wizard and the connector detail open as drawers over it.
  */
 export const ConnectionsOverview = (props: ConnectionsOverviewProps) => {
-    const t = useTranslations("connections")
-    const { activeWorkspaceId } = useActiveWorkspace()
-    const workspaces = useWorkspaceCards()
-    const user = useAuthUser()
-    const role = workspaces.cards.find((card) => card.id === activeWorkspaceId)?.role
-    const manager = role === "owner" || role === "manager"
-    const data = useConnectionsData()
-    const items = data.items
-    const agentNames = data.agentNames
-    const live = liveConnections(items)
-    const attention = attentionConnections(items)
-    const first = attention[0]
-    const namesOf = (agentIds: ReadonlyArray<string>) =>
-        agentIds.map((id) => agentNames[id]).filter((name): name is string => name !== undefined)
-    const showsLibrary = props.tab === "library" || (props.tab !== "connected" && live.length === 0)
-
-    const groups: ReadonlyArray<PageGroup> = PROVIDER_GROUPS.map((group) => ({
-        id: group.id,
-        title: t(GROUP_TITLE_KEY[group.id]),
-        count: items.filter((item) => group.providers.includes(item.provider)).length,
-        cards: group.providers
-            .filter((provider) => items.some((item) => item.provider === provider))
-            .map((provider) => {
-                const rows = sortRows(items.filter((item) => item.provider === provider))
-                return {
-                    provider,
-                    title: t(providerKey(provider, "title")),
-                    fact: t("connectionCount", { count: rows.length }),
-                    rows: rows.map((connection) => ({ connection, agentNames: namesOf(connection.agentIds) })),
-                }
-            }),
-    })).filter((group) => group.cards.length > 0)
-
-    const words: PageWords = {
-        title: t("title"),
-        description: t("description"),
-        crumbLabel: t("crumbLabel"),
-        crumbHome: t("crumbHome"),
-        homeHref: CONNECTION_ROUTES.dashboard,
-        summary:
-            attention.length > 0
-                ? t("summary", { live: live.length, attention: attention.length })
-                : t("summaryCalm", { live: live.length }),
-        ownerOnly: t("ownerOnly"),
-        emptyTitle: t("connectedEmpty"),
-        emptyHint: t("connectedEmptyHint"),
-        automationsLink: t("automationsLink"),
-        automationsHref: CONNECTION_ROUTES.automations,
-        loadFailed: t("loadFailed"),
-        forbiddenTitle: t("forbiddenTitle"),
-        forbiddenBody: t("forbiddenBody"),
-        forbiddenBack: t("forbiddenBack"),
-        forbiddenHref: CONNECTION_ROUTES.chat,
+    const page = props.props
+    if (page.mode === "forbidden") {
+        return (
+            <PageContainer measure="product">
+                <div className={classNames.page}>
+                    <SectionHeader level={1} title={page.words.forbiddenTitle} description={page.words.forbiddenBody} />
+                    <TextAction href={page.words.forbiddenHref}>{page.words.forbiddenBack}</TextAction>
+                </div>
+            </PageContainer>
+        )
     }
-
-    const isLoading = workspaces.status === "loading" || (manager && data.isLoading)
-    const failed = data.failed
-
+    if (page.mode === "loading") {
+        return (
+            <PageContainer measure="product">
+                <div className={classNames.page}>
+                    {headOf(page, false)}
+                    <Skeleton shape="text" lines={4} />
+                </div>
+            </PageContainer>
+        )
+    }
+    if (page.mode === "failed") {
+        return (
+            <PageContainer measure="product">
+                <div className={classNames.page}>
+                    {headOf(page, false)}
+                    <Alert tone="negative" title={page.words.loadFailed} />
+                </div>
+            </PageContainer>
+        )
+    }
     return (
-        <ConnectionsOverviewBase
-            props={{
-                mode: modeOf({ isLoading, manager, failed }),
-                words,
-                view: showsLibrary ? "library" : "connected",
-                ownerEmail: user.data?.email ?? "",
-                canManage: role === "owner",
-                localOnly: isLocalOnly(webSiteOrigin()),
-                items,
-                agents: data.activeAgents,
-                agentNames,
-                liveCount: live.length,
-                attention: first === undefined ? null : { first, count: attention.length },
-                groups,
-            }}
-        />
+        <PageContainer measure="product">
+            <div className={classNames.page}>
+                {headOf(page, true)}
+                {page.attention === null ? null : (
+                    <props.renderAttention
+                        connection={page.attention.first}
+                        count={page.attention.count}
+                        canManage={page.canManage}
+                    />
+                )}
+                {page.canManage ? null : <Alert tone="informative" title={page.words.ownerOnly} />}
+                <props.renderViewTabs selected={page.view} liveCount={page.liveCount} />
+                {page.view === "library" ? <props.renderLibrary items={page.items} /> : null}
+                {page.view === "connected" && page.liveCount === 0 ? (
+                    <EmptyNotice message={page.words.emptyTitle} description={page.words.emptyHint} />
+                ) : null}
+                {page.view === "connected" ? (
+                    <ConnectionsLists
+                        props={page}
+                        renderAddButton={props.renderAddButton}
+                        renderRow={props.renderRow}
+                    />
+                ) : null}
+                <TextAction href={page.words.automationsHref}>{page.words.automationsLink}</TextAction>
+            </div>
+        </PageContainer>
     )
 }
+
+/** The feature host supplies the registered drawers and their readiness. */
+interface OverlayHostProps {
+    readonly active: boolean
+    readonly candidate: ReactNode
+}
+
+/** A pure host for the connection drawers; the feature owns their registration and lifecycle. */
+export const OverlayHost = (props: OverlayHostProps) => <>{props.active ? props.candidate : null}</>
