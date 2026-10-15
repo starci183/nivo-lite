@@ -85,10 +85,6 @@ environments:
       web:
         replicas: 1
         port: 3000
-      ingress:
-        replicas: 1
-        port: 443
-        httpPort: 80
       openclaw:
         replicas: 1
         port: 18790
@@ -185,11 +181,9 @@ environments:
           settings:
             OPENCLAW_MODEL: {key: OPENCLAW_MODEL, default: openrouter/deepseek/deepseek-v4-flash}
       configs:
-        - {name: routes, file: infra/swarm/edge/routes.yml, env: NIVO_CFG_ROUTES}
         - {name: openclaw-entrypoint, file: infra/swarm/openclaw/entrypoint.sh, env: NIVO_CFG_OPENCLAW_ENTRYPOINT}
         - {name: openclaw-init, file: infra/swarm/openclaw/openclaw-init.mjs, env: NIVO_CFG_OPENCLAW_INIT}
         - {name: openclaw-relay, file: infra/swarm/openclaw/openclaw-relay.mjs, env: NIVO_CFG_OPENCLAW_RELAY}
-      passEnv: [ACME_EMAIL]
       verify:
         http:
           - {name: api liveness, url: "https://api.nivo.vn/healthz", status: 200, json: {status: ok}, retry: true}
@@ -225,6 +219,8 @@ environments:
           dynamicDir: /home/nivo/nivo-edge/dynamic
           container: nivo-edge-traefik-1
         routes: infra/swarm/edge/routes.yml
+        # `ingress publish`: nivo's routes go into the shared directory as nivo.yml; the generic routes.yml of the old edge (nivo, namnivo, n8n and engine routes) is backed up (age) and retired. Tenant files (academy.yml, tayson.yml) are never touched.
+        publish: {file: nivo.yml, supersedes: [routes.yml]}
         upstreams:
           - {name: nivo-web, hosts: [nivo.vn, www.nivo.vn], container: nivo-web-web-1, aliases: [nivo-web], port: 3000}
           - {name: namnivo, hosts: [nguyentuannam.org, www.nguyentuannam.org, app.nguyentuannam.org], container: namnivo-web-web-1, aliases: [namnivo-web], port: 3000}
