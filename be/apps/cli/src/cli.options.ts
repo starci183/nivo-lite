@@ -1,20 +1,10 @@
-import { parseLlmConfig } from "@modules/integrations/llm"
 import type { LlmOptions } from "@modules/integrations/llm"
-import { parseChannelProvisioningConfig } from "@modules/domain/channel-provisioning"
 import type { ChannelProvisioningOptions } from "@modules/domain/channel-provisioning"
-import { parseConnectionsConfig } from "@modules/domain/connections"
 import type { ConnectionsOptions } from "@modules/domain/connections"
-import { parseChannelSetupConfig } from "@modules/integrations/channel-setup"
 import type { ChannelSetupOptions } from "@modules/integrations/channel-setup"
-import { parseN8nHostConfig } from "@modules/integrations/n8n-host"
 import type { N8nHostOptions } from "@modules/integrations/n8n-host"
-import { parseSepaySimulationConfig } from "@modules/domain/sepay-simulation"
 import type { SepaySimulationRegistration } from "@modules/domain/sepay-simulation"
-import { SimulationPostClient } from "@modules/integrations/webhook-delivery"
-import { parseSupabaseConfig } from "@modules/integrations/supabase"
 import type { SupabaseOptions } from "@modules/integrations/supabase"
-import type { EnvSource } from "@modules/platform/config"
-import { parsePrimaryDatabaseConfig } from "@modules/platform/database"
 import type { DatabaseConnectionOptions } from "@modules/platform/database"
 
 /** Everything the lite cli needs: the Supabase PostgreSQL connection and the Supabase project it administers. */
@@ -36,18 +26,3 @@ export interface CliAppOptions {
     /** The secrets and output of the connect-channel command. */
     readonly channelProvisioning: ChannelProvisioningOptions
 }
-
-/** Reads the one declared connection without adding entities or TypeORM migrations, and the Supabase project. */
-export const parseCliAppOptions = (env: EnvSource): CliAppOptions => ({
-    connections: [parsePrimaryDatabaseConfig(env)],
-    n8nHost: parseN8nHostConfig(env),
-    supabase: parseSupabaseConfig(env),
-    llm: parseLlmConfig(env),
-    sepaySimulation: parseSepaySimulationConfig(env, SimulationPostClient, (line) => process.stdout.write(`${line}\n`)),
-    channelConnections: parseConnectionsConfig(env),
-    channelSetup: parseChannelSetupConfig(env),
-    channelProvisioning: parseChannelProvisioningConfig(env, (line) =>
-        process.stdout.write(`${line}
-`),
-    ),
-})

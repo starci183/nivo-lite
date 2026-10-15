@@ -1,6 +1,6 @@
 import { Test } from "@nestjs/testing"
 import { fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
-import { PaymentProofService, parseJsonObject } from "@modules/domain/billing"
+import { BillingError, BillingErrorCode, PaymentProofService, parseJsonObject } from "@modules/domain/billing"
 import type { SepayDelivery } from "@modules/domain/billing"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import {
@@ -81,6 +81,34 @@ describe("SepayTransactionsService", () => {
                 },
             ])
             expect(tx.em.query).toHaveBeenCalledWith(SELECT_REVIEW_TRANSACTIONS, ["ws-1", ["order-1"]])
+        })
+    })
+
+    describe("verifySepayDelivery", () => {
+        it.each([AUTHORIZATION, undefined])(
+            "delegates the exact authorization %j without reading data",
+            async (authorization) => {
+                const { settlement, tx, proof } = await build([])
+
+                settlement.verifySepayDelivery(authorization)
+
+                expect(proof.verifyBillingKey).toHaveBeenCalledTimes(1)
+                expect(proof.verifyBillingKey).toHaveBeenCalledWith(authorization)
+                expect(tx.outcomes).toEqual([])
+                expect(tx.em.query).not.toHaveBeenCalled()
+            },
+        )
+
+        it("propagates a refused key without reading data", async () => {
+            const { settlement, tx, proof } = await build([])
+            const failure = new BillingError({ code: BillingErrorCode.WebhookUnauthorized })
+            proof.verifyBillingKey.mockImplementation(() => {
+                throw failure
+            })
+
+            expect(() => settlement.verifySepayDelivery(AUTHORIZATION)).toThrow(failure)
+            expect(tx.outcomes).toEqual([])
+            expect(tx.em.query).not.toHaveBeenCalled()
         })
     })
 

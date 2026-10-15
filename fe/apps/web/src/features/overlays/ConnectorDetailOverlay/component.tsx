@@ -5,11 +5,37 @@ import { ProviderLogo } from "@/components/branches/ProviderLogo"
 import type { AgentOption, Connection, ConnectorGlyph, Provider } from "@/modules/types"
 import { connectorDetailClassNames as classNames } from "./classNames"
 
+/** What decides which face of the Connections overview and its overlays can mount. */
+interface ModeInput {
+    readonly isLoading: boolean
+    readonly manager: boolean
+    readonly failed: boolean
+}
+
+/** Loading and access take priority over the result of the workspace reads. */
+export const modeOf = (input: ModeInput): "loading" | "ready" | "forbidden" | "failed" => {
+    if (input.isLoading) return "loading"
+    if (!input.manager) return "forbidden"
+    return input.failed ? "failed" : "ready"
+}
+
 /** One connection of the connector with the names of the agents bound to it. */
 export interface DetailRow {
     readonly connection: Connection
     readonly agentNames: ReadonlyArray<string>
 }
+
+/** Resolve the agents displayed beneath each connection without changing the supplied order. */
+export const detailRowsOf = (
+    connections: ReadonlyArray<Connection>,
+    agentNames: Readonly<Record<string, string>>,
+): ReadonlyArray<DetailRow> =>
+    connections.map((connection) => ({
+        connection,
+        agentNames: connection.agentIds
+            .map((agentId) => agentNames[agentId])
+            .filter((name): name is string => name !== undefined),
+    }))
 
 /** The connector whose detail is open, with its words resolved. */
 export interface DetailEntry {

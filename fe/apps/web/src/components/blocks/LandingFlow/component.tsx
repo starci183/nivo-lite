@@ -9,8 +9,7 @@ import {
     SurfaceCard,
     Text,
 } from "@starci/grammar/common"
-import { LandingIconTile } from "@/components/leaves/LandingIconTile"
-import type { IconName } from "@/components/leaves/Icon"
+import { LandingIconTile, type IconName } from "@/components/leaves/Icon"
 import { ANCHOR, FLOW_BODY, FLOW_GRID, FLOW_ITEM, FLOW_META, FLOW_NAME, SECTION_STACK } from "./classNames"
 
 /** One step of the flow: who acts, what happens, and whether the person decides. */

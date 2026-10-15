@@ -5,6 +5,9 @@ import { BankFeedService } from "@modules/domain/billing"
 import { Public, PublicReason } from "@modules/domain/identity"
 import { RateLimit, RateTier } from "@modules/platform/http-security"
 
+/** The fixed response SePay requires for an accepted delivery. */
+export const PROVIDER_ACK = { success: true } as const
+
 @Controller("api/connections/sepay")
 /**
  * POST /api/connections/sepay/:connectionId, a workspace's OWN SePay bank feed (not NIVO's billing). The wizard shows the owner
@@ -23,8 +26,9 @@ export class SepayFeedWebhook {
         @Req() request: RawBodyRequest<Request>,
         @Param("connectionId") connectionId: string,
         @Headers("authorization") authorization: string | undefined,
-    ): Promise<{ success: true }> {
+    ): Promise<typeof PROVIDER_ACK> {
+        await this.feed.verifySepayFeedDelivery({ connectionId, authorization, rawBody: request.rawBody })
         await this.feed.acceptSepayFeedDelivery({ connectionId, authorization, rawBody: request.rawBody })
-        return { success: true }
+        return PROVIDER_ACK
     }
 }

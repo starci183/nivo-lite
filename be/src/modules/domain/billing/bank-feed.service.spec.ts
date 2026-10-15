@@ -413,9 +413,12 @@ describe("BankFeedService", () => {
         }
 
         it("proves the delivery and books an incoming transfer keyed by the SePay transaction id", async () => {
-            const { feed, proof, inbound } = await build([STATE, FED, AGENT])
+            const { feed, tx, proof, inbound } = await build([STATE, FED, AGENT])
             proof.proveSepayFeed.mockResolvedValue(delivery(incoming))
 
+            await expect(feed.verifySepayFeedDelivery(feedDelivery)).resolves.toBeUndefined()
+            expect(tx.outcomes).toEqual([])
+            expect(inbound.recordBankPayment).not.toHaveBeenCalled()
             await feed.acceptSepayFeedDelivery(feedDelivery)
 
             expect(proof.proveSepayFeed).toHaveBeenCalledWith(feedDelivery)
@@ -463,11 +466,13 @@ describe("BankFeedService", () => {
                 .mockResolvedValueOnce(delivery({ ...incoming, transferAmount: 0 }))
                 .mockResolvedValueOnce(delivery({ ...incoming, transferAmount: "lots" }))
                 .mockRejectedValueOnce(refusal)
+                .mockRejectedValueOnce(refusal)
 
             await feed.acceptSepayFeedDelivery(feedDelivery)
             await feed.acceptSepayFeedDelivery(feedDelivery)
             await feed.acceptSepayFeedDelivery(feedDelivery)
             await expect(feed.acceptSepayFeedDelivery(feedDelivery)).rejects.toBe(refusal)
+            await expect(feed.verifySepayFeedDelivery(feedDelivery)).rejects.toBe(refusal)
 
             expect(tx.outcomes).toEqual([])
             expect(inbound.recordBankPayment).not.toHaveBeenCalled()
