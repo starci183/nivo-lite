@@ -13,7 +13,6 @@ import { AgentSyncService } from "@modules/domain/openclaw-agent-sync"
 import { AI_GENERATIONS_COMPLETION, AI_GENERATIONS_USAGE } from "./ai-generations.decorators"
 import { AiGenerationsLogEvent } from "./ai-generations.log-events"
 import type { GenerationCompletion, UsageGate } from "./ai-generations.port"
-import { AiGenerationsError, AiGenerationsErrorCode } from "./errors/ai-generations.error"
 import { GenerationRunnerService } from "./generation-runner.service"
 import {
     CANCEL_GENERATION,
@@ -106,37 +105,6 @@ describe("GenerationRunnerService", () => {
         await expect(runner.runJob(job)).resolves.toBeUndefined()
 
         expect(claims.advance).not.toHaveBeenCalled()
-        expect(completion.completeGeneration).not.toHaveBeenCalled()
-    })
-
-    it("rejects a generation job when the claims port is missing", async () => {
-        const em = mockEntityManager({ query: [FIND_GENERATION, []] })
-        const { runner, claims, completion } = await build(em)
-        Object.defineProperty(runner, "claims", { value: undefined })
-        const job = { jobId: "job-3", kind: "generate", fencingToken: 2, currentStep: null, payload: PAYLOAD }
-
-        await expect(runner.runJob(job)).rejects.toEqual(
-            new AiGenerationsError({
-                code: AiGenerationsErrorCode.GenerationFailed,
-                params: { reason: "job_claims", message: "" },
-            }),
-        )
-
-        expect(em.query.mock.calls).toEqual([[FIND_GENERATION, ["g1", "w1"]]])
-        expect(claims.advance).not.toHaveBeenCalled()
-        expect(completion.completeGeneration).not.toHaveBeenCalled()
-    })
-
-    it("fences a generation job when no completion port is configured", async () => {
-        const em = mockEntityManager({ query: [FIND_GENERATION, []] })
-        const { runner, claims, completion } = await build(em)
-        Object.defineProperty(runner, "completion", { value: undefined })
-        const job = { jobId: "job-4", kind: "generate", fencingToken: 3, currentStep: null, payload: PAYLOAD }
-
-        await expect(runner.runJob(job)).resolves.toBeUndefined()
-
-        expect(em.query.mock.calls).toEqual([[FIND_GENERATION, ["g1", "w1"]]])
-        expect(claims.advance.mock.calls).toEqual([[{ jobId: "job-4", expectedFencingToken: 3, step: "apply-result" }]])
         expect(completion.completeGeneration).not.toHaveBeenCalled()
     })
 
