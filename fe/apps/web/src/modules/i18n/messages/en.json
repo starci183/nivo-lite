@@ -347,8 +347,7 @@
     "notFoundText": "This page does not exist or you no longer have access to it.",
     "notFoundHome": "Back to overview",
     "globalErrorTitle": "NIVO OS could not start",
-    "globalErrorText": "An unexpected error stopped the page. Try again in a moment.",
-    "homeDescription": "Human Leads. AI Operates. System Learns. One owner, one next step and evidence for every customer."
+    "globalErrorText": "An unexpected error stopped the page. Try again in a moment."
   },
   "approval": {
     "needsApproval": "Needs your approval",
@@ -600,9 +599,6 @@
     "missingCapabilitySellsOnline": "online marketplace sales",
     "missingCapabilityHasRecurringContracts": "recurring contracts",
     "missingCapabilityHasDelivery": "delivery",
-    "auditEnabled": "Switched on the automation: {name}",
-    "auditDisabled": "Switched off the automation: {name}",
-    "auditBodysaved": "Approved the automation message: {name}",
     "auditStreak": "{count} approvals in a row without edits.",
     "auditAutosendgranted": "The owner allowed \"{name}\" to send by itself",
     "auditAutosenddeclined": "The owner did not allow \"{name}\" to send by itself yet"
@@ -721,7 +717,6 @@
     "title": "Second Brain",
     "intro": "What your business knows, in one place. Every agent reads it through its own view; you decide what changes.",
     "tabsLabel": "Brain sections",
-    "tabMap": "Map",
     "tabReview": "To review",
     "tabFacts": "Facts",
     "tabLessons": "Lessons",
@@ -937,7 +932,6 @@
     "split": "Split",
     "scheduledBadge": "From {date}",
     "evidence": "Evidence",
-    "asked": "Left open. Ask {who}, then come back to decide.",
     "splitDone": "Kept both: a separate fact was added for that situation.",
     "conflictGroup": "Documents disagree",
     "conflictGroupHint": "{n} different values for the same item. Pick the right one; the others are rejected.",
@@ -2487,10 +2481,7 @@
     "syncNone": "Not synced yet",
     "syncNever": "none",
     "resync": "Sync again",
-    "ago": "{n}s ago",
-    "agoMin": "{n} min ago",
     "agoHour": "{n} h ago",
-    "agoDay": "{n} d ago",
     "replyTitle": "Customer replies",
     "timeoutLabel": "Longest wait (seconds)",
     "timeoutHint": "If the agent has not answered by then, the customer gets a direct answer instead (5 to 120, default 25).",
@@ -3299,9 +3290,7 @@
     "errZipBomb": "This ZIP looks unsafe (extreme compression), so it was not opened.",
     "errZipEmpty": "This ZIP has no readable documents.",
     "addCancel": "Cancel",
-    "tabText": "Text",
     "tabFaq": "Q&A",
-    "tabFile": "File",
     "tabUrl": "Link",
     "fieldTitle": "Name",
     "fieldTitleHint": "A short name so you can find it later.",
@@ -3594,203 +3583,6 @@
     "suggest_brand_voice_topic": "Voice and sample replies",
     "suggest_brand_voice_hint": "A few sample replies you like."
   },
-  "landing": {
-    "navLabel": "Main navigation",
-    "homeLabel": "NIVO home",
-    "navProduct": "Product",
-    "navHow": "How it works",
-    "navFounding": "Founding 50",
-    "navFaq": "FAQ",
-    "signIn": "Sign in",
-    "openDashboard": "Open dashboard",
-    "tryNow": "Try it",
-    "heroLine1": "Important work stays on track.",
-    "heroLine2": "Results are verified.",
-    "heroLead": "NIVO OS helps the owner follow every customer, commitment and open task: one accountable owner, one clear next step, and evidence when it is done.",
-    "heroCta": "Try NIVO OS",
-    "heroSecondary": "See the product",
-    "heroOffer": "Founding 50 · {percent}% off the first year",
-    "heroFactNoCard": "No card needed",
-    "heroFactSetup": "Set up in 5 minutes",
-    "heroFactChannels": "Zalo · Telegram · SePay",
-    "heroCardTitle": "Today NIVO is following",
-    "heroCardAria": "Example of what NIVO follows today",
-    "heroRow1Title": "Mr. Minh · quote",
-    "heroRow1Desc": "An owns it · call back at 15:00",
-    "heroRow1Badge": "Awaiting approval",
-    "heroRow2Title": "Ms. Lan · payment",
-    "heroRow2Desc": "SePay confirmed 12,000,000đ",
-    "heroRow2Badge": "Verified",
-    "tagline": "Human Leads. AI Operates. System Learns.",
-    "demoLabel": "Real product · sample data",
-    "shotOverview": "The NIVO OS overview: open work, approvals waiting and the pipeline",
-    "shotOffice": "The Office: team and AI agents in one group chat",
-    "shotContext": "A customer page with the context brief and history",
-    "shotOwner": "One accountable owner and one next step",
-    "shotApproval": "The approval card: the AI draft waits for the owner",
-    "shotOutcome": "Outcome and evidence recorded for a won customer",
-    "trustLead": "Work that should not depend on your memory",
-    "trustFor": "Built for",
-    "trustAudience": "B2B service businesses",
-    "trustSub": "Experts · Consultants · Training · Agencies",
-    "chip1": "New customer waiting for a reply",
-    "chip2": "Quote waiting to be sent",
-    "chip3": "Commitment about to be late",
-    "chip4": "Customer to contact again",
-    "chip5": "Overdue payment",
-    "chip6": "Work waiting for approval",
-    "chip7": "Contract waiting to be signed",
-    "chip8": "Document the customer has not sent",
-    "chip9": "Opportunity with no next step",
-    "productEyebrow": "NIVO OS",
-    "productTitle": "One task. A clear owner, step and result.",
-    "tabsLabel": "Views of NIVO OS",
-    "tab1": "Office",
-    "tab2": "Customer and context",
-    "tab3": "Owner and next step",
-    "tab4": "AI approval",
-    "tab5": "Result and evidence",
-    "tab1Title": "One place for people and AI agents",
-    "tab1b1": "The team and the agents work in one group chat.",
-    "tab1b2": "Mention @sales or @accounting and that agent replies.",
-    "tab1b3": "Anything waiting for you is at the top, not buried in messages.",
-    "tab2Title": "Every customer arrives with context",
-    "tab2b1": "The customer's own words, contact and channel are kept together.",
-    "tab2b2": "A short brief marked AI is prepared for you to check.",
-    "tab2b3": "Every change is added to an append-only history.",
-    "tab3Title": "One owner and one next step for every customer",
-    "tab3b1": "Each piece of work has exactly one accountable owner, human or agent.",
-    "tab3b2": "The next step comes with a due date, so nothing floats.",
-    "tab3b3": "Reassign or change the date in one click.",
-    "tab4Title": "AI drafts. You decide.",
-    "tab4b1": "The agent prepares the message; it cannot send it on its own.",
-    "tab4b2": "You approve, edit or reject before anything leaves the company.",
-    "tab4b3": "The decision is recorded: proposed, reviewed, approved, logged.",
-    "tab5Title": "A finished task is not yet a verified result",
-    "tab5b1": "Evidence moves from pending to captured, reviewed and verified.",
-    "tab5b2": "Record what happened with a reference: a note or a signed document.",
-    "tab5b3": "A won deal is handed on to the Accounting Agent.",
-    "flowEyebrow": "How it works",
-    "flowTitle": "Three agents, one flow",
-    "flowLead": "One customer journey, from the first chat to the invoice. Humans approve everything that leaves the company.",
-    "flowStepLabel": "Step {n}",
-    "flow1Name": "Chatbot",
-    "flow1Title": "Captures the lead",
-    "flow1Text": "Answers website visitors after hours and records the need, channel and contact.",
-    "flow2Name": "Sales Agent",
-    "flow2Title": "Owns the next step",
-    "flow2Text": "Proposes the owner, next step and due date, and drafts the follow-up.",
-    "flow3Name": "You",
-    "flow3Title": "Owner approves",
-    "flow3Text": "Approve, edit or reject. Nothing is sent before you decide.",
-    "flow4Name": "Accounting Agent",
-    "flow4Title": "Drafts the invoice",
-    "flow4Text": "Once a deal is won with evidence, the invoice is drafted and waits for your approval.",
-    "flowHuman": "Human decision",
-    "connectEyebrow": "Connect",
-    "connectTitle": "Start from the data you already have",
-    "connectLead": "Customers reach you through several channels. NIVO starts with the one that is ready and adds the rest in order.",
-    "connectAvailable": "Available now",
-    "connectRoadmap": "Roadmap",
-    "chWebsite": "Website chat",
-    "chWebsiteText": "The Chatbot agent answers visitors and captures leads with context.",
-    "chZalo": "Zalo",
-    "chZaloText": "Customer messages become leads with an owner.",
-    "chEmail": "Email",
-    "chEmailText": "Customer emails are turned into tasks with a next step.",
-    "chForm": "Web form",
-    "chFormText": "Form submissions arrive in the same lead list.",
-    "connectNote": "Only the Chatbot is available today. Other channels are on the roadmap and have no date yet.",
-    "connectCta": "Try NIVO OS",
-    "flowAiMark": "AI"
-  },
-  "landingBottom": {
-    "offerAria": "Start with NIVO OS",
-    "offerEyebrow": "Start with NIVO",
-    "offerTitle": "Clear scope before you start",
-    "fact1Title": "1 real task",
-    "fact1Text": "Pick one important task that is due soon and can be checked.",
-    "fact2Title": "{days} days",
-    "fact2Text": "Free trial to start checking the result. {card}",
-    "fact2NoCard": "No card needed to start.",
-    "fact2Card": "A card is needed to start.",
-    "fact3Title": "3 questions",
-    "fact3Text": "Who is responsible? What happens next? What evidence shows it is done?",
-    "fact4Title": "The right approver",
-    "fact4Text": "Exceptions go to the person with the authority to decide.",
-    "priceLabel": "Starting price",
-    "perMonth": "/ month",
-    "priceAfterTrial": "After the free trial. Base price shown crossed out.",
-    "foundingTag": "Founding 50",
-    "foundingPriceLabel": "Founding 50 price, confirmed at signing",
-    "foundingSaving": "{percent}% off for the first {cap} SMEs",
-    "offerEnds": "Ends {date}",
-    "offerCta": "Try NIVO OS",
-    "offerFine": "Price snapshot. Final price and terms are confirmed by the NIVO team when you sign.",
-    "commitAria": "NIVO principles",
-    "commitEyebrow": "NIVO principles",
-    "commitTitle": "Human Leads.\nAI Operates.\nSystem Learns.",
-    "commitPanelLabel": "NIVO · Product principles",
-    "commitPanelText": "How we look at results.",
-    "commitAiChip": "AI",
-    "commitAiNote": "AI prepares. A person approves.",
-    "commitAuthor": "The NIVO team",
-    "commitAuthorRole": "Product principles",
-    "commitQuote": "With NIVO, what you need to know is which important task reached which result, where the evidence is, and which part still needs a person to decide.",
-    "principle1Title": "Human Leads. AI Operates. System Learns.",
-    "principle1Text": "The owner sets direction and approves. AI agents prepare the work. The system records what happened.",
-    "principle2Title": "Evidence over Hype",
-    "principle2Text": "A finished task is not a verified result. We show what was done and what was confirmed.",
-    "ctaAria": "Try NIVO OS",
-    "ctaTitle": "Start with one specific task.",
-    "ctaText": "Choose a task with a clear owner, a clear scope and a result you can confirm. Try NIVO OS and see how it runs.",
-    "ctaButton": "Try NIVO OS",
-    "ctaNote": "Sign in and explore a ready-made workspace. Trial terms are confirmed by the NIVO team.",
-    "ctaMascotAlt": "NIVO unicorn pointing to the start button",
-    "faqAria": "Frequently asked questions",
-    "faqEyebrow": "Questions and answers",
-    "faqTitle": "Frequently asked questions",
-    "faqListLeft": "Frequently asked questions, first group",
-    "faqListRight": "Frequently asked questions, second group",
-    "q1": "What is NIVO OS?",
-    "a1": "NIVO OS is an operating system for founder-led service businesses. Every piece of work has one accountable owner, one clear next step and evidence of the result. Your team and AI agents work together in one Office.",
-    "q2": "Can the AI send messages to customers by itself?",
-    "a2": "No. AI agents prepare drafts and suggest next steps. The owner approves, edits or rejects before anything leaves the company, and the system records the decision.",
-    "q3": "What is included, and what do I buy?",
-    "a3": "Sales Agent and Accounting Agent come with your workspace. The Chatbot is an agent you buy from the catalog, set up and test before it starts capturing website leads.",
-    "q4": "What are the Founding 50 terms?",
-    "a4": "{percent}% off for the first {cap} SMEs that start with NIVO before {date}. Final terms are confirmed by the NIVO team.",
-    "q5": "What data does NIVO use, and where does it live?",
-    "a5": "The product you see here is a trial workspace with sample data. The production data policy, including access, export, storage and deletion, is confirmed during onboarding, before you connect real data.",
-    "q6": "How do I start?",
-    "a6": "Sign in, open the trial workspace and follow one lead from the Chatbot to Sales, to your approval, to the invoice. Then pick one real task to try.",
-    "q7": "How much does it cost?",
-    "a7": "The pricing snapshot shows {plan} at {price} per month after a {days}-day trial. The final price and terms are confirmed by the NIVO team before you start.",
-    "q8": "Does NIVO guarantee that customers buy or pay?",
-    "a8": "No. Whether a customer buys or pays depends on many factors. NIVO shows who owns each task, what happened and what evidence exists, so you can act on facts.",
-    "footerAria": "NIVO footer",
-    "footerHome": "NIVO home",
-    "footerAbout": "NIVO builds NIVO OS, an operating system that helps founders see the owner, the next step and the evidence of completion for every important task.",
-    "footerTagline": "Human Leads. AI Operates. System Learns.",
-    "colProduct": "Product",
-    "colCompany": "Company",
-    "colSupport": "Support",
-    "linkTry": "Try NIVO OS",
-    "linkProduct": "See the product",
-    "linkFounding": "Founding 50 offer",
-    "linkPrinciples": "NIVO principles",
-    "linkFaq": "Questions and answers",
-    "linkSignIn": "Sign in",
-    "linkStart": "How to start",
-    "linkTerms": "Founding 50 terms",
-    "linkPrivacy": "Privacy policy",
-    "linkTos": "Terms of service",
-    "footerCopyright": "© 2026 NIVO. All rights reserved.",
-    "footerLegal": "CÔNG TY TNHH CÔNG NGHỆ NIVO",
-    "footerLegalNote": "Tax ID and registered address to be confirmed and published before launch.",
-    "planName": "NIVO Start",
-    "commitQuoteMarked": "“{quote}”"
-  },
   "lead": {
     "contextTitle": "Customer context",
     "contextBrief": "Context brief",
@@ -3950,8 +3742,6 @@
     "filterChannel": "Channel",
     "filterOwner": "Owner",
     "filterSort": "Sort",
-    "allStages": "All stages",
-    "allChannels": "All channels",
     "allOwners": "All owners",
     "sortNewest": "Newest",
     "sortOldest": "Oldest",
@@ -4033,194 +3823,6 @@
     "stepDraftReady": "Draft ready",
     "stepApproved": "Approved",
     "stepInvoiced": "Invoiced"
-  },
-  "legal": {
-    "privacy": {
-      "title": "Privacy Policy",
-      "draft": "Draft - last updated 12/10/2026",
-      "intro": "This policy explains how NIVO OS collects, uses and protects your data when you use the service at nivo.vn.",
-      "sections": [
-        {
-          "id": "who",
-          "title": "1. Who we are",
-          "paragraphs": [
-            "NIVO OS (nivo.vn) is operated by the NIVO team. Privacy questions go to support@nivo.vn."
-          ]
-        },
-        {
-          "id": "collect",
-          "title": "2. Data we collect",
-          "items": [
-            "Account: email, display name and sign-in details through Google or email and password.",
-            "Workspace data you and your team enter: customers, orders, bookings, notes, automation settings.",
-            "Messages from the channels you connect (Zalo OA, Telegram), including the content and the sender details the channel provides.",
-            "Payment notifications from SePay when you connect a bank account: amount, transfer description, time.",
-            "Documents you add to the Second Brain (uploaded files, links, pasted text, files picked from Google Drive).",
-            "AI usage metering (number of calls, tokens, cost) to calculate AI credits."
-          ]
-        },
-        {
-          "id": "use",
-          "title": "3. How we use data",
-          "items": [
-            "To provide and run the service: store data, answer customers, run automations, reconcile payments.",
-            "To meter AI credits and bill plans.",
-            "For security, abuse prevention and support when you ask for it."
-          ],
-          "afterItems": [
-            "We do not sell your data and do not use it for advertising."
-          ]
-        },
-        {
-          "id": "ai",
-          "title": "4. AI processing",
-          "paragraphs": [
-            "To draft replies and suggestions, the relevant content is sent to AI model providers: OpenRouter for Second Brain embeddings, and NIVO's AI engine for generation. NIVO does not use your data to train models."
-          ]
-        },
-        {
-          "id": "storage",
-          "title": "5. Storage and security",
-          "paragraphs": [
-            "Data is stored on Supabase with access controlled per workspace. Connection secrets and tokens (Zalo, Telegram, Google, bank) are encrypted with AES-256-GCM before they are stored. No system is perfectly secure; we apply reasonable measures to reduce risk."
-          ]
-        },
-        {
-          "id": "retention",
-          "title": "6. Retention and deletion",
-          "paragraphs": [
-            "We keep data while the workspace is active. When you ask us to delete your account or workspace, we delete the data within 30 days, except what the law requires us to keep (for example payment records). Disconnecting a channel or a Google account removes that connection's stored token."
-          ]
-        },
-        {
-          "id": "rights",
-          "title": "7. Your rights",
-          "paragraphs": [
-            "You may access, correct, export, restrict the processing of and ask us to delete your personal data, and withdraw consent you gave. Send requests to support@nivo.vn. You are responsible for having a lawful basis to enter your own customers' data into NIVO."
-          ]
-        },
-        {
-          "id": "cookies",
-          "title": "8. Cookies",
-          "paragraphs": [
-            "NIVO uses essential cookies only: the sign-in session, the language preference and a short-lived access check. We use no advertising or tracking cookies."
-          ]
-        },
-        {
-          "id": "google",
-          "title": "9. Dữ liệu Google / Google user data",
-          "paragraphs": [
-            "NIVO accesses Google Drive only through the Google Picker, and only for the files you explicitly select (scope drive.file). NIVO also accesses the Google Sheets you connect (scope drive.file).",
-            "NIVO reads those files to add them to the workspace's Second Brain and does nothing else with them."
-          ],
-          "items": [
-            "NIVO does not sell or transfer Google data to third parties, does not use it for ads, and does not use it to train generalized AI/ML models.",
-            "Humans do not read your Google data, except with your consent, for security reasons or to comply with the law.",
-            "Google tokens are stored encrypted. You can revoke access at any time by disconnecting in NIVO or at myaccount.google.com/permissions."
-          ],
-          "limitedUse": true
-        },
-        {
-          "id": "changes",
-          "title": "10. Changes and contact",
-          "paragraphs": [
-            "We will update the date at the top when this policy changes. Contact: support@nivo.vn."
-          ]
-        }
-      ]
-    },
-    "terms": {
-      "title": "Terms of Service",
-      "draft": "Draft - last updated 12/10/2026",
-      "intro": "By creating an account or using NIVO OS at nivo.vn, you agree to the terms below.",
-      "sections": [
-        {
-          "id": "service",
-          "title": "1. The service",
-          "paragraphs": [
-            "NIVO OS is software that helps small businesses manage customers, messages, payments and tasks, with AI assistance. Features may change over time."
-          ]
-        },
-        {
-          "id": "accounts",
-          "title": "2. Accounts and workspaces",
-          "paragraphs": [
-            "You must give accurate information and keep your sign-in details secret. The workspace owner is responsible for the members they invite and the connections (Zalo OA, Telegram, SePay, Google) they configure."
-          ]
-        },
-        {
-          "id": "plans",
-          "title": "3. Plans and AI credits",
-          "items": [
-            "Each plan includes a monthly AI credit allowance; on Pro and Max, unused credits carry into the next month (up to one month's allowance).",
-            "When the monthly credits run out you can buy top-up packs. Top-up credits are valid for 12 months from purchase.",
-            "Payment is by bank transfer through a VietQR code handled by SePay. An order is confirmed when a transfer with the right amount and reference is received."
-          ]
-        },
-        {
-          "id": "use",
-          "title": "4. Acceptable use",
-          "items": [
-            "Do not use NIVO to send spam, to defraud, or to publish unlawful content.",
-            "Do not break into or overload the system, or access another workspace's data.",
-            "You must have the legal right to the customer data you enter, and follow the rules of Zalo, Telegram, Google and your bank."
-          ]
-        },
-        {
-          "id": "content",
-          "title": "5. Customer content",
-          "paragraphs": [
-            "You keep ownership of the data and documents you put into NIVO. You give us a limited right to store and process them to provide the service, as described in the Privacy Policy."
-          ]
-        },
-        {
-          "id": "ai",
-          "title": "6. AI output",
-          "paragraphs": [
-            "AI can be wrong or incomplete. Review its output before you rely on it or send it to a customer, especially anything about money, contracts or legal matters. You are responsible for decisions made on that output."
-          ]
-        },
-        {
-          "id": "availability",
-          "title": "7. Availability",
-          "paragraphs": [
-            "We work to keep the service running but do not promise it will be uninterrupted. The service depends on third parties (Zalo, Telegram, SePay, Google, AI providers) that may change or fail."
-          ]
-        },
-        {
-          "id": "termination",
-          "title": "8. Termination",
-          "paragraphs": [
-            "You may stop using NIVO and ask us to delete your account at any time. We may suspend or end an account that breaks these terms. Unused credits are not refunded unless the law requires it."
-          ]
-        },
-        {
-          "id": "liability",
-          "title": "9. Limits of liability",
-          "paragraphs": [
-            "To the extent the law allows, the service is provided as is, and NIVO is not liable for indirect loss or lost profit. NIVO's total liability is capped at the amount you paid in the last 12 months."
-          ]
-        },
-        {
-          "id": "law",
-          "title": "10. Governing law",
-          "paragraphs": [
-            "These terms are governed by the law of Vietnam. Disputes are first settled by negotiation, and otherwise by the competent courts of Vietnam."
-          ]
-        },
-        {
-          "id": "contact",
-          "title": "11. Contact",
-          "paragraphs": [
-            "Send questions to support@nivo.vn."
-          ]
-        }
-      ]
-    },
-    "limitedUseSentence": "NIVO's use and transfer of information received from Google APIs to any other app will adhere to the Google API Services User Data Policy, including the Limited Use requirements.",
-    "limitedUseNote": "",
-    "policyUrl": "https://developers.google.com/terms/api-services-user-data-policy",
-    "siteName": "NIVO OS"
   },
   "login": {
     "aboutLabel": "About NIVO OS",
@@ -4729,7 +4331,6 @@
     "pageTitle": "Agents",
     "pageDescription": "Your AI team. Every agent answers to a named person.",
     "addAgent": "Add agent",
-    "agentsCount": "{count} in your workspace",
     "catalogTitle": "Agent catalog",
     "catalogDescription": "Buy an agent to add another operator to your team. Included agents are ready to use.",
     "open": "Open {name}",
@@ -4739,7 +4340,6 @@
     "chat": "Chat",
     "copyFailed": "The handle could not be copied.",
     "added": "Added {time}",
-    "agentNotChanged": "The agent was not changed",
     "stepTest": "Test",
     "addToWorkspace": "Add to workspace",
     "fieldName": "Name",
@@ -4879,11 +4479,7 @@
     "holdingHint": "What a customer gets when the agent cannot answer in time. A person is then asked to reply. Leave empty for the default.",
     "holdingDefault": "Dạ em đã nhận tin, nhân viên sẽ phản hồi anh/chị sớm ạ",
     "autoTitle": "This agent's automations",
-    "autoSeeAll": "See all",
-    "autoHelp": "Jobs that run by themselves for this agent. Switch each one on or off.",
-    "autoLoadFailed": "Could not load automations.",
     "autoRetry": "Try again",
-    "autoLoading": "Loading...",
     "installed": "Agent installed.",
     "instanceCreated": "New agent created.",
     "loadFailed": "Could not load your agents.",
@@ -5318,8 +4914,6 @@
     "adAria": "Founding 50 offer",
     "adDismiss": "Dismiss offer",
     "adTitle": "Your website goes quiet after 6pm",
-    "adText": "Chatbot answers every visitor and hands leads to Sales",
-    "adOff": "-50% Founding price",
     "addChatbot": "Add Chatbot",
     "insightTitle": "{after} of {count} website leads arrived after hours",
     "checklistTitle": "Get NIVO OS working for you",
@@ -5411,7 +5005,6 @@
     "filterDue": "Due",
     "filterStage": "Lead stage",
     "allOwners": "All owners",
-    "anyStage": "Any stage",
     "anyTime": "Any time",
     "dueOverdue": "Overdue",
     "dueWeek": "Next 7 days",
@@ -5794,8 +5387,6 @@
     "matchedByCodeAmount": "Matched record code + amount",
     "bankCredit": "{bank} credit +{amount} · content {ref} · from {payer}",
     "bankEventBody": "{bank} credit: {content}",
-    "askMsg": "{dept} needs your decision · {reason}: {summary}",
-    "autoMsg": "{dept} completed: {summary}",
     "resumedMsg": "Decided by {user} → NIVO continued: {summary}",
     "rejectedWork": "{user} rejected: {summary}",
     "rejectedResult": "Rejected; NIVO stopped this work",
@@ -5814,7 +5405,6 @@
     "returnedToAi": "{user} handed the conversation back to the AI",
     "takenOverNoReply": "A team member is handling this conversation",
     "nameRequired": "Enter the customer's name",
-    "amountInvalid": "The amount must be a positive number",
     "staffNameRequired": "Enter the staff member's name",
     "staffNotFound": "Staff member not found",
     "waitingBrief": "Waiting for the owner's decision:",
@@ -6147,8 +5737,6 @@
     "gateRenderQueued": "Put the video \"{title}\" in the render queue.",
     "automationOfferTitle": "New offer",
     "automationDraftTitle": "Auto draft · {title}",
-    "automationSkipped": "Skipped",
-    "automationNeedsSession": "Writing a video needs a signed-in person; the automatic version cannot do it here yet.",
     "automationStepDraft": "Created a draft video from \"{title}\"",
     "automationStepScript": "NIVO is writing the script and will tell you in Office when it is done",
     "refreshNow": "Refresh",
@@ -6361,8 +5949,6 @@
     "errDate": "Choose the date the money was received.",
     "errContent": "Enter the transfer content (at least 3 characters).",
     "errAdjustNote": "Write what needs correcting (at least 5 characters).",
-    "adjustLog": "Correction added: {note}",
-    "adjustLogAmount": "Correction added: {note} (amount should be {amount} VND)",
     "errPayer": "Enter a payer name of up to 200 characters.",
     "errNote": "Keep the note within 2,000 characters.",
     "adjustSaved": "Correction recorded.",

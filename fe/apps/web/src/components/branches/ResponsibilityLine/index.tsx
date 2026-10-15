@@ -1,7 +1,6 @@
 import { Badge, Button, DropdownMenu, IconTile, ListRow, Text } from "@starci/grammar/common"
 import type { BadgeTone, DropdownMenuEntry } from "@starci/grammar/common"
-import { nivoIconSource } from "@/components/leaves/Icon"
-import type { IconName } from "@/components/leaves/Icon"
+import { nivoIconSource, type IconName } from "@/components/leaves/Icon"
 import type { ResponsibilityRowView } from "@/hooks/responsibilities"
 import { CONSOLE_ROUTES, leadHref } from "@/modules/routes"
 import { ACTIONS_CLASS, META_CLASS } from "./classNames"

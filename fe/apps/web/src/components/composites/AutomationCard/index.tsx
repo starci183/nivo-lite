@@ -1,7 +1,6 @@
 import type { ReactNode } from "react"
 import { Badge, Icon, IconTile, Link, Switch, SurfaceCard, Text, TextAction } from "@starci/grammar/common"
-import { nivoIconSource } from "@/components/leaves/Icon"
-import type { IconName } from "@/components/leaves/Icon"
+import { nivoIconSource, type IconName } from "@/components/leaves/Icon"
 import { ACTIONS_CLASS, CARD_FOOT_CLASS, CARD_STACK_CLASS, CARD_TEXT_CLASS, CARD_TOP_CLASS } from "./classNames"
 
 /** The icon word of a template. */

@@ -16,6 +16,8 @@
     "@heroui/styles": "3.2.6",
     "@hookform/resolvers": "5.4.0",
     "@internationalized/date": "^3.12.4",
+    "@nivo-lite/i18n": "*",
+    "@nivo-lite/offer": "*",
     "@reduxjs/toolkit": "2.11.2",
     "@starci/grammar": "0.9.14",
     "@starci/heroicons": "0.3.4",
@@ -34,12 +36,12 @@
     "react-dom": "19.2.3",
     "react-hook-form": "7.77.0",
     "react-redux": "9.2.0",
+    "recharts": "3.8.1",
     "server-only": "0.0.1",
     "superjson": "2.2.6",
     "swr": "2.4.2",
     "zod": "4.4.3",
-    "zustand": "5.0.12",
-    "recharts": "3.8.1"
+    "zustand": "5.0.12"
   },
   "devDependencies": {
     "@graphql-codegen/cli": "7.4.6",

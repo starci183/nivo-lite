@@ -347,8 +347,7 @@
     "notFoundText": "Trang này không tồn tại hoặc bạn không còn quyền truy cập.",
     "notFoundHome": "Về tổng quan",
     "globalErrorTitle": "NIVO OS chưa thể khởi động",
-    "globalErrorText": "Một lỗi bất ngờ đã dừng trang. Hãy thử lại sau giây lát.",
-    "homeDescription": "Con người dẫn dắt. AI vận hành. Hệ thống học hỏi. Một chủ doanh nghiệp, một bước tiếp theo và bằng chứng cho mỗi khách hàng."
+    "globalErrorText": "Một lỗi bất ngờ đã dừng trang. Hãy thử lại sau giây lát."
   },
   "approval": {
     "needsApproval": "Cần bạn duyệt",
@@ -600,9 +599,6 @@
     "missingCapabilitySellsOnline": "bán trên sàn thương mại điện tử",
     "missingCapabilityHasRecurringContracts": "hợp đồng định kỳ",
     "missingCapabilityHasDelivery": "giao hàng",
-    "auditEnabled": "Bật tự động hoá: {name}",
-    "auditDisabled": "Tắt tự động hoá: {name}",
-    "auditBodysaved": "Duyệt lời nhắn tự động hoá: {name}",
     "auditStreak": "{count} lần duyệt liên tiếp không sửa.",
     "auditAutosendgranted": "Chủ shop cho phép \"{name}\" tự gửi",
     "auditAutosenddeclined": "Chủ shop chưa cho \"{name}\" tự gửi"
@@ -721,7 +717,6 @@
     "title": "Second Brain",
     "intro": "Những gì doanh nghiệp biết, ở một chỗ. Mỗi agent đọc qua góc nhìn riêng; bạn quyết định điều gì thay đổi.",
     "tabsLabel": "Các phần của bộ não",
-    "tabMap": "Bản đồ",
     "tabReview": "Cần duyệt",
     "tabFacts": "Sự thật",
     "tabLessons": "Bài học",
@@ -937,7 +932,6 @@
     "split": "Tách",
     "scheduledBadge": "Từ {date}",
     "evidence": "Bằng chứng",
-    "asked": "Để lại chờ. Hỏi {who} rồi quay lại quyết.",
     "splitDone": "Đã giữ cả hai: thêm một sự thật riêng cho hoàn cảnh đó.",
     "conflictGroup": "Tài liệu nói khác nhau",
     "conflictGroupHint": "{n} giá trị khác nhau cho cùng một mục. Chọn giá trị đúng; các giá trị còn lại sẽ bị từ chối.",
@@ -2487,10 +2481,7 @@
     "syncNone": "Chưa đồng bộ lần nào",
     "syncNever": "chưa có",
     "resync": "Đồng bộ lại",
-    "ago": "{n} giây trước",
-    "agoMin": "{n} phút trước",
     "agoHour": "{n} giờ trước",
-    "agoDay": "{n} ngày trước",
     "replyTitle": "Trả lời khách",
     "timeoutLabel": "Thời gian chờ tối đa (giây)",
     "timeoutHint": "Quá thời gian này mà agent chưa trả lời thì khách nhận câu trả lời trực tiếp (từ 5 đến 120, mặc định 25).",
@@ -3299,9 +3290,7 @@
     "errZipBomb": "ZIP này có vẻ không an toàn (nén quá mức) nên không được mở.",
     "errZipEmpty": "ZIP này không có tài liệu đọc được.",
     "addCancel": "Hủy",
-    "tabText": "Văn bản",
     "tabFaq": "Hỏi–đáp",
-    "tabFile": "Tệp",
     "tabUrl": "Link",
     "fieldTitle": "Tên",
     "fieldTitleHint": "Tên ngắn để bạn dễ tìm lại.",
@@ -3594,203 +3583,6 @@
     "suggest_brand_voice_topic": "Cách xưng hô và giọng điệu mẫu",
     "suggest_brand_voice_hint": "Vài câu mẫu bạn ưng ý để agent nói đúng giọng của bạn."
   },
-  "landing": {
-    "navLabel": "Điều hướng chính",
-    "homeLabel": "NIVO trang chủ",
-    "navProduct": "Sản phẩm",
-    "navHow": "Cách hoạt động",
-    "navFounding": "Founding 50",
-    "navFaq": "Hỏi đáp",
-    "signIn": "Đăng nhập",
-    "openDashboard": "Vào dashboard",
-    "tryNow": "Dùng thử",
-    "heroLine1": "Việc quan trọng được theo sát.",
-    "heroLine2": "Kết quả được kiểm chứng.",
-    "heroLead": "NIVO OS giúp chủ doanh nghiệp theo sát khách hàng, cam kết và việc cần xử lý: rõ người phụ trách, rõ bước tiếp theo, rõ bằng chứng hoàn tất.",
-    "heroCta": "Dùng thử NIVO OS",
-    "heroSecondary": "Xem sản phẩm",
-    "heroOffer": "Founding 50 · giảm {percent}% năm đầu",
-    "heroFactNoCard": "Không cần thẻ",
-    "heroFactSetup": "Cài đặt trong 5 phút",
-    "heroFactChannels": "Zalo · Telegram · SePay",
-    "heroCardTitle": "Hôm nay NIVO đang theo sát",
-    "heroCardAria": "Ví dụ việc NIVO đang theo sát hôm nay",
-    "heroRow1Title": "Anh Minh · báo giá",
-    "heroRow1Desc": "An phụ trách · gọi lại 15:00",
-    "heroRow1Badge": "Chờ duyệt",
-    "heroRow2Title": "Chị Lan · thanh toán",
-    "heroRow2Desc": "SePay xác nhận 12.000.000đ",
-    "heroRow2Badge": "Đã kiểm chứng",
-    "tagline": "Human Leads. AI Operates. System Learns.",
-    "demoLabel": "Sản phẩm thật · dữ liệu mẫu",
-    "shotOverview": "Tổng quan NIVO OS: việc đang mở, việc chờ duyệt và phễu khách hàng",
-    "shotOffice": "Office: đội ngũ và agent AI trong một nhóm chat",
-    "shotContext": "Trang khách hàng với bối cảnh tóm tắt và lịch sử",
-    "shotOwner": "Một người phụ trách và một bước tiếp theo",
-    "shotApproval": "Thẻ duyệt: bản nháp của AI chờ chủ doanh nghiệp",
-    "shotOutcome": "Kết quả và bằng chứng của một khách đã chốt",
-    "trustLead": "Những việc không nên phụ thuộc vào trí nhớ của bạn",
-    "trustFor": "Dành cho",
-    "trustAudience": "Doanh nghiệp dịch vụ B2B",
-    "trustSub": "Chuyên gia · Tư vấn · Đào tạo · Agency",
-    "chip1": "Khách mới chờ phản hồi",
-    "chip2": "Báo giá chờ gửi",
-    "chip3": "Cam kết sắp trễ hạn",
-    "chip4": "Khách cần liên hệ lại",
-    "chip5": "Khoản phải thu quá hạn",
-    "chip6": "Việc chờ phê duyệt",
-    "chip7": "Hợp đồng chờ ký",
-    "chip8": "Tài liệu khách chưa gửi",
-    "chip9": "Cơ hội chưa có bước tiếp",
-    "productEyebrow": "NIVO OS",
-    "productTitle": "Một việc. Rõ người, rõ bước, rõ kết quả.",
-    "tabsLabel": "Góc nhìn NIVO OS",
-    "tab1": "Office",
-    "tab2": "Khách hàng và bối cảnh",
-    "tab3": "Người phụ trách và bước tiếp theo",
-    "tab4": "Người duyệt AI",
-    "tab5": "Kết quả và bằng chứng",
-    "tab1Title": "Một nơi cho con người và agent AI",
-    "tab1b1": "Đội ngũ và các agent cùng làm việc trong một nhóm chat.",
-    "tab1b2": "Gọi @sales hoặc @accounting để agent đó trả lời.",
-    "tab1b3": "Việc đang chờ bạn nằm trên cùng, không bị chìm trong tin nhắn.",
-    "tab2Title": "Mỗi khách hàng đến kèm bối cảnh",
-    "tab2b1": "Lời của khách, thông tin liên hệ và kênh được giữ cùng một chỗ.",
-    "tab2b2": "Bản tóm tắt ngắn có nhãn AI được chuẩn bị để bạn kiểm tra.",
-    "tab2b3": "Mọi thay đổi được ghi vào lịch sử chỉ thêm, không sửa xóa.",
-    "tab3Title": "Mỗi khách hàng một người phụ trách, một bước tiếp theo",
-    "tab3b1": "Mỗi việc có đúng một người chịu trách nhiệm, người hoặc agent.",
-    "tab3b2": "Bước tiếp theo luôn có hạn, nên không việc nào bị lửng lơ.",
-    "tab3b3": "Đổi người phụ trách hoặc đổi hạn chỉ với một lần bấm.",
-    "tab4Title": "AI soạn nháp. Bạn quyết định.",
-    "tab4b1": "Agent soạn tin nhắn nhưng không thể tự gửi.",
-    "tab4b2": "Bạn duyệt, sửa hoặc từ chối trước khi bất cứ thứ gì rời công ty.",
-    "tab4b3": "Quyết định được ghi lại: đề xuất, xem xét, duyệt, hệ thống ghi nhận.",
-    "tab5Title": "Làm xong chưa phải là kết quả đã kiểm chứng",
-    "tab5b1": "Bằng chứng đi từ chờ, đã ghi nhận, đã xem xét đến đã xác minh.",
-    "tab5b2": "Ghi lại điều đã xảy ra kèm tham chiếu: ghi chú hoặc tài liệu đã ký.",
-    "tab5b3": "Khách đã chốt được chuyển tiếp cho Accounting Agent.",
-    "flowEyebrow": "Cách hoạt động",
-    "flowTitle": "Ba agent, một luồng",
-    "flowLead": "Một hành trình khách hàng, từ cuộc chat đầu tiên đến hóa đơn. Con người duyệt mọi thứ rời công ty.",
-    "flowStepLabel": "Bước {n}",
-    "flow1Name": "Chatbot",
-    "flow1Title": "Ghi nhận khách hàng",
-    "flow1Text": "Trả lời khách vào website ngoài giờ và ghi lại nhu cầu, kênh, thông tin liên hệ.",
-    "flow2Name": "Sales Agent",
-    "flow2Title": "Nhận bước tiếp theo",
-    "flow2Text": "Đề xuất người phụ trách, bước tiếp theo, hạn và soạn bản nháp phản hồi.",
-    "flow3Name": "Bạn",
-    "flow3Title": "Chủ doanh nghiệp duyệt",
-    "flow3Text": "Duyệt, sửa hoặc từ chối. Không gì được gửi trước khi bạn quyết định.",
-    "flow4Name": "Accounting Agent",
-    "flow4Title": "Soạn hóa đơn",
-    "flow4Text": "Khi khách chốt có bằng chứng, hóa đơn được soạn nháp và chờ bạn duyệt.",
-    "flowHuman": "Quyết định của con người",
-    "connectEyebrow": "Kết nối",
-    "connectTitle": "Bắt đầu từ dữ liệu bạn đang có",
-    "connectLead": "Khách hàng đến từ nhiều kênh. NIVO bắt đầu với kênh đã sẵn sàng và bổ sung các kênh còn lại theo thứ tự.",
-    "connectAvailable": "Có sẵn",
-    "connectRoadmap": "Lộ trình",
-    "chWebsite": "Chat trên website",
-    "chWebsiteText": "Agent Chatbot trả lời khách truy cập và ghi nhận khách hàng kèm ngữ cảnh.",
-    "chZalo": "Zalo",
-    "chZaloText": "Tin nhắn của khách trở thành khách hàng có người phụ trách.",
-    "chEmail": "Email",
-    "chEmailText": "Email của khách được chuyển thành việc có bước tiếp theo.",
-    "chForm": "Form trên web",
-    "chFormText": "Form gửi về cùng danh sách khách hàng.",
-    "connectNote": "Hiện chỉ có Chatbot. Các kênh khác nằm trong lộ trình và chưa có ngày cụ thể.",
-    "connectCta": "Dùng thử NIVO OS",
-    "flowAiMark": "AI"
-  },
-  "landingBottom": {
-    "offerAria": "Bắt đầu với NIVO OS",
-    "offerEyebrow": "Bắt đầu cùng NIVO",
-    "offerTitle": "Rõ phạm vi trước khi bắt đầu",
-    "fact1Title": "1 việc thật",
-    "fact1Text": "Chọn một việc quan trọng, sắp đến hạn và có thể kiểm chứng.",
-    "fact2Title": "{days} ngày",
-    "fact2Text": "Thời gian dùng thử miễn phí để bắt đầu kiểm chứng. {card}",
-    "fact2NoCard": "Không cần thẻ khi bắt đầu.",
-    "fact2Card": "Cần thẻ khi bắt đầu.",
-    "fact3Title": "3 câu hỏi",
-    "fact3Text": "Ai phụ trách? Làm gì tiếp? Bằng chứng nào xác nhận đã xong?",
-    "fact4Title": "Đúng người duyệt",
-    "fact4Text": "Ngoại lệ cần người có thẩm quyền xem xét.",
-    "priceLabel": "Giá khởi điểm",
-    "perMonth": "/ tháng",
-    "priceAfterTrial": "Sau thời gian dùng thử. Giá gốc được gạch ngang.",
-    "foundingTag": "Founding 50",
-    "foundingPriceLabel": "Giá Founding 50, cần xác nhận khi ký",
-    "foundingSaving": "Giảm {percent}% cho {cap} SME đầu tiên",
-    "offerEnds": "Kết thúc {date}",
-    "offerCta": "Dùng thử NIVO OS",
-    "offerFine": "Giá tham khảo. Giá và điều khoản cuối cùng do đội ngũ NIVO xác nhận khi ký.",
-    "commitAria": "Nguyên tắc của NIVO",
-    "commitEyebrow": "Nguyên tắc của NIVO",
-    "commitTitle": "Con người dẫn dắt.\nAI vận hành có kiểm soát.\nHệ thống học hỏi.",
-    "commitPanelLabel": "NIVO · Nguyên tắc phát triển sản phẩm",
-    "commitPanelText": "Cách chúng tôi nhìn nhận kết quả.",
-    "commitAiChip": "AI",
-    "commitAiNote": "AI chuẩn bị. Con người duyệt.",
-    "commitAuthor": "Đội ngũ NIVO",
-    "commitAuthorRole": "Nguyên tắc phát triển sản phẩm",
-    "commitQuote": "Với NIVO, điều cần biết là việc quan trọng đã đạt kết quả nào, bằng chứng ở đâu và phần nào vẫn cần con người quyết định.",
-    "principle1Title": "Human Leads. AI Operates. System Learns.",
-    "principle1Text": "Chủ doanh nghiệp định hướng và duyệt. AI agent chuẩn bị công việc. Hệ thống ghi lại những gì đã xảy ra.",
-    "principle2Title": "Evidence over Hype",
-    "principle2Text": "Việc đã làm chưa phải kết quả đã xác nhận. Chúng tôi cho thấy điều đã làm và điều đã được xác nhận.",
-    "ctaAria": "Dùng thử NIVO OS",
-    "ctaTitle": "Bắt đầu với một việc cụ thể.",
-    "ctaText": "Chọn một việc có người phụ trách, phạm vi rõ và kết quả có thể xác nhận. Dùng thử NIVO OS và xem cách nó vận hành.",
-    "ctaButton": "Dùng thử NIVO OS",
-    "ctaNote": "Đăng nhập và khám phá một workspace đã sẵn sàng. Điều kiện dùng thử do đội ngũ NIVO xác nhận.",
-    "ctaMascotAlt": "Kỳ lân NIVO chỉ vào nút bắt đầu",
-    "faqAria": "Câu hỏi thường gặp",
-    "faqEyebrow": "Hỏi & đáp",
-    "faqTitle": "Câu hỏi thường gặp",
-    "faqListLeft": "Câu hỏi thường gặp, nhóm thứ nhất",
-    "faqListRight": "Câu hỏi thường gặp, nhóm thứ hai",
-    "q1": "NIVO OS là gì?",
-    "a1": "NIVO OS là hệ điều hành cho doanh nghiệp dịch vụ do người sáng lập dẫn dắt. Mỗi việc có một người phụ trách, một bước tiếp theo rõ ràng và bằng chứng về kết quả. Đội ngũ và các AI agent làm việc cùng nhau trong một Office.",
-    "q2": "AI có tự gửi tin nhắn cho khách hàng không?",
-    "a2": "Không. AI agent chỉ chuẩn bị bản nháp và gợi ý bước tiếp theo. Chủ doanh nghiệp duyệt, chỉnh sửa hoặc từ chối trước khi bất cứ điều gì rời khỏi công ty, và hệ thống ghi lại quyết định đó.",
-    "q3": "Có sẵn những gì và tôi mua gì?",
-    "a3": "Sales Agent và Accounting Agent có sẵn trong workspace của bạn. Chatbot là agent bạn mua từ danh mục, thiết lập và dùng thử trước khi nó bắt đầu ghi nhận khách hàng từ website.",
-    "q4": "Điều khoản Founding 50 là gì?",
-    "a4": "Giảm {percent}% cho {cap} SME đầu tiên bắt đầu với NIVO trước {date}. Điều khoản cuối cùng do đội ngũ NIVO xác nhận.",
-    "q5": "NIVO dùng dữ liệu nào và lưu ở đâu?",
-    "a5": "Sản phẩm bạn thấy ở đây là workspace dùng thử với dữ liệu mẫu. Chính sách dữ liệu khi vận hành thật, gồm quyền truy cập, xuất, lưu trữ và xóa dữ liệu, được xác nhận trong quá trình onboarding, trước khi bạn kết nối dữ liệu thật.",
-    "q6": "Tôi bắt đầu như thế nào?",
-    "a6": "Đăng nhập, mở workspace dùng thử và theo một khách hàng từ Chatbot sang Sales, đến bước bạn duyệt, rồi đến hóa đơn. Sau đó chọn một việc thật để thử.",
-    "q7": "NIVO tính phí thế nào?",
-    "a7": "Bảng giá tham khảo cho thấy {plan} giá {price} mỗi tháng sau {days} ngày dùng thử. Giá và điều khoản cuối cùng do đội ngũ NIVO xác nhận trước khi bạn bắt đầu.",
-    "q8": "NIVO có bảo đảm khách sẽ mua hoặc thanh toán không?",
-    "a8": "Không. Việc khách mua hoặc thanh toán phụ thuộc nhiều yếu tố. NIVO cho bạn thấy ai phụ trách từng việc, điều gì đã xảy ra và có bằng chứng nào, để bạn hành động dựa trên sự thật.",
-    "footerAria": "Chân trang NIVO",
-    "footerHome": "NIVO - Trang chủ",
-    "footerAbout": "NIVO xây dựng NIVO OS, hệ điều hành giúp nhà sáng lập thấy người phụ trách, bước tiếp theo và bằng chứng hoàn tất cho mọi việc quan trọng.",
-    "footerTagline": "Human Leads. AI Operates. System Learns.",
-    "colProduct": "Sản phẩm",
-    "colCompany": "Công ty",
-    "colSupport": "Hỗ trợ",
-    "linkTry": "Dùng thử NIVO OS",
-    "linkProduct": "Xem sản phẩm",
-    "linkFounding": "Ưu đãi Founding 50",
-    "linkPrinciples": "Nguyên tắc của NIVO",
-    "linkFaq": "Hỏi & đáp",
-    "linkSignIn": "Đăng nhập",
-    "linkStart": "Cách bắt đầu",
-    "linkTerms": "Điều khoản Founding 50",
-    "linkPrivacy": "Chính sách quyền riêng tư",
-    "linkTos": "Điều khoản sử dụng",
-    "footerCopyright": "© 2026 NIVO. Bảo lưu mọi quyền.",
-    "footerLegal": "CÔNG TY TNHH CÔNG NGHỆ NIVO",
-    "footerLegalNote": "Mã số thuế và địa chỉ đăng ký sẽ được xác nhận và công bố trước khi ra mắt.",
-    "planName": "NIVO Start",
-    "commitQuoteMarked": "“{quote}”"
-  },
   "lead": {
     "contextTitle": "Bối cảnh khách hàng",
     "contextBrief": "Tóm tắt bối cảnh",
@@ -3950,8 +3742,6 @@
     "filterChannel": "Kênh",
     "filterOwner": "Người phụ trách",
     "filterSort": "Sắp xếp",
-    "allStages": "Tất cả giai đoạn",
-    "allChannels": "Tất cả kênh",
     "allOwners": "Tất cả người phụ trách",
     "sortNewest": "Mới nhất",
     "sortOldest": "Cũ nhất",
@@ -4033,194 +3823,6 @@
     "stepDraftReady": "Có bản nháp",
     "stepApproved": "Đã duyệt",
     "stepInvoiced": "Đã xuất hóa đơn"
-  },
-  "legal": {
-    "privacy": {
-      "title": "Chính sách quyền riêng tư",
-      "draft": "Bản nháp - cập nhật lần cuối 12/10/2026",
-      "intro": "Chính sách này giải thích NIVO OS thu thập, sử dụng và bảo vệ dữ liệu của bạn như thế nào khi bạn dùng dịch vụ tại nivo.vn.",
-      "sections": [
-        {
-          "id": "who",
-          "title": "1. Chúng tôi là ai",
-          "paragraphs": [
-            "NIVO OS (nivo.vn) do đội ngũ NIVO vận hành. Câu hỏi về quyền riêng tư xin gửi tới support@nivo.vn."
-          ]
-        },
-        {
-          "id": "collect",
-          "title": "2. Dữ liệu chúng tôi thu thập",
-          "items": [
-            "Tài khoản: email, tên hiển thị và thông tin đăng nhập qua Google hoặc email và mật khẩu.",
-            "Dữ liệu không gian làm việc do bạn và nhóm của bạn nhập: khách hàng, đơn hàng, lịch hẹn, ghi chú, cấu hình tự động hóa.",
-            "Tin nhắn từ các kênh bạn kết nối (Zalo OA, Telegram), gồm nội dung và thông tin người gửi mà kênh cung cấp.",
-            "Thông báo thanh toán từ SePay khi bạn kết nối tài khoản ngân hàng: số tiền, nội dung chuyển khoản, thời điểm.",
-            "Tài liệu bạn thêm vào Second Brain (tệp tải lên, liên kết, văn bản dán, tệp chọn từ Google Drive).",
-            "Số liệu sử dụng AI (số lần gọi, lượng token, chi phí) để tính credit AI."
-          ]
-        },
-        {
-          "id": "use",
-          "title": "3. Cách chúng tôi sử dụng dữ liệu",
-          "items": [
-            "Cung cấp và vận hành dịch vụ: lưu dữ liệu, trả lời khách hàng, chạy tự động hóa, đối soát thanh toán.",
-            "Tính credit AI và thanh toán gói dịch vụ.",
-            "Bảo mật, chống lạm dụng và hỗ trợ khi bạn yêu cầu."
-          ],
-          "afterItems": [
-            "Chúng tôi không bán dữ liệu của bạn và không dùng nó để quảng cáo."
-          ]
-        },
-        {
-          "id": "ai",
-          "title": "4. Xử lý bằng AI",
-          "paragraphs": [
-            "Để tạo câu trả lời và đề xuất, nội dung liên quan được gửi tới các nhà cung cấp mô hình AI: OpenRouter để tạo embedding cho Second Brain, và hệ thống AI của NIVO để sinh nội dung. NIVO không dùng dữ liệu của bạn để huấn luyện mô hình."
-          ]
-        },
-        {
-          "id": "storage",
-          "title": "5. Lưu trữ và bảo mật",
-          "paragraphs": [
-            "Dữ liệu được lưu trên Supabase và được kiểm soát truy cập theo từng không gian làm việc. Các khóa và token kết nối (Zalo, Telegram, Google, ngân hàng) được mã hóa bằng AES-256-GCM trước khi lưu. Không có hệ thống nào an toàn tuyệt đối; chúng tôi áp dụng các biện pháp hợp lý để giảm rủi ro."
-          ]
-        },
-        {
-          "id": "retention",
-          "title": "6. Thời gian lưu giữ và xóa dữ liệu",
-          "paragraphs": [
-            "Chúng tôi giữ dữ liệu trong thời gian không gian làm việc còn hoạt động. Khi bạn yêu cầu xóa tài khoản hoặc không gian làm việc, chúng tôi xóa dữ liệu trong vòng 30 ngày, trừ phần pháp luật yêu cầu phải giữ (ví dụ chứng từ thanh toán). Ngắt kết nối một kênh hoặc tài khoản Google sẽ xóa token đã lưu của kết nối đó."
-          ]
-        },
-        {
-          "id": "rights",
-          "title": "7. Quyền của bạn",
-          "paragraphs": [
-            "Bạn có quyền truy cập, chỉnh sửa, xuất, hạn chế xử lý và yêu cầu xóa dữ liệu cá nhân của mình, cũng như rút lại sự đồng ý đã cấp. Hãy gửi yêu cầu tới support@nivo.vn. Bạn chịu trách nhiệm có căn cứ hợp pháp để nhập dữ liệu của khách hàng của mình vào NIVO."
-          ]
-        },
-        {
-          "id": "cookies",
-          "title": "8. Cookie",
-          "paragraphs": [
-            "NIVO chỉ dùng cookie thiết yếu: cookie phiên đăng nhập, cookie ghi nhớ ngôn ngữ và một cookie ngắn hạn kiểm tra quyền truy cập. Chúng tôi không dùng cookie quảng cáo hay theo dõi."
-          ]
-        },
-        {
-          "id": "google",
-          "title": "9. Dữ liệu Google / Google user data",
-          "paragraphs": [
-            "NIVO truy cập Google Drive chỉ thông qua Google Picker, và chỉ với những tệp bạn chủ động chọn (phạm vi drive.file). NIVO cũng truy cập các Google Sheets bạn kết nối (phạm vi drive.file).",
-            "NIVO đọc các tệp đó để thêm vào Second Brain của không gian làm việc và không làm gì khác với chúng."
-          ],
-          "items": [
-            "NIVO không bán hay chuyển dữ liệu Google cho bên thứ ba, không dùng cho quảng cáo, và không dùng để huấn luyện các mô hình AI/ML tổng quát.",
-            "Con người không đọc dữ liệu Google của bạn, trừ khi bạn đồng ý, vì lý do bảo mật hoặc để tuân thủ pháp luật.",
-            "Token Google được lưu mã hóa. Bạn có thể thu hồi bất kỳ lúc nào bằng cách ngắt kết nối trong NIVO hoặc tại myaccount.google.com/permissions."
-          ],
-          "limitedUse": true
-        },
-        {
-          "id": "changes",
-          "title": "10. Thay đổi và liên hệ",
-          "paragraphs": [
-            "Chúng tôi sẽ cập nhật ngày ở đầu trang khi chính sách thay đổi. Liên hệ: support@nivo.vn."
-          ]
-        }
-      ]
-    },
-    "terms": {
-      "title": "Điều khoản sử dụng",
-      "draft": "Bản nháp - cập nhật lần cuối 12/10/2026",
-      "intro": "Khi tạo tài khoản hoặc dùng NIVO OS tại nivo.vn, bạn đồng ý với các điều khoản dưới đây.",
-      "sections": [
-        {
-          "id": "service",
-          "title": "1. Dịch vụ",
-          "paragraphs": [
-            "NIVO OS là phần mềm giúp doanh nghiệp nhỏ quản lý khách hàng, tin nhắn, thanh toán và công việc, với trợ lý AI hỗ trợ. Tính năng có thể thay đổi theo thời gian."
-          ]
-        },
-        {
-          "id": "accounts",
-          "title": "2. Tài khoản và không gian làm việc",
-          "paragraphs": [
-            "Bạn cần cung cấp thông tin đúng và giữ bí mật thông tin đăng nhập. Chủ không gian làm việc chịu trách nhiệm về các thành viên được mời và các kết nối (Zalo OA, Telegram, SePay, Google) mà họ cấu hình."
-          ]
-        },
-        {
-          "id": "plans",
-          "title": "3. Gói dịch vụ và credit AI",
-          "items": [
-            "Mỗi gói có mức credit AI hằng tháng; gói Pro và Max được cộng dồn phần chưa dùng sang tháng kế tiếp (tối đa bằng một tháng).",
-            "Khi hết credit tháng, bạn có thể mua thêm gói nạp. Credit nạp có hiệu lực 12 tháng kể từ ngày mua.",
-            "Thanh toán bằng chuyển khoản ngân hàng qua mã VietQR do SePay xử lý. Đơn hàng được xác nhận khi nhận được khoản chuyển đúng số tiền và nội dung."
-          ]
-        },
-        {
-          "id": "use",
-          "title": "4. Sử dụng chấp nhận được",
-          "items": [
-            "Không dùng NIVO để gửi spam, lừa đảo hoặc nội dung trái pháp luật.",
-            "Không xâm nhập, làm quá tải hệ thống hoặc truy cập dữ liệu của không gian làm việc khác.",
-            "Bạn phải có quyền hợp pháp đối với dữ liệu khách hàng bạn nhập và tuân thủ quy định của Zalo, Telegram, Google và ngân hàng."
-          ]
-        },
-        {
-          "id": "content",
-          "title": "5. Nội dung của khách hàng",
-          "paragraphs": [
-            "Bạn giữ quyền sở hữu dữ liệu và tài liệu bạn đưa vào NIVO. Bạn cấp cho chúng tôi quyền hạn chế để lưu trữ và xử lý chúng nhằm cung cấp dịch vụ, theo Chính sách quyền riêng tư."
-          ]
-        },
-        {
-          "id": "ai",
-          "title": "6. Kết quả do AI tạo ra",
-          "paragraphs": [
-            "AI có thể sai hoặc thiếu sót. Hãy xem lại kết quả trước khi dựa vào hoặc gửi cho khách hàng, nhất là các nội dung về tiền, hợp đồng và pháp lý. Bạn chịu trách nhiệm về quyết định dựa trên kết quả đó."
-          ]
-        },
-        {
-          "id": "availability",
-          "title": "7. Tình trạng dịch vụ",
-          "paragraphs": [
-            "Chúng tôi cố gắng giữ dịch vụ hoạt động ổn định nhưng không cam kết không gián đoạn. Dịch vụ phụ thuộc vào bên thứ ba (Zalo, Telegram, SePay, Google, nhà cung cấp AI) có thể thay đổi hoặc gặp sự cố."
-          ]
-        },
-        {
-          "id": "termination",
-          "title": "8. Chấm dứt",
-          "paragraphs": [
-            "Bạn có thể ngừng dùng và yêu cầu xóa tài khoản bất kỳ lúc nào. Chúng tôi có thể tạm ngưng hoặc chấm dứt tài khoản vi phạm điều khoản này. Credit chưa dùng không được hoàn lại, trừ khi pháp luật quy định khác."
-          ]
-        },
-        {
-          "id": "liability",
-          "title": "9. Giới hạn trách nhiệm",
-          "paragraphs": [
-            "Trong phạm vi pháp luật cho phép, dịch vụ được cung cấp ở trạng thái hiện có, và NIVO không chịu trách nhiệm về thiệt hại gián tiếp hay mất lợi nhuận. Trách nhiệm tối đa của NIVO không vượt quá số tiền bạn đã trả trong 12 tháng gần nhất."
-          ]
-        },
-        {
-          "id": "law",
-          "title": "10. Luật áp dụng",
-          "paragraphs": [
-            "Điều khoản này tuân theo pháp luật Việt Nam. Tranh chấp được giải quyết thương lượng trước, nếu không được thì tại tòa án có thẩm quyền của Việt Nam."
-          ]
-        },
-        {
-          "id": "contact",
-          "title": "11. Liên hệ",
-          "paragraphs": [
-            "Gửi câu hỏi tới support@nivo.vn."
-          ]
-        }
-      ]
-    },
-    "limitedUseSentence": "NIVO's use and transfer of information received from Google APIs to any other app will adhere to the Google API Services User Data Policy, including the Limited Use requirements.",
-    "limitedUseNote": "Nói cách khác: NIVO chỉ dùng dữ liệu nhận từ Google API để cung cấp tính năng bạn yêu cầu, và tuân thủ các yêu cầu Giới hạn sử dụng (Limited Use) trong Chính sách dữ liệu người dùng của Google API Services.",
-    "policyUrl": "https://developers.google.com/terms/api-services-user-data-policy",
-    "siteName": "NIVO OS"
   },
   "login": {
     "aboutLabel": "Giới thiệu NIVO OS",
@@ -4729,7 +4331,6 @@
     "pageTitle": "Agent",
     "pageDescription": "Đội ngũ AI của bạn. Mỗi agent đều có người phụ trách.",
     "addAgent": "Thêm agent",
-    "agentsCount": "{count} trong workspace",
     "catalogTitle": "Danh mục agent",
     "catalogDescription": "Mua agent để thêm một trợ lý AI vào đội ngũ. Agent có sẵn có thể dùng ngay.",
     "open": "Mở {name}",
@@ -4739,7 +4340,6 @@
     "chat": "Chat",
     "copyFailed": "Không sao chép được tên nhắc.",
     "added": "Thêm lúc {time}",
-    "agentNotChanged": "Chưa thay đổi được trợ lý",
     "stepTest": "Dùng thử",
     "addToWorkspace": "Thêm vào workspace",
     "fieldName": "Tên",
@@ -4879,11 +4479,7 @@
     "holdingHint": "Khách nhận câu này khi agent chưa trả lời kịp, và một nhân viên sẽ được nhờ trả lời. Để trống thì dùng câu mặc định.",
     "holdingDefault": "Dạ em đã nhận tin, nhân viên sẽ phản hồi anh/chị sớm ạ",
     "autoTitle": "Tự động hoá của agent",
-    "autoSeeAll": "Xem tất cả",
-    "autoHelp": "Những việc tự chạy cho agent này. Bạn bật hoặc tắt từng việc.",
-    "autoLoadFailed": "Chưa tải được tự động hoá.",
     "autoRetry": "Thử lại",
-    "autoLoading": "Đang tải...",
     "installed": "Đã cài đặt agent.",
     "instanceCreated": "Đã tạo agent mới.",
     "loadFailed": "Không tải được danh sách agent.",
@@ -5318,8 +4914,6 @@
     "adAria": "Ưu đãi Founding 50",
     "adDismiss": "Ẩn ưu đãi",
     "adTitle": "Website của bạn im ắng sau 6 giờ tối",
-    "adText": "Chatbot trả lời mọi khách truy cập và chuyển khách hàng cho Sales",
-    "adOff": "Giảm 50%",
     "addChatbot": "Thêm Chatbot",
     "insightTitle": "{after}/{count} khách hàng từ website đến ngoài giờ làm việc",
     "checklistTitle": "Đưa NIVO OS vào vận hành",
@@ -5411,7 +5005,6 @@
     "filterDue": "Hạn",
     "filterStage": "Giai đoạn",
     "allOwners": "Tất cả người phụ trách",
-    "anyStage": "Mọi giai đoạn",
     "anyTime": "Mọi lúc",
     "dueOverdue": "Quá hạn",
     "dueWeek": "7 ngày tới",
@@ -5794,8 +5387,6 @@
     "matchedByCodeAmount": "Khớp mã hồ sơ + số tiền",
     "bankCredit": "{bank} báo có +{amount} · nội dung {ref} · từ {payer}",
     "bankEventBody": "{bank} báo có: {content}",
-    "askMsg": "{dept} cần bạn quyết định · {reason}: {summary}",
-    "autoMsg": "{dept} đã tự hoàn thành: {summary}",
     "resumedMsg": "Đã quyết định bởi {user} → NIVO đã tiếp tục: {summary}",
     "rejectedWork": "{user} đã từ chối: {summary}",
     "rejectedResult": "Đã từ chối — NIVO dừng việc này",
@@ -5814,7 +5405,6 @@
     "returnedToAi": "{user} đã trả hội thoại lại cho AI",
     "takenOverNoReply": "Nhân viên đang trực tiếp xử lý hội thoại này",
     "nameRequired": "Nhập tên khách",
-    "amountInvalid": "Số tiền phải là số dương",
     "staffNameRequired": "Nhập tên nhân viên",
     "staffNotFound": "Không tìm thấy nhân viên",
     "waitingBrief": "Đang chờ chủ doanh nghiệp quyết định:",
@@ -6147,8 +5737,6 @@
     "gateRenderQueued": "Đã đưa video «{title}» vào hàng dựng.",
     "automationOfferTitle": "Ưu đãi mới",
     "automationDraftTitle": "Soạn tự động · {title}",
-    "automationSkipped": "Bỏ qua",
-    "automationNeedsSession": "Việc soạn video cần một người đang đăng nhập; bản tự động chưa làm được ở đây.",
     "automationStepDraft": "Tạo bản nháp video từ «{title}»",
     "automationStepScript": "NIVO đang soạn kịch bản, xong sẽ báo bạn trong Văn phòng",
     "refreshNow": "Làm mới",
@@ -6361,8 +5949,6 @@
     "errDate": "Hãy chọn ngày nhận tiền.",
     "errContent": "Hãy nhập nội dung chuyển khoản (ít nhất 3 ký tự).",
     "errAdjustNote": "Hãy ghi cần điều chỉnh gì (ít nhất 5 ký tự).",
-    "adjustLog": "Đã thêm điều chỉnh: {note}",
-    "adjustLogAmount": "Đã thêm điều chỉnh: {note} (số đúng là {amount} VND)",
     "errPayer": "Nhập tên người chuyển tiền, tối đa 200 ký tự.",
     "errNote": "Ghi chú không được vượt quá 2.000 ký tự.",
     "adjustSaved": "Đã ghi nhận điều chỉnh.",

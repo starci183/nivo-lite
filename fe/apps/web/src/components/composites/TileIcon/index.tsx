@@ -1,7 +1,6 @@
 import { IconTile } from "@starci/grammar/common"
 import type { IconTileTone } from "@starci/grammar/common"
-import { nivoIconSource } from "../../leaves/Icon"
-import type { IconName } from "../../leaves/Icon"
+import { nivoIconSource, type IconName } from "@/components/leaves/Icon"
 
 /** Semantic state carried by the tile: resting, running or needing attention. */
 type TileIconSignal = "none" | "active" | "attention"

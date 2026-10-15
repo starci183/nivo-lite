@@ -4,7 +4,7 @@ import * as Outline from "@heroicons/react/24/outline"
 import * as Solid from "@heroicons/react/16/solid"
 import * as StarciSolid from "@starci/heroicons/16/solid"
 import * as StarciOutline from "@starci/heroicons/24/outline"
-import { Icon as GrammarIcon, IconTile } from "@starci/grammar/common"
+import { Icon as GrammarIcon } from "@starci/grammar/common"
 import type { IconUsage } from "@starci/grammar/common"
 import Image from "next/image"
 import type { SVGProps } from "react"
@@ -133,17 +133,4 @@ export const Icon = (props: IconProps) => (
         usage={props.props.usage}
         ariaLabel={props.props.ariaLabel}
     />
-)
-
-/** A serialisable glyph name, so a server component can pass it. */
-interface LandingIconTileProps {
-    readonly name: IconName
-}
-
-/**
- * Neutral identity tile. The client boundary exists so a server component hands over a glyph NAME,
- * never a glyph function.
- */
-export const LandingIconTile = (props: LandingIconTileProps) => (
-    <IconTile source={nivoIconSource(props.name, "leading")} tone="neutral" size="sm" />
 )

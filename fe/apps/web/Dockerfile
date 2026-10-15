@@ -1,10 +1,10 @@
-# nivo-lite/web - the web Next app (standalone output). The build context is the APP ROOT (the folder holding the one
+# nivo-lite/web - the console Next app on app.nivo.vn (standalone output). The build context is the APP ROOT (the folder holding the one
 # package.json and package-lock.json), not this folder:
 #
 #   docker build -f fe/apps/web/Dockerfile -t nivo-lite/web:<tag> .
 #
 # Pass the public values with --build-arg: NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY, NEXT_PUBLIC_API_URL (default https://api.nivo.vn), NEXT_PUBLIC_DEVELOPER_API_URL (default https://api.nivo.vn),
-# NEXT_PUBLIC_SITE_URL (default https://nivo.vn).
+# NEXT_PUBLIC_SITE_URL (default https://app.nivo.vn), NEXT_PUBLIC_LANDING_URL (default https://nivo.vn).
 #
 # NEXT_PUBLIC_* values are published to every browser by design, so they are the one kind of build argument; every server-only
 # variable is supplied at run time (env_file). It follows the image canon (knowledge/hfs/docker.md) and diverges from it nowhere.
@@ -22,12 +22,14 @@ ARG NEXT_PUBLIC_SUPABASE_URL
 ARG NEXT_PUBLIC_SUPABASE_ANON_KEY
 ARG NEXT_PUBLIC_API_URL=https://api.nivo.vn
 ARG NEXT_PUBLIC_DEVELOPER_API_URL=https://api.nivo.vn
-ARG NEXT_PUBLIC_SITE_URL=https://nivo.vn
+ARG NEXT_PUBLIC_SITE_URL=https://app.nivo.vn
+ARG NEXT_PUBLIC_LANDING_URL=https://nivo.vn
 ENV NEXT_PUBLIC_SUPABASE_URL=$NEXT_PUBLIC_SUPABASE_URL \
     NEXT_PUBLIC_SUPABASE_ANON_KEY=$NEXT_PUBLIC_SUPABASE_ANON_KEY \
     NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL \
     NEXT_PUBLIC_DEVELOPER_API_URL=$NEXT_PUBLIC_DEVELOPER_API_URL \
     NEXT_PUBLIC_SITE_URL=$NEXT_PUBLIC_SITE_URL \
+    NEXT_PUBLIC_LANDING_URL=$NEXT_PUBLIC_LANDING_URL \
     NEXT_TELEMETRY_DISABLED=1
 COPY --from=manifests /app ./
 RUN npm ci --ignore-scripts
@@ -38,6 +40,7 @@ COPY be/contracts be/contracts
 COPY supabase/types supabase/types
 COPY supabase/migrations supabase/migrations
 COPY fe/tsconfig.json fe/tsconfig.json
+COPY fe/packages fe/packages
 COPY fe/apps/web fe/apps/web
 RUN mkdir -p fe/apps/web/public
 RUN npm run codegen --silent

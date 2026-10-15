@@ -3,7 +3,7 @@ import { InjectHiringOptions } from "./hiring.decorators"
 import type { HiringOptions } from "./hiring.options"
 
 /** The origin links use until the app root passes the real one. */
-const DEFAULT_SITE = "https://nivo.vn"
+const DEFAULT_SITE = "https://app.nivo.vn"
 
 @Injectable()
 /** The public links the hiring capability gives out: a job page, the page where a candidate picks an interview time, the page where a candidate answers an offer. */

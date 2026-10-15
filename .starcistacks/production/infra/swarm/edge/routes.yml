@@ -1,5 +1,5 @@
 # Routes of the NIVO ingress (Traefik file provider, mounted as a versioned Swarm config; a change is a new config name and a rolled ingress task).
-# The product is served on nivo.vn and www.nivo.vn (web) and api.nivo.vn (the api). The zone is at Tino: every host needs its A record there
+# The landing is served on nivo.vn and www.nivo.vn, the console on app.nivo.vn, and the api on api.nivo.vn. The zone is at Tino: every host needs its A record there
 # (be/docs/runbooks/dns-rollback.md) before Traefik can obtain its certificate. Each host gets its own Let's Encrypt certificate, persisted in the
 # acme volume. The api keeps answering the /api/, /graphql and /healthz paths of nivo.vn and www.nivo.vn so every webhook URL customers
 # configured with the old host keeps working.
@@ -11,21 +11,32 @@ http:
         contentTypeNosniff: true
         referrerPolicy: strict-origin-when-cross-origin
   routers:
-    web:
+    landing:
       rule: Host(`nivo.vn`) || Host(`www.nivo.vn`)
+      priority: 10
+      entryPoints: [websecure]
+      service: landing
+      middlewares: [secure-headers]
+      tls:
+        certResolver: le
+        domains: [{ main: nivo.vn }, { main: www.nivo.vn }]
+    web:
+      rule: Host(`app.nivo.vn`)
       entryPoints: [websecure]
       service: web
       middlewares: [secure-headers]
       tls: { certResolver: le }
     # Every /api/ path of the product hosts is the back end: provider webhooks and OAuth callbacks keep their public URLs. The explicit priority
-    # makes this router win over the catch-all `web` router; the path is forwarded unchanged. /health/live of the product hosts stays the web's.
+    # makes this router win over the catch-all `landing` router; the path is forwarded unchanged. /health/live of the product hosts stays the landing's.
     api-paths:
       rule: (Host(`nivo.vn`) || Host(`www.nivo.vn`)) && (PathPrefix(`/api/`) || Path(`/graphql`) || Path(`/healthz`))
       priority: 100
       entryPoints: [websecure]
       service: api
       middlewares: [secure-headers]
-      tls: { certResolver: le }
+      tls:
+        certResolver: le
+        domains: [{ main: nivo.vn }, { main: www.nivo.vn }]
     api:
       rule: Host(`api.nivo.vn`)
       entryPoints: [websecure]
@@ -49,7 +60,11 @@ http:
 
   services:
     # Health checks here are READINESS for traffic: an instance that fails them is taken out of rotation, never restarted (the Swarm healthcheck
-    # is liveness). web has only its liveness route; the api's /readyz answers 200 only while its database answers.
+    # is liveness). web and landing have only their liveness route; the api's /readyz answers 200 only while its database answers.
+    landing:
+      loadBalancer:
+        servers: [{ url: "http://nivo-landing:3000" }]
+        healthCheck: { path: /health/live, interval: 10s, timeout: 3s }
     web:
       loadBalancer:
         servers: [{ url: "http://nivo-web-swarm:3000" }]

@@ -1,14 +1,8 @@
-import type { Metadata } from "next"
-import { getTranslations } from "next-intl/server"
-import { LandingPage } from "@/features/pages/LandingPage"
+import { HomeRedirectPage } from "@/features/pages/HomeRedirectPage"
 
-/** The document title and description of the landing page. */
-export const generateMetadata = async (): Promise<Metadata> => {
-    const t = await getTranslations("app")
-    return { title: t("title"), description: t("homeDescription") }
-}
+export { homeRedirectMetadata as generateMetadata } from "@/features/pages/HomeRedirectPage"
 
-/** Public landing page (default route). */
-const Page = () => <LandingPage />
+/** The console has no front page: the dashboard is where a signed-in reader starts (the proxy sends everyone else to sign in). */
+const Page = () => <HomeRedirectPage />
 
 export default Page

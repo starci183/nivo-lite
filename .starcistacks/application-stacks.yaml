@@ -1,6 +1,6 @@
 # NIVO (nivo-lite) application stack, schema starci/application-stacks@1.
 #
-# dev        docker-swarm: the local Supabase (supabase CLI) with the be and the fe in containers.
+# dev        docker-swarm: the local Supabase (supabase CLI) with the api, console and landing in containers.
 # production docker-swarm on ONE Ubuntu VPS (single-manager swarm: orchestration without manager failover). The Supabase Cloud project is the
 #            external datastore. Runbook: .starcistacks/production/README.md (the seven commands, the release flow, the cutover window).
 #
@@ -9,7 +9,7 @@
 #                    memory on the runner with SOPS_AGE_KEY (GitHub environment `production`) and pipes each value into
 #                    `docker secret create nivo-<key>-v<keyed hash>` on the manager; the rendered stack keeps {external: true, name: <runtimeName>}.
 #                    The logical name -> runtime name map is each release's release.json (/srv/nivo/releases/<digest>/).
-#   Owner actions    (1) DNS at Tino: A records for nivo.vn, www.nivo.vn and api.nivo.vn -> the VPS (nothing scripts DNS; receipt: nslookup).
+#   Owner actions    (1) DNS at Tino: A records for nivo.vn, www.nivo.vn, app.nivo.vn and api.nivo.vn -> the VPS (nothing scripts DNS; receipt: nslookup).
 #                    (2) Approve `docker swarm init` on the VPS once (deploy/swarm/vps.sh prepare --init-swarm, NIVO_SWARM_INIT_APPROVED=1).
 #                    (3) Keep the age identity backed up; set the GitHub environment secret SOPS_AGE_KEY and the reviewers of `production`.
 #   Platform         Ubuntu Server 24.04 LTS amd64 (22.04 LTS amd64 is a candidate); Docker Engine from Docker's signed apt repository.
@@ -28,7 +28,13 @@ components:
     role: service
     image: ghcr.io/starci183/nivo-lite-web
     compose: infra/swarm/stack.yaml
-    purpose: The Next.js app (standalone output); no runtime secret, its public values are build arguments. Liveness /health/live.
+    purpose: The Next.js console on app.nivo.vn (standalone output); no runtime secret, its public values are build arguments. Liveness /health/live.
+    required: true
+  landing:
+    role: service
+    image: ghcr.io/starci183/nivo-lite-landing
+    compose: infra/swarm/stack.yaml
+    purpose: The Next.js landing on nivo.vn and www.nivo.vn (standalone output); no runtime secret or API credentials, its public values are build arguments. Liveness /health/live.
     required: true
   ingress:
     role: ingress
@@ -65,6 +71,9 @@ environments:
       web:
         replicas: 1
         port: 3000
+      landing:
+        replicas: 1
+        port: 3000
       ingress:
         replicas: 1
         port: 3000
@@ -83,6 +92,9 @@ environments:
         replicas: 1
         port: 8787
       web:
+        replicas: 1
+        port: 3000
+      landing:
         replicas: 1
         port: 3000
       openclaw:
@@ -296,13 +308,14 @@ services:
   #   container-registry:
   #     provider: ghcr
   #     mode: hosted
-  #     purpose: The api and web images of every release, pushed by the stack-deploy workflow; the Swarm deploy pulls them by digest with --with-registry-auth.
+  #     purpose: The api, web and landing images of every release, pushed by the stack-deploy workflow; the Swarm deploy pulls them by digest with --with-registry-auth.
   #     host:
   #       public: https://ghcr.io
   #     auth: github-token
   #     projects:
   #       - {repository: nivo-lite, key: ghcr.io/starci183/nivo-lite-api}
   #       - {repository: nivo-lite, key: ghcr.io/starci183/nivo-lite-web}
+  #       - {repository: nivo-lite, key: ghcr.io/starci183/nivo-lite-landing}
   #     ci:
   #       workflow: .github/workflows/stack-deploy.yml
   #       wiring: required

@@ -1,3 +1,5 @@
+import { landingUrl } from "@/modules/config"
+
 /** The destinations the sign-in, sign-up, password and invitation surfaces link to, named once. */
 export const AUTH_ROUTES = {
     login: "/login",
@@ -5,9 +7,13 @@ export const AUTH_ROUTES = {
     forgotPassword: "/forgot-password",
     resetPassword: "/reset-password",
     workspaces: "/workspaces",
-    privacy: "/privacy",
-    terms: "/terms",
 } as const
+
+/** The privacy policy, served by the landing site. */
+export const privacyHref = (): string => `${landingUrl()}/privacy`
+
+/** The terms of service, served by the landing site. */
+export const termsHref = (): string => `${landingUrl()}/terms`
 
 /** The sign-in page, optionally leading on to `next` afterwards. */
 export const loginPath = (next?: string): string =>

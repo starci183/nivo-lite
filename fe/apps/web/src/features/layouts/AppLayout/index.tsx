@@ -17,7 +17,7 @@ export const appLayoutViewport: Viewport = { width: "device-width", initialScale
 /** The localized document title and description. */
 export const appLayoutMetadata = async (locale: string): Promise<Metadata> => {
     const t = await getTranslations({ locale, namespace: "app" })
-    return { title: t("title"), description: t("description") }
+    return { title: t("title"), description: t("description"), robots: { index: false, follow: false } }
 }
 
 /** The server-resolved document around the routed body. */

@@ -2,7 +2,7 @@ import { Alert, Button, Divider, Input, Text, TextAction } from "@starci/grammar
 import { AuthForm } from "../../composites/AuthForm"
 import { AuthPanel } from "../../composites/AuthPanel"
 import { EmailField } from "../../composites/EmailField"
-import { Icon } from "../../leaves/Icon"
+import { Icon } from "@/components/leaves/Icon"
 import { LOGIN_ACTIONS_CLASS_NAME, LOGIN_CENTER_CLASS_NAME, LOGIN_ROW_CLASS_NAME } from "./classNames"
 
 /** The words and state of the sign-in card, resolved by the connected block. */

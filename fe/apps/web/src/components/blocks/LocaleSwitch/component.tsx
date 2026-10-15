@@ -1,4 +1,4 @@
-import { LocaleSegments } from "../../composites/LocaleSegments"
+import { LocaleSegments } from "@/components/composites/LocaleSegments"
 
 /** The words, options and state of the language switch, resolved by the connected block. */
 export interface LocaleSwitchBaseProps {

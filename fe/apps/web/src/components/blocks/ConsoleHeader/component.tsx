@@ -5,7 +5,7 @@ import { ConsoleAccountMenu } from "../../composites/ConsoleAccountMenu"
 import { ConsoleNotifications } from "../../composites/ConsoleNotifications"
 import { ConsoleWorkspaceMenu } from "../../composites/ConsoleWorkspaceMenu"
 import { FoundingBadge } from "../../composites/FoundingBadge"
-import { LocaleSegments } from "../../composites/LocaleSegments"
+import { LocaleSegments } from "@/components/composites/LocaleSegments"
 import { NivoLogo } from "../../leaves/NivoLogo"
 import { ACTIONS, BADGE, BRAND, SEARCH, WORKSPACE_NAME } from "./classNames"
 

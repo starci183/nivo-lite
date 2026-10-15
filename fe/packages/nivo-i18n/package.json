@@ -1,0 +1,45 @@
+{
+  "name": "@nivo-lite/i18n",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./proxy": {
+      "types": "./dist/proxy.d.ts",
+      "default": "./dist/proxy.js"
+    },
+    "./locale-switch": {
+      "types": "./dist/locale-switch.d.ts",
+      "default": "./dist/locale-switch.js"
+    },
+    "./request": {
+      "types": "./dist/request.d.ts",
+      "default": "./dist/request.js"
+    },
+    "./layout": {
+      "types": "./dist/layout.d.ts",
+      "default": "./dist/layout.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "lint": "starci app lint --workspace .",
+    "typecheck": "tsc --noEmit --pretty false"
+  },
+  "dependencies": {
+    "next": "16.1.6",
+    "next-intl": "4.13.6",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "server-only": "0.0.1"
+  },
+  "devDependencies": {
+    "@types/node": "22.20.4",
+    "@types/react": "19.3.0",
+    "typescript": "5.9.3"
+  }
+}

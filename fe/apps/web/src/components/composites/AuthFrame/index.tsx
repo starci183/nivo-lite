@@ -11,7 +11,7 @@ import {
     TextAction,
     WorkspaceShell,
 } from "@starci/grammar/common"
-import { AUTH_ROUTES } from "@/modules/routes"
+import { privacyHref, termsHref } from "@/modules/routes"
 import {
     AUTH_ART_BAND_CLASS_NAME,
     AUTH_BRAND_PANE_CLASS_NAME,
@@ -94,10 +94,10 @@ export const AuthFrame = (props: AuthFrameProps) => (
                     {props.children}
                     <div className={AUTH_LEGAL_CLASS_NAME}>
                         <NavLandmark label={props.legalLabel} layout="bar">
-                            <TextAction href={AUTH_ROUTES.privacy} size="sm">
+                            <TextAction href={privacyHref()} size="sm">
                                 {props.privacyLabel}
                             </TextAction>
-                            <TextAction href={AUTH_ROUTES.terms} size="sm">
+                            <TextAction href={termsHref()} size="sm">
                                 {props.termsLabel}
                             </TextAction>
                         </NavLandmark>
