@@ -32,6 +32,13 @@ http:
       service: api
       middlewares: [secure-headers]
       tls: { certResolver: le }
+    # The n8n editor and its webhooks: the swarm n8n (SQLite on the persisted volume) is the real one; the old compose n8n is retired at the cutover.
+    n8n:
+      rule: Host(`n8n.nivo.vn`)
+      entryPoints: [websecure]
+      service: n8n
+      middlewares: [secure-headers]
+      tls: { certResolver: le }
     # nguyentuannam.org (repo namnivo-lite): a standalone container `namnivo-web` that joins the attachable overlay network nivo-edge-swarm.
     namnivo:
       rule: Host(`nguyentuannam.org`) || Host(`www.nguyentuannam.org`) || Host(`app.nguyentuannam.org`)
@@ -51,6 +58,10 @@ http:
       loadBalancer:
         servers: [{ url: "http://nivo-api:8787" }]
         healthCheck: { path: /readyz, interval: 10s, timeout: 3s }
+    n8n:
+      loadBalancer:
+        servers: [{ url: "http://nivo-n8n:5678" }]
+        healthCheck: { path: /healthz, interval: 10s, timeout: 3s }
     namnivo:
       loadBalancer:
         servers: [{ url: "http://namnivo-web:3000" }]

@@ -226,7 +226,6 @@ environments:
         upstreams:
           - {name: nivo-web, hosts: [nivo.vn, www.nivo.vn], container: nivo-web-web-1, aliases: [nivo-web], port: 3000}
           - {name: namnivo, hosts: [nguyentuannam.org, www.nguyentuannam.org, app.nguyentuannam.org], container: namnivo-web-web-1, aliases: [namnivo-web], port: 3000}
-          - {name: n8n-editor, hosts: [n8n.nivo.vn], hostAddress: 172.29.0.1, port: 5678}
           - {name: tayson-web, hosts: [doanhnghieptayson.vn, www.doanhnghieptayson.vn], container: tayson-web, aliases: [tayson-web], port: 3073}
           - {name: tayson-api, container: tayson-api, aliases: [tayson-api], port: 3074}
           - {name: tayson-crm, hosts: [crm.doanhnghieptayson.vn], container: tayson-crm, aliases: [tayson-crm], port: 3173}
