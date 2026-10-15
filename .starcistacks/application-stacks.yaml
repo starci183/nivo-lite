@@ -199,7 +199,7 @@ environments:
             stdout: '^\d+ \d+\r?\n?$'
       jobs: {service: api, command: [node, be/dist/apps/cli/src/main.js, jobs]}
       tasks:
-        seed-media:   {service: api, command: [node, be/dist/apps/cli/src/main.js, seed-media, upload]}
+        seed-media:   {service: api, command: [node, be/dist/apps/cli/src/main.js, seed-media, upload, --dir, be/src/assets/media-seed]}
         seed-modules: {service: api, command: [node, be/dist/apps/cli/src/main.js, seed-modules, run]}
       backup:
         image: alpine:3.21@sha256:ce64758a109eb420d874a118f87920e625e12d3634e03b4a5573fd9f6e5d3507
