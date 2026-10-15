@@ -1,5 +1,5 @@
 import type { WorkItem } from "@modules/domain/decisions"
-import { contactOf, LIVE_BOOKING_STATUSES, originOf, settlementOf } from "./booking-remind.policy"
+import { contactOf, LIVE_BOOKING_STATUSES, reminderOriginOf, settlementOf } from "./booking-remind.policy"
 
 describe("LIVE_BOOKING_STATUSES", () => {
     it("keeps reminders for requested, confirmed and rescheduled bookings", () => {
@@ -19,13 +19,13 @@ describe("settlementOf", () => {
     })
 })
 
-describe("originOf", () => {
+describe("reminderOriginOf", () => {
     it("keeps simulated bookings simulated", () => {
-        expect(originOf("simulated")).toBe("simulated")
+        expect(reminderOriginOf("simulated")).toBe("simulated")
     })
 
     it.each(["live", "", "other"])("treats origin '%s' as live", (origin) => {
-        expect(originOf(origin)).toBe("live")
+        expect(reminderOriginOf(origin)).toBe("live")
     })
 })
 
