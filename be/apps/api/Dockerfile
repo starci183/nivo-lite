@@ -21,6 +21,8 @@ RUN npm ci --ignore-scripts
 COPY be/tsconfig.json be/tsconfig.build.json be/
 COPY be/src be/src
 COPY be/apps/api be/apps/api
+# The cli app ships in the same image: the stack runs jobs, the watchdog and the seeds as `node be/dist/apps/cli/src/main.js` inside the api service.
+COPY be/apps/cli be/apps/cli
 RUN npm run build:be
 
 FROM node:22.14.0-alpine3.21 AS runtime
