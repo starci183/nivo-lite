@@ -26,7 +26,7 @@ import {
 import { useActiveWorkspace, useWorkspaceCards } from "@/hooks/workspaces"
 import { webSiteOrigin } from "@/modules/config"
 import type { AgentOption, Connection } from "@/modules/types"
-import { ConnectorDetailOverlayBase, detailRowsOf, modeOf } from "./component"
+import { ConnectorDetailOverlayBase, detailRowsOf, detailModeOf } from "./component"
 import type { DetailEntry } from "./component"
 
 /** Workspace inputs supplied by a caller, or read by the drawer when its server page registers it without inputs. */
@@ -88,7 +88,7 @@ export const ConnectionsOverlayHost = (props: ConnectionsOverlayHostProps) => {
             }),
     })).filter((group) => group.cards.length > 0)
     const isLoading = workspaces.status === "loading" || (manager && data.isLoading)
-    const mode = modeOf({ isLoading, manager, failed: data.failed })
+    const mode = detailModeOf({ isLoading, manager, failed: data.failed })
     return (
         <>
             <ConnectionsOverview

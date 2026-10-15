@@ -13,7 +13,7 @@ interface ModeInput {
 }
 
 /** Loading and access take priority over the result of the workspace reads. */
-export const modeOf = (input: ModeInput): "loading" | "ready" | "forbidden" | "failed" => {
+export const detailModeOf = (input: ModeInput): "loading" | "ready" | "forbidden" | "failed" => {
     if (input.isLoading) return "loading"
     if (!input.manager) return "forbidden"
     return input.failed ? "failed" : "ready"
