@@ -442,22 +442,6 @@ export interface BookingEvent {
     readonly kind: BookingEventKind
 }
 
-/** A line to the customer in the chat the booking came from. */
-export interface BookingNotice {
-    /** The workspace. */
-    readonly workspaceId: string
-    /** The conversation of the customer. */
-    readonly conversationId: string
-    /** What to say. */
-    readonly text: string
-}
-
-/** Carries a notice into the customer's chat; true when it reached the customer. */
-export interface BookingNotifier {
-    /** Delivers one notice. */
-    notify(notice: BookingNotice): Promise<boolean>
-}
-
 /** What applying one booking event did, for the job log. */
 export interface BookingEffects {
     /** False when the booking no longer exists. */

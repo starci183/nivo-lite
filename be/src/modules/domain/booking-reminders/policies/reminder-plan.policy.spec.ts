@@ -1,4 +1,4 @@
-import { cardReminderHours, reminderPlan } from "./reminder-plan.policy"
+import { cardReminderBody, cardReminderHours, hoursOfKind, reminderPlan } from "./reminder-plan.policy"
 
 const HOUR = 3_600_000
 
@@ -25,6 +25,27 @@ describe("reminder-plan.policy", () => {
             expect(cardReminderHours({ firstHours: 0, secondHours: "x" })).toEqual([])
             expect(cardReminderHours({})).toEqual([])
             expect(cardReminderHours(null)).toEqual([])
+        })
+    })
+
+    describe("cardReminderBody", () => {
+        it.each([null, undefined, "", " \n\t "])("returns null for missing or blank wording %j", (body) => {
+            expect(cardReminderBody(body)).toBeNull()
+        })
+
+        it("trims the owner's wording", () => {
+            expect(cardReminderBody("  Ch\u00e0o {{ten_khach}}\n ")).toBe("Ch\u00e0o {{ten_khach}}")
+        })
+    })
+
+    describe("hoursOfKind", () => {
+        it.each([
+            ["h24", 24],
+            ["h2", 2],
+            ["h", 0],
+            ["hx", 0],
+        ])("reads %s as %d hours", (kind, hours) => {
+            expect(hoursOfKind(kind)).toBe(hours)
         })
     })
 })

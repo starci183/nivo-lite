@@ -23,3 +23,6 @@ export {
     toSaveBookingExceptionRequest,
 } from "./booking-workbench.mapper"
 export { toRequestPublicBookingRequest, toRequestPublicBookingType } from "./public-booking-graphql.mapper"
+export { BookingNoticesService } from "./booking-notices.service"
+export type { BookingNotice, BookingNoticeResult, BookingNotifier } from "./booking-notice.contracts"
+export type { EffectsRow } from "./persistence/booking.rows"

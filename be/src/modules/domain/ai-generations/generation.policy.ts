@@ -137,3 +137,19 @@ export const composeTurn = (input: GenerationInput): string => {
         output,
     ].join("\n")
 }
+
+/** Whether a failure is the deadline of the request passing (an aborted signal or a timeout error). */
+export const isTimeoutCause = (cause: unknown): boolean =>
+    cause instanceof Error && (cause.name === "TimeoutError" || cause.name === "AbortError")
+
+/** Waits for the work, or fails the moment the signal aborts, so one deadline covers every step of a call. */
+export const untilAborted = <T>(work: Promise<T>, signal: AbortSignal): Promise<T> =>
+    new Promise<T>((resolve, reject) => {
+        const onAbort = (): void => reject(signal.reason)
+        if (signal.aborted) {
+            onAbort()
+            return
+        }
+        signal.addEventListener("abort", onAbort, { once: true })
+        work.then(resolve, reject).finally(() => signal.removeEventListener("abort", onAbort))
+    })

@@ -12,6 +12,7 @@ import { BookingBoardService } from "./booking-board.service"
 import { BookingSetupService } from "./booking-setup.service"
 import { BookingEffectsService } from "./booking-effects.service"
 import { BookingModelService } from "./booking-model.service"
+import { BookingNoticesService } from "./booking-notices.service"
 import { BookingOverviewService } from "./booking-overview.service"
 import { BookingChatLookupService } from "./booking-chat-lookup.service"
 import { BookingPublicService } from "./booking-public.service"
@@ -26,11 +27,12 @@ export class BookingsModule extends ConfigurableModuleClass {
     static register(options: typeof OPTIONS_TYPE): DynamicModule {
         const base = super.register(options)
         const waitlist = BookingWaitlistModule.register({})
+        const reminders = BookingRemindersModule.register({})
         return {
             ...base,
             imports: [
                 ...(base.imports ?? []),
-                BookingRemindersModule.register({}),
+                reminders,
                 BookingServicesModule.register({}),
                 BookingResourcesModule.register({}),
                 BookingHoursModule.register({}),
@@ -42,6 +44,7 @@ export class BookingsModule extends ConfigurableModuleClass {
                 ...(base.providers ?? []),
                 { provide: BOOKINGS_NOTIFIER, useClass: options.notifier },
                 BookingModelService,
+                BookingNoticesService,
                 BookingReservationService,
                 BookingPublicService,
                 BookingDeskService,
@@ -52,6 +55,9 @@ export class BookingsModule extends ConfigurableModuleClass {
                 BookingChatLookupService,
             ],
             exports: [
+                BOOKINGS_NOTIFIER,
+                reminders,
+                BookingNoticesService,
                 BookingChatLookupService,
                 waitlist,
                 BookingPublicService,

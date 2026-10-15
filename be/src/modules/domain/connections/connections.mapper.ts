@@ -34,10 +34,20 @@ const isStatus = (value: string): value is ConnectionStatus => Object.hasOwn(STA
 const isRecordObject = (value: unknown): value is Readonly<Record<string, unknown>> =>
     typeof value === "object" && value !== null && !Array.isArray(value)
 
+/** Meta keys a person may have stored as a number (a Telegram chat id is one): they are read as text. */
+const NUMERIC_TEXT_KEYS: ReadonlyArray<string> = ["owner_chat_id"]
+
+const metaText = (key: string, value: unknown): string | null => {
+    if (typeof value === "string") return value
+    return typeof value === "number" && Number.isFinite(value) && NUMERIC_TEXT_KEYS.includes(key) ? String(value) : null
+}
+
 const asMeta = (value: unknown): Readonly<Record<string, string>> =>
     isRecordObject(value)
         ? Object.fromEntries(
-              Object.entries(value).filter((entry): entry is [string, string] => typeof entry[1] === "string"),
+              Object.entries(value)
+                  .map(([key, entry]) => [key, metaText(key, entry)] as const)
+                  .filter((entry): entry is readonly [string, string] => entry[1] !== null),
           )
         : {}
 

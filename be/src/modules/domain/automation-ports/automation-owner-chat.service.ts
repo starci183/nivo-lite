@@ -19,21 +19,29 @@ export class AutomationOwnerChatService implements AutomationOwnerChat {
         @InjectLogger() private readonly logger: Logger,
     ) {}
 
-    /** Tries connected Telegram bots in order and answers whether one reached its registered owner's chat. */
+    /**
+     * Tries connected Telegram bots in order and answers whether one reached its registered owner's chat. A lookup that fails is the
+     * same as no chat: the report was already posted in Office, so the run goes on with a skipped step and a retry never posts twice.
+     */
     async sendToOwner(workspaceId: string, text: string): Promise<boolean> {
-        const connections = await this.connections.listByProvider(workspaceId, "telegram", {
-            includeDisconnected: false,
-        })
-        return connections.reduce<Promise<boolean>>(
-            async (reached, connection) => (await reached) || this.tryConnection(workspaceId, connection, text),
-            Promise.resolve(false),
-        )
+        try {
+            const connections = await this.connections.listByProvider(workspaceId, "telegram", {
+                includeDisconnected: false,
+            })
+            return await connections.reduce<Promise<boolean>>(
+                async (reached, connection) => (await reached) || this.tryConnection(workspaceId, connection, text),
+                Promise.resolve(false),
+            )
+        } catch (cause) {
+            this.logger.error(AutomationPortsLogEvent.OwnerChatLookupFailed, cause, { workspaceId })
+            return false
+        }
     }
 
     private async tryConnection(workspaceId: string, connection: ConnectionRecord, text: string): Promise<boolean> {
         if (connection.status !== "connected") return false
         const chatId = connection.meta.owner_chat_id
-        if (typeof chatId !== "string" || chatId === "") return false
+        if (chatId === undefined || chatId === "") return false
         const token = await this.secrets.botToken(workspaceId, connection.id)
         if (token.kind !== "ok") return false
         return this.telegram.sendMessage(token.value, chatId, text).then(

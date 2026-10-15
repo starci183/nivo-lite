@@ -157,7 +157,7 @@ export interface CustomerEmail {
     /** Unique per email. */
     readonly dedupeKey: string
     /** The kind of thing the gate files the work under. */
-    readonly subjectType: "transaction" | "invoice"
+    readonly subjectType: "transaction" | "invoice" | "lead"
     /** The id of that thing. */
     readonly subjectId: string | null
     /** The customer. */

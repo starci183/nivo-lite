@@ -1,5 +1,5 @@
 import type { Type } from "@nestjs/common"
-import type { BookingNotifier } from "./bookings.contracts"
+import type { BookingNotifier } from "./booking-notice.contracts"
 
 /** What the booking capability takes from the app root. */
 export interface BookingsOptions {

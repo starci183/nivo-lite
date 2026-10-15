@@ -3,6 +3,7 @@ import type { OnModuleInit } from "@nestjs/common"
 import { InjectWorkPerformerRegistry } from "@modules/domain/decisions"
 import type { WorkPerformerRegistry } from "@modules/domain/decisions"
 import { BOOKING_ACTIONS, BookingPerformerService } from "./booking-performer.service"
+import { BookingRemindPerformerService } from "./booking-remind-performer.service"
 import { CarePerformerService } from "./care-performer.service"
 import { ClassifyLeadPerformerService } from "./classify-lead-performer.service"
 import { ConfirmOrderPerformerService } from "./confirm-order-performer.service"
@@ -31,6 +32,7 @@ export class WorkPerformersRegistrarService implements OnModuleInit {
         private readonly reply: ReplyCustomerPerformerService,
         private readonly email: SendEmailPerformerService,
         private readonly booking: BookingPerformerService,
+        private readonly remind: BookingRemindPerformerService,
         private readonly redeem: RedeemRewardPerformerService,
     ) {}
 
@@ -47,6 +49,7 @@ export class WorkPerformersRegistrarService implements OnModuleInit {
         this.registry.add("reply_customer", this.reply)
         this.registry.add("send_email", this.email)
         for (const action of BOOKING_ACTIONS) this.registry.add(action, this.booking)
+        this.registry.add("remind_booking", this.remind)
         this.registry.add("redeem_reward", this.redeem)
     }
 }

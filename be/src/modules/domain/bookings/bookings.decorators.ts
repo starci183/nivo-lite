@@ -1,6 +1,6 @@
 import { injector } from "@modules/platform/composition"
 import type { TypedParameterDecorator } from "@modules/platform/composition"
-import type { BookingNotifier } from "./bookings.contracts"
+import type { BookingNotifier } from "./booking-notice.contracts"
 
 /** Token of the delivery of booking notices into the chat of a customer. */
 export const BOOKINGS_NOTIFIER: unique symbol = Symbol("domain.bookings.notifier")

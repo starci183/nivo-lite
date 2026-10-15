@@ -135,26 +135,33 @@ describe("AutomationOwnerChatService", () => {
         })
     })
 
-    it("preserves a failed connection lookup", async () => {
+    it("logs a failed connection lookup and answers false", async () => {
         const { subject, connections, secrets, telegram, logger } = await setup()
         const failure = new Error("Connections unavailable")
         connections.listByProvider.mockRejectedValue(failure)
 
-        await expect(subject.sendToOwner(WS, TEXT)).rejects.toBe(failure)
+        await expect(subject.sendToOwner(WS, TEXT)).resolves.toBe(false)
 
+        expect(connections.listByProvider.mock.calls).toEqual([[WS, "telegram", { includeDisconnected: false }]])
         expect(secrets.botToken).not.toHaveBeenCalled()
         expect(telegram.sendMessage).not.toHaveBeenCalled()
-        expect(logger.error).not.toHaveBeenCalled()
+        expect(logger.error.mock.calls).toEqual([
+            [AutomationPortsLogEvent.OwnerChatLookupFailed, failure, { workspaceId: WS }],
+        ])
     })
 
-    it("preserves a failed token lookup", async () => {
-        const { subject, secrets, telegram, logger } = await setup()
+    it("logs a failed token lookup and answers false without trying later connections", async () => {
+        const { subject, connections, secrets, telegram, logger } = await setup()
         const failure = new Error("Token lookup unavailable")
+        connections.listByProvider.mockResolvedValue([connectionOf(), connectionOf({ id: "later" })])
         secrets.botToken.mockRejectedValue(failure)
 
-        await expect(subject.sendToOwner(WS, TEXT)).rejects.toBe(failure)
+        await expect(subject.sendToOwner(WS, TEXT)).resolves.toBe(false)
 
+        expect(secrets.botToken.mock.calls).toEqual([[WS, "connection-1"]])
         expect(telegram.sendMessage).not.toHaveBeenCalled()
-        expect(logger.error).not.toHaveBeenCalled()
+        expect(logger.error.mock.calls).toEqual([
+            [AutomationPortsLogEvent.OwnerChatLookupFailed, failure, { workspaceId: WS }],
+        ])
     })
 })

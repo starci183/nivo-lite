@@ -1,13 +1,11 @@
 import { Test } from "@nestjs/testing"
 import { FakeClock, builder, mock } from "@starci/jest-preset"
+import { GenerationsService } from "@modules/domain/ai-generations"
 import { BrainEvalCasesService } from "@modules/domain/brain-eval-cases"
 import { BrainLessonsService } from "@modules/domain/brain-lessons"
 import type { LessonRecord } from "@modules/domain/brain-lessons"
 import { DecisionCorrectionsService } from "@modules/domain/decisions"
-import { UsageMeterService } from "@modules/domain/knowledge"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
-import { LLM } from "@modules/integrations/llm"
-import type { LlmPort } from "@modules/integrations/llm"
 import { CLOCK } from "@modules/platform/clock"
 import { BRAIN_CORRECTIONS } from "./brain.decorators"
 import type { Correction, CorrectionSource } from "./brain.contracts"
@@ -56,29 +54,29 @@ const build = async (list: ReadonlyArray<Correction> = corrections()) => {
     lessons.list.mockResolvedValue([])
     const cases = mock<BrainEvalCasesService>()
     cases.keep.mockResolvedValue(2)
-    const llm = mock<LlmPort>()
-    llm.complete.mockResolvedValue({
-        text: "model answer",
-        model: "qwen/test",
-        usage: { promptTokens: 10, completionTokens: 5, totalTokens: 15, costUsd: 0.001 },
+    const generations = mock<GenerationsService>()
+    generations.generate.mockResolvedValue({
+        ok: true,
+        output: "model answer",
+        generationId: "g1",
+        timings: {},
+        usage: null,
     })
-    const usage = mock<UsageMeterService>()
     const json = mock<ModelJsonService>()
     json.jsonOf.mockReturnValue({ lessons: [] })
     const moduleRef = await Test.createTestingModule({
         providers: [
             BrainLearningService,
             { provide: BRAIN_CORRECTIONS, useValue: source },
-            { provide: LLM, useValue: llm },
+            { provide: GenerationsService, useValue: generations },
             { provide: WorkspaceMembersService, useValue: members },
             { provide: BrainLessonsService, useValue: lessons },
             { provide: BrainEvalCasesService, useValue: cases },
-            { provide: UsageMeterService, useValue: usage },
             { provide: ModelJsonService, useValue: json },
             { provide: CLOCK, useValue: new FakeClock(AT) },
         ],
     }).compile()
-    return { service: moduleRef.get(BrainLearningService), source, members, lessons, cases, llm, usage, json }
+    return { service: moduleRef.get(BrainLearningService), source, members, lessons, cases, generations, json }
 }
 
 describe("BrainLearningService", () => {
@@ -87,7 +85,7 @@ describe("BrainLearningService", () => {
     })
 
     it("requires a manager before reading any corrections", async () => {
-        const { service, source, members, cases, llm } = await build()
+        const { service, source, members, cases, generations } = await build()
         const error = new Error("forbidden")
         members.require.mockRejectedValue(error)
 
@@ -96,12 +94,12 @@ describe("BrainLearningService", () => {
         expect(members.require).toHaveBeenCalledWith("u1", "ws1", ["owner", "manager"])
         expect(source.recent).not.toHaveBeenCalled()
         expect(cases.keep).not.toHaveBeenCalled()
-        expect(llm.complete).not.toHaveBeenCalled()
+        expect(generations.generate).not.toHaveBeenCalled()
     })
 
     it("keeps regression cases but skips learning below three corrections", async () => {
         const list = corrections().slice(0, 2)
-        const { service, source, members, cases, lessons, llm, usage } = await build(list)
+        const { service, source, members, cases, lessons, generations } = await build(list)
 
         await expect(service.mine("u1", "ws1", "chatbot")).resolves.toEqual({
             corrections: 2,
@@ -125,12 +123,11 @@ describe("BrainLearningService", () => {
             },
         ])
         expect(lessons.list).not.toHaveBeenCalled()
-        expect(llm.complete).not.toHaveBeenCalled()
-        expect(usage.record).not.toHaveBeenCalled()
+        expect(generations.generate).not.toHaveBeenCalled()
     })
 
     it("keeps an empty corrections window without invoking the model", async () => {
-        const { service, cases, llm } = await build([])
+        const { service, cases, generations } = await build([])
         cases.keep.mockResolvedValue(0)
 
         await expect(service.mine("u1", "ws1", "chatbot")).resolves.toEqual({
@@ -141,12 +138,12 @@ describe("BrainLearningService", () => {
         })
 
         expect(cases.keep).toHaveBeenCalledWith("ws1", "chatbot", [])
-        expect(llm.complete).not.toHaveBeenCalled()
+        expect(generations.generate).not.toHaveBeenCalled()
     })
 
-    it("reports model unavailability without recording usage or parsing a result", async () => {
-        const { service, llm, usage, json, lessons } = await build()
-        llm.complete.mockResolvedValue(null)
+    it("reports model unavailability with the correction and saved case counts without parsing a result", async () => {
+        const { service, generations, json, lessons } = await build()
+        generations.generate.mockResolvedValue({ ok: false, reason: "timeout", message: "Try again later" })
 
         await expect(service.mine("u1", "ws1", "chatbot")).resolves.toEqual({
             corrections: 3,
@@ -156,13 +153,12 @@ describe("BrainLearningService", () => {
         })
 
         expect(lessons.list).toHaveBeenCalledWith("ws1", ["active", "proposed"])
-        expect(usage.record).not.toHaveBeenCalled()
         expect(json.jsonOf).not.toHaveBeenCalled()
         expect(lessons.propose).not.toHaveBeenCalled()
     })
 
-    it("meters the model call, includes applicable lessons and proposes only lessons supported by two distinct known decisions", async () => {
-        const { service, llm, usage, json, lessons } = await build()
+    it("generates lessons with applicable guidance and proposes only those supported by two distinct known decisions", async () => {
+        const { service, generations, json, lessons } = await build()
         lessons.list.mockResolvedValue([
             lessonOf(),
             lessonOf({ id: "l2", module: null, title: "Universal", body: "Be clear", status: "proposed" }),
@@ -191,15 +187,18 @@ describe("BrainLearningService", () => {
             proposed: 2,
         })
 
-        expect(llm.complete).toHaveBeenCalledWith({ system: LEARN_SYSTEM, prompt, timeoutMs: 60_000 })
-        expect(usage.record).toHaveBeenCalledWith({
+        expect(generations.generate).toHaveBeenCalledTimes(1)
+        expect(generations.generate).toHaveBeenCalledWith({
             workspaceId: "ws1",
+            purpose: "brain_lessons",
             kind: "guide",
             module: "other",
-            model: "qwen/test",
-            usage: { promptTokens: 10, completionTokens: 5, totalTokens: 15, costUsd: 0.001 },
-            promptChars: LEARN_SYSTEM.length + prompt.length,
-            completionChars: 12,
+            responseFormat: "json",
+            timeoutMs: 60_000,
+            messages: [
+                { role: "system", content: LEARN_SYSTEM },
+                { role: "user", content: prompt },
+            ],
         })
         expect(json.jsonOf).toHaveBeenCalledWith("model answer")
         expect(lessons.propose).toHaveBeenCalledTimes(2)
@@ -257,8 +256,8 @@ describe("BrainLearningService", () => {
         })
     })
 
-    it("records usage even when the parsed model answer has no lessons", async () => {
-        const { service, json, usage, lessons } = await build()
+    it("returns no proposals when the generated output cannot be parsed into lessons", async () => {
+        const { service, json, lessons } = await build()
         json.jsonOf.mockReturnValue(null)
 
         await expect(service.mine("u1", "ws1", "chatbot")).resolves.toEqual({
@@ -267,7 +266,7 @@ describe("BrainLearningService", () => {
             proposed: 0,
         })
 
-        expect(usage.record).toHaveBeenCalledTimes(1)
+        expect(json.jsonOf).toHaveBeenCalledWith("model answer")
         expect(lessons.propose).not.toHaveBeenCalled()
     })
 

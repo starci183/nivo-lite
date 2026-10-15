@@ -340,6 +340,8 @@ export const toFigureRow = (row: WindowRow): FigureRow => ({
 export interface EffectsRow {
     /** The booking id. */
     readonly id: string
+    /** The workspace of the booking. */
+    readonly workspace_id: string
     /** The status now. */
     readonly status: string
     /** The lead of the customer, or null. */
@@ -368,4 +370,12 @@ export interface EffectsRow {
     readonly start_ms: number
     /** The instant it was cancelled, or null. */
     readonly cancelled_ms: number | null
+    /** The name of the resource, or an empty text. */
+    readonly resource_name: string
+    /** The deposit in VND. */
+    readonly deposit_vnd: number
+    /** The start it was moved from, or null when it never moved. */
+    readonly from_ms: number | null
+    /** Whether the booking holds its slot. */
+    readonly holds_slot: boolean
 }
