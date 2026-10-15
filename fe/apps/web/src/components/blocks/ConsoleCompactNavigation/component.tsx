@@ -1,7 +1,7 @@
 import { Badge, Button, Drawer, Icon, TextAction } from "@starci/grammar/common"
 import type { ConsoleNavItem } from "@/modules/types"
 import { ConsoleSidebar } from "../../composites/ConsoleSidebar"
-import { nivoIconSource } from "../../leaves/Icon"
+import { nivoIconSource } from "@/components/leaves/Icon"
 import { COMPACT_NAV } from "./classNames"
 
 /** The destinations, words and open state, resolved by the connected block. */

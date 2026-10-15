@@ -3,7 +3,7 @@
 // that adds the api environment, the `<KEY>_FILE` pointers and the versioned secret grants, resolved by `docker stack config`.
 //
 //   SOPS_AGE_KEY=... node deploy/swarm/render.mjs --api-image ghcr.io/o/nivo-lite-api@sha256:... --web-image ghcr.io/o/nivo-lite-web@sha256:... \
-//        --source-sha <git sha> --out <dir> [--previous <release digest>] [--secrets-dir <dir>]
+//        --landing-image ghcr.io/o/nivo-lite-landing@sha256:... --source-sha <git sha> --out <dir> [--previous <release digest>] [--secrets-dir <dir>]
 //
 // Writes under <dir>: stack.yaml (the rendered review model; its sha256 is the release digest), stack.generated.yaml (the override, JSON),
 // release.json (the release record: digests, secret and config runtime names, non-secret config digest, health assertions), and the config
@@ -24,10 +24,13 @@ const allowUnpinned = args.includes("--allow-unpinned")
 const extraCompose = args.flatMap((arg, index, all) => (all[index - 1] === "--extra-compose" ? [resolve(arg)] : []))
 const apiImage = flag("--api-image")
 const webImage = flag("--web-image")
+const landingImage = flag("--landing-image")
 if (!isImageReference(apiImage, allowUnpinned))
     fail("--api-image must be a registry reference pinned by @sha256 digest")
 if (!isImageReference(webImage, allowUnpinned))
     fail("--web-image must be a registry reference pinned by @sha256 digest")
+if (!isImageReference(landingImage, allowUnpinned))
+    fail("--landing-image must be a registry reference pinned by @sha256 digest")
 const out = resolve(flag("--out") ?? fail("--out <dir> is required"))
 const secretsDir = resolve(flag("--secrets-dir") ?? join(ROOT, ".starcistacks", "production", "secrets"))
 const sourceSha = flag("--source-sha") ?? "unknown"
@@ -59,6 +62,7 @@ const override = {
     services: {
         api: { image: apiImage, environment: apiEnvironment, secrets: grant(sealed.grants.api) },
         web: { image: webImage },
+        landing: { image: landingImage },
         openclaw: { environment: { OPENCLAW_MODEL: escapeDollar(model) }, secrets: grant(sealed.grants.openclaw) },
         n8n: { secrets: grant(sealed.grants.n8n) },
     },
@@ -84,6 +88,7 @@ const env = {
     ACME_EMAIL: process.env.ACME_EMAIL ?? "",
     NIVO_API_IMAGE: apiImage,
     NIVO_WEB_IMAGE: webImage,
+    NIVO_LANDING_IMAGE: landingImage,
 }
 for (const config of configs) env[config.env] = config.name
 for (const key of Object.keys(env)) if (env[key] === undefined) delete env[key]
@@ -125,7 +130,7 @@ const release = {
     stack: STACK,
     releaseDigest,
     sourceSha,
-    images: { api: apiImage, web: webImage, thirdParty: "pinned by digest in stack.yaml" },
+    images: { api: apiImage, web: webImage, landing: landingImage, thirdParty: "pinned by digest in stack.yaml" },
     configDigest,
     configs: configs.map((c) => ({ logical: c.logical, name: c.name })),
     secrets: Object.entries(sealed.secrets)
@@ -137,7 +142,11 @@ const release = {
         "api /healthz",
         "api /readyz",
         "api graphql __typename",
-        "web /health/live",
+        "landing https://nivo.vn/health/live",
+        "landing https://www.nivo.vn/health/live",
+        "web https://app.nivo.vn/health/live",
+        "legacy https://nivo.vn/healthz reaches api",
+        "https://nivo.vn/login?x=1 redirects 308 to https://app.nivo.vn/login?x=1",
         "jobs watchdog two integers",
         "swarm convergence",
     ],

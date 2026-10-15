@@ -1,5 +1,5 @@
 import { Button, IconButton, List, ListItem, Meter, SurfaceCard, Text } from "@starci/grammar/common"
-import { Icon, nivoIconSource } from "../../leaves/Icon"
+import { Icon, nivoIconSource } from "@/components/leaves/Icon"
 import { ALL_SET, CHECK_BODY, CHECK_LIST, STEP, STEP_NEXT } from "./classNames"
 
 /** One onboarding step as the checklist draws it; `done` comes from real rows and events only. */

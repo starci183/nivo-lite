@@ -1,6 +1,6 @@
 import { Button, IconButton, List, ListItem, Popover, Text, TextAction } from "@starci/grammar/common"
 import type { ConsolePending } from "@/modules/types"
-import { nivoIconSource } from "../../leaves/Icon"
+import { nivoIconSource } from "@/components/leaves/Icon"
 import { ITEM, LIST, PANEL } from "./classNames"
 
 /** The words of the bell, resolved by the caller. */

@@ -6,7 +6,7 @@
 #                                  host lacks. --init-swarm runs `docker swarm init` ONLY with NIVO_SWARM_INIT_APPROVED=1 (the owner's approval)
 #   vps.sh doctor                  the same checks plus services, secrets, configs and the release pointers; changes nothing
 #   vps.sh status                  stack services, tasks (with errors) and update state
-#   vps.sh logs <service> [args]   docker service logs (api, web, ingress, openclaw, n8n)
+#   vps.sh logs <service> [args]   docker service logs (api, web, landing, ingress, openclaw, n8n)
 #   vps.sh down                    docker stack rm nivo: the stack goes, volumes, secrets and configs stay
 #   vps.sh tunnel n8n|openclaw     a loopback-only socat container that joins the private network, for the editor / Control UI over an SSH tunnel
 #   vps.sh backup                  see deploy/swarm/backup.sh
@@ -58,7 +58,7 @@ case "$cmd" in
     docker stack ps "$STACK" --no-trunc --format 'table {{.Name}}\t{{.CurrentState}}\t{{.DesiredState}}\t{{.Error}}'
     for s in $(docker stack services "$STACK" --format '{{.Name}}'); do printf '%s update: ' "$s"; docker service inspect "$s" --format '{{if .UpdateStatus}}{{.UpdateStatus.State}}{{else}}none{{end}}'; done ;;
   logs)
-    svc="${1:?service: api web ingress openclaw n8n}"; shift
+    svc="${1:?service: api web landing ingress openclaw n8n}"; shift
     exec docker service logs --tail 200 "$@" "${STACK}_${svc}" ;;
   down)
     docker stack rm "$STACK"

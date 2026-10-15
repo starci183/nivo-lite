@@ -1,8 +1,8 @@
-import createMiddleware from "next-intl/middleware"
+import { negotiateLocale } from "@nivo-lite/i18n/proxy"
 import { NextRequest, NextResponse } from "next/server"
 import { sessionCookieOptions } from "./modules/config"
 import { refreshSession } from "./modules/auth"
-import { routing } from "./modules/i18n"
+import { LOCALES, LOCALE_COOKIE } from "./modules/i18n"
 import { APP_ROUTES, onPublicOrigin } from "./modules/routes"
 
 // Reachable without a session. Webhooks (Telegram, bank connection) are each verified by their own secret header; /api/n8n by a per-run bearer token (hash stored with an expiry).
@@ -24,24 +24,16 @@ const PUBLIC_PATHS = [
     "/api/b",
     "/j",
     "/l",
-    "/privacy",
-    "/terms",
     "/health",
 ] // /b/<slug> and /api/b/<slug>: the public booking page (rate limited, honeypot, gate)
 
 // Roots the locale rewrite never touches: handlers, the auth return route, liveness and framework files. Every other path is served
 // from /<locale>/... while the URL stays unprefixed (localePrefix "never"; the NIVO_LOCALE cookie decides).
 const UNNEGOTIATED_ROOTS: ReadonlySet<string> = new Set(["api", "auth", "health", "_next", "_vercel"])
-const negotiate = createMiddleware(routing)
-
-const isUnnegotiated = (pathname: string): boolean => {
-    const last = pathname.split("/").at(-1) ?? ""
-    return UNNEGOTIATED_ROOTS.has(pathname.split("/")[1] ?? "") || (last.includes(".") && !last.endsWith("."))
-}
 
 /** Segment-aware prefix match, so "/auth" never swallows "/authority". */
 const isPublicPath = (pathname: string): boolean =>
-    pathname === "/" || PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`))
+    PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`))
 
 /** Only same-site paths may come back through `?next=`. */
 const safeNext = (value: string | null): string | null =>
@@ -69,11 +61,28 @@ const incomingOf = (request: NextRequest): NextRequest => {
     return new NextRequest(request, { headers })
 }
 
+/** The language the landing site hands over (`?lang=vi|en`), or null when the address carries none. */
+const handedOverLocale = (request: NextRequest): (typeof LOCALES)[number] | null => {
+    const lang = request.nextUrl.searchParams.get("lang")
+    return LOCALES.find((locale) => locale === lang) ?? null
+}
+
+/** Stores the handed-over language in the locale cookie and reopens the same address without the parameter. */
+const adoptLocale = (request: NextRequest, locale: (typeof LOCALES)[number]): NextResponse => {
+    const clean = request.nextUrl.clone()
+    clean.searchParams.delete("lang")
+    const out = NextResponse.redirect(onPublicOrigin(request, clean))
+    out.cookies.set(LOCALE_COOKIE, locale, { ...sessionCookieOptions, path: "/", maxAge: 60 * 60 * 24 * 365 })
+    return out
+}
+
 /** Refreshes the session, applies the locale rewrite, gates private paths with verified claims (a disabled seat is refused by the back end). */
 export const proxy = async (original: NextRequest): Promise<NextResponse> => {
     const request = incomingOf(original)
     const { pathname } = request.nextUrl
-    const stamped = (): NextResponse => (isUnnegotiated(pathname) ? NextResponse.next({ request }) : negotiate(request))
+    const handedOver = handedOverLocale(request)
+    if (handedOver !== null) return adoptLocale(request, handedOver)
+    const stamped = (): NextResponse => negotiateLocale(request, UNNEGOTIATED_ROOTS)
     let response = stamped()
     const cookiesBefore = request.headers.get("cookie")
     const principal = await refreshSession(request, response)
@@ -101,7 +110,7 @@ export const proxy = async (original: NextRequest): Promise<NextResponse> => {
     if (!principal.success) {
         if (isPublic) return response
         const url = loginUrl()
-        url.searchParams.set("next", `${pathname}${request.nextUrl.search}`)
+        if (pathname !== "/") url.searchParams.set("next", `${pathname}${request.nextUrl.search}`)
         return redirectTo(url)
     }
 

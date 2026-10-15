@@ -1,9 +1,9 @@
-# Deploys NIVO to the production Docker Swarm (one Ubuntu VPS, single-manager swarm): api, web, ingress, openclaw, n8n. Canon: docs/application-stacks.md,
+# Deploys NIVO to the production Docker Swarm (one Ubuntu VPS, single-manager swarm): api, web (app.nivo.vn), landing (nivo.vn/www), ingress, openclaw, n8n. Canon: docs/application-stacks.md,
 # "Docker Swarm on a VPS". Runs by hand only (Actions > Deploy stack > Run workflow); it has no push trigger.
 # It replaces the three compose workflows (api-deploy, edge-deploy, web-deploy), which stay reachable ONLY from the rollback tag pre-lite-cutover.
 #
 # One release = one run:
-#   1 build and push   the api and web images to GHCR (GITHUB_TOKEN); the deploy below uses their immutable digests, never a tag
+#   1 build and push   the api, web and landing images to GHCR (GITHUB_TOKEN); the deploy below uses their immutable digests, never a tag
 #   2 render           deploy/swarm/render.mjs: stack.yaml (docker stack config), release.json (digests, secret/config runtime names, config digest)
 #   3 provision        versioned Swarm secrets, decrypted in memory with SOPS_AGE_KEY and piped into `docker secret create` (never printed), and configs
 #   4 pre-pull         the images are pulled on the manager so the update window is only the start time of the tasks
@@ -17,6 +17,7 @@
 # Environment "production" (protect it with required reviewers):
 #   vars    VPS_HOST, VPS_USER, ACME_EMAIL (optional, the Let's Encrypt contact),
 #           NEXT_PUBLIC_API_URL / NEXT_PUBLIC_DEVELOPER_API_URL (optional, default https://api.nivo.vn)
+#           NEXT_PUBLIC_SITE_URL is fixed below: https://app.nivo.vn for web, https://nivo.vn for landing
 #   secrets VPS_SSH_KEY (CI-only deploy key), VPS_KNOWN_HOSTS (pinned host keys), SOPS_AGE_KEY (the age identity of .sops.yaml; the ONLY way
 #           application secrets reach the job)
 # The VPS holds no age identity and no plaintext secret file: Swarm secrets are encrypted in Raft and mounted in memory at /run/secrets.
@@ -73,6 +74,7 @@ jobs:
           owner="${GITHUB_REPOSITORY_OWNER,,}"
           echo "api=ghcr.io/${owner}/nivo-lite-api" >> "$GITHUB_OUTPUT"
           echo "web=ghcr.io/${owner}/nivo-lite-web" >> "$GITHUB_OUTPUT"
+          echo "landing=ghcr.io/${owner}/nivo-lite-landing" >> "$GITHUB_OUTPUT"
 
       - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3.12.0
 
@@ -119,11 +121,27 @@ jobs:
           tags: ${{ steps.names.outputs.web }}:${{ github.sha }}
           build-args: |
             ${{ steps.public.outputs.args }}
-            NEXT_PUBLIC_SITE_URL=https://nivo.vn
+            NEXT_PUBLIC_SITE_URL=https://app.nivo.vn
+            NEXT_PUBLIC_LANDING_URL=https://nivo.vn
             NEXT_PUBLIC_API_URL=${{ vars.NEXT_PUBLIC_API_URL || 'https://api.nivo.vn' }}
             NEXT_PUBLIC_DEVELOPER_API_URL=${{ vars.NEXT_PUBLIC_DEVELOPER_API_URL || 'https://api.nivo.vn' }}
           cache-from: type=gha,scope=web
           cache-to: type=gha,scope=web,mode=max
+
+      - name: Build and push the landing image
+        id: landing
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
+        with:
+          context: .
+          file: fe/apps/landing/Dockerfile
+          push: true
+          provenance: false
+          tags: ${{ steps.names.outputs.landing }}:${{ github.sha }}
+          build-args: |
+            NEXT_PUBLIC_SITE_URL=https://nivo.vn
+            NEXT_PUBLIC_APP_URL=https://app.nivo.vn
+          cache-from: type=gha,scope=landing
+          cache-to: type=gha,scope=landing,mode=max
 
       - name: SSH setup (pinned host key, key login, one multiplexed connection)
         env:
@@ -166,11 +184,13 @@ jobs:
           ACME_EMAIL: ${{ vars.ACME_EMAIL }}
           API_REF: ${{ steps.names.outputs.api }}@${{ steps.api.outputs.digest }}
           WEB_REF: ${{ steps.names.outputs.web }}@${{ steps.web.outputs.digest }}
+          LANDING_REF: ${{ steps.names.outputs.landing }}@${{ steps.landing.outputs.digest }}
         run: |
           previous="$(deploy/swarm/release.sh current)"
           echo "previous=$previous" >> "$GITHUB_OUTPUT"
           out="$RUNNER_TEMP/release"
-          node deploy/swarm/render.mjs --api-image "$API_REF" --web-image "$WEB_REF" --source-sha "$GITHUB_SHA" --previous "$previous" --out "$out"
+          node deploy/swarm/render.mjs --api-image "$API_REF" --web-image "$WEB_REF" --landing-image "$LANDING_REF" --source-sha "$GITHUB_SHA" --previous "$previous" --out "$out"
+          # Reject placeholders for every service, including both web and landing.
           if grep -Eq '@sha256:0{64}' "$out/stack.yaml"; then
             echo "::error::rendered stack still carries a placeholder digest"
             exit 1
@@ -189,6 +209,7 @@ jobs:
       - name: Store the release record (the pointer does not move yet) and pre-pull the images
         run: |
           deploy/swarm/release.sh store "$RUNNER_TEMP/release" "${{ steps.render.outputs.digest16 }}"
+          # Pull every service image from the rendered release, including web and landing.
           grep -E '^\s+image: ' "$RUNNER_TEMP/release/stack.yaml" | awk '{print $2}' | sort -u | while read -r image; do docker pull --quiet "$image" >/dev/null; echo "pulled $image"; done
 
       - name: Cutover window - stop the previous compose model
@@ -235,6 +256,7 @@ jobs:
             echo "ROLLING BACK to the previous accepted release $previous"
             deploy/swarm/release.sh fetch "$previous" "$RUNNER_TEMP/previous"
             since="$(date -u -d '-30 seconds' +%FT%TZ)"
+            # The stored stack restores every image digest, including web and landing.
             docker stack deploy --prune --with-registry-auth --resolve-image always --detach=true -c "$RUNNER_TEMP/previous/stack.yaml" "$STACK"
             node deploy/swarm/converge.mjs --stack "$STACK" --since "$since" --timeout 600 && echo "rollback converged on $previous" || echo "ROLLBACK DID NOT CONVERGE: follow be/docs/runbooks/cutover.md, Rollback"
           elif [ "${{ steps.retire.outputs.retired }}" = "1" ]; then
@@ -318,9 +340,15 @@ jobs:
           [ -n "$target" ] || { echo "::error::no previous accepted release is recorded; use restore_compose for the cutover rollback"; exit 1; }
           deploy/swarm/release.sh fetch "$target" "$RUNNER_TEMP/target"
           since="$(date -u -d '-30 seconds' +%FT%TZ)"
+          # The stored stack restores every image digest, including web and landing.
           docker stack deploy --prune --with-registry-auth --resolve-image always --detach=true -c "$RUNNER_TEMP/target/stack.yaml" "$STACK"
           node deploy/swarm/converge.mjs --stack "$STACK" --since "$since" --timeout 600
-          node deploy/swarm/verify.mjs --retry 180
+          verify_args=(--retry 180)
+          legacy_web="$(node -p '!JSON.parse(require("node:fs").readFileSync(process.argv[1], "utf8")).images?.landing' "$RUNNER_TEMP/target/release.json")"
+          if [ "$legacy_web" = "true" ]; then
+            verify_args+=(--legacy-web)
+          fi
+          node deploy/swarm/verify.mjs "${verify_args[@]}"
           deploy/swarm/release.sh accept "$target"
           echo "rolled back to release $target"
 

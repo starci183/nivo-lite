@@ -1,0 +1,25 @@
+{
+  "name": "@nivo-lite/landing",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "build": "next build",
+    "dev": "next dev",
+    "lint": "starci app lint --workspace .",
+    "start": "next start",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@heroicons/react": "2.2.0",
+    "@heroui/react": "3.2.6",
+    "@heroui/styles": "3.2.6",
+    "@nivo-lite/i18n": "*",
+    "@nivo-lite/offer": "*",
+    "@starci/grammar": "0.9.14",
+    "@xyflow/react": "12.11.6",
+    "next": "16.1.6",
+    "next-intl": "4.13.6",
+    "react": "19.2.3",
+    "react-dom": "19.2.3"
+  }
+}

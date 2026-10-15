@@ -37,6 +37,10 @@ export const graphqlTuning = {
     retryMaxAttempts: 3,
 } as const
 
+/** The public origin of the landing site (privacy and terms live there, not in the console). */
+export const landingUrl = (): string =>
+    required("NEXT_PUBLIC_LANDING_URL", process.env.NEXT_PUBLIC_LANDING_URL).replace(/\/+$/u, "")
+
 /** The public origin of the site (providers call back to it); `undefined` when it is not set. */
 export const webSiteOrigin = (): string | undefined => process.env.NEXT_PUBLIC_SITE_URL
 

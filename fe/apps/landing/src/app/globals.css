@@ -1,0 +1,6 @@
+@import "tailwindcss";
+@import "@heroui/styles/css";
+@import "@starci/grammar/common.css";
+
+/* Grammar renderers ship in the hoisted node_modules at the app root; Tailwind must scan them. (src/components is scanned with the app.) */
+@source "../../../../../node_modules/@starci/grammar/dist";

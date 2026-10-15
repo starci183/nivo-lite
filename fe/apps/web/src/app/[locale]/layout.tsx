@@ -1,9 +1,7 @@
-import { hasLocale } from "next-intl"
-import { getMessages } from "next-intl/server"
-import { notFound } from "next/navigation"
+import { readLocaleSegment } from "@nivo-lite/i18n/layout"
 import type { ReactNode } from "react"
 import { AppLayout, appLayoutMetadata } from "@/features/layouts/AppLayout"
-import { PRODUCT_TIME_ZONE, routing } from "@/modules/i18n"
+import { PRODUCT_TIME_ZONE } from "@/modules/i18n"
 import { Providers } from "./providers"
 import "../globals.css"
 import "@/modules/brand"
@@ -21,9 +19,7 @@ export const generateMetadata = async (props: LayoutProps) => appLayoutMetadata(
 
 /** The locale segment's document, providers and app chrome. */
 const Layout = async (props: LayoutProps) => {
-    const { locale } = await props.params
-    if (!hasLocale(routing.locales, locale)) notFound()
-    const messages = await getMessages({ locale })
+    const { locale, messages } = await readLocaleSegment(props.params)
     return (
         <AppLayout
             locale={locale}

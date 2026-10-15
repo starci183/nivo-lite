@@ -1,7 +1,7 @@
 import { Badge, Sidebar } from "@starci/grammar/common"
 import type { SidebarGroup, SidebarItem } from "@starci/grammar/common"
 import type { ConsoleNavItem } from "@/modules/types"
-import { nivoIconSource } from "../../leaves/Icon"
+import { nivoIconSource } from "@/components/leaves/Icon"
 
 /** What the navigation rail draws and reports. */
 type ConsoleSidebarProps = {

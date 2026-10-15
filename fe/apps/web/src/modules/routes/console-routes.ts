@@ -1,6 +1,5 @@
 /** Console and public destinations the overview, workbench and landing surfaces link to, named once. */
 export const CONSOLE_ROUTES = {
-    landing: "/",
     login: "/login",
     dashboard: "/dashboard",
     chat: "/chat",
@@ -11,8 +10,6 @@ export const CONSOLE_ROUTES = {
     decisions: "/decisions",
     connections: "/connections",
     team: "/team",
-    privacy: "/privacy",
-    terms: "/terms",
     modules: "/modules",
     newChatbot: "/modules/new?module=chatbot",
 } as const

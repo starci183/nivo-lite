@@ -29,7 +29,7 @@ test("allow-unpinned never accepts a placeholder or a missing image", () => {
 })
 
 test("render CLI rejects placeholder images before loading secrets or calling docker", () => {
-    for (const image of ["api", "web"]) {
+    for (const image of ["api", "web", "landing"]) {
         for (const allowUnpinned of [false, true]) {
             const run = spawnSync(
                 process.execPath,
@@ -39,6 +39,10 @@ test("render CLI rejects placeholder images before loading secrets or calling do
                     image === "api" ? placeholder : pinned,
                     "--web-image",
                     image === "web" ? placeholder : pinned,
+                    "--landing-image",
+                    image === "landing"
+                        ? placeholder.replace("/api@", "/landing@")
+                        : pinned.replace("/api@", "/landing@"),
                     ...(allowUnpinned ? ["--allow-unpinned"] : []),
                 ],
                 { encoding: "utf8" },
@@ -51,11 +55,27 @@ test("render CLI rejects placeholder images before loading secrets or calling do
     }
 })
 
+test("render CLI requires a landing image before loading secrets or calling docker", () => {
+    const run = spawnSync(
+        process.execPath,
+        [fileURLToPath(new URL("./render.mjs", import.meta.url)), "--api-image", pinned, "--web-image", pinned],
+        { encoding: "utf8" },
+    )
+    assert.ifError(run.error)
+    assert.equal(run.status, 1)
+    assert.equal(run.stdout, "")
+    assert.equal(run.stderr, "swarm: --landing-image must be a registry reference pinned by @sha256 digest\n")
+})
+
 test("rendered stack guard finds surviving placeholders in any service", () => {
-    const stack = `services:\n  api:\n    image: ${pinned}\n  web:\n    image: "${placeholder}"\n`
-    assert.equal(hasPlaceholderDigest(stack), true)
-    assert.equal(hasPlaceholderDigest(Buffer.from(stack)), true)
-    assert.equal(hasPlaceholderDigest(stack.replace(placeholder, pinned)), false)
+    for (const service of ["api", "web", "landing"]) {
+        const stack = `services:\n${["api", "web", "landing"]
+            .map((name) => `  ${name}:\n    image: "${name === service ? placeholder : pinned}"\n`)
+            .join("")}`
+        assert.equal(hasPlaceholderDigest(stack), true)
+        assert.equal(hasPlaceholderDigest(Buffer.from(stack)), true)
+        assert.equal(hasPlaceholderDigest(stack.replace(placeholder, pinned)), false)
+    }
     assert.equal(hasPlaceholderDigest(`${placeholder}1`), false)
     assert.equal(hasPlaceholderDigest("services: {}\n"), false)
 })

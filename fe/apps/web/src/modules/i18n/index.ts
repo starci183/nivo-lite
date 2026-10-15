@@ -1,8 +1,10 @@
-import { createNavigation } from "next-intl/navigation"
-import { routing } from "./routing"
-
-export { DEFAULT_LOCALE, LOCALE_COOKIE, PRODUCT_TIME_ZONE, appLocaleOf, intlTagOf, routing } from "./routing"
-
-/** Locale-aware navigation for client components. */
-export const navigation = createNavigation(routing)
+export {
+    DEFAULT_LOCALE,
+    LOCALES,
+    LOCALE_COOKIE,
+    PRODUCT_TIME_ZONE,
+    appLocaleOf,
+    intlTagOf,
+    navigation,
+} from "@nivo-lite/i18n"
 export { shiftDate, wallClockText, wallDate, wallInstant, wallMinutes, weekStartOf } from "./zoned-time"

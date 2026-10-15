@@ -3,7 +3,8 @@
 // api task (OpenClaw reachable by service DNS, the job tooling). Probes are bounded and read-only; nothing here mutates business data.
 // Public checks retry for a few minutes because the ingress obtains each certificate on the first request.
 //
-//   DOCKER_HOST=ssh://vps node deploy/swarm/verify.mjs [--api https://api.nivo.vn] [--web https://nivo.vn] [--www https://www.nivo.vn] [--retry 180] [--skip-internal] [--skip-public]
+//   DOCKER_HOST=ssh://vps node deploy/swarm/verify.mjs [--api https://api.nivo.vn] [--web https://nivo.vn] [--www https://www.nivo.vn] [--app https://app.nivo.vn] [--retry 180] [--skip-internal] [--skip-public] [--legacy-web]
+// --legacy-web verifies a stored release from before the landing/app split (no app host or landing redirects).
 import { spawnSync } from "node:child_process"
 
 const args = process.argv.slice(2)
@@ -12,8 +13,9 @@ const flag = (name, fallback) => {
     return at < 0 ? fallback : args[at + 1]
 }
 const api = flag("--api", "https://api.nivo.vn")
-const web = flag("--web", "https://nivo.vn")
+const landing = flag("--web", "https://nivo.vn")
 const www = flag("--www", "https://www.nivo.vn")
+const app = flag("--app", "https://app.nivo.vn")
 const retrySeconds = Number(flag("--retry", "180"))
 const sleep = (ms) => new Promise((done) => setTimeout(done, ms))
 const results = []
@@ -75,16 +77,16 @@ if (!args.includes("--skip-public")) {
         { retry: true },
     )
     await check(
-        "web /health/live on the apex",
+        "landing /health/live on the apex",
         async () => {
-            const response = await get(`${web}/health/live`)
+            const response = await get(`${landing}/health/live`)
             expect(response.status === 200, `HTTP ${response.status}`)
             return "200"
         },
         { retry: true },
     )
     await check(
-        "web /health/live on www",
+        "landing /health/live on www",
         async () => {
             const response = await get(`${www}/health/live`)
             expect(response.status === 200, `HTTP ${response.status}`)
@@ -92,10 +94,32 @@ if (!args.includes("--skip-public")) {
         },
         { retry: true },
     )
+    if (!args.includes("--legacy-web")) {
+        await check(
+            "web /health/live on app.nivo.vn",
+            async () => {
+                const response = await get(`${app}/health/live`)
+                expect(response.status === 200, `HTTP ${response.status}`)
+                return "200"
+            },
+            { retry: true },
+        )
+        await check(
+            "landing login redirects to the app with its query",
+            async () => {
+                const response = await get(`${landing}/login?x=1`, { redirect: "manual" })
+                expect(response.status === 308, `HTTP ${response.status}`)
+                const location = response.headers.get("location")
+                expect(location === `${app}/login?x=1`, `unexpected location: ${location}`)
+                return "308 with path and query preserved"
+            },
+            { retry: true },
+        )
+    }
     await check(
         "legacy webhook path nivo.vn/healthz reaches the api",
         async () => {
-            const response = await get(`${web}/healthz`)
+            const response = await get(`${landing}/healthz`)
             expect(response.status === 200, `HTTP ${response.status}`)
             return "200"
         },

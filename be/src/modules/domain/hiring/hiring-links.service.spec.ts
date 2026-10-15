@@ -18,9 +18,9 @@ describe("HiringLinksService", () => {
     it("uses the default public origin when the configured site is null", async () => {
         const { service } = await build()
 
-        expect(service.job("coffee-shop", "barista")).toBe("https://nivo.vn/j/coffee-shop/barista")
-        expect(service.interview("interview-token")).toBe("https://nivo.vn/j/lich/interview-token")
-        expect(service.offer("offer-token")).toBe("https://nivo.vn/j/thu/offer-token")
+        expect(service.job("coffee-shop", "barista")).toBe("https://app.nivo.vn/j/coffee-shop/barista")
+        expect(service.interview("interview-token")).toBe("https://app.nivo.vn/j/lich/interview-token")
+        expect(service.offer("offer-token")).toBe("https://app.nivo.vn/j/thu/offer-token")
     })
 
     it("uses the configured public origin for every candidate link", async () => {

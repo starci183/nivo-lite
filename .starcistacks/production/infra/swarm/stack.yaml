@@ -4,8 +4,9 @@
 # `docker stack deploy --with-registry-auth nivo`. Nothing here is built on the VPS and no secret value appears in it.
 #
 # Topology (only `ingress` publishes ports):
-#   ingress   Traefik: 80/443 in HOST mode (the real client address reaches the api rate limiter), TLS for nivo.vn, www.nivo.vn, api.nivo.vn
-#   web       the Next.js app, reached as nivo-web:3000 on the edge network
+#   ingress   Traefik: 80/443 in HOST mode (the real client address reaches the api rate limiter), TLS for nivo.vn, www.nivo.vn, app.nivo.vn, api.nivo.vn
+#   landing   the Next.js landing on nivo.vn / www.nivo.vn, reached as nivo-landing:3000 on the edge network
+#   web       the Next.js console on app.nivo.vn, reached as nivo-web:3000 on the edge network
 #   api       the Nest api: GraphQL, webhooks, the pgmq workers, the job alert monitor; reached as nivo-api:8787 on the edge network
 #   openclaw  the agent gateway; the api reaches it by service DNS (openclaw:18790) on the private `agents` network
 #   n8n       private automation editor on the `automation` network (no published port); SQLite database on the persisted volume n8n-data
@@ -103,6 +104,38 @@ services:
     deploy:
       replicas: 1
       resources: { limits: { memory: 600M } }
+      update_config:
+        { parallelism: 1, order: start-first, failure_action: rollback, monitor: 30s, max_failure_ratio: 0, delay: 5s }
+      rollback_config: { parallelism: 1, order: start-first, monitor: 30s }
+      restart_policy: { condition: any, delay: 5s }
+
+  landing:
+    image: ghcr.io/starci183/nivo-lite-landing@sha256:0000000000000000000000000000000000000000000000000000000000000000
+    environment:
+      PORT: "3000"
+      HOSTNAME: 0.0.0.0
+      NODE_OPTIONS: --max-old-space-size=256
+    networks:
+      edge:
+        aliases: [nivo-landing]
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:3000/health/live',{signal:AbortSignal.timeout(4000)}).then(r=>process.exit(r.status<500?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 40s
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "5" }
+    deploy:
+      replicas: 1
+      resources: { limits: { memory: 300M } }
       update_config:
         { parallelism: 1, order: start-first, failure_action: rollback, monitor: 30s, max_failure_ratio: 0, delay: 5s }
       rollback_config: { parallelism: 1, order: start-first, monitor: 30s }

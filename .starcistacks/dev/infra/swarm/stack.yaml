@@ -1,16 +1,18 @@
-# NIVO local development: Supabase stays under the Supabase CLI; this Swarm runs the be and fe.
-# Build the two images from the repository root before deploying (Swarm never builds images):
+# NIVO local development: Supabase stays under the Supabase CLI; this Swarm runs the api, console and landing.
+# Build the three images from the repository root before deploying (Swarm never builds images):
 #   docker build -f be/apps/api/Dockerfile -t <registry>/nivo-lite-api:dev .
 #   docker build -f fe/apps/web/Dockerfile -t <registry>/nivo-lite-web:dev \
 #     --build-arg NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321 --build-arg NEXT_PUBLIC_SUPABASE_ANON_KEY \
 #     --build-arg NEXT_PUBLIC_API_URL=http://localhost:8787 \
 #     --build-arg NEXT_PUBLIC_DEVELOPER_API_URL=http://localhost:8787 \
-#     --build-arg NEXT_PUBLIC_SITE_URL=http://localhost:3000 .
-# Push both images, then write their digest references into a Compose override (services: api: {image: <ref>@sha256:...}, web: {image: ...});
+#     --build-arg NEXT_PUBLIC_SITE_URL=http://localhost:3000 --build-arg NEXT_PUBLIC_LANDING_URL=http://landing.localhost:3000 .
+#   docker build -f fe/apps/landing/Dockerfile -t <registry>/nivo-lite-landing:dev \
+#     --build-arg NEXT_PUBLIC_SITE_URL=http://landing.localhost:3000 --build-arg NEXT_PUBLIC_APP_URL=http://localhost:3000 .
+# Push all three images, then write their digest references into a Compose override (services: api: {image: <ref>@sha256:...}, web: {image: ...}, landing: {image: ...});
 # the digests in this file are placeholders that the override replaces.
 # With Supabase running, supply the same local api.dev.env as before, then deploy from the root:
 #   docker stack config -c .starcistacks/dev/infra/swarm/stack.yaml -c dev.images.override.yaml | docker stack deploy -c - nivo-dev
-# The sole ingress preserves http://localhost:8787 (api) and http://localhost:3000 (web).
+# The sole ingress preserves http://localhost:8787 (api) and http://localhost:3000 (web console); http://landing.localhost:3000 serves the landing.
 # Use a local single-manager Swarm; the Supabase URLs must be reachable from its containers.
 version: "3.8"
 
@@ -73,6 +75,33 @@ services:
         traefik.http.routers.dev-web.rule: PathPrefix(`/`)
         traefik.http.routers.dev-web.service: dev-web
         traefik.http.services.dev-web.loadbalancer.server.port: "3000"
+      update_config: { order: start-first, failure_action: rollback, monitor: 60s }
+      rollback_config: { order: start-first, monitor: 60s }
+      restart_policy: { condition: any, delay: 5s }
+
+  landing:
+    image: ghcr.io/starci183/nivo-lite-landing@sha256:0000000000000000000000000000000000000000000000000000000000000000
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:3000/health/live').then(r=>process.exit(r.status<500?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+    deploy:
+      replicas: 1
+      labels:
+        traefik.enable: "true"
+        traefik.http.routers.dev-landing.entrypoints: web
+        traefik.http.routers.dev-landing.rule: Host(`landing.localhost`)
+        traefik.http.routers.dev-landing.priority: "100"
+        traefik.http.routers.dev-landing.service: dev-landing
+        traefik.http.services.dev-landing.loadbalancer.server.port: "3000"
       update_config: { order: start-first, failure_action: rollback, monitor: 60s }
       rollback_config: { order: start-first, monitor: 60s }
       restart_policy: { condition: any, delay: 5s }
