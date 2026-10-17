@@ -17,10 +17,11 @@ import { CreateVideoMediaUploadResolver } from "./create-video-media-upload.reso
 import { ApproveVideoProjectResolver } from "./approve-video-project.resolver"
 import { ShareVideoProjectResolver } from "./share-video-project.resolver"
 import { RequestVideoScriptResolver } from "./request-video-script.resolver"
+import { ConfigurableModuleClass } from "./video-graphql.module-definition"
 import { VideoScriptStatusResolver } from "./video-script-status.resolver"
 
 @Module({
-    imports: [VideoApiModule],
+    imports: [VideoApiModule.register({})],
     providers: [
         ListVideoProjectsResolver,
         GetVideoProjectResolver,
@@ -43,4 +44,4 @@ import { VideoScriptStatusResolver } from "./video-script-status.resolver"
     ],
 })
 /** The GraphQL workbench reads and manager writes for videos. */
-export class VideoGraphqlModule {}
+export class VideoGraphqlModule extends ConfigurableModuleClass {}

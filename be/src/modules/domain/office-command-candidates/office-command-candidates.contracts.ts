@@ -117,10 +117,13 @@ export interface ReadyResolution {
 /** What a model's choice resolves to once validated against the agent's contract. */
 export type Resolution = UnmappedResolution | MissingResolution | ReadyResolution
 
+/** The catalog keys of the words that ask for a missing key. */
+export type NeedKey = "office.cmdNeedOrder" | "office.cmdNeedLead" | "office.cmdNeedInvoice" | "office.cmdNeedOther"
+
 /** The words of a missing key: the catalog key of its text and the value that fills `{{field}}`. */
 export interface NeedText {
     /** The message catalog key. */
-    readonly key: string
+    readonly key: NeedKey
     /** The value of `{{field}}`. */
     readonly field: string
 }

@@ -127,16 +127,27 @@ const build = async (stubs: ReadonlyArray<readonly [string, unknown]> = []) => {
     }
 }
 
-describe("LeadActionsService", () => {
-    const createInput = {
-        contactName: "Lan",
-        company: "Hue Tea",
-        channel: "zalo",
-        need: "oolong tea",
-        phone: null,
-        email: null,
-    }
+const createInput = {
+    contactName: "Lan",
+    company: "Hue Tea",
+    channel: "zalo",
+    need: "oolong tea",
+    phone: null,
+    email: null,
+}
 
+const transientKinds: ReadonlyArray<ErrorKind> = ["unavailable", "internal", "rate-limited"]
+
+const delivery: QueueDelivery = {
+    id: "delivery-1",
+    queue: "lead_actions",
+    job: "lead-actions.run",
+    payload: { workspaceId: "ws-1", runId: "run-1" },
+    attempt: 3,
+    signal: new AbortController().signal,
+}
+
+describe("LeadActionsService", () => {
     it("enqueues a validated capture and answers the queued run", async () => {
         const { actions, queue } = await build([[INSERT_LEAD_ACTION, [{ id: "run-1" }]]])
 
@@ -192,7 +203,9 @@ describe("LeadActionsService", () => {
             actions.request("user-1", "ws-1", "settle-won", { leadId: LEAD, evidence: null }, "vi"),
         ).rejects.toMatchObject({ code: LeadActionsErrorCode.NotWon })
     })
+})
 
+describe("LeadActionsService", () => {
     it("ignores a job that is not a lead action", async () => {
         const { actions, tx } = await build()
         const job: ClaimedJob = {
@@ -249,7 +262,9 @@ describe("LeadActionsService", () => {
         expect(responsibilities.find).toHaveBeenCalledWith("ws-1", RESPONSIBILITY)
         expect(tx.em.transaction).not.toHaveBeenCalled()
     })
+})
 
+describe("LeadActionsService", () => {
     it.each(["refresh-context", "suggest-owner", "settle-won"] as const)(
         "proves the lead before enqueueing %s",
         async (action) => {
@@ -315,7 +330,9 @@ describe("LeadActionsService", () => {
             JSON.stringify(result),
         ])
     })
+})
 
+describe("LeadActionsService", () => {
     it.each([
         ["refresh-context", undefined],
         ["refresh-context", null],
@@ -374,7 +391,9 @@ describe("LeadActionsService", () => {
             LeadActionsErrorCode.InvalidInput,
         ])
     })
+})
 
+describe("LeadActionsService", () => {
     it("records a permanent refusal from a different domain family", async () => {
         const { actions, members, errors, tx } = await build([
             [BEGIN_LEAD_ACTION, [running]],
@@ -389,7 +408,6 @@ describe("LeadActionsService", () => {
         expect(tx.em.query).toHaveBeenCalledWith(REFUSE_LEAD_ACTION, ["run-1", "ws-1", "job-1", 7, cause.code])
     })
 
-    const transientKinds: ReadonlyArray<ErrorKind> = ["unavailable", "internal", "rate-limited"]
     it.each(transientKinds)("preserves a %s domain failure for retry", async (kind) => {
         const { actions, ai, errors, tx } = await build([[BEGIN_LEAD_ACTION, [running]]])
         const cause = new LeadActionsError({ code: LeadActionsErrorCode.Busy })
@@ -422,7 +440,9 @@ describe("LeadActionsService", () => {
         expect(errors.describe).not.toHaveBeenCalled()
         expect(tx.em.query).toHaveBeenCalledTimes(1)
     })
+})
 
+describe("LeadActionsService", () => {
     it("reports a missing run fence when both completion and refusal lose ownership", async () => {
         const { actions, ai, tx } = await build([
             [BEGIN_LEAD_ACTION, [running]],
@@ -448,15 +468,6 @@ describe("LeadActionsService", () => {
             LeadActionsErrorCode.NotFound,
         ])
     })
-
-    const delivery: QueueDelivery = {
-        id: "delivery-1",
-        queue: "lead_actions",
-        job: "lead-actions.run",
-        payload: { workspaceId: "ws-1", runId: "run-1" },
-        attempt: 3,
-        signal: new AbortController().signal,
-    }
 
     it("ignores an exhausted delivery without a lead action address", async () => {
         const { actions, claims, tx } = await build()

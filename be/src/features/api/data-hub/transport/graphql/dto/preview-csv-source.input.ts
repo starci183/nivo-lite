@@ -1,7 +1,7 @@
 import { Field, ID, InputType } from "@nestjs/graphql"
 import { Type } from "class-transformer"
 import { IsIn, IsOptional, IsString, IsUUID, MaxLength, ValidateNested } from "class-validator"
-import { DataJsonScalar } from "./data-json.type"
+import { DataJsonScalar } from "../data-json.mapper"
 import { UploadedFileInput } from "./uploaded-file.input"
 
 /** The most characters pasted table text may take. */
@@ -10,7 +10,9 @@ export const CSV_TEXT_MAX = 10_485_760
 @InputType()
 /** The bounded arguments of previewCsvSource: which source to read (also the base of runCsvImport). */
 export class PreviewCsvSourceInput {
-    /** Where the rows come from: file, sheet (Google Sheets link), paste (text copied from Excel) or grid (typed rows). */
+    /**
+     * Where the rows come from: file, sheet (Google Sheets link), paste (text copied from Excel) or grid (typed rows).
+     */
     @Field(() => String)
     @IsIn(["file", "sheet", "paste", "grid"])
     @MaxLength(10)

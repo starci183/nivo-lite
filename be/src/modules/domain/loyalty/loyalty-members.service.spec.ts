@@ -109,7 +109,7 @@ const build = async (
 
 describe("LoyaltyMembersService", () => {
     describe("detail", () => {
-        it("shows the customer with the timeline, the tier progress, the expiring points and what they can redeem", async () => {
+        it("shows the customer timeline, tier progress, expiring points and rewards", async () => {
             const { service, access } = await build()
 
             const detail = await service.detail("user-1", { workspaceId: "ws-1", customerId: "c1" })
@@ -122,7 +122,7 @@ describe("LoyaltyMembersService", () => {
             expect(detail.rewards.map((option) => option.block?.code ?? null)).toEqual([null, "not_enough_points"])
         })
 
-        it("shows no expiring points for a programme whose points never expire, and no tier for a customer without one", async () => {
+        it("omits nonexpiring points and an absent customer tier", async () => {
             const config = { ...CONFIG, expiry: { months: 0, warnDays: 30 } }
             const { service } = await build({ config, member: memberOf({ tierKey: null }) })
 
@@ -140,7 +140,9 @@ describe("LoyaltyMembersService", () => {
             })
         })
     })
+})
 
+describe("LoyaltyMembersService", () => {
     describe("adjust", () => {
         const adjust = { workspaceId: "ws-1", customerId: "c1", points: 25.4, reason: "  goodwill ", token: "tok-1" }
 
@@ -207,7 +209,9 @@ describe("LoyaltyMembersService", () => {
             })
         })
     })
+})
 
+describe("LoyaltyMembersService", () => {
     describe("sync", () => {
         it("makes customers of the leads and links them in one transaction", async () => {
             const { service, access, customers, links } = await build()

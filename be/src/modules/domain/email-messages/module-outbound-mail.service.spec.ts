@@ -95,7 +95,9 @@ describe("ModuleOutboundMailService", () => {
 
         expect(send).toHaveBeenCalledWith(expect.not.objectContaining({ attachments: expect.anything() }))
     })
+})
 
+describe("ModuleOutboundMailService", () => {
     it("renders the default shop, supplies empty references and forwards the approved work item", async () => {
         const send = jest.fn().mockResolvedValue({ status: "sent" })
         const nameOf = jest.fn().mockResolvedValue("")

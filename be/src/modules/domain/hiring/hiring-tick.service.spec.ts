@@ -152,7 +152,9 @@ describe("HiringTickService", () => {
         expect(catalog.get.mock.calls).toEqual([["hiring.event.offerExpired", {}, "vi"]])
         expect(logger.error).not.toHaveBeenCalled()
     })
+})
 
+describe("HiringTickService", () => {
     it("counts sent reminders, expired offers, closed jobs and deleted candidates and files", async () => {
         const em = mockEntityManager({
             query: [
@@ -212,7 +214,9 @@ describe("HiringTickService", () => {
         ])
         expect(logger.error).not.toHaveBeenCalled()
     })
+})
 
+describe("HiringTickService", () => {
     it("handles enabled reminders with no due interviews and present empty expiration rows", async () => {
         const em = mockEntityManager({
             query: [
@@ -266,7 +270,9 @@ describe("HiringTickService", () => {
             [EXPIRE_JOBS, ["ws-1"]],
         ])
     })
+})
 
+describe("HiringTickService", () => {
     it("preserves successful counts when reminding fails", async () => {
         const em = mockEntityManager({
             query: [

@@ -204,7 +204,9 @@ describe("WorkspaceMailService delivery", () => {
         expect(log.sentSince).toHaveBeenCalledWith("ws-1", new Date("2026-10-13T09:00:00.000Z"), null)
         expect(connections.listByProvider).not.toHaveBeenCalled()
     })
+})
 
+describe("WorkspaceMailService delivery", () => {
     it("sends gated customer mail through the requested SMTP and records its references", async () => {
         const { service, log, mail, connections } = await buildDelivery()
         log.sentSince.mockResolvedValue(119)
@@ -263,7 +265,9 @@ describe("WorkspaceMailService delivery", () => {
             attachments: undefined,
         })
     })
+})
 
+describe("WorkspaceMailService delivery", () => {
     it.each([
         [true, "errors.MAIL_AUTH"],
         [false, "errors.MAIL_UNKNOWN"],
@@ -302,7 +306,9 @@ describe("WorkspaceMailService delivery", () => {
         expect(mail.hasPlatformSender).not.toHaveBeenCalled()
         expect(mail.sendThroughPlatform).not.toHaveBeenCalled()
     })
+})
 
+describe("WorkspaceMailService delivery", () => {
     it.each([false, true])("sends an owner notice through the platform with attachments: %s", async (withFile) => {
         const { service, mail, log } = await buildDelivery([])
         mail.hasPlatformSender.mockReturnValue(true)
@@ -328,7 +334,9 @@ describe("WorkspaceMailService delivery", () => {
             expect.objectContaining({ connectionId: null, status: "sent", via: "platform", error: null }),
         )
     })
+})
 
+describe("WorkspaceMailService delivery", () => {
     it("refuses a platform notice once the daily limit is reached", async () => {
         const { service, mail, log } = await buildDelivery([])
         mail.hasPlatformSender.mockReturnValue(true)
@@ -358,7 +366,9 @@ describe("WorkspaceMailService delivery", () => {
             expect.objectContaining({ status: "failed", via: "platform", error: "errors.MAIL_UNKNOWN" }),
         )
     })
+})
 
+describe("WorkspaceMailService delivery", () => {
     describe("hasWorkspaceSmtp", () => {
         it("recognizes a connected SMTP with a readable password", async () => {
             const { service, connections } = await buildDelivery()
@@ -397,11 +407,9 @@ describe("WorkspaceMailService delivery", () => {
             connections.readSecret.mockResolvedValue({ plain: "invalid-json", webhookSecret: "" })
 
             await expect(service.hasWorkspaceSmtp("ws-1")).resolves.toBe(false)
-            expect(logger.error).toHaveBeenCalledWith(
-                EmailMessagesLogEvent.CredentialUnreadable,
-                expect.any(SyntaxError),
-                { connectionId: "smtp-1" },
-            )
+            expect(logger.error).toHaveBeenCalledWith(EmailMessagesLogEvent.Undecryptable, expect.any(SyntaxError), {
+                connectionId: "smtp-1",
+            })
         })
     })
 })

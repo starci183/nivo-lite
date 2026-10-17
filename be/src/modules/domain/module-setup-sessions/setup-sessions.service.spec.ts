@@ -110,7 +110,9 @@ describe("SetupSessionsService", () => {
 
         await expect((await build(em)).open(opening)).resolves.toBeNull()
     })
+})
 
+describe("SetupSessionsService", () => {
     it("rethrows a database error that is not a unique violation", async () => {
         const em = mockEntityManager()
         em.query.mockRejectedValueOnce(Object.assign(new Error("foreign key"), { code: "23503" }))
@@ -175,7 +177,9 @@ describe("SetupSessionsService", () => {
         expect(em.query).toHaveBeenCalledTimes(1)
         expect(em.query).toHaveBeenCalledWith(FIND_LATEST_SESSION, ["inst-1"])
     })
+})
 
+describe("SetupSessionsService", () => {
     it.each(["applied", "discarded"] as const)("leaves facts on a %s session unchanged", async (status) => {
         const em = mockEntityManager({ query: [FIND_LATEST_SESSION, [{ ...session, status }]] })
         const service = await build(em)

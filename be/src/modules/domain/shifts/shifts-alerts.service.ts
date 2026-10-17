@@ -60,7 +60,10 @@ interface AlertJob {
 }
 
 /** The verdict line of a reminder by where it reached the person. */
-const remindDoneKey = (telegram: boolean | null, zalo: boolean | null): string => {
+const remindDoneKey = (
+    telegram: boolean | null,
+    zalo: boolean | null,
+): "shifts.remindDoneOffice" | "shifts.remindDoneTelegram" | "shifts.remindDoneZalo" => {
     if (telegram === true) return "shifts.remindDoneTelegram"
     if (zalo === true) return "shifts.remindDoneZalo"
     return "shifts.remindDoneOffice"

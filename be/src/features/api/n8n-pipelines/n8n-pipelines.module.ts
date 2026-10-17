@@ -4,6 +4,7 @@ import { FetchOverdueInvoicesHandler } from "./application/fetch-overdue-invoice
 import { FetchMonthLedgerHandler } from "./application/fetch-month-ledger.handler"
 import { SendEmailHandler } from "./application/send-email.handler"
 import { CompleteRunHandler } from "./application/complete-run.handler"
+import { ConfigurableModuleClass } from "./n8n-pipelines.module-definition"
 
 @Module({
     providers: [
@@ -15,4 +16,4 @@ import { CompleteRunHandler } from "./application/complete-run.handler"
     ],
 })
 /** The n8n-pipelines feature: the handlers of its application. */
-export class N8nPipelinesApiModule {}
+export class N8nPipelinesApiModule extends ConfigurableModuleClass {}

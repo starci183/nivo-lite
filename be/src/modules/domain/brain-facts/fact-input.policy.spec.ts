@@ -1,10 +1,27 @@
+import { Test } from "@nestjs/testing"
 import type { Evidence } from "./brain-facts.contracts"
 import { EVIDENCE_MAX, mergeEvidence, normalFact } from "./fact-input.policy"
 
+type Subject = {
+    normalFact: typeof normalFact
+    mergeEvidence: typeof mergeEvidence
+}
+
+const SUBJECT = Symbol("fact-input.policy")
+
+const build = async () => {
+    const moduleRef = await Test.createTestingModule({
+        providers: [{ provide: SUBJECT, useValue: { normalFact, mergeEvidence } }],
+    }).compile()
+    return moduleRef.get<Subject>(SUBJECT)
+}
+
 describe("fact inputs", () => {
-    it("trims labels and values and returns normalized keys and the numeric value", () => {
+    it("trims labels and values and returns normalized keys and the numeric value", async () => {
+        const subject = await build()
+
         expect(
-            normalFact({
+            subject.normalFact({
                 subjectLabel: "  Combo Th\u01b0 gi\u00e3n  ",
                 attributeLabel: "  Gi\u00e1  ",
                 value: "  1,2 tr  ",
@@ -19,9 +36,15 @@ describe("fact inputs", () => {
         })
     })
 
-    it("bounds all labels and the value", () => {
+    it("bounds all labels and the value", async () => {
+        const subject = await build()
+
         expect(
-            normalFact({ subjectLabel: "S".repeat(170), attributeLabel: "A".repeat(130), value: "v".repeat(2010) }),
+            subject.normalFact({
+                subjectLabel: "S".repeat(170),
+                attributeLabel: "A".repeat(130),
+                value: "v".repeat(2010),
+            }),
         ).toEqual({
             subjectLabel: "S".repeat(160),
             attributeLabel: "A".repeat(120),
@@ -36,11 +59,15 @@ describe("fact inputs", () => {
         { subjectLabel: "???", attributeLabel: "price", value: "8" },
         { subjectLabel: "combo", attributeLabel: "???", value: "8" },
         { subjectLabel: "combo", attributeLabel: "price", value: "   " },
-    ])("rejects an input lacking a usable subject, attribute or value: %j", (input) => {
-        expect(normalFact(input)).toBeNull()
+    ])("rejects an input lacking a usable subject, attribute or value: %j", async (input) => {
+        const subject = await build()
+
+        expect(subject.normalFact(input)).toBeNull()
     })
 
-    it("keeps existing evidence and adds only new kind and reference pairs", () => {
+    it("keeps existing evidence and adds only new kind and reference pairs", async () => {
+        const subject = await build()
+
         const have: Array<Evidence> = [{ kind: "note", ref: "n1", label: "Original" }]
         const add: Array<Evidence> = [
             { kind: "note", ref: "n1", label: "Repeated" },
@@ -48,7 +75,7 @@ describe("fact inputs", () => {
             { kind: "note", ref: "n2", label: "New note" },
         ]
 
-        expect(mergeEvidence(have, add)).toEqual([
+        expect(subject.mergeEvidence(have, add)).toEqual([
             { kind: "note", ref: "n1", label: "Original" },
             { kind: "document", ref: "n1", label: "Document" },
             { kind: "note", ref: "n2", label: "New note" },
@@ -60,8 +87,12 @@ describe("fact inputs", () => {
             { kind: "note", ref: "n2", label: "New note" },
         ])
     })
+})
 
-    it("keeps exactly the newest twenty pieces of evidence", () => {
+describe("fact inputs", () => {
+    it("keeps exactly the newest twenty pieces of evidence", async () => {
+        const subject = await build()
+
         const have: Array<Evidence> = Array.from({ length: 20 }, (_, index) => ({
             kind: "note",
             ref: `n${index}`,
@@ -70,7 +101,7 @@ describe("fact inputs", () => {
         const add: Array<Evidence> = [{ kind: "note", ref: "n20", label: "Note 20" }]
 
         expect(EVIDENCE_MAX).toBe(20)
-        expect(mergeEvidence(have, add)).toEqual([
+        expect(subject.mergeEvidence(have, add)).toEqual([
             { kind: "note", ref: "n1", label: "Note 1" },
             { kind: "note", ref: "n2", label: "Note 2" },
             { kind: "note", ref: "n3", label: "Note 3" },
@@ -92,6 +123,6 @@ describe("fact inputs", () => {
             { kind: "note", ref: "n19", label: "Note 19" },
             { kind: "note", ref: "n20", label: "Note 20" },
         ])
-        expect(mergeEvidence([], [])).toEqual([])
+        expect(subject.mergeEvidence([], [])).toEqual([])
     })
 })

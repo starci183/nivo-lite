@@ -199,7 +199,7 @@ export class WorkspaceMailService {
                 typeof parsed === "object" && parsed !== null ? Reflect.get(parsed, "password") : null
             return typeof password === "string" ? password : null
         } catch (cause) {
-            this.logger.error(EmailMessagesLogEvent.CredentialUnreadable, cause, { connectionId })
+            this.logger.error(EmailMessagesLogEvent.Undecryptable, cause, { connectionId })
             return null
         }
     }

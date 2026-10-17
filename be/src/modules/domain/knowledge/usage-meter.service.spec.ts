@@ -103,7 +103,11 @@ describe("UsageMeterService", () => {
             )
             expect(em.query).toHaveBeenCalledWith(POST_USAGE_NOTICE, ["ws-1", "2026-10-01", "warn", "notice text"])
         })
+    })
+})
 
+describe("UsageMeterService", () => {
+    describe("record", () => {
         it("names only the allowances that are set", async () => {
             const em = mockEntityManager({
                 query: [
@@ -150,7 +154,9 @@ describe("UsageMeterService", () => {
             })
         })
     })
+})
 
+describe("UsageMeterService", () => {
     describe("blockedBy", () => {
         const exceeded = rowOf({ tokens_used: 10, tokens_limit: 10 })
 

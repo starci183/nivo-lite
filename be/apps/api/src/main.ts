@@ -2,7 +2,7 @@ import { NestFactory } from "@nestjs/core"
 import type { NestExpressApplication } from "@nestjs/platform-express"
 import { SystemClockService } from "@modules/platform/clock"
 import { EnvSource } from "@modules/platform/config"
-import { RequestValidationService, securityHeadersMiddleware } from "@modules/platform/http-security"
+import { securityHeaders } from "@modules/platform/http-security"
 import { createJsonLogger, LoggingLogEvent } from "@modules/platform/logging"
 import { DomainError } from "@modules/platform/errors"
 import { AppModule } from "./app.module"
@@ -16,13 +16,15 @@ const bootstrap = async (): Promise<void> => {
     const env = EnvSource.fromProcess()
     const options = readApiEnv(env)
     const app = await NestFactory.create<NestExpressApplication>(AppModule.register(options), { rawBody: true })
-    app.set("trust proxy", options.httpSecurity.trustedProxyHops)
+    // The environment parser accepts exactly these proxy topologies; every Express value is a fixed hop count.
+    if (options.httpSecurity.trustedProxyHops === 0) app.set("trust proxy", 0)
+    else if (options.httpSecurity.trustedProxyHops === 2) app.set("trust proxy", 2)
+    else app.set("trust proxy", 1)
     app.disable("x-powered-by")
-    app.use(securityHeadersMiddleware())
+    app.use(securityHeaders)
     app.useBodyParser("json", { limit: JSON_BODY_LIMIT })
     app.enableCors({ origin: [...options.httpSecurity.allowedOrigins] })
     app.enableShutdownHooks()
-    app.useGlobalPipes(app.get(RequestValidationService))
     await app.listen(options.server.port)
     createJsonLogger(new SystemClockService()).info(LoggingLogEvent.ServerStarted, {
         service: "api",

@@ -1,6 +1,5 @@
+import { NullAsAbsent } from "@modules/platform/graphql"
 import { Field, Float, InputType } from "@nestjs/graphql"
-import { Transform } from "class-transformer"
-import type { TransformFnParams } from "class-transformer"
 import { IsNumber, IsOptional, IsString, Matches, Max, MaxLength, Min, MinLength } from "class-validator"
 
 @InputType()
@@ -17,7 +16,7 @@ export class FieldValueInput {
     /** The text value. */
     @Field(() => String, { nullable: true })
     @IsOptional()
-    @Transform(({ value }: TransformFnParams): unknown => value ?? undefined)
+    @NullAsAbsent()
     @IsString()
     @MaxLength(2000)
     text?: string
@@ -25,7 +24,7 @@ export class FieldValueInput {
     /** The number value. */
     @Field(() => Float, { nullable: true })
     @IsOptional()
-    @Transform(({ value }: TransformFnParams): unknown => value ?? undefined)
+    @NullAsAbsent()
     @IsNumber({ allowNaN: false, allowInfinity: false })
     @Min(-1000000000000)
     @Max(1000000000000)

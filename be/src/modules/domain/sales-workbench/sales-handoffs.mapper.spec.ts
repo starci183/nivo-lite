@@ -1,3 +1,4 @@
+import { Test } from "@nestjs/testing"
 import { builder } from "@starci/jest-preset"
 import type { InvoiceViewRow } from "@modules/domain/invoices"
 import type { LeadView } from "@modules/domain/leads"
@@ -5,6 +6,16 @@ import type { OrdersWorkbenchRow } from "@modules/domain/orders"
 import type { HandoffRow } from "./sales-workbench.contracts"
 import type { WorkItemView } from "./work-item-view.contracts"
 import { handoffsOf } from "./sales-handoffs.mapper"
+
+const SUBJECT = Symbol("sales-handoffs.mapper")
+type Subject = { handoffsOf: typeof handoffsOf }
+
+const build = async () => {
+    const moduleRef = await Test.createTestingModule({
+        providers: [{ provide: SUBJECT, useValue: { handoffsOf } }],
+    }).compile()
+    return moduleRef.get<Subject>(SUBJECT)
+}
 
 const orderOf = builder<OrdersWorkbenchRow>({
     id: "order-1",
@@ -107,18 +118,22 @@ const handoffOf = builder<HandoffRow>({
 })
 
 describe("handoffsOf", () => {
-    it("returns no rows when there are no orders or customers", () => {
+    it("returns no rows when there are no orders or customers", async () => {
+        const subject = await build()
+
         expect(
-            handoffsOf(
+            subject.handoffsOf(
                 { invoices: [], items: [], leads: [] },
                 { orders: [], leadById: new Map(), quoteByLead: new Map(), closedByLead: new Map() },
             ),
         ).toEqual([])
     })
 
-    it("uses the last non-void invoice and first invoice work while ignoring unrelated rows", () => {
+    it("uses the last non-void invoice and first invoice work while ignoring unrelated rows", async () => {
+        const subject = await build()
+
         expect(
-            handoffsOf(
+            subject.handoffsOf(
                 {
                     invoices: [
                         invoiceOf(),
@@ -155,10 +170,14 @@ describe("handoffsOf", () => {
             }),
         ])
     })
+})
 
-    it("allows confirmed orders without active work and carries shipment state for the other orders", () => {
+describe("handoffsOf", () => {
+    it("allows confirmed orders without active work and carries shipment state for the other orders", async () => {
+        const subject = await build()
+
         expect(
-            handoffsOf(
+            subject.handoffsOf(
                 {
                     invoices: [],
                     items: [
@@ -230,10 +249,14 @@ describe("handoffsOf", () => {
             }),
         ])
     })
+})
 
-    it("adds only won customers without orders and sorts newest confirmations before missing dates", () => {
+describe("handoffsOf", () => {
+    it("adds only won customers without orders and sorts newest confirmations before missing dates", async () => {
+        const subject = await build()
+
         expect(
-            handoffsOf(
+            subject.handoffsOf(
                 {
                     invoices: [],
                     items: [itemOf({ id: "lead-work", subject_id: "won-priced", subject_type: "lead" })],

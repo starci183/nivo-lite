@@ -1,4 +1,16 @@
+import { Test } from "@nestjs/testing"
 import { COMMAND_KINDS, commandOf } from "./command-payload.policy"
+
+const SUBJECT = Symbol("command-payload.policy")
+
+type Subject = Pick<typeof import("./command-payload.policy"), "commandOf">
+
+const build = async () => {
+    const moduleRef = await Test.createTestingModule({
+        providers: [{ provide: SUBJECT, useValue: { commandOf } }],
+    }).compile()
+    return moduleRef.get<Subject>(SUBJECT)
+}
 
 const FACT = {
     subjectType: "business",
@@ -29,139 +41,185 @@ describe("commandOf", () => {
         ])
     })
 
-    it("refuses an unknown kind", () => {
-        expect(commandOf("fact.remove", {})).toBeNull()
+    it("refuses an unknown kind", async () => {
+        const subject = await build()
+
+        expect(subject.commandOf("fact.remove", {})).toBeNull()
     })
 
-    it.each<[unknown]>([[null], [undefined], [[]], ["payload"], [7]])("refuses a non-object payload %p", (payload) => {
-        expect(commandOf("brain.maintain", payload)).toBeNull()
+    it.each<[unknown]>([[null], [undefined], [[]], ["payload"], [7]])(
+        "refuses a non-object payload %p",
+        async (payload) => {
+            const subject = await build()
+
+            expect(subject.commandOf("brain.maintain", payload)).toBeNull()
+        },
+    )
+})
+describe("commandOf fact.save", () => {
+    it("keeps every fact field and omits unrelated fields", async () => {
+        const subject = await build()
+
+        expect(
+            subject.commandOf("fact.save", {
+                ...FACT,
+                modules: ["sales", "support"],
+                validFrom: "2026-10-01",
+                validTo: "2026-10-31",
+                note: "October hours",
+                gapId: "gap-1",
+                workspaceId: "untrusted",
+            }),
+        ).toEqual({
+            kind: "fact.save",
+            form: {
+                ...FACT,
+                modules: ["sales", "support"],
+                validFrom: "2026-10-01",
+                validTo: "2026-10-31",
+                note: "October hours",
+                gapId: "gap-1",
+            },
+        })
     })
 
-    describe("fact.save", () => {
-        it("keeps every fact field and omits unrelated fields", () => {
-            expect(
-                commandOf("fact.save", {
-                    ...FACT,
-                    modules: ["sales", "support"],
-                    validFrom: "2026-10-01",
-                    validTo: "2026-10-31",
-                    note: "October hours",
-                    gapId: "gap-1",
-                    workspaceId: "untrusted",
-                }),
-            ).toEqual({
+    it.each<[unknown]>([[undefined], ["sales"], [["sales", 1]]])(
+        "defaults invalid modules %p to an empty list",
+        async (modules) => {
+            const subject = await build()
+
+            expect(subject.commandOf("fact.save", { ...FACT, modules })).toEqual({
                 kind: "fact.save",
                 form: {
                     ...FACT,
-                    modules: ["sales", "support"],
-                    validFrom: "2026-10-01",
-                    validTo: "2026-10-31",
-                    note: "October hours",
-                    gapId: "gap-1",
+                    modules: [],
+                    validFrom: undefined,
+                    validTo: undefined,
+                    note: undefined,
+                    gapId: undefined,
                 },
             })
-        })
+        },
+    )
 
-        it.each<[unknown]>([[undefined], ["sales"], [["sales", 1]]])(
-            "defaults invalid modules %p to an empty list",
-            (modules) => {
-                expect(commandOf("fact.save", { ...FACT, modules })).toEqual({
-                    kind: "fact.save",
-                    form: {
-                        ...FACT,
-                        modules: [],
-                        validFrom: undefined,
-                        validTo: undefined,
-                        note: undefined,
-                        gapId: undefined,
-                    },
-                })
-            },
-        )
+    it.each(["subjectType", "scope", "subjectLabel", "attributeLabel", "value"])(
+        "requires a text %s field",
+        async (field) => {
+            const subject = await build()
 
-        it.each(["subjectType", "scope", "subjectLabel", "attributeLabel", "value"])(
-            "requires a text %s field",
-            (field) => {
-                expect(commandOf("fact.save", { ...FACT, [field]: undefined })).toBeNull()
-            },
-        )
+            expect(subject.commandOf("fact.save", { ...FACT, [field]: undefined })).toBeNull()
+        },
+    )
 
-        it("refuses unknown subject types and scopes", () => {
-            expect(commandOf("fact.save", { ...FACT, subjectType: "unknown" })).toBeNull()
-            expect(commandOf("fact.save", { ...FACT, scope: "private" })).toBeNull()
-        })
+    it("refuses unknown subject types and scopes", async () => {
+        const subject = await build()
+
+        expect(subject.commandOf("fact.save", { ...FACT, subjectType: "unknown" })).toBeNull()
+        expect(subject.commandOf("fact.save", { ...FACT, scope: "private" })).toBeNull()
     })
+})
+describe("commandOf", () => {
+    it.each(["apply", "reject", "choose", "split", "retire"])("reads fact decision %s", async (action) => {
+        const subject = await build()
 
-    it.each(["apply", "reject", "choose", "split", "retire"])("reads fact decision %s", (action) => {
-        expect(commandOf("fact.decide", { id: "fact-1", action, note: "Reason", situation: "Weekends" })).toEqual({
+        expect(
+            subject.commandOf("fact.decide", { id: "fact-1", action, note: "Reason", situation: "Weekends" }),
+        ).toEqual({
             kind: "fact.decide",
             decision: { id: "fact-1", action, note: "Reason", situation: "Weekends" },
         })
     })
 
-    it("reads a fact decision without optional text", () => {
-        expect(commandOf("fact.decide", { id: "fact-1", action: "apply", note: 4 })).toEqual({
+    it("reads a fact decision without optional text", async () => {
+        const subject = await build()
+
+        expect(subject.commandOf("fact.decide", { id: "fact-1", action: "apply", note: 4 })).toEqual({
             kind: "fact.decide",
             decision: { id: "fact-1", action: "apply", note: undefined, situation: undefined },
         })
     })
 
-    it("reads the key and optional installation whose current fact is kept", () => {
-        expect(commandOf("fact.keep", { subjectKey: "shop", attribute: "hours", installationId: "agent-1" })).toEqual({
+    it("reads the key and optional installation whose current fact is kept", async () => {
+        const subject = await build()
+
+        expect(
+            subject.commandOf("fact.keep", { subjectKey: "shop", attribute: "hours", installationId: "agent-1" }),
+        ).toEqual({
             kind: "fact.keep",
             keep: { subjectKey: "shop", attribute: "hours", installationId: "agent-1" },
         })
-        expect(commandOf("fact.keep", { subjectKey: "shop", attribute: "hours" })).toEqual({
+        expect(subject.commandOf("fact.keep", { subjectKey: "shop", attribute: "hours" })).toEqual({
             kind: "fact.keep",
             keep: { subjectKey: "shop", attribute: "hours", installationId: undefined },
         })
     })
 
-    it("reads a lesson form with its optional context", () => {
+    it("reads a lesson form with its optional context", async () => {
+        const subject = await build()
+
         expect(
-            commandOf("lesson.save", { module: "sales", title: "Confirm", body: "Ask first", appliesWhen: "Unsure" }),
+            subject.commandOf("lesson.save", {
+                module: "sales",
+                title: "Confirm",
+                body: "Ask first",
+                appliesWhen: "Unsure",
+            }),
         ).toEqual({
             kind: "lesson.save",
             form: { module: "sales", title: "Confirm", body: "Ask first", appliesWhen: "Unsure" },
         })
-        expect(commandOf("lesson.save", { title: "Confirm", body: "Ask first" })).toEqual({
+        expect(subject.commandOf("lesson.save", { title: "Confirm", body: "Ask first" })).toEqual({
             kind: "lesson.save",
             form: { module: undefined, title: "Confirm", body: "Ask first", appliesWhen: undefined },
         })
     })
 
-    it.each(["active", "rejected", "retired"])("reads lesson decision %s", (action) => {
-        expect(commandOf("lesson.decide", { id: "lesson-1", action })).toEqual({
+    it.each(["active", "rejected", "retired"])("reads lesson decision %s", async (action) => {
+        const subject = await build()
+
+        expect(subject.commandOf("lesson.decide", { id: "lesson-1", action })).toEqual({
             kind: "lesson.decide",
             decision: { id: "lesson-1", action },
         })
     })
+})
 
-    it("reads gap, mining, deletion, and maintenance commands", () => {
-        expect(commandOf("gap.dismiss", { id: "gap-1" })).toEqual({ kind: "gap.dismiss", id: "gap-1" })
-        expect(commandOf("lessons.mine", { module: "sales" })).toEqual({ kind: "lessons.mine", module: "sales" })
-        expect(commandOf("source.delete", { sourceId: "source-1" })).toEqual({
+describe("commandOf", () => {
+    it("reads gap, mining, deletion, and maintenance commands", async () => {
+        const subject = await build()
+
+        expect(subject.commandOf("gap.dismiss", { id: "gap-1" })).toEqual({ kind: "gap.dismiss", id: "gap-1" })
+        expect(subject.commandOf("lessons.mine", { module: "sales" })).toEqual({
+            kind: "lessons.mine",
+            module: "sales",
+        })
+        expect(subject.commandOf("source.delete", { sourceId: "source-1" })).toEqual({
             kind: "source.delete",
             sourceId: "source-1",
         })
-        expect(commandOf("brain.maintain", {})).toEqual({ kind: "brain.maintain" })
-        expect(commandOf("knowledge.reembed", {})).toEqual({ kind: "knowledge.reembed" })
+        expect(subject.commandOf("brain.maintain", {})).toEqual({ kind: "brain.maintain" })
+        expect(subject.commandOf("knowledge.reembed", {})).toEqual({ kind: "knowledge.reembed" })
     })
 
-    it("reads replacement text only when it is text", () => {
-        expect(commandOf("source.reindex", { sourceId: "source-1", content: "New text" })).toEqual({
+    it("reads replacement text only when it is text", async () => {
+        const subject = await build()
+
+        expect(subject.commandOf("source.reindex", { sourceId: "source-1", content: "New text" })).toEqual({
             kind: "source.reindex",
             reindex: { sourceId: "source-1", content: "New text" },
         })
-        expect(commandOf("source.reindex", { sourceId: "source-1", content: null })).toEqual({
+        expect(subject.commandOf("source.reindex", { sourceId: "source-1", content: null })).toEqual({
             kind: "source.reindex",
             reindex: { sourceId: "source-1", content: undefined },
         })
     })
+})
+describe("commandOf", () => {
+    it("reads all source metadata and preserves empty values used for clearing", async () => {
+        const subject = await build()
 
-    it("reads all source metadata and preserves empty values used for clearing", () => {
         expect(
-            commandOf("source.update", {
+            subject.commandOf("source.update", {
                 sourceId: "source-1",
                 title: "Guide",
                 topic: "",
@@ -180,7 +238,7 @@ describe("commandOf", () => {
                 visibility: "internal",
             },
         })
-        expect(commandOf("source.update", { sourceId: "source-1", tags: [1] })).toEqual({
+        expect(subject.commandOf("source.update", { sourceId: "source-1", tags: [1] })).toEqual({
             kind: "source.update",
             update: {
                 sourceId: "source-1",
@@ -193,21 +251,27 @@ describe("commandOf", () => {
         })
     })
 
-    it("reads a knowledge question and both kinds of Drive folder reference", () => {
-        expect(commandOf("knowledge.ask", { question: "Hours?", module: "sales", audience: "customer" })).toEqual({
+    it("reads a knowledge question and both kinds of Drive folder reference", async () => {
+        const subject = await build()
+
+        expect(
+            subject.commandOf("knowledge.ask", { question: "Hours?", module: "sales", audience: "customer" }),
+        ).toEqual({
             kind: "knowledge.ask",
             ask: { question: "Hours?", module: "sales", audience: "customer" },
         })
-        expect(commandOf("drive.linked", { url: "https://drive.example/folder" })).toEqual({
+        expect(subject.commandOf("drive.linked", { url: "https://drive.example/folder" })).toEqual({
             kind: "drive.linked",
             url: "https://drive.example/folder",
         })
-        expect(commandOf("drive.picked", { folderId: "folder-1", token: "picker-token" })).toEqual({
+        expect(subject.commandOf("drive.picked", { folderId: "folder-1", token: "picker-token" })).toEqual({
             kind: "drive.picked",
             picked: { folderId: "folder-1", token: "picker-token" },
         })
     })
+})
 
+describe("commandOf", () => {
     it.each<[string, object]>([
         ["fact.decide", { action: "apply" }],
         ["fact.decide", { id: "fact-1", action: "invalid" }],
@@ -228,7 +292,9 @@ describe("commandOf", () => {
         ["drive.linked", {}],
         ["drive.picked", { token: "picker-token" }],
         ["drive.picked", { folderId: "folder-1" }],
-    ])("refuses %s when a required field is missing or invalid: %p", (kind, payload) => {
-        expect(commandOf(kind, payload)).toBeNull()
+    ])("refuses %s when a required field is missing or invalid: %p", async (kind, payload) => {
+        const subject = await build()
+
+        expect(subject.commandOf(kind, payload)).toBeNull()
     })
 })

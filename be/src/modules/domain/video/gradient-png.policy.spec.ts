@@ -1,5 +1,16 @@
+import { Test } from "@nestjs/testing"
 import { inflateSync } from "node:zlib"
 import { gradientPng } from "./gradient-png.policy"
+
+const SUBJECT = Symbol("gradient-png.policy")
+type Subject = { gradientPng: typeof gradientPng }
+
+const build = async () => {
+    const moduleRef = await Test.createTestingModule({
+        providers: [{ provide: SUBJECT, useValue: { gradientPng } }],
+    }).compile()
+    return moduleRef.get<Subject>(SUBJECT)
+}
 
 const SIGNATURE = [137, 80, 78, 71, 13, 10, 26, 10]
 const SIDE = 96
@@ -17,8 +28,10 @@ const pixel = (raw: Buffer, x: number, y: number): Array<number> => {
 }
 
 describe("gradientPng", () => {
-    it("writes a 96 x 96 RGB PNG", () => {
-        const png = gradientPng("#000000", "#ffffff", "vertical")
+    it("writes a 96 x 96 RGB PNG", async () => {
+        const subject = await build()
+
+        const png = subject.gradientPng("#000000", "#ffffff", "vertical")
 
         expect([...png.subarray(0, 8)]).toEqual(SIGNATURE)
         expect(png.subarray(12, 16).toString("ascii")).toBe("IHDR")
@@ -26,16 +39,20 @@ describe("gradientPng", () => {
         expect(png.subarray(png.length - 8, png.length - 4).toString("ascii")).toBe("IEND")
     })
 
-    it("runs top to bottom in the vertical direction", () => {
-        const raw = pixelsOf(gradientPng("#000000", "#ffffff", "vertical"))
+    it("runs top to bottom in the vertical direction", async () => {
+        const subject = await build()
+
+        const raw = pixelsOf(subject.gradientPng("#000000", "#ffffff", "vertical"))
 
         expect(pixel(raw, 0, 0)).toEqual([0, 0, 0])
         expect(pixel(raw, 95, 0)).toEqual([0, 0, 0])
         expect(pixel(raw, 40, 95)).toEqual([255, 255, 255])
     })
 
-    it("runs corner to corner in the diagonal direction", () => {
-        const raw = pixelsOf(gradientPng("#102030", "#f0e0d0", "diagonal"))
+    it("runs corner to corner in the diagonal direction", async () => {
+        const subject = await build()
+
+        const raw = pixelsOf(subject.gradientPng("#102030", "#f0e0d0", "diagonal"))
 
         expect(pixel(raw, 0, 0)).toEqual([16, 32, 48])
         expect(pixel(raw, 95, 95)).toEqual([240, 224, 208])

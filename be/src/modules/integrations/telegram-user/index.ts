@@ -1,7 +1,6 @@
 export { parseTelegramUserConfig } from "./telegram-user.config"
 export { InjectTelegramUser, TELEGRAM_USER } from "./telegram-user.decorators"
 export { TelegramUserModule } from "./telegram-user.module"
-export type { TelegramUserOptions } from "./telegram-user.options"
 export type { TelegramUserClient } from "./telegram-user.client"
 export type {
     TelegramChatChoice,

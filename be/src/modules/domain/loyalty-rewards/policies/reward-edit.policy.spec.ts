@@ -1,5 +1,15 @@
+import { Test } from "@nestjs/testing"
 import type { RewardEdit } from "../loyalty-rewards.contracts"
 import { rewardKey, sanitizeReward } from "./reward-edit.policy"
+
+const SUBJECT = Symbol("reward-edit.policy")
+
+const build = async () => {
+    const moduleRef = await Test.createTestingModule({
+        providers: [{ provide: SUBJECT, useValue: { rewardKey, sanitizeReward } }],
+    }).compile()
+    return moduleRef.get<typeof import("./reward-edit.policy")>(SUBJECT)
+}
 
 const EDIT: RewardEdit = {
     id: "r1",
@@ -22,15 +32,19 @@ describe("rewardKey", () => {
         ["---___!!!", "reward"],
         ["ABCDEFGHIJKLMNOPQRSTUVWXYZ123456789", "abcdefghijklmnopqrstuvwxyz1234"],
         ["voucher_50k", "voucher_50k"],
-    ])("normalizes %s to the safe key %s", (name, expected) => {
-        expect(rewardKey(name)).toBe(expected)
+    ])("normalizes %s to the safe key %s", async (name, expected) => {
+        const subject = await build()
+
+        expect(subject.rewardKey(name)).toBe(expected)
     })
 })
 
 describe("sanitizeReward", () => {
-    it("trims text, rounds numbers and preserves the identity and unlimited fields", () => {
+    it("trims text, rounds numbers and preserves the identity and unlimited fields", async () => {
+        const subject = await build()
+
         expect(
-            sanitizeReward({
+            subject.sanitizeReward({
                 ...EDIT,
                 name: "  Voucher  ",
                 valueVnd: 123.6,
@@ -40,9 +54,11 @@ describe("sanitizeReward", () => {
         ).toEqual({ ...EDIT, valueVnd: 124, pointsCost: 9 })
     })
 
-    it("bounds text lengths and finite numeric values for storage", () => {
+    it("bounds text lengths and finite numeric values for storage", async () => {
+        const subject = await build()
+
         expect(
-            sanitizeReward({
+            subject.sanitizeReward({
                 ...EDIT,
                 name: ` ${"N".repeat(90)} `,
                 kind: "percent",
@@ -70,9 +86,11 @@ describe("sanitizeReward", () => {
         })
     })
 
-    it("uses minimums for nonfinite values and clears blank tier keys", () => {
+    it("uses minimums for nonfinite values and clears blank tier keys", async () => {
+        const subject = await build()
+
         expect(
-            sanitizeReward({
+            subject.sanitizeReward({
                 ...EDIT,
                 kind: "percent",
                 valueVnd: Number.POSITIVE_INFINITY,
@@ -92,10 +110,14 @@ describe("sanitizeReward", () => {
             perCustomerLimit: 1,
         })
     })
+})
 
-    it("defaults an absent percent to ten and rounds stock and customer limits", () => {
+describe("sanitizeReward", () => {
+    it("defaults an absent percent to ten and rounds stock and customer limits", async () => {
+        const subject = await build()
+
         expect(
-            sanitizeReward({
+            subject.sanitizeReward({
                 ...EDIT,
                 kind: "percent",
                 stock: 4.8,
@@ -105,7 +127,9 @@ describe("sanitizeReward", () => {
         ).toEqual({ ...EDIT, kind: "percent", percent: 10, stock: 5, perCustomerLimit: 2, minTierKey: "bac" })
     })
 
-    it("discards percentages on rewards that give items or vouchers", () => {
-        expect(sanitizeReward({ ...EDIT, kind: "item", percent: 25 })).toEqual({ ...EDIT, kind: "item" })
+    it("discards percentages on rewards that give items or vouchers", async () => {
+        const subject = await build()
+
+        expect(subject.sanitizeReward({ ...EDIT, kind: "item", percent: 25 })).toEqual({ ...EDIT, kind: "item" })
     })
 })

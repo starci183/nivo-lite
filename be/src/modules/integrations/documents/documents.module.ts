@@ -1,11 +1,12 @@
 import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
 import { DocumentsClient } from "./documents.client"
-import { DOCUMENTS } from "./documents.decorators"
+import { DOCUMENTS, DOCUMENT_FILE_READERS } from "./documents.decorators"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./documents.module-definition"
 import { DocumentsHttpClient } from "./documents-http.client"
 import { DriveApiClient } from "./drive-api.client"
 import { DriveFolderClient } from "./drive-folder.client"
+import { libraryReaders } from "./library-readers.client"
 import { PublicLinkClient } from "./public-link.client"
 
 @Module({})
@@ -19,12 +20,13 @@ export class DocumentsModule extends ConfigurableModuleClass {
             providers: [
                 ...(base.providers ?? []),
                 DocumentsHttpClient,
+                { provide: DOCUMENT_FILE_READERS, useValue: libraryReaders },
                 PublicLinkClient,
                 DriveApiClient,
                 DriveFolderClient,
                 { provide: DOCUMENTS, useClass: DocumentsClient },
             ],
-            exports: [DOCUMENTS],
+            exports: [DOCUMENTS, DOCUMENT_FILE_READERS],
         }
     }
 }

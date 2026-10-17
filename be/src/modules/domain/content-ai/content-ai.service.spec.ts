@@ -1,123 +1,31 @@
+import {
+    MEMBER,
+    MATERIAL,
+    PILLAR,
+    CADENCE,
+    CONFIGURATION,
+    itemOf,
+    stateOf,
+    statusOf,
+} from "../../../tests/fixtures/builders/content-ai.builder"
 import { Test } from "@nestjs/testing"
-import { FakeClock, builder, fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
+import { FakeClock, fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
 import { GenerationsService } from "@modules/domain/ai-generations"
 import type { GenerationEnqueued, GenerationState } from "@modules/domain/ai-generations"
 import { AuthorityRulesService } from "@modules/domain/authority-rules"
 import { ContentAiStoreService, ContentEditorService } from "@modules/domain/content-items"
-import type { ContentItem } from "@modules/domain/content-items"
 import { ContentMediaService } from "@modules/domain/content-media"
 import { ContentConfigurationService } from "@modules/domain/content-settings"
-import type { ContentConfiguration } from "@modules/domain/content-settings"
-import type { WorkspaceMember } from "@modules/domain/workspace-members"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { CLOCK } from "@modules/platform/clock"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { ContentAiCompletionService } from "./content-ai-completion.service"
-import type { BrandMaterial } from "./content-ai-prompt.policy"
 import { ContentAiService } from "./content-ai.service"
-import type { ContentAiStatus } from "./content-ai.contracts"
 import { ContentBrandService } from "./content-brand.service"
 import { ContentAiErrorCode } from "./errors/content-ai.error"
+
 const errorOf = (code: ContentAiErrorCode) => ({ code })
-const MEMBER: WorkspaceMember = {
-    userId: "user-1",
-    workspaceId: "ws-1",
-    role: "owner",
-    staffId: null,
-    displayName: "An",
-    status: "active",
-}
-const MATERIAL: BrandMaterial = {
-    shop: "Lan",
-    authority: { brandVoice: "warm", replyStyle: "short", limitsNote: "" },
-    setup: { summary: "Cafe", facts: [], tone: "", claimsLimits: "", audience: "", channels: "" },
-    sources: [],
-    brainFacts: [],
-}
-const PILLAR = {
-    id: "pillar-1",
-    workspaceId: "ws-1",
-    name: "Coffee",
-    description: "Beans",
-    weight: 1,
-    active: true,
-    sort: 0,
-}
-const CADENCE = {
-    id: "cadence-1",
-    workspaceId: "ws-1",
-    channel: "facebook" as const,
-    postsPerWeek: 7,
-    days: [1, 2, 3, 4, 5, 6, 7],
-    time: "09:00",
-}
-const CONFIGURATION: ContentConfiguration = {
-    pillars: [PILLAR],
-    cadence: [CADENCE],
-    settings: {
-        workspaceId: "ws-1",
-        brandVoice: "",
-        avoid: "",
-        cta: "Book",
-        hashtags: [],
-        automations: { today_reminder: false, offer_draft: false, weekly_summary: false },
-        marks: {},
-    },
-}
-const itemOf = builder<ContentItem>({
-    id: "item-1",
-    workspaceId: "ws-1",
-    planId: null,
-    title: "Coffee",
-    brief: "Fresh beans",
-    pillarId: null,
-    channels: ["facebook"],
-    scheduledAt: null,
-    status: "idea",
-    variants: {},
-    hashtags: [],
-    media: [],
-    links: [],
-    holidayKey: null,
-    evidence: [],
-    published: {},
-    workItemId: null,
-    draftedAt: null,
-    approvedBy: null,
-    approvedAt: null,
-    publishedAt: null,
-    source: "plan",
-    createdBy: "An",
-    createdAt: "2026-10-12T00:00:00.000Z",
-    updatedAt: "2026-10-12T00:00:00.000Z",
-})
-const stateOf = builder<GenerationState>({
-    id: "g-1",
-    workspaceId: "ws-1",
-    purpose: "content_draft",
-    status: "queued",
-    text: null,
-    errorCode: null,
-    input: { context: { rootId: "g-1", generationIds: ["g-2", "g-3"], itemId: "item-1" } },
-    output: {},
-    timings: {},
-    createdAt: "2026-10-12T00:00:00.000Z",
-    finishedAt: null,
-    messages: [],
-})
-const statusOf = builder<ContentAiStatus>({
-    id: "g-1",
-    status: "queued",
-    progress: 0,
-    itemId: "item-1",
-    planId: null,
-    resultId: null,
-    ideas: null,
-    seconds: null,
-    skippedPast: null,
-    warnings: [],
-    errorCode: null,
-})
+
 const build = async (root: GenerationState | null = null, children: ReadonlyArray<GenerationState> = []) => {
     const em = mockEntityManager()
     const tx = fakeTransaction(em)
@@ -164,6 +72,7 @@ const build = async (root: GenerationState | null = null, children: ReadonlyArra
     const dependencies = { brand, members, generations, completion, rules, editor, store, configuration, media }
     return { service: moduleRef.get(ContentAiService), ...dependencies, tx }
 }
+
 describe("ContentAiService", () => {
     it("returns the public brand material after proving membership", async () => {
         const { service, brand } = await build()
@@ -211,6 +120,9 @@ describe("ContentAiService", () => {
         )
         expect(generations.request).not.toHaveBeenCalled()
     })
+})
+
+describe("ContentAiService", () => {
     it("enqueues a rewrite with the matched theme, holiday, library and optimistic timestamp", async () => {
         const { service, editor, members, generations, media, tx } = await build()
         editor.get.mockResolvedValue(
@@ -274,6 +186,9 @@ describe("ContentAiService", () => {
         expect(store.createQuickIdea).not.toHaveBeenCalled()
         expect(generations.request).not.toHaveBeenCalled()
     })
+})
+
+describe("ContentAiService", () => {
     it.each([
         { topic: "  Coffee\nFresh beans  ", normalized: "Coffee\nFresh beans", title: "Coffee" },
         { topic: "\n Coffee \n", normalized: "Coffee", title: "Coffee" },
@@ -314,6 +229,9 @@ describe("ContentAiService", () => {
         })
         expect(tx.commits).toBe(1)
     })
+})
+
+describe("ContentAiService", () => {
     it.each([
         { month: "bad", configuration: CONFIGURATION, code: ContentAiErrorCode.InvalidInput },
         {
@@ -339,6 +257,9 @@ describe("ContentAiService", () => {
         await expect(service.requestMonthPlan("user-1", "ws-1", entry.month)).rejects.toMatchObject(errorOf(entry.code))
         expect(generations.request).not.toHaveBeenCalled()
     })
+})
+
+describe("ContentAiService", () => {
     it("rolls back a plan when the first generation response omits its id", async () => {
         const { service, generations, tx } = await build()
         generations.request.mockResolvedValueOnce(mock<GenerationEnqueued>({ id: undefined, status: "queued" }))
@@ -395,6 +316,7 @@ describe("ContentAiService", () => {
         expect(tx.commits).toBe(1)
     })
 })
+
 describe("ContentAiService status", () => {
     it.each([null, stateOf({ purpose: "chat_reply" }), stateOf({ input: { context: { rootId: "g-other" } } })])(
         "hides missing, unrelated and child generations %#",
@@ -445,6 +367,9 @@ describe("ContentAiService status", () => {
             errorCode: expected,
         })
     })
+})
+
+describe("ContentAiService status", () => {
     it("returns the applied draft result and normalized review warnings", async () => {
         const { service } = await build(
             stateOf({

@@ -10,15 +10,6 @@ export const SHIFTS_REMIND_JOB = "shifts.remind"
 /** The job that alerts the managers when nobody checked in to one shift. */
 export const SHIFTS_NOSHOW_JOB = "shifts.noshow"
 
-/** The pg_cron scheduler that sends a tick every minute; every replica upserts it by id and the deployment still fires it once a minute. */
-export const SHIFTS_TICK_SCHEDULER = {
-    queue: SHIFTS_QUEUE,
-    job: SHIFTS_TICK_JOB,
-    id: "shifts-tick",
-    everyMs: 60_000,
-    payload: { kind: "tick" },
-} as const
-
 /** The payload of a minute tick. */
 export interface ShiftsTickPayload {
     /** Always `tick`. */

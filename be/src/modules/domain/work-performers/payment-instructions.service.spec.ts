@@ -84,41 +84,41 @@ const profileOf = (knowledge: string): AgentProfile => ({
 
 const conversation = { id: "conv-1", agentId: "agent-1", channel: "telegram", visitorName: "Khach" }
 
-describe("PaymentInstructionsService", () => {
-    const build = async () => {
-        const kit = mock<PerformerKitService>()
-        kit.text.mockImplementation((_ctx, key, params = {}) => [key, ...Object.values(params).map(String)].join("|"))
-        kit.department.mockResolvedValue("Accounting")
-        const conversations = mock<AgentConversationsService>()
-        conversations.latestOfLead.mockResolvedValue(conversation)
-        const agents = mock<AgentsService>()
-        const leads = mock<LeadRecordsService>()
-        const orders = mock<OrdersService>()
-        const delivery = mock<CustomerDeliveryService>()
-        const evidence = mock<EvidenceService>()
-        const moduleRef = await Test.createTestingModule({
-            providers: [
-                PaymentInstructionsService,
-                { provide: PerformerKitService, useValue: kit },
-                { provide: AgentConversationsService, useValue: conversations },
-                { provide: AgentsService, useValue: agents },
-                { provide: LeadRecordsService, useValue: leads },
-                { provide: OrdersService, useValue: orders },
-                { provide: CustomerDeliveryService, useValue: delivery },
-                { provide: EvidenceService, useValue: evidence },
-            ],
-        }).compile()
-        return {
-            service: moduleRef.get(PaymentInstructionsService),
-            conversations,
-            agents,
-            leads,
-            orders,
-            delivery,
-            evidence,
-        }
+const build = async () => {
+    const kit = mock<PerformerKitService>()
+    kit.text.mockImplementation((_ctx, key, params = {}) => [key, ...Object.values(params).map(String)].join("|"))
+    kit.department.mockResolvedValue("Accounting")
+    const conversations = mock<AgentConversationsService>()
+    conversations.latestOfLead.mockResolvedValue(conversation)
+    const agents = mock<AgentsService>()
+    const leads = mock<LeadRecordsService>()
+    const orders = mock<OrdersService>()
+    const delivery = mock<CustomerDeliveryService>()
+    const evidence = mock<EvidenceService>()
+    const moduleRef = await Test.createTestingModule({
+        providers: [
+            PaymentInstructionsService,
+            { provide: PerformerKitService, useValue: kit },
+            { provide: AgentConversationsService, useValue: conversations },
+            { provide: AgentsService, useValue: agents },
+            { provide: LeadRecordsService, useValue: leads },
+            { provide: OrdersService, useValue: orders },
+            { provide: CustomerDeliveryService, useValue: delivery },
+            { provide: EvidenceService, useValue: evidence },
+        ],
+    }).compile()
+    return {
+        service: moduleRef.get(PaymentInstructionsService),
+        conversations,
+        agents,
+        leads,
+        orders,
+        delivery,
+        evidence,
     }
+}
 
+describe("PaymentInstructionsService", () => {
     it("sends the goods, the amount, the code and the bank details of the agent's notes", async () => {
         const { service, conversations, agents, leads, orders, delivery, evidence } = await build()
         leads.find.mockResolvedValue(lead)
@@ -183,7 +183,9 @@ describe("PaymentInstructionsService", () => {
 
         expect(conversations.latestOfLead).not.toHaveBeenCalled()
     })
+})
 
+describe("PaymentInstructionsService", () => {
     it("sends nothing when the customer has no Telegram conversation", async () => {
         const { service, conversations, delivery } = await build()
         conversations.latestOfLead.mockResolvedValue(null)

@@ -1,6 +1,17 @@
-import { toConnectionRecord } from "./connections.mapper"
+import { Test } from "@nestjs/testing"
+import { toConnectionRecord as realToConnectionRecord } from "./connections.mapper"
 import { ConnectionsErrorCode } from "./errors/connections.error"
 import type { ConnectionSelectRow } from "./persistence/connections.rows"
+
+const SUBJECT = Symbol("connections.mapper")
+
+const buildSubject = async () => {
+    const moduleRef = await Test.createTestingModule({
+        providers: [{ provide: SUBJECT, useValue: { toConnectionRecord: realToConnectionRecord } }],
+    }).compile()
+    const subject = moduleRef.get<{ toConnectionRecord: typeof realToConnectionRecord }>(SUBJECT)
+    return { subject }
+}
 
 const row: ConnectionSelectRow = {
     id: "c1",
@@ -19,8 +30,10 @@ const row: ConnectionSelectRow = {
 }
 
 describe("toConnectionRecord", () => {
-    it("maps every column to its camelCase field", () => {
-        expect(toConnectionRecord(row)).toEqual({
+    it("maps every column to its camelCase field", async () => {
+        const { subject } = await buildSubject()
+
+        expect(subject.toConnectionRecord(row)).toEqual({
             id: "c1",
             workspaceId: "w1",
             provider: "sepay",
@@ -37,25 +50,33 @@ describe("toConnectionRecord", () => {
         })
     })
 
-    it("falls back to empty meta, live and not default for odd stored values", () => {
+    it("falls back to empty meta, live and not default for odd stored values", async () => {
+        const { subject } = await buildSubject()
+
         const odd: ConnectionSelectRow = { ...row, public_meta: [], environment: null, is_default: null }
 
-        expect(toConnectionRecord(odd)).toMatchObject({ meta: {}, environment: "live", isDefault: false })
-        expect(toConnectionRecord({ ...odd, public_meta: null })).toMatchObject({ meta: {} })
+        expect(subject.toConnectionRecord(odd)).toMatchObject({ meta: {}, environment: "live", isDefault: false })
+        expect(subject.toConnectionRecord({ ...odd, public_meta: null })).toMatchObject({ meta: {} })
     })
 
     it.each([
         { provider: "unknown", status: "connected" },
         { provider: "sepay", status: "unknown" },
-    ])("refuses stored provider $provider and status $status that cannot be mapped", ({ provider, status }) => {
-        expect(() => toConnectionRecord({ ...row, provider, status })).toThrow(
+    ])("refuses stored provider $provider and status $status that cannot be mapped", async ({ provider, status }) => {
+        const { subject } = await buildSubject()
+
+        expect(() => subject.toConnectionRecord({ ...row, provider, status })).toThrow(
             expect.objectContaining({ code: ConnectionsErrorCode.NotFound, params: { id: "c1" } }),
         )
     })
+})
 
-    it("keeps only string public facts and includes a readable first-event text", () => {
+describe("toConnectionRecord public facts", () => {
+    it("keeps only string public facts and includes a readable first-event text", async () => {
+        const { subject } = await buildSubject()
+
         const firstEvent = { amount: 0, content: "", at: "2026-10-12T01:00:00Z", text: "Hello" }
-        const mapped = toConnectionRecord({
+        const mapped = subject.toConnectionRecord({
             ...row,
             public_meta: { bank_code: "VCB", count: 3, enabled: true, absent: null },
             first_event: firstEvent,
@@ -65,8 +86,10 @@ describe("toConnectionRecord", () => {
         expect(mapped.firstEvent).toEqual(firstEvent)
     })
 
-    it("reads a finite numeric owner chat id as text while dropping other numeric facts", () => {
-        const mapped = toConnectionRecord({
+    it("reads a finite numeric owner chat id as text while dropping other numeric facts", async () => {
+        const { subject } = await buildSubject()
+
+        const mapped = subject.toConnectionRecord({
             ...row,
             public_meta: { owner_chat_id: 123456789, count: 3, bad: Number.NaN },
         })
@@ -76,17 +99,23 @@ describe("toConnectionRecord", () => {
 
     it.each([Number.NaN, Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY])(
         "drops a non-finite numeric owner chat id: %p",
-        (ownerChatId) => {
-            expect(toConnectionRecord({ ...row, public_meta: { owner_chat_id: ownerChatId } }).meta).toEqual({})
+        async (ownerChatId) => {
+            const { subject } = await buildSubject()
+
+            expect(subject.toConnectionRecord({ ...row, public_meta: { owner_chat_id: ownerChatId } }).meta).toEqual({})
         },
     )
 
-    it("keeps an owner chat id that is already text", () => {
-        expect(toConnectionRecord({ ...row, public_meta: { owner_chat_id: "123456789" } }).meta).toEqual({
+    it("keeps an owner chat id that is already text", async () => {
+        const { subject } = await buildSubject()
+
+        expect(subject.toConnectionRecord({ ...row, public_meta: { owner_chat_id: "123456789" } }).meta).toEqual({
             owner_chat_id: "123456789",
         })
     })
+})
 
+describe("toConnectionRecord", () => {
     it.each([
         undefined,
         null,
@@ -95,13 +124,20 @@ describe("toConnectionRecord", () => {
         { amount: "5", content: "hi", at: "now" },
         { amount: 5, content: false, at: "now" },
         { amount: 5, content: "hi", at: 5 },
-    ])("omits an invalid stored first event: %p", (firstEvent) => {
-        expect(toConnectionRecord({ ...row, first_event: firstEvent }).firstEvent).toBeNull()
+    ])("omits an invalid stored first event: %p", async (firstEvent) => {
+        const { subject } = await buildSubject()
+
+        expect(subject.toConnectionRecord({ ...row, first_event: firstEvent }).firstEvent).toBeNull()
     })
 
-    it("omits non-string optional event text", () => {
+    it("omits non-string optional event text", async () => {
+        const { subject } = await buildSubject()
+
         expect(
-            toConnectionRecord({ ...row, first_event: { amount: 5, content: "hi", at: "now", text: 9 } }).firstEvent,
+            subject.toConnectionRecord({
+                ...row,
+                first_event: { amount: 5, content: "hi", at: "now", text: 9 },
+            }).firstEvent,
         ).toEqual({ amount: 5, content: "hi", at: "now" })
     })
 })

@@ -93,7 +93,11 @@ describe("BookingReservationService", () => {
                 id: "b2",
             })
         })
+    })
+})
 
+describe("BookingReservationService", () => {
+    describe("reserve", () => {
         it("writes a request that does not hold its slot without checking the load", async () => {
             const manager = mockEntityManager({
                 query: [
@@ -136,7 +140,9 @@ describe("BookingReservationService", () => {
             })
         })
     })
+})
 
+describe("BookingReservationService", () => {
     describe("relocate", () => {
         const moveOf = (overrides: Partial<RelocateParams> = {}): RelocateParams => ({
             manager: mockEntityManager(),

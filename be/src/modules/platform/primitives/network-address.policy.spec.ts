@@ -1,4 +1,13 @@
+import { Test } from "@nestjs/testing"
 import { isPrivateAddress, isWellFormedHost } from "./network-address.policy"
+const SUBJECT = Symbol("network-address.policy")
+
+const build = async () => {
+    const moduleRef = await Test.createTestingModule({
+        providers: [{ provide: SUBJECT, useValue: { isPrivateAddress, isWellFormedHost } }],
+    }).compile()
+    return moduleRef.get<typeof import("./network-address.policy")>(SUBJECT)
+}
 
 describe("isPrivateAddress", () => {
     it.each([
@@ -26,8 +35,10 @@ describe("isPrivateAddress", () => {
         "example.com",
         "10.1.2",
         "10.1.2.x",
-    ])("treats %s as private", (address) => {
-        expect(isPrivateAddress(address)).toBe(true)
+    ])("treats %s as private", async (address) => {
+        const subject = await build()
+
+        expect(subject.isPrivateAddress(address)).toBe(true)
     })
 
     it.each([
@@ -41,21 +52,25 @@ describe("isPrivateAddress", () => {
         "::ffff:8.8.8.8",
         "2001:4860:4860::8888",
         "fe70::1",
-    ])("treats %s as public", (address) => {
-        expect(isPrivateAddress(address)).toBe(false)
+    ])("treats %s as public", async (address) => {
+        const subject = await build()
+
+        expect(subject.isPrivateAddress(address)).toBe(false)
     })
 })
 
 describe("isWellFormedHost", () => {
-    it("accepts a DNS name and refuses an empty, dotted or oversized one", () => {
-        expect(isWellFormedHost("a")).toBe(true)
-        expect(isWellFormedHost("Shop.Example")).toBe(true)
-        expect(isWellFormedHost("a-b.example")).toBe(true)
-        expect(isWellFormedHost("")).toBe(false)
-        expect(isWellFormedHost("a..b")).toBe(false)
-        expect(isWellFormedHost("-ab")).toBe(false)
-        expect(isWellFormedHost("ab-")).toBe(false)
-        expect(isWellFormedHost(`${"a".repeat(63)}.${"b".repeat(189)}`)).toBe(true)
-        expect(isWellFormedHost("a".repeat(254))).toBe(false)
+    it("accepts a DNS name and refuses an empty, dotted or oversized one", async () => {
+        const subject = await build()
+
+        expect(subject.isWellFormedHost("a")).toBe(true)
+        expect(subject.isWellFormedHost("Shop.Example")).toBe(true)
+        expect(subject.isWellFormedHost("a-b.example")).toBe(true)
+        expect(subject.isWellFormedHost("")).toBe(false)
+        expect(subject.isWellFormedHost("a..b")).toBe(false)
+        expect(subject.isWellFormedHost("-ab")).toBe(false)
+        expect(subject.isWellFormedHost("ab-")).toBe(false)
+        expect(subject.isWellFormedHost(`${"a".repeat(63)}.${"b".repeat(189)}`)).toBe(true)
+        expect(subject.isWellFormedHost("a".repeat(254))).toBe(false)
     })
 })

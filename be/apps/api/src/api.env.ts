@@ -32,7 +32,76 @@ import { parseGoogleConfig } from "@modules/integrations/google"
 import { parseMetaConfig } from "@modules/integrations/meta"
 import { parseWebhookDeliveryConfig } from "@modules/integrations/webhook-delivery"
 import { parseTtsConfig } from "@modules/integrations/tts"
-import type { ApiOptions } from "./api.options"
+
+/** Everything the API needs from its environment, parsed once by `api.env.ts` and handed to `AppModule.register`. */
+export interface ApiOptions {
+    /** The HTTP listener. */
+    readonly server: ReturnType<typeof parseServerConfig>
+    /** The origin allowlist and rate limits. */
+    readonly httpSecurity: ReturnType<typeof parseHttpSecurityConfig>
+    /** The least-privilege PostgreSQL connection to the Supabase project. */
+    readonly database: ReturnType<typeof parsePrimaryDatabaseConfig>
+    /** Supabase Auth, Storage and token-verification configuration. */
+    readonly supabase: ReturnType<typeof parseSupabaseConfig>
+    /** The embeddings and chat models, and the keys that reach them. */
+    readonly llm: ReturnType<typeof parseLlmConfig>
+    /** The Google Drive reader and the readers of office files and PDFs. */
+    readonly documents: ReturnType<typeof parseDocumentsConfig>
+    /** Whether a person with no workspace may create a free one. */
+    readonly workspaces: ReturnType<typeof parseWorkspacesConfig>
+    /** Invitation links and how long they stay valid. */
+    readonly workspaceInvites: ReturnType<typeof parseWorkspaceInvitesConfig>
+    /** The payment feeds: keys, bank account and the credential key. */
+    readonly billing: ReturnType<typeof parseBillingConfig>
+    /** The OpenClaw gateway and the agent workspaces. */
+    readonly openclaw: ReturnType<typeof parseOpenclawConfig>
+    /** The prompt library tunables. */
+    readonly deepseek: ReturnType<typeof parseDeepseekConfig>
+    /** The key that seals the credentials of the connections. */
+    readonly connectionSecrets: ReturnType<typeof parseConnectionSecretsConfig>
+    /** The dedicated secret mixed into loyalty one-time code hashes. */
+    readonly loyaltyOtps: ReturnType<typeof parseLoyaltyOtpsConfig>
+    /** The public origin of the web app, for provider return addresses. */
+    readonly channels: ReturnType<typeof parseChannelsConfig>
+    /** The Telegram Bot API host. */
+    readonly telegram: ReturnType<typeof parseTelegramConfig>
+    /** The Zalo OAuth and Open API hosts. */
+    readonly zalo: ReturnType<typeof parseZaloConfig>
+    /** Outgoing mail: the platform sender and the private-host policy. */
+    readonly mail: ReturnType<typeof parseMailConfig>
+    /** The private-host policy for the owner's systems the data hub reads. */
+    readonly dataSources: ReturnType<typeof parseDataSourcesConfig>
+    /** The personal Telegram app used for account login and read-only chat sync. */
+    readonly telegramUser: ReturnType<typeof parseTelegramUserConfig>
+    /** The platform team that may use the console. */
+    readonly platformAdmin: ReturnType<typeof parsePlatformAdminConfig>
+    /** How the pgmq workers run. */
+    readonly queue: ReturnType<typeof parseQueueConfig>
+    /** Who this worker is and how long a job claim lasts. */
+    readonly jobs: ReturnType<typeof parseJobsConfig>
+    /** The independent monitor of failed jobs and stale queued work. */
+    readonly jobsAlert: ReturnType<typeof parseJobsAlertConfig>
+    /** The channel token key that seals provider credentials, and the public site address. */
+    readonly connections: ReturnType<typeof parseConnectionsConfig>
+    /** The signing key behind outgoing webhooks. */
+    readonly webhookConnections: ReturnType<typeof parseWebhookConnectionsConfig>
+    /** Google OAuth and Sheets. */
+    readonly google: ReturnType<typeof parseGoogleConfig>
+    /** Meta (Facebook Pages and Instagram). */
+    readonly meta: ReturnType<typeof parseMetaConfig>
+    /** The provider calls a connection wizard makes while connecting a channel. */
+    readonly channelSetup: ReturnType<typeof parseChannelSetupConfig>
+    /** Deliveries to tenant-supplied webhook addresses. */
+    readonly webhookDelivery: ReturnType<typeof parseWebhookDeliveryConfig>
+    /** The signing secret and the webhook base of the shared n8n workflows. */
+    readonly n8n: ReturnType<typeof parseN8nConfig>
+    /** How ffmpeg is run. */
+    readonly ffmpeg: ReturnType<typeof parseFfmpegConfig>
+    /** The text-to-speech provider of the video voiceover. */
+    readonly tts: ReturnType<typeof parseTtsConfig>
+    /** Where the video renderer finds its assets and how it runs ffmpeg. */
+    readonly video: ReturnType<typeof parseVideoConfig>
+}
 
 /** Reads the API environment; missing or invalid values fail boot and secret readers prefer mounted files. */
 export const readApiEnv = (env: EnvSource): ApiOptions => ({

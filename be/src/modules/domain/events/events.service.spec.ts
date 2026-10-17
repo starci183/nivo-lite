@@ -6,6 +6,92 @@ import { EventsService } from "./events.service"
 import type { EventRecordRow } from "./persistence/events.rows"
 import { INSERT_EVENT, LIST_EVENTS, LIST_LEAD_EVENTS } from "./persistence/events.sql"
 
+const registerWorkspaceEvents = () => {
+    it("appends the line to the workspace evidence log", async () => {
+        const em = mockEntityManager({ query: [INSERT_EVENT, []] })
+        const service = await build(em)
+
+        await expect(
+            service.record({
+                workspaceId: "ws-1",
+                kind: "member.invited",
+                actor: "Chu",
+                summary: "an@example.test",
+            }),
+        ).resolves.toBeUndefined()
+
+        expect(em.query).toHaveBeenCalledWith(INSERT_EVENT, [
+            "ws-1",
+            "member.invited",
+            "Chu",
+            "an@example.test",
+            null,
+            null,
+            null,
+        ])
+    })
+
+    it("carries the customer, the work item and the raw evidence when given", async () => {
+        const em = mockEntityManager({ query: [INSERT_EVENT, []] })
+        const service = await build(em)
+
+        await expect(
+            service.record({
+                workspaceId: "ws-1",
+                kind: "work.asked",
+                actor: "Sales",
+                summary: "ask",
+                leadId: "lead-1",
+                workItemId: "work-1",
+                evidence: "raw",
+            }),
+        ).resolves.toBeUndefined()
+
+        expect(em.query).toHaveBeenCalledWith(INSERT_EVENT, [
+            "ws-1",
+            "work.asked",
+            "Sales",
+            "ask",
+            "lead-1",
+            "work-1",
+            "raw",
+        ])
+    })
+}
+
+const registerTransactionalEvents = () => {
+    it("appends a line about a lead with its evidence in the transaction of the caller", async () => {
+        const em = mockEntityManager()
+        const tx = mockEntityManager({ query: [INSERT_EVENT, []] })
+        const service = await build(em)
+
+        await expect(
+            service.record(
+                {
+                    workspaceId: "ws-1",
+                    kind: "outcome.recorded",
+                    actor: "Linh",
+                    summary: "Stage",
+                    leadId: "lead-1",
+                    evidence: "Sent",
+                },
+                tx,
+            ),
+        ).resolves.toBeUndefined()
+
+        expect(tx.query).toHaveBeenCalledWith(INSERT_EVENT, [
+            "ws-1",
+            "outcome.recorded",
+            "Linh",
+            "Stage",
+            "lead-1",
+            null,
+            "Sent",
+        ])
+        expect(em.query).not.toHaveBeenCalled()
+    })
+}
+
 const rowOf = builder<EventRecordRow>({
     id: "event-1",
     lead_id: "lead-1",
@@ -26,87 +112,8 @@ const build = async (em: MockEntityManager) => {
 
 describe("EventsService", () => {
     describe("record", () => {
-        it("appends the line to the workspace evidence log", async () => {
-            const em = mockEntityManager({ query: [INSERT_EVENT, []] })
-            const service = await build(em)
-
-            await expect(
-                service.record({
-                    workspaceId: "ws-1",
-                    kind: "member.invited",
-                    actor: "Chu",
-                    summary: "an@example.test",
-                }),
-            ).resolves.toBeUndefined()
-
-            expect(em.query).toHaveBeenCalledWith(INSERT_EVENT, [
-                "ws-1",
-                "member.invited",
-                "Chu",
-                "an@example.test",
-                null,
-                null,
-                null,
-            ])
-        })
-
-        it("carries the customer, the work item and the raw evidence when given", async () => {
-            const em = mockEntityManager({ query: [INSERT_EVENT, []] })
-            const service = await build(em)
-
-            await expect(
-                service.record({
-                    workspaceId: "ws-1",
-                    kind: "work.asked",
-                    actor: "Sales",
-                    summary: "ask",
-                    leadId: "lead-1",
-                    workItemId: "work-1",
-                    evidence: "raw",
-                }),
-            ).resolves.toBeUndefined()
-
-            expect(em.query).toHaveBeenCalledWith(INSERT_EVENT, [
-                "ws-1",
-                "work.asked",
-                "Sales",
-                "ask",
-                "lead-1",
-                "work-1",
-                "raw",
-            ])
-        })
-
-        it("appends a line about a lead with its evidence in the transaction of the caller", async () => {
-            const em = mockEntityManager()
-            const tx = mockEntityManager({ query: [INSERT_EVENT, []] })
-            const service = await build(em)
-
-            await expect(
-                service.record(
-                    {
-                        workspaceId: "ws-1",
-                        kind: "outcome.recorded",
-                        actor: "Linh",
-                        summary: "Stage",
-                        leadId: "lead-1",
-                        evidence: "Sent",
-                    },
-                    tx,
-                ),
-            ).resolves.toBeUndefined()
-
-            expect(tx.query).toHaveBeenCalledWith(INSERT_EVENT, [
-                "ws-1",
-                "outcome.recorded",
-                "Linh",
-                "Stage",
-                "lead-1",
-                null,
-                "Sent",
-            ])
-            expect(em.query).not.toHaveBeenCalled()
-        })
+        registerWorkspaceEvents()
+        registerTransactionalEvents()
     })
 
     describe("leadHistory", () => {

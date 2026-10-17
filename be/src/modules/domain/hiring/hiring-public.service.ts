@@ -16,6 +16,7 @@ import type {
 import { HiringCandidatesService } from "./hiring-candidates.service"
 import { HiringChatService } from "./hiring-chat.service"
 import type { ChatApplication, ChatRegistration } from "./hiring-chat.service"
+import { HiringPostingService } from "./hiring-posting.service"
 import { HiringDataService } from "./hiring-data.service"
 import { slugify } from "./policies/text.policy"
 
@@ -44,6 +45,7 @@ export class HiringPublicService {
         private readonly data: HiringDataService,
         private readonly candidates: HiringCandidatesService,
         private readonly chat: HiringChatService,
+        private readonly posting: HiringPostingService,
     ) {}
 
     /** The open jobs a shop chat turn may take applications for, with the rules; empty when none is open for chat. */
@@ -103,6 +105,7 @@ export class HiringPublicService {
 
     /** A one-time place to upload a CV for a job, valid for the folder of that job only. */
     async createCvUpload(request: CreateCvUploadParams): Promise<CreateCvUploadOutput> {
+        await this.posting.requireOpen(request)
         const { workspaceId, job } = await this.resolve(request)
         const dot = request.fileName.lastIndexOf(".")
         const extension = dot < 0 ? "" : request.fileName.slice(dot + 1).toLowerCase()
@@ -116,6 +119,7 @@ export class HiringPublicService {
 
     /** Takes an application from the public page. A filled honeypot field is answered like a success and stores nothing. */
     async apply(request: ApplyParams, ipHash?: string): Promise<ApplyOutput> {
+        await this.posting.requireOpen(request)
         if ((request.website ?? "").trim() !== "") return { duplicate: false }
         const { workspaceId, job } = await this.resolve(request)
         if (!job.channels.includes("page")) throw new HiringError({ code: HiringErrorCode.JobNotOpen })

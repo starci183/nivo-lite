@@ -1,7 +1,7 @@
 import { Test } from "@nestjs/testing"
-import { builder, mock } from "@starci/jest-preset"
+import { mock } from "@starci/jest-preset"
 import { WORK_PERFORMER_REGISTRY } from "@modules/domain/decisions"
-import type { Prepared, WorkContext, WorkItem, WorkPerformerRegistry } from "@modules/domain/decisions"
+import type { WorkPerformerRegistry } from "@modules/domain/decisions"
 import { LeadRecordsService } from "@modules/domain/leads"
 import { LeadFlowsError, LeadFlowsErrorCode } from "./errors/lead-flows.error"
 import { LeadFlowConversationService } from "./lead-flow-conversation.service"
@@ -11,75 +11,22 @@ import { LeadFlowStoreService } from "./lead-flow-store.service"
 import { DEFAULT_CRITERIA, EMPTY_SIGNALS } from "./lead-flow-score.policy"
 import { parseAnalysis } from "./lead-flow-steps.policy"
 import { LeadFlowTurnService } from "./lead-flow-turn.service"
-import type { Analysis, LeadFlow, LeadFlowPatch } from "./lead-flows.contracts"
-import type { FlowFields } from "./lead-flow-fields.policy"
+import type { LeadFlow } from "./lead-flows.contracts"
 import { ScoreLeadPerformerService } from "./score-lead-performer.service"
-const NOW = "2026-10-12T10:00:00.000Z"
-const ctx: WorkContext = { workspaceId: "ws-1", actor: "Lan", locale: "en" }
-const flowOf = builder<LeadFlow>({
-    id: "flow-1",
-    workspace_id: "ws-1",
-    lead_id: "lead-1",
-    connection_id: "connection-1",
-    conversation_id: "conv-1",
-    platform: "facebook",
-    psid: "person-1",
-    igsid: null,
-    phone: null,
-    email: null,
-    name: "Lan",
-    state: "new",
-    resume_state: null,
-    source: null,
-    touches: [],
-    answers: [],
-    asked: 0,
-    pending_question: null,
-    contact_asked_at: null,
-    signals: EMPTY_SIGNALS,
-    score: null,
-    score_reasons: [],
-    scored_at: null,
-    analysis: null,
-    last_user_at: null,
-    last_user_text: null,
-    greeted_at: null,
-    handed_off_at: null,
-    followed_up_at: null,
-    closed_at: null,
-    escalated_at: null,
-    escalation_reason: null,
-})
-const itemOf = builder<WorkItem>({
-    id: "item-1",
-    workspace_id: "ws-1",
-    department: "lead_gen",
-    action: "greet_prospect",
-    subject_type: "lead",
-    subject_id: "lead-1",
-    lead_id: "lead-1",
-    inbound_event_id: null,
-    parent_id: null,
-    chain_id: "chain-1",
-    depth: 1,
-    status: "queued",
-    decided_path: "auto",
-    reason: null,
-    reasons: [],
-    missing_fields: [],
-    proposal: { summary: "", fields: {} },
-    result: null,
-    error: null,
-    evidence_state: "pending",
-    assigned_staff_id: null,
-    execution_id: null,
-    origin: "live",
-    created_at: NOW,
-    updated_at: NOW,
-    completed_at: null,
-    installation_id: null,
-})
-const DOT = String.fromCodePoint(0x00b7)
+import type { Prepared } from "@modules/domain/decisions"
+import type { LeadFlowPatch } from "./lead-flows.contracts"
+import {
+    NOW,
+    ctx,
+    flowOf,
+    itemOf,
+    DOT,
+    turnItem,
+    cold,
+    emptyForm,
+    blankResult,
+    cases,
+} from "@tests/fixtures/builders/score-lead-performer.builder"
 const build = async (flow: LeadFlow = flowOf()) => {
     const registry = mock<WorkPerformerRegistry>()
     const store = mock<LeadFlowStoreService>()
@@ -121,8 +68,7 @@ const build = async (flow: LeadFlow = flowOf()) => {
     }).compile()
     return { performer: moduleRef.get(ScoreLeadPerformerService), registry, kit, store, meta, transcript, turns, leads }
 }
-const turnItem = (text: string) =>
-    itemOf({ proposal: { summary: "", fields: { turn: "t:1", source_kind: "dm", text } } })
+
 describe("ScoreLeadPerformerService", () => {
     it("registers score_lead at boot and says nothing while a person holds the lead", async () => {
         const { performer, registry, transcript, turns } = await build(flowOf({ state: "escalated" }))
@@ -158,6 +104,9 @@ describe("ScoreLeadPerformerService", () => {
         expect(store.patch).toHaveBeenCalledWith(flow, { analysis })
         expect(kit.escalate).not.toHaveBeenCalled()
     })
+})
+
+describe("ScoreLeadPerformerService", () => {
     it("hands an angry or refund turn to a person instead of scoring it", async () => {
         const flow = flowOf()
         const { performer, kit, turns } = await build(flow)
@@ -190,6 +139,9 @@ describe("ScoreLeadPerformerService", () => {
             notify: true,
         })
     })
+})
+
+describe("ScoreLeadPerformerService", () => {
     it("stores the score and the answer to the pending question", async () => {
         const flow = flowOf({ pending_question: 0, state: "qualifying" })
         const answers = [{ i: 0, question: "When?", answer: "Next week", at: NOW }]
@@ -235,6 +187,9 @@ describe("ScoreLeadPerformerService", () => {
         })
         expect(store.patch).not.toHaveBeenCalled()
     })
+})
+
+describe("ScoreLeadPerformerService", () => {
     it.each([
         ["", "", "warm"],
         ["broken JSON", "unknown", null],
@@ -255,6 +210,9 @@ describe("ScoreLeadPerformerService", () => {
         })
         expect(kit.log).toHaveBeenCalledWith(ctx, flow, "item-1", "lead_gen.scored", "Scored", "")
     })
+})
+
+describe("ScoreLeadPerformerService", () => {
     it.each<readonly [string, string | null, string | null, string | null, LeadFlow["state"], LeadFlowPatch]>([
         ["84901234567", null, null, "lead-1", "new", { phone: "84901234567", state: "scored" }],
         ["lan@example.com", null, null, "lead-1", "new", { email: "lan@example.com", state: "scored" }],
@@ -323,116 +281,9 @@ describe("ScoreLeadPerformerService", () => {
             answers: [previous, { i: 2, question: "", answer: "Green tea", at: NOW }],
         })
     })
-    const cold = parseAnalysis({ confidence: 1 }, "manual:item-1")
-    const warm = parseAnalysis({ confidence: 1, signals: { need: "Tea" } }, "manual:item-1")
-    const emptyForm = parseAnalysis(
-        { confidence: 1, signals: { need: null, contact: "", interest: "medium" } },
-        "manual:item-1",
-    )
-    const filledForm = { ...emptyForm, signals: { ...emptyForm.signals, need: "Tea" } }
-    const coffeeForm = { ...emptyForm, signals: { ...emptyForm.signals, need: "Coffee" } }
-    const answered = { ...warm, answer: "Tomorrow" }
-    const hot = parseAnalysis(
-        {
-            confidence: 1,
-            signals: { need: "Tea", contact: "lan@example.com", asks_price_or_schedule: true },
-            sentiment: "negative",
-        },
-        "manual:item-1",
-    )
-    const gap = parseAnalysis(
-        { confidence: 1, knowledge_gap: { question: "Does it ship?", topic: "delivery" } },
-        "manual:item-1",
-    )
-    const source = {
-        kind: "mention",
-        platform: "instagram",
-        at: NOW,
-        post_id: null,
-        ad_id: null,
-        form_id: null,
-        comment_id: null,
-        leadgen_id: null,
-        referral: null,
-    } as const
-    type PrepareCase = readonly [
-        name: string,
-        flow: Partial<LeadFlow>,
-        fields: FlowFields,
-        expected: FlowFields,
-        reading?: Analysis | null,
-        stored?: Analysis,
-        resume?: LeadFlow,
-        emptySplit?: boolean,
-    ]
-    const unread: Partial<LeadFlow> = { analysis: null }
-    const pending: Partial<LeadFlow> = { ...unread, state: "qualifying", last_user_text: "Tomorrow" }
-    const gapFields = { source_kind: "comment", text: "Does it ship?" }
-    const unreadable = { step: "escalate", escalation: "unreadable", confidence: 0 }
-    const lowConfidence = { step: "escalate", escalation: "low_confidence", confidence: 0.6 - 0.05 }
-    const hotComment = { step: "comment", score: "hot", handoff: "1", negative: "1" }
-    const hotHold = { step: "hold", score: "hot", handoff: "", negative: "" }
-    const form = { source_kind: "leadgen", need: "Tea\nCoffee" }
-    const formResult = { step: "follow_up", need: "Tea", confidence: 1, score: "warm" }
-    const coffeeResult = { ...formResult, need: "Coffee" }
-    const blankForm = { source_kind: "leadgen" }
-    const nullForm = { ...blankForm, need: null }
-    const numericForm = { ...blankForm, need: 12 }
-    const newlineForm = { ...blankForm, need: "\nCoffee" }
-    const blankResult = { step: "close", need: "", confidence: 1, score: "cold" }
-    const noChannel: Partial<LeadFlow> = { ...unread, connection_id: null, conversation_id: null }
-    const held: Partial<LeadFlow> = { state: "handed_off", asked: 2, contact_asked_at: NOW, greeted_at: NOW }
-    const resumed = flowOf({ analysis: cold, state: "qualifying", source })
-    const cases: ReadonlyArray<PrepareCase> = [
-        ["empty comment", unread, { source_kind: "comment" }, { step: "comment", confidence: 1 }, undefined, cold],
-        ["empty mention", unread, { source_kind: "mention" }, { step: "hold", confidence: 1 }, undefined, cold],
-        ["empty form", unread, { ...form, need: "" }, { step: "close", need: "", confidence: 1 }, undefined, emptyForm],
-        ["form need", unread, form, formResult, undefined, filledForm],
-        ["missing need", unread, blankForm, blankResult, undefined, emptyForm],
-        ["null need", unread, nullForm, blankResult, undefined, emptyForm],
-        ["numeric need", unread, numericForm, blankResult, undefined, emptyForm],
-        ["leading newline", unread, newlineForm, coffeeResult, undefined, coffeeForm],
-        ["empty split", unread, form, blankResult, undefined, emptyForm, undefined, true],
-        ["empty DM", noChannel, {}, { ...unreadable, connection_id: "", conversation_id: "" }],
-        [
-            "pending question",
-            { ...pending, pending_question: 0 },
-            {},
-            { step: "ask", question: "When?", answer: "Tomorrow" },
-            answered,
-        ],
-        [
-            "missing pending question",
-            { ...pending, pending_question: 3 },
-            {},
-            { step: "ask", question: "When?", answer: "Tomorrow" },
-            answered,
-        ],
-        ["gap", unread, gapFields, lowConfidence, gap],
-        ["gap without conversation", { ...unread, conversation_id: null }, gapFields, lowConfidence, gap],
-        ["model failure", unread, { source_kind: "mention", text: "A question" }, unreadable, null],
-        ["refund model failure", unread, { text: "refund" }, { ...unreadable, escalation: "refund" }, null],
-        ["given phone", {}, { contact: "0901234567" }, { contact: "84901234567", step: "greet" }],
-        ["given email", {}, { contact: "Lan@Example.com" }, { contact: "lan@example.com", step: "greet" }],
-        ["flow phone", { phone: "84987654321", email: "old@example.com" }, {}, { contact: "84987654321" }],
-        ["flow email", { email: "old@example.com" }, {}, { contact: "old@example.com" }],
-        ["no contact", { psid: null }, {}, { contact: "", need: "" }],
-        ["hot comment", { analysis: hot }, { source_kind: "comment" }, hotComment],
-        ["hot mention", { analysis: hot }, { source_kind: "mention" }, hotHold],
-        ["hot DM", { analysis: hot }, {}, { ...hotHold, step: "handoff" }],
-        ["cached form need", {}, form, formResult],
-        ["missing question", { state: "qualifying", asked: -1 }, {}, { step: "ask", index: -1, question: "" }],
-        ["handed off", held, {}, { step: "hold", index: 2, question: "" }],
-        [
-            "released source",
-            { state: "escalated" },
-            {},
-            { step: "hold", source_kind: "mention", confidence: 1 },
-            undefined,
-            undefined,
-            resumed,
-        ],
-    ]
+})
+
+describe("ScoreLeadPerformerService", () => {
     it.each(cases.map((row) => ({ name: row[0], row })))(
         "prepares $name",
         async ({ row: [_name, patch, fields, expected, reading, stored, resume, emptySplit] }) => {

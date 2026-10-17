@@ -1,9 +1,10 @@
+import { TelegramHttpModule, webhookVerifiers } from "./telegram-http.module"
 import { Test } from "@nestjs/testing"
 import type { RawBodyRequest } from "@nestjs/common"
 import { mock } from "@starci/jest-preset"
 import type { Request } from "express"
 import { TelegramInboxService } from "@modules/domain/telegram-inbox"
-import type { WebhookSignatureService } from "@modules/platform/http-security"
+import { ScopedWebhookVerifier } from "@modules/domain/webhook-proofs"
 import { TelegramWebhook } from "./telegram.webhook"
 
 const CONNECTION = "0b1d52a4-8f3e-4c8a-9a64-4f0d2f6e7a11"
@@ -12,19 +13,17 @@ const ROUTE = { connectionId: CONNECTION }
 const TOKEN = "connection-secret"
 
 const build = async () => {
-    const signature = mock<WebhookSignatureService>()
+    const signature = mock<ScopedWebhookVerifier>()
     signature.verify.mockResolvedValue(undefined)
     const deliveries = mock<TelegramInboxService>()
     deliveries.acceptTelegramDelivery.mockResolvedValue(undefined)
     const moduleRef = await Test.createTestingModule({
-        providers: [TelegramWebhook, { provide: TelegramInboxService, useValue: deliveries }],
-    })
-        .useMocker((token) =>
-            typeof token === "symbol" && token.description === "platform.http-security.webhook-signature"
-                ? signature
-                : undefined,
-        )
-        .compile()
+        providers: [
+            TelegramWebhook,
+            { provide: ScopedWebhookVerifier, useValue: signature },
+            { provide: TelegramInboxService, useValue: deliveries },
+        ],
+    }).compile()
     return { webhook: moduleRef.get(TelegramWebhook), signature, deliveries }
 }
 
@@ -64,7 +63,7 @@ describe("TelegramWebhook", () => {
         await expect(received).resolves.toBeUndefined()
         expect(effects).toEqual(["verify", "acceptTelegramDelivery"])
         expect(deliveries.acceptTelegramDelivery).toHaveBeenCalledTimes(1)
-        expect(deliveries.acceptTelegramDelivery).toHaveBeenCalledWith(CONNECTION, BODY)
+        expect(deliveries.acceptTelegramDelivery).toHaveBeenCalledWith(BODY, CONNECTION)
     })
 
     it("propagates a signature refusal without calling the domain", async () => {
@@ -86,7 +85,9 @@ describe("TelegramWebhook", () => {
         })
         expect(deliveries.acceptTelegramDelivery).not.toHaveBeenCalled()
     })
+})
 
+describe("Telegram delivery intake", () => {
     it("propagates a domain failure after one successful signature verification", async () => {
         const { webhook, signature, deliveries } = await build()
         const failure = new Error("inbox unavailable")
@@ -105,7 +106,7 @@ describe("TelegramWebhook", () => {
             timestamp: undefined,
         })
         expect(deliveries.acceptTelegramDelivery).toHaveBeenCalledTimes(1)
-        expect(deliveries.acceptTelegramDelivery).toHaveBeenCalledWith(CONNECTION, BODY)
+        expect(deliveries.acceptTelegramDelivery).toHaveBeenCalledWith(BODY, CONNECTION)
     })
 
     it("hands missing raw bytes and a missing token to the signature verifier unchanged", async () => {
@@ -124,6 +125,13 @@ describe("TelegramWebhook", () => {
             timestamp: undefined,
         })
         expect(deliveries.acceptTelegramDelivery).toHaveBeenCalledTimes(1)
-        expect(deliveries.acceptTelegramDelivery).toHaveBeenCalledWith(CONNECTION, undefined)
+        expect(deliveries.acceptTelegramDelivery).toHaveBeenCalledWith(undefined, CONNECTION)
+    })
+})
+
+describe("TelegramHttpModule proof declaration", () => {
+    it("declares the exact domain verification method", () => {
+        expect(webhookVerifiers).toEqual([ScopedWebhookVerifier.prototype.verify])
+        expect(TelegramHttpModule.register({}).module).toBe(TelegramHttpModule)
     })
 })

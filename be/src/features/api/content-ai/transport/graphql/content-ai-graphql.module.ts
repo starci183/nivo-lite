@@ -1,5 +1,6 @@
 import { Module } from "@nestjs/common"
 import { ContentAiApiModule } from "../../content-ai.module"
+import { ConfigurableModuleClass } from "./content-ai-graphql.module-definition"
 import { GetBrandMaterialResolver } from "./get-brand-material.resolver"
 import { GetDraftingBlockedResolver } from "./get-drafting-blocked.resolver"
 import { GetRecentTitlesResolver } from "./get-recent-titles.resolver"
@@ -9,7 +10,7 @@ import { RequestContentQuickDraftResolver } from "./request-content-quick-draft.
 import { RequestContentMonthPlanResolver } from "./request-content-month-plan.resolver"
 
 @Module({
-    imports: [ContentAiApiModule],
+    imports: [ContentAiApiModule.register({})],
     providers: [
         GetBrandMaterialResolver,
         GetDraftingBlockedResolver,
@@ -21,4 +22,4 @@ import { RequestContentMonthPlanResolver } from "./request-content-month-plan.re
     ],
 })
 /** GraphQL transport of the content AI workbench. */
-export class ContentAiGraphqlModule {}
+export class ContentAiGraphqlModule extends ConfigurableModuleClass {}

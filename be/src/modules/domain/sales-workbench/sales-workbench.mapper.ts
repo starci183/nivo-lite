@@ -7,6 +7,7 @@ import type { ResponsibilityRecord } from "@modules/domain/responsibilities"
 import type { WorkItemView } from "./work-item-view.contracts"
 import { handoffsOf } from "./sales-handoffs.mapper"
 import type {
+    TestRunName,
     AttentionKind,
     AttentionRow,
     AutoActivity,
@@ -101,7 +102,7 @@ export interface SalesRows {
     /** The recurring Sales contracts. */
     readonly contracts: ReadonlyArray<ContractResult>
     /** True when a customer name marks a test run (UAT or debug leads), which no figure counts. */
-    readonly isTestRun: (...names: ReadonlyArray<string | null | undefined>) => boolean
+    readonly isTestRun: (...names: ReadonlyArray<TestRunName>) => boolean
 }
 
 const MIN = 60_000
@@ -122,7 +123,9 @@ export const autoDoneItemsOf = (items: ReadonlyArray<WorkItemView>): ReadonlyArr
         .filter((item) => item.department === "sales" && item.status === "done" && item.decided_path === "auto")
         .slice(0, AUTO_ACTIVITY_LIMIT)
 
-/** Conversion by source: leads created in the window that are now won, grouped by channel. Test-run leads are excluded. */
+/**
+ * Conversion by source: leads created in the window that are now won, grouped by channel. Test-run leads are excluded.
+ */
 const conversionOf = (rows: SalesRows): SalesConversion => {
     const since = new Date(rows.nowMs - CONVERSION_WINDOW_DAYS * 86_400_000).toISOString()
     const bySource = new Map<string, { source: string; leads: number; won: number }>()
@@ -294,6 +297,39 @@ const decisionsOf = (rows: SalesRows, look: Lookups): ReadonlyArray<SalesDecisio
     return [...fromItems, ...fromDrafts].sort((a, b) => a.createdAt.localeCompare(b.createdAt))
 }
 
+/** Finds open customer conversations still awaiting a reply. */
+const awaitingReplies = (rows: SalesRows, look: Lookups): Array<AttentionRow> => {
+    const rowsOut: Array<AttentionRow> = []
+    const latest = new Map<string, MessageSlim>()
+    for (const message of rows.messages)
+        if (!latest.has(message.conversation_id)) latest.set(message.conversation_id, message)
+    const seen = new Set<string>()
+    for (const conversation of rows.conversations) {
+        const message = latest.get(conversation.id)
+        const lead = conversation.lead_id ? look.leadById.get(conversation.lead_id) : undefined
+        if (!message || message.role !== "user" || !lead || !OPEN_STAGES.includes(lead.stage) || seen.has(lead.id))
+            continue
+        if (rows.nowMs - Date.parse(message.created_at) < AWAITING_REPLY_AFTER_MS) continue
+        seen.add(lead.id)
+        rowsOut.push({
+            key: `reply:${conversation.id}`,
+            kind: "awaiting_reply",
+            leadId: lead.id,
+            customer: lead.contact_name,
+            company: lead.company,
+            stage: lead.stage,
+            need: clip(message.body),
+            since: message.created_at,
+            owner: conversation.handled_by ?? look.openStepByLead.get(lead.id)?.owner_name ?? null,
+            workItemId: null,
+            decisionId: null,
+            action: null,
+            missing: [],
+        })
+    }
+    return rowsOut
+}
+
 const attentionOf = (
     rows: SalesRows,
     look: Lookups,
@@ -368,33 +404,7 @@ const attentionOf = (
             missing: [],
         })
     }
-    const latest = new Map<string, MessageSlim>()
-    for (const message of rows.messages)
-        if (!latest.has(message.conversation_id)) latest.set(message.conversation_id, message)
-    const seen = new Set<string>()
-    for (const conversation of rows.conversations) {
-        const message = latest.get(conversation.id)
-        const lead = conversation.lead_id ? look.leadById.get(conversation.lead_id) : undefined
-        if (!message || message.role !== "user" || !lead || !OPEN_STAGES.includes(lead.stage) || seen.has(lead.id))
-            continue
-        if (rows.nowMs - Date.parse(message.created_at) < AWAITING_REPLY_AFTER_MS) continue
-        seen.add(lead.id)
-        rowsOut.push({
-            key: `reply:${conversation.id}`,
-            kind: "awaiting_reply",
-            leadId: lead.id,
-            customer: lead.contact_name,
-            company: lead.company,
-            stage: lead.stage,
-            need: clip(message.body),
-            since: message.created_at,
-            owner: conversation.handled_by ?? look.openStepByLead.get(lead.id)?.owner_name ?? null,
-            workItemId: null,
-            decisionId: null,
-            action: null,
-            missing: [],
-        })
-    }
+    rowsOut.push(...awaitingReplies(rows, look))
     return rowsOut.sort((a, b) => PRIORITY[a.kind] - PRIORITY[b.kind] || a.since.localeCompare(b.since))
 }
 

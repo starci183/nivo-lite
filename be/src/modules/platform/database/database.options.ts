@@ -18,6 +18,8 @@ export interface DatabaseConnectionOptions extends DatabaseConnectionConfig {
 
 /** Options of the database capability. */
 export interface DatabaseOptions {
+    /** The integration-owned type parsers created separately for each app connection. */
+    readonly typeParsers: () => unknown
     /** The connections this app opens; one per physical database. */
     readonly connections: ReadonlyArray<DatabaseConnectionOptions>
 }

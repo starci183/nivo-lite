@@ -30,195 +30,196 @@ const build = async () => {
     return { client: moduleRef.get(WebhookDeliveryClient), clock, http }
 }
 
-describe("WebhookDeliveryClient", () => {
-    afterEach(() => {
-        jest.restoreAllMocks()
+afterEach(() => {
+    jest.restoreAllMocks()
+})
+describe("WebhookDeliveryClient resolveTarget", () => {
+    it.each([
+        ["not a URL", "url"],
+        ["ftp://receiver.test/hook", "scheme"],
+        ["https://user:password@receiver.test/hook", "credentials"],
+    ])("refuses %s with reason %s before resolving DNS", async (raw, reason) => {
+        const lookupMock = jest.spyOn(lookupOwner, "lookup").mockResolvedValue([])
+        const { client } = await build()
+        const error: unknown = await client.resolveTarget(raw, true).catch((cause: unknown) => cause)
+
+        expect(error).toBeInstanceOf(WebhookDeliveryError)
+        expect(error).toEqual(
+            new WebhookDeliveryError({ code: WebhookDeliveryErrorCode.TargetRefused, params: { reason } }),
+        )
+        expect(error).toHaveProperty("code", WebhookDeliveryErrorCode.TargetRefused)
+        expect(error).toHaveProperty("params", { reason })
+        expect(lookupMock).not.toHaveBeenCalled()
     })
 
-    describe("resolveTarget", () => {
-        it.each([
-            ["not a URL", "url"],
-            ["ftp://receiver.test/hook", "scheme"],
-            ["https://user:password@receiver.test/hook", "credentials"],
-        ])("refuses %s with reason %s before resolving DNS", async (raw, reason) => {
+    it.each(["http://localhost:3100/hook", "https://10.0.0.1/hook"])(
+        "allows %s without DNS on a local site",
+        async (raw) => {
             const lookupMock = jest.spyOn(lookupOwner, "lookup").mockResolvedValue([])
             const { client } = await build()
-            const error: unknown = await client.resolveTarget(raw, true).catch((cause: unknown) => cause)
 
-            expect(error).toBeInstanceOf(WebhookDeliveryError)
-            expect(error).toEqual(
-                new WebhookDeliveryError({ code: WebhookDeliveryErrorCode.TargetRefused, params: { reason } }),
-            )
-            expect(error).toHaveProperty("code", WebhookDeliveryErrorCode.TargetRefused)
-            expect(error).toHaveProperty("params", { reason })
+            await expect(client.resolveTarget(`  ${raw}  `, false)).resolves.toEqual(new URL(raw))
             expect(lookupMock).not.toHaveBeenCalled()
-        })
+        },
+    )
 
-        it.each(["http://localhost:3100/hook", "https://10.0.0.1/hook"])(
-            "allows %s without DNS on a local site",
-            async (raw) => {
-                const lookupMock = jest.spyOn(lookupOwner, "lookup").mockResolvedValue([])
-                const { client } = await build()
-
-                await expect(client.resolveTarget(`  ${raw}  `, false)).resolves.toEqual(new URL(raw))
-                expect(lookupMock).not.toHaveBeenCalled()
-            },
-        )
-
-        it.each(["https://8.8.8.8/hook", "https://[2001:4860:4860::8888]/hook"])(
-            "accepts the public IP literal %s without DNS",
-            async (raw) => {
-                const lookupMock = jest.spyOn(lookupOwner, "lookup").mockResolvedValue([])
-                const { client } = await build()
-
-                await expect(client.resolveTarget(raw, true)).resolves.toEqual(new URL(raw))
-                expect(lookupMock).not.toHaveBeenCalled()
-            },
-        )
-
-        it("accepts a hostname only after checking every resolved address", async () => {
+    it.each(["https://8.8.8.8/hook", "https://[2001:4860:4860::8888]/hook"])(
+        "accepts the public IP literal %s without DNS",
+        async (raw) => {
             const lookupMock = jest.spyOn(lookupOwner, "lookup").mockResolvedValue([])
             const { client } = await build()
-            lookupMock.mockResolvedValue([
-                { address: "8.8.8.8", family: 4 },
-                { address: "2001:4860:4860::8888", family: 6 },
-            ])
 
-            await expect(client.resolveTarget("  https://receiver.test:8443/hook?key=1  ", true)).resolves.toEqual(
-                new URL("https://receiver.test:8443/hook?key=1"),
-            )
-            expect(lookupMock).toHaveBeenCalledTimes(1)
-            expect(lookupMock).toHaveBeenCalledWith("receiver.test", { all: true })
-        })
-
-        it.each(["http://127.0.0.1/hook", "https://[::1]/hook"])("refuses the private IP literal %s", async (raw) => {
-            const lookupMock = jest.spyOn(lookupOwner, "lookup").mockResolvedValue([])
-            const { client } = await build()
-            const error: unknown = await client.resolveTarget(raw, true).catch((cause: unknown) => cause)
-
-            expect(error).toBeInstanceOf(WebhookDeliveryError)
-            expect(error).toHaveProperty("code", WebhookDeliveryErrorCode.TargetRefused)
-            expect(error).toHaveProperty("params", { reason: "private" })
+            await expect(client.resolveTarget(raw, true)).resolves.toEqual(new URL(raw))
             expect(lookupMock).not.toHaveBeenCalled()
+        },
+    )
+
+    it("accepts a hostname only after checking every resolved address", async () => {
+        const lookupMock = jest.spyOn(lookupOwner, "lookup").mockResolvedValue([])
+        const { client } = await build()
+        lookupMock.mockResolvedValue([
+            { address: "8.8.8.8", family: 4 },
+            { address: "2001:4860:4860::8888", family: 6 },
+        ])
+
+        await expect(client.resolveTarget("  https://receiver.test:8443/hook?key=1  ", true)).resolves.toEqual(
+            new URL("https://receiver.test:8443/hook?key=1"),
+        )
+        expect(lookupMock).toHaveBeenCalledTimes(1)
+        expect(lookupMock).toHaveBeenCalledWith("receiver.test", { all: true })
+    })
+
+    it.each(["http://127.0.0.1/hook", "https://[::1]/hook"])("refuses the private IP literal %s", async (raw) => {
+        const lookupMock = jest.spyOn(lookupOwner, "lookup").mockResolvedValue([])
+        const { client } = await build()
+        const error: unknown = await client.resolveTarget(raw, true).catch((cause: unknown) => cause)
+
+        expect(error).toBeInstanceOf(WebhookDeliveryError)
+        expect(error).toHaveProperty("code", WebhookDeliveryErrorCode.TargetRefused)
+        expect(error).toHaveProperty("params", { reason: "private" })
+        expect(lookupMock).not.toHaveBeenCalled()
+    })
+})
+
+describe("WebhookDeliveryClient resolveTarget", () => {
+    it("refuses a hostname when any resolved address is private", async () => {
+        const lookupMock = jest.spyOn(lookupOwner, "lookup").mockResolvedValue([])
+        const { client } = await build()
+        lookupMock.mockResolvedValue([
+            { address: "8.8.8.8", family: 4 },
+            { address: "10.0.0.1", family: 4 },
+        ])
+        const error: unknown = await client
+            .resolveTarget("https://receiver.test/hook", true)
+            .catch((cause: unknown) => cause)
+
+        expect(error).toBeInstanceOf(WebhookDeliveryError)
+        expect(error).toHaveProperty("code", WebhookDeliveryErrorCode.TargetRefused)
+        expect(error).toHaveProperty("params", { reason: "private" })
+        expect(lookupMock).toHaveBeenCalledWith("receiver.test", { all: true })
+    })
+
+    it.each(["empty answer", "lookup failure"])("refuses a host after %s", async (scenario) => {
+        const lookupMock = jest.spyOn(lookupOwner, "lookup").mockResolvedValue([])
+        const { client } = await build()
+        if (scenario === "empty answer") lookupMock.mockResolvedValue([])
+        else lookupMock.mockRejectedValue(new Error("DNS unavailable"))
+        const error: unknown = await client
+            .resolveTarget("https://missing.test/hook", true)
+            .catch((cause: unknown) => cause)
+
+        expect(error).toBeInstanceOf(WebhookDeliveryError)
+        expect(error).toHaveProperty("code", WebhookDeliveryErrorCode.TargetRefused)
+        expect(error).toHaveProperty("params", { reason: "host_not_found" })
+        expect(lookupMock).toHaveBeenCalledTimes(1)
+        expect(lookupMock).toHaveBeenCalledWith("missing.test", { all: true })
+    })
+})
+
+describe("WebhookDeliveryClient post", () => {
+    it.each([200, 299, 302, 503])("posts once and reports HTTP %i with the elapsed time", async (status) => {
+        const { client, clock, http } = await build()
+        http.request.mockImplementation(() => {
+            clock.advance(43)
+            return Promise.resolve({ status, body: "" })
         })
+        const url = new URL("https://receiver.test/hook")
+        const body = '{"event":"lead.created"}'
 
-        it("refuses a hostname when any resolved address is private", async () => {
-            const lookupMock = jest.spyOn(lookupOwner, "lookup").mockResolvedValue([])
-            const { client } = await build()
-            lookupMock.mockResolvedValue([
-                { address: "8.8.8.8", family: 4 },
-                { address: "10.0.0.1", family: 4 },
-            ])
-            const error: unknown = await client
-                .resolveTarget("https://receiver.test/hook", true)
-                .catch((cause: unknown) => cause)
-
-            expect(error).toBeInstanceOf(WebhookDeliveryError)
-            expect(error).toHaveProperty("code", WebhookDeliveryErrorCode.TargetRefused)
-            expect(error).toHaveProperty("params", { reason: "private" })
-            expect(lookupMock).toHaveBeenCalledWith("receiver.test", { all: true })
-        })
-
-        it.each(["empty answer", "lookup failure"])("refuses a host after %s", async (scenario) => {
-            const lookupMock = jest.spyOn(lookupOwner, "lookup").mockResolvedValue([])
-            const { client } = await build()
-            if (scenario === "empty answer") lookupMock.mockResolvedValue([])
-            else lookupMock.mockRejectedValue(new Error("DNS unavailable"))
-            const error: unknown = await client
-                .resolveTarget("https://missing.test/hook", true)
-                .catch((cause: unknown) => cause)
-
-            expect(error).toBeInstanceOf(WebhookDeliveryError)
-            expect(error).toHaveProperty("code", WebhookDeliveryErrorCode.TargetRefused)
-            expect(error).toHaveProperty("params", { reason: "host_not_found" })
-            expect(lookupMock).toHaveBeenCalledTimes(1)
-            expect(lookupMock).toHaveBeenCalledWith("missing.test", { all: true })
+        await expect(
+            client.post({ url, body, headers: { "x-nivo-event": "lead.created", "x-nivo-signature": "signed" } }),
+        ).resolves.toEqual({ status, failure: null, durationMs: 43 })
+        expect(http.request).toHaveBeenCalledTimes(1)
+        expect(http.request).toHaveBeenCalledWith({
+            method: "POST",
+            url: url.href,
+            redirect: "manual",
+            timeoutMs: 4000,
+            headers: {
+                "content-type": "application/json",
+                "x-nivo-event": "lead.created",
+                "x-nivo-signature": "signed",
+            },
+            bytes: Buffer.from(body),
+            read: "text",
         })
     })
 
-    describe("post", () => {
-        it.each([200, 299, 302, 503])("posts once and reports HTTP %i with the elapsed time", async (status) => {
-            const { client, clock, http } = await build()
-            http.request.mockImplementation(() => {
-                clock.advance(43)
-                return Promise.resolve({ status, body: "" })
-            })
-            const url = new URL("https://receiver.test/hook")
-            const body = '{"event":"lead.created"}'
+    it("lets the supplied headers override the default JSON content type", async () => {
+        const { client, http } = await build()
+        http.request.mockResolvedValue({ status: 204, body: "" })
+        const url = new URL("https://receiver.test/hook")
+        const body = "{}"
 
-            await expect(
-                client.post({ url, body, headers: { "x-nivo-event": "lead.created", "x-nivo-signature": "signed" } }),
-            ).resolves.toEqual({ status, failure: null, durationMs: 43 })
-            expect(http.request).toHaveBeenCalledTimes(1)
-            expect(http.request).toHaveBeenCalledWith({
-                method: "POST",
-                url: url.href,
-                redirect: "manual",
-                timeoutMs: 4000,
-                headers: {
-                    "content-type": "application/json",
-                    "x-nivo-event": "lead.created",
-                    "x-nivo-signature": "signed",
-                },
-                bytes: Buffer.from(body),
-                read: "text",
-            })
+        await expect(
+            client.post({ url, body, headers: { "content-type": "application/custom+json" } }),
+        ).resolves.toEqual({ status: 204, failure: null, durationMs: 0 })
+        expect(http.request).toHaveBeenCalledTimes(1)
+        expect(http.request).toHaveBeenCalledWith({
+            method: "POST",
+            url: url.href,
+            redirect: "manual",
+            timeoutMs: 4000,
+            headers: { "content-type": "application/custom+json" },
+            bytes: Buffer.from(body),
+            read: "text",
         })
+    })
+})
 
-        it("lets the supplied headers override the default JSON content type", async () => {
-            const { client, http } = await build()
-            http.request.mockResolvedValue({ status: 204, body: "" })
-            const url = new URL("https://receiver.test/hook")
-            const body = "{}"
-
-            await expect(
-                client.post({ url, body, headers: { "content-type": "application/custom+json" } }),
-            ).resolves.toEqual({ status: 204, failure: null, durationMs: 0 })
-            expect(http.request).toHaveBeenCalledTimes(1)
-            expect(http.request).toHaveBeenCalledWith({
-                method: "POST",
-                url: url.href,
-                redirect: "manual",
-                timeoutMs: 4000,
-                headers: { "content-type": "application/custom+json" },
-                bytes: Buffer.from(body),
-                read: "text",
-            })
+describe("WebhookDeliveryClient post", () => {
+    it.each([
+        { cause: new HttpError({ code: HttpErrorCode.Timeout }), failure: "timeout" },
+        { cause: new HttpError({ code: HttpErrorCode.Network }), failure: "unreachable" },
+        { cause: new HttpError({ code: HttpErrorCode.BodyUnreadable }), failure: "unreachable" },
+        { cause: Object.assign(new Error("deadline"), { name: "TimeoutError" }), failure: "unreachable" },
+        { cause: Object.assign(new Error("aborted"), { name: "AbortError" }), failure: "unreachable" },
+        { cause: new Error("connection refused"), failure: "unreachable" },
+        { cause: "offline", failure: "unreachable" },
+        { cause: null, failure: "unreachable" },
+    ])("reports $failure for $cause and preserves elapsed time", async ({ cause, failure }) => {
+        const { client, clock, http } = await build()
+        http.request.mockImplementation(() => {
+            clock.advance(71)
+            return Promise.reject(cause)
         })
+        const url = new URL("https://receiver.test/hook")
+        const body = "{}"
 
-        it.each([
-            { cause: new HttpError({ code: HttpErrorCode.Timeout }), failure: "timeout" },
-            { cause: new HttpError({ code: HttpErrorCode.Network }), failure: "unreachable" },
-            { cause: new HttpError({ code: HttpErrorCode.BodyUnreadable }), failure: "unreachable" },
-            { cause: Object.assign(new Error("deadline"), { name: "TimeoutError" }), failure: "unreachable" },
-            { cause: Object.assign(new Error("aborted"), { name: "AbortError" }), failure: "unreachable" },
-            { cause: new Error("connection refused"), failure: "unreachable" },
-            { cause: "offline", failure: "unreachable" },
-            { cause: null, failure: "unreachable" },
-        ])("reports $failure for $cause and preserves elapsed time", async ({ cause, failure }) => {
-            const { client, clock, http } = await build()
-            http.request.mockImplementation(() => {
-                clock.advance(71)
-                return Promise.reject(cause)
-            })
-            const url = new URL("https://receiver.test/hook")
-            const body = "{}"
-
-            await expect(client.post({ url, body, headers: {} })).resolves.toEqual({
-                status: null,
-                failure,
-                durationMs: 71,
-            })
-            expect(http.request).toHaveBeenCalledTimes(1)
-            expect(http.request).toHaveBeenCalledWith({
-                method: "POST",
-                url: url.href,
-                redirect: "manual",
-                timeoutMs: 4000,
-                headers: { "content-type": "application/json" },
-                bytes: Buffer.from(body),
-                read: "text",
-            })
+        await expect(client.post({ url, body, headers: {} })).resolves.toEqual({
+            status: null,
+            failure,
+            durationMs: 71,
+        })
+        expect(http.request).toHaveBeenCalledTimes(1)
+        expect(http.request).toHaveBeenCalledWith({
+            method: "POST",
+            url: url.href,
+            redirect: "manual",
+            timeoutMs: 4000,
+            headers: { "content-type": "application/json" },
+            bytes: Buffer.from(body),
+            read: "text",
         })
     })
 })

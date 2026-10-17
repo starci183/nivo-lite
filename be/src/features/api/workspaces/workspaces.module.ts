@@ -16,6 +16,7 @@ import { ResendInviteHandler } from "./application/resend-invite.handler"
 import { RevokeInviteHandler } from "./application/revoke-invite.handler"
 import { SaveStaffHandler } from "./application/save-staff.handler"
 import { SetMemberStatusHandler } from "./application/set-member-status.handler"
+import { ConfigurableModuleClass } from "./workspaces.module-definition"
 
 @Module({
     providers: [
@@ -39,4 +40,4 @@ import { SetMemberStatusHandler } from "./application/set-member-status.handler"
     ],
 })
 /** The workspaces feature: the handlers of its application. */
-export class WorkspacesApiModule {}
+export class WorkspacesApiModule extends ConfigurableModuleClass {}

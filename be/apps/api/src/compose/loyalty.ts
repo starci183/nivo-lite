@@ -1,4 +1,4 @@
-import type { ModuleMetadata } from "@nestjs/common"
+import type { DynamicModule } from "@nestjs/common"
 import { BookingGraphqlModule } from "@features/api/booking"
 import { LoyaltyGraphqlModule } from "@features/api/loyalty"
 import { LoyaltyTillHttpModule } from "@features/api/loyalty-till"
@@ -14,7 +14,7 @@ import { LoyaltyRewardsModule } from "@modules/domain/loyalty-rewards"
 import { LoyaltyCodeDeliveryService, LoyaltyModule } from "@modules/domain/loyalty"
 import type { ApiOptions } from "../api.options"
 /** The loyalty area of the API, in registration order. */
-export const loyaltyModules = (options: ApiOptions): NonNullable<ModuleMetadata["imports"]> => [
+export const loyaltyModules = (options: ApiOptions): Array<DynamicModule> => [
     LoyaltyProgramsModule.register({ isGlobal: true }),
     LoyaltyCustomersModule.register({ isGlobal: true }),
     LoyaltyCustomerLinksModule.register({ isGlobal: true }),
@@ -23,9 +23,9 @@ export const loyaltyModules = (options: ApiOptions): NonNullable<ModuleMetadata[
     LoyaltyCampaignsModule.register({ isGlobal: true }),
     LoyaltyOtpsModule.register({ isGlobal: true, ...options.loyaltyOtps }),
     LoyaltyModule.register({ isGlobal: true, delivery: LoyaltyCodeDeliveryService }),
-    PublicBookingGraphqlModule,
-    BookingGraphqlModule,
-    PublicLoyaltyGraphqlModule,
-    LoyaltyGraphqlModule,
-    LoyaltyTillHttpModule,
+    PublicBookingGraphqlModule.register({}),
+    BookingGraphqlModule.register({}),
+    PublicLoyaltyGraphqlModule.register({}),
+    LoyaltyGraphqlModule.register({}),
+    LoyaltyTillHttpModule.register({}),
 ]

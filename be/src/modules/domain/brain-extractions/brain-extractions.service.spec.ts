@@ -111,7 +111,9 @@ describe("BrainExtractionsService", () => {
             await expect(service.get(WS, "s1")).resolves.toBeNull()
         })
     })
+})
 
+describe("BrainExtractionsService", () => {
     describe("start", () => {
         it("starts the reading with a copy of its orphan facts", async () => {
             const em = mockEntityManager({ query: [UPSERT_EXTRACTION, []] })
@@ -179,7 +181,9 @@ describe("BrainExtractionsService", () => {
             expect(em.query).toHaveBeenCalledWith(SAVE_PROGRESS, [WS, "s1", "running", 4, 9, 5, null, 0])
         })
     })
+})
 
+describe("BrainExtractionsService", () => {
     describe("finish", () => {
         it("closes the reading with the model that read it", async () => {
             const em = mockEntityManager({ query: [FINISH_EXTRACTION, []] })

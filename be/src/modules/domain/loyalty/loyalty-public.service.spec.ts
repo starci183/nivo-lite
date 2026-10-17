@@ -152,7 +152,9 @@ describe("LoyaltyPublicService", () => {
             })
         })
     })
+})
 
+describe("LoyaltyPublicService", () => {
     describe("requestCode", () => {
         const request = { slug: "spa", phone: "0912 345 678" }
 
@@ -177,18 +179,22 @@ describe("LoyaltyPublicService", () => {
             expect(otps.discard).toHaveBeenCalledWith("o1")
         })
 
-        it("answers the same and sends nothing for a phone that is no customer, a customer asked too often or a customer without a push chat", async () => {
-            const stranger = await build({ customer: null })
-            const often = await build({ customerCodes: 3 })
-            const none = await build({ target: null })
-            const noChannel = await build({ target: { id: "v1", channel: null } })
-            const website = await build({ target: { id: "v1", channel: "website" } })
+        it(
+            "answers the same and sends nothing for a phone that is no customer, a customer asked too often " +
+                "or a customer without a push chat",
+            async () => {
+                const stranger = await build({ customer: null })
+                const often = await build({ customerCodes: 3 })
+                const none = await build({ target: null })
+                const noChannel = await build({ target: { id: "v1", channel: null } })
+                const website = await build({ target: { id: "v1", channel: "website" } })
 
-            for (const world of [stranger, often, none, noChannel, website]) {
-                await expect(world.service.requestCode(request)).resolves.toEqual({ ok: true, code: "none" })
-                expect(world.delivery.send).not.toHaveBeenCalled()
-            }
-        })
+                for (const world of [stranger, often, none, noChannel, website]) {
+                    await expect(world.service.requestCode(request)).resolves.toEqual({ ok: true, code: "none" })
+                    expect(world.delivery.send).not.toHaveBeenCalled()
+                }
+            },
+        )
 
         it("refuses a phone that is not a number, a page that is gone and a busy workspace", async () => {
             const { service } = await build()
@@ -203,7 +209,9 @@ describe("LoyaltyPublicService", () => {
             await expect(busy.service.requestCode(request)).resolves.toEqual({ ok: false, code: "busy" })
         })
     })
+})
 
+describe("LoyaltyPublicService", () => {
     describe("verifyCode", () => {
         const verify = { slug: "spa", phone: "0912 345 678", typed: "123 456" }
 

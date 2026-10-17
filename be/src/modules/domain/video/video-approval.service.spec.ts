@@ -151,7 +151,11 @@ describe("VideoApprovalService", () => {
             await expect(service.approve("person-1", "workspace-1", "project-1")).resolves.toBe(project)
             expect(engine.runWork).not.toHaveBeenCalled()
         })
+    })
+})
 
+describe("VideoApprovalService", () => {
+    describe("approve", () => {
         it.each([
             ["a draft", projectOf({ status: "draft" })],
             ["a project with no render", projectOf({ render: null })],

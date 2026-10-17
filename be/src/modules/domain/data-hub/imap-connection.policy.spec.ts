@@ -1,3 +1,5 @@
+import type * as SubjectModule from "./imap-connection.policy"
+import { Test } from "@nestjs/testing"
 import type { ImapInput } from "./imap-connection.contracts"
 import {
     credentialFromInput,
@@ -10,6 +12,31 @@ import {
 } from "./imap-connection.policy"
 import { DataHubErrorCode } from "./errors/data-hub.error"
 import { IMAP_CONNECTION_TEXT, imapSummary } from "./messages/imap-connection.messages"
+
+const SUBJECT = Symbol("imap-connection.policy")
+type Subject = Pick<
+    typeof SubjectModule,
+    "parseCredential" | "parseConfig" | "credentialFromInput" | "settingsFromInput" | "metaFromSettings" | "cursorKey"
+>
+
+const buildSubject = async () => {
+    const moduleRef = await Test.createTestingModule({
+        providers: [
+            {
+                provide: SUBJECT,
+                useValue: {
+                    parseCredential,
+                    parseConfig,
+                    credentialFromInput,
+                    settingsFromInput,
+                    metaFromSettings,
+                    cursorKey,
+                },
+            },
+        ],
+    }).compile()
+    return moduleRef.get<Subject>(SUBJECT)
+}
 
 const input: ImapInput = {
     name: " Support mailbox ",
@@ -34,8 +61,10 @@ const refused = async (run: () => unknown, detail: string): Promise<void> => {
 describe("parseCredential", () => {
     it.each([undefined, true, false])(
         "reads the credential and treats secure=%s as an explicit opt-out only",
-        (secure) => {
-            expect(parseCredential(JSON.stringify({ ...credential, secure }))).toEqual({
+        async (secure) => {
+            const subject = await buildSubject()
+
+            expect(subject.parseCredential(JSON.stringify({ ...credential, secure }))).toEqual({
                 ...credential,
                 secure: secure !== false,
             })
@@ -43,14 +72,18 @@ describe("parseCredential", () => {
     )
 
     it.each(["broken", "null", "42", '"credential"', "[]", "{}"])("refuses unusable JSON %s", async (raw) => {
-        await refused(() => parseCredential(raw), IMAP_CONNECTION_TEXT.credentialMissing)
+        const subject = await buildSubject()
+
+        await refused(() => subject.parseCredential(raw), IMAP_CONNECTION_TEXT.credentialMissing)
     })
 
     it.each([{ host: 1 }, { user: null }, { password: false }, { port: "993" }])(
         "refuses a credential with an invalid required field %j",
         async (change) => {
+            const subject = await buildSubject()
+
             await refused(
-                () => parseCredential(JSON.stringify({ ...credential, ...change })),
+                () => subject.parseCredential(JSON.stringify({ ...credential, ...change })),
                 IMAP_CONNECTION_TEXT.credentialMissing,
             )
         },
@@ -58,19 +91,28 @@ describe("parseCredential", () => {
 })
 
 describe("parseConfig", () => {
-    it.each(["broken", "null", "42"])("uses the INBOX fallback for non-object JSON %s", (config) => {
-        expect(parseConfig({ config })).toEqual({ folders: ["INBOX"], sinceDays: 30 })
+    it.each(["broken", "null", "42"])("uses the INBOX fallback for non-object JSON %s", async (config) => {
+        const subject = await buildSubject()
+
+        expect(subject.parseConfig({ config })).toEqual({ folders: ["INBOX"], sinceDays: 30 })
     })
 
-    it("keeps an empty folder list when configuration is absent or its folders are not an array", () => {
-        expect(parseConfig({})).toEqual({ folders: [], sinceDays: 30 })
-        expect(parseConfig({ config: '{"folders":"INBOX","sinceDays":"7"}' })).toEqual({ folders: [], sinceDays: 30 })
+    it("keeps an empty folder list when configuration is absent or its folders are not an array", async () => {
+        const subject = await buildSubject()
+
+        expect(subject.parseConfig({})).toEqual({ folders: [], sinceDays: 30 })
+        expect(subject.parseConfig({ config: '{"folders":"INBOX","sinceDays":"7"}' })).toEqual({
+            folders: [],
+            sinceDays: 30,
+        })
     })
 
-    it("filters invalid folder entries and keeps only the first twenty accepted paths", () => {
+    it("filters invalid folder entries and keeps only the first twenty accepted paths", async () => {
+        const subject = await buildSubject()
+
         const folders = Array.from({ length: 22 }, (_unused, index) => `Folder ${index}`)
         expect(
-            parseConfig({
+            subject.parseConfig({
                 config: JSON.stringify({
                     folders: [null, 1, "", "x".repeat(201), "x".repeat(200), ...folders],
                     sinceDays: 60,
@@ -79,8 +121,10 @@ describe("parseConfig", () => {
         ).toEqual({ folders: ["x".repeat(200), ...folders.slice(0, 19)], sinceDays: 30 })
     })
 
-    it.each([7, 30, 90])("keeps an accepted look-back of %s days", (sinceDays) => {
-        expect(parseConfig({ config: JSON.stringify({ folders: ["INBOX"], sinceDays }) })).toEqual({
+    it.each([7, 30, 90])("keeps an accepted look-back of %s days", async (sinceDays) => {
+        const subject = await buildSubject()
+
+        expect(subject.parseConfig({ config: JSON.stringify({ folders: ["INBOX"], sinceDays }) })).toEqual({
             folders: ["INBOX"],
             sinceDays,
         })
@@ -88,8 +132,10 @@ describe("parseConfig", () => {
 })
 
 describe("credentialFromInput", () => {
-    it("trims host and user while keeping the typed password and implicit TLS", () => {
-        expect(credentialFromInput(input, "stored-password")).toEqual({
+    it("trims host and user while keeping the typed password and implicit TLS", async () => {
+        const subject = await buildSubject()
+
+        expect(subject.credentialFromInput(input, "stored-password")).toEqual({
             host: "imap.example.com",
             port: 993,
             secure: true,
@@ -98,9 +144,11 @@ describe("credentialFromInput", () => {
         })
     })
 
-    it("reuses a saved password and selects STARTTLS", () => {
+    it("reuses a saved password and selects STARTTLS", async () => {
+        const subject = await buildSubject()
+
         expect(
-            credentialFromInput({ ...input, password: "", security: "starttls", port: 143 }, "stored-password"),
+            subject.credentialFromInput({ ...input, password: "", security: "starttls", port: 143 }, "stored-password"),
         ).toEqual({
             host: "imap.example.com",
             port: 143,
@@ -111,33 +159,49 @@ describe("credentialFromInput", () => {
     })
 
     it.each([" ", "x".repeat(254), "mail server", "mail/server"])("refuses the invalid host %s", async (host) => {
-        await refused(() => credentialFromInput({ ...input, host }, null), IMAP_CONNECTION_TEXT.hostInvalid)
+        const subject = await buildSubject()
+
+        await refused(() => subject.credentialFromInput({ ...input, host }, null), IMAP_CONNECTION_TEXT.hostInvalid)
     })
 
     it.each([1.5, 0, 65_536])("refuses the invalid port %s", async (port) => {
-        await refused(() => credentialFromInput({ ...input, port }, null), IMAP_CONNECTION_TEXT.portInvalid)
+        const subject = await buildSubject()
+
+        await refused(() => subject.credentialFromInput({ ...input, port }, null), IMAP_CONNECTION_TEXT.portInvalid)
     })
 
     it("refuses an unsupported security mode", async () => {
+        const subject = await buildSubject()
+
         await refused(
-            () => credentialFromInput({ ...input, security: "plain" }, null),
+            () => subject.credentialFromInput({ ...input, security: "plain" }, null),
             IMAP_CONNECTION_TEXT.securityInvalid,
         )
     })
 
     it.each([" ", "x".repeat(321)])("refuses the invalid login name %s", async (user) => {
-        await refused(() => credentialFromInput({ ...input, user }, null), IMAP_CONNECTION_TEXT.userMissing)
+        const subject = await buildSubject()
+
+        await refused(() => subject.credentialFromInput({ ...input, user }, null), IMAP_CONNECTION_TEXT.userMissing)
     })
 
     it.each([null, ""])("refuses a blank typed password when its saved value is %s", async (savedPassword) => {
+        const subject = await buildSubject()
+
         await refused(
-            () => credentialFromInput({ ...input, password: "" }, savedPassword),
+            () => subject.credentialFromInput({ ...input, password: "" }, savedPassword),
             IMAP_CONNECTION_TEXT.passwordMissing,
         )
     })
+})
 
-    it.each([1, 65_535])("accepts the port boundary %s and maximum host and user lengths", (port) => {
-        expect(credentialFromInput({ ...input, host: "x".repeat(253), user: "x".repeat(320), port }, null)).toEqual({
+describe("credentialFromInput", () => {
+    it.each([1, 65_535])("accepts the port boundary %s and maximum host and user lengths", async (port) => {
+        const subject = await buildSubject()
+
+        expect(
+            subject.credentialFromInput({ ...input, host: "x".repeat(253), user: "x".repeat(320), port }, null),
+        ).toEqual({
             host: "x".repeat(253),
             port,
             secure: true,
@@ -148,8 +212,10 @@ describe("credentialFromInput", () => {
 })
 
 describe("settingsFromInput", () => {
-    it("trims the name and email and keeps selected settings", () => {
-        expect(settingsFromInput(input)).toEqual({
+    it("trims the name and email and keeps selected settings", async () => {
+        const subject = await buildSubject()
+
+        expect(subject.settingsFromInput(input)).toEqual({
             name: "Support mailbox",
             email: "support@example.com",
             folders: ["INBOX", "Sent"],
@@ -159,8 +225,10 @@ describe("settingsFromInput", () => {
         expect(SINCE_CHOICES).toEqual([7, 30, 90])
     })
 
-    it.each([null, undefined])("defaults the look-back and manual schedule from %s", (unset) => {
-        expect(settingsFromInput({ ...input, sinceDays: unset, syncEveryMinutes: unset })).toEqual({
+    it.each([null, undefined])("defaults the look-back and manual schedule from %s", async (unset) => {
+        const subject = await buildSubject()
+
+        expect(subject.settingsFromInput({ ...input, sinceDays: unset, syncEveryMinutes: unset })).toEqual({
             name: "Support mailbox",
             email: "support@example.com",
             folders: ["INBOX", "Sent"],
@@ -169,10 +237,12 @@ describe("settingsFromInput", () => {
         })
     })
 
-    it("filters and deduplicates folders before limiting to twenty and accepts boundary name/email lengths", () => {
+    it("filters and deduplicates folders before limiting to twenty and accepts boundary name/email lengths", async () => {
+        const subject = await buildSubject()
+
         const folders = Array.from({ length: 21 }, (_unused, index) => `Folder ${index}`)
         expect(
-            settingsFromInput({
+            subject.settingsFromInput({
                 ...input,
                 name: "x".repeat(80),
                 email: "x".repeat(320),
@@ -188,30 +258,50 @@ describe("settingsFromInput", () => {
     })
 
     it.each([" ", "x".repeat(81)])("refuses the invalid name %s", async (name) => {
-        await refused(() => settingsFromInput({ ...input, name }), IMAP_CONNECTION_TEXT.nameInvalid)
+        const subject = await buildSubject()
+
+        await refused(() => subject.settingsFromInput({ ...input, name }), IMAP_CONNECTION_TEXT.nameInvalid)
     })
 
     it("refuses an oversized email", async () => {
-        await refused(() => settingsFromInput({ ...input, email: "x".repeat(321) }), IMAP_CONNECTION_TEXT.emailTooLong)
-    })
+        const subject = await buildSubject()
 
+        await refused(
+            () => subject.settingsFromInput({ ...input, email: "x".repeat(321) }),
+            IMAP_CONNECTION_TEXT.emailTooLong,
+        )
+    })
+})
+
+describe("settingsFromInput", () => {
     it.each([{ folders: undefined }, { folders: null }, { folders: [] }, { folders: ["", "x".repeat(201)] }])(
         "refuses absent usable folders $folders",
         async ({ folders }) => {
-            await refused(() => settingsFromInput({ ...input, folders }), IMAP_CONNECTION_TEXT.folderMissing)
+            const subject = await buildSubject()
+
+            await refused(() => subject.settingsFromInput({ ...input, folders }), IMAP_CONNECTION_TEXT.folderMissing)
         },
     )
 
     it("refuses unsupported look-back and schedule values", async () => {
-        await refused(() => settingsFromInput({ ...input, sinceDays: 60 }), IMAP_CONNECTION_TEXT.sinceInvalid)
-        await refused(() => settingsFromInput({ ...input, syncEveryMinutes: 30 }), IMAP_CONNECTION_TEXT.everyInvalid)
-    })
+        const subject = await buildSubject()
 
+        await refused(() => subject.settingsFromInput({ ...input, sinceDays: 60 }), IMAP_CONNECTION_TEXT.sinceInvalid)
+        await refused(
+            () => subject.settingsFromInput({ ...input, syncEveryMinutes: 30 }),
+            IMAP_CONNECTION_TEXT.everyInvalid,
+        )
+    })
+})
+
+describe("settingsFromInput", () => {
     it.each([
         [30, 15],
         [90, 360],
-    ])("accepts a look-back of %s days and schedule of %s minutes", (sinceDays, syncEveryMinutes) => {
-        expect(settingsFromInput({ ...input, sinceDays, syncEveryMinutes })).toEqual({
+    ])("accepts a look-back of %s days and schedule of %s minutes", async (sinceDays, syncEveryMinutes) => {
+        const subject = await buildSubject()
+
+        expect(subject.settingsFromInput({ ...input, sinceDays, syncEveryMinutes })).toEqual({
             name: "Support mailbox",
             email: "support@example.com",
             folders: ["INBOX", "Sent"],
@@ -225,9 +315,17 @@ describe("mailbox metadata", () => {
     it.each([
         { folders: ["INBOX", "Sent"], shown: "INBOX, Sent" },
         { folders: ["INBOX", "Sent", "Archive", "Spam"], shown: "INBOX, Sent +2" },
-    ])("stores the full configuration and a concise summary for $shown", ({ folders, shown }) => {
+    ])("stores the full configuration and a concise summary for $shown", async ({ folders, shown }) => {
+        const subject = await buildSubject()
+
         expect(
-            metaFromSettings({ name: "Mailbox", email: "owner@example.com", folders, sinceDays: 90, every: null }),
+            subject.metaFromSettings({
+                name: "Mailbox",
+                email: "owner@example.com",
+                folders,
+                sinceDays: 90,
+                every: null,
+            }),
         ).toEqual({
             config: JSON.stringify({ folders, sinceDays: 90 }),
             summary: imapSummary(shown, 90),
@@ -235,7 +333,9 @@ describe("mailbox metadata", () => {
         })
     })
 
-    it("keeps the folder path intact in its cursor key", () => {
-        expect(cursorKey("Sent/2026")).toBe("cursor:Sent/2026")
+    it("keeps the folder path intact in its cursor key", async () => {
+        const subject = await buildSubject()
+
+        expect(subject.cursorKey("Sent/2026")).toBe("cursor:Sent/2026")
     })
 })

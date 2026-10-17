@@ -10,7 +10,7 @@ import { MESSAGE_CATALOG } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
 import { BookingEffectsService } from "./booking-effects.service"
 import { BookingModelService } from "./booking-model.service"
-import type { BookingNotice, BookingNotifier } from "./booking-notice.contracts"
+import type { BookingNotifier } from "./booking-notice.contracts"
 import { BookingNoticesService } from "./booking-notices.service"
 import type { BookingEffects, BookingEvent, BookingSettings } from "./bookings.contracts"
 import { BOOKINGS_NOTIFIER } from "./bookings.decorators"
@@ -21,14 +21,15 @@ import {
     SET_BOOKING_FEE,
 } from "./persistence/booking-effects.sql"
 import { DEFAULT_SETTINGS } from "./persistence/booking.rows"
-import type { EffectsRow } from "./persistence/booking.rows"
-import type { NoticeFacts } from "./policies/booking-notice-text.policy"
+
+import { noticeOf, FACTS, rowOf, evidenceOf } from "@tests/fixtures/builders/booking-effects.builder"
 
 const WORKSPACE = "ws-1"
 const BOOKING_ID = "b1"
 const NOW = Date.UTC(2026, 9, 14, 5)
 const START = Date.UTC(2026, 9, 15, 2, 30)
 const HOUR = 3_600_000
+
 const CLAIMED = [CLAIM_EFFECT, [{ id: BOOKING_ID }]] as const
 const ALREADY_CLAIMED = [CLAIM_EFFECT, []] as const
 const SELECTED = [SELECT_BOOKING_FOR_EFFECTS, [WORKSPACE, BOOKING_ID]] as const
@@ -38,59 +39,7 @@ const NO_EFFECTS: BookingEffects = { found: false, reminders: "none", feeVnd: 0,
 const effectsOf = builder<BookingEffects>({ ...NO_EFFECTS, found: true })
 const eventOf = builder<BookingEvent>({ workspaceId: WORKSPACE, bookingId: BOOKING_ID, kind: "status" })
 const settingsOf = builder<BookingSettings>(DEFAULT_SETTINGS)
-const evidenceOf = builder<Parameters<EventsService["record"]>[0]>({
-    workspaceId: WORKSPACE,
-    kind: "booking.done",
-    actor: "vi:bookings.evidence.actor:{}",
-    summary: 'vi:bookings.evidence.done:{"service":"Cut","customer":"Mai"}',
-    leadId: "lead-1",
-})
-const noticeOf = builder<BookingNotice>({
-    workspaceId: WORKSPACE,
-    bookingId: BOOKING_ID,
-    kind: "confirmed",
-    leadId: "lead-1",
-    conversationId: "conversation-1",
-    email: "mai@example.com",
-    subject: "Notice subject",
-    text: "Notice text",
-    dedupeKey: `${BOOKING_ID}:notice:confirmed`,
-})
-const FACTS: NoticeFacts = {
-    shop: "Shop",
-    customer: "Mai",
-    service: "Cut",
-    resource: "An",
-    startMs: START,
-    timezone: "Asia/Ho_Chi_Minh",
-    address: "1 Main Street",
-    depositVnd: 50_000,
-    cancelWindowHours: 24,
-    fromMs: null,
-    feeVnd: 0,
-}
-const rowOf = builder<EffectsRow>({
-    id: BOOKING_ID,
-    workspace_id: WORKSPACE,
-    status: "confirmed",
-    lead_id: "lead-1",
-    conversation_id: "conversation-1",
-    customer_name: "Mai",
-    customer_phone: "84912345678",
-    customer_email: "mai@example.com",
-    origin: "live",
-    cancel_reason: null,
-    reschedule_count: 0,
-    service_name: "Cut",
-    price_vnd: 200000,
-    cancel_fee_vnd: 0,
-    start_ms: START,
-    cancelled_ms: null,
-    resource_name: "An",
-    deposit_vnd: 50_000,
-    from_ms: null,
-    holds_slot: true,
-})
+
 const build = async (stubs: ReadonlyArray<readonly [string, unknown]> = [], settings = settingsOf()) => {
     const tx = fakeTransaction(mockEntityManager({ query: stubs }))
     const models = mock<BookingModelService>()
@@ -181,7 +130,9 @@ describe("BookingEffectsService", () => {
         expect(messages.get).not.toHaveBeenCalled()
         expect(inbound.handOffOrder).not.toHaveBeenCalled()
     })
+})
 
+describe("BookingEffectsService", () => {
     it.each([
         ["confirmed", "status", 0, "Asia/Ho_Chi_Minh", [24, 2], "confirmed", "notice:confirmed", true],
         ["rescheduled", "moved", 3, "UTC", [12, 1], "moved", "notice:moved:3", false],
@@ -229,7 +180,9 @@ describe("BookingEffectsService", () => {
         expect(events.record).not.toHaveBeenCalled()
         expect(inbound.handOffOrder).not.toHaveBeenCalled()
     })
+})
 
+describe("BookingEffectsService", () => {
     it("releases a failed notice claim before retrying a rejected delivery", async () => {
         const { service, tx, notifier } = await build([
             [SELECT_BOOKING_FOR_EFFECTS, [rowOf()]],
@@ -295,7 +248,9 @@ describe("BookingEffectsService", () => {
         ])
         expect(tx.em.query.mock.calls).toEqual([SELECTED, claimOf("notice:confirmed")])
     })
+})
 
+describe("BookingEffectsService", () => {
     it.each([true, false])("skips an already claimed notice when conversation exists=%s", async (conversation) => {
         const { service, tx, reminders, notifier, messages, notices } = await build([
             [SELECT_BOOKING_FOR_EFFECTS, [rowOf({ conversation_id: conversation ? "conversation-1" : null })]],
@@ -312,7 +267,9 @@ describe("BookingEffectsService", () => {
         expect(notices.textOf).not.toHaveBeenCalled()
         expect(notices.subjectOf).not.toHaveBeenCalled()
     })
+})
 
+describe("BookingEffectsService", () => {
     it.each([
         { status: "cancelled", fee: 74000, recorded: 74000, previous: 0, changed: true },
         { status: "no_show", fee: 35000, recorded: 35000, previous: 0, changed: true },
@@ -383,7 +340,9 @@ describe("BookingEffectsService", () => {
         }
         expect(inbound.handOffOrder).not.toHaveBeenCalled()
     })
+})
 
+describe("BookingEffectsService", () => {
     it("records evidence once when the closed booking event is repeated", async () => {
         const { service, tx, reminders, events, messages } = await build([
             [SELECT_BOOKING_FOR_EFFECTS, [rowOf({ status: "done", conversation_id: null, lead_id: null })]],
@@ -428,7 +387,9 @@ describe("BookingEffectsService", () => {
             [noticeOf({ kind: "cancelled", dedupeKey: `${BOOKING_ID}:notice:cancelled` })],
         ])
     })
+})
 
+describe("BookingEffectsService", () => {
     it.each([
         { phone: "84912345678", email: "mai@example.com", contact: "84912345678", handedOff: true },
         { phone: null, email: "mai@example.com", contact: "mai@example.com", handedOff: false },

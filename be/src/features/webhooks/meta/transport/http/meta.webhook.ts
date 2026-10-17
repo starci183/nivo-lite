@@ -3,7 +3,7 @@ import type { RawBodyRequest } from "@nestjs/common"
 import type { Request } from "express"
 import { Public, PublicReason } from "@modules/domain/identity"
 import { MetaConnectionsService } from "@modules/domain/meta-connections"
-import { MetaInboxService } from "@modules/domain/meta-inbox"
+import { MetaInboxService, MetaWebhookVerifierService } from "@modules/domain/meta-inbox"
 import { RateLimit, RateTier } from "@modules/platform/http-security"
 import { MetaChallengeRequest } from "./dto/meta-challenge.request"
 
@@ -12,6 +12,7 @@ import { MetaChallengeRequest } from "./dto/meta-challenge.request"
 export class MetaWebhook {
     constructor(
         private readonly inbox: MetaInboxService,
+        private readonly signature: MetaWebhookVerifierService,
         private readonly verifier: MetaConnectionsService,
     ) {}
 
@@ -34,6 +35,7 @@ export class MetaWebhook {
         @Req() request: RawBodyRequest<Request>,
         @Headers("x-hub-signature-256") signature: string | undefined,
     ): Promise<void> {
+        this.signature.verify(request.rawBody, signature)
         await this.inbox.accept(request.rawBody, signature)
     }
 }

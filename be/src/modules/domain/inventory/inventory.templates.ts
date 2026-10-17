@@ -1,10 +1,10 @@
 import { InventoryError, InventoryErrorCode } from "./errors/inventory.error"
 import type { InventoryTemplateInfo } from "./inventory-workbench.contracts"
 import type { ApplyStarterParams } from "./inventory-operations.contracts"
-import { BUILDING_TEMPLATE } from "./messages/inventory-template-building.messages"
-import { CAFE_TEMPLATE } from "./messages/inventory-template-cafe.messages"
-import { RETAIL_TEMPLATE } from "./messages/inventory-template-retail.messages"
-import { SPA_TEMPLATE } from "./messages/inventory-template-spa.messages"
+import { buildingTemplate } from "./messages/inventory-template-building.messages"
+import { cafeTemplate } from "./messages/inventory-template-cafe.messages"
+import { retailTemplate } from "./messages/inventory-template-retail.messages"
+import { spaTemplate } from "./messages/inventory-template-spa.messages"
 
 /** One starter set: the label the chooser shows and the payload the apply call loads. */
 export interface InventoryTemplate extends InventoryTemplateInfo {
@@ -14,10 +14,10 @@ export interface InventoryTemplate extends InventoryTemplateInfo {
 
 /** Every starter set a business can pick. */
 export const INVENTORY_TEMPLATES: ReadonlyArray<InventoryTemplate> = [
-    CAFE_TEMPLATE,
-    RETAIL_TEMPLATE,
-    BUILDING_TEMPLATE,
-    SPA_TEMPLATE,
+    cafeTemplate(),
+    retailTemplate(),
+    buildingTemplate(),
+    spaTemplate(),
 ]
 
 /** The starter payload of one key; an unknown key is invalid. */

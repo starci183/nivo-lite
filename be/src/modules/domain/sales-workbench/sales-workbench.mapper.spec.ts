@@ -1,171 +1,43 @@
-import type { ContractResult } from "@modules/domain/contracts"
-import type { SalesDeal, AutoActivity, SalesDecision, AttentionRow } from "./sales-workbench.contracts"
-import { builder, mock } from "@starci/jest-preset"
-import type { LeadView } from "@modules/domain/leads"
-import type { OrdersWorkbenchRow } from "@modules/domain/orders"
+import {
+    OLDER,
+    YESTERDAY,
+    BEFORE_MONTH,
+    MONTH,
+    NOVEMBER,
+    NOW,
+    quote,
+    CLIPPED,
+    leadOf,
+    orderOf,
+    stepOf,
+    itemOf,
+    rowsOf,
+    contractOf,
+    dealOf,
+    activityOf,
+    decisionOf,
+    attentionOf,
+    failureOf,
+    overdueOf,
+    replyOf,
+    anonymousOf,
+    unknownFailureOf,
+    legacyOf,
+} from "../../../tests/fixtures/builders/sales-workbench.builder"
+import { Test } from "@nestjs/testing"
+import type { SalesDecision, AttentionRow } from "./sales-workbench.contracts"
 import type { ResponsibilityRecord } from "@modules/domain/responsibilities"
-import type { WorkItemView } from "./work-item-view.contracts"
 import { autoDoneItemsOf, buildSalesWorkbench, conversationIdsOf, type SalesRows } from "./sales-workbench.mapper"
 
-const CREATED = "2026-10-12T10:00:00.000Z"
-const UPDATED = "2026-10-12T11:00:00.000Z"
-const OLDER = "2026-10-11T00:00:00.000Z"
-const YESTERDAY = "2026-10-12T00:00:00.000Z"
-const BEFORE_MONTH = "2026-10-31T16:59:59.999Z"
-const MONTH = "2026-10-31T17:00:00.000Z"
-const NOVEMBER = "2026-11-01T00:00:00.000Z"
-const NOW = "2026-10-13T02:00:00.000Z"
-const quote = (amount_vnd?: number | null, summary = "Quote") => ({ summary, fields: {}, amount_vnd })
-const CLIPPED = "x".repeat(139) + "\u2026"
+const SUBJECT = Symbol("sales-workbench.mapper")
+type Subject = typeof import("./sales-workbench.mapper")
 
-const contact = { id: "lead-1", contact_name: "Lan", company: "Tea Co", channel: "web" }
-const leadOfSeed = mock<LeadView>({ ...contact, need: "Tea", stage: "proposal", created_at: CREATED })
-const leadOf = builder<LeadView>(leadOfSeed)
-const orderOfSeed = mock<OrdersWorkbenchRow>({
-    id: "order-1",
-    lead_id: "lead-1",
-    order_no: "ORD-1",
-    items: "Tea",
-    amount_vnd: 200,
-    status: "confirmed",
-    confirmed_at: UPDATED,
-    shipped_at: null,
-    carrier: null,
-    tracking_code: null,
-})
-const orderOf = builder<OrdersWorkbenchRow>(orderOfSeed)
-const stepOfSeed = mock<ResponsibilityRecord>({
-    id: "step-1",
-    lead_id: "lead-1",
-    title: "Follow up",
-    owner_name: "Mai",
-    next_action: "Call",
-    due_at: null,
-    status: "open",
-})
-const stepOf = builder<ResponsibilityRecord>(stepOfSeed)
-const itemOfSeed = mock<WorkItemView>({
-    id: "item-1",
-    department: "sales",
-    action: "send_quote",
-    subject_id: "lead-1",
-    lead_id: "lead-1",
-    status: "done",
-    decided_path: "auto",
-    reason: "routine",
-    missing_fields: [],
-    proposal: quote(100),
-    result: null,
-    error: null,
-    evidence_state: "verified",
-    assigned_staff_id: null,
-    created_at: CREATED,
-    updated_at: UPDATED,
-    completed_at: null,
-    lead: contact,
-    assignedStaffName: null,
-    href: "/leads/lead-1",
-})
-const itemOf = builder<WorkItemView>(itemOfSeed)
-const rowsOf = builder<SalesRows>({
-    nowMs: Date.parse(NOW),
-    leads: [],
-    steps: [],
-    orders: [],
-    invoices: [],
-    conversations: [],
-    messages: [],
-    drafts: [],
-    staff: [],
-    outcomes: [],
-    items: [],
-    decided: [],
-    autoEvidence: [],
-    contracts: [],
-    isTestRun: () => false,
-})
-
-const contractOf = builder<ContractResult>({
-    id: "contract-1",
-    leadId: "lead-1",
-    customerName: "Lan",
-    plan: "Monthly",
-    startsOn: "2026-10-01",
-    endsOn: "2026-11-01",
-    amountVnd: 100,
-    status: "active",
-    note: "Renew",
-})
-const dealOf = builder<SalesDeal>({
-    leadId: "lead-1",
-    customer: "Lan",
-    company: "Tea Co",
-    channel: "web",
-    need: "Tea",
-    stage: "proposal",
-    valueVnd: null,
-    valueSource: null,
-    nextStep: null,
-    dueAt: null,
-    owner: null,
-    createdAt: CREATED,
-    closedReason: null,
-    closedAt: null,
-})
-const activityOf = builder<AutoActivity>({
-    id: "result",
-    action: "send_quote",
-    leadId: "lead-1",
-    customer: "Lan",
-    summary: "Quote",
-    at: UPDATED,
-    evidenceState: "verified",
-    evidence: null,
-    href: "/leads/lead-1",
-})
-const decisionOf = builder<SalesDecision>({
-    id: "legacy",
-    source: "work_item",
-    workItemId: null,
-    executionId: null,
-    leadId: null,
-    customer: "\u2014",
-    action: "follow_up",
-    reason: "routine",
-    summary: "Call",
-    draft: "",
-    amountVnd: null,
-    hasAmount: false,
-    missing: [],
-    assignedStaffId: null,
-    assignedStaffName: null,
-    createdAt: CREATED,
-})
-const attentionOf = builder<AttentionRow>({
-    key: "decision:waiting",
-    kind: "decision",
-    leadId: "lead-1",
-    customer: "Lan",
-    company: "Tea Co",
-    stage: "proposal",
-    need: "Quote",
-    since: CREATED,
-    owner: null,
-    workItemId: null,
-    decisionId: null,
-    action: "send_quote",
-    missing: [],
-})
-
-const failureOf = builder<AttentionRow>(attentionOf({ kind: "failed", since: UPDATED }))
-
-const overdueOf = builder<AttentionRow>(attentionOf({ kind: "overdue", since: YESTERDAY, owner: "Mai", action: null }))
-const replyOf = builder<AttentionRow>(
-    attentionOf({ kind: "awaiting_reply", since: "2026-10-13T01:56:00.000Z", action: null }),
-)
-const anonymousOf = builder<AttentionRow>(attentionOf({ leadId: null, customer: "\u2014", company: "", stage: null }))
-const unknownFailureOf = builder<AttentionRow>(anonymousOf({ kind: "failed", since: UPDATED }))
-const legacyOf = builder<SalesDecision>(decisionOf({ source: "execution", reason: null, createdAt: NOW }))
+const build = async () => {
+    const moduleRef = await Test.createTestingModule({
+        providers: [{ provide: SUBJECT, useValue: { conversationIdsOf, autoDoneItemsOf, buildSalesWorkbench } }],
+    }).compile()
+    return moduleRef.get<Subject>(SUBJECT)
+}
 
 type PendingCase = Pick<SalesDecision, "customer" | "amountVnd" | "hasAmount" | "missing" | "draft"> &
     Pick<AttentionRow, "leadId" | "owner" | "kind"> &
@@ -179,13 +51,13 @@ type LegacyCase = Pick<SalesDecision, "leadId" | "customer" | "summary"> & {
     label: string
     step: ResponsibilityRecord | null
 }
+const benchOf = (subject: Subject, changes: Partial<SalesRows> = {}) => subject.buildSalesWorkbench(rowsOf(changes))
 
-const benchOf = (changes: Partial<SalesRows> = {}) => buildSalesWorkbench(rowsOf(changes))
-
-it("keeps conversation order and the first forty automatic completed sales items", () => {
+it("keeps conversation order and the first forty automatic completed sales items", async () => {
+    const subject = await build()
     const automatic = Array.from({ length: 41 }, (_, index) => itemOf({ id: `auto-${index}` }))
     expect(
-        autoDoneItemsOf([
+        subject.autoDoneItemsOf([
             itemOf({ department: "accounting" }),
             itemOf({ status: "queued" }),
             itemOf({ decided_path: "human" }),
@@ -194,11 +66,11 @@ it("keeps conversation order and the first forty automatic completed sales items
     ).toEqual(automatic.slice(0, 40))
 })
 
-it("maps first-row deal lookups and measures exact monthly and conversion boundaries", () => {
+const monthlyBoundaryResult = (subject: Subject) => {
     const now = Date.parse("2026-10-31T18:00:00.000Z")
     const since = new Date(now - 90 * 86_400_000).toISOString()
     const beforeSince = new Date(Date.parse(since) - 1).toISOString()
-    const result = benchOf({
+    const result = benchOf(subject, {
         nowMs: now,
         leads: [
             leadOf({ id: "won", stage: "won", channel: "zalo", created_at: since }),
@@ -250,6 +122,11 @@ it("maps first-row deal lookups and measures exact monthly and conversion bounda
         ],
         isTestRun: (...names) => names.includes("UAT") || names.includes("Debug"),
     })
+    return { result, since }
+}
+
+it("maps first-row deal lookups and measures exact monthly and conversion boundaries", async () => {
+    const { result, since } = monthlyBoundaryResult(await build())
     expect(result.deals[0]).toEqual(
         dealOf({ valueVnd: 200, valueSource: "order", nextStep: "Call", owner: "Assigned" }),
     )
@@ -292,8 +169,8 @@ it("maps first-row deal lookups and measures exact monthly and conversion bounda
     })
 })
 
-it("maps automatic activity using the first evidence, result and completion fallbacks", () => {
-    const result = benchOf({
+it("maps automatic activity using the first evidence, result and completion fallbacks", async () => {
+    const result = benchOf(await build(), {
         items: [
             itemOf({ id: "result", result: { summary: "Sent", href: "/sent" }, completed_at: NOW }),
             itemOf({ id: "fallback", result: { summary: "Finished" }, lead: null }),
@@ -316,13 +193,76 @@ it("maps automatic activity using the first evidence, result and completion fall
     ])
 })
 
-it.each`
-    label          | leadId       | named    | field         | customer      | amount       | amountVnd | hasAmount | missing           | draft         | staffName     | owner         | action          | kind          | attentionAction
-    ${"named"}     | ${"lead-1"}  | ${true}  | ${null}       | ${"Lan"}      | ${100}       | ${100}    | ${true}   | ${[]}             | ${"Dear Lan"} | ${"Assigned"} | ${"Assigned"} | ${"send_quote"} | ${"decision"} | ${"send_quote"}
-    ${"numeric"}   | ${"missing"} | ${false} | ${42}         | ${"42"}       | ${null}      | ${null}   | ${true}   | ${[]}             | ${""}         | ${null}       | ${null}       | ${"send_quote"} | ${"decision"} | ${"send_quote"}
-    ${"string"}    | ${null}      | ${false} | ${"Customer"} | ${"Customer"} | ${undefined} | ${null}   | ${true}   | ${["amount_vnd"]} | ${""}         | ${null}       | ${null}       | ${"follow_up"}  | ${"clarify"}  | ${"send_follow_up"}
-    ${"anonymous"} | ${null}      | ${false} | ${null}       | ${"\u2014"}   | ${undefined} | ${null}   | ${false}  | ${[]}             | ${""}         | ${null}       | ${null}       | ${"send_quote"} | ${"decision"} | ${"send_quote"}
-`("maps a $label waiting proposal and its attention row", (data: PendingCase) => {
+it.each<PendingCase>([
+    {
+        label: "named",
+        leadId: "lead-1",
+        named: true,
+        field: null,
+        customer: "Lan",
+        amount: 100,
+        amountVnd: 100,
+        hasAmount: true,
+        missing: [],
+        draft: "Dear Lan",
+        staffName: "Assigned",
+        owner: "Assigned",
+        action: "send_quote",
+        kind: "decision",
+        attentionAction: "send_quote",
+    },
+    {
+        label: "numeric",
+        leadId: "missing",
+        named: false,
+        field: 42,
+        customer: "42",
+        amount: null,
+        amountVnd: null,
+        hasAmount: true,
+        missing: [],
+        draft: "",
+        staffName: null,
+        owner: null,
+        action: "send_quote",
+        kind: "decision",
+        attentionAction: "send_quote",
+    },
+    {
+        label: "string",
+        leadId: null,
+        named: false,
+        field: "Customer",
+        customer: "Customer",
+        amount: undefined,
+        amountVnd: null,
+        hasAmount: true,
+        missing: ["amount_vnd"],
+        draft: "",
+        staffName: null,
+        owner: null,
+        action: "follow_up",
+        kind: "clarify",
+        attentionAction: "send_follow_up",
+    },
+    {
+        label: "anonymous",
+        leadId: null,
+        named: false,
+        field: null,
+        customer: "\u2014",
+        amount: undefined,
+        amountVnd: null,
+        hasAmount: false,
+        missing: [],
+        draft: "",
+        staffName: null,
+        owner: null,
+        action: "send_quote",
+        kind: "decision",
+        attentionAction: "send_quote",
+    },
+])("maps a $label waiting proposal and its attention row", async (data: PendingCase) => {
     const { leadId, customer, action, draft, amountVnd, hasAmount, missing, staffName } = data
     const { named, field, amount, kind, attentionAction, owner } = data
     const staffId = staffName === null ? null : "staff-1"
@@ -338,7 +278,7 @@ it.each`
         proposal,
         ...assignment,
     })
-    const result = benchOf({ leads: named ? [leadOf()] : [], items: [input] })
+    const result = benchOf(await build(), { leads: named ? [leadOf()] : [], items: [input] })
     const identity = { id: "item-1", workItemId: "item-1", summary: "Quote" }
     const details = { leadId, customer, action, draft, amountVnd, hasAmount, missing }
     expect(result.decisions).toEqual([decisionOf({ ...identity, ...details, ...assigned })])
@@ -355,25 +295,20 @@ it.each`
     ${"linked"}           | ${stepOf()}                       | ${"lead-1"} | ${"Lan"}    | ${"Call"}
     ${"missing step"}     | ${null}                           | ${null}     | ${"\u2014"} | ${""}
     ${"missing customer"} | ${stepOf({ lead_id: "missing" })} | ${null}     | ${"\u2014"} | ${"Call"}
-`("maps a legacy draft with $label", (data: LegacyCase) => {
-    const result = benchOf({
+`("maps a legacy draft with $label", async (data: LegacyCase) => {
+    const result = benchOf(await build(), {
         leads: [leadOf()],
         steps: data.step === null ? [] : [data.step],
         drafts: [{ id: "legacy", responsibility_id: "step-1", draft: "Legacy text", created_at: NOW }],
     })
+    const { leadId, customer, summary } = data
     expect(result.decisions).toEqual([
-        legacyOf({
-            executionId: "legacy",
-            leadId: data.leadId,
-            customer: data.customer,
-            summary: data.summary,
-            draft: "Legacy text",
-        }),
+        legacyOf({ executionId: "legacy", leadId, customer, summary, draft: "Legacy text" }),
     ])
 })
 
-it("orders legacy and work decisions by their creation time", () => {
-    const result = benchOf({
+it("orders legacy and work decisions by their creation time", async () => {
+    const result = benchOf(await build(), {
         items: [itemOf({ id: "late", status: "waiting_decision", created_at: NOW })],
         drafts: [{ id: "legacy", responsibility_id: "gone", draft: "D", created_at: OLDER }],
     })
@@ -383,9 +318,9 @@ it("orders legacy and work decisions by their creation time", () => {
     ])
 })
 
-it("orders failures before overdue work, clips long text, and filters ineligible responsibilities", () => {
+it("orders failures before overdue work, clips long text, and filters ineligible responsibilities", async () => {
     const longText = `  ${"x".repeat(139)}  trailing\n words  `
-    const result = benchOf({
+    const result = benchOf(await build(), {
         leads: [leadOf(), leadOf({ id: "won", stage: "won" })],
         items: [
             itemOf({ id: "error", status: "failed", error: longText, assignedStaffName: "Assigned" }),
@@ -416,7 +351,9 @@ it("orders failures before overdue work, clips long text, and filters ineligible
     ])
 })
 
-it("flags one unanswered customer conversation per open lead after three minutes using the newest message", () => {
+it("flags one unanswered conversation per open lead after three minutes from the newest message", async () => {
+    const subject = await build()
+
     const old = "2026-10-13T01:56:00.000Z"
     const boundary = "2026-10-13T01:57:00.000Z"
     const conversations = [
@@ -431,8 +368,8 @@ it("flags one unanswered customer conversation per open lead after three minutes
         { id: "step", lead_id: "step", handled_by: null },
         { id: "unowned", lead_id: "unowned", handled_by: null },
     ]
-    expect(conversationIdsOf(conversations.slice(0, 2))).toEqual(["none", "assistant"])
-    const result = benchOf({
+    expect(subject.conversationIdsOf(conversations.slice(0, 2))).toEqual(["none", "assistant"])
+    const result = benchOf(subject, {
         leads: [
             leadOf(),
             leadOf({ id: "step" }),
@@ -463,7 +400,7 @@ it("flags one unanswered customer conversation per open lead after three minutes
     ])
 })
 
-it("sorts active contracts first by expiry without mutating input and retains staff", () => {
+it("sorts active contracts first by expiry without mutating input and retains staff", async () => {
     const contracts = [
         contractOf({ id: "ended", status: "ended", endsOn: "2026-01-01" }),
         contractOf({ id: "active-later", endsOn: "2026-12-01" }),
@@ -481,7 +418,7 @@ it("sorts active contracts first by expiry without mutating input and retains st
         ...Array.from({ length: 180 }, (_, index) => leadOf({ id: `open-${index}` })),
     ]
     const before = contracts.map((contract) => ({ ...contract }))
-    const result = benchOf({ leads, contracts, staff: [{ id: "staff-1", name: "Mai" }] })
+    const result = benchOf(await build(), { leads, contracts, staff: [{ id: "staff-1", name: "Mai" }] })
     expect(result.contracts).toEqual([contracts[2], contracts[1], contracts[0], contracts[3]])
     expect(contracts).toEqual(before)
     expect(result.staff).toEqual([{ id: "staff-1", name: "Mai" }])

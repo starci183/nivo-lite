@@ -1,4 +1,4 @@
-import type { ModuleMetadata } from "@nestjs/common"
+import type { DynamicModule } from "@nestjs/common"
 import { SUPABASE_OBJECTS } from "@modules/integrations/supabase"
 import { ContentModule } from "@modules/domain/content"
 import { ContentItemsModule } from "@modules/domain/content-items"
@@ -17,7 +17,7 @@ import { ContentMediaGraphqlModule } from "@features/api/content-media"
 import { VideoGraphqlModule } from "@features/api/video"
 import { RendersGraphqlModule } from "@features/api/renders"
 /** The content area of the API, in registration order. */
-export const contentModules = (): NonNullable<ModuleMetadata["imports"]> => [
+export const contentModules = (): Array<DynamicModule> => [
     ContentItemsModule.register({ isGlobal: true }),
     ContentSettingsModule.register({ isGlobal: true }),
     ContentPillarsModule.register({ isGlobal: true }),
@@ -26,12 +26,12 @@ export const contentModules = (): NonNullable<ModuleMetadata["imports"]> => [
     ContentPlansModule.register({ isGlobal: true }),
     ContentPublishingModule.register({ isGlobal: true }),
     ContentMediaModule.register({ isGlobal: true, storage: SUPABASE_OBJECTS }),
-    ContentGraphqlModule,
-    ContentSettingsGraphqlModule,
-    ContentAiGraphqlModule,
-    ContentPublishingGraphqlModule,
-    ContentMediaGraphqlModule,
-    VideoGraphqlModule,
+    ContentGraphqlModule.register({}),
+    ContentSettingsGraphqlModule.register({}),
+    ContentAiGraphqlModule.register({}),
+    ContentPublishingGraphqlModule.register({}),
+    ContentMediaGraphqlModule.register({}),
+    VideoGraphqlModule.register({}),
     ContentModule.register({ isGlobal: true }),
-    RendersGraphqlModule,
+    RendersGraphqlModule.register({}),
 ]

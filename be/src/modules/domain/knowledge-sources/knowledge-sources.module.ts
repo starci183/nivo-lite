@@ -13,7 +13,7 @@ export class KnowledgeSourcesModule extends ConfigurableModuleClass {
         const base = super.register(options)
         return {
             ...base,
-            imports: [...(base.imports ?? []), KnowledgeQueueModule],
+            imports: [...(base.imports ?? []), KnowledgeQueueModule.register({})],
             providers: [
                 ...(base.providers ?? []),
                 { provide: KNOWLEDGE_STORAGE, useExisting: options.storage },

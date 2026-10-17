@@ -1,17 +1,28 @@
+import type * as SubjectModule from "./connection-commands.policy"
 import { strict as assert } from "node:assert"
 import { Test } from "@nestjs/testing"
 import { mock } from "@starci/jest-preset"
 import type { MockOf } from "@starci/jest-preset"
-import { ChannelConnectionsService } from "@modules/domain/channel-connections"
-import { ConnectionGrantsService } from "@modules/domain/connection-grants"
-import { ConnectionLifecycleService } from "@modules/domain/connection-lifecycle"
-import { ConnectionsError, ConnectionsService } from "@modules/domain/connections"
-import type { ConnectionActor } from "@modules/domain/connections"
-import { GoogleConnectionsService } from "@modules/domain/google-connections"
-import { MetaConnectionsService } from "@modules/domain/meta-connections"
-import { WebhookConnectionsService } from "@modules/domain/webhook-connections"
+import type { ChannelConnectionsService } from "@modules/domain/channel-connections"
+import type { ConnectionGrantsService } from "@modules/domain/connection-grants"
+import type { ConnectionLifecycleService } from "@modules/domain/connection-lifecycle"
+import { ConnectionsError } from "@modules/domain/connections"
+import type { ConnectionActor, ConnectionsService } from "@modules/domain/connections"
+import type { GoogleConnectionsService } from "@modules/domain/google-connections"
+import type { MetaConnectionsService } from "@modules/domain/meta-connections"
+import type { WebhookConnectionsService } from "@modules/domain/webhook-connections"
 import { COMMANDS, runCommand } from "./connection-commands.policy"
 import type { CommandServices } from "./connection-commands.policy"
+
+const SUBJECT = Symbol("connection-commands.policy")
+type Subject = Pick<typeof SubjectModule, "runCommand">
+
+const buildSubject = async () => {
+    const moduleRef = await Test.createTestingModule({
+        providers: [{ provide: SUBJECT, useValue: { runCommand } }],
+    }).compile()
+    return moduleRef.get<Subject>(SUBJECT)
+}
 
 const CONNECTION = "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"
 const AGENT = "11111111-2222-3333-4444-555555555555"
@@ -149,7 +160,7 @@ const routes: ReadonlyArray<Route> = [
     },
 ]
 
-const build = async (): Promise<Services> => {
+const build = (): Services => {
     const services: Services = {
         connections: mock<ConnectionsService>(),
         grants: mock<ConnectionGrantsService>(),
@@ -159,26 +170,7 @@ const build = async (): Promise<Services> => {
         meta: mock<MetaConnectionsService>(),
         lifecycle: mock<ConnectionLifecycleService>(),
     }
-    const moduleRef = await Test.createTestingModule({
-        providers: [
-            { provide: ConnectionsService, useValue: services.connections },
-            { provide: ConnectionGrantsService, useValue: services.grants },
-            { provide: ChannelConnectionsService, useValue: services.channels },
-            { provide: WebhookConnectionsService, useValue: services.webhooks },
-            { provide: GoogleConnectionsService, useValue: services.google },
-            { provide: MetaConnectionsService, useValue: services.meta },
-            { provide: ConnectionLifecycleService, useValue: services.lifecycle },
-        ],
-    }).compile()
-    return {
-        connections: moduleRef.get(ConnectionsService),
-        grants: moduleRef.get(ConnectionGrantsService),
-        channels: moduleRef.get(ChannelConnectionsService),
-        webhooks: moduleRef.get(WebhookConnectionsService),
-        google: moduleRef.get(GoogleConnectionsService),
-        meta: moduleRef.get(MetaConnectionsService),
-        lifecycle: moduleRef.get(ConnectionLifecycleService),
-    }
+    return services
 }
 
 const routeFor = (kind: string): Route => {
@@ -188,8 +180,10 @@ const routeFor = (kind: string): Route => {
 }
 
 const refuses = async (kind: string, input: Input, field: string): Promise<void> => {
-    const services = await build()
-    const cause: unknown = await runCommand(services, actor, kind, input).catch((error: unknown) => error)
+    const subject = await buildSubject()
+
+    const services = build()
+    const cause: unknown = await subject.runCommand(services, actor, kind, input).catch((error: unknown) => error)
     expect(cause).toBeInstanceOf(ConnectionsError)
     expect(cause).toHaveProperty("code", "CONNECTIONS_COMMAND_INVALID")
     expect(cause).toHaveProperty("params", { field })
@@ -223,12 +217,14 @@ describe("connection commands policy", () => {
     })
 
     it.each(routes)("runs $kind with the actor and its exact capability arguments", async (route) => {
-        const services = await build()
+        const subject = await buildSubject()
+
+        const services = build()
         const call = route.call(services)
         const answer = { accepted: route.kind }
         call.mockResolvedValue(answer)
 
-        await expect(runCommand(services, actor, route.kind, route.input)).resolves.toEqual(answer)
+        await expect(subject.runCommand(services, actor, route.kind, route.input)).resolves.toEqual(answer)
 
         expect(call.mock.calls).toEqual([route.args])
         for (const other of routes) {
@@ -250,25 +246,35 @@ describe("connection commands policy", () => {
     ])("refuses the unknown or inherited kind %s", (kind) => refuses(kind, {}, "kind"))
 
     it.each([undefined, null])("turns a capability's %p answer into true", async (answer) => {
-        const services = await build()
+        const subject = await buildSubject()
+
+        const services = build()
         routeFor("connection.delete").call(services).mockResolvedValue(answer)
-        await expect(runCommand(services, actor, "connection.delete", { connectionId: CONNECTION })).resolves.toBe(true)
+        await expect(
+            subject.runCommand(services, actor, "connection.delete", { connectionId: CONNECTION }),
+        ).resolves.toBe(true)
         expect(services.lifecycle.remove).toHaveBeenCalledWith(actor, CONNECTION)
     })
 
     it.each([false, 0, ""])("keeps the non-nullish answer %p", async (answer) => {
-        const services = await build()
+        const subject = await buildSubject()
+
+        const services = build()
         routeFor("google.state").call(services).mockResolvedValue(answer)
-        await expect(runCommand(services, actor, "google.state", {})).resolves.toBe(answer)
+        await expect(subject.runCommand(services, actor, "google.state", {})).resolves.toBe(answer)
     })
 
     it("propagates a capability failure unchanged", async () => {
-        const services = await build()
+        const subject = await buildSubject()
+
+        const services = build()
         const cause = new Error("capability failed")
         services.google.accounts.mockRejectedValue(cause)
-        await expect(runCommand(services, actor, "google.accounts", {})).rejects.toBe(cause)
+        await expect(subject.runCommand(services, actor, "google.accounts", {})).rejects.toBe(cause)
     })
+})
 
+describe("connection commands policy", () => {
     describe("UUID fields", () => {
         const fields = routes.flatMap((route) =>
             ["connectionId", "agentId"]
@@ -284,24 +290,28 @@ describe("connection commands policy", () => {
         })
 
         it("accepts uppercase hex UUIDs without changing them", async () => {
-            const services = await build()
+            const subject = await buildSubject()
+
+            const services = build()
             const id = CONNECTION.toUpperCase()
-            await runCommand(services, actor, "connection.first-event", { connectionId: id })
+            await subject.runCommand(services, actor, "connection.first-event", { connectionId: id })
             expect(services.connections.firstEvent).toHaveBeenCalledWith(actor, id)
         })
     })
 
     describe("text fields", () => {
         it.each(textFields)("validates %s.%s through its %i-character limit", async (kind, field, max) => {
+            const subject = await buildSubject()
+
             const route = routeFor(kind)
             if (field !== "apiKey") await refuses(kind, { ...route.input, [field]: undefined }, field)
             await refuses(kind, { ...route.input, [field]: null }, field)
             await refuses(kind, { ...route.input, [field]: 42 }, field)
             await refuses(kind, { ...route.input, [field]: "x".repeat(max + 1) }, field)
-            const services = await build()
+            const services = build()
             const text = "x".repeat(max)
 
-            await runCommand(services, actor, kind, { ...route.input, [field]: text })
+            await subject.runCommand(services, actor, kind, { ...route.input, [field]: text })
 
             const call = route.call(services)
             const expected = route.args.map((argument) =>
@@ -314,8 +324,10 @@ describe("connection commands policy", () => {
         })
 
         it("passes empty text through for the capability to validate", async () => {
-            const services = await build()
-            await runCommand(services, actor, "telegram.connect", { name: "", token: "" })
+            const subject = await buildSubject()
+
+            const services = build()
+            await subject.runCommand(services, actor, "telegram.connect", { name: "", token: "" })
             expect(services.channels.connectTelegram).toHaveBeenCalledWith(actor, { name: "", token: "" })
         })
     })
@@ -327,85 +339,89 @@ describe("connection commands policy", () => {
         )
 
         it.each(["a", "0_", "a".repeat(60)])("accepts the allowed id %s unchanged", async (connectorId) => {
-            const services = await build()
+            const subject = await buildSubject()
 
-            await runCommand(services, actor, "connection.want", { connectorId })
+            const services = build()
+
+            await subject.runCommand(services, actor, "connection.want", { connectorId })
 
             expect(services.connections.wantConnector).toHaveBeenCalledWith(actor, connectorId)
         })
     })
+})
 
-    describe("access and optional fields", () => {
-        it.each(["read", "ask", "auto", null])("passes the grant level %p unchanged", async (access) => {
-            const services = await build()
+describe("connection commands policy access and optional fields", () => {
+    it.each(["read", "ask", "auto", null])("passes the grant level %p unchanged", async (access) => {
+        const subject = await buildSubject()
 
-            await runCommand(services, actor, "grant.set", { connectionId: CONNECTION, agentId: AGENT, access })
+        const services = build()
 
-            expect(services.grants.setGrant).toHaveBeenCalledWith(actor, CONNECTION, AGENT, access)
-        })
+        await subject.runCommand(services, actor, "grant.set", { connectionId: CONNECTION, agentId: AGENT, access })
 
-        it.each([undefined, "owner", "READ", 1, {}, []])("refuses the grant level %p", async (access) => {
-            await refuses("grant.set", { connectionId: CONNECTION, agentId: AGENT, access }, "access")
-        })
-
-        it("omits an absent apiKey from a money update", async () => {
-            const services = await build()
-
-            await runCommand(services, actor, "money.update", { connectionId: CONNECTION, ...money })
-
-            expect(services.channels.updateMoneyConnection).toHaveBeenCalledWith(actor, CONNECTION, money)
-        })
-
-        it("authorizes Meta with an absent connectionId", async () => {
-            const services = await build()
-
-            await runCommand(services, actor, "meta.authorize", {})
-
-            expect(services.meta.authorize).toHaveBeenCalledWith(actor, undefined)
-        })
-
-        it.each([undefined, null, false, "true", 1])(
-            "only enables Meta repair for literal true, not %p",
-            async (repair) => {
-                const services = await build()
-
-                await runCommand(services, actor, "meta.check", { connectionId: CONNECTION, repair })
-
-                expect(services.meta.check).toHaveBeenCalledWith(actor, CONNECTION, false)
-            },
-        )
+        expect(services.grants.setGrant).toHaveBeenCalledWith(actor, CONNECTION, AGENT, access)
     })
 
+    it.each([undefined, "owner", "READ", 1, {}, []])("refuses the grant level %p", async (access) => {
+        await refuses("grant.set", { connectionId: CONNECTION, agentId: AGENT, access }, "access")
+    })
+
+    it("omits an absent apiKey from a money update", async () => {
+        const subject = await buildSubject()
+
+        const services = build()
+
+        await subject.runCommand(services, actor, "money.update", { connectionId: CONNECTION, ...money })
+
+        expect(services.channels.updateMoneyConnection).toHaveBeenCalledWith(actor, CONNECTION, money)
+    })
+
+    it("authorizes Meta with an absent connectionId", async () => {
+        const subject = await buildSubject()
+
+        const services = build()
+
+        await subject.runCommand(services, actor, "meta.authorize", {})
+
+        expect(services.meta.authorize).toHaveBeenCalledWith(actor, undefined)
+    })
+
+    it.each([undefined, null, false, "true", 1])(
+        "only enables Meta repair for literal true, not %p",
+        async (repair) => {
+            const subject = await buildSubject()
+
+            const services = build()
+            await subject.runCommand(services, actor, "meta.check", { connectionId: CONNECTION, repair })
+            expect(services.meta.check).toHaveBeenCalledWith(actor, CONNECTION, false)
+        },
+    )
+})
+
+describe("connection commands policy", () => {
     describe.each([
         { kind: "grant.connection-agents", listKey: "agents", idKey: "agentId", id: AGENT },
         { kind: "grant.agent-connections", listKey: "connections", idKey: "connectionId", id: CONNECTION },
     ])("$kind wishes", ({ kind, listKey, idKey, id }) => {
         const base = routeFor(kind).input
-
         it.each([undefined, null, {}, "ids", 1, Array.from({ length: 201 }, () => id)])(
             "refuses a list that does not fit: %p",
             (list) => refuses(kind, { ...base, [listKey]: list }, listKey),
         )
-
         it.each([null, 1, false, [], "bad-id", {}, { access: "read" }])(
             "refuses an entry that does not fit: %p",
             (entry) => refuses(kind, { ...base, [listKey]: [entry] }, listKey),
         )
-
         it.each([null, 1, "bad-id"])("refuses a bad id in an object: %p", async (badId) => {
             await refuses(kind, { ...base, [listKey]: [{ [idKey]: badId }] }, listKey)
         })
-
         it.each([null, "owner", 1, {}, []])("refuses a bad optional level: %p", async (access) => {
             await refuses(kind, { ...base, [listKey]: [{ [idKey]: id, access }] }, listKey)
         })
-
         it.each([0, 200])("accepts %i wishes and maps bare ids exactly", async (length) => {
-            const services = await build()
+            const subject = await buildSubject()
+            const services = build()
             const list = Array.from({ length }, () => id)
-
-            await runCommand(services, actor, kind, { ...base, [listKey]: list })
-
+            await subject.runCommand(services, actor, kind, { ...base, [listKey]: list })
             const parentId = listKey === "agents" ? CONNECTION : AGENT
             expect(routeFor(kind).call(services)).toHaveBeenCalledWith(
                 actor,
@@ -413,18 +429,16 @@ describe("connection commands policy", () => {
                 list.map(() => ({ [idKey]: id })),
             )
         })
-
         it("keeps all optional levels and leaves undefined access absent", async () => {
-            const services = await build()
+            const subject = await buildSubject()
+            const services = build()
             const list = [
                 { [idKey]: id, access: undefined },
                 { [idKey]: id, access: "read" },
                 { [idKey]: id, access: "ask" },
                 { [idKey]: id, access: "auto" },
             ]
-
-            await runCommand(services, actor, kind, { ...base, [listKey]: list })
-
+            await subject.runCommand(services, actor, kind, { ...base, [listKey]: list })
             expect(routeFor(kind).call(services)).toHaveBeenCalledWith(
                 actor,
                 listKey === "agents" ? CONNECTION : AGENT,
@@ -437,26 +451,24 @@ describe("connection commands policy", () => {
             )
         })
     })
+})
 
+describe("connection commands policy", () => {
     describe.each(["webhook.start", "webhook.events"])("%s events", (kind) => {
         const base = routeFor(kind).input
-
         it.each([undefined, null, {}, "event", 1, Array.from({ length: 21 }, () => "event")])(
             "refuses a list that does not fit: %p",
             (events) => refuses(kind, { ...base, events }, "events"),
         )
-
         it.each([null, 1, {}, [], "x".repeat(41)])("refuses an event that does not fit: %p", async (event) => {
             await refuses(kind, { ...base, events: [event] }, "events")
         })
-
         it.each([{ events: [] }, { events: Array.from({ length: 20 }, () => "x".repeat(40)) }])(
             "accepts boundary events $events",
             async ({ events }) => {
-                const services = await build()
-
-                await runCommand(services, actor, kind, { ...base, events })
-
+                const subject = await buildSubject()
+                const services = build()
+                await subject.runCommand(services, actor, kind, { ...base, events })
                 if (kind === "webhook.start") {
                     expect(services.webhooks.start).toHaveBeenCalledWith(actor, {
                         name: "Orders",
@@ -469,20 +481,17 @@ describe("connection commands policy", () => {
             },
         )
     })
-
     describe("provider values", () => {
         it.each([undefined, null, "value", 1, [], { ["x".repeat(61)]: "v" }, { key: "x".repeat(401) }, { key: 1 }])(
             "refuses values that do not fit: %p",
             (values) => refuses("money.provider-keys", { connectionId: CONNECTION, values }, "values"),
         )
-
         it.each([{}, { ["x".repeat(60)]: "y".repeat(400), "": "" }])(
             "accepts an empty map or the exact key and value limits",
             async (values) => {
-                const services = await build()
-
-                await runCommand(services, actor, "money.provider-keys", { connectionId: CONNECTION, values })
-
+                const subject = await buildSubject()
+                const services = build()
+                await subject.runCommand(services, actor, "money.provider-keys", { connectionId: CONNECTION, values })
                 expect(services.channels.saveProviderKeys).toHaveBeenCalledWith(actor, CONNECTION, values)
             },
         )

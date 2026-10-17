@@ -36,7 +36,9 @@ interface Slot {
 
 type State = Map<string, Array<Seg>>
 
-/** A person who could take a piece: their work with it added, what it costs extra, and the minutes they already have. */
+/**
+ * A person who could take a piece: their work with it added, what it costs extra, and the minutes they already have.
+ */
 interface Candidate {
     readonly staff: ShiftStaff
     readonly next: Array<Seg>
@@ -94,7 +96,10 @@ const haveFor = (state: State, slot: Slot): number => {
     return Math.min(...counts)
 }
 
-/** The slots of a block: a block longer than one working day is cut into pieces the same person can still take back to back. */
+/**
+ * The slots of a block: a block longer than one working day is cut into pieces the same person can still take back to
+ * back.
+ */
 const slotsOf = (block: Block, dates: ReadonlyArray<string>): Array<Slot> => {
     const from = toMin(block.start)
     const to = toMin(block.end)
@@ -121,11 +126,103 @@ const whyNot = (kinds: ReadonlyArray<string>): AskReason => {
     return kinds.every((k) => k === "rest") ? "rest" : "other"
 }
 
+/** Checks whether adding a piece keeps a person within the work rules. */
+const tryAdd = (env: Env, state: State, person: ShiftStaff, seg: Seg): Candidate | null => {
+    const cur = state.get(person.id) ?? []
+    if (covers(cur, seg.date, seg.pos, seg.s, seg.e)) return null
+    const next = withSeg(cur, seg)
+    if (violationsForSegs(env, person.id, next).some((x) => x.length > 0)) return null
+    const extra = weekCost(person, next, env.overtimeHoursWeek) - weekCost(person, cur, env.overtimeHoursWeek)
+    return { staff: person, next, cost: extra, minutes: minutesOf(cur) }
+}
+
+/** Adds the cheapest feasible people until a slot reaches its target. */
+const fill = (
+    env: Env,
+    staff: ReadonlyArray<ShiftStaff>,
+    state: State,
+    slot: Slot,
+    target: number,
+    rand: () => number,
+    noise: number,
+): void => {
+    let have = haveFor(state, slot)
+    for (let guard = 0; have < target && guard < FILL_GUARD; guard++) {
+        const seg = segOfSlot(slot)
+        const jitter = (cost: number): number => cost * (1 + (rand() - 0.5) * noise)
+        const candidates = staff
+            .filter((p) => p.positionIds.includes(seg.pos))
+            .flatMap((p) => {
+                const c = tryAdd(env, state, p, seg)
+                return c === null ? [] : [c]
+            })
+            .sort(
+                (a, b) =>
+                    jitter(a.cost) - jitter(b.cost) ||
+                    a.minutes - b.minutes ||
+                    a.staff.positionIds.length - b.staff.positionIds.length ||
+                    a.staff.name.localeCompare(b.staff.name),
+            )
+        const best = candidates[0]
+        if (best === undefined) break
+        state.set(best.staff.id, best.next)
+        const now = haveFor(state, slot)
+        if (now <= have) break
+        have = now
+    }
+}
+
 /**
- * The schedule solver: deterministic, no I/O, no AI. The schedule itself always comes from here; the model only explains it afterwards.
- * Greedy fill with repair over a few seeded starts: each head goes to the qualified, available person who adds the least wage (ties to
- * the fewest hours so far, then to the less flexible person); hard blocks first, peak blocks before the rest; the best start wins
- * (fewest missing heads, then peak gap, then cost, then fairness). What no one can cover becomes an open shift.
+ * A person who cannot take the piece only because of other work they have: hand one of those pieces to somebody else,
+ * then take it.
+ */
+const repair = (env: Env, staff: ReadonlyArray<ShiftStaff>, state: State, slot: Slot): boolean => {
+    const seg = segOfSlot(slot)
+    for (const person of staff) {
+        if (!person.positionIds.includes(seg.pos) || onLeave(env.leaves, person.id, seg.date)) continue
+        if (!isAvailable(env.avail, person.id, seg.date, seg.s, seg.e)) continue
+        const cur = state.get(person.id) ?? []
+        if (covers(cur, seg.date, seg.pos, seg.s, seg.e)) continue
+        const pieces = [...cur].sort((a, b) => Number(a.date !== seg.date) - Number(b.date !== seg.date))
+        for (const piece of pieces) {
+            const takes = tryAdd(env, new Map([...state, [person.id, cur.filter((x) => x !== piece)]]), person, seg)
+            if (takes === null) continue
+            for (const other of staff) {
+                if (other.id === person.id || !other.positionIds.includes(piece.pos)) continue
+                const moved = tryAdd(env, state, other, piece)
+                if (moved === null) continue
+                state.set(other.id, moved.next)
+                state.set(person.id, takes.next)
+                return true
+            }
+        }
+    }
+    return false
+}
+
+/** Measures shortages, cost and fairness for a completed start. */
+const score = (env: Env, staff: ReadonlyArray<ShiftStaff>, slots: ReadonlyArray<Slot>, state: State): Result => {
+    let short = 0
+    let idealGap = 0
+    for (const slot of slots) {
+        const have = haveFor(state, slot)
+        const hours = (slot.e - slot.s) / 60
+        short += Math.max(0, slot.block.min - have) * hours
+        if (slot.block.peak) idealGap += Math.max(0, slot.block.ideal - have) * hours
+    }
+    const worked = staff.map((p) => state.get(p.id) ?? [])
+    const cost = staff.reduce((sum, p) => sum + weekCost(p, state.get(p.id) ?? [], env.overtimeHoursWeek), 0)
+    const minutes = worked.filter((segs) => segs.length > 0).map(minutesOf)
+    const spread = minutes.length > 0 ? Math.max(...minutes) - Math.min(...minutes) : 0
+    return { state, short, idealGap, cost, spread }
+}
+
+/**
+ * The schedule solver: deterministic, no I/O, no AI. The schedule itself always comes from here; the model only
+ * explains it afterwards. Greedy fill with repair over a few seeded starts: each head goes to the qualified, available
+ * person who adds the least wage (ties to the fewest hours so far, then to the less flexible person); hard blocks
+ * first, peak blocks before the rest; the best start wins (fewest missing heads, then peak gap, then cost, then
+ * fairness). What no one can cover becomes an open shift.
  */
 export const solveWeek = (input: SolveInput): SolveOutput => {
     const startedAt = input.nowMs()
@@ -149,96 +246,20 @@ export const solveWeek = (input: SolveInput): SolveOutput => {
         ).length,
     }))
 
-    const tryAdd = (state: State, person: ShiftStaff, seg: Seg): Candidate | null => {
-        const cur = state.get(person.id) ?? []
-        if (covers(cur, seg.date, seg.pos, seg.s, seg.e)) return null
-        const next = withSeg(cur, seg)
-        if (violationsForSegs(env, person.id, next).some((x) => x.length > 0)) return null
-        const extra = weekCost(person, next, env.overtimeHoursWeek) - weekCost(person, cur, env.overtimeHoursWeek)
-        return { staff: person, next, cost: extra, minutes: minutesOf(cur) }
-    }
-
-    const fill = (state: State, slot: Slot, target: number, rand: () => number, noise: number): void => {
-        let have = haveFor(state, slot)
-        for (let guard = 0; have < target && guard < FILL_GUARD; guard++) {
-            const seg = segOfSlot(slot)
-            const jitter = (cost: number): number => cost * (1 + (rand() - 0.5) * noise)
-            const candidates = staff
-                .filter((p) => p.positionIds.includes(seg.pos))
-                .flatMap((p) => {
-                    const c = tryAdd(state, p, seg)
-                    return c === null ? [] : [c]
-                })
-                .sort(
-                    (a, b) =>
-                        jitter(a.cost) - jitter(b.cost) ||
-                        a.minutes - b.minutes ||
-                        a.staff.positionIds.length - b.staff.positionIds.length ||
-                        a.staff.name.localeCompare(b.staff.name),
-                )
-            const best = candidates[0]
-            if (best === undefined) break
-            state.set(best.staff.id, best.next)
-            const now = haveFor(state, slot)
-            if (now <= have) break
-            have = now
-        }
-    }
-
-    /** A person who cannot take the piece only because of other work they have: hand one of those pieces to somebody else, then take it. */
-    const repair = (state: State, slot: Slot): boolean => {
-        const seg = segOfSlot(slot)
-        for (const person of staff) {
-            if (!person.positionIds.includes(seg.pos) || onLeave(env.leaves, person.id, seg.date)) continue
-            if (!isAvailable(env.avail, person.id, seg.date, seg.s, seg.e)) continue
-            const cur = state.get(person.id) ?? []
-            if (covers(cur, seg.date, seg.pos, seg.s, seg.e)) continue
-            const pieces = [...cur].sort((a, b) => Number(a.date !== seg.date) - Number(b.date !== seg.date))
-            for (const piece of pieces) {
-                const takes = tryAdd(new Map([...state, [person.id, cur.filter((x) => x !== piece)]]), person, seg)
-                if (takes === null) continue
-                for (const other of staff) {
-                    if (other.id === person.id || !other.positionIds.includes(piece.pos)) continue
-                    const moved = tryAdd(state, other, piece)
-                    if (moved === null) continue
-                    state.set(other.id, moved.next)
-                    state.set(person.id, takes.next)
-                    return true
-                }
-            }
-        }
-        return false
-    }
-
-    const score = (state: State): Result => {
-        let short = 0
-        let idealGap = 0
-        for (const slot of slots) {
-            const have = haveFor(state, slot)
-            const hours = (slot.e - slot.s) / 60
-            short += Math.max(0, slot.block.min - have) * hours
-            if (slot.block.peak) idealGap += Math.max(0, slot.block.ideal - have) * hours
-        }
-        const worked = staff.map((p) => state.get(p.id) ?? [])
-        const cost = staff.reduce((sum, p) => sum + weekCost(p, state.get(p.id) ?? [], env.overtimeHoursWeek), 0)
-        const minutes = worked.filter((segs) => segs.length > 0).map(minutesOf)
-        const spread = minutes.length > 0 ? Math.max(...minutes) - Math.min(...minutes) : 0
-        return { state, short, idealGap, cost, spread }
-    }
-
     const run = (order: ReadonlyArray<Slot>, rand: () => number, noise: number): Result => {
         const state: State = new Map()
-        for (const slot of order) fill(state, slot, slot.block.min, rand, noise)
+        for (const slot of order) fill(env, staff, state, slot, slot.block.min, rand, noise)
         for (const slot of order) {
             for (let guard = 0; haveFor(state, slot) < slot.block.min && guard < REPAIR_GUARD; guard++) {
-                if (!repair(state, slot)) break
-                fill(state, slot, slot.block.min, rand, noise)
+                if (!repair(env, staff, state, slot)) break
+                fill(env, staff, state, slot, slot.block.min, rand, noise)
             }
         }
         for (const slot of order) {
-            if (slot.block.peak && slot.block.ideal > slot.block.min) fill(state, slot, slot.block.ideal, rand, noise)
+            if (slot.block.peak && slot.block.ideal > slot.block.min)
+                fill(env, staff, state, slot, slot.block.ideal, rand, noise)
         }
-        return score(state)
+        return score(env, staff, slots, state)
     }
 
     const better = (a: Result, b: Result): number =>

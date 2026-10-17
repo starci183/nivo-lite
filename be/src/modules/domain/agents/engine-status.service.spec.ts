@@ -93,7 +93,9 @@ describe("EngineStatusService", () => {
             await expect(service.processorOf("w1", "chatbot")).resolves.toBe("openclaw")
         })
     })
+})
 
+describe("EngineStatusService", () => {
     describe("status", () => {
         it("reports a configured engine whose sync checked in recently", async () => {
             const { service, members, em } = await build({

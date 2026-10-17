@@ -138,7 +138,9 @@ describe("SmtpWizardService", () => {
             expect(connections.create).not.toHaveBeenCalled()
         })
     })
+})
 
+describe("SmtpWizardService", () => {
     describe("sendTest", () => {
         it("sends a real test email, logs it, connects the connection and makes it the first default", async () => {
             const { service, mail, connections, log } = await build()
@@ -195,7 +197,11 @@ describe("SmtpWizardService", () => {
             ).resolves.toEqual({ to: "lan@example.test", isDefault: true })
             expect(connections.setDefaultSmtp).toHaveBeenCalledWith("ws-1", "smtp-1")
         })
+    })
+})
 
+describe("SmtpWizardService", () => {
+    describe("sendTest", () => {
         it("reports the existing default without changing it again", async () => {
             const { service, connections } = await build()
             connections.defaultSmtpId.mockResolvedValue("smtp-1")
@@ -205,7 +211,11 @@ describe("SmtpWizardService", () => {
             ).resolves.toEqual({ to: "lan@example.test", isDefault: true })
             expect(connections.setDefaultSmtp).not.toHaveBeenCalled()
         })
+    })
+})
 
+describe("SmtpWizardService", () => {
+    describe("sendTest", () => {
         it("uses NIVO as the shop name when the workspace has no name", async () => {
             const { service, mail, workspaces } = await build()
             workspaces.nameOf.mockResolvedValue("")
@@ -260,7 +270,11 @@ describe("SmtpWizardService", () => {
                 lastError: "[errors.MAIL_AUTH]",
             })
         })
+    })
+})
 
+describe("SmtpWizardService", () => {
+    describe("sendTest", () => {
         it("keeps a failed send's reason on a connected connection and rethrows", async () => {
             const { service, mail, connections, log } = await build(connectionOf({ status: "connected" }))
             const failure = new Error("socket hang up")
@@ -310,7 +324,7 @@ describe("SmtpWizardService", () => {
             await expect(
                 service.sendTest(actor, { connectionId: "smtp-1", to: "lan@example.test", makeDefault: false }),
             ).rejects.toMatchObject({ code: EmailMessagesErrorCode.SmtpPassword })
-            expect(logger.error.mock.calls[0]?.[0]).toBe(EmailMessagesLogEvent.CredentialUnreadable)
+            expect(logger.error.mock.calls[0]?.[0]).toBe(EmailMessagesLogEvent.Undecryptable)
             expect(logger.error.mock.calls[0]?.[2]).toEqual({ connectionId: "smtp-1" })
             expect(mail.sendThroughSmtp).not.toHaveBeenCalled()
         })
@@ -323,7 +337,11 @@ describe("SmtpWizardService", () => {
                 service.sendTest(actor, { connectionId: "smtp-1", to: "lan@example.test", makeDefault: false }),
             ).rejects.toMatchObject({ code: EmailMessagesErrorCode.SmtpPassword })
         })
+    })
+})
 
+describe("SmtpWizardService", () => {
+    describe("sendTest", () => {
         it("refuses a disconnected or foreign connection", async () => {
             const disconnected = await build(connectionOf({ status: "disconnected" }))
             const other = await build(connectionOf({ provider: "telegram" }))
@@ -370,7 +388,9 @@ describe("SmtpWizardService", () => {
             expect(connections.patch).toHaveBeenCalledWith("ws-1", "smtp-1", { status: "pending", lastError: null })
         })
     })
+})
 
+describe("SmtpWizardService", () => {
     describe("setDefault", () => {
         it("makes a connected connection the default sender", async () => {
             const { service, connections } = await build(connectionOf({ status: "connected" }))

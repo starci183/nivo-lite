@@ -167,21 +167,19 @@ describe("AgentChatService", () => {
             expect(tx.em.query).not.toHaveBeenCalledWith(FIND_FOUNDING_PURCHASE, expect.anything())
         })
 
-        it("refuses a missing agent row", async () => {
-            const { service, agents } = await build([[FIND_CHAT_AGENT, []]])
-            agents.profileOf.mockResolvedValue(PROFILE)
-
-            await expect(service.page("u1", PAGE)).rejects.toMatchObject({ code: AgentChatErrorCode.AgentNotFound })
-        })
-
-        it("refuses an agent that has no profile", async () => {
-            const { service, agents } = await build([[FIND_CHAT_AGENT, [AGENT]]])
-            agents.profileOf.mockResolvedValue(null)
+        it.each([
+            { name: "agent row", rows: [], profile: PROFILE },
+            { name: "agent profile", rows: [AGENT], profile: null },
+        ])("refuses a missing $name", async ({ rows, profile }) => {
+            const { service, agents } = await build([[FIND_CHAT_AGENT, rows]])
+            agents.profileOf.mockResolvedValue(profile)
 
             await expect(service.page("u1", PAGE)).rejects.toMatchObject({ code: AgentChatErrorCode.AgentNotFound })
         })
     })
+})
 
+describe("AgentChatService", () => {
     describe("listConversations", () => {
         it("returns the agent's history after proving the agent", async () => {
             const { service, conversations } = await build([[FIND_CHAT_AGENT, [AGENT]]])
@@ -214,7 +212,9 @@ describe("AgentChatService", () => {
             expect(messages.listChat).not.toHaveBeenCalled()
         })
     })
+})
 
+describe("AgentChatService", () => {
     describe("start", () => {
         it("opens a test chat under the member's name and stores the greeting", async () => {
             const { service, conversations, messages, tx } = await build([[FIND_CHAT_AGENT, [AGENT]]])
@@ -263,7 +263,9 @@ describe("AgentChatService", () => {
             expect(conversations.openChat).not.toHaveBeenCalled()
         })
     })
+})
 
+describe("AgentChatService", () => {
     describe("send", () => {
         it("stores a customer message and queues a turn", async () => {
             const { service, conversations, messages, turns, tx } = await build()
@@ -320,7 +322,9 @@ describe("AgentChatService", () => {
             expect(turns.enqueueChatTurn).not.toHaveBeenCalled()
         })
     })
+})
 
+describe("AgentChatService", () => {
     describe("takeOver", () => {
         it("records the member as holder and substitutes their name in the line", async () => {
             const { service, conversations, messages, tx } = await build()
@@ -358,7 +362,9 @@ describe("AgentChatService", () => {
             expect(messages.storeLine).toHaveBeenCalledWith("w1", "c1", "b".repeat(400), expect.anything())
         })
     })
+})
 
+describe("AgentChatService", () => {
     describe("turnStatus", () => {
         it("reports a queued turn and the stored reply id", async () => {
             const { service, queueStatus } = await build([[FIND_CHAT_TURN_MESSAGE, [TURN]]])
@@ -436,7 +442,9 @@ describe("AgentChatService", () => {
             })
         })
     })
+})
 
+describe("AgentChatService", () => {
     it.each([
         { kind: "test", visitorName: "Lan" },
         { kind: "customer", visitorName: null },

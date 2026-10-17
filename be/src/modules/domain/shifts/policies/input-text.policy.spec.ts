@@ -1,4 +1,14 @@
+import { Test } from "@nestjs/testing"
 import { isDay, isTime } from "./input-text.policy"
+
+const SUBJECT = Symbol("input-text.policy")
+
+const build = async () => {
+    const moduleRef = await Test.createTestingModule({
+        providers: [{ provide: SUBJECT, useValue: { isDay, isTime } }],
+    }).compile()
+    return moduleRef.get<typeof import("./input-text.policy")>(SUBJECT)
+}
 
 describe("input text policy", () => {
     it.each([
@@ -13,8 +23,10 @@ describe("input text policy", () => {
         ["13/10/2026", false],
         ["2026-10-13T00:00:00Z", false],
         ["", false],
-    ])("validates calendar day %s as %s", (input, expected) => {
-        expect(isDay(input)).toBe(expected)
+    ])("validates calendar day %s as %s", async (input, expected) => {
+        const subject = await build()
+
+        expect(subject.isDay(input)).toBe(expected)
     })
 
     it.each([
@@ -29,7 +41,9 @@ describe("input text policy", () => {
         ["09:05:00", false],
         [" 09:05", false],
         ["", false],
-    ])("validates clock text %s as %s", (input, expected) => {
-        expect(isTime(input)).toBe(expected)
+    ])("validates clock text %s as %s", async (input, expected) => {
+        const subject = await build()
+
+        expect(subject.isTime(input)).toBe(expected)
     })
 })

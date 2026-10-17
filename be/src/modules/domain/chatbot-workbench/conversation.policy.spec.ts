@@ -1,6 +1,18 @@
+import type * as SubjectModule from "./conversation.policy"
+import { Test } from "@nestjs/testing"
 import { builder } from "@starci/jest-preset"
 import { channelOf, roleOf, toConversation, waitingConversationId } from "./conversation.policy"
 import type { ConversationRow, MessageBriefRow, WaitingRow } from "./persistence/chatbot-workbench.rows"
+
+const SUBJECT = Symbol("conversation.policy")
+type Subject = Pick<typeof SubjectModule, "channelOf" | "roleOf" | "waitingConversationId" | "toConversation">
+
+const buildSubject = async () => {
+    const moduleRef = await Test.createTestingModule({
+        providers: [{ provide: SUBJECT, useValue: { channelOf, roleOf, waitingConversationId, toConversation } }],
+    }).compile()
+    return moduleRef.get<Subject>(SUBJECT)
+}
 
 const conversationOf = builder<ConversationRow>({
     id: "c-1",
@@ -30,12 +42,16 @@ const waitingOf = builder<WaitingRow>({
 })
 
 describe("conversation policy", () => {
-    it.each(["telegram", "zalo", "facebook", "instagram"])("keeps the %s customer channel", (channel) => {
-        expect(channelOf(channel)).toBe(channel)
+    it.each(["telegram", "zalo", "facebook", "instagram"])("keeps the %s customer channel", async (channel) => {
+        const subject = await buildSubject()
+
+        expect(subject.channelOf(channel)).toBe(channel)
     })
 
-    it.each(["website", "webchat", "internal", "ZALO", ""])("represents %s as website chat", (channel) => {
-        expect(channelOf(channel)).toBe("website")
+    it.each(["website", "webchat", "internal", "ZALO", ""])("represents %s as website chat", async (channel) => {
+        const subject = await buildSubject()
+
+        expect(subject.channelOf(channel)).toBe("website")
     })
 
     it.each([
@@ -43,13 +59,19 @@ describe("conversation policy", () => {
         ["system", "system"],
         ["user", "user"],
         ["visitor", "user"],
-    ])("normalizes role %s to %s", (stored, expected) => {
-        expect(roleOf(stored)).toBe(expected)
+    ])("normalizes role %s to %s", async (stored, expected) => {
+        const subject = await buildSubject()
+
+        expect(subject.roleOf(stored)).toBe(expected)
     })
 
-    it("prefers an explicit conversation id, including an empty string, over the subject", () => {
-        expect(waitingConversationId(waitingOf({ proposal: { fields: { conversation_id: "c-2" } } }))).toBe("c-2")
-        expect(waitingConversationId(waitingOf({ proposal: { fields: { conversation_id: "" } } }))).toBe("")
+    it("prefers an explicit conversation id, including an empty string, over the subject", async () => {
+        const subject = await buildSubject()
+
+        expect(subject.waitingConversationId(waitingOf({ proposal: { fields: { conversation_id: "c-2" } } }))).toBe(
+            "c-2",
+        )
+        expect(subject.waitingConversationId(waitingOf({ proposal: { fields: { conversation_id: "" } } }))).toBe("")
     })
 
     it.each([
@@ -60,13 +82,17 @@ describe("conversation policy", () => {
         { fields: [] },
         { fields: {} },
         { fields: { conversation_id: 2 } },
-    ])("falls back to the subject when a proposal has no string conversation id: %j", (proposal) => {
-        expect(waitingConversationId(waitingOf({ proposal }))).toBe("c-1")
-        expect(waitingConversationId(waitingOf({ proposal, subject_id: null }))).toBeNull()
+    ])("falls back to the subject when a proposal has no string conversation id: %j", async (proposal) => {
+        const subject = await buildSubject()
+
+        expect(subject.waitingConversationId(waitingOf({ proposal }))).toBe("c-1")
+        expect(subject.waitingConversationId(waitingOf({ proposal, subject_id: null }))).toBeNull()
     })
 
-    it("maps an empty conversation using its creation date and no display name", () => {
-        expect(toConversation(conversationOf(), [], undefined, false)).toEqual({
+    it("maps an empty conversation using its creation date and no display name", async () => {
+        const subject = await buildSubject()
+
+        expect(subject.toConversation(conversationOf(), [], undefined, false)).toEqual({
             id: "c-1",
             channel: "zalo",
             name: "",
@@ -80,15 +106,20 @@ describe("conversation policy", () => {
             unanswered: false,
         })
     })
+})
 
-    it("trims the visitor name and shows the last conversation line while tracking the latest system activity", () => {
+describe("conversation policy", () => {
+    it("trims the visitor name and shows the last conversation line while tracking the latest system activity", async () => {
+        const subject = await buildSubject()
+
         const messages = [
             messageOf(),
             messageOf({ id: "m-2", role: "agent", body: "Yes", created_at: "2026-10-13T01:02:00.000Z" }),
             messageOf({ id: "m-3", role: "system", body: "Assigned", created_at: "2026-10-13T01:03:00.000Z" }),
         ]
 
-        expect(toConversation(conversationOf({ visitor_name: "  Minh  " }), messages, "Hoa", true)).toEqual({
+        const conversation = conversationOf({ visitor_name: "  Minh  " })
+        expect(subject.toConversation(conversation, messages, "Hoa", true)).toEqual({
             id: "c-1",
             channel: "zalo",
             name: "Minh",
@@ -103,8 +134,10 @@ describe("conversation policy", () => {
         })
     })
 
-    it("shows the latest system line when no conversational lines exist", () => {
-        const result = toConversation(
+    it("shows the latest system line when no conversational lines exist", async () => {
+        const subject = await buildSubject()
+
+        const result = subject.toConversation(
             conversationOf({ visitor_name: "  " }),
             [messageOf({ role: "system", body: "Opened" })],
             "Hoa",
@@ -121,28 +154,39 @@ describe("conversation policy", () => {
         })
     })
 
-    it("clips long previews to 139 characters with trailing whitespace removed before the ellipsis", () => {
+    it("clips long previews to 139 characters with trailing whitespace removed before the ellipsis", async () => {
+        const subject = await buildSubject()
+
         const body = "x".repeat(138) + "  more"
 
-        expect(toConversation(conversationOf(), [messageOf({ body })], "", false).lastText).toBe(
+        expect(subject.toConversation(conversationOf(), [messageOf({ body })], "", false).lastText).toBe(
             "x".repeat(138) + "...",
         )
-        expect(toConversation(conversationOf(), [messageOf({ body: "x".repeat(141) })], "", false).lastText).toBe(
-            "x".repeat(139) + "...",
-        )
-        expect(toConversation(conversationOf(), [messageOf({ body: "x".repeat(140) })], "", false).lastText).toBe(
-            "x".repeat(140),
-        )
+        expect(
+            subject.toConversation(conversationOf(), [messageOf({ body: "x".repeat(141) })], "", false).lastText,
+        ).toBe("x".repeat(139) + "...")
+        expect(
+            subject.toConversation(conversationOf(), [messageOf({ body: "x".repeat(140) })], "", false).lastText,
+        ).toBe("x".repeat(140))
     })
+})
 
+describe("conversation policy", () => {
     it.each([
         [false, null, false],
         [true, null, true],
         [false, "staff-1", true],
     ] as const)(
         "marks the customer's last line unanswered with waiting=%s and handler=%s",
-        (waiting, handledBy, expected) => {
-            const result = toConversation(conversationOf({ handled_by: handledBy }), [messageOf()], undefined, waiting)
+        async (waiting, handledBy, expected) => {
+            const subject = await buildSubject()
+
+            const result = subject.toConversation(
+                conversationOf({ handled_by: handledBy }),
+                [messageOf()],
+                undefined,
+                waiting,
+            )
 
             expect(result.unanswered).toBe(expected)
             expect(result.handledBy).toBe(handledBy)

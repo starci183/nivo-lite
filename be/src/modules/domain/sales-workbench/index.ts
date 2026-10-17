@@ -1,3 +1,6 @@
 export { SalesWorkbenchModule } from "./sales-workbench.module"
 export { SalesWorkbenchService } from "./sales-workbench.service"
 export type { SalesWorkbenchData } from "./sales-workbench.contracts"
+export type { SalesDeal, AutoActivity, SalesDecision, AttentionRow } from "./sales-workbench.contracts"
+export type { WorkItemView } from "./work-item-view.contracts"
+export type { SalesRows } from "./sales-workbench.mapper"

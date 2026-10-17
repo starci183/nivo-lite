@@ -1,6 +1,5 @@
 export {
     AGENTS_QUEUE,
-    AGENTS_SYNC_SCHEDULER,
     AgentsJob,
     isGenerateWithAgentPayload,
     isSetupTurnPayload,

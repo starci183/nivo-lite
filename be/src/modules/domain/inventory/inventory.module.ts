@@ -26,7 +26,11 @@ export class InventoryModule extends ConfigurableModuleClass {
         const base = super.register(options)
         return {
             ...base,
-            imports: [...(base.imports ?? []), InventoryOrderModule, InventoryReplenishModule],
+            imports: [
+                ...(base.imports ?? []),
+                InventoryOrderModule.register({}),
+                InventoryReplenishModule.register({}),
+            ],
             providers: [
                 ...(base.providers ?? []),
                 InventoryLocationsService,

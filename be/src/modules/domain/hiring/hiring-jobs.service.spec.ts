@@ -1,3 +1,11 @@
+import {
+    text,
+    requirementsOf,
+    cleanAds,
+    retries,
+    adOutput,
+    minimalFacts,
+} from "@tests/fixtures/builders/hiring-jobs.builder"
 import { Test } from "@nestjs/testing"
 import { FakeClock, mock, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
@@ -7,7 +15,7 @@ import { CLOCK } from "@modules/platform/clock"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import type { MessageCatalog } from "@modules/platform/i18n"
 import { HiringErrorCode } from "./errors/hiring.error"
-import type { HiringSettings, JobQuestion, JobRecord, JobRequirements } from "./hiring.contracts"
+import type { HiringSettings, JobQuestion, JobRecord } from "./hiring.contracts"
 import type { GenerateAdOutput, SaveJobParams, SetJobStatusParams } from "./hiring-operations.contracts"
 import { HiringDataService } from "./hiring-data.service"
 import { HiringJobsService } from "./hiring-jobs.service"
@@ -15,17 +23,6 @@ import { HiringLinksService } from "./hiring-links.service"
 import { HiringSettingsService } from "./hiring-settings.service"
 import { HiringTextService } from "./hiring-text.service"
 import { CREATE_JOB, SET_JOB_ADS, SET_JOB_STATUS, UPDATE_JOB } from "./persistence/hiring.sql"
-
-const text = (key: string, params: Record<string, string | number> = {}): string => `${key}${JSON.stringify(params)}`
-const requirementsOf = (overrides: Partial<JobRequirements> = {}): JobRequirements => ({
-    skills: [],
-    experienceYears: null,
-    experienceNote: "",
-    availability: [],
-    mustHave: [],
-    niceToHave: [],
-    ...overrides,
-})
 const commonFields: Omit<JobRecord, "id" | "workspaceId" | "slug" | "status"> = {
     title: "Cashier",
     position: "",
@@ -78,13 +75,6 @@ const fieldsOf = (overrides: Record<string, unknown> = {}): string =>
         },
         ...overrides,
     })
-const minimalFacts = (): string =>
-    [
-        text("hiring.facts.title", { title: "Cashier" }),
-        text("hiring.facts.employment", { employment: text("hiring.employment.full_time") }),
-        text("hiring.facts.pay", { pay: text("hiring.pay.negotiable") }),
-        text("hiring.facts.headcount", { count: 1 }),
-    ].join("\n")
 const fairnessParams = (field: string) => ({
     parts: `hiring.field.${field}{}: "nu cashier" (hiring.fairness.gender{})`,
     more: "",
@@ -138,23 +128,7 @@ const build = async (entityManager: MockEntityManager) => {
     const service = moduleRef.get(HiringJobsService)
     return { service, members, data, generator, settings, links, office, words, clock, catalog }
 }
-const cleanAds = { facebook: "Facebook {{link}}", zalo: "Zalo {{link}}", topcv: "Board {{link}}" }
-const unfairAds = JSON.stringify({
-    facebook: "nu\nFacebook {{link}}",
-    zalo: "Zalo {{link}}\nnu",
-    topcv: "nu\nBoard {{link}}\nnu",
-})
 const question: JobQuestion = { id: "available", text: "Available Monday?", type: "yesno", required: true }
-const adOutput = (overrides: Partial<GenerateAdOutput> = {}): GenerateAdOutput => ({
-    facebook: "Facebook https://jobs.example/shop/cashier",
-    zalo: "Zalo https://jobs.example/shop/cashier",
-    topcv: "Board https://jobs.example/shop/cashier",
-    generatedAt: "2026-10-13T08:00:00.000Z",
-    ms: 0,
-    attempts: 1,
-    sanitised: false,
-    ...overrides,
-})
 const generationRequest = (feedback = "") => ({
     workspaceId: "ws-1",
     purpose: "hiring_job_ad",
@@ -170,41 +144,59 @@ const expectStoredAds = (em: MockEntityManager, output: GenerateAdOutput) => {
     ])
 }
 
+const createCases = [
+    { request: requestOf(), slug: "cashier", fields: fieldsOf() },
+    { request: requestOf({ title: "!!!" }), slug: "tuyen-dung", fields: fieldsOf({ title: "!!!" }) },
+    ...[
+        [null, 20000],
+        [10000, null],
+        [10000, 10000],
+    ].map(([payMinVnd, payMaxVnd]) => ({
+        request: requestOf({ payMinVnd, payMaxVnd, payUnit: "month" }),
+        slug: "cashier",
+        fields: fieldsOf({ payMinVnd, payMaxVnd }),
+    })),
+    {
+        request: requestOf({
+            title: "T".repeat(150),
+            position: "P".repeat(130),
+            employmentType: "full_time",
+            schedule: "S".repeat(310),
+            description: "D".repeat(6010),
+            location: "L".repeat(310),
+            payUnit: "shift",
+            closesAt: null,
+        }),
+        slug: "t".repeat(60),
+        fields: fieldsOf({
+            title: "T".repeat(140),
+            position: "P".repeat(120),
+            schedule: "S".repeat(300),
+            description: "D".repeat(6000),
+            location: "L".repeat(300),
+            payUnit: "shift",
+        }),
+    },
+]
+
+const nonOpen: Array<SetJobStatusParams["status"]> = ["draft", "paused", "closed"]
+
+const cases: Array<{ status: SetJobStatusParams["status"]; job: JobRecord; settings: Array<Array<string>> }> = [
+    ...nonOpen.map((status) => ({ status, job: jobOf(), settings: [] })),
+    { status: "open", job: jobOf({ description: "Help customers" }), settings: [["ws-1"]] },
+    {
+        status: "open",
+        job: jobOf({ description: "   ", requirements: requirementsOf({ skills: ["Register"] }) }),
+        settings: [["ws-1"]],
+    },
+    {
+        status: "open",
+        job: jobOf({ requirements: requirementsOf({ mustHave: ["Counting"] }) }),
+        settings: [["ws-1"]],
+    },
+]
+
 describe("HiringJobsService", () => {
-    const createCases = [
-        { request: requestOf(), slug: "cashier", fields: fieldsOf() },
-        { request: requestOf({ title: "!!!" }), slug: "tuyen-dung", fields: fieldsOf({ title: "!!!" }) },
-        ...[
-            [null, 20000],
-            [10000, null],
-            [10000, 10000],
-        ].map(([payMinVnd, payMaxVnd]) => ({
-            request: requestOf({ payMinVnd, payMaxVnd, payUnit: "month" }),
-            slug: "cashier",
-            fields: fieldsOf({ payMinVnd, payMaxVnd }),
-        })),
-        {
-            request: requestOf({
-                title: "T".repeat(150),
-                position: "P".repeat(130),
-                employmentType: "full_time",
-                schedule: "S".repeat(310),
-                description: "D".repeat(6010),
-                location: "L".repeat(310),
-                payUnit: "shift",
-                closesAt: null,
-            }),
-            slug: "t".repeat(60),
-            fields: fieldsOf({
-                title: "T".repeat(140),
-                position: "P".repeat(120),
-                schedule: "S".repeat(300),
-                description: "D".repeat(6000),
-                location: "L".repeat(300),
-                payUnit: "shift",
-            }),
-        },
-    ]
     it.each(createCases)("creates $slug with cleaned fields", async ({ request, slug, fields }) => {
         const em = mockEntityManager({ query: [CREATE_JOB, [{ id: "job-1" }]] })
         const { service, members } = await build(em)
@@ -212,6 +204,9 @@ describe("HiringJobsService", () => {
         expect(members.require.mock.calls).toEqual([["user-1", "ws-1", ["owner", "manager"]]])
         expect(em.query.mock.calls).toEqual([createQuery(slug, fields)])
     })
+})
+
+describe("HiringJobsService", () => {
     it("cleans supplied fields and stores requirements and questions in row format", async () => {
         const em = mockEntityManager({ query: [CREATE_JOB, [{ id: "job-1" }]] })
         const { service } = await build(em)
@@ -278,6 +273,9 @@ describe("HiringJobsService", () => {
         })
         expect(em.query.mock.calls).toEqual([createQuery("shop-cashier", expected)])
     })
+})
+
+describe("HiringJobsService", () => {
     it.each([
         { rows: [[], [{ id: null }], [{ id: "job-3" }]], result: { id: "job-3", slug: "cashier-3" }, count: 3 },
         { rows: [[]], result: null, count: 30 },
@@ -291,6 +289,7 @@ describe("HiringJobsService", () => {
             Array.from({ length: count }, (_, index) => createQuery(index === 0 ? "cashier" : `cashier-${index + 1}`)),
         )
     })
+
     it.each([
         { rows: [{ value: true }], job: jobOf({ slug: "original-cashier" }), reads: [["ws-1", "job-1"]] },
         { rows: [], job: undefined, reads: [] },
@@ -306,6 +305,7 @@ describe("HiringJobsService", () => {
         expect(em.query.mock.calls).toEqual([[UPDATE_JOB, ["ws-1", "job-1", fieldsOf()]]])
         expect(data.job.mock.calls).toEqual(reads)
     })
+
     it.each([
         { request: requestOf({ title: "  Ab  " }), error: { code: HiringErrorCode.JobTitleInvalid } },
         {
@@ -326,6 +326,7 @@ describe("HiringJobsService", () => {
             ])
         expect(em.query).not.toHaveBeenCalled()
     })
+
     it("propagates membership refusal before validating or saving", async () => {
         const em = mockEntityManager()
         const { service, members } = await build(em)
@@ -334,6 +335,9 @@ describe("HiringJobsService", () => {
         await expect(service.saveJob("user-1", "ws-1", requestOf())).rejects.toBe(failure)
         expect(em.query).not.toHaveBeenCalled()
     })
+})
+
+describe("HiringJobsService", () => {
     it.each([jobOf(), undefined])("returns a known job or refuses a missing job %j", async (job) => {
         const { service, data } = await build(mockEntityManager())
         data.job.mockResolvedValue(job)
@@ -342,21 +346,7 @@ describe("HiringJobsService", () => {
         else await required.resolves.toEqual(jobOf())
         expect(data.job.mock.calls).toEqual([["ws-1", "job-1"]])
     })
-    const nonOpen: Array<SetJobStatusParams["status"]> = ["draft", "paused", "closed"]
-    const cases: Array<{ status: SetJobStatusParams["status"]; job: JobRecord; settings: Array<Array<string>> }> = [
-        ...nonOpen.map((status) => ({ status, job: jobOf(), settings: [] })),
-        { status: "open", job: jobOf({ description: "Help customers" }), settings: [["ws-1"]] },
-        {
-            status: "open",
-            job: jobOf({ description: "   ", requirements: requirementsOf({ skills: ["Register"] }) }),
-            settings: [["ws-1"]],
-        },
-        {
-            status: "open",
-            job: jobOf({ requirements: requirementsOf({ mustHave: ["Counting"] }) }),
-            settings: [["ws-1"]],
-        },
-    ]
+
     it.each(cases)("sets $status and ensures settings", async ({ status, job, settings: calls }) => {
         const em = mockEntityManager({ query: [SET_JOB_STATUS, [{ value: true }]] })
         const { service, members, data, settings } = await build(em)
@@ -366,6 +356,7 @@ describe("HiringJobsService", () => {
         expect(em.query.mock.calls).toEqual([[SET_JOB_STATUS, ["ws-1", "job-1", status]]])
         expect(settings.ensure.mock.calls).toEqual(calls)
     })
+
     it.each([
         { job: jobOf(), error: { code: HiringErrorCode.JobNeedsContent } },
         { job: jobOf({ description: "nu cashier" }), error: unfairError("description") },
@@ -377,11 +368,15 @@ describe("HiringJobsService", () => {
         expect(settings.ensure).not.toHaveBeenCalled()
         expect(em.query).not.toHaveBeenCalled()
     })
+
     it("omits empty optional facts and lists", async () => {
         const { service, words } = await build(mockEntityManager())
         expect(service.jobFacts(jobOf())).toBe(minimalFacts())
         expect(words.amount).not.toHaveBeenCalled()
     })
+})
+
+describe("HiringJobsService", () => {
     it("includes every fact with exact list separators and formatted pay", async () => {
         const { service, words } = await build(mockEntityManager())
         const job = jobOf({
@@ -427,6 +422,9 @@ describe("HiringJobsService", () => {
         )
         expect(words.amount.mock.calls).toEqual([[10000], [20000]])
     })
+})
+
+describe("HiringJobsService", () => {
     it("fills every placeholder, appends missing links and stores exact elapsed time", async () => {
         const em = mockEntityManager({ query: [SET_JOB_ADS, [{ value: true }]] })
         const { service, members, data, settings, office, links, generator, clock } = await build(em)
@@ -456,16 +454,7 @@ describe("HiringJobsService", () => {
         expect(generator.generate.mock.calls).toEqual([[generationRequest()]])
         expectStoredAds(em, output)
     })
-    const retries: Array<[string, string, string, boolean]> = [
-        ["not JSON", JSON.stringify(cleanAds), "hiring.ad.badFormat{}", false],
-        [
-            JSON.stringify({ facebook: "nu", zalo: "nu", topcv: "mang thai" }),
-            JSON.stringify(cleanAds),
-            text("hiring.ad.unfair", { traits: "hiring.fairness.gender{}, hiring.fairness.pregnancy{}" }),
-            false,
-        ],
-        [unfairAds, unfairAds, text("hiring.ad.unfair", { traits: "hiring.fairness.gender{}" }), true],
-    ]
+
     it.each(retries)("retries %s with exact feedback and sanitising", async (first, second, feedback, sanitised) => {
         const em = mockEntityManager({ query: [SET_JOB_ADS, [{ value: true }]] })
         const { service, generator } = await build(em)
@@ -477,6 +466,7 @@ describe("HiringJobsService", () => {
         expect(generator.generate.mock.calls).toEqual([[generationRequest()], [generationRequest(feedback)]])
         expectStoredAds(em, output)
     })
+
     it.each([
         { written: { ok: false, output: "" }, calls: [generationRequest()] },
         ...["facebook", "zalo", "topcv"].map((field) => ({

@@ -1,8 +1,39 @@
+import { Test } from "@nestjs/testing"
 import type { DraftSnapshot, GateEvidence } from "@modules/domain/module-context-versions"
 import { ACCOUNTING_MODULE } from "../accounting.contracts"
 import type { ModuleDefinition } from "../modules.contracts"
-import { mergeSetupTurn, parseLoose, readSetupTurn, setupPromptOf } from "./setup-turn.policy"
+import {
+    mergeSetupTurn as realMergeSetupTurn,
+    parseLoose as realParseLoose,
+    readSetupTurn as realReadSetupTurn,
+    setupPromptOf as realSetupPromptOf,
+} from "./setup-turn.policy"
 import type { SetupTurnInput } from "./setup-turn.policy"
+
+const SUBJECT = Symbol("setup-turn.policy")
+
+const buildSubject = async () => {
+    const moduleRef = await Test.createTestingModule({
+        providers: [
+            {
+                provide: SUBJECT,
+                useValue: {
+                    mergeSetupTurn: realMergeSetupTurn,
+                    parseLoose: realParseLoose,
+                    readSetupTurn: realReadSetupTurn,
+                    setupPromptOf: realSetupPromptOf,
+                },
+            },
+        ],
+    }).compile()
+    const subject = moduleRef.get<{
+        mergeSetupTurn: typeof realMergeSetupTurn
+        parseLoose: typeof realParseLoose
+        readSetupTurn: typeof realReadSetupTurn
+        setupPromptOf: typeof realSetupPromptOf
+    }>(SUBJECT)
+    return { subject }
+}
 
 const MODULE: ModuleDefinition = {
     ...ACCOUNTING_MODULE,
@@ -54,14 +85,18 @@ describe("parseLoose", () => {
         ["prefix {broken} suffix", null],
         ["} before {", null],
         ["{", null],
-    ])("reads the model response %s", (raw, expected) => {
-        expect(parseLoose(raw)).toEqual(expected)
+    ])("reads the model response %s", async (raw, expected) => {
+        const { subject } = await buildSubject()
+
+        expect(subject.parseLoose(raw)).toEqual(expected)
     })
 })
 
 describe("setupPromptOf", () => {
-    it("describes English setup, the missing checklist, declared writes and an empty draft", () => {
-        const prompt = setupPromptOf(inputOf())
+    it("describes English setup, the missing checklist, declared writes and an empty draft", async () => {
+        const { subject } = await buildSubject()
+
+        const prompt = subject.setupPromptOf(inputOf())
 
         expect(prompt.split("\n").filter((line) => line.startsWith("- hours") || line.startsWith("- tone"))).toEqual([
             "- hours | Hours | When do you open? | state: missing",
@@ -69,20 +104,26 @@ describe("setupPromptOf", () => {
         ])
         expect(prompt).toContain("Write the reply in English.")
         expect(prompt).toContain(
-            'What each gate can write for real (Second Brain facts and the authority of the agent). The owner confirms every write on a card before it happens:\n- gate hours: fact | subjectType business | attribute "Hours" | audience public',
+            "What each gate can write for real (Second Brain facts and the authority of the agent). The owner " +
+                "confirms every write on a card before it happens:\n- gate hours: fact | subjectType business | " +
+                'attribute "Hours" | audience public',
         )
         expect(prompt).toContain("Facts already noted:\n(none yet)\nSummary so far: (none)")
         expect(prompt).toContain('- "writes": for every concrete value the owner gave THIS turn')
         expect(prompt.split("\n").slice(-2)).toEqual([
-            'Return ONLY a JSON object: {"reply": string, "summary": string, "facts": [{"key": string, "text": string}], "gates": {"<gateKey>": {"status": "proposed", "evidence": string}}, "writes": [ ... ]}',
+            'Return ONLY a JSON object: {"reply": string, "summary": string, "facts": [{"key": string, ' +
+                '"text": string}], "gates": {"<gateKey>": {"status": "proposed", "evidence": string}}, ' +
+                '"writes": [ ... ]}',
             "Valid gate keys: hours, tone",
         ])
     })
 
-    it("addresses the owner in Vietnamese and supplies known evidence, facts and gap guesses", () => {
+    it("addresses the owner in Vietnamese and supplies known evidence, facts and gap guesses", async () => {
+        const { subject } = await buildSubject()
+
         const evidence = "e".repeat(305)
         const question = "q".repeat(205)
-        const prompt = setupPromptOf(
+        const prompt = subject.setupPromptOf(
             inputOf({
                 locale: "vi",
                 draft: { summary: "A tea shop", facts: [{ key: "city", text: "Hue" }] },
@@ -104,15 +145,21 @@ describe("setupPromptOf", () => {
         ])
         expect(prompt).toContain("Facts already noted:\n- city: Hue\nSummary so far: A tea shop")
         expect(prompt).toContain(
-            'When the owner answers one, add a write {"gate": "gap", "kind": "fact", "gap": <id in brackets>, "subject": ..., "attribute": ..., "value": <the answer>}.',
+            'When the owner answers one, add a write {"gate": "gap", "kind": "fact", "gap": <id in ' +
+                'brackets>, "subject": ..., "attribute": ..., "value": <the answer>}.',
         )
     })
+})
 
-    it("omits write instructions and the writes field when the checklist declares none and there are no gaps", () => {
-        const prompt = setupPromptOf(inputOf({ module: { ...MODULE, gates: [] } }))
+describe("setupPromptOf", () => {
+    it("omits write instructions and the writes field when the checklist declares none and there are no gaps", async () => {
+        const { subject } = await buildSubject()
+
+        const prompt = subject.setupPromptOf(inputOf({ module: { ...MODULE, gates: [] } }))
 
         expect(prompt.split("\n").slice(-2)).toEqual([
-            'Return ONLY a JSON object: {"reply": string, "summary": string, "facts": [{"key": string, "text": string}], "gates": {"<gateKey>": {"status": "proposed", "evidence": string}}}',
+            'Return ONLY a JSON object: {"reply": string, "summary": string, "facts": [{"key": string, ' +
+                '"text": string}], "gates": {"<gateKey>": {"status": "proposed", "evidence": string}}}',
             "Valid gate keys: ",
         ])
         expect(prompt).not.toContain("What each gate can write for real")
@@ -120,8 +167,10 @@ describe("setupPromptOf", () => {
         expect(prompt).not.toContain("Open customer questions:")
     })
 
-    it("asks for writes when only an open question can be answered", () => {
-        const prompt = setupPromptOf(
+    it("asks for writes when only an open question can be answered", async () => {
+        const { subject } = await buildSubject()
+
+        const prompt = subject.setupPromptOf(
             inputOf({
                 module: { ...MODULE, gates: [] },
                 gaps: [{ id: "g1", question: "Hours?", topic: null, attributeGuess: null, count: 1 }],
@@ -129,7 +178,9 @@ describe("setupPromptOf", () => {
         )
 
         expect(prompt.split("\n").slice(-2)).toEqual([
-            'Return ONLY a JSON object: {"reply": string, "summary": string, "facts": [{"key": string, "text": string}], "gates": {"<gateKey>": {"status": "proposed", "evidence": string}}, "writes": [ ... ]}',
+            'Return ONLY a JSON object: {"reply": string, "summary": string, "facts": [{"key": string, ' +
+                '"text": string}], "gates": {"<gateKey>": {"status": "proposed", "evidence": string}}, ' +
+                '"writes": [ ... ]}',
             "Valid gate keys: ",
         ])
         expect(prompt).not.toContain('- "writes":')
@@ -137,8 +188,10 @@ describe("setupPromptOf", () => {
 })
 
 describe("readSetupTurn", () => {
-    it.each(["A plain answer", "", "null", "[]", "1"])("uses raw non-object response %s", (raw) => {
-        expect(readSetupTurn(inputOf(), raw, "Try again", "Shop")).toEqual({
+    it.each(["A plain answer", "", "null", "[]", "1"])("uses raw non-object response %s", async (raw) => {
+        const { subject } = await buildSubject()
+
+        expect(subject.readSetupTurn(inputOf(), raw, "Try again", "Shop")).toEqual({
             reply: raw === "" ? "Try again" : raw,
             facts: [],
             gates: {},
@@ -146,7 +199,9 @@ describe("readSetupTurn", () => {
         })
     })
 
-    it("trims the response, sanitizes remembered facts and gate evidence, and retains declared writes", () => {
+    it("trims the response, sanitizes remembered facts and gate evidence, and retains declared writes", async () => {
+        const { subject } = await buildSubject()
+
         const raw = JSON.stringify({
             reply: ` ${"r".repeat(1505)} `,
             summary: ` ${"s".repeat(605)} `,
@@ -168,7 +223,7 @@ describe("readSetupTurn", () => {
             writes: [{ gate: "hours", kind: "fact", value: "8 to 5" }],
         })
 
-        expect(readSetupTurn(inputOf(), raw, "Fallback", "Shop")).toEqual({
+        expect(subject.readSetupTurn(inputOf(), raw, "Fallback", "Shop")).toEqual({
             reply: "r".repeat(1500),
             summary: "s".repeat(600),
             facts: [
@@ -196,8 +251,10 @@ describe("readSetupTurn", () => {
         { reply: " ", summary: " ", facts: {}, gates: [] },
         { reply: 3, summary: null, facts: null, gates: null },
         { gates: { hours: { evidence: " " }, tone: { evidence: 1 } } },
-    ])("supplies fallback text and omits empty information", (parsed) => {
-        expect(readSetupTurn(inputOf(), JSON.stringify(parsed), "Fallback", "Shop")).toEqual({
+    ])("supplies fallback text and omits empty information", async (parsed) => {
+        const { subject } = await buildSubject()
+
+        expect(subject.readSetupTurn(inputOf(), JSON.stringify(parsed), "Fallback", "Shop")).toEqual({
             reply: "Fallback",
             facts: [],
             gates: {},
@@ -207,7 +264,9 @@ describe("readSetupTurn", () => {
 })
 
 describe("mergeSetupTurn", () => {
-    it("updates existing facts, adds new facts, retains confirmed gates and proposes other gates", () => {
+    it("updates existing facts, adds new facts, retains confirmed gates and proposes other gates", async () => {
+        const { subject } = await buildSubject()
+
         const draft: DraftSnapshot = { summary: "Old", facts: [{ key: "city", text: "Hue" }] }
         const gates: GateEvidence = {
             hours: { status: "confirmed", evidence: "8 to 5", confirmed_by: "Lan" },
@@ -215,7 +274,7 @@ describe("mergeSetupTurn", () => {
         }
 
         expect(
-            mergeSetupTurn(draft, gates, {
+            subject.mergeSetupTurn(draft, gates, {
                 reply: "Thanks",
                 summary: "New",
                 facts: [
@@ -243,11 +302,13 @@ describe("mergeSetupTurn", () => {
         expect(gates.tone).toEqual({ status: "missing", evidence: "" })
     })
 
-    it("keeps the prior summary when omitted and retains only the most recent sixty facts", () => {
+    it("keeps the prior summary when omitted and retains only the most recent sixty facts", async () => {
+        const { subject } = await buildSubject()
+
         const facts = Array.from({ length: 61 }, (_, at) => ({ key: `fact_${at}`, text: `${at}` }))
 
         expect(
-            mergeSetupTurn({ summary: "Prior", facts }, {}, { reply: "", facts: [], gates: {}, writes: [] }),
+            subject.mergeSetupTurn({ summary: "Prior", facts }, {}, { reply: "", facts: [], gates: {}, writes: [] }),
         ).toEqual({
             draft: { summary: "Prior", facts: facts.slice(1) },
             gates: {},

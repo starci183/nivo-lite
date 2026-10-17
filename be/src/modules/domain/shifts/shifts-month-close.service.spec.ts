@@ -170,7 +170,9 @@ describe("ShiftsMonthCloseService", () => {
         expect(mail.send).not.toHaveBeenCalled()
         expect(notify.toManagers).toHaveBeenCalledWith("ws-1", "shifts.payrollOffice", "payroll")
     })
+})
 
+describe("ShiftsMonthCloseService", () => {
     it("builds the payroll text, CSV and evidence even when mail fails and no prior marker exists", async () => {
         const em = mockEntityManager()
         answer(em, null, true)
@@ -214,7 +216,8 @@ describe("ShiftsMonthCloseService", () => {
                 {
                     filename: "cong-2026-09.csv",
                     content:
-                        '\uFEFFshifts.payrollCsvHeader\n"Lan","1","4","4","30000","120000"\n"shifts.payrollCsvTotal","","4","","","120000"',
+                        '\uFEFFshifts.payrollCsvHeader\n"Lan","1","4","4","30000",' +
+                        '"120000"\n"shifts.payrollCsvTotal","","4","","","120000"',
                     contentType: "text/csv; charset=utf-8",
                 },
             ],
@@ -227,7 +230,9 @@ describe("ShiftsMonthCloseService", () => {
             evidence: JSON.stringify([{ name: "Lan", shifts: 1, hours: 4, checked: 4, wage: 30000, cost: 120000 }]),
         })
     })
+})
 
+describe("ShiftsMonthCloseService", () => {
     it("counts only new closes and continues after a workspace fails", async () => {
         const em = mockEntityManager()
         em.query.mockResolvedValue([

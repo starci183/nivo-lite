@@ -1,13 +1,7 @@
 import { QueueError, QueueErrorCode } from "./errors/queue.error"
 import { DomainError } from "@modules/platform/errors"
-import type {
-    QueueDelivery,
-    QueueHandler,
-    QueueJob,
-    QueueSchedulerDefinition,
-    QueueWriteOptions,
-} from "./queue.contracts"
-import type { QueueMessageRow, QueueReadRow } from "./persistence/queue.rows"
+import type { QueueDelivery, QueueHandler, QueueJob, QueueWriteOptions } from "./queue.contracts"
+import type { QueueReadRow } from "./persistence/queue.rows"
 
 /** How many starts a job gets before it is archived as failed. */
 export const ATTEMPTS = 4
@@ -68,12 +62,6 @@ export const jobOf = (queue: string, payload: object, options: QueueWriteOptions
     payload,
 })
 
-/** The message of a scheduler tick: the same body job_enqueue sends, without an outbox row. */
-export const tickOf = (scheduler: QueueSchedulerDefinition): QueueMessageRow => ({
-    name: scheduler.job ?? scheduler.queue,
-    payload: scheduler.payload ?? {},
-})
-
 /**
  * The delivery a handler receives for one read message; a scheduler tick carries no outbox id and is known by its queue and message
  * id (pgmq numbers the messages of each queue from 1, so the bare message id of two queues' ticks would be the same job key).
@@ -90,12 +78,3 @@ export const deliveryOf = (queue: string, row: QueueReadRow, signal: AbortSignal
 /** The handler a delivery goes to: the one of its job, else the one of the whole queue, else none. */
 export const routeOf = (handlers: ReadonlyArray<QueueHandler>, delivery: QueueDelivery): QueueHandler | undefined =>
     handlers.find((handler) => handler.job === delivery.job) ?? handlers.find((handler) => handler.job === undefined)
-
-/** The pg_cron schedule of an interval: seconds below a minute, whole minutes below an hour, whole hours otherwise (rounded, at least one). */
-export const cronScheduleOf = (everyMs: number): string => {
-    const seconds = Math.max(1, Math.round(everyMs / 1000))
-    if (seconds < 60) return `${seconds} seconds`
-    const minutes = Math.round(seconds / 60)
-    if (minutes < 60) return `*/${minutes} * * * *`
-    return `0 */${Math.min(23, Math.round(minutes / 60))} * * *`
-}

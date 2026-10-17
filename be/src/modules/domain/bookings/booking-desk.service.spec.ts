@@ -206,7 +206,11 @@ describe("BookingDeskService", () => {
                 expect.objectContaining({ booking: expect.objectContaining({ resourceId: "r1" }) }),
             )
         })
+    })
+})
 
+describe("BookingDeskService", () => {
+    describe("add", () => {
         it("refuses a start the planner cannot place and says why", async () => {
             const full = await build({}, modelOf(), [taken("r1")])
             const closed = await build({})
@@ -260,7 +264,11 @@ describe("BookingDeskService", () => {
             })
             expect(taken_.reminders.schedule).not.toHaveBeenCalled()
         })
+    })
+})
 
+describe("BookingDeskService", () => {
+    describe("add", () => {
         it("refuses an incomplete form before touching the calendar", async () => {
             const { service, models } = await build()
 
@@ -277,7 +285,9 @@ describe("BookingDeskService", () => {
             expect(models.spans).not.toHaveBeenCalled()
         })
     })
+})
 
+describe("BookingDeskService", () => {
     describe("move", () => {
         it("requires owner or manager access before moving the booking", async () => {
             const { service, access, reservation } = await buildLocked()
@@ -339,7 +349,9 @@ describe("BookingDeskService", () => {
             expect(reminders.schedule).not.toHaveBeenCalled()
         })
     })
+})
 
+describe("BookingDeskService", () => {
     describe("confirm", () => {
         it("requires owner or manager access before confirming the request", async () => {
             const { service, access, tx } = await buildLocked("requested", CONFIRM_BOOKING)
@@ -405,7 +417,9 @@ describe("BookingDeskService", () => {
             expect(reminders.cancel).toHaveBeenCalledWith(expect.anything(), "b1", "no_show")
         })
     })
+})
 
+describe("BookingDeskService", () => {
     describe("cancel", () => {
         it("cancels the booking, frees its place and stops its reminders", async () => {
             const { service, reminders, tx } = await buildLocked("confirmed", CANCEL_BOOKING)
@@ -462,7 +476,9 @@ describe("BookingDeskService", () => {
             expect(reminders.cancel).not.toHaveBeenCalled()
         })
     })
+})
 
+describe("BookingDeskService", () => {
     it.each<"moveApproved" | "confirmApproved" | "cancelApproved">([
         "moveApproved",
         "confirmApproved",

@@ -30,15 +30,15 @@ const draft: DataConnectionDraft = {
     everyMinutes: null,
 }
 
-describe("DataHubService", () => {
-    const build = async () => {
-        const connections = mock<ConnectionsService>()
-        const moduleRef = await Test.createTestingModule({
-            providers: [DataHubService, { provide: ConnectionsService, useValue: connections }],
-        }).compile()
-        return { service: moduleRef.get(DataHubService), connections }
-    }
+const build = async () => {
+    const connections = mock<ConnectionsService>()
+    const moduleRef = await Test.createTestingModule({
+        providers: [DataHubService, { provide: ConnectionsService, useValue: connections }],
+    }).compile()
+    return { service: moduleRef.get(DataHubService), connections }
+}
 
+describe("DataHubService", () => {
     it("answers null when the connection has no stored credential", async () => {
         const { service, connections } = await build()
         connections.readSecret.mockResolvedValue(null)
@@ -88,7 +88,9 @@ describe("DataHubService", () => {
         expect(connections.find).toHaveBeenCalledWith("w-1", "c-1")
         expect(connections.scheduleOf).toHaveBeenCalledWith("w-1", "c-1")
     })
+})
 
+describe("DataHubService", () => {
     it.each([
         null,
         { ...record, status: "disconnected" as const },
@@ -141,7 +143,9 @@ describe("DataHubService", () => {
             expect(connections.setSchedule).not.toHaveBeenCalled()
         },
     )
+})
 
+describe("DataHubService", () => {
     it("updates the public facts, clears failures and replaces the schedule", async () => {
         const { service, connections } = await build()
         await expect(

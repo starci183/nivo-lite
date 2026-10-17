@@ -1,5 +1,5 @@
+import { NullAsAbsent } from "@modules/platform/graphql"
 import { Field, InputType } from "@nestjs/graphql"
-import { Transform } from "class-transformer"
 import { IsOptional, IsString, MaxLength, MinLength } from "class-validator"
 
 @InputType()
@@ -21,7 +21,7 @@ export class ReturnZaloAuthorizationInput {
 
     /** The OA id Zalo reports. */
     @Field(() => String, { nullable: true })
-    @Transform(({ value }) => value ?? undefined)
+    @NullAsAbsent()
     @IsOptional()
     @IsString()
     @MaxLength(60)

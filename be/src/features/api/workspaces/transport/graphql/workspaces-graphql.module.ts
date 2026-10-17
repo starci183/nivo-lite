@@ -17,9 +17,10 @@ import { SetMemberStatusResolver } from "./set-member-status.resolver"
 import { WorkspaceInvitesResolver } from "./workspace-invites.resolver"
 import { WorkspaceMembersResolver } from "./workspace-members.resolver"
 import { WorkspaceStaffResolver } from "./workspace-staff.resolver"
+import { ConfigurableModuleClass } from "./workspaces-graphql.module-definition"
 
 @Module({
-    imports: [WorkspacesApiModule],
+    imports: [WorkspacesApiModule.register({})],
     providers: [
         MembershipsResolver,
         MyWorkspaceRoleResolver,
@@ -41,4 +42,4 @@ import { WorkspaceStaffResolver } from "./workspace-staff.resolver"
     ],
 })
 /** The GraphQL transport of the workspaces feature. */
-export class WorkspacesGraphqlModule {}
+export class WorkspacesGraphqlModule extends ConfigurableModuleClass {}

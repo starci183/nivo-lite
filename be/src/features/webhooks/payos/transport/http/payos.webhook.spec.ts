@@ -1,3 +1,4 @@
+import { PayosHttpModule, webhookVerifiers } from "./payos-http.module"
 import { HttpStatus } from "@nestjs/common"
 import type { RawBodyRequest } from "@nestjs/common"
 import { HTTP_CODE_METADATA } from "@nestjs/common/constants"
@@ -5,7 +6,7 @@ import { Test } from "@nestjs/testing"
 import type { Request } from "express"
 import { mock } from "@starci/jest-preset"
 import { BankFeedService } from "@modules/domain/billing"
-import type { WebhookSignatureService } from "@modules/platform/http-security"
+import { ScopedWebhookVerifier } from "@modules/domain/webhook-proofs"
 import { PayosWebhook } from "./payos.webhook"
 
 const RAW = Buffer.from(JSON.stringify({ code: "00" }))
@@ -17,22 +18,19 @@ const DELIVERY = {
     signature: undefined,
     timestamp: undefined,
 }
-const INTAKE = { connectionId: CONNECTION, rawBody: RAW }
 
 const build = async () => {
-    const signature = mock<WebhookSignatureService>()
+    const signature = mock<ScopedWebhookVerifier>()
     signature.verify.mockResolvedValue(undefined)
     const feed = mock<BankFeedService>()
     feed.acceptPayosDelivery.mockResolvedValue(undefined)
     const moduleRef = await Test.createTestingModule({
-        providers: [PayosWebhook, { provide: BankFeedService, useValue: feed }],
-    })
-        .useMocker((token) =>
-            typeof token === "symbol" && token.description === "platform.http-security.webhook-signature"
-                ? signature
-                : undefined,
-        )
-        .compile()
+        providers: [
+            { provide: ScopedWebhookVerifier, useValue: signature },
+            PayosWebhook,
+            { provide: BankFeedService, useValue: feed },
+        ],
+    }).compile()
     return { door: moduleRef.get(PayosWebhook), signature, feed }
 }
 
@@ -65,7 +63,7 @@ describe("PayosWebhook", () => {
         await expect(received).resolves.toBeUndefined()
         expect(effects).toEqual(["verify", "acceptPayosDelivery"])
         expect(feed.acceptPayosDelivery).toHaveBeenCalledTimes(1)
-        expect(feed.acceptPayosDelivery).toHaveBeenCalledWith(INTAKE)
+        expect(feed.acceptPayosDelivery).toHaveBeenCalledWith(RAW, CONNECTION)
     })
 
     it("propagates a signature refusal without calling the feed intake", async () => {
@@ -90,7 +88,7 @@ describe("PayosWebhook", () => {
         expect(signature.verify).toHaveBeenCalledTimes(1)
         expect(signature.verify).toHaveBeenCalledWith(DELIVERY)
         expect(feed.acceptPayosDelivery).toHaveBeenCalledTimes(1)
-        expect(feed.acceptPayosDelivery).toHaveBeenCalledWith(INTAKE)
+        expect(feed.acceptPayosDelivery).toHaveBeenCalledWith(RAW, CONNECTION)
     })
 
     it("hands missing raw bytes to verification and intake unchanged", async () => {
@@ -109,10 +107,17 @@ describe("PayosWebhook", () => {
             timestamp: undefined,
         })
         expect(feed.acceptPayosDelivery).toHaveBeenCalledTimes(1)
-        expect(feed.acceptPayosDelivery).toHaveBeenCalledWith({ connectionId: CONNECTION, rawBody: undefined })
+        expect(feed.acceptPayosDelivery).toHaveBeenCalledWith(undefined, CONNECTION)
     })
 
     it("acknowledges an accepted delivery with HTTP 200", () => {
         expect(Reflect.getMetadata(HTTP_CODE_METADATA, PayosWebhook.prototype.receive)).toBe(HttpStatus.OK)
+    })
+})
+
+describe("PayosHttpModule proof declaration", () => {
+    it("declares the exact domain verification method", () => {
+        expect(webhookVerifiers).toEqual([ScopedWebhookVerifier.prototype.verify])
+        expect(PayosHttpModule.register({}).module).toBe(PayosHttpModule)
     })
 })

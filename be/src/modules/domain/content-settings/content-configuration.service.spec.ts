@@ -139,7 +139,9 @@ describe("ContentConfigurationService", () => {
             ["#tea", "#coffee"],
         ])
     })
+})
 
+describe("ContentConfigurationService", () => {
     it("answers blank brand settings when none are stored", async () => {
         const em = mockEntityManager({ query: [SELECT_CONFIGURATION_BRAND, []] })
         const members = mock<WorkspaceMembersService>()
@@ -199,7 +201,9 @@ describe("ContentConfigurationService", () => {
         expect(tx.em.query).toHaveBeenCalledWith(LOCK_CONFIGURATION, ["ws-1"])
         expect(tx.commits).toBe(1)
     })
+})
 
+describe("ContentConfigurationService", () => {
     it("refuses a repeated theme id and an id the workspace does not have", async () => {
         const tx = fakeTransaction(
             mockEntityManager({
@@ -267,7 +271,9 @@ describe("ContentConfigurationService", () => {
             code: ContentSettingsErrorCode.Duplicate,
         })
     })
+})
 
+describe("ContentConfigurationService", () => {
     it("applies the suggested Facebook and Zalo cadence", async () => {
         const tx = fakeTransaction(
             mockEntityManager({

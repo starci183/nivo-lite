@@ -112,11 +112,25 @@ const build = async () => {
 
 describe("ChatReplyService", () => {
     describe("setHandling", () => {
-        it("setHandling has its first case written", async () => {
-            const { service } = await build()
+        it("setHandling exercises its first behavior through the compiled module", async () => {
+            const { service, conversations, messages, events, transaction } = await build()
+            conversations.lockForHuman.mockResolvedValue(null)
+
+            await expect(service.setHandling("user-1", "ws-1", "conversation-1", true, "en")).rejects.toMatchObject({
+                code: ChatreplyErrorCode.NotFound,
+            })
+            expect(transaction.outcomes).toEqual(["rollback"])
+            expect(conversations.setHumanHandling).not.toHaveBeenCalled()
+            expect(messages.storeLine).not.toHaveBeenCalled()
+            expect(events.record).not.toHaveBeenCalled()
+
             expect(service.setHandling).toBeInstanceOf(Function)
         })
+    })
+})
 
+describe("ChatReplyService", () => {
+    describe("setHandling", () => {
         it("refuses a missing conversation inside the transaction", async () => {
             const { service, conversations, messages, events, transaction } = await build()
             conversations.lockForHuman.mockResolvedValue(null)
@@ -129,7 +143,11 @@ describe("ChatReplyService", () => {
             expect(messages.storeLine).not.toHaveBeenCalled()
             expect(events.record).not.toHaveBeenCalled()
         })
+    })
+})
 
+describe("ChatReplyService", () => {
+    describe("setHandling", () => {
         it("refuses staff changing a conversation held by another person", async () => {
             const { service, conversations, messages, events, transaction } = await build()
             conversations.lockForHuman.mockResolvedValue({ ...CONVERSATION, handledBy: "Other" })
@@ -142,7 +160,11 @@ describe("ChatReplyService", () => {
             expect(events.record).not.toHaveBeenCalled()
             expect(transaction.outcomes).toEqual(["rollback"])
         })
+    })
+})
 
+describe("ChatReplyService", () => {
+    describe("setHandling", () => {
         it.each([
             [true, "An"],
             [false, null],
@@ -160,7 +182,11 @@ describe("ChatReplyService", () => {
             expect(catalog.get).not.toHaveBeenCalled()
             expect(transaction.outcomes).toEqual(["commit"])
         })
+    })
+})
 
+describe("ChatReplyService", () => {
+    describe("setHandling", () => {
         it.each([
             [true, null, "An", "chatreply.takenOver", "conversation.take_over"],
             [false, "An", null, "chatreply.released", "conversation.hand_back"],
@@ -194,14 +220,30 @@ describe("ChatReplyService", () => {
             },
         )
     })
+})
 
+describe("ChatReplyService", () => {
     describe("requestReply", () => {
         const request = { conversationId: "conversation-1", body: "  Hello customer \n", locale: "en" } as const
-        it("requestReply has its first case written", async () => {
-            const { service } = await build()
+        it("requestReply exercises its first behavior through the compiled module", async () => {
+            const { service, conversations, messages, chatTurns, transaction } = await build()
+            conversations.lockForHuman.mockResolvedValue(null)
+
+            await expect(service.requestReply("user-1", "ws-1", request)).rejects.toMatchObject({
+                code: ChatreplyErrorCode.NotFound,
+            })
+            expect(messages.storeHumanMessage).not.toHaveBeenCalled()
+            expect(chatTurns.enqueueChatTurn).not.toHaveBeenCalled()
+            expect(transaction.outcomes).toEqual(["rollback"])
+
             expect(service.requestReply).toBeInstanceOf(Function)
         })
+    })
+})
 
+describe("ChatReplyService", () => {
+    describe("requestReply", () => {
+        const request = { conversationId: "conversation-1", body: "  Hello customer \n", locale: "en" } as const
         it("refuses a missing conversation before storing or enqueueing a reply", async () => {
             const { service, conversations, messages, chatTurns, transaction } = await build()
             conversations.lockForHuman.mockResolvedValue(null)
@@ -213,7 +255,12 @@ describe("ChatReplyService", () => {
             expect(chatTurns.enqueueChatTurn).not.toHaveBeenCalled()
             expect(transaction.outcomes).toEqual(["rollback"])
         })
+    })
+})
 
+describe("ChatReplyService", () => {
+    describe("requestReply", () => {
+        const request = { conversationId: "conversation-1", body: "  Hello customer \n", locale: "en" } as const
         it.each([null, "OpenClaw"])("requires a person to hold the conversation instead of %s", async (handledBy) => {
             const { service, conversations, messages, chatTurns } = await build()
             conversations.lockForHuman.mockResolvedValue({ ...CONVERSATION, handledBy })
@@ -224,7 +271,12 @@ describe("ChatReplyService", () => {
             expect(messages.storeHumanMessage).not.toHaveBeenCalled()
             expect(chatTurns.enqueueChatTurn).not.toHaveBeenCalled()
         })
+    })
+})
 
+describe("ChatReplyService", () => {
+    describe("requestReply", () => {
+        const request = { conversationId: "conversation-1", body: "  Hello customer \n", locale: "en" } as const
         it("refuses a staff reply in a conversation held by another person", async () => {
             const { service, conversations, messages, chatTurns, events } = await build()
             conversations.lockForHuman.mockResolvedValue({ ...CONVERSATION, handledBy: "Other" })
@@ -236,7 +288,12 @@ describe("ChatReplyService", () => {
             expect(chatTurns.enqueueChatTurn).not.toHaveBeenCalled()
             expect(events.record).not.toHaveBeenCalled()
         })
+    })
+})
 
+describe("ChatReplyService", () => {
+    describe("requestReply", () => {
+        const request = { conversationId: "conversation-1", body: "  Hello customer \n", locale: "en" } as const
         it("stores the trimmed human message and its delivery job in the same transaction", async () => {
             const { service, members, conversations, messages, chatTurns, events, catalog, transaction } = await build()
 
@@ -284,7 +341,9 @@ describe("ChatReplyService", () => {
             expect(transaction.outcomes).toEqual(["commit"])
         })
     })
+})
 
+describe("ChatReplyService", () => {
     describe("requestAnswer", () => {
         const request = {
             workItemId: "work-1",
@@ -292,11 +351,28 @@ describe("ChatReplyService", () => {
             text: " Reply ",
             locale: "en",
         } as const
-        it("requestAnswer has its first case written", async () => {
-            const { service } = await build()
+        it("requestAnswer exercises its first behavior through the compiled module", async () => {
+            const { service, decisions, decisionQueue } = await build()
+            decisions.getWorkItem.mockResolvedValue(itemOf({ status: "done" }))
+
+            await expect(service.requestAnswer("user-1", "ws-1", request)).rejects.toMatchObject({
+                code: DecisionsErrorCode.NotWaiting,
+            })
+            expect(decisionQueue.enqueueDecideWork).not.toHaveBeenCalled()
+
             expect(service.requestAnswer).toBeInstanceOf(Function)
         })
+    })
+})
 
+describe("ChatReplyService", () => {
+    describe("requestAnswer", () => {
+        const request = {
+            workItemId: "work-1",
+            conversationId: "conversation-1",
+            text: " Reply ",
+            locale: "en",
+        } as const
         it.each([{ action: "other_action" }, { subject_id: "other-conversation" }])(
             "rejects an item that does not address this answer: %j",
             async (changes) => {
@@ -311,7 +387,17 @@ describe("ChatReplyService", () => {
                 expect(decisionQueue.enqueueDecideWork).not.toHaveBeenCalled()
             },
         )
+    })
+})
 
+describe("ChatReplyService", () => {
+    describe("requestAnswer", () => {
+        const request = {
+            workItemId: "work-1",
+            conversationId: "conversation-1",
+            text: " Reply ",
+            locale: "en",
+        } as const
         it("rejects an answer that is no longer waiting for a decision", async () => {
             const { service, decisions, decisionQueue } = await build()
             decisions.getWorkItem.mockResolvedValue(itemOf({ status: "done" }))
@@ -321,7 +407,17 @@ describe("ChatReplyService", () => {
             })
             expect(decisionQueue.enqueueDecideWork).not.toHaveBeenCalled()
         })
+    })
+})
 
+describe("ChatReplyService", () => {
+    describe("requestAnswer", () => {
+        const request = {
+            workItemId: "work-1",
+            conversationId: "conversation-1",
+            text: " Reply ",
+            locale: "en",
+        } as const
         it("refuses a staff member for an unassigned answer", async () => {
             const { service, decisions, entityManager, decisionQueue } = await build()
             decisions.getWorkItem.mockResolvedValue(itemOf({ assigned_staff_id: null }))
@@ -332,7 +428,17 @@ describe("ChatReplyService", () => {
             expect(entityManager.transaction).not.toHaveBeenCalled()
             expect(decisionQueue.enqueueDecideWork).not.toHaveBeenCalled()
         })
+    })
+})
 
+describe("ChatReplyService", () => {
+    describe("requestAnswer", () => {
+        const request = {
+            workItemId: "work-1",
+            conversationId: "conversation-1",
+            text: " Reply ",
+            locale: "en",
+        } as const
         it("refuses an answer when its conversation vanished before enqueueing", async () => {
             const { service, conversations, decisionQueue, transaction } = await build()
             conversations.lockForHuman.mockResolvedValue(null)
@@ -343,7 +449,17 @@ describe("ChatReplyService", () => {
             expect(decisionQueue.enqueueDecideWork).not.toHaveBeenCalled()
             expect(transaction.outcomes).toEqual(["rollback"])
         })
+    })
+})
 
+describe("ChatReplyService", () => {
+    describe("requestAnswer", () => {
+        const request = {
+            workItemId: "work-1",
+            conversationId: "conversation-1",
+            text: " Reply ",
+            locale: "en",
+        } as const
         it.each([
             [" Reply ", "approved", { draft: "Reply", fields: [{ name: "conversation_id", text: "conversation-1" }] }],
             [null, "rejected", null],

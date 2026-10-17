@@ -1,3 +1,4 @@
+import { Test } from "@nestjs/testing"
 import { builder } from "@starci/jest-preset"
 import type {
     BookingResource,
@@ -9,6 +10,16 @@ import type {
 } from "../bookings.contracts"
 import { checkSlot, findSlots, nearestSlots, peakLoad, utilisation, windowsOf } from "./availability.policy"
 import { zonedMs } from "./zoned-time.policy"
+const SUBJECT = Symbol("availability.policy")
+
+const build = async () => {
+    const moduleRef = await Test.createTestingModule({
+        providers: [
+            { provide: SUBJECT, useValue: { windowsOf, peakLoad, findSlots, checkSlot, nearestSlots, utilisation } },
+        ],
+    }).compile()
+    return moduleRef.get<typeof import("./availability.policy")>(SUBJECT)
+}
 
 const TZ = "Asia/Ho_Chi_Minh"
 const at = (date: string, hhmm: string): number => zonedMs(date, hhmm, TZ)
@@ -50,112 +61,152 @@ const planOf = builder<PlanInput>({
     nowMs: NOW,
 })
 const DAY = { from: at("2026-10-12", "00:00"), to: at("2026-10-13", "00:00") }
-const startsOf = (input: PlanInput): ReadonlyArray<number> => findSlots(input, DAY.from, DAY.to).map((s) => s.startMs)
+const startsOf = (subject: Awaited<ReturnType<typeof build>>, input: PlanInput): ReadonlyArray<number> =>
+    subject.findSlots(input, DAY.from, DAY.to).map((s) => s.startMs)
 
 describe("availability.policy", () => {
     describe("windowsOf", () => {
         const resource = resourceOf()
 
-        it("reads the weekly hours of the weekday, earliest window first", () => {
+        it("reads the weekly hours of the weekday, earliest window first", async () => {
+            const subject = await build()
+
             const hours = [
                 hoursOf({ start: "13:00:00", end: "17:00:00" }),
                 hoursOf({ start: "09:00", end: "12:00" }),
                 hoursOf({ weekday: 2 }),
                 hoursOf({ resourceId: "other" }),
             ]
-            expect(windowsOf(resource, "2026-10-12", hours, [], TZ)).toEqual([
+            expect(subject.windowsOf(resource, "2026-10-12", hours, [], TZ)).toEqual([
                 { startMs: at("2026-10-12", "09:00"), endMs: at("2026-10-12", "12:00") },
                 { startMs: at("2026-10-12", "13:00"), endMs: at("2026-10-12", "17:00") },
             ])
         })
 
-        it("drops a window that ends before it starts", () => {
+        it("drops a window that ends before it starts", async () => {
+            const subject = await build()
+
             const hours = [hoursOf({ start: "12:00", end: "09:00" })]
-            expect(windowsOf(resource, "2026-10-12", hours, [], TZ)).toEqual([])
+            expect(subject.windowsOf(resource, "2026-10-12", hours, [], TZ)).toEqual([])
         })
 
-        it("closes the day for a closed exception of the resource", () => {
+        it("closes the day for a closed exception of the resource", async () => {
+            const subject = await build()
+
             const exceptions = [exceptionOf({ resourceId: "r1" })]
-            expect(windowsOf(resource, "2026-10-12", [hoursOf()], exceptions, TZ)).toEqual([])
+            expect(subject.windowsOf(resource, "2026-10-12", [hoursOf()], exceptions, TZ)).toEqual([])
         })
 
-        it("closes the day for a closed exception of the whole business", () => {
-            expect(windowsOf(resource, "2026-10-12", [hoursOf()], [exceptionOf()], TZ)).toEqual([])
+        it("closes the day for a closed exception of the whole business", async () => {
+            const subject = await build()
+
+            expect(subject.windowsOf(resource, "2026-10-12", [hoursOf()], [exceptionOf()], TZ)).toEqual([])
         })
 
-        it("lets the exception of the resource win over the one of the business", () => {
+        it("lets the exception of the resource win over the one of the business", async () => {
+            const subject = await build()
+
             const exceptions = [
                 exceptionOf(),
                 exceptionOf({ resourceId: "r1", closed: false, start: "14:00:00", end: "16:00:00" }),
             ]
-            expect(windowsOf(resource, "2026-10-12", [hoursOf()], exceptions, TZ)).toEqual([
+            expect(subject.windowsOf(resource, "2026-10-12", [hoursOf()], exceptions, TZ)).toEqual([
                 { startMs: at("2026-10-12", "14:00"), endMs: at("2026-10-12", "16:00") },
             ])
         })
 
-        it("uses the open exception of the business when the resource has none", () => {
+        it("uses the open exception of the business when the resource has none", async () => {
+            const subject = await build()
+
             const exceptions = [exceptionOf({ closed: false, start: "10:00", end: "11:00" })]
-            expect(windowsOf(resource, "2026-10-12", [hoursOf()], exceptions, TZ)).toEqual([
+            expect(subject.windowsOf(resource, "2026-10-12", [hoursOf()], exceptions, TZ)).toEqual([
                 { startMs: at("2026-10-12", "10:00"), endMs: at("2026-10-12", "11:00") },
             ])
         })
 
-        it("falls back to the weekly hours when an open exception names no times", () => {
-            const exceptions = [exceptionOf({ closed: false })]
-            expect(windowsOf(resource, "2026-10-12", [hoursOf()], exceptions, TZ)).toHaveLength(1)
-        })
+        it("falls back to the weekly hours when an open exception names no times", async () => {
+            const subject = await build()
 
-        it("ignores exceptions of other dates", () => {
-            const exceptions = [exceptionOf({ date: "2026-10-13" })]
-            expect(windowsOf(resource, "2026-10-12", [hoursOf()], exceptions, TZ)).toHaveLength(1)
+            const exceptions = [exceptionOf({ closed: false })]
+            expect(subject.windowsOf(resource, "2026-10-12", [hoursOf()], exceptions, TZ)).toHaveLength(1)
         })
     })
+})
 
+describe("availability.policy", () => {
+    describe("windowsOf", () => {
+        const resource = resourceOf()
+
+        it("ignores exceptions of other dates", async () => {
+            const subject = await build()
+
+            const exceptions = [exceptionOf({ date: "2026-10-13" })]
+            expect(subject.windowsOf(resource, "2026-10-12", [hoursOf()], exceptions, TZ)).toHaveLength(1)
+        })
+    })
+})
+
+describe("availability.policy", () => {
     describe("peakLoad", () => {
         const from = at("2026-10-12", "09:00")
+
         const to = at("2026-10-12", "11:00")
 
-        it("is zero without overlapping spans", () => {
-            expect(peakLoad([], "r1", from, to, null)).toBe(0)
-            expect(peakLoad([spanOf({ resourceId: "other" })], "r1", from, to, null)).toBe(0)
-            expect(peakLoad([spanOf({ startMs: to, blockEndMs: to + 1000 })], "r1", from, to, null)).toBe(0)
-            expect(peakLoad([spanOf({ startMs: from - 1000, blockEndMs: from })], "r1", from, to, null)).toBe(0)
+        it("is zero without overlapping spans", async () => {
+            const subject = await build()
+
+            expect(subject.peakLoad([], "r1", from, to, null)).toBe(0)
+            expect(subject.peakLoad([spanOf({ resourceId: "other" })], "r1", from, to, null)).toBe(0)
+            expect(subject.peakLoad([spanOf({ startMs: to, blockEndMs: to + 1000 })], "r1", from, to, null)).toBe(0)
+            expect(subject.peakLoad([spanOf({ startMs: from - 1000, blockEndMs: from })], "r1", from, to, null)).toBe(0)
         })
 
-        it("counts the party of a span that overlaps", () => {
-            expect(peakLoad([spanOf({ partySize: 3 })], "r1", from, to, null)).toBe(3)
+        it("counts the party of a span that overlaps", async () => {
+            const subject = await build()
+
+            expect(subject.peakLoad([spanOf({ partySize: 3 })], "r1", from, to, null)).toBe(3)
         })
 
-        it("adds the spans that meet at one moment and not those that follow each other", () => {
+        it("adds the spans that meet at one moment and not those that follow each other", async () => {
+            const subject = await build()
+
             const overlapping = [
                 spanOf({ startMs: from, blockEndMs: to }),
                 spanOf({ id: "b2", startMs: from + 1000, blockEndMs: to }),
             ]
-            expect(peakLoad(overlapping, "r1", from, to, null)).toBe(2)
+            expect(subject.peakLoad(overlapping, "r1", from, to, null)).toBe(2)
             const sequential = [
                 spanOf({ startMs: from, blockEndMs: from + 3_600_000 }),
                 spanOf({ id: "b2", startMs: from + 3_600_000, blockEndMs: to }),
             ]
-            expect(peakLoad(sequential, "r1", from, to, null)).toBe(1)
+            expect(subject.peakLoad(sequential, "r1", from, to, null)).toBe(1)
         })
 
-        it("leaves out the excluded booking", () => {
-            expect(peakLoad([spanOf()], "r1", from, to, "b1")).toBe(0)
+        it("leaves out the excluded booking", async () => {
+            const subject = await build()
+
+            expect(subject.peakLoad([spanOf()], "r1", from, to, "b1")).toBe(0)
         })
     })
+})
 
+describe("availability.policy", () => {
     describe("findSlots", () => {
-        it("lists a start per step inside the opening hours", () => {
-            expect(startsOf(planOf())).toEqual([
+        it("lists a start per step inside the opening hours", async () => {
+            const subject = await build()
+
+            expect(startsOf(subject, planOf())).toEqual([
                 at("2026-10-12", "09:00"),
                 at("2026-10-12", "10:00"),
                 at("2026-10-12", "11:00"),
             ])
         })
 
-        it("answers the end and the buffered end of each slot", () => {
+        it("answers the end and the buffered end of each slot", async () => {
+            const subject = await build()
+
             const input = planOf({ service: serviceOf({ durationMin: 30, bufferMin: 15 }) })
-            const [first] = findSlots(input, DAY.from, DAY.to)
+            const [first] = subject.findSlots(input, DAY.from, DAY.to)
             expect(first).toEqual({
                 startMs: at("2026-10-12", "09:00"),
                 endMs: at("2026-10-12", "09:30"),
@@ -164,95 +215,137 @@ describe("availability.policy", () => {
             })
         })
 
-        it("never uses a step below five minutes", () => {
+        it("never uses a step below five minutes", async () => {
+            const subject = await build()
+
             const input = planOf({
                 service: serviceOf({ durationMin: 5 }),
                 policy: { timezone: TZ, slotStepMin: 1, minLeadMin: 0, maxAdvanceDays: 30 },
             })
-            expect(startsOf(input).slice(0, 2)).toEqual([at("2026-10-12", "09:00"), at("2026-10-12", "09:05")])
+            expect(startsOf(subject, input).slice(0, 2)).toEqual([at("2026-10-12", "09:00"), at("2026-10-12", "09:05")])
         })
 
-        it("offers nothing for an inactive service", () => {
-            expect(startsOf(planOf({ service: serviceOf({ active: false }) }))).toEqual([])
+        it("offers nothing for an inactive service", async () => {
+            const subject = await build()
+
+            expect(startsOf(subject, planOf({ service: serviceOf({ active: false }) }))).toEqual([])
         })
 
-        it("offers nothing when the range is empty after the lead time", () => {
+        it("offers nothing when the range is empty after the lead time", async () => {
+            const subject = await build()
+
             const input = planOf({ policy: { timezone: TZ, slotStepMin: 60, minLeadMin: 99_999, maxAdvanceDays: 30 } })
-            expect(startsOf(input)).toEqual([])
+            expect(startsOf(subject, input)).toEqual([])
         })
 
-        it("keeps the minimum lead time", () => {
+        it("keeps the minimum lead time", async () => {
+            const subject = await build()
+
             const input = planOf({
                 nowMs: at("2026-10-12", "09:30"),
                 policy: { timezone: TZ, slotStepMin: 60, minLeadMin: 30, maxAdvanceDays: 30 },
             })
-            expect(startsOf(input)).toEqual([at("2026-10-12", "10:00"), at("2026-10-12", "11:00")])
+            expect(startsOf(subject, input)).toEqual([at("2026-10-12", "10:00"), at("2026-10-12", "11:00")])
         })
 
-        it("stops at the advance limit", () => {
+        it("stops at the advance limit", async () => {
+            const subject = await build()
+
             const input = planOf({ policy: { timezone: TZ, slotStepMin: 60, minLeadMin: 0, maxAdvanceDays: 2 } })
-            expect(findSlots(input, at("2026-10-12", "00:00"), at("2026-10-20", "00:00"))).toHaveLength(3)
+            expect(subject.findSlots(input, at("2026-10-12", "00:00"), at("2026-10-20", "00:00"))).toHaveLength(3)
+        })
+    })
+})
+
+describe("availability.policy", () => {
+    describe("findSlots", () => {
+        it("skips a resource that cannot hold the party", async () => {
+            const subject = await build()
+
+            expect(startsOf(subject, planOf({ partySize: 2 }))).toEqual([])
+            expect(startsOf(subject, planOf({ partySize: 2, resources: [resourceOf({ capacity: 2 })] }))).toHaveLength(
+                3,
+            )
         })
 
-        it("skips a resource that cannot hold the party", () => {
-            expect(startsOf(planOf({ partySize: 2 }))).toEqual([])
-            expect(startsOf(planOf({ partySize: 2, resources: [resourceOf({ capacity: 2 })] }))).toHaveLength(3)
-        })
+        it("restricts to the asked resource and the kind the service needs", async () => {
+            const subject = await build()
 
-        it("restricts to the asked resource and the kind the service needs", () => {
             const resources = [resourceOf(), resourceOf({ id: "r2", name: "Binh", kind: "room", sort: 1 })]
             const hours = [hoursOf(), hoursOf({ resourceId: "r2" })]
             const base = planOf({ resources, hours })
-            expect(new Set(findSlots(base, DAY.from, DAY.to).map((s) => s.resourceId))).toEqual(new Set(["r1", "r2"]))
+            expect(new Set(subject.findSlots(base, DAY.from, DAY.to).map((s) => s.resourceId))).toEqual(
+                new Set(["r1", "r2"]),
+            )
             const onlyRoom = planOf({ resources, hours, service: serviceOf({ resourceKind: "room" }) })
-            expect(new Set(findSlots(onlyRoom, DAY.from, DAY.to).map((s) => s.resourceId))).toEqual(new Set(["r2"]))
+            expect(new Set(subject.findSlots(onlyRoom, DAY.from, DAY.to).map((s) => s.resourceId))).toEqual(
+                new Set(["r2"]),
+            )
             const asked = planOf({ resources, hours, resourceId: "r1" })
-            expect(new Set(findSlots(asked, DAY.from, DAY.to).map((s) => s.resourceId))).toEqual(new Set(["r1"]))
+            expect(new Set(subject.findSlots(asked, DAY.from, DAY.to).map((s) => s.resourceId))).toEqual(
+                new Set(["r1"]),
+            )
             const inactive = planOf({ resources: [resourceOf({ active: false })] })
-            expect(startsOf(inactive)).toEqual([])
+            expect(startsOf(subject, inactive)).toEqual([])
         })
+    })
+})
 
-        it("orders resources by sort, then by name, and slots by start then resource", () => {
+describe("availability.policy", () => {
+    describe("findSlots", () => {
+        it("orders resources by sort, then by name, and slots by start then resource", async () => {
+            const subject = await build()
+
             const resources = [
                 resourceOf({ id: "r2", name: "Binh", sort: 1 }),
                 resourceOf({ id: "r1", name: "Zed", sort: 0 }),
                 resourceOf({ id: "r3", name: "Ann", sort: 1 }),
             ]
             const hours = [hoursOf(), hoursOf({ resourceId: "r2" }), hoursOf({ resourceId: "r3" })]
-            const first = findSlots(planOf({ resources, hours }), DAY.from, DAY.to).slice(0, 3)
+            const first = subject.findSlots(planOf({ resources, hours }), DAY.from, DAY.to).slice(0, 3)
             expect(first.map((s) => s.resourceId)).toEqual(["r1", "r2", "r3"])
         })
 
-        it("leaves out start times a booking holds, buffer included", () => {
+        it("leaves out start times a booking holds, buffer included", async () => {
+            const subject = await build()
+
             const input = planOf({
                 service: serviceOf({ bufferMin: 30 }),
                 taken: [spanOf({ startMs: at("2026-10-12", "10:00"), blockEndMs: at("2026-10-12", "11:00") })],
             })
-            expect(startsOf(input)).toEqual([at("2026-10-12", "11:00")])
+            expect(startsOf(subject, input)).toEqual([at("2026-10-12", "11:00")])
         })
 
-        it("does not let the excluded booking block itself", () => {
+        it("does not let the excluded booking block itself", async () => {
+            const subject = await build()
+
             const input = planOf({ taken: [spanOf()], excludeId: "b1" })
-            expect(startsOf(input)).toHaveLength(3)
-            expect(startsOf(planOf({ taken: [spanOf()] }))).toHaveLength(2)
+            expect(startsOf(subject, input)).toHaveLength(3)
+            expect(startsOf(subject, planOf({ taken: [spanOf()] }))).toHaveLength(2)
         })
 
-        it("shares a resource of capacity up to the party count", () => {
+        it("shares a resource of capacity up to the party count", async () => {
+            const subject = await build()
+
             const input = planOf({
                 resources: [resourceOf({ capacity: 2 })],
                 taken: [spanOf({ partySize: 1 })],
                 partySize: 1,
             })
-            expect(startsOf(input)).toHaveLength(3)
-            expect(startsOf(planOf({ ...input, taken: [spanOf({ partySize: 2 })] }))).toHaveLength(2)
+            expect(startsOf(subject, input)).toHaveLength(3)
+            expect(startsOf(subject, planOf({ ...input, taken: [spanOf({ partySize: 2 })] }))).toHaveLength(2)
         })
     })
+})
 
+describe("availability.policy", () => {
     describe("checkSlot", () => {
         const nineAm = at("2026-10-12", "09:00")
 
-        it("answers the slot of a free start", () => {
-            expect(checkSlot(planOf(), nineAm)).toEqual({
+        it("answers the slot of a free start", async () => {
+            const subject = await build()
+
+            expect(subject.checkSlot(planOf(), nineAm)).toEqual({
                 ok: true,
                 slot: {
                     startMs: nineAm,
@@ -263,74 +356,103 @@ describe("availability.policy", () => {
             })
         })
 
-        it("refuses an inactive service and a business without a fitting resource", () => {
-            expect(checkSlot(planOf({ service: serviceOf({ active: false }) }), nineAm)).toEqual({
+        it("refuses an inactive service and a business without a fitting resource", async () => {
+            const subject = await build()
+
+            expect(subject.checkSlot(planOf({ service: serviceOf({ active: false }) }), nineAm)).toEqual({
                 ok: false,
                 why: "no_service",
             })
-            expect(checkSlot(planOf({ resources: [] }), nineAm)).toEqual({ ok: false, why: "no_resource" })
+            expect(subject.checkSlot(planOf({ resources: [] }), nineAm)).toEqual({ ok: false, why: "no_resource" })
         })
 
-        it("refuses a start that is too soon or too far", () => {
+        it("refuses a start that is too soon or too far", async () => {
+            const subject = await build()
+
             const lead = planOf({
                 policy: { timezone: TZ, slotStepMin: 60, minLeadMin: 60 * 24 * 2, maxAdvanceDays: 30 },
             })
-            expect(checkSlot(lead, nineAm)).toEqual({ ok: false, why: "too_soon" })
+            expect(subject.checkSlot(lead, nineAm)).toEqual({ ok: false, why: "too_soon" })
             const far = planOf({ policy: { timezone: TZ, slotStepMin: 60, minLeadMin: 0, maxAdvanceDays: 1 } })
-            expect(checkSlot(far, at("2026-10-20", "09:00"))).toEqual({ ok: false, why: "too_far" })
+            expect(subject.checkSlot(far, at("2026-10-20", "09:00"))).toEqual({ ok: false, why: "too_far" })
         })
 
-        it("explains a start nobody can take as full inside opening hours and closed outside them", () => {
+        it("explains a start nobody can take as full inside opening hours and closed outside them", async () => {
+            const subject = await build()
+
             const taken = planOf({ taken: [spanOf()] })
-            expect(checkSlot(taken, nineAm)).toEqual({ ok: false, why: "full" })
-            expect(checkSlot(planOf(), at("2026-10-12", "20:00"))).toEqual({ ok: false, why: "closed" })
+            expect(subject.checkSlot(taken, nineAm)).toEqual({ ok: false, why: "full" })
+            expect(subject.checkSlot(planOf(), at("2026-10-12", "20:00"))).toEqual({ ok: false, why: "closed" })
         })
 
-        it("picks the least loaded resource and the first one on a tie", () => {
+        it("picks the least loaded resource and the first one on a tie", async () => {
+            const subject = await build()
+
             const resources = [
                 resourceOf({ id: "r1", capacity: 4, sort: 0 }),
                 resourceOf({ id: "r2", name: "Binh", capacity: 4, sort: 1 }),
             ]
             const hours = [hoursOf(), hoursOf({ resourceId: "r2" })]
             const busyFirst = planOf({ resources, hours, taken: [spanOf({ resourceId: "r1", partySize: 2 })] })
-            const loaded = checkSlot(busyFirst, nineAm)
+            const loaded = subject.checkSlot(busyFirst, nineAm)
             expect(loaded.ok && loaded.slot.resourceId).toBe("r2")
-            const tie = checkSlot(planOf({ resources, hours }), nineAm)
+            const tie = subject.checkSlot(planOf({ resources, hours }), nineAm)
             expect(tie.ok && tie.slot.resourceId).toBe("r1")
         })
     })
+})
 
+describe("availability.policy", () => {
     describe("nearestSlots", () => {
         const wanted = at("2026-10-12", "10:00")
 
-        it("returns the closest distinct start times, earliest first", () => {
+        it("returns the closest distinct start times, earliest first", async () => {
+            const subject = await build()
+
             const resources = [resourceOf(), resourceOf({ id: "r2", name: "Binh", sort: 1 })]
             const hours = [hoursOf(), hoursOf({ resourceId: "r2" })]
-            const result = nearestSlots(planOf({ resources, hours }), wanted, 3, 7)
+            const result = subject.nearestSlots(planOf({ resources, hours }), wanted, 3, 7)
             expect(result.map((s) => s.startMs)).toEqual([at("2026-10-12", "09:00"), wanted, at("2026-10-12", "11:00")])
         })
 
-        it("returns fewer slots when fewer are free and breaks distance ties by time", () => {
+        it("returns fewer slots when fewer are free and breaks distance ties by time", async () => {
+            const subject = await build()
+
             const input = planOf({ policy: { timezone: TZ, slotStepMin: 60, minLeadMin: 0, maxAdvanceDays: 2 } })
-            expect(nearestSlots(input, wanted, 5, 1).length).toBeLessThanOrEqual(3)
-            expect(nearestSlots(planOf({ resources: [] }), wanted, 3, 7)).toEqual([])
+            expect(subject.nearestSlots(input, wanted, 5, 1).length).toBeLessThanOrEqual(3)
+            expect(subject.nearestSlots(planOf({ resources: [] }), wanted, 3, 7)).toEqual([])
         })
     })
+})
 
+describe("availability.policy", () => {
     describe("utilisation", () => {
         const resources = [resourceOf(), resourceOf({ id: "r2", active: false }), resourceOf({ id: "r3", capacity: 2 })]
+
         const hours = [hoursOf(), hoursOf({ resourceId: "r2" })]
 
-        it("shares the booked minutes over the open minutes of the active resources", () => {
-            const result = utilisation(resources, hours, [], new Map([["r1", 90]]), "2026-10-12", "2026-10-12", TZ)
+        it("shares the booked minutes over the open minutes of the active resources", async () => {
+            const subject = await build()
+
+            const result = subject.utilisation(
+                resources,
+                hours,
+                [],
+                new Map([["r1", 90]]),
+                "2026-10-12",
+                "2026-10-12",
+                TZ,
+            )
             expect(result).toEqual([
                 { resourceId: "r1", name: "Anna", openMin: 180, bookedMin: 90, pct: 50 },
                 { resourceId: "r3", name: "Anna", openMin: 0, bookedMin: 0, pct: 0 },
             ])
         })
 
-        it("caps the share at one hundred percent and weighs capacity in", () => {
-            const capped = utilisation(
+        it("caps the share at one hundred percent and weighs capacity in", async () => {
+            const subject = await build()
+
+            const capped = subject.utilisation(
                 [resourceOf()],
                 hours,
                 [],
@@ -341,9 +463,9 @@ describe("availability.policy", () => {
             )
             expect(capped[0]?.pct).toBe(100)
             const wide = [resourceOf({ capacity: 2 })]
-            expect(utilisation(wide, hours, [], new Map([["r1", 180]]), "2026-10-12", "2026-10-12", TZ)[0]?.pct).toBe(
-                50,
-            )
+            expect(
+                subject.utilisation(wide, hours, [], new Map([["r1", 180]]), "2026-10-12", "2026-10-12", TZ)[0]?.pct,
+            ).toBe(50)
         })
     })
 })

@@ -1,6 +1,16 @@
+import { Test } from "@nestjs/testing"
 import { builder } from "@starci/jest-preset"
 import { conversationFacts, median, vnDayStart } from "./leadgen-conversations.mapper"
 import type { LeadGenMessageRow, LeadGenWorkbenchRow } from "./persistence/leadgen-workbench.rows"
+
+const SUBJECT = Symbol("leadgen-conversations.mapper")
+
+const buildSubject = async () => {
+    const moduleRef = await Test.createTestingModule({
+        providers: [{ provide: SUBJECT, useValue: { vnDayStart, median, conversationFacts } }],
+    }).compile()
+    return moduleRef.get<typeof import("./leadgen-conversations.mapper")>(SUBJECT)
+}
 
 const NOW = Date.parse("2026-10-12T12:00:00.000Z")
 const rowsOf = builder<LeadGenWorkbenchRow>({
@@ -24,44 +34,60 @@ describe("vnDayStart", () => {
         ["2026-10-11T16:59:59.999Z", "2026-10-10T17:00:00.000Z"],
         ["2026-10-11T17:00:00.000Z", "2026-10-11T17:00:00.000Z"],
         ["2026-10-12T16:59:59.999Z", "2026-10-11T17:00:00.000Z"],
-    ])("reports Vietnamese midnight for %s", (now, expected) => {
-        expect(vnDayStart(Date.parse(now))).toBe(Date.parse(expected))
+    ])("reports Vietnamese midnight for %s", async (now, expected) => {
+        const subject = await buildSubject()
+
+        expect(subject.vnDayStart(Date.parse(now))).toBe(Date.parse(expected))
     })
 })
 
 describe("median", () => {
-    it("returns null without reply samples", () => {
-        expect(median([])).toBeNull()
+    it("returns null without reply samples", async () => {
+        const subject = await buildSubject()
+
+        expect(subject.median([])).toBeNull()
     })
 
-    it("sorts odd samples numerically without changing the caller's array", () => {
+    it("sorts odd samples numerically without changing the caller's array", async () => {
+        const subject = await buildSubject()
+
         const samples = [100, 2, 10]
 
-        expect(median(samples)).toBe(10)
+        expect(subject.median(samples)).toBe(10)
         expect(samples).toEqual([100, 2, 10])
     })
 
-    it("averages the middle two samples in an even set", () => {
-        expect(median([20, 2, 8, 4])).toBe(6)
+    it("averages the middle two samples in an even set", async () => {
+        const subject = await buildSubject()
+
+        expect(subject.median([20, 2, 8, 4])).toBe(6)
     })
 
-    it("handles missing samples in sparse arrays", () => {
-        expect(median(new Array<number>(1))).toBeNull()
-        expect(median(new Array<number>(2))).toBe(0)
-        expect(median([10, ...new Array<number>(1)])).toBe(5)
+    it("handles missing samples in sparse arrays", async () => {
+        const subject = await buildSubject()
+
+        expect(subject.median(new Array<number>(1))).toBeNull()
+        expect(subject.median(new Array<number>(2))).toBe(0)
+        expect(subject.median([10, ...new Array<number>(1)])).toBe(5)
     })
 })
 
 describe("conversationFacts", () => {
-    it("returns no evidence when there are no attached conversations", () => {
-        expect(conversationFacts(rowsOf({ messages: [messageOf({ conversation_id: "unattached" })] }))).toEqual({
-            last: new Map(),
-            replyMinutes: [],
-        })
+    it("returns no evidence when there are no attached conversations", async () => {
+        const subject = await buildSubject()
+
+        expect(subject.conversationFacts(rowsOf({ messages: [messageOf({ conversation_id: "unattached" })] }))).toEqual(
+            {
+                last: new Map(),
+                replyMinutes: [],
+            },
+        )
     })
 
-    it("ignores system messages and measures the first reply after the first user message", () => {
-        const facts = conversationFacts(
+    it("ignores system messages and measures the first reply after the first user message", async () => {
+        const subject = await buildSubject()
+
+        const facts = subject.conversationFacts(
             rowsOf({
                 conversations: [{ id: "conversation-1", lead_id: "lead-1" }],
                 messages: [
@@ -84,8 +110,10 @@ describe("conversationFacts", () => {
         })
     })
 
-    it("keeps the latest conversation preview for each lead and clips long text", () => {
-        const facts = conversationFacts(
+    it("keeps the latest conversation preview for each lead and clips long text", async () => {
+        const subject = await buildSubject()
+
+        const facts = subject.conversationFacts(
             rowsOf({
                 conversations: [
                     { id: "conversation-1", lead_id: "lead-1" },
@@ -111,9 +139,13 @@ describe("conversationFacts", () => {
             replyMinutes: [],
         })
     })
+})
 
-    it("omits previews for unlinked leads and conversations containing only system messages", () => {
-        const facts = conversationFacts(
+describe("conversationFacts", () => {
+    it("omits previews for unlinked leads and conversations containing only system messages", async () => {
+        const subject = await buildSubject()
+
+        const facts = subject.conversationFacts(
             rowsOf({
                 conversations: [
                     { id: "conversation-1", lead_id: null },
@@ -134,8 +166,10 @@ describe("conversationFacts", () => {
         })
     })
 
-    it("includes first messages exactly thirty days old and excludes older reply samples", () => {
-        const facts = conversationFacts(
+    it("includes first messages exactly thirty days old and excludes older reply samples", async () => {
+        const subject = await buildSubject()
+
+        const facts = subject.conversationFacts(
             rowsOf({
                 conversations: [
                     { id: "boundary", lead_id: "lead-1" },

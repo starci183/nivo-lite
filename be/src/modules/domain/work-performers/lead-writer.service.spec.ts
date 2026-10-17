@@ -67,28 +67,28 @@ const itemOf = builder<WorkItem>({
     installation_id: null,
 })
 
-describe("LeadWriterService", () => {
-    const build = async () => {
-        const catalog = mock<MessageCatalog>()
-        catalog.get.mockImplementation((key) => `label of ${key}`)
-        const conversations = mock<AgentConversationsService>()
-        conversations.turnOf.mockResolvedValue({ kind: "ok", value: turnOf(null) })
-        const inbound = mock<InboundEventsService>()
-        inbound.recordInput.mockResolvedValue({ duplicate: false, inboundEventId: "ev-1" })
-        const bus = mock<CommandBusService>()
-        bus.sendCommandItem.mockResolvedValue(itemOf())
-        const moduleRef = await Test.createTestingModule({
-            providers: [
-                LeadWriterService,
-                { provide: MESSAGE_CATALOG, useValue: catalog },
-                { provide: AgentConversationsService, useValue: conversations },
-                { provide: InboundEventsService, useValue: inbound },
-                { provide: CommandBusService, useValue: bus },
-            ],
-        }).compile()
-        return { writer: moduleRef.get(LeadWriterService), conversations, inbound, bus }
-    }
+const build = async () => {
+    const catalog = mock<MessageCatalog>()
+    catalog.get.mockImplementation((key) => `label of ${key}`)
+    const conversations = mock<AgentConversationsService>()
+    conversations.turnOf.mockResolvedValue({ kind: "ok", value: turnOf(null) })
+    const inbound = mock<InboundEventsService>()
+    inbound.recordInput.mockResolvedValue({ duplicate: false, inboundEventId: "ev-1" })
+    const bus = mock<CommandBusService>()
+    bus.sendCommandItem.mockResolvedValue(itemOf())
+    const moduleRef = await Test.createTestingModule({
+        providers: [
+            LeadWriterService,
+            { provide: MESSAGE_CATALOG, useValue: catalog },
+            { provide: AgentConversationsService, useValue: conversations },
+            { provide: InboundEventsService, useValue: inbound },
+            { provide: CommandBusService, useValue: bus },
+        ],
+    }).compile()
+    return { writer: moduleRef.get(LeadWriterService), conversations, inbound, bus }
+}
 
+describe("LeadWriterService", () => {
     it("records the input, hands the lead to Sales and ties the conversation to it", async () => {
         const { writer, conversations, inbound, bus } = await build()
 
@@ -152,7 +152,9 @@ describe("LeadWriterService", () => {
 
         expect(inbound.recordInput).not.toHaveBeenCalled()
     })
+})
 
+describe("LeadWriterService", () => {
     it("keeps the lead a conversation is already tied to", async () => {
         const { writer, conversations, inbound } = await build()
         conversations.turnOf.mockResolvedValue({ kind: "ok", value: turnOf("lead-1") })

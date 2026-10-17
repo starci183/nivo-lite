@@ -21,8 +21,16 @@ const build = async () => {
 
 describe("ChatReplyStatusService", () => {
     describe("replyStatus", () => {
-        it("replyStatus has its first case written", async () => {
-            const { service } = await build()
+        it("replyStatus exercises its first behavior through the compiled module", async () => {
+            const { service, entityManager, members } = await build()
+            entityManager.query.mockResolvedValue([])
+
+            await expect(service.replyStatus("user-1", "ws-1", "message-1")).rejects.toMatchObject({
+                code: ChatreplyErrorCode.NotFound,
+            })
+            expect(members.require).toHaveBeenCalledWith("user-1", "ws-1")
+            expect(entityManager.query).toHaveBeenCalledWith(FIND_REPLY_PROGRESS, ["ws-1", "message-1"])
+
             expect(service.replyStatus).toBeInstanceOf(Function)
         })
 
@@ -64,10 +72,20 @@ describe("ChatReplyStatusService", () => {
             },
         )
     })
+})
 
+describe("ChatReplyStatusService", () => {
     describe("answerStatus", () => {
-        it("answerStatus has its first case written", async () => {
-            const { service } = await build()
+        it("answerStatus exercises its first behavior through the compiled module", async () => {
+            const { service, entityManager, members } = await build()
+            entityManager.query.mockResolvedValue([])
+
+            await expect(service.answerStatus("user-1", "ws-1", "work-1")).rejects.toMatchObject({
+                code: ChatreplyErrorCode.NotFound,
+            })
+            expect(members.require).toHaveBeenCalledWith("user-1", "ws-1")
+            expect(entityManager.query).toHaveBeenCalledWith(FIND_ANSWER_PROGRESS, ["ws-1", "work-1"])
+
             expect(service.answerStatus).toBeInstanceOf(Function)
         })
 

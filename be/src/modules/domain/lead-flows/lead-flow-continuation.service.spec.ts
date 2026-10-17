@@ -37,6 +37,51 @@ const build = async () => {
     return { continuation: moduleRef.get(LeadFlowContinuationService), commands, engine }
 }
 
+const continuationCases = [
+    {
+        plan: "handoff",
+        command: "handoff_to_sales",
+        reason: "hot_lead",
+        dedupeKey: "handoff_to_sales:lead-1",
+        extra: { contact: "0912", need: "tea", score: "hot" },
+    },
+    {
+        plan: "greet",
+        command: "greet_prospect",
+        reason: "first_reply",
+        dedupeKey: "greet_prospect:lead-1",
+        extra: {},
+    },
+    {
+        plan: "ask_contact",
+        command: "ask_qualifying",
+        reason: "ask_contact",
+        dedupeKey: "ask_qualifying:lead-1:contact",
+        extra: { index: 0, question_kind: "contact" },
+    },
+    {
+        plan: "follow_up",
+        command: "follow_up_lead",
+        reason: "warm_lead",
+        dedupeKey: "follow_up_lead:lead-1:t:2",
+        extra: {},
+    },
+    { plan: "close", command: "close_lead", reason: "cold_lead", dedupeKey: "close_lead:lead-1:t:2", extra: {} },
+    {
+        plan: "comment",
+        command: "reply_comment_public",
+        reason: "comment",
+        dedupeKey: "reply_comment_public:comment:comment-1",
+        extra: {
+            public_reply: "Hello",
+            private_reply: "In your inbox",
+            negative: "0",
+            text: "Question",
+            connection_id: "connection-1",
+        },
+    },
+]
+
 describe("LeadFlowContinuationService", () => {
     it("scores a captured lead, then runs the steps its input queued", async () => {
         const { continuation, commands, engine } = await build()
@@ -69,7 +114,6 @@ describe("LeadFlowContinuationService", () => {
         ])
         expect(engine.runInboundQueued).toHaveBeenCalledWith(ctx, "event-1", 10)
     })
-
     it("asks the next question a score decided, and hands a hot lead to Sales beside it", async () => {
         const { continuation, commands, engine } = await build()
         const fields = {
@@ -100,7 +144,9 @@ describe("LeadFlowContinuationService", () => {
         })
         expect(engine.runInboundQueued).not.toHaveBeenCalled()
     })
+})
 
+describe("LeadFlowContinuationService", () => {
     it("sends the private reply after a public reply to a comment that was not negative", async () => {
         const { continuation, commands } = await build()
         const fields = { comment_id: "comment-1", private_reply: "Check your inbox", connection_id: "connection-1" }
@@ -112,8 +158,7 @@ describe("LeadFlowContinuationService", () => {
             ["private_reply_comment", "private_reply_comment:comment:comment-1"],
         ])
     })
-
-    it("does nothing for a delivery of another shape, a step without a lead, or a step the conversation waits after", async () => {
+    it("ignores malformed deliveries, missing leads and steps awaiting conversation", async () => {
         const { continuation, commands, engine } = await build()
 
         await continuation.continue({ workspaceId: "ws-1" })
@@ -123,7 +168,6 @@ describe("LeadFlowContinuationService", () => {
         expect(commands.sendCommand).not.toHaveBeenCalled()
         expect(engine.runInboundQueued).not.toHaveBeenCalled()
     })
-
     it("scores a capture with its item id as the turn when none was supplied", async () => {
         const { continuation, commands } = await build()
 
@@ -142,102 +186,66 @@ describe("LeadFlowContinuationService", () => {
             payload: { subject_type: "lead", subject_id: "lead-1", lead_id: "lead-1" },
         })
     })
+})
 
-    it.each([
-        {
-            plan: "handoff",
-            command: "handoff_to_sales",
-            reason: "hot_lead",
-            dedupeKey: "handoff_to_sales:lead-1",
-            extra: { contact: "0912", need: "tea", score: "hot" },
-        },
-        {
-            plan: "greet",
-            command: "greet_prospect",
-            reason: "first_reply",
-            dedupeKey: "greet_prospect:lead-1",
-            extra: {},
-        },
-        {
-            plan: "ask_contact",
-            command: "ask_qualifying",
-            reason: "ask_contact",
-            dedupeKey: "ask_qualifying:lead-1:contact",
-            extra: { index: 0, question_kind: "contact" },
-        },
-        {
-            plan: "follow_up",
-            command: "follow_up_lead",
-            reason: "warm_lead",
-            dedupeKey: "follow_up_lead:lead-1:t:2",
-            extra: {},
-        },
-        { plan: "close", command: "close_lead", reason: "cold_lead", dedupeKey: "close_lead:lead-1:t:2", extra: {} },
-        {
-            plan: "comment",
-            command: "reply_comment_public",
-            reason: "comment",
-            dedupeKey: "reply_comment_public:comment:comment-1",
-            extra: {
+describe("LeadFlowContinuationService", () => {
+    it.each(continuationCases)(
+        "runs the $plan plan chosen by a score",
+        async ({ plan, command, reason, dedupeKey, extra }) => {
+            const { continuation, commands, engine } = await build()
+            const base = {
+                turn: "t:2",
+                conversation_id: "conv-1",
+                reply: "A reply",
+                comment_id: "comment-1",
+                post_id: "post-1",
+                source_kind: "comment",
+                score: "warm",
+            }
+            const fields = {
+                ...base,
+                step: plan,
+                index: null,
+                contact: "0912",
+                need: "tea",
                 public_reply: "Hello",
                 private_reply: "In your inbox",
                 negative: "0",
                 text: "Question",
                 connection_id: "connection-1",
-            },
-        },
-    ])("runs the $plan plan chosen by a score", async ({ plan, command, reason, dedupeKey, extra }) => {
-        const { continuation, commands, engine } = await build()
-        const base = {
-            turn: "t:2",
-            conversation_id: "conv-1",
-            reply: "A reply",
-            comment_id: "comment-1",
-            post_id: "post-1",
-            source_kind: "comment",
-            score: "warm",
-        }
-        const fields = {
-            ...base,
-            step: plan,
-            index: null,
-            contact: "0912",
-            need: "tea",
-            public_reply: "Hello",
-            private_reply: "In your inbox",
-            negative: "0",
-            text: "Question",
-            connection_id: "connection-1",
-        }
+            }
 
-        await continuation.continue(payloadOf(stepOf({ action: "score_lead", fields })))
+            await continuation.continue(payloadOf(stepOf({ action: "score_lead", fields })))
 
-        expect(commands.sendCommand.mock.calls).toEqual([
-            [
-                ctx,
-                {
-                    from: "lead_gen",
-                    to: "lead_gen",
-                    command,
-                    reason,
-                    parentId: "item-1",
-                    chainId: "chain-1",
-                    origin: "live",
-                    inboundEventId: null,
-                    dedupeKey,
-                    payload: {
-                        subject_type: "lead",
-                        subject_id: "lead-1",
-                        lead_id: "lead-1",
-                        ...(plan === "handoff" ? {} : base),
-                        ...extra,
+            expect(commands.sendCommand.mock.calls).toEqual([
+                [
+                    ctx,
+                    {
+                        from: "lead_gen",
+                        to: "lead_gen",
+                        command,
+                        reason,
+                        parentId: "item-1",
+                        chainId: "chain-1",
+                        origin: "live",
+                        inboundEventId: null,
+                        dedupeKey,
+                        payload: {
+                            subject_type: "lead",
+                            subject_id: "lead-1",
+                            lead_id: "lead-1",
+                            ...(plan === "handoff" ? {} : base),
+                            ...extra,
+                        },
                     },
-                },
-            ],
-        ])
-        expect(engine.runInboundQueued).not.toHaveBeenCalled()
-    })
+                ],
+            ])
+            expect(engine.runInboundQueued).not.toHaveBeenCalled()
+        },
+    )
+})
 
+describe("LeadFlowContinuationService", () => {
     it("sends a negative comment's public reply without a private reply plan", async () => {
         const { continuation, commands } = await build()
 
@@ -273,7 +281,6 @@ describe("LeadFlowContinuationService", () => {
             ],
         ])
     })
-
     it("waits for a message when scoring has no next plan, and still drains the input", async () => {
         const { continuation, commands, engine } = await build()
 

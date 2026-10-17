@@ -1,6 +1,7 @@
 import { Module } from "@nestjs/common"
 import { ContentSettingsApiModule } from "../../content-settings.module"
 import { ContentConfigurationResolver } from "./content-configuration.resolver"
+import { ConfigurableModuleClass } from "./content-settings-graphql.module-definition"
 import { SaveContentPillarsResolver } from "./save-content-pillars.resolver"
 import { ApplyContentPillarPresetsResolver } from "./apply-content-pillar-presets.resolver"
 import { SaveContentCadenceResolver } from "./save-content-cadence.resolver"
@@ -9,7 +10,7 @@ import { SaveContentBrandResolver } from "./save-content-brand.resolver"
 import { SetContentAutomationResolver } from "./set-content-automation.resolver"
 
 @Module({
-    imports: [ContentSettingsApiModule],
+    imports: [ContentSettingsApiModule.register({})],
     providers: [
         ContentConfigurationResolver,
         SaveContentPillarsResolver,
@@ -21,4 +22,4 @@ import { SetContentAutomationResolver } from "./set-content-automation.resolver"
     ],
 })
 /** GraphQL transport of the content settings feature. */
-export class ContentSettingsGraphqlModule {}
+export class ContentSettingsGraphqlModule extends ConfigurableModuleClass {}

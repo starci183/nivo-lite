@@ -1,8 +1,18 @@
+import { Test } from "@nestjs/testing"
 import { builder } from "@starci/jest-preset"
 import type { WorkItem } from "@modules/domain/decisions"
 import type { WorkspaceMember } from "@modules/domain/workspace-members"
-import { answerConversationId, replyBody, requireHandlingAccess } from "./chatreply.policy"
+import { replyBody, requireHandlingAccess, answerConversationId } from "./chatreply.policy"
 import { ChatreplyError, ChatreplyErrorCode } from "./errors/chatreply.error"
+
+const SUBJECT = Symbol("chatreply.policy")
+
+const build = async () => {
+    const moduleRef = await Test.createTestingModule({
+        providers: [{ provide: SUBJECT, useValue: { replyBody, requireHandlingAccess, answerConversationId } }],
+    }).compile()
+    return moduleRef.get<typeof import("./chatreply.policy")>(SUBJECT)
+}
 
 const memberOf = builder<WorkspaceMember>({
     userId: "user-1",
@@ -44,31 +54,43 @@ const itemOf = builder<WorkItem>({
 })
 
 describe("replyBody", () => {
-    it("trims the reply and preserves its interior whitespace", () => {
-        expect(replyBody(" \n Hello  customer \t")).toBe("Hello  customer")
+    it("trims the reply and preserves its interior whitespace", async () => {
+        const subject = await build()
+
+        expect(subject.replyBody(" \n Hello  customer \t")).toBe("Hello  customer")
     })
 
-    it("accepts exactly 4000 characters after trimming", () => {
+    it("accepts exactly 4000 characters after trimming", async () => {
+        const subject = await build()
+
         const body = "x".repeat(4000)
-        expect(replyBody(` ${body} `)).toBe(body)
+        expect(subject.replyBody(` ${body} `)).toBe(body)
     })
 
-    it.each([" \n\t", "x".repeat(4001)])("refuses an empty or oversized body", (body) => {
-        expect(() => replyBody(body)).toThrow(new ChatreplyError({ code: ChatreplyErrorCode.InvalidBody }))
+    it.each([" \n\t", "x".repeat(4001)])("refuses an empty or oversized body", async (body) => {
+        const subject = await build()
+
+        expect(() => subject.replyBody(body)).toThrow(new ChatreplyError({ code: ChatreplyErrorCode.InvalidBody }))
     })
 })
 
 describe("requireHandlingAccess", () => {
-    it.each([null, "OpenClaw", "An"])("permits staff when the conversation is held by %s", (holder) => {
-        expect(requireHandlingAccess(memberOf(), holder)).toBeUndefined()
+    it.each([null, "OpenClaw", "An"])("permits staff when the conversation is held by %s", async (holder) => {
+        const subject = await build()
+
+        expect(subject.requireHandlingAccess(memberOf(), holder)).toBeUndefined()
     })
 
-    it.each(["owner", "manager"] as const)("permits %s to reassign another holder", (role) => {
-        expect(requireHandlingAccess(memberOf({ role }), "Other")).toBeUndefined()
+    it.each(["owner", "manager"] as const)("permits %s to reassign another holder", async (role) => {
+        const subject = await build()
+
+        expect(subject.requireHandlingAccess(memberOf({ role }), "Other")).toBeUndefined()
     })
 
-    it("refuses staff trying to change another person's conversation", () => {
-        expect(() => requireHandlingAccess(memberOf(), "Other")).toThrow(
+    it("refuses staff trying to change another person's conversation", async () => {
+        const subject = await build()
+
+        expect(() => subject.requireHandlingAccess(memberOf(), "Other")).toThrow(
             new ChatreplyError({ code: ChatreplyErrorCode.HeldByOther }),
         )
     })
@@ -82,17 +104,27 @@ describe("answerConversationId", () => {
         { conversation_id: null },
     ]
 
-    it("prefers the explicit conversation field over the legacy subject", () => {
+    it("prefers the explicit conversation field over the legacy subject", async () => {
+        const subject = await build()
+
         expect(
-            answerConversationId(itemOf({ proposal: { summary: "Reply", fields: { conversation_id: "explicit" } } })),
+            subject.answerConversationId(
+                itemOf({ proposal: { summary: "Reply", fields: { conversation_id: "explicit" } } }),
+            ),
         ).toBe("explicit")
     })
 
-    it.each(legacyFields)("falls back to the legacy conversation subject for fields %j", (fields) => {
-        expect(answerConversationId(itemOf({ proposal: { summary: "Reply", fields } }))).toBe("legacy-conversation")
+    it.each(legacyFields)("falls back to the legacy conversation subject for fields %j", async (fields) => {
+        const subject = await build()
+
+        expect(subject.answerConversationId(itemOf({ proposal: { summary: "Reply", fields } }))).toBe(
+            "legacy-conversation",
+        )
     })
 
-    it("returns null for an unrelated subject without an explicit address", () => {
-        expect(answerConversationId(itemOf({ subject_type: "lead", subject_id: "lead-1" }))).toBeNull()
+    it("returns null for an unrelated subject without an explicit address", async () => {
+        const subject = await build()
+
+        expect(subject.answerConversationId(itemOf({ subject_type: "lead", subject_id: "lead-1" }))).toBeNull()
     })
 })

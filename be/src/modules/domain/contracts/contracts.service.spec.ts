@@ -96,7 +96,7 @@ describe("ContractsService", () => {
                     leadId: "lead-1",
                     kind: "contract.created",
                     actor: "Linh",
-                    summary: 'contracts.created:{"who":"Linh","customer":"Anh Minh"}',
+                    summary: "contracts.created:{\"who\":\"Linh\",\"customer\":\"Anh Minh\"}",
                     evidence: "2026-10-01 → 2027-09-30",
                 },
                 expect.anything(),
@@ -118,7 +118,7 @@ describe("ContractsService", () => {
                 expect.objectContaining({
                     leadId: null,
                     kind: "contract.updated",
-                    summary: 'contracts.updated:{"who":"Linh","customer":"Anh Minh"}',
+                    summary: "contracts.updated:{\"who\":\"Linh\",\"customer\":\"Anh Minh\"}",
                 }),
                 expect.anything(),
             )
@@ -147,7 +147,11 @@ describe("ContractsService", () => {
                 params: { list: "active, ended, cancelled" },
             })
         })
+    })
+})
 
+describe("ContractsService", () => {
+    describe("saveContract", () => {
         it("refuses a lead the workspace does not have", async () => {
             const tx = fakeTransaction(mockEntityManager({ query: [INSERT_CONTRACT, []] }))
             const { contracts, events } = await build(tx.em)
@@ -183,7 +187,9 @@ describe("ContractsService", () => {
 
     describe("list", () => {
         it("lists the workspace contracts after proving membership", async () => {
-            const em = mockEntityManager({ query: [LIST_CONTRACTS, [ROW, { ...ROW, id: "contract-2", lead_id: null }]] })
+            const em = mockEntityManager({
+                query: [LIST_CONTRACTS, [ROW, { ...ROW, id: "contract-2", lead_id: null }]],
+            })
             const { contracts, members } = await build(em)
 
             await expect(contracts.list("ws-1", "user-1")).resolves.toEqual([

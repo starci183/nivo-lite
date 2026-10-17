@@ -85,7 +85,9 @@ describe("ShiftsTextService", () => {
             "vi",
         )
     })
+})
 
+describe("ShiftsTextService", () => {
     it("renders each rule finding with its own values and preserves their order", async () => {
         const { service, catalog } = await build()
 

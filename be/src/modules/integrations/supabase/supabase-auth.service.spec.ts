@@ -41,102 +41,99 @@ const build = async () => {
     return { service: moduleRef.get(SupabaseAuthService), auth, publicClient, logger }
 }
 
-describe("SupabaseAuthService", () => {
-    describe("accountOf", () => {
-        it("reads the profile name, avatar and last sign-in", async () => {
-            const { service, auth } = await build()
-            auth.getUserById.mockResolvedValue(
-                found(
-                    userOf({
-                        last_sign_in_at: "2026-10-01T00:00:00.000Z",
-                        user_metadata: { full_name: "An Nguyen", avatar_url: "https://img.test/a.png" },
-                    }),
-                ),
-            )
+describe("SupabaseAuthService > accountOf", () => {
+    it("reads the profile name, avatar and last sign-in", async () => {
+        const { service, auth } = await build()
+        auth.getUserById.mockResolvedValue(
+            found(
+                userOf({
+                    last_sign_in_at: "2026-10-01T00:00:00.000Z",
+                    user_metadata: { full_name: "An Nguyen", avatar_url: "https://img.test/a.png" },
+                }),
+            ),
+        )
 
-            expect(await service.accountOf("user-1")).toSucceedWith({
-                id: "user-1",
-                email: "an@example.test",
-                lastSignInAt: "2026-10-01T00:00:00.000Z",
-                avatarUrl: "https://img.test/a.png",
-                displayName: "An Nguyen",
-            })
-            expect(auth.getUserById).toHaveBeenCalledWith("user-1")
+        expect(await service.accountOf("user-1")).toSucceedWith({
+            id: "user-1",
+            email: "an@example.test",
+            lastSignInAt: "2026-10-01T00:00:00.000Z",
+            avatarUrl: "https://img.test/a.png",
+            displayName: "An Nguyen",
         })
+        expect(auth.getUserById).toHaveBeenCalledWith("user-1")
+    })
 
-        it("falls back to the name claim, then the email local part, then Owner", async () => {
-            const { service, auth } = await build()
-            auth.getUserById
-                .mockResolvedValueOnce(found(userOf({ user_metadata: { name: "Binh" } })))
-                .mockResolvedValueOnce(found(userOf({ email: "chi@x.test" })))
-                .mockResolvedValueOnce(found(userOf({ email: undefined })))
+    it("falls back to the name claim, then the email local part, then Owner", async () => {
+        const { service, auth } = await build()
+        auth.getUserById
+            .mockResolvedValueOnce(found(userOf({ user_metadata: { name: "Binh" } })))
+            .mockResolvedValueOnce(found(userOf({ email: "chi@x.test" })))
+            .mockResolvedValueOnce(found(userOf({ email: undefined })))
 
-            expect(await service.accountOf("u1")).toSucceedWith({
-                id: "user-1",
-                email: "an@example.test",
-                lastSignInAt: null,
-                avatarUrl: null,
-                displayName: "Binh",
-            })
-            expect(await service.accountOf("u2")).toSucceedWith({
-                id: "user-1",
-                email: "chi@x.test",
-                lastSignInAt: null,
-                avatarUrl: null,
-                displayName: "chi",
-            })
-            expect(await service.accountOf("u3")).toSucceedWith({
-                id: "user-1",
-                email: "",
-                lastSignInAt: null,
-                avatarUrl: null,
-                displayName: "Owner",
-            })
+        expect(await service.accountOf("u1")).toSucceedWith({
+            id: "user-1",
+            email: "an@example.test",
+            lastSignInAt: null,
+            avatarUrl: null,
+            displayName: "Binh",
         })
-
-        it("refuses with not found when Auth cannot find the user", async () => {
-            const { service, auth } = await build()
-            auth.getUserById.mockResolvedValue(failed(404))
-
-            expect(await service.accountOf("user-1")).toBeRefused(SupabaseErrorCode.AccountNotFound)
+        expect(await service.accountOf("u2")).toSucceedWith({
+            id: "user-1",
+            email: "chi@x.test",
+            lastSignInAt: null,
+            avatarUrl: null,
+            displayName: "chi",
+        })
+        expect(await service.accountOf("u3")).toSucceedWith({
+            id: "user-1",
+            email: "",
+            lastSignInAt: null,
+            avatarUrl: null,
+            displayName: "Owner",
         })
     })
 
-    describe("deliverInvite", () => {
-        const redirect = "https://app.test/auth/confirm"
+    it("refuses with not found when Auth cannot find the user", async () => {
+        const { service, auth } = await build()
+        auth.getUserById.mockResolvedValue(failed(404))
 
-        it("invites a new person by account invitation", async () => {
-            const { service, auth } = await build()
-            auth.inviteUserByEmail.mockResolvedValue(found(userOf()))
+        expect(await service.accountOf("user-1")).toBeRefused(SupabaseErrorCode.AccountNotFound)
+    })
+})
 
-            await expect(service.deliverInvite("new@x.test", redirect)).resolves.toBe("invited")
-            expect(auth.inviteUserByEmail).toHaveBeenCalledWith("new@x.test", { redirectTo: redirect })
-        })
+describe("SupabaseAuthService > deliverInvite", () => {
+    const redirect = "https://app.test/auth/confirm"
+    it("invites a new person by account invitation", async () => {
+        const { service, auth } = await build()
+        auth.inviteUserByEmail.mockResolvedValue(found(userOf()))
 
-        it("emails a sign-in link to a person who already has an account", async () => {
-            const { service, auth, publicClient } = await build()
-            auth.inviteUserByEmail.mockResolvedValue(failed(422))
-            publicClient.sendSignInLink.mockResolvedValue(true)
+        await expect(service.deliverInvite("new@x.test", redirect)).resolves.toBe("invited")
+        expect(auth.inviteUserByEmail).toHaveBeenCalledWith("new@x.test", { redirectTo: redirect })
+    })
 
-            await expect(service.deliverInvite("old@x.test", redirect)).resolves.toBe("existing")
-            expect(publicClient.sendSignInLink).toHaveBeenCalledWith("old@x.test", redirect)
-        })
+    it("emails a sign-in link to a person who already has an account", async () => {
+        const { service, auth, publicClient } = await build()
+        auth.inviteUserByEmail.mockResolvedValue(failed(422))
+        publicClient.sendSignInLink.mockResolvedValue(true)
 
-        it("delivers nothing when the sign-in link cannot be sent", async () => {
-            const { service, auth, publicClient } = await build()
-            auth.inviteUserByEmail.mockResolvedValue(failed(422))
-            publicClient.sendSignInLink.mockResolvedValue(false)
+        await expect(service.deliverInvite("old@x.test", redirect)).resolves.toBe("existing")
+        expect(publicClient.sendSignInLink).toHaveBeenCalledWith("old@x.test", redirect)
+    })
 
-            await expect(service.deliverInvite("old@x.test", redirect)).resolves.toBe("none")
-        })
+    it("delivers nothing when the sign-in link cannot be sent", async () => {
+        const { service, auth, publicClient } = await build()
+        auth.inviteUserByEmail.mockResolvedValue(failed(422))
+        publicClient.sendSignInLink.mockResolvedValue(false)
 
-        it("logs and delivers nothing when Auth is unreachable", async () => {
-            const { service, auth, logger } = await build()
-            const failure = new Error("network")
-            auth.inviteUserByEmail.mockRejectedValue(failure)
+        await expect(service.deliverInvite("old@x.test", redirect)).resolves.toBe("none")
+    })
 
-            await expect(service.deliverInvite("x@x.test", redirect)).resolves.toBe("none")
-            expect(logger.error).toHaveBeenCalledWith(SupabaseLogEvent.InviteDeliveryFailed, failure)
-        })
+    it("logs and delivers nothing when Auth is unreachable", async () => {
+        const { service, auth, logger } = await build()
+        const failure = new Error("network")
+        auth.inviteUserByEmail.mockRejectedValue(failure)
+
+        await expect(service.deliverInvite("x@x.test", redirect)).resolves.toBe("none")
+        expect(logger.error).toHaveBeenCalledWith(SupabaseLogEvent.InviteDeliveryFailed, failure)
     })
 })

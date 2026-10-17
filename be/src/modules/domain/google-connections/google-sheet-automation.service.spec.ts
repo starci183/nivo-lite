@@ -85,138 +85,140 @@ describe("GoogleSheetAutomationService", () => {
             { recordOrders: true },
         )
     })
+})
 
-    describe("record", () => {
-        it("writes the event and answers a done run with its evidence", async () => {
-            const { service, google } = await build()
+describe("GoogleSheetAutomationService / record", () => {
+    it("writes the event and answers a done run with its evidence", async () => {
+        const { service, google } = await build()
 
-            const result = await service.record(context, {
-                event: "order.confirmed",
-                data: { order_no: "DH-1" },
-                at: "2026-10-12T02:00:00.000Z",
-            })
-            expect(google.runSheetEvent).toHaveBeenCalledWith("ws-1", context.config, {
-                event: "order.confirmed",
-                data: { order_no: "DH-1" },
-                occurredAt: "2026-10-12T02:00:00.000Z",
-            })
-            expect(result.status).toBe("done")
-            expect(result.evidence).toBe("Row 2")
+        const result = await service.record(context, {
+            event: "order.confirmed",
+            data: { order_no: "DH-1" },
+            at: "2026-10-12T02:00:00.000Z",
         })
-
-        it("answers a skipped run when the kind of event is switched off", async () => {
-            const { service, google } = await build()
-            google.runSheetEvent.mockResolvedValue({ evidence: "Leads off", skipped: true })
-
-            const result = await service.record(context, { event: "lead.created", data: {}, at: NOW })
-            expect(result.status).toBe("skipped")
-            expect(result).toEqual({
-                status: "skipped",
-                steps: [
-                    {
-                        label: "googleConnections.sheetOrders.skipped{}",
-                        status: "skipped",
-                        detail: "googleConnections.sheetOrders.skippedDetail{}",
-                    },
-                ],
-                evidence: "Leads off",
-            })
-            expect(google.runSheetEvent).toHaveBeenCalledWith(
-                "ws-1",
-                context.config,
-                expect.objectContaining({ occurredAt: NOW.toISOString() }),
-            )
+        expect(google.runSheetEvent).toHaveBeenCalledWith("ws-1", context.config, {
+            event: "order.confirmed",
+            data: { order_no: "DH-1" },
+            occurredAt: "2026-10-12T02:00:00.000Z",
         })
-
-        it("skips an event the sheet does not record without calling Google", async () => {
-            const { service, google } = await build()
-
-            await expect(service.record(context, { event: "order.shipped" })).resolves.toMatchObject({
-                status: "skipped",
-            })
-            expect(google.runSheetEvent).not.toHaveBeenCalled()
-        })
-
-        it.each([undefined, null, 17])("skips a non-string event: %s", async (event) => {
-            const { service, google } = await build()
-
-            await expect(service.record(context, { event })).resolves.toEqual({
-                status: "skipped",
-                steps: [
-                    {
-                        label: "googleConnections.sheetOrders.skipped{}",
-                        status: "skipped",
-                        detail: "googleConnections.sheetOrders.skippedDetail{}",
-                    },
-                ],
-                evidence: null,
-            })
-            expect(google.runSheetEvent).not.toHaveBeenCalled()
-        })
-
-        it.each([
-            { data: null, at: "" },
-            { data: ["not", "an object"], at: 42 },
-            { data: "text", at: undefined },
-        ])("uses empty data and the clock for an unstructured payload: %j", async ({ data, at }) => {
-            const { service, google } = await build()
-
-            await expect(service.record(context, { event: "deal.won", data, at })).resolves.toEqual({
-                status: "done",
-                steps: [{ label: "googleConnections.sheetOrders.written{}", status: "done", detail: "Row 2" }],
-                evidence: "Row 2",
-            })
-            expect(google.runSheetEvent).toHaveBeenCalledWith("ws-1", context.config, {
-                event: "deal.won",
-                data: {},
-                occurredAt: NOW.toISOString(),
-            })
-        })
+        expect(result.status).toBe("done")
+        expect(result.evidence).toBe("Row 2")
     })
 
-    describe("prepareEnable", () => {
-        it("creates the spreadsheet named after the shop and keeps its id and link", async () => {
-            const { service, google } = await build()
+    it("answers a skipped run when the kind of event is switched off", async () => {
+        const { service, google } = await build()
+        google.runSheetEvent.mockResolvedValue({ evidence: "Leads off", skipped: true })
 
-            await expect(service.prepareEnable("ws-1", sheetDef, { recordOrders: true })).resolves.toEqual({
-                recordOrders: true,
-                spreadsheetId: "sheet-new",
-                sheetUrl: "https://docs.google.com/spreadsheets/d/sheet-new/edit",
-            })
-            expect(google.provisionOrdersSheet).toHaveBeenCalledWith(
-                "ws-1",
-                'googleConnections.sheetTitle{"name":"Lan Shop"}',
-                { recordOrders: true },
-            )
+        const result = await service.record(context, { event: "lead.created", data: {}, at: NOW })
+        expect(result.status).toBe("skipped")
+        expect(result).toEqual({
+            status: "skipped",
+            steps: [
+                {
+                    label: "googleConnections.sheetOrders.skipped{}",
+                    status: "skipped",
+                    detail: "googleConnections.sheetOrders.skippedDetail{}",
+                },
+            ],
+            evidence: "Leads off",
         })
+        expect(google.runSheetEvent).toHaveBeenCalledWith(
+            "ws-1",
+            context.config,
+            expect.objectContaining({ occurredAt: NOW.toISOString() }),
+        )
+    })
 
-        it("leaves another template and an existing spreadsheet untouched", async () => {
-            const { service, google } = await build()
+    it("skips an event the sheet does not record without calling Google", async () => {
+        const { service, google } = await build()
 
-            await expect(
-                service.prepareEnable("ws-1", buildTemplate({ key: "thank_payment" }), { a: 1 }),
-            ).resolves.toEqual({ a: 1 })
-            await expect(service.prepareEnable("ws-1", sheetDef, { spreadsheetId: "s1" })).resolves.toEqual({
-                spreadsheetId: "s1",
-            })
-            expect(google.provisionOrdersSheet).not.toHaveBeenCalled()
+        await expect(service.record(context, { event: "order.shipped" })).resolves.toMatchObject({
+            status: "skipped",
         })
+        expect(google.runSheetEvent).not.toHaveBeenCalled()
+    })
 
-        it("uses the fallback shop name when a blank spreadsheet and workspace name are supplied", async () => {
-            const { service, google, workspaces } = await build()
-            workspaces.nameOf.mockResolvedValue("   ")
-            const config = { spreadsheetId: " \t ", recordOrders: true }
+    it.each([undefined, null, 17])("skips a non-string event: %s", async (event) => {
+        const { service, google } = await build()
 
-            await expect(service.prepareEnable("ws-1", sheetDef, config)).resolves.toEqual({
-                recordOrders: true,
-                spreadsheetId: "sheet-new",
-                sheetUrl: "https://docs.google.com/spreadsheets/d/sheet-new/edit",
-            })
-            expect(google.provisionOrdersSheet).toHaveBeenCalledWith(
-                "ws-1",
-                'googleConnections.sheetTitle{"name":"NIVO"}',
-                config,
-            )
+        await expect(service.record(context, { event })).resolves.toEqual({
+            status: "skipped",
+            steps: [
+                {
+                    label: "googleConnections.sheetOrders.skipped{}",
+                    status: "skipped",
+                    detail: "googleConnections.sheetOrders.skippedDetail{}",
+                },
+            ],
+            evidence: null,
         })
+        expect(google.runSheetEvent).not.toHaveBeenCalled()
+    })
+})
+
+describe("GoogleSheetAutomationService / record", () => {
+    it.each([
+        { data: null, at: "" },
+        { data: ["not", "an object"], at: 42 },
+        { data: "text", at: undefined },
+    ])("uses empty data and the clock for an unstructured payload: %j", async ({ data, at }) => {
+        const { service, google } = await build()
+
+        await expect(service.record(context, { event: "deal.won", data, at })).resolves.toEqual({
+            status: "done",
+            steps: [{ label: "googleConnections.sheetOrders.written{}", status: "done", detail: "Row 2" }],
+            evidence: "Row 2",
+        })
+        expect(google.runSheetEvent).toHaveBeenCalledWith("ws-1", context.config, {
+            event: "deal.won",
+            data: {},
+            occurredAt: NOW.toISOString(),
+        })
+    })
+})
+
+describe("GoogleSheetAutomationService / prepareEnable", () => {
+    it("creates the spreadsheet named after the shop and keeps its id and link", async () => {
+        const { service, google } = await build()
+
+        await expect(service.prepareEnable("ws-1", sheetDef, { recordOrders: true })).resolves.toEqual({
+            recordOrders: true,
+            spreadsheetId: "sheet-new",
+            sheetUrl: "https://docs.google.com/spreadsheets/d/sheet-new/edit",
+        })
+        expect(google.provisionOrdersSheet).toHaveBeenCalledWith(
+            "ws-1",
+            'googleConnections.sheetTitle{"name":"Lan Shop"}',
+            { recordOrders: true },
+        )
+    })
+
+    it("leaves another template and an existing spreadsheet untouched", async () => {
+        const { service, google } = await build()
+
+        await expect(service.prepareEnable("ws-1", buildTemplate({ key: "thank_payment" }), { a: 1 })).resolves.toEqual(
+            { a: 1 },
+        )
+        await expect(service.prepareEnable("ws-1", sheetDef, { spreadsheetId: "s1" })).resolves.toEqual({
+            spreadsheetId: "s1",
+        })
+        expect(google.provisionOrdersSheet).not.toHaveBeenCalled()
+    })
+
+    it("uses the fallback shop name when a blank spreadsheet and workspace name are supplied", async () => {
+        const { service, google, workspaces } = await build()
+        workspaces.nameOf.mockResolvedValue("   ")
+        const config = { spreadsheetId: " \t ", recordOrders: true }
+
+        await expect(service.prepareEnable("ws-1", sheetDef, config)).resolves.toEqual({
+            recordOrders: true,
+            spreadsheetId: "sheet-new",
+            sheetUrl: "https://docs.google.com/spreadsheets/d/sheet-new/edit",
+        })
+        expect(google.provisionOrdersSheet).toHaveBeenCalledWith(
+            "ws-1",
+            'googleConnections.sheetTitle{"name":"NIVO"}',
+            config,
+        )
     })
 })

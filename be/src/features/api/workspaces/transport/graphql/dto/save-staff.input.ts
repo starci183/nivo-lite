@@ -1,11 +1,7 @@
 import { Field, ID, InputType } from "@nestjs/graphql"
-import { Transform } from "class-transformer"
-import type { TransformFnParams } from "class-transformer"
 import { IsBoolean, IsEmail, IsOptional, IsString, IsUUID, MaxLength, MinLength } from "class-validator"
 
-/** An empty email becomes null. */
-const emptyEmail = ({ value }: TransformFnParams): unknown =>
-    typeof value === "string" && value.trim() === "" ? null : value
+import { TrimmedEmptyAsNull } from "@modules/platform/graphql"
 
 @InputType()
 /** Adds a staff row, or replaces one. */
@@ -33,7 +29,7 @@ export class SaveStaffInput {
     /** The contact email; absent or blank stores none. */
     @Field(() => String, { nullable: true })
     @IsOptional()
-    @Transform(emptyEmail)
+    @TrimmedEmptyAsNull()
     @IsEmail()
     @MaxLength(254)
     email?: string | null

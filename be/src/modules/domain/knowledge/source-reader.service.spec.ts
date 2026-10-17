@@ -55,7 +55,9 @@ describe("SourceReaderService", () => {
         })
         await expect(reader.read(sourceOf({ kind: "faq" }))).resolves.toMatchObject({ kind: "ok" })
     })
+})
 
+describe("SourceReaderService", () => {
     describe("files", () => {
         const file = (patch: Partial<SourceRecord> = {}) =>
             sourceOf({ kind: "file", storagePath: `${WS}/a/menu.pdf`, content: "", ...patch })
@@ -113,6 +115,13 @@ describe("SourceReaderService", () => {
 
             await expect(reader.read(file())).resolves.toEqual({ kind: "refused", code: StoredNote.FileMissing })
         })
+    })
+})
+
+describe("SourceReaderService", () => {
+    describe("files", () => {
+        const file = (patch: Partial<SourceRecord> = {}) =>
+            sourceOf({ kind: "file", storagePath: `${WS}/a/menu.pdf`, content: "", ...patch })
 
         it("refuses a file larger than the bucket allows", async () => {
             const { reader, sources, documents } = await build()
@@ -122,7 +131,9 @@ describe("SourceReaderService", () => {
             await expect(reader.read(file())).resolves.toEqual({ kind: "refused", code: StoredNote.FileTooLarge })
         })
     })
+})
 
+describe("SourceReaderService", () => {
     describe("links", () => {
         const link = (patch: Partial<SourceRecord> = {}) =>
             sourceOf({

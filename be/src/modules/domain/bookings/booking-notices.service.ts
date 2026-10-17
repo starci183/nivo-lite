@@ -81,23 +81,24 @@ export class BookingNoticesService {
 
     /** The sentence for a change of the booking. */
     textOf(kind: ChangeNotice, facts: NoticeFacts): string {
-        const say = this.say()
-        if (kind === "confirmed") return confirmedText(say, facts)
-        if (kind === "moved") return movedText(say, facts)
-        return kind === "cancelled" ? cancelledText(say, facts) : noShowText(say, facts)
+        const t = this.say()
+        if (kind === "confirmed") return confirmedText(t, facts)
+        if (kind === "moved") return movedText(t, facts)
+        return kind === "cancelled" ? cancelledText(t, facts) : noShowText(t, facts)
     }
 
     /** The subject of the email that carries a notice. */
     subjectOf(kind: BookingNoticeKind, service: string): string {
-        return this.say()(`bookings.subject.${kind}`, { service })
+        const t = this.say()
+        return t(`bookings.subject.${kind}`, { service })
     }
 
     /** The reminder: the owner's own wording with its blanks filled, or the fixed sentence. */
     reminderOf(facts: NoticeFacts, hoursBefore: number, customBody: OptionalBody): string {
-        const say = this.say()
-        if (customBody === null || customBody.trim() === "") return reminderText(say, facts, hoursBefore)
-        const neutral = Object.fromEntries(REMINDER_NEUTRAL.map((name) => [name, say(`bookings.neutral.${name}`)]))
-        return fillReminderBody(customBody, reminderVariables(say, facts), neutral)
+        const t = this.say()
+        if (customBody === null || customBody.trim() === "") return reminderText(t, facts, hoursBefore)
+        const neutral = Object.fromEntries(REMINDER_NEUTRAL.map((name) => [name, t(`bookings.neutral.${name}`)]))
+        return fillReminderBody(customBody, reminderVariables(t, facts), neutral)
     }
 
     /** Delivers a notice to the customer through the notifier the app registered. */

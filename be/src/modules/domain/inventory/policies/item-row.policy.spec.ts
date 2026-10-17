@@ -1,5 +1,15 @@
+import { Test } from "@nestjs/testing"
 import { toInventoryItem } from "./item-row.policy"
 import type { ItemRowColumns } from "./item-row.policy"
+
+const SUBJECT = Symbol("item-row.policy")
+
+const buildSubject = async () => {
+    const moduleRef = await Test.createTestingModule({
+        providers: [{ provide: SUBJECT, useValue: { toInventoryItem } }],
+    }).compile()
+    return moduleRef.get<typeof import("./item-row.policy")>(SUBJECT)
+}
 
 const rowOf = (overrides: Partial<ItemRowColumns>): ItemRowColumns => ({
     id: "item-1",
@@ -19,8 +29,10 @@ const rowOf = (overrides: Partial<ItemRowColumns>): ItemRowColumns => ({
 })
 
 describe("toInventoryItem", () => {
-    it("turns the numeric columns into numbers", () => {
-        expect(toInventoryItem(rowOf({ sell_price_vnd: "1500" }))).toEqual({
+    it("turns the numeric columns into numbers", async () => {
+        const subject = await buildSubject()
+
+        expect(subject.toInventoryItem(rowOf({ sell_price_vnd: "1500" }))).toEqual({
             id: "item-1",
             sku: "SKU1",
             name: "Sugar",
@@ -37,11 +49,15 @@ describe("toInventoryItem", () => {
         })
     })
 
-    it("keeps an absent selling price absent", () => {
-        expect(toInventoryItem(rowOf({})).sellPriceVnd).toBeNull()
+    it("keeps an absent selling price absent", async () => {
+        const subject = await buildSubject()
+
+        expect(subject.toInventoryItem(rowOf({})).sellPriceVnd).toBeNull()
     })
 
-    it("keeps the usable unit conversions and drops the broken ones", () => {
+    it("keeps the usable unit conversions and drops the broken ones", async () => {
+        const subject = await buildSubject()
+
         const units = [
             { unit: "box", factor: "24" },
             { unit: "", factor: 5 },
@@ -50,10 +66,12 @@ describe("toInventoryItem", () => {
             { unit: "pack" },
         ]
 
-        expect(toInventoryItem(rowOf({ units })).units).toEqual([{ unit: "box", factor: 24 }])
+        expect(subject.toInventoryItem(rowOf({ units })).units).toEqual([{ unit: "box", factor: 24 }])
     })
 
-    it("reads a units column that is not a list as no conversions", () => {
-        expect(toInventoryItem(rowOf({ units: { unit: "box" } })).units).toEqual([])
+    it("reads a units column that is not a list as no conversions", async () => {
+        const subject = await buildSubject()
+
+        expect(subject.toInventoryItem(rowOf({ units: { unit: "box" } })).units).toEqual([])
     })
 })

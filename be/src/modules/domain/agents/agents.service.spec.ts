@@ -175,7 +175,9 @@ describe("AgentsService", () => {
             await expect(service.profileOfDepartment("w1", "chatbot")).resolves.toBeNull()
         })
     })
+})
 
+describe("AgentsService", () => {
     describe("list", () => {
         it("lists the agents of the workspace for a member", async () => {
             const em = mockEntityManager({ query: [LIST_AGENTS, [AGENT]] })
@@ -235,7 +237,9 @@ describe("AgentsService", () => {
             await expect(service.agentOfDepartment("w1", "chatbot", "i1")).resolves.toBeNull()
         })
     })
+})
 
+describe("AgentsService", () => {
     describe("dashboard", () => {
         const stubs = mockEntityManager({
             query: [
@@ -305,7 +309,11 @@ describe("AgentsService", () => {
                 "tool",
             ])
         })
+    })
+})
 
+describe("AgentsService", () => {
+    describe("dashboard", () => {
         it("reads the whole department of a single-instance type and hides the gaps from staff", async () => {
             const em = mockEntityManager({
                 query: [
@@ -362,7 +370,9 @@ describe("AgentsService", () => {
             })
         })
     })
+})
 
+describe("AgentsService", () => {
     describe("create", () => {
         const agent = {
             workspaceId: "w1",
@@ -426,7 +436,9 @@ describe("AgentsService", () => {
             await expect(service.create("u1", agent)).rejects.toMatchObject({ code: AgentsErrorCode.NotCreated })
         })
     })
+})
 
+describe("AgentsService", () => {
     describe("edits", () => {
         it("renames an agent", async () => {
             const em = mockEntityManager({ query: [RENAME_AGENT, [{ id: "a1" }]] })

@@ -17,6 +17,7 @@ import { ApproveVideoProjectHandler } from "./application/approve-video-project.
 import { ShareVideoProjectHandler } from "./application/share-video-project.handler"
 import { RequestVideoScriptHandler } from "./application/request-video-script.handler"
 import { GetVideoScriptStatusHandler } from "./application/get-video-script-status.handler"
+import { ConfigurableModuleClass } from "./video.module-definition"
 
 @Module({
     providers: [
@@ -41,4 +42,4 @@ import { GetVideoScriptStatusHandler } from "./application/get-video-script-stat
     ],
 })
 /** The application handlers of the video workbench. */
-export class VideoApiModule {}
+export class VideoApiModule extends ConfigurableModuleClass {}

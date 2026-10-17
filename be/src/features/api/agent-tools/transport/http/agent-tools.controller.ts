@@ -1,6 +1,6 @@
 import { Body, Controller, Get, Headers, HttpCode, Param, Post } from "@nestjs/common"
 import type { CommandBus, QueryBus } from "@nestjs/cqrs"
-import { Public, PublicReason } from "@modules/domain/identity"
+import { Credential } from "@modules/domain/identity"
 import { InjectCommandBus, InjectQueryBus } from "@modules/platform/cqrs"
 import { GetToolManifestQuery } from "../../application/get-tool-manifest.query"
 import { RunToolCommand } from "../../application/run-tool.command"
@@ -11,8 +11,9 @@ import { ToolManifestResponse, ToolResultResponse } from "./dto/tool-result.resp
 
 @Controller("agent-tools")
 /**
- * The HTTP door OpenClaw agents call back into: the tool manifest and one call per tool. The caller is an agent running in the gateway,
- * not a person: a call carries the short-lived per-job tool token as bearer and the domain verifies it; no session is involved.
+ * The HTTP door OpenClaw agents call back into: the tool manifest and one call per tool. The caller is an agent running
+ * in the gateway, not a person: a call carries the short-lived per-job tool token as bearer and the domain verifies it;
+ * no session is involved.
  */
 export class AgentToolsController {
     constructor(
@@ -22,7 +23,7 @@ export class AgentToolsController {
 
     /** Lists the tools an agent may call; static text with no workspace data. */
     @Get()
-    @Public({ reason: PublicReason.ToolToken })
+    @Credential({ kind: "tool-token" })
     async manifest(): Promise<ToolManifestResponse> {
         const result = await this.queryBus.execute(new GetToolManifestQuery({ request: {} }))
         return toToolManifestResponse(result)
@@ -31,7 +32,7 @@ export class AgentToolsController {
     /** Runs one tool for the job the bearer token names; the workspace and conversation come from the token only. */
     @Post(":tool")
     @HttpCode(200)
-    @Public({ reason: PublicReason.ToolToken })
+    @Credential({ kind: "tool-token" })
     async run(
         @Headers("authorization") authorization: string | undefined,
         @Param() params: ToolNameRequest,

@@ -195,7 +195,9 @@ describe("TurnModulesService", () => {
         expect(booking.brief).not.toHaveBeenCalled()
         expect(catalog.get).not.toHaveBeenCalled()
     })
+})
 
+describe("TurnModulesService", () => {
     it("leaves a reply without module requests alone", async () => {
         const { modules, booking, loyalty, bindings, engine, evidence } = await build()
         await expect(modules.settle(ctx, turnOf(), replyOf())).resolves.toEqual({ reply: null, lines: [] })
@@ -264,7 +266,9 @@ describe("TurnModulesService", () => {
         expect(bindings.handoversOf).not.toHaveBeenCalled()
         expect(evidence.log).toHaveBeenCalledTimes(1)
     })
+})
 
+describe("TurnModulesService", () => {
     it("does not open work for a reward that has no redeem intent", async () => {
         const { modules, loyalty, engine, evidence } = await build()
         await expect(modules.settle(ctx, turnOf(), replyOf({ loyaltyRewardKey: "missing" }))).resolves.toEqual({
@@ -298,7 +302,9 @@ describe("TurnModulesService", () => {
         })
         expect(engine.runWork).not.toHaveBeenCalled()
     })
+})
 
+describe("TurnModulesService", () => {
     it("opens a preset gated redemption with message deduplication and the authoritative reward facts", async () => {
         const { modules, loyalty, engine, evidence, catalog } = await build()
         loyalty.redeemIntent.mockResolvedValueOnce(openIntent)

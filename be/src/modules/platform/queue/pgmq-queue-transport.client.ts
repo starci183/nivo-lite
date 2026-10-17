@@ -5,33 +5,23 @@ import { InjectErrorReporter } from "@modules/platform/errors"
 import type { ErrorReporter } from "@modules/platform/errors"
 import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
-import type { QueueDelivery, QueueHandler, QueueJob, QueueSchedulerDefinition } from "./queue.contracts"
+import type { QueueDelivery, QueueHandler, QueueJob } from "./queue.contracts"
 import { InjectQueueOptions } from "./queue.decorators"
 import { QueueLogEvent } from "./queue.log-events"
 import type { QueueOptions } from "./queue.options"
 import {
     TOUCHES_PER_TIMEOUT,
     backoffSecondsOf,
-    cronScheduleOf,
     deliveryOf,
     isExhausted,
     isUnrecoverable,
     reasonOf,
     retryAfterSecondsOf,
     secondsOf,
-    tickOf,
     workspaceOf,
 } from "./queue.policy"
 import type { QueueTransport } from "./queue-transport.port"
-import {
-    CRON_SCHEDULE,
-    JOB_ACK,
-    JOB_ARCHIVE,
-    JOB_ENQUEUE,
-    JOB_FAIL,
-    JOB_READ,
-    JOB_TOUCH,
-} from "./persistence/queue.sql"
+import { JOB_ACK, JOB_ARCHIVE, JOB_ENQUEUE, JOB_FAIL, JOB_READ, JOB_TOUCH } from "./persistence/queue.sql"
 import type { QueueReadRow } from "./persistence/queue.rows"
 
 /** A delivery in flight: the queue it belongs to, the signal that aborts it and the promise that settles when it is done. */
@@ -63,16 +53,6 @@ export class PgmqQueueTransportClient implements QueueTransport {
     /** Writes the outbox row and sends the message inside the transaction `tx`; a dedupe key that already exists sends nothing. */
     async add(tx: EntityManager, job: QueueJob): Promise<void> {
         await tx.query(JOB_ENQUEUE, [job.workspaceId, job.queue, job.job, JSON.stringify(job.payload), job.dedupeKey])
-    }
-
-    /** Creates or replaces the pg_cron job named by the scheduler id; pg_cron keeps one per name however many replicas call this. */
-    async upsertScheduler(scheduler: QueueSchedulerDefinition): Promise<void> {
-        await this.entityManager.query(CRON_SCHEDULE, [
-            scheduler.id,
-            cronScheduleOf(scheduler.everyMs),
-            scheduler.queue,
-            JSON.stringify(tickOf(scheduler)),
-        ])
     }
 
     /** Starts the read loop of the handler's queue. */

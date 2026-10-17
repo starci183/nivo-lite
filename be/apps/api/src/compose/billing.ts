@@ -1,4 +1,6 @@
-import type { ModuleMetadata } from "@nestjs/common"
+import { VietcombankInboxModule } from "@modules/domain/vietcombank-inbox"
+import { BankFeedInboxModule } from "@modules/domain/bank-feed-inbox"
+import type { DynamicModule } from "@nestjs/common"
 import { CassoHttpModule } from "@features/webhooks/casso"
 import { PayosHttpModule } from "@features/webhooks/payos"
 import { SepayHttpModule } from "@features/webhooks/sepay"
@@ -14,18 +16,20 @@ import { BillingGraphqlModule } from "@features/api/billing"
 import { CreditsGraphqlModule } from "@features/api/credits"
 import type { ApiOptions } from "../api.options"
 /** The billing area of the API, in registration order. */
-export const billingModules = (options: ApiOptions): NonNullable<ModuleMetadata["imports"]> => [
+export const billingModules = (options: ApiOptions): Array<DynamicModule> => [
     PaymentOrdersModule.register({ isGlobal: true }),
+    VietcombankInboxModule.register({ isGlobal: true }),
+    BankFeedInboxModule.register({ isGlobal: true }),
     BillingModule.register({ isGlobal: true, ...options.billing }),
-    BillingGraphqlModule,
+    BillingGraphqlModule.register({}),
     SepayTransactionsModule.register({ isGlobal: true }),
     AiUsageEventsModule.register({ isGlobal: true }),
     CreditsModule.register({ isGlobal: true }),
-    CreditsGraphqlModule,
+    CreditsGraphqlModule.register({}),
     PaymentOrderRequestsModule.register({ isGlobal: true }),
-    CassoHttpModule,
-    PayosHttpModule,
-    SepayHttpModule,
-    SepayFeedHttpModule,
-    VietcombankHttpModule,
+    CassoHttpModule.register({}),
+    PayosHttpModule.register({}),
+    SepayHttpModule.register({}),
+    SepayFeedHttpModule.register({}),
+    VietcombankHttpModule.register({}),
 ]

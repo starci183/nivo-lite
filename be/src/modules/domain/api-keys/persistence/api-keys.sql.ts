@@ -1,6 +1,9 @@
 import { sql } from "@modules/platform/database"
 
-/** Verifies a key hash, counts this minute's request and stamps its last use in ONE round trip ($1 hash); answers jsonb or null. */
+/**
+ * Verifies a key hash, counts this minute's request and stamps its last use in ONE round trip ($1 hash); answers jsonb
+ * or null.
+ */
 export const API_KEY_AUTH = sql`SELECT public.api_key_auth($1) AS auth`
 
 /** The role of an active member of a workspace ($1 workspace, $2 user). */
@@ -29,7 +32,10 @@ RETURNING id, name, key_prefix,
     to_char(last_used_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') AS last_used_at,
     to_char(revoked_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') AS revoked_at`
 
-/** Revokes a working key of a workspace and answers it; a missing or already revoked key answers no row ($1 workspace, $2 id). */
+/**
+ * Revokes a working key of a workspace and answers it; a missing or already revoked key answers no row ($1 workspace,
+ * $2 id).
+ */
 export const REVOKE_KEY = sql`WITH revoked AS (
     UPDATE public.api_keys SET revoked_at = now()
     WHERE id = $2 AND workspace_id = $1 AND revoked_at IS NULL
@@ -40,3 +46,8 @@ SELECT id, name, key_prefix,
     to_char(last_used_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') AS last_used_at,
     to_char(revoked_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') AS revoked_at
 FROM revoked`
+
+/** Read-only credential proof by hash; the operation still accounts for exactly one rate hit ($1 hash). */
+export const API_KEY_CREDENTIAL = sql`SELECT id, workspace_id, name, scopes,
+    revoked_at IS NOT NULL AS revoked
+FROM public.api_keys WHERE key_hash = $1 LIMIT 1`

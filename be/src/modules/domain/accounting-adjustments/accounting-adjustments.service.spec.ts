@@ -116,7 +116,9 @@ describe("AccountingAdjustmentsService", () => {
             expect(em.query).toHaveBeenCalledWith(LIST_ADJUSTMENTS, [WORKSPACE])
         })
     })
+})
 
+describe("AccountingAdjustmentsService", () => {
     describe("create", () => {
         it("appends the correction and its evidence line in one transaction under the member's name", async () => {
             const { service, tx, members, events } = await build(
@@ -175,7 +177,11 @@ describe("AccountingAdjustmentsService", () => {
             expect(tx.rollbacks).toBe(1)
             expect(events.record).not.toHaveBeenCalled()
         })
+    })
+})
 
+describe("AccountingAdjustmentsService", () => {
+    describe("create", () => {
         it("records a transaction note without a lead or corrected amount", async () => {
             const adjustment = adjustmentOf({ target_type: "transaction", corrected_amount_vnd: null })
             const { service, tx, invoices, transactions, events } = await build(

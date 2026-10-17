@@ -72,6 +72,7 @@ describe("AgentConversationsService", () => {
             handled_by: "Lan",
             created_at: "2026-10-13T09:00:00+07:00",
         }
+
         const chat = {
             id: "chat-1",
             kind: "customer",
@@ -129,7 +130,11 @@ describe("AgentConversationsService", () => {
             expect(inside.query).toHaveBeenCalledWith(LOCK_CHAT_CONVERSATION, ["ws-1", "chat-1"])
             expect(em.query).not.toHaveBeenCalled()
         })
+    })
+})
 
+describe("AgentConversationsService", () => {
+    describe("chat", () => {
         it("refuses to lock a chat that is absent from the workspace", async () => {
             const { service } = await build()
             const inside = mockEntityManager({ query: [LOCK_CHAT_CONVERSATION, []] })
@@ -151,7 +156,9 @@ describe("AgentConversationsService", () => {
             expect(em.query).not.toHaveBeenCalled()
         })
     })
+})
 
+describe("AgentConversationsService", () => {
     describe("customer leads", () => {
         it("lists customer lead conversations using the default or requested bound", async () => {
             const rows = [{ id: "conv-1", lead_id: "lead-1", handled_by: "Lan" }]
@@ -184,7 +191,9 @@ describe("AgentConversationsService", () => {
             expect(em.query).toHaveBeenCalledWith(FIND_LATEST_LEAD_CONVERSATION, ["ws-1", "lead-1", "zalo"])
         })
     })
+})
 
+describe("AgentConversationsService", () => {
     describe("human handling", () => {
         it("maps the locked customer conversation and its current holder", async () => {
             const { service, em } = await build()
@@ -236,7 +245,9 @@ describe("AgentConversationsService", () => {
             expect(em.query).not.toHaveBeenCalled()
         })
     })
+})
 
+describe("AgentConversationsService", () => {
     describe("find", () => {
         it("answers the conversation of a customer on a connection", async () => {
             const { service, em } = await build()
@@ -294,7 +305,9 @@ describe("AgentConversationsService", () => {
             })
         })
     })
+})
 
+describe("AgentConversationsService", () => {
     describe("writes", () => {
         it("archives and rebinds through the given transaction", async () => {
             const { service } = await build()
@@ -342,7 +355,9 @@ describe("AgentConversationsService", () => {
             })
         })
     })
+})
 
+describe("AgentConversationsService", () => {
     describe("turnOf", () => {
         it("answers the conversation with the agent that speaks in it", async () => {
             const { service } = await build()

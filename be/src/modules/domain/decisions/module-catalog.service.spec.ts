@@ -91,7 +91,9 @@ describe("ModuleCatalogService", () => {
             await expect(service.nameOf("sales", "en")).resolves.toBe("sales")
         })
     })
+})
 
+describe("ModuleCatalogService", () => {
     describe("actionOf", () => {
         it("answers the action", async () => {
             const em = mockEntityManager({ query: [FIND_ACTION, [actionRowOf()]] })

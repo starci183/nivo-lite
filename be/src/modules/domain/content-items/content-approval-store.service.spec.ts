@@ -41,8 +41,16 @@ const build = async () => {
 
 describe("ContentApprovalStoreService", () => {
     describe("claimSubmission", () => {
-        it("claimSubmission has its first case written", async () => {
-            const { service } = await build()
+        it("claimSubmission exercises its first behavior through the compiled module", async () => {
+            const { service, entityManager } = await build()
+            entityManager.query.mockResolvedValue([])
+
+            await expect(
+                service.claimSubmission("workspace", "post", "work", evidence, snapshot),
+            ).rejects.toMatchObject({
+                code: ContentItemsErrorCode.WrongStatus,
+            })
+
             expect(service.claimSubmission).toBeInstanceOf(Function)
         })
 
@@ -76,10 +84,20 @@ describe("ContentApprovalStoreService", () => {
             })
         })
     })
+})
 
+describe("ContentApprovalStoreService", () => {
     describe("approve", () => {
-        it("approve has its first case written", async () => {
-            const { service } = await build()
+        it("approve exercises its first behavior through the compiled module", async () => {
+            const { service, entityManager } = await build()
+            entityManager.query.mockResolvedValue([])
+
+            await expect(
+                service.approve("workspace", "post", "work", "Approver", null, evidence),
+            ).rejects.toMatchObject({
+                code: ContentItemsErrorCode.WrongStatus,
+            })
+
             expect(service.approve).toBeInstanceOf(Function)
         })
 
@@ -126,10 +144,18 @@ describe("ContentApprovalStoreService", () => {
             })
         })
     })
+})
 
+describe("ContentApprovalStoreService", () => {
     describe("reject", () => {
-        it("reject has its first case written", async () => {
-            const { service } = await build()
+        it("reject exercises its first behavior through the compiled module", async () => {
+            const { service, entityManager } = await build()
+            entityManager.query.mockResolvedValue([])
+
+            await expect(service.reject("workspace", "post", "work", evidence)).rejects.toMatchObject({
+                code: ContentItemsErrorCode.WrongStatus,
+            })
+
             expect(service.reject).toBeInstanceOf(Function)
         })
 
@@ -157,10 +183,18 @@ describe("ContentApprovalStoreService", () => {
             })
         })
     })
+})
 
+describe("ContentApprovalStoreService", () => {
     describe("markPublished", () => {
-        it("markPublished has its first case written", async () => {
-            const { service } = await build()
+        it("markPublished exercises its first behavior through the compiled module", async () => {
+            const { service, entityManager } = await build()
+            entityManager.query.mockResolvedValue([])
+
+            await expect(service.markPublished("workspace", "post", "facebook", mark, evidence)).rejects.toMatchObject({
+                code: ContentItemsErrorCode.WrongStatus,
+            })
+
             expect(service.markPublished).toBeInstanceOf(Function)
         })
 

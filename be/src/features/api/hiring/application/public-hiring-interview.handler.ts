@@ -17,6 +17,6 @@ export class PublicHiringInterviewHandler extends ICQRSHandler<PublicHiringInter
     }
 
     protected override process(query: PublicHiringInterviewQuery): Promise<PublicInterviewOutput> {
-        return this.interviews.publicView(query.params.request)
+        return this.interviews.publicView(query.params.request, query.params.request.credentialPrincipal)
     }
 }

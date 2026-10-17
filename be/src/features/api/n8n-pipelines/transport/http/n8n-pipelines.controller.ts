@@ -1,6 +1,6 @@
 import { Body, Controller, Get, Headers, HttpCode, HttpStatus, Param, Post, Query } from "@nestjs/common"
 import type { CommandBus, QueryBus } from "@nestjs/cqrs"
-import { Public, PublicReason } from "@modules/domain/identity"
+import { Credential } from "@modules/domain/identity"
 import type { DaySummary, MonthLedger, OverdueInvoices } from "@modules/domain/n8n-runs"
 import { InjectCommandBus, InjectQueryBus } from "@modules/platform/cqrs"
 import { RateLimit, RateTier } from "@modules/platform/http-security"
@@ -18,11 +18,12 @@ import { SendEmailResponse } from "./dto/send-email.response"
 import { toCompletion, toRawEmail, toSendEmailResponse } from "./n8n-pipelines.mapper"
 
 @Controller("api/n8n")
-@Public({ reason: PublicReason.SignedWebhook })
+@Credential({ kind: "run-token" })
 @RateLimit(RateTier.Strict)
 /**
- * The doors the shared n8n workflows call back on. They are anonymous to the session guard because a workflow has no session: each
- * call proves itself with the bearer token of its own run, which the domain checks before any data is read or any mail is sent.
+ * The doors the shared n8n workflows call back on. The global guard authenticates their run credentials: each call
+ * proves itself with the bearer token of its own run, which the domain checks before any data is read or any mail is
+ * sent.
  */
 export class N8nPipelinesController {
     constructor(
@@ -32,18 +33,21 @@ export class N8nPipelinesController {
 
     /** The figures of a day and the owners to mail. */
     @Get("data/daily-summary")
+    @Credential({ kind: "run-token", workflow: "email-daily-report" })
     daySummary(@Headers("authorization") authorization = "", @Query() query: DayRequest): Promise<DaySummary> {
         return this.queryBus.execute(new FetchDaySummaryQuery({ request: { authorization, date: query.date } }))
     }
 
     /** The overdue invoices of customers with an address, one item per reminder. */
     @Get("data/overdue-invoices")
+    @Credential({ kind: "run-token", workflow: "email-debt-reminder" })
     overdueInvoices(@Headers("authorization") authorization = ""): Promise<OverdueInvoices> {
         return this.queryBus.execute(new FetchOverdueInvoicesQuery({ request: { authorization } }))
     }
 
     /** A month of the ledger as CSV text and as the variables of the email. */
     @Get("data/month-ledger")
+    @Credential({ kind: "run-token", workflow: "email-month-ledger" })
     monthLedger(@Headers("authorization") authorization = "", @Query() query: PeriodRequest): Promise<MonthLedger> {
         return this.queryBus.execute(new FetchMonthLedgerQuery({ request: { authorization, period: query.period } }))
     }

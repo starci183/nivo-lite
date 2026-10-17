@@ -18,6 +18,7 @@ import { SetInventoryItemActiveHandler } from "./application/set-inventory-item-
 import { TakeInventoryStockHandler } from "./application/take-inventory-stock.handler"
 import { TransferInventoryStockHandler } from "./application/transfer-inventory-stock.handler"
 import { UpdateInventoryPoDraftHandler } from "./application/update-inventory-po-draft.handler"
+import { ConfigurableModuleClass } from "./inventory.module-definition"
 
 @Module({
     providers: [
@@ -43,4 +44,4 @@ import { UpdateInventoryPoDraftHandler } from "./application/update-inventory-po
     ],
 })
 /** The inventory feature: the handlers of its application. */
-export class InventoryApiModule {}
+export class InventoryApiModule extends ConfigurableModuleClass {}

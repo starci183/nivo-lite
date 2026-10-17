@@ -48,7 +48,7 @@ export class PaymentSecretsService {
             const credential = decryptSecret(row.ciphertext, this.options.channelTokenKey?.reveal())
             return { workspaceId: row.workspace_id, credential, webhookSecret: row.webhook_secret }
         } catch (cause) {
-            this.logger.error(BillingLogEvent.CredentialUnreadable, cause, { connectionId })
+            this.logger.error(BillingLogEvent.Undecryptable, cause, { connectionId })
             return null
         }
     }

@@ -153,7 +153,11 @@ describe("VideoScriptingService", () => {
             })
             expect(generations.request).not.toHaveBeenCalled()
         })
+    })
+})
 
+describe("VideoScriptingService", () => {
+    describe("request", () => {
         it.each([
             ["a rendering project", projectOf({ status: "rendering" })],
             ["a queued render", projectOf({ render_status: "queued" })],
@@ -204,7 +208,11 @@ describe("VideoScriptingService", () => {
             expect(projectWriter.start).not.toHaveBeenCalled()
             expect(generations.state.mock.calls).toEqual(stateCalls)
         })
+    })
+})
 
+describe("VideoScriptingService", () => {
+    describe("request", () => {
         it("times out a stale operation and its retry before queuing a fresh one", async () => {
             const stale = projectOf({
                 status: "scripting",
@@ -219,7 +227,9 @@ describe("VideoScriptingService", () => {
             ])
         })
     })
+})
 
+describe("VideoScriptingService", () => {
     describe("status", () => {
         it("refuses an operation that is not a video script", async () => {
             const { scripting, generations } = await build()
@@ -269,7 +279,11 @@ describe("VideoScriptingService", () => {
                 errorCode: expected,
             })
         })
+    })
+})
 
+describe("VideoScriptingService", () => {
+    describe("status", () => {
         it("reports an operation older than the limit as timed out", async () => {
             const { scripting, generations } = await build(SCRIPTING)
             generations.state.mockResolvedValue(stateOf({ createdAt: STALE }))
@@ -322,7 +336,11 @@ describe("VideoScriptingService", () => {
                 progress: 50,
             })
         })
+    })
+})
 
+describe("VideoScriptingService", () => {
+    describe("status", () => {
         it("reports a running correction when its generation row is unavailable", async () => {
             const { scripting, generations, projectWriter } = await build(
                 projectOf({

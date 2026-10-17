@@ -28,12 +28,16 @@ export const segmentParts = (segment: Segment, tierNames: ReadonlyMap<string, st
     ...(segment.tiers.length > 0
         ? [
               {
-                  key: "loyalty.segment.tiers",
+                  key: "loyalty.segment.tiers" as const,
                   params: { tiers: segment.tiers.map((key) => tierNames.get(key) ?? key).join(", ") },
               },
           ]
         : []),
-    ...(segment.inactiveDays > 0 ? [{ key: "loyalty.segment.inactive", params: { days: segment.inactiveDays } }] : []),
-    ...(segment.birthdayThisMonth ? [{ key: "loyalty.segment.birthday", params: {} }] : []),
-    ...(segment.minSpendVnd > 0 ? [{ key: "loyalty.segment.minSpend", params: { amount: segment.minSpendVnd } }] : []),
+    ...(segment.inactiveDays > 0
+        ? [{ key: "loyalty.segment.inactive" as const, params: { days: segment.inactiveDays } }]
+        : []),
+    ...(segment.birthdayThisMonth ? [{ key: "loyalty.segment.birthday" as const, params: {} }] : []),
+    ...(segment.minSpendVnd > 0
+        ? [{ key: "loyalty.segment.minSpend" as const, params: { amount: segment.minSpendVnd } }]
+        : []),
 ]

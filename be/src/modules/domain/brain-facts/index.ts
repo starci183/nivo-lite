@@ -7,3 +7,5 @@ export { factLine } from "./fact-view.policy"
 export { BRAIN_FACTS_MESSAGES } from "./messages/brain-facts.messages"
 export type { BrainSubjectType, Evidence, FactRecord, ProposeResult, Scope } from "./brain-facts.contracts"
 export { SUBJECT_TYPES } from "./brain-facts.contracts"
+
+export type { FactInput } from "./brain-facts.contracts"

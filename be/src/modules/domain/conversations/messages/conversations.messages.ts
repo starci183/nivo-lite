@@ -4,7 +4,6 @@ import type { MessageBundle } from "@modules/platform/i18n"
 export const CONVERSATIONS_MESSAGES: MessageBundle = {
     vi: {
         "errors.CONVERSATIONS_NOT_ANSWERED": "Tin nhắn này không cần trả lời.",
-        "errors.CONVERSATIONS_TURN_TARGET_MISSING": "Cuộc trò chuyện hoặc tin nhắn cần trả lời không còn tồn tại.",
         "conversations.photoSent": "Khách gửi một ảnh",
         "conversations.zaloGuest": "Khách Zalo",
         "conversations.facebookGuest": "Khách Facebook",
@@ -18,7 +17,6 @@ export const CONVERSATIONS_MESSAGES: MessageBundle = {
     },
     en: {
         "errors.CONVERSATIONS_NOT_ANSWERED": "This message does not need an answer.",
-        "errors.CONVERSATIONS_TURN_TARGET_MISSING": "The conversation or the message to answer no longer exists.",
         "conversations.photoSent": "The customer sent a photo",
         "conversations.zaloGuest": "Zalo customer",
         "conversations.facebookGuest": "Facebook customer",

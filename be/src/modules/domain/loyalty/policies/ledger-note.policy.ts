@@ -4,12 +4,12 @@ import type { NotePart } from "../loyalty.contracts"
 /** The lines of the note that explains how a purchase earned its points: the rate, the tier bonus and the points of the visit. */
 export const earnNoteParts = (calc: PointsCalc): ReadonlyArray<NotePart> => [
     calc.label === ""
-        ? { key: "loyalty.earn.rate", params: { rate: calc.rate } }
-        : { key: "loyalty.earn.rateCategory", params: { rate: calc.rate, label: calc.label } },
+        ? { key: "loyalty.earn.rate" as const, params: { rate: calc.rate } }
+        : { key: "loyalty.earn.rateCategory" as const, params: { rate: calc.rate, label: calc.label } },
     ...(calc.multiplier > 1
-        ? [{ key: "loyalty.earn.tier", params: { tier: calc.tierName, multiplier: calc.multiplier } }]
+        ? [{ key: "loyalty.earn.tier" as const, params: { tier: calc.tierName, multiplier: calc.multiplier } }]
         : []),
-    ...(calc.perVisit > 0 ? [{ key: "loyalty.earn.visit", params: { points: calc.perVisit } }] : []),
+    ...(calc.perVisit > 0 ? [{ key: "loyalty.earn.visit" as const, params: { points: calc.perVisit } }] : []),
 ]
 
 /** The code a customer shows to receive a reward, made from the end of the redemption key. */

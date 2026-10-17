@@ -1,10 +1,22 @@
+import { Test } from "@nestjs/testing"
 import { isAllowedOrigin } from "./allowed-origin.policy"
+
+const SUBJECT = Symbol("allowed-origin.policy")
+
+const buildSubject = async () => {
+    const moduleRef = await Test.createTestingModule({
+        providers: [{ provide: SUBJECT, useValue: { isAllowedOrigin } }],
+    }).compile()
+    return moduleRef.get<typeof import("./allowed-origin.policy")>(SUBJECT)
+}
 
 describe("isAllowedOrigin", () => {
     it.each(["https://app.test", "http://localhost", "http://localhost:3000", "https://[::1]:8443"])(
         "accepts the canonical HTTP(S) origin %s",
-        (origin) => {
-            expect(isAllowedOrigin(origin)).toBe(true)
+        async (origin) => {
+            const subject = await buildSubject()
+
+            expect(subject.isAllowedOrigin(origin)).toBe(true)
         },
     )
 
@@ -27,7 +39,9 @@ describe("isAllowedOrigin", () => {
         "https://app.test:443",
         " https://app.test",
         "https://app.test\n",
-    ])("refuses the noncanonical or non-HTTP(S) origin %s", (origin) => {
-        expect(isAllowedOrigin(origin)).toBe(false)
+    ])("refuses the noncanonical or non-HTTP(S) origin %s", async (origin) => {
+        const subject = await buildSubject()
+
+        expect(subject.isAllowedOrigin(origin)).toBe(false)
     })
 })

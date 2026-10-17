@@ -1,3 +1,4 @@
+import { Test } from "@nestjs/testing"
 import {
     detailOf,
     findingsOf,
@@ -8,21 +9,46 @@ import {
     readCustomerReply,
 } from "./reply-reading.policy"
 import type { CustomerReply } from "./customer-turns.contracts"
+const SUBJECT = Symbol("reply-reading.policy")
+
+const build = async () => {
+    const moduleRef = await Test.createTestingModule({
+        providers: [
+            {
+                provide: SUBJECT,
+                useValue: {
+                    parseJsonLoose,
+                    readChatApplication,
+                    readChatBookingRequest,
+                    findingsOf,
+                    readCustomerReply,
+                    detailOf,
+                    humanReasonOf,
+                },
+            },
+        ],
+    }).compile()
+    return moduleRef.get<typeof import("./reply-reading.policy")>(SUBJECT)
+}
 
 const HOLD = "One moment."
 
 describe("parseJsonLoose", () => {
-    it("reads a whole object, a fenced block, and the outermost braces", () => {
-        expect(parseJsonLoose('{"a":1}')).toEqual({ a: 1 })
-        expect(parseJsonLoose('```json\n{"a":1}\n```')).toEqual({ a: 1 })
-        expect(parseJsonLoose('```\n{"a":1}\n```')).toEqual({ a: 1 })
-        expect(parseJsonLoose('note {"a":1} tail')).toEqual({ a: 1 })
+    it("reads a whole object, a fenced block, and the outermost braces", async () => {
+        const subject = await build()
+
+        expect(subject.parseJsonLoose('{"a":1}')).toEqual({ a: 1 })
+        expect(subject.parseJsonLoose('```json\n{"a":1}\n```')).toEqual({ a: 1 })
+        expect(subject.parseJsonLoose('```\n{"a":1}\n```')).toEqual({ a: 1 })
+        expect(subject.parseJsonLoose('note {"a":1} tail')).toEqual({ a: 1 })
     })
 
     it.each(["", "no braces", "} before {", "{not json}", "[1,2]", "```json\n[1]\n```"])(
         "returns null for %s",
-        (raw) => {
-            expect(parseJsonLoose(raw)).toBeNull()
+        async (raw) => {
+            const subject = await build()
+
+            expect(subject.parseJsonLoose(raw)).toBeNull()
         },
     )
 })
@@ -38,8 +64,10 @@ describe("readChatApplication", () => {
         answers: [{ question_id: "q1", answer: "yes" }, { question_id: "", answer: "no" }, "skip"],
     }
 
-    it("keeps a consented application with a phone or an email", () => {
-        expect(readChatApplication(application)).toEqual({
+    it("keeps a consented application with a phone or an email", async () => {
+        const subject = await build()
+
+        expect(subject.readChatApplication(application)).toEqual({
             job: "barista",
             name: "Lan",
             phone: "0912",
@@ -48,7 +76,7 @@ describe("readChatApplication", () => {
             availability: "mornings",
             answers: [{ questionId: "q1", answer: "yes" }],
         })
-        expect(readChatApplication({ ...application, phone: "", email: "lan@example.com" })?.email).toBe(
+        expect(subject.readChatApplication({ ...application, phone: "", email: "lan@example.com" })?.email).toBe(
             "lan@example.com",
         )
     })
@@ -59,14 +87,18 @@ describe("readChatApplication", () => {
         ["no name", { ...application, name: "" }],
         ["no contact", { ...application, phone: "", email: "" }],
         ["no consent", { ...application, consent: false }],
-    ])("returns null for %s", (_label, value) => {
-        expect(readChatApplication(value)).toBeNull()
+    ])("returns null for %s", async (_label, value) => {
+        const subject = await build()
+
+        expect(subject.readChatApplication(value)).toBeNull()
     })
 
-    it("drops answers that are not a list or that have a blank side", () => {
-        expect(readChatApplication({ ...application, answers: "yes" })?.answers).toEqual([])
+    it("drops answers that are not a list or that have a blank side", async () => {
+        const subject = await build()
+
+        expect(subject.readChatApplication({ ...application, answers: "yes" })?.answers).toEqual([])
         expect(
-            readChatApplication({
+            subject.readChatApplication({
                 ...application,
                 answers: [
                     { question_id: "q1", answer: "" },
@@ -76,47 +108,56 @@ describe("readChatApplication", () => {
         ).toEqual([])
     })
 
-    it("bounds the job, the name and an answer", () => {
-        const long = readChatApplication({ ...application, job: "j".repeat(200), name: "n".repeat(200) })
+    it("bounds the job, the name and an answer", async () => {
+        const subject = await build()
+
+        const long = subject.readChatApplication({ ...application, job: "j".repeat(200), name: "n".repeat(200) })
         expect(long?.job).toHaveLength(100)
         expect(long?.name).toHaveLength(120)
     })
 })
 
 describe("readChatBookingRequest", () => {
-    it.each(["book", "reschedule", "cancel", "availability", "waitlist"] as const)("keeps a %s request", (intent) => {
-        expect(
-            readChatBookingRequest({
+    it.each(["book", "reschedule", "cancel", "availability", "waitlist"] as const)(
+        "keeps a %s request",
+        async (intent) => {
+            const subject = await build()
+
+            expect(
+                subject.readChatBookingRequest({
+                    intent,
+                    service: "Tea",
+                    date: "2026-10-14",
+                    time: "9:05",
+                    from: "09:00",
+                    to: "10:00",
+                    party_size: 1.6,
+                    contact_name: "Lan",
+                    phone: "0912",
+                    email: "lan@example.com",
+                    note: "window",
+                }),
+            ).toEqual({
                 intent,
                 service: "Tea",
                 date: "2026-10-14",
-                time: "9:05",
+                time: "09:05",
                 from: "09:00",
                 to: "10:00",
-                party_size: 1.6,
-                contact_name: "Lan",
+                partySize: 2,
+                name: "Lan",
                 phone: "0912",
                 email: "lan@example.com",
                 note: "window",
-            }),
-        ).toEqual({
-            intent,
-            service: "Tea",
-            date: "2026-10-14",
-            time: "09:05",
-            from: "09:00",
-            to: "10:00",
-            partySize: 2,
-            name: "Lan",
-            phone: "0912",
-            email: "lan@example.com",
-            note: "window",
-        })
-    })
+            })
+        },
+    )
 
-    it("defaults a missing party and clears an invalid date, hour and contact", () => {
+    it("defaults a missing party and clears an invalid date, hour and contact", async () => {
+        const subject = await build()
+
         expect(
-            readChatBookingRequest({
+            subject.readChatBookingRequest({
                 intent: "book",
                 party_size: 0,
                 date: "Tuesday",
@@ -140,23 +181,31 @@ describe("readChatBookingRequest", () => {
             note: null,
         })
     })
+})
 
-    it("caps the party at 200 and reads a numeric string", () => {
-        expect(readChatBookingRequest({ intent: "book", party_size: 500 })?.partySize).toBe(200)
-        expect(readChatBookingRequest({ intent: "book", party_size: "3" })?.partySize).toBe(3)
-        expect(readChatBookingRequest({ intent: "book", party_size: "nope" })?.partySize).toBe(1)
-        expect(readChatBookingRequest({ intent: "book", date: "2026-10-14 extra" })?.date).toBe("2026-10-14")
+describe("readChatBookingRequest", () => {
+    it("caps the party at 200 and reads a numeric string", async () => {
+        const subject = await build()
+
+        expect(subject.readChatBookingRequest({ intent: "book", party_size: 500 })?.partySize).toBe(200)
+        expect(subject.readChatBookingRequest({ intent: "book", party_size: "3" })?.partySize).toBe(3)
+        expect(subject.readChatBookingRequest({ intent: "book", party_size: "nope" })?.partySize).toBe(1)
+        expect(subject.readChatBookingRequest({ intent: "book", date: "2026-10-14 extra" })?.date).toBe("2026-10-14")
     })
 
-    it.each([null, [], { intent: "join" }])("returns null for %j", (value) => {
-        expect(readChatBookingRequest(value)).toBeNull()
+    it.each([null, [], { intent: "join" }])("returns null for %j", async (value) => {
+        const subject = await build()
+
+        expect(subject.readChatBookingRequest(value)).toBeNull()
     })
 })
 
 describe("findingsOf", () => {
-    it("reads a lead, an order, a gap and a reward, and treats anything else as absent", () => {
+    it("reads a lead, an order, a gap and a reward, and treats anything else as absent", async () => {
+        const subject = await build()
+
         expect(
-            findingsOf({
+            subject.findingsOf({
                 lead: { contact_name: "Lan", need: "Tea", company: "Hue", phone: "0912", email: "" },
                 order: { items: "Tra sua", amount_vnd: "1.200" },
                 payment_claim: true,
@@ -188,8 +237,10 @@ describe("findingsOf", () => {
         ["a loyalty reward with no key", { loyalty: { intent: "redeem", reward_key: " " } }],
         ["a loyalty value that is not an object", { loyalty: "tea" }],
         ["a claim that is not exactly true", { payment_claim: "yes" }],
-    ])("drops %s", (_label, value) => {
-        const findings = findingsOf(value)
+    ])("drops %s", async (_label, value) => {
+        const subject = await build()
+
+        const findings = subject.findingsOf(value)
         expect(findings.lead).toBeNull()
         expect(findings.order).toBeNull()
         expect(findings.knowledgeGap).toBeNull()
@@ -197,8 +248,10 @@ describe("findingsOf", () => {
         expect(findings.paymentClaim).toBe(false)
     })
 
-    it("rounds a fractional order amount", () => {
-        expect(findingsOf({ order: { items: "Tea", amount_vnd: 1.6 } }).order).toEqual({
+    it("rounds a fractional order amount", async () => {
+        const subject = await build()
+
+        expect(subject.findingsOf({ order: { items: "Tea", amount_vnd: 1.6 } }).order).toEqual({
             items: "Tea",
             amountVnd: 2,
         })
@@ -206,8 +259,10 @@ describe("findingsOf", () => {
 })
 
 describe("readCustomerReply", () => {
-    it("holds the line when the answer is not the contract or the reply is blank", () => {
-        expect(readCustomerReply("hello", HOLD)).toEqual({
+    it("holds the line when the answer is not the contract or the reply is blank", async () => {
+        const subject = await build()
+
+        expect(subject.readCustomerReply("hello", HOLD)).toEqual({
             reply: HOLD,
             needsHuman: true,
             reason: "unclear_outcome",
@@ -220,13 +275,15 @@ describe("readCustomerReply", () => {
             loyaltyRewardKey: null,
             bookingRequest: null,
         })
-        expect(readCustomerReply("   ", HOLD).proposedAnswer).toBeNull()
-        expect(readCustomerReply('{"reply":"  "}', HOLD).reply).toBe(HOLD)
-        expect(readCustomerReply("x".repeat(2000), HOLD).proposedAnswer).toHaveLength(1500)
+        expect(subject.readCustomerReply("   ", HOLD).proposedAnswer).toBeNull()
+        expect(subject.readCustomerReply('{"reply":"  "}', HOLD).reply).toBe(HOLD)
+        expect(subject.readCustomerReply("x".repeat(2000), HOLD).proposedAnswer).toHaveLength(1500)
     })
 
-    it("keeps a reply and maps the reason", () => {
-        const read = readCustomerReply(
+    it("keeps a reply and maps the reason", async () => {
+        const subject = await build()
+
+        const read = subject.readCustomerReply(
             JSON.stringify({
                 reply: "Thanks",
                 needs_human: true,
@@ -248,8 +305,13 @@ describe("readCustomerReply", () => {
         ["other", true, "unclear_outcome"],
         ["other", false, null],
         ["", false, null],
-    ] as const)("reads reason %s when needs_human is %s as %s", (reason, needsHuman, expected) => {
-        const read = readCustomerReply(JSON.stringify({ reply: "Thanks", needs_human: needsHuman, reason }), HOLD)
+    ] as const)("reads reason %s when needs_human is %s as %s", async (reason, needsHuman, expected) => {
+        const subject = await build()
+
+        const read = subject.readCustomerReply(
+            JSON.stringify({ reply: "Thanks", needs_human: needsHuman, reason }),
+            HOLD,
+        )
         expect(read.reason).toBe(expected)
         expect(read.needsHuman).toBe(needsHuman)
         expect(read.proposedAnswer).toBeNull()
@@ -262,8 +324,10 @@ describe("humanReasonOf", () => {
         ["unclear_outcome", false, "unclear_outcome"],
         ["other", true, "unclear_outcome"],
         ["other", false, null],
-    ] as const)("reads %s (needs human %s) as %s", (reason, needsHuman, expected) => {
-        expect(humanReasonOf(reason, needsHuman)).toBe(expected)
+    ] as const)("reads %s (needs human %s) as %s", async (reason, needsHuman, expected) => {
+        const subject = await build()
+
+        expect(subject.humanReasonOf(reason, needsHuman)).toBe(expected)
     })
 })
 
@@ -282,8 +346,10 @@ describe("detailOf", () => {
         bookingRequest: null,
     }
 
-    it("writes nulls when nothing was captured", () => {
-        expect(detailOf(empty)).toEqual({
+    it("writes nulls when nothing was captured", async () => {
+        const subject = await build()
+
+        expect(subject.detailOf(empty)).toEqual({
             lead: null,
             order: null,
             payment_claim: false,
@@ -293,10 +359,28 @@ describe("detailOf", () => {
             booking_request: null,
         })
     })
+})
 
-    it("writes the reply contract's own member names", () => {
+describe("detailOf", () => {
+    const empty: CustomerReply = {
+        reply: "Thanks",
+        needsHuman: false,
+        reason: null,
+        proposedAnswer: null,
+        lead: null,
+        order: null,
+        paymentClaim: false,
+        knowledgeGap: null,
+        application: null,
+        loyaltyRewardKey: null,
+        bookingRequest: null,
+    }
+
+    it("writes the reply contract's own member names", async () => {
+        const subject = await build()
+
         expect(
-            detailOf({
+            subject.detailOf({
                 ...empty,
                 lead: { contactName: "Lan", company: "", need: "Tea", phone: null, email: null },
                 order: { items: "Tea", amountVnd: 50_000 },

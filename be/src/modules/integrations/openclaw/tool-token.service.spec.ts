@@ -114,3 +114,24 @@ describe("ToolTokenService", () => {
         expect(answers[25]).toBeNull()
     })
 })
+
+describe("ToolTokenService authentication", () => {
+    it("authenticates without consuming a call, while retaining expiry, revocation and exhaustion", async () => {
+        const { tokens, clock } = await build()
+        const token = tokens.mint(subject, 600)
+
+        for (let call = 0; call < 25; call += 1) {
+            expect(tokens.verify(token, false)).not.toBeNull()
+            expect(tokens.verify(token)).not.toBeNull()
+        }
+        expect(tokens.verify(token, false)).toBeNull()
+
+        const fresh = tokens.mint(subject, 1)
+        clock.advance(2000)
+        expect(tokens.verify(fresh, false)).toBeNull()
+        const revoked = tokens.mint(subject, 600)
+        tokens.revoke(subject.jobId)
+        expect(tokens.verify(revoked, false)).toBeNull()
+        expect(tokens.verify("forged.token", false)).toBeNull()
+    })
+})

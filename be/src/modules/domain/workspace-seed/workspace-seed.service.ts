@@ -33,8 +33,8 @@ export class WorkspaceSeedService {
     async seedOperator(): Promise<SeedReport> {
         const { print } = this.options
         const accounts = [
-            { role: "OWNER", ...SEED_OWNER, password: newPassword() },
-            { role: "STAFF", ...SEED_STAFF, password: newPassword() },
+            { role: "OWNER", email: SEED_OWNER.email, name: SEED_OWNER.name, password: newPassword() },
+            { role: "STAFF", email: SEED_STAFF.email, name: SEED_STAFF.name, password: newPassword() },
         ] as const
         const [owner, staff] = accounts
         const report = await this.seed({ owner, staff })

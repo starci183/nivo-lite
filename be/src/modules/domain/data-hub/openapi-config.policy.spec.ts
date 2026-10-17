@@ -1,3 +1,5 @@
+import type * as SubjectModule from "./openapi-config.policy"
+import { Test } from "@nestjs/testing"
 import type { OpenApiAuth, OpenApiConfig } from "@modules/integrations/data-sources"
 import {
     cleanAuth,
@@ -8,6 +10,24 @@ import {
     parseConfig,
     summaryOf,
 } from "./openapi-config.policy"
+
+const SUBJECT = Symbol("openapi-config.policy")
+type Subject = Pick<
+    typeof SubjectModule,
+    "normalizeConfig" | "parseConfig" | "summaryOf" | "parseAuth" | "mergeAuth" | "credentialOf" | "cleanAuth"
+>
+
+const buildSubject = async () => {
+    const moduleRef = await Test.createTestingModule({
+        providers: [
+            {
+                provide: SUBJECT,
+                useValue: { normalizeConfig, parseConfig, summaryOf, parseAuth, mergeAuth, credentialOf, cleanAuth },
+            },
+        ],
+    }).compile()
+    return moduleRef.get<Subject>(SUBJECT)
+}
 
 const emptyConfig: OpenApiConfig = {
     v: 1,
@@ -29,14 +49,53 @@ const authOf = (overrides: Partial<OpenApiAuth> = {}): OpenApiAuth => ({
     ...overrides,
 })
 
+const EXPECTED_CONFIG = {
+    v: 1,
+    specUrl: "https://api.example/spec",
+    baseUrl: "https://api.example",
+    authType: "header",
+    authName: "X-Key",
+    ops: [
+        {
+            id: "list",
+            method: "GET",
+            path: "/records",
+            summary: "List records",
+            params: [
+                { in: "path", name: "id", required: true },
+                { in: "query", name: "q", required: false },
+                { in: "header", name: "X-Trace", required: false },
+            ],
+            hasBody: true,
+        },
+        { id: "create", method: "POST", path: "/records", summary: "", params: [], hasBody: false },
+    ],
+    pulls: [
+        {
+            opId: "list",
+            entity: "customer",
+            itemsPath: "data.items",
+            idField: "record.id",
+            titleField: "name",
+            fixedQuery: "status=active",
+        },
+        { opId: "list", entity: "other", itemsPath: "", idField: "", titleField: "", fixedQuery: "" },
+    ],
+    tools: ["list", "create"],
+}
+
 describe("normalizeConfig", () => {
-    it.each([undefined, null, [], 5, "invalid", {}])("cleans a missing or non-object config (%p)", (raw) => {
-        expect(normalizeConfig(raw)).toEqual(emptyConfig)
+    it.each([undefined, null, [], 5, "invalid", {}])("cleans a missing or non-object config (%p)", async (raw) => {
+        const subject = await buildSubject()
+
+        expect(subject.normalizeConfig(raw)).toEqual(emptyConfig)
     })
 
-    it("drops malformed operations and parameters and keeps only GET pulls with known ids", () => {
+    it("drops malformed operations and parameters and keeps only GET pulls with known ids", async () => {
+        const subject = await buildSubject()
+
         expect(
-            normalizeConfig({
+            subject.normalizeConfig({
                 specUrl: " https://api.example/spec ",
                 baseUrl: " https://api.example/// ",
                 authType: " header ",
@@ -80,43 +139,14 @@ describe("normalizeConfig", () => {
                 ],
                 tools: [" list ", "missing", "list", "create", 3],
             }),
-        ).toEqual({
-            v: 1,
-            specUrl: "https://api.example/spec",
-            baseUrl: "https://api.example",
-            authType: "header",
-            authName: "X-Key",
-            ops: [
-                {
-                    id: "list",
-                    method: "GET",
-                    path: "/records",
-                    summary: "List records",
-                    params: [
-                        { in: "path", name: "id", required: true },
-                        { in: "query", name: "q", required: false },
-                        { in: "header", name: "X-Trace", required: false },
-                    ],
-                    hasBody: true,
-                },
-                { id: "create", method: "POST", path: "/records", summary: "", params: [], hasBody: false },
-            ],
-            pulls: [
-                {
-                    opId: "list",
-                    entity: "customer",
-                    itemsPath: "data.items",
-                    idField: "record.id",
-                    titleField: "name",
-                    fixedQuery: "status=active",
-                },
-                { opId: "list", entity: "other", itemsPath: "", idField: "", titleField: "", fixedQuery: "" },
-            ],
-            tools: ["list", "create"],
-        })
+        ).toEqual(EXPECTED_CONFIG)
     })
+})
 
-    it("clips the public fields at their storage limits and drops unsupported authentication", () => {
+describe("normalizeConfig", () => {
+    it("clips the public fields at their storage limits and drops unsupported authentication", async () => {
+        const subject = await buildSubject()
+
         const id = "i".repeat(80)
         const path = `/${"p".repeat(499)}`
         const summary = "s".repeat(120)
@@ -124,7 +154,7 @@ describe("normalizeConfig", () => {
         const field = "f".repeat(200)
 
         expect(
-            normalizeConfig({
+            subject.normalizeConfig({
                 specUrl: "s".repeat(1001),
                 baseUrl: "b".repeat(1001),
                 authType: "unsupported",
@@ -184,37 +214,45 @@ describe("normalizeConfig", () => {
 })
 
 describe("parseConfig and summaryOf", () => {
-    it.each([undefined, null, "", "{", "null", "[]", '"value"'])("returns null for unusable JSON (%p)", (raw) => {
-        expect(parseConfig(raw)).toBeNull()
+    it.each([undefined, null, "", "{", "null", "[]", '"value"'])("returns null for unusable JSON (%p)", async (raw) => {
+        const subject = await buildSubject()
+
+        expect(subject.parseConfig(raw)).toBeNull()
     })
 
-    it("normalizes a stored object and describes the pull and tool counts", () => {
-        expect(parseConfig('{"baseUrl":"https://api.example/"}')).toEqual({
+    it("normalizes a stored object and describes the pull and tool counts", async () => {
+        const subject = await buildSubject()
+
+        expect(subject.parseConfig('{"baseUrl":"https://api.example/"}')).toEqual({
             ...emptyConfig,
             baseUrl: "https://api.example",
         })
-        const config = normalizeConfig({
+        const config = subject.normalizeConfig({
             ops: [{ id: "list", method: "GET", path: "/records" }],
             pulls: [{ opId: "list" }, { opId: "list" }],
             tools: ["list"],
         })
 
-        expect(summaryOf(config)).toBe("2 API k\u00e9o d\u1eef li\u1ec7u \u00b7 1 API cho agent")
-        expect(summaryOf(emptyConfig)).toBe("0 API k\u00e9o d\u1eef li\u1ec7u \u00b7 0 API cho agent")
+        expect(subject.summaryOf(config)).toBe("2 API k\u00e9o d\u1eef li\u1ec7u \u00b7 1 API cho agent")
+        expect(subject.summaryOf(emptyConfig)).toBe("0 API k\u00e9o d\u1eef li\u1ec7u \u00b7 0 API cho agent")
     })
 })
 
 describe("parseAuth and cleanAuth", () => {
     it.each(["{", "null", "[]", "1", "{}", '{"type":"unknown","value":4,"user":false,"password":null}'])(
         "defaults broken or missing credential fields (%s)",
-        (raw) => {
-            expect(parseAuth(raw)).toEqual({ type: "none", name: "", value: "", user: "", password: "" })
+        async (raw) => {
+            const subject = await buildSubject()
+
+            expect(subject.parseAuth(raw)).toEqual({ type: "none", name: "", value: "", user: "", password: "" })
         },
     )
 
-    it("trims and clips the name and type while preserving secret whitespace", () => {
+    it("trims and clips the name and type while preserving secret whitespace", async () => {
+        const subject = await buildSubject()
+
         expect(
-            parseAuth(
+            subject.parseAuth(
                 JSON.stringify({
                     type: " basic ",
                     name: ` ${"n".repeat(101)} `,
@@ -225,7 +263,7 @@ describe("parseAuth and cleanAuth", () => {
             ),
         ).toEqual({ type: "basic", name: "n".repeat(100), value: " key ", user: " user ", password: " pass " })
         expect(
-            cleanAuth({ type: " bearer ", name: " Authorization ", value: " token ", user: "", password: "" }),
+            subject.cleanAuth({ type: " bearer ", name: " Authorization ", value: " token ", user: "", password: "" }),
         ).toEqual({
             type: "bearer",
             name: "Authorization",
@@ -233,7 +271,7 @@ describe("parseAuth and cleanAuth", () => {
             user: "",
             password: "",
         })
-        expect(cleanAuth({ type: "invalid", name: " key ", value: "secret", user: "", password: "" })).toEqual({
+        expect(subject.cleanAuth({ type: "invalid", name: " key ", value: "secret", user: "", password: "" })).toEqual({
             type: "none",
             name: "key",
             value: "secret",
@@ -244,24 +282,30 @@ describe("parseAuth and cleanAuth", () => {
 })
 
 describe("mergeAuth and credentialOf", () => {
-    it("keeps typed credentials when there is no stored one or its type changed", () => {
+    it("keeps typed credentials when there is no stored one or its type changed", async () => {
+        const subject = await buildSubject()
+
         const typed = authOf()
 
-        expect(mergeAuth(typed, null)).toBe(typed)
-        expect(mergeAuth(typed, authOf({ type: "bearer" }))).toBe(typed)
+        expect(subject.mergeAuth(typed, null)).toBe(typed)
+        expect(subject.mergeAuth(typed, authOf({ type: "bearer" }))).toBe(typed)
     })
 
-    it("fills only blank secrets from matching stored credentials", () => {
-        expect(mergeAuth(authOf({ name: "new", value: "", user: "", password: "" }), authOf())).toEqual(
+    it("fills only blank secrets from matching stored credentials", async () => {
+        const subject = await buildSubject()
+
+        expect(subject.mergeAuth(authOf({ name: "new", value: "", user: "", password: "" }), authOf())).toEqual(
             authOf({ name: "new" }),
         )
-        expect(mergeAuth(authOf(), authOf({ value: "old-token", user: "old-user", password: "old-password" }))).toEqual(
-            authOf(),
-        )
+        expect(
+            subject.mergeAuth(authOf(), authOf({ value: "old-token", user: "old-user", password: "old-password" })),
+        ).toEqual(authOf())
     })
 
-    it("writes the configured type and name and the merged secrets in the legacy order", () => {
-        expect(credentialOf({ ...emptyConfig, authType: "query", authName: "api_key" }, authOf())).toBe(
+    it("writes the configured type and name and the merged secrets in the legacy order", async () => {
+        const subject = await buildSubject()
+
+        expect(subject.credentialOf({ ...emptyConfig, authType: "query", authName: "api_key" }, authOf())).toBe(
             '{"type":"query","name":"api_key","value":"token","user":"owner","password":"secret"}',
         )
     })

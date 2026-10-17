@@ -10,6 +10,7 @@ import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { InjectMessageCatalog } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
 import { LoyaltyError, LoyaltyErrorCode } from "./errors/loyalty.error"
+import type { NotePart } from "./loyalty.contracts"
 import { earnNoteParts } from "./policies/ledger-note.policy"
 
 const STORED_LOCALE = "vi"
@@ -92,7 +93,7 @@ export class LoyaltyEarningService {
                 invoiceId: null,
                 rewardId: null,
                 evidence: earnNoteParts(calc)
-                    .map((part) => this.messages.get(part.key, part.params, STORED_LOCALE))
+                    .map((part: NotePart) => this.messages.get(part.key, part.params, STORED_LOCALE))
                     .join(", "),
                 expiresAt: expiryDate(config, whenMs),
                 occurredAt: new Date(whenMs).toISOString(),

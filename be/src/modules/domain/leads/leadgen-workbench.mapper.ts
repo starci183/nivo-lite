@@ -28,7 +28,73 @@ const latestBy = (items: ReadonlyArray<LeadGenWorkItemRow>, action: string): Map
     return out
 }
 
-/** Derives the whole Lead Gen workbench from the rows the flow already writes; every source field is read defensively. */
+/** Aggregates captured leads by their source. */
+const sourcesOf = (leadRows: ReadonlyArray<LeadGenLead>): Array<LeadGenSource> => {
+    const sourceMap = new Map<string, { key: string; origin: LeadOrigin; leads: number; hot: number; won: number }>()
+    for (const row of leadRows) {
+        const key = `${row.origin.platform}:${row.origin.kind}:${row.origin.refKind ?? ""}:${row.origin.refId ?? ""}`
+        const current = sourceMap.get(key) ?? { key, origin: row.origin, leads: 0, hot: 0, won: 0 }
+        current.leads += 1
+        if (row.score === "hot") current.hot += 1
+        if (row.stage === "won") current.won += 1
+        sourceMap.set(key, current)
+    }
+    return [...sourceMap.values()].sort((a, b) => b.leads - a.leads || b.hot - a.hot)
+}
+
+/** Maps public replies waiting for approval. */
+const commentsOf = (leadGenItems: ReadonlyArray<LeadGenWorkItemRow>): Array<LeadGenComment> => {
+    return leadGenItems
+        .filter((item) => item.action === "reply_comment_public" && item.status === "waiting_decision")
+        .map((item) => {
+            const fields = fieldsOf(item)
+            const origin = leadOriginOf(fields, text(fields.channel_label), "")
+            return {
+                workItemId: item.id,
+                platform: origin.platform,
+                author: firstText(fields, ["author", "author_name", "commenter", "sender_name", "contact_name"]),
+                comment:
+                    firstText(fields, ["comment", "comment_text", "text", "message", "body"]) ||
+                    item.proposal?.summary ||
+                    "",
+                draft: item.proposal?.draft ?? "",
+                refLabel: origin.refLabel ?? origin.refId,
+                at: item.created_at,
+            }
+        })
+        .sort((a, b) => a.at.localeCompare(b.at))
+}
+
+/** Maps completed handoffs with their current lead and classification state. */
+const handoffsOf = (
+    leads: ReadonlyArray<LeadGenLeadRow>,
+    leadRows: ReadonlyArray<LeadGenLead>,
+    handoffItem: ReadonlyMap<string, LeadGenWorkItemRow>,
+    classify: ReadonlyMap<string, LeadGenWorkItemRow>,
+): Array<LeadGenHandoff> => {
+    const leadById = new Map(leads.map((lead) => [lead.id, lead]))
+    const scoreById = new Map(leadRows.map((row) => [row.id, row.score]))
+    const handoffs: Array<LeadGenHandoff> = []
+    for (const [leadId, handoff] of handoffItem) {
+        const lead = leadById.get(leadId)
+        if (!lead) continue
+        handoffs.push({
+            key: handoff.id,
+            leadId,
+            name: lead.contact_name,
+            score: scoreById.get(leadId) ?? null,
+            at: handoff.completed_at ?? handoff.created_at,
+            classify: classify.get(leadId)?.status ?? null,
+            stage: lead.stage,
+            href: `/leads/${leadId}`,
+        })
+    }
+    return handoffs.sort((a, b) => b.at.localeCompare(a.at))
+}
+
+/**
+ * Derives the whole Lead Gen workbench from the rows the flow already writes; every source field is read defensively.
+ */
 export const buildLeadGenWorkbench = (rows: LeadGenWorkbenchRow): LeadGenWorkbenchData => {
     const { nowMs, installationId } = rows
     const ownLead = (lead: LeadGenLeadRow): boolean =>
@@ -75,55 +141,10 @@ export const buildLeadGenWorkbench = (rows: LeadGenWorkbenchRow): LeadGenWorkben
     })
     leadRows.sort((a, b) => b.lastAt.localeCompare(a.lastAt))
 
-    const sourceMap = new Map<string, { key: string; origin: LeadOrigin; leads: number; hot: number; won: number }>()
-    for (const row of leadRows) {
-        const key = `${row.origin.platform}:${row.origin.kind}:${row.origin.refKind ?? ""}:${row.origin.refId ?? ""}`
-        const current = sourceMap.get(key) ?? { key, origin: row.origin, leads: 0, hot: 0, won: 0 }
-        current.leads += 1
-        if (row.score === "hot") current.hot += 1
-        if (row.stage === "won") current.won += 1
-        sourceMap.set(key, current)
-    }
-    const sources: Array<LeadGenSource> = [...sourceMap.values()].sort((a, b) => b.leads - a.leads || b.hot - a.hot)
+    const sources = sourcesOf(leadRows)
+    const comments = commentsOf(leadGenItems)
 
-    const comments: Array<LeadGenComment> = leadGenItems
-        .filter((item) => item.action === "reply_comment_public" && item.status === "waiting_decision")
-        .map((item) => {
-            const fields = fieldsOf(item)
-            const origin = leadOriginOf(fields, text(fields.channel_label), "")
-            return {
-                workItemId: item.id,
-                platform: origin.platform,
-                author: firstText(fields, ["author", "author_name", "commenter", "sender_name", "contact_name"]),
-                comment:
-                    firstText(fields, ["comment", "comment_text", "text", "message", "body"]) ||
-                    item.proposal?.summary ||
-                    "",
-                draft: item.proposal?.draft ?? "",
-                refLabel: origin.refLabel ?? origin.refId,
-                at: item.created_at,
-            }
-        })
-        .sort((a, b) => a.at.localeCompare(b.at))
-
-    const leadById = new Map(leads.map((lead) => [lead.id, lead]))
-    const scoreById = new Map(leadRows.map((row) => [row.id, row.score]))
-    const handoffs: Array<LeadGenHandoff> = []
-    for (const [leadId, handoff] of handoffItem) {
-        const lead = leadById.get(leadId)
-        if (!lead) continue
-        handoffs.push({
-            key: handoff.id,
-            leadId,
-            name: lead.contact_name,
-            score: scoreById.get(leadId) ?? null,
-            at: handoff.completed_at ?? handoff.created_at,
-            classify: classify.get(leadId)?.status ?? null,
-            stage: lead.stage,
-            href: `/leads/${leadId}`,
-        })
-    }
-    handoffs.sort((a, b) => b.at.localeCompare(a.at))
+    const handoffs = handoffsOf(leads, leadRows, handoffItem, classify)
 
     const since = conversionSinceIso(nowMs)
     const dayStart = new Date(vnDayStart(nowMs)).toISOString()

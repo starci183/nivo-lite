@@ -80,7 +80,9 @@ describe("JobClaimService", () => {
             ).resolves.toBeNull()
         })
     })
+})
 
+describe("JobClaimService", () => {
     describe("guarded writes", () => {
         it("records a step, completes and fails under the token the caller holds", async () => {
             const manager = mockEntityManager({
@@ -128,7 +130,7 @@ describe("JobClaimService", () => {
     })
 
     describe("runKey", () => {
-        it("includes the job, the step and the fencing token, so a zombie's key differs from the live worker's", async () => {
+        it("includes the job, step and fencing token to distinguish a zombie worker's key", async () => {
             const { claims } = await build(mockEntityManager())
 
             expect(claims.runKey(claimed, "send")).toBe("j-1:send:3")
@@ -142,7 +144,9 @@ describe("JobClaimService", () => {
             expect(() => claims.runKey(claimed, "send:twice")).toThrow(JobsErrorCode.RunKeyInvalid)
         })
     })
+})
 
+describe("JobClaimService", () => {
     describe("withFence", () => {
         it("returns the domain effect result while holding the live token in a committed transaction", async () => {
             const manager = mockEntityManager({ query: [LOCK_JOB_FENCE, [{ id: "j-1" }]] })
@@ -190,7 +194,9 @@ describe("JobClaimService", () => {
             expect(transaction.outcomes).toEqual(["rollback"])
         })
     })
+})
 
+describe("JobClaimService", () => {
     describe("withFailedFence", () => {
         it("passes the failed claim and its numeric token to the terminal effect", async () => {
             const manager = mockEntityManager({

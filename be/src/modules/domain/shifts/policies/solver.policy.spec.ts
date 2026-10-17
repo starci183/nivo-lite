@@ -1,79 +1,26 @@
-import type { Block, Shift, ShiftStaff, SolveInput, SolverReport } from "../shifts.contracts"
+import { Test } from "@nestjs/testing"
 import { solveWeek } from "./solver.policy"
+import { person, block, inputOf, shift, report } from "@tests/fixtures/builders/solver.builder"
+const SUBJECT = Symbol("solver.policy")
 
-const person = (values: Partial<ShiftStaff> = {}): ShiftStaff => ({
-    id: "a",
-    name: "Alex",
-    positionIds: ["bar"],
-    skills: [],
-    wage: 30000,
-    maxWeek: 40,
-    maxDay: 8,
-    minRest: 11,
-    staffRowId: null,
-    telegramChatId: null,
-    zaloUserId: null,
-    phone: null,
-    active: true,
-    ...values,
-})
-
-const block = (values: Partial<Block> = {}): Block => ({
-    id: "block-1",
-    weekday: 0,
-    start: "07:00",
-    end: "11:00",
-    positionId: "bar",
-    min: 1,
-    ideal: 1,
-    peak: false,
-    ...values,
-})
-
-const inputOf = (values: Partial<SolveInput> = {}): SolveInput => ({
-    monday: "2026-10-12",
-    staff: [person()],
-    blocks: [block()],
-    avail: [],
-    leaves: [],
-    prior: new Map(),
-    overtimeHoursWeek: 40,
-    nowMs: () => 1000,
-    budgetMs: 100,
-    starts: 1,
-    ...values,
-})
-
-const shift = (values: Partial<Shift> = {}): Shift => ({
-    id: "new-0",
-    date: "2026-10-12",
-    start: "07:00",
-    end: "11:00",
-    positionId: "bar",
-    staffId: "a",
-    status: "draft",
-    ...values,
-})
-
-const report = (values: Partial<SolverReport> = {}): SolverReport => ({
-    ms: 0,
-    iterations: 1,
-    costVnd: 120000,
-    shiftCount: 1,
-    openCount: 0,
-    shortages: [],
-    hoursByStaff: [{ staffId: "a", hours: 4 }],
-    askCandidates: [],
-    ...values,
-})
+const build = async () => {
+    const moduleRef = await Test.createTestingModule({
+        providers: [{ provide: SUBJECT, useValue: { solveWeek } }],
+    }).compile()
+    return moduleRef.get<typeof import("./solver.policy")>(SUBJECT)
+}
 
 describe("schedule solver policy", () => {
-    it("creates an exact draft and report with a fixed clock", () => {
-        expect(solveWeek(inputOf())).toEqual({ shifts: [shift()], report: report() })
+    it("creates an exact draft and report with a fixed clock", async () => {
+        const subject = await build()
+
+        expect(subject.solveWeek(inputOf())).toEqual({ shifts: [shift()], report: report() })
     })
 
-    it("filters inactive staff and returns an exact empty solution when no blocks exist", () => {
-        expect(solveWeek(inputOf({ staff: [person({ active: false })], blocks: [], starts: 3 }))).toEqual({
+    it("filters inactive staff and returns an exact empty solution when no blocks exist", async () => {
+        const subject = await build()
+
+        expect(subject.solveWeek(inputOf({ staff: [person({ active: false })], blocks: [], starts: 3 }))).toEqual({
             shifts: [],
             report: report({ iterations: 3, costVnd: 0, shiftCount: 0, hoursByStaff: [] }),
         })
@@ -83,14 +30,18 @@ describe("schedule solver policy", () => {
         ["07:00", "07:00"],
         ["11:00", "07:00"],
         ["invalid", "invalid"],
-    ])("creates no coverage cells for the empty block %s-%s", (start, end) => {
-        expect(solveWeek(inputOf({ blocks: [block({ start, end })], starts: 2 }))).toEqual({
+    ])("creates no coverage cells for the empty block %s-%s", async (start, end) => {
+        const subject = await build()
+
+        expect(subject.solveWeek(inputOf({ blocks: [block({ start, end })], starts: 2 }))).toEqual({
             shifts: [],
             report: report({ iterations: 2, costVnd: 0, shiftCount: 0, hoursByStaff: [] }),
         })
     })
 
-    it("fills busy windows to ideal and breaks equal costs by flexibility then name", () => {
+    it("fills busy windows to ideal and breaks equal costs by flexibility then name", async () => {
+        const subject = await build()
+
         const staff = [
             person({ id: "flexible", name: "Aaron", positionIds: ["bar", "cash"] }),
             person({ id: "b", name: "Blake" }),
@@ -98,7 +49,7 @@ describe("schedule solver policy", () => {
             person({ id: "inactive", active: false }),
         ]
 
-        expect(solveWeek(inputOf({ staff, blocks: [block({ ideal: 2, peak: true })] }))).toEqual({
+        expect(subject.solveWeek(inputOf({ staff, blocks: [block({ ideal: 2, peak: true })] }))).toEqual({
             shifts: [shift(), shift({ id: "new-1", staffId: "b" })],
             report: report({
                 costVnd: 240000,
@@ -111,7 +62,9 @@ describe("schedule solver policy", () => {
         })
     })
 
-    it("merges touching pieces across a long block and keeps distinct positions and days", () => {
+    it("merges touching pieces across a long block and keeps distinct positions and days", async () => {
+        const subject = await build()
+
         const blocks = [
             block({ id: "wide", start: "07:00", end: "19:00" }),
             block({ id: "cash", positionId: "cash", start: "20:00", end: "21:00" }),
@@ -121,7 +74,9 @@ describe("schedule solver policy", () => {
         ]
 
         expect(
-            solveWeek(inputOf({ staff: [person({ positionIds: ["bar", "cash"], maxDay: 16, minRest: 0 })], blocks })),
+            subject.solveWeek(
+                inputOf({ staff: [person({ positionIds: ["bar", "cash"], maxDay: 16, minRest: 0 })], blocks }),
+            ),
         ).toEqual({
             shifts: [
                 shift({ end: "20:00" }),
@@ -132,8 +87,12 @@ describe("schedule solver policy", () => {
             report: report({ costVnd: 660000, shiftCount: 4, hoursByStaff: [{ staffId: "a", hours: 22 }] }),
         })
     })
+})
 
-    it("repairs a shortage by transferring an earlier piece to another qualified person", () => {
+describe("schedule solver policy", () => {
+    it("repairs a shortage by transferring an earlier piece to another qualified person", async () => {
+        const subject = await build()
+
         const staff = [
             person({ positionIds: ["bar", "cash"], wage: 10000 }),
             person({ id: "b", name: "Blake", wage: 20000 }),
@@ -144,7 +103,7 @@ describe("schedule solver policy", () => {
             block({ id: "cash", start: "12:00", end: "17:00", positionId: "cash" }),
         ]
 
-        expect(solveWeek(inputOf({ staff, blocks }))).toEqual({
+        expect(subject.solveWeek(inputOf({ staff, blocks }))).toEqual({
             shifts: [
                 shift({ start: "12:00", end: "17:00", positionId: "cash" }),
                 shift({ id: "new-1", end: "12:00", staffId: "b" }),
@@ -160,7 +119,9 @@ describe("schedule solver policy", () => {
         })
     })
 
-    it("reports each actionable shortage reason and excludes leave, unqualified and mixed refusals", () => {
+    it("reports each actionable shortage reason and excludes leave, unqualified and mixed refusals", async () => {
+        const subject = await build()
+
         const staff = [
             person({ id: "unavailable" }),
             person({ id: "hours", maxDay: 0, maxWeek: 0 }),
@@ -180,7 +141,7 @@ describe("schedule solver policy", () => {
             prior: new Map([["rest", [{ date: "2026-10-11", s: 1200, e: 1380, pos: "bar" }]]]),
         })
 
-        expect(solveWeek(input)).toEqual({
+        expect(subject.solveWeek(input)).toEqual({
             shifts: [shift({ staffId: null }), shift({ id: "new-1", staffId: null })],
             report: report({
                 costVnd: 0,
@@ -205,9 +166,13 @@ describe("schedule solver policy", () => {
             }),
         })
     })
+})
 
-    it("retains already covered people when another head cannot cover the block", () => {
-        expect(solveWeek(inputOf({ blocks: [block({ min: 2, ideal: 2 })] }))).toEqual({
+describe("schedule solver policy", () => {
+    it("retains already covered people when another head cannot cover the block", async () => {
+        const subject = await build()
+
+        expect(subject.solveWeek(inputOf({ blocks: [block({ min: 2, ideal: 2 })] }))).toEqual({
             shifts: [shift(), shift({ id: "new-1", staffId: null })],
             report: report({
                 openCount: 1,
@@ -225,9 +190,13 @@ describe("schedule solver policy", () => {
         })
     })
 
-    it("uses an empty fallback date for an out-of-range weekday and ignores zero-length blocks", () => {
+    it("uses an empty fallback date for an out-of-range weekday and ignores zero-length blocks", async () => {
+        const subject = await build()
+
         expect(
-            solveWeek(inputOf({ staff: [], blocks: [block({ weekday: 9 }), block({ id: "empty", end: "07:00" })] })),
+            subject.solveWeek(
+                inputOf({ staff: [], blocks: [block({ weekday: 9 }), block({ id: "empty", end: "07:00" })] }),
+            ),
         ).toEqual({
             shifts: [shift({ date: "", staffId: null })],
             report: report({
@@ -242,20 +211,24 @@ describe("schedule solver policy", () => {
         })
     })
 
-    it("caps additional starts by a fixed budget and reports elapsed clock time", () => {
-        expect(solveWeek(inputOf({ nowMs: () => 1000, starts: 5, budgetMs: 0 }))).toEqual({
+    it("caps additional starts by a fixed budget and reports elapsed clock time", async () => {
+        const subject = await build()
+
+        expect(subject.solveWeek(inputOf({ nowMs: () => 1000, starts: 5, budgetMs: 0 }))).toEqual({
             shifts: [shift()],
             report: report(),
         })
-        expect(solveWeek(inputOf({ nowMs: () => 1000, starts: 3 }))).toEqual({
+        expect(subject.solveWeek(inputOf({ nowMs: () => 1000, starts: 3 }))).toEqual({
             shifts: [shift()],
             report: report({ iterations: 3 }),
         })
     })
 
-    it("keeps the cheaper deterministic solution when seeded starts perturb tied assignments", () => {
+    it("keeps the cheaper deterministic solution when seeded starts perturb tied assignments", async () => {
+        const subject = await build()
+
         expect(
-            solveWeek(
+            subject.solveWeek(
                 inputOf({
                     staff: [person(), person({ id: "b", name: "Blake", wage: 32000 })],
                     blocks: [block(), block({ id: "tuesday", weekday: 1 })],
@@ -272,10 +245,14 @@ describe("schedule solver policy", () => {
             }),
         })
     })
+})
 
-    it("cannot repair weekly hours when removing one piece still leaves too much work", () => {
+describe("schedule solver policy", () => {
+    it("cannot repair weekly hours when removing one piece still leaves too much work", async () => {
+        const subject = await build()
+
         expect(
-            solveWeek(
+            subject.solveWeek(
                 inputOf({
                     staff: [person({ maxWeek: 8 })],
                     blocks: [
@@ -310,8 +287,12 @@ describe("schedule solver policy", () => {
             }),
         })
     })
+})
 
-    it("cannot transfer a conflicting piece to another person who has no day capacity", () => {
+describe("schedule solver policy", () => {
+    it("cannot transfer a conflicting piece to another person who has no day capacity", async () => {
+        const subject = await build()
+
         const staff = [
             person({ positionIds: ["bar", "cash"], wage: 10000 }),
             person({ id: "b", name: "Blake", maxDay: 0 }),
@@ -319,7 +300,7 @@ describe("schedule solver policy", () => {
         ]
 
         expect(
-            solveWeek(
+            subject.solveWeek(
                 inputOf({
                     staff,
                     blocks: [
@@ -355,7 +336,9 @@ describe("schedule solver policy", () => {
         })
     })
 
-    it("selects a seeded start that reserves the cheaper flexible person for the longer role", () => {
+    it("selects a seeded start that reserves the cheaper flexible person for the longer role", async () => {
+        const subject = await build()
+
         const staff = [
             person({ positionIds: ["bar", "cash"], wage: 10000 }),
             person({ id: "b", name: "Blake", wage: 20000 }),
@@ -363,7 +346,7 @@ describe("schedule solver policy", () => {
         ]
 
         expect(
-            solveWeek(
+            subject.solveWeek(
                 inputOf({
                     staff,
                     blocks: [block(), block({ id: "cash", start: "11:00", end: "16:00", positionId: "cash" })],
@@ -383,10 +366,14 @@ describe("schedule solver policy", () => {
             }),
         })
     })
+})
 
-    it("selects the fairest seeded allocation when total wages are tied", () => {
+describe("schedule solver policy", () => {
+    it("selects the fairest seeded allocation when total wages are tied", async () => {
+        const subject = await build()
+
         expect(
-            solveWeek(
+            subject.solveWeek(
                 inputOf({
                     staff: [person({ wage: 0, maxWeek: 8 }), person({ id: "b", name: "Blake", wage: 0, maxWeek: 8 })],
                     blocks: [
@@ -415,9 +402,11 @@ describe("schedule solver policy", () => {
         })
     })
 
-    it("keeps the complete baseline when extending a person adds no minimum coverage in a seeded start", () => {
+    it("keeps the complete baseline when extending a person adds no minimum coverage in a seeded start", async () => {
+        const subject = await build()
+
         expect(
-            solveWeek(
+            subject.solveWeek(
                 inputOf({
                     staff: [person({ wage: 0 }), person({ id: "b", name: "Blake", wage: 0 })],
                     blocks: [
@@ -441,14 +430,18 @@ describe("schedule solver policy", () => {
             }),
         })
     })
+})
 
-    it("stops filling at sixty heads and does not ask an available person to waive a rule", () => {
+describe("schedule solver policy", () => {
+    it("stops filling at sixty heads and does not ask an available person to waive a rule", async () => {
+        const subject = await build()
+
         const staff = Array.from({ length: 61 }, (_, index) =>
             person({ id: `p-${String(index).padStart(2, "0")}`, name: `Person ${String(index).padStart(2, "0")}` }),
         )
         const assigned = staff.slice(0, 60).map((p, index) => shift({ id: `new-${index}`, staffId: p.id }))
 
-        expect(solveWeek(inputOf({ staff, blocks: [block({ min: 61, ideal: 61 })] }))).toEqual({
+        expect(subject.solveWeek(inputOf({ staff, blocks: [block({ min: 61, ideal: 61 })] }))).toEqual({
             shifts: [...assigned, shift({ id: "new-60", staffId: null })],
             report: report({
                 costVnd: 7200000,

@@ -1,9 +1,9 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { InjectQueueOutbox } from "@modules/platform/queue"
-import type { QueueOutbox, QueueSchedulerDefinition } from "@modules/platform/queue"
+import type { QueueOutbox } from "@modules/platform/queue"
 
-/** The queue name: the contract between this producer, the scheduler below and the processor of the run-data-sync job (a pgmq queue name). */
+/** The queue name: the contract between this producer, the migration tick and the processor of the run-data-sync job (a pgmq queue name). */
 export const DATA_SYNC_QUEUE = "data_sync"
 
 /** The payload of one sync: the connection to read and the run row that records it. */
@@ -36,14 +36,6 @@ export const isDataSyncPayload = (value: unknown): value is DataSyncPayload =>
 /** True when a job payload is a scheduler tick. */
 export const isDataSyncTickPayload = (value: unknown): value is DataSyncTickPayload =>
     typeof value === "object" && value !== null && "tick" in value && value.tick === true
-
-/** Every minute the scheduled syncs that are due are queued, one job each; pg_cron upserts the schedule by id, so every replica may register it. */
-export const DATA_SYNC_SCHEDULER: QueueSchedulerDefinition = {
-    queue: DATA_SYNC_QUEUE,
-    id: "data-sync-tick",
-    everyMs: 60_000,
-    payload: { tick: true } satisfies DataSyncTickPayload,
-}
 
 @Injectable()
 /** The typed producer of the data-sync queue: the one way a sync job starts. */

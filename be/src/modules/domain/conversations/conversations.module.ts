@@ -19,7 +19,7 @@ export class ConversationsModule extends ConfigurableModuleClass {
         ]
         return {
             ...base,
-            imports: [...(base.imports ?? []), ChatTurnModule],
+            imports: [...(base.imports ?? []), ChatTurnModule.register({})],
             providers: [
                 ...(base.providers ?? []),
                 ...plugged,

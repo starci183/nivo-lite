@@ -155,8 +155,10 @@ describe("ChannelProvisioningService", () => {
         expect(print.mock.calls).toEqual([["telegram connection telegram-1 (Bot Telegram); webhook registered"]])
         expect(grants.setConnectionAgents).not.toHaveBeenCalled()
     })
+})
 
-    it("keeps a supplied Telegram name and reports an unregistered webhook without binding when bind is false", async () => {
+describe("ChannelProvisioningService", () => {
+    it("keeps the Telegram name and reports an unbound webhook when binding is disabled", async () => {
         const { service, entityManager, channels, grants, print } = await build()
         channels.connectTelegram.mockResolvedValue({
             connection: { ...TELEGRAM, name: "Shop bot" },
@@ -212,12 +214,15 @@ describe("ChannelProvisioningService", () => {
         expect(entityManager.query.mock.calls).toEqual([[FIND_WORKSPACE_OWNER, [WORKSPACE]]])
         expect(print.mock.calls).toEqual([
             [
-                "sepay connection sepay-1; paste into SePay: url https://nivo.vn/hook/sepay/sepay-1  api key nivo-sepay-key",
+                "sepay connection sepay-1; paste into SePay: url " +
+                    "https://nivo.vn/hook/sepay/sepay-1  api key nivo-sepay-key",
             ],
         ])
         expect(grants.setConnectionAgents).not.toHaveBeenCalled()
     })
+})
 
+describe("ChannelProvisioningService", () => {
     it("binds only the agents whose modules can use Telegram, preserving their order", async () => {
         const { service, entityManager, grants, print } = await build(
             {},
@@ -283,12 +288,15 @@ describe("ChannelProvisioningService", () => {
         expect(grants.setConnectionAgents.mock.calls).toEqual([[ACTOR, "sepay-1", [{ agentId: "bank-1" }]]])
         expect(print.mock.calls).toEqual([
             [
-                "sepay connection sepay-1; paste into SePay: url https://nivo.vn/hook/sepay/sepay-1  api key nivo-sepay-key",
+                "sepay connection sepay-1; paste into SePay: url " +
+                    "https://nivo.vn/hook/sepay/sepay-1  api key nivo-sepay-key",
             ],
             ["bound 1 agent(s)"],
         ])
     })
+})
 
+describe("ChannelProvisioningService", () => {
     it("sets an empty agent wish list and prints zero when no module can use the provider", async () => {
         const { service, grants, print } = await build(
             {},

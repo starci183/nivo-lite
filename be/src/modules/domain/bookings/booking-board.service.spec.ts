@@ -80,7 +80,7 @@ const build = async (entityManager: MockEntityManager) => {
 
 describe("BookingBoardService", () => {
     describe("board", () => {
-        it("reads the week of today in the workspace's time zone with its bookings placed on the local clock", async () => {
+        it("reads this week and places bookings on the workspace's local clock", async () => {
             const em = mockEntityManager({
                 query: [
                     [SELECT_SERVICES, []],
@@ -129,7 +129,11 @@ describe("BookingBoardService", () => {
                 to: "2026-10-18",
             })
         })
+    })
+})
 
+describe("BookingBoardService", () => {
+    describe("board", () => {
         it("reads exceptions from yesterday when the range starts later", async () => {
             const em = mockEntityManager({
                 query: [
@@ -150,7 +154,7 @@ describe("BookingBoardService", () => {
             expect(em.query).toHaveBeenCalledWith(SELECT_BOARD_EXCEPTIONS, [WORKSPACE, "2026-10-13"])
         })
 
-        it("refuses a date that does not exist, a range that ends before it starts and one longer than a year", async () => {
+        it("refuses invalid dates, reversed ranges and ranges longer than a year", async () => {
             const { service } = await build(
                 mockEntityManager({
                     query: [
@@ -195,7 +199,11 @@ describe("BookingBoardService", () => {
             await expect(service.board(USER, { workspaceId: WORKSPACE })).rejects.toBe(refusal)
             expect(em.query).not.toHaveBeenCalled()
         })
+    })
+})
 
+describe("BookingBoardService", () => {
+    describe("board", () => {
         it.each([
             { from: "tomorrow" },
             { from: "2026-13-01" },

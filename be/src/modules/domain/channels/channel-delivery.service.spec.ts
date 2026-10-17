@@ -127,17 +127,21 @@ describe("ChannelDeliveryService", () => {
             expect(secrets.botToken).not.toHaveBeenCalled()
         })
 
-        it("counts a website conversation as delivered on the page and sends nothing for a Telegram one without an external id", async () => {
-            const website = await build(target({ channel: "website" }))
-            const anonymous = await build(target({ externalId: null }))
+        it(
+            "counts a website conversation as delivered on the page and sends nothing for a Telegram one " +
+                "without an external id",
+            async () => {
+                const website = await build(target({ channel: "website" }))
+                const anonymous = await build(target({ externalId: null }))
 
-            await expect(website.service.deliver(request)).resolves.toEqual({ delivered: true, failure: null })
-            await expect(anonymous.service.deliver(request)).resolves.toEqual({ delivered: false, failure: null })
-            expect(website.telegram.sendMessage).not.toHaveBeenCalled()
-            expect(anonymous.telegram.sendMessage).not.toHaveBeenCalled()
-            expect(website.messages.markDelivery).toHaveBeenCalledWith("msg-1", true, undefined)
-            expect(anonymous.messages.markDelivery).toHaveBeenCalledWith("msg-1", false, undefined)
-        })
+                await expect(website.service.deliver(request)).resolves.toEqual({ delivered: true, failure: null })
+                await expect(anonymous.service.deliver(request)).resolves.toEqual({ delivered: false, failure: null })
+                expect(website.telegram.sendMessage).not.toHaveBeenCalled()
+                expect(anonymous.telegram.sendMessage).not.toHaveBeenCalled()
+                expect(website.messages.markDelivery).toHaveBeenCalledWith("msg-1", true, undefined)
+                expect(anonymous.messages.markDelivery).toHaveBeenCalledWith("msg-1", false, undefined)
+            },
+        )
     })
 
     it("sends nothing for a channel that has no sender", async () => {
@@ -147,7 +151,9 @@ describe("ChannelDeliveryService", () => {
         expect(senders.get).toHaveBeenCalledWith("sms")
         expect(telegram.sendMessage).not.toHaveBeenCalled()
     })
+})
 
+describe("ChannelDeliveryService", () => {
     describe("other channels", () => {
         it("hands the reply to the sender registered for the channel", async () => {
             const { service, senders } = await build(target({ channel: "facebook" }))
@@ -167,7 +173,9 @@ describe("ChannelDeliveryService", () => {
             expect(messages.markDelivery).toHaveBeenCalledWith("msg-1", false, undefined)
         })
     })
+})
 
+describe("ChannelDeliveryService", () => {
     describe("zalo", () => {
         const inside = NOW - 2 * HOUR
 
@@ -230,6 +238,12 @@ describe("ChannelDeliveryService", () => {
             expect(credentials.accessToken).toHaveBeenNthCalledWith(2, "c-1", { stale: "access-1" })
             expect(zalo.sendCsText).toHaveBeenLastCalledWith("access-2", "user-1", "Hello")
         })
+    })
+})
+
+describe("ChannelDeliveryService", () => {
+    describe("zalo", () => {
+        const inside = NOW - 2 * HOUR
 
         it("classifies any other refusal for the workbench and logs it", async () => {
             const { service, zalo, credentials, logger } = await build(zaloTarget(), inside)
@@ -263,7 +277,9 @@ describe("ChannelDeliveryService", () => {
             await expect(service.deliver(request)).resolves.toEqual({ delivered: false, failure: "zalo_error" })
         })
     })
+})
 
+describe("ChannelDeliveryService", () => {
     describe("sendToPerson", () => {
         const person = {
             workspaceId: "ws-1",
@@ -323,7 +339,9 @@ describe("ChannelDeliveryService", () => {
             expect(telegram.sendTyping).not.toHaveBeenCalled()
         })
     })
+})
 
+describe("ChannelDeliveryService", () => {
     describe("customerName", () => {
         it("asks Zalo for the display name of the customer", async () => {
             const { service, zalo, credentials } = await build()

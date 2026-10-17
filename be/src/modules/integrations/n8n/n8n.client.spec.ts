@@ -12,6 +12,7 @@ import { N8N_HOST_RESOLVER, N8N_OPTIONS } from "./n8n.decorators"
 import { N8nLogEvent } from "./n8n.log-events"
 import type { N8nOptions } from "./n8n.options"
 import { signBody, workspaceKey } from "./n8n.policy"
+import type { N8nHostResolver } from "./n8n.policy"
 
 const optionsOf = builder<N8nOptions>({
     signingSecret: new Secret("shared-secret"),
@@ -30,11 +31,14 @@ const deliveryOf = builder<N8nDelivery>({
     occurredAtMs: 1_700_000_000_000,
 })
 
-const build = async (options: N8nOptions = optionsOf()) => {
+const build = async (overrides: Partial<N8nOptions> = {}) => {
+    const options = builder<N8nOptions>(optionsOf())(overrides)
     const http = mock<HttpClient>()
     http.request.mockResolvedValue({ status: 200, body: { message: "started" } })
     const logger = mock<Logger>()
-    const resolve = jest.fn<Promise<ReadonlyArray<string>>, [string]>().mockResolvedValue(["8.8.8.8"])
+    const resolver = mock<{ resolve: N8nHostResolver }>()
+    const resolve = resolver.resolve
+    resolve.mockResolvedValue(["8.8.8.8"])
     const moduleRef = await Test.createTestingModule({
         providers: [
             N8nClient,
@@ -115,7 +119,11 @@ describe("N8nClient", () => {
                 params: { targets: 1 },
             })
         })
+    })
+})
 
+describe("N8nClient", () => {
+    describe("deliver", () => {
         it("throws a retryable error when the network fails", async () => {
             const { client, http, logger } = await build()
             http.request.mockRejectedValueOnce(new HttpError({ code: HttpErrorCode.Network }))

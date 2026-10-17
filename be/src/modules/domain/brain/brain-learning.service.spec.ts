@@ -83,7 +83,6 @@ describe("BrainLearningService", () => {
     afterEach(() => {
         jest.restoreAllMocks()
     })
-
     it("requires a manager before reading any corrections", async () => {
         const { service, source, members, cases, generations } = await build()
         const error = new Error("forbidden")
@@ -140,7 +139,11 @@ describe("BrainLearningService", () => {
         expect(cases.keep).toHaveBeenCalledWith("ws1", "chatbot", [])
         expect(generations.generate).not.toHaveBeenCalled()
     })
-
+})
+describe("BrainLearningService", () => {
+    afterEach(() => {
+        jest.restoreAllMocks()
+    })
     it("reports model unavailability with the correction and saved case counts without parsing a result", async () => {
         const { service, generations, json, lessons } = await build()
         generations.generate.mockResolvedValue({ ok: false, reason: "timeout", message: "Try again later" })
@@ -156,7 +159,11 @@ describe("BrainLearningService", () => {
         expect(json.jsonOf).not.toHaveBeenCalled()
         expect(lessons.propose).not.toHaveBeenCalled()
     })
-
+})
+describe("BrainLearningService", () => {
+    afterEach(() => {
+        jest.restoreAllMocks()
+    })
     it("generates lessons with applicable guidance and proposes only those supported by two distinct known decisions", async () => {
         const { service, generations, json, lessons } = await build()
         lessons.list.mockResolvedValue([
@@ -178,7 +185,8 @@ describe("BrainLearningService", () => {
         })
         const prompt = [
             "EXISTING LESSONS:\n- Relevant: Keep replies short\n- Universal: Be clear",
-            "CORRECTIONS (newest first):\n[d1]\nAction: send · edited\nAI draft: Draft one\nOwner's version: Owner one\nOwner's note: Short\n\n[d2]\nAction: refund · rejected\n\n[d3]\nAction: send · edited",
+            "CORRECTIONS (newest first):\n[d1]\nAction: send · edited\nAI draft: Draft one\nOwner's version: " +
+                "Owner one\nOwner's note: Short\n\n[d2]\nAction: refund · rejected\n\n[d3]\nAction: send · edited",
         ].join("\n\n")
 
         await expect(service.mine("u1", "ws1", "chatbot")).resolves.toEqual({
@@ -227,7 +235,11 @@ describe("BrainLearningService", () => {
             proposedBy: "NIVO",
         })
     })
-
+})
+describe("BrainLearningService", () => {
+    afterEach(() => {
+        jest.restoreAllMocks()
+    })
     it("uses the decision id as evidence if a known correction cannot be retrieved", async () => {
         const list = corrections()
         jest.spyOn(list, "find").mockReturnValueOnce(undefined)

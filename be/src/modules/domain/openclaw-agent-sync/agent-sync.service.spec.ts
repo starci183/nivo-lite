@@ -212,7 +212,9 @@ describe("AgentSyncService", () => {
             expect(queue.enqueueSyncAgents).not.toHaveBeenCalled()
         })
     })
+})
 
+describe("AgentSyncService", () => {
     describe("process", () => {
         it("syncs the installation a job names", async () => {
             const { service, bundles } = await build({ previousHash: "old" })
@@ -267,7 +269,9 @@ describe("AgentSyncService", () => {
             expect(installations.onOpenclaw).toHaveBeenCalledWith(null, 500)
         })
     })
+})
 
+describe("AgentSyncService", () => {
     describe("syncInstallation", () => {
         it("skips an installation that is not on OpenClaw unless forced", async () => {
             const { service, bundles } = await build({
@@ -336,7 +340,11 @@ describe("AgentSyncService", () => {
             await expect(service.syncInstallation(WORKSPACE, "i1", false)).resolves.toMatchObject({ changed: true })
             expect(writer.write).toHaveBeenCalledTimes(1)
         })
+    })
+})
 
+describe("AgentSyncService", () => {
+    describe("syncInstallation", () => {
         it("records the failure on the sync row and rethrows it", async () => {
             const { service, tx, logger } = await build({ dirs: false })
 
@@ -369,7 +377,9 @@ describe("AgentSyncService", () => {
             })
         })
     })
+})
 
+describe("AgentSyncService", () => {
     describe("ensureInternalAgent", () => {
         it("writes the files and registers the internal agent on first use", async () => {
             const { service, writer, registry, pause } = await build({ internalRegistered: true })

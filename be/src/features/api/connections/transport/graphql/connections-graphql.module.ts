@@ -7,6 +7,7 @@ import { CheckConnectionResolver } from "./check-connection.resolver"
 import { CheckMetaResolver } from "./check-meta.resolver"
 import { ChooseMetaPageResolver } from "./choose-meta-page.resolver"
 import { ConnectTelegramResolver } from "./connect-telegram.resolver"
+import { ConfigurableModuleClass } from "./connections-graphql.module-definition"
 import { DeleteConnectionResolver } from "./delete-connection.resolver"
 import { DisconnectConnectionResolver } from "./disconnect-connection.resolver"
 import { FinishWebhookConnectionResolver } from "./finish-webhook-connection.resolver"
@@ -38,7 +39,7 @@ import { UpdateWebhookEventsResolver } from "./update-webhook-events.resolver"
 import { WantConnectorResolver } from "./want-connector.resolver"
 
 @Module({
-    imports: [ConnectionsApiModule],
+    imports: [ConnectionsApiModule.register({})],
     providers: [
         AuthorizeGoogleResolver,
         AuthorizeMetaResolver,
@@ -79,4 +80,4 @@ import { WantConnectorResolver } from "./want-connector.resolver"
     ],
 })
 /** The GraphQL transport of the connections feature. */
-export class ConnectionsGraphqlModule {}
+export class ConnectionsGraphqlModule extends ConfigurableModuleClass {}

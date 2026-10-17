@@ -172,6 +172,7 @@ describe("HiringCandidatesService", () => {
         data.candidate.mockResolvedValue(undefined)
         await refuse(service.requireCandidate(W, "missing"), Code.CandidateNotFound)
     })
+
     it.each<CandidateRecord["stage"]>(["rejected", "withdrawn", "hired"])(
         "refuses a closed %s candidate",
         async (stage) => {
@@ -182,6 +183,9 @@ describe("HiringCandidatesService", () => {
             })
         },
     )
+})
+
+describe("HiringCandidatesService", () => {
     describe("submit", () => {
         it.each([
             { job: jobOf({ status: "paused" }), input: inputOf(), code: Code.JobNotOpen },
@@ -252,6 +256,9 @@ describe("HiringCandidatesService", () => {
             expect(screening.requestScreening).not.toHaveBeenCalled()
         })
     })
+})
+
+describe("HiringCandidatesService", () => {
     describe("move", () => {
         it("refuses an unknown stage before reading the candidate", async () => {
             const { service, data, members } = await build()
@@ -302,6 +309,9 @@ describe("HiringCandidatesService", () => {
             query(em, MOVE_CANDIDATE, [W, C, request.stage, reason, "Manager", summary])
         })
     })
+})
+
+describe("HiringCandidatesService", () => {
     describe("saveNotes", () => {
         const detail = text("hiring.fairness.notes", { trait: text("hiring.fairness.gender") })
         it.each<[string, Array<FlagRow>, Code, Record<string, string | number>]>([
@@ -322,6 +332,7 @@ describe("HiringCandidatesService", () => {
             query(em, SAVE_NOTES, [W, C, "a".repeat(4000), "Manager", text("hiring.event.notes")])
         })
     })
+
     describe("deleteAll and delete", () => {
         it.each([
             { ids: [], rows: [], candidates: 0, files: 0, paths: [] },
@@ -354,6 +365,9 @@ describe("HiringCandidatesService", () => {
             expect(storage.remove.mock.calls).toEqual([[["cv-1"]]])
         })
     })
+})
+
+describe("HiringCandidatesService", () => {
     describe("cv", () => {
         const url = "https://files.example.com/cv"
         const empty = { url: null, name: null, mime: null }
@@ -377,6 +391,7 @@ describe("HiringCandidatesService", () => {
             expect(storage.signedUrl.mock.calls).toEqual(calls)
         })
     })
+
     describe("linkStaff", () => {
         it.each<[CandidateRecord, Array<StaffLinkRow>, Code, boolean]>([
             [candidateOf(), [], Code.StaffNotHired, false],
@@ -410,6 +425,9 @@ describe("HiringCandidatesService", () => {
             ])
         })
     })
+})
+
+describe("HiringCandidatesService", () => {
     describe("toggleOnboarding", () => {
         it.each([true, false])("stores the onboarding done value %s", async (done) => {
             const em = mockEntityManager({ query: [TOGGLE_ONBOARDING, [{ value: true }]] })
@@ -424,6 +442,7 @@ describe("HiringCandidatesService", () => {
             await refuse(service.toggleOnboarding(U, W, { id: "missing", done: true }), Code.OnboardingNotFound)
         })
     })
+
     describe("closeJobIfFilled", () => {
         const line = text("hiring.office.jobFilled", { title: "Barista", hired: 2, headcount: 2 })
         it.each<[Array<FilledRow>, boolean, Array<[string, string]>]>([

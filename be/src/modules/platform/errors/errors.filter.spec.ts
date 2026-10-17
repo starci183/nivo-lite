@@ -32,7 +32,6 @@ describe("ErrorsFilter", () => {
         expect(errors.describe).not.toHaveBeenCalled()
         expect(host.switchToHttp).not.toHaveBeenCalled()
     })
-
     it("writes a localized description and its status to an HTTP response", async () => {
         const { filter, errors, requestLocale } = await build()
         const failure = new Error("order missing")
@@ -67,7 +66,9 @@ describe("ErrorsFilter", () => {
             params: { orderId: "order-1" },
         })
     })
+})
 
+describe("ErrorsFilter", () => {
     it.each([
         ["a named connection", { connectionId: "connection-1" }, "connection-1"],
         ["an absent name", {}, null],

@@ -13,8 +13,6 @@ export enum ContentItemsErrorCode {
     Frozen = "CONTENT_ITEMS_FROZEN",
     /** Every channel needs draft text. */
     TextMissing = "CONTENT_ITEMS_TEXT_MISSING",
-    /** The selected channel is unsupported. */
-    InvalidChannel = "CONTENT_ITEMS_INVALID_CHANNEL",
     /** A write that must answer the row it wrote answered none. */
     NotWritten = "CONTENT_ITEMS_NOT_WRITTEN",
 }
@@ -26,7 +24,6 @@ export const CONTENT_ITEMS_ERROR_KINDS: Record<ContentItemsErrorCode, ErrorKind>
     [ContentItemsErrorCode.WrongStatus]: "conflict",
     [ContentItemsErrorCode.Frozen]: "conflict",
     [ContentItemsErrorCode.TextMissing]: "invalid",
-    [ContentItemsErrorCode.InvalidChannel]: "invalid",
     [ContentItemsErrorCode.NotWritten]: "internal",
 }
 

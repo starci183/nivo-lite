@@ -1,4 +1,4 @@
-import type { FairnessCategory, FairnessViolation, JobDraftTexts } from "../hiring.contracts"
+import type { FairnessCategory, FairnessField, FairnessViolation, JobDraftTexts } from "../hiring.contracts"
 import { fold } from "./text.policy"
 
 interface FairnessRule {
@@ -159,7 +159,7 @@ const isLegalMinimumAge = (prefix: string | undefined, age: number, after: strin
     ((prefix !== undefined && MINIMUM_PREFIXES.includes(prefix)) || /^\s*tro len/u.test(after))
 
 /** Every place a text asks for, or screens on, a protected trait; empty means fine. `field` names where it was found. */
-export const findFairnessViolations = (text: string, field = ""): Array<FairnessViolation> => {
+export const findFairnessViolations = (text: string, field: FairnessField | "" = ""): Array<FairnessViolation> => {
     const normalized = text.normalize("NFC")
     const lower = normalized.toLowerCase()
     const { folded, map } = foldMapped(normalized)
@@ -197,19 +197,19 @@ export const findFairnessViolations = (text: string, field = ""): Array<Fairness
 
 /** Runs the validator over every text a job puts in front of candidates or uses to screen them. */
 export const validateJobDraft = (draft: JobDraftTexts): Array<FairnessViolation> => {
-    const fields: Array<[string, string | undefined]> = [
+    const fields: Array<[FairnessField, string | undefined]> = [
         ["title", draft.title],
         ["position", draft.position],
         ["description", draft.description],
         ["schedule", draft.schedule],
         ["experience", draft.requirements.experienceNote],
-        ...draft.requirements.skills.map((entry): [string, string] => ["skill", entry]),
-        ...draft.requirements.availability.map((entry): [string, string] => ["availability", entry]),
-        ...draft.requirements.mustHave.map((entry): [string, string] => ["mustHave", entry]),
-        ...draft.requirements.niceToHave.map((entry): [string, string] => ["niceToHave", entry]),
-        ...draft.questions.flatMap((question): Array<[string, string]> => [
+        ...draft.requirements.skills.map((entry): [FairnessField, string] => ["skill", entry]),
+        ...draft.requirements.availability.map((entry): [FairnessField, string] => ["availability", entry]),
+        ...draft.requirements.mustHave.map((entry): [FairnessField, string] => ["mustHave", entry]),
+        ...draft.requirements.niceToHave.map((entry): [FairnessField, string] => ["niceToHave", entry]),
+        ...draft.questions.flatMap((question): Array<[FairnessField, string]> => [
             ["question", question.text],
-            ...(question.choices ?? []).map((choice): [string, string] => ["choice", choice]),
+            ...(question.choices ?? []).map((choice): [FairnessField, string] => ["choice", choice]),
         ]),
     ]
     return fields.flatMap(([field, text]) =>

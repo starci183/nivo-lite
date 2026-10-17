@@ -1,4 +1,4 @@
-import type { ModuleMetadata } from "@nestjs/common"
+import type { DynamicModule } from "@nestjs/common"
 import { AutomationsModule } from "@modules/domain/automations"
 import { AutomationCommandsModule } from "@modules/domain/automation-commands"
 import { AutomationPortsModule } from "@modules/domain/automation-ports"
@@ -12,7 +12,7 @@ import { HttpModule } from "@modules/platform/http"
 import { GraphqlModule } from "@modules/platform/graphql"
 import type { ApiOptions } from "../api.options"
 /** The automations area of the API, in registration order. */
-export const automationsModules = (options: ApiOptions): NonNullable<ModuleMetadata["imports"]> => [
+export const automationsModules = (options: ApiOptions): Array<DynamicModule> => [
     ...[HttpModule.register({ isGlobal: true }), GraphqlModule.register({ isGlobal: true })],
     N8nModule.register({ isGlobal: true, ...options.n8n }),
     AutomationPortsModule.register({ isGlobal: true }),

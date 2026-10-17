@@ -9,12 +9,12 @@ import { HTTP_SECURITY_OPTIONS } from "./http-security.decorators"
 import type { HttpSecurityOptions } from "./http-security.options"
 import { RateLimit, RateLimitGuard, RateTier } from "./rate-limit.guard"
 
-const options = builder<HttpSecurityOptions>({
+const OPTIONS: HttpSecurityOptions = {
     trustedProxyHops: 1,
     allowedOrigins: [],
     rateLimit: { windowMs: 60_000, defaultLimit: 3, strictLimit: 1 },
     webhooks: {},
-})
+}
 
 class Door {}
 
@@ -39,7 +39,7 @@ const build = async (handler = defaultHandler) => {
             RateLimitGuard,
             Reflector,
             { provide: CLOCK, useValue: clock },
-            { provide: HTTP_SECURITY_OPTIONS, useValue: options() },
+            { provide: HTTP_SECURITY_OPTIONS, useValue: builder<HttpSecurityOptions>(OPTIONS)() },
         ],
     }).compile()
     return { guard: moduleRef.get(RateLimitGuard), context, clock, callFrom }

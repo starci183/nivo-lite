@@ -101,7 +101,9 @@ describe("AutomationTemplatesService", () => {
             })
         })
     })
+})
 
+describe("AutomationTemplatesService", () => {
     describe("syncCatalog", () => {
         it("writes every definition in one transaction and forgets the cached catalogue", async () => {
             const tx = fakeTransaction(

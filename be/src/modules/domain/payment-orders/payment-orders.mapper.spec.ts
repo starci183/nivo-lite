@@ -1,3 +1,4 @@
+import { Test } from "@nestjs/testing"
 import { toPaymentOrder } from "./payment-orders.mapper"
 import type { OrderRow } from "./persistence/payment-orders.rows"
 
@@ -16,9 +17,20 @@ const ROW: OrderRow = {
     detail: { credits: 1000 },
 }
 
+const SUBJECT = Symbol("payment-orders.mapper")
+
+const buildSubject = async () => {
+    const moduleRef = await Test.createTestingModule({
+        providers: [{ provide: SUBJECT, useValue: { toPaymentOrder } }],
+    }).compile()
+    return moduleRef.get<{ toPaymentOrder: typeof toPaymentOrder }>(SUBJECT)
+}
+
 describe("payment orders mapper", () => {
-    it("maps the columns to the order, instants as ISO text", () => {
-        expect(toPaymentOrder(ROW)).toEqual({
+    it("maps the columns to the order, instants as ISO text", async () => {
+        const subject = await buildSubject()
+
+        expect(subject.toPaymentOrder(ROW)).toEqual({
             id: "order-1",
             workspaceId: "ws-1",
             planCode: "starter",
@@ -34,11 +46,17 @@ describe("payment orders mapper", () => {
         })
     })
 
-    it("keeps the instant a paid order was settled", () => {
-        expect(toPaymentOrder({ ...ROW, paid_at: "2026-10-12T10:05:00+00:00" }).paidAt).toBe("2026-10-12T10:05:00.000Z")
+    it("keeps the instant a paid order was settled", async () => {
+        const subject = await buildSubject()
+
+        expect(subject.toPaymentOrder({ ...ROW, paid_at: "2026-10-12T10:05:00+00:00" }).paidAt).toBe(
+            "2026-10-12T10:05:00.000Z",
+        )
     })
 
-    it.each([[[1]], ["text"], [5]])("counts the stored detail %p as no detail", (detail) => {
-        expect(toPaymentOrder({ ...ROW, detail }).detail).toEqual({})
+    it.each([[[1]], ["text"], [5]])("counts the stored detail %p as no detail", async (detail) => {
+        const subject = await buildSubject()
+
+        expect(subject.toPaymentOrder({ ...ROW, detail }).detail).toEqual({})
     })
 })

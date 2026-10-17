@@ -1,3 +1,4 @@
+import type { QueueTimeout } from "./queue-timeout.port"
 import { injector } from "@modules/platform/composition"
 import type { TypedParameterDecorator } from "@modules/platform/composition"
 import type { QueueOptions } from "./queue.options"
@@ -37,3 +38,9 @@ export const InjectQueueTransport = (): TypedParameterDecorator<QueueTransport> 
 /** Injects the authoritative queue status reader. Parameter type: QueueStatusService. */
 export const InjectQueueStatusService = (): TypedParameterDecorator<QueueStatusService> =>
     injector<QueueStatusService>(QUEUE_STATUS)
+
+/** Token of the cancellable process-local deadline port. */
+export const QUEUE_TIMEOUT: unique symbol = Symbol("platform.queue.timeout")
+
+/** Injects the deadline port. Parameter type: QueueTimeout. */
+export const InjectQueueTimeout = (): TypedParameterDecorator<QueueTimeout> => injector<QueueTimeout>(QUEUE_TIMEOUT)

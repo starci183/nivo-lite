@@ -95,7 +95,9 @@ describe("InviteCommandsService", () => {
         expect(invites[method]).toHaveBeenCalledWith("user-1", "ws-1", "i-1")
         expect(commands.succeed).toHaveBeenCalledWith("command-1", RESULT)
     })
+})
 
+describe("InviteCommandsService", () => {
     it("re-issues an invitation for the platform team and audits it", async () => {
         const input = { inviteId: "i-1", actorEmail: "admin@nivo.vn" }
         const { service, commands, support, audits } = await build(command({ kind: "admin.invite.resend", input }))

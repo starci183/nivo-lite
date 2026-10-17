@@ -75,7 +75,9 @@ import {
 const DAY_MS = 86_400_000
 
 @Injectable()
-/** The console's read side: the workspace list, one workspace's overview and the platform health; every view is audited. */
+/**
+ * The console's read side: the workspace list, one workspace's overview and the platform health; every view is audited.
+ */
 export class AdminDirectoryService {
     constructor(
         @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
@@ -206,30 +208,7 @@ export class AdminDirectoryService {
             orders: orders.map(toOrder),
             transfers: transfers.map(toTransfer),
             billingEvents: billingEvents.map(toBillingEvent),
-            modules: installs.map((install): AdminModule => {
-                const version = versions.find((candidate) => candidate.id === install.active_context_version_id)
-                const sync = syncs.find((candidate) => candidate.installation_id === install.id)
-                return {
-                    id: install.id,
-                    key: install.module_key,
-                    status: install.status,
-                    operatingMode: install.operating_mode,
-                    live: install.live_enabled,
-                    processor: install.processor === "openclaw" ? "openclaw" : "nivo",
-                    contextVersion: version?.version ?? null,
-                    contextAppliedAt: isoOrNull(version?.applied_at ?? null),
-                    sync:
-                        sync === undefined
-                            ? null
-                            : {
-                                  agentId: sync.agent_id,
-                                  contextVersion: sync.context_version,
-                                  checkedAt: iso(sync.checked_at),
-                                  status: sync.status,
-                                  error: sync.error,
-                              },
-                }
-            }),
+            modules: this.workspaceModules(installs, versions, syncs),
             connections: connections.map((connection) => toConnection(connection, nowMs)),
             errors: errors.map(toError),
             knowledgeTotal: sources.length,
@@ -283,5 +262,36 @@ export class AdminDirectoryService {
         if (unique.length === 0) return new Map()
         const rows = await this.entityManager.query<Array<R.UserEmailRow>>(LIST_USER_EMAILS, [unique])
         return new Map(rows.map((row) => [row.id, row.email]))
+    }
+
+    private workspaceModules(
+        installs: ReadonlyArray<R.InstallRow>,
+        versions: ReadonlyArray<R.ContextVersionRow>,
+        syncs: ReadonlyArray<R.AgentSyncRow>,
+    ): Array<AdminModule> {
+        return installs.map((install): AdminModule => {
+            const version = versions.find((candidate) => candidate.id === install.active_context_version_id)
+            const sync = syncs.find((candidate) => candidate.installation_id === install.id)
+            return {
+                id: install.id,
+                key: install.module_key,
+                status: install.status,
+                operatingMode: install.operating_mode,
+                live: install.live_enabled,
+                processor: install.processor === "openclaw" ? "openclaw" : "nivo",
+                contextVersion: version?.version ?? null,
+                contextAppliedAt: isoOrNull(version?.applied_at ?? null),
+                sync:
+                    sync === undefined
+                        ? null
+                        : {
+                              agentId: sync.agent_id,
+                              contextVersion: sync.context_version,
+                              checkedAt: iso(sync.checked_at),
+                              status: sync.status,
+                              error: sync.error,
+                          },
+            }
+        })
     }
 }

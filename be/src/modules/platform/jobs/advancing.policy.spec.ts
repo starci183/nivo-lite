@@ -1,3 +1,4 @@
+import { Test } from "@nestjs/testing"
 import { mock } from "@starci/jest-preset"
 import { AdvancingJobStepPolicy } from "./advancing.policy"
 import { JobsError, JobsErrorCode } from "./errors/jobs.error"
@@ -26,6 +27,14 @@ class DeliveryStep extends AdvancingJobStepPolicy {
     }
 }
 
+const build = async (claims: JobClaims, delivery: JobEffect<unknown>) => {
+    const claimWriter = mock<JobClaims>({ advance: claims.advance })
+    const moduleRef = await Test.createTestingModule({
+        providers: [{ provide: AdvancingJobStepPolicy, useFactory: () => new DeliveryStep(claimWriter, delivery) }],
+    }).compile()
+    return moduleRef.get(AdvancingJobStepPolicy)
+}
+
 describe("AdvancingJobStepPolicy", () => {
     it("waits for the fenced advance before starting its domain effect and discards the effect's result", async () => {
         const claims = mock<JobClaims>()
@@ -37,7 +46,7 @@ describe("AdvancingJobStepPolicy", () => {
         )
         const delivery = jest.fn().mockResolvedValue({ sent: true })
 
-        const run = new DeliveryStep(claims, delivery).run(job)
+        const run = (await build(claims, delivery)).run(job)
 
         expect(claims.advance).toHaveBeenCalledWith({ jobId: "job-1", expectedFencingToken: 3, step: "deliver" })
         expect(delivery).not.toHaveBeenCalled()
@@ -52,7 +61,7 @@ describe("AdvancingJobStepPolicy", () => {
         claims.advance.mockRejectedValue(failure)
         const delivery = jest.fn()
 
-        await expect(new DeliveryStep(claims, delivery).run(job)).rejects.toBe(failure)
+        await expect((await build(claims, delivery)).run(job)).rejects.toBe(failure)
 
         expect(delivery).not.toHaveBeenCalled()
     })
@@ -67,7 +76,7 @@ describe("AdvancingJobStepPolicy", () => {
             }),
         )
         let finished = false
-        const run = new DeliveryStep(claims, delivery).run(job).then(() => {
+        const run = (await build(claims, delivery)).run(job).then(() => {
             finished = true
         })
         await Promise.resolve()
@@ -85,7 +94,7 @@ describe("AdvancingJobStepPolicy", () => {
         const failure = new JobsError({ code: JobsErrorCode.ConnectionMissing })
         const delivery = jest.fn().mockRejectedValue(failure)
 
-        await expect(new DeliveryStep(claims, delivery).run(job)).rejects.toBe(failure)
+        await expect((await build(claims, delivery)).run(job)).rejects.toBe(failure)
 
         expect(claims.advance).toHaveBeenCalledTimes(1)
     })
@@ -98,6 +107,6 @@ describe("AdvancingJobStepPolicy", () => {
             throw failure
         }
 
-        await expect(new DeliveryStep(claims, delivery).run(job)).rejects.toBe(failure)
+        await expect((await build(claims, delivery)).run(job)).rejects.toBe(failure)
     })
 })

@@ -6,6 +6,7 @@ import { SaveContentCadenceHandler } from "./application/save-content-cadence.ha
 import { ApplyContentCadencePresetsHandler } from "./application/apply-content-cadence-presets.handler"
 import { SaveContentBrandHandler } from "./application/save-content-brand.handler"
 import { SetContentAutomationHandler } from "./application/set-content-automation.handler"
+import { ConfigurableModuleClass } from "./content-settings.module-definition"
 
 @Module({
     providers: [
@@ -19,4 +20,4 @@ import { SetContentAutomationHandler } from "./application/set-content-automatio
     ],
 })
 /** CQRS application handlers for content configuration. */
-export class ContentSettingsApiModule {}
+export class ContentSettingsApiModule extends ConfigurableModuleClass {}

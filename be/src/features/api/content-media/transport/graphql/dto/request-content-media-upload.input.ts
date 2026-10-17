@@ -22,6 +22,6 @@ export class RequestContentMediaUploadInput {
     @Field(() => Int)
     @IsInt()
     @Min(1)
-    @Max(10 * 1024 * 1024)
+    @Max(10485760)
     sizeBytes!: number
 }

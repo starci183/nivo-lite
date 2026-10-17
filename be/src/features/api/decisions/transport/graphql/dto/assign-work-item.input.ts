@@ -1,6 +1,5 @@
+import { NullAsAbsent } from "@modules/platform/graphql"
 import { Field, ID, InputType } from "@nestjs/graphql"
-import { Transform } from "class-transformer"
-import type { TransformFnParams } from "class-transformer"
 import { IsOptional, IsUUID, MaxLength } from "class-validator"
 
 @InputType()
@@ -15,7 +14,7 @@ export class AssignWorkItemInput {
     /** The staff member, or null to take the assignment back. */
     @Field(() => ID, { nullable: true })
     @IsOptional()
-    @Transform(({ value }: TransformFnParams): unknown => value ?? undefined)
+    @NullAsAbsent()
     @IsUUID("4")
     @MaxLength(36)
     staffId?: string

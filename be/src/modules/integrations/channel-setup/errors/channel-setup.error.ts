@@ -9,8 +9,6 @@ export enum ChannelSetupErrorCode {
     Unreachable = "CHANNEL_SETUP_UNREACHABLE",
     /** The provider answered with a refusal that is not a rejected credential (for example a webhook address it will not use). */
     Refused = "CHANNEL_SETUP_REFUSED",
-    /** The Zalo authorization cannot be built because the app is not configured with a site url. */
-    NotConfigured = "CHANNEL_SETUP_NOT_CONFIGURED",
 }
 
 /** How each channel-setup code travels. */
@@ -18,7 +16,6 @@ export const CHANNEL_SETUP_ERROR_KINDS: Record<ChannelSetupErrorCode, ErrorKind>
     [ChannelSetupErrorCode.CredentialRejected]: "invalid",
     [ChannelSetupErrorCode.Unreachable]: "unavailable",
     [ChannelSetupErrorCode.Refused]: "invalid",
-    [ChannelSetupErrorCode.NotConfigured]: "unavailable",
 }
 
 /** The one error class of the channel-setup integration. */

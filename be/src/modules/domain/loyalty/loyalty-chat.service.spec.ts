@@ -70,35 +70,35 @@ const PROGRAM_LINES = ["loyalty.chat.header", "loyalty.chat.earn|1", "loyalty.ch
 const REWARD_LINES = ["loyalty.chat.rewards", "loyalty.chat.reward|voucher|Voucher|500|50000|-|-|-|-"]
 const MEMBER_LINE = "loyalty.chat.member|Mai|Bronze|600|1000000|2"
 
-describe("LoyaltyChatService", () => {
-    const build = async () => {
-        const clock = new FakeClock(NOW)
-        const catalog = mock<MessageCatalog>()
-        catalog.get.mockImplementation((key, params) => [key, ...Object.values(params).map(String)].join("|"))
-        const programs = mock<LoyaltyProgramsService>()
-        programs.findActive.mockResolvedValue(programOf())
-        const rewards = mock<LoyaltyRewardsService>()
-        rewards.list.mockResolvedValue([rewardOf()])
-        const ledger = mock<LoyaltyLedgerService>()
-        ledger.member.mockResolvedValue(memberOf())
-        ledger.redeemedCounts.mockResolvedValue(new Map())
-        ledger.expiryEntries.mockResolvedValue([])
-        const links = mock<LoyaltyCustomerLinksService>()
-        links.customerOfChat.mockResolvedValue("c1")
-        const moduleRef = await Test.createTestingModule({
-            providers: [
-                LoyaltyChatService,
-                { provide: CLOCK, useValue: clock },
-                { provide: MESSAGE_CATALOG, useValue: catalog },
-                { provide: LoyaltyProgramsService, useValue: programs },
-                { provide: LoyaltyRewardsService, useValue: rewards },
-                { provide: LoyaltyLedgerService, useValue: ledger },
-                { provide: LoyaltyCustomerLinksService, useValue: links },
-            ],
-        }).compile()
-        return { service: moduleRef.get(LoyaltyChatService), catalog, programs, rewards, ledger, links }
-    }
+const build = async () => {
+    const clock = new FakeClock(NOW)
+    const catalog = mock<MessageCatalog>()
+    catalog.get.mockImplementation((key, params) => [key, ...Object.values(params).map(String)].join("|"))
+    const programs = mock<LoyaltyProgramsService>()
+    programs.findActive.mockResolvedValue(programOf())
+    const rewards = mock<LoyaltyRewardsService>()
+    rewards.list.mockResolvedValue([rewardOf()])
+    const ledger = mock<LoyaltyLedgerService>()
+    ledger.member.mockResolvedValue(memberOf())
+    ledger.redeemedCounts.mockResolvedValue(new Map())
+    ledger.expiryEntries.mockResolvedValue([])
+    const links = mock<LoyaltyCustomerLinksService>()
+    links.customerOfChat.mockResolvedValue("c1")
+    const moduleRef = await Test.createTestingModule({
+        providers: [
+            LoyaltyChatService,
+            { provide: CLOCK, useValue: clock },
+            { provide: MESSAGE_CATALOG, useValue: catalog },
+            { provide: LoyaltyProgramsService, useValue: programs },
+            { provide: LoyaltyRewardsService, useValue: rewards },
+            { provide: LoyaltyLedgerService, useValue: ledger },
+            { provide: LoyaltyCustomerLinksService, useValue: links },
+        ],
+    }).compile()
+    return { service: moduleRef.get(LoyaltyChatService), catalog, programs, rewards, ledger, links }
+}
 
+describe("LoyaltyChatService", () => {
     describe("brief", () => {
         it("returns no brief and reads no customer facts without an active programme", async () => {
             const { service, programs, rewards, ledger, links, catalog } = await build()
@@ -160,7 +160,11 @@ describe("LoyaltyChatService", () => {
             expect(ledger.member).toHaveBeenCalledWith("ws-1", "c1")
             expect(ledger.redeemedCounts).not.toHaveBeenCalled()
         })
+    })
+})
 
+describe("LoyaltyChatService", () => {
+    describe("brief", () => {
         it("says the catalogue is empty and that there is nothing to redeem", async () => {
             const { service, rewards } = await build()
             rewards.list.mockResolvedValue([])
@@ -226,7 +230,11 @@ describe("LoyaltyChatService", () => {
             )
             expect(catalog.get).toHaveBeenCalledWith("loyalty.chat.expiring", { points: 80, at: "2026-10-20" }, "vi")
         })
+    })
+})
 
+describe("LoyaltyChatService", () => {
+    describe("brief", () => {
         it("shows no expiry warning after the points due soon have already been spent", async () => {
             const { service, ledger, catalog } = await build()
             ledger.expiryEntries.mockResolvedValue([
@@ -284,7 +292,11 @@ describe("LoyaltyChatService", () => {
                 "vi",
             )
         })
+    })
+})
 
+describe("LoyaltyChatService", () => {
+    describe("brief", () => {
         it("excludes rewards whose customer redemption limit has been reached", async () => {
             const { service, rewards, ledger } = await build()
             rewards.list.mockResolvedValue([rewardOf({ perCustomerLimit: 1 })])
@@ -319,13 +331,16 @@ describe("LoyaltyChatService", () => {
                 "loyalty.chat.canRedeem",
                 {
                     rewards:
-                        '"key1", "key2", "key3", "key4", "key5", "key6", "key7", "key8", "key9", "key10", "key11", "key12"',
+                        `"key1", "key2", "key3", "key4", "key5", "key6", ` +
+                        `"key7", "key8", "key9", "key10", "key11", "key12"`,
                 },
                 "vi",
             )
         })
     })
+})
 
+describe("LoyaltyChatService", () => {
     describe("redeemIntent", () => {
         it("returns no intent without an active programme", async () => {
             const { service, programs, rewards, ledger, links } = await build()
@@ -388,7 +403,11 @@ describe("LoyaltyChatService", () => {
             expect(ledger.redeemedCounts).toHaveBeenCalledWith("c1")
             expect(ledger.expiryEntries).not.toHaveBeenCalled()
         })
+    })
+})
 
+describe("LoyaltyChatService", () => {
+    describe("redeemIntent", () => {
         it("blocks a request when the catalogue cost exceeds the ledger balance", async () => {
             const { service, ledger } = await build()
             ledger.member.mockResolvedValue(memberOf({ points: 499 }))

@@ -1,9 +1,21 @@
+import { Test } from "@nestjs/testing"
 import { mock } from "@starci/jest-preset"
 import type { MessageCatalog } from "@modules/platform/i18n"
 import { rewardPresetEdits } from "./reward-presets.policy"
 
+const SUBJECT = Symbol("reward-presets.policy")
+
+const build = async () => {
+    const moduleRef = await Test.createTestingModule({
+        providers: [{ provide: SUBJECT, useValue: { rewardPresetEdits } }],
+    }).compile()
+    return moduleRef.get<typeof import("./reward-presets.policy")>(SUBJECT)
+}
+
 describe("rewardPresetEdits", () => {
-    it("resolves every starter reward name and note in the stored Vietnamese locale", () => {
+    it("resolves every starter reward name and note in the stored Vietnamese locale", async () => {
+        const subject = await build()
+
         const messages = mock<MessageCatalog>()
         messages.get
             .mockReturnValueOnce("Phi\u1ebfu 50k")
@@ -13,7 +25,7 @@ describe("rewardPresetEdits", () => {
             .mockReturnValueOnce("Qu\u00e0 t\u1eb7ng")
             .mockReturnValueOnce("Ghi ch\u00fa qu\u00e0")
 
-        expect(rewardPresetEdits(messages)).toEqual([
+        expect(subject.rewardPresetEdits(messages)).toEqual([
             {
                 key: "voucher-50k",
                 kind: "voucher",

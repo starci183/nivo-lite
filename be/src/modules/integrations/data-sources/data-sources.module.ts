@@ -1,6 +1,14 @@
 import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
-import { DATABASE, IMAP, OPENAPI, PUBLIC_HOST, TABLE, WORKBOOK_READER } from "./data-sources.decorators"
+import {
+    DATABASE,
+    IMAP,
+    OPENAPI,
+    PUBLIC_HOST,
+    TABLE,
+    WORKBOOK_READER,
+    TABLE_DOCUMENT_READERS,
+} from "./data-sources.decorators"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./data-sources.module-definition"
 import { DatabaseClient } from "./database.client"
 import { ImapClient } from "./imap.client"
@@ -19,6 +27,7 @@ export class DataSourcesModule extends ConfigurableModuleClass {
             ...base,
             providers: [
                 ...(base.providers ?? []),
+                { provide: TABLE_DOCUMENT_READERS, useExisting: options.documentReaders },
                 { provide: PUBLIC_HOST, useClass: PublicHostClient },
                 { provide: IMAP, useClass: ImapClient },
                 { provide: DATABASE, useClass: DatabaseClient },

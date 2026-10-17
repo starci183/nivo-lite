@@ -92,7 +92,9 @@ describe("WorkspacePruneService", () => {
         })
         expect(printed(terminal)).toEqual(["KEEP:"])
     })
+})
 
+describe("WorkspacePruneService", () => {
     it("says so when there is nothing to delete", async () => {
         const em = mockEntityManager({ query: [LIST_ALL_WORKSPACES, [NIVO]] })
         const { prune, terminal } = await build(em)

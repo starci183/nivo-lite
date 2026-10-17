@@ -1,3 +1,4 @@
+import type { CredentialPrincipal } from "@modules/domain/identity"
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { EntitlementsService } from "@modules/domain/billing"
@@ -108,7 +109,7 @@ export class WorkspaceInvitesService {
             workspaceId,
             kind: "member.invited",
             actor: actor.displayName,
-            summary: `${email} · ${request.role}`,
+            summary: `${email} \u00b7 ${request.role}`,
         })
         return { email, link: this.linkOf(minted.token), delivery }
     }
@@ -151,8 +152,24 @@ export class WorkspaceInvitesService {
         })
     }
 
+    /** Resolves a preview token to its stored invitation, including historical states. */
+    async authenticateLink(token: string): Promise<CredentialPrincipal> {
+        const [row] = await this.entityManager.query<Array<InviteRow>>(FIND_INVITE_BY_TOKEN, [token])
+        if (row === undefined) throw new WorkspaceInvitesError({ code: WorkspaceInvitesErrorCode.Invalid })
+        return { kind: "link-token", subject: row.id, workspaceId: row.workspace_id }
+    }
+
     /** What the person sees before accepting; a token that matches nothing is refused. */
-    async preview(token: string): Promise<InvitePreview> {
+    async preview(token: string, principal?: CredentialPrincipal): Promise<InvitePreview> {
+        if (principal !== undefined) {
+            const bound = await this.authenticateLink(token)
+            if (
+                principal.kind !== bound.kind ||
+                principal.subject !== bound.subject ||
+                principal.workspaceId !== bound.workspaceId
+            )
+                throw new WorkspaceInvitesError({ code: WorkspaceInvitesErrorCode.Invalid })
+        }
         const [row] = await this.entityManager.query<Array<InvitePreviewRow>>(PREVIEW_INVITE, [token, this.clock.now()])
         if (row === undefined) throw new WorkspaceInvitesError({ code: WorkspaceInvitesErrorCode.Invalid })
         return {

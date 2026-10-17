@@ -6,8 +6,6 @@ export enum KnowledgeLogEvent {
     QuotaReadFailed = "knowledge.usage.quota_failed",
     /** The owner notice about the allowance could not be posted. */
     NoticeFailed = "knowledge.usage.notice_failed",
-    /** A passage batch could not get its vectors; the passages are stored without them. */
-    EmbeddingMissing = "knowledge.embedding.missing",
     /** A source was closed as failed. */
     SourceFailed = "knowledge.source.failed",
     /** Google refused to list a folder picked in the Picker; the owner is asked to pick the files inside. */

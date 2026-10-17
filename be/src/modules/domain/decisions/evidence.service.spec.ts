@@ -100,7 +100,9 @@ describe("EvidenceService", () => {
             )
         })
     })
+})
 
+describe("EvidenceService", () => {
     describe("decide", () => {
         it("appends the decision with the proposals serialised", async () => {
             const em = mockEntityManager({ query: [INSERT_DECISION, []] })
@@ -157,7 +159,9 @@ describe("EvidenceService", () => {
             ])
         })
     })
+})
 
+describe("EvidenceService", () => {
     describe("listDecisions", () => {
         it("answers the history of a customer, oldest first when asked", async () => {
             const em = mockEntityManager({ query: [LIST_LEAD_DECISION_HISTORY, [recordOf()]] })

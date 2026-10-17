@@ -147,7 +147,11 @@ describe("VideoRenderService", () => {
             expect(renderer.render).not.toHaveBeenCalled()
             expect(video.failRender).toHaveBeenCalledWith("render-1", expect.stringContaining("VIDEO_RENDER_REJECTED"))
         })
+    })
+})
 
+describe("VideoRenderService", () => {
+    describe("render", () => {
         it("fails the render for good when an asset is missing or too big", async () => {
             const { service, video, assets } = await build()
             assets.download.mockResolvedValueOnce({ data: null, error: new Error("gone") })
@@ -196,7 +200,11 @@ describe("VideoRenderService", () => {
 
             expect(video.failRender).toHaveBeenCalledWith("render-1", "render failed")
         })
+    })
+})
 
+describe("VideoRenderService", () => {
+    describe("render", () => {
         it("retries a render whose files could not be uploaded", async () => {
             const { service, video, assets } = await build()
             assets.upload.mockResolvedValue({ error: new Error("down") })
@@ -254,7 +262,9 @@ describe("VideoRenderService", () => {
             })
         })
     })
+})
 
+describe("VideoRenderService", () => {
     describe("onApplicationBootstrap", () => {
         it("removes the work directories of crashed renders older than an hour and keeps the others", async () => {
             const { service, options } = await build()

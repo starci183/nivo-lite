@@ -1,4 +1,5 @@
 import { Module } from "@nestjs/common"
+import { ConfigurableModuleClass } from "./admin.module-definition"
 import { GetAdminSessionHandler } from "./application/get-admin-session.handler"
 import { ListWorkspacesHandler } from "./application/list-workspaces.handler"
 import { GetWorkspaceDetailHandler } from "./application/get-workspace-detail.handler"
@@ -21,4 +22,4 @@ import { ResendWorkspaceInviteHandler } from "./application/resend-workspace-inv
     ],
 })
 /** The admin feature: the handlers of its application. */
-export class AdminApiModule {}
+export class AdminApiModule extends ConfigurableModuleClass {}

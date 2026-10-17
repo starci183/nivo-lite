@@ -126,7 +126,11 @@ describe("VideoProjectEditorService", () => {
             expect(events.record).not.toHaveBeenCalled()
             expect(tx.rollbacks).toBe(1)
         })
+    })
+})
 
+describe("VideoProjectEditorService", () => {
+    describe("create", () => {
         it("records the supplied title and reads the newly created draft", async () => {
             const { editor, tx, writer, events, workbench } = await build()
             writer.create.mockResolvedValue("project-2")
@@ -151,7 +155,9 @@ describe("VideoProjectEditorService", () => {
             expect(tx.commits).toBe(1)
         })
     })
+})
 
+describe("VideoProjectEditorService", () => {
     describe("update", () => {
         it("cleans the changed inputs and scenes before saving", async () => {
             const { editor, writer } = await build()
@@ -205,7 +211,9 @@ describe("VideoProjectEditorService", () => {
             expect(workbench.get).toHaveBeenNthCalledWith(2, "person-1", WS, "project-1")
         })
     })
+})
 
+describe("VideoProjectEditorService", () => {
     describe("duplicate", () => {
         it("answers the copy and records the event in one transaction", async () => {
             const { editor, tx, writer, events } = await build()
@@ -251,7 +259,9 @@ describe("VideoProjectEditorService", () => {
             })
         })
     })
+})
 
+describe("VideoProjectEditorService", () => {
     describe("publish", () => {
         it("records the owner's own publication in one transaction", async () => {
             const { editor, tx, writer, events } = await build()
@@ -278,7 +288,9 @@ describe("VideoProjectEditorService", () => {
             expect(tx.rollbacks).toBe(1)
         })
     })
+})
 
+describe("VideoProjectEditorService", () => {
     describe("saveBrand", () => {
         it("normalises the kit before saving and answers the saved kit", async () => {
             const { editor, brands } = await build()

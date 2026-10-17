@@ -1,4 +1,4 @@
-import { builder, mock } from "@starci/jest-preset"
+import { mock } from "@starci/jest-preset"
 import { Test } from "@nestjs/testing"
 import { AuthorityRulesService } from "@modules/domain/authority-rules"
 import { WorkItemsService } from "@modules/domain/work-items"
@@ -7,22 +7,29 @@ import type { MessageCatalog } from "@modules/platform/i18n"
 import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import type * as Work from "./decisions.contracts"
-import { DecisionsErrorCode } from "./errors/decisions.error"
 import { ModuleCatalogService } from "./module-catalog.service"
 import { WorkApprovalService } from "./work-approval.service"
 import { WorkChainService } from "./work-chain.service"
 import type { OutboundAccess } from "./work-engine.contracts"
-import type { InboundWorkSource } from "./inbound-work.contracts"
 import { OUTBOUND_ACCESS_GATE } from "./work-engine.decorators"
-import { WorkEngineLogEvent } from "./work-engine.log-events"
 import type { OutboundAccessGate } from "./work-engine.port"
 import { WorkEngineService } from "./work-engine.service"
 import { WorkIntakeService } from "./work-intake.service"
 import { WORK_PERFORMER_REGISTRY } from "./work-performer.port"
 import type { WorkPerformerRegistry } from "./work-performer.port"
 import { WorkRecorderService } from "./work-recorder.service"
-const ctx: Work.WorkContext = { workspaceId: "ws-1", actor: "An", locale: "en" }
-const quote: Work.Proposal = { summary: "Quote", fields: { items: "tea" }, amount_vnd: 100 }
+import { DecisionsErrorCode } from "./errors/decisions.error"
+import type { InboundWorkSource } from "./inbound-work.contracts"
+import { WorkEngineLogEvent } from "./work-engine.log-events"
+import {
+    ctx,
+    quote,
+    itemOf,
+    ruleOf,
+    actionEntry,
+    specOf,
+    performedOf,
+} from "@tests/fixtures/builders/work-engine.builder"
 const quoteResult = { summary: "Sent the quote" }
 const autoResult = { path: "auto", result: quoteResult, evidence: "captured", leadId: null }
 const blankPatch = { proposal: quote, subjectType: null, subjectId: null, leadId: null }
@@ -36,59 +43,7 @@ const authorityAsk = expect.objectContaining({
 })
 const anyValue = expect.anything()
 const editedDraft = expect.objectContaining({ draft: "x" })
-const itemOf = builder<Work.WorkItem>({
-    id: "item-1",
-    workspace_id: "ws-1",
-    department: "sales",
-    action: "send_quote",
-    subject_type: "lead",
-    subject_id: "lead-1",
-    lead_id: "lead-1",
-    inbound_event_id: null,
-    parent_id: null,
-    chain_id: "item-1",
-    depth: 0,
-    status: "queued",
-    decided_path: null,
-    reason: null,
-    reasons: [],
-    missing_fields: [],
-    proposal: quote,
-    result: null,
-    error: null,
-    evidence_state: "pending",
-    assigned_staff_id: null,
-    execution_id: null,
-    origin: "live",
-    created_at: "2026-10-12T09:00:00.000Z",
-    updated_at: "2026-10-12T09:00:00.000Z",
-    completed_at: null,
-    installation_id: "inst-1",
-})
-const ruleOf = builder<Work.AuthorityRule>({
-    id: "rule-1",
-    department: "sales",
-    action: "send_quote",
-    mode: "auto",
-    limit_vnd: null,
-    required_fields: [],
-})
-const actionEntry = builder<Work.ActionEntry>({
-    action: "send_quote",
-    moduleKey: "sales",
-    maxMode: null,
-    next: [],
-    label: { vi: "Gui bao gia", en: "Send quote" },
-})
-const specOf = builder<Work.WorkSpec>({
-    action: "send_quote",
-    subject_type: "lead",
-    subject_id: "lead-1",
-    lead_id: "lead-1",
-    dedupeKey: "send_quote:lead-1",
-    origin: "live",
-})
-const performedOf = builder<Work.Performed>({ summary: "Sent the quote", evidence: "captured" })
+
 interface Options {
     readonly performer?: Work.WorkPerformer | null
     readonly rule?: Work.OptionalAuthorityRule
@@ -175,6 +130,7 @@ const run = async (options: Options = {}, overrides: Partial<Work.WorkSpec> = {}
     const built = await build(options)
     return { built, item: await built.service.runWork(ctx, specOf(overrides)) }
 }
+
 describe("WorkEngineService", () => {
     describe("runWork", () => {
         it("answers the existing item when the dedupe key was used", async () => {
@@ -182,17 +138,20 @@ describe("WorkEngineService", () => {
             expect(item.id).toBe("item-1")
             expect(built.items.claim).not.toHaveBeenCalled()
         })
+
         it("only inserts a queued item", async () => {
             const { built, item } = await run({}, { queue: true })
             expect(item.status).toBe("queued")
             expect(built.items.claim).not.toHaveBeenCalled()
         })
+
         it("answers the item when another worker already holds it", async () => {
             const { built, item } = await run({ items: { claim: resolved(null) } })
             expect(item.status).toBe("queued")
             expect(built.items.claim).toHaveBeenCalledWith("ws-1", "item-1")
             expect(built.performer?.prepare).not.toHaveBeenCalled()
         })
+
         it("prepares, passes the gate, performs and logs an automatic item, then continues the chain", async () => {
             const proposal = { summary: "Work.Prepared", fields: { items: "tea" } }
             const prepared: Work.Prepared = {
@@ -215,10 +174,12 @@ describe("WorkEngineService", () => {
             expect(built.continueChain).toHaveBeenCalledWith(ctx, doneItem)
             expect(built.ask).not.toHaveBeenCalled()
         })
+
         it("keeps the stored address when the performer corrects none", async () => {
             const { built } = await run({})
             expect(built.items.savePrepared).toHaveBeenCalledWith("item-1", blankPatch)
         })
+
         it("records the href and the customer the performer found", async () => {
             const performer = performerOf({
                 perform: resolved(performedOf({ href: "/quotes/1", lead_id: "lead-9" })),
@@ -229,6 +190,7 @@ describe("WorkEngineService", () => {
                 expect.objectContaining({ result: { summary: "Sent the quote", href: "/quotes/1" }, leadId: "lead-9" }),
             )
         })
+
         it("skips the prepare step of a preset item and the chain of a no-chain item", async () => {
             const { built } = await run({}, { preset: true, noChain: true })
             expect(built.performer?.prepare).not.toHaveBeenCalled()
@@ -236,6 +198,11 @@ describe("WorkEngineService", () => {
             expect(built.finished).toHaveBeenCalledTimes(1)
             expect(built.continueChain).not.toHaveBeenCalled()
         })
+    })
+})
+
+describe("WorkEngineService", () => {
+    describe("runWork", () => {
         it.each([
             { label: "with a label", action: actionEntry(), result: { summary: "engine.recordOnly(Send quote)" } },
             { label: "without a label", action: null, result: { summary: "engine.recordOnly(send_quote)" } },
@@ -246,6 +213,7 @@ describe("WorkEngineService", () => {
                 expect.objectContaining({ result, evidence: "pending", leadId: "lead-1" }),
             )
         })
+
         it("asks a person when the owner has granted no rule", async () => {
             const { built, item } = await run({ rule: null })
             expect(item.status).toBe("waiting_decision")
@@ -255,6 +223,7 @@ describe("WorkEngineService", () => {
             })
             expect(built.finished).not.toHaveBeenCalled()
         })
+
         it("asks a person when the item was forced to ask", async () => {
             const { built } = await run({}, { preset: true, forceAsk: "unclear_outcome" })
             expect(built.ask).toHaveBeenCalledWith(ctx, anyValue, anyValue, {
@@ -262,6 +231,7 @@ describe("WorkEngineService", () => {
                 rule: ruleOf(),
             })
         })
+
         it.each(["auto", "ask", "read"] as const)("honors the %s outbound grant", async (access) => {
             const { built } = await run({ access }, { preset: true })
             if (access === "auto") {
@@ -271,6 +241,7 @@ describe("WorkEngineService", () => {
                 expect(built.ask).toHaveBeenCalledWith(ctx, anyValue, anyValue, authorityAsk)
             }
         })
+
         it("does not look at the access of an action that sends no message", async () => {
             const { built } = await run(
                 {
@@ -281,6 +252,7 @@ describe("WorkEngineService", () => {
             )
             expect(built.accessOf).not.toHaveBeenCalled()
         })
+
         it.each([
             { cause: new RangeError("model down"), message: "model down" },
             { cause: "x".repeat(600), message: "x".repeat(500) },
@@ -291,6 +263,7 @@ describe("WorkEngineService", () => {
             expect(built.items.markFailed).toHaveBeenCalledWith("item-1", message)
             expect(built.failed).toHaveBeenCalledWith(ctx, existingItem, message)
         })
+
         it("still answers a failed item when the failure cannot be saved", async () => {
             const performer = performerOf({ perform: jest.fn().mockRejectedValue(new RangeError("send failed")) })
             const { built, item } = await run({
@@ -303,11 +276,15 @@ describe("WorkEngineService", () => {
             })
         })
     })
+})
+
+describe("WorkEngineService", () => {
     it("hands the finished item to the chain", async () => {
         const built = await build()
         await built.service.continueChain(ctx, itemOf())
         expect(built.continueChain).toHaveBeenCalledWith(ctx, itemOf())
     })
+
     describe("runQueued", () => {
         it.each([
             { limit: 0, queued: null, count: 0, reads: [] },
@@ -331,6 +308,7 @@ describe("WorkEngineService", () => {
             expect(built.finished).toHaveBeenCalledTimes(1)
         })
     })
+
     describe("queued work", () => {
         it.each([false, true])("runQueuedItem handles a successful claim: %s", async (claimed) => {
             const built = await build({ items: { claim: resolved(claimed ? itemOf() : null) } })
@@ -368,6 +346,9 @@ describe("WorkEngineService", () => {
             expect(built.items.markDone).toHaveBeenCalledTimes(limit === 0 ? 0 : 1)
         })
     })
+})
+
+describe("WorkEngineService", () => {
     describe("resumeWork", () => {
         const owner = { name: "Lan", kind: "owner" } as const
         it("refuses a decision on an item that no longer waits", async () => {
@@ -377,6 +358,7 @@ describe("WorkEngineService", () => {
             )
             expect(built.items.reopen).toHaveBeenCalledWith("ws-1", "item-1")
         })
+
         it("stops the work with the action's undo and tells the people", async () => {
             const onReject = resolved(undefined)
             const built = await build({ performer: performerOf({ onReject }) })
@@ -390,6 +372,7 @@ describe("WorkEngineService", () => {
             )
             expect(built.rejected).toHaveBeenCalledWith(ctx, existingItem, editedDraft, owner, "no")
         })
+
         it("needs no undo from a performer without one, or from an action without a performer", async () => {
             const plain = await build()
             const none = await build({ performer: null })
@@ -398,6 +381,7 @@ describe("WorkEngineService", () => {
             expect(plain.rejected).toHaveBeenCalledWith(ctx, anyValue, anyValue, owner, null)
             expect(none.rejected).toHaveBeenCalledTimes(1)
         })
+
         it.each([
             ["rejected", "onReject", "undo failed"],
             ["approved", "perform", "send failed"],
@@ -407,11 +391,7 @@ describe("WorkEngineService", () => {
             await expect(built.service.resumeWork(ctx, "item-1", decision, {}, owner)).rejects.toThrow(message)
             expect(built.failed).toHaveBeenCalledWith(ctx, existingItem, message)
         })
-        const candidates = [
-            { id: "inv-1", label: "One", amount_vnd: 1 },
-            { id: "inv-2", label: "Two", amount_vnd: 2 },
-        ]
-        const proposal: Work.Proposal = { summary: "Pay", fields: {}, candidates }
+
         it.each([
             ["unchanged", {}, null, "approved", expect.objectContaining({ outcome: "clear" })],
             ["edited", { amount_vnd: 90 }, "cheaper", "edited", expect.objectContaining({ amount_vnd: 90 })],
@@ -424,6 +404,7 @@ describe("WorkEngineService", () => {
             expect(built.finished).toHaveBeenCalledWith(ctx, waitingItem, doneItem, proposal, plan, performedOf())
             expect(built.continueChain).toHaveBeenCalledTimes(1)
         })
+
         it("sends the item back to waiting and names the fields that are still missing", async () => {
             const built = await build({ rule: ruleOf({ required_fields: ["need"] }) })
             await expect(built.service.resumeWork(ctx, "item-1", "approved", {}, owner)).rejects.toMatchObject({
@@ -438,6 +419,17 @@ describe("WorkEngineService", () => {
             })
             expect(built.finished).not.toHaveBeenCalled()
         })
+    })
+})
+
+describe("WorkEngineService", () => {
+    describe("resumeWork", () => {
+        const owner = { name: "Lan", kind: "owner" } as const
+        const candidates = [
+            { id: "inv-1", label: "One", amount_vnd: 1 },
+            { id: "inv-2", label: "Two", amount_vnd: 2 },
+        ]
+        const proposal: Work.Proposal = { summary: "Pay", fields: {}, candidates }
         it("asks the person to choose among several candidates", async () => {
             const built = await build({
                 items: { reopen: resolved(itemOf({ proposal, reason: "unclear_outcome" })) },
@@ -450,6 +442,7 @@ describe("WorkEngineService", () => {
                 expect.objectContaining({ proposal, reason: "unclear_outcome" }),
             )
         })
+
         it("accepts the chosen candidate", async () => {
             const built = await build({
                 rule: ruleOf({ mode: "ask" }),
@@ -460,6 +453,7 @@ describe("WorkEngineService", () => {
             expect(built.finished).toHaveBeenCalledWith(ctx, anyValue, anyValue, chosen, anyValue, anyValue)
         })
     })
+
     describe("inputs to work", () => {
         const event: InboundWorkSource = { id: "event-1", origin: "simulated" }
         it("starts the department's work for an inbound event", async () => {

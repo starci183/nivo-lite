@@ -146,7 +146,7 @@ describe("SalesWorkbenchService", () => {
             expect(executions.list).toHaveBeenCalledWith("ws-1", { pendingLegacy: true, limit: 50 })
         })
 
-        it("names the customers and people of the work items and reads the evidence of auto-done sales work", async () => {
+        it("names work-item customers and people and reads evidence for auto-done sales", async () => {
             const { workbench, leads, staff, events, items } = await build()
             staff.list.mockResolvedValue([{ id: "staff-1", name: "Lan" }])
             items.listForWorkbench.mockResolvedValue([
@@ -176,7 +176,11 @@ describe("SalesWorkbenchService", () => {
 
             expect(messages.listForConversations).toHaveBeenCalledWith("ws-1", ["conv-1", "conv-2"], { limit: 800 })
         })
+    })
+})
 
+describe("SalesWorkbenchService", () => {
+    describe("read", () => {
         it("excludes UAT and debug names from conversion while retaining ordinary customers", async () => {
             const { workbench, leads } = await build()
             leads.list.mockResolvedValue([

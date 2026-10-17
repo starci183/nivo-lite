@@ -130,7 +130,9 @@ describe("MetaChannelSender", () => {
         expect(connections.readSecret).not.toHaveBeenCalled()
         expect(meta.deliverMessage).not.toHaveBeenCalled()
     })
+})
 
+describe("MetaChannelSender", () => {
     it("returns false when the connection lookup fails", async () => {
         const { service, connections, meta } = await build()
         connections.find.mockRejectedValue(new Error("connection storage unavailable"))

@@ -1,5 +1,5 @@
 import type { TemplateDefinition } from "./automation-templates.contracts"
-import { text } from "./policies/catalog-text.policy"
+import { translate } from "./policies/catalog-text.policy"
 
 /** The inventory templates the engine runs itself, in file-name order. */
 export const INVENTORY_TEMPLATES: ReadonlyArray<TemplateDefinition> = [
@@ -11,12 +11,12 @@ export const INVENTORY_TEMPLATES: ReadonlyArray<TemplateDefinition> = [
         executor: "implemented",
         moduleKey: "inventory",
         icon: "cart",
-        name: text("automationTemplates.inventory_low_stock.name"),
-        description: text("automationTemplates.inventory_low_stock.description"),
+        name: translate("automationTemplates.inventory_low_stock.name"),
+        description: translate("automationTemplates.inventory_low_stock.description"),
         trigger: {
             kind: "schedule",
             event: "schedule.daily",
-            line: text("automationTemplates.inventory_low_stock.line"),
+            line: translate("automationTemplates.inventory_low_stock.line"),
         },
         requires: {
             modules: ["inventory"],
@@ -28,13 +28,13 @@ export const INVENTORY_TEMPLATES: ReadonlyArray<TemplateDefinition> = [
             {
                 key: "time",
                 kind: "time",
-                label: text("automationTemplates.inventory_low_stock.settings.time.label"),
+                label: translate("automationTemplates.inventory_low_stock.settings.time.label"),
             },
         ],
         contentMode: "none",
         guardrails: [
-            text("automationTemplates.inventory_low_stock.guardrails.0"),
-            text("automationTemplates.inventory_low_stock.guardrails.1"),
+            translate("automationTemplates.inventory_low_stock.guardrails.0"),
+            translate("automationTemplates.inventory_low_stock.guardrails.1"),
         ],
         variables: [],
         defaultBody: null,
@@ -53,12 +53,12 @@ export const INVENTORY_TEMPLATES: ReadonlyArray<TemplateDefinition> = [
         executor: "implemented",
         moduleKey: "inventory",
         icon: "truck",
-        name: text("automationTemplates.inventory_supplier_overdue.name"),
-        description: text("automationTemplates.inventory_supplier_overdue.description"),
+        name: translate("automationTemplates.inventory_supplier_overdue.name"),
+        description: translate("automationTemplates.inventory_supplier_overdue.description"),
         trigger: {
             kind: "schedule",
             event: "schedule.daily",
-            line: text("automationTemplates.inventory_supplier_overdue.line"),
+            line: translate("automationTemplates.inventory_supplier_overdue.line"),
         },
         requires: {
             modules: ["inventory"],
@@ -70,19 +70,19 @@ export const INVENTORY_TEMPLATES: ReadonlyArray<TemplateDefinition> = [
             {
                 key: "time",
                 kind: "time",
-                label: text("automationTemplates.inventory_supplier_overdue.settings.time.label"),
+                label: translate("automationTemplates.inventory_supplier_overdue.settings.time.label"),
             },
             {
                 key: "graceDays",
                 kind: "number",
                 min: 0,
                 max: 30,
-                suffix: text("automationTemplates.inventory_supplier_overdue.settings.graceDays.suffix"),
-                label: text("automationTemplates.inventory_supplier_overdue.settings.graceDays.label"),
+                suffix: translate("automationTemplates.inventory_supplier_overdue.settings.graceDays.suffix"),
+                label: translate("automationTemplates.inventory_supplier_overdue.settings.graceDays.label"),
             },
         ],
         contentMode: "none",
-        guardrails: [text("automationTemplates.inventory_supplier_overdue.guardrails.0")],
+        guardrails: [translate("automationTemplates.inventory_supplier_overdue.guardrails.0")],
         variables: [],
         defaultBody: null,
         authority: {
@@ -101,12 +101,12 @@ export const INVENTORY_TEMPLATES: ReadonlyArray<TemplateDefinition> = [
         executor: "implemented",
         moduleKey: "inventory",
         icon: "report",
-        name: text("automationTemplates.inventory_weekly_report.name"),
-        description: text("automationTemplates.inventory_weekly_report.description"),
+        name: translate("automationTemplates.inventory_weekly_report.name"),
+        description: translate("automationTemplates.inventory_weekly_report.description"),
         trigger: {
             kind: "schedule",
             event: "schedule.daily",
-            line: text("automationTemplates.inventory_weekly_report.line"),
+            line: translate("automationTemplates.inventory_weekly_report.line"),
         },
         requires: {
             modules: ["inventory"],
@@ -118,17 +118,17 @@ export const INVENTORY_TEMPLATES: ReadonlyArray<TemplateDefinition> = [
             {
                 key: "time",
                 kind: "time",
-                label: text("automationTemplates.inventory_weekly_report.settings.time.label"),
+                label: translate("automationTemplates.inventory_weekly_report.settings.time.label"),
             },
             {
                 key: "email",
                 kind: "email",
-                label: text("automationTemplates.inventory_weekly_report.settings.email.label"),
-                hint: text("automationTemplates.inventory_weekly_report.settings.email.hint"),
+                label: translate("automationTemplates.inventory_weekly_report.settings.email.label"),
+                hint: translate("automationTemplates.inventory_weekly_report.settings.email.hint"),
             },
         ],
         contentMode: "none",
-        guardrails: [text("automationTemplates.inventory_weekly_report.guardrails.0")],
+        guardrails: [translate("automationTemplates.inventory_weekly_report.guardrails.0")],
         variables: [],
         defaultBody: null,
         authority: {

@@ -77,7 +77,9 @@ describe("DecisionJobsService", () => {
             locale: "en",
         })
     })
+})
 
+describe("DecisionJobsService", () => {
     it("passes omitted work edits and optional texts as undefined", async () => {
         const { service, decisions } = await build()
         const payload: DecideWorkPayload = {
@@ -140,7 +142,9 @@ describe("DecisionJobsService", () => {
 
         expect(decisions.decideExecution).not.toHaveBeenCalled()
     })
+})
 
+describe("DecisionJobsService", () => {
     it("propagates a refused execution decision", async () => {
         const { service, decisions } = await build()
         const refusal = new Error("Approval card is no longer waiting")

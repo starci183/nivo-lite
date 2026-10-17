@@ -90,28 +90,28 @@ const settings: BookingSettings = {
     address: "12 Nguy\u1ec5n Hu\u1ec7",
 }
 
-describe("BookingRemindPerformerService", () => {
-    const build = async () => {
-        const kit = mock<PerformerKitService>()
-        kit.text.mockImplementation((_ctx, key, params) => `${key}:${JSON.stringify(params)}`)
-        const notices = mock<BookingNoticesService>()
-        notices.deliver.mockResolvedValue({ delivered: true, kept: true, via: "zalo" })
-        const notifier = { notify: notices.deliver }
-        notices.bookingOf.mockResolvedValue(bookingOf())
-        notices.settingsOf.mockResolvedValue(settings)
-        notices.subjectOf.mockReturnValue("Nh\u1eafc l\u1ecbch h\u1eb9n")
-        notices.whenOf.mockReturnValue("16:00 ng\u00e0y 16/10/2026")
-        const moduleRef = await Test.createTestingModule({
-            providers: [
-                BookingRemindPerformerService,
-                { provide: CLOCK, useValue: new FakeClock(now) },
-                { provide: PerformerKitService, useValue: kit },
-                { provide: BookingNoticesService, useValue: notices },
-            ],
-        }).compile()
-        return { service: moduleRef.get(BookingRemindPerformerService), notifier, kit, notices }
-    }
+const build = async () => {
+    const kit = mock<PerformerKitService>()
+    kit.text.mockImplementation((_ctx, key, params) => `${key}:${JSON.stringify(params)}`)
+    const notices = mock<BookingNoticesService>()
+    notices.deliver.mockResolvedValue({ delivered: true, kept: true, via: "zalo" })
+    const notifier = { notify: notices.deliver }
+    notices.bookingOf.mockResolvedValue(bookingOf())
+    notices.settingsOf.mockResolvedValue(settings)
+    notices.subjectOf.mockReturnValue("Nh\u1eafc l\u1ecbch h\u1eb9n")
+    notices.whenOf.mockReturnValue("16:00 ng\u00e0y 16/10/2026")
+    const moduleRef = await Test.createTestingModule({
+        providers: [
+            BookingRemindPerformerService,
+            { provide: CLOCK, useValue: new FakeClock(now) },
+            { provide: PerformerKitService, useValue: kit },
+            { provide: BookingNoticesService, useValue: notices },
+        ],
+    }).compile()
+    return { service: moduleRef.get(BookingRemindPerformerService), notifier, kit, notices }
+}
 
+describe("BookingRemindPerformerService", () => {
     it("preserves the original Vietnamese reminder wording", () => {
         expect(WORK_PERFORMERS_MESSAGES.vi["performers.reminderClosed"]).toBe(
             "L\u1ecbch \u0111\u00e3 \u0111\u00f3ng ho\u1eb7c \u0111\u00e3 qua gi\u1edd, kh\u00f4ng nh\u1eafc.",
@@ -174,7 +174,9 @@ describe("BookingRemindPerformerService", () => {
         expect(notifier.notify).not.toHaveBeenCalled()
         expect(kit.text).not.toHaveBeenCalled()
     })
+})
 
+describe("BookingRemindPerformerService", () => {
     it.each(["cancelled", "done", "no_show"])("does not remind a %s booking", async (status) => {
         const { service, notifier, kit, notices } = await build()
         notices.bookingOf.mockResolvedValue(bookingOf({ status }))
@@ -223,7 +225,9 @@ describe("BookingRemindPerformerService", () => {
         expect(notices.settingsOf).not.toHaveBeenCalled()
         expect(kit.text).not.toHaveBeenCalled()
     })
+})
 
+describe("BookingRemindPerformerService", () => {
     it.each([
         { delivered: true, via: "zalo", toldKey: "reminderSent", status: "requested" },
         { delivered: true, via: "email", toldKey: "reminderSent", status: "confirmed" },

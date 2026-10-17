@@ -3,8 +3,8 @@ import type { RawBodyRequest } from "@nestjs/common"
 import type { Request } from "express"
 import { Public, PublicReason } from "@modules/domain/identity"
 import { ZaloInboxService } from "@modules/domain/zalo-inbox"
-import { InjectWebhookSignature, RateLimit, RateTier } from "@modules/platform/http-security"
-import type { WebhookSignatureService } from "@modules/platform/http-security"
+import { RateLimit, RateTier } from "@modules/platform/http-security"
+import { ScopedWebhookVerifier } from "@modules/domain/webhook-proofs"
 import { ConnectionRequest } from "./dto/connection.request"
 
 @Controller("api/connections/zalo")
@@ -14,7 +14,7 @@ import { ConnectionRequest } from "./dto/connection.request"
  */
 export class ZaloWebhook {
     constructor(
-        @InjectWebhookSignature() private readonly signature: WebhookSignatureService,
+        private readonly signature: ScopedWebhookVerifier,
         private readonly deliveries: ZaloInboxService,
     ) {}
 
@@ -35,6 +35,6 @@ export class ZaloWebhook {
             signature: mac,
             timestamp: undefined,
         })
-        await this.deliveries.acceptZaloDelivery(route.connectionId, request.rawBody)
+        await this.deliveries.acceptZaloDelivery(request.rawBody, route.connectionId)
     }
 }

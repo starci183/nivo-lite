@@ -6,6 +6,7 @@ import { GetContentAiStatusHandler } from "./application/get-content-ai-status.h
 import { RequestContentDraftHandler } from "./application/request-content-draft.handler"
 import { RequestContentQuickDraftHandler } from "./application/request-content-quick-draft.handler"
 import { RequestContentMonthPlanHandler } from "./application/request-content-month-plan.handler"
+import { ConfigurableModuleClass } from "./content-ai.module-definition"
 
 @Module({
     providers: [
@@ -19,4 +20,4 @@ import { RequestContentMonthPlanHandler } from "./application/request-content-mo
     ],
 })
 /** Application handlers of the content AI feature. */
-export class ContentAiApiModule {}
+export class ContentAiApiModule extends ConfigurableModuleClass {}

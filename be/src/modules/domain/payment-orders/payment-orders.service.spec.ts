@@ -112,7 +112,9 @@ describe("PaymentOrdersService", () => {
 
         expect(em.query.mock.calls).toEqual([[SELECT_OPEN_PLAN_ORDER, ["ws-1", new Date(NOW)]]])
     })
+})
 
+describe("PaymentOrdersService", () => {
     describe("create", () => {
         it("writes the pending order with a fresh code and answers it", async () => {
             const em = mockEntityManager({ query: [INSERT_PAYMENT_ORDER, [ROW]] })
@@ -155,7 +157,9 @@ describe("PaymentOrdersService", () => {
             expect(em.query).toHaveBeenCalledTimes(5)
         })
     })
+})
 
+describe("PaymentOrdersService", () => {
     describe("open orders", () => {
         const query = { workspaceId: "ws-1", target: "credits_1000", amountVnd: 299000 }
 

@@ -159,7 +159,9 @@ describe("LeadFlowService", () => {
             decisions: [],
         })
     })
+})
 
+describe("LeadFlowService", () => {
     it("reads owner records, deduplicates staff and orders the customer's journey by creation time and id", async () => {
         const records: Partial<LeadFlowRecords> = {
             workItems: [ITEM, { ...ITEM, id: "item-2" }, { ...ITEM, id: "item-3", assigned_staff_id: null }],
@@ -228,7 +230,9 @@ describe("LeadFlowService", () => {
         expect(transactions.listForInvoices).toHaveBeenCalledWith("ws-1", ["invoice-1", "invoice-2"])
         expect(staff.namesOf).toHaveBeenCalledWith("ws-1", ["staff-1"])
     })
+})
 
+describe("LeadFlowService", () => {
     it("refuses a nonmember before reading the lead or any journey records", async () => {
         const { service, members, leads, workItems, orders, invoices, transactions, evidence, staff } =
             await buildWithDoubles()

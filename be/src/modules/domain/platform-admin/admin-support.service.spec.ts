@@ -46,7 +46,9 @@ describe("AdminSupportService", () => {
             to: "2026-12-11T00:00:00.000Z",
         })
     })
+})
 
+describe("AdminSupportService", () => {
     it("sets the billing status and audits from and to", async () => {
         const { support, access, billing } = await build()
         billing.setStatus.mockResolvedValue({ from: "active", to: "past_due" })
@@ -58,7 +60,9 @@ describe("AdminSupportService", () => {
             to: "past_due",
         })
     })
+})
 
+describe("AdminSupportService", () => {
     it("moves the workspace to a plan with its own credits and audits it", async () => {
         const { support, access, billing, quotas } = await build()
         billing.setPlan.mockResolvedValue({ from: "starter", to: "enterprise" })
@@ -75,7 +79,9 @@ describe("AdminSupportService", () => {
             creditsTo: 5000,
         })
     })
+})
 
+describe("AdminSupportService", () => {
     it("sets no credits when the plan is refused", async () => {
         const { support, quotas, billing } = await build()
         billing.setPlan.mockRejectedValue(new Error("unknown plan"))
@@ -83,7 +89,9 @@ describe("AdminSupportService", () => {
         await expect(support.setPlan(PRINCIPAL, "ws-1", "gone", null)).rejects.toThrow("unknown plan")
         expect(quotas.setCreditsLimit).not.toHaveBeenCalled()
     })
+})
 
+describe("AdminSupportService", () => {
     it("reissues the invitation and audits it", async () => {
         const { support, access, invites } = await build()
         invites.reissue.mockResolvedValue({
@@ -104,7 +112,9 @@ describe("AdminSupportService", () => {
             delivery: "invited",
         })
     })
+})
 
+describe("AdminSupportService", () => {
     it("refuses a caller who is not an admin before anything is changed", async () => {
         const { support, access, billing } = await build()
         access.requireAdmin.mockImplementation(() => {

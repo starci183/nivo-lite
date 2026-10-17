@@ -131,6 +131,49 @@ const invoiceLedgerStatus = (invoice: LedgerInvoice, settledByPayment: boolean):
     return invoice.status === "paid" ? "paid" : "issued"
 }
 
+/** Follows subject work items to their unique decisions. */
+const decisionSteps = (
+    workBySubject: ReadonlyMap<string, ReadonlyArray<LedgerWork>>,
+    decisionsByWork: ReadonlyMap<string, ReadonlyArray<LedgerDecision>>,
+    subjectIds: ReadonlyArray<string | null>,
+): ReadonlyArray<AccountingLineageStep> => {
+    const seen = new Set<string>()
+    const steps: Array<AccountingLineageStep> = []
+    for (const subjectId of subjectIds) {
+        if (subjectId === null) continue
+        for (const work of bucket(workBySubject, subjectId)) {
+            for (const decision of bucket(decisionsByWork, work.id)) {
+                if (seen.has(decision.id)) continue
+                seen.add(decision.id)
+                const who = decision.decider_kind === "policy" ? null : decision.decided_by
+                steps.push({
+                    kind: "decision",
+                    title: decision.action,
+                    detail: [who, decision.note].filter(Boolean).join(" / ") || null,
+                    at: decision.created_at,
+                    status: decision.outcome,
+                    amount: null,
+                })
+            }
+        }
+    }
+    return steps
+}
+
+/** Maps the append-only correction notes for one ledger target. */
+const adjustmentSteps = (
+    adjustmentsByTarget: ReadonlyMap<string, ReadonlyArray<LedgerAdjustment>>,
+    key: string,
+): ReadonlyArray<AccountingLineageStep> =>
+    bucket(adjustmentsByTarget, key).map((adjustment) => ({
+        kind: "adjustment",
+        title: adjustment.created_by,
+        detail: adjustment.note,
+        at: adjustment.created_at,
+        status: null,
+        amount: adjustment.corrected_amount_vnd,
+    }))
+
 /** The ledger derived from invoices and payments, newest first, with the lineage of every line. */
 export const buildLedger = (input: LedgerInput): ReadonlyArray<AccountingLedgerEntry> => {
     const invoiceById = new Map(input.invoices.map((invoice) => [invoice.id, invoice]))
@@ -142,45 +185,13 @@ export const buildLedger = (input: LedgerInput): ReadonlyArray<AccountingLedgerE
         (adjustment) => `${adjustment.target_type}:${adjustment.target_id}`,
     )
 
-    const decisionSteps = (subjectIds: ReadonlyArray<string | null>): ReadonlyArray<AccountingLineageStep> => {
-        const seen = new Set<string>()
-        const steps: Array<AccountingLineageStep> = []
-        for (const subjectId of subjectIds) {
-            if (subjectId === null) continue
-            for (const work of bucket(workBySubject, subjectId)) {
-                for (const decision of bucket(decisionsByWork, work.id)) {
-                    if (seen.has(decision.id)) continue
-                    seen.add(decision.id)
-                    const who = decision.decider_kind === "policy" ? null : decision.decided_by
-                    steps.push({
-                        kind: "decision",
-                        title: decision.action,
-                        detail: [who, decision.note].filter(Boolean).join(" / ") || null,
-                        at: decision.created_at,
-                        status: decision.outcome,
-                        amount: null,
-                    })
-                }
-            }
-        }
-        return steps
-    }
-    const adjustmentSteps = (key: string): ReadonlyArray<AccountingLineageStep> =>
-        bucket(adjustmentsByTarget, key).map((adjustment) => ({
-            kind: "adjustment",
-            title: adjustment.created_by,
-            detail: adjustment.note,
-            at: adjustment.created_at,
-            status: null,
-            amount: adjustment.corrected_amount_vnd,
-        }))
-
     const ledger: Array<AccountingLedgerEntry> = []
     for (const invoice of input.invoices) {
         if (invoice.status === "draft") continue
         const txs = bucket(txByInvoice, invoice.id)
         const settledByPayment = invoice.status === "paid" && txs.length > 0
-        // A paid invoice with a matched bank credit is already counted as income by that credit's row; without one (a customer
+        // A paid invoice with a matched bank credit is already counted as income by that credit's row; without one (a
+        // customer
         // claim confirmed by a person) the invoice row itself is the income entry, its basis is in the decision.
         const kind: AccountingLedgerKind = invoice.status === "paid" && !settledByPayment ? "income" : "receivable"
         ledger.push({
@@ -198,8 +209,12 @@ export const buildLedger = (input: LedgerInput): ReadonlyArray<AccountingLedgerE
                 orderStep(invoice),
                 invoiceStep(invoice),
                 ...txs.map(paymentStep),
-                ...decisionSteps([invoice.id, invoice.order_id, ...txs.map((tx) => tx.id)]),
-                ...adjustmentSteps(`invoice:${invoice.id}`),
+                ...decisionSteps(workBySubject, decisionsByWork, [
+                    invoice.id,
+                    invoice.order_id,
+                    ...txs.map((tx) => tx.id),
+                ]),
+                ...adjustmentSteps(adjustmentsByTarget, `invoice:${invoice.id}`),
             ]),
             adjustmentCount: bucket(adjustmentsByTarget, `invoice:${invoice.id}`).length,
         })
@@ -221,8 +236,12 @@ export const buildLedger = (input: LedgerInput): ReadonlyArray<AccountingLedgerE
                 invoice === undefined ? null : orderStep(invoice),
                 invoice === undefined ? null : invoiceStep(invoice),
                 paymentStep(tx),
-                ...decisionSteps([tx.id, invoice?.id ?? null, invoice?.order_id ?? null]),
-                ...adjustmentSteps(`transaction:${tx.id}`),
+                ...decisionSteps(workBySubject, decisionsByWork, [
+                    tx.id,
+                    invoice?.id ?? null,
+                    invoice?.order_id ?? null,
+                ]),
+                ...adjustmentSteps(adjustmentsByTarget, `transaction:${tx.id}`),
             ]),
             adjustmentCount: bucket(adjustmentsByTarget, `transaction:${tx.id}`).length,
         })

@@ -228,198 +228,198 @@ describe("ShiftsPerformersService", () => {
         expect(em.query).not.toHaveBeenCalled()
         expect(notify.toStaff).not.toHaveBeenCalled()
     })
+})
 
-    describe("performPublish", () => {
-        it.each([
-            {
-                evidence: { solver: "fixed" },
-                populated: true,
-                publishEvidence: '{"solver":"fixed","publish":{"by":"Manager","workItemId":"work-1"}}',
-            },
-            ...[null, "old evidence", []].map((evidence) => ({
-                evidence,
-                populated: false,
-                publishEvidence: '{"publish":{"by":"Manager","workItemId":"work-1"}}',
-            })),
-        ])(
-            "publishes grouped shifts or an empty schedule with evidence $evidence",
-            async ({ evidence, populated, publishEvidence }) => {
-                const em = mockEntityManager({ query: [PUBLISH_SCHEDULE, []] })
-                const { service, data, notify, office, words } = await build(em)
-                data.scheduleRow.mockResolvedValue(scheduleOf({ evidence }))
-                data.scheduleShifts.mockResolvedValue(
-                    populated
-                        ? [
-                              shiftOf(),
-                              shiftOf({ id: "shift-2", start: "10:30", end: "13:00" }),
-                              shiftOf({ id: "shift-3", staffId: "staff-2", end: "11:00" }),
-                              ...["open-1", "open-2", "open-3", "open-4", "open-5"].map((id) =>
-                                  shiftOf({ id, staffId: null }),
-                              ),
-                              shiftOf({ id: "draft-1", status: "draft" }),
-                          ]
-                        : [],
-                )
-                const people = populated ? 2 : 0
+describe("ShiftsPerformersService performPublish", () => {
+    it.each([
+        {
+            evidence: { solver: "fixed" },
+            populated: true,
+            publishEvidence: '{"solver":"fixed","publish":{"by":"Manager","workItemId":"work-1"}}',
+        },
+        ...[null, "old evidence", []].map((evidence) => ({
+            evidence,
+            populated: false,
+            publishEvidence: '{"publish":{"by":"Manager","workItemId":"work-1"}}',
+        })),
+    ])(
+        "publishes grouped shifts or an empty schedule with evidence $evidence",
+        async ({ evidence, populated, publishEvidence }) => {
+            const em = mockEntityManager({ query: [PUBLISH_SCHEDULE, []] })
+            const { service, data, notify, office, words } = await build(em)
+            data.scheduleRow.mockResolvedValue(scheduleOf({ evidence }))
+            data.scheduleShifts.mockResolvedValue(
+                populated
+                    ? [
+                          shiftOf(),
+                          shiftOf({ id: "shift-2", start: "10:30", end: "13:00" }),
+                          shiftOf({ id: "shift-3", staffId: "staff-2", end: "11:00" }),
+                          ...["open-1", "open-2", "open-3", "open-4", "open-5"].map((id) =>
+                              shiftOf({ id, staffId: null }),
+                          ),
+                          shiftOf({ id: "draft-1", status: "draft" }),
+                      ]
+                    : [],
+            )
+            const people = populated ? 2 : 0
 
-                await expect(service.performPublish(context)).resolves.toEqual(
-                    captured(text("shifts.publishDone", { week: "week:2026-10-12", people }), "3"),
-                )
-
-                expect(em.query.mock.calls).toEqual([
-                    [PUBLISH_SCHEDULE, ["ws-1", "schedule-1", publishEvidence, "work-1"]],
-                ])
-                expect(data.loadSetup.mock.calls).toEqual(workspaceCalls(false))
-                expect(data.scheduleShifts.mock.calls).toEqual(workspaceCalls("schedule-1"))
-                expect(notify.toStaff.mock.calls).toEqual(
-                    populated
-                        ? staffCalls(
-                              personalNotice("staff-1", {
-                                  count: 2,
-                                  hours: 4.5,
-                                  lines: "- line:shift-1\n- line:shift-2",
-                              }),
-                              personalNotice("staff-2", { count: 1, hours: 3, lines: "- line:shift-3" }),
-                          )
-                        : [],
-                )
-                expect(notify.toManagers.mock.calls).toEqual(
-                    populated
-                        ? workspaceCalls(
-                              text("shifts.gapOffice", {
-                                  count: 5,
-                                  week: "week:2026-10-12",
-                                  lines: "line:open-1; line:open-2; line:open-3; line:open-4",
-                              }),
-                          )
-                        : [],
-                )
-                expect(words.line.mock.calls.map(([, shift]) => shift.id)).toEqual(
-                    populated ? ["shift-1", "shift-2", "shift-3", "open-1", "open-2", "open-3", "open-4"] : [],
-                )
-                expect(office.logEvidence.mock.calls).toEqual(
-                    officeCalls({
-                        summary: text("shifts.publishEvidence", { week: "week:2026-10-12", people }),
-                        evidence: populated
-                            ? '{"scheduleId":"schedule-1","shifts":8,"open":5}'
-                            : '{"scheduleId":"schedule-1","shifts":0,"open":0}',
-                    }),
-                )
-            },
-        )
-
-        it("refuses missing and superseded schedules without changing data", async () => {
-            const em = mockEntityManager({})
-            const { service, data, notify, office } = await build(em)
-            data.scheduleRow
-                .mockResolvedValueOnce(undefined)
-                .mockResolvedValueOnce(scheduleOf({ status: "superseded" }))
-
-            await expect(service.performPublish(context)).rejects.toMatchObject({
-                code: ShiftsErrorCode.ScheduleNotFound,
-            })
-            await expect(service.performPublish(context)).rejects.toMatchObject({
-                code: ShiftsErrorCode.ScheduleNotDraft,
-            })
-
-            expect(em.query).not.toHaveBeenCalled()
-            expect(notify.toStaff).not.toHaveBeenCalled()
-            expect(office.logEvidence).not.toHaveBeenCalled()
-        })
-    })
-
-    describe("performSwap", () => {
-        it.each([
-            {
-                kind: "swap",
-                fromStaffId: "staff-1",
-                findings: [{ code: "notice", params: { hours: 12 } }],
-                sentences: [text("shifts.finding.notice", { hours: 12 })],
-            },
-            { kind: "claim", fromStaffId: null, findings: [], sentences: [] },
-        ])("approves $kind and notifies its participants", async ({ kind, fromStaffId, findings, sentences }) => {
-            const em = mockEntityManager({ query: [DECIDE_SWAP, [{ settled: true }]] })
-            const { service, data, requests, notify, office } = await build(em)
-            data.swapRow.mockResolvedValue(swapOf({ kind, from_staff_id: fromStaffId }))
-            requests.checkSwap.mockResolvedValue({ shift: shiftOf(), setup: setupOf(), findings })
-            const resultParams = { kind: text(`shifts.swapKind.${kind}`), line: "line:shift-1", to: "Bob" }
-
-            await expect(service.performSwap(context)).resolves.toEqual(
-                captured(text("shifts.swapApproved", resultParams)),
+            await expect(service.performPublish(context)).resolves.toEqual(
+                captured(text("shifts.publishDone", { week: "week:2026-10-12", people }), "3"),
             )
 
-            expect(requests.checkSwap.mock.calls).toEqual([
-                ["ws-1", { kind, fromStaffId, toStaffId: "staff-2" }, "shift-1"],
-            ])
-            expect(em.query.mock.calls).toEqual([
-                [DECIDE_SWAP, ["ws-1", "swap-1", "approved", "Manager", JSON.stringify(sentences), "work-1"]],
-            ])
-            const toNotice = noticeOf({
-                staffId: "staff-2",
-                kind: "swap",
-                shiftId: "shift-1",
-                body: text("shifts.swapDoneTo", { line: "line:shift-1" }),
-            })
-            const fromNotice = noticeOf({
-                kind: "swap",
-                shiftId: "shift-1",
-                body: text("shifts.swapDoneFrom", { line: "line:shift-1", to: "Bob" }),
-            })
+            expect(em.query.mock.calls).toEqual([[PUBLISH_SCHEDULE, ["ws-1", "schedule-1", publishEvidence, "work-1"]]])
+            expect(data.loadSetup.mock.calls).toEqual(workspaceCalls(false))
+            expect(data.scheduleShifts.mock.calls).toEqual(workspaceCalls("schedule-1"))
             expect(notify.toStaff.mock.calls).toEqual(
-                fromStaffId === null ? workspaceCalls(toNotice) : workspaceCalls(toNotice, fromNotice),
+                populated
+                    ? staffCalls(
+                          personalNotice("staff-1", {
+                              count: 2,
+                              hours: 4.5,
+                              lines: "- line:shift-1\n- line:shift-2",
+                          }),
+                          personalNotice("staff-2", { count: 1, hours: 3, lines: "- line:shift-3" }),
+                      )
+                    : [],
+            )
+            expect(notify.toManagers.mock.calls).toEqual(
+                populated
+                    ? workspaceCalls(
+                          text("shifts.gapOffice", {
+                              count: 5,
+                              week: "week:2026-10-12",
+                              lines: "line:open-1; line:open-2; line:open-3; line:open-4",
+                          }),
+                      )
+                    : [],
+            )
+            expect(words.line.mock.calls.map(([, shift]) => shift.id)).toEqual(
+                populated ? ["shift-1", "shift-2", "shift-3", "open-1", "open-2", "open-3", "open-4"] : [],
             )
             expect(office.logEvidence.mock.calls).toEqual(
                 officeCalls({
-                    kind: "shifts.swap_approved",
-                    summary: text("shifts.swapEvidence", resultParams),
-                    evidence: sentences.join(" "),
+                    summary: text("shifts.publishEvidence", { week: "week:2026-10-12", people }),
+                    evidence: populated
+                        ? '{"scheduleId":"schedule-1","shifts":8,"open":5}'
+                        : '{"scheduleId":"schedule-1","shifts":0,"open":0}',
                 }),
             )
+        },
+    )
+})
+
+describe("ShiftsPerformersService performPublish", () => {
+    it("refuses missing and superseded schedules without changing data", async () => {
+        const em = mockEntityManager({})
+        const { service, data, notify, office } = await build(em)
+        data.scheduleRow.mockResolvedValueOnce(undefined).mockResolvedValueOnce(scheduleOf({ status: "superseded" }))
+
+        await expect(service.performPublish(context)).rejects.toMatchObject({
+            code: ShiftsErrorCode.ScheduleNotFound,
+        })
+        await expect(service.performPublish(context)).rejects.toMatchObject({
+            code: ShiftsErrorCode.ScheduleNotDraft,
         })
 
-        it.each([false, true])("refuses hard findings or a disappeared shift (missing=%s)", async (missing) => {
-            const em = mockEntityManager({})
-            const { service, requests, words, notify } = await build(em)
-            const hard: ReadonlyArray<SwapFinding> = missing
-                ? []
-                : ["shift-missing", "not-posted", "not-owner", "taken", "taker-gone", "started"].map((code) => ({
-                      code,
-                      params: {},
-                  }))
-            requests.checkSwap.mockResolvedValue({
-                shift: missing ? undefined : shiftOf(),
-                setup: setupOf(),
-                findings: missing ? [] : [...hard, { code: "notice", params: { hours: 12 } }],
-            })
-            await expect(service.performSwap(context)).rejects.toMatchObject({
-                code: ShiftsErrorCode.SwapRefused,
-                params: { reasons: hard.map((finding) => text(`shifts.finding.${finding.code}`)).join(" ") },
-            })
-            expect(words.findings.mock.calls).toEqual([[hard]])
-            expect(em.query).not.toHaveBeenCalled()
-            expect(notify.toStaff).not.toHaveBeenCalled()
+        expect(em.query).not.toHaveBeenCalled()
+        expect(notify.toStaff).not.toHaveBeenCalled()
+        expect(office.logEvidence).not.toHaveBeenCalled()
+    })
+})
+
+describe("ShiftsPerformersService performSwap", () => {
+    it.each([
+        {
+            kind: "swap",
+            fromStaffId: "staff-1",
+            findings: [{ code: "notice", params: { hours: 12 } }],
+            sentences: [text("shifts.finding.notice", { hours: 12 })],
+        },
+        { kind: "claim", fromStaffId: null, findings: [], sentences: [] },
+    ])("approves $kind and notifies its participants", async ({ kind, fromStaffId, findings, sentences }) => {
+        const em = mockEntityManager({ query: [DECIDE_SWAP, [{ settled: true }]] })
+        const { service, data, requests, notify, office } = await build(em)
+        data.swapRow.mockResolvedValue(swapOf({ kind, from_staff_id: fromStaffId }))
+        requests.checkSwap.mockResolvedValue({ shift: shiftOf(), setup: setupOf(), findings })
+        const resultParams = { kind: text(`shifts.swapKind.${kind}`), line: "line:shift-1", to: "Bob" }
+
+        await expect(service.performSwap(context)).resolves.toEqual(captured(text("shifts.swapApproved", resultParams)))
+
+        expect(requests.checkSwap.mock.calls).toEqual([
+            ["ws-1", { kind, fromStaffId, toStaffId: "staff-2" }, "shift-1"],
+        ])
+        expect(em.query.mock.calls).toEqual([
+            [DECIDE_SWAP, ["ws-1", "swap-1", "approved", "Manager", JSON.stringify(sentences), "work-1"]],
+        ])
+        const toNotice = noticeOf({
+            staffId: "staff-2",
+            kind: "swap",
+            shiftId: "shift-1",
+            body: text("shifts.swapDoneTo", { line: "line:shift-1" }),
         })
-
-        it.each([{ rows: [] }, { rows: [{ settled: false }] }])(
-            "reports a settlement race for $rows without sending notices",
-            async ({ rows }) => {
-                const em = mockEntityManager({ query: [DECIDE_SWAP, rows] })
-                const { service, notify, office } = await build(em)
-
-                await expect(service.performSwap(context)).resolves.toEqual({
-                    summary: text("shifts.swapHandled"),
-                    evidence: "pending",
-                })
-
-                expect(em.query.mock.calls).toEqual([
-                    [DECIDE_SWAP, ["ws-1", "swap-1", "approved", "Manager", "[]", "work-1"]],
-                ])
-                expect(notify.toStaff).not.toHaveBeenCalled()
-                expect(office.logEvidence).not.toHaveBeenCalled()
-            },
+        const fromNotice = noticeOf({
+            kind: "swap",
+            shiftId: "shift-1",
+            body: text("shifts.swapDoneFrom", { line: "line:shift-1", to: "Bob" }),
+        })
+        expect(notify.toStaff.mock.calls).toEqual(
+            fromStaffId === null ? workspaceCalls(toNotice) : workspaceCalls(toNotice, fromNotice),
+        )
+        expect(office.logEvidence.mock.calls).toEqual(
+            officeCalls({
+                kind: "shifts.swap_approved",
+                summary: text("shifts.swapEvidence", resultParams),
+                evidence: sentences.join(" "),
+            }),
         )
     })
 
+    it.each([false, true])("refuses hard findings or a disappeared shift (missing=%s)", async (missing) => {
+        const em = mockEntityManager({})
+        const { service, requests, words, notify } = await build(em)
+        const hard: ReadonlyArray<SwapFinding> = missing
+            ? []
+            : ["shift-missing", "not-posted", "not-owner", "taken", "taker-gone", "started"].map((code) => ({
+                  code,
+                  params: {},
+              }))
+        requests.checkSwap.mockResolvedValue({
+            shift: missing ? undefined : shiftOf(),
+            setup: setupOf(),
+            findings: missing ? [] : [...hard, { code: "notice", params: { hours: 12 } }],
+        })
+        await expect(service.performSwap(context)).rejects.toMatchObject({
+            code: ShiftsErrorCode.SwapRefused,
+            params: { reasons: hard.map((finding) => text(`shifts.finding.${finding.code}`)).join(" ") },
+        })
+        expect(words.findings.mock.calls).toEqual([[hard]])
+        expect(em.query).not.toHaveBeenCalled()
+        expect(notify.toStaff).not.toHaveBeenCalled()
+    })
+})
+
+describe("ShiftsPerformersService performSwap", () => {
+    it.each([{ rows: [] }, { rows: [{ settled: false }] }])(
+        "reports a settlement race for $rows without sending notices",
+        async ({ rows }) => {
+            const em = mockEntityManager({ query: [DECIDE_SWAP, rows] })
+            const { service, notify, office } = await build(em)
+
+            await expect(service.performSwap(context)).resolves.toEqual({
+                summary: text("shifts.swapHandled"),
+                evidence: "pending",
+            })
+
+            expect(em.query.mock.calls).toEqual([
+                [DECIDE_SWAP, ["ws-1", "swap-1", "approved", "Manager", "[]", "work-1"]],
+            ])
+            expect(notify.toStaff).not.toHaveBeenCalled()
+            expect(office.logEvidence).not.toHaveBeenCalled()
+        },
+    )
+})
+
+describe("ShiftsPerformersService", () => {
     it.each([
         { kind: "swap", fromStaffId: "staff-1", recipient: "staff-1" },
         { kind: "claim", fromStaffId: null, recipient: "staff-2" },
@@ -435,55 +435,57 @@ describe("ShiftsPerformersService", () => {
             staffCalls({ staffId: recipient, kind: "swap", body: text("shifts.swapDeclined") }),
         )
     })
+})
 
-    describe("performLeave", () => {
-        it.each([
-            { rows: [{ opened: ["shift-1", "shift-2"] }], opened: ["shift-1", "shift-2"], count: 2 },
-            { rows: [], opened: [], count: 0 },
-            { rows: [{ opened: null }], opened: [], count: 0 },
-            { rows: [{ opened: [] }], opened: [], count: 0 },
-        ])("records leave and sends notices for $rows", async ({ rows, opened, count }) => {
-            const em = mockEntityManager({ query: [DECIDE_LEAVE, rows] })
-            const { service, data, notify, cover, office } = await build(em)
+describe("ShiftsPerformersService performLeave", () => {
+    it.each([
+        { rows: [{ opened: ["shift-1", "shift-2"] }], opened: ["shift-1", "shift-2"], count: 2 },
+        { rows: [], opened: [], count: 0 },
+        { rows: [{ opened: null }], opened: [], count: 0 },
+        { rows: [{ opened: [] }], opened: [], count: 0 },
+    ])("records leave and sends notices for $rows", async ({ rows, opened, count }) => {
+        const em = mockEntityManager({ query: [DECIDE_LEAVE, rows] })
+        const { service, data, notify, cover, office } = await build(em)
 
-            await expect(service.performLeave(context)).resolves.toEqual(
-                captured(text("shifts.leaveApproved", { name: "Alice", count })),
-            )
+        await expect(service.performLeave(context)).resolves.toEqual(
+            captured(text("shifts.leaveApproved", { name: "Alice", count })),
+        )
 
-            expect(data.loadSetup.mock.calls).toEqual(workspaceCalls(false))
-            expect(em.query.mock.calls).toEqual([
-                [
-                    DECIDE_LEAVE,
-                    ["ws-1", "leave-1", "approved", "Manager", "work-1", text("shifts.leaveNote", { name: "Alice" })],
-                ],
-            ])
-            expect(notify.toStaff.mock.calls).toEqual(leaveStaffCalls("shifts.leaveDoneStaff"))
-            expect(cover.suggestions.mock.calls).toEqual(count === 0 ? [] : [["ws-1", opened, "staff-1"]])
-            expect(notify.toManagers.mock.calls).toEqual(
-                count === 0
-                    ? []
-                    : workspaceCalls(
-                          text("shifts.leaveGapOffice", {
-                              name: "Alice",
-                              count: 2,
-                              lines: "Alice can cover; Bob can cover",
-                          }),
-                      ),
-            )
-            expect(office.logEvidence.mock.calls).toEqual(
-                officeCalls({
-                    kind: "shifts.leave_approved",
-                    summary: text("shifts.leaveEvidence", {
-                        name: "Alice",
-                        range: "range:2026-10-12:2026-10-13",
-                        count,
-                    }),
-                    evidence: "leave-1",
+        expect(data.loadSetup.mock.calls).toEqual(workspaceCalls(false))
+        expect(em.query.mock.calls).toEqual([
+            [
+                DECIDE_LEAVE,
+                ["ws-1", "leave-1", "approved", "Manager", "work-1", text("shifts.leaveNote", { name: "Alice" })],
+            ],
+        ])
+        expect(notify.toStaff.mock.calls).toEqual(leaveStaffCalls("shifts.leaveDoneStaff"))
+        expect(cover.suggestions.mock.calls).toEqual(count === 0 ? [] : [["ws-1", opened, "staff-1"]])
+        expect(notify.toManagers.mock.calls).toEqual(
+            count === 0
+                ? []
+                : workspaceCalls(
+                      text("shifts.leaveGapOffice", {
+                          name: "Alice",
+                          count: 2,
+                          lines: "Alice can cover; Bob can cover",
+                      }),
+                  ),
+        )
+        expect(office.logEvidence.mock.calls).toEqual(
+            officeCalls({
+                kind: "shifts.leave_approved",
+                summary: text("shifts.leaveEvidence", {
+                    name: "Alice",
+                    range: "range:2026-10-12:2026-10-13",
+                    count,
                 }),
-            )
-        })
+                evidence: "leave-1",
+            }),
+        )
     })
+})
 
+describe("ShiftsPerformersService", () => {
     it("declines pending leave and tells the staff member the range", async () => {
         const em = mockEntityManager({ query: [DECIDE_LEAVE, []] })
         const { service, notify } = await build(em)

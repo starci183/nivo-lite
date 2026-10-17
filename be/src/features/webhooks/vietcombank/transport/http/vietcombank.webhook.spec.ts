@@ -1,3 +1,4 @@
+import { VietcombankHttpModule, webhookVerifiers } from "./vietcombank-http.module"
 import { HttpStatus } from "@nestjs/common"
 import type { RawBodyRequest } from "@nestjs/common"
 import { HTTP_CODE_METADATA } from "@nestjs/common/constants"
@@ -5,7 +6,7 @@ import { Test } from "@nestjs/testing"
 import type { Request } from "express"
 import { mock } from "@starci/jest-preset"
 import { BankFeedService } from "@modules/domain/billing"
-import type { WebhookSignatureService } from "@modules/platform/http-security"
+import { ScopedWebhookVerifier } from "@modules/domain/webhook-proofs"
 import { VietcombankWebhook } from "./vietcombank.webhook"
 
 const RAW = Buffer.from(JSON.stringify({ amount_vnd: 1 }))
@@ -20,19 +21,17 @@ const DELIVERY = {
 const INTAKE = { secret: SECRET, rawBody: RAW }
 
 const build = async () => {
-    const signature = mock<WebhookSignatureService>()
+    const signature = mock<ScopedWebhookVerifier>()
     signature.verify.mockResolvedValue(undefined)
     const feed = mock<BankFeedService>()
     feed.acceptSimulatedCredit.mockResolvedValue(undefined)
     const moduleRef = await Test.createTestingModule({
-        providers: [VietcombankWebhook, { provide: BankFeedService, useValue: feed }],
-    })
-        .useMocker((token) =>
-            typeof token === "symbol" && token.description === "platform.http-security.webhook-signature"
-                ? signature
-                : undefined,
-        )
-        .compile()
+        providers: [
+            { provide: ScopedWebhookVerifier, useValue: signature },
+            VietcombankWebhook,
+            { provide: BankFeedService, useValue: feed },
+        ],
+    }).compile()
     return { door: moduleRef.get(VietcombankWebhook), signature, feed }
 }
 
@@ -114,5 +113,12 @@ describe("VietcombankWebhook", () => {
 
     it("acknowledges an accepted credit with HTTP 200", () => {
         expect(Reflect.getMetadata(HTTP_CODE_METADATA, VietcombankWebhook.prototype.receive)).toBe(HttpStatus.OK)
+    })
+})
+
+describe("VietcombankHttpModule proof declaration", () => {
+    it("declares the exact domain verification method", () => {
+        expect(webhookVerifiers).toEqual([ScopedWebhookVerifier.prototype.verify])
+        expect(VietcombankHttpModule.register({}).module).toBe(VietcombankHttpModule)
     })
 })

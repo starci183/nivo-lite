@@ -3,8 +3,8 @@ import type { RawBodyRequest } from "@nestjs/common"
 import type { Request } from "express"
 import { BankFeedService } from "@modules/domain/billing"
 import { Public, PublicReason } from "@modules/domain/identity"
-import { InjectWebhookSignature, RateLimit, RateTier } from "@modules/platform/http-security"
-import type { WebhookSignatureService } from "@modules/platform/http-security"
+import { RateLimit, RateTier } from "@modules/platform/http-security"
+import { ScopedWebhookVerifier } from "@modules/domain/webhook-proofs"
 
 @Controller("api/connections/payos")
 /**
@@ -14,7 +14,7 @@ import type { WebhookSignatureService } from "@modules/platform/http-security"
  */
 export class PayosWebhook {
     constructor(
-        @InjectWebhookSignature() private readonly signature: WebhookSignatureService,
+        private readonly signature: ScopedWebhookVerifier,
         private readonly feed: BankFeedService,
     ) {}
 
@@ -31,6 +31,6 @@ export class PayosWebhook {
             signature: undefined,
             timestamp: undefined,
         })
-        await this.feed.acceptPayosDelivery({ connectionId, rawBody: request.rawBody })
+        await this.feed.acceptPayosDelivery(request.rawBody, connectionId)
     }
 }

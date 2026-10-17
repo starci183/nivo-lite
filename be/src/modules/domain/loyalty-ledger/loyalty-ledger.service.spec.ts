@@ -71,185 +71,185 @@ const build = async (entityManager: MockEntityManager) => {
     return moduleRef.get(LoyaltyLedgerService)
 }
 
-describe("LoyaltyLedgerService", () => {
-    describe("post", () => {
-        it("locks the customer, checks the key and writes the entry", async () => {
-            const manager = mockEntityManager({
-                query: [
-                    [LOCK_CUSTOMER, [{ id: "c1" }]],
-                    [SELECT_ENTRY_BY_REF, []],
-                    [INSERT_ENTRY, [{ id: "e1" }]],
-                ],
-            })
-            const ledger = await build(mockEntityManager())
-
-            await expect(ledger.post(postOf(manager))).resolves.toBe("e1")
-
-            expect(manager.query).toHaveBeenCalledWith(LOCK_CUSTOMER, ["c1", "ws-1"])
-            expect(manager.query).toHaveBeenCalledWith(INSERT_ENTRY, [
-                "ws-1",
-                "c1",
-                "earn",
-                50,
-                "order:1",
-                "NIVO",
-                50000,
-                "o1",
-                null,
-                null,
-                "note",
-                null,
-                "2026-10-12T00:00:00.000Z",
-            ])
-            expect(manager.query).not.toHaveBeenCalledWith(SELECT_BALANCE, expect.anything())
+describe("LoyaltyLedgerService post", () => {
+    it("locks the customer, checks the key and writes the entry", async () => {
+        const manager = mockEntityManager({
+            query: [
+                [LOCK_CUSTOMER, [{ id: "c1" }]],
+                [SELECT_ENTRY_BY_REF, []],
+                [INSERT_ENTRY, [{ id: "e1" }]],
+            ],
         })
+        const ledger = await build(mockEntityManager())
 
-        it("changes nothing when the key was posted before", async () => {
-            const manager = mockEntityManager({
-                query: [
-                    [LOCK_CUSTOMER, [{ id: "c1" }]],
-                    [SELECT_ENTRY_BY_REF, [{ id: "e0" }]],
-                ],
-            })
-            const ledger = await build(mockEntityManager())
+        await expect(ledger.post(postOf(manager))).resolves.toBe("e1")
 
-            await expect(ledger.post(postOf(manager))).resolves.toBeNull()
+        expect(manager.query).toHaveBeenCalledWith(LOCK_CUSTOMER, ["c1", "ws-1"])
+        expect(manager.query).toHaveBeenCalledWith(INSERT_ENTRY, [
+            "ws-1",
+            "c1",
+            "earn",
+            50,
+            "order:1",
+            "NIVO",
+            50000,
+            "o1",
+            null,
+            null,
+            "note",
+            null,
+            "2026-10-12T00:00:00.000Z",
+        ])
+        expect(manager.query).not.toHaveBeenCalledWith(SELECT_BALANCE, expect.anything())
+    })
+
+    it("changes nothing when the key was posted before", async () => {
+        const manager = mockEntityManager({
+            query: [
+                [LOCK_CUSTOMER, [{ id: "c1" }]],
+                [SELECT_ENTRY_BY_REF, [{ id: "e0" }]],
+            ],
         })
+        const ledger = await build(mockEntityManager())
 
-        it("refuses a customer the workspace does not have", async () => {
-            const manager = mockEntityManager({ query: [LOCK_CUSTOMER, []] })
-            const ledger = await build(mockEntityManager())
+        await expect(ledger.post(postOf(manager))).resolves.toBeNull()
+    })
 
-            await expect(ledger.post(postOf(manager))).rejects.toMatchObject({
-                code: LoyaltyLedgerErrorCode.CustomerNotFound,
-            })
+    it("refuses a customer the workspace does not have", async () => {
+        const manager = mockEntityManager({ query: [LOCK_CUSTOMER, []] })
+        const ledger = await build(mockEntityManager())
+
+        await expect(ledger.post(postOf(manager))).rejects.toMatchObject({
+            code: LoyaltyLedgerErrorCode.CustomerNotFound,
         })
+    })
+})
 
-        it("takes points only up to the balance", async () => {
-            const ok = mockEntityManager({
-                query: [
-                    [LOCK_CUSTOMER, [{ id: "c1" }]],
-                    [SELECT_ENTRY_BY_REF, []],
-                    [SELECT_BALANCE, [{ points: 100 }]],
-                    [INSERT_ENTRY, [{ id: "e2" }]],
-                ],
-            })
-            const short = mockEntityManager({
-                query: [
-                    [LOCK_CUSTOMER, [{ id: "c1" }]],
-                    [SELECT_ENTRY_BY_REF, []],
-                    [SELECT_BALANCE, [{ points: 10 }]],
-                ],
-            })
-            const ledger = await build(mockEntityManager())
-
-            await expect(ledger.post({ ...postOf(ok), kind: "redeem", points: -100 })).resolves.toBe("e2")
-            await expect(ledger.post({ ...postOf(short), kind: "redeem", points: -100 })).rejects.toMatchObject({
-                code: LoyaltyLedgerErrorCode.InsufficientPoints,
-            })
+describe("LoyaltyLedgerService post", () => {
+    it("takes points only up to the balance", async () => {
+        const ok = mockEntityManager({
+            query: [
+                [LOCK_CUSTOMER, [{ id: "c1" }]],
+                [SELECT_ENTRY_BY_REF, []],
+                [SELECT_BALANCE, [{ points: 100 }]],
+                [INSERT_ENTRY, [{ id: "e2" }]],
+            ],
         })
+        const short = mockEntityManager({
+            query: [
+                [LOCK_CUSTOMER, [{ id: "c1" }]],
+                [SELECT_ENTRY_BY_REF, []],
+                [SELECT_BALANCE, [{ points: 10 }]],
+            ],
+        })
+        const ledger = await build(mockEntityManager())
 
-        it("fails when the insert answers no row", async () => {
-            const manager = mockEntityManager({
-                query: [
-                    [LOCK_CUSTOMER, [{ id: "c1" }]],
-                    [SELECT_ENTRY_BY_REF, []],
-                    [INSERT_ENTRY, []],
-                ],
-            })
-            const ledger = await build(mockEntityManager())
-
-            await expect(ledger.post(postOf(manager))).rejects.toMatchObject({ code: LoyaltyLedgerErrorCode.NotPosted })
+        await expect(ledger.post({ ...postOf(ok), kind: "redeem", points: -100 })).resolves.toBe("e2")
+        await expect(ledger.post({ ...postOf(short), kind: "redeem", points: -100 })).rejects.toMatchObject({
+            code: LoyaltyLedgerErrorCode.InsufficientPoints,
         })
     })
 
-    describe("hasRef", () => {
-        it("tells whether a key was posted before", async () => {
-            const posted = await build(mockEntityManager({ query: [SELECT_ENTRY_BY_REF, [{ id: "e0" }]] }))
-            const fresh = await build(mockEntityManager({ query: [SELECT_ENTRY_BY_REF, []] }))
-
-            await expect(posted.hasRef("ws-1", "order:1")).resolves.toBe(true)
-            await expect(fresh.hasRef("ws-1", "order:1")).resolves.toBe(false)
+    it("fails when the insert answers no row", async () => {
+        const manager = mockEntityManager({
+            query: [
+                [LOCK_CUSTOMER, [{ id: "c1" }]],
+                [SELECT_ENTRY_BY_REF, []],
+                [INSERT_ENTRY, []],
+            ],
         })
+        const ledger = await build(mockEntityManager())
+
+        await expect(ledger.post(postOf(manager))).rejects.toMatchObject({ code: LoyaltyLedgerErrorCode.NotPosted })
+    })
+})
+
+describe("LoyaltyLedgerService hasRef", () => {
+    it("tells whether a key was posted before", async () => {
+        const posted = await build(mockEntityManager({ query: [SELECT_ENTRY_BY_REF, [{ id: "e0" }]] }))
+        const fresh = await build(mockEntityManager({ query: [SELECT_ENTRY_BY_REF, []] }))
+
+        await expect(posted.hasRef("ws-1", "order:1")).resolves.toBe(true)
+        await expect(fresh.hasRef("ws-1", "order:1")).resolves.toBe(false)
+    })
+})
+
+describe("LoyaltyLedgerService reads", () => {
+    it("lists the members and finds one", async () => {
+        const ledger = await build(
+            mockEntityManager({
+                query: [
+                    [SELECT_MEMBERS, [MEMBER_ROW, { ...MEMBER_ROW, last_visit_at: null }]],
+                    [SELECT_MEMBER, [MEMBER_ROW]],
+                ],
+            }),
+        )
+
+        await expect(ledger.members("ws-1")).resolves.toEqual([MEMBER, { ...MEMBER, lastVisitAt: null }])
+        await expect(ledger.member("ws-1", "c1")).resolves.toEqual(MEMBER)
     })
 
-    describe("reads", () => {
-        it("lists the members and finds one", async () => {
-            const ledger = await build(
-                mockEntityManager({
-                    query: [
-                        [SELECT_MEMBERS, [MEMBER_ROW, { ...MEMBER_ROW, last_visit_at: null }]],
-                        [SELECT_MEMBER, [MEMBER_ROW]],
-                    ],
-                }),
-            )
+    it("answers null for a member that is not there", async () => {
+        const ledger = await build(mockEntityManager({ query: [SELECT_MEMBER, []] }))
 
-            await expect(ledger.members("ws-1")).resolves.toEqual([MEMBER, { ...MEMBER, lastVisitAt: null }])
-            await expect(ledger.member("ws-1", "c1")).resolves.toEqual(MEMBER)
+        await expect(ledger.member("ws-1", "zzz")).resolves.toBeNull()
+    })
+
+    it("reads the timeline of a customer", async () => {
+        const row = {
+            id: "e1",
+            customer_id: "c1",
+            kind: "earn",
+            points: 50,
+            amount_vnd: 50000,
+            order_id: "o1",
+            ref: "order:1",
+            by_name: "NIVO",
+            evidence: "note",
+            reward_id: null,
+            work_item_id: null,
+            expires_at: new Date("2027-10-12T00:00:00.000Z"),
+            occurred_at: new Date("2026-10-12T00:00:00.000Z"),
+        }
+        const ledger = await build(mockEntityManager({ query: [SELECT_TIMELINE, [row, { ...row, expires_at: null }]] }))
+
+        const [first, second] = await ledger.timeline("ws-1", "c1", 200)
+
+        expect(first).toMatchObject({
+            id: "e1",
+            by: "NIVO",
+            expiresAt: "2027-10-12T00:00:00.000Z",
+            occurredAt: "2026-10-12T00:00:00.000Z",
         })
+        expect(second).toMatchObject({ expiresAt: null })
+    })
+})
 
-        it("answers null for a member that is not there", async () => {
-            const ledger = await build(mockEntityManager({ query: [SELECT_MEMBER, []] }))
-
-            await expect(ledger.member("ws-1", "zzz")).resolves.toBeNull()
-        })
-
-        it("reads the timeline of a customer", async () => {
-            const row = {
-                id: "e1",
-                customer_id: "c1",
-                kind: "earn",
-                points: 50,
-                amount_vnd: 50000,
-                order_id: "o1",
-                ref: "order:1",
-                by_name: "NIVO",
-                evidence: "note",
-                reward_id: null,
-                work_item_id: null,
-                expires_at: new Date("2027-10-12T00:00:00.000Z"),
-                occurred_at: new Date("2026-10-12T00:00:00.000Z"),
-            }
-            const ledger = await build(
-                mockEntityManager({ query: [SELECT_TIMELINE, [row, { ...row, expires_at: null }]] }),
-            )
-
-            const [first, second] = await ledger.timeline("ws-1", "c1", 200)
-
-            expect(first).toMatchObject({
-                id: "e1",
-                by: "NIVO",
-                expiresAt: "2027-10-12T00:00:00.000Z",
-                occurredAt: "2026-10-12T00:00:00.000Z",
-            })
-            expect(second).toMatchObject({ expiresAt: null })
-        })
-
-        it("counts redemptions per reward, reads the expiry entries and sums the totals", async () => {
-            const ledger = await build(
-                mockEntityManager({
-                    query: [
-                        [COUNT_REDEEMED, [{ reward_id: "r1", total: 2 }]],
+describe("LoyaltyLedgerService reads", () => {
+    it("counts redemptions per reward, reads the expiry entries and sums the totals", async () => {
+        const ledger = await build(
+            mockEntityManager({
+                query: [
+                    [COUNT_REDEEMED, [{ reward_id: "r1", total: 2 }]],
+                    [
+                        SELECT_EXPIRY_ENTRIES,
                         [
-                            SELECT_EXPIRY_ENTRIES,
-                            [
-                                { kind: "earn", points: 10, expires_at: new Date("2027-01-01T00:00:00.000Z") },
-                                { kind: "redeem", points: -5, expires_at: null },
-                            ],
+                            { kind: "earn", points: 10, expires_at: new Date("2027-01-01T00:00:00.000Z") },
+                            { kind: "redeem", points: -5, expires_at: null },
                         ],
-                        [SELECT_TOTALS_SINCE, [{ kind: "earn", entries: 3, points: 90, amount_vnd: 90000 }]],
                     ],
-                }),
-            )
+                    [SELECT_TOTALS_SINCE, [{ kind: "earn", entries: 3, points: 90, amount_vnd: 90000 }]],
+                ],
+            }),
+        )
 
-            await expect(ledger.redeemedCounts("c1")).resolves.toEqual(new Map([["r1", 2]]))
-            await expect(ledger.expiryEntries("c1")).resolves.toEqual([
-                { kind: "earn", points: 10, expiresAt: "2027-01-01T00:00:00.000Z" },
-                { kind: "redeem", points: -5, expiresAt: null },
-            ])
-            await expect(ledger.totalsSince("ws-1", "2026-09-12T00:00:00.000Z")).resolves.toEqual([
-                { kind: "earn", entries: 3, points: 90, amountVnd: 90000 },
-            ])
-        })
+        await expect(ledger.redeemedCounts("c1")).resolves.toEqual(new Map([["r1", 2]]))
+        await expect(ledger.expiryEntries("c1")).resolves.toEqual([
+            { kind: "earn", points: 10, expiresAt: "2027-01-01T00:00:00.000Z" },
+            { kind: "redeem", points: -5, expiresAt: null },
+        ])
+        await expect(ledger.totalsSince("ws-1", "2026-09-12T00:00:00.000Z")).resolves.toEqual([
+            { kind: "earn", entries: 3, points: 90, amountVnd: 90000 },
+        ])
     })
 })

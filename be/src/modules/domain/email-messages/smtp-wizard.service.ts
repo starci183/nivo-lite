@@ -145,7 +145,7 @@ export class SmtpWizardService {
         try {
             return passwordOfParsed(JSON.parse(credential))
         } catch (cause) {
-            this.logger.error(EmailMessagesLogEvent.CredentialUnreadable, cause, { connectionId })
+            this.logger.error(EmailMessagesLogEvent.Undecryptable, cause, { connectionId })
             return null
         }
     }

@@ -87,7 +87,9 @@ describe("ExecutionsService", () => {
         expect(manager.query).toHaveBeenCalledWith(FIND_EXECUTION_RECORD, ["ws-1", "missing"])
         expect(em.query).not.toHaveBeenCalled()
     })
+})
 
+describe("ExecutionsService", () => {
     it.each([
         [{ limit: 25 }, ["ws-1", null, false, 25]],
         [
@@ -138,7 +140,9 @@ describe("ExecutionsService", () => {
             }),
         ).toBeNull()
     })
+})
 
+describe("ExecutionsService", () => {
     it("settles through the supplied transaction manager", async () => {
         const em = mockEntityManager()
         const row = { id: "exec-1", status: "rejected", work_item_id: null, draft: "Hello" }

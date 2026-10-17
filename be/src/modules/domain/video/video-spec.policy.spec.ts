@@ -1,12 +1,42 @@
+import { Test } from "@nestjs/testing"
 import {
-    aspectSize,
-    estimateSceneSeconds,
-    mediaPathOf,
-    musicObjectPath,
-    normaliseColor,
-    validateVideoSpec,
+    aspectSize as aspectSizeImplementation,
+    estimateSceneSeconds as estimateSceneSecondsImplementation,
+    mediaPathOf as mediaPathOfImplementation,
+    musicObjectPath as musicObjectPathImplementation,
+    normaliseColor as normaliseColorImplementation,
+    validateVideoSpec as validateVideoSpecImplementation,
     VIDEO_MAX_SCENES,
 } from "./video-spec.policy"
+
+const SUBJECT = Symbol("subject")
+type Subject = {
+    aspectSize: typeof aspectSizeImplementation
+    estimateSceneSeconds: typeof estimateSceneSecondsImplementation
+    mediaPathOf: typeof mediaPathOfImplementation
+    musicObjectPath: typeof musicObjectPathImplementation
+    normaliseColor: typeof normaliseColorImplementation
+    validateVideoSpec: typeof validateVideoSpecImplementation
+}
+
+const buildSubject = async () => {
+    const moduleRef = await Test.createTestingModule({
+        providers: [
+            {
+                provide: SUBJECT,
+                useValue: {
+                    aspectSize: aspectSizeImplementation,
+                    estimateSceneSeconds: estimateSceneSecondsImplementation,
+                    mediaPathOf: mediaPathOfImplementation,
+                    musicObjectPath: musicObjectPathImplementation,
+                    normaliseColor: normaliseColorImplementation,
+                    validateVideoSpec: validateVideoSpecImplementation,
+                },
+            },
+        ],
+    }).compile()
+    return moduleRef.get<Subject>(SUBJECT)
+}
 
 const WORKSPACE = "0a1b2c3d-0a1b-4c3d-8a1b-0a1b2c3d4e5f"
 const OTHER = "ffffffff-0a1b-4c3d-8a1b-0a1b2c3d4e5f"
@@ -28,8 +58,10 @@ const validSpec = {
 }
 
 describe("musicObjectPath", () => {
-    it("puts a bed under the music folder of the media bucket", () => {
-        expect(musicObjectPath("calm-glow")).toBe("music/calm-glow.mp3")
+    it("puts a bed under the music folder of the media bucket", async () => {
+        const subject = await buildSubject()
+
+        expect(subject.musicObjectPath("calm-glow")).toBe("music/calm-glow.mp3")
     })
 })
 
@@ -38,32 +70,44 @@ describe("normaliseColor", () => {
         ["#ABC", "#aabbcc"],
         ["16A34A", "#16a34a"],
         ["  #0f172a ", "#0f172a"],
-    ])("reads %s as %s", (input, expected) => {
-        expect(normaliseColor(input)).toBe(expected)
+    ])("reads %s as %s", async (input, expected) => {
+        const subject = await buildSubject()
+
+        expect(subject.normaliseColor(input)).toBe(expected)
     })
 
-    it.each([[42], ["#12"], ["red"], [null]])("refuses %s", (input) => {
-        expect(normaliseColor(input)).toBeNull()
+    it.each([[42], ["#12"], ["red"], [null]])("refuses %s", async (input) => {
+        const subject = await buildSubject()
+
+        expect(subject.normaliseColor(input)).toBeNull()
     })
 })
 
 describe("mediaPathOf", () => {
-    it("accepts a path inside the workspace folder", () => {
-        expect(mediaPathOf(`/${IMAGE}`, WORKSPACE)).toBe(IMAGE)
+    it("accepts a path inside the workspace folder", async () => {
+        const subject = await buildSubject()
+
+        expect(subject.mediaPathOf(`/${IMAGE}`, WORKSPACE)).toBe(IMAGE)
     })
 
-    it("accepts any workspace folder when none is pinned", () => {
-        expect(mediaPathOf(IMAGE)).toBe(IMAGE)
+    it("accepts any workspace folder when none is pinned", async () => {
+        const subject = await buildSubject()
+
+        expect(subject.mediaPathOf(IMAGE)).toBe(IMAGE)
     })
 
-    it("reads the path out of a Storage URL", () => {
+    it("reads the path out of a Storage URL", async () => {
+        const subject = await buildSubject()
+
         const url = `https://project.supabase.co/storage/v1/object/sign/media/${WORKSPACE}/my%20photo.jpg?token=abc`
-        expect(mediaPathOf(url, WORKSPACE)).toBe(`${WORKSPACE}/my photo.jpg`)
+        expect(subject.mediaPathOf(url, WORKSPACE)).toBe(`${WORKSPACE}/my photo.jpg`)
     })
 
-    it("turns bytes that are not UTF-8 into the replacement character", () => {
+    it("turns bytes that are not UTF-8 into the replacement character", async () => {
+        const subject = await buildSubject()
+
         const url = `https://project.supabase.co/storage/v1/object/public/media/${WORKSPACE}/%ff.jpg`
-        expect(mediaPathOf(url)).toContain("�")
+        expect(subject.mediaPathOf(url)).toContain("�")
     })
 
     it.each([
@@ -83,20 +127,30 @@ describe("mediaPathOf", () => {
             "a URL with a broken percent escape",
             `https://project.supabase.co/storage/v1/object/sign/media/${WORKSPACE}/a%zz.jpg`,
         ],
-    ])("refuses %s", (_label, input) => {
-        expect(mediaPathOf(input, WORKSPACE)).toBeNull()
+    ])("refuses %s", async (_label, input) => {
+        const subject = await buildSubject()
+
+        expect(subject.mediaPathOf(input, WORKSPACE)).toBeNull()
     })
 })
 
 describe("estimateSceneSeconds", () => {
-    it("takes the duration a scene names", () => {
-        expect(estimateSceneSeconds({ caption: "", text: "", voiceover: "", duration_s: 7 })).toBe(7)
+    it("takes the duration a scene names", async () => {
+        const subject = await buildSubject()
+
+        expect(subject.estimateSceneSeconds({ caption: "", text: "", voiceover: "", duration_s: 7 })).toBe(7)
     })
 
-    it("estimates from the longer of speaking and reading, between 3 and 15 seconds", () => {
-        expect(estimateSceneSeconds({ caption: "", text: "", voiceover: "", duration_s: 0 })).toBe(3)
-        expect(estimateSceneSeconds({ caption: "", text: "", voiceover: "x".repeat(140), duration_s: 0 })).toBe(10.8)
-        expect(estimateSceneSeconds({ caption: "x".repeat(2000), text: "", voiceover: "", duration_s: 0 })).toBe(15)
+    it("estimates from the longer of speaking and reading, between 3 and 15 seconds", async () => {
+        const subject = await buildSubject()
+
+        expect(subject.estimateSceneSeconds({ caption: "", text: "", voiceover: "", duration_s: 0 })).toBe(3)
+        expect(subject.estimateSceneSeconds({ caption: "", text: "", voiceover: "x".repeat(140), duration_s: 0 })).toBe(
+            10.8,
+        )
+        expect(
+            subject.estimateSceneSeconds({ caption: "x".repeat(2000), text: "", voiceover: "", duration_s: 0 }),
+        ).toBe(15)
     })
 })
 
@@ -105,14 +159,18 @@ describe("aspectSize", () => {
         ["9:16", 1080, 1920],
         ["1:1", 1080, 1080],
         ["16:9", 1920, 1080],
-    ] as const)("draws %s at %i x %i", (aspect, width, height) => {
-        expect(aspectSize(aspect)).toEqual({ width, height })
+    ] as const)("draws %s at %i x %i", async (aspect, width, height) => {
+        const subject = await buildSubject()
+
+        expect(subject.aspectSize(aspect)).toEqual({ width, height })
     })
 })
 
 describe("validateVideoSpec", () => {
-    it("normalises a valid spec", () => {
-        const result = validateVideoSpec(validSpec, { workspaceId: WORKSPACE })
+    it("normalises a valid spec", async () => {
+        const subject = await buildSubject()
+
+        const result = subject.validateVideoSpec(validSpec, { workspaceId: WORKSPACE })
 
         expect(result).toEqual({
             ok: true,
@@ -136,15 +194,23 @@ describe("validateVideoSpec", () => {
             },
         })
     })
+})
 
-    it("keeps every kind of background, the music, the voice and the logo", () => {
-        const result = validateVideoSpec(
+describe("validateVideoSpec", () => {
+    it("keeps every kind of background, the music, the voice and the logo", async () => {
+        const subject = await buildSubject()
+
+        const result = subject.validateVideoSpec(
             {
                 aspect: "16:9",
                 captions: false,
                 scenes: [
                     { background: { type: "image", src: IMAGE, motion: "pan-right" }, duration_s: "4" },
-                    { background: { type: "video", src: IMAGE, start_s: "12" }, duration_s: 15, transition: "none" },
+                    {
+                        background: { type: "video", src: IMAGE, start_s: "12" },
+                        duration_s: 15,
+                        transition: "none",
+                    },
                     { background: { type: "gradient", from: "#000", to: "#fff" }, voiceover: " hi\r\n" },
                 ],
                 brand: { name: "Shop", primary: "#abcdef", secondary: "#123456", logo: IMAGE },
@@ -175,19 +241,27 @@ describe("validateVideoSpec", () => {
         })
     })
 
-    it("refuses what is not an object", () => {
-        expect(validateVideoSpec("spec")).toEqual({ ok: false, errors: ["spec must be an object"] })
+    it("refuses what is not an object", async () => {
+        const subject = await buildSubject()
+
+        expect(subject.validateVideoSpec("spec")).toEqual({ ok: false, errors: ["spec must be an object"] })
     })
 
-    it("refuses a spec with neither scenes nor brand", () => {
-        expect(validateVideoSpec({})).toEqual({
+    it("refuses a spec with neither scenes nor brand", async () => {
+        const subject = await buildSubject()
+
+        expect(subject.validateVideoSpec({})).toEqual({
             ok: false,
             errors: ["scenes: at least one scene is required", "brand.name is required"],
         })
     })
+})
 
-    it("lists every problem of a bad spec", () => {
-        const result = validateVideoSpec(
+describe("validateVideoSpec", () => {
+    it("lists every problem of a bad spec", async () => {
+        const subject = await buildSubject()
+
+        const result = subject.validateVideoSpec(
             {
                 aspect: "4:3",
                 scenes: [
@@ -221,20 +295,26 @@ describe("validateVideoSpec", () => {
         )
     })
 
-    it("refuses music that is neither null nor an object", () => {
-        const result = validateVideoSpec({ ...validSpec, music: "loud" })
+    it("refuses music that is neither null nor an object", async () => {
+        const subject = await buildSubject()
+
+        const result = subject.validateVideoSpec({ ...validSpec, music: "loud" })
 
         expect(result.ok ? [] : result.errors).toEqual(["music must be null or { track, volume }"])
     })
+})
 
-    it("refuses no scene, too many scenes and a video that is too long", () => {
+describe("validateVideoSpec", () => {
+    it("refuses no scene, too many scenes and a video that is too long", async () => {
+        const subject = await buildSubject()
+
         const scene = validSpec.scenes[0]
-        const none = validateVideoSpec({ ...validSpec, scenes: [] })
-        const many = validateVideoSpec({
+        const none = subject.validateVideoSpec({ ...validSpec, scenes: [] })
+        const many = subject.validateVideoSpec({
             ...validSpec,
             scenes: Array.from({ length: VIDEO_MAX_SCENES + 1 }, () => scene),
         })
-        const long = validateVideoSpec({
+        const long = subject.validateVideoSpec({
             ...validSpec,
             scenes: Array.from({ length: 7 }, () => ({ ...scene, duration_s: 15 })),
         })

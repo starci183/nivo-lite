@@ -1,3 +1,20 @@
+import type { NewBooking } from "./booking-reservation.service"
+import { DEFAULT_SETTINGS } from "./persistence/booking.rows"
+import {
+    HOUR,
+    WORKSPACE,
+    PAGE,
+    NOW,
+    MONDAY_NINE,
+    CHAT_KEY,
+    CHAT_LINK,
+    ALTERNATIVES,
+    bookingRequestOf,
+    workspaceRequestOf,
+    replyOf,
+    nextReplyOf,
+    failureOf,
+} from "../../../tests/fixtures/builders/booking-public.builder"
 import { Test } from "@nestjs/testing"
 import { FakeClock, builder, fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
 import { CLOCK } from "@modules/platform/clock"
@@ -6,37 +23,12 @@ import { BookingModelService } from "./booking-model.service"
 import { BookingPublicService } from "./booking-public.service"
 import { BookingRemindersService } from "@modules/domain/booking-reminders"
 import { BookingReservationService } from "./booking-reservation.service"
-import type { NewBooking } from "./booking-reservation.service"
-import type {
-    BookableService,
-    BookingModel,
-    PublicBookParams,
-    PublicBookResult,
-    TakenSpan,
-    WorkspaceBookParams,
-} from "./bookings.contracts"
+import type { BookableService, BookingModel, TakenSpan } from "./bookings.contracts"
 import { BookingsErrorCode } from "./errors/bookings.error"
 import { SELECT_PAGE_BY_SLUG } from "./persistence/booking-model.sql"
 import { SELECT_BOOKING_BY_KEY, SELECT_NEXT_CANCELLABLE_BOOKING } from "./persistence/booking-write.sql"
-import { DEFAULT_SETTINGS } from "./persistence/booking.rows"
 import type { CancellableBookingRow, KeyedBookingRow } from "./persistence/booking.rows"
 
-const WORKSPACE = "ws-1"
-const PAGE = {
-    workspace_id: WORKSPACE,
-    public_note: "Note",
-    address: "1 Main St",
-    timezone: "Asia/Ho_Chi_Minh",
-    shop: "Spa Anna",
-}
-/** Sunday noon in Ho Chi Minh City, before Monday's hours from 09:00. */
-const NOW = Date.UTC(2026, 9, 11, 5, 0)
-const MONDAY_NINE = "2026-10-12T02:00:00.000Z"
-const HOUR = 3_600_000
-const CHAT_KEY = `chat:job-1:${MONDAY_NINE}`
-const CHAT_LINK = { conversationId: "conversation-1", leadId: "lead-1" }
-const ALTERNATIVES = ["2026-10-12T03:00:00.000Z", "2026-10-12T04:00:00.000Z", "2026-10-12T05:00:00.000Z"]
-const settingsOf = builder({ ...DEFAULT_SETTINGS, slotStepMin: 60 })
 const serviceOf = builder<BookableService>({
     id: "s1",
     name: "Cut",
@@ -46,47 +38,6 @@ const serviceOf = builder<BookableService>({
     priceVnd: 200000,
     resourceKind: null,
     active: true,
-})
-const modelOf = builder<BookingModel>({
-    settings: settingsOf(),
-    services: [
-        serviceOf(),
-        serviceOf({ id: "s2", name: "Old", description: "", durationMin: 30, priceVnd: null, active: false }),
-    ],
-    resources: [{ id: "r1", name: "Anna", kind: "staff", capacity: 1, active: true, sort: 0 }],
-    hours: [{ resourceId: "r1", weekday: 1, start: "09:00", end: "18:00" }],
-    exceptions: [],
-})
-const REQUEST_DETAILS = {
-    serviceId: "s1",
-    start: MONDAY_NINE,
-    name: " Mai ",
-    phone: "0912 345 678",
-    party: 1,
-    note: " first visit ",
-}
-const requestOf = builder<PublicBookParams>({
-    ...REQUEST_DETAILS,
-    slug: "spa-anna",
-    email: "Mai@Example.com",
-    token: "",
-    website: "",
-})
-const workspaceRequestOf = builder<WorkspaceBookParams>({
-    ...REQUEST_DETAILS,
-    workspaceId: WORKSPACE,
-    email: "",
-    token: CHAT_KEY,
-    sourceChannel: "chat",
-})
-const replyOf = builder<PublicBookResult>({
-    ok: true,
-    state: "confirmed",
-    code: "confirmed",
-    serviceName: "Cut",
-    startIso: MONDAY_NINE,
-    alternatives: [],
-    bookingId: "b1",
 })
 const bookingOf = builder<NewBooking>({
     workspaceId: WORKSPACE,
@@ -111,8 +62,10 @@ const bookingOf = builder<NewBooking>({
     conversationId: null,
     leadId: null,
 })
+/** Expected chat reservation with its conversation, lead and idempotency identity. */
 const chatBookingOf = (overrides: Partial<NewBooking> = {}) =>
     bookingOf({ ...overrides, ...CHAT_LINK, sourceChannel: "chat", idempotencyKey: CHAT_KEY })
+/** Expected public form reservation with a normalized customer email. */
 const publicBookingOf = (overrides: Partial<NewBooking> = {}) =>
     bookingOf({ ...overrides, customerEmail: "mai@example.com" })
 const HELD_FORM_BOOKING = bookingOf({
@@ -121,7 +74,27 @@ const HELD_FORM_BOOKING = bookingOf({
     depositStatus: "due",
     idempotencyKey: "public:form-token-1",
 })
-const parkedOf = () => publicBookingOf({ status: "requested", holdsSlot: false, conflictNote: "full" })
+
+const TAKEN_NINE: TakenSpan = {
+    id: "b9",
+    resourceId: "r1",
+    startMs: Date.UTC(2026, 9, 12, 2),
+    blockEndMs: Date.UTC(2026, 9, 12, 3),
+    partySize: 1,
+}
+/** Expected next cancellable booking for a linked or unlinked lead. */
+
+const settingsOf = builder({ ...DEFAULT_SETTINGS, slotStepMin: 60 })
+const modelOf = builder<BookingModel>({
+    settings: settingsOf(),
+    services: [
+        serviceOf(),
+        serviceOf({ id: "s2", name: "Old", description: "", durationMin: 30, priceVnd: null, active: false }),
+    ],
+    resources: [{ id: "r1", name: "Anna", kind: "staff", capacity: 1, active: true, sort: 0 }],
+    hours: [{ resourceId: "r1", weekday: 1, start: "09:00", end: "18:00" }],
+    exceptions: [],
+})
 const reserveOf = (booking: NewBooking) => ({ manager: expect.anything(), force: false, booking })
 const SCHEDULE = {
     manager: expect.anything(),
@@ -131,13 +104,6 @@ const SCHEDULE = {
     nowMs: NOW,
     defaultHours: [24, 2],
 }
-const TAKEN_NINE: TakenSpan = {
-    id: "b9",
-    resourceId: "r1",
-    startMs: Date.UTC(2026, 9, 12, 2),
-    blockEndMs: Date.UTC(2026, 9, 12, 3),
-    partySize: 1,
-}
 const NEXT_ROW: CancellableBookingRow = {
     id: "b-next",
     lead_id: "lead-1",
@@ -145,27 +111,6 @@ const NEXT_ROW: CancellableBookingRow = {
     service_name: "Cut",
     start_ms: Date.parse(MONDAY_NINE),
 }
-const nextReplyOf = (leadId: string | null) => ({
-    id: "b-next",
-    leadId,
-    customerName: "Mai",
-    serviceName: "Cut",
-    startIso: MONDAY_NINE,
-})
-interface RequestFailure {
-    readonly label: string
-    readonly cause: unknown
-    readonly request: WorkspaceBookParams
-    readonly key: string | null
-    readonly reads: number
-}
-const failureOf = builder<RequestFailure>({
-    label: "uncoded",
-    cause: {},
-    request: workspaceRequestOf(),
-    key: CHAT_KEY,
-    reads: 1,
-})
 
 interface BuildOptions {
     readonly page?: boolean
@@ -206,6 +151,8 @@ const build = async (options: BuildOptions = {}) => {
     }).compile()
     return { service: moduleRef.get(BookingPublicService), models, reservation, reminders, tx }
 }
+
+const parkedOf = () => publicBookingOf({ status: "requested", holdsSlot: false, conflictNote: "full" })
 
 describe("BookingPublicService", () => {
     describe("page", () => {
@@ -276,7 +223,9 @@ describe("BookingPublicService", () => {
             expect(tx.em.query).not.toHaveBeenCalled()
         })
     })
+})
 
+describe("BookingPublicService", () => {
     describe("nextCancellable", () => {
         it("returns the next booking for a normalised phone scoped to the workspace", async () => {
             const { service, tx } = await build({ cancellable: [NEXT_ROW] })
@@ -322,7 +271,7 @@ describe("BookingPublicService", () => {
                 settings: settingsOf({ autoConfirm: params.autoConfirm, depositPct: heldForm ? 50 : 0 }),
             })
             const { service, reservation, reminders, tx } = await build({ page: !chat, model, spans: params.spans })
-            const form = requestOf(heldForm ? { token: "form-token-1", email: "nope" } : {})
+            const form = bookingRequestOf(heldForm ? { token: "form-token-1", email: "nope" } : {})
             const result = chat ? service.requestIn(workspaceRequestOf(CHAT_LINK)) : service.book(form)
             await expect(result).resolves.toEqual(params.reply)
             const booking = chat
@@ -338,7 +287,9 @@ describe("BookingPublicService", () => {
             expect(tx.commits).toBe(1)
         })
     })
+})
 
+describe("BookingPublicService", () => {
     describe("requestIn", () => {
         it("keeps null links and skips keyed lookup for a chat request without a token", async () => {
             const { service, reservation, tx } = await build()
@@ -382,7 +333,11 @@ describe("BookingPublicService", () => {
             expect(tx.commits).toBe(0)
             expect(reminders.schedule).not.toHaveBeenCalled()
         })
+    })
+})
 
+describe("BookingPublicService", () => {
+    describe("requestIn", () => {
         it.each([
             failureOf({ label: "missing concurrent row", cause: { code: "23505" }, reads: 2 }),
             failureOf({
@@ -412,12 +367,14 @@ describe("BookingPublicService", () => {
             expect(tx.rollbacks).toBe(1)
         })
     })
+})
 
+describe("BookingPublicService", () => {
     describe("book", () => {
         it("parks the request when another request took the free time first", async () => {
             const { service, reservation } = await build()
             reservation.reserve.mockResolvedValueOnce({ kind: "full" })
-            await expect(service.book(requestOf())).resolves.toMatchObject({
+            await expect(service.book(bookingRequestOf())).resolves.toMatchObject({
                 state: "waiting",
                 code: "received_taken",
                 bookingId: "b1",
@@ -428,7 +385,7 @@ describe("BookingPublicService", () => {
 
         it("records why a time outside the opening hours cannot be taken", async () => {
             const { service, reservation } = await build()
-            await service.book(requestOf({ start: "2026-10-12T14:00:00.000Z" }))
+            await service.book(bookingRequestOf({ start: "2026-10-12T14:00:00.000Z" }))
             expect(reservation.reserve).toHaveBeenCalledWith(
                 expect.objectContaining({
                     booking: expect.objectContaining({ holdsSlot: false, conflictNote: "closed" }),
@@ -442,7 +399,7 @@ describe("BookingPublicService", () => {
         ])("fails when there is $label", async ({ model, spans, failsWrite }) => {
             const { service, reservation } = await build({ model, spans })
             if (failsWrite) reservation.reserve.mockResolvedValueOnce({ kind: "resource_not_found" })
-            await expect(service.book(requestOf())).resolves.toEqual(
+            await expect(service.book(bookingRequestOf())).resolves.toEqual(
                 replyOf({ ok: false, state: "failed", code: "no_resource", bookingId: null }),
             )
         })
@@ -459,13 +416,13 @@ describe("BookingPublicService", () => {
             },
         ])("answers a repeated form from existing booking $row.id", async ({ row, reply }) => {
             const { service, reservation } = await build({ keyed: [row] })
-            await expect(service.book(requestOf({ token: "form-token-1" }))).resolves.toEqual(reply)
+            await expect(service.book(bookingRequestOf({ token: "form-token-1" }))).resolves.toEqual(reply)
             expect(reservation.reserve).not.toHaveBeenCalled()
         })
 
         it("drops a bot that filled the honeypot without writing anything", async () => {
             const { service, reservation, models } = await build()
-            await expect(service.book(requestOf({ website: "http://spam" }))).resolves.toEqual(
+            await expect(service.book(bookingRequestOf({ website: "http://spam" }))).resolves.toEqual(
                 replyOf({
                     state: "waiting",
                     code: "received_free",
@@ -477,14 +434,18 @@ describe("BookingPublicService", () => {
             expect(models.model).not.toHaveBeenCalled()
             expect(reservation.reserve).not.toHaveBeenCalled()
         })
+    })
+})
 
+describe("BookingPublicService", () => {
+    describe("book", () => {
         it.each([
-            { request: requestOf({ name: "  " }), code: "name_required" },
-            { request: requestOf({ phone: "12" }), code: "phone_invalid" },
-            { request: requestOf({ phone: "" }), code: "phone_invalid" },
-            { request: requestOf({ start: "tomorrow" }), code: "start_invalid" },
-            { request: requestOf({ serviceId: "s2" }), code: "service_unavailable" },
-            { request: requestOf({ serviceId: "zzz" }), code: "service_unavailable" },
+            { request: bookingRequestOf({ name: "  " }), code: "name_required" },
+            { request: bookingRequestOf({ phone: "12" }), code: "phone_invalid" },
+            { request: bookingRequestOf({ phone: "" }), code: "phone_invalid" },
+            { request: bookingRequestOf({ start: "tomorrow" }), code: "start_invalid" },
+            { request: bookingRequestOf({ serviceId: "s2" }), code: "service_unavailable" },
+            { request: bookingRequestOf({ serviceId: "zzz" }), code: "service_unavailable" },
         ])("refuses $code before any write", async ({ request, code }) => {
             const { service, reservation } = await build()
             await expect(service.book(request)).resolves.toMatchObject({ ok: false, state: "invalid", code })
@@ -493,7 +454,9 @@ describe("BookingPublicService", () => {
 
         it("refuses an unknown slug", async () => {
             const { service } = await build({ page: false })
-            await expect(service.book(requestOf())).rejects.toMatchObject({ code: BookingsErrorCode.PageNotFound })
+            await expect(service.book(bookingRequestOf())).rejects.toMatchObject({
+                code: BookingsErrorCode.PageNotFound,
+            })
         })
     })
 })

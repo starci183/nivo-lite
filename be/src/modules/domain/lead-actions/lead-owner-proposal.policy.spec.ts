@@ -1,5 +1,15 @@
+import { Test } from "@nestjs/testing"
 import { LeadActionsErrorCode } from "./errors/lead-actions.error"
-import { ownerProposalOf } from "./lead-owner-proposal.policy"
+import { ownerProposalOf as ownerProposalOfImplementation } from "./lead-owner-proposal.policy"
+
+const SUBJECT = Symbol("subject")
+type Subject = { ownerProposalOf: typeof ownerProposalOfImplementation }
+const buildSubject = async () => {
+    const moduleRef = await Test.createTestingModule({
+        providers: [{ provide: SUBJECT, useValue: { ownerProposalOf: ownerProposalOfImplementation } }],
+    }).compile()
+    return moduleRef.get<Subject>(SUBJECT)
+}
 
 const proposal = {
     title: " Call prospect ",
@@ -16,12 +26,16 @@ const invalid = (field: string) => ({
 })
 
 describe("lead owner proposal policy", () => {
-    it.each([undefined, null, 42, "proposal", []])("refuses a non-record proposal %p", (value) => {
-        expect(ownerProposalOf(value)).toEqual(invalid("proposal"))
+    it.each([undefined, null, 42, "proposal", []])("refuses a non-record proposal %p", async (value) => {
+        const subject = await buildSubject()
+
+        expect(subject.ownerProposalOf(value)).toEqual(invalid("proposal"))
     })
 
-    it("trims an agent proposal and drops unrelated properties", () => {
-        expect(ownerProposalOf({ ...proposal, extra: "ignored" })).toEqual({
+    it("trims an agent proposal and drops unrelated properties", async () => {
+        const subject = await buildSubject()
+
+        expect(subject.ownerProposalOf({ ...proposal, extra: "ignored" })).toEqual({
             kind: "ok",
             value: {
                 title: "Call prospect",
@@ -34,8 +48,12 @@ describe("lead owner proposal policy", () => {
         })
     })
 
-    it.each([null, "", " named-person "])("clears a human owner's handle %p", (handle) => {
-        expect(ownerProposalOf({ ...proposal, owner_kind: "human", owner_handle: handle, rationale: " " })).toEqual({
+    it.each([null, "", " named-person "])("clears a human owner's handle %p", async (handle) => {
+        const subject = await buildSubject()
+
+        expect(
+            subject.ownerProposalOf({ ...proposal, owner_kind: "human", owner_handle: handle, rationale: " " }),
+        ).toEqual({
             kind: "ok",
             value: {
                 title: "Call prospect",
@@ -66,11 +84,15 @@ describe("lead owner proposal policy", () => {
         ["due_in_days", Number.POSITIVE_INFINITY],
         ["due_in_days", -1],
         ["due_in_days", 366],
-    ])("refuses invalid %s value %p", (field, value) => {
-        expect(ownerProposalOf({ ...proposal, [field]: value })).toEqual(invalid(field))
+    ])("refuses invalid %s value %p", async (field, value) => {
+        const subject = await buildSubject()
+
+        expect(subject.ownerProposalOf({ ...proposal, [field]: value })).toEqual(invalid(field))
     })
 
-    it.each([0, 365])("accepts a proposal at the due-day boundary %s", (dueDays) => {
+    it.each([0, 365])("accepts a proposal at the due-day boundary %s", async (dueDays) => {
+        const subject = await buildSubject()
+
         const value = {
             title: "t".repeat(200),
             owner_kind: "agent",
@@ -79,6 +101,6 @@ describe("lead owner proposal policy", () => {
             due_in_days: dueDays,
             rationale: "r".repeat(2000),
         }
-        expect(ownerProposalOf(value)).toEqual({ kind: "ok", value })
+        expect(subject.ownerProposalOf(value)).toEqual({ kind: "ok", value })
     })
 })

@@ -1,4 +1,5 @@
 import { Module } from "@nestjs/common"
+import { ConfigurableModuleClass } from "./agentchat.module-definition"
 import { GetAgentChatPageHandler } from "./application/agent-chat-page.handler"
 import { ListAgentChatConversationsHandler } from "./application/agent-chat-conversations.handler"
 import { ListAgentChatMessagesHandler } from "./application/agent-chat-messages.handler"
@@ -19,4 +20,4 @@ import { GetAgentChatTurnStatusHandler } from "./application/agent-chat-turn-sta
     ],
 })
 /** Application handlers of the agent chat feature. */
-export class AgentchatApiModule {}
+export class AgentchatApiModule extends ConfigurableModuleClass {}

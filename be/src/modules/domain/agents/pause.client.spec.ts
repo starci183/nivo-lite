@@ -1,8 +1,10 @@
+import { Test } from "@nestjs/testing"
 import { PauseClient } from "./pause.client"
 
 describe("PauseClient", () => {
     it("resolves with nothing once the time has passed", async () => {
-        const client = new PauseClient()
+        const moduleRef = await Test.createTestingModule({ providers: [PauseClient] }).compile()
+        const client = moduleRef.get(PauseClient)
 
         await expect(client.wait(20)).resolves.toBeUndefined()
     })

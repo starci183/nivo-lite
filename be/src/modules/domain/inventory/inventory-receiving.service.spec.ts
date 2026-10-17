@@ -78,221 +78,222 @@ const build = async (entityManager: MockEntityManager) => {
     return { service: moduleRef.get(InventoryReceivingService), office, movements, orders }
 }
 
-describe("InventoryReceivingService", () => {
-    describe("receivePo", () => {
-        it("receives goods at the actual price, completes the order, notes the price change and hands the payable to Accounting", async () => {
-            const em = mockEntityManager({
-                query: [
-                    [OPEN_RECEIPT, [{ id: "rec-1" }]],
-                    [RECEIVE_PO_LINE, []],
-                    [RECEIVE_PO_LINE, []],
-                    [CLOSE_RECEIPT, []],
-                    [SET_PO_STATUS, []],
-                    [RECOMPUTE_PO_TOTAL, [{ total: "1" }]],
-                    [SELECT_ACCOUNTING_INSTALLED, [{ id: "mod-1" }]],
-                ],
-            })
-            const { service, movements, orders, office } = await build(em)
-            orders.loadPo
-                .mockResolvedValueOnce(poOf())
-                .mockResolvedValueOnce(
-                    poOf({ lines: poOf().lines.map((line) => ({ ...line, qtyReceived: line.qtyOrdered })) }),
-                )
-
-            const result = await service.receivePo("user-1", "ws-1", {
-                poId: "po-1",
-                invoiceNo: " INV-9 ",
-                note: "ok",
-                lines: [
-                    { lineId: UUID, qty: "10", unitCost: "6.500" },
-                    { lineId: UUID_2, qty: "5", unitCost: "" },
-                ],
-            })
-
-            expect(result).toEqual({
-                status: "received",
-                received: 2,
-                priceChanges: [expect.stringContaining("inventory.priceChange")],
-                payableVnd: 65500,
-                handedToAccounting: true,
-            })
-            expect(em.query).toHaveBeenCalledWith(OPEN_RECEIPT, ["ws-1", "po-1", "INV-9", "ok", "Lan"])
-            expect(movements.apply).toHaveBeenCalledWith("ws-1", {
-                itemId: "item-1",
-                locationId: "loc-1",
-                kind: "in",
-                delta: 10,
-                reason: text("inventory.receiveReason", { poNo: "PO-202610-0001" }),
-                refType: "po",
-                refId: "po-1",
-                refLabel: "PO-202610-0001",
-                by: "Lan",
-                evidence: text("inventory.invoiceEvidence", { invoiceNo: "INV-9" }),
-                dedupe: `po-receive:rec-1:${UUID}`,
-                unitCost: 6500,
-            })
-            expect(em.query).toHaveBeenCalledWith(RECEIVE_PO_LINE, [UUID, 10, 6500])
-            expect(em.query).toHaveBeenCalledWith(RECEIVE_PO_LINE, [UUID_2, 5, 100])
-            expect(em.query).toHaveBeenCalledWith(CLOSE_RECEIPT, ["rec-1", 65500])
-            expect(em.query).toHaveBeenCalledWith(SET_PO_STATUS, ["po-1", "received"])
-            expect(office.logEvidence).toHaveBeenCalledWith(
-                "ws-1",
-                expect.objectContaining({
-                    kind: "inventory.received",
-                    summary: expect.stringContaining("inventory.receivedFullSummary"),
-                }),
+describe("InventoryReceivingService / receivePo", () => {
+    it("receives at actual prices, completes the order, logs changes and hands the payable to Accounting", async () => {
+        const em = mockEntityManager({
+            query: [
+                [OPEN_RECEIPT, [{ id: "rec-1" }]],
+                [RECEIVE_PO_LINE, []],
+                [RECEIVE_PO_LINE, []],
+                [CLOSE_RECEIPT, []],
+                [SET_PO_STATUS, []],
+                [RECOMPUTE_PO_TOTAL, [{ total: "1" }]],
+                [SELECT_ACCOUNTING_INSTALLED, [{ id: "mod-1" }]],
+            ],
+        })
+        const { service, movements, orders, office } = await build(em)
+        orders.loadPo
+            .mockResolvedValueOnce(poOf())
+            .mockResolvedValueOnce(
+                poOf({ lines: poOf().lines.map((line) => ({ ...line, qtyReceived: line.qtyOrdered })) }),
             )
-            expect(office.postOffice).toHaveBeenCalledWith("ws-1", expect.stringContaining("inventory.priceChangeNote"))
-            expect(office.postOffice).toHaveBeenCalledWith("ws-1", expect.stringContaining("inventory.payableNote"))
-            expect(office.logEvidence).toHaveBeenCalledWith(
-                "ws-1",
-                expect.objectContaining({ kind: "inventory.payable", actor: text("inventory.receiveActor") }),
-            )
-            expect(movements.replenishLater).toHaveBeenCalledWith("ws-1", ["item-1", "item-2"])
+
+        const result = await service.receivePo("user-1", "ws-1", {
+            poId: "po-1",
+            invoiceNo: " INV-9 ",
+            note: "ok",
+            lines: [
+                { lineId: UUID, qty: "10", unitCost: "6.500" },
+                { lineId: UUID_2, qty: "5", unitCost: "" },
+            ],
         })
 
-        it("marks a partial receipt, skips a line that was not applied and does not hand over without Accounting or an invoice number", async () => {
-            const em = mockEntityManager({
-                query: [
-                    [OPEN_RECEIPT, [{ id: "rec-1" }]],
-                    [RECEIVE_PO_LINE, []],
-                    [CLOSE_RECEIPT, []],
-                    [SET_PO_STATUS, []],
-                    [RECOMPUTE_PO_TOTAL, [{ total: "1" }]],
-                    [SELECT_ACCOUNTING_INSTALLED, []],
-                ],
-            })
-            const { service, movements, orders, office } = await build(em)
-            movements.apply
-                .mockResolvedValueOnce({ applied: true, before: 0, after: 4, cost: 0 })
-                .mockResolvedValueOnce({ applied: false, before: 0, after: 0, cost: 0 })
-            orders.loadPo
-                .mockResolvedValueOnce(poOf())
-                .mockResolvedValueOnce(poOf({ lines: poOf().lines.map((line) => ({ ...line, qtyReceived: 4 })) }))
+        expect(result).toEqual({
+            status: "received",
+            received: 2,
+            priceChanges: [expect.stringContaining("inventory.priceChange")],
+            payableVnd: 65500,
+            handedToAccounting: true,
+        })
+        expect(em.query).toHaveBeenCalledWith(OPEN_RECEIPT, ["ws-1", "po-1", "INV-9", "ok", "Lan"])
+        expect(movements.apply).toHaveBeenCalledWith("ws-1", {
+            itemId: "item-1",
+            locationId: "loc-1",
+            kind: "in",
+            delta: 10,
+            reason: text("inventory.receiveReason", { poNo: "PO-202610-0001" }),
+            refType: "po",
+            refId: "po-1",
+            refLabel: "PO-202610-0001",
+            by: "Lan",
+            evidence: text("inventory.invoiceEvidence", { invoiceNo: "INV-9" }),
+            dedupe: `po-receive:rec-1:${UUID}`,
+            unitCost: 6500,
+        })
+        expect(em.query).toHaveBeenCalledWith(RECEIVE_PO_LINE, [UUID, 10, 6500])
+        expect(em.query).toHaveBeenCalledWith(RECEIVE_PO_LINE, [UUID_2, 5, 100])
+        expect(em.query).toHaveBeenCalledWith(CLOSE_RECEIPT, ["rec-1", 65500])
+        expect(em.query).toHaveBeenCalledWith(SET_PO_STATUS, ["po-1", "received"])
+        expect(office.logEvidence).toHaveBeenCalledWith(
+            "ws-1",
+            expect.objectContaining({
+                kind: "inventory.received",
+                summary: expect.stringContaining("inventory.receivedFullSummary"),
+            }),
+        )
+        expect(office.postOffice).toHaveBeenCalledWith("ws-1", expect.stringContaining("inventory.priceChangeNote"))
+        expect(office.postOffice).toHaveBeenCalledWith("ws-1", expect.stringContaining("inventory.payableNote"))
+        expect(office.logEvidence).toHaveBeenCalledWith(
+            "ws-1",
+            expect.objectContaining({ kind: "inventory.payable", actor: text("inventory.receiveActor") }),
+        )
+        expect(movements.replenishLater).toHaveBeenCalledWith("ws-1", ["item-1", "item-2"])
+    })
+})
 
-            const result = await service.receivePo("user-1", "ws-1", {
+describe("InventoryReceivingService / receivePo", () => {
+    it("marks partial receipts, skips unapplied lines and requires Accounting and an invoice", async () => {
+        const em = mockEntityManager({
+            query: [
+                [OPEN_RECEIPT, [{ id: "rec-1" }]],
+                [RECEIVE_PO_LINE, []],
+                [CLOSE_RECEIPT, []],
+                [SET_PO_STATUS, []],
+                [RECOMPUTE_PO_TOTAL, [{ total: "1" }]],
+                [SELECT_ACCOUNTING_INSTALLED, []],
+            ],
+        })
+        const { service, movements, orders, office } = await build(em)
+        movements.apply
+            .mockResolvedValueOnce({ applied: true, before: 0, after: 4, cost: 0 })
+            .mockResolvedValueOnce({ applied: false, before: 0, after: 0, cost: 0 })
+        orders.loadPo
+            .mockResolvedValueOnce(poOf())
+            .mockResolvedValueOnce(poOf({ lines: poOf().lines.map((line) => ({ ...line, qtyReceived: 4 })) }))
+
+        const result = await service.receivePo("user-1", "ws-1", {
+            poId: "po-1",
+            invoiceNo: "",
+            note: "",
+            lines: [
+                { lineId: UUID, qty: "4", unitCost: "6000" },
+                { lineId: UUID_2, qty: "5", unitCost: "" },
+                { lineId: "line-unknown", qty: "1", unitCost: "" },
+                { lineId: UUID, qty: "0", unitCost: "" },
+            ],
+        })
+
+        expect(result).toEqual({
+            status: "partially_received",
+            received: 1,
+            priceChanges: [],
+            payableVnd: 24000,
+            handedToAccounting: false,
+        })
+        expect(em.query).toHaveBeenCalledWith(OPEN_RECEIPT, ["ws-1", "po-1", null, "", "Lan"])
+        expect(movements.apply).toHaveBeenCalledWith("ws-1", expect.objectContaining({ evidence: null }))
+        expect(office.postOffice).not.toHaveBeenCalled()
+        expect(office.logEvidence).toHaveBeenCalledWith(
+            "ws-1",
+            expect.objectContaining({
+                evidence: null,
+                summary: expect.stringContaining("inventory.receivedPartSummary"),
+            }),
+        )
+    })
+})
+
+describe("InventoryReceivingService / receivePo", () => {
+    it("names the fallback supplier and item and writes the invoice into the payable", async () => {
+        const em = mockEntityManager({
+            query: [
+                [OPEN_RECEIPT, [{ id: "rec-1" }]],
+                [RECEIVE_PO_LINE, []],
+                [CLOSE_RECEIPT, []],
+                [SET_PO_STATUS, []],
+                [RECOMPUTE_PO_TOTAL, [{ total: "1" }]],
+                [SELECT_ACCOUNTING_INSTALLED, [{ id: "mod-1" }]],
+            ],
+        })
+        const { service, orders, office } = await build(em)
+        orders.loadPo.mockResolvedValue(poOf({ supplier: null }))
+
+        await service.receivePo("user-1", "ws-1", {
+            poId: "po-1",
+            invoiceNo: "INV-1",
+            note: "",
+            lines: [{ lineId: UUID_2, qty: "1", unitCost: "300" }],
+        })
+
+        expect(office.postOffice).toHaveBeenCalledWith("ws-1", expect.stringContaining(text("inventory.itemFallback")))
+        expect(office.postOffice).toHaveBeenCalledWith(
+            "ws-1",
+            expect.stringContaining(text("inventory.supplierFallback")),
+        )
+    })
+
+    it("hands a payable to Accounting without an invoice number", async () => {
+        const em = mockEntityManager({
+            query: [
+                [OPEN_RECEIPT, [{ id: "rec-1" }]],
+                [RECEIVE_PO_LINE, []],
+                [CLOSE_RECEIPT, []],
+                [SET_PO_STATUS, []],
+                [RECOMPUTE_PO_TOTAL, [{ total: "1" }]],
+                [SELECT_ACCOUNTING_INSTALLED, [{ id: "mod-1" }]],
+            ],
+        })
+        const { service, office } = await build(em)
+
+        await service.receivePo("user-1", "ws-1", {
+            poId: "po-1",
+            invoiceNo: "",
+            note: "",
+            lines: [{ lineId: UUID_2, qty: "1", unitCost: "300" }],
+        })
+
+        expect(office.logEvidence).toHaveBeenCalledWith(
+            "ws-1",
+            expect.objectContaining({ kind: "inventory.payable", evidence: null }),
+        )
+        expect(office.postOffice).toHaveBeenCalledWith("ws-1", expect.stringContaining('"invoice":""'))
+    })
+})
+
+describe("InventoryReceivingService / receivePo", () => {
+    it("throws away the receipt when no line received anything", async () => {
+        const em = mockEntityManager({
+            query: [
+                [OPEN_RECEIPT, [{ id: "rec-1" }]],
+                [DISCARD_RECEIPT, []],
+            ],
+        })
+        const { service } = await build(em)
+
+        await expect(
+            service.receivePo("user-1", "ws-1", {
                 poId: "po-1",
                 invoiceNo: "",
                 note: "",
-                lines: [
-                    { lineId: UUID, qty: "4", unitCost: "6000" },
-                    { lineId: UUID_2, qty: "5", unitCost: "" },
-                    { lineId: "line-unknown", qty: "1", unitCost: "" },
-                    { lineId: UUID, qty: "0", unitCost: "" },
-                ],
-            })
-
-            expect(result).toEqual({
-                status: "partially_received",
-                received: 1,
-                priceChanges: [],
-                payableVnd: 24000,
-                handedToAccounting: false,
-            })
-            expect(em.query).toHaveBeenCalledWith(OPEN_RECEIPT, ["ws-1", "po-1", null, "", "Lan"])
-            expect(movements.apply).toHaveBeenCalledWith("ws-1", expect.objectContaining({ evidence: null }))
-            expect(office.postOffice).not.toHaveBeenCalled()
-            expect(office.logEvidence).toHaveBeenCalledWith(
-                "ws-1",
-                expect.objectContaining({
-                    evidence: null,
-                    summary: expect.stringContaining("inventory.receivedPartSummary"),
-                }),
-            )
+                lines: [{ lineId: UUID, qty: "0", unitCost: "" }],
+            }),
+        ).rejects.toMatchObject({
+            code: InventoryErrorCode.ReceiptEmpty,
         })
 
-        it("names the fallback supplier and item and writes the invoice into the payable", async () => {
-            const em = mockEntityManager({
-                query: [
-                    [OPEN_RECEIPT, [{ id: "rec-1" }]],
-                    [RECEIVE_PO_LINE, []],
-                    [CLOSE_RECEIPT, []],
-                    [SET_PO_STATUS, []],
-                    [RECOMPUTE_PO_TOTAL, [{ total: "1" }]],
-                    [SELECT_ACCOUNTING_INSTALLED, [{ id: "mod-1" }]],
-                ],
-            })
-            const { service, orders, office } = await build(em)
-            orders.loadPo.mockResolvedValue(poOf({ supplier: null }))
+        expect(em.query).toHaveBeenCalledWith(DISCARD_RECEIPT, ["rec-1"])
+    })
 
-            await service.receivePo("user-1", "ws-1", {
-                poId: "po-1",
-                invoiceNo: "INV-1",
-                note: "",
-                lines: [{ lineId: UUID_2, qty: "1", unitCost: "300" }],
-            })
+    it("refuses an order that was not sent and a receipt the database did not open", async () => {
+        const em = mockEntityManager({ query: [OPEN_RECEIPT, []] })
+        const { service, orders } = await build(em)
+        orders.loadPo.mockResolvedValueOnce(poOf({ status: "draft" })).mockResolvedValueOnce(poOf())
 
-            expect(office.postOffice).toHaveBeenCalledWith(
-                "ws-1",
-                expect.stringContaining(text("inventory.itemFallback")),
-            )
-            expect(office.postOffice).toHaveBeenCalledWith(
-                "ws-1",
-                expect.stringContaining(text("inventory.supplierFallback")),
-            )
-        })
-
-        it("hands a payable to Accounting without an invoice number", async () => {
-            const em = mockEntityManager({
-                query: [
-                    [OPEN_RECEIPT, [{ id: "rec-1" }]],
-                    [RECEIVE_PO_LINE, []],
-                    [CLOSE_RECEIPT, []],
-                    [SET_PO_STATUS, []],
-                    [RECOMPUTE_PO_TOTAL, [{ total: "1" }]],
-                    [SELECT_ACCOUNTING_INSTALLED, [{ id: "mod-1" }]],
-                ],
-            })
-            const { service, office } = await build(em)
-
-            await service.receivePo("user-1", "ws-1", {
-                poId: "po-1",
-                invoiceNo: "",
-                note: "",
-                lines: [{ lineId: UUID_2, qty: "1", unitCost: "300" }],
-            })
-
-            expect(office.logEvidence).toHaveBeenCalledWith(
-                "ws-1",
-                expect.objectContaining({ kind: "inventory.payable", evidence: null }),
-            )
-            expect(office.postOffice).toHaveBeenCalledWith("ws-1", expect.stringContaining('"invoice":""'))
-        })
-
-        it("throws away the receipt when no line received anything", async () => {
-            const em = mockEntityManager({
-                query: [
-                    [OPEN_RECEIPT, [{ id: "rec-1" }]],
-                    [DISCARD_RECEIPT, []],
-                ],
-            })
-            const { service } = await build(em)
-
-            await expect(
-                service.receivePo("user-1", "ws-1", {
-                    poId: "po-1",
-                    invoiceNo: "",
-                    note: "",
-                    lines: [{ lineId: UUID, qty: "0", unitCost: "" }],
-                }),
-            ).rejects.toMatchObject({
-                code: InventoryErrorCode.ReceiptEmpty,
-            })
-
-            expect(em.query).toHaveBeenCalledWith(DISCARD_RECEIPT, ["rec-1"])
-        })
-
-        it("refuses an order that was not sent and a receipt the database did not open", async () => {
-            const em = mockEntityManager({ query: [OPEN_RECEIPT, []] })
-            const { service, orders } = await build(em)
-            orders.loadPo.mockResolvedValueOnce(poOf({ status: "draft" })).mockResolvedValueOnce(poOf())
-
-            await expect(
-                service.receivePo("user-1", "ws-1", { poId: "po-1", invoiceNo: "", note: "", lines: [] }),
-            ).rejects.toMatchObject({ code: InventoryErrorCode.PoNotReceivable })
-            await expect(
-                service.receivePo("user-1", "ws-1", { poId: "po-1", invoiceNo: "", note: "", lines: [] }),
-            ).rejects.toMatchObject({ code: InventoryErrorCode.PoNotReceivable })
-        })
+        await expect(
+            service.receivePo("user-1", "ws-1", { poId: "po-1", invoiceNo: "", note: "", lines: [] }),
+        ).rejects.toMatchObject({ code: InventoryErrorCode.PoNotReceivable })
+        await expect(
+            service.receivePo("user-1", "ws-1", { poId: "po-1", invoiceNo: "", note: "", lines: [] }),
+        ).rejects.toMatchObject({ code: InventoryErrorCode.PoNotReceivable })
     })
 })

@@ -27,3 +27,6 @@ LIMIT 1`
  * (invoker rights, under the same row policies) instead of writing the table ($1 connection id, $2 instant, $3 first event JSON).
  */
 export const MARK_CONNECTION_FED = sql`SELECT public.connection_mark_fed($1, $2, $3::jsonb)`
+
+/** Resolves the connection's workspace without retaining any provider credential in the receipt. */
+export const SELECT_FEED_CONNECTION = sql`SELECT workspace_id FROM public.connections WHERE id = $1 LIMIT 1`

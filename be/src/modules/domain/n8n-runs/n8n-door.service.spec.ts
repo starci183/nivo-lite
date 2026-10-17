@@ -110,7 +110,9 @@ describe("N8nDoorService", () => {
             expect(data.monthLedger).toHaveBeenNthCalledWith(2, "ws-1", "2026-09")
         })
     })
+})
 
+describe("N8nDoorService", () => {
     describe("sendEmail", () => {
         it("cleans what the workflow sent and sends it to the audience of the template", async () => {
             const { door, email, templates } = await build("customer")

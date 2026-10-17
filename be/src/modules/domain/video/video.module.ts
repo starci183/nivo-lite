@@ -26,7 +26,11 @@ export class VideoModule extends ConfigurableModuleClass {
         const base = super.register(options)
         return {
             ...base,
-            imports: [...(base.imports ?? []), VideoRenderModule, VideoBrandKitsModule.register({ isGlobal: false })],
+            imports: [
+                ...(base.imports ?? []),
+                VideoRenderModule.register({}),
+                VideoBrandKitsModule.register({ isGlobal: false }),
+            ],
             providers: [
                 ...(base.providers ?? []),
                 { provide: VIDEO_ASSETS, useExisting: options.assets },

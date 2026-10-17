@@ -1,14 +1,44 @@
+import { Test } from "@nestjs/testing"
 import { PATTERNS, buildInstallation } from "@tests/fixtures/builders/automations.builder"
 import {
     PATTERN_CAPABILITIES,
-    capabilitiesFrom,
-    contextVersionFor,
-    contextsFrom,
-    factsFrom,
-    gateModeFor,
-    shopContextFrom,
+    capabilitiesFrom as capabilitiesFromImplementation,
+    contextVersionFor as contextVersionForImplementation,
+    contextsFrom as contextsFromImplementation,
+    factsFrom as factsFromImplementation,
+    gateModeFor as gateModeForImplementation,
+    shopContextFrom as shopContextFromImplementation,
 } from "./context.policy"
 import type { ActiveContexts } from "./context.policy"
+
+const SUBJECT = Symbol("subject")
+type Subject = {
+    capabilitiesFrom: typeof capabilitiesFromImplementation
+    contextVersionFor: typeof contextVersionForImplementation
+    contextsFrom: typeof contextsFromImplementation
+    factsFrom: typeof factsFromImplementation
+    gateModeFor: typeof gateModeForImplementation
+    shopContextFrom: typeof shopContextFromImplementation
+}
+
+const buildSubject = async () => {
+    const moduleRef = await Test.createTestingModule({
+        providers: [
+            {
+                provide: SUBJECT,
+                useValue: {
+                    capabilitiesFrom: capabilitiesFromImplementation,
+                    contextVersionFor: contextVersionForImplementation,
+                    contextsFrom: contextsFromImplementation,
+                    factsFrom: factsFromImplementation,
+                    gateModeFor: gateModeForImplementation,
+                    shopContextFrom: shopContextFromImplementation,
+                },
+            },
+        ],
+    }).compile()
+    return moduleRef.get<Subject>(SUBJECT)
+}
 
 const contexts = (overrides: Partial<ActiveContexts> = {}): ActiveContexts => ({
     installed: [],
@@ -20,8 +50,10 @@ const contexts = (overrides: Partial<ActiveContexts> = {}): ActiveContexts => ({
 })
 
 describe("contextsFrom", () => {
-    it("collects the versions, the text, the hours of the gate and the operating mode of each module", () => {
-        const result = contextsFrom([
+    it("collects the versions, the text, the hours of the gate and the operating mode of each module", async () => {
+        const subject = await buildSubject()
+
+        const result = subject.contextsFrom([
             buildInstallation({
                 module_key: "sales",
                 operating_mode: "assist",
@@ -51,14 +83,24 @@ describe("contextsFrom", () => {
         expect(result.text).toContain("Delivery in town.")
     })
 
-    it("knows nothing before any module is installed", () => {
-        expect(contextsFrom([])).toEqual({ installed: [], versions: {}, text: "", hoursText: "", operatingModes: {} })
+    it("knows nothing before any module is installed", async () => {
+        const subject = await buildSubject()
+
+        expect(subject.contextsFrom([])).toEqual({
+            installed: [],
+            versions: {},
+            text: "",
+            hoursText: "",
+            operatingModes: {},
+        })
     })
 })
 
 describe("shopContextFrom", () => {
-    it("names the shop, its hours from the gate and the tone the owner set", () => {
-        const shop = shopContextFrom(
+    it("names the shop, its hours from the gate and the tone the owner set", async () => {
+        const subject = await buildSubject()
+
+        const shop = subject.shopContextFrom(
             "Tiem Hoa",
             { brand_voice: " warm ", reply_style: "short" },
             contexts({ hoursText: "Hours 8h-21h" }),
@@ -73,8 +115,10 @@ describe("shopContextFrom", () => {
         })
     })
 
-    it("reads the hours from a line of the context when the gate states none, and the tone from the reply style", () => {
-        const shop = shopContextFrom(
+    it("reads context hours when the gate has none, and tone from reply style", async () => {
+        const subject = await buildSubject()
+
+        const shop = subject.shopContextFrom(
             null,
             { reply_style: "short" },
             contexts({ text: "We sell flowers\nOpening hours 9:00 - 18:00" }),
@@ -84,29 +128,35 @@ describe("shopContextFrom", () => {
         expect(shop).toMatchObject({ shop: "shop", hours: "09:00 - 18:00", tone: "short" })
     })
 
-    it("states no hours and no tone when the shop told none", () => {
-        expect(shopContextFrom("S", null, contexts({ text: "Opening hours vary" }), PATTERNS)).toEqual({
+    it("states no hours and no tone when the shop told none", async () => {
+        const subject = await buildSubject()
+
+        expect(subject.shopContextFrom("S", null, contexts({ text: "Opening hours vary" }), PATTERNS)).toEqual({
             shop: "S",
             hours: "",
             tone: "",
             hoursRange: null,
         })
-        expect(shopContextFrom("S", {}, contexts(), PATTERNS).tone).toBe("")
+        expect(subject.shopContextFrom("S", {}, contexts(), PATTERNS).tone).toBe("")
     })
 })
 
 describe("capabilitiesFrom", () => {
     const none = { contracts: 0, shipped: 0 }
 
-    it("finds what the text affirms and ignores a sentence that denies it", () => {
+    it("finds what the text affirms and ignores a sentence that denies it", async () => {
+        const subject = await buildSubject()
+
         const text = "We take a deposit. No appointment needed. We sell online; delivery is free"
-        const has = capabilitiesFrom(contexts({ text }), [], 0, none, PATTERNS)
+        const has = subject.capabilitiesFrom(contexts({ text }), [], 0, none, PATTERNS)
 
         expect([...has].sort()).toEqual(["has_deposits", "has_delivery", "sells_online"].sort())
     })
 
-    it("reads the knowledge sources too, cut at three thousand characters", () => {
-        const has = capabilitiesFrom(
+    it("reads the knowledge sources too, cut at three thousand characters", async () => {
+        const subject = await buildSubject()
+
+        const has = subject.capabilitiesFrom(
             contexts(),
             [
                 { title: "Subscription plans", content: "..." },
@@ -120,8 +170,10 @@ describe("capabilitiesFrom", () => {
         expect([...has]).toEqual(["has_recurring_contracts"])
     })
 
-    it("adds the capabilities the installed modules and the data prove", () => {
-        const has = capabilitiesFrom(
+    it("adds the capabilities the installed modules and the data prove", async () => {
+        const subject = await buildSubject()
+
+        const has = subject.capabilitiesFrom(
             contexts({ installed: ["booking"], hoursText: "Hours 8h-21h" }),
             [],
             2,
@@ -140,8 +192,10 @@ describe("capabilitiesFrom", () => {
         )
     })
 
-    it("finds due dates and opening hours stated in the text", () => {
-        const has = capabilitiesFrom(
+    it("finds due dates and opening hours stated in the text", async () => {
+        const subject = await buildSubject()
+
+        const has = subject.capabilitiesFrom(
             contexts({ text: "Customers pay later.\nOur hours: 8h-21h" }),
             [],
             0,
@@ -160,30 +214,38 @@ describe("capabilitiesFrom", () => {
 describe("factsFrom", () => {
     const connections = [{ provider: "telegram", status: "active" }]
 
-    it("takes a chat from the agents or from a live chat connection", () => {
+    it("takes a chat from the agents or from a live chat connection", async () => {
+        const subject = await buildSubject()
+
         const capabilities = new Set<never>()
 
-        expect(factsFrom(contexts({ installed: ["sales"] }), capabilities, [], 1)).toMatchObject({
+        expect(subject.factsFrom(contexts({ installed: ["sales"] }), capabilities, [], 1)).toMatchObject({
             installed: ["sales"],
             hasChat: true,
         })
-        expect(factsFrom(contexts(), capabilities, connections, 0).hasChat).toBe(true)
-        expect(factsFrom(contexts(), capabilities, [{ provider: "zalo_oa", status: "active" }], 0).hasChat).toBe(true)
-        expect(factsFrom(contexts(), capabilities, [{ provider: "telegram", status: "pending" }], 0).hasChat).toBe(
+        expect(subject.factsFrom(contexts(), capabilities, connections, 0).hasChat).toBe(true)
+        expect(
+            subject.factsFrom(contexts(), capabilities, [{ provider: "zalo_oa", status: "active" }], 0).hasChat,
+        ).toBe(true)
+        expect(
+            subject.factsFrom(contexts(), capabilities, [{ provider: "telegram", status: "pending" }], 0).hasChat,
+        ).toBe(false)
+        expect(subject.factsFrom(contexts(), capabilities, [{ provider: "google", status: "active" }], 0).hasChat).toBe(
             false,
         )
-        expect(factsFrom(contexts(), capabilities, [{ provider: "google", status: "active" }], 0).hasChat).toBe(false)
     })
 })
 
 describe("contextVersionFor", () => {
-    it("is the version of the module, or the highest of the installed modules for a workspace-wide template", () => {
+    it("is the version of the module, or the highest of the installed modules for a workspace-wide template", async () => {
+        const subject = await buildSubject()
+
         const versions = { sales: 3, booking: 5 }
 
-        expect(contextVersionFor("sales", versions)).toBe(3)
-        expect(contextVersionFor("care", versions)).toBeNull()
-        expect(contextVersionFor(null, versions)).toBe(5)
-        expect(contextVersionFor(null, {})).toBeNull()
+        expect(subject.contextVersionFor("sales", versions)).toBe(3)
+        expect(subject.contextVersionFor("care", versions)).toBeNull()
+        expect(subject.contextVersionFor(null, versions)).toBe(5)
+        expect(subject.contextVersionFor(null, {})).toBeNull()
     })
 })
 
@@ -193,13 +255,17 @@ describe("gateModeFor", () => {
         { department: "sales", action: "send_follow_up", mode: "ask" as const },
     ]
 
-    it("is never for an action the owner set no rule for", () => {
-        expect(gateModeFor("reply_customer", rules, {})).toBe("never")
+    it("is never for an action the owner set no rule for", async () => {
+        const subject = await buildSubject()
+
+        expect(subject.gateModeFor("reply_customer", rules, {})).toBe("never")
     })
 
-    it("is the mode of the rule, with auto turned into ask while the department only assists", () => {
-        expect(gateModeFor("send_care", rules, { sales: null })).toBe("auto")
-        expect(gateModeFor("send_care", rules, { sales: "assist" })).toBe("ask")
-        expect(gateModeFor("send_follow_up", rules, { sales: "assist" })).toBe("ask")
+    it("is the mode of the rule, with auto turned into ask while the department only assists", async () => {
+        const subject = await buildSubject()
+
+        expect(subject.gateModeFor("send_care", rules, { sales: null })).toBe("auto")
+        expect(subject.gateModeFor("send_care", rules, { sales: "assist" })).toBe("ask")
+        expect(subject.gateModeFor("send_follow_up", rules, { sales: "assist" })).toBe("ask")
     })
 })

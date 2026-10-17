@@ -1,3 +1,4 @@
+import { Test } from "@nestjs/testing"
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
@@ -6,8 +7,11 @@ import { NIVO_KNOWLEDGE_FILES } from "./nivo-knowledge.templates"
 
 describe("NivoFolderClient", () => {
     let folder: string
+    let subject: NivoFolderClient
 
     beforeEach(async () => {
+        const moduleRef = await Test.createTestingModule({ providers: [NivoFolderClient] }).compile()
+        subject = moduleRef.get(NivoFolderClient)
         folder = await mkdtemp(join(tmpdir(), "nivo-folder-"))
     })
 
@@ -19,7 +23,7 @@ describe("NivoFolderClient", () => {
         const original = [...NIVO_KNOWLEDGE_FILES]
         const expected = [...NIVO_KNOWLEDGE_FILES].sort((a, b) => a.path.localeCompare(b.path))
 
-        await expect(new NivoFolderClient().read(undefined)).resolves.toEqual(expected)
+        await expect(subject.read(undefined)).resolves.toEqual(expected)
         expect(NIVO_KNOWLEDGE_FILES).toEqual(original)
     })
 
@@ -33,7 +37,7 @@ describe("NivoFolderClient", () => {
         await writeFile(join(folder, "notes.txt"), "Skip ordinary text", "utf8")
         await writeFile(join(folder, "core", "nested", "upper.MD"), "Skip uppercase extension", "utf8")
 
-        await expect(new NivoFolderClient().read(folder)).resolves.toEqual([
+        await expect(subject.read(folder)).resolves.toEqual([
             { path: "a.md", text: "First root file" },
             { path: "core/nested/authority.md", text: "Evidence matters" },
             { path: "core/tone.md", text: "Warm tone" },
@@ -42,12 +46,12 @@ describe("NivoFolderClient", () => {
     })
 
     it("answers an empty list for an empty folder", async () => {
-        await expect(new NivoFolderClient().read(folder)).resolves.toEqual([])
+        await expect(subject.read(folder)).resolves.toEqual([])
     })
 
     it("propagates a missing-folder filesystem error", async () => {
         const missing = join(folder, "missing")
 
-        await expect(new NivoFolderClient().read(missing)).rejects.toMatchObject({ code: "ENOENT", path: missing })
+        await expect(subject.read(missing)).rejects.toMatchObject({ code: "ENOENT", path: missing })
     })
 })

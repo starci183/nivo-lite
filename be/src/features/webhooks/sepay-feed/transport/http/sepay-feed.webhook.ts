@@ -27,8 +27,8 @@ export class SepayFeedWebhook {
         @Param("connectionId") connectionId: string,
         @Headers("authorization") authorization: string | undefined,
     ): Promise<typeof PROVIDER_ACK> {
-        await this.feed.verifySepayFeedDelivery({ connectionId, authorization, rawBody: request.rawBody })
-        await this.feed.acceptSepayFeedDelivery({ connectionId, authorization, rawBody: request.rawBody })
+        await this.feed.verifySepayFeedDelivery(authorization, connectionId, request.rawBody)
+        await this.feed.acceptSepayFeedDelivery(request.rawBody, connectionId)
         return PROVIDER_ACK
     }
 }

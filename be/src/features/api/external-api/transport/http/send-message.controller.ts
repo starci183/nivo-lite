@@ -1,6 +1,6 @@
 import { Body, Controller, Headers, HttpCode, HttpStatus, Post } from "@nestjs/common"
 import type { CommandBus } from "@nestjs/cqrs"
-import { Public, PublicReason } from "@modules/domain/identity"
+import { Credential } from "@modules/domain/identity"
 import { InjectCommandBus } from "@modules/platform/cqrs"
 import { RateLimit, RateTier } from "@modules/platform/http-security"
 import { SendMessageCommand } from "../../application/send-message.command"
@@ -9,14 +9,17 @@ import { SendMessageResponse } from "./dto/send-message.response"
 import { toSendMessageRequest, toSendMessageResponse } from "./send-message.mapper"
 
 @Controller("api/v1/messages")
-/** HTTP door of messaging a customer: the public API, authenticated by the bearer API key inside the operation. */
+/**
+ * HTTP door of messaging a customer: the public API, authenticated by an API-key guard; the operation checks scope and
+ * rate budget.
+ */
 export class SendMessageController {
     constructor(@InjectCommandBus() private readonly commandBus: CommandBus) {}
 
     /** Queues a message to a customer conversation: 202, never an instant send. */
     @Post()
     @HttpCode(HttpStatus.ACCEPTED)
-    @Public({ reason: PublicReason.SignedWebhook })
+    @Credential({ kind: "api-key" })
     @RateLimit(RateTier.Strict)
     async sendMessage(
         @Headers("authorization") authorization: string | undefined,

@@ -11,76 +11,86 @@ import { DataHubService } from "./data-hub.service"
 import { DataHubErrorCode } from "./errors/data-hub.error"
 import { DATABASE_WIZARD_COPY as COPY } from "./messages/database.messages"
 
-describe("DatabaseWizardService", () => {
-    const actor: ConnectionActor = { principalId: "owner-1", workspaceId: "workspace-1" }
-    const targetView: DatabaseTargetView = {
-        engine: "postgres",
-        host: "database.example.com",
-        port: 5432,
-        database: "sales",
-        user: "reader",
-        ssl: true,
-    }
-    const target: DatabaseTarget = { ...targetView, password: "typed-password" }
-    const mapping: TableMapping = {
+const actor: ConnectionActor = { principalId: "owner-1", workspaceId: "workspace-1" }
+
+const targetView: DatabaseTargetView = {
+    engine: "postgres",
+    host: "database.example.com",
+    port: 5432,
+    database: "sales",
+    user: "reader",
+    ssl: true,
+}
+
+const target: DatabaseTarget = { ...targetView, password: "typed-password" }
+
+const mapping: TableMapping = {
+    schema: "public",
+    table: "customers",
+    entity: "customer",
+    idColumn: "id",
+    titleColumn: "name",
+    updatedColumn: "updated_at",
+    columns: ["id", "name"],
+}
+
+const tables: ReadonlyArray<DatabaseTable> = [
+    {
         schema: "public",
-        table: "customers",
-        entity: "customer",
-        idColumn: "id",
-        titleColumn: "name",
-        updatedColumn: "updated_at",
-        columns: ["id", "name"],
-    }
-    const tables: ReadonlyArray<DatabaseTable> = [
-        {
-            schema: "public",
-            name: "customers",
-            columns: [
-                { name: "id", type: "text" },
-                { name: "name", type: "text" },
-            ],
-        },
-    ]
-    const preview: DatabasePreview = { columns: ["id", "name"], rows: [["customer-1", "Alice"]] }
-    const connection: DataConnection = {
-        id: "connection-1",
-        workspaceId: "workspace-1",
-        provider: "database",
-        name: "Sales",
-        status: "connected",
-        lastError: null,
-        meta: { config: JSON.stringify({ tables: [mapping] }), "cursor:public.customers": "old-cursor" },
-        everyMinutes: 60,
-        lastSyncAt: null,
-    }
-    const draft: DatabaseSaveDraft = { name: "  Sales  ", target, tables: [mapping] }
-    const credential =
-        '{"engine":"postgres","host":"database.example.com","port":5432,"database":"sales","user":"reader","password":"typed-password","ssl":true}'
-    const meta = {
-        config: JSON.stringify({ tables: [mapping] }),
-        summary: COPY.summary("PostgreSQL", 1),
-        host: "database.example.com",
-    }
+        name: "customers",
+        columns: [
+            { name: "id", type: "text" },
+            { name: "name", type: "text" },
+        ],
+    },
+]
 
-    const build = async () => {
-        const hub = mock<DataHubService>()
-        const database = mock<DatabaseClient>()
-        hub.own.mockResolvedValue(connection)
-        hub.credentialOf.mockResolvedValue(JSON.stringify({ ...target, password: "stored-password" }))
-        hub.create.mockResolvedValue("connection-new")
-        hub.agentIds.mockResolvedValue(["agent-1", "agent-2"])
-        database.listTables.mockResolvedValue(tables)
-        database.preview.mockResolvedValue(preview)
-        const moduleRef = await Test.createTestingModule({
-            providers: [
-                DatabaseWizardService,
-                { provide: DataHubService, useValue: hub },
-                { provide: DATABASE, useValue: database },
-            ],
-        }).compile()
-        return { service: moduleRef.get(DatabaseWizardService), hub, database }
-    }
+const preview: DatabasePreview = { columns: ["id", "name"], rows: [["customer-1", "Alice"]] }
 
+const connection: DataConnection = {
+    id: "connection-1",
+    workspaceId: "workspace-1",
+    provider: "database",
+    name: "Sales",
+    status: "connected",
+    lastError: null,
+    meta: { config: JSON.stringify({ tables: [mapping] }), "cursor:public.customers": "old-cursor" },
+    everyMinutes: 60,
+    lastSyncAt: null,
+}
+
+const draft: DatabaseSaveDraft = { name: "  Sales  ", target, tables: [mapping] }
+
+const credential =
+    '{"engine":"postgres","host":"database.example.com","port":5432,"database":"sales",' +
+    '"user":"reader","password":"typed-password","ssl":true}'
+
+const meta = {
+    config: JSON.stringify({ tables: [mapping] }),
+    summary: COPY.summary("PostgreSQL", 1),
+    host: "database.example.com",
+}
+
+const build = async () => {
+    const hub = mock<DataHubService>()
+    const database = mock<DatabaseClient>()
+    hub.own.mockResolvedValue(connection)
+    hub.credentialOf.mockResolvedValue(JSON.stringify({ ...target, password: "stored-password" }))
+    hub.create.mockResolvedValue("connection-new")
+    hub.agentIds.mockResolvedValue(["agent-1", "agent-2"])
+    database.listTables.mockResolvedValue(tables)
+    database.preview.mockResolvedValue(preview)
+    const moduleRef = await Test.createTestingModule({
+        providers: [
+            DatabaseWizardService,
+            { provide: DataHubService, useValue: hub },
+            { provide: DATABASE, useValue: database },
+        ],
+    }).compile()
+    return { service: moduleRef.get(DatabaseWizardService), hub, database }
+}
+
+describe("DatabaseWizardService", () => {
     it("lists the visible tables using the cleaned typed target after checking the owner", async () => {
         const { service, hub, database } = await build()
 
@@ -149,7 +159,9 @@ describe("DatabaseWizardService", () => {
         expect(hub.own).toHaveBeenCalledWith("workspace-1", "connection-1", "database")
         expect(database.listTables).not.toHaveBeenCalled()
     })
+})
 
+describe("DatabaseWizardService", () => {
     it.each([
         { reason: "blank host", target: { ...target, host: " " }, detail: COPY.needHost },
         { reason: "oversized host", target: { ...target, host: "h".repeat(254) }, detail: COPY.needHost },
@@ -223,7 +235,9 @@ describe("DatabaseWizardService", () => {
         })
         expect(database.preview).not.toHaveBeenCalled()
     })
+})
 
+describe("DatabaseWizardService", () => {
     it("preserves a database failure while previewing rows", async () => {
         const { service, database } = await build()
         const cause = new Error("preview failed")
@@ -283,7 +297,9 @@ describe("DatabaseWizardService", () => {
         expect(hub.credentialOf).not.toHaveBeenCalled()
         expect(hub.create).not.toHaveBeenCalled()
     })
+})
 
+describe("DatabaseWizardService", () => {
     it("keeps the stored password when saving an existing connection with a blank password", async () => {
         const { service, hub } = await build()
 
@@ -295,7 +311,8 @@ describe("DatabaseWizardService", () => {
         expect(hub.own).toHaveBeenNthCalledWith(2, "workspace-1", "connection-1", "database")
         expect(hub.saveCredential).toHaveBeenCalledWith(
             "connection-1",
-            '{"engine":"postgres","host":"database.example.com","port":5432,"database":"sales","user":"reader","password":"stored-password","ssl":true}',
+            '{"engine":"postgres","host":"database.example.com","port":5432,"database":"sales",' +
+                '"user":"reader","password":"stored-password","ssl":true}',
         )
         expect(hub.update).toHaveBeenCalledWith("workspace-1", "connection-1", {
             name: "Sales",
@@ -355,7 +372,9 @@ describe("DatabaseWizardService", () => {
             expect(hub.update).toHaveBeenCalledTimes(updates)
         },
     )
+})
 
+describe("DatabaseWizardService", () => {
     it.each<[string, Readonly<Record<string, string>>, ReadonlyArray<TableMapping>, number | null, Array<string>]>([
         ["valid", connection.meta, [mapping], 60, ["agent-1", "agent-2"]],
         ["missing", {}, [], null, []],
@@ -420,7 +439,9 @@ describe("DatabaseWizardService", () => {
         expect(hub.credentialOf).not.toHaveBeenCalled()
         expect(database.listTables).not.toHaveBeenCalled()
     })
+})
 
+describe("DatabaseWizardService", () => {
     it.each<["own" | "credentialOf" | "agentIds", Array<Array<string>>, number]>([
         ["own", [], 0],
         ["credentialOf", [["connection-1"]], 0],

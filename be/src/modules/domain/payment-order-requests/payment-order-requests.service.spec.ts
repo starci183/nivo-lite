@@ -134,7 +134,9 @@ describe("PaymentOrderRequestsService", () => {
             expect(tx.outcomes).toEqual(["commit"])
         },
     )
+})
 
+describe("PaymentOrderRequestsService", () => {
     it("rolls back without queuing when insertion does not produce a request id", async () => {
         const em = mockEntityManager({ query: [INSERT_REQUEST, []] })
         const tx = fakeTransaction(em)
@@ -197,7 +199,9 @@ describe("PaymentOrderRequestsService", () => {
 
         expect(em.query).not.toHaveBeenCalled()
     })
+})
 
+describe("PaymentOrderRequestsService", () => {
     it.each([
         { cause: new BillingError({ code: BillingErrorCode.Forbidden }), code: BillingErrorCode.Forbidden },
         { cause: new Error("queue failure"), code: PaymentOrderRequestsErrorCode.JobFailed },
@@ -262,7 +266,9 @@ describe("PaymentOrderRequestsService", () => {
         expect(credits.topup).not.toHaveBeenCalled()
         expect(credits.upgrade).not.toHaveBeenCalled()
     })
+})
 
+describe("PaymentOrderRequestsService", () => {
     it.each([{ rows: [] }, { rows: [{ ...REQUEST, status: "done" }] }, { rows: [{ ...REQUEST, status: "failed" }] }])(
         "ignores a missing or already answered request: $rows",
         async ({ rows }) => {
@@ -326,7 +332,9 @@ describe("PaymentOrderRequestsService", () => {
         expect(credits.upgrade).not.toHaveBeenCalled()
         expectAnswered(em)
     })
+})
 
+describe("PaymentOrderRequestsService", () => {
     it("tops up the pack from the database", async () => {
         const em = mockEntityManager({
             query: [
@@ -378,7 +386,9 @@ describe("PaymentOrderRequestsService", () => {
         expect(em.query).toHaveBeenCalledTimes(2)
         expect(em.query).toHaveBeenNthCalledWith(2, MARK_REQUEST_FAILED, ["request-1", "BILLING_FORBIDDEN"])
     })
+})
 
+describe("PaymentOrderRequestsService", () => {
     it("writes the stable refusal code of a credits domain error", async () => {
         const em = mockEntityManager({
             query: [

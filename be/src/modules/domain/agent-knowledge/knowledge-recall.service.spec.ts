@@ -111,7 +111,9 @@ describe("KnowledgeRecallService", () => {
         expect(found.brief).not.toContain("Playbook")
         expect(found.passages).toHaveLength(1)
     })
+})
 
+describe("KnowledgeRecallService", () => {
     it("goes on without the passages when the search fails, and says so in the log", async () => {
         const { recall, search, logger } = await build()
         search.passages.mockRejectedValueOnce(new Error("embedding down"))
@@ -119,12 +121,16 @@ describe("KnowledgeRecallService", () => {
         expect(found.brief).toContain("Tea - Price: 50k")
         expect(logger.error).toHaveBeenCalled()
     })
+})
 
+describe("KnowledgeRecallService", () => {
     it("writes the standing memory grouped by subject", async () => {
         const { recall } = await build()
         await expect(recall.standingMemory(view)).resolves.toBe("bundle.memoryFacts")
     })
+})
 
+describe("KnowledgeRecallService", () => {
     it("reads a bounded fact view and passes the complete view to a fact search", async () => {
         const { recall, facts } = await build()
         const second = { ...fact, id: "fact-2", value: "60k" }
@@ -137,7 +143,9 @@ describe("KnowledgeRecallService", () => {
         expect(facts.forView).toHaveBeenCalledWith(view.workspaceId, "internal", "chatbot", "agent-1", 500)
         expect(facts.search).toHaveBeenCalledWith(view.workspaceId, "internal", "chatbot", "agent-1", "tea price", 2)
     })
+})
 
+describe("KnowledgeRecallService", () => {
     it("keeps passage knowledge when facts fail and logs the exact failed part", async () => {
         const { recall, facts, search, logger } = await build()
         const cause = new Error("facts unavailable")
@@ -145,7 +153,8 @@ describe("KnowledgeRecallService", () => {
 
         await expect(recall.recall(view, "menu", { facts: 2, passages: 3, budget: 100 })).resolves.toEqual({
             brief: [
-                "BUSINESS KNOWLEDGE (use only what is here; never invent a price, policy, date or promise that is not written):",
+                "BUSINESS KNOWLEDGE (use only what is here; never invent a price, policy, date or promise " +
+                    "that is not written):",
                 "From the business documents:\n- Menu: Menu text",
             ].join("\n"),
             passages: [passage("business", "Menu")],
@@ -157,7 +166,9 @@ describe("KnowledgeRecallService", () => {
             part: "facts",
         })
     })
+})
 
+describe("KnowledgeRecallService", () => {
     it("answers an empty recall when both knowledge sources fail", async () => {
         const { recall, facts, search, logger } = await build()
         const factsCause = new Error("facts unavailable")
@@ -175,20 +186,25 @@ describe("KnowledgeRecallService", () => {
             part: "passages",
         })
     })
+})
 
+describe("KnowledgeRecallService", () => {
     it("uses the fact budget before passages and omits citations that do not fit", async () => {
         const { recall, search } = await build()
         search.passages.mockResolvedValue([passage("business", "Menu"), passage("business", "Hours")])
 
         await expect(recall.recall(view, "tea", { facts: 1, passages: 2, budget: 18 })).resolves.toEqual({
             brief: [
-                "BUSINESS KNOWLEDGE (use only what is here; never invent a price, policy, date or promise that is not written):",
+                "BUSINESS KNOWLEDGE (use only what is here; never invent a price, policy, date or promise " +
+                    "that is not written):",
                 "Confirmed facts:\n- Tea - Price: 50k",
             ].join("\n"),
             passages: [],
         })
     })
+})
 
+describe("KnowledgeRecallService", () => {
     it("normalizes and clips document text and returns only the passages quoted in the brief", async () => {
         const { recall, facts, search } = await build()
         facts.search.mockResolvedValue([])
@@ -198,13 +214,16 @@ describe("KnowledgeRecallService", () => {
 
         await expect(recall.recall(view, "tea", { facts: 0, passages: 3, budget: 408 })).resolves.toEqual({
             brief: [
-                "BUSINESS KNOWLEDGE (use only what is here; never invent a price, policy, date or promise that is not written):",
+                "BUSINESS KNOWLEDGE (use only what is here; never invent a price, policy, date or promise " +
+                    "that is not written):",
                 `From the business documents:\n- Menu: Tea ${"x".repeat(395)}…`,
             ].join("\n"),
             passages: [menu],
         })
     })
+})
 
+describe("KnowledgeRecallService", () => {
     it("answers empty recall and standing memory when the view contains no knowledge", async () => {
         const { recall, facts, search, messages } = await build()
         facts.search.mockResolvedValue([])
@@ -215,7 +234,9 @@ describe("KnowledgeRecallService", () => {
         await expect(recall.standingMemory(view, 100)).resolves.toBe("")
         expect(messages.get).not.toHaveBeenCalled()
     })
+})
 
+describe("KnowledgeRecallService", () => {
     it("groups facts by their first subject label and budgets complete subject blocks", async () => {
         const { recall, facts, lessons, messages } = await build()
         facts.forView.mockResolvedValue([
@@ -233,7 +254,9 @@ describe("KnowledgeRecallService", () => {
         )
         expect(lessons.forModule).toHaveBeenCalledWith(view.workspaceId, "chatbot")
     })
+})
 
+describe("KnowledgeRecallService", () => {
     it.each([null, undefined, ""])("keeps an empty heading for provider subject label %s", async (subjectLabel) => {
         const { recall, facts, messages } = await build()
         facts.forView.mockResolvedValue([Object.assign({}, fact, { subjectLabel })])
@@ -242,7 +265,9 @@ describe("KnowledgeRecallService", () => {
         await expect(recall.standingMemory(view)).resolves.toBe("facts: ### \n- Price: 50k")
         expect(messages.get).toHaveBeenCalledWith("bundle.memoryFacts", { body: "### \n- Price: 50k" }, "vi")
     })
+})
 
+describe("KnowledgeRecallService", () => {
     it("includes conditional lessons after facts and omits a condition for blank applicability", async () => {
         const { recall, lessons, messages } = await build()
         lessons.forModule.mockResolvedValue([lesson("Size", "Size missing"), lesson("Always", " \t ")])
@@ -251,7 +276,8 @@ describe("KnowledgeRecallService", () => {
         )
 
         await expect(recall.standingMemory(view)).resolves.toBe(
-            "bundle.memoryFacts: ### Tea\n- Price: 50k\n\nbundle.memoryLessons: - Size: Ask once. (when Size missing)\n- Always: Ask once.",
+            "bundle.memoryFacts: ### Tea\n- Price: 50k\n\nbundle.memoryLessons: - Size: Ask once. (when Size " +
+                "missing)\n- Always: Ask once.",
         )
         expect(messages.get).toHaveBeenCalledWith("bundle.memoryWhen", { when: "Size missing" }, "vi")
         expect(messages.get).toHaveBeenCalledWith(

@@ -119,7 +119,9 @@ describe("LeadRecordsService", () => {
 
         expect(em.query).toHaveBeenCalledWith(HAND_OVER_LEAD_NEED, ["ws-1", "lead-1", need])
     })
+})
 
+describe("LeadRecordsService", () => {
     it("answers no names when no leads were asked for", async () => {
         const { records, em } = await build()
 
@@ -190,7 +192,9 @@ describe("LeadRecordsService", () => {
             "simulated",
         ])
     })
+})
 
+describe("LeadRecordsService", () => {
     it("writes the supplied missing contact and classification values", async () => {
         const { records, em } = await build()
 

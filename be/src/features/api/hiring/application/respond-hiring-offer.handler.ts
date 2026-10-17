@@ -17,6 +17,6 @@ export class RespondHiringOfferHandler extends ICQRSHandler<RespondHiringOfferCo
     }
 
     protected override process(command: RespondHiringOfferCommand): Promise<RespondOfferOutput> {
-        return this.offers.respond(command.params.request)
+        return this.offers.respond(command.params.request, command.params.request.credentialPrincipal)
     }
 }

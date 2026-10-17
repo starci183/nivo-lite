@@ -47,75 +47,76 @@ const runOf = (id = "run-1", connectionId = "c-1"): DataSyncRun => ({
     finishedAt: null,
 })
 
-describe("DataSyncService", () => {
-    const buildKit = async (registerCsv = true) => {
-        const entityManager = mockEntityManager()
-        const transaction = fakeTransaction(entityManager)
-        const clock = new FakeClock("2026-10-12T10:00:00.000Z")
-        const catalog = mock<MessageCatalog>()
-        const logger = mock<Logger>()
-        const queue = mock<DataSyncQueue>()
-        const connections = mock<ConnectionsService>()
-        const hub = mock<DataHubService>()
-        const records = mock<DataRecordsService>()
-        const runs = mock<DataSyncRunsService>()
-        const csv = mock<CsvImportSyncService>(registerCsv ? { provider: "csv_import" } : {})
-        const database = mock<DatabaseSyncService>({ provider: "database" })
-        const imap = mock<ImapSyncService>({ provider: "imap" })
-        const openapi = mock<OpenApiSyncService>({ provider: "openapi" })
-        const telegramUser = mock<TelegramUserSyncService>({ provider: "telegram_user" })
-        hub.owner.mockResolvedValue({ role: "owner", displayName: "Owner" })
-        hub.own.mockResolvedValue(connectionOf())
-        hub.credentialOf.mockResolvedValue("credential")
-        runs.open.mockResolvedValue(runOf())
-        runs.finish.mockResolvedValue(undefined)
-        queue.enqueueSync.mockResolvedValue(undefined)
-        connections.markSynced.mockResolvedValue(undefined)
-        connections.markSyncFailed.mockResolvedValue(undefined)
-        catalog.get.mockReturnValue("Try again")
-        const moduleRef = await Test.createTestingModule({
-            providers: [
-                DataSyncService,
-                { provide: PRIMARY_ENTITY_MANAGER, useValue: entityManager },
-                { provide: CLOCK, useValue: clock },
-                { provide: MESSAGE_CATALOG, useValue: catalog },
-                { provide: LOGGER, useValue: logger },
-                { provide: DataSyncQueue, useValue: queue },
-                { provide: ConnectionsService, useValue: connections },
-                { provide: DataHubService, useValue: hub },
-                { provide: DataRecordsService, useValue: records },
-                { provide: DataSyncRunsService, useValue: runs },
-                { provide: CsvImportSyncService, useValue: csv },
-                { provide: DatabaseSyncService, useValue: database },
-                { provide: ImapSyncService, useValue: imap },
-                { provide: OpenApiSyncService, useValue: openapi },
-                { provide: TelegramUserSyncService, useValue: telegramUser },
-            ],
-        }).compile()
-        return {
-            service: moduleRef.get(DataSyncService),
-            entityManager,
-            transaction,
-            clock,
-            catalog,
-            logger,
-            queue,
-            connections,
-            hub,
-            records,
-            runs,
-            csv,
-            database,
-            imap,
-            openapi,
-            telegramUser,
-        }
+const buildKit = async (registerCsv = true) => {
+    const entityManager = mockEntityManager()
+    const transaction = fakeTransaction(entityManager)
+    const clock = new FakeClock("2026-10-12T10:00:00.000Z")
+    const catalog = mock<MessageCatalog>()
+    const logger = mock<Logger>()
+    const queue = mock<DataSyncQueue>()
+    const connections = mock<ConnectionsService>()
+    const hub = mock<DataHubService>()
+    const records = mock<DataRecordsService>()
+    const runs = mock<DataSyncRunsService>()
+    const csv = mock<CsvImportSyncService>(registerCsv ? { provider: "csv_import" } : {})
+    const database = mock<DatabaseSyncService>({ provider: "database" })
+    const imap = mock<ImapSyncService>({ provider: "imap" })
+    const openapi = mock<OpenApiSyncService>({ provider: "openapi" })
+    const telegramUser = mock<TelegramUserSyncService>({ provider: "telegram_user" })
+    hub.owner.mockResolvedValue({ role: "owner", displayName: "Owner" })
+    hub.own.mockResolvedValue(connectionOf())
+    hub.credentialOf.mockResolvedValue("credential")
+    runs.open.mockResolvedValue(runOf())
+    runs.finish.mockResolvedValue(undefined)
+    queue.enqueueSync.mockResolvedValue(undefined)
+    connections.markSynced.mockResolvedValue(undefined)
+    connections.markSyncFailed.mockResolvedValue(undefined)
+    catalog.get.mockReturnValue("Try again")
+    const moduleRef = await Test.createTestingModule({
+        providers: [
+            DataSyncService,
+            { provide: PRIMARY_ENTITY_MANAGER, useValue: entityManager },
+            { provide: CLOCK, useValue: clock },
+            { provide: MESSAGE_CATALOG, useValue: catalog },
+            { provide: LOGGER, useValue: logger },
+            { provide: DataSyncQueue, useValue: queue },
+            { provide: ConnectionsService, useValue: connections },
+            { provide: DataHubService, useValue: hub },
+            { provide: DataRecordsService, useValue: records },
+            { provide: DataSyncRunsService, useValue: runs },
+            { provide: CsvImportSyncService, useValue: csv },
+            { provide: DatabaseSyncService, useValue: database },
+            { provide: ImapSyncService, useValue: imap },
+            { provide: OpenApiSyncService, useValue: openapi },
+            { provide: TelegramUserSyncService, useValue: telegramUser },
+        ],
+    }).compile()
+    return {
+        service: moduleRef.get(DataSyncService),
+        entityManager,
+        transaction,
+        clock,
+        catalog,
+        logger,
+        queue,
+        connections,
+        hub,
+        records,
+        runs,
+        csv,
+        database,
+        imap,
+        openapi,
+        telegramUser,
     }
-    const build = async () => {
-        const { service } = await buildKit()
-        return service
-    }
+}
 
+const build = async () => {
+    const { service } = await buildKit()
+    return service
+}
+
+describe("DataSyncService", () => {
     it("ignores a job payload that is neither a tick nor a sync", async () => {
         const service = await build()
 
@@ -188,7 +189,9 @@ describe("DataSyncService", () => {
         expect(hub.owner).toHaveBeenCalledWith(actor)
         expect(runs.find).toHaveBeenCalledWith("ws-1", "run-1")
     })
+})
 
+describe("DataSyncService", () => {
     it("refuses a missing status run with the not-found code", async () => {
         const { service, runs } = await buildKit()
         runs.find.mockResolvedValue(null)
@@ -237,7 +240,9 @@ describe("DataSyncService", () => {
         expect(entityManager.transaction).not.toHaveBeenCalled()
         expect(queue.enqueueSync).not.toHaveBeenCalled()
     })
+})
 
+describe("DataSyncService", () => {
     it("passes the credential, counts written rows and exposes the exact two-minute deadline", async () => {
         const { service, hub, records, csv, clock, connections, runs, logger } = await buildKit()
         const first = [{ externalId: "order-1", data: { paid: true } }]
@@ -310,7 +315,9 @@ describe("DataSyncService", () => {
         expect(runs.finish).toHaveBeenCalledWith("run-1", "failed", 5, "r".repeat(500))
         expect(connections.markSynced).not.toHaveBeenCalled()
     })
+})
 
+describe("DataSyncService", () => {
     it("settles an unexpected failure even when marking the connection failed also rejects", async () => {
         const { service, hub, catalog, connections, runs, logger } = await buildKit()
         const cause = new TypeError("lookup unavailable")

@@ -19,8 +19,8 @@ export interface KnowledgeSearch {
 }
 
 /**
- * Writes the lead the agent captured (owner: the decisions side). The adapter sends the handoff_lead command through the gate, and keeps the
- * rule that a conversation already tied to a lead is not rewritten from a chat tool.
+ * Writes the lead the agent captured (owner: the decisions side). The adapter sends the handoff_lead command through
+ * the gate, and keeps the rule that a conversation already tied to a lead is not rewritten from a chat tool.
  */
 export interface LeadWriter {
     /** Creates or updates the lead of the conversation. */
@@ -34,8 +34,9 @@ export interface BookingTools {
 }
 
 /**
- * Asks the owner to approve an answer. The decisions lane implements it with WorkEngineService.runWork (action reply_customer, subject
- * conversation, dedupeKey reply_customer:engine:<jobId>, preset, noChain, forceAsk = reason) and escalates to staff when the item waits for a decision.
+ * Asks the owner to approve an answer. The decisions lane implements it with WorkEngineService.runWork (action
+ * reply_customer, subject conversation, dedupeKey reply_customer:engine:<jobId>, preset, noChain, forceAsk = reason)
+ * and escalates to staff when the item waits for a decision.
  */
 export interface ApprovalRequester {
     /** Opens the approval work item. */
@@ -60,6 +61,6 @@ export interface ToolTokens {
     mint(subject: ToolContext, ttlSeconds: number): string
     /** Ends the token of a job. */
     revoke(jobId: string): void
-    /** The claims of a valid token of a running job, or null. */
-    verify(token: string): OptionalToolClaims
+    /** The claims of a valid token of a running job, or null; admission passes false to avoid consuming a call. */
+    verify(token: string, consume?: boolean): OptionalToolClaims
 }

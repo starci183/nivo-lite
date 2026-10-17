@@ -41,7 +41,12 @@ describe("JsonLoggerService", () => {
         expect(written).toEqual([
             {
                 stream: "out",
-                line: `${JSON.stringify({ level: "info", event: "calendar.opened", time: "2026-05-06T07:08:09.000Z", personId: "p-1" })}\n`,
+                line: `${JSON.stringify({
+                    level: "info",
+                    event: "calendar.opened",
+                    time: "2026-05-06T07:08:09.000Z",
+                    personId: "p-1",
+                })}\n`,
             },
         ])
     })
@@ -55,7 +60,11 @@ describe("JsonLoggerService", () => {
         expect(written).toEqual([
             {
                 stream: "err",
-                line: `${JSON.stringify({ level: "warn", event: LoggingLogEvent.StartupFailed, time: "2026-05-06T07:08:10.000Z" })}\n`,
+                line: `${JSON.stringify({
+                    level: "warn",
+                    event: LoggingLogEvent.StartupFailed,
+                    time: "2026-05-06T07:08:10.000Z",
+                })}\n`,
             },
         ])
     })
@@ -79,7 +88,9 @@ describe("JsonLoggerService", () => {
             },
         ])
     })
+})
 
+describe("JsonLoggerService", () => {
     it("writes an error line with the text of a cause that is not an Error", async () => {
         const { logger, written } = await build()
 
@@ -88,7 +99,12 @@ describe("JsonLoggerService", () => {
         expect(written).toEqual([
             {
                 stream: "err",
-                line: `${JSON.stringify({ level: "error", event: "db.failed", time: "2026-05-06T07:08:09.000Z", errorMessage: "plain failure" })}\n`,
+                line: `${JSON.stringify({
+                    level: "error",
+                    event: "db.failed",
+                    time: "2026-05-06T07:08:09.000Z",
+                    errorMessage: "plain failure",
+                })}\n`,
             },
         ])
     })
@@ -108,8 +124,16 @@ describe("JsonLoggerService", () => {
             logger.warn(LoggingLogEvent.StartupFailed)
 
             expect(lines).toEqual([
-                `out:${JSON.stringify({ level: "info", event: LoggingLogEvent.ServerStarted, time: "2026-05-06T07:08:09.000Z" })}\n`,
-                `err:${JSON.stringify({ level: "warn", event: LoggingLogEvent.StartupFailed, time: "2026-05-06T07:08:09.000Z" })}\n`,
+                `out:${JSON.stringify({
+                    level: "info",
+                    event: LoggingLogEvent.ServerStarted,
+                    time: "2026-05-06T07:08:09.000Z",
+                })}\n`,
+                `err:${JSON.stringify({
+                    level: "warn",
+                    event: LoggingLogEvent.StartupFailed,
+                    time: "2026-05-06T07:08:09.000Z",
+                })}\n`,
             ])
         })
     })

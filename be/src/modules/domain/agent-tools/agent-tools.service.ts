@@ -38,8 +38,9 @@ const SUMMARY_QUERY_CHARS = 100
 
 @Injectable()
 /**
- * The tool bridge of the agents. A tool call carries the per-job token of the OpenClaw turn; the workspace and conversation are taken from
- * its claims only, never from the arguments. Each call is dispatched to a port and leaves an evidence line.
+ * The tool bridge of the agents. A tool call carries the per-job token of the OpenClaw turn; the workspace and
+ * conversation are taken from its claims only, never from the arguments. Each call is dispatched to a port and leaves
+ * an evidence line.
  */
 export class AgentToolsService {
     constructor(
@@ -73,6 +74,13 @@ export class AgentToolsService {
         return Promise.resolve(this.manifest())
     }
 
+    /** Authenticates a tool credential without consuming the call that runTool will account for. */
+    authenticateBearer(authorization: OptionalAuthorization): ToolContext {
+        const claims = this.tokens.verify(bearerTokenOf(authorization), false)
+        if (claims === null) throw new AgentToolsError({ code: AgentToolsErrorCode.TokenInvalid })
+        return { jobId: claims.jobId, workspaceId: claims.workspaceId, conversationId: claims.conversationId }
+    }
+
     /** Runs one tool for the job named by the token. */
     async runTool(token: string, tool: string, args: ToolArgs): Promise<JsonResult> {
         const claims = this.tokens.verify(token)
@@ -88,7 +96,10 @@ export class AgentToolsService {
         return await this.dispatch(ctx, tool, args)
     }
 
-    /** Runs one tool for the job named by the bearer token of an Authorization header; a missing or foreign header is a refused token. */
+    /**
+     * Runs one tool for the job named by the bearer token of an Authorization header; a missing or foreign header is a
+     * refused token.
+     */
     runBearerTool(authorization: OptionalAuthorization, tool: string, args: ToolArgs): Promise<JsonResult> {
         return this.runTool(bearerTokenOf(authorization), tool, args)
     }

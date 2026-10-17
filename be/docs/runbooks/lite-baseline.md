@@ -1,6 +1,6 @@
 # Lite conversion baseline
 
-Historical record of the start of the conversion (the engine it mentions was retired at the cutover). The database baseline that replaced the migration history is `supabase/migrations/20261013142504_lite-baseline.sql`; the dead engine objects it still carried are dropped by `20261020110000_drop-engine-schema.sql`.
+Historical record of the start of the conversion (the engine it mentions was retired at the cutover). The database baseline that replaced the migration history is `supabase/migrations/_archive/20261013142504_lite-baseline.sql` (archived since the canon restamp; the chain now starts at `supabase/migrations/20261026000000_baseline.sql`); the dead engine objects it still carried are dropped by `supabase/migrations/_archive/20261020110000_drop-engine-schema.sql`.
 
 Recorded at the end of Wave 0 on branch lite/convert with `starci app check` (ruling worktree D:/starci-lanes/lite-ruling, manifest 2.2.0).
 
@@ -48,7 +48,7 @@ Total findings: 6786 (all errors) over 1663 tracked files. The lanes drive each 
 
 Other gates at the baseline:
 
-- `npm run typecheck`, `npm run build:be` and `npm run build -w @nivo-lite/web` pass.
+- `npm run typecheck`, `npm run build:be` and `npm run build:fe` pass.
 - `npm test` (be unit specs): 34 suites, 147 tests, platform roles at 100%.
 - `cd be && npx eslint apps src`: 20 HFS_UNUSED_EXPORT errors (index exports of the platform with no consumer yet; they clear as features land).
 - The pre-commit hook fails on legacy content (prettier on unformatted fe scripts, docs and resources); pure moves were committed with HUSKY=0.

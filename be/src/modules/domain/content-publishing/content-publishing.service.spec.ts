@@ -135,7 +135,9 @@ describe("ContentPublishingService", () => {
             }),
         )
     })
+})
 
+describe("ContentPublishingService", () => {
     it("uses the first-round key when the draft has no schedule and no work item yet", async () => {
         const { service, items, engine } = await build()
         items.get.mockResolvedValue(
@@ -193,7 +195,9 @@ describe("ContentPublishingService", () => {
             }),
         )
     })
+})
 
+describe("ContentPublishingService", () => {
     it.each([
         ["an idea", itemOf({ status: "idea" }), ContentPublishingErrorCode.NotDrafted],
         ["a post that is not a draft", itemOf({ status: "approved" }), ContentPublishingErrorCode.WrongStatus],
@@ -243,7 +247,9 @@ describe("ContentPublishingService", () => {
             text: "contentPublishing.failed:{}",
         })
     })
+})
 
+describe("ContentPublishingService", () => {
     it("records manual proof for an approved channel and the publication event", async () => {
         const { service, items, store, events } = await build()
         const published = { id: "item-1", allDone: false }
@@ -266,7 +272,10 @@ describe("ContentPublishingService", () => {
                 at: AT,
                 kind: "published",
                 by: "Lan",
-                text: 'contentPublishing.published:{"who":"Lan","channel":"facebook","proof":"https://facebook.com/posts/1"}',
+                text:
+                    'contentPublishing.published:{"who":"Lan","channel":"facebook' +
+                    '","proof":"https://facebo' +
+                    'ok.com/posts/1"}',
             },
         )
         expect(events.record).toHaveBeenCalledWith({
@@ -293,14 +302,19 @@ describe("ContentPublishingService", () => {
             "zalo",
             expect.objectContaining({ url: "", how: "contentPublishing.defaultHow:{}" }),
             expect.objectContaining({
-                text: 'contentPublishing.published:{"who":"Lan","channel":"zalo","proof":"contentPublishing.defaultHow:{}"}',
+                text:
+                    'contentPublishing.published:{"who":"Lan","channel":"zalo","p' +
+                    'roof":"contentPublishing.' +
+                    'defaultHow:{}"}',
             }),
         )
         expect(events.record).toHaveBeenCalledWith(
             expect.objectContaining({ evidence: "contentPublishing.defaultHow:{}" }),
         )
     })
+})
 
+describe("ContentPublishingService", () => {
     it.each([
         [
             "a draft",

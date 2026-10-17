@@ -1,6 +1,6 @@
 import { Field, ID, InputType } from "@nestjs/graphql"
-import { IsBoolean, IsObject, IsString, IsUUID, Matches, MaxLength, ValidateIf } from "class-validator"
-import { GraphqlJsonObject } from "@modules/platform/graphql"
+import { IsBoolean, IsObject, IsString, IsUUID, Matches, MaxLength } from "class-validator"
+import { GraphqlJsonObject, ValidateWhenDefined } from "@modules/platform/graphql"
 
 @InputType()
 /** What an owner changes on one pipeline; every field but the template is optional. */
@@ -13,38 +13,38 @@ export class UpdateAutomationPipelineInput {
 
     /** Switch on or off. */
     @Field(() => Boolean, { nullable: true })
-    @ValidateIf((_, value) => value !== undefined)
+    @ValidateWhenDefined()
     @IsBoolean()
     enabled?: boolean
 
     /** Hide or restore. */
     @Field(() => Boolean, { nullable: true })
-    @ValidateIf((_, value) => value !== undefined)
+    @ValidateWhenDefined()
     @IsBoolean()
     dismissed?: boolean
 
     /** New setting values, by key. */
     @Field(() => GraphqlJsonObject, { nullable: true })
-    @ValidateIf((_, value) => value !== undefined)
+    @ValidateWhenDefined()
     @IsObject()
     values?: object
 
     /** The approved wording. */
     @Field(() => String, { nullable: true })
-    @ValidateIf((_, value) => value !== undefined)
+    @ValidateWhenDefined()
     @IsString()
     @MaxLength(4000)
     body?: string
 
     /** The answer to send by itself. */
     @Field(() => Boolean, { nullable: true })
-    @ValidateIf((_, value) => value !== undefined)
+    @ValidateWhenDefined()
     @IsBoolean()
     autoSend?: boolean
 
     /** The Google account the spreadsheet is written with. */
     @Field(() => ID, { nullable: true })
-    @ValidateIf((_, value) => value !== undefined)
+    @ValidateWhenDefined()
     @IsUUID("4")
     @MaxLength(36)
     googleConnectionId?: string

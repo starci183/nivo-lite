@@ -49,7 +49,10 @@ export interface RenderInput {
     readonly assets: ReadonlyMap<string, string>
     /** Aborts every ffmpeg run of the render. */
     readonly signal: AbortSignal
-    /** Which delivery of the job this is; a voice failure fails the early deliveries (the queue retries them, the cache keeps the finished clips) and only degrades the late ones. */
+    /**
+     * Which delivery of the job this is; a voice failure fails the early deliveries (the queue retries them, the cache
+     * keeps the finished clips) and only degrades the late ones.
+     */
     readonly attempt: number
     /** Reports the progress of a stage, 0..100. */
     readonly onProgress: (stage: RenderStage, percent: number) => void
@@ -122,7 +125,9 @@ interface MixedAudio {
     readonly loudness: LoudnessReport
 }
 
-/** Deliveries below this number fail on a voice error so the queue retries them; later ones fall back to captions only. */
+/**
+ * Deliveries below this number fail on a voice error so the queue retries them; later ones fall back to captions only.
+ */
 const STRICT_TTS_ATTEMPTS = 3
 
 /** The number at an index of a list, 0 when the list is shorter. */
@@ -190,36 +195,10 @@ export class RendererService {
         const audio = await lap("audio_ms", () => this.audio(input, voiced.clips, starts, total))
         input.onProgress("mix", 100)
 
-        const units = new RegExp(`^(${this.catalog.get("video.captions.units", {}, "vi")})[.,!?]*$`, "iu")
-        const cues = captionCues(
-            spec,
-            starts,
-            lengths,
-            voiced.clips.map((clip) => clip !== null),
-        )
-        await writeFile(join(workDir, "subs.ass"), buildAss(spec.aspect, cues, units), "utf8")
+        await this.writeCaptions(input, starts, lengths, voiced.clips)
 
         const videoFile = join(workDir, "out.mp4")
-        await lap("encode_ms", async () => {
-            const logo = spec.brand.logo === null ? undefined : input.assets.get(spec.brand.logo)
-            const args = finalArgs({
-                spec,
-                segments,
-                audioFile: audio.file,
-                logoFile: logo,
-                starts,
-                crossfades,
-                total,
-                threads: this.options.ffmpegThreads,
-                fontsDir: this.options.fontsDir,
-                output: videoFile,
-            })
-            await this.ffmpeg.run("ffmpeg", args, {
-                signal,
-                cwd: workDir,
-                onTime: (seconds) => input.onProgress("encode", Math.min(99, Math.round((seconds / total) * 100))),
-            })
-        })
+        await lap("encode_ms", () => this.encode(input, segments, audio.file, starts, crossfades, total, videoFile))
 
         const posterFile = join(workDir, "poster.jpg")
         await this.ffmpeg.run("ffmpeg", posterArgs(videoFile, valueAt(lengths, 0), total, size.width, posterFile), {
@@ -318,7 +297,10 @@ export class RendererService {
         return files
     }
 
-    /** The track the spec names, downloaded from the media bucket into the work directory; null for none, and a track the bucket does not hold is a rejected render. */
+    /**
+     * The track the spec names, downloaded from the media bucket into the work directory; null for none, and a track
+     * the bucket does not hold is a rejected render.
+     */
     private async musicFileOf(spec: VideoSpec, workDir: string): Promise<string | null> {
         const track = MUSIC_TRACKS.find((candidate) => candidate.id === spec.music?.track)
         if (track === undefined) return null
@@ -364,5 +346,52 @@ export class RendererService {
         const filter = audioFilterOf(measured)
         await this.ffmpeg.run("ffmpeg", aacArgs(premix, filter.filter, output), { signal, cwd: workDir })
         return { file: output, loudness: loudnessReport(measured, filter.normalised) }
+    }
+
+    private async encode(
+        input: RenderInput,
+        segments: ReadonlyArray<string>,
+        audioFile: string,
+        starts: ReadonlyArray<number>,
+        crossfades: ReturnType<typeof crossfadesOf>,
+        total: number,
+        videoFile: string,
+    ): Promise<void> {
+        const { spec, signal, workDir } = input
+        const logo = spec.brand.logo === null ? undefined : input.assets.get(spec.brand.logo)
+        const args = finalArgs({
+            spec,
+            segments,
+            audioFile,
+            logoFile: logo,
+            starts,
+            crossfades,
+            total,
+            threads: this.options.ffmpegThreads,
+            fontsDir: this.options.fontsDir,
+            output: videoFile,
+        })
+        await this.ffmpeg.run("ffmpeg", args, {
+            signal,
+            cwd: workDir,
+            onTime: (seconds) => input.onProgress("encode", Math.min(99, Math.round((seconds / total) * 100))),
+        })
+    }
+
+    private async writeCaptions(
+        input: RenderInput,
+        starts: ReadonlyArray<number>,
+        lengths: ReadonlyArray<number>,
+        clips: ReadonlyArray<VoiceClip | null>,
+    ): Promise<void> {
+        const { spec, workDir } = input
+        const units = new RegExp(`^(${this.catalog.get("video.captions.units", {}, "vi")})[.,!?]*$`, "iu")
+        const cues = captionCues(
+            spec,
+            starts,
+            lengths,
+            clips.map((clip) => clip !== null),
+        )
+        await writeFile(join(workDir, "subs.ass"), buildAss(spec.aspect, cues, units), "utf8")
     }
 }

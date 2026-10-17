@@ -7,6 +7,7 @@ import { RunNowHandler } from "./application/run-now.handler"
 import { ListGoogleAccountsHandler } from "./application/list-google-accounts.handler"
 import { SuggestAutomationsHandler } from "./application/suggest-automations.handler"
 import { EmitEventHandler } from "./application/emit-event.handler"
+import { ConfigurableModuleClass } from "./automations.module-definition"
 
 @Module({
     providers: [
@@ -21,4 +22,4 @@ import { EmitEventHandler } from "./application/emit-event.handler"
     ],
 })
 /** The automations feature: the handlers of its application. */
-export class AutomationsApiModule {}
+export class AutomationsApiModule extends ConfigurableModuleClass {}

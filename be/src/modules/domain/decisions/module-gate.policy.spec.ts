@@ -1,7 +1,17 @@
+import { Test } from "@nestjs/testing"
 import { mock } from "@starci/jest-preset"
 import type { ModuleApprovalRequest } from "@modules/domain/module-ops"
 import type { Proposal, WorkContext, WorkItem } from "./decisions.contracts"
 import { performContextOf, performedOf, proposalOf, subjectTypeOf } from "./module-gate.policy"
+
+const SUBJECT = Symbol("module-gate.policy")
+
+const buildSubject = async () => {
+    const moduleRef = await Test.createTestingModule({
+        providers: [{ provide: SUBJECT, useValue: { subjectTypeOf, proposalOf, performContextOf, performedOf } }],
+    }).compile()
+    return moduleRef.get<typeof import("./module-gate.policy")>(SUBJECT)
+}
 
 const request: ModuleApprovalRequest = {
     workspaceId: "ws-1",
@@ -27,21 +37,32 @@ describe("module gate policy", () => {
         "purchase_order",
         "stock",
         "video_project",
-    ])("keeps the known subject kind %s", (kind) => {
-        expect(subjectTypeOf(kind)).toBe(kind)
+    ])("keeps the known subject kind %s", async (kind) => {
+        const subject = await buildSubject()
+
+        expect(subject.subjectTypeOf(kind)).toBe(kind)
     })
 
-    it.each(["candidate", "LEAD", "", " lead "])("records the unrecognized subject kind %p as inbound", (kind) => {
-        expect(subjectTypeOf(kind)).toBe("inbound")
+    it.each(["candidate", "LEAD", "", " lead "])(
+        "records the unrecognized subject kind %p as inbound",
+        async (kind) => {
+            const subject = await buildSubject()
+
+            expect(subject.subjectTypeOf(kind)).toBe("inbound")
+        },
+    )
+
+    it("omits draft and amount when the request does not supply them", async () => {
+        const subject = await buildSubject()
+
+        expect(subject.proposalOf(request)).toEqual({ summary: "Offer for Chi", fields: {} })
     })
 
-    it("omits draft and amount when the request does not supply them", () => {
-        expect(proposalOf(request)).toEqual({ summary: "Offer for Chi", fields: {} })
-    })
+    it("keeps the draft and amount and translates boolean facts to text", async () => {
+        const subject = await buildSubject()
 
-    it("keeps the draft and amount and translates boolean facts to text", () => {
         expect(
-            proposalOf({
+            subject.proposalOf({
                 ...request,
                 draft: "Dear Chi",
                 amountVnd: 1_500_000,
@@ -55,8 +76,10 @@ describe("module gate policy", () => {
         })
     })
 
-    it("preserves an empty draft and zero amount rather than omitting them", () => {
-        expect(proposalOf({ ...request, draft: "", amountVnd: 0 })).toEqual({
+    it("preserves an empty draft and zero amount rather than omitting them", async () => {
+        const subject = await buildSubject()
+
+        expect(subject.proposalOf({ ...request, draft: "", amountVnd: 0 })).toEqual({
             summary: "Offer for Chi",
             draft: "",
             amount_vnd: 0,
@@ -68,11 +91,13 @@ describe("module gate policy", () => {
         { draft: "Edited offer", expectedDraft: "Edited offer" },
         { draft: "", expectedDraft: "" },
         { draft: undefined, expectedDraft: null },
-    ])("uses the deciding person's draft $draft and facts", ({ draft, expectedDraft }) => {
+    ])("uses the deciding person's draft $draft and facts", async ({ draft, expectedDraft }) => {
+        const subject = await buildSubject()
+
         const item = mock<WorkItem>({ id: "item-1" })
         const proposal: Proposal = { summary: "Offer", draft, fields: { candidate_id: "candidate-1" } }
 
-        expect(performContextOf(ctx, item, proposal, { name: "Chi", kind: "owner" })).toEqual({
+        expect(subject.performContextOf(ctx, item, proposal, { name: "Chi", kind: "owner" })).toEqual({
             workspaceId: "ws-1",
             workItemId: "item-1",
             actor: "Chi",
@@ -80,12 +105,16 @@ describe("module gate policy", () => {
             fields: { candidate_id: "candidate-1" },
         })
     })
+})
 
-    it("records a performer's href and detail alongside the item's lead", () => {
+describe("module gate policy", () => {
+    it("records a performer's href and detail alongside the item's lead", async () => {
+        const subject = await buildSubject()
+
         const item = mock<WorkItem>({ lead_id: "lead-1" })
 
         expect(
-            performedOf(item, {
+            subject.performedOf(item, {
                 summary: "Offer sent",
                 evidence: "captured",
                 href: "/offers/offer-1",
@@ -100,10 +129,12 @@ describe("module gate policy", () => {
         })
     })
 
-    it("omits an absent href and records null for absent detail and lead", () => {
+    it("omits an absent href and records null for absent detail and lead", async () => {
+        const subject = await buildSubject()
+
         const item = mock<WorkItem>({ lead_id: null })
 
-        expect(performedOf(item, { summary: "Offer queued", evidence: "pending" })).toEqual({
+        expect(subject.performedOf(item, { summary: "Offer queued", evidence: "pending" })).toEqual({
             summary: "Offer queued",
             evidence: "pending",
             lead_id: null,
@@ -111,10 +142,14 @@ describe("module gate policy", () => {
         })
     })
 
-    it("preserves empty href and detail supplied by the performer", () => {
+    it("preserves empty href and detail supplied by the performer", async () => {
+        const subject = await buildSubject()
+
         const item = mock<WorkItem>({ lead_id: null })
 
-        expect(performedOf(item, { summary: "Offer sent", evidence: "captured", href: "", detail: "" })).toEqual({
+        expect(
+            subject.performedOf(item, { summary: "Offer sent", evidence: "captured", href: "", detail: "" }),
+        ).toEqual({
             summary: "Offer sent",
             evidence: "captured",
             href: "",

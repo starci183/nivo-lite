@@ -105,7 +105,11 @@ describe("HiringChatService", () => {
 
             expect(words.text).not.toHaveBeenCalled()
         })
+    })
+})
 
+describe("HiringChatService", () => {
+    describe("brief", () => {
         it("describes criteria, pay and questions while ignoring choices on non-choice questions", async () => {
             const { service, data, words, catalog } = await build()
             data.chatJobs.mockResolvedValue([jobOf()])
@@ -158,7 +162,11 @@ describe("HiringChatService", () => {
                 ],
             ])
         })
+    })
+})
 
+describe("HiringChatService", () => {
+    describe("brief", () => {
         it("includes jobs closing now or later in order and supplies missing content labels", async () => {
             const { service, data, words } = await build()
             const empty = jobOf({
@@ -215,7 +223,9 @@ describe("HiringChatService", () => {
             expect(words.amount).not.toHaveBeenCalled()
         })
     })
+})
 
+describe("HiringChatService", () => {
     describe("register", () => {
         it("returns a missing-job message when the slug is unknown", async () => {
             const { service, data, candidates } = await build()

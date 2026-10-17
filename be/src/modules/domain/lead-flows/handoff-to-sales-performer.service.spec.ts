@@ -14,6 +14,7 @@ import { EMPTY_SIGNALS } from "./lead-flow-score.policy"
 import type { LeadFlow } from "./lead-flows.contracts"
 
 const NOW = "2026-10-12T10:00:00.000Z"
+
 const ctx: WorkContext = { workspaceId: "ws-1", actor: "Lan", locale: "en" }
 
 const flowOf = builder<LeadFlow>({
@@ -148,7 +149,6 @@ describe("HandoffToSalesPerformerService", () => {
 
         expect(registry.add).toHaveBeenCalledWith("handoff_to_sales", performer)
     })
-
     it("lets a hot lead go on its own with the contact and need the gate requires", async () => {
         const { performer, store, leads } = await build()
         store.byLead.mockResolvedValue(hotFlow)
@@ -163,7 +163,6 @@ describe("HandoffToSalesPerformerService", () => {
 
         expect(leads.find).toHaveBeenCalledWith("ws-1", "lead-1")
     })
-
     it("leaves a lead that is not hot unclear to the gate so a person decides", async () => {
         const { performer, store, kit } = await build()
         store.byLead.mockResolvedValue(null)
@@ -175,7 +174,6 @@ describe("HandoffToSalesPerformerService", () => {
 
         expect(kit.text).toHaveBeenCalledWith("en", "handoff.ask", { name: "", level: "level.warm" })
     })
-
     it("writes the package as the brief for Sales, closes the bot's part and logs the hand-off", async () => {
         const { performer, kit, store, leads } = await build()
         const pack = "Wholesale tea\nlabel.score: hot (asked price)\nlabel.source: Facebook dm"
@@ -192,7 +190,6 @@ describe("HandoffToSalesPerformerService", () => {
         })
         expect(kit.log).toHaveBeenCalledWith(ctx, hotFlow, "item-1", "lead_gen.handoff", "handoff.evidence", pack)
     })
-
     it("refuses a lead without a flow", async () => {
         const { performer, store, leads } = await build()
         store.requireByLead.mockRejectedValue(new LeadFlowsError({ code: LeadFlowsErrorCode.NoFlow }))
@@ -203,7 +200,9 @@ describe("HandoffToSalesPerformerService", () => {
 
         expect(leads.handOver).not.toHaveBeenCalled()
     })
+})
 
+describe("HandoffToSalesPerformerService", () => {
     it("defaults a missing score to cold when neither the lead nor its flow exists", async () => {
         const { performer, store, kit, leads } = await build()
         store.byLead.mockResolvedValue(null)
@@ -219,7 +218,6 @@ describe("HandoffToSalesPerformerService", () => {
         expect(kit.text).toHaveBeenCalledWith("en", "handoff.ask", { name: "", level: "level.cold" })
         expect(leads.find).not.toHaveBeenCalled()
     })
-
     it("uses the recorded lead's name and need when the flow has neither", async () => {
         const { performer, store, kit, leads } = await build()
         store.byLead.mockResolvedValue(flowOf({ name: null, psid: null }))
@@ -237,7 +235,6 @@ describe("HandoffToSalesPerformerService", () => {
 
         expect(kit.text).toHaveBeenCalledWith("en", "handoff.ask", { name: "Minh", level: "level.warm" })
     })
-
     it("retains the proposal's contact and need over values from a nameless flow", async () => {
         const { performer, store, kit, leads } = await build()
         store.byLead.mockResolvedValue({ ...hotFlow, name: null })
@@ -259,7 +256,9 @@ describe("HandoffToSalesPerformerService", () => {
 
         expect(kit.text).toHaveBeenCalledWith("en", "handoff.hot", { name: "" })
     })
+})
 
+describe("HandoffToSalesPerformerService", () => {
     it("uses an empty need when the flow and recorded lead have no need", async () => {
         const { performer, store, leads } = await build()
         store.byLead.mockResolvedValue(flowOf({ psid: null }))
@@ -273,7 +272,9 @@ describe("HandoffToSalesPerformerService", () => {
             },
         })
     })
+})
 
+describe("HandoffToSalesPerformerService", () => {
     it("logs and closes an unlinked flow with the default hot score and no need", async () => {
         const flow = flowOf({ lead_id: null })
         const { performer, kit, store, leads } = await build(flow)

@@ -1,4 +1,10 @@
-import type { ModuleMetadata } from "@nestjs/common"
+import { BankFeedDeliveryQueueModule } from "@features/jobs/bank-feed-delivery"
+import { VietcombankDeliveryQueueModule } from "@features/jobs/vietcombank-delivery"
+import { SepayDeliveryQueueModule } from "@features/jobs/sepay-delivery"
+import { ZaloDeliveryQueueModule } from "@features/jobs/zalo-delivery"
+import { TelegramDeliveryQueueModule } from "@features/jobs/telegram-delivery"
+import { MetaDeliveryQueueModule } from "@features/jobs/meta-delivery"
+import type { DynamicModule } from "@nestjs/common"
 import { RunDataSyncQueueModule } from "@features/jobs/run-data-sync"
 import { ExtractKnowledgeFactsQueueModule } from "@features/jobs/extract-knowledge-facts"
 import { RunBrainCommandQueueModule } from "@features/jobs/run-brain-command"
@@ -36,40 +42,46 @@ import { RunShiftsAlertsQueueModule } from "@features/jobs/run-shifts-alerts"
 import { RunLeadGenQueueModule } from "@features/jobs/run-lead-gen"
 
 /** The background jobs the api runs: each queue module registers its processor with the job runner. */
-export const API_JOB_QUEUES = [
-    RunDataSyncQueueModule,
-    ExtractKnowledgeFactsQueueModule,
-    RunBrainCommandQueueModule,
-    IndexKnowledgeSourceQueueModule,
-    ReembedKnowledgeQueueModule,
-    EmitN8nEventQueueModule,
-    EmitWebhookEventQueueModule,
-    RunAutomationCommandQueueModule,
-    RunAutomationTickQueueModule,
-    RunDecisionsQueueModule,
-    RunSetupTurnQueueModule,
-    GenerateWithAgentQueueModule,
-    SyncAgentsQueueModule,
-    DrainWorkQueueModule,
-    DraftLoyaltyCampaignQueueModule,
-    CheckConnectionHealthQueueModule,
-    CompleteZaloAuthorizationQueueModule,
-    RefreshZaloTokensQueueModule,
-    RunZaloWizardQueueModule,
-    RunChatTurnQueueModule,
-    RunLeadActionQueueModule,
-    ReconcileBankCreditQueueModule,
-    CreatePaymentOrderQueueModule,
-    ApplyBookingStatusQueueModule,
-    PublishContentQueueModule,
-    AcceptMetaEventQueueModule,
-    RunLeadGenQueueModule,
-    IssueInviteQueueModule,
-    RenderVideoQueueModule,
-    ConnectionCommandsQueueModule,
-    RequestRenderQueueModule,
-    DeductOrderQueueModule,
-    ReplenishStockQueueModule,
-    HiringTickQueueModule,
-    RunShiftsAlertsQueueModule,
-] satisfies NonNullable<ModuleMetadata["imports"]>
+export const API_JOB_QUEUES: Array<DynamicModule> = [
+    MetaDeliveryQueueModule.register({}),
+    TelegramDeliveryQueueModule.register({}),
+    ZaloDeliveryQueueModule.register({}),
+    SepayDeliveryQueueModule.register({}),
+    VietcombankDeliveryQueueModule.register({}),
+    BankFeedDeliveryQueueModule.register({}),
+    RunDataSyncQueueModule.register({}),
+    ExtractKnowledgeFactsQueueModule.register({}),
+    RunBrainCommandQueueModule.register({}),
+    IndexKnowledgeSourceQueueModule.register({}),
+    ReembedKnowledgeQueueModule.register({}),
+    EmitN8nEventQueueModule.register({}),
+    EmitWebhookEventQueueModule.register({}),
+    RunAutomationCommandQueueModule.register({}),
+    RunAutomationTickQueueModule.register({}),
+    RunDecisionsQueueModule.register({}),
+    RunSetupTurnQueueModule.register({}),
+    GenerateWithAgentQueueModule.register({}),
+    SyncAgentsQueueModule.register({}),
+    DrainWorkQueueModule.register({}),
+    DraftLoyaltyCampaignQueueModule.register({}),
+    CheckConnectionHealthQueueModule.register({}),
+    CompleteZaloAuthorizationQueueModule.register({}),
+    RefreshZaloTokensQueueModule.register({}),
+    RunZaloWizardQueueModule.register({}),
+    RunChatTurnQueueModule.register({}),
+    RunLeadActionQueueModule.register({}),
+    ReconcileBankCreditQueueModule.register({}),
+    CreatePaymentOrderQueueModule.register({}),
+    ApplyBookingStatusQueueModule.register({}),
+    PublishContentQueueModule.register({}),
+    AcceptMetaEventQueueModule.register({}),
+    RunLeadGenQueueModule.register({}),
+    IssueInviteQueueModule.register({}),
+    RenderVideoQueueModule.register({}),
+    ConnectionCommandsQueueModule.register({}),
+    RequestRenderQueueModule.register({}),
+    DeductOrderQueueModule.register({}),
+    ReplenishStockQueueModule.register({}),
+    HiringTickQueueModule.register({}),
+    RunShiftsAlertsQueueModule.register({}),
+]

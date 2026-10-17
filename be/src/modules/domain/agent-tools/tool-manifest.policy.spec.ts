@@ -1,7 +1,22 @@
-import { isBookingTool, isToolName, TOOL_MANIFEST } from "./tool-manifest.policy"
+import { Test } from "@nestjs/testing"
+import { isBookingTool as realIsBookingTool, isToolName as realIsToolName, TOOL_MANIFEST } from "./tool-manifest.policy"
+
+const SUBJECT = Symbol("tool-manifest.policy")
+type Subject = {
+    isBookingTool: typeof realIsBookingTool
+    isToolName: typeof realIsToolName
+}
+
+const build = async () => {
+    const moduleRef = await Test.createTestingModule({
+        providers: [{ provide: SUBJECT, useValue: { isBookingTool: realIsBookingTool, isToolName: realIsToolName } }],
+    }).compile()
+    return moduleRef.get<Subject>(SUBJECT)
+}
 
 describe("tool manifest policy", () => {
-    it("lists the four chat tools and the three booking tools", () => {
+    it("lists the four chat tools and the three booking tools", async () => {
+        await build()
         expect(TOOL_MANIFEST.map((tool) => tool.name)).toEqual([
             "knowledge.search",
             "lead.create_or_update",
@@ -13,15 +28,17 @@ describe("tool manifest policy", () => {
         ])
     })
 
-    it("knows a manifest name and refuses any other text", () => {
-        expect(isToolName("handoff.to_person")).toBe(true)
-        expect(isToolName("shell.exec")).toBe(false)
+    it("knows a manifest name and refuses any other text", async () => {
+        const subject = await build()
+        expect(subject.isToolName("handoff.to_person")).toBe(true)
+        expect(subject.isToolName("shell.exec")).toBe(false)
     })
 
-    it("recognises the booking tools only", () => {
-        expect(isBookingTool("booking.request")).toBe(true)
-        expect(isBookingTool("booking.find_slots")).toBe(true)
-        expect(isBookingTool("booking.cancel")).toBe(true)
-        expect(isBookingTool("knowledge.search")).toBe(false)
+    it("recognises the booking tools only", async () => {
+        const subject = await build()
+        expect(subject.isBookingTool("booking.request")).toBe(true)
+        expect(subject.isBookingTool("booking.find_slots")).toBe(true)
+        expect(subject.isBookingTool("booking.cancel")).toBe(true)
+        expect(subject.isBookingTool("knowledge.search")).toBe(false)
     })
 })

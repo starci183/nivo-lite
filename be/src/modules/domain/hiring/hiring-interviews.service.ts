@@ -1,3 +1,5 @@
+import { hiringLinkPrincipal, requireHiringLinkBinding } from "./policies/link-credential.policy"
+import type { CredentialPrincipal } from "@modules/domain/identity"
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { ApprovalGate, OfficeLog } from "@modules/domain/module-ops"
@@ -189,8 +191,14 @@ export class HiringInterviewsService {
         }
     }
 
+    /** Resolves the secret link to its stored interview, including historical states. */
+    async authenticateLink(token: string): Promise<CredentialPrincipal> {
+        return hiringLinkPrincipal(isToken(token) ? await this.data.interviewByToken(token) : undefined)
+    }
+
     /** What a candidate sees on the link of an interview. */
-    async publicView(request: PublicInterviewParams): Promise<PublicInterviewOutput> {
+    async publicView(request: PublicInterviewParams, principal?: CredentialPrincipal): Promise<PublicInterviewOutput> {
+        if (principal !== undefined) requireHiringLinkBinding(principal, await this.authenticateLink(request.token))
         const interview = await this.byToken(request.token)
         const heads = await this.data.heads(interview.candidateId, interview.jobId)
         if (heads === undefined) throw new HiringError({ code: HiringErrorCode.PublicNotFound })
@@ -216,10 +224,11 @@ export class HiringInterviewsService {
     }
 
     /** The candidate picks one of the proposed times, or says none fits. A pick confirms the interview once; a second click changes nothing. */
-    async respond(request: RespondSlotParams): Promise<RespondSlotOutput> {
+    async respond(request: RespondSlotParams, principal?: CredentialPrincipal): Promise<RespondSlotOutput> {
         if (!isToken(request.token)) return { outcome: "invalid", slotStart: null }
         const interview = await this.data.interviewByToken(request.token)
         if (interview === undefined) return { outcome: "invalid", slotStart: null }
+        if (principal !== undefined) requireHiringLinkBinding(principal, hiringLinkPrincipal(interview))
         if (interview.status === "confirmed") return { outcome: "already_confirmed", slotStart: interview.slotStart }
         if (interview.status !== "proposed") return { outcome: "closed", slotStart: null }
         const candidate = await this.data.candidateHead(interview.candidateId)

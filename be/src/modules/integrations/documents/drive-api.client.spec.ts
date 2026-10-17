@@ -1,10 +1,9 @@
+import type { Logger } from "@modules/platform/logging"
+import { DocumentsLogEvent } from "./documents.log-events"
 import { Test } from "@nestjs/testing"
 import { builder, mock } from "@starci/jest-preset"
 import { Secret } from "@modules/platform/config"
-import { HTTP_CLIENT } from "@modules/platform/http"
 import type { HttpClient, HttpResponse } from "@modules/platform/http"
-import { LOGGER } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
 import type { DocumentReaders } from "./documents.contracts"
 import { DOCUMENTS_OPTIONS } from "./documents.decorators"
 import type { DocumentsOptions } from "./documents.options"
@@ -35,15 +34,33 @@ const bytes = (body: string | Uint8Array, headers: Record<string, string> = {}, 
 
 type Route = readonly [match: string, response: HttpResponse]
 
-const build = async (options: DocumentsOptions = optionsOf()) => {
+const build = async (inputOptions: DocumentsOptions = optionsOf()) => {
+    const options = builder<DocumentsOptions>(inputOptions)()
     const http = mock<HttpClient>()
+    const logger: Logger = mock<Logger>()
+    const transport = mock<DocumentsHttpClient>({
+        get: jest.fn((url: string, headers: Readonly<Record<string, string>>, timeoutMs: number) =>
+            http.request({ method: "GET", url, headers, read: "bytes", timeoutMs }),
+        ),
+        postForm: jest.fn((url: string, form: Readonly<Record<string, string>>, timeoutMs: number) =>
+            http.request({ method: "POST", url, form, read: "bytes", timeoutMs }),
+        ),
+        jsonBody: jest.fn((response: HttpResponse): unknown => {
+            try {
+                return JSON.parse(
+                    new TextDecoder().decode(response.body instanceof Uint8Array ? response.body : new Uint8Array()),
+                )
+            } catch (cause) {
+                logger.error(DocumentsLogEvent.BodyUnreadable, cause, { status: response.status })
+                return undefined
+            }
+        }),
+    })
     const moduleRef = await Test.createTestingModule({
         providers: [
             DriveApiClient,
-            DocumentsHttpClient,
             { provide: DOCUMENTS_OPTIONS, useValue: options },
-            { provide: HTTP_CLIENT, useValue: http },
-            { provide: LOGGER, useValue: mock<Logger>() },
+            { provide: DocumentsHttpClient, useValue: transport },
         ],
     }).compile()
     const route = (table: ReadonlyArray<Route>): void => {
@@ -73,7 +90,11 @@ describe("DriveApiClient", () => {
                 expect.objectContaining({ headers: { Authorization: "Bearer token-1" }, timeoutMs: 30_000 }),
             )
         })
+    })
+})
 
+describe("DriveApiClient", () => {
+    describe("readFile", () => {
         it("downloads an uploaded PDF and reads it with the reader", async () => {
             const readers = mock<DocumentReaders>()
             readers.pdf.mockResolvedValue("pdf words")
@@ -85,7 +106,11 @@ describe("DriveApiClient", () => {
 
             await expect(client.readFile("token-1", FILE_ID)).resolves.toEqual({ name: "menu.pdf", text: "pdf words" })
         })
+    })
+})
 
+describe("DriveApiClient", () => {
+    describe("readFile", () => {
         it("sniffs the kind of a download from its content type when the name has no extension", async () => {
             const { client, route } = await build()
             route([
@@ -95,7 +120,11 @@ describe("DriveApiClient", () => {
 
             await expect(client.readFile("token-1", FILE_ID)).resolves.toEqual({ name: "notes", text: "plain" })
         })
+    })
+})
 
+describe("DriveApiClient", () => {
+    describe("readFile", () => {
         it("uses the id as the name when Drive gives none and cuts a long text", async () => {
             const { client, route } = await build()
             route([
@@ -108,7 +137,11 @@ describe("DriveApiClient", () => {
             expect(read.name).toBe(FILE_ID)
             expect(read.text).toHaveLength(120_000)
         })
+    })
+})
 
+describe("DriveApiClient", () => {
+    describe("readFile", () => {
         it.each([
             ["a named", { name: "blob", mimeType: "application/octet-stream" }, "application/octet-stream"],
             ["a typeless", { name: "blob.xyz" }, "unknown"],
@@ -121,7 +154,11 @@ describe("DriveApiClient", () => {
                 params: { type },
             })
         })
+    })
+})
 
+describe("DriveApiClient", () => {
+    describe("readFile", () => {
         it.each([
             ["image/png", { "content-type": "image/png" }],
             ["unknown", {}],
@@ -134,7 +171,11 @@ describe("DriveApiClient", () => {
 
             await expect(client.readFile("token-1", FILE_ID)).rejects.toMatchObject({ params: { type } })
         })
+    })
+})
 
+describe("DriveApiClient", () => {
+    describe("readFile", () => {
         it("refuses a malformed id before it calls Drive", async () => {
             const { client, http } = await build()
 
@@ -144,7 +185,11 @@ describe("DriveApiClient", () => {
 
             expect(http.request).not.toHaveBeenCalled()
         })
+    })
+})
 
+describe("DriveApiClient", () => {
+    describe("readFile", () => {
         it("refuses a folder", async () => {
             const { client, route } = await build()
             route([[META, json({ name: "Dir", mimeType: "application/vnd.google-apps.folder" })]])
@@ -153,7 +198,11 @@ describe("DriveApiClient", () => {
                 code: DocumentsErrorCode.FolderUnsupported,
             })
         })
+    })
+})
 
+describe("DriveApiClient", () => {
+    describe("readFile", () => {
         it("refuses a file whose reported size is over the limit before it downloads", async () => {
             const { client, http, route } = await build()
             route([[META, json({ name: "big.pdf", mimeType: "application/pdf", size: "10000001" })]])
@@ -164,7 +213,11 @@ describe("DriveApiClient", () => {
 
             expect(http.request).toHaveBeenCalledTimes(1)
         })
+    })
+})
 
+describe("DriveApiClient", () => {
+    describe("readFile", () => {
         it("refuses a download over the limit even when Drive reported no size", async () => {
             const { client, route } = await build()
             route([
@@ -176,7 +229,11 @@ describe("DriveApiClient", () => {
                 code: DocumentsErrorCode.TooLarge,
             })
         })
+    })
+})
 
+describe("DriveApiClient", () => {
+    describe("readFile", () => {
         it("reports a rejected token", async () => {
             const { client, route } = await build()
             route([["/files/", bytes("", {}, 401)]])
@@ -185,7 +242,11 @@ describe("DriveApiClient", () => {
                 code: DocumentsErrorCode.TokenRejected,
             })
         })
+    })
+})
 
+describe("DriveApiClient", () => {
+    describe("readFile", () => {
         it.each([
             [404, "not found"],
             [403, "forbidden"],
@@ -197,7 +258,11 @@ describe("DriveApiClient", () => {
                 code: DocumentsErrorCode.DriveNoAccess,
             })
         })
+    })
+})
 
+describe("DriveApiClient", () => {
+    describe("readFile", () => {
         it.each([
             [403, "rateLimitExceeded", DocumentsErrorCode.Refused],
             [500, "oops", DocumentsErrorCode.Unavailable],
@@ -208,7 +273,9 @@ describe("DriveApiClient", () => {
             await expect(client.readFile("token-1", FILE_ID)).rejects.toMatchObject({ code, params: { status } })
         })
     })
+})
 
+describe("DriveApiClient", () => {
     describe("refreshAccessToken", () => {
         it("asks Google for a new access token with the client of the deployment", async () => {
             const { client, http } = await build()

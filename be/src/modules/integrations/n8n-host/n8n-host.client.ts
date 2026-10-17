@@ -28,7 +28,7 @@ export class N8nHostClient implements N8nHostShell {
 
     /** Runs the command and answers its standard output; a non-zero exit throws with the start of the output. */
     run(request: HostCommand): Promise<string> {
-        if (request.local) return this.execute("bash", ["-c", request.command], request)
+        if (request.local) return this.runProcess("bash", ["-c", request.command], request)
         if (!this.options.host || this.options.sshKey === undefined)
             throw new N8nHostError({ code: N8nHostErrorCode.HostMissing })
         return this.runRemote(request, this.options.sshKey)
@@ -44,7 +44,7 @@ export class N8nHostClient implements N8nHostShell {
                 knownHostsPath = join(directory, "known_hosts")
                 await writeFile(knownHostsPath, this.options.knownHosts, { mode: 0o600 })
             }
-            return await this.execute(
+            return await this.runProcess(
                 "ssh",
                 [...sshArguments(this.options, request.command, keyPath, knownHostsPath)],
                 request,
@@ -54,7 +54,7 @@ export class N8nHostClient implements N8nHostShell {
         }
     }
 
-    private execute(program: string, args: Array<string>, request: HostCommand): Promise<string> {
+    private runProcess(program: string, args: Array<string>, request: HostCommand): Promise<string> {
         const child = spawn(program, args)
         return new Promise<string>((resolve, reject) => {
             const out: Array<string> = []

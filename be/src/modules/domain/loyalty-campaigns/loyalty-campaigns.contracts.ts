@@ -104,10 +104,14 @@ export interface LoyaltyCampaignView {
     readonly errorCode: string | null
 }
 
+/** The catalog keys of the parts of a segment label. */
+export type SegmentPartKey =
+    "loyalty.segment.tiers" | "loyalty.segment.inactive" | "loyalty.segment.birthday" | "loyalty.segment.minSpend"
+
 /** The text of one part of a segment label, to be looked up in the message catalog. */
 export interface SegmentPart {
     /** The catalog key. */
-    readonly key: string
+    readonly key: SegmentPartKey
     /** The values that fill the text. */
     readonly params: Readonly<Record<string, string | number>>
 }

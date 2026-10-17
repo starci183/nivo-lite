@@ -1,3 +1,4 @@
+import { Test } from "@nestjs/testing"
 import { TELEGRAM_USER_TEXT } from "./messages/telegram-user.messages"
 import {
     TELEGRAM_NOT_CONFIGURED_MESSAGE,
@@ -8,6 +9,27 @@ import {
     telegramErrorCode,
 } from "./telegram-user-errors.policy"
 
+type Subject = {
+    telegramErrorCode: typeof telegramErrorCode
+    isTelegramRevoked: typeof isTelegramRevoked
+    explainTelegramError: typeof explainTelegramError
+    isKnownTelegramError: typeof isKnownTelegramError
+}
+
+const SUBJECT = Symbol("telegram-user-errors.policy")
+
+const buildSubject = async () => {
+    const moduleRef = await Test.createTestingModule({
+        providers: [
+            {
+                provide: SUBJECT,
+                useValue: { telegramErrorCode, isTelegramRevoked, explainTelegramError, isKnownTelegramError },
+            },
+        ],
+    }).compile()
+    return moduleRef.get<Subject>(SUBJECT)
+}
+
 describe("telegram user errors", () => {
     it("publishes the owner-facing sentences for a revoked session and a missing app", () => {
         expect(TELEGRAM_REVOKED_MESSAGE).toBe(TELEGRAM_USER_TEXT.revoked)
@@ -15,12 +37,16 @@ describe("telegram user errors", () => {
     })
 
     describe("telegramErrorCode", () => {
-        it("reads errorMessage, then message, and answers nothing otherwise", () => {
-            expect(telegramErrorCode({ errorMessage: "SESSION_REVOKED", message: "other" })).toBe("SESSION_REVOKED")
-            expect(telegramErrorCode({ message: "PHONE_CODE_INVALID" })).toBe("PHONE_CODE_INVALID")
-            expect(telegramErrorCode({ message: 12 })).toBe("")
-            expect(telegramErrorCode(null)).toBe("")
-            expect(telegramErrorCode("SESSION_REVOKED")).toBe("")
+        it("reads errorMessage, then message, and answers nothing otherwise", async () => {
+            const subject = await buildSubject()
+
+            expect(subject.telegramErrorCode({ errorMessage: "SESSION_REVOKED", message: "other" })).toBe(
+                "SESSION_REVOKED",
+            )
+            expect(subject.telegramErrorCode({ message: "PHONE_CODE_INVALID" })).toBe("PHONE_CODE_INVALID")
+            expect(subject.telegramErrorCode({ message: 12 })).toBe("")
+            expect(subject.telegramErrorCode(null)).toBe("")
+            expect(subject.telegramErrorCode("SESSION_REVOKED")).toBe("")
         })
     })
 
@@ -33,13 +59,17 @@ describe("telegram user errors", () => {
             "USER_DEACTIVATED_BAN",
             "AUTH_KEY_INVALID",
             "AUTH_KEY_DUPLICATED",
-        ])("is true for %s", (code) => {
-            expect(isTelegramRevoked({ errorMessage: code })).toBe(true)
+        ])("is true for %s", async (code) => {
+            const subject = await buildSubject()
+
+            expect(subject.isTelegramRevoked({ errorMessage: code })).toBe(true)
         })
 
-        it("is false for a code the owner can fix and for a value with no code", () => {
-            expect(isTelegramRevoked({ errorMessage: "PHONE_CODE_INVALID" })).toBe(false)
-            expect(isTelegramRevoked(undefined)).toBe(false)
+        it("is false for a code the owner can fix and for a value with no code", async () => {
+            const subject = await buildSubject()
+
+            expect(subject.isTelegramRevoked({ errorMessage: "PHONE_CODE_INVALID" })).toBe(false)
+            expect(subject.isTelegramRevoked(undefined)).toBe(false)
         })
     })
 
@@ -55,16 +85,20 @@ describe("telegram user errors", () => {
             ["FLOOD_WAIT_30", TELEGRAM_USER_TEXT.flood],
             ["SEND_CODE_UNAVAILABLE", TELEGRAM_USER_TEXT.flood],
             ["SESSION_REVOKED", TELEGRAM_USER_TEXT.revoked],
-        ])("explains %s", (code, sentence) => {
-            expect(explainTelegramError({ errorMessage: code })).toBe(sentence)
-            expect(isKnownTelegramError({ errorMessage: code })).toBe(true)
+        ])("explains %s", async (code, sentence) => {
+            const subject = await buildSubject()
+
+            expect(subject.explainTelegramError({ errorMessage: code })).toBe(sentence)
+            expect(subject.isKnownTelegramError({ errorMessage: code })).toBe(true)
         })
 
-        it("hides an unknown failure and a value that is not an error object", () => {
-            expect(explainTelegramError({ errorMessage: "RPC_CALL_FAIL" })).toBe(TELEGRAM_USER_TEXT.unavailable)
-            expect(explainTelegramError("down")).toBe(TELEGRAM_USER_TEXT.unavailable)
-            expect(isKnownTelegramError({ message: "RPC_CALL_FAIL" })).toBe(false)
-            expect(isKnownTelegramError(1)).toBe(false)
+        it("hides an unknown failure and a value that is not an error object", async () => {
+            const subject = await buildSubject()
+
+            expect(subject.explainTelegramError({ errorMessage: "RPC_CALL_FAIL" })).toBe(TELEGRAM_USER_TEXT.unavailable)
+            expect(subject.explainTelegramError("down")).toBe(TELEGRAM_USER_TEXT.unavailable)
+            expect(subject.isKnownTelegramError({ message: "RPC_CALL_FAIL" })).toBe(false)
+            expect(subject.isKnownTelegramError(1)).toBe(false)
         })
     })
 })

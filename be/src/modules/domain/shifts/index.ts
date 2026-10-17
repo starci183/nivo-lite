@@ -47,3 +47,5 @@ export type {
     RequestPublishParams,
     RequestSwapParams,
 } from "./shifts-operations.contracts"
+
+export type { Block, Shift, ShiftStaff, SolveInput, SolverReport } from "./shifts.contracts"

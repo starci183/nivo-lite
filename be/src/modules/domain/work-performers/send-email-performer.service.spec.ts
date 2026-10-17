@@ -49,27 +49,27 @@ const proposalOf = (fields: Proposal["fields"] = {}, draft: string | undefined =
     fields: { contact: " lan@huetea.vn ", subject: "Your receipt", purpose: "receipt", ...fields },
 })
 
-describe("SendEmailPerformerService", () => {
-    const build = async () => {
-        const logger = mock<Logger>()
-        const kit = mock<PerformerKitService>()
-        kit.text.mockImplementation((_ctx, key, params = {}) => [key, ...Object.values(params).map(String)].join("|"))
-        const mail = mock<WorkspaceMailService>()
-        mail.send.mockResolvedValue({ status: "sent", emailMessageId: "em-1", via: "workspace" })
-        const workspaces = mock<WorkspacesService>()
-        workspaces.nameOf.mockResolvedValue("Hue Tea")
-        const moduleRef = await Test.createTestingModule({
-            providers: [
-                SendEmailPerformerService,
-                { provide: LOGGER, useValue: logger },
-                { provide: PerformerKitService, useValue: kit },
-                { provide: WorkspaceMailService, useValue: mail },
-                { provide: WorkspacesService, useValue: workspaces },
-            ],
-        }).compile()
-        return { service: moduleRef.get(SendEmailPerformerService), logger, mail, workspaces }
-    }
+const build = async () => {
+    const logger = mock<Logger>()
+    const kit = mock<PerformerKitService>()
+    kit.text.mockImplementation((_ctx, key, params = {}) => [key, ...Object.values(params).map(String)].join("|"))
+    const mail = mock<WorkspaceMailService>()
+    mail.send.mockResolvedValue({ status: "sent", emailMessageId: "em-1", via: "workspace" })
+    const workspaces = mock<WorkspacesService>()
+    workspaces.nameOf.mockResolvedValue("Hue Tea")
+    const moduleRef = await Test.createTestingModule({
+        providers: [
+            SendEmailPerformerService,
+            { provide: LOGGER, useValue: logger },
+            { provide: PerformerKitService, useValue: kit },
+            { provide: WorkspaceMailService, useValue: mail },
+            { provide: WorkspacesService, useValue: workspaces },
+        ],
+    }).compile()
+    return { service: moduleRef.get(SendEmailPerformerService), logger, mail, workspaces }
+}
 
+describe("SendEmailPerformerService", () => {
     it("prepares the proposal it was given", async () => {
         const { service } = await build()
         const item = itemOf()
@@ -138,7 +138,9 @@ describe("SendEmailPerformerService", () => {
             refs: {},
         })
     })
+})
 
+describe("SendEmailPerformerService", () => {
     it("sends without references that are not an object", async () => {
         const { service, mail, logger } = await build()
 

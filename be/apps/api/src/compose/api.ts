@@ -1,4 +1,4 @@
-import type { ModuleMetadata } from "@nestjs/common"
+import type { DynamicModule } from "@nestjs/common"
 import { AutomationsGraphqlModule } from "@features/api/automations"
 import { FlowsGraphqlModule } from "@features/api/flows"
 import { N8nPipelinesHttpModule } from "@features/api/n8n-pipelines"
@@ -24,29 +24,29 @@ import { MetaConnectionsHttpModule } from "@features/api/meta-connections"
 import { MetaHttpModule } from "@features/webhooks/meta"
 import { ConnectionsGraphqlModule } from "@features/api/connections"
 /** The api area of the API, in registration order. */
-export const apiModules = (): NonNullable<ModuleMetadata["imports"]> => [
-    WorkspacesGraphqlModule,
-    ApiKeysGraphqlModule,
-    InventoryGraphqlModule,
-    ShiftsGraphqlModule,
-    HiringGraphqlModule,
-    OverviewGraphqlModule,
-    AccountGraphqlModule,
-    ShellGraphqlModule,
-    ConnectionsGraphqlModule,
-    DataHubGraphqlModule,
-    InboxGraphqlModule,
-    AgentChatGraphqlModule,
-    InboxSimulationGraphqlModule,
+export const apiModules = (): Array<DynamicModule> => [
+    WorkspacesGraphqlModule.register({}),
+    ApiKeysGraphqlModule.register({}),
+    InventoryGraphqlModule.register({}),
+    ShiftsGraphqlModule.register({}),
+    HiringGraphqlModule.register({}),
+    OverviewGraphqlModule.register({}),
+    AccountGraphqlModule.register({}),
+    ShellGraphqlModule.register({}),
+    ConnectionsGraphqlModule.register({}),
+    DataHubGraphqlModule.register({}),
+    InboxGraphqlModule.register({}),
+    AgentChatGraphqlModule.register({}),
+    InboxSimulationGraphqlModule.register({}),
     InboxSimulationModule.register({ isGlobal: true }),
     AgentChatModule.register({ isGlobal: true }),
-    KnowledgeGraphqlModule,
-    EvidenceGraphqlModule,
-    GoogleConnectionsHttpModule,
-    MetaConnectionsHttpModule,
-    MetaHttpModule,
-    AutomationsGraphqlModule,
-    FlowsGraphqlModule,
-    N8nPipelinesHttpModule,
-    AdminGraphqlModule,
+    KnowledgeGraphqlModule.register({}),
+    EvidenceGraphqlModule.register({}),
+    GoogleConnectionsHttpModule.register({}),
+    MetaConnectionsHttpModule.register({}),
+    MetaHttpModule.register({}),
+    AutomationsGraphqlModule.register({}),
+    FlowsGraphqlModule.register({}),
+    N8nPipelinesHttpModule.register({}),
+    AdminGraphqlModule.register({}),
 ]

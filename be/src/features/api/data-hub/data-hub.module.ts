@@ -26,6 +26,7 @@ import { SubmitTelegramPasswordHandler } from "./application/submit-telegram-pas
 import { CancelTelegramLoginHandler } from "./application/cancel-telegram-login.handler"
 import { ListTelegramChatsHandler } from "./application/list-telegram-chats.handler"
 import { SaveTelegramUserSetupHandler } from "./application/save-telegram-user-setup.handler"
+import { ConfigurableModuleClass } from "./data-hub.module-definition"
 
 @Module({
     providers: [
@@ -59,4 +60,4 @@ import { SaveTelegramUserSetupHandler } from "./application/save-telegram-user-s
     ],
 })
 /** The data hub feature: the handlers of its application. */
-export class DataHubApiModule {}
+export class DataHubApiModule extends ConfigurableModuleClass {}

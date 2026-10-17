@@ -13,6 +13,7 @@ import { HiringNotifyService } from "./hiring-notify.service"
 import { HiringOffersService } from "./hiring-offers.service"
 import { HiringPerformersService } from "./hiring-performers.service"
 import { HiringPublicService } from "./hiring-public.service"
+import { HiringPostingService } from "./hiring-posting.service"
 import { HiringScreeningService } from "./hiring-screening.service"
 import { HiringSettingsService } from "./hiring-settings.service"
 import { HiringTextService } from "./hiring-text.service"
@@ -44,6 +45,7 @@ export class HiringModule extends ConfigurableModuleClass {
                 HiringInterviewsService,
                 HiringOffersService,
                 HiringPublicService,
+                HiringPostingService,
                 HiringChatService,
                 HiringTickService,
                 HiringPerformersService,
@@ -59,6 +61,7 @@ export class HiringModule extends ConfigurableModuleClass {
                 HiringInterviewsService,
                 HiringOffersService,
                 HiringPublicService,
+                HiringPostingService,
                 HiringChatService,
                 HiringTickService,
                 HiringWorkbenchService,

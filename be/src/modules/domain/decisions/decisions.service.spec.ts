@@ -200,7 +200,9 @@ describe("DecisionsService", () => {
             expect(em.query).toHaveBeenCalledWith(LIST_DECISION_HISTORY, ["ws-1", deciders, outcome, "sales", 100])
         })
     })
+})
 
+describe("DecisionsService", () => {
     describe("listWorkItems", () => {
         it("answers a page and the cursor of the next one", async () => {
             const em = mockEntityManager({ query: [LIST_WORK_ITEMS, [viewOf("a"), viewOf("b"), viewOf("c")]] })
@@ -263,7 +265,9 @@ describe("DecisionsService", () => {
             })
         })
     })
+})
 
+describe("DecisionsService", () => {
     describe("readAuthority", () => {
         it("answers the sheet and the rules for a manager", async () => {
             const { service, members, authority, rules } = await build(mockEntityManager())
@@ -296,7 +300,9 @@ describe("DecisionsService", () => {
             )
         })
     })
+})
 
+describe("DecisionsService", () => {
     describe("saveRule", () => {
         it("allows automatic decisions for an uncapped action", async () => {
             const { service, rules, evidence } = await build(mockEntityManager())
@@ -368,7 +374,9 @@ describe("DecisionsService", () => {
             expect(rules.save).toHaveBeenCalledTimes(1)
         })
     })
+})
 
+describe("DecisionsService", () => {
     describe("reconcileDetails", () => {
         it("prefers the stored transaction and returns existing candidates in proposal order", async () => {
             const candidates = ["invoice-2", "missing", "invoice-1"].map((id) => ({ id, label: id, amount_vnd: 1000 }))

@@ -85,48 +85,56 @@ const responsibility = {
     created_at: "2026-10-14T00:00:00.000Z",
 }
 
+const leads = mock<LeadRecordsService>()
+
+const inbound = mock<InboundEventsService>()
+
+const commands = mock<CommandBusService>()
+
+const engine = mock<WorkEngineService>()
+
+const items = mock<WorkItemsService>()
+
+const responsibilities = mock<ResponsibilityJournalService>()
+
+const automations = mock<AutomationsService>()
+
+const build = async () => {
+    const moduleRef = await Test.createTestingModule({
+        providers: [
+            LeadActionFlowService,
+            { provide: LeadRecordsService, useValue: leads },
+            { provide: InboundEventsService, useValue: inbound },
+            { provide: CommandBusService, useValue: commands },
+            { provide: WorkEngineService, useValue: engine },
+            { provide: WorkItemsService, useValue: items },
+            { provide: ResponsibilityJournalService, useValue: responsibilities },
+            { provide: AutomationsService, useValue: automations },
+        ],
+    }).compile()
+    return moduleRef.get(LeadActionFlowService)
+}
+
+beforeEach(() => {
+    jest.resetAllMocks()
+    leads.require.mockResolvedValue(lead)
+    inbound.recordInput.mockResolvedValue({ duplicate: false, inboundEventId: "inbound-1" })
+    inbound.find.mockResolvedValue(null)
+    commands.sendCommandItem.mockResolvedValue(work)
+    engine.runWork.mockResolvedValue(work)
+    items.findByDedupe.mockResolvedValue(null)
+    responsibilities.find.mockResolvedValue(responsibility)
+})
+
 describe("LeadActionFlowService", () => {
-    const leads = mock<LeadRecordsService>()
-    const inbound = mock<InboundEventsService>()
-    const commands = mock<CommandBusService>()
-    const engine = mock<WorkEngineService>()
-    const items = mock<WorkItemsService>()
-    const responsibilities = mock<ResponsibilityJournalService>()
-    const automations = mock<AutomationsService>()
-
-    beforeEach(() => {
-        jest.resetAllMocks()
-        leads.require.mockResolvedValue(lead)
-        inbound.recordInput.mockResolvedValue({ duplicate: false, inboundEventId: "inbound-1" })
-        inbound.find.mockResolvedValue(null)
-        commands.sendCommandItem.mockResolvedValue(work)
-        engine.runWork.mockResolvedValue(work)
-        items.findByDedupe.mockResolvedValue(null)
-        responsibilities.find.mockResolvedValue(responsibility)
-    })
-
-    const build = async () => {
-        const moduleRef = await Test.createTestingModule({
-            providers: [
-                LeadActionFlowService,
-                { provide: LeadRecordsService, useValue: leads },
-                { provide: InboundEventsService, useValue: inbound },
-                { provide: CommandBusService, useValue: commands },
-                { provide: WorkEngineService, useValue: engine },
-                { provide: WorkItemsService, useValue: items },
-                { provide: ResponsibilityJournalService, useValue: responsibilities },
-                { provide: AutomationsService, useValue: automations },
-            ],
-        }).compile()
-        return moduleRef.get(LeadActionFlowService)
-    }
-
     it("refuses to settle a lead that is not won", async () => {
         const service = await build()
 
         await expect(service.settleWon(ctx, run)).rejects.toMatchObject({ code: LeadActionsErrorCode.NotWon })
     })
+})
 
+describe("LeadActionFlowService", () => {
     it("records manual capture details, normalises both contacts and continues the owner chain", async () => {
         const service = await build()
         const input: LeadActionInput = {
@@ -190,7 +198,9 @@ describe("LeadActionFlowService", () => {
         ])
         expect(engine.runQueuedItem).toHaveBeenCalledWith(ctx, "follow-1")
     })
+})
 
+describe("LeadActionFlowService", () => {
     it("defaults omitted capture fields and returns no lead when the event is absent", async () => {
         const service = await build()
         commands.sendCommandItem.mockResolvedValue({ ...work, lead_id: null, status: "waiting_decision" })
@@ -230,7 +240,9 @@ describe("LeadActionFlowService", () => {
         expect(leads.fillContact).not.toHaveBeenCalled()
         expect(items.findByDedupe).not.toHaveBeenCalled()
     })
+})
 
+describe("LeadActionFlowService", () => {
     it("uses the email when the phone is blank and recovers the lead linked to the inbound event", async () => {
         const service = await build()
         commands.sendCommandItem.mockResolvedValue({ ...work, lead_id: null })
@@ -278,7 +290,9 @@ describe("LeadActionFlowService", () => {
         expect(items.findByDedupe.mock.calls).toEqual([["ws-1", "classify_lead:after:work-1"]])
         expect(engine.runQueuedItem).not.toHaveBeenCalled()
     })
+})
 
+describe("LeadActionFlowService", () => {
     it("finishes after classification when no follow-up was queued", async () => {
         const service = await build()
         items.findByDedupe.mockResolvedValueOnce({ ...work, id: "classified-1" }).mockResolvedValueOnce(null)
@@ -319,7 +333,9 @@ describe("LeadActionFlowService", () => {
         })
         expect(items.findByDedupe).toHaveBeenCalledWith("ws-1", "send_follow_up:resp:resp-1:run-1")
     })
+})
 
+describe("LeadActionFlowService", () => {
     it.each([null, { ...work, execution_id: null }])(
         "uses the drafted execution when the current execution is absent: %p",
         async (current) => {
@@ -368,7 +384,9 @@ describe("LeadActionFlowService", () => {
         await expect(service.create(ctx, run)).rejects.toMatchObject({ code: LeadActionsErrorCode.Busy })
         expect(leads.fillContact).not.toHaveBeenCalled()
     })
+})
 
+describe("LeadActionFlowService", () => {
     it("reports the original work id when queued capture disappears", async () => {
         const service = await build()
         commands.sendCommandItem.mockResolvedValue({ ...work, status: "queued" })
@@ -393,7 +411,9 @@ describe("LeadActionFlowService", () => {
         expect(engine.runQueuedItem).not.toHaveBeenCalled()
         expect(leads.fillContact).not.toHaveBeenCalled()
     })
+})
 
+describe("LeadActionFlowService", () => {
     it.each([
         { origin: "simulated" as const, evidence: "Signed agreement", expected: "Signed agreement" },
         { origin: "live" as const, evidence: "", expected: null },

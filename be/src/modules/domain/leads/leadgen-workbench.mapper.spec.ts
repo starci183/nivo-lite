@@ -1,7 +1,17 @@
+import { Test } from "@nestjs/testing"
 import { mock } from "@starci/jest-preset"
 import type { Proposal } from "@modules/domain/decisions"
 import { buildLeadGenWorkbench, conversionSinceIso } from "./leadgen-workbench.mapper"
 import type { LeadGenLeadRow, LeadGenWorkbenchRow, LeadGenWorkItemRow } from "./persistence/leadgen-workbench.rows"
+
+const SUBJECT = Symbol("leadgen-workbench.mapper")
+
+const buildSubject = async () => {
+    const moduleRef = await Test.createTestingModule({
+        providers: [{ provide: SUBJECT, useValue: { conversionSinceIso, buildLeadGenWorkbench } }],
+    }).compile()
+    return moduleRef.get<typeof import("./leadgen-workbench.mapper")>(SUBJECT)
+}
 
 const NOW = Date.parse("2026-10-12T03:00:00.000Z")
 const CREATED = "2026-10-12T02:00:00.000Z"
@@ -46,10 +56,138 @@ const rows = (patch: Partial<LeadGenWorkbenchRow> = {}): LeadGenWorkbenchRow => 
 const FACEBOOK = { platform: "facebook", kind: "other", refKind: null, refId: null, refLabel: null }
 const POST = { platform: "facebook", kind: "comment", refKind: "post", refId: "post-1", refLabel: "Offer" }
 
+const detailedWorkbenchRows = rows({
+    leads: [
+        lead("a"),
+        lead("b", { stage: "won" }),
+        lead("c", { stage: "proposal", channel: "other" }),
+        lead("d", { stage: "qualified", channel: "other" }),
+        lead("e", { channel: "other" }),
+        lead("f", { stage: "won", created_at: "2026-07-14T02:59:59.999Z" }),
+        lead("ignored", { channel: "other" }),
+        lead("test", { contact_name: "UAT" }),
+    ],
+    items: [
+        item("capture-a", "capture_lead", "a", {
+            proposal: {
+                summary: "Capture",
+                fields: { score: "hot", source_kind: "comment", post_id: "post-1", source_label: "Offer" },
+            },
+        }),
+        item("capture-a-old", "capture_lead", "a", {
+            proposal: { summary: "Old", fields: { score: "cold" } },
+        }),
+        item("capture-b", "capture_lead", "b", {
+            proposal: {
+                summary: "Capture",
+                fields: { score: "warm", source_kind: "comment", post_id: "post-1" },
+            },
+        }),
+        item("capture-c", "capture_lead", "c", {
+            proposal: { summary: "Capture", fields: { score: "cold" } },
+        }),
+        item("score-c", "score_lead", "c", { proposal: { summary: "Score", fields: { score: "hot" } } }),
+        item("score-a", "score_lead", "a"),
+        item("score-d", "score_lead", "d", { proposal: { summary: "Score", fields: { score: "warm" } } }),
+        item("handoff-a", "handoff_to_sales", "a", { completed_at: "2026-10-12T02:30:00.000Z" }),
+        item("handoff-e", "handoff_to_sales", "e"),
+        item("handoff-missing", "handoff_to_sales", "missing"),
+        item("without-lead", "capture_lead", null),
+        item("classify-a", "classify_lead", "a", { department: "sales" }),
+        item("classify-a-old", "classify_lead", "a", { department: "sales", status: "failed" }),
+    ],
+    conversations: [{ id: "talk-a", lead_id: "a" }],
+    messages: [
+        {
+            conversation_id: "talk-a",
+            role: "user",
+            body: "Question",
+            created_at: "2026-10-12T02:40:00.000Z",
+        },
+        {
+            conversation_id: "talk-a",
+            role: "agent",
+            body: "  Latest\n reply  ",
+            created_at: "2026-10-12T02:41:14.000Z",
+        },
+    ],
+})
+
+const expectedWorkbenchLeads = [
+    {
+        id: "a",
+        name: "a",
+        stage: "new",
+        score: "hot",
+        origin: POST,
+        lastText: "Latest reply",
+        lastAt: "2026-10-12T02:41:14.000Z",
+        createdAt: CREATED,
+        href: "/leads/a",
+    },
+    {
+        id: "b",
+        name: "b",
+        stage: "won",
+        score: "warm",
+        origin: { ...POST, refLabel: null },
+        lastText: "Need advice",
+        lastAt: CREATED,
+        createdAt: CREATED,
+        href: "/leads/b",
+    },
+    {
+        id: "c",
+        name: "c",
+        stage: "proposal",
+        score: "hot",
+        origin: { ...FACEBOOK, platform: "other" },
+        lastText: "Need advice",
+        lastAt: CREATED,
+        createdAt: CREATED,
+        href: "/leads/c",
+    },
+    {
+        id: "d",
+        name: "d",
+        stage: "qualified",
+        score: "warm",
+        origin: { ...FACEBOOK, platform: "other" },
+        lastText: "Need advice",
+        lastAt: CREATED,
+        createdAt: CREATED,
+        href: "/leads/d",
+    },
+    {
+        id: "e",
+        name: "e",
+        stage: "new",
+        score: null,
+        origin: { ...FACEBOOK, platform: "other" },
+        lastText: "Need advice",
+        lastAt: CREATED,
+        createdAt: CREATED,
+        href: "/leads/e",
+    },
+    {
+        id: "f",
+        name: "f",
+        stage: "won",
+        score: null,
+        origin: FACEBOOK,
+        lastText: "Need advice",
+        lastAt: "2026-07-14T02:59:59.999Z",
+        createdAt: "2026-07-14T02:59:59.999Z",
+        href: "/leads/f",
+    },
+]
+
 describe("leadgen-workbench.mapper", () => {
-    it("reports the exact conversion boundary and an empty workbench", () => {
-        expect(conversionSinceIso(NOW)).toBe("2026-07-14T03:00:00.000Z")
-        expect(buildLeadGenWorkbench(rows())).toEqual({
+    it("reports the exact conversion boundary and an empty workbench", async () => {
+        const subject = await buildSubject()
+
+        expect(subject.conversionSinceIso(NOW)).toBe("2026-07-14T03:00:00.000Z")
+        expect(subject.buildLeadGenWorkbench(rows())).toEqual({
             metrics: {
                 newToday: 0,
                 hotWaiting: 0,
@@ -67,65 +205,10 @@ describe("leadgen-workbench.mapper", () => {
         })
     })
 
-    it("derives scores, source outcomes, latest activity and Sales handoffs from the newest work", () => {
-        const result = buildLeadGenWorkbench(
-            rows({
-                leads: [
-                    lead("a"),
-                    lead("b", { stage: "won" }),
-                    lead("c", { stage: "proposal", channel: "other" }),
-                    lead("d", { stage: "qualified", channel: "other" }),
-                    lead("e", { channel: "other" }),
-                    lead("f", { stage: "won", created_at: "2026-07-14T02:59:59.999Z" }),
-                    lead("ignored", { channel: "other" }),
-                    lead("test", { contact_name: "UAT" }),
-                ],
-                items: [
-                    item("capture-a", "capture_lead", "a", {
-                        proposal: {
-                            summary: "Capture",
-                            fields: { score: "hot", source_kind: "comment", post_id: "post-1", source_label: "Offer" },
-                        },
-                    }),
-                    item("capture-a-old", "capture_lead", "a", {
-                        proposal: { summary: "Old", fields: { score: "cold" } },
-                    }),
-                    item("capture-b", "capture_lead", "b", {
-                        proposal: {
-                            summary: "Capture",
-                            fields: { score: "warm", source_kind: "comment", post_id: "post-1" },
-                        },
-                    }),
-                    item("capture-c", "capture_lead", "c", {
-                        proposal: { summary: "Capture", fields: { score: "cold" } },
-                    }),
-                    item("score-c", "score_lead", "c", { proposal: { summary: "Score", fields: { score: "hot" } } }),
-                    item("score-a", "score_lead", "a"),
-                    item("score-d", "score_lead", "d", { proposal: { summary: "Score", fields: { score: "warm" } } }),
-                    item("handoff-a", "handoff_to_sales", "a", { completed_at: "2026-10-12T02:30:00.000Z" }),
-                    item("handoff-e", "handoff_to_sales", "e"),
-                    item("handoff-missing", "handoff_to_sales", "missing"),
-                    item("without-lead", "capture_lead", null),
-                    item("classify-a", "classify_lead", "a", { department: "sales" }),
-                    item("classify-a-old", "classify_lead", "a", { department: "sales", status: "failed" }),
-                ],
-                conversations: [{ id: "talk-a", lead_id: "a" }],
-                messages: [
-                    {
-                        conversation_id: "talk-a",
-                        role: "user",
-                        body: "Question",
-                        created_at: "2026-10-12T02:40:00.000Z",
-                    },
-                    {
-                        conversation_id: "talk-a",
-                        role: "agent",
-                        body: "  Latest\n reply  ",
-                        created_at: "2026-10-12T02:41:14.000Z",
-                    },
-                ],
-            }),
-        )
+    it("derives scores, source outcomes, latest activity and Sales handoffs from the newest work", async () => {
+        const subject = await buildSubject()
+
+        const result = subject.buildLeadGenWorkbench(detailedWorkbenchRows)
         expect(result.metrics).toEqual({
             newToday: 5,
             hotWaiting: 1,
@@ -135,74 +218,7 @@ describe("leadgen-workbench.mapper", () => {
             conversionLeads: 5,
             conversionWon: 1,
         })
-        expect(result.leads).toEqual([
-            {
-                id: "a",
-                name: "a",
-                stage: "new",
-                score: "hot",
-                origin: POST,
-                lastText: "Latest reply",
-                lastAt: "2026-10-12T02:41:14.000Z",
-                createdAt: CREATED,
-                href: "/leads/a",
-            },
-            {
-                id: "b",
-                name: "b",
-                stage: "won",
-                score: "warm",
-                origin: { ...POST, refLabel: null },
-                lastText: "Need advice",
-                lastAt: CREATED,
-                createdAt: CREATED,
-                href: "/leads/b",
-            },
-            {
-                id: "c",
-                name: "c",
-                stage: "proposal",
-                score: "hot",
-                origin: { ...FACEBOOK, platform: "other" },
-                lastText: "Need advice",
-                lastAt: CREATED,
-                createdAt: CREATED,
-                href: "/leads/c",
-            },
-            {
-                id: "d",
-                name: "d",
-                stage: "qualified",
-                score: "warm",
-                origin: { ...FACEBOOK, platform: "other" },
-                lastText: "Need advice",
-                lastAt: CREATED,
-                createdAt: CREATED,
-                href: "/leads/d",
-            },
-            {
-                id: "e",
-                name: "e",
-                stage: "new",
-                score: null,
-                origin: { ...FACEBOOK, platform: "other" },
-                lastText: "Need advice",
-                lastAt: CREATED,
-                createdAt: CREATED,
-                href: "/leads/e",
-            },
-            {
-                id: "f",
-                name: "f",
-                stage: "won",
-                score: null,
-                origin: FACEBOOK,
-                lastText: "Need advice",
-                lastAt: "2026-07-14T02:59:59.999Z",
-                createdAt: "2026-07-14T02:59:59.999Z",
-                href: "/leads/f",
-            },
-        ])
+        expect(result.leads).toEqual(expectedWorkbenchLeads)
         expect(result.sources).toEqual([
             { key: "other:other::", origin: { ...FACEBOOK, platform: "other" }, leads: 3, hot: 1, won: 0 },
             { key: "facebook:comment:post:post-1", origin: POST, leads: 2, hot: 1, won: 1 },
@@ -233,9 +249,13 @@ describe("leadgen-workbench.mapper", () => {
         expect(result.comments).toEqual([])
         expect(result.leadsHidden).toBe(0)
     })
+})
 
-    it("limits leads and pending comments to the selected installation while reading Sales classification", () => {
-        const result = buildLeadGenWorkbench(
+describe("leadgen-workbench.mapper", () => {
+    it("limits leads and pending comments to the selected installation while reading Sales classification", async () => {
+        const subject = await buildSubject()
+
+        const result = subject.buildLeadGenWorkbench(
             rows({
                 installationId: "agent-1",
                 leads: [lead("own"), lead("other", { installation_id: "agent-2" })],
@@ -278,14 +298,18 @@ describe("leadgen-workbench.mapper", () => {
         expect(result.metrics.hotWaiting).toBe(1)
         expect(result.comments).toEqual([])
     })
+})
 
-    it("reads pending comments defensively and orders them oldest first", () => {
+describe("leadgen-workbench.mapper", () => {
+    it("reads pending comments defensively and orders them oldest first", async () => {
+        const subject = await buildSubject()
+
         const legacyProposal = mock<Proposal>({ fields: undefined, summary: undefined, draft: undefined })
         const missingProposal = mock<LeadGenWorkItemRow>({
             ...item("missing", "reply_comment_public", null, { status: "waiting_decision" }),
             proposal: undefined,
         })
-        const result = buildLeadGenWorkbench(
+        const result = subject.buildLeadGenWorkbench(
             rows({
                 items: [
                     item("full", "reply_comment_public", null, {
@@ -355,15 +379,19 @@ describe("leadgen-workbench.mapper", () => {
             },
         ])
     })
+})
 
-    it("orders equally sized sources by hot leads, counts closed hot leads, and caps only the visible list", () => {
+describe("leadgen-workbench.mapper", () => {
+    it("orders equally sized sources by hot leads, counts closed hot leads, and caps only the visible list", async () => {
+        const subject = await buildSubject()
+
         const leads = Array.from({ length: 102 }, (_, index) =>
             lead(`lead-${index}`, {
                 channel: index < 51 ? "instagram" : "facebook",
                 stage: index === 0 ? "lost" : "new",
             }),
         )
-        const result = buildLeadGenWorkbench(
+        const result = subject.buildLeadGenWorkbench(
             rows({
                 leads,
                 items: [

@@ -93,84 +93,84 @@ const build = async (entityManager: MockEntityManager) => {
     return { service: moduleRef.get(OverviewService), members }
 }
 
-describe("OverviewService", () => {
-    describe("dashboard", () => {
-        it("reads every figure for an active member, in the founding window", async () => {
-            const em = mockEntityManager({
-                query: [
-                    [DASHBOARD_RESPONSIBILITIES, [{ rows: [RESPONSIBILITY] }]],
-                    [DASHBOARD_AGENTS, [{ rows: [AGENT] }]],
-                    [DASHBOARD_EVENTS, [{ rows: [EVENT] }]],
-                    [DASHBOARD_LEADS, [{ rows: [LEAD] }]],
-                    [DASHBOARD_PENDING, [{ rows: [PENDING] }]],
-                    [DASHBOARD_PROMO, [{ promo: PROMO }]],
-                    [DASHBOARD_GOVERNANCE, [{ governance: GOVERNANCE }]],
-                    [DASHBOARD_EXCEPTIONS, [{ rows: [EXCEPTION] }]],
-                ],
-            })
-            const { service, members } = await build(em)
-
-            await expect(service.dashboard("user-1", "ws-1")).resolves.toEqual({
-                since7: SINCE7,
-                responsibilities: [RESPONSIBILITY],
-                agents: [AGENT],
-                events: [EVENT],
-                leads: [LEAD],
-                pending: [PENDING],
-                promo: PROMO,
-                governance: GOVERNANCE,
-                exceptions: [EXCEPTION],
-            })
-            expect(members.require).toHaveBeenCalledWith("user-1", "ws-1")
-            expect(em.query).toHaveBeenCalledWith(DASHBOARD_RESPONSIBILITIES, ["ws-1"])
-            expect(em.query).toHaveBeenCalledWith(DASHBOARD_AGENTS, ["ws-1"])
-            expect(em.query).toHaveBeenCalledWith(DASHBOARD_EVENTS, ["ws-1", 6])
-            expect(em.query).toHaveBeenCalledWith(DASHBOARD_LEADS, ["ws-1"])
-            expect(em.query).toHaveBeenCalledWith(DASHBOARD_PENDING, ["ws-1"])
-            expect(em.query).toHaveBeenCalledWith(DASHBOARD_PROMO, ["ws-1", FOUNDING_FROM, FOUNDING_TO])
-            expect(em.query).toHaveBeenCalledWith(DASHBOARD_GOVERNANCE, ["ws-1", SINCE7])
-            expect(em.query).toHaveBeenCalledWith(DASHBOARD_EXCEPTIONS, ["ws-1"])
+describe("OverviewService > dashboard", () => {
+    it("reads every figure for an active member, in the founding window", async () => {
+        const em = mockEntityManager({
+            query: [
+                [DASHBOARD_RESPONSIBILITIES, [{ rows: [RESPONSIBILITY] }]],
+                [DASHBOARD_AGENTS, [{ rows: [AGENT] }]],
+                [DASHBOARD_EVENTS, [{ rows: [EVENT] }]],
+                [DASHBOARD_LEADS, [{ rows: [LEAD] }]],
+                [DASHBOARD_PENDING, [{ rows: [PENDING] }]],
+                [DASHBOARD_PROMO, [{ promo: PROMO }]],
+                [DASHBOARD_GOVERNANCE, [{ governance: GOVERNANCE }]],
+                [DASHBOARD_EXCEPTIONS, [{ rows: [EXCEPTION] }]],
+            ],
         })
+        const { service, members } = await build(em)
 
-        it.each([
-            { label: "a missing promo field", promo: [{}] },
-            { label: "no promo row", promo: [] },
-        ])("reads empty answers with $label as empty lists and blank promo and governance", async ({ promo }) => {
-            const em = mockEntityManager({
-                query: [
-                    [DASHBOARD_RESPONSIBILITIES, []],
-                    [DASHBOARD_AGENTS, [{}]],
-                    [DASHBOARD_EVENTS, [{ rows: null }]],
-                    [DASHBOARD_LEADS, [{ rows: [] }]],
-                    [DASHBOARD_PENDING, []],
-                    [DASHBOARD_PROMO, promo],
-                    [DASHBOARD_GOVERNANCE, []],
-                    [DASHBOARD_EXCEPTIONS, []],
-                ],
-            })
-            const { service } = await build(em)
-
-            await expect(service.dashboard("user-1", "ws-1")).resolves.toEqual({
-                since7: SINCE7,
-                responsibilities: [],
-                agents: [],
-                events: [],
-                leads: [],
-                pending: [],
-                promo: EMPTY_PROMO,
-                governance: EMPTY_GOVERNANCE,
-                exceptions: [],
-            })
+        await expect(service.dashboard("user-1", "ws-1")).resolves.toEqual({
+            since7: SINCE7,
+            responsibilities: [RESPONSIBILITY],
+            agents: [AGENT],
+            events: [EVENT],
+            leads: [LEAD],
+            pending: [PENDING],
+            promo: PROMO,
+            governance: GOVERNANCE,
+            exceptions: [EXCEPTION],
         })
+        expect(members.require).toHaveBeenCalledWith("user-1", "ws-1")
+        expect(em.query).toHaveBeenCalledWith(DASHBOARD_RESPONSIBILITIES, ["ws-1"])
+        expect(em.query).toHaveBeenCalledWith(DASHBOARD_AGENTS, ["ws-1"])
+        expect(em.query).toHaveBeenCalledWith(DASHBOARD_EVENTS, ["ws-1", 6])
+        expect(em.query).toHaveBeenCalledWith(DASHBOARD_LEADS, ["ws-1"])
+        expect(em.query).toHaveBeenCalledWith(DASHBOARD_PENDING, ["ws-1"])
+        expect(em.query).toHaveBeenCalledWith(DASHBOARD_PROMO, ["ws-1", FOUNDING_FROM, FOUNDING_TO])
+        expect(em.query).toHaveBeenCalledWith(DASHBOARD_GOVERNANCE, ["ws-1", SINCE7])
+        expect(em.query).toHaveBeenCalledWith(DASHBOARD_EXCEPTIONS, ["ws-1"])
+    })
 
-        it("reads nothing when the caller is not a member", async () => {
-            const denied = new Error("not a member")
-            const em = mockEntityManager()
-            const { service, members } = await build(em)
-            members.require.mockRejectedValue(denied)
-
-            await expect(service.dashboard("user-1", "ws-9")).rejects.toBe(denied)
-            expect(em.query).not.toHaveBeenCalled()
+    it.each([
+        { label: "a missing promo field", promo: [{}] },
+        { label: "no promo row", promo: [] },
+    ])("reads empty answers with $label as empty lists and blank promo and governance", async ({ promo }) => {
+        const em = mockEntityManager({
+            query: [
+                [DASHBOARD_RESPONSIBILITIES, []],
+                [DASHBOARD_AGENTS, [{}]],
+                [DASHBOARD_EVENTS, [{ rows: null }]],
+                [DASHBOARD_LEADS, [{ rows: [] }]],
+                [DASHBOARD_PENDING, []],
+                [DASHBOARD_PROMO, promo],
+                [DASHBOARD_GOVERNANCE, []],
+                [DASHBOARD_EXCEPTIONS, []],
+            ],
         })
+        const { service } = await build(em)
+
+        await expect(service.dashboard("user-1", "ws-1")).resolves.toEqual({
+            since7: SINCE7,
+            responsibilities: [],
+            agents: [],
+            events: [],
+            leads: [],
+            pending: [],
+            promo: EMPTY_PROMO,
+            governance: EMPTY_GOVERNANCE,
+            exceptions: [],
+        })
+    })
+})
+
+describe("OverviewService > dashboard", () => {
+    it("reads nothing when the caller is not a member", async () => {
+        const denied = new Error("not a member")
+        const em = mockEntityManager()
+        const { service, members } = await build(em)
+        members.require.mockRejectedValue(denied)
+
+        await expect(service.dashboard("user-1", "ws-9")).rejects.toBe(denied)
+        expect(em.query).not.toHaveBeenCalled()
     })
 })

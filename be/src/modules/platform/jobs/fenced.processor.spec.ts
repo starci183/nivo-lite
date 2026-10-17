@@ -1,3 +1,4 @@
+import { Test } from "@nestjs/testing"
 import type { ClaimedJob } from "./jobs.contracts"
 import { FencedProcessor } from "./fenced.processor"
 
@@ -19,9 +20,16 @@ class MailProcessor extends FencedProcessor {
     }
 }
 
+const build = async () => {
+    const moduleRef = await Test.createTestingModule({
+        providers: [{ provide: FencedProcessor, useClass: MailProcessor }],
+    }).compile()
+    return moduleRef.get<MailProcessor>(FencedProcessor)
+}
+
 describe("FencedProcessor", () => {
     it("lets a processor declare its queue and process a claimed job", async () => {
-        const processor = new MailProcessor()
+        const processor = await build()
 
         await processor.process(claimedJob)
 
@@ -29,8 +37,8 @@ describe("FencedProcessor", () => {
         expect(processor.processed).toEqual([claimedJob])
     })
 
-    it("takes every job of its queue and the app default concurrency unless it says otherwise", () => {
-        const processor = new MailProcessor()
+    it("takes every job of its queue and the app default concurrency unless it says otherwise", async () => {
+        const processor = await build()
 
         expect([processor.job, processor.concurrency]).toEqual([undefined, undefined])
     })
@@ -45,6 +53,7 @@ describe("FencedProcessor", () => {
             signal: new AbortController().signal,
         }
 
-        await expect(new MailProcessor().onFailed(delivery, new Error("gave up"))).resolves.toBeUndefined()
+        const processor = await build()
+        await expect(processor.onFailed(delivery, new Error("gave up"))).resolves.toBeUndefined()
     })
 })

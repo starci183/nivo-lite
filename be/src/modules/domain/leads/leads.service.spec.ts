@@ -131,7 +131,11 @@ describe("LeadsService", () => {
             expect(teamChat.postSystem).not.toHaveBeenCalled()
             expect(tx.rollbacks).toBe(1)
         })
+    })
+})
 
+describe("LeadsService", () => {
+    describe("recordOutcome", () => {
         it("hands a won deal to Accounting inside the same transaction", async () => {
             const tx = fakeTransaction(mockEntityManager({ query: [UPDATE_LEAD_STAGE, [{ ...LEAD, stage: "won" }]] }))
             const { leads, responsibilities } = await build(tx.em)

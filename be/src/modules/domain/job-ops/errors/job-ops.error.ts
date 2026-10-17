@@ -3,6 +3,8 @@ import type { ErrorKind } from "@modules/platform/errors"
 
 /** Codes of the jobs operations capability. */
 export enum JobOpsErrorCode {
+    /** The requested tick is not a migration-owned scheduler id. */
+    TickIdInvalid = "JOB_OPS_TICK_ID_INVALID",
     /** The requested row limit is not an integer from 1 through 200. */
     LimitInvalid = "JOB_OPS_LIMIT_INVALID",
     /** The requested time window is not an integer from 1 through 720 hours. */
@@ -19,6 +21,7 @@ export enum JobOpsErrorCode {
 
 /** How each jobs operations code travels. */
 export const JOB_OPS_ERROR_KINDS: Record<JobOpsErrorCode, ErrorKind> = {
+    [JobOpsErrorCode.TickIdInvalid]: "invalid",
     [JobOpsErrorCode.LimitInvalid]: "invalid",
     [JobOpsErrorCode.HoursInvalid]: "invalid",
     [JobOpsErrorCode.IdInvalid]: "invalid",

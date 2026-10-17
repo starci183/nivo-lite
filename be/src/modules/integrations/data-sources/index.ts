@@ -14,7 +14,6 @@ export {
     InjectTable,
 } from "./data-sources.decorators"
 export { DataSourcesModule } from "./data-sources.module"
-export type { DataSourcesOptions } from "./data-sources.options"
 export type { DatabaseClient } from "./database.client"
 export type { ImapClient } from "./imap.client"
 export type { OpenApiClient } from "./openapi.client"
@@ -44,3 +43,4 @@ export {
     suggestFromItems,
 } from "./openapi-items.policy"
 export { openApiFailure } from "./messages/openapi.messages"
+export { appPgTypes } from "./pg-types.policy"

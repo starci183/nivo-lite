@@ -44,7 +44,9 @@ describe("KnowledgeReembedService", () => {
             expect(sources.requestReembed).toHaveBeenCalledWith("u1", WS, "m1")
         })
     })
+})
 
+describe("KnowledgeReembedService", () => {
     describe("reembed", () => {
         it("does nothing when the deployment cannot embed", async () => {
             const { service, embeddings } = await build()
@@ -103,7 +105,11 @@ describe("KnowledgeReembedService", () => {
 
             expect(embeddings.embed).toHaveBeenCalledTimes(REEMBED_MAX_BATCHES)
         })
+    })
+})
 
+describe("KnowledgeReembedService", () => {
+    describe("reembed", () => {
         it("waits when the workspace has no credits left", async () => {
             const { service, usage, embeddings } = await build()
             usage.blockedBy.mockResolvedValue(true)

@@ -21,48 +21,7 @@ import {
     SHIP_ORDER,
 } from "./persistence/orders.sql"
 
-const NOW = "2026-10-13T02:00:00.000Z"
-
-const orderOf = builder<SalesOrderRow>({
-    id: "order-1",
-    workspace_id: "ws-1",
-    lead_id: "lead-1",
-    inbound_event_id: null,
-    order_no: "DH-20261013-0001",
-    items: "2 x Tea",
-    amount_vnd: 90000,
-    status: "draft",
-    origin: "live",
-    confirmed_by: null,
-    confirmed_at: null,
-    created_at: "2026-10-13T01:00:00.000Z",
-    shipped_at: null,
-    carrier: null,
-    tracking_code: null,
-})
-
-const draftOf = builder<NewOrderDraft>({
-    workspaceId: "ws-1",
-    leadId: "lead-1",
-    inboundEventId: "event-1",
-    orderNo: null,
-    items: "2 x Tea",
-    amountVnd: 90000,
-    origin: "live",
-})
-
-const build = async (entityManager: MockEntityManager) => {
-    const moduleRef = await Test.createTestingModule({
-        providers: [
-            OrdersService,
-            { provide: PRIMARY_ENTITY_MANAGER, useValue: entityManager },
-            { provide: CLOCK, useValue: new FakeClock(NOW) },
-        ],
-    }).compile()
-    return moduleRef.get(OrdersService)
-}
-
-describe("OrdersService", () => {
+const registerFind = () => {
     describe("find", () => {
         it("answers the order of the workspace", async () => {
             const em = mockEntityManager({ query: [FIND_ORDER, [orderOf()]] })
@@ -127,7 +86,9 @@ describe("OrdersService", () => {
             ])
         })
     })
+}
 
+const registerListForLead = () => {
     describe("listForLead", () => {
         it("reads the orders of one customer", async () => {
             const em = mockEntityManager({ query: [LIST_LEAD_ORDERS, [orderOf()]] })
@@ -175,7 +136,9 @@ describe("OrdersService", () => {
             expect(em.query).toHaveBeenCalledWith(FIND_ORDER_LABELS, ["ws-1", ["order-1"]])
         })
     })
+}
 
+const registerDraft = () => {
     describe("draft", () => {
         it("numbers the order after the ones already taken today in shop time", async () => {
             const drafted = orderOf({ order_no: "DH-20261013-0004" })
@@ -251,7 +214,9 @@ describe("OrdersService", () => {
             expect(em.query).toHaveBeenCalledTimes(5)
         })
     })
+}
 
+const registerConfirm = () => {
     describe("confirm", () => {
         it("confirms the draft at the clock instant", async () => {
             const confirmed = orderOf({ status: "confirmed", confirmed_by: "Lan", confirmed_at: NOW })
@@ -320,4 +285,52 @@ describe("OrdersService", () => {
             ])
         })
     })
+}
+
+const NOW = "2026-10-13T02:00:00.000Z"
+
+const orderOf = builder<SalesOrderRow>({
+    id: "order-1",
+    workspace_id: "ws-1",
+    lead_id: "lead-1",
+    inbound_event_id: null,
+    order_no: "DH-20261013-0001",
+    items: "2 x Tea",
+    amount_vnd: 90000,
+    status: "draft",
+    origin: "live",
+    confirmed_by: null,
+    confirmed_at: null,
+    created_at: "2026-10-13T01:00:00.000Z",
+    shipped_at: null,
+    carrier: null,
+    tracking_code: null,
+})
+
+const draftOf = builder<NewOrderDraft>({
+    workspaceId: "ws-1",
+    leadId: "lead-1",
+    inboundEventId: "event-1",
+    orderNo: null,
+    items: "2 x Tea",
+    amountVnd: 90000,
+    origin: "live",
+})
+
+const build = async (entityManager: MockEntityManager) => {
+    const moduleRef = await Test.createTestingModule({
+        providers: [
+            OrdersService,
+            { provide: PRIMARY_ENTITY_MANAGER, useValue: entityManager },
+            { provide: CLOCK, useValue: new FakeClock(NOW) },
+        ],
+    }).compile()
+    return moduleRef.get(OrdersService)
+}
+
+describe("OrdersService", () => {
+    registerFind()
+    registerListForLead()
+    registerDraft()
+    registerConfirm()
 })

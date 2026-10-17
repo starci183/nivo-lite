@@ -1,5 +1,5 @@
+import { NullAsAbsent } from "@modules/platform/graphql"
 import { Field, ID, InputType } from "@nestjs/graphql"
-import { Transform } from "class-transformer"
 import { IsOptional, IsUUID, MaxLength } from "class-validator"
 
 @InputType()
@@ -7,7 +7,7 @@ import { IsOptional, IsUUID, MaxLength } from "class-validator"
 export class AuthorizeMetaInput {
     /** The connection to log in again, or nothing for a new one. */
     @Field(() => ID, { nullable: true })
-    @Transform(({ value }) => value ?? undefined)
+    @NullAsAbsent()
     @IsOptional()
     @IsUUID()
     @MaxLength(64)

@@ -70,7 +70,9 @@ describe("LoyaltyProgramsService", () => {
             await expect(missing.findBySlug("nobody")).resolves.toBeNull()
         })
     })
+})
 
+describe("LoyaltyProgramsService", () => {
     describe("findActive", () => {
         it("answers the programme when the module runs and the owner switched it on", async () => {
             const programs = await build(
@@ -125,7 +127,9 @@ describe("LoyaltyProgramsService", () => {
             await expect(gone.shopName("ws-1")).resolves.toBe("")
         })
     })
+})
 
+describe("LoyaltyProgramsService", () => {
     describe("save", () => {
         const expected = {
             workspaceId: "ws-1",
@@ -180,6 +184,19 @@ describe("LoyaltyProgramsService", () => {
                 false,
             ])
         })
+    })
+})
+
+describe("LoyaltyProgramsService", () => {
+    describe("save", () => {
+        const expected = {
+            workspaceId: "ws-1",
+            slug: "spa-anna",
+            name: "Spa Anna",
+            enabled: true,
+            config: DEFAULT_CONFIG,
+            createdAt: "2026-10-01T00:00:00.000Z",
+        }
 
         it("uses supplied programme fields and resolved rules on creation", async () => {
             const config = { ...DEFAULT_CONFIG, earn: { ...DEFAULT_CONFIG.earn, perThousandVnd: -3 } }
@@ -222,6 +239,19 @@ describe("LoyaltyProgramsService", () => {
             expect(manager.query).toHaveBeenCalledTimes(4)
             expect(manager.query).toHaveBeenNthCalledWith(4, UPDATE_PROGRAM, ["ws-1", null, null, null])
         })
+    })
+})
+
+describe("LoyaltyProgramsService", () => {
+    describe("save", () => {
+        const expected = {
+            workspaceId: "ws-1",
+            slug: "spa-anna",
+            name: "Spa Anna",
+            enabled: true,
+            config: DEFAULT_CONFIG,
+            createdAt: "2026-10-01T00:00:00.000Z",
+        }
 
         it("retries a conflicting slug with a suffix after finding no raced programme", async () => {
             const manager = mockEntityManager({
@@ -256,7 +286,11 @@ describe("LoyaltyProgramsService", () => {
                 true,
             ])
         })
+    })
+})
 
+describe("LoyaltyProgramsService", () => {
+    describe("save", () => {
         it("answers null after five failed inserts, checking for a raced programme after each", async () => {
             const manager = mockEntityManager({
                 query: [

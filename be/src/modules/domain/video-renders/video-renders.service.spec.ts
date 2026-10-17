@@ -88,7 +88,9 @@ describe("VideoRendersService", () => {
             })
         })
     })
+})
 
+describe("VideoRendersService", () => {
     describe("claim", () => {
         it("answers the render a delivery takes", async () => {
             const em = mockEntityManager({
@@ -156,7 +158,9 @@ describe("VideoRendersService", () => {
             expect(manager.query).toHaveBeenCalledWith(FAIL_RENDER, ["render-1", "boom"])
         })
     })
+})
 
+describe("VideoRendersService", () => {
     describe("getStatus", () => {
         it.each([
             ["queued", "queued", null, null, null, null, null],
@@ -209,7 +213,9 @@ describe("VideoRendersService", () => {
             })
         })
     })
+})
 
+describe("VideoRendersService", () => {
     describe("completed media", () => {
         const rows = [
             {
@@ -227,6 +233,7 @@ describe("VideoRendersService", () => {
                 created_at: "2026-10-14T09:00:00.000Z",
             },
         ]
+
         const media = [
             {
                 id: "render-1",

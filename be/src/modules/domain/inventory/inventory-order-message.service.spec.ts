@@ -133,7 +133,9 @@ describe("InventoryOrderMessageService.compose", () => {
         expect(request?.user).not.toContain("inventory.ai.factTotal")
         expect(request?.user).not.toContain("inventory.ai.factDue")
     })
+})
 
+describe("InventoryOrderMessageService.compose", () => {
     it("writes a reminder with the due day", async () => {
         const em = mockEntityManager({ query: [SELECT_BRAND_VOICE, []] })
         const { service } = await build(em)
@@ -143,7 +145,7 @@ describe("InventoryOrderMessageService.compose", () => {
         expect(message.text).toContain("inventory.reminderDue")
     })
 
-    it("addresses the supplier by name, then by a polite fallback, and reaches an email channel by default", async () => {
+    it("uses the supplier name or a polite fallback and defaults to email", async () => {
         const em = mockEntityManager({
             query: [
                 [SELECT_BRAND_VOICE, []],

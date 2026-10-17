@@ -114,7 +114,9 @@ describe("WorkspaceMailerService", () => {
         expect(mail.send).not.toHaveBeenCalled()
         expect(engine.runWork).not.toHaveBeenCalled()
     })
+})
 
+describe("WorkspaceMailerService", () => {
     it("records the unavailable workspace sender and skips the gate", async () => {
         const { mailer, mail, log, engine, catalog } = await build(false, "done")
 
@@ -182,7 +184,9 @@ describe("WorkspaceMailerService", () => {
         expect(log.isWaitingFor).not.toHaveBeenCalled()
         expect(mail.send).not.toHaveBeenCalled()
     })
+})
 
+describe("WorkspaceMailerService", () => {
     it("returns a failed gate item with its recorded failure", async () => {
         const { mailer, log, mail } = await build(true, "failed", false, "SMTP rejected")
 
@@ -239,7 +243,9 @@ describe("WorkspaceMailerService", () => {
         expect(log.record).not.toHaveBeenCalled()
         expect(mail.send).not.toHaveBeenCalled()
     })
+})
 
+describe("WorkspaceMailerService", () => {
     it("renders an owner's email and returns the sender's message and error", async () => {
         const { mailer, mail, catalog, engine, log } = await build(true, "done")
         mail.send.mockResolvedValue({

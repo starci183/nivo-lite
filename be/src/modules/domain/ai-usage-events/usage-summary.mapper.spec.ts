@@ -1,19 +1,52 @@
-import { toDailyModuleUsage, toUsageSummary } from "./usage-summary.mapper"
+import { Test } from "@nestjs/testing"
+import {
+    toDailyModuleUsage as realToDailyModuleUsage,
+    toUsageSummary as realToUsageSummary,
+} from "./usage-summary.mapper"
+
+const SUBJECT = Symbol("usage-summary.mapper")
+
+const build = async () => {
+    const moduleRef = await Test.createTestingModule({
+        providers: [
+            {
+                provide: SUBJECT,
+                useValue: { toDailyModuleUsage: realToDailyModuleUsage, toUsageSummary: realToUsageSummary },
+            },
+        ],
+    }).compile()
+    return moduleRef.get<{
+        toDailyModuleUsage: typeof realToDailyModuleUsage
+        toUsageSummary: typeof realToUsageSummary
+    }>(SUBJECT)
+}
 
 describe("usage summary mapper", () => {
-    it("maps the database daily row", () => {
+    it("maps the database daily row", async () => {
+        const subject = await build()
+
         expect(
-            toDailyModuleUsage({ day: "2026-10-02", module: "sales", calls: 2, tokens: 40, cost_usd: 0.00113 }),
+            subject.toDailyModuleUsage({
+                day: "2026-10-02",
+                module: "sales",
+                calls: 2,
+                tokens: 40,
+                cost_usd: 0.00113,
+            }),
         ).toEqual({ day: "2026-10-02", module: "sales", calls: 2, tokens: 40, costUsd: 0.00113 })
     })
 
-    it("returns empty groups when the workspace has no usage or quota", () => {
-        expect(toUsageSummary(null, [])).toEqual({ status: null, byModule: [], daily: [] })
+    it("returns empty groups when the workspace has no usage or quota", async () => {
+        const subject = await build()
+
+        expect(subject.toUsageSummary(null, [])).toEqual({ status: null, byModule: [], daily: [] })
     })
 
-    it("adds repeated module and day rollups, sorts modules by credits and days chronologically", () => {
+    it("adds repeated module and day rollups, sorts modules by credits and days chronologically", async () => {
+        const subject = await build()
+
         expect(
-            toUsageSummary(null, [
+            subject.toUsageSummary(null, [
                 { day: "2026-10-02", module: "sales", calls: 1, tokens: 10, costUsd: 0.00113 },
                 { day: "2026-10-01", module: "office", calls: 2, tokens: 20, costUsd: 0.00339 },
                 { day: "2026-10-02", module: "sales", calls: 3, tokens: 30, costUsd: 0.00113 },

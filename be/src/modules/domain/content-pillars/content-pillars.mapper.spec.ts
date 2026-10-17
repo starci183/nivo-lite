@@ -1,3 +1,4 @@
+import { Test } from "@nestjs/testing"
 import type { ContentPillarDraft } from "./content-pillars.contracts"
 import { ContentPillarDraftSelectionMapper, toContentPillar } from "./content-pillars.mapper"
 import type { ContentPillarRow } from "./persistence/content-pillars.rows"
@@ -10,6 +11,15 @@ const row: ContentPillarRow = {
     weight: 3,
     sort: 1,
     active: true,
+}
+
+const build = async (rows: ReadonlyArray<ContentPillarDraft>) => {
+    const moduleRef = await Test.createTestingModule({
+        providers: [
+            { provide: ContentPillarDraftSelectionMapper, useValue: new ContentPillarDraftSelectionMapper(rows) },
+        ],
+    }).compile()
+    return moduleRef.get(ContentPillarDraftSelectionMapper)
 }
 
 describe("toContentPillar", () => {
@@ -27,7 +37,7 @@ describe("toContentPillar", () => {
 })
 
 describe("ContentPillarDraftSelectionMapper", () => {
-    it("keeps a string id and drops an omitted one", () => {
+    it("keeps a string id and drops an omitted one", async () => {
         const withId: ContentPillarDraft = {
             id: "pillar-1",
             name: "Tea",
@@ -37,7 +47,7 @@ describe("ContentPillarDraftSelectionMapper", () => {
         }
         const omitted: ContentPillarDraft = { name: "Coffee", description: "", weight: 1, active: false }
 
-        expect(new ContentPillarDraftSelectionMapper([withId, omitted]).rows).toEqual([
+        expect((await build([withId, omitted])).rows).toEqual([
             { id: "pillar-1", name: "Tea", description: "Daily cups", weight: 3, active: true },
             { name: "Coffee", description: "", weight: 1, active: false },
         ])

@@ -1,6 +1,40 @@
+import { Test } from "@nestjs/testing"
 import { builder } from "@starci/jest-preset"
 import type { JobQuestionInput, JobRequirementsInput } from "../hiring-operations.contracts"
-import { cleanChannels, cleanHeadcount, cleanMoney, cleanQuestions, cleanRequirements } from "./job-input.policy"
+import {
+    cleanChannels as cleanChannelsImplementation,
+    cleanHeadcount as cleanHeadcountImplementation,
+    cleanMoney as cleanMoneyImplementation,
+    cleanQuestions as cleanQuestionsImplementation,
+    cleanRequirements as cleanRequirementsImplementation,
+} from "./job-input.policy"
+
+const SUBJECT = Symbol("subject")
+type Subject = {
+    cleanChannels: typeof cleanChannelsImplementation
+    cleanHeadcount: typeof cleanHeadcountImplementation
+    cleanMoney: typeof cleanMoneyImplementation
+    cleanQuestions: typeof cleanQuestionsImplementation
+    cleanRequirements: typeof cleanRequirementsImplementation
+}
+
+const buildSubject = async () => {
+    const moduleRef = await Test.createTestingModule({
+        providers: [
+            {
+                provide: SUBJECT,
+                useValue: {
+                    cleanChannels: cleanChannelsImplementation,
+                    cleanHeadcount: cleanHeadcountImplementation,
+                    cleanMoney: cleanMoneyImplementation,
+                    cleanQuestions: cleanQuestionsImplementation,
+                    cleanRequirements: cleanRequirementsImplementation,
+                },
+            },
+        ],
+    }).compile()
+    return moduleRef.get<Subject>(SUBJECT)
+}
 
 const requirementsOf = builder<JobRequirementsInput>({
     skills: [],
@@ -14,8 +48,10 @@ const questionOf = builder<JobQuestionInput>({ text: "Question", type: "text", r
 
 describe("hiring job input policy", () => {
     describe("requirements", () => {
-        it("uses empty requirements when none are supplied", () => {
-            expect(cleanRequirements(undefined)).toEqual({
+        it("uses empty requirements when none are supplied", async () => {
+            const subject = await buildSubject()
+
+            expect(subject.cleanRequirements(undefined)).toEqual({
                 skills: [],
                 experienceYears: null,
                 experienceNote: "",
@@ -25,9 +61,11 @@ describe("hiring job input policy", () => {
             })
         })
 
-        it("trims and bounds every requirement list and note", () => {
+        it("trims and bounds every requirement list and note", async () => {
+            const subject = await buildSubject()
+
             expect(
-                cleanRequirements(
+                subject.cleanRequirements(
                     requirementsOf({
                         skills: Array.from({ length: 41 }, () => `  ${"s".repeat(201)}  `),
                         experienceYears: 2.5,
@@ -47,23 +85,32 @@ describe("hiring job input policy", () => {
             })
         })
 
-        it("limits experience to fifty and rejects negative, missing or non-finite years", () => {
-            expect(cleanRequirements(requirementsOf({ experienceYears: 51 })).experienceYears).toBe(50)
-            expect(cleanRequirements(requirementsOf({ experienceYears: 0 })).experienceYears).toBe(0)
-            expect(cleanRequirements(requirementsOf({ experienceYears: -1 })).experienceYears).toBeNull()
+        it("limits experience to fifty and rejects negative, missing or non-finite years", async () => {
+            const subject = await buildSubject()
+
+            expect(subject.cleanRequirements(requirementsOf({ experienceYears: 51 })).experienceYears).toBe(50)
+            expect(subject.cleanRequirements(requirementsOf({ experienceYears: 0 })).experienceYears).toBe(0)
+            expect(subject.cleanRequirements(requirementsOf({ experienceYears: -1 })).experienceYears).toBeNull()
             expect(
-                cleanRequirements(requirementsOf({ experienceYears: Number.POSITIVE_INFINITY })).experienceYears,
+                subject.cleanRequirements(requirementsOf({ experienceYears: Number.POSITIVE_INFINITY }))
+                    .experienceYears,
             ).toBeNull()
-            expect(cleanRequirements(requirementsOf({ experienceYears: Number.NaN })).experienceYears).toBeNull()
-            expect(cleanRequirements(requirementsOf({ experienceYears: null })).experienceYears).toBeNull()
-            expect(cleanRequirements(requirementsOf()).experienceYears).toBeNull()
+            expect(
+                subject.cleanRequirements(requirementsOf({ experienceYears: Number.NaN })).experienceYears,
+            ).toBeNull()
+            expect(subject.cleanRequirements(requirementsOf({ experienceYears: null })).experienceYears).toBeNull()
+            expect(subject.cleanRequirements(requirementsOf()).experienceYears).toBeNull()
         })
     })
+})
 
+describe("hiring job input policy", () => {
     describe("questions", () => {
-        it("cleans each question type and retains valid ids and expected answers", () => {
+        it("cleans each question type and retains valid ids and expected answers", async () => {
+            const subject = await buildSubject()
+
             expect(
-                cleanQuestions([
+                subject.cleanQuestions([
                     questionOf({ id: "valid-ID_2", text: "  Free text  ", required: true }),
                     questionOf({ id: "bad id", text: "  Can work?  ", type: "yesno", expectYesNo: "no" }),
                     questionOf({ text: "  Experience?  ", type: "number", expectNumber: 1.5 }),
@@ -89,9 +136,11 @@ describe("hiring job input policy", () => {
             ])
         })
 
-        it("omits unavailable expectations and empty choices", () => {
+        it("omits unavailable expectations and empty choices", async () => {
+            const subject = await buildSubject()
+
             expect(
-                cleanQuestions([
+                subject.cleanQuestions([
                     questionOf({ type: "yesno" }),
                     questionOf({ type: "number" }),
                     questionOf({ type: "number", expectNumber: Number.POSITIVE_INFINITY }),
@@ -109,19 +158,27 @@ describe("hiring job input policy", () => {
             ])
         })
 
-        it("keeps both yes and no expectations and a zero minimum", () => {
-            expect(cleanQuestions([questionOf({ type: "yesno", expectYesNo: "yes" })])).toEqual([
+        it("keeps both yes and no expectations and a zero minimum", async () => {
+            const subject = await buildSubject()
+
+            expect(subject.cleanQuestions([questionOf({ type: "yesno", expectYesNo: "yes" })])).toEqual([
                 { id: "q1", text: "Question", type: "yesno", required: false, expect: "yes" },
             ])
-            expect(cleanQuestions([questionOf({ type: "number", expectNumber: 0 })])).toEqual([
+            expect(subject.cleanQuestions([questionOf({ type: "number", expectNumber: 0 })])).toEqual([
                 { id: "q1", text: "Question", type: "number", required: false, expect: 0 },
             ])
         })
+    })
+})
 
-        it("drops empty questions before taking twelve and derives their ids after filtering", () => {
+describe("hiring job input policy", () => {
+    describe("questions", () => {
+        it("drops empty questions before taking twelve and derives their ids after filtering", async () => {
+            const subject = await buildSubject()
+
             const questions = Array.from({ length: 13 }, (_, index) => questionOf({ text: ` Question ${index} ` }))
 
-            expect(cleanQuestions([questionOf({ text: "  " }), ...questions])).toEqual(
+            expect(subject.cleanQuestions([questionOf({ text: "  " }), ...questions])).toEqual(
                 Array.from({ length: 12 }, (_, index) => ({
                     id: `q${index + 1}`,
                     text: `Question ${index}`,
@@ -129,12 +186,14 @@ describe("hiring job input policy", () => {
                     required: false,
                 })),
             )
-            expect(cleanQuestions([])).toEqual([])
+            expect(subject.cleanQuestions([])).toEqual([])
         })
 
-        it("bounds question text, choices and choice expectations and rejects invalid ids", () => {
+        it("bounds question text, choices and choice expectations and rejects invalid ids", async () => {
+            const subject = await buildSubject()
+
             expect(
-                cleanQuestions([
+                subject.cleanQuestions([
                     questionOf({
                         id: "x".repeat(25),
                         text: `  ${"q".repeat(241)}  `,
@@ -160,29 +219,37 @@ describe("hiring job input policy", () => {
         })
     })
 
-    it("keeps known application channels and falls back to the page", () => {
-        expect(cleanChannels(undefined)).toEqual(["page", "chat"])
-        expect(cleanChannels(["chat", "email", "page"])).toEqual(["chat", "page"])
-        expect(cleanChannels(["chat", "chat"])).toEqual(["chat", "chat"])
-        expect(cleanChannels(["email"])).toEqual(["page"])
-        expect(cleanChannels([])).toEqual(["page"])
+    it("keeps known application channels and falls back to the page", async () => {
+        const subject = await buildSubject()
+
+        expect(subject.cleanChannels(undefined)).toEqual(["page", "chat"])
+        expect(subject.cleanChannels(["chat", "email", "page"])).toEqual(["chat", "page"])
+        expect(subject.cleanChannels(["chat", "chat"])).toEqual(["chat", "chat"])
+        expect(subject.cleanChannels(["email"])).toEqual(["page"])
+        expect(subject.cleanChannels([])).toEqual(["page"])
     })
 
-    it("rounds non-negative finite money amounts and rejects other values", () => {
-        expect(cleanMoney(1234.5)).toBe(1235)
-        expect(cleanMoney(0)).toBe(0)
-        expect(cleanMoney(-1)).toBeNull()
-        expect(cleanMoney(Number.NaN)).toBeNull()
-        expect(cleanMoney(Number.POSITIVE_INFINITY)).toBeNull()
-        expect(cleanMoney(null)).toBeNull()
-        expect(cleanMoney(undefined)).toBeNull()
-    })
+    it("rounds non-negative finite money amounts and rejects other values", async () => {
+        const subject = await buildSubject()
 
-    it("defaults, rounds and bounds headcount between one and five hundred", () => {
-        expect(cleanHeadcount(undefined)).toBe(1)
-        expect(cleanHeadcount(0)).toBe(1)
-        expect(cleanHeadcount(-5)).toBe(1)
-        expect(cleanHeadcount(2.5)).toBe(3)
-        expect(cleanHeadcount(501)).toBe(500)
+        expect(subject.cleanMoney(1234.5)).toBe(1235)
+        expect(subject.cleanMoney(0)).toBe(0)
+        expect(subject.cleanMoney(-1)).toBeNull()
+        expect(subject.cleanMoney(Number.NaN)).toBeNull()
+        expect(subject.cleanMoney(Number.POSITIVE_INFINITY)).toBeNull()
+        expect(subject.cleanMoney(null)).toBeNull()
+        expect(subject.cleanMoney(undefined)).toBeNull()
+    })
+})
+
+describe("hiring job input policy", () => {
+    it("defaults, rounds and bounds headcount between one and five hundred", async () => {
+        const subject = await buildSubject()
+
+        expect(subject.cleanHeadcount(undefined)).toBe(1)
+        expect(subject.cleanHeadcount(0)).toBe(1)
+        expect(subject.cleanHeadcount(-5)).toBe(1)
+        expect(subject.cleanHeadcount(2.5)).toBe(3)
+        expect(subject.cleanHeadcount(501)).toBe(500)
     })
 })

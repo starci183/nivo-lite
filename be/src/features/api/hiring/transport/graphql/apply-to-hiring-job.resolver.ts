@@ -1,6 +1,6 @@
 import type { CommandBus } from "@nestjs/cqrs"
 import { Args, Mutation, Resolver } from "@nestjs/graphql"
-import { Public, PublicReason } from "@modules/domain/identity"
+import { Credential } from "@modules/domain/identity"
 import { InjectCommandBus } from "@modules/platform/cqrs"
 import { RateLimit, RateTier } from "@modules/platform/http-security"
 import { ApplyToHiringJobCommand } from "../../application/apply-to-hiring-job.command"
@@ -14,7 +14,7 @@ export class ApplyToHiringJobResolver {
     constructor(@InjectCommandBus() private readonly commandBus: CommandBus) {}
 
     /** Apply for a job. */
-    @Public({ reason: PublicReason.PublicForm })
+    @Credential({ kind: "posting", workflow: "apply-to-hiring-job" })
     @RateLimit(RateTier.Strict)
     @Mutation(() => ApplyResultType, { name: "applyToHiringJob" })
     async applyToHiringJob(@Args("input") input: ApplyToHiringJobInput): Promise<ApplyResultType> {

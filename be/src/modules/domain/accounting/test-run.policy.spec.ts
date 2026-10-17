@@ -1,6 +1,16 @@
+import { Test } from "@nestjs/testing"
 import { builder } from "@starci/jest-preset"
 import type { AccountingWaitingWorkRow } from "@modules/domain/decisions"
 import { isTestRunName, isTestRunWorkItem } from "./test-run.policy"
+
+const SUBJECT = Symbol("test-run.policy")
+
+const buildSubject = async () => {
+    const moduleRef = await Test.createTestingModule({
+        providers: [{ provide: SUBJECT, useValue: { isTestRunName, isTestRunWorkItem } }],
+    }).compile()
+    return moduleRef.get<typeof import("./test-run.policy")>(SUBJECT)
+}
 
 const itemOf = builder<AccountingWaitingWorkRow>({
     id: "work-1",
@@ -35,17 +45,21 @@ const itemOf = builder<AccountingWaitingWorkRow>({
 })
 
 describe("test-run policy", () => {
-    it("only recognizes the case-sensitive legacy markers in string labels", () => {
-        expect(isTestRunName()).toBe(false)
-        expect(isTestRunName(undefined, null, "", "Customer", "uat-dbg")).toBe(false)
-        expect(isTestRunName(null, "Customer UAT-42", "Customer")).toBe(true)
-        expect(isTestRunName("Customer", "DBG-42 transfer")).toBe(true)
+    it("only recognizes the case-sensitive legacy markers in string labels", async () => {
+        const subject = await buildSubject()
+
+        expect(subject.isTestRunName()).toBe(false)
+        expect(subject.isTestRunName(undefined, null, "", "Customer", "uat-dbg")).toBe(false)
+        expect(subject.isTestRunName(null, "Customer UAT-42", "Customer")).toBe(true)
+        expect(subject.isTestRunName("Customer", "DBG-42 transfer")).toBe(true)
     })
 
-    it("keeps live work with no customer and null, numeric or absent proposal fields", () => {
-        expect(isTestRunWorkItem(itemOf())).toBe(false)
+    it("keeps live work with no customer and null, numeric or absent proposal fields", async () => {
+        const subject = await buildSubject()
+
+        expect(subject.isTestRunWorkItem(itemOf())).toBe(false)
         expect(
-            isTestRunWorkItem(
+            subject.isTestRunWorkItem(
                 itemOf({ proposal: { summary: "Issue invoice", fields: { contact_name: null, customer: 42 } } }),
             ),
         ).toBe(false)
@@ -57,7 +71,9 @@ describe("test-run policy", () => {
         itemOf({ proposal: { summary: "UAT payment", fields: {} } }),
         itemOf({ proposal: { summary: "Issue invoice", fields: { contact_name: "DBG buyer" } } }),
         itemOf({ proposal: { summary: "Issue invoice", fields: { customer: "UAT customer" } } }),
-    ])("excludes a test marker wherever the work item carries a customer label", (item) => {
-        expect(isTestRunWorkItem(item)).toBe(true)
+    ])("excludes a test marker wherever the work item carries a customer label", async (item) => {
+        const subject = await buildSubject()
+
+        expect(subject.isTestRunWorkItem(item)).toBe(true)
     })
 })

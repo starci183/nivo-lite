@@ -1,68 +1,112 @@
+import { Test } from "@nestjs/testing"
+
 import { createHmac } from "node:crypto"
+
 import { parseLead, parseWebhook, sameToken, verifyChallenge, verifySignature } from "./meta-webhook.policy"
 
+const POLICY = Symbol("./meta-webhook.policy")
+
+type PolicySubject = {
+    sameToken: typeof sameToken
+    verifySignature: typeof verifySignature
+    verifyChallenge: typeof verifyChallenge
+    parseWebhook: typeof parseWebhook
+    parseLead: typeof parseLead
+}
+
 const NOW = 1_800_000_000_000
+
 const BODY = Buffer.from('{"object":"page"}')
+
 const signatureOf = (secret: string, body: Buffer = BODY): string =>
     `sha256=${createHmac("sha256", secret).update(body).digest("hex")}`
 
+const buildSubject = async () => {
+    const moduleRef = await Test.createTestingModule({
+        providers: [
+            { provide: POLICY, useValue: { sameToken, verifySignature, verifyChallenge, parseWebhook, parseLead } },
+        ],
+    }).compile()
+    const subject = moduleRef.get<PolicySubject>(POLICY)
+
+    return { subject }
+}
+
 describe("sameToken", () => {
-    it("compares strings of any length", () => {
-        expect(sameToken("abc", "abc")).toBe(true)
-        expect(sameToken("abc", "abd")).toBe(false)
-        expect(sameToken("abc", "abcd")).toBe(false)
+    it("compares strings of any length", async () => {
+        const { subject } = await buildSubject()
+
+        expect(subject.sameToken("abc", "abc")).toBe(true)
+        expect(subject.sameToken("abc", "abd")).toBe(false)
+        expect(subject.sameToken("abc", "abcd")).toBe(false)
     })
 })
 
 describe("verifySignature", () => {
-    it("accepts the HMAC of the raw body and refuses everything else", () => {
-        expect(verifySignature(signatureOf("s"), BODY, "s")).toBe(true)
-        expect(verifySignature(` ${signatureOf("s").toUpperCase().replace("SHA256", "sha256")} `, BODY, "s")).toBe(true)
-        expect(verifySignature(signatureOf("other"), BODY, "s")).toBe(false)
-        expect(verifySignature("sha256=abc", BODY, "s")).toBe(false)
-        expect(verifySignature("nonsense", BODY, "s")).toBe(false)
-        expect(verifySignature(null, BODY, "s")).toBe(false)
-        expect(verifySignature(signatureOf("s"), BODY, "")).toBe(false)
+    it("accepts the HMAC of the raw body and refuses everything else", async () => {
+        const { subject } = await buildSubject()
+
+        expect(subject.verifySignature(signatureOf("s"), BODY, "s")).toBe(true)
+        expect(
+            subject.verifySignature(` ${signatureOf("s").toUpperCase().replace("SHA256", "sha256")} `, BODY, "s"),
+        ).toBe(true)
+        expect(subject.verifySignature(signatureOf("other"), BODY, "s")).toBe(false)
+        expect(subject.verifySignature("sha256=abc", BODY, "s")).toBe(false)
+        expect(subject.verifySignature("nonsense", BODY, "s")).toBe(false)
+        expect(subject.verifySignature(null, BODY, "s")).toBe(false)
+        expect(subject.verifySignature(signatureOf("s"), BODY, "")).toBe(false)
     })
 })
 
 describe("verifyChallenge", () => {
     const query = { mode: "subscribe", verifyToken: "tok", challenge: "c-1" }
 
-    it("echoes the challenge for our token", () => {
-        expect(verifyChallenge(query, " tok ")).toBe("c-1")
+    it("echoes the challenge for our token", async () => {
+        const { subject } = await buildSubject()
+
+        expect(subject.verifyChallenge(query, " tok ")).toBe("c-1")
     })
 
-    it("refuses a wrong mode, token or missing challenge or configuration", () => {
-        expect(verifyChallenge({ ...query, mode: "other" }, "tok")).toBeNull()
-        expect(verifyChallenge({ ...query, verifyToken: "bad" }, "tok")).toBeNull()
-        expect(verifyChallenge({ ...query, verifyToken: undefined }, "tok")).toBeNull()
-        expect(verifyChallenge({ ...query, challenge: undefined }, "tok")).toBeNull()
-        expect(verifyChallenge(query, undefined)).toBeNull()
-        expect(verifyChallenge(query, "  ")).toBeNull()
+    it("refuses a wrong mode, token or missing challenge or configuration", async () => {
+        const { subject } = await buildSubject()
+
+        expect(subject.verifyChallenge({ ...query, mode: "other" }, "tok")).toBeNull()
+        expect(subject.verifyChallenge({ ...query, verifyToken: "bad" }, "tok")).toBeNull()
+        expect(subject.verifyChallenge({ ...query, verifyToken: undefined }, "tok")).toBeNull()
+        expect(subject.verifyChallenge({ ...query, challenge: undefined }, "tok")).toBeNull()
+        expect(subject.verifyChallenge(query, undefined)).toBeNull()
+        expect(subject.verifyChallenge(query, "  ")).toBeNull()
     })
 })
 
 const pageBody = (entry: object) => ({ object: "page", entry: [{ id: "PAGE", time: 1700000000, ...entry }] })
+
 const igBody = (entry: object) => ({ object: "instagram", entry: [{ id: "IG", time: 1700000000, ...entry }] })
 
 describe("parseWebhook", () => {
-    it("ignores unknown objects and garbage", () => {
-        expect(parseWebhook(null, NOW)).toEqual([])
-        expect(parseWebhook({ object: "user" }, NOW)).toEqual([])
+    it("ignores unknown objects and garbage", async () => {
+        const { subject } = await buildSubject()
+
+        expect(subject.parseWebhook(null, NOW)).toEqual([])
+        expect(subject.parseWebhook({ object: "user" }, NOW)).toEqual([])
         expect(
-            parseWebhook({ object: "page", entry: ["x", { id: "P", changes: ["x"], messaging: [null] }] }, NOW),
+            subject.parseWebhook({ object: "page", entry: ["x", { id: "P", changes: ["x"], messaging: [null] }] }, NOW),
         ).toEqual([])
     })
+    it("reads a Messenger text, a quick reply and an attachment, never an echo or a receipt", async () => {
+        const { subject } = await buildSubject()
 
-    it("reads a Messenger text, a quick reply and an attachment, never an echo or a receipt", () => {
-        const events = parseWebhook(
+        const events = subject.parseWebhook(
             pageBody({
                 messaging: [
                     {
                         sender: { id: "U1" },
                         timestamp: 1700000001000,
-                        message: { mid: "m1", text: "hi", referral: { ref: "r", ads_context_data: { ad_id: "A" } } },
+                        message: {
+                            mid: "m1",
+                            text: "hi",
+                            referral: { ref: "r", ads_context_data: { ad_id: "A" } },
+                        },
                     },
                     {
                         sender: { id: "U2" },
@@ -90,9 +134,13 @@ describe("parseWebhook", () => {
         expect(events[0]).toMatchObject({ page_id: "PAGE", ig_id: null, timestamp: 1700000001000 })
         expect(events[1]?.timestamp).toBe(1700000000000)
     })
+})
 
-    it("reads postbacks with and without a message id", () => {
-        const events = parseWebhook(
+describe("parseWebhook", () => {
+    it("reads postbacks with and without a message id", async () => {
+        const { subject } = await buildSubject()
+
+        const events = subject.parseWebhook(
             pageBody({
                 messaging: [
                     {
@@ -116,16 +164,26 @@ describe("parseWebhook", () => {
         ])
         expect(events[0]?.referral).toEqual({ ref: null, source: null, type: "OPEN_THREAD", ad_id: null })
     })
+})
 
-    it("reads Page changes: messages, lead ads, comments and mentions", () => {
-        const events = parseWebhook(
+describe("parseWebhook", () => {
+    it("reads Page changes: messages, lead ads, comments and mentions", async () => {
+        const { subject } = await buildSubject()
+
+        const events = subject.parseWebhook(
             pageBody({
                 changes: [
                     { field: "messages", value: { sender: { id: "U1" }, message: { mid: "m", text: "yo" } } },
                     { field: "messaging_postbacks", value: { sender: { id: "U1" }, postback: { payload: "P" } } },
                     {
                         field: "leadgen",
-                        value: { leadgen_id: 77, page_id: "P2", form_id: "F", ad_id: "A", created_time: 1700000005 },
+                        value: {
+                            leadgen_id: 77,
+                            page_id: "P2",
+                            form_id: "F",
+                            ad_id: "A",
+                            created_time: 1700000005,
+                        },
                     },
                     { field: "leadgen", value: { form_id: "F" } },
                     {
@@ -140,7 +198,10 @@ describe("parseWebhook", () => {
                             created_time: 1700000006,
                         },
                     },
-                    { field: "feed", value: { item: "comment", verb: "add", comment_id: "C2", from: { id: "PAGE" } } },
+                    {
+                        field: "feed",
+                        value: { item: "comment", verb: "add", comment_id: "C2", from: { id: "PAGE" } },
+                    },
                     { field: "feed", value: { item: "post", verb: "add", comment_id: "C3" } },
                     { field: "feed", value: { item: "comment", verb: "add" } },
                     { field: "mention", value: { verb: "add", post_id: "PO2", message: "m" } },
@@ -165,9 +226,13 @@ describe("parseWebhook", () => {
         expect(events[2]).toMatchObject({ page_id: "P2", form_id: "F", ad_id: "A", timestamp: 1700000005000 })
         expect(events[3]).toMatchObject({ sender_psid: "U9", sender_name: "Nine", text: "nice", post_id: "PO" })
     })
+})
 
-    it("reads Instagram messages, comments and mentions", () => {
-        const events = parseWebhook(
+describe("parseWebhook", () => {
+    it("reads Instagram messages, comments and mentions", async () => {
+        const { subject } = await buildSubject()
+
+        const events = subject.parseWebhook(
             igBody({
                 messaging: [{ sender: { id: "S1" }, timestamp: 4, message: { mid: "im", text: "hello" } }],
                 changes: [
@@ -201,8 +266,10 @@ describe("parseWebhook", () => {
         expect(events[0]).toMatchObject({ ig_id: "IG", page_id: null, sender_igsid: "S1" })
     })
 
-    it("tolerates empty strings, empty referrals, anonymous comments and entries that are not objects", () => {
-        const events = parseWebhook(
+    it("tolerates empty strings, empty referrals, anonymous comments and entries that are not objects", async () => {
+        const { subject } = await buildSubject()
+
+        const events = subject.parseWebhook(
             {
                 object: "page",
                 entry: [
@@ -211,7 +278,10 @@ describe("parseWebhook", () => {
                         id: "PAGE",
                         time: 1700000000,
                         messaging: [
-                            { sender: { id: "U1" }, message: { mid: "", text: "", attachments: [{}], referral: {} } },
+                            {
+                                sender: { id: "U1" },
+                                message: { mid: "", text: "", attachments: [{}], referral: {} },
+                            },
                         ],
                         changes: [
                             { field: "leadgen", value: { leadgen_id: "L9" } },
@@ -231,9 +301,13 @@ describe("parseWebhook", () => {
         expect(events[0]?.referral).toBeNull()
         expect(events[2]).toMatchObject({ sender_psid: null, sender_name: null, text: null })
     })
+})
 
-    it("reads numeric strings from Meta and drops mentions and changes with nothing to key on", () => {
-        const events = parseWebhook(
+describe("parseWebhook", () => {
+    it("reads numeric strings from Meta and drops mentions and changes with nothing to key on", async () => {
+        const { subject } = await buildSubject()
+
+        const events = subject.parseWebhook(
             {
                 object: "page",
                 entry: [
@@ -251,17 +325,21 @@ describe("parseWebhook", () => {
         )
 
         expect(events.map((event) => event.timestamp)).toEqual([1700000002000])
-        expect(parseWebhook(igBody({ changes: [{ field: "comments" }, { value: {} }] }), NOW)).toEqual([])
+        expect(subject.parseWebhook(igBody({ changes: [{ field: "comments" }, { value: {} }] }), NOW)).toEqual([])
     })
 
-    it("reads an Instagram comment without author or media", () => {
-        const events = parseWebhook(igBody({ changes: [{ field: "comments", value: { id: "IC9" } }] }), NOW)
+    it("reads an Instagram comment without author or media", async () => {
+        const { subject } = await buildSubject()
+
+        const events = subject.parseWebhook(igBody({ changes: [{ field: "comments", value: { id: "IC9" } }] }), NOW)
 
         expect(events[0]).toMatchObject({ sender_igsid: null, sender_name: null, post_id: null, text: null })
     })
 
-    it("uses the current time for an entry with no time", () => {
-        const events = parseWebhook(
+    it("uses the current time for an entry with no time", async () => {
+        const { subject } = await buildSubject()
+
+        const events = subject.parseWebhook(
             {
                 object: "page",
                 entry: [{ id: "P", messaging: [{ sender: { id: "U" }, message: { mid: "m", text: "t" } }] }],
@@ -274,8 +352,10 @@ describe("parseWebhook", () => {
 })
 
 describe("parseLead", () => {
-    it("reads the contact and keeps every answer", () => {
-        const lead = parseLead({
+    it("reads the contact and keeps every answer", async () => {
+        const { subject } = await buildSubject()
+
+        const lead = subject.parseLead({
             ad_id: "A",
             form_id: "F",
             created_time: "2026-10-12T00:00:00+0000",
@@ -301,9 +381,11 @@ describe("parseLead", () => {
         })
     })
 
-    it("builds the name from the parts and tolerates a lead with nothing", () => {
+    it("builds the name from the parts and tolerates a lead with nothing", async () => {
+        const { subject } = await buildSubject()
+
         expect(
-            parseLead({
+            subject.parseLead({
                 field_data: [
                     { name: "first_name", values: ["An"] },
                     { name: "last_name", values: ["B"] },
@@ -314,7 +396,7 @@ describe("parseLead", () => {
             name: "An B",
             phone: null,
         })
-        expect(parseLead(undefined)).toEqual({
+        expect(subject.parseLead(undefined)).toEqual({
             name: null,
             phone: null,
             email: null,

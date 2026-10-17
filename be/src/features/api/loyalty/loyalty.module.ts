@@ -15,6 +15,7 @@ import { SyncMembersHandler } from "./application/sync-members.handler"
 import { PreviewSegmentHandler } from "./application/preview-segment.handler"
 import { DraftCampaignHandler } from "./application/draft-campaign.handler"
 import { SubmitLoyaltyCampaignHandler } from "./application/submit-loyalty-campaign.handler"
+import { ConfigurableModuleClass } from "./loyalty.module-definition"
 
 @Module({
     providers: [
@@ -37,4 +38,4 @@ import { SubmitLoyaltyCampaignHandler } from "./application/submit-loyalty-campa
     ],
 })
 /** The loyalty feature: the handlers of its application. */
-export class LoyaltyApiModule {}
+export class LoyaltyApiModule extends ConfigurableModuleClass {}

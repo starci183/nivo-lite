@@ -1,15 +1,29 @@
+import {
+    TOKEN,
+    candidateOf,
+    slot,
+    interviewOf,
+    roleCall,
+    when,
+    confirmArgs,
+    defaultSlots,
+    declaredSlots,
+    interviewDurationCases,
+    interviewMember,
+    mismatchedInterviewPrincipals,
+} from "@tests/fixtures/builders/l2-hiring-interviews.builder"
+import { text, interviewRequestOf, statusOf, fields, contextOf, gateOf } from "@tests/fixtures/builders/hiring.builder"
 import { Test } from "@nestjs/testing"
-import { builder, FakeClock, mock, mockEntityManager } from "@starci/jest-preset"
+import { FakeClock, mock, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { ApprovalGate, OfficeLog } from "@modules/domain/module-ops"
-import type { PerformContext } from "@modules/domain/module-ops"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { CLOCK } from "@modules/platform/clock"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { HiringErrorCode } from "./errors/hiring.error"
-import type { CandidateRecord, InterviewRecord, Slot } from "./hiring.contracts"
-import type { RequestInterviewParams, SetInterviewStatusParams } from "./hiring-operations.contracts"
 import { HiringCandidatesService } from "./hiring-candidates.service"
+import type { InterviewStatus } from "./hiring.contracts"
+import type { RespondSlotOutput } from "./hiring-public.contracts"
 import { HiringDataService } from "./hiring-data.service"
 import { HiringInterviewsService } from "./hiring-interviews.service"
 import { HiringLinksService } from "./hiring-links.service"
@@ -25,103 +39,22 @@ import {
     SET_INTERVIEW_STATUS,
 } from "./persistence/hiring.sql"
 
-const TOKEN = "0123456789abcdef0123456789abcdef"
-type ApprovalRequest = Parameters<ApprovalGate["request"]>[0]
-const text = (key: string, params: Record<string, string | number> = {}): string => `${key}${JSON.stringify(params)}`
-const candidateOf = builder<CandidateRecord>({
-    id: "candidate-1",
-    workspaceId: "ws-1",
-    jobId: "job-1",
-    name: "Alice",
-    phone: "0901234567",
-    email: "alice@example.com",
-    source: "page",
-    conversationId: null,
-    cvPath: null,
-    cvName: null,
-    cvMime: null,
-    answers: [],
-    availability: "Monday",
-    stage: "shortlisted",
-    staffId: null,
-})
-const slot: Slot = { start: "2026-10-12T02:00:00.000Z", end: "2026-10-12T02:30:00.000Z" }
-const interviewOf = builder<InterviewRecord>({
-    id: "interview-1",
-    workspaceId: "ws-1",
-    candidateId: "candidate-1",
-    jobId: "job-1",
-    interviewerUserId: "interviewer-1",
-    interviewerName: "Bob",
-    mode: "in_person",
-    location: "Main Street",
-    durationMin: 30,
-    proposedSlots: [slot],
-    slotStart: slot.start,
-    slotEnd: slot.end,
-    status: "proposed",
-    token: TOKEN,
-    workItemId: "work-1",
-    note: "Candidate note",
-})
-const requestOf = builder<RequestInterviewParams>({
-    candidateId: "candidate-1",
-    mode: "in_person",
-    location: " Main Street ",
-    durationMin: 30,
-})
-const statusOf = builder<SetInterviewStatusParams>({ id: "interview-1", status: "done" })
-const fields = {
-    candidate_id: "candidate-1",
-    interviewer_user_id: "interviewer-1",
-    interviewer_name: "Bob",
-    mode: "online",
-    location: "https://meeting.example.com",
-    duration_min: 30,
+interface CredentialResponseCase {
+    readonly status: InterviewStatus
+    readonly outcome: RespondSlotOutput["outcome"]
+    readonly slotStart: string | null
 }
-const contextOf = builder<PerformContext>({
-    workspaceId: "ws-1",
-    workItemId: "work-1",
-    actor: "Manager",
-    draft: null,
-    fields,
-})
-const gateOf = builder<ApprovalRequest>({
-    workspaceId: "ws-1",
-    actor: "Manager",
-    action: "schedule_interview",
-    subjectType: "candidate",
-    subjectId: "candidate-1",
-    dedupeKey: "schedule_interview:candidate-1:3",
-    summary: text("hiring.interview.summary", { name: "Alice" }),
-    fields,
-})
-const roleCall = ["user-1", "ws-1", ["owner", "manager"]]
-const when = `when:${slot.start}`
-const confirmArgs = [TOKEN, slot.start, slot.end, text("hiring.event.interviewConfirmed", { when })]
-const defaultSlots = [
-    slot,
-    { start: "2026-10-13T02:00:00.000Z", end: "2026-10-13T02:30:00.000Z" },
-    { start: "2026-10-14T02:00:00.000Z", end: "2026-10-14T02:30:00.000Z" },
-]
-const declaredSlots = [
-    slot,
-    { start: "2026-10-19T02:00:00.000Z", end: "2026-10-19T02:30:00.000Z" },
-    { start: "2026-10-26T02:00:00.000Z", end: "2026-10-26T02:30:00.000Z" },
-]
+
+const missingLink = { code: HiringErrorCode.PublicNotFound }
+
+const notification = (subject: string, text: string) => ({ subject, text, workItemId: "work-1" })
+
 const build = async (entityManager: MockEntityManager = mockEntityManager()) => {
     const words = mock<HiringTextService>()
     words.text.mockImplementation(text)
     words.when.mockImplementation((instant) => `when:${String(instant)}`)
     const members = mock<WorkspaceMembersService>()
-    members.require.mockResolvedValue({
-        userId: "user-1",
-        workspaceId: "ws-1",
-        role: "manager",
-        staffId: null,
-        displayName: "Manager",
-        status: "active",
-    })
+    members.require.mockResolvedValue(interviewMember)
     const gate = mock<ApprovalGate>()
     gate.request.mockResolvedValue({ status: "waiting_decision", workItemId: "work-1" })
     const office = mock<OfficeLog>()
@@ -165,16 +98,7 @@ const build = async (entityManager: MockEntityManager = mockEntityManager()) => 
 }
 
 describe("HiringInterviewsService", () => {
-    it.each([
-        { request: requestOf({ durationMin: 0 }), expected: 30 },
-        { request: requestOf({ durationMin: -1 }), expected: 15 },
-        { request: requestOf({ durationMin: 181 }), expected: 180 },
-        { request: requestOf({ durationMin: 45 }), expected: 45 },
-        {
-            request: requestOf({ interviewerUserId: "member-2", mode: "online", location: ` ${"x".repeat(301)} ` }),
-            expected: 30,
-        },
-    ])("requests an interview with duration $request.durationMin", async ({ request, expected }) => {
+    it.each(interviewDurationCases)("requests duration $request.durationMin", async ({ request, expected }) => {
         const { service, members, candidates, data, gate } = await build()
         await expect(service.request("user-1", "ws-1", request)).resolves.toEqual({
             status: "waiting_decision",
@@ -211,17 +135,25 @@ describe("HiringInterviewsService", () => {
         data.memberName.mockResolvedValue(undefined)
         data.interviewers.mockResolvedValueOnce([])
         const failures = [
-            { request: requestOf(), code: HiringErrorCode.InterviewOpen },
-            { request: requestOf({ interviewerUserId: "missing" }), code: HiringErrorCode.InterviewerNotMember },
-            { request: requestOf(), code: HiringErrorCode.InterviewerMissing },
-            { request: requestOf({ mode: "online", location: "  " }), code: HiringErrorCode.OnlineLinkRequired },
+            { request: interviewRequestOf(), code: HiringErrorCode.InterviewOpen },
+            {
+                request: interviewRequestOf({ interviewerUserId: "missing" }),
+                code: HiringErrorCode.InterviewerNotMember,
+            },
+            { request: interviewRequestOf(), code: HiringErrorCode.InterviewerMissing },
+            {
+                request: interviewRequestOf({ mode: "online", location: "  " }),
+                code: HiringErrorCode.OnlineLinkRequired,
+            },
         ]
         for (const { request, code } of failures) {
             await expect(service.request("user-1", "ws-1", request)).rejects.toMatchObject({ code })
         }
         expect(gate.request).not.toHaveBeenCalled()
     })
+})
 
+describe("HiringInterviewsService", () => {
     it.each([
         { declared: true, jobPresent: true, location: fields.location, title: "Barista" },
         { declared: false, jobPresent: true, location: "Main Street", title: "Barista" },
@@ -252,11 +184,10 @@ describe("HiringInterviewsService", () => {
             summary: text("hiring.interview.proposed", { count: 3, name: "Alice", note }),
             evidence: "captured",
         }
-        await expect(
-            service.perform(
-                contextOf({ fields: declared ? fields : { candidate_id: "candidate-1", duration_min: 0 } }),
-            ),
-        ).resolves.toEqual(declared ? expected : { ...expected, detail: `interview:${TOKEN}` })
+        const context = contextOf({ fields: declared ? fields : { candidate_id: "candidate-1", duration_min: 0 } })
+        await expect(service.perform(context)).resolves.toEqual(
+            declared ? expected : { ...expected, detail: `interview:${TOKEN}` },
+        )
         const interviewerId = declared ? "interviewer-1" : ""
         expect(data.availability.mock.calls).toEqual([["ws-1", interviewerId]])
         expect(data.busy.mock.calls).toEqual([["ws-1", interviewerId]])
@@ -274,18 +205,12 @@ describe("HiringInterviewsService", () => {
             slots: slots.map((item) => `- when:${item.start}`).join("\n"),
             link: `interview:${TOKEN}`,
         })
-        expect(notify.toCandidate.mock.calls).toEqual([
-            [
-                candidateOf(),
-                {
-                    subject: text("hiring.interview.subject", { title }),
-                    text: invite,
-                    workItemId: "work-1",
-                },
-            ],
-        ])
+        const message = notification(text("hiring.interview.subject", { title }), invite)
+        expect(notify.toCandidate.mock.calls).toEqual([[candidateOf(), message]])
     })
+})
 
+describe("HiringInterviewsService", () => {
     it("refuses a performance without free slots", async () => {
         const em = mockEntityManager()
         const { service, data, notify } = await build(em)
@@ -314,13 +239,12 @@ describe("HiringInterviewsService", () => {
         expect(data.interviewByToken.mock.calls).toEqual([[TOKEN]])
         expect(data.heads.mock.calls).toEqual([["candidate-1", "job-1"]])
         expect(office.workspaceName.mock.calls).toEqual([["ws-1"]])
-        const missing = { code: HiringErrorCode.PublicNotFound }
-        await expect(service.publicView({ token: "bad" })).rejects.toMatchObject(missing)
+        await expect(service.publicView({ token: "bad" })).rejects.toMatchObject(missingLink)
         expect(data.interviewByToken.mock.calls).toEqual([[TOKEN]])
         data.interviewByToken.mockResolvedValueOnce(undefined)
-        await expect(service.publicView({ token: TOKEN })).rejects.toMatchObject(missing)
+        await expect(service.publicView({ token: TOKEN })).rejects.toMatchObject(missingLink)
         data.heads.mockResolvedValue(undefined)
-        await expect(service.publicView({ token: TOKEN })).rejects.toMatchObject(missing)
+        await expect(service.publicView({ token: TOKEN })).rejects.toMatchObject(missingLink)
     })
 
     it("leaves invalid, confirmed and closed responses unchanged", async () => {
@@ -352,7 +276,9 @@ describe("HiringInterviewsService", () => {
         await expect(response).resolves.toEqual({ outcome: "not_offered", slotStart: null })
         expect(em.query.mock.calls).toEqual([[NONE_FIT_INTERVIEW, args]])
     })
+})
 
+describe("HiringInterviewsService", () => {
     it.each([
         { rows: [], name: "Bob", outcome: "stale" },
         { rows: [{ value: false }], name: "Bob", outcome: "stale" },
@@ -403,7 +329,9 @@ describe("HiringInterviewsService", () => {
             code: HiringErrorCode.MemberNotFound,
         })
     })
+})
 
+describe("HiringInterviewsService", () => {
     it.each([
         { weekday: 1.5, startMin: 540, endMin: 600 },
         { weekday: -1, startMin: 540, endMin: 600 },
@@ -458,7 +386,9 @@ describe("HiringInterviewsService", () => {
         expect(em.query.mock.calls).toEqual([[CLAIM_REMINDER, ["interview-1"]]])
         expect(data.candidate).not.toHaveBeenCalled()
     })
+})
 
+describe("HiringInterviewsService", () => {
     it.each([true, false])("records a reminder with delivery=$hasWork", async (hasWork) => {
         const em = mockEntityManager({
             query: [
@@ -471,17 +401,16 @@ describe("HiringInterviewsService", () => {
         const interview = hasWork ? interviewOf() : interviewOf({ workItemId: null, location: "", interviewerName: "" })
         await expect(service.remind(interview, "Coffee Shop")).resolves.toBe(true)
         const title = hasWork ? "Barista" : ""
-        const reminder = {
-            subject: text("hiring.interview.reminderSubject", { title }),
-            text: text("hiring.interview.reminder", {
+        const reminder = notification(
+            text("hiring.interview.reminderSubject", { title }),
+            text("hiring.interview.reminder", {
                 name: "Alice",
                 title,
                 when,
                 place: " (Main Street)",
                 shop: "Coffee Shop",
             }),
-            workItemId: "work-1",
-        }
+        )
         expect(notify.toCandidate.mock.calls).toEqual(hasWork ? [[candidateOf(), reminder]] : [])
         const event = text("hiring.event.reminder", { when, note: hasWork ? "delivery-note" : "" })
         const args = ["ws-1", "candidate-1", "interview_reminder", text("hiring.actor"), event]
@@ -496,5 +425,76 @@ describe("HiringInterviewsService", () => {
             who: hasWork ? text("hiring.office.withWho", { who: "Bob" }) : "",
         })
         expect(office.postOffice.mock.calls).toEqual([["ws-1", line]])
+    })
+})
+describe("stored link credentials", () => {
+    it.each<CredentialResponseCase>([
+        { status: "confirmed", outcome: "already_confirmed", slotStart: slot.start },
+        { status: "cancelled", outcome: "closed", slotStart: null },
+        { status: "done", outcome: "closed", slotStart: null },
+    ])("preserves $status responses after admission", async ({ status, outcome, slotStart }) => {
+        const { service, data, office } = await build()
+        data.interviewByToken.mockResolvedValue(interviewOf({ status }))
+        const principal = await service.authenticateLink(TOKEN)
+        await expect(service.respond({ token: TOKEN }, principal)).resolves.toEqual({ outcome, slotStart })
+        expect(data.candidateHead).not.toHaveBeenCalled()
+        expect(office.postOffice).not.toHaveBeenCalled()
+    })
+
+    it("resolves the stored record and workspace", async () => {
+        const { service } = await build()
+        await expect(service.authenticateLink(TOKEN)).resolves.toEqual({
+            kind: "link-token",
+            subject: "interview-1",
+            workspaceId: "ws-1",
+        })
+    })
+
+    it.each(["", "malformed"])("refuses malformed tokens %s before lookup", async (token) => {
+        const { service, data } = await build()
+        await expect(service.authenticateLink(token)).rejects.toMatchObject(missingLink)
+        expect(data.interviewByToken).not.toHaveBeenCalled()
+    })
+
+    it("refuses an unknown stored token", async () => {
+        const { service, data } = await build()
+        data.interviewByToken.mockResolvedValue(undefined)
+        await expect(service.authenticateLink(TOKEN)).rejects.toMatchObject(missingLink)
+    })
+
+    it.each(mismatchedInterviewPrincipals)("refuses mismatched principal (%p)", async (principal) => {
+        const { service, office } = await build()
+        await expect(service.respond({ token: TOKEN }, principal)).rejects.toMatchObject(missingLink)
+        expect(office.postOffice).not.toHaveBeenCalled()
+    })
+})
+
+describe("admitted link responses", () => {
+    it("preserves response data outcomes after link admission", async () => {
+        const { service, data, office } = await build()
+        data.interviewByToken.mockResolvedValue(interviewOf({ status: "confirmed" }))
+        const historical = await service.authenticateLink(TOKEN)
+        await expect(service.respond({ token: TOKEN }, historical)).resolves.toMatchObject({
+            outcome: "already_confirmed",
+        })
+        data.interviewByToken.mockResolvedValue(interviewOf({ status: "cancelled" }))
+        const principal = await service.authenticateLink(TOKEN)
+        await expect(service.respond({ token: TOKEN }, principal)).resolves.toEqual({
+            outcome: "closed",
+            slotStart: null,
+        })
+        data.interviewByToken.mockResolvedValue(undefined)
+        await expect(service.respond({ token: TOKEN }, principal)).resolves.toEqual({
+            outcome: "invalid",
+            slotStart: null,
+        })
+        expect(office.postOffice).not.toHaveBeenCalled()
+    })
+
+    it("allows the bound public view", async () => {
+        const { service } = await build()
+        await expect(
+            service.publicView({ token: TOKEN }, { kind: "link-token", subject: "interview-1", workspaceId: "ws-1" }),
+        ).resolves.toHaveProperty("status")
     })
 })

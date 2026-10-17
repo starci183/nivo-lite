@@ -35,7 +35,9 @@ describe("AppCommandsService", () => {
         })
         expect(em.query.mock.calls).toEqual([[BEGIN_COMMAND, ["command-1"]]])
     })
+})
 
+describe("AppCommandsService", () => {
     it("preserves a command without a workspace and with an empty record", async () => {
         const em = mockEntityManager({ query: [BEGIN_COMMAND, [{ ...row, workspace_id: null, input: {} }]] })
         const service = await serviceOf(em)
@@ -49,7 +51,9 @@ describe("AppCommandsService", () => {
         })
         expect(em.query.mock.calls).toEqual([[BEGIN_COMMAND, ["command-1"]]])
     })
+})
 
+describe("AppCommandsService", () => {
     it.each([
         { input: null },
         { input: undefined },
@@ -71,7 +75,9 @@ describe("AppCommandsService", () => {
         })
         expect(em.query.mock.calls).toEqual([[BEGIN_COMMAND, ["command-1"]]])
     })
+})
 
+describe("AppCommandsService", () => {
     it.each(["unknown-command", "settled-command"])("returns null when %s has no eligible row", async (commandId) => {
         const em = mockEntityManager({ query: [BEGIN_COMMAND, []] })
         const service = await serviceOf(em)
@@ -80,7 +86,9 @@ describe("AppCommandsService", () => {
 
         expect(em.query.mock.calls).toEqual([[BEGIN_COMMAND, [commandId]]])
     })
+})
 
+describe("AppCommandsService", () => {
     it("settles a successful command with its JSON result", async () => {
         const em = mockEntityManager({ query: [SUCCEED_COMMAND, [{ id: "command-1" }]] })
         const service = await serviceOf(em)
@@ -93,7 +101,9 @@ describe("AppCommandsService", () => {
             [SUCCEED_COMMAND, ["command-1", '{"inviteId":"invite-1","url":"https://example.com/invite","sent":true}']],
         ])
     })
+})
 
+describe("AppCommandsService", () => {
     it("settles a failed command with the exact domain code", async () => {
         const em = mockEntityManager({ query: [FAIL_COMMAND, [{ id: "command-1" }]] })
         const service = await serviceOf(em)
@@ -102,7 +112,9 @@ describe("AppCommandsService", () => {
 
         expect(em.query.mock.calls).toEqual([[FAIL_COMMAND, ["command-1", "INVITE_EXPIRED"]]])
     })
+})
 
+describe("AppCommandsService", () => {
     it("rethrows a begin query failure", async () => {
         const em = mockEntityManager({ query: [BEGIN_COMMAND, []] })
         const error = new Error("begin unavailable")
@@ -113,7 +125,9 @@ describe("AppCommandsService", () => {
 
         expect(em.query.mock.calls).toEqual([[BEGIN_COMMAND, ["command-1"]]])
     })
+})
 
+describe("AppCommandsService", () => {
     it("rethrows a success query failure", async () => {
         const em = mockEntityManager({ query: [SUCCEED_COMMAND, []] })
         const error = new Error("success unavailable")
@@ -124,7 +138,9 @@ describe("AppCommandsService", () => {
 
         expect(em.query.mock.calls).toEqual([[SUCCEED_COMMAND, ["command-1", "{}"]]])
     })
+})
 
+describe("AppCommandsService", () => {
     it("rethrows an error while recording failure", async () => {
         const em = mockEntityManager({ query: [FAIL_COMMAND, []] })
         const error = new Error("failure unavailable")

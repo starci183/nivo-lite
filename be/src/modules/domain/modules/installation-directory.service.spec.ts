@@ -74,145 +74,145 @@ const build = async () => {
     return { service: moduleRef.get(InstallationDirectoryService), installations, versions, catalog }
 }
 
-describe("InstallationDirectoryService", () => {
-    describe("byId, firstOfModule and ofAgent", () => {
-        it("maps the installation record to the shape of the agents capability", async () => {
-            const { service, installations } = await build()
-            installations.find.mockResolvedValue(recordOf())
-            installations.firstOfModule.mockResolvedValue(recordOf())
-            installations.ofAgent.mockResolvedValue(recordOf())
+describe("InstallationDirectoryService > byId, firstOfModule and ofAgent", () => {
+    it("maps the installation record to the shape of the agents capability", async () => {
+        const { service, installations } = await build()
+        installations.find.mockResolvedValue(recordOf())
+        installations.firstOfModule.mockResolvedValue(recordOf())
+        installations.ofAgent.mockResolvedValue(recordOf())
 
-            await expect(service.byId("ws-1", "inst-1")).resolves.toEqual(INSTALLATION)
-            await expect(service.firstOfModule("ws-1", "accounting")).resolves.toEqual(INSTALLATION)
-            await expect(service.ofAgent("ws-1", "agent-1")).resolves.toEqual(INSTALLATION)
-            expect(installations.find).toHaveBeenCalledWith("ws-1", "inst-1")
-        })
-
-        it("answers null when no installation matches", async () => {
-            const { service, installations } = await build()
-            installations.find.mockResolvedValue(null)
-            installations.firstOfModule.mockResolvedValue(null)
-            installations.ofAgent.mockResolvedValue(null)
-
-            await expect(service.byId("ws-1", "missing")).resolves.toBeNull()
-            await expect(service.firstOfModule("ws-1", "accounting")).resolves.toBeNull()
-            await expect(service.ofAgent("ws-1", "agent-9")).resolves.toBeNull()
-        })
+        await expect(service.byId("ws-1", "inst-1")).resolves.toEqual(INSTALLATION)
+        await expect(service.firstOfModule("ws-1", "accounting")).resolves.toEqual(INSTALLATION)
+        await expect(service.ofAgent("ws-1", "agent-1")).resolves.toEqual(INSTALLATION)
+        expect(installations.find).toHaveBeenCalledWith("ws-1", "inst-1")
     })
 
-    describe("onOpenclaw", () => {
-        it("answers the installations the records hold", async () => {
-            const { service, installations } = await build()
-            const refs = [{ id: "inst-1", workspaceId: "ws-1" }]
-            installations.onOpenclaw.mockResolvedValue(refs)
+    it("answers null when no installation matches", async () => {
+        const { service, installations } = await build()
+        installations.find.mockResolvedValue(null)
+        installations.firstOfModule.mockResolvedValue(null)
+        installations.ofAgent.mockResolvedValue(null)
 
-            await expect(service.onOpenclaw(null, 10)).resolves.toEqual(refs)
-            expect(installations.onOpenclaw).toHaveBeenCalledWith(null, 10)
-        })
+        await expect(service.byId("ws-1", "missing")).resolves.toBeNull()
+        await expect(service.firstOfModule("ws-1", "accounting")).resolves.toBeNull()
+        await expect(service.ofAgent("ws-1", "agent-9")).resolves.toBeNull()
+    })
+})
+
+describe("InstallationDirectoryService > onOpenclaw", () => {
+    it("answers the installations the records hold", async () => {
+        const { service, installations } = await build()
+        const refs = [{ id: "inst-1", workspaceId: "ws-1" }]
+        installations.onOpenclaw.mockResolvedValue(refs)
+
+        await expect(service.onOpenclaw(null, 10)).resolves.toEqual(refs)
+        expect(installations.onOpenclaw).toHaveBeenCalledWith(null, 10)
+    })
+})
+
+describe("InstallationDirectoryService > contextVersionOf", () => {
+    it("answers null for an unknown version", async () => {
+        const { service, versions } = await build()
+        versions.find.mockResolvedValue(null)
+
+        await expect(service.contextVersionOf("missing")).resolves.toBeNull()
     })
 
-    describe("contextVersionOf", () => {
-        it("answers null for an unknown version", async () => {
-            const { service, versions } = await build()
-            versions.find.mockResolvedValue(null)
+    it("flattens the confirmed gates in the order of the module, the facts and the tone", async () => {
+        const { service, versions, installations, catalog } = await build()
+        versions.find.mockResolvedValue(versionOf())
+        installations.findById.mockResolvedValue(recordOf())
+        catalog.find.mockResolvedValue(ACCOUNTING_MODULE)
 
-            await expect(service.contextVersionOf("missing")).resolves.toBeNull()
+        await expect(service.contextVersionOf("version-1")).resolves.toEqual({
+            version: 3,
+            summary: "A bakery in Hanoi.",
+            gates: [{ label: ACCOUNTING_MODULE.gates[0]?.label_vi, evidence: "Invoices and reminders" }],
+            facts: ["Open 7 to 21", "VAT 8 percent"],
+            toneEvidence: "Warm and short",
         })
+        expect(catalog.find).toHaveBeenCalledWith("accounting")
+    })
 
-        it("flattens the confirmed gates in the order of the module, the facts and the tone", async () => {
-            const { service, versions, installations, catalog } = await build()
-            versions.find.mockResolvedValue(versionOf())
-            installations.findById.mockResolvedValue(recordOf())
-            catalog.find.mockResolvedValue(ACCOUNTING_MODULE)
-
-            await expect(service.contextVersionOf("version-1")).resolves.toEqual({
-                version: 3,
-                summary: "A bakery in Hanoi.",
-                gates: [{ label: ACCOUNTING_MODULE.gates[0]?.label_vi, evidence: "Invoices and reminders" }],
-                facts: ["Open 7 to 21", "VAT 8 percent"],
-                toneEvidence: "Warm and short",
-            })
-            expect(catalog.find).toHaveBeenCalledWith("accounting")
-        })
-
-        it("keeps empty confirmed evidence and uses catalog order rather than snapshot insertion order", async () => {
-            const { service, versions, installations, catalog } = await build()
-            versions.find.mockResolvedValue(
-                versionOf({
-                    snapshot: {
-                        summary: "Confirmed setup",
-                        facts: [],
-                        gates: {
-                            currency_tax: { status: "confirmed", evidence: "VND" },
-                            scope: { status: "confirmed", evidence: "" },
-                            source_evidence: { status: "proposed", evidence: "Review invoices" },
-                            tone: { status: "confirmed", evidence: "" },
-                        },
-                    },
-                }),
-            )
-            installations.findById.mockResolvedValue(recordOf())
-            catalog.find.mockResolvedValue(ACCOUNTING_MODULE)
-
-            await expect(service.contextVersionOf("version-1")).resolves.toEqual({
-                version: 3,
-                summary: "Confirmed setup",
-                gates: [
-                    { label: ACCOUNTING_MODULE.gates[0]?.label_vi, evidence: "" },
-                    { label: ACCOUNTING_MODULE.gates[1]?.label_vi, evidence: "VND" },
-                ],
-                facts: [],
-                toneEvidence: "",
-            })
-            expect(versions.find).toHaveBeenCalledWith("version-1")
-            expect(installations.findById).toHaveBeenCalledWith("inst-1")
-        })
-
-        it.each([undefined, null])(
-            "keeps empty evidence for a confirmed database gate with %p evidence",
-            async (evidence) => {
-                const { service, versions, installations, catalog } = await build()
-                const scope: GateEntry = { status: "confirmed", evidence: "Placeholder" }
-                const version = versionOf({
-                    snapshot: {
-                        summary: "Imported setup",
-                        facts: [],
-                        gates: { scope },
-                    },
-                })
-                if (evidence === undefined) Reflect.deleteProperty(scope, "evidence")
-                else Object.defineProperty(scope, "evidence", { value: evidence })
-                versions.find.mockResolvedValue(version)
-                installations.findById.mockResolvedValue(recordOf())
-                catalog.find.mockResolvedValue(ACCOUNTING_MODULE)
-
-                await expect(service.contextVersionOf("version-1")).resolves.toEqual({
-                    version: 3,
-                    summary: "Imported setup",
-                    gates: [{ label: ACCOUNTING_MODULE.gates[0]?.label_vi, evidence: "" }],
+    it("keeps empty confirmed evidence and uses catalog order rather than snapshot insertion order", async () => {
+        const { service, versions, installations, catalog } = await build()
+        versions.find.mockResolvedValue(
+            versionOf({
+                snapshot: {
+                    summary: "Confirmed setup",
                     facts: [],
-                    toneEvidence: "",
-                })
-            },
+                    gates: {
+                        currency_tax: { status: "confirmed", evidence: "VND" },
+                        scope: { status: "confirmed", evidence: "" },
+                        source_evidence: { status: "proposed", evidence: "Review invoices" },
+                        tone: { status: "confirmed", evidence: "" },
+                    },
+                },
+            }),
         )
+        installations.findById.mockResolvedValue(recordOf())
+        catalog.find.mockResolvedValue(ACCOUNTING_MODULE)
 
-        it("lists no gate when the installation is gone, and no tone when none was confirmed", async () => {
+        await expect(service.contextVersionOf("version-1")).resolves.toEqual({
+            version: 3,
+            summary: "Confirmed setup",
+            gates: [
+                { label: ACCOUNTING_MODULE.gates[0]?.label_vi, evidence: "" },
+                { label: ACCOUNTING_MODULE.gates[1]?.label_vi, evidence: "VND" },
+            ],
+            facts: [],
+            toneEvidence: "",
+        })
+        expect(versions.find).toHaveBeenCalledWith("version-1")
+        expect(installations.findById).toHaveBeenCalledWith("inst-1")
+    })
+})
+
+describe("InstallationDirectoryService > contextVersionOf", () => {
+    it.each([undefined, null])(
+        "keeps empty evidence for a confirmed database gate with %p evidence",
+        async (evidence) => {
             const { service, versions, installations, catalog } = await build()
-            versions.find.mockResolvedValue(
-                versionOf({
-                    snapshot: { summary: "", facts: [], gates: { scope: { status: "confirmed", evidence: "" } } },
-                }),
-            )
-            installations.findById.mockResolvedValue(null)
+            const scope: GateEntry = { status: "confirmed", evidence: "Placeholder" }
+            const version = versionOf({
+                snapshot: {
+                    summary: "Imported setup",
+                    facts: [],
+                    gates: { scope },
+                },
+            })
+            if (evidence === undefined) Reflect.deleteProperty(scope, "evidence")
+            else Object.defineProperty(scope, "evidence", { value: evidence })
+            versions.find.mockResolvedValue(version)
+            installations.findById.mockResolvedValue(recordOf())
+            catalog.find.mockResolvedValue(ACCOUNTING_MODULE)
 
             await expect(service.contextVersionOf("version-1")).resolves.toEqual({
                 version: 3,
-                summary: "",
-                gates: [],
+                summary: "Imported setup",
+                gates: [{ label: ACCOUNTING_MODULE.gates[0]?.label_vi, evidence: "" }],
                 facts: [],
                 toneEvidence: "",
             })
-            expect(catalog.find).not.toHaveBeenCalled()
+        },
+    )
+
+    it("lists no gate when the installation is gone, and no tone when none was confirmed", async () => {
+        const { service, versions, installations, catalog } = await build()
+        versions.find.mockResolvedValue(
+            versionOf({
+                snapshot: { summary: "", facts: [], gates: { scope: { status: "confirmed", evidence: "" } } },
+            }),
+        )
+        installations.findById.mockResolvedValue(null)
+
+        await expect(service.contextVersionOf("version-1")).resolves.toEqual({
+            version: 3,
+            summary: "",
+            gates: [],
+            facts: [],
+            toneEvidence: "",
         })
+        expect(catalog.find).not.toHaveBeenCalled()
     })
 })

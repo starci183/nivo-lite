@@ -174,7 +174,9 @@ describe("LeadActionAiService", () => {
         )
         expect(tx.outcomes).toEqual(["commit"])
     })
+})
 
+describe("LeadActionAiService", () => {
     it("assigns the matching active sales profile and records the next action and owner message together", async () => {
         const { ai, model, responsibilities, agents, events, messages, catalog, tx } = await build()
         responsibilities.list.mockResolvedValue([
@@ -245,7 +247,9 @@ describe("LeadActionAiService", () => {
         })
         expect(tx.outcomes).toEqual(["commit"])
     })
+})
 
+describe("LeadActionAiService", () => {
     it("falls back to the first eligible agent when the proposed handle is absent", async () => {
         const { ai, responsibilities, model, catalog } = await build()
         responsibilities.list.mockResolvedValue([])
@@ -275,7 +279,7 @@ describe("LeadActionAiService", () => {
         )
     })
 
-    it("uses active agents from other modules when there are no sales agents and respects a human proposal", async () => {
+    it("uses other active agents without sales agents and respects human proposals", async () => {
         const { ai, leads, model, responsibilities, agents, catalog } = await build()
         const unbriefedLead = { ...lead, context_summary: null }
         leads.require.mockResolvedValue(unbriefedLead)
@@ -313,7 +317,9 @@ describe("LeadActionAiService", () => {
             "vi",
         )
     })
+})
 
+describe("LeadActionAiService", () => {
     it("assigns a person when the model proposes an agent but there are no eligible profiles", async () => {
         const { ai, model, responsibilities, agents, catalog } = await build()
         responsibilities.list.mockResolvedValue([])

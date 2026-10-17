@@ -122,3 +122,68 @@ export const PATTERNS: ShopPatterns = {
     hoursLine: /hours/i,
     negation: /\bno\b|\bnot\b/i,
 }
+
+/** Input factories for automation engine scenarios. */
+export const template = (key: string, overrides: Partial<TemplateDefinition> = {}) =>
+    buildTemplate({ key, ...overrides })
+/** Builds a pipeline using its template key as its durable identity. */
+export const pipeline = (key: string, overrides: Partial<PipelineRow> = {}) =>
+    buildPipelineRow({ id: `p-${key}`, template_key: key, ...overrides })
+/** Pairs implemented templates with their enabled pipelines. */
+export const setupOf = (...keys: ReadonlyArray<string>) => ({
+    pipelines: keys.map((key) => pipeline(key)),
+    templates: keys.map((key) => template(key)),
+})
+/** Pairs one n8n workflow with its configured pipeline. */
+export const n8nSetup = (
+    key: string,
+    definition: Partial<TemplateDefinition> = {},
+    row: Partial<PipelineRow> = {},
+) => ({
+    pipelines: [pipeline(key, row)],
+    templates: [template(key, { executor: "n8n", ...definition })],
+})
+
+/** Scheduled workflow inputs for the engine. */
+export const scheduled = (time = "17:00") =>
+    n8nSetup(
+        "email-daily-report",
+        {
+            settings: [{ key: "time", kind: "time", label: { vi: "a", en: "b" } }],
+            defaults: { time: "17:00" },
+            trigger: { kind: "schedule", event: "schedule.daily", line: { vi: "a", en: "b" } },
+            n8n: { webhook: "nivo/daily", audience: "owner" },
+        },
+        { config: { time } },
+    )
+
+/** A received payment that starts engine event scenarios. */
+export const paymentEvent = {
+    workspaceId: "ws-1",
+    event: "payment.received",
+    data: { lead_id: "l-1", invoice_id: "i-1" },
+    dedupe: "d-1",
+}
+
+/** The fixed clock instant for automation engine scenarios. */
+export const NOW = "2026-10-12T10:00:00.000Z"
+
+/** A completed executor result with no reported steps. */
+export const DONE = { status: "done" as const, steps: [] }
+
+/** Builds the customer payment receipt workflow. */
+export const receiptSetup = () =>
+    n8nSetup(
+        "email-payment-receipt",
+        { n8n: { webhook: "nivo/receipt", audience: "customer" } },
+        { body: "Dear {ten_khach}" },
+    )
+
+/** A template trigger request shared by fireTemplate scenarios. */
+export const fireRequest = {
+    workspaceId: "ws-1",
+    templateKey: "thank_payment",
+    dedupe: "d-1",
+    triggerRef: "t-1",
+    payload: { a: 1 },
+}

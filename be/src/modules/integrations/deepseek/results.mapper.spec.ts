@@ -1,3 +1,4 @@
+import { Test } from "@nestjs/testing"
 import {
     authorityChangeOf,
     classificationOf,
@@ -7,11 +8,34 @@ import {
     responsibilityOf,
 } from "./results.mapper"
 
+const SUBJECT = Symbol("results.mapper")
+
+const buildSubject = async () => {
+    const moduleRef = await Test.createTestingModule({
+        providers: [
+            {
+                provide: SUBJECT,
+                useValue: {
+                    classificationOf,
+                    extractedOrderOf,
+                    responsibilityOf,
+                    designedModuleOf,
+                    authorityChangeOf,
+                    proposedCommandOf,
+                },
+            },
+        ],
+    }).compile()
+    return moduleRef.get<typeof import("./results.mapper")>(SUBJECT)
+}
+
 describe("results mapper", () => {
     describe("classificationOf", () => {
-        it("keeps a valid stage and clamps the confidence", () => {
+        it("keeps a valid stage and clamps the confidence", async () => {
+            const subject = await buildSubject()
+
             expect(
-                classificationOf({
+                subject.classificationOf({
                     stage: "qualified",
                     confidence: 3,
                     next_action: "Call",
@@ -25,11 +49,16 @@ describe("results mapper", () => {
                 missing: ["phone", "7"],
                 context: "- who",
             })
-            expect(classificationOf({ stage: "won", confidence: -2 })).toMatchObject({ stage: "won", confidence: 0 })
+            expect(subject.classificationOf({ stage: "won", confidence: -2 })).toMatchObject({
+                stage: "won",
+                confidence: 0,
+            })
         })
 
-        it("falls back to a new lead with half confidence", () => {
-            expect(classificationOf({ stage: "weird" })).toEqual({
+        it("falls back to a new lead with half confidence", async () => {
+            const subject = await buildSubject()
+
+            expect(subject.classificationOf({ stage: "weird" })).toEqual({
                 stage: "new",
                 confidence: 0.5,
                 next_action: "",
@@ -40,25 +69,31 @@ describe("results mapper", () => {
     })
 
     describe("extractedOrderOf", () => {
-        it("rounds a stated total and never guesses one", () => {
-            expect(extractedOrderOf({ items: "Combo", amount_vnd: 1500000.4, confidence: 0.9 })).toEqual({
+        it("rounds a stated total and never guesses one", async () => {
+            const subject = await buildSubject()
+
+            expect(subject.extractedOrderOf({ items: "Combo", amount_vnd: 1500000.4, confidence: 0.9 })).toEqual({
                 items: "Combo",
                 amount_vnd: 1500000,
                 confidence: 0.9,
             })
-            expect(extractedOrderOf({ items: "Combo", amount_vnd: -5 })).toEqual({
+            expect(subject.extractedOrderOf({ items: "Combo", amount_vnd: -5 })).toEqual({
                 items: "Combo",
                 amount_vnd: null,
                 confidence: 0.5,
             })
-            expect(extractedOrderOf({})).toEqual({ items: "", amount_vnd: null, confidence: 0.5 })
+            expect(subject.extractedOrderOf({})).toEqual({ items: "", amount_vnd: null, confidence: 0.5 })
         })
     })
+})
 
+describe("results mapper", () => {
     describe("responsibilityOf and designedModuleOf", () => {
-        it("reads a proposed responsibility, defaulting to the human owner", () => {
+        it("reads a proposed responsibility, defaulting to the human owner", async () => {
+            const subject = await buildSubject()
+
             expect(
-                responsibilityOf({
+                subject.responsibilityOf({
                     title: "T",
                     owner_kind: "agent",
                     owner_handle: "sales",
@@ -74,7 +109,7 @@ describe("results mapper", () => {
                 due_in_days: 3,
                 rationale: "R",
             })
-            expect(responsibilityOf({ owner_kind: "robot" })).toEqual({
+            expect(subject.responsibilityOf({ owner_kind: "robot" })).toEqual({
                 title: "",
                 owner_kind: "human",
                 owner_handle: null,
@@ -84,21 +119,26 @@ describe("results mapper", () => {
             })
         })
 
-        it("reads a designed agent", () => {
-            expect(designedModuleOf({ name: "N", handle: "h", role: "r", instructions: "i" })).toEqual({
+        it("reads a designed agent", async () => {
+            const subject = await buildSubject()
+
+            expect(subject.designedModuleOf({ name: "N", handle: "h", role: "r", instructions: "i" })).toEqual({
                 name: "N",
                 handle: "h",
                 role: "r",
                 instructions: "i",
             })
-            expect(designedModuleOf({})).toEqual({ name: "", handle: "", role: "", instructions: "" })
+            expect(subject.designedModuleOf({})).toEqual({ name: "", handle: "", role: "", instructions: "" })
         })
     })
+})
 
+describe("results mapper", () => {
     describe("authorityChangeOf", () => {
-        it("reads every part of the owner's grant", () => {
+        it("reads every part of the owner's grant", async () => {
+            const subject = await buildSubject()
             expect(
-                authorityChangeOf({
+                subject.authorityChangeOf({
                     goals: { revenue_vnd: 300000000, new_customers: 4, first_reply_minutes: 5, note: "grow" },
                     policies_add: ["Deposit 30%", ""],
                     reply_style: "short",
@@ -124,9 +164,9 @@ describe("results mapper", () => {
                 understood: true,
             })
         })
-
-        it("treats an empty answer as understood but granting nothing, and false as not understood", () => {
-            expect(authorityChangeOf({})).toEqual({
+        it("treats an empty answer as understood but granting nothing, and false as not understood", async () => {
+            const subject = await buildSubject()
+            expect(subject.authorityChangeOf({})).toEqual({
                 goals: { revenue_vnd: null, new_customers: null, first_reply_minutes: null, note: null },
                 policies_add: [],
                 reply_style: null,
@@ -135,14 +175,15 @@ describe("results mapper", () => {
                 rules: [],
                 understood: true,
             })
-            expect(authorityChangeOf({ understood: false }).understood).toBe(false)
+            expect(subject.authorityChangeOf({ understood: false }).understood).toBe(false)
         })
     })
-
     describe("proposedCommandOf", () => {
-        it("reads a command with trimmed ids and only text or numeric fields", () => {
+        it("reads a command with trimmed ids and only text or numeric fields", async () => {
+            const subject = await buildSubject()
+
             expect(
-                proposedCommandOf({
+                subject.proposedCommandOf({
                     intent: "command",
                     command: " issue_receipt ",
                     subject_id: "o-1",
@@ -158,9 +199,11 @@ describe("results mapper", () => {
             })
         })
 
-        it("reads a question and defaults an empty answer to an empty command", () => {
-            expect(proposedCommandOf({ intent: "question", command: "x" }).intent).toBe("question")
-            expect(proposedCommandOf({})).toEqual({
+        it("reads a question and defaults an empty answer to an empty command", async () => {
+            const subject = await buildSubject()
+
+            expect(subject.proposedCommandOf({ intent: "question", command: "x" }).intent).toBe("question")
+            expect(subject.proposedCommandOf({})).toEqual({
                 intent: "command",
                 command: null,
                 subject_id: null,

@@ -1,3 +1,4 @@
+import { Test } from "@nestjs/testing"
 import { builder } from "@starci/jest-preset"
 import type { LedgerTotal, LoyaltyMember } from "@modules/domain/loyalty-ledger"
 import type { LoyaltyTier } from "@modules/domain/loyalty-programs"
@@ -30,16 +31,27 @@ const TOTALS: ReadonlyArray<LedgerTotal> = [
     { kind: "expire", entries: 1, points: -20, amountVnd: 0 },
 ]
 
+const SUBJECT = Symbol("overview.policy")
+
+const buildSubject = async () => {
+    const moduleRef = await Test.createTestingModule({
+        providers: [{ provide: SUBJECT, useValue: { computeStats, computeFigures } }],
+    }).compile()
+    return moduleRef.get<{ computeStats: typeof computeStats; computeFigures: typeof computeFigures }>(SUBJECT)
+}
+
 describe("overview.policy", () => {
     describe("computeStats", () => {
-        it("sums members and what the ledger moved", () => {
+        it("sums members and what the ledger moved", async () => {
+            const subject = await buildSubject()
+
             const members = [
                 memberOf({ points: 10, lastVisitAt: ago(5), birthday: "1990-10-03" }),
                 memberOf({ id: "c2", points: 30, lastVisitAt: ago(100), tierKey: "dong", birthday: "1990-01-03" }),
                 memberOf({ id: "c3", points: 0, lastVisitAt: null, tierKey: null }),
             ]
 
-            expect(computeStats(members, TOTALS, TIERS, 7, NOW)).toEqual({
+            expect(subject.computeStats(members, TOTALS, TIERS, 7, NOW)).toEqual({
                 members: 3,
                 active90d: 1,
                 pointsOutstanding: 40,
@@ -58,8 +70,10 @@ describe("overview.policy", () => {
             })
         })
 
-        it("is all zeros for an empty programme", () => {
-            expect(computeStats([], [], [], 0, NOW)).toEqual({
+        it("is all zeros for an empty programme", async () => {
+            const subject = await buildSubject()
+
+            expect(subject.computeStats([], [], [], 0, NOW)).toEqual({
                 members: 0,
                 active90d: 0,
                 pointsOutstanding: 0,
@@ -77,16 +91,18 @@ describe("overview.policy", () => {
     })
 
     describe("computeFigures", () => {
-        it("counts the customers who bought lately and those at risk, a customer who never bought counting from joining", () => {
+        it("counts recent and at-risk customers, using joining for those who never bought", async () => {
+            const subject = await buildSubject()
+
             const members = [
                 memberOf({ lastVisitAt: ago(5) }),
                 memberOf({ id: "c2", lastVisitAt: ago(70) }),
                 memberOf({ id: "c3", lastVisitAt: null, joinedAt: ago(10) }),
                 memberOf({ id: "c4", lastVisitAt: null, joinedAt: ago(90) }),
             ]
-            const stats = computeStats(members, TOTALS, TIERS, 0, NOW)
+            const stats = subject.computeStats(members, TOTALS, TIERS, 0, NOW)
 
-            expect(computeFigures(members, stats, NOW)).toEqual({
+            expect(subject.computeFigures(members, stats, NOW)).toEqual({
                 members: 4,
                 activeMembers: 1,
                 pointsIssued30d: 400,

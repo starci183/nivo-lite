@@ -74,9 +74,13 @@ const build = async () => {
 
 describe("LoyaltySetupService", () => {
     describe("saveProgram", () => {
-        it("saveProgram has its first case written", async () => {
-            const { service } = await build()
+        it("propagates a programme storage failure", async () => {
+            const { service, programs } = await build()
+            const failure = new Error("operation refused")
+            programs.save.mockRejectedValue(failure)
             expect(service.saveProgram).toBeInstanceOf(Function)
+
+            await expect(service.saveProgram("user-1", { workspaceId: "ws-1" })).rejects.toBe(failure)
         })
 
         it("authorizes managers and forwards the submitted programme fields", async () => {
@@ -108,11 +112,18 @@ describe("LoyaltySetupService", () => {
             expect(programs.save).not.toHaveBeenCalled()
         })
     })
+})
 
+describe("LoyaltySetupService", () => {
     describe("saveReward", () => {
-        it("saveReward has its first case written", async () => {
-            const { service } = await build()
+        it("does not save rewards when authorization fails", async () => {
+            const { service, members, rewardsCatalog } = await build()
+            const failure = new Error("operation refused")
+            members.require.mockRejectedValue(failure)
             expect(service.saveReward).toBeInstanceOf(Function)
+
+            await expect(service.saveReward("user-1", REWARD_PARAMS)).rejects.toBe(failure)
+            expect(rewardsCatalog.save).not.toHaveBeenCalled()
         })
 
         it("authorizes managers and saves a valid reward without altering its fields", async () => {
@@ -168,11 +179,20 @@ describe("LoyaltySetupService", () => {
             })
         })
     })
+})
 
+describe("LoyaltySetupService", () => {
     describe("deleteReward", () => {
-        it("deleteReward has its first case written", async () => {
-            const { service } = await build()
+        it("does not delete rewards when authorization fails", async () => {
+            const { service, members, rewardsCatalog } = await build()
+            const failure = new Error("operation refused")
+            members.require.mockRejectedValue(failure)
             expect(service.deleteReward).toBeInstanceOf(Function)
+
+            await expect(service.deleteReward("user-1", { workspaceId: "ws-1", rewardId: "reward-1" })).rejects.toBe(
+                failure,
+            )
+            expect(rewardsCatalog.remove).not.toHaveBeenCalled()
         })
 
         it.each<readonly ["deleted" | "retired" | "missing", boolean]>([
@@ -190,11 +210,18 @@ describe("LoyaltySetupService", () => {
             expect(rewardsCatalog.remove).toHaveBeenCalledWith("ws-1", "reward-1")
         })
     })
+})
 
+describe("LoyaltySetupService", () => {
     describe("addRewardPresets", () => {
-        it("addRewardPresets has its first case written", async () => {
-            const { service } = await build()
+        it("does not add presets when authorization fails", async () => {
+            const { service, members, rewardsCatalog } = await build()
+            const failure = new Error("operation refused")
+            members.require.mockRejectedValue(failure)
             expect(service.addRewardPresets).toBeInstanceOf(Function)
+
+            await expect(service.addRewardPresets("user-1", { workspaceId: "ws-1" })).rejects.toBe(failure)
+            expect(rewardsCatalog.addPresets).not.toHaveBeenCalled()
         })
 
         it("authorizes managers and passes the starter catalogue with localized wording", async () => {
@@ -255,11 +282,20 @@ describe("LoyaltySetupService", () => {
             ])
         })
     })
+})
 
+describe("LoyaltySetupService", () => {
     describe("updateCustomer", () => {
-        it("updateCustomer has its first case written", async () => {
-            const { service } = await build()
+        it("does not update customer profiles when authorization fails", async () => {
+            const { service, members, customers } = await build()
+            const failure = new Error("operation refused")
+            members.require.mockRejectedValue(failure)
             expect(service.updateCustomer).toBeInstanceOf(Function)
+
+            await expect(
+                service.updateCustomer("user-1", { workspaceId: "ws-1", customerId: "customer-1" }),
+            ).rejects.toBe(failure)
+            expect(customers.updateProfile).not.toHaveBeenCalled()
         })
 
         it.each([undefined, null, "1900-01-01", "2026-01-01"])(

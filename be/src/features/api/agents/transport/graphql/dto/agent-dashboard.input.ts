@@ -1,6 +1,5 @@
+import { NullAsAbsent } from "@modules/platform/graphql"
 import { Field, ID, InputType } from "@nestjs/graphql"
-import { Transform } from "class-transformer"
-import type { TransformFnParams } from "class-transformer"
 import { IsOptional, IsString, IsUUID, MaxLength, MinLength } from "class-validator"
 
 @InputType()
@@ -16,7 +15,7 @@ export class AgentDashboardInput {
     /** The instance whose dashboard it is; the first of the module when absent. */
     @Field(() => ID, { nullable: true })
     @IsOptional()
-    @Transform(({ value }: TransformFnParams): unknown => value ?? undefined)
+    @NullAsAbsent()
     @IsUUID("4")
     @MaxLength(36)
     installationId?: string

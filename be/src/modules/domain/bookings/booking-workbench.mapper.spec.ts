@@ -1,3 +1,4 @@
+import { Test } from "@nestjs/testing"
 import type { BookingBoard } from "./booking-board.contracts"
 import type { BookingDeskDraft, BookingServiceDraft } from "./booking-workbench.contracts"
 import {
@@ -12,6 +13,28 @@ import {
 } from "./booking-workbench.mapper"
 import { BookingsErrorCode } from "./errors/bookings.error"
 import { DEFAULT_SETTINGS } from "./persistence/booking.rows"
+const SUBJECT = Symbol("booking-workbench.mapper")
+
+const build = async () => {
+    const moduleRef = await Test.createTestingModule({
+        providers: [
+            {
+                provide: SUBJECT,
+                useValue: {
+                    toBookingBoardRequest,
+                    toBookingBoardType,
+                    toAddBookingRequest,
+                    toSaveBookingServiceRequest,
+                    toSaveBookingResourceRequest,
+                    toSaveBookingExceptionRequest,
+                    toAddBookingType,
+                    toMoveBookingType,
+                },
+            },
+        ],
+    }).compile()
+    return moduleRef.get<typeof import("./booking-workbench.mapper")>(SUBJECT)
+}
 
 const DESK: BookingDeskDraft = {
     serviceId: "service-1",
@@ -35,12 +58,16 @@ const SERVICE: BookingServiceDraft = {
 
 describe("booking workbench mapper", () => {
     describe("toBookingBoardRequest", () => {
-        it.each([undefined, {}, { from: null, to: null }])("omits an absent range %p", (draft) => {
-            expect(toBookingBoardRequest("ws-1", draft)).toEqual({ workspaceId: "ws-1" })
+        it.each([undefined, {}, { from: null, to: null }])("omits an absent range %p", async (draft) => {
+            const subject = await build()
+
+            expect(subject.toBookingBoardRequest("ws-1", draft)).toEqual({ workspaceId: "ws-1" })
         })
 
-        it("preserves both explicitly supplied dates and the caller's workspace", () => {
-            expect(toBookingBoardRequest("ws-1", { from: "2026-10-12", to: "2026-10-18" })).toEqual({
+        it("preserves both explicitly supplied dates and the caller's workspace", async () => {
+            const subject = await build()
+
+            expect(subject.toBookingBoardRequest("ws-1", { from: "2026-10-12", to: "2026-10-18" })).toEqual({
                 workspaceId: "ws-1",
                 from: "2026-10-12",
                 to: "2026-10-18",
@@ -49,7 +76,9 @@ describe("booking workbench mapper", () => {
     })
 
     describe("toBookingBoardType", () => {
-        it("projects each status count and preserves every other board field", () => {
+        it("projects each status count and preserves every other board field", async () => {
+            const subject = await build()
+
             const board: BookingBoard = {
                 timezone: "Asia/Ho_Chi_Minh",
                 today: "2026-10-14",
@@ -81,7 +110,7 @@ describe("booking workbench mapper", () => {
                 },
             }
 
-            expect(toBookingBoardType(board)).toEqual({
+            expect(subject.toBookingBoardType(board)).toEqual({
                 ...board,
                 stats: {
                     ...board.stats,
@@ -95,10 +124,14 @@ describe("booking workbench mapper", () => {
             expect(board.stats.byStatus).toEqual({ confirmed: 2, waiting: 0, done: 1 })
         })
     })
+})
 
+describe("booking workbench mapper", () => {
     describe("request defaults", () => {
-        it.each([{}, { resourceId: null, phone: null, note: null }])("defaults desk details %p", (details) => {
-            expect(toAddBookingRequest("ws-1", { ...DESK, ...details })).toEqual({
+        it.each([{}, { resourceId: null, phone: null, note: null }])("defaults desk details %p", async (details) => {
+            const subject = await build()
+
+            expect(subject.toAddBookingRequest("ws-1", { ...DESK, ...details })).toEqual({
                 ...DESK,
                 workspaceId: "ws-1",
                 resourceId: "",
@@ -107,29 +140,40 @@ describe("booking workbench mapper", () => {
             })
         })
 
-        it("keeps supplied desk details and chat links", () => {
+        it("keeps supplied desk details and chat links", async () => {
+            const subject = await build()
+
             const draft = { ...DESK, resourceId: "resource-1", phone: "0901234567", note: "Window seat" }
-            expect(toAddBookingRequest("ws-1", draft)).toEqual({ ...draft, workspaceId: "ws-1" })
+            expect(subject.toAddBookingRequest("ws-1", draft)).toEqual({ ...draft, workspaceId: "ws-1" })
         })
 
-        it.each([{}, { id: null, priceVnd: null, followupDays: null }])("defaults service options %p", (options) => {
-            expect(toSaveBookingServiceRequest("ws-1", { ...SERVICE, ...options })).toEqual({
-                ...SERVICE,
-                workspaceId: "ws-1",
-                id: null,
-                priceVnd: null,
-                followupDays: null,
-            })
-        })
+        it.each([{}, { id: null, priceVnd: null, followupDays: null }])(
+            "defaults service options %p",
+            async (options) => {
+                const subject = await build()
 
-        it("preserves existing service identity and zero-valued price and follow-up", () => {
+                expect(subject.toSaveBookingServiceRequest("ws-1", { ...SERVICE, ...options })).toEqual({
+                    ...SERVICE,
+                    workspaceId: "ws-1",
+                    id: null,
+                    priceVnd: null,
+                    followupDays: null,
+                })
+            },
+        )
+
+        it("preserves existing service identity and zero-valued price and follow-up", async () => {
+            const subject = await build()
+
             const draft = { ...SERVICE, id: "service-1", priceVnd: 0, followupDays: 0 }
-            expect(toSaveBookingServiceRequest("ws-1", draft)).toEqual({ ...draft, workspaceId: "ws-1" })
+            expect(subject.toSaveBookingServiceRequest("ws-1", draft)).toEqual({ ...draft, workspaceId: "ws-1" })
         })
 
-        it.each([{}, { id: null, staffId: null }])("defaults resource identities %p", (identities) => {
+        it.each([{}, { id: null, staffId: null }])("defaults resource identities %p", async (identities) => {
+            const subject = await build()
+
             expect(
-                toSaveBookingResourceRequest("ws-1", {
+                subject.toSaveBookingResourceRequest("ws-1", {
                     name: "Chair",
                     kind: "chair",
                     capacity: 2,
@@ -146,8 +190,14 @@ describe("booking workbench mapper", () => {
                 active: false,
             })
         })
+    })
+})
 
-        it("keeps an existing resource's staff link", () => {
+describe("booking workbench mapper", () => {
+    describe("request defaults", () => {
+        it("keeps an existing resource's staff link", async () => {
+            const subject = await build()
+
             const draft = {
                 id: "resource-1",
                 staffId: "staff-1",
@@ -156,24 +206,31 @@ describe("booking workbench mapper", () => {
                 capacity: 1,
                 active: true,
             }
-            expect(toSaveBookingResourceRequest("ws-1", draft)).toEqual({ ...draft, workspaceId: "ws-1" })
+            expect(subject.toSaveBookingResourceRequest("ws-1", draft)).toEqual({ ...draft, workspaceId: "ws-1" })
         })
 
-        it.each([undefined, null, "resource-1"])("maps exception scope %p", (resourceId) => {
+        it.each([undefined, null, "resource-1"])("maps exception scope %p", async (resourceId) => {
+            const subject = await build()
+
             const draft = { date: "2026-10-14", closed: true, start: "", end: "", note: "Holiday", resourceId }
-            expect(toSaveBookingExceptionRequest("ws-1", draft)).toEqual({
+            expect(subject.toSaveBookingExceptionRequest("ws-1", draft)).toEqual({
                 ...draft,
                 workspaceId: "ws-1",
                 resourceId: resourceId ?? null,
             })
         })
     })
+})
 
+describe("booking workbench mapper", () => {
     describe.each([
-        ["add", toAddBookingType],
-        ["move", toMoveBookingType],
-    ] as const)("%s placement", (_name, project) => {
-        it("returns the identity of a successful placement", () => {
+        ["add", "toAddBookingType"],
+        ["move", "toMoveBookingType"],
+    ] as const)("%s placement", (_name, method) => {
+        it("returns the identity of a successful placement", async () => {
+            const subject = await build()
+            const project = subject[method]
+
             expect(project({ ok: true, id: "booking-1", reason: null })).toEqual({ id: "booking-1" })
         })
 
@@ -188,11 +245,17 @@ describe("booking workbench mapper", () => {
             ["taken", BookingsErrorCode.Taken],
             ["not_movable", BookingsErrorCode.NotMovable],
             ["resource_not_found", BookingsErrorCode.ResourceNotFound],
-        ] as const)("promotes %s to its domain error", (reason, code) => {
+        ] as const)("promotes %s to its domain error", async (reason, code) => {
+            const subject = await build()
+            const project = subject[method]
+
             expect(() => project({ ok: false, id: null, reason })).toThrow(expect.objectContaining({ code }))
         })
 
-        it.each([false, true])("rejects an absent identity when ok is %p", (ok) => {
+        it.each([false, true])("rejects an absent identity when ok is %p", async (ok) => {
+            const subject = await build()
+            const project = subject[method]
+
             expect(() => project({ ok, id: null, reason: null })).toThrow(
                 expect.objectContaining({ code: BookingsErrorCode.NotCreated }),
             )

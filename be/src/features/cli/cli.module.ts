@@ -1,4 +1,5 @@
 import { Module } from "@nestjs/common"
+import { ConfigurableModuleClass } from "./cli.module-definition"
 import { ConnectChannelModule } from "./connect-channel/connect-channel.module"
 import { CliJobsModule } from "./jobs/jobs.module"
 import { MigrateModule } from "./migrate/migrate.module"
@@ -14,19 +15,19 @@ import { SimulateSepayModule } from "./simulate-sepay/simulate-sepay.module"
 
 @Module({
     imports: [
-        ConnectChannelModule,
-        CliJobsModule,
-        MigrateModule,
-        PruneWorkspacesModule,
-        SeedModule,
-        SeedKnowledgeModule,
-        SeedMediaModule,
-        SeedModulesModule,
-        SeedWorkspaceModule,
-        SeedAutomationsModule,
-        SyncN8nModule,
-        SimulateSepayModule,
+        ConnectChannelModule.register({}),
+        CliJobsModule.register({}),
+        MigrateModule.register({}),
+        PruneWorkspacesModule.register({}),
+        SeedModule.register({}),
+        SeedKnowledgeModule.register({}),
+        SeedMediaModule.register({}),
+        SeedModulesModule.register({}),
+        SeedWorkspaceModule.register({}),
+        SeedAutomationsModule.register({}),
+        SyncN8nModule.register({}),
+        SimulateSepayModule.register({}),
     ],
 })
 /** The cli feature root: every command group of the back end, compiled only into apps/cli. */
-export class CliModule {}
+export class CliModule extends ConfigurableModuleClass {}

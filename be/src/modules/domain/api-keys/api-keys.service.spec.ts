@@ -10,6 +10,7 @@ import { hashKey } from "./api-keys.policy"
 import { ApiKeysErrorCode } from "./errors/api-keys.error"
 import {
     API_KEY_AUTH,
+    API_KEY_CREDENTIAL,
     COUNT_ACTIVE_KEYS,
     INSERT_KEY,
     LIST_KEYS,
@@ -193,7 +194,9 @@ describe("ApiKeysService management", () => {
         expect(em.query).not.toHaveBeenCalled()
         expect(events.record).not.toHaveBeenCalled()
     })
+})
 
+describe("ApiKeysService management", () => {
     it.each([
         { active: [], scenario: "the count query answers no row" },
         { active: [{ active: 19 }], scenario: "one active slot remains" },
@@ -252,7 +255,9 @@ describe("ApiKeysService management", () => {
         expect(events.record).not.toHaveBeenCalled()
         expect(transaction.outcomes).toEqual(["rollback"])
     })
+})
 
+describe("ApiKeysService management", () => {
     it("refuses an insert that returns no key and leaves no creation event", async () => {
         const em = mockEntityManager({
             query: [
@@ -319,5 +324,70 @@ describe("ApiKeysService management", () => {
         expect(em.query).toHaveBeenCalledWith(REVOKE_KEY, ["workspace-1", "missing"])
         expect(events.record).not.toHaveBeenCalled()
         expect(transaction.outcomes).toEqual(["rollback"])
+    })
+})
+
+describe("ApiKeysService credential admission", () => {
+    it("proves the stored credential without calling the rate-accounting function", async () => {
+        const em = mockEntityManager({
+            query: [
+                API_KEY_CREDENTIAL,
+                [{ id: "key-1", workspace_id: "ws-1", name: "Till", scopes: ["loyalty:read"] }],
+            ],
+        })
+        const keys = await build(em)
+
+        await expect(keys.verifyCredential("Bearer nvk_secret")).resolves.toEqual({
+            keyId: "key-1",
+            workspaceId: "ws-1",
+            name: "Till",
+            scopes: ["loyalty:read"],
+        })
+        expect(em.query).toHaveBeenCalledTimes(1)
+        expect(em.query).toHaveBeenCalledWith(API_KEY_CREDENTIAL, [hashKey("nvk_secret")])
+    })
+
+    it("defaults optional descriptive fields without inventing scopes", async () => {
+        const keys = await build(
+            mockEntityManager({
+                query: [API_KEY_CREDENTIAL, [{ id: "key-1", workspace_id: "ws-1" }]],
+            }),
+        )
+
+        await expect(keys.verifyCredential("Bearer nvk_secret")).resolves.toEqual({
+            keyId: "key-1",
+            workspaceId: "ws-1",
+            name: "",
+            scopes: [],
+        })
+    })
+
+    it("rejects malformed credentials before any database call", async () => {
+        const em = mockEntityManager()
+        const keys = await build(em)
+
+        await expect(keys.verifyCredential("Basic nvk_secret")).rejects.toMatchObject({
+            code: ApiKeysErrorCode.Unauthorized,
+        })
+        expect(em.query).not.toHaveBeenCalled()
+    })
+
+    it.each([{ rows: [] }, { rows: [{}] }, { rows: [{ id: "key-1" }] }])(
+        "rejects an unknown or incomplete key (%p)",
+        async ({ rows }) => {
+            const keys = await build(mockEntityManager({ query: [API_KEY_CREDENTIAL, rows] }))
+
+            await expect(keys.verifyCredential("Bearer nvk_secret")).rejects.toMatchObject({
+                code: ApiKeysErrorCode.Unauthorized,
+            })
+        },
+    )
+
+    it("preserves the revoked-key refusal", async () => {
+        const keys = await build(mockEntityManager({ query: [API_KEY_CREDENTIAL, [{ revoked: true }]] }))
+
+        await expect(keys.verifyCredential("Bearer nvk_secret")).rejects.toMatchObject({
+            code: ApiKeysErrorCode.Revoked,
+        })
     })
 })

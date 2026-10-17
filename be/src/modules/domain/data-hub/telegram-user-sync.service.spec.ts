@@ -9,58 +9,62 @@ import { TELEGRAM_WIZARD_TEXT } from "./messages/telegram-user-wizard.messages"
 import { TelegramUserSyncService } from "./telegram-user-sync.service"
 import type { TelegramConfig } from "./telegram-user-wizard.contracts"
 
-describe("TelegramUserSyncService", () => {
-    const config: TelegramConfig = {
-        chats: [
-            { id: "100", title: "Support", kind: "group" },
-            { id: "-200", title: "Announcements", kind: "channel" },
+const config: TelegramConfig = {
+    chats: [
+        { id: "100", title: "Support", kind: "group" },
+        { id: "-200", title: "Announcements", kind: "channel" },
+    ],
+    sinceDays: 7,
+}
+
+const message: TelegramRawMessage = {
+    id: 42,
+    date: 1_791_936_000,
+    text: "A customer needs help",
+    senderName: "Alice",
+    replyToId: null,
+    hasMedia: false,
+}
+
+const savedMeta = { config: JSON.stringify(config), "cursor:100": "41" }
+
+const build = async (meta: Readonly<Record<string, string>> = savedMeta, credential = '{"session":"test-session"}') => {
+    const telegram = mock<TelegramUserClient>()
+    const clock = new FakeClock("2026-10-14T00:00:00.000Z")
+    const now = jest.spyOn(clock, "now")
+    const context = mock<DataSyncContext>({
+        connection: {
+            id: "connection-1",
+            workspaceId: "workspace-1",
+            provider: "telegram_user",
+            name: "Support account",
+            status: "connected",
+            lastError: null,
+            meta,
+            everyMinutes: 15,
+            lastSyncAt: null,
+        },
+        credential,
+    })
+    context.isExpired.mockReturnValue(false)
+    context.upsert.mockResolvedValue(1)
+    telegram.readChats.mockResolvedValue([])
+    const moduleRef = await Test.createTestingModule({
+        providers: [
+            TelegramUserSyncService,
+            { provide: TELEGRAM_USER, useValue: telegram },
+            { provide: CLOCK, useValue: clock },
         ],
-        sinceDays: 7,
-    }
-    const message: TelegramRawMessage = {
-        id: 42,
-        date: 1_791_936_000,
-        text: "A customer needs help",
-        senderName: "Alice",
-        replyToId: null,
-        hasMedia: false,
-    }
-    const savedMeta = { config: JSON.stringify(config), "cursor:100": "41" }
+    }).compile()
+    return { service: moduleRef.get(TelegramUserSyncService), telegram, now, context }
+}
 
-    const build = async (
-        meta: Readonly<Record<string, string>> = savedMeta,
-        credential = '{"session":"test-session"}',
-    ) => {
-        const telegram = mock<TelegramUserClient>()
-        const clock = new FakeClock("2026-10-14T00:00:00.000Z")
-        const now = jest.spyOn(clock, "now")
-        const context = mock<DataSyncContext>({
-            connection: {
-                id: "connection-1",
-                workspaceId: "workspace-1",
-                provider: "telegram_user",
-                name: "Support account",
-                status: "connected",
-                lastError: null,
-                meta,
-                everyMinutes: 15,
-                lastSyncAt: null,
-            },
-            credential,
-        })
-        context.isExpired.mockReturnValue(false)
-        context.upsert.mockResolvedValue(1)
-        telegram.readChats.mockResolvedValue([])
-        const moduleRef = await Test.createTestingModule({
-            providers: [
-                TelegramUserSyncService,
-                { provide: TELEGRAM_USER, useValue: telegram },
-                { provide: CLOCK, useValue: clock },
-            ],
-        }).compile()
-        return { service: moduleRef.get(TelegramUserSyncService), telegram, now, context }
-    }
+const EXPECTED_SYNC_RESULT = {
+    rows: 5,
+    meta: { "cursor:100": "43", "cursor:-200": "1" },
+}
 
+describe("TelegramUserSyncService", () => {
     it("reads picked chats with their cursors and writes exact message rows in order", async () => {
         const { service, telegram, context } = await build()
         telegram.readChats.mockResolvedValue([
@@ -79,10 +83,7 @@ describe("TelegramUserSyncService", () => {
         ])
         context.upsert.mockResolvedValueOnce(2).mockResolvedValueOnce(3)
 
-        await expect(service.sync(context)).resolves.toEqual({
-            rows: 5,
-            meta: { "cursor:100": "43", "cursor:-200": "1" },
-        })
+        await expect(service.sync(context)).resolves.toEqual(EXPECTED_SYNC_RESULT)
         expect(service.provider).toBe("telegram_user")
         expect(telegram.readChats).toHaveBeenCalledWith({
             session: "test-session",
@@ -139,7 +140,9 @@ describe("TelegramUserSyncService", () => {
             },
         ])
     })
+})
 
+describe("TelegramUserSyncService", () => {
     it.each(["{}", "broken", '{"session":""}', '{"session":1}'])(
         "rejects a credential without a usable session: %s",
         async (credential) => {
@@ -207,7 +210,9 @@ describe("TelegramUserSyncService", () => {
         await expect(service.sync(context)).resolves.toEqual({ rows: 0 })
         expect(context.upsert).not.toHaveBeenCalled()
     })
+})
 
+describe("TelegramUserSyncService", () => {
     it("reports the exact number of capped chats even when they have no message rows", async () => {
         const { service, telegram, context } = await build()
         telegram.readChats.mockResolvedValue([
@@ -273,7 +278,9 @@ describe("TelegramUserSyncService", () => {
             expect(context.upsert).not.toHaveBeenCalled()
         },
     )
+})
 
+describe("TelegramUserSyncService", () => {
     it("propagates an unexpected Telegram read failure without writing messages", async () => {
         const { service, telegram, context } = await build()
         const cause = new Error("unexpected Telegram read failure")
@@ -282,7 +289,9 @@ describe("TelegramUserSyncService", () => {
         await expect(service.sync(context)).rejects.toBe(cause)
         expect(context.upsert).not.toHaveBeenCalled()
     })
+})
 
+describe("TelegramUserSyncService", () => {
     it("propagates a write failure before processing the next chat", async () => {
         const { service, telegram, context } = await build()
         const cause = new Error("message write failed")

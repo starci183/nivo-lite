@@ -14,7 +14,7 @@ export class GoogleCallbackController {
     /** Google sends the browser here with the signed state; it is sent on to the site with the result. */
     @Get("callback")
     @Redirect()
-    @Public({ reason: PublicReason.SignedWebhook })
+    @Public({ reason: PublicReason.AuthHandshake })
     @RateLimit(RateTier.Strict)
     async callback(@Query() query: GoogleCallbackRequest): Promise<{ url: string }> {
         const outcome = await this.commandBus.execute(

@@ -1,5 +1,14 @@
+import { Test } from "@nestjs/testing"
 import { DomainError } from "@modules/platform/errors"
 import { eachInOrder } from "./sequence.policy"
+const SUBJECT = Symbol("sequence.policy")
+
+const build = async () => {
+    const moduleRef = await Test.createTestingModule({
+        providers: [{ provide: SUBJECT, useValue: { eachInOrder } }],
+    }).compile()
+    return moduleRef.get<typeof import("./sequence.policy")>(SUBJECT)
+}
 
 type SequenceErrorCode = "STEP_FAILED"
 
@@ -9,9 +18,11 @@ const pause = (): Promise<void> => new Promise((resolve) => setImmediate(resolve
 
 describe("eachInOrder", () => {
     it("starts an item only after the one before it settled, in item order", async () => {
+        const subject = await build()
+
         const events: Array<string> = []
 
-        await eachInOrder(new Set(["a", "b", "c"]), async (item, index) => {
+        await subject.eachInOrder(new Set(["a", "b", "c"]), async (item, index) => {
             events.push(`start ${item} ${index}`)
             await pause()
             events.push(`end ${item}`)
@@ -21,13 +32,17 @@ describe("eachInOrder", () => {
     })
 
     it("answers nothing for an empty list", async () => {
-        await expect(eachInOrder([], () => Promise.resolve())).resolves.toBeUndefined()
+        const subject = await build()
+
+        await expect(subject.eachInOrder([], () => Promise.resolve())).resolves.toBeUndefined()
     })
 
     it("rejects with the first failure and never starts the items after it", async () => {
+        const subject = await build()
+
         const started: Array<number> = []
 
-        const run = eachInOrder([1, 2, 3], async (item) => {
+        const run = subject.eachInOrder([1, 2, 3], async (item) => {
             started.push(item)
             await pause()
             if (item === 2) throw new SequenceError({ code: "STEP_FAILED" })
@@ -38,7 +53,9 @@ describe("eachInOrder", () => {
     })
 
     it("rejects when a step throws before it returns a promise", async () => {
-        const run = eachInOrder([1], (): Promise<void> => {
+        const subject = await build()
+
+        const run = subject.eachInOrder([1], (): Promise<void> => {
             throw new SequenceError({ code: "STEP_FAILED" })
         })
 

@@ -25,8 +25,6 @@ export enum OpenclawErrorCode {
     RegistrationOff = "OPENCLAW_REGISTRATION_OFF",
     /** A path of an agent bundle would leave the agent workspace. */
     WorkspacePathUnsafe = "OPENCLAW_WORKSPACE_PATH_UNSAFE",
-    /** The process cannot write the agent workspace: the config directory is not set. */
-    WorkspaceUnavailable = "OPENCLAW_WORKSPACE_UNAVAILABLE",
 }
 
 /** How each OpenClaw code travels. */
@@ -42,7 +40,6 @@ export const OPENCLAW_ERROR_KINDS: Record<OpenclawErrorCode, ErrorKind> = {
     [OpenclawErrorCode.RunFailed]: "unavailable",
     [OpenclawErrorCode.RegistrationOff]: "unavailable",
     [OpenclawErrorCode.WorkspacePathUnsafe]: "invalid",
-    [OpenclawErrorCode.WorkspaceUnavailable]: "unavailable",
 }
 
 /** The one error class of the OpenClaw integration. */

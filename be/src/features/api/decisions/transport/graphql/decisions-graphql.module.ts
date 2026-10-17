@@ -5,6 +5,7 @@ import { CreateResponsibilityResolver } from "./create-responsibility.resolver"
 import { DecideExecutionResolver } from "./decide-execution.resolver"
 import { AssignWorkItemResolver } from "./assign-work-item.resolver"
 import { DecideWorkItemResolver } from "./decide-work-item.resolver"
+import { ConfigurableModuleClass } from "./decisions-graphql.module-definition"
 import { HoldWorkItemResolver } from "./hold-work-item.resolver"
 import { DecisionHistoryResolver } from "./decision-history.resolver"
 import { ReconcileDetailsResolver } from "./reconcile-details.resolver"
@@ -17,7 +18,7 @@ import { WorkItemResolver } from "./work-item.resolver"
 import { WorkItemsResolver } from "./work-items.resolver"
 
 @Module({
-    imports: [DecisionsApiModule],
+    imports: [DecisionsApiModule.register({})],
     providers: [
         WorkItemsResolver,
         WorkItemResolver,
@@ -37,4 +38,4 @@ import { WorkItemsResolver } from "./work-items.resolver"
     ],
 })
 /** The GraphQL transport of the decisions feature. */
-export class DecisionsGraphqlModule {}
+export class DecisionsGraphqlModule extends ConfigurableModuleClass {}

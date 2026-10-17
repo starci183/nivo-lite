@@ -96,132 +96,130 @@ const performed: Performed = {
     detail: "Thank you",
 }
 
-describe("CarePerformerService", () => {
-    const build = async () => {
-        const kit = mock<PerformerKitService>()
-        kit.text.mockImplementation((_ctx, key, params = {}) => [key, ...Object.values(params).map(String)].join("|"))
-        kit.scope.mockReturnValue({ workspaceId: "ws-1", locale: "en" })
-        kit.leadInput.mockReturnValue({ contact_name: "Lan", company: "Hue Tea", channel: "zalo", need: "wholesale" })
-        kit.brief.mockResolvedValue("brief")
-        const leads = mock<LeadRecordsService>()
-        leads.require.mockResolvedValue(lead)
-        const transactions = mock<TransactionsService>()
-        const invoices = mock<InvoicesService>()
-        const orders = mock<OrdersService>()
-        const writer = mock<PromptWriter>()
-        writer.draftCare.mockResolvedValue("Thank you")
-        const delivery = mock<CustomerDeliveryService>()
-        delivery.contactOf.mockResolvedValue("84901234567")
-        const moduleRef = await Test.createTestingModule({
-            providers: [
-                CarePerformerService,
-                { provide: PerformerKitService, useValue: kit },
-                { provide: LeadRecordsService, useValue: leads },
-                { provide: TransactionsService, useValue: transactions },
-                { provide: InvoicesService, useValue: invoices },
-                { provide: OrdersService, useValue: orders },
-                { provide: PROMPT_WRITER, useValue: writer },
-                { provide: CustomerDeliveryService, useValue: delivery },
-            ],
-        }).compile()
-        return { service: moduleRef.get(CarePerformerService), transactions, invoices, orders, writer, delivery }
-    }
+const build = async () => {
+    const kit = mock<PerformerKitService>()
+    kit.text.mockImplementation((_ctx, key, params = {}) => [key, ...Object.values(params).map(String)].join("|"))
+    kit.scope.mockReturnValue({ workspaceId: "ws-1", locale: "en" })
+    kit.leadInput.mockReturnValue({ contact_name: "Lan", company: "Hue Tea", channel: "zalo", need: "wholesale" })
+    kit.brief.mockResolvedValue("brief")
+    const leads = mock<LeadRecordsService>()
+    leads.require.mockResolvedValue(lead)
+    const transactions = mock<TransactionsService>()
+    const invoices = mock<InvoicesService>()
+    const orders = mock<OrdersService>()
+    const writer = mock<PromptWriter>()
+    writer.draftCare.mockResolvedValue("Thank you")
+    const delivery = mock<CustomerDeliveryService>()
+    delivery.contactOf.mockResolvedValue("84901234567")
+    const moduleRef = await Test.createTestingModule({
+        providers: [
+            CarePerformerService,
+            { provide: PerformerKitService, useValue: kit },
+            { provide: LeadRecordsService, useValue: leads },
+            { provide: TransactionsService, useValue: transactions },
+            { provide: InvoicesService, useValue: invoices },
+            { provide: OrdersService, useValue: orders },
+            { provide: PROMPT_WRITER, useValue: writer },
+            { provide: CustomerDeliveryService, useValue: delivery },
+        ],
+    }).compile()
+    return { service: moduleRef.get(CarePerformerService), transactions, invoices, orders, writer, delivery }
+}
 
-    describe("prepare", () => {
-        it("writes the thank-you from the paid transaction, its invoice and the goods", async () => {
-            const { service, transactions, invoices, orders, writer } = await build()
-            transactions.find.mockResolvedValue(transactionOf())
-            invoices.find.mockResolvedValue(invoiceOf())
-            orders.labelsOf.mockResolvedValue([{ id: "ord-1", order_no: "SO-1", items: "2 tea boxes" }])
-            const item = itemOf({
-                subject_type: "transaction",
-                subject_id: "tx-1",
-                proposal: { summary: "s", fields: { x: 1 } },
-            })
-
-            await expect(service.prepare(ctx, item)).resolves.toEqual({
-                proposal: {
-                    summary: "careSummary|Lan",
-                    draft: "Thank you",
-                    fields: { x: 1, customer: "Lan", contact: "84901234567" },
-                },
-            })
-            expect(writer.draftCare).toHaveBeenCalledWith(
-                { workspaceId: "ws-1", locale: "en" },
-                { contact_name: "Lan", company: "Hue Tea", channel: "zalo", need: "wholesale" },
-                `2 tea boxes · INV-1 · ${formatVnd(450000, "en")}`,
-                "brief",
-            )
+describe("CarePerformerService prepare", () => {
+    it("writes the thank-you from the paid transaction, its invoice and the goods", async () => {
+        const { service, transactions, invoices, orders, writer } = await build()
+        transactions.find.mockResolvedValue(transactionOf())
+        invoices.find.mockResolvedValue(invoiceOf())
+        orders.labelsOf.mockResolvedValue([{ id: "ord-1", order_no: "SO-1", items: "2 tea boxes" }])
+        const item = itemOf({
+            subject_type: "transaction",
+            subject_id: "tx-1",
+            proposal: { summary: "s", fields: { x: 1 } },
         })
 
-        it("uses the invoice the proposal names without reading a transaction", async () => {
-            const { service, transactions, invoices, writer } = await build()
-            invoices.find.mockResolvedValue(invoiceOf({ id: "inv-2", invoice_no: "INV-2", order_id: null }))
-            const item = itemOf({ proposal: { summary: "s", fields: { invoice_id: "inv-2" } } })
-
-            await service.prepare(ctx, item)
-
-            expect(transactions.find).not.toHaveBeenCalled()
-            expect(invoices.find).toHaveBeenCalledWith("ws-1", "inv-2")
-            expect(writer.draftCare.mock.calls[0]?.[2]).toBe(`INV-2 · ${formatVnd(450000, "en")}`)
+        await expect(service.prepare(ctx, item)).resolves.toEqual({
+            proposal: {
+                summary: "careSummary|Lan",
+                draft: "Thank you",
+                fields: { x: 1, customer: "Lan", contact: "84901234567" },
+            },
         })
-
-        it("names only the amount of a transaction that settled no invoice", async () => {
-            const { service, transactions, invoices, writer } = await build()
-            transactions.find.mockResolvedValue(transactionOf({ invoice_id: null }))
-
-            await service.prepare(ctx, itemOf({ subject_type: "transaction", subject_id: "tx-1" }))
-
-            expect(invoices.find).not.toHaveBeenCalled()
-            expect(writer.draftCare.mock.calls[0]?.[2]).toBe(formatVnd(500000, "en"))
-        })
-
-        it("writes an empty note when the invoice the item is about is gone", async () => {
-            const { service, invoices, writer } = await build()
-            invoices.find.mockResolvedValue(null)
-
-            await service.prepare(ctx, itemOf({ subject_type: "invoice", subject_id: "inv-9" }))
-
-            expect(invoices.find).toHaveBeenCalledWith("ws-1", "inv-9")
-            expect(writer.draftCare.mock.calls[0]?.[2]).toBe("")
-        })
-
-        it("refuses an item without a customer", async () => {
-            const { service } = await build()
-
-            await expect(service.prepare(ctx, itemOf({ lead_id: null }))).rejects.toMatchObject({
-                code: WorkPerformersErrorCode.SubjectMissing,
-            })
-        })
+        expect(writer.draftCare).toHaveBeenCalledWith(
+            { workspaceId: "ws-1", locale: "en" },
+            { contact_name: "Lan", company: "Hue Tea", channel: "zalo", need: "wholesale" },
+            `2 tea boxes · INV-1 · ${formatVnd(450000, "en")}`,
+            "brief",
+        )
     })
 
-    describe("perform", () => {
-        it("delivers the draft and leaves the care evidence", async () => {
-            const { service, delivery } = await build()
-            delivery.sendAndLog.mockResolvedValue(performed)
-            const item = itemOf()
+    it("uses the invoice the proposal names without reading a transaction", async () => {
+        const { service, transactions, invoices, writer } = await build()
+        invoices.find.mockResolvedValue(invoiceOf({ id: "inv-2", invoice_no: "INV-2", order_id: null }))
+        const item = itemOf({ proposal: { summary: "s", fields: { invoice_id: "inv-2" } } })
 
-            await expect(
-                service.perform(ctx, item, { summary: "s", draft: "Thank you", fields: {} }, { name: "Mai" }),
-            ).resolves.toEqual(performed)
-            expect(delivery.sendAndLog).toHaveBeenCalledWith(ctx, item, lead, "Thank you", { name: "Mai" }, "care.sent")
+        await service.prepare(ctx, item)
+
+        expect(transactions.find).not.toHaveBeenCalled()
+        expect(invoices.find).toHaveBeenCalledWith("ws-1", "inv-2")
+        expect(writer.draftCare.mock.calls[0]?.[2]).toBe(`INV-2 · ${formatVnd(450000, "en")}`)
+    })
+
+    it("names only the amount of a transaction that settled no invoice", async () => {
+        const { service, transactions, invoices, writer } = await build()
+        transactions.find.mockResolvedValue(transactionOf({ invoice_id: null }))
+
+        await service.prepare(ctx, itemOf({ subject_type: "transaction", subject_id: "tx-1" }))
+
+        expect(invoices.find).not.toHaveBeenCalled()
+        expect(writer.draftCare.mock.calls[0]?.[2]).toBe(formatVnd(500000, "en"))
+    })
+
+    it("writes an empty note when the invoice the item is about is gone", async () => {
+        const { service, invoices, writer } = await build()
+        invoices.find.mockResolvedValue(null)
+
+        await service.prepare(ctx, itemOf({ subject_type: "invoice", subject_id: "inv-9" }))
+
+        expect(invoices.find).toHaveBeenCalledWith("ws-1", "inv-9")
+        expect(writer.draftCare.mock.calls[0]?.[2]).toBe("")
+    })
+
+    it("refuses an item without a customer", async () => {
+        const { service } = await build()
+
+        await expect(service.prepare(ctx, itemOf({ lead_id: null }))).rejects.toMatchObject({
+            code: WorkPerformersErrorCode.SubjectMissing,
         })
+    })
+})
 
-        it("delivers the summary when there is no draft", async () => {
-            const { service, delivery } = await build()
-            delivery.sendAndLog.mockResolvedValue(performed)
+describe("CarePerformerService perform", () => {
+    it("delivers the draft and leaves the care evidence", async () => {
+        const { service, delivery } = await build()
+        delivery.sendAndLog.mockResolvedValue(performed)
+        const item = itemOf()
 
-            await service.perform(ctx, itemOf(), { summary: "Thanks Lan", fields: {} }, { name: "Mai" })
+        await expect(
+            service.perform(ctx, item, { summary: "s", draft: "Thank you", fields: {} }, { name: "Mai" }),
+        ).resolves.toEqual(performed)
+        expect(delivery.sendAndLog).toHaveBeenCalledWith(ctx, item, lead, "Thank you", { name: "Mai" }, "care.sent")
+    })
 
-            expect(delivery.sendAndLog.mock.calls[0]?.[3]).toBe("Thanks Lan")
-        })
+    it("delivers the summary when there is no draft", async () => {
+        const { service, delivery } = await build()
+        delivery.sendAndLog.mockResolvedValue(performed)
 
-        it("refuses an item without a customer", async () => {
-            const { service } = await build()
+        await service.perform(ctx, itemOf(), { summary: "Thanks Lan", fields: {} }, { name: "Mai" })
 
-            await expect(
-                service.perform(ctx, itemOf({ lead_id: null }), { summary: "s", fields: {} }, { name: "Mai" }),
-            ).rejects.toMatchObject({ code: WorkPerformersErrorCode.SubjectMissing })
-        })
+        expect(delivery.sendAndLog.mock.calls[0]?.[3]).toBe("Thanks Lan")
+    })
+
+    it("refuses an item without a customer", async () => {
+        const { service } = await build()
+
+        await expect(
+            service.perform(ctx, itemOf({ lead_id: null }), { summary: "s", fields: {} }, { name: "Mai" }),
+        ).rejects.toMatchObject({ code: WorkPerformersErrorCode.SubjectMissing })
     })
 })

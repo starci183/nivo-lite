@@ -14,6 +14,5 @@ export {
     OPENCLAW_WORKSPACE_WRITER,
 } from "./openclaw.decorators"
 export { OpenclawModule } from "./openclaw.module"
-export type { OpenclawOptions } from "./openclaw.options"
 export { ToolTokenService } from "./tool-token.service"
 export { WorkspaceWriterService } from "./workspace-writer.service"

@@ -1,3 +1,5 @@
+import { ZaloDeliveryPolicy } from "./zalo-delivery.policy"
+import { INBOX, InboxService } from "@modules/platform/inbox"
 import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./zalo-inbox.module-definition"
@@ -11,8 +13,13 @@ export class ZaloInboxModule extends ConfigurableModuleClass {
         const base = super.register(options)
         return {
             ...base,
-            providers: [...(base.providers ?? []), ZaloInboxService],
-            exports: [ZaloInboxService],
+            providers: [
+                ...(base.providers ?? []),
+                { provide: INBOX, useClass: InboxService },
+                ZaloInboxService,
+                ZaloDeliveryPolicy,
+            ],
+            exports: [ZaloInboxService, ZaloDeliveryPolicy],
         }
     }
 }

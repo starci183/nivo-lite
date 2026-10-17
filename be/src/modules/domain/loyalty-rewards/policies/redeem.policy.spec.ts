@@ -1,7 +1,17 @@
+import { Test } from "@nestjs/testing"
 import { builder } from "@starci/jest-preset"
 import type { LoyaltyConfig } from "@modules/domain/loyalty-programs"
 import type { LoyaltyReward, RedeemCandidate } from "../loyalty-rewards.contracts"
 import { redeemBlock } from "./redeem.policy"
+
+const SUBJECT = Symbol("redeem.policy")
+
+const build = async () => {
+    const moduleRef = await Test.createTestingModule({
+        providers: [{ provide: SUBJECT, useValue: { redeemBlock } }],
+    }).compile()
+    return moduleRef.get<typeof import("./redeem.policy")>(SUBJECT)
+}
 
 const DEFAULT_CONFIG: LoyaltyConfig = {
     earn: { perThousandVnd: 1, perVisit: 0, categories: [], trigger: "payment", minOrderVnd: 0 },
@@ -31,49 +41,69 @@ const rewardOf = builder<LoyaltyReward>({
 const customerOf = builder<RedeemCandidate>({ points: 600, tierKey: "dong", redeemedBefore: 0 })
 
 describe("redeem.policy", () => {
-    it("lets a customer with enough points redeem an open reward", () => {
-        expect(redeemBlock(DEFAULT_CONFIG, rewardOf(), customerOf())).toBeNull()
+    it("lets a customer with enough points redeem an open reward", async () => {
+        const subject = await build()
+
+        expect(subject.redeemBlock(DEFAULT_CONFIG, rewardOf(), customerOf())).toBeNull()
         expect(
-            redeemBlock(DEFAULT_CONFIG, rewardOf({ stock: 3, perCustomerLimit: 2 }), customerOf({ redeemedBefore: 1 })),
+            subject.redeemBlock(
+                DEFAULT_CONFIG,
+                rewardOf({ stock: 3, perCustomerLimit: 2 }),
+                customerOf({ redeemedBefore: 1 }),
+            ),
         ).toBeNull()
     })
 
-    it("refuses a paused reward", () => {
-        expect(redeemBlock(DEFAULT_CONFIG, rewardOf({ active: false }), customerOf())).toEqual({
+    it("refuses a paused reward", async () => {
+        const subject = await build()
+
+        expect(subject.redeemBlock(DEFAULT_CONFIG, rewardOf({ active: false }), customerOf())).toEqual({
             code: "inactive",
             params: {},
         })
     })
 
-    it("refuses a reward that is out of stock", () => {
-        expect(redeemBlock(DEFAULT_CONFIG, rewardOf({ stock: 0 }), customerOf())).toEqual({
+    it("refuses a reward that is out of stock", async () => {
+        const subject = await build()
+
+        expect(subject.redeemBlock(DEFAULT_CONFIG, rewardOf({ stock: 0 }), customerOf())).toEqual({
             code: "out_of_stock",
             params: {},
         })
     })
 
-    it("refuses a customer with too few points and says how many", () => {
-        expect(redeemBlock(DEFAULT_CONFIG, rewardOf(), customerOf({ points: 100 }))).toEqual({
+    it("refuses a customer with too few points and says how many", async () => {
+        const subject = await build()
+
+        expect(subject.redeemBlock(DEFAULT_CONFIG, rewardOf(), customerOf({ points: 100 }))).toEqual({
             code: "not_enough_points",
             params: { cost: 500, points: 100 },
         })
     })
 
-    it("refuses a customer who reached the limit of the reward", () => {
+    it("refuses a customer who reached the limit of the reward", async () => {
+        const subject = await build()
+
         expect(
-            redeemBlock(DEFAULT_CONFIG, rewardOf({ perCustomerLimit: 2 }), customerOf({ redeemedBefore: 2 })),
+            subject.redeemBlock(DEFAULT_CONFIG, rewardOf({ perCustomerLimit: 2 }), customerOf({ redeemedBefore: 2 })),
         ).toEqual({
             code: "limit_reached",
             params: { limit: 2 },
         })
     })
 
-    it("refuses a customer below the tier the reward needs and names the tier", () => {
-        expect(redeemBlock(DEFAULT_CONFIG, rewardOf({ minTierKey: "bac" }), customerOf())).toEqual({
+    it("refuses a customer below the tier the reward needs and names the tier", async () => {
+        const subject = await build()
+
+        expect(subject.redeemBlock(DEFAULT_CONFIG, rewardOf({ minTierKey: "bac" }), customerOf())).toEqual({
             code: "tier_required",
             params: { tier: "Silver" },
         })
-        expect(redeemBlock(DEFAULT_CONFIG, rewardOf({ minTierKey: "gone" }), customerOf({ tierKey: null }))).toBeNull()
-        expect(redeemBlock(DEFAULT_CONFIG, rewardOf({ minTierKey: "bac" }), customerOf({ tierKey: "vang" }))).toBeNull()
+        expect(
+            subject.redeemBlock(DEFAULT_CONFIG, rewardOf({ minTierKey: "gone" }), customerOf({ tierKey: null })),
+        ).toBeNull()
+        expect(
+            subject.redeemBlock(DEFAULT_CONFIG, rewardOf({ minTierKey: "bac" }), customerOf({ tierKey: "vang" })),
+        ).toBeNull()
     })
 })

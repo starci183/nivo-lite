@@ -166,20 +166,20 @@ export class HiringJobsService {
 
     /** The facts of a job, one per line, that the ad and the letters are written from. */
     jobFacts(job: JobRecord): string {
-        const textOf = this.words.textOf
+        const t = this.words.textOf
         const requirements = job.requirements
-        const experience = experienceLine(requirements.experienceYears, requirements.experienceNote, "facts", textOf)
+        const experience = experienceLine(requirements.experienceYears, requirements.experienceNote, "facts", t)
         const list = (key: string, items: ReadonlyArray<string>, glue: string): string =>
-            items.length === 0 ? "" : textOf(key, { list: items.join(glue) })
+            items.length === 0 ? "" : t(key, { list: items.join(glue) })
         return [
-            textOf("hiring.facts.title", { title: job.title }),
-            job.position === "" ? "" : textOf("hiring.facts.position", { position: job.position }),
-            textOf("hiring.facts.employment", { employment: textOf(`hiring.employment.${job.employmentType}`, {}) }),
-            job.schedule === "" ? "" : textOf("hiring.facts.schedule", { schedule: job.schedule }),
-            textOf("hiring.facts.pay", { pay: payPhrase(job, textOf, (amount) => this.words.amount(amount)) }),
-            job.location === "" ? "" : textOf("hiring.facts.place", { place: job.location }),
-            textOf("hiring.facts.headcount", { count: job.headcount }),
-            job.description === "" ? "" : textOf("hiring.facts.description", { description: job.description }),
+            t("hiring.facts.title", { title: job.title }),
+            job.position === "" ? "" : t("hiring.facts.position", { position: job.position }),
+            t("hiring.facts.employment", { employment: t(`hiring.employment.${job.employmentType}`, {}) }),
+            job.schedule === "" ? "" : t("hiring.facts.schedule", { schedule: job.schedule }),
+            t("hiring.facts.pay", { pay: payPhrase(job, t, (amount) => this.words.amount(amount)) }),
+            job.location === "" ? "" : t("hiring.facts.place", { place: job.location }),
+            t("hiring.facts.headcount", { count: job.headcount }),
+            job.description === "" ? "" : t("hiring.facts.description", { description: job.description }),
             list("hiring.facts.skills", requirements.skills, ", "),
             experience,
             list("hiring.facts.availability", requirements.availability, ", "),

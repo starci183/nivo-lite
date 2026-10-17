@@ -1,9 +1,20 @@
+import { Test } from "@nestjs/testing"
 import { cancellableOf } from "./cancellable.policy"
+const SUBJECT = Symbol("cancellable.policy")
+
+const build = async () => {
+    const moduleRef = await Test.createTestingModule({
+        providers: [{ provide: SUBJECT, useValue: { cancellableOf } }],
+    }).compile()
+    return moduleRef.get<typeof import("./cancellable.policy")>(SUBJECT)
+}
 
 describe("cancellableOf", () => {
-    it("names the booking, its customer, its service and its start", () => {
+    it("names the booking, its customer, its service and its start", async () => {
+        const subject = await build()
+
         expect(
-            cancellableOf({
+            subject.cancellableOf({
                 id: "b-1",
                 lead_id: "lead-1",
                 customer_name: "Lan",
@@ -19,7 +30,9 @@ describe("cancellableOf", () => {
         })
     })
 
-    it("answers none for no row", () => {
-        expect(cancellableOf(undefined)).toBeNull()
+    it("answers none for no row", async () => {
+        const subject = await build()
+
+        expect(subject.cancellableOf(undefined)).toBeNull()
     })
 })

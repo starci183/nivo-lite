@@ -3,6 +3,7 @@ import type { DynamicModule } from "@nestjs/common"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./job-ops.module-definition"
 import { JobOpsConsoleService } from "./job-ops-console.service"
 import { JobOpsAlertMonitorService } from "./job-ops-alert-monitor.service"
+import { JobTickService } from "./job-tick.service"
 import { JobOpsService } from "./job-ops.service"
 
 @Module({})
@@ -16,10 +17,11 @@ export class JobOpsModule extends ConfigurableModuleClass {
             providers: [
                 ...(base.providers ?? []),
                 JobOpsService,
+                JobTickService,
                 JobOpsConsoleService,
                 ...(options.alerts === undefined ? [] : [JobOpsAlertMonitorService]),
             ],
-            exports: [JobOpsService, JobOpsConsoleService],
+            exports: [JobOpsService, JobOpsConsoleService, JobTickService],
         }
     }
 }

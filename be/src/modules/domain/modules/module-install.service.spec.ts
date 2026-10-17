@@ -83,294 +83,282 @@ const build = async () => {
             { provide: AgentSyncService, useValue: sync },
         ],
     }).compile()
-    return {
-        service: moduleRef.get(ModuleInstallService),
-        installations,
-        members,
-        catalog,
-        agents,
-        rules,
-        events,
-        sync,
-    }
+    const service = moduleRef.get(ModuleInstallService)
+    return { service, installations, members, catalog, agents, rules, events, sync }
 }
 
-describe("ModuleInstallService", () => {
-    describe("install", () => {
-        it("refuses a blank instance name", async () => {
-            const { service } = await build()
+describe("ModuleInstallService > install", () => {
+    it("refuses a blank instance name", async () => {
+        const { service } = await build()
 
-            await expect(service.install("u1", requestOf({ name: "   " }))).rejects.toMatchObject({
-                code: ModulesErrorCode.InstanceNameInvalid,
-            })
-        })
-
-        it("refuses a second instance of a type that allows one", async () => {
-            const { service, catalog } = await build()
-            catalog.find.mockResolvedValue(ACCOUNTING_MODULE)
-
-            await expect(
-                service.install("u1", requestOf({ moduleKey: "accounting", newInstance: true })),
-            ).rejects.toMatchObject({ code: ModulesErrorCode.SingleInstanceOnly })
-        })
-
-        it("answers the installation the type already has, and still seeds its rules and its sync", async () => {
-            const { service, installations, rules, sync } = await build()
-            installations.firstOfModule.mockResolvedValue(recordOf())
-
-            await expect(service.install("u1", requestOf())).resolves.toEqual({
-                installationId: "inst-1",
-                agentId: "agent-1",
-                created: false,
-            })
-            expect(installations.insert).not.toHaveBeenCalled()
-            expect(rules.seedDefaults).toHaveBeenCalledWith("ws-1", "chatbot", expect.any(Array))
-            expect(sync.requestNow).toHaveBeenCalledWith({ workspaceId: "ws-1", installationId: "inst-1", force: true })
-        })
-
-        it("installs the first instance on an agent no installation drives yet", async () => {
-            const { service, installations, agents, events } = await build()
-            installations.firstOfModule.mockResolvedValue(null)
-            installations.instanceNames.mockResolvedValue([])
-            installations.boundAgentIds.mockResolvedValue(["agent-1"])
-            agents.list.mockResolvedValue([agentOf(), agentOf({ id: "agent-2" })])
-            installations.insert.mockResolvedValue("inst-2")
-
-            await expect(service.install("u1", requestOf())).resolves.toEqual({
-                installationId: "inst-2",
-                agentId: "agent-2",
-                created: true,
-            })
-            expect(agents.create).not.toHaveBeenCalled()
-            expect(installations.insert).toHaveBeenCalledWith({
-                workspaceId: "ws-1",
-                moduleKey: "chatbot",
-                name: CHATBOT_MODULE.name.en,
-                agentId: "agent-2",
-                operatingMode: "assist",
-            })
-            expect(events.record).toHaveBeenCalledWith({
-                workspaceId: "ws-1",
-                kind: "module.installed",
-                actor: "Lan",
-                summary: `Lan: ${CHATBOT_MODULE.name.en}`,
-            })
-        })
-
-        it("adds a named instance on a new agent with a free handle", async () => {
-            const { service, installations, agents, events } = await build()
-            installations.instanceNames.mockResolvedValue([{ id: "inst-1", name: CHATBOT_MODULE.name.en }])
-            agents.list.mockResolvedValue([agentOf()])
-            agents.create.mockResolvedValue(agentOf({ id: "agent-9" }))
-            installations.insert.mockResolvedValue("inst-9")
-
-            await expect(
-                service.install("u1", requestOf({ newInstance: true, name: "  Night   desk " })),
-            ).resolves.toEqual({ installationId: "inst-9", agentId: "agent-9", created: true })
-            expect(agents.create).toHaveBeenCalledWith("u1", {
-                workspaceId: "ws-1",
-                module: "chatbot",
-                name: "Night desk",
-                handle: `${CHATBOT_MODULE.agent.handle}-2`,
-                role: CHATBOT_MODULE.agent.role.en,
-                instructions: CHATBOT_MODULE.agent.instructions.en,
-            })
-            expect(events.record).toHaveBeenCalledWith(
-                expect.objectContaining({ summary: `Lan: ${CHATBOT_MODULE.name.en} - Night desk` }),
-            )
-        })
-
-        it("refuses an instance name the type already uses", async () => {
-            const { service, installations } = await build()
-            installations.instanceNames.mockResolvedValue([{ id: "inst-1", name: "Night desk" }])
-
-            await expect(
-                service.install("u1", requestOf({ newInstance: true, name: "night DESK" })),
-            ).rejects.toMatchObject({ code: ModulesErrorCode.InstanceNameTaken })
-        })
-
-        it("answers the installation another tab created when it lost the race", async () => {
-            const { service, installations, agents } = await build()
-            installations.firstOfModule.mockResolvedValueOnce(null).mockResolvedValueOnce(recordOf({ id: "inst-3" }))
-            installations.instanceNames.mockResolvedValue([])
-            installations.boundAgentIds.mockResolvedValue([])
-            agents.list.mockResolvedValue([agentOf()])
-            installations.insert.mockResolvedValue(null)
-
-            await expect(service.install("u1", requestOf())).resolves.toEqual({
-                installationId: "inst-3",
-                agentId: "agent-1",
-                created: false,
-            })
-        })
-
-        it("reports the name taken when an added instance lost the race", async () => {
-            const { service, installations, agents } = await build()
-            installations.instanceNames.mockResolvedValue([])
-            agents.list.mockResolvedValue([])
-            agents.create.mockResolvedValue(agentOf({ id: "agent-9" }))
-            installations.insert.mockResolvedValue(null)
-
-            await expect(service.install("u1", requestOf({ newInstance: true }))).rejects.toMatchObject({
-                code: ModulesErrorCode.InstanceNameTaken,
-            })
+        await expect(service.install("u1", requestOf({ name: "   " }))).rejects.toMatchObject({
+            code: ModulesErrorCode.InstanceNameInvalid,
         })
     })
 
-    describe("rename", () => {
-        it("refuses a name a sibling instance holds", async () => {
-            const { service, installations } = await build()
-            installations.find.mockResolvedValue(recordOf())
-            installations.instanceNames.mockResolvedValue([{ id: "inst-2", name: "Night desk" }])
+    it("refuses a second instance of a type that allows one", async () => {
+        const { service, catalog } = await build()
+        catalog.find.mockResolvedValue(ACCOUNTING_MODULE)
 
-            await expect(service.rename("u1", "ws-1", "inst-1", "NIGHT desk")).rejects.toMatchObject({
-                code: ModulesErrorCode.InstanceNameTaken,
-            })
+        await expect(
+            service.install("u1", requestOf({ moduleKey: "accounting", newInstance: true })),
+        ).rejects.toMatchObject({ code: ModulesErrorCode.SingleInstanceOnly })
+    })
+
+    it("answers the installation the type already has, and still seeds its rules and its sync", async () => {
+        const { service, installations, rules, sync } = await build()
+        installations.firstOfModule.mockResolvedValue(recordOf())
+
+        await expect(service.install("u1", requestOf())).resolves.toEqual({
+            installationId: "inst-1",
+            agentId: "agent-1",
+            created: false,
         })
+        expect(installations.insert).not.toHaveBeenCalled()
+        expect(rules.seedDefaults).toHaveBeenCalledWith("ws-1", "chatbot", expect.any(Array))
+        expect(sync.requestNow).toHaveBeenCalledWith({ workspaceId: "ws-1", installationId: "inst-1", force: true })
+    })
 
-        it("renames the instance and answers it read back", async () => {
-            const { service, installations } = await build()
-            installations.find.mockResolvedValueOnce(recordOf()).mockResolvedValueOnce(recordOf({ name: "Lobby" }))
-            installations.instanceNames.mockResolvedValue([])
-            installations.rename.mockResolvedValue("done")
+    it("installs the first instance on an agent no installation drives yet", async () => {
+        const { service, installations, agents, events } = await build()
+        installations.firstOfModule.mockResolvedValue(null)
+        installations.instanceNames.mockResolvedValue([])
+        installations.boundAgentIds.mockResolvedValue(["agent-1"])
+        agents.list.mockResolvedValue([agentOf(), agentOf({ id: "agent-2" })])
+        installations.insert.mockResolvedValue("inst-2")
 
-            await expect(service.rename("u1", "ws-1", "inst-1", " Lobby ")).resolves.toEqual(
-                recordOf({ name: "Lobby" }),
-            )
-            expect(installations.rename).toHaveBeenCalledWith("ws-1", "inst-1", "Lobby")
+        await expect(service.install("u1", requestOf())).resolves.toEqual({
+            installationId: "inst-2",
+            agentId: "agent-2",
+            created: true,
         })
+        expect(agents.create).not.toHaveBeenCalled()
+        expect(installations.insert).toHaveBeenCalledWith({
+            workspaceId: "ws-1",
+            moduleKey: "chatbot",
+            name: CHATBOT_MODULE.name.en,
+            agentId: "agent-2",
+            operatingMode: "assist",
+        })
+        expect(events.record).toHaveBeenCalledWith({
+            workspaceId: "ws-1",
+            kind: "module.installed",
+            actor: "Lan",
+            summary: `Lan: ${CHATBOT_MODULE.name.en}`,
+        })
+    })
+})
 
-        it("refuses an installation the write did not find", async () => {
-            const { service, installations } = await build()
-            installations.find.mockResolvedValue(recordOf())
-            installations.instanceNames.mockResolvedValue([])
-            installations.rename.mockResolvedValue("missing")
+describe("ModuleInstallService > install", () => {
+    it("adds a named instance on a new agent with a free handle", async () => {
+        const { service, installations, agents, events } = await build()
+        installations.instanceNames.mockResolvedValue([{ id: "inst-1", name: CHATBOT_MODULE.name.en }])
+        agents.list.mockResolvedValue([agentOf()])
+        agents.create.mockResolvedValue(agentOf({ id: "agent-9" }))
+        installations.insert.mockResolvedValue("inst-9")
 
-            await expect(service.rename("u1", "ws-1", "inst-1", "Lobby")).rejects.toMatchObject({
-                code: ModulesErrorCode.InstallationNotFound,
-            })
+        await expect(service.install("u1", requestOf({ newInstance: true, name: "  Night   desk " }))).resolves.toEqual(
+            { installationId: "inst-9", agentId: "agent-9", created: true },
+        )
+        expect(agents.create).toHaveBeenCalledWith("u1", {
+            workspaceId: "ws-1",
+            module: "chatbot",
+            name: "Night desk",
+            handle: `${CHATBOT_MODULE.agent.handle}-2`,
+            role: CHATBOT_MODULE.agent.role.en,
+            instructions: CHATBOT_MODULE.agent.instructions.en,
+        })
+        expect(events.record).toHaveBeenCalledWith(
+            expect.objectContaining({ summary: `Lan: ${CHATBOT_MODULE.name.en} - Night desk` }),
+        )
+    })
+
+    it("refuses an instance name the type already uses", async () => {
+        const { service, installations } = await build()
+        installations.instanceNames.mockResolvedValue([{ id: "inst-1", name: "Night desk" }])
+
+        await expect(service.install("u1", requestOf({ newInstance: true, name: "night DESK" }))).rejects.toMatchObject(
+            { code: ModulesErrorCode.InstanceNameTaken },
+        )
+    })
+
+    it("answers the installation another tab created when it lost the race", async () => {
+        const { service, installations, agents } = await build()
+        installations.firstOfModule.mockResolvedValueOnce(null).mockResolvedValueOnce(recordOf({ id: "inst-3" }))
+        installations.instanceNames.mockResolvedValue([])
+        installations.boundAgentIds.mockResolvedValue([])
+        agents.list.mockResolvedValue([agentOf()])
+        installations.insert.mockResolvedValue(null)
+
+        await expect(service.install("u1", requestOf())).resolves.toEqual({
+            installationId: "inst-3",
+            agentId: "agent-1",
+            created: false,
         })
     })
 
-    describe("setLive", () => {
-        it("refuses to go live before a context version is applied", async () => {
-            const { service, installations } = await build()
-            installations.find.mockResolvedValue(recordOf({ activeContextVersionId: null }))
+    it("reports the name taken when an added instance lost the race", async () => {
+        const { service, installations, agents } = await build()
+        installations.instanceNames.mockResolvedValue([])
+        agents.list.mockResolvedValue([])
+        agents.create.mockResolvedValue(agentOf({ id: "agent-9" }))
+        installations.insert.mockResolvedValue(null)
 
-            await expect(service.setLive("u1", "ws-1", "inst-1", true)).rejects.toMatchObject({
-                code: ModulesErrorCode.NeedsVersion,
-            })
+        await expect(service.install("u1", requestOf({ newInstance: true }))).rejects.toMatchObject({
+            code: ModulesErrorCode.InstanceNameTaken,
         })
+    })
+})
 
-        it("switches the installation and its agent live", async () => {
-            const { service, installations, agents } = await build()
-            installations.find.mockResolvedValueOnce(recordOf()).mockResolvedValueOnce(recordOf({ liveEnabled: true }))
-            installations.setLive.mockResolvedValue("done")
+describe("ModuleInstallService > rename", () => {
+    it("refuses a name a sibling instance holds", async () => {
+        const { service, installations } = await build()
+        installations.find.mockResolvedValue(recordOf())
+        installations.instanceNames.mockResolvedValue([{ id: "inst-2", name: "Night desk" }])
 
-            await expect(service.setLive("u1", "ws-1", "inst-1", true)).resolves.toEqual(
-                recordOf({ liveEnabled: true }),
-            )
-            expect(agents.setStatus).toHaveBeenCalledWith("u1", "ws-1", "agent-1", true)
+        await expect(service.rename("u1", "ws-1", "inst-1", "NIGHT desk")).rejects.toMatchObject({
+            code: ModulesErrorCode.InstanceNameTaken,
         })
     })
 
-    describe("renameAgent", () => {
-        it("refuses a name shorter than the limit", async () => {
-            const { service } = await build()
+    it("renames the instance and answers it read back", async () => {
+        const { service, installations } = await build()
+        installations.find.mockResolvedValueOnce(recordOf()).mockResolvedValueOnce(recordOf({ name: "Lobby" }))
+        installations.instanceNames.mockResolvedValue([])
+        installations.rename.mockResolvedValue("done")
 
-            await expect(service.renameAgent("u1", "ws-1", "inst-1", " A ")).rejects.toMatchObject({
-                code: ModulesErrorCode.AgentNameInvalid,
-                params: { min: 2, max: 40 },
-            })
+        await expect(service.rename("u1", "ws-1", "inst-1", " Lobby ")).resolves.toEqual(recordOf({ name: "Lobby" }))
+        expect(installations.rename).toHaveBeenCalledWith("ws-1", "inst-1", "Lobby")
+    })
+
+    it("refuses an installation the write did not find", async () => {
+        const { service, installations } = await build()
+        installations.find.mockResolvedValue(recordOf())
+        installations.instanceNames.mockResolvedValue([])
+        installations.rename.mockResolvedValue("missing")
+
+        await expect(service.rename("u1", "ws-1", "inst-1", "Lobby")).rejects.toMatchObject({
+            code: ModulesErrorCode.InstallationNotFound,
         })
+    })
+})
 
-        it("refuses an installation without an agent", async () => {
-            const { service, installations } = await build()
-            installations.find.mockResolvedValue(recordOf({ agentId: null }))
+describe("ModuleInstallService > setLive", () => {
+    it("refuses to go live before a context version is applied", async () => {
+        const { service, installations } = await build()
+        installations.find.mockResolvedValue(recordOf({ activeContextVersionId: null }))
 
-            await expect(service.renameAgent("u1", "ws-1", "inst-1", "Mai")).rejects.toMatchObject({
-                code: ModulesErrorCode.AgentMissing,
-            })
-        })
-
-        it("renames the agent and asks for a sync without forcing it", async () => {
-            const { service, installations, agents, sync } = await build()
-            installations.find.mockResolvedValue(recordOf())
-
-            await expect(service.renameAgent("u1", "ws-1", "inst-1", " Mai ")).resolves.toEqual(recordOf())
-            expect(agents.rename).toHaveBeenCalledWith("u1", "ws-1", "agent-1", "Mai")
-            expect(sync.requestNow).toHaveBeenCalledWith({
-                workspaceId: "ws-1",
-                installationId: "inst-1",
-                force: false,
-            })
+        await expect(service.setLive("u1", "ws-1", "inst-1", true)).rejects.toMatchObject({
+            code: ModulesErrorCode.NeedsVersion,
         })
     })
 
-    describe("saveSetting", () => {
-        it("refuses a setting out of its range", async () => {
-            const { service } = await build()
+    it("switches the installation and its agent live", async () => {
+        const { service, installations, agents } = await build()
+        installations.find.mockResolvedValueOnce(recordOf()).mockResolvedValueOnce(recordOf({ liveEnabled: true }))
+        installations.setLive.mockResolvedValue("done")
 
-            await expect(service.saveSetting("u1", "ws-1", "inst-1", "openclawTimeoutSec", 999)).rejects.toMatchObject({
-                code: ModulesErrorCode.SettingInvalid,
-            })
-        })
+        await expect(service.setLive("u1", "ws-1", "inst-1", true)).resolves.toEqual(recordOf({ liveEnabled: true }))
+        expect(agents.setStatus).toHaveBeenCalledWith("u1", "ws-1", "agent-1", true)
+    })
+})
 
-        it("merges the setting into the settings of the installation", async () => {
-            const { service, installations } = await build()
-            installations.find.mockResolvedValue(recordOf())
-            installations.saveSettings.mockResolvedValue("done")
+describe("ModuleInstallService > renameAgent", () => {
+    it("refuses a name shorter than the limit", async () => {
+        const { service } = await build()
 
-            await service.saveSetting("u1", "ws-1", "inst-1", "holdingMessage", " One moment ")
-
-            expect(installations.saveSettings).toHaveBeenCalledWith("ws-1", "inst-1", {
-                openclawTimeoutSec: 30,
-                holdingMessage: "One moment",
-            })
+        await expect(service.renameAgent("u1", "ws-1", "inst-1", " A ")).rejects.toMatchObject({
+            code: ModulesErrorCode.AgentNameInvalid,
+            params: { min: 2, max: 40 },
         })
     })
 
-    describe("syncStatus", () => {
-        it("answers the status of the copy", async () => {
-            const { service, installations } = await build()
-            const status: AgentSyncStatus = {
-                state: "ok",
-                syncedVersion: 1,
-                activeVersion: 1,
-                checkedAt: null,
-                error: null,
-            }
-            installations.syncStatus.mockResolvedValue(status)
+    it("refuses an installation without an agent", async () => {
+        const { service, installations } = await build()
+        installations.find.mockResolvedValue(recordOf({ agentId: null }))
 
-            await expect(service.syncStatus("u1", "ws-1", "inst-1")).resolves.toEqual(status)
-        })
-
-        it("refuses an installation of another workspace", async () => {
-            const { service, installations } = await build()
-            installations.syncStatus.mockResolvedValue(null)
-
-            await expect(service.syncStatus("u1", "ws-1", "inst-1")).rejects.toMatchObject({
-                code: ModulesErrorCode.InstallationNotFound,
-            })
+        await expect(service.renameAgent("u1", "ws-1", "inst-1", "Mai")).rejects.toMatchObject({
+            code: ModulesErrorCode.AgentMissing,
         })
     })
 
-    describe("reads", () => {
-        it("answers the installations of the workspace to any member", async () => {
-            const { service, installations, members } = await build()
-            installations.list.mockResolvedValue([recordOf()])
+    it("renames the agent and asks for a sync without forcing it", async () => {
+        const { service, installations, agents, sync } = await build()
+        installations.find.mockResolvedValue(recordOf())
 
-            await expect(service.list("u1", "ws-1")).resolves.toEqual([recordOf()])
-            expect(members.require).toHaveBeenCalledWith("u1", "ws-1")
+        await expect(service.renameAgent("u1", "ws-1", "inst-1", " Mai ")).resolves.toEqual(recordOf())
+        expect(agents.rename).toHaveBeenCalledWith("u1", "ws-1", "agent-1", "Mai")
+        expect(sync.requestNow).toHaveBeenCalledWith({
+            workspaceId: "ws-1",
+            installationId: "inst-1",
+            force: false,
         })
+    })
+})
 
-        it("refuses a missing installation", async () => {
-            const { service, installations } = await build()
-            installations.find.mockResolvedValue(null)
+describe("ModuleInstallService > saveSetting", () => {
+    it("refuses a setting out of its range", async () => {
+        const { service } = await build()
 
-            await expect(service.get("u1", "ws-1", "inst-1")).rejects.toMatchObject({
-                code: ModulesErrorCode.InstallationNotFound,
-            })
+        await expect(service.saveSetting("u1", "ws-1", "inst-1", "openclawTimeoutSec", 999)).rejects.toMatchObject({
+            code: ModulesErrorCode.SettingInvalid,
+        })
+    })
+
+    it("merges the setting into the settings of the installation", async () => {
+        const { service, installations } = await build()
+        installations.find.mockResolvedValue(recordOf())
+        installations.saveSettings.mockResolvedValue("done")
+
+        await service.saveSetting("u1", "ws-1", "inst-1", "holdingMessage", " One moment ")
+
+        expect(installations.saveSettings).toHaveBeenCalledWith("ws-1", "inst-1", {
+            openclawTimeoutSec: 30,
+            holdingMessage: "One moment",
+        })
+    })
+})
+
+describe("ModuleInstallService > syncStatus", () => {
+    it("answers the status of the copy", async () => {
+        const { service, installations } = await build()
+        const status: AgentSyncStatus = {
+            state: "ok",
+            syncedVersion: 1,
+            activeVersion: 1,
+            checkedAt: null,
+            error: null,
+        }
+        installations.syncStatus.mockResolvedValue(status)
+
+        await expect(service.syncStatus("u1", "ws-1", "inst-1")).resolves.toEqual(status)
+    })
+
+    it("refuses an installation of another workspace", async () => {
+        const { service, installations } = await build()
+        installations.syncStatus.mockResolvedValue(null)
+
+        await expect(service.syncStatus("u1", "ws-1", "inst-1")).rejects.toMatchObject({
+            code: ModulesErrorCode.InstallationNotFound,
+        })
+    })
+})
+
+describe("ModuleInstallService > reads", () => {
+    it("answers the installations of the workspace to any member", async () => {
+        const { service, installations, members } = await build()
+        installations.list.mockResolvedValue([recordOf()])
+
+        await expect(service.list("u1", "ws-1")).resolves.toEqual([recordOf()])
+        expect(members.require).toHaveBeenCalledWith("u1", "ws-1")
+    })
+
+    it("refuses a missing installation", async () => {
+        const { service, installations } = await build()
+        installations.find.mockResolvedValue(null)
+
+        await expect(service.get("u1", "ws-1", "inst-1")).rejects.toMatchObject({
+            code: ModulesErrorCode.InstallationNotFound,
         })
     })
 })
@@ -415,7 +403,8 @@ describe("ModuleInstallService lifecycle and reads", () => {
             summary: `Lan: ${CHATBOT_MODULE.name.vi} - Branch desk`,
         })
     })
-    it("reports the name taken when a first-instance insert loses a race without a surviving installation", async () => {
+
+    it("reports a taken name after a first-instance race without a surviving installation", async () => {
         const { service, installations, agents, events, rules, sync } = await build()
         installations.firstOfModule.mockResolvedValue(null)
         installations.instanceNames.mockResolvedValue([])
@@ -432,6 +421,7 @@ describe("ModuleInstallService lifecycle and reads", () => {
         expect(rules.seedDefaults).not.toHaveBeenCalled()
         expect(sync.requestNow).not.toHaveBeenCalled()
     })
+
     it("rejects a blank instance rename before reading or writing the installation", async () => {
         const { service, installations, members } = await build()
 
@@ -442,6 +432,9 @@ describe("ModuleInstallService lifecycle and reads", () => {
         expect(installations.find).not.toHaveBeenCalled()
         expect(installations.rename).not.toHaveBeenCalled()
     })
+})
+
+describe("ModuleInstallService lifecycle and reads", () => {
     it("reports an instance name taken by a concurrent rename", async () => {
         const { service, installations } = await build()
         installations.find.mockResolvedValue(recordOf())
@@ -455,6 +448,7 @@ describe("ModuleInstallService lifecycle and reads", () => {
         expect(installations.rename).toHaveBeenCalledWith("ws-1", "inst-1", "Lobby")
         expect(installations.find).toHaveBeenCalledTimes(1)
     })
+
     it("writes the operating mode and reads the updated installation", async () => {
         const { service, installations, members } = await build()
         installations.setOperatingMode.mockResolvedValue("done")
@@ -466,6 +460,7 @@ describe("ModuleInstallService lifecycle and reads", () => {
         expect(installations.setOperatingMode).toHaveBeenCalledWith("ws-1", "inst-1", "autopilot")
         expect(installations.find).toHaveBeenCalledWith("ws-1", "inst-1")
     })
+
     it("pauses an installation with neither an agent nor an applied version", async () => {
         const { service, installations, agents } = await build()
         const paused = recordOf({ agentId: null, activeContextVersionId: null, status: "paused" })
@@ -477,6 +472,7 @@ describe("ModuleInstallService lifecycle and reads", () => {
         expect(agents.setStatus).not.toHaveBeenCalled()
         expect(installations.find).toHaveBeenCalledTimes(2)
     })
+
     it("answers record ownership after checking workspace membership", async () => {
         const { service, installations, members } = await build()
         installations.installationOfRecord.mockResolvedValue({ installationId: "inst-1" })
@@ -487,6 +483,7 @@ describe("ModuleInstallService lifecycle and reads", () => {
         expect(members.require).toHaveBeenCalledWith("u1", "ws-1")
         expect(installations.installationOfRecord).toHaveBeenCalledWith("ws-1", "record-1")
     })
+
     it("answers requirement facts after checking workspace membership", async () => {
         const { service, installations, members } = await build()
         const facts = { providers: ["meta"], chatAgents: 2, staff: 3, members: 4 }

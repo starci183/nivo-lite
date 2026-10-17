@@ -1,20 +1,47 @@
+import { Test } from "@nestjs/testing"
 import {
-    readContentEvidence,
-    readContentLinks,
-    readContentMedia,
-    readContentPublished,
     readContentVariants,
+    readContentMedia,
+    readContentLinks,
+    readContentEvidence,
+    readContentPublished,
 } from "./content-editor-json.mapper"
 
-describe("content editor historical JSON readers", () => {
-    it.each([undefined, null, 1, "invalid", []])("ignores malformed channel maps: %p", (value) => {
-        expect(readContentVariants(value)).toEqual({})
-        expect(readContentPublished(value)).toEqual({})
-    })
+const SUBJECT = Symbol("content-editor-json.mapper")
 
-    it("selects supported channel objects and fills missing variant fields", () => {
+const build = async () => {
+    const moduleRef = await Test.createTestingModule({
+        providers: [
+            {
+                provide: SUBJECT,
+                useValue: {
+                    readContentVariants,
+                    readContentMedia,
+                    readContentLinks,
+                    readContentEvidence,
+                    readContentPublished,
+                },
+            },
+        ],
+    }).compile()
+    return moduleRef.get<typeof import("./content-editor-json.mapper")>(SUBJECT)
+}
+
+describe("content editor historical JSON readers", () => {
+    it.each([undefined, null, 1, "invalid", []])("ignores malformed channel maps: %p", async (value) => {
+        const subject = await build()
+
+        expect(subject.readContentVariants(value)).toEqual({})
+        expect(subject.readContentPublished(value)).toEqual({})
+    })
+})
+
+describe("content editor historical JSON readers", () => {
+    it("selects supported channel objects and fills missing variant fields", async () => {
+        const subject = await build()
+
         expect(
-            readContentVariants({
+            subject.readContentVariants({
                 facebook: { text: "Draft", hashtags: ["one", 2, null], note: "Note" },
                 zalo: { text: 12, hashtags: "not an array", note: false },
                 tiktok: null,
@@ -26,10 +53,14 @@ describe("content editor historical JSON readers", () => {
             zalo: { text: "", hashtags: [], note: "" },
         })
     })
+})
 
-    it("selects supported publication proofs and defaults malformed members", () => {
+describe("content editor historical JSON readers", () => {
+    it("selects supported publication proofs and defaults malformed members", async () => {
+        const subject = await build()
+
         expect(
-            readContentPublished({
+            subject.readContentPublished({
                 facebook: { at: "2026-10-14", by: "Editor", url: "https://example.test/post", how: "manual" },
                 zalo: { at: null, by: 1 },
                 tiktok: "invalid",
@@ -40,16 +71,24 @@ describe("content editor historical JSON readers", () => {
             zalo: { at: "", by: "", url: "", how: "" },
         })
     })
+})
 
-    it.each([undefined, null, {}, "invalid"])("defaults malformed collections: %p", (value) => {
-        expect(readContentMedia(value)).toEqual([])
-        expect(readContentLinks(value)).toEqual([])
-        expect(readContentEvidence(value)).toEqual([])
+describe("content editor historical JSON readers", () => {
+    it.each([undefined, null, {}, "invalid"])("defaults malformed collections: %p", async (value) => {
+        const subject = await build()
+
+        expect(subject.readContentMedia(value)).toEqual([])
+        expect(subject.readContentLinks(value)).toEqual([])
+        expect(subject.readContentEvidence(value)).toEqual([])
     })
+})
 
-    it("normalizes attachments and omits malformed array elements", () => {
+describe("content editor historical JSON readers", () => {
+    it("normalizes attachments and omits malformed array elements", async () => {
+        const subject = await build()
+
         expect(
-            readContentMedia([
+            subject.readContentMedia([
                 null,
                 [],
                 "invalid",
@@ -61,16 +100,20 @@ describe("content editor historical JSON readers", () => {
             { kind: "media", name: "", path: undefined, id: undefined, suggested: false },
         ])
     })
+})
 
-    it("preserves link and audit text while defaulting invalid fields", () => {
+describe("content editor historical JSON readers", () => {
+    it("preserves link and audit text while defaulting invalid fields", async () => {
+        const subject = await build()
+
         expect(
-            readContentLinks([null, [], 1, { url: "https://example.test", label: "Source" }, { url: null }]),
+            subject.readContentLinks([null, [], 1, { url: "https://example.test", label: "Source" }, { url: null }]),
         ).toEqual([
             { url: "https://example.test", label: "Source" },
             { url: "", label: "" },
         ])
         expect(
-            readContentEvidence([
+            subject.readContentEvidence([
                 null,
                 [],
                 false,

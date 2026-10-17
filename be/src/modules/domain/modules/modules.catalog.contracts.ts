@@ -25,3 +25,6 @@ export const MODULE_CATALOG: ReadonlyArray<ModuleDefinition> = [
     CONTENT_MODULE,
     HIRING_MODULE,
 ]
+
+/** The module knowledge folders in catalogue order, shared by app composition. */
+export const MODULE_KNOWLEDGE_FOLDERS: ReadonlyArray<string> = MODULE_CATALOG.map((module) => module.knowledgeFolder)

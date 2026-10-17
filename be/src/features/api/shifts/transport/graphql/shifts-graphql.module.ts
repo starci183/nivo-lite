@@ -20,12 +20,13 @@ import { SaveShiftsCoverageResolver } from "./save-shifts-coverage.resolver"
 import { SaveShiftsPositionResolver } from "./save-shifts-position.resolver"
 import { SaveShiftsSettingsResolver } from "./save-shifts-settings.resolver"
 import { SaveShiftsStaffResolver } from "./save-shifts-staff.resolver"
+import { ConfigurableModuleClass } from "./shifts-graphql.module-definition"
 import { ShiftsMineResolver } from "./shifts-mine.resolver"
 import { ShiftsWorkbenchResolver } from "./shifts-workbench.resolver"
 import { SubmitShiftsAvailabilityResolver } from "./submit-shifts-availability.resolver"
 
 @Module({
-    imports: [ShiftsApiModule],
+    imports: [ShiftsApiModule.register({})],
     providers: [
         AddShiftsAvailabilityResolver,
         AddShiftsDraftShiftResolver,
@@ -53,4 +54,4 @@ import { SubmitShiftsAvailabilityResolver } from "./submit-shifts-availability.r
     ],
 })
 /** The GraphQL transport of the shifts feature. */
-export class ShiftsGraphqlModule {}
+export class ShiftsGraphqlModule extends ConfigurableModuleClass {}

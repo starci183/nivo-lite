@@ -1,5 +1,5 @@
+import { NullAsAbsent } from "@modules/platform/graphql"
 import { Field, ID, InputType } from "@nestjs/graphql"
-import { Transform } from "class-transformer"
 import { IsOptional, IsString, IsUUID, MaxLength, MinLength } from "class-validator"
 
 @InputType()
@@ -44,7 +44,7 @@ export class UpdateMoneyConnectionInput {
 
     /** SePay: the API key. */
     @Field(() => String, { nullable: true })
-    @Transform(({ value }) => value ?? undefined)
+    @NullAsAbsent()
     @IsOptional()
     @IsString()
     @MaxLength(200)

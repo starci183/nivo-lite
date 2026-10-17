@@ -62,99 +62,97 @@ const performed: Performed = {
     detail: "50 boxes at 1.5M",
 }
 
-describe("QuotePerformerService", () => {
-    const build = async () => {
-        const kit = mock<PerformerKitService>()
-        kit.text.mockImplementation((_ctx, key, params = {}) => [key, ...Object.values(params).map(String)].join("|"))
-        kit.money.mockImplementation((_ctx, amount) =>
-            amount === null || amount === undefined ? "no amount" : `${amount} VND`,
-        )
-        const leads = mock<LeadRecordsService>()
-        leads.require.mockResolvedValue(lead)
-        const delivery = mock<CustomerDeliveryService>()
-        delivery.contactOf.mockResolvedValue("lan@huetea.vn")
-        const moduleRef = await Test.createTestingModule({
-            providers: [
-                QuotePerformerService,
-                { provide: PerformerKitService, useValue: kit },
-                { provide: LeadRecordsService, useValue: leads },
-                { provide: CustomerDeliveryService, useValue: delivery },
-            ],
-        }).compile()
-        return { service: moduleRef.get(QuotePerformerService), leads, delivery }
-    }
+const build = async () => {
+    const kit = mock<PerformerKitService>()
+    kit.text.mockImplementation((_ctx, key, params = {}) => [key, ...Object.values(params).map(String)].join("|"))
+    kit.money.mockImplementation((_ctx, amount) =>
+        amount === null || amount === undefined ? "no amount" : `${amount} VND`,
+    )
+    const leads = mock<LeadRecordsService>()
+    leads.require.mockResolvedValue(lead)
+    const delivery = mock<CustomerDeliveryService>()
+    delivery.contactOf.mockResolvedValue("lan@huetea.vn")
+    const moduleRef = await Test.createTestingModule({
+        providers: [
+            QuotePerformerService,
+            { provide: PerformerKitService, useValue: kit },
+            { provide: LeadRecordsService, useValue: leads },
+            { provide: CustomerDeliveryService, useValue: delivery },
+        ],
+    }).compile()
+    return { service: moduleRef.get(QuotePerformerService), leads, delivery }
+}
 
-    describe("prepare", () => {
-        it("keeps the approved amount and adds the customer and the contact", async () => {
-            const { service, leads } = await build()
+describe("QuotePerformerService prepare", () => {
+    it("keeps the approved amount and adds the customer and the contact", async () => {
+        const { service, leads } = await build()
 
-            await expect(service.prepare(ctx, itemOf())).resolves.toEqual({
-                proposal: {
-                    summary: "quoteSummary|Lan|1500000 VND",
-                    draft: "50 boxes at 1.5M",
-                    amount_vnd: 1500000,
-                    fields: { items: "50 boxes", customer: "Lan", contact: "lan@huetea.vn", amount_vnd: 1500000 },
-                },
-            })
-            expect(leads.require).toHaveBeenCalledWith("ws-1", "lead-1")
+        await expect(service.prepare(ctx, itemOf())).resolves.toEqual({
+            proposal: {
+                summary: "quoteSummary|Lan|1500000 VND",
+                draft: "50 boxes at 1.5M",
+                amount_vnd: 1500000,
+                fields: { items: "50 boxes", customer: "Lan", contact: "lan@huetea.vn", amount_vnd: 1500000 },
+            },
         })
+        expect(leads.require).toHaveBeenCalledWith("ws-1", "lead-1")
+    })
 
-        it("says there is no amount when the proposal carries none", async () => {
-            const { service } = await build()
-            const item = itemOf({ proposal: { summary: "Quote", fields: {} } })
+    it("says there is no amount when the proposal carries none", async () => {
+        const { service } = await build()
+        const item = itemOf({ proposal: { summary: "Quote", fields: {} } })
 
-            await expect(service.prepare(ctx, item)).resolves.toEqual({
-                proposal: {
-                    summary: "quoteSummary|Lan|no amount",
-                    amount_vnd: null,
-                    fields: { customer: "Lan", contact: "lan@huetea.vn", amount_vnd: null },
-                },
-            })
-        })
-
-        it("refuses an item without a customer", async () => {
-            const { service } = await build()
-
-            await expect(service.prepare(ctx, itemOf({ lead_id: null }))).rejects.toMatchObject({
-                code: WorkPerformersErrorCode.SubjectMissing,
-            })
+        await expect(service.prepare(ctx, item)).resolves.toEqual({
+            proposal: {
+                summary: "quoteSummary|Lan|no amount",
+                amount_vnd: null,
+                fields: { customer: "Lan", contact: "lan@huetea.vn", amount_vnd: null },
+            },
         })
     })
 
-    describe("perform", () => {
-        it("delivers the approved draft and leaves the quote evidence", async () => {
-            const { service, delivery } = await build()
-            delivery.sendAndLog.mockResolvedValue(performed)
-            const item = itemOf()
+    it("refuses an item without a customer", async () => {
+        const { service } = await build()
 
-            await expect(service.perform(ctx, item, item.proposal, { name: "Mai", kind: "owner" })).resolves.toEqual(
-                performed,
-            )
-            expect(delivery.sendAndLog).toHaveBeenCalledWith(
-                ctx,
-                item,
-                lead,
-                "50 boxes at 1.5M",
-                { name: "Mai", kind: "owner" },
-                "quote.sent",
-            )
+        await expect(service.prepare(ctx, itemOf({ lead_id: null }))).rejects.toMatchObject({
+            code: WorkPerformersErrorCode.SubjectMissing,
         })
+    })
+})
 
-        it("delivers the summary when there is no draft", async () => {
-            const { service, delivery } = await build()
-            delivery.sendAndLog.mockResolvedValue(performed)
+describe("QuotePerformerService perform", () => {
+    it("delivers the approved draft and leaves the quote evidence", async () => {
+        const { service, delivery } = await build()
+        delivery.sendAndLog.mockResolvedValue(performed)
+        const item = itemOf()
 
-            await service.perform(ctx, itemOf(), { summary: "Quote of 1.5M", fields: {} }, { name: "Mai" })
+        await expect(service.perform(ctx, item, item.proposal, { name: "Mai", kind: "owner" })).resolves.toEqual(
+            performed,
+        )
+        expect(delivery.sendAndLog).toHaveBeenCalledWith(
+            ctx,
+            item,
+            lead,
+            "50 boxes at 1.5M",
+            { name: "Mai", kind: "owner" },
+            "quote.sent",
+        )
+    })
 
-            expect(delivery.sendAndLog.mock.calls[0]?.[3]).toBe("Quote of 1.5M")
-        })
+    it("delivers the summary when there is no draft", async () => {
+        const { service, delivery } = await build()
+        delivery.sendAndLog.mockResolvedValue(performed)
 
-        it("refuses an item without a customer", async () => {
-            const { service } = await build()
+        await service.perform(ctx, itemOf(), { summary: "Quote of 1.5M", fields: {} }, { name: "Mai" })
 
-            await expect(
-                service.perform(ctx, itemOf({ lead_id: null }), { summary: "s", fields: {} }, { name: "Mai" }),
-            ).rejects.toMatchObject({ code: WorkPerformersErrorCode.SubjectMissing })
-        })
+        expect(delivery.sendAndLog.mock.calls[0]?.[3]).toBe("Quote of 1.5M")
+    })
+
+    it("refuses an item without a customer", async () => {
+        const { service } = await build()
+
+        await expect(
+            service.perform(ctx, itemOf({ lead_id: null }), { summary: "s", fields: {} }, { name: "Mai" }),
+        ).rejects.toMatchObject({ code: WorkPerformersErrorCode.SubjectMissing })
     })
 })

@@ -1,123 +1,17 @@
 import { Test } from "@nestjs/testing"
 import { mock } from "@starci/jest-preset"
-import mammoth from "mammoth"
 import Papa from "papaparse"
-import unpdf from "unpdf"
-import { PUBLIC_HOST, WORKBOOK_READER } from "./data-sources.decorators"
+import { PUBLIC_HOST, WORKBOOK_READER, TABLE_DOCUMENT_READERS } from "./data-sources.decorators"
 import { DataSourcesError, DataSourcesErrorCode } from "./errors/data-sources.error"
 import { TABLE_COPY } from "./messages/table.messages"
+import type { TableDocumentReaders } from "./table-shapes.contracts"
 import { TABLE_MAX_BYTES } from "./table-shapes.contracts"
 import { TableClient } from "./table.client"
 import type { PublicHostClient, PublicResponse } from "./public-host.client"
-import { WorkbookReaderClient } from "./workbook-reader.client"
 import type { WorkbookReader } from "./workbook-reader.contracts"
 
-interface TextParser {
-    parse(text: string, config: Papa.ParseConfig<Array<string>>): Papa.ParseResult<Array<string>>
-}
-
-const textParser: TextParser = Papa
-
-class MockWord {
-    text = "word"
-    error: Error | undefined = undefined
-}
-class MockPdf {
-    text = "pdf"
-    pages = 2
-    error: Error | undefined = undefined
-}
-const mockWord = new MockWord()
-const mockPdf = new MockPdf()
-
-const wordSpy = jest.spyOn(mammoth, "extractRawText")
-const proxySpy = jest.spyOn(unpdf, "getDocumentProxy")
-const pdfSpy = jest.spyOn(unpdf, "extractText")
-
-/** A real workbook of two sheets, First (Name / An) and Second (Name / Bo), as the bytes of an .xlsx file. */
-const TWO_SHEETS = Buffer.from(
-    [
-        "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",
-    ].join(""),
-    "base64",
-)
-
-/** A ZIP workbook with an empty sheets list and its workbook relationships. */
-const NO_SHEETS = Buffer.from(
-    [
-        "UEsDBBQAAAAIAJGITl2FoDfkVAAAAGAAAAAPAAAAeGwvd29ya2Jvb2sueG1sNYxBCoAgEAC/Ej2glQ4dwvyL1Zah64q7UM9Pgo4z",
-        "A2NvrnFljt1DKcvSB9UyA8gWkLwMXDC3cnAlrw3rCVIq+l0ColKC0ZgJyF+5d/ZzAs7Cf3UvUEsDBBQAAAAIAJGITl013cuD",
-        "SwAAAFUAAAAaAAAAeGwvX3JlbHMvd29ya2Jvb2sueG1sLnJlbHOzCUrNSSzJzM8rzsgsKFaoyM3JK7ZVyigpKbDS1y9OzkjN",
-        "TSzWyy9IzQPKpOUX5SaWALlF6foFicnZiemp+kYGBmb6RchmKOnbAQBQSwECFAAUAAAACACRiE5dhaA35FQAAABgAAAADwAA",
-        "AAAAAAAAAAAAAAAAAAAAeGwvd29ya2Jvb2sueG1sUEsBAhQAFAAAAAgAkYhOXTXdy4NLAAAAVQAAABoAAAAAAAAAAAAAAAAAgQAA",
-        "AHhsL19yZWxzL3dvcmtib29rLnhtbC5yZWxzUEsFBgAAAAACAAIAhQAAAAQBAAAAAA==",
-    ].join(""),
-    "base64",
-)
-
-const csv = (text: string): Uint8Array => new TextEncoder().encode(text)
-const zip = new Uint8Array([0x50, 0x4b, 0x03, 0x04, 0x00])
-const docx = new Uint8Array([0x50, 0x4b, 0x03, 0x04])
-
-const build = async () => {
-    const publicHost = mock<PublicHostClient>()
-    const workbookReader = mock<WorkbookReader>()
-    const moduleRef = await Test.createTestingModule({
-        providers: [
-            TableClient,
-            WorkbookReaderClient,
-            { provide: PUBLIC_HOST, useValue: publicHost },
-            { provide: WORKBOOK_READER, useValue: workbookReader },
-        ],
-    }).compile()
-    workbookReader.read.mockImplementation((bytes) => moduleRef.get(WorkbookReaderClient).read(bytes))
-    return { client: moduleRef.get(TableClient), publicHost, workbookReader }
-}
-
-const google = (partial: Partial<PublicResponse>): PublicResponse => ({
-    status: 200,
-    headers: { "content-type": "text/csv" },
-    text: "Name\nAn",
-    ...partial,
-})
-
-describe("TableClient", () => {
+const registerTableClient = () => {
     beforeEach(() => {
-        wordSpy.mockImplementation(() =>
-            mockWord.error === undefined
-                ? Promise.resolve({ value: mockWord.text, messages: [] })
-                : Promise.reject(mockWord.error),
-        )
-        proxySpy.mockResolvedValue(mock<Awaited<ReturnType<typeof unpdf.getDocumentProxy>>>())
-        pdfSpy.mockImplementation(() =>
-            mockPdf.error === undefined
-                ? Promise.resolve({ text: mockPdf.text, totalPages: mockPdf.pages })
-                : Promise.reject(mockPdf.error),
-        )
         mockWord.text = "word"
         mockWord.error = undefined
         mockPdf.text = "pdf"
@@ -128,7 +22,9 @@ describe("TableClient", () => {
     afterAll(() => {
         jest.restoreAllMocks()
     })
+}
 
+const registerReadTextAndReadGrid = () => {
     describe("readText and readGrid", () => {
         it("detects a delimiter and ignores a quote error when rows remain", async () => {
             const { client } = await build()
@@ -192,7 +88,9 @@ describe("TableClient", () => {
             parseSpy.mockRestore()
         })
     })
+}
 
+const registerReadFile = () => {
     describe("readFile", () => {
         it("reads a csv and refuses an empty, oversized, unknown or binary file", async () => {
             const { client } = await build()
@@ -219,7 +117,7 @@ describe("TableClient", () => {
         })
 
         it("reads the named sheet, else the first, and refuses an unreadable workbook", async () => {
-            const { client } = await build()
+            const { client, workbookReader } = await build()
 
             await expect(client.readFile("orders.xlsx", TWO_SHEETS, "Second")).resolves.toMatchObject({
                 headers: ["Name"],
@@ -231,13 +129,15 @@ describe("TableClient", () => {
                 sheet: "First",
                 rows: [["An"]],
             })
+            workbookReader.read.mockRejectedValueOnce(new Error("invalid workbook"))
             await expect(client.readFile("orders.xlsx", zip)).rejects.toMatchObject({
                 params: { detail: TABLE_COPY.unreadableExcel },
             })
         })
 
         it("preserves the reader failure for a workbook with no sheets", async () => {
-            const { client } = await build()
+            const { client, workbookReader } = await build()
+            workbookReader.read.mockRejectedValueOnce(new TypeError("readFiles(...).then is not a function"))
             const answer = client.readFile("empty.xlsx", NO_SHEETS)
 
             await expect(answer).rejects.toMatchObject({
@@ -262,7 +162,9 @@ describe("TableClient", () => {
             expect(workbookReader.read).toHaveBeenCalledWith(zip)
         })
     })
+}
 
+const registerReadDocumentFile = () => {
     describe("readDocumentFile", () => {
         it("reads text and refuses the wrong kind or a binary text file", async () => {
             const { client } = await build()
@@ -304,11 +206,10 @@ describe("TableClient", () => {
             })
         })
     })
+}
 
+const registerGoogleLinks = () => {
     describe("google links", () => {
-        const sheet = "https://docs.google.com/spreadsheets/d/sheet-id-01/edit"
-        const doc = "https://docs.google.com/document/d/doc-id-0001/edit"
-
         it("reads a public sheet and document", async () => {
             const { client, publicHost } = await build()
             publicHost.get.mockResolvedValue(google({}))
@@ -352,4 +253,117 @@ describe("TableClient", () => {
             })
         })
     })
+}
+
+const sheet = "https://docs.google.com/spreadsheets/d/sheet-id-01/edit"
+
+const doc = "https://docs.google.com/document/d/doc-id-0001/edit"
+
+interface TextParser {
+    parse(text: string, config: Papa.ParseConfig<Array<string>>): Papa.ParseResult<Array<string>>
+}
+
+const textParser: TextParser = Papa
+
+class MockWord {
+    text = "word"
+    error: Error | undefined = undefined
+}
+class MockPdf {
+    text = "pdf"
+    pages = 2
+    error: Error | undefined = undefined
+}
+const mockWord = new MockWord()
+const mockPdf = new MockPdf()
+
+/** A real workbook of two sheets, First (Name / An) and Second (Name / Bo), as the bytes of an .xlsx file. */
+const TWO_SHEETS = Buffer.from(
+    [
+        "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",
+    ].join(""),
+    "base64",
+)
+
+/** A ZIP workbook with an empty sheets list and its workbook relationships. */
+const NO_SHEETS = Buffer.from(
+    [
+        "UEsDBBQAAAAIAJGITl2FoDfkVAAAAGAAAAAPAAAAeGwvd29ya2Jvb2sueG1sNYxBCoAgEAC/Ej2glQ4dwvyL1Zah64q7UM9Pgo4z",
+        "A2NvrnFljt1DKcvSB9UyA8gWkLwMXDC3cnAlrw3rCVIq+l0ColKC0ZgJyF+5d/ZzAs7Cf3UvUEsDBBQAAAAIAJGITl013cuD",
+        "SwAAAFUAAAAaAAAAeGwvX3JlbHMvd29ya2Jvb2sueG1sLnJlbHOzCUrNSSzJzM8rzsgsKFaoyM3JK7ZVyigpKbDS1y9OzkjN",
+        "TSzWyy9IzQPKpOUX5SaWALlF6foFicnZiemp+kYGBmb6RchmKOnbAQBQSwECFAAUAAAACACRiE5dhaA35FQAAABgAAAADwAA",
+        "AAAAAAAAAAAAAAAAAAAAeGwvd29ya2Jvb2sueG1sUEsBAhQAFAAAAAgAkYhOXTXdy4NLAAAAVQAAABoAAAAAAAAAAAAAAAAAgQAA",
+        "AHhsL19yZWxzL3dvcmtib29rLnhtbC5yZWxzUEsFBgAAAAACAAIAhQAAAAQBAAAAAA==",
+    ].join(""),
+    "base64",
+)
+
+const csv = (text: string): Uint8Array => new TextEncoder().encode(text)
+const zip = new Uint8Array([0x50, 0x4b, 0x03, 0x04, 0x00])
+const docx = new Uint8Array([0x50, 0x4b, 0x03, 0x04])
+
+const build = async () => {
+    const publicHost = mock<PublicHostClient>()
+    const workbookReader = mock<WorkbookReader>()
+    const readers = mock<TableDocumentReaders>()
+    readers.docx.mockImplementation(() =>
+        mockWord.error === undefined ? Promise.resolve(mockWord.text) : Promise.reject(mockWord.error),
+    )
+    readers.pdfDetails.mockImplementation(() =>
+        mockPdf.error === undefined
+            ? Promise.resolve({ text: mockPdf.text, pages: mockPdf.pages })
+            : Promise.reject(mockPdf.error),
+    )
+    const moduleRef = await Test.createTestingModule({
+        providers: [
+            TableClient,
+            { provide: TABLE_DOCUMENT_READERS, useValue: readers },
+            { provide: PUBLIC_HOST, useValue: publicHost },
+            { provide: WORKBOOK_READER, useValue: workbookReader },
+        ],
+    }).compile()
+    workbookReader.read.mockResolvedValue([
+        { sheet: "First", data: [["Name"], ["An"]] },
+        { sheet: "Second", data: [["Name"], ["Bo"]] },
+    ])
+    return { client: moduleRef.get(TableClient), publicHost, workbookReader }
+}
+
+const google = (partial: Partial<PublicResponse>): PublicResponse => ({
+    status: 200,
+    headers: { "content-type": "text/csv" },
+    text: "Name\nAn",
+    ...partial,
+})
+
+describe("TableClient", () => {
+    registerTableClient()
+    registerReadTextAndReadGrid()
+    registerReadFile()
+    registerReadDocumentFile()
+    registerGoogleLinks()
 })

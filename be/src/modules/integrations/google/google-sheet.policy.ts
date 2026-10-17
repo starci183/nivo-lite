@@ -12,22 +12,22 @@ const ORDER_COLUMNS = ["date", "code", "customer", "service", "amount", "status"
 const LEAD_COLUMNS = ["date", "name", "company", "need", "phone", "email", "channel"] as const
 
 /** One text of the sheet product copy, with `{{name}}` placeholders filled. */
-export const sheetText = (key: string, params: Readonly<Record<string, string | number>> = {}): string =>
+export const translate = (key: string, params: Readonly<Record<string, string | number>> = {}): string =>
     (TEXT[key] ?? key).replace(/\{\{(\w+)\}\}/gu, (_, name: string) => String(params[name] ?? ""))
 
 /** The orders tab title. */
-export const ordersTab = (): string => sheetText("sheet.ordersTab")
+export const ordersTab = (): string => translate("sheet.ordersTab")
 
 /** The new-customers tab title. */
-export const leadsTab = (): string => sheetText("sheet.leadsTab")
+export const leadsTab = (): string => translate("sheet.leadsTab")
 
 /** The orders header row. */
 export const orderHeader = (): ReadonlyArray<string> =>
-    ORDER_COLUMNS.map((column) => sheetText(`sheet.orderHeader.${column}`))
+    ORDER_COLUMNS.map((column) => translate(`sheet.orderHeader.${column}`))
 
 /** The new-customers header row. */
 export const leadHeader = (): ReadonlyArray<string> =>
-    LEAD_COLUMNS.map((column) => sheetText(`sheet.leadHeader.${column}`))
+    LEAD_COLUMNS.map((column) => translate(`sheet.leadHeader.${column}`))
 
 /** dd/MM/yyyy HH:mm in Vietnam time (the current time when `iso` is not a date). */
 export const formatVnTime = (iso: string, now: Date): string => {
@@ -70,13 +70,13 @@ export const buildCreateBody = (title: string, now: Date) => {
     const sample: ReadonlyArray<SheetCell> = [
         formatVnTime(now.toISOString(), now),
         "MAU-001",
-        sheetText("sheet.sampleMark"),
-        sheetText("sheet.sampleService"),
+        translate("sheet.sampleMark"),
+        translate("sheet.sampleService"),
         500000,
-        sheetText("sheet.statusWon"),
+        translate("sheet.statusWon"),
         "",
-        sheetText("sheet.sampleChannel"),
-        sheetText("sheet.sampleOwner"),
+        translate("sheet.sampleChannel"),
+        translate("sheet.sampleOwner"),
     ]
     return {
         properties: { title, locale: "vi_VN", timeZone: "Asia/Ho_Chi_Minh" },
@@ -120,7 +120,10 @@ export const buildCreateBody = (title: string, now: Date) => {
     }
 }
 
-/** The follow-up batchUpdate: the money column (E) shows thousands separators and the dong sign for every row below the header. */
+/**
+ * The follow-up batchUpdate: the money column (E) shows thousands separators and the dong sign for every row below the
+ * header.
+ */
 export const buildFormatBody = () => ({
     requests: [
         {
@@ -158,13 +161,53 @@ const itemsText = (value: unknown): string =>
 const flagOn = (config: SheetConfig, key: string): boolean => config[key] === true || config[key] === "true"
 
 const skipped = (why: string): SheetEventResult => ({
-    evidence: sheetText("evidence.skipped", { why: sheetText(why) }),
+    evidence: translate("evidence.skipped", { why: translate(why) }),
     skipped: true,
 })
 
+/** Records a payment against an existing order or adds its payment row. */
+const applyPayment = async (
+    api: SheetsApi,
+    config: SheetConfig,
+    event: SheetEventIn,
+    now: Date,
+    id: string,
+    at: string,
+    orderNo: string,
+    leadCode: string,
+    where: (row: number, what: string) => string,
+): Promise<SheetEventResult> => {
+    const data = event.data
+    if (!flagOn(config, "markPaid")) return skipped("evidence.why.paidOff")
+    const amount = asNumber(data.amount_vnd)
+    const paidText = translate("sheet.paidNote", {
+        amount: sheetVnd(amount),
+        at: formatVnTime(asText(data.paid_at) || event.occurredAt, now),
+    })
+    const found = await api.findRow(id, [orderNo, leadCode])
+    if (found) {
+        await api.updateCells(id, found.row, { F: translate("sheet.statusPaid"), G: paidText })
+        return { evidence: where(found.row, translate("evidence.markedPaid", { code: found.code })) }
+    }
+    const code = orderNo || asText(data.invoice_no) || leadCode
+    const added = await api.appendRow(id, ordersTab(), ORDER_COLUMNS.length, [
+        at,
+        code,
+        asText(data.customer),
+        "",
+        amount,
+        translate("sheet.statusPaid"),
+        paidText,
+        "",
+        "",
+    ])
+    return { evidence: where(added, translate("evidence.addedPaid", { code })) }
+}
+
 /**
- * Applies one NIVO event to the shop's sheet through the sheet operations. Idempotent: an order code appears once (a repeat
- * updates or is a no-op). Throws GOOGLE_SHEET_MISSING when the config names no spreadsheet; any API failure propagates so the caller retries.
+ * Applies one NIVO event to the shop's sheet through the sheet operations. Idempotent: an order code appears once (a
+ * repeat updates or is a no-op). Throws GOOGLE_SHEET_MISSING when the config names no spreadsheet; any API failure
+ * propagates so the caller retries.
  */
 export const applySheetEvent = async (
     api: SheetsApi,
@@ -176,7 +219,7 @@ export const applySheetEvent = async (
     if (!id) throw new GoogleError({ code: GoogleErrorCode.SheetMissing })
     const data = event.data
     const at = formatVnTime(event.occurredAt, now)
-    const where = (row: number, what: string) => sheetText("evidence.where", { id, row, what })
+    const where = (row: number, what: string) => translate("evidence.where", { id, row, what })
     const orderNo = asText(data.order_no)
     const leadCode = asText(data.lead_id) ? leadKey(asText(data.lead_id)) : ""
 
@@ -191,35 +234,12 @@ export const applySheetEvent = async (
             asText(data.email),
             asText(data.channel),
         ])
-        const name = asText(data.name) || sheetText("evidence.noName")
-        return { evidence: where(row, sheetText("evidence.leadNew", { name })) }
+        const name = asText(data.name) || translate("evidence.noName")
+        return { evidence: where(row, translate("evidence.leadNew", { name })) }
     }
 
     if (event.event === "payment.received") {
-        if (!flagOn(config, "markPaid")) return skipped("evidence.why.paidOff")
-        const amount = asNumber(data.amount_vnd)
-        const paidText = sheetText("sheet.paidNote", {
-            amount: sheetVnd(amount),
-            at: formatVnTime(asText(data.paid_at) || event.occurredAt, now),
-        })
-        const found = await api.findRow(id, [orderNo, leadCode])
-        if (found) {
-            await api.updateCells(id, found.row, { F: sheetText("sheet.statusPaid"), G: paidText })
-            return { evidence: where(found.row, sheetText("evidence.markedPaid", { code: found.code })) }
-        }
-        const code = orderNo || asText(data.invoice_no) || leadCode
-        const added = await api.appendRow(id, ordersTab(), ORDER_COLUMNS.length, [
-            at,
-            code,
-            asText(data.customer),
-            "",
-            amount,
-            sheetText("sheet.statusPaid"),
-            paidText,
-            "",
-            "",
-        ])
-        return { evidence: where(added, sheetText("evidence.addedPaid", { code })) }
+        return applyPayment(api, config, event, now, id, at, orderNo, leadCode, where)
     }
 
     // order.confirmed | deal.won
@@ -227,34 +247,35 @@ export const applySheetEvent = async (
     const code = orderNo || leadCode
     const have = await api.findRow(id, [orderNo, leadCode])
     if (event.event === "deal.won") {
-        if (have) return { evidence: where(have.row, sheetText("evidence.rowKept", { code: have.code })) }
+        if (have) return { evidence: where(have.row, translate("evidence.rowKept", { code: have.code })) }
         const row = await api.appendRow(id, ordersTab(), ORDER_COLUMNS.length, [
             at,
             code,
             asText(data.name) || asText(data.company),
             asText(data.need),
             "",
-            sheetText("sheet.statusWon"),
+            translate("sheet.statusWon"),
             "",
             asText(data.channel),
             "",
         ])
-        return { evidence: where(row, sheetText("evidence.dealWon", { code })) }
+        return { evidence: where(row, translate("evidence.dealWon", { code })) }
     }
     if (have) {
-        // A row from deal.won (keyed by the lead) becomes the order's row; a row that already has the order code is left as it is.
+        // A row from deal.won (keyed by the lead) becomes the order's row; a row that already has the order code is
+        // left as it is.
         if (!orderNo || have.code === orderNo) {
-            return { evidence: where(have.row, sheetText("evidence.rowKept", { code: have.code })) }
+            return { evidence: where(have.row, translate("evidence.rowKept", { code: have.code })) }
         }
         const cells: Record<string, SheetCell> = {
             B: orderNo,
             D: itemsText(data.items),
             E: asNumber(data.amount_vnd),
-            F: sheetText("sheet.statusWon"),
+            F: translate("sheet.statusWon"),
         }
         if (asText(data.confirmed_by)) cells.I = asText(data.confirmed_by)
         await api.updateCells(id, have.row, cells)
-        return { evidence: where(have.row, sheetText("evidence.rowUpdated", { code: have.code, order: orderNo })) }
+        return { evidence: where(have.row, translate("evidence.rowUpdated", { code: have.code, order: orderNo })) }
     }
     const row = await api.appendRow(id, ordersTab(), ORDER_COLUMNS.length, [
         at,
@@ -262,10 +283,10 @@ export const applySheetEvent = async (
         asText(data.customer),
         itemsText(data.items),
         asNumber(data.amount_vnd),
-        sheetText("sheet.statusWon"),
+        translate("sheet.statusWon"),
         "",
         asText(data.channel),
         asText(data.confirmed_by),
     ])
-    return { evidence: where(row, sheetText("evidence.orderWritten", { code })) }
+    return { evidence: where(row, translate("evidence.orderWritten", { code })) }
 }

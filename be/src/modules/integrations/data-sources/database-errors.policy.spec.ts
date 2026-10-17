@@ -1,21 +1,24 @@
+import { Test } from "@nestjs/testing"
 import { DataSourcesError, DataSourcesErrorCode } from "./errors/data-sources.error"
 import { toDatabaseError } from "./database-errors.policy"
 import { DATABASE_COPY } from "./messages/database.messages"
 
-interface DriverFields {
-    code?: unknown
-    errno?: unknown
-    number?: unknown
-    message?: unknown
+const SUBJECT = Symbol("database-errors.policy")
+
+const buildSubject = async () => {
+    const moduleRef = await Test.createTestingModule({
+        providers: [{ provide: SUBJECT, useValue: { toDatabaseError } }],
+    }).compile()
+    return moduleRef.get<typeof import("./database-errors.policy")>(SUBJECT)
 }
 
-const driver = (fields: DriverFields): unknown => fields
+const registerKnownDatabaseErrors = () => {
+    it("returns a data-sources error unchanged", async () => {
+        const subject = await buildSubject()
 
-describe("toDatabaseError", () => {
-    it("returns a data-sources error unchanged", () => {
         const own = new DataSourcesError({ code: DataSourcesErrorCode.HostInvalid })
 
-        expect(toDatabaseError(own)).toBe(own)
+        expect(subject.toDatabaseError(own)).toBe(own)
     })
 
     it.each<[unknown, string]>([
@@ -40,8 +43,13 @@ describe("toDatabaseError", () => {
         [new Error("canceling statement due to statement timeout"), DATABASE_COPY.queryTooSlow],
         [new Error("maximum statement execution time exceeded"), DATABASE_COPY.queryTooSlow],
         [new Error("Query read timeout"), DATABASE_COPY.queryTooSlow],
-    ])("rejects a login, database or slow-query failure (%j)", (error, detail) => {
-        expect(toDatabaseError(error)).toMatchObject({ code: DataSourcesErrorCode.Rejected, params: { detail } })
+    ])("rejects a login, database or slow-query failure (%j)", async (error, detail) => {
+        const subject = await buildSubject()
+
+        expect(subject.toDatabaseError(error)).toMatchObject({
+            code: DataSourcesErrorCode.Rejected,
+            params: { detail },
+        })
     })
 
     it.each<[unknown, string]>([
@@ -52,8 +60,10 @@ describe("toDatabaseError", () => {
         [driver({ code: "ECONNREFUSED" }), DATABASE_COPY.refused],
         [driver({ code: "ENOTFOUND" }), DATABASE_COPY.unknownHost],
         [driver({ code: "ECONNRESET" }), DATABASE_COPY.reset],
-    ])("reports an unreachable server (%j)", (error, detail) => {
-        const mapped = toDatabaseError(error)
+    ])("reports an unreachable server (%j)", async (error, detail) => {
+        const subject = await buildSubject()
+
+        const mapped = subject.toDatabaseError(error)
 
         expect(mapped).toMatchObject({ code: DataSourcesErrorCode.Unavailable, params: { detail } })
         expect(mapped.cause).toBe(error)
@@ -73,11 +83,20 @@ describe("toDatabaseError", () => {
         [driver({ code: "ER_BAD_FIELD_ERROR" }), DATABASE_COPY.columnGone],
         [driver({ errno: 1054 }), DATABASE_COPY.columnGone],
         [driver({ number: 207 }), DATABASE_COPY.columnGone],
-    ])("rejects a statement the server answered (%j)", (error, detail) => {
-        expect(toDatabaseError(error)).toMatchObject({ code: DataSourcesErrorCode.Rejected, params: { detail } })
-    })
+    ])("rejects a statement the server answered (%j)", async (error, detail) => {
+        const subject = await buildSubject()
 
-    it("shortens an unknown driver message and ignores fields that are not text or numbers", () => {
+        expect(subject.toDatabaseError(error)).toMatchObject({
+            code: DataSourcesErrorCode.Rejected,
+            params: { detail },
+        })
+    })
+}
+
+const registerUnknownDatabaseErrors = () => {
+    it("shortens an unknown driver message and ignores fields that are not text or numbers", async () => {
+        const subject = await buildSubject()
+
         const noisy = driver({
             code: 12,
             errno: "no",
@@ -85,14 +104,28 @@ describe("toDatabaseError", () => {
             message: `  ${"x".repeat(180)}   ${"y".repeat(40)}  `,
         })
 
-        expect(toDatabaseError(noisy)).toMatchObject({
+        expect(subject.toDatabaseError(noisy)).toMatchObject({
             code: DataSourcesErrorCode.Rejected,
             params: { detail: DATABASE_COPY.unreadable(` ${"x".repeat(180)} ${"y".repeat(18)}`) },
         })
-        expect(toDatabaseError("down")).toMatchObject({
+        expect(subject.toDatabaseError("down")).toMatchObject({
             code: DataSourcesErrorCode.Rejected,
             params: { detail: DATABASE_COPY.unreadable("") },
         })
-        expect(toDatabaseError(null).params.detail).toBe(DATABASE_COPY.unreadable(""))
+        expect(subject.toDatabaseError(null).params.detail).toBe(DATABASE_COPY.unreadable(""))
     })
+}
+
+interface DriverFields {
+    code?: unknown
+    errno?: unknown
+    number?: unknown
+    message?: unknown
+}
+
+const driver = (fields: DriverFields): unknown => fields
+
+describe("toDatabaseError", () => {
+    registerKnownDatabaseErrors()
+    registerUnknownDatabaseErrors()
 })

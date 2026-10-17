@@ -1,5 +1,15 @@
+import { Test } from "@nestjs/testing"
 import type { Block, Shift } from "../shifts.contracts"
 import { coverageOf, fewestOnDuty } from "./coverage.policy"
+
+const SUBJECT = Symbol("coverage.policy")
+
+const build = async () => {
+    const moduleRef = await Test.createTestingModule({
+        providers: [{ provide: SUBJECT, useValue: { coverageOf, fewestOnDuty } }],
+    }).compile()
+    return moduleRef.get<typeof import("./coverage.policy")>(SUBJECT)
+}
 
 const shift = (values: Partial<Shift> = {}): Shift => ({
     id: "shift-1",
@@ -25,7 +35,9 @@ const block = (values: Partial<Block> = {}): Block => ({
 })
 
 describe("coverage policy", () => {
-    it("counts unique people only when they cover every minute of a half-hour cell", () => {
+    it("counts unique people only when they cover every minute of a half-hour cell", async () => {
+        const subject = await build()
+
         const shifts = [
             shift(),
             shift({ id: "duplicate" }),
@@ -36,16 +48,20 @@ describe("coverage policy", () => {
             shift({ id: "other-position", positionId: "cash", staffId: "f" }),
         ]
 
-        expect(fewestOnDuty(shifts, "2026-10-12", "bar", 420, 525)).toBe(2)
-        expect(fewestOnDuty(shifts, "2026-10-12", "bar", 450, 525)).toBe(3)
-        expect(fewestOnDuty(shifts, "2026-10-12", "bar", 525, 540)).toBe(2)
-        expect(fewestOnDuty(shifts, "2026-10-12", "bar", 540, 540)).toBe(0)
-        expect(fewestOnDuty([], "2026-10-12", "bar", 420, 540)).toBe(0)
+        expect(subject.fewestOnDuty(shifts, "2026-10-12", "bar", 420, 525)).toBe(2)
+        expect(subject.fewestOnDuty(shifts, "2026-10-12", "bar", 450, 525)).toBe(3)
+        expect(subject.fewestOnDuty(shifts, "2026-10-12", "bar", 525, 540)).toBe(2)
+        expect(subject.fewestOnDuty(shifts, "2026-10-12", "bar", 540, 540)).toBe(0)
+        expect(subject.fewestOnDuty([], "2026-10-12", "bar", 420, 540)).toBe(0)
     })
+})
 
-    it("reports exact short, adequate and excess coverage with weekday and fallback dates", () => {
+describe("coverage policy", () => {
+    it("reports exact short, adequate and excess coverage with weekday and fallback dates", async () => {
+        const subject = await build()
+
         expect(
-            coverageOf(
+            subject.coverageOf(
                 [
                     block({ id: "short", weekday: 1 }),
                     block({ id: "ok", peak: true }),
@@ -110,6 +126,6 @@ describe("coverage policy", () => {
                 status: "ok",
             },
         ])
-        expect(coverageOf([], "2026-10-12", [])).toEqual([])
+        expect(subject.coverageOf([], "2026-10-12", [])).toEqual([])
     })
 })

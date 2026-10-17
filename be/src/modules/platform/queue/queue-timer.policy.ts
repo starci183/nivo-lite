@@ -15,7 +15,7 @@ export const startLocalTimeout = (timeoutMs: number, callback: LocalTimerCallbac
 
 /** Runs callbacks on a process-local interval without holding the process open or using a queue worker. */
 export const startLocalInterval = (intervalMs: number, callback: LocalTimerCallback): LocalTimer => {
-    const timer = setInterval(callback, intervalMs)
+    const timer = setInterval(() => callback(), intervalMs)
     timer.unref()
     return { cancel: () => clearInterval(timer) }
 }

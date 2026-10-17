@@ -23,6 +23,7 @@ import { SaveHiringSettingsHandler } from "./application/save-hiring-settings.ha
 import { SetHiringInterviewStatusHandler } from "./application/set-hiring-interview-status.handler"
 import { SetHiringJobStatusHandler } from "./application/set-hiring-job-status.handler"
 import { ToggleHiringOnboardingHandler } from "./application/toggle-hiring-onboarding.handler"
+import { ConfigurableModuleClass } from "./hiring.module-definition"
 
 @Module({
     providers: [
@@ -53,4 +54,4 @@ import { ToggleHiringOnboardingHandler } from "./application/toggle-hiring-onboa
     ],
 })
 /** The hiring feature: the handlers of its application. */
-export class HiringApiModule {}
+export class HiringApiModule extends ConfigurableModuleClass {}

@@ -106,7 +106,9 @@ describe("HiringNotifyService", () => {
         expect(chat.deliver).toHaveBeenCalledWith("ws-1", "conversation-1", message.text)
         expect(mail.send).not.toHaveBeenCalled()
     })
+})
 
+describe("HiringNotifyService", () => {
     it("reports email delivery after the chat failed", async () => {
         const { service, chat, mail, words } = await build()
         mail.send.mockResolvedValue({ status: "sent" })
@@ -166,7 +168,9 @@ describe("HiringNotifyService", () => {
             ["hiring.delivery.manual", { why: " (hiring.delivery.chatFailed{}; hiring.delivery.mailFailed{})" }],
         ])
     })
+})
 
+describe("HiringNotifyService", () => {
     it("includes only the mail failure when no chat conversation exists", async () => {
         const { service, chat, words } = await build()
 

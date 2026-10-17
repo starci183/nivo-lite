@@ -148,7 +148,9 @@ describe("LoyaltyEarningService", () => {
         })
         expect(ledger.post).not.toHaveBeenCalled()
     })
+})
 
+describe("LoyaltyEarningService", () => {
     it("answers duplicate for a sale posted before and does not look at the tier", async () => {
         const { service, customers } = await build({ members: [null], posted: null })
 

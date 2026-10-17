@@ -11,9 +11,19 @@ const ENTITIES: ReadonlyArray<string> = [...CSV_TABLE_ENTITIES, "document"]
 export const invalid = (detail: string): DataHubError =>
     new DataHubError({ code: DataHubErrorCode.Invalid, params: { detail } })
 
+/** The label of each entity, read key by key. */
+const ENTITY_LABELS: Readonly<Record<CsvEntity, string>> = {
+    customer: CSV_COPY.entity.customer,
+    order: CSV_COPY.entity.order,
+    product: CSV_COPY.entity.product,
+    transaction: CSV_COPY.entity.transaction,
+    other: CSV_COPY.entity.other,
+    document: CSV_COPY.entity.document,
+}
+
 /** The one-line summary of an import: the entity label, a middle dot, the count and its unit. */
 export const summaryOf = (entity: CsvEntity, total: number): string =>
-    `${CSV_COPY.entity[entity]} · ${SUMMARY_FORMAT.format(total)} ${entity === "document" ? CSV_COPY.documentUnit : CSV_COPY.rowUnit}`
+    `${ENTITY_LABELS[entity]} · ${SUMMARY_FORMAT.format(total)} ${entity === "document" ? CSV_COPY.documentUnit : CSV_COPY.rowUnit}`
 
 /** True for a plain object. */
 export const isPlainObject = (value: unknown): value is Record<string, unknown> =>

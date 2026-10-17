@@ -1,6 +1,9 @@
+import { INBOX, InboxService } from "@modules/platform/inbox"
 import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./telegram-inbox.module-definition"
+import { TELEGRAM_RECEIPT_PROCESSOR } from "./telegram-inbox.decorators"
+import { TelegramDeliveryService } from "./telegram-delivery.service"
 import { TelegramInboxService } from "./telegram-inbox.service"
 
 @Module({})
@@ -11,8 +14,14 @@ export class TelegramInboxModule extends ConfigurableModuleClass {
         const base = super.register(options)
         return {
             ...base,
-            providers: [...(base.providers ?? []), TelegramInboxService],
-            exports: [TelegramInboxService],
+            providers: [
+                ...(base.providers ?? []),
+                { provide: INBOX, useClass: InboxService },
+                TelegramInboxService,
+                TelegramDeliveryService,
+                { provide: TELEGRAM_RECEIPT_PROCESSOR, useExisting: TelegramInboxService },
+            ],
+            exports: [TelegramInboxService, TelegramDeliveryService],
         }
     }
 }

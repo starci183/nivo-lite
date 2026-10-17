@@ -1,16 +1,16 @@
+import type { Logger } from "@modules/platform/logging"
+import { DocumentsLogEvent } from "./documents.log-events"
 import { Test } from "@nestjs/testing"
 import { builder, mock } from "@starci/jest-preset"
-import { HTTP_CLIENT } from "@modules/platform/http"
 import type { HttpClient, HttpResponse } from "@modules/platform/http"
-import { LOGGER } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
 import type { DocumentReaders } from "./documents.contracts"
 import { DOCUMENTS_OPTIONS } from "./documents.decorators"
 import type { DocumentsOptions } from "./documents.options"
 import { DocumentsHttpClient } from "./documents-http.client"
 import { DriveApiClient } from "./drive-api.client"
 import { DriveFolderClient } from "./drive-folder.client"
-import { DocumentsErrorCode } from "./errors/documents.error"
+import { metaFrom } from "./drive-meta.mapper"
+import { DocumentsError, DocumentsErrorCode } from "./errors/documents.error"
 
 const optionsOf = builder<DocumentsOptions>({
     driveBase: "https://drive.test/v3",
@@ -31,15 +31,51 @@ const failure = (status: number): HttpResponse => ({ status, headers: {}, url: "
 type Route = readonly [match: string, response: HttpResponse]
 
 const build = async () => {
+    const options = builder<DocumentsOptions>(optionsOf())()
     const http = mock<HttpClient>()
+    const logger: Logger = mock<Logger>()
+    const transport = mock<DocumentsHttpClient>({
+        get: jest.fn((url: string, headers: Readonly<Record<string, string>>, timeoutMs: number) =>
+            http.request({ method: "GET", url, headers, read: "bytes", timeoutMs }),
+        ),
+        postForm: jest.fn((url: string, form: Readonly<Record<string, string>>, timeoutMs: number) =>
+            http.request({ method: "POST", url, form, read: "bytes", timeoutMs }),
+        ),
+        jsonBody: jest.fn((response: HttpResponse): unknown => {
+            try {
+                return JSON.parse(
+                    new TextDecoder().decode(response.body instanceof Uint8Array ? response.body : new Uint8Array()),
+                )
+            } catch (cause) {
+                logger.error(DocumentsLogEvent.BodyUnreadable, cause, { status: response.status })
+                return undefined
+            }
+        }),
+    })
+    const api = mock<DriveApiClient>()
+    api.get.mockImplementation(async (token, url) => {
+        const response = await transport.get(url, { Authorization: `Bearer ${token}` }, 30_000)
+        if (response.status === 401) throw new DocumentsError({ code: DocumentsErrorCode.TokenRejected })
+        if (response.status >= 400) throw new DocumentsError({ code: DocumentsErrorCode.DriveNoAccess })
+        return response
+    })
+    api.metaOf.mockImplementation(async (token, id) =>
+        metaFrom(
+            transport.jsonBody(
+                await api.get(
+                    token,
+                    `https://drive.test/v3/files/${id}?fields=id,name,mimeType,size,modifiedTime,trashed,` +
+                        "shortcutDetails(targetId)&supportsAllDrives=true",
+                ),
+            ),
+        ),
+    )
     const moduleRef = await Test.createTestingModule({
         providers: [
             DriveFolderClient,
-            DriveApiClient,
-            DocumentsHttpClient,
-            { provide: DOCUMENTS_OPTIONS, useValue: optionsOf() },
-            { provide: HTTP_CLIENT, useValue: http },
-            { provide: LOGGER, useValue: mock<Logger>() },
+            { provide: DriveApiClient, useValue: api },
+            { provide: DOCUMENTS_OPTIONS, useValue: options },
+            { provide: DocumentsHttpClient, useValue: transport },
         ],
     }).compile()
     const route = (table: ReadonlyArray<Route>): void => {
@@ -70,7 +106,9 @@ describe("DriveFolderClient", () => {
             code: DocumentsErrorCode.NotFolder,
         })
     })
+})
 
+describe("DriveFolderClient", () => {
     it("lists the files of the folder and the folders below it with their paths", async () => {
         const { client, route } = await build()
         route([
@@ -106,7 +144,9 @@ describe("DriveFolderClient", () => {
             ["deep.txt", "Menus", null],
         ])
     })
+})
 
+describe("DriveFolderClient", () => {
     it("uses the id as the name of a folder with none and keeps paging while Drive sends a page token", async () => {
         const { client, http } = await build()
         http.request.mockImplementation((request) => {
@@ -124,7 +164,9 @@ describe("DriveFolderClient", () => {
         expect(listing.name).toBe(FOLDER_ID)
         expect(listing.files.map((file) => file.name)).toEqual(["a.txt", "b.txt"])
     })
+})
 
+describe("DriveFolderClient", () => {
     it("follows shortcuts to files and folders, and skips the ones that cannot be followed", async () => {
         const { client, route } = await build()
         const shortcut = (id: string, name: string | undefined, targetId: string | undefined) => ({
@@ -162,7 +204,9 @@ describe("DriveFolderClient", () => {
 
         expect(listing.files.map((file) => file.name)).toEqual(["real.txt"])
     })
+})
 
+describe("DriveFolderClient", () => {
     it("skips a shortcut whose lookup fails for any reason and names unnamed folders by their id", async () => {
         const { client, http } = await build()
         http.request.mockImplementation((request) => {
@@ -199,7 +243,9 @@ describe("DriveFolderClient", () => {
 
         expect(listing.files.map((file) => [file.name, file.path])).toEqual([["in.txt", "1TargetFolderFold09"]])
     })
+})
 
+describe("DriveFolderClient", () => {
     it("does not swallow a rejected token met while following a shortcut", async () => {
         const { client, route } = await build()
         route([
@@ -223,7 +269,9 @@ describe("DriveFolderClient", () => {
             code: DocumentsErrorCode.TokenRejected,
         })
     })
+})
 
+describe("DriveFolderClient", () => {
     it("stops following shortcuts after fifty lookups", async () => {
         const { client, http } = await build()
         const shortcuts = Array.from({ length: 52 }, (_, index) => ({
@@ -243,7 +291,9 @@ describe("DriveFolderClient", () => {
 
         expect(listing.files).toHaveLength(50)
     })
+})
 
+describe("DriveFolderClient", () => {
     it("marks the listing truncated when folders nest deeper than the limit", async () => {
         const { client, http } = await build()
         http.request.mockImplementation((request) => {
@@ -261,7 +311,9 @@ describe("DriveFolderClient", () => {
 
         expect(listing.truncated).toBe(true)
     })
+})
 
+describe("DriveFolderClient", () => {
     it("marks the listing truncated at the file limit and lists nothing after it", async () => {
         const { client, http } = await build()
         const files = [

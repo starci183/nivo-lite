@@ -137,7 +137,9 @@ describe("LoyaltyCampaignWorkbenchService", () => {
             expect(drafts.request).not.toHaveBeenCalled()
         })
     })
+})
 
+describe("LoyaltyCampaignWorkbenchService", () => {
     describe("submit", () => {
         it("submit has its first case written", async () => {
             const { service } = await build()
@@ -176,7 +178,11 @@ describe("LoyaltyCampaignWorkbenchService", () => {
             expect(engine.runWork).not.toHaveBeenCalled()
             expect(campaigns.attachDecision).not.toHaveBeenCalled()
         })
+    })
+})
 
+describe("LoyaltyCampaignWorkbenchService", () => {
+    describe("submit", () => {
         it.each([
             { status: "done", stored: "sending" },
             { status: "rejected", stored: "rejected" },
@@ -240,7 +246,11 @@ describe("LoyaltyCampaignWorkbenchService", () => {
             expect(campaigns.get).toHaveBeenNthCalledWith(2, "ws-1", "campaign-1")
             expect(campaigns.attachDecision).toHaveBeenCalledWith("ws-1", "campaign-1", "work-1", "sending")
         })
+    })
+})
 
+describe("LoyaltyCampaignWorkbenchService", () => {
+    describe("submit", () => {
         it("rejects when the failed link still leaves the campaign without a decision", async () => {
             const { service, access, campaigns, engine } = await build()
             access.require.mockResolvedValue(ACTOR)

@@ -1,5 +1,5 @@
 import type { TemplateDefinition } from "./automation-templates.contracts"
-import { text } from "./policies/catalog-text.policy"
+import { translate } from "./policies/catalog-text.policy"
 
 /** The templates a shared n8n workflow runs (executor `n8n`), in file-name order; the workflows themselves live with the n8n host. */
 export const N8N_TEMPLATES: ReadonlyArray<TemplateDefinition> = [
@@ -11,12 +11,12 @@ export const N8N_TEMPLATES: ReadonlyArray<TemplateDefinition> = [
         executor: "n8n",
         moduleKey: null,
         icon: "report",
-        name: text("automationTemplates.email-daily-report.name"),
-        description: text("automationTemplates.email-daily-report.description"),
+        name: translate("automationTemplates.email-daily-report.name"),
+        description: translate("automationTemplates.email-daily-report.description"),
         trigger: {
             kind: "schedule",
             event: "schedule.daily",
-            line: text("automationTemplates.email-daily-report.line"),
+            line: translate("automationTemplates.email-daily-report.line"),
         },
         requires: {
             modules: [],
@@ -28,18 +28,18 @@ export const N8N_TEMPLATES: ReadonlyArray<TemplateDefinition> = [
             {
                 key: "time",
                 kind: "time",
-                label: text("automationTemplates.email-daily-report.settings.time.label"),
+                label: translate("automationTemplates.email-daily-report.settings.time.label"),
             },
             {
                 key: "subject",
                 kind: "text",
-                label: text("automationTemplates.email-daily-report.settings.subject.label"),
+                label: translate("automationTemplates.email-daily-report.settings.subject.label"),
             },
         ],
         contentMode: "fixed",
-        guardrails: [text("automationTemplates.email-daily-report.guardrails.0")],
+        guardrails: [translate("automationTemplates.email-daily-report.guardrails.0")],
         variables: ["ten_shop", "ngay", "tom_tat", "viec_cho"],
-        defaultBody: text("automationTemplates.email-daily-report.defaultBody"),
+        defaultBody: translate("automationTemplates.email-daily-report.defaultBody"),
         authority: {
             action: null,
         },
@@ -61,12 +61,12 @@ export const N8N_TEMPLATES: ReadonlyArray<TemplateDefinition> = [
         executor: "n8n",
         moduleKey: "accounting",
         icon: "debt",
-        name: text("automationTemplates.email-debt-reminder.name"),
-        description: text("automationTemplates.email-debt-reminder.description"),
+        name: translate("automationTemplates.email-debt-reminder.name"),
+        description: translate("automationTemplates.email-debt-reminder.description"),
         trigger: {
             kind: "schedule",
             event: "schedule.daily",
-            line: text("automationTemplates.email-debt-reminder.line"),
+            line: translate("automationTemplates.email-debt-reminder.line"),
         },
         requires: {
             modules: ["accounting"],
@@ -78,37 +78,37 @@ export const N8N_TEMPLATES: ReadonlyArray<TemplateDefinition> = [
             {
                 key: "time",
                 kind: "time",
-                label: text("automationTemplates.email-debt-reminder.settings.time.label"),
+                label: translate("automationTemplates.email-debt-reminder.settings.time.label"),
             },
             {
                 key: "after_days",
                 kind: "number",
                 min: 0,
                 max: 60,
-                suffix: text("automationTemplates.email-debt-reminder.settings.after_days.suffix"),
-                label: text("automationTemplates.email-debt-reminder.settings.after_days.label"),
+                suffix: translate("automationTemplates.email-debt-reminder.settings.after_days.suffix"),
+                label: translate("automationTemplates.email-debt-reminder.settings.after_days.label"),
             },
             {
                 key: "repeat_days",
                 kind: "number",
                 min: 1,
                 max: 90,
-                suffix: text("automationTemplates.email-debt-reminder.settings.repeat_days.suffix"),
-                label: text("automationTemplates.email-debt-reminder.settings.repeat_days.label"),
+                suffix: translate("automationTemplates.email-debt-reminder.settings.repeat_days.suffix"),
+                label: translate("automationTemplates.email-debt-reminder.settings.repeat_days.label"),
             },
             {
                 key: "subject",
                 kind: "text",
-                label: text("automationTemplates.email-debt-reminder.settings.subject.label"),
+                label: translate("automationTemplates.email-debt-reminder.settings.subject.label"),
             },
         ],
         contentMode: "fixed",
         guardrails: [
-            text("automationTemplates.email-debt-reminder.guardrails.0"),
-            text("automationTemplates.email-debt-reminder.guardrails.1"),
+            translate("automationTemplates.email-debt-reminder.guardrails.0"),
+            translate("automationTemplates.email-debt-reminder.guardrails.1"),
         ],
         variables: ["ten_khach", "ten_shop", "so_tien", "ma_phieu", "han", "so_ngay_tre"],
-        defaultBody: text("automationTemplates.email-debt-reminder.defaultBody"),
+        defaultBody: translate("automationTemplates.email-debt-reminder.defaultBody"),
         authority: {
             action: "send_email",
         },
@@ -132,12 +132,12 @@ export const N8N_TEMPLATES: ReadonlyArray<TemplateDefinition> = [
         executor: "n8n",
         moduleKey: "accounting",
         icon: "ledger",
-        name: text("automationTemplates.email-month-ledger.name"),
-        description: text("automationTemplates.email-month-ledger.description"),
+        name: translate("automationTemplates.email-month-ledger.name"),
+        description: translate("automationTemplates.email-month-ledger.description"),
         trigger: {
             kind: "schedule",
             event: "schedule.monthly",
-            line: text("automationTemplates.email-month-ledger.line"),
+            line: translate("automationTemplates.email-month-ledger.line"),
         },
         requires: {
             modules: ["accounting"],
@@ -150,23 +150,23 @@ export const N8N_TEMPLATES: ReadonlyArray<TemplateDefinition> = [
                 key: "accountant_email",
                 kind: "email",
                 required: true,
-                label: text("automationTemplates.email-month-ledger.settings.accountant_email.label"),
+                label: translate("automationTemplates.email-month-ledger.settings.accountant_email.label"),
             },
             {
                 key: "time",
                 kind: "time",
-                label: text("automationTemplates.email-month-ledger.settings.time.label"),
+                label: translate("automationTemplates.email-month-ledger.settings.time.label"),
             },
             {
                 key: "subject",
                 kind: "text",
-                label: text("automationTemplates.email-month-ledger.settings.subject.label"),
+                label: translate("automationTemplates.email-month-ledger.settings.subject.label"),
             },
         ],
         contentMode: "fixed",
-        guardrails: [text("automationTemplates.email-month-ledger.guardrails.0")],
+        guardrails: [translate("automationTemplates.email-month-ledger.guardrails.0")],
         variables: ["ten_shop", "ky", "tom_tat"],
-        defaultBody: text("automationTemplates.email-month-ledger.defaultBody"),
+        defaultBody: translate("automationTemplates.email-month-ledger.defaultBody"),
         authority: {
             action: null,
         },
@@ -188,12 +188,12 @@ export const N8N_TEMPLATES: ReadonlyArray<TemplateDefinition> = [
         executor: "n8n",
         moduleKey: "accounting",
         icon: "receipt",
-        name: text("automationTemplates.email-payment-receipt.name"),
-        description: text("automationTemplates.email-payment-receipt.description"),
+        name: translate("automationTemplates.email-payment-receipt.name"),
+        description: translate("automationTemplates.email-payment-receipt.description"),
         trigger: {
             kind: "event",
             event: "payment.received",
-            line: text("automationTemplates.email-payment-receipt.line"),
+            line: translate("automationTemplates.email-payment-receipt.line"),
         },
         requires: {
             modules: ["accounting"],
@@ -205,16 +205,16 @@ export const N8N_TEMPLATES: ReadonlyArray<TemplateDefinition> = [
             {
                 key: "subject",
                 kind: "text",
-                label: text("automationTemplates.email-payment-receipt.settings.subject.label"),
+                label: translate("automationTemplates.email-payment-receipt.settings.subject.label"),
             },
         ],
         contentMode: "fixed",
         guardrails: [
-            text("automationTemplates.email-payment-receipt.guardrails.0"),
-            text("automationTemplates.email-payment-receipt.guardrails.1"),
+            translate("automationTemplates.email-payment-receipt.guardrails.0"),
+            translate("automationTemplates.email-payment-receipt.guardrails.1"),
         ],
         variables: ["ten_khach", "ten_shop", "so_tien", "ma_phieu", "ngay"],
-        defaultBody: text("automationTemplates.email-payment-receipt.defaultBody"),
+        defaultBody: translate("automationTemplates.email-payment-receipt.defaultBody"),
         authority: {
             action: "send_email",
         },

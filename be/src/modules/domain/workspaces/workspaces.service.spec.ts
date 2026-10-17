@@ -107,7 +107,9 @@ describe("WorkspacesService", () => {
             expect(em.query).not.toHaveBeenCalled()
         })
     })
+})
 
+describe("WorkspacesService", () => {
     describe("startFirst", () => {
         it("creates nothing where free signup is disabled", async () => {
             const em = mockEntityManager()

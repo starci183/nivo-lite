@@ -1,3 +1,4 @@
+import { Test } from "@nestjs/testing"
 import type { ShiftsSettingsRow, ShiftsShiftRow, ShiftsStaffRow } from "../persistence/shifts.rows"
 import {
     DEFAULT_SETTINGS,
@@ -10,6 +11,29 @@ import {
     toShift,
     toStaff,
 } from "./row-mappers.policy"
+
+const SUBJECT = Symbol("row-mappers.policy")
+
+const build = async () => {
+    const moduleRef = await Test.createTestingModule({
+        providers: [
+            {
+                provide: SUBJECT,
+                useValue: {
+                    priorOf,
+                    toAvail,
+                    toBlock,
+                    toLeave,
+                    toPosition,
+                    toSettings,
+                    toShift,
+                    toStaff,
+                },
+            },
+        ],
+    }).compile()
+    return moduleRef.get<typeof import("./row-mappers.policy")>(SUBJECT)
+}
 
 const staffRow: ShiftsStaffRow = {
     id: "staff-1",
@@ -49,21 +73,25 @@ const shiftRow: ShiftsShiftRow = {
 }
 
 describe("row mappers", () => {
-    it("keeps a position color and supplies the default for empty color", () => {
-        expect(toPosition({ id: "position-1", name: "Cashier", color: "#123456" })).toEqual({
+    it("keeps a position color and supplies the default for empty color", async () => {
+        const subject = await build()
+
+        expect(subject.toPosition({ id: "position-1", name: "Cashier", color: "#123456" })).toEqual({
             id: "position-1",
             name: "Cashier",
             color: "#123456",
         })
-        expect(toPosition({ id: "position-2", name: "Barista", color: "" })).toEqual({
+        expect(subject.toPosition({ id: "position-2", name: "Barista", color: "" })).toEqual({
             id: "position-2",
             name: "Barista",
             color: "#2f6fed",
         })
     })
 
-    it("maps a staff profile with decimal limits and the caller-supplied wage", () => {
-        expect(toStaff(staffRow, 30000)).toEqual({
+    it("maps a staff profile with decimal limits and the caller-supplied wage", async () => {
+        const subject = await build()
+
+        expect(subject.toStaff(staffRow, 30000)).toEqual({
             id: "staff-1",
             name: "Alex",
             staffRowId: "office-1",
@@ -83,9 +111,11 @@ describe("row mappers", () => {
     it.each([
         { max_hours_week: 0, max_hours_day: "unreadable", min_rest_hours: -1 },
         { max_hours_week: "unreadable", max_hours_day: 0, min_rest_hours: "unreadable" },
-    ])("uses default limits for zero or unreadable hours and invalid rest %p", (limits) => {
+    ])("uses default limits for zero or unreadable hours and invalid rest %p", async (limits) => {
+        const subject = await build()
+
         expect(
-            toStaff(
+            subject.toStaff(
                 {
                     ...staffRow,
                     ...limits,
@@ -113,9 +143,13 @@ describe("row mappers", () => {
             active: false,
         })
     })
+})
 
-    it("allows a zero rest limit", () => {
-        expect(toStaff({ ...staffRow, min_rest_hours: 0 }, 0)).toEqual({
+describe("row mappers", () => {
+    it("allows a zero rest limit", async () => {
+        const subject = await build()
+
+        expect(subject.toStaff({ ...staffRow, min_rest_hours: 0 }, 0)).toEqual({
             id: "staff-1",
             name: "Alex",
             staffRowId: "office-1",
@@ -132,9 +166,11 @@ describe("row mappers", () => {
         })
     })
 
-    it("maps a coverage block and normalizes database times", () => {
+    it("maps a coverage block and normalizes database times", async () => {
+        const subject = await build()
+
         expect(
-            toBlock({
+            subject.toBlock({
                 id: "block-1",
                 weekday: 2,
                 start_time: "08:30:00",
@@ -156,8 +192,10 @@ describe("row mappers", () => {
         })
     })
 
-    it("returns the exact settings defaults when there is no settings row", () => {
-        expect(toSettings(undefined)).toEqual({
+    it("returns the exact settings defaults when there is no settings row", async () => {
+        const subject = await build()
+
+        expect(subject.toSettings(undefined)).toEqual({
             openingHours: [],
             swapNoticeHours: 24,
             leaveNoticeDays: 2,
@@ -165,11 +203,13 @@ describe("row mappers", () => {
             noshowMinutes: 10,
             overtimeHoursWeek: 48,
         })
-        expect(toSettings(undefined)).toBe(DEFAULT_SETTINGS)
+        expect(subject.toSettings(undefined)).toBe(DEFAULT_SETTINGS)
     })
 
-    it("maps settings with numeric weekdays and decimal overtime hours", () => {
-        expect(toSettings(settingsRow)).toEqual({
+    it("maps settings with numeric weekdays and decimal overtime hours", async () => {
+        const subject = await build()
+
+        expect(subject.toSettings(settingsRow)).toEqual({
             openingHours: [
                 { weekday: 0, open: "07:00", close: "22:00" },
                 { weekday: 6, open: "09:00", close: "18:00" },
@@ -181,9 +221,13 @@ describe("row mappers", () => {
             overtimeHoursWeek: 40,
         })
     })
+})
 
-    it.each([undefined, null, [], "invalid", 1])("ignores non-record opening hours %p", (opening_hours) => {
-        expect(toSettings({ ...settingsRow, opening_hours, overtime_hours_week: 0 })).toEqual({
+describe("row mappers", () => {
+    it.each([undefined, null, [], "invalid", 1])("ignores non-record opening hours %p", async (opening_hours) => {
+        const subject = await build()
+
+        expect(subject.toSettings({ ...settingsRow, opening_hours, overtime_hours_week: 0 })).toEqual({
             openingHours: [],
             swapNoticeHours: 12,
             leaveNoticeDays: 3,
@@ -193,9 +237,11 @@ describe("row mappers", () => {
         })
     })
 
-    it("ignores malformed opening days while retaining complete text windows", () => {
+    it("ignores malformed opening days while retaining complete text windows", async () => {
+        const subject = await build()
+
         expect(
-            toSettings({
+            subject.toSettings({
                 ...settingsRow,
                 opening_hours: {
                     0: null,
@@ -218,9 +264,11 @@ describe("row mappers", () => {
         })
     })
 
-    it("maps date-based availability and normalizes its times", () => {
+    it("maps date-based availability and normalizes its times", async () => {
+        const subject = await build()
+
         expect(
-            toAvail({
+            subject.toAvail({
                 staff_id: "staff-1",
                 weekday: null,
                 shift_date: "2026-10-12",
@@ -237,10 +285,14 @@ describe("row mappers", () => {
             available: false,
         })
     })
+})
 
-    it("maps approved leave dates without persistence metadata", () => {
+describe("row mappers", () => {
+    it("maps approved leave dates without persistence metadata", async () => {
+        const subject = await build()
+
         expect(
-            toLeave({
+            subject.toLeave({
                 id: "leave-1",
                 staff_id: "staff-1",
                 from_date: "2026-10-12",
@@ -254,9 +306,13 @@ describe("row mappers", () => {
             to: "2026-10-14",
         })
     })
+})
 
-    it("maps a shift without schedule metadata", () => {
-        expect(toShift(shiftRow)).toEqual({
+describe("row mappers", () => {
+    it("maps a shift without schedule metadata", async () => {
+        const subject = await build()
+
+        expect(subject.toShift(shiftRow)).toEqual({
             id: "shift-1",
             date: "2026-10-11",
             start: "08:30",
@@ -267,10 +323,12 @@ describe("row mappers", () => {
         })
     })
 
-    it("groups prior work by person in row order and skips open shifts", () => {
-        expect(priorOf([])).toEqual(new Map())
+    it("groups prior work by person in row order and skips open shifts", async () => {
+        const subject = await build()
+
+        expect(subject.priorOf([])).toEqual(new Map())
         expect(
-            priorOf([
+            subject.priorOf([
                 { ...shiftRow, staff_id: null },
                 shiftRow,
                 { ...shiftRow, id: "shift-2", start_time: "18:00:00", end_time: "21:00:00" },

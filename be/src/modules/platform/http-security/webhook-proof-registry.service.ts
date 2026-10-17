@@ -18,14 +18,16 @@ export class WebhookProofRegistryService implements WebhookProofRegistry {
         this.proofs.set(proof.provider, proof)
     }
 
-    /** Asks the proof registered for the provider. */
-    prove(provider: string, request: WebhookProofRequest): Promise<boolean> {
+    /** Enforces the registered proof and retains the shared HTTP security refusal codes. */
+    async verify(provider: string, request: WebhookProofRequest): Promise<void> {
         const proof = this.proofs.get(provider)
         if (proof === undefined) {
             return Promise.reject(
                 new HttpSecurityError({ code: HttpSecurityErrorCode.WebhookProviderUnknown, params: { provider } }),
             )
         }
-        return proof.prove(request)
+        if (!(await proof.prove(request))) {
+            throw new HttpSecurityError({ code: HttpSecurityErrorCode.WebhookSignatureInvalid })
+        }
     }
 }

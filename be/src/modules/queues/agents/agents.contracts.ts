@@ -82,23 +82,3 @@ export const syncSubjectOf = (payload: SyncAgentsPayload): string => {
     if (payload.installationId !== undefined) return payload.installationId
     return payload.workspaceId === undefined ? "all" : `ws:${payload.workspaceId}`
 }
-
-/** The recurring task the app root adds to the queue options: the shape of a platform queue scheduler. */
-export interface AgentsSchedulerDefinition {
-    /** The queue the ticks go to. */
-    readonly queue: string
-    /** The job name of every tick. */
-    readonly job: string
-    /** The stable id of the scheduler: the pg_cron job name. */
-    readonly id: string
-    /** The interval between two ticks, in milliseconds. */
-    readonly everyMs: number
-}
-
-/** Every five minutes pg_cron enqueues one empty sync tick: it re-syncs every installation on OpenClaw, as the engine did at startup and every five minutes. The app root adds it to the queue options. */
-export const AGENTS_SYNC_SCHEDULER: AgentsSchedulerDefinition = {
-    queue: AGENTS_QUEUE,
-    job: AgentsJob.Sync,
-    id: "agents-sync-all",
-    everyMs: 5 * MINUTE_MS,
-}

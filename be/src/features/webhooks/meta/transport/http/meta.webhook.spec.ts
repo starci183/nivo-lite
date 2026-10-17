@@ -6,7 +6,7 @@ import type { Request } from "express"
 import { mock } from "@starci/jest-preset"
 import { ConnectionsError, ConnectionsErrorCode } from "@modules/domain/connections"
 import { MetaConnectionsService } from "@modules/domain/meta-connections"
-import { MetaInboxService } from "@modules/domain/meta-inbox"
+import { MetaInboxService, MetaWebhookVerifierService } from "@modules/domain/meta-inbox"
 import { MetaWebhook } from "./meta.webhook"
 
 const RAW = Buffer.from('{\n  "object": "page", "entry": []\n}\n')
@@ -16,28 +16,31 @@ const CHALLENGE = " 000123\n<&> "
 const build = async () => {
     const inbox = mock<MetaInboxService>()
     inbox.accept.mockResolvedValue(undefined)
+    const signature = mock<MetaWebhookVerifierService>()
     const verifier = mock<MetaConnectionsService>()
     verifier.respondToChallenge.mockResolvedValue(CHALLENGE)
     const moduleRef = await Test.createTestingModule({
-        controllers: [MetaWebhook],
         providers: [
+            MetaWebhook,
+            { provide: MetaWebhookVerifierService, useValue: signature },
             { provide: MetaInboxService, useValue: inbox },
             { provide: MetaConnectionsService, useValue: verifier },
         ],
     }).compile()
-    return { door: moduleRef.get(MetaWebhook), inbox, verifier }
+    return { door: moduleRef.get(MetaWebhook), inbox, verifier, signature }
 }
 
 describe("MetaWebhook", () => {
     it.each([
         { rawBody: RAW, signature: SIGNATURE },
         { rawBody: undefined, signature: undefined },
-    ])("passes the exact raw body and signature to the inbox: %j", async ({ rawBody, signature }) => {
-        const { door, inbox } = await build()
+    ])("passes the exact raw body and signature to verification and intake: %j", async ({ rawBody, signature }) => {
+        const { door, inbox, signature: proof } = await build()
 
         const result = await door.receive(mock<RawBodyRequest<Request>>({ rawBody }), signature)
 
         expect(result).toBeUndefined()
+        expect(proof.verify).toHaveBeenCalledWith(rawBody, signature)
         expect(inbox.accept).toHaveBeenCalledTimes(1)
         expect(inbox.accept).toHaveBeenCalledWith(rawBody, signature)
         expect(inbox.accept.mock.calls[0]?.[0]).toBe(rawBody)
@@ -66,9 +69,9 @@ describe("MetaWebhook", () => {
         expect(returned).toBe(true)
     })
 
-    it("lets the inbox signature refusal reach Meta unchanged", async () => {
+    it("lets an intake failure reach Meta unchanged", async () => {
         const { door, inbox } = await build()
-        const failure = new Error("signature invalid")
+        const failure = new ConnectionsError({ code: ConnectionsErrorCode.NotFound })
         inbox.accept.mockRejectedValue(failure)
 
         await expect(door.receive(mock<RawBodyRequest<Request>>({ rawBody: RAW }), SIGNATURE)).rejects.toBe(failure)
@@ -91,7 +94,8 @@ describe("MetaWebhook", () => {
         expect(verifier.respondToChallenge).toHaveBeenCalledWith(query)
         expect(verifier.respondToChallenge.mock.calls[0]?.[0]).toBe(query)
     })
-
+})
+describe("MetaWebhook", () => {
     it("lets the verifier's wrong-token refusal reach Meta unchanged", async () => {
         const { door, verifier } = await build()
         const query = {
@@ -118,5 +122,32 @@ describe("MetaWebhook", () => {
         expect(Reflect.getMetadata(HEADERS_METADATA, MetaWebhook.prototype.challenge)).toEqual([
             { name: "content-type", value: "text/plain" },
         ])
+    })
+})
+
+describe("MetaWebhook signature proof", () => {
+    it("proves the raw bytes before accepting the delivery", async () => {
+        const { door, inbox, signature } = await build()
+        const order: Array<string> = []
+        signature.verify.mockImplementation(() => {
+            order.push("verify")
+        })
+        inbox.accept.mockImplementation(() => {
+            order.push("accept")
+            return Promise.resolve()
+        })
+        await door.receive(mock<RawBodyRequest<Request>>({ rawBody: RAW }), SIGNATURE)
+        expect(signature.verify).toHaveBeenCalledWith(RAW, SIGNATURE)
+        expect(order).toEqual(["verify", "accept"])
+    })
+    it("propagates a signature refusal without passing it to the inbox", async () => {
+        const { door, inbox, signature } = await build()
+        const refusal = new ConnectionsError({ code: ConnectionsErrorCode.Forbidden })
+        signature.verify.mockImplementation(() => {
+            throw refusal
+        })
+        await expect(door.receive(mock<RawBodyRequest<Request>>({ rawBody: RAW }), SIGNATURE)).rejects.toBe(refusal)
+        expect(signature.verify).toHaveBeenCalledWith(RAW, SIGNATURE)
+        expect(inbox.accept).not.toHaveBeenCalled()
     })
 })

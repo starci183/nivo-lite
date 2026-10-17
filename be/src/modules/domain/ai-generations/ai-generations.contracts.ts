@@ -235,8 +235,44 @@ export interface GuideAsk {
     readonly locale: Locale
 }
 
+/** The ids of the places of the console the guide may send someone to. */
+export type GuidePageId =
+    | "office"
+    | "overview"
+    | "authority"
+    | "inbox"
+    | "leads"
+    | "responsibilities"
+    | "decisions"
+    | "automations"
+    | "knowledge"
+    | "brain"
+    | "modules"
+    | "team"
+    | "connections"
+    | "connections.sepay"
+    | "connections.telegram"
+    | "connections.zalo_oa"
+    | "connections.smtp"
+    | "connections.google"
+    | "connections.webhook"
+    | "developers"
+    | "billing"
+    | "account"
+
+/** The catalog keys of the guide prompt: three words for each page and the lines of the system part. */
+export type GuideKey =
+    | `guide.page.${GuidePageId}.${"title" | "what" | "how"}`
+    | "guide.systemIntro"
+    | "guide.systemStyle"
+    | "guide.rulesTitle"
+    | "guide.rules"
+    | "guide.audienceManager"
+    | "guide.audienceStaff"
+    | "guide.replyFormat"
+
 /** The words the guide prompt is built from, in one language. */
 export interface GuideWords {
     /** The text of a catalog key. */
-    readonly text: (key: string) => string
+    readonly text: (key: GuideKey) => string
 }

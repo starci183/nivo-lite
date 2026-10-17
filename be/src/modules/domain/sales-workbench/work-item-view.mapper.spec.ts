@@ -1,7 +1,18 @@
+import { Test } from "@nestjs/testing"
 import { builder } from "@starci/jest-preset"
 import type { LeadView } from "@modules/domain/leads"
 import type { WorkItem } from "@modules/domain/work-items"
 import { viewOfWorkItem } from "./work-item-view.mapper"
+
+const SUBJECT = Symbol("work-item-view.mapper")
+type Subject = { viewOfWorkItem: typeof viewOfWorkItem }
+
+const build = async () => {
+    const moduleRef = await Test.createTestingModule({
+        providers: [{ provide: SUBJECT, useValue: { viewOfWorkItem } }],
+    }).compile()
+    return moduleRef.get<Subject>(SUBJECT)
+}
 
 const itemOf = builder<WorkItem>({
     id: "item-1",
@@ -47,11 +58,13 @@ const leadOf = builder<LeadView>({
 })
 
 describe("viewOfWorkItem", () => {
-    it("retains the item and adds the first matching customer and assigned person", () => {
+    it("retains the item and adds the first matching customer and assigned person", async () => {
+        const subject = await build()
+
         const item = itemOf({ department: "inventory", decidedBy: "staff-2", deciderName: "Mai" })
 
         expect(
-            viewOfWorkItem(
+            subject.viewOfWorkItem(
                 item,
                 [leadOf({ id: "unrelated" }), leadOf(), leadOf({ contact_name: "Duplicate" })],
                 [
@@ -69,10 +82,12 @@ describe("viewOfWorkItem", () => {
         })
     })
 
-    it("keeps the lead navigation when the referenced customer and person are absent", () => {
+    it("keeps the lead navigation when the referenced customer and person are absent", async () => {
+        const subject = await build()
+
         const item = itemOf({ lead_id: "deleted-lead", execution_id: null })
 
-        expect(viewOfWorkItem(item, [leadOf()], [{ id: "staff-2", name: "Mai" }])).toEqual({
+        expect(subject.viewOfWorkItem(item, [leadOf()], [{ id: "staff-2", name: "Mai" }])).toEqual({
             ...item,
             lead: null,
             assignedStaffName: null,
@@ -85,10 +100,12 @@ describe("viewOfWorkItem", () => {
         { department: "inventory", href: "/agents/inventory/workbench?tab=orders" },
         { department: "shifts", href: "/agents/shifts/workbench" },
         { department: "accounting", href: "/chat" },
-    ])("routes customerless $department work to $href", ({ department, href }) => {
+    ])("routes customerless $department work to $href", async ({ department, href }) => {
+        const subject = await build()
+
         const item = itemOf({ department, lead_id: null, assigned_staff_id: null, execution_id: null })
 
-        expect(viewOfWorkItem(item, [leadOf()], [{ id: "staff-1", name: "Bao" }])).toEqual({
+        expect(subject.viewOfWorkItem(item, [leadOf()], [{ id: "staff-1", name: "Bao" }])).toEqual({
             ...item,
             lead: null,
             assignedStaffName: null,

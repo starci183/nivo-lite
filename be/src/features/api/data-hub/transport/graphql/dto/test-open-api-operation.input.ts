@@ -1,7 +1,7 @@
 import { Field, ID, InputType } from "@nestjs/graphql"
 import { Type } from "class-transformer"
 import { IsDefined, IsOptional, IsString, IsUUID, MaxLength, ValidateNested } from "class-validator"
-import { DataJsonScalar } from "./data-json.type"
+import { DataJsonScalar } from "../data-json.mapper"
 import { OpenApiAuthInput } from "./open-api-auth.input"
 
 @InputType()

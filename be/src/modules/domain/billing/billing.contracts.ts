@@ -1,3 +1,4 @@
+import type { BankFeedDeliveryRecorded } from "@modules/queues/bank-feed-delivery"
 import type { PaymentOrder } from "@modules/domain/payment-orders"
 import type { BankAccountOptions } from "./billing.options"
 import type { JsonObject } from "./webhook-body.policy"
@@ -262,18 +263,6 @@ export interface ProvenDelivery {
 /** The proof of a payOS delivery: a proven payment, or the confirmation ping that is acknowledged and never booked. */
 export type PayosProof = ({ readonly kind: "proven" } & ProvenDelivery) | { readonly kind: "sample" }
 
-/** What a payment connection reports before the connection decides how to book it. */
-export interface IncomingCredit {
-    /** The credited amount in VND. */
-    readonly amount: number
-    /** The transfer content. */
-    readonly content: string
-    /** The provider-prefixed transaction id: the idempotency key. */
-    readonly eventId: string
-    /** The bank name to show when the connection has no name. */
-    readonly fallbackBankName: string
-}
-
 /** Frozen top-up and upgrade figures exposed with a payment order. */
 export interface BillingPaymentDetails {
     /** Frozen credits figure; null when this order does not carry it. */
@@ -328,3 +317,12 @@ export interface ManualCredit {
     /** The payer, when the person named one. */
     readonly payer?: string
 }
+
+/** A committed simulated-bank receipt waiting for its booking job. */
+export interface VietcombankDeliveryRecorded {
+    /** The original provider-prefixed bank event id. */
+    readonly deliveryId: string
+}
+
+/** The workspace providers admitted by the bank-feed receipt job. */
+export type BankFeedProvider = BankFeedDeliveryRecorded["provider"]

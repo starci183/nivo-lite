@@ -1,3 +1,5 @@
+import type * as SubjectModule from "./csv-import-config.policy"
+import { Test } from "@nestjs/testing"
 import { CSV_NO_COLUMN } from "./csv-import.contracts"
 import {
     cleanImportName,
@@ -14,6 +16,44 @@ import {
 import { DataHubErrorCode } from "./errors/data-hub.error"
 import { CSV_COPY } from "./messages/csv-import.messages"
 
+const SUBJECT = Symbol("csv-import-config.policy")
+type Subject = Pick<
+    typeof SubjectModule,
+    | "invalid"
+    | "summaryOf"
+    | "isPlainObject"
+    | "readConfig"
+    | "isSchedule"
+    | "mappingOf"
+    | "missingColumns"
+    | "tableEntityOf"
+    | "cleanImportName"
+    | "cleanMapping"
+>
+
+const buildSubject = async () => {
+    const moduleRef = await Test.createTestingModule({
+        providers: [
+            {
+                provide: SUBJECT,
+                useValue: {
+                    invalid,
+                    summaryOf,
+                    isPlainObject,
+                    readConfig,
+                    isSchedule,
+                    mappingOf,
+                    missingColumns,
+                    tableEntityOf,
+                    cleanImportName,
+                    cleanMapping,
+                },
+            },
+        ],
+    }).compile()
+    return moduleRef.get<Subject>(SUBJECT)
+}
+
 const refused = (detail: string) => ({ code: DataHubErrorCode.Invalid, params: { detail } })
 
 const config = {
@@ -29,36 +69,48 @@ const config = {
     link: "https://docs.google.com/spreadsheets/d/sheet-1",
 }
 
+const headers = ["id", "name"]
+
 describe("invalid", () => {
-    it("carries the sentence the owner reads", () => {
-        expect(invalid("nope")).toMatchObject(refused("nope"))
+    it("carries the sentence the owner reads", async () => {
+        const subject = await buildSubject()
+
+        expect(subject.invalid("nope")).toMatchObject(refused("nope"))
     })
 })
 
 describe("summaryOf", () => {
-    it("counts rows or documents in Vietnamese grouping", () => {
-        expect(summaryOf("customer", 1200)).toBe(`${CSV_COPY.entity.customer} \u00b7 1.200 ${CSV_COPY.rowUnit}`)
-        expect(summaryOf("document", 2)).toBe(`${CSV_COPY.entity.document} \u00b7 2 ${CSV_COPY.documentUnit}`)
+    it("counts rows or documents in Vietnamese grouping", async () => {
+        const subject = await buildSubject()
+
+        expect(subject.summaryOf("customer", 1200)).toBe(`${CSV_COPY.entity.customer} \u00b7 1.200 ${CSV_COPY.rowUnit}`)
+        expect(subject.summaryOf("document", 2)).toBe(`${CSV_COPY.entity.document} \u00b7 2 ${CSV_COPY.documentUnit}`)
     })
 })
 
 describe("isPlainObject", () => {
-    it("accepts a plain object and rejects a list or a null", () => {
-        expect(isPlainObject({ a: 1 })).toBe(true)
-        expect(isPlainObject([])).toBe(false)
-        expect(isPlainObject(null)).toBe(false)
-        expect(isPlainObject("x")).toBe(false)
+    it("accepts a plain object and rejects a list or a null", async () => {
+        const subject = await buildSubject()
+
+        expect(subject.isPlainObject({ a: 1 })).toBe(true)
+        expect(subject.isPlainObject([])).toBe(false)
+        expect(subject.isPlainObject(null)).toBe(false)
+        expect(subject.isPlainObject("x")).toBe(false)
     })
 })
 
 describe("readConfig", () => {
-    it("reads a saved setup, including optional sheet and link", () => {
-        expect(readConfig({ config: JSON.stringify(config) })).toEqual(config)
+    it("reads a saved setup, including optional sheet and link", async () => {
+        const subject = await buildSubject()
+
+        expect(subject.readConfig({ config: JSON.stringify(config) })).toEqual(config)
     })
 
-    it("omits a sheet or link that is not text and drops unknown kinds and columns", () => {
+    it("omits a sheet or link that is not text and drops unknown kinds and columns", async () => {
+        const subject = await buildSubject()
+
         expect(
-            readConfig({
+            subject.readConfig({
                 config: JSON.stringify({
                     ...config,
                     sheet: 1,
@@ -93,30 +145,40 @@ describe("readConfig", () => {
         ["a non-text source", { config: JSON.stringify({ ...config, source: 1 }) }],
         ["an unknown entity", { config: JSON.stringify({ ...config, entity: "lead" }) }],
         ["a non-text entity", { config: JSON.stringify({ ...config, entity: null }) }],
-    ])("returns null for %s", (_label, meta) => {
-        expect(readConfig(meta)).toBeNull()
+    ])("returns null for %s", async (_label, meta) => {
+        const subject = await buildSubject()
+
+        expect(subject.readConfig(meta)).toBeNull()
     })
 
-    it("ignores kinds that are not an object and columns that are not a list", () => {
-        expect(readConfig({ config: JSON.stringify({ ...config, kinds: ["text"] }) })?.kinds).toEqual({})
-        expect(readConfig({ config: JSON.stringify({ ...config, columns: "id" }) })?.columns).toEqual([])
+    it("ignores kinds that are not an object and columns that are not a list", async () => {
+        const subject = await buildSubject()
+
+        expect(subject.readConfig({ config: JSON.stringify({ ...config, kinds: ["text"] }) })?.kinds).toEqual({})
+        expect(subject.readConfig({ config: JSON.stringify({ ...config, columns: "id" }) })?.columns).toEqual([])
     })
 })
 
 describe("isSchedule", () => {
-    it.each([null, 60, 360, 1440])("accepts %s", (value) => {
-        expect(isSchedule(value)).toBe(true)
+    it.each([null, 60, 360, 1440])("accepts %s", async (value) => {
+        const subject = await buildSubject()
+
+        expect(subject.isSchedule(value)).toBe(true)
     })
 
-    it("rejects a schedule the sheet link cannot take", () => {
-        expect(isSchedule(15)).toBe(false)
-        expect(isSchedule("60")).toBe(false)
+    it("rejects a schedule the sheet link cannot take", async () => {
+        const subject = await buildSubject()
+
+        expect(subject.isSchedule(15)).toBe(false)
+        expect(subject.isSchedule("60")).toBe(false)
     })
 })
 
 describe("mappingOf", () => {
-    it("keeps the mapping fields of a config", () => {
-        expect(mappingOf(config)).toEqual({
+    it("keeps the mapping fields of a config", async () => {
+        const subject = await buildSubject()
+
+        expect(subject.mappingOf(config)).toEqual({
             idColumn: "id",
             titleColumn: "name",
             dateColumn: "when",
@@ -127,41 +189,51 @@ describe("mappingOf", () => {
 })
 
 describe("missingColumns", () => {
-    it("names the mapped columns the new headers dropped", () => {
-        expect(missingColumns({ idColumn: "id", titleColumn: "", dateColumn: null }, ["name"])).toEqual(["id"])
+    it("names the mapped columns the new headers dropped", async () => {
+        const subject = await buildSubject()
+
+        expect(subject.missingColumns({ idColumn: "id", titleColumn: "", dateColumn: null }, ["name"])).toEqual(["id"])
         expect(
-            missingColumns({ idColumn: "id", titleColumn: "name", dateColumn: "when" }, ["id", "name", "when"]),
+            subject.missingColumns({ idColumn: "id", titleColumn: "name", dateColumn: "when" }, ["id", "name", "when"]),
         ).toEqual([])
     })
 })
 
 describe("tableEntityOf", () => {
-    it.each(["customer", "order", "product", "transaction", "other"] as const)("accepts %s", (entity) => {
-        expect(tableEntityOf(entity)).toBe(entity)
+    it.each(["customer", "order", "product", "transaction", "other"] as const)("accepts %s", async (entity) => {
+        const subject = await buildSubject()
+
+        expect(subject.tableEntityOf(entity)).toBe(entity)
     })
 
-    it.each([null, undefined, "document", "lead"])("refuses %s", (raw) => {
-        expect(() => tableEntityOf(raw)).toThrow(expect.objectContaining(refused(CSV_COPY.chooseEntity)))
+    it.each([null, undefined, "document", "lead"])("refuses %s", async (raw) => {
+        const subject = await buildSubject()
+
+        expect(() => subject.tableEntityOf(raw)).toThrow(expect.objectContaining(refused(CSV_COPY.chooseEntity)))
     })
 })
 
 describe("cleanImportName", () => {
-    it("trims, collapses spaces and stops at 60 characters", () => {
-        expect(cleanImportName("  Kh\u00e1ch  h\u00e0ng  ")).toBe("Kh\u00e1ch h\u00e0ng")
-        expect(cleanImportName(` ${"a".repeat(80)} `)).toBe("a".repeat(60))
+    it("trims, collapses spaces and stops at 60 characters", async () => {
+        const subject = await buildSubject()
+
+        expect(subject.cleanImportName("  Kh\u00e1ch  h\u00e0ng  ")).toBe("Kh\u00e1ch h\u00e0ng")
+        expect(subject.cleanImportName(` ${"a".repeat(80)} `)).toBe("a".repeat(60))
     })
 
-    it.each([null, undefined, " a "])("refuses %s", (raw) => {
-        expect(() => cleanImportName(raw)).toThrow(expect.objectContaining(refused(CSV_COPY.nameTooShort)))
+    it.each([null, undefined, " a "])("refuses %s", async (raw) => {
+        const subject = await buildSubject()
+
+        expect(() => subject.cleanImportName(raw)).toThrow(expect.objectContaining(refused(CSV_COPY.nameTooShort)))
     })
 })
 
 describe("cleanMapping", () => {
-    const headers = ["id", "name"]
+    it("keeps a real header and a known kind, and treats a missing kind as text", async () => {
+        const subject = await buildSubject()
 
-    it("keeps a real header and a known kind, and treats a missing kind as text", () => {
         expect(
-            cleanMapping(
+            subject.cleanMapping(
                 { idColumn: "id", titleColumn: CSV_NO_COLUMN, dateColumn: "", kinds: { id: "phone", name: "nope" } },
                 headers,
             ),
@@ -174,25 +246,33 @@ describe("cleanMapping", () => {
         })
     })
 
-    it("treats null and undefined as no column", () => {
-        expect(cleanMapping({ idColumn: null, titleColumn: undefined, dateColumn: null }, headers)).toMatchObject({
+    it("treats null and undefined as no column", async () => {
+        const subject = await buildSubject()
+
+        expect(
+            subject.cleanMapping({ idColumn: null, titleColumn: undefined, dateColumn: null }, headers),
+        ).toMatchObject({
             idColumn: null,
             titleColumn: null,
             dateColumn: null,
         })
     })
 
-    it("refuses a column the data does not have", () => {
-        expect(() => cleanMapping({ idColumn: "missing-column" }, headers)).toThrow(
+    it("refuses a column the data does not have", async () => {
+        const subject = await buildSubject()
+
+        expect(() => subject.cleanMapping({ idColumn: "missing-column" }, headers)).toThrow(
             expect.objectContaining(refused(CSV_COPY.columnMissing("missing-column"))),
         )
-        expect(() => cleanMapping({ idColumn: 4 }, headers)).toThrow(
+        expect(() => subject.cleanMapping({ idColumn: 4 }, headers)).toThrow(
             expect.objectContaining(refused(CSV_COPY.columnMissing(""))),
         )
     })
 
-    it("reads a mapping that is not an object as empty choices", () => {
-        expect(cleanMapping(null, headers)).toEqual({
+    it("reads a mapping that is not an object as empty choices", async () => {
+        const subject = await buildSubject()
+
+        expect(subject.cleanMapping(null, headers)).toEqual({
             idColumn: null,
             titleColumn: null,
             dateColumn: null,

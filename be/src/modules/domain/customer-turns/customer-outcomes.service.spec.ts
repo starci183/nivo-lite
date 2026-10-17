@@ -1,76 +1,35 @@
+import { WS, catalog, turnOf, proposalOf } from "@tests/fixtures/builders/customer-outcomes.builder"
+import { CustomerTurnsLogEvent } from "./customer-turns.log-events"
 import { Test } from "@nestjs/testing"
 import { FakeClock, mock } from "@starci/jest-preset"
 import type { Logger } from "@modules/platform/logging"
 import { AgentBindingsService } from "@modules/domain/agent-connections"
 import { AgentConversationsService } from "@modules/domain/agent-conversations"
 import { KnowledgeGapNotesService } from "@modules/domain/agent-knowledge"
-import type { CustomerTurn, ChatTurnProposal } from "@modules/domain/conversations"
 import { CommandBusService, EvidenceService, WorkEngineService } from "@modules/domain/decisions"
 import { HiringPublicService } from "@modules/domain/hiring"
 import { InboundEventsService } from "@modules/domain/inbound-events"
 import { InvoicesService } from "@modules/domain/invoices"
 import { WorkItemsService } from "@modules/domain/work-items"
 import { CLOCK } from "@modules/platform/clock"
-import { MESSAGE_CATALOG } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
+import { MESSAGE_CATALOG } from "@modules/platform/i18n"
 import { LOGGER } from "@modules/platform/logging"
 import { CustomerOutcomesService } from "./customer-outcomes.service"
-import { CustomerTurnsLogEvent } from "./customer-turns.log-events"
+
 import { findingsOf } from "./reply-reading.policy"
 import { StaffEscalationService } from "./staff-escalation.service"
 import { TurnModulesService } from "./turn-modules.service"
 import { TurnPurchasesService } from "./turn-purchases.service"
 
-const WS = "11111111-1111-4111-8111-111111111111"
-const catalog: MessageCatalog = { get: (key: string) => key }
-
-const turnOf = (leadId: string | null = null, knowledge = "Tra sua: 50.000d"): CustomerTurn => ({
-    conversation: {
-        id: "c1",
-        workspaceId: WS,
-        channel: "telegram",
-        externalId: "42",
-        connectionId: null,
-        leadId,
-        handledBy: null,
-        visitorName: "Lan",
-        installationId: null,
-        agent: {
-            id: "a1",
-            name: "Bot",
-            handle: "bot",
-            role: "Chatbot",
-            module: "chatbot",
-            instructions: "",
-            knowledge,
-            approvalRule: "",
-            greeting: "",
-        },
-    },
-    messageId: "m1",
-    body: "I want one milk tea",
-    channelEventId: "tg:42:1",
-    transcript: [{ role: "user", body: "I want one milk tea" }],
-})
-
-const proposalOf = (
-    detail: Readonly<Record<string, unknown>>,
-    changes: Partial<ChatTurnProposal> = {},
-): ChatTurnProposal => ({
-    reply: "Thanks!",
-    needsHuman: false,
-    reason: "",
-    proposedAnswer: "",
-    detail,
-    ...changes,
+const engineOf = () => ({
+    runWork: jest.fn().mockResolvedValue({ id: "w1", status: "waiting_decision", lead_id: null }),
+    startOrderWork: jest.fn().mockResolvedValue({ id: "w2", status: "done", lead_id: "l9" }),
+    runQueued: jest.fn().mockResolvedValue(0),
 })
 
 const build = async () => {
-    const engine = {
-        runWork: jest.fn().mockResolvedValue({ id: "w1", status: "waiting_decision", lead_id: null }),
-        startOrderWork: jest.fn().mockResolvedValue({ id: "w2", status: "done", lead_id: "l9" }),
-        runQueued: jest.fn().mockResolvedValue(0),
-    }
+    const engine = engineOf()
     const bus = {
         sendCommandItem: jest.fn().mockResolvedValue({ id: "w3", status: "done", lead_id: "l9", reason: null }),
     }
@@ -143,7 +102,7 @@ const build = async () => {
         bindings,
         hiring,
         staff,
-        logger: moduleRef.get(LOGGER),
+        logger,
     }
 }
 
@@ -203,7 +162,9 @@ describe("CustomerOutcomesService", () => {
         )
         expect(verdict).toEqual({ reply: "Thanks!", send: true, lines: [] })
     })
+})
 
+describe("CustomerOutcomesService", () => {
     it("asks a person for an unknown order price and skips module requests", async () => {
         const unknown = await build()
         const verdict = await unknown.outcomes.settle(
@@ -262,7 +223,9 @@ describe("CustomerOutcomesService", () => {
             }),
         )
     })
+})
 
+describe("CustomerOutcomesService", () => {
     it("notes the knowledge gap the reply named", async () => {
         const { outcomes, gaps } = await build()
         await outcomes.settle(
@@ -323,7 +286,9 @@ describe("CustomerOutcomesService", () => {
         })
         expect(verdict).toEqual({ reply: "Thanks!", send: true, lines: [] })
     })
+})
 
+describe("CustomerOutcomesService", () => {
     it("uses a module's booking reply in place of the model's reply", async () => {
         const { outcomes, modules, engine } = await build()
         modules.settle.mockResolvedValueOnce({ reply: "Your appointment is requested", lines: [] })
@@ -382,7 +347,9 @@ describe("CustomerOutcomesService", () => {
         expect(register).toHaveBeenCalledWith(WS, "c1", expect.objectContaining({ job: "barista" }))
         expect(verdict.reply).toBe(reply)
     })
+})
 
+describe("CustomerOutcomesService", () => {
     it("holds the reply for approval when the connection access is ask", async () => {
         const { outcomes, bindings, staff, engine } = await build()
         bindings.agentsFor.mockResolvedValue([{ id: "a1", access: "ask" }])
@@ -451,7 +418,9 @@ describe("CustomerOutcomesService", () => {
         expect(asking.conversations.attachLead).not.toHaveBeenCalled()
         expect(asking.conversations.rename).toHaveBeenCalledWith("c1", "Lan")
     })
+})
 
+describe("CustomerOutcomesService", () => {
     it("does not open a second waiting answer or escalate a decision that is already closed", async () => {
         const existed = await build()
         existed.items.findByDedupe.mockResolvedValue({ id: "old" })

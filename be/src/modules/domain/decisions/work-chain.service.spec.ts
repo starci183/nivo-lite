@@ -188,7 +188,9 @@ describe("WorkChainService", () => {
 
         expect(built.sent).toHaveLength(1)
     })
+})
 
+describe("WorkChainService", () => {
     it("queues no follow-up for a lost lead", async () => {
         const built = await build(mockEntityManager())
 
@@ -249,7 +251,9 @@ describe("WorkChainService", () => {
 
         expect(built.sent).toEqual([])
     })
+})
 
+describe("WorkChainService", () => {
     describe("after a reconciled payment", () => {
         const paid = (overrides: Partial<WorkItem>): WorkItem =>
             itemOf({ action: "reconcile_payment", department: "accounting", subject_type: "transaction", ...overrides })
@@ -311,7 +315,9 @@ describe("WorkChainService", () => {
             expect(built.receipts).toHaveBeenCalledTimes(3)
         })
     })
+})
 
+describe("WorkChainService", () => {
     describe("lead generation", () => {
         it("hands a lead generation step to the lead flow", async () => {
             const built = await build(mockEntityManager())

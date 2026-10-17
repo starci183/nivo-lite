@@ -1,3 +1,5 @@
+import type * as SubjectModule from "./telegram-user-config.policy"
+import { Test } from "@nestjs/testing"
 import type { TelegramRawMessage } from "@modules/integrations/telegram-user"
 import { TELEGRAM_WIZARD_TEXT } from "./messages/telegram-user-wizard.messages"
 import {
@@ -18,6 +20,48 @@ import {
     toSinceDays,
 } from "./telegram-user-config.policy"
 import type { PickedChat } from "./telegram-user-wizard.contracts"
+
+const SUBJECT = Symbol("telegram-user-config.policy")
+type Subject = Pick<
+    typeof SubjectModule,
+    | "normalizePhone"
+    | "maskPhone"
+    | "accountLabel"
+    | "cleanChats"
+    | "parseConfig"
+    | "serializeConfig"
+    | "summaryOf"
+    | "toSinceDays"
+    | "cursorKey"
+    | "readCursor"
+    | "sinceUnix"
+    | "mapMessage"
+>
+
+const buildSubject = async () => {
+    const moduleRef = await Test.createTestingModule({
+        providers: [
+            {
+                provide: SUBJECT,
+                useValue: {
+                    normalizePhone,
+                    maskPhone,
+                    accountLabel,
+                    cleanChats,
+                    parseConfig,
+                    serializeConfig,
+                    summaryOf,
+                    toSinceDays,
+                    cursorKey,
+                    readCursor,
+                    sinceUnix,
+                    mapMessage,
+                },
+            },
+        ],
+    }).compile()
+    return moduleRef.get<Subject>(SUBJECT)
+}
 
 const chat: PickedChat = { id: "-123", title: "Project", kind: "group" }
 const messageOf = (overrides: Partial<TelegramRawMessage> = {}): TelegramRawMessage => ({
@@ -47,8 +91,10 @@ describe("normalizePhone", () => {
         ["+1 (234) 567-8901", "+12345678901"],
         ["+12345678", "+12345678"],
         ["+123456789012345", "+123456789012345"],
-    ])("normalizes %s to %s", (raw, expected) => {
-        expect(normalizePhone(raw)).toBe(expected)
+    ])("normalizes %s to %s", async (raw, expected) => {
+        const subject = await buildSubject()
+
+        expect(subject.normalizePhone(raw)).toBe(expected)
     })
 
     it.each([
@@ -62,27 +108,35 @@ describe("normalizePhone", () => {
         "+012345678",
         "+1234567",
         "+1234567890123456",
-    ])("rejects an unsupported or invalid number (%s)", (raw) => {
-        expect(normalizePhone(raw)).toBeNull()
+    ])("rejects an unsupported or invalid number (%s)", async (raw) => {
+        const subject = await buildSubject()
+
+        expect(subject.normalizePhone(raw)).toBeNull()
     })
 })
 
 describe("accountLabel", () => {
-    it("keeps only three phone digits and trims the name", () => {
-        expect(maskPhone("+84 (912)-345.678")).toBe("\u2026678")
-        expect(accountLabel("  Owner Name  ", "owner", "+84912345678")).toBe("Owner Name (@owner) \u2026678")
-        expect(accountLabel("  ", null, "+84912345678")).toBe("Telegram \u2026678")
+    it("keeps only three phone digits and trims the name", async () => {
+        const subject = await buildSubject()
+
+        expect(subject.maskPhone("+84 (912)-345.678")).toBe("\u2026678")
+        expect(subject.accountLabel("  Owner Name  ", "owner", "+84912345678")).toBe("Owner Name (@owner) \u2026678")
+        expect(subject.accountLabel("  ", null, "+84912345678")).toBe("Telegram \u2026678")
     })
 })
 
 describe("cleanChats", () => {
-    it.each([undefined, null, {}, "chats", 42])("returns no chats for a non-array (%s)", (value) => {
-        expect(cleanChats(value)).toEqual([])
+    it.each([undefined, null, {}, "chats", 42])("returns no chats for a non-array (%s)", async (value) => {
+        const subject = await buildSubject()
+
+        expect(subject.cleanChats(value)).toEqual([])
     })
 
-    it("skips malformed entries and duplicate ids, preserving the first valid title", () => {
+    it("skips malformed entries and duplicate ids, preserving the first valid title", async () => {
+        const subject = await buildSubject()
+
         expect(
-            cleanChats([
+            subject.cleanChats([
                 null,
                 42,
                 ["123"],
@@ -106,37 +160,45 @@ describe("cleanChats", () => {
         ])
     })
 
-    it("keeps the first fifty valid unique chats", () => {
+    it("keeps the first fifty valid unique chats", async () => {
+        const subject = await buildSubject()
+
         const chats = Array.from({ length: 51 }, (_unused, index) => ({
             id: String(index),
             title: `Chat ${index}`,
             kind: "group",
         }))
 
-        expect(cleanChats(chats)).toEqual(chats.slice(0, 50))
+        expect(subject.cleanChats(chats)).toEqual(chats.slice(0, 50))
     })
 })
 
 describe("parseConfig", () => {
     it.each([null, undefined, "", "{", "null", "[]", "1", "{}", '{"chats":{}}'])(
         "returns null for missing or broken configuration (%s)",
-        (raw) => {
-            expect(parseConfig(raw)).toBeNull()
+        async (raw) => {
+            const subject = await buildSubject()
+
+            expect(subject.parseConfig(raw)).toBeNull()
         },
     )
 
-    it("cleans saved chats and recognizes the thirty-day window", () => {
-        expect(parseConfig(JSON.stringify({ chats: [chat, chat, { id: "nope" }], sinceDays: 30 }))).toEqual({
+    it("cleans saved chats and recognizes the thirty-day window", async () => {
+        const subject = await buildSubject()
+
+        expect(subject.parseConfig(JSON.stringify({ chats: [chat, chat, { id: "nope" }], sinceDays: 30 }))).toEqual({
             chats: [chat],
             sinceDays: 30,
         })
-        expect(parseConfig(JSON.stringify({ chats: [], sinceDays: 60 }))).toEqual({ chats: [], sinceDays: 7 })
-        expect(parseConfig(JSON.stringify({ chats: [chat] }))).toEqual({ chats: [chat], sinceDays: 7 })
+        expect(subject.parseConfig(JSON.stringify({ chats: [], sinceDays: 60 }))).toEqual({ chats: [], sinceDays: 7 })
+        expect(subject.parseConfig(JSON.stringify({ chats: [chat] }))).toEqual({ chats: [chat], sinceDays: 7 })
     })
 })
 
 describe("serializeConfig", () => {
-    it("stores only fifty chats with titles capped at 120 characters", () => {
+    it("stores only fifty chats with titles capped at 120 characters", async () => {
+        const subject = await buildSubject()
+
         const chats = Array.from({ length: 51 }, (_unused, index): PickedChat => ({
             id: String(index),
             title: "t".repeat(121),
@@ -148,44 +210,61 @@ describe("serializeConfig", () => {
             kind: "channel",
         }))
 
-        expect(serializeConfig({ chats, sinceDays: 30 })).toBe(JSON.stringify({ chats: expected, sinceDays: 30 }))
+        expect(subject.serializeConfig({ chats, sinceDays: 30 })).toBe(
+            JSON.stringify({ chats: expected, sinceDays: 30 }),
+        )
         expect(chats).toHaveLength(51)
         expect(chats[0]?.title).toHaveLength(121)
     })
 })
 
 describe("sync window and summary", () => {
-    it("uses the owner-facing summary and chooses seven or thirty days", () => {
-        expect(summaryOf(2)).toBe(TELEGRAM_WIZARD_TEXT.summary(2))
-        expect(toSinceDays(30)).toBe(30)
-        expect(toSinceDays(7)).toBe(7)
-        expect(toSinceDays(60)).toBe(7)
+    it("uses the owner-facing summary and chooses seven or thirty days", async () => {
+        const subject = await buildSubject()
+
+        expect(subject.summaryOf(2)).toBe(TELEGRAM_WIZARD_TEXT.summary(2))
+        expect(subject.toSinceDays(30)).toBe(30)
+        expect(subject.toSinceDays(7)).toBe(7)
+        expect(subject.toSinceDays(60)).toBe(7)
     })
 
-    it("converts the first sync window to whole Unix seconds", () => {
-        expect(sinceUnix(7, 1_700_000_000_999)).toBe(1_699_395_200)
-        expect(sinceUnix(30, 1_700_000_000_000)).toBe(1_697_408_000)
+    it("converts the first sync window to whole Unix seconds", async () => {
+        const subject = await buildSubject()
+
+        expect(subject.sinceUnix(7, 1_700_000_000_999)).toBe(1_699_395_200)
+        expect(subject.sinceUnix(30, 1_700_000_000_000)).toBe(1_697_408_000)
     })
 })
 
 describe("readCursor", () => {
-    it("uses a cursor key per chat and reads positive integral ids", () => {
-        expect(cursorKey("-123")).toBe("cursor:-123")
-        expect(readCursor({ "cursor:-123": "42", "cursor:456": "99" }, "-123")).toBe(42)
+    it("uses a cursor key per chat and reads positive integral ids", async () => {
+        const subject = await buildSubject()
+
+        expect(subject.cursorKey("-123")).toBe("cursor:-123")
+        expect(subject.readCursor({ "cursor:-123": "42", "cursor:456": "99" }, "-123")).toBe(42)
     })
 
-    it.each(["0", "-1", "1.5", "NaN", "Infinity", "", "bad"])("defaults an invalid cursor (%s) to zero", (value) => {
-        expect(readCursor({ "cursor:-123": value }, "-123")).toBe(0)
-    })
+    it.each(["0", "-1", "1.5", "NaN", "Infinity", "", "bad"])(
+        "defaults an invalid cursor (%s) to zero",
+        async (value) => {
+            const subject = await buildSubject()
 
-    it("defaults a missing cursor to zero", () => {
-        expect(readCursor({}, "-123")).toBe(0)
+            expect(subject.readCursor({ "cursor:-123": value }, "-123")).toBe(0)
+        },
+    )
+
+    it("defaults a missing cursor to zero", async () => {
+        const subject = await buildSubject()
+
+        expect(subject.readCursor({}, "-123")).toBe(0)
     })
 })
 
 describe("mapMessage", () => {
-    it("maps the chat, message id, timestamp and body into a hub row", () => {
-        expect(mapMessage(chat, messageOf())).toEqual({
+    it("maps the chat, message id, timestamp and body into a hub row", async () => {
+        const subject = await buildSubject()
+
+        expect(subject.mapMessage(chat, messageOf())).toEqual({
             externalId: "-123:42",
             title: "Hello",
             occurredAt: new Date("2023-11-14T22:13:20.000Z"),
@@ -200,8 +279,12 @@ describe("mapMessage", () => {
         })
     })
 
-    it("caps the text at 4000 characters and the title at 120", () => {
-        expect(mapMessage(chat, messageOf({ text: "t".repeat(4001), hasMedia: true, replyToId: null }))).toEqual({
+    it("caps the text at 4000 characters and the title at 120", async () => {
+        const subject = await buildSubject()
+
+        expect(
+            subject.mapMessage(chat, messageOf({ text: "t".repeat(4001), hasMedia: true, replyToId: null })),
+        ).toEqual({
             externalId: "-123:42",
             title: "t".repeat(120),
             occurredAt: new Date("2023-11-14T22:13:20.000Z"),
@@ -216,8 +299,12 @@ describe("mapMessage", () => {
         })
     })
 
-    it("uses the attachment label only for an empty message with media", () => {
-        expect(mapMessage(chat, messageOf({ text: "", hasMedia: true })).title).toBe(TELEGRAM_WIZARD_TEXT.attachment)
-        expect(mapMessage(chat, messageOf({ text: "", hasMedia: false })).title).toBe("")
+    it("uses the attachment label only for an empty message with media", async () => {
+        const subject = await buildSubject()
+
+        expect(subject.mapMessage(chat, messageOf({ text: "", hasMedia: true })).title).toBe(
+            TELEGRAM_WIZARD_TEXT.attachment,
+        )
+        expect(subject.mapMessage(chat, messageOf({ text: "", hasMedia: false })).title).toBe("")
     })
 })

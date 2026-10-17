@@ -1,6 +1,16 @@
+import { Test } from "@nestjs/testing"
+
 import { createCipheriv, randomBytes } from "node:crypto"
-import { decryptSecret, sameText, sha256Hex } from "./channel-secret.policy"
+
+import {
+    decryptSecret as realDecryptSecret,
+    sameText as realSameText,
+    sha256Hex as realSha256Hex,
+} from "./channel-secret.policy"
+
 import { BillingErrorCode } from "./errors/billing.error"
+
+const SUBJECT = Symbol("channel-secret.policy")
 
 const KEY = randomBytes(32).toString("base64")
 
@@ -11,20 +21,47 @@ const encrypt = (plain: string, keyBase64: string): string => {
     return Buffer.concat([iv, cipher.getAuthTag(), body]).toString("base64")
 }
 
+const buildSubject = async () => {
+    const moduleRef = await Test.createTestingModule({
+        providers: [
+            {
+                provide: SUBJECT,
+                useValue: { decryptSecret: realDecryptSecret, sameText: realSameText, sha256Hex: realSha256Hex },
+            },
+        ],
+    }).compile()
+    const subject = moduleRef.get<{
+        decryptSecret: typeof realDecryptSecret
+        sameText: typeof realSameText
+        sha256Hex: typeof realSha256Hex
+    }>(SUBJECT)
+    const decryptSecret = subject.decryptSecret
+    const sameText = subject.sameText
+    const sha256Hex = subject.sha256Hex
+
+    return { decryptSecret, sameText, sha256Hex }
+}
+
 describe("channel secret policy", () => {
     describe("decryptSecret", () => {
-        it("reads back what was stored under the key", () => {
+        it("reads back what was stored under the key", async () => {
+            const { decryptSecret } = await buildSubject()
+
             expect(decryptSecret(encrypt('{"secureKey":"k"}', KEY), KEY)).toBe('{"secureKey":"k"}')
         })
 
-        it("fails without a key or with a key of the wrong size", () => {
+        it("fails without a key or with a key of the wrong size", async () => {
+            const { decryptSecret } = await buildSubject()
+
             const stored = encrypt("x", KEY)
             const unreadable = expect.objectContaining({ code: BillingErrorCode.CredentialUnreadable })
             expect(() => decryptSecret(stored, undefined)).toThrow(unreadable)
             expect(() => decryptSecret(stored, Buffer.alloc(16).toString("base64"))).toThrow(unreadable)
         })
 
-        it("fails for another key, a tampered value and a truncated one, keeping the cause", () => {
+        it("fails for another key, a tampered value and a truncated one, keeping the cause", async () => {
+            const { decryptSecret } = await buildSubject()
+
             const stored = encrypt("x", KEY)
             const tampered = Buffer.from(stored, "base64")
             tampered[tampered.length - 1] = (tampered[tampered.length - 1] ?? 0) ^ 1
@@ -43,7 +80,9 @@ describe("channel secret policy", () => {
     })
 
     describe("sameText", () => {
-        it("compares texts of equal length in constant time and refuses any difference", () => {
+        it("compares texts of equal length in constant time and refuses any difference", async () => {
+            const { sameText } = await buildSubject()
+
             expect(sameText("abc", "abc")).toBe(true)
             expect(sameText("abc", "abd")).toBe(false)
             expect(sameText("abc", "abcd")).toBe(false)
@@ -51,7 +90,9 @@ describe("channel secret policy", () => {
     })
 
     describe("sha256Hex", () => {
-        it("is the SHA-256 hex digest", () => {
+        it("is the SHA-256 hex digest", async () => {
+            const { sha256Hex } = await buildSubject()
+
             expect(sha256Hex("abc")).toBe("ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad")
         })
     })

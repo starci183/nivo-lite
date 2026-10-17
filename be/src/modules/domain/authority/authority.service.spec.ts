@@ -53,7 +53,9 @@ describe("AuthorityService", () => {
             await expect(service.ensureSheet("ws-1")).resolves.toBe(false)
         })
     })
+})
 
+describe("AuthorityService", () => {
     describe("load", () => {
         it("answers the house rules", async () => {
             const em = mockEntityManager({ query: [FIND_AUTHORITY, [authorityRowOf()]] })
@@ -69,7 +71,9 @@ describe("AuthorityService", () => {
             await expect(service.load({ workspaceId: "ws-1" })).resolves.toBeNull()
         })
     })
+})
 
+describe("AuthorityService", () => {
     describe("profileOf", () => {
         it("answers the whole sheet", async () => {
             const em = mockEntityManager({ query: [FIND_AUTHORITY_PROFILE, [profileOf()]] })
@@ -85,7 +89,9 @@ describe("AuthorityService", () => {
             await expect(service.profileOf("ws-1")).resolves.toBeNull()
         })
     })
+})
 
+describe("AuthorityService", () => {
     describe("save", () => {
         it("lays the patch over the stored sheet and saves it", async () => {
             const saved = profileOf({ policies: "P2" })

@@ -1,9 +1,42 @@
+import { Test } from "@nestjs/testing"
 import { builder } from "@starci/jest-preset"
-import { leadSourceOf, platformOf, saveParams, sourceKindOf, toLeadFlow } from "./lead-flow.mapper"
+import {
+    platformOf as realPlatformOf,
+    sourceKindOf as realSourceKindOf,
+    leadSourceOf as realLeadSourceOf,
+    toLeadFlow as realToLeadFlow,
+    saveParams as realSaveParams,
+} from "./lead-flow.mapper"
 import type { Analysis, FlowState, LeadFlow, LeadSource, Signals, SourceKind } from "./lead-flows.contracts"
 import type { LeadFlowRow } from "./persistence/lead-flows.rows"
 
+const SUBJECT = Symbol("lead-flow.mapper")
+
+type Subject = Pick<
+    typeof import("./lead-flow.mapper"),
+    "platformOf" | "sourceKindOf" | "leadSourceOf" | "toLeadFlow" | "saveParams"
+>
+
+const build = async () => {
+    const moduleRef = await Test.createTestingModule({
+        providers: [
+            {
+                provide: SUBJECT,
+                useValue: {
+                    platformOf: realPlatformOf,
+                    sourceKindOf: realSourceKindOf,
+                    leadSourceOf: realLeadSourceOf,
+                    toLeadFlow: realToLeadFlow,
+                    saveParams: realSaveParams,
+                },
+            },
+        ],
+    }).compile()
+    return moduleRef.get<Subject>(SUBJECT)
+}
+
 const NOW = "2026-10-12T10:00:00.000Z"
+
 const rowOf = builder<LeadFlowRow>({
     id: "flow-1",
     workspace_id: "ws-1",
@@ -49,6 +82,7 @@ const SIGNALS: Signals = {
     wants_meeting: false,
     interest: "medium",
 }
+
 const EMPTY_FLOW: LeadFlow = {
     id: "flow-1",
     workspace_id: "ws-1",
@@ -83,6 +117,7 @@ const EMPTY_FLOW: LeadFlow = {
     escalated_at: null,
     escalation_reason: null,
 }
+
 const SOURCE: LeadSource = {
     platform: "instagram",
     kind: "comment",
@@ -94,6 +129,7 @@ const SOURCE: LeadSource = {
     referral: { ref: "ref-1", source: "ADS", type: "OPEN_THREAD", ad_id: "ad-2" },
     at: NOW,
 }
+
 const ANALYSIS: Analysis = {
     turn: "turn-1",
     signals: SIGNALS,
@@ -108,24 +144,29 @@ const ANALYSIS: Analysis = {
 }
 
 describe("lead flow mapping", () => {
-    it.each(["instagram", "facebook", "unknown", null])("recognizes platform %s", (value) => {
-        expect(platformOf(value)).toBe(value === "instagram" ? "instagram" : "facebook")
-    })
+    it.each(["instagram", "facebook", "unknown", null])("recognizes platform %s", async (value) => {
+        const subject = await build()
 
-    it.each<SourceKind>(["leadgen", "dm", "comment", "mention"])("recognizes source kind %s", (kind) => {
-        expect(sourceKindOf(kind, "dm")).toBe(kind)
+        expect(subject.platformOf(value)).toBe(value === "instagram" ? "instagram" : "facebook")
     })
+    it.each<SourceKind>(["leadgen", "dm", "comment", "mention"])("recognizes source kind %s", async (kind) => {
+        const subject = await build()
 
-    it("uses the caller's source fallback for an unrecognized kind", () => {
-        expect(sourceKindOf("invalid", "mention")).toBe("mention")
-        expect(sourceKindOf(null, "dm")).toBe("dm")
+        expect(subject.sourceKindOf(kind, "dm")).toBe(kind)
     })
+    it("uses the caller's source fallback for an unrecognized kind", async () => {
+        const subject = await build()
 
-    it("rejects values with neither a platform nor a kind and defaults missing source fields", () => {
-        expect(leadSourceOf(null)).toBeNull()
-        expect(leadSourceOf({})).toBeNull()
-        expect(leadSourceOf([])).toBeNull()
-        expect(leadSourceOf({ platform: "instagram" })).toEqual({
+        expect(subject.sourceKindOf("invalid", "mention")).toBe("mention")
+        expect(subject.sourceKindOf(null, "dm")).toBe("dm")
+    })
+    it("rejects values with neither a platform nor a kind and defaults missing source fields", async () => {
+        const subject = await build()
+
+        expect(subject.leadSourceOf(null)).toBeNull()
+        expect(subject.leadSourceOf({})).toBeNull()
+        expect(subject.leadSourceOf([])).toBeNull()
+        expect(subject.leadSourceOf({ platform: "instagram" })).toEqual({
             platform: "instagram",
             kind: "leadgen",
             post_id: null,
@@ -136,7 +177,7 @@ describe("lead flow mapping", () => {
             referral: null,
             at: null,
         })
-        expect(leadSourceOf({ kind: "dm", referral: null })).toEqual({
+        expect(subject.leadSourceOf({ kind: "dm", referral: null })).toEqual({
             platform: "facebook",
             kind: "dm",
             post_id: null,
@@ -148,29 +189,40 @@ describe("lead flow mapping", () => {
             at: null,
         })
     })
+    it("preserves source identifiers and validates the referral shape", async () => {
+        const subject = await build()
 
-    it("preserves source identifiers and validates the referral shape", () => {
-        expect(leadSourceOf(SOURCE)).toEqual(SOURCE)
-        expect(leadSourceOf({ ...SOURCE, referral: "invalid" })).toEqual({ ...SOURCE, referral: null })
+        expect(subject.leadSourceOf(SOURCE)).toEqual(SOURCE)
+        expect(subject.leadSourceOf({ ...SOURCE, referral: "invalid" })).toEqual({ ...SOURCE, referral: null })
         expect(
-            leadSourceOf({ ...SOURCE, referral: { ref: "  campaign  ", source: 1, type: "", ad_id: null } }),
+            subject.leadSourceOf({ ...SOURCE, referral: { ref: "  campaign  ", source: 1, type: "", ad_id: null } }),
         ).toEqual({
             ...SOURCE,
             referral: { ref: "campaign", source: null, type: null, ad_id: null },
         })
     })
+})
 
-    it("supplies safe defaults for malformed or missing stored fields", () => {
-        expect(toLeadFlow(rowOf())).toEqual(EMPTY_FLOW)
+describe("lead flow mapping", () => {
+    it("supplies safe defaults for malformed or missing stored fields", async () => {
+        const subject = await build()
+
+        expect(subject.toLeadFlow(rowOf())).toEqual(EMPTY_FLOW)
         expect(
-            toLeadFlow(rowOf({ touches: {}, answers: "bad", score_reasons: 1, signals: {}, analysis: { turn: " " } })),
+            subject.toLeadFlow(
+                rowOf({ touches: {}, answers: "bad", score_reasons: 1, signals: {}, analysis: { turn: " " } }),
+            ),
         ).toEqual(EMPTY_FLOW)
     })
+})
 
-    it("maps every field, normalizes timestamps, and drops malformed touches and answers", () => {
+describe("lead flow mapping", () => {
+    it("maps every field, normalizes timestamps, and drops malformed touches and answers", async () => {
+        const subject = await build()
+
         const answer = { i: 1, question: "What do you need?", answer: "Tea", at: NOW }
         expect(
-            toLeadFlow(
+            subject.toLeadFlow(
                 rowOf({
                     platform: "instagram",
                     state: "scored",
@@ -222,28 +274,37 @@ describe("lead flow mapping", () => {
             escalation_reason: "complaint",
         })
     })
+})
 
+describe("lead flow mapping", () => {
     it.each<FlowState>(["new", "greeted", "qualifying", "scored", "handed_off", "nurturing", "closed", "escalated"])(
         "recognizes the stored state %s",
-        (state) => {
-            expect(toLeadFlow(rowOf({ state, resume_state: state }))).toEqual({
+        async (state) => {
+            const subject = await build()
+
+            expect(subject.toLeadFlow(rowOf({ state, resume_state: state }))).toEqual({
                 ...EMPTY_FLOW,
                 state,
                 resume_state: state,
             })
         },
     )
+})
 
-    it.each(["hot", "warm", "cold", "unknown"])("recognizes the stored score %s", (score) => {
-        expect(toLeadFlow(rowOf({ score, platform: "facebook" }))).toEqual({
+describe("lead flow mapping", () => {
+    it.each(["hot", "warm", "cold", "unknown"])("recognizes the stored score %s", async (score) => {
+        const subject = await build()
+
+        expect(subject.toLeadFlow(rowOf({ score, platform: "facebook" }))).toEqual({
             ...EMPTY_FLOW,
             platform: "facebook",
             score: score === "unknown" ? null : score,
         })
     })
+    it("serializes absent JSON fields and places each save parameter in column order", async () => {
+        const subject = await build()
 
-    it("serializes absent JSON fields and places each save parameter in column order", () => {
-        expect(saveParams(EMPTY_FLOW)).toEqual([
+        expect(subject.saveParams(EMPTY_FLOW)).toEqual([
             "flow-1",
             "ws-1",
             "lead-1",
@@ -278,11 +339,15 @@ describe("lead flow mapping", () => {
             null,
         ])
     })
+})
 
-    it("serializes the source, touches, answers, signals, reasons and analysis without losing scalar fields", () => {
+describe("lead flow mapping", () => {
+    it("serializes source, touches, answers, signals, reasons and analysis, preserving scalars", async () => {
+        const subject = await build()
+
         const answer = { i: 0, question: "Need?", answer: "Tea", at: NOW }
         expect(
-            saveParams({
+            subject.saveParams({
                 ...EMPTY_FLOW,
                 platform: "instagram",
                 igsid: "ig-1",

@@ -1,4 +1,16 @@
-import { pickLocale } from "./request-locale.policy"
+import { Test } from "@nestjs/testing"
+import { pickLocale as pickLocaleImplementation } from "./request-locale.policy"
+
+const SUBJECT = Symbol("subject")
+type Subject = { pickLocale: typeof pickLocaleImplementation }
+
+const buildSubject = async () => {
+    const moduleRef = await Test.createTestingModule({
+        providers: [{ provide: SUBJECT, useValue: { pickLocale: pickLocaleImplementation } }],
+    }).compile()
+    const subject = moduleRef.get<Subject>(SUBJECT)
+    return { subject }
+}
 
 describe("pickLocale", () => {
     it.each([
@@ -8,7 +20,9 @@ describe("pickLocale", () => {
         [["fr", "en"], "en"],
         ["fr-FR,de", "vi"],
         [undefined, "vi"],
-    ])("picks the locale of %j", (header, expected) => {
-        expect(pickLocale(header)).toBe(expected)
+    ])("picks the locale of %j", async (header, expected) => {
+        const { subject } = await buildSubject()
+
+        expect(subject.pickLocale(header)).toBe(expected)
     })
 })

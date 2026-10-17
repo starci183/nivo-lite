@@ -70,7 +70,9 @@ describe("KnowledgeDriveService", () => {
             })
         })
     })
+})
 
+describe("KnowledgeDriveService", () => {
     describe("listPickedFolder", () => {
         it("lists the folder with the token of the browser", async () => {
             const { service, documents } = await build()

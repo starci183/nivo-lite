@@ -1,4 +1,16 @@
+import type * as SubjectModule from "./queue-timer.policy"
+import { Test } from "@nestjs/testing"
 import { startLocalInterval, startLocalTimeout } from "./queue-timer.policy"
+
+const SUBJECT = Symbol("queue-timer.policy")
+type Subject = Pick<typeof SubjectModule, "startLocalTimeout" | "startLocalInterval">
+
+const buildSubject = async () => {
+    const moduleRef = await Test.createTestingModule({
+        providers: [{ provide: SUBJECT, useValue: { startLocalTimeout, startLocalInterval } }],
+    }).compile()
+    return moduleRef.get<Subject>(SUBJECT)
+}
 
 describe("process-local queue timers", () => {
     beforeEach(() => {
@@ -9,9 +21,11 @@ describe("process-local queue timers", () => {
         jest.useRealTimers()
     })
 
-    it("runs a timeout once, only after its full duration", () => {
+    it("runs a timeout once, only after its full duration", async () => {
+        const subject = await buildSubject()
+
         let completed = 0
-        startLocalTimeout(2000, () => {
+        subject.startLocalTimeout(2000, () => {
             completed += 1
         })
 
@@ -27,9 +41,11 @@ describe("process-local queue timers", () => {
         expect(completed).toBe(1)
     })
 
-    it("cancels a timeout before its callback can run", () => {
+    it("cancels a timeout before its callback can run", async () => {
+        const subject = await buildSubject()
+
         let completed = 0
-        const timer = startLocalTimeout(2000, () => {
+        const timer = subject.startLocalTimeout(2000, () => {
             completed += 1
         })
 
@@ -42,9 +58,11 @@ describe("process-local queue timers", () => {
         expect(completed).toBe(0)
     })
 
-    it("runs an interval at each full duration", () => {
+    it("runs an interval at each full duration", async () => {
+        const subject = await buildSubject()
+
         let completed = 0
-        const timer = startLocalInterval(1000, () => {
+        const timer = subject.startLocalInterval(1000, () => {
             completed += 1
         })
 
@@ -59,10 +77,22 @@ describe("process-local queue timers", () => {
         expect(jest.getTimerCount()).toBe(1)
         timer.cancel()
     })
+})
 
-    it("cancels future interval callbacks and releases its timer", () => {
+describe("process-local queue timers", () => {
+    beforeEach(() => {
+        jest.useFakeTimers()
+    })
+
+    afterEach(() => {
+        jest.useRealTimers()
+    })
+
+    it("cancels future interval callbacks and releases its timer", async () => {
+        const subject = await buildSubject()
+
         let completed = 0
-        const timer = startLocalInterval(1000, () => {
+        const timer = subject.startLocalInterval(1000, () => {
             completed += 1
         })
 

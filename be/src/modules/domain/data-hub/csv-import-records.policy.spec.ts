@@ -1,8 +1,20 @@
+import type * as SubjectModule from "./csv-import-records.policy"
+import { Test } from "@nestjs/testing"
 import { DOCUMENT_MAX_TEXT } from "@modules/integrations/data-sources"
 import { buildRecords, recordFromDocument, recordFromGoogleDoc } from "./csv-import-records.policy"
 import type { CsvMapping } from "./csv-import.contracts"
 import { DataHubErrorCode } from "./errors/data-hub.error"
 import { CSV_COPY } from "./messages/csv-import.messages"
+
+const SUBJECT = Symbol("csv-import-records.policy")
+type Subject = Pick<typeof SubjectModule, "buildRecords" | "recordFromDocument" | "recordFromGoogleDoc">
+
+const buildSubject = async () => {
+    const moduleRef = await Test.createTestingModule({
+        providers: [{ provide: SUBJECT, useValue: { buildRecords, recordFromDocument, recordFromGoogleDoc } }],
+    }).compile()
+    return moduleRef.get<Subject>(SUBJECT)
+}
 
 const mapping: CsvMapping = {
     idColumn: "id",
@@ -13,8 +25,10 @@ const mapping: CsvMapping = {
 }
 
 describe("buildRecords", () => {
-    it("normalises phones, emails, numbers and dates and keeps the original text", () => {
-        const built = buildRecords(
+    it("normalises phones, emails, numbers and dates and keeps the original text", async () => {
+        const subject = await buildSubject()
+
+        const built = subject.buildRecords(
             {
                 headers: mapping.columns,
                 rows: [["KH1", "Lan", "+84 912 345 678", "Lan@Example.com", "1.200", "14/10/2026", "hi"]],
@@ -46,8 +60,10 @@ describe("buildRecords", () => {
         })
     })
 
-    it("keeps a phone that is already digits and skips a value that is not a number or a date", () => {
-        const built = buildRecords(
+    it("keeps a phone that is already digits and skips a value that is not a number or a date", async () => {
+        const subject = await buildSubject()
+
+        const built = subject.buildRecords(
             {
                 headers: ["phone", "amount", "when"],
                 rows: [["0912", "abc", "later"]],
@@ -65,21 +81,27 @@ describe("buildRecords", () => {
         expect(built.records[0]?.data).not.toHaveProperty("when__date")
     })
 
-    it("uses the raw phone text when it has no digits, and a phone id when the id column is a phone", () => {
-        const built = buildRecords(
+    it("uses the raw phone text when it has no digits, and a phone id when the id column is a phone", async () => {
+        const subject = await buildSubject()
+
+        const built = subject.buildRecords(
             { headers: ["id", "name"], rows: [["+84 912 345 678", ""]] },
             { ...mapping, idColumn: "id", titleColumn: "name", kinds: { id: "phone", name: "text" } },
         )
         expect(built.records[0]).toMatchObject({ externalId: "0912345678", title: "0912345678" })
-        const words = buildRecords(
+        const words = subject.buildRecords(
             { headers: ["phone"], rows: [["abc"]] },
             { ...mapping, idColumn: null, titleColumn: null, dateColumn: null, kinds: { phone: "phone" } },
         )
         expect(words.records[0]?.data).toEqual({ phone: "abc" })
     })
+})
 
-    it("skips a blank id or an id over 300 characters and counts a repeated id once", () => {
-        const built = buildRecords(
+describe("buildRecords", () => {
+    it("skips a blank id or an id over 300 characters and counts a repeated id once", async () => {
+        const subject = await buildSubject()
+
+        const built = subject.buildRecords(
             {
                 headers: ["id", "name"],
                 rows: [
@@ -99,10 +121,12 @@ describe("buildRecords", () => {
         ])
     })
 
-    it("cuts a title at 300 characters and ignores an unknown kind as text", () => {
+    it("cuts a title at 300 characters and ignores an unknown kind as text", async () => {
+        const subject = await buildSubject()
+
         const kinds: CsvMapping["kinds"] = { id: "text", name: "text" }
         Reflect.set(kinds, "name", "nope")
-        const built = buildRecords(
+        const built = subject.buildRecords(
             { headers: ["id", "name"], rows: [["KH1", "n".repeat(400)]] },
             {
                 ...mapping,
@@ -114,23 +138,27 @@ describe("buildRecords", () => {
         expect(built.records[0]?.data.name).toBe("n".repeat(400))
     })
 
-    it("reads a missing cell as empty and skips a row with nothing in it", () => {
-        const built = buildRecords(
+    it("reads a missing cell as empty and skips a row with nothing in it", async () => {
+        const subject = await buildSubject()
+
+        const built = subject.buildRecords(
             { headers: ["id", "name"], rows: [[]] },
             { ...mapping, idColumn: null, titleColumn: "name", dateColumn: null },
         )
         expect(built).toEqual({ records: [], skipped: 0, duplicates: 0 })
     })
 
-    it("skips a missing id and uses a numbered title when mapped title and date cells are absent", () => {
+    it("skips a missing id and uses a numbered title when mapped title and date cells are absent", async () => {
+        const subject = await buildSubject()
+
         expect(
-            buildRecords(
+            subject.buildRecords(
                 { headers: ["note", "id"], rows: [["Present"]] },
                 { ...mapping, idColumn: "id", titleColumn: null, dateColumn: null, kinds: {} },
             ),
         ).toEqual({ records: [], skipped: 1, duplicates: 0 })
         expect(
-            buildRecords(
+            subject.buildRecords(
                 { headers: ["note", "name", "when"], rows: [["Present"]] },
                 { ...mapping, idColumn: null, titleColumn: "name", dateColumn: "when", kinds: {} },
             ),
@@ -142,10 +170,14 @@ describe("buildRecords", () => {
             duplicates: 0,
         })
     })
+})
 
-    it("uses the original text for a phone id containing no digits", () => {
+describe("buildRecords", () => {
+    it("uses the original text for a phone id containing no digits", async () => {
+        const subject = await buildSubject()
+
         expect(
-            buildRecords(
+            subject.buildRecords(
                 { headers: ["id"], rows: [["words"]] },
                 { ...mapping, idColumn: "id", titleColumn: null, dateColumn: null, kinds: { id: "phone" } },
             ),
@@ -158,16 +190,22 @@ describe("buildRecords", () => {
 })
 
 describe("recordFromDocument", () => {
-    it("uses the heading and keeps the page count", () => {
-        expect(recordFromDocument("C:\\docs\\guide.pdf", { text: "# Uploaded\r\nBody\u0000", pages: 2 })).toEqual({
+    it("uses the heading and keeps the page count", async () => {
+        const subject = await buildSubject()
+
+        expect(
+            subject.recordFromDocument("C:\\docs\\guide.pdf", { text: "# Uploaded\r\nBody\u0000", pages: 2 }),
+        ).toEqual({
             externalId: "guide.pdf",
             title: "Uploaded",
             data: { text: "# Uploaded\nBody", source: "upload", fileName: "guide.pdf", pages: 2 },
         })
     })
 
-    it("uses the first line when there is no heading, and omits pages", () => {
-        expect(recordFromDocument("notes/plain.txt", { text: "  First line\nsecond" })).toEqual({
+    it("uses the first line when there is no heading, and omits pages", async () => {
+        const subject = await buildSubject()
+
+        expect(subject.recordFromDocument("notes/plain.txt", { text: "  First line\nsecond" })).toEqual({
             externalId: "plain.txt",
             title: "First line",
             data: { text: "First line\nsecond", source: "upload", fileName: "plain.txt" },
@@ -179,18 +217,24 @@ describe("recordFromDocument", () => {
         ["Intro\n\n## Later heading\nBody", "Later heading"],
         ["###\nBody", "Body"],
         ["x".repeat(121), "x".repeat(120)],
-    ])("chooses the title from uploaded text %p", (text, title) => {
-        expect(recordFromDocument("plain.txt", { text }).title).toBe(title)
+    ])("chooses the title from uploaded text %p", async (text, title) => {
+        const subject = await buildSubject()
+
+        expect(subject.recordFromDocument("plain.txt", { text }).title).toBe(title)
     })
 
-    it("falls back to the file name when the heading is only marks", () => {
-        expect(recordFromDocument("marks.md", { text: "###" }).title).toBe("marks.md")
+    it("falls back to the file name when the heading is only marks", async () => {
+        const subject = await buildSubject()
+
+        expect(subject.recordFromDocument("marks.md", { text: "###" }).title).toBe("marks.md")
     })
 
-    it("structurally preserves the file name for a synthetic missing title line", () => {
+    it("structurally preserves the file name for a synthetic missing title line", async () => {
+        const subject = await buildSubject()
+
         const split = jest.spyOn(String.prototype, "split").mockReturnValueOnce([])
         try {
-            expect(recordFromDocument("notes/plain.txt", { text: "Body" })).toEqual({
+            expect(subject.recordFromDocument("notes/plain.txt", { text: "Body" })).toEqual({
                 externalId: "plain.txt",
                 title: "plain.txt",
                 data: { text: "Body", source: "upload", fileName: "plain.txt" },
@@ -200,13 +244,15 @@ describe("recordFromDocument", () => {
         }
     })
 
-    it("marks a document that was cut and refuses one with no text", () => {
+    it("marks a document that was cut and refuses one with no text", async () => {
+        const subject = await buildSubject()
+
         const text = `${"a".repeat(DOCUMENT_MAX_TEXT)}\nmore`
-        expect(recordFromDocument("long.txt", { text }).data).toMatchObject({ truncated: true })
-        const actualText = recordFromDocument("long.txt", { text }).data.text
+        expect(subject.recordFromDocument("long.txt", { text }).data).toMatchObject({ truncated: true })
+        const actualText = subject.recordFromDocument("long.txt", { text }).data.text
         expect(typeof actualText).toBe("string")
         if (typeof actualText === "string") expect(actualText.length).toBe(DOCUMENT_MAX_TEXT)
-        expect(() => recordFromDocument("empty.txt", { text: " \n " })).toThrow(
+        expect(() => subject.recordFromDocument("empty.txt", { text: " \n " })).toThrow(
             expect.objectContaining({
                 code: DataHubErrorCode.Invalid,
                 params: { detail: CSV_COPY.documentNoText("empty.txt") },
@@ -216,17 +262,21 @@ describe("recordFromDocument", () => {
 })
 
 describe("recordFromGoogleDoc", () => {
-    it("strips a byte-order mark and names the document from its heading", () => {
-        expect(recordFromGoogleDoc("document-1", "\uFEFF# Linked\nBody")).toEqual({
+    it("strips a byte-order mark and names the document from its heading", async () => {
+        const subject = await buildSubject()
+
+        expect(subject.recordFromGoogleDoc("document-1", "\uFEFF# Linked\nBody")).toEqual({
             externalId: "document-1",
             title: "Linked",
             data: { text: "# Linked\nBody", source: "google_docs", docId: "document-1" },
         })
     })
 
-    it("uses a short id when the document has no title line, and refuses an empty export", () => {
-        expect(recordFromGoogleDoc("document-1234", "###").title).toBe(CSV_COPY.googleDocTitle("document"))
-        expect(() => recordFromGoogleDoc("document-1", " ")).toThrow(
+    it("uses a short id when the document has no title line, and refuses an empty export", async () => {
+        const subject = await buildSubject()
+
+        expect(subject.recordFromGoogleDoc("document-1234", "###").title).toBe(CSV_COPY.googleDocTitle("document"))
+        expect(() => subject.recordFromGoogleDoc("document-1", " ")).toThrow(
             expect.objectContaining({
                 code: DataHubErrorCode.Invalid,
                 params: { detail: CSV_COPY.googleDocEmpty },
@@ -238,14 +288,18 @@ describe("recordFromGoogleDoc", () => {
         ["\uFEFF\n \n  First non-empty line\nSecond line", "First non-empty line"],
         ["Intro\n\n## Later heading\nBody", "Later heading"],
         ["###\nBody", "Body"],
-    ])("chooses the title from a Google export %p", (text, title) => {
-        expect(recordFromGoogleDoc("document-1234", text).title).toBe(title)
+    ])("chooses the title from a Google export %p", async (text, title) => {
+        const subject = await buildSubject()
+
+        expect(subject.recordFromGoogleDoc("document-1234", text).title).toBe(title)
     })
 
-    it("structurally preserves the Google default for a synthetic missing title line", () => {
+    it("structurally preserves the Google default for a synthetic missing title line", async () => {
+        const subject = await buildSubject()
+
         const split = jest.spyOn(String.prototype, "split").mockReturnValueOnce([])
         try {
-            expect(recordFromGoogleDoc("document-1234", "Body")).toEqual({
+            expect(subject.recordFromGoogleDoc("document-1234", "Body")).toEqual({
                 externalId: "document-1234",
                 title: "Google Docs document",
                 data: { text: "Body", source: "google_docs", docId: "document-1234" },
@@ -255,8 +309,10 @@ describe("recordFromGoogleDoc", () => {
         }
     })
 
-    it("marks a Google Doc that was cut", () => {
+    it("marks a Google Doc that was cut", async () => {
+        const subject = await buildSubject()
+
         const raw = "a".repeat(DOCUMENT_MAX_TEXT + 1)
-        expect(recordFromGoogleDoc("document-1", raw).data).toMatchObject({ truncated: true })
+        expect(subject.recordFromGoogleDoc("document-1", raw).data).toMatchObject({ truncated: true })
     })
 })

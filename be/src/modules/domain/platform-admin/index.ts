@@ -15,4 +15,3 @@ export type {
     WorkspaceFilter,
 } from "./platform-admin.contracts"
 export { PlatformAdminModule } from "./platform-admin.module"
-export type { PlatformAdminOptions } from "./platform-admin.options"

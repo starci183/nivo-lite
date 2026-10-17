@@ -108,7 +108,9 @@ describe("ContentMediaService", () => {
         expect(members.require).toHaveBeenCalledWith("user-1", "ws-1")
         expect(storage.list).not.toHaveBeenCalled()
     })
+})
 
+describe("ContentMediaService", () => {
     it("signs workspace files and videos and skips a video outside the workspace", async () => {
         const { service, storage, renders } = await build()
         storage.list.mockResolvedValue(ok([{ name: STORED_PHOTO, createdAt: "2026-10-01T00:00:00.000Z" }]))
@@ -176,7 +178,9 @@ describe("ContentMediaService", () => {
         })
         expect(storage.signedUrls).toHaveBeenNthCalledWith(1, "media", paths.slice(0, 80), 3600)
     })
+})
 
+describe("ContentMediaService", () => {
     it.each([
         { path: "", download: "https://cdn.example/file?download=" },
         { path: "ws-1/", download: "https://cdn.example/file?download=" },
@@ -217,7 +221,9 @@ describe("ContentMediaService", () => {
             code: ContentMediaErrorCode.StorageUnavailable,
         })
     })
+})
 
+describe("ContentMediaService", () => {
     it("uses the default filename when the provider path has no final segment", async () => {
         const { service, storage, renders } = await build()
         storage.list.mockResolvedValue(ok([]))
@@ -284,7 +290,9 @@ describe("ContentMediaService", () => {
 
         expect(entitlements.requireStorageFor).not.toHaveBeenCalled()
     })
+})
 
+describe("ContentMediaService", () => {
     it("refuses the upload when no object id is allocated", async () => {
         const entityManager = mockEntityManager({ query: [NEW_CONTENT_MEDIA_UPLOAD_ID, []] })
         const { service, storage } = await build(entityManager)
@@ -351,7 +359,9 @@ describe("ContentMediaService", () => {
         expect(storage.signedUrls).toHaveBeenNthCalledWith(1, "media", [], 3600)
         expect(storage.signedUrls).toHaveBeenNthCalledWith(2, "videos", [video.outputPath], 3600)
     })
+})
 
+describe("ContentMediaService", () => {
     it("refuses when media signing succeeds but video signing fails", async () => {
         const { service, storage, renders } = await build()
         storage.list.mockResolvedValue(ok([]))

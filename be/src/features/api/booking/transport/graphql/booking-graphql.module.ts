@@ -2,6 +2,7 @@ import { Module } from "@nestjs/common"
 import { BookingApiModule } from "../../booking.module"
 import { BookingBoardResolver } from "./booking-board.resolver"
 import { AddBookingResolver } from "./add-booking.resolver"
+import { ConfigurableModuleClass } from "./booking-graphql.module-definition"
 import { MoveBookingResolver } from "./move-booking.resolver"
 import { ConfirmBookingResolver } from "./confirm-booking.resolver"
 import { CheckInBookingResolver } from "./check-in-booking.resolver"
@@ -20,7 +21,7 @@ import { SaveBookingPublicPageResolver } from "./save-booking-public-page.resolv
 import { RemoveBookingWaitlistEntryResolver } from "./remove-booking-waitlist-entry.resolver"
 
 @Module({
-    imports: [BookingApiModule],
+    imports: [BookingApiModule.register({})],
     providers: [
         BookingBoardResolver,
         AddBookingResolver,
@@ -43,4 +44,4 @@ import { RemoveBookingWaitlistEntryResolver } from "./remove-booking-waitlist-en
     ],
 })
 /** The GraphQL transport of the booking workbench. */
-export class BookingGraphqlModule {}
+export class BookingGraphqlModule extends ConfigurableModuleClass {}

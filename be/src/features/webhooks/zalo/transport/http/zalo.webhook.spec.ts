@@ -1,9 +1,10 @@
+import { ZaloHttpModule, webhookVerifiers } from "./zalo-http.module"
 import { Test } from "@nestjs/testing"
 import type { RawBodyRequest } from "@nestjs/common"
 import { mock } from "@starci/jest-preset"
 import type { Request } from "express"
 import { ZaloInboxService } from "@modules/domain/zalo-inbox"
-import type { WebhookSignatureService } from "@modules/platform/http-security"
+import { ScopedWebhookVerifier } from "@modules/domain/webhook-proofs"
 import { ZaloWebhook } from "./zalo.webhook"
 
 const CONNECTION = "0b1d52a4-8f3e-4c8a-9a64-4f0d2f6e7a11"
@@ -12,19 +13,17 @@ const ROUTE = { connectionId: CONNECTION }
 const MAC = "connection-mac"
 
 const build = async () => {
-    const signature = mock<WebhookSignatureService>()
+    const signature = mock<ScopedWebhookVerifier>()
     signature.verify.mockResolvedValue(undefined)
     const deliveries = mock<ZaloInboxService>()
     deliveries.acceptZaloDelivery.mockResolvedValue(undefined)
     const moduleRef = await Test.createTestingModule({
-        providers: [ZaloWebhook, { provide: ZaloInboxService, useValue: deliveries }],
-    })
-        .useMocker((token) =>
-            typeof token === "symbol" && token.description === "platform.http-security.webhook-signature"
-                ? signature
-                : undefined,
-        )
-        .compile()
+        providers: [
+            ZaloWebhook,
+            { provide: ScopedWebhookVerifier, useValue: signature },
+            { provide: ZaloInboxService, useValue: deliveries },
+        ],
+    }).compile()
     return { webhook: moduleRef.get(ZaloWebhook), signature, deliveries }
 }
 
@@ -64,7 +63,7 @@ describe("ZaloWebhook", () => {
         await expect(received).resolves.toBeUndefined()
         expect(effects).toEqual(["verify", "acceptZaloDelivery"])
         expect(deliveries.acceptZaloDelivery).toHaveBeenCalledTimes(1)
-        expect(deliveries.acceptZaloDelivery).toHaveBeenCalledWith(CONNECTION, BODY)
+        expect(deliveries.acceptZaloDelivery).toHaveBeenCalledWith(BODY, CONNECTION)
     })
 
     it("propagates a signature refusal without calling the domain", async () => {
@@ -86,7 +85,9 @@ describe("ZaloWebhook", () => {
         })
         expect(deliveries.acceptZaloDelivery).not.toHaveBeenCalled()
     })
+})
 
+describe("Zalo delivery intake", () => {
     it("propagates a domain failure after one successful signature verification", async () => {
         const { webhook, signature, deliveries } = await build()
         const failure = new Error("inbox unavailable")
@@ -105,7 +106,7 @@ describe("ZaloWebhook", () => {
             timestamp: undefined,
         })
         expect(deliveries.acceptZaloDelivery).toHaveBeenCalledTimes(1)
-        expect(deliveries.acceptZaloDelivery).toHaveBeenCalledWith(CONNECTION, BODY)
+        expect(deliveries.acceptZaloDelivery).toHaveBeenCalledWith(BODY, CONNECTION)
     })
 
     it("hands missing raw bytes and a missing MAC to the signature verifier unchanged", async () => {
@@ -124,6 +125,13 @@ describe("ZaloWebhook", () => {
             timestamp: undefined,
         })
         expect(deliveries.acceptZaloDelivery).toHaveBeenCalledTimes(1)
-        expect(deliveries.acceptZaloDelivery).toHaveBeenCalledWith(CONNECTION, undefined)
+        expect(deliveries.acceptZaloDelivery).toHaveBeenCalledWith(undefined, CONNECTION)
+    })
+})
+
+describe("ZaloHttpModule proof declaration", () => {
+    it("declares the exact domain verification method", () => {
+        expect(webhookVerifiers).toEqual([ScopedWebhookVerifier.prototype.verify])
+        expect(ZaloHttpModule.register({}).module).toBe(ZaloHttpModule)
     })
 })

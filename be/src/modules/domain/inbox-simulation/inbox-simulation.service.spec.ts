@@ -93,7 +93,9 @@ describe("InboxSimulationService", () => {
             decisionsDedupeKey(DecisionsJob.SimulateInbound, "event-row-1"),
         )
     })
+})
 
+describe("InboxSimulationService", () => {
     it("records and enqueues a trimmed input in the same transaction", async () => {
         const { service, entityManager, members, store, decisions, queueStatus, tx } = await build()
         queueStatus.status.mockResolvedValue({ id: "job-1", state: "running", attempts: 1 })
@@ -139,7 +141,9 @@ describe("InboxSimulationService", () => {
             decisionsDedupeKey(DecisionsJob.SimulateInbound, "event-row-1"),
         )
     })
+})
 
+describe("InboxSimulationService", () => {
     it.each([undefined, null, " "])("generates an event identity when the supplied identity is %p", async (eventId) => {
         const { service, entityManager, store, decisions, queueStatus, tx } = await build()
         entityManager.query.mockResolvedValue([{ id: "generated-event" }])
@@ -170,7 +174,6 @@ describe("InboxSimulationService", () => {
         )
         expect(tx.outcomes).toEqual(["commit"])
     })
-
     it("rolls back when the database cannot generate an event identity", async () => {
         const { service, entityManager, store, decisions, queueStatus, tx } = await build()
         entityManager.query.mockResolvedValue([])
@@ -185,7 +188,6 @@ describe("InboxSimulationService", () => {
         expect(queueStatus.status).not.toHaveBeenCalled()
         expect(tx.outcomes).toEqual(["rollback"])
     })
-
     it("requires membership before recording a request", async () => {
         const { service, members, store, decisions, tx } = await build()
         const refusal = { code: "WORKSPACE_MEMBER_REQUIRED" }
@@ -197,7 +199,9 @@ describe("InboxSimulationService", () => {
         expect(decisions.enqueueSimulateInbound).not.toHaveBeenCalled()
         expect(tx.outcomes).toEqual([])
     })
+})
 
+describe("InboxSimulationService", () => {
     it("refuses a status read for an event that does not belong to this workspace", async () => {
         const { service, entityManager, members, queueStatus } = await build()
         entityManager.query.mockResolvedValue([])
@@ -210,7 +214,9 @@ describe("InboxSimulationService", () => {
         expect(entityManager.query).toHaveBeenCalledWith(FIND_SIMULATION_RESULT, ["ws-1", "missing"])
         expect(queueStatus.status).not.toHaveBeenCalled()
     })
+})
 
+describe("InboxSimulationService", () => {
     it("reports failed work and supplies empty strings for nullable persisted fields", async () => {
         const { service, entityManager } = await build()
         entityManager.query.mockResolvedValue([
@@ -232,7 +238,6 @@ describe("InboxSimulationService", () => {
             workItem: { id: "work-1", department: "", status: "" },
         })
     })
-
     it("returns the persisted first work item while an absent job is treated as queued", async () => {
         const { service, entityManager, queueStatus } = await build()
         entityManager.query.mockResolvedValue([

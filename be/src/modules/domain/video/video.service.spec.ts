@@ -112,7 +112,11 @@ describe("VideoService", () => {
             expect(renders.open).not.toHaveBeenCalled()
             expect(queue.enqueueRenderVideo).not.toHaveBeenCalled()
         })
+    })
+})
 
+describe("VideoService", () => {
+    describe("requestRender", () => {
         it("refuses anyone who does not manage the workspace", async () => {
             const { video, projects, members, renders, queue } = await build()
             projects.forRender.mockResolvedValue(projectOf())
@@ -146,7 +150,11 @@ describe("VideoService", () => {
 
             await expect(video.requestRender("person-1", "project-1")).resolves.toMatchObject({ renderId: "render-1" })
         })
+    })
+})
 
+describe("VideoService", () => {
+    describe("requestRender", () => {
         it("names the video after the workspace until the owner saves a shop name, and fills in the brand defaults", async () => {
             const { video, projects, renders } = await build()
             const blank = {
@@ -193,7 +201,11 @@ describe("VideoService", () => {
             expect(renders.open).not.toHaveBeenCalled()
             expect(queue.enqueueRenderVideo).not.toHaveBeenCalled()
         })
+    })
+})
 
+describe("VideoService", () => {
+    describe("requestRender", () => {
         it("writes nothing when the workspace has the most renders open", async () => {
             const { video, tx, projects, versions, renders, queue } = await build()
             projects.forRender.mockResolvedValue(projectOf())
@@ -238,7 +250,9 @@ describe("VideoService", () => {
             expect(tx.commits).toBe(1)
         })
     })
+})
 
+describe("VideoService", () => {
     describe("failRender", () => {
         it("settles the render and sends its project back to draft with the reason in one transaction", async () => {
             const { video, tx, projects, renders } = await build()

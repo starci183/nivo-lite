@@ -1,3 +1,4 @@
+import { Test } from "@nestjs/testing"
 import type { LoyaltyReward } from "@modules/domain/loyalty-rewards"
 import type { MemberDetail } from "./loyalty.contracts"
 import type { ProgramConfigSubmission, RewardSubmission } from "./loyalty-graphql.contracts"
@@ -34,11 +35,37 @@ const REWARD: LoyaltyReward = {
     minTierKey: null,
 }
 
+const SUBJECT = Symbol("loyalty-graphql.mapper")
+
+const buildSubject = async () => {
+    const moduleRef = await Test.createTestingModule({
+        providers: [
+            {
+                provide: SUBJECT,
+                useValue: {
+                    toSaveLoyaltyProgramRequest,
+                    toSaveLoyaltyRewardRequest,
+                    toUpdateLoyaltyMemberRequest,
+                    toLoyaltyMemberType,
+                },
+            },
+        ],
+    }).compile()
+    return moduleRef.get<{
+        toSaveLoyaltyProgramRequest: typeof toSaveLoyaltyProgramRequest
+        toSaveLoyaltyRewardRequest: typeof toSaveLoyaltyRewardRequest
+        toUpdateLoyaltyMemberRequest: typeof toUpdateLoyaltyMemberRequest
+        toLoyaltyMemberType: typeof toLoyaltyMemberType
+    }>(SUBJECT)
+}
+
 describe("loyalty GraphQL request mapping", () => {
     describe("toSaveLoyaltyProgramRequest", () => {
-        it("preserves saved fields for omitted and null programme edits", () => {
-            expect(toSaveLoyaltyProgramRequest({}, "ws-1")).toEqual({ workspaceId: "ws-1" })
-            expect(toSaveLoyaltyProgramRequest({ name: null, enabled: null, config: null }, "ws-1")).toEqual({
+        it("preserves saved fields for omitted and null programme edits", async () => {
+            const subject = await buildSubject()
+
+            expect(subject.toSaveLoyaltyProgramRequest({}, "ws-1")).toEqual({ workspaceId: "ws-1" })
+            expect(subject.toSaveLoyaltyProgramRequest({ name: null, enabled: null, config: null }, "ws-1")).toEqual({
                 workspaceId: "ws-1",
             })
         })
@@ -47,10 +74,12 @@ describe("loyalty GraphQL request mapping", () => {
             ["order", "order"],
             ["payment", "payment"],
             ["unsupported", "payment"],
-        ])("normalizes the %s earning trigger to %s without changing the other rules", (trigger, expected) => {
+        ])("normalizes the %s earning trigger to %s without changing the other rules", async (trigger, expected) => {
+            const subject = await buildSubject()
+
             const config = { ...CONFIG, earn: { ...CONFIG.earn, trigger } }
 
-            expect(toSaveLoyaltyProgramRequest({ name: "", enabled: false, config }, "ws-1")).toEqual({
+            expect(subject.toSaveLoyaltyProgramRequest({ name: "", enabled: false, config }, "ws-1")).toEqual({
                 workspaceId: "ws-1",
                 name: "",
                 enabled: false,
@@ -59,10 +88,14 @@ describe("loyalty GraphQL request mapping", () => {
             expect(config.earn.trigger).toBe(trigger)
         })
     })
+})
 
+describe("loyalty GraphQL request mapping", () => {
     describe("toSaveLoyaltyRewardRequest", () => {
-        it("leaves omitted identifiers absent and expresses omitted limits as unlimited", () => {
-            expect(toSaveLoyaltyRewardRequest(SUBMISSION, "ws-1")).toEqual({
+        it("leaves omitted identifiers absent and expresses omitted limits as unlimited", async () => {
+            const subject = await buildSubject()
+
+            expect(subject.toSaveLoyaltyRewardRequest(SUBMISSION, "ws-1")).toEqual({
                 workspaceId: "ws-1",
                 ...SUBMISSION,
                 percent: null,
@@ -72,9 +105,11 @@ describe("loyalty GraphQL request mapping", () => {
             })
         })
 
-        it("omits null identifiers while preserving explicit unlimited limits", () => {
+        it("omits null identifiers while preserving explicit unlimited limits", async () => {
+            const subject = await buildSubject()
+
             expect(
-                toSaveLoyaltyRewardRequest(
+                subject.toSaveLoyaltyRewardRequest(
                     {
                         ...SUBMISSION,
                         id: null,
@@ -101,9 +136,11 @@ describe("loyalty GraphQL request mapping", () => {
             ["item", "item"],
             ["voucher", "voucher"],
             ["unsupported", "voucher"],
-        ])("selects %s as the supported %s kind and retains supplied zero limits", (kind, expected) => {
+        ])("selects %s as the supported %s kind and retains supplied zero limits", async (kind, expected) => {
+            const subject = await buildSubject()
+
             expect(
-                toSaveLoyaltyRewardRequest(
+                subject.toSaveLoyaltyRewardRequest(
                     {
                         ...SUBMISSION,
                         kind,
@@ -129,28 +166,46 @@ describe("loyalty GraphQL request mapping", () => {
             })
         })
     })
+})
 
+describe("loyalty GraphQL request mapping", () => {
     describe("toUpdateLoyaltyMemberRequest", () => {
-        it("preserves omitted profile fields and null names or notes", () => {
-            expect(toUpdateLoyaltyMemberRequest({ customerId: "customer-1" }, "ws-1")).toEqual({
-                workspaceId: "ws-1",
-                customerId: "customer-1",
-            })
-            expect(toUpdateLoyaltyMemberRequest({ customerId: "customer-1", name: null, note: null }, "ws-1")).toEqual({
-                workspaceId: "ws-1",
-                customerId: "customer-1",
-            })
-        })
+        it("preserves omitted profile fields and null names or notes", async () => {
+            const subject = await buildSubject()
 
-        it.each([null, "1990-05-20"])("retains a birthday edit of %s and explicit empty profile values", (birthday) => {
+            expect(subject.toUpdateLoyaltyMemberRequest({ customerId: "customer-1" }, "ws-1")).toEqual({
+                workspaceId: "ws-1",
+                customerId: "customer-1",
+            })
             expect(
-                toUpdateLoyaltyMemberRequest({ customerId: "customer-1", name: "", birthday, note: "" }, "ws-1"),
-            ).toEqual({ workspaceId: "ws-1", customerId: "customer-1", name: "", birthday, note: "" })
+                subject.toUpdateLoyaltyMemberRequest({ customerId: "customer-1", name: null, note: null }, "ws-1"),
+            ).toEqual({
+                workspaceId: "ws-1",
+                customerId: "customer-1",
+            })
         })
-    })
 
+        it.each([null, "1990-05-20"])(
+            "retains a birthday edit of %s and explicit empty profile values",
+            async (birthday) => {
+                const subject = await buildSubject()
+
+                expect(
+                    subject.toUpdateLoyaltyMemberRequest(
+                        { customerId: "customer-1", name: "", birthday, note: "" },
+                        "ws-1",
+                    ),
+                ).toEqual({ workspaceId: "ws-1", customerId: "customer-1", name: "", birthday, note: "" })
+            },
+        )
+    })
+})
+
+describe("loyalty GraphQL request mapping", () => {
     describe("toLoyaltyMemberType", () => {
-        it("retains member details and represents every refusal parameter as named text", () => {
+        it("retains member details and represents every refusal parameter as named text", async () => {
+            const subject = await buildSubject()
+
             const detail: MemberDetail = {
                 member: {
                     id: "customer-1",
@@ -176,7 +231,7 @@ describe("loyalty GraphQL request mapping", () => {
                 ],
             }
 
-            expect(toLoyaltyMemberType(detail)).toEqual({
+            expect(subject.toLoyaltyMemberType(detail)).toEqual({
                 ...detail,
                 rewards: [
                     { reward: REWARD, block: null },

@@ -120,7 +120,9 @@ describe("InvoicesService", () => {
             [LIST_ISSUED_INVOICES, [WS, 10, "simulated"]],
         ])
     })
+})
 
+describe("InvoicesService", () => {
     it("lists accounting invoices with the default or requested limit", async () => {
         const row: InvoiceAccountingRow = { ...VIEW, order: null, lead: null }
         const em = mockEntityManager({
@@ -186,7 +188,9 @@ describe("InvoicesService", () => {
         await expect(service.listForLead(WS, "l1")).resolves.toEqual([VIEW])
         expect(em.query).toHaveBeenCalledWith(LIST_LEAD_INVOICES, [WS, "l1"])
     })
+})
 
+describe("InvoicesService", () => {
     it("issues the next monthly number with the clock's dates and issuer", async () => {
         const created = { ...INVOICE, invoice_no: "INV-202610-0043", origin: "simulated", issued_by: "Lan" }
         const em = mockEntityManager({
@@ -244,7 +248,9 @@ describe("InvoicesService", () => {
             [FIND_INVOICE_OF_ORDER, [WS, "o1"]],
         ])
     })
+})
 
+describe("InvoicesService", () => {
     it("tries the following number when the conflicted order has no existing invoice", async () => {
         const created = { ...INVOICE, invoice_no: "INV-202610-0002" }
         const em = mockEntityManager({

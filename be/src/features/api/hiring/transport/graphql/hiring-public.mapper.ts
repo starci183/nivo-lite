@@ -1,16 +1,13 @@
 import type {
     ApplyOutput,
-    CreateCvUploadOutput,
-    CreateCvUploadParams,
+    HiringPublicService,
     PublicInterviewOutput,
-    PublicInterviewParams,
     PublicJobOutput,
     PublicJobParams,
     PublicOfferOutput,
-    PublicOfferParams,
     RespondOfferOutput,
-    RespondOfferParams,
-    RespondSlotOutput,
+    HiringOffersService,
+    HiringInterviewsService,
 } from "@modules/domain/hiring"
 import type { ApplyResultType } from "./dto/apply-result.type"
 import type { CreateCvUploadType } from "./dto/create-cv-upload.type"
@@ -24,6 +21,12 @@ import type { RespondHiringOfferInput } from "./dto/respond-hiring-offer.input"
 import type { RespondOfferType } from "./dto/respond-offer.type"
 import type { RespondSlotType } from "./dto/respond-slot.type"
 
+type PublicOfferParams = Parameters<HiringOffersService["publicView"]>[0]
+type PublicInterviewParams = Parameters<HiringInterviewsService["publicView"]>[0]
+type RespondOfferParams = Parameters<HiringOffersService["respond"]>[0]
+type CreateCvUploadOutput = Awaited<ReturnType<HiringPublicService["createCvUpload"]>>
+type RespondSlotOutput = Awaited<ReturnType<HiringInterviewsService["respond"]>>
+
 /** Maps the GraphQL input to the public job request. */
 export const toPublicHiringJobRequest = (input: PublicHiringJobInput): PublicJobParams => ({
     ws: input.ws,
@@ -31,7 +34,9 @@ export const toPublicHiringJobRequest = (input: PublicHiringJobInput): PublicJob
 })
 
 /** Maps the GraphQL input to the CV upload request. */
-export const toCreateHiringCvUploadRequest = (input: CreateHiringCvUploadInput): CreateCvUploadParams => ({
+export const toCreateHiringCvUploadRequest = (
+    input: CreateHiringCvUploadInput,
+): Parameters<HiringPublicService["createCvUpload"]>[0] => ({
     ws: input.ws,
     job: input.job,
     fileName: input.fileName,

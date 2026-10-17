@@ -1,14 +1,37 @@
+import { Test } from "@nestjs/testing"
 import {
-    contentChannels,
+    requireContentInput,
     contentHashtags,
+    contentChannels,
+    contentVariants,
     contentHasText,
     contentTransition,
-    contentVariants,
     mergeContentPatch,
-    requireContentInput,
 } from "./content-editor.policy"
 import { ContentItemsError, ContentItemsErrorCode } from "./errors/content-items.error"
 import type { ContentItem, SaveContentItem } from "./content-editor.contracts"
+
+const SUBJECT = Symbol("content-editor.policy")
+
+const build = async () => {
+    const moduleRef = await Test.createTestingModule({
+        providers: [
+            {
+                provide: SUBJECT,
+                useValue: {
+                    requireContentInput,
+                    contentHashtags,
+                    contentChannels,
+                    contentVariants,
+                    contentHasText,
+                    contentTransition,
+                    mergeContentPatch,
+                },
+            },
+        ],
+    }).compile()
+    return moduleRef.get<typeof import("./content-editor.policy")>(SUBJECT)
+}
 
 const item = (overrides: Partial<ContentItem> = {}): ContentItem => ({
     id: "post",
@@ -45,68 +68,88 @@ const expectFailure = (action: () => unknown, code: ContentItemsErrorCode): void
 }
 
 describe("content editor input policies", () => {
-    it("accepts valid input and returns the stable invalid-input error", () => {
-        expect(requireContentInput(true)).toBeUndefined()
-        expectFailure(() => requireContentInput(false), ContentItemsErrorCode.InvalidInput)
+    it("accepts valid input and returns the stable invalid-input error", async () => {
+        const subject = await build()
+
+        expect(subject.requireContentInput(true)).toBeUndefined()
+        expectFailure(() => subject.requireContentInput(false), ContentItemsErrorCode.InvalidInput)
     })
 
-    it("canonicalizes, deduplicates and bounds hashtags", () => {
-        expect(contentHashtags([" ## Hello world ", "#Helloworld", " ", "###", " #second "])).toEqual([
+    it("canonicalizes, deduplicates and bounds hashtags", async () => {
+        const subject = await build()
+
+        expect(subject.contentHashtags([" ## Hello world ", "#Helloworld", " ", "###", " #second "])).toEqual([
             "Helloworld",
             "second",
         ])
-        expect(contentHashtags(["x".repeat(81)])).toEqual(["x".repeat(80)])
-        expect(contentHashtags(Array.from({ length: 31 }, (_, index) => `tag${index}`))).toEqual(
+        expect(subject.contentHashtags(["x".repeat(81)])).toEqual(["x".repeat(80)])
+        expect(subject.contentHashtags(Array.from({ length: 31 }, (_, index) => `tag${index}`))).toEqual(
             Array.from({ length: 30 }, (_, index) => `tag${index}`),
         )
     })
 
-    it("retains supported channels in first-selected order", () => {
-        expect(contentChannels(["zalo", "facebook", "zalo"])).toEqual(["zalo", "facebook"])
+    it("retains supported channels in first-selected order", async () => {
+        const subject = await build()
+
+        expect(subject.contentChannels(["zalo", "facebook", "zalo"])).toEqual(["zalo", "facebook"])
     })
 
     it.each([
         { channels: [] },
         { channels: ["unsupported"] },
         { channels: ["facebook", "zalo", "tiktok", "instagram", "facebook"] },
-    ])("rejects empty, unsupported or oversized channel selections: %p", ({ channels }) => {
-        expectFailure(() => contentChannels(channels), ContentItemsErrorCode.InvalidInput)
+    ])("rejects empty, unsupported or oversized channel selections: %p", async ({ channels }) => {
+        const subject = await build()
+
+        expectFailure(() => subject.contentChannels(channels), ContentItemsErrorCode.InvalidInput)
     })
 
-    it("normalizes supported channel texts and rejects unknown channel keys", () => {
+    it("normalizes supported channel texts and rejects unknown channel keys", async () => {
+        const subject = await build()
+
         expect(
-            contentVariants({ facebook: { text: "x".repeat(6001), hashtags: [" # shared "], note: "n".repeat(601) } }),
+            subject.contentVariants({
+                facebook: { text: "x".repeat(6001), hashtags: [" # shared "], note: "n".repeat(601) },
+            }),
         ).toEqual({
             facebook: { text: "x".repeat(6000), hashtags: ["shared"], note: "n".repeat(600) },
         })
-        expect(contentVariants({})).toEqual({})
+        expect(subject.contentVariants({})).toEqual({})
         expectFailure(
-            () => contentVariants({ unsupported: { text: "Draft", hashtags: [], note: "" } }),
+            () => subject.contentVariants({ unsupported: { text: "Draft", hashtags: [], note: "" } }),
             ContentItemsErrorCode.InvalidInput,
         )
     })
 
-    it("requires at least one nonblank channel text", () => {
-        expect(contentHasText({ variants: {} })).toBe(false)
-        expect(contentHasText({ variants: { facebook: { text: " \n ", hashtags: [], note: "Note" } } })).toBe(false)
-        expect(contentHasText({ variants: { zalo: { text: " Draft ", hashtags: [], note: "" } } })).toBe(true)
+    it("requires at least one nonblank channel text", async () => {
+        const subject = await build()
+
+        expect(subject.contentHasText({ variants: {} })).toBe(false)
+        expect(subject.contentHasText({ variants: { facebook: { text: " \n ", hashtags: [], note: "Note" } } })).toBe(
+            false,
+        )
+        expect(subject.contentHasText({ variants: { zalo: { text: " Draft ", hashtags: [], note: "" } } })).toBe(true)
     })
 })
 
 describe("content lifecycle transitions", () => {
-    it.each(["idea", "draft", "approved"])("skips a post in %s", (status) => {
-        expect(contentTransition(item({ status }), "skip")).toBe("skipped")
+    it.each(["idea", "draft", "approved"])("skips a post in %s", async (status) => {
+        const subject = await build()
+
+        expect(subject.contentTransition(item({ status }), "skip")).toBe("skipped")
     })
 
-    it("restores skipped posts according to their remaining text and reopens approval", () => {
-        expect(contentTransition(item({ status: "skipped" }), "restore")).toBe("idea")
+    it("restores skipped posts according to their remaining text and reopens approval", async () => {
+        const subject = await build()
+
+        expect(subject.contentTransition(item({ status: "skipped" }), "restore")).toBe("idea")
         expect(
-            contentTransition(
+            subject.contentTransition(
                 item({ status: "skipped", variants: { facebook: { text: "Draft", hashtags: [], note: "" } } }),
                 "restore",
             ),
         ).toBe("draft")
-        expect(contentTransition(item({ status: "approved" }), "reopen")).toBe("draft")
+        expect(subject.contentTransition(item({ status: "approved" }), "reopen")).toBe("draft")
     })
 
     it.each([
@@ -114,19 +157,27 @@ describe("content lifecycle transitions", () => {
         ["idea", "restore"],
         ["draft", "reopen"],
         ["idea", "unknown"],
-    ])("rejects %s -> %s", (status, kind) => {
-        expectFailure(() => contentTransition(item({ status }), kind), ContentItemsErrorCode.WrongStatus)
+    ])("rejects %s -> %s", async (status, kind) => {
+        const subject = await build()
+
+        expectFailure(() => subject.contentTransition(item({ status }), kind), ContentItemsErrorCode.WrongStatus)
     })
 })
 
 describe("mergeContentPatch", () => {
-    it("preserves an open post when no replacement was selected", () => {
-        const original = item()
-        expect(mergeContentPatch(original, {}, "workspace")).toEqual(original)
-        expect(mergeContentPatch(item({ status: "draft" }), {}, "workspace")).toEqual(item({ status: "draft" }))
-    })
+    it("preserves an open post when no replacement was selected", async () => {
+        const subject = await build()
 
-    it("normalizes every selected editable field and promotes an idea with text to draft", () => {
+        const original = item()
+        expect(subject.mergeContentPatch(original, {}, "workspace")).toEqual(original)
+        expect(subject.mergeContentPatch(item({ status: "draft" }), {}, "workspace")).toEqual(item({ status: "draft" }))
+    })
+})
+
+describe("mergeContentPatch", () => {
+    it("normalizes every selected editable field and promotes an idea with text to draft", async () => {
+        const subject = await build()
+
         const patch: SaveContentItem = {
             title: `  ${"T".repeat(201)}  `,
             brief: "B".repeat(4001),
@@ -144,7 +195,7 @@ describe("mergeContentPatch", () => {
                 { kind: "video_render", name: "Render", id: "ABCDEFAB-1234-5678-9012-ABCDEFABCDEF" },
             ],
         }
-        expect(mergeContentPatch(item(), patch, "workspace")).toEqual({
+        expect(subject.mergeContentPatch(item(), patch, "workspace")).toEqual({
             ...item(),
             title: "T".repeat(200),
             brief: "B".repeat(4000),
@@ -158,8 +209,12 @@ describe("mergeContentPatch", () => {
             status: "draft",
         })
     })
+})
 
-    it("replaces selected fields with empty collections without promoting a blank idea", () => {
+describe("mergeContentPatch", () => {
+    it("replaces selected fields with empty collections without promoting a blank idea", async () => {
+        const subject = await build()
+
         const patch: SaveContentItem = {
             brief: "",
             pillarId: "new-pillar",
@@ -170,24 +225,34 @@ describe("mergeContentPatch", () => {
             links: [],
             media: [],
         }
-        expect(mergeContentPatch(item(), patch, "workspace")).toEqual({ ...item(), ...patch })
+        expect(subject.mergeContentPatch(item(), patch, "workspace")).toEqual({ ...item(), ...patch })
     })
+})
 
-    it("caps accepted supporting links at ten", () => {
+describe("mergeContentPatch", () => {
+    it("caps accepted supporting links at ten", async () => {
+        const subject = await build()
+
         const links = Array.from({ length: 11 }, (_, index) => ({
             url: `http://example.test/${index}`,
             label: `${index}`,
         }))
-        expect(mergeContentPatch(item(), { links }, "workspace").links).toEqual(links.slice(0, 10))
+        expect(subject.mergeContentPatch(item(), { links }, "workspace").links).toEqual(links.slice(0, 10))
     })
+})
 
-    it("refuses an all-whitespace title", () => {
+describe("mergeContentPatch", () => {
+    it("refuses an all-whitespace title", async () => {
+        const subject = await build()
+
         expectFailure(
-            () => mergeContentPatch(item(), { title: " \n " }, "workspace"),
+            () => subject.mergeContentPatch(item(), { title: " \n " }, "workspace"),
             ContentItemsErrorCode.InvalidInput,
         )
     })
+})
 
+describe("mergeContentPatch", () => {
     it.each([
         { media: [{ kind: "video_render", name: "Missing render" }] },
         { media: [{ kind: "video_render", name: "Bad render", id: "not-a-uuid" }] },
@@ -195,27 +260,45 @@ describe("mergeContentPatch", () => {
         { media: [{ kind: "media", name: "Missing path" }] },
         { media: [{ kind: "media", name: "Other workspace", path: "other/photo.png" }] },
         { media: Array.from({ length: 11 }, () => ({ kind: "media", name: "Photo", path: "workspace/photo.png" })) },
-    ])("refuses invalid attachments: %p", ({ media }) => {
-        expectFailure(() => mergeContentPatch(item(), { media }, "workspace"), ContentItemsErrorCode.InvalidInput)
-    })
+    ])("refuses invalid attachments: %p", async ({ media }) => {
+        const subject = await build()
 
-    it("lets an approved post move or clear its schedule while preserving its editor data", () => {
+        expectFailure(
+            () => subject.mergeContentPatch(item(), { media }, "workspace"),
+            ContentItemsErrorCode.InvalidInput,
+        )
+    })
+})
+
+describe("mergeContentPatch", () => {
+    it("lets an approved post move or clear its schedule while preserving its editor data", async () => {
+        const subject = await build()
+
         const original = item({ status: "approved" })
-        expect(mergeContentPatch(original, { scheduledAt: "new-time", title: "Ignored" }, "workspace")).toEqual({
-            ...original,
-            scheduledAt: "new-time",
-        })
-        expect(mergeContentPatch(original, { scheduledAt: null }, "workspace")).toEqual({
+        expect(subject.mergeContentPatch(original, { scheduledAt: "new-time", title: "Ignored" }, "workspace")).toEqual(
+            {
+                ...original,
+                scheduledAt: "new-time",
+            },
+        )
+        expect(subject.mergeContentPatch(original, { scheduledAt: null }, "workspace")).toEqual({
             ...original,
             scheduledAt: null,
         })
     })
+})
 
+describe("mergeContentPatch", () => {
     it.each([
         ["approved", {}],
         ["published", { scheduledAt: "new-time" }],
         ["published", {}],
-    ])("rejects frozen edits on %s", (status, patch) => {
-        expectFailure(() => mergeContentPatch(item({ status }), patch, "workspace"), ContentItemsErrorCode.Frozen)
+    ])("rejects frozen edits on %s", async (status, patch) => {
+        const subject = await build()
+
+        expectFailure(
+            () => subject.mergeContentPatch(item({ status }), patch, "workspace"),
+            ContentItemsErrorCode.Frozen,
+        )
     })
 })

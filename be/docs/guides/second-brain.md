@@ -11,13 +11,13 @@ One shared memory per workspace; every agent reads it through its own view. Owne
 | `brain_source_profiles` | How to read one data source (connection + entity): field meaning, type, format           | Proposed from samples, confirmed once. Builds on `connections.public_meta.config` (the data hub's own column map); never writes it.                                                                                                                 |
 | `brain_eval_cases`      | Known-good answers kept as regression cases                                              | Every owner correction (decision `edited` / `rejected`) becomes a case.                                                                                                                                                                             |
 
-**Trust by source** (`TRUST` in `src/lib/brain/shared.ts`): owner 95, manager 85, document 75, system 70, staff 60, customer 30, AI 20. Only owner and manager statements apply without review (`AUTO_APPLY_TRUST` 85). A new value keeps the scope, modules and kind of the fact it replaces unless told otherwise, so a staff correction never turns a public price internal.
+**Trust by source** (the trust table in `be/src/modules/domain/brain-facts/fact-key.policy.ts`): owner 95, manager 85, document 75, system 70, staff 60, customer 30, AI 20. Only owner and manager statements apply without review (auto-apply threshold 85, same file). A new value keeps the scope, modules and kind of the fact it replaces unless told otherwise, so a staff correction never turns a public price internal.
 
 **Views** (`visibleTo`): customer-facing agents (chatbot) see `public` facts only; internal agents see `public` + `internal`; `restricted` facts only reach the modules they name.
 
 ## Where agents get it
 
-- `AGENTS.md` (OpenClaw sync, `buildAgentBundle`): the "facts in force" section (every fact in the agent's view, grouped by subject, budgeted) and the "approved lessons" section. Every brain change calls `enqueueWorkspaceSync`.
+- the agent rules file (OpenClaw sync, `buildAgentBundle`): the "facts in force" section (every fact in the agent's view, grouped by subject, budgeted) and the "approved lessons" section. Every brain change calls `enqueueWorkspaceSync`.
 - Per turn (`buildAgentContext`): `recall` adds `BRAIN FACTS [F1..]` matching the question and, for internal agents, `DATA RECORDS [D1..]` from `data_records` on connections the agent holds a grant on. Numbers are quoted as stored, never summed from text. Citations carry layer `brain` / `data`.
 
 ## Self-learning (reviewed)

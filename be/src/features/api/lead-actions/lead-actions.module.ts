@@ -5,6 +5,7 @@ import { SuggestLeadOwnerHandler } from "./application/suggest-lead-owner.handle
 import { DraftLeadExecutionHandler } from "./application/draft-lead-execution.handler"
 import { SettleWonDealHandler } from "./application/settle-won-deal.handler"
 import { LeadActionStatusHandler } from "./application/lead-action-status.handler"
+import { ConfigurableModuleClass } from "./lead-actions.module-definition"
 
 @Module({
     providers: [
@@ -17,4 +18,4 @@ import { LeadActionStatusHandler } from "./application/lead-action-status.handle
     ],
 })
 /** Application handlers of the asynchronous lead actions feature. */
-export class LeadActionsApiModule {}
+export class LeadActionsApiModule extends ConfigurableModuleClass {}

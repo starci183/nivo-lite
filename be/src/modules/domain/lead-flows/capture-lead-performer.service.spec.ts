@@ -1,6 +1,8 @@
 import { Test } from "@nestjs/testing"
 import { builder, mock } from "@starci/jest-preset"
 import type { AgentProfile } from "@modules/domain/agents"
+import type { FlowFields } from "./lead-flow-fields.policy"
+
 import { BusinessEventsService } from "@modules/domain/automations"
 import { WORK_PERFORMER_REGISTRY } from "@modules/domain/decisions"
 import type { WorkContext, WorkItem, WorkPerformerRegistry } from "@modules/domain/decisions"
@@ -11,7 +13,7 @@ import { ResponsibilityJournalService } from "@modules/domain/responsibilities"
 import { CaptureLeadPerformerService } from "./capture-lead-performer.service"
 import { LeadFlowsError, LeadFlowsErrorCode } from "./errors/lead-flows.error"
 import { LeadFlowConversationService } from "./lead-flow-conversation.service"
-import type { FlowFields } from "./lead-flow-fields.policy"
+
 import { LeadFlowKitService } from "./lead-flow-kit.service"
 import { LeadFlowMetaService } from "./lead-flow-meta.service"
 import { LeadFlowStoreService } from "./lead-flow-store.service"
@@ -19,6 +21,7 @@ import { EMPTY_SIGNALS } from "./lead-flow-score.policy"
 import type { LeadFlow, LeadSource } from "./lead-flows.contracts"
 
 const NOW = "2026-10-12T10:00:00.000Z"
+
 const ctx: WorkContext = { workspaceId: "ws-1", actor: "Lan", locale: "en" }
 
 const flowOf = builder<LeadFlow>({
@@ -127,11 +130,7 @@ const build = async (flow: LeadFlow = flowOf({ phone: "84912345678", psid: null 
     const store = mock<LeadFlowStoreService>()
     const meta = mock<LeadFlowMetaService>()
     const transcript = mock<LeadFlowConversationService>()
-    const kit = mock<LeadFlowKitService>({
-        store,
-        meta,
-        transcript,
-    })
+    const kit = mock<LeadFlowKitService>({ store, meta, transcript })
     kit.text.mockImplementation((_locale, key) => key)
     kit.nameOf.mockReturnValue("Lan")
     kit.now.mockReturnValue(NOW)
@@ -167,18 +166,13 @@ const build = async (flow: LeadFlow = flowOf({ phone: "84912345678", psid: null 
             { provide: BusinessEventsService, useValue: events },
         ],
     }).compile()
-    return {
-        performer: moduleRef.get(CaptureLeadPerformerService),
-        registry,
-        kit,
-        store,
-        transcript,
-        leads,
-        inbound,
-        responsibilities,
-        events,
-    }
+    const performer = moduleRef.get(CaptureLeadPerformerService)
+    return { performer, registry, kit, store, transcript, leads, inbound, responsibilities, events }
 }
+
+const captured = { summary: "capture.done", evidence: "captured", lead_id: "lead-1", detail: null }
+
+const merged = { ...captured, summary: "capture.merged" }
 
 describe("CaptureLeadPerformerService", () => {
     it("registers capture_lead at boot and summarises where the lead came from", async () => {
@@ -192,7 +186,6 @@ describe("CaptureLeadPerformerService", () => {
         })
         expect(kit.sourceLine).toHaveBeenCalledWith("en", SOURCE)
     })
-
     it("creates a new lead, opens its flow and links the inbound event", async () => {
         const { performer, store, leads, inbound, responsibilities, events } = await build()
         leads.match.mockResolvedValue(null)
@@ -227,7 +220,9 @@ describe("CaptureLeadPerformerService", () => {
         })
         expect(inbound.mark).toHaveBeenCalledWith("ws-1", "event-1", null, "lead-1")
     })
+})
 
+describe("CaptureLeadPerformerService", () => {
     it("merges a known lead, fills its missing contact and keeps the touch", async () => {
         const flow = flowOf({ phone: "84912345678", psid: null })
         const { performer, store, leads, events, kit } = await build(flow)
@@ -257,7 +252,6 @@ describe("CaptureLeadPerformerService", () => {
             "want tea",
         )
     })
-
     it("refuses when the flow can neither be opened nor found again", async () => {
         const { performer, store, leads } = await build()
         leads.match.mockResolvedValue(leadOf())
@@ -269,10 +263,9 @@ describe("CaptureLeadPerformerService", () => {
 
         expect(store.patch).not.toHaveBeenCalled()
     })
+})
 
-    const captured = { summary: "capture.done", evidence: "captured", lead_id: "lead-1", detail: null }
-    const merged = { ...captured, summary: "capture.merged" }
-
+describe("CaptureLeadPerformerService", () => {
     it("uses source defaults without identity, and explicit details with email identity", async () => {
         const { performer, leads, kit } = await build()
         leads.capture.mockResolvedValue(leadOf())
@@ -331,7 +324,9 @@ describe("CaptureLeadPerformerService", () => {
             origin: "live",
         })
     })
+})
 
+describe("CaptureLeadPerformerService", () => {
     it("uses the matching flow's existing lead and preserves its completed contact", async () => {
         const flow = flowOf({ phone: "84912345678", psid: null, email: "minh@example.com" })
         const { performer, store, leads } = await build(flow)
@@ -346,7 +341,9 @@ describe("CaptureLeadPerformerService", () => {
         expect(store.byLead).not.toHaveBeenCalled()
         expect(store.open).not.toHaveBeenCalled()
     })
+})
 
+describe("CaptureLeadPerformerService", () => {
     it("links an unassigned matching flow and fills its missing email and metadata", async () => {
         const flow = flowOf({
             lead_id: null,
@@ -378,7 +375,6 @@ describe("CaptureLeadPerformerService", () => {
             name: "Lan",
         })
     })
-
     it("matches email when a flow's previous lead is missing and metadata is absent", async () => {
         const flow = flowOf({ psid: null, email: "minh@example.com", name: null, connection_id: null })
         const { performer, store, leads } = await build(flow)
@@ -398,7 +394,9 @@ describe("CaptureLeadPerformerService", () => {
         expect(leads.fillContact).not.toHaveBeenCalled()
         expect(store.patch).toHaveBeenCalledWith(flow, { touches: [{ ...SOURCE, form_id: null }] })
     })
+})
 
+describe("CaptureLeadPerformerService", () => {
     it.each<readonly [LeadSource["kind"], LeadSource["platform"], string, string, string, string | null]>([
         ["dm", "facebook", "person-1", "", "attachment", "conv-1"],
         ["dm", "instagram", "instagram-1", "want tea", "want tea", null],
@@ -456,7 +454,9 @@ describe("CaptureLeadPerformerService", () => {
         expect(store.patch.mock.calls).toHaveLength(conversationId === null ? 1 : 2)
         if (conversationId !== null) expect(store.patch).toHaveBeenCalledWith(flow, { conversation_id: conversationId })
     })
+})
 
+describe("CaptureLeadPerformerService", () => {
     it.each<readonly [string, string | null, boolean]>([
         ["dm", "person-1", false],
         ["dm", null, true],
@@ -473,7 +473,6 @@ describe("CaptureLeadPerformerService", () => {
         expect(transcript.say).not.toHaveBeenCalled()
         expect(store.patch).toHaveBeenCalledTimes(1)
     })
-
     it.each<{ identity: FlowFields; concurrent: LeadFlow }>([
         { identity: {}, concurrent: flowOf() },
         { identity: { psid: "messenger-1" }, concurrent: flowOf({ lead_id: "other-lead", psid: "messenger-1" }) },

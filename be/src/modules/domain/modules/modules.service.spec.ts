@@ -47,105 +47,105 @@ const syncTransaction = (held = KEYS) =>
         }),
     )
 
-describe("ModulesService", () => {
-    describe("catalog", () => {
-        it("answers the categories and the modules of its options", async () => {
-            await expect((await build()).service.catalog()).resolves.toEqual({
-                categories: MODULE_CATEGORIES,
-                modules: MODULE_CATALOG,
-            })
+describe("ModulesService > catalog", () => {
+    it("answers the categories and the modules of its options", async () => {
+        await expect((await build()).service.catalog()).resolves.toEqual({
+            categories: MODULE_CATEGORIES,
+            modules: MODULE_CATALOG,
         })
     })
+})
 
-    describe("find", () => {
-        it("answers the module with the key", async () => {
-            const sales = MODULE_CATALOG.find((module) => module.key === "sales")
+describe("ModulesService > find", () => {
+    it("answers the module with the key", async () => {
+        const sales = MODULE_CATALOG.find((module) => module.key === "sales")
 
-            await expect((await build()).service.find("sales")).resolves.toBe(sales)
-        })
-
-        it("answers a typed not-found result for a key the catalogue does not list", async () => {
-            await expect((await build()).service.find("nope")).rejects.toMatchObject({
-                code: ModulesErrorCode.NotFound,
-                params: { key: "nope" },
-            })
-        })
+        await expect((await build()).service.find("sales")).resolves.toBe(sales)
     })
 
-    describe("sync", () => {
-        it("upserts the modules and hands the actions to the authority actions in the same transaction", async () => {
-            const tx = syncTransaction()
-            const { service, authorityActions } = await build({}, tx.em)
-            authorityActions.upsertAll.mockResolvedValue({ written: ACTIONS.length, stale: ["retired_action"] })
-
-            const report = await service.sync()
-
-            expect(report).toEqual({
-                modules: KEYS.length,
-                actions: ACTIONS.length,
-                staleModules: [],
-                staleActions: ["retired_action"],
-            })
-            expect(tx.commits).toBe(1)
-            expect(authorityActions.upsertAll).toHaveBeenCalledWith(
-                expect.anything(),
-                expect.arrayContaining([
-                    {
-                        action: "issue_invoice",
-                        module_key: "accounting",
-                        sort_order: 0,
-                        default_mode: "auto",
-                        default_limit_vnd: 20000000,
-                        default_required_fields: ["customer", "amount_vnd"],
-                        amount_limit: true,
-                        max_mode: null,
-                        label: ACCOUNTING_MODULE.authorityActions[0]?.label,
-                    },
-                ]),
-            )
+    it("answers a typed not-found result for a key the catalogue does not list", async () => {
+        await expect((await build()).service.find("nope")).rejects.toMatchObject({
+            code: ModulesErrorCode.NotFound,
+            params: { key: "nope" },
         })
+    })
+})
 
-        it("writes each module with its columns and its whole definition, stamped with the clock", async () => {
-            const tx = syncTransaction()
-            const { service, authorityActions } = await build({}, tx.em)
-            authorityActions.upsertAll.mockResolvedValue({ written: 0, stale: [] })
+describe("ModulesService > sync", () => {
+    it("upserts the modules and hands the actions to the authority actions in the same transaction", async () => {
+        const tx = syncTransaction()
+        const { service, authorityActions } = await build({}, tx.em)
+        authorityActions.upsertAll.mockResolvedValue({ written: ACTIONS.length, stale: ["retired_action"] })
 
-            await service.sync()
+        const report = await service.sync()
 
-            const expected = MODULE_CATALOG.map((module) => ({
-                key: module.key,
-                sort_order: module.order,
-                status: module.status,
-                category: module.category,
-                audience: module.audience,
-                knowledge_folder: module.knowledgeFolder,
-                workbench: module.workbench,
-                default_operating_mode: module.defaultOperatingMode,
-                multi_instance: module.multiInstance,
-                definition: module,
-            }))
-            expect(tx.em.query).toHaveBeenCalledWith(UPSERT_MODULES, [JSON.stringify(expected), new Date(AT)])
+        expect(report).toEqual({
+            modules: KEYS.length,
+            actions: ACTIONS.length,
+            staleModules: [],
+            staleActions: ["retired_action"],
         })
+        expect(tx.commits).toBe(1)
+        expect(authorityActions.upsertAll).toHaveBeenCalledWith(
+            expect.anything(),
+            expect.arrayContaining([
+                {
+                    action: "issue_invoice",
+                    module_key: "accounting",
+                    sort_order: 0,
+                    default_mode: "auto",
+                    default_limit_vnd: 20000000,
+                    default_required_fields: ["customer", "amount_vnd"],
+                    amount_limit: true,
+                    max_mode: null,
+                    label: ACCOUNTING_MODULE.authorityActions[0]?.label,
+                },
+            ]),
+        )
+    })
 
-        it("reports the module rows the database holds that the catalogue no longer lists, and deletes nothing", async () => {
-            const tx = syncTransaction([...KEYS, { key: "retired" }])
-            const { service, authorityActions } = await build({}, tx.em)
-            authorityActions.upsertAll.mockResolvedValue({ written: 1, stale: [] })
+    it("writes each module with its columns and its whole definition, stamped with the clock", async () => {
+        const tx = syncTransaction()
+        const { service, authorityActions } = await build({}, tx.em)
+        authorityActions.upsertAll.mockResolvedValue({ written: 0, stale: [] })
 
-            await expect(service.sync()).resolves.toMatchObject({
-                staleModules: ["retired"],
-            })
+        await service.sync()
+
+        const expected = MODULE_CATALOG.map((module) => ({
+            key: module.key,
+            sort_order: module.order,
+            status: module.status,
+            category: module.category,
+            audience: module.audience,
+            knowledge_folder: module.knowledgeFolder,
+            workbench: module.workbench,
+            default_operating_mode: module.defaultOperatingMode,
+            multi_instance: module.multiInstance,
+            definition: module,
+        }))
+        expect(tx.em.query).toHaveBeenCalledWith(UPSERT_MODULES, [JSON.stringify(expected), new Date(AT)])
+    })
+
+    it("reports persisted modules missing from the catalogue without deleting them", async () => {
+        const tx = syncTransaction([...KEYS, { key: "retired" }])
+        const { service, authorityActions } = await build({}, tx.em)
+        authorityActions.upsertAll.mockResolvedValue({ written: 1, stale: [] })
+
+        await expect(service.sync()).resolves.toMatchObject({
+            staleModules: ["retired"],
         })
+    })
+})
 
-        it("refuses a catalogue that breaks its own rules and writes nothing", async () => {
-            const entityManager = mockEntityManager()
-            const { service } = await build({ categories: [] }, entityManager)
+describe("ModulesService > sync", () => {
+    it("refuses a catalogue that breaks its own rules and writes nothing", async () => {
+        const entityManager = mockEntityManager()
+        const { service } = await build({ categories: [] }, entityManager)
 
-            await expect(service.sync()).rejects.toMatchObject({
-                code: ModulesErrorCode.CatalogInvalid,
-                params: { problems: expect.stringContaining("unknown category") },
-            })
-            expect(entityManager.transaction).not.toHaveBeenCalled()
+        await expect(service.sync()).rejects.toMatchObject({
+            code: ModulesErrorCode.CatalogInvalid,
+            params: { problems: expect.stringContaining("unknown category") },
         })
+        expect(entityManager.transaction).not.toHaveBeenCalled()
     })
 })

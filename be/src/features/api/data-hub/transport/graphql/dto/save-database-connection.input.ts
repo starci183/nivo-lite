@@ -1,7 +1,7 @@
 import { Field, ID, InputType, Int } from "@nestjs/graphql"
 import { Type } from "class-transformer"
 import { IsDefined, IsIn, IsOptional, IsString, IsUUID, MaxLength, ValidateNested } from "class-validator"
-import { DataJsonScalar } from "./data-json.type"
+import { DataJsonScalar } from "../data-json.mapper"
 import { DatabaseTargetInput } from "./database-target.input"
 
 @InputType()
@@ -26,7 +26,10 @@ export class SaveDatabaseConnectionInput {
     @Type(() => DatabaseTargetInput)
     target!: DatabaseTargetInput
 
-    /** The mapped tables: a list of {schema, table, entity, idColumn, titleColumn, updatedColumn, columns} (cleaned by the back end). */
+    /**
+     * The mapped tables: a list of {schema, table, entity, idColumn, titleColumn, updatedColumn, columns} (cleaned by
+     * the back end).
+     */
     @Field(() => DataJsonScalar)
     @IsDefined()
     tables!: unknown

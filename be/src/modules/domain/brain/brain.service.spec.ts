@@ -105,252 +105,241 @@ const build = async () => {
     return { service: moduleRef.get(BrainService), logger, members, facts, lessons, gaps, sources, documentFacts }
 }
 
-describe("BrainService", () => {
-    describe("saveFact", () => {
-        it("applies an owner's fact with dated manual evidence and answers its linked and matching questions", async () => {
-            const { service, members, facts, gaps } = await build()
-            const form = formOf({ note: "  Checked today  ", gapId: "g1", validFrom: AT, validTo: "2026-11-01" })
+describe("BrainService saveFact", () => {
+    it("applies an owner's fact with dated manual evidence and answers its linked and matching questions", async () => {
+        const { service, members, facts, gaps } = await build()
+        const form = formOf({ note: "  Checked today  ", gapId: "g1", validFrom: AT, validTo: "2026-11-01" })
 
-            await expect(service.saveFact("u1", WS, form)).resolves.toEqual({ fact: factOf(), outcome: "applied" })
+        await expect(service.saveFact("u1", WS, form)).resolves.toEqual({ fact: factOf(), outcome: "applied" })
 
-            expect(members.require).toHaveBeenCalledWith("u1", WS, ["owner", "manager"])
-            expect(facts.propose).toHaveBeenCalledWith(WS, {
-                subjectType: "business",
-                subjectLabel: "Shop",
-                attributeLabel: "Hours",
-                value: "8 to 21",
-                scope: "public",
-                modules: [],
-                validFrom: AT,
-                validTo: "2026-11-01",
-                sourceKind: "owner",
-                proposedBy: "Ada",
-                autoApply: true,
-                evidence: [
-                    {
-                        kind: "manual",
-                        ref: `manual:${Date.parse(AT)}`,
-                        label: "Ada wrote this on the Second Brain page",
-                        quote: "Checked today",
-                        at: AT,
-                    },
-                ],
-            })
-            expect(gaps.answer).toHaveBeenCalledWith(WS, "g1", "fact:f1")
-            expect(gaps.resolve).toHaveBeenCalledWith(WS, {
-                text: "Shop - Hours: 8 to 21",
-                minimum: 0.6,
-                module: null,
-                by: "fact:f1",
-            })
+        expect(members.require).toHaveBeenCalledWith("u1", WS, ["owner", "manager"])
+        expect(facts.propose).toHaveBeenCalledWith(WS, {
+            subjectType: "business",
+            subjectLabel: "Shop",
+            attributeLabel: "Hours",
+            value: "8 to 21",
+            scope: "public",
+            modules: [],
+            validFrom: AT,
+            validTo: "2026-11-01",
+            sourceKind: "owner",
+            proposedBy: "Ada",
+            autoApply: true,
+            evidence: [
+                {
+                    kind: "manual",
+                    ref: `manual:${Date.parse(AT)}`,
+                    label: "Ada wrote this on the Second Brain page",
+                    quote: "Checked today",
+                    at: AT,
+                },
+            ],
         })
-
-        it.each([undefined, "   "])("records a manager's fact without an evidence quote for note %p", async (note) => {
-            const { service, members, facts, gaps } = await build()
-            members.require.mockResolvedValue(memberOf({ role: "manager", displayName: "Bo" }))
-
-            await service.saveFact("u1", WS, formOf({ note }))
-
-            expect(facts.propose).toHaveBeenCalledWith(WS, {
-                subjectType: "business",
-                subjectLabel: "Shop",
-                attributeLabel: "Hours",
-                value: "8 to 21",
-                scope: "public",
-                modules: [],
-                validFrom: undefined,
-                validTo: undefined,
-                sourceKind: "manager",
-                proposedBy: "Bo",
-                autoApply: true,
-                evidence: [
-                    {
-                        kind: "manual",
-                        ref: `manual:${Date.parse(AT)}`,
-                        label: "Bo wrote this on the Second Brain page",
-                        quote: undefined,
-                        at: AT,
-                    },
-                ],
-            })
-            expect(gaps.answer).not.toHaveBeenCalled()
-        })
-
-        const waiting: ReadonlyArray<ProposeResult> = [
-            { fact: factOf(), outcome: "conflict" },
-            { fact: factOf({ status: "scheduled" }), outcome: "applied" },
-        ]
-        it.each(waiting)(
-            "keeps a linked question open for result $outcome with status $fact.status",
-            async (result) => {
-                const { service, facts, gaps } = await build()
-                facts.propose.mockResolvedValue(result)
-
-                await expect(service.saveFact("u1", WS, formOf({ gapId: "g1" }))).resolves.toEqual(result)
-
-                expect(gaps.answer).not.toHaveBeenCalled()
-            },
-        )
-
-        it("does not resolve other questions for an active internal fact", async () => {
-            const { service, facts, gaps } = await build()
-            const result: ProposeResult = { fact: factOf({ scope: "internal" }), outcome: "applied" }
-            facts.propose.mockResolvedValue(result)
-
-            await expect(service.saveFact("u1", WS, formOf({ scope: "internal", gapId: "g1" }))).resolves.toEqual(
-                result,
-            )
-
-            expect(gaps.answer).toHaveBeenCalledWith(WS, "g1", "fact:f1")
-            expect(gaps.resolve).not.toHaveBeenCalled()
-        })
-
-        it("logs a matching failure and still returns the saved fact", async () => {
-            const { service, logger, gaps } = await build()
-            const cause = new Error("matching failed")
-            gaps.resolve.mockRejectedValue(cause)
-
-            await expect(service.saveFact("u1", WS, formOf())).resolves.toEqual({ fact: factOf(), outcome: "applied" })
-
-            expect(logger.error).toHaveBeenCalledWith(BrainLogEvent.GapsFailed, cause, { factId: "f1" })
-        })
-
-        it("stops before proposing when membership is refused", async () => {
-            const { service, members, facts, gaps } = await build()
-            const cause = new Error("not a manager")
-            members.require.mockRejectedValue(cause)
-
-            await expect(service.saveFact("u1", WS, formOf())).rejects.toBe(cause)
-
-            expect(facts.propose).not.toHaveBeenCalled()
-            expect(gaps.answer).not.toHaveBeenCalled()
-            expect(gaps.resolve).not.toHaveBeenCalled()
+        expect(gaps.answer).toHaveBeenCalledWith(WS, "g1", "fact:f1")
+        expect(gaps.resolve).toHaveBeenCalledWith(WS, {
+            text: "Shop - Hours: 8 to 21",
+            minimum: 0.6,
+            module: null,
+            by: "fact:f1",
         })
     })
 
-    describe("decideFact", () => {
-        const decisions: ReadonlyArray<FactDecision> = [
-            { workspaceId: WS, id: "f1", action: "apply" },
-            { workspaceId: WS, id: "f1", action: "reject", note: "Incorrect" },
-            { workspaceId: WS, id: "f1", action: "choose" },
-            { workspaceId: WS, id: "f1", action: "split", situation: "Weekends" },
-            { workspaceId: WS, id: "f1", action: "split" },
-            { workspaceId: WS, id: "f1", action: "retire", note: "Ended" },
-        ]
-        it.each(decisions)(
-            "carries out $action and resolves questions covered by the returned fact",
-            async (decision) => {
-                const { service, members, facts, gaps } = await build()
-                facts.apply.mockResolvedValue(factOf())
-                facts.reject.mockResolvedValue(factOf())
-                facts.choose.mockResolvedValue(factOf())
-                facts.split.mockResolvedValue(factOf())
-                facts.retire.mockResolvedValue(factOf())
+    it.each([undefined, "   "])("records a manager's fact without an evidence quote for note %p", async (note) => {
+        const { service, members, facts, gaps } = await build()
+        members.require.mockResolvedValue(memberOf({ role: "manager", displayName: "Bo" }))
 
-                await expect(service.decideFact("u1", decision)).resolves.toEqual(factOf())
+        await service.saveFact("u1", WS, formOf({ note }))
 
-                expect(members.require).toHaveBeenCalledWith("u1", WS, ["owner", "manager"])
-                expect(gaps.resolve).toHaveBeenCalledWith(WS, {
-                    text: "Shop - Hours: 8 to 21",
-                    minimum: 0.6,
-                    module: null,
-                    by: "fact:f1",
-                })
-                switch (decision.action) {
-                    case "apply":
-                        expect(facts.apply).toHaveBeenCalledWith(WS, "f1", "Ada", "")
-                        break
-                    case "reject":
-                        expect(facts.reject).toHaveBeenCalledWith(WS, "f1", "Ada", "Incorrect")
-                        break
-                    case "choose":
-                        expect(facts.choose).toHaveBeenCalledWith(WS, "f1", "Ada")
-                        break
-                    case "split":
-                        expect(facts.split).toHaveBeenCalledWith(WS, "f1", decision.situation ?? "", "Ada")
-                        break
-                    case "retire":
-                        expect(facts.retire).toHaveBeenCalledWith(WS, "f1", "Ada", "Ended")
-                        break
-                }
-            },
-        )
+        expect(facts.propose).toHaveBeenCalledWith(WS, {
+            subjectType: "business",
+            subjectLabel: "Shop",
+            attributeLabel: "Hours",
+            value: "8 to 21",
+            scope: "public",
+            modules: [],
+            validFrom: undefined,
+            validTo: undefined,
+            sourceKind: "manager",
+            proposedBy: "Bo",
+            autoApply: true,
+            evidence: [
+                {
+                    kind: "manual",
+                    ref: `manual:${Date.parse(AT)}`,
+                    label: "Bo wrote this on the Second Brain page",
+                    quote: undefined,
+                    at: AT,
+                },
+            ],
+        })
+        expect(gaps.answer).not.toHaveBeenCalled()
+    })
+})
+describe("BrainService saveFact", () => {
+    const waiting: ReadonlyArray<ProposeResult> = [
+        { fact: factOf(), outcome: "conflict" },
+        { fact: factOf({ status: "scheduled" }), outcome: "applied" },
+    ]
+    it.each(waiting)("keeps a linked question open for result $outcome with status $fact.status", async (result) => {
+        const { service, facts, gaps } = await build()
+        facts.propose.mockResolvedValue(result)
+
+        await expect(service.saveFact("u1", WS, formOf({ gapId: "g1" }))).resolves.toEqual(result)
+
+        expect(gaps.answer).not.toHaveBeenCalled()
     })
 
-    describe("keepCurrent", () => {
-        it.each([undefined, "i1"])(
-            "rejects waiting values under the caller's name for instance %p",
-            async (installationId) => {
-                const { service, facts } = await build()
-                facts.keepCurrent.mockResolvedValue(3)
+    it("does not resolve other questions for an active internal fact", async () => {
+        const { service, facts, gaps } = await build()
+        const result: ProposeResult = { fact: factOf({ scope: "internal" }), outcome: "applied" }
+        facts.propose.mockResolvedValue(result)
 
-                await expect(
-                    service.keepCurrent("u1", {
-                        workspaceId: WS,
-                        subjectKey: "shop",
-                        attribute: "hours",
-                        installationId,
-                    }),
-                ).resolves.toBe(3)
+        await expect(service.saveFact("u1", WS, formOf({ scope: "internal", gapId: "g1" }))).resolves.toEqual(result)
 
-                expect(facts.keepCurrent).toHaveBeenCalledWith(WS, "shop", "hours", "Ada", installationId ?? null)
-            },
-        )
+        expect(gaps.answer).toHaveBeenCalledWith(WS, "g1", "fact:f1")
+        expect(gaps.resolve).not.toHaveBeenCalled()
     })
 
-    describe("lessons", () => {
-        it.each([undefined, "chatbot"])("applies a manual lesson for module %p", async (module) => {
-            const { service, lessons } = await build()
+    it("logs a matching failure and still returns the saved fact", async () => {
+        const { service, logger, gaps } = await build()
+        const cause = new Error("matching failed")
+        gaps.resolve.mockRejectedValue(cause)
+
+        await expect(service.saveFact("u1", WS, formOf())).resolves.toEqual({ fact: factOf(), outcome: "applied" })
+
+        expect(logger.error).toHaveBeenCalledWith(BrainLogEvent.GapsFailed, cause, { factId: "f1" })
+    })
+
+    it("stops before proposing when membership is refused", async () => {
+        const { service, members, facts, gaps } = await build()
+        const cause = new Error("not a manager")
+        members.require.mockRejectedValue(cause)
+
+        await expect(service.saveFact("u1", WS, formOf())).rejects.toBe(cause)
+
+        expect(facts.propose).not.toHaveBeenCalled()
+        expect(gaps.answer).not.toHaveBeenCalled()
+        expect(gaps.resolve).not.toHaveBeenCalled()
+    })
+})
+describe("BrainService decideFact", () => {
+    const decisions: ReadonlyArray<FactDecision> = [
+        { workspaceId: WS, id: "f1", action: "apply" },
+        { workspaceId: WS, id: "f1", action: "reject", note: "Incorrect" },
+        { workspaceId: WS, id: "f1", action: "choose" },
+        { workspaceId: WS, id: "f1", action: "split", situation: "Weekends" },
+        { workspaceId: WS, id: "f1", action: "split" },
+        { workspaceId: WS, id: "f1", action: "retire", note: "Ended" },
+    ]
+    it.each(decisions)("carries out $action and resolves questions covered by the returned fact", async (decision) => {
+        const { service, members, facts, gaps } = await build()
+        facts.apply.mockResolvedValue(factOf())
+        facts.reject.mockResolvedValue(factOf())
+        facts.choose.mockResolvedValue(factOf())
+        facts.split.mockResolvedValue(factOf())
+        facts.retire.mockResolvedValue(factOf())
+
+        await expect(service.decideFact("u1", decision)).resolves.toEqual(factOf())
+
+        expect(members.require).toHaveBeenCalledWith("u1", WS, ["owner", "manager"])
+        expect(gaps.resolve).toHaveBeenCalledWith(WS, {
+            text: "Shop - Hours: 8 to 21",
+            minimum: 0.6,
+            module: null,
+            by: "fact:f1",
+        })
+        switch (decision.action) {
+            case "apply":
+                expect(facts.apply).toHaveBeenCalledWith(WS, "f1", "Ada", "")
+                break
+            case "reject":
+                expect(facts.reject).toHaveBeenCalledWith(WS, "f1", "Ada", "Incorrect")
+                break
+            case "choose":
+                expect(facts.choose).toHaveBeenCalledWith(WS, "f1", "Ada")
+                break
+            case "split":
+                expect(facts.split).toHaveBeenCalledWith(WS, "f1", decision.situation ?? "", "Ada")
+                break
+            case "retire":
+                expect(facts.retire).toHaveBeenCalledWith(WS, "f1", "Ada", "Ended")
+                break
+        }
+    })
+})
+describe("BrainService keepCurrent", () => {
+    it.each([undefined, "i1"])(
+        "rejects waiting values under the caller's name for instance %p",
+        async (installationId) => {
+            const { service, facts } = await build()
+            facts.keepCurrent.mockResolvedValue(3)
 
             await expect(
-                service.saveLesson("u1", {
+                service.keepCurrent("u1", {
                     workspaceId: WS,
-                    module,
-                    title: "Confirm",
-                    body: "Confirm hours",
-                    appliesWhen: "Before replying",
+                    subjectKey: "shop",
+                    attribute: "hours",
+                    installationId,
                 }),
-            ).resolves.toEqual(lesson)
+            ).resolves.toBe(3)
 
-            expect(lessons.propose).toHaveBeenCalledWith(WS, {
-                module: module ?? null,
+            expect(facts.keepCurrent).toHaveBeenCalledWith(WS, "shop", "hours", "Ada", installationId ?? null)
+        },
+    )
+})
+describe("BrainService lessons", () => {
+    const verdicts: ReadonlyArray<"active" | "rejected"> = ["active", "rejected"]
+    it.each([undefined, "chatbot"])("applies a manual lesson for module %p", async (module) => {
+        const { service, lessons } = await build()
+
+        await expect(
+            service.saveLesson("u1", {
+                workspaceId: WS,
+                module,
                 title: "Confirm",
                 body: "Confirm hours",
                 appliesWhen: "Before replying",
-                origin: "manual",
-                proposedBy: "Ada",
-                apply: true,
-            })
-        })
+            }),
+        ).resolves.toEqual(lesson)
 
-        it("retires an existing lesson", async () => {
-            const { service, lessons } = await build()
-            const retired = { ...lesson, status: "retired" }
-            lessons.retire.mockResolvedValue({ ...lesson, status: "retired" })
-
-            await expect(service.decideLesson("u1", { workspaceId: WS, id: "l1", action: "retired" })).resolves.toEqual(
-                retired,
-            )
-
-            expect(lessons.retire).toHaveBeenCalledWith(WS, "l1", "Ada")
-            expect(lessons.decide).not.toHaveBeenCalled()
-        })
-
-        const verdicts: ReadonlyArray<"active" | "rejected"> = ["active", "rejected"]
-        it.each(verdicts)("records the %s verdict of a proposed lesson", async (action) => {
-            const { service, lessons } = await build()
-            lessons.decide.mockResolvedValue({ ...lesson, status: action })
-
-            await expect(service.decideLesson("u1", { workspaceId: WS, id: "l1", action })).resolves.toEqual({
-                ...lesson,
-                status: action,
-            })
-
-            expect(lessons.decide).toHaveBeenCalledWith(WS, "l1", action, "Ada")
-            expect(lessons.retire).not.toHaveBeenCalled()
+        expect(lessons.propose).toHaveBeenCalledWith(WS, {
+            module: module ?? null,
+            title: "Confirm",
+            body: "Confirm hours",
+            appliesWhen: "Before replying",
+            origin: "manual",
+            proposedBy: "Ada",
+            apply: true,
         })
     })
 
+    it("retires an existing lesson", async () => {
+        const { service, lessons } = await build()
+        const retired = { ...lesson, status: "retired" }
+        lessons.retire.mockResolvedValue({ ...lesson, status: "retired" })
+
+        await expect(service.decideLesson("u1", { workspaceId: WS, id: "l1", action: "retired" })).resolves.toEqual(
+            retired,
+        )
+
+        expect(lessons.retire).toHaveBeenCalledWith(WS, "l1", "Ada")
+        expect(lessons.decide).not.toHaveBeenCalled()
+    })
+
+    it.each(verdicts)("records the %s verdict of a proposed lesson", async (action) => {
+        const { service, lessons } = await build()
+        lessons.decide.mockResolvedValue({ ...lesson, status: action })
+
+        await expect(service.decideLesson("u1", { workspaceId: WS, id: "l1", action })).resolves.toEqual({
+            ...lesson,
+            status: action,
+        })
+
+        expect(lessons.decide).toHaveBeenCalledWith(WS, "l1", action, "Ada")
+        expect(lessons.retire).not.toHaveBeenCalled()
+    })
+})
+describe("BrainService", () => {
     it("dismisses a customer question under the manager's name", async () => {
         const { service, members, gaps } = await build()
 

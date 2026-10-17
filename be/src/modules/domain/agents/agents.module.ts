@@ -17,7 +17,7 @@ export class AgentsModule extends ConfigurableModuleClass {
         const { isGlobal: _isGlobal, ...parsed } = options
         return {
             ...base,
-            imports: [...(base.imports ?? []), AgentsQueueModule],
+            imports: [...(base.imports ?? []), AgentsQueueModule.register({})],
             providers: [
                 ...(base.providers ?? []),
                 { provide: AGENTS_OPTIONS, useValue: parsed },

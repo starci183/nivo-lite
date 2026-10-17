@@ -56,7 +56,7 @@ export class DecisionsModule extends ConfigurableModuleClass {
         ]
         return {
             ...base,
-            imports: [...(base.imports ?? []), ...owners, DecisionsQueueModule],
+            imports: [...(base.imports ?? []), ...owners, DecisionsQueueModule.register({})],
             providers: [
                 ...(base.providers ?? []),
                 { provide: WORK_PERFORMER_REGISTRY, useExisting: WorkPerformersService },

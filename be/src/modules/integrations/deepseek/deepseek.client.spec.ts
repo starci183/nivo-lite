@@ -103,7 +103,11 @@ describe("DeepseekClient", () => {
             expect(request?.messages[0]?.content).toContain("Workspace state:\nstate")
             expect(request?.messages[1]?.content).toBe("a\nb")
         })
+    })
+})
 
+describe("DeepseekClient", () => {
+    describe("text prompts", () => {
         it("tests an agent with the chat so far", async () => {
             const { client, generator } = await build()
             generator.generate.mockResolvedValue("ok")
@@ -136,7 +140,9 @@ describe("DeepseekClient", () => {
             expect(request?.messages[1]?.content).toContain("Payment: Combo - 1.000.000")
         })
     })
+})
 
+describe("DeepseekClient", () => {
     describe("json prompts", () => {
         it("reads a lead turn as raw JSON with the catalog voice and lead generation metering", async () => {
             const { client, generator, catalog } = await build()
@@ -171,7 +177,9 @@ describe("DeepseekClient", () => {
         it("proposes a responsibility", async () => {
             const { client, generator } = await build()
             generator.generate.mockResolvedValue(
-                '{"title":"Follow up","owner_kind":"agent","owner_handle":"sales","next_action":"Call","due_in_days":2,"rationale":"routine"}',
+                '{"title":"Follow up","owner_kind":"agent","owner_handle":"sa' +
+                    'les","next_action":"Call"' +
+                    ',"due_in_days":2,"rationale":"routine"}',
             )
 
             await expect(client.proposeResponsibility(scope, lead, "ctx", [agent], "Owner")).resolves.toEqual({
@@ -198,7 +206,11 @@ describe("DeepseekClient", () => {
             })
             expect(generator.generate.mock.calls[0]?.[0]).toMatchObject({ purpose: "setup:setup", module: "setup" })
         })
+    })
+})
 
+describe("DeepseekClient", () => {
+    describe("json prompts", () => {
         it("classifies a lead", async () => {
             const { client, generator } = await build()
             generator.generate.mockResolvedValue(
@@ -269,7 +281,9 @@ describe("DeepseekClient", () => {
             })
         })
     })
+})
 
+describe("DeepseekClient", () => {
     describe("json parsing", () => {
         it("reads a fenced answer and an object inside prose", async () => {
             const { client, generator } = await build()

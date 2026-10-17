@@ -99,7 +99,9 @@ describe("AutomationOwnerChatService", () => {
         expect(secrets.botToken.mock.calls).toEqual([[WS, "connection-1"]])
         expect(telegram.sendMessage).toHaveBeenCalledTimes(1)
     })
+})
 
+describe("AutomationOwnerChatService", () => {
     it("logs a failed send and tries the next connection with its own token and chat", async () => {
         const { subject, connections, secrets, telegram, logger } = await setup()
         const failure = new Error("Telegram unavailable")

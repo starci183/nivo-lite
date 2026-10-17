@@ -123,7 +123,9 @@ describe("LeadGenCommentService", () => {
 
         expect(outbox.jobs).toEqual([])
     })
+})
 
+describe("LeadGenCommentService", () => {
     it.each([null, undefined])("preserves the proposed draft when the edit is %s", async (draft) => {
         const { comments, outbox, tx, members, decisions, write } = await build(
             itemOf({ assigned_staff_id: "staff-1" }),
@@ -193,7 +195,9 @@ describe("LeadGenCommentService", () => {
         expect(tx.outcomes).toEqual([])
         expect(tx.em.query).not.toHaveBeenCalled()
     })
+})
 
+describe("LeadGenCommentService", () => {
     it.each([
         { department: "sales", action: "reply_comment_public" },
         { department: "lead_gen", action: "score_lead" },
@@ -262,7 +266,9 @@ describe("LeadGenCommentService", () => {
             errorCode,
         })
     })
+})
 
+describe("LeadGenCommentService", () => {
     it("reports a successful comment without a result link", async () => {
         const { comments } = await build(itemOf({ status: "done", result: { summary: "Replied" } }), [])
 

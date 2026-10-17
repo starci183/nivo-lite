@@ -1,3 +1,4 @@
+import { Test } from "@nestjs/testing"
 import type { Env, Seg, Shift, ShiftStaff } from "../shifts.contracts"
 import {
     laborCost,
@@ -10,6 +11,30 @@ import {
     violationsOfShifts,
     weekCost,
 } from "./work-rules.policy"
+
+const SUBJECT = Symbol("work-rules.policy")
+
+const build = async () => {
+    const moduleRef = await Test.createTestingModule({
+        providers: [
+            {
+                provide: SUBJECT,
+                useValue: {
+                    laborCost,
+                    liveShifts,
+                    minutesOf,
+                    onDate,
+                    segOf,
+                    shiftsByStaff,
+                    violationsForSegs,
+                    violationsOfShifts,
+                    weekCost,
+                },
+            },
+        ],
+    }).compile()
+    return moduleRef.get<typeof import("./work-rules.policy")>(SUBJECT)
+}
 
 const person = (values: Partial<ShiftStaff> = {}): ShiftStaff => ({
     id: "a",
@@ -50,15 +75,19 @@ const shift = (values: Partial<Shift> = {}): Shift => ({
 })
 
 describe("work rules policy", () => {
-    it("converts a shift into minutes and keeps only assigned, uncancelled work", () => {
+    it("converts a shift into minutes and keeps only assigned, uncancelled work", async () => {
+        const subject = await build()
+
         const assigned = shift()
         const published = shift({ id: "shift-2", status: "published" })
         const open = shift({ id: "open", staffId: null })
         const cancelled = shift({ id: "cancelled", status: "cancelled" })
 
-        expect(segOf(assigned)).toEqual({ date: "2026-10-12", s: 420, e: 660, pos: "bar" })
-        expect(liveShifts([assigned, open, cancelled, published])).toEqual([assigned, published])
-        expect(shiftsByStaff([assigned, open, cancelled, published, shift({ id: "b-1", staffId: "b" })])).toEqual(
+        expect(subject.segOf(assigned)).toEqual({ date: "2026-10-12", s: 420, e: 660, pos: "bar" })
+        expect(subject.liveShifts([assigned, open, cancelled, published])).toEqual([assigned, published])
+        expect(
+            subject.shiftsByStaff([assigned, open, cancelled, published, shift({ id: "b-1", staffId: "b" })]),
+        ).toEqual(
             new Map([
                 ["a", [assigned, published]],
                 ["b", [shift({ id: "b-1", staffId: "b" })]],
@@ -66,20 +95,26 @@ describe("work rules policy", () => {
         )
     })
 
-    it("keeps empty violation lists for an unknown person", () => {
-        expect(violationsForSegs(envOf(), "unknown", [segment("2026-10-12", 420, 660)])).toEqual([[]])
-        expect(violationsForSegs(envOf(), "a", [])).toEqual([])
+    it("keeps empty violation lists for an unknown person", async () => {
+        const subject = await build()
+
+        expect(subject.violationsForSegs(envOf(), "unknown", [segment("2026-10-12", 420, 660)])).toEqual([[]])
+        expect(subject.violationsForSegs(envOf(), "a", [])).toEqual([])
     })
 
-    it("keeps violation alignment for several shifts of an unknown person", () => {
+    it("keeps violation alignment for several shifts of an unknown person", async () => {
+        const subject = await build()
+
         const unknown = [shift({ staffId: "unknown" }), shift({ id: "unknown-2", staffId: "unknown" })]
 
-        expect(violationsForSegs(envOf(), "unknown", unknown.map(segOf))).toEqual([[], []])
-        expect(violationsOfShifts(envOf(), unknown)).toEqual(new Map())
-        expect(violationsOfShifts(envOf(), [])).toEqual(new Map())
+        expect(subject.violationsForSegs(envOf(), "unknown", unknown.map(subject.segOf))).toEqual([[], []])
+        expect(subject.violationsOfShifts(envOf(), unknown)).toEqual(new Map())
+        expect(subject.violationsOfShifts(envOf(), [])).toEqual(new Map())
     })
 
-    it("returns every broken rule in input order with exact cumulative hours", () => {
+    it("returns every broken rule in input order with exact cumulative hours", async () => {
+        const subject = await build()
+
         const env = envOf({
             staff: new Map([["a", person({ maxDay: 3, maxWeek: 5 })]]),
             avail: [{ staffId: "a", weekday: 0, date: null, start: "07:00", end: "12:00", available: false }],
@@ -91,7 +126,7 @@ describe("work rules policy", () => {
             segment("2026-10-12", 420, 540),
         ]
 
-        expect(violationsForSegs(env, "a", segs)).toEqual([
+        expect(subject.violationsForSegs(env, "a", segs)).toEqual([
             [{ kind: "max_week", detail: "8.0h" }],
             [
                 { kind: "position", detail: "position" },
@@ -108,8 +143,12 @@ describe("work rules policy", () => {
             ],
         ])
     })
+})
 
-    it("measures rest against the preceding working day and excludes prior work from totals", () => {
+describe("work rules policy", () => {
+    it("measures rest against the preceding working day and excludes prior work from totals", async () => {
+        const subject = await build()
+
         const env = envOf({
             prior: new Map([
                 [
@@ -125,32 +164,38 @@ describe("work rules policy", () => {
         })
         const segs = [segment("2026-10-13", 420, 480), segment("2026-10-12", 480, 600), segment("2026-10-12", 360, 420)]
 
-        expect(violationsForSegs(env, "a", segs)).toEqual([
+        expect(subject.violationsForSegs(env, "a", segs)).toEqual([
             [],
             [{ kind: "rest", detail: "10.0h" }],
             [{ kind: "rest", detail: "8.0h" }],
         ])
-        expect(violationsForSegs(env, "b", segs)).toEqual([[], [], []])
-        expect(violationsForSegs(envOf({ prior: new Map() }), "a", [segment("2026-10-12", 420, 480)])).toEqual([[]])
+        expect(subject.violationsForSegs(env, "b", segs)).toEqual([[], [], []])
+        expect(subject.violationsForSegs(envOf({ prior: new Map() }), "a", [segment("2026-10-12", 420, 480)])).toEqual([
+            [],
+        ])
     })
 
-    it("tolerates rounding at hour limits and exact rest at the boundary", () => {
+    it("tolerates rounding at hour limits and exact rest at the boundary", async () => {
+        const subject = await build()
+
         const env = envOf({ staff: new Map([["a", person({ maxDay: 1, maxWeek: 2, minRest: 23 })]]) })
 
         expect(
-            violationsForSegs(env, "a", [segment("2026-10-12", 420, 480.005), segment("2026-10-13", 481, 541)]),
+            subject.violationsForSegs(env, "a", [segment("2026-10-12", 420, 480.005), segment("2026-10-13", 481, 541)]),
         ).toEqual([[], []])
-        expect(violationsForSegs(env, "a", [segment("2026-10-12", 420, 480), segment("2026-10-13", 420, 480)])).toEqual(
-            [[], []],
-        )
+        expect(
+            subject.violationsForSegs(env, "a", [segment("2026-10-12", 420, 480), segment("2026-10-13", 420, 480)]),
+        ).toEqual([[], []])
     })
 
-    it("maps violations only to assigned live shifts with findings", () => {
+    it("maps violations only to assigned live shifts with findings", async () => {
+        const subject = await build()
+
         const invalid = shift({ id: "invalid", positionId: "cash" })
         const healthy = shift({ id: "healthy", date: "2026-10-13" })
 
         expect(
-            violationsOfShifts(envOf(), [
+            subject.violationsOfShifts(envOf(), [
                 invalid,
                 healthy,
                 shift({ id: "open", staffId: null }),
@@ -158,8 +203,12 @@ describe("work rules policy", () => {
             ]),
         ).toEqual(new Map([["invalid", [{ kind: "position", detail: "position" }]]]))
     })
+})
 
-    it("keeps finding order and duplicate shift ids across staff groups", () => {
+describe("work rules policy", () => {
+    it("keeps finding order and duplicate shift ids across staff groups", async () => {
+        const subject = await build()
+
         const env = envOf({
             staff: new Map([
                 ["a", person({ maxDay: 1, maxWeek: 2, minRest: 0 })],
@@ -176,7 +225,7 @@ describe("work rules policy", () => {
             shift({ id: "shared", staffId: "b", date: "2026-10-13", end: "08:00" }),
         ]
 
-        expect([...violationsOfShifts(env, shifts)]).toEqual([
+        expect([...subject.violationsOfShifts(env, shifts)]).toEqual([
             ["shared", [{ kind: "max_week", detail: "3.0h" }]],
             [
                 "a-finding",
@@ -190,17 +239,21 @@ describe("work rules policy", () => {
         ])
     })
 
-    it("totals minutes and pays overtime at one and a half times the wage", () => {
+    it("totals minutes and pays overtime at one and a half times the wage", async () => {
+        const subject = await build()
+
         const segs = [segment("2026-10-12", 420, 900), segment("2026-10-13", 420, 900)]
 
-        expect(minutesOf([])).toBe(0)
-        expect(minutesOf(segs)).toBe(960)
-        expect(weekCost(person(), segs, 10)).toBe(570000)
-        expect(weekCost(person({ wage: 1 }), [segment("2026-10-12", 0, 31)], 10)).toBe(1)
-        expect(weekCost(person(), [], 40)).toBe(0)
+        expect(subject.minutesOf([])).toBe(0)
+        expect(subject.minutesOf(segs)).toBe(960)
+        expect(subject.weekCost(person(), segs, 10)).toBe(570000)
+        expect(subject.weekCost(person({ wage: 1 }), [segment("2026-10-12", 0, 31)], 10)).toBe(1)
+        expect(subject.weekCost(person(), [], 40)).toBe(0)
     })
 
-    it("reports exact labor costs while ignoring unknown, open and cancelled people", () => {
+    it("reports exact labor costs while ignoring unknown, open and cancelled people", async () => {
+        const subject = await build()
+
         const env = envOf({
             staff: new Map([
                 ["a", person()],
@@ -210,7 +263,7 @@ describe("work rules policy", () => {
         })
 
         expect(
-            laborCost(env, [
+            subject.laborCost(env, [
                 shift(),
                 shift({ id: "a-2", date: "2026-10-13" }),
                 shift({ id: "b-1", staffId: "b", end: "09:00" }),
@@ -225,16 +278,23 @@ describe("work rules policy", () => {
                 { staffId: "b", minutes: 120, cost: 80000 },
             ],
         })
-        expect(laborCost(env, [])).toEqual({ total: 0, byStaff: [] })
+        expect(subject.laborCost(env, [])).toEqual({ total: 0, byStaff: [] })
     })
+})
 
-    it("returns noncancelled shifts on a date in chronological order", () => {
+describe("work rules policy", () => {
+    it("returns noncancelled shifts on a date in chronological order", async () => {
+        const subject = await build()
+
         const morning = shift()
         const evening = shift({ id: "evening", start: "18:00", end: "20:00", staffId: null })
 
         expect(
-            onDate([evening, shift({ date: "2026-10-13" }), shift({ status: "cancelled" }), morning], "2026-10-12"),
+            subject.onDate(
+                [evening, shift({ date: "2026-10-13" }), shift({ status: "cancelled" }), morning],
+                "2026-10-12",
+            ),
         ).toEqual([morning, evening])
-        expect(onDate([], "2026-10-12")).toEqual([])
+        expect(subject.onDate([], "2026-10-12")).toEqual([])
     })
 })

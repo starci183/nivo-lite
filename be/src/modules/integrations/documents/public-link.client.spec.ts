@@ -22,7 +22,8 @@ const answer = (body: string | Uint8Array, headers: Record<string, string>, stat
     body: typeof body === "string" ? Buffer.from(body) : body,
 })
 
-const build = async (options: DocumentsOptions = optionsOf()) => {
+const build = async (inputOptions: DocumentsOptions = optionsOf()) => {
+    const options = builder<DocumentsOptions>(inputOptions)()
     const http = mock<DocumentsHttpClient>()
     const moduleRef = await Test.createTestingModule({
         providers: [
@@ -52,7 +53,9 @@ describe("PublicLinkClient", () => {
             10_000,
         )
     })
+})
 
+describe("PublicLinkClient", () => {
     it("reads a text body by its content type", async () => {
         const { client, http } = await build()
         http.get.mockResolvedValue(
@@ -61,7 +64,9 @@ describe("PublicLinkClient", () => {
 
         await expect(client.read(WEB)).resolves.toEqual({ text: "plain words", title: null })
     })
+})
 
+describe("PublicLinkClient", () => {
     it("reads a PDF through the reader of the options", async () => {
         const readers = mock<DocumentReaders>()
         readers.pdf.mockResolvedValue("pdf words")
@@ -70,7 +75,9 @@ describe("PublicLinkClient", () => {
 
         await expect(client.read(WEB)).resolves.toEqual({ text: "pdf words", title: null })
     })
+})
 
+describe("PublicLinkClient", () => {
     it("cuts a long text at the limit", async () => {
         const { client, http } = await build()
         http.get.mockResolvedValue(answer("a".repeat(130_000), { "content-type": "text/plain" }))
@@ -79,7 +86,9 @@ describe("PublicLinkClient", () => {
 
         expect(read.text).toHaveLength(120_000)
     })
+})
 
+describe("PublicLinkClient", () => {
     it("refuses a private address before it fetches anything", async () => {
         const { client, http } = await build()
 
@@ -89,14 +98,18 @@ describe("PublicLinkClient", () => {
 
         expect(http.get).not.toHaveBeenCalled()
     })
+})
 
+describe("PublicLinkClient", () => {
     it.each([404, 401, 403])("takes status %s of a Google file for a file that is not public", async (status) => {
         const { client, http } = await build()
         http.get.mockResolvedValue(answer("", {}, status))
 
         await expect(client.read(GOOGLE)).rejects.toMatchObject({ code: DocumentsErrorCode.NotPublic })
     })
+})
 
+describe("PublicLinkClient", () => {
     it("takes a redirect to the Google sign-in for a file that is not public", async () => {
         const { client, http } = await build()
         http.get.mockResolvedValue(
@@ -105,21 +118,27 @@ describe("PublicLinkClient", () => {
 
         await expect(client.read(GOOGLE)).rejects.toMatchObject({ code: DocumentsErrorCode.NotPublic })
     })
+})
 
+describe("PublicLinkClient", () => {
     it("takes a page answered for a Google export for the sign-in wall", async () => {
         const { client, http } = await build()
         http.get.mockResolvedValue(answer("<html>wall</html>", { "content-type": "text/html" }))
 
         await expect(client.read(GOOGLE)).rejects.toMatchObject({ code: DocumentsErrorCode.NotPublic })
     })
+})
 
+describe("PublicLinkClient", () => {
     it("reads the CSV export of a Google file", async () => {
         const { client, http } = await build()
         http.get.mockResolvedValue(answer("a,b", { "content-type": "text/csv" }))
 
         await expect(client.read(GOOGLE)).resolves.toEqual({ text: "a,b", title: null })
     })
+})
 
+describe("PublicLinkClient", () => {
     it.each([
         [404, DocumentsErrorCode.Refused],
         [410, DocumentsErrorCode.Refused],
@@ -130,14 +149,18 @@ describe("PublicLinkClient", () => {
 
         await expect(client.read(WEB)).rejects.toMatchObject({ code, params: { status } })
     })
+})
 
+describe("PublicLinkClient", () => {
     it("refuses a body over the limit", async () => {
         const { client, http } = await build()
         http.get.mockResolvedValue(answer(new Uint8Array(12_000_001), { "content-type": "text/plain" }))
 
         await expect(client.read(WEB)).rejects.toMatchObject({ code: DocumentsErrorCode.TooLarge })
     })
+})
 
+describe("PublicLinkClient", () => {
     it.each([
         ["image/png; x=1", "image/png"],
         [undefined, "unknown"],

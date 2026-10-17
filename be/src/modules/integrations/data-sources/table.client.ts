@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import Papa from "papaparse"
-import { InjectPublicHost, InjectWorkbookReader } from "./data-sources.decorators"
+import { InjectPublicHost, InjectWorkbookReader, InjectTableDocumentReaders } from "./data-sources.decorators"
 import { DataSourcesError, DataSourcesErrorCode } from "./errors/data-sources.error"
 import type { PublicHostClient } from "./public-host.client"
 import { TABLE_COPY } from "./messages/table.messages"
@@ -18,7 +18,7 @@ import {
     withoutBom,
 } from "./table-rows.policy"
 import { TABLE_MAX_BYTES } from "./table-shapes.contracts"
-import type { GoogleDocumentText, Table, UploadedDocumentText } from "./table-shapes.contracts"
+import type { GoogleDocumentText, Table, UploadedDocumentText, TableDocumentReaders } from "./table-shapes.contracts"
 import type { WorkbookReader } from "./workbook-reader.contracts"
 
 const GOOGLE_TIMEOUT_MS = 20_000
@@ -29,6 +29,7 @@ export class TableClient {
     constructor(
         @InjectPublicHost() private readonly publicHost: PublicHostClient,
         @InjectWorkbookReader() private readonly workbookReader: WorkbookReader,
+        @InjectTableDocumentReaders() private readonly documentReaders: TableDocumentReaders,
     ) {}
 
     /** Delimited text (comma, semicolon, tab or pipe, detected) to a table. */
@@ -95,8 +96,7 @@ export class TableClient {
         if (kind === "docx") {
             if (!(bytes[0] === 0x50 && bytes[1] === 0x4b)) throw rejected(TABLE_COPY.badDocx(label))
             try {
-                const mammoth = await import("mammoth")
-                return { text: (await mammoth.extractRawText({ buffer: Buffer.from(bytes) })).value }
+                return { text: await this.documentReaders.docx(bytes) }
             } catch (cause) {
                 throw rejected(TABLE_COPY.unreadableWord(label), cause)
             }
@@ -105,10 +105,7 @@ export class TableClient {
             throw rejected(TABLE_COPY.badPdf(label))
         }
         try {
-            const { extractText, getDocumentProxy } = await import("unpdf")
-            const pdf = await getDocumentProxy(new Uint8Array(bytes))
-            const out = await extractText(pdf, { mergePages: true })
-            return { text: out.text, pages: out.totalPages }
+            return await this.documentReaders.pdfDetails(bytes)
         } catch (cause) {
             throw rejected(TABLE_COPY.unreadablePdf(label), cause)
         }

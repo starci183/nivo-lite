@@ -83,7 +83,9 @@ describe("ConnectionSecretsService", () => {
             expect(opened).toMatchObject({ kind: "ok", value: { credential: "hello" } })
         })
     })
+})
 
+describe("ConnectionSecretsService", () => {
     describe("secretOf", () => {
         it("opens the credential of a connected connection of the provider", async () => {
             const { service, em } = await build({ [FIND_CONNECTION_SECRET]: [row()] })
@@ -139,7 +141,9 @@ describe("ConnectionSecretsService", () => {
             })
         })
     })
+})
 
+describe("ConnectionSecretsService", () => {
     describe("botToken", () => {
         it("answers the token only to the workspace that owns the connection", async () => {
             const { service } = await build({ [FIND_CONNECTION_SECRET]: [row()] })
@@ -207,7 +211,9 @@ describe("ConnectionSecretsService", () => {
             expect(em.query).toHaveBeenCalledWith(LIST_ZALO_CONNECTIONS_DUE, [horizon])
         })
     })
+})
 
+describe("ConnectionSecretsService", () => {
     describe("stored credentials", () => {
         it("seals new credentials using the default manager", async () => {
             const { service, em } = await build()

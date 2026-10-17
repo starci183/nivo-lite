@@ -109,7 +109,9 @@ describe("DirectGenerationService", () => {
         expect(generations.busyText).toHaveBeenCalledWith(params)
         expect(logger.error).not.toHaveBeenCalled()
     })
+})
 
+describe("DirectGenerationService", () => {
     it("answers the busy sentence when the stored generation is still running", async () => {
         const em = mockEntityManager({
             query: [

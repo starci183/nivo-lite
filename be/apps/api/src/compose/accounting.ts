@@ -1,4 +1,4 @@
-import type { ModuleMetadata } from "@nestjs/common"
+import type { DynamicModule } from "@nestjs/common"
 import { OrdersGraphqlModule } from "@features/api/orders"
 import { AccountingGraphqlModule } from "@features/api/accounting"
 import { AdjustmentsGraphqlModule } from "@features/api/adjustments"
@@ -13,14 +13,14 @@ import { WorkPerformersModule } from "@modules/domain/work-performers"
 import { OfficeCommandCandidatesModule } from "@modules/domain/office-command-candidates"
 import { DeepseekClient } from "@modules/integrations/deepseek"
 /** The accounting area of the API, in registration order. */
-export const accountingModules = (): NonNullable<ModuleMetadata["imports"]> => [
+export const accountingModules = (): Array<DynamicModule> => [
     OrdersModule.register({ isGlobal: true }),
-    OrdersGraphqlModule,
+    OrdersGraphqlModule.register({}),
     StaffModule.register({ isGlobal: true }),
     AccountingAdjustmentsModule.register({ isGlobal: true }),
     AccountingModule.register({ isGlobal: true }),
-    AccountingGraphqlModule,
-    AdjustmentsGraphqlModule,
+    AccountingGraphqlModule.register({}),
+    AdjustmentsGraphqlModule.register({}),
     InvoicesModule.register({ isGlobal: true }),
     TransactionsModule.register({ isGlobal: true }),
     EmailMessagesModule.register({ isGlobal: true }),

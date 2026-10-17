@@ -5,6 +5,7 @@ import type { DataSourcesOptions } from "./data-sources.options"
 import type { ImapClient } from "./imap.client"
 import type { OpenApiClient } from "./openapi.client"
 import type { PublicHostClient } from "./public-host.client"
+import type { TableDocumentReaders } from "./table-shapes.contracts"
 import type { TableClient } from "./table.client"
 import type { WorkbookReader } from "./workbook-reader.contracts"
 
@@ -51,3 +52,10 @@ export const InjectTable = (): TypedParameterDecorator<TableClient> => injector<
 /** Injects the internal workbook reader. Parameter type: WorkbookReader. */
 export const InjectWorkbookReader = (): TypedParameterDecorator<WorkbookReader> =>
     injector<WorkbookReader>(WORKBOOK_READER)
+
+/** Token of the document readers selected by composition. */
+export const TABLE_DOCUMENT_READERS: unique symbol = Symbol("integrations.data-sources.document-readers")
+
+/** Injects the selected document readers. Parameter type: TableDocumentReaders. */
+export const InjectTableDocumentReaders = (): TypedParameterDecorator<TableDocumentReaders> =>
+    injector<TableDocumentReaders>(TABLE_DOCUMENT_READERS)

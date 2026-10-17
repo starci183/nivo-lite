@@ -127,7 +127,9 @@ describe("WorkApprovalService", () => {
             expect(service.fieldLabels(ctx, ["need", "nickname"])).toBe("Need, nickname")
         })
     })
+})
 
+describe("WorkApprovalService", () => {
     describe("ask", () => {
         it("puts the item in front of a person and tells the log, the Office and the inbound event", async () => {
             const { service, evidence, office, inbound, markWaiting } = await build()
@@ -160,7 +162,7 @@ describe("WorkApprovalService", () => {
             expect(inbound).toHaveBeenCalledWith(ctx, "in-1", "needs_decision", "lead-1")
         })
 
-        it("names the missing fields in the evidence, before the limit, and skips an item without an inbound event", async () => {
+        it("names missing fields before the limit and skips an absent inbound event", async () => {
             const { service, evidence, inbound } = await build(waitingOf({ inbound_event_id: null }))
 
             await service.ask(
@@ -199,7 +201,11 @@ describe("WorkApprovalService", () => {
 
             expect(evidence).toHaveBeenCalledWith(ctx, expect.objectContaining({ evidence: null }))
         })
+    })
+})
 
+describe("WorkApprovalService", () => {
+    describe("ask", () => {
         describe("the approval card of a follow-up", () => {
             const followUp = (overrides: Partial<WorkItem> = {}): WorkItem =>
                 itemOf({ action: "send_follow_up", ...overrides })

@@ -79,8 +79,8 @@ export class HiringScreeningService {
         const candidate = await this.data.candidate(workspaceId, candidateId)
         const job = candidate === undefined ? undefined : await this.data.job(workspaceId, candidate.jobId)
         if (candidate === undefined || job === undefined) return null
-        const textOf = this.words.textOf
-        const screened = screenAgainstRequirements(job, candidate, textOf)
+        const t = this.words.textOf
+        const screened = screenAgainstRequirements(job, candidate, t)
         const lines = screened.reasons
             .map((reason) =>
                 this.words.text("hiring.screen.line", {
@@ -104,7 +104,7 @@ export class HiringScreeningService {
             module: "hiring",
             system: this.words.text("hiring.screen.system"),
             user: this.words.text("hiring.screen.user", {
-                criteria: criteriaText(job, textOf),
+                criteria: criteriaText(job, t),
                 score: screened.score,
                 lines: lines === "" ? this.words.text("hiring.screen.noCriteria") : lines,
                 answers: answers === "" ? this.words.text("hiring.screen.noAnswers") : answers,

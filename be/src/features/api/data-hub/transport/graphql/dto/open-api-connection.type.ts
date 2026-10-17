@@ -1,5 +1,5 @@
 import { Field, Int, ObjectType } from "@nestjs/graphql"
-import { DataJsonScalar } from "./data-json.type"
+import { DataJsonScalar } from "../data-json.mapper"
 
 @ObjectType()
 /** A saved API connection as the wizard reopens it; never holds a secret. */

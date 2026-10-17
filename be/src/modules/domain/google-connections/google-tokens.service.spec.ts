@@ -127,7 +127,9 @@ describe("GoogleTokensService", () => {
         )
         expect(connections.patch).toHaveBeenCalledWith("ws-1", "c1", { status: "error", lastError: "invalid_grant" })
     })
+})
 
+describe("GoogleTokensService", () => {
     it("retries once with a forced token when the first is refused", async () => {
         const { service } = await build()
         const token = jest.fn((force: boolean) => Promise.resolve(force ? "fresh" : "old"))

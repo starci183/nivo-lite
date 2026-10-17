@@ -1,9 +1,22 @@
+import { Test } from "@nestjs/testing"
 import { toPassage } from "./passage.mapper"
 
+const SUBJECT = Symbol("passage.mapper")
+type Subject = { toPassage: typeof toPassage }
+
+const build = async () => {
+    const moduleRef = await Test.createTestingModule({
+        providers: [{ provide: SUBJECT, useValue: { toPassage } }],
+    }).compile()
+    return moduleRef.get<Subject>(SUBJECT)
+}
+
 describe("toPassage", () => {
-    it("renames the columns of a search row", () => {
+    it("renames the columns of a search row", async () => {
+        const subject = await build()
+
         expect(
-            toPassage({
+            subject.toPassage({
                 layer: "business",
                 id: "c1",
                 source_id: "s1",

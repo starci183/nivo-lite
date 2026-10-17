@@ -1,6 +1,7 @@
+import type { CredentialPrincipal } from "@modules/domain/identity"
 import type { CommandBus } from "@nestjs/cqrs"
 import { Args, Mutation, Resolver } from "@nestjs/graphql"
-import { Public, PublicReason } from "@modules/domain/identity"
+import { Credential, CurrentCredentialPrincipal } from "@modules/domain/identity"
 import { InjectCommandBus } from "@modules/platform/cqrs"
 import { RateLimit, RateTier } from "@modules/platform/http-security"
 import { RespondHiringInterviewCommand } from "../../application/respond-hiring-interview.command"
@@ -14,12 +15,17 @@ export class RespondHiringInterviewResolver {
     constructor(@InjectCommandBus() private readonly commandBus: CommandBus) {}
 
     /** Pick an interview time from the candidate's link. */
-    @Public({ reason: PublicReason.PublicForm })
+    @Credential({ kind: "link-token", workflow: "respond-hiring-interview" })
     @RateLimit(RateTier.Strict)
     @Mutation(() => RespondSlotType, { name: "respondHiringInterview" })
-    async respondHiringInterview(@Args("input") input: RespondHiringInterviewInput): Promise<RespondSlotType> {
+    async respondHiringInterview(
+        @Args("input") input: RespondHiringInterviewInput,
+        @CurrentCredentialPrincipal() credentialPrincipal: CredentialPrincipal,
+    ): Promise<RespondSlotType> {
         const result = await this.commandBus.execute(
-            new RespondHiringInterviewCommand({ request: toRespondHiringInterviewRequest(input) }),
+            new RespondHiringInterviewCommand({
+                request: { ...toRespondHiringInterviewRequest(input), credentialPrincipal },
+            }),
         )
         return toRespondSlotType(result)
     }

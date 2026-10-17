@@ -1,6 +1,7 @@
+import type { CredentialPrincipal } from "@modules/domain/identity"
 import type { CommandBus } from "@nestjs/cqrs"
 import { Args, Mutation, Resolver } from "@nestjs/graphql"
-import { Public, PublicReason } from "@modules/domain/identity"
+import { Credential, CurrentCredentialPrincipal } from "@modules/domain/identity"
 import { InjectCommandBus } from "@modules/platform/cqrs"
 import { RateLimit, RateTier } from "@modules/platform/http-security"
 import { RespondHiringOfferCommand } from "../../application/respond-hiring-offer.command"
@@ -14,12 +15,15 @@ export class RespondHiringOfferResolver {
     constructor(@InjectCommandBus() private readonly commandBus: CommandBus) {}
 
     /** Accept or decline an offer from the candidate's link. */
-    @Public({ reason: PublicReason.PublicForm })
+    @Credential({ kind: "link-token", workflow: "respond-hiring-offer" })
     @RateLimit(RateTier.Strict)
     @Mutation(() => RespondOfferType, { name: "respondHiringOffer" })
-    async respondHiringOffer(@Args("input") input: RespondHiringOfferInput): Promise<RespondOfferType> {
+    async respondHiringOffer(
+        @Args("input") input: RespondHiringOfferInput,
+        @CurrentCredentialPrincipal() credentialPrincipal: CredentialPrincipal,
+    ): Promise<RespondOfferType> {
         const result = await this.commandBus.execute(
-            new RespondHiringOfferCommand({ request: toRespondHiringOfferRequest(input) }),
+            new RespondHiringOfferCommand({ request: { ...toRespondHiringOfferRequest(input), credentialPrincipal } }),
         )
         return toRespondOfferType(result)
     }

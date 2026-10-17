@@ -99,7 +99,9 @@ describe("PromoService", () => {
             },
         )
     })
+})
 
+describe("PromoService", () => {
     describe("state", () => {
         it("turns the recorded facts into stats and onboarding steps that link to the chatbot", async () => {
             const em = mockEntityManager({ query: [FIND_PROMO_STATE, [stateRow]] })

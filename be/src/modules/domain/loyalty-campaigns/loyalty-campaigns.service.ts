@@ -16,6 +16,7 @@ import type {
     CampaignParams,
     LoyaltyCampaignView,
     Segment,
+    SegmentPart,
     SegmentPreview,
 } from "./loyalty-campaigns.contracts"
 import { loyaltyCampaignOf } from "./loyalty-campaigns.mapper"
@@ -164,7 +165,7 @@ export class LoyaltyCampaignsService {
     private async defaultName(params: CampaignParams): Promise<string> {
         const program = await this.programs.find(params.workspaceId)
         const names = new Map((program?.config.tiers ?? []).map((tier) => [tier.key, tier.name]))
-        const parts = segmentParts(params.segment, names).map((part) =>
+        const parts = segmentParts(params.segment, names).map((part: SegmentPart) =>
             this.messages.get(part.key, part.params, STORED_LOCALE),
         )
         const label = parts.length > 0 ? parts.join(", ") : this.messages.get("loyalty.segment.all", {}, STORED_LOCALE)

@@ -255,3 +255,6 @@ export interface SalesSourceConversion {
     /** Those now won. */
     readonly won: number
 }
+
+/** A customer or company name supplied to the test-run classifier. */
+export type TestRunName = string | null | undefined

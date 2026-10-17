@@ -8,53 +8,55 @@ import { DataHubError, DataHubErrorCode } from "./errors/data-hub.error"
 import { ImapSyncService } from "./imap-sync.service"
 import { IMAP_CONNECTION_TEXT, imapMoreNote } from "./messages/imap-connection.messages"
 
-describe("ImapSyncService", () => {
-    const credential = {
-        host: "mail.example.com",
-        port: 993,
-        secure: true,
-        user: "reader@example.com",
-        password: "fixture-password",
-    }
-    const row = {
-        externalId: "INBOX:123:8",
-        title: "A message",
-        occurredAt: new Date("2026-10-13T09:00:00.000Z"),
-        data: { folder: "INBOX", subject: "A message" },
-    }
-    const idle = { path: "INBOX", cursor: null, rows: 0, more: false, failure: null }
+const credential = {
+    host: "mail.example.com",
+    port: 993,
+    secure: true,
+    user: "reader@example.com",
+    password: "fixture-password",
+}
 
-    const build = async (
-        meta: Readonly<Record<string, string>> = {
-            config: JSON.stringify({ folders: ["INBOX"], sinceDays: 30 }),
-            "cursor:INBOX": "123:7",
+const row = {
+    externalId: "INBOX:123:8",
+    title: "A message",
+    occurredAt: new Date("2026-10-13T09:00:00.000Z"),
+    data: { folder: "INBOX", subject: "A message" },
+}
+
+const idle = { path: "INBOX", cursor: null, rows: 0, more: false, failure: null }
+
+const build = async (
+    meta: Readonly<Record<string, string>> = {
+        config: JSON.stringify({ folders: ["INBOX"], sinceDays: 30 }),
+        "cursor:INBOX": "123:7",
+    },
+) => {
+    const imap = mock<ImapClient>()
+    const clock = new FakeClock("2026-10-14T10:00:00.000Z")
+    const context = mock<DataSyncContext>({
+        connection: {
+            id: "connection-1",
+            workspaceId: "workspace-1",
+            provider: "imap",
+            name: "Mailbox",
+            status: "connected",
+            lastError: null,
+            meta,
+            everyMinutes: 60,
+            lastSyncAt: null,
         },
-    ) => {
-        const imap = mock<ImapClient>()
-        const clock = new FakeClock("2026-10-14T10:00:00.000Z")
-        const context = mock<DataSyncContext>({
-            connection: {
-                id: "connection-1",
-                workspaceId: "workspace-1",
-                provider: "imap",
-                name: "Mailbox",
-                status: "connected",
-                lastError: null,
-                meta,
-                everyMinutes: 60,
-                lastSyncAt: null,
-            },
-            credential: JSON.stringify(credential),
-        })
-        context.isExpired.mockReturnValue(false)
-        context.upsert.mockResolvedValue(1)
-        imap.pull.mockResolvedValue({ folders: [idle], expired: false })
-        const moduleRef = await Test.createTestingModule({
-            providers: [ImapSyncService, { provide: IMAP, useValue: imap }, { provide: CLOCK, useValue: clock }],
-        }).compile()
-        return { service: moduleRef.get(ImapSyncService), imap, clock, context }
-    }
+        credential: JSON.stringify(credential),
+    })
+    context.isExpired.mockReturnValue(false)
+    context.upsert.mockResolvedValue(1)
+    imap.pull.mockResolvedValue({ folders: [idle], expired: false })
+    const moduleRef = await Test.createTestingModule({
+        providers: [ImapSyncService, { provide: IMAP, useValue: imap }, { provide: CLOCK, useValue: clock }],
+    }).compile()
+    return { service: moduleRef.get(ImapSyncService), imap, clock, context }
+}
 
+describe("ImapSyncService", () => {
     it("reads configured folders with their cursors and look-back and writes delivered messages", async () => {
         const { service, imap, clock, context } = await build({
             config: JSON.stringify({ folders: ["INBOX", "Archive"], sinceDays: 7 }),
@@ -114,7 +116,9 @@ describe("ImapSyncService", () => {
         await expect(service.sync(context)).resolves.toEqual({ rows: 0, meta: {} })
         expect(context.upsert).not.toHaveBeenCalled()
     })
+})
 
+describe("ImapSyncService", () => {
     it("reports a failed folder without rejecting when another folder succeeds with no new rows", async () => {
         const { service, imap, context } = await build({
             config: JSON.stringify({ folders: ["INBOX", "Archive"], sinceDays: 30 }),
@@ -184,7 +188,9 @@ describe("ImapSyncService", () => {
             meta: {},
         })
     })
+})
 
+describe("ImapSyncService", () => {
     it("appends the time-budget note after a folder's pending-message note", async () => {
         const { service, imap, context } = await build()
         imap.pull.mockResolvedValue({
@@ -256,7 +262,9 @@ describe("ImapSyncService", () => {
         await expect(service.sync(context)).rejects.toBe(cause)
         expect(context.upsert).not.toHaveBeenCalled()
     })
+})
 
+describe("ImapSyncService", () => {
     it("propagates an unexpected mailbox client failure", async () => {
         const { service, imap, context } = await build()
         const cause = new Error("Mailbox read failed")

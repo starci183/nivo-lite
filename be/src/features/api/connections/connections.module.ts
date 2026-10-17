@@ -35,6 +35,7 @@ import { SendSmtpTestHandler } from "./application/send-smtp-test.handler"
 import { ChangeSmtpPasswordHandler } from "./application/change-smtp-password.handler"
 import { SetDefaultSmtpHandler } from "./application/set-default-smtp.handler"
 import { WantConnectorHandler } from "./application/want-connector.handler"
+import { ConfigurableModuleClass } from "./connections.module-definition"
 
 @Module({
     providers: [
@@ -77,4 +78,4 @@ import { WantConnectorHandler } from "./application/want-connector.handler"
     ],
 })
 /** The connections feature: the handlers of its application. */
-export class ConnectionsApiModule {}
+export class ConnectionsApiModule extends ConfigurableModuleClass {}

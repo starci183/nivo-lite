@@ -90,13 +90,17 @@ describe("KnowledgeGapNotesService", () => {
         await notes.note(noteOf({ knowledgeGap: { question: "Sunday delivery?", topic: "Delivery | Days" } }))
         expect(gaps.record).toHaveBeenCalledWith(WS, expect.objectContaining({ source: "model" }))
     })
+})
 
+describe("KnowledgeGapNotesService", () => {
     it("records an uncovered question that asked for a person with nothing to propose", async () => {
         const { notes, gaps } = await build()
         await notes.note(noteOf({ needsHuman: true }))
         expect(gaps.record).toHaveBeenCalledWith(WS, expect.objectContaining({ source: "retrieval" }))
     })
+})
 
+describe("KnowledgeGapNotesService", () => {
     it("leaves a transaction alone and never throws", async () => {
         const { notes, gaps, logger } = await build()
         await notes.note(noteOf({ needsHuman: true, isTransaction: true }))
@@ -105,7 +109,9 @@ describe("KnowledgeGapNotesService", () => {
         await expect(notes.note(noteOf({ knowledgeGap: { question: "Q?", topic: "" } }))).resolves.toBeUndefined()
         expect(logger.error).toHaveBeenCalled()
     })
+})
 
+describe("KnowledgeGapNotesService", () => {
     it("records the exact model claim before considering transaction or proposed-answer signals", async () => {
         const { notes, gaps, recall, search } = await build()
         await notes.note(
@@ -126,7 +132,9 @@ describe("KnowledgeGapNotesService", () => {
         expect(recall.factsMatching).not.toHaveBeenCalled()
         expect(search.passagesText).not.toHaveBeenCalled()
     })
+})
 
+describe("KnowledgeGapNotesService", () => {
     it.each([{ needsHuman: false }, { needsHuman: true, proposedAnswer: "We deliver Sundays." }])(
         "does not search or record when escalation does not need a missing answer: %j",
         async (signals) => {
@@ -137,7 +145,9 @@ describe("KnowledgeGapNotesService", () => {
             expect(search.passagesText).not.toHaveBeenCalled()
         },
     )
+})
 
+describe("KnowledgeGapNotesService", () => {
     it("falls back to retrieval when the model claim is blank", async () => {
         const { notes, gaps, recall, search } = await build()
         const note = {
@@ -157,7 +167,9 @@ describe("KnowledgeGapNotesService", () => {
             source: "retrieval",
         })
     })
+})
 
+describe("KnowledgeGapNotesService", () => {
     it("does not search a question without significant words", async () => {
         const { notes, gaps, recall, search } = await build()
         await notes.note({ ...noteOf({ needsHuman: true }), question: "Hi, how are you?" })
@@ -165,7 +177,9 @@ describe("KnowledgeGapNotesService", () => {
         expect(recall.factsMatching).not.toHaveBeenCalled()
         expect(search.passagesText).not.toHaveBeenCalled()
     })
+})
 
+describe("KnowledgeGapNotesService", () => {
     it("uses fact subject, attribute and value together to recognize an answered question", async () => {
         const { notes, gaps, recall, search } = await build()
         const note = { ...noteOf({ needsHuman: true }), question: "Sunday delivery schedule prices" }
@@ -177,7 +191,9 @@ describe("KnowledgeGapNotesService", () => {
         expect(search.passagesText).toHaveBeenCalledWith(note.view, "sunday delivery schedule prices", 5)
         expect(gaps.record).not.toHaveBeenCalled()
     })
+})
 
+describe("KnowledgeGapNotesService", () => {
     it.each([passageOf("Sunday", "Delivery", "Schedule"), passageOf("Sunday delivery", null, "Schedule")])(
         "uses passage title, optional topic and content to recognize an answered question: %j",
         async (passage) => {
@@ -189,7 +205,9 @@ describe("KnowledgeGapNotesService", () => {
             expect(search.passagesText).toHaveBeenCalledTimes(1)
         },
     )
+})
 
+describe("KnowledgeGapNotesService", () => {
     it("records retrieval gaps when neither facts nor passages cover enough question words", async () => {
         const { notes, gaps, recall, search } = await build()
         const note = { ...noteOf({ needsHuman: true }), question: "Sunday delivery schedule prices" }
@@ -204,7 +222,9 @@ describe("KnowledgeGapNotesService", () => {
             source: "retrieval",
         })
     })
+})
 
+describe("KnowledgeGapNotesService", () => {
     it("logs each failed coverage lookup and still records the uncovered question", async () => {
         const { notes, gaps, recall, search, logger } = await build()
         const factFailure = new Error("facts unavailable")
@@ -230,7 +250,9 @@ describe("KnowledgeGapNotesService", () => {
             source: "retrieval",
         })
     })
+})
 
+describe("KnowledgeGapNotesService", () => {
     it("logs the original record failure with its conversation and preserves the reply", async () => {
         const { notes, gaps, logger } = await build()
         const cause = new Error("gap storage unavailable")

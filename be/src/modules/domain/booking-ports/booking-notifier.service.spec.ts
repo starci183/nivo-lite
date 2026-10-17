@@ -127,7 +127,9 @@ describe("BookingNotifierService", () => {
             expect(logger.error).not.toHaveBeenCalled()
         },
     )
+})
 
+describe("BookingNotifierService", () => {
     it.each([null, "work-item-1"])("records the notice's work item %s", async (workItemId) => {
         const { service, events } = await build()
 
@@ -139,7 +141,9 @@ describe("BookingNotifierService", () => {
 
         expect(events.record.mock.calls).toEqual([[{ ...EVIDENCE, workItemId }]])
     })
+})
 
+describe("BookingNotifierService", () => {
     it("keeps a stored notice when the channel refuses delivery", async () => {
         const { service, messages, channels, events, catalog, mailer } = await build()
         channels.deliver.mockResolvedValue({ delivered: false, failure: "zalo_window_expired" })
@@ -157,7 +161,9 @@ describe("BookingNotifierService", () => {
         ])
         expect(mailer.requestCustomerEmail).not.toHaveBeenCalled()
     })
+})
 
+describe("BookingNotifierService", () => {
     it("logs a thrown channel push and keeps the stored notice without repeating or emailing it", async () => {
         const { service, messages, channels, events, logger, mailer } = await build()
         const failure = new Error("Zalo refresh busy")
@@ -175,7 +181,9 @@ describe("BookingNotifierService", () => {
         expect(events.record.mock.calls).toEqual([[{ ...EVIDENCE, summary: "bookingPorts.failed" }]])
         expect(mailer.requestCustomerEmail).not.toHaveBeenCalled()
     })
+})
 
+describe("BookingNotifierService", () => {
     it.each([
         { name: "missing", target: refused(AgentConversationsErrorCode.NotFound) },
         { name: "another workspace's", target: ok(targetOf({ workspaceId: "ws-2" })) },
@@ -199,7 +207,9 @@ describe("BookingNotifierService", () => {
         ])
         expect(mailer.requestCustomerEmail).not.toHaveBeenCalled()
     })
+})
 
+describe("BookingNotifierService", () => {
     it("routes a public-page booking straight to the lead's latest conversation", async () => {
         const { service, conversations, messages, channels, mailer } = await build()
         conversations.latestOfLead.mockResolvedValue(latestOf({ channel: "instagram" }))
@@ -218,7 +228,9 @@ describe("BookingNotifierService", () => {
         expect(channels.deliver.mock.calls).toEqual([[{ ...DELIVERY, conversationId: "latest-conversation" }]])
         expect(mailer.requestCustomerEmail).not.toHaveBeenCalled()
     })
+})
 
+describe("BookingNotifierService", () => {
     it.each([
         { status: "sent", delivered: true, kept: true, summary: "bookingPorts.delivered" },
         { status: "waiting_decision", delivered: false, kept: true, summary: "bookingPorts.failed" },
@@ -251,7 +263,9 @@ describe("BookingNotifierService", () => {
             ])
         },
     )
+})
 
+describe("BookingNotifierService", () => {
     it.each([
         {
             name: "missing and has no lead",
@@ -294,7 +308,9 @@ describe("BookingNotifierService", () => {
         expect(mailer.requestCustomerEmail.mock.calls).toEqual([[{ ...EMAIL, subjectId: leadId, leadId }]])
         expect(events.record.mock.calls).toEqual([[{ ...EVIDENCE, leadId }]])
     })
+})
 
+describe("BookingNotifierService", () => {
     it.each([null, "", " \t\n "])(
         "records failure without sending when no conversation or email exists (%p)",
         async (email) => {
@@ -319,7 +335,9 @@ describe("BookingNotifierService", () => {
             ])
         },
     )
+})
 
+describe("BookingNotifierService", () => {
     it.each([
         { delivered: true, summary: "bookingPorts.delivered" },
         { delivered: false, summary: "bookingPorts.failed" },
@@ -340,7 +358,9 @@ describe("BookingNotifierService", () => {
             ])
         },
     )
+})
 
+describe("BookingNotifierService", () => {
     it("propagates a conversation lookup failure before storing or delivering", async () => {
         const { service, conversations, messages, channels, events, mailer } = await build()
         const failure = new Error("Conversation lookup unavailable")
@@ -354,7 +374,9 @@ describe("BookingNotifierService", () => {
         expect(mailer.requestCustomerEmail).not.toHaveBeenCalled()
         expect(events.record).not.toHaveBeenCalled()
     })
+})
 
+describe("BookingNotifierService", () => {
     it("propagates a storage failure without attempting delivery or recording a verdict", async () => {
         const { service, messages, channels, events, mailer } = await build()
         const failure = new Error("Message could not be stored")

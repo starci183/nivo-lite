@@ -28,6 +28,7 @@ import { LessonMiningStatusHandler } from "./application/lesson-mining-status.ha
 import { AuthorizeDriveHandler } from "./application/authorize-drive.handler"
 import { DisconnectDriveHandler } from "./application/disconnect-drive.handler"
 import { GetDriveGrantHandler } from "./application/get-drive-grant.handler"
+import { ConfigurableModuleClass } from "./knowledge.module-definition"
 
 @Module({
     providers: [
@@ -63,4 +64,4 @@ import { GetDriveGrantHandler } from "./application/get-drive-grant.handler"
     ],
 })
 /** The knowledge feature: the handlers of its application. */
-export class KnowledgeApiModule {}
+export class KnowledgeApiModule extends ConfigurableModuleClass {}

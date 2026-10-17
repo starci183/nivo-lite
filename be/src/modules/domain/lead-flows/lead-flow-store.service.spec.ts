@@ -80,7 +80,6 @@ describe("LeadFlowStoreService", () => {
             [FIND_FLOW_BY_LEAD, ["ws-1", "lead-2"]],
         ])
     })
-
     it("answers no flow for a missing lead and no candidates for an empty identity without a query", async () => {
         const { store, entityManager } = await build([])
 
@@ -89,7 +88,6 @@ describe("LeadFlowStoreService", () => {
 
         expect(entityManager.query).not.toHaveBeenCalled()
     })
-
     it("finds the candidate flows by every identity key", async () => {
         const { store, entityManager } = await build([[FIND_FLOW_CANDIDATES, [rowOf()]]])
 
@@ -97,7 +95,9 @@ describe("LeadFlowStoreService", () => {
 
         expect(entityManager.query).toHaveBeenCalledWith(FIND_FLOW_CANDIDATES, ["ws-1", "person-1", null, null, null])
     })
+})
 
+describe("LeadFlowStoreService", () => {
     it("opens a flow, and answers null when the same person was opened at the same moment", async () => {
         const opening: NewLeadFlow = {
             workspaceId: "ws-1",
@@ -134,7 +134,9 @@ describe("LeadFlowStoreService", () => {
             "Hello",
         ])
     })
+})
 
+describe("LeadFlowStoreService", () => {
     it("saves a patched flow and refuses a save that returns no row", async () => {
         const flow = toLeadFlow(rowOf())
         const { store, entityManager } = await build([

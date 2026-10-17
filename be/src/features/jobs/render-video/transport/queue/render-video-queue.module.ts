@@ -3,15 +3,18 @@ import type { OnModuleInit } from "@nestjs/common"
 import { InjectJobProcessorRegistry } from "@modules/platform/jobs"
 import type { JobProcessorRegistry } from "@modules/platform/jobs"
 import { RenderVideoModule } from "../../render-video.module"
+import { ConfigurableModuleClass } from "./render-video-queue.module-definition"
 import { RenderVideoProcessor } from "./render-video.processor"
 
-@Module({ imports: [RenderVideoModule], providers: [RenderVideoProcessor] })
+@Module({ imports: [RenderVideoModule.register({})], providers: [RenderVideoProcessor] })
 /** The queue transport of the render-video job: registers its processor with the job runner, which an api or worker app composes; a new render enqueues it. */
-export class RenderVideoQueueModule implements OnModuleInit {
+export class RenderVideoQueueModule extends ConfigurableModuleClass implements OnModuleInit {
     constructor(
         @InjectJobProcessorRegistry() private readonly registry: JobProcessorRegistry,
         private readonly processor: RenderVideoProcessor,
-    ) {}
+    ) {
+        super()
+    }
 
     /** Hands the processor to the registry. */
     onModuleInit(): void {

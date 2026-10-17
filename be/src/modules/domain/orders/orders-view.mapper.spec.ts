@@ -1,6 +1,16 @@
+import { Test } from "@nestjs/testing"
 import { builder } from "@starci/jest-preset"
 import { toSalesOrderView } from "./orders-view.mapper"
 import type { SalesOrderRow } from "./persistence/orders.rows"
+
+const SUBJECT = Symbol("orders-view.mapper")
+
+const buildSubject = async () => {
+    const moduleRef = await Test.createTestingModule({
+        providers: [{ provide: SUBJECT, useValue: { toSalesOrderView } }],
+    }).compile()
+    return moduleRef.get<typeof import("./orders-view.mapper")>(SUBJECT)
+}
 
 const orderOf = builder<SalesOrderRow>({
     id: "order-1",
@@ -38,11 +48,15 @@ const VIEW = {
 }
 
 describe("toSalesOrderView", () => {
-    it("maps every public order field and retains stored string instants", () => {
-        expect(toSalesOrderView(orderOf())).toEqual(VIEW)
+    it("maps every public order field and retains stored string instants", async () => {
+        const subject = await buildSubject()
+
+        expect(subject.toSalesOrderView(orderOf())).toEqual(VIEW)
     })
 
-    it("keeps absent customer, money, confirmation and shipment fields null", () => {
+    it("keeps absent customer, money, confirmation and shipment fields null", async () => {
+        const subject = await buildSubject()
+
         const row = orderOf({
             lead_id: null,
             amount_vnd: null,
@@ -53,7 +67,7 @@ describe("toSalesOrderView", () => {
             tracking_code: null,
         })
 
-        expect(toSalesOrderView(row)).toEqual({
+        expect(subject.toSalesOrderView(row)).toEqual({
             ...VIEW,
             leadId: null,
             amountVnd: null,
@@ -65,13 +79,15 @@ describe("toSalesOrderView", () => {
         })
     })
 
-    it("normalizes Date instants returned by a database driver to UTC ISO strings", () => {
+    it("normalizes Date instants returned by a database driver to UTC ISO strings", async () => {
+        const subject = await buildSubject()
+
         const row = orderOf()
         Reflect.set(row, "created_at", new Date("2026-10-13T01:00:00+07:00"))
         Reflect.set(row, "confirmed_at", new Date("2026-10-13T01:30:00+07:00"))
         Reflect.set(row, "shipped_at", new Date("2026-10-13T03:00:00+07:00"))
 
-        expect(toSalesOrderView(row)).toEqual({
+        expect(subject.toSalesOrderView(row)).toEqual({
             ...VIEW,
             createdAt: "2026-10-12T18:00:00.000Z",
             confirmedAt: "2026-10-12T18:30:00.000Z",

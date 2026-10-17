@@ -1,3 +1,4 @@
+import { itemOf } from "../../../tests/fixtures/builders/work-decision.builder"
 import { builder, fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
 import { Test } from "@nestjs/testing"
 import { ExecutionsService } from "@modules/domain/executions"
@@ -28,35 +29,6 @@ const memberOf = builder<WorkspaceMember>({
     staffId: null,
     displayName: "An",
     status: "active",
-})
-const itemOf = builder<WorkItem>({
-    id: "item-1",
-    workspace_id: "ws-1",
-    department: "sales",
-    action: "send_follow_up",
-    subject_type: "lead",
-    subject_id: "lead-1",
-    lead_id: "lead-1",
-    inbound_event_id: null,
-    parent_id: null,
-    chain_id: null,
-    depth: 0,
-    status: "waiting_decision",
-    decided_path: null,
-    reason: "over_authority",
-    reasons: ["over_authority"],
-    missing_fields: [],
-    proposal: { summary: "Send", fields: {} },
-    result: null,
-    error: null,
-    evidence_state: "pending",
-    assigned_staff_id: null,
-    execution_id: null,
-    origin: "live",
-    created_at: "2026-10-12T10:00:00.000Z",
-    updated_at: "2026-10-12T10:00:00.000Z",
-    completed_at: null,
-    installation_id: null,
 })
 const cardOf = builder<ExecutionRow>({
     id: "exec-1",
@@ -244,6 +216,9 @@ describe("WorkDecisionService", () => {
             })
         })
     })
+})
+
+describe("WorkDecisionService", () => {
     describe("sendCommand", () => {
         const request = {
             to: "sales",
@@ -267,6 +242,9 @@ describe("WorkDecisionService", () => {
             })
         })
     })
+})
+
+describe("WorkDecisionService", () => {
     describe("decideExecution", () => {
         it("decides the work item behind the card and settles the card", async () => {
             const settled = cardOf({ status: "approved" })
@@ -281,7 +259,7 @@ describe("WorkDecisionService", () => {
                 editedDraft: null,
             })
         })
-        it("passes the edited draft to the work and answers the card as decided when the engine settled it", async () => {
+        it("passes edits to the work and answers decided when the engine settled it", async () => {
             const { service, resumeWork } = await build()
             const result = await service.decideExecution("user-1", "ws-1", cardRequestOf({ editedDraft: "Edited" }))
             expect(result).toEqual({ id: "exec-1", status: "approved", work_item_id: "item-1", draft: "Edited" })
@@ -319,6 +297,9 @@ describe("WorkDecisionService", () => {
             expect(resumeWork).not.toHaveBeenCalled()
         })
     })
+})
+
+describe("WorkDecisionService", () => {
     describe("decideExecution of a legacy card", () => {
         const legacyCard = cardOf({ work_item_id: null })
         it("saves the edited legacy draft with the decision in the transaction", async () => {
@@ -339,6 +320,7 @@ describe("WorkDecisionService", () => {
             )
             expect(tx.commits).toBe(1)
         })
+
         it("settles the card, closes the responsibility, logs and posts the decision in one transaction", async () => {
             const settled = cardOf({ status: "approved", work_item_id: null, draft: "Hi Minh" })
             const { service, tx, responsibilities, log, office, resumeWork } = await build({
@@ -367,6 +349,7 @@ describe("WorkDecisionService", () => {
                 body: "legacy.approvedMessage()",
             })
         })
+
         it("reopens the responsibility of a rejected card and logs no draft", async () => {
             const settled = cardOf({ status: "rejected", work_item_id: null })
             const { service, responsibilities, log } = await build({ card: legacyCard, settled })
@@ -380,6 +363,7 @@ describe("WorkDecisionService", () => {
                 expect.anything(),
             )
         })
+
         it("lets only an owner or a manager decide it", async () => {
             const { service, tx } = await build({ card: legacyCard, member: memberOf({ role: "staff" }) })
             await expect(service.decideExecution("user-1", "ws-1", cardRequestOf())).rejects.toMatchObject({
@@ -387,6 +371,12 @@ describe("WorkDecisionService", () => {
             })
             expect(tx.outcomes).toEqual([])
         })
+    })
+})
+
+describe("WorkDecisionService", () => {
+    describe("decideExecution of a legacy card", () => {
+        const legacyCard = cardOf({ work_item_id: null })
         it.each([
             {
                 name: "a record decided meanwhile",

@@ -31,7 +31,7 @@ const build = async (options: LlmOptions = optionsOf()) => {
     const moduleRef = await Test.createTestingModule({
         providers: [
             LlmClient,
-            { provide: LLM_OPTIONS, useValue: options },
+            { provide: LLM_OPTIONS, useValue: { ...options } },
             { provide: HTTP_CLIENT, useValue: http },
             { provide: LOGGER, useValue: logger },
         ],
@@ -59,7 +59,9 @@ describe("LlmClient", () => {
             expect(client.embeddingsConfigured()).toBe(false)
         })
     })
+})
 
+describe("LlmClient", () => {
     describe("embed", () => {
         it("sends one batch and answers the vectors in the order of the texts with the reported usage", async () => {
             const { client, http } = await build()
@@ -111,7 +113,11 @@ describe("LlmClient", () => {
                 costUsd: null,
             })
         })
+    })
+})
 
+describe("LlmClient", () => {
+    describe("embed", () => {
         it("sorts missing and non-numeric indexes as zero before positive indexes", async () => {
             const { client, http } = await build()
             http.request.mockResolvedValue(
@@ -166,7 +172,11 @@ describe("LlmClient", () => {
                 usage: { promptTokens: null, costUsd: null },
             })
         })
+    })
+})
 
+describe("LlmClient", () => {
+    describe("embed", () => {
         it("answers null without a key and without texts, and calls nothing", async () => {
             const keyless = await build(NO_EMBEDDING_KEY)
             const { client, http } = await build()
@@ -208,7 +218,11 @@ describe("LlmClient", () => {
 
             expect(logger.error).toHaveBeenCalledWith(LlmLogEvent.EmbeddingFailed, failure)
         })
+    })
+})
 
+describe("LlmClient", () => {
+    describe("embed", () => {
         it.each([
             ["a body that is not JSON", "<html>"],
             ["a body that is not text", undefined],
@@ -239,7 +253,9 @@ describe("LlmClient", () => {
             expect(logger.error).toHaveBeenCalledWith(LlmLogEvent.BodyUnreadable, expect.any(SyntaxError))
         })
     })
+})
 
+describe("LlmClient", () => {
     describe("complete", () => {
         const request = { system: "rules", prompt: "question", timeoutMs: 5000 }
 
@@ -290,6 +306,12 @@ describe("LlmClient", () => {
 
             expect(http.request).not.toHaveBeenCalled()
         })
+    })
+})
+
+describe("LlmClient", () => {
+    describe("complete", () => {
+        const request = { system: "rules", prompt: "question", timeoutMs: 5000 }
 
         it("answers null and logs a refusal when the provider fails", async () => {
             const { client, http, logger } = await build()

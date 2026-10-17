@@ -3,8 +3,8 @@ import type { RawBodyRequest } from "@nestjs/common"
 import type { Request } from "express"
 import { BankFeedService } from "@modules/domain/billing"
 import { Public, PublicReason } from "@modules/domain/identity"
-import { InjectWebhookSignature, RateLimit, RateTier } from "@modules/platform/http-security"
-import type { WebhookSignatureService } from "@modules/platform/http-security"
+import { RateLimit, RateTier } from "@modules/platform/http-security"
+import { ScopedWebhookVerifier } from "@modules/domain/webhook-proofs"
 
 @Controller("api/connections/casso")
 /**
@@ -14,7 +14,7 @@ import type { WebhookSignatureService } from "@modules/platform/http-security"
  */
 export class CassoWebhook {
     constructor(
-        @InjectWebhookSignature() private readonly signature: WebhookSignatureService,
+        private readonly signature: ScopedWebhookVerifier,
         private readonly feed: BankFeedService,
     ) {}
 
@@ -37,6 +37,6 @@ export class CassoWebhook {
             // The V1 token rides the timestamp slot because the proof request has no second header slot.
             timestamp: secureToken,
         })
-        await this.feed.acceptCassoDelivery({ connectionId, rawBody: request.rawBody, signature, secureToken })
+        await this.feed.acceptCassoDelivery(request.rawBody, connectionId)
     }
 }

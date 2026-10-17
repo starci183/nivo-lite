@@ -7,12 +7,12 @@ import { HTTP_SECURITY_OPTIONS } from "./http-security.decorators"
 import type { HttpSecurityOptions } from "./http-security.options"
 import { OriginGuard } from "./origin.guard"
 
-const options = builder<HttpSecurityOptions>({
+const OPTIONS: HttpSecurityOptions = {
     trustedProxyHops: 1,
     allowedOrigins: ["https://app.test"],
     rateLimit: { windowMs: 60_000, defaultLimit: 100, strictLimit: 10 },
     webhooks: {},
-})
+}
 
 const build = async (method: string, headers: Request["headers"]) => {
     const request = mock<Request>({ headers, method, ip: "127.0.0.1" })
@@ -21,7 +21,7 @@ const build = async (method: string, headers: Request["headers"]) => {
     const context = mock<ExecutionContext>()
     context.switchToHttp.mockReturnValue(http)
     const moduleRef = await Test.createTestingModule({
-        providers: [OriginGuard, { provide: HTTP_SECURITY_OPTIONS, useValue: options() }],
+        providers: [OriginGuard, { provide: HTTP_SECURITY_OPTIONS, useValue: builder<HttpSecurityOptions>(OPTIONS)() }],
     }).compile()
     return { guard: moduleRef.get(OriginGuard), context }
 }

@@ -8,6 +8,7 @@ import { GetContentFiguresHandler } from "./application/content-figures.handler"
 import { GetContentWorkbenchHandler } from "./application/content-workbench.handler"
 import { ListContentItemsHandler } from "./application/content-items.handler"
 import { GetContentItemHandler } from "./application/content-item.handler"
+import { ConfigurableModuleClass } from "./content.module-definition"
 
 @Module({
     providers: [
@@ -23,4 +24,4 @@ import { GetContentItemHandler } from "./application/content-item.handler"
     ],
 })
 /** Content application handlers. */
-export class ContentApiModule {}
+export class ContentApiModule extends ConfigurableModuleClass {}

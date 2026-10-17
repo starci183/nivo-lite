@@ -1,3 +1,4 @@
+import { Test } from "@nestjs/testing"
 import { mock } from "@starci/jest-preset"
 import mssql from "mssql"
 import type { ConnectionPool, IRecordSet, IResult, Request } from "mssql"
@@ -7,6 +8,213 @@ import pg from "pg"
 import type { Client, QueryResult } from "pg"
 import type { DatabaseTarget } from "./database-session.contracts"
 import { DATABASE_CONNECT_MS, DATABASE_QUERY_MS, openMssql, openMysql, openPostgres } from "./database-drivers.client"
+
+const SUBJECT = Symbol("database-drivers.client")
+
+type PolicySubject = {
+    openPostgres: typeof openPostgres
+    openMysql: typeof openMysql
+    openMssql: typeof openMssql
+}
+const buildSubject = async () => {
+    const moduleRef = await Test.createTestingModule({
+        providers: [
+            {
+                provide: SUBJECT,
+                useValue: {
+                    openPostgres,
+                    openMysql,
+                    openMssql,
+                },
+            },
+        ],
+    }).compile()
+    return moduleRef.get<PolicySubject>(SUBJECT)
+}
+
+const registerDatabaseDrivers = () => {
+    beforeEach(() => {
+        Object.assign(mockPg, new DriverControl())
+        Object.assign(mockMysql, new DriverControl())
+        Object.assign(mockMssql, new DriverControl())
+        mockPgClients.length = 0
+        mockMysqlClients.length = 0
+        mockMssqlPools.length = 0
+        pgSpy.mockImplementation(pgClientOf)
+        mysqlSpy.mockImplementation(mysqlConnectionOf)
+        mssqlSpy.mockImplementation(mssqlPoolOf)
+    })
+
+    afterAll(() => {
+        jest.restoreAllMocks()
+    })
+
+    describe("openPostgres", () => {
+        it("connects read only, with the host name as the TLS server name", async () => {
+            const subject = await buildSubject()
+
+            const session = await subject.openPostgres(target(), "203.0.113.5")
+            const client = mockPgClients[0]
+
+            expect(client?.config).toMatchObject({
+                host: "203.0.113.5",
+                port: 5432,
+                user: "nivo",
+                password: "secret",
+                database: "shop",
+                connectionTimeoutMillis: DATABASE_CONNECT_MS,
+                statement_timeout: DATABASE_QUERY_MS,
+                query_timeout: DATABASE_QUERY_MS,
+                options: "-c default_transaction_read_only=on",
+                ssl: { rejectUnauthorized: false, servername: "db.example" },
+            })
+            client?.listeners.get("error")?.()
+            await expect(session.query("select 1", ["a"])).resolves.toEqual([{ id: "1" }])
+            await expect(session.query("select 2")).resolves.toEqual([{ id: "1" }])
+            expect(client?.queries[1]).toEqual({ sql: "select 1", params: ["a"] })
+            expect(client?.queries[2]).toEqual({ sql: "select 2", params: undefined })
+            await session.close()
+        })
+
+        it("skips the server name for an address and for a clear-text connection", async () => {
+            const subject = await buildSubject()
+
+            await subject.openPostgres(target({ host: "203.0.113.5", ssl: true }), "203.0.113.5")
+            await subject.openPostgres(target({ ssl: false }), "203.0.113.5")
+
+            expect(mockPgClients[0]?.config).toHaveProperty("ssl", { rejectUnauthorized: false })
+            expect(mockPgClients[1]?.config).toHaveProperty("ssl", false)
+        })
+
+        it("closes the connection when the read-only setting is refused, even if closing fails", async () => {
+            const subject = await buildSubject()
+
+            const refused = new Error("readonly")
+            mockPg.setError = refused
+            await expect(subject.openPostgres(target(), "203.0.113.5")).rejects.toBe(refused)
+
+            mockPg.endError = new Error("end")
+            await expect(subject.openPostgres(target(), "203.0.113.5")).rejects.toBe(refused)
+        })
+
+        it("swallows a failure while closing a live session", async () => {
+            const subject = await buildSubject()
+
+            const session = await subject.openPostgres(target(), "203.0.113.5")
+            mockPg.endError = new Error("end")
+
+            await expect(session.close()).resolves.toBeUndefined()
+        })
+    })
+}
+
+const registerOpenMysql = () => {
+    describe("openMysql", () => {
+        it("sets a read-only session and ignores a server that has no execution-time limit", async () => {
+            const subject = await buildSubject()
+
+            mockMysql.executionError = new Error("unknown variable")
+            const session = await subject.openMysql(target({ engine: "mysql", port: 3306 }), "203.0.113.8")
+
+            expect(mockMysqlClients[0]?.config).toMatchObject({
+                host: "203.0.113.8",
+                port: 3306,
+                connectTimeout: DATABASE_CONNECT_MS,
+                ssl: { rejectUnauthorized: false, servername: "db.example" },
+                multipleStatements: false,
+            })
+            await expect(session.query("select 1")).resolves.toEqual([{ id: "1" }])
+            await expect(session.query("select 2", ["b"])).resolves.toEqual([{ id: "1" }])
+            expect(mockMysqlClients[0]?.queries.at(-1)).toEqual({ sql: "select 2", params: ["b"] })
+            await session.close()
+        })
+
+        it("uses no TLS object for a clear-text connection and drops the server name of an address", async () => {
+            const subject = await buildSubject()
+
+            await subject.openMysql(target({ engine: "mysql", ssl: false }), "203.0.113.8")
+            await subject.openMysql(target({ engine: "mysql", host: "203.0.113.8" }), "203.0.113.8")
+
+            expect(mockMysqlClients[0]?.config).toHaveProperty("ssl", undefined)
+            expect(mockMysqlClients[1]?.config).toHaveProperty("ssl", { rejectUnauthorized: false })
+        })
+
+        it("destroys the connection when the read-only setting is refused", async () => {
+            const subject = await buildSubject()
+
+            const refused = new Error("readonly")
+            mockMysql.setError = refused
+
+            await expect(subject.openMysql(target({ engine: "mysql" }), "203.0.113.8")).rejects.toBe(refused)
+            expect(mockMysqlClients[0]?.destroyed).toBe(true)
+        })
+
+        it("destroys the connection when ending it fails", async () => {
+            const subject = await buildSubject()
+
+            const session = await subject.openMysql(target({ engine: "mysql" }), "203.0.113.8")
+            mockMysql.endError = new Error("end")
+
+            await session.close()
+
+            expect(mockMysqlClients[0]?.destroyed).toBe(true)
+        })
+    })
+}
+
+const registerOpenMssql = () => {
+    describe("openMssql", () => {
+        it("names the server only for an encrypted host name and binds each parameter", async () => {
+            const subject = await buildSubject()
+
+            const session = await subject.openMssql(target({ engine: "mssql", port: 1433 }), "203.0.113.9")
+
+            expect(mockMssqlPools[0]?.config).toMatchObject({
+                server: "203.0.113.9",
+                port: 1433,
+                connectionTimeout: DATABASE_CONNECT_MS,
+                requestTimeout: DATABASE_QUERY_MS,
+                options: {
+                    encrypt: true,
+                    trustServerCertificate: true,
+                    readOnlyIntent: true,
+                    serverName: "db.example",
+                },
+            })
+            await expect(session.query("select 1", ["a", "b"])).resolves.toEqual([{ id: "1" }])
+            await expect(session.query("select 2")).resolves.toEqual([{ id: "1" }])
+            expect(mockMssqlPools[0]?.inputs).toEqual([
+                { name: "p0", value: "a" },
+                { name: "p1", value: "b" },
+                { name: "select 1", value: "" },
+                { name: "select 2", value: "" },
+            ])
+            await session.close()
+            expect(mockMssqlPools[0]?.closed).toBe(true)
+        })
+
+        it("omits the server name for a clear-text connection and for an address", async () => {
+            const subject = await buildSubject()
+
+            await subject.openMssql(target({ engine: "mssql", ssl: false }), "203.0.113.9")
+            await subject.openMssql(target({ engine: "mssql", host: "203.0.113.9" }), "203.0.113.9")
+
+            expect(mockMssqlPools[0]?.config).toMatchObject({ options: { encrypt: false } })
+            expect(mockMssqlPools[1]?.config).toMatchObject({ options: { encrypt: true } })
+            expect(JSON.stringify(mockMssqlPools[0]?.config)).not.toContain("serverName")
+            expect(JSON.stringify(mockMssqlPools[1]?.config)).not.toContain("serverName")
+        })
+
+        it("swallows a failure while closing the pool", async () => {
+            const subject = await buildSubject()
+
+            const session = await subject.openMssql(target({ engine: "mssql" }), "203.0.113.9")
+            mockMssql.endError = new Error("close")
+
+            await expect(session.close()).resolves.toBeUndefined()
+        })
+    })
+}
 
 interface QueryCall {
     readonly sql: string
@@ -41,7 +249,10 @@ interface MysqlOpened {
 
 interface MssqlOpened {
     readonly config: unknown
-    readonly inputs: Array<{ name: string; value: unknown }>
+    readonly inputs: Array<{
+        name: string
+        value: unknown
+    }>
     closed: boolean
 }
 
@@ -167,159 +378,7 @@ const target = (partial: Partial<DatabaseTarget> = {}): DatabaseTarget => ({
 })
 
 describe("database drivers", () => {
-    beforeEach(() => {
-        Object.assign(mockPg, new DriverControl())
-        Object.assign(mockMysql, new DriverControl())
-        Object.assign(mockMssql, new DriverControl())
-        mockPgClients.length = 0
-        mockMysqlClients.length = 0
-        mockMssqlPools.length = 0
-        pgSpy.mockImplementation(pgClientOf)
-        mysqlSpy.mockImplementation(mysqlConnectionOf)
-        mssqlSpy.mockImplementation(mssqlPoolOf)
-    })
-
-    afterAll(() => {
-        jest.restoreAllMocks()
-    })
-
-    describe("openPostgres", () => {
-        it("connects read only, with the host name as the TLS server name", async () => {
-            const session = await openPostgres(target(), "203.0.113.5")
-            const client = mockPgClients[0]
-
-            expect(client?.config).toMatchObject({
-                host: "203.0.113.5",
-                port: 5432,
-                user: "nivo",
-                password: "secret",
-                database: "shop",
-                connectionTimeoutMillis: DATABASE_CONNECT_MS,
-                statement_timeout: DATABASE_QUERY_MS,
-                query_timeout: DATABASE_QUERY_MS,
-                options: "-c default_transaction_read_only=on",
-                ssl: { rejectUnauthorized: false, servername: "db.example" },
-            })
-            client?.listeners.get("error")?.()
-            await expect(session.query("select 1", ["a"])).resolves.toEqual([{ id: "1" }])
-            await expect(session.query("select 2")).resolves.toEqual([{ id: "1" }])
-            expect(client?.queries[1]).toEqual({ sql: "select 1", params: ["a"] })
-            expect(client?.queries[2]).toEqual({ sql: "select 2", params: undefined })
-            await session.close()
-        })
-
-        it("skips the server name for an address and for a clear-text connection", async () => {
-            await openPostgres(target({ host: "203.0.113.5", ssl: true }), "203.0.113.5")
-            await openPostgres(target({ ssl: false }), "203.0.113.5")
-
-            expect(mockPgClients[0]?.config).toHaveProperty("ssl", { rejectUnauthorized: false })
-            expect(mockPgClients[1]?.config).toHaveProperty("ssl", false)
-        })
-
-        it("closes the connection when the read-only setting is refused, even if closing fails", async () => {
-            const refused = new Error("readonly")
-            mockPg.setError = refused
-            await expect(openPostgres(target(), "203.0.113.5")).rejects.toBe(refused)
-
-            mockPg.endError = new Error("end")
-            await expect(openPostgres(target(), "203.0.113.5")).rejects.toBe(refused)
-        })
-
-        it("swallows a failure while closing a live session", async () => {
-            const session = await openPostgres(target(), "203.0.113.5")
-            mockPg.endError = new Error("end")
-
-            await expect(session.close()).resolves.toBeUndefined()
-        })
-    })
-
-    describe("openMysql", () => {
-        it("sets a read-only session and ignores a server that has no execution-time limit", async () => {
-            mockMysql.executionError = new Error("unknown variable")
-            const session = await openMysql(target({ engine: "mysql", port: 3306 }), "203.0.113.8")
-
-            expect(mockMysqlClients[0]?.config).toMatchObject({
-                host: "203.0.113.8",
-                port: 3306,
-                connectTimeout: DATABASE_CONNECT_MS,
-                ssl: { rejectUnauthorized: false, servername: "db.example" },
-                multipleStatements: false,
-            })
-            await expect(session.query("select 1")).resolves.toEqual([{ id: "1" }])
-            await expect(session.query("select 2", ["b"])).resolves.toEqual([{ id: "1" }])
-            expect(mockMysqlClients[0]?.queries.at(-1)).toEqual({ sql: "select 2", params: ["b"] })
-            await session.close()
-        })
-
-        it("uses no TLS object for a clear-text connection and drops the server name of an address", async () => {
-            await openMysql(target({ engine: "mysql", ssl: false }), "203.0.113.8")
-            await openMysql(target({ engine: "mysql", host: "203.0.113.8" }), "203.0.113.8")
-
-            expect(mockMysqlClients[0]?.config).toHaveProperty("ssl", undefined)
-            expect(mockMysqlClients[1]?.config).toHaveProperty("ssl", { rejectUnauthorized: false })
-        })
-
-        it("destroys the connection when the read-only setting is refused", async () => {
-            const refused = new Error("readonly")
-            mockMysql.setError = refused
-
-            await expect(openMysql(target({ engine: "mysql" }), "203.0.113.8")).rejects.toBe(refused)
-            expect(mockMysqlClients[0]?.destroyed).toBe(true)
-        })
-
-        it("destroys the connection when ending it fails", async () => {
-            const session = await openMysql(target({ engine: "mysql" }), "203.0.113.8")
-            mockMysql.endError = new Error("end")
-
-            await session.close()
-
-            expect(mockMysqlClients[0]?.destroyed).toBe(true)
-        })
-    })
-
-    describe("openMssql", () => {
-        it("names the server only for an encrypted host name and binds each parameter", async () => {
-            const session = await openMssql(target({ engine: "mssql", port: 1433 }), "203.0.113.9")
-
-            expect(mockMssqlPools[0]?.config).toMatchObject({
-                server: "203.0.113.9",
-                port: 1433,
-                connectionTimeout: DATABASE_CONNECT_MS,
-                requestTimeout: DATABASE_QUERY_MS,
-                options: {
-                    encrypt: true,
-                    trustServerCertificate: true,
-                    readOnlyIntent: true,
-                    serverName: "db.example",
-                },
-            })
-            await expect(session.query("select 1", ["a", "b"])).resolves.toEqual([{ id: "1" }])
-            await expect(session.query("select 2")).resolves.toEqual([{ id: "1" }])
-            expect(mockMssqlPools[0]?.inputs).toEqual([
-                { name: "p0", value: "a" },
-                { name: "p1", value: "b" },
-                { name: "select 1", value: "" },
-                { name: "select 2", value: "" },
-            ])
-            await session.close()
-            expect(mockMssqlPools[0]?.closed).toBe(true)
-        })
-
-        it("omits the server name for a clear-text connection and for an address", async () => {
-            await openMssql(target({ engine: "mssql", ssl: false }), "203.0.113.9")
-            await openMssql(target({ engine: "mssql", host: "203.0.113.9" }), "203.0.113.9")
-
-            expect(mockMssqlPools[0]?.config).toMatchObject({ options: { encrypt: false } })
-            expect(mockMssqlPools[1]?.config).toMatchObject({ options: { encrypt: true } })
-            expect(JSON.stringify(mockMssqlPools[0]?.config)).not.toContain("serverName")
-            expect(JSON.stringify(mockMssqlPools[1]?.config)).not.toContain("serverName")
-        })
-
-        it("swallows a failure while closing the pool", async () => {
-            const session = await openMssql(target({ engine: "mssql" }), "203.0.113.9")
-            mockMssql.endError = new Error("close")
-
-            await expect(session.close()).resolves.toBeUndefined()
-        })
-    })
+    registerDatabaseDrivers()
+    registerOpenMysql()
+    registerOpenMssql()
 })

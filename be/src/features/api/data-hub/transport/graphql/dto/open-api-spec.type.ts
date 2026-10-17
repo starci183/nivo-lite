@@ -1,5 +1,5 @@
 import { Field, ObjectType } from "@nestjs/graphql"
-import { DataJsonScalar } from "./data-json.type"
+import { DataJsonScalar } from "../data-json.mapper"
 
 @ObjectType()
 /** The authentication a spec hints at. */
@@ -28,7 +28,10 @@ export class OpenApiSpecType {
     @Field(() => String)
     specUrl!: string
 
-    /** The operations: a list of {id, method, path, summary, params: [{name, in, required}], hasBody, suggest?: {itemsPath, idField, titleField}}. */
+    /**
+     * The operations: a list of {id, method, path, summary, params: [{name, in, required}], hasBody, suggest?:
+     * {itemsPath, idField, titleField}}.
+     */
     @Field(() => DataJsonScalar)
     ops!: unknown
 

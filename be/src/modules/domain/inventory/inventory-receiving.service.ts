@@ -53,9 +53,9 @@ export class InventoryReceivingService {
     }
 
     /**
-     * Receives goods against an order: each line's actual quantity becomes an `in` movement at the actual price, the item
-     * cost moves to the weighted average and the order becomes partially received or received. A changed price is listed
-     * and recorded; when Accounting is installed the supplier's invoice is handed over as a payable.
+     * Receives goods against an order: each line's actual quantity becomes an `in` movement at the actual price, the
+     * item cost moves to the weighted average and the order becomes partially received or received. A changed price is
+     * listed and recorded; when Accounting is installed the supplier's invoice is handed over as a payable.
      */
     async receivePo(userId: string, workspaceId: string, request: ReceivePoParams): Promise<ReceivePoOutput> {
         const { displayName: actor } = await this.members.require(userId, workspaceId, MANAGER_ROLES)
@@ -121,28 +121,16 @@ export class InventoryReceivingService {
         const status = complete ? "received" : "partially_received"
         await this.entityManager.query(SET_PO_STATUS, [po.id, status])
         await this.entityManager.query(RECOMPUTE_PO_TOTAL, [po.id])
-        await this.office.logEvidence(workspaceId, {
-            kind: "inventory.received",
+        await this.reportReceipt(
+            workspaceId,
             actor,
-            summary: this.text(complete ? "inventory.receivedFullSummary" : "inventory.receivedPartSummary", {
-                poNo: po.poNo,
-                count: touched.length,
-                value: formatMoney(value),
-            }),
-            evidence:
-                [
-                    invoiceEvidence,
-                    ...priceChanges.map((change) => this.text("inventory.priceChangeEvidence", { change })),
-                ]
-                    .filter(Boolean)
-                    .join(" | ") || null,
-        })
-        if (priceChanges.length > 0) {
-            await this.office.postOffice(
-                workspaceId,
-                this.text("inventory.priceChangeNote", { poNo: po.poNo, changes: priceChanges.join("; ") }),
-            )
-        }
+            po.poNo,
+            complete,
+            touched.length,
+            value,
+            invoiceEvidence,
+            priceChanges,
+        )
         const handedToAccounting = value > 0 && (await this.accountingInstalled(workspaceId))
         if (handedToAccounting)
             await this.handToAccounting(workspaceId, po.supplier?.name ?? null, po.poNo, invoiceNo, value)
@@ -174,5 +162,39 @@ export class InventoryReceivingService {
             summary: this.text("inventory.payableSummary", { who, value: formatMoney(value), poNo }),
             evidence: invoiceNo === "" ? null : this.text("inventory.invoiceEvidence", { invoiceNo }),
         })
+    }
+
+    private async reportReceipt(
+        workspaceId: string,
+        actor: string,
+        poNo: string,
+        complete: boolean,
+        count: number,
+        value: number,
+        invoiceEvidence: string | null,
+        priceChanges: ReadonlyArray<string>,
+    ): Promise<void> {
+        await this.office.logEvidence(workspaceId, {
+            kind: "inventory.received",
+            actor,
+            summary: this.text(complete ? "inventory.receivedFullSummary" : "inventory.receivedPartSummary", {
+                poNo,
+                count,
+                value: formatMoney(value),
+            }),
+            evidence:
+                [
+                    invoiceEvidence,
+                    ...priceChanges.map((change) => this.text("inventory.priceChangeEvidence", { change })),
+                ]
+                    .filter(Boolean)
+                    .join(" | ") || null,
+        })
+        if (priceChanges.length > 0) {
+            await this.office.postOffice(
+                workspaceId,
+                this.text("inventory.priceChangeNote", { poNo, changes: priceChanges.join("; ") }),
+            )
+        }
     }
 }

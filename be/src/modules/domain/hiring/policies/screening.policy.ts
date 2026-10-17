@@ -1,5 +1,6 @@
 import type {
     Answer,
+    ExperienceFamily,
     JobQuestion,
     JobRecord,
     ReasonStatus,
@@ -76,54 +77,62 @@ const entry = (criterion: string, status: ReasonStatus, note: string, weight: nu
 const clipText = (text: string, max: number): string => (text.length > max ? `${text.slice(0, max - 3)}...` : text)
 
 /** One scored question against the answer given. */
-const questionEntry = (question: JobQuestion, given: string, textOf: TextOf): Entry => {
+const questionEntry = (question: JobQuestion, given: string, t: TextOf): Entry => {
     const weight = question.required ? REQUIRED_WEIGHT : OPTIONAL_WEIGHT
     const label = clipText(question.text, QUESTION_LABEL_MAX)
     const make = (status: ReasonStatus, key: string, params: Record<string, string | number> = {}): Entry =>
-        entry(label, status, textOf(`hiring.screen.${key}`, params), weight, question.required)
+        entry(label, status, t(key, params), weight, question.required)
     const quote = given.slice(0, ANSWER_QUOTE_MAX)
-    if (given === "") return make("unknown", "unanswered")
+    if (given === "") return make("unknown", "hiring.screen.unanswered")
     if (question.type === "yesno") {
         const said = parseYesNo(given)
-        if (said === null) return make("unknown", "yesnoUnclear", { answer: quote })
-        if (said === question.expect) return make("met", said === "yes" ? "yesnoYes" : "yesnoNoOk")
-        return make("unmet", said === "yes" ? "yesnoNeedNo" : "yesnoNeedYes")
+        if (said === null) return make("unknown", "hiring.screen.yesnoUnclear", { answer: quote })
+        if (said === question.expect)
+            return make("met", said === "yes" ? "hiring.screen.yesnoYes" : "hiring.screen.yesnoNoOk")
+        return make("unmet", said === "yes" ? "hiring.screen.yesnoNeedNo" : "hiring.screen.yesnoNeedYes")
     }
     if (question.type === "number" && typeof question.expect === "number") {
         const number = firstNumber(given)
-        if (number === null) return make("unknown", "numberNone", { answer: quote })
-        return make(number >= question.expect ? "met" : "unmet", number >= question.expect ? "numberOk" : "numberLow", {
-            n: number,
-            need: question.expect,
-        })
+        if (number === null) return make("unknown", "hiring.screen.numberNone", { answer: quote })
+        return make(
+            number >= question.expect ? "met" : "unmet",
+            number >= question.expect ? "hiring.screen.numberOk" : "hiring.screen.numberLow",
+            {
+                n: number,
+                need: question.expect,
+            },
+        )
     }
     const accepted = Array.isArray(question.expect) ? question.expect : []
     const ok = accepted.some((choice) => fold(choice) === fold(given) || has(fold(given), choice))
-    return make(ok ? "met" : "unmet", ok ? "choiceOk" : "choiceBad", { answer: quote, need: accepted.join(", ") })
+    return make(ok ? "met" : "unmet", ok ? "hiring.screen.choiceOk" : "hiring.screen.choiceBad", {
+        answer: quote,
+        need: accepted.join(", "),
+    })
 }
 
 const answerOf = (answers: ReadonlyArray<Answer>, question: JobQuestion): string =>
     answers.find((answer) => answer.questionId === question.id)?.answer.trim() ?? ""
 
-const questionEntries = (job: Screened, person: ScreenedPerson, textOf: TextOf): Array<Entry> =>
+const questionEntries = (job: Screened, person: ScreenedPerson, t: TextOf): Array<Entry> =>
     job.questions
         .filter((question) => question.expect !== undefined)
-        .map((question) => questionEntry(question, answerOf(person.answers, question), textOf))
+        .map((question) => questionEntry(question, answerOf(person.answers, question), t))
 
-const skillEntries = (job: Screened, text: string, textOf: TextOf): Array<Entry> =>
+const skillEntries = (job: Screened, text: string, t: TextOf): Array<Entry> =>
     job.requirements.skills
         .filter((skill) => skill.trim() !== "")
         .map((skill) =>
             entry(
-                textOf("hiring.screen.skill", { skill }),
+                t("hiring.screen.skill", { skill }),
                 has(text, skill) ? "met" : "unknown",
-                textOf(has(text, skill) ? "hiring.screen.skillMet" : "hiring.screen.skillUnknown", {}),
+                t(has(text, skill) ? "hiring.screen.skillMet" : "hiring.screen.skillUnknown", {}),
                 SKILL_WEIGHT,
                 false,
             ),
         )
 
-const experienceEntries = (job: Screened, text: string, textOf: TextOf): Array<Entry> => {
+const experienceEntries = (job: Screened, text: string, t: TextOf): Array<Entry> => {
     const need = job.requirements.experienceYears
     const asked = job.questions.some(
         (question) =>
@@ -131,40 +140,38 @@ const experienceEntries = (job: Screened, text: string, textOf: TextOf): Array<E
     )
     if (need === null || need <= 0 || asked) return []
     const got = experienceYears(text)
-    const criterion = textOf("hiring.screen.experience", { years: need })
+    const criterion = t("hiring.screen.experience", { years: need })
     if (got === null)
-        return [entry(criterion, "unknown", textOf("hiring.screen.experienceUnknown", {}), SKILL_WEIGHT, false)]
+        return [entry(criterion, "unknown", t("hiring.screen.experienceUnknown", {}), SKILL_WEIGHT, false)]
     const years = Math.round(got * TENTH) / TENTH
     return [
         entry(
             criterion,
             got >= need ? "met" : "unmet",
-            textOf("hiring.screen.experienceGot", { years }),
+            t("hiring.screen.experienceGot", { years }),
             SKILL_WEIGHT,
             false,
         ),
     ]
 }
 
-const availabilityEntries = (job: Screened, person: ScreenedPerson, text: string, textOf: TextOf): Array<Entry> => {
+const availabilityEntries = (job: Screened, person: ScreenedPerson, text: string, t: TextOf): Array<Entry> => {
     const wanted = job.requirements.availability
     if (wanted.length === 0) return []
     const hay = fold(`${person.availability} ${text}`)
     const hits = wanted.filter((item) => has(hay, item))
-    const criterion = textOf("hiring.screen.availability", { list: wanted.join(", ") })
+    const criterion = t("hiring.screen.availability", { list: wanted.join(", ") })
     if (person.availability.trim() === "" && hits.length === 0) {
-        return [entry(criterion, "unknown", textOf("hiring.screen.availUnknown", {}), SKILL_WEIGHT, false)]
+        return [entry(criterion, "unknown", t("hiring.screen.availUnknown", {}), SKILL_WEIGHT, false)]
     }
     if (hits.length > 0) {
-        return [
-            entry(criterion, "met", textOf("hiring.screen.availMet", { hits: hits.join(", ") }), SKILL_WEIGHT, false),
-        ]
+        return [entry(criterion, "met", t("hiring.screen.availMet", { hits: hits.join(", ") }), SKILL_WEIGHT, false)]
     }
     return [
         entry(
             criterion,
             "unmet",
-            textOf("hiring.screen.availUnmet", { given: person.availability.slice(0, ANSWER_QUOTE_MAX) }),
+            t("hiring.screen.availUnmet", { given: person.availability.slice(0, ANSWER_QUOTE_MAX) }),
             SKILL_WEIGHT,
             false,
         ),
@@ -181,7 +188,7 @@ const wishEntries = (
     key: string,
     weight: number,
     text: string,
-    textOf: TextOf,
+    t: TextOf,
 ): Array<Entry> =>
     items.flatMap((item) => {
         const tokens = tokensOf(item)
@@ -189,9 +196,9 @@ const wishEntries = (
         const ok = tokens.filter((token) => text.includes(token)).length / tokens.length >= TOKEN_SHARE
         return [
             entry(
-                textOf(`hiring.screen.${key}`, { item }),
+                t(key, { item }),
                 ok ? "met" : "unknown",
-                textOf(ok ? "hiring.screen.mentioned" : "hiring.screen.notMentioned", {}),
+                t(ok ? "hiring.screen.mentioned" : "hiring.screen.notMentioned", {}),
                 weight,
                 false,
             ),
@@ -209,15 +216,15 @@ const labelOf = (score: number, total: number, unmetMust: number, unknown: numbe
  * Nothing about the person (name, phone, source, anything protected) is read. The score is advisory and never rejects anybody: a met line adds its
  * weight, an unmet or unknown line adds nothing, and only an explicit "no" or a too-low number makes a line unmet.
  */
-export const screenAgainstRequirements = (job: Screened, person: ScreenedPerson, textOf: TextOf): Screening => {
+export const screenAgainstRequirements = (job: Screened, person: ScreenedPerson, t: TextOf): Screening => {
     const text = fold(person.answers.map((answer) => scrubProtected(answer.answer)).join(" \n "))
     const entries = [
-        ...questionEntries(job, person, textOf),
-        ...skillEntries(job, text, textOf),
-        ...experienceEntries(job, text, textOf),
-        ...availabilityEntries(job, person, text, textOf),
-        ...wishEntries(job.requirements.mustHave, "mustHave", REQUIRED_WEIGHT, text, textOf),
-        ...wishEntries(job.requirements.niceToHave, "niceToHave", OPTIONAL_WEIGHT, text, textOf),
+        ...questionEntries(job, person, t),
+        ...skillEntries(job, text, t),
+        ...experienceEntries(job, text, t),
+        ...availabilityEntries(job, person, text, t),
+        ...wishEntries(job.requirements.mustHave, "hiring.screen.mustHave", REQUIRED_WEIGHT, text, t),
+        ...wishEntries(job.requirements.niceToHave, "hiring.screen.niceToHave", OPTIONAL_WEIGHT, text, t),
     ]
     const total = entries.reduce((sum, line) => sum + line.weight, 0)
     const met = entries.filter((line) => line.status === "met").reduce((sum, line) => sum + line.weight, 0)
@@ -232,37 +239,37 @@ export const screenAgainstRequirements = (job: Screened, person: ScreenedPerson,
 }
 
 /** The experience line of a text about a job: the years asked with the note, the note alone, or nothing. `family` names the catalog group (criteria or facts). */
-export const experienceLine = (years: number | null, note: string, family: string, textOf: TextOf): string => {
+export const experienceLine = (years: number | null, note: string, family: ExperienceFamily, t: TextOf): string => {
+    const facts = family === "facts"
     if (years !== null && years > 0) {
-        return textOf(`hiring.${family}.experienceYears`, { years, note: note === "" ? "" : ` (${note})` })
+        const yearsKey = facts ? "hiring.facts.experienceYears" : "hiring.criteria.experienceYears"
+        return t(yearsKey, { years, note: note === "" ? "" : ` (${note})` })
     }
-    return note === "" ? "" : textOf(`hiring.${family}.experienceNote`, { note })
+    return note === "" ? "" : t(facts ? "hiring.facts.experienceNote" : "hiring.criteria.experienceNote", { note })
 }
 
 /** A short plain description of the job criteria: what the model is told to compare against. */
 export const criteriaText = (
     job: Pick<JobRecord, "title" | "requirements" | "employmentType" | "schedule" | "location">,
-    textOf: TextOf,
+    t: TextOf,
 ): string => {
     const requirements = job.requirements
-    const where = [textOf(`hiring.employment.${job.employmentType}`, {}), job.schedule, job.location]
+    const where = [t(`hiring.employment.${job.employmentType}`, {}), job.schedule, job.location]
         .filter((part) => part !== "")
         .join(", ")
-    const experience = experienceLine(requirements.experienceYears, requirements.experienceNote, "criteria", textOf)
+    const experience = experienceLine(requirements.experienceYears, requirements.experienceNote, "criteria", t)
     return [
-        textOf("hiring.criteria.position", { title: job.title, where }),
-        requirements.skills.length > 0
-            ? textOf("hiring.criteria.skills", { list: requirements.skills.join(", ") })
-            : "",
+        t("hiring.criteria.position", { title: job.title, where }),
+        requirements.skills.length > 0 ? t("hiring.criteria.skills", { list: requirements.skills.join(", ") }) : "",
         experience,
         requirements.availability.length > 0
-            ? textOf("hiring.criteria.availability", { list: requirements.availability.join(", ") })
+            ? t("hiring.criteria.availability", { list: requirements.availability.join(", ") })
             : "",
         requirements.mustHave.length > 0
-            ? textOf("hiring.criteria.mustHave", { list: requirements.mustHave.join("; ") })
+            ? t("hiring.criteria.mustHave", { list: requirements.mustHave.join("; ") })
             : "",
         requirements.niceToHave.length > 0
-            ? textOf("hiring.criteria.niceToHave", { list: requirements.niceToHave.join("; ") })
+            ? t("hiring.criteria.niceToHave", { list: requirements.niceToHave.join("; ") })
             : "",
     ]
         .filter((line) => line !== "")

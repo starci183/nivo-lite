@@ -10,7 +10,7 @@ import type { RequirementLabeller } from "./policies/cards.policy"
 import { contextVersionFor, contextsFrom } from "./policies/context.policy"
 import type { ActiveContexts, ShopPatterns } from "./policies/context.policy"
 import { shopContextFrom } from "./policies/context.policy"
-import { NEUTRAL_VARIABLES, SAMPLE_VARIABLES } from "./policies/words.policy"
+import { NEUTRAL_VARIABLES, SAMPLE_VARIABLES } from "./words.contracts"
 
 /** The text a model is given about the shop and the context version a wording is written from. */
 export interface ShopContextText {

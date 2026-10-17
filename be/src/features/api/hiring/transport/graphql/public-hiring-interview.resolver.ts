@@ -1,6 +1,7 @@
+import type { CredentialPrincipal } from "@modules/domain/identity"
 import type { QueryBus } from "@nestjs/cqrs"
 import { Args, Query, Resolver } from "@nestjs/graphql"
-import { Public, PublicReason } from "@modules/domain/identity"
+import { Credential, CurrentCredentialPrincipal } from "@modules/domain/identity"
 import { InjectQueryBus } from "@modules/platform/cqrs"
 import { RateLimit, RateTier } from "@modules/platform/http-security"
 import { PublicHiringInterviewQuery } from "../../application/public-hiring-interview.query"
@@ -14,12 +15,17 @@ export class PublicHiringInterviewResolver {
     constructor(@InjectQueryBus() private readonly queryBus: QueryBus) {}
 
     /** Read an interview from the candidate's link. */
-    @Public({ reason: PublicReason.PublicForm })
+    @Credential({ kind: "link-token", workflow: "public-hiring-interview" })
     @RateLimit(RateTier.Strict)
     @Query(() => PublicInterviewType, { name: "publicHiringInterview" })
-    async publicHiringInterview(@Args("input") input: HiringTokenInput): Promise<PublicInterviewType> {
+    async publicHiringInterview(
+        @Args("input") input: HiringTokenInput,
+        @CurrentCredentialPrincipal() credentialPrincipal: CredentialPrincipal,
+    ): Promise<PublicInterviewType> {
         const result = await this.queryBus.execute(
-            new PublicHiringInterviewQuery({ request: toPublicHiringInterviewRequest(input) }),
+            new PublicHiringInterviewQuery({
+                request: { ...toPublicHiringInterviewRequest(input), credentialPrincipal },
+            }),
         )
         return toPublicInterviewType(result)
     }

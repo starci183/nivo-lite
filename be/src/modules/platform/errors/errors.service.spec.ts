@@ -1,6 +1,6 @@
 import { NotFoundException } from "@nestjs/common"
 import { GraphQLError } from "graphql"
-import { mock } from "@starci/jest-preset"
+import { builder, mock } from "@starci/jest-preset"
 import { Test } from "@nestjs/testing"
 import type { Logger } from "@modules/platform/logging"
 import { LOGGER } from "@modules/platform/logging"
@@ -11,6 +11,7 @@ import { ERROR_REPORTER, ERRORS_OPTIONS } from "./errors.decorators"
 import { ErrorsError, ErrorsErrorCode } from "./errors/errors.error"
 import { ErrorsLogEvent } from "./errors.log-events"
 import type { ErrorKindTable } from "./errors.contracts"
+import type { ErrorsOptions } from "./errors.options"
 import type { ErrorReporter } from "./errors.port"
 import { ErrorsService } from "./errors.service"
 
@@ -23,12 +24,13 @@ const CALENDARS_ERROR_KINDS: ErrorKindTable = { CALENDARS_NOT_FOUND: "not-found"
 const build = async (kinds: ReadonlyArray<ErrorKindTable>) => {
     const catalog = mock<MessageCatalog>()
     const logger = mock<Logger>()
+    const options = builder<ErrorsOptions>({ kinds })()
     const reporter = mock<ErrorReporter>()
     reporter.report.mockResolvedValue(undefined)
     const moduleRef = await Test.createTestingModule({
         providers: [
             ErrorsService,
-            { provide: ERRORS_OPTIONS, useValue: { kinds } },
+            { provide: ERRORS_OPTIONS, useValue: options },
             { provide: MESSAGE_CATALOG, useValue: catalog },
             { provide: LOGGER, useValue: logger },
             { provide: ERROR_REPORTER, useValue: reporter },
@@ -37,144 +39,133 @@ const build = async (kinds: ReadonlyArray<ErrorKindTable>) => {
     return { errors: moduleRef.get(ErrorsService), catalog, logger, reporter }
 }
 
-describe("ErrorsService", () => {
-    describe("describe", () => {
-        it("keeps the code, kind and params of a declared domain error", async () => {
-            const { errors, logger } = await build([CALENDARS_ERROR_KINDS])
-            const declared = new CalendarsError({ code: "CALENDARS_NOT_FOUND", params: { id: "calendar-1" } })
+describe("ErrorsService / describe", () => {
+    it("keeps the code, kind and params of a declared domain error", async () => {
+        const { errors, logger } = await build([CALENDARS_ERROR_KINDS])
+        const declared = new CalendarsError({ code: "CALENDARS_NOT_FOUND", params: { id: "calendar-1" } })
 
-            expect(errors.describe(declared)).toEqual({
-                code: "CALENDARS_NOT_FOUND",
-                kind: "not-found",
-                status: 404,
-                params: { id: "calendar-1" },
-            })
-            expect(logger.error).not.toHaveBeenCalled()
+        expect(errors.describe(declared)).toEqual({
+            code: "CALENDARS_NOT_FOUND",
+            kind: "not-found",
+            status: 404,
+            params: { id: "calendar-1" },
         })
+        expect(logger.error).not.toHaveBeenCalled()
+    })
+    it("keeps the code of an error the errors capability itself declares", async () => {
+        const { errors } = await build([])
 
-        it("keeps the code of an error the errors capability itself declares", async () => {
-            const { errors } = await build([])
-
-            expect(errors.describe(new ErrorsError({ code: ErrorsErrorCode.Internal }))).toEqual({
-                code: "ERRORS_INTERNAL",
-                kind: "internal",
-                status: 500,
-                params: {},
-            })
-        })
-
-        it("masks a domain error no composed capability declared and logs it", async () => {
-            const { errors, logger } = await build([])
-            const undeclared = new CalendarsError({ code: "CALENDARS_NOT_FOUND" })
-
-            expect(errors.describe(undeclared)).toEqual({
-                code: "ERRORS_INTERNAL",
-                kind: "internal",
-                status: 500,
-                params: {},
-            })
-            expect(logger.error).toHaveBeenCalledWith(ErrorsLogEvent.Unhandled, undeclared, { scope: "api" })
-        })
-
-        it("masks any other failure and logs it", async () => {
-            const { errors, logger } = await build([])
-            const failure = new Error("boom")
-
-            expect(errors.describe(failure).code).toBe("ERRORS_INTERNAL")
-            expect(logger.error).toHaveBeenCalledWith(ErrorsLogEvent.Unhandled, failure, { scope: "api" })
-        })
-
-        it("records an unhandled failure with the reporter under the site the transport names", async () => {
-            const { errors, reporter } = await build([])
-            const failure = new Error("boom")
-
-            errors.describe(failure, { scope: "http", context: { route: "/v1/hooks" } })
-
-            expect(reporter.report).toHaveBeenCalledWith("http", failure, { route: "/v1/hooks" })
+        expect(errors.describe(new ErrorsError({ code: ErrorsErrorCode.Internal }))).toEqual({
+            code: "ERRORS_INTERNAL",
+            kind: "internal",
+            status: 500,
+            params: {},
         })
     })
+    it("masks a domain error no composed capability declared and logs it", async () => {
+        const { errors, logger } = await build([])
+        const undeclared = new CalendarsError({ code: "CALENDARS_NOT_FOUND" })
 
-    describe("describe of the framework not-found", () => {
-        it("answers the not-found of an unmatched route as not-found, without logging it", async () => {
-            const { errors, logger } = await build([])
+        expect(errors.describe(undeclared)).toEqual({
+            code: "ERRORS_INTERNAL",
+            kind: "internal",
+            status: 500,
+            params: {},
+        })
+        expect(logger.error).toHaveBeenCalledWith(ErrorsLogEvent.Unhandled, undeclared, { scope: "api" })
+    })
+    it("masks any other failure and logs it", async () => {
+        const { errors, logger } = await build([])
+        const failure = new Error("boom")
 
-            expect(errors.describe(new NotFoundException())).toEqual({
-                code: ErrorsErrorCode.RouteNotFound,
-                kind: "not-found",
-                status: 404,
-                params: {},
-            })
-            expect(logger.error).not.toHaveBeenCalled()
+        expect(errors.describe(failure).code).toBe("ERRORS_INTERNAL")
+        expect(logger.error).toHaveBeenCalledWith(ErrorsLogEvent.Unhandled, failure, { scope: "api" })
+    })
+    it("records an unhandled failure with the reporter under the site the transport names", async () => {
+        const { errors, reporter } = await build([])
+        const failure = new Error("boom")
+
+        errors.describe(failure, { scope: "http", context: { route: "/v1/hooks" } })
+
+        expect(reporter.report).toHaveBeenCalledWith("http", failure, { route: "/v1/hooks" })
+    })
+})
+
+describe("ErrorsService / describe of the framework not-found", () => {
+    it("answers the not-found of an unmatched route as not-found, without logging it", async () => {
+        const { errors, logger } = await build([])
+
+        expect(errors.describe(new NotFoundException())).toEqual({
+            code: ErrorsErrorCode.RouteNotFound,
+            kind: "not-found",
+            status: 404,
+            params: {},
+        })
+        expect(logger.error).not.toHaveBeenCalled()
+    })
+})
+
+describe("ErrorsService / describeInvalidOperation", () => {
+    it("describes a malformed operation as invalid", async () => {
+        const { errors } = await build([])
+
+        expect(errors.describeInvalidOperation()).toEqual({
+            code: "ERRORS_OPERATION_INVALID",
+            kind: "invalid",
+            status: 400,
+            params: {},
         })
     })
+})
 
-    describe("describeInvalidOperation", () => {
-        it("describes a malformed operation as invalid", async () => {
-            const { errors } = await build([])
+describe("ErrorsService / formatError", () => {
+    it("answers the code, kind and params of the original error of a GraphQL failure", async () => {
+        const { errors } = await build([CALENDARS_ERROR_KINDS])
+        const original = new CalendarsError({ code: "CALENDARS_NOT_FOUND", params: { id: "calendar-1" } })
+        const graphql = new GraphQLError(original.code, { originalError: original, path: ["calendar"] })
 
-            expect(errors.describeInvalidOperation()).toEqual({
-                code: "ERRORS_OPERATION_INVALID",
-                kind: "invalid",
-                status: 400,
-                params: {},
-            })
+        expect(errors.formatError(graphql.toJSON(), graphql)).toEqual({
+            message: "CALENDARS_NOT_FOUND",
+            locations: undefined,
+            path: ["calendar"],
+            extensions: { code: "CALENDARS_NOT_FOUND", kind: "not-found", params: { id: "calendar-1" } },
         })
     })
+    it("answers an invalid operation for a GraphQL failure without an original error", async () => {
+        const { errors } = await build([])
+        const graphql = new GraphQLError(ErrorsErrorCode.OperationInvalid)
 
-    describe("formatError", () => {
-        it("answers the code, kind and params of the original error of a GraphQL failure", async () => {
-            const { errors } = await build([CALENDARS_ERROR_KINDS])
-            const original = new CalendarsError({ code: "CALENDARS_NOT_FOUND", params: { id: "calendar-1" } })
-            const graphql = new GraphQLError(original.code, { originalError: original, path: ["calendar"] })
-
-            expect(errors.formatError(graphql.toJSON(), graphql)).toEqual({
-                message: "CALENDARS_NOT_FOUND",
-                locations: undefined,
-                path: ["calendar"],
-                extensions: { code: "CALENDARS_NOT_FOUND", kind: "not-found", params: { id: "calendar-1" } },
-            })
-        })
-
-        it("answers an invalid operation for a GraphQL failure without an original error", async () => {
-            const { errors } = await build([])
-            const graphql = new GraphQLError(ErrorsErrorCode.OperationInvalid)
-
-            expect(errors.formatError(graphql.toJSON(), graphql).extensions).toEqual({
-                code: "ERRORS_OPERATION_INVALID",
-                kind: "invalid",
-                params: {},
-            })
-        })
-
-        it("masks a failure that is not a GraphQL error", async () => {
-            const { errors } = await build([])
-            const graphql = new GraphQLError(ErrorsErrorCode.Internal)
-
-            expect(errors.formatError(graphql.toJSON(), new Error("boom")).extensions).toEqual({
-                code: "ERRORS_INTERNAL",
-                kind: "internal",
-                params: {},
-            })
+        expect(errors.formatError(graphql.toJSON(), graphql).extensions).toEqual({
+            code: "ERRORS_OPERATION_INVALID",
+            kind: "invalid",
+            params: {},
         })
     })
+    it("masks a failure that is not a GraphQL error", async () => {
+        const { errors } = await build([])
+        const graphql = new GraphQLError(ErrorsErrorCode.Internal)
 
-    describe("text", () => {
-        it("returns the catalog text of the code in the locale", async () => {
-            const { errors, catalog } = await build([])
-            catalog.get.mockReturnValue("Calendar calendar-1 was not found")
-
-            expect(errors.text("CALENDARS_NOT_FOUND", { id: "calendar-1" }, "en")).toBe(
-                "Calendar calendar-1 was not found",
-            )
-            expect(catalog.get).toHaveBeenCalledWith("errors.CALENDARS_NOT_FOUND", { id: "calendar-1" }, "en")
+        expect(errors.formatError(graphql.toJSON(), new Error("boom")).extensions).toEqual({
+            code: "ERRORS_INTERNAL",
+            kind: "internal",
+            params: {},
         })
+    })
+})
 
-        it("returns the text of the internal error when the code has no catalog entry", async () => {
-            const { errors, catalog } = await build([])
-            catalog.get.mockImplementation((key) => (key === "errors.ERRORS_INTERNAL" ? "Something broke" : key))
+describe("ErrorsService / text", () => {
+    it("returns the catalog text of the code in the locale", async () => {
+        const { errors, catalog } = await build([])
+        catalog.get.mockReturnValue("Calendar calendar-1 was not found")
 
-            expect(errors.text("CALENDARS_NOT_FOUND", {}, "vi")).toBe("Something broke")
-            expect(catalog.get).toHaveBeenLastCalledWith("errors.ERRORS_INTERNAL", {}, "vi")
-        })
+        expect(errors.text("CALENDARS_NOT_FOUND", { id: "calendar-1" }, "en")).toBe("Calendar calendar-1 was not found")
+        expect(catalog.get).toHaveBeenCalledWith("errors.CALENDARS_NOT_FOUND", { id: "calendar-1" }, "en")
+    })
+    it("returns the text of the internal error when the code has no catalog entry", async () => {
+        const { errors, catalog } = await build([])
+        catalog.get.mockImplementation((key) => (key === "errors.ERRORS_INTERNAL" ? "Something broke" : key))
+
+        expect(errors.text("CALENDARS_NOT_FOUND", {}, "vi")).toBe("Something broke")
+        expect(catalog.get).toHaveBeenLastCalledWith("errors.ERRORS_INTERNAL", {}, "vi")
     })
 })

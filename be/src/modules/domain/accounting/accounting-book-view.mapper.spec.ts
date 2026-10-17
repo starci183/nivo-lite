@@ -1,8 +1,111 @@
+import { Test } from "@nestjs/testing"
 import { builder } from "@starci/jest-preset"
 import type { InvoiceAccountingRow } from "@modules/domain/invoices"
 import type { TransactionAccountingRow } from "@modules/domain/transactions"
 import type { AccountingBook, BookOrder } from "./accounting-book.contracts"
 import { toAccountingBookView } from "./accounting-book-view.mapper"
+
+const SUBJECT = Symbol("accounting-book-view.mapper")
+
+const buildSubject = async () => {
+    const moduleRef = await Test.createTestingModule({
+        providers: [{ provide: SUBJECT, useValue: { toAccountingBookView } }],
+    }).compile()
+    return moduleRef.get<typeof import("./accounting-book-view.mapper")>(SUBJECT)
+}
+
+const expectedBook = {
+    invoices: [
+        {
+            id: "invoice-1",
+            workspaceId: "workspace-1",
+            orderId: "order-1",
+            leadId: "lead-1",
+            invoiceNo: "INV-1",
+            amountVnd: 120000,
+            status: "paid",
+            origin: "live",
+            issuedBy: "Lan",
+            paidAt: "2026-10-14T11:00:00Z",
+            issuedAt: "2026-10-12T10:00:00Z",
+            dueAt: "2026-10-15T10:00:00Z",
+            createdAt: "2026-10-12T09:00:00Z",
+            order: { orderNo: "SO-1", items: "Tea", amountVnd: 120000, status: "paid" },
+            lead: { contactName: "Mai", company: "Mai Bakery" },
+        },
+    ],
+    transactions: [
+        {
+            id: "transaction-1",
+            workspaceId: "workspace-1",
+            inboundEventId: "inbound-1",
+            amountVnd: 120000,
+            reference: "INV-1 payment",
+            payer: "Mai",
+            invoiceId: "invoice-1",
+            status: "matched",
+            origin: "live",
+            channel: "bank",
+            occurredAt: "2026-10-14T10:00:00Z",
+            createdAt: "2026-10-14T10:01:00Z",
+            inbound: { channel: "bank", eventId: "bank-1", body: "Payment received", senderName: "Mai" },
+        },
+    ],
+    orders: [
+        {
+            id: "order-1",
+            workspaceId: "workspace-1",
+            leadId: "lead-1",
+            inboundEventId: "inbound-2",
+            orderNo: "SO-1",
+            items: "Tea",
+            amountVnd: 120000,
+            status: "paid",
+            origin: "live",
+            confirmedBy: "Lan",
+            confirmedAt: "2026-10-12T08:00:00Z",
+            createdAt: "2026-10-12T07:00:00Z",
+            shippedAt: "2026-10-13T08:00:00Z",
+            carrier: "Carrier",
+            trackingCode: "TRACK-1",
+            lead: { contactName: "Mai", company: "Mai Bakery" },
+        },
+    ],
+    works: [
+        {
+            id: "work-1",
+            action: "accounting.reconcile",
+            status: "done",
+            subjectType: "transaction",
+            subjectId: "transaction-1",
+            createdAt: "2026-10-14T10:02:00Z",
+        },
+    ],
+    decisions: [
+        {
+            id: "decision-1",
+            workItemId: "work-1",
+            action: "accounting.reconcile",
+            decidedBy: "Lan",
+            deciderKind: "staff",
+            outcome: "approved",
+            note: "Verified bank transfer",
+            createdAt: "2026-10-14T10:03:00Z",
+        },
+    ],
+    adjustments: [
+        {
+            id: "adjustment-1",
+            targetType: "invoice",
+            targetId: "invoice-1",
+            note: "Amount corrected",
+            correctedAmount: 120000,
+            createdBy: "Lan",
+            createdAt: "2026-10-14T10:04:00Z",
+        },
+    ],
+    adjustmentsReady: true,
+}
 
 const invoiceOf = builder<InvoiceAccountingRow>({
     id: "invoice-1",
@@ -60,7 +163,9 @@ const orderOf = builder<BookOrder>({
 })
 
 describe("toAccountingBookView", () => {
-    it("maps every owned record and its available evidence to the public book", () => {
+    it("maps every owned record and its available evidence to the public book", async () => {
+        const subject = await buildSubject()
+
         const book: AccountingBook = {
             invoices: [invoiceOf()],
             transactions: [transactionOf()],
@@ -101,102 +206,13 @@ describe("toAccountingBookView", () => {
             adjustmentsReady: true,
         }
 
-        expect(toAccountingBookView(book)).toEqual({
-            invoices: [
-                {
-                    id: "invoice-1",
-                    workspaceId: "workspace-1",
-                    orderId: "order-1",
-                    leadId: "lead-1",
-                    invoiceNo: "INV-1",
-                    amountVnd: 120000,
-                    status: "paid",
-                    origin: "live",
-                    issuedBy: "Lan",
-                    paidAt: "2026-10-14T11:00:00Z",
-                    issuedAt: "2026-10-12T10:00:00Z",
-                    dueAt: "2026-10-15T10:00:00Z",
-                    createdAt: "2026-10-12T09:00:00Z",
-                    order: { orderNo: "SO-1", items: "Tea", amountVnd: 120000, status: "paid" },
-                    lead: { contactName: "Mai", company: "Mai Bakery" },
-                },
-            ],
-            transactions: [
-                {
-                    id: "transaction-1",
-                    workspaceId: "workspace-1",
-                    inboundEventId: "inbound-1",
-                    amountVnd: 120000,
-                    reference: "INV-1 payment",
-                    payer: "Mai",
-                    invoiceId: "invoice-1",
-                    status: "matched",
-                    origin: "live",
-                    channel: "bank",
-                    occurredAt: "2026-10-14T10:00:00Z",
-                    createdAt: "2026-10-14T10:01:00Z",
-                    inbound: { channel: "bank", eventId: "bank-1", body: "Payment received", senderName: "Mai" },
-                },
-            ],
-            orders: [
-                {
-                    id: "order-1",
-                    workspaceId: "workspace-1",
-                    leadId: "lead-1",
-                    inboundEventId: "inbound-2",
-                    orderNo: "SO-1",
-                    items: "Tea",
-                    amountVnd: 120000,
-                    status: "paid",
-                    origin: "live",
-                    confirmedBy: "Lan",
-                    confirmedAt: "2026-10-12T08:00:00Z",
-                    createdAt: "2026-10-12T07:00:00Z",
-                    shippedAt: "2026-10-13T08:00:00Z",
-                    carrier: "Carrier",
-                    trackingCode: "TRACK-1",
-                    lead: { contactName: "Mai", company: "Mai Bakery" },
-                },
-            ],
-            works: [
-                {
-                    id: "work-1",
-                    action: "accounting.reconcile",
-                    status: "done",
-                    subjectType: "transaction",
-                    subjectId: "transaction-1",
-                    createdAt: "2026-10-14T10:02:00Z",
-                },
-            ],
-            decisions: [
-                {
-                    id: "decision-1",
-                    workItemId: "work-1",
-                    action: "accounting.reconcile",
-                    decidedBy: "Lan",
-                    deciderKind: "staff",
-                    outcome: "approved",
-                    note: "Verified bank transfer",
-                    createdAt: "2026-10-14T10:03:00Z",
-                },
-            ],
-            adjustments: [
-                {
-                    id: "adjustment-1",
-                    targetType: "invoice",
-                    targetId: "invoice-1",
-                    note: "Amount corrected",
-                    correctedAmount: 120000,
-                    createdBy: "Lan",
-                    createdAt: "2026-10-14T10:04:00Z",
-                },
-            ],
-            adjustmentsReady: true,
-        })
+        expect(subject.toAccountingBookView(book)).toEqual(expectedBook)
     })
 
-    it("retains absent evidence relations and correction persistence readiness", () => {
-        const view = toAccountingBookView({
+    it("retains absent evidence relations and correction persistence readiness", async () => {
+        const subject = await buildSubject()
+
+        const view = subject.toAccountingBookView({
             invoices: [invoiceOf({ order: null, lead: null })],
             transactions: [transactionOf({ inbound: null })],
             orders: [orderOf({ lead: null })],

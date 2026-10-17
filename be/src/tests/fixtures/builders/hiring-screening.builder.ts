@@ -1,0 +1,47 @@
+/** Complete data for the colocated screening fixture factory. */
+export const CANDIDATE = {
+    id: "candidate-1",
+    workspaceId: "ws-1",
+    jobId: "job-1",
+    name: "Alex",
+    phone: "0901234567",
+    email: "alex@example.com",
+    source: "page",
+    conversationId: null,
+    cvPath: null,
+    cvName: null,
+    cvMime: null,
+    answers: [],
+    availability: "",
+    stage: "applied",
+    staffId: null,
+} as const
+
+/** Complete data for the colocated screening fixture factory. */
+export const JOB = {
+    id: "job-1",
+    workspaceId: "ws-1",
+    slug: "barista",
+    title: "Barista",
+    position: "Barista",
+    employmentType: "full_time",
+    schedule: "Morning",
+    payMinVnd: null,
+    payMaxVnd: null,
+    payUnit: "month",
+    location: "Cafe",
+    headcount: 1,
+    description: "Prepare drinks",
+    requirements: {
+        skills: [],
+        experienceYears: null,
+        experienceNote: "",
+        availability: [],
+        mustHave: [],
+        niceToHave: [],
+    },
+    questions: [],
+    status: "open",
+    channels: ["page"],
+    closesAt: null,
+} as const

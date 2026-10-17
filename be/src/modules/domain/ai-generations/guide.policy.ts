@@ -1,13 +1,13 @@
-import type { GenMessage, GuideAsk, GuideWords } from "./ai-generations.contracts"
+import type { GenMessage, GuideAsk, GuidePageId, GuideWords } from "./ai-generations.contracts"
 
 /** One place of the console the guide may send someone to; its words are the `guide.page.<id>.*` catalog keys. */
 interface GuidePage {
-    readonly id: string
+    readonly id: GuidePageId
     readonly path: string
     readonly managerOnly: boolean
 }
 
-const page = (id: string, path: string, managerOnly = false): GuidePage => ({ id, path, managerOnly })
+const page = (id: GuidePageId, path: string, managerOnly = false): GuidePage => ({ id, path, managerOnly })
 
 /** The map of the console (the same ids as the browser's site map, which turns the model's page ids into links). */
 const GUIDE_PAGES: ReadonlyArray<GuidePage> = [
@@ -71,7 +71,7 @@ export const guideAskerKey = (workspaceId: string, userId: string): string => `g
  * they are, the last turns and the question as the user line. The words come from the catalog in the member's language.
  */
 export const guidePrompt = (ask: GuideAsk, isManager: boolean, words: GuideWords): ReadonlyArray<GenMessage> => {
-    const title = (id: string): string => words.text(`guide.page.${id}.title`)
+    const title = (id: GuidePageId): string => words.text(`guide.page.${id}.title`)
     const lines = pagesFor(isManager)
         .map(
             (entry) =>

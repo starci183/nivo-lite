@@ -114,7 +114,9 @@ describe("N8nEmailService", () => {
             expect(mailer.sendOwnerEmail).not.toHaveBeenCalled()
         })
     })
+})
 
+describe("N8nEmailService", () => {
     describe("sendEmail to a customer", () => {
         it("asks the gate for the email, filed under the invoice, with the dedupe the workflow gave", async () => {
             const { email, mailer } = await build()

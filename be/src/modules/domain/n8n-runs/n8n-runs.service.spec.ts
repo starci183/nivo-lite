@@ -136,7 +136,9 @@ describe("N8nRunsService", () => {
             await expect(runs.startRun(START)).rejects.toMatchObject({ code: N8nRunsErrorCode.ApiBaseMissing })
         })
     })
+})
 
+describe("N8nRunsService", () => {
     describe("deliver", () => {
         it("posts the run to n8n with the instant of the delivery", async () => {
             const { runs, n8n } = await build(mockEntityManager())
@@ -185,7 +187,9 @@ describe("N8nRunsService", () => {
             expect(em.query).toHaveBeenCalledWith(COMPLETE_N8N_RUN, [RUN_ID, "ws-1", "failed", "Bi tu choi", null])
         })
     })
+})
 
+describe("N8nRunsService", () => {
     describe("verifyRun", () => {
         const stored = (overrides: Record<string, unknown> = {}) => ({
             id: RUN_ID,
@@ -255,6 +259,20 @@ describe("N8nRunsService", () => {
                 }),
             ).resolves.toBeNull()
         })
+    })
+})
+
+describe("N8nRunsService", () => {
+    describe("verifyRun", () => {
+        const stored = (overrides: Record<string, unknown> = {}) => ({
+            id: RUN_ID,
+            workspace_id: "ws-1",
+            template_key: "email-daily-report",
+            token_hash: hashToken(TOKEN),
+            expires_at: "2026-10-12T10:20:00.000Z",
+            status: "running",
+            ...overrides,
+        })
 
         it.each([
             ["an unknown run", []],
@@ -303,7 +321,9 @@ describe("N8nRunsService", () => {
             await expect(runs.completeRun(run, {})).rejects.toMatchObject({ code: N8nRunsErrorCode.NotClosed })
         })
     })
+})
 
+describe("N8nRunsService", () => {
     describe("requireWorkflow and requireRun", () => {
         const run: N8nRunContext = { runId: RUN_ID, workspaceId: "ws-1", templateKey: "email-daily-report", config: {} }
 

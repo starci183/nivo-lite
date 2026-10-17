@@ -14,7 +14,7 @@ export class LeadActionsModule extends ConfigurableModuleClass {
         const base = super.register(options)
         return {
             ...base,
-            imports: [...(base.imports ?? []), LeadActionsQueueModule],
+            imports: [...(base.imports ?? []), LeadActionsQueueModule.register({})],
             providers: [...(base.providers ?? []), LeadActionsService, LeadActionAiService, LeadActionFlowService],
             exports: [LeadActionsService],
         }

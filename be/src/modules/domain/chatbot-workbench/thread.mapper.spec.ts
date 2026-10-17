@@ -1,6 +1,18 @@
+import type * as SubjectModule from "./thread.mapper"
+import { Test } from "@nestjs/testing"
 import { builder } from "@starci/jest-preset"
 import { buildChatbotThread } from "./thread.mapper"
 import type { ConversationRow, LeadRow, MessageRow, WaitingRow } from "./persistence/chatbot-workbench.rows"
+
+const SUBJECT = Symbol("thread.mapper")
+type Subject = Pick<typeof SubjectModule, "buildChatbotThread">
+
+const buildSubject = async () => {
+    const moduleRef = await Test.createTestingModule({
+        providers: [{ provide: SUBJECT, useValue: { buildChatbotThread } }],
+    }).compile()
+    return moduleRef.get<Subject>(SUBJECT)
+}
 
 const conversationOf = builder<ConversationRow>({
     id: "c-1",
@@ -43,9 +55,87 @@ const LEAD: LeadRow = {
     email: "hoa@example.test",
 }
 
+const EXPECTED_THREAD = {
+    conversation: {
+        id: "c-1",
+        channel: "zalo",
+        name: "Hoa",
+        leadId: "l-1",
+        lastText: "Price?",
+        lastRole: "user",
+        lastAt: "2026-10-13T01:01:00.000Z",
+        messageCount: 3,
+        handledBy: null,
+        waiting: true,
+        unanswered: false,
+    },
+    messages: [
+        {
+            id: "m-1",
+            role: "user",
+            authorKind: "ai",
+            authorName: null,
+            body: "Price?",
+            createdAt: "2026-10-13T01:01:00.000Z",
+            delivery: null,
+            deliveryError: null,
+        },
+        {
+            id: "m-2",
+            role: "agent",
+            authorKind: "human",
+            authorName: "Lan",
+            body: "200k",
+            createdAt: "2026-10-13T01:01:00.000Z",
+            delivery: "sent",
+            deliveryError: null,
+        },
+        {
+            id: "m-3",
+            role: "system",
+            authorKind: "ai",
+            authorName: null,
+            body: "Retry failed",
+            createdAt: "2026-10-13T01:01:00.000Z",
+            delivery: "failed",
+            deliveryError: "zalo_window_expired",
+        },
+        {
+            id: "m-4",
+            role: "user",
+            authorKind: "ai",
+            authorName: null,
+            body: "Price?",
+            createdAt: "2026-10-13T01:01:00.000Z",
+            delivery: null,
+            deliveryError: null,
+        },
+    ],
+    lead: {
+        id: "l-1",
+        name: "Hoa",
+        company: "Hoa Shop",
+        stage: "new",
+        need: "T-shirts",
+        phone: "0901000000",
+        email: "hoa@example.test",
+    },
+    escalation: {
+        workItemId: "w-1",
+        question: "Can you confirm?",
+        draft: "It costs 200k",
+        staffName: "Minh",
+        since: "2026-10-13T01:02:00.000Z",
+    },
+    externalId: "zalo-9",
+    handledAt: "2026-10-13T01:03:00.000Z",
+}
+
 describe("chatbot thread mapper", () => {
-    it("maps the conversation, complete lead, delivery states and first matching escalation", () => {
-        const result = buildChatbotThread({
+    it("maps the conversation, complete lead, delivery states and first matching escalation", async () => {
+        const subject = await buildSubject()
+
+        const result = subject.buildChatbotThread({
             conversation: conversationOf({ handled_at: new Date("2026-10-13T01:03:00.000Z") }),
             messages: [
                 messageOf(),
@@ -83,86 +173,16 @@ describe("chatbot thread mapper", () => {
             staffName: "Minh",
         })
 
-        expect(result).toEqual({
-            conversation: {
-                id: "c-1",
-                channel: "zalo",
-                name: "Hoa",
-                leadId: "l-1",
-                lastText: "Price?",
-                lastRole: "user",
-                lastAt: "2026-10-13T01:01:00.000Z",
-                messageCount: 3,
-                handledBy: null,
-                waiting: true,
-                unanswered: false,
-            },
-            messages: [
-                {
-                    id: "m-1",
-                    role: "user",
-                    authorKind: "ai",
-                    authorName: null,
-                    body: "Price?",
-                    createdAt: "2026-10-13T01:01:00.000Z",
-                    delivery: null,
-                    deliveryError: null,
-                },
-                {
-                    id: "m-2",
-                    role: "agent",
-                    authorKind: "human",
-                    authorName: "Lan",
-                    body: "200k",
-                    createdAt: "2026-10-13T01:01:00.000Z",
-                    delivery: "sent",
-                    deliveryError: null,
-                },
-                {
-                    id: "m-3",
-                    role: "system",
-                    authorKind: "ai",
-                    authorName: null,
-                    body: "Retry failed",
-                    createdAt: "2026-10-13T01:01:00.000Z",
-                    delivery: "failed",
-                    deliveryError: "zalo_window_expired",
-                },
-                {
-                    id: "m-4",
-                    role: "user",
-                    authorKind: "ai",
-                    authorName: null,
-                    body: "Price?",
-                    createdAt: "2026-10-13T01:01:00.000Z",
-                    delivery: null,
-                    deliveryError: null,
-                },
-            ],
-            lead: {
-                id: "l-1",
-                name: "Hoa",
-                company: "Hoa Shop",
-                stage: "new",
-                need: "T-shirts",
-                phone: "0901000000",
-                email: "hoa@example.test",
-            },
-            escalation: {
-                workItemId: "w-1",
-                question: "Can you confirm?",
-                draft: "It costs 200k",
-                staffName: "Minh",
-                since: "2026-10-13T01:02:00.000Z",
-            },
-            externalId: "zalo-9",
-            handledAt: "2026-10-13T01:03:00.000Z",
-        })
+        expect(result).toEqual(EXPECTED_THREAD)
     })
+})
 
-    it("returns absent optional records and a conversation creation timestamp for an empty thread", () => {
+describe("chatbot thread mapper", () => {
+    it("returns absent optional records and a conversation creation timestamp for an empty thread", async () => {
+        const subject = await buildSubject()
+
         expect(
-            buildChatbotThread({
+            subject.buildChatbotThread({
                 conversation: conversationOf({ lead_id: null, external_id: null }),
                 messages: [],
                 waiting: [],
@@ -201,8 +221,10 @@ describe("chatbot thread mapper", () => {
         { proposal: { fields: { question: 42 }, summary: "Summary" }, question: "Summary", draft: "" },
         { proposal: { fields: { question: "" }, summary: "Summary", draft: "Draft" }, question: "", draft: "Draft" },
         { proposal: { fields: { question: false }, summary: false }, question: "", draft: "" },
-    ])("normalizes escalation question and draft from $proposal", ({ proposal, question, draft }) => {
-        const result = buildChatbotThread({
+    ])("normalizes escalation question and draft from $proposal", async ({ proposal, question, draft }) => {
+        const subject = await buildSubject()
+
+        const result = subject.buildChatbotThread({
             conversation: conversationOf(),
             messages: [],
             waiting: [waitingOf({ proposal })],

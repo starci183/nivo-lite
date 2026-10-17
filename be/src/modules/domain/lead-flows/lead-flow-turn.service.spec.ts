@@ -18,6 +18,7 @@ import type { TurnRequest } from "./lead-flow-turn.service"
 import { LeadFlowsLogEvent } from "./lead-flows.log-events"
 
 const NOW = "2026-10-12T10:00:00.000Z"
+
 const ctx: WorkContext = { workspaceId: "ws-1", actor: "Lan", locale: "en" }
 
 const factOf = builder<FactRecord>({
@@ -72,6 +73,7 @@ const passageOf = builder<Passage>({
     visibility: "public",
     topic: "tea | price",
 })
+
 const KNOWLEDGE_HEADER =
     "BUSINESS KNOWLEDGE (use only what is here; never invent a price, policy, date or promise that is not written):"
 
@@ -119,7 +121,6 @@ describe("LeadFlowTurnService", () => {
         expect(facts.forView).toHaveBeenCalledWith("ws-1", "internal", "lead_gen", null, 300)
         expect(logger.error).toHaveBeenCalledWith(LeadFlowsLogEvent.SetupUnreadable, failure, { workspaceId: "ws-1" })
     })
-
     it("settles a keyword escalation without calling the model", async () => {
         const { turns, ai } = await build()
 
@@ -130,7 +131,6 @@ describe("LeadFlowTurnService", () => {
 
         expect(ai.readLeadTurn).not.toHaveBeenCalled()
     })
-
     it("reads a turn with one model call in the owner's voice", async () => {
         const { turns, ai, authority } = await build()
         authority.load.mockResolvedValue({ policies: "", reply_style: "short", brand_voice: "Warm", limits_note: "" })
@@ -157,7 +157,9 @@ describe("LeadFlowTurnService", () => {
             },
         )
     })
+})
 
+describe("LeadFlowTurnService", () => {
     it("answers no reading when the model fails", async () => {
         const { turns, ai, authority, logger } = await build()
         authority.load.mockResolvedValue(null)
@@ -171,7 +173,9 @@ describe("LeadFlowTurnService", () => {
             turn: "t:1",
         })
     })
+})
 
+describe("LeadFlowTurnService", () => {
     it("remembers a question the knowledge could not answer and survives a failed write", async () => {
         const { turns, gaps, logger } = await build()
         const failure = new Error("gaps down")
@@ -194,7 +198,6 @@ describe("LeadFlowTurnService", () => {
         })
         expect(logger.error).toHaveBeenCalledWith(LeadFlowsLogEvent.GapNotNoted, failure, { workspaceId: "ws-1" })
     })
-
     it("reads the first criteria and ideal customer setup facts alongside the owner's questions", async () => {
         const { turns, facts } = await build()
         const criteriaText = "Hot: phone and need. Warm: contact."
@@ -217,7 +220,9 @@ describe("LeadFlowTurnService", () => {
         })
         expect(facts.forView).toHaveBeenCalledWith("ws-1", "internal", "lead_gen", null, 300)
     })
+})
 
+describe("LeadFlowTurnService", () => {
     it("embeds the first turn and passes the persona, facts and only public documents to the model", async () => {
         const { turns, facts, knowledge, authority, ai } = await build()
         const request = requestOf({
@@ -266,12 +271,20 @@ describe("LeadFlowTurnService", () => {
                 criteriaText: "Hot: needs tea",
                 first: true,
                 voice: "short",
-                brief: `${KNOWLEDGE_HEADER}\nConfirmed facts:\n- Shop - Price: 100 per box\nFrom the business documents:\n- Tea catalogue:  A box costs 100. ${"x".repeat(381)}\u2026`,
+                brief: [
+                    KNOWLEDGE_HEADER,
+                    "\nConfirmed facts:\n- Shop - Price: 100 per box\nFrom the business documents:\n- Tea ",
+                    "catalogue:  A box costs 100. ",
+                    "x".repeat(381),
+                    "\u2026",
+                ].join(""),
             },
         )
         expect(ai.readLeadTurn).toHaveBeenCalledTimes(1)
     })
+})
 
+describe("LeadFlowTurnService", () => {
     it("uses word search for later turns and keeps facts when there are no public documents", async () => {
         const { turns, facts, knowledge, authority, ai } = await build()
         authority.load.mockResolvedValue({ policies: "", reply_style: "", brand_voice: "Warm", limits_note: "" })
@@ -305,7 +318,6 @@ describe("LeadFlowTurnService", () => {
             },
         )
     })
-
     it("keeps document knowledge when fact search fails and logs the failed retrieval", async () => {
         const { turns, facts, knowledge, authority, ai, logger } = await build()
         const failure = new Error("facts unavailable")
@@ -337,7 +349,9 @@ describe("LeadFlowTurnService", () => {
             workspaceId: "ws-1",
         })
     })
+})
 
+describe("LeadFlowTurnService", () => {
     it("caps the public brief at 1800 characters and survives a document search failure", async () => {
         const { turns, facts, knowledge, authority, ai, logger } = await build()
         const failure = new Error("documents unavailable")

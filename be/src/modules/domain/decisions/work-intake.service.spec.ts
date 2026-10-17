@@ -151,7 +151,9 @@ describe("WorkIntakeService", () => {
 
         expect(seen.map((row) => row.id)).toEqual(["item-1"])
     })
+})
 
+describe("WorkIntakeService", () => {
     it("answers the existing item and logs the duplicate when the key was used", async () => {
         const { service, evidence, findByDedupe } = await build({ inserted: null, existing: itemOf({ id: "old" }) })
         const seen: Array<WorkItem> = []

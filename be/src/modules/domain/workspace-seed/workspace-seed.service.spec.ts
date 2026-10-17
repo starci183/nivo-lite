@@ -1,5 +1,5 @@
 import { Test } from "@nestjs/testing"
-import { mock } from "@starci/jest-preset"
+import { builder, mock } from "@starci/jest-preset"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { WorkspacesService } from "@modules/domain/workspaces"
 import type { WorkspaceMembership } from "@modules/domain/workspaces"
@@ -12,7 +12,7 @@ import {
 } from "./messages/workspace-seed.messages"
 import type { SeedRequest } from "./workspace-seed.contracts"
 import { SEED_AUTH, WORKSPACE_SEED_OPTIONS } from "./workspace-seed.decorators"
-import type { SeedAuth, SeedAuthUser, SeedNewUser } from "./workspace-seed.options"
+import type { SeedAuth, SeedAuthUser, SeedNewUser, WorkspaceSeedOptions } from "./workspace-seed.options"
 import { WorkspaceSeedService } from "./workspace-seed.service"
 
 const REQUEST: SeedRequest = {
@@ -53,10 +53,11 @@ const build = async (change: Partial<Record<keyof SeedAuth, jest.Mock>> = {}) =>
     workspaces.memberships.mockResolvedValue([])
     workspaces.createFree.mockResolvedValue({ id: "ws-new" })
     const members = mock<WorkspaceMembersService>()
+    const options = builder<WorkspaceSeedOptions>({ auth: "x", print })()
     const moduleRef = await Test.createTestingModule({
         providers: [
             WorkspaceSeedService,
-            { provide: WORKSPACE_SEED_OPTIONS, useValue: { auth: "x", print } },
+            { provide: WORKSPACE_SEED_OPTIONS, useValue: options },
             { provide: SEED_AUTH, useValue: auth },
             { provide: WorkspacesService, useValue: workspaces },
             { provide: WorkspaceMembersService, useValue: members },
@@ -124,7 +125,11 @@ describe("WorkspaceSeedService", () => {
             expect(report.lines).toContain(`user exists: ${SEED_OWNER.email} (password set)`)
             expect(report.lines).toContain("workspace kept ws-own")
         })
+    })
+})
 
+describe("WorkspaceSeedService", () => {
+    describe("seed", () => {
         it("finds an account on a later page", async () => {
             const { seed, auth } = await build({
                 listUsers: jest
@@ -192,7 +197,9 @@ describe("WorkspaceSeedService", () => {
             await expect(seed.seed(REQUEST)).rejects.toMatchObject({ code: WorkspaceSeedErrorCode.RowMissing })
         })
     })
+})
 
+describe("WorkspaceSeedService", () => {
     describe("seedOperator", () => {
         it("seeds with fresh passwords and prints the credentials once, guidance and report after seeding", async () => {
             const { seed, auth, members, print } = await build()
@@ -223,13 +230,18 @@ describe("WorkspaceSeedService", () => {
                 ...report.lines,
             ])
             expect(SEED_CREDENTIALS_GUIDANCE).toBe(
-                "Shown once and not stored. Seal them with `starci app secret set dev test-accounts` (see .starcistacks) before closing this terminal; the next run sets new passwords.",
+                "Shown once and not stored. Seal them with `starci app secret set dev test-accounts` " +
+                    "(see .starcistacks) before closing this terminal; the next run sets new passwords.",
             )
             expect(print.mock.invocationCallOrder[0]).toBeGreaterThan(members.join.mock.invocationCallOrder[0] ?? 0)
             expect(report.workspaceId).toBe("ws-new")
             expect(report.lines.join("\n")).not.toMatch(/READY_|PASSWORD/)
         })
+    })
+})
 
+describe("WorkspaceSeedService", () => {
+    describe("seedOperator", () => {
         it("sets a new password for both existing accounts on every run", async () => {
             const { seed, auth, print } = await build({
                 listUsers: jest.fn().mockResolvedValue({

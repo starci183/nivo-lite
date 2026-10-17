@@ -117,7 +117,11 @@ describe("KnowledgeIndexingService", () => {
             expect(sources.advance).toHaveBeenCalledWith(WS, "s1", 38.75)
             expect(sources.advance).toHaveBeenCalledWith(WS, "s1", 80)
         })
+    })
+})
 
+describe("KnowledgeIndexingService", () => {
+    describe("index", () => {
         it("stores passages for keyword search only when there are no vectors", async () => {
             const { service, sources, chunks, embeddings } = await build()
             embeddings.embed.mockResolvedValue(null)
@@ -129,7 +133,11 @@ describe("KnowledgeIndexingService", () => {
             )
             expect(sources.finishIndexing).toHaveBeenCalledWith(WS, "s1", StoredNote.KeywordOnly, 1)
         })
+    })
+})
 
+describe("KnowledgeIndexingService", () => {
+    describe("index", () => {
         it("stores a passage the provider gave no vector for without one", async () => {
             const { service, chunks, embeddings } = await build()
             embeddings.embed.mockResolvedValue([])
@@ -190,7 +198,11 @@ describe("KnowledgeIndexingService", () => {
             expect(sources.blockIndexing).toHaveBeenCalledWith(WS, "s1", StoredNote.NoCreditsForIndex, drafts.length)
             expect(sources.finishIndexing).not.toHaveBeenCalled()
         })
+    })
+})
 
+describe("KnowledgeIndexingService", () => {
+    describe("index", () => {
         it("does not ask about credits for a small document", async () => {
             const { service, usage } = await build()
 
@@ -247,7 +259,11 @@ describe("KnowledgeIndexingService", () => {
             expect(sources.fail).toHaveBeenCalledWith(WS, "s1", DocumentsErrorCode.NotPublic)
             expect(logger.error).toHaveBeenCalled()
         })
+    })
+})
 
+describe("KnowledgeIndexingService", () => {
+    describe("index", () => {
         it("lets the queue retry a page or a storage that could not be reached", async () => {
             const { service, sources, reader } = await build()
             const down = new DocumentsError({ code: DocumentsErrorCode.Unavailable })

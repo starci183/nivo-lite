@@ -1,16 +1,45 @@
+import { Test } from "@nestjs/testing"
 import { builder } from "@starci/jest-preset"
 import { KnowledgeSourcesErrorCode } from "./errors/knowledge-sources.error"
 import type { AddSourceInput } from "./knowledge-sources.contracts"
-import { normalizeSource, normalizeUpdate, replacementContent, safeFileName, tagsOf } from "./source-input.policy"
+import { tagsOf, normalizeSource, normalizeUpdate, replacementContent, safeFileName } from "./source-input.policy"
+
+const SUBJECT = Symbol("source-input.policy")
+type Subject = {
+    tagsOf: typeof tagsOf
+    normalizeSource: typeof normalizeSource
+    normalizeUpdate: typeof normalizeUpdate
+    replacementContent: typeof replacementContent
+    safeFileName: typeof safeFileName
+}
+const buildSubject = async () => {
+    const moduleRef = await Test.createTestingModule({
+        providers: [
+            {
+                provide: SUBJECT,
+                useValue: {
+                    tagsOf,
+                    normalizeSource,
+                    normalizeUpdate,
+                    replacementContent,
+                    safeFileName,
+                },
+            },
+        ],
+    }).compile()
+    return moduleRef.get<Subject>(SUBJECT)
+}
 
 const WS = "11111111-1111-4111-8111-111111111111"
 
 const inputOf = builder<AddSourceInput>({ kind: "text", title: "Hours", content: "Open 8 to 21" })
 
 describe("normalizeSource", () => {
-    it("tidies a note", () => {
+    it("tidies a note", async () => {
+        const subject = await buildSubject()
+
         expect(
-            normalizeSource(
+            subject.normalizeSource(
                 WS,
                 inputOf({
                     title: "  Hours  ",
@@ -41,40 +70,48 @@ describe("normalizeSource", () => {
         })
     })
 
-    it("keeps a Q&A list internal by default and empty optional fields null", () => {
+    it("keeps a Q&A list internal by default and empty optional fields null", async () => {
+        const subject = await buildSubject()
+
         expect(
-            normalizeSource(WS, inputOf({ kind: "faq", topic: "  ", module: "", visibility: "other" })),
+            subject.normalizeSource(WS, inputOf({ kind: "faq", topic: "  ", module: "", visibility: "other" })),
         ).toMatchObject({
             kind: "ok",
             value: { kind: "faq", topic: null, module: null, visibility: "internal", origin: null },
         })
     })
 
-    it("keeps the address of a link as its content and titles it from the address", () => {
-        expect(normalizeSource(WS, inputOf({ kind: "url", title: "", url: " https://shop.test/menu " }))).toMatchObject(
-            {
-                kind: "ok",
-                value: {
-                    kind: "url",
-                    title: "shop.test/menu",
-                    content: "https://shop.test/menu",
-                    sourceUrl: "https://shop.test/menu",
-                },
+    it("keeps the address of a link as its content and titles it from the address", async () => {
+        const subject = await buildSubject()
+
+        expect(
+            subject.normalizeSource(WS, inputOf({ kind: "url", title: "", url: " https://shop.test/menu " })),
+        ).toMatchObject({
+            kind: "ok",
+            value: {
+                kind: "url",
+                title: "shop.test/menu",
+                content: "https://shop.test/menu",
+                sourceUrl: "https://shop.test/menu",
             },
-        )
+        })
     })
 
-    it("keeps the storage object of a file and titles it from the file name", () => {
+    it("keeps the storage object of a file and titles it from the file name", async () => {
+        const subject = await buildSubject()
+
         const storagePath = `${WS}/22222222-2222-4222-8222-222222222222/price-list.v2.pdf`
 
         expect(
-            normalizeSource(WS, inputOf({ kind: "file", title: "", storagePath, content: undefined })),
+            subject.normalizeSource(WS, inputOf({ kind: "file", title: "", storagePath, content: undefined })),
         ).toMatchObject({
             kind: "ok",
             value: { kind: "file", title: "price-list.v2", content: "", storagePath },
         })
     })
+})
 
+describe("normalizeSource", () => {
     it.each([
         ["an unknown kind", inputOf({ kind: "audio" }), KnowledgeSourcesErrorCode.SourceKindUnknown],
         ["a link that is not http", inputOf({ kind: "url", url: "ftp://x" }), KnowledgeSourcesErrorCode.UrlInvalid],
@@ -95,14 +132,18 @@ describe("normalizeSource", () => {
             KnowledgeSourcesErrorCode.ContentTooLong,
         ],
         ["a note without a title", inputOf({ title: "  " }), KnowledgeSourcesErrorCode.TitleRequired],
-    ])("refuses %s", (_name, input, code) => {
-        expect(normalizeSource(WS, input)).toMatchObject({ kind: "refused", code })
+    ])("refuses %s", async (_name, input, code) => {
+        const subject = await buildSubject()
+
+        expect(subject.normalizeSource(WS, input)).toMatchObject({ kind: "refused", code })
     })
 })
 
 describe("normalizeUpdate", () => {
-    it("keeps what is not given and tidies what is", () => {
-        expect(normalizeUpdate({ sourceId: "s" })).toEqual({
+    it("keeps what is not given and tidies what is", async () => {
+        const subject = await buildSubject()
+
+        expect(subject.normalizeUpdate({ sourceId: "s" })).toEqual({
             title: null,
             topic: null,
             tags: null,
@@ -110,7 +151,7 @@ describe("normalizeUpdate", () => {
             visibility: null,
         })
         expect(
-            normalizeUpdate({
+            subject.normalizeUpdate({
                 sourceId: "s",
                 title: " T ",
                 topic: " x ",
@@ -121,8 +162,12 @@ describe("normalizeUpdate", () => {
         ).toEqual({ title: "T", topic: "x", tags: ["a"], module: "m", visibility: "public" })
     })
 
-    it("clears a topic and a module with an empty text and names an empty title", () => {
-        expect(normalizeUpdate({ sourceId: "s", title: " ", topic: "", module: "", visibility: "internal" })).toEqual({
+    it("clears a topic and a module with an empty text and names an empty title", async () => {
+        const subject = await buildSubject()
+
+        expect(
+            subject.normalizeUpdate({ sourceId: "s", title: " ", topic: "", module: "", visibility: "internal" }),
+        ).toEqual({
             title: "Untitled",
             topic: "",
             tags: null,
@@ -133,14 +178,21 @@ describe("normalizeUpdate", () => {
 })
 
 describe("replacementContent", () => {
-    it("keeps the text when none is given and trims a given one", () => {
-        expect(replacementContent(undefined)).toEqual({ kind: "ok", value: null })
-        expect(replacementContent(" new ")).toEqual({ kind: "ok", value: "new" })
+    it("keeps the text when none is given and trims a given one", async () => {
+        const subject = await buildSubject()
+
+        expect(subject.replacementContent(undefined)).toEqual({ kind: "ok", value: null })
+        expect(subject.replacementContent(" new ")).toEqual({ kind: "ok", value: "new" })
     })
 
-    it("refuses an empty or too long text", () => {
-        expect(replacementContent(" ")).toMatchObject({ kind: "refused", code: KnowledgeSourcesErrorCode.ContentEmpty })
-        expect(replacementContent("a".repeat(120_001))).toMatchObject({
+    it("refuses an empty or too long text", async () => {
+        const subject = await buildSubject()
+
+        expect(subject.replacementContent(" ")).toMatchObject({
+            kind: "refused",
+            code: KnowledgeSourcesErrorCode.ContentEmpty,
+        })
+        expect(subject.replacementContent("a".repeat(120_001))).toMatchObject({
             kind: "refused",
             code: KnowledgeSourcesErrorCode.ContentTooLong,
         })
@@ -148,21 +200,29 @@ describe("replacementContent", () => {
 })
 
 describe("tagsOf", () => {
-    it("answers no tags for none, cuts each to forty characters and keeps twelve", () => {
-        expect(tagsOf(undefined)).toEqual([])
-        expect(tagsOf(["x".repeat(50)])[0]).toHaveLength(40)
-        expect(tagsOf(Array.from({ length: 20 }, (_, index) => `t${index}`))).toHaveLength(12)
+    it("answers no tags for none, cuts each to forty characters and keeps twelve", async () => {
+        const subject = await buildSubject()
+
+        expect(subject.tagsOf(undefined)).toEqual([])
+        expect(subject.tagsOf(["x".repeat(50)])[0]).toHaveLength(40)
+        expect(subject.tagsOf(Array.from({ length: 20 }, (_, index) => `t${index}`))).toHaveLength(12)
     })
 })
 
 describe("safeFileName", () => {
-    it("drops folders, marks and spaces", () => {
-        expect(safeFileName("C:\\docs\\B\u1ea3ng gi\u00e1 \u0111\u1ed3 u\u1ed1ng.pdf")).toBe("Bang_gia_do_uong.pdf")
-        expect(safeFileName("\u0110a.txt")).toBe("Da.txt")
+    it("drops folders, marks and spaces", async () => {
+        const subject = await buildSubject()
+
+        expect(subject.safeFileName("C:\\docs\\B\u1ea3ng gi\u00e1 \u0111\u1ed3 u\u1ed1ng.pdf")).toBe(
+            "Bang_gia_do_uong.pdf",
+        )
+        expect(subject.safeFileName("\u0110a.txt")).toBe("Da.txt")
     })
 
-    it("names an empty name file and keeps the last 120 characters", () => {
-        expect(safeFileName("///")).toBe("file")
-        expect(safeFileName(`${"a".repeat(200)}.pdf`)).toHaveLength(120)
+    it("names an empty name file and keeps the last 120 characters", async () => {
+        const subject = await buildSubject()
+
+        expect(subject.safeFileName("///")).toBe("file")
+        expect(subject.safeFileName(`${"a".repeat(200)}.pdf`)).toHaveLength(120)
     })
 })

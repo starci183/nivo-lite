@@ -1,6 +1,29 @@
+import { Test } from "@nestjs/testing"
 import { builder } from "@starci/jest-preset"
 import type { KnowledgeSourcesRow } from "./persistence/knowledge-sources.rows"
-import { toSourceDetail, toSourceRecord, toSourceSummary } from "./source-record.mapper"
+import { toSourceRecord, toSourceSummary, toSourceDetail } from "./source-record.mapper"
+
+const SUBJECT = Symbol("source-record.mapper")
+type Subject = {
+    toSourceRecord: typeof toSourceRecord
+    toSourceSummary: typeof toSourceSummary
+    toSourceDetail: typeof toSourceDetail
+}
+const buildSubject = async () => {
+    const moduleRef = await Test.createTestingModule({
+        providers: [
+            {
+                provide: SUBJECT,
+                useValue: {
+                    toSourceRecord,
+                    toSourceSummary,
+                    toSourceDetail,
+                },
+            },
+        ],
+    }).compile()
+    return moduleRef.get<Subject>(SUBJECT)
+}
 
 const rowOf = builder<KnowledgeSourcesRow>({
     id: "s1",
@@ -26,8 +49,10 @@ const rowOf = builder<KnowledgeSourcesRow>({
 })
 
 describe("toSourceRecord", () => {
-    it("renames the columns the jobs read", () => {
-        expect(toSourceRecord(rowOf())).toEqual({
+    it("renames the columns the jobs read", async () => {
+        const subject = await buildSubject()
+
+        expect(subject.toSourceRecord(rowOf())).toEqual({
             id: "s1",
             workspaceId: "w1",
             module: null,
@@ -65,20 +90,26 @@ const summary = {
 }
 
 describe("toSourceSummary", () => {
-    it("renames all the list columns and formats the stored instants", () => {
-        expect(toSourceSummary(rowOf())).toEqual(summary)
+    it("renames all the list columns and formats the stored instants", async () => {
+        const subject = await buildSubject()
+
+        expect(subject.toSourceSummary(rowOf())).toEqual(summary)
     })
 })
 
 describe("toSourceDetail", () => {
-    it("includes the stored text with the source summary", () => {
-        expect(toSourceDetail(rowOf())).toEqual({ ...summary, content: "https://x.test" })
+    it("includes the stored text with the source summary", async () => {
+        const subject = await buildSubject()
+
+        expect(subject.toSourceDetail(rowOf())).toEqual({ ...summary, content: "https://x.test" })
     })
 
-    it("defaults a list row without text to empty content", () => {
+    it("defaults a list row without text to empty content", async () => {
+        const subject = await buildSubject()
+
         const { content, ...row } = rowOf()
 
         expect(content).toBe("https://x.test")
-        expect(toSourceDetail(row)).toEqual({ ...summary, content: "" })
+        expect(subject.toSourceDetail(row)).toEqual({ ...summary, content: "" })
     })
 })

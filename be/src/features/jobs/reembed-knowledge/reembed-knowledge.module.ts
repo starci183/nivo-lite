@@ -1,6 +1,7 @@
 import { Module } from "@nestjs/common"
+import { ConfigurableModuleClass } from "./reembed-knowledge.module-definition"
 import { ReembedStep } from "./steps/reembed.step"
 
 @Module({ providers: [ReembedStep], exports: [ReembedStep] })
 /** The application of the reembed-knowledge job: its step; the queue transport module imports it. */
-export class ReembedKnowledgeModule {}
+export class ReembedKnowledgeModule extends ConfigurableModuleClass {}

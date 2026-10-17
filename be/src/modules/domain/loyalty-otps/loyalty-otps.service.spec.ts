@@ -86,44 +86,44 @@ describe("LoyaltyOtpsService", () => {
             expect(entityManager.query).toHaveBeenCalledWith(DELETE_CODE, ["o1"])
         })
     })
+})
 
-    describe("check", () => {
-        const open = (attempts: number) => ({ id: "o1", code_hash: codeHash(PEPPER, "c1", "123456"), attempts })
+describe("LoyaltyOtpsService check", () => {
+    const open = (attempts: number) => ({ id: "o1", code_hash: codeHash(PEPPER, "c1", "123456"), attempts })
 
-        it("accepts the right code and uses it up", async () => {
-            const entityManager = mockEntityManager({
-                query: [
-                    [SELECT_OPEN_CODE, [open(0)]],
-                    [MARK_USED, []],
-                ],
-            })
-            const otps = await build(entityManager)
-
-            await expect(otps.check("c1", "123456")).resolves.toBe("accepted")
-
-            expect(entityManager.query).toHaveBeenCalledWith(MARK_USED, ["o1", new Date(NOW).toISOString()])
+    it("accepts the right code and uses it up", async () => {
+        const entityManager = mockEntityManager({
+            query: [
+                [SELECT_OPEN_CODE, [open(0)]],
+                [MARK_USED, []],
+            ],
         })
+        const otps = await build(entityManager)
 
-        it("rejects a wrong code and counts the try", async () => {
-            const entityManager = mockEntityManager({
-                query: [
-                    [SELECT_OPEN_CODE, [open(1)]],
-                    [BUMP_ATTEMPTS, []],
-                ],
-            })
-            const otps = await build(entityManager)
+        await expect(otps.check("c1", "123456")).resolves.toBe("accepted")
 
-            await expect(otps.check("c1", "000000")).resolves.toBe("rejected")
+        expect(entityManager.query).toHaveBeenCalledWith(MARK_USED, ["o1", new Date(NOW).toISOString()])
+    })
 
-            expect(entityManager.query).toHaveBeenCalledWith(BUMP_ATTEMPTS, ["o1"])
+    it("rejects a wrong code and counts the try", async () => {
+        const entityManager = mockEntityManager({
+            query: [
+                [SELECT_OPEN_CODE, [open(1)]],
+                [BUMP_ATTEMPTS, []],
+            ],
         })
+        const otps = await build(entityManager)
 
-        it("rejects when no code is open or the tries are used up, even for the right code", async () => {
-            const none = await build(mockEntityManager({ query: [SELECT_OPEN_CODE, []] }))
-            const spent = await build(mockEntityManager({ query: [SELECT_OPEN_CODE, [open(5)]] }))
+        await expect(otps.check("c1", "000000")).resolves.toBe("rejected")
 
-            await expect(none.check("c1", "123456")).resolves.toBe("rejected")
-            await expect(spent.check("c1", "123456")).resolves.toBe("rejected")
-        })
+        expect(entityManager.query).toHaveBeenCalledWith(BUMP_ATTEMPTS, ["o1"])
+    })
+
+    it("rejects when no code is open or the tries are used up, even for the right code", async () => {
+        const none = await build(mockEntityManager({ query: [SELECT_OPEN_CODE, []] }))
+        const spent = await build(mockEntityManager({ query: [SELECT_OPEN_CODE, [open(5)]] }))
+
+        await expect(none.check("c1", "123456")).resolves.toBe("rejected")
+        await expect(spent.check("c1", "123456")).resolves.toBe("rejected")
     })
 })

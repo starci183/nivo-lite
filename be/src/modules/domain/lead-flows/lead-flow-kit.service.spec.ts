@@ -1,7 +1,7 @@
 import { Test } from "@nestjs/testing"
 import { FakeClock, builder, mock } from "@starci/jest-preset"
 import { CommandBusService, EvidenceService, WorkEngineService } from "@modules/domain/decisions"
-import type { WorkContext, WorkItem } from "@modules/domain/decisions"
+import type { WorkContext } from "@modules/domain/decisions"
 import { CLOCK } from "@modules/platform/clock"
 import { MESSAGE_CATALOG } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
@@ -13,7 +13,8 @@ import { LeadFlowStoreService } from "./lead-flow-store.service"
 import { EMPTY_SIGNALS } from "./lead-flow-score.policy"
 import type { LeadFlow } from "./lead-flows.contracts"
 
-const NOW = "2026-10-12T10:00:00.000Z"
+import { NOW, itemOf } from "@tests/fixtures/builders/lead-flow-kit.builder"
+
 const ctx: WorkContext = { workspaceId: "ws-1", actor: "Lan", locale: "en" }
 
 const flowOf = builder<LeadFlow>({
@@ -49,36 +50,6 @@ const flowOf = builder<LeadFlow>({
     closed_at: null,
     escalated_at: null,
     escalation_reason: null,
-})
-
-const itemOf = builder<WorkItem>({
-    id: "item-1",
-    workspace_id: "ws-1",
-    department: "lead_gen",
-    action: "greet_prospect",
-    subject_type: "lead",
-    subject_id: "lead-1",
-    lead_id: "lead-1",
-    inbound_event_id: null,
-    parent_id: null,
-    chain_id: "chain-1",
-    depth: 1,
-    status: "queued",
-    decided_path: "auto",
-    reason: null,
-    reasons: [],
-    missing_fields: [],
-    proposal: { summary: "", fields: {} },
-    result: null,
-    error: null,
-    evidence_state: "pending",
-    assigned_staff_id: null,
-    execution_id: null,
-    origin: "live",
-    created_at: NOW,
-    updated_at: NOW,
-    completed_at: null,
-    installation_id: null,
 })
 
 const build = async () => {
@@ -129,7 +100,6 @@ describe("LeadFlowKitService", () => {
             detail: null,
         })
     })
-
     it("stores a direct message in the transcript with its delivery", async () => {
         const { kit, meta, transcript } = await build()
         meta.sendToFlow.mockResolvedValue({ ok: false, reason: "failed", detail: "token" })
@@ -145,7 +115,9 @@ describe("LeadFlowKitService", () => {
             delivery: { sent: false, error: "meta_token" },
         })
     })
+})
 
+describe("LeadFlowKitService", () => {
     it("proposes a tagged reply for a person once the 24 hour window has passed", async () => {
         const { kit, meta, transcript, commands } = await build()
         meta.sendToFlow.mockResolvedValue({ ok: false, reason: "tag_only", detail: null })
@@ -177,7 +149,9 @@ describe("LeadFlowKitService", () => {
             seed: { summary: "lead-flows.tag.summary", draft: "Hello" },
         })
     })
+})
 
+describe("LeadFlowKitService", () => {
     it("explains a message that could not go and refuses a Meta failure", async () => {
         const { kit, meta, commands } = await build()
         meta.sendToFlow.mockResolvedValueOnce({ ok: false, reason: "no_recipient", detail: null })
@@ -193,7 +167,6 @@ describe("LeadFlowKitService", () => {
 
         expect(commands.sendCommand).not.toHaveBeenCalled()
     })
-
     it("holds the prospect for a person, silences the bot and tells the person once", async () => {
         const { kit, store, meta, transcript, evidence } = await build()
         const flow = flowOf({ state: "qualifying" })
@@ -222,7 +195,9 @@ describe("LeadFlowKitService", () => {
         })
         expect(meta.sendToFlow).toHaveBeenCalledWith("ws-1", held, "lead-flows.line.handover", false)
     })
+})
 
+describe("LeadFlowKitService", () => {
     it("uses names and localized source labels, including the default message source", async () => {
         const { kit, catalog } = await build()
 
@@ -242,11 +217,14 @@ describe("LeadFlowKitService", () => {
                 at: NOW,
             }),
         ).toBe(
-            "Instagram · lead-flows.kind.leadgen · lead-flows.word.form form-1 · lead-flows.word.ad ad-1 · lead-flows.word.post post-1",
+            "Instagram · lead-flows.kind.leadgen · lead-flows.word.form form-1 · lead-flows.word.ad ad-1 · " +
+                "lead-flows.word.post post-1",
         )
         expect(catalog.get).toHaveBeenCalledWith("lead-flows.kind.leadgen", {}, "en")
     })
+})
 
+describe("LeadFlowKitService", () => {
     it.each([null, "", "x".repeat(401)])("stores bounded evidence for %s", async (value) => {
         const { kit, evidence } = await build()
 
@@ -261,7 +239,6 @@ describe("LeadFlowKitService", () => {
             evidence: value ? "x".repeat(400) : null,
         })
     })
-
     it("records successful tagged delivery and a failure without a detail", async () => {
         const { kit, meta, transcript } = await build()
         meta.sendToFlow.mockResolvedValueOnce({ ok: true, reason: null, detail: null })
@@ -296,7 +273,9 @@ describe("LeadFlowKitService", () => {
             ],
         ])
     })
+})
 
+describe("LeadFlowKitService", () => {
     it("prepares closing lines from a trimmed reply and omits empty proposal text", async () => {
         const { kit, store, catalog } = await build()
         store.requireByLead.mockResolvedValue(flowOf())
@@ -317,7 +296,9 @@ describe("LeadFlowKitService", () => {
         expect(store.requireByLead).toHaveBeenCalledWith("ws-1", "lead-1")
         expect(catalog.get).toHaveBeenCalledWith("lead-flows.close.summary", { name: "Lan" }, "en")
     })
+})
 
+describe("LeadFlowKitService", () => {
     it("returns successful delivery and explains a disconnected or unoffered tagged reply", async () => {
         const { kit, meta, commands } = await build()
         meta.sendToFlow.mockResolvedValueOnce({ ok: true, reason: null, detail: null })
@@ -340,7 +321,6 @@ describe("LeadFlowKitService", () => {
         expect(kit.metaRefused("token").params).toEqual({ failure: "token" })
         expect(commands.sendCommand).not.toHaveBeenCalled()
     })
-
     it.each([
         {
             phone: "84123456789",
@@ -383,7 +363,9 @@ describe("LeadFlowKitService", () => {
             seed: { summary: "lead-flows.tag.summary", draft: "Hello" },
         })
     })
+})
 
+describe("LeadFlowKitService", () => {
     it.each([
         {
             state: "escalated" as const,
@@ -420,7 +402,9 @@ describe("LeadFlowKitService", () => {
         expect(transcript.say).not.toHaveBeenCalled()
         expect(meta.sendToFlow).not.toHaveBeenCalled()
     })
+})
 
+describe("LeadFlowKitService", () => {
     it.each([
         { conversationId: "conv-1", chainId: "chain-1", text: `  ${"x".repeat(130)}  `, question: "x".repeat(130) },
         { conversationId: null, chainId: null, text: "   ", question: "lead-flows.no-text" },
@@ -477,7 +461,9 @@ describe("LeadFlowKitService", () => {
             )
         },
     )
+})
 
+describe("LeadFlowKitService", () => {
     it.each(["greeted" as const, null])("resumes an escalated flow from %s", async (resumeState) => {
         const { kit, store } = await build()
         const flow = flowOf({ state: "escalated", resume_state: resumeState })

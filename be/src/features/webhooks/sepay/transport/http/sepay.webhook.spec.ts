@@ -3,36 +3,21 @@ import type { RawBodyRequest } from "@nestjs/common"
 import { HTTP_CODE_METADATA } from "@nestjs/common/constants"
 import { Test } from "@nestjs/testing"
 import type { Request } from "express"
-import { mock, mockEntityManager } from "@starci/jest-preset"
-import { BillingError, BillingErrorCode, PaymentProofService } from "@modules/domain/billing"
-import type { BillingOptions } from "@modules/domain/billing"
+import { mock } from "@starci/jest-preset"
+import { BillingError, BillingErrorCode } from "@modules/domain/billing"
 import { PublicReason } from "@modules/domain/identity"
 import { SepayTransactionsService } from "@modules/domain/sepay-transactions"
-import { Secret } from "@modules/platform/config"
 import { RateTier } from "@modules/platform/http-security"
 import { SepayHttpModule, webhookVerifiers } from "./sepay-http.module"
 import { PROVIDER_ACK, SepayWebhook } from "./sepay.webhook"
 
 const RAW = Buffer.from(JSON.stringify({ id: 9001 }))
-const OPTIONS: BillingOptions = {
-    sepayApiKey: new Secret("k"),
-    bankAccount: { account: "", bank: "", holder: "" },
-    simulatedBank: { secret: undefined, workspaceId: undefined },
-    channelTokenKey: undefined,
-}
 
 const build = async () => {
-    const service = new SepayTransactionsService(
-        mockEntityManager({ query: [] }),
-        new PaymentProofService(OPTIONS, mock()),
-    )
-    const settlement = {
-        verifySepayDelivery: jest.spyOn(service, "verifySepayDelivery"),
-        acceptSepayDelivery: jest.spyOn(service, "acceptSepayDelivery").mockResolvedValue(undefined),
-    }
+    const settlement = mock<SepayTransactionsService>()
+    settlement.acceptSepayDelivery.mockResolvedValue(undefined)
     const moduleRef = await Test.createTestingModule({
-        controllers: [SepayWebhook],
-        providers: [{ provide: SepayTransactionsService, useValue: service }],
+        providers: [SepayWebhook, { provide: SepayTransactionsService, useValue: settlement }],
     }).compile()
     return { door: moduleRef.get(SepayWebhook), settlement }
 }
@@ -97,11 +82,15 @@ describe("SepayWebhook", () => {
         await expect(response).resolves.toBe(PROVIDER_ACK)
         expect(order).toEqual(["verify", "intake", "ack"])
     })
-
+})
+describe("SepayWebhook", () => {
     it.each([undefined, "Bearer k", "Apikey wrong"])(
         "refuses the invalid key %j before accessing the request or accepting a delivery",
         async (authorization) => {
             const { door, settlement } = await build()
+            settlement.verifySepayDelivery.mockImplementation(() => {
+                throw new BillingError({ code: BillingErrorCode.WebhookUnauthorized })
+            })
             const rawBody = jest.fn(() => RAW)
             const request = mock<RawBodyRequest<Request>>()
             Object.defineProperty(request, "rawBody", { get: rawBody })

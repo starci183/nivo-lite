@@ -32,228 +32,226 @@ const failure = (message: string, extra: object = {}) => ({
     error: Object.assign(new StorageError(message), extra),
 })
 
-describe("SupabaseObjectsService", () => {
-    describe("signedUpload", () => {
-        it("answers the path, token and address Storage signed", async () => {
-            const { service, bucket, storage } = await build()
-            bucket.createSignedUploadUrl.mockResolvedValue({
-                data: { path: "ws/1/a.pdf", token: "t", signedUrl: "https://s.test/u" },
-                error: null,
-            })
-
-            await expect(service.signedUpload("knowledge-uploads", "ws/1/a.pdf")).resolves.toEqual({
-                kind: "ok",
-                value: { path: "ws/1/a.pdf", token: "t", signedUrl: "https://s.test/u" },
-            })
-
-            expect(storage.from).toHaveBeenCalledWith("knowledge-uploads")
+describe("SupabaseObjectsService > signedUpload", () => {
+    it("answers the path, token and address Storage signed", async () => {
+        const { service, bucket, storage } = await build()
+        bucket.createSignedUploadUrl.mockResolvedValue({
+            data: { path: "ws/1/a.pdf", token: "t", signedUrl: "https://s.test/u" },
+            error: null,
         })
 
-        it("reports an unavailable provider and logs the cause", async () => {
-            const { service, bucket, logger } = await build()
-            const refused = failure("down")
-            bucket.createSignedUploadUrl.mockResolvedValue(refused)
+        await expect(service.signedUpload("knowledge-uploads", "ws/1/a.pdf")).resolves.toEqual({
+            kind: "ok",
+            value: { path: "ws/1/a.pdf", token: "t", signedUrl: "https://s.test/u" },
+        })
 
-            await expect(service.signedUpload("b", "p")).resolves.toMatchObject({
-                kind: "refused",
-                code: SupabaseErrorCode.ProviderUnavailable,
-            })
+        expect(storage.from).toHaveBeenCalledWith("knowledge-uploads")
+    })
 
-            expect(logger.error).toHaveBeenCalledWith(SupabaseLogEvent.StorageFailed, refused.error, { bucket: "b" })
+    it("reports an unavailable provider and logs the cause", async () => {
+        const { service, bucket, logger } = await build()
+        const refused = failure("down")
+        bucket.createSignedUploadUrl.mockResolvedValue(refused)
+
+        await expect(service.signedUpload("b", "p")).resolves.toMatchObject({
+            kind: "refused",
+            code: SupabaseErrorCode.ProviderUnavailable,
+        })
+
+        expect(logger.error).toHaveBeenCalledWith(SupabaseLogEvent.StorageFailed, refused.error, { bucket: "b" })
+    })
+})
+
+describe("SupabaseObjectsService > download", () => {
+    it("answers the bytes and the content type", async () => {
+        const { service, bucket } = await build()
+        bucket.download.mockResolvedValue({ data: new Blob(["abc"], { type: "text/plain" }), error: null })
+
+        const result = await service.download("b", "p")
+
+        expect(result).toMatchObject({ kind: "ok", value: { contentType: "text/plain" } })
+        expect(result.kind === "ok" ? Buffer.from(result.value.bytes).toString() : "").toBe("abc")
+    })
+
+    it.each([
+        ["a status code of 404", failure("x", { statusCode: "404" })],
+        ["a status of 400", failure("x", { status: 400 })],
+        ["a message that says not found", failure("Object not found")],
+    ])("reports a missing object for %s", async (_name, answer) => {
+        const { service, bucket } = await build()
+        bucket.download.mockResolvedValue(answer)
+
+        await expect(service.download("b", "p")).resolves.toMatchObject({
+            kind: "refused",
+            code: SupabaseErrorCode.ObjectNotFound,
         })
     })
 
-    describe("download", () => {
-        it("answers the bytes and the content type", async () => {
-            const { service, bucket } = await build()
-            bucket.download.mockResolvedValue({ data: new Blob(["abc"], { type: "text/plain" }), error: null })
+    it("reports an unavailable provider for any other failure and logs it", async () => {
+        const { service, bucket, logger } = await build()
+        bucket.download.mockResolvedValue(failure("boom", { status: 500 }))
 
-            const result = await service.download("b", "p")
-
-            expect(result).toMatchObject({ kind: "ok", value: { contentType: "text/plain" } })
-            expect(result.kind === "ok" ? Buffer.from(result.value.bytes).toString() : "").toBe("abc")
+        await expect(service.download("b", "p")).resolves.toMatchObject({
+            kind: "refused",
+            code: SupabaseErrorCode.ProviderUnavailable,
         })
 
-        it.each([
-            ["a status code of 404", failure("x", { statusCode: "404" })],
-            ["a status of 400", failure("x", { status: 400 })],
-            ["a message that says not found", failure("Object not found")],
-        ])("reports a missing object for %s", async (_name, answer) => {
-            const { service, bucket } = await build()
-            bucket.download.mockResolvedValue(answer)
+        expect(logger.error).toHaveBeenCalledWith(SupabaseLogEvent.StorageFailed, expect.any(Error), {
+            bucket: "b",
+        })
+    })
+})
 
-            await expect(service.download("b", "p")).resolves.toMatchObject({
-                kind: "refused",
-                code: SupabaseErrorCode.ObjectNotFound,
-            })
+describe("SupabaseObjectsService > list", () => {
+    it("omits folder markers and preserves the names and available creation dates", async () => {
+        const { service, bucket, storage } = await build()
+        bucket.list.mockResolvedValue({
+            data: [
+                {
+                    id: null,
+                    name: "folder",
+                    created_at: null,
+                    updated_at: null,
+                    last_accessed_at: null,
+                    metadata: null,
+                },
+                {
+                    id: "new",
+                    name: "new.pdf",
+                    created_at: "2026-10-14T10:00:00Z",
+                    updated_at: null,
+                    last_accessed_at: null,
+                    metadata: null,
+                },
+                {
+                    id: "old",
+                    name: "old.pdf",
+                    created_at: null,
+                    updated_at: null,
+                    last_accessed_at: null,
+                    metadata: null,
+                },
+            ],
+            error: null,
         })
 
-        it("reports an unavailable provider for any other failure and logs it", async () => {
-            const { service, bucket, logger } = await build()
-            bucket.download.mockResolvedValue(failure("boom", { status: 500 }))
-
-            await expect(service.download("b", "p")).resolves.toMatchObject({
-                kind: "refused",
-                code: SupabaseErrorCode.ProviderUnavailable,
-            })
-
-            expect(logger.error).toHaveBeenCalledWith(SupabaseLogEvent.StorageFailed, expect.any(Error), {
-                bucket: "b",
-            })
+        await expect(service.list("documents", "workspace/1", 12)).resolves.toEqual({
+            kind: "ok",
+            value: [
+                { name: "new.pdf", createdAt: "2026-10-14T10:00:00Z" },
+                { name: "old.pdf", createdAt: null },
+            ],
+        })
+        expect(storage.from).toHaveBeenCalledWith("documents")
+        expect(bucket.list).toHaveBeenCalledWith("workspace/1", {
+            limit: 12,
+            sortBy: { column: "created_at", order: "desc" },
         })
     })
 
-    describe("list", () => {
-        it("omits folder markers and preserves the names and available creation dates", async () => {
-            const { service, bucket, storage } = await build()
-            bucket.list.mockResolvedValue({
-                data: [
-                    {
-                        id: null,
-                        name: "folder",
-                        created_at: null,
-                        updated_at: null,
-                        last_accessed_at: null,
-                        metadata: null,
-                    },
-                    {
-                        id: "new",
-                        name: "new.pdf",
-                        created_at: "2026-10-14T10:00:00Z",
-                        updated_at: null,
-                        last_accessed_at: null,
-                        metadata: null,
-                    },
-                    {
-                        id: "old",
-                        name: "old.pdf",
-                        created_at: null,
-                        updated_at: null,
-                        last_accessed_at: null,
-                        metadata: null,
-                    },
-                ],
-                error: null,
-            })
+    it("logs a failed list request and reports an unavailable provider", async () => {
+        const { service, bucket, logger } = await build()
+        const answer = failure("list unavailable")
+        bucket.list.mockResolvedValue(answer)
 
-            await expect(service.list("documents", "workspace/1", 12)).resolves.toEqual({
-                kind: "ok",
-                value: [
-                    { name: "new.pdf", createdAt: "2026-10-14T10:00:00Z" },
-                    { name: "old.pdf", createdAt: null },
-                ],
-            })
-            expect(storage.from).toHaveBeenCalledWith("documents")
-            expect(bucket.list).toHaveBeenCalledWith("workspace/1", {
-                limit: 12,
-                sortBy: { column: "created_at", order: "desc" },
-            })
+        await expect(service.list("documents", "workspace/1", 12)).resolves.toEqual({
+            kind: "refused",
+            code: SupabaseErrorCode.ProviderUnavailable,
         })
-
-        it("logs a failed list request and reports an unavailable provider", async () => {
-            const { service, bucket, logger } = await build()
-            const answer = failure("list unavailable")
-            bucket.list.mockResolvedValue(answer)
-
-            await expect(service.list("documents", "workspace/1", 12)).resolves.toEqual({
-                kind: "refused",
-                code: SupabaseErrorCode.ProviderUnavailable,
-            })
-            expect(logger.error).toHaveBeenCalledWith(SupabaseLogEvent.StorageFailed, answer.error, {
-                bucket: "documents",
-            })
+        expect(logger.error).toHaveBeenCalledWith(SupabaseLogEvent.StorageFailed, answer.error, {
+            bucket: "documents",
         })
     })
+})
 
-    describe("signedUrls", () => {
-        it("answers an empty list without contacting Storage when no paths were requested", async () => {
-            const { service, bucket, storage } = await build()
+describe("SupabaseObjectsService > signedUrls", () => {
+    it("answers an empty list without contacting Storage when no paths were requested", async () => {
+        const { service, bucket, storage } = await build()
 
-            await expect(service.signedUrls("documents", [], 60)).resolves.toEqual({ kind: "ok", value: [] })
-            expect(storage.from).not.toHaveBeenCalled()
-            expect(bucket.createSignedUrls).not.toHaveBeenCalled()
-        })
-
-        it("keeps only signed addresses with a path and a nonempty string URL", async () => {
-            const { service, bucket, storage } = await build()
-            bucket.createSignedUrls.mockResolvedValue({
-                data: [
-                    { path: "one.pdf", signedUrl: "https://s.test/one", signedURL: "/one", error: null },
-                    { path: null, signedUrl: "https://s.test/no-path", signedURL: "/no-path", error: "missing path" },
-                    { path: "missing.pdf", signedUrl: null, signedURL: null, error: "not found" },
-                    { path: "empty.pdf", signedUrl: "", signedURL: "", error: null },
-                ],
-                error: null,
-            })
-
-            await expect(service.signedUrls("documents", ["one.pdf", "missing.pdf"], 60)).resolves.toEqual({
-                kind: "ok",
-                value: [{ path: "one.pdf", signedUrl: "https://s.test/one" }],
-            })
-            expect(storage.from).toHaveBeenCalledWith("documents")
-            expect(bucket.createSignedUrls).toHaveBeenCalledWith(["one.pdf", "missing.pdf"], 60)
-        })
-
-        it("logs a failed signing request and reports an unavailable provider", async () => {
-            const { service, bucket, logger } = await build()
-            const answer = failure("signing unavailable")
-            bucket.createSignedUrls.mockResolvedValue(answer)
-
-            await expect(service.signedUrls("documents", ["one.pdf"], 60)).resolves.toEqual({
-                kind: "refused",
-                code: SupabaseErrorCode.ProviderUnavailable,
-            })
-            expect(logger.error).toHaveBeenCalledWith(SupabaseLogEvent.StorageFailed, answer.error, {
-                bucket: "documents",
-            })
-        })
+        await expect(service.signedUrls("documents", [], 60)).resolves.toEqual({ kind: "ok", value: [] })
+        expect(storage.from).not.toHaveBeenCalled()
+        expect(bucket.createSignedUrls).not.toHaveBeenCalled()
     })
 
-    describe("remove", () => {
-        it("answers zero without contacting Storage when no paths were requested", async () => {
-            const { service, bucket, storage } = await build()
-
-            await expect(service.remove("documents", [])).resolves.toEqual({ kind: "ok", value: 0 })
-            expect(storage.from).not.toHaveBeenCalled()
-            expect(bucket.remove).not.toHaveBeenCalled()
+    it("keeps only signed addresses with a path and a nonempty string URL", async () => {
+        const { service, bucket, storage } = await build()
+        bucket.createSignedUrls.mockResolvedValue({
+            data: [
+                { path: "one.pdf", signedUrl: "https://s.test/one", signedURL: "/one", error: null },
+                { path: null, signedUrl: "https://s.test/no-path", signedURL: "/no-path", error: "missing path" },
+                { path: "missing.pdf", signedUrl: null, signedURL: null, error: "not found" },
+                { path: "empty.pdf", signedUrl: "", signedURL: "", error: null },
+            ],
+            error: null,
         })
 
-        it("answers the number Storage actually removed and sends the requested paths", async () => {
-            const { service, bucket, storage } = await build()
-            bucket.remove.mockResolvedValue({
-                data: [
-                    {
-                        id: "one",
-                        name: "one.pdf",
-                        created_at: null,
-                        updated_at: null,
-                        last_accessed_at: null,
-                        metadata: null,
-                    },
-                ],
-                error: null,
-            })
+        await expect(service.signedUrls("documents", ["one.pdf", "missing.pdf"], 60)).resolves.toEqual({
+            kind: "ok",
+            value: [{ path: "one.pdf", signedUrl: "https://s.test/one" }],
+        })
+        expect(storage.from).toHaveBeenCalledWith("documents")
+        expect(bucket.createSignedUrls).toHaveBeenCalledWith(["one.pdf", "missing.pdf"], 60)
+    })
 
-            await expect(service.remove("documents", ["one.pdf", "missing.pdf"])).resolves.toEqual({
-                kind: "ok",
-                value: 1,
-            })
-            expect(storage.from).toHaveBeenCalledWith("documents")
-            expect(bucket.remove).toHaveBeenCalledWith(["one.pdf", "missing.pdf"])
+    it("logs a failed signing request and reports an unavailable provider", async () => {
+        const { service, bucket, logger } = await build()
+        const answer = failure("signing unavailable")
+        bucket.createSignedUrls.mockResolvedValue(answer)
+
+        await expect(service.signedUrls("documents", ["one.pdf"], 60)).resolves.toEqual({
+            kind: "refused",
+            code: SupabaseErrorCode.ProviderUnavailable,
+        })
+        expect(logger.error).toHaveBeenCalledWith(SupabaseLogEvent.StorageFailed, answer.error, {
+            bucket: "documents",
+        })
+    })
+})
+
+describe("SupabaseObjectsService > remove", () => {
+    it("answers zero without contacting Storage when no paths were requested", async () => {
+        const { service, bucket, storage } = await build()
+
+        await expect(service.remove("documents", [])).resolves.toEqual({ kind: "ok", value: 0 })
+        expect(storage.from).not.toHaveBeenCalled()
+        expect(bucket.remove).not.toHaveBeenCalled()
+    })
+
+    it("answers the number Storage actually removed and sends the requested paths", async () => {
+        const { service, bucket, storage } = await build()
+        bucket.remove.mockResolvedValue({
+            data: [
+                {
+                    id: "one",
+                    name: "one.pdf",
+                    created_at: null,
+                    updated_at: null,
+                    last_accessed_at: null,
+                    metadata: null,
+                },
+            ],
+            error: null,
         })
 
-        it("logs a failed removal and reports an unavailable provider", async () => {
-            const { service, bucket, logger } = await build()
-            const answer = failure("removal unavailable")
-            bucket.remove.mockResolvedValue(answer)
+        await expect(service.remove("documents", ["one.pdf", "missing.pdf"])).resolves.toEqual({
+            kind: "ok",
+            value: 1,
+        })
+        expect(storage.from).toHaveBeenCalledWith("documents")
+        expect(bucket.remove).toHaveBeenCalledWith(["one.pdf", "missing.pdf"])
+    })
 
-            await expect(service.remove("documents", ["one.pdf"])).resolves.toEqual({
-                kind: "refused",
-                code: SupabaseErrorCode.ProviderUnavailable,
-            })
-            expect(logger.error).toHaveBeenCalledWith(SupabaseLogEvent.StorageFailed, answer.error, {
-                bucket: "documents",
-            })
+    it("logs a failed removal and reports an unavailable provider", async () => {
+        const { service, bucket, logger } = await build()
+        const answer = failure("removal unavailable")
+        bucket.remove.mockResolvedValue(answer)
+
+        await expect(service.remove("documents", ["one.pdf"])).resolves.toEqual({
+            kind: "refused",
+            code: SupabaseErrorCode.ProviderUnavailable,
+        })
+        expect(logger.error).toHaveBeenCalledWith(SupabaseLogEvent.StorageFailed, answer.error, {
+            bucket: "documents",
         })
     })
 })

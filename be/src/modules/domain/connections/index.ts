@@ -16,7 +16,6 @@ export type {
     WizardSettlement,
 } from "./connections.contracts"
 export { ConnectionsModule } from "./connections.module"
-export type { ConnectionsOptions } from "./connections.options"
 export { ConnectionsService } from "./connections.service"
 export { CONNECTIONS_ERROR_KINDS, ConnectionsError, ConnectionsErrorCode } from "./errors/connections.error"
 export { CONNECTIONS_MESSAGES } from "./messages/connections.messages"

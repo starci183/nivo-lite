@@ -159,7 +159,11 @@ describe("WorkPlacementService", () => {
             expect(log).not.toHaveBeenCalled()
             expect(getWorkItem).toHaveBeenCalledTimes(1)
         })
+    })
+})
 
+describe("WorkPlacementService", () => {
+    describe("hold", () => {
         it("lets assigned staff hold the work, preserves its fields and returns the refreshed item", async () => {
             const { service, getWorkItem, holdItem, log, catalog } = await build(
                 memberOf({ role: "staff", staffId: "staff-1", displayName: "Binh" }),
@@ -205,7 +209,9 @@ describe("WorkPlacementService", () => {
             ])
         })
     })
+})
 
+describe("WorkPlacementService", () => {
     describe("assign", () => {
         it("names the staff member on the evidence", async () => {
             const { service, assignItem, log } = await build()

@@ -1,6 +1,15 @@
+import { Test } from "@nestjs/testing"
 import type { PublicBookResult } from "./bookings.contracts"
 import { BookingsErrorCode } from "./errors/bookings.error"
 import { toRequestPublicBookingRequest, toRequestPublicBookingType } from "./public-booking-graphql.mapper"
+const SUBJECT = Symbol("public-booking-graphql.mapper")
+
+const build = async () => {
+    const moduleRef = await Test.createTestingModule({
+        providers: [{ provide: SUBJECT, useValue: { toRequestPublicBookingRequest, toRequestPublicBookingType } }],
+    }).compile()
+    return moduleRef.get<typeof import("./public-booking-graphql.mapper")>(SUBJECT)
+}
 
 const INPUT = {
     slug: "hair-shop",
@@ -23,29 +32,45 @@ const RESULT: PublicBookResult = {
 }
 
 describe("public booking GraphQL mapper", () => {
-    it("fills omitted optional text with empty strings", () => {
-        expect(toRequestPublicBookingRequest(INPUT)).toEqual({ ...INPUT, email: "", note: "", website: "" })
+    it("fills omitted optional text with empty strings", async () => {
+        const subject = await build()
+
+        expect(subject.toRequestPublicBookingRequest(INPUT)).toEqual({ ...INPUT, email: "", note: "", website: "" })
     })
 
-    it("preserves all the supplied public form fields", () => {
+    it("preserves all the supplied public form fields", async () => {
+        const subject = await build()
+
         const input = { ...INPUT, email: "mai@example.test", note: "Window seat", website: "honeypot" }
-        expect(toRequestPublicBookingRequest(input)).toEqual(input)
+        expect(subject.toRequestPublicBookingRequest(input)).toEqual(input)
     })
 
-    it.each(["confirmed", "received_free", "received_taken"] as const)("answers the recorded %s outcome", (code) => {
-        expect(toRequestPublicBookingType({ ...RESULT, code })).toEqual({
-            state: "confirmed",
-            code,
-            serviceName: "Haircut",
-            startIso: INPUT.start,
-            alternatives: ["2026-10-14T03:00:00.000Z"],
-            bookingId: "booking-1",
-        })
-    })
+    it.each(["confirmed", "received_free", "received_taken"] as const)(
+        "answers the recorded %s outcome",
+        async (code) => {
+            const subject = await build()
 
-    it("keeps the waiting state and absent identity of an unanswered request", () => {
+            expect(subject.toRequestPublicBookingType({ ...RESULT, code })).toEqual({
+                state: "confirmed",
+                code,
+                serviceName: "Haircut",
+                startIso: INPUT.start,
+                alternatives: ["2026-10-14T03:00:00.000Z"],
+                bookingId: "booking-1",
+            })
+        },
+    )
+
+    it("keeps the waiting state and absent identity of an unanswered request", async () => {
+        const subject = await build()
+
         expect(
-            toRequestPublicBookingType({ ...RESULT, state: "waiting", code: "received_taken", bookingId: null }),
+            subject.toRequestPublicBookingType({
+                ...RESULT,
+                state: "waiting",
+                code: "received_taken",
+                bookingId: null,
+            }),
         ).toEqual({
             state: "waiting",
             code: "received_taken",
@@ -62,8 +87,10 @@ describe("public booking GraphQL mapper", () => {
         ["start_invalid", BookingsErrorCode.DateTimeInvalid],
         ["service_unavailable", BookingsErrorCode.ServiceNotFound],
         ["no_resource", BookingsErrorCode.NoResource],
-    ] as const)("promotes %s to the domain error", (code, expectedCode) => {
-        expect(() => toRequestPublicBookingType({ ...RESULT, ok: false, state: "invalid", code })).toThrow(
+    ] as const)("promotes %s to the domain error", async (code, expectedCode) => {
+        const subject = await build()
+
+        expect(() => subject.toRequestPublicBookingType({ ...RESULT, ok: false, state: "invalid", code })).toThrow(
             expect.objectContaining({ code: expectedCode }),
         )
     })

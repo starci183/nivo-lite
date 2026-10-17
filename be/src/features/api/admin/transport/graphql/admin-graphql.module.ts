@@ -1,5 +1,6 @@
 import { Module } from "@nestjs/common"
 import { AdminApiModule } from "../../admin.module"
+import { ConfigurableModuleClass } from "./admin-graphql.module-definition"
 import { AdminSessionResolver } from "./admin-session.resolver"
 import { AdminWorkspacesResolver } from "./admin-workspaces.resolver"
 import { AdminWorkspaceResolver } from "./admin-workspace.resolver"
@@ -10,7 +11,7 @@ import { AdminSetWorkspacePlanResolver } from "./admin-set-workspace-plan.resolv
 import { AdminResendWorkspaceInviteResolver } from "./admin-resend-workspace-invite.resolver"
 
 @Module({
-    imports: [AdminApiModule],
+    imports: [AdminApiModule.register({})],
     providers: [
         AdminSessionResolver,
         AdminWorkspacesResolver,
@@ -23,4 +24,4 @@ import { AdminResendWorkspaceInviteResolver } from "./admin-resend-workspace-inv
     ],
 })
 /** The GraphQL transport of the admin feature. */
-export class AdminGraphqlModule {}
+export class AdminGraphqlModule extends ConfigurableModuleClass {}

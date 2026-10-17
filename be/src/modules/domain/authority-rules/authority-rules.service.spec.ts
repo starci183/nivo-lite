@@ -48,117 +48,114 @@ const build = async (entityManager: MockEntityManager) => {
     return moduleRef.get(AuthorityRulesService)
 }
 
-describe("AuthorityRulesService", () => {
-    describe("ruleFor", () => {
-        it("answers null when the owner granted no rule", async () => {
-            const service = await build(mockEntityManager({ query: [FIND_RULE, []] }))
+describe("AuthorityRulesService > ruleFor", () => {
+    it("answers null when the owner granted no rule", async () => {
+        const service = await build(mockEntityManager({ query: [FIND_RULE, []] }))
 
-            await expect(service.ruleFor(scope, "send_follow_up", null)).resolves.toBeNull()
-        })
-
-        it("answers an ask rule without reading the operating mode", async () => {
-            const em = mockEntityManager({ query: [FIND_RULE, [ruleRowOf({ mode: "ask" })]] })
-            const service = await build(em)
-
-            await expect(service.ruleFor(scope, "send_follow_up", null)).resolves.toEqual(ruleRowOf({ mode: "ask" }))
-            expect(em.query).toHaveBeenCalledTimes(1)
-            expect(em.query).toHaveBeenCalledWith(FIND_RULE, ["ws-1", "send_follow_up"])
-        })
-
-        it("downgrades an auto rule while the instance assists", async () => {
-            const assist = builder<OperatingModeRow>({ operating_mode: "assist" })
-            const em = mockEntityManager({
-                query: [
-                    [FIND_RULE, [ruleRowOf()]],
-                    [FIND_OPERATING_MODE, [assist()]],
-                ],
-            })
-            const service = await build(em)
-
-            await expect(service.ruleFor(scope, "send_follow_up", "inst-1")).resolves.toEqual(
-                ruleRowOf({ mode: "ask" }),
-            )
-            expect(em.query).toHaveBeenCalledWith(FIND_OPERATING_MODE, ["ws-1", "sales", "inst-1"])
-        })
-
-        it("keeps an auto rule on autopilot", async () => {
-            const em = mockEntityManager({
-                query: [
-                    [FIND_RULE, [ruleRowOf()]],
-                    [FIND_OPERATING_MODE, [{ operating_mode: "autopilot" }]],
-                ],
-            })
-            const service = await build(em)
-
-            await expect(service.ruleFor(scope, "send_follow_up", null)).resolves.toEqual(ruleRowOf())
-        })
-
-        it("keeps an auto rule when the module has no installation", async () => {
-            const em = mockEntityManager({
-                query: [
-                    [FIND_RULE, [ruleRowOf()]],
-                    [FIND_OPERATING_MODE, []],
-                ],
-            })
-            const service = await build(em)
-
-            await expect(service.ruleFor(scope, "send_follow_up", null)).resolves.toEqual(ruleRowOf())
-        })
+        await expect(service.ruleFor(scope, "send_follow_up", null)).resolves.toBeNull()
     })
 
-    describe("list", () => {
-        it("lists the stored rules", async () => {
-            const em = mockEntityManager({ query: [LIST_RULES, [recordOf()]] })
-            const service = await build(em)
+    it("answers an ask rule without reading the operating mode", async () => {
+        const em = mockEntityManager({ query: [FIND_RULE, [ruleRowOf({ mode: "ask" })]] })
+        const service = await build(em)
 
-            await expect(service.list("ws-1")).resolves.toEqual([recordOf()])
-            expect(em.query).toHaveBeenCalledWith(LIST_RULES, ["ws-1"])
-        })
+        await expect(service.ruleFor(scope, "send_follow_up", null)).resolves.toEqual(ruleRowOf({ mode: "ask" }))
+        expect(em.query).toHaveBeenCalledTimes(1)
+        expect(em.query).toHaveBeenCalledWith(FIND_RULE, ["ws-1", "send_follow_up"])
     })
 
-    describe("save", () => {
-        it("saves the rule", async () => {
-            const em = mockEntityManager({ query: [UPSERT_RULE, [recordOf({ mode: "ask" })]] })
-            const service = await build(em)
-
-            await expect(service.save("ws-1", changeOf())).resolves.toEqual(recordOf({ mode: "ask" }))
-            expect(em.query).toHaveBeenCalledWith(UPSERT_RULE, [
-                "ws-1",
-                "send_follow_up",
-                "ask",
-                1000,
-                ["contact"],
-                "sales",
-                null,
-            ])
+    it("downgrades an auto rule while the instance assists", async () => {
+        const assist = builder<OperatingModeRow>({ operating_mode: "assist" })
+        const em = mockEntityManager({
+            query: [
+                [FIND_RULE, [ruleRowOf()]],
+                [FIND_OPERATING_MODE, [assist()]],
+            ],
         })
+        const service = await build(em)
 
-        it("refuses an action the registry does not know", async () => {
-            const service = await build(mockEntityManager({ query: [UPSERT_RULE, []] }))
-
-            await expect(service.save("ws-1", changeOf())).rejects.toMatchObject({
-                code: AuthorityRulesErrorCode.UnknownAction,
-                params: { action: "send_follow_up" },
-            })
-        })
+        await expect(service.ruleFor(scope, "send_follow_up", "inst-1")).resolves.toEqual(ruleRowOf({ mode: "ask" }))
+        expect(em.query).toHaveBeenCalledWith(FIND_OPERATING_MODE, ["ws-1", "sales", "inst-1"])
     })
 
-    describe("seedDefaults", () => {
-        it("passes the module defaults to the database as JSON without changing their fields", async () => {
-            const rules = [
-                { action: "send_follow_up", mode: "ask" as const, limit_vnd: 1000, required_fields: ["contact"] },
-                { action: "reply", mode: "auto" as const, limit_vnd: null, required_fields: [] },
-            ]
-            const em = mockEntityManager({ query: [SEED_DEFAULT_RULES, []] })
-            const service = await build(em)
-
-            await expect(service.seedDefaults("ws-1", "sales", rules)).resolves.toBeUndefined()
-            expect(em.query).toHaveBeenCalledTimes(1)
-            expect(em.query).toHaveBeenCalledWith(SEED_DEFAULT_RULES, [
-                "ws-1",
-                "sales",
-                '[{"action":"send_follow_up","mode":"ask","limit_vnd":1000,"required_fields":["contact"]},{"action":"reply","mode":"auto","limit_vnd":null,"required_fields":[]}]',
-            ])
+    it("keeps an auto rule on autopilot", async () => {
+        const em = mockEntityManager({
+            query: [
+                [FIND_RULE, [ruleRowOf()]],
+                [FIND_OPERATING_MODE, [{ operating_mode: "autopilot" }]],
+            ],
         })
+        const service = await build(em)
+
+        await expect(service.ruleFor(scope, "send_follow_up", null)).resolves.toEqual(ruleRowOf())
+    })
+
+    it("keeps an auto rule when the module has no installation", async () => {
+        const em = mockEntityManager({
+            query: [
+                [FIND_RULE, [ruleRowOf()]],
+                [FIND_OPERATING_MODE, []],
+            ],
+        })
+        const service = await build(em)
+
+        await expect(service.ruleFor(scope, "send_follow_up", null)).resolves.toEqual(ruleRowOf())
+    })
+})
+
+describe("AuthorityRulesService > list", () => {
+    it("lists the stored rules", async () => {
+        const em = mockEntityManager({ query: [LIST_RULES, [recordOf()]] })
+        const service = await build(em)
+
+        await expect(service.list("ws-1")).resolves.toEqual([recordOf()])
+        expect(em.query).toHaveBeenCalledWith(LIST_RULES, ["ws-1"])
+    })
+})
+
+describe("AuthorityRulesService > save", () => {
+    it("saves the rule", async () => {
+        const em = mockEntityManager({ query: [UPSERT_RULE, [recordOf({ mode: "ask" })]] })
+        const service = await build(em)
+
+        await expect(service.save("ws-1", changeOf())).resolves.toEqual(recordOf({ mode: "ask" }))
+        expect(em.query).toHaveBeenCalledWith(UPSERT_RULE, [
+            "ws-1",
+            "send_follow_up",
+            "ask",
+            1000,
+            ["contact"],
+            "sales",
+            null,
+        ])
+    })
+
+    it("refuses an action the registry does not know", async () => {
+        const service = await build(mockEntityManager({ query: [UPSERT_RULE, []] }))
+
+        await expect(service.save("ws-1", changeOf())).rejects.toMatchObject({
+            code: AuthorityRulesErrorCode.UnknownAction,
+            params: { action: "send_follow_up" },
+        })
+    })
+})
+
+describe("AuthorityRulesService > seedDefaults", () => {
+    it("passes the module defaults to the database as JSON without changing their fields", async () => {
+        const rules = [
+            { action: "send_follow_up", mode: "ask" as const, limit_vnd: 1000, required_fields: ["contact"] },
+            { action: "reply", mode: "auto" as const, limit_vnd: null, required_fields: [] },
+        ]
+        const em = mockEntityManager({ query: [SEED_DEFAULT_RULES, []] })
+        const service = await build(em)
+
+        await expect(service.seedDefaults("ws-1", "sales", rules)).resolves.toBeUndefined()
+        expect(em.query).toHaveBeenCalledTimes(1)
+        expect(em.query).toHaveBeenCalledWith(SEED_DEFAULT_RULES, [
+            "ws-1",
+            "sales",
+            '[{"action":"send_follow_up","mode":"ask","limit_vnd":1000,"required_fields":' +
+                '["contact"]},{"action":"reply","mode":"auto","limit_vnd":null,"required_fields":[]}]',
+        ])
     })
 })

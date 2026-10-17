@@ -1,3 +1,4 @@
+import { BankFeedDeliveryService } from "./bank-feed-delivery.service"
 import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
 import { BankCreditModule } from "@modules/queues/bank-credit"
@@ -19,7 +20,7 @@ export class BillingModule extends ConfigurableModuleClass {
         const base = super.register(options)
         return {
             ...base,
-            imports: [...(base.imports ?? []), BankCreditModule],
+            imports: [...(base.imports ?? []), BankCreditModule.register({})],
             providers: [
                 ...(base.providers ?? []),
                 BillingService,
@@ -31,6 +32,7 @@ export class BillingModule extends ConfigurableModuleClass {
                 VietcombankProofService,
                 PaymentSecretsService,
                 BankFeedService,
+                BankFeedDeliveryService,
             ],
             exports: [
                 MODULE_OPTIONS_TOKEN,
@@ -39,6 +41,7 @@ export class BillingModule extends ConfigurableModuleClass {
                 EntitlementsService,
                 PaymentProofService,
                 BankFeedService,
+                BankFeedDeliveryService,
             ],
         }
     }

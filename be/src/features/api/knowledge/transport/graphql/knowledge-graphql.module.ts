@@ -1,5 +1,6 @@
 import { Module } from "@nestjs/common"
 import { KnowledgeApiModule } from "../../knowledge.module"
+import { ConfigurableModuleClass } from "./knowledge-graphql.module-definition"
 import { KnowledgeSourcesResolver } from "./knowledge-sources.resolver"
 import { KnowledgeSourceResolver } from "./knowledge-source.resolver"
 import { NivoKnowledgeCountResolver } from "./nivo-knowledge-count.resolver"
@@ -31,7 +32,7 @@ import { DisconnectDriveResolver } from "./disconnect-drive.resolver"
 import { GetDriveGrantResolver } from "./get-drive-grant.resolver"
 
 @Module({
-    imports: [KnowledgeApiModule],
+    imports: [KnowledgeApiModule.register({})],
     providers: [
         KnowledgeSourcesResolver,
         KnowledgeSourceResolver,
@@ -65,4 +66,4 @@ import { GetDriveGrantResolver } from "./get-drive-grant.resolver"
     ],
 })
 /** The GraphQL transport of the knowledge feature. */
-export class KnowledgeGraphqlModule {}
+export class KnowledgeGraphqlModule extends ConfigurableModuleClass {}

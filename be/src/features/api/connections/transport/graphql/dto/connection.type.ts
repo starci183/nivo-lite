@@ -1,7 +1,7 @@
 import { Field, ID, ObjectType } from "@nestjs/graphql"
 import { FirstEventType } from "./first-event.type"
 import { ConnectionGrantType } from "./connection-grant.type"
-import { StringMapScalar } from "./string-map.type"
+import { StringMapScalar } from "../string-map.mapper"
 
 @ObjectType()
 /** One connection of a workspace, without any secret. */

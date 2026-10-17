@@ -1,5 +1,14 @@
+import { Test } from "@nestjs/testing"
 import type { BrainFactRow } from "./persistence/brain-facts.rows"
 import { isoOf, toFactRecord } from "./fact-record.mapper"
+const SUBJECT = Symbol("fact-record.mapper")
+
+const build = async () => {
+    const moduleRef = await Test.createTestingModule({
+        providers: [{ provide: SUBJECT, useValue: { isoOf, toFactRecord } }],
+    }).compile()
+    return moduleRef.get<typeof import("./fact-record.mapper")>(SUBJECT)
+}
 
 const row = (overrides: Partial<BrainFactRow> = {}): BrainFactRow => ({
     id: "f1",
@@ -33,13 +42,17 @@ const row = (overrides: Partial<BrainFactRow> = {}): BrainFactRow => ({
 })
 
 describe("fact records", () => {
-    it("formats a driver Date or preserves existing timestamp text", () => {
-        expect(isoOf(new Date("2026-01-01T00:00:00.000Z"))).toBe("2026-01-01T00:00:00.000Z")
-        expect(isoOf("2026-01-02T00:00:00.000Z")).toBe("2026-01-02T00:00:00.000Z")
+    it("formats a driver Date or preserves existing timestamp text", async () => {
+        const subject = await build()
+
+        expect(subject.isoOf(new Date("2026-01-01T00:00:00.000Z"))).toBe("2026-01-01T00:00:00.000Z")
+        expect(subject.isoOf("2026-01-02T00:00:00.000Z")).toBe("2026-01-02T00:00:00.000Z")
     })
 
-    it("maps all stored fields with numeric conversion and timestamp normalization", () => {
-        expect(toFactRecord(row())).toEqual({
+    it("maps all stored fields with numeric conversion and timestamp normalization", async () => {
+        const subject = await build()
+
+        expect(subject.toFactRecord(row())).toEqual({
             id: "f1",
             subjectType: "product",
             subjectKey: "combo",
@@ -68,10 +81,14 @@ describe("fact records", () => {
             decisionNote: "Approved",
         })
     })
+})
 
-    it("preserves null values and supplies defaults for optional stored collections and proposal kind", () => {
+describe("fact records", () => {
+    it("preserves null values and supplies defaults for optional stored collections and proposal kind", async () => {
+        const subject = await build()
+
         expect(
-            toFactRecord(
+            subject.toFactRecord(
                 row({
                     value_number: null,
                     unit: null,

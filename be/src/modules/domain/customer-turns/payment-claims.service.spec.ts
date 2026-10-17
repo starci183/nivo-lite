@@ -112,7 +112,9 @@ describe("PaymentClaimsService", () => {
             }),
         )
     })
+})
 
+describe("PaymentClaimsService", () => {
     it("uses a dash when the lead has no contact name", async () => {
         const engine = { runWork: jest.fn().mockResolvedValue({ id: "w9" }) }
         const items = { latestOfKey: jest.fn().mockResolvedValue(null) }

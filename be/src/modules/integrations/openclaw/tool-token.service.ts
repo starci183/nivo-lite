@@ -17,8 +17,9 @@ const KEY_BYTES = 32
 
 @Injectable()
 /**
- * Short-lived per-job tokens for the tool bridge. A token is bound to one job (hence to one workspace and one conversation), expires
- * with it, and is honoured only while that job runs in this process. OpenClaw never holds a credential that outlives the turn.
+ * Short-lived per-job tokens for the tool bridge. A token is bound to one job (hence to one workspace and one
+ * conversation), expires with it, and is honoured only while that job runs in this process. OpenClaw never holds a
+ * credential that outlives the turn.
  */
 export class ToolTokenService {
     private readonly key: Buffer | null
@@ -35,7 +36,10 @@ export class ToolTokenService {
                 : Buffer.from(hkdfSync("sha256", options.toolSecret.reveal(), "", KEY_CONTEXT, KEY_BYTES))
     }
 
-    /** Mints a token valid for `ttlSeconds` and marks the job active; an empty text when the tool bridge has no secret. Call `revoke` when the job ends. */
+    /**
+     * Mints a token valid for `ttlSeconds` and marks the job active; an empty text when the tool bridge has no secret.
+     * Call `revoke` when the job ends.
+     */
     mint(subject: ToolTokenSubject, ttlSeconds: number): string {
         if (this.key === null) return ""
         const claims: ToolClaims = { ...subject, exp: Math.floor(this.clock.now().getTime() / 1000) + ttlSeconds }
@@ -49,8 +53,11 @@ export class ToolTokenService {
         this.active.delete(jobId)
     }
 
-    /** The claims of a valid, unexpired token of a job still running here; null otherwise. Counts the call against the per-job cap. */
-    verify(token: string): VerifiedToolClaims {
+    /**
+     * The claims of a valid, unexpired token of a job still running here; null otherwise. Consumes one call by default;
+     * admission may inspect without consuming.
+     */
+    verify(token: string, consume: boolean = true): VerifiedToolClaims {
         const [body = "", mac = ""] = token.split(".")
         if (this.key === null || body === "" || mac === "") return null
         if (!this.same(this.macOf(this.key, body), mac)) return null
@@ -58,7 +65,7 @@ export class ToolTokenService {
         if (claims === null || claims.exp < this.clock.now().getTime() / 1000) return null
         const calls = this.active.get(claims.jobId)
         if (calls === undefined || calls >= MAX_CALLS_PER_JOB) return null
-        this.active.set(claims.jobId, calls + 1)
+        if (consume) this.active.set(claims.jobId, calls + 1)
         return claims
     }
 
@@ -74,7 +81,7 @@ export class ToolTokenService {
                 typeof exp === "number"
             return valid ? { jobId, workspaceId, conversationId, exp } : null
         } catch (cause) {
-            this.logger.error(OpenclawLogEvent.ToolTokenUnreadable, cause)
+            this.logger.error(OpenclawLogEvent.ToolGrantUnreadable, cause)
             return null
         }
     }

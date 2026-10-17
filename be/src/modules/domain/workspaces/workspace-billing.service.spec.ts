@@ -84,7 +84,9 @@ describe("WorkspaceBillingService", () => {
             expect(em.query).toHaveBeenCalledWith(UPDATE_STATUS, ["ws-1", "past_due"])
         })
     })
+})
 
+describe("WorkspaceBillingService", () => {
     describe("setPlan", () => {
         it("moves the workspace to an active plan", async () => {
             const em = mockEntityManager({

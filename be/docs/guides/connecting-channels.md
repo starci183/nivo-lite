@@ -8,7 +8,7 @@ The webhook and callback URLs below keep their public paths across the lite cuto
 
 ## 0. Preparation (once)
 
-1. Make sure the site origin is correct in production (`NEXT_PUBLIC_SITE_URL=https://nivo.vn`). Without it, Google sign-in and the Zalo OA authorisation step (OAuth) are redirected to `0.0.0.0:3000`.
+1. Make sure the site origin is correct in production (the web app's public site origin, `https://nivo.vn`, read in `fe/apps/web/src/modules/config/index.ts`). Without it, Google sign-in and the Zalo OA authorisation step (OAuth) are redirected to `0.0.0.0:3000`.
 2. `cto.nivo@gmail.com` signs in to `nivo.vn` once (with Google) to create the account. This email is listed in `NIVO_PLATFORM_ADMINS`, so it can open `/admin`.
 3. Create a workspace: open `/workspaces/new`, choose a plan, a name and a business type. The workspace is now in the `pending_payment` state.
 4. Activate the workspace: open `/admin`, open the new workspace, press **Extend** and then **Confirm**.
@@ -71,6 +71,6 @@ Note: Zalo may require the application to be reviewed or the OA to be verified b
 
 ## When something fails
 
-- The Connections page says "only works over https": the web image was built without `NEXT_PUBLIC_SITE_URL=https://nivo.vn` (the web workflow sets it as a build argument); redeploy the web.
+- The Connections page says "only works over https": the web image was built without its public site origin, `https://nivo.vn` (the deploy sets it as a build argument); redeploy the web.
 - The error "cannot decrypt credentials": `CHANNEL_TOKEN_KEY` in production changed. The credentials of the connections have to be entered again.
 - Application errors are written to the `app_errors` table, and credentials are masked before they are written. See `/admin/health`.

@@ -14,6 +14,7 @@ import { SaveRuleHandler } from "./application/save-rule.handler"
 import { SendCommandHandler } from "./application/send-command.handler"
 import { UpdateAuthorityHandler } from "./application/update-authority.handler"
 import { UpdateResponsibilityStatusHandler } from "./application/update-responsibility-status.handler"
+import { ConfigurableModuleClass } from "./decisions.module-definition"
 
 @Module({
     providers: [
@@ -35,4 +36,4 @@ import { UpdateResponsibilityStatusHandler } from "./application/update-responsi
     ],
 })
 /** The decisions feature: the handlers of its application. */
-export class DecisionsApiModule {}
+export class DecisionsApiModule extends ConfigurableModuleClass {}

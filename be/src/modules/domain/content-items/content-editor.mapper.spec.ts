@@ -1,5 +1,15 @@
+import { Test } from "@nestjs/testing"
 import { contentInstant, toContentItem } from "./content-editor.mapper"
 import type { ContentEditorRow } from "./persistence/content-editor.rows"
+
+const SUBJECT = Symbol("content-editor.mapper")
+
+const build = async () => {
+    const moduleRef = await Test.createTestingModule({
+        providers: [{ provide: SUBJECT, useValue: { contentInstant, toContentItem } }],
+    }).compile()
+    return moduleRef.get<typeof import("./content-editor.mapper")>(SUBJECT)
+}
 
 const storedRow = (): ContentEditorRow => ({
     id: "post",
@@ -30,13 +40,17 @@ const storedRow = (): ContentEditorRow => ({
 })
 
 describe("content editor row mapping", () => {
-    it("serializes Date timestamps and preserves driver strings", () => {
-        expect(contentInstant(new Date("2026-10-14T01:02:03.456Z"))).toBe("2026-10-14T01:02:03.456Z")
-        expect(contentInstant("driver timestamp")).toBe("driver timestamp")
+    it("serializes Date timestamps and preserves driver strings", async () => {
+        const subject = await build()
+
+        expect(subject.contentInstant(new Date("2026-10-14T01:02:03.456Z"))).toBe("2026-10-14T01:02:03.456Z")
+        expect(subject.contentInstant("driver timestamp")).toBe("driver timestamp")
     })
 
-    it("preserves every editor, publication, audit and approval field", () => {
-        expect(toContentItem(storedRow())).toEqual({
+    it("preserves every editor, publication, audit and approval field", async () => {
+        const subject = await build()
+
+        expect(subject.toContentItem(storedRow())).toEqual({
             id: "post",
             workspaceId: "workspace",
             planId: "plan",
@@ -67,10 +81,12 @@ describe("content editor row mapping", () => {
         })
     })
 
-    it("defaults unsupported channels, lifecycle state and source", () => {
+    it("defaults unsupported channels, lifecycle state and source", async () => {
+        const subject = await build()
+
         const row = { ...storedRow(), channels: ["unknown"], status: "unknown", source: "unknown" }
-        expect(toContentItem(row)).toEqual({
-            ...toContentItem(storedRow()),
+        expect(subject.toContentItem(row)).toEqual({
+            ...subject.toContentItem(storedRow()),
             channels: ["facebook"],
             status: "idea",
             source: "manual",

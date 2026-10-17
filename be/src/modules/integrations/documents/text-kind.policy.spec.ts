@@ -1,4 +1,14 @@
+import { Test } from "@nestjs/testing"
 import { fileTextKind, hasExtension, sniffTextKind } from "./text-kind.policy"
+
+const SUBJECT = Symbol("text-kind.policy")
+
+const build = async () => {
+    const moduleRef = await Test.createTestingModule({
+        providers: [{ provide: SUBJECT, useValue: { fileTextKind, hasExtension, sniffTextKind } }],
+    }).compile()
+    return moduleRef.get<typeof import("./text-kind.policy")>(SUBJECT)
+}
 
 const bytesOf = (text: string): Uint8Array => new TextEncoder().encode(text)
 
@@ -12,26 +22,34 @@ describe("fileTextKind", () => {
         ["a.md", "text"],
         ["a.markdown", "text"],
         ["a.csv", "text"],
-    ])("reads %s as %s", (name, kind) => {
-        expect(fileTextKind(name)).toBe(kind)
+    ])("reads %s as %s", async (name, kind) => {
+        const subject = await build()
+
+        expect(subject.fileTextKind(name)).toBe(kind)
     })
 
-    it("cannot read another extension or a name without one", () => {
-        expect(fileTextKind("photo.png")).toBeNull()
-        expect(fileTextKind("README")).toBeNull()
+    it("cannot read another extension or a name without one", async () => {
+        const subject = await build()
+
+        expect(subject.fileTextKind("photo.png")).toBeNull()
+        expect(subject.fileTextKind("README")).toBeNull()
     })
 })
 
 describe("hasExtension", () => {
-    it("tells a name with an extension from one without", () => {
-        expect(hasExtension("a.png")).toBe(true)
-        expect(hasExtension("a")).toBe(false)
+    it("tells a name with an extension from one without", async () => {
+        const subject = await build()
+
+        expect(subject.hasExtension("a.png")).toBe(true)
+        expect(subject.hasExtension("a")).toBe(false)
     })
 })
 
 describe("sniffTextKind", () => {
-    it("recognises a PDF by its header whatever the content type", () => {
-        expect(sniffTextKind(bytesOf("%PDF-1.7 rest"), "application/octet-stream")).toBe("pdf")
+    it("recognises a PDF by its header whatever the content type", async () => {
+        const subject = await build()
+
+        expect(subject.sniffTextKind(bytesOf("%PDF-1.7 rest"), "application/octet-stream")).toBe("pdf")
     })
 
     it.each([
@@ -42,12 +60,16 @@ describe("sniffTextKind", () => {
         ["text/csv", "text"],
         ["application/json", "text"],
         ["application/xml", "text"],
-    ])("recognises the content type %s as %s", (contentType, kind) => {
-        expect(sniffTextKind(bytesOf("body"), contentType)).toBe(kind)
+    ])("recognises the content type %s as %s", async (contentType, kind) => {
+        const subject = await build()
+
+        expect(subject.sniffTextKind(bytesOf("body"), contentType)).toBe(kind)
     })
 
-    it("does not take a web page or an unknown type for text", () => {
-        expect(sniffTextKind(bytesOf("<html>"), "text/html")).toBeNull()
-        expect(sniffTextKind(bytesOf("body"), "image/png")).toBeNull()
+    it("does not take a web page or an unknown type for text", async () => {
+        const subject = await build()
+
+        expect(subject.sniffTextKind(bytesOf("<html>"), "text/html")).toBeNull()
+        expect(subject.sniffTextKind(bytesOf("body"), "image/png")).toBeNull()
     })
 })

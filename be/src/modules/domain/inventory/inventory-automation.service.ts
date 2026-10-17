@@ -6,7 +6,7 @@ import type { Clock } from "@modules/platform/clock"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { InjectMessageCatalog } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
-import type { DraftOutcome, OverdueResult, WeeklyReport } from "./inventory.contracts"
+import type { DraftOutcome, InventoryItem, OverdueResult, WeeklyReport } from "./inventory.contracts"
 import { InventoryDispatchService } from "./inventory-dispatch.service"
 import { InventoryMovementsService, SYSTEM_ACTOR } from "./inventory-movements.service"
 import { InventoryReplenishService } from "./inventory-replenish.service"
@@ -52,7 +52,10 @@ interface ReminderPoRow {
 }
 
 @Injectable()
-/** The routine inventory jobs the automation engine runs: the daily low-stock draft, the weekly report and the overdue-supplier reminder. */
+/**
+ * The routine inventory jobs the automation engine runs: the daily low-stock draft, the weekly report and the
+ * overdue-supplier reminder.
+ */
 export class InventoryAutomationService {
     constructor(
         @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
@@ -69,7 +72,10 @@ export class InventoryAutomationService {
         return this.catalog.get(key, params, "vi")
     }
 
-    /** Drafts one order per supplier for the low items, says so in the Office and asks the owner to approve each; nothing leaves without that approval. */
+    /**
+     * Drafts one order per supplier for the low items, says so in the Office and asks the owner to approve each;
+     * nothing leaves without that approval.
+     */
     async runLowStock(workspaceId: string, actor: string): Promise<DraftOutcome> {
         const outcome = await this.replenish.draftLow(workspaceId, { by: actor, requestApproval: false })
         if (outcome.poIds.length === 0) return outcome
@@ -108,22 +114,7 @@ export class InventoryAutomationService {
             )
         const orders = await this.entityManager.query<Array<OpenPoRow>>(SELECT_OPEN_POS, [workspaceId])
         const shop = await this.office.workspaceName(workspaceId)
-        const lowLine =
-            low.length === 0
-                ? this.text("inventory.reportNoLow", {})
-                : this.text("inventory.reportLow", {
-                      count: low.length,
-                      list: low
-                          .slice(0, LOW_LIST_MAX)
-                          .map((item) =>
-                              this.text("inventory.reportLowItem", {
-                                  name: item.name,
-                                  qty: formatQty(totals.get(item.id) ?? 0),
-                                  unit: item.unit,
-                              }),
-                          )
-                          .join("; "),
-                  })
+        const lowLine = this.reportLowLine(low, totals)
         const ordersLine =
             orders.length === 0
                 ? this.text("inventory.reportNoOrders", {})
@@ -164,7 +155,10 @@ export class InventoryAutomationService {
         return { text, valueVnd, lowCount: low.length, openOrders: orders.length, email: mailed?.status ?? "none" }
     }
 
-    /** The sent orders that are past due (after `graceDays`) and still deserve a reminder: at most two per order, two days apart. */
+    /**
+     * The sent orders that are past due (after `graceDays`) and still deserve a reminder: at most two per order, two
+     * days apart.
+     */
     async overdueOrderIds(workspaceId: string, graceDays: number): Promise<Array<string>> {
         const now = this.clock.now().getTime()
         const cutoffDay = new Date(now - Math.max(0, graceDays) * DAY_MS).toISOString().slice(0, 10)
@@ -194,5 +188,23 @@ export class InventoryAutomationService {
             reminder: po.reminders + 1,
             poNo: po.po_no,
         }
+    }
+
+    private reportLowLine(low: ReadonlyArray<InventoryItem>, totals: ReadonlyMap<string, number>): string {
+        return low.length === 0
+            ? this.text("inventory.reportNoLow", {})
+            : this.text("inventory.reportLow", {
+                  count: low.length,
+                  list: low
+                      .slice(0, LOW_LIST_MAX)
+                      .map((item) =>
+                          this.text("inventory.reportLowItem", {
+                              name: item.name,
+                              qty: formatQty(totals.get(item.id) ?? 0),
+                              unit: item.unit,
+                          }),
+                      )
+                      .join("; "),
+              })
     }
 }

@@ -1,7 +1,161 @@
 import type { InventoryTemplate } from "../inventory.templates"
 
+/** The starter's coffee and milk items. */
+const coffeeAndMilkItems = (): InventoryTemplate["starter"]["items"] => [
+    {
+        sku: "CF-HAT",
+        name: "Cà phê hạt rang",
+        unit: "g",
+        units: [
+            {
+                unit: "kg",
+                factor: 1000,
+            },
+        ],
+        category: "Nguyên liệu",
+        costVnd: 250,
+        reorderPoint: 2000,
+        reorderQty: 10000,
+        supplier: "Cà phê Tây Nguyên Phú Lộc",
+        aliases: ["cà phê hạt", "ca phe hat"],
+        qty: 6000,
+    },
+    {
+        sku: "SUA-DAC",
+        name: "Sữa đặc",
+        unit: "ml",
+        units: [
+            {
+                unit: "hộp",
+                factor: 380,
+            },
+        ],
+        category: "Nguyên liệu",
+        costVnd: 60,
+        reorderPoint: 1500,
+        reorderQty: 7600,
+        supplier: "Tạp hoá sỉ Minh Anh",
+        aliases: ["sữa đặc có đường"],
+        qty: 4000,
+    },
+    {
+        sku: "SUA-TUOI",
+        name: "Sữa tươi",
+        unit: "ml",
+        units: [
+            {
+                unit: "lít",
+                factor: 1000,
+            },
+            {
+                unit: "thùng",
+                factor: 12000,
+            },
+        ],
+        category: "Nguyên liệu",
+        costVnd: 30,
+        reorderPoint: 3000,
+        reorderQty: 12000,
+        supplier: "Tạp hoá sỉ Minh Anh",
+        qty: 8000,
+    },
+]
+
+/** The starter's tea and sugar items. */
+const teaAndSugarItems = (): InventoryTemplate["starter"]["items"] => [
+    {
+        sku: "DUONG",
+        name: "Đường cát",
+        unit: "g",
+        units: [
+            {
+                unit: "kg",
+                factor: 1000,
+            },
+        ],
+        category: "Nguyên liệu",
+        costVnd: 22,
+        reorderPoint: 2000,
+        reorderQty: 10000,
+        supplier: "Tạp hoá sỉ Minh Anh",
+        qty: 7000,
+    },
+    {
+        sku: "TRA-DEN",
+        name: "Trà đen",
+        unit: "g",
+        units: [
+            {
+                unit: "kg",
+                factor: 1000,
+            },
+        ],
+        category: "Nguyên liệu",
+        costVnd: 180,
+        reorderPoint: 1000,
+        reorderQty: 5000,
+        supplier: "Cà phê Tây Nguyên Phú Lộc",
+        qty: 3000,
+    },
+]
+
+/** The starter's packaging items. */
+const packagingItems = (): InventoryTemplate["starter"]["items"] => [
+    {
+        sku: "LY-NHUA",
+        name: "Ly nhựa 500ml",
+        unit: "cái",
+        units: [
+            {
+                unit: "cây",
+                factor: 50,
+            },
+        ],
+        category: "Bao bì",
+        costVnd: 900,
+        reorderPoint: 200,
+        reorderQty: 1000,
+        supplier: "Tạp hoá sỉ Minh Anh",
+        qty: 600,
+    },
+    {
+        sku: "NAP-LY",
+        name: "Nắp ly",
+        unit: "cái",
+        units: [
+            {
+                unit: "cây",
+                factor: 100,
+            },
+        ],
+        category: "Bao bì",
+        costVnd: 300,
+        reorderPoint: 200,
+        reorderQty: 1000,
+        supplier: "Tạp hoá sỉ Minh Anh",
+        qty: 600,
+    },
+    {
+        sku: "ONG-HUT",
+        name: "Ống hút",
+        unit: "cái",
+        units: [
+            {
+                unit: "hộp",
+                factor: 100,
+            },
+        ],
+        category: "Bao bì",
+        costVnd: 150,
+        reorderPoint: 200,
+        reorderQty: 1000,
+        supplier: "Tạp hoá sỉ Minh Anh",
+        qty: 600,
+    },
+]
+
 /** Quán cà phê & trà */
-export const CAFE_TEMPLATE: InventoryTemplate = {
+export const cafeTemplate = (): InventoryTemplate => ({
     key: "cafe",
     name: "Quán cà phê & trà",
     description:
@@ -24,150 +178,7 @@ export const CAFE_TEMPLATE: InventoryTemplate = {
                 paymentTerms: "Công nợ 7 ngày",
             },
         ],
-        items: [
-            {
-                sku: "CF-HAT",
-                name: "Cà phê hạt rang",
-                unit: "g",
-                units: [
-                    {
-                        unit: "kg",
-                        factor: 1000,
-                    },
-                ],
-                category: "Nguyên liệu",
-                costVnd: 250,
-                reorderPoint: 2000,
-                reorderQty: 10000,
-                supplier: "Cà phê Tây Nguyên Phú Lộc",
-                aliases: ["cà phê hạt", "ca phe hat"],
-                qty: 6000,
-            },
-            {
-                sku: "SUA-DAC",
-                name: "Sữa đặc",
-                unit: "ml",
-                units: [
-                    {
-                        unit: "hộp",
-                        factor: 380,
-                    },
-                ],
-                category: "Nguyên liệu",
-                costVnd: 60,
-                reorderPoint: 1500,
-                reorderQty: 7600,
-                supplier: "Tạp hoá sỉ Minh Anh",
-                aliases: ["sữa đặc có đường"],
-                qty: 4000,
-            },
-            {
-                sku: "SUA-TUOI",
-                name: "Sữa tươi",
-                unit: "ml",
-                units: [
-                    {
-                        unit: "lít",
-                        factor: 1000,
-                    },
-                    {
-                        unit: "thùng",
-                        factor: 12000,
-                    },
-                ],
-                category: "Nguyên liệu",
-                costVnd: 30,
-                reorderPoint: 3000,
-                reorderQty: 12000,
-                supplier: "Tạp hoá sỉ Minh Anh",
-                qty: 8000,
-            },
-            {
-                sku: "DUONG",
-                name: "Đường cát",
-                unit: "g",
-                units: [
-                    {
-                        unit: "kg",
-                        factor: 1000,
-                    },
-                ],
-                category: "Nguyên liệu",
-                costVnd: 22,
-                reorderPoint: 2000,
-                reorderQty: 10000,
-                supplier: "Tạp hoá sỉ Minh Anh",
-                qty: 7000,
-            },
-            {
-                sku: "TRA-DEN",
-                name: "Trà đen",
-                unit: "g",
-                units: [
-                    {
-                        unit: "kg",
-                        factor: 1000,
-                    },
-                ],
-                category: "Nguyên liệu",
-                costVnd: 180,
-                reorderPoint: 1000,
-                reorderQty: 5000,
-                supplier: "Cà phê Tây Nguyên Phú Lộc",
-                qty: 3000,
-            },
-            {
-                sku: "LY-NHUA",
-                name: "Ly nhựa 500ml",
-                unit: "cái",
-                units: [
-                    {
-                        unit: "cây",
-                        factor: 50,
-                    },
-                ],
-                category: "Bao bì",
-                costVnd: 900,
-                reorderPoint: 200,
-                reorderQty: 1000,
-                supplier: "Tạp hoá sỉ Minh Anh",
-                qty: 600,
-            },
-            {
-                sku: "NAP-LY",
-                name: "Nắp ly",
-                unit: "cái",
-                units: [
-                    {
-                        unit: "cây",
-                        factor: 100,
-                    },
-                ],
-                category: "Bao bì",
-                costVnd: 300,
-                reorderPoint: 200,
-                reorderQty: 1000,
-                supplier: "Tạp hoá sỉ Minh Anh",
-                qty: 600,
-            },
-            {
-                sku: "ONG-HUT",
-                name: "Ống hút",
-                unit: "cái",
-                units: [
-                    {
-                        unit: "hộp",
-                        factor: 100,
-                    },
-                ],
-                category: "Bao bì",
-                costVnd: 150,
-                reorderPoint: 200,
-                reorderQty: 1000,
-                supplier: "Tạp hoá sỉ Minh Anh",
-                qty: 600,
-            },
-        ],
+        items: [...coffeeAndMilkItems(), ...teaAndSugarItems(), ...packagingItems()],
         recipes: [
             {
                 name: "Cà phê sữa",
@@ -197,5 +208,4 @@ export const CAFE_TEMPLATE: InventoryTemplate = {
             },
         ],
     },
-}
-
+})

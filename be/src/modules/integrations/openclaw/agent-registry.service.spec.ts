@@ -24,23 +24,21 @@ const memoryFiles = (initial: Record<string, string> = {}) => {
 }
 
 const build = async (overrides: Partial<OpenclawOptions> = {}, disk = memoryFiles()) => {
+    const options = builder<OpenclawOptions>({
+        gateway: null,
+        turnTimeoutMs: 90_000,
+        settleMs: 3000,
+        configDir: "/state",
+        gatewayStateDir: "/home/node/.openclaw",
+        manageAgents: true,
+        toolSecret: null,
+    })(overrides)
     const files = mock<OpenclawFiles>(disk.files)
     const logger = mock<Logger>()
     const moduleRef = await Test.createTestingModule({
         providers: [
             AgentRegistryService,
-            {
-                provide: OPENCLAW_OPTIONS,
-                useValue: builder<OpenclawOptions>({
-                    gateway: null,
-                    turnTimeoutMs: 90_000,
-                    settleMs: 3000,
-                    configDir: "/state",
-                    gatewayStateDir: "/home/node/.openclaw",
-                    manageAgents: true,
-                    toolSecret: null,
-                })(overrides),
-            },
+            { provide: OPENCLAW_OPTIONS, useValue: options },
             { provide: OPENCLAW_FILES, useValue: files },
             { provide: LOGGER, useValue: logger },
         ],
@@ -86,7 +84,9 @@ describe("AgentRegistryService", () => {
             expect(registry.workspaceDirs(AGENT)).toBeNull()
         })
     })
+})
 
+describe("AgentRegistryService", () => {
     describe("register", () => {
         it("writes the agent and keeps the implicit main agent as the default", async () => {
             const disk = memoryFiles({ [CONFIG]: JSON.stringify({ gateway: { reload: { mode: "hybrid" } } }) })
@@ -112,7 +112,11 @@ describe("AgentRegistryService", () => {
             expect(disk.files.writeText).toHaveBeenCalledWith(CONFIG, disk.store.get(CONFIG), 0o600)
             expect(logger.info).toHaveBeenCalledTimes(1)
         })
+    })
+})
 
+describe("AgentRegistryService", () => {
+    describe("register", () => {
         it("creates the file when there is none and does not rewrite an entry that is current", async () => {
             const disk = memoryFiles()
             const { registry } = await build({}, disk)
@@ -121,7 +125,11 @@ describe("AgentRegistryService", () => {
             expect(registry.register(AGENT, "Bot")).toBe(false)
             expect(disk.files.writeText).toHaveBeenCalledTimes(1)
         })
+    })
+})
 
+describe("AgentRegistryService", () => {
+    describe("register", () => {
         it("corrects an entry that drifted and leaves other agents, entries and keys alone", async () => {
             const disk = memoryFiles({
                 [CONFIG]: JSON.stringify({
@@ -143,7 +151,11 @@ describe("AgentRegistryService", () => {
             expect(config.agents.list[0]).toBe("not an entry")
             expect(config.agents.list[2]).toMatchObject({ id: AGENT, name: "Bot", extra: true })
         })
+    })
+})
 
+describe("AgentRegistryService", () => {
+    describe("register", () => {
         it("does not add a main agent when another entry is already the default", async () => {
             const disk = memoryFiles({
                 [CONFIG]: JSON.stringify({ agents: { list: [{ id: "other", default: true }] } }),
@@ -154,7 +166,11 @@ describe("AgentRegistryService", () => {
 
             expect(stored(disk.store).agents.list.map((entry) => entry["id"])).toEqual(["other", AGENT])
         })
+    })
+})
 
+describe("AgentRegistryService", () => {
+    describe("register", () => {
         it("treats a config that is not an object as empty", async () => {
             const disk = memoryFiles({ [CONFIG]: "[1,2]" })
             const { registry } = await build({}, disk)
@@ -162,7 +178,11 @@ describe("AgentRegistryService", () => {
             expect(registry.register(AGENT, "Bot")).toBe(true)
             expect(stored(disk.store).agents.list).toHaveLength(2)
         })
+    })
+})
 
+describe("AgentRegistryService", () => {
+    describe("register", () => {
         it("refuses when registration is off or has no config directory", async () => {
             const off = await build({ manageAgents: false })
             const none = await build({ configDir: undefined })
@@ -174,7 +194,11 @@ describe("AgentRegistryService", () => {
                 expect.objectContaining({ code: OpenclawErrorCode.RegistrationOff }),
             )
         })
+    })
+})
 
+describe("AgentRegistryService", () => {
+    describe("register", () => {
         it("refuses to overwrite a config it cannot read", async () => {
             const disk = memoryFiles({ [CONFIG]: "{ broken" })
             const { registry, logger } = await build({}, disk)
@@ -186,7 +210,9 @@ describe("AgentRegistryService", () => {
             expect(disk.store.get(CONFIG)).toBe("{ broken")
         })
     })
+})
 
+describe("AgentRegistryService", () => {
     describe("has and isCurrent", () => {
         it("sees a registered agent and nothing before", async () => {
             const disk = memoryFiles()

@@ -34,8 +34,8 @@ const NO_FIGURES: DayFiguresRow = {
 
 @Injectable()
 /**
- * The executors that run the shop's day: the end-of-day report, the delivery notice, the contract renewal reminder. Each does ONE
- * thing and reports steps and evidence; whatever reaches a customer goes through the gate.
+ * The executors that run the shop's day: the end-of-day report, the delivery notice, the contract renewal reminder.
+ * Each does ONE thing and reports steps and evidence; whatever reaches a customer goes through the gate.
  */
 export class AutomationOperationsExecutorsService {
     constructor(
@@ -186,12 +186,7 @@ export class AutomationOperationsExecutorsService {
             evidence = sent.evidence
         }
         const owner = (await this.messages.firstStaffName(context.workspaceId)) ?? say("after.staffFallback")
-        const due = new Date(
-            Math.min(
-                instantOf(`${contract.ends_on}T00:00:00+07:00`),
-                this.clock.now().getTime() + RENEWAL_FOLLOW_UP_DAYS * DAY_MS,
-            ),
-        )
+        const due = this.renewalDue(contract.ends_on)
         const opened = await this.office.openFollowUp(context.workspaceId, {
             leadId: lead.id,
             title: say("renewal.taskTitle", { plan, name: lead.contact_name, ends }),
@@ -235,5 +230,14 @@ export class AutomationOperationsExecutorsService {
         })
         await this.records.attachContractLead(workspaceId, contract.id, leadId)
         return leadId
+    }
+
+    private renewalDue(endsOn: string): Date {
+        return new Date(
+            Math.min(
+                instantOf(`${endsOn}T00:00:00+07:00`),
+                this.clock.now().getTime() + RENEWAL_FOLLOW_UP_DAYS * DAY_MS,
+            ),
+        )
     }
 }

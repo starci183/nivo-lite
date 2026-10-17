@@ -1,5 +1,6 @@
 import { Module } from "@nestjs/common"
 import { ContentApiModule } from "../../content.module"
+import { ConfigurableModuleClass } from "./content-graphql.module-definition"
 import { CreateContentItemResolver } from "./create-content-item.resolver"
 import { SaveContentItemResolver } from "./save-content-item.resolver"
 import { MoveContentItemResolver } from "./move-content-item.resolver"
@@ -11,7 +12,7 @@ import { ListContentItemsResolver } from "./content-items.resolver"
 import { GetContentItemResolver } from "./content-item.resolver"
 
 @Module({
-    imports: [ContentApiModule],
+    imports: [ContentApiModule.register({})],
     providers: [
         CreateContentItemResolver,
         SaveContentItemResolver,
@@ -25,4 +26,4 @@ import { GetContentItemResolver } from "./content-item.resolver"
     ],
 })
 /** Content GraphQL operations. */
-export class ContentGraphqlModule {}
+export class ContentGraphqlModule extends ConfigurableModuleClass {}

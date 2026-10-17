@@ -7,15 +7,12 @@ export enum PlatformAdminErrorCode {
     NotFound = "PLATFORM_ADMIN_NOT_FOUND",
     /** The workspace does not exist. */
     WorkspaceNotFound = "PLATFORM_ADMIN_WORKSPACE_NOT_FOUND",
-    /** The plan does not exist or is retired. */
-    PlanUnknown = "PLATFORM_ADMIN_PLAN_UNKNOWN",
 }
 
 /** How each platform-admin code travels. */
 export const PLATFORM_ADMIN_ERROR_KINDS: Record<PlatformAdminErrorCode, ErrorKind> = {
     [PlatformAdminErrorCode.NotFound]: "not-found",
     [PlatformAdminErrorCode.WorkspaceNotFound]: "not-found",
-    [PlatformAdminErrorCode.PlanUnknown]: "invalid",
 }
 
 /** The one error class of the platform-admin capability. */

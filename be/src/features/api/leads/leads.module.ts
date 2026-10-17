@@ -3,9 +3,10 @@ import { AddResponsibilityHandler } from "./application/add-responsibility.handl
 import { AssignResponsibilityHandler } from "./application/assign-responsibility.handler"
 import { RecordOutcomeHandler } from "./application/record-outcome.handler"
 import { SaveContractHandler } from "./application/save-contract.handler"
+import { ConfigurableModuleClass } from "./leads.module-definition"
 
 @Module({
     providers: [RecordOutcomeHandler, AddResponsibilityHandler, AssignResponsibilityHandler, SaveContractHandler],
 })
 /** The leads feature: the handlers of its application. */
-export class LeadsApiModule {}
+export class LeadsApiModule extends ConfigurableModuleClass {}

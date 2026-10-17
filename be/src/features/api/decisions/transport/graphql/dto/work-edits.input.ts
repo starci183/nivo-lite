@@ -1,6 +1,6 @@
+import { NullAsAbsent } from "@modules/platform/graphql"
 import { Field, ID, InputType, Int } from "@nestjs/graphql"
-import { Transform, Type } from "class-transformer"
-import type { TransformFnParams } from "class-transformer"
+import { Type } from "class-transformer"
 import {
     ArrayMaxSize,
     IsArray,
@@ -21,7 +21,7 @@ export class WorkEditsInput {
     /** A new draft. */
     @Field(() => String, { nullable: true })
     @IsOptional()
-    @Transform(({ value }: TransformFnParams): unknown => value ?? undefined)
+    @NullAsAbsent()
     @IsString()
     @MaxLength(10000)
     draft?: string
@@ -37,7 +37,7 @@ export class WorkEditsInput {
     /** Changed fields. */
     @Field(() => [FieldValueInput], { nullable: true })
     @IsOptional()
-    @Transform(({ value }: TransformFnParams): unknown => value ?? undefined)
+    @NullAsAbsent()
     @IsArray()
     @ArrayMaxSize(30)
     @ValidateNested({ each: true })
@@ -47,7 +47,7 @@ export class WorkEditsInput {
     /** The invoice the owner chose among the candidates. */
     @Field(() => ID, { nullable: true })
     @IsOptional()
-    @Transform(({ value }: TransformFnParams): unknown => value ?? undefined)
+    @NullAsAbsent()
     @IsUUID("4")
     @MaxLength(36)
     candidateId?: string

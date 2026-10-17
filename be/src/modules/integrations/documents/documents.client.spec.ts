@@ -19,7 +19,8 @@ const optionsOf = builder<DocumentsOptions>({
 
 const ID = "1AbCdEfGhIjKlMnOp"
 
-const build = async (options: DocumentsOptions = optionsOf()) => {
+const build = async (inputOptions: DocumentsOptions = optionsOf()) => {
+    const options = builder<DocumentsOptions>(inputOptions)()
     const links = mock<PublicLinkClient>()
     const drive = mock<DriveApiClient>()
     const folders = mock<DriveFolderClient>()
@@ -55,7 +56,11 @@ describe("DocumentsClient", () => {
 
             expect(links.read).toHaveBeenCalledWith({ kind: "web", fetchUrl: "https://shop.test/menu" })
         })
+    })
+})
 
+describe("DocumentsClient", () => {
+    describe("readLink", () => {
         it("refuses a text that is not a link", async () => {
             const { client } = await build()
 
@@ -63,7 +68,11 @@ describe("DocumentsClient", () => {
                 code: DocumentsErrorCode.LinkInvalid,
             })
         })
+    })
+})
 
+describe("DocumentsClient", () => {
+    describe("readLink", () => {
         it.each([
             ["connected", DocumentsErrorCode.FolderUnsupported],
             ["none", DocumentsErrorCode.DriveGrantMissing],
@@ -75,7 +84,11 @@ describe("DocumentsClient", () => {
                 client.readLink(`https://drive.google.com/drive/folders/${ID}`, accessOf(state)),
             ).rejects.toMatchObject({ code })
         })
+    })
+})
 
+describe("DocumentsClient", () => {
+    describe("readLink", () => {
         it("asks for the grant when a Drive folder arrives from an API key", async () => {
             const { client } = await build()
 
@@ -83,7 +96,11 @@ describe("DocumentsClient", () => {
                 code: DocumentsErrorCode.DriveGrantMissing,
             })
         })
+    })
+})
 
+describe("DocumentsClient", () => {
+    describe("readLink", () => {
         it("reads a Google file that is not public with the Drive access of the workspace", async () => {
             const { client, links, drive } = await build()
             links.read.mockRejectedValue(new DocumentsError({ code: DocumentsErrorCode.NotPublic }))
@@ -95,7 +112,11 @@ describe("DocumentsClient", () => {
             expect(read.title).toHaveLength(160)
             expect(drive.readFile).toHaveBeenCalledWith("token-1", ID)
         })
+    })
+})
 
+describe("DocumentsClient", () => {
+    describe("readLink", () => {
         it("asks for the grant when the workspace never gave Drive access", async () => {
             const { client, links } = await build()
             links.read.mockRejectedValue(new DocumentsError({ code: DocumentsErrorCode.NotPublic }))
@@ -104,7 +125,11 @@ describe("DocumentsClient", () => {
                 client.readLink(`https://docs.google.com/document/d/${ID}/edit`, accessOf("none")),
             ).rejects.toMatchObject({ code: DocumentsErrorCode.DriveGrantMissing })
         })
+    })
+})
 
+describe("DocumentsClient", () => {
+    describe("readLink", () => {
         it("lets the Drive access of the workspace report a lost grant", async () => {
             const { client, links } = await build()
             links.read.mockRejectedValue(new DocumentsError({ code: DocumentsErrorCode.NotPublic }))
@@ -114,7 +139,11 @@ describe("DocumentsClient", () => {
 
             await expect(client.readLink(`https://docs.google.com/document/d/${ID}/edit`, access)).rejects.toBe(lost)
         })
+    })
+})
 
+describe("DocumentsClient", () => {
+    describe("readLink", () => {
         it.each([
             ["an API key", null, new DocumentsError({ code: DocumentsErrorCode.NotPublic })],
             ["a plain page", accessOf("connected"), new DocumentsError({ code: DocumentsErrorCode.NotPublic })],
@@ -129,7 +158,9 @@ describe("DocumentsClient", () => {
             await expect(client.readLink(raw, access)).rejects.toBe(failure)
         })
     })
+})
 
+describe("DocumentsClient", () => {
     describe("driveFolderOf", () => {
         it("answers the folder id of a Drive folder address, and null for anything else", async () => {
             const { client } = await build()
@@ -140,7 +171,9 @@ describe("DocumentsClient", () => {
             expect(client.driveFolderOf("not a link")).toBeNull()
         })
     })
+})
 
+describe("DocumentsClient", () => {
     describe("canReadFileName", () => {
         it("accepts a readable extension and a name without one, and refuses another extension", async () => {
             const { client } = await build()
@@ -150,7 +183,9 @@ describe("DocumentsClient", () => {
             expect(client.canReadFileName("photo.png")).toBe(false)
         })
     })
+})
 
+describe("DocumentsClient", () => {
     describe("readFile", () => {
         it("reads bytes by the kind the name gives", async () => {
             const { client } = await build()
@@ -178,7 +213,9 @@ describe("DocumentsClient", () => {
             })
         })
     })
+})
 
+describe("DocumentsClient", () => {
     describe("Drive", () => {
         it("hands a Drive file, a folder and a token refresh to the Drive client", async () => {
             const { client, drive, folders } = await build()

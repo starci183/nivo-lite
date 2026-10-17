@@ -88,20 +88,26 @@ describe("AgentKnowledgeLensService", () => {
         expect(lens.audienceOf("no-such-module")).toBe("customer")
         expect(lens.audienceOf("accounting")).toBe("internal")
     })
+})
 
+describe("AgentKnowledgeLensService", () => {
     it("orders the module's own rules before core and leaves other kinds out", async () => {
         const { lens } = await build()
         const rules = await lens.baseRulesOf(["chatbot", "core"])
         expect(rules.map((rule) => rule.title)).toEqual(["b-bot", "a-core"])
     })
+})
 
+describe("AgentKnowledgeLensService", () => {
     it("never counts internal documents for a customer lens", async () => {
         const { lens, sources } = await build()
         const counts = await lens.countsFor(WS, "chatbot", null)
         expect(counts.audience).toBe("customer")
         expect(sources.countReadable).toHaveBeenCalledWith(expect.objectContaining({ audience: "customer" }), "public")
     })
+})
 
+describe("AgentKnowledgeLensService", () => {
     it("answers null for the gaps only when their table is missing", async () => {
         const { lens, gaps } = await build()
         gaps.openOfModule.mockRejectedValueOnce({ driverError: { code: "42P01" } })
@@ -109,7 +115,9 @@ describe("AgentKnowledgeLensService", () => {
         gaps.openOfModule.mockRejectedValueOnce(new Error("boom"))
         await expect(lens.openGapsOf(WS, "chatbot", 5)).rejects.toThrow("boom")
     })
+})
 
+describe("AgentKnowledgeLensService", () => {
     it("projects readable documents and passes the instance's internal view to the source reader", async () => {
         const { lens, sources } = await build()
         const document = {
@@ -127,7 +135,9 @@ describe("AgentKnowledgeLensService", () => {
             3,
         )
     })
+})
 
+describe("AgentKnowledgeLensService", () => {
     it("returns the standing memory for the exact customer view", async () => {
         const { lens, recall } = await build()
         recall.standingMemory.mockResolvedValueOnce("### Delivery\n- Days: Sunday")
@@ -139,7 +149,9 @@ describe("AgentKnowledgeLensService", () => {
             installationId: null,
         })
     })
+})
 
+describe("AgentKnowledgeLensService", () => {
     it("sorts rules by folder order and then slug, including tone and rejecting unrelated folders", async () => {
         const { lens, nivo } = await build()
         nivo.list.mockResolvedValueOnce([
@@ -157,7 +169,9 @@ describe("AgentKnowledgeLensService", () => {
         expect(nivo.list).toHaveBeenCalledTimes(1)
         await expect(lens.baseRulesOf([])).resolves.toEqual([])
     })
+})
 
+describe("AgentKnowledgeLensService", () => {
     it("counts public, internal and restricted facts with the same view and a 500 fact limit", async () => {
         const { lens, sources, recall } = await build()
         const view = { workspaceId: WS, module: "accounting", audience: "internal", installationId: "instance-1" }
@@ -177,7 +191,9 @@ describe("AgentKnowledgeLensService", () => {
         expect(sources.countReadable).toHaveBeenNthCalledWith(2, view, "internal")
         expect(recall.factsInView).toHaveBeenCalledWith(view, 500)
     })
+})
 
+describe("AgentKnowledgeLensService", () => {
     it("returns open gap counts and only the fields used by the lens", async () => {
         const { lens, gaps } = await build()
         const gap = {
@@ -204,7 +220,9 @@ describe("AgentKnowledgeLensService", () => {
         await expect(lens.openGapsOf(WS, "chatbot", 3)).resolves.toEqual({ openCount: 8, items: [gap] })
         expect(gaps.openOfModule).toHaveBeenCalledWith(WS, "chatbot", 3)
     })
+})
 
+describe("AgentKnowledgeLensService", () => {
     it.each([{ code: "42P01" }, { driverError: null, code: "42P01" }, { driverError: "driver", code: "42P01" }])(
         "returns null for a missing table reported without a driver object: %j",
         async (cause) => {
@@ -213,7 +231,9 @@ describe("AgentKnowledgeLensService", () => {
             await expect(lens.openGapsOf(WS, "chatbot", 5)).resolves.toBeNull()
         },
     )
+})
 
+describe("AgentKnowledgeLensService", () => {
     it.each([null, "network unavailable", { driverError: { code: "40001" }, code: "42P01" }])(
         "preserves failures that do not report a missing table: %j",
         async (cause) => {

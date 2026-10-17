@@ -10,8 +10,7 @@ export interface MetaInboundJob {
     readonly event: MetaEvent
 }
 
-/** The queue the events are written to. */
-export const META_INBOUND_QUEUE = "meta_inbound"
+export { META_INBOUND_QUEUE } from "@modules/queues/meta-inbound"
 
 /** True when a job payload is the payload of an accept-meta-event job. */
 export const isMetaInboundJob = (value: unknown): value is MetaInboundJob =>
@@ -30,3 +29,6 @@ export type RawDelivery = Buffer | undefined
 
 /** The `X-Hub-Signature-256` header of a delivery; undefined when Meta sent none, which is refused. */
 export type DeliverySignature = string | undefined
+
+export { META_DELIVERY_QUEUE } from "@modules/queues/meta-delivery"
+export type { MetaDeliveryRecorded } from "@modules/queues/meta-delivery"

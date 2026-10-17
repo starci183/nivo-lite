@@ -21,8 +21,6 @@ export enum DecisionsErrorCode {
     ModeCapped = "DECISIONS_MODE_CAPPED",
     /** The work item is not waiting for a decision any more. */
     NotWaiting = "DECISIONS_NOT_WAITING",
-    /** A page request is malformed. */
-    PageInvalid = "DECISIONS_PAGE_INVALID",
     /** The work could not be done; the reason rides in the params. */
     WorkFailed = "DECISIONS_WORK_FAILED",
     /** The person approved but required data is still missing; the fields ride in the params. */
@@ -48,7 +46,6 @@ export const DECISIONS_ERROR_KINDS: Record<DecisionsErrorCode, ErrorKind> = {
     [DecisionsErrorCode.UnknownAction]: "invalid",
     [DecisionsErrorCode.ModeCapped]: "invalid",
     [DecisionsErrorCode.NotWaiting]: "conflict",
-    [DecisionsErrorCode.PageInvalid]: "invalid",
     [DecisionsErrorCode.WorkFailed]: "internal",
     [DecisionsErrorCode.StillMissing]: "invalid",
     [DecisionsErrorCode.ChooseCandidate]: "invalid",

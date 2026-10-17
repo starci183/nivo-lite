@@ -2,8 +2,6 @@
 export const TABLE_COPY = {
     /** The file holds nothing. */
     noData: "File không có dữ liệu.",
-    /** The first row is empty. */
-    headerRow: "Dòng đầu tiên phải là tên các cột.",
     /** Too many columns. */
     tooManyColumns: (max: number): string => `File có quá nhiều cột (tối đa ${max}).`,
     /** Too many rows; the limit is already formatted. */

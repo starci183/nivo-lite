@@ -23,7 +23,7 @@ export class DataHubModule extends ConfigurableModuleClass {
         const base = super.register(options)
         return {
             ...base,
-            imports: [...(base.imports ?? []), DataSyncModule],
+            imports: [...(base.imports ?? []), DataSyncModule.register({})],
             providers: [
                 ...(base.providers ?? []),
                 DataHubService,

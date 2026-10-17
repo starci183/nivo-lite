@@ -15,7 +15,7 @@ export class N8nRunsModule extends ConfigurableModuleClass {
         const base = super.register(options)
         return {
             ...base,
-            imports: [...(base.imports ?? []), N8nQueueModule],
+            imports: [...(base.imports ?? []), N8nQueueModule.register({})],
             providers: [...(base.providers ?? []), N8nRunsService, N8nDataService, N8nEmailService, N8nDoorService],
             exports: [N8nRunsService, N8nDataService, N8nEmailService, N8nDoorService],
         }

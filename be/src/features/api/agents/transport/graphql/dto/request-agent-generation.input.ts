@@ -1,6 +1,6 @@
+import { NullAsAbsent } from "@modules/platform/graphql"
 import { Field, InputType, Int } from "@nestjs/graphql"
-import { Transform, Type } from "class-transformer"
-import type { TransformFnParams } from "class-transformer"
+import { Type } from "class-transformer"
 import {
     ArrayMaxSize,
     IsArray,
@@ -44,7 +44,7 @@ export class RequestAgentGenerationInput {
     /** How long the text may take, ms; the default when absent. */
     @Field(() => Int, { nullable: true })
     @IsOptional()
-    @Transform(({ value }: TransformFnParams): unknown => value ?? undefined)
+    @NullAsAbsent()
     @IsInt()
     @Min(5000)
     @Max(120000)

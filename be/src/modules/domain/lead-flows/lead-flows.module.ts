@@ -36,7 +36,7 @@ export class LeadFlowsModule extends ConfigurableModuleClass {
         const base = super.register(options)
         return {
             ...base,
-            imports: [...(base.imports ?? []), LeadGenQueueModule],
+            imports: [...(base.imports ?? []), LeadGenQueueModule.register({})],
             providers: [
                 ...(base.providers ?? []),
                 { provide: LEAD_TURN_READER, useExisting: DEEPSEEK_CLIENT },

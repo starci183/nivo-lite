@@ -63,7 +63,7 @@ describe("JobRunnerService", () => {
             expect(processor.process).toHaveBeenCalledWith(job)
         })
 
-        it("subscribes a processor of one job under that job and its concurrency, and hands its failure to the processor", async () => {
+        it("subscribes with the job and concurrency and hands failures to the processor", async () => {
             const { runner, queues } = await build()
             const processor = mock<FencedProcessor>({ queue: "mail", job: "mail.send", concurrency: 2 })
             const cause = new Error("gave up")
@@ -76,9 +76,11 @@ describe("JobRunnerService", () => {
             expect(processor.onFailed).toHaveBeenCalledWith(delivery, cause)
         })
     })
+})
 
+describe("JobRunnerService", () => {
     describe("run", () => {
-        it("claims the delivery with the job key and the lease, processes it and completes it under the claimed token", async () => {
+        it("claims with the job key and lease, processes and completes under the claimed token", async () => {
             const { runner, claims, processor } = await build()
             claims.claim.mockResolvedValue(job)
 
@@ -116,7 +118,7 @@ describe("JobRunnerService", () => {
             expect(claims.complete).not.toHaveBeenCalled()
         })
 
-        it("stops quietly when a write is fenced out: a newer worker owns the job and this one causes no further effect", async () => {
+        it("stops further effects when a newer worker fences out a write", async () => {
             const { runner, claims, logger, processor } = await build()
             claims.claim.mockResolvedValue(job)
             claims.complete.mockRejectedValue(fenced())
@@ -127,7 +129,7 @@ describe("JobRunnerService", () => {
             expect(claims.fail).not.toHaveBeenCalled()
         })
 
-        it("marks the job failed under its token and rethrows when the processor throws, so the queue retries", async () => {
+        it("marks failure under its token and rethrows processor errors for queue retry", async () => {
             const { runner, claims, logger, processor } = await build()
             claims.claim.mockResolvedValue(job)
             const failure = new Error("provider down")
@@ -148,8 +150,12 @@ describe("JobRunnerService", () => {
 
             expect(claims.fail).toHaveBeenCalledWith({ jobId: "j-1", expectedFencingToken: 2, reason: "plain text" })
         })
+    })
+})
 
-        it("still rethrows the original failure when recording it is fenced out, and logs when recording it fails otherwise", async () => {
+describe("JobRunnerService", () => {
+    describe("run", () => {
+        it("rethrows the original failure when recording is fenced out and logs other recording failures", async () => {
             const { runner, claims, logger, processor } = await build()
             claims.claim.mockResolvedValue(job)
             const failure = new Error("provider down")

@@ -64,3 +64,11 @@ export type DocumentKind = "docx" | "pdf" | "text"
 
 /** How an uploaded table is read. */
 export type TableFileKind = "csv" | "xlsx"
+
+/** The document text readers supplied by the app's chosen document integration. */
+export interface TableDocumentReaders {
+    /** Reads the text of a Word file. */
+    docx(bytes: Uint8Array): Promise<string>
+    /** Reads PDF text and preserves its page count. */
+    pdfDetails(bytes: Uint8Array): Promise<UploadedDocumentText>
+}

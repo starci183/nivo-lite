@@ -103,119 +103,114 @@ const build = async () => {
     return { service: moduleRef.get(SalesDecisionsService), tx, members, decisions, executions, queue, status }
 }
 
-describe("SalesDecisionsService", () => {
-    describe("decideWorkItem", () => {
-        it("queues the decision keyed by the item version and answers the queued action", async () => {
-            const { service, tx, queue, status } = await build()
+describe("SalesDecisionsService decideWorkItem", () => {
+    it("queues the decision keyed by the item version and answers the queued action", async () => {
+        const { service, tx, queue, status } = await build()
 
-            await expect(service.decideWorkItem("user-1", decision)).resolves.toEqual(ACTION)
+        await expect(service.decideWorkItem("user-1", decision)).resolves.toEqual(ACTION)
 
-            expect(tx.commits).toBe(1)
-            expect(queue.enqueueDecideWork.mock.calls[0]?.[0]).toEqual({
-                workspaceId: "ws-1",
-                userId: "user-1",
-                locale: "en",
-                workItemId: "item-1",
-                decision: "approved",
-                edits: undefined,
-                note: "ok",
-                basis: undefined,
-            })
-            expect(queue.enqueueDecideWork.mock.calls[0]?.[2]).toBe(`item-1:${UPDATED_AT}`)
-            expect(status.queued.mock.calls[0]?.slice(1)).toEqual([
-                "ws-1",
-                `decisions.decide-work:item-1:${UPDATED_AT}`,
-            ])
+        expect(tx.commits).toBe(1)
+        expect(queue.enqueueDecideWork.mock.calls[0]?.[0]).toEqual({
+            workspaceId: "ws-1",
+            userId: "user-1",
+            locale: "en",
+            workItemId: "item-1",
+            decision: "approved",
+            edits: undefined,
+            note: "ok",
+            basis: undefined,
         })
-
-        it("lets assigned staff decide their own item", async () => {
-            const { service, members, decisions } = await build()
-            members.require.mockResolvedValue(memberOf({ role: "staff", staffId: "staff-1" }))
-            decisions.getWorkItem.mockResolvedValue(itemOf({ assigned_staff_id: "staff-1" }))
-
-            await expect(service.decideWorkItem("user-1", decision)).resolves.toEqual(ACTION)
-        })
-
-        it("refuses staff deciding an item assigned to someone else", async () => {
-            const { service, tx, members, decisions, queue } = await build()
-            members.require.mockResolvedValue(memberOf({ role: "staff", staffId: "staff-1" }))
-            decisions.getWorkItem.mockResolvedValue(itemOf({ assigned_staff_id: "staff-2" }))
-
-            await expect(service.decideWorkItem("user-1", decision)).rejects.toMatchObject({
-                code: DecisionsErrorCode.NotAllowed,
-            })
-            expect(tx.outcomes).toEqual([])
-            expect(queue.enqueueDecideWork).not.toHaveBeenCalled()
-        })
-
-        it("refuses an item that no longer waits for a decision", async () => {
-            const { service, decisions, queue } = await build()
-            decisions.getWorkItem.mockResolvedValue(itemOf({ status: "done" }))
-
-            await expect(service.decideWorkItem("user-1", decision)).rejects.toMatchObject({
-                code: DecisionsErrorCode.NotWaiting,
-            })
-            expect(queue.enqueueDecideWork).not.toHaveBeenCalled()
-        })
+        expect(queue.enqueueDecideWork.mock.calls[0]?.[2]).toBe(`item-1:${UPDATED_AT}`)
+        expect(status.queued.mock.calls[0]?.slice(1)).toEqual(["ws-1", `decisions.decide-work:item-1:${UPDATED_AT}`])
     })
 
-    describe("decideDraft", () => {
-        it("queues a manager's decision on a card without a work item keyed by the card", async () => {
-            const { service, tx, queue, status, decisions } = await build()
+    it("lets assigned staff decide their own item", async () => {
+        const { service, members, decisions } = await build()
+        members.require.mockResolvedValue(memberOf({ role: "staff", staffId: "staff-1" }))
+        decisions.getWorkItem.mockResolvedValue(itemOf({ assigned_staff_id: "staff-1" }))
 
-            await expect(service.decideDraft("user-1", draftDecision)).resolves.toEqual(ACTION)
+        await expect(service.decideWorkItem("user-1", decision)).resolves.toEqual(ACTION)
+    })
 
-            expect(tx.commits).toBe(1)
-            expect(decisions.getWorkItem).not.toHaveBeenCalled()
-            expect(queue.enqueueDecideExecution.mock.calls[0]?.[0]).toEqual({
-                workspaceId: "ws-1",
-                userId: "user-1",
-                locale: "en",
-                executionId: "exec-1",
-                decision: "approved",
-                editedDraft: "Hi",
-            })
-            expect(queue.enqueueDecideExecution.mock.calls[0]?.[2]).toBe("exec-1")
-            expect(status.queued.mock.calls[0]?.slice(1)).toEqual(["ws-1", "decisions.decide-execution:exec-1"])
+    it("refuses staff deciding an item assigned to someone else", async () => {
+        const { service, tx, members, decisions, queue } = await build()
+        members.require.mockResolvedValue(memberOf({ role: "staff", staffId: "staff-1" }))
+        decisions.getWorkItem.mockResolvedValue(itemOf({ assigned_staff_id: "staff-2" }))
+
+        await expect(service.decideWorkItem("user-1", decision)).rejects.toMatchObject({
+            code: DecisionsErrorCode.NotAllowed,
         })
+        expect(tx.outcomes).toEqual([])
+        expect(queue.enqueueDecideWork).not.toHaveBeenCalled()
+    })
 
-        it("keys a card with a work item by the card and the item version", async () => {
-            const { service, executions, queue } = await build()
-            executions.find.mockResolvedValue(cardOf({ work_item_id: "item-1" }))
+    it("refuses an item that no longer waits for a decision", async () => {
+        const { service, decisions, queue } = await build()
+        decisions.getWorkItem.mockResolvedValue(itemOf({ status: "done" }))
 
-            await service.decideDraft("user-1", draftDecision)
-
-            expect(queue.enqueueDecideExecution.mock.calls[0]?.[2]).toBe(`exec-1:${UPDATED_AT}`)
+        await expect(service.decideWorkItem("user-1", decision)).rejects.toMatchObject({
+            code: DecisionsErrorCode.NotWaiting,
         })
+        expect(queue.enqueueDecideWork).not.toHaveBeenCalled()
+    })
+})
 
-        it("refuses staff deciding a card without a work item", async () => {
-            const { service, members, queue } = await build()
-            members.require.mockResolvedValue(memberOf({ role: "staff", staffId: "staff-1" }))
+describe("SalesDecisionsService decideDraft", () => {
+    it("queues a manager's decision on a card without a work item keyed by the card", async () => {
+        const { service, tx, queue, status, decisions } = await build()
 
-            await expect(service.decideDraft("user-1", draftDecision)).rejects.toMatchObject({
-                code: DecisionsErrorCode.NotAllowed,
-            })
-            expect(queue.enqueueDecideExecution).not.toHaveBeenCalled()
+        await expect(service.decideDraft("user-1", draftDecision)).resolves.toEqual(ACTION)
+
+        expect(tx.commits).toBe(1)
+        expect(decisions.getWorkItem).not.toHaveBeenCalled()
+        expect(queue.enqueueDecideExecution.mock.calls[0]?.[0]).toEqual({
+            workspaceId: "ws-1",
+            userId: "user-1",
+            locale: "en",
+            executionId: "exec-1",
+            decision: "approved",
+            editedDraft: "Hi",
         })
+        expect(queue.enqueueDecideExecution.mock.calls[0]?.[2]).toBe("exec-1")
+        expect(status.queued.mock.calls[0]?.slice(1)).toEqual(["ws-1", "decisions.decide-execution:exec-1"])
+    })
 
-        it.each([
-            ["a missing card", null, DecisionsErrorCode.NotFound],
-            ["a decided card", cardOf({ status: "approved" }), DecisionsErrorCode.NotWaiting],
-        ])("refuses %s", async (_name, card, code) => {
-            const { service, executions } = await build()
-            executions.find.mockResolvedValue(card)
+    it("keys a card with a work item by the card and the item version", async () => {
+        const { service, executions, queue } = await build()
+        executions.find.mockResolvedValue(cardOf({ work_item_id: "item-1" }))
 
-            await expect(service.decideDraft("user-1", draftDecision)).rejects.toMatchObject({ code })
+        await service.decideDraft("user-1", draftDecision)
+
+        expect(queue.enqueueDecideExecution.mock.calls[0]?.[2]).toBe(`exec-1:${UPDATED_AT}`)
+    })
+
+    it("refuses staff deciding a card without a work item", async () => {
+        const { service, members, queue } = await build()
+        members.require.mockResolvedValue(memberOf({ role: "staff", staffId: "staff-1" }))
+
+        await expect(service.decideDraft("user-1", draftDecision)).rejects.toMatchObject({
+            code: DecisionsErrorCode.NotAllowed,
         })
+        expect(queue.enqueueDecideExecution).not.toHaveBeenCalled()
+    })
 
-        it("refuses a card whose work item no longer waits", async () => {
-            const { service, executions, decisions } = await build()
-            executions.find.mockResolvedValue(cardOf({ work_item_id: "item-1" }))
-            decisions.getWorkItem.mockResolvedValue(itemOf({ status: "done" }))
+    it.each([
+        ["a missing card", null, DecisionsErrorCode.NotFound],
+        ["a decided card", cardOf({ status: "approved" }), DecisionsErrorCode.NotWaiting],
+    ])("refuses %s", async (_name, card, code) => {
+        const { service, executions } = await build()
+        executions.find.mockResolvedValue(card)
 
-            await expect(service.decideDraft("user-1", draftDecision)).rejects.toMatchObject({
-                code: DecisionsErrorCode.NotWaiting,
-            })
+        await expect(service.decideDraft("user-1", draftDecision)).rejects.toMatchObject({ code })
+    })
+
+    it("refuses a card whose work item no longer waits", async () => {
+        const { service, executions, decisions } = await build()
+        executions.find.mockResolvedValue(cardOf({ work_item_id: "item-1" }))
+        decisions.getWorkItem.mockResolvedValue(itemOf({ status: "done" }))
+
+        await expect(service.decideDraft("user-1", draftDecision)).rejects.toMatchObject({
+            code: DecisionsErrorCode.NotWaiting,
         })
     })
 })

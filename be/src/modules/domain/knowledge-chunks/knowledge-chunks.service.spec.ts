@@ -86,7 +86,11 @@ describe("KnowledgeChunksService", () => {
                 [null],
             ])
         })
+    })
+})
 
+describe("KnowledgeChunksService", () => {
+    describe("replace", () => {
         it("inserts a long document in batches that keep the order", async () => {
             const tx = fakeTransaction(
                 mockEntityManager({
@@ -155,7 +159,9 @@ describe("KnowledgeChunksService", () => {
             await expect(service.embeddedOf(WS, "s1")).resolves.toEqual([{ order: 0, text: "a", model: "m1" }])
         })
     })
+})
 
+describe("KnowledgeChunksService", () => {
     describe("stale", () => {
         it("names the passages that need a vector of the model", async () => {
             const em = mockEntityManager({ query: [SELECT_STALE_CHUNKS, [{ id: "c1", content: "a" }]] })

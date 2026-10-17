@@ -1,3 +1,4 @@
+import { Test } from "@nestjs/testing"
 import { builder } from "@starci/jest-preset"
 import {
     GovernanceDecidedPath,
@@ -5,9 +6,18 @@ import {
     GovernanceDecisionOutcome,
     GovernanceWorkReason,
     GovernanceWorkStatus,
-    presentGovernance,
+    presentGovernance as realPresentGovernance,
 } from "./governance.policy"
 import type { RawGovernance } from "./governance.policy"
+
+const SUBJECT = Symbol("governance.policy")
+const buildSubject = async () => {
+    const moduleRef = await Test.createTestingModule({
+        providers: [{ provide: SUBJECT, useValue: { presentGovernance: realPresentGovernance } }],
+    }).compile()
+    const subject = moduleRef.get<{ presentGovernance: typeof realPresentGovernance }>(SUBJECT)
+    return subject.presentGovernance
+}
 
 const workOf = builder<RawGovernance["work"][number]>({
     id: "work-1",
@@ -88,7 +98,9 @@ describe("presentGovernance", () => {
         },
     ])(
         "presents stored work words: $status, $reason, $path",
-        ({ status, reason, path, expectedStatus, expectedReason, expectedPath }) => {
+        async ({ status, reason, path, expectedStatus, expectedReason, expectedPath }) => {
+            const presentGovernance = await buildSubject()
+
             const work = workOf({ status, reason, decidedPath: path })
             const raw = governanceOf({ work: [work] })
 
@@ -100,7 +112,9 @@ describe("presentGovernance", () => {
         },
     )
 
-    it("defaults unrecognized work words to queued and absent classifications", () => {
+    it("defaults unrecognized work words to queued and absent classifications", async () => {
+        const presentGovernance = await buildSubject()
+
         const work = workOf({ status: "legacy-status", reason: "legacy-reason", decidedPath: "legacy-path" })
         const raw = governanceOf({ work: [work] })
 
@@ -109,8 +123,12 @@ describe("presentGovernance", () => {
             work: [{ ...work, status: GovernanceWorkStatus.Queued, reason: null, decidedPath: null }],
         })
     })
+})
 
-    it("retains null work classifications and optional descriptive fields", () => {
+describe("presentGovernance", () => {
+    it("retains null work classifications and optional descriptive fields", async () => {
+        const presentGovernance = await buildSubject()
+
         const work = workOf({
             reason: null,
             decidedPath: null,
@@ -159,7 +177,9 @@ describe("presentGovernance", () => {
             expectedKind: GovernanceDeciderKind.Policy,
             expectedOutcome: GovernanceDecisionOutcome.Approved,
         },
-    ])("presents stored decision words: $kind, $outcome", ({ kind, outcome, expectedKind, expectedOutcome }) => {
+    ])("presents stored decision words: $kind, $outcome", async ({ kind, outcome, expectedKind, expectedOutcome }) => {
+        const presentGovernance = await buildSubject()
+
         const decision = decisionOf({ deciderKind: kind, outcome })
         const raw = governanceOf({ decisions7: [decision] })
 
@@ -170,7 +190,9 @@ describe("presentGovernance", () => {
         expect(raw.decisions7).toEqual([decisionOf({ deciderKind: kind, outcome })])
     })
 
-    it("preserves an empty governance block", () => {
+    it("preserves an empty governance block", async () => {
+        const presentGovernance = await buildSubject()
+
         expect(presentGovernance(governanceOf())).toEqual(governanceOf())
     })
 })

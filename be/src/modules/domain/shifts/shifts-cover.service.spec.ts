@@ -90,94 +90,94 @@ const build = async (staff: ReadonlyArray<ShiftStaff> = []) => {
     return { service: moduleRef.get(ShiftsCoverService), data, words, catalog, setup }
 }
 
-describe("ShiftsCoverService", () => {
-    describe("suggestions", () => {
-        it("asks for at most three qualified available names and excludes the person on leave", async () => {
-            const { service, data, words, setup } = await build([
-                person("leaver", "Leaver"),
-                person("inactive", "Inactive", { active: false }),
-                person("unqualified", "Unqualified", { positionIds: [] }),
-                person("busy", "Busy"),
-                person("a", "Alice"),
-                person("b", "Bob"),
-                person("c", "Chris"),
-                person("d", "Dana"),
-            ])
-            data.rangeShifts.mockResolvedValue([{ ...shiftOf("busy-shift"), staffId: "busy" }])
+describe("ShiftsCoverService suggestions", () => {
+    it("asks for at most three qualified available names and excludes the person on leave", async () => {
+        const { service, data, words, setup } = await build([
+            person("leaver", "Leaver"),
+            person("inactive", "Inactive", { active: false }),
+            person("unqualified", "Unqualified", { positionIds: [] }),
+            person("busy", "Busy"),
+            person("a", "Alice"),
+            person("b", "Bob"),
+            person("c", "Chris"),
+            person("d", "Dana"),
+        ])
+        data.rangeShifts.mockResolvedValue([{ ...shiftOf("busy-shift"), staffId: "busy" }])
 
-            await expect(service.suggestions("ws-1", ["shift-1"], "leaver")).resolves.toEqual([
-                text("shifts.leaveGapAsk", { line: "shift-1 line", names: "Alice, Bob, Chris" }),
-            ])
+        await expect(service.suggestions("ws-1", ["shift-1"], "leaver")).resolves.toEqual([
+            text("shifts.leaveGapAsk", { line: "shift-1 line", names: "Alice, Bob, Chris" }),
+        ])
 
-            expect(data.loadSetup.mock.calls).toEqual([["ws-1", false]])
-            expect(data.shiftRow.mock.calls).toEqual([["ws-1", "shift-1"]])
-            expect(data.loadEnv.mock.calls).toEqual([["ws-1", "2026-10-12", setup]])
-            expect(data.rangeShifts.mock.calls).toEqual([
-                ["ws-1", "2026-10-12", "2026-10-18", ["draft", "published", "swapped"]],
-            ])
-            expect(words.line.mock.calls).toEqual([[setup, shiftOf("shift-1")]])
-            expect(words.text.mock.calls).toEqual([
-                ["shifts.leaveGapAsk", { line: "shift-1 line", names: "Alice, Bob, Chris" }],
-            ])
-        })
+        expect(data.loadSetup.mock.calls).toEqual([["ws-1", false]])
+        expect(data.shiftRow.mock.calls).toEqual([["ws-1", "shift-1"]])
+        expect(data.loadEnv.mock.calls).toEqual([["ws-1", "2026-10-12", setup]])
+        expect(data.rangeShifts.mock.calls).toEqual([
+            ["ws-1", "2026-10-12", "2026-10-18", ["draft", "published", "swapped"]],
+        ])
+        expect(words.line.mock.calls).toEqual([[setup, shiftOf("shift-1")]])
+        expect(words.text.mock.calls).toEqual([
+            ["shifts.leaveGapAsk", { line: "shift-1 line", names: "Alice, Bob, Chris" }],
+        ])
+    })
 
-        it("reports nobody for an uncovered shift", async () => {
-            const { service, words, setup } = await build([person("leaver", "Leaver")])
+    it("reports nobody for an uncovered shift", async () => {
+        const { service, words, setup } = await build([person("leaver", "Leaver")])
 
-            await expect(service.suggestions("ws-1", ["shift-1"], "leaver")).resolves.toEqual([
-                text("shifts.leaveGapNobody", { line: "shift-1 line" }),
-            ])
+        await expect(service.suggestions("ws-1", ["shift-1"], "leaver")).resolves.toEqual([
+            text("shifts.leaveGapNobody", { line: "shift-1 line" }),
+        ])
 
-            expect(words.line.mock.calls).toEqual([[setup, shiftOf("shift-1")]])
-            expect(words.text.mock.calls).toEqual([["shifts.leaveGapNobody", { line: "shift-1 line" }]])
-        })
+        expect(words.line.mock.calls).toEqual([[setup, shiftOf("shift-1")]])
+        expect(words.text.mock.calls).toEqual([["shifts.leaveGapNobody", { line: "shift-1 line" }]])
+    })
+})
 
-        it("reads only the first six ids and skips missing rows while preserving order", async () => {
-            const { service, data, words, setup } = await build([person("a", "Alice")])
-            data.shiftRow.mockResolvedValueOnce(undefined)
+describe("ShiftsCoverService suggestions", () => {
+    it("reads only the first six ids and skips missing rows while preserving order", async () => {
+        const { service, data, words, setup } = await build([person("a", "Alice")])
+        data.shiftRow.mockResolvedValueOnce(undefined)
 
-            await expect(
-                service.suggestions(
-                    "ws-1",
-                    ["missing", "shift-2", "shift-3", "shift-4", "shift-5", "shift-6", "ignored"],
-                    "leaver",
-                ),
-            ).resolves.toEqual([
-                text("shifts.leaveGapAsk", { line: "shift-2 line", names: "Alice" }),
-                text("shifts.leaveGapAsk", { line: "shift-3 line", names: "Alice" }),
-                text("shifts.leaveGapAsk", { line: "shift-4 line", names: "Alice" }),
-                text("shifts.leaveGapAsk", { line: "shift-5 line", names: "Alice" }),
-                text("shifts.leaveGapAsk", { line: "shift-6 line", names: "Alice" }),
-            ])
+        await expect(
+            service.suggestions(
+                "ws-1",
+                ["missing", "shift-2", "shift-3", "shift-4", "shift-5", "shift-6", "ignored"],
+                "leaver",
+            ),
+        ).resolves.toEqual([
+            text("shifts.leaveGapAsk", { line: "shift-2 line", names: "Alice" }),
+            text("shifts.leaveGapAsk", { line: "shift-3 line", names: "Alice" }),
+            text("shifts.leaveGapAsk", { line: "shift-4 line", names: "Alice" }),
+            text("shifts.leaveGapAsk", { line: "shift-5 line", names: "Alice" }),
+            text("shifts.leaveGapAsk", { line: "shift-6 line", names: "Alice" }),
+        ])
 
-            expect(data.shiftRow.mock.calls).toEqual([
-                ["ws-1", "missing"],
-                ["ws-1", "shift-2"],
-                ["ws-1", "shift-3"],
-                ["ws-1", "shift-4"],
-                ["ws-1", "shift-5"],
-                ["ws-1", "shift-6"],
-            ])
-            expect(words.line.mock.calls).toEqual([
-                [setup, shiftOf("shift-2")],
-                [setup, shiftOf("shift-3")],
-                [setup, shiftOf("shift-4")],
-                [setup, shiftOf("shift-5")],
-                [setup, shiftOf("shift-6")],
-            ])
-        })
+        expect(data.shiftRow.mock.calls).toEqual([
+            ["ws-1", "missing"],
+            ["ws-1", "shift-2"],
+            ["ws-1", "shift-3"],
+            ["ws-1", "shift-4"],
+            ["ws-1", "shift-5"],
+            ["ws-1", "shift-6"],
+        ])
+        expect(words.line.mock.calls).toEqual([
+            [setup, shiftOf("shift-2")],
+            [setup, shiftOf("shift-3")],
+            [setup, shiftOf("shift-4")],
+            [setup, shiftOf("shift-5")],
+            [setup, shiftOf("shift-6")],
+        ])
+    })
 
-        it("returns no suggestions when there are no shift ids", async () => {
-            const { service, data, words } = await build()
+    it("returns no suggestions when there are no shift ids", async () => {
+        const { service, data, words } = await build()
 
-            await expect(service.suggestions("ws-1", [], "leaver")).resolves.toEqual([])
+        await expect(service.suggestions("ws-1", [], "leaver")).resolves.toEqual([])
 
-            expect(data.loadSetup.mock.calls).toEqual([["ws-1", false]])
-            expect(data.shiftRow).not.toHaveBeenCalled()
-            expect(data.loadEnv).not.toHaveBeenCalled()
-            expect(data.rangeShifts).not.toHaveBeenCalled()
-            expect(words.line).not.toHaveBeenCalled()
-            expect(words.text).not.toHaveBeenCalled()
-        })
+        expect(data.loadSetup.mock.calls).toEqual([["ws-1", false]])
+        expect(data.shiftRow).not.toHaveBeenCalled()
+        expect(data.loadEnv).not.toHaveBeenCalled()
+        expect(data.rangeShifts).not.toHaveBeenCalled()
+        expect(words.line).not.toHaveBeenCalled()
+        expect(words.text).not.toHaveBeenCalled()
     })
 })

@@ -1,4 +1,16 @@
+import type * as SubjectModule from "./bank-name.policy"
+import { Test } from "@nestjs/testing"
 import { bankNameOf } from "./bank-name.policy"
+
+const SUBJECT = Symbol("bank-name.policy")
+type Subject = Pick<typeof SubjectModule, "bankNameOf">
+
+const buildSubject = async () => {
+    const moduleRef = await Test.createTestingModule({
+        providers: [{ provide: SUBJECT, useValue: { bankNameOf } }],
+    }).compile()
+    return moduleRef.get<Subject>(SUBJECT)
+}
 
 const LISTED: ReadonlyArray<readonly [string, string]> = [
     ["VCB", "Vietcombank"],
@@ -34,18 +46,24 @@ const LISTED: ReadonlyArray<readonly [string, string]> = [
 ]
 
 describe("bankNameOf", () => {
-    it.each(LISTED)("names %s as %s", (code, name) => {
-        expect(bankNameOf(code)).toBe(name)
+    it.each(LISTED)("names %s as %s", async (code, name) => {
+        const subject = await buildSubject()
+
+        expect(subject.bankNameOf(code)).toBe(name)
     })
 
-    it("accepts a listed code written in lower case with surrounding spaces", () => {
-        expect(bankNameOf("  vcb ")).toBe("Vietcombank")
-        expect(bankNameOf("timo")).toBe("Timo")
+    it("accepts a listed code written in lower case with surrounding spaces", async () => {
+        const subject = await buildSubject()
+
+        expect(subject.bankNameOf("  vcb ")).toBe("Vietcombank")
+        expect(subject.bankNameOf("timo")).toBe("Timo")
     })
 
-    it("keeps an unlisted code, trimmed and in upper case", () => {
-        expect(bankNameOf("  xyz ")).toBe("XYZ")
-        expect(bankNameOf("")).toBe("")
-        expect(bankNameOf("   ")).toBe("")
+    it("keeps an unlisted code, trimmed and in upper case", async () => {
+        const subject = await buildSubject()
+
+        expect(subject.bankNameOf("  xyz ")).toBe("XYZ")
+        expect(subject.bankNameOf("")).toBe("")
+        expect(subject.bankNameOf("   ")).toBe("")
     })
 })

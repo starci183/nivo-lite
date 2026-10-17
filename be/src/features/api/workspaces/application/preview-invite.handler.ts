@@ -17,6 +17,6 @@ export class PreviewInviteHandler extends ICQRSHandler<PreviewInviteQuery, Invit
     }
 
     protected override process(query: PreviewInviteQuery): Promise<InvitePreview> {
-        return this.invites.preview(query.params.request.token)
+        return this.invites.preview(query.params.request.token, query.params.request.credentialPrincipal)
     }
 }

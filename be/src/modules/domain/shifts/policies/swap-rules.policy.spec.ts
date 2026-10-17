@@ -1,6 +1,16 @@
+import { Test } from "@nestjs/testing"
 import type { Env, Setup, Shift, ShiftStaff } from "../shifts.contracts"
 import type { SwapCheck } from "./swap-rules.policy"
 import { coverCandidates, swapFindings } from "./swap-rules.policy"
+
+const SUBJECT = Symbol("swap-rules.policy")
+
+const build = async () => {
+    const moduleRef = await Test.createTestingModule({
+        providers: [{ provide: SUBJECT, useValue: { coverCandidates, swapFindings } }],
+    }).compile()
+    return moduleRef.get<typeof import("./swap-rules.policy")>(SUBJECT)
+}
 
 const person = (overrides: Partial<ShiftStaff> = {}): ShiftStaff => ({
     id: "staff-1",
@@ -61,31 +71,45 @@ const check = (overrides: Partial<SwapCheck> = {}): SwapCheck => ({
 })
 
 describe("swapFindings", () => {
-    it("returns only shift-missing when the shift does not exist", () => {
-        expect(swapFindings(check({ shift: undefined }))).toEqual([{ code: "shift-missing", params: {} }])
+    it("returns only shift-missing when the shift does not exist", async () => {
+        const subject = await build()
+
+        expect(subject.swapFindings(check({ shift: undefined }))).toEqual([{ code: "shift-missing", params: {} }])
     })
 
-    it.each(["published", "swapped"])("accepts an owned %s shift with a qualified taker", (status) => {
-        expect(swapFindings(check({ shift: { ...target, status } }))).toEqual([])
+    it.each(["published", "swapped"])("accepts an owned %s shift with a qualified taker", async (status) => {
+        const subject = await build()
+
+        expect(subject.swapFindings(check({ shift: { ...target, status } }))).toEqual([])
     })
 
-    it("reports an unposted shift and an offer from someone other than its owner", () => {
-        expect(swapFindings(check({ shift: { ...target, staffId: "another-owner", status: "draft" } }))).toEqual([
+    it("reports an unposted shift and an offer from someone other than its owner", async () => {
+        const subject = await build()
+
+        expect(
+            subject.swapFindings(check({ shift: { ...target, staffId: "another-owner", status: "draft" } })),
+        ).toEqual([
             { code: "not-posted", params: {} },
             { code: "not-owner", params: {} },
         ])
     })
 
-    it("reports a claim on a taken shift and accepts a claim on an open shift", () => {
+    it("reports a claim on a taken shift and accepts a claim on an open shift", async () => {
+        const subject = await build()
+
         const ask = { kind: "claim", fromStaffId: null, toStaffId: "staff-1" }
 
-        expect(swapFindings(check({ ask: { ...ask, kind: "claim" } }))).toEqual([{ code: "taken", params: {} }])
-        expect(swapFindings(check({ ask: { ...ask, kind: "claim" }, shift: { ...target, staffId: null } }))).toEqual([])
+        expect(subject.swapFindings(check({ ask: { ...ask, kind: "claim" } }))).toEqual([{ code: "taken", params: {} }])
+        expect(
+            subject.swapFindings(check({ ask: { ...ask, kind: "claim" }, shift: { ...target, staffId: null } })),
+        ).toEqual([])
     })
 
-    it("retains shift findings when the taker does not exist", () => {
+    it("retains shift findings when the taker does not exist", async () => {
+        const subject = await build()
+
         expect(
-            swapFindings(
+            subject.swapFindings(
                 check({
                     shift: { ...target, status: "cancelled", staffId: "another-owner" },
                     setup: { ...setup, staff: [] },
@@ -98,9 +122,11 @@ describe("swapFindings", () => {
         ])
     })
 
-    it("reports an inactive taker before checking notice or work rules", () => {
+    it("reports an inactive taker before checking notice or work rules", async () => {
+        const subject = await build()
+
         expect(
-            swapFindings(
+            subject.swapFindings(
                 check({
                     setup: { ...setup, staff: [person({ active: false })] },
                     now: new Date("2026-10-13T02:00:00Z"),
@@ -109,23 +135,33 @@ describe("swapFindings", () => {
         ).toEqual([{ code: "taker-gone", params: {} }])
     })
 
-    it("reports a shift that has already started", () => {
-        expect(swapFindings(check({ now: new Date("2026-10-12T02:00:00.001Z") }))).toEqual([
+    it("reports a shift that has already started", async () => {
+        const subject = await build()
+
+        expect(subject.swapFindings(check({ now: new Date("2026-10-12T02:00:00.001Z") }))).toEqual([
             { code: "started", params: {} },
         ])
     })
+})
 
-    it("reports insufficient notice including the exact start instant", () => {
-        expect(swapFindings(check({ now: new Date("2026-10-11T02:00:00.001Z") }))).toEqual([
+describe("swapFindings", () => {
+    it("reports insufficient notice including the exact start instant", async () => {
+        const subject = await build()
+
+        expect(subject.swapFindings(check({ now: new Date("2026-10-11T02:00:00.001Z") }))).toEqual([
             { code: "notice", params: { hours: 24 } },
         ])
-        expect(swapFindings(check({ now: new Date("2026-10-12T02:00:00Z") }))).toEqual([
+        expect(subject.swapFindings(check({ now: new Date("2026-10-12T02:00:00Z") }))).toEqual([
             { code: "notice", params: { hours: 24 } },
         ])
-        expect(swapFindings(check({ now: new Date("2026-10-11T02:00:00Z") }))).toEqual([])
+        expect(subject.swapFindings(check({ now: new Date("2026-10-11T02:00:00Z") }))).toEqual([])
     })
+})
 
-    it("reports the position name and every distinct work rule in discovery order", () => {
+describe("swapFindings", () => {
+    it("reports the position name and every distinct work rule in discovery order", async () => {
+        const subject = await build()
+
         const taker = person({ positionIds: [], maxDay: 2, maxWeek: 3, minRest: 12 })
         const env: Env = {
             ...environment([taker]),
@@ -134,7 +170,7 @@ describe("swapFindings", () => {
         }
 
         expect(
-            swapFindings(
+            subject.swapFindings(
                 check({
                     setup: { ...setup, staff: [taker] },
                     env,
@@ -162,15 +198,19 @@ describe("swapFindings", () => {
         ])
     })
 
-    it("renders a missing position as empty text and avoids a duplicate position rule", () => {
-        expect(swapFindings(check({ shift: { ...target, positionId: "missing-position" } }))).toEqual([
+    it("renders a missing position as empty text and avoids a duplicate position rule", async () => {
+        const subject = await build()
+
+        expect(subject.swapFindings(check({ shift: { ...target, positionId: "missing-position" } }))).toEqual([
             { code: "position", params: { name: "Alex", position: "" } },
         ])
     })
 })
 
 describe("coverCandidates", () => {
-    it("keeps qualified active people inside every rule and ignores the target shift itself", () => {
+    it("keeps qualified active people inside every rule and ignores the target shift itself", async () => {
+        const subject = await build()
+
         const available = person()
         const inactive = person({ id: "inactive", active: false })
         const excluded = person({ id: "excluded" })
@@ -180,7 +220,7 @@ describe("coverCandidates", () => {
         const assignedTarget = { ...target, staffId: "staff-1" }
 
         expect(
-            coverCandidates(
+            subject.coverCandidates(
                 { ...setup, staff },
                 environment(staff),
                 assignedTarget,
@@ -195,12 +235,14 @@ describe("coverCandidates", () => {
         ).toEqual([available])
     })
 
-    it("returns no candidates when every person is unavailable", () => {
+    it("returns no candidates when every person is unavailable", async () => {
+        const subject = await build()
+
         const env: Env = {
             ...environment(setup.staff),
             avail: [{ staffId: "staff-1", weekday: 0, date: null, start: "09:00", end: "17:00", available: false }],
         }
 
-        expect(coverCandidates(setup, env, target, [], [])).toEqual([])
+        expect(subject.coverCandidates(setup, env, target, [], [])).toEqual([])
     })
 })

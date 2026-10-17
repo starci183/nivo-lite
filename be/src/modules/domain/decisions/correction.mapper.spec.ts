@@ -1,6 +1,16 @@
+import { Test } from "@nestjs/testing"
 import { builder } from "@starci/jest-preset"
 import { toCorrection } from "./correction.mapper"
 import type { CorrectionRow } from "./persistence/corrections.rows"
+
+const SUBJECT = Symbol("correction.mapper")
+
+const buildSubject = async () => {
+    const moduleRef = await Test.createTestingModule({
+        providers: [{ provide: SUBJECT, useValue: { toCorrection } }],
+    }).compile()
+    return moduleRef.get<typeof import("./correction.mapper")>(SUBJECT)
+}
 
 const correctionRowOf = builder<CorrectionRow>({
     id: "decision-1",
@@ -14,10 +24,12 @@ const correctionRowOf = builder<CorrectionRow>({
 })
 
 describe("toCorrection", () => {
-    it("maps the decision identity and preserves the complete proposal objects and note", () => {
+    it("maps the decision identity and preserves the complete proposal objects and note", async () => {
+        const subject = await buildSubject()
+
         const row = correctionRowOf()
 
-        const correction = toCorrection(row)
+        const correction = subject.toCorrection(row)
 
         expect(correction).toEqual({
             decisionId: "decision-1",
@@ -32,10 +44,12 @@ describe("toCorrection", () => {
         expect(correction.after).toBe(row.after)
     })
 
-    it("keeps a rejected decision's null proposals and absent note", () => {
+    it("keeps a rejected decision's null proposals and absent note", async () => {
+        const subject = await buildSubject()
+
         const row = correctionRowOf({ outcome: "rejected", before: null, after: null, note: null })
 
-        expect(toCorrection(row)).toEqual({
+        expect(subject.toCorrection(row)).toEqual({
             decisionId: "decision-1",
             action: "send_follow_up",
             outcome: "rejected",

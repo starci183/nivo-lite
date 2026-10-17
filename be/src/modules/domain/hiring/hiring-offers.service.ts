@@ -1,3 +1,5 @@
+import { hiringLinkPrincipal, requireHiringLinkBinding } from "./policies/link-credential.policy"
+import type { CredentialPrincipal } from "@modules/domain/identity"
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { ApprovalGate, OfficeLog, ModuleTextGenerator } from "@modules/domain/module-ops"
@@ -255,8 +257,14 @@ export class HiringOffersService {
         }
     }
 
+    /** Resolves the secret link to its stored offer, including historical states. */
+    async authenticateLink(token: string): Promise<CredentialPrincipal> {
+        return hiringLinkPrincipal(isToken(token) ? await this.data.offerByToken(token) : undefined)
+    }
+
     /** What a candidate sees on the link of an offer. */
-    async publicView(request: PublicOfferParams): Promise<PublicOfferOutput> {
+    async publicView(request: PublicOfferParams, principal?: CredentialPrincipal): Promise<PublicOfferOutput> {
+        if (principal !== undefined) requireHiringLinkBinding(principal, await this.authenticateLink(request.token))
         const offer = isToken(request.token) ? await this.data.offerByToken(request.token) : undefined
         if (offer === undefined || HIDDEN_STATUSES.includes(offer.status))
             throw new HiringError({ code: HiringErrorCode.PublicNotFound })
@@ -281,9 +289,11 @@ export class HiringOffersService {
     }
 
     /** The candidate answers a sent offer: accepting makes them hired with the onboarding checklist, declining withdraws them. */
-    async respond(request: RespondOfferParams): Promise<RespondOfferOutput> {
+    async respond(request: RespondOfferParams, principal?: CredentialPrincipal): Promise<RespondOfferOutput> {
         const offer = isToken(request.token) ? await this.data.offerByToken(request.token) : undefined
-        if (offer === undefined || HIDDEN_STATUSES.includes(offer.status)) return { outcome: "invalid" }
+        if (offer === undefined) return { outcome: "invalid" }
+        if (principal !== undefined) requireHiringLinkBinding(principal, hiringLinkPrincipal(offer))
+        if (HIDDEN_STATUSES.includes(offer.status)) return { outcome: "invalid" }
         if (offer.status === "accepted") return { outcome: "already_accepted" }
         if (offer.status === "declined") return { outcome: "already_declined" }
         if (offer.status === "expired") return { outcome: "expired" }

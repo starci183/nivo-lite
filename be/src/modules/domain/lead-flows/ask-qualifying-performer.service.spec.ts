@@ -14,6 +14,7 @@ import { LeadFlowTurnService } from "./lead-flow-turn.service"
 import type { LeadFlow } from "./lead-flows.contracts"
 
 const NOW = "2026-10-12T10:00:00.000Z"
+
 const ctx: WorkContext = { workspaceId: "ws-1", actor: "Lan", locale: "en" }
 
 const flowOf = builder<LeadFlow>({
@@ -136,7 +137,6 @@ describe("AskQualifyingPerformerService", () => {
 
         expect(registry.add).toHaveBeenCalledWith("ask_qualifying", performer)
     })
-
     it("asks the owner's next question after the reply of the turn", async () => {
         const { performer, turns } = await build()
 
@@ -150,7 +150,6 @@ describe("AskQualifyingPerformerService", () => {
 
         expect(turns.setup).toHaveBeenCalledWith("ws-1")
     })
-
     it("sends the question, counts it and waits for the answer", async () => {
         const flow = flowOf({ state: "greeted" })
         const { performer, kit, store } = await build(flow)
@@ -171,7 +170,6 @@ describe("AskQualifyingPerformerService", () => {
             greeted_at: NOW,
         })
     })
-
     it("asks nothing more when four questions were asked or one still waits for its answer", async () => {
         const { performer, kit, store } = await build(flowOf({ asked: 4 }))
 
@@ -185,7 +183,6 @@ describe("AskQualifyingPerformerService", () => {
         expect(kit.dmOrExplain).not.toHaveBeenCalled()
         expect(store.patch).not.toHaveBeenCalled()
     })
-
     it("explains a question that could not go", async () => {
         const { performer, kit, store } = await build()
         kit.dmOrExplain.mockResolvedValue({ sent: false, line: "tag.proposed" })
@@ -194,7 +191,9 @@ describe("AskQualifyingPerformerService", () => {
 
         expect(store.patch).not.toHaveBeenCalled()
     })
+})
 
+describe("AskQualifyingPerformerService", () => {
     it.each<{ fields: FlowFields; index: number; draft: string; kind: string }>([
         {
             fields: { index: "1", reply: "Here is the answer", question: "Your budget?" },
@@ -218,7 +217,6 @@ describe("AskQualifyingPerformerService", () => {
             expect(kit.text).toHaveBeenCalledWith("en", "ask.summary", { name: "Lan", n: 2 })
         },
     )
-
     it("asks for contact despite a pending question and keeps the original greeting time", async () => {
         const flow = flowOf({ asked: 1, pending_question: 0, greeted_at: NOW })
         const { performer, kit, store } = await build(flow)
@@ -239,7 +237,6 @@ describe("AskQualifyingPerformerService", () => {
             contact_asked_at: NOW,
         })
     })
-
     it.each<{ fields: FlowFields; pending: number }>([
         { fields: { index: 2 }, pending: 2 },
         { fields: {}, pending: 0 },

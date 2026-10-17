@@ -11,6 +11,7 @@ import { EMPTY_SIGNALS } from "./lead-flow-score.policy"
 import type { LeadFlow } from "./lead-flows.contracts"
 
 const NOW = "2026-10-12T10:00:00.000Z"
+
 const ctx: WorkContext = { workspaceId: "ws-1", actor: "Lan", locale: "en" }
 
 const flowOf = builder<LeadFlow>({
@@ -114,7 +115,6 @@ describe("GreetProspectPerformerService", () => {
 
         expect(registry.add).toHaveBeenCalledWith("greet_prospect", performer)
     })
-
     it("drafts the reply of the turn, else the named greeting", async () => {
         const { performer, kit } = await build()
         const withReply = itemOf({ proposal: { summary: "", fields: { reply: "Hi Lan, welcome" } } })
@@ -128,7 +128,6 @@ describe("GreetProspectPerformerService", () => {
 
         expect(kit.text).toHaveBeenCalledWith("en", "line.greet-named", { name: "Lan" })
     })
-
     it("greets inside the window and marks the flow greeted", async () => {
         const { performer, kit, store } = await build()
         kit.dmOrExplain.mockResolvedValue({ sent: true, line: "" })
@@ -143,7 +142,6 @@ describe("GreetProspectPerformerService", () => {
         expect(kit.dmOrExplain).toHaveBeenCalledWith(ctx, itemOf(), flowOf(), "Hello", true)
         expect(store.patch).toHaveBeenCalledWith(flowOf(), { state: "greeted", greeted_at: NOW })
     })
-
     it("explains a greeting that could not go and never greets twice", async () => {
         const { performer, kit, store } = await build()
         kit.dmOrExplain.mockResolvedValue({ sent: false, line: "not-sent.window" })
@@ -163,7 +161,9 @@ describe("GreetProspectPerformerService", () => {
         expect(kit.dmOrExplain).toHaveBeenCalledTimes(1)
         expect(store.patch).not.toHaveBeenCalled()
     })
+})
 
+describe("GreetProspectPerformerService", () => {
     it("uses the plain greeting for an unnamed prospect and preserves an existing draft", async () => {
         const { performer, kit } = await build(flowOf({ name: null }))
 
@@ -178,7 +178,9 @@ describe("GreetProspectPerformerService", () => {
 
         expect(kit.text).toHaveBeenCalledWith("en", "line.greet")
     })
+})
 
+describe("GreetProspectPerformerService", () => {
     it("preserves qualifying state when a greeting proposal has no draft", async () => {
         const flow = flowOf({ state: "qualifying" })
         const { performer, kit, store } = await build(flow)

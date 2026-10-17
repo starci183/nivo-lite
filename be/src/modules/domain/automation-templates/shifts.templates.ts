@@ -1,5 +1,5 @@
 import type { TemplateDefinition } from "./automation-templates.contracts"
-import { text } from "./policies/catalog-text.policy"
+import { translate } from "./policies/catalog-text.policy"
 
 /** The shifts templates the engine runs itself, in file-name order. */
 export const SHIFTS_TEMPLATES: ReadonlyArray<TemplateDefinition> = [
@@ -11,12 +11,12 @@ export const SHIFTS_TEMPLATES: ReadonlyArray<TemplateDefinition> = [
         executor: "implemented",
         moduleKey: "shifts",
         icon: "calendar",
-        name: text("automationTemplates.shifts_leave_gap.name"),
-        description: text("automationTemplates.shifts_leave_gap.description"),
+        name: translate("automationTemplates.shifts_leave_gap.name"),
+        description: translate("automationTemplates.shifts_leave_gap.description"),
         trigger: {
             kind: "event",
             event: "leave.requested",
-            line: text("automationTemplates.shifts_leave_gap.line"),
+            line: translate("automationTemplates.shifts_leave_gap.line"),
         },
         requires: {
             modules: ["shifts"],
@@ -26,7 +26,7 @@ export const SHIFTS_TEMPLATES: ReadonlyArray<TemplateDefinition> = [
         },
         settings: [],
         contentMode: "none",
-        guardrails: [text("automationTemplates.shifts_leave_gap.guardrails.0")],
+        guardrails: [translate("automationTemplates.shifts_leave_gap.guardrails.0")],
         variables: [],
         defaultBody: null,
         authority: {
@@ -42,12 +42,12 @@ export const SHIFTS_TEMPLATES: ReadonlyArray<TemplateDefinition> = [
         executor: "implemented",
         moduleKey: "shifts",
         icon: "ledger",
-        name: text("automationTemplates.shifts_month_close.name"),
-        description: text("automationTemplates.shifts_month_close.description"),
+        name: translate("automationTemplates.shifts_month_close.name"),
+        description: translate("automationTemplates.shifts_month_close.description"),
         trigger: {
             kind: "schedule",
             event: "schedule.monthly",
-            line: text("automationTemplates.shifts_month_close.line"),
+            line: translate("automationTemplates.shifts_month_close.line"),
         },
         requires: {
             modules: ["shifts"],
@@ -61,16 +61,16 @@ export const SHIFTS_TEMPLATES: ReadonlyArray<TemplateDefinition> = [
                 kind: "number",
                 min: 1,
                 max: 28,
-                label: text("automationTemplates.shifts_month_close.settings.day.label"),
+                label: translate("automationTemplates.shifts_month_close.settings.day.label"),
             },
             {
                 key: "time",
                 kind: "time",
-                label: text("automationTemplates.shifts_month_close.settings.time.label"),
+                label: translate("automationTemplates.shifts_month_close.settings.time.label"),
             },
         ],
         contentMode: "none",
-        guardrails: [text("automationTemplates.shifts_month_close.guardrails.0")],
+        guardrails: [translate("automationTemplates.shifts_month_close.guardrails.0")],
         variables: [],
         defaultBody: null,
         authority: {
@@ -89,12 +89,12 @@ export const SHIFTS_TEMPLATES: ReadonlyArray<TemplateDefinition> = [
         executor: "implemented",
         moduleKey: "shifts",
         icon: "calendar",
-        name: text("automationTemplates.shifts_shift_reminder.name"),
-        description: text("automationTemplates.shifts_shift_reminder.description"),
+        name: translate("automationTemplates.shifts_shift_reminder.name"),
+        description: translate("automationTemplates.shifts_shift_reminder.description"),
         trigger: {
             kind: "event",
             event: "shift.upcoming",
-            line: text("automationTemplates.shifts_shift_reminder.line"),
+            line: translate("automationTemplates.shifts_shift_reminder.line"),
         },
         requires: {
             modules: ["shifts"],
@@ -108,21 +108,21 @@ export const SHIFTS_TEMPLATES: ReadonlyArray<TemplateDefinition> = [
                 kind: "number",
                 min: 10,
                 max: 240,
-                suffix: text("automationTemplates.shifts_shift_reminder.settings.beforeMinutes.suffix"),
-                label: text("automationTemplates.shifts_shift_reminder.settings.beforeMinutes.label"),
+                suffix: translate("automationTemplates.shifts_shift_reminder.settings.beforeMinutes.suffix"),
+                label: translate("automationTemplates.shifts_shift_reminder.settings.beforeMinutes.label"),
             },
             {
                 key: "noShowMinutes",
                 kind: "number",
                 min: 5,
                 max: 60,
-                suffix: text("automationTemplates.shifts_shift_reminder.settings.noShowMinutes.suffix"),
-                label: text("automationTemplates.shifts_shift_reminder.settings.noShowMinutes.label"),
-                hint: text("automationTemplates.shifts_shift_reminder.settings.noShowMinutes.hint"),
+                suffix: translate("automationTemplates.shifts_shift_reminder.settings.noShowMinutes.suffix"),
+                label: translate("automationTemplates.shifts_shift_reminder.settings.noShowMinutes.label"),
+                hint: translate("automationTemplates.shifts_shift_reminder.settings.noShowMinutes.hint"),
             },
         ],
         contentMode: "none",
-        guardrails: [text("automationTemplates.shifts_shift_reminder.guardrails.0")],
+        guardrails: [translate("automationTemplates.shifts_shift_reminder.guardrails.0")],
         variables: [],
         defaultBody: null,
         authority: {

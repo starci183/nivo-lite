@@ -1,8 +1,37 @@
+import { Test } from "@nestjs/testing"
 import { ACCOUNTING_MODULE } from "../accounting.contracts"
 import type { RuleCardPayload } from "@modules/domain/module-setup-writes"
 import type { AuthorityActionDefinition, FactWrite, ModuleDefinition, ModuleGate } from "../modules.contracts"
-import { cardOf, gateWritesOf, sanitizeWrites, targetKeyOf, vndOf, writeSpecLines } from "./setup-writes.policy"
+import {
+    cardOf as realCardOf,
+    gateWritesOf as realGateWritesOf,
+    sanitizeWrites as realSanitizeWrites,
+    targetKeyOf as realTargetKeyOf,
+    vndOf as realVndOf,
+    writeSpecLines as realWriteSpecLines,
+} from "./setup-writes.policy"
 import type { OpenGap, ProposedFact, ProposedRule } from "./setup-writes.policy"
+
+const SUBJECT = Symbol("setup-writes.policy")
+
+const buildSubject = async () => {
+    const moduleRef = await Test.createTestingModule({
+        providers: [
+            {
+                provide: SUBJECT,
+                useValue: {
+                    cardOf: realCardOf,
+                    gateWritesOf: realGateWritesOf,
+                    sanitizeWrites: realSanitizeWrites,
+                    targetKeyOf: realTargetKeyOf,
+                    vndOf: realVndOf,
+                    writeSpecLines: realWriteSpecLines,
+                },
+            },
+        ],
+    }).compile()
+    return moduleRef.get<typeof import("./setup-writes.policy")>(SUBJECT)
+}
 
 const gateOf = (key: string, writes?: ModuleGate["writes"]): ModuleGate => ({
     key,
@@ -93,7 +122,9 @@ describe("vndOf", () => {
         ["1.5k", 1500],
         ["2 ngh\u00ecn", 2000],
         ["2 ng\u00e0n", 2000],
-    ])("reads %s as VND", (raw, expected) => {
+    ])("reads %s as VND", async (raw, expected) => {
+        const { vndOf } = await buildSubject()
+
         expect(vndOf(raw)).toBe(expected)
     })
 
@@ -105,13 +136,17 @@ describe("vndOf", () => {
         ["1,2,3k", null],
         ["1..2\nbody", 12],
         ["24k:notes", 24000],
-    ])("preserves the numeric prefix and unit before trailing text: %s", (raw, expected) => {
+    ])("preserves the numeric prefix and unit before trailing text: %s", async (raw, expected) => {
+        const { vndOf } = await buildSubject()
+
         expect(vndOf(raw)).toBe(expected)
     })
 })
 
 describe("gateWritesOf, targetKeyOf and cardOf", () => {
-    it("reads declared writes and answers an empty list for gates without them", () => {
+    it("reads declared writes and answers an empty list for gates without them", async () => {
+        const { gateWritesOf } = await buildSubject()
+
         expect(gateWritesOf(MODULE, "hours")).toEqual([
             { kind: "fact", subjectType: "business", attributeLabel: "Hours", scope: "internal" },
         ])
@@ -119,7 +154,9 @@ describe("gateWritesOf, targetKeyOf and cardOf", () => {
         expect(gateWritesOf(MODULE, "absent")).toEqual([])
     })
 
-    it("normalizes fact targets, keys rules by action and stores the completed payload", () => {
+    it("normalizes fact targets, keys rules by action and stores the completed payload", async () => {
+        const { cardOf, targetKeyOf } = await buildSubject()
+
         expect(targetKeyOf(FACT)).toBe("fact:cafe-shop|opening-hours")
         expect(targetKeyOf(RULE)).toBe("rule:send")
         expect(cardOf(FACT, FACT.payload)).toEqual({
@@ -139,11 +176,15 @@ describe("gateWritesOf, targetKeyOf and cardOf", () => {
 })
 
 describe("sanitizeWrites", () => {
-    it.each([null, {}, "writes"])("answers no writes for a non-array input", (raw) => {
+    it.each([null, {}, "writes"])("answers no writes for a non-array input", async (raw) => {
+        const { sanitizeWrites } = await buildSubject()
+
         expect(sanitizeWrites(MODULE, raw, [], "Shop")).toEqual([])
     })
 
-    it("rejects non-object, empty, unknown and undeclared writes", () => {
+    it("rejects non-object, empty, unknown and undeclared writes", async () => {
+        const { sanitizeWrites } = await buildSubject()
+
         expect(
             sanitizeWrites(
                 MODULE,
@@ -174,8 +215,12 @@ describe("sanitizeWrites", () => {
         ).toEqual([])
         expect(sanitizeWrites(MODULE, [{ gate: "hours", kind: "fact", value: "8 to 5" }], [], "")).toEqual([])
     })
+})
 
-    it("uses the declared fact attribute, scope and subject type while trimming and limiting owner text", () => {
+describe("sanitizeWrites", () => {
+    it("uses the declared fact attribute, scope and subject type while trimming and limiting owner text", async () => {
+        const { sanitizeWrites } = await buildSubject()
+
         expect(
             sanitizeWrites(
                 MODULE,
@@ -229,10 +274,14 @@ describe("sanitizeWrites", () => {
             },
         ])
     })
+})
 
+describe("sanitizeWrites", () => {
     it.each([undefined, null, "", "unrecognized"])(
         "defaults a malformed declared subject type %s to other",
-        (subjectType) => {
+        async (subjectType) => {
+            const { sanitizeWrites } = await buildSubject()
+
             const write: FactWrite = {
                 kind: "fact",
                 subjectType: "product",
@@ -259,7 +308,9 @@ describe("sanitizeWrites", () => {
         },
     )
 
-    it("keeps valid modes and a positive amount while leaving the other half of a rule unset", () => {
+    it("keeps valid modes and a positive amount while leaving the other half of a rule unset", async () => {
+        const { sanitizeWrites } = await buildSubject()
+
         expect(
             sanitizeWrites(MODULE, [{ gate: "mode", kind: "rule", action: " send ", mode: "auto" }], [], "Shop"),
         ).toEqual([
@@ -293,8 +344,12 @@ describe("sanitizeWrites", () => {
             },
         ])
     })
+})
 
-    it("answers a gap using its guesses or explicit labels and uses the module audience", () => {
+describe("sanitizeWrites", () => {
+    it("answers a gap using its guesses or explicit labels and uses the module audience", async () => {
+        const { sanitizeWrites } = await buildSubject()
+
         expect(
             sanitizeWrites(MODULE, [{ gate: "gap", kind: "fact", gap: " g1 ", value: "50" }], [GAP], "Shop"),
         ).toEqual([
@@ -354,8 +409,12 @@ describe("sanitizeWrites", () => {
             },
         ])
     })
+})
 
-    it("rejects gaps without a matching id, attribute or subject", () => {
+describe("sanitizeWrites", () => {
+    it("rejects gaps without a matching id, attribute or subject", async () => {
+        const { sanitizeWrites } = await buildSubject()
+
         expect(
             sanitizeWrites(
                 MODULE,
@@ -382,7 +441,9 @@ describe("sanitizeWrites", () => {
         ).toEqual([])
     })
 
-    it("keeps the latest write to a target and limits each turn to eight distinct targets", () => {
+    it("keeps the latest write to a target and limits each turn to eight distinct targets", async () => {
+        const { sanitizeWrites } = await buildSubject()
+
         const raw = Array.from({ length: 9 }, (_, at) => ({
             gate: "product",
             kind: "fact",
@@ -414,17 +475,24 @@ describe("sanitizeWrites", () => {
 })
 
 describe("writeSpecLines", () => {
-    it("describes fact audiences, both rule fields, mode caps and unknown actions", () => {
+    it("describes fact audiences, both rule fields, mode caps and unknown actions", async () => {
+        const { writeSpecLines } = await buildSubject()
+
         expect(writeSpecLines(MODULE)).toEqual([
             '- gate hours: fact | subjectType business | attribute "Hours" | audience internal',
             '- gate product: fact | subjectType product | attribute "Price" | audience public',
             '- gate multiple: fact | subjectType policy | attribute "Delivery" | audience restricted',
             '- gate multiple: fact | subjectType policy | attribute "Returns" | audience internal',
-            '- gate mode: rule | action send (send label) | field mode: "auto" (runs by itself), "ask" (asks the owner first) or "never"',
-            '- gate capped: rule | action charge (charge label) | field mode: "auto" (runs by itself), "ask" (asks the owner first) or "never" (never "auto")',
-            "- gate limit: rule | action send (send label) | field limit_vnd: the amount in VND below which it runs by itself",
-            "- gate no_limit: rule | action notify (notify label) | field limit_vnd: the amount in VND below which it runs by itself",
-            '- gate unknown: rule | action missing (missing) | field mode: "auto" (runs by itself), "ask" (asks the owner first) or "never" (never "auto")',
+            '- gate mode: rule | action send (send label) | field mode: "auto" (runs by itself), ' +
+                '"ask" (asks the owner first) or "never"',
+            '- gate capped: rule | action charge (charge label) | field mode: "auto" (runs by ' +
+                'itself), "ask" (asks the owner first) or "never" (never "auto")',
+            "- gate limit: rule | action send (send label) | field limit_vnd: the amount in VND " +
+                "below which it runs by itself",
+            "- gate no_limit: rule | action notify (notify label) | field limit_vnd: the amount " +
+                "in VND below which it runs by itself",
+            '- gate unknown: rule | action missing (missing) | field mode: "auto" (runs by ' +
+                'itself), "ask" (asks the owner first) or "never" (never "auto")',
         ])
     })
 })

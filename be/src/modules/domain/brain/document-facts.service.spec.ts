@@ -84,18 +84,8 @@ const build = async (source = sourceOf()) => {
             { provide: ModelJsonService, useValue: json },
         ],
     }).compile()
-    return {
-        service: moduleRef.get(DocumentFactsService),
-        llm,
-        logger,
-        facts,
-        gaps,
-        extractions,
-        indexing,
-        sources,
-        usage,
-        json,
-    }
+    const service = moduleRef.get(DocumentFactsService)
+    return { service, llm, logger, facts, gaps, extractions, indexing, sources, usage, json }
 }
 
 describe("DocumentFactsService", () => {
@@ -156,7 +146,8 @@ describe("DocumentFactsService", () => {
         expect(extractions.start).not.toHaveBeenCalled()
         expect(llm.complete).not.toHaveBeenCalled()
     })
-
+})
+describe("DocumentFactsService", () => {
     it("starts a new extraction without withdrawing and defaults a missing resumed record", async () => {
         const { service, extractions, facts, usage, sources, llm } = await build()
         extractions.get.mockResolvedValue(null)
@@ -215,7 +206,8 @@ describe("DocumentFactsService", () => {
             attempts: 2,
         })
     })
-
+})
+describe("DocumentFactsService", () => {
     it("restarts the same text when the prompt version changed", async () => {
         const { service, extractions, facts } = await build()
         extractions.get.mockResolvedValueOnce(extractionOf({ promptVersion: 0 }))
@@ -269,7 +261,8 @@ describe("DocumentFactsService", () => {
         })
         expect(sources.ready).not.toHaveBeenCalled()
     })
-
+})
+describe("DocumentFactsService", () => {
     it.each([ExtractionNote.ModelBusy, ExtractionNote.AnswerUnreadable])(
         "closes the third %s attempt",
         async (note) => {
@@ -328,7 +321,8 @@ describe("DocumentFactsService", () => {
         expect(llm.complete).toHaveBeenCalledTimes(2)
         expect(extractions.finish).toHaveBeenCalledWith(WS, SOURCE, model === "" ? "" : "m1")
     })
-
+})
+describe("DocumentFactsService", () => {
     it("files public facts with document evidence and preserves owner review and instance scope", async () => {
         const { service, json, facts, extractions, gaps, sources } = await build()
         extractions.get.mockResolvedValue(extractionOf({ attempts: 2 }))
@@ -390,7 +384,8 @@ describe("DocumentFactsService", () => {
         })
         expect(sources.ready).toHaveBeenCalledWith(WS, SOURCE, null)
     })
-
+})
+describe("DocumentFactsService", () => {
     it.each([
         { visibility: "public", scope: "internal" },
         { visibility: "internal", scope: "public" },
@@ -452,7 +447,8 @@ describe("DocumentFactsService", () => {
             attempts: 0,
         })
     })
-
+})
+describe("DocumentFactsService", () => {
     it("files only the room left under the document limit", async () => {
         const { service, json, facts, extractions } = await build()
         extractions.get.mockResolvedValue(extractionOf({ factsProposed: 199 }))

@@ -107,7 +107,9 @@ describe("GenerationRunnerService", () => {
         expect(claims.advance).not.toHaveBeenCalled()
         expect(completion.completeGeneration).not.toHaveBeenCalled()
     })
+})
 
+describe("GenerationRunnerService", () => {
     it("runs the prompt on the internal agent, writes the text and meters it", async () => {
         const em = mockEntityManager({
             query: [
@@ -156,7 +158,9 @@ describe("GenerationRunnerService", () => {
             completionChars: 5,
         })
     })
+})
 
+describe("GenerationRunnerService", () => {
     it("subtracts the time spent setting up the agent from the turn budget", async () => {
         const em = mockEntityManager({
             query: [
@@ -228,7 +232,9 @@ describe("GenerationRunnerService", () => {
             "2026-10-12T10:00:01.600Z",
         ])
     })
+})
 
+describe("GenerationRunnerService", () => {
     it("leaves a row the caller cancelled alone and meters nothing", async () => {
         const em = mockEntityManager({
             query: [
@@ -282,7 +288,9 @@ describe("GenerationRunnerService", () => {
             "2026-10-12T10:00:00.000Z",
         ])
     })
+})
 
+describe("GenerationRunnerService", () => {
     it("writes an empty answer as a failure", async () => {
         const em = mockEntityManager({
             query: [
@@ -327,7 +335,9 @@ describe("GenerationRunnerService", () => {
             "2026-10-12T10:00:00.100Z",
         ])
     })
+})
 
+describe("GenerationRunnerService", () => {
     it("cancels a generation when its deadline passes while the internal agent is still being prepared", async () => {
         const em = mockEntityManager({
             query: [

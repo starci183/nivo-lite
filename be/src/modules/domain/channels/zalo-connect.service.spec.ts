@@ -134,7 +134,11 @@ describe("ZaloConnectService", () => {
                 JSON.stringify({ appId, appSecret: "12345678", oaSecret: "" }),
             )
         })
+    })
+})
 
+describe("ZaloConnectService", () => {
+    describe("start", () => {
         it.each(["12345", "12345a", "1".repeat(31), "12 3456"])(
             "refuses an app id that is not 6 to 30 digits: %s",
             async (appId) => {
@@ -165,7 +169,9 @@ describe("ZaloConnectService", () => {
             expect(connections.create).not.toHaveBeenCalled()
         })
     })
+})
 
+describe("ZaloConnectService", () => {
     describe("saveOaSecret", () => {
         it.each([8, 200])("seals an OA secret of length %s into the stored credential", async (length) => {
             const { service, connections, secrets, credentials } = await build()
@@ -230,7 +236,9 @@ describe("ZaloConnectService", () => {
             expect(connections.patch).not.toHaveBeenCalled()
         })
     })
+})
 
+describe("ZaloConnectService", () => {
     describe("view", () => {
         it("shows authorization, the OA id and the first event to an owner or a manager", async () => {
             const { service, connections } = await build()
@@ -284,7 +292,9 @@ describe("ZaloConnectService", () => {
             expect(credentials.beginAuthorization.mock.calls).toEqual([["ws-1", "c-1"]])
         })
     })
+})
 
+describe("ZaloConnectService", () => {
     describe("finishAuthorization", () => {
         const returned = (state: string): ZaloReturn => ({ state, code: "code-1", oaId: "oa-9" })
 
@@ -344,6 +354,12 @@ describe("ZaloConnectService", () => {
             expect(connections.find.mock.calls).toEqual([["ws-1", ""]])
             expect(connections.markFailing).not.toHaveBeenCalled()
         })
+    })
+})
+
+describe("ZaloConnectService", () => {
+    describe("finishAuthorization", () => {
+        const returned = (state: string): ZaloReturn => ({ state, code: "code-1", oaId: "oa-9" })
 
         it("defaults to an empty connection id when the state split has no fields", async () => {
             const { service, credentials, connections, logger } = await build()

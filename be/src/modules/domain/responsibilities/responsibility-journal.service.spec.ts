@@ -33,147 +33,10 @@ import {
 } from "./persistence/responsibility-journal.sql"
 import { ResponsibilityJournalService } from "./responsibility-journal.service"
 
-const ctx: ResponsibilityScope = { workspaceId: "ws-1", actor: "An", locale: "en" }
-
-const rowOf = builder<ResponsibilityRecord>({
-    id: "resp-1",
-    workspace_id: "ws-1",
-    lead_id: "lead-1",
-    title: "Follow up with Binh",
-    owner_kind: "agent",
-    owner_agent_id: "agent-1",
-    owner_name: "Sales Agent",
-    next_action: "Classify",
-    due_at: "2026-10-13T10:00:00.000Z",
-    status: "open",
-    created_at: "2026-10-12T10:00:00.000Z",
-})
-
-const memberOf = builder<WorkspaceMember>({
-    userId: "user-1",
-    workspaceId: "ws-1",
-    role: "staff",
-    staffId: null,
-    displayName: "An",
-    status: "active",
-})
-
-const inputOf = builder<NewResponsibility>({
-    lead_id: "lead-1",
-    title: "Call Binh",
-    owner: "human",
-    next_action: "Call",
-    due_at: null,
-})
-
-const build = async (entityManager: MockEntityManager, sales: OptionalAgentIdentity = null) => {
-    const members = mock<WorkspaceMembersService>({ require: jest.fn().mockResolvedValue(memberOf()) })
-    const events = mock<EventsService>({ record: jest.fn().mockResolvedValue(undefined) })
-    const directory = mock<AgentDirectory>({ agentOfDepartment: jest.fn().mockResolvedValue(sales) })
-    const catalog = mock<MessageCatalog>({
-        get: jest.fn((key: string, params: Readonly<Record<string, string | number>>) => `${key}:${params.name ?? ""}`),
-    })
-    const moduleRef = await Test.createTestingModule({
-        providers: [
-            ResponsibilityJournalService,
-            { provide: PRIMARY_ENTITY_MANAGER, useValue: entityManager },
-            { provide: CLOCK, useValue: new FakeClock("2026-10-12T10:00:00.000Z") },
-            { provide: MESSAGE_CATALOG, useValue: catalog },
-            { provide: AGENT_DIRECTORY, useValue: directory },
-            { provide: WorkspaceMembersService, useValue: members },
-            { provide: EventsService, useValue: events },
-        ],
-    }).compile()
-    return { service: moduleRef.get(ResponsibilityJournalService), members, events, directory }
-}
-
-describe("ResponsibilityJournalService", () => {
+const registerEnsureFor = () => {
     describe("ensureFor", () => {
-        it("answers the open responsibility of the customer", async () => {
-            const em = mockEntityManager({ query: [FIND_OPEN_RESPONSIBILITY, [rowOf()]] })
-            const { service } = await build(em)
-
-            await expect(service.ensureFor(ctx, "lead-1")).resolves.toEqual(rowOf())
-            expect(em.query).toHaveBeenCalledWith(FIND_OPEN_RESPONSIBILITY, ["ws-1", "lead-1"])
-        })
-
-        it("creates one owned by the Sales agent, due in a day", async () => {
-            const em = mockEntityManager({
-                query: [
-                    [FIND_OPEN_RESPONSIBILITY, []],
-                    [FIND_LEAD_NAME, [{ contact_name: "Binh" }]],
-                    [INSERT_RESPONSIBILITY, [rowOf()]],
-                ],
-            })
-            const { service, directory } = await build(em, { id: "agent-1", name: "Sales Agent" })
-
-            await expect(service.ensureFor(ctx, "lead-1")).resolves.toEqual(rowOf())
-
-            expect(directory.agentOfDepartment).toHaveBeenCalledWith("ws-1", "sales", null)
-            expect(em.query).toHaveBeenCalledWith(INSERT_RESPONSIBILITY, [
-                "ws-1",
-                "lead-1",
-                "responsibility.title:Binh",
-                "agent",
-                "agent-1",
-                "Sales Agent",
-                "responsibility.next:",
-                "2026-10-13T10:00:00.000Z",
-            ])
-        })
-
-        it("is owned by the actor when the workspace has no Sales agent", async () => {
-            const em = mockEntityManager({
-                query: [
-                    [FIND_OPEN_RESPONSIBILITY, []],
-                    [FIND_LEAD_NAME, [{ contact_name: "Binh" }]],
-                    [INSERT_RESPONSIBILITY, [rowOf({ owner_kind: "human", owner_agent_id: null, owner_name: "An" })]],
-                ],
-            })
-            const { service } = await build(em)
-
-            await service.ensureFor(ctx, "lead-1")
-
-            expect(em.query).toHaveBeenCalledWith(INSERT_RESPONSIBILITY, [
-                "ws-1",
-                "lead-1",
-                "responsibility.title:Binh",
-                "human",
-                null,
-                "An",
-                "responsibility.next:",
-                "2026-10-13T10:00:00.000Z",
-            ])
-        })
-
-        it("refuses a customer that is not in the workspace", async () => {
-            const em = mockEntityManager({
-                query: [
-                    [FIND_OPEN_RESPONSIBILITY, []],
-                    [FIND_LEAD_NAME, []],
-                ],
-            })
-            const { service } = await build(em)
-
-            await expect(service.ensureFor(ctx, "lead-9")).rejects.toMatchObject({
-                code: ResponsibilitiesErrorCode.NotFound,
-            })
-        })
-
-        it("refuses when the customer vanished before the insert", async () => {
-            const em = mockEntityManager({
-                query: [
-                    [FIND_OPEN_RESPONSIBILITY, []],
-                    [FIND_LEAD_NAME, [{ contact_name: "Binh" }]],
-                    [INSERT_RESPONSIBILITY, []],
-                ],
-            })
-            const { service } = await build(em)
-
-            await expect(service.ensureFor(ctx, "lead-1")).rejects.toMatchObject({
-                code: ResponsibilitiesErrorCode.NotFound,
-            })
-        })
+        registerResponsibilityOwnership()
+        registerMissingCustomer()
     })
 
     describe("list", () => {
@@ -192,7 +55,9 @@ describe("ResponsibilityJournalService", () => {
             expect(em.query).toHaveBeenCalledWith(LIST_RESPONSIBILITIES, ["ws-1"])
         })
     })
+}
 
+const registerCreate = () => {
     describe("create", () => {
         it("adds a responsibility owned by the caller and logs it", async () => {
             const created = rowOf({ owner_kind: "human", owner_agent_id: null, owner_name: "An", next_action: "Call" })
@@ -255,7 +120,9 @@ describe("ResponsibilityJournalService", () => {
             })
         })
     })
+}
 
+const registerUpdateStatus = () => {
     describe("updateStatus", () => {
         it("moves the responsibility", async () => {
             const em = mockEntityManager({ query: [UPDATE_RESPONSIBILITY_STATUS, [rowOf({ status: "done" })]] })
@@ -291,14 +158,6 @@ describe("ResponsibilityJournalService", () => {
     })
 
     describe("openNamed", () => {
-        const task = {
-            leadId: "lead-1",
-            title: "Nurture Binh",
-            ownerName: "Linh",
-            nextAction: "Call back",
-            dueAt: "2026-10-14T10:00:00.000Z",
-        }
-
         it("opens a human follow-up owned by the named person", async () => {
             const em = mockEntityManager({
                 query: [
@@ -330,7 +189,9 @@ describe("ResponsibilityJournalService", () => {
             expect(em.query).not.toHaveBeenCalledWith(INSERT_RESPONSIBILITY, expect.anything())
         })
     })
+}
 
+const registerJourneyAndBoardReaders = () => {
     describe("journey and board readers", () => {
         it("returns the customer's journey in the query's order", async () => {
             const rows = [rowOf(), rowOf({ id: "resp-2", status: "done" })]
@@ -357,7 +218,9 @@ describe("ResponsibilityJournalService", () => {
             expect(em.query).toHaveBeenCalledWith(LIST_BOARD_RESPONSIBILITIES, ["ws-1"])
         })
     })
+}
 
+const registerEngineUpdates = () => {
     describe("engine updates", () => {
         it("finds a responsibility with the primary manager", async () => {
             const em = mockEntityManager({ query: [FIND_RESPONSIBILITY, [rowOf()]] })
@@ -407,7 +270,9 @@ describe("ResponsibilityJournalService", () => {
             expect(em.query).toHaveBeenCalledWith(UPDATE_RESPONSIBILITY_NEXT_ACTION, ["ws-1", "resp-1", "Send quote"])
         })
     })
+}
 
+const registerAgentAssignment = () => {
     it("creates and records an agent assignment in the caller's transaction", async () => {
         const em = mockEntityManager()
         const transaction = mockEntityManager({
@@ -445,4 +310,165 @@ describe("ResponsibilityJournalService", () => {
         )
         expect(em.query).not.toHaveBeenCalled()
     })
+}
+
+const registerResponsibilityOwnership = () => {
+    it("answers the open responsibility of the customer", async () => {
+        const em = mockEntityManager({ query: [FIND_OPEN_RESPONSIBILITY, [rowOf()]] })
+        const { service } = await build(em)
+
+        await expect(service.ensureFor(ctx, "lead-1")).resolves.toEqual(rowOf())
+        expect(em.query).toHaveBeenCalledWith(FIND_OPEN_RESPONSIBILITY, ["ws-1", "lead-1"])
+    })
+
+    it("creates one owned by the Sales agent, due in a day", async () => {
+        const em = mockEntityManager({
+            query: [
+                [FIND_OPEN_RESPONSIBILITY, []],
+                [FIND_LEAD_NAME, [{ contact_name: "Binh" }]],
+                [INSERT_RESPONSIBILITY, [rowOf()]],
+            ],
+        })
+        const { service, directory } = await build(em, { id: "agent-1", name: "Sales Agent" })
+
+        await expect(service.ensureFor(ctx, "lead-1")).resolves.toEqual(rowOf())
+
+        expect(directory.agentOfDepartment).toHaveBeenCalledWith("ws-1", "sales", null)
+        expect(em.query).toHaveBeenCalledWith(INSERT_RESPONSIBILITY, [
+            "ws-1",
+            "lead-1",
+            "responsibility.title:Binh",
+            "agent",
+            "agent-1",
+            "Sales Agent",
+            "responsibility.next:",
+            "2026-10-13T10:00:00.000Z",
+        ])
+    })
+
+    it("is owned by the actor when the workspace has no Sales agent", async () => {
+        const em = mockEntityManager({
+            query: [
+                [FIND_OPEN_RESPONSIBILITY, []],
+                [FIND_LEAD_NAME, [{ contact_name: "Binh" }]],
+                [INSERT_RESPONSIBILITY, [rowOf({ owner_kind: "human", owner_agent_id: null, owner_name: "An" })]],
+            ],
+        })
+        const { service } = await build(em)
+
+        await service.ensureFor(ctx, "lead-1")
+
+        expect(em.query).toHaveBeenCalledWith(INSERT_RESPONSIBILITY, [
+            "ws-1",
+            "lead-1",
+            "responsibility.title:Binh",
+            "human",
+            null,
+            "An",
+            "responsibility.next:",
+            "2026-10-13T10:00:00.000Z",
+        ])
+    })
+
+    it("refuses a customer that is not in the workspace", async () => {
+        const em = mockEntityManager({
+            query: [
+                [FIND_OPEN_RESPONSIBILITY, []],
+                [FIND_LEAD_NAME, []],
+            ],
+        })
+        const { service } = await build(em)
+
+        await expect(service.ensureFor(ctx, "lead-9")).rejects.toMatchObject({
+            code: ResponsibilitiesErrorCode.NotFound,
+        })
+    })
+}
+
+const registerMissingCustomer = () => {
+    it("refuses when the customer vanished before the insert", async () => {
+        const em = mockEntityManager({
+            query: [
+                [FIND_OPEN_RESPONSIBILITY, []],
+                [FIND_LEAD_NAME, [{ contact_name: "Binh" }]],
+                [INSERT_RESPONSIBILITY, []],
+            ],
+        })
+        const { service } = await build(em)
+
+        await expect(service.ensureFor(ctx, "lead-1")).rejects.toMatchObject({
+            code: ResponsibilitiesErrorCode.NotFound,
+        })
+    })
+}
+
+const task = {
+    leadId: "lead-1",
+    title: "Nurture Binh",
+    ownerName: "Linh",
+    nextAction: "Call back",
+    dueAt: "2026-10-14T10:00:00.000Z",
+}
+
+const ctx: ResponsibilityScope = { workspaceId: "ws-1", actor: "An", locale: "en" }
+
+const rowOf = builder<ResponsibilityRecord>({
+    id: "resp-1",
+    workspace_id: "ws-1",
+    lead_id: "lead-1",
+    title: "Follow up with Binh",
+    owner_kind: "agent",
+    owner_agent_id: "agent-1",
+    owner_name: "Sales Agent",
+    next_action: "Classify",
+    due_at: "2026-10-13T10:00:00.000Z",
+    status: "open",
+    created_at: "2026-10-12T10:00:00.000Z",
+})
+
+const memberOf = builder<WorkspaceMember>({
+    userId: "user-1",
+    workspaceId: "ws-1",
+    role: "staff",
+    staffId: null,
+    displayName: "An",
+    status: "active",
+})
+
+const inputOf = builder<NewResponsibility>({
+    lead_id: "lead-1",
+    title: "Call Binh",
+    owner: "human",
+    next_action: "Call",
+    due_at: null,
+})
+
+const build = async (entityManager: MockEntityManager, sales: OptionalAgentIdentity = null) => {
+    const members = mock<WorkspaceMembersService>({ require: jest.fn().mockResolvedValue(memberOf()) })
+    const events = mock<EventsService>({ record: jest.fn().mockResolvedValue(undefined) })
+    const directory = mock<AgentDirectory>({ agentOfDepartment: jest.fn().mockResolvedValue(sales) })
+    const catalog = mock<MessageCatalog>({
+        get: jest.fn((key: string, params: Readonly<Record<string, string | number>>) => `${key}:${params.name ?? ""}`),
+    })
+    const moduleRef = await Test.createTestingModule({
+        providers: [
+            ResponsibilityJournalService,
+            { provide: PRIMARY_ENTITY_MANAGER, useValue: entityManager },
+            { provide: CLOCK, useValue: new FakeClock("2026-10-12T10:00:00.000Z") },
+            { provide: MESSAGE_CATALOG, useValue: catalog },
+            { provide: AGENT_DIRECTORY, useValue: directory },
+            { provide: WorkspaceMembersService, useValue: members },
+            { provide: EventsService, useValue: events },
+        ],
+    }).compile()
+    return { service: moduleRef.get(ResponsibilityJournalService), members, events, directory }
+}
+
+describe("ResponsibilityJournalService", () => {
+    registerEnsureFor()
+    registerCreate()
+    registerUpdateStatus()
+    registerJourneyAndBoardReaders()
+    registerEngineUpdates()
+    registerAgentAssignment()
 })

@@ -113,7 +113,9 @@ describe("SepaySimulationService", () => {
             ['sent id=1791829230456 content="NIVO8F3K2 chuyen tien" amount=0'],
         ])
     })
+})
 
+describe("SepaySimulationService", () => {
     it("uses the supplied amount, id, debit flag and url and accepts the last success status", async () => {
         const { simulation, post, print } = await build({}, 299)
 

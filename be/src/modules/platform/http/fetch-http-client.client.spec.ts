@@ -20,11 +20,11 @@ const responseOf = (status = 200) =>
 const HEADERS = { "content-type": "text/plain" }
 const FINAL = "https://service.test/final"
 
-describe("FetchHttpClient", () => {
-    afterEach(() => {
-        jest.restoreAllMocks()
-    })
+afterEach(() => {
+    jest.restoreAllMocks()
+})
 
+describe("FetchHttpClient", () => {
     it("sends a JSON request and parses its JSON response", async () => {
         const client = await build()
         const response = responseOf(201)
@@ -89,7 +89,9 @@ describe("FetchHttpClient", () => {
             signal: expect.any(AbortSignal),
         })
     })
+})
 
+describe("FetchHttpClient", () => {
     it("reads the body as text when the request asks for it, even when it is not JSON", async () => {
         const client = await build()
         const response = responseOf(502)
@@ -160,7 +162,9 @@ describe("FetchHttpClient", () => {
             client.request({ method: "GET", url: "https://service.test/orders", timeoutMs: 2500 }),
         ).rejects.toMatchObject({ code: HttpErrorCode.BodyUnreadable, cause: expect.any(SyntaxError) })
     })
+})
 
+describe("FetchHttpClient", () => {
     it("maps a failure before headers to a network error", async () => {
         const client = await build()
         jest.spyOn(global, "fetch").mockRejectedValue("connection refused")
@@ -217,7 +221,9 @@ describe("FetchHttpClient", () => {
             }),
         ).rejects.toMatchObject({ code: HttpErrorCode.Timeout, cause: failure })
     })
+})
 
+describe("FetchHttpClient", () => {
     it.each<{
         name: string
         read: HttpRequest["read"]

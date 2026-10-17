@@ -33,23 +33,23 @@ const lead: LeadRecordRow = {
     origin: "live",
 }
 
-describe("PerformerKitService", () => {
-    const build = async () => {
-        const catalog = mock<MessageCatalog>()
-        catalog.get.mockImplementation((key, params, locale) => `${locale}:${key}:${JSON.stringify(params)}`)
-        const authorityService = mock<AuthorityService>()
-        const modules = mock<ModuleCatalogService>()
-        const moduleRef = await Test.createTestingModule({
-            providers: [
-                PerformerKitService,
-                { provide: MESSAGE_CATALOG, useValue: catalog },
-                { provide: AuthorityService, useValue: authorityService },
-                { provide: ModuleCatalogService, useValue: modules },
-            ],
-        }).compile()
-        return { kit: moduleRef.get(PerformerKitService), catalog, authorityService, modules }
-    }
+const build = async () => {
+    const catalog = mock<MessageCatalog>()
+    catalog.get.mockImplementation((key, params, locale) => `${locale}:${key}:${JSON.stringify(params)}`)
+    const authorityService = mock<AuthorityService>()
+    const modules = mock<ModuleCatalogService>()
+    const moduleRef = await Test.createTestingModule({
+        providers: [
+            PerformerKitService,
+            { provide: MESSAGE_CATALOG, useValue: catalog },
+            { provide: AuthorityService, useValue: authorityService },
+            { provide: ModuleCatalogService, useValue: modules },
+        ],
+    }).compile()
+    return { kit: moduleRef.get(PerformerKitService), catalog, authorityService, modules }
+}
 
+describe("PerformerKitService", () => {
     it("reads a performer text in the language of the call", async () => {
         const { kit, catalog } = await build()
 
@@ -82,7 +82,10 @@ describe("PerformerKitService", () => {
         authorityService.load.mockResolvedValue(authority)
 
         await expect(kit.brief(ctx)).resolves.toBe(
-            "\nAuthority granted by the owner:\nBusiness policies:\nNo refunds\nReply style: warm\nAlways ask the owner first when: discounts",
+            [
+                "\nAuthority granted by the owner:\nBusiness policies:\nNo refunds\nReply style: warm\nAlways ",
+                "ask the owner first when: discounts",
+            ].join(""),
         )
         expect(authorityService.load).toHaveBeenCalledWith({ workspaceId: "ws-1" })
     })
@@ -118,7 +121,9 @@ describe("PerformerKitService", () => {
         await expect(kit.department(ctx, "sales")).resolves.toBe("Sales")
         expect(modules.nameOf).toHaveBeenCalledWith("sales", "vi")
     })
+})
 
+describe("PerformerKitService", () => {
     it("labels a lead stage", async () => {
         const { kit, catalog } = await build()
 

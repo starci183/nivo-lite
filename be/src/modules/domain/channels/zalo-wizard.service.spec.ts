@@ -125,7 +125,9 @@ describe("ZaloWizardService", () => {
         ])
         expect(credentials.load).not.toHaveBeenCalled()
     })
+})
 
+describe("ZaloWizardService", () => {
     it.each([
         { appId: "", appSecret: "app-secret" },
         { appId: "app-1", appSecret: "" },
@@ -157,13 +159,19 @@ describe("ZaloWizardService", () => {
         expect(credentials.load.mock.calls).toEqual([["c-1"]])
         expect(secrets.seal.mock.calls).toEqual([
             [
-                '{"appId":"app-1","appSecret":"app-secret","oaSecret":"oa-secret-2","accessToken":"access-1","refreshToken":"refresh-1"}',
+                [
+                    '{"appId":"app-1","appSecret":"app-secret",',
+                    '"oaSecret":"oa-secret-2","accessToken":"access-1","refreshToken":"refresh-1"}',
+                ].join(""),
             ],
         ])
         expect(secrets.save.mock.calls).toEqual([
             [
                 "c-1",
-                'sealed:{"appId":"app-1","appSecret":"app-secret","oaSecret":"oa-secret-2","accessToken":"access-1","refreshToken":"refresh-1"}',
+                [
+                    'sealed:{"appId":"app-1","appSecret":"app-secret",',
+                    '"oaSecret":"oa-secret-2","accessToken":"access-1","refreshToken":"refresh-1"}',
+                ].join(""),
             ],
         ])
         expect(drafts.dropDraft.mock.calls).toEqual([["c-1"]])
@@ -188,7 +196,9 @@ describe("ZaloWizardService", () => {
         expect(secrets.save).not.toHaveBeenCalled()
         expect(drafts.dropDraft).not.toHaveBeenCalled()
     })
+})
 
+describe("ZaloWizardService", () => {
     it("settles a redelivered app command with a readable credential when the draft is gone", async () => {
         const { service, credentials, connections, secrets, drafts } = await build()
         drafts.draftOf.mockResolvedValue({ present: false, appId: "", appSecret: "", oaSecret: "" })
@@ -256,7 +266,9 @@ describe("ZaloWizardService", () => {
         expect(secrets.save).not.toHaveBeenCalled()
         expect(drafts.dropDraft).not.toHaveBeenCalled()
     })
+})
 
+describe("ZaloWizardService", () => {
     it.each<ZaloWizardPayload["command"]>(["app", "oa"])(
         "logs and settles a missing connection for %s",
         async (command) => {
@@ -307,7 +319,9 @@ describe("ZaloWizardService", () => {
         expect(logger.error.mock.calls[0]?.[2]).toEqual({ connectionId: "c-1", command: "app" })
         expect(drafts.draftOf).not.toHaveBeenCalled()
     })
+})
 
+describe("ZaloWizardService", () => {
     it("logs a refused authorization and settles its channels code", async () => {
         const { service, credentials, connections, logger } = await build()
         const cause = new ChannelsError({ code: ChannelsErrorCode.ZaloNotAuthorized })

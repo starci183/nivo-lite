@@ -43,21 +43,21 @@ const proposalOf = builder<Proposal>({
     fields: { conversation_id: "conv-1" },
 })
 
-describe("ReplyCustomerPerformerService", () => {
-    const build = async () => {
-        const kit = mock<PerformerKitService>()
-        kit.text.mockImplementation((_ctx, key, params = {}) => [key, ...Object.values(params).map(String)].join("|"))
-        const delivery = mock<CustomerDeliveryService>()
-        const moduleRef = await Test.createTestingModule({
-            providers: [
-                ReplyCustomerPerformerService,
-                { provide: PerformerKitService, useValue: kit },
-                { provide: CustomerDeliveryService, useValue: delivery },
-            ],
-        }).compile()
-        return { service: moduleRef.get(ReplyCustomerPerformerService), delivery }
-    }
+const build = async () => {
+    const kit = mock<PerformerKitService>()
+    kit.text.mockImplementation((_ctx, key, params = {}) => [key, ...Object.values(params).map(String)].join("|"))
+    const delivery = mock<CustomerDeliveryService>()
+    const moduleRef = await Test.createTestingModule({
+        providers: [
+            ReplyCustomerPerformerService,
+            { provide: PerformerKitService, useValue: kit },
+            { provide: CustomerDeliveryService, useValue: delivery },
+        ],
+    }).compile()
+    return { service: moduleRef.get(ReplyCustomerPerformerService), delivery }
+}
 
+describe("ReplyCustomerPerformerService", () => {
     it("prepares the proposal it was given", async () => {
         const { service } = await build()
         const item = itemOf()
@@ -117,7 +117,9 @@ describe("ReplyCustomerPerformerService", () => {
             summary: "replyPostedTelegram",
         })
     })
+})
 
+describe("ReplyCustomerPerformerService", () => {
     it("pushes nothing when the proposal names no conversation or has no draft", async () => {
         const { service, delivery } = await build()
 
@@ -180,7 +182,9 @@ describe("ReplyCustomerPerformerService", () => {
         )
         expect(delivery.inConversation).not.toHaveBeenCalled()
     })
+})
 
+describe("ReplyCustomerPerformerService", () => {
     it("stores a named policy actor's reply as the agent", async () => {
         const { service, delivery } = await build()
         const actor = { name: "NIVO policy", kind: "policy" }

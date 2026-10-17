@@ -1,4 +1,18 @@
+import { Test } from "@nestjs/testing"
 import { isRequestableKind } from "./request-kind.policy"
+
+const SUBJECT = Symbol("request-kind.policy")
+type Subject = {
+    isRequestableKind: typeof isRequestableKind
+}
+
+const buildSubject = async () => {
+    const moduleRef = await Test.createTestingModule({
+        providers: [{ provide: SUBJECT, useValue: { isRequestableKind } }],
+    }).compile()
+    const subject = moduleRef.get<Subject>(SUBJECT)
+    return { subject }
+}
 
 describe("isRequestableKind", () => {
     it.each([
@@ -10,8 +24,10 @@ describe("isRequestableKind", () => {
         ["sales", "owner_chat", false],
         ["unknown", "engine", false],
         ["constructor", "engine", false],
-    ])("module %s asking for kind %s -> %s", (module, kind, expected) => {
-        expect(isRequestableKind(module, kind)).toBe(expected)
+    ])("module %s asking for kind %s -> %s", async (module, kind, expected) => {
+        const { subject } = await buildSubject()
+
+        expect(subject.isRequestableKind(module, kind)).toBe(expected)
     })
 
     it.each([
@@ -31,8 +47,10 @@ describe("isRequestableKind", () => {
         ["other", "engine"],
         ["shifts", "engine"],
         ["video", "engine"],
-    ])("allows module %s to request its own kind %s", (module, kind) => {
-        expect(isRequestableKind(module, kind)).toBe(true)
+    ])("allows module %s to request its own kind %s", async (module, kind) => {
+        const { subject } = await buildSubject()
+
+        expect(subject.isRequestableKind(module, kind)).toBe(true)
     })
 
     it.each([
@@ -43,7 +61,9 @@ describe("isRequestableKind", () => {
         ["office", "chat_reply"],
         ["chatbot", "relay"],
         ["other", ""],
-    ])("refuses module %s asking for foreign or absent kind %s", (module, kind) => {
-        expect(isRequestableKind(module, kind)).toBe(false)
+    ])("refuses module %s asking for foreign or absent kind %s", async (module, kind) => {
+        const { subject } = await buildSubject()
+
+        expect(subject.isRequestableKind(module, kind)).toBe(false)
     })
 })

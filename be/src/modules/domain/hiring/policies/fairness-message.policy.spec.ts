@@ -1,7 +1,18 @@
+import { Test } from "@nestjs/testing"
 import { mock } from "@starci/jest-preset"
 import type { MessageCatalog } from "@modules/platform/i18n"
 import type { FairnessViolation } from "../hiring.contracts"
-import { fairnessMessage } from "./fairness-message.policy"
+import { fairnessMessage as fairnessMessageImplementation } from "./fairness-message.policy"
+
+const SUBJECT = Symbol("subject")
+type Subject = { fairnessMessage: typeof fairnessMessageImplementation }
+
+const buildSubject = async () => {
+    const moduleRef = await Test.createTestingModule({
+        providers: [{ provide: SUBJECT, useValue: { fairnessMessage: fairnessMessageImplementation } }],
+    }).compile()
+    return moduleRef.get<Subject>(SUBJECT)
+}
 
 const text = (key: string, params: Readonly<Record<string, string | number>>): string =>
     `${key}${JSON.stringify(params)}`
@@ -15,10 +26,12 @@ const build = () => {
 }
 
 describe("hiring fairness message policy", () => {
-    it("renders an empty refusal with advice and no additional count", () => {
+    it("renders an empty refusal with advice and no additional count", async () => {
+        const subject = await buildSubject()
+
         const { catalog, textOf } = build()
 
-        expect(fairnessMessage([], textOf)).toBe(
+        expect(subject.fairnessMessage([], textOf)).toBe(
             text("hiring.fairness.refusal", { parts: "", more: "", advice: "hiring.fairness.advice{}" }),
         )
         expect(catalog.get.mock.calls).toEqual([
@@ -27,7 +40,9 @@ describe("hiring fairness message policy", () => {
         ])
     })
 
-    it("quotes the excerpt and category with a field label only when supplied", () => {
+    it("quotes the excerpt and category with a field label only when supplied", async () => {
+        const subject = await buildSubject()
+
         const { catalog, textOf } = build()
         const violations: Array<FairnessViolation> = [
             { category: "age", excerpt: "20 tuoi", field: "title" },
@@ -35,7 +50,7 @@ describe("hiring fairness message policy", () => {
         ]
         const parts = `hiring.field.title{}: "20 tuoi" (hiring.fairness.age{}); "nu" (hiring.fairness.gender{})`
 
-        expect(fairnessMessage(violations, textOf)).toBe(
+        expect(subject.fairnessMessage(violations, textOf)).toBe(
             text("hiring.fairness.refusal", { parts, more: "", advice: "hiring.fairness.advice{}" }),
         )
         expect(catalog.get.mock.calls).toEqual([
@@ -47,16 +62,20 @@ describe("hiring fairness message policy", () => {
         ])
     })
 
-    it("quotes four violations and reports the exact remaining count", () => {
+    it("quotes four violations and reports the exact remaining count", async () => {
+        const subject = await buildSubject()
+
         const { catalog, textOf } = build()
         const violations: Array<FairnessViolation> = Array.from({ length: 6 }, (_, index) => ({
             category: "age",
             excerpt: `age ${index}`,
             field: "",
         }))
-        const parts = `"age 0" (hiring.fairness.age{}); "age 1" (hiring.fairness.age{}); "age 2" (hiring.fairness.age{}); "age 3" (hiring.fairness.age{})`
+        const parts =
+            `"age 0" (hiring.fairness.age{}); "age 1" (hiring.fairness.age{}); ` +
+            `"age 2" (hiring.fairness.age{}); "age 3" (hiring.fairness.age{})`
 
-        expect(fairnessMessage(violations, textOf)).toBe(
+        expect(subject.fairnessMessage(violations, textOf)).toBe(
             text("hiring.fairness.refusal", {
                 parts,
                 more: `hiring.fairness.more{"count":2}`,
@@ -77,8 +96,12 @@ describe("hiring fairness message policy", () => {
             ],
         ])
     })
+})
 
-    it("does not add a remaining count at exactly four violations", () => {
+describe("hiring fairness message policy", () => {
+    it("does not add a remaining count at exactly four violations", async () => {
+        const subject = await buildSubject()
+
         const { catalog, textOf } = build()
         const violations: Array<FairnessViolation> = Array.from({ length: 4 }, () => ({
             category: "age",
@@ -86,9 +109,11 @@ describe("hiring fairness message policy", () => {
             field: "",
         }))
 
-        expect(fairnessMessage(violations, textOf)).toBe(
+        expect(subject.fairnessMessage(violations, textOf)).toBe(
             text("hiring.fairness.refusal", {
-                parts: `"20 tuoi" (hiring.fairness.age{}); "20 tuoi" (hiring.fairness.age{}); "20 tuoi" (hiring.fairness.age{}); "20 tuoi" (hiring.fairness.age{})`,
+                parts:
+                    `"20 tuoi" (hiring.fairness.age{}); "20 tuoi" (hiring.fairness.age{}); ` +
+                    `"20 tuoi" (hiring.fairness.age{}); "20 tuoi" (hiring.fairness.age{})`,
                 more: "",
                 advice: "hiring.fairness.advice{}",
             }),

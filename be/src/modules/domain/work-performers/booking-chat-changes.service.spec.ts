@@ -76,157 +76,155 @@ const build = async () => {
     return { service: moduleRef.get(BookingChatChangesService), bookings, lookup, engine, catalog }
 }
 
-describe("BookingChatChangesService", () => {
-    describe("apply", () => {
-        it("opens a forced cancellation decision for the chat's booking with exact customer facts", async () => {
-            const { service, bookings, lookup, engine, catalog } = await build()
-            await expect(
-                service.apply(turnOf({ request: requestOf({ intent: "cancel", note: "Plans changed" }) })),
-            ).resolves.toEqual({
-                reply: "performers.chatBooking.cancelWaiting|Haircut",
-                state: "cancelWaiting",
-            })
-            expect(lookup.nextOfChat).toHaveBeenCalledWith(
-                { workspaceId: "ws-1", leadId: "chat-lead", conversationId: "conv-1" },
-                Date.parse(NOW),
-            )
-            expect(bookings.nextCancellable).not.toHaveBeenCalled()
-            expect(bookings.catalogIn).not.toHaveBeenCalled()
-            expect(engine.runWork).toHaveBeenCalledWith(
-                { workspaceId: "ws-1", actor: "NIVO engine", locale: "vi" },
-                {
-                    action: "cancel_booking",
-                    subject_type: "conversation",
-                    subject_id: "conv-1",
-                    lead_id: "booking-lead",
-                    origin: "live",
-                    preset: true,
-                    noChain: true,
-                    forceAsk: "unclear_outcome",
-                    dedupeKey: "cancel_booking:booking:booking-1",
-                    seed: {
-                        summary: `performers.chatBooking.cancelSummary|Haircut|Mai|${START}`,
-                        fields: {
-                            booking_id: "booking-1",
-                            start_at: START,
-                            service: "Haircut",
-                            customer_name: "Mai",
-                            conversation_id: "conv-1",
-                            reason: "Plans changed",
-                        },
-                    },
-                },
-            )
-            expect(catalog.get.mock.calls).toEqual([
-                ["performers.chatBooking.cancelSummary", { service: "Haircut", name: "Mai", start: START }, "vi"],
-                ["performers.chatBooking.cancelWaiting", { service: "Haircut" }, "vi"],
-            ])
+describe("BookingChatChangesService apply", () => {
+    it("opens a forced cancellation decision for the chat's booking with exact customer facts", async () => {
+        const { service, bookings, lookup, engine, catalog } = await build()
+        await expect(
+            service.apply(turnOf({ request: requestOf({ intent: "cancel", note: "Plans changed" }) })),
+        ).resolves.toEqual({
+            reply: "performers.chatBooking.cancelWaiting|Haircut",
+            state: "cancelWaiting",
         })
-
-        it("falls back to the supplied phone and the chat's lead when the chat has no booking", async () => {
-            const { service, bookings, lookup, engine } = await build()
-            lookup.nextOfChat.mockResolvedValue(null)
-            bookings.nextCancellable.mockResolvedValue(cancellableOf({ leadId: null }))
-            await expect(service.apply(turnOf({ request: requestOf({ intent: "cancel" }) }))).resolves.toEqual({
-                reply: "performers.chatBooking.cancelWaiting|Haircut",
-                state: "cancelWaiting",
-            })
-            expect(bookings.nextCancellable).toHaveBeenCalledWith("ws-1", "0912 345 678", Date.parse(NOW))
-            expect(engine.runWork.mock.calls[0]?.[1]).toMatchObject({
+        expect(lookup.nextOfChat).toHaveBeenCalledWith(
+            { workspaceId: "ws-1", leadId: "chat-lead", conversationId: "conv-1" },
+            Date.parse(NOW),
+        )
+        expect(bookings.nextCancellable).not.toHaveBeenCalled()
+        expect(bookings.catalogIn).not.toHaveBeenCalled()
+        expect(engine.runWork).toHaveBeenCalledWith(
+            { workspaceId: "ws-1", actor: "NIVO engine", locale: "vi" },
+            {
+                action: "cancel_booking",
                 subject_type: "conversation",
                 subject_id: "conv-1",
-                lead_id: "chat-lead",
-                seed: { fields: { reason: "" } },
-            })
-        })
-
-        it("asks for the booking contact when neither a chat booking nor a phone is available", async () => {
-            const { service, bookings, lookup, engine, catalog } = await build()
-            lookup.nextOfChat.mockResolvedValue(null)
-            await expect(
-                service.apply(turnOf({ request: requestOf({ intent: "cancel", phone: null }) })),
-            ).resolves.toEqual({
-                reply: "performers.chatBooking.notFound",
-                state: "notFound",
-            })
-            expect(catalog.get).toHaveBeenCalledWith("performers.chatBooking.notFound", {}, "vi")
-            expect(bookings.nextCancellable).not.toHaveBeenCalled()
-            expect(engine.runWork).not.toHaveBeenCalled()
-        })
-
-        it("opens no change decision when both chat and phone lookups find nothing", async () => {
-            const { service, bookings, lookup, engine } = await build()
-            lookup.nextOfChat.mockResolvedValue(null)
-            await expect(service.apply(turnOf({ request: requestOf({ intent: "reschedule" }) }))).resolves.toEqual({
-                reply: "performers.chatBooking.notFound",
-                state: "notFound",
-            })
-            expect(bookings.nextCancellable).toHaveBeenCalledWith("ws-1", "0912 345 678", Date.parse(NOW))
-            expect(engine.runWork).not.toHaveBeenCalled()
-            expect(bookings.catalogIn).not.toHaveBeenCalled()
-        })
-
-        it.each([requestOf({ intent: "reschedule", date: null }), requestOf({ intent: "reschedule", time: null })])(
-            "asks for a complete new time before opening a reschedule decision ($date, $time)",
-            async (request) => {
-                const { service, bookings, engine, catalog } = await build()
-                await expect(service.apply(turnOf({ request }))).resolves.toEqual({
-                    reply: "performers.chatBooking.askNewTime|Haircut",
-                    state: "askNewTime",
-                })
-                expect(catalog.get).toHaveBeenCalledWith(
-                    "performers.chatBooking.askNewTime",
-                    { service: "Haircut" },
-                    "vi",
-                )
-                expect(bookings.catalogIn).not.toHaveBeenCalled()
-                expect(engine.runWork).not.toHaveBeenCalled()
-            },
-        )
-
-        it("opens a reschedule decision with a local new time and retains the normal chat reply", async () => {
-            const { service, bookings, lookup, engine, catalog } = await build()
-            lookup.nextOfChat.mockResolvedValue(cancellableOf({ leadId: null }))
-            await expect(
-                service.apply(
-                    turnOf({
-                        leadId: null,
-                        request: requestOf({ intent: "reschedule", date: "2026-10-14", time: "14:30" }),
-                    }),
-                ),
-            ).resolves.toEqual({ reply: null, state: "reschedule_asked" })
-            expect(bookings.catalogIn).toHaveBeenCalledWith("ws-1")
-            expect(bookings.freeTimesIn).not.toHaveBeenCalled()
-            expect(bookings.requestIn).not.toHaveBeenCalled()
-            expect(engine.runWork).toHaveBeenCalledWith(
-                { workspaceId: "ws-1", actor: "NIVO engine", locale: "vi" },
-                {
-                    action: "reschedule",
-                    subject_type: "conversation",
-                    subject_id: "conv-1",
-                    lead_id: null,
-                    origin: "live",
-                    preset: true,
-                    noChain: true,
-                    dedupeKey: `reschedule:booking:booking-1:${NEW_START}`,
-                    seed: {
-                        summary: `performers.chatBooking.rescheduleSummary|Haircut|Mai|${START}|${NEW_START}`,
-                        fields: {
-                            booking_id: "booking-1",
-                            start_at: START,
-                            service: "Haircut",
-                            customer_name: "Mai",
-                            conversation_id: "conv-1",
-                            new_start: NEW_START,
-                        },
+                lead_id: "booking-lead",
+                origin: "live",
+                preset: true,
+                noChain: true,
+                forceAsk: "unclear_outcome",
+                dedupeKey: "cancel_booking:booking:booking-1",
+                seed: {
+                    summary: `performers.chatBooking.cancelSummary|Haircut|Mai|${START}`,
+                    fields: {
+                        booking_id: "booking-1",
+                        start_at: START,
+                        service: "Haircut",
+                        customer_name: "Mai",
+                        conversation_id: "conv-1",
+                        reason: "Plans changed",
                     },
                 },
-            )
-            expect(catalog.get).toHaveBeenCalledWith(
-                "performers.chatBooking.rescheduleSummary",
-                { service: "Haircut", name: "Mai", start: START, to: NEW_START },
-                "vi",
-            )
+            },
+        )
+        expect(catalog.get.mock.calls).toEqual([
+            ["performers.chatBooking.cancelSummary", { service: "Haircut", name: "Mai", start: START }, "vi"],
+            ["performers.chatBooking.cancelWaiting", { service: "Haircut" }, "vi"],
+        ])
+    })
+
+    it("falls back to the supplied phone and the chat's lead when the chat has no booking", async () => {
+        const { service, bookings, lookup, engine } = await build()
+        lookup.nextOfChat.mockResolvedValue(null)
+        bookings.nextCancellable.mockResolvedValue(cancellableOf({ leadId: null }))
+        await expect(service.apply(turnOf({ request: requestOf({ intent: "cancel" }) }))).resolves.toEqual({
+            reply: "performers.chatBooking.cancelWaiting|Haircut",
+            state: "cancelWaiting",
         })
+        expect(bookings.nextCancellable).toHaveBeenCalledWith("ws-1", "0912 345 678", Date.parse(NOW))
+        expect(engine.runWork.mock.calls[0]?.[1]).toMatchObject({
+            subject_type: "conversation",
+            subject_id: "conv-1",
+            lead_id: "chat-lead",
+            seed: { fields: { reason: "" } },
+        })
+    })
+})
+
+describe("BookingChatChangesService apply", () => {
+    it("asks for the booking contact when neither a chat booking nor a phone is available", async () => {
+        const { service, bookings, lookup, engine, catalog } = await build()
+        lookup.nextOfChat.mockResolvedValue(null)
+        await expect(service.apply(turnOf({ request: requestOf({ intent: "cancel", phone: null }) }))).resolves.toEqual(
+            {
+                reply: "performers.chatBooking.notFound",
+                state: "notFound",
+            },
+        )
+        expect(catalog.get).toHaveBeenCalledWith("performers.chatBooking.notFound", {}, "vi")
+        expect(bookings.nextCancellable).not.toHaveBeenCalled()
+        expect(engine.runWork).not.toHaveBeenCalled()
+    })
+
+    it("opens no change decision when both chat and phone lookups find nothing", async () => {
+        const { service, bookings, lookup, engine } = await build()
+        lookup.nextOfChat.mockResolvedValue(null)
+        await expect(service.apply(turnOf({ request: requestOf({ intent: "reschedule" }) }))).resolves.toEqual({
+            reply: "performers.chatBooking.notFound",
+            state: "notFound",
+        })
+        expect(bookings.nextCancellable).toHaveBeenCalledWith("ws-1", "0912 345 678", Date.parse(NOW))
+        expect(engine.runWork).not.toHaveBeenCalled()
+        expect(bookings.catalogIn).not.toHaveBeenCalled()
+    })
+
+    it.each([requestOf({ intent: "reschedule", date: null }), requestOf({ intent: "reschedule", time: null })])(
+        "asks for a complete new time before opening a reschedule decision ($date, $time)",
+        async (request) => {
+            const { service, bookings, engine, catalog } = await build()
+            await expect(service.apply(turnOf({ request }))).resolves.toEqual({
+                reply: "performers.chatBooking.askNewTime|Haircut",
+                state: "askNewTime",
+            })
+            expect(catalog.get).toHaveBeenCalledWith("performers.chatBooking.askNewTime", { service: "Haircut" }, "vi")
+            expect(bookings.catalogIn).not.toHaveBeenCalled()
+            expect(engine.runWork).not.toHaveBeenCalled()
+        },
+    )
+})
+
+describe("BookingChatChangesService apply", () => {
+    it("opens a reschedule decision with a local new time and retains the normal chat reply", async () => {
+        const { service, bookings, lookup, engine, catalog } = await build()
+        lookup.nextOfChat.mockResolvedValue(cancellableOf({ leadId: null }))
+        await expect(
+            service.apply(
+                turnOf({
+                    leadId: null,
+                    request: requestOf({ intent: "reschedule", date: "2026-10-14", time: "14:30" }),
+                }),
+            ),
+        ).resolves.toEqual({ reply: null, state: "reschedule_asked" })
+        expect(bookings.catalogIn).toHaveBeenCalledWith("ws-1")
+        expect(bookings.freeTimesIn).not.toHaveBeenCalled()
+        expect(bookings.requestIn).not.toHaveBeenCalled()
+        expect(engine.runWork).toHaveBeenCalledWith(
+            { workspaceId: "ws-1", actor: "NIVO engine", locale: "vi" },
+            {
+                action: "reschedule",
+                subject_type: "conversation",
+                subject_id: "conv-1",
+                lead_id: null,
+                origin: "live",
+                preset: true,
+                noChain: true,
+                dedupeKey: `reschedule:booking:booking-1:${NEW_START}`,
+                seed: {
+                    summary: `performers.chatBooking.rescheduleSummary|Haircut|Mai|${START}|${NEW_START}`,
+                    fields: {
+                        booking_id: "booking-1",
+                        start_at: START,
+                        service: "Haircut",
+                        customer_name: "Mai",
+                        conversation_id: "conv-1",
+                        new_start: NEW_START,
+                    },
+                },
+            },
+        )
+        expect(catalog.get).toHaveBeenCalledWith(
+            "performers.chatBooking.rescheduleSummary",
+            { service: "Haircut", name: "Mai", start: START, to: NEW_START },
+            "vi",
+        )
     })
 })

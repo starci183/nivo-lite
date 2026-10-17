@@ -131,7 +131,11 @@ describe("BookingOverviewService", () => {
                 "inst-1",
             ])
         })
+    })
+})
 
+describe("BookingOverviewService", () => {
+    describe("overview", () => {
         it("has no shares to show for a business without resources or finished bookings", async () => {
             const { service, entityManager } = await build(
                 {

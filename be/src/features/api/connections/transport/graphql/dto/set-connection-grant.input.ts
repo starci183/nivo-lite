@@ -1,5 +1,5 @@
 import { Field, ID, InputType } from "@nestjs/graphql"
-import { Transform } from "class-transformer"
+import { UndefinedAsNull } from "@modules/platform/graphql"
 import { IsIn, IsOptional, IsString, IsUUID, MaxLength } from "class-validator"
 import { ACCESS_LEVELS } from "@modules/domain/connection-grants"
 import type { Access } from "@modules/domain/agent-connections"
@@ -21,7 +21,7 @@ export class SetConnectionGrantInput {
 
     /** The level, or nothing to remove the access. */
     @Field(() => String, { nullable: true })
-    @Transform(({ value }) => value ?? null)
+    @UndefinedAsNull()
     @IsOptional()
     @IsString()
     @MaxLength(8)

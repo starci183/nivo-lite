@@ -137,63 +137,50 @@ const inserted = async (em: MockEntityManager, input: SendCommandInput, row: Wor
     return { ...built, plan }
 }
 
+const refusal = (
+    name: string,
+    input: SendCommandInput,
+    refused: CommandRefusal,
+    detail: string,
+    queries: Queries = [],
+    missing?: ReadonlyArray<string>,
+) => [name, input, { ok: false, refused, detail, ...(missing ? { missing } : {}) }, queries] as const
+
+const refusalCases = [
+    refusal("an unknown module", inputOf({ to: "mystery" }), "unknown_module", "no agent mystery"),
+    refusal("an unknown command", inputOf({ command: "dance" }), "unknown_command", "sales does not accept dance"),
+    refusal("an unknown sender", inputOf({ from: "stranger" }), "unknown_sender", "no sender stranger"),
+    refusal("an absent agent", inputOf({ from: AGENT_ID }), "unknown_sender", `no sender ${AGENT_ID}`, [
+        [FIND_SENDER_AGENT, []],
+    ]),
+    refusal(
+        "missing payload keys",
+        inputOf({ payload: { subject_id: "lead-1" } }),
+        "missing_fields",
+        "sales.classify_lead needs lead_id",
+        [],
+        ["lead_id"],
+    ),
+    refusal(
+        "an invalid subject kind",
+        inputOf({ payload: { lead_id: "lead-1", subject_type: "planet" } }),
+        "missing_fields",
+        "planet is not a kind of record",
+        [],
+        ["subject_type"],
+    ),
+    refusal("a deep chain", inputOf({ parentId: "parent-1" }), "too_deep", "depth 7 is deeper than the chain allows", [
+        [FIND_PARENT_POSITION, [{ id: "parent-1", chain_id: "chain-1", depth: 6 }]],
+    ]),
+    refusal("a cycle", inputOf({ chainId: "chain-1" }), "cycle", "classify_lead on lead already ran in chain chain-1", [
+        [FIND_CHAIN_TOP, [{ depth: 1 }]],
+        [CHAIN_REPEATS_COMMAND, [{ repeats: true }]],
+    ]),
+]
+
 describe("CommandPlannerService", () => {
     describe("refusals", () => {
-        const refusal = (
-            name: string,
-            input: SendCommandInput,
-            refused: CommandRefusal,
-            detail: string,
-            queries: Queries = [],
-            missing?: ReadonlyArray<string>,
-        ) => [name, input, { ok: false, refused, detail, ...(missing ? { missing } : {}) }, queries] as const
-
-        it.each([
-            refusal("an unknown module", inputOf({ to: "mystery" }), "unknown_module", "no agent mystery"),
-            refusal(
-                "an unknown command",
-                inputOf({ command: "dance" }),
-                "unknown_command",
-                "sales does not accept dance",
-            ),
-            refusal("an unknown sender", inputOf({ from: "stranger" }), "unknown_sender", "no sender stranger"),
-            refusal("an absent agent", inputOf({ from: AGENT_ID }), "unknown_sender", `no sender ${AGENT_ID}`, [
-                [FIND_SENDER_AGENT, []],
-            ]),
-            refusal(
-                "missing payload keys",
-                inputOf({ payload: { subject_id: "lead-1" } }),
-                "missing_fields",
-                "sales.classify_lead needs lead_id",
-                [],
-                ["lead_id"],
-            ),
-            refusal(
-                "an invalid subject kind",
-                inputOf({ payload: { lead_id: "lead-1", subject_type: "planet" } }),
-                "missing_fields",
-                "planet is not a kind of record",
-                [],
-                ["subject_type"],
-            ),
-            refusal(
-                "a deep chain",
-                inputOf({ parentId: "parent-1" }),
-                "too_deep",
-                "depth 7 is deeper than the chain allows",
-                [[FIND_PARENT_POSITION, [{ id: "parent-1", chain_id: "chain-1", depth: 6 }]]],
-            ),
-            refusal(
-                "a cycle",
-                inputOf({ chainId: "chain-1" }),
-                "cycle",
-                "classify_lead on lead already ran in chain chain-1",
-                [
-                    [FIND_CHAIN_TOP, [{ depth: 1 }]],
-                    [CHAIN_REPEATS_COMMAND, [{ repeats: true }]],
-                ],
-            ),
-        ])("refuses %s", async (_name, input, expected, queries) => {
+        it.each(refusalCases)("refuses %s", async (_name, input, expected, queries) => {
             const built = await build(mockEntityManager({ query: queries }))
             expect(await built.service.plan(ctx, input)).toEqual(expected)
             expect(built.log).toHaveBeenCalledTimes(1)
@@ -216,7 +203,11 @@ describe("CommandPlannerService", () => {
                     "lead-1",
                 ])
         })
+    })
+})
 
+describe("CommandPlannerService", () => {
+    describe("refusals", () => {
         it("survives an evidence log that is down", async () => {
             const built = await build(mockEntityManager({}))
             built.log.mockRejectedValue(new RangeError("down"))
@@ -280,7 +271,9 @@ describe("CommandPlannerService", () => {
             expect(plan.spec.subject_id).toBe(subjectId)
         })
     })
+})
 
+describe("CommandPlannerService", () => {
     describe("the place in the chain", () => {
         const parent = (chain_id: string | null, depth: number) => [{ id: "parent-1", chain_id, depth }]
         const parentInput = { parentId: "parent-1" }
@@ -315,7 +308,9 @@ describe("CommandPlannerService", () => {
             expect(plan.spec.parent_id).toBe(input.parentId ?? null)
         })
     })
+})
 
+describe("CommandPlannerService", () => {
     describe("the receiving instance", () => {
         const resolved = (id: string, via: string, name: string | null): Queries => [
             [RESOLVE_INSTALLATION, [{ installation_id: id, via, name }]],
@@ -380,8 +375,23 @@ describe("CommandPlannerService", () => {
             })
         })
     })
+})
 
+describe("CommandPlannerService", () => {
     describe("the Office mirror and the sent evidence", () => {
+        const label = (value: string | null): Queries => [[FIND_SUBJECT_LABEL, [{ label: value }]]]
+        const agent = (name: string, module: string, installation_name: string | null): Queries => [
+            [FIND_SENDER_AGENT, [{ name, module, installation_name }]],
+            [FIND_SUBJECT_LABEL, []],
+        ]
+        const mirror = (
+            name: string,
+            body: string,
+            input: Partial<SendCommandInput> = {},
+            query: Queries = [[FIND_SUBJECT_LABEL, []]],
+            failed = false,
+        ) => [name, body, inputOf(input), query, failed] as const
+        const subject = (kind: string) => ({ lead_id: "lead-1", subject_type: kind, subject_id: `${kind}-1` })
         it("announces a command that became an item, once inserted", async () => {
             const built = await inserted(
                 mockEntityManager({ query: [[FIND_SUBJECT_LABEL, [{ label: "Lan" }]]] }),
@@ -405,20 +415,6 @@ describe("CommandPlannerService", () => {
             })
             expect(built.em.query).toHaveBeenCalledWith(FIND_SUBJECT_LABEL, ["ws-1", "lead", "lead-1"])
         })
-
-        const label = (value: string | null): Queries => [[FIND_SUBJECT_LABEL, [{ label: value }]]]
-        const agent = (name: string, module: string, installation_name: string | null): Queries => [
-            [FIND_SENDER_AGENT, [{ name, module, installation_name }]],
-            [FIND_SUBJECT_LABEL, []],
-        ]
-        const mirror = (
-            name: string,
-            body: string,
-            input: Partial<SendCommandInput> = {},
-            query: Queries = [[FIND_SUBJECT_LABEL, []]],
-            failed = false,
-        ) => [name, body, inputOf(input), query, failed] as const
-        const subject = (kind: string) => ({ lead_id: "lead-1", subject_type: kind, subject_id: `${kind}-1` })
 
         it.each([
             mirror("an inbound sender", "Customer: classify", { from: "inbound" }),
@@ -450,7 +446,11 @@ describe("CommandPlannerService", () => {
                     subjectType: "lead",
                 })
         })
+    })
+})
 
+describe("CommandPlannerService", () => {
+    describe("the Office mirror and the sent evidence", () => {
         it("records the instance that was chosen and how", async () => {
             const named = await inserted(
                 mockEntityManager({ query: [[FIND_GIVEN_INSTALLATION, [{ id: "inst-1", name: "Branch 1" }]]] }),

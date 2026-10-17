@@ -9,75 +9,77 @@ import type { DataSyncContext } from "./data-hub.contracts"
 import { DataHubErrorCode } from "./errors/data-hub.error"
 import { CSV_COPY } from "./messages/csv-import.messages"
 
-describe("CsvImportSyncService", () => {
-    const config: CsvConfig = {
-        v: 1,
-        source: "sheet",
-        entity: "customer",
-        idColumn: "id",
-        titleColumn: "name",
-        dateColumn: null,
-        kinds: { id: "text", name: "text", email: "email" },
-        columns: ["id", "name", "email"],
-        link: "https://docs.google.com/spreadsheets/d/sheet-1",
-    }
-    const source: Table = {
-        headers: ["id", "name", "email"],
-        rows: [
-            [" customer-1 ", " Alice ", " ALICE@EXAMPLE.COM "],
-            ["customer-2", "Bob", "bob@example.com"],
-            ["", "Missing id", ""],
+const config: CsvConfig = {
+    v: 1,
+    source: "sheet",
+    entity: "customer",
+    idColumn: "id",
+    titleColumn: "name",
+    dateColumn: null,
+    kinds: { id: "text", name: "text", email: "email" },
+    columns: ["id", "name", "email"],
+    link: "https://docs.google.com/spreadsheets/d/sheet-1",
+}
+
+const source: Table = {
+    headers: ["id", "name", "email"],
+    rows: [
+        [" customer-1 ", " Alice ", " ALICE@EXAMPLE.COM "],
+        ["customer-2", "Bob", "bob@example.com"],
+        ["", "Missing id", ""],
+    ],
+    sheets: [],
+    sheet: "",
+    delimiter: ",",
+}
+
+const recordsToWrite = [
+    {
+        externalId: "customer-1",
+        title: "Alice",
+        occurredAt: null,
+        data: { id: "customer-1", name: "Alice", email: "alice@example.com" },
+    },
+    {
+        externalId: "customer-2",
+        title: "Bob",
+        occurredAt: null,
+        data: { id: "customer-2", name: "Bob", email: "bob@example.com" },
+    },
+]
+
+const build = async (meta: Readonly<Record<string, string>> = { config: JSON.stringify(config) }) => {
+    const records = mock<DataRecordsService>()
+    const table = mock<TableClient>()
+    const context = mock<DataSyncContext>({
+        connection: {
+            id: "connection-1",
+            workspaceId: "workspace-1",
+            provider: "csv_import",
+            name: "Customers",
+            status: "connected",
+            lastError: null,
+            meta,
+            everyMinutes: 60,
+            lastSyncAt: null,
+        },
+        credential: "{}",
+    })
+    records.countExisting.mockResolvedValue(1)
+    records.count.mockResolvedValue(1234)
+    table.readSheetLink.mockResolvedValue(source)
+    context.upsert.mockResolvedValue(2)
+    const moduleRef = await Test.createTestingModule({
+        providers: [
+            CsvImportSyncService,
+            { provide: DataRecordsService, useValue: records },
+            { provide: TABLE, useValue: table },
         ],
-        sheets: [],
-        sheet: "",
-        delimiter: ",",
-    }
-    const recordsToWrite = [
-        {
-            externalId: "customer-1",
-            title: "Alice",
-            occurredAt: null,
-            data: { id: "customer-1", name: "Alice", email: "alice@example.com" },
-        },
-        {
-            externalId: "customer-2",
-            title: "Bob",
-            occurredAt: null,
-            data: { id: "customer-2", name: "Bob", email: "bob@example.com" },
-        },
-    ]
+    }).compile()
+    return { service: moduleRef.get(CsvImportSyncService), records, table, context }
+}
 
-    const build = async (meta: Readonly<Record<string, string>> = { config: JSON.stringify(config) }) => {
-        const records = mock<DataRecordsService>()
-        const table = mock<TableClient>()
-        const context = mock<DataSyncContext>({
-            connection: {
-                id: "connection-1",
-                workspaceId: "workspace-1",
-                provider: "csv_import",
-                name: "Customers",
-                status: "connected",
-                lastError: null,
-                meta,
-                everyMinutes: 60,
-                lastSyncAt: null,
-            },
-            credential: "{}",
-        })
-        records.countExisting.mockResolvedValue(1)
-        records.count.mockResolvedValue(1234)
-        table.readSheetLink.mockResolvedValue(source)
-        context.upsert.mockResolvedValue(2)
-        const moduleRef = await Test.createTestingModule({
-            providers: [
-                CsvImportSyncService,
-                { provide: DataRecordsService, useValue: records },
-                { provide: TABLE, useValue: table },
-            ],
-        }).compile()
-        return { service: moduleRef.get(CsvImportSyncService), records, table, context }
-    }
-
+describe("CsvImportSyncService", () => {
     it("re-reads the saved sheet and upserts its mapped rows with an exact summary", async () => {
         const { service, records, table, context } = await build()
 
@@ -148,7 +150,9 @@ describe("CsvImportSyncService", () => {
         expect(context.upsert).not.toHaveBeenCalled()
         expect(records.count).not.toHaveBeenCalled()
     })
+})
 
+describe("CsvImportSyncService", () => {
     it("upserts an empty sheet and summarizes the existing total", async () => {
         const { service, records, table, context } = await build()
         table.readSheetLink.mockResolvedValue({ ...source, rows: [] })

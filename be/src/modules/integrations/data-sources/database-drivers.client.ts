@@ -11,6 +11,9 @@ export const DATABASE_CONNECT_MS = 10_000
 /** How long one statement may run. */
 export const DATABASE_QUERY_MS = 15_000
 
+const MYSQL_READ_ONLY = "SET SESSION TRANSACTION READ ONLY"
+const MYSQL_TIMEOUT = `SET SESSION MAX_EXECUTION_TIME=${DATABASE_QUERY_MS}`
+
 const tlsOf = (target: DatabaseTarget): DatabaseTlsOptions => ({
     rejectUnauthorized: false,
     ...(isIP(target.host) ? {} : { servername: target.host }),
@@ -69,8 +72,8 @@ export const openMysql = async (target: DatabaseTarget, address: string): Promis
     })
     connection.on("error", () => undefined)
     try {
-        await connection.query("SET SESSION TRANSACTION READ ONLY")
-        await connection.query(`SET SESSION MAX_EXECUTION_TIME=${DATABASE_QUERY_MS}`).then(
+        await connection.query(MYSQL_READ_ONLY)
+        await connection.query(MYSQL_TIMEOUT).then(
             () => undefined,
             () => undefined,
         )

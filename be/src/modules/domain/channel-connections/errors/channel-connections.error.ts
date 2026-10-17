@@ -23,8 +23,6 @@ export enum ChannelConnectionsErrorCode {
     KeysInvalid = "CHANNEL_CONNECTIONS_KEYS_INVALID",
     /** payOS did not confirm the webhook address. */
     PayosConfirmRefused = "CHANNEL_CONNECTIONS_PAYOS_CONFIRM_REFUSED",
-    /** The Zalo app id or secret is missing or malformed. */
-    ZaloFieldsInvalid = "CHANNEL_CONNECTIONS_ZALO_FIELDS_INVALID",
     /** The stored Zalo tokens are missing or no longer usable. */
     ZaloTokenRefused = "CHANNEL_CONNECTIONS_ZALO_TOKEN_REFUSED",
     /** The connection is not of the provider the operation is for. */
@@ -45,7 +43,6 @@ export const CHANNEL_CONNECTIONS_ERROR_KINDS: Record<ChannelConnectionsErrorCode
     [ChannelConnectionsErrorCode.ApiKeyInvalid]: "invalid",
     [ChannelConnectionsErrorCode.KeysInvalid]: "invalid",
     [ChannelConnectionsErrorCode.PayosConfirmRefused]: "unavailable",
-    [ChannelConnectionsErrorCode.ZaloFieldsInvalid]: "invalid",
     [ChannelConnectionsErrorCode.ZaloTokenRefused]: "unavailable",
     [ChannelConnectionsErrorCode.ProviderUnsupported]: "invalid",
     [ChannelConnectionsErrorCode.Failed]: "internal",

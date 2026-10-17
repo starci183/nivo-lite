@@ -38,7 +38,7 @@ export const MOTIONS = ["zoom-in", "zoom-out", "pan-left", "pan-right", "none"] 
 /** One of the image motions. */
 export type Motion = (typeof MOTIONS)[number]
 
-/** Royalty-free tracks synthesised for NIVO (CC0, uploaded to the media bucket by `cli seed-media upload`, see be/src/assets/media-seed/music/LICENSE.md). */
+/** Royalty-free tracks synthesised for NIVO (CC0, uploaded to the media bucket by `cli seed-media upload`, see be/docs/guides/asset-licenses.md). */
 export const MUSIC_TRACKS = [
     { id: "sunny-pop", bpm: 112 },
     { id: "calm-glow", bpm: 72 },

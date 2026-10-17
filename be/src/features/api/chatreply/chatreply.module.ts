@@ -4,6 +4,7 @@ import { SetChatHandlingHandler } from "./application/set-chat-handling.handler"
 import { RequestChatReplyHandler } from "./application/request-chat-reply.handler"
 import { ChatAnswerStatusHandler } from "./application/chat-answer-status.handler"
 import { ChatReplyStatusHandler } from "./application/chat-reply-status.handler"
+import { ConfigurableModuleClass } from "./chatreply.module-definition"
 
 @Module({
     providers: [
@@ -15,4 +16,4 @@ import { ChatReplyStatusHandler } from "./application/chat-reply-status.handler"
     ],
 })
 /** The application handlers for member customer replies and their queued progress. */
-export class ChatReplyApiModule {}
+export class ChatReplyApiModule extends ConfigurableModuleClass {}

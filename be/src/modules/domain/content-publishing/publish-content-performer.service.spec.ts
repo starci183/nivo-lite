@@ -117,7 +117,9 @@ describe("PublishContentPerformerService", () => {
             text: "Lan approved work-1",
         })
     })
+})
 
+describe("PublishContentPerformerService", () => {
     it.each([
         ["another workspace", { ...ITEM, workspace_id: "ws-2" }],
         ["no subject", { ...ITEM, subject_id: null }],

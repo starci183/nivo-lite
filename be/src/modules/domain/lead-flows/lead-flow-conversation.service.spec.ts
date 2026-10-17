@@ -81,7 +81,6 @@ describe("LeadFlowConversationService", () => {
         expect(agents.profileOf).not.toHaveBeenCalled()
         expect(agents.profileOfDepartment).toHaveBeenCalledWith("ws-1", "lead_gen")
     })
-
     it("follows the current agent and the lead in a conversation that already exists", async () => {
         const { service, conversations, entityManager } = await build()
         conversations.find.mockResolvedValue(ok({ ...REF, agentId: "agent-0" }))
@@ -93,7 +92,6 @@ describe("LeadFlowConversationService", () => {
         expect(conversations.attachLead).toHaveBeenCalledWith("ws-1", "conv-1", "lead-1")
         expect(conversations.open).not.toHaveBeenCalled()
     })
-
     it("opens the conversation on first contact, and opens none without a connection", async () => {
         const { service, conversations, entityManager } = await build()
         conversations.find.mockResolvedValue(refused(AgentConversationsErrorCode.NotFound))
@@ -117,7 +115,9 @@ describe("LeadFlowConversationService", () => {
         ])
         expect(conversations.attachLead).toHaveBeenCalledWith("ws-1", "conv-2", "lead-1")
     })
+})
 
+describe("LeadFlowConversationService", () => {
     it("stores each kind of transcript line with its delivery, and nothing for an empty one", async () => {
         const { service, messages, entityManager } = await build()
         messages.storeAgentMessage.mockResolvedValue("message-1")
@@ -133,7 +133,9 @@ describe("LeadFlowConversationService", () => {
         expect(messages.storeAgentMessage).toHaveBeenCalledTimes(1)
         expect(messages.markDelivery).toHaveBeenCalledWith("message-1", false, "meta_token")
     })
+})
 
+describe("LeadFlowConversationService", () => {
     it("tells whether a person holds an escalated flow and hands a conversation to a person", async () => {
         const { service, conversations } = await build()
         conversations.turnOf.mockResolvedValue(
@@ -169,7 +171,6 @@ describe("LeadFlowConversationService", () => {
         expect(conversations.turnOf).toHaveBeenCalledTimes(1)
         expect(conversations.handToPerson).toHaveBeenCalledWith("ws-1", "conv-1", LEAD_GEN_ACTOR)
     })
-
     it("uses the first bound agent's profile and falls back when it is absent or no connection is supplied", async () => {
         const { service, bindings, agents } = await build()
         bindings.agentsFor.mockResolvedValue([
@@ -194,7 +195,9 @@ describe("LeadFlowConversationService", () => {
             ["ws-1", "lead_gen"],
         ])
     })
+})
 
+describe("LeadFlowConversationService", () => {
     it("keeps an existing agent and lead, and does not attach an absent flow lead", async () => {
         const { service, conversations } = await build()
         conversations.find.mockResolvedValueOnce(ok({ ...REF, leadId: "existing-lead" })).mockResolvedValueOnce(ok(REF))
@@ -210,7 +213,6 @@ describe("LeadFlowConversationService", () => {
             ["ws-1", "facebook", "connection-1", "person-1"],
         ])
     })
-
     it("requires a person id and defaults an unnamed new conversation to Facebook without attaching an absent lead", async () => {
         const { service, conversations, entityManager } = await build()
         conversations.find.mockResolvedValue(refused(AgentConversationsErrorCode.NotFound))
@@ -236,7 +238,6 @@ describe("LeadFlowConversationService", () => {
         )
         expect(conversations.attachLead).not.toHaveBeenCalled()
     })
-
     it("stores an agent line without delivery and omits a null delivery error, while ignoring a missing conversation", async () => {
         const { service, messages } = await build()
         const line = { workspaceId: "ws-1", conversationId: "conv-1", role: "agent" as const, body: "Hi!" }
@@ -256,7 +257,9 @@ describe("LeadFlowConversationService", () => {
         expect(messages.storeCustomer).not.toHaveBeenCalled()
         expect(messages.storeLine).not.toHaveBeenCalled()
     })
+})
 
+describe("LeadFlowConversationService", () => {
     it("stores a work item under its stable id and reports sent, failed and missing delivery records", async () => {
         const { service, messages, entityManager } = await build()
         messages.storeHumanMessage.mockResolvedValue("item-1")
@@ -293,7 +296,6 @@ describe("LeadFlowConversationService", () => {
             ["item-1", "conv-1"],
         ])
     })
-
     it("passes delivery failures through and omits a null error on success", async () => {
         const { service, messages } = await build()
 
@@ -305,7 +307,6 @@ describe("LeadFlowConversationService", () => {
             ["message-2", true, undefined],
         ])
     })
-
     it("checks every nonempty conversation and treats missing or agent-held turns as free", async () => {
         const { service, conversations } = await build()
         conversations.turnOf

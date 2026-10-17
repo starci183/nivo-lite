@@ -129,7 +129,9 @@ describe("AutomationPipelinesService", () => {
             await expect((await build(em)).pipelineKeys("ws-1")).resolves.toEqual([{ id: "p-1", template_key: "a" }])
         })
     })
+})
 
+describe("AutomationPipelinesService", () => {
     describe("savePipeline", () => {
         it("writes the template and the columns and answers the stored row", async () => {
             const em = mockEntityManager({ query: [UPSERT_PIPELINE, [ROW]] })

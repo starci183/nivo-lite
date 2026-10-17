@@ -11,6 +11,7 @@ import { ApiKeysError, ApiKeysErrorCode } from "./errors/api-keys.error"
 import type { ApiKeysRow, MemberRow } from "./persistence/api-keys.rows"
 import {
     API_KEY_AUTH,
+    API_KEY_CREDENTIAL,
     COUNT_ACTIVE_KEYS,
     INSERT_KEY,
     LIST_KEYS,
@@ -34,7 +35,9 @@ const toView = (row: KeyRow): ApiKeyView => ({
 })
 
 @Injectable()
-/** The workspace API keys reached only through the shared primary EntityManager: the admission of a public API request. */
+/**
+ * The workspace API keys reached only through the shared primary EntityManager: the admission of a public API request.
+ */
 export class ApiKeysService {
     constructor(
         @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
@@ -43,8 +46,8 @@ export class ApiKeysService {
     ) {}
 
     /**
-     * Admits a public API request: the bearer key must exist, work, stay inside its minute budget and carry `scope`. The lookup,
-     * the rate hit and the last-use stamp are one statement.
+     * Admits a public API request: the bearer key must exist, work, stay inside its minute budget and carry `scope`.
+     * The lookup, the rate hit and the last-use stamp are one statement.
      */
     async authenticate(scope: ApiScope, authorization: string = ""): Promise<ApiPrincipal> {
         const key = bearerKey(authorization)
@@ -55,6 +58,16 @@ export class ApiKeysService {
         const admitted = admitKey(row?.auth ?? null, scope, this.clock.now())
         if (admitted.kind === "refused") throw new ApiKeysError({ code: admitted.code, params: admitted.params })
         return admitted.value
+    }
+
+    /** Establishes a key identity without consuming its per-minute operation budget. */
+    async verifyCredential(authorization: string): Promise<ApiPrincipal> {
+        const key = bearerKey(authorization)
+        if (key === undefined) throw new ApiKeysError({ code: ApiKeysErrorCode.Unauthorized })
+        const [row] = await this.entityManager.query<Array<ApiKeyAuthAnswer>>(API_KEY_CREDENTIAL, [hashKey(key)])
+        if (row?.revoked) throw new ApiKeysError({ code: ApiKeysErrorCode.Revoked })
+        if (!row?.id || !row.workspace_id) throw new ApiKeysError({ code: ApiKeysErrorCode.Unauthorized })
+        return { keyId: row.id, workspaceId: row.workspace_id, name: row.name ?? "", scopes: row.scopes ?? [] }
     }
 
     /** The keys of a workspace, newest first, for an owner or manager of it. */

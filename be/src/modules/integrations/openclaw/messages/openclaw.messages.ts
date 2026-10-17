@@ -14,7 +14,6 @@ export const OPENCLAW_MESSAGES: MessageBundle = {
         "errors.OPENCLAW_RUN_FAILED": "Lượt chạy trên OpenClaw kết thúc với lỗi.",
         "errors.OPENCLAW_REGISTRATION_OFF": "Chưa bật đăng ký agent OpenClaw.",
         "errors.OPENCLAW_WORKSPACE_PATH_UNSAFE": "Đường dẫn không an toàn trong bộ agent: {{path}}.",
-        "errors.OPENCLAW_WORKSPACE_UNAVAILABLE": "Chưa cấu hình thư mục ghi workspace của agent.",
     },
     en: {
         "errors.OPENCLAW_CONFIG_INVALID": "The OpenClaw configuration is invalid: {{key}}.",
@@ -29,6 +28,5 @@ export const OPENCLAW_MESSAGES: MessageBundle = {
         "errors.OPENCLAW_RUN_FAILED": "The run on OpenClaw ended in error.",
         "errors.OPENCLAW_REGISTRATION_OFF": "OpenClaw agent registration is switched off.",
         "errors.OPENCLAW_WORKSPACE_PATH_UNSAFE": "A path of the agent bundle is unsafe: {{path}}.",
-        "errors.OPENCLAW_WORKSPACE_UNAVAILABLE": "The agent workspace directory is not configured.",
     },
 }

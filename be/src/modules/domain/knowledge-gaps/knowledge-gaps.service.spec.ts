@@ -78,7 +78,9 @@ describe("KnowledgeGapsService", () => {
             [SELECT_GAPS, [WS, ["dismissed"], 10]],
         ])
     })
+})
 
+describe("KnowledgeGapsService", () => {
     describe("record", () => {
         it("ignores a question without significant words before querying", async () => {
             const em = mockEntityManager()
@@ -138,7 +140,11 @@ describe("KnowledgeGapsService", () => {
                 "retrieval",
             ])
         })
+    })
+})
 
+describe("KnowledgeGapsService", () => {
+    describe("record", () => {
         it("prefers an exact key over a similar question and reopens an answered gap", async () => {
             const em = mockEntityManager({
                 query: [
@@ -196,7 +202,11 @@ describe("KnowledgeGapsService", () => {
                 reopened: false,
             })
         })
+    })
+})
 
+describe("KnowledgeGapsService", () => {
+    describe("record", () => {
         it("counts on the competing gap when an insert loses the uniqueness race", async () => {
             const em = mockEntityManager({
                 query: [
@@ -254,7 +264,9 @@ describe("KnowledgeGapsService", () => {
             [ANSWER_GAP, [WS, "g2", "owner"]],
         ])
     })
+})
 
+describe("KnowledgeGapsService", () => {
     it("answers matching questions of one module in their stored order", async () => {
         const em = mockEntityManager({
             query: [
@@ -305,7 +317,9 @@ describe("KnowledgeGapsService", () => {
             [SELECT_OPEN_GAPS, [WS, 300]],
         ])
     })
+})
 
+describe("KnowledgeGapsService", () => {
     describe("openOfModule", () => {
         it("returns the total and mapped open gaps of the requested module with a capped limit", async () => {
             const em = mockEntityManager({

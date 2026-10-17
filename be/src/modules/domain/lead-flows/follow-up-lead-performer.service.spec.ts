@@ -12,6 +12,7 @@ import { EMPTY_SIGNALS } from "./lead-flow-score.policy"
 import type { LeadFlow } from "./lead-flows.contracts"
 
 const NOW = "2026-10-12T10:00:00.000Z"
+
 const ctx: WorkContext = { workspaceId: "ws-1", actor: "Lan", locale: "en" }
 
 const flowOf = builder<LeadFlow>({
@@ -129,7 +130,6 @@ describe("FollowUpLeadPerformerService", () => {
         await expect(performer.prepare(ctx, itemOf())).resolves.toBe(prepared)
         expect(kit.lineProposal).toHaveBeenCalledWith(ctx, itemOf(), "line.follow-up", "follow.summary")
     })
-
     it("follows up inside the window and stamps the first follow-up", async () => {
         const { performer, kit, store } = await build()
         kit.dm.mockResolvedValue({ ok: true, reason: null, detail: null })
@@ -146,7 +146,6 @@ describe("FollowUpLeadPerformerService", () => {
             followed_up_at: NOW,
         })
     })
-
     it("hands a first follow-up outside the window to Sales once", async () => {
         const flow = flowOf({ state: "scored", score: "warm" })
         const { performer, kit, store, commands } = await build(flow)
@@ -171,7 +170,9 @@ describe("FollowUpLeadPerformerService", () => {
         })
         expect(store.patch).toHaveBeenCalledWith(flow, { state: "nurturing", followed_up_at: NOW })
     })
+})
 
+describe("FollowUpLeadPerformerService", () => {
     it("explains a later follow-up that could not go and refuses a Meta failure", async () => {
         const { performer, kit, store, commands } = await build(flowOf({ followed_up_at: NOW }))
         kit.dm.mockResolvedValueOnce({ ok: false, reason: "window", detail: null })
@@ -186,7 +187,9 @@ describe("FollowUpLeadPerformerService", () => {
         expect(commands.sendCommand).not.toHaveBeenCalled()
         expect(store.patch).not.toHaveBeenCalled()
     })
+})
 
+describe("FollowUpLeadPerformerService", () => {
     it("does nothing when there is no line to send", async () => {
         const { performer, kit } = await build()
 
@@ -198,7 +201,6 @@ describe("FollowUpLeadPerformerService", () => {
 
         expect(kit.dm).not.toHaveBeenCalled()
     })
-
     it("sends a later follow-up without changing the first follow-up time", async () => {
         const flow = flowOf({ followed_up_at: "2026-10-11T10:00:00.000Z" })
         const { performer, kit, store, commands } = await build(flow)
@@ -215,7 +217,6 @@ describe("FollowUpLeadPerformerService", () => {
         expect(store.patch).toHaveBeenCalledWith(flow, { state: "nurturing" })
         expect(commands.sendCommand).not.toHaveBeenCalled()
     })
-
     it("keeps the existing chain when Sales receives the first follow-up", async () => {
         const { performer, kit, commands } = await build()
         kit.dm.mockResolvedValue({ ok: false, reason: "window", detail: null })
@@ -241,7 +242,9 @@ describe("FollowUpLeadPerformerService", () => {
             payload: { subject_type: "lead", subject_id: "lead-1", lead_id: "lead-1" },
         })
     })
+})
 
+describe("FollowUpLeadPerformerService", () => {
     it("does nothing when the proposal omits its draft", async () => {
         const { performer, kit, store } = await build()
 

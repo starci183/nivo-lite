@@ -11,65 +11,7 @@ import { FLOW_SIMULATED_INPUTS } from "./flow-engine.decorators"
 import { FlowEngineService } from "./flow-engine.service"
 import { OwnerChatService } from "./owner-chat.service"
 
-const member = builder<WorkspaceMember>({
-    userId: "user-1",
-    workspaceId: "ws-1",
-    role: "owner",
-    staffId: null,
-    displayName: "An",
-    status: "active",
-})()
-
-const build = async () => {
-    const decide = jest.fn().mockResolvedValue({ id: "item-1", status: "done" })
-    const hold = jest.fn().mockResolvedValue({ id: "item-1", status: "waiting_decision" })
-    const saveRule = jest.fn().mockResolvedValue({ action: "send_quote", mode: "ask" })
-    const setHandling = jest.fn().mockResolvedValue({ conversationId: "conv-1", handledBy: "An" })
-    const request = jest.fn().mockResolvedValue({ id: "event-1", status: "queued", duplicate: false })
-    const reply = jest.fn().mockResolvedValue({ handled: true, reply: "ok", posted: false })
-    const updateAuthority = jest.fn().mockResolvedValue({ policies: "check limits" })
-    const save = jest.fn().mockResolvedValue({ id: "staff-1", name: "An" })
-    const assign = jest.fn().mockResolvedValue({ id: "item-1", assigned_staff_id: "staff-1" })
-    const requestReply = jest.fn().mockResolvedValue({ id: "reply-1", status: "queued" })
-    const apply = jest.fn().mockResolvedValue({ summary: "saved", authority: null, rules: [] })
-    const simulator = mock<SimulatedInputs>({ request })
-    const decisions = mock<DecisionsService>({ saveRule, updateAuthority })
-    const work = mock<WorkDecisionService>({ decide })
-    const placement = mock<WorkPlacementService>({ hold, assign })
-    const staff = mock<StaffService>({ save })
-    const chats = mock<ChatReplyService>({ setHandling, requestReply })
-    const authorityChat = mock<AuthorityChatService>({ apply })
-    const ownerChat = mock<OwnerChatService>({ reply })
-    const moduleRef = await Test.createTestingModule({
-        providers: [
-            FlowEngineService,
-            { provide: DecisionsService, useValue: decisions },
-            { provide: WorkDecisionService, useValue: work },
-            { provide: WorkPlacementService, useValue: placement },
-            { provide: StaffService, useValue: staff },
-            { provide: FLOW_SIMULATED_INPUTS, useValue: simulator },
-            { provide: ChatReplyService, useValue: chats },
-            { provide: AuthorityChatService, useValue: authorityChat },
-            { provide: OwnerChatService, useValue: ownerChat },
-        ],
-    }).compile()
-    return {
-        service: moduleRef.get(FlowEngineService),
-        decide,
-        hold,
-        saveRule,
-        setHandling,
-        request,
-        reply,
-        updateAuthority,
-        save,
-        assign,
-        requestReply,
-        apply,
-    }
-}
-
-describe("FlowEngineService", () => {
+const registerDecisionCommands = () => {
     it("decides a work item as the member and answers the item", async () => {
         const { service, decide } = await build()
 
@@ -126,7 +68,9 @@ describe("FlowEngineService", () => {
         expect(setHandling).toHaveBeenCalledWith("user-1", "ws-1", "conv-1", true, "vi")
         expect(result.data).toEqual({ conversation_id: "conv-1", handled_by: "An" })
     })
+}
 
+const registerSimulationCommands = () => {
     it("records a simulated input from the old snake_case fields", async () => {
         const { service, request } = await build()
 
@@ -195,7 +139,9 @@ describe("FlowEngineService", () => {
         })
         expect(result).toEqual({ data: { id: "staff-1", name: "An" } })
     })
+}
 
+const registerPlacementCommands = () => {
     it.each([
         { payload: { note: "wait", locale: "en" }, note: "wait", locale: "en" },
         { payload: {}, note: "", locale: "vi" },
@@ -262,4 +208,68 @@ describe("FlowEngineService", () => {
         expect(apply).toHaveBeenCalledWith({ ...member, workspaceId: "ws-2" }, "Ask before quoting", "en")
         expect(result).toEqual({ data: { summary: "saved", authority: null, rules: [] } })
     })
+}
+
+const member = builder<WorkspaceMember>({
+    userId: "user-1",
+    workspaceId: "ws-1",
+    role: "owner",
+    staffId: null,
+    displayName: "An",
+    status: "active",
+})()
+
+const build = async () => {
+    const decide = jest.fn().mockResolvedValue({ id: "item-1", status: "done" })
+    const hold = jest.fn().mockResolvedValue({ id: "item-1", status: "waiting_decision" })
+    const saveRule = jest.fn().mockResolvedValue({ action: "send_quote", mode: "ask" })
+    const setHandling = jest.fn().mockResolvedValue({ conversationId: "conv-1", handledBy: "An" })
+    const request = jest.fn().mockResolvedValue({ id: "event-1", status: "queued", duplicate: false })
+    const reply = jest.fn().mockResolvedValue({ handled: true, reply: "ok", posted: false })
+    const updateAuthority = jest.fn().mockResolvedValue({ policies: "check limits" })
+    const save = jest.fn().mockResolvedValue({ id: "staff-1", name: "An" })
+    const assign = jest.fn().mockResolvedValue({ id: "item-1", assigned_staff_id: "staff-1" })
+    const requestReply = jest.fn().mockResolvedValue({ id: "reply-1", status: "queued" })
+    const apply = jest.fn().mockResolvedValue({ summary: "saved", authority: null, rules: [] })
+    const simulator = mock<SimulatedInputs>({ request })
+    const decisions = mock<DecisionsService>({ saveRule, updateAuthority })
+    const work = mock<WorkDecisionService>({ decide })
+    const placement = mock<WorkPlacementService>({ hold, assign })
+    const staff = mock<StaffService>({ save })
+    const chats = mock<ChatReplyService>({ setHandling, requestReply })
+    const authorityChat = mock<AuthorityChatService>({ apply })
+    const ownerChat = mock<OwnerChatService>({ reply })
+    const moduleRef = await Test.createTestingModule({
+        providers: [
+            FlowEngineService,
+            { provide: DecisionsService, useValue: decisions },
+            { provide: WorkDecisionService, useValue: work },
+            { provide: WorkPlacementService, useValue: placement },
+            { provide: StaffService, useValue: staff },
+            { provide: FLOW_SIMULATED_INPUTS, useValue: simulator },
+            { provide: ChatReplyService, useValue: chats },
+            { provide: AuthorityChatService, useValue: authorityChat },
+            { provide: OwnerChatService, useValue: ownerChat },
+        ],
+    }).compile()
+    return {
+        service: moduleRef.get(FlowEngineService),
+        decide,
+        hold,
+        saveRule,
+        setHandling,
+        request,
+        reply,
+        updateAuthority,
+        save,
+        assign,
+        requestReply,
+        apply,
+    }
+}
+
+describe("FlowEngineService", () => {
+    registerDecisionCommands()
+    registerSimulationCommands()
+    registerPlacementCommands()
 })

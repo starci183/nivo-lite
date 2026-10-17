@@ -1,6 +1,6 @@
 import { Field, Int, ObjectType } from "@nestjs/graphql"
 import type { CsvMapping } from "@modules/domain/data-hub"
-import { DataJsonScalar } from "./data-json.type"
+import { DataJsonScalar } from "../data-json.mapper"
 
 @ObjectType()
 /** What reading an import source answers before anything is saved. */
@@ -29,7 +29,9 @@ export class CsvPreviewType {
     @Field(() => String)
     delimiter!: string
 
-    /** The suggested mapping (the saved one when uploading again): {idColumn, titleColumn, dateColumn, kinds, columns}. */
+    /**
+     * The suggested mapping (the saved one when uploading again): {idColumn, titleColumn, dateColumn, kinds, columns}.
+     */
     @Field(() => DataJsonScalar)
     mapping!: CsvMapping
 

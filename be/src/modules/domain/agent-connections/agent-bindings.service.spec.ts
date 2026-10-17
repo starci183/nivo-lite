@@ -73,7 +73,9 @@ describe("AgentBindingsService", () => {
             expect(em.query).toHaveBeenCalledWith(LIST_AGENTS_OF_CONNECTION, ["c1", ["inbound_chat"]])
         })
     })
+})
 
+describe("AgentBindingsService", () => {
     describe("connectionsFor", () => {
         it("includes pending read grants with the default options", async () => {
             const rows = [
@@ -137,7 +139,9 @@ describe("AgentBindingsService", () => {
             expect(em.query).toHaveBeenCalledWith(LIST_CONNECTIONS_OF_AGENT, ["a1", ["outbound_chat"]])
         })
     })
+})
 
+describe("AgentBindingsService", () => {
     describe("connectionsOfAgent", () => {
         it("lists every connection of an agent of the workspace for a member, whatever the purpose", async () => {
             const rows = [
@@ -204,7 +208,9 @@ describe("AgentBindingsService", () => {
             expect(em.query).not.toHaveBeenCalled()
         })
     })
+})
 
+describe("AgentBindingsService", () => {
     describe("grant", () => {
         const grant = {
             workspaceId: "w1",
@@ -275,7 +281,9 @@ describe("AgentBindingsService", () => {
             expect(members.require).not.toHaveBeenCalled()
         })
     })
+})
 
+describe("AgentBindingsService", () => {
     describe("removeGrant", () => {
         const target = { workspaceId: "w1", agentId: "a1", connectionId: "c1" }
 

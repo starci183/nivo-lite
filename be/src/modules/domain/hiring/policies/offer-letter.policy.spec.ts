@@ -1,7 +1,38 @@
+import { Test } from "@nestjs/testing"
 import { builder, mock } from "@starci/jest-preset"
 import type { MessageCatalog } from "@modules/platform/i18n"
 import type { JobRecord, OfferTerms, TextOf } from "../hiring.contracts"
-import { cleanLetterPart, composeOffer, payPhrase, termsBlock } from "./offer-letter.policy"
+import {
+    cleanLetterPart as cleanLetterPartImplementation,
+    composeOffer as composeOfferImplementation,
+    payPhrase as payPhraseImplementation,
+    termsBlock as termsBlockImplementation,
+} from "./offer-letter.policy"
+
+const SUBJECT = Symbol("subject")
+type Subject = {
+    cleanLetterPart: typeof cleanLetterPartImplementation
+    composeOffer: typeof composeOfferImplementation
+    payPhrase: typeof payPhraseImplementation
+    termsBlock: typeof termsBlockImplementation
+}
+
+const buildSubject = async () => {
+    const moduleRef = await Test.createTestingModule({
+        providers: [
+            {
+                provide: SUBJECT,
+                useValue: {
+                    cleanLetterPart: cleanLetterPartImplementation,
+                    composeOffer: composeOfferImplementation,
+                    payPhrase: payPhraseImplementation,
+                    termsBlock: termsBlockImplementation,
+                },
+            },
+        ],
+    }).compile()
+    return moduleRef.get<Subject>(SUBJECT)
+}
 
 const text = (key: string, params: Readonly<Record<string, string | number>> = {}): string =>
     `${key}${JSON.stringify(params)}`
@@ -47,10 +78,12 @@ const termsOf = builder<OfferTerms>({ title: "", pay: "", startDate: "", probati
 
 describe("offer letter policy", () => {
     describe("payPhrase", () => {
-        it("quotes equal positive amounts as exact pay", () => {
+        it("quotes equal positive amounts as exact pay", async () => {
+            const subject = await buildSubject()
+
             const { catalog, textOf, format } = build()
 
-            expect(payPhrase(jobOf({ payMinVnd: 30000, payMaxVnd: 30000 }), textOf, format)).toBe(
+            expect(subject.payPhrase(jobOf({ payMinVnd: 30000, payMaxVnd: 30000 }), textOf, format)).toBe(
                 text("hiring.pay.exact", { amount: "VND 30000", unit: "hiring.payUnit.hour{}" }),
             )
             expect(catalog.get.mock.calls).toEqual([
@@ -59,10 +92,12 @@ describe("offer letter policy", () => {
             ])
         })
 
-        it("quotes different positive amounts as a range", () => {
+        it("quotes different positive amounts as a range", async () => {
+            const subject = await buildSubject()
+
             const { textOf, format } = build()
 
-            expect(payPhrase(jobOf({ payUnit: "month" }), textOf, format)).toBe(
+            expect(subject.payPhrase(jobOf({ payUnit: "month" }), textOf, format)).toBe(
                 text("hiring.pay.range", {
                     min: "VND 30000",
                     max: "VND 50000",
@@ -71,18 +106,22 @@ describe("offer letter policy", () => {
             )
         })
 
-        it.each([null, 0, -1])("quotes only a positive lower amount when the upper amount is %s", (max) => {
+        it.each([null, 0, -1])("quotes only a positive lower amount when the upper amount is %s", async (max) => {
+            const subject = await buildSubject()
+
             const { textOf, format } = build()
 
-            expect(payPhrase(jobOf({ payMinVnd: 30000, payMaxVnd: max, payUnit: "shift" }), textOf, format)).toBe(
-                text("hiring.pay.from", { amount: "VND 30000", unit: "hiring.payUnit.shift{}" }),
-            )
+            expect(
+                subject.payPhrase(jobOf({ payMinVnd: 30000, payMaxVnd: max, payUnit: "shift" }), textOf, format),
+            ).toBe(text("hiring.pay.from", { amount: "VND 30000", unit: "hiring.payUnit.shift{}" }))
         })
 
-        it.each([null, 0, -1])("quotes only a positive upper amount when the lower amount is %s", (min) => {
+        it.each([null, 0, -1])("quotes only a positive upper amount when the lower amount is %s", async (min) => {
+            const subject = await buildSubject()
+
             const { textOf, format } = build()
 
-            expect(payPhrase(jobOf({ payMinVnd: min, payMaxVnd: 50000 }), textOf, format)).toBe(
+            expect(subject.payPhrase(jobOf({ payMinVnd: min, payMaxVnd: 50000 }), textOf, format)).toBe(
                 text("hiring.pay.upTo", { amount: "VND 50000", unit: "hiring.payUnit.hour{}" }),
             )
         })
@@ -93,18 +132,26 @@ describe("offer letter policy", () => {
             [0, null],
             [0, 0],
             [-1, -2],
-        ])("makes nonpositive or absent amounts negotiable (%s, %s)", (min, max) => {
+        ])("makes nonpositive or absent amounts negotiable (%s, %s)", async (min, max) => {
+            const subject = await buildSubject()
+
             const { textOf, format } = build()
 
-            expect(payPhrase(jobOf({ payMinVnd: min, payMaxVnd: max }), textOf, format)).toBe("hiring.pay.negotiable{}")
+            expect(subject.payPhrase(jobOf({ payMinVnd: min, payMaxVnd: max }), textOf, format)).toBe(
+                "hiring.pay.negotiable{}",
+            )
         })
     })
+})
 
+describe("offer letter policy", () => {
     describe("termsBlock", () => {
-        it("uses the job title and computed pay when the entered terms are empty", () => {
+        it("uses the job title and computed pay when the entered terms are empty", async () => {
+            const subject = await buildSubject()
+
             const { textOf } = build()
 
-            expect(termsBlock(jobOf({ location: "" }), termsOf(), 7, "Computed pay", textOf)).toBe(
+            expect(subject.termsBlock(jobOf({ location: "" }), termsOf(), 7, "Computed pay", textOf)).toBe(
                 [
                     "hiring.offer.termsHead{}",
                     text("hiring.offer.termPosition", {
@@ -117,7 +164,9 @@ describe("offer letter policy", () => {
             )
         })
 
-        it("preserves every owner-entered term and the job location in order", () => {
+        it("preserves every owner-entered term and the job location in order", async () => {
+            const subject = await buildSubject()
+
             const { textOf } = build()
             const terms = termsOf({
                 title: "Senior cashier",
@@ -127,7 +176,7 @@ describe("offer letter policy", () => {
                 note: "Bring your documents",
             })
 
-            expect(termsBlock(jobOf({ employmentType: "full_time" }), terms, 5, "Computed pay", textOf)).toBe(
+            expect(subject.termsBlock(jobOf({ employmentType: "full_time" }), terms, 5, "Computed pay", textOf)).toBe(
                 [
                     "hiring.offer.termsHead{}",
                     text("hiring.offer.termPosition", {
@@ -144,13 +193,17 @@ describe("offer letter policy", () => {
             )
         })
     })
+})
 
+describe("offer letter policy", () => {
     describe("composeOffer", () => {
-        it("uses catalog opening and closing for null model paragraphs", () => {
+        it("uses catalog opening and closing for null model paragraphs", async () => {
+            const subject = await buildSubject()
+
             const { textOf } = build()
 
             expect(
-                composeOffer(
+                subject.composeOffer(
                     {
                         candidate: "Alex",
                         shop: "Main shop",
@@ -171,11 +224,13 @@ describe("offer letter policy", () => {
             )
         })
 
-        it("places supplied model paragraphs around the exact approved terms", () => {
+        it("places supplied model paragraphs around the exact approved terms", async () => {
+            const subject = await buildSubject()
+
             const { catalog, textOf } = build()
 
             expect(
-                composeOffer(
+                subject.composeOffer(
                     {
                         candidate: "Alex",
                         shop: "Main shop",
@@ -190,11 +245,13 @@ describe("offer letter policy", () => {
             expect(catalog.get.mock.calls).toEqual([["hiring.offer.signoff", { shop: "Main shop" }, "vi"]])
         })
 
-        it("preserves empty strings because only null chooses a template", () => {
+        it("preserves empty strings because only null chooses a template", async () => {
+            const subject = await buildSubject()
+
             const { textOf } = build()
 
             expect(
-                composeOffer(
+                subject.composeOffer(
                     {
                         candidate: "Alex",
                         shop: "Main shop",
@@ -208,29 +265,39 @@ describe("offer letter policy", () => {
             ).toBe(`\n\nApproved terms\n\n\n\nhiring.offer.signoff{"shop":"Main shop"}`)
         })
     })
+})
 
+describe("offer letter policy", () => {
     describe("cleanLetterPart", () => {
-        it("strips heading and emphasis markup and surrounding whitespace", () => {
-            expect(cleanLetterPart("  ## **Welcome aboard** __We value your work__.  ")).toBe(
+        it("strips heading and emphasis markup and surrounding whitespace", async () => {
+            const subject = await buildSubject()
+
+            expect(subject.cleanLetterPart("  ## **Welcome aboard** __We value your work__.  ")).toBe(
                 "Welcome aboard We value your work.",
             )
-            expect(cleanLetterPart("*Welcome aboard.*")).toBe("Welcome aboard.")
+            expect(subject.cleanLetterPart("*Welcome aboard.*")).toBe("Welcome aboard.")
         })
 
-        it("accepts the exact minimum and maximum paragraph lengths", () => {
-            expect(cleanLetterPart("Welcome aboard.")).toBe("Welcome aboard.")
-            expect(cleanLetterPart("a".repeat(700))).toBe("a".repeat(700))
+        it("accepts the exact minimum and maximum paragraph lengths", async () => {
+            const subject = await buildSubject()
+
+            expect(subject.cleanLetterPart("Welcome aboard.")).toBe("Welcome aboard.")
+            expect(subject.cleanLetterPart("a".repeat(700))).toBe("a".repeat(700))
         })
 
-        it("rejects paragraphs outside the permitted length", () => {
-            expect(cleanLetterPart("Welcome aboard")).toBeNull()
-            expect(cleanLetterPart("a".repeat(701))).toBeNull()
-            expect(cleanLetterPart("   ")).toBeNull()
+        it("rejects paragraphs outside the permitted length", async () => {
+            const subject = await buildSubject()
+
+            expect(subject.cleanLetterPart("Welcome aboard")).toBeNull()
+            expect(subject.cleanLetterPart("a".repeat(701))).toBeNull()
+            expect(subject.cleanLetterPart("   ")).toBeNull()
         })
 
-        it("rejects figures and paragraphs containing protected criteria", () => {
-            expect(cleanLetterPart("Welcome aboard in 2026.")).toBeNull()
-            expect(cleanLetterPart("We require tre trung applicants.")).toBeNull()
+        it("rejects figures and paragraphs containing protected criteria", async () => {
+            const subject = await buildSubject()
+
+            expect(subject.cleanLetterPart("Welcome aboard in 2026.")).toBeNull()
+            expect(subject.cleanLetterPart("We require tre trung applicants.")).toBeNull()
         })
     })
 })

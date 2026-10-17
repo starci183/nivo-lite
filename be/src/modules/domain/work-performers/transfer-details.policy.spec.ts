@@ -1,4 +1,18 @@
+import { Test } from "@nestjs/testing"
 import { transferDetailsOf } from "./transfer-details.policy"
+
+const SUBJECT = Symbol("transfer-details.policy")
+type Subject = {
+    transferDetailsOf: typeof transferDetailsOf
+}
+
+const buildSubject = async () => {
+    const moduleRef = await Test.createTestingModule({
+        providers: [{ provide: SUBJECT, useValue: { transferDetailsOf } }],
+    }).compile()
+    const subject = moduleRef.get<Subject>(SUBJECT)
+    return { subject }
+}
 
 /** The Vietnamese label, built from code points so the spec stays ASCII. */
 const VIETNAMESE_LABEL = ["th", 0xf4, "ng tin chuy", 0x1ec3, "n kho", 0x1ea3, "n"]
@@ -6,40 +20,58 @@ const VIETNAMESE_LABEL = ["th", 0xf4, "ng tin chuy", 0x1ec3, "n kho", 0x1ea3, "n
     .join("")
 
 describe("transferDetailsOf", () => {
-    it("reads the English bank-transfer line", () => {
-        expect(transferDetailsOf("Hours: 8-5\nBank Transfer Details: 9704 123\nThanks")).toBe("9704 123")
+    it("reads the English bank-transfer line", async () => {
+        const { subject } = await buildSubject()
+
+        expect(subject.transferDetailsOf("Hours: 8-5\nBank Transfer Details: 9704 123\nThanks")).toBe("9704 123")
     })
 
-    it("reads the English payment-details line", () => {
-        expect(transferDetailsOf("payment details: VCB 001")).toBe("VCB 001")
+    it("reads the English payment-details line", async () => {
+        const { subject } = await buildSubject()
+
+        expect(subject.transferDetailsOf("payment details: VCB 001")).toBe("VCB 001")
     })
 
-    it("reads the Vietnamese label", () => {
-        expect(transferDetailsOf(`${VIETNAMESE_LABEL}: 9704 999`)).toBe("9704 999")
+    it("reads the Vietnamese label", async () => {
+        const { subject } = await buildSubject()
+
+        expect(subject.transferDetailsOf(`${VIETNAMESE_LABEL}: 9704 999`)).toBe("9704 999")
     })
 
-    it("reads a bulleted line and a fullwidth colon", () => {
-        expect(transferDetailsOf(`\u2022 bank transfer details\uff1a  VCB 002  `)).toBe("VCB 002")
+    it("reads a bulleted line and a fullwidth colon", async () => {
+        const { subject } = await buildSubject()
+
+        expect(subject.transferDetailsOf(`\u2022 bank transfer details\uff1a  VCB 002  `)).toBe("VCB 002")
     })
 
-    it("reads a dashed line across a Windows break", () => {
-        expect(transferDetailsOf("- payment details: ACB 7\r\nnext")).toBe("ACB 7")
+    it("reads a dashed line across a Windows break", async () => {
+        const { subject } = await buildSubject()
+
+        expect(subject.transferDetailsOf("- payment details: ACB 7\r\nnext")).toBe("ACB 7")
     })
 
-    it("reads a starred line", () => {
-        expect(transferDetailsOf("* Bank transfer details: TCB 3")).toBe("TCB 3")
+    it("reads a starred line", async () => {
+        const { subject } = await buildSubject()
+
+        expect(subject.transferDetailsOf("* Bank transfer details: TCB 3")).toBe("TCB 3")
     })
 
-    it("answers nothing when the knowledge has no details line", () => {
-        expect(transferDetailsOf("We deliver in Hue.")).toBeNull()
+    it("answers nothing when the knowledge has no details line", async () => {
+        const { subject } = await buildSubject()
+
+        expect(subject.transferDetailsOf("We deliver in Hue.")).toBeNull()
     })
 
-    it("answers nothing for empty knowledge", () => {
-        expect(transferDetailsOf("")).toBeNull()
+    it("answers nothing for empty knowledge", async () => {
+        const { subject } = await buildSubject()
+
+        expect(subject.transferDetailsOf("")).toBeNull()
     })
 
-    it("answers nothing when no knowledge was passed", () => {
-        expect(transferDetailsOf(null)).toBeNull()
-        expect(transferDetailsOf(undefined)).toBeNull()
+    it("answers nothing when no knowledge was passed", async () => {
+        const { subject } = await buildSubject()
+
+        expect(subject.transferDetailsOf(null)).toBeNull()
+        expect(subject.transferDetailsOf(undefined)).toBeNull()
     })
 })

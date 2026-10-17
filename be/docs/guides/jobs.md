@@ -12,9 +12,9 @@ The design is the StarCi queue pattern: the job commits with the business row, w
 | The fenced claim of a running job (a fencing token per claim) and the processor base | `be/src/modules/platform/jobs` (`FencedProcessor`, `JobClaimService`, `JobFenceService`, `JobRunnerService`; table `public.jobs`)              |
 | Queue contracts: job names, payloads, dedupe keys, the typed producer, schedulers    | `be/src/modules/queues/<queue>/` (27 queues; `modules/queues/knowledge` is the reference)                                                      |
 | The job itself: processor, steps under the claimed token, transport to the queue     | `be/src/features/jobs/<job>/{steps,transport/queue}`                                                                                           |
-| Which queues run and which schedulers are registered                                 | `be/apps/api/src/api.options.ts` (`API_JOB_QUEUES`, `API_SCHEDULERS`)                                                                          |
-| The SQL: `pgmq.create` per queue, `job_*` functions, `job_outbox`, `job_slots`       | `supabase/migrations/20261013142504_lite-baseline.sql`                                                                                         |
-| Operator commands                                                                    | `be/src/features/cli/jobs` (`cli jobs stats\|failed\|open\|retry\|retry-failed\|watchdog`) and `deploy/swarm/jobs.sh`                          |
+| Which queues run and which schedulers are registered                                 | `be/apps/api/src/compose/jobs.ts` (queue list) and `be/apps/api/src/compose/schedulers.ts` (scheduler list)                                    |
+| The SQL: `pgmq.create` per queue, `job_*` functions, `job_outbox`, `job_slots`       | `supabase/migrations/20261026000000_baseline.sql`                                                                                              |
+| Operator commands                                                                    | `be/src/features/cli/jobs` (`cli jobs stats\|failed\|open\|retry\|retry-failed\|watchdog`) and `starci app stack jobs`                         |
 
 ## Architecture
 
@@ -29,7 +29,7 @@ The design is the StarCi queue pattern: the job commits with the business row, w
         │  job_read(queue, vt, free slots, ws limit)   pgmq.read skips locked rows; a workspace already running
         │                                              QUEUE_WORKSPACE_CONCURRENCY jobs is deferred (job_slots), not counted as an attempt
         ▼
-   FencedProcessor of the job name (features/jobs/<job>): steps advance under the claimed fence token; chained jobs through the typed producer
+   FencedProcessor of the job name (be/src/features/jobs/<job>): steps advance under the claimed fence token; chained jobs through the typed producer
         │  job_touch every third of the visibility timeout (extends the timeout and the slot lease)
         │  success → job_ack     retryable error → job_fail (5 s, 10 s, 20 s)     final / unrecoverable → onFailed + job_archive
         ▼
@@ -38,7 +38,7 @@ The design is the StarCi queue pattern: the job commits with the business row, w
 
 Why no relay: `job_enqueue` writes the outbox row and sends the pgmq message in the same transaction as the business row. A rolled-back insert never starts work; a committed row always has its message. Why `job_outbox` stays: pgmq has no dedupe, and chained jobs need one; the same row is the audit trail (`state` queued → running → done | failed, `attempts`, `last_error`) that operators and the watchdog read with plain SQL.
 
-Recurring ticks (automation, shifts, agents sync, decisions drain, content tick, connection health, zalo refresh, data sync) are `QueueSchedulerDefinition`s in `API_SCHEDULERS`: at boot the api upserts each as a pg_cron job by id (`SELECT pgmq.send(...)`), so a pool of replicas fires each tick once per interval. Four other pg_cron jobs belong to the baseline (`ai-generations-prune`, `hiring-apply-hits-prune`, `hiring-tick`, `video-renders-reap`). The migration `20261020110000_drop-engine-schema.sql` removed the legacy HTTP ticks of the engine.
+Recurring ticks (automation, shifts, agents sync, decisions drain, content tick, connection health, zalo refresh, data sync) are `QueueSchedulerDefinition`s in the scheduler list (`be/apps/api/src/compose/schedulers.ts`): at boot the api upserts each as a pg_cron job by id (`SELECT pgmq.send(...)`), so a pool of replicas fires each tick once per interval. Four other pg_cron jobs belong to the baseline (`ai-generations-prune`, `hiring-apply-hits-prune`, `hiring-tick`, `video-renders-reap`). The migration `supabase/migrations/_archive/20261020110000_drop-engine-schema.sql` removed the legacy HTTP ticks of the engine.
 
 ## Database contract
 
@@ -61,7 +61,7 @@ The api never calls the `pgmq` schema directly; the role `app_be` holds execute 
 
 ## Job contracts
 
-Each queue's `contracts.ts` is the one list of its job names, payloads and dedupe keys. Payloads carry ids, never rows: the handler re-reads the current state. The knowledge queue:
+Each queue's contracts file (`be/src/modules/queues/<queue>/<queue>.contracts.ts`) is the one list of its job names, payloads and dedupe keys. Payloads carry ids, never rows: the handler re-reads the current state. The knowledge queue:
 
 | Job                 | Payload                      | Does                                                                                                 |
 | ------------------- | ---------------------------- | ---------------------------------------------------------------------------------------------------- |
@@ -74,12 +74,12 @@ Each queue's `contracts.ts` is the one list of its job names, payloads and dedup
 
 ## Retry policy
 
-`modules/platform/queue/queue.policy.ts`:
+`be/src/modules/platform/queue/queue.policy.ts`:
 
 - 4 attempts; after a failed one the message comes back after 5 s, 10 s, 20 s (`job_fail` sets the visibility timeout).
 - Attempts are `job_outbox.attempts`, counted when a message really starts (pgmq's `read_ct` also counts the deferrals of a busy workspace, so it is not used).
 - A message read but not finished (worker crashed) becomes visible again when its visibility timeout runs out, and counts as one more attempt.
-- `QueueError` code `QUEUE_UNRECOVERABLE` (bad payload, missing subject, no credits: reason `blocked_credits`) ends the job at once; `QUEUE_RETRY_AFTER` retries after the seconds it carries. Nothing retries a blocked-credits source on its own: the owner tops up and presses Retry.
+- `QueueError` code `Unrecoverable` (`be/src/modules/platform/queue/errors/queue.error.ts`; bad payload, missing subject, no credits: reason `blocked_credits`) ends the job at once; the `RetryAfter` code retries after the seconds it carries. Nothing retries a blocked-credits source on its own: the owner tops up and presses Retry.
 - `onFailed(delivery, cause)` of the processor runs once when the job ends as failed.
 - A job aborted by shutdown is handed back (`job_fail` with delay 0); it is not final.
 - Failed messages stay in `pgmq.a_<queue>` and their outbox rows in `state = 'failed'`.
@@ -95,10 +95,10 @@ A job can be delivered more than once (a visibility timeout ran out, a lost ack,
 
 ## How to add a job
 
-1. In `modules/queues/<queue>/` add the job name, payload and dedupe-key builder to the contracts, and the typed producer. A new queue needs `select pgmq.create('<queue>')` in a forward migration and an entry in `API_JOB_QUEUES`.
+1. In `be/src/modules/queues/<queue>/` add the job name, payload and dedupe-key builder to the contracts, and the typed producer. A new queue needs `select pgmq.create('<queue>')` in a forward migration and an entry in the queue list (`be/apps/api/src/compose/jobs.ts`).
 2. Produce it in the same transaction as the change that needs it: from the application handler with `outbox.write(tx, ...)`, or from another job step through the typed producer.
 3. Write the processor in `features/jobs/<job>/`: a `FencedProcessor` with `queue` and `job`, steps that advance under the claimed token, and the queue module that hands the processor to the `JobProcessorRegistry`. Make it idempotent. Throw a `QueueError` for errors a retry cannot fix.
-4. Register the queue module in the api composition (`be/apps/api/src/app.module.ts`). A recurring tick is a `QueueSchedulerDefinition` in `API_SCHEDULERS`.
+4. Register the queue module in the api composition (`be/apps/api/src/app.module.ts`). A recurring tick is a `QueueSchedulerDefinition` in the scheduler list (`be/apps/api/src/compose/schedulers.ts`).
 5. A "retry" action exposed to a user (GraphQL) must enqueue the owning job through the outbox, never run the work inline.
 
 ## Operations
@@ -116,7 +116,7 @@ select public.job_requeue('<outbox id>');           -- send a failed job again
 select knowledge_retry_source('<sourceId>');        -- or retry a document the owner's way
 ```
 
-On the VPS, `deploy/swarm/jobs.sh` resolves the api task of the Swarm stack and wraps `cli jobs ...` inside the api container (`stats`, `failed`, `open`, `retry`, `retry-failed`); see `be/docs/runbooks/jobs-operations.md`.
+On the VPS, `starci app stack jobs` resolves the api task of the Swarm stack and wraps `cli jobs ...` inside the api container (`stats`, `failed`, `open`, `retry`, `retry-failed`); see `be/docs/runbooks/jobs-operations.md`.
 
 Settings (api environment, all optional):
 

@@ -7,6 +7,7 @@ import { ListPendingApprovalsHandler } from "./application/list-pending-approval
 import { ListThreadMessagesHandler } from "./application/list-thread-messages.handler"
 import { PostOfficeMessageHandler } from "./application/post-office-message.handler"
 import { ProposeCommandHandler } from "./application/propose-command.handler"
+import { ConfigurableModuleClass } from "./office.module-definition"
 
 @Module({
     providers: [
@@ -21,4 +22,4 @@ import { ProposeCommandHandler } from "./application/propose-command.handler"
     ],
 })
 /** The office feature: the handlers of its application. */
-export class OfficeApiModule {}
+export class OfficeApiModule extends ConfigurableModuleClass {}

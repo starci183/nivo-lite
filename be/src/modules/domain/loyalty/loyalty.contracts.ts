@@ -145,10 +145,13 @@ export interface WorkspaceRef {
     readonly workspaceId: string
 }
 
+/** The catalog keys of the lines of an earn note. */
+export type EarnNoteKey = "loyalty.earn.rate" | "loyalty.earn.rateCategory" | "loyalty.earn.tier" | "loyalty.earn.visit"
+
 /** One line of the note written into the ledger, to be looked up in the message catalog. */
 export interface NotePart {
     /** The catalog key. */
-    readonly key: string
+    readonly key: EarnNoteKey
     /** The values that fill the text. */
     readonly params: Readonly<Record<string, string | number>>
 }

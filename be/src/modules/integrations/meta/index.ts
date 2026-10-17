@@ -14,6 +14,6 @@ export type {
 export { META_CLIENT, InjectMetaClient } from "./meta.decorators"
 export type { MetaClient } from "./meta.client"
 export { MetaModule } from "./meta.module"
-export type { MetaOptions } from "./meta.options"
 export { META_MESSAGES } from "./messages/meta.messages"
 export { checkPrivateReply } from "./meta-window.policy"
+export { parseWebhook } from "./meta-webhook.policy"

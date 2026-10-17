@@ -1,3 +1,4 @@
+import { Test } from "@nestjs/testing"
 import type { LoyaltyReward } from "@modules/domain/loyalty-rewards"
 import { rewardLineParams } from "./chat-brief.policy"
 
@@ -16,9 +17,20 @@ const reward: LoyaltyReward = {
     active: true,
 }
 
+const SUBJECT = Symbol("chat-brief.policy")
+
+const buildSubject = async () => {
+    const moduleRef = await Test.createTestingModule({
+        providers: [{ provide: SUBJECT, useValue: { rewardLineParams } }],
+    }).compile()
+    return moduleRef.get<{ rewardLineParams: typeof rewardLineParams }>(SUBJECT)
+}
+
 describe("rewardLineParams", () => {
-    it("lists the key, the cost and the limits, with a dash for none", () => {
-        expect(rewardLineParams(reward)).toEqual({
+    it("lists the key, the cost and the limits, with a dash for none", async () => {
+        const subject = await buildSubject()
+
+        expect(subject.rewardLineParams(reward)).toEqual({
             key: "coffee",
             name: "Coffee",
             cost: 100,

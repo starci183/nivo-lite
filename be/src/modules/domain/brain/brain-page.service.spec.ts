@@ -70,97 +70,93 @@ const build = async (role: WorkspaceRole = "owner") => {
     return { page: moduleRef.get(BrainPageService), members, facts, gaps, commands }
 }
 
-describe("BrainPageService", () => {
-    describe("overview", () => {
-        it("shows a manager the facts, the open questions and one lens per active agent module of the catalogue", async () => {
-            const { page, facts, gaps } = await build("manager")
+describe("BrainPageService overview", () => {
+    it("shows a manager the facts, the open questions and one lens per active agent module of the catalogue", async () => {
+        const { page, facts, gaps } = await build("manager")
 
-            const overview = await page.overview(USER, WORKSPACE)
+        const overview = await page.overview(USER, WORKSPACE)
 
-            expect(overview).toEqual({
-                facts: [],
-                lessons: [],
-                gaps: [],
-                gapsOpen: 7,
-                extractions: [],
-                lenses: [
-                    { module: "booking", name: "Mai", audience: "customer" },
-                    { module: "accounting", name: "Kim", audience: "internal" },
-                ],
-            })
-            expect(facts.list).toHaveBeenCalledWith(WORKSPACE, {
-                statuses: ["active", "proposed", "scheduled"],
-                limit: 2000,
-            })
-            expect(gaps.list).toHaveBeenCalledWith(WORKSPACE, ["open"], 50)
+        expect(overview).toEqual({
+            facts: [],
+            lessons: [],
+            gaps: [],
+            gapsOpen: 7,
+            extractions: [],
+            lenses: [
+                { module: "booking", name: "Mai", audience: "customer" },
+                { module: "accounting", name: "Kim", audience: "internal" },
+            ],
+        })
+        expect(facts.list).toHaveBeenCalledWith(WORKSPACE, {
+            statuses: ["active", "proposed", "scheduled"],
+            limit: 2000,
+        })
+        expect(gaps.list).toHaveBeenCalledWith(WORKSPACE, ["open"], 50)
+    })
+
+    it("shows a staff member the lessons only", async () => {
+        const { page, facts, gaps } = await build("staff")
+
+        const overview = await page.overview(USER, WORKSPACE)
+
+        expect(overview.gapsOpen).toBe(0)
+        expect(overview.lenses).toHaveLength(2)
+        expect(facts.list).not.toHaveBeenCalled()
+        expect(gaps.countOpen).not.toHaveBeenCalled()
+    })
+})
+describe("BrainPageService requestMining", () => {
+    it("asks for the study of one agent's corrections as a manager and answers the command", async () => {
+        const { page, members, commands } = await build()
+        commands.request.mockResolvedValue("cmd-1")
+
+        await expect(page.requestMining(USER, WORKSPACE, "sales")).resolves.toBe("cmd-1")
+
+        expect(members.require).toHaveBeenCalledWith(USER, WORKSPACE, ["owner", "manager"])
+        expect(commands.request).toHaveBeenCalledWith(USER, WORKSPACE, "lessons.mine", { module: "sales" })
+    })
+})
+describe("BrainPageService miningState", () => {
+    it("reads the counts and the reason out of the stored result", async () => {
+        const { page, commands } = await build()
+        commands.stateOf.mockResolvedValue({
+            status: "done",
+            result: { corrections: 4, newCases: 2, proposed: 0, reason: "no_pattern" },
+            errorCode: null,
         })
 
-        it("shows a staff member the lessons only", async () => {
-            const { page, facts, gaps } = await build("staff")
-
-            const overview = await page.overview(USER, WORKSPACE)
-
-            expect(overview.gapsOpen).toBe(0)
-            expect(overview.lenses).toHaveLength(2)
-            expect(facts.list).not.toHaveBeenCalled()
-            expect(gaps.countOpen).not.toHaveBeenCalled()
+        await expect(page.miningState(USER, WORKSPACE, "cmd-1")).resolves.toEqual({
+            id: "cmd-1",
+            status: "done",
+            corrections: 4,
+            newCases: 2,
+            proposed: 0,
+            reason: "no_pattern",
+            errorCode: null,
         })
     })
 
-    describe("requestMining", () => {
-        it("asks for the study of one agent's corrections as a manager and answers the command", async () => {
-            const { page, members, commands } = await build()
-            commands.request.mockResolvedValue("cmd-1")
+    it("answers empty counts while the study runs or after it failed", async () => {
+        const { page, commands } = await build()
+        commands.stateOf.mockResolvedValue({ status: "failed", result: null, errorCode: "BRAIN_MODEL_UNAVAILABLE" })
 
-            await expect(page.requestMining(USER, WORKSPACE, "sales")).resolves.toBe("cmd-1")
-
-            expect(members.require).toHaveBeenCalledWith(USER, WORKSPACE, ["owner", "manager"])
-            expect(commands.request).toHaveBeenCalledWith(USER, WORKSPACE, "lessons.mine", { module: "sales" })
+        await expect(page.miningState(USER, WORKSPACE, "cmd-1")).resolves.toEqual({
+            id: "cmd-1",
+            status: "failed",
+            corrections: null,
+            newCases: null,
+            proposed: null,
+            reason: null,
+            errorCode: "BRAIN_MODEL_UNAVAILABLE",
         })
     })
 
-    describe("miningState", () => {
-        it("reads the counts and the reason out of the stored result", async () => {
-            const { page, commands } = await build()
-            commands.stateOf.mockResolvedValue({
-                status: "done",
-                result: { corrections: 4, newCases: 2, proposed: 0, reason: "no_pattern" },
-                errorCode: null,
-            })
+    it("refuses a command the person did not ask for", async () => {
+        const { page, commands } = await build()
+        commands.stateOf.mockResolvedValue(null)
 
-            await expect(page.miningState(USER, WORKSPACE, "cmd-1")).resolves.toEqual({
-                id: "cmd-1",
-                status: "done",
-                corrections: 4,
-                newCases: 2,
-                proposed: 0,
-                reason: "no_pattern",
-                errorCode: null,
-            })
-        })
-
-        it("answers empty counts while the study runs or after it failed", async () => {
-            const { page, commands } = await build()
-            commands.stateOf.mockResolvedValue({ status: "failed", result: null, errorCode: "BRAIN_MODEL_UNAVAILABLE" })
-
-            await expect(page.miningState(USER, WORKSPACE, "cmd-1")).resolves.toEqual({
-                id: "cmd-1",
-                status: "failed",
-                corrections: null,
-                newCases: null,
-                proposed: null,
-                reason: null,
-                errorCode: "BRAIN_MODEL_UNAVAILABLE",
-            })
-        })
-
-        it("refuses a command the person did not ask for", async () => {
-            const { page, commands } = await build()
-            commands.stateOf.mockResolvedValue(null)
-
-            await expect(page.miningState(USER, WORKSPACE, "cmd-9")).rejects.toMatchObject({
-                code: BrainErrorCode.CommandNotFound,
-            })
+        await expect(page.miningState(USER, WORKSPACE, "cmd-9")).rejects.toMatchObject({
+            code: BrainErrorCode.CommandNotFound,
         })
     })
 })

@@ -1,6 +1,16 @@
+import { Test } from "@nestjs/testing"
 import { builder } from "@starci/jest-preset"
 import { mergeAuthority } from "./authority.policy"
 import type { AuthorityProfile } from "./authority.contracts"
+
+const SUBJECT = Symbol("authority.policy")
+
+const build = async () => {
+    const moduleRef = await Test.createTestingModule({
+        providers: [{ provide: SUBJECT, useValue: { mergeAuthority } }],
+    }).compile()
+    return moduleRef.get<typeof import("./authority.policy")>(SUBJECT)
+}
 
 const profileOf = builder<AuthorityProfile>({
     policies: "P",
@@ -16,8 +26,10 @@ const profileOf = builder<AuthorityProfile>({
 })
 
 describe("mergeAuthority", () => {
-    it("starts from an empty sheet", () => {
-        expect(mergeAuthority(null, {})).toEqual({
+    it("starts from an empty sheet", async () => {
+        const subject = await build()
+
+        expect(subject.mergeAuthority(null, {})).toEqual({
             policies: "",
             reply_style: "",
             brand_voice: "",
@@ -29,8 +41,10 @@ describe("mergeAuthority", () => {
         })
     })
 
-    it("keeps what the patch leaves out", () => {
-        expect(mergeAuthority(profileOf(), { policies: "P2" })).toEqual({
+    it("keeps what the patch leaves out", async () => {
+        const subject = await build()
+
+        expect(subject.mergeAuthority(profileOf(), { policies: "P2" })).toEqual({
             policies: "P2",
             reply_style: "R",
             brand_voice: "B",
@@ -42,9 +56,11 @@ describe("mergeAuthority", () => {
         })
     })
 
-    it("lays every field of the patch over the sheet and lets a goal be cleared", () => {
+    it("lays every field of the patch over the sheet and lets a goal be cleared", async () => {
+        const subject = await build()
+
         expect(
-            mergeAuthority(profileOf(), {
+            subject.mergeAuthority(profileOf(), {
                 policies: "p",
                 reply_style: "r",
                 brand_voice: "b",
@@ -66,7 +82,9 @@ describe("mergeAuthority", () => {
         })
     })
 
-    it("keeps a goal that is stored as null", () => {
-        expect(mergeAuthority(profileOf({ goal_revenue_vnd: null }), {}).goal_revenue_vnd).toBeNull()
+    it("keeps a goal that is stored as null", async () => {
+        const subject = await build()
+
+        expect(subject.mergeAuthority(profileOf({ goal_revenue_vnd: null }), {}).goal_revenue_vnd).toBeNull()
     })
 })

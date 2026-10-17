@@ -10,49 +10,53 @@ import type { ImapInput } from "./imap-connection.contracts"
 import { ImapWizardService } from "./imap-wizard.service"
 import { IMAP_CONNECTION_TEXT, imapSummary } from "./messages/imap-connection.messages"
 
-describe("ImapWizardService", () => {
-    const actor: ConnectionActor = { principalId: "owner-1", workspaceId: "workspace-1" }
-    const input: ImapInput = {
-        name: " Support mailbox ",
-        email: " support@example.com ",
-        host: " imap.example.com ",
-        port: 993,
-        security: "tls",
-        user: " support@example.com ",
-        password: "typed-password",
-        folders: ["INBOX", "Sent", "INBOX"],
-        sinceDays: 7,
-        syncEveryMinutes: 60,
-    }
-    const connection: DataConnection = {
-        id: "imap-1",
-        workspaceId: "workspace-1",
-        provider: "imap",
-        name: "Saved mailbox",
-        status: "connected",
-        lastError: null,
-        meta: { config: '{"folders":["Archive"],"sinceDays":90}', email: "saved@example.com", "cursor:Archive": "42" },
-        everyMinutes: 15,
-        lastSyncAt: null,
-    }
-    const savedCredential =
-        '{"host":"saved.example.com","port":143,"secure":false,"user":"saved-user","password":"stored-password"}'
-    const build = async () => {
-        const hub = mock<DataHubService>()
-        const imap = mock<ImapClient>()
-        hub.own.mockResolvedValue(connection)
-        hub.credentialOf.mockResolvedValue(savedCredential)
-        hub.create.mockResolvedValue("imap-new")
-        const moduleRef = await Test.createTestingModule({
-            providers: [
-                ImapWizardService,
-                { provide: DataHubService, useValue: hub },
-                { provide: IMAP, useValue: imap },
-            ],
-        }).compile()
-        return { service: moduleRef.get(ImapWizardService), hub, imap }
-    }
+const actor: ConnectionActor = { principalId: "owner-1", workspaceId: "workspace-1" }
 
+const input: ImapInput = {
+    name: " Support mailbox ",
+    email: " support@example.com ",
+    host: " imap.example.com ",
+    port: 993,
+    security: "tls",
+    user: " support@example.com ",
+    password: "typed-password",
+    folders: ["INBOX", "Sent", "INBOX"],
+    sinceDays: 7,
+    syncEveryMinutes: 60,
+}
+
+const connection: DataConnection = {
+    id: "imap-1",
+    workspaceId: "workspace-1",
+    provider: "imap",
+    name: "Saved mailbox",
+    status: "connected",
+    lastError: null,
+    meta: {
+        config: '{"folders":["Archive"],"sinceDays":90}',
+        email: "saved@example.com",
+        "cursor:Archive": "42",
+    },
+    everyMinutes: 15,
+    lastSyncAt: null,
+}
+
+const savedCredential =
+    '{"host":"saved.example.com","port":143,"secure":false,' + '"user":"saved-user","password":"stored-password"}'
+
+const build = async () => {
+    const hub = mock<DataHubService>()
+    const imap = mock<ImapClient>()
+    hub.own.mockResolvedValue(connection)
+    hub.credentialOf.mockResolvedValue(savedCredential)
+    hub.create.mockResolvedValue("imap-new")
+    const moduleRef = await Test.createTestingModule({
+        providers: [ImapWizardService, { provide: DataHubService, useValue: hub }, { provide: IMAP, useValue: imap }],
+    }).compile()
+    return { service: moduleRef.get(ImapWizardService), hub, imap }
+}
+
+describe("ImapWizardService", () => {
     it("tests a new mailbox with cleaned login settings and returns its folders", async () => {
         const { service, hub, imap } = await build()
         imap.listFolders.mockResolvedValue(["INBOX", "Sent"])
@@ -109,7 +113,9 @@ describe("ImapWizardService", () => {
         expect(hub.own).not.toHaveBeenCalled()
         expect(imap.listFolders).not.toHaveBeenCalled()
     })
+})
 
+describe("ImapWizardService", () => {
     it("creates a mailbox with cleaned settings and a sealed credential payload", async () => {
         const { service, hub } = await build()
 
@@ -123,7 +129,8 @@ describe("ImapWizardService", () => {
                 email: "support@example.com",
             },
             credential:
-                '{"host":"imap.example.com","port":993,"secure":true,"user":"support@example.com","password":"typed-password"}',
+                '{"host":"imap.example.com","port":993,"secure":true,"user":"support@example.com"' +
+                ',"password":"typed-password"}',
             everyMinutes: 60,
         })
         expect(hub.saveCredential).not.toHaveBeenCalled()
@@ -136,7 +143,8 @@ describe("ImapWizardService", () => {
         await expect(service.save(actor, { ...input, connectionId: "imap-1", password: "" })).resolves.toBe("imap-1")
         expect(hub.saveCredential).toHaveBeenCalledWith(
             "imap-1",
-            '{"host":"imap.example.com","port":993,"secure":true,"user":"support@example.com","password":"stored-password"}',
+            '{"host":"imap.example.com","port":993,"secure":true,"user":"support@example.com"' +
+                ',"password":"stored-password"}',
         )
         expect(hub.update).toHaveBeenCalledWith("workspace-1", "imap-1", {
             name: "Support mailbox",
@@ -170,7 +178,9 @@ describe("ImapWizardService", () => {
         })
         expect(hub.agentIds).toHaveBeenCalledWith("workspace-1", "imap-1")
     })
+})
 
+describe("ImapWizardService", () => {
     it("loads default login values when no credential is stored", async () => {
         const { service, hub } = await build()
         hub.own.mockResolvedValue({ ...connection, meta: { config: "broken" } })
@@ -195,7 +205,7 @@ describe("ImapWizardService", () => {
     it("loads implicit TLS when a saved credential enables it", async () => {
         const { service, hub } = await build()
         hub.credentialOf.mockResolvedValue(
-            '{"host":"imap.example.com","port":993,"secure":true,"user":"mail-user","password":"hidden"}',
+            '{"host":"imap.example.com","port":993,"secure":true,' + '"user":"mail-user","password":"hidden"}',
         )
         hub.agentIds.mockResolvedValue([])
 

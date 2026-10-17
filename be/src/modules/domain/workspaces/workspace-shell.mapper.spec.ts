@@ -1,4 +1,14 @@
+import { Test } from "@nestjs/testing"
 import { toShellFacts } from "./workspace-shell.mapper"
+
+const SUBJECT = Symbol("workspace-shell.mapper")
+
+const buildSubject = async () => {
+    const moduleRef = await Test.createTestingModule({
+        providers: [{ provide: SUBJECT, useValue: { toShellFacts } }],
+    }).compile()
+    return moduleRef.get<typeof import("./workspace-shell.mapper")>(SUBJECT)
+}
 
 const EMPTY = {
     leadCount: 0,
@@ -12,9 +22,10 @@ const EMPTY = {
 }
 
 describe("toShellFacts", () => {
-    it("maps a shell object, keeping record rows and pausing only a paused agent", () => {
+    it("maps a shell object, keeping record rows and pausing only a paused agent", async () => {
+        const subject = await buildSubject()
         expect(
-            toShellFacts({
+            subject.toShellFacts({
                 lead_count: 4,
                 open_responsibility_count: 2,
                 pending_decisions: 1,
@@ -67,15 +78,17 @@ describe("toShellFacts", () => {
         })
     })
 
-    it("reads a non-object, wrong types and flags that are not strictly true as empty", () => {
-        expect(toShellFacts(null)).toEqual(EMPTY)
-        expect(toShellFacts(["agents"])).toEqual(EMPTY)
-        expect(toShellFacts("shell")).toEqual(EMPTY)
-        expect(toShellFacts(undefined)).toEqual(EMPTY)
-        expect(toShellFacts(4)).toEqual(EMPTY)
-        expect(toShellFacts(true)).toEqual(EMPTY)
+    it("reads a non-object, wrong types and flags that are not strictly true as empty", async () => {
+        const subject = await buildSubject()
+
+        expect(subject.toShellFacts(null)).toEqual(EMPTY)
+        expect(subject.toShellFacts(["agents"])).toEqual(EMPTY)
+        expect(subject.toShellFacts("shell")).toEqual(EMPTY)
+        expect(subject.toShellFacts(undefined)).toEqual(EMPTY)
+        expect(subject.toShellFacts(4)).toEqual(EMPTY)
+        expect(subject.toShellFacts(true)).toEqual(EMPTY)
         expect(
-            toShellFacts({
+            subject.toShellFacts({
                 lead_count: "4",
                 open_responsibility_count: null,
                 pending_decisions: false,

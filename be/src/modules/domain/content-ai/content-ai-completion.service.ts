@@ -198,31 +198,7 @@ export class ContentAiCompletionService {
             },
             tx,
         )
-        await this.evidence.decide(
-            { workspaceId: root.workspaceId, actor: "NIVO", locale: "en" },
-            {
-                work_item_id: null,
-                lead_id: null,
-                department: "content",
-                action: "draft_post",
-                decided_by: "NIVO",
-                decider_kind: "policy",
-                outcome: "auto_done",
-                reason: "routine",
-                note: item.title,
-            },
-            tx,
-        )
-        await this.events.record(
-            {
-                workspaceId: root.workspaceId,
-                kind: "content.drafted",
-                actor: "NIVO",
-                summary: item.title,
-                evidence: channels.join(", "),
-            },
-            tx,
-        )
+        await this.recordDraftEvidence(root.workspaceId, item.title, channels, tx)
         return { itemId, seconds, warnings: written.warnings }
     }
 
@@ -286,5 +262,38 @@ export class ContentAiCompletionService {
             tx,
         )
         return { ...plan, seconds: Math.round(aiMs / 1000), skippedPast: numeric(context.skippedPast) ?? 0 }
+    }
+
+    private async recordDraftEvidence(
+        workspaceId: string,
+        title: string,
+        channels: ReadonlyArray<string>,
+        tx: EntityManager,
+    ): Promise<void> {
+        await this.evidence.decide(
+            { workspaceId, actor: "NIVO", locale: "en" },
+            {
+                work_item_id: null,
+                lead_id: null,
+                department: "content",
+                action: "draft_post",
+                decided_by: "NIVO",
+                decider_kind: "policy",
+                outcome: "auto_done",
+                reason: "routine",
+                note: title,
+            },
+            tx,
+        )
+        await this.events.record(
+            {
+                workspaceId,
+                kind: "content.drafted",
+                actor: "NIVO",
+                summary: title,
+                evidence: channels.join(", "),
+            },
+            tx,
+        )
     }
 }

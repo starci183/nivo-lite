@@ -15,106 +15,115 @@ import { DataHubService } from "./data-hub.service"
 import { DataHubErrorCode } from "./errors/data-hub.error"
 import { CSV_COPY } from "./messages/csv-import.messages"
 
-describe("CsvImportWizardService", () => {
-    const actor: ConnectionActor = { principalId: "owner-1", workspaceId: "workspace-1" }
-    const config: CsvConfig = {
-        v: 1,
-        source: "manual",
-        entity: "customer",
-        idColumn: "id",
-        titleColumn: "name",
-        dateColumn: null,
-        kinds: { id: "text", name: "text" },
-        columns: ["id", "name"],
-    }
-    const documentsConfig: CsvConfig = {
-        ...config,
-        source: "document",
-        entity: "document",
-        idColumn: null,
-        titleColumn: null,
-        dateColumn: null,
-        kinds: {},
-        columns: [],
-    }
-    const uploadRun: DataSyncRun = {
-        id: "run-1",
-        connectionId: "connection-1",
-        trigger: "upload",
-        state: "running",
-        rows: 0,
-        error: null,
-        startedAt: "2026-10-14T00:00:00.000Z",
-        finishedAt: null,
-    }
-    const source: Table = {
-        headers: ["id", "name"],
-        rows: [
-            ["customer-1", "Alice"],
-            ["customer-2", "Bob"],
-            ["", "Missing id"],
+const actor: ConnectionActor = { principalId: "owner-1", workspaceId: "workspace-1" }
+
+const config: CsvConfig = {
+    v: 1,
+    source: "manual",
+    entity: "customer",
+    idColumn: "id",
+    titleColumn: "name",
+    dateColumn: null,
+    kinds: { id: "text", name: "text" },
+    columns: ["id", "name"],
+}
+
+const documentsConfig: CsvConfig = {
+    ...config,
+    source: "document",
+    entity: "document",
+    idColumn: null,
+    titleColumn: null,
+    dateColumn: null,
+    kinds: {},
+    columns: [],
+}
+
+const uploadRun: DataSyncRun = {
+    id: "run-1",
+    connectionId: "connection-1",
+    trigger: "upload",
+    state: "running",
+    rows: 0,
+    error: null,
+    startedAt: "2026-10-14T00:00:00.000Z",
+    finishedAt: null,
+}
+
+const source: Table = {
+    headers: ["id", "name"],
+    rows: [
+        ["customer-1", "Alice"],
+        ["customer-2", "Bob"],
+        ["", "Missing id"],
+    ],
+    sheets: [],
+    sheet: "",
+    delimiter: ",",
+}
+
+const connection: DataConnection = {
+    id: "connection-1",
+    workspaceId: "workspace-1",
+    provider: "csv_import",
+    name: "Customers",
+    status: "connected",
+    lastError: null,
+    meta: { config: JSON.stringify(config), file: "customers.csv", summary: "Saved summary" },
+    everyMinutes: null,
+    lastSyncAt: null,
+}
+
+const request: CsvImportRequest = {
+    kind: "paste",
+    entity: "customer",
+    name: "  Customers  ",
+    text: "id,name\ncustomer-1,Alice",
+    mapping: config,
+}
+
+const recordsToWrite = [
+    { externalId: "customer-1", title: "Alice", occurredAt: null, data: { id: "customer-1", name: "Alice" } },
+    { externalId: "customer-2", title: "Bob", occurredAt: null, data: { id: "customer-2", name: "Bob" } },
+]
+
+const customerSummary = `${CSV_COPY.entity.customer} \u00b7 2 ${CSV_COPY.rowUnit}`
+
+const documentSummary = `${CSV_COPY.entity.document} \u00b7 2 ${CSV_COPY.documentUnit}`
+
+const build = async () => {
+    const transaction = fakeTransaction()
+    const hub = mock<DataHubService>()
+    const connections = mock<ConnectionsService>()
+    const records = mock<DataRecordsService>()
+    const runs = mock<DataSyncRunsService>()
+    const table = mock<TableClient>()
+    hub.own.mockResolvedValue(connection)
+    hub.create.mockResolvedValue("connection-1")
+    hub.agentIds.mockResolvedValue(["agent-1"])
+    records.upsert.mockResolvedValue(2)
+    records.count.mockResolvedValue(2)
+    records.countExisting.mockResolvedValue(1)
+    runs.open.mockResolvedValue(null)
+    table.readText.mockReturnValue(source)
+    table.readGrid.mockReturnValue(source)
+    table.readFile.mockResolvedValue(source)
+    table.readSheetLink.mockResolvedValue(source)
+    const moduleRef = await Test.createTestingModule({
+        providers: [
+            CsvImportWizardService,
+            { provide: PRIMARY_ENTITY_MANAGER, useValue: transaction.em },
+            { provide: DataHubService, useValue: hub },
+            { provide: ConnectionsService, useValue: connections },
+            { provide: DataRecordsService, useValue: records },
+            { provide: DataSyncRunsService, useValue: runs },
+            { provide: TABLE, useValue: table },
         ],
-        sheets: [],
-        sheet: "",
-        delimiter: ",",
-    }
-    const connection: DataConnection = {
-        id: "connection-1",
-        workspaceId: "workspace-1",
-        provider: "csv_import",
-        name: "Customers",
-        status: "connected",
-        lastError: null,
-        meta: { config: JSON.stringify(config), file: "customers.csv", summary: "Saved summary" },
-        everyMinutes: null,
-        lastSyncAt: null,
-    }
-    const request: CsvImportRequest = {
-        kind: "paste",
-        entity: "customer",
-        name: "  Customers  ",
-        text: "id,name\ncustomer-1,Alice",
-        mapping: config,
-    }
-    const recordsToWrite = [
-        { externalId: "customer-1", title: "Alice", occurredAt: null, data: { id: "customer-1", name: "Alice" } },
-        { externalId: "customer-2", title: "Bob", occurredAt: null, data: { id: "customer-2", name: "Bob" } },
-    ]
-    const customerSummary = `${CSV_COPY.entity.customer} \u00b7 2 ${CSV_COPY.rowUnit}`
-    const documentSummary = `${CSV_COPY.entity.document} \u00b7 2 ${CSV_COPY.documentUnit}`
+    }).compile()
+    return { service: moduleRef.get(CsvImportWizardService), transaction, hub, connections, records, runs, table }
+}
 
-    const build = async () => {
-        const transaction = fakeTransaction()
-        const hub = mock<DataHubService>()
-        const connections = mock<ConnectionsService>()
-        const records = mock<DataRecordsService>()
-        const runs = mock<DataSyncRunsService>()
-        const table = mock<TableClient>()
-        hub.own.mockResolvedValue(connection)
-        hub.create.mockResolvedValue("connection-1")
-        hub.agentIds.mockResolvedValue(["agent-1"])
-        records.upsert.mockResolvedValue(2)
-        records.count.mockResolvedValue(2)
-        records.countExisting.mockResolvedValue(1)
-        runs.open.mockResolvedValue(null)
-        table.readText.mockReturnValue(source)
-        table.readGrid.mockReturnValue(source)
-        table.readFile.mockResolvedValue(source)
-        table.readSheetLink.mockResolvedValue(source)
-        const moduleRef = await Test.createTestingModule({
-            providers: [
-                CsvImportWizardService,
-                { provide: PRIMARY_ENTITY_MANAGER, useValue: transaction.em },
-                { provide: DataHubService, useValue: hub },
-                { provide: ConnectionsService, useValue: connections },
-                { provide: DataRecordsService, useValue: records },
-                { provide: DataSyncRunsService, useValue: runs },
-                { provide: TABLE, useValue: table },
-            ],
-        }).compile()
-        return { service: moduleRef.get(CsvImportWizardService), transaction, hub, connections, records, runs, table }
-    }
-
+describe("CsvImportWizardService", () => {
     it("loads a saved import with its grants and schedule after checking the owner", async () => {
         const { service, hub } = await build()
 
@@ -169,7 +178,9 @@ describe("CsvImportWizardService", () => {
         })
         expect(table.readText).toHaveBeenCalledWith("id,name\ncustomer-1,Alice")
     })
+})
 
+describe("CsvImportWizardService", () => {
     it("carries a saved mapping and reports columns missing from a re-upload", async () => {
         const { service, hub, table } = await build()
         const saved: CsvConfig = { ...config, titleColumn: "full_name", kinds: { id: "text", name: "email" } }
@@ -215,15 +226,15 @@ describe("CsvImportWizardService", () => {
         const { service, hub, table } = await build()
         const cause = new Error("owner required")
         hub.owner.mockRejectedValue(cause)
-
         await expect(service.preview(actor, request)).rejects.toBe(cause)
         expect(table.readText).not.toHaveBeenCalled()
     })
+})
 
+describe("CsvImportWizardService", () => {
     it("creates a manual import, writes mapped rows and settles its upload run", async () => {
         const { service, hub, records, runs, connections, transaction } = await build()
         runs.open.mockResolvedValue(uploadRun)
-
         await expect(service.importTable(actor, request)).resolves.toEqual({
             connectionId: "connection-1",
             added: 2,
@@ -250,12 +261,10 @@ describe("CsvImportWizardService", () => {
         expect(runs.finish).toHaveBeenCalledWith("run-1", "ok", 2, null)
         expect(transaction.commits).toBe(1)
     })
-
     it("updates existing sheet rows and changes their schedule", async () => {
         const { service, hub, records, connections, table } = await build()
         const saved: CsvConfig = { ...config, source: "sheet", link: "https://docs.google.com/spreadsheets/d/sheet-1" }
         hub.own.mockResolvedValue({ ...connection, meta: { config: JSON.stringify(saved) } })
-
         await expect(
             service.importTable(actor, {
                 ...request,
@@ -282,19 +291,18 @@ describe("CsvImportWizardService", () => {
             file: "Google Sheets",
         })
     })
-
     it("refuses an unsupported sheet schedule before creating an import", async () => {
         const { service, hub } = await build()
-
         await expect(
             service.importTable(actor, { ...request, kind: "sheet", link: "https://example.com/sheet", schedule: 15 }),
         ).rejects.toMatchObject({ code: DataHubErrorCode.Invalid, params: { detail: CSV_COPY.scheduleInvalid } })
         expect(hub.create).not.toHaveBeenCalled()
     })
+})
 
+describe("CsvImportWizardService", () => {
     it("refuses a re-upload from a different source", async () => {
         const { service, records } = await build()
-
         await expect(
             service.importTable(actor, {
                 ...request,
@@ -305,18 +313,18 @@ describe("CsvImportWizardService", () => {
         ).rejects.toMatchObject({ code: DataHubErrorCode.Invalid, params: { detail: CSV_COPY.otherSource } })
         expect(records.upsert).not.toHaveBeenCalled()
     })
-
     it("refuses a table with no usable ids before creating an import", async () => {
         const { service, table, hub } = await build()
         table.readText.mockReturnValue({ ...source, rows: [["", "Missing id"]] })
-
         await expect(service.importTable(actor, request)).rejects.toMatchObject({
             code: DataHubErrorCode.Invalid,
             params: { detail: CSV_COPY.noRows },
         })
         expect(hub.create).not.toHaveBeenCalled()
     })
+})
 
+describe("CsvImportWizardService", () => {
     it("imports uploaded documents and a Google Doc as exact document records", async () => {
         const { service, table, records, hub } = await build()
         table.readDocumentFile.mockResolvedValue({ text: "# Uploaded\nBody", pages: 2 })
@@ -329,7 +337,6 @@ describe("CsvImportWizardService", () => {
         }
         const documentLink = "https://docs.google.com/document/d/document-1"
         const documentConfig: CsvConfig = { ...documentsConfig, link: documentLink }
-
         await expect(
             service.importDocuments(actor, {
                 name: "Documents",
@@ -372,11 +379,9 @@ describe("CsvImportWizardService", () => {
         })
         expect(table.readDocumentLink).toHaveBeenCalledTimes(1)
     })
-
     it("refuses documents added to an existing table import", async () => {
         const { service, table, hub } = await build()
         const documentError = { code: DataHubErrorCode.Invalid, params: { detail: CSV_COPY.notDocumentImport } }
-
         await expect(
             service.importDocuments(actor, {
                 connectionId: "connection-1",
@@ -389,28 +394,26 @@ describe("CsvImportWizardService", () => {
             documentError,
         )
     })
+})
 
+describe("CsvImportWizardService", () => {
     it("removes a newly created connection after the first write fails", async () => {
         const { service, records, hub, connections } = await build()
         const cause = new Error("write failed")
         records.upsert.mockRejectedValue(cause)
-
         await expect(service.importTable(actor, request)).rejects.toBe(cause)
         expect(hub.remove).toHaveBeenCalledWith("workspace-1", "connection-1")
         expect(connections.markSynced).not.toHaveBeenCalled()
     })
-
     it("keeps an existing connection and marks its upload run failed", async () => {
         const { service, records, hub, runs } = await build()
         const cause = new Error("write failed")
         records.upsert.mockRejectedValue(cause)
         runs.open.mockResolvedValue(uploadRun)
-
         await expect(service.importTable(actor, { ...request, connectionId: "connection-1" })).rejects.toBe(cause)
         expect(hub.remove).not.toHaveBeenCalled()
         expect(runs.finish).toHaveBeenCalledWith("run-1", "failed", 0, "Error: write failed")
     })
-
     it("refuses an unknown source, an empty file, and a re-upload with no saved setup", async () => {
         const { service, table, hub } = await build()
         await expect(service.preview(actor, { kind: "other", entity: "customer" })).rejects.toMatchObject({
@@ -421,7 +424,6 @@ describe("CsvImportWizardService", () => {
             service.preview(actor, { kind: "file", entity: "customer", file: { name: "a.csv", contentBase64: "" } }),
         ).rejects.toMatchObject({ params: { detail: CSV_COPY.chooseFile } })
         expect(table.readFile).not.toHaveBeenCalled()
-
         await service.preview(actor, {
             kind: "file",
             entity: "customer",
@@ -429,13 +431,11 @@ describe("CsvImportWizardService", () => {
             sheet: "",
         })
         expect(table.readFile).toHaveBeenCalledWith("customers.xlsx", Buffer.from("abc"), undefined)
-
         hub.own.mockResolvedValue({ ...connection, meta: {} })
         await expect(service.importTable(actor, { ...request, connectionId: "connection-1" })).rejects.toMatchObject({
             params: { detail: CSV_COPY.noSavedSetup },
         })
     })
-
     it("creates a sheet import on the named tab with a manual schedule", async () => {
         const { service, hub, table } = await build()
         table.readSheetLink.mockResolvedValue({ ...source, sheet: "Customers" })
@@ -461,7 +461,9 @@ describe("CsvImportWizardService", () => {
         await service.importTable(actor, { ...sheetRequest, schedule: 1440 })
         expect(hub.create).toHaveBeenLastCalledWith(actor, expect.objectContaining({ everyMinutes: 1440 }))
     })
+})
 
+describe("CsvImportWizardService", () => {
     it("adds documents to a saved document import and ignores an empty upload", async () => {
         const { service, hub, table, records } = await build()
         hub.own.mockResolvedValue({ ...connection, meta: { config: JSON.stringify(documentsConfig) } })
@@ -479,14 +481,12 @@ describe("CsvImportWizardService", () => {
         ])
         expect(hub.create).not.toHaveBeenCalled()
     })
-
     it("refuses a document import with nothing to read", async () => {
         const { service } = await build()
         await expect(service.importDocuments(actor, { name: "Docs" })).rejects.toMatchObject({
             params: { detail: CSV_COPY.chooseDocuments },
         })
     })
-
     it("keeps an existing import when the upload run was not opened and the write fails", async () => {
         const { service, records, hub, runs } = await build()
         records.upsert.mockRejectedValue("write failed")

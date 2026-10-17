@@ -95,66 +95,69 @@ const build = async (em: MockEntityManager) => {
     return { service: moduleRef.get(HiringWorkbenchService), members, candidates, links }
 }
 
+const workbenchData = () =>
+    ({
+        query: [
+            [SELECT_WORKBENCH_JOBS, []],
+            [SELECT_WORKBENCH_CANDIDATES, []],
+            [SELECT_WORKBENCH_INTERVIEWS, []],
+            [SELECT_WORKBENCH_OFFERS, []],
+            [
+                SELECT_WORKBENCH_ONBOARDING,
+                [
+                    {
+                        id: "on-1",
+                        candidate_id: "cand-1",
+                        title: "Sign the contract",
+                        done: true,
+                        done_at: new Date("2026-10-14T02:00:00.000Z"),
+                        sort: 1,
+                    },
+                    {
+                        id: "on-2",
+                        candidate_id: "cand-1",
+                        title: "Collect the uniform",
+                        done: false,
+                        done_at: null,
+                        sort: 2,
+                    },
+                ],
+            ],
+            [
+                SELECT_WORKBENCH_MEMBERS,
+                [
+                    { user_id: "u-1", display_name: "Lan", role: "owner" },
+                    { user_id: "u-2", display_name: "Nam", role: "manager" },
+                ],
+            ],
+            [
+                SELECT_ALL_AVAILABILITY,
+                [
+                    { member_user_id: "u-1", weekday: 1, start_min: 540, end_min: 720 },
+                    { member_user_id: "u-1", weekday: 3, start_min: 780, end_min: 1020 },
+                ],
+            ],
+            [COUNT_WAITING_APPROVALS, [{ n: "4" }]],
+            [
+                SELECT_FIGURES,
+                [
+                    {
+                        open_roles: "2",
+                        total_roles: 3,
+                        pipeline: "7",
+                        interviews_week: 1,
+                        offers_waiting: "0",
+                        offers_sent: 2,
+                    },
+                ],
+            ],
+        ],
+    }) as const
+
 describe("HiringWorkbenchService", () => {
     describe("bench", () => {
         it("answers the workbench with members' windows, onboarding, approvals and this week's figures", async () => {
-            const em = mockEntityManager({
-                query: [
-                    [SELECT_WORKBENCH_JOBS, []],
-                    [SELECT_WORKBENCH_CANDIDATES, []],
-                    [SELECT_WORKBENCH_INTERVIEWS, []],
-                    [SELECT_WORKBENCH_OFFERS, []],
-                    [
-                        SELECT_WORKBENCH_ONBOARDING,
-                        [
-                            {
-                                id: "on-1",
-                                candidate_id: "cand-1",
-                                title: "Sign the contract",
-                                done: true,
-                                done_at: new Date("2026-10-14T02:00:00.000Z"),
-                                sort: 1,
-                            },
-                            {
-                                id: "on-2",
-                                candidate_id: "cand-1",
-                                title: "Collect the uniform",
-                                done: false,
-                                done_at: null,
-                                sort: 2,
-                            },
-                        ],
-                    ],
-                    [
-                        SELECT_WORKBENCH_MEMBERS,
-                        [
-                            { user_id: "u-1", display_name: "Lan", role: "owner" },
-                            { user_id: "u-2", display_name: "Nam", role: "manager" },
-                        ],
-                    ],
-                    [
-                        SELECT_ALL_AVAILABILITY,
-                        [
-                            { member_user_id: "u-1", weekday: 1, start_min: 540, end_min: 720 },
-                            { member_user_id: "u-1", weekday: 3, start_min: 780, end_min: 1020 },
-                        ],
-                    ],
-                    [COUNT_WAITING_APPROVALS, [{ n: "4" }]],
-                    [
-                        SELECT_FIGURES,
-                        [
-                            {
-                                open_roles: "2",
-                                total_roles: 3,
-                                pipeline: "7",
-                                interviews_week: 1,
-                                offers_waiting: "0",
-                                offers_sent: 2,
-                            },
-                        ],
-                    ],
-                ],
-            })
+            const em = mockEntityManager(workbenchData())
             const { service, members, links } = await build(em)
 
             await expect(service.bench("u-1", "ws-1")).resolves.toEqual({
@@ -214,7 +217,11 @@ describe("HiringWorkbenchService", () => {
             ])
             expect(links.job).not.toHaveBeenCalled()
         })
+    })
+})
 
+describe("HiringWorkbenchService", () => {
+    describe("bench", () => {
         it("answers zero figures and approvals when the counts are missing", async () => {
             const em = mockEntityManager({
                 query: [
@@ -255,7 +262,9 @@ describe("HiringWorkbenchService", () => {
             expect(em.query).not.toHaveBeenCalled()
         })
     })
+})
 
+describe("HiringWorkbenchService", () => {
     describe("candidateDetail", () => {
         it("answers the candidate's timeline and CV link", async () => {
             const em = mockEntityManager({

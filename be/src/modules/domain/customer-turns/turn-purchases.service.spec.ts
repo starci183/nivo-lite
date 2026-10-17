@@ -149,9 +149,14 @@ describe("TurnPurchasesService", () => {
         ).resolves.toEqual({ lines: [], changed: false, leadId: null })
         expect(engine.startOrderWork).not.toHaveBeenCalled()
     })
+})
 
+describe("TurnPurchasesService", () => {
     it("names the sender from the lead phone, then the email, and does not attach a lead the order already has", async () => {
-        const phone = { ...reply, lead: { contactName: "Minh", company: "", need: "tea", phone: "0912", email: null } }
+        const phone = {
+            ...reply,
+            lead: { contactName: "Minh", company: "", need: "tea", phone: "0912", email: null },
+        }
         const { purchases, inbound, conversations, engine } = await build()
         const item = mock<WorkItem>({ id: "w2", status: "done", lead_id: null })
         engine.startOrderWork.mockResolvedValue(item)
@@ -211,7 +216,9 @@ describe("TurnPurchasesService", () => {
         expect(created).toEqual({ lines: ["customerTurns.claimRecorded"], changed: true, leadId: null })
         expect(inbound.mark).not.toHaveBeenCalled()
     })
+})
 
+describe("TurnPurchasesService", () => {
     it("ignores a payment claim with no invoice", async () => {
         const { purchases, inbound } = await build()
         await expect(purchases.recordClaim(ctx, turn, null, channel)).resolves.toEqual({

@@ -1,6 +1,5 @@
+import { NullAsAbsent } from "@modules/platform/graphql"
 import { Field, InputType, Int } from "@nestjs/graphql"
-import { Transform } from "class-transformer"
-import type { TransformFnParams } from "class-transformer"
 import { IsInt, IsOptional, IsString, Max, MaxLength, Min } from "class-validator"
 
 @InputType()
@@ -9,7 +8,7 @@ export class AuthorityPatchInput {
     /** The business policies. */
     @Field(() => String, { nullable: true })
     @IsOptional()
-    @Transform(({ value }: TransformFnParams): unknown => value ?? undefined)
+    @NullAsAbsent()
     @IsString()
     @MaxLength(8000)
     policies?: string
@@ -17,7 +16,7 @@ export class AuthorityPatchInput {
     /** How replies are written. */
     @Field(() => String, { nullable: true })
     @IsOptional()
-    @Transform(({ value }: TransformFnParams): unknown => value ?? undefined)
+    @NullAsAbsent()
     @IsString()
     @MaxLength(4000)
     reply_style?: string
@@ -25,7 +24,7 @@ export class AuthorityPatchInput {
     /** The brand voice. */
     @Field(() => String, { nullable: true })
     @IsOptional()
-    @Transform(({ value }: TransformFnParams): unknown => value ?? undefined)
+    @NullAsAbsent()
     @IsString()
     @MaxLength(4000)
     brand_voice?: string
@@ -33,7 +32,7 @@ export class AuthorityPatchInput {
     /** What the agent must always ask about first. */
     @Field(() => String, { nullable: true })
     @IsOptional()
-    @Transform(({ value }: TransformFnParams): unknown => value ?? undefined)
+    @NullAsAbsent()
     @IsString()
     @MaxLength(4000)
     limits_note?: string
@@ -65,7 +64,7 @@ export class AuthorityPatchInput {
     /** Free note on the goals. */
     @Field(() => String, { nullable: true })
     @IsOptional()
-    @Transform(({ value }: TransformFnParams): unknown => value ?? undefined)
+    @NullAsAbsent()
     @IsString()
     @MaxLength(2000)
     goal_note?: string

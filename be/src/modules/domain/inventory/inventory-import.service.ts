@@ -170,34 +170,14 @@ export class InventoryImportService {
         return this.applyStarter(userId, workspaceId, inventoryStarterOf(key))
     }
 
-    /** Loads a starter set: suppliers, items (with opening stock) and recipes; items and recipes that already exist are left as they are. */
+    /**
+     * Loads a starter set: suppliers, items (with opening stock) and recipes; items and recipes that already exist are
+     * left as they are.
+     */
     async applyStarter(userId: string, workspaceId: string, request: ApplyStarterParams): Promise<ApplyStarterOutput> {
         const { displayName: actor } = await this.members.require(userId, workspaceId, MANAGER_ROLES)
         await this.locations.defaultLocation(workspaceId)
-        const supplierIds = new Map<string, string>()
-        for (const known of await this.entityManager.query<Array<NameRow>>(SELECT_SUPPLIER_NAMES, [workspaceId])) {
-            supplierIds.set(known.name.toLowerCase(), known.id)
-        }
-        let suppliers = 0
-        await eachInOrder(
-            request.suppliers.filter((supplier) => !supplierIds.has(supplier.name.toLowerCase())),
-            async (supplier) => {
-                const id = await this.catalogue.writeSupplier(workspaceId, {
-                    id: null,
-                    name: supplier.name,
-                    contact: supplier.contactName ?? "",
-                    email: supplier.email ?? null,
-                    phone: supplier.phone ?? null,
-                    zalo: supplier.zalo ?? null,
-                    channel: channelOf(supplier.channel),
-                    leadTime: supplier.leadTimeDays,
-                    terms: supplier.paymentTerms ?? "",
-                    note: "",
-                })
-                supplierIds.set(supplier.name.toLowerCase(), id)
-                suppliers += 1
-            },
-        )
+        const { supplierIds, suppliers } = await this.loadStarterSuppliers(workspaceId, request)
         const itemIds = new Map(
             (await this.entityManager.query<Array<RefRow>>(SELECT_ITEM_REFS, [workspaceId])).map((row) => [
                 row.sku,
@@ -273,5 +253,36 @@ export class InventoryImportService {
             summary: this.text("inventory.starterSummary", { name: request.name, items, suppliers, recipes }),
         })
         return { items, suppliers, recipes }
+    }
+
+    private async loadStarterSuppliers(
+        workspaceId: string,
+        request: ApplyStarterParams,
+    ): Promise<{ supplierIds: Map<string, string>; suppliers: number }> {
+        const supplierIds = new Map<string, string>()
+        for (const known of await this.entityManager.query<Array<NameRow>>(SELECT_SUPPLIER_NAMES, [workspaceId])) {
+            supplierIds.set(known.name.toLowerCase(), known.id)
+        }
+        let suppliers = 0
+        await eachInOrder(
+            request.suppliers.filter((supplier) => !supplierIds.has(supplier.name.toLowerCase())),
+            async (supplier) => {
+                const id = await this.catalogue.writeSupplier(workspaceId, {
+                    id: null,
+                    name: supplier.name,
+                    contact: supplier.contactName ?? "",
+                    email: supplier.email ?? null,
+                    phone: supplier.phone ?? null,
+                    zalo: supplier.zalo ?? null,
+                    channel: channelOf(supplier.channel),
+                    leadTime: supplier.leadTimeDays,
+                    terms: supplier.paymentTerms ?? "",
+                    note: "",
+                })
+                supplierIds.set(supplier.name.toLowerCase(), id)
+                suppliers += 1
+            },
+        )
+        return { supplierIds, suppliers }
     }
 }

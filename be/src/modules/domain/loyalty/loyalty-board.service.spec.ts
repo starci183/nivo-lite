@@ -189,7 +189,9 @@ describe("LoyaltyBoardService", () => {
             expect(campaigns.list).not.toHaveBeenCalled()
         })
     })
+})
 
+describe("LoyaltyBoardService", () => {
     describe("program", () => {
         it("program has its first case written", async () => {
             const { service } = await build()

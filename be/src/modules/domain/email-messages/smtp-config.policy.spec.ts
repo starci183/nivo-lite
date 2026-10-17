@@ -1,6 +1,17 @@
+import { Test } from "@nestjs/testing"
 import { builder } from "@starci/jest-preset"
 import type { ConnectionRecord } from "@modules/domain/connections"
 import { chooseSmtp, smtpConfigOf } from "./smtp-config.policy"
+
+const SUBJECT = Symbol("smtp-config.policy")
+type Subject = { smtpConfigOf: typeof smtpConfigOf; chooseSmtp: typeof chooseSmtp }
+
+const build = async () => {
+    const moduleRef = await Test.createTestingModule({
+        providers: [{ provide: SUBJECT, useValue: { smtpConfigOf, chooseSmtp } }],
+    }).compile()
+    return moduleRef.get<Subject>(SUBJECT)
+}
 
 const connectionOf = builder<ConnectionRecord>({
     id: "smtp-1",
@@ -20,9 +31,11 @@ const connectionOf = builder<ConnectionRecord>({
 
 describe("SMTP config policy", () => {
     describe("smtpConfigOf", () => {
-        it("combines public connection facts with the supplied secret", () => {
+        it("combines public connection facts with the supplied secret", async () => {
+            const subject = await build()
+
             expect(
-                smtpConfigOf(
+                subject.smtpConfigOf(
                     {
                         host: "smtp.example.com",
                         port: "465",
@@ -46,8 +59,10 @@ describe("SMTP config policy", () => {
             })
         })
 
-        it("defaults absent public facts to STARTTLS on port 587 and empty fields", () => {
-            expect(smtpConfigOf({}, "secret")).toEqual({
+        it("defaults absent public facts to STARTTLS on port 587 and empty fields", async () => {
+            const subject = await build()
+
+            expect(subject.smtpConfigOf({}, "secret")).toEqual({
                 host: "",
                 port: 587,
                 security: "starttls",
@@ -59,8 +74,10 @@ describe("SMTP config policy", () => {
             })
         })
 
-        it("omits an explicitly empty reply address and uses STARTTLS for other security values", () => {
-            expect(smtpConfigOf({ reply_to: "", security: "other", port: "2525" }, "secret")).toEqual({
+        it("omits an explicitly empty reply address and uses STARTTLS for other security values", async () => {
+            const subject = await build()
+
+            expect(subject.smtpConfigOf({ reply_to: "", security: "other", port: "2525" }, "secret")).toEqual({
                 host: "",
                 port: 2525,
                 security: "starttls",
@@ -72,38 +89,48 @@ describe("SMTP config policy", () => {
             })
         })
     })
+})
 
+describe("SMTP config policy", () => {
     describe("chooseSmtp", () => {
-        it("uses the connected workspace default before an older connected sender", () => {
+        it("uses the connected workspace default before an older connected sender", async () => {
+            const subject = await build()
+
             const oldest = connectionOf()
             const disconnectedDefault = connectionOf({ id: "smtp-pending", status: "pending", isDefault: true })
             const defaultSender = connectionOf({ id: "smtp-default", isDefault: true })
 
-            expect(chooseSmtp([disconnectedDefault, oldest, defaultSender], undefined)).toBe(defaultSender)
+            expect(subject.chooseSmtp([disconnectedDefault, oldest, defaultSender], undefined)).toBe(defaultSender)
         })
 
-        it("uses the first connected sender when none is the default", () => {
+        it("uses the first connected sender when none is the default", async () => {
+            const subject = await build()
+
             const pending = connectionOf({ id: "smtp-pending", status: "pending" })
             const oldest = connectionOf({ id: "smtp-oldest" })
             const newer = connectionOf({ id: "smtp-newer" })
 
-            expect(chooseSmtp([pending, oldest, newer], undefined)).toBe(oldest)
+            expect(subject.chooseSmtp([pending, oldest, newer], undefined)).toBe(oldest)
         })
 
-        it("uses an explicitly requested connected sender even when another sender is the default", () => {
+        it("uses an explicitly requested connected sender even when another sender is the default", async () => {
+            const subject = await build()
+
             const defaultSender = connectionOf({ id: "smtp-default", isDefault: true })
             const requested = connectionOf({ id: "smtp-requested" })
 
-            expect(chooseSmtp([defaultSender, requested], "smtp-requested")).toBe(requested)
+            expect(subject.chooseSmtp([defaultSender, requested], "smtp-requested")).toBe(requested)
         })
 
-        it("answers null when the requested sender is absent or not connected", () => {
+        it("answers null when the requested sender is absent or not connected", async () => {
+            const subject = await build()
+
             const connected = connectionOf()
             const pending = connectionOf({ id: "smtp-pending", status: "pending" })
 
-            expect(chooseSmtp([connected, pending], "smtp-missing")).toBeNull()
-            expect(chooseSmtp([connected, pending], "smtp-pending")).toBeNull()
-            expect(chooseSmtp([], undefined)).toBeNull()
+            expect(subject.chooseSmtp([connected, pending], "smtp-missing")).toBeNull()
+            expect(subject.chooseSmtp([connected, pending], "smtp-pending")).toBeNull()
+            expect(subject.chooseSmtp([], undefined)).toBeNull()
         })
     })
 })

@@ -3,7 +3,7 @@ import { AutomationTemplatesError, AutomationTemplatesErrorCode } from "../error
 import { AUTOMATION_TEMPLATES_MESSAGES } from "../messages/automation-templates.messages"
 
 /** Reads the words of a template from the messages catalog by key, in both languages; a key with no text is a defect of the catalogue. */
-export const text = (key: string): LocalizedText => {
+export const translate = (key: string): LocalizedText => {
     const vi = AUTOMATION_TEMPLATES_MESSAGES.vi[key]
     const en = AUTOMATION_TEMPLATES_MESSAGES.en[key]
     if (vi === undefined || en === undefined) {

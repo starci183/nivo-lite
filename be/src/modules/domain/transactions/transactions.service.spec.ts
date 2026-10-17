@@ -63,7 +63,9 @@ describe("TransactionsService", () => {
             ])
         })
     })
+})
 
+describe("TransactionsService", () => {
     describe("momentOf", () => {
         it("answers the money and the moment of the payment, or null", async () => {
             const moment = { amount_vnd: 500000, payer: "Minh", reference: null, occurred_at: "2026-10-13T02:00:00Z" }
@@ -79,7 +81,9 @@ describe("TransactionsService", () => {
             await expect(transactions.momentOf("ws-1", "missing")).resolves.toBeNull()
         })
     })
+})
 
+describe("TransactionsService", () => {
     describe("listForInvoices", () => {
         it("reads nothing for no invoices", async () => {
             const em = mockEntityManager()
@@ -103,7 +107,9 @@ describe("TransactionsService", () => {
             expect(em.query).toHaveBeenCalledWith(LIST_INVOICE_TRANSACTIONS, ["ws-1", ["invoice-1"]])
         })
     })
+})
 
+describe("TransactionsService", () => {
     describe("listAccounting", () => {
         it("reads the newest payments, a thousand by default", async () => {
             const row: TransactionAccountingRow = {
@@ -129,7 +135,9 @@ describe("TransactionsService", () => {
             ])
         })
     })
+})
 
+describe("TransactionsService", () => {
     describe("open", () => {
         it("records an unmatched payment and answers it", async () => {
             const em = mockEntityManager({ query: [INSERT_TRANSACTION, [transactionOf()]] })
@@ -154,7 +162,9 @@ describe("TransactionsService", () => {
             })
         })
     })
+})
 
+describe("TransactionsService", () => {
     describe("match and sendToReview", () => {
         it("settles the invoice with the payment and then sends the payment back to review", async () => {
             const em = mockEntityManager({

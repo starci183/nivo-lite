@@ -1,3 +1,5 @@
+import type { CandidateRecord, JobRecord } from "./hiring.contracts"
+import { CANDIDATE, JOB } from "@tests/fixtures/builders/hiring-screening.builder"
 import { Test } from "@nestjs/testing"
 import { builder, mock, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
@@ -9,60 +11,15 @@ import type { MessageCatalog } from "@modules/platform/i18n"
 import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { HiringErrorCode } from "./errors/hiring.error"
-import type { CandidateRecord, JobRecord } from "./hiring.contracts"
 import { HiringDataService } from "./hiring-data.service"
 import { HiringScreeningService } from "./hiring-screening.service"
 import { HiringTextService } from "./hiring-text.service"
 import { HiringLogEvent } from "./hiring.log-events"
 import { SET_SCREENED } from "./persistence/hiring.sql"
+const candidateOf = builder<CandidateRecord>(CANDIDATE)
+const jobOf = builder<JobRecord>(JOB)
 
 const text = (key: string, params: Record<string, string | number> = {}): string => `${key}${JSON.stringify(params)}`
-
-const candidateOf = builder<CandidateRecord>({
-    id: "candidate-1",
-    workspaceId: "ws-1",
-    jobId: "job-1",
-    name: "Alex",
-    phone: "0901234567",
-    email: "alex@example.com",
-    source: "page",
-    conversationId: null,
-    cvPath: null,
-    cvName: null,
-    cvMime: null,
-    answers: [],
-    availability: "",
-    stage: "applied",
-    staffId: null,
-})
-
-const jobOf = builder<JobRecord>({
-    id: "job-1",
-    workspaceId: "ws-1",
-    slug: "barista",
-    title: "Barista",
-    position: "Barista",
-    employmentType: "full_time",
-    schedule: "Morning",
-    payMinVnd: null,
-    payMaxVnd: null,
-    payUnit: "month",
-    location: "Cafe",
-    headcount: 1,
-    description: "Prepare drinks",
-    requirements: {
-        skills: [],
-        experienceYears: null,
-        experienceNote: "",
-        availability: [],
-        mustHave: [],
-        niceToHave: [],
-    },
-    questions: [],
-    status: "open",
-    channels: ["page"],
-    closesAt: null,
-})
 
 const contextOf = (fields: PerformContext["fields"]): PerformContext => ({
     workspaceId: "ws-1",
@@ -125,6 +82,35 @@ const build = async (entityManager: MockEntityManager = mockEntityManager()) => 
     return { service: moduleRef.get(HiringScreeningService), catalog, words, logger, members, data, generator, gate }
 }
 
+const screeningGeneratorCalls = (criterion: string, note: string) => [
+    [
+        {
+            workspaceId: "ws-1",
+            purpose: "hiring_screen",
+            module: "hiring",
+            system: text("hiring.screen.system"),
+            user: text("hiring.screen.user", {
+                criteria: [
+                    text("hiring.criteria.position", {
+                        title: "Barista",
+                        where: `${text("hiring.employment.full_time")}, Morning, Cafe`,
+                    }),
+                    text("hiring.criteria.skills", { list: "coffee" }),
+                ].join("\n"),
+                score: 100,
+                lines: text("hiring.screen.line", {
+                    status: text("hiring.reasonStatus.met"),
+                    criterion,
+                    note,
+                }),
+                answers: text("hiring.screen.answer", { question: "Skills", answer: "coffee." }),
+                availability: "weekday.",
+            }),
+            timeoutMs: 75000,
+        },
+    ],
+]
+
 describe("HiringScreeningService", () => {
     describe("requestScreening", () => {
         it("leaves a missing candidate waiting without reading a job", async () => {
@@ -148,7 +134,11 @@ describe("HiringScreeningService", () => {
             expect(data.job.mock.calls).toEqual([["ws-1", "job-1"]])
             expect(gate.request).not.toHaveBeenCalled()
         })
+    })
+})
 
+describe("HiringScreeningService", () => {
+    describe("requestScreening", () => {
         it("asks with fallback text and the original dedupe key when the model fails", async () => {
             const { service, generator, gate, data } = await build()
 
@@ -208,7 +198,11 @@ describe("HiringScreeningService", () => {
             ])
             expect(data.askAttempts).not.toHaveBeenCalled()
         })
+    })
+})
 
+describe("HiringScreeningService", () => {
+    describe("requestScreening", () => {
         it("scrubs volunteered traits and model output and retains three fair questions on a new attempt", async () => {
             const { service, data, generator, gate } = await build()
             data.candidate.mockResolvedValue(
@@ -252,34 +246,7 @@ describe("HiringScreeningService", () => {
                 workItemId: "work-1",
             })
 
-            expect(generator.generate.mock.calls).toEqual([
-                [
-                    {
-                        workspaceId: "ws-1",
-                        purpose: "hiring_screen",
-                        module: "hiring",
-                        system: text("hiring.screen.system"),
-                        user: text("hiring.screen.user", {
-                            criteria: [
-                                text("hiring.criteria.position", {
-                                    title: "Barista",
-                                    where: `${text("hiring.employment.full_time")}, Morning, Cafe`,
-                                }),
-                                text("hiring.criteria.skills", { list: "coffee" }),
-                            ].join("\n"),
-                            score: 100,
-                            lines: text("hiring.screen.line", {
-                                status: text("hiring.reasonStatus.met"),
-                                criterion,
-                                note,
-                            }),
-                            answers: text("hiring.screen.answer", { question: "Skills", answer: "coffee." }),
-                            availability: "weekday.",
-                        }),
-                        timeoutMs: 75000,
-                    },
-                ],
-            ])
+            expect(generator.generate.mock.calls).toEqual(screeningGeneratorCalls(criterion, note))
             expect(data.askAttempts.mock.calls).toEqual([["ws-1", "screen_candidate", "screen_candidate:candidate-1:"]])
             expect(gate.request.mock.calls).toEqual([
                 [
@@ -312,7 +279,11 @@ describe("HiringScreeningService", () => {
                 ],
             ])
         })
+    })
+})
 
+describe("HiringScreeningService", () => {
+    describe("requestScreening", () => {
         it("caps a model summary at seven hundred characters", async () => {
             const { service, generator, gate } = await build()
             generator.generate.mockResolvedValue({ ok: true, output: JSON.stringify({ summary: "a".repeat(701) }) })
@@ -345,7 +316,9 @@ describe("HiringScreeningService", () => {
             expect(logger.error.mock.calls).toEqual([[HiringLogEvent.AskFailed, { candidateId: "candidate-1", cause }]])
         })
     })
+})
 
+describe("HiringScreeningService", () => {
     describe("rescreen", () => {
         it("requires a manager and refuses a missing candidate", async () => {
             const { service, data, members, gate } = await build()
@@ -383,7 +356,9 @@ describe("HiringScreeningService", () => {
             })
         })
     })
+})
 
+describe("HiringScreeningService", () => {
     describe("perform", () => {
         it("refuses a candidate who no longer exists", async () => {
             const em = mockEntityManager()
@@ -434,7 +409,11 @@ describe("HiringScreeningService", () => {
 
             expect(em.query.mock.calls).toEqual([screenedQuery(73, "fit", JSON.stringify(reasons), detail)])
         })
+    })
+})
 
+describe("HiringScreeningService", () => {
+    describe("perform", () => {
         it.each([
             { label: "not_fit", score: -5, storedScore: 0, reasons: "broken", questions: "broken" },
             { label: "consider", score: 120, storedScore: 100, reasons: "{}", questions: "{}" },

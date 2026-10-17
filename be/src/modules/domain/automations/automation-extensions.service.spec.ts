@@ -27,87 +27,81 @@ const context: ScanContext = {
     trigger: () => Promise.resolve(),
 }
 
-describe("AutomationExtensionsService", () => {
-    describe("executorOf", () => {
-        it("finds the executor an extension registered for a template", async () => {
-            const { extensions } = await build()
-            const executor = (_context: ExecutorContext) => Promise.resolve({ status: "done" as const, steps: [] })
-            extensions.add({})
-            extensions.add({ executors: { thank_payment: executor } })
+describe("AutomationExtensionsService executorOf", () => {
+    it("finds the executor an extension registered for a template", async () => {
+        const { extensions } = await build()
+        const executor = (_context: ExecutorContext) => Promise.resolve({ status: "done" as const, steps: [] })
+        extensions.add({})
+        extensions.add({ executors: { thank_payment: executor } })
 
-            expect(extensions.executorOf("thank_payment")).toBe(executor)
-            expect(extensions.executorOf("other")).toBeUndefined()
-        })
+        expect(extensions.executorOf("thank_payment")).toBe(executor)
+        expect(extensions.executorOf("other")).toBeUndefined()
+    })
+})
+describe("AutomationExtensionsService scan", () => {
+    it("lets the first extension that owns the template answer", async () => {
+        const { extensions } = await build()
+        const first = jest.fn().mockResolvedValue(null)
+        const owner = jest.fn().mockResolvedValue(3)
+        const later = jest.fn().mockResolvedValue(9)
+        extensions.add({})
+        extensions.add({ scan: first })
+        extensions.add({ scan: owner })
+        extensions.add({ scan: later })
+
+        await expect(extensions.scan(context)).resolves.toBe(3)
+
+        expect(first).toHaveBeenCalledTimes(1)
+        expect(later).not.toHaveBeenCalled()
     })
 
-    describe("scan", () => {
-        it("lets the first extension that owns the template answer", async () => {
-            const { extensions } = await build()
-            const first = jest.fn().mockResolvedValue(null)
-            const owner = jest.fn().mockResolvedValue(3)
-            const later = jest.fn().mockResolvedValue(9)
-            extensions.add({})
-            extensions.add({ scan: first })
-            extensions.add({ scan: owner })
-            extensions.add({ scan: later })
+    it("answers none when no extension owns the template", async () => {
+        const { extensions } = await build()
 
-            await expect(extensions.scan(context)).resolves.toBe(3)
+        await expect(extensions.scan(context)).resolves.toBeNull()
+    })
+})
+describe("AutomationExtensionsService tick", () => {
+    it("adds up the work of every extension and logs a failing one without stopping the others", async () => {
+        const { extensions, logger } = await build()
+        const failure = new Error("boom")
+        extensions.add({})
+        extensions.add({ tick: () => Promise.resolve(2) })
+        extensions.add({ tick: () => Promise.reject(failure) })
+        extensions.add({ tick: () => Promise.resolve(5) })
 
-            expect(first).toHaveBeenCalledTimes(1)
-            expect(later).not.toHaveBeenCalled()
-        })
+        await expect(extensions.tick(new Date("2026-10-12T10:00:00.000Z"))).resolves.toBe(7)
 
-        it("answers none when no extension owns the template", async () => {
-            const { extensions } = await build()
+        expect(logger.error).toHaveBeenCalledWith(AutomationsLogEvent.ExtensionTickFailed, failure)
+    })
+})
+describe("AutomationExtensionsService prepareEnable", () => {
+    it("passes the config through every extension that prepares it", async () => {
+        const { extensions } = await build()
+        const first: AutomationExtension = {
+            prepareEnable: (_w, _u, _d, config) => Promise.resolve({ ...config, a: 1 }),
+        }
+        const second: AutomationExtension = {
+            prepareEnable: (_w, _u, _d, config) => Promise.resolve({ ...config, b: 2 }),
+        }
+        extensions.add({})
+        extensions.add(first)
+        extensions.add(second)
 
-            await expect(extensions.scan(context)).resolves.toBeNull()
+        await expect(extensions.prepareEnable("ws-1", "u-1", buildTemplate(), { z: 0 })).resolves.toEqual({
+            z: 0,
+            a: 1,
+            b: 2,
         })
     })
+})
+describe("AutomationExtensionsService googleAccounts", () => {
+    it("collects the accounts of the extensions that know them", async () => {
+        const { extensions } = await build()
+        const account = { id: "g-1", email: "a@b.c", status: "active" }
+        extensions.add({})
+        extensions.add({ googleAccounts: () => Promise.resolve([account]) })
 
-    describe("tick", () => {
-        it("adds up the work of every extension and logs a failing one without stopping the others", async () => {
-            const { extensions, logger } = await build()
-            const failure = new Error("boom")
-            extensions.add({})
-            extensions.add({ tick: () => Promise.resolve(2) })
-            extensions.add({ tick: () => Promise.reject(failure) })
-            extensions.add({ tick: () => Promise.resolve(5) })
-
-            await expect(extensions.tick(new Date("2026-10-12T10:00:00.000Z"))).resolves.toBe(7)
-
-            expect(logger.error).toHaveBeenCalledWith(AutomationsLogEvent.ExtensionTickFailed, failure)
-        })
-    })
-
-    describe("prepareEnable", () => {
-        it("passes the config through every extension that prepares it", async () => {
-            const { extensions } = await build()
-            const first: AutomationExtension = {
-                prepareEnable: (_w, _u, _d, config) => Promise.resolve({ ...config, a: 1 }),
-            }
-            const second: AutomationExtension = {
-                prepareEnable: (_w, _u, _d, config) => Promise.resolve({ ...config, b: 2 }),
-            }
-            extensions.add({})
-            extensions.add(first)
-            extensions.add(second)
-
-            await expect(extensions.prepareEnable("ws-1", "u-1", buildTemplate(), { z: 0 })).resolves.toEqual({
-                z: 0,
-                a: 1,
-                b: 2,
-            })
-        })
-    })
-
-    describe("googleAccounts", () => {
-        it("collects the accounts of the extensions that know them", async () => {
-            const { extensions } = await build()
-            const account = { id: "g-1", email: "a@b.c", status: "active" }
-            extensions.add({})
-            extensions.add({ googleAccounts: () => Promise.resolve([account]) })
-
-            await expect(extensions.googleAccounts("ws-1")).resolves.toEqual([account])
-        })
+        await expect(extensions.googleAccounts("ws-1")).resolves.toEqual([account])
     })
 })

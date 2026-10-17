@@ -1,5 +1,6 @@
 import { Field, ID, InputType } from "@nestjs/graphql"
-import { IsIn, IsString, IsUUID, MaxLength, MinLength, ValidateIf } from "class-validator"
+import { IsIn, IsString, IsUUID, MaxLength, MinLength } from "class-validator"
+import { ValidateWhenNotNull } from "@modules/platform/graphql"
 import type { Locale } from "@modules/platform/i18n"
 
 @InputType()
@@ -19,7 +20,7 @@ export class RequestChatAnswerInput {
 
     /** The text. */
     @Field(() => String, { nullable: true })
-    @ValidateIf((_input: object, value: unknown) => value !== null)
+    @ValidateWhenNotNull()
     @IsString()
     @MinLength(1)
     @MaxLength(4000)

@@ -1,24 +1,26 @@
+import { Test } from "@nestjs/testing"
 import { DataSourcesErrorCode } from "./errors/data-sources.error"
 import { OPENAPI_TEXT } from "./messages/openapi.messages"
 import { describeSpec } from "./openapi-spec.policy"
-
-const refusal = (detail: string) => expect.objectContaining({ code: DataSourcesErrorCode.Rejected, params: { detail } })
-
-const get = (operationId: string, extra: Record<string, unknown> = {}) => ({
-    get: { operationId, responses: { "200": { description: "ok" } }, ...extra },
-})
-
-describe("describeSpec", () => {
-    it("refuses a document that is not OpenAPI 3 or Swagger 2", () => {
-        expect(() => describeSpec(null, "")).toThrow(refusal(OPENAPI_TEXT.notSpec))
-        expect(() => describeSpec([], "")).toThrow(refusal(OPENAPI_TEXT.notSpec))
-        expect(() => describeSpec({ openapi: "2.0" }, "")).toThrow(refusal(OPENAPI_TEXT.notSpec))
-        expect(() => describeSpec({ swagger: "1.0" }, "")).toThrow(refusal(OPENAPI_TEXT.notSpec))
-        expect(() => describeSpec({ openapi: "3.0.0" }, "")).toThrow(refusal(OPENAPI_TEXT.noOperations))
+const SUBJECT = Symbol("openapi-spec.policy")
+const buildSubject = async () => {
+    const moduleRef = await Test.createTestingModule({
+        providers: [{ provide: SUBJECT, useValue: { describeSpec } }],
+    }).compile()
+    return moduleRef.get<typeof import("./openapi-spec.policy")>(SUBJECT)
+}
+const registerSpecValidation = () => {
+    it("refuses a document that is not OpenAPI 3 or Swagger 2", async () => {
+        const subject = await buildSubject()
+        expect(() => subject.describeSpec(null, "")).toThrow(refusal(OPENAPI_TEXT.notSpec))
+        expect(() => subject.describeSpec([], "")).toThrow(refusal(OPENAPI_TEXT.notSpec))
+        expect(() => subject.describeSpec({ openapi: "2.0" }, "")).toThrow(refusal(OPENAPI_TEXT.notSpec))
+        expect(() => subject.describeSpec({ swagger: "1.0" }, "")).toThrow(refusal(OPENAPI_TEXT.notSpec))
+        expect(() => subject.describeSpec({ openapi: "3.0.0" }, "")).toThrow(refusal(OPENAPI_TEXT.noOperations))
     })
-
-    it("lists a GET and ignores a path that is not an operation item", () => {
-        const spec = describeSpec(
+    it("lists a GET and ignores a path that is not an operation item", async () => {
+        const subject = await buildSubject()
+        const spec = subject.describeSpec(
             {
                 openapi: "3.1.0",
                 paths: {
@@ -45,8 +47,10 @@ describe("describeSpec", () => {
         ])
     })
 
-    it("cleans operation ids, numbers duplicates, and falls back to the method/path and description", () => {
-        const spec = describeSpec(
+    it("cleans operation ids, numbers duplicates, and falls back to the method/path and description", async () => {
+        const subject = await buildSubject()
+
+        const spec = subject.describeSpec(
             {
                 openapi: "3.0.3",
                 info: { title: "T".repeat(90) },
@@ -70,18 +74,27 @@ describe("describeSpec", () => {
         expect(spec.baseUrl).toBe("")
     })
 
-    it("keeps at most 500 operations", () => {
+    it("keeps at most 500 operations", async () => {
+        const subject = await buildSubject()
+
         const paths: Record<string, unknown> = {}
         for (let index = 0; index < 501; index += 1) paths[`/p${index}`] = get(`op${index}`)
 
-        const spec = describeSpec({ openapi: "3.0.0", info: { title: "Shop" }, paths }, "https://api.example/spec")
+        const spec = subject.describeSpec(
+            { openapi: "3.0.0", info: { title: "Shop" }, paths },
+            "https://api.example/spec",
+        )
 
         expect(spec.ops).toHaveLength(500)
         expect(spec.ops[499]?.id).toBe("op499")
     })
+}
 
-    it("lets operation parameters override shared parameters, reads a body, and skips unusable parameters", () => {
-        const spec = describeSpec(
+const registerOperationParameters = () => {
+    it("lets operation parameters override shared parameters, reads a body, and skips unusable parameters", async () => {
+        const subject = await buildSubject()
+
+        const spec = subject.describeSpec(
             {
                 swagger: "2.0",
                 host: "api.example",
@@ -134,9 +147,13 @@ describe("describeSpec", () => {
             suggest: { itemsPath: "", idField: "id", titleField: "name" },
         })
     })
+}
 
-    it("suggests fields from a referenced response and a nested array", () => {
-        const spec = describeSpec(
+const registerResponseFields = () => {
+    it("suggests fields from a referenced response and a nested array", async () => {
+        const subject = await buildSubject()
+
+        const spec = subject.describeSpec(
             {
                 openapi: "3.0.0",
                 servers: [
@@ -182,9 +199,13 @@ describe("describeSpec", () => {
         expect(spec.baseUrl).toBe("https://api.example/v1")
         expect(spec.ops[0]?.suggest).toEqual({ itemsPath: "data.items", idField: "sku", titleField: "title" })
     })
+}
 
-    it("ignores external references while keeping usable local operations and parameters", () => {
-        const spec = describeSpec(
+const registerSchemaReferences = () => {
+    it("ignores external references while keeping usable local operations and parameters", async () => {
+        const subject = await buildSubject()
+
+        const spec = subject.describeSpec(
             {
                 openapi: "3.0.0",
                 paths: {
@@ -221,8 +242,10 @@ describe("describeSpec", () => {
             { responses: { "200": { schema: { type: "array", items: { $ref: "#/components/schemas/Missing" } } } } },
         ],
         ["empty response content", { responses: { "200": { content: {} } } }],
-    ])("keeps the operation without field suggestions for %s", (_label, extra) => {
-        const spec = describeSpec(
+    ])("keeps the operation without field suggestions for %s", async (_label, extra) => {
+        const subject = await buildSubject()
+
+        const spec = subject.describeSpec(
             { openapi: "3.0.0", paths: { "/orders": get("listOrders", extra) } },
             "https://api.example/spec.json",
         )
@@ -238,9 +261,13 @@ describe("describeSpec", () => {
             },
         ])
     })
+}
 
-    it("locates a primitive array without suggesting nonexistent item fields", () => {
-        const spec = describeSpec(
+const registerSchemaTraversal = () => {
+    it("locates a primitive array without suggesting nonexistent item fields", async () => {
+        const subject = await buildSubject()
+
+        const spec = subject.describeSpec(
             {
                 openapi: "3.0.0",
                 paths: {
@@ -261,7 +288,9 @@ describe("describeSpec", () => {
         expect(spec.ops[0]?.suggest).toEqual({ itemsPath: "", idField: "", titleField: "" })
     })
 
-    it("fills an empty server variable, stops past two levels, and follows a json pointer escape", () => {
+    it("fills an empty server variable, stops past two levels, and follows a json pointer escape", async () => {
+        const subject = await buildSubject()
+
         const schemas: Record<string, unknown> = {
             "a/b~c": { type: "array", items: { type: "object", properties: { code: {} } } },
         }
@@ -271,67 +300,11 @@ describe("describeSpec", () => {
             }
         }
 
-        const spec = describeSpec(
+        const spec = subject.describeSpec(
             {
                 openapi: "3.0.0",
                 servers: [{ url: "/{root}", variables: {} }],
-                paths: {
-                    "/deep": {
-                        get: {
-                            responses: {
-                                "200": {
-                                    schema: {
-                                        type: "object",
-                                        properties: {
-                                            a: {
-                                                type: "object",
-                                                properties: {
-                                                    b: {
-                                                        type: "object",
-                                                        properties: { c: { type: "array", items: { type: "object" } } },
-                                                    },
-                                                },
-                                            },
-                                        },
-                                    },
-                                },
-                            },
-                        },
-                    },
-                    "/near": {
-                        get: {
-                            responses: {
-                                "200": {
-                                    content: {
-                                        "application/problem+json": {
-                                            schema: {
-                                                type: "object",
-                                                properties: {
-                                                    rows: {
-                                                        type: "array",
-                                                        items: { type: "object", properties: { id: {} } },
-                                                    },
-                                                },
-                                            },
-                                        },
-                                    },
-                                },
-                            },
-                        },
-                    },
-                    "/escaped": {
-                        get: {
-                            responses: {
-                                "200": { schema: { $ref: "#/components/schemas/a~1b~0c" } },
-                            },
-                        },
-                    },
-                    "/too-deep": {
-                        get: {
-                            responses: { "200": { schema: { $ref: "#/components/schemas/n0" } } },
-                        },
-                    },
-                },
+                paths: nestedSchemas,
                 components: { schemas },
             },
             "https://api.example/spec",
@@ -343,14 +316,16 @@ describe("describeSpec", () => {
         expect(spec.ops[2]?.suggest).toEqual({ itemsPath: "", idField: "code", titleField: "" })
         expect(spec.ops[3]?.suggest).toBeUndefined()
     })
+}
 
-    it("reads the auth hint from the first usable scheme", () => {
+const registerAuthHints = () => {
+    it("reads the auth hint from the first usable scheme", async () => {
+        const subject = await buildSubject()
         const hint = (schemes: Record<string, unknown>) =>
-            describeSpec(
+            subject.describeSpec(
                 { openapi: "3.0.0", paths: { "/ping": get("ping") }, components: { securitySchemes: schemes } },
                 "https://api.example",
             ).authHint
-
         expect(hint({ broken: { $ref: "#/nope" }, key: { type: "apiKey", in: "query", name: "api_key" } })).toEqual({
             type: "query",
             name: "api_key",
@@ -366,7 +341,7 @@ describe("describeSpec", () => {
         expect(hint({ oidc: { type: "openIdConnect" } })).toEqual({ type: "bearer", name: "" })
         expect(hint({ other: { type: "mutual" } })).toEqual({ type: "none", name: "" })
         expect(
-            describeSpec(
+            subject.describeSpec(
                 {
                     swagger: "2.0",
                     securityDefinitions: { key: { type: "apiKey", in: "header", name: "X-Key" } },
@@ -376,50 +351,134 @@ describe("describeSpec", () => {
             ).authHint,
         ).toEqual({ type: "header", name: "X-Key" })
     })
-
-    it("builds a swagger base from the host, the scheme list, or the spec url", () => {
+    it("builds a swagger base from the host, the scheme list, or the spec url", async () => {
+        const subject = await buildSubject()
         expect(
-            describeSpec(
+            subject.describeSpec(
                 { swagger: "2.0", schemes: ["http", "https"], host: "api.example", paths: { "/ping": get("ping") } },
                 "",
             ).baseUrl,
         ).toBe("https://api.example")
         expect(
-            describeSpec({ swagger: "2.0", host: "api.example", basePath: "/", paths: { "/ping": get("ping") } }, "")
-                .baseUrl,
+            subject.describeSpec(
+                { swagger: "2.0", host: "api.example", basePath: "/", paths: { "/ping": get("ping") } },
+                "",
+            ).baseUrl,
         ).toBe("https://api.example")
         expect(
-            describeSpec(
+            subject.describeSpec(
                 { swagger: "2.0", basePath: "/v1/", paths: { "/ping": get("ping") } },
                 "https://files.example/a/spec.json",
             ).baseUrl,
         ).toBe("https://files.example/v1")
-        expect(describeSpec({ swagger: "2.0", paths: { "/ping": get("ping") } }, "").baseUrl).toBe("")
+        expect(subject.describeSpec({ swagger: "2.0", paths: { "/ping": get("ping") } }, "").baseUrl).toBe("")
         expect(
-            describeSpec(
+            subject.describeSpec(
                 { openapi: "3.0.0", servers: [{ url: "https://api.example/v1/" }], paths: { "/ping": get("ping") } },
                 "",
             ).baseUrl,
         ).toBe("https://api.example/v1")
-        expect(describeSpec({ openapi: "3.0.0", servers: "nope", paths: { "/ping": get("ping") } }, "").baseUrl).toBe(
-            "",
-        )
+        expect(
+            subject.describeSpec({ openapi: "3.0.0", servers: "nope", paths: { "/ping": get("ping") } }, "").baseUrl,
+        ).toBe("")
     })
+    it("keeps an absolute HTTP server URL when the spec URL cannot be parsed", async () => {
+        const subject = await buildSubject()
 
-    it("keeps an absolute HTTP server URL when the spec URL cannot be parsed", () => {
-        const spec = describeSpec(
+        const spec = subject.describeSpec(
             { openapi: "3.0.0", servers: [{ url: "https://api.example/v1/" }], paths: { "/ping": get("ping") } },
             "not-a-url",
         )
 
         expect(spec.baseUrl).toBe("https://api.example/v1")
     })
+}
 
-    it("defaults a missing entry in an in-memory Swagger scheme list to HTTPS", () => {
+const registerDefaultScheme = () => {
+    it("defaults a missing entry in an in-memory Swagger scheme list to HTTPS", async () => {
+        const subject = await buildSubject()
+
         const schemes: Array<string> = []
         schemes.length = 1
-        const spec = describeSpec({ swagger: "2.0", schemes, host: "api.example", paths: { "/ping": get("ping") } }, "")
+        const spec = subject.describeSpec(
+            { swagger: "2.0", schemes, host: "api.example", paths: { "/ping": get("ping") } },
+            "",
+        )
 
         expect(spec.baseUrl).toBe("https://api.example")
     })
+}
+
+const nestedSchemas = {
+    "/deep": {
+        get: {
+            responses: {
+                "200": {
+                    schema: {
+                        type: "object",
+                        properties: {
+                            a: {
+                                type: "object",
+                                properties: {
+                                    b: {
+                                        type: "object",
+                                        properties: { c: { type: "array", items: { type: "object" } } },
+                                    },
+                                },
+                            },
+                        },
+                    },
+                },
+            },
+        },
+    },
+    "/near": {
+        get: {
+            responses: {
+                "200": {
+                    content: {
+                        "application/problem+json": {
+                            schema: {
+                                type: "object",
+                                properties: {
+                                    rows: {
+                                        type: "array",
+                                        items: { type: "object", properties: { id: {} } },
+                                    },
+                                },
+                            },
+                        },
+                    },
+                },
+            },
+        },
+    },
+    "/escaped": {
+        get: {
+            responses: {
+                "200": { schema: { $ref: "#/components/schemas/a~1b~0c" } },
+            },
+        },
+    },
+    "/too-deep": {
+        get: {
+            responses: { "200": { schema: { $ref: "#/components/schemas/n0" } } },
+        },
+    },
+}
+
+const refusal = (detail: string) => expect.objectContaining({ code: DataSourcesErrorCode.Rejected, params: { detail } })
+
+const get = (operationId: string, extra: Record<string, unknown> = {}) => ({
+    get: { operationId, responses: { "200": { description: "ok" } }, ...extra },
+})
+
+describe("describeSpec", () => {
+    registerSpecValidation()
+    registerOperationParameters()
+    registerResponseFields()
+    registerSchemaReferences()
+    registerSchemaTraversal()
+    registerAuthHints()
+    registerDefaultScheme()
 })

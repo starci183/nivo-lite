@@ -1,7 +1,17 @@
+import { Test } from "@nestjs/testing"
 import { builder } from "@starci/jest-preset"
 import { WorkItemsErrorCode } from "./errors/work-items.error"
 import type { WorkItemRow } from "./persistence/work-items.rows"
-import { requireWorkItem, toProposal, toWorkItem } from "./work-items.mapper"
+import { toProposal, toWorkItem, requireWorkItem } from "./work-items.mapper"
+
+const SUBJECT = Symbol("work-items.mapper")
+
+const build = async () => {
+    const moduleRef = await Test.createTestingModule({
+        providers: [{ provide: SUBJECT, useValue: { toProposal, toWorkItem, requireWorkItem } }],
+    }).compile()
+    return moduleRef.get<typeof import("./work-items.mapper")>(SUBJECT)
+}
 
 const rowOf = builder<WorkItemRow>({
     id: "item-1",
@@ -35,12 +45,16 @@ const rowOf = builder<WorkItemRow>({
 
 describe("work item mapper", () => {
     describe("toProposal", () => {
-        it("gives an empty stored proposal its defaults", () => {
-            expect(toProposal({})).toEqual({ summary: "", fields: {} })
+        it("gives an empty stored proposal its defaults", async () => {
+            const subject = await build()
+
+            expect(subject.toProposal({})).toEqual({ summary: "", fields: {} })
         })
 
-        it("keeps what is stored", () => {
-            expect(toProposal({ summary: "S", fields: { a: 1 }, draft: "D" })).toEqual({
+        it("keeps what is stored", async () => {
+            const subject = await build()
+
+            expect(subject.toProposal({ summary: "S", fields: { a: 1 }, draft: "D" })).toEqual({
                 summary: "S",
                 fields: { a: 1 },
                 draft: "D",
@@ -49,28 +63,36 @@ describe("work item mapper", () => {
     })
 
     describe("toWorkItem", () => {
-        it("turns the timestamps into ISO strings", () => {
-            const item = toWorkItem(rowOf())
+        it("turns the timestamps into ISO strings", async () => {
+            const subject = await build()
+
+            const item = subject.toWorkItem(rowOf())
             expect(item.created_at).toBe("2026-10-12T10:00:00.000Z")
             expect(item.updated_at).toBe("2026-10-12T10:01:00.000Z")
             expect(item.completed_at).toBeNull()
             expect(item.proposal).toEqual({ summary: "Quote", fields: { items: "tea" } })
         })
 
-        it("converts the completion time when there is one", () => {
-            const item = toWorkItem(rowOf({ completed_at: new Date("2026-10-12T11:00:00.000Z"), proposal: {} }))
+        it("converts the completion time when there is one", async () => {
+            const subject = await build()
+
+            const item = subject.toWorkItem(rowOf({ completed_at: new Date("2026-10-12T11:00:00.000Z"), proposal: {} }))
             expect(item.completed_at).toBe("2026-10-12T11:00:00.000Z")
             expect(item.proposal).toEqual({ summary: "", fields: {} })
         })
     })
 
     describe("requireWorkItem", () => {
-        it("answers the first row as an item", () => {
-            expect(requireWorkItem([rowOf({ id: "a" }), rowOf({ id: "b" })]).id).toBe("a")
+        it("answers the first row as an item", async () => {
+            const subject = await build()
+
+            expect(subject.requireWorkItem([rowOf({ id: "a" }), rowOf({ id: "b" })]).id).toBe("a")
         })
 
-        it("is a typed not-found without a row", () => {
-            expect(() => requireWorkItem([])).toThrow(WorkItemsErrorCode.NotFound)
+        it("is a typed not-found without a row", async () => {
+            const subject = await build()
+
+            expect(() => subject.requireWorkItem([])).toThrow(WorkItemsErrorCode.NotFound)
         })
     })
 })

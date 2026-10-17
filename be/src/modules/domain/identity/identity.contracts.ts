@@ -1,3 +1,4 @@
+import type { CredentialPrincipal } from "./credential.contracts"
 import type { Principal } from "@modules/platform/cqrs"
 
 declare module "express-serve-static-core" {
@@ -5,6 +6,8 @@ declare module "express-serve-static-core" {
     interface Request {
         /** The authenticated Supabase caller, when the door is not public. */
         principal?: Principal
+        /** The alternate credential, never a session principal. */
+        credentialPrincipal?: CredentialPrincipal
     }
 }
 
@@ -12,16 +15,12 @@ declare module "express-serve-static-core" {
 export enum PublicReason {
     /** Liveness and readiness probes. */
     Health = "health",
+    /** OAuth and other authentication handshakes. */
+    AuthHandshake = "auth-handshake",
     /** A webhook whose signature is verified before its domain intake runs. */
     SignedWebhook = "signed-webhook",
-    /** A public page the visitor acts on without an account, bounded by an unguessable link token or the rate limit. */
-    PublicForm = "public-form",
-    /** A door whose caller carries a short-lived tool token that the domain verifies (the tools OpenClaw agents call back). */
-    ToolToken = "tool-token",
     /** A published catalog page (booking page, loyalty check) read without a session; always rate limited. */
     CatalogRead = "catalog-read",
-    /** The preview of an invitation link, read before the invited person signs in; always rate limited. */
-    InviteLink = "invite-link",
 }
 
 /** The metadata `@Public` attaches to a door. */

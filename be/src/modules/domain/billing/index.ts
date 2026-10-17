@@ -1,3 +1,4 @@
+export { BankFeedDeliveryService } from "./bank-feed-delivery.service"
 export { BankFeedService } from "./bank-feed.service"
 export { parseBillingConfig } from "./billing.config"
 export { BILLING_ERROR_KINDS, BillingError, BillingErrorCode } from "./errors/billing.error"
@@ -8,7 +9,7 @@ export { EntitlementsService } from "./entitlements.service"
 export { PaymentProofService } from "./payment-proof.service"
 export { sepayPayloadOf } from "./sepay.policy"
 export { parseJsonObject } from "./webhook-body.policy"
-export type { BankAccountOptions, BillingOptions } from "./billing.options"
+export type { BankAccountOptions } from "./billing.options"
 export type {
     BillingWorkspace,
     PayableOrder,

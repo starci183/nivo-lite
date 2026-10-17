@@ -69,7 +69,9 @@ describe("BookingModelService", () => {
             await expect(model.settings("ws-1")).resolves.toBe(DEFAULT_SETTINGS)
         })
     })
+})
 
+describe("BookingModelService", () => {
     describe("model", () => {
         it("reads settings, services, resources, hours and exceptions together", async () => {
             const model = await build(
@@ -148,7 +150,9 @@ describe("BookingModelService", () => {
             expect(result.settings.slotStepMin).toBe(30)
         })
     })
+})
 
+describe("BookingModelService", () => {
     describe("spans", () => {
         it("joins the held bookings with the whole-day blocks of approved leave", async () => {
             const entityManager = mockEntityManager({

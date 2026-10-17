@@ -1,5 +1,5 @@
 import type { TemplateDefinition } from "./automation-templates.contracts"
-import { text } from "./policies/catalog-text.policy"
+import { translate } from "./policies/catalog-text.policy"
 
 /** The booking templates the engine runs itself, in file-name order. */
 export const BOOKING_TEMPLATES: ReadonlyArray<TemplateDefinition> = [
@@ -11,12 +11,12 @@ export const BOOKING_TEMPLATES: ReadonlyArray<TemplateDefinition> = [
         executor: "implemented",
         moduleKey: "booking",
         icon: "calendar",
-        name: text("automationTemplates.appointment_reminder.name"),
-        description: text("automationTemplates.appointment_reminder.description"),
+        name: translate("automationTemplates.appointment_reminder.name"),
+        description: translate("automationTemplates.appointment_reminder.description"),
         trigger: {
             kind: "schedule",
             event: "booking.upcoming",
-            line: text("automationTemplates.appointment_reminder.line"),
+            line: translate("automationTemplates.appointment_reminder.line"),
         },
         requires: {
             modules: ["booking"],
@@ -30,22 +30,22 @@ export const BOOKING_TEMPLATES: ReadonlyArray<TemplateDefinition> = [
                 kind: "number",
                 min: 1,
                 max: 72,
-                suffix: text("automationTemplates.appointment_reminder.settings.firstHours.suffix"),
-                label: text("automationTemplates.appointment_reminder.settings.firstHours.label"),
+                suffix: translate("automationTemplates.appointment_reminder.settings.firstHours.suffix"),
+                label: translate("automationTemplates.appointment_reminder.settings.firstHours.label"),
             },
             {
                 key: "secondHours",
                 kind: "number",
                 min: 0,
                 max: 24,
-                suffix: text("automationTemplates.appointment_reminder.settings.secondHours.suffix"),
-                label: text("automationTemplates.appointment_reminder.settings.secondHours.label"),
+                suffix: translate("automationTemplates.appointment_reminder.settings.secondHours.suffix"),
+                label: translate("automationTemplates.appointment_reminder.settings.secondHours.label"),
             },
         ],
         contentMode: "fixed",
-        guardrails: [text("automationTemplates.appointment_reminder.guardrails.0")],
+        guardrails: [translate("automationTemplates.appointment_reminder.guardrails.0")],
         variables: ["ten_khach", "ten_shop", "dich_vu", "gio_hen", "nguoi_lam", "dia_chi"],
-        defaultBody: text("automationTemplates.appointment_reminder.defaultBody"),
+        defaultBody: translate("automationTemplates.appointment_reminder.defaultBody"),
         authority: {
             action: "remind_booking",
         },
@@ -62,12 +62,12 @@ export const BOOKING_TEMPLATES: ReadonlyArray<TemplateDefinition> = [
         executor: "implemented",
         moduleKey: "booking",
         icon: "winback",
-        name: text("automationTemplates.booking_comeback.name"),
-        description: text("automationTemplates.booking_comeback.description"),
+        name: translate("automationTemplates.booking_comeback.name"),
+        description: translate("automationTemplates.booking_comeback.description"),
         trigger: {
             kind: "schedule",
             event: "booking.followup",
-            line: text("automationTemplates.booking_comeback.line"),
+            line: translate("automationTemplates.booking_comeback.line"),
         },
         requires: {
             modules: ["booking"],
@@ -77,9 +77,9 @@ export const BOOKING_TEMPLATES: ReadonlyArray<TemplateDefinition> = [
         },
         settings: [],
         contentMode: "fixed",
-        guardrails: [text("automationTemplates.booking_comeback.guardrails.0")],
+        guardrails: [translate("automationTemplates.booking_comeback.guardrails.0")],
         variables: ["ten_khach", "ten_shop", "dich_vu", "so_ngay"],
-        defaultBody: text("automationTemplates.booking_comeback.defaultBody"),
+        defaultBody: translate("automationTemplates.booking_comeback.defaultBody"),
         authority: {
             action: "send_follow_up",
         },
@@ -93,12 +93,12 @@ export const BOOKING_TEMPLATES: ReadonlyArray<TemplateDefinition> = [
         executor: "implemented",
         moduleKey: "booking",
         icon: "review",
-        name: text("automationTemplates.booking_review.name"),
-        description: text("automationTemplates.booking_review.description"),
+        name: translate("automationTemplates.booking_review.name"),
+        description: translate("automationTemplates.booking_review.description"),
         trigger: {
             kind: "schedule",
             event: "booking.done",
-            line: text("automationTemplates.booking_review.line"),
+            line: translate("automationTemplates.booking_review.line"),
         },
         requires: {
             modules: ["booking"],
@@ -112,17 +112,17 @@ export const BOOKING_TEMPLATES: ReadonlyArray<TemplateDefinition> = [
                 kind: "number",
                 min: 1,
                 max: 72,
-                suffix: text("automationTemplates.booking_review.settings.afterHours.suffix"),
-                label: text("automationTemplates.booking_review.settings.afterHours.label"),
+                suffix: translate("automationTemplates.booking_review.settings.afterHours.suffix"),
+                label: translate("automationTemplates.booking_review.settings.afterHours.label"),
             },
         ],
         contentMode: "fixed",
         guardrails: [
-            text("automationTemplates.booking_review.guardrails.0"),
-            text("automationTemplates.booking_review.guardrails.1"),
+            translate("automationTemplates.booking_review.guardrails.0"),
+            translate("automationTemplates.booking_review.guardrails.1"),
         ],
         variables: ["ten_khach", "ten_shop", "dich_vu"],
-        defaultBody: text("automationTemplates.booking_review.defaultBody"),
+        defaultBody: translate("automationTemplates.booking_review.defaultBody"),
         authority: {
             action: "send_care",
         },
@@ -138,12 +138,12 @@ export const BOOKING_TEMPLATES: ReadonlyArray<TemplateDefinition> = [
         executor: "implemented",
         moduleKey: "booking",
         icon: "calendar",
-        name: text("automationTemplates.booking_waitlist_notice.name"),
-        description: text("automationTemplates.booking_waitlist_notice.description"),
+        name: translate("automationTemplates.booking_waitlist_notice.name"),
+        description: translate("automationTemplates.booking_waitlist_notice.description"),
         trigger: {
             kind: "schedule",
             event: "booking.slot_free",
-            line: text("automationTemplates.booking_waitlist_notice.line"),
+            line: translate("automationTemplates.booking_waitlist_notice.line"),
         },
         requires: {
             modules: ["booking"],
@@ -153,9 +153,9 @@ export const BOOKING_TEMPLATES: ReadonlyArray<TemplateDefinition> = [
         },
         settings: [],
         contentMode: "fixed",
-        guardrails: [text("automationTemplates.booking_waitlist_notice.guardrails.0")],
+        guardrails: [translate("automationTemplates.booking_waitlist_notice.guardrails.0")],
         variables: ["ten_khach", "ten_shop", "dich_vu", "gio_hen"],
-        defaultBody: text("automationTemplates.booking_waitlist_notice.defaultBody"),
+        defaultBody: translate("automationTemplates.booking_waitlist_notice.defaultBody"),
         authority: {
             action: "send_care",
         },

@@ -1,8 +1,66 @@
+import { Test } from "@nestjs/testing"
 import { builder } from "@starci/jest-preset"
 import type { AccountingWaitingWorkRow } from "@modules/domain/decisions"
 import type { StaffRow } from "@modules/domain/staff"
 import { buildAccountingWorkbench } from "./accounting-workbench.policy"
 import { toAccountingWorkbenchView } from "./accounting-workbench-view.mapper"
+
+const SUBJECT = Symbol("accounting-workbench-view.mapper")
+
+const buildSubject = async () => {
+    const moduleRef = await Test.createTestingModule({
+        providers: [{ provide: SUBJECT, useValue: { toAccountingWorkbenchView } }],
+    }).compile()
+    return moduleRef.get<typeof import("./accounting-workbench-view.mapper")>(SUBJECT)
+}
+
+const expectedQuestions = [
+    {
+        group: "missing_data",
+        item: {
+            id: "work-1",
+            workspaceId: "ws-1",
+            department: "accounting",
+            action: "issue_invoice",
+            subjectType: "invoice",
+            subjectId: "invoice-1",
+            leadId: null,
+            inboundEventId: null,
+            parentId: null,
+            chainId: null,
+            depth: 0,
+            status: "waiting_decision",
+            decidedPath: null,
+            reason: "missing_data",
+            reasons: ["missing_data"],
+            missingFields: ["customer"],
+            proposal: {
+                summary: "Issue payment record",
+                draft: null,
+                amountVnd: 120,
+                confidence: null,
+                outcome: null,
+                fields: [
+                    { name: "customer", text: "Mai", number: null },
+                    { name: "amount", text: null, number: 120 },
+                ],
+                candidates: [],
+            },
+            result: null,
+            error: null,
+            evidenceState: "pending",
+            assignedStaffId: "staff-1",
+            assignedStaffName: "Hoa",
+            executionId: null,
+            origin: "live",
+            createdAt: "2026-10-12T10:00:00.000Z",
+            updatedAt: "2026-10-12T10:00:00.000Z",
+            completedAt: null,
+            installationId: null,
+            lead: null,
+        },
+    },
+]
 
 const itemOf = builder<AccountingWaitingWorkRow>({
     id: "work-1",
@@ -46,7 +104,9 @@ const STAFF: StaffRow = {
 }
 
 describe("toAccountingWorkbenchView", () => {
-    it("retains workbench figures and groups while mapping question proposals and staff transport fields", () => {
+    it("retains workbench figures and groups while mapping question proposals and staff transport fields", async () => {
+        const subject = await buildSubject()
+
         const item = itemOf()
         const data = buildAccountingWorkbench({
             book: {
@@ -65,57 +125,11 @@ describe("toAccountingWorkbenchView", () => {
             role: "owner",
         })
 
-        const view = toAccountingWorkbenchView(data)
+        const view = subject.toAccountingWorkbenchView(data)
 
         expect(view).toEqual({
             ...data,
-            questions: [
-                {
-                    group: "missing_data",
-                    item: {
-                        id: "work-1",
-                        workspaceId: "ws-1",
-                        department: "accounting",
-                        action: "issue_invoice",
-                        subjectType: "invoice",
-                        subjectId: "invoice-1",
-                        leadId: null,
-                        inboundEventId: null,
-                        parentId: null,
-                        chainId: null,
-                        depth: 0,
-                        status: "waiting_decision",
-                        decidedPath: null,
-                        reason: "missing_data",
-                        reasons: ["missing_data"],
-                        missingFields: ["customer"],
-                        proposal: {
-                            summary: "Issue payment record",
-                            draft: null,
-                            amountVnd: 120,
-                            confidence: null,
-                            outcome: null,
-                            fields: [
-                                { name: "customer", text: "Mai", number: null },
-                                { name: "amount", text: null, number: 120 },
-                            ],
-                            candidates: [],
-                        },
-                        result: null,
-                        error: null,
-                        evidenceState: "pending",
-                        assignedStaffId: "staff-1",
-                        assignedStaffName: "Hoa",
-                        executionId: null,
-                        origin: "live",
-                        createdAt: "2026-10-12T10:00:00.000Z",
-                        updatedAt: "2026-10-12T10:00:00.000Z",
-                        completedAt: null,
-                        installationId: null,
-                        lead: null,
-                    },
-                },
-            ],
+            questions: expectedQuestions,
             staff: [
                 {
                     id: "staff-1",

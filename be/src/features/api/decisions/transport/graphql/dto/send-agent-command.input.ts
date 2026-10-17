@@ -1,6 +1,6 @@
+import { NullAsAbsent } from "@modules/platform/graphql"
 import { Field, ID, InputType } from "@nestjs/graphql"
-import { Transform, Type } from "class-transformer"
-import type { TransformFnParams } from "class-transformer"
+import { Type } from "class-transformer"
 import {
     ArrayMaxSize,
     IsArray,
@@ -44,14 +44,14 @@ export class SendAgentCommandInput {
     /** The kind of record the command is about. */
     @Field(() => String, { nullable: true })
     @IsOptional()
-    @Transform(({ value }: TransformFnParams): unknown => value ?? undefined)
+    @NullAsAbsent()
     @IsIn(["lead", "order", "invoice", "transaction", "conversation", "inbound", "purchase_order", "stock"])
     subjectType?: "lead" | "order" | "invoice" | "transaction" | "conversation" | "inbound" | "purchase_order" | "stock"
 
     /** The record the command is about. */
     @Field(() => ID, { nullable: true })
     @IsOptional()
-    @Transform(({ value }: TransformFnParams): unknown => value ?? undefined)
+    @NullAsAbsent()
     @IsUUID("4")
     @MaxLength(36)
     subjectId?: string
@@ -59,7 +59,7 @@ export class SendAgentCommandInput {
     /** The customer the command is about. */
     @Field(() => ID, { nullable: true })
     @IsOptional()
-    @Transform(({ value }: TransformFnParams): unknown => value ?? undefined)
+    @NullAsAbsent()
     @IsUUID("4")
     @MaxLength(36)
     leadId?: string
@@ -67,7 +67,7 @@ export class SendAgentCommandInput {
     /** The other payload fields the command declares. */
     @Field(() => [FieldValueInput], { nullable: true })
     @IsOptional()
-    @Transform(({ value }: TransformFnParams): unknown => value ?? undefined)
+    @NullAsAbsent()
     @IsArray()
     @ArrayMaxSize(30)
     @ValidateNested({ each: true })

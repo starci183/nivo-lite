@@ -97,122 +97,120 @@ const build = async (entityManager: MockEntityManager) => {
     return moduleRef.get(ShiftsDataService)
 }
 
-describe("ShiftsDataService", () => {
-    describe("loadSetup", () => {
-        it("maps positions, people, wages, coverage and settings exactly", async () => {
-            const em = mockEntityManager({
-                query: [
-                    [SELECT_POSITIONS, [{ id: "position-1", name: "Barista", color: "#123456" }]],
-                    [
-                        SELECT_STAFF,
-                        [
-                            staffRow(),
-                            staffRow({ id: "staff-2", name: "Blair" }),
-                            staffRow({ id: "staff-3", name: "Casey" }),
-                        ],
-                    ],
-                    [
-                        SELECT_PAY,
-                        [
-                            { staff_id: "staff-1", hourly_wage_vnd: "30000.00" },
-                            { staff_id: "staff-2", hourly_wage_vnd: "unreadable" },
-                        ],
-                    ],
-                    [
-                        SELECT_COVERAGE,
-                        [
-                            {
-                                id: "block-1",
-                                weekday: 0,
-                                start_time: "08:00:00",
-                                end_time: "16:00:00",
-                                position_id: "position-1",
-                                min_staff: 1,
-                                ideal_staff: 2,
-                                is_peak: true,
-                            },
-                        ],
-                    ],
-                    [
-                        SELECT_SETTINGS,
-                        [
-                            {
-                                opening_hours: { "0": { open: "08:00", close: "22:00" } },
-                                swap_notice_hours: 12,
-                                leave_notice_days: 3,
-                                remind_minutes: 45,
-                                noshow_minutes: 15,
-                                overtime_hours_week: "40",
-                            },
-                        ],
-                    ],
-                ],
-            })
-            const service = await build(em)
+const setupRows: ReadonlyArray<readonly [string, ReadonlyArray<object>]> = [
+    [SELECT_POSITIONS, [{ id: "position-1", name: "Barista", color: "#123456" }]],
+    [
+        SELECT_STAFF,
+        [staffRow(), staffRow({ id: "staff-2", name: "Blair" }), staffRow({ id: "staff-3", name: "Casey" })],
+    ],
+    [
+        SELECT_PAY,
+        [
+            { staff_id: "staff-1", hourly_wage_vnd: "30000.00" },
+            { staff_id: "staff-2", hourly_wage_vnd: "unreadable" },
+        ],
+    ],
+    [
+        SELECT_COVERAGE,
+        [
+            {
+                id: "block-1",
+                weekday: 0,
+                start_time: "08:00:00",
+                end_time: "16:00:00",
+                position_id: "position-1",
+                min_staff: 1,
+                ideal_staff: 2,
+                is_peak: true,
+            },
+        ],
+    ],
+    [
+        SELECT_SETTINGS,
+        [
+            {
+                opening_hours: { "0": { open: "08:00", close: "22:00" } },
+                swap_notice_hours: 12,
+                leave_notice_days: 3,
+                remind_minutes: 45,
+                noshow_minutes: 15,
+                overtime_hours_week: "40",
+            },
+        ],
+    ],
+]
 
-            await expect(service.loadSetup("ws-1", true)).resolves.toEqual({
-                positions: [{ id: "position-1", name: "Barista", color: "#123456" }],
-                staff: [
-                    person,
-                    { ...person, id: "staff-2", name: "Blair", wage: 0 },
-                    { ...person, id: "staff-3", name: "Casey", wage: 0 },
-                ],
-                blocks: [
-                    {
-                        id: "block-1",
-                        weekday: 0,
-                        start: "08:00",
-                        end: "16:00",
-                        positionId: "position-1",
-                        min: 1,
-                        ideal: 2,
-                        peak: true,
-                    },
-                ],
-                settings,
-            })
-            expect(em.query.mock.calls).toEqual([
-                [SELECT_POSITIONS, ["ws-1"]],
-                [SELECT_STAFF, ["ws-1"]],
-                [SELECT_PAY, ["ws-1"]],
-                [SELECT_COVERAGE, ["ws-1"]],
-                [SELECT_SETTINGS, ["ws-1"]],
-            ])
-        })
+describe("ShiftsDataService loadSetup", () => {
+    it("maps positions, people, wages, coverage and settings exactly", async () => {
+        const em = mockEntityManager({ query: setupRows })
+        const service = await build(em)
 
-        it("omits the pay query and uses zero wages and default rules when settings are absent", async () => {
-            const em = mockEntityManager({
-                query: [
-                    [SELECT_POSITIONS, []],
-                    [SELECT_STAFF, [staffRow()]],
-                    [SELECT_COVERAGE, []],
-                    [SELECT_SETTINGS, []],
-                ],
-            })
-            const service = await build(em)
-
-            await expect(service.loadSetup("ws-1", false)).resolves.toEqual({
-                positions: [],
-                staff: [{ ...person, wage: 0 }],
-                blocks: [],
-                settings: {
-                    openingHours: [],
-                    swapNoticeHours: 24,
-                    leaveNoticeDays: 2,
-                    remindMinutes: 60,
-                    noshowMinutes: 10,
-                    overtimeHoursWeek: 48,
+        await expect(service.loadSetup("ws-1", true)).resolves.toEqual({
+            positions: [{ id: "position-1", name: "Barista", color: "#123456" }],
+            staff: [
+                person,
+                { ...person, id: "staff-2", name: "Blair", wage: 0 },
+                { ...person, id: "staff-3", name: "Casey", wage: 0 },
+            ],
+            blocks: [
+                {
+                    id: "block-1",
+                    weekday: 0,
+                    start: "08:00",
+                    end: "16:00",
+                    positionId: "position-1",
+                    min: 1,
+                    ideal: 2,
+                    peak: true,
                 },
-            })
-            expect(em.query.mock.calls).toEqual([
-                [SELECT_POSITIONS, ["ws-1"]],
-                [SELECT_STAFF, ["ws-1"]],
-                [SELECT_COVERAGE, ["ws-1"]],
-                [SELECT_SETTINGS, ["ws-1"]],
-            ])
+            ],
+            settings,
         })
+        expect(em.query.mock.calls).toEqual([
+            [SELECT_POSITIONS, ["ws-1"]],
+            [SELECT_STAFF, ["ws-1"]],
+            [SELECT_PAY, ["ws-1"]],
+            [SELECT_COVERAGE, ["ws-1"]],
+            [SELECT_SETTINGS, ["ws-1"]],
+        ])
     })
+})
 
+describe("ShiftsDataService loadSetup", () => {
+    it("omits the pay query and uses zero wages and default rules when settings are absent", async () => {
+        const em = mockEntityManager({
+            query: [
+                [SELECT_POSITIONS, []],
+                [SELECT_STAFF, [staffRow()]],
+                [SELECT_COVERAGE, []],
+                [SELECT_SETTINGS, []],
+            ],
+        })
+        const service = await build(em)
+
+        await expect(service.loadSetup("ws-1", false)).resolves.toEqual({
+            positions: [],
+            staff: [{ ...person, wage: 0 }],
+            blocks: [],
+            settings: {
+                openingHours: [],
+                swapNoticeHours: 24,
+                leaveNoticeDays: 2,
+                remindMinutes: 60,
+                noshowMinutes: 10,
+                overtimeHoursWeek: 48,
+            },
+        })
+        expect(em.query.mock.calls).toEqual([
+            [SELECT_POSITIONS, ["ws-1"]],
+            [SELECT_STAFF, ["ws-1"]],
+            [SELECT_COVERAGE, ["ws-1"]],
+            [SELECT_SETTINGS, ["ws-1"]],
+        ])
+    })
+})
+
+describe("ShiftsDataService", () => {
     it("loads approved availability and leave for the week and prior work for the preceding day", async () => {
         const em = mockEntityManager({
             query: [
@@ -264,7 +262,9 @@ describe("ShiftsDataService", () => {
             [SELECT_PRIOR_SHIFTS, ["ws-1", "2026-10-11"]],
         ])
     })
+})
 
+describe("ShiftsDataService", () => {
     it("maps schedule, workspace-range and staff-range shifts and forwards each query parameter", async () => {
         const em = mockEntityManager({
             query: [
@@ -335,7 +335,9 @@ describe("ShiftsDataService", () => {
             [SELECT_SWAP, ["ws-1", "swap-1"]],
         ])
     })
+})
 
+describe("ShiftsDataService", () => {
     it("returns undefined when a shift, schedule, leave or swap does not exist", async () => {
         const em = mockEntityManager({
             query: [

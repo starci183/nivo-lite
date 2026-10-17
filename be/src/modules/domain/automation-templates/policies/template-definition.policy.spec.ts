@@ -1,5 +1,16 @@
+import { Test } from "@nestjs/testing"
 import { AutomationTemplatesErrorCode } from "../errors/automation-templates.error"
-import { parseTemplateDefinition } from "./template-definition.policy"
+import { parseTemplateDefinition as parseTemplateDefinitionImplementation } from "./template-definition.policy"
+
+const SUBJECT = Symbol("subject")
+type Subject = { parseTemplateDefinition: typeof parseTemplateDefinitionImplementation }
+
+const buildSubject = async () => {
+    const moduleRef = await Test.createTestingModule({
+        providers: [{ provide: SUBJECT, useValue: { parseTemplateDefinition: parseTemplateDefinitionImplementation } }],
+    }).compile()
+    return moduleRef.get<Subject>(SUBJECT)
+}
 
 const text = { vi: "Hello there", en: "Hello" }
 
@@ -25,16 +36,20 @@ const valid = () => ({
 })
 
 describe("parseTemplateDefinition", () => {
-    it("answers a valid definition as it is", () => {
+    it("answers a valid definition as it is", async () => {
+        const subject = await buildSubject()
+
         const definition = valid()
-        expect(parseTemplateDefinition(definition)).toBe(definition)
+        expect(subject.parseTemplateDefinition(definition)).toBe(definition)
     })
 
-    it("accepts a workspace-wide template with no body and no action, and an n8n template with its webhook", () => {
+    it("accepts a workspace-wide template with no body and no action, and an n8n template with its webhook", async () => {
+        const subject = await buildSubject()
+
         const workspaceWide = { ...valid(), moduleKey: null, defaultBody: null, authority: { action: null } }
-        expect(parseTemplateDefinition(workspaceWide)).toBe(workspaceWide)
+        expect(subject.parseTemplateDefinition(workspaceWide)).toBe(workspaceWide)
         const n8n = { ...valid(), executor: "n8n", n8n: { webhook: "nivo/email-daily-report", audience: "owner" } }
-        expect(parseTemplateDefinition(n8n)).toBe(n8n)
+        expect(subject.parseTemplateDefinition(n8n)).toBe(n8n)
     })
 
     it.each([
@@ -64,8 +79,10 @@ describe("parseTemplateDefinition", () => {
         ["defaults", { defaults: null }],
         ["n8n", { executor: "n8n" }],
         ["n8n", { executor: "n8n", n8n: { webhook: "x", audience: "world" } }],
-    ])("names the field %s when it is wrong (%j)", (field, patch) => {
-        expect(() => parseTemplateDefinition({ ...valid(), ...patch })).toThrow(
+    ])("names the field %s when it is wrong (%j)", async (field, patch) => {
+        const subject = await buildSubject()
+
+        expect(() => subject.parseTemplateDefinition({ ...valid(), ...patch })).toThrow(
             expect.objectContaining({
                 code: AutomationTemplatesErrorCode.DefinitionInvalid,
                 params: { key: "thank_payment", field },
@@ -75,15 +92,19 @@ describe("parseTemplateDefinition", () => {
 
     it.each([[{ ...valid(), key: "Bad Key" }], [{ ...valid(), key: undefined }], ["text"], [null]])(
         "refuses a definition whose key is not a template key (%j)",
-        (raw) => {
-            expect(() => parseTemplateDefinition(raw)).toThrow(
+        async (raw) => {
+            const subject = await buildSubject()
+
+            expect(() => subject.parseTemplateDefinition(raw)).toThrow(
                 expect.objectContaining({ code: AutomationTemplatesErrorCode.DefinitionInvalid }),
             )
         },
     )
 
-    it("names an unreadable key with a question mark", () => {
-        expect(() => parseTemplateDefinition(null)).toThrow(
+    it("names an unreadable key with a question mark", async () => {
+        const subject = await buildSubject()
+
+        expect(() => subject.parseTemplateDefinition(null)).toThrow(
             expect.objectContaining({ params: { key: "?", field: "key" } }),
         )
     })

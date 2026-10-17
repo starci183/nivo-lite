@@ -153,7 +153,9 @@ describe("VideoWorkbenchService", () => {
             })
         })
     })
+})
 
+describe("VideoWorkbenchService", () => {
     describe("managed", () => {
         it("answers the manager's membership with the project", async () => {
             const em = mockEntityManager({ query: [LIST_WORKBENCH_PROJECTS, [rowOf()]] })
@@ -166,7 +168,9 @@ describe("VideoWorkbenchService", () => {
             expect(members.require).toHaveBeenCalledWith("person-1", WS, ["owner", "manager"])
         })
     })
+})
 
+describe("VideoWorkbenchService", () => {
     describe("brand", () => {
         const brandRow: WorkbenchBrandRow = {
             workspace_name: " Bakery ",
@@ -225,7 +229,9 @@ describe("VideoWorkbenchService", () => {
             })
         })
     })
+})
 
+describe("VideoWorkbenchService", () => {
     describe("sources", () => {
         it("answers the public sources of the workspace", async () => {
             const sources = [{ id: "source-1", title: "Menu", topic: null, excerpt: "Bread" }]

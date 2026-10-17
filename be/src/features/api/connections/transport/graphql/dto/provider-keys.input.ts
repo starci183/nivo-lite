@@ -1,5 +1,5 @@
+import { NullAsAbsent } from "@modules/platform/graphql"
 import { Field, InputType } from "@nestjs/graphql"
-import { Transform } from "class-transformer"
 import { IsOptional, IsString, MaxLength } from "class-validator"
 
 @InputType()
@@ -7,7 +7,7 @@ import { IsOptional, IsString, MaxLength } from "class-validator"
 export class ProviderKeysInput {
     /** payOS client id. */
     @Field(() => String, { nullable: true })
-    @Transform(({ value }) => value ?? undefined)
+    @NullAsAbsent()
     @IsOptional()
     @IsString()
     @MaxLength(400)
@@ -15,7 +15,7 @@ export class ProviderKeysInput {
 
     /** payOS API key. */
     @Field(() => String, { nullable: true })
-    @Transform(({ value }) => value ?? undefined)
+    @NullAsAbsent()
     @IsOptional()
     @IsString()
     @MaxLength(400)
@@ -23,7 +23,7 @@ export class ProviderKeysInput {
 
     /** payOS checksum key. */
     @Field(() => String, { nullable: true })
-    @Transform(({ value }) => value ?? undefined)
+    @NullAsAbsent()
     @IsOptional()
     @IsString()
     @MaxLength(400)
@@ -31,7 +31,7 @@ export class ProviderKeysInput {
 
     /** Casso secure key. */
     @Field(() => String, { nullable: true })
-    @Transform(({ value }) => value ?? undefined)
+    @NullAsAbsent()
     @IsOptional()
     @IsString()
     @MaxLength(400)

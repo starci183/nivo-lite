@@ -1,3 +1,4 @@
+import { randomBytes } from "node:crypto"
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
@@ -12,7 +13,6 @@ import type {
 } from "./hiring.contracts"
 import {
     COUNT_ASKS,
-    NEW_TOKEN,
     SELECT_ACTIVE_OFFER,
     SELECT_AVAILABILITY,
     SELECT_BUSY,
@@ -52,7 +52,6 @@ import type {
     MemberNameRow,
     TickWorkspaceRow,
     CountRow,
-    TextRow,
 } from "./persistence/hiring.rows"
 import { toCandidate, toInterview, toJob, toOffer, toSettings } from "./policies/row-mappers.policy"
 import { hiringIsoOf } from "./policies/vn-time.policy"
@@ -240,10 +239,9 @@ export class HiringDataService {
         return row?.channel ?? null
     }
 
-    /** A fresh unguessable token for a link or an upload folder. */
-    async newToken(): Promise<string> {
-        const row = await this.first(this.entityManager.query<Array<TextRow>>(NEW_TOKEN, []))
-        return row?.value ?? ""
+    /** A fresh 128-bit random token for a link or upload folder, retaining the legacy 32-hex format. */
+    newToken(): Promise<string> {
+        return Promise.resolve(randomBytes(16).toString("hex"))
     }
 
     /** How many times an action was asked with one dedupe prefix, so a repeated ask gets a fresh key. */

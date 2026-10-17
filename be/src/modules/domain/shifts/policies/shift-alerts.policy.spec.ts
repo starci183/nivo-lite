@@ -1,3 +1,4 @@
+import { Test } from "@nestjs/testing"
 import type { AlertShift } from "./shift-alerts.policy"
 import {
     alertMinutesOf,
@@ -10,6 +11,29 @@ import {
     toAlertShift,
 } from "./shift-alerts.policy"
 import { instantOf } from "./time.policy"
+
+const SUBJECT = Symbol("shift-alerts.policy")
+
+const build = async () => {
+    const moduleRef = await Test.createTestingModule({
+        providers: [
+            {
+                provide: SUBJECT,
+                useValue: {
+                    alertMinutesOf,
+                    dueAlerts,
+                    isNoShowDue,
+                    isRemindDue,
+                    minutesLate,
+                    monthToClose,
+                    shiftWindow,
+                    toAlertShift,
+                },
+            },
+        ],
+    }).compile()
+    return moduleRef.get<typeof import("./shift-alerts.policy")>(SUBJECT)
+}
 
 const item = (flags: Partial<Omit<AlertShift, "shift">> = {}): AlertShift => ({
     shift: {
@@ -31,21 +55,25 @@ const at = (minute: number): number => instantOf("2026-10-14", minute).getTime()
 const minutes = { remindMinutes: 60, noshowMinutes: 10 }
 
 describe("alertMinutesOf", () => {
-    it("takes the automation settings first, then the module defaults, then the built-in ones", () => {
-        expect(alertMinutesOf({ beforeMinutes: 30, noShowMinutes: "15" }, 90, 20)).toEqual({
+    it("takes the automation settings first, then the module defaults, then the built-in ones", async () => {
+        const subject = await build()
+
+        expect(subject.alertMinutesOf({ beforeMinutes: 30, noShowMinutes: "15" }, 90, 20)).toEqual({
             remindMinutes: 30,
             noshowMinutes: 15,
         })
-        expect(alertMinutesOf({ beforeMinutes: 0 }, 90, 20)).toEqual({ remindMinutes: 90, noshowMinutes: 20 })
-        expect(alertMinutesOf(null, null, null)).toEqual({ remindMinutes: 60, noshowMinutes: 10 })
+        expect(subject.alertMinutesOf({ beforeMinutes: 0 }, 90, 20)).toEqual({ remindMinutes: 90, noshowMinutes: 20 })
+        expect(subject.alertMinutesOf(null, null, null)).toEqual({ remindMinutes: 60, noshowMinutes: 10 })
     })
 
-    it("rounds positive settings and rejects nonfinite or negative settings and defaults", () => {
-        expect(alertMinutesOf({ beforeMinutes: 25.6, noShowMinutes: 4.4 }, null, null)).toEqual({
+    it("rounds positive settings and rejects nonfinite or negative settings and defaults", async () => {
+        const subject = await build()
+
+        expect(subject.alertMinutesOf({ beforeMinutes: 25.6, noShowMinutes: 4.4 }, null, null)).toEqual({
             remindMinutes: 26,
             noshowMinutes: 4,
         })
-        expect(alertMinutesOf({ beforeMinutes: "invalid", noShowMinutes: -5 }, Infinity, -1)).toEqual({
+        expect(subject.alertMinutesOf({ beforeMinutes: "invalid", noShowMinutes: -5 }, Infinity, -1)).toEqual({
             remindMinutes: 60,
             noshowMinutes: 10,
         })
@@ -53,9 +81,11 @@ describe("alertMinutesOf", () => {
 })
 
 describe("toAlertShift", () => {
-    it("maps database times and preserves the shift identifiers, status and flags", () => {
+    it("maps database times and preserves the shift identifiers, status and flags", async () => {
+        const subject = await build()
+
         expect(
-            toAlertShift({
+            subject.toAlertShift({
                 id: "s-1",
                 schedule_id: "schedule-1",
                 shift_date: "2026-10-14",
@@ -69,7 +99,7 @@ describe("toAlertShift", () => {
                 alerted: true,
             }),
         ).toEqual(item({ checkedIn: true, reminded: true, alerted: true }))
-        expect(shiftWindow(item().shift)).toEqual({
+        expect(subject.shiftWindow(item().shift)).toEqual({
             startMs: Date.parse("2026-10-14T08:00:00+07:00"),
             endMs: Date.parse("2026-10-14T12:00:00+07:00"),
         })
@@ -77,58 +107,74 @@ describe("toAlertShift", () => {
 })
 
 describe("isRemindDue", () => {
-    it("is due inside the lead time before the start, once", () => {
-        expect(isRemindDue(item(), minutes, at(6 * 60 + 59))).toBe(false)
-        expect(isRemindDue(item(), minutes, at(7 * 60))).toBe(true)
-        expect(isRemindDue(item(), minutes, at(8 * 60))).toBe(false)
-        expect(isRemindDue(item({ reminded: true }), minutes, at(7 * 60 + 30))).toBe(false)
+    it("is due inside the lead time before the start, once", async () => {
+        const subject = await build()
+
+        expect(subject.isRemindDue(item(), minutes, at(6 * 60 + 59))).toBe(false)
+        expect(subject.isRemindDue(item(), minutes, at(7 * 60))).toBe(true)
+        expect(subject.isRemindDue(item(), minutes, at(8 * 60))).toBe(false)
+        expect(subject.isRemindDue(item({ reminded: true }), minutes, at(7 * 60 + 30))).toBe(false)
     })
 })
 
 describe("isNoShowDue", () => {
-    it("is due after the delay while the shift runs, when nobody checked in or was told", () => {
-        expect(isNoShowDue(item(), minutes, at(8 * 60 + 9))).toBe(false)
-        expect(isNoShowDue(item(), minutes, at(8 * 60 + 10))).toBe(true)
-        expect(isNoShowDue(item({ checkedIn: true }), minutes, at(9 * 60))).toBe(false)
-        expect(isNoShowDue(item({ alerted: true }), minutes, at(9 * 60))).toBe(false)
-        expect(isNoShowDue(item(), minutes, at(12 * 60))).toBe(false)
+    it("is due after the delay while the shift runs, when nobody checked in or was told", async () => {
+        const subject = await build()
+
+        expect(subject.isNoShowDue(item(), minutes, at(8 * 60 + 9))).toBe(false)
+        expect(subject.isNoShowDue(item(), minutes, at(8 * 60 + 10))).toBe(true)
+        expect(subject.isNoShowDue(item({ checkedIn: true }), minutes, at(9 * 60))).toBe(false)
+        expect(subject.isNoShowDue(item({ alerted: true }), minutes, at(9 * 60))).toBe(false)
+        expect(subject.isNoShowDue(item(), minutes, at(12 * 60))).toBe(false)
     })
 })
 
 describe("dueAlerts", () => {
-    it("lists what each shift is due for", () => {
-        expect(dueAlerts([item()], minutes, at(7 * 60)).map((due) => due.kind)).toEqual(["remind"])
+    it("lists what each shift is due for", async () => {
+        const subject = await build()
+
+        expect(subject.dueAlerts([item()], minutes, at(7 * 60)).map((due) => due.kind)).toEqual(["remind"])
     })
 
-    it("returns the full no-show item and omits shifts whose alert was already sent", () => {
+    it("returns the full no-show item and omits shifts whose alert was already sent", async () => {
+        const subject = await build()
+
         const shift = item()
-        expect(dueAlerts([shift, item({ checkedIn: true })], minutes, at(8 * 60 + 10))).toEqual([
+        expect(subject.dueAlerts([shift, item({ checkedIn: true })], minutes, at(8 * 60 + 10))).toEqual([
             { item: shift, kind: "noshow" },
         ])
-        expect(dueAlerts([item({ reminded: true })], minutes, at(7 * 60))).toEqual([])
+        expect(subject.dueAlerts([item({ reminded: true })], minutes, at(7 * 60))).toEqual([])
     })
 })
 
 describe("minutesLate", () => {
-    it("counts whole minutes since the start, at least one", () => {
-        expect(minutesLate(item().shift, at(8 * 60 + 12))).toBe(12)
-        expect(minutesLate(item().shift, at(8 * 60))).toBe(1)
+    it("counts whole minutes since the start, at least one", async () => {
+        const subject = await build()
+
+        expect(subject.minutesLate(item().shift, at(8 * 60 + 12))).toBe(12)
+        expect(subject.minutesLate(item().shift, at(8 * 60))).toBe(1)
     })
 })
 
 describe("monthToClose", () => {
-    it("closes the previous month from the configured day and time", () => {
-        expect(monthToClose({ day: 2, time: "09:00" }, { date: "2026-10-01", minute: 600 })).toBeNull()
-        expect(monthToClose({ day: 2, time: "09:00" }, { date: "2026-10-02", minute: 539 })).toBeNull()
-        expect(monthToClose({ day: 2, time: "09:00" }, { date: "2026-10-02", minute: 540 })).toBe("2026-09")
-        expect(monthToClose(null, { date: "2026-01-05", minute: 600 })).toBe("2025-12")
+    it("closes the previous month from the configured day and time", async () => {
+        const subject = await build()
+
+        expect(subject.monthToClose({ day: 2, time: "09:00" }, { date: "2026-10-01", minute: 600 })).toBeNull()
+        expect(subject.monthToClose({ day: 2, time: "09:00" }, { date: "2026-10-02", minute: 539 })).toBeNull()
+        expect(subject.monthToClose({ day: 2, time: "09:00" }, { date: "2026-10-02", minute: 540 })).toBe("2026-09")
+        expect(subject.monthToClose(null, { date: "2026-01-05", minute: 600 })).toBe("2025-12")
     })
 
-    it("clamps and rounds configured days and supplies missing or invalid clock components", () => {
-        expect(monthToClose({ day: 30, time: "00:00" }, { date: "2026-10-27", minute: 0 })).toBeNull()
-        expect(monthToClose({ day: 30, time: "00:00" }, { date: "2026-10-28", minute: 0 })).toBe("2026-09")
-        expect(monthToClose({ day: -2, time: "9" }, { date: "2026-10-01", minute: 540 })).toBe("2026-09")
-        expect(monthToClose({ day: 1.6, time: "invalid:invalid" }, { date: "2026-10-02", minute: 0 })).toBe("2026-09")
-        expect(monthToClose({ day: "invalid", time: 10 }, { date: "2026-10-01", minute: 540 })).toBe("2026-09")
+    it("clamps and rounds configured days and supplies missing or invalid clock components", async () => {
+        const subject = await build()
+
+        expect(subject.monthToClose({ day: 30, time: "00:00" }, { date: "2026-10-27", minute: 0 })).toBeNull()
+        expect(subject.monthToClose({ day: 30, time: "00:00" }, { date: "2026-10-28", minute: 0 })).toBe("2026-09")
+        expect(subject.monthToClose({ day: -2, time: "9" }, { date: "2026-10-01", minute: 540 })).toBe("2026-09")
+        expect(subject.monthToClose({ day: 1.6, time: "invalid:invalid" }, { date: "2026-10-02", minute: 0 })).toBe(
+            "2026-09",
+        )
+        expect(subject.monthToClose({ day: "invalid", time: 10 }, { date: "2026-10-01", minute: 540 })).toBe("2026-09")
     })
 })

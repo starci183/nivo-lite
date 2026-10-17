@@ -1,3 +1,4 @@
+import { INBOX, InboxService } from "@modules/platform/inbox"
 import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./sepay-transactions.module-definition"
@@ -12,7 +13,12 @@ export class SepayTransactionsModule extends ConfigurableModuleClass {
         const base = super.register(options)
         return {
             ...base,
-            providers: [...(base.providers ?? []), SepayTransactionsService, SepayReviewService],
+            providers: [
+                ...(base.providers ?? []),
+                { provide: INBOX, useClass: InboxService },
+                SepayTransactionsService,
+                SepayReviewService,
+            ],
             exports: [SepayTransactionsService, SepayReviewService],
         }
     }

@@ -16,82 +16,96 @@ import { TELEGRAM_WIZARD_TEXT as TEXT } from "./messages/telegram-user-wizard.me
 import type { PickedChat, SaveTelegramSetupInput, TelegramLoginState } from "./telegram-user-wizard.contracts"
 import { TelegramUserWizardService } from "./telegram-user-wizard.service"
 
-describe("TelegramUserWizardService", () => {
-    const actor: ConnectionActor = { principalId: "owner-1", workspaceId: "workspace-1" }
-    const now = new Date("2026-10-14T00:00:00.000Z")
-    const login: TelegramLoginState = {
-        stage: "code",
-        phone: "+84912345678",
-        phoneCodeHash: "code-hash",
-        session: "pending-session",
-        startedAt: 1791935940000,
-    }
-    const connection: DataConnection = {
-        id: "telegram-1",
-        workspaceId: "workspace-1",
-        provider: "telegram_user",
-        name: "Personal Telegram",
-        status: "pending",
-        lastError: null,
-        meta: { consentAt: "2026-10-13T00:00:00.000Z", "cursor:101": "42" },
-        everyMinutes: null,
-        lastSyncAt: null,
-    }
-    const draft = { name: "  Personal Telegram  ", phone: "0912 345 678", consent: true }
-    const setup: SaveTelegramSetupInput = {
-        connectionId: "telegram-1",
-        chats: [{ id: "101", title: "Team", kind: "group" }],
-        sinceDays: 30,
-        everyMinutes: 15,
-    }
-    const codeEntry = { connectionId: "telegram-1", code: "12345" }
-    const passwordEntry = { connectionId: "telegram-1", password: "typed-password" }
-    const invalidChats: ReadonlyArray<PickedChat> = [{ id: "invalid", title: "Invalid", kind: "group" }]
-    const oversizedChats = Array.from({ length: 51 }, (): PickedChat => ({ id: "101", title: "Team", kind: "group" }))
-    const expiredCredential = JSON.stringify({ login: { ...login, startedAt: 0 } })
-    const initialState = { name: "Personal Telegram", config: null, everyMinutes: null, consent: true }
-    const sentCode = { phoneCodeHash: "sent-hash", session: "sent-session", viaApp: true }
-    const finalCredential = '{"session":"final-session"}'
-    const startedCredential =
-        '{"login":{"stage":"code","phone":"+84912345678","phoneCodeHash":"sent-hash","session":"sent-session","startedAt":1791936000000}}'
-    const rejectsInvalid = (operation: Promise<unknown>, detail: string) =>
-        expect(operation).rejects.toMatchObject({ code: DataHubErrorCode.Invalid, params: { detail } })
-    const build = async () => {
-        const hub = mock<DataHubService>()
-        const connections = mock<ConnectionsService>()
-        const telegram = mock<TelegramUserClient>()
-        const clock = new FakeClock(now)
-        hub.own.mockResolvedValue(connection)
-        hub.credentialOf.mockResolvedValue(JSON.stringify({ login }))
-        hub.create.mockResolvedValue("telegram-new")
-        telegram.configured.mockReturnValue(true)
-        telegram.sendCode.mockResolvedValue(sentCode)
-        telegram.resendCode.mockResolvedValue({ phoneCodeHash: "resent-hash", session: "resent-session" })
-        telegram.signIn.mockResolvedValue({
-            kind: "ready",
-            session: "final-session",
-            account: { displayName: "  Alice  ", username: "alice" },
-        })
-        telegram.checkPassword.mockResolvedValue({
-            session: "final-session",
-            account: { displayName: "", username: null },
-        })
-        const moduleRef = await Test.createTestingModule({
-            providers: [
-                TelegramUserWizardService,
-                { provide: DataHubService, useValue: hub },
-                { provide: ConnectionsService, useValue: connections },
-                { provide: TELEGRAM_USER, useValue: telegram },
-                { provide: CLOCK, useValue: clock },
-            ],
-        }).compile()
-        return { service: moduleRef.get(TelegramUserWizardService), hub, connections, telegram, clock }
-    }
-    type TelegramFailureCase = [
-        "sendCode" | "resendCode" | "signIn" | "checkPassword" | "listDialogs",
-        (service: TelegramUserWizardService) => Promise<unknown>,
-    ]
+const actor: ConnectionActor = { principalId: "owner-1", workspaceId: "workspace-1" }
 
+const login: TelegramLoginState = {
+    stage: "code",
+    phone: "+84912345678",
+    phoneCodeHash: "code-hash",
+    session: "pending-session",
+    startedAt: 1791935940000,
+}
+
+const connection: DataConnection = {
+    id: "telegram-1",
+    workspaceId: "workspace-1",
+    provider: "telegram_user",
+    name: "Personal Telegram",
+    status: "pending",
+    lastError: null,
+    meta: { consentAt: "2026-10-13T00:00:00.000Z", "cursor:101": "42" },
+    everyMinutes: null,
+    lastSyncAt: null,
+}
+
+const draft = { name: "  Personal Telegram  ", phone: "0912 345 678", consent: true }
+
+const setup: SaveTelegramSetupInput = {
+    connectionId: "telegram-1",
+    chats: [{ id: "101", title: "Team", kind: "group" }],
+    sinceDays: 30,
+    everyMinutes: 15,
+}
+
+const passwordEntry = { connectionId: "telegram-1", password: "typed-password" }
+
+const invalidChats: ReadonlyArray<PickedChat> = [{ id: "invalid", title: "Invalid", kind: "group" }]
+
+const oversizedChats = Array.from({ length: 51 }, (): PickedChat => ({ id: "101", title: "Team", kind: "group" }))
+
+const expiredCredential = JSON.stringify({ login: { ...login, startedAt: 0 } })
+
+const initialState = { name: "Personal Telegram", config: null, everyMinutes: null, consent: true }
+
+const sentCode = { phoneCodeHash: "sent-hash", session: "sent-session", viaApp: true }
+
+const finalCredential = '{"session":"final-session"}'
+
+const startedCredential =
+    '{"login":{"stage":"code","phone":"+84912345678","phoneCodeHash":"sent-hash","session"' +
+    ':"sent-session","startedAt":1791936000000}}'
+
+const rejectsInvalid = (operation: Promise<unknown>, detail: string) =>
+    expect(operation).rejects.toMatchObject({ code: DataHubErrorCode.Invalid, params: { detail } })
+
+const build = async () => {
+    const hub = mock<DataHubService>()
+    const connections = mock<ConnectionsService>()
+    const telegram = mock<TelegramUserClient>()
+    const clock = new FakeClock(new Date("2026-10-14T00:00:00.000Z"))
+    hub.own.mockResolvedValue(connection)
+    hub.credentialOf.mockResolvedValue(JSON.stringify({ login }))
+    hub.create.mockResolvedValue("telegram-new")
+    telegram.configured.mockReturnValue(true)
+    telegram.sendCode.mockResolvedValue(sentCode)
+    telegram.resendCode.mockResolvedValue({ phoneCodeHash: "resent-hash", session: "resent-session" })
+    telegram.signIn.mockResolvedValue({
+        kind: "ready",
+        session: "final-session",
+        account: { displayName: "  Alice  ", username: "alice" },
+    })
+    telegram.checkPassword.mockResolvedValue({
+        session: "final-session",
+        account: { displayName: "", username: null },
+    })
+    const moduleRef = await Test.createTestingModule({
+        providers: [
+            TelegramUserWizardService,
+            { provide: DataHubService, useValue: hub },
+            { provide: ConnectionsService, useValue: connections },
+            { provide: TELEGRAM_USER, useValue: telegram },
+            { provide: CLOCK, useValue: clock },
+        ],
+    }).compile()
+    return { service: moduleRef.get(TelegramUserWizardService), hub, connections, telegram, clock }
+}
+
+type TelegramFailureCase = [
+    "sendCode" | "resendCode" | "signIn" | "checkPassword" | "listDialogs",
+    (service: TelegramUserWizardService) => Promise<unknown>,
+]
+
+describe("TelegramUserWizardService", () => {
     it.each([true, false])("reports deployment readiness as %s after checking ownership", async (configured) => {
         const { service, hub, telegram } = await build()
         telegram.configured.mockReturnValue(configured)
@@ -152,7 +166,9 @@ describe("TelegramUserWizardService", () => {
         })
         expect(clockSpy).not.toHaveBeenCalled()
     })
+})
 
+describe("TelegramUserWizardService", () => {
     it.each([
         { connectionId: undefined, name: draft.name, expectedName: "Personal Telegram", viaApp: true },
         { connectionId: null, name: "A".repeat(81), expectedName: "A".repeat(80), viaApp: false },
@@ -185,7 +201,8 @@ describe("TelegramUserWizardService", () => {
         expect(telegram.sendCode).toHaveBeenCalledWith("+12025550123")
         expect(hub.saveCredential).toHaveBeenCalledWith(
             "telegram-1",
-            '{"login":{"stage":"code","phone":"+12025550123","phoneCodeHash":"sent-hash","session":"sent-session","startedAt":1791936000000}}',
+            '{"login":{"stage":"code","phone":"+12025550123","phoneCodeHash":"sent-hash","session"' +
+                ':"sent-session","startedAt":1791936000000}}',
         )
         expect(connections.patch).toHaveBeenCalledWith("workspace-1", "telegram-1", {
             name: "Personal Telegram",
@@ -223,10 +240,13 @@ describe("TelegramUserWizardService", () => {
         expect(telegram.resendCode).toHaveBeenCalledWith(passwordLogin)
         expect(hub.saveCredential).toHaveBeenCalledWith(
             "telegram-1",
-            '{"login":{"stage":"code","phone":"+84912345678","phoneCodeHash":"resent-hash","session":"resent-session","startedAt":1791935940000}}',
+            '{"login":{"stage":"code","phone":"+84912345678","phoneCodeHash":"resent-hash","sessio' +
+                'n":"resent-session","startedAt":1791935940000}}',
         )
     })
+})
 
+describe("TelegramUserWizardService", () => {
     it.each<[string, DataConnection["status"], string, string]>([
         ["connected", "connected", JSON.stringify({ login }), TEXT.noPendingLogin],
         ["missing", "pending", "{}", TEXT.noPendingLogin],
@@ -249,7 +269,8 @@ describe("TelegramUserWizardService", () => {
         expect(telegram.signIn).toHaveBeenCalledWith({ ...login, code: "1234" })
         expect(hub.saveCredential).toHaveBeenCalledWith(
             "telegram-1",
-            '{"login":{"stage":"password","phone":"+84912345678","phoneCodeHash":"code-hash","session":"password-session","startedAt":1791935940000}}',
+            '{"login":{"stage":"password","phone":"+84912345678","phoneCodeHash":"code-hash","sess' +
+                'ion":"password-session","startedAt":1791935940000}}',
         )
         expect(connections.patch).not.toHaveBeenCalled()
     })
@@ -299,7 +320,9 @@ describe("TelegramUserWizardService", () => {
             meta: { ...connection.meta, account: "Telegram \u2026678" },
         })
     })
+})
 
+describe("TelegramUserWizardService", () => {
     it.each<[DataConnection["status"], ReadonlyArray<ReadonlyArray<string>>]>([
         ["pending", [["workspace-1", "telegram-1"]]],
         ["connected", []],
@@ -329,7 +352,6 @@ describe("TelegramUserWizardService", () => {
         await rejectsInvalid(service.listChats(actor, "telegram-1"), TELEGRAM_REVOKED_MESSAGE)
         expect(telegram.listDialogs).not.toHaveBeenCalled()
     })
-
     it.each<[number | null | undefined, number, number, number | null]>([
         [15, 30, 30, 15],
         [undefined, 90, 7, null],
@@ -366,7 +388,9 @@ describe("TelegramUserWizardService", () => {
             })
         },
     )
+})
 
+describe("TelegramUserWizardService", () => {
     it("accepts exactly fifty chats with an hourly schedule", async () => {
         const { service, hub } = await build()
         const chats = Array.from({ length: 50 }, (_, index): PickedChat => ({
@@ -382,7 +406,6 @@ describe("TelegramUserWizardService", () => {
             everyMinutes: 60,
         })
     })
-
     it.each<[string, string, SaveTelegramSetupInput, string]>([
         ["missing session", "{}", setup, TEXT.notLoggedIn],
         ["unsupported schedule", finalCredential, { ...setup, everyMinutes: 30 }, TEXT.scheduleInvalid],
@@ -395,11 +418,10 @@ describe("TelegramUserWizardService", () => {
         await rejectsInvalid(service.saveSetup(actor, input), detail)
         expect(hub.update).not.toHaveBeenCalled()
     })
-
     it.each<TelegramFailureCase>([
         ["sendCode", (service) => service.startLogin(actor, draft)],
         ["resendCode", (service) => service.resendCode(actor, "telegram-1")],
-        ["signIn", (service) => service.submitCode(actor, codeEntry)],
+        ["signIn", (service) => service.submitCode(actor, { connectionId: "telegram-1", code: "12345" })],
         ["checkPassword", (service) => service.submitPassword(actor, passwordEntry)],
         ["listDialogs", (service) => service.listChats(actor, "telegram-1")],
     ])("propagates %s failures without changing the session or account", async (method, invoke) => {
@@ -414,7 +436,6 @@ describe("TelegramUserWizardService", () => {
         expect(hub.saveCredential).not.toHaveBeenCalled()
         expect(connections.patch).not.toHaveBeenCalled()
     })
-
     it("propagates setup persistence failures", async () => {
         const { service, hub } = await build()
         const cause = new Error("setup write failed")
@@ -422,7 +443,6 @@ describe("TelegramUserWizardService", () => {
         hub.update.mockRejectedValue(cause)
         await expect(service.saveSetup(actor, setup)).rejects.toBe(cause)
     })
-
     it("does not patch the account when persisting the final session fails", async () => {
         const { service, hub, connections } = await build()
         const cause = new Error("credential write failed")
@@ -430,7 +450,9 @@ describe("TelegramUserWizardService", () => {
         await expect(service.submitCode(actor, { connectionId: "telegram-1", code: "12345" })).rejects.toBe(cause)
         expect(connections.patch).not.toHaveBeenCalled()
     })
+})
 
+describe("TelegramUserWizardService", () => {
     it.each<[string, string | null, ReadonlyArray<ReadonlyArray<string>>]>([
         [
             "both sessions",
@@ -449,7 +471,6 @@ describe("TelegramUserWizardService", () => {
         expect(telegram.logOut.mock.calls).toEqual(calls)
         expect(hub.saveCredential).toHaveBeenCalledWith("telegram-1", "{}")
     })
-
     it("blanks the credential even when logging out the first session fails", async () => {
         const { service, hub, telegram } = await build()
         const cause = new Error("logout failed")
@@ -459,7 +480,6 @@ describe("TelegramUserWizardService", () => {
         expect(telegram.logOut.mock.calls).toEqual([["final-session"]])
         expect(hub.saveCredential).toHaveBeenCalledWith("telegram-1", "{}")
     })
-
     it.each<"own" | "credentialOf">(["own", "credentialOf"])("keeps sessions when %s lookup fails", async (lookup) => {
         const { service, hub, telegram } = await build()
         const cause = new DataHubError({ code: DataHubErrorCode.NotFound })
@@ -468,7 +488,6 @@ describe("TelegramUserWizardService", () => {
         expect(telegram.logOut).not.toHaveBeenCalled()
         expect(hub.saveCredential).not.toHaveBeenCalled()
     })
-
     it("propagates credential clearing failures after logging out", async () => {
         const { service, hub, telegram } = await build()
         const cause = new Error("credential clear failed")

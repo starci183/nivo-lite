@@ -188,7 +188,9 @@ describe("LoyaltyApiService", () => {
             })
         })
     })
+})
 
+describe("LoyaltyApiService", () => {
     describe("award", () => {
         const sale = {
             authorization: HEADER,
@@ -230,7 +232,9 @@ describe("LoyaltyApiService", () => {
             await expect(vanished.service.award(sale)).rejects.toMatchObject({ code: LoyaltyErrorCode.MemberNotFound })
         })
     })
+})
 
+describe("LoyaltyApiService", () => {
     describe("redeem", () => {
         const call = {
             authorization: HEADER,

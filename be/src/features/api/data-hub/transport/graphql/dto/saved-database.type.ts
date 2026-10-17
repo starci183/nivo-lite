@@ -1,5 +1,5 @@
 import { Field, ID, Int, ObjectType } from "@nestjs/graphql"
-import { DataJsonScalar } from "./data-json.type"
+import { DataJsonScalar } from "../data-json.mapper"
 
 @ObjectType()
 /** A saved database target, without the password. */

@@ -1,4 +1,5 @@
-import type { ModuleMetadata } from "@nestjs/common"
+import { CustomerTurnRuntimeService, CustomerOutcomesService } from "@modules/domain/customer-turns"
+import type { DynamicModule } from "@nestjs/common"
 import { InboundEventsModule } from "@modules/domain/inbound-events"
 import { AgentConversationsModule } from "@modules/domain/agent-conversations"
 import { AgentMessagesModule } from "@modules/domain/agent-messages"
@@ -13,10 +14,9 @@ import { MailModule } from "@modules/integrations/mail"
 import { TelegramModule } from "@modules/integrations/telegram"
 import { ZaloModule } from "@modules/integrations/zalo"
 import { CustomerTurnsModule } from "@modules/domain/customer-turns"
-import { G19_PORTS } from "./ports"
 import type { ApiOptions } from "../api.options"
 /** The messaging area of the API, in registration order. */
-export const messagingModules = (options: ApiOptions): NonNullable<ModuleMetadata["imports"]> => [
+export const messagingModules = (options: ApiOptions): Array<DynamicModule> => [
     TelegramModule.register({ isGlobal: true, ...options.telegram }),
     ZaloModule.register({ isGlobal: true, ...options.zalo }),
     MailModule.register({ isGlobal: true, ...options.mail }),
@@ -26,7 +26,11 @@ export const messagingModules = (options: ApiOptions): NonNullable<ModuleMetadat
     ChannelReceiptsModule.register({ isGlobal: true }),
     InboundEventsModule.register({ isGlobal: true }),
     ChannelsModule.register({ isGlobal: true, ...options.channels }),
-    ConversationsModule.register({ isGlobal: true, ...G19_PORTS.chatTurn }),
+    ConversationsModule.register({
+        isGlobal: true,
+        runtime: CustomerTurnRuntimeService,
+        outcomes: CustomerOutcomesService,
+    }),
     CustomerTurnsModule.register({ isGlobal: true }),
     TelegramInboxModule.register({ isGlobal: true }),
     ZaloInboxModule.register({ isGlobal: true }),

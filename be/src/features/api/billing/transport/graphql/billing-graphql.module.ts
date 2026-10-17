@@ -1,6 +1,7 @@
 import { Module } from "@nestjs/common"
 import { BillingBankAccountResolver } from "./billing-bank-account.resolver"
 import { BillingApiModule } from "../../billing.module"
+import { ConfigurableModuleClass } from "./billing-graphql.module-definition"
 import { BillingPlansResolver } from "./billing-plans.resolver"
 import { BillingPlanQuoteResolver } from "./billing-plan-quote.resolver"
 import { BillingStorageResolver } from "./billing-storage.resolver"
@@ -15,7 +16,7 @@ import { RequestPaymentOrderResolver } from "./request-payment-order.resolver"
 import { PaymentOrderRequestStatusResolver } from "./payment-order-request-status.resolver"
 
 @Module({
-    imports: [BillingApiModule],
+    imports: [BillingApiModule.register({})],
     providers: [
         BillingBankAccountResolver,
         BillingPlansResolver,
@@ -33,4 +34,4 @@ import { PaymentOrderRequestStatusResolver } from "./payment-order-request-statu
     ],
 })
 /** Authenticated GraphQL billing transport. */
-export class BillingGraphqlModule {}
+export class BillingGraphqlModule extends ConfigurableModuleClass {}

@@ -224,7 +224,9 @@ describe("BookingReminderTickService", () => {
         expect(engine.runWork).not.toHaveBeenCalled()
         expect(logger.error).not.toHaveBeenCalled()
     })
+})
 
+describe("BookingReminderTickService", () => {
     it.each([
         { status: "requested", origin: "live", phone: "0901234567", email: "lan@example.com", contact: "0901234567" },
         { status: "confirmed", origin: "simulated", phone: null, email: "lan@example.com", contact: "lan@example.com" },
@@ -284,7 +286,9 @@ describe("BookingReminderTickService", () => {
         ])
         expect(logger.error).not.toHaveBeenCalled()
     })
+})
 
+describe("BookingReminderTickService", () => {
     it.each<{
         status: WorkItem["status"]
         settlement: string
@@ -322,7 +326,9 @@ describe("BookingReminderTickService", () => {
             ],
         ])
     })
+})
 
+describe("BookingReminderTickService", () => {
     it.each([
         { stage: "notices", cause: new Error("x".repeat(350)), note: "x".repeat(300) },
         { stage: "engine", cause: "y".repeat(350), note: "y".repeat(300) },

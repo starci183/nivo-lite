@@ -9,12 +9,6 @@ export interface ContentTickPayload {
     readonly force?: boolean
 }
 
-/** The id of the pg_cron scheduler that sends a content tick every quarter hour. */
-export const CONTENT_TICK_SCHEDULER = "content-tick"
-
-/** The pause between two content ticks. */
-export const CONTENT_TICK_EVERY_MS = 15 * 60 * 1000
-
 /** Reads a job payload as a content tick: unknown fields are dropped and a malformed field is ignored. */
 export const contentTickPayloadOf = (value: object): ContentTickPayload => ({
     ...("workspaceId" in value && typeof value.workspaceId === "string" ? { workspaceId: value.workspaceId } : {}),

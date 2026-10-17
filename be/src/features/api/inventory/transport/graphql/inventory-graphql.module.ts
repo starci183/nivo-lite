@@ -7,6 +7,7 @@ import { CreateInventoryPoResolver } from "./create-inventory-po.resolver"
 import { DeleteInventoryRecipeResolver } from "./delete-inventory-recipe.resolver"
 import { DraftInventoryLowStockResolver } from "./draft-inventory-low-stock.resolver"
 import { ImportInventoryPasteResolver } from "./import-inventory-paste.resolver"
+import { ConfigurableModuleClass } from "./inventory-graphql.module-definition"
 import { InventoryTemplatesResolver } from "./inventory-templates.resolver"
 import { InventoryWorkbenchResolver } from "./inventory-workbench.resolver"
 import { ReceiveInventoryPoResolver } from "./receive-inventory-po.resolver"
@@ -21,7 +22,7 @@ import { TransferInventoryStockResolver } from "./transfer-inventory-stock.resol
 import { UpdateInventoryPoDraftResolver } from "./update-inventory-po-draft.resolver"
 
 @Module({
-    imports: [InventoryApiModule],
+    imports: [InventoryApiModule.register({})],
     providers: [
         AdjustInventoryStockResolver,
         ApplyInventoryStarterResolver,
@@ -45,4 +46,4 @@ import { UpdateInventoryPoDraftResolver } from "./update-inventory-po-draft.reso
     ],
 })
 /** The GraphQL transport of the inventory feature. */
-export class InventoryGraphqlModule {}
+export class InventoryGraphqlModule extends ConfigurableModuleClass {}

@@ -147,7 +147,11 @@ describe("WorkRecorderService", () => {
             expect(built.decisionMade).not.toHaveBeenCalled()
             expect(built.mark).toHaveBeenCalledWith(ctx, "in-1", "processed", "lead-1")
         })
+    })
+})
 
+describe("WorkRecorderService", () => {
+    describe("finished", () => {
         it("logs a person's finish with their name, note and the proposal before and after", async () => {
             const built = await build()
 
@@ -215,7 +219,9 @@ describe("WorkRecorderService", () => {
             expect(built.error).toHaveBeenCalledWith(WorkEngineLogEvent.DecisionEventFailed, expect.any(RangeError))
         })
     })
+})
 
+describe("WorkRecorderService", () => {
     it("writes no evidence text for an automatic finish without detail", async () => {
         const built = await build()
 
@@ -268,7 +274,9 @@ describe("WorkRecorderService", () => {
             )
         })
     })
+})
 
+describe("WorkRecorderService", () => {
     describe("failed", () => {
         it("tells the log, the Office and the inbound event", async () => {
             const built = await build()

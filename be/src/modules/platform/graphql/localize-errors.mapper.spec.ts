@@ -1,3 +1,4 @@
+import { Test } from "@nestjs/testing"
 import type { Response } from "express"
 import type { GraphQLRequestContext, GraphQLRequestContextWillSendResponse, GraphQLResponse } from "@apollo/server"
 import { mock } from "@starci/jest-preset"
@@ -6,7 +7,26 @@ import { DomainError } from "@modules/platform/errors"
 import type { ErrorsService } from "@modules/platform/errors"
 import type { RequestLocale } from "@modules/platform/i18n"
 import type { GraphqlContext } from "./graphql.contracts"
-import { localizeError, localizeErrorsPlugin } from "./localize-errors.mapper"
+import {
+    localizeError as realLocalizeError,
+    localizeErrorsPlugin as realLocalizeErrorsPlugin,
+} from "./localize-errors.mapper"
+
+const SUBJECT = Symbol("localize-errors.mapper")
+
+type Subject = Pick<typeof import("./localize-errors.mapper"), "localizeError" | "localizeErrorsPlugin">
+
+const build = async () => {
+    const moduleRef = await Test.createTestingModule({
+        providers: [
+            {
+                provide: SUBJECT,
+                useValue: { localizeError: realLocalizeError, localizeErrorsPlugin: realLocalizeErrorsPlugin },
+            },
+        ],
+    }).compile()
+    return moduleRef.get<Subject>(SUBJECT)
+}
 
 type IncrementalBody = Extract<GraphQLResponse["body"], { kind: "incremental" }>
 
@@ -39,9 +59,10 @@ const sendResponse = async (
     requestLocale: RequestLocale,
     context: GraphQLRequestContextWillSendResponse<GraphqlContext>,
 ): Promise<void> => {
-    const listener = await localizeErrorsPlugin(errors, requestLocale).requestDidStart?.(
-        mock<GraphQLRequestContext<GraphqlContext>>(),
-    )
+    const subject = await build()
+    const listener = await subject
+        .localizeErrorsPlugin(errors, requestLocale)
+        .requestDidStart?.(mock<GraphQLRequestContext<GraphqlContext>>())
     if (listener === undefined || listener === null || listener.willSendResponse === undefined) {
         throw new SpecError({ code: "SPEC_INVARIANT" })
     }
@@ -52,14 +73,17 @@ describe("localizeError", () => {
     it.each<{ error: GraphQLFormattedError }>([
         { error: { message: "syntax error" } },
         { error: { message: "numeric code", extensions: { code: 7 } } },
-    ])("returns an error without a string code unchanged", ({ error }) => {
+    ])("returns an error without a string code unchanged", async ({ error }) => {
+        const subject = await build()
+
         const errors = mock<ErrorsService>()
 
-        expect(localizeError(errors, "en", error)).toBe(error)
+        expect(subject.localizeError(errors, "en", error)).toBe(error)
         expect(errors.text).not.toHaveBeenCalled()
     })
+    it("replaces a coded error's message with the catalog text and keeps its other fields", async () => {
+        const subject = await build()
 
-    it("replaces a coded error's message with the catalog text and keeps its other fields", () => {
         const errors = mock<ErrorsService>()
         errors.text.mockReturnValue("The order was not found")
         const error: GraphQLFormattedError = {
@@ -71,19 +95,20 @@ describe("localizeError", () => {
             },
         }
 
-        expect(localizeError(errors, "en", error)).toEqual({
+        expect(subject.localizeError(errors, "en", error)).toEqual({
             ...error,
             message: "The order was not found",
         })
         expect(errors.text).toHaveBeenCalledWith("ORDER_NOT_FOUND", { orderId: "o-1", retries: 2 }, "en")
     })
+    it("uses empty interpolation params when the extension params are not a record", async () => {
+        const subject = await build()
 
-    it("uses empty interpolation params when the extension params are not a record", () => {
         const errors = mock<ErrorsService>()
         errors.text.mockReturnValue("The order was not found")
 
         expect(
-            localizeError(errors, "vi", {
+            subject.localizeError(errors, "vi", {
                 message: "ORDER_NOT_FOUND",
                 extensions: { code: "ORDER_NOT_FOUND", params: "o-1" },
             }).message,
@@ -103,7 +128,6 @@ describe("localizeErrorsPlugin", () => {
         expect(requestLocale.of).not.toHaveBeenCalled()
         expect(errors.text).not.toHaveBeenCalled()
     })
-
     it("leaves a single response without errors unchanged", async () => {
         const errors = mock<ErrorsService>()
         const requestLocale = mock<RequestLocale>()
@@ -114,7 +138,6 @@ describe("localizeErrorsPlugin", () => {
         expect(requestLocale.of).not.toHaveBeenCalled()
         expect(errors.text).not.toHaveBeenCalled()
     })
-
     it("localizes every coded error of a single response in the request locale", async () => {
         const errors = mock<ErrorsService>()
         const requestLocale = mock<RequestLocale>()

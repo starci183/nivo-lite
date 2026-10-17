@@ -5,4 +5,3 @@ export { CONNECTION_SECRETS_ERROR_KINDS, ConnectionSecretsErrorCode } from "./er
 export { CONNECTION_SECRETS_MESSAGES } from "./messages/connection-secrets.messages"
 export { randomSecret, safeEqual } from "./secret-cipher.policy"
 export type { ConnectionSecret, OptionalStoredSecret } from "./connection-secrets.contracts"
-export type { ConnectionSecretsOptions } from "./connection-secrets.options"

@@ -9,65 +9,68 @@ import { DatabaseSyncService } from "./database-sync.service"
 import type { DataSyncContext } from "./data-hub.contracts"
 import { DataHubErrorCode } from "./errors/data-hub.error"
 
+const target: DatabaseTarget = {
+    engine: "postgres",
+    host: "database.example.com",
+    port: 5432,
+    database: "sales",
+    user: "reader",
+    password: "password",
+    ssl: true,
+}
+
+const customers: TableMapping = {
+    schema: "public",
+    table: "customers",
+    entity: "customer",
+    idColumn: "id",
+    titleColumn: "name",
+    updatedColumn: "updated_at",
+    columns: ["id", "name"],
+}
+
+const orders: TableMapping = { ...customers, table: "orders", entity: "order" }
+
+const row = {
+    externalId: "customer-1",
+    title: "Alice",
+    occurredAt: null,
+    data: { id: "customer-1", name: "Alice" },
+}
+
+const build = async (tables: ReadonlyArray<TableMapping> = [customers]) => {
+    const database = mock<DatabaseClient>()
+    const reader = mock<DatabaseReader>()
+    const catalog = mock<MessageCatalog>()
+    const context = mock<DataSyncContext>({
+        connection: {
+            id: "connection-1",
+            workspaceId: "workspace-1",
+            provider: "database",
+            name: "Sales",
+            status: "connected",
+            lastError: null,
+            meta: { config: JSON.stringify({ tables }), "cursor:public.customers": "2026-10-12T10:00:00.000Z" },
+            everyMinutes: 60,
+            lastSyncAt: null,
+        },
+        credential: JSON.stringify(target),
+    })
+    database.read.mockImplementation((_target, run) => run(reader))
+    context.isExpired.mockReturnValue(false)
+    context.upsert.mockResolvedValue(1)
+    reader.readTable.mockResolvedValue({ records: [row], cursor: "2026-10-13T10:00:00.000Z" })
+    const moduleRef = await Test.createTestingModule({
+        providers: [
+            DatabaseSyncService,
+            { provide: DATABASE, useValue: database },
+            { provide: MESSAGE_CATALOG, useValue: catalog },
+        ],
+    }).compile()
+    return { service: moduleRef.get(DatabaseSyncService), database, reader, catalog, context }
+}
+
 describe("DatabaseSyncService", () => {
-    const target: DatabaseTarget = {
-        engine: "postgres",
-        host: "database.example.com",
-        port: 5432,
-        database: "sales",
-        user: "reader",
-        password: "password",
-        ssl: true,
-    }
-    const customers: TableMapping = {
-        schema: "public",
-        table: "customers",
-        entity: "customer",
-        idColumn: "id",
-        titleColumn: "name",
-        updatedColumn: "updated_at",
-        columns: ["id", "name"],
-    }
-    const orders: TableMapping = { ...customers, table: "orders", entity: "order" }
-    const row = {
-        externalId: "customer-1",
-        title: "Alice",
-        occurredAt: null,
-        data: { id: "customer-1", name: "Alice" },
-    }
-
-    const build = async (tables: ReadonlyArray<TableMapping> = [customers]) => {
-        const database = mock<DatabaseClient>()
-        const reader = mock<DatabaseReader>()
-        const catalog = mock<MessageCatalog>()
-        const context = mock<DataSyncContext>({
-            connection: {
-                id: "connection-1",
-                workspaceId: "workspace-1",
-                provider: "database",
-                name: "Sales",
-                status: "connected",
-                lastError: null,
-                meta: { config: JSON.stringify({ tables }), "cursor:public.customers": "2026-10-12T10:00:00.000Z" },
-                everyMinutes: 60,
-                lastSyncAt: null,
-            },
-            credential: JSON.stringify(target),
-        })
-        database.read.mockImplementation((_target, run) => run(reader))
-        context.isExpired.mockReturnValue(false)
-        context.upsert.mockResolvedValue(1)
-        reader.readTable.mockResolvedValue({ records: [row], cursor: "2026-10-13T10:00:00.000Z" })
-        const moduleRef = await Test.createTestingModule({
-            providers: [
-                DatabaseSyncService,
-                { provide: DATABASE, useValue: database },
-                { provide: MESSAGE_CATALOG, useValue: catalog },
-            ],
-        }).compile()
-        return { service: moduleRef.get(DatabaseSyncService), database, reader, catalog, context }
-    }
-
     it("reads the mapped table with its saved cursor and returns the written rows and next cursor", async () => {
         const { service, database, reader, context } = await build()
 
@@ -141,7 +144,9 @@ describe("DatabaseSyncService", () => {
         expect(reader.readTable).not.toHaveBeenCalled()
         expect(context.upsert).not.toHaveBeenCalled()
     })
+})
 
+describe("DatabaseSyncService", () => {
     it("propagates an unexpected reader failure without attempting the next table", async () => {
         const { service, reader, catalog, context } = await build([customers, orders])
         const cause = new Error("unexpected driver failure")

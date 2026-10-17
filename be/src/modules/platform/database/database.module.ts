@@ -5,7 +5,6 @@ import type { DataSource } from "typeorm"
 import { DATABASE_OPTIONS } from "./database.port"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./database.module-definition"
 import { MigrationRunnerService } from "./migration-runner.service"
-import { appPgTypes } from "./pg-types.policy"
 import { PRIMARY_CONNECTION } from "./primary.connection"
 import { PRIMARY_ENTITY_MANAGER } from "./primary.decorators"
 import { SeedRunnerService } from "./seed-runner.service"
@@ -18,7 +17,9 @@ const ENTITY_MANAGER_TOKENS: ReadonlyMap<string, EntityManagerToken> = new Map<s
 ])
 
 @Module({})
-/** Opens each named Supabase PostgreSQL connection and exposes its shared EntityManager without entities or migrations. */
+/**
+ * Opens each named Supabase PostgreSQL connection and exposes its shared EntityManager without entities or migrations.
+ */
 export class DatabaseModule extends ConfigurableModuleClass {
     /** Registers the capability once per app with the connections it opens. */
     static register(options: typeof OPTIONS_TYPE): DynamicModule {
@@ -47,7 +48,7 @@ export class DatabaseModule extends ConfigurableModuleClass {
                         schema: connection.schema,
                         synchronize: false,
                         retryAttempts: 2,
-                        extra: { types: appPgTypes() },
+                        extra: { types: options.typeParsers() },
                     }),
                 ),
             ],

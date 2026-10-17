@@ -69,6 +69,17 @@ const build = async (entityManager: MockEntityManager) => {
     return { service: moduleRef.get(HiringSettingsService), members, office, data, catalog }
 }
 
+const invalidPatches: Array<[SaveSettingsParams, HiringErrorCode]> = [
+    [{ publicSlug: "ab" }, HiringErrorCode.SlugInvalid],
+    [{ publicSlug: "!!!" }, HiringErrorCode.SlugInvalid],
+    [{ publicSlug: "Admin" }, HiringErrorCode.SlugReserved],
+    [{ retentionDays: 7.5 }, HiringErrorCode.RetentionInvalid],
+    [{ retentionDays: 6 }, HiringErrorCode.RetentionInvalid],
+    [{ retentionDays: 731 }, HiringErrorCode.RetentionInvalid],
+    [{ applyConsentText: "C".repeat(19) }, HiringErrorCode.ConsentTextInvalid],
+    [{ applyConsentText: "C".repeat(801) }, HiringErrorCode.ConsentTextInvalid],
+]
+
 describe("HiringSettingsService", () => {
     describe("ensure", () => {
         it("returns existing settings without creating a slug", async () => {
@@ -137,7 +148,11 @@ describe("HiringSettingsService", () => {
             ])
             expect(data.settings.mock.calls).toEqual([["ws-1"], ["ws-1"], ["ws-1"]])
         })
+    })
+})
 
+describe("HiringSettingsService", () => {
+    describe("ensure", () => {
         it("refuses after exactly twenty unavailable slugs", async () => {
             const em = mockEntityManager({ query: [INIT_SETTINGS, []] })
             const { service, data } = await build(em)
@@ -178,7 +193,9 @@ describe("HiringSettingsService", () => {
             expect(data.settings).not.toHaveBeenCalled()
         })
     })
+})
 
+describe("HiringSettingsService", () => {
     describe("save", () => {
         it("cleans every supplied field and returns the reloaded settings", async () => {
             const em = mockEntityManager({ query: [SAVE_SETTINGS, [{ value: "saved" }]] })
@@ -239,7 +256,11 @@ describe("HiringSettingsService", () => {
                 [SAVE_SETTINGS, ["ws-1", JSON.stringify({ publicSlug: "s".repeat(60), adTone: "T".repeat(200) })]],
             ])
         })
+    })
+})
 
+describe("HiringSettingsService", () => {
+    describe("save", () => {
         it.each([
             [7, 20],
             [730, 800],
@@ -252,17 +273,6 @@ describe("HiringSettingsService", () => {
 
             expect(em.query.mock.calls).toEqual([[SAVE_SETTINGS, ["ws-1", JSON.stringify(patch)]]])
         })
-
-        const invalidPatches: Array<[SaveSettingsParams, HiringErrorCode]> = [
-            [{ publicSlug: "ab" }, HiringErrorCode.SlugInvalid],
-            [{ publicSlug: "!!!" }, HiringErrorCode.SlugInvalid],
-            [{ publicSlug: "Admin" }, HiringErrorCode.SlugReserved],
-            [{ retentionDays: 7.5 }, HiringErrorCode.RetentionInvalid],
-            [{ retentionDays: 6 }, HiringErrorCode.RetentionInvalid],
-            [{ retentionDays: 731 }, HiringErrorCode.RetentionInvalid],
-            [{ applyConsentText: "C".repeat(19) }, HiringErrorCode.ConsentTextInvalid],
-            [{ applyConsentText: "C".repeat(801) }, HiringErrorCode.ConsentTextInvalid],
-        ]
 
         it.each(invalidPatches)("refuses invalid patch %j with code %s", async (patch, code) => {
             const em = mockEntityManager()

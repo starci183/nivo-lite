@@ -22,7 +22,13 @@ const WORKSPACE = "0a1b2c3d-0a1b-4c3d-8a1b-0a1b2c3d4e5f"
 const IMAGE = `${WORKSPACE}/photo.jpg`
 const LOGO = `${WORKSPACE}/logo.png`
 
-const PRINTED = `{ "input_i" : "-20.0", "input_tp" : "-3.0", "input_lra" : "5.0", "input_thresh" : "-30.0", "target_offset" : "0.1" }`
+const PRINTED = JSON.stringify({
+    input_i: "-20.0",
+    input_tp: "-3.0",
+    input_lra: "5.0",
+    input_thresh: "-30.0",
+    target_offset: "0.1",
+})
 
 const sceneOf = builder<Scene>({
     background: { type: "color", color: "#112233" },
@@ -148,7 +154,9 @@ describe("RendererService", () => {
         const subs = await readFile(join(options.workDir, "render-1", "subs.ass"), "utf8")
         expect(subs).toContain("Dialogue: 1,0:00:00.15")
     })
+})
 
+describe("RendererService", () => {
     it("renders a silent video with no voice, no music and no loudness pass", async () => {
         const { renderer, ffmpeg, tts, inputOf } = await build()
 
@@ -193,7 +201,9 @@ describe("RendererService", () => {
 
         expect(output.meta.tts).toMatchObject({ cached: 1 })
     })
+})
 
+describe("RendererService", () => {
     describe("when the voice fails", () => {
         const retryable = new TtsError({ code: TtsErrorCode.Retryable })
         const spoken = specOf({ scenes: [sceneOf({ voiceover: "One" }), sceneOf({ voiceover: "Two" })] })
@@ -250,7 +260,9 @@ describe("RendererService", () => {
             params: { reason: "video_too_long: 16 s (max 10 s)" },
         })
     })
+})
 
+describe("RendererService", () => {
     it("rejects a track the media bucket does not hold", async () => {
         const { renderer, inputOf } = await build()
         const spec = specOf({ music: { track: "bold-beat", volume: 0.5 } })

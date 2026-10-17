@@ -6,10 +6,6 @@ export enum LoggingLogEvent {
     StartupFailed = "server.startup_failed",
     /** A cli command threw or commander rejected the command line; the process exits non-zero. */
     CommandFailed = "cli.command_failed",
-    /** The worker started: its jobs are ticking and its consumers are polling. */
-    WorkerStarted = "worker.started",
-    /** The cli app's migrate run finished; the names of the applied migrations ride in the fields. */
-    MigrationsApplied = "migrations.applied",
     /** The seed command finished; the seed files it ran ride in the fields, by connection. */
     SeedsApplied = "seeds.applied",
 }

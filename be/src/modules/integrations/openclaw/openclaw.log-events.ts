@@ -15,5 +15,5 @@ export enum OpenclawLogEvent {
     /** The managed-file manifest of a workspace could not be read as JSON; it is treated as empty. */
     ManifestUnreadable = "openclaw.manifest_unreadable",
     /** A tool token carried a body that is not JSON claims. */
-    ToolTokenUnreadable = "openclaw.tool_token_unreadable",
+    ToolGrantUnreadable = "openclaw.tool_token_unreadable",
 }

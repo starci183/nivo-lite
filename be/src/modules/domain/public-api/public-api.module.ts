@@ -15,7 +15,7 @@ export class PublicApiModule extends ConfigurableModuleClass {
         const base = super.register(options)
         return {
             ...base,
-            imports: [...(base.imports ?? []), PublicApiQueueModule],
+            imports: [...(base.imports ?? []), PublicApiQueueModule.register({})],
             providers: [
                 ...(base.providers ?? []),
                 PublicEventsService,

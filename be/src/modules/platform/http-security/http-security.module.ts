@@ -1,5 +1,6 @@
 import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
+import { APP_PIPE } from "@nestjs/core"
 import { WEBHOOK_PROOF_REGISTRY, WEBHOOK_SIGNATURE } from "./http-security.decorators"
 import { ConfigurableModuleClass, MODULE_OPTIONS_TOKEN, OPTIONS_TYPE } from "./http-security.module-definition"
 import { RequestValidationService } from "./request-validation.service"
@@ -16,19 +17,13 @@ export class HttpSecurityModule extends ConfigurableModuleClass {
             ...base,
             providers: [
                 ...(base.providers ?? []),
-                RequestValidationService,
+                { provide: APP_PIPE, useClass: RequestValidationService },
                 WebhookProofRegistryService,
                 { provide: WEBHOOK_PROOF_REGISTRY, useExisting: WebhookProofRegistryService },
                 WebhookSignatureService,
                 { provide: WEBHOOK_SIGNATURE, useExisting: WebhookSignatureService },
             ],
-            exports: [
-                MODULE_OPTIONS_TOKEN,
-                RequestValidationService,
-                WebhookSignatureService,
-                WEBHOOK_SIGNATURE,
-                WEBHOOK_PROOF_REGISTRY,
-            ],
+            exports: [MODULE_OPTIONS_TOKEN, WebhookSignatureService, WEBHOOK_SIGNATURE, WEBHOOK_PROOF_REGISTRY],
         }
     }
 }

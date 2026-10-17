@@ -1,33 +1,34 @@
 import { createHash } from "node:crypto"
+import { InjectInbox } from "@modules/platform/inbox"
+import type { Inbox } from "@modules/platform/inbox"
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { ConnectionsService } from "@modules/domain/connections"
 import { ConversationsService } from "@modules/domain/conversations"
 import { MetaCommentsService } from "@modules/domain/meta-comments"
 import { MetaThreadsService } from "@modules/domain/meta-threads"
-import { InjectMetaClient } from "@modules/integrations/meta"
-import type { MetaClient, MetaEvent } from "@modules/integrations/meta"
-import { acceptWebhookDelivery, InjectPrimaryEntityManager } from "@modules/platform/database"
+import { MetaReceiptPolicy } from "./meta-receipt.policy"
+import type { MetaEvent } from "@modules/integrations/meta"
+import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { eachInOrder, isRecord, parseJsonText } from "@modules/platform/primitives"
 import { InjectQueueOutbox } from "@modules/platform/queue"
 import type { QueueOutbox } from "@modules/platform/queue"
-import { isMetaInboundJob, META_INBOUND_QUEUE } from "./meta-inbox.contracts"
+import { isMetaInboundJob, META_INBOUND_QUEUE, META_DELIVERY_QUEUE } from "./meta-inbox.contracts"
 import { InjectMetaEventTaker } from "./meta-inbox.decorators"
 import type { MetaEventTaker } from "./meta-inbox.port"
-import type { DeliverySignature, MetaInboundJob, RawDelivery } from "./meta-inbox.contracts"
-import { MetaInboxError, MetaInboxErrorCode } from "./errors/meta-inbox.error"
-import { COMPLETE_META_INBOX, INSERT_META_INBOX } from "./persistence/meta-inbox.sql"
+import type { DeliverySignature, MetaDeliveryRecorded, MetaInboundJob, RawDelivery } from "./meta-inbox.contracts"
+import { COMPLETE_META_INBOX, FIND_PENDING_META_INBOX, INSERT_META_INBOX } from "./persistence/meta-inbox.sql"
 
 @Injectable()
 /**
- * Accepts one signed Meta delivery. The signature is checked against the raw body, the delivery is claimed once (a redelivery is
- * acknowledged without running again), and in the same transaction each event of a connected Page opens its messaging window or
- * private-reply window, marks the connection as working, and is queued for the handlers that answer it.
+ * Records signed Meta receipts and their outbox messages atomically. A deferred consumer opens messaging windows,
+ * records connected Page events and queues downstream handlers after the receipt has committed.
  */
 export class MetaInboxService {
     constructor(
         @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
-        @InjectMetaClient() private readonly meta: MetaClient,
+        private readonly receipts: MetaReceiptPolicy,
+        @InjectInbox() private readonly inbox: Inbox,
         @InjectQueueOutbox() private readonly outbox: QueueOutbox,
         private readonly connections: ConnectionsService,
         private readonly conversations: ConversationsService,
@@ -36,29 +37,48 @@ export class MetaInboxService {
         @InjectMetaEventTaker() private readonly taker: MetaEventTaker,
     ) {}
 
-    /** Verifies and records the delivery; a delivery that carries no event of ours is acknowledged and dropped. */
-    async accept(rawBody: RawDelivery, signature: DeliverySignature): Promise<void> {
-        if (rawBody === undefined || !this.meta.verifyDelivery(signature, rawBody)) {
-            throw new MetaInboxError({ code: MetaInboxErrorCode.SignatureInvalid })
-        }
-        const read = parseJsonText(rawBody.toString("utf8"))
-        if (!read.ok || !isRecord(read.value)) return
-        const body = read.value
-        const events = this.meta.parse(body)
-        if (events.length === 0) return
-        await acceptWebhookDelivery({
-            entityManager: this.entityManager,
-            insert: INSERT_META_INBOX,
-            complete: COMPLETE_META_INBOX,
-            provider: "meta",
-            deliveryId: createHash("sha256").update(rawBody).digest("hex"),
-            payload: body,
-            process: (manager) => this.process(events, manager),
+    /** Records the signed receipt and its typed handoff atomically without processing business events. */
+    accept(rawBody: RawDelivery, signature: DeliverySignature): Promise<void> {
+        return this.entityManager.transaction(async (manager) => {
+            const read = parseJsonText(rawBody?.toString("utf8") ?? "")
+            const decoded = {
+                valid: read.ok && isRecord(read.value) && !Array.isArray(read.value),
+                payload: read.ok && isRecord(read.value) && !Array.isArray(read.value) ? read.value : {},
+            }
+            const deliveryId =
+                rawBody === undefined || signature === undefined || !decoded.valid
+                    ? ""
+                    : createHash("sha256").update(rawBody).digest("hex")
+            if (
+                !(await this.inbox.claim("meta", deliveryId, manager, {
+                    insert: INSERT_META_INBOX,
+                    payload: decoded.payload,
+                }))
+            )
+                return
+            const message: MetaDeliveryRecorded = { deliveryId }
+            await this.outbox.write(manager, META_DELIVERY_QUEUE, message, {
+                dedupeKey: `${META_DELIVERY_QUEUE}:${deliveryId}`,
+            })
+        })
+    }
+
+    /** Processes the pending receipt after commit; the row lock and completion protect against replay. */
+    processRecordedDelivery(message: MetaDeliveryRecorded): Promise<void> {
+        return this.entityManager.transaction(async (manager) => {
+            const [pending] = await manager.query<Array<{ readonly id: string; readonly payload: object }>>(
+                FIND_PENDING_META_INBOX,
+                [message.deliveryId],
+            )
+            if (pending === undefined) return
+            await this.process(this.receipts.parse(pending.payload), manager)
+            await manager.query(COMPLETE_META_INBOX, [pending.id])
         })
     }
 
     /**
-     * Delivers the event a claimed job carries: the taker (the lead generation flow) first, else the chatbot front door; a payload that
+     * Delivers the event a claimed job carries: the taker (the lead generation flow) first, else the chatbot front
+     * door; a payload that
      * is not a queued Meta event is left alone.
      */
     async deliverPayload(payload: object): Promise<void> {
@@ -68,8 +88,10 @@ export class MetaInboxService {
     }
 
     /**
-     * Hands one queued event to the conversation of its customer: a direct message is stored and answered by the front-door agent bound
-     * to the connection (in one transaction with its chat-turn job). Postbacks, comments, mentions and lead ads are the business of the
+     * Hands one queued event to the conversation of its customer: a direct message is stored and answered by the
+     * front-door agent bound
+     * to the connection (in one transaction with its chat-turn job). Postbacks, comments, mentions and lead ads are
+     * the business of the
      * lead-flow lanes and are left alone here.
      */
     async deliver(job: MetaInboundJob): Promise<void> {
@@ -111,12 +133,16 @@ export class MetaInboxService {
                 manager,
             )
         }
-        await this.connections.recordEvent(owner.id, {
-            amount: 0,
-            content: event.sender_name ?? event.kind,
-            at,
-            text: (event.text ?? "").slice(0, 160),
-        })
+        await this.connections.recordEvent(
+            owner.id,
+            {
+                amount: 0,
+                content: event.sender_name ?? event.kind,
+                at,
+                text: (event.text ?? "").slice(0, 160),
+            },
+            manager,
+        )
         const job: MetaInboundJob = { connectionId: owner.id, workspaceId: owner.workspaceId, event }
         await this.outbox.write(manager, META_INBOUND_QUEUE, job, {
             dedupeKey: `${META_INBOUND_QUEUE}:${owner.id}:${event.event_key}`,

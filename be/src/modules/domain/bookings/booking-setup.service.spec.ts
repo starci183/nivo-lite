@@ -159,7 +159,9 @@ describe("BookingSetupService", () => {
             })
         })
     })
+})
 
+describe("BookingSetupService", () => {
     describe("saveResource", () => {
         it("creates a staff resource with the default week in one transaction", async () => {
             const { setup, tx, resources, hours } = await build()
@@ -205,7 +207,9 @@ describe("BookingSetupService", () => {
             expect(tx.commits).toBe(1)
         })
     })
+})
 
+describe("BookingSetupService", () => {
     describe("saveHours", () => {
         it("replaces the week of an owned resource", async () => {
             const { setup, hours } = await build()
@@ -272,7 +276,9 @@ describe("BookingSetupService", () => {
             ).rejects.toMatchObject({ code: BookingsErrorCode.CatalogNotFound })
         })
     })
+})
 
+describe("BookingSetupService", () => {
     describe("savePolicy", () => {
         it("saves the policy with the trimmed address at the clock's instant", async () => {
             const { setup, settings } = await build()
@@ -332,7 +338,9 @@ describe("BookingSetupService", () => {
             ).rejects.toMatchObject({ code: BookingsErrorCode.InvalidInput })
         })
     })
+})
 
+describe("BookingSetupService", () => {
     describe("additional setup outcomes", () => {
         it("updates a service with its explicit resource kind, no price and a follow-up", async () => {
             const { setup, services } = await build()
@@ -402,7 +410,11 @@ describe("BookingSetupService", () => {
             ).resolves.toEqual({ id: RESOURCE })
             expect(hours.replace).toHaveBeenCalledWith(WORKSPACE, RESOURCE, rows, expect.anything())
         })
+    })
+})
 
+describe("BookingSetupService", () => {
+    describe("additional setup outcomes", () => {
         it("rejects more than 56 weekly opening windows", async () => {
             const { setup, hours } = await build()
             const rows = Array.from({ length: 57 }, () => ({ weekday: 1, start: "09:00", end: "10:00" }))

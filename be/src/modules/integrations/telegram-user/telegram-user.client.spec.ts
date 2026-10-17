@@ -199,20 +199,20 @@ const read = (partial: Partial<TelegramReadRequest> = {}): TelegramReadRequest =
     ...partial,
 })
 
+afterAll(() => {
+    jest.restoreAllMocks()
+})
+
+beforeEach(() => {
+    Object.assign(mockTg, new MockTelegram())
+    sessionSpy.mockImplementation(() => mock<StringSession>({ save: () => "saved-session" }))
+    clientSpy.mockImplementation(() => clientOf(mock<StringSession>({ save: () => "saved-session" })))
+    checkSpy.mockResolvedValue(
+        new Api.InputCheckPasswordSRP({ srpId: returnBigInt(1), A: Buffer.from("a"), M1: Buffer.from("m") }),
+    )
+})
+
 describe("TelegramUserClient", () => {
-    beforeEach(() => {
-        Object.assign(mockTg, new MockTelegram())
-        sessionSpy.mockImplementation(() => mock<StringSession>({ save: () => "saved-session" }))
-        clientSpy.mockImplementation(() => clientOf(mock<StringSession>({ save: () => "saved-session" })))
-        checkSpy.mockResolvedValue(
-            new Api.InputCheckPasswordSRP({ srpId: returnBigInt(1), A: Buffer.from("a"), M1: Buffer.from("m") }),
-        )
-    })
-
-    afterAll(() => {
-        jest.restoreAllMocks()
-    })
-
     it("reports whether the deployment has credentials", async () => {
         const ready = await build()
         const missing = await build({ app: null })
@@ -264,7 +264,9 @@ describe("TelegramUserClient", () => {
             params: { detail: TELEGRAM_USER_TEXT.noAccount },
         })
     })
+})
 
+describe("TelegramUserClient", () => {
     it("checks the two-step password and maps a known or unknown Telegram failure", async () => {
         const { client, logger } = await build()
 
@@ -308,7 +310,9 @@ describe("TelegramUserClient", () => {
             { id: "12", title: "News", kind: "channel", unread: 3 },
         ])
     })
+})
 
+describe("TelegramUserClient", () => {
     it("reads new messages from a cursor or the window start and skips service or empty ones", async () => {
         const { client } = await build()
         mockTg.dialogs = [dialogOf({ id: "10", entityKind: "user", title: "Ada" })]
@@ -360,7 +364,9 @@ describe("TelegramUserClient", () => {
         await expect(client.readChats(read({ cursors: new Map(), chatIds: ["10", "11"] }))).resolves.toHaveLength(1)
         expect(mockTg.windows.at(-1)).toEqual({ reverse: true, offsetDate: 1_700_000_000, limit: 2 })
     })
+})
 
+describe("TelegramUserClient", () => {
     it("refuses a revoked session, stops when the run expires, and logs a logout that fails", async () => {
         const { client, logger } = await build()
         mockTg.authorized = false
@@ -401,7 +407,9 @@ describe("TelegramUserClient", () => {
             { id: "11", title: "11", kind: "channel", unread: 0 },
         ])
     })
+})
 
+describe("TelegramUserClient", () => {
     it("skips unusable dialog entities and empty messages but keeps pure media", async () => {
         const { client } = await build()
         mockTg.dialogs = [
@@ -450,24 +458,13 @@ describe("TelegramUserClient", () => {
         ).resolves.toEqual([])
         expect(mockTg.windows).toEqual([])
     })
+})
 
-    it("propagates a cleanup logger failure after sending a code succeeds", async () => {
+describe("TelegramUserClient", () => {
+    it.each([false, true])("propagates cleanup logger failures with connection failure %s", async (connectionFails) => {
         const { client, logger } = await build()
         const failure = new DataSourcesError({ code: DataSourcesErrorCode.Unavailable })
-        mockTg.destroyError = new Error("destroy unavailable")
-        logger.error.mockImplementation(() => {
-            throw failure
-        })
-
-        await expect(client.sendCode("+841234")).rejects.toBe(failure)
-        expect(logger.error).toHaveBeenCalledWith(TelegramUserLogEvent.CloseFailed, mockTg.destroyError, {})
-        expect(mockTg.destroyed).toBe(true)
-    })
-
-    it("propagates a cleanup logger failure after the connection fails", async () => {
-        const { client, logger } = await build()
-        const failure = new DataSourcesError({ code: DataSourcesErrorCode.Unavailable })
-        mockTg.connectError = { errorMessage: "PHONE_CODE_INVALID" }
+        mockTg.connectError = connectionFails ? { errorMessage: "PHONE_CODE_INVALID" } : undefined
         mockTg.destroyError = new Error("destroy unavailable")
         logger.error.mockImplementation(() => {
             throw failure

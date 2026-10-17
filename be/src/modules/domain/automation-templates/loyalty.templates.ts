@@ -1,5 +1,5 @@
 import type { TemplateDefinition } from "./automation-templates.contracts"
-import { text } from "./policies/catalog-text.policy"
+import { translate } from "./policies/catalog-text.policy"
 
 /** The loyalty templates the engine runs itself, in file-name order. */
 export const LOYALTY_TEMPLATES: ReadonlyArray<TemplateDefinition> = [
@@ -11,12 +11,12 @@ export const LOYALTY_TEMPLATES: ReadonlyArray<TemplateDefinition> = [
         executor: "implemented",
         moduleKey: "loyalty",
         icon: "calendar",
-        name: text("automationTemplates.loyalty_birthday.name"),
-        description: text("automationTemplates.loyalty_birthday.description"),
+        name: translate("automationTemplates.loyalty_birthday.name"),
+        description: translate("automationTemplates.loyalty_birthday.description"),
         trigger: {
             kind: "schedule",
             event: "schedule.daily",
-            line: text("automationTemplates.loyalty_birthday.line"),
+            line: translate("automationTemplates.loyalty_birthday.line"),
         },
         requires: {
             modules: ["loyalty"],
@@ -27,12 +27,12 @@ export const LOYALTY_TEMPLATES: ReadonlyArray<TemplateDefinition> = [
         settings: [],
         contentMode: "ai_per_case",
         guardrails: [
-            text("automationTemplates.loyalty_birthday.guardrails.0"),
-            text("automationTemplates.loyalty_birthday.guardrails.1"),
-            text("automationTemplates.loyalty_birthday.guardrails.2"),
+            translate("automationTemplates.loyalty_birthday.guardrails.0"),
+            translate("automationTemplates.loyalty_birthday.guardrails.1"),
+            translate("automationTemplates.loyalty_birthday.guardrails.2"),
         ],
         variables: ["ten_khach", "ten_shop", "uu_dai"],
-        defaultBody: text("automationTemplates.loyalty_birthday.defaultBody"),
+        defaultBody: translate("automationTemplates.loyalty_birthday.defaultBody"),
         authority: {
             action: "send_promo",
         },
@@ -46,12 +46,12 @@ export const LOYALTY_TEMPLATES: ReadonlyArray<TemplateDefinition> = [
         executor: "implemented",
         moduleKey: "loyalty",
         icon: "moon",
-        name: text("automationTemplates.loyalty_expiring.name"),
-        description: text("automationTemplates.loyalty_expiring.description"),
+        name: translate("automationTemplates.loyalty_expiring.name"),
+        description: translate("automationTemplates.loyalty_expiring.description"),
         trigger: {
             kind: "schedule",
             event: "schedule.daily",
-            line: text("automationTemplates.loyalty_expiring.line"),
+            line: translate("automationTemplates.loyalty_expiring.line"),
         },
         requires: {
             modules: ["loyalty"],
@@ -62,12 +62,12 @@ export const LOYALTY_TEMPLATES: ReadonlyArray<TemplateDefinition> = [
         settings: [],
         contentMode: "ai_per_case",
         guardrails: [
-            text("automationTemplates.loyalty_expiring.guardrails.0"),
-            text("automationTemplates.loyalty_expiring.guardrails.1"),
-            text("automationTemplates.loyalty_expiring.guardrails.2"),
+            translate("automationTemplates.loyalty_expiring.guardrails.0"),
+            translate("automationTemplates.loyalty_expiring.guardrails.1"),
+            translate("automationTemplates.loyalty_expiring.guardrails.2"),
         ],
         variables: ["ten_khach", "ten_shop", "diem", "han"],
-        defaultBody: text("automationTemplates.loyalty_expiring.defaultBody"),
+        defaultBody: translate("automationTemplates.loyalty_expiring.defaultBody"),
         authority: {
             action: "send_promo",
         },
@@ -81,12 +81,12 @@ export const LOYALTY_TEMPLATES: ReadonlyArray<TemplateDefinition> = [
         executor: "implemented",
         moduleKey: "loyalty",
         icon: "review",
-        name: text("automationTemplates.loyalty_tier_up.name"),
-        description: text("automationTemplates.loyalty_tier_up.description"),
+        name: translate("automationTemplates.loyalty_tier_up.name"),
+        description: translate("automationTemplates.loyalty_tier_up.description"),
         trigger: {
             kind: "event",
             event: "loyalty.tier_up",
-            line: text("automationTemplates.loyalty_tier_up.line"),
+            line: translate("automationTemplates.loyalty_tier_up.line"),
         },
         requires: {
             modules: ["loyalty"],
@@ -97,12 +97,12 @@ export const LOYALTY_TEMPLATES: ReadonlyArray<TemplateDefinition> = [
         settings: [],
         contentMode: "ai_per_case",
         guardrails: [
-            text("automationTemplates.loyalty_tier_up.guardrails.0"),
-            text("automationTemplates.loyalty_tier_up.guardrails.1"),
-            text("automationTemplates.loyalty_tier_up.guardrails.2"),
+            translate("automationTemplates.loyalty_tier_up.guardrails.0"),
+            translate("automationTemplates.loyalty_tier_up.guardrails.1"),
+            translate("automationTemplates.loyalty_tier_up.guardrails.2"),
         ],
         variables: ["ten_khach", "ten_shop", "hang", "uu_dai"],
-        defaultBody: text("automationTemplates.loyalty_tier_up.defaultBody"),
+        defaultBody: translate("automationTemplates.loyalty_tier_up.defaultBody"),
         authority: {
             action: "send_promo",
         },
@@ -116,12 +116,12 @@ export const LOYALTY_TEMPLATES: ReadonlyArray<TemplateDefinition> = [
         executor: "implemented",
         moduleKey: "loyalty",
         icon: "winback",
-        name: text("automationTemplates.loyalty_winback.name"),
-        description: text("automationTemplates.loyalty_winback.description"),
+        name: translate("automationTemplates.loyalty_winback.name"),
+        description: translate("automationTemplates.loyalty_winback.description"),
         trigger: {
             kind: "schedule",
             event: "schedule.daily",
-            line: text("automationTemplates.loyalty_winback.line"),
+            line: translate("automationTemplates.loyalty_winback.line"),
         },
         requires: {
             modules: ["loyalty"],
@@ -134,18 +134,18 @@ export const LOYALTY_TEMPLATES: ReadonlyArray<TemplateDefinition> = [
                 key: "offer",
                 kind: "text",
                 maxLength: 120,
-                label: text("automationTemplates.loyalty_winback.settings.offer.label"),
-                hint: text("automationTemplates.loyalty_winback.settings.offer.hint"),
+                label: translate("automationTemplates.loyalty_winback.settings.offer.label"),
+                hint: translate("automationTemplates.loyalty_winback.settings.offer.hint"),
             },
         ],
         contentMode: "ai_per_case",
         guardrails: [
-            text("automationTemplates.loyalty_winback.guardrails.0"),
-            text("automationTemplates.loyalty_winback.guardrails.1"),
-            text("automationTemplates.loyalty_winback.guardrails.2"),
+            translate("automationTemplates.loyalty_winback.guardrails.0"),
+            translate("automationTemplates.loyalty_winback.guardrails.1"),
+            translate("automationTemplates.loyalty_winback.guardrails.2"),
         ],
         variables: ["ten_khach", "ten_shop", "diem", "hang", "uu_dai"],
-        defaultBody: text("automationTemplates.loyalty_winback.defaultBody"),
+        defaultBody: translate("automationTemplates.loyalty_winback.defaultBody"),
         authority: {
             action: "send_promo",
             alwaysAsk: true,

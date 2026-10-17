@@ -66,7 +66,9 @@ describe("KnowledgeJobsService", () => {
             expect(indexing.failSource).not.toHaveBeenCalled()
         })
     })
+})
 
+describe("KnowledgeJobsService", () => {
     describe("reembed", () => {
         it("embeds the stale passages with the model in use when none is named", async () => {
             const { service, reembedding, sources } = await build()

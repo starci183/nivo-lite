@@ -142,7 +142,11 @@ describe("VideoScriptingCompletionService", () => {
             )
             expect(tx.commits).toBe(1)
         })
+    })
+})
 
+describe("VideoScriptingCompletionService", () => {
+    describe("complete", () => {
         it("keeps the project title when the owner typed it", async () => {
             const { completion, projectWriter } = await build(
                 stateOf(),
@@ -186,7 +190,11 @@ describe("VideoScriptingCompletionService", () => {
             expect(generations.recordFailure).not.toHaveBeenCalled()
             expect(tx.commits).toBe(1)
         })
+    })
+})
 
+describe("VideoScriptingCompletionService", () => {
+    describe("complete", () => {
         it("records the failure of a generation that ended without text", async () => {
             const { completion, projectWriter, generations } = await build(stateOf({ status: "error", text: null }))
 
@@ -234,7 +242,11 @@ describe("VideoScriptingCompletionService", () => {
             )
             expect(projectWriter.fail).not.toHaveBeenCalled()
         })
+    })
+})
 
+describe("VideoScriptingCompletionService", () => {
+    describe("complete", () => {
         it("fails a second malformed answer as a format error", async () => {
             const meta = { ...META, generation_id: "generation-2", attempts: 2 }
             const { completion, generations, projectWriter } = await build(
@@ -286,7 +298,11 @@ describe("VideoScriptingCompletionService", () => {
             expect(generations.request).not.toHaveBeenCalled()
             expect(tx.commits).toBe(1)
         })
+    })
+})
 
+describe("VideoScriptingCompletionService", () => {
+    describe("complete", () => {
         it("keeps an untitled answer's project title and supplies null media without a start time", async () => {
             const meta = { ...META, started_at: null }
             const { completion, projectWriter, events } = await build(
@@ -339,7 +355,11 @@ describe("VideoScriptingCompletionService", () => {
                 })
             },
         )
+    })
+})
 
+describe("VideoScriptingCompletionService", () => {
+    describe("complete", () => {
         it("retains only string-content conversation messages when queuing a correction", async () => {
             const { completion, generations, projectWriter } = await build(
                 stateOf({
@@ -383,7 +403,11 @@ describe("VideoScriptingCompletionService", () => {
                 JSON.stringify({ ...META, generation_id: "generation-2", attempts: 2 }),
             )
         })
+    })
+})
 
+describe("VideoScriptingCompletionService", () => {
+    describe("complete", () => {
         it("records a format failure when the generation engine refuses the correction", async () => {
             const { completion, tx, generations, projectWriter } = await build(
                 stateOf({ text: "invalid answer", input: { context: { projectId: "project-1" }, messages: null } }),
@@ -419,7 +443,11 @@ describe("VideoScriptingCompletionService", () => {
             expect(projectWriter.start).not.toHaveBeenCalled()
             expect(tx.commits).toBe(1)
         })
+    })
+})
 
+describe("VideoScriptingCompletionService", () => {
+    describe("complete", () => {
         it.each([undefined, null, 42])(
             "writes nothing when the request changes to %p during a refused retry",
             async (requestId) => {

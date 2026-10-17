@@ -17,41 +17,79 @@ import { ReplyCustomerPerformerService } from "./reply-customer-performer.servic
 import { SendEmailPerformerService } from "./send-email-performer.service"
 import { WorkPerformersRegistrarService } from "./work-performers-registrar.service"
 
+const build = async () => {
+    const registry = mock<WorkPerformerRegistry>()
+    const handoff = mock<HandoffLeadPerformerService>()
+    const classify = mock<ClassifyLeadPerformerService>()
+    const followUp = mock<FollowUpPerformerService>()
+    const quote = mock<QuotePerformerService>()
+    const care = mock<CarePerformerService>()
+    const order = mock<ConfirmOrderPerformerService>()
+    const invoice = mock<IssueInvoicePerformerService>()
+    const payment = mock<ReconcilePaymentPerformerService>()
+    const reply = mock<ReplyCustomerPerformerService>()
+    const email = mock<SendEmailPerformerService>()
+    const booking = mock<BookingPerformerService>()
+    const remind = mock<BookingRemindPerformerService>()
+    const redeem = mock<RedeemRewardPerformerService>()
+    const moduleRef = await Test.createTestingModule({
+        providers: [
+            WorkPerformersRegistrarService,
+            { provide: WORK_PERFORMER_REGISTRY, useValue: registry },
+            { provide: HandoffLeadPerformerService, useValue: handoff },
+            { provide: ClassifyLeadPerformerService, useValue: classify },
+            { provide: FollowUpPerformerService, useValue: followUp },
+            { provide: QuotePerformerService, useValue: quote },
+            { provide: CarePerformerService, useValue: care },
+            { provide: ConfirmOrderPerformerService, useValue: order },
+            { provide: IssueInvoicePerformerService, useValue: invoice },
+            { provide: ReconcilePaymentPerformerService, useValue: payment },
+            { provide: ReplyCustomerPerformerService, useValue: reply },
+            { provide: SendEmailPerformerService, useValue: email },
+            { provide: BookingPerformerService, useValue: booking },
+            { provide: BookingRemindPerformerService, useValue: remind },
+            { provide: RedeemRewardPerformerService, useValue: redeem },
+        ],
+    }).compile()
+
+    return {
+        moduleRef,
+        registry,
+        handoff,
+        classify,
+        followUp,
+        quote,
+        care,
+        order,
+        invoice,
+        payment,
+        reply,
+        email,
+        booking,
+        remind,
+        redeem,
+    }
+}
+
 describe("WorkPerformersRegistrarService", () => {
     it("registers sales, booking, reminder and reward performers at boot", async () => {
-        const registry = mock<WorkPerformerRegistry>()
-        const handoff = mock<HandoffLeadPerformerService>()
-        const classify = mock<ClassifyLeadPerformerService>()
-        const followUp = mock<FollowUpPerformerService>()
-        const quote = mock<QuotePerformerService>()
-        const care = mock<CarePerformerService>()
-        const order = mock<ConfirmOrderPerformerService>()
-        const invoice = mock<IssueInvoicePerformerService>()
-        const payment = mock<ReconcilePaymentPerformerService>()
-        const reply = mock<ReplyCustomerPerformerService>()
-        const email = mock<SendEmailPerformerService>()
-        const booking = mock<BookingPerformerService>()
-        const remind = mock<BookingRemindPerformerService>()
-        const redeem = mock<RedeemRewardPerformerService>()
-        const moduleRef = await Test.createTestingModule({
-            providers: [
-                WorkPerformersRegistrarService,
-                { provide: WORK_PERFORMER_REGISTRY, useValue: registry },
-                { provide: HandoffLeadPerformerService, useValue: handoff },
-                { provide: ClassifyLeadPerformerService, useValue: classify },
-                { provide: FollowUpPerformerService, useValue: followUp },
-                { provide: QuotePerformerService, useValue: quote },
-                { provide: CarePerformerService, useValue: care },
-                { provide: ConfirmOrderPerformerService, useValue: order },
-                { provide: IssueInvoicePerformerService, useValue: invoice },
-                { provide: ReconcilePaymentPerformerService, useValue: payment },
-                { provide: ReplyCustomerPerformerService, useValue: reply },
-                { provide: SendEmailPerformerService, useValue: email },
-                { provide: BookingPerformerService, useValue: booking },
-                { provide: BookingRemindPerformerService, useValue: remind },
-                { provide: RedeemRewardPerformerService, useValue: redeem },
-            ],
-        }).compile()
+        const {
+            moduleRef,
+            registry,
+            handoff,
+            classify,
+            followUp,
+            quote,
+            care,
+            order,
+            invoice,
+            payment,
+            reply,
+            email,
+            booking,
+            remind,
+            redeem,
+        } = await build()
 
         const registered = new Map<string, WorkPerformer>()
         registry.add.mockImplementation((action, performer) => {

@@ -76,30 +76,30 @@ const proposalOf = (fields: Proposal["fields"] = {}): Proposal => ({
     fields: { customer_id: "c1", reward_id: "r1", customer: "Mai", conversation_id: "v1", ...fields },
 })
 
-describe("RedeemRewardPerformerService", () => {
-    const build = async () => {
-        const logger = mock<Logger>()
-        const kit = mock<PerformerKitService>()
-        kit.text.mockImplementation((_ctx, key, params = {}) => [key, ...Object.values(params).map(String)].join("|"))
-        const redemption = mock<LoyaltyRedemptionService>()
-        redemption.redeem.mockResolvedValue({ code: "QT-ITEM-1", posted: true, reward })
-        const ledger = mock<LoyaltyLedgerService>()
-        ledger.member.mockResolvedValue(member)
-        const delivery = mock<CustomerDeliveryService>()
-        delivery.inConversation.mockResolvedValue(true)
-        const moduleRef = await Test.createTestingModule({
-            providers: [
-                RedeemRewardPerformerService,
-                { provide: LOGGER, useValue: logger },
-                { provide: PerformerKitService, useValue: kit },
-                { provide: LoyaltyRedemptionService, useValue: redemption },
-                { provide: LoyaltyLedgerService, useValue: ledger },
-                { provide: CustomerDeliveryService, useValue: delivery },
-            ],
-        }).compile()
-        return { service: moduleRef.get(RedeemRewardPerformerService), logger, kit, redemption, ledger, delivery }
-    }
+const build = async () => {
+    const logger = mock<Logger>()
+    const kit = mock<PerformerKitService>()
+    kit.text.mockImplementation((_ctx, key, params = {}) => [key, ...Object.values(params).map(String)].join("|"))
+    const redemption = mock<LoyaltyRedemptionService>()
+    redemption.redeem.mockResolvedValue({ code: "QT-ITEM-1", posted: true, reward })
+    const ledger = mock<LoyaltyLedgerService>()
+    ledger.member.mockResolvedValue(member)
+    const delivery = mock<CustomerDeliveryService>()
+    delivery.inConversation.mockResolvedValue(true)
+    const moduleRef = await Test.createTestingModule({
+        providers: [
+            RedeemRewardPerformerService,
+            { provide: LOGGER, useValue: logger },
+            { provide: PerformerKitService, useValue: kit },
+            { provide: LoyaltyRedemptionService, useValue: redemption },
+            { provide: LoyaltyLedgerService, useValue: ledger },
+            { provide: CustomerDeliveryService, useValue: delivery },
+        ],
+    }).compile()
+    return { service: moduleRef.get(RedeemRewardPerformerService), logger, kit, redemption, ledger, delivery }
+}
 
+describe("RedeemRewardPerformerService", () => {
     it("prepares the proposal supplied by the chat", async () => {
         const { service, redemption, delivery } = await build()
         const item = itemOf({ proposal: proposalOf() })
@@ -170,7 +170,9 @@ describe("RedeemRewardPerformerService", () => {
         expect(ledger.member).not.toHaveBeenCalled()
         expect(delivery.inConversation).not.toHaveBeenCalled()
     })
+})
 
+describe("RedeemRewardPerformerService", () => {
     it("uses zero as the remaining balance when the member has vanished", async () => {
         const { service, ledger, delivery } = await build()
         ledger.member.mockResolvedValue(null)

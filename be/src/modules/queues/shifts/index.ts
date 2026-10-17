@@ -2,7 +2,7 @@ export {
     SHIFTS_NOSHOW_JOB,
     SHIFTS_QUEUE,
     SHIFTS_REMIND_JOB,
-    SHIFTS_TICK_SCHEDULER,
+    SHIFTS_TICK_JOB,
     noShowDedupeKey,
     remindDedupeKey,
 } from "./shifts.queue"

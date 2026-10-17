@@ -109,15 +109,13 @@ describe("InboxSimulationWorkerService", () => {
 
         await expect(service.run(PAYLOAD)).rejects.toMatchObject({ code: InboxSimulationErrorCode.NotFound })
     })
-
     it("refuses a stored event that was not simulated", async () => {
         const { service, inboundEvents } = await build()
         inboundEvents.find.mockResolvedValue(LIVE)
 
         await expect(service.run(PAYLOAD)).rejects.toMatchObject({ code: InboxSimulationErrorCode.NotFound })
     })
-
-    it("hands off a simulated message with its sender and localized channel then records its finished lead", async () => {
+    it("hands off the sender and localized channel and records the finished lead", async () => {
         const { service, members, inboundEvents, engine, workItems, catalog } = await build()
         inboundEvents.find.mockResolvedValue({
             ...LIVE,
@@ -154,7 +152,6 @@ describe("InboxSimulationWorkerService", () => {
             ["ws-1", "in-1", "processed", "lead-1"],
         ])
     })
-
     it("supplies an empty contact name for an unnamed message", async () => {
         const { service, inboundEvents, engine } = await build()
         inboundEvents.find.mockResolvedValue({ ...LIVE, origin: "simulated" })
@@ -169,7 +166,9 @@ describe("InboxSimulationWorkerService", () => {
             null,
         )
     })
+})
 
+describe("InboxSimulationWorkerService", () => {
     it("starts order work with the supplied items and stored amount", async () => {
         const { service, inboundEvents, engine, catalog } = await build()
         inboundEvents.find.mockResolvedValue({ ...LIVE, origin: "simulated", kind: "order", amount_vnd: 1000 })
@@ -184,7 +183,6 @@ describe("InboxSimulationWorkerService", () => {
         expect(engine.startInboundWork).not.toHaveBeenCalled()
         expect(catalog.get).not.toHaveBeenCalled()
     })
-
     it("starts reconciliation for a simulated payment", async () => {
         const { service, inboundEvents, engine } = await build()
         inboundEvents.find.mockResolvedValue({ ...LIVE, origin: "simulated", kind: "payment", amount_vnd: 4500 })
@@ -199,7 +197,6 @@ describe("InboxSimulationWorkerService", () => {
             null,
         )
     })
-
     it("marks an initial failed result and stops without draining follow-ups", async () => {
         const { service, inboundEvents, engine, workItems } = await build()
         inboundEvents.find.mockResolvedValue({ ...LIVE, origin: "simulated" })
@@ -214,7 +211,6 @@ describe("InboxSimulationWorkerService", () => {
         expect(engine.runInboundQueued).not.toHaveBeenCalled()
         expect(workItems.inboundState).not.toHaveBeenCalled()
     })
-
     it("marks a failed follow-up even when another step remains queued", async () => {
         const { service, inboundEvents, workItems } = await build()
         inboundEvents.find.mockResolvedValue({ ...LIVE, origin: "simulated" })
@@ -230,7 +226,9 @@ describe("InboxSimulationWorkerService", () => {
             ["ws-1", "in-1", "failed", null],
         ])
     })
+})
 
+describe("InboxSimulationWorkerService", () => {
     it("leaves unfinished queued work received and requests a retry after its lease", async () => {
         const { service, inboundEvents, engine, workItems } = await build()
         inboundEvents.find.mockResolvedValue({ ...LIVE, origin: "simulated" })
@@ -245,7 +243,6 @@ describe("InboxSimulationWorkerService", () => {
         expect(inboundEvents.mark.mock.calls).toEqual([["ws-1", "in-1", "received", "lead-1"]])
         expect(workItems.findByDedupe).not.toHaveBeenCalled()
     })
-
     it("refreshes a queued first step after draining and records its refreshed lead", async () => {
         const { service, inboundEvents, engine, workItems } = await build()
         inboundEvents.find.mockResolvedValue({ ...LIVE, origin: "simulated" })
@@ -260,7 +257,6 @@ describe("InboxSimulationWorkerService", () => {
             ["ws-1", "in-1", "processed", "refreshed-lead"],
         ])
     })
-
     it("fails if the drained first item cannot be refreshed", async () => {
         const { service, inboundEvents, engine, workItems } = await build()
         inboundEvents.find.mockResolvedValue({ ...LIVE, origin: "simulated" })
@@ -274,7 +270,6 @@ describe("InboxSimulationWorkerService", () => {
 
         expect(inboundEvents.mark.mock.calls).toEqual([["ws-1", "in-1", "received", "lead-1"]])
     })
-
     it("marks a completed first step as needing a decision when a child waits", async () => {
         const { service, inboundEvents, workItems } = await build()
         inboundEvents.find.mockResolvedValue({ ...LIVE, origin: "simulated" })
@@ -287,7 +282,9 @@ describe("InboxSimulationWorkerService", () => {
             ["ws-1", "in-1", "needs_decision", "lead-1"],
         ])
     })
+})
 
+describe("InboxSimulationWorkerService", () => {
     it("records a first step that waits for a decision as needing a decision", async () => {
         const { service, inboundEvents, engine } = await build()
         inboundEvents.find.mockResolvedValue({ ...LIVE, origin: "simulated" })

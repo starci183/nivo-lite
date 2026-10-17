@@ -20,7 +20,7 @@ import { SELECT_FIRST_STAFF, SELECT_LATEST_CONVERSATION, SELECT_LEAD } from "./p
 import type { ConversationReadRow, LeadReadRow } from "./persistence/automations.rows"
 import { acceptableMessage, fillBody, stripQuotes } from "./policies/config.policy"
 import { CLASSIFY_SYSTEM, FEEDBACK_MAX, caseSystem, shopBlock } from "./policies/prompt.policy"
-import { NEUTRAL_VARIABLES } from "./policies/words.policy"
+import { NEUTRAL_VARIABLES } from "./words.contracts"
 
 @Injectable()
 /**

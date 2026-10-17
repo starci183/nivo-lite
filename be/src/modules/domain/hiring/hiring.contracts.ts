@@ -80,14 +80,31 @@ export interface JobDraftTexts {
 export type FairnessCategory =
     "gender" | "age" | "religion" | "ethnicity" | "marital" | "pregnancy" | "disability" | "hometown" | "appearance"
 
+/** The catalog group an experience line is written from. */
+export type ExperienceFamily = "criteria" | "facts"
+
+/** The parts of a job a fairness violation can sit in. */
+export type FairnessField =
+    | "title"
+    | "position"
+    | "description"
+    | "schedule"
+    | "experience"
+    | "skill"
+    | "availability"
+    | "mustHave"
+    | "niceToHave"
+    | "question"
+    | "choice"
+
 /** One place a text asks for, or screens on, a protected trait. */
 export interface FairnessViolation {
     /** The trait. */
     readonly category: FairnessCategory
     /** The words found, with a little context. */
     readonly excerpt: string
-    /** Which part of the job the words are in. */
-    readonly field: string
+    /** Which part of the job the words are in; empty when the text has no part. */
+    readonly field: FairnessField | ""
 }
 
 /** One answer a candidate gave. */

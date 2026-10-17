@@ -9,6 +9,7 @@ import type { ApplyParams } from "./hiring-public.contracts"
 import { HiringCandidatesService } from "./hiring-candidates.service"
 import { HiringChatService } from "./hiring-chat.service"
 import { HiringDataService } from "./hiring-data.service"
+import { HiringPostingService } from "./hiring-posting.service"
 import { HiringPublicService } from "./hiring-public.service"
 
 const jobOf = (overrides: Partial<JobRecord> = {}): JobRecord => ({
@@ -98,6 +99,7 @@ const build = async (job = jobOf()) => {
     const moduleRef = await Test.createTestingModule({
         providers: [
             HiringPublicService,
+            HiringPostingService,
             { provide: CLOCK, useValue: new FakeClock("2026-10-13T00:00:00.000Z") },
             { provide: OfficeLog, useValue: office },
             { provide: CvStorage, useValue: storage },
@@ -109,87 +111,87 @@ const build = async (job = jobOf()) => {
     return { service: moduleRef.get(HiringPublicService), office, storage, data, candidates, chat, job }
 }
 
-describe("HiringPublicService", () => {
-    describe("job", () => {
-        it("returns the public fields and questions without scoring expectations", async () => {
-            const { service, office, data, job } = await build()
+describe("HiringPublicService job", () => {
+    it("returns the public fields and questions without scoring expectations", async () => {
+        const { service, office, data, job } = await build()
 
-            const result = await service.job(request)
+        const result = await service.job(request)
 
-            expect(result).toEqual({
-                title: "Cashier",
-                position: "Counter",
-                employmentType: "part_time",
-                schedule: "Evenings",
-                payMinVnd: 30000,
-                payMaxVnd: 40000,
-                payUnit: "hour",
-                location: "Market",
-                headcount: 2,
-                description: "Serve customers",
-                status: "open",
-                closesAt: null,
-                company: "Market Shop",
-                consentText: "consent-1",
-                open: true,
-                requirements: {
-                    skills: ["POS"],
-                    experienceYears: 1,
-                    experienceNote: "Retail",
-                    availability: ["Evenings"],
-                    mustHave: ["Handle payments"],
-                    niceToHave: ["Stock shelves"],
-                },
-                questions: [
-                    { id: "q-1", text: "Can you use POS?", type: "yesno", required: true, choices: [] },
-                    { id: "q-2", text: "Choose a shift", type: "choice", required: false, choices: ["Evening"] },
-                ],
-            })
-            expect(result.requirements).not.toBe(job.requirements)
-            expect(data.settingsBySlug.mock.calls).toEqual([["shop"]])
-            expect(data.jobBySlug.mock.calls).toEqual([["ws-1", "cashier"]])
-            expect(office.workspaceName.mock.calls).toEqual([["ws-1"]])
-        })
-
-        it.each([
-            { status: "paused", channels: ["page"], closesAt: null, open: false },
-            { status: "open", channels: ["chat"], closesAt: null, open: false },
-            { status: "open", channels: ["page"], closesAt: "2026-10-12T23:59:59.999Z", open: false },
-            { status: "open", channels: ["page"], closesAt: "2026-10-13T00:00:00.000Z", open: true },
-            { status: "open", channels: ["page"], closesAt: "2026-10-14T00:00:00.000Z", open: true },
-        ] satisfies ReadonlyArray<Pick<JobRecord, "status" | "channels" | "closesAt"> & { open: boolean }>)(
-            "reports open=$open for status=$status and closesAt=$closesAt",
-            async ({ status, channels, closesAt, open }) => {
-                const { service } = await build(jobOf({ status, channels, closesAt }))
-
-                expect((await service.job(request)).open).toBe(open)
+        expect(result).toEqual({
+            title: "Cashier",
+            position: "Counter",
+            employmentType: "part_time",
+            schedule: "Evenings",
+            payMinVnd: 30000,
+            payMaxVnd: 40000,
+            payUnit: "hour",
+            location: "Market",
+            headcount: 2,
+            description: "Serve customers",
+            status: "open",
+            closesAt: null,
+            company: "Market Shop",
+            consentText: "consent-1",
+            open: true,
+            requirements: {
+                skills: ["POS"],
+                experienceYears: 1,
+                experienceNote: "Retail",
+                availability: ["Evenings"],
+                mustHave: ["Handle payments"],
+                niceToHave: ["Stock shelves"],
             },
-        )
-
-        it("rejects a missing workspace without looking up a job", async () => {
-            const { service, data, office } = await build()
-            data.settingsBySlug.mockResolvedValue(undefined)
-
-            await expect(service.job(request)).rejects.toMatchObject({ code: HiringErrorCode.PublicNotFound })
-
-            expect(data.jobBySlug).not.toHaveBeenCalled()
-            expect(office.workspaceName).not.toHaveBeenCalled()
+            questions: [
+                { id: "q-1", text: "Can you use POS?", type: "yesno", required: true, choices: [] },
+                { id: "q-2", text: "Choose a shift", type: "choice", required: false, choices: ["Evening"] },
+            ],
         })
-
-        it("rejects a missing job", async () => {
-            const { service, data } = await build()
-            data.jobBySlug.mockResolvedValue(undefined)
-
-            await expect(service.job(request)).rejects.toMatchObject({ code: HiringErrorCode.PublicNotFound })
-        })
-
-        it("rejects a draft job", async () => {
-            const { service } = await build(jobOf({ status: "draft" }))
-
-            await expect(service.job(request)).rejects.toMatchObject({ code: HiringErrorCode.PublicNotFound })
-        })
+        expect(result.requirements).not.toBe(job.requirements)
+        expect(data.settingsBySlug.mock.calls).toEqual([["shop"]])
+        expect(data.jobBySlug.mock.calls).toEqual([["ws-1", "cashier"]])
+        expect(office.workspaceName.mock.calls).toEqual([["ws-1"]])
     })
 
+    it.each([
+        { status: "paused", channels: ["page"], closesAt: null, open: false },
+        { status: "open", channels: ["chat"], closesAt: null, open: false },
+        { status: "open", channels: ["page"], closesAt: "2026-10-12T23:59:59.999Z", open: false },
+        { status: "open", channels: ["page"], closesAt: "2026-10-13T00:00:00.000Z", open: true },
+        { status: "open", channels: ["page"], closesAt: "2026-10-14T00:00:00.000Z", open: true },
+    ] satisfies ReadonlyArray<Pick<JobRecord, "status" | "channels" | "closesAt"> & { open: boolean }>)(
+        "reports open=$open for status=$status and closesAt=$closesAt",
+        async ({ status, channels, closesAt, open }) => {
+            const { service } = await build(jobOf({ status, channels, closesAt }))
+
+            expect((await service.job(request)).open).toBe(open)
+        },
+    )
+
+    it("rejects a missing workspace without looking up a job", async () => {
+        const { service, data, office } = await build()
+        data.settingsBySlug.mockResolvedValue(undefined)
+
+        await expect(service.job(request)).rejects.toMatchObject({ code: HiringErrorCode.PublicNotFound })
+
+        expect(data.jobBySlug).not.toHaveBeenCalled()
+        expect(office.workspaceName).not.toHaveBeenCalled()
+    })
+
+    it("rejects a missing job", async () => {
+        const { service, data } = await build()
+        data.jobBySlug.mockResolvedValue(undefined)
+
+        await expect(service.job(request)).rejects.toMatchObject({ code: HiringErrorCode.PublicNotFound })
+    })
+
+    it("rejects a draft job", async () => {
+        const { service } = await build(jobOf({ status: "draft" }))
+
+        await expect(service.job(request)).rejects.toMatchObject({ code: HiringErrorCode.PublicNotFound })
+    })
+})
+
+describe("HiringPublicService", () => {
     describe("createCvUpload", () => {
         it.each(["PDF", "doc", "docx", "jpg", "jpeg", "png"])(
             "creates an upload path for an allowed %s extension",
@@ -249,16 +251,18 @@ describe("HiringPublicService", () => {
             })
         })
     })
+})
 
+describe("HiringPublicService", () => {
     describe("apply", () => {
-        it("answers a filled honeypot without resolving or storing anything", async () => {
+        it("checks the posting before answering a filled honeypot without storing anything", async () => {
             const { service, data, candidates } = await build()
 
             await expect(service.apply({ ...application, website: " https://bot.example " })).resolves.toEqual({
                 duplicate: false,
             })
 
-            expect(data.settingsBySlug).not.toHaveBeenCalled()
+            expect(data.settingsBySlug).toHaveBeenCalledWith("shop")
             expect(candidates.submit).not.toHaveBeenCalled()
         })
 
@@ -301,7 +305,11 @@ describe("HiringPublicService", () => {
                 expect(candidates.submit.mock.calls).toEqual([["ws-1", job, "page", submission, {}]])
             },
         )
+    })
+})
 
+describe("HiringPublicService", () => {
+    describe("apply", () => {
         it.each([
             ["pdf", "application/pdf"],
             ["doc", "application/msword"],
@@ -361,7 +369,9 @@ describe("HiringPublicService", () => {
             ])
         })
     })
+})
 
+describe("HiringPublicService", () => {
     it("hands the shop chat the open jobs and stores the application the chatbot took", async () => {
         const { service } = await build()
         await expect(service.chatBrief("ws-1")).resolves.toBe("[OPEN JOBS] barista")
@@ -376,5 +386,29 @@ describe("HiringPublicService", () => {
                 answers: [],
             }),
         ).resolves.toEqual({ ok: true, message: "stored", candidateId: "candidate-2" })
+    })
+})
+
+describe("anonymous posting admission before effects", () => {
+    it.each([
+        { status: "paused" as const, code: HiringErrorCode.JobNotOpen },
+        { channels: ["chat" as const], code: HiringErrorCode.JobNotOpen },
+        { closesAt: "2026-10-12T00:00:00.000Z", code: HiringErrorCode.JobExpired },
+    ])("refuses both submission doors before any effect (%p)", async ({ code, ...overrides }) => {
+        const { service, storage, candidates, data } = await build(jobOf(overrides))
+        await expect(service.createCvUpload({ ...request, fileName: "resume.pdf" })).rejects.toMatchObject({ code })
+        await expect(service.apply({ ...application, website: "bot" })).rejects.toMatchObject({ code })
+        expect(storage.signedUpload).not.toHaveBeenCalled()
+        expect(data.newToken).not.toHaveBeenCalled()
+        expect(candidates.submit).not.toHaveBeenCalled()
+    })
+})
+
+describe("posting changes during submission", () => {
+    it("refuses an application if page publication is removed after admission", async () => {
+        const { service, data, candidates } = await build()
+        data.jobBySlug.mockResolvedValueOnce(jobOf()).mockResolvedValueOnce(jobOf({ channels: ["chat"] }))
+        await expect(service.apply(application)).rejects.toMatchObject({ code: HiringErrorCode.JobNotOpen })
+        expect(candidates.submit).not.toHaveBeenCalled()
     })
 })

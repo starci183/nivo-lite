@@ -9,7 +9,6 @@ export type {
     WorkspaceMembership,
 } from "./workspaces.contracts"
 export { parseWorkspacesConfig } from "./workspaces.config"
-export type { WorkspacesOptions } from "./workspaces.options"
 export { WorkspacesModule } from "./workspaces.module"
 export { WorkspacesService } from "./workspaces.service"
 export { WorkspaceBillingService } from "./workspace-billing.service"

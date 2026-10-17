@@ -16,7 +16,9 @@ import { LeadFlowMetaService } from "./lead-flow-meta.service"
 import { LeadFlowStoreService } from "./lead-flow-store.service"
 
 const AT = Date.parse("2026-10-12T10:00:00.000Z")
+
 const ctx = { workspaceId: "ws-1", actor: "Facebook Lead Ads", locale: "vi" }
+
 const PAGE: MetaPageAccess = { pageId: "page-1", pageToken: "page-token", igId: null }
 
 const eventOf = builder<MetaEvent>({
@@ -143,7 +145,9 @@ describe("LeadAdsIntakeService", () => {
         expect(engine.runWork).not.toHaveBeenCalled()
         expect(inbound.mark).toHaveBeenCalledWith("ws-1", "event-1", "processed", null)
     })
+})
 
+describe("LeadAdsIntakeService", () => {
     it("keeps the empty lead id in a captured submission when the queued event omits it", async () => {
         const { intake, meta, bindings, inbound, commands } = await build()
         const event = eventOf()
@@ -176,7 +180,6 @@ describe("LeadAdsIntakeService", () => {
         })
         expect(inbound.mark).toHaveBeenCalledWith("ws-1", "event-1", "processed", null)
     })
-
     it("hands the submission to Sales when no lead_gen agent listens", async () => {
         const { intake, bindings, commands, engine } = await build()
         bindings.agentsFor.mockResolvedValue([agentOf({ module: "sales" })])
@@ -202,7 +205,9 @@ describe("LeadAdsIntakeService", () => {
             },
         })
     })
+})
 
+describe("LeadAdsIntakeService", () => {
     it("marks the connection failing on a lasting refusal and routes nothing", async () => {
         const { intake, meta, bindings, connections, inbound } = await build()
         meta.fetchLead.mockRejectedValue(new MetaError({ code: MetaErrorCode.Refused, params: { failure: "token" } }))
@@ -216,7 +221,9 @@ describe("LeadAdsIntakeService", () => {
         expect(bindings.agentsFor).not.toHaveBeenCalled()
         expect(inbound.mark).not.toHaveBeenCalled()
     })
+})
 
+describe("LeadAdsIntakeService", () => {
     it("rethrows a refusal that may heal on a retry", async () => {
         const { intake, meta, inbound } = await build()
         const failure = new MetaError({ code: MetaErrorCode.Refused, params: { failure: "rate_limited" } })
@@ -226,7 +233,6 @@ describe("LeadAdsIntakeService", () => {
 
         expect(inbound.recordInput).not.toHaveBeenCalled()
     })
-
     it.each([
         { name: null, phone: null, email: "lan@example.com", sender: "lan@example.com", contact: "lan@example.com" },
         { name: null, phone: "0912", email: null, sender: "0912", contact: "0912" },
@@ -276,7 +282,9 @@ describe("LeadAdsIntakeService", () => {
             expect(inbound.mark).toHaveBeenCalledWith("ws-1", "event-1", "processed", null)
         },
     )
+})
 
+describe("LeadAdsIntakeService", () => {
     it("adds the ad to a form label, excludes all contact fields, and limits the need to 600 characters", async () => {
         const { intake, meta, bindings, inbound, commands } = await build()
         const answer = "x".repeat(700)
@@ -302,7 +310,6 @@ describe("LeadAdsIntakeService", () => {
             expect.objectContaining({ need, ad_id: "ad-1", text: `budget range: ${answer}` }),
         )
     })
-
     it.each(["missing page", "missing lead id"])(
         "stores an unreadable input without fetching a lead for %s",
         async (missing) => {
@@ -331,7 +338,9 @@ describe("LeadAdsIntakeService", () => {
             expect(inbound.mark).not.toHaveBeenCalled()
         },
     )
+})
 
+describe("LeadAdsIntakeService", () => {
     it.each(["processed", "received", null])(
         "routes a duplicate only when its stored status is not processed: %s",
         async (status) => {
@@ -364,7 +373,6 @@ describe("LeadAdsIntakeService", () => {
             )
         },
     )
-
     it("keeps an unbound submission unprocessed", async () => {
         const { intake, bindings, commands, engine, inbound } = await build()
         bindings.agentsFor.mockResolvedValue([])
@@ -376,7 +384,6 @@ describe("LeadAdsIntakeService", () => {
         expect(engine.runWork).not.toHaveBeenCalled()
         expect(inbound.mark).not.toHaveBeenCalled()
     })
-
     it.each(["transport failed", new MetaError({ code: MetaErrorCode.Unreachable })])(
         "rethrows a failure outside a refused Graph response",
         async (failure) => {

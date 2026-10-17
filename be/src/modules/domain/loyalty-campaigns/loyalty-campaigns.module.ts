@@ -13,7 +13,7 @@ export class LoyaltyCampaignsModule extends ConfigurableModuleClass {
         const base = super.register(options)
         return {
             ...base,
-            imports: [...(base.imports ?? []), LoyaltyCampaignQueueModule],
+            imports: [...(base.imports ?? []), LoyaltyCampaignQueueModule.register({})],
             providers: [...(base.providers ?? []), LoyaltyCampaignsService, LoyaltyCampaignDraftsService],
             exports: [LoyaltyCampaignsService, LoyaltyCampaignDraftsService],
         }

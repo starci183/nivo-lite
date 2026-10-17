@@ -1,4 +1,5 @@
-import type { ModuleMetadata } from "@nestjs/common"
+import { LeadGenIntakeService } from "@modules/domain/lead-flows"
+import type { DynamicModule } from "@nestjs/common"
 import { ConnectionsModule } from "@modules/domain/connections"
 import { DataHubModule } from "@modules/domain/data-hub"
 import { DataRecordsModule } from "@modules/domain/data-records"
@@ -17,14 +18,14 @@ import { GoogleModule } from "@modules/integrations/google"
 import { MetaModule } from "@modules/integrations/meta"
 import { ChannelSetupModule } from "@modules/integrations/channel-setup"
 import { WebhookDeliveryModule } from "@modules/integrations/webhook-delivery"
-import { LEAD_LANE } from "./bindings"
+import { DOCUMENT_FILE_READERS } from "@modules/integrations/documents"
 import { TELEGRAM_USER_ERRORS } from "../api.options"
 import type { ApiOptions } from "../api.options"
 /** The connections area of the API, in registration order. */
-export const connectionsModules = (options: ApiOptions): NonNullable<ModuleMetadata["imports"]> => [
+export const connectionsModules = (options: ApiOptions): Array<DynamicModule> => [
     ConnectionsModule.register({ isGlobal: true, ...options.connections }),
     ConnectionGrantsModule.register({ isGlobal: true }),
-    DataSourcesModule.register({ isGlobal: true, ...options.dataSources }),
+    DataSourcesModule.register({ isGlobal: true, ...options.dataSources, documentReaders: DOCUMENT_FILE_READERS }),
     TelegramUserModule.register({ isGlobal: true, ...options.telegramUser, errors: TELEGRAM_USER_ERRORS }),
     DataRecordsModule.register({ isGlobal: true }),
     DataSyncRunsModule.register({ isGlobal: true }),
@@ -33,7 +34,7 @@ export const connectionsModules = (options: ApiOptions): NonNullable<ModuleMetad
     WebhookConnectionsModule.register({ isGlobal: true, ...options.webhookConnections }),
     GoogleConnectionsModule.register({ isGlobal: true }),
     MetaConnectionsModule.register({ isGlobal: true }),
-    MetaInboxModule.register({ isGlobal: true, taker: LEAD_LANE.metaTaker }),
+    MetaInboxModule.register({ isGlobal: true, taker: LeadGenIntakeService }),
     ConnectionLifecycleModule.register({ isGlobal: true }),
     ConnectionCommandsModule.register({ isGlobal: true }),
     GoogleModule.register({ isGlobal: true, ...options.google }),

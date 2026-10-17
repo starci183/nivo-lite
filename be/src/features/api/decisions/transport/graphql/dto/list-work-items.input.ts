@@ -1,6 +1,6 @@
+import { NullAsAbsent } from "@modules/platform/graphql"
 import { Field, InputType, Int } from "@nestjs/graphql"
-import { Transform, Type } from "class-transformer"
-import type { TransformFnParams } from "class-transformer"
+import { Type } from "class-transformer"
 import {
     ArrayMaxSize,
     IsArray,
@@ -38,7 +38,7 @@ export class ListWorkItemsInput {
     /** Where the page starts: the `next` cursor of the previous page. */
     @Field(() => WorkItemCursorInput, { nullable: true })
     @IsOptional()
-    @Transform(({ value }: TransformFnParams): unknown => value ?? undefined)
+    @NullAsAbsent()
     @ValidateNested()
     @Type(() => WorkItemCursorInput)
     after?: WorkItemCursorInput

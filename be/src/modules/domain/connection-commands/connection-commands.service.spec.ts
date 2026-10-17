@@ -100,7 +100,9 @@ describe("ConnectionCommandsService", () => {
         expect(connections.firstEvent).not.toHaveBeenCalled()
         expect(errors.describe).not.toHaveBeenCalled()
     })
+})
 
+describe("ConnectionCommandsService", () => {
     it("runs a pending command as its member and writes its successful answer as JSON", async () => {
         const entityManager = mockEntityManager({
             query: [
@@ -123,7 +125,10 @@ describe("ConnectionCommandsService", () => {
                 FINISH_COMMAND,
                 [
                     "command-1",
-                    '{"ok":true,"value":{"status":"connected","firstEvent":{"amount":75000,"content":"invoice-7","at":"2026-10-13T02:00:00.000Z"}}}',
+                    [
+                        '{"ok":true,"value":{"status":"connected","firstEvent":{"amount":75000,',
+                        '"content":"invoice-7","at":"2026-10-13T02:00:00.000Z"}}}',
+                    ].join(""),
                 ],
             ],
         ])
@@ -160,7 +165,10 @@ describe("ConnectionCommandsService", () => {
                 FINISH_COMMAND,
                 [
                     "command-1",
-                    '{"ok":false,"kind":"not-found","code":"CONNECTIONS_NOT_FOUND","params":{"connectionId":"00000000-0000-0000-0000-000000000001"}}',
+                    [
+                        '{"ok":false,"kind":"not-found","code":"CONNECTIONS_NOT_FOUND",',
+                        '"params":{"connectionId":"00000000-0000-0000-0000-000000000001"}}',
+                    ].join(""),
                 ],
             ],
         ])

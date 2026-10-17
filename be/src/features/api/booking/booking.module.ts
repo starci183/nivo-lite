@@ -18,6 +18,7 @@ import { CheckInBookingHandler } from "./application/check-in-booking.handler"
 import { CompleteBookingHandler } from "./application/complete-booking.handler"
 import { MarkNoShowHandler } from "./application/mark-no-show.handler"
 import { CancelBookingHandler } from "./application/cancel-booking.handler"
+import { ConfigurableModuleClass } from "./booking.module-definition"
 
 @Module({
     providers: [
@@ -43,4 +44,4 @@ import { CancelBookingHandler } from "./application/cancel-booking.handler"
     ],
 })
 /** The booking feature: the handlers of its application. */
-export class BookingApiModule {}
+export class BookingApiModule extends ConfigurableModuleClass {}

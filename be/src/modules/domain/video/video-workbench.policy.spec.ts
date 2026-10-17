@@ -1,14 +1,44 @@
+import { Test } from "@nestjs/testing"
 import { builder } from "@starci/jest-preset"
 import type { WorkbenchProjectRow } from "./persistence/video-workbench.rows"
 import type { WorkbenchRender } from "./video-workbench.contracts"
 import {
-    editorScenesOf,
-    videoInputsOf,
-    videoInstant,
-    videoRecord,
-    workbenchProjectOf,
-    workspaceMediaPath,
+    editorScenesOf as editorScenesOfImplementation,
+    videoInputsOf as videoInputsOfImplementation,
+    videoInstant as videoInstantImplementation,
+    videoRecord as videoRecordImplementation,
+    workbenchProjectOf as workbenchProjectOfImplementation,
+    workspaceMediaPath as workspaceMediaPathImplementation,
 } from "./video-workbench.policy"
+
+const SUBJECT = Symbol("subject")
+type Subject = {
+    editorScenesOf: typeof editorScenesOfImplementation
+    videoInputsOf: typeof videoInputsOfImplementation
+    videoInstant: typeof videoInstantImplementation
+    videoRecord: typeof videoRecordImplementation
+    workbenchProjectOf: typeof workbenchProjectOfImplementation
+    workspaceMediaPath: typeof workspaceMediaPathImplementation
+}
+
+const buildSubject = async () => {
+    const moduleRef = await Test.createTestingModule({
+        providers: [
+            {
+                provide: SUBJECT,
+                useValue: {
+                    editorScenesOf: editorScenesOfImplementation,
+                    videoInputsOf: videoInputsOfImplementation,
+                    videoInstant: videoInstantImplementation,
+                    videoRecord: videoRecordImplementation,
+                    workbenchProjectOf: workbenchProjectOfImplementation,
+                    workspaceMediaPath: workspaceMediaPathImplementation,
+                },
+            },
+        ],
+    }).compile()
+    return moduleRef.get<Subject>(SUBJECT)
+}
 
 const WS = "workspace-1"
 const SOURCE = "0a1b2c3d-0a1b-4c3d-8a1b-0a1b2c3d4e5f"
@@ -37,14 +67,18 @@ const rowOf = builder<WorkbenchProjectRow>({
 })
 
 describe("videoRecord", () => {
-    it("retains an object's fields", () => {
+    it("retains an object's fields", async () => {
+        const subject = await buildSubject()
+
         const object = { title: "Saved" }
 
-        expect(videoRecord(object)).toBe(object)
+        expect(subject.videoRecord(object)).toBe(object)
     })
 
-    it.each([null, undefined, 5, "text", [{ title: "Saved" }]])("rejects a non-record %j", (raw) => {
-        expect(videoRecord(raw)).toEqual({})
+    it.each([null, undefined, 5, "text", [{ title: "Saved" }]])("rejects a non-record %j", async (raw) => {
+        const subject = await buildSubject()
+
+        expect(subject.videoRecord(raw)).toEqual({})
     })
 })
 
@@ -56,15 +90,19 @@ describe("workspaceMediaPath", () => {
         [`${WS}/../photo.jpg`, false],
         [`${WS}/folder\\photo.jpg`, false],
         [`${WS}/photo%20one.jpg`, false],
-    ] as const)("accepts workspace path %s: %s", (path, expected) => {
-        expect(workspaceMediaPath(path, WS)).toBe(expected)
+    ] as const)("accepts workspace path %s: %s", async (path, expected) => {
+        const subject = await buildSubject()
+
+        expect(subject.workspaceMediaPath(path, WS)).toBe(expected)
     })
 })
 
 describe("videoInputsOf", () => {
-    it("keeps valid UUIDs and workspace media, normalizes notes, and accepts explicit automation", () => {
+    it("keeps valid UUIDs and workspace media, normalizes notes, and accepts explicit automation", async () => {
+        const subject = await buildSubject()
+
         expect(
-            videoInputsOf(
+            subject.videoInputsOf(
                 {
                     source_ids: [SOURCE, SOURCE.toUpperCase(), "not-a-uuid", 12],
                     sourceIds: ["ignored-alias"],
@@ -82,8 +120,10 @@ describe("videoInputsOf", () => {
         })
     })
 
-    it("reads the camel-case source alias when the stored field is null", () => {
-        expect(videoInputsOf({ source_ids: null, sourceIds: [SOURCE], auto: "true" }, WS)).toEqual({
+    it("reads the camel-case source alias when the stored field is null", async () => {
+        const subject = await buildSubject()
+
+        expect(subject.videoInputsOf({ source_ids: null, sourceIds: [SOURCE], auto: "true" }, WS)).toEqual({
             sourceIds: [SOURCE],
             notes: "",
             media: [],
@@ -91,15 +131,19 @@ describe("videoInputsOf", () => {
         })
     })
 
-    it.each([null, { source_ids: "wrong", notes: 5, media: {} }])("defaults malformed inputs %j", (raw) => {
-        expect(videoInputsOf(raw, WS)).toEqual({ sourceIds: [], notes: "", media: [], auto: false })
+    it.each([null, { source_ids: "wrong", notes: 5, media: {} }])("defaults malformed inputs %j", async (raw) => {
+        const subject = await buildSubject()
+
+        expect(subject.videoInputsOf(raw, WS)).toEqual({ sourceIds: [], notes: "", media: [], auto: false })
     })
 
-    it("caps sources, instructions and media at their editor limits", () => {
+    it("caps sources, instructions and media at their editor limits", async () => {
+        const subject = await buildSubject()
+
         const sourceIds = Array.from({ length: 14 }, () => SOURCE)
         const media = Array.from({ length: 42 }, (_unused, index) => `${WS}/${index}.jpg`)
 
-        expect(videoInputsOf({ sourceIds, notes: `  ${"x".repeat(601)}  `, media }, WS)).toEqual({
+        expect(subject.videoInputsOf({ sourceIds, notes: `  ${"x".repeat(601)}  `, media }, WS)).toEqual({
             sourceIds: sourceIds.slice(0, 12),
             notes: "x".repeat(600),
             media: media.slice(0, 40),
@@ -109,9 +153,11 @@ describe("videoInputsOf", () => {
 })
 
 describe("editorScenesOf", () => {
-    it("discards malformed and empty entries while preserving editor identities and valid footage", () => {
+    it("discards malformed and empty entries while preserving editor identities and valid footage", async () => {
+        const subject = await buildSubject()
+
         expect(
-            editorScenesOf(
+            subject.editorScenesOf(
                 [
                     null,
                     [],
@@ -141,12 +187,16 @@ describe("editorScenesOf", () => {
             { id: "scene-6", role: "cta", caption: "", voiceover: "Visit today", visual: "", media: null },
         ])
     })
+})
 
-    it("limits every scene text field", () => {
+describe("editorScenesOf", () => {
+    it("limits every scene text field", async () => {
+        const subject = await buildSubject()
+
         const media = `${WS}/${"m".repeat(320)}`
 
         expect(
-            editorScenesOf(
+            subject.editorScenesOf(
                 [
                     {
                         id: "i".repeat(61),
@@ -171,10 +221,12 @@ describe("editorScenesOf", () => {
         ])
     })
 
-    it("limits processing to the first twelve stored entries", () => {
+    it("limits processing to the first twelve stored entries", async () => {
+        const subject = await buildSubject()
+
         const raw = Array.from({ length: 14 }, (_unused, index) => ({ caption: `Scene ${index + 1}` }))
 
-        expect(editorScenesOf(raw, WS)).toEqual(
+        expect(subject.editorScenesOf(raw, WS)).toEqual(
             Array.from({ length: 12 }, (_unused, index) => ({
                 id: `scene-${index + 1}`,
                 role: "body",
@@ -186,20 +238,26 @@ describe("editorScenesOf", () => {
         )
     })
 
-    it("defaults non-array scripts to no scenes", () => {
-        expect(editorScenesOf({ caption: "Hello" }, WS)).toEqual([])
+    it("defaults non-array scripts to no scenes", async () => {
+        const subject = await buildSubject()
+
+        expect(subject.editorScenesOf({ caption: "Hello" }, WS)).toEqual([])
     })
 })
 
 describe("videoInstant", () => {
-    it.each([new Date(INSTANT), INSTANT])("preserves the stored instant %s", (instant) => {
-        expect(videoInstant(instant)).toBe(INSTANT)
+    it.each([new Date(INSTANT), INSTANT])("preserves the stored instant %s", async (instant) => {
+        const subject = await buildSubject()
+
+        expect(subject.videoInstant(instant)).toBe(INSTANT)
     })
 })
 
 describe("workbenchProjectOf", () => {
-    it("maps the saved project and sanitizes its inputs and script", () => {
-        expect(workbenchProjectOf(rowOf(), WS, null)).toEqual({
+    it("maps the saved project and sanitizes its inputs and script", async () => {
+        const subject = await buildSubject()
+
+        expect(subject.workbenchProjectOf(rowOf(), WS, null)).toEqual({
             id: "project-1",
             title: "Spring offer",
             goal: "offer",
@@ -224,7 +282,9 @@ describe("workbenchProjectOf", () => {
     it.each([
         ["code:VIDEO_SCRIPT_FORMAT", "VIDEO_SCRIPT_FORMAT"],
         ["private provider failure", "VIDEO_PROJECT_FAILED"],
-    ])("exposes only a stable code for %s", (lastError, expectedCode) => {
+    ])("exposes only a stable code for %s", async (lastError, expectedCode) => {
+        const subject = await buildSubject()
+
         const render: WorkbenchRender = {
             id: "render-1",
             status: "done",
@@ -244,8 +304,8 @@ describe("workbenchProjectOf", () => {
             published_at: INSTANT,
         })
 
-        expect(workbenchProjectOf(row, WS, render)).toEqual({
-            ...workbenchProjectOf(rowOf(), WS, null),
+        expect(subject.workbenchProjectOf(row, WS, render)).toEqual({
+            ...subject.workbenchProjectOf(rowOf(), WS, null),
             lastErrorCode: expectedCode,
             approvedAt: INSTANT,
             approvedByName: "Lan",

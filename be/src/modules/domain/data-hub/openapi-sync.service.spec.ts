@@ -122,7 +122,9 @@ describe("OpenApiSyncService", () => {
         await expect(service.sync(context)).resolves.toEqual({ rows: 0, meta: { "cursor.customers": "" } })
         expect(context.upsert).not.toHaveBeenCalled()
     })
+})
 
+describe("OpenApiSyncService", () => {
     it("follows same-origin next links and stops on an empty answer", async () => {
         const { service, client, context } = await build()
         client.call.mockResolvedValueOnce({
@@ -175,7 +177,9 @@ describe("OpenApiSyncService", () => {
             fixedQuery: "active=true",
         })
     })
+})
 
+describe("OpenApiSyncService", () => {
     it("saves the next link when the time budget expires between pages", async () => {
         const { service, client, context } = await build()
         context.isExpired.mockReturnValueOnce(false).mockReturnValueOnce(false).mockReturnValue(true)
@@ -238,7 +242,9 @@ describe("OpenApiSyncService", () => {
         expect(client.call).toHaveBeenCalledTimes(2)
         expect(context.upsert).toHaveBeenCalledTimes(1)
     })
+})
 
+describe("OpenApiSyncService", () => {
     it("finishes a short limit page and includes the page size in the request", async () => {
         const paged = operation({
             params: [
@@ -305,7 +311,9 @@ describe("OpenApiSyncService", () => {
         await expect(service.sync(context)).rejects.toBe(failure)
         expect(context.upsert).not.toHaveBeenCalled()
     })
+})
 
+describe("OpenApiSyncService", () => {
     it("uses the error code when a partial failure has no string detail", async () => {
         const orders = operation({ id: "orders", path: "/orders" })
         const { service, client, context } = await build(

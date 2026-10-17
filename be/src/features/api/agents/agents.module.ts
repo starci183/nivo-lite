@@ -1,4 +1,5 @@
 import { Module } from "@nestjs/common"
+import { ConfigurableModuleClass } from "./agents.module-definition"
 import { AgentConnectionCandidatesHandler } from "./application/agent-connection-candidates.handler"
 import { AskGuideHandler } from "./application/ask-guide.handler"
 import { CreateAgentHandler } from "./application/create-agent.handler"
@@ -37,4 +38,4 @@ import { SetAgentTextsHandler } from "./application/set-agent-texts.handler"
     ],
 })
 /** The agents feature: the handlers of its application. */
-export class AgentsApiModule {}
+export class AgentsApiModule extends ConfigurableModuleClass {}

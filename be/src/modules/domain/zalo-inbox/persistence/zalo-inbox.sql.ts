@@ -6,7 +6,7 @@ VALUES ($1, $2, $3::jsonb)
 ON CONFLICT (provider, delivery_id) DO NOTHING
 RETURNING id`
 
-/** Marks a claimed Zalo delivery processed before its transaction commits ($1 inbox id). */
+/** Marks a claimed Zalo delivery processed in the deferred consumer transaction ($1 inbox id). */
 export const COMPLETE_ZALO_INBOX = sql`WITH completed AS (
     UPDATE public.zalo_inbox
     SET processed_at = now()
@@ -14,3 +14,9 @@ export const COMPLETE_ZALO_INBOX = sql`WITH completed AS (
     RETURNING id
 )
 SELECT id FROM completed`
+
+/** Locks one pending receipt; concurrent jobs and completed replays cannot repeat its effects. */
+export const FIND_PENDING_ZALO_INBOX = sql`SELECT id, payload FROM public.zalo_inbox
+WHERE provider = 'zalo' AND delivery_id = $1 AND processed_at IS NULL
+LIMIT 1
+FOR UPDATE`

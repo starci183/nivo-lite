@@ -1,4 +1,4 @@
-import type { ModuleMetadata } from "@nestjs/common"
+import type { DynamicModule } from "@nestjs/common"
 import { AgentsService } from "@modules/domain/agents"
 import { SUPABASE_AUTH } from "@modules/integrations/supabase"
 import { MessagesModule } from "@modules/domain/messages"
@@ -11,7 +11,7 @@ import { LeadsModule } from "@modules/domain/leads"
 import { LeadFlowsModule } from "@modules/domain/lead-flows"
 import type { ApiOptions } from "../api.options"
 /** The identity area of the API, in registration order. */
-export const identityModules = (options: ApiOptions): NonNullable<ModuleMetadata["imports"]> => [
+export const identityModules = (options: ApiOptions): Array<DynamicModule> => [
     LeadsModule.register({ isGlobal: true }),
     LeadFlowsModule.register({ isGlobal: true }),
     MessagesModule.register({ isGlobal: true, agentDirectory: AgentsService }),

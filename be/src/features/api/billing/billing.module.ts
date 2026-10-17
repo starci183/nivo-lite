@@ -12,6 +12,7 @@ import { OpenPlanPaymentOrderHandler } from "./application/open-plan-payment-ord
 import { BillingReviewTransactionsHandler } from "./application/billing-review-transactions.handler"
 import { RequestPaymentOrderHandler } from "./application/request-payment-order.handler"
 import { PaymentOrderRequestStatusHandler } from "./application/payment-order-request-status.handler"
+import { ConfigurableModuleClass } from "./billing.module-definition"
 
 @Module({
     providers: [
@@ -31,4 +32,4 @@ import { PaymentOrderRequestStatusHandler } from "./application/payment-order-re
     ],
 })
 /** Application handlers for billing reads and queued payment requests. */
-export class BillingApiModule {}
+export class BillingApiModule extends ConfigurableModuleClass {}

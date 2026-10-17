@@ -1,6 +1,5 @@
+import { NullAsAbsent } from "@modules/platform/graphql"
 import { Field, ID, InputType } from "@nestjs/graphql"
-import { Transform } from "class-transformer"
-import type { TransformFnParams } from "class-transformer"
 import { IsIn, IsOptional, IsString, IsUUID, MaxLength } from "class-validator"
 
 @InputType()
@@ -20,7 +19,7 @@ export class DecideExecutionInput {
     /** The draft the person edited. */
     @Field(() => String, { nullable: true })
     @IsOptional()
-    @Transform(({ value }: TransformFnParams): unknown => value ?? undefined)
+    @NullAsAbsent()
     @IsString()
     @MaxLength(10000)
     editedDraft?: string

@@ -120,6 +120,10 @@ describe("CustomerTurnGatewayService", () => {
         )
         expect(logger.error).not.toHaveBeenCalled()
     })
+})
+
+describe("CustomerTurnGatewayService", () => {
+    afterEach(() => jest.restoreAllMocks())
 
     it("logs a failed installation sync before falling back to the internal agent", async () => {
         const { service, sync, logger } = await build()
@@ -177,6 +181,10 @@ describe("CustomerTurnGatewayService", () => {
         ).rejects.toBe(cause)
         expect(logger.error).not.toHaveBeenCalled()
     })
+})
+
+describe("CustomerTurnGatewayService", () => {
+    afterEach(() => jest.restoreAllMocks())
 
     it("uses the conversation already captured by the runtime without reading it again from the turn", async () => {
         const { service, gateway } = await build()

@@ -47,276 +47,299 @@ const build = async (options: JobOpsOptions = OPTIONS) => {
     return { service: moduleRef.get(JobOpsAlertMonitorService), clock, jobs, logger, reporter, configuredOptions }
 }
 
-describe("JobOpsAlertMonitorService", () => {
+describe("JobOpsAlertMonitorService / onApplicationBootstrap", () => {
     beforeEach(() => jest.useFakeTimers())
     afterEach(() => {
         jest.clearAllTimers()
         jest.useRealTimers()
     })
+    it.each([{}, { alerts: { enabled: false, intervalMs: INTERVAL_MS, failedMax: 20, staleSeconds: 300 } }])(
+        "does not start a timer when alerts are disabled or omitted: %j",
+        async (options) => {
+            const { service, jobs, logger, reporter } = await build(options)
 
-    describe("onApplicationBootstrap", () => {
-        it.each([{}, { alerts: { enabled: false, intervalMs: INTERVAL_MS, failedMax: 20, staleSeconds: 300 } }])(
-            "does not start a timer when alerts are disabled or omitted: %j",
-            async (options) => {
-                const { service, jobs, logger, reporter } = await build(options)
-
-                service.onApplicationBootstrap()
-                await jest.advanceTimersByTimeAsync(INTERVAL_MS)
-
-                expect(jest.getTimerCount()).toBe(0)
-                expect(jobs.stats).not.toHaveBeenCalled()
-                expect(logger.error).not.toHaveBeenCalled()
-                expect(reporter.report).not.toHaveBeenCalled()
-            },
-        )
-
-        it("starts just one timer when bootstrap is called twice", async () => {
-            const { service, jobs } = await build()
-
-            service.onApplicationBootstrap()
             service.onApplicationBootstrap()
             await jest.advanceTimersByTimeAsync(INTERVAL_MS)
 
-            expect(jest.getTimerCount()).toBe(1)
-            expect(jobs.stats).toHaveBeenCalledTimes(1)
-        })
+            expect(jest.getTimerCount()).toBe(0)
+            expect(jobs.stats).not.toHaveBeenCalled()
+            expect(logger.error).not.toHaveBeenCalled()
+            expect(reporter.report).not.toHaveBeenCalled()
+        },
+    )
+
+    it("starts just one timer when bootstrap is called twice", async () => {
+        const { service, jobs } = await build()
+
+        service.onApplicationBootstrap()
+        service.onApplicationBootstrap()
+        await jest.advanceTimersByTimeAsync(INTERVAL_MS)
+
+        expect(jest.getTimerCount()).toBe(1)
+        expect(jobs.stats).toHaveBeenCalledTimes(1)
     })
+})
 
-    describe("checks", () => {
-        it.each([undefined, { enabled: false, intervalMs: INTERVAL_MS, failedMax: 20, staleSeconds: 300 }])(
-            "stops reading statistics when the configured alerts become disabled: %j",
-            async (alerts) => {
-                const { service, jobs, logger, reporter, configuredOptions } = await build()
-                service.onApplicationBootstrap()
-                jest.replaceProperty(configuredOptions, "alerts", alerts)
-
-                await jest.advanceTimersByTimeAsync(INTERVAL_MS)
-
-                expect(jobs.stats).not.toHaveBeenCalled()
-                expect(logger.warn).not.toHaveBeenCalled()
-                expect(logger.error).not.toHaveBeenCalled()
-                expect(reporter.report).not.toHaveBeenCalled()
-                await service.onApplicationShutdown()
-                expect(jest.getTimerCount()).toBe(0)
-            },
-        )
-
-        it("logs reporting failures and permits later checks with the recorded cooldown", async () => {
-            const { service, jobs, logger, reporter } = await build()
-            const failure = new Error("reporter unavailable")
-            const fields = {
-                kind: "failed-jobs",
-                failed24h: 21,
-                oldestQueuedAgeSeconds: 0,
-                failedMax: 20,
-                staleSeconds: 300,
-            }
-            jobs.stats.mockResolvedValue({ ...STATS, failed24h: 21 })
-            reporter.report.mockRejectedValueOnce(failure)
-
+describe("JobOpsAlertMonitorService / checks", () => {
+    beforeEach(() => jest.useFakeTimers())
+    afterEach(() => {
+        jest.clearAllTimers()
+        jest.useRealTimers()
+    })
+    it.each([undefined, { enabled: false, intervalMs: INTERVAL_MS, failedMax: 20, staleSeconds: 300 }])(
+        "stops reading statistics when the configured alerts become disabled: %j",
+        async (alerts) => {
+            const { service, jobs, logger, reporter, configuredOptions } = await build()
             service.onApplicationBootstrap()
+            jest.replaceProperty(configuredOptions, "alerts", alerts)
+
             await jest.advanceTimersByTimeAsync(INTERVAL_MS)
 
-            expect(jobs.stats).toHaveBeenCalledTimes(1)
-            expect(logger.error.mock.calls).toEqual([
-                [
-                    JobOpsLogEvent.AlertFailedJobs,
-                    expect.objectContaining({ code: JobOpsErrorCode.FailedJobsAlert }),
-                    fields,
-                ],
-                [JobOpsLogEvent.AlertMonitorFailed, failure],
-            ])
-            expect(reporter.report).toHaveBeenCalledTimes(1)
-            expect(reporter.report).toHaveBeenCalledWith(
-                "jobs.alert",
+            expect(jobs.stats).not.toHaveBeenCalled()
+            expect(logger.warn).not.toHaveBeenCalled()
+            expect(logger.error).not.toHaveBeenCalled()
+            expect(reporter.report).not.toHaveBeenCalled()
+            await service.onApplicationShutdown()
+            expect(jest.getTimerCount()).toBe(0)
+        },
+    )
+
+    it("logs reporting failures and permits later checks with the recorded cooldown", async () => {
+        const { service, jobs, logger, reporter } = await build()
+        const failure = new Error("reporter unavailable")
+        const fields = {
+            kind: "failed-jobs",
+            failed24h: 21,
+            oldestQueuedAgeSeconds: 0,
+            failedMax: 20,
+            staleSeconds: 300,
+        }
+        jobs.stats.mockResolvedValue({ ...STATS, failed24h: 21 })
+        reporter.report.mockRejectedValueOnce(failure)
+
+        service.onApplicationBootstrap()
+        await jest.advanceTimersByTimeAsync(INTERVAL_MS)
+
+        expect(jobs.stats).toHaveBeenCalledTimes(1)
+        expect(logger.error.mock.calls).toEqual([
+            [
+                JobOpsLogEvent.AlertFailedJobs,
                 expect.objectContaining({ code: JobOpsErrorCode.FailedJobsAlert }),
                 fields,
-            )
-
-            await jest.advanceTimersByTimeAsync(INTERVAL_MS)
-
-            expect(jobs.stats).toHaveBeenCalledTimes(2)
-            expect(logger.error).toHaveBeenCalledTimes(2)
-            expect(logger.warn).not.toHaveBeenCalled()
-            expect(reporter.report).toHaveBeenCalledTimes(1)
-        })
-
-        it.each([STATS, { ...STATS, failed24h: 20, oldestQueuedAgeSeconds: 300 }])(
-            "does not alert when statistics are within or at the limits: %j",
-            async (stats) => {
-                const { service, jobs, logger, reporter } = await build()
-                jobs.stats.mockResolvedValue(stats)
-
-                service.onApplicationBootstrap()
-                await jest.advanceTimersByTimeAsync(INTERVAL_MS)
-
-                expect(jobs.stats).toHaveBeenCalledTimes(1)
-                expect(logger.error).not.toHaveBeenCalled()
-                expect(logger.warn).not.toHaveBeenCalled()
-                expect(reporter.report).not.toHaveBeenCalled()
-            },
+            ],
+            [JobOpsLogEvent.AlertMonitorFailed, failure],
+        ])
+        expect(reporter.report).toHaveBeenCalledTimes(1)
+        expect(reporter.report).toHaveBeenCalledWith(
+            "jobs.alert",
+            expect.objectContaining({ code: JobOpsErrorCode.FailedJobsAlert }),
+            fields,
         )
 
-        it.each([
-            [
-                "failed-jobs",
-                { ...STATS, failed24h: 21 },
-                JobOpsLogEvent.AlertFailedJobs,
-                JobOpsErrorCode.FailedJobsAlert,
-            ],
-            [
-                "jobs-stale",
-                { ...STATS, oldestQueuedAgeSeconds: 301 },
-                JobOpsLogEvent.AlertJobsStale,
-                JobOpsErrorCode.JobsStaleAlert,
-            ],
-        ] as const)("logs and reports one %s alert above its limit", async (kind, stats, event, code) => {
+        await jest.advanceTimersByTimeAsync(INTERVAL_MS)
+
+        expect(jobs.stats).toHaveBeenCalledTimes(2)
+        expect(logger.error).toHaveBeenCalledTimes(2)
+        expect(logger.warn).not.toHaveBeenCalled()
+        expect(reporter.report).toHaveBeenCalledTimes(1)
+    })
+})
+
+describe("JobOpsAlertMonitorService / checks", () => {
+    beforeEach(() => jest.useFakeTimers())
+    afterEach(() => {
+        jest.clearAllTimers()
+        jest.useRealTimers()
+    })
+    it.each([STATS, { ...STATS, failed24h: 20, oldestQueuedAgeSeconds: 300 }])(
+        "does not alert when statistics are within or at the limits: %j",
+        async (stats) => {
             const { service, jobs, logger, reporter } = await build()
             jobs.stats.mockResolvedValue(stats)
-            const fields = {
-                kind,
-                failed24h: stats.failed24h,
-                oldestQueuedAgeSeconds: stats.oldestQueuedAgeSeconds,
-                failedMax: 20,
-                staleSeconds: 300,
-            }
 
             service.onApplicationBootstrap()
             await jest.advanceTimersByTimeAsync(INTERVAL_MS)
 
-            expect(logger.error).toHaveBeenCalledTimes(1)
-            expect(logger.error).toHaveBeenCalledWith(event, expect.any(JobOpsError), fields)
-            expect(reporter.report).toHaveBeenCalledTimes(1)
-            expect(reporter.report).toHaveBeenCalledWith("jobs.alert", expect.objectContaining({ code }), fields)
-            expect(reporter.report.mock.calls[0]?.[1]).toBe(logger.error.mock.calls[0]?.[1])
-            expect(logger.warn).not.toHaveBeenCalled()
-        })
-
-        it("keeps a separate thirty-minute cooldown for each alert kind", async () => {
-            const { service, clock, jobs, logger, reporter } = await build()
-            jobs.stats.mockResolvedValue({ ...STATS, failed24h: 21 })
-            service.onApplicationBootstrap()
-            await jest.advanceTimersByTimeAsync(INTERVAL_MS)
-
-            clock.advance(10 * 60 * 1000)
-            jobs.stats.mockResolvedValue(OVER_LIMITS)
-            await jest.advanceTimersByTimeAsync(INTERVAL_MS)
-            expect(logger.error.mock.calls.map(([event]) => event)).toEqual([
-                JobOpsLogEvent.AlertFailedJobs,
-                JobOpsLogEvent.AlertJobsStale,
-            ])
-
-            clock.advance(20 * 60 * 1000 - 1)
-            await jest.advanceTimersByTimeAsync(INTERVAL_MS)
-            expect(logger.error).toHaveBeenCalledTimes(2)
-            expect(reporter.report).toHaveBeenCalledTimes(2)
-
-            clock.advance(1)
-            await jest.advanceTimersByTimeAsync(INTERVAL_MS)
-            expect(logger.error.mock.calls.map(([event]) => event)).toEqual([
-                JobOpsLogEvent.AlertFailedJobs,
-                JobOpsLogEvent.AlertJobsStale,
-                JobOpsLogEvent.AlertFailedJobs,
-            ])
-            expect(reporter.report).toHaveBeenCalledTimes(3)
-
-            clock.advance(10 * 60 * 1000)
-            await jest.advanceTimersByTimeAsync(INTERVAL_MS)
-            expect(logger.error.mock.calls.map(([event]) => event)).toEqual([
-                JobOpsLogEvent.AlertFailedJobs,
-                JobOpsLogEvent.AlertJobsStale,
-                JobOpsLogEvent.AlertFailedJobs,
-                JobOpsLogEvent.AlertJobsStale,
-            ])
-            expect(reporter.report.mock.calls.map(([scope, , fields]) => [scope, fields?.kind])).toEqual([
-                ["jobs.alert", "failed-jobs"],
-                ["jobs.alert", "jobs-stale"],
-                ["jobs.alert", "failed-jobs"],
-                ["jobs.alert", "jobs-stale"],
-            ])
-        })
-
-        it.each([
-            ["stats-unavailable", () => Promise.resolve(null)],
-            ["stats-error", () => Promise.reject(new Error("driver error with private details"))],
-        ] as const)("only warns for %s and leaves both cooldowns available", async (reason, readStats) => {
-            const { service, jobs, logger, reporter } = await build()
-            jobs.stats.mockImplementationOnce(readStats)
-            jobs.stats.mockResolvedValue(OVER_LIMITS)
-
-            service.onApplicationBootstrap()
-            await jest.advanceTimersByTimeAsync(INTERVAL_MS)
-
-            expect(logger.warn).toHaveBeenCalledTimes(1)
-            expect(logger.warn).toHaveBeenCalledWith(JobOpsLogEvent.AlertUnavailable, { reason })
+            expect(jobs.stats).toHaveBeenCalledTimes(1)
             expect(logger.error).not.toHaveBeenCalled()
+            expect(logger.warn).not.toHaveBeenCalled()
             expect(reporter.report).not.toHaveBeenCalled()
+        },
+    )
 
-            await jest.advanceTimersByTimeAsync(INTERVAL_MS)
+    it.each([
+        ["failed-jobs", { ...STATS, failed24h: 21 }, JobOpsLogEvent.AlertFailedJobs, JobOpsErrorCode.FailedJobsAlert],
+        [
+            "jobs-stale",
+            { ...STATS, oldestQueuedAgeSeconds: 301 },
+            JobOpsLogEvent.AlertJobsStale,
+            JobOpsErrorCode.JobsStaleAlert,
+        ],
+    ] as const)("logs and reports one %s alert above its limit", async (kind, stats, event, code) => {
+        const { service, jobs, logger, reporter } = await build()
+        jobs.stats.mockResolvedValue(stats)
+        const fields = {
+            kind,
+            failed24h: stats.failed24h,
+            oldestQueuedAgeSeconds: stats.oldestQueuedAgeSeconds,
+            failedMax: 20,
+            staleSeconds: 300,
+        }
 
-            expect(logger.warn).toHaveBeenCalledTimes(1)
-            expect(logger.error.mock.calls.map(([event]) => event)).toEqual([
-                JobOpsLogEvent.AlertFailedJobs,
-                JobOpsLogEvent.AlertJobsStale,
-            ])
-            expect(reporter.report).toHaveBeenCalledTimes(2)
-        })
+        service.onApplicationBootstrap()
+        await jest.advanceTimersByTimeAsync(INTERVAL_MS)
+
+        expect(logger.error).toHaveBeenCalledTimes(1)
+        expect(logger.error).toHaveBeenCalledWith(event, expect.any(JobOpsError), fields)
+        expect(reporter.report).toHaveBeenCalledTimes(1)
+        expect(reporter.report).toHaveBeenCalledWith("jobs.alert", expect.objectContaining({ code }), fields)
+        expect(reporter.report.mock.calls[0]?.[1]).toBe(logger.error.mock.calls[0]?.[1])
+        expect(logger.warn).not.toHaveBeenCalled()
+    })
+})
+
+describe("JobOpsAlertMonitorService / checks", () => {
+    beforeEach(() => jest.useFakeTimers())
+    afterEach(() => {
+        jest.clearAllTimers()
+        jest.useRealTimers()
+    })
+    it("keeps a separate thirty-minute cooldown for each alert kind", async () => {
+        const { service, clock, jobs, logger, reporter } = await build()
+        jobs.stats.mockResolvedValue({ ...STATS, failed24h: 21 })
+        service.onApplicationBootstrap()
+        await jest.advanceTimersByTimeAsync(INTERVAL_MS)
+
+        clock.advance(10 * 60 * 1000)
+        jobs.stats.mockResolvedValue(OVER_LIMITS)
+        await jest.advanceTimersByTimeAsync(INTERVAL_MS)
+        expect(logger.error.mock.calls.map(([event]) => event)).toEqual([
+            JobOpsLogEvent.AlertFailedJobs,
+            JobOpsLogEvent.AlertJobsStale,
+        ])
+
+        clock.advance(20 * 60 * 1000 - 1)
+        await jest.advanceTimersByTimeAsync(INTERVAL_MS)
+        expect(logger.error).toHaveBeenCalledTimes(2)
+        expect(reporter.report).toHaveBeenCalledTimes(2)
+
+        clock.advance(1)
+        await jest.advanceTimersByTimeAsync(INTERVAL_MS)
+        expect(logger.error.mock.calls.map(([event]) => event)).toEqual([
+            JobOpsLogEvent.AlertFailedJobs,
+            JobOpsLogEvent.AlertJobsStale,
+            JobOpsLogEvent.AlertFailedJobs,
+        ])
+        expect(reporter.report).toHaveBeenCalledTimes(3)
+
+        clock.advance(10 * 60 * 1000)
+        await jest.advanceTimersByTimeAsync(INTERVAL_MS)
+        expect(logger.error.mock.calls.map(([event]) => event)).toEqual([
+            JobOpsLogEvent.AlertFailedJobs,
+            JobOpsLogEvent.AlertJobsStale,
+            JobOpsLogEvent.AlertFailedJobs,
+            JobOpsLogEvent.AlertJobsStale,
+        ])
+        expect(reporter.report.mock.calls.map(([scope, , fields]) => [scope, fields?.kind])).toEqual([
+            ["jobs.alert", "failed-jobs"],
+            ["jobs.alert", "jobs-stale"],
+            ["jobs.alert", "failed-jobs"],
+            ["jobs.alert", "jobs-stale"],
+        ])
+    })
+})
+
+describe("JobOpsAlertMonitorService / checks", () => {
+    beforeEach(() => jest.useFakeTimers())
+    afterEach(() => {
+        jest.clearAllTimers()
+        jest.useRealTimers()
+    })
+    it.each([
+        ["stats-unavailable", () => Promise.resolve(null)],
+        ["stats-error", () => Promise.reject(new Error("driver error with private details"))],
+    ] as const)("only warns for %s and leaves both cooldowns available", async (reason, readStats) => {
+        const { service, jobs, logger, reporter } = await build()
+        jobs.stats.mockImplementationOnce(readStats)
+        jobs.stats.mockResolvedValue(OVER_LIMITS)
+
+        service.onApplicationBootstrap()
+        await jest.advanceTimersByTimeAsync(INTERVAL_MS)
+
+        expect(logger.warn).toHaveBeenCalledTimes(1)
+        expect(logger.warn).toHaveBeenCalledWith(JobOpsLogEvent.AlertUnavailable, { reason })
+        expect(logger.error).not.toHaveBeenCalled()
+        expect(reporter.report).not.toHaveBeenCalled()
+
+        await jest.advanceTimersByTimeAsync(INTERVAL_MS)
+
+        expect(logger.warn).toHaveBeenCalledTimes(1)
+        expect(logger.error.mock.calls.map(([event]) => event)).toEqual([
+            JobOpsLogEvent.AlertFailedJobs,
+            JobOpsLogEvent.AlertJobsStale,
+        ])
+        expect(reporter.report).toHaveBeenCalledTimes(2)
+    })
+})
+
+describe("JobOpsAlertMonitorService / onApplicationShutdown", () => {
+    beforeEach(() => jest.useFakeTimers())
+    afterEach(() => {
+        jest.clearAllTimers()
+        jest.useRealTimers()
+    })
+    it("cancels future checks and waits for the running statistics read", async () => {
+        const { service, jobs, logger, reporter } = await build()
+        let finish: (stats: JobStatsResult) => void = () => undefined
+        jobs.stats.mockImplementationOnce(
+            () =>
+                new Promise<JobStatsResult>((resolve) => {
+                    finish = resolve
+                }),
+        )
+        service.onApplicationBootstrap()
+        await jest.advanceTimersByTimeAsync(INTERVAL_MS * 2)
+        expect(jobs.stats).toHaveBeenCalledTimes(1)
+        const stopped = jest.fn()
+
+        const closing = service.onApplicationShutdown().then(stopped)
+        await Promise.resolve()
+
+        expect(jest.getTimerCount()).toBe(0)
+        expect(stopped).not.toHaveBeenCalled()
+        finish(OVER_LIMITS)
+        await closing
+        await jest.advanceTimersByTimeAsync(INTERVAL_MS)
+
+        expect(stopped).toHaveBeenCalledTimes(1)
+        expect(jobs.stats).toHaveBeenCalledTimes(1)
+        expect(logger.error).not.toHaveBeenCalled()
+        expect(reporter.report).not.toHaveBeenCalled()
     })
 
-    describe("onApplicationShutdown", () => {
-        it("cancels future checks and waits for the running statistics read", async () => {
-            const { service, jobs, logger, reporter } = await build()
-            let finish: (stats: JobStatsResult) => void = () => undefined
-            jobs.stats.mockImplementationOnce(
-                () =>
-                    new Promise<JobStatsResult>((resolve) => {
-                        finish = resolve
-                    }),
-            )
-            service.onApplicationBootstrap()
-            await jest.advanceTimersByTimeAsync(INTERVAL_MS * 2)
-            expect(jobs.stats).toHaveBeenCalledTimes(1)
-            const stopped = jest.fn()
+    it("waits for reports already started by a running check", async () => {
+        const { service, jobs, reporter } = await build()
+        jobs.stats.mockResolvedValue({ ...STATS, failed24h: 21 })
+        let finish: () => void = () => undefined
+        reporter.report.mockImplementationOnce(
+            () =>
+                new Promise<void>((resolve) => {
+                    finish = resolve
+                }),
+        )
+        service.onApplicationBootstrap()
+        await jest.advanceTimersByTimeAsync(INTERVAL_MS)
+        expect(reporter.report).toHaveBeenCalledTimes(1)
+        const stopped = jest.fn()
 
-            const closing = service.onApplicationShutdown().then(stopped)
-            await Promise.resolve()
+        const closing = service.onApplicationShutdown().then(stopped)
+        await Promise.resolve()
 
-            expect(jest.getTimerCount()).toBe(0)
-            expect(stopped).not.toHaveBeenCalled()
-            finish(OVER_LIMITS)
-            await closing
-            await jest.advanceTimersByTimeAsync(INTERVAL_MS)
+        expect(jest.getTimerCount()).toBe(0)
+        expect(stopped).not.toHaveBeenCalled()
+        finish()
+        await closing
 
-            expect(stopped).toHaveBeenCalledTimes(1)
-            expect(jobs.stats).toHaveBeenCalledTimes(1)
-            expect(logger.error).not.toHaveBeenCalled()
-            expect(reporter.report).not.toHaveBeenCalled()
-        })
-
-        it("waits for reports already started by a running check", async () => {
-            const { service, jobs, reporter } = await build()
-            jobs.stats.mockResolvedValue({ ...STATS, failed24h: 21 })
-            let finish: () => void = () => undefined
-            reporter.report.mockImplementationOnce(
-                () =>
-                    new Promise<void>((resolve) => {
-                        finish = resolve
-                    }),
-            )
-            service.onApplicationBootstrap()
-            await jest.advanceTimersByTimeAsync(INTERVAL_MS)
-            expect(reporter.report).toHaveBeenCalledTimes(1)
-            const stopped = jest.fn()
-
-            const closing = service.onApplicationShutdown().then(stopped)
-            await Promise.resolve()
-
-            expect(jest.getTimerCount()).toBe(0)
-            expect(stopped).not.toHaveBeenCalled()
-            finish()
-            await closing
-
-            expect(stopped).toHaveBeenCalledTimes(1)
-        })
+        expect(stopped).toHaveBeenCalledTimes(1)
     })
 })

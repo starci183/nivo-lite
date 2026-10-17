@@ -74,7 +74,9 @@ describe("N8nDataService", () => {
             await expect(service.ownerRecipients("ws-1")).resolves.toEqual([{ email: "owner@shop.vn", name: "Lan" }])
         })
     })
+})
 
+describe("N8nDataService", () => {
     describe("dailySummary", () => {
         const numbers = {
             new_leads: 2,
@@ -140,7 +142,9 @@ describe("N8nDataService", () => {
             expect(summary.variables.tom_tat).toContain('overdue{"count":0}')
         })
     })
+})
 
+describe("N8nDataService", () => {
     describe("overdueInvoices", () => {
         const invoices = [
             { id: "i-1", invoice_no: "HD1", amount_vnd: "100000", due_at: "2026-10-01T00:00:00Z", lead_id: "l-1" },
@@ -148,13 +152,14 @@ describe("N8nDataService", () => {
             { id: "i-3", invoice_no: "HD3", amount_vnd: "300000", due_at: "2026-10-02T00:00:00Z", lead_id: "l-3" },
             { id: "i-4", invoice_no: "HD4", amount_vnd: "400000", due_at: "2026-10-02T00:00:00Z", lead_id: null },
         ]
+
         const leads = [
             { id: "l-1", contact_name: "An", email: "An@Mail.com" },
             { id: "l-2", contact_name: "Binh", email: "binh@mail.com" },
             { id: "l-3", contact_name: "Chi", email: null },
         ]
 
-        it("lists one reminder per invoice with an address that was not reminded lately and counts the others", async () => {
+        it("lists reminders for addressed invoices not reminded lately and counts the others", async () => {
             const em = mockEntityManager({
                 query: [
                     [SELECT_OVERDUE_INVOICES, invoices],
@@ -186,7 +191,7 @@ describe("N8nDataService", () => {
             expect(em.query).toHaveBeenCalledWith(SELECT_REMINDED_INVOICES, ["ws-1", "2026-10-02T10:00:00.000Z"])
         })
 
-        it("uses the default delays, reads no contact when no invoice names a lead, and has an invoice without a due date due now", async () => {
+        it("uses default delays, skips absent leads and treats missing due dates as due now", async () => {
             const em = mockEntityManager({
                 query: [
                     [SELECT_OVERDUE_INVOICES, [{ ...invoices[3], lead_id: null }]],
@@ -202,6 +207,23 @@ describe("N8nDataService", () => {
             expect(em.query).toHaveBeenCalledWith(SELECT_OVERDUE_INVOICES, ["ws-1", "2026-10-09T10:00:00.000Z"])
             expect(em.query).not.toHaveBeenCalledWith(SELECT_LEAD_CONTACTS, expect.anything())
         })
+    })
+})
+
+describe("N8nDataService", () => {
+    describe("overdueInvoices", () => {
+        const invoices = [
+            { id: "i-1", invoice_no: "HD1", amount_vnd: "100000", due_at: "2026-10-01T00:00:00Z", lead_id: "l-1" },
+            { id: "i-2", invoice_no: "HD2", amount_vnd: "200000", due_at: null, lead_id: "l-2" },
+            { id: "i-3", invoice_no: "HD3", amount_vnd: "300000", due_at: "2026-10-02T00:00:00Z", lead_id: "l-3" },
+            { id: "i-4", invoice_no: "HD4", amount_vnd: "400000", due_at: "2026-10-02T00:00:00Z", lead_id: null },
+        ]
+
+        const leads = [
+            { id: "l-1", contact_name: "An", email: "An@Mail.com" },
+            { id: "l-2", contact_name: "Binh", email: "binh@mail.com" },
+            { id: "l-3", contact_name: "Chi", email: null },
+        ]
 
         it("dates an invoice with no due date today", async () => {
             const em = mockEntityManager({
@@ -242,7 +264,9 @@ describe("N8nDataService", () => {
             expect((await service.overdueInvoices("ws-1", {})).items).toHaveLength(50)
         })
     })
+})
 
+describe("N8nDataService", () => {
     describe("monthLedger", () => {
         it("writes a month of payments and invoices as csv, with the totals as variables", async () => {
             const em = mockEntityManager({
@@ -309,7 +333,9 @@ describe("N8nDataService", () => {
             await expect(service.monthLedger("ws-1", null)).resolves.toMatchObject({ period: "2026-09", rows: 0 })
         })
     })
+})
 
+describe("N8nDataService", () => {
     describe("paymentReceipt", () => {
         const invoice = {
             id: "i-1",
@@ -318,7 +344,9 @@ describe("N8nDataService", () => {
             lead_id: "l-1",
             paid_at: "2026-10-10T03:00:00Z",
         }
+
         const lead = { id: "l-1", contact_name: "An", email: "An@Mail.com" }
+
         const payment = { invoice_id: "i-1", amount_vnd: "100000", occurred_at: "2026-10-11T03:00:00Z" }
 
         it("answers nothing without a payment or an invoice", async () => {
@@ -370,6 +398,22 @@ describe("N8nDataService", () => {
                 data: { refs: { transaction_id: null }, variables: { ngay: "10/10/2026" } },
             })
         })
+    })
+})
+
+describe("N8nDataService", () => {
+    describe("paymentReceipt", () => {
+        const invoice = {
+            id: "i-1",
+            invoice_no: "HD1",
+            amount_vnd: "250000",
+            lead_id: "l-1",
+            paid_at: "2026-10-10T03:00:00Z",
+        }
+
+        const lead = { id: "l-1", contact_name: "An", email: "An@Mail.com" }
+
+        const payment = { invoice_id: "i-1", amount_vnd: "100000", occurred_at: "2026-10-11T03:00:00Z" }
 
         it("dates the receipt today when neither the payment nor the invoice has a date", async () => {
             const service = await build(

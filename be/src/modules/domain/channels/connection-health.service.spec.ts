@@ -105,7 +105,9 @@ describe("ConnectionHealthService", () => {
         expect(connections.markHealth).not.toHaveBeenCalled()
         expect(logger.warn).not.toHaveBeenCalled()
     })
+})
 
+describe("ConnectionHealthService", () => {
     it("skips setup that is still pending, even when its event is old and its recorded health is failing", async () => {
         const { service, connections, logger } = await build()
         connections.healthBatch.mockResolvedValue([
@@ -162,7 +164,9 @@ describe("ConnectionHealthService", () => {
         ])
         expect(connections.healthBatch.mock.calls).toEqual([["", 200]])
     })
+})
 
+describe("ConnectionHealthService", () => {
     it("uses the supplied silence threshold and the current clock on every check", async () => {
         const { service, connections, clock, logger } = await build()
         connections.healthBatch.mockResolvedValue([connection()])
@@ -221,7 +225,9 @@ describe("ConnectionHealthService", () => {
         ])
         expect(connections.markHealth).not.toHaveBeenCalled()
     })
+})
 
+describe("ConnectionHealthService", () => {
     it("finishes a changed verdict before judging the next connection", async () => {
         const { service, connections, logger } = await build()
         connections.healthBatch.mockResolvedValue([
@@ -273,7 +279,9 @@ describe("ConnectionHealthService", () => {
         expect(connections.markHealth).not.toHaveBeenCalled()
         expect(logger.warn).not.toHaveBeenCalled()
     })
+})
 
+describe("ConnectionHealthService", () => {
     it("propagates a failed mark without warning or processing the next connection", async () => {
         const { service, connections, logger } = await build()
         const failure = new Error("health write unavailable")

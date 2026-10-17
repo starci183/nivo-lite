@@ -140,7 +140,9 @@ describe("CreditsService", () => {
 
         await expect(credits.listPacks()).resolves.toEqual([])
     })
+})
 
+describe("CreditsService", () => {
     describe("topup", () => {
         it.each(["active", "past_due"])(
             "creates a pack order for an %s workspace from catalogue values",
@@ -212,7 +214,11 @@ describe("CreditsService", () => {
             )
             expect(orders.create).not.toHaveBeenCalled()
         })
+    })
+})
 
+describe("CreditsService", () => {
+    describe("topup", () => {
         it("refuses a listed plan, which buys add-on packs instead of the old catalogue", async () => {
             const { credits, billing, orders } = await build()
             billing.findPlan.mockResolvedValue({ ...CURRENT, listed: true })
@@ -235,7 +241,9 @@ describe("CreditsService", () => {
             expect(orders.create).not.toHaveBeenCalled()
         })
     })
+})
 
+describe("CreditsService", () => {
     describe("upgrade", () => {
         it("freezes the unused credit and current billing figures on a new upgrade order", async () => {
             const { credits, billing, orders } = await build()
@@ -301,7 +309,11 @@ describe("CreditsService", () => {
             expect(orders.findOpenUpgrade).not.toHaveBeenCalled()
             expect(orders.create).not.toHaveBeenCalled()
         })
+    })
+})
 
+describe("CreditsService", () => {
+    describe("upgrade", () => {
         it("prices the upgrade from the monthly amount the workspace was billed, not the catalogue", async () => {
             const { credits, billing, orders } = await build()
             billing.findWorkspaceBilling.mockResolvedValue({ ...WORKSPACE, billedMonthlyVnd: 1200000 })
@@ -368,7 +380,11 @@ describe("CreditsService", () => {
             expect(billing.findPlan).not.toHaveBeenCalled()
             expect(orders.create).not.toHaveBeenCalled()
         })
+    })
+})
 
+describe("CreditsService", () => {
+    describe("upgrade", () => {
         it("refuses an upgrade whose prepaid credit covers the whole target price", async () => {
             const { credits, billing, orders } = await build()
             billing.findWorkspaceBilling.mockResolvedValue({ ...WORKSPACE, paidUntil: "2026-12-12T10:00:00.000Z" })
@@ -422,7 +438,9 @@ describe("CreditsService", () => {
             expect(em.query).toHaveBeenCalledWith(SELECT_MONTH_PACK_PURCHASES, ["ws-1"])
         })
     })
+})
 
+describe("CreditsService", () => {
     describe("creditPack", () => {
         const PACK_PLAN: Plan = {
             ...CURRENT,

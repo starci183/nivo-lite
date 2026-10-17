@@ -12,6 +12,7 @@ import type { LeadFlow } from "./lead-flows.contracts"
 import { ReplyCommentPublicPerformerService } from "./reply-comment-public-performer.service"
 
 const NOW = "2026-10-12T10:00:00.000Z"
+
 const ctx: WorkContext = { workspaceId: "ws-1", actor: "Lan", locale: "en" }
 
 const flowOf = builder<LeadFlow>({
@@ -114,6 +115,7 @@ const build = async (flow: LeadFlow = flowOf({ last_user_text: "Too pricey" })) 
 }
 
 const by: PerformedBy = { name: "Mai", kind: "owner" }
+
 const proposal = { summary: "", fields: { comment_id: "comment-1" }, draft: "Thanks for asking!" }
 
 describe("ReplyCommentPublicPerformerService", () => {
@@ -133,7 +135,6 @@ describe("ReplyCommentPublicPerformerService", () => {
         })
         expect(kit.holdForPerson).not.toHaveBeenCalled()
     })
-
     it("hands a negative comment to a person and leaves the reply unclear to the gate", async () => {
         const flow = flowOf({ last_user_text: "Too pricey" })
         const { performer, kit } = await build(flow)
@@ -156,7 +157,6 @@ describe("ReplyCommentPublicPerformerService", () => {
             notify: false,
         })
     })
-
     it("posts the reply once and records its delivery on the stable transcript line", async () => {
         const { performer, meta, transcript } = await build()
         transcript.stableLine.mockResolvedValue({ id: "item-1", sent: false })
@@ -176,7 +176,9 @@ describe("ReplyCommentPublicPerformerService", () => {
         )
         expect(transcript.markDelivery).toHaveBeenCalledWith("item-1", true, null)
     })
+})
 
+describe("ReplyCommentPublicPerformerService", () => {
     it("never posts twice when the line already went out", async () => {
         const { performer, meta, transcript } = await build()
         transcript.stableLine.mockResolvedValue({ id: "item-1", sent: true })
@@ -186,7 +188,9 @@ describe("ReplyCommentPublicPerformerService", () => {
         expect(meta.publicReply).not.toHaveBeenCalled()
         expect(transcript.markDelivery).not.toHaveBeenCalled()
     })
+})
 
+describe("ReplyCommentPublicPerformerService", () => {
     it("refuses a simulated item, a missing comment and a reply Meta refused", async () => {
         const { performer, meta, transcript } = await build(flowOf({ conversation_id: null }))
         meta.publicReply.mockResolvedValue({ ok: false, failure: "permission", recipientId: null })
@@ -203,7 +207,6 @@ describe("ReplyCommentPublicPerformerService", () => {
 
         expect(transcript.stableLine).not.toHaveBeenCalled()
     })
-
     it.each([
         { text: "Owner text", last: "Previous text", question: "Owner text" },
         { text: "", last: null, question: "" },
@@ -230,7 +233,6 @@ describe("ReplyCommentPublicPerformerService", () => {
             notify: false,
         })
     })
-
     it.each([undefined, "", "   "])("refuses a missing or blank draft: %s", async (draft) => {
         const { performer, meta, transcript } = await build()
 
@@ -240,7 +242,6 @@ describe("ReplyCommentPublicPerformerService", () => {
         expect(meta.publicReply).not.toHaveBeenCalled()
         expect(transcript.stableLine).not.toHaveBeenCalled()
     })
-
     it("requires a page before creating a transcript line", async () => {
         const { performer, meta, transcript } = await build(flowOf({ connection_id: null }))
 
@@ -250,7 +251,9 @@ describe("ReplyCommentPublicPerformerService", () => {
         expect(meta.publicReply).not.toHaveBeenCalled()
         expect(transcript.stableLine).not.toHaveBeenCalled()
     })
+})
 
+describe("ReplyCommentPublicPerformerService", () => {
     it("uses explicit channel fields and trims the reply without requiring a conversation", async () => {
         const { performer, meta, transcript, kit } = await build(flowOf({ connection_id: null, conversation_id: null }))
         meta.publicReply.mockResolvedValue({ ok: true, failure: null, recipientId: null })
@@ -274,7 +277,6 @@ describe("ReplyCommentPublicPerformerService", () => {
         expect(transcript.stableLine).not.toHaveBeenCalled()
         expect(transcript.markDelivery).not.toHaveBeenCalled()
     })
-
     it("uses the explicit conversation and rejects an unavailable Meta page", async () => {
         const { performer, meta, transcript } = await build(flowOf({ conversation_id: null }))
         transcript.stableLine.mockResolvedValue({ id: "line-2", sent: false })
@@ -291,7 +293,6 @@ describe("ReplyCommentPublicPerformerService", () => {
         expect(transcript.stableLine).toHaveBeenCalledWith("ws-1", "conv-2", "public.line", "Mai", "item-1")
         expect(transcript.markDelivery).not.toHaveBeenCalled()
     })
-
     it("records a failed delivery before surfacing Meta's refusal", async () => {
         const { performer, kit, meta, transcript } = await build()
         transcript.stableLine.mockResolvedValue({ id: "line-1", sent: false })

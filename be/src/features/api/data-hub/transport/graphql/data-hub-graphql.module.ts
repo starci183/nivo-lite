@@ -1,5 +1,6 @@
 import { Module } from "@nestjs/common"
 import { DataHubApiModule } from "../../data-hub.module"
+import { ConfigurableModuleClass } from "./data-hub-graphql.module-definition"
 import { RequestDataSyncResolver } from "./request-data-sync.resolver"
 import { SetSyncScheduleResolver } from "./set-sync-schedule.resolver"
 import { DataSyncRunResolver } from "./data-sync-run.resolver"
@@ -29,7 +30,7 @@ import { ListTelegramChatsResolver } from "./list-telegram-chats.resolver"
 import { SaveTelegramUserSetupResolver } from "./save-telegram-user-setup.resolver"
 
 @Module({
-    imports: [DataHubApiModule],
+    imports: [DataHubApiModule.register({})],
     providers: [
         RequestDataSyncResolver,
         SetSyncScheduleResolver,
@@ -61,4 +62,4 @@ import { SaveTelegramUserSetupResolver } from "./save-telegram-user-setup.resolv
     ],
 })
 /** The GraphQL transport of the data hub feature. */
-export class DataHubGraphqlModule {}
+export class DataHubGraphqlModule extends ConfigurableModuleClass {}

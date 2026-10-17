@@ -105,7 +105,9 @@ describe("VideoMediaService", () => {
             expect(storage.signedUrls).toHaveBeenCalledWith("media", [`${WS}/cake.png`], 3600)
         })
     })
+})
 
+describe("VideoMediaService", () => {
     describe("createUpload", () => {
         const file = { name: "B\u00e1nh m\u00ec ngon!.JPG", type: "image/jpeg", size: 1000 }
 
@@ -169,7 +171,9 @@ describe("VideoMediaService", () => {
             })
         })
     })
+})
 
+describe("VideoMediaService", () => {
     describe("render", () => {
         it("answers nothing before the first render", async () => {
             const { media } = await build(mockEntityManager({}))
@@ -232,7 +236,9 @@ describe("VideoMediaService", () => {
             expect(storage.signedUrls).toHaveBeenCalledWith("videos", [DONE.poster_path], 3600)
         })
     })
+})
 
+describe("VideoMediaService", () => {
     describe("shareLink", () => {
         it("answers a three day link for a workspace video", async () => {
             const { media, storage } = await build(mockEntityManager({}))

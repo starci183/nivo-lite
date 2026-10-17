@@ -7,34 +7,7 @@ import { OpenApiClient } from "./openapi.client"
 import type { OpenApiCall } from "./openapi.contracts"
 import type { PublicHostClient, PublicResponse } from "./public-host.client"
 
-const SPEC =
-    '{"openapi":"3.0.0","info":{"title":"Shop"},"paths":{"/ping":{"get":{"operationId":"ping","responses":{"200":{"description":"ok"}}}}}}'
-
-const response = (partial: Partial<PublicResponse>): PublicResponse => ({
-    status: 200,
-    headers: {},
-    text: SPEC,
-    ...partial,
-})
-
-const callOf = (partial: Partial<OpenApiCall> = {}): OpenApiCall => ({
-    baseUrl: "https://api.example",
-    op: { id: "ping", method: "GET", path: "/ping", summary: "", params: [], hasBody: false },
-    auth: { type: "none", name: "", value: "", user: "", password: "" },
-    input: {},
-    ...partial,
-})
-
-const build = async (allowPrivate = false) => {
-    const publicHost = mock<PublicHostClient>()
-    publicHost.allowsPrivate.mockReturnValue(allowPrivate)
-    const moduleRef = await Test.createTestingModule({
-        providers: [OpenApiClient, { provide: PUBLIC_HOST, useValue: publicHost }],
-    }).compile()
-    return { client: moduleRef.get(OpenApiClient), publicHost }
-}
-
-describe("OpenApiClient", () => {
+const registerFetchSpec = () => {
     describe("fetchSpec", () => {
         it("refuses a link that is not https, unless a development site allows http", async () => {
             const blocked = await build(false)
@@ -74,7 +47,19 @@ describe("OpenApiClient", () => {
             expect(client.parseSpec(SPEC, "https://api.example/openapi.json").title).toBe("Shop")
             expect(
                 client.parseSpec(
-                    "openapi: '3.0.0'\ninfo:\n  title: Shop\npaths:\n  /ping:\n    get:\n      operationId: ping\n      responses:\n        '200':\n          description: ok\n",
+                    [
+                        "openapi: '3.0.0'",
+                        "info:",
+                        "  title: Shop",
+                        "paths:",
+                        "  /ping:",
+                        "    get:",
+                        "      operationId: ping",
+                        "      responses:",
+                        "        '200':",
+                        "          description: ok",
+                        "",
+                    ].join("\n"),
                     "https://api.example/openapi.yaml",
                 ).ops[0]?.id,
             ).toBe("ping")
@@ -89,7 +74,9 @@ describe("OpenApiClient", () => {
             )
         })
     })
+}
 
+const registerCall = () => {
     describe("call", () => {
         it("sends the built request and keeps a non-success status", async () => {
             const { client, publicHost } = await build()
@@ -117,4 +104,39 @@ describe("OpenApiClient", () => {
             })
         })
     })
+}
+
+const SPEC = JSON.stringify({
+    openapi: "3.0.0",
+    info: { title: "Shop" },
+    paths: { "/ping": { get: { operationId: "ping", responses: { "200": { description: "ok" } } } } },
+})
+
+const response = (partial: Partial<PublicResponse>): PublicResponse => ({
+    status: 200,
+    headers: {},
+    text: SPEC,
+    ...partial,
+})
+
+const callOf = (partial: Partial<OpenApiCall> = {}): OpenApiCall => ({
+    baseUrl: "https://api.example",
+    op: { id: "ping", method: "GET", path: "/ping", summary: "", params: [], hasBody: false },
+    auth: { type: "none", name: "", value: "", user: "", password: "" },
+    input: {},
+    ...partial,
+})
+
+const build = async (allowPrivate = false) => {
+    const publicHost = mock<PublicHostClient>()
+    publicHost.allowsPrivate.mockReturnValue(allowPrivate)
+    const moduleRef = await Test.createTestingModule({
+        providers: [OpenApiClient, { provide: PUBLIC_HOST, useValue: publicHost }],
+    }).compile()
+    return { client: moduleRef.get(OpenApiClient), publicHost }
+}
+
+describe("OpenApiClient", () => {
+    registerFetchSpec()
+    registerCall()
 })

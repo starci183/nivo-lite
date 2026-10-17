@@ -65,7 +65,9 @@ describe("WorkspaceWriterService", () => {
             ])
         })
     })
+})
 
+describe("WorkspaceWriterService", () => {
     describe("write", () => {
         it("writes every file and a manifest, then writes nothing the second time", async () => {
             const { writer, disk } = await build()
@@ -117,7 +119,9 @@ describe("WorkspaceWriterService", () => {
             }
         })
     })
+})
 
+describe("WorkspaceWriterService", () => {
     describe("matches", () => {
         it("is true for an identical workspace and false for a changed, missing or stale one", async () => {
             const { writer } = await build()

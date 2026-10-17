@@ -49,3 +49,6 @@ export interface SepaySimulationRegistration extends Omit<SepaySimulationOptions
     /** The integration class that implements the simulated delivery transport. */
     readonly poster: Type<SimulationPoster>
 }
+
+/** The environment settings before the app binds delivery and operator output. */
+export type SepaySimulationConfig = Pick<SepaySimulationOptions, "apiKey" | "bankCode" | "bankAccount" | "url">

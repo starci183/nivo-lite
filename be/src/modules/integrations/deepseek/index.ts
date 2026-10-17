@@ -2,7 +2,6 @@ export { DEEPSEEK_ERROR_KINDS } from "./errors/deepseek.error"
 export { DEEPSEEK_MESSAGES } from "./messages/deepseek.messages"
 export { DeepseekClient } from "./deepseek.client"
 export { parseDeepseekConfig } from "./deepseek.config"
-export type { DeepseekOptions } from "./deepseek.options"
 export type {
     AgentInput,
     Classification,

@@ -1,6 +1,7 @@
 import { Module } from "@nestjs/common"
 import { GetLoyaltyCampaignResolver } from "./get-loyalty-campaign.resolver"
 import { DraftCampaignResolver } from "./draft-campaign.resolver"
+import { ConfigurableModuleClass } from "./loyalty-graphql.module-definition"
 import { SubmitLoyaltyCampaignResolver } from "./submit-loyalty-campaign.resolver"
 import { LoyaltyApiModule } from "../../loyalty.module"
 import { LoyaltyBoardResolver } from "./loyalty-board.resolver"
@@ -17,7 +18,7 @@ import { AddLoyaltyPresetRewardsResolver } from "./add-loyalty-preset-rewards.re
 import { UpdateLoyaltyMemberResolver } from "./update-loyalty-member.resolver"
 
 @Module({
-    imports: [LoyaltyApiModule],
+    imports: [LoyaltyApiModule.register({})],
     providers: [
         GetLoyaltyCampaignResolver,
         DraftCampaignResolver,
@@ -37,4 +38,4 @@ import { UpdateLoyaltyMemberResolver } from "./update-loyalty-member.resolver"
     ],
 })
 /** Exposes the loyalty workbench through GraphQL. */
-export class LoyaltyGraphqlModule {}
+export class LoyaltyGraphqlModule extends ConfigurableModuleClass {}

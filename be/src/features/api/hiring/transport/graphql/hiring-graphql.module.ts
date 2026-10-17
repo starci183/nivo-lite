@@ -6,6 +6,7 @@ import { CreateHiringCvUploadResolver } from "./create-hiring-cv-upload.resolver
 import { DeleteHiringCandidateResolver } from "./delete-hiring-candidate.resolver"
 import { GenerateHiringAdResolver } from "./generate-hiring-ad.resolver"
 import { HiringCandidateDetailResolver } from "./hiring-candidate-detail.resolver"
+import { ConfigurableModuleClass } from "./hiring-graphql.module-definition"
 import { HiringWorkbenchResolver } from "./hiring-workbench.resolver"
 import { LinkHiringStaffResolver } from "./link-hiring-staff.resolver"
 import { MoveHiringCandidateResolver } from "./move-hiring-candidate.resolver"
@@ -26,7 +27,7 @@ import { SetHiringJobStatusResolver } from "./set-hiring-job-status.resolver"
 import { ToggleHiringOnboardingResolver } from "./toggle-hiring-onboarding.resolver"
 
 @Module({
-    imports: [HiringApiModule],
+    imports: [HiringApiModule.register({})],
     providers: [
         ApplyToHiringJobResolver,
         CancelHiringOfferResolver,
@@ -55,4 +56,4 @@ import { ToggleHiringOnboardingResolver } from "./toggle-hiring-onboarding.resol
     ],
 })
 /** The GraphQL transport of the hiring feature. */
-export class HiringGraphqlModule {}
+export class HiringGraphqlModule extends ConfigurableModuleClass {}

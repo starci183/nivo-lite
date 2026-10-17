@@ -14,42 +14,7 @@ import { DatabaseClient } from "./database.client"
 import { DataSourcesErrorCode } from "./errors/data-sources.error"
 import type { PublicHostClient } from "./public-host.client"
 
-const sessionOf = (engine: DatabaseEngine, rows: ReadonlyArray<DatabaseRow> = []): MockOf<DatabaseSession> => {
-    const session = mock<DatabaseSession>({ engine })
-    session.query.mockResolvedValue(rows)
-    session.close.mockResolvedValue(undefined)
-    return session
-}
-
-const target = (engine: DatabaseTarget["engine"]): DatabaseTarget => ({
-    engine,
-    host: "db.example",
-    port: 5432,
-    database: "shop",
-    user: "nivo",
-    password: "secret",
-    ssl: false,
-})
-
-const selection: DatabaseSelection = {
-    schema: "public",
-    table: "orders",
-    idColumn: "id",
-    titleColumn: "title",
-    updatedColumn: "updated_at",
-    columns: ["note"],
-}
-
-const build = async () => {
-    const publicHost = mock<PublicHostClient>()
-    publicHost.resolve.mockResolvedValue({ address: "203.0.113.5", family: 4 })
-    const moduleRef = await Test.createTestingModule({
-        providers: [DatabaseClient, { provide: PUBLIC_HOST, useValue: publicHost }],
-    }).compile()
-    return { client: moduleRef.get(DatabaseClient), publicHost }
-}
-
-describe("DatabaseClient", () => {
+const registerDatabaseClient = () => {
     afterEach(() => {
         jest.restoreAllMocks()
     })
@@ -106,7 +71,9 @@ describe("DatabaseClient", () => {
         })
         expect(open).toHaveBeenCalledWith(target("mssql"), "203.0.113.5")
     })
+}
 
+const registerDatabaseFailures = () => {
     it("maps a refused connection and a failed query, and still closes the session", async () => {
         const { client } = await build()
         const refused = Object.assign(new Error("no"), { code: "ECONNREFUSED" })
@@ -165,12 +132,15 @@ describe("DatabaseClient", () => {
             client.read(target("postgres"), (reader) => reader.readTable(selection, { limit: 10 })),
         ).rejects.toMatchObject({ code: DataSourcesErrorCode.Rejected, cause: failure })
         expect(session.query).toHaveBeenCalledWith(
-            'SELECT "id", "title", "updated_at", "note", ("updated_at")::text AS "__nivo_cursor" FROM "public"."orders" ORDER BY "updated_at" ASC LIMIT 10',
+            'SELECT "id", "title", "updated_at", "note", ("updated_at")::text AS "__nivo_cursor" ' +
+                'FROM "public"."orders" ORDER BY "updated_at" ASC LIMIT 10',
             [],
         )
         expect(session.close).toHaveBeenCalledTimes(1)
     })
+}
 
+const registerDatabaseCleanup = () => {
     it("propagates a cleanup failure when the read callback also rejects", async () => {
         const { client } = await build()
         const session = sessionOf("postgres")
@@ -183,4 +153,45 @@ describe("DatabaseClient", () => {
         expect(session.close).toHaveBeenCalledTimes(1)
         expect(session.query).not.toHaveBeenCalled()
     })
+}
+
+const sessionOf = (engine: DatabaseEngine, rows: ReadonlyArray<DatabaseRow> = []): MockOf<DatabaseSession> => {
+    const session = mock<DatabaseSession>({ engine })
+    session.query.mockResolvedValue(rows)
+    session.close.mockResolvedValue(undefined)
+    return session
+}
+
+const target = (engine: DatabaseTarget["engine"]): DatabaseTarget => ({
+    engine,
+    host: "db.example",
+    port: 5432,
+    database: "shop",
+    user: "nivo",
+    password: "secret",
+    ssl: false,
+})
+
+const selection: DatabaseSelection = {
+    schema: "public",
+    table: "orders",
+    idColumn: "id",
+    titleColumn: "title",
+    updatedColumn: "updated_at",
+    columns: ["note"],
+}
+
+const build = async () => {
+    const publicHost = mock<PublicHostClient>()
+    publicHost.resolve.mockResolvedValue({ address: "203.0.113.5", family: 4 })
+    const moduleRef = await Test.createTestingModule({
+        providers: [DatabaseClient, { provide: PUBLIC_HOST, useValue: publicHost }],
+    }).compile()
+    return { client: moduleRef.get(DatabaseClient), publicHost }
+}
+
+describe("DatabaseClient", () => {
+    registerDatabaseClient()
+    registerDatabaseFailures()
+    registerDatabaseCleanup()
 })

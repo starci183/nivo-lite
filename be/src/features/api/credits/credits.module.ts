@@ -5,6 +5,7 @@ import { ListCreditTopupLotsHandler } from "./application/list-credit-topup-lots
 import { GetCreditQuotaStatusHandler } from "./application/get-credit-quota-status.handler"
 import { GetCreditUsageSummaryHandler } from "./application/get-credit-usage-summary.handler"
 import { GetCreditRecentCostUsdHandler } from "./application/get-credit-recent-cost-usd.handler"
+import { ConfigurableModuleClass } from "./credits.module-definition"
 
 @Module({
     providers: [
@@ -17,4 +18,4 @@ import { GetCreditRecentCostUsdHandler } from "./application/get-credit-recent-c
     ],
 })
 /** The credit catalogue, purchased lots, quota and usage application handlers. */
-export class CreditsApiModule {}
+export class CreditsApiModule extends ConfigurableModuleClass {}

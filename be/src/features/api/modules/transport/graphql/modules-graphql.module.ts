@@ -12,6 +12,7 @@ import { ModuleInstallationResolver } from "./module-installation.resolver"
 import { ModuleInstallationsResolver } from "./module-installations.resolver"
 import { ModuleRequirementFactsResolver } from "./module-requirement-facts.resolver"
 import { ModulesCatalogResolver } from "./modules-catalog.resolver"
+import { ConfigurableModuleClass } from "./modules-graphql.module-definition"
 import { PostSetupMessageResolver } from "./post-setup-message.resolver"
 import { RenameInstallationAgentResolver } from "./rename-installation-agent.resolver"
 import { RenameModuleInstallationResolver } from "./rename-module-installation.resolver"
@@ -24,7 +25,7 @@ import { SetupStateResolver } from "./setup-state.resolver"
 import { SetupVersionsResolver } from "./setup-versions.resolver"
 
 @Module({
-    imports: [ModulesApiModule],
+    imports: [ModulesApiModule.register({})],
     providers: [
         ModulesCatalogResolver,
         ModuleDefinitionResolver,
@@ -51,4 +52,4 @@ import { SetupVersionsResolver } from "./setup-versions.resolver"
     ],
 })
 /** The GraphQL transport of the modules feature. */
-export class ModulesGraphqlModule {}
+export class ModulesGraphqlModule extends ConfigurableModuleClass {}

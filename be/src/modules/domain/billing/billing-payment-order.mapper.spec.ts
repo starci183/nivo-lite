@@ -1,5 +1,14 @@
+import { Test } from "@nestjs/testing"
+
 import type { PayableOrder } from "./billing.contracts"
-import { paymentInstructionsOf } from "./billing-payment-order.mapper"
+
+import { paymentInstructionsOf as realPaymentInstructionsOf } from "./billing-payment-order.mapper"
+
+const SUBJECT = Symbol("billing-payment-order.mapper")
+
+type Subject = {
+    paymentInstructionsOf: typeof realPaymentInstructionsOf
+}
 
 const ORDER: PayableOrder = {
     order: {
@@ -20,8 +29,19 @@ const ORDER: PayableOrder = {
     bank: { bank: "VCB", account: "123456", holder: "NIVO" },
 }
 
+const buildSubject = async () => {
+    const moduleRef = await Test.createTestingModule({
+        providers: [{ provide: SUBJECT, useValue: { paymentInstructionsOf: realPaymentInstructionsOf } }],
+    }).compile()
+    const subject = moduleRef.get<Subject>(SUBJECT)
+
+    return { subject }
+}
+
 describe("paymentInstructionsOf", () => {
-    it("preserves the order and receiving instructions while retaining every correctly typed frozen detail", () => {
+    it("preserves the order and receiving instructions while retaining every correctly typed frozen detail", async () => {
+        const { subject } = await buildSubject()
+
         const detail = {
             credits: 5000,
             from: "starter",
@@ -36,7 +56,7 @@ describe("paymentInstructionsOf", () => {
             seats: 3,
             promo: true,
         }
-        const result = paymentInstructionsOf({ ...ORDER, order: { ...ORDER.order, detail } })
+        const result = subject.paymentInstructionsOf({ ...ORDER, order: { ...ORDER.order, detail } })
 
         expect(result).toEqual({ ...ORDER.order, qrUrl: ORDER.qrUrl, bank: ORDER.bank, detail })
         expect(result.bank).not.toBe(ORDER.bank)
@@ -59,8 +79,10 @@ describe("paymentInstructionsOf", () => {
             seats: "3",
             promo: "true",
         },
-    ])("answers null for absent or incorrectly typed details %p", (detail) => {
-        expect(paymentInstructionsOf({ ...ORDER, order: { ...ORDER.order, detail } }).detail).toEqual({
+    ])("answers null for absent or incorrectly typed details %p", async (detail) => {
+        const { subject } = await buildSubject()
+
+        expect(subject.paymentInstructionsOf({ ...ORDER, order: { ...ORDER.order, detail } }).detail).toEqual({
             credits: null,
             from: null,
             to: null,
@@ -75,10 +97,14 @@ describe("paymentInstructionsOf", () => {
             promo: null,
         })
     })
+})
 
+describe("paymentInstructionsOf", () => {
     it.each([0, -100])(
         "omits a nonpositive tier allowance %p while preserving zero and false sale details",
-        (tierCredits) => {
+        async (tierCredits) => {
+            const { subject } = await buildSubject()
+
             const detail = {
                 credits: 0,
                 from: "",
@@ -94,7 +120,7 @@ describe("paymentInstructionsOf", () => {
                 promo: false,
             }
 
-            expect(paymentInstructionsOf({ ...ORDER, order: { ...ORDER.order, detail } }).detail).toEqual({
+            expect(subject.paymentInstructionsOf({ ...ORDER, order: { ...ORDER.order, detail } }).detail).toEqual({
                 ...detail,
                 tierCredits: null,
             })

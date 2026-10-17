@@ -97,6 +97,15 @@ describe("KnowledgeSearchService", () => {
                 service.ask("u1", WS, { question: "q", module: "nope", audience: "internal" }),
             ).rejects.toMatchObject({ code: KnowledgeErrorCode.ModuleUnknown })
         })
+    })
+})
+
+describe("KnowledgeSearchService", () => {
+    describe("ask", () => {
+        const stubs = (audience: string): ReadonlyArray<readonly [string, unknown]> => [
+            [SELECT_MODULE_AUDIENCE, [{ audience }]],
+            [MATCH_KNOWLEDGE, [row("business")]],
+        ]
 
         it("answers nothing, and spends nothing, for an empty question", async () => {
             const { service, embeddings } = await build(mockEntityManager({ query: stubs("internal") }))
@@ -131,7 +140,9 @@ describe("KnowledgeSearchService", () => {
             })
         })
     })
+})
 
+describe("KnowledgeSearchService", () => {
     describe("passages", () => {
         it("searches by words alone when the query cannot be embedded", async () => {
             const em = mockEntityManager({ query: [MATCH_KNOWLEDGE, [row("nivo")]] })
@@ -180,7 +191,9 @@ describe("KnowledgeSearchService", () => {
             expect(embeddings.embed).not.toHaveBeenCalled()
         })
     })
+})
 
+describe("KnowledgeSearchService", () => {
     describe("passagesText", () => {
         it("keeps the business passages and spends no credits", async () => {
             const em = mockEntityManager({ query: [MATCH_KNOWLEDGE, [row("nivo"), row("business")]] })

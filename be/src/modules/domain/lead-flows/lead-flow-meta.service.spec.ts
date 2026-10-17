@@ -11,6 +11,7 @@ import { LeadFlowMetaService } from "./lead-flow-meta.service"
 import type { CommentTarget, DmTarget } from "./lead-flows.contracts"
 
 const NOW = "2026-10-13T10:00:00.000Z"
+
 const HOUR_MS = 3_600_000
 
 const CONNECTION: ConnectionRecord = {
@@ -30,7 +31,9 @@ const CONNECTION: ConnectionRecord = {
 }
 
 const PAGE: MetaPageAccess = { pageId: "page-1", pageToken: "page-token", igId: "ig-1" }
+
 const FLOW: DmTarget = { connection_id: "connection-1", platform: "facebook", psid: "person-1", igsid: null }
+
 const COMMENT: CommentTarget = {
     workspaceId: "ws-1",
     connectionId: "connection-1",
@@ -74,7 +77,6 @@ describe("LeadFlowMetaService", () => {
 
         expect(connections.find).toHaveBeenCalledWith("ws-1", "connection-1")
     })
-
     it("sends a direct message inside the 24 hour window", async () => {
         const { service, meta, threads } = await build()
         threads.lastUserAt.mockResolvedValue(Date.parse(NOW) - HOUR_MS)
@@ -93,7 +95,6 @@ describe("LeadFlowMetaService", () => {
         })
         expect(meta.deliverMessage).toHaveBeenCalledWith(PAGE, "facebook", "person-1", "Hello", "standard")
     })
-
     it("refuses a normal message after 24 hours and lets a person's tagged reply go up to 7 days", async () => {
         const { service, meta, threads } = await build()
         threads.lastUserAt.mockResolvedValue(Date.parse(NOW) - 48 * HOUR_MS)
@@ -117,7 +118,9 @@ describe("LeadFlowMetaService", () => {
 
         expect(meta.deliverMessage.mock.calls).toEqual([[PAGE, "facebook", "person-1", "Hello", "human_agent"]])
     })
+})
 
+describe("LeadFlowMetaService", () => {
     it("claims the one private reply of a recent comment before sending it and gives it back on a failure", async () => {
         const { service, meta, comments } = await build()
         comments.replyState.mockResolvedValue({ commentAt: Date.parse(NOW) - HOUR_MS, replied: false })
@@ -141,7 +144,6 @@ describe("LeadFlowMetaService", () => {
         expect(meta.privateMessage).toHaveBeenCalledWith(PAGE, "facebook", "comment-1", "Hi")
         expect(comments.release).toHaveBeenCalledTimes(1)
     })
-
     it("refuses a private reply to an old comment or one somebody already claimed, without sending", async () => {
         const { service, meta, comments } = await build()
         meta.takePrivateReplySlots.mockReturnValue(true)
@@ -162,7 +164,6 @@ describe("LeadFlowMetaService", () => {
 
         expect(meta.privateMessage).not.toHaveBeenCalled()
     })
-
     it("ignores absent and other-provider connections and unreadable credentials", async () => {
         const { service, connections } = await build()
         connections.find.mockResolvedValueOnce(null)
@@ -178,7 +179,9 @@ describe("LeadFlowMetaService", () => {
         await expect(service.pageOf("ws-1", "connection-1")).resolves.toEqual({ ...PAGE, igId: null })
         expect(connections.readSecret).toHaveBeenCalledWith("connection-1")
     })
+})
 
+describe("LeadFlowMetaService", () => {
     it("reads lead details, mentions and names through the supplied Page", async () => {
         const { service, meta } = await build()
         const lead = {
@@ -205,7 +208,6 @@ describe("LeadFlowMetaService", () => {
         expect(meta.fetchMention).toHaveBeenCalledWith(PAGE, "mention-1")
         expect(meta.fetchProfileName).toHaveBeenCalledWith(PAGE, "instagram", "ig-person")
     })
-
     it.each([
         { ...FLOW, connection_id: null },
         { ...FLOW, platform: null },
@@ -217,7 +219,6 @@ describe("LeadFlowMetaService", () => {
 
         expect(threads.lastUserAt).not.toHaveBeenCalled()
     })
-
     it("sends a person's Instagram reply inside the window as a standard message", async () => {
         const { service, meta, threads } = await build()
         const flow: DmTarget = { ...FLOW, platform: "instagram", igsid: "ig-person" }
@@ -238,7 +239,9 @@ describe("LeadFlowMetaService", () => {
         })
         expect(meta.deliverMessage).toHaveBeenCalledWith(PAGE, "instagram", "ig-person", "A human reply", "standard")
     })
+})
 
+describe("LeadFlowMetaService", () => {
     it("refuses closed windows and a missing Page before delivering", async () => {
         const { service, meta, threads, connections } = await build()
         threads.lastUserAt.mockResolvedValue(Date.parse(NOW) - 8 * 24 * HOUR_MS)
@@ -263,7 +266,6 @@ describe("LeadFlowMetaService", () => {
 
         expect(meta.deliverMessage).not.toHaveBeenCalled()
     })
-
     it("answers publicly with the Page and reports delivery without a recipient", async () => {
         const { service, meta, connections } = await build()
         meta.publicReply.mockResolvedValueOnce({ ok: true, ids: ["comment-reply-1"] })
@@ -287,7 +289,9 @@ describe("LeadFlowMetaService", () => {
             [PAGE, "facebook", "comment-1", "Another reply"],
         ])
     })
+})
 
+describe("LeadFlowMetaService", () => {
     it("does not claim a private reply without a Page or available rate-limit slot", async () => {
         const { service, meta, connections, comments } = await build()
         connections.find.mockResolvedValueOnce(null)
@@ -307,7 +311,9 @@ describe("LeadFlowMetaService", () => {
         expect(comments.claim).not.toHaveBeenCalled()
         expect(meta.privateMessage).not.toHaveBeenCalled()
     })
+})
 
+describe("LeadFlowMetaService", () => {
     it("retains the claim when Meta says a private reply was already sent", async () => {
         const { service, meta, comments } = await build()
         comments.replyState.mockResolvedValue({ commentAt: Date.parse(NOW), replied: false })

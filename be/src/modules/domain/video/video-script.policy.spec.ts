@@ -1,5 +1,16 @@
+import { Test } from "@nestjs/testing"
 import { mediaKindOf, readScript, specOf } from "./video-script.policy"
 import type { BrandKit } from "./video-script.policy"
+
+const SUBJECT = Symbol("video-script.policy")
+type Subject = { readScript: typeof readScript; mediaKindOf: typeof mediaKindOf; specOf: typeof specOf }
+
+const build = async () => {
+    const moduleRef = await Test.createTestingModule({
+        providers: [{ provide: SUBJECT, useValue: { readScript, mediaKindOf, specOf } }],
+    }).compile()
+    return moduleRef.get<Subject>(SUBJECT)
+}
 
 const WORKSPACE = "0a1b2c3d-0a1b-4c3d-8a1b-0a1b2c3d4e5f"
 
@@ -13,21 +24,25 @@ const brand: BrandKit = {
 }
 
 describe("readScript", () => {
-    it("keeps the clean scenes, at most twelve", () => {
+    it("keeps the clean scenes, at most twelve", async () => {
+        const subject = await build()
+
         const raw = Array.from({ length: 14 }, (_unused, index) => ({
             caption: ` Scene   ${index} `,
             voiceover: "Words",
             media: `${WORKSPACE}/${index}.jpg`,
         }))
 
-        const scenes = readScript(raw)
+        const scenes = subject.readScript(raw)
 
         expect(scenes).toHaveLength(12)
         expect(scenes[0]).toEqual({ caption: "Scene 0", voiceover: "Words", media: `${WORKSPACE}/0.jpg` })
     })
 
-    it("drops what is not a scene or has nothing to show or say, and cuts long values", () => {
-        const scenes = readScript([
+    it("drops what is not a scene or has nothing to show or say, and cuts long values", async () => {
+        const subject = await build()
+
+        const scenes = subject.readScript([
             "text",
             null,
             { caption: "", voiceover: "" },
@@ -41,8 +56,10 @@ describe("readScript", () => {
         ])
     })
 
-    it("reads nothing from what is not a list", () => {
-        expect(readScript({ caption: "a" })).toEqual([])
+    it("reads nothing from what is not a list", async () => {
+        const subject = await build()
+
+        expect(subject.readScript({ caption: "a" })).toEqual([])
     })
 })
 
@@ -53,14 +70,18 @@ describe("mediaKindOf", () => {
         ["clip.webm", "video"],
         ["photo.jpg", "image"],
         ["photo.mp4.png", "image"],
-    ] as const)("tells %s is a %s", (path, kind) => {
-        expect(mediaKindOf(path)).toBe(kind)
+    ] as const)("tells %s is a %s", async (path, kind) => {
+        const subject = await build()
+
+        expect(subject.mediaKindOf(path)).toBe(kind)
     })
 })
 
 describe("specOf", () => {
-    it("builds cards in alternating colours for scenes without media and Ken Burns or clips for scenes with media", () => {
-        const spec = specOf(
+    it("builds cards in alternating colours for scenes without media and Ken Burns or clips for scenes with media", async () => {
+        const subject = await build()
+
+        const spec = subject.specOf(
             [
                 { caption: "Welcome", voiceover: "Hello", media: null },
                 { caption: "Look", voiceover: "", media: `${WORKSPACE}/a.jpg` },
@@ -124,9 +145,13 @@ describe("specOf", () => {
             captions: true,
         })
     })
+})
 
-    it("swaps the gradient colours on the second card", () => {
-        const spec = specOf(
+describe("specOf", () => {
+    it("swaps the gradient colours on the second card", async () => {
+        const subject = await build()
+
+        const spec = subject.specOf(
             [
                 { caption: "One", voiceover: "", media: null },
                 { caption: "Two", voiceover: "", media: null },
@@ -144,8 +169,10 @@ describe("specOf", () => {
         })
     })
 
-    it("falls back to the default shape, name, music and voice", () => {
-        const spec = specOf(
+    it("falls back to the default shape, name, music and voice", async () => {
+        const subject = await build()
+
+        const spec = subject.specOf(
             [{ caption: "x".repeat(150), voiceover: "", media: null }],
             "4:3",
             { shopName: "", primary: "", secondary: "", logoPath: null, musicTrack: "loud", voice: "robot" },

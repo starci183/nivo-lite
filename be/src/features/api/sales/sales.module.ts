@@ -6,6 +6,7 @@ import { MarkOrderShippedHandler } from "./application/mark-order-shipped.handle
 import { DecideSalesWorkItemHandler } from "./application/decide-sales-work-item.handler"
 import { DecideSalesDraftHandler } from "./application/decide-sales-draft.handler"
 import { SalesActionStatusHandler } from "./application/sales-action-status.handler"
+import { ConfigurableModuleClass } from "./sales.module-definition"
 
 @Module({
     providers: [
@@ -19,4 +20,4 @@ import { SalesActionStatusHandler } from "./application/sales-action-status.hand
     ],
 })
 /** The application handlers of the Sales GraphQL feature. */
-export class SalesApiModule {}
+export class SalesApiModule extends ConfigurableModuleClass {}

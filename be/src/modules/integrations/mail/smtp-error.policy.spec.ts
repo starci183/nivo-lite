@@ -1,5 +1,17 @@
+import { Test } from "@nestjs/testing"
 import { MailError, MailErrorCode } from "./errors/mail.error"
-import { classifySmtpFailure } from "./smtp-error.policy"
+import { classifySmtpFailure as realClassifySmtpFailure } from "./smtp-error.policy"
+
+const SUBJECT = Symbol("smtp-error.policy")
+
+type Subject = Pick<typeof import("./smtp-error.policy"), "classifySmtpFailure">
+
+const build = async () => {
+    const moduleRef = await Test.createTestingModule({
+        providers: [{ provide: SUBJECT, useValue: { classifySmtpFailure: realClassifySmtpFailure } }],
+    }).compile()
+    return moduleRef.get<Subject>(SUBJECT)
+}
 
 const failure = (shape: Record<string, unknown>) =>
     Object.assign(new Error(typeof shape.message === "string" ? shape.message : ""), shape)
@@ -37,27 +49,34 @@ describe("classifySmtpFailure", () => {
         [failure({ message: "something odd" }), MailErrorCode.Unknown],
         ["not an object", MailErrorCode.Unknown],
         [null, MailErrorCode.Unknown],
-    ])("classifies %#", (error, code) => {
-        expect(classifySmtpFailure(error).code).toBe(code)
-    })
+    ])("classifies %#", async (error, code) => {
+        const subject = await build()
 
-    it("keeps the server's words, collapsed and bounded, and the cause", () => {
+        expect(subject.classifySmtpFailure(error).code).toBe(code)
+    })
+    it("keeps the server's words, collapsed and bounded, and the cause", async () => {
+        const subject = await build()
+
         const cause = failure({ code: "ETIMEDOUT", message: `line one\n   line two ${"x".repeat(400)}` })
 
-        const mapped = classifySmtpFailure(cause)
+        const mapped = subject.classifySmtpFailure(cause)
 
         expect(mapped.cause).toBe(cause)
         expect(String(mapped.params.detail)).toMatch(/^line one line two x+$/u)
         expect(String(mapped.params.detail).length).toBeLessThanOrEqual(300)
     })
+    it("passes a MailError through unchanged", async () => {
+        const subject = await build()
 
-    it("passes a MailError through unchanged", () => {
         const own = new MailError({ code: MailErrorCode.Limit })
 
-        expect(classifySmtpFailure(own)).toBe(own)
+        expect(subject.classifySmtpFailure(own)).toBe(own)
     })
+    it("reads a response and a message that are not strings as empty", async () => {
+        const subject = await build()
 
-    it("reads a response and a message that are not strings as empty", () => {
-        expect(classifySmtpFailure({ response: 5, message: 7, responseCode: "535" }).code).toBe(MailErrorCode.Unknown)
+        expect(subject.classifySmtpFailure({ response: 5, message: 7, responseCode: "535" }).code).toBe(
+            MailErrorCode.Unknown,
+        )
     })
 })

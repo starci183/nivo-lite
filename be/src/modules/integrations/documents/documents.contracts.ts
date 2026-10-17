@@ -19,11 +19,16 @@ export type MaybeFolderId = string | null
 /** The Drive access of a workspace, or null when the caller has none (an API key). */
 export type MaybeDriveAccess = DriveAccess | null
 
-/** How the Google Drive access of one workspace is reached; the knowledge domain implements it over its stored grant. */
+/**
+ * How the Google Drive access of one workspace is reached; the knowledge domain implements it over its stored grant.
+ */
 export interface DriveAccess {
     /** Whether the workspace has given access, never did, or lost it. */
     state(): Promise<DocumentGrantState>
-    /** Runs `use` with a valid access token; the implementation refreshes the token, and retries once when Drive answers 401. */
+    /**
+     * Runs `use` with a valid access token; the implementation refreshes the token, and retries once when Drive answers
+     * 401.
+     */
     withToken<T>(use: DriveTokenUse<T>): Promise<T>
 }
 
@@ -85,4 +90,18 @@ export interface DocumentReaders {
     docx(bytes: Uint8Array): Promise<string>
     /** The text of a PDF, pages merged. */
     pdf(bytes: Uint8Array): Promise<string>
+}
+
+/** The merged PDF text and the original document page count. */
+export interface DocumentFileTextResult {
+    /** The merged text of all pages. */
+    readonly text: string
+    /** The number of pages in the source PDF. */
+    readonly pages: number
+}
+
+/** Library extraction results needed by uploaded-file consumers. */
+export interface DocumentFileReaders extends DocumentReaders {
+    /** Merged PDF text together with the original page count. */
+    pdfDetails(bytes: Uint8Array): Promise<DocumentFileTextResult>
 }

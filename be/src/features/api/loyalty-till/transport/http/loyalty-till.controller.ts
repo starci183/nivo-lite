@@ -1,6 +1,6 @@
 import { Body, Controller, Get, Headers, HttpCode, Post, Query } from "@nestjs/common"
 import type { CommandBus, QueryBus } from "@nestjs/cqrs"
-import { Public, PublicReason } from "@modules/domain/identity"
+import { Credential } from "@modules/domain/identity"
 import { InjectCommandBus, InjectQueryBus } from "@modules/platform/cqrs"
 import { RateLimit, RateTier } from "@modules/platform/http-security"
 import { ListTillMembersQuery } from "../../application/list-till-members.query"
@@ -30,7 +30,7 @@ export class LoyaltyTillController {
 
     /** Lists customers or finds one by phone. */
     @Get("members")
-    @Public({ reason: PublicReason.CatalogRead })
+    @Credential({ kind: "api-key" })
     @RateLimit(RateTier.Strict)
     async listTillMembers(
         @Query() query: ListTillMembersSearchRequest,
@@ -44,7 +44,7 @@ export class LoyaltyTillController {
 
     /** Earns the points of a sale made outside NIVO. */
     @Post("award")
-    @Public({ reason: PublicReason.CatalogRead })
+    @Credential({ kind: "api-key" })
     @RateLimit(RateTier.Strict)
     async awardTillPoints(
         @Body() body: AwardTillPointsBodyRequest,
@@ -59,7 +59,7 @@ export class LoyaltyTillController {
     /** Redeems a reward for a customer. */
     @Post("redeem")
     @HttpCode(200)
-    @Public({ reason: PublicReason.CatalogRead })
+    @Credential({ kind: "api-key" })
     @RateLimit(RateTier.Strict)
     async redeemTillReward(
         @Body() body: RedeemTillRewardBodyRequest,
@@ -73,7 +73,7 @@ export class LoyaltyTillController {
 
     /** Writes the draft of a promotion for the owner to approve. */
     @Post("promo")
-    @Public({ reason: PublicReason.CatalogRead })
+    @Credential({ kind: "api-key" })
     @RateLimit(RateTier.Strict)
     async draftTillPromo(
         @Body() body: DraftTillPromoBodyRequest,

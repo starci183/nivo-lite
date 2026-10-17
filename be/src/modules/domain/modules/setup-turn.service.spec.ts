@@ -178,7 +178,9 @@ describe("SetupTurnService", () => {
         expect(generations.run).not.toHaveBeenCalled()
         expect(messages.post.mock.calls).toEqual([])
     })
+})
 
+describe("SetupTurnService", () => {
     it("leaves a closed draft alone", async () => {
         const { service, sessions, generations } = await build()
         sessions.find.mockResolvedValue(sessionOf({ status: "applied" }))

@@ -12,7 +12,6 @@ export type {
 export { GOOGLE_CLIENT, InjectGoogleClient } from "./google.decorators"
 export type { GoogleClient } from "./google.client"
 export { GoogleModule } from "./google.module"
-export type { GoogleOptions } from "./google.options"
 export { isConsentFailure, sheetUrlOf } from "./google-url.policy"
 export { safeReturnTo, withResult } from "./google-state.policy"
 export { GOOGLE_MESSAGES } from "./messages/google.messages"

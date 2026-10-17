@@ -14,9 +14,9 @@ import type { QueueTransport } from "./queue-transport.port"
 
 @Injectable()
 /**
- * The consuming side of the queues: the registry the processors fill, and the workers and schedulers started when the app has registered
+ * The consuming side of the queues: the registry the processors fill, and the workers started when the app has registered
  * every handler. One worker reads a queue and routes each delivery to the handler of its job (else the handler of the whole queue); a job
- * no handler names ends at once. A scheduler that cannot be registered is logged and does not stop the app: the next boot upserts it again.
+ * no handler names ends at once.
  */
 export class QueueWorkerService implements QueueWorkerRegistry, OnApplicationBootstrap, OnApplicationShutdown {
     private readonly handlers: Array<QueueHandler> = []
@@ -38,15 +38,10 @@ export class QueueWorkerService implements QueueWorkerRegistry, OnApplicationBoo
         this.handlers.push(handler)
     }
 
-    /** Starts one worker per registered queue (unless the consumer is off), then registers the schedulers of the options. */
+    /** Starts one worker per registered queue (unless the consumer is off). */
     async onApplicationBootstrap(): Promise<void> {
         if (this.options.enabled) await eachInOrder(this.queues(), (queue) => this.work(queue))
         else this.logger.warn(QueueLogEvent.ConsumerDisabled, { queues: this.queues() })
-        await eachInOrder(this.options.schedulers, (scheduler) =>
-            this.transport.upsertScheduler(scheduler).catch((cause: unknown) => {
-                this.logger.error(QueueLogEvent.SchedulerFailed, cause, { scheduler: scheduler.id })
-            }),
-        )
     }
 
     /** Stops the workers and waits for the deliveries they run. */

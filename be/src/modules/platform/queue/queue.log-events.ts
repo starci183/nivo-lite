@@ -1,7 +1,5 @@
 /** Log events of the queues. */
 export enum QueueLogEvent {
-    /** A scheduler could not be registered at boot. */
-    SchedulerFailed = "queue.scheduler.failed",
     /** The workers are off (QUEUE_ENABLED=0): jobs wait in their queue. */
     ConsumerDisabled = "queue.consumer.disabled",
     /** A worker could not read its queue; it waits and reads again. */

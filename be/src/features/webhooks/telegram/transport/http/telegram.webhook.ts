@@ -3,8 +3,8 @@ import type { RawBodyRequest } from "@nestjs/common"
 import type { Request } from "express"
 import { TelegramInboxService } from "@modules/domain/telegram-inbox"
 import { Public, PublicReason } from "@modules/domain/identity"
-import { InjectWebhookSignature, RateLimit, RateTier } from "@modules/platform/http-security"
-import type { WebhookSignatureService } from "@modules/platform/http-security"
+import { RateLimit, RateTier } from "@modules/platform/http-security"
+import { ScopedWebhookVerifier } from "@modules/domain/webhook-proofs"
 import { ConnectionRequest } from "./dto/connection.request"
 
 @Controller("api/telegram")
@@ -14,7 +14,7 @@ import { ConnectionRequest } from "./dto/connection.request"
  */
 export class TelegramWebhook {
     constructor(
-        @InjectWebhookSignature() private readonly signature: WebhookSignatureService,
+        private readonly signature: ScopedWebhookVerifier,
         private readonly deliveries: TelegramInboxService,
     ) {}
 
@@ -35,6 +35,6 @@ export class TelegramWebhook {
             signature: token,
             timestamp: undefined,
         })
-        await this.deliveries.acceptTelegramDelivery(route.connectionId, request.rawBody)
+        await this.deliveries.acceptTelegramDelivery(request.rawBody, route.connectionId)
     }
 }

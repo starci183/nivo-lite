@@ -189,7 +189,9 @@ describe("CustomerTurnRuntimeService", () => {
         expect(request?.message).toContain("KNOW")
         expect(usage.record).toHaveBeenCalledTimes(1)
     })
+})
 
+describe("CustomerTurnRuntimeService", () => {
     it("preserves the booking request in the proposal's reply-contract detail", async () => {
         const bookingRequest = {
             intent: "reschedule",
@@ -243,7 +245,9 @@ describe("CustomerTurnRuntimeService", () => {
         })
         expect(gateway.runTurn).toHaveBeenCalledTimes(1)
     })
+})
 
+describe("CustomerTurnRuntimeService", () => {
     it.each([
         { label: "missing", value: undefined, partySize: 1 },
         { label: "nonfinite", value: "Infinity", partySize: 1 },
@@ -281,7 +285,9 @@ describe("CustomerTurnRuntimeService", () => {
         })
         expect(gateway.runTurn).toHaveBeenCalledTimes(1)
     })
+})
 
+describe("CustomerTurnRuntimeService", () => {
     it("normalizes a short booking hour and clears invalid dates and hours", async () => {
         const { runtime, gateway } = await build({
             text: JSON.stringify({
@@ -345,7 +351,9 @@ describe("CustomerTurnRuntimeService", () => {
         })
         expect(gateway.runTurn).toHaveBeenCalledTimes(1)
     })
+})
 
+describe("CustomerTurnRuntimeService", () => {
     it("falls back when the gateway fails and builds the internal agent when the module agent is unknown", async () => {
         const { runtime, gateway, logger, registry, sync } = await build()
         const cause = new Error("gateway down")

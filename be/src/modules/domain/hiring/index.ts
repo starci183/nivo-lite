@@ -7,6 +7,7 @@ export { HiringInterviewsService } from "./hiring-interviews.service"
 export { HiringJobsService } from "./hiring-jobs.service"
 export { HiringOffersService } from "./hiring-offers.service"
 export { HiringPublicService } from "./hiring-public.service"
+export { HiringPostingService } from "./hiring-posting.service"
 export { HiringScreeningService } from "./hiring-screening.service"
 export { HiringSettingsService } from "./hiring-settings.service"
 export { HiringWorkbenchService } from "./hiring-workbench.service"
@@ -41,17 +42,11 @@ export type {
 export type {
     ApplyOutput,
     ApplyParams,
-    CreateCvUploadOutput,
-    CreateCvUploadParams,
     PublicInterviewOutput,
-    PublicInterviewParams,
     PublicJobOutput,
     PublicJobParams,
     PublicOfferOutput,
-    PublicOfferParams,
     RespondOfferOutput,
-    RespondOfferParams,
-    RespondSlotOutput,
 } from "./hiring-public.contracts"
 export type { HiringBenchView, HiringCandidateDetailView } from "./hiring-workbench.contracts"
 export { toHiringBenchType } from "./hiring-bench.mapper"
@@ -63,3 +58,5 @@ export {
     toSaveHiringJobRequest,
     toSaveHiringSettingsRequest,
 } from "./hiring-requests.mapper"
+
+export type { CandidateRecord, InterviewRecord, JobRecord, OfferRecord } from "./hiring.contracts"

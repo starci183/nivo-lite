@@ -61,22 +61,22 @@ const grantOf = (id: string, access: BoundAgent["access"]): BoundAgent => ({
     purpose: "outbound_chat",
 })
 
-describe("OutboundAccessService", () => {
-    const build = async () => {
-        const conversations = mock<AgentConversationsService>()
-        const bindings = mock<AgentBindingsService>()
-        const agents = mock<AgentsService>()
-        const moduleRef = await Test.createTestingModule({
-            providers: [
-                OutboundAccessService,
-                { provide: AgentConversationsService, useValue: conversations },
-                { provide: AgentBindingsService, useValue: bindings },
-                { provide: AgentsService, useValue: agents },
-            ],
-        }).compile()
-        return { access: moduleRef.get(OutboundAccessService), conversations, bindings, agents }
-    }
+const build = async () => {
+    const conversations = mock<AgentConversationsService>()
+    const bindings = mock<AgentBindingsService>()
+    const agents = mock<AgentsService>()
+    const moduleRef = await Test.createTestingModule({
+        providers: [
+            OutboundAccessService,
+            { provide: AgentConversationsService, useValue: conversations },
+            { provide: AgentBindingsService, useValue: bindings },
+            { provide: AgentsService, useValue: agents },
+        ],
+    }).compile()
+    return { access: moduleRef.get(OutboundAccessService), conversations, bindings, agents }
+}
 
+describe("OutboundAccessService", () => {
     it("uses the access of the department agent on the conversation named in the proposal", async () => {
         const { access, conversations, bindings, agents } = await build()
         conversations.targetOf.mockResolvedValue({ kind: "ok", value: targetOf("conn-1") })
@@ -140,7 +140,9 @@ describe("OutboundAccessService", () => {
         expect(conversations.latestOfLead).toHaveBeenCalledWith("ws-1", "lead-1", null)
         expect(conversations.targetOf).not.toHaveBeenCalled()
     })
+})
 
+describe("OutboundAccessService", () => {
     it("acts alone when there is no lead and no conversation", async () => {
         const { access, conversations } = await build()
         const item = itemOf({ subject_type: "conversation", subject_id: null, lead_id: null })

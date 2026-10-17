@@ -1,14 +1,30 @@
+import type { CredentialPrincipal } from "@modules/domain/identity"
+import {
+    jobOf,
+    termsOf,
+    template,
+    modelLetter,
+    candidateOf,
+    TOKEN,
+    staleResponses,
+    text,
+    contextOf,
+    onboarding,
+    modelOutput,
+    generatorValue,
+    offerOf,
+} from "@tests/fixtures/builders/hiring-offers.builder"
 import { Test } from "@nestjs/testing"
 import { builder, FakeClock, mock, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { ApprovalGate, OfficeLog, ModuleTextGenerator } from "@modules/domain/module-ops"
-import type { PerformContext } from "@modules/domain/module-ops"
+
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { CLOCK } from "@modules/platform/clock"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import type { MessageCatalog } from "@modules/platform/i18n"
 import { HiringErrorCode } from "./errors/hiring.error"
-import type { CandidateRecord, Delivery, JobRecord, OfferRecord, OfferTerms } from "./hiring.contracts"
+import type { Delivery, OfferTerms } from "./hiring.contracts"
 import type { RequestOfferParams } from "./hiring-operations.contracts"
 import { HiringCandidatesService } from "./hiring-candidates.service"
 import { HiringDataService } from "./hiring-data.service"
@@ -17,110 +33,10 @@ import { HiringNotifyService } from "./hiring-notify.service"
 import { HiringOffersService } from "./hiring-offers.service"
 import { HiringTextService } from "./hiring-text.service"
 import { ANSWER_OFFER, CANCEL_OFFER, CREATE_OFFER, LINK_OFFER, MARK_OFFER_SENT } from "./persistence/hiring.sql"
-
-const TOKEN = "0123456789abcdef0123456789abcdef"
-const staleResponses = [{ rows: [] }, { rows: [{ value: null }] }, { rows: [{ value: "sent" }] }]
 const publicNotFound = { code: HiringErrorCode.PublicNotFound }
-const text = (key: string, params: Readonly<Record<string, string | number>> = {}): string =>
-    `${key}${JSON.stringify(params)}`
-const candidateOf = builder<CandidateRecord>({
-    id: "candidate-1",
-    workspaceId: "ws-1",
-    jobId: "job-1",
-    name: "Alice",
-    phone: "0901234567",
-    email: "alice@example.com",
-    source: "page",
-    conversationId: null,
-    cvPath: null,
-    cvName: null,
-    cvMime: null,
-    answers: [],
-    availability: "Monday",
-    stage: "shortlisted",
-    staffId: null,
-})
-const jobOf = builder<JobRecord>({
-    id: "job-1",
-    workspaceId: "ws-1",
-    slug: "barista",
-    title: "Barista",
-    position: "Barista",
-    employmentType: "full_time",
-    schedule: "Monday to Friday",
-    payMinVnd: 100,
-    payMaxVnd: 100,
-    payUnit: "shift",
-    location: "Main Street",
-    headcount: 1,
-    description: "Prepare drinks",
-    requirements: {
-        skills: [],
-        experienceYears: null,
-        experienceNote: "",
-        availability: [],
-        mustHave: [],
-        niceToHave: [],
-    },
-    questions: [],
-    status: "open",
-    channels: ["page"],
-    closesAt: null,
-})
-const termsOf = builder<OfferTerms>({
-    title: "Lead Barista",
-    pay: "100 per shift",
-    startDate: "2026-11-01",
-    probation: "One month",
-    note: "Bring a notebook",
-})
-const offerOf = builder<OfferRecord>({
-    id: "offer-1",
-    workspaceId: "ws-1",
-    candidateId: "candidate-1",
-    jobId: "job-1",
-    terms: termsOf(),
-    draft: "Stored letter",
-    status: "sent",
-    token: TOKEN,
-    workItemId: "work-1",
-    expiresAt: "2026-10-19T00:00:00.000Z",
-})
+
 const requestOf = builder<RequestOfferParams>({ candidateId: "candidate-1", ...termsOf() })
-const contextOf = builder<PerformContext>({
-    workspaceId: "ws-1",
-    workItemId: "work-1",
-    actor: "Manager",
-    draft: " Approved letter ",
-    fields: { offer_id: "offer-1", candidate_id: "candidate-1" },
-})
 const deliveryOf = builder<Delivery>({ via: "email", delivered: true, note: "delivery-note" })
-const termsText = ({ title, pay, startDate, probation, note }: OfferTerms): string =>
-    [
-        text("hiring.offer.termsHead"),
-        text("hiring.offer.termPosition", { title, employment: text("hiring.employment.full_time") }),
-        text("hiring.offer.termPay", { pay }),
-        text("hiring.offer.termStart", { date: startDate }),
-        text("hiring.offer.termProbation", { probation }),
-        text("hiring.offer.termPlace", { place: "Main Street" }),
-        text("hiring.offer.termNote", { note }),
-        text("hiring.offer.termValid", { days: 7 }),
-    ].join("\n")
-const template = (terms: OfferTerms = termsOf()): string =>
-    [
-        text("hiring.offer.opening", { name: "Alice", shop: "Coffee Shop", title: terms.title }),
-        termsText(terms),
-        text("hiring.offer.closing"),
-        text("hiring.offer.signoff", { shop: "Coffee Shop" }),
-    ].join("\n\n")
-const modelLetter = (terms: OfferTerms = termsOf()): string =>
-    [
-        "Welcome to our team.",
-        termsText(terms),
-        "We look forward to meeting you.",
-        text("hiring.offer.signoff", { shop: "Coffee Shop" }),
-    ].join("\n\n")
-const modelOutput = JSON.stringify({ opening: "**Welcome to our team.**", closing: "We look forward to meeting you." })
 const createCalls = (terms: OfferTerms = termsOf(), stored = "waiting") => {
     const json = JSON.stringify({
         title: terms.title,
@@ -145,15 +61,6 @@ const gateValue = (draft: string, key: string, terms: OfferTerms, contact: strin
     draft,
     fields: { candidate_id: "candidate-1", offer_id: "offer-1", contact },
 })
-const generatorValue = (title: string) => ({
-    workspaceId: "ws-1",
-    purpose: "hiring_offer",
-    module: "hiring",
-    system: text("hiring.offer.system"),
-    user: text("hiring.offer.user", { shop: "Coffee Shop", name: "Alice", title }),
-    timeoutMs: 75000,
-})
-const onboarding = [1, 2, 3, 4, 5, 6, 7].map((step) => text(`hiring.onboarding.${step}`))
 const answerCalls = (accept = true, name = "Alice", key = "hiring.event.offerAccepted") => [
     [ANSWER_OFFER, [TOKEN, accept, onboarding, name, text(key)]],
 ]
@@ -316,6 +223,9 @@ describe("HiringOffersService", () => {
             expect(em.query.mock.calls).toEqual(createCalls(terms, stored))
         },
     )
+})
+
+describe("HiringOffersService", () => {
     it("request refuses active offers, missing pay, protected traits and missing jobs", async () => {
         const em = mockEntityManager()
         const { service, data, gate } = await build(em)
@@ -334,6 +244,7 @@ describe("HiringOffersService", () => {
         expect(em.query).not.toHaveBeenCalled()
         expect(gate.request).not.toHaveBeenCalled()
     })
+
     it.each([{ rows: [] }, { rows: [{ id: null }] }])("refuses created rows $rows", async ({ rows }) => {
         const em = mockEntityManager({ query: [CREATE_OFFER, rows] })
         const { service, generator, gate } = await build(em)
@@ -343,6 +254,9 @@ describe("HiringOffersService", () => {
         expect(generator.generate).not.toHaveBeenCalled()
         expect(gate.request).not.toHaveBeenCalled()
     })
+})
+
+describe("HiringOffersService", () => {
     it.each([
         {
             draft: " Approved letter ",
@@ -383,6 +297,7 @@ describe("HiringOffersService", () => {
         const args = ["ws-1", "offer-1", body, delivery.via, "2026-10-19T00:00:00.000Z", "Manager", event]
         expect(em.query.mock.calls).toEqual([[MARK_OFFER_SENT, args]])
     })
+
     it("perform refuses missing offers and jobs before delivering", async () => {
         const { service, data, notify } = await build()
         data.offer.mockResolvedValueOnce(undefined)
@@ -391,6 +306,7 @@ describe("HiringOffersService", () => {
         await expect(service.perform(contextOf())).rejects.toMatchObject({ code: HiringErrorCode.JobNotFound })
         expect(notify.toCandidate).not.toHaveBeenCalled()
     })
+
     it("reject cancels only draft and waiting offers", async () => {
         const em = mockEntityManager({ query: [CANCEL_OFFER, []] })
         const { service } = await build(em)
@@ -399,6 +315,9 @@ describe("HiringOffersService", () => {
             [CANCEL_OFFER, ["ws-1", "offer-1", ["draft", "waiting"], "Manager", text("hiring.event.offerNotApproved")]],
         ])
     })
+})
+
+describe("HiringOffersService", () => {
     it.each([
         {
             workItemId: "work-1",
@@ -416,6 +335,7 @@ describe("HiringOffersService", () => {
         ])
         expect(gate.decide.mock.calls).toEqual(decisions)
     })
+
     it("cancel refuses an offer that cannot be cancelled", async () => {
         const em = mockEntityManager({ query: [CANCEL_OFFER, []] })
         const { service, gate } = await build(em)
@@ -424,6 +344,7 @@ describe("HiringOffersService", () => {
         })
         expect(gate.decide).not.toHaveBeenCalled()
     })
+
     it("publicView returns exact public terms and refuses missing heads", async () => {
         const { service, data, office } = await build()
         await expect(service.publicView({ token: TOKEN })).resolves.toEqual({
@@ -442,6 +363,7 @@ describe("HiringOffersService", () => {
         data.heads.mockResolvedValue(undefined)
         await expect(service.publicView({ token: TOKEN })).rejects.toMatchObject(publicNotFound)
     })
+
     it("publicView and respond refuse malformed and missing tokens", async () => {
         const { service, data } = await build()
         await expect(service.publicView({ token: "bad" })).rejects.toMatchObject(publicNotFound)
@@ -451,6 +373,9 @@ describe("HiringOffersService", () => {
         await expect(service.publicView({ token: TOKEN })).rejects.toMatchObject(publicNotFound)
         await expect(service.respond({ token: TOKEN, accept: true })).resolves.toEqual({ outcome: "invalid" })
     })
+})
+
+describe("HiringOffersService", () => {
     it.each([
         { offer: offerOf({ status: "draft" }), outcome: "invalid" },
         { offer: offerOf({ status: "waiting" }), outcome: "invalid" },
@@ -464,7 +389,8 @@ describe("HiringOffersService", () => {
         const em = mockEntityManager()
         const { service, data } = await build(em)
         data.offerByToken.mockResolvedValue(offer)
-        await expect(service.respond({ token: TOKEN, accept: true })).resolves.toEqual({ outcome })
+        const principal = await service.authenticateLink(TOKEN)
+        await expect(service.respond({ token: TOKEN, accept: true }, principal)).resolves.toEqual({ outcome })
         expect(data.candidateHead).not.toHaveBeenCalled()
         expect(em.query).not.toHaveBeenCalled()
         if (outcome === "invalid") {
@@ -472,6 +398,7 @@ describe("HiringOffersService", () => {
             expect(data.heads).not.toHaveBeenCalled()
         }
     })
+
     it.each(staleResponses)("respond returns stale for unclaimed rows $rows", async ({ rows }) => {
         const em = mockEntityManager({ query: [ANSWER_OFFER, rows] })
         const { service, office, candidates } = await build(em)
@@ -480,6 +407,7 @@ describe("HiringOffersService", () => {
         expect(office.postOffice).not.toHaveBeenCalled()
         expect(candidates.closeJobIfFilled).not.toHaveBeenCalled()
     })
+
     it.each([true, false])("respond records accept=%s with exact onboarding and side effects", async (accept) => {
         const value = accept ? "accepted" : "declined"
         const suffix = accept ? "Accepted" : "Declined"
@@ -496,5 +424,66 @@ describe("HiringOffersService", () => {
         expect(em.query.mock.calls).toEqual(answerCalls(accept, name, `hiring.event.offer${suffix}`))
         expect(office.postOffice.mock.calls).toEqual([["ws-1", text(`hiring.office.offer${suffix}`, { name, title })]])
         expect(candidates.closeJobIfFilled.mock.calls).toEqual(accept ? [["ws-1", "job-1"]] : [])
+    })
+})
+
+describe("stored link credentials", () => {
+    it("resolves the stored record and workspace", async () => {
+        const { service } = await build()
+        await expect(service.authenticateLink(TOKEN)).resolves.toEqual({
+            kind: "link-token",
+            subject: "offer-1",
+            workspaceId: "ws-1",
+        })
+    })
+
+    it.each(["", "malformed"])("refuses malformed tokens %s before lookup", async (token) => {
+        const { service, data } = await build()
+        await expect(service.authenticateLink(token)).rejects.toMatchObject({ code: HiringErrorCode.PublicNotFound })
+        expect(data.offerByToken).not.toHaveBeenCalled()
+    })
+
+    it("refuses an unknown stored token", async () => {
+        const { service, data } = await build()
+        data.offerByToken.mockResolvedValue(undefined)
+        await expect(service.authenticateLink(TOKEN)).rejects.toMatchObject({ code: HiringErrorCode.PublicNotFound })
+    })
+
+    it.each<CredentialPrincipal>([
+        { kind: "api-key", subject: "offer-1", workspaceId: "ws-1" },
+        { kind: "link-token", subject: "foreign-record", workspaceId: "ws-1" },
+        { kind: "link-token", subject: "offer-1", workspaceId: "foreign-workspace" },
+    ])("refuses a mismatched principal before responding (%p)", async (principal) => {
+        const { service, office } = await build()
+        await expect(service.respond({ token: TOKEN, accept: true }, principal)).rejects.toMatchObject({
+            code: HiringErrorCode.PublicNotFound,
+        })
+        expect(office.postOffice).not.toHaveBeenCalled()
+    })
+
+    it("preserves response data outcomes after link admission", async () => {
+        const { service, data, office } = await build()
+        data.offerByToken.mockResolvedValue(offerOf({ status: "accepted" }))
+        const historical = await service.authenticateLink(TOKEN)
+        await expect(service.respond({ token: TOKEN, accept: true }, historical)).resolves.toMatchObject({
+            outcome: "already_accepted",
+        })
+        data.offerByToken.mockResolvedValue(offerOf({ status: "draft" }))
+        const principal = await service.authenticateLink(TOKEN)
+        await expect(service.respond({ token: TOKEN, accept: true }, principal)).resolves.toEqual({
+            outcome: "invalid",
+        })
+        data.offerByToken.mockResolvedValue(undefined)
+        await expect(service.respond({ token: TOKEN, accept: true }, principal)).resolves.toEqual({
+            outcome: "invalid",
+        })
+        expect(office.postOffice).not.toHaveBeenCalled()
+    })
+
+    it("allows the bound public view", async () => {
+        const { service } = await build()
+        await expect(
+            service.publicView({ token: TOKEN }, { kind: "link-token", subject: "offer-1", workspaceId: "ws-1" }),
+        ).resolves.toHaveProperty("status")
     })
 })

@@ -116,242 +116,238 @@ const buildWithoutSigning = async () => {
     return { service: moduleRef.get(WebhookEventsService), outbox }
 }
 
-describe("WebhookEventsService", () => {
-    describe("publish", () => {
-        it("queues one delivery per connected webhook that picked the event, keyed by connection and occurrence", async () => {
-            const { service, outbox } = await build()
+describe("WebhookEventsService publish", () => {
+    it("queues one delivery per connected webhook that picked the event, keyed by connection and occurrence", async () => {
+        const { service, outbox } = await build()
 
-            await expect(service.publish(PUBLICATION)).resolves.toBeUndefined()
+        await expect(service.publish(PUBLICATION)).resolves.toBeUndefined()
 
-            expect(outbox.jobs).toEqual([{ queue: N8N_QUEUE, payload: JOB }])
-        })
-
-        it("queues nothing while signing is off", async () => {
-            const { service, outbox } = await buildWithoutSigning()
-
-            await service.publish(PUBLICATION)
-
-            expect(outbox.jobs).toEqual([])
-        })
-
-        it("uses the caller's manager and the occurrence's dedupe key for each subscription", async () => {
-            const { service, connections, outbox } = await build()
-            const manager = mockEntityManager()
-            const write = jest.spyOn(outbox, "write")
-            connections.listByProvider.mockResolvedValue([record(), record({ id: "c2" })])
-
-            await service.publish(PUBLICATION, manager)
-
-            expect(connections.listByProvider.mock.calls).toEqual([["ws-1", "webhook", { includeDisconnected: false }]])
-            expect(write.mock.calls).toEqual([
-                [manager, N8N_QUEUE, JOB, { job: N8N_WEBHOOK_JOB, dedupeKey: `${N8N_WEBHOOK_JOB}:${JOB.deliveryId}` }],
-                [
-                    manager,
-                    N8N_QUEUE,
-                    { ...JOB, connectionId: "c2", deliveryId: `c2:${PUBLICATION.dedupe}` },
-                    { job: N8N_WEBHOOK_JOB, dedupeKey: `${N8N_WEBHOOK_JOB}:c2:${PUBLICATION.dedupe}` },
-                ],
-            ])
-        })
+        expect(outbox.jobs).toEqual([{ queue: N8N_QUEUE, payload: JOB }])
     })
 
-    describe("deliver", () => {
-        it("posts the signed event with the delivery id and the occurrence timestamp", async () => {
-            const { service, delivery } = await build()
+    it("queues nothing while signing is off", async () => {
+        const { service, outbox } = await buildWithoutSigning()
 
-            await expect(service.deliver(JOB)).resolves.toBeUndefined()
+        await service.publish(PUBLICATION)
 
-            const body = JSON.stringify({
-                id: JOB.deliveryId,
-                event: "decision.made",
-                workspace_id: "ws-1",
-                occurred_at: NOW.toISOString(),
-                data: DATA,
-            })
-            const timestamp = String(NOW.getTime())
-            const key = workspaceSigningSecret("engine-secret", "ws-1")
-            expect(delivery.post.mock.calls).toEqual([
-                [
-                    {
-                        url: new URL(TARGET),
-                        body,
-                        headers: {
-                            "x-nivo-event": "decision.made",
-                            "x-nivo-delivery": JOB.deliveryId,
-                            "x-nivo-timestamp": timestamp,
-                            "x-nivo-signature": signDelivery(key, timestamp, body),
-                        },
+        expect(outbox.jobs).toEqual([])
+    })
+
+    it("uses the caller's manager and the occurrence's dedupe key for each subscription", async () => {
+        const { service, connections, outbox } = await build()
+        const manager = mockEntityManager()
+        const write = jest.spyOn(outbox, "write")
+        connections.listByProvider.mockResolvedValue([record(), record({ id: "c2" })])
+
+        await service.publish(PUBLICATION, manager)
+
+        expect(connections.listByProvider.mock.calls).toEqual([["ws-1", "webhook", { includeDisconnected: false }]])
+        expect(write.mock.calls).toEqual([
+            [manager, N8N_QUEUE, JOB, { job: N8N_WEBHOOK_JOB, dedupeKey: `${N8N_WEBHOOK_JOB}:${JOB.deliveryId}` }],
+            [
+                manager,
+                N8N_QUEUE,
+                { ...JOB, connectionId: "c2", deliveryId: `c2:${PUBLICATION.dedupe}` },
+                { job: N8N_WEBHOOK_JOB, dedupeKey: `${N8N_WEBHOOK_JOB}:c2:${PUBLICATION.dedupe}` },
+            ],
+        ])
+    })
+})
+
+describe("WebhookEventsService deliver", () => {
+    it("posts the signed event with the delivery id and the occurrence timestamp", async () => {
+        const { service, delivery } = await build()
+
+        await expect(service.deliver(JOB)).resolves.toBeUndefined()
+
+        const body = JSON.stringify({
+            id: JOB.deliveryId,
+            event: "decision.made",
+            workspace_id: "ws-1",
+            occurred_at: NOW.toISOString(),
+            data: DATA,
+        })
+        const timestamp = String(NOW.getTime())
+        const key = workspaceSigningSecret("engine-secret", "ws-1")
+        expect(delivery.post.mock.calls).toEqual([
+            [
+                {
+                    url: new URL(TARGET),
+                    body,
+                    headers: {
+                        "x-nivo-event": "decision.made",
+                        "x-nivo-delivery": JOB.deliveryId,
+                        "x-nivo-timestamp": timestamp,
+                        "x-nivo-signature": signDelivery(key, timestamp, body),
                     },
-                ],
-            ])
-        })
+                },
+            ],
+        ])
+    })
 
-        it("throws a retryable failure when the receiver is down", async () => {
-            const { service, delivery } = await build()
-            delivery.post.mockResolvedValue({ status: null, failure: "timeout", durationMs: 10_000 })
+    it("throws a retryable failure when the receiver is down", async () => {
+        const { service, delivery } = await build()
+        delivery.post.mockResolvedValue({ status: null, failure: "timeout", durationMs: 10_000 })
 
-            await expect(service.deliver(JOB)).rejects.toEqual(
-                new WebhookConnectionsError({
-                    code: WebhookConnectionsErrorCode.DeliveryFailed,
-                    params: { status: "none" },
-                }),
-            )
-        })
+        await expect(service.deliver(JOB)).rejects.toEqual(
+            new WebhookConnectionsError({
+                code: WebhookConnectionsErrorCode.DeliveryFailed,
+                params: { status: "none" },
+            }),
+        )
+    })
 
-        it("records a 4xx answer on the connection and does not retry", async () => {
-            const { service, delivery, connections } = await build()
-            delivery.post.mockResolvedValue({ status: 410, failure: null, durationMs: 9 })
+    it("records a 4xx answer on the connection and does not retry", async () => {
+        const { service, delivery, connections } = await build()
+        delivery.post.mockResolvedValue({ status: 410, failure: null, durationMs: 9 })
 
-            await expect(service.deliver(JOB)).resolves.toBeUndefined()
+        await expect(service.deliver(JOB)).resolves.toBeUndefined()
 
-            expect(connections.patch.mock.calls).toEqual([["ws-1", "c1", { lastError: "HTTP 410" }]])
-        })
+        expect(connections.patch.mock.calls).toEqual([["ws-1", "c1", { lastError: "HTTP 410" }]])
+    })
 
-        it("records an address NIVO may not call and posts nothing", async () => {
-            const { service, delivery, connections } = await build()
-            delivery.resolveTarget.mockRejectedValue(
-                new WebhookDeliveryError({ code: WebhookDeliveryErrorCode.TargetRefused }),
-            )
-
-            await expect(service.deliver(JOB)).resolves.toBeUndefined()
-
-            expect(delivery.post.mock.calls).toEqual([])
-            expect(connections.patch.mock.calls).toEqual([
-                ["ws-1", "c1", { lastError: WebhookDeliveryErrorCode.TargetRefused }],
-            ])
-        })
-
-        it("drops the delivery of a connection that was switched off", async () => {
-            const { service, delivery, connections } = await build()
-            connections.find.mockResolvedValue(record({ status: "disconnected" }))
-
-            await expect(service.deliver(JOB)).resolves.toBeUndefined()
-
-            expect(delivery.post.mock.calls).toEqual([])
-        })
-
-        it("ignores a payload that is not a webhook delivery", async () => {
-            const { service, connections, delivery, logger } = await build()
-
-            await expect(service.deliver({ connectionId: "c1" })).resolves.toBeUndefined()
-
-            expect(connections.find.mock.calls).toEqual([])
-            expect(delivery.post.mock.calls).toEqual([])
-            expect(logger.warn.mock.calls).toEqual([])
-        })
-
-        it("drops a delivery whose connection no longer exists", async () => {
-            const { service, connections, delivery, logger } = await build()
-            connections.find.mockResolvedValue(null)
-
-            await expect(service.deliver(JOB)).resolves.toBeUndefined()
-
-            expect(connections.find.mock.calls).toEqual([["ws-1", "c1"]])
-            expect(connections.readSecret.mock.calls).toEqual([])
-            expect(delivery.post.mock.calls).toEqual([])
-            expect(logger.warn.mock.calls).toEqual([
-                [WebhookConnectionsLogEvent.DeliveryDropped, { connectionId: "c1" }],
-            ])
-        })
-
-        it("drops a queued delivery when signing has been turned off", async () => {
-            const { service, connections, delivery, logger } = await build(SIGNING_OFF)
-
-            await expect(service.deliver(JOB)).resolves.toBeUndefined()
-
-            expect(connections.readSecret.mock.calls).toEqual([["c1"]])
-            expect(delivery.resolveTarget.mock.calls).toEqual([])
-            expect(logger.warn.mock.calls).toEqual([
-                [WebhookConnectionsLogEvent.DeliveryDropped, { connectionId: "c1" }],
-            ])
-        })
-
-        it("drops a connection whose stored secret is missing", async () => {
-            const { service, connections, delivery, logger } = await build()
-            connections.readSecret.mockResolvedValue(null)
-
-            await expect(service.deliver(JOB)).resolves.toBeUndefined()
-
-            expect(delivery.resolveTarget.mock.calls).toEqual([])
-            expect(logger.warn.mock.calls).toEqual([
-                [WebhookConnectionsLogEvent.DeliveryDropped, { connectionId: "c1" }],
-            ])
-        })
-
-        it.each(["null", "42", "{}", '{"url":42}', '{"url":""}'])(
-            "drops a secret without a nonempty URL: %s",
-            async (plain) => {
-                const { service, connections, delivery, logger } = await build()
-                connections.readSecret.mockResolvedValue({ plain, webhookSecret: "s" })
-
-                await expect(service.deliver(JOB)).resolves.toBeUndefined()
-
-                expect(delivery.resolveTarget.mock.calls).toEqual([])
-                expect(logger.warn.mock.calls).toEqual([
-                    [WebhookConnectionsLogEvent.DeliveryDropped, { connectionId: "c1" }],
-                ])
-                expect(logger.error.mock.calls).toEqual([])
-            },
+    it("records an address NIVO may not call and posts nothing", async () => {
+        const { service, delivery, connections } = await build()
+        delivery.resolveTarget.mockRejectedValue(
+            new WebhookDeliveryError({ code: WebhookDeliveryErrorCode.TargetRefused }),
         )
 
-        it("records unreadable JSON and drops the delivery", async () => {
+        await expect(service.deliver(JOB)).resolves.toBeUndefined()
+
+        expect(delivery.post.mock.calls).toEqual([])
+        expect(connections.patch.mock.calls).toEqual([
+            ["ws-1", "c1", { lastError: WebhookDeliveryErrorCode.TargetRefused }],
+        ])
+    })
+})
+
+describe("WebhookEventsService deliver", () => {
+    it("drops the delivery of a connection that was switched off", async () => {
+        const { service, delivery, connections } = await build()
+        connections.find.mockResolvedValue(record({ status: "disconnected" }))
+
+        await expect(service.deliver(JOB)).resolves.toBeUndefined()
+
+        expect(delivery.post.mock.calls).toEqual([])
+    })
+
+    it("ignores a payload that is not a webhook delivery", async () => {
+        const { service, connections, delivery, logger } = await build()
+
+        await expect(service.deliver({ connectionId: "c1" })).resolves.toBeUndefined()
+
+        expect(connections.find.mock.calls).toEqual([])
+        expect(delivery.post.mock.calls).toEqual([])
+        expect(logger.warn.mock.calls).toEqual([])
+    })
+
+    it("drops a delivery whose connection no longer exists", async () => {
+        const { service, connections, delivery, logger } = await build()
+        connections.find.mockResolvedValue(null)
+
+        await expect(service.deliver(JOB)).resolves.toBeUndefined()
+
+        expect(connections.find.mock.calls).toEqual([["ws-1", "c1"]])
+        expect(connections.readSecret.mock.calls).toEqual([])
+        expect(delivery.post.mock.calls).toEqual([])
+        expect(logger.warn.mock.calls).toEqual([[WebhookConnectionsLogEvent.DeliveryDropped, { connectionId: "c1" }]])
+    })
+
+    it("drops a queued delivery when signing has been turned off", async () => {
+        const { service, connections, delivery, logger } = await build(SIGNING_OFF)
+
+        await expect(service.deliver(JOB)).resolves.toBeUndefined()
+
+        expect(connections.readSecret.mock.calls).toEqual([["c1"]])
+        expect(delivery.resolveTarget.mock.calls).toEqual([])
+        expect(logger.warn.mock.calls).toEqual([[WebhookConnectionsLogEvent.DeliveryDropped, { connectionId: "c1" }]])
+    })
+
+    it("drops a connection whose stored secret is missing", async () => {
+        const { service, connections, delivery, logger } = await build()
+        connections.readSecret.mockResolvedValue(null)
+
+        await expect(service.deliver(JOB)).resolves.toBeUndefined()
+
+        expect(delivery.resolveTarget.mock.calls).toEqual([])
+        expect(logger.warn.mock.calls).toEqual([[WebhookConnectionsLogEvent.DeliveryDropped, { connectionId: "c1" }]])
+    })
+})
+
+describe("WebhookEventsService deliver", () => {
+    it.each(["null", "42", "{}", '{"url":42}', '{"url":""}'])(
+        "drops a secret without a nonempty URL: %s",
+        async (plain) => {
             const { service, connections, delivery, logger } = await build()
-            connections.readSecret.mockResolvedValue({ plain: "broken JSON", webhookSecret: "s" })
+            connections.readSecret.mockResolvedValue({ plain, webhookSecret: "s" })
 
             await expect(service.deliver(JOB)).resolves.toBeUndefined()
 
-            expect(delivery.post.mock.calls).toEqual([])
-            expect(logger.error.mock.calls).toEqual([
-                [WebhookConnectionsLogEvent.AddressUnreadable, expect.any(SyntaxError), { connectionId: "c1" }],
-            ])
+            expect(delivery.resolveTarget.mock.calls).toEqual([])
             expect(logger.warn.mock.calls).toEqual([
                 [WebhookConnectionsLogEvent.DeliveryDropped, { connectionId: "c1" }],
             ])
-        })
+            expect(logger.error.mock.calls).toEqual([])
+        },
+    )
 
-        it("resolves the target without requiring a public origin on a local deployment", async () => {
-            const { service, connections, delivery } = await build()
-            connections.publicOrigin.mockReturnValue(null)
+    it("records unreadable JSON and drops the delivery", async () => {
+        const { service, connections, delivery, logger } = await build()
+        connections.readSecret.mockResolvedValue({ plain: "broken JSON", webhookSecret: "s" })
 
-            await expect(service.deliver(JOB)).resolves.toBeUndefined()
+        await expect(service.deliver(JOB)).resolves.toBeUndefined()
 
-            expect(delivery.resolveTarget.mock.calls).toEqual([[TARGET, false]])
-            expect(delivery.post).toHaveBeenCalledTimes(1)
-        })
+        expect(delivery.post.mock.calls).toEqual([])
+        expect(logger.error.mock.calls).toEqual([
+            [WebhookConnectionsLogEvent.AddressUnreadable, expect.any(SyntaxError), { connectionId: "c1" }],
+        ])
+        expect(logger.warn.mock.calls).toEqual([[WebhookConnectionsLogEvent.DeliveryDropped, { connectionId: "c1" }]])
+    })
 
-        it("propagates an unexpected target resolution failure for a queue retry", async () => {
-            const { service, connections, delivery, logger } = await build()
-            const failure = new TypeError("resolver failure")
-            delivery.resolveTarget.mockRejectedValue(failure)
+    it("resolves the target without requiring a public origin on a local deployment", async () => {
+        const { service, connections, delivery } = await build()
+        connections.publicOrigin.mockReturnValue(null)
 
-            await expect(service.deliver(JOB)).rejects.toBe(failure)
+        await expect(service.deliver(JOB)).resolves.toBeUndefined()
 
-            expect(delivery.post.mock.calls).toEqual([])
-            expect(connections.patch.mock.calls).toEqual([])
-            expect(logger.warn.mock.calls).toEqual([])
-        })
+        expect(delivery.resolveTarget.mock.calls).toEqual([[TARGET, false]])
+        expect(delivery.post).toHaveBeenCalledTimes(1)
+    })
 
-        it.each([429, 503])("throws a retryable failure for HTTP %s", async (status) => {
-            const { service, connections, delivery } = await build()
-            delivery.post.mockResolvedValue({ status, failure: null, durationMs: 12 })
+    it("propagates an unexpected target resolution failure for a queue retry", async () => {
+        const { service, connections, delivery, logger } = await build()
+        const failure = new TypeError("resolver failure")
+        delivery.resolveTarget.mockRejectedValue(failure)
 
-            await expect(service.deliver(JOB)).rejects.toEqual(
-                new WebhookConnectionsError({
-                    code: WebhookConnectionsErrorCode.DeliveryFailed,
-                    params: { status: String(status) },
-                }),
-            )
+        await expect(service.deliver(JOB)).rejects.toBe(failure)
 
-            expect(connections.patch.mock.calls).toEqual([])
-        })
+        expect(delivery.post.mock.calls).toEqual([])
+        expect(connections.patch.mock.calls).toEqual([])
+        expect(logger.warn.mock.calls).toEqual([])
+    })
 
-        it("clears an earlier failure after the receiver accepts a delivery", async () => {
-            const { service, connections } = await build()
-            connections.find.mockResolvedValue(record({ lastError: "HTTP 410" }))
+    it.each([429, 503])("throws a retryable failure for HTTP %s", async (status) => {
+        const { service, connections, delivery } = await build()
+        delivery.post.mockResolvedValue({ status, failure: null, durationMs: 12 })
 
-            await expect(service.deliver(JOB)).resolves.toBeUndefined()
+        await expect(service.deliver(JOB)).rejects.toEqual(
+            new WebhookConnectionsError({
+                code: WebhookConnectionsErrorCode.DeliveryFailed,
+                params: { status: String(status) },
+            }),
+        )
 
-            expect(connections.patch.mock.calls).toEqual([["ws-1", "c1", { lastError: null }]])
-        })
+        expect(connections.patch.mock.calls).toEqual([])
+    })
+})
+
+describe("WebhookEventsService deliver", () => {
+    it("clears an earlier failure after the receiver accepts a delivery", async () => {
+        const { service, connections } = await build()
+        connections.find.mockResolvedValue(record({ lastError: "HTTP 410" }))
+
+        await expect(service.deliver(JOB)).resolves.toBeUndefined()
+
+        expect(connections.patch.mock.calls).toEqual([["ws-1", "c1", { lastError: null }]])
     })
 })

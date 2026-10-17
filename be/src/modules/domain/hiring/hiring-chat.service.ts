@@ -47,12 +47,12 @@ export class HiringChatService {
     ) {}
 
     private jobLine(job: JobRecord): string {
-        const textOf = this.words.textOf
+        const t = this.words.textOf
         const questions = job.questions
             .map((question) => {
                 const offered = question.type === "choice" ? (question.choices ?? []) : []
-                const choices = offered.length > 0 ? textOf("hiring.chat.choices", { list: offered.join(" / ") }) : ""
-                return textOf("hiring.chat.question", {
+                const choices = offered.length > 0 ? t("hiring.chat.choices", { list: offered.join(" / ") }) : ""
+                return t("hiring.chat.question", {
                     id: question.id,
                     star: question.required ? "*" : "",
                     text: question.text,
@@ -60,15 +60,15 @@ export class HiringChatService {
                 })
             })
             .join("\n")
-        return textOf("hiring.chat.job", {
+        return t("hiring.chat.job", {
             slug: job.slug,
             title: job.title,
-            employment: textOf(`hiring.employment.${job.employmentType}`, {}),
-            pay: payPhrase(job, textOf, (amount) => this.words.amount(amount)),
-            place: job.location === "" ? textOf("hiring.chat.noPlace", {}) : job.location,
+            employment: t(`hiring.employment.${job.employmentType}`, {}),
+            pay: payPhrase(job, t, (amount) => this.words.amount(amount)),
+            place: job.location === "" ? t("hiring.chat.noPlace", {}) : job.location,
             schedule: job.schedule,
-            criteria: criteriaText(job, textOf).split("\n").slice(1).join("; ") || textOf("hiring.chat.noCriteria", {}),
-            questions: questions === "" ? textOf("hiring.chat.noQuestions", {}) : questions,
+            criteria: criteriaText(job, t).split("\n").slice(1).join("; ") || t("hiring.chat.noCriteria", {}),
+            questions: questions === "" ? t("hiring.chat.noQuestions", {}) : questions,
         })
     }
 

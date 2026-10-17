@@ -22,6 +22,7 @@ import { SaveShiftsStaffHandler } from "./application/save-shifts-staff.handler"
 import { ShiftsMineHandler } from "./application/shifts-mine.handler"
 import { ShiftsWorkbenchHandler } from "./application/shifts-workbench.handler"
 import { SubmitShiftsAvailabilityHandler } from "./application/submit-shifts-availability.handler"
+import { ConfigurableModuleClass } from "./shifts.module-definition"
 
 @Module({
     providers: [
@@ -51,4 +52,4 @@ import { SubmitShiftsAvailabilityHandler } from "./application/submit-shifts-ava
     ],
 })
 /** The shifts feature: the handlers of its application. */
-export class ShiftsApiModule {}
+export class ShiftsApiModule extends ConfigurableModuleClass {}

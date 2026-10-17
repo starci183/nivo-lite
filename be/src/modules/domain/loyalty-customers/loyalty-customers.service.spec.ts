@@ -13,26 +13,7 @@ import {
     UPDATE_CUSTOMER_PROFILE,
 } from "./persistence/loyalty-customers.sql"
 
-const ROW = {
-    id: "c1",
-    name: "Mai",
-    phone: "84912345678",
-    email: null,
-    birthday: "1990-05-01",
-    tier_key: "bac",
-    joined_at: new Date("2026-10-01T00:00:00.000Z"),
-    note: "vip",
-}
-const PERSON = { workspaceId: "ws-1", name: "Mai", phone: "84912345678", email: null, birthday: null }
-
-const build = async (entityManager: MockEntityManager) => {
-    const moduleRef = await Test.createTestingModule({
-        providers: [LoyaltyCustomersService, { provide: PRIMARY_ENTITY_MANAGER, useValue: entityManager }],
-    }).compile()
-    return moduleRef.get(LoyaltyCustomersService)
-}
-
-describe("LoyaltyCustomersService", () => {
+const registerByPhoneAndById = () => {
     describe("byPhone and byId", () => {
         it("answers the customer a row holds", async () => {
             const customers = await build(
@@ -72,7 +53,9 @@ describe("LoyaltyCustomersService", () => {
             await expect(customers.byId("ws-1", "zzz")).resolves.toBeNull()
         })
     })
+}
 
+const registerEnsureByPhone = () => {
     describe("ensureByPhone", () => {
         it("answers the customer the phone already belongs to", async () => {
             const manager = mockEntityManager({ query: [SELECT_CUSTOMER_BY_PHONE, [ROW]] })
@@ -122,15 +105,6 @@ describe("LoyaltyCustomersService", () => {
     })
 
     describe("moveTier", () => {
-        const move = (manager: MockEntityManager) => ({
-            manager,
-            workspaceId: "ws-1",
-            customerId: "c1",
-            toKey: "bac",
-            fromKey: null,
-            nowIso: "2026-10-12T00:00:00.000Z",
-        })
-
         it("is true when this call moved the customer and false when somebody did first", async () => {
             const moved = mockEntityManager({ query: [UPDATE_CUSTOMER_TIER, [{ id: "c1" }]] })
             const lost = mockEntityManager({ query: [UPDATE_CUSTOMER_TIER, []] })
@@ -147,7 +121,9 @@ describe("LoyaltyCustomersService", () => {
             ])
         })
     })
+}
 
+const registerLeadContactsAndCreateFromLeads = () => {
     describe("leadContacts and createFromLeads", () => {
         it("keeps the leads with a usable phone or email, normalised", async () => {
             const customers = await build(
@@ -194,7 +170,9 @@ describe("LoyaltyCustomersService", () => {
             await expect(customers.createFromLeads(manager, "ws-1", [])).resolves.toBe(0)
         })
     })
+}
 
+const registerUpdateProfile = () => {
     describe("updateProfile", () => {
         it("trims and bounds profile fields and saves a valid birthday", async () => {
             const manager = mockEntityManager({ query: [UPDATE_CUSTOMER_PROFILE, [{ id: "c1" }]] })
@@ -250,4 +228,39 @@ describe("LoyaltyCustomersService", () => {
             expect(manager.query).toHaveBeenCalledWith(UPDATE_CUSTOMER_PROFILE, ["ws-1", "c1", null, true, null, null])
         })
     })
+}
+
+const move = (manager: MockEntityManager) => ({
+    manager,
+    workspaceId: "ws-1",
+    customerId: "c1",
+    toKey: "bac",
+    fromKey: null,
+    nowIso: "2026-10-12T00:00:00.000Z",
+})
+
+const ROW = {
+    id: "c1",
+    name: "Mai",
+    phone: "84912345678",
+    email: null,
+    birthday: "1990-05-01",
+    tier_key: "bac",
+    joined_at: new Date("2026-10-01T00:00:00.000Z"),
+    note: "vip",
+}
+const PERSON = { workspaceId: "ws-1", name: "Mai", phone: "84912345678", email: null, birthday: null }
+
+const build = async (entityManager: MockEntityManager) => {
+    const moduleRef = await Test.createTestingModule({
+        providers: [LoyaltyCustomersService, { provide: PRIMARY_ENTITY_MANAGER, useValue: entityManager }],
+    }).compile()
+    return moduleRef.get(LoyaltyCustomersService)
+}
+
+describe("LoyaltyCustomersService", () => {
+    registerByPhoneAndById()
+    registerEnsureByPhone()
+    registerLeadContactsAndCreateFromLeads()
+    registerUpdateProfile()
 })

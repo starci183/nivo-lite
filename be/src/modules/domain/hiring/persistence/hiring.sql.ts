@@ -88,9 +88,6 @@ export const SELECT_CONVERSATION_CHANNEL = sql`SELECT channel FROM public.agent_
 /** Counts the earlier asks of one action and dedupe prefix so a repeated ask gets a fresh key ($1 workspace, $2 action, $3 key prefix pattern). */
 export const COUNT_ASKS = sql`SELECT count(*)::int AS count FROM public.work_items WHERE workspace_id = $1 AND action = $2 AND dedupe_key LIKE $3`
 
-/** Makes a fresh link token (no parameters). */
-export const NEW_TOKEN = sql`SELECT public.hiring_new_token() AS value`
-
 /** Creates the settings of a workspace ($1 workspace, $2 slug); answers created, exists or taken. */
 export const INIT_SETTINGS = sql`SELECT public.hiring_settings_init($1::uuid, $2::text) AS value`
 

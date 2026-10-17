@@ -1,3 +1,16 @@
+import type { Env, Setup } from "./shifts.contracts"
+import type { ShiftsScheduleRow } from "./persistence/shifts.rows"
+import {
+    text,
+    staffOf,
+    blockOf,
+    shiftOf,
+    proposalOf,
+    emptyExplanation,
+    shortageShiftParams,
+    savedCoverage,
+    savedSolver,
+} from "../../../tests/fixtures/builders/shifts-schedule.builder"
 import { Test } from "@nestjs/testing"
 import { builder, FakeClock, mock, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
@@ -6,7 +19,7 @@ import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { CLOCK } from "@modules/platform/clock"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { ShiftsErrorCode } from "./errors/shifts.error"
-import type { ShiftsScheduleRow, ShiftsShiftRow } from "./persistence/shifts.rows"
+import type { ShiftsShiftRow } from "./persistence/shifts.rows"
 import {
     ADD_SHIFTS,
     LINK_SCHEDULE,
@@ -17,35 +30,8 @@ import {
 } from "./persistence/shifts.sql"
 import { ShiftsDataService } from "./shifts-data.service"
 import { ShiftsScheduleService } from "./shifts-schedule.service"
-import type { ProposeWeekOutput } from "./shifts-operations.contracts"
 import { ShiftsTextService } from "./shifts-text.service"
-import type { Block, Env, Setup, Shift, ShiftStaff } from "./shifts.contracts"
-const text = (key: string, params: Record<string, string | number> = {}): string => `${key}${JSON.stringify(params)}`
-const staffOf = builder<ShiftStaff>({
-    id: "staff-1",
-    name: "Alex",
-    positionIds: ["position-1"],
-    skills: [],
-    wage: 30000,
-    maxWeek: 40,
-    maxDay: 8,
-    minRest: 12,
-    staffRowId: null,
-    telegramChatId: null,
-    zaloUserId: null,
-    phone: null,
-    active: true,
-})
-const blockOf = builder<Block>({
-    id: "block-1",
-    weekday: 0,
-    start: "08:00",
-    end: "10:00",
-    positionId: "position-1",
-    min: 1,
-    ideal: 1,
-    peak: false,
-})
+
 const setupOf = builder<Setup>({
     positions: [{ id: "position-1", name: "Cashier", color: "#ff0000" }],
     staff: [staffOf({ id: "inactive-1", active: false }), staffOf()],
@@ -59,12 +45,14 @@ const setupOf = builder<Setup>({
         overtimeHoursWeek: 40,
     },
 })
+
 const envOf = builder<Env>({
     staff: new Map([["staff-1", staffOf()]]),
     avail: [],
     leaves: [],
     overtimeHoursWeek: 40,
 })
+
 const scheduleOf = builder<ShiftsScheduleRow>({
     id: "schedule-1",
     week_start: "2026-10-12",
@@ -74,49 +62,11 @@ const scheduleOf = builder<ShiftsScheduleRow>({
     summary: {},
     evidence: { source: "saved" },
 })
-const shiftOf = builder<Shift>({
-    id: "shift-1",
-    date: "2026-10-12",
-    start: "08:00",
-    end: "10:00",
-    positionId: "position-1",
-    staffId: "staff-1",
-    status: "draft",
-})
-const proposalOf = builder<ProposeWeekOutput>({
-    scheduleId: "schedule-1",
-    version: 3,
-    shifts: 1,
-    open: 0,
-    short: 0,
-    costVnd: 60000,
-    ms: 0,
-    iterations: 6,
-})
-const savedCoverage =
-    '{"coverage":[{"blockId":"block-1","date":"2026-10-12","positionId":"position-1","start":"08:00","end":"10:00","min":1,"ideal":1,"peak":false,"have":1,"status":"ok"}],"hours":[{"staffId":"staff-1","hours":2}]}'
-const savedSolver =
-    '{"solver":{"ms":0,"iterations":6,"costVnd":60000,"shiftCount":1,"openCount":0,"shortages":[],"hoursByStaff":[{"staffId":"staff-1","hours":2}],"askCandidates":[]}}'
-const emptyExplanation = text("shifts.explain.fallback", {
-    week: "week:2026-10-12",
-    version: 1,
-    shifts: 0,
-    open: 0,
-    cost: "0\u0111",
-    short: "shifts.explain.shortNone{}",
-})
+
 const emptyInsertion = [SET_EXPLANATION, ["ws-1", "schedule-1", emptyExplanation, "{}"]]
-const shortageShiftParams = [
-    "ws-1",
-    "schedule-1",
-    ["2026-10-12", "2026-10-12"],
-    ["08:00", "08:00"],
-    ["10:00", "10:00"],
-    ["position-1", "position-1"],
-    ["staff-1", null],
-    "solver",
-]
+
 const shortageInsertion = [ADD_SHIFTS, shortageShiftParams]
+
 const build = async (entityManager: MockEntityManager) => {
     const members = mock<WorkspaceMembersService>()
     members.require.mockResolvedValue({
@@ -157,6 +107,7 @@ const build = async (entityManager: MockEntityManager) => {
     }).compile()
     return { service: moduleRef.get(ShiftsScheduleService), members, data, words, generator, gate }
 }
+
 const shiftRowOf = builder<ShiftsShiftRow>({
     id: "shift-1",
     schedule_id: "schedule-1",
@@ -169,14 +120,7 @@ const shiftRowOf = builder<ShiftsShiftRow>({
     schedule_status: "draft",
     week_start: "2026-10-12",
 })
-const addRequest = {
-    scheduleId: "schedule-1",
-    date: "2026-10-12",
-    start: "08:00",
-    end: "10:00",
-    positionId: "position-1",
-    staffId: "staff-1",
-}
+
 /** The service with a draft shift on file, an empty week around it and no staff in its environment. */
 const buildEdits = async (entityManager: MockEntityManager) => {
     const built = await build(entityManager)
@@ -185,6 +129,25 @@ const buildEdits = async (entityManager: MockEntityManager) => {
     built.data.loadEnv.mockResolvedValue(envOf({ staff: new Map() }))
     return built
 }
+
+const fallbackExplanation = text("shifts.explain.fallback", {
+    week: "week:2026-10-12",
+    version: 3,
+    shifts: 1,
+    open: 1,
+    cost: "0\u0111",
+    short: text("shifts.explain.shortSome", { count: 1 }),
+})
+
+const addRequest = {
+    scheduleId: "schedule-1",
+    date: "2026-10-12",
+    start: "08:00",
+    end: "10:00",
+    positionId: "position-1",
+    staffId: "staff-1",
+}
+
 describe("ShiftsScheduleService", () => {
     it("proposeWeek: solves and saves the containing week with exact shifts and evidence", async () => {
         const em = mockEntityManager({
@@ -229,6 +192,7 @@ describe("ShiftsScheduleService", () => {
             ],
         ])
     })
+
     it.each([
         { empty: true, min: 0, output: proposalOf({ version: 1, shifts: 0, costVnd: 0 }) },
         { empty: false, min: 2, output: proposalOf({ open: 1, short: 1 }) },
@@ -247,7 +211,9 @@ describe("ShiftsScheduleService", () => {
         expect(em.query.mock.calls).toHaveLength(empty ? 2 : 3)
         expect(em.query.mock.calls[1]).toEqual(empty ? emptyInsertion : shortageInsertion)
     })
+})
 
+describe("ShiftsScheduleService", () => {
     it("proposeWeek: refuses an invalid week before reading setup", async () => {
         const em = mockEntityManager({})
         const { service, data } = await build(em)
@@ -283,15 +249,6 @@ describe("ShiftsScheduleService", () => {
         },
     )
 
-    const fallbackExplanation = text("shifts.explain.fallback", {
-        week: "week:2026-10-12",
-        version: 3,
-        shifts: 1,
-        open: 1,
-        cost: "0\u0111",
-        short: text("shifts.explain.shortSome", { count: 1 }),
-    })
-
     it.each<[boolean, string, boolean, string]>([
         [true, "  Everyone is scheduled.\n", false, "Everyone is scheduled."],
         [false, "Ignore this failed result", true, fallbackExplanation],
@@ -314,7 +271,9 @@ describe("ShiftsScheduleService", () => {
             [SET_EXPLANATION, ["ws-1", "schedule-1", explanation, JSON.stringify({ source: "saved" })]],
         ])
     })
+})
 
+describe("ShiftsScheduleService", () => {
     it.each([
         { waiting: true, costVnd: "60000.4", attempts: 1, shifts: 2, open: 1, cost: "60.000\u0111" },
         { waiting: false, costVnd: "invalid", attempts: 0, shifts: 1, open: 0, cost: "0\u0111" },
@@ -383,7 +342,9 @@ describe("ShiftsScheduleService", () => {
             code,
         })
     })
+})
 
+describe("ShiftsScheduleService", () => {
     it.each<["reassignShift" | "addDraftShift", string]>([
         ["reassignShift", "missing"],
         ["reassignShift", "inactive-1"],
@@ -429,7 +390,9 @@ describe("ShiftsScheduleService", () => {
             expect(em.query).not.toHaveBeenCalled()
         },
     )
+})
 
+describe("ShiftsScheduleService", () => {
     it.each<[boolean, boolean, string | null | undefined]>([
         [true, false, "Alex"],
         [false, false, "Alex"],

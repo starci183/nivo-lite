@@ -84,204 +84,223 @@ const rejectionOf = async (run: Promise<unknown>): Promise<AgentToolsError | nul
     }
 }
 
-describe("AgentToolsService", () => {
-    describe("issue, revoke and manifest", () => {
-        it("delegates the token to the tool token service", async () => {
-            const { service, tokens } = await build()
+describe("AgentToolsService > issue, revoke and manifest", () => {
+    it("delegates the token to the tool token service", async () => {
+        const { service, tokens } = await build()
 
-            expect(service.issue(ctx, 60)).toBe("signed-token")
-            service.revoke("job-1")
+        expect(service.issue(ctx, 60)).toBe("signed-token")
+        service.revoke("job-1")
 
-            expect(tokens.mint).toHaveBeenCalledWith(ctx, 60)
-            expect(tokens.revoke).toHaveBeenCalledWith("job-1")
+        expect(tokens.mint).toHaveBeenCalledWith(ctx, 60)
+        expect(tokens.revoke).toHaveBeenCalledWith("job-1")
+    })
+
+    it("answers the manifest", async () => {
+        const { service } = await build()
+
+        expect(service.manifest()).toBe(TOOL_MANIFEST)
+    })
+
+    it("answers the manifest to a door that awaits it", async () => {
+        const { service } = await build()
+
+        await expect(service.describeTools()).resolves.toBe(TOOL_MANIFEST)
+    })
+})
+
+describe("AgentToolsService > runBearerTool", () => {
+    it("runs the tool for the job the bearer token names", async () => {
+        const { service } = await build()
+
+        const result = await service.runBearerTool("Bearer good", "handoff.to_person", {})
+
+        expect(result).toEqual({ status: "handed_to_person" })
+    })
+
+    it("refuses a call with no bearer token", async () => {
+        const { service } = await build(null)
+
+        const error = await rejectionOf(service.runBearerTool(undefined, "knowledge.search", { query: "x" }))
+
+        expect(error).toMatchObject({ code: AgentToolsErrorCode.TokenInvalid })
+    })
+})
+
+describe("AgentToolsService > runTool", () => {
+    it("refuses a token that does not verify, before looking at the tool", async () => {
+        const { service, knowledge } = await build(null)
+
+        const error = await rejectionOf(service.runTool("bad", "knowledge.search", { query: "x" }))
+
+        expect(error?.code).toBe(AgentToolsErrorCode.TokenInvalid)
+        expect(knowledge.search).not.toHaveBeenCalled()
+    })
+
+    it("refuses a tool that is not in the manifest", async () => {
+        const { service } = await build()
+
+        const error = await rejectionOf(service.runTool("t", "shell.exec", {}))
+
+        expect(error?.code).toBe(AgentToolsErrorCode.UnknownTool)
+        expect(error?.params).toEqual({ tool: "shell.exec" })
+    })
+
+    it("searches the knowledge for the job's own conversation and traces it", async () => {
+        const { service, knowledge, events } = await build()
+
+        const result = await service.runTool("t", "knowledge.search", {
+            query: "hours",
+            workspaceId: "other-ws",
+            conversationId: "other-conv",
         })
 
-        it("answers the manifest", async () => {
-            const { service } = await build()
-
-            expect(service.manifest()).toBe(TOOL_MANIFEST)
-        })
-
-        it("answers the manifest to a door that awaits it", async () => {
-            const { service } = await build()
-
-            await expect(service.describeTools()).resolves.toBe(TOOL_MANIFEST)
+        expect(result).toEqual({ passages: "Opening hours 8-17", citations: [{ title: "Hours", topic: "faq" }] })
+        expect(knowledge.search).toHaveBeenCalledWith(ctx, "hours")
+        expect(events.record).toHaveBeenCalledWith({
+            workspaceId: "ws-1",
+            kind: "engine.tool.knowledge.search",
+            actor: "NIVO engine",
+            summary: "Knowledge search: hours",
+            leadId: "lead-9",
+            evidence: "job-1",
         })
     })
 
-    describe("runBearerTool", () => {
-        it("runs the tool for the job the bearer token names", async () => {
-            const { service } = await build()
+    it("keeps only 100 characters of the query in the evidence summary", async () => {
+        const { service, events } = await build()
 
-            const result = await service.runBearerTool("Bearer good", "handoff.to_person", {})
+        await service.runTool("t", "knowledge.search", { query: "q".repeat(300) })
 
-            expect(result).toEqual({ status: "handed_to_person" })
+        expect(events.record).toHaveBeenCalledWith({
+            workspaceId: "ws-1",
+            kind: "engine.tool.knowledge.search",
+            actor: "NIVO engine",
+            summary: `Knowledge search: ${"q".repeat(100)}`,
+            leadId: "lead-9",
+            evidence: "job-1",
+        })
+    })
+})
+
+describe("AgentToolsService > runTool", () => {
+    it("hands the lead to the writer and traces the lead it returns", async () => {
+        const { service, leads, events } = await build()
+
+        const result = await service.runTool("t", "lead.create_or_update", {
+            contact_name: "An",
+            need: "a quote",
+            phone: "0900",
         })
 
-        it("refuses a call with no bearer token", async () => {
-            const { service } = await build(null)
-
-            const error = await rejectionOf(service.runBearerTool(undefined, "knowledge.search", { query: "x" }))
-
-            expect(error).toMatchObject({ code: AgentToolsErrorCode.TokenInvalid })
+        expect(result).toEqual({ lead_id: "lead-1", status: "done" })
+        expect(leads.createOrUpdate).toHaveBeenCalledWith(ctx, {
+            contactName: "An",
+            need: "a quote",
+            company: null,
+            contact: "0900",
+        })
+        expect(events.record).toHaveBeenCalledWith({
+            workspaceId: "ws-1",
+            kind: "engine.tool.lead.create_or_update",
+            actor: "NIVO engine",
+            summary: "Lead handed to Sales through the gate (done)",
+            leadId: "lead-1",
+            evidence: "job-1",
         })
     })
 
-    describe("runTool", () => {
-        it("refuses a token that does not verify, before looking at the tool", async () => {
-            const { service, knowledge } = await build(null)
+    it("refuses a lead without a name before writing anything", async () => {
+        const { service, leads, events } = await build()
 
-            const error = await rejectionOf(service.runTool("bad", "knowledge.search", { query: "x" }))
+        const error = await rejectionOf(service.runTool("t", "lead.create_or_update", { need: "x" }))
 
-            expect(error?.code).toBe(AgentToolsErrorCode.TokenInvalid)
-            expect(knowledge.search).not.toHaveBeenCalled()
+        expect(error?.params).toEqual({ field: "contact_name" })
+        expect(leads.createOrUpdate).not.toHaveBeenCalled()
+        expect(events.record).not.toHaveBeenCalled()
+    })
+
+    it("requests the owner's approval and traces the work item", async () => {
+        const { service, approvals, events } = await build()
+
+        const result = await service.runTool("t", "approval.request", {
+            question: "Discount?",
+            reason: "unclear_outcome",
         })
 
-        it("refuses a tool that is not in the manifest", async () => {
-            const { service } = await build()
-
-            const error = await rejectionOf(service.runTool("t", "shell.exec", {}))
-
-            expect(error?.code).toBe(AgentToolsErrorCode.UnknownTool)
-            expect(error?.params).toEqual({ tool: "shell.exec" })
+        expect(result).toEqual({ work_item_id: "wi-1", status: "waiting_decision" })
+        expect(approvals.request).toHaveBeenCalledWith(ctx, {
+            question: "Discount?",
+            proposedAnswer: null,
+            reason: "unclear_outcome",
         })
-
-        it("searches the knowledge for the job's own conversation and traces it", async () => {
-            const { service, knowledge, events } = await build()
-
-            const result = await service.runTool("t", "knowledge.search", {
-                query: "hours",
-                workspaceId: "other-ws",
-                conversationId: "other-conv",
-            })
-
-            expect(result).toEqual({ passages: "Opening hours 8-17", citations: [{ title: "Hours", topic: "faq" }] })
-            expect(knowledge.search).toHaveBeenCalledWith(ctx, "hours")
-            expect(events.record).toHaveBeenCalledWith({
-                workspaceId: "ws-1",
-                kind: "engine.tool.knowledge.search",
-                actor: "NIVO engine",
-                summary: "Knowledge search: hours",
-                leadId: "lead-9",
-                evidence: "job-1",
-            })
+        expect(events.record).toHaveBeenCalledWith({
+            workspaceId: "ws-1",
+            kind: "engine.tool.approval.request",
+            actor: "NIVO engine",
+            summary: "Approval requested from the owner (waiting_decision)",
+            leadId: "lead-9",
+            evidence: "wi-1",
         })
+    })
+})
 
-        it("keeps only 100 characters of the query in the evidence summary", async () => {
-            const { service, events } = await build()
+describe("AgentToolsService > runTool", () => {
+    it("hands the conversation to a person and traces the reason", async () => {
+        const { service, handoffs, events } = await build()
 
-            await service.runTool("t", "knowledge.search", { query: "q".repeat(300) })
+        const result = await service.runTool("t", "handoff.to_person", { reason: "angry customer" })
 
-            expect(events.record).toHaveBeenCalledWith({
-                workspaceId: "ws-1",
-                kind: "engine.tool.knowledge.search",
-                actor: "NIVO engine",
-                summary: `Knowledge search: ${"q".repeat(100)}`,
-                leadId: "lead-9",
-                evidence: "job-1",
-            })
+        expect(result).toEqual({ status: "handed_to_person" })
+        expect(handoffs.handoff).toHaveBeenCalledWith(ctx, "angry customer")
+        expect(events.record).toHaveBeenCalledWith({
+            workspaceId: "ws-1",
+            kind: "engine.tool.handoff.to_person",
+            actor: "NIVO engine",
+            summary: "Conversation handed to a person",
+            leadId: "lead-9",
+            evidence: "angry customer",
         })
+    })
 
-        it("hands the lead to the writer and traces the lead it returns", async () => {
-            const { service, leads, events } = await build()
+    it("traces the job when a handoff gives no reason", async () => {
+        const { service, events } = await build()
 
-            const result = await service.runTool("t", "lead.create_or_update", {
-                contact_name: "An",
-                need: "a quote",
-                phone: "0900",
-            })
+        await service.runTool("t", "handoff.to_person", {})
 
-            expect(result).toEqual({ lead_id: "lead-1", status: "done" })
-            expect(leads.createOrUpdate).toHaveBeenCalledWith(ctx, {
-                contactName: "An",
-                need: "a quote",
-                company: null,
-                contact: "0900",
-            })
-            expect(events.record).toHaveBeenCalledWith({
-                workspaceId: "ws-1",
-                kind: "engine.tool.lead.create_or_update",
-                actor: "NIVO engine",
-                summary: "Lead handed to Sales through the gate (done)",
-                leadId: "lead-1",
-                evidence: "job-1",
-            })
+        expect(events.record).toHaveBeenCalledWith({
+            workspaceId: "ws-1",
+            kind: "engine.tool.handoff.to_person",
+            actor: "NIVO engine",
+            summary: "Conversation handed to a person",
+            leadId: "lead-9",
+            evidence: "job-1",
         })
+    })
 
-        it("refuses a lead without a name before writing anything", async () => {
-            const { service, leads, events } = await build()
+    it("leaves the booking tools to their port, which traces itself", async () => {
+        const { service, booking, events } = await build()
 
-            const error = await rejectionOf(service.runTool("t", "lead.create_or_update", { need: "x" }))
+        const result = await service.runTool("t", "booking.find_slots", { date: "2026-10-13" })
 
-            expect(error?.params).toEqual({ field: "contact_name" })
-            expect(leads.createOrUpdate).not.toHaveBeenCalled()
-            expect(events.record).not.toHaveBeenCalled()
-        })
+        expect(result).toEqual({ slots: ["09:00"] })
+        expect(booking.run).toHaveBeenCalledWith(ctx, "booking.find_slots", { date: "2026-10-13" })
+        expect(events.record).not.toHaveBeenCalled()
+    })
+})
 
-        it("requests the owner's approval and traces the work item", async () => {
-            const { service, approvals, events } = await build()
+describe("AgentToolsService credential admission", () => {
+    it("establishes only the token's context without dispatching or consuming a call", async () => {
+        const { service, tokens, knowledge, events } = await build()
 
-            const result = await service.runTool("t", "approval.request", {
-                question: "Discount?",
-                reason: "unclear_outcome",
-            })
+        expect(service.authenticateBearer("Bearer signed-token")).toEqual(ctx)
+        expect(tokens.verify).toHaveBeenCalledWith("signed-token", false)
+        expect(knowledge.search).not.toHaveBeenCalled()
+        expect(events.record).not.toHaveBeenCalled()
+    })
 
-            expect(result).toEqual({ work_item_id: "wi-1", status: "waiting_decision" })
-            expect(approvals.request).toHaveBeenCalledWith(ctx, {
-                question: "Discount?",
-                proposedAnswer: null,
-                reason: "unclear_outcome",
-            })
-            expect(events.record).toHaveBeenCalledWith({
-                workspaceId: "ws-1",
-                kind: "engine.tool.approval.request",
-                actor: "NIVO engine",
-                summary: "Approval requested from the owner (waiting_decision)",
-                leadId: "lead-9",
-                evidence: "wi-1",
-            })
-        })
+    it("preserves the token-invalid refusal", async () => {
+        const { service } = await build(null)
 
-        it("hands the conversation to a person and traces the reason", async () => {
-            const { service, handoffs, events } = await build()
-
-            const result = await service.runTool("t", "handoff.to_person", { reason: "angry customer" })
-
-            expect(result).toEqual({ status: "handed_to_person" })
-            expect(handoffs.handoff).toHaveBeenCalledWith(ctx, "angry customer")
-            expect(events.record).toHaveBeenCalledWith({
-                workspaceId: "ws-1",
-                kind: "engine.tool.handoff.to_person",
-                actor: "NIVO engine",
-                summary: "Conversation handed to a person",
-                leadId: "lead-9",
-                evidence: "angry customer",
-            })
-        })
-
-        it("traces the job when a handoff gives no reason", async () => {
-            const { service, events } = await build()
-
-            await service.runTool("t", "handoff.to_person", {})
-
-            expect(events.record).toHaveBeenCalledWith({
-                workspaceId: "ws-1",
-                kind: "engine.tool.handoff.to_person",
-                actor: "NIVO engine",
-                summary: "Conversation handed to a person",
-                leadId: "lead-9",
-                evidence: "job-1",
-            })
-        })
-
-        it("leaves the booking tools to their port, which traces itself", async () => {
-            const { service, booking, events } = await build()
-
-            const result = await service.runTool("t", "booking.find_slots", { date: "2026-10-13" })
-
-            expect(result).toEqual({ slots: ["09:00"] })
-            expect(booking.run).toHaveBeenCalledWith(ctx, "booking.find_slots", { date: "2026-10-13" })
-            expect(events.record).not.toHaveBeenCalled()
-        })
+        expect(() => service.authenticateBearer(undefined)).toThrow(AgentToolsError)
     })
 })

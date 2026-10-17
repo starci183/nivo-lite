@@ -17,7 +17,9 @@ describe("ContentPatchSelectionMapper", () => {
             })
         },
     )
+})
 
+describe("ContentPatchSelectionMapper", () => {
     it("retains selected fields and clears nullable schedule and pillar fields", () => {
         expect(
             new ContentPatchSelectionMapper({
@@ -55,7 +57,9 @@ describe("ContentPatchSelectionMapper", () => {
             ],
         })
     })
+})
 
+describe("ContentPatchSelectionMapper", () => {
     it("retains empty replacements and selected schedule values", () => {
         expect(
             new ContentPatchSelectionMapper({

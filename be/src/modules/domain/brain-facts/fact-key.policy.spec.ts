@@ -1,4 +1,20 @@
+import { Test } from "@nestjs/testing"
 import { AUTO_APPLY_TRUST, keyOf, numberOf, sameValue, TRUST } from "./fact-key.policy"
+
+type Subject = {
+    keyOf: typeof keyOf
+    numberOf: typeof numberOf
+    sameValue: typeof sameValue
+}
+
+const SUBJECT = Symbol("fact-key.policy")
+
+const build = async () => {
+    const moduleRef = await Test.createTestingModule({
+        providers: [{ provide: SUBJECT, useValue: { keyOf, numberOf, sameValue } }],
+    }).compile()
+    return moduleRef.get<Subject>(SUBJECT)
+}
 
 describe("fact keys", () => {
     afterEach(() => jest.restoreAllMocks())
@@ -8,10 +24,12 @@ describe("fact keys", () => {
         expect(AUTO_APPLY_TRUST).toBe(85)
     })
 
-    it("normalizes accents, case and separators, and bounds the key", () => {
-        expect(keyOf("  \u0110\u1ed3ng, COMBO Th\u01b0 gi\u00e3n!!! 12  ")).toBe("dong-combo-thu-gian-12")
-        expect(keyOf("???")).toBe("")
-        expect(keyOf("A".repeat(130))).toBe("a".repeat(120))
+    it("normalizes accents, case and separators, and bounds the key", async () => {
+        const subject = await build()
+
+        expect(subject.keyOf("  \u0110\u1ed3ng, COMBO Th\u01b0 gi\u00e3n!!! 12  ")).toBe("dong-combo-thu-gian-12")
+        expect(subject.keyOf("???")).toBe("")
+        expect(subject.keyOf("A".repeat(130))).toBe("a".repeat(120))
     })
 
     it.each([
@@ -33,14 +51,18 @@ describe("fact keys", () => {
         ["nothing", null],
         ["1.2.3", null],
         ["9".repeat(309), null],
-    ])("reads %s as %s", (text, expected) => {
-        expect(numberOf(text)).toBe(expected)
+    ])("reads %s as %s", async (text, expected) => {
+        const subject = await build()
+
+        expect(subject.numberOf(text)).toBe(expected)
     })
 
-    it("handles an absent number capture defensively", () => {
+    it("handles an absent number capture defensively", async () => {
+        const subject = await build()
+
         jest.spyOn(String.prototype, "match").mockReturnValueOnce([""])
 
-        expect(numberOf("ignored")).toBe(0)
+        expect(subject.numberOf("ignored")).toBe(0)
     })
 
     it.each([
@@ -52,7 +74,9 @@ describe("fact keys", () => {
         ["eight", "8", false],
         ["8", "eight", false],
         ["first", "second", false],
-    ])("compares %s and %s", (first, second, expected) => {
-        expect(sameValue(first, second)).toBe(expected)
+    ])("compares %s and %s", async (first, second, expected) => {
+        const subject = await build()
+
+        expect(subject.sameValue(first, second)).toBe(expected)
     })
 })

@@ -1,8 +1,6 @@
 export { ActionPerformerRegistry } from "./action-performer.port"
 export type { ActionPerformer } from "./action-performer.port"
 export { ApprovalGate } from "./approval-gate.port"
-export { MODULE_OPS_ERROR_KINDS } from "./errors/module-ops.error"
-export { MODULE_OPS_MESSAGES } from "./messages/module-ops.messages"
 export { OfficeLog } from "./office-log.port"
 export { OutboundMail } from "./outbound-mail.port"
 export { ModuleTextGenerator } from "./text-generator.port"

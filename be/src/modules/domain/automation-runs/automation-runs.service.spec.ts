@@ -51,240 +51,228 @@ const BEGIN = {
     runAt: undefined,
 }
 
-describe("AutomationRunsService", () => {
-    describe("beginRun", () => {
-        it("stores a running run at once and answers it", async () => {
-            const em = mockEntityManager({ query: [INSERT_RUN, [{ id: "r-1", attempts: 1 }]] })
-            const { runs } = await build(em)
+describe("AutomationRunsService > beginRun", () => {
+    it("stores a running run at once and answers it", async () => {
+        const em = mockEntityManager({ query: [INSERT_RUN, [{ id: "r-1", attempts: 1 }]] })
+        const { runs } = await build(em)
 
-            await expect(runs.beginRun(BEGIN)).resolves.toEqual({ id: "r-1", attempts: 1, payload: { a: 1 } })
+        await expect(runs.beginRun(BEGIN)).resolves.toEqual({ id: "r-1", attempts: 1, payload: { a: 1 } })
 
-            expect(em.query).toHaveBeenCalledWith(INSERT_RUN, [
-                "p-1",
-                "ws-1",
-                "t-1",
-                "d-1",
-                '{"a":1}',
-                "running",
-                1,
-                NOW,
-            ])
-        })
-
-        it("stores a trigger for later queued and answers none", async () => {
-            const em = mockEntityManager({ query: [INSERT_RUN, [{ id: "r-1", attempts: 0 }]] })
-            const { runs } = await build(em)
-            const runAt = new Date("2026-10-12T11:00:00.000Z")
-
-            await expect(runs.beginRun({ ...BEGIN, runAt })).resolves.toBeNull()
-
-            expect(em.query).toHaveBeenCalledWith(INSERT_RUN, [
-                "p-1",
-                "ws-1",
-                "t-1",
-                "d-1",
-                '{"a":1}',
-                "queued",
-                0,
-                runAt.toISOString(),
-            ])
-        })
-
-        it("runs a trigger scheduled within the second at once", async () => {
-            const em = mockEntityManager({ query: [INSERT_RUN, [{ id: "r-1", attempts: 1 }]] })
-            const { runs } = await build(em)
-
-            await expect(runs.beginRun({ ...BEGIN, runAt: new Date(NOW) })).resolves.toMatchObject({ id: "r-1" })
-        })
-
-        it("answers none for a repeated trigger", async () => {
-            const em = mockEntityManager({ query: [INSERT_RUN, []] })
-            const { runs } = await build(em)
-
-            await expect(runs.beginRun(BEGIN)).resolves.toBeNull()
-        })
+        expect(em.query).toHaveBeenCalledWith(INSERT_RUN, ["p-1", "ws-1", "t-1", "d-1", '{"a":1}', "running", 1, NOW])
     })
 
-    describe("dueRunIds", () => {
-        it("answers the ids of the runs that are due", async () => {
-            const em = mockEntityManager({ query: [SELECT_DUE_RUNS, [{ id: "r-1" }, { id: "r-2" }]] })
-            const { runs } = await build(em)
+    it("stores a trigger for later queued and answers none", async () => {
+        const em = mockEntityManager({ query: [INSERT_RUN, [{ id: "r-1", attempts: 0 }]] })
+        const { runs } = await build(em)
+        const runAt = new Date("2026-10-12T11:00:00.000Z")
 
-            await expect(runs.dueRunIds("p-1", new Date(NOW), 10)).resolves.toEqual(["r-1", "r-2"])
+        await expect(runs.beginRun({ ...BEGIN, runAt })).resolves.toBeNull()
 
-            expect(em.query).toHaveBeenCalledWith(SELECT_DUE_RUNS, ["p-1", 3, NOW, 10])
-        })
+        expect(em.query).toHaveBeenCalledWith(INSERT_RUN, [
+            "p-1",
+            "ws-1",
+            "t-1",
+            "d-1",
+            '{"a":1}',
+            "queued",
+            0,
+            runAt.toISOString(),
+        ])
     })
 
-    describe("claimRun", () => {
-        it("answers the claimed run, or none when another tick took it", async () => {
-            const claimed: ClaimedRun = { id: "r-1", attempts: 2, payload: {} }
-            const { runs } = await build(mockEntityManager({ query: [CLAIM_RUN, [claimed]] }))
-            const { runs: lost } = await build(mockEntityManager({ query: [CLAIM_RUN, []] }))
+    it("runs a trigger scheduled within the second at once", async () => {
+        const em = mockEntityManager({ query: [INSERT_RUN, [{ id: "r-1", attempts: 1 }]] })
+        const { runs } = await build(em)
 
-            await expect(runs.claimRun("r-1")).resolves.toEqual(claimed)
-            await expect(lost.claimRun("r-1")).resolves.toBeNull()
-        })
+        await expect(runs.beginRun({ ...BEGIN, runAt: new Date(NOW) })).resolves.toMatchObject({ id: "r-1" })
     })
 
-    describe("executeRun", () => {
-        const run: ClaimedRun = { id: "r-1", attempts: 1, payload: {} }
+    it("answers none for a repeated trigger", async () => {
+        const em = mockEntityManager({ query: [INSERT_RUN, []] })
+        const { runs } = await build(em)
 
-        it("finishes the run with the result of the execution", async () => {
-            const em = mockEntityManager({ query: [FINISH_RUN, []] })
-            const { runs } = await build(em)
+        await expect(runs.beginRun(BEGIN)).resolves.toBeNull()
+    })
+})
 
-            await expect(
-                runs.executeRun(run, () => Promise.resolve({ status: "done", steps: [], evidence: "why" })),
-            ).resolves.toBe("done")
+describe("AutomationRunsService > dueRunIds", () => {
+    it("answers the ids of the runs that are due", async () => {
+        const em = mockEntityManager({ query: [SELECT_DUE_RUNS, [{ id: "r-1" }, { id: "r-2" }]] })
+        const { runs } = await build(em)
 
-            expect(em.query).toHaveBeenCalledWith(FINISH_RUN, ["r-1", "done", "[]", "why", NOW])
-        })
+        await expect(runs.dueRunIds("p-1", new Date(NOW), 10)).resolves.toEqual(["r-1", "r-2"])
 
-        it("keeps a run that waits for approval unfinished", async () => {
-            const em = mockEntityManager({ query: [FINISH_RUN, []] })
-            const { runs } = await build(em)
+        expect(em.query).toHaveBeenCalledWith(SELECT_DUE_RUNS, ["p-1", 3, NOW, 10])
+    })
+})
 
-            await runs.executeRun(run, () => Promise.resolve({ status: "waiting_approval", steps: [] }))
+describe("AutomationRunsService > claimRun", () => {
+    it("answers the claimed run, or none when another tick took it", async () => {
+        const claimed: ClaimedRun = { id: "r-1", attempts: 2, payload: {} }
+        const { runs } = await build(mockEntityManager({ query: [CLAIM_RUN, [claimed]] }))
+        const { runs: lost } = await build(mockEntityManager({ query: [CLAIM_RUN, []] }))
 
-            expect(em.query).toHaveBeenCalledWith(FINISH_RUN, ["r-1", "waiting_approval", "[]", null, null])
-        })
+        await expect(runs.claimRun("r-1")).resolves.toEqual(claimed)
+        await expect(lost.claimRun("r-1")).resolves.toBeNull()
+    })
+})
 
-        it("stores a failure with the first backoff and a retry while attempts are left", async () => {
-            const em = mockEntityManager({ query: [FAIL_RUN, []] })
-            const { runs, logger } = await build(em)
+describe("AutomationRunsService > executeRun", () => {
+    const run: ClaimedRun = { id: "r-1", attempts: 1, payload: {} }
+    it("finishes the run with the result of the execution", async () => {
+        const em = mockEntityManager({ query: [FINISH_RUN, []] })
+        const { runs } = await build(em)
 
-            await expect(runs.executeRun(run, () => Promise.reject(new Error("boom")))).resolves.toBe("failed")
+        await expect(
+            runs.executeRun(run, () => Promise.resolve({ status: "done", steps: [], evidence: "why" })),
+        ).resolves.toBe("done")
 
-            expect(logger.error).toHaveBeenCalledWith(AutomationRunsLogEvent.RunFailed, expect.any(Error), {
-                runId: "r-1",
-                attempt: 1,
-            })
-            expect(em.query).toHaveBeenCalledWith(FAIL_RUN, [
-                "r-1",
-                "boom",
-                "2026-10-12T10:02:00.000Z",
-                null,
-                JSON.stringify([{ label: "Loi", status: "failed", detail: "boom" }]),
-            ])
-        })
-
-        it("ends a run on its third failure, whatever was thrown", async () => {
-            const em = mockEntityManager({ query: [FAIL_RUN, []] })
-            const { runs } = await build(em)
-
-            await runs.executeRun({ ...run, attempts: 3 }, () => Promise.reject("plain"))
-
-            expect(em.query).toHaveBeenCalledWith(FAIL_RUN, [
-                "r-1",
-                "plain",
-                "2026-10-12T10:30:00.000Z",
-                NOW,
-                JSON.stringify([{ label: "Loi", status: "failed", detail: "plain" }]),
-            ])
-        })
-
-        it("waits ten minutes after the second failure", async () => {
-            const em = mockEntityManager({ query: [FAIL_RUN, []] })
-            const { runs } = await build(em)
-
-            await runs.executeRun({ ...run, attempts: 2 }, () => Promise.reject(new Error("again")))
-
-            expect(em.query).toHaveBeenCalledWith(FAIL_RUN, [
-                "r-1",
-                "again",
-                "2026-10-12T10:10:00.000Z",
-                null,
-                JSON.stringify([{ label: "Loi", status: "failed", detail: "again" }]),
-            ])
-        })
+        expect(em.query).toHaveBeenCalledWith(FINISH_RUN, ["r-1", "done", "[]", "why", NOW])
     })
 
-    describe("finishRun and settleRun", () => {
-        it("ends a run without evidence", async () => {
-            const em = mockEntityManager({ query: [FINISH_RUN, []] })
-            const { runs } = await build(em)
+    it("keeps a run that waits for approval unfinished", async () => {
+        const em = mockEntityManager({ query: [FINISH_RUN, []] })
+        const { runs } = await build(em)
 
-            await runs.finishRun("r-1", { status: "skipped", steps: [] })
+        await runs.executeRun(run, () => Promise.resolve({ status: "waiting_approval", steps: [] }))
 
-            expect(em.query).toHaveBeenCalledWith(FINISH_RUN, ["r-1", "skipped", "[]", null, NOW])
-        })
-
-        it("ends a run the owner decided", async () => {
-            const em = mockEntityManager({ query: [FINISH_RUN, []] })
-            const { runs } = await build(em)
-
-            await runs.settleRun({ runId: "r-1", status: "done", steps: [], evidence: "approved" })
-
-            expect(em.query).toHaveBeenCalledWith(FINISH_RUN, ["r-1", "done", "[]", "approved", NOW])
-        })
+        expect(em.query).toHaveBeenCalledWith(FINISH_RUN, ["r-1", "waiting_approval", "[]", null, null])
     })
 
-    describe("runsOf", () => {
-        it("reads the latest runs of a workspace", async () => {
-            const em = mockEntityManager({ query: [SELECT_RUNS, [{ id: "r-1" }]] })
-            const { runs } = await build(em)
+    it("stores a failure with the first backoff and a retry while attempts are left", async () => {
+        const em = mockEntityManager({ query: [FAIL_RUN, []] })
+        const { runs, logger } = await build(em)
 
-            await expect(runs.runsOf({ workspaceId: "ws-1", templateKey: null, limit: 20 })).resolves.toEqual([
-                { id: "r-1" },
-            ])
+        await expect(runs.executeRun(run, () => Promise.reject(new Error("boom")))).resolves.toBe("failed")
 
-            expect(em.query).toHaveBeenCalledWith(SELECT_RUNS, ["ws-1", null, 20])
+        expect(logger.error).toHaveBeenCalledWith(AutomationRunsLogEvent.RunFailed, expect.any(Error), {
+            runId: "r-1",
+            attempt: 1,
         })
+        expect(em.query).toHaveBeenCalledWith(FAIL_RUN, [
+            "r-1",
+            "boom",
+            "2026-10-12T10:02:00.000Z",
+            null,
+            JSON.stringify([{ label: "Loi", status: "failed", detail: "boom" }]),
+        ])
     })
 
-    describe("priorRuns", () => {
-        it("reads nothing for no reference", async () => {
-            const em = mockEntityManager()
-            const { runs } = await build(em)
+    it("ends a run on its third failure, whatever was thrown", async () => {
+        const em = mockEntityManager({ query: [FAIL_RUN, []] })
+        const { runs } = await build(em)
 
-            await expect(runs.priorRuns("p-1", [])).resolves.toEqual([])
+        await runs.executeRun({ ...run, attempts: 3 }, () => Promise.reject("plain"))
 
-            expect(em.query).not.toHaveBeenCalled()
-        })
-
-        it("reads the history of the references", async () => {
-            const em = mockEntityManager({ query: [SELECT_PRIOR_RUNS, [{ trigger_ref: "a" }]] })
-            const { runs } = await build(em)
-
-            await expect(runs.priorRuns("p-1", ["a"])).resolves.toEqual([{ trigger_ref: "a" }])
-
-            expect(em.query).toHaveBeenCalledWith(SELECT_PRIOR_RUNS, ["p-1", ["a"]])
-        })
+        expect(em.query).toHaveBeenCalledWith(FAIL_RUN, [
+            "r-1",
+            "plain",
+            "2026-10-12T10:30:00.000Z",
+            NOW,
+            JSON.stringify([{ label: "Loi", status: "failed", detail: "plain" }]),
+        ])
     })
 
-    describe("waitingRunsFor", () => {
-        it("reads the runs that wait for one work item", async () => {
-            const em = mockEntityManager({ query: [SELECT_WAITING_RUNS, [{ id: "r-1" }]] })
-            const { runs } = await build(em)
+    it("waits ten minutes after the second failure", async () => {
+        const em = mockEntityManager({ query: [FAIL_RUN, []] })
+        const { runs } = await build(em)
 
-            await expect(runs.waitingRunsFor("ws-1", "w-1")).resolves.toEqual([{ id: "r-1" }])
+        await runs.executeRun({ ...run, attempts: 2 }, () => Promise.reject(new Error("again")))
 
-            expect(em.query).toHaveBeenCalledWith(SELECT_WAITING_RUNS, ["ws-1", '[{"workItemId":"w-1"}]'])
-        })
+        expect(em.query).toHaveBeenCalledWith(FAIL_RUN, [
+            "r-1",
+            "again",
+            "2026-10-12T10:10:00.000Z",
+            null,
+            JSON.stringify([{ label: "Loi", status: "failed", detail: "again" }]),
+        ])
+    })
+})
+
+describe("AutomationRunsService > finishRun and settleRun", () => {
+    it("ends a run without evidence", async () => {
+        const em = mockEntityManager({ query: [FINISH_RUN, []] })
+        const { runs } = await build(em)
+
+        await runs.finishRun("r-1", { status: "skipped", steps: [] })
+
+        expect(em.query).toHaveBeenCalledWith(FINISH_RUN, ["r-1", "skipped", "[]", null, NOW])
     })
 
-    describe("latestDoneRun", () => {
-        it("answers the latest finished run, or none", async () => {
-            const query = { pipelineId: "p-1", reference: "ref", since: NOW }
-            const { runs } = await build(
-                mockEntityManager({ query: [SELECT_LATEST_DONE_RUN, [{ id: "r-1", payload: { x: 1 } }]] }),
-            )
-            const { runs: none } = await build(mockEntityManager({ query: [SELECT_LATEST_DONE_RUN, []] }))
+    it("ends a run the owner decided", async () => {
+        const em = mockEntityManager({ query: [FINISH_RUN, []] })
+        const { runs } = await build(em)
 
-            await expect(runs.latestDoneRun(query)).resolves.toEqual({ id: "r-1", attempts: 0, payload: { x: 1 } })
-            await expect(none.latestDoneRun(query)).resolves.toBeNull()
-        })
+        await runs.settleRun({ runId: "r-1", status: "done", steps: [], evidence: "approved" })
+
+        expect(em.query).toHaveBeenCalledWith(FINISH_RUN, ["r-1", "done", "[]", "approved", NOW])
+    })
+})
+
+describe("AutomationRunsService > runsOf", () => {
+    it("reads the latest runs of a workspace", async () => {
+        const em = mockEntityManager({ query: [SELECT_RUNS, [{ id: "r-1" }]] })
+        const { runs } = await build(em)
+
+        await expect(runs.runsOf({ workspaceId: "ws-1", templateKey: null, limit: 20 })).resolves.toEqual([
+            { id: "r-1" },
+        ])
+
+        expect(em.query).toHaveBeenCalledWith(SELECT_RUNS, ["ws-1", null, 20])
+    })
+})
+
+describe("AutomationRunsService > priorRuns", () => {
+    it("reads nothing for no reference", async () => {
+        const em = mockEntityManager()
+        const { runs } = await build(em)
+
+        await expect(runs.priorRuns("p-1", [])).resolves.toEqual([])
+
+        expect(em.query).not.toHaveBeenCalled()
     })
 
-    describe("markPayload", () => {
-        it("replaces the payload of a run", async () => {
-            const em = mockEntityManager({ query: [UPDATE_RUN_PAYLOAD, []] })
-            const { runs } = await build(em)
+    it("reads the history of the references", async () => {
+        const em = mockEntityManager({ query: [SELECT_PRIOR_RUNS, [{ trigger_ref: "a" }]] })
+        const { runs } = await build(em)
 
-            await runs.markPayload("r-1", { y: 2 })
+        await expect(runs.priorRuns("p-1", ["a"])).resolves.toEqual([{ trigger_ref: "a" }])
 
-            expect(em.query).toHaveBeenCalledWith(UPDATE_RUN_PAYLOAD, ["r-1", '{"y":2}'])
-        })
+        expect(em.query).toHaveBeenCalledWith(SELECT_PRIOR_RUNS, ["p-1", ["a"]])
+    })
+})
+
+describe("AutomationRunsService > waitingRunsFor", () => {
+    it("reads the runs that wait for one work item", async () => {
+        const em = mockEntityManager({ query: [SELECT_WAITING_RUNS, [{ id: "r-1" }]] })
+        const { runs } = await build(em)
+
+        await expect(runs.waitingRunsFor("ws-1", "w-1")).resolves.toEqual([{ id: "r-1" }])
+
+        expect(em.query).toHaveBeenCalledWith(SELECT_WAITING_RUNS, ["ws-1", '[{"workItemId":"w-1"}]'])
+    })
+})
+
+describe("AutomationRunsService > latestDoneRun", () => {
+    it("answers the latest finished run, or none", async () => {
+        const query = { pipelineId: "p-1", reference: "ref", since: NOW }
+        const { runs } = await build(
+            mockEntityManager({ query: [SELECT_LATEST_DONE_RUN, [{ id: "r-1", payload: { x: 1 } }]] }),
+        )
+        const { runs: none } = await build(mockEntityManager({ query: [SELECT_LATEST_DONE_RUN, []] }))
+
+        await expect(runs.latestDoneRun(query)).resolves.toEqual({ id: "r-1", attempts: 0, payload: { x: 1 } })
+        await expect(none.latestDoneRun(query)).resolves.toBeNull()
+    })
+})
+
+describe("AutomationRunsService > markPayload", () => {
+    it("replaces the payload of a run", async () => {
+        const em = mockEntityManager({ query: [UPDATE_RUN_PAYLOAD, []] })
+        const { runs } = await build(em)
+
+        await runs.markPayload("r-1", { y: 2 })
+
+        expect(em.query).toHaveBeenCalledWith(UPDATE_RUN_PAYLOAD, ["r-1", '{"y":2}'])
     })
 })

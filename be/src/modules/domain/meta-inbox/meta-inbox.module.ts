@@ -1,8 +1,12 @@
+import { MetaReceiptPolicy } from "./meta-receipt.policy"
+import { MetaDeliveryService } from "./meta-delivery.service"
+import { MetaWebhookVerifierService } from "./meta-webhook-verifier.service"
+import { INBOX, InboxService } from "@modules/platform/inbox"
 import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
 import { MetaCommentsModule } from "@modules/domain/meta-comments"
 import { MetaThreadsModule } from "@modules/domain/meta-threads"
-import { META_EVENT_TAKER } from "./meta-inbox.decorators"
+import { META_EVENT_TAKER, META_RECEIPT_PROCESSOR } from "./meta-inbox.decorators"
 import { MetaInboxService } from "./meta-inbox.service"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./meta-inbox.module-definition"
 
@@ -18,10 +22,15 @@ export class MetaInboxModule extends ConfigurableModuleClass {
             imports: [...(base.imports ?? []), ...owners],
             providers: [
                 ...(base.providers ?? []),
+                { provide: INBOX, useClass: InboxService },
                 { provide: META_EVENT_TAKER, useExisting: options.taker },
                 MetaInboxService,
+                MetaReceiptPolicy,
+                MetaDeliveryService,
+                { provide: META_RECEIPT_PROCESSOR, useExisting: MetaInboxService },
+                MetaWebhookVerifierService,
             ],
-            exports: [...owners, MetaInboxService],
+            exports: [...owners, MetaDeliveryService, MetaInboxService, MetaWebhookVerifierService],
         }
     }
 }

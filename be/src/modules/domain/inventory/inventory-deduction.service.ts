@@ -67,10 +67,10 @@ export class InventoryDeductionService {
     }
 
     /**
-     * A confirmed order takes its goods out of stock: a line that matches a recipe takes the recipe's ingredients, a line
-     * that matches an item takes the item (a unit word scales by the item's conversion). One movement per item per order,
-     * so a repeated delivery never deducts twice; a line that matches nothing is reported in the Office, never guessed.
-     * A workspace with no items does nothing.
+     * A confirmed order takes its goods out of stock: a line that matches a recipe takes the recipe's ingredients, a
+     * line that matches an item takes the item (a unit word scales by the item's conversion). One movement per item per
+     * order, so a repeated delivery never deducts twice; a line that matches nothing is reported in the Office, never
+     * guessed. A workspace with no items does nothing.
      */
     async deductForOrder(order: OrderText): Promise<DeductResult> {
         const nothing: DeductResult = { deducted: [], unmatched: [] }
@@ -127,6 +127,20 @@ export class InventoryDeductionService {
             })
             if (applied.applied) deducted.push({ itemId, name: item.name, qty, unit: item.unit, after: applied.after })
         })
+        await this.reportDeduction(order, deducted, unmatched)
+        await this.movements.replenishLater(
+            workspaceId,
+            deducted.map((line) => line.itemId),
+        )
+        return { deducted, unmatched }
+    }
+
+    private async reportDeduction(
+        order: OrderText,
+        deducted: ReadonlyArray<DeductedLine>,
+        unmatched: ReadonlyArray<string>,
+    ): Promise<void> {
+        const { workspaceId, orderNo, items: orderText } = order
         if (deducted.length > 0) {
             const lines = deducted
                 .map((line) =>
@@ -155,10 +169,5 @@ export class InventoryDeductionService {
                 }),
             )
         }
-        await this.movements.replenishLater(
-            workspaceId,
-            deducted.map((line) => line.itemId),
-        )
-        return { deducted, unmatched }
     }
 }

@@ -5,6 +5,7 @@ import { AgentConnectionsResolver } from "./agent-connections.resolver"
 import { AgentDashboardResolver } from "./agent-dashboard.resolver"
 import { AgentEngineStatusResolver } from "./agent-engine-status.resolver"
 import { AgentGenerationStatusResolver } from "./agent-generation-status.resolver"
+import { ConfigurableModuleClass } from "./agents-graphql.module-definition"
 import { AgentsResolver } from "./agents.resolver"
 import { AskGuideResolver } from "./ask-guide.resolver"
 import { CreateAgentResolver } from "./create-agent.resolver"
@@ -17,7 +18,7 @@ import { SetAgentStatusResolver } from "./set-agent-status.resolver"
 import { SetAgentTextsResolver } from "./set-agent-texts.resolver"
 
 @Module({
-    imports: [AgentsApiModule],
+    imports: [AgentsApiModule.register({})],
     providers: [
         AgentsResolver,
         AgentDashboardResolver,
@@ -37,4 +38,4 @@ import { SetAgentTextsResolver } from "./set-agent-texts.resolver"
     ],
 })
 /** The GraphQL transport of the agents feature. */
-export class AgentsGraphqlModule {}
+export class AgentsGraphqlModule extends ConfigurableModuleClass {}

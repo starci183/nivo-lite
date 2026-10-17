@@ -129,7 +129,8 @@ describe("DecisionsQueueService", () => {
             ["user-1", "workspace-1", { candidateId: "candidate-1", locale: "en" }],
         ])
     })
-
+})
+describe("DecisionsQueueService", () => {
     it("ignores a payload with another shape", async () => {
         const { service, decisions, commands } = await build()
 

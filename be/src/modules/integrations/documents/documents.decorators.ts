@@ -15,3 +15,6 @@ export const InjectDocumentsOptions = (): TypedParameterDecorator<DocumentsOptio
 
 /** Injects the documents port. Parameter type: DocumentsPort. */
 export const InjectDocuments = (): TypedParameterDecorator<DocumentsPort> => injector<DocumentsPort>(DOCUMENTS)
+
+/** Token of the shared Word and PDF library readers. */
+export const DOCUMENT_FILE_READERS: unique symbol = Symbol("integrations.documents.file-readers")

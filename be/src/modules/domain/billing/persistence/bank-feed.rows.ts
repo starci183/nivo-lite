@@ -27,3 +27,9 @@ export interface AgentIdRow {
     /** The agent id. */
     readonly id: string
 }
+
+/** The current workspace of a receipt's connection. */
+export interface FeedConnectionRow {
+    /** The workspace that owns the connection. */
+    readonly workspace_id: string
+}

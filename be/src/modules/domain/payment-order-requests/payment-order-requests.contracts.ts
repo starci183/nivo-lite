@@ -1,5 +1,4 @@
-/** The queue name: the contract between the rpc that creates a request (a pgmq message) and the processor of the create-payment-order job. */
-export const PAYMENT_ORDER_REQUEST_QUEUE = "payment_order_requested"
+export { PAYMENT_ORDER_REQUEST_QUEUE } from "@modules/queues/payment-order-request"
 
 /** What a member asked to pay. */
 export type PaymentOrderRequestKind = "plan" | "renew" | "topup" | "upgrade" | "credit_pack"

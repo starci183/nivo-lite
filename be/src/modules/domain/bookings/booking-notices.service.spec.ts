@@ -149,6 +149,16 @@ describe("BookingNoticesService", () => {
             }),
         )
     })
+})
+
+describe("BookingNoticesService", () => {
+    const subjects: ReadonlyArray<{ readonly kind: BookingNoticeKind; readonly text: string }> = [
+        { kind: "confirmed", text: "X\u00e1c nh\u1eadn l\u1ecbch h\u1eb9n Cut" },
+        { kind: "moved", text: "\u0110\u1ed5i l\u1ecbch h\u1eb9n Cut" },
+        { kind: "cancelled", text: "H\u1ee7y l\u1ecbch h\u1eb9n Cut" },
+        { kind: "no_show", text: "H\u1ee7y l\u1ecbch h\u1eb9n Cut" },
+        { kind: "reminder", text: "Nh\u1eafc l\u1ecbch h\u1eb9n" },
+    ]
 
     it("writes a confirmation with the original Vietnamese wording", async () => {
         const { service } = await build()
@@ -195,13 +205,6 @@ describe("BookingNoticesService", () => {
         )
     })
 
-    const subjects: ReadonlyArray<{ readonly kind: BookingNoticeKind; readonly text: string }> = [
-        { kind: "confirmed", text: "X\u00e1c nh\u1eadn l\u1ecbch h\u1eb9n Cut" },
-        { kind: "moved", text: "\u0110\u1ed5i l\u1ecbch h\u1eb9n Cut" },
-        { kind: "cancelled", text: "H\u1ee7y l\u1ecbch h\u1eb9n Cut" },
-        { kind: "no_show", text: "H\u1ee7y l\u1ecbch h\u1eb9n Cut" },
-        { kind: "reminder", text: "Nh\u1eafc l\u1ecbch h\u1eb9n" },
-    ]
     it.each(subjects)("reads the Vietnamese subject for $kind", async ({ kind, text }) => {
         const { service, messages } = await build()
 
@@ -209,7 +212,9 @@ describe("BookingNoticesService", () => {
 
         expect(messages.get.mock.calls).toEqual([[`bookings.subject.${kind}`, { service: "Cut" }, "vi"]])
     })
+})
 
+describe("BookingNoticesService", () => {
     it.each([null, "", " \t\n "])("uses the fixed reminder for a blank body: %j", async (body) => {
         const { service } = await build()
 
@@ -249,7 +254,9 @@ describe("BookingNoticesService", () => {
             ),
         ).toBe(`Mai|Nivo Salon|Cut|${WHEN}|Lan|12 L\u00ea L\u1ee3i`)
     })
+})
 
+describe("BookingNoticesService", () => {
     it("fills blank custom variables with their Vietnamese neutral words", async () => {
         const { service, messages, catalog } = await build()
         messages.get.mockImplementation((key, params, locale) =>
@@ -310,7 +317,9 @@ describe("BookingNoticesService", () => {
 
         expect(models.settings.mock.calls).toEqual([[WORKSPACE]])
     })
+})
 
+describe("BookingNoticesService", () => {
     it("hands a notice to the notifier the app registered and answers its result", async () => {
         const { service, notifier } = await build()
         const notice: BookingNotice = {

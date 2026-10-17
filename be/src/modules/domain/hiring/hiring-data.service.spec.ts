@@ -1,19 +1,23 @@
+import type { HiringSettings, JobRecord, CandidateRecord, InterviewRecord, OfferRecord } from "./hiring.contracts"
+import {
+    settingsRow,
+    settings as settingsFixture,
+    jobRow,
+    job as jobFixture,
+    candidateRow,
+    candidate as candidateFixture,
+    interviewRow,
+    interview as interviewFixture,
+    offerRow,
+    offer as offerFixture,
+} from "@tests/fixtures/builders/hiring-data.builder"
 import { Test } from "@nestjs/testing"
 import { mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
-import type { CandidateRecord, HiringSettings, InterviewRecord, JobRecord, OfferRecord } from "./hiring.contracts"
 import { HiringDataService } from "./hiring-data.service"
-import type {
-    HiringCandidatesRow,
-    HiringInterviewsRow,
-    HiringJobsRow,
-    HiringOffersRow,
-    HiringSettingsRow,
-} from "./persistence/hiring.rows"
 import {
     COUNT_ASKS,
-    NEW_TOKEN,
     SELECT_ACTIVE_OFFER,
     SELECT_AVAILABILITY,
     SELECT_BUSY,
@@ -38,177 +42,11 @@ import {
     SELECT_TICK_WORKSPACE,
 } from "./persistence/hiring.sql"
 
-const settingsRow: HiringSettingsRow = {
-    workspace_id: "ws-1",
-    public_slug: "shop",
-    retention_days: 90,
-    notify_new_candidate: true,
-    remind_interview: false,
-    auto_close_when_filled: true,
-    apply_consent_text: "Consent example",
-    ad_tone: "Friendly",
-}
-
-const settings: HiringSettings = {
-    workspaceId: "ws-1",
-    publicSlug: "shop",
-    retentionDays: 90,
-    notifyNewCandidate: true,
-    remindInterview: false,
-    autoCloseWhenFilled: true,
-    applyConsentText: "Consent example",
-    adTone: "Friendly",
-}
-
-const jobRow: HiringJobsRow = {
-    id: "job-1",
-    workspace_id: "ws-1",
-    slug: "barista",
-    title: "Barista",
-    position: "Coffee maker",
-    employment_type: "part_time",
-    schedule: "Monday morning",
-    pay_min_vnd: "30000",
-    pay_max_vnd: "40000",
-    pay_unit: "hour",
-    location: "Main shop",
-    headcount: 2,
-    description: "Make coffee",
-    requirements: null,
-    questions: null,
-    status: "open",
-    channels: ["page", "chat"],
-    closes_at: "2026-10-20T08:00:00+07:00",
-}
-
-const job: JobRecord = {
-    id: "job-1",
-    workspaceId: "ws-1",
-    slug: "barista",
-    title: "Barista",
-    position: "Coffee maker",
-    employmentType: "part_time",
-    schedule: "Monday morning",
-    payMinVnd: 30000,
-    payMaxVnd: 40000,
-    payUnit: "hour",
-    location: "Main shop",
-    headcount: 2,
-    description: "Make coffee",
-    requirements: {
-        skills: [],
-        experienceYears: null,
-        experienceNote: "",
-        availability: [],
-        mustHave: [],
-        niceToHave: [],
-    },
-    questions: [],
-    status: "open",
-    channels: ["page", "chat"],
-    closesAt: "2026-10-20T01:00:00.000Z",
-}
-
-const candidateRow: HiringCandidatesRow = {
-    id: "candidate-1",
-    workspace_id: "ws-1",
-    job_id: "job-1",
-    name: "Alex",
-    phone: "0912345678",
-    email: "alex@example.test",
-    source: "page",
-    conversation_id: null,
-    cv_path: null,
-    cv_name: null,
-    cv_mime: null,
-    answers: [{ question_id: "q-1", question: "Experience?", answer: "Two years" }],
-    availability: "Monday morning",
-    stage: "applied",
-    staff_id: null,
-}
-
-const candidate: CandidateRecord = {
-    id: "candidate-1",
-    workspaceId: "ws-1",
-    jobId: "job-1",
-    name: "Alex",
-    phone: "0912345678",
-    email: "alex@example.test",
-    source: "page",
-    conversationId: null,
-    cvPath: null,
-    cvName: null,
-    cvMime: null,
-    answers: [{ questionId: "q-1", question: "Experience?", answer: "Two years" }],
-    availability: "Monday morning",
-    stage: "applied",
-    staffId: null,
-}
-
-const interviewRow: HiringInterviewsRow = {
-    id: "interview-1",
-    workspace_id: "ws-1",
-    candidate_id: "candidate-1",
-    job_id: "job-1",
-    interviewer_user_id: "user-1",
-    interviewer_name: "Blair",
-    mode: "in_person",
-    location: "Main shop",
-    duration_min: 30,
-    proposed_slots: [{ start: "2026-10-14T01:00:00.000Z", end: "2026-10-14T01:30:00.000Z" }],
-    slot_start: new Date("2026-10-14T01:00:00.000Z"),
-    slot_end: "2026-10-14T01:30:00.000Z",
-    status: "confirmed",
-    token: "0123456789abcdef0123456789abcdef",
-    work_item_id: "work-1",
-    note: "Bring examples",
-}
-
-const interview: InterviewRecord = {
-    id: "interview-1",
-    workspaceId: "ws-1",
-    candidateId: "candidate-1",
-    jobId: "job-1",
-    interviewerUserId: "user-1",
-    interviewerName: "Blair",
-    mode: "in_person",
-    location: "Main shop",
-    durationMin: 30,
-    proposedSlots: [{ start: "2026-10-14T01:00:00.000Z", end: "2026-10-14T01:30:00.000Z" }],
-    slotStart: "2026-10-14T01:00:00.000Z",
-    slotEnd: "2026-10-14T01:30:00.000Z",
-    status: "confirmed",
-    token: "0123456789abcdef0123456789abcdef",
-    workItemId: "work-1",
-    note: "Bring examples",
-}
-
-const offerTerms = { title: "Barista", pay: "40000 per hour", probation: "One month", note: "Welcome" }
-const offerRow: HiringOffersRow = {
-    id: "offer-1",
-    workspace_id: "ws-1",
-    candidate_id: "candidate-1",
-    job_id: "job-1",
-    terms: { ...offerTerms, start_date: "2026-10-20" },
-    draft: "Letter draft",
-    status: "sent",
-    token: "0123456789abcdef0123456789abcdef",
-    work_item_id: "work-1",
-    expires_at: "2026-10-21T08:00:00+07:00",
-}
-
-const offer: OfferRecord = {
-    id: "offer-1",
-    workspaceId: "ws-1",
-    candidateId: "candidate-1",
-    jobId: "job-1",
-    terms: { ...offerTerms, startDate: "2026-10-20" },
-    draft: "Letter draft",
-    status: "sent",
-    token: "0123456789abcdef0123456789abcdef",
-    workItemId: "work-1",
-    expiresAt: "2026-10-21T01:00:00.000Z",
-}
+const settings: HiringSettings = settingsFixture
+const job: JobRecord = jobFixture
+const candidate: CandidateRecord = candidateFixture
+const interview: InterviewRecord = interviewFixture
+const offer: OfferRecord = offerFixture
 
 const build = async (entityManager: MockEntityManager) => {
     const moduleRef = await Test.createTestingModule({
@@ -252,7 +90,9 @@ describe("HiringDataService", () => {
             [SELECT_OFFER_BY_TOKEN, ["offer-token"]],
         ])
     })
+})
 
+describe("HiringDataService", () => {
     it("returns first raw workspace, candidate head, job head and member rows", async () => {
         const workspace = { workspace_id: "ws-1", retention_days: 90, remind_interview: true }
         const candidateHead = { id: "candidate-1", name: "Alex" }
@@ -291,7 +131,9 @@ describe("HiringDataService", () => {
             [SELECT_MEMBER_NAME, ["ws-2", "user-2"]],
         ])
     })
+})
 
+describe("HiringDataService", () => {
     it("combines candidate and job heads only when both exist", async () => {
         const candidateHead = { id: "candidate-1", name: "Alex" }
         const jobHead = { title: "Barista", location: "Main shop", position: "Coffee maker" }
@@ -328,7 +170,9 @@ describe("HiringDataService", () => {
             [SELECT_JOB_HEAD, ["job-2"]],
         ])
     })
+})
 
+describe("HiringDataService", () => {
     it("maps chat jobs, reminder interviews, availability and interviewers", async () => {
         const from = new Date("2026-10-14T00:00:00.000Z")
         const until = new Date("2026-10-14T02:00:00.000Z")
@@ -394,7 +238,9 @@ describe("HiringDataService", () => {
             [SELECT_RETENTION_DUE, ["ws-1", "2026-07-15T00:00:00.000Z"]],
         ])
     })
+})
 
+describe("HiringDataService", () => {
     it("reports whether open interviews and active offers have a row", async () => {
         const em = mockEntityManager({
             query: [
@@ -448,16 +294,15 @@ describe("HiringDataService", () => {
         await expect(service.busy("ws-1", "user-1")).resolves.toEqual([first, second, third, fourth])
         expect(em.query.mock.calls).toEqual([[SELECT_BUSY, ["ws-1", "user-1"]]])
     })
+})
 
-    it("reads channels and tokens with defaults for absent and null rows", async () => {
+describe("HiringDataService", () => {
+    it("reads channels with defaults for absent and null rows", async () => {
         const em = mockEntityManager({
             query: [
                 [SELECT_CONVERSATION_CHANNEL, [{ channel: "telegram" }]],
                 [SELECT_CONVERSATION_CHANNEL, [{ channel: null }]],
                 [SELECT_CONVERSATION_CHANNEL, []],
-                [NEW_TOKEN, [{ value: "0123456789abcdef0123456789abcdef" }]],
-                [NEW_TOKEN, [{ value: null }]],
-                [NEW_TOKEN, []],
             ],
         })
         const service = await build(em)
@@ -465,16 +310,10 @@ describe("HiringDataService", () => {
         await expect(service.conversationChannel("conversation-1")).resolves.toBe("telegram")
         await expect(service.conversationChannel("conversation-2")).resolves.toBeNull()
         await expect(service.conversationChannel("conversation-3")).resolves.toBeNull()
-        await expect(service.newToken()).resolves.toBe("0123456789abcdef0123456789abcdef")
-        await expect(service.newToken()).resolves.toBe("")
-        await expect(service.newToken()).resolves.toBe("")
         expect(em.query.mock.calls).toEqual([
             [SELECT_CONVERSATION_CHANNEL, ["conversation-1"]],
             [SELECT_CONVERSATION_CHANNEL, ["conversation-2"]],
             [SELECT_CONVERSATION_CHANNEL, ["conversation-3"]],
-            [NEW_TOKEN, []],
-            [NEW_TOKEN, []],
-            [NEW_TOKEN, []],
         ])
     })
 
@@ -496,5 +335,18 @@ describe("HiringDataService", () => {
             [COUNT_ASKS, ["ws-1", "invite_interview", "interview:candidate-1:%"]],
             [COUNT_ASKS, ["ws-2", "send_offer", "offer:offer-2:%"]],
         ])
+    })
+})
+
+describe("HiringDataService link issuance", () => {
+    it("issues independent 16-byte opaque tokens in the existing link format without database generation", async () => {
+        const em = mockEntityManager()
+        const service = await build(em)
+        const first = await service.newToken()
+        const second = await service.newToken()
+        expect(first).toMatch(/^[a-f0-9]{32}$/u)
+        expect(second).toMatch(/^[a-f0-9]{32}$/u)
+        expect(first).not.toBe(second)
+        expect(em.query).not.toHaveBeenCalled()
     })
 })

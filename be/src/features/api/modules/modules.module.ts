@@ -20,6 +20,7 @@ import { SaveInstallationSettingHandler } from "./application/save-installation-
 import { SetModuleLiveHandler } from "./application/set-module-live.handler"
 import { SetOperatingModeHandler } from "./application/set-operating-mode.handler"
 import { SetSetupGateHandler } from "./application/set-setup-gate.handler"
+import { ConfigurableModuleClass } from "./modules.module-definition"
 
 @Module({
     providers: [
@@ -47,4 +48,4 @@ import { SetSetupGateHandler } from "./application/set-setup-gate.handler"
     ],
 })
 /** The modules feature: the handlers that read the catalogue and run the lifecycle and the setup chat of the installed agents. */
-export class ModulesApiModule {}
+export class ModulesApiModule extends ConfigurableModuleClass {}

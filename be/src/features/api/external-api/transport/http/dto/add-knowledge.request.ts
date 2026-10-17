@@ -1,6 +1,5 @@
-import { Transform } from "class-transformer"
 import { ArrayMaxSize, IsArray, IsNotEmpty, IsOptional, IsString, MaxLength } from "class-validator"
-import { trimmedField } from "@modules/domain/public-api"
+import { TrimmedField } from "@modules/domain/public-api"
 
 /** The characters of the text of one knowledge source, with room for the escapes of JSON. */
 const CONTENT_CHARS_MAX = 240_000
@@ -8,14 +7,14 @@ const CONTENT_CHARS_MAX = 240_000
 /** The JSON body of POST /api/v1/knowledge: a text source to chunk and index. */
 export class AddKnowledgeRequest {
     /** The source title. */
-    @Transform(({ value }) => trimmedField(value))
+    @TrimmedField()
     @IsString()
     @IsNotEmpty()
     @MaxLength(160)
     title!: string
 
     /** The text of the source; the domain refuses one longer than 120000 characters. */
-    @Transform(({ value }) => trimmedField(value))
+    @TrimmedField()
     @IsString()
     @IsNotEmpty()
     @MaxLength(CONTENT_CHARS_MAX)
@@ -23,14 +22,14 @@ export class AddKnowledgeRequest {
 
     /** The topic. */
     @IsOptional()
-    @Transform(({ value }) => trimmedField(value))
+    @TrimmedField()
     @IsString()
     @MaxLength(80)
     topic?: string
 
     /** `public` lets customers be answered from it; anything else keeps it internal. */
     @IsOptional()
-    @Transform(({ value }) => trimmedField(value))
+    @TrimmedField()
     @IsString()
     @MaxLength(10)
     visibility?: string

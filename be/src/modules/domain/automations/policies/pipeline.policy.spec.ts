@@ -1,3 +1,4 @@
+import { Test } from "@nestjs/testing"
 import { AutomationsErrorCode } from "../errors/automations.error"
 import { TEXT, buildPipelineRow, buildTemplate } from "@tests/fixtures/builders/automations.builder"
 import {
@@ -14,13 +15,51 @@ import {
 
 const BODY = "Hello {ten_khach}, thank you"
 
+const SUBJECT = Symbol("pipeline.policy")
+type Subject = Pick<
+    typeof import("./pipeline.policy"),
+    | "blankPipeline"
+    | "writeOf"
+    | "planToggle"
+    | "planSave"
+    | "planDismiss"
+    | "planAutoSend"
+    | "planGoogleAccount"
+    | "planDecision"
+>
+
+const buildSubject = async () => {
+    const moduleRef = await Test.createTestingModule({
+        providers: [
+            {
+                provide: SUBJECT,
+                useValue: {
+                    blankPipeline,
+                    writeOf,
+                    planToggle,
+                    planSave,
+                    planDismiss,
+                    planAutoSend,
+                    planGoogleAccount,
+                    planDecision,
+                },
+            },
+        ],
+    }).compile()
+    return moduleRef.get<Subject>(SUBJECT)
+}
+
 describe("writeOf", () => {
-    it("is a blank pipeline before the first switch", () => {
-        expect(writeOf(null)).toEqual(blankPipeline())
-        expect(blankPipeline()).toMatchObject({ enabled: false, body: null, autoSend: false })
+    it("is a blank pipeline before the first switch", async () => {
+        const subject = await buildSubject()
+
+        expect(subject.writeOf(null)).toEqual(subject.blankPipeline())
+        expect(subject.blankPipeline()).toMatchObject({ enabled: false, body: null, autoSend: false })
     })
 
-    it("takes the editable columns of a stored row", () => {
+    it("takes the editable columns of a stored row", async () => {
+        const subject = await buildSubject()
+
         const row = buildPipelineRow({
             body: "b",
             body_version: 2,
@@ -31,7 +70,7 @@ describe("writeOf", () => {
             config: { a: 1 },
         })
 
-        expect(writeOf(row)).toEqual({
+        expect(subject.writeOf(row)).toEqual({
             enabled: true,
             dismissed: false,
             config: { a: 1 },
@@ -52,12 +91,16 @@ describe("planToggle", () => {
         defaultBody: { vi: BODY, en: BODY },
     })
 
-    it("switches off without any check", () => {
-        expect(planToggle(def, { ...blankPipeline(), enabled: true }, false, [], 1).enabled).toBe(false)
+    it("switches off without any check", async () => {
+        const subject = await buildSubject()
+
+        expect(subject.planToggle(def, { ...subject.blankPipeline(), enabled: true }, false, [], 1).enabled).toBe(false)
     })
 
-    it("switches on with the standard wording and the settings resolved", () => {
-        const write = planToggle(def, blankPipeline(), true, [], 7)
+    it("switches on with the standard wording and the settings resolved", async () => {
+        const subject = await buildSubject()
+
+        const write = subject.planToggle(def, subject.blankPipeline(), true, [], 7)
 
         expect(write).toMatchObject({
             enabled: true,
@@ -69,27 +112,34 @@ describe("planToggle", () => {
         })
     })
 
-    it("keeps the wording the owner approved and a template with none", () => {
-        const approved = planToggle(def, { ...blankPipeline(), body: "mine" }, true, [], 7)
-        const plain = planToggle(buildTemplate(), blankPipeline(), true, [], null)
+    it("keeps the wording the owner approved and a template with none", async () => {
+        const subject = await buildSubject()
+
+        const approved = subject.planToggle(def, { ...subject.blankPipeline(), body: "mine" }, true, [], 7)
+        const plain = subject.planToggle(buildTemplate(), subject.blankPipeline(), true, [], null)
 
         expect(approved).toMatchObject({ body: "mine", bodyVersion: 0 })
         expect(plain).toMatchObject({ body: null, bodyVersion: 0 })
     })
 
-    it("refuses a template nothing runs yet", () => {
-        expect(() => planToggle(buildTemplate({ executor: "definition" }), blankPipeline(), true, [], null)).toThrow(
+    it("refuses a template nothing runs yet", async () => {
+        const subject = await buildSubject()
+
+        const def = buildTemplate({ executor: "definition" })
+        expect(() => subject.planToggle(def, subject.blankPipeline(), true, [], null)).toThrow(
             expect.objectContaining({ code: AutomationsErrorCode.ComingSoon }),
         )
     })
 
-    it("names what is missing", () => {
+    it("names what is missing", async () => {
+        const subject = await buildSubject()
+
         const missing = [
             { kind: "module" as const, key: "sales", label: { vi: "Ban hang", en: "Sales" } },
             { kind: "channel" as const, key: "customer_chat", label: { vi: "Chat", en: "Chat" } },
         ]
 
-        expect(() => planToggle(def, blankPipeline(), true, missing, null)).toThrow(
+        expect(() => subject.planToggle(def, subject.blankPipeline(), true, missing, null)).toThrow(
             expect.objectContaining({
                 code: AutomationsErrorCode.RequirementMissing,
                 params: { items: "Ban hang, Chat" },
@@ -118,25 +168,33 @@ describe("planSave", () => {
         autoSend: true,
     }
 
-    it("changes nothing when nothing is saved", () => {
-        expect(planSave(def, current, { values: undefined, body: undefined }, 1)).toBe(current)
+    it("changes nothing when nothing is saved", async () => {
+        const subject = await buildSubject()
+
+        expect(subject.planSave(def, current, { values: undefined, body: undefined }, 1)).toBe(current)
     })
 
-    it("saves the values of the settings only, clamped", () => {
+    it("saves the values of the settings only, clamped", async () => {
+        const subject = await buildSubject()
+
         const values = { days: 50, ghost: "x", flag: true, note: "hello" }
-        const next = planSave(def, current, { values, body: undefined }, 1)
+        const next = subject.planSave(def, current, { values, body: undefined }, 1)
 
         expect(next.config).toEqual({ days: 9, flag: true, note: "hello" })
     })
 
-    it("ignores a value of a setting that is neither a text, a number nor a switch", () => {
-        const next = planSave(def, current, { values: { days: { nested: 1 } }, body: undefined }, 1)
+    it("ignores a value of a setting that is neither a text, a number nor a switch", async () => {
+        const subject = await buildSubject()
+
+        const next = subject.planSave(def, current, { values: { days: { nested: 1 } }, body: undefined }, 1)
 
         expect(next.config).toEqual({ days: 3, flag: false, note: "" })
     })
 
-    it("saves a new wording and restarts the trust ladder", () => {
-        const next = planSave(def, current, { values: undefined, body: "  Dear {ten_khach}, welcome  " }, 4)
+    it("saves a new wording and restarts the trust ladder", async () => {
+        const subject = await buildSubject()
+
+        const next = subject.planSave(def, current, { values: undefined, body: "  Dear {ten_khach}, welcome  " }, 4)
 
         expect(next).toMatchObject({
             body: "Dear {ten_khach}, welcome",
@@ -148,70 +206,101 @@ describe("planSave", () => {
         })
     })
 
-    it("refuses a wording for a template that sends no message", () => {
-        expect(() => planSave(buildTemplate(), current, { values: undefined, body: BODY }, 1)).toThrow(
+    it("refuses a wording for a template that sends no message", async () => {
+        const subject = await buildSubject()
+
+        expect(() => subject.planSave(buildTemplate(), current, { values: undefined, body: BODY }, 1)).toThrow(
             expect.objectContaining({ code: AutomationsErrorCode.NoMessage }),
         )
     })
 
-    it("refuses a wording that is too short or names a blank the template does not offer", () => {
-        expect(() => planSave(def, current, { values: undefined, body: "short" }, 1)).toThrow(
+    it("refuses a wording that is too short or names a blank the template does not offer", async () => {
+        const subject = await buildSubject()
+
+        expect(() => subject.planSave(def, current, { values: undefined, body: "short" }, 1)).toThrow(
             expect.objectContaining({ code: AutomationsErrorCode.BodyTooShort }),
         )
-        expect(() => planSave(def, current, { values: undefined, body: "A long {ghost} wording" }, 1)).toThrow(
-            expect.objectContaining({ code: AutomationsErrorCode.BodyUnknownVariable, params: { variable: "ghost" } }),
+        expect(() => subject.planSave(def, current, { values: undefined, body: "A long {ghost} wording" }, 1)).toThrow(
+            expect.objectContaining({
+                code: AutomationsErrorCode.BodyUnknownVariable,
+                params: { variable: "ghost" },
+            }),
         )
     })
 })
 
 describe("planDismiss", () => {
-    it("hides a template and switches it off, and restores it without switching it on", () => {
-        const on = { ...blankPipeline(), enabled: true }
+    it("hides a template and switches it off, and restores it without switching it on", async () => {
+        const subject = await buildSubject()
 
-        expect(planDismiss(on, true)).toMatchObject({ dismissed: true, enabled: false })
-        expect(planDismiss({ ...on, dismissed: true }, false)).toMatchObject({ dismissed: false, enabled: true })
+        const on = { ...subject.blankPipeline(), enabled: true }
+
+        expect(subject.planDismiss(on, true)).toMatchObject({ dismissed: true, enabled: false })
+        expect(subject.planDismiss({ ...on, dismissed: true }, false)).toMatchObject({
+            dismissed: false,
+            enabled: true,
+        })
     })
 })
 
 describe("planAutoSend", () => {
-    it("accepts or declines an offer that was made", () => {
-        const offered = { ...blankPipeline(), trustOfferedAt: "t", approvalStreak: 20 }
+    it("accepts or declines an offer that was made", async () => {
+        const subject = await buildSubject()
 
-        expect(planAutoSend(offered, true)).toMatchObject({ autoSend: true, trustOfferedAt: "t" })
-        expect(planAutoSend(offered, false)).toMatchObject({ autoSend: false, trustOfferedAt: null, approvalStreak: 0 })
+        const offered = { ...subject.blankPipeline(), trustOfferedAt: "t", approvalStreak: 20 }
+
+        expect(subject.planAutoSend(offered, true)).toMatchObject({ autoSend: true, trustOfferedAt: "t" })
+        expect(subject.planAutoSend(offered, false)).toMatchObject({
+            autoSend: false,
+            trustOfferedAt: null,
+            approvalStreak: 0,
+        })
     })
 
-    it("refuses an answer to an offer that was not made", () => {
-        expect(() => planAutoSend(blankPipeline(), true)).toThrow(
+    it("refuses an answer to an offer that was not made", async () => {
+        const subject = await buildSubject()
+
+        expect(() => subject.planAutoSend(subject.blankPipeline(), true)).toThrow(
             expect.objectContaining({ code: AutomationsErrorCode.TrustNotOffered }),
         )
     })
 })
 
 describe("planGoogleAccount", () => {
-    const def = buildTemplate({ requires: { modules: [], channels: [], connections: ["google"], capabilities: [] } })
+    const def = buildTemplate({
+        requires: { modules: [], channels: [], connections: ["google"], capabilities: [] },
+    })
 
-    it("moves the sheet to another account and forgets the old spreadsheet", () => {
-        const current = { ...blankPipeline(), config: { googleConnectionId: "g-1", spreadsheetId: "s", sheetUrl: "u" } }
+    it("moves the sheet to another account and forgets the old spreadsheet", async () => {
+        const subject = await buildSubject()
 
-        expect(planGoogleAccount(def, current, "g-2", ["g-2"]).config).toEqual({
+        const current = {
+            ...subject.blankPipeline(),
+            config: { googleConnectionId: "g-1", spreadsheetId: "s", sheetUrl: "u" },
+        }
+
+        expect(subject.planGoogleAccount(def, current, "g-2", ["g-2"]).config).toEqual({
             googleConnectionId: "g-2",
             spreadsheetId: "",
             sheetUrl: "",
         })
     })
 
-    it("keeps the pipeline when the account is the same", () => {
-        const current = { ...blankPipeline(), config: { googleConnectionId: "g-1" } }
+    it("keeps the pipeline when the account is the same", async () => {
+        const subject = await buildSubject()
 
-        expect(planGoogleAccount(def, current, "g-1", ["g-1"])).toBe(current)
+        const current = { ...subject.blankPipeline(), config: { googleConnectionId: "g-1" } }
+
+        expect(subject.planGoogleAccount(def, current, "g-1", ["g-1"])).toBe(current)
     })
 
-    it("refuses a template that does not write to Google and an account the workspace does not have", () => {
-        expect(() => planGoogleAccount(buildTemplate(), blankPipeline(), "g-1", ["g-1"])).toThrow(
+    it("refuses a template that does not write to Google and an account the workspace does not have", async () => {
+        const subject = await buildSubject()
+
+        expect(() => subject.planGoogleAccount(buildTemplate(), subject.blankPipeline(), "g-1", ["g-1"])).toThrow(
             expect.objectContaining({ code: AutomationsErrorCode.GoogleNotUsed }),
         )
-        expect(() => planGoogleAccount(def, blankPipeline(), "g-9", ["g-1"])).toThrow(
+        expect(() => subject.planGoogleAccount(def, subject.blankPipeline(), "g-9", ["g-1"])).toThrow(
             expect.objectContaining({ code: AutomationsErrorCode.GoogleAccountUnknown }),
         )
     })
@@ -220,8 +309,10 @@ describe("planGoogleAccount", () => {
 describe("planDecision", () => {
     const now = "2026-10-12T00:00:00.000Z"
 
-    it("counts an approval", () => {
-        const plan = planDecision({ ...blankPipeline(), approvalStreak: 3 }, "approved", now)
+    it("counts an approval", async () => {
+        const subject = await buildSubject()
+
+        const plan = subject.planDecision({ ...subject.blankPipeline(), approvalStreak: 3 }, "approved", now)
 
         expect(plan).toEqual({
             write: expect.objectContaining({ approvalStreak: 4, trustOfferedAt: null }),
@@ -229,21 +320,29 @@ describe("planDecision", () => {
         })
     })
 
-    it("resets the streak on any other outcome", () => {
-        expect(planDecision({ ...blankPipeline(), approvalStreak: 3 }, "edited", now).write.approvalStreak).toBe(0)
+    it("resets the streak on any other outcome", async () => {
+        const subject = await buildSubject()
+
+        const current = { ...subject.blankPipeline(), approvalStreak: 3 }
+        expect(subject.planDecision(current, "edited", now).write.approvalStreak).toBe(0)
     })
 
-    it("offers sending by itself once, at the threshold", () => {
-        const plan = planDecision({ ...blankPipeline(), approvalStreak: TRUST_THRESHOLD - 1 }, "approved", now)
-        const again = planDecision(plan.write, "approved", now)
+    it("offers sending by itself once, at the threshold", async () => {
+        const subject = await buildSubject()
+
+        const current = { ...subject.blankPipeline(), approvalStreak: TRUST_THRESHOLD - 1 }
+        const plan = subject.planDecision(current, "approved", now)
+        const again = subject.planDecision(plan.write, "approved", now)
 
         expect(plan).toMatchObject({ offered: true, write: { trustOfferedAt: now } })
         expect(again).toMatchObject({ offered: false, write: { trustOfferedAt: now } })
     })
 
-    it("does not offer to one who already sends by itself", () => {
-        const plan = planDecision(
-            { ...blankPipeline(), approvalStreak: TRUST_THRESHOLD, autoSend: true },
+    it("does not offer to one who already sends by itself", async () => {
+        const subject = await buildSubject()
+
+        const plan = subject.planDecision(
+            { ...subject.blankPipeline(), approvalStreak: TRUST_THRESHOLD, autoSend: true },
             "approved",
             now,
         )

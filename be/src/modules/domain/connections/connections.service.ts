@@ -97,7 +97,10 @@ export class ConnectionsService {
         this.providerUrl = options.publicApiUrl ?? options.publicSiteUrl
     }
 
-    /** The webhook address a provider must call for a connection (built from the site url even on localhost, for display). */
+    /**
+     * The webhook address a provider must call for a connection (built from the site url even on localhost, for
+     * display).
+     */
     webhookUrl(provider: Provider, connectionId: string, origin: string = this.providerUrl ?? this.siteUrl): string {
         return webhookUrlFor(provider, connectionId, origin)
     }
@@ -151,7 +154,10 @@ export class ConnectionsService {
         return rows.map(toConnectionRecord)
     }
 
-    /** The oldest live connection of a provider whose public fact `key` equals `value`, in any workspace (a bot or a Page is live in one place only). */
+    /**
+     * The oldest live connection of a provider whose public fact `key` equals `value`, in any workspace (a bot or a
+     * Page is live in one place only).
+     */
     async findLiveByMeta(
         provider: Provider,
         key: string,
@@ -196,7 +202,8 @@ export class ConnectionsService {
     }
 
     /**
-     * Creates a connection and its sealed secret in one transaction (inside the caller transaction when one is handed in), so
+     * Creates a connection and its sealed secret in one transaction (inside the caller transaction when one is handed
+     * in), so
      * a secret that cannot be stored leaves no connection behind. Answers the id.
      */
     create(input: CreateConnectionInput, manager?: EntityManager): Promise<string> {
@@ -244,12 +251,15 @@ export class ConnectionsService {
         try {
             return await this.secrets.read(connectionId)
         } catch (cause) {
-            this.logger.error(ConnectionsLogEvent.SecretUnreadable, cause, { connectionId })
+            this.logger.error(ConnectionsLogEvent.Undecryptable, cause, { connectionId })
             return null
         }
     }
 
-    /** Seals and stores the credential; the webhook secret changes only when one is given (a new row gets a random one). */
+    /**
+     * Seals and stores the credential; the webhook secret changes only when one is given (a new row gets a random
+     * one).
+     */
     writeSecret(connectionId: string, plain: string, webhookSecret?: string): Promise<void> {
         return this.secrets.write(connectionId, plain, webhookSecret)
     }
@@ -259,24 +269,32 @@ export class ConnectionsService {
         return this.secrets.wipe(connectionId)
     }
 
-    /** Deletes a connection of the workspace (its secret and bindings go with it); a missing one is a typed not-found. */
+    /**
+     * Deletes a connection of the workspace (its secret and bindings go with it); a missing one is a typed not-found.
+     */
     async remove(workspaceId: string, id: string): Promise<void> {
         const rows = await this.entityManager.query<Array<{ id: string }>>(DELETE_CONNECTION, [workspaceId, id])
         if (rows[0] === undefined) throw new ConnectionsError({ code: ConnectionsErrorCode.NotFound, params: { id } })
     }
 
     /**
-     * Remembers that an authenticated event reached the connection: pending or error becomes connected, the time is kept,
-     * and the first event is stored once. Answers the connection name and environment, or null when it does not exist.
+     * Remembers that an authenticated event reached the connection: pending or error becomes connected, the time is
+     * kept,
+     * and the first event is stored once. Uses the caller transaction when supplied.
+     * Answers the connection name and environment, or null when it does not exist.
      */
-    async recordEvent(connectionId: string, event: ConnectionEvent): Promise<OptionalRecordedEvent> {
+    async recordEvent(
+        connectionId: string,
+        event: ConnectionEvent,
+        manager: EntityManager = this.entityManager,
+    ): Promise<OptionalRecordedEvent> {
         const first = {
             amount: Math.round(event.amount),
             content: event.content,
             at: event.at,
             ...(event.text === undefined ? {} : { text: event.text }),
         }
-        const [row] = await this.entityManager.query<Array<{ name: string; environment: string }>>(RECORD_EVENT, [
+        const [row] = await manager.query<Array<{ name: string; environment: string }>>(RECORD_EVENT, [
             connectionId,
             event.at,
             JSON.stringify(first),
@@ -318,7 +336,9 @@ export class ConnectionsService {
         await this.entityManager.query(MARK_CONNECTION_ERROR, [connectionId, reason])
     }
 
-    /** The connection received its first (or any) event: it turns connected and keeps the first event for the wizard. */
+    /**
+     * The connection received its first (or any) event: it turns connected and keeps the first event for the wizard.
+     */
     async markReceived(connectionId: string, firstEvent: FirstEvent, manager: EntityManager): Promise<void> {
         await manager.query(MARK_CONNECTION_RECEIVED, [connectionId, JSON.stringify(firstEvent)])
     }
@@ -331,7 +351,9 @@ export class ConnectionsService {
         ])
     }
 
-    /** A page of the connections the health check judges, in id order, after the given id (empty for the first page). */
+    /**
+     * A page of the connections the health check judges, in id order, after the given id (empty for the first page).
+     */
     async healthBatch(afterId: string, size: number): Promise<ReadonlyArray<HealthCandidate>> {
         const rows = await this.entityManager.query<Array<HealthCandidateRow>>(LIST_HEALTH_BATCH, [
             afterId === "" ? NIL_UUID : afterId,
@@ -358,7 +380,10 @@ export class ConnectionsService {
         ])
     }
 
-    /** Writes the result of a wizard job next to its ticket; a newer ticket on the row means the owner moved on and nothing is written. */
+    /**
+     * Writes the result of a wizard job next to its ticket; a newer ticket on the row means the owner moved on and
+     * nothing is written.
+     */
     async settleWizard(connectionId: string, ticket: string, settlement: WizardSettlement): Promise<void> {
         const wizard = {
             ticket,
@@ -371,7 +396,10 @@ export class ConnectionsService {
         await this.entityManager.query(SETTLE_WIZARD, [connectionId, ticket, JSON.stringify(facts)])
     }
 
-    /** How often a connection of the workspace syncs by itself and when it last did; a missing one is a typed not-found. */
+    /**
+     * How often a connection of the workspace syncs by itself and when it last did; a missing one is a typed not-
+     * found.
+     */
     async scheduleOf(workspaceId: string, id: string): Promise<SyncSchedule> {
         const [row] = await this.entityManager.query<Array<SyncScheduleRow>>(FIND_SYNC_SCHEDULE, [workspaceId, id])
         if (row === undefined) throw new ConnectionsError({ code: ConnectionsErrorCode.NotFound, params: { id } })
@@ -388,7 +416,9 @@ export class ConnectionsService {
         if (rows[0] === undefined) throw new ConnectionsError({ code: ConnectionsErrorCode.NotFound, params: { id } })
     }
 
-    /** A sync finished: the connection works, the next sync is scheduled and the given public facts join the old ones. */
+    /**
+     * A sync finished: the connection works, the next sync is scheduled and the given public facts join the old ones.
+     */
     async markSynced(connectionId: string, facts: SyncFacts): Promise<void> {
         await this.entityManager.query(MARK_SYNCED, [connectionId, JSON.stringify(facts)])
     }
@@ -398,7 +428,10 @@ export class ConnectionsService {
         await this.entityManager.query(MARK_SYNC_FAILED, [connectionId, reason])
     }
 
-    /** Claims the connections of these providers whose scheduled sync is due, soonest first; their next sync moves half an hour on until the sync sets the real time. */
+    /**
+     * Claims the connections of these providers whose scheduled sync is due, soonest first; their next sync moves half
+     * an hour on until the sync sets the real time.
+     */
     async claimDueSyncs(providers: ReadonlyArray<Provider>, size: number): Promise<ReadonlyArray<ConnectionOwner>> {
         const rows = await this.entityManager.query<Array<{ id: string; workspace_id: string }>>(CLAIM_DUE_SYNCS, [
             providers,

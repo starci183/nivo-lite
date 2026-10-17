@@ -1,10 +1,20 @@
-﻿import { Test } from "@nestjs/testing"
-import { FakeClock, builder, fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
+import {
+    NOW,
+    stateOf,
+    itemOf,
+    PILLAR,
+    PLAN_CONTEXT,
+    planRoot,
+    DRAFT_CONTEXT,
+    draftRoot,
+    draftChild,
+} from "@tests/fixtures/builders/content-ai-completion.builder"
+import { Test } from "@nestjs/testing"
+import { FakeClock, fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
 import { GenerationsService } from "@modules/domain/ai-generations"
 import type { GenerationState } from "@modules/domain/ai-generations"
 import { AuthorityRulesService } from "@modules/domain/authority-rules"
 import { ContentAiStoreService, ContentEditorService } from "@modules/domain/content-items"
-import type { ContentItem } from "@modules/domain/content-items"
 import { ContentPlansService } from "@modules/domain/content-plans"
 import { EvidenceService } from "@modules/domain/decisions"
 import { EventsService } from "@modules/domain/events"
@@ -15,59 +25,7 @@ import type { Logger } from "@modules/platform/logging"
 import { ContentAiCompletionService } from "./content-ai-completion.service"
 import { ContentAiLogEvent } from "./content-ai.log-events"
 import { ContentAiErrorCode } from "./errors/content-ai.error"
-const NOW = "2026-10-13T03:00:30.000Z"
-const stateOf = builder<GenerationState>({
-    id: "g-2",
-    workspaceId: "ws-1",
-    purpose: "content_plan",
-    status: "done",
-    text: null,
-    errorCode: null,
-    input: { context: { rootId: "g-1" } },
-    output: {},
-    timings: {},
-    createdAt: "2026-10-13T03:00:00.000Z",
-    finishedAt: null,
-    messages: [{ role: "user", content: "Write a post" }],
-})
-const BRAND = {
-    shop: "Flower Shop",
-    knowledge: "Fresh flowers delivered the same day.",
-    voice: "friendly",
-    avoid: "",
-    audience: "Office customers",
-    cta: "Message the shop",
-    sources: [],
-    brandHashtags: ["#tiemhoa"],
-}
-const PILLAR = { id: "pl-1", name: "Products", description: "", weight: 1, active: true }
-const itemOf = builder<ContentItem>({
-    id: "item-1",
-    workspaceId: "ws-1",
-    planId: null,
-    title: "Roses this week",
-    brief: "",
-    pillarId: "pl-1",
-    channels: ["zalo"],
-    scheduledAt: null,
-    status: "idea",
-    variants: {},
-    hashtags: [],
-    media: [{ kind: "image", name: "old.jpg", suggested: true }],
-    links: [],
-    holidayKey: null,
-    evidence: [],
-    published: {},
-    workItemId: null,
-    draftedAt: null,
-    approvedBy: null,
-    approvedAt: null,
-    publishedAt: null,
-    source: "plan",
-    createdBy: "Lan",
-    createdAt: "2026-10-12T00:00:00.000Z",
-    updatedAt: "2026-10-12T00:00:00.000Z",
-})
+
 const build = async (states: ReadonlyArray<GenerationState>) => {
     const em = mockEntityManager()
     const tx = fakeTransaction(em)
@@ -105,43 +63,11 @@ const build = async (states: ReadonlyArray<GenerationState>) => {
     const service = moduleRef.get(ContentAiCompletionService)
     return { service, tx, logger, generations, rules, editor, store, plans, evidence, events }
 }
+
 /** The arguments of a call without its trailing transaction manager. */
 const withoutManager = (calls: ReadonlyArray<ReadonlyArray<unknown>>): Array<Array<unknown>> =>
     calls.map((call) => call.slice(0, -1))
-const PLAN_CONTEXT = {
-    operation: "plan",
-    generationIds: ["g-2"],
-    month: "2026-11",
-    actor: "Lan",
-    quota: [],
-    holidays: [],
-    sources: ["Price list"],
-    skippedPast: 2,
-    slots: [
-        { n: 1, at: "2026-11-02T02:00:00.000Z", channels: ["facebook"], pillar: PILLAR, holiday: null },
-        { n: 2, at: "2026-11-05T02:00:00.000Z", channels: ["zalo"], pillar: PILLAR, holiday: null },
-    ],
-}
-const planRoot = stateOf({ id: "g-1", status: "running", input: { context: PLAN_CONTEXT } })
-const DRAFT_CONTEXT = {
-    operation: "draft",
-    generationIds: ["g-2"],
-    itemId: "item-1",
-    channels: ["facebook", "myspace"],
-    brand: BRAND,
-    library: [{ kind: "image", name: "hoa-hong.jpg", path: "ws-1/hoa-hong.jpg" }],
-    pillars: [],
-    expectedUpdatedAt: "2026-10-12T00:00:00.000Z",
-}
-const draftRoot = stateOf({ id: "g-1", purpose: "content_draft", status: "running", input: { context: DRAFT_CONTEXT } })
-const draftChild = stateOf({
-    purpose: "content_draft",
-    text: JSON.stringify({
-        variants: { facebook: { text: "Fresh roses every morning.", hashtags: ["#hoahong"], note: "" } },
-        media: [1, 7],
-        hashtags: ["hoa hong"],
-    }),
-})
+
 describe("ContentAiCompletionService", () => {
     it("selects at most two valid media in generated order from a sparse library", async () => {
         const first = { kind: "image", name: "first.jpg" }
@@ -172,6 +98,9 @@ describe("ContentAiCompletionService", () => {
         expect(tx.outcomes).toEqual([])
         expect(generations.recordResult).not.toHaveBeenCalled()
     })
+})
+
+describe("ContentAiCompletionService", () => {
     it("applies the accepted ideas of a finished plan with the timing and records the result", async () => {
         const child = stateOf({
             input: { context: { rootId: "g-1", allowedSlots: [1, 2] } },
@@ -216,6 +145,9 @@ describe("ContentAiCompletionService", () => {
         ])
         expect(tx.commits).toBe(1)
     })
+})
+
+describe("ContentAiCompletionService", () => {
     it("writes the draft variants, suggested media, evidence and event for a finished draft", async () => {
         const { service, generations, store, evidence, events } = await build([draftRoot, draftChild])
         await service.complete("ws-1", "g-2")
@@ -270,6 +202,9 @@ describe("ContentAiCompletionService", () => {
         expect(logger.error.mock.calls[0]?.[2]).toEqual({ workspaceId: "ws-1", generationId: "g-2" })
         expect(tx.outcomes).toEqual(["rollback", "commit"])
     })
+})
+
+describe("ContentAiCompletionService", () => {
     it("asks once more for an unreadable answer and swaps the child in the root context", async () => {
         const unreadable = stateOf({ text: "not json", input: { context: { rootId: "g-1" }, timeout_ms: 60000 } })
         const { service, generations, plans } = await build([planRoot, unreadable])
@@ -327,6 +262,9 @@ describe("ContentAiCompletionService", () => {
         expect(withoutManager(generations.recordFailure.mock.calls)).toEqual([["ws-1", "g-1", code]])
         expect(generations.recordResult).not.toHaveBeenCalled()
     })
+})
+
+describe("ContentAiCompletionService", () => {
     it.each([
         [],
         [draftChild],
@@ -391,6 +329,9 @@ describe("ContentAiCompletionService", () => {
             )
         }
     })
+})
+
+describe("ContentAiCompletionService", () => {
     it("matches a theme, trims the quick title, validates media and retains manual attachments", async () => {
         const context = {
             ...DRAFT_CONTEXT,
@@ -462,6 +403,9 @@ describe("ContentAiCompletionService", () => {
             ["ws-1", "g-1", { itemId: "item-1", seconds: 30, warnings: [] }],
         ])
     })
+})
+
+describe("ContentAiCompletionService", () => {
     it("rejects malformed plan siblings and missing scheduling metadata", async () => {
         for (const slots of [undefined, PLAN_CONTEXT.slots]) {
             const root = stateOf({ ...planRoot, input: { context: { ...PLAN_CONTEXT, slots } } })

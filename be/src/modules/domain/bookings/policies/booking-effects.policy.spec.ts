@@ -1,7 +1,18 @@
+import { Test } from "@nestjs/testing"
 import { builder } from "@starci/jest-preset"
 import type { BookingEventKind } from "../bookings.contracts"
 import { DEFAULT_SETTINGS } from "../persistence/booking.rows"
 import { cancelFeeOf, feeOf, isLateCancel, noticeMark, noticeOf, remindersOf } from "./booking-effects.policy"
+const SUBJECT = Symbol("booking-effects.policy")
+
+const build = async () => {
+    const moduleRef = await Test.createTestingModule({
+        providers: [
+            { provide: SUBJECT, useValue: { isLateCancel, cancelFeeOf, noticeOf, noticeMark, remindersOf, feeOf } },
+        ],
+    }).compile()
+    return moduleRef.get<typeof import("./booking-effects.policy")>(SUBJECT)
+}
 
 const HOUR = 3_600_000
 const START = Date.UTC(2026, 9, 15, 2)
@@ -14,72 +25,98 @@ const rowOf = builder<Parameters<typeof cancelFeeOf>[0]>({
 
 describe("booking-effects.policy", () => {
     describe("isLateCancel", () => {
-        it("requires a cancellation and excludes the exact edge of the window", () => {
-            expect(isLateCancel(START, null, 24)).toBe(false)
-            expect(isLateCancel(START, START - 24 * HOUR, 24)).toBe(false)
-            expect(isLateCancel(START, START - 24 * HOUR - 1, 24)).toBe(false)
-            expect(isLateCancel(START, START - 24 * HOUR + 1, 24)).toBe(true)
-            expect(isLateCancel(START, START + 1, 24)).toBe(true)
+        it("requires a cancellation and excludes the exact edge of the window", async () => {
+            const subject = await build()
+
+            expect(subject.isLateCancel(START, null, 24)).toBe(false)
+            expect(subject.isLateCancel(START, START - 24 * HOUR, 24)).toBe(false)
+            expect(subject.isLateCancel(START, START - 24 * HOUR - 1, 24)).toBe(false)
+            expect(subject.isLateCancel(START, START - 24 * HOUR + 1, 24)).toBe(true)
+            expect(subject.isLateCancel(START, START + 1, 24)).toBe(true)
         })
     })
 
     describe("cancelFeeOf", () => {
-        it.each(["owner", "owner_cancelled"])("waives the fee for the owner's reason %s", (cancel_reason) => {
-            expect(cancelFeeOf(rowOf({ cancel_reason }), 24, 25)).toBe(0)
+        it.each(["owner", "owner_cancelled"])("waives the fee for the owner's reason %s", async (cancel_reason) => {
+            const subject = await build()
+
+            expect(subject.cancelFeeOf(rowOf({ cancel_reason }), 24, 25)).toBe(0)
         })
 
-        it("charges and rounds the customer's late cancellation with or without a reason", () => {
-            expect(cancelFeeOf(rowOf(), 24, 25)).toBe(50_000)
-            expect(cancelFeeOf(rowOf({ cancel_reason: null, price_vnd: 99_999 }), 24, 33)).toBe(33_000)
+        it("charges and rounds the customer's late cancellation with or without a reason", async () => {
+            const subject = await build()
+
+            expect(subject.cancelFeeOf(rowOf(), 24, 25)).toBe(50_000)
+            expect(subject.cancelFeeOf(rowOf({ cancel_reason: null, price_vnd: 99_999 }), 24, 33)).toBe(33_000)
         })
 
-        it.each([null, 0, -1])("charges nothing for an unusable price %p", (price_vnd) => {
-            expect(cancelFeeOf(rowOf({ price_vnd }), 24, 25)).toBe(0)
+        it.each([null, 0, -1])("charges nothing for an unusable price %p", async (price_vnd) => {
+            const subject = await build()
+
+            expect(subject.cancelFeeOf(rowOf({ price_vnd }), 24, 25)).toBe(0)
         })
 
-        it.each([0, -10])("charges nothing for a nonpositive percentage %p", (feePct) => {
-            expect(cancelFeeOf(rowOf(), 24, feePct)).toBe(0)
+        it.each([0, -10])("charges nothing for a nonpositive percentage %p", async (feePct) => {
+            const subject = await build()
+
+            expect(subject.cancelFeeOf(rowOf(), 24, feePct)).toBe(0)
         })
 
-        it("charges nothing when the customer cancelled on time or did not cancel", () => {
-            expect(cancelFeeOf(rowOf({ cancelled_ms: START - 24 * HOUR }), 24, 25)).toBe(0)
-            expect(cancelFeeOf(rowOf({ cancelled_ms: null }), 24, 25)).toBe(0)
+        it("charges nothing when the customer cancelled on time or did not cancel", async () => {
+            const subject = await build()
+
+            expect(subject.cancelFeeOf(rowOf({ cancelled_ms: START - 24 * HOUR }), 24, 25)).toBe(0)
+            expect(subject.cancelFeeOf(rowOf({ cancelled_ms: null }), 24, 25)).toBe(0)
         })
     })
+})
 
+describe("booking-effects.policy", () => {
     describe("noticeOf", () => {
         it.each<BookingEventKind>(["created", "status", "moved"])(
             "gives cancellation priority over the event %s",
-            (kind) => {
-                expect(noticeOf(kind, "cancelled")).toBe("cancelled")
+            async (kind) => {
+                const subject = await build()
+
+                expect(subject.noticeOf(kind, "cancelled")).toBe("cancelled")
             },
         )
 
-        it("announces a move by event or status before a confirmation", () => {
-            expect(noticeOf("moved", "confirmed")).toBe("moved")
-            expect(noticeOf("status", "rescheduled")).toBe("moved")
-            expect(noticeOf("created", "confirmed")).toBe("confirmed")
+        it("announces a move by event or status before a confirmation", async () => {
+            const subject = await build()
+
+            expect(subject.noticeOf("moved", "confirmed")).toBe("moved")
+            expect(subject.noticeOf("status", "rescheduled")).toBe("moved")
+            expect(subject.noticeOf("created", "confirmed")).toBe("confirmed")
         })
 
         it.each<BookingEventKind>(["created", "status", "moved"])(
             "gives a no-show priority over the event %s",
-            (kind) => {
-                expect(noticeOf(kind, "no_show")).toBe("no_show")
+            async (kind) => {
+                const subject = await build()
+
+                expect(subject.noticeOf(kind, "no_show")).toBe("no_show")
             },
         )
 
-        it.each(["requested", "done", "unknown"])("does not announce the status %s", (status) => {
-            expect(noticeOf("status", status)).toBeNull()
+        it.each(["requested", "done", "unknown"])("does not announce the status %s", async (status) => {
+            const subject = await build()
+
+            expect(subject.noticeOf("status", status)).toBeNull()
         })
     })
+})
 
+describe("booking-effects.policy", () => {
     describe("noticeMark", () => {
-        it("keys moves on their count and other notices on their kind", () => {
-            expect(noticeMark("moved", 0)).toBe("notice:moved:0")
-            expect(noticeMark("moved", 3)).toBe("notice:moved:3")
-            expect(noticeMark("confirmed", 3)).toBe("notice:confirmed")
-            expect(noticeMark("cancelled", 3)).toBe("notice:cancelled")
-            expect(noticeMark("no_show", 3)).toBe("notice:no_show")
+        it("keys moves on their count and other notices on their kind", async () => {
+            const subject = await build()
+
+            expect(subject.noticeMark("moved", 0)).toBe("notice:moved:0")
+            expect(subject.noticeMark("moved", 3)).toBe("notice:moved:3")
+            expect(subject.noticeMark("confirmed", 3)).toBe("notice:confirmed")
+            expect(subject.noticeMark("cancelled", 3)).toBe("notice:cancelled")
+            expect(subject.noticeMark("no_show", 3)).toBe("notice:no_show")
         })
     })
 
@@ -89,13 +126,19 @@ describe("booking-effects.policy", () => {
             { live: true, closed: true, expected: "planned" },
             { live: false, closed: true, expected: "stopped" },
             { live: false, closed: false, expected: "none" },
-        ])("returns $expected for live=$live and closed=$closed", ({ live, closed, expected }) => {
-            expect(remindersOf(live, closed)).toBe(expected)
+        ])("returns $expected for live=$live and closed=$closed", async ({ live, closed, expected }) => {
+            const subject = await build()
+
+            expect(subject.remindersOf(live, closed)).toBe(expected)
         })
     })
+})
 
+describe("booking-effects.policy", () => {
     describe("feeOf", () => {
-        it("uses the settings' cancellation window and percentage for a cancelled booking", () => {
+        it("uses the settings' cancellation window and percentage for a cancelled booking", async () => {
+            const subject = await build()
+
             const row = { ...rowOf(), status: "cancelled" }
             const settings = {
                 ...DEFAULT_SETTINGS,
@@ -104,24 +147,39 @@ describe("booking-effects.policy", () => {
                 noShowFeeVnd: 75_000,
             }
 
-            expect(feeOf(row, settings)).toBe(74_000)
-            expect(feeOf({ ...row, cancelled_ms: START - 2 * HOUR }, settings)).toBe(0)
-            expect(feeOf(row, { ...settings, cancelWindowHours: 1 })).toBe(0)
-            expect(feeOf(row, { ...settings, lateCancelFeePct: 10 })).toBe(20_000)
-            expect(feeOf({ ...row, cancel_reason: "owner" }, settings)).toBe(0)
+            expect(subject.feeOf(row, settings)).toBe(74_000)
+            expect(subject.feeOf({ ...row, cancelled_ms: START - 2 * HOUR }, settings)).toBe(0)
+            expect(subject.feeOf(row, { ...settings, cancelWindowHours: 1 })).toBe(0)
+            expect(subject.feeOf(row, { ...settings, lateCancelFeePct: 10 })).toBe(20_000)
+            expect(subject.feeOf({ ...row, cancel_reason: "owner" }, settings)).toBe(0)
         })
 
-        it.each([0, 65_000])("uses the configured no-show fee %p regardless of cancellation facts", (noShowFeeVnd) => {
-            const row = { ...rowOf({ price_vnd: null, cancel_reason: "owner", cancelled_ms: null }), status: "no_show" }
+        it.each([0, 65_000])(
+            "uses the configured no-show fee %p regardless of cancellation facts",
+            async (noShowFeeVnd) => {
+                const subject = await build()
 
-            expect(feeOf(row, { ...DEFAULT_SETTINGS, noShowFeeVnd, lateCancelFeePct: 50 })).toBe(noShowFeeVnd)
-        })
+                const row = {
+                    ...rowOf({ price_vnd: null, cancel_reason: "owner", cancelled_ms: null }),
+                    status: "no_show",
+                }
+
+                expect(subject.feeOf(row, { ...DEFAULT_SETTINGS, noShowFeeVnd, lateCancelFeePct: 50 })).toBe(
+                    noShowFeeVnd,
+                )
+            },
+        )
 
         it.each(["requested", "confirmed", "rescheduled", "done", "unknown"])(
             "charges nothing for the status %s",
-            (status) => {
+            async (status) => {
+                const subject = await build()
+
                 expect(
-                    feeOf({ ...rowOf(), status }, { ...DEFAULT_SETTINGS, lateCancelFeePct: 50, noShowFeeVnd: 65_000 }),
+                    subject.feeOf(
+                        { ...rowOf(), status },
+                        { ...DEFAULT_SETTINGS, lateCancelFeePct: 50, noShowFeeVnd: 65_000 },
+                    ),
                 ).toBe(0)
             },
         )

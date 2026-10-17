@@ -34,7 +34,8 @@ const spawnSpy = jest.spyOn(childProcess, "spawn")
 
 const optionsOf = builder<FfmpegOptions>({ nice: false })
 
-const build = async (options: FfmpegOptions) => {
+const build = async (inputOptions: FfmpegOptions) => {
+    const options = builder<FfmpegOptions>(inputOptions)()
     const moduleRef = await Test.createTestingModule({
         providers: [FfmpegClient, { provide: FFMPEG_OPTIONS, useValue: options }],
     }).compile()
@@ -70,7 +71,11 @@ describe("FfmpegClient", () => {
                 ["ffmpeg", ["-hide_banner", "-nostdin", "-y", "-i", "in.mp4", "out.mp4"], { cwd: "work" }],
             ])
         })
+    })
+})
 
+describe("FfmpegClient", () => {
+    describe("run", () => {
         it("lowers the priority with nice unless the run is urgent", async () => {
             const ffmpeg = await build(optionsOf({ nice: true }))
             const signal = new AbortController().signal
@@ -86,7 +91,11 @@ describe("FfmpegClient", () => {
                 ["ffprobe", ["b"], { cwd: "." }],
             ])
         })
+    })
+})
 
+describe("FfmpegClient", () => {
+    describe("run", () => {
         it("reports the output time of a run that asks for the timeline", async () => {
             const ffmpeg = await build(optionsOf())
             const seconds: Array<number> = []
@@ -112,7 +121,11 @@ describe("FfmpegClient", () => {
                 "-nostats",
             ])
         })
+    })
+})
 
+describe("FfmpegClient", () => {
+    describe("run", () => {
         it("fails with the end of stderr when the tool exits with an error", async () => {
             const ffmpeg = await build(optionsOf())
             const running = ffmpeg.run("ffmpeg", ["x"], { signal: new AbortController().signal, cwd: "." })
@@ -124,7 +137,11 @@ describe("FfmpegClient", () => {
                 params: { tool: "ffmpeg", reason: "exit 1", stderr: "Invalid data" },
             })
         })
+    })
+})
 
+describe("FfmpegClient", () => {
+    describe("run", () => {
         it("fails when the tool was stopped by a signal", async () => {
             const ffmpeg = await build(optionsOf())
             const running = ffmpeg.run("ffmpeg", ["x"], { signal: new AbortController().signal, cwd: "." })
@@ -132,7 +149,11 @@ describe("FfmpegClient", () => {
 
             await expect(running).rejects.toMatchObject({ params: { reason: "exit signal" } })
         })
+    })
+})
 
+describe("FfmpegClient", () => {
+    describe("run", () => {
         it("fails when the tool cannot start", async () => {
             const ffmpeg = await build(optionsOf())
             const cause = new Error("ENOENT")
@@ -141,7 +162,11 @@ describe("FfmpegClient", () => {
 
             await expect(running).rejects.toMatchObject({ params: { reason: "could not start" }, cause })
         })
+    })
+})
 
+describe("FfmpegClient", () => {
+    describe("run", () => {
         it("kills the tool when the caller aborts, and ignores what it does afterwards", async () => {
             const ffmpeg = await build(optionsOf())
             const abort = new AbortController()
@@ -154,7 +179,11 @@ describe("FfmpegClient", () => {
 
             expect(kill).toHaveBeenCalledWith("SIGKILL")
         })
+    })
+})
 
+describe("FfmpegClient", () => {
+    describe("run", () => {
         it("kills the tool when it runs longer than its timeout", async () => {
             const ffmpeg = await build(optionsOf())
             const running = ffmpeg.run("ffmpeg", ["x"], {
@@ -167,7 +196,9 @@ describe("FfmpegClient", () => {
             expect(lastChild().kill).toHaveBeenCalledWith("SIGKILL")
         })
     })
+})
 
+describe("FfmpegClient", () => {
     describe("probeDuration", () => {
         it("answers the duration ffprobe printed", async () => {
             const ffmpeg = await build(optionsOf())

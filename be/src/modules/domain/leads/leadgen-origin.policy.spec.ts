@@ -1,4 +1,26 @@
+import { Test } from "@nestjs/testing"
 import { clip, firstText, leadOriginOf, platformOf, scoreFromFields, text } from "./leadgen-origin.policy"
+
+const SUBJECT = Symbol("leadgen-origin.policy")
+
+const buildSubject = async () => {
+    const moduleRef = await Test.createTestingModule({
+        providers: [
+            {
+                provide: SUBJECT,
+                useValue: {
+                    text,
+                    firstText,
+                    clip,
+                    platformOf,
+                    scoreFromFields,
+                    leadOriginOf,
+                },
+            },
+        ],
+    }).compile()
+    return moduleRef.get<typeof import("./leadgen-origin.policy")>(SUBJECT)
+}
 
 describe("text", () => {
     it.each([
@@ -9,15 +31,19 @@ describe("text", () => {
         { value: undefined, expected: "" },
         { value: true, expected: "" },
         { value: {}, expected: "" },
-    ])("reads $value as '$expected'", ({ value, expected }) => {
-        expect(text(value)).toBe(expected)
+    ])("reads $value as '$expected'", async ({ value, expected }) => {
+        const subject = await buildSubject()
+
+        expect(subject.text(value)).toBe(expected)
     })
 })
 
 describe("firstText", () => {
-    it("skips absent, unsupported and blank values in key order", () => {
+    it("skips absent, unsupported and blank values in key order", async () => {
+        const subject = await buildSubject()
+
         expect(
-            firstText({ ignored: {}, blank: "  ", number: 0, later: "later" }, [
+            subject.firstText({ ignored: {}, blank: "  ", number: 0, later: "later" }, [
                 "missing",
                 "ignored",
                 "blank",
@@ -27,21 +53,27 @@ describe("firstText", () => {
         ).toBe("0")
     })
 
-    it("returns blank when no requested field has text", () => {
-        expect(firstText({ name: "Lan" }, [])).toBe("")
-        expect(firstText({ empty: null, blank: "\n " }, ["empty", "blank", "missing"])).toBe("")
+    it("returns blank when no requested field has text", async () => {
+        const subject = await buildSubject()
+
+        expect(subject.firstText({ name: "Lan" }, [])).toBe("")
+        expect(subject.firstText({ empty: null, blank: "\n " }, ["empty", "blank", "missing"])).toBe("")
     })
 })
 
 describe("clip", () => {
-    it("collapses whitespace and retains text within the default limit", () => {
-        expect(clip("  Hello\n\t Lan   ")).toBe("Hello Lan")
-        expect(clip("x".repeat(140))).toBe("x".repeat(140))
+    it("collapses whitespace and retains text within the default limit", async () => {
+        const subject = await buildSubject()
+
+        expect(subject.clip("  Hello\n\t Lan   ")).toBe("Hello Lan")
+        expect(subject.clip("x".repeat(140))).toBe("x".repeat(140))
     })
 
-    it("reserves one character for the ellipsis and trims a clipped trailing space", () => {
-        expect(clip("x".repeat(141))).toBe(`${"x".repeat(139)}…`)
-        expect(clip("abc def", 5)).toBe("abc…")
+    it("reserves one character for the ellipsis and trims a clipped trailing space", async () => {
+        const subject = await buildSubject()
+
+        expect(subject.clip("x".repeat(141))).toBe(`${"x".repeat(139)}…`)
+        expect(subject.clip("abc def", 5)).toBe("abc…")
     })
 })
 
@@ -54,8 +86,10 @@ describe("platformOf", () => {
         { hints: ["Meta lead form"], expected: "facebook" },
         { hints: ["big audience"], expected: "other" },
         { hints: [], expected: "other" },
-    ])("infers $expected from $hints", ({ hints, expected }) => {
-        expect(platformOf(...hints)).toBe(expected)
+    ])("infers $expected from $hints", async ({ hints, expected }) => {
+        const subject = await buildSubject()
+
+        expect(subject.platformOf(...hints)).toBe(expected)
     })
 })
 
@@ -70,15 +104,18 @@ describe("scoreFromFields", () => {
         { fields: { score: "unknown", lead_score: "", temperature: "warm", rating: "hot" }, expected: "warm" },
         { fields: { score: 10, lead_score: null, temperature: true, grade: "unsure" }, expected: null },
         { fields: {}, expected: null },
-    ])("reads $fields as $expected", ({ fields, expected }) => {
-        expect(scoreFromFields(fields)).toBe(expected)
+    ])("reads $fields as $expected", async ({ fields, expected }) => {
+        const subject = await buildSubject()
+
+        expect(subject.scoreFromFields(fields)).toBe(expected)
     })
 })
 
 describe("leadOriginOf", () => {
-    it("uses the first capture aliases and prioritizes ads over forms and posts", () => {
+    it("uses the first capture aliases and prioritizes ads over forms and posts", async () => {
+        const subject = await buildSubject()
         expect(
-            leadOriginOf(
+            subject.leadOriginOf(
                 {
                     platform: " Instagram ",
                     network: "facebook",
@@ -102,10 +139,10 @@ describe("leadOriginOf", () => {
             refLabel: "Autumn campaign",
         })
     })
-
-    it("uses the fallback channel and form aliases when the explicit label is empty", () => {
+    it("uses the fallback channel and form aliases when the explicit label is empty", async () => {
+        const subject = await buildSubject()
         expect(
-            leadOriginOf(
+            subject.leadOriginOf(
                 {
                     network: "meta",
                     capture_kind: "leadgen",
@@ -124,9 +161,11 @@ describe("leadOriginOf", () => {
             refLabel: "Signup",
         })
     })
-
-    it("attributes a comment to a post and reads an accented channel label", () => {
-        expect(leadOriginOf({ post: "post-1", post_name: "New menu" }, "B\u00ecnh lu\u1eadn IG", "Unknown")).toEqual({
+    it("attributes a comment to a post and reads an accented channel label", async () => {
+        const subject = await buildSubject()
+        expect(
+            subject.leadOriginOf({ post: "post-1", post_name: "New menu" }, "B\u00ecnh lu\u1eadn IG", "Unknown"),
+        ).toEqual({
             platform: "instagram",
             kind: "comment",
             refKind: "post",
@@ -134,7 +173,6 @@ describe("leadOriginOf", () => {
             refLabel: "New menu",
         })
     })
-
     it.each([
         { fields: { kind: "comment" }, label: "Other", kind: "comment" },
         { fields: { reason: "mention" }, label: "Other", kind: "mention" },
@@ -142,8 +180,9 @@ describe("leadOriginOf", () => {
         { fields: { source: "dm" }, label: "Other", kind: "dm" },
         { fields: {}, label: "Tin nh\u1eafn", kind: "dm" },
         { fields: {}, label: "Other", kind: "other" },
-    ])("classifies $fields / $label as $kind without a reference", ({ fields, label, kind }) => {
-        expect(leadOriginOf(fields, label, "Unknown")).toEqual({
+    ])("classifies $fields / $label as $kind without a reference", async ({ fields, label, kind }) => {
+        const subject = await buildSubject()
+        expect(subject.leadOriginOf(fields, label, "Unknown")).toEqual({
             platform: "other",
             kind,
             refKind: null,
@@ -151,10 +190,18 @@ describe("leadOriginOf", () => {
             refLabel: null,
         })
     })
+})
 
-    it("prioritizes lead forms over comments and uses the available ad label", () => {
+describe("leadOriginOf", () => {
+    it("prioritizes lead forms over comments and uses the available ad label", async () => {
+        const subject = await buildSubject()
+
         expect(
-            leadOriginOf({ source_type: "form comment", ad: "ad-2", ad_name: "Lead ad" }, "Facebook", "Unknown"),
+            subject.leadOriginOf(
+                { source_type: "form comment", ad: "ad-2", ad_name: "Lead ad" },
+                "Facebook",
+                "Unknown",
+            ),
         ).toEqual({
             platform: "facebook",
             kind: "lead_ad",
@@ -164,8 +211,10 @@ describe("leadOriginOf", () => {
         })
     })
 
-    it("retains a campaign label and the short form reference alias", () => {
-        expect(leadOriginOf({ form: "form-3", campaign_name: "Launch" }, "Inbox", "Meta")).toEqual({
+    it("retains a campaign label and the short form reference alias", async () => {
+        const subject = await buildSubject()
+
+        expect(subject.leadOriginOf({ form: "form-3", campaign_name: "Launch" }, "Inbox", "Meta")).toEqual({
             platform: "facebook",
             kind: "dm",
             refKind: "form",

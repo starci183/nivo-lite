@@ -135,6 +135,22 @@ const factForm = (payload: Payload): FactForm | null => {
     }
 }
 
+/** Reads the editable metadata of a source command. */
+const sourceUpdate = (payload: Payload, sourceId: string | undefined): BrainCommand | null =>
+    sourceId === undefined
+        ? null
+        : {
+              kind: "source.update",
+              update: {
+                  sourceId,
+                  title: text(payload, "title"),
+                  topic: text(payload, "topic"),
+                  tags: texts(payload, "tags"),
+                  module: text(payload, "module"),
+                  visibility: text(payload, "visibility"),
+              },
+          }
+
 /** The command of one kind, read from its payload. */
 const read = (kind: BrainCommandKind, payload: Payload): BrainCommand | null => {
     const id = text(payload, "id")
@@ -182,19 +198,7 @@ const read = (kind: BrainCommandKind, payload: Payload): BrainCommand | null => 
         case "source.reindex":
             return sourceId === undefined ? null : { kind, reindex: { sourceId, content: text(payload, "content") } }
         case "source.update":
-            return sourceId === undefined
-                ? null
-                : {
-                      kind,
-                      update: {
-                          sourceId,
-                          title: text(payload, "title"),
-                          topic: text(payload, "topic"),
-                          tags: texts(payload, "tags"),
-                          module: text(payload, "module"),
-                          visibility: text(payload, "visibility"),
-                      },
-                  }
+            return sourceUpdate(payload, sourceId)
         case "knowledge.ask": {
             const question = text(payload, "question")
             const module = text(payload, "module")

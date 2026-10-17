@@ -1,7 +1,18 @@
+import { Test } from "@nestjs/testing"
 import { builder } from "@starci/jest-preset"
 import type { JobQuestion } from "./hiring.contracts"
-import { toHiringBenchType } from "./hiring-bench.mapper"
+import { toHiringBenchType as toHiringBenchTypeImplementation } from "./hiring-bench.mapper"
 import type { HiringBenchView, HiringJobView } from "./hiring-workbench.contracts"
+
+const SUBJECT = Symbol("subject")
+type Subject = { toHiringBenchType: typeof toHiringBenchTypeImplementation }
+
+const buildSubject = async () => {
+    const moduleRef = await Test.createTestingModule({
+        providers: [{ provide: SUBJECT, useValue: { toHiringBenchType: toHiringBenchTypeImplementation } }],
+    }).compile()
+    return moduleRef.get<Subject>(SUBJECT)
+}
 
 const question = builder<JobQuestion>({ id: "q-1", text: "Weekend?", type: "text", required: true })
 
@@ -61,18 +72,22 @@ const bench = builder<HiringBenchView>({
     meUserId: "user-1",
 })
 
-const fieldsOf = (expectation: Partial<JobQuestion>) =>
-    toHiringBenchType(bench({ jobs: [job({ questions: [question(expectation)] })] })).jobs[0]?.questions[0]
+const fieldsOf = (subject: Subject, expectation: Partial<JobQuestion>) =>
+    subject.toHiringBenchType(bench({ jobs: [job({ questions: [question(expectation)] })] })).jobs[0]?.questions[0]
 
 describe("toHiringBenchType", () => {
-    it("keeps the bench and its jobs as they are apart from the questions", () => {
+    it("keeps the bench and its jobs as they are apart from the questions", async () => {
+        const subject = await buildSubject()
+
         const view = bench({ jobs: [job()] })
 
-        expect(toHiringBenchType(view)).toEqual({ ...view, jobs: [{ ...job(), questions: [] }] })
+        expect(subject.toHiringBenchType(view)).toEqual({ ...view, jobs: [{ ...job(), questions: [] }] })
     })
 
-    it("writes a question without choices or expectation with empty choices and null expectations", () => {
-        expect(fieldsOf({})).toEqual({
+    it("writes a question without choices or expectation with empty choices and null expectations", async () => {
+        const subject = await buildSubject()
+
+        expect(fieldsOf(subject, {})).toEqual({
             id: "q-1",
             text: "Weekend?",
             type: "text",
@@ -89,8 +104,10 @@ describe("toHiringBenchType", () => {
         { expect: "no" as const, fields: { expectYesNo: "no", expectNumber: null, expectChoices: null } },
         { expect: 3, fields: { expectYesNo: null, expectNumber: 3, expectChoices: null } },
         { expect: ["Sat"], fields: { expectYesNo: null, expectNumber: null, expectChoices: ["Sat"] } },
-    ])("splits the expectation $expect into its typed field", ({ expect: expectation, fields }) => {
-        expect(fieldsOf({ choices: ["Sat", "Sun"], expect: expectation })).toMatchObject({
+    ])("splits the expectation $expect into its typed field", async ({ expect: expectation, fields }) => {
+        const subject = await buildSubject()
+
+        expect(fieldsOf(subject, { choices: ["Sat", "Sun"], expect: expectation })).toMatchObject({
             choices: ["Sat", "Sun"],
             ...fields,
         })

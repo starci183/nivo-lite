@@ -7,7 +7,7 @@ import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { InjectMessageCatalog } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
 import { InventoryError, InventoryErrorCode } from "./errors/inventory.error"
-import type { SendKind, SendRequestResult } from "./inventory.contracts"
+import type { LoadedPo, SendKind, SendRequestResult } from "./inventory.contracts"
 import type { RequestSendOutput, RequestSendParams } from "./inventory-operations.contracts"
 import { InventoryOrderMessageService } from "./inventory-order-message.service"
 import { InventoryOrdersService } from "./inventory-orders.service"
@@ -25,7 +25,10 @@ import {
 } from "./persistence/inventory.sql"
 
 @Injectable()
-/** Sending an order to its supplier: the owner is asked first, then the order goes by email or becomes a copy-ready message. */
+/**
+ * Sending an order to its supplier: the owner is asked first, then the order goes by email or becomes a copy-ready
+ * message.
+ */
 export class InventoryDispatchService {
     constructor(
         @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
@@ -50,8 +53,8 @@ export class InventoryDispatchService {
     }
 
     /**
-     * Writes the order message, asks the gate to decide `send_purchase_order` and, when the owner must decide, parks the
-     * order as waiting for approval. A repeated call while a decision waits changes nothing.
+     * Writes the order message, asks the gate to decide `send_purchase_order` and, when the owner must decide, parks
+     * the order as waiting for approval. A repeated call while a decision waits changes nothing.
      */
     async askToSend(workspaceId: string, actor: string, poId: string, kind: SendKind): Promise<SendRequestResult> {
         const po = await this.orders.loadPo(workspaceId, poId)
@@ -100,7 +103,10 @@ export class InventoryDispatchService {
         return { status: verdict.status, workItemId: verdict.workItemId }
     }
 
-    /** The performer of the send_purchase_order action: the order or the reminder goes to the supplier, by email or as a copy-ready message. */
+    /**
+     * The performer of the send_purchase_order action: the order or the reminder goes to the supplier, by email or as a
+     * copy-ready message.
+     */
     async performSendPurchaseOrder(context: PerformContext): Promise<PerformResult> {
         const po = await this.orders.loadPo(context.workspaceId, fieldText(context.fields, "po_id"))
         const reminder = fieldText(context.fields, "kind") === "reminder"
@@ -113,34 +119,7 @@ export class InventoryDispatchService {
         const message = (context.draft ?? po.message).trim()
         if (message === "") throw new InventoryError({ code: InventoryErrorCode.PoMessageEmpty })
         const supplier = po.supplier
-        const email =
-            supplier?.channel === "email" && supplier.email !== null && isEmailAddress(supplier.email.trim())
-                ? supplier.email.trim()
-                : null
-        let via: "email" | "copy" = "copy"
-        let note: string | null = null
-        if (email !== null) {
-            const shop = await this.office.workspaceName(context.workspaceId)
-            const subject = this.text(reminder ? "inventory.reminderSubject" : "inventory.orderSubject", {
-                shop,
-                poNo: po.poNo,
-            })
-            const sent = await this.mail.send({
-                workspaceId: context.workspaceId,
-                to: email,
-                subject,
-                title: subject,
-                body: message,
-                purpose: reminder ? "inventory_po_reminder" : "inventory_po",
-                audience: "customer",
-                refs: { po_id: po.id, po_no: po.poNo },
-                workItemId: context.workItemId,
-            })
-            if (sent.status === "sent") via = "email"
-            else note = sent.error ?? this.text("inventory.emailNotSent", {})
-        } else if (supplier?.channel === "email") {
-            note = this.text("inventory.supplierEmailMissing", {})
-        }
+        const { via, note } = await this.deliverOrder(context, po, reminder, message)
         const who = supplier?.name ?? this.text("inventory.supplierFallback", {})
         const channelWord = this.text(`inventory.channelWord.${supplier?.channel ?? "email"}`, {})
         if (reminder) {
@@ -193,7 +172,10 @@ export class InventoryDispatchService {
         }
     }
 
-    /** The owner refused the send: the order goes back to a draft they can edit or cancel; a refused reminder needs no cleanup. */
+    /**
+     * The owner refused the send: the order goes back to a draft they can edit or cancel; a refused reminder needs no
+     * cleanup.
+     */
     async rejectSendPurchaseOrder(context: PerformContext): Promise<void> {
         if (fieldText(context.fields, "kind") === "reminder") return
         await this.entityManager.query(REFUSE_PO, [
@@ -201,5 +183,43 @@ export class InventoryDispatchService {
             fieldText(context.fields, "po_id"),
             this.text("inventory.refusedNote", {}),
         ])
+    }
+
+    private async deliverOrder(
+        context: PerformContext,
+        po: LoadedPo,
+        reminder: boolean,
+        message: string,
+    ): Promise<{ via: "email" | "copy"; note: string | null }> {
+        const supplier = po.supplier
+        const email =
+            supplier?.channel === "email" && supplier.email !== null && isEmailAddress(supplier.email.trim())
+                ? supplier.email.trim()
+                : null
+        let via: "email" | "copy" = "copy"
+        let note: string | null = null
+        if (email !== null) {
+            const shop = await this.office.workspaceName(context.workspaceId)
+            const subject = this.text(reminder ? "inventory.reminderSubject" : "inventory.orderSubject", {
+                shop,
+                poNo: po.poNo,
+            })
+            const sent = await this.mail.send({
+                workspaceId: context.workspaceId,
+                to: email,
+                subject,
+                title: subject,
+                body: message,
+                purpose: reminder ? "inventory_po_reminder" : "inventory_po",
+                audience: "customer",
+                refs: { po_id: po.id, po_no: po.poNo },
+                workItemId: context.workItemId,
+            })
+            if (sent.status === "sent") via = "email"
+            else note = sent.error ?? this.text("inventory.emailNotSent", {})
+        } else if (supplier?.channel === "email") {
+            note = this.text("inventory.supplierEmailMissing", {})
+        }
+        return { via, note }
     }
 }

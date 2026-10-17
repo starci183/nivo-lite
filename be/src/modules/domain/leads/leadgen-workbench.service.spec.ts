@@ -68,7 +68,9 @@ describe("LeadGenWorkbenchService", () => {
         expect(members.require).toHaveBeenCalledWith("user-1", "ws-1")
         expect(em.query).toHaveBeenCalledWith(LIST_LEADGEN_MESSAGES, ["ws-1", SINCE])
     })
+})
 
+describe("LeadGenWorkbenchService", () => {
     it("reads every dataset for the authorized workspace and treats omitted installation scope as all instances", async () => {
         const { bench, em } = await build()
         const normal = mock<LeadGenLeadRow>({
@@ -124,7 +126,9 @@ describe("LeadGenWorkbenchService", () => {
         expect(em.query).toHaveBeenNthCalledWith(3, LIST_LEADGEN_CONVERSATIONS, ["ws-1"])
         expect(em.query).toHaveBeenNthCalledWith(4, LIST_LEADGEN_MESSAGES, ["ws-1", SINCE])
     })
+})
 
+describe("LeadGenWorkbenchService", () => {
     it("applies an explicit installation scope", async () => {
         const { bench, em } = await build()
         const own = mock<LeadGenLeadRow>({

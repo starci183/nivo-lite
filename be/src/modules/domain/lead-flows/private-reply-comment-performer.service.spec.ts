@@ -15,6 +15,7 @@ import type { LeadFlow } from "./lead-flows.contracts"
 import { PrivateReplyCommentPerformerService } from "./private-reply-comment-performer.service"
 
 const NOW = "2026-10-12T10:00:00.000Z"
+
 const ctx: WorkContext = { workspaceId: "ws-1", actor: "Lan", locale: "en" }
 
 const flowOf = builder<LeadFlow>({
@@ -127,6 +128,7 @@ const build = async (flow: LeadFlow = flowOf({ psid: null })) => {
 }
 
 const proposal = { summary: "", fields: { comment_id: "comment-1" }, draft: "Hi, here are the details" }
+
 const sentTo = (recipientId: string | null) => ({ ok: true, failure: null, recipientId })
 
 describe("PrivateReplyCommentPerformerService", () => {
@@ -145,7 +147,6 @@ describe("PrivateReplyCommentPerformerService", () => {
             },
         })
     })
-
     it("sends the one private reply, links the person it reached and stores the line", async () => {
         const flow = flowOf({ psid: null })
         const { performer, meta, store, transcript } = await build(flow)
@@ -171,7 +172,6 @@ describe("PrivateReplyCommentPerformerService", () => {
             delivery: { sent: true, error: null },
         })
     })
-
     it("still greets the flow when the person is already linked elsewhere", async () => {
         const flow = flowOf({ psid: null })
         const { performer, meta, store, logger } = await build(flow)
@@ -184,7 +184,6 @@ describe("PrivateReplyCommentPerformerService", () => {
         expect(logger.error).toHaveBeenCalledWith(LeadFlowsLogEvent.PersonNotLinked, failure, { flowId: "flow-1" })
         expect(store.patch).toHaveBeenLastCalledWith(flow, { greeted_at: NOW, state: "greeted" })
     })
-
     it("answers a repeat or an expired comment without an error", async () => {
         const { performer, meta, transcript } = await build()
         meta.privateReply.mockResolvedValueOnce({ ok: false, failure: "already_replied", recipientId: null })
@@ -195,7 +194,9 @@ describe("PrivateReplyCommentPerformerService", () => {
 
         expect(transcript.say).not.toHaveBeenCalled()
     })
+})
 
+describe("PrivateReplyCommentPerformerService", () => {
     it("refuses a step without a comment, without a Page, or that Meta refused", async () => {
         const { performer, meta } = await build(flowOf({ connection_id: null }))
 
@@ -211,7 +212,6 @@ describe("PrivateReplyCommentPerformerService", () => {
             code: LeadFlowsErrorCode.MetaRefused,
         })
     })
-
     it.each([
         { name: null, draft: undefined, expected: "line.private-greet" },
         { name: "Lan", draft: undefined, expected: "line.private-greet-named" },
@@ -229,7 +229,6 @@ describe("PrivateReplyCommentPerformerService", () => {
         if (name === null) expect(kit.text).toHaveBeenCalledWith("en", "line.private-greet")
         else expect(kit.text).toHaveBeenCalledWith("en", "line.private-greet-named", { name: "Lan" })
     })
-
     it("uses the proposal connection and conversation and an empty absent draft", async () => {
         const flow = flowOf({ platform: "instagram", igsid: null, state: "qualifying" })
         const { performer, meta, store, transcript } = await build(flow)
@@ -259,7 +258,9 @@ describe("PrivateReplyCommentPerformerService", () => {
             delivery: { sent: true, error: null },
         })
     })
+})
 
+describe("PrivateReplyCommentPerformerService", () => {
     it.each([
         { platform: "facebook" as const, psid: "known-person", igsid: null, recipientId: "replacement" },
         { platform: "instagram" as const, psid: null, igsid: "known-person", recipientId: "replacement" },
@@ -282,7 +283,6 @@ describe("PrivateReplyCommentPerformerService", () => {
             expect(store.patch).toHaveBeenCalledWith(flow, { greeted_at: NOW })
         },
     )
-
     it("treats an unknown comment age as expired without greeting or storing a line", async () => {
         const { performer, meta, store, transcript } = await build()
         meta.privateReply.mockResolvedValue({ ok: false, failure: "comment_age_unknown", recipientId: null })
@@ -297,7 +297,6 @@ describe("PrivateReplyCommentPerformerService", () => {
         expect(store.patch).not.toHaveBeenCalled()
         expect(transcript.say).not.toHaveBeenCalled()
     })
-
     it("refuses a missing Page result or an unspecified Meta failure", async () => {
         const { performer, meta, kit, transcript } = await build()
         meta.privateReply.mockResolvedValueOnce(null)
