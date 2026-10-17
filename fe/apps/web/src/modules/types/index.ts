@@ -308,3 +308,7 @@ export type {
 } from "./accounting-question-card"
 export type { ProgramCopy, TierErrorView } from "./loyalty-program"
 export type { GraphQLResponse } from "./outcome"
+
+export type { SetupWriteDraft } from "./setup-write-draft"
+
+export type { ModuleIconName } from "./module-icon"

@@ -1,8 +1,8 @@
 "use client"
 
-import { useState } from "react"
 import { canRetry, linkProblemOf, pairsToText, typedLinks } from "@/modules/documents"
 import type { InstanceOption, QaLabels, QueueActions } from "@/modules/documents"
+import { useState } from "react"
 import { useAddQueue } from "./useAddQueue"
 import { useBatchOptions } from "./useBatchOptions"
 import type { AddPreset } from "./useBatchOptions"
@@ -47,18 +47,9 @@ export const useAddDocuments = (input: AddDocumentsInput) => {
     const pendingCount = retryable.length + typed.length
     const isNoteEmpty = note.title.trim() === "" || noteBody.trim() === ""
     const isEmpty = mode === "files" ? pendingCount === 0 : isNoteEmpty
-    const isDone =
-        queuedCount > 0 &&
-        !isBusy &&
-        (mode === "files" ? pendingCount === 0 : note.title.trim() === "" && noteBody.trim() === "")
+    const isDone = isDocumentBatchDone(queuedCount, isBusy, mode, pendingCount, note.title, noteBody)
 
-    const runBatch = async () => {
-        // Links still sitting in the inputs join the queue first.
-        const added = queue.addLinks(typedLinks(linkRows.links, queue.items))
-        if (added.length > 0) linkRows.clear()
-        const waiting = [...retryable, ...added.filter((item) => item.status === "waiting")]
-        return waiting.length === 0 ? 0 : queue.sendAll(waiting, options.meta())
-    }
+    const runBatch = createDocumentBatchRunner(queue, linkRows, retryable, options)
 
     const runNote = async () => {
         const queued = await actions.enqueue({
@@ -117,3 +108,32 @@ export const useAddDocuments = (input: AddDocumentsInput) => {
         close,
     }
 }
+
+/** Builds the runBatch command from the current render state. */
+const createDocumentBatchRunner =
+    (
+        queue: ReturnType<typeof useAddQueue>,
+        linkRows: ReturnType<typeof useLinkRows>,
+        retryable: ReturnType<typeof useAddQueue>["items"],
+        options: ReturnType<typeof useBatchOptions>,
+    ) =>
+    async () => {
+        // Links still sitting in the inputs join the queue first.
+        const added = queue.addLinks(typedLinks(linkRows.links, queue.items))
+        if (added.length > 0) linkRows.clear()
+        const waiting = [...retryable, ...added.filter((item) => item.status === "waiting")]
+        return waiting.length === 0 ? 0 : queue.sendAll(waiting, options.meta())
+    }
+
+/** Whether every submitted document has completed and no draft remains. */
+const isDocumentBatchDone = (
+    queuedCount: number,
+    isBusy: boolean,
+    mode: AddMode,
+    pendingCount: number,
+    title: string,
+    noteBody: string,
+) =>
+    queuedCount > 0 &&
+    !isBusy &&
+    (mode === "files" ? pendingCount === 0 : title.trim() === "" && noteBody.trim() === "")

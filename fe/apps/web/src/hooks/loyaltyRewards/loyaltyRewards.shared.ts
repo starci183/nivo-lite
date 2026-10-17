@@ -1,5 +1,5 @@
 import { digitsOnly, parseDigits } from "@/hooks/loyalty"
-import type { LoyaltyRewardType } from "@/modules/api"
+import type { LoyaltyRewardType } from "@/hooks/swr"
 
 /** The kinds of reward the catalogue offers. */
 export const REWARD_KINDS: ReadonlyArray<string> = ["voucher", "item", "percent"]

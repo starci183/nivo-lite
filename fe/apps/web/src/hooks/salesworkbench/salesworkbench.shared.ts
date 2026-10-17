@@ -1,8 +1,7 @@
-import type { FlowDecisionRow } from "@/modules/types"
-import type { SalesWorkbenchType } from "@/modules/api"
-import { isActionKey, isModuleKey } from "@/modules/catalog"
-import type { AttentionKind, LeadStageId, SalesWorkbenchData } from "@/modules/types"
 import { DEAL_STAGES } from "@/hooks/sales"
+import type { SalesWorkbenchType } from "@/hooks/swr"
+import { isActionKey, isModuleKey } from "@/modules/catalog"
+import type { AttentionKind, FlowDecisionRow, LeadStageId, SalesWorkbenchData } from "@/modules/types"
 
 const reasonOf = (value: string | null | undefined): FlowDecisionRow["reason"] =>
     value === "routine" ||
@@ -57,7 +56,39 @@ export const salesWorkbenchViewOf = (data: SalesWorkbenchType): SalesWorkbenchDa
         assignedStaffId: row.assignedStaffId ?? null,
         assignedStaffName: row.assignedStaffName ?? null,
     })),
-    decided: data.decided.map((row) => ({
+    decided: data.decided.map(decidedRowMapper()),
+    handoffs: data.handoffs.map(handoffRowMapper()),
+    activity: data.activity.map((row) => ({
+        ...row,
+        action: actionOf(row.action),
+        leadId: row.leadId ?? null,
+        customer: row.customer ?? null,
+        evidence: row.evidence ?? null,
+        evidenceState:
+            row.evidenceState === "captured" ||
+            row.evidenceState === "reviewed" ||
+            row.evidenceState === "verified" ||
+            row.evidenceState === "customer_confirmed"
+                ? row.evidenceState
+                : "pending",
+    })),
+    contracts: data.contracts.map((row) => ({
+        id: row.id,
+        lead_id: row.leadId ?? null,
+        customer_name: row.customerName,
+        plan: row.plan,
+        starts_on: row.startsOn,
+        ends_on: row.endsOn,
+        amount_vnd: row.amountVnd ?? null,
+        status: row.status === "ended" || row.status === "cancelled" ? row.status : "active",
+        note: row.note,
+    })),
+})
+
+const decidedRowMapper = (): ((
+    row: SalesWorkbenchType["decided"][number],
+) => SalesWorkbenchData["decided"][number]) => {
+    return (row) => ({
         id: row.id,
         work_item_id: row.workItemId ?? null,
         lead_id: row.leadId ?? null,
@@ -73,8 +104,13 @@ export const salesWorkbenchViewOf = (data: SalesWorkbenchType): SalesWorkbenchDa
         reason: reasonOf(row.reason),
         note: row.note ?? null,
         created_at: row.createdAt,
-    })),
-    handoffs: data.handoffs.map((row) => ({
+    })
+}
+
+const handoffRowMapper = (): ((
+    row: SalesWorkbenchType["handoffs"][number],
+) => SalesWorkbenchData["handoffs"][number]) => {
+    return (row) => ({
         ...row,
         orderId: row.orderId ?? null,
         leadId: row.leadId ?? null,
@@ -117,30 +153,5 @@ export const salesWorkbenchViewOf = (data: SalesWorkbenchType): SalesWorkbenchDa
         shippedAt: row.shippedAt ?? null,
         carrier: row.carrier ?? null,
         trackingCode: row.trackingCode ?? null,
-    })),
-    activity: data.activity.map((row) => ({
-        ...row,
-        action: actionOf(row.action),
-        leadId: row.leadId ?? null,
-        customer: row.customer ?? null,
-        evidence: row.evidence ?? null,
-        evidenceState:
-            row.evidenceState === "captured" ||
-            row.evidenceState === "reviewed" ||
-            row.evidenceState === "verified" ||
-            row.evidenceState === "customer_confirmed"
-                ? row.evidenceState
-                : "pending",
-    })),
-    contracts: data.contracts.map((row) => ({
-        id: row.id,
-        lead_id: row.leadId ?? null,
-        customer_name: row.customerName,
-        plan: row.plan,
-        starts_on: row.startsOn,
-        ends_on: row.endsOn,
-        amount_vnd: row.amountVnd ?? null,
-        status: row.status === "ended" || row.status === "cancelled" ? row.status : "active",
-        note: row.note,
-    })),
-})
+    })
+}

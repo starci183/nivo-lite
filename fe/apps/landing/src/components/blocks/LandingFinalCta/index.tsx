@@ -4,7 +4,9 @@ import { LandingFinalCtaBase } from "./component"
 
 /** The landing final call to action with its copy resolved on the server. */
 export const LandingFinalCta = async () => {
-    const [t, locale] = await Promise.all([getTranslations("landingBottom"), getLocale()])
+    const t = await getTranslations("landingBottom")
+
+    const locale = await getLocale()
     return (
         <LandingFinalCtaBase
             props={{

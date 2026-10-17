@@ -102,17 +102,7 @@ export const DatabaseConnectFields = (props: DatabaseConnectFieldsProps) => {
                     value={view.values.user}
                     onValueChange={on.field("user")}
                 />
-                <Input
-                    id="db-password"
-                    name="password"
-                    kind="password"
-                    label={view.text.password}
-                    variant="secondary"
-                    isDisabled={view.isDisabled}
-                    value={view.values.password}
-                    hint={view.passwordHint}
-                    onValueChange={on.field("password")}
-                />
+                {renderDatabaseConnectFieldsPassword(view, on)}
             </div>
             <RadioGroup
                 variant="secondary"
@@ -128,3 +118,21 @@ export const DatabaseConnectFields = (props: DatabaseConnectFieldsProps) => {
         </>
     )
 }
+
+/** Renders the DatabaseConnectFields password section. */
+const renderDatabaseConnectFieldsPassword = (
+    view: DatabaseConnectFieldsProps["props"],
+    on: DatabaseConnectFieldsProps["on"],
+) => (
+    <Input
+        id="db-password"
+        name="password"
+        kind="password"
+        label={view.text.password}
+        variant="secondary"
+        isDisabled={view.isDisabled}
+        value={view.values.password}
+        hint={view.passwordHint}
+        onValueChange={on.field("password")}
+    />
+)

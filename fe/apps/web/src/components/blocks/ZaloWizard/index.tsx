@@ -22,6 +22,32 @@ interface ZaloWizardProps {
 
 const SECRET_MASK = "••••••"
 
+const textOf = (
+    tw: ReturnType<typeof useTranslations<"connectionWizard">>,
+    tc: ReturnType<typeof useTranslations<"connections">>,
+) => ({
+    back: tw("back"),
+    next: tw("next"),
+    close: tw("close"),
+    done: tw("done"),
+    skip: tw("skip"),
+    openProvider: tw("openProvider", { brand: PROVIDERS.zalo_oa.brand }),
+    fieldName: tc("fieldName"),
+    fieldNameHint: tc("fieldNameHint"),
+    fieldAppId: tc("fieldAppId"),
+    fieldAppIdHint: tw("zaloAppHint"),
+    fieldAppSecret: tc("fieldAppSecret"),
+    createdLocked: tw("createdLocked"),
+    saveOaSecret: tw("zaloSaveOaSecret"),
+    oaSecretSaved: tw("zaloOaSecretSaved"),
+    needSecret: tw("zaloNeedSecret"),
+    authorizeBody: tw("zaloAuthorizeBody"),
+    authorize: tw("zaloAuthorize"),
+    reauthorize: tw("zaloReauthorize"),
+    verifyIntro: tw("zaloVerifyIntro"),
+    verifyWaiting: tw("zaloVerifyWaiting"),
+})
+
 /** Zalo OA in the shared wizard frame: name and app keys, set up the Zalo app, connect the OA, check, attach to the agents. */
 export const ZaloWizard = (props: ZaloWizardProps) => {
     const tw = useTranslations("connectionWizard")
@@ -91,28 +117,7 @@ export const ZaloWizard = (props: ZaloWizardProps) => {
                 },
                 note: wizard.note,
                 isPending: wizard.isPending,
-                text: {
-                    back: tw("back"),
-                    next: tw("next"),
-                    close: tw("close"),
-                    done: tw("done"),
-                    skip: tw("skip"),
-                    openProvider: tw("openProvider", { brand: def.brand }),
-                    fieldName: tc("fieldName"),
-                    fieldNameHint: tc("fieldNameHint"),
-                    fieldAppId: tc("fieldAppId"),
-                    fieldAppIdHint: tw("zaloAppHint"),
-                    fieldAppSecret: tc("fieldAppSecret"),
-                    createdLocked: tw("createdLocked"),
-                    saveOaSecret: tw("zaloSaveOaSecret"),
-                    oaSecretSaved: tw("zaloOaSecretSaved"),
-                    needSecret: tw("zaloNeedSecret"),
-                    authorizeBody: tw("zaloAuthorizeBody"),
-                    authorize: tw("zaloAuthorize"),
-                    reauthorize: tw("zaloReauthorize"),
-                    verifyIntro: tw("zaloVerifyIntro"),
-                    verifyWaiting: tw("zaloVerifyWaiting"),
-                },
+                text: textOf(tw, tc),
             }}
             on={wizard.on}
         />

@@ -1,3 +1,9 @@
+import type { LeadStageId } from "@/modules/types"
+import type { useTranslations, useFormatter } from "next-intl"
+import type { useLeadCommands } from "@/hooks/leads"
+import type { useSalesActions } from "@/hooks/sales"
+import type { useSalesWorkbench } from "@/hooks/salesworkbench"
+import type { useSalesPipelineForm } from "@/hooks/rhf"
 import {
     Badge,
     Button,
@@ -85,59 +91,7 @@ export const SalesPipelineBase = (props: SalesPipelineBaseProps) => {
     const dialog = p.dialog
     return (
         <>
-            <HorizontalScrollRegion overflow="needed" aria-label={p.label}>
-                <div className={BOARD_CLASS_NAME}>
-                    {p.lanes.map((lane) => (
-                        <div key={lane.stage} className={LANE_CLASS_NAME}>
-                            <SurfaceListCard
-                                label={lane.title}
-                                fact={lane.fact}
-                                empty={<EmptyNotice message={p.emptyText} />}
-                                footer={
-                                    lane.hiddenText === null ? undefined : (
-                                        <Text size="xs" tone="muted">
-                                            {lane.hiddenText}
-                                        </Text>
-                                    )
-                                }
-                            >
-                                {lane.deals.map((deal) => (
-                                    <ListItem key={deal.leadId} className={DEAL_ROW_CLASS_NAME}>
-                                        <TextAction href={deal.href}>{deal.customer}</TextAction>
-                                        {deal.company === "" ? null : (
-                                            <Text size="xs" tone="muted">
-                                                {deal.company}
-                                            </Text>
-                                        )}
-                                        <div className={CHIPS_CLASS_NAME}>
-                                            <Text as="span" size="sm" weight="semibold">
-                                                {deal.value}
-                                            </Text>
-                                            {deal.source === null ? null : <Badge tone="neutral">{deal.source}</Badge>}
-                                        </div>
-                                        <Text size="sm" tone={deal.isClosed ? "muted" : undefined} overflow="clamp-2">
-                                            {deal.nextLine}
-                                        </Text>
-                                        <Text size="xs" tone="muted">
-                                            {deal.facts}
-                                        </Text>
-                                        <div className={ROW_ACTIONS_CLASS_NAME}>
-                                            <Button
-                                                variant="tertiary"
-                                                size="sm"
-                                                isDisabled={p.isPending}
-                                                onPress={() => on.move(deal.leadId)}
-                                            >
-                                                {p.moveLabel}
-                                            </Button>
-                                        </div>
-                                    </ListItem>
-                                ))}
-                            </SurfaceListCard>
-                        </div>
-                    ))}
-                </div>
-            </HorizontalScrollRegion>
+            {renderPipelineLanes({ p, on })}
             <Dialog
                 isOpen={dialog !== null}
                 onOpenChange={(open) => {
@@ -199,4 +153,79 @@ export const SalesPipelineBase = (props: SalesPipelineBaseProps) => {
             </Dialog>
         </>
     )
+}
+
+const renderPipelineLanes = ({ p, on }: RenderPipelineLanesInput) => (
+    <HorizontalScrollRegion overflow="needed" aria-label={p.label}>
+        <div className={BOARD_CLASS_NAME}>
+            {p.lanes.map((lane) => (
+                <div key={lane.stage} className={LANE_CLASS_NAME}>
+                    <SurfaceListCard
+                        label={lane.title}
+                        fact={lane.fact}
+                        empty={<EmptyNotice message={p.emptyText} />}
+                        footer={
+                            lane.hiddenText === null ? undefined : (
+                                <Text size="xs" tone="muted">
+                                    {lane.hiddenText}
+                                </Text>
+                            )
+                        }
+                    >
+                        {lane.deals.map((deal) => (
+                            <ListItem key={deal.leadId} className={DEAL_ROW_CLASS_NAME}>
+                                <TextAction href={deal.href}>{deal.customer}</TextAction>
+                                {deal.company === "" ? null : (
+                                    <Text size="xs" tone="muted">
+                                        {deal.company}
+                                    </Text>
+                                )}
+                                <div className={CHIPS_CLASS_NAME}>
+                                    <Text as="span" size="sm" weight="semibold">
+                                        {deal.value}
+                                    </Text>
+                                    {deal.source === null ? null : <Badge tone="neutral">{deal.source}</Badge>}
+                                </div>
+                                <Text size="sm" tone={deal.isClosed ? "muted" : undefined} overflow="clamp-2">
+                                    {deal.nextLine}
+                                </Text>
+                                <Text size="xs" tone="muted">
+                                    {deal.facts}
+                                </Text>
+                                <div className={ROW_ACTIONS_CLASS_NAME}>
+                                    <Button
+                                        variant="tertiary"
+                                        size="sm"
+                                        isDisabled={p.isPending}
+                                        onPress={() => on.move(deal.leadId)}
+                                    >
+                                        {p.moveLabel}
+                                    </Button>
+                                </div>
+                            </ListItem>
+                        ))}
+                    </SurfaceListCard>
+                </div>
+            ))}
+        </div>
+    </HorizontalScrollRegion>
+)
+
+type RenderPipelineLanesInput = { p: SalesPipelineBaseProps["props"]; on: SalesPipelineBaseProps["on"] }
+/** State values and commands consumed by the connected surface. */
+export type SalesPipelineControllerInput = {
+    readonly t: ReturnType<typeof useTranslations<"workbenchSales">>
+    readonly format: ReturnType<typeof useFormatter>
+    readonly commands: ReturnType<typeof useLeadCommands>
+    readonly actions: ReturnType<typeof useSalesActions>
+    readonly data: ReturnType<typeof useSalesWorkbench>["data"]
+    readonly deals: NonNullable<NonNullable<ReturnType<typeof useSalesWorkbench>["data"]>["deals"]>
+    readonly closedHidden: NonNullable<NonNullable<ReturnType<typeof useSalesWorkbench>["data"]>["closedHidden"]>
+    readonly form: ReturnType<typeof useSalesPipelineForm>
+    readonly selectedTarget: LeadStageId | ""
+    readonly reason: string
+    readonly target: LeadStageId | null
+    readonly isPending: boolean
+    readonly movingId: string | null
+    readonly setMovingId: React.Dispatch<React.SetStateAction<string | null>>
 }

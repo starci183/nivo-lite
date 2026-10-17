@@ -1,2 +1,2 @@
-export { pageDays, resultKey } from "./publicBooking.shared"
-export { usePublicBooking } from "./usePublicBooking"
+export { usePublicBookingPage } from "./usePublicBookingPage"
+export { usePublicBookingForm } from "./usePublicBookingForm"

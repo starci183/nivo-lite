@@ -93,52 +93,7 @@ export const LoyaltyCheckFormBase = (props: LoyaltyCheckFormBaseProps) => {
                 <EmptyNotice message={props.props.unavailable} />
             </SurfaceCard>
         )
-    if (step === "result" && result !== undefined)
-        return (
-            <SurfaceCard ariaLabel={result.greeting}>
-                <div className={CARD_CLASS_NAME}>
-                    <Heading level={2} scale="standard">
-                        {result.greeting}
-                    </Heading>
-                    <DescriptionList
-                        layout="stat-strip"
-                        isDivided
-                        items={[
-                            { id: "tier", term: result.tierLabel, description: result.tierName },
-                            { id: "points", term: result.pointsLabel, description: result.points },
-                        ]}
-                    />
-                    {result.nextTier === undefined ? null : (
-                        <Text size="sm" tone="muted">
-                            {result.nextTier}
-                        </Text>
-                    )}
-                    {result.expiring === undefined ? null : <Alert tone="affirmative" title={result.expiring} />}
-                    <SurfaceListCard
-                        label={result.rewardsTitle}
-                        headingLevel={3}
-                        depth="nested"
-                        empty={<EmptyNotice message={result.noRewards} />}
-                    >
-                        {result.rewards.map((reward) => (
-                            <ListItem key={reward.id} className={REWARD_CLASS_NAME}>
-                                <Badge tone={reward.canRedeem ? "success" : "neutral"}>{reward.badge}</Badge>
-                                <Text weight="semibold">{reward.name}</Text>
-                                <Text size="sm" tone="muted">
-                                    {reward.detail}
-                                </Text>
-                            </ListItem>
-                        ))}
-                    </SurfaceListCard>
-                    <Text size="sm" tone="muted">
-                        {result.redeemHint}
-                    </Text>
-                    <Button variant="outline" onPress={on.back}>
-                        {props.props.back}
-                    </Button>
-                </div>
-            </SurfaceCard>
-        )
+    if (step === "result" && result !== undefined) return renderGreeting(props)
     return (
         <SurfaceCard ariaLabel={title}>
             <div className={CARD_CLASS_NAME}>
@@ -168,40 +123,97 @@ export const LoyaltyCheckFormBase = (props: LoyaltyCheckFormBaseProps) => {
                         </Form>
                     </>
                 ) : (
-                    <>
-                        <Alert
-                            tone="affirmative"
-                            title={props.props.code.sentTitle}
-                            description={props.props.code.sentBody}
-                        />
-                        <Form label={props.props.code.check} onSubmit={on.check} isPending={isBusy}>
-                            <div className={FORM_CLASS_NAME}>
-                                <Input
-                                    id="loyalty-code"
-                                    name="code"
-                                    kind="code"
-                                    label={props.props.code.label}
-                                    variant="secondary"
-                                    isRequired
-                                    isDisabled={isBusy}
-                                    value={props.props.code.value}
-                                    onValueChange={on.setCode}
-                                />
-                                <Button variant="primary" width="fill" type="submit" isPending={isBusy}>
-                                    {props.props.code.check}
-                                </Button>
-                            </div>
-                        </Form>
-                        <Button variant="outline" isDisabled={isBusy} onPress={on.sendCode}>
-                            {props.props.code.resend}
-                        </Button>
-                        <Button variant="tertiary" isDisabled={isBusy} onPress={on.back}>
-                            {props.props.back}
-                        </Button>
-                    </>
+                    renderVerificationCode(props)
                 )}
                 {error === undefined ? null : <Alert tone="negative" title={error} />}
             </div>
         </SurfaceCard>
+    )
+}
+
+/** Draws the greeting section of the current view. */
+const renderGreeting = (props: LoyaltyCheckFormBaseProps) => {
+    const { result } = props.props
+    const on = props.on
+    if (result === undefined) return null
+    return (
+        <SurfaceCard ariaLabel={result.greeting}>
+            <div className={CARD_CLASS_NAME}>
+                <Heading level={2} scale="standard">
+                    {result.greeting}
+                </Heading>
+                <DescriptionList
+                    layout="stat-strip"
+                    isDivided
+                    items={[
+                        { id: "tier", term: result.tierLabel, description: result.tierName },
+                        { id: "points", term: result.pointsLabel, description: result.points },
+                    ]}
+                />
+                {result.nextTier === undefined ? null : (
+                    <Text size="sm" tone="muted">
+                        {result.nextTier}
+                    </Text>
+                )}
+                {result.expiring === undefined ? null : <Alert tone="affirmative" title={result.expiring} />}
+                <SurfaceListCard
+                    label={result.rewardsTitle}
+                    headingLevel={3}
+                    depth="nested"
+                    empty={<EmptyNotice message={result.noRewards} />}
+                >
+                    {result.rewards.map((reward) => (
+                        <ListItem key={reward.id} className={REWARD_CLASS_NAME}>
+                            <Badge tone={reward.canRedeem ? "success" : "neutral"}>{reward.badge}</Badge>
+                            <Text weight="semibold">{reward.name}</Text>
+                            <Text size="sm" tone="muted">
+                                {reward.detail}
+                            </Text>
+                        </ListItem>
+                    ))}
+                </SurfaceListCard>
+                <Text size="sm" tone="muted">
+                    {result.redeemHint}
+                </Text>
+                <Button variant="outline" onPress={on.back}>
+                    {props.props.back}
+                </Button>
+            </div>
+        </SurfaceCard>
+    )
+}
+
+/** Draws the LoyaltyCheckFormContent section of the current view. */
+const renderVerificationCode = (props: LoyaltyCheckFormBaseProps) => {
+    const { isBusy } = props.props
+    const on = props.on
+    return (
+        <>
+            <Alert tone="affirmative" title={props.props.code.sentTitle} description={props.props.code.sentBody} />
+            <Form label={props.props.code.check} onSubmit={on.check} isPending={isBusy}>
+                <div className={FORM_CLASS_NAME}>
+                    <Input
+                        id="loyalty-code"
+                        name="code"
+                        kind="code"
+                        label={props.props.code.label}
+                        variant="secondary"
+                        isRequired
+                        isDisabled={isBusy}
+                        value={props.props.code.value}
+                        onValueChange={on.setCode}
+                    />
+                    <Button variant="primary" width="fill" type="submit" isPending={isBusy}>
+                        {props.props.code.check}
+                    </Button>
+                </div>
+            </Form>
+            <Button variant="outline" isDisabled={isBusy} onPress={on.sendCode}>
+                {props.props.code.resend}
+            </Button>
+            <Button variant="tertiary" isDisabled={isBusy} onPress={on.back}>
+                {props.props.back}
+            </Button>
+        </>
     )
 }

@@ -5,8 +5,8 @@ import {
     QUERY_KNOWLEDGE_SOURCES_SWR_KEY,
     useMutateCreateKnowledgeUploadSwr,
     useMutateEnqueueKnowledgeSourceSwr,
+    usePutPresignedSwr,
 } from "@/hooks/swr"
-import { putPresigned } from "@/modules/api"
 import type { QueueActions } from "@/modules/documents"
 import { useGraphQLWithToast, useRestWithToast } from "@/modules/toast"
 
@@ -18,6 +18,7 @@ import { useGraphQLWithToast, useRestWithToast } from "@/modules/toast"
 export const useQueueActions = (): QueueActions => {
     const runGraphQL = useGraphQLWithToast()
     const runRest = useRestWithToast()
+    const { trigger: putPresigned } = usePutPresignedSwr()
     const { trigger: askUpload } = useMutateCreateKnowledgeUploadSwr()
     const { trigger: enqueueSource } = useMutateEnqueueKnowledgeSourceSwr()
     return {

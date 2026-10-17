@@ -1,10 +1,10 @@
 "use client"
 
-import { useTranslations } from "next-intl"
-import { useState, useTransition } from "react"
 import type { RowBusy, RowConfirm } from "@/hooks/connection-rows"
 import type { Settled } from "@/hooks/connection-wizard"
 import type { Connection, RowNote, SepayKeys } from "@/modules/types"
+import { useTranslations } from "next-intl"
+import { useState, useTransition } from "react"
 import { useConnectionRowCommands } from "./useConnectionRowCommands"
 import { useConnectionsRefresh } from "./useConnectionsRefresh"
 import { useSyncNow } from "./useSyncNow"
@@ -71,22 +71,7 @@ export const useConnectionRowActions = (connection: Connection): ConnectionRowAc
             setNote({ tone: "affirmative", text: t("metaRowCheckOk", { fields: verdict.page.fields.join(", ") }) })
         else setNote({ tone: "negative", text: verdict.tokenOk ? t("metaRowCheckBad") : t("metaTestToken") })
     }
-    const checkProvider = async () => {
-        const result = await commands.check()
-        if (result.kind !== "ok") return setNote({ tone: "negative", text: result.message })
-        const check = result.value
-        if (check.provider === "zalo_oa") return setNote({ tone: "affirmative", text: t("zaloCheckOk") })
-        if (check.provider !== "telegram") return setNote({ tone: "informative", text: t("checkNothing") })
-        if (check.localOnly) return setNote({ tone: "informative", text: t("checkLocal") })
-        const parts = [
-            check.webhookOk ? t("checkOk", { pending: check.pending }) : t("checkNotRegistered"),
-            check.lastError === null ? "" : t("checkLastError", { error: check.lastError }),
-        ]
-        setNote({
-            tone: check.webhookOk && check.lastError === null ? "affirmative" : "negative",
-            text: parts.filter(Boolean).join(" "),
-        })
-    }
+    const checkProvider = createProviderCheck(commands, setNote, t)
     const sendTest = async () => {
         const result = await commands.testWebhook()
         if (result.kind !== "ok") return setNote({ tone: "negative", text: result.message })
@@ -129,3 +114,27 @@ export const useConnectionRowActions = (connection: Connection): ConnectionRowAc
         remove: () => void finish("remove", commands.remove),
     }
 }
+
+/** Builds the checkProvider command from the current render state. */
+const createProviderCheck =
+    (
+        commands: ReturnType<typeof useConnectionRowCommands>,
+        setNote: (note: RowNote | null) => void,
+        t: ReturnType<typeof useTranslations<"connections">>,
+    ) =>
+    async () => {
+        const result = await commands.check()
+        if (result.kind !== "ok") return setNote({ tone: "negative", text: result.message })
+        const check = result.value
+        if (check.provider === "zalo_oa") return setNote({ tone: "affirmative", text: t("zaloCheckOk") })
+        if (check.provider !== "telegram") return setNote({ tone: "informative", text: t("checkNothing") })
+        if (check.localOnly) return setNote({ tone: "informative", text: t("checkLocal") })
+        const parts = [
+            check.webhookOk ? t("checkOk", { pending: check.pending }) : t("checkNotRegistered"),
+            check.lastError === null ? "" : t("checkLastError", { error: check.lastError }),
+        ]
+        setNote({
+            tone: check.webhookOk && check.lastError === null ? "affirmative" : "negative",
+            text: parts.filter(Boolean).join(" "),
+        })
+    }

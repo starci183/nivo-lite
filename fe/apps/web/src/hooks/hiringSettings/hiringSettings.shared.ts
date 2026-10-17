@@ -1,4 +1,4 @@
-import type { HiringSettingsType, SaveHiringSettingsRequest } from "@/modules/api"
+import type { HiringSettingsType, SaveHiringSettingsRequest } from "@/hooks/swr"
 
 /** The values of the settings form. */
 export interface SettingsValues {

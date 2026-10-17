@@ -1,5 +1,5 @@
+import type { LoyaltyMemberType } from "@/hooks/swr"
 import type { BadgeTone } from "@starci/grammar/common"
-import type { LoyaltyMemberType } from "@/modules/api"
 
 /** The orders the member list can take. */
 export type MemberSortKey = "points" | "lastVisit" | "spend"

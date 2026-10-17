@@ -74,75 +74,9 @@ export const SetupGatesCard = (props: SetupGatesCardProps) => (
                                 {gate.statusLabel}
                             </Badge>
                         </div>
-                        {props.editing === gate.key ? (
-                            <>
-                                <Textarea
-                                    variant="secondary"
-                                    name={`gate-${gate.key}`}
-                                    label={gate.label}
-                                    isLabelHidden
-                                    description={gate.hint}
-                                    rows={3}
-                                    maxLength={800}
-                                    placeholder={props.evidencePlaceholder}
-                                    value={props.editText}
-                                    onValueChange={props.onEditText}
-                                />
-                                <div className={GATE_ACTIONS}>
-                                    <Button
-                                        variant="primary"
-                                        size="sm"
-                                        isPending={props.isGating}
-                                        isDisabled={props.editText.trim().length === 0}
-                                        onPress={() => props.onGate(gate.key, "edit", props.editText)}
-                                    >
-                                        {props.editSaveLabel}
-                                    </Button>
-                                    <Button variant="ghost" size="sm" onPress={props.onStopEdit}>
-                                        {props.editCancelLabel}
-                                    </Button>
-                                </div>
-                            </>
-                        ) : (
-                            <>
-                                <SetupGatesCardEvidence
-                                    hint={gate.hint}
-                                    evidence={gate.evidence}
-                                    isWaiting={props.isLoading}
-                                />
-                                {props.isLoading ? null : (
-                                    <div className={GATE_ACTIONS}>
-                                        {gate.status === "proposed" ? (
-                                            <Button
-                                                variant="secondary"
-                                                size="sm"
-                                                isPending={props.isGating}
-                                                onPress={() => props.onGate(gate.key, "confirm")}
-                                            >
-                                                {props.confirmLabel}
-                                            </Button>
-                                        ) : null}
-                                        {gate.status === "confirmed" ? (
-                                            <Button
-                                                variant="ghost"
-                                                size="sm"
-                                                isPending={props.isGating}
-                                                onPress={() => props.onGate(gate.key, "reopen")}
-                                            >
-                                                {props.unconfirmLabel}
-                                            </Button>
-                                        ) : null}
-                                        <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            onPress={() => props.onStartEdit(gate.key, gate.evidence)}
-                                        >
-                                            {props.editLabel}
-                                        </Button>
-                                    </div>
-                                )}
-                            </>
-                        )}
+                        {props.editing === gate.key
+                            ? renderSetupGatesCardEdit(gate, props)
+                            : renderSetupGatesCardEvidence(gate, props)}
                     </ListItem>
                 ))}
             </List>
@@ -169,4 +103,73 @@ export const SetupGatesCard = (props: SetupGatesCardProps) => (
             </div>
         </div>
     </SurfaceCard>
+)
+
+/** Renders the SetupGatesCard evidence section. */
+const renderSetupGatesCardEvidence = (
+    gate: Pick<SetupGate, "hint" | "evidence" | "status" | "key">,
+    props: SetupGatesCardProps,
+) => (
+    <>
+        <SetupGatesCardEvidence hint={gate.hint} evidence={gate.evidence} isWaiting={props.isLoading} />
+        {props.isLoading ? null : (
+            <div className={GATE_ACTIONS}>
+                {gate.status === "proposed" ? (
+                    <Button
+                        variant="secondary"
+                        size="sm"
+                        isPending={props.isGating}
+                        onPress={() => props.onGate(gate.key, "confirm")}
+                    >
+                        {props.confirmLabel}
+                    </Button>
+                ) : null}
+                {gate.status === "confirmed" ? (
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        isPending={props.isGating}
+                        onPress={() => props.onGate(gate.key, "reopen")}
+                    >
+                        {props.unconfirmLabel}
+                    </Button>
+                ) : null}
+                <Button variant="ghost" size="sm" onPress={() => props.onStartEdit(gate.key, gate.evidence)}>
+                    {props.editLabel}
+                </Button>
+            </div>
+        )}
+    </>
+)
+
+/** Renders the SetupGatesCard edit section. */
+const renderSetupGatesCardEdit = (gate: Pick<SetupGate, "key" | "label" | "hint">, props: SetupGatesCardProps) => (
+    <>
+        <Textarea
+            variant="secondary"
+            name={`gate-${gate.key}`}
+            label={gate.label}
+            isLabelHidden
+            description={gate.hint}
+            rows={3}
+            maxLength={800}
+            placeholder={props.evidencePlaceholder}
+            value={props.editText}
+            onValueChange={props.onEditText}
+        />
+        <div className={GATE_ACTIONS}>
+            <Button
+                variant="primary"
+                size="sm"
+                isPending={props.isGating}
+                isDisabled={props.editText.trim().length === 0}
+                onPress={() => props.onGate(gate.key, "edit", props.editText)}
+            >
+                {props.editSaveLabel}
+            </Button>
+            <Button variant="ghost" size="sm" onPress={props.onStopEdit}>
+                {props.editCancelLabel}
+            </Button>
+        </div>
+    </>
 )

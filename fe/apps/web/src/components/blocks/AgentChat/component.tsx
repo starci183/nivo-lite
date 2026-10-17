@@ -1,3 +1,4 @@
+import type { ModuleIconName } from "@/modules/types"
 import { useState } from "react"
 import { Breadcrumbs, FillViewport, Region, SurfaceCard, Tabs } from "@starci/grammar/common"
 import type { BreadcrumbItem } from "@starci/grammar/common"
@@ -49,7 +50,7 @@ export interface AgentChatViewProps {
     readonly pageLabel: string
     /** The agent is loading: the frame, the labels and the composer stay, names and rows are skeletons. */
     readonly isLoading: boolean
-    readonly glyph: string
+    readonly glyph: ModuleIconName
     readonly module: string
     readonly railTitle: string
     readonly newLabel: string

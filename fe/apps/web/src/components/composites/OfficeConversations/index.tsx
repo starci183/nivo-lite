@@ -66,49 +66,7 @@ export const OfficeConversations = (props: OfficeConversationsProps) => {
                         {text("noMatches", { q })}
                     </Text>
                 ) : null}
-                {showGroup ? (
-                    <Region label={text("sectionGroups")} className={SECTION_CLASS_NAME}>
-                        <div className={CAPTION_CLASS_NAME}>
-                            <Text size="xs" tone="muted" weight="semibold">
-                                {text("sectionGroups")}
-                            </Text>
-                        </div>
-                        <ListBox
-                            label={text("sectionGroups")}
-                            selectionMode="single"
-                            selectedIds={SELECTED_GROUP}
-                            onSelectionChange={props.on.openGroup}
-                            isLoading={isLoading}
-                            loadingRows={1}
-                            items={[
-                                {
-                                    id: "group",
-                                    label: list.groupLabel,
-                                    description: list.groupPreview,
-                                    leading: (
-                                        <IconTile
-                                            source={nivoIconSource("community", "leading")}
-                                            tone="neutral"
-                                            size="sm"
-                                        />
-                                    ),
-                                    trailing: (
-                                        <div className={TRAILING_CLASS_NAME}>
-                                            {list.groupTime === null ? null : (
-                                                <Text size="xs" tone="muted">
-                                                    {list.groupTime}
-                                                </Text>
-                                            )}
-                                            {list.pendingCount > 0 ? (
-                                                <Badge tone="accent">{list.pendingCount}</Badge>
-                                            ) : null}
-                                        </div>
-                                    ),
-                                },
-                            ]}
-                        />
-                    </Region>
-                ) : null}
+                {showGroup ? renderOfficeConversationsGroups(text, props, isLoading, list) : null}
                 {agents.length > 0 ? (
                     <Region label={text("sectionAgents")} className={SECTION_CLASS_NAME}>
                         <div className={CAPTION_CLASS_NAME}>
@@ -146,3 +104,45 @@ export const OfficeConversations = (props: OfficeConversationsProps) => {
         </>
     )
 }
+
+/** Renders the OfficeConversations groups section. */
+const renderOfficeConversationsGroups = (
+    text: NonNullable<OfficeConversationsProps["props"]["text"]>,
+    props: OfficeConversationsProps,
+    isLoading: NonNullable<OfficeConversationsProps["props"]["isLoading"]>,
+    list: NonNullable<OfficeConversationsProps["props"]["list"]>,
+) => (
+    <Region label={text("sectionGroups")} className={SECTION_CLASS_NAME}>
+        <div className={CAPTION_CLASS_NAME}>
+            <Text size="xs" tone="muted" weight="semibold">
+                {text("sectionGroups")}
+            </Text>
+        </div>
+        <ListBox
+            label={text("sectionGroups")}
+            selectionMode="single"
+            selectedIds={SELECTED_GROUP}
+            onSelectionChange={props.on.openGroup}
+            isLoading={isLoading}
+            loadingRows={1}
+            items={[
+                {
+                    id: "group",
+                    label: list.groupLabel,
+                    description: list.groupPreview,
+                    leading: <IconTile source={nivoIconSource("community", "leading")} tone="neutral" size="sm" />,
+                    trailing: (
+                        <div className={TRAILING_CLASS_NAME}>
+                            {list.groupTime === null ? null : (
+                                <Text size="xs" tone="muted">
+                                    {list.groupTime}
+                                </Text>
+                            )}
+                            {list.pendingCount > 0 ? <Badge tone="accent">{list.pendingCount}</Badge> : null}
+                        </div>
+                    ),
+                },
+            ]}
+        />
+    </Region>
+)

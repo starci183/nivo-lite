@@ -61,69 +61,7 @@ export interface LoyaltyMembersBaseProps {
 /** Draws the member list with search, tier filter and sort, and the detail beside it (desktop) or below it (phone). */
 export const LoyaltyMembersBase = (props: LoyaltyMembersBaseProps) => (
     <PrimaryRailLayout
-        primary={
-            <SurfaceCard
-                label={props.props.title}
-                headingLevel={2}
-                labelEnd={
-                    <Text size="xs" tone="muted" live="polite">
-                        {props.props.countLabel}
-                    </Text>
-                }
-            >
-                <div className={BODY_CLASS_NAME}>
-                    <div className={FILTERS_CLASS_NAME}>
-                        <SearchField
-                            label={props.props.search.label}
-                            placeholder={props.props.search.placeholder}
-                            variant="secondary"
-                            value={props.props.search.value}
-                            onValueChange={props.on.search}
-                            onClear={() => props.on.search("")}
-                        />
-                        <Select
-                            label={props.props.tier.label}
-                            options={[...props.props.tier.options]}
-                            variant="secondary"
-                            value={props.props.tier.value}
-                            onValueChange={props.on.setTier}
-                        />
-                        <Select
-                            label={props.props.sort.label}
-                            options={[...props.props.sort.options]}
-                            variant="secondary"
-                            value={props.props.sort.value}
-                            onValueChange={props.on.setSort}
-                        />
-                    </div>
-                    {props.props.empty === undefined ? (
-                        <ListBox
-                            label={props.props.title}
-                            items={props.props.rows.map((row) => ({
-                                id: row.id,
-                                label: row.label,
-                                description: row.description,
-                                ...(row.tier === undefined
-                                    ? {}
-                                    : { trailing: <Badge tone={row.tier.tone}>{row.tier.name}</Badge> }),
-                            }))}
-                            selectionMode="single"
-                            selectedIds={props.props.selectedId === null ? [] : [props.props.selectedId]}
-                            onSelectionChange={(ids) => props.on.select(ids[0] ?? null)}
-                        />
-                    ) : (
-                        <EmptyNotice message={props.props.empty.title} description={props.props.empty.body} />
-                    )}
-                    {props.props.showMoreLabel === undefined ? null : (
-                        <div>
-                            <Button variant="outline" onPress={props.on.showMore}>
-                                {props.props.showMoreLabel}
-                            </Button>
-                        </div>
-                    )}
-                </div>
-            </SurfaceCard>
-        }
+        primary={renderMemberList({ props })}
         rail={
             <div id={props.props.detailId} className={DETAIL_CLASS_NAME}>
                 {props.props.selectedId === null ? (
@@ -141,4 +79,73 @@ export const LoyaltyMembersBase = (props: LoyaltyMembersBaseProps) => (
         railWidth="wide"
         align="start"
     />
+)
+
+/** Inputs needed to build the title section. */
+interface RenderMemberListContext {
+    readonly props: LoyaltyMembersBaseProps
+}
+/** Builds the title section from the current view. */
+const renderMemberList = ({ props }: RenderMemberListContext) => (
+    <SurfaceCard
+        label={props.props.title}
+        headingLevel={2}
+        labelEnd={
+            <Text size="xs" tone="muted" live="polite">
+                {props.props.countLabel}
+            </Text>
+        }
+    >
+        <div className={BODY_CLASS_NAME}>
+            <div className={FILTERS_CLASS_NAME}>
+                <SearchField
+                    label={props.props.search.label}
+                    placeholder={props.props.search.placeholder}
+                    variant="secondary"
+                    value={props.props.search.value}
+                    onValueChange={props.on.search}
+                    onClear={() => props.on.search("")}
+                />
+                <Select
+                    label={props.props.tier.label}
+                    options={[...props.props.tier.options]}
+                    variant="secondary"
+                    value={props.props.tier.value}
+                    onValueChange={props.on.setTier}
+                />
+                <Select
+                    label={props.props.sort.label}
+                    options={[...props.props.sort.options]}
+                    variant="secondary"
+                    value={props.props.sort.value}
+                    onValueChange={props.on.setSort}
+                />
+            </div>
+            {props.props.empty === undefined ? (
+                <ListBox
+                    label={props.props.title}
+                    items={props.props.rows.map((row) => ({
+                        id: row.id,
+                        label: row.label,
+                        description: row.description,
+                        ...(row.tier === undefined
+                            ? {}
+                            : { trailing: <Badge tone={row.tier.tone}>{row.tier.name}</Badge> }),
+                    }))}
+                    selectionMode="single"
+                    selectedIds={props.props.selectedId === null ? [] : [props.props.selectedId]}
+                    onSelectionChange={(ids) => props.on.select(ids[0] ?? null)}
+                />
+            ) : (
+                <EmptyNotice message={props.props.empty.title} description={props.props.empty.body} />
+            )}
+            {props.props.showMoreLabel === undefined ? null : (
+                <div>
+                    <Button variant="outline" onPress={props.on.showMore}>
+                        {props.props.showMoreLabel}
+                    </Button>
+                </div>
+            )}
+        </div>
+    </SurfaceCard>
 )

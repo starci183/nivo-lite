@@ -1,27 +1,25 @@
 "use client"
 
-import { useEffect, useState } from "react"
-import { useMutateAuthorizeGoogleSwr } from "@/hooks/swr"
 import { useModuleCatalog } from "@/hooks/moduleCatalog"
+import { useMutateAuthorizeGoogleSwr } from "@/hooks/swr"
+import { isForbiddenFailure } from "@/modules/failure"
 import {
     automationBoardOf,
     automationFiltersFor,
     automationScopeOf,
-    automationStatusOf,
     matchesAutomationFilter,
-    startsAutomationConnection,
     visibleAutomations,
 } from "@/modules/automations"
 import type { AutomationFilterKey, AutomationStatus } from "@/modules/automations"
 import { pickCopy } from "@/modules/catalog"
-import { isForbiddenFailure } from "@/modules/api"
 import { navigation } from "@/modules/i18n"
 import { automationFocusPath } from "@/modules/routes"
 import { useGraphQLWithToast } from "@/modules/toast"
 import type { AutomationCardView, AutomationsBoardView } from "@/modules/types"
-import { CONNECTION_ROUTE } from "./automations.shared"
+import { useState } from "react"
+import { automationBoardActionsOf, automationBoardInputOf, CONNECTION_ROUTE } from "./automations.shared"
 import type { AutomationPatch, AutomationsBoardActions, AutomationsBoardInput } from "./automations.shared"
-import { useAutomationDetail } from "./useAutomationDetail"
+import { useAutomationSelection } from "./useAutomationSelection"
 import { useAutomations } from "./useAutomations"
 
 /** What the board hook answers: the view model when the data is there, the actions, and how the read went. */
@@ -46,35 +44,13 @@ export const useAutomationsBoard = (input: AutomationsBoardInput): AutomationsBo
         Object.entries(catalog.modules).map(([key, module]) => [key, pickCopy(module.name, locale)]),
     )
     const [filter, setFilter] = useState<AutomationFilterKey>("all")
-    const [selected, setSelected] = useState<string | null>(input.focus ?? null)
-    const [awaiting, setAwaiting] = useState<string | null>(null)
     const isNested = input.layout === "module"
     const cards = automations.data?.cards ?? []
 
     const scoped = cards.filter((card) => (input.moduleKey ? automationScopeOf(card.def) === input.moduleKey : true))
     const visible = visibleAutomations(scoped)
     const shown = visible.filter((card) => matchesAutomationFilter(card, filter))
-    const current = visible.find((card) => card.key === selected) ?? null
-    const detail = useAutomationDetail(current)
-
-    useEffect(() => {
-        if (selected)
-            document.getElementById("automation-detail")?.scrollIntoView({ behavior: "smooth", block: "nearest" })
-    }, [selected])
-
     const change = (key: string, patch: AutomationPatch) => automations.apply(key, patch)
-
-    const open = (card: AutomationCardView) => {
-        setSelected(card.key)
-        if (card.body === null && card.def.defaultBody !== null) detail.compose(card.key)
-    }
-
-    const select = (key: string) => {
-        setAwaiting(null)
-        const card = cards.find((candidate) => candidate.key === key)
-        if (selected === key || card === undefined) return setSelected(null)
-        open(card)
-    }
 
     const connect = async (card: AutomationCardView, status: AutomationStatus) => {
         const route = CONNECTION_ROUTE[status]
@@ -85,91 +61,46 @@ export const useAutomationsBoard = (input: AutomationsBoardInput): AutomationsBo
         if (started !== undefined) window.location.assign(started.url)
     }
 
-    const toggle = (key: string, next: boolean) => {
-        const card = cards.find((candidate) => candidate.key === key)
-        if (card === undefined) return
-        const status = automationStatusOf(card)
-        if (startsAutomationConnection(status)) return void connect(card, status)
-        if (next && card.def.defaultBody && card.body === null) {
-            open(card)
-            return setAwaiting(card.key)
-        }
-        void change(card.key, { enabled: next })
-    }
-
-    const saveBody = async (): Promise<boolean> =>
-        current === null ? false : change(current.key, { body: detail.form.body })
-
-    const enable = async () => {
-        if (current === null || !(await saveBody())) return
-        setAwaiting(null)
-        await change(current.key, { enabled: true })
-    }
-
-    const saveSettings = async () => {
-        if (current === null) return
-        detail.markSaved(await change(current.key, { values: detail.form.values }))
-    }
+    const { selected, awaiting, current, detail, select, toggle, saveBody, enable, saveSettings, setSelected } =
+        useAutomationSelection({ focus: input.focus ?? null, cards, visible, change, connect })
 
     const view =
         automations.data === undefined || catalog.slot.items === undefined
             ? undefined
-            : automationBoardOf({
-                  t,
-                  locale,
-                  moduleNames,
-                  when: input.when,
-                  isNested,
-                  cards,
-                  scoped,
-                  shown,
-                  filter,
-                  selected,
-                  busyKey: automations.busyKey,
-                  accounts: automations.data.accounts,
-                  runs: automations.data.runs,
-                  shop: automations.data.shop,
-                  sample: automations.data.sample,
-                  current,
-                  errorText: undefined,
-                  open: {
-                      values: detail.form.values,
-                      body: detail.form.body,
-                      note: detail.form.note,
-                      isComposing: detail.work.isComposing,
-                      isStarting: detail.work.isStarting,
-                      isStarted: detail.work.isStarted,
-                      isSaved: detail.form.isSaved,
-                      isAwaiting: current !== null && awaiting === current.key && current.body === null,
-                  },
-              })
+            : automationBoardOf(
+                  automationBoardInputOf(
+                      t,
+                      locale,
+                      moduleNames,
+                      input,
+                      isNested,
+                      cards,
+                      scoped,
+                      shown,
+                      filter,
+                      selected,
+                      automations.data,
+                      automations.busyKey,
+                      current,
+                      detail,
+                      awaiting,
+                  ),
+              )
     const filters = automationFiltersFor(cards)
 
-    const on: AutomationsBoardActions = {
+    const on: AutomationsBoardActions = automationBoardActionsOf(
         select,
         toggle,
-        setFilter: (id) => {
-            const next = filters.find((key) => key === id)
-            if (next !== undefined) setFilter(next)
-        },
-        close: () => setSelected(null),
-        dismissError: () => undefined,
-        restore: (key) => void change(key, { dismissed: false }),
-        pickAccount: (key, connectionId) => void change(key, { googleConnectionId: connectionId }),
-        dismiss: () => {
-            if (current !== null) void change(current.key, { dismissed: true }).then((ok) => ok && setSelected(null))
-        },
-        changeSetting: detail.changeValue,
-        saveSettings: () => void saveSettings(),
-        changeBody: detail.editBody,
-        enable: () => void enable(),
-        saveBody: () => void saveBody(),
-        compose: () => detail.compose(),
-        answerTrust: (accept) => {
-            if (current !== null) void change(current.key, { autoSend: accept })
-        },
-        runNow: detail.startRun,
-    }
+        filters,
+        setFilter,
+        setSelected,
+        change,
+        current,
+        detail,
+        saveSettings,
+        saveBody,
+        enable,
+    )
     return {
         view,
         on,

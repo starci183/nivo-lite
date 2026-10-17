@@ -12,7 +12,9 @@ const CHANNELS = [
 
 /** The landing connect section with its copy resolved on the server. */
 export const LandingConnect = async () => {
-    const [t, locale] = await Promise.all([getTranslations("landing"), getLocale()])
+    const t = await getTranslations("landing")
+
+    const locale = await getLocale()
     return (
         <LandingConnectBase
             props={{

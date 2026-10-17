@@ -79,61 +79,70 @@ export const LeadGenCommentList = (props: LeadGenCommentListProps) => {
                             )
                         }
                     >
-                        <div className={FORM_CLASS_NAME}>
-                            <Text as="p" size="sm">
-                                {row.comment}
-                            </Text>
-                            {row.isEditing ? (
-                                <>
-                                    <Textarea
-                                        label={props.draftLabel}
-                                        variant="secondary"
-                                        rows={3}
-                                        value={row.draftValue}
-                                        isDisabled={props.isApproving}
-                                        onValueChange={(value) => props.onDraft(row.id, value)}
-                                    />
-                                    <div className={ACTIONS_CLASS_NAME}>
-                                        <Button
-                                            variant="outline"
-                                            size="sm"
-                                            isDisabled={props.isApproving}
-                                            onPress={() => props.onCancel(row.id)}
-                                        >
-                                            {props.cancelLabel}
-                                        </Button>
-                                        <Button
-                                            variant="primary"
-                                            size="sm"
-                                            isPending={isBusy}
-                                            isDisabled={props.isApproving || !row.draftValue.trim()}
-                                            onPress={() => props.onApprove(row.id, true)}
-                                        >
-                                            {props.saveApproveLabel}
-                                        </Button>
-                                    </div>
-                                </>
-                            ) : (
-                                <Text as="p" size="sm" tone="muted">
-                                    {row.draft || props.noDraft}
-                                </Text>
-                            )}
-                            {row.error === null ? null : (
-                                <div className={ACTIONS_CLASS_NAME}>
-                                    <Text size="sm" live="assertive">
-                                        {row.error}
-                                    </Text>
-                                    {isBusy ? (
-                                        <Button variant="outline" size="sm" onPress={props.onRetry}>
-                                            {props.retryLabel}
-                                        </Button>
-                                    ) : null}
-                                </div>
-                            )}
-                        </div>
+                        {renderLeadGenCommentListComment(row, props, isBusy)}
                     </ListRow>
                 )
             })}
         </SurfaceListCard>
     )
 }
+
+/** Renders the LeadGenCommentList comment section. */
+const renderLeadGenCommentListComment = (
+    row: Pick<LeadGenCommentView, "comment" | "isEditing" | "draftValue" | "id" | "draft" | "error">,
+    props: LeadGenCommentListProps,
+    isBusy: boolean,
+) => (
+    <div className={FORM_CLASS_NAME}>
+        <Text as="p" size="sm">
+            {row.comment}
+        </Text>
+        {row.isEditing ? (
+            <>
+                <Textarea
+                    label={props.draftLabel}
+                    variant="secondary"
+                    rows={3}
+                    value={row.draftValue}
+                    isDisabled={props.isApproving}
+                    onValueChange={(value) => props.onDraft(row.id, value)}
+                />
+                <div className={ACTIONS_CLASS_NAME}>
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        isDisabled={props.isApproving}
+                        onPress={() => props.onCancel(row.id)}
+                    >
+                        {props.cancelLabel}
+                    </Button>
+                    <Button
+                        variant="primary"
+                        size="sm"
+                        isPending={isBusy}
+                        isDisabled={props.isApproving || !row.draftValue.trim()}
+                        onPress={() => props.onApprove(row.id, true)}
+                    >
+                        {props.saveApproveLabel}
+                    </Button>
+                </div>
+            </>
+        ) : (
+            <Text as="p" size="sm" tone="muted">
+                {row.draft || props.noDraft}
+            </Text>
+        )}
+        {row.error === null ? null : (
+            <div className={ACTIONS_CLASS_NAME}>
+                <Text size="sm" live="assertive">
+                    {row.error}
+                </Text>
+                {isBusy ? (
+                    <Button variant="outline" size="sm" onPress={props.onRetry}>
+                        {props.retryLabel}
+                    </Button>
+                ) : null}
+            </div>
+        )}
+    </div>
+)

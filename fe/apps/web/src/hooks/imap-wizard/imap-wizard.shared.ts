@@ -1,3 +1,6 @@
+import type { ImapAccountValues } from "@/hooks/rhf"
+import type { ImapWizardState } from "./useImapWizard"
+
 /** How the mailbox connection is secured. */
 export type ImapSecurity = "tls" | "starttls"
 
@@ -102,3 +105,45 @@ export const IMAP_SINCE_KEY = { 7: "since7", 30: "since30", 90: "since90" } as c
     (typeof IMAP_SINCE_DAYS)[number],
     string
 >
+
+/** Restores a saved connection or prepares the initial wizard state. */
+export const stateOf = (mailbox: ImapMailbox | undefined): ImapWizardState => ({
+    index: 0,
+    savedId: mailbox === undefined ? null : mailbox.id,
+    preset: mailbox === undefined ? "gmail" : presetOfHost(mailbox.host),
+    folderList: mailbox === undefined ? [] : mailbox.folders,
+    tested: null,
+    folders: mailbox === undefined ? ["INBOX"] : mailbox.folders,
+    sinceDays: mailbox === undefined ? 30 : mailbox.sinceDays,
+    every: mailbox === undefined ? 60 : mailbox.syncEveryMinutes,
+    agentIds: mailbox === undefined ? [] : mailbox.agentIds,
+    error: null,
+})
+
+/** Resolves the mailbox account fields from the current draft and saved connection. */
+export const accountOf = (mailbox: ImapMailbox | undefined): ImapAccountValues | undefined =>
+    mailbox === undefined
+        ? undefined
+        : {
+              name: mailbox.name,
+              email: mailbox.email,
+              host: mailbox.host,
+              port: String(mailbox.port),
+              security: mailbox.security,
+              user: mailbox.user,
+              password: "",
+          }
+
+/** Builds the mailbox request from its current account and resumed credentials. */
+export const requestOf = (state: ImapWizardState, values: ImapAccountValues, user: string) => {
+    return () => ({
+        ...(state.savedId === null ? {} : { connectionId: state.savedId }),
+        name: values.name.trim(),
+        email: values.email.trim(),
+        host: values.host,
+        port: Number(values.port),
+        security: values.security,
+        user,
+        password: values.password,
+    })
+}

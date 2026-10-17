@@ -1,5 +1,6 @@
 "use client"
 
+import type { WorkspaceReadKey } from "@/hooks/workspaceread"
 import useSWR from "swr"
 import type { LessonMiningStatusType } from "@/modules/api"
 import { useWorkspaceKey } from "@/hooks/workspaceKey"
@@ -19,7 +20,7 @@ export const useQueryLessonMiningStatusSwr = (
     const key = useWorkspaceKey(QUERY_LESSON_MINING_STATUS_SWR_KEY, [id ?? ""], id !== undefined)
     return useSWR(
         key,
-        async ([, , commandId]: readonly [string, string, string]) => {
+        async ([, , commandId]: WorkspaceReadKey<string>) => {
             const result = await queryLessonMiningStatus({ request: { id: commandId } })
             if (!result.data) throw new Error("lessonMiningStatus answered no data")
             return result.data.lessonMiningStatus

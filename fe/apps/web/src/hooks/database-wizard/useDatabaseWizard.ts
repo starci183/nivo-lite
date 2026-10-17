@@ -1,12 +1,16 @@
 "use client"
 
-import { useEffect, useReducer, useRef, useTransition } from "react"
+import { databaseTargetOf, stateOf, DB_SCHEDULES, DB_STEPS, dbEngineOf, dbPortOf } from "./database-wizard.shared"
 import { useSetConnectionAgents } from "@/hooks/connections"
+import type { AgentWish } from "@/hooks/connections"
 import { useDatabaseTargetForm } from "@/hooks/rhf"
-import type { DbEngine, DbSavedConnection, DbTableInfo, DbTableMapping, DbTarget } from "@/modules/types"
+import type { DatabaseTargetValues } from "@/hooks/rhf"
+import type { DbEngine, DbTableInfo, DbTableMapping, DbTarget } from "@/modules/types"
 import { DB_DEFAULT_PORT } from "@/modules/utils"
-import { DB_SCHEDULES, DB_STEPS, dbEngineOf, dbPortOf } from "./database-wizard.shared"
+import { useEffect, useReducer, useRef, useTransition } from "react"
+import type { Settled } from "../connection-wizard"
 import { useDatabaseCommands } from "./useDatabaseCommands"
+import type { DatabaseCommands } from "./useDatabaseCommands"
 import { useDatabaseSaved } from "./useDatabaseSaved"
 import { useDatabaseTables } from "./useDatabaseTables"
 
@@ -19,7 +23,7 @@ interface DatabaseWizardInput {
 }
 
 /** The wizard's own state, besides the connect form. */
-interface DatabaseWizardState {
+export interface DatabaseWizardState {
     readonly index: number
     readonly passwordKept: boolean
     readonly connId: string | undefined
@@ -42,22 +46,6 @@ const merge = (state: DatabaseWizardState, patch: DatabasePatch): DatabaseWizard
     ...(typeof patch === "function" ? patch(state) : patch),
 })
 
-const stateOf = (
-    resumeId: string | undefined,
-    saved: DbSavedConnection | null,
-    loadError?: string,
-): DatabaseWizardState => ({
-    index: 0,
-    passwordKept: false,
-    connId: resumeId,
-    tables: null,
-    picked: saved?.tables ?? [],
-    everyMinutes: saved === null ? 60 : saved.everyMinutes,
-    agentIds: saved?.agentIds ?? [],
-    error: loadError ?? null,
-    found: null,
-})
-
 /**
  * The database wizard's state machine: 1 connect and list the tables, 2 map the tables, 3 schedule (the connection is saved here),
  * 4 attach agents. When resuming, the saved connection is read first (`isLoading`) and seeds the steps once. The password lives in
@@ -78,15 +66,7 @@ export const useDatabaseWizard = (input: DatabaseWizardInput) => {
     const passwordSaved = state.passwordKept || Boolean(saved?.hasPassword)
     const form = useDatabaseTargetForm(passwordSaved, saved, DB_DEFAULT_PORT.postgres)
     const values = form.watch()
-    const typed = (): DbTarget => ({
-        engine: values.engine,
-        host: values.host.trim(),
-        port: Number(values.port),
-        database: values.database.trim(),
-        user: values.user.trim(),
-        password: values.password,
-        ssl: values.ssl,
-    })
+    const typed = () => databaseTargetOf(values)
     const mapping = useDatabaseTables({
         commands,
         connectionId: state.connId,
@@ -96,6 +76,67 @@ export const useDatabaseWizard = (input: DatabaseWizardInput) => {
         update: (change) => patch((s) => ({ picked: change(s.picked) })),
     })
 
+    const { go, test, save, finish, setField, setEngine, setSsl } = createDatabaseWizardActions(
+        patch,
+        form,
+        values,
+        startTransition,
+        commands,
+        state,
+        typed,
+        input,
+        setConnectionAgents,
+    )
+
+    return {
+        isLoading,
+        step: DB_STEPS[state.index] ?? "connect",
+        index: state.index,
+        values,
+        passwordSaved,
+        tables: state.tables,
+        picked: state.picked,
+        everyMinutes: state.everyMinutes,
+        agentIds: state.agentIds,
+        error: state.error,
+        found: state.found,
+        isPending,
+        canTest: form.formState.isValid,
+        tablesReady: state.picked.length > 0 && state.picked.every((m) => m.idColumn),
+        mapped: mapping.mapped,
+        on: {
+            go,
+            test,
+            save,
+            finish,
+            toggle: mapping.toggle,
+            setEntity: mapping.setEntity,
+            setIdColumn: mapping.setIdColumn,
+            setOptionalColumn: mapping.setOptionalColumn,
+            setColumns: mapping.setColumns,
+            preview: mapping.preview,
+            setField,
+            setEngine,
+            setSsl,
+            close: () => input.onClose(state.connId !== undefined && state.connId !== input.resumeId),
+            setSchedule: (key: string) =>
+                patch({ everyMinutes: DB_SCHEDULES.find((s) => s.key === key)?.minutes ?? null }),
+            setAgentIds: (agentIds: ReadonlyArray<string>) => patch({ agentIds }),
+        },
+    }
+}
+
+const createDatabaseWizardActions = (
+    patch: import("react").Dispatch<Parameters<typeof merge>[1]>,
+    form: ReturnType<typeof useDatabaseTargetForm>,
+    values: DatabaseTargetValues,
+    startTransition: import("react").TransitionStartFunction,
+    commands: DatabaseCommands,
+    state: DatabaseWizardState,
+    typed: () => DbTarget,
+    input: DatabaseWizardInput,
+    setConnectionAgents: (connectionId: string, wanted: ReadonlyArray<AgentWish>) => Promise<Settled<true>>,
+) => {
     const go = (to: number) => patch({ error: null, found: null, index: to })
     const fail = (message: string) => patch({ error: message, found: null })
     const setField = (field: TextField) => (value: string) => {
@@ -152,41 +193,7 @@ export const useDatabaseWizard = (input: DatabaseWizardInput) => {
             input.onClose(true)
         })
     }
-
-    return {
-        isLoading,
-        step: DB_STEPS[state.index] ?? "connect",
-        index: state.index,
-        values,
-        passwordSaved,
-        tables: state.tables,
-        picked: state.picked,
-        everyMinutes: state.everyMinutes,
-        agentIds: state.agentIds,
-        error: state.error,
-        found: state.found,
-        isPending,
-        canTest: form.formState.isValid,
-        tablesReady: state.picked.length > 0 && state.picked.every((m) => m.idColumn),
-        mapped: mapping.mapped,
-        on: {
-            go,
-            test,
-            save,
-            finish,
-            toggle: mapping.toggle,
-            setEntity: mapping.setEntity,
-            setIdColumn: mapping.setIdColumn,
-            setOptionalColumn: mapping.setOptionalColumn,
-            setColumns: mapping.setColumns,
-            preview: mapping.preview,
-            setField,
-            setEngine,
-            setSsl,
-            close: () => input.onClose(state.connId !== undefined && state.connId !== input.resumeId),
-            setSchedule: (key: string) =>
-                patch({ everyMinutes: DB_SCHEDULES.find((s) => s.key === key)?.minutes ?? null }),
-            setAgentIds: (agentIds: ReadonlyArray<string>) => patch({ agentIds }),
-        },
-    }
+    return { go, test, save, finish, setField, setEngine, setSsl }
 }
+
+/** Builds the normalized target sent by database commands. */

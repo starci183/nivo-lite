@@ -1,5 +1,6 @@
 "use client"
 
+import { argumentKey } from "@/hooks/workspaceread"
 import useSWR from "swr"
 import { queryWorkspaceStaff } from "@/modules/api/graphql/queries/query-workspace-staff"
 
@@ -8,7 +9,7 @@ export const QUERY_WORKSPACE_STAFF_SWR_KEY = "QUERY_WORKSPACE_STAFF_SWR"
 
 /** The active staff rows of the active workspace. */
 export const useQueryWorkspaceStaffSwr = (workspaceId: string | undefined) =>
-    useSWR(workspaceId === undefined ? null : [QUERY_WORKSPACE_STAFF_SWR_KEY, workspaceId], async () => {
+    useSWR(argumentKey(QUERY_WORKSPACE_STAFF_SWR_KEY, workspaceId), async () => {
         const result = await queryWorkspaceStaff()
         if (!result.data) throw new Error("workspaceStaff answered no data")
         return result.data.workspaceStaff

@@ -1,22 +1,10 @@
+import type { SetupWriteDraft as Draft } from "@/modules/types"
 import { useState } from "react"
 import { FACT_SCOPES } from "@/modules/types"
-import type { FactScope, FlowRuleMode } from "@/modules/types"
+import type { FlowRuleMode } from "@/modules/types"
 import type { SetupResolution, SetupWrite, SetupWriteDecision } from "@/modules/types"
 import { SetupWriteView } from "@/components/leaves/SetupWriteView"
-import type { SetupWriteDecided, SetupWriteInstance, SetupWriteWords } from "@/modules/types"
-
-/** What the owner has edited on a card so far. */
-type Draft = {
-    readonly isEditing: boolean
-    readonly value: string
-    readonly scope: FactScope
-    readonly mode: FlowRuleMode
-    readonly limit: number | null
-    readonly resolution: SetupResolution
-    readonly situation: string
-    /** Shared by every instance of the type unless the owner keeps it for this one. */
-    readonly onlyThis: boolean
-}
+import type { SetupWriteDecided, SetupWriteInstance, SetupWriteProposal, SetupWriteWords } from "@/modules/types"
 
 /** What the chat hands the card: the write, the words, the way to settle it and the instance the chat is for. */
 type SetupWriteCardProps = {
@@ -120,63 +108,11 @@ export const SetupWriteCard = (props: SetupWriteCardProps) => {
         }
         decide({ decision: "confirm", rule: { mode: draft.mode, limitVnd: rules?.hasLimit ? draft.limit : null } })
     }
-    const resolutionLabels = { replace: words.replace, keep: words.keep, both: words.both }
     return (
         <SetupWriteView
             props={{
                 decided: decidedOf(write, words),
-                proposal: {
-                    id: write.id,
-                    head: write.kind === "fact" ? words.factTitle : words.ruleTitle,
-                    isFact: write.kind === "fact",
-                    hasGap: write.kind === "fact" && Boolean(write.payload.gapId),
-                    gapLabel: words.gap,
-                    items: itemsOf(write, draft, draft.onlyThis ? forThisLabel : forAllLabel, words),
-                    sharedNote: write.kind === "rule" && instance !== null ? words.ruleShared(instance.typeName) : "",
-                    isEditing: draft.isEditing,
-                    valueLabel: words.value,
-                    value: draft.value,
-                    scopeLabel: words.scope,
-                    scope: draft.scope,
-                    scopeOptions: FACT_SCOPES.map((scope) => ({ value: scope, label: words.scopeLabel(scope) })),
-                    forLabel: words.forLabel,
-                    forValue: draft.onlyThis ? FOR_THIS : FOR_ALL,
-                    forOptions:
-                        instance === null
-                            ? []
-                            : [
-                                  { value: FOR_ALL, label: forAllLabel },
-                                  { value: FOR_THIS, label: forThisLabel },
-                              ],
-                    modeLabel: words.mode,
-                    mode: draft.mode,
-                    modeOptions: MODES.filter((mode) => mode !== "auto" || rules?.allowsAuto === true).map((mode) => ({
-                        value: mode,
-                        label: words.modeLabel(mode),
-                    })),
-                    hasLimit: rules?.hasLimit === true,
-                    limitLabel: words.limit,
-                    limit: draft.limit ?? undefined,
-                    isLimitDisabled: draft.mode === "never",
-                    isConflict,
-                    conflictTitle: words.conflictTitle,
-                    conflictBody: words.conflictBody(write.kind === "fact" ? (write.current?.value ?? "") : ""),
-                    resolution: draft.resolution,
-                    resolutionOptions: RESOLUTIONS.map((resolution) => ({
-                        value: resolution,
-                        label: resolutionLabels[resolution],
-                    })),
-                    situationLabel: words.situation,
-                    situation: draft.situation,
-                    confirmLabel: words.confirm,
-                    editLabel: draft.isEditing ? words.editDone : words.edit,
-                    rejectLabel: words.reject,
-                    canConfirm:
-                        write.kind === "rule" ||
-                        (draft.value.trim().length > 0 &&
-                            (draft.resolution !== "both" || !isConflict || draft.situation.trim().length > 0)),
-                    isPending: props.isBusy,
-                },
+                proposal: proposalOf(props, draft, isConflict, forAllLabel, forThisLabel, rules),
             }}
             on={{
                 value: (value) => patch({ value }),
@@ -193,4 +129,69 @@ export const SetupWriteCard = (props: SetupWriteCardProps) => {
             }}
         />
     )
+}
+
+/** Resolves the proposal fields and choices from the current draft. */
+const proposalOf = (
+    props: SetupWriteCardProps,
+    draft: Draft,
+    isConflict: boolean,
+    forAllLabel: string,
+    forThisLabel: string,
+    rules: ReturnType<SetupWriteWords["actionRules"]> | null,
+): SetupWriteProposal => {
+    const { write, words, instance } = props
+    const resolutionLabels = { replace: words.replace, keep: words.keep, both: words.both }
+    return {
+        id: write.id,
+        head: write.kind === "fact" ? words.factTitle : words.ruleTitle,
+        isFact: write.kind === "fact",
+        hasGap: write.kind === "fact" && Boolean(write.payload.gapId),
+        gapLabel: words.gap,
+        items: itemsOf(write, draft, draft.onlyThis ? forThisLabel : forAllLabel, words),
+        sharedNote: write.kind === "rule" && instance !== null ? words.ruleShared(instance.typeName) : "",
+        isEditing: draft.isEditing,
+        valueLabel: words.value,
+        value: draft.value,
+        scopeLabel: words.scope,
+        scope: draft.scope,
+        scopeOptions: FACT_SCOPES.map((scope) => ({ value: scope, label: words.scopeLabel(scope) })),
+        forLabel: words.forLabel,
+        forValue: draft.onlyThis ? FOR_THIS : FOR_ALL,
+        forOptions:
+            instance === null
+                ? []
+                : [
+                      { value: FOR_ALL, label: forAllLabel },
+                      { value: FOR_THIS, label: forThisLabel },
+                  ],
+        modeLabel: words.mode,
+        mode: draft.mode,
+        modeOptions: MODES.filter((mode) => mode !== "auto" || rules?.allowsAuto === true).map((mode) => ({
+            value: mode,
+            label: words.modeLabel(mode),
+        })),
+        hasLimit: rules?.hasLimit === true,
+        limitLabel: words.limit,
+        limit: draft.limit ?? undefined,
+        isLimitDisabled: draft.mode === "never",
+        isConflict,
+        conflictTitle: words.conflictTitle,
+        conflictBody: words.conflictBody(write.kind === "fact" ? (write.current?.value ?? "") : ""),
+        resolution: draft.resolution,
+        resolutionOptions: RESOLUTIONS.map((resolution) => ({
+            value: resolution,
+            label: resolutionLabels[resolution],
+        })),
+        situationLabel: words.situation,
+        situation: draft.situation,
+        confirmLabel: words.confirm,
+        editLabel: draft.isEditing ? words.editDone : words.edit,
+        rejectLabel: words.reject,
+        canConfirm:
+            write.kind === "rule" ||
+            (draft.value.trim().length > 0 &&
+                (draft.resolution !== "both" || !isConflict || draft.situation.trim().length > 0)),
+        isPending: props.isBusy,
+    }
 }

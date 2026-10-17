@@ -67,47 +67,7 @@ export const SalesAttentionBase = (props: SalesAttentionBaseProps) => {
                     }
                     customer={row.customer}
                     customerHref={row.leadHref}
-                    actions={
-                        <>
-                            {row.decisionHref === null ? null : (
-                                <Button variant="primary" size="sm" href={row.decisionHref}>
-                                    {row.kind === "clarify" ? p.answerLabel : p.decideLabel}
-                                </Button>
-                            )}
-                            {row.kind === "failed" && row.workItemId !== null ? (
-                                <>
-                                    <Button
-                                        variant="primary"
-                                        size="sm"
-                                        isPending={row.isRetryBusy}
-                                        isDisabled={p.isBusy}
-                                        onPress={() => on.retry(row.key, row.workItemId ?? "")}
-                                    >
-                                        {p.retryLabel}
-                                    </Button>
-                                    <Button
-                                        variant="outline"
-                                        size="sm"
-                                        isPending={row.isStopBusy}
-                                        isDisabled={p.isBusy}
-                                        onPress={() => on.stop(row.key, row.workItemId ?? "")}
-                                    >
-                                        {p.stopLabel}
-                                    </Button>
-                                </>
-                            ) : null}
-                            {row.kind === "overdue" && row.leadHref !== null ? (
-                                <Button variant="primary" size="sm" href={row.leadHref}>
-                                    {p.followUpLabel}
-                                </Button>
-                            ) : null}
-                            {row.kind === "awaiting_reply" && row.leadHref !== null ? (
-                                <Button variant="primary" size="sm" href={row.leadHref}>
-                                    {p.replyLabel}
-                                </Button>
-                            ) : null}
-                        </>
-                    }
+                    actions={renderAttentionActions({ row, p, on })}
                 >
                     {row.title === null ? null : (
                         <Text size="sm" weight="medium">
@@ -131,4 +91,52 @@ export const SalesAttentionBase = (props: SalesAttentionBaseProps) => {
             ))}
         </SurfaceListCard>
     )
+}
+
+const renderAttentionActions = ({ row, p, on }: RenderAttentionActionsInput) => (
+    <>
+        {row.decisionHref === null ? null : (
+            <Button variant="primary" size="sm" href={row.decisionHref}>
+                {row.kind === "clarify" ? p.answerLabel : p.decideLabel}
+            </Button>
+        )}
+        {row.kind === "failed" && row.workItemId !== null ? (
+            <>
+                <Button
+                    variant="primary"
+                    size="sm"
+                    isPending={row.isRetryBusy}
+                    isDisabled={p.isBusy}
+                    onPress={() => on.retry(row.key, row.workItemId ?? "")}
+                >
+                    {p.retryLabel}
+                </Button>
+                <Button
+                    variant="outline"
+                    size="sm"
+                    isPending={row.isStopBusy}
+                    isDisabled={p.isBusy}
+                    onPress={() => on.stop(row.key, row.workItemId ?? "")}
+                >
+                    {p.stopLabel}
+                </Button>
+            </>
+        ) : null}
+        {row.kind === "overdue" && row.leadHref !== null ? (
+            <Button variant="primary" size="sm" href={row.leadHref}>
+                {p.followUpLabel}
+            </Button>
+        ) : null}
+        {row.kind === "awaiting_reply" && row.leadHref !== null ? (
+            <Button variant="primary" size="sm" href={row.leadHref}>
+                {p.replyLabel}
+            </Button>
+        ) : null}
+    </>
+)
+
+type RenderAttentionActionsInput = {
+    row: AttentionItemView
+    p: SalesAttentionBaseProps["props"]
+    on: SalesAttentionBaseProps["on"]
 }

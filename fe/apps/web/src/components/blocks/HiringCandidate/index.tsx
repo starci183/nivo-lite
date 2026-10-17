@@ -3,9 +3,9 @@
 import { useTranslations } from "next-intl"
 import {
     OPEN_OFFER_STATUSES,
-    focusedCandidateId,
     reasonTone,
     scoreTone,
+    focusedCandidateId,
     stageTone,
     useHiringFormat,
     useHiringSay,
@@ -24,20 +24,15 @@ import { useHiringReject } from "@/hooks/hiringPipeline"
 import { NO_CANDIDATE } from "@/hooks/hiringMap"
 import { useHiringBenchStore } from "@/hooks/zustand/hiringBench"
 import { useHiringInterviewForm, useHiringOfferForm } from "@/hooks/rhf"
+import type { CandidateView, HiringWorkbenchData } from "@/hooks/hiringWire"
 import { HiringCandidateBase } from "./component"
-import type { HiringCandidateBaseProps } from "./component"
+import { candidateDetailsOf } from "./component"
+
+const candidateDetailTools = { reasonTone, scoreTone, isPreviewable, openOfferStatuses: OPEN_OFFER_STATUSES }
 
 /** The record a `?focus=` link leads to: the drawer opens on it until somebody opens another candidate or closes it. */
 interface HiringCandidateProps {
     readonly focus: string | null
-}
-
-type CvState = HiringCandidateBaseProps["props"]["cv"]["state"]
-
-/** Where the CV stands: there is none, the link is still loading, or it is ready. */
-const cvStateOf = (hasFile: boolean, isLoaded: boolean, hasLink: boolean): CvState => {
-    if (hasLink) return "ready"
-    return hasFile && !isLoaded ? "loading" : "none"
 }
 
 /** The connected candidate drawer: the workbench row plus the detail query (CV link, timeline), and every command on the candidate. */
@@ -62,7 +57,6 @@ export const HiringCandidate = (props: HiringCandidateProps) => {
         ),
         candidate.id,
     )
-    const cv = view.detail?.cv ?? null
     const closeDialog = () => {
         interview.reset()
         offer.reset()
@@ -85,57 +79,7 @@ export const HiringCandidate = (props: HiringCandidateProps) => {
                 canOffer: !view.isClosed && !view.hasOpenOffer,
                 canShortlist: candidate.stage === "applied" || candidate.stage === "screening",
                 canReject: !view.isClosed,
-                score:
-                    candidate.score === null
-                        ? null
-                        : {
-                              value: t("pipeScore", { score: candidate.score }),
-                              label: candidate.scoreLabel === null ? "" : t(`score_${candidate.scoreLabel}`),
-                              tone: scoreTone(candidate.scoreLabel),
-                              summary: candidate.scoreSummary,
-                              reasons: candidate.scoreReasons.map((reason, index) => ({
-                                  id: `${index}:${reason.criterion}`,
-                                  criterion: reason.criterion,
-                                  note: reason.note,
-                                  statusLabel: format.label("reason", reason.status),
-                                  tone: reasonTone(reason.status),
-                              })),
-                          },
-                cv: {
-                    state: cvStateOf(candidate.cvPath !== null, view.detail !== undefined, cv !== null),
-                    openLabel: cv === null ? "" : t("candCvOpen", { name: cv.name }),
-                    url: cv?.url ?? "",
-                    isPdf: cv?.mime === "application/pdf",
-                    canPreview: cv !== null && isPreviewable(cv.mime),
-                    isPreviewing: view.showCv,
-                },
-                answers: candidate.answers.map((answer) => ({
-                    id: answer.questionId,
-                    title: answer.question,
-                    text: answer.answer,
-                })),
-                interviews: view.interviews.map((entry) => ({
-                    id: entry.id,
-                    title: "",
-                    text: [
-                        format.label("ivStatus", entry.status) +
-                            (entry.slotStart === null ? "" : `: ${format.dateTime(entry.slotStart)}`),
-                        entry.interviewerName,
-                    ]
-                        .filter((part) => part !== "")
-                        .join(" · "),
-                })),
-                offers: view.offers.map((entry) => ({
-                    id: entry.id,
-                    title: "",
-                    text: `${format.label("offerStatus", entry.status)} · ${entry.pay}`,
-                    canCancel: OPEN_OFFER_STATUSES.includes(entry.status),
-                })),
-                events: view.detail?.events.map((event) => ({
-                    id: event.id,
-                    title: event.summary,
-                    text: `${event.actor} · ${format.dateTime(event.createdAt)}`,
-                })),
+                ...candidateDetailsOf(candidate, view, format, t, candidateDetailTools),
                 notes: view.notes,
                 canSaveNotes: view.notes !== candidate.notes,
                 retention: t("candRetention", { days: view.retentionDays }),
@@ -143,37 +87,7 @@ export const HiringCandidate = (props: HiringCandidateProps) => {
                 isBusy: view.isPending,
                 error: view.error,
                 notice: view.notice,
-                interview: {
-                    say,
-                    name: candidate.name,
-                    members: data.members.map((member) => ({
-                        id: member.userId,
-                        label: member.windows.length > 0 ? member.name : t("ivNoWindows", { name: member.name }),
-                    })),
-                    modes: INTERVIEW_MODES.map((mode) => ({ id: mode, label: t(`ivMode_${mode}`) })),
-                    values: interview.values,
-                    outcome: interview.outcome,
-                    canSend: interview.canSend,
-                    isBusy: interview.isPending,
-                    error: interview.error,
-                },
-                offer: {
-                    say,
-                    name: candidate.name,
-                    values: offer.values,
-                    outcome: offer.outcome,
-                    canSend: offer.canSend,
-                    isBusy: offer.isPending,
-                    error: offer.error,
-                },
-                reject: {
-                    say,
-                    name: candidate.name,
-                    reason: reject.reason,
-                    canConfirm: reject.canConfirm,
-                    isBusy: reject.isPending,
-                    error: reject.error,
-                },
+                ...candidateDialogsOf({ candidate, data, t, say, interview, offer, reject }),
             }}
             on={{
                 openDialog: view.openDialog,
@@ -197,4 +111,53 @@ export const HiringCandidate = (props: HiringCandidateProps) => {
             }}
         />
     )
+}
+
+/** Independent request state for the three candidate dialogs. */
+const candidateDialogsOf = (context: CandidateDialogsContext) => {
+    const { candidate, data, t, say, interview, offer, reject } = context
+    return {
+        interview: {
+            say,
+            name: candidate.name,
+            members: data.members.map((member) => ({
+                id: member.userId,
+                label: member.windows.length > 0 ? member.name : t("ivNoWindows", { name: member.name }),
+            })),
+            modes: INTERVIEW_MODES.map((mode) => ({ id: mode, label: t(`ivMode_${mode}`) })),
+            values: interview.values,
+            outcome: interview.outcome,
+            canSend: interview.canSend,
+            isBusy: interview.isPending,
+            error: interview.error,
+        },
+        offer: {
+            say,
+            name: candidate.name,
+            values: offer.values,
+            outcome: offer.outcome,
+            canSend: offer.canSend,
+            isBusy: offer.isPending,
+            error: offer.error,
+        },
+        reject: {
+            say,
+            name: candidate.name,
+            reason: reject.reason,
+            canConfirm: reject.canConfirm,
+            isBusy: reject.isPending,
+            error: reject.error,
+        },
+    }
+}
+
+/** Request state required by the candidate dialogs. */
+type CandidateDialogsContext = {
+    readonly candidate: CandidateView
+    readonly data: HiringWorkbenchData
+    readonly t: ReturnType<typeof useTranslations<"hiring">>
+    readonly say: ReturnType<typeof useHiringSay>
+    readonly interview: ReturnType<typeof useHiringInterviewRequest>
+    readonly offer: ReturnType<typeof useHiringOfferRequest>
+    readonly reject: ReturnType<typeof useHiringReject>
 }

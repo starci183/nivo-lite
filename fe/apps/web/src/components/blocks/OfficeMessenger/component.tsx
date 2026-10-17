@@ -69,18 +69,8 @@ export const OfficeMessengerBase = (props: OfficeMessengerBaseProps) => {
     const on = props.on
     const { text } = view
     const isTasks = view.centre === "tasks"
-    const infoPanel = (
-        <OfficeInfoPanel
-            props={{ info: view.info, isDocked: view.isInfoDocked, text }}
-            on={{
-                jumpApproval: on.jumpApproval,
-                jumpException: on.jumpException,
-                mention: on.mention,
-                openTasks: on.openTasks,
-                close: on.closeInfo,
-            }}
-        />
-    )
+    const infoPanel = <MessengerInfoPanel {...props} />
+
     return (
         <>
             <FillViewport minHeight="md" bottomInset="none">
@@ -101,46 +91,7 @@ export const OfficeMessengerBase = (props: OfficeMessengerBaseProps) => {
                                 view.phoneView === "thread" ? THREAD_COLUMN_CLASS_NAME : THREAD_COLUMN_HIDDEN_CLASS_NAME
                             }
                         >
-                            <div className={HEAD_CLASS_NAME}>
-                                <div className={PHONE_ONLY_CLASS_NAME}>
-                                    <IconButton
-                                        source={nivoIconSource("back", "leading")}
-                                        label={text("back")}
-                                        onPress={on.back}
-                                    />
-                                </div>
-                                <div className={HEAD_AVATAR_CLASS_NAME}>
-                                    <IconTile source={nivoIconSource("community", "leading")} tone="neutral" />
-                                </div>
-                                <div className={HEAD_TEXT_CLASS_NAME}>
-                                    <Heading level={1}>{isTasks ? text("tasksTitle") : text("title")}</Heading>
-                                    {isTasks ? null : (
-                                        <Text size="sm" tone="muted" overflow="truncate" isSkeleton={view.isLoading}>
-                                            {view.subtitle}
-                                        </Text>
-                                    )}
-                                </div>
-                                <div className={HEAD_ACTIONS_CLASS_NAME}>
-                                    {isTasks ? (
-                                        <div className={WIDE_ONLY_CLASS_NAME}>
-                                            <Button variant="ghost" size="sm" onPress={on.showChat}>
-                                                {text("tasksBack")}
-                                            </Button>
-                                        </div>
-                                    ) : null}
-                                    {!isTasks && view.chip !== null ? (
-                                        <Button variant="outline" size="sm" onPress={on.chip}>
-                                            {view.chip}
-                                        </Button>
-                                    ) : null}
-                                    <IconButton
-                                        source={nivoIconSource("sidebar", "leading")}
-                                        label={view.isInfoOpen ? text("infoClose") : text("infoOpen")}
-                                        isActive={view.isInfoOpen}
-                                        onPress={on.toggleInfo}
-                                    />
-                                </div>
-                            </div>
+                            <OfficeMessengerHeader {...props} />
                             {isTasks ? (
                                 <div className={TASKS_CLASS_NAME}>
                                     <OfficeTasks props={{ tasks: view.tasks, text }} on={{ openLeads: on.openLeads }} />
@@ -181,5 +132,72 @@ export const OfficeMessengerBase = (props: OfficeMessengerBaseProps) => {
                 </Drawer>
             )}
         </>
+    )
+}
+
+/** Renders the OfficeMessengerHeader section. */
+const OfficeMessengerHeader = (props: OfficeMessengerBaseProps) => {
+    const view = props.props
+    const on = props.on
+    const { text } = view
+    const isTasks = view.centre === "tasks"
+    return (
+        <>
+            <div className={HEAD_CLASS_NAME}>
+                <div className={PHONE_ONLY_CLASS_NAME}>
+                    <IconButton source={nivoIconSource("back", "leading")} label={text("back")} onPress={on.back} />
+                </div>
+                <div className={HEAD_AVATAR_CLASS_NAME}>
+                    <IconTile source={nivoIconSource("community", "leading")} tone="neutral" />
+                </div>
+                <div className={HEAD_TEXT_CLASS_NAME}>
+                    <Heading level={1}>{isTasks ? text("tasksTitle") : text("title")}</Heading>
+                    {isTasks ? null : (
+                        <Text size="sm" tone="muted" overflow="truncate" isSkeleton={view.isLoading}>
+                            {view.subtitle}
+                        </Text>
+                    )}
+                </div>
+                <div className={HEAD_ACTIONS_CLASS_NAME}>
+                    {isTasks ? (
+                        <div className={WIDE_ONLY_CLASS_NAME}>
+                            <Button variant="ghost" size="sm" onPress={on.showChat}>
+                                {text("tasksBack")}
+                            </Button>
+                        </div>
+                    ) : null}
+                    {!isTasks && view.chip !== null ? (
+                        <Button variant="outline" size="sm" onPress={on.chip}>
+                            {view.chip}
+                        </Button>
+                    ) : null}
+                    <IconButton
+                        source={nivoIconSource("sidebar", "leading")}
+                        label={view.isInfoOpen ? text("infoClose") : text("infoOpen")}
+                        isActive={view.isInfoOpen}
+                        onPress={on.toggleInfo}
+                    />
+                </div>
+            </div>
+        </>
+    )
+}
+
+/** Connects the shared info panel used by the dock and drawer. */
+const MessengerInfoPanel = (props: OfficeMessengerBaseProps) => {
+    const view = props.props
+    const on = props.on
+    const { text } = view
+    return (
+        <OfficeInfoPanel
+            props={{ info: view.info, isDocked: view.isInfoDocked, text }}
+            on={{
+                jumpApproval: on.jumpApproval,
+                jumpException: on.jumpException,
+                mention: on.mention,
+                openTasks: on.openTasks,
+                close: on.closeInfo,
+            }}
+        />
     )
 }

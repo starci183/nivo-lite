@@ -35,34 +35,7 @@ export const CreditsUpgrade = (props: CreditsUpgradeProps) => {
                 </div>
             </SurfaceCard>
         )
-    else if (upgrade)
-        offer = (
-            <SurfaceCard label={copy.title} headingLevel={2} isHighlight>
-                <div className={STACK_CLASS_NAME}>
-                    <div className={COPY_CLASS_NAME}>
-                        <Text size="metric-lead" weight="semibold">
-                            {upgrade.name}
-                        </Text>
-                        <Text size="sm" tone="muted">
-                            {upgrade.line}
-                        </Text>
-                        <Text weight="semibold">{upgrade.price}</Text>
-                    </div>
-                    {copy.view.canBuy ? (
-                        <div>
-                            <Button
-                                variant="primary"
-                                isPending={upgrade.pending}
-                                isDisabled={upgrade.disabled}
-                                onPress={() => props.on.upgrade(upgrade.target)}
-                            >
-                                {upgrade.action}
-                            </Button>
-                        </div>
-                    ) : null}
-                </div>
-            </SurfaceCard>
-        )
+    else if (upgrade) offer = renderCreditsUpgradeRecommendation(copy, upgrade, props)
     else if (contact)
         offer = (
             <SurfaceCard label={copy.title} headingLevel={2}>
@@ -121,3 +94,36 @@ export const CreditsUpgrade = (props: CreditsUpgradeProps) => {
         </div>
     )
 }
+
+/** Renders the CreditsUpgrade recommendation section. */
+const renderCreditsUpgradeRecommendation = (
+    copy: NonNullable<CreditsUpgradeProps["props"]>,
+    upgrade: NonNullable<CreditsUpgradeProps["props"]["view"]["upgrade"]>,
+    props: CreditsUpgradeProps,
+) => (
+    <SurfaceCard label={copy.title} headingLevel={2} isHighlight>
+        <div className={STACK_CLASS_NAME}>
+            <div className={COPY_CLASS_NAME}>
+                <Text size="metric-lead" weight="semibold">
+                    {upgrade.name}
+                </Text>
+                <Text size="sm" tone="muted">
+                    {upgrade.line}
+                </Text>
+                <Text weight="semibold">{upgrade.price}</Text>
+            </div>
+            {copy.view.canBuy ? (
+                <div>
+                    <Button
+                        variant="primary"
+                        isPending={upgrade.pending}
+                        isDisabled={upgrade.disabled}
+                        onPress={() => props.on.upgrade(upgrade.target)}
+                    >
+                        {upgrade.action}
+                    </Button>
+                </div>
+            ) : null}
+        </div>
+    </SurfaceCard>
+)

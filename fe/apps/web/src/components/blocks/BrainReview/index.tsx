@@ -8,28 +8,14 @@ import type { BrainFact } from "@/modules/types"
 import { BrainReviewBase } from "./component"
 
 /** The connected review list: words each proposal, suggests what to do with it and sends the decision to the back end. */
-export const BrainReview = () => {
-    const t = useTranslations("brain")
-    const command = useBrainCommand()
-    const board = useBrainBoard()
+/** Connects the state and commands used by BrainReview. */
+const buildBrainReviewState = (
+    board: ReturnType<typeof useBrainBoard>,
+    t: ReturnType<typeof useTranslations<"brain">>,
+    command: ReturnType<typeof useBrainCommand>,
+) => {
     const plan = reviewBoardOf(board.facts)
-    const byLine = (fact: BrainFact): string =>
-        t("by", { who: fact.proposedBy, source: t(FACT_SOURCE_KEY[fact.sourceKind]), trust: fact.trust })
-    const titleOf = (fact: BrainFact): string => `${fact.subjectLabel} · ${fact.attributeLabel}`
-    const decide = (id: string, label: string, action: "apply" | "choose", isPrimary: boolean): RowActionView => ({
-        id: `decide-${id}`,
-        label,
-        variant: isPrimary ? "primary" : "outline",
-        onPress: () => command.send("fact.decide", { id, action }, { done: t("applied") }),
-    })
-    const reject = (id: string, label: string): RowActionView => ({
-        id: `reject-${id}`,
-        label,
-        variant: "ghost",
-        onPress: () => command.send("fact.decide", { id, action: "reject" }, { done: t("rejected") }),
-    })
-    const gated = (actions: ReadonlyArray<RowActionView>): ReadonlyArray<RowActionView> =>
-        board.canWrite ? actions : []
+    const { byLine, titleOf, decide, reject, gated } = reviewRowActions(t, command, board)
     const singleRow = (single: ReviewSingle): KnowledgeRowView => {
         const advice = adviceFor(single.p, single.current, board.nowMs)
         const isApply = advice.action === "apply" || advice.action === "schedule"
@@ -96,6 +82,18 @@ export const BrainReview = () => {
             },
         ],
     })
+    return { t, plan, groupRow, singleRow, retireRow, board, command }
+}
+
+/** Draws the connected view from its current state. */
+export const BrainReview = () => {
+    const t = useTranslations("brain")
+    const command = useBrainCommand()
+    const board = useBrainBoard()
+
+    const connected = buildBrainReviewState(board, t, command)
+    if (connected === null) return null
+    const { plan, groupRow, singleRow, retireRow } = connected
     return (
         <BrainReviewBase
             props={{
@@ -120,4 +118,30 @@ export const BrainReview = () => {
             }}
         />
     )
+}
+
+/** Builds the commands and labels shared by all review rows. */
+const reviewRowActions = (
+    t: ReturnType<typeof useTranslations<"brain">>,
+    command: ReturnType<typeof useBrainCommand>,
+    board: ReturnType<typeof useBrainBoard>,
+) => {
+    const byLine = (fact: BrainFact): string =>
+        t("by", { who: fact.proposedBy, source: t(FACT_SOURCE_KEY[fact.sourceKind]), trust: fact.trust })
+    const titleOf = (fact: BrainFact): string => `${fact.subjectLabel} · ${fact.attributeLabel}`
+    const decide = (id: string, label: string, action: "apply" | "choose", isPrimary: boolean): RowActionView => ({
+        id: `decide-${id}`,
+        label,
+        variant: isPrimary ? "primary" : "outline",
+        onPress: () => command.send("fact.decide", { id, action }, { done: t("applied") }),
+    })
+    const reject = (id: string, label: string): RowActionView => ({
+        id: `reject-${id}`,
+        label,
+        variant: "ghost",
+        onPress: () => command.send("fact.decide", { id, action: "reject" }, { done: t("rejected") }),
+    })
+    const gated = (actions: ReadonlyArray<RowActionView>): ReadonlyArray<RowActionView> =>
+        board.canWrite ? actions : []
+    return { byLine, titleOf, decide, reject, gated }
 }

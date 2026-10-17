@@ -62,62 +62,69 @@ export const ContentAddPostBase = (props: ContentAddPostBaseProps) => {
                     </>
                 }
             >
-                <div className={FORM_CLASS_NAME}>
-                    <Input
-                        id="add-title"
-                        name="title"
-                        label={t("addFieldTitle")}
-                        variant="secondary"
-                        value={props.props.title}
-                        isDisabled={isPending}
-                        onValueChange={props.on.title}
-                    />
-                    <Input
-                        id="add-date"
-                        name="date"
-                        label={t("addDate")}
-                        variant="secondary"
-                        value={props.props.date}
-                        hint={t("addDateHint")}
-                        isDisabled={isPending}
-                        onValueChange={props.on.date}
-                    />
-                    <Input
-                        id="add-time"
-                        name="time"
-                        label={t("addTime")}
-                        variant="secondary"
-                        value={props.props.time}
-                        hint={t("addTimeHint")}
-                        isDisabled={isPending}
-                        onValueChange={props.on.time}
-                    />
-                    {props.props.pillarOptions.length > 1 ? (
-                        <Select
-                            variant="secondary"
-                            label={t("fieldPillar")}
-                            options={props.props.pillarOptions}
-                            value={props.props.pillarId ?? ""}
-                            isDisabled={isPending}
-                            onValueChange={(v) => props.on.pillar(v || null)}
-                        />
-                    ) : null}
-                    <CheckboxGroup
-                        label={t("fieldChannels")}
-                        orientation="horizontal"
-                        variant="secondary"
-                        options={props.props.channelOptions}
-                        value={props.props.channels}
-                        isDisabled={isPending}
-                        onValueChange={props.on.channels}
-                    />
-                    <ContentCommandNote
-                        note={props.props.note}
-                        closeLabel={t("close")}
-                        onDismiss={props.on.dismissNote}
-                    />
-                </div>
+                {renderNewPostFields(t, props, isPending)}
             </Dialog>
         </>
+    )
+}
+
+/** Draws the div section of the ContentAddPost view. */
+const renderNewPostFields = (
+    t: ContentAddPostBaseProps["props"]["t"],
+    props: ContentAddPostBaseProps,
+    isPending: ContentAddPostBaseProps["props"]["isPending"],
+) => {
+    return (
+        <div className={FORM_CLASS_NAME}>
+            <Input
+                id="add-title"
+                name="title"
+                label={t("addFieldTitle")}
+                variant="secondary"
+                value={props.props.title}
+                isDisabled={isPending}
+                onValueChange={props.on.title}
+            />
+            <Input
+                id="add-date"
+                name="date"
+                label={t("addDate")}
+                variant="secondary"
+                value={props.props.date}
+                hint={t("addDateHint")}
+                isDisabled={isPending}
+                onValueChange={props.on.date}
+            />
+            <Input
+                id="add-time"
+                name="time"
+                label={t("addTime")}
+                variant="secondary"
+                value={props.props.time}
+                hint={t("addTimeHint")}
+                isDisabled={isPending}
+                onValueChange={props.on.time}
+            />
+            {props.props.pillarOptions.length > 1 ? (
+                <Select
+                    variant="secondary"
+                    label={t("fieldPillar")}
+                    options={props.props.pillarOptions}
+                    value={props.props.pillarId ?? ""}
+                    isDisabled={isPending}
+                    onValueChange={(v) => props.on.pillar(v || null)}
+                />
+            ) : null}
+            <CheckboxGroup
+                label={t("fieldChannels")}
+                orientation="horizontal"
+                variant="secondary"
+                options={props.props.channelOptions}
+                value={props.props.channels}
+                isDisabled={isPending}
+                onValueChange={props.on.channels}
+            />
+            <ContentCommandNote note={props.props.note} closeLabel={t("close")} onDismiss={props.on.dismissNote} />
+        </div>
     )
 }

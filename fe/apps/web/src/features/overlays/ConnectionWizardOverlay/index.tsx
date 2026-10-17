@@ -4,7 +4,7 @@ import { useTranslations } from "next-intl"
 import { useSearchParams } from "next/navigation"
 import { purposeFor } from "@/hooks/connection-access"
 import { PROVIDERS, providerKey } from "@/hooks/connection-providers"
-import { useAuthUser } from "@/hooks/auth"
+import { useQueryAuthUserSwr } from "@/hooks/auth"
 import {
     moneyProviderOf,
     useConnectionOverlays,
@@ -38,7 +38,7 @@ export const ConnectionWizardOverlay = (props: ConnectionWizardOverlayProps) => 
     const params = useSearchParams()
     const overlays = useConnectionOverlays()
     const data = useConnectionsData()
-    const user = useAuthUser()
+    const user = useQueryAuthUserSwr()
     const items = props.items ?? data.items
     const agents = props.agents ?? data.activeAgents
     const found = wizardTargetOf((name) => params.get(name), items)

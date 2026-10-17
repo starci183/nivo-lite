@@ -1,3 +1,4 @@
+import type { ModuleIconName } from "@/modules/types"
 import { AgentAutomations } from "@/components/blocks/AgentAutomations"
 import { AgentConnectionAccess } from "@/components/blocks/AgentConnectionAccess"
 import { AgentIdentityCard } from "@/components/blocks/AgentIdentityCard"
@@ -14,7 +15,7 @@ export interface AgentSettingsPageBaseProps {
     readonly props: {
         readonly module: ModuleKey
         readonly installationId: string
-        readonly glyph: string
+        readonly glyph: ModuleIconName
         /** The extra card of the type, by its catalogue key; null when it has none. */
         readonly extrasKey: string | null
     }

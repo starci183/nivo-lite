@@ -2,7 +2,7 @@
 
 import { useCallback } from "react"
 import { useMutateReturnZaloAuthorizationSwr } from "@/hooks/swr"
-import { isRefusedByBackend } from "@/modules/api"
+import { isRefusedByBackend } from "@/modules/failure"
 
 /** What Zalo sends the browser back with after the owner granted the OA permissions. */
 export interface ZaloReturnInput {

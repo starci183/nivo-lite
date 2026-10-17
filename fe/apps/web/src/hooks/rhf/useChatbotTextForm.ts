@@ -6,7 +6,7 @@ import { useForm } from "react-hook-form"
 import { z } from "zod"
 
 /** What the text form of the inbox needs. */
-interface ChatbotTextFormOptions {
+export interface ChatbotTextFormOptions {
     readonly draft: string
     /** The catalog key of the words shown when the text is over the limit. */
     readonly tooLong: "replyTooLong" | "answerTooLong"

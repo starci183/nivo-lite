@@ -1,6 +1,16 @@
-import { z } from "zod"
-import type { DbEngine, DbEntity, DbPreviewRows, DbSavedConnection, DbTableInfo, DbTableMapping } from "@/modules/types"
+import type {
+    DbEngine,
+    DbEntity,
+    DbPreviewRows,
+    DbSavedConnection,
+    DbTableInfo,
+    DbTableMapping,
+    DbTarget,
+} from "@/modules/types"
 import { DB_ENGINES } from "@/modules/utils"
+import { z } from "zod"
+import type { DatabaseTargetValues } from "@/hooks/rhf"
+import type { DatabaseWizardState } from "./useDatabaseWizard"
 
 /** A table named by its schema and either of the two spellings of its name. */
 interface DbTableRef {
@@ -129,3 +139,31 @@ export const dbPreviewLines = (preview: DbPreviewRows): ReadonlyArray<{ readonly
 
 /** Only digits, at most 5: what the port field keeps of what is typed. */
 export const dbPortOf = (value: string): string => value.replace(/\D/g, "").slice(0, 5)
+
+/** Restores a saved connection or prepares the initial wizard state. */
+export const stateOf = (
+    resumeId: string | undefined,
+    saved: DbSavedConnection | null,
+    loadError?: string,
+): DatabaseWizardState => ({
+    index: 0,
+    passwordKept: false,
+    connId: resumeId,
+    tables: null,
+    picked: saved?.tables ?? [],
+    everyMinutes: saved === null ? 60 : saved.everyMinutes,
+    agentIds: saved?.agentIds ?? [],
+    error: loadError ?? null,
+    found: null,
+})
+
+/** Normalizes database form values into the target sent by commands. */
+export const databaseTargetOf = (values: DatabaseTargetValues): DbTarget => ({
+    engine: values.engine,
+    host: values.host.trim(),
+    port: Number(values.port),
+    database: values.database.trim(),
+    user: values.user.trim(),
+    password: values.password,
+    ssl: values.ssl,
+})

@@ -131,41 +131,7 @@ export const ResponsibilitiesBoardBase = (props: ResponsibilitiesBoardBaseProps)
                             </div>
                         </div>
                     ) : null}
-                    <div className={TOOLBAR_CLASS}>
-                        <Tabs
-                            variant="primary"
-                            label={view.tabsLabel}
-                            selectedKey={view.status}
-                            inset="none"
-                            labelVisibility="always"
-                            items={view.tabs}
-                            onSelect={props.on.status}
-                        />
-                        <div className={TOOLBAR_END_CLASS}>
-                            <div className={SEARCH_CLASS}>
-                                <SearchField
-                                    label={view.searchLabel}
-                                    isLabelHidden
-                                    placeholder={view.searchPlaceholder}
-                                    value={view.query}
-                                    onValueChange={props.on.query}
-                                    onClear={() => props.on.query("")}
-                                />
-                            </div>
-                            <Button variant="ghost" onPress={props.on.toggleFilters}>
-                                {view.filtersLabel}
-                            </Button>
-                            <div className={SORT_CLASS}>
-                                <Select
-                                    label={view.sortLabel}
-                                    isLabelHidden
-                                    options={view.sorts}
-                                    value={view.sort}
-                                    onValueChange={props.on.sort}
-                                />
-                            </div>
-                        </div>
-                    </div>
+                    <ResponsibilityToolbar {...props} />
                     <div className={LIST_HEAD_CLASS}>
                         <div className={LIST_TITLE_CLASS}>
                             <Text weight="semibold">{view.listTitle}</Text>
@@ -195,5 +161,49 @@ export const ResponsibilitiesBoardBase = (props: ResponsibilitiesBoardBaseProps)
                 </div>
             </div>
         </PageContainer>
+    )
+}
+
+/** Renders the ResponsibilityToolbar section. */
+const ResponsibilityToolbar = (props: ResponsibilitiesBoardBaseProps) => {
+    const view = props.props
+    return (
+        <>
+            <div className={TOOLBAR_CLASS}>
+                <Tabs
+                    variant="primary"
+                    label={view.tabsLabel}
+                    selectedKey={view.status}
+                    inset="none"
+                    labelVisibility="always"
+                    items={view.tabs}
+                    onSelect={props.on.status}
+                />
+                <div className={TOOLBAR_END_CLASS}>
+                    <div className={SEARCH_CLASS}>
+                        <SearchField
+                            label={view.searchLabel}
+                            isLabelHidden
+                            placeholder={view.searchPlaceholder}
+                            value={view.query}
+                            onValueChange={props.on.query}
+                            onClear={() => props.on.query("")}
+                        />
+                    </div>
+                    <Button variant="ghost" onPress={props.on.toggleFilters}>
+                        {view.filtersLabel}
+                    </Button>
+                    <div className={SORT_CLASS}>
+                        <Select
+                            label={view.sortLabel}
+                            isLabelHidden
+                            options={view.sorts}
+                            value={view.sort}
+                            onValueChange={props.on.sort}
+                        />
+                    </div>
+                </div>
+            </div>
+        </>
     )
 }

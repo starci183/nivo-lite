@@ -119,34 +119,7 @@ export const AgentDashboardFrameBase = (props: AgentDashboardFrameBaseProps) => 
                 />
             )}
 
-            <div className={SIDE_GRID_CLASS_NAME}>
-                <DoneRegion
-                    label={view.doneLabel}
-                    isLoading={view.isHeadLoading}
-                    isFailed={view.doneFailed}
-                    view={view.done}
-                    failure={view.failure}
-                    onRetry={props.on.retry}
-                />
-                <ConnectionsRegion
-                    label={view.connectionsLabel}
-                    isLoading={view.isHeadLoading}
-                    isFailed={view.connectionsFailed}
-                    view={view.connections}
-                    failure={view.failure}
-                    onRetry={props.on.retry}
-                />
-                <div className={SIDE_COLUMN_CLASS_NAME}>
-                    <KnowledgeRegion
-                        label={view.knowledgeLabel}
-                        isLoading={view.isHeadLoading}
-                        isFailed={view.knowledgeFailed}
-                        view={view.knowledge}
-                        failure={view.failure}
-                        onRetry={props.on.retry}
-                    />
-                </div>
-            </div>
+            {renderDashboardRegions(view, props)}
             {props.state.gaps}
 
             {hasStrip ? (
@@ -170,6 +143,40 @@ export const AgentDashboardFrameBase = (props: AgentDashboardFrameBaseProps) => 
                     (view.hasPlaceholder ? (
                         <SurfaceListCard ariaLabel={active?.label ?? view.tabsLabel} isLoading />
                     ) : null)}
+            </div>
+        </div>
+    )
+}
+
+/** Draws the div section of the AgentDashboardFrame view. */
+const renderDashboardRegions = (view: AgentDashboardFrameBaseProps["props"], props: AgentDashboardFrameBaseProps) => {
+    return (
+        <div className={SIDE_GRID_CLASS_NAME}>
+            <DoneRegion
+                label={view.doneLabel}
+                isLoading={view.isHeadLoading}
+                isFailed={view.doneFailed}
+                view={view.done}
+                failure={view.failure}
+                onRetry={props.on.retry}
+            />
+            <ConnectionsRegion
+                label={view.connectionsLabel}
+                isLoading={view.isHeadLoading}
+                isFailed={view.connectionsFailed}
+                view={view.connections}
+                failure={view.failure}
+                onRetry={props.on.retry}
+            />
+            <div className={SIDE_COLUMN_CLASS_NAME}>
+                <KnowledgeRegion
+                    label={view.knowledgeLabel}
+                    isLoading={view.isHeadLoading}
+                    isFailed={view.knowledgeFailed}
+                    view={view.knowledge}
+                    failure={view.failure}
+                    onRetry={props.on.retry}
+                />
             </div>
         </div>
     )

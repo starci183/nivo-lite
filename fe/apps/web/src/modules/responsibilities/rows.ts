@@ -1,3 +1,4 @@
+import type { ModuleIconName } from "@/modules/types"
 import { MODULE_REGISTRY, isModuleKey } from "@/modules/catalog"
 import { dayOffset, dueText } from "./days"
 
@@ -66,8 +67,8 @@ export interface OwnerGroupView {
     readonly name: string
     readonly kind: "human" | "agent"
     readonly handle: string | null
-    /** SVG path data of the glyph an agent owner is drawn with. */
-    readonly glyph: string
+    /** Semantic Icon name of the glyph an agent owner is drawn with. */
+    readonly glyph: ModuleIconName
     readonly rows: ReadonlyArray<ResponsibilityRowView>
 }
 
@@ -172,7 +173,7 @@ export const toRowModelsFromWire = (
     })
 
 /** The glyph of the module an agent runs; an unknown key reads as the chatbot. */
-const glyphOf = (handle: string | null): string =>
+const glyphOf = (handle: string | null): ModuleIconName =>
     MODULE_REGISTRY[handle !== null && isModuleKey(handle) ? handle : "chatbot"].glyph
 
 /** Group rows by owner. Owners with the most rows first, humans before agents on a tie. */

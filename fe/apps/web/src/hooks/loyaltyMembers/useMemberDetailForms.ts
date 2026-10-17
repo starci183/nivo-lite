@@ -1,6 +1,5 @@
 "use client"
 
-import { useFormatter, useTranslations } from "next-intl"
 import {
     LOYALTY_ADJUST_REASON_MAX,
     LOYALTY_MEMBER_NAME_MAX,
@@ -9,8 +8,9 @@ import {
     isoToInput,
     parseSigned,
 } from "@/hooks/loyalty"
-import type { LoyaltyMemberType } from "@/modules/api"
 import { useLoyaltyAdjustForm, useLoyaltyMemberForm } from "@/hooks/rhf"
+import type { LoyaltyMemberType } from "@/hooks/swr"
+import { useFormatter, useTranslations } from "next-intl"
 import type { useMemberActions } from "./useMemberActions"
 
 /** What the forms of the member page need to know. */
@@ -59,11 +59,7 @@ export const useMemberDetailForms = (input: MemberDetailFormsInput) => {
         note: editForm.watch("note"),
         ...(nameError === undefined ? {} : { nameError }),
         ...(birthdayError === undefined ? {} : { birthdayError }),
-        nameLabel: t("fieldName"),
-        birthdayLabel: t("fieldBirthday"),
-        birthdayPlaceholder: t("birthdayPlaceholder"),
-        birthdayHint: t("birthdayHint"),
-        noteLabel: t("fieldNote"),
+        ...editPropsLabelsOf(t),
         noteMax: LOYALTY_MEMBER_NOTE_MAX,
         saveLabel: t("save"),
         isPending: actions.isPending,
@@ -78,11 +74,7 @@ export const useMemberDetailForms = (input: MemberDetailFormsInput) => {
         points: adjustValues.points,
         reason: adjustValues.reason,
         ...(pointsError === undefined ? {} : { pointsError }),
-        pointsLabel: t("adjustPoints"),
-        pointsHint: t("adjustPointsHint"),
-        pointsPlaceholder: "+50",
-        reasonLabel: t("adjustReason"),
-        submitLabel: t("adjustSubmit"),
+        ...adjustmentLabelsOf(t),
         canSubmit: adjustPoints !== null && adjustPoints !== 0 && adjustValues.reason.trim() !== "",
         ...(actions.adjustNote === null ? {} : { note: actions.adjustNote }),
         isPending: actions.isPending,
@@ -98,7 +90,48 @@ export const useMemberDetailForms = (input: MemberDetailFormsInput) => {
             }),
         onSubmit: () => void submitAdjust(),
     }
-    const readOnly = {
+    const readOnly = readOnlyOf(t, member, format)
+    return {
+        adjust: adjustProps,
+        edit: input.canManage ? editProps : undefined,
+        readOnly: input.canManage ? undefined : readOnly,
+        reset: () => {
+            editForm.reset()
+            adjustForm.reset()
+        },
+    }
+}
+
+/** Resolves the editProps labels for the current locale. */
+const editPropsLabelsOf = (t: ReturnType<typeof useTranslations<"loyalty">>) => ({
+    nameLabel: t("fieldName"),
+    birthdayLabel: t("fieldBirthday"),
+    birthdayPlaceholder: t("birthdayPlaceholder"),
+    birthdayHint: t("birthdayHint"),
+    noteLabel: t("fieldNote"),
+})
+
+const readOnlyOf = (
+    t: ReturnType<typeof useTranslations<"loyalty">>,
+    member:
+        | {
+              birthday: string | null
+              email: string | null
+              id: string
+              joinedAt: string
+              lastVisitAt: string | null
+              lifetimeSpendVnd: number
+              name: string
+              note: string
+              phone: string | null
+              points: number
+              tierKey: string | null
+              visits: number
+          }
+        | undefined,
+    format: ReturnType<typeof useFormatter>,
+) => {
+    return {
         items: [
             {
                 id: "birthday",
@@ -121,13 +154,13 @@ export const useMemberDetailForms = (input: MemberDetailFormsInput) => {
         ],
         note: t("readOnlyNote"),
     }
-    return {
-        adjust: adjustProps,
-        edit: input.canManage ? editProps : undefined,
-        readOnly: input.canManage ? undefined : readOnly,
-        reset: () => {
-            editForm.reset()
-            adjustForm.reset()
-        },
-    }
 }
+
+/** Labels of the points adjustment form. */
+const adjustmentLabelsOf = (t: ReturnType<typeof useTranslations<"loyalty">>) => ({
+    pointsLabel: t("adjustPoints"),
+    pointsHint: t("adjustPointsHint"),
+    pointsPlaceholder: "+50",
+    reasonLabel: t("adjustReason"),
+    submitLabel: t("adjustSubmit"),
+})

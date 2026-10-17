@@ -1,23 +1,16 @@
 "use client"
 
-import { useCallback, useState } from "react"
-import useSWRMutation from "swr/mutation"
-import { queryOfficeMessages } from "@/modules/api/graphql/queries/query-office-messages"
-import { useQueryOfficeMessagesSwr } from "@/hooks/swr"
 import { slotOfSwr } from "@/hooks/slot"
-import type { DataSlot } from "@/modules/types"
+import { useQueryOfficeMessagesSwr } from "@/hooks/swr"
 import { OFFICE_PAGE_SIZE, OFFICE_POLL_MS, mergeMessages, toOfficeMessage } from "@/modules/office"
 import type { OfficeMessage } from "@/modules/office"
+import type { DataSlot } from "@/modules/types"
+import { useCallback, useState } from "react"
 
 /** The cursor of the earliest line read so far. */
 interface ThreadCursor {
     readonly createdAt: string
     readonly id: string
-}
-
-/** The argument of the earlier-page read. */
-interface CursorArg {
-    readonly arg: ThreadCursor
 }
 
 /** The Office thread: the newest page, read again every few seconds, and the earlier pages the person asked for. */
@@ -31,11 +24,7 @@ export const useOfficeThread = (): {
     const latest = useQueryOfficeMessagesSwr({ limit: OFFICE_PAGE_SIZE }, { refreshInterval: OFFICE_POLL_MS })
     const [earlier, setEarlier] = useState<ReadonlyArray<OfficeMessage>>([])
     const [cursor, setCursor] = useState<ThreadCursor | null | undefined>(undefined)
-    const page = useSWRMutation("OFFICE_EARLIER_PAGE", async (_key: string, { arg }: CursorArg) => {
-        const result = await queryOfficeMessages({ request: { before: arg, limit: OFFICE_PAGE_SIZE } })
-        if (!result.data) throw new Error("officeMessages answered no data")
-        return result.data.officeMessages
-    })
+    const page = latest.earlier
     const next = cursor === undefined ? (latest.data?.next ?? null) : cursor
     const loadEarlier = useCallback(() => {
         if (next === null) return

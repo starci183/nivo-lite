@@ -9,19 +9,19 @@ import { ConnectionLibrary } from "@/components/blocks/ConnectionLibrary"
 import { ConnectionRow } from "@/components/blocks/ConnectionRow"
 import { ConnectionsOverview, OverlayHost } from "@/components/blocks/ConnectionsOverview"
 import { ConnectionViewTabs } from "@/components/blocks/ConnectionViewTabs"
-import { useAuthUser } from "@/hooks/auth"
+import { useQueryAuthUserSwr } from "@/hooks/auth"
 import { catalogKey, entryById } from "@/hooks/connection-catalog"
-import { PROVIDER_GROUPS, PROVIDER_LOGO, providerKey } from "@/hooks/connection-providers"
+import { PROVIDER_LOGO } from "@/hooks/connection-providers"
 import {
     attentionConnections,
     CONNECTION_ROUTES,
-    GROUP_TITLE_KEY,
     isLocalOnly,
     liveConnections,
     sortRows,
     URL_PARAMS,
     useConnectionOverlays,
     useConnectionsData,
+    connectionGroups,
 } from "@/hooks/connections"
 import { useActiveWorkspace, useWorkspaceCards } from "@/hooks/workspaces"
 import { webSiteOrigin } from "@/modules/config"
@@ -59,7 +59,7 @@ export const ConnectionsOverlayHost = (props: ConnectionsOverlayHostProps) => {
     const t = useTranslations("connections")
     const { activeWorkspaceId } = useActiveWorkspace()
     const workspaces = useWorkspaceCards()
-    const user = useAuthUser()
+    const user = useQueryAuthUserSwr()
     const data = useConnectionsData()
     const role = workspaces.cards.find((card) => card.id === activeWorkspaceId)?.role
     const manager = role === "owner" || role === "manager"
@@ -68,25 +68,8 @@ export const ConnectionsOverlayHost = (props: ConnectionsOverlayHostProps) => {
     const live = liveConnections(items)
     const attention = attentionConnections(items)
     const first = attention[0]
-    const namesOf = (agentIds: ReadonlyArray<string>) =>
-        agentIds.map((id) => agentNames[id]).filter((name): name is string => name !== undefined)
     const showsLibrary = props.tab === "library" || (props.tab !== "connected" && live.length === 0)
-    const groups = PROVIDER_GROUPS.map((group) => ({
-        id: group.id,
-        title: t(GROUP_TITLE_KEY[group.id]),
-        count: items.filter((item) => group.providers.includes(item.provider)).length,
-        cards: group.providers
-            .filter((provider) => items.some((item) => item.provider === provider))
-            .map((provider) => {
-                const rows = sortRows(items.filter((item) => item.provider === provider))
-                return {
-                    provider,
-                    title: t(providerKey(provider, "title")),
-                    fact: t("connectionCount", { count: rows.length }),
-                    rows: rows.map((connection) => ({ connection, agentNames: namesOf(connection.agentIds) })),
-                }
-            }),
-    })).filter((group) => group.cards.length > 0)
+    const groups = connectionGroups(items, agentNames, t)
     const isLoading = workspaces.status === "loading" || (manager && data.isLoading)
     const mode = detailModeOf({ isLoading, manager, failed: data.failed })
     return (
@@ -143,7 +126,7 @@ export const ConnectorDetailOverlay = (props: ConnectorDetailOverlayProps) => {
     const params = useSearchParams()
     const overlays = useConnectionOverlays()
     const data = useConnectionsData()
-    const user = useAuthUser()
+    const user = useQueryAuthUserSwr()
     const { activeWorkspaceId } = useActiveWorkspace()
     const workspaces = useWorkspaceCards()
     const role = workspaces.cards.find((card) => card.id === activeWorkspaceId)?.role

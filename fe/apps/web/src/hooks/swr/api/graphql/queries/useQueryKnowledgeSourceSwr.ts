@@ -1,5 +1,6 @@
 "use client"
 
+import type { WorkspaceReadKey } from "@/hooks/workspaceread"
 import useSWR from "swr"
 import { useWorkspaceKey } from "@/hooks/workspaceKey"
 import { queryKnowledgeSource } from "@/modules/api/graphql/queries/query-knowledge-source"
@@ -17,7 +18,7 @@ export const useQueryKnowledgeSourceSwr = (id: string | undefined) => {
     const key = useWorkspaceKey(QUERY_KNOWLEDGE_SOURCE_SWR_KEY, [id ?? ""], id !== undefined)
     return useSWR(
         key,
-        async ([, , sourceId]: readonly [string, string, string]) => {
+        async ([, , sourceId]: WorkspaceReadKey<string>) => {
             const result = await queryKnowledgeSource({ request: { id: sourceId } })
             if (!result.data) throw new Error("knowledgeSource answered no data")
             return result.data.knowledgeSource

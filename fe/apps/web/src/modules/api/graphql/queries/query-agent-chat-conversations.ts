@@ -33,6 +33,8 @@ enum QueryAgentChatConversations {
     Query1 = "query1",
 }
 
+const queryMap: Record<QueryAgentChatConversations, Document> = { [QueryAgentChatConversations.Query1]: query1 }
+
 /** Parameters of the agent's conversation history query. */
 type QueryAgentChatConversationsParams = QueryParams<
     QueryAgentChatConversations,
@@ -40,10 +42,15 @@ type QueryAgentChatConversationsParams = QueryParams<
 > & { request: QueryAgentChatConversationsRequest }
 
 /** Loads conversations under the active workspace's membership. */
-export const queryAgentChatConversations = async ({ request, signal, headers }: QueryAgentChatConversationsParams) => {
+export const queryAgentChatConversations = async ({
+    query = QueryAgentChatConversations.Query1,
+    request,
+    signal,
+    headers,
+}: QueryAgentChatConversationsParams) => {
     const apollo = createAuthApolloClient({ signal, headers })
     return apollo.query({
-        query: query1,
+        query: queryMap[query],
         variables: { input: request },
         context: { headers },
     })

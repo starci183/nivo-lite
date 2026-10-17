@@ -1,15 +1,15 @@
 "use client"
 
-import { useMemo } from "react"
-import { answeredData, useSettledGraphQL } from "@/hooks/connection-wizard"
+import { useSettledGraphQL } from "@/hooks/connection-wizard"
 import type { Settled } from "@/hooks/connection-wizard"
 import { useConnectionsRefresh } from "@/hooks/connections"
-import { useMutateSaveOpenApiConnectionSwr } from "@/hooks/swr"
-import type { MutateSaveOpenApiConnectionRequest } from "@/modules/api/graphql/mutations/mutation-save-open-api-connection"
-import { queryLoadOpenApiSpec } from "@/modules/api/graphql/queries/query-load-open-api-specification"
-import { queryTestOpenApiOperation } from "@/modules/api/graphql/queries/query-test-open-api-operation"
-import type { QueryTestOpenApiOperationRequest } from "@/modules/api/graphql/queries/query-test-open-api-operation"
-import type { OpenApiTestType } from "@/modules/api"
+import {
+    useMutateSaveOpenApiConnectionSwr,
+    useQueryLoadOpenApiSpecificationSwr,
+    useQueryTestOpenApiOperationSwr,
+} from "@/hooks/swr"
+import type { MutateSaveOpenApiConnectionRequest, OpenApiTestType, QueryTestOpenApiOperationRequest } from "@/hooks/swr"
+import { useMemo } from "react"
 import { OPEN_API_AUTH_TYPES, parseOpenApiOps } from "./openapi-wizard.shared"
 import type { OpenApiOp } from "./openapi-wizard.shared"
 
@@ -39,17 +39,15 @@ const authTypeOf = (raw: string): OpenApiSpecView["authType"] =>
 /** The OpenAPI wizard's calls bound to the toast helper. */
 export const useOpenApiCommands = (): OpenApiCommands => {
     const settle = useSettledGraphQL()
+    const { trigger: loadSpec } = useQueryLoadOpenApiSpecificationSwr()
+    const { trigger: testOperation } = useQueryTestOpenApiOperationSwr()
     const refresh = useConnectionsRefresh()
     const { trigger: triggerSave } = useMutateSaveOpenApiConnectionSwr()
     return useMemo(
         () => ({
             loadSpec: (specUrl, specText) =>
                 settle(async () => {
-                    const data = answeredData(
-                        await queryLoadOpenApiSpec({ request: { specUrl, specText } }),
-                        "loadOpenApiSpec",
-                    )
-                    const spec = data.loadOpenApiSpec
+                    const spec = await loadSpec({ specUrl, specText })
                     return {
                         title: spec.title,
                         baseUrl: spec.baseUrl,
@@ -61,8 +59,7 @@ export const useOpenApiCommands = (): OpenApiCommands => {
                 }),
             test: (request) =>
                 settle(async () => {
-                    const data = answeredData(await queryTestOpenApiOperation({ request }), "testOpenApiOperation")
-                    return data.testOpenApiOperation
+                    return testOperation(request)
                 }),
             save: async (request) => {
                 const settled = await settle(() => triggerSave(request))
@@ -71,6 +68,6 @@ export const useOpenApiCommands = (): OpenApiCommands => {
                 return settled
             },
         }),
-        [settle, refresh, triggerSave],
+        [settle, refresh, triggerSave, loadSpec, testOperation],
     )
 }

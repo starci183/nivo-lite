@@ -10,7 +10,7 @@ import type {
     ShiftsSetupType,
     ShiftsSwapType,
     ShiftsWorkItemType,
-} from "@/modules/api"
+} from "@/hooks/swr"
 import type {
     ShiftsAvailRowView,
     ShiftsAvailView,

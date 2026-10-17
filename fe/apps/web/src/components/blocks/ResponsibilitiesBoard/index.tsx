@@ -85,23 +85,14 @@ export const ResponsibilitiesBoard = (props: ResponsibilitiesBoardProps) => {
                 clearLabel: t("clearFilters"),
                 isFiltered: filters.isFiltered,
                 tabsLabel: t("tabsLabel"),
-                tabs: [
-                    { id: ALL, label: `${t("tabAll")}${countOf("all")}` },
-                    ...ROW_STATUSES.map((status) => ({
-                        id: status,
-                        label: `${t(STATUS_KEYS[status])}${countOf(status)}`,
-                    })),
-                ],
+                tabs: responsibilityTabs(t, countOf),
                 status: filters.status,
                 searchLabel: t("searchLabel"),
                 searchPlaceholder: t("searchPlaceholder"),
                 query: filters.query,
                 filtersLabel: t("filters"),
                 sortLabel: t("sortLabel"),
-                sorts: [
-                    { id: "due", label: t("sortDue") },
-                    { id: "newest", label: t("sortNewest") },
-                ],
+                sorts: responsibilitySorts(t),
                 sort: filters.sort,
                 listTitle: t("byOwner"),
                 count: slot.isLoading ? "" : String(filters.visibleCount),
@@ -130,3 +121,21 @@ export const ResponsibilitiesBoard = (props: ResponsibilitiesBoardProps) => {
         />
     )
 }
+
+/** Resolves the two supported sort choices. */
+const responsibilitySorts = (t: ReturnType<typeof useTranslations<"responsibilities">>) => [
+    { id: "due", label: t("sortDue") },
+    { id: "newest", label: t("sortNewest") },
+]
+
+/** Resolves status tabs and the current row counts. */
+const responsibilityTabs = (
+    t: ReturnType<typeof useTranslations<"responsibilities">>,
+    countOf: (key: RowStatus | "all") => string,
+) => [
+    { id: ALL, label: `${t("tabAll")}${countOf("all")}` },
+    ...ROW_STATUSES.map((status) => ({
+        id: status,
+        label: `${t(STATUS_KEYS[status])}${countOf(status)}`,
+    })),
+]

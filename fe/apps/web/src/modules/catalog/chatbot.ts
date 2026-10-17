@@ -5,7 +5,7 @@ export const CHATBOT = {
     key: "chatbot",
     order: 10,
     icon: "support",
-    glyph: "M4 5h16v10H9l-5 4z",
+    glyph: "moduleChatbot",
     mascot: "/images/promo/mascot-chat.png",
     category: "sales_customer",
     status: "stable",

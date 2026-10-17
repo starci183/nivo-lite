@@ -73,6 +73,42 @@ const previewOf = (tile: Pick<VideoMediaTile, "url" | "kind" | "name">) => {
     )
 }
 
+const sourcesOf = (props: VideoInputsStepBaseProps) => {
+    return (
+        <>
+            {props.props.sources.length === 0 ? (
+                <div className={INPUTS_COPY}>
+                    <Text weight="semibold">{props.props.sourcesHeading}</Text>
+                    <Text size="xs" tone="muted">
+                        {props.props.sourcesHint}
+                    </Text>
+                    <Text size="sm" tone="muted">
+                        {props.props.sourcesEmpty}
+                    </Text>
+                </div>
+            ) : (
+                <CheckboxGroup
+                    label={props.props.sourcesHeading}
+                    description={props.props.sourcesHint}
+                    variant="secondary"
+                    isDisabled={!props.props.canEdit}
+                    value={props.props.sourceIds}
+                    options={props.props.sources.map((source) => ({
+                        value: source.value,
+                        label: source.label,
+                        description: (
+                            <Text as="span" size="xs" tone="muted" overflow="clamp-2">
+                                {source.excerpt}
+                            </Text>
+                        ),
+                    }))}
+                    onValueChange={props.on.sourceIds}
+                />
+            )}
+        </>
+    )
+}
+
 /** Draws step two: public knowledge to base the video on, what to stress, photos and clips. */
 export const VideoInputsStepBase = (props: VideoInputsStepBaseProps) => (
     <div className={INPUTS_STACK}>
@@ -81,35 +117,7 @@ export const VideoInputsStepBase = (props: VideoInputsStepBaseProps) => (
         )}
         <SurfaceCard label={props.props.heading}>
             <div className={INPUTS_STACK}>
-                {props.props.sources.length === 0 ? (
-                    <div className={INPUTS_COPY}>
-                        <Text weight="semibold">{props.props.sourcesHeading}</Text>
-                        <Text size="xs" tone="muted">
-                            {props.props.sourcesHint}
-                        </Text>
-                        <Text size="sm" tone="muted">
-                            {props.props.sourcesEmpty}
-                        </Text>
-                    </div>
-                ) : (
-                    <CheckboxGroup
-                        label={props.props.sourcesHeading}
-                        description={props.props.sourcesHint}
-                        variant="secondary"
-                        isDisabled={!props.props.canEdit}
-                        value={props.props.sourceIds}
-                        options={props.props.sources.map((source) => ({
-                            value: source.value,
-                            label: source.label,
-                            description: (
-                                <Text as="span" size="xs" tone="muted" overflow="clamp-2">
-                                    {source.excerpt}
-                                </Text>
-                            ),
-                        }))}
-                        onValueChange={props.on.sourceIds}
-                    />
-                )}
+                {sourcesOf(props)}
                 <Textarea
                     label={props.props.notesLabel}
                     variant="secondary"

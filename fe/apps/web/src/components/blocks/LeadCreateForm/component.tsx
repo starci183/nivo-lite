@@ -53,32 +53,7 @@ export const LeadCreateFormBase = (props: LeadCreateFormBaseProps) => {
                             {p.intro}
                         </Text>
                     </div>
-                    <Input
-                        id="lead-contact"
-                        name="contact_name"
-                        label={p.contactLabel}
-                        hint={p.contactHint}
-                        variant="secondary"
-                        isRequired
-                        isDisabled={p.isPending}
-                        value={p.values.contact_name}
-                        isError={Boolean(p.errors.contact_name)}
-                        errorMessage={p.errors.contact_name}
-                        onValueChange={(value) => on.change("contact_name", value)}
-                    />
-                    <Input
-                        id="lead-company"
-                        name="company"
-                        label={p.companyLabel}
-                        hint={p.companyHint}
-                        variant="secondary"
-                        isRequired
-                        isDisabled={p.isPending}
-                        value={p.values.company}
-                        isError={Boolean(p.errors.company)}
-                        errorMessage={p.errors.company}
-                        onValueChange={(value) => on.change("company", value)}
-                    />
+                    <LeadContactFields {...props} />
                     <Select
                         label={p.channelLabel}
                         name="channel"
@@ -130,5 +105,40 @@ export const LeadCreateFormBase = (props: LeadCreateFormBaseProps) => {
                 </div>
             </Form>
         </SurfaceCard>
+    )
+}
+
+/** Required contact and company fields of a new lead. */
+const LeadContactFields = (props: LeadCreateFormBaseProps) => {
+    const { props: p, on } = props
+    return (
+        <>
+            <Input
+                id="lead-contact"
+                name="contact_name"
+                label={p.contactLabel}
+                hint={p.contactHint}
+                variant="secondary"
+                isRequired
+                isDisabled={p.isPending}
+                value={p.values.contact_name}
+                isError={Boolean(p.errors.contact_name)}
+                errorMessage={p.errors.contact_name}
+                onValueChange={(value) => on.change("contact_name", value)}
+            />
+            <Input
+                id="lead-company"
+                name="company"
+                label={p.companyLabel}
+                hint={p.companyHint}
+                variant="secondary"
+                isRequired
+                isDisabled={p.isPending}
+                value={p.values.company}
+                isError={Boolean(p.errors.company)}
+                errorMessage={p.errors.company}
+                onValueChange={(value) => on.change("company", value)}
+            />
+        </>
     )
 }

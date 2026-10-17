@@ -1,16 +1,16 @@
 "use client"
 
+import {
+    QUERY_ACCOUNTING_WORKBENCH_SWR_KEY,
+    QUERY_AGENT_DASHBOARD_SWR_KEY,
+    useMutateRecordManualEvidenceSwr,
+} from "@/hooks/swr"
+import type { MutateRecordManualEvidenceRequest } from "@/hooks/swr"
+import { useActiveWorkspace } from "@/hooks/workspaces"
+import { toast, useGraphQLWithToast } from "@/modules/toast"
 import { useTranslations } from "next-intl"
 import { useCallback } from "react"
 import { mutate } from "swr"
-import {
-    useMutateRecordManualEvidenceSwr,
-    QUERY_ACCOUNTING_WORKBENCH_SWR_KEY,
-    QUERY_AGENT_DASHBOARD_SWR_KEY,
-} from "@/hooks/swr"
-import { useActiveWorkspace } from "@/hooks/workspaces"
-import type { MutateRecordManualEvidenceRequest } from "@/modules/api/graphql/mutations/mutation-record-manual-evidence"
-import { toast, useGraphQLWithToast } from "@/modules/toast"
 
 /** Records a manual credit, reports duplicates and revalidates the accounting figures. */
 export const useRecordManualEvidence = () => {

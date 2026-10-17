@@ -1,3 +1,5 @@
+import { nivoIconSource } from "@/components/leaves/Icon"
+import type { ModuleIconName } from "@/modules/types"
 import { Avatar, Badge, Button, Text } from "@starci/grammar/common"
 import { AgentMark } from "@/components/leaves/AgentMark"
 import { BACK_CLASS_NAME, HEADER_ACTIONS_CLASS_NAME, HEADER_CLASS_NAME, HEADER_COPY_CLASS_NAME } from "./classNames"
@@ -7,7 +9,7 @@ export interface AgentChatHeaderProps {
     readonly backLabel: string
     readonly name: string
     readonly subtitle: string
-    readonly glyph: string
+    readonly glyph: ModuleIconName
     readonly module: string
     /** The agent is still loading: the mark and the lines draw as waiting shapes. */
     readonly isSkeleton: boolean
@@ -27,7 +29,7 @@ export interface AgentChatHeaderProps {
 
 /** What the mark of the header needs. */
 interface HeaderMarkProps {
-    readonly glyph: string
+    readonly glyph: ModuleIconName
     readonly module: string
     readonly name: string
     readonly isSkeleton: boolean
@@ -36,7 +38,9 @@ interface HeaderMarkProps {
 /** The mark of the agent, or a waiting avatar while the agent loads. */
 const HeaderMark = (props: HeaderMarkProps) => {
     if (props.isSkeleton) return <Avatar name="" size="md" isSkeleton />
-    return <AgentMark glyph={props.glyph} module={props.module} label={props.name} size="md" />
+    return (
+        <AgentMark glyph={nivoIconSource(props.glyph, "leading")} module={props.module} label={props.name} size="md" />
+    )
 }
 
 /** The header of the chat: who the agent is, what state the conversation is in and what the owner can do with it. */

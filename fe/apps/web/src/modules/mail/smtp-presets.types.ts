@@ -21,8 +21,8 @@ interface SmtpMode {
     readonly fixedUser?: string
     /** The username is the sender mailbox (Gmail, Microsoft 365, Zoho). */
     readonly userIsEmail?: boolean
-    readonly passwordLabel: string
-    readonly passwordHint: string
+    readonly passLabel: string
+    readonly passHint: string
     readonly steps: ReadonlyArray<GuideStep>
     readonly cautions: ReadonlyArray<string>
 }

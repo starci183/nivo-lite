@@ -1,13 +1,14 @@
 "use client"
 
+import { creditRecordsOf, invoiceRecordsOf, orderRecordsOf } from "@/hooks/accountingRecords"
+import { useAccountingEvidenceForm } from "@/hooks/rhf"
+import type { AccountingEvidenceValues } from "@/hooks/rhf"
 import type { AccountingWorkbenchData } from "@/modules/types"
+import { digitsToNumber, moneyOf, vietnamToday } from "@/modules/utils"
 import { useFormatter, useTranslations } from "next-intl"
 import { useState } from "react"
 import { useWatch } from "react-hook-form"
-import { digitsToNumber, moneyOf, vietnamToday } from "@/modules/utils"
 import { useRecordManualEvidence } from "./useRecordManualEvidence"
-import { creditRecordsOf, invoiceRecordsOf, orderRecordsOf } from "@/hooks/accountingRecords"
-import { useAccountingEvidenceForm, type AccountingEvidenceValues } from "@/hooks/rhf"
 
 /** The Evidence tab: credits, invoices and orders without an invoice, plus the manual evidence form. */
 export const useAccountingEvidence = (data: AccountingWorkbenchData | undefined) => {
@@ -75,14 +76,7 @@ export const useAccountingEvidence = (data: AccountingWorkbenchData | undefined)
                 intro: t("manualIntro"),
                 amountLabel: t("fAmount"),
                 amountHint: !fields.amount ? null : moneyOf(format, digitsToNumber(fields.amount)),
-                dateLabel: t("fDate"),
-                contentLabel: t("fContent"),
-                contentHint: t("fContentHint"),
-                payerLabel: t("fPayer"),
-                noteLabel: t("fNote"),
-                saveLabel: t("manualSave"),
-                cancelLabel: t("cancel"),
-                foot: t("manualFoot"),
+                ...evidenceFormLabelsOf(t),
                 amount: fields.amount ?? "",
                 date: fields.date || today,
                 maxDate: today,
@@ -97,3 +91,15 @@ export const useAccountingEvidence = (data: AccountingWorkbenchData | undefined)
         on: actions,
     }
 }
+
+/** Resolves the form labels for the current locale. */
+const evidenceFormLabelsOf = (t: ReturnType<typeof useTranslations<"workbenchAccounting">>) => ({
+    dateLabel: t("fDate"),
+    contentLabel: t("fContent"),
+    contentHint: t("fContentHint"),
+    payerLabel: t("fPayer"),
+    noteLabel: t("fNote"),
+    saveLabel: t("manualSave"),
+    cancelLabel: t("cancel"),
+    foot: t("manualFoot"),
+})

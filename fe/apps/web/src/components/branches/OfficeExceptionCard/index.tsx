@@ -48,19 +48,7 @@ export const OfficeExceptionCard = (props: OfficeExceptionCardProps) => {
                 {item.reasonBadge === null ? null : <Badge tone="neutral">{item.reasonBadge}</Badge>}
                 {item.isSimulated ? <Badge tone="neutral">{text("simulatedTag")}</Badge> : null}
             </div>
-            <div className={QUOTE_CLASS_NAME}>
-                <Text size="xs" tone="muted" weight="medium">
-                    {item.errorText === null ? text("exceptionProposes") : text("exceptionErrorLabel")}
-                </Text>
-                <Text as="p" size="sm">
-                    {item.errorText ?? item.summary}
-                </Text>
-                {item.draft === null || item.errorText !== null ? null : (
-                    <Text as="p" size="sm" tone="muted">
-                        {item.draft}
-                    </Text>
-                )}
-            </div>
+            {renderOfficeExceptionCardProposal(item, text)}
             {item.creditLine === null ? null : (
                 <div className={QUOTE_CLASS_NAME}>
                     <Text size="xs" tone="muted" weight="medium">
@@ -110,3 +98,23 @@ export const OfficeExceptionCard = (props: OfficeExceptionCardProps) => {
         </OfficeCardFrame>
     )
 }
+
+/** Renders the OfficeExceptionCard proposal section. */
+const renderOfficeExceptionCardProposal = (
+    item: NonNullable<OfficeExceptionCardProps["item"]>,
+    text: NonNullable<OfficeExceptionCardProps["text"]>,
+) => (
+    <div className={QUOTE_CLASS_NAME}>
+        <Text size="xs" tone="muted" weight="medium">
+            {item.errorText === null ? text("exceptionProposes") : text("exceptionErrorLabel")}
+        </Text>
+        <Text as="p" size="sm">
+            {item.errorText ?? item.summary}
+        </Text>
+        {item.draft === null || item.errorText !== null ? null : (
+            <Text as="p" size="sm" tone="muted">
+                {item.draft}
+            </Text>
+        )}
+    </div>
+)

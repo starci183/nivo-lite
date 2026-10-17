@@ -1,6 +1,6 @@
 // Pure (non-React) toast helpers around API outcomes. The localized labels are injected by the `use*WithToast` hooks (./hooks),
 // so this core stays free of React and i18n.
-import { isUnauthenticatedFailure } from "@/modules/api"
+import { isUnauthenticatedFailure } from "@/modules/failure"
 import type { GraphQLResponse } from "@/modules/types"
 import { toast } from "./toast"
 

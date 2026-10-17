@@ -1,5 +1,5 @@
 import type { useFormatter, useTranslations } from "next-intl"
-import type { CreditUsageSummaryType } from "@/modules/api"
+import type { CreditUsageSummaryType } from "@/hooks/swr"
 import { dayjs } from "@/modules/dayjs"
 
 type UsageTranslator = ReturnType<typeof useTranslations<"billing">>

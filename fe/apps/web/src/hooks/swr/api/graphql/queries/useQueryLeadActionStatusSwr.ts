@@ -1,7 +1,9 @@
 "use client"
 
+import { workspaceArgumentKey, jobPolling, noData } from "@/hooks/workspaceread"
+import type { WorkspaceReadKey } from "@/hooks/workspaceread"
+import useSWR from "swr"
 import type { SWRConfiguration } from "swr"
-import { jobPolling, noData, useWorkspaceArgSwr } from "@/hooks/workspaceread"
 import { queryLeadActionStatus } from "@/modules/api/graphql/queries/query-lead-action-status"
 
 /** Workspace-scoped cache identity for the leadActionStatus query. */
@@ -13,12 +15,10 @@ export const useQueryLeadActionStatusSwr = (
     id: string | undefined,
     options?: SWRConfiguration,
 ) =>
-    useWorkspaceArgSwr(
-        QUERY_LEAD_ACTION_STATUS_SWR_KEY,
-        workspaceId,
-        id,
-        async (value) =>
-            (await queryLeadActionStatus({ request: { id: value } })).data?.leadActionStatus ??
+    useSWR(
+        workspaceArgumentKey(QUERY_LEAD_ACTION_STATUS_SWR_KEY, workspaceId, id),
+        async ([, , input]: WorkspaceReadKey<string>) =>
+            (await queryLeadActionStatus({ request: { id: input } })).data?.leadActionStatus ??
             noData("leadActionStatus"),
         jobPolling(options),
     )

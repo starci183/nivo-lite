@@ -1,3 +1,4 @@
+import type { ModuleIconName } from "@/modules/types"
 import { MODULE_REGISTRY, isModuleKey } from "@/modules/catalog"
 import type { ModuleKey } from "@/modules/catalog"
 import { agentHref, agentListHref, instancesOf } from "@/modules/installations"
@@ -98,5 +99,5 @@ export const typeTargetOf = (
 }
 
 /** The glyph of an agent type; an unknown or missing key falls back to the chatbot glyph. */
-export const moduleGlyphOf = (module: string | null): string =>
+export const moduleGlyphOf = (module: string | null): ModuleIconName =>
     isModuleKey(module) ? MODULE_REGISTRY[module].glyph : MODULE_REGISTRY.chatbot.glyph

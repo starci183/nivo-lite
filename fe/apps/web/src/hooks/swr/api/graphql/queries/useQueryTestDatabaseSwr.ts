@@ -1,14 +1,15 @@
 "use client"
 
-import useSWRMutation from "swr/mutation"
 import { queryTestDatabase } from "@/modules/api/graphql/queries/query-test-database"
+import type { queryTestDatabase as QueryTestDatabaseOperation } from "@/modules/api/graphql/queries/query-test-database"
+import useSWRMutation from "swr/mutation"
 
 /** The SWR key of the testDatabase query. */
 export const QUERY_TEST_DATABASE_SWR_KEY = "QUERY_TEST_DATABASE_SWR"
 
 /** The argument the trigger of this hook is called with. */
 interface TriggerArg {
-    readonly arg: Parameters<typeof queryTestDatabase>[0]["request"]
+    readonly arg: Parameters<typeof QueryTestDatabaseOperation>[0]["request"]
 }
 
 /** Lazily connects read only to the owner database; `trigger(input)` answers its tables and rejects with the back end failure. */

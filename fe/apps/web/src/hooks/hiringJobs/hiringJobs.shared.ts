@@ -1,6 +1,6 @@
-import { linesOf } from "@/hooks/hiring"
+import { linesOf, type FieldOf } from "@/hooks/hiring"
 import type { JobQuestionView, JobView } from "@/hooks/hiringWire"
-import type { HiringJobQuestionRequest, SaveHiringJobRequest } from "@/modules/api"
+import type { HiringJobQuestionRequest, SaveHiringJobRequest } from "@/hooks/swr"
 
 /** The answer kinds a question can ask for. */
 export const QUESTION_TYPES: ReadonlyArray<string> = ["text", "yesno", "number", "choice"]
@@ -47,6 +47,12 @@ export interface HiringJobValues {
     niceToHave: string
     questions: Array<HiringQuestionValues>
     channels: Array<string>
+}
+
+/** The text and numeric changes shared by the basic and requirement job fields. */
+export interface HiringJobFieldCommands {
+    readonly onText: (name: FieldOf<HiringJobValues, string>, value: string) => void
+    readonly onNumber: (name: FieldOf<HiringJobValues, number | null>, value: number | null) => void
 }
 
 /** A new question id: short, unique enough within one job. */

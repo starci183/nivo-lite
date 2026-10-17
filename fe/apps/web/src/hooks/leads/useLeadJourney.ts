@@ -1,10 +1,10 @@
 "use client"
 
-import { useTranslations } from "next-intl"
 import { useQueryLeadJourneySwr } from "@/hooks/swr"
+import type { LeadJourneyType } from "@/hooks/swr"
 import { useActiveWorkspace } from "@/hooks/workspaces"
-import type { LeadJourneyType } from "@/modules/api"
 import type { DataSlot, LeadJourney } from "@/modules/types"
+import { useTranslations } from "next-intl"
 import { leadRecordOf } from "./leads.shared"
 
 const journeyOf = (detail: LeadJourneyType): LeadJourney => ({

@@ -1,6 +1,7 @@
 "use client"
 
-import { useKeyedQuerySwr } from "@/hooks/reuseables"
+import { argumentKey, answeredData } from "@/hooks/workspaceread"
+import useSWR from "swr"
 import type { SWRConfiguration } from "swr"
 import { queryConnectionFirstEvent } from "@/modules/api/graphql/queries/query-connection-first-event"
 
@@ -9,10 +10,12 @@ export const QUERY_CONNECTION_FIRST_EVENT_SWR_KEY = "QUERY_CONNECTION_FIRST_EVEN
 
 /** Whether a connection already received its first event. The key carries the connection; `undefined` pauses it. */
 export const useQueryConnectionFirstEventSwr = (connectionId: string | undefined, options?: SWRConfiguration) =>
-    useKeyedQuerySwr(
-        QUERY_CONNECTION_FIRST_EVENT_SWR_KEY,
-        connectionId,
-        (id) => queryConnectionFirstEvent({ request: { connectionId: id } }),
-        (data) => data.connectionFirstEvent,
+    useSWR(
+        argumentKey(QUERY_CONNECTION_FIRST_EVENT_SWR_KEY, connectionId),
+        async ([, input]: readonly [string, NonNullable<typeof connectionId>]) =>
+            answeredData(
+                await queryConnectionFirstEvent({ request: { connectionId: input } }),
+                QUERY_CONNECTION_FIRST_EVENT_SWR_KEY,
+            ).connectionFirstEvent,
         options,
     )

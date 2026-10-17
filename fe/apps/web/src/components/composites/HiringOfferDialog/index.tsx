@@ -49,62 +49,74 @@ export const HiringOfferDialog = (props: HiringOfferDialogProps) => {
                 />
             )}
         >
-            <div className={FORM_CLASS_NAME}>
-                {error === null ? null : <Alert tone="negative" title={say("offerFailed")} description={error} />}
-                {outcome === null ? (
-                    <>
-                        <Input
-                            id="of-title"
-                            name="title"
-                            label={say("offerRole")}
-                            variant="secondary"
-                            value={values.title}
-                            onValueChange={(title) => on.text("title", title)}
-                        />
-                        <Input
-                            id="of-pay"
-                            name="pay"
-                            label={say("offerPay")}
-                            hint={say("offerPayExample")}
-                            variant="secondary"
-                            isRequired
-                            value={values.pay}
-                            onValueChange={(pay) => on.text("pay", pay)}
-                        />
-                        <div className={GRID_CLASS_NAME}>
-                            <Input
-                                id="of-start"
-                                name="start_date"
-                                label={say("offerStart")}
-                                variant="secondary"
-                                value={values.startDate}
-                                onValueChange={(startDate) => on.text("startDate", startDate)}
-                            />
-                            <Input
-                                id="of-prob"
-                                name="probation"
-                                label={say("offerProbation")}
-                                variant="secondary"
-                                value={values.probation}
-                                onValueChange={(probation) => on.text("probation", probation)}
-                            />
-                        </div>
-                        <Textarea
-                            label={say("offerNote")}
-                            variant="secondary"
-                            rows={2}
-                            value={values.note}
-                            onValueChange={(note) => on.text("note", note)}
-                        />
-                    </>
-                ) : (
-                    <Alert
-                        tone={isWaiting ? "cautionary" : "affirmative"}
-                        title={say(isWaiting ? "offerWaiting" : "offerHandled")}
-                        description={isWaiting ? `${outcome.summary} ${say("offerOpenDecisions")}` : outcome.summary}
-                    />
-                )}
-            </div>
+            {renderHiringOfferDialogFields(error, say, outcome, values, on, isWaiting)}
         </Dialog>
     )
 }
+
+/** Renders the HiringOfferDialog fields section. */
+const renderHiringOfferDialogFields = (
+    error: HiringOfferDialogProps["props"]["error"],
+    say: NonNullable<HiringOfferDialogProps["props"]["say"]>,
+    outcome: HiringOfferDialogProps["props"]["outcome"],
+    values: NonNullable<HiringOfferDialogProps["props"]["values"]>,
+    on: NonNullable<HiringOfferDialogProps["on"]>,
+    isWaiting: boolean,
+) => (
+    <div className={FORM_CLASS_NAME}>
+        {error === null ? null : <Alert tone="negative" title={say("offerFailed")} description={error} />}
+        {outcome === null ? (
+            <>
+                <Input
+                    id="of-title"
+                    name="title"
+                    label={say("offerRole")}
+                    variant="secondary"
+                    value={values.title}
+                    onValueChange={(title) => on.text("title", title)}
+                />
+                <Input
+                    id="of-pay"
+                    name="pay"
+                    label={say("offerPay")}
+                    hint={say("offerPayExample")}
+                    variant="secondary"
+                    isRequired
+                    value={values.pay}
+                    onValueChange={(pay) => on.text("pay", pay)}
+                />
+                <div className={GRID_CLASS_NAME}>
+                    <Input
+                        id="of-start"
+                        name="start_date"
+                        label={say("offerStart")}
+                        variant="secondary"
+                        value={values.startDate}
+                        onValueChange={(startDate) => on.text("startDate", startDate)}
+                    />
+                    <Input
+                        id="of-prob"
+                        name="probation"
+                        label={say("offerProbation")}
+                        variant="secondary"
+                        value={values.probation}
+                        onValueChange={(probation) => on.text("probation", probation)}
+                    />
+                </div>
+                <Textarea
+                    label={say("offerNote")}
+                    variant="secondary"
+                    rows={2}
+                    value={values.note}
+                    onValueChange={(note) => on.text("note", note)}
+                />
+            </>
+        ) : (
+            <Alert
+                tone={isWaiting ? "cautionary" : "affirmative"}
+                title={say(isWaiting ? "offerWaiting" : "offerHandled")}
+                description={isWaiting ? `${outcome.summary} ${say("offerOpenDecisions")}` : outcome.summary}
+            />
+        )}
+    </div>
+)

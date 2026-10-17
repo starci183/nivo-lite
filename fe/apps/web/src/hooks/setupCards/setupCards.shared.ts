@@ -1,6 +1,10 @@
+import type { MutateDecideSetupCardRequest } from "@/hooks/swr"
+import { isActionKey } from "@/modules/catalog"
 import { FACT_SCOPES, FACT_SUBJECT_TYPES } from "@/modules/types"
-import type { FactScope, FactSubjectType, FlowRuleMode } from "@/modules/types"
 import type {
+    FactScope,
+    FactSubjectType,
+    FlowRuleMode,
     SetupFactWrite,
     SetupResolution,
     SetupRuleWrite,
@@ -8,8 +12,6 @@ import type {
     SetupWriteDecision,
     SetupWriteStatus,
 } from "@/modules/types"
-import type { MutateDecideSetupCardRequest } from "@/modules/api/graphql/mutations/mutation-decide-setup-card"
-import { isActionKey } from "@/modules/catalog"
 
 const WRITE_STATUSES: ReadonlyArray<SetupWriteStatus> = ["proposed", "applied", "rejected", "superseded"]
 const isRecord = (value: unknown): value is Readonly<Record<string, unknown>> =>

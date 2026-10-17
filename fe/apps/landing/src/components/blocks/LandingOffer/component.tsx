@@ -75,64 +75,7 @@ export const LandingOfferBase = (props: LandingOfferBaseProps) => {
                                 <LandingFact key={fact.id} icon={fact.icon} title={fact.title} text={fact.text} />
                             ))}
                         </div>
-                        <SurfaceCard
-                            label={props.props.priceLabel}
-                            headingLevel={3}
-                            labelEnd={campaign === null ? undefined : <Badge tone="accent">{campaign.tag}</Badge>}
-                            isHighlight
-                            height="fill"
-                        >
-                            <div className={TILE_BODY}>
-                                <div className={PRICE_STACK}>
-                                    <Text size="sm" tone="muted" weight="medium">
-                                        {props.props.planName}
-                                    </Text>
-                                    {campaign === null ? null : (
-                                        <Text tone="muted" isSuperseded>
-                                            {campaign.basePrice}
-                                        </Text>
-                                    )}
-                                    <div className={PRICE_ROW}>
-                                        <Text size="metric-lead" weight="semibold">
-                                            {props.props.price}
-                                        </Text>
-                                        <Text size="sm" tone="muted">
-                                            {props.props.perMonth}
-                                        </Text>
-                                    </div>
-                                    <Text size="sm" tone="muted">
-                                        {props.props.priceNote}
-                                    </Text>
-                                    {campaign === null ? null : (
-                                        <Text tone="accent" weight="semibold">
-                                            {campaign.saving}
-                                        </Text>
-                                    )}
-                                </div>
-                                <div className={TILE_FOOT}>
-                                    {campaign === null ? null : (
-                                        <>
-                                            <div role="timer" aria-label={campaign.countdownLabel}>
-                                                <DescriptionList
-                                                    layout="stat-strip"
-                                                    isDivided
-                                                    items={campaign.countdown.map((unit) => ({
-                                                        id: unit.id,
-                                                        term: unit.term,
-                                                        description: unit.value,
-                                                    }))}
-                                                />
-                                            </div>
-                                            <Text size="xs">{campaign.endsText}</Text>
-                                        </>
-                                    )}
-                                    <Button variant="primary" size="lg" width="fill" href={props.props.ctaHref}>
-                                        {props.props.ctaLabel}
-                                    </Button>
-                                    <Text size="xs">{props.props.fine}</Text>
-                                </div>
-                            </div>
-                        </SurfaceCard>
+                        {renderLandingOfferPrice(props, campaign)}
                         <div className={FACTS_COL}>
                             {props.props.rightFacts.map((fact) => (
                                 <LandingFact key={fact.id} icon={fact.icon} title={fact.title} text={fact.text} />
@@ -144,3 +87,68 @@ export const LandingOfferBase = (props: LandingOfferBaseProps) => {
         </Region>
     )
 }
+
+/** Renders the LandingOffer price section. */
+const renderLandingOfferPrice = (
+    props: Pick<LandingOfferBaseProps, "props">,
+    campaign: LandingOfferBaseProps["props"]["campaign"],
+) => (
+    <SurfaceCard
+        label={props.props.priceLabel}
+        headingLevel={3}
+        labelEnd={campaign === null ? undefined : <Badge tone="accent">{campaign.tag}</Badge>}
+        isHighlight
+        height="fill"
+    >
+        <div className={TILE_BODY}>
+            <div className={PRICE_STACK}>
+                <Text size="sm" tone="muted" weight="medium">
+                    {props.props.planName}
+                </Text>
+                {campaign === null ? null : (
+                    <Text tone="muted" isSuperseded>
+                        {campaign.basePrice}
+                    </Text>
+                )}
+                <div className={PRICE_ROW}>
+                    <Text size="metric-lead" weight="semibold">
+                        {props.props.price}
+                    </Text>
+                    <Text size="sm" tone="muted">
+                        {props.props.perMonth}
+                    </Text>
+                </div>
+                <Text size="sm" tone="muted">
+                    {props.props.priceNote}
+                </Text>
+                {campaign === null ? null : (
+                    <Text tone="accent" weight="semibold">
+                        {campaign.saving}
+                    </Text>
+                )}
+            </div>
+            <div className={TILE_FOOT}>
+                {campaign === null ? null : (
+                    <>
+                        <div role="timer" aria-label={campaign.countdownLabel}>
+                            <DescriptionList
+                                layout="stat-strip"
+                                isDivided
+                                items={campaign.countdown.map((unit) => ({
+                                    id: unit.id,
+                                    term: unit.term,
+                                    description: unit.value,
+                                }))}
+                            />
+                        </div>
+                        <Text size="xs">{campaign.endsText}</Text>
+                    </>
+                )}
+                <Button variant="primary" size="lg" width="fill" href={props.props.ctaHref}>
+                    {props.props.ctaLabel}
+                </Button>
+                <Text size="xs">{props.props.fine}</Text>
+            </div>
+        </div>
+    </SurfaceCard>
+)

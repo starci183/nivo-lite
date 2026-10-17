@@ -1,5 +1,6 @@
 "use client"
 
+import type { LeadAgeContext } from "./component"
 import { useFormatter, useTranslations } from "next-intl"
 import { useState } from "react"
 import { ageOf, STAGE_KEYS, STAGE_ORDER, STAGE_TONES, useLeadActions, useLeadBoard } from "@/hooks/leads"
@@ -35,14 +36,7 @@ export const LeadsBoard = (props: LeadsBoardProps) => {
     const isPending = actions.isPending
     const [nowIso] = useState(() => new Date().toISOString())
 
-    const agoOf = (iso: string): string => {
-        const age = ageOf(iso, nowIso)
-        if (age.unit === "now") return t("agoJustNow")
-        if (age.unit === "minutes") return t("agoMinutes", { n: age.n })
-        if (age.unit === "hours") return t("agoHours", { n: age.n })
-        if (age.unit === "days") return t("agoDays", { n: age.n })
-        return format.dateTime(new Date(iso), { dateStyle: "medium", timeStyle: "short" })
-    }
+    const agoOf = (iso: string): string => leadAgeLabel(iso, { nowIso, t, format })
     const failureOf = (leadId: string): string | null => {
         if (failure?.id === leadId) return failure.text
         return busyId === leadId ? actions.error : null
@@ -92,35 +86,7 @@ export const LeadsBoard = (props: LeadsBoardProps) => {
 
     return (
         <LeadsBoardBase
-            props={{
-                slot,
-                query,
-                selectedTab: stage,
-                isRowBusy: isPending && busyId !== null,
-                labels: {
-                    searchLabel: t("searchLabel"),
-                    searchPlaceholder: t("searchPlaceholder"),
-                    clearLabel: t("clearFilters"),
-                    tabsLabel: t("tabsLabel"),
-                    newLeadLabel: t("newLead"),
-                    listAria: t("listAria"),
-                    emptyAria: t("emptyAria"),
-                    emptyTitle: t("emptyTitle"),
-                    emptyBody: t("emptyBody"),
-                    noMatchTitle: t("noMatchTitle"),
-                    noMatchBody: t("noMatchBody"),
-                    openLabel: t("rowOpenLead"),
-                    officeLabel: t("rowOffice"),
-                    officeHref: LEADS_ROUTES.chat,
-                    proposeLabel: t("rowPropose"),
-                    moreLabel: t("rowMore"),
-                    loadingTabs: [
-                        { id: ALL, label: t("tabAllBare") },
-                        ...STAGE_ORDER.map((id) => ({ id, label: t(STAGE_KEYS[id]) })),
-                    ],
-                    slot: slotLabels(t("emptyTitle")),
-                },
-            }}
+            props={buildLeadsBoardView({ slot, query, stage, isPending, busyId, t, slotLabels })}
             on={{
                 query: setQuery,
                 clear: () => {
@@ -133,4 +99,56 @@ export const LeadsBoard = (props: LeadsBoardProps) => {
             }}
         />
     )
+}
+
+/** Inputs needed to build the LeadsBoardContent section. */
+interface BuildLeadsBoardViewContext {
+    readonly slot: import("@/modules/types").DataSlot<BoardView>
+    readonly query: string
+    readonly stage: string
+    readonly isPending: boolean
+    readonly busyId: string | null
+    readonly t: ReturnType<typeof useTranslations<"leads">>
+    readonly slotLabels: ReturnType<typeof useSlotLabels>
+}
+/** Builds the LeadsBoardContent section from the current view. */
+const buildLeadsBoardView = ({ slot, query, stage, isPending, busyId, t, slotLabels }: BuildLeadsBoardViewContext) =>
+    ({
+        slot,
+        query,
+        selectedTab: stage,
+        isRowBusy: isPending && busyId !== null,
+        labels: {
+            searchLabel: t("searchLabel"),
+            searchPlaceholder: t("searchPlaceholder"),
+            clearLabel: t("clearFilters"),
+            tabsLabel: t("tabsLabel"),
+            newLeadLabel: t("newLead"),
+            listAria: t("listAria"),
+            emptyAria: t("emptyAria"),
+            emptyTitle: t("emptyTitle"),
+            emptyBody: t("emptyBody"),
+            noMatchTitle: t("noMatchTitle"),
+            noMatchBody: t("noMatchBody"),
+            openLabel: t("rowOpenLead"),
+            officeLabel: t("rowOffice"),
+            officeHref: LEADS_ROUTES.chat,
+            proposeLabel: t("rowPropose"),
+            moreLabel: t("rowMore"),
+            loadingTabs: [
+                { id: ALL, label: t("tabAllBare") },
+                ...STAGE_ORDER.map((id) => ({ id, label: t(STAGE_KEYS[id]) })),
+            ],
+            slot: slotLabels(t("emptyTitle")),
+        },
+    }) as const
+
+/** Relative age, falling back to a full date for older leads. */
+const leadAgeLabel = (iso: string, { nowIso, t, format }: LeadAgeContext): string => {
+    const age = ageOf(iso, nowIso)
+    if (age.unit === "now") return t("agoJustNow")
+    if (age.unit === "minutes") return t("agoMinutes", { n: age.n })
+    if (age.unit === "hours") return t("agoHours", { n: age.n })
+    if (age.unit === "days") return t("agoDays", { n: age.n })
+    return format.dateTime(new Date(iso), { dateStyle: "medium", timeStyle: "short" })
 }

@@ -92,17 +92,10 @@ const actionsOf = ({ props, on }: WebhookWizardBaseProps): ReadonlyArray<WizardA
     ]
 }
 
-/** n8n / Make / Zapier webhook in the shared wizard frame: address and events, signing key, a test send, done. */
-export const WebhookWizardBase = (props: WebhookWizardBaseProps) => {
+const addressOf = (props: WebhookWizardBaseProps) => {
     const { props: view, on } = props
     return (
-        <WizardFrame
-            title={view.title}
-            stepLabel={view.stepLabel}
-            steps={view.steps}
-            index={view.index}
-            footer={<WizardFooter actions={actionsOf(props)} />}
-        >
+        <>
             {view.step === "address" ? (
                 <>
                     <div className={classNames.fields}>
@@ -137,6 +130,22 @@ export const WebhookWizardBase = (props: WebhookWizardBaseProps) => {
                     />
                 </>
             ) : null}
+        </>
+    )
+}
+
+/** n8n / Make / Zapier webhook in the shared wizard frame: address and events, signing key, a test send, done. */
+export const WebhookWizardBase = (props: WebhookWizardBaseProps) => {
+    const { props: view, on } = props
+    return (
+        <WizardFrame
+            title={view.title}
+            stepLabel={view.stepLabel}
+            steps={view.steps}
+            index={view.index}
+            footer={<WizardFooter actions={actionsOf(props)} />}
+        >
+            {addressOf(props)}
             {view.step === "secret" ? (
                 <>
                     <Text size="sm" tone="muted">

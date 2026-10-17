@@ -76,36 +76,7 @@ export const ImapAccountFields = (props: ImapAccountFieldsProps) => {
                 options={view.presets}
                 onValueChange={(value) => value && on.preset(value)}
             />
-            {view.isCustom ? (
-                <>
-                    <Input
-                        id="imap-host"
-                        name="host"
-                        label={view.text.host}
-                        variant="secondary"
-                        isDisabled={view.isDisabled}
-                        value={view.values.host}
-                        onValueChange={on.field("host")}
-                    />
-                    <Input
-                        id="imap-port"
-                        name="port"
-                        label={view.text.port}
-                        variant="secondary"
-                        isDisabled={view.isDisabled}
-                        value={view.values.port}
-                        onValueChange={on.field("port")}
-                    />
-                    <Select
-                        label={view.text.security}
-                        variant="secondary"
-                        isDisabled={view.isDisabled}
-                        value={view.values.security}
-                        options={view.securities}
-                        onValueChange={(value) => value && on.security(value)}
-                    />
-                </>
-            ) : null}
+            {view.isCustom ? renderImapAccountFieldsServerFields(view, on) : null}
             <Input
                 id="imap-user"
                 name="user"
@@ -130,3 +101,38 @@ export const ImapAccountFields = (props: ImapAccountFieldsProps) => {
         </div>
     )
 }
+
+/** Renders the ImapAccountFields server fields section. */
+const renderImapAccountFieldsServerFields = (
+    view: NonNullable<ImapAccountFieldsProps["props"]>,
+    on: NonNullable<ImapAccountFieldsProps["on"]>,
+) => (
+    <>
+        <Input
+            id="imap-host"
+            name="host"
+            label={view.text.host}
+            variant="secondary"
+            isDisabled={view.isDisabled}
+            value={view.values.host}
+            onValueChange={on.field("host")}
+        />
+        <Input
+            id="imap-port"
+            name="port"
+            label={view.text.port}
+            variant="secondary"
+            isDisabled={view.isDisabled}
+            value={view.values.port}
+            onValueChange={on.field("port")}
+        />
+        <Select
+            label={view.text.security}
+            variant="secondary"
+            isDisabled={view.isDisabled}
+            value={view.values.security}
+            options={view.securities}
+            onValueChange={(value) => value && on.security(value)}
+        />
+    </>
+)

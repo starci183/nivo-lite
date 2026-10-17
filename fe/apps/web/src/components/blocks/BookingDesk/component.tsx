@@ -1,16 +1,10 @@
-import {
-    Alert,
-    AlertDialog,
-    Badge,
-    Checkbox,
-    DateField,
-    EmptyNotice,
-    SurfaceListCard,
-    Text,
-    Button,
-} from "@starci/grammar/common"
+import type { Dispatch, SetStateAction } from "react"
+import type { useBookingRange, useBookingActions, useBookingPlacement, blankPlacementOf } from "@/hooks/bookingDesk"
+import type { useTranslations, useFormatter } from "next-intl"
+import { shiftDate } from "@/modules/i18n"
+import { BookingDeskNavigation } from "@/components/composites/BookingDeskNavigation"
+import { Alert, AlertDialog, Badge, EmptyNotice, SurfaceListCard, Button } from "@starci/grammar/common"
 import type { BadgeTone } from "@starci/grammar/common"
-import { parseDate } from "@internationalized/date"
 import { BookingAgendaRow } from "@/components/composites/BookingAgendaRow"
 import type { BookingAgendaRowView } from "@/components/composites/BookingAgendaRow"
 import { BookingDetailDialog } from "@/components/composites/BookingDetailDialog"
@@ -93,35 +87,7 @@ export const BookingDeskBase = (props: BookingDeskBaseProps) => {
                     </Button>
                 </div>
             )}
-            {p.nav === undefined ? null : (
-                <div className={TOOLBAR_CLASS}>
-                    <Button size="sm" variant="outline" isDisabled={p.isPending} onPress={on.prev}>
-                        {p.nav.prevLabel}
-                    </Button>
-                    <Button size="sm" variant="outline" isDisabled={p.isPending} onPress={on.thisWeek}>
-                        {p.nav.thisWeekLabel}
-                    </Button>
-                    <Button size="sm" variant="outline" isDisabled={p.isPending} onPress={on.next}>
-                        {p.nav.nextLabel}
-                    </Button>
-                    <DateField
-                        label={p.nav.dateLabel}
-                        isLabelHidden
-                        value={parseDate(p.nav.date)}
-                        onValueChange={(value) => {
-                            if (value !== null) on.pickDate(value.toString())
-                        }}
-                    />
-                    <Checkbox
-                        label={p.nav.showCancelledLabel}
-                        isSelected={p.nav.showCancelled}
-                        onSelectedChange={on.toggleCancelled}
-                    />
-                    <Text as="span" size="sm" tone="muted">
-                        {p.nav.rangeText}
-                    </Text>
-                </div>
-            )}
+            {p.nav === undefined ? null : <BookingDeskNavigation props={p.nav} isPending={p.isPending} on={on} />}
             {p.notice === undefined ? null : (
                 <Alert
                     key={p.notice.text}
@@ -180,3 +146,149 @@ export const BookingDeskBase = (props: BookingDeskBaseProps) => {
         </div>
     )
 }
+
+/** Draws the div section of the BookingDesk view. */
+
+/** State and injected commands needed by the booking desk interactions. */
+interface BookingDeskEventsInput {
+    readonly openAdd: () => unknown
+    readonly place: ReturnType<typeof useBookingPlacement>
+    readonly range: ReturnType<typeof useBookingRange>
+    readonly anchor: string
+    readonly board: NonNullable<ReturnType<typeof useBookingRange>["board"]>
+    readonly setShowCancelled: Dispatch<SetStateAction<boolean>>
+    readonly desk: ReturnType<typeof useBookingActions>
+    readonly setOpenId: Dispatch<SetStateAction<string | null>>
+    readonly act: (id: string, action: string) => void
+    readonly cancelId: string | null
+    readonly setCancelId: Dispatch<SetStateAction<string | null>>
+    readonly open: NonNullable<ReturnType<typeof useBookingRange>["board"]>["bookings"][number] | undefined
+    readonly openMove: (id: string) => void
+}
+
+/** Maps the agenda controls and dialogs to the injected commands. */
+export const buildBookingDeskEvents = (
+    connected: BookingDeskEventsInput,
+    moveAction: string,
+): BookingDeskBaseProps["on"] => {
+    const {
+        openAdd,
+        place,
+        range,
+        anchor,
+        board,
+        setShowCancelled,
+        desk,
+        setOpenId,
+        act,
+        cancelId,
+        setCancelId,
+        open,
+        openMove,
+    } = connected
+    return {
+        add: openAdd,
+        placementChange: place.change,
+        placementSubmit: place.submit,
+        placementClose: place.close,
+        prev: () => range.goto(shiftDate(anchor, -7)),
+        next: () => range.goto(shiftDate(anchor, 7)),
+        thisWeek: () => range.goto(board.today),
+        pickDate: range.goto,
+        toggleCancelled: setShowCancelled,
+        dismissNotice: desk.dismiss,
+        open: setOpenId,
+        act,
+        confirmCancel: () => {
+            if (cancelId === null) return
+            desk.act(cancelId, "cancel", () => {
+                setCancelId(null)
+                setOpenId(null)
+            })
+        },
+        keepBooking: () => setCancelId(null),
+        detailAction: (action) => {
+            if (open === undefined) return
+            if (action === moveAction) openMove(open.id)
+            else act(open.id, action)
+        },
+        closeDetail: () => setOpenId(null),
+    }
+}
+
+/** Derives the visible agenda and navigation copy from the supplied booking data. */
+export const buildBookingDeskDisplay = (
+    board: NonNullable<ReturnType<typeof useBookingRange>["board"]>,
+    anchorValue: string,
+    t: ReturnType<typeof useTranslations<"workbenchBooking">>,
+    format: ReturnType<typeof useFormatter>,
+    isToday: boolean,
+    showCancelled: boolean,
+    openId: string | null,
+    cancelId: string | null,
+    placement: typeof blankPlacementOf,
+    loadingSuffix: string,
+) => {
+    const words = {
+        say: t,
+        resourceName: (id: string) => board.resources.find((resource) => resource.id === id)?.name ?? "",
+        money: (value: number) =>
+            format.number(value, { style: "currency", currency: "VND", maximumFractionDigits: 0 }),
+    }
+    const dayText = (date: string) =>
+        format.dateTime(new Date(`${date}T12:00:00Z`), {
+            weekday: "long",
+            day: "2-digit",
+            month: "2-digit",
+            timeZone: "UTC",
+        })
+    const visible = board.bookings.filter(
+        (booking) => (!isToday || booking.date === board.today) && (showCancelled || booking.status !== "cancelled"),
+    )
+    const open = board.bookings.find((booking) => booking.id === openId)
+    const cancelling = board.bookings.find((booking) => booking.id === cancelId)
+    const activeServices = board.services.filter((service) => service.active)
+    const blank = placement(activeServices[0]?.id ?? "", board.today)
+    const resourceOptions = board.resources
+        .filter((resource) => resource.active)
+        .map((resource) => ({ id: resource.id, label: resource.name }))
+    const anchor = anchorValue === "" ? board.today : anchorValue
+    const nav = {
+        prevLabel: t("prev"),
+        nextLabel: t("next"),
+        thisWeekLabel: t("today"),
+        dateLabel: t("pickDate"),
+        date: anchor,
+        showCancelledLabel: t("showCancelled"),
+        showCancelled,
+        rangeText: `${dayText(board.from)} - ${dayText(board.to)}${loadingSuffix}`,
+    }
+    return { words, dayText, visible, open, cancelling, activeServices, blank, resourceOptions, anchor, nav }
+}
+
+/** Builds the confirmation copy for the booking awaiting cancellation. */
+export const buildBookingCancel = (
+    cancelling: BookingDeskEventsInput["open"],
+    t: ReturnType<typeof useTranslations<"workbenchBooking">>,
+): Pick<BookingDeskBaseProps["props"], "cancel"> =>
+    cancelling === undefined
+        ? {}
+        : {
+              cancel: {
+                  title: t("confirmCancelTitle", {
+                      name: cancelling.customer === "" ? t("customerFallback") : cancelling.customer,
+                  }),
+                  confirmLabel: t("confirmCancelYes"),
+                  keepLabel: t("confirmCancelKeep"),
+              },
+          }
+
+/** Resolves the legend labels for each booking status tone. */
+export const buildBookingLegend = (
+    tones: Readonly<Record<string, BadgeTone>>,
+    t: ReturnType<typeof useTranslations<"workbenchBooking">>,
+): BookingDeskBaseProps["props"]["legend"] =>
+    Object.entries(tones).map(([status, tone]) => ({
+        text: t(`status_${status}`),
+        tone,
+    }))

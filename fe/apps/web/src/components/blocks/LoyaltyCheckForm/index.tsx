@@ -29,45 +29,7 @@ export const LoyaltyCheckForm = (props: LoyaltyCheckFormProps) => {
     const { points } = check
     if (check.step === "result" && points !== null) {
         const firstAt = points.expiring.firstAt
-        result = {
-            greeting: t("hello", { name: points.name }),
-            tierLabel: t("tier"),
-            tierName: points.tierName === "" ? t("noTier") : points.tierName,
-            pointsLabel: t("points"),
-            points: format.number(points.points),
-            ...(points.nextTier === null || points.nextTier === undefined
-                ? {}
-                : {
-                      nextTier: t("nextTier", {
-                          amount: money(points.nextTier.missingVnd),
-                          tier: points.nextTier.tier.name,
-                      }),
-                  }),
-            ...(points.expiring.points > 0 && firstAt !== null && firstAt !== undefined
-                ? {
-                      expiring: t("expiring", {
-                          points: format.number(points.expiring.points),
-                          date: format.dateTime(new Date(firstAt), {
-                              day: "2-digit",
-                              month: "2-digit",
-                              year: "numeric",
-                          }),
-                      }),
-                  }
-                : {}),
-            rewardsTitle: t("rewardsTitle"),
-            noRewards: t("noRewards"),
-            redeemHint: t("redeemHint"),
-            rewards: points.rewards.map((reward) => ({
-                id: reward.name,
-                name: reward.name,
-                detail: [`${format.number(reward.pointsCost)} ${t("pointsUnit")}`, reward.note]
-                    .filter((part) => part !== "")
-                    .join(" · "),
-                badge: t(reward.canRedeem ? "canRedeem" : "needMore"),
-                canRedeem: reward.canRedeem,
-            })),
-        }
+        result = buildLoyaltyAccountView({ t, points, format, money, firstAt })
     }
 
     return (
@@ -108,3 +70,53 @@ export const LoyaltyCheckForm = (props: LoyaltyCheckFormProps) => {
         />
     )
 }
+
+/** Inputs needed to build the LoyaltyCheckFormContent section. */
+interface BuildLoyaltyAccountViewContext {
+    readonly t: ReturnType<typeof useTranslations<"loyaltyPublic">>
+    readonly points: NonNullable<ReturnType<typeof usePublicLoyalty>["points"]>
+    readonly format: ReturnType<typeof useFormatter>
+    readonly money: (value: number) => string
+    readonly firstAt: string | null
+}
+/** Builds the LoyaltyCheckFormContent section from the current view. */
+const buildLoyaltyAccountView = ({ t, points, format, money, firstAt }: BuildLoyaltyAccountViewContext) =>
+    ({
+        greeting: t("hello", { name: points.name }),
+        tierLabel: t("tier"),
+        tierName: points.tierName === "" ? t("noTier") : points.tierName,
+        pointsLabel: t("points"),
+        points: format.number(points.points),
+        ...(points.nextTier === null || points.nextTier === undefined
+            ? {}
+            : {
+                  nextTier: t("nextTier", {
+                      amount: money(points.nextTier.missingVnd),
+                      tier: points.nextTier.tier.name,
+                  }),
+              }),
+        ...(points.expiring.points > 0 && firstAt !== null && firstAt !== undefined
+            ? {
+                  expiring: t("expiring", {
+                      points: format.number(points.expiring.points),
+                      date: format.dateTime(new Date(firstAt), {
+                          day: "2-digit",
+                          month: "2-digit",
+                          year: "numeric",
+                      }),
+                  }),
+              }
+            : {}),
+        rewardsTitle: t("rewardsTitle"),
+        noRewards: t("noRewards"),
+        redeemHint: t("redeemHint"),
+        rewards: points.rewards.map((reward) => ({
+            id: reward.name,
+            name: reward.name,
+            detail: [`${format.number(reward.pointsCost)} ${t("pointsUnit")}`, reward.note]
+                .filter((part) => part !== "")
+                .join(" · "),
+            badge: t(reward.canRedeem ? "canRedeem" : "needMore"),
+            canRedeem: reward.canRedeem,
+        })),
+    }) as const

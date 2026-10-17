@@ -1,19 +1,21 @@
 "use client"
 
-import { useTranslations } from "next-intl"
-import { useCallback, useState, useTransition } from "react"
+import { useTransition } from "react"
+import { viewOf, connectionNameOf } from "./money-wizard.shared"
+import type { AccountForm, FollowDraft, MoneyFlags } from "./money-wizard.shared"
 import { PROVIDERS } from "@/hooks/connection-providers"
-import { allAgentIds, resumeNoteOf, useAdoptOnce } from "@/hooks/connection-wizard"
-import { wizardConnectionOf } from "@/hooks/connection-wire"
-import { useFirstEvent, useSetConnectionAgents } from "@/hooks/connections"
-import { useQueryMoneyConnectionSwr } from "@/hooks/swr"
-import type { AgentOption, Environment, MoneyProvider, WizardConnection, WizardNote } from "@/modules/types"
-import { connectionNameOf, MONEY_STEPS, moneyContextOf, moneyFlagsOf, webhookNameOf } from "./money-wizard.shared"
-import type { AccountForm, FollowDraft } from "./money-wizard.shared"
+import type { ProviderDef } from "@/hooks/connection-providers"
+import type { Settled } from "@/hooks/connection-wizard"
+import { useSetConnectionAgents } from "@/hooks/connections"
+import type { AgentWish } from "@/hooks/connections"
+import type { AgentOption, MoneyProvider, WizardConnection, WizardNote } from "@/modules/types"
+import { useTranslations } from "next-intl"
 import { useMoneyCommands } from "./useMoneyCommands"
+import type { MoneyCommands } from "./useMoneyCommands"
+import { useMoneyWizardState } from "./useMoneyWizardState"
 
 /** What the bank and payment wizard needs from its drawer. */
-interface MoneyWizardInput {
+export interface MoneyWizardInput {
     readonly provider: MoneyProvider
     /** Continue this unfinished connection instead of creating a new one. */
     readonly resumeId: string | undefined
@@ -33,57 +35,87 @@ export const useMoneyWizard = (input: MoneyWizardInput) => {
     const commands = useMoneyCommands()
     const setAgentsOf = useSetConnectionAgents()
     const def = PROVIDERS[input.provider]
-    const [nav, setNav] = useState({ index: 0, skipped: false })
-    const [form, setForm] = useState<AccountForm>({
-        environment: def.environments[0],
-        name: "",
-        bank: "",
-        account: "",
-        holder: "",
-    })
-    const [conn, setConn] = useState<WizardConnection | null>(null)
-    const [follow, setFollow] = useState<FollowDraft>({ webhookName: "", apiKey: "", values: {}, keysSaved: false })
-    const [agentIds, setAgentIds] = useState<ReadonlyArray<string>>(allAgentIds(input.agents))
-    const [note, setNote] = useState<WizardNote | null>(null)
+    const state = useMoneyWizardState(input, def)
     const [isPending, startTransition] = useTransition()
-    const resume = useQueryMoneyConnectionSwr(input.resumeId, { revalidateOnFocus: false, shouldRetryOnError: false })
-    const step = MONEY_STEPS[nav.index] ?? "env"
-    const watch = useFirstEvent({
-        connectionId: conn === null ? null : conn.id,
-        isActive: step === "verify",
-    })
-    const received = watch.event !== null || (conn !== null && conn.firstEvent !== null)
-    const flags = moneyFlagsOf(def, form, follow, conn)
+    const { save, go, fail } = createMoneyWizardActions(
+        state.setNote,
+        state.setNav,
+        state.conn,
+        startTransition,
+        commands,
+        state.form,
+        input,
+        state.follow,
+        state.adopt,
+        tw,
+        def,
+    )
 
-    /** Keeps the form and the follow-along drafts in step with the stored connection. */
-    const adopt = useCallback((stored: WizardConnection) => {
-        setConn(stored)
-        setForm({
-            environment: stored.environment,
-            name: stored.name,
-            bank: stored.bankCode,
-            account: "",
-            holder: stored.holder,
-        })
-        setFollow((current) => ({ ...current, webhookName: webhookNameOf(stored.name), apiKey: stored.apiKey }))
-    }, [])
+    const { create, followDone, finish } = createMoneyWizardActions2(
+        state.conn,
+        state.flags,
+        save,
+        state.form,
+        go,
+        startTransition,
+        commands,
+        input,
+        fail,
+        state.adopt,
+        state.follow,
+        state.setFollow,
+        def,
+        state.setNote,
+        tw,
+        setAgentsOf,
+        state.agentIds,
+    )
 
-    // The stored connection arrives once: adopt it while rendering (derived state), not from an effect.
-    useAdoptOnce(resume.data, (data) => {
-        const stored = wizardConnectionOf(data)
-        adopt(stored)
-        setFollow((current) => ({ ...current, keysSaved: stored.credentialsSaved }))
-        if (stored.agentIds.length > 0) setAgentIds(stored.agentIds)
-        setNav((current) => ({ ...current, index: 2 }))
-    })
+    return viewOf(
+        state.nav,
+        state.step,
+        input,
+        state.resume,
+        state.form,
+        state.conn,
+        state.follow,
+        state.note,
+        state.agentIds,
+        isPending,
+        state.received,
+        state.watch,
+        state.flags,
+        go,
+        create,
+        followDone,
+        finish,
+        state.setNote,
+        state.setNav,
+        state.setForm,
+        state.setFollow,
+        state.setAgentIds,
+    )
+}
 
+const createMoneyWizardActions = (
+    setNote: import("react").Dispatch<import("react").SetStateAction<WizardNote | null>>,
+    setNav: import("react").Dispatch<import("react").SetStateAction<{ index: number; skipped: boolean }>>,
+    conn: WizardConnection | null,
+    startTransition: import("react").TransitionStartFunction,
+    commands: MoneyCommands,
+    form: AccountForm,
+    input: MoneyWizardInput,
+    follow: FollowDraft,
+    adopt: (stored: WizardConnection) => void,
+    tw: ReturnType<typeof useTranslations<"connectionWizard">>,
+    def: ProviderDef,
+) => {
     const go = (to: number) => {
         setNote(null)
         setNav((current) => ({ ...current, index: to }))
     }
     const fail = (message: string) => setNote({ tone: "negative", text: message })
 
-    /** Saves edits to the existing connection, then moves on (and says what to change on the provider too). */
     const save = (name: string, to: number) => {
         if (conn === null) return
         startTransition(async () => {
@@ -98,7 +130,28 @@ export const useMoneyWizard = (input: MoneyWizardInput) => {
             setNote({ tone: "affirmative", text: tw("editSaved", { brand: def.brand }) })
         })
     }
+    return { save, go, fail }
+}
 
+const createMoneyWizardActions2 = (
+    conn: WizardConnection | null,
+    flags: MoneyFlags,
+    save: (name: string, to: number) => void,
+    form: AccountForm,
+    go: (to: number) => void,
+    startTransition: import("react").TransitionStartFunction,
+    commands: MoneyCommands,
+    input: MoneyWizardInput,
+    fail: (message: string) => void,
+    adopt: (stored: WizardConnection) => void,
+    follow: FollowDraft,
+    setFollow: import("react").Dispatch<import("react").SetStateAction<FollowDraft>>,
+    def: ProviderDef,
+    setNote: import("react").Dispatch<import("react").SetStateAction<WizardNote | null>>,
+    tw: ReturnType<typeof useTranslations<"connectionWizard">>,
+    setAgentsOf: (connectionId: string, wanted: ReadonlyArray<AgentWish>) => Promise<Settled<true>>,
+    agentIds: readonly string[],
+) => {
     const create = () => {
         if (conn !== null) return flags.accountDirty ? save(form.name, 2) : go(2)
         startTransition(async () => {
@@ -131,45 +184,8 @@ export const useMoneyWizard = (input: MoneyWizardInput) => {
             input.onClose(true)
         })
     }
-
-    return {
-        index: nav.index,
-        step,
-        isLoading: input.resumeId !== undefined && resume.data === undefined && resume.error === undefined,
-        form,
-        conn,
-        follow,
-        note: resumeNoteOf(note, resume.error),
-        agentIds,
-        isPending,
-        received,
-        firstEvent: watch.event ?? (conn === null ? null : conn.firstEvent),
-        hasCheckFailed: watch.failed,
-        hasSkipped: nav.skipped,
-        flags,
-        context: moneyContextOf(form, conn),
-        on: {
-            go,
-            create,
-            followDone,
-            finish,
-            skip: () => {
-                setNote(null)
-                setNav((current) => ({ ...current, index: 4, skipped: true }))
-            },
-            close: () => input.onClose(conn !== null),
-            environment: (environment: Environment) => setForm((current) => ({ ...current, environment })),
-            name: (name: string) => setForm((current) => ({ ...current, name })),
-            bank: (bank: string) => setForm((current) => ({ ...current, bank })),
-            account: (account: string) => setForm((current) => ({ ...current, account })),
-            holder: (holder: string) => setForm((current) => ({ ...current, holder })),
-            edit: (token: string, value: string) =>
-                setFollow((current) =>
-                    token === "webhookName" ? { ...current, webhookName: value } : { ...current, apiKey: value },
-                ),
-            paste: (field: string, value: string) =>
-                setFollow((current) => ({ ...current, values: { ...current.values, [field]: value } })),
-            agents: setAgentIds,
-        },
-    }
+    return { create, followDone, finish }
 }
+
+/** The current money-connection step and whether verification was skipped. */
+export type NavInput1 = { index: number; skipped: boolean }

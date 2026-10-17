@@ -87,72 +87,8 @@ const AdminWorkspacesView = (props: AdminWorkspacesViewProps) => {
         { id: "messages", label: columns.messages, align: "end" },
         { id: "waiting", label: columns.waiting, align: "end" },
     ]
-    const none = (
-        <Text size="sm" tone="muted">
-            {props.props.noneLabel}
-        </Text>
-    )
-    const renderCell = (row: AdminWorkspaceRowView, columnId: string) => {
-        switch (columnId) {
-            case "workspace":
-                return (
-                    <div className={CELL_STACK_CLASS_NAME}>
-                        <Button size="sm" variant="ghost" href={row.href}>
-                            {row.name}
-                        </Button>
-                        {row.needsAttention ? <Badge tone="warning">{props.props.attentionLabel}</Badge> : null}
-                    </div>
-                )
-            case "owner":
-                return <Text size="sm">{row.ownerEmail}</Text>
-            case "billing":
-                return (
-                    <div className={CELL_STACK_CLASS_NAME}>
-                        <Badge tone={row.statusTone}>{row.status}</Badge>
-                        {row.paidUntil === null ? null : (
-                            <Text size="xs" tone="muted">
-                                {row.paidUntil}
-                            </Text>
-                        )}
-                    </div>
-                )
-            case "plan":
-                return <Text size="sm">{row.plan}</Text>
-            case "created":
-                return <Text size="sm">{row.created}</Text>
-            case "members":
-                return <Text size="sm">{row.members}</Text>
-            case "modules":
-                return row.modules.length === 0 ? (
-                    none
-                ) : (
-                    <div className={BADGE_WRAP_CLASS_NAME}>
-                        <AdminBadges badges={row.modules} />
-                    </div>
-                )
-            case "connections":
-                return row.connections.length === 0 ? (
-                    none
-                ) : (
-                    <div className={CELL_STACK_CLASS_NAME}>
-                        <div className={BADGE_WRAP_CLASS_NAME}>
-                            <AdminBadges badges={row.connections} />
-                        </div>
-                        <AdminBadges badges={row.connectionWarnings} />
-                    </div>
-                )
-            case "lastMessage":
-                return <Text size="sm">{row.lastMessage}</Text>
-            case "messages":
-                return <Text size="sm">{row.messages7d}</Text>
-            default:
-                return row.openDecisions > 0 ? (
-                    <Badge tone="warning">{row.openDecisions}</Badge>
-                ) : (
-                    <Text size="sm">{0}</Text>
-                )
-        }
-    }
+
+    const renderCell = (row: AdminWorkspaceRowView, columnId: string) => renderWorkspaceCell(row, columnId, props)
 
     return (
         <>
@@ -162,35 +98,7 @@ const AdminWorkspacesView = (props: AdminWorkspacesViewProps) => {
                 title={props.props.title}
                 description={props.props.description}
             />
-            <div className={FILTERS_CLASS_NAME}>
-                <Form label={props.props.searchLabel} action={ADMIN_ROUTES.workspaces} method="get">
-                    <div className={SEARCH_FORM_CLASS_NAME}>
-                        <Input
-                            id="admin-search"
-                            name="q"
-                            label={props.props.searchField}
-                            placeholder={props.props.searchPlaceholder}
-                            defaultValue={props.props.query}
-                        />
-                        <Button type="submit" variant="secondary">
-                            {props.props.searchSubmit}
-                        </Button>
-                    </div>
-                </Form>
-                <div className={CHIPS_CLASS_NAME} role="group" aria-label={props.props.filtersLabel}>
-                    {props.props.filters.map((filter) => (
-                        <TextAction
-                            key={filter.id}
-                            appearance="choice"
-                            size="sm"
-                            isCurrent={props.props.filter === filter.id}
-                            href={filter.href}
-                        >
-                            {filter.label}
-                        </TextAction>
-                    ))}
-                </div>
-            </div>
+            {renderWorkspaceFilters(props)}
             <Region labelledBy="admin-workspaces-shown" className={STACK_CLASS_NAME}>
                 <SectionHeader id="admin-workspaces-shown" level={2} title={props.props.shownTitle} />
                 <DataTable
@@ -219,3 +127,105 @@ export const AdminWorkspacesBase = (props: AdminWorkspacesBaseProps) => (
         {props.props.view === undefined ? null : <AdminWorkspacesView props={props.props.view} />}
     </AdminLoadState>
 )
+
+/** Draws the div section of the AdminWorkspaces view. */
+const renderWorkspaceFilters = (props: AdminWorkspacesViewProps) => (
+    <div className={FILTERS_CLASS_NAME}>
+        <Form label={props.props.searchLabel} action={ADMIN_ROUTES.workspaces} method="get">
+            <div className={SEARCH_FORM_CLASS_NAME}>
+                <Input
+                    id="admin-search"
+                    name="q"
+                    label={props.props.searchField}
+                    placeholder={props.props.searchPlaceholder}
+                    defaultValue={props.props.query}
+                />
+                <Button type="submit" variant="secondary">
+                    {props.props.searchSubmit}
+                </Button>
+            </div>
+        </Form>
+        <div className={CHIPS_CLASS_NAME} role="group" aria-label={props.props.filtersLabel}>
+            {props.props.filters.map((filter) => (
+                <TextAction
+                    key={filter.id}
+                    appearance="choice"
+                    size="sm"
+                    isCurrent={props.props.filter === filter.id}
+                    href={filter.href}
+                >
+                    {filter.label}
+                </TextAction>
+            ))}
+        </div>
+    </div>
+)
+
+/** Draws a workspace table cell from its column identity. */
+const renderWorkspaceCell = (row: AdminWorkspaceRowView, columnId: string, props: AdminWorkspacesViewProps) => {
+    const none = (
+        <Text size="sm" tone="muted">
+            {props.props.noneLabel}
+        </Text>
+    )
+
+    switch (columnId) {
+        case "workspace":
+            return (
+                <div className={CELL_STACK_CLASS_NAME}>
+                    <Button size="sm" variant="ghost" href={row.href}>
+                        {row.name}
+                    </Button>
+                    {row.needsAttention ? <Badge tone="warning">{props.props.attentionLabel}</Badge> : null}
+                </div>
+            )
+        case "owner":
+            return <Text size="sm">{row.ownerEmail}</Text>
+        case "billing":
+            return (
+                <div className={CELL_STACK_CLASS_NAME}>
+                    <Badge tone={row.statusTone}>{row.status}</Badge>
+                    {row.paidUntil === null ? null : (
+                        <Text size="xs" tone="muted">
+                            {row.paidUntil}
+                        </Text>
+                    )}
+                </div>
+            )
+        case "plan":
+            return <Text size="sm">{row.plan}</Text>
+        case "created":
+            return <Text size="sm">{row.created}</Text>
+        case "members":
+            return <Text size="sm">{row.members}</Text>
+        case "modules":
+            return row.modules.length === 0 ? (
+                none
+            ) : (
+                <div className={BADGE_WRAP_CLASS_NAME}>
+                    <AdminBadges badges={row.modules} />
+                </div>
+            )
+        case "connections":
+            return row.connections.length === 0 ? (
+                none
+            ) : (
+                <div className={CELL_STACK_CLASS_NAME}>
+                    <div className={BADGE_WRAP_CLASS_NAME}>
+                        <AdminBadges badges={row.connections} />
+                    </div>
+                    <AdminBadges badges={row.connectionWarnings} />
+                </div>
+            )
+        case "lastMessage":
+            return <Text size="sm">{row.lastMessage}</Text>
+        case "messages":
+            return <Text size="sm">{row.messages7d}</Text>
+        default:
+            return row.openDecisions > 0 ? (
+                <Badge tone="warning">{row.openDecisions}</Badge>
+            ) : (
+                <Text size="sm">{0}</Text>
+            )
+    }
+}

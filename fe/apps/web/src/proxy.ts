@@ -1,7 +1,7 @@
 import { negotiateLocale } from "@nivo-lite/i18n/proxy"
 import { NextRequest, NextResponse } from "next/server"
 import { sessionCookieOptions } from "./modules/config"
-import { refreshSession } from "./modules/auth"
+import { refreshSession } from "./modules/auth/server"
 import { LOCALES, LOCALE_COOKIE } from "./modules/i18n"
 import { APP_ROUTES, onPublicOrigin } from "./modules/routes"
 

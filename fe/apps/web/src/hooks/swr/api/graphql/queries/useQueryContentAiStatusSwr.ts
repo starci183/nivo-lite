@@ -1,8 +1,11 @@
 "use client"
 
+import { answeredData } from "@/hooks/workspaceread"
+import type { WorkspaceReadKey } from "@/hooks/workspaceread"
+import { useWorkspaceParamsKey } from "@/hooks/workspaceKey"
+import useSWR from "swr"
 import type { SWRConfiguration } from "swr"
 import { queryContentAiStatus } from "@/modules/api/graphql/queries/query-content-ai-status"
-import { useWorkspaceQuerySwr } from "@/hooks/reuseables"
 import type { ContentAiStatusType } from "@/modules/api"
 
 /** The SWR key of the contentAiStatus query. */
@@ -13,11 +16,11 @@ type ContentAiStatusCallbacks = Pick<SWRConfiguration<ContentAiStatusType, Error
 
 /** A queued content AI job, read every two seconds until it is done. */
 export const useQueryContentAiStatusSwr = (id: string | undefined, callbacks: ContentAiStatusCallbacks) =>
-    useWorkspaceQuerySwr(
-        QUERY_CONTENT_AI_STATUS_SWR_KEY,
-        id === undefined ? null : [id],
-        ([jobId]) => queryContentAiStatus({ request: { id: jobId } }),
-        (data) => data.contentAiStatus,
+    useSWR(
+        useWorkspaceParamsKey(QUERY_CONTENT_AI_STATUS_SWR_KEY, id === undefined ? null : ([id] as const)),
+        async ([, , ...input]: WorkspaceReadKey<string>) =>
+            answeredData(await queryContentAiStatus({ request: { id: input[0] } }), QUERY_CONTENT_AI_STATUS_SWR_KEY)
+                .contentAiStatus,
         {
             refreshInterval: (data) => (data?.status === "succeeded" || data?.status === "failed" ? 0 : 2000),
             revalidateOnFocus: false,

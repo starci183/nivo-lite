@@ -1,26 +1,11 @@
-import {
-    Alert,
-    Button,
-    CheckboxGroup,
-    Dialog,
-    Heading,
-    Input,
-    NumberField,
-    SegmentedControl,
-    Select,
-    Textarea,
-} from "@starci/grammar/common"
+import { Alert, Button, CheckboxGroup, Dialog, Heading, Textarea } from "@starci/grammar/common"
+import { HiringJobFields } from "@/components/leaves/HiringJobFields"
+import type { HiringJobFieldsProps } from "@/components/leaves/HiringJobFields"
 import { HiringRequirementFields } from "@/components/branches/HiringRequirementFields"
 import { HiringQuestionList } from "@/components/branches/HiringQuestionList"
 import type { FieldOf, HiringSay } from "@/hooks/hiring"
 import type { HiringJobValues, HiringQuestionValues } from "@/hooks/hiringJobs"
-import { FORM_CLASS_NAME, GRID_CLASS_NAME } from "./classNames"
-
-/** One option of a choice field. */
-interface Option {
-    readonly id: string
-    readonly label: string
-}
+import { FORM_CLASS_NAME } from "./classNames"
 
 /** The words, values and state of the job editor dialog. */
 export interface HiringJobEditorDialogProps {
@@ -28,10 +13,10 @@ export interface HiringJobEditorDialogProps {
         readonly say: HiringSay
         readonly isNew: boolean
         readonly values: HiringJobValues
-        readonly employmentOptions: ReadonlyArray<Option>
-        readonly payUnitOptions: ReadonlyArray<Option>
-        readonly questionTypeOptions: ReadonlyArray<Option>
-        readonly channelOptions: ReadonlyArray<Option>
+        readonly employmentOptions: HiringJobFieldsProps["employmentOptions"]
+        readonly payUnitOptions: HiringJobFieldsProps["employmentOptions"]
+        readonly questionTypeOptions: HiringJobFieldsProps["employmentOptions"]
+        readonly channelOptions: HiringJobFieldsProps["employmentOptions"]
         readonly canSave: boolean
         readonly canAddQuestion: boolean
         readonly isBusy: boolean
@@ -49,8 +34,6 @@ export interface HiringJobEditorDialogProps {
     }
 }
 
-const numberOrNull = (value: number): number | null => (Number.isFinite(value) ? value : null)
-
 /** The dialog that creates or edits one job post: the post itself, what candidates are screened on, and their questions. */
 export const HiringJobEditorDialog = (props: HiringJobEditorDialogProps) => {
     const { say, values, isBusy, error } = props.props
@@ -65,104 +48,18 @@ export const HiringJobEditorDialog = (props: HiringJobEditorDialogProps) => {
             title={say(props.props.isNew ? "jobEditorNew" : "jobEditorEdit")}
             closeLabel={say("close")}
             description={say("jobEditorHint")}
-            footer={(close) => (
-                <>
-                    <Button variant="tertiary" onPress={close}>
-                        {say("cancel")}
-                    </Button>
-                    <Button
-                        variant="primary"
-                        isPending={isBusy}
-                        isDisabled={isBusy || !props.props.canSave}
-                        onPress={on.save}
-                    >
-                        {say("jobEditorSave")}
-                    </Button>
-                </>
-            )}
+            footer={(close) => renderHiringJobEditorDialogFooter(close, say, isBusy, props.props.canSave, on.save)}
         >
             <div className={FORM_CLASS_NAME}>
                 {error === null ? null : <Alert tone="negative" title={say("errorNotSaved")} description={error} />}
-                <div className={GRID_CLASS_NAME}>
-                    <Input
-                        id="job-title"
-                        name="title"
-                        label={say("jobTitleLabel")}
-                        placeholder={say("jobTitlePlaceholder")}
-                        variant="secondary"
-                        isRequired
-                        value={values.title}
-                        onValueChange={(title) => on.text("title", title)}
-                    />
-                    <Input
-                        id="job-position"
-                        name="position"
-                        label={say("jobPosition")}
-                        variant="secondary"
-                        value={values.position}
-                        onValueChange={(position) => on.text("position", position)}
-                    />
-                    <SegmentedControl
-                        label={say("jobEmployment")}
-                        options={props.props.employmentOptions.map((option) => ({
-                            value: option.id,
-                            label: option.label,
-                        }))}
-                        value={values.employmentType}
-                        onValueChange={(type) => on.text("employmentType", type)}
-                    />
-                    <Input
-                        id="job-schedule"
-                        name="schedule"
-                        label={say("jobSchedule")}
-                        placeholder={say("jobSchedulePlaceholder")}
-                        variant="secondary"
-                        value={values.schedule}
-                        onValueChange={(schedule) => on.text("schedule", schedule)}
-                    />
-                    <NumberField
-                        variant="secondary"
-                        label={say("jobPayMin")}
-                        minValue={0}
-                        step={500000}
-                        formatOptions={{ maximumFractionDigits: 0 }}
-                        value={values.payMin ?? undefined}
-                        onValueChange={(value) => on.number("payMin", numberOrNull(value))}
-                    />
-                    <NumberField
-                        variant="secondary"
-                        label={say("jobPayMax")}
-                        minValue={0}
-                        step={500000}
-                        formatOptions={{ maximumFractionDigits: 0 }}
-                        value={values.payMax ?? undefined}
-                        onValueChange={(value) => on.number("payMax", numberOrNull(value))}
-                    />
-                    <Select
-                        variant="secondary"
-                        label={say("jobPayUnit")}
-                        options={props.props.payUnitOptions}
-                        value={values.payUnit}
-                        onValueChange={(unit) => on.text("payUnit", unit ?? "month")}
-                    />
-                    <Input
-                        id="job-location"
-                        name="location"
-                        label={say("jobLocation")}
-                        variant="secondary"
-                        value={values.location}
-                        onValueChange={(location) => on.text("location", location)}
-                    />
-                    <NumberField
-                        variant="secondary"
-                        label={say("jobHeadcount")}
-                        minValue={1}
-                        maxValue={500}
-                        step={1}
-                        value={values.headcount}
-                        onValueChange={(value) => on.number("headcount", Number.isFinite(value) ? value : 1)}
-                    />
-                </div>
+                <HiringJobFields
+                    say={say}
+                    values={values}
+                    employmentOptions={props.props.employmentOptions}
+                    payUnitOptions={props.props.payUnitOptions}
+                    onText={on.text}
+                    onNumber={on.number}
+                />
                 <Textarea
                     variant="secondary"
                     label={say("jobDescription")}
@@ -194,3 +91,21 @@ export const HiringJobEditorDialog = (props: HiringJobEditorDialogProps) => {
         </Dialog>
     )
 }
+
+/** Renders the HiringJobEditorDialog footer section. */
+const renderHiringJobEditorDialogFooter = (
+    close: () => void,
+    say: NonNullable<HiringJobEditorDialogProps["props"]["say"]>,
+    isBusy: NonNullable<HiringJobEditorDialogProps["props"]["isBusy"]>,
+    canSave: boolean,
+    save: () => void,
+) => (
+    <>
+        <Button variant="tertiary" onPress={close}>
+            {say("cancel")}
+        </Button>
+        <Button variant="primary" isPending={isBusy} isDisabled={isBusy || !canSave} onPress={save}>
+            {say("jobEditorSave")}
+        </Button>
+    </>
+)

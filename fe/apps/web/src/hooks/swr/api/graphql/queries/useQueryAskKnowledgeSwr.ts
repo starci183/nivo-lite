@@ -1,11 +1,12 @@
 "use client"
 
-import useSWRMutation from "swr/mutation"
 import { queryAskKnowledge } from "@/modules/api/graphql/queries/query-ask-knowledge"
+import type { queryAskKnowledge as QueryAskKnowledgeOperation } from "@/modules/api/graphql/queries/query-ask-knowledge"
+import useSWRMutation from "swr/mutation"
 
 /** What the askKnowledge query is triggered with. */
 interface AskKnowledgeArg {
-    readonly arg: Parameters<typeof queryAskKnowledge>[0]["request"]
+    readonly arg: Parameters<typeof QueryAskKnowledgeOperation>[0]["request"]
 }
 
 /** The SWR key of the askKnowledge query. */

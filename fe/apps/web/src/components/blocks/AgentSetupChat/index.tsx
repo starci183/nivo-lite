@@ -2,7 +2,8 @@
 
 import { useFormatter, useTranslations } from "next-intl"
 import { useAgentRights } from "@/hooks/agentSettings"
-import { useSetupChat, useSetupState, useSetupThread, useSetupVersions, useThreadScroll } from "@/hooks/agentSetup"
+import { useSetupChat, useSetupState, useSetupVersions, useThreadScroll } from "@/hooks/agentSetup"
+import { setupThreadOf } from "@/hooks/agentSetup"
 import { mapSlot, useSlotLabels } from "@/hooks/slot"
 import { useSetupWriteWords } from "@/hooks/setupCards"
 import { useModuleName } from "@/hooks/installations"
@@ -32,7 +33,7 @@ export const AgentSetupChat = (props: AgentSetupChatProps) => {
     const state = slot.items
     const chat = useSetupChat(state?.session.id ?? "", state?.turnPending === true)
     useThreadScroll(`${state?.messages.length ?? 0}:${chat.isSending}:${state?.revisions.length ?? 0}`)
-    const groups = useSetupThread(
+    const groups = setupThreadOf(
         state?.revisions ?? NO_VERSIONS,
         state?.messages ?? NO_VERSIONS,
         state?.writes ?? NO_VERSIONS,

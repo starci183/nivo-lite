@@ -1,3 +1,6 @@
+import { BookingCustomerFields } from "@/components/leaves/BookingCustomerFields"
+import type { BookingPlacementDialogProps } from "@/components/leaves/BookingCustomerFields"
+export type { BookingPlacementDialogProps } from "@/components/leaves/BookingCustomerFields"
 import { parseDate, parseTime } from "@internationalized/date"
 import {
     Alert,
@@ -12,51 +15,6 @@ import {
     TimeField,
 } from "@starci/grammar/common"
 import { GRID_CLASS, STACK_CLASS } from "./classNames"
-
-/** The fields of the dialog. */
-type BookingPlacementFields = {
-    readonly serviceId: string
-    readonly date: string
-    readonly time: string
-    readonly resourceId: string
-    readonly name: string
-    readonly phone: string
-    readonly party: number
-    readonly note: string
-    readonly force: boolean
-}
-
-/** What the placement dialog draws and reports: it adds a booking (every field) or moves one (when, where). */
-export type BookingPlacementDialogProps = {
-    readonly mode: "add" | "move"
-    readonly title: string
-    readonly fields: BookingPlacementFields
-    readonly serviceOptions: ReadonlyArray<{ readonly id: string; readonly label: string }>
-    readonly resourceOptions: ReadonlyArray<{ readonly id: string; readonly label: string }>
-    readonly labels: {
-        readonly name: string
-        readonly phone: string
-        readonly service: string
-        readonly date: string
-        readonly time: string
-        readonly resource: string
-        readonly party: string
-        readonly note: string
-        readonly notePlaceholder: string
-        readonly force: string
-        readonly save: string
-        readonly cancel: string
-        readonly close: string
-    }
-    /** The reason the last try was refused, in words. */
-    readonly refusal?: string
-    /** Whether the owner may stack the booking anyway. */
-    readonly canForce: boolean
-    readonly isPending: boolean
-    readonly onChange: (patch: Partial<BookingPlacementFields>) => void
-    readonly onSubmit: () => void
-    readonly onClose: () => void
-}
 
 /** The option that lets the database pick a free place; the field holds an empty id for it. */
 export const AUTO_RESOURCE = "auto"
@@ -74,57 +32,12 @@ export const BookingPlacementDialog = (props: BookingPlacementDialogProps) => {
             size="md"
             title={props.title}
             closeLabel={labels.close}
-            footer={
-                <>
-                    <Button size="sm" variant="outline" isDisabled={props.isPending} onPress={props.onClose}>
-                        {labels.cancel}
-                    </Button>
-                    <Button
-                        size="sm"
-                        variant="primary"
-                        isPending={props.isPending}
-                        isDisabled={
-                            props.isPending || (adding && (fields.name.trim() === "" || fields.serviceId === ""))
-                        }
-                        onPress={props.onSubmit}
-                    >
-                        {labels.save}
-                    </Button>
-                </>
-            }
+            footer={renderBookingPlacementDialogFooter(props, labels, adding, fields)}
         >
             <Form label={props.title} isPending={props.isPending} onSubmit={props.onSubmit}>
                 <div className={STACK_CLASS}>
                     <div className={GRID_CLASS}>
-                        {adding ? (
-                            <>
-                                <Input
-                                    id="booking-place-name"
-                                    name="name"
-                                    label={labels.name}
-                                    variant="secondary"
-                                    isRequired
-                                    value={fields.name}
-                                    onValueChange={(name) => props.onChange({ name })}
-                                />
-                                <Input
-                                    id="booking-place-phone"
-                                    name="phone"
-                                    kind="tel"
-                                    label={labels.phone}
-                                    variant="secondary"
-                                    value={fields.phone}
-                                    onValueChange={(phone) => props.onChange({ phone })}
-                                />
-                                <Select
-                                    label={labels.service}
-                                    variant="secondary"
-                                    options={props.serviceOptions}
-                                    value={fields.serviceId}
-                                    onValueChange={(serviceId) => props.onChange({ serviceId: serviceId ?? "" })}
-                                />
-                            </>
-                        ) : null}
+                        {adding ? <BookingCustomerFields {...props} /> : null}
                         <DateField
                             label={labels.date}
                             variant="secondary"
@@ -155,30 +68,7 @@ export const BookingPlacementDialog = (props: BookingPlacementDialogProps) => {
                                 })
                             }
                         />
-                        {adding ? (
-                            <>
-                                <NumberField
-                                    label={labels.party}
-                                    variant="secondary"
-                                    minValue={1}
-                                    maxValue={20}
-                                    step={1}
-                                    value={fields.party}
-                                    onValueChange={(party) =>
-                                        props.onChange({ party: Number.isFinite(party) ? Math.max(1, party) : 1 })
-                                    }
-                                />
-                                <Input
-                                    id="booking-place-note"
-                                    name="note"
-                                    label={labels.note}
-                                    variant="secondary"
-                                    placeholder={labels.notePlaceholder}
-                                    value={fields.note}
-                                    onValueChange={(note) => props.onChange({ note })}
-                                />
-                            </>
-                        ) : null}
+                        {adding ? renderBookingPlacementDialogPartyFields(labels, fields, props) : null}
                     </div>
                     {props.refusal === undefined ? null : <Alert tone="negative" title={props.refusal} />}
                     {props.canForce || fields.force ? (
@@ -194,3 +84,54 @@ export const BookingPlacementDialog = (props: BookingPlacementDialogProps) => {
         </Dialog>
     )
 }
+
+/** Renders the BookingPlacementDialog party fields section. */
+const renderBookingPlacementDialogPartyFields = (
+    labels: NonNullable<BookingPlacementDialogProps["labels"]>,
+    fields: NonNullable<BookingPlacementDialogProps["fields"]>,
+    props: BookingPlacementDialogProps,
+) => (
+    <>
+        <NumberField
+            label={labels.party}
+            variant="secondary"
+            minValue={1}
+            maxValue={20}
+            step={1}
+            value={fields.party}
+            onValueChange={(party) => props.onChange({ party: Number.isFinite(party) ? Math.max(1, party) : 1 })}
+        />
+        <Input
+            id="booking-place-note"
+            name="note"
+            label={labels.note}
+            variant="secondary"
+            placeholder={labels.notePlaceholder}
+            value={fields.note}
+            onValueChange={(note) => props.onChange({ note })}
+        />
+    </>
+)
+
+/** Renders the BookingPlacementDialog footer section. */
+const renderBookingPlacementDialogFooter = (
+    props: Pick<BookingPlacementDialogProps, "isPending" | "onClose" | "onSubmit">,
+    labels: NonNullable<BookingPlacementDialogProps["labels"]>,
+    adding: boolean,
+    fields: NonNullable<BookingPlacementDialogProps["fields"]>,
+) => (
+    <>
+        <Button size="sm" variant="outline" isDisabled={props.isPending} onPress={props.onClose}>
+            {labels.cancel}
+        </Button>
+        <Button
+            size="sm"
+            variant="primary"
+            isPending={props.isPending}
+            isDisabled={props.isPending || (adding && (fields.name.trim() === "" || fields.serviceId === ""))}
+            onPress={props.onSubmit}
+        >
+            {labels.save}
+        </Button>
+    </>
+)

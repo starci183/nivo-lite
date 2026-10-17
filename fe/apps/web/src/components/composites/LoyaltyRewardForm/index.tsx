@@ -49,51 +49,8 @@ export const LoyaltyRewardForm = (props: LoyaltyRewardFormProps) => (
                 isDisabled={props.isPending}
                 onValueChange={(value) => props.onChange("name", value)}
             />
-            <div className={FIELD_PAIR_CLASS_NAME}>
-                <Select
-                    label={props.kindLabel}
-                    variant="secondary"
-                    options={props.kindOptions}
-                    value={props.values.kind}
-                    isDisabled={props.isPending}
-                    onValueChange={(value) => props.onChange("kind", value ?? "")}
-                />
-                <Input
-                    id="reward-cost"
-                    name="cost"
-                    label={props.costLabel}
-                    variant="secondary"
-                    isRequired
-                    isError={props.costError !== undefined}
-                    errorMessage={props.costError}
-                    value={props.values.cost}
-                    isDisabled={props.isPending}
-                    onValueChange={(value) => props.onChange("cost", value)}
-                />
-            </div>
-            <div className={FIELD_PAIR_CLASS_NAME}>
-                <Input
-                    id="reward-value"
-                    name="value"
-                    label={props.valueLabel}
-                    variant="secondary"
-                    hint={props.valueHint}
-                    value={props.values.value}
-                    isDisabled={props.isPending}
-                    onValueChange={(value) => props.onChange("value", value)}
-                />
-                {props.values.kind === "percent" ? (
-                    <Input
-                        id="reward-percent"
-                        name="percent"
-                        label={props.percentLabel}
-                        variant="secondary"
-                        value={props.values.percent}
-                        isDisabled={props.isPending}
-                        onValueChange={(value) => props.onChange("percent", value)}
-                    />
-                ) : null}
-            </div>
+            {renderLoyaltyRewardFormKindFields(props)}
+            {renderLoyaltyRewardFormValueFields(props)}
             <div className={FIELD_PAIR_CLASS_NAME}>
                 <Input
                     id="reward-stock"
@@ -149,4 +106,67 @@ export const LoyaltyRewardForm = (props: LoyaltyRewardFormProps) => (
             </div>
         </div>
     </Form>
+)
+
+/** Renders the LoyaltyRewardForm value fields section. */
+const renderLoyaltyRewardFormValueFields = (
+    props: Pick<
+        LoyaltyRewardFormProps,
+        "valueLabel" | "valueHint" | "values" | "isPending" | "onChange" | "percentLabel"
+    >,
+) => (
+    <div className={FIELD_PAIR_CLASS_NAME}>
+        <Input
+            id="reward-value"
+            name="value"
+            label={props.valueLabel}
+            variant="secondary"
+            hint={props.valueHint}
+            value={props.values.value}
+            isDisabled={props.isPending}
+            onValueChange={(value) => props.onChange("value", value)}
+        />
+        {props.values.kind === "percent" ? (
+            <Input
+                id="reward-percent"
+                name="percent"
+                label={props.percentLabel}
+                variant="secondary"
+                value={props.values.percent}
+                isDisabled={props.isPending}
+                onValueChange={(value) => props.onChange("percent", value)}
+            />
+        ) : null}
+    </div>
+)
+
+/** Renders the LoyaltyRewardForm kind fields section. */
+const renderLoyaltyRewardFormKindFields = (
+    props: Pick<
+        LoyaltyRewardFormProps,
+        "kindLabel" | "kindOptions" | "values" | "isPending" | "onChange" | "costLabel" | "costError"
+    >,
+) => (
+    <div className={FIELD_PAIR_CLASS_NAME}>
+        <Select
+            label={props.kindLabel}
+            variant="secondary"
+            options={props.kindOptions}
+            value={props.values.kind}
+            isDisabled={props.isPending}
+            onValueChange={(value) => props.onChange("kind", value ?? "")}
+        />
+        <Input
+            id="reward-cost"
+            name="cost"
+            label={props.costLabel}
+            variant="secondary"
+            isRequired
+            isError={props.costError !== undefined}
+            errorMessage={props.costError}
+            value={props.values.cost}
+            isDisabled={props.isPending}
+            onValueChange={(value) => props.onChange("cost", value)}
+        />
+    </div>
 )

@@ -1,3 +1,7 @@
+import type { useTranslations } from "next-intl"
+import type { useShiftsFormat, useShiftsBenchData } from "@/hooks/shifts"
+import type { useShiftsWeekCommands } from "@/hooks/shiftsCommands"
+import type { useShiftsWeekModel } from "@/hooks/shiftsCoverage"
 import {
     Button,
     EmptyNotice,
@@ -119,67 +123,7 @@ export const ShiftsGridBase = (props: ShiftsGridBaseProps) => (
                                             {row.sub}
                                         </Text>
                                     </div>
-                                    {row.cells.map((cell) => (
-                                        <div
-                                            key={cell.id}
-                                            role="gridcell"
-                                            className={cellClassName(cell.isTarget, cell.isOff)}
-                                            onDragOver={(event) => {
-                                                if (!cell.canDrop) return
-                                                event.preventDefault()
-                                                props.on.hover(cell.id)
-                                            }}
-                                            onDragLeave={() => props.on.hover(null)}
-                                            onDrop={(event) => {
-                                                event.preventDefault()
-                                                const shiftId = event.dataTransfer.getData("text/plain")
-                                                if (shiftId !== "") props.on.drop(shiftId, row.id)
-                                            }}
-                                            onClick={() => {
-                                                if (cell.canDrop) props.on.place(row.id)
-                                            }}
-                                        >
-                                            {cell.chips.map((chip) => (
-                                                <div
-                                                    key={chip.id}
-                                                    draggable={props.props.editable}
-                                                    className={chipClassName(
-                                                        chip.isPicked,
-                                                        chip.why !== "",
-                                                        chip.isOpen,
-                                                    )}
-                                                    style={{ borderLeftColor: chip.color || undefined }}
-                                                    onDragStart={(event) => {
-                                                        event.dataTransfer.setData("text/plain", chip.id)
-                                                        props.on.dragStart(chip.id)
-                                                    }}
-                                                    onDragEnd={props.on.dragEnd}
-                                                >
-                                                    <Button
-                                                        size="sm"
-                                                        variant="ghost"
-                                                        isDisabled={!props.props.editable}
-                                                        onPress={() => props.on.pick(chip.id)}
-                                                    >
-                                                        {chip.time}
-                                                    </Button>
-                                                    <Text as="span" size="xs" tone="muted" overflow="truncate">
-                                                        {chip.position}
-                                                    </Text>
-                                                    {chip.why === "" ? null : (
-                                                        <Text size="xs" tone="muted">
-                                                            {chip.why}
-                                                        </Text>
-                                                    )}
-                                                </div>
-                                            ))}
-                                            {cell.isOff && cell.chips.length === 0 ? (
-                                                <Text as="span" size="xs" tone="muted">
-                                                    {props.props.onLeaveLabel}
-                                                </Text>
-                                            ) : null}
-                                        </div>
-                                    ))}
+                                    {row.cells.map((cell) => renderGridCell({ cell, props, row }))}
                                 </Fragment>
                             ))}
                         </div>
@@ -225,3 +169,84 @@ export const ShiftsGridBase = (props: ShiftsGridBaseProps) => (
         </div>
     </Region>
 )
+
+const renderGridCell = ({ cell, props, row }: RenderGridCellInput) => (
+    <div
+        key={cell.id}
+        role="gridcell"
+        className={cellClassName(cell.isTarget, cell.isOff)}
+        onDragOver={(event) => {
+            if (!cell.canDrop) return
+            event.preventDefault()
+            props.on.hover(cell.id)
+        }}
+        onDragLeave={() => props.on.hover(null)}
+        onDrop={(event) => {
+            event.preventDefault()
+            const shiftId = event.dataTransfer.getData("text/plain")
+            if (shiftId !== "") props.on.drop(shiftId, row.id)
+        }}
+        onClick={() => {
+            if (cell.canDrop) props.on.place(row.id)
+        }}
+    >
+        {cell.chips.map((chip) => (
+            <div
+                key={chip.id}
+                draggable={props.props.editable}
+                className={chipClassName(chip.isPicked, chip.why !== "", chip.isOpen)}
+                style={{ borderLeftColor: chip.color || undefined }}
+                onDragStart={(event) => {
+                    event.dataTransfer.setData("text/plain", chip.id)
+                    props.on.dragStart(chip.id)
+                }}
+                onDragEnd={props.on.dragEnd}
+            >
+                <Button
+                    size="sm"
+                    variant="ghost"
+                    isDisabled={!props.props.editable}
+                    onPress={() => props.on.pick(chip.id)}
+                >
+                    {chip.time}
+                </Button>
+                <Text as="span" size="xs" tone="muted" overflow="truncate">
+                    {chip.position}
+                </Text>
+                {chip.why === "" ? null : (
+                    <Text size="xs" tone="muted">
+                        {chip.why}
+                    </Text>
+                )}
+            </div>
+        ))}
+        {cell.isOff && cell.chips.length === 0 ? (
+            <Text as="span" size="xs" tone="muted">
+                {props.props.onLeaveLabel}
+            </Text>
+        ) : null}
+    </div>
+)
+
+type RenderGridCellInput = { cell: GridCellView; props: ShiftsGridBaseProps; row: GridRowView }
+/** State values and commands consumed by the connected surface. */
+export type ShiftsGridControllerInput = {
+    readonly t: ReturnType<typeof useTranslations<"shifts">>
+    readonly format: ReturnType<typeof useShiftsFormat>
+    readonly week: ReturnType<typeof useShiftsWeekCommands>
+    readonly bench: NonNullable<ReturnType<typeof useShiftsBenchData>>["data"]
+    readonly setMoves: React.Dispatch<React.SetStateAction<Readonly<Record<string, string | null>>>>
+    readonly picked: string | null
+    readonly setPicked: React.Dispatch<React.SetStateAction<string | null>>
+    readonly over: string | null
+    readonly setOver: React.Dispatch<React.SetStateAction<string | null>>
+    readonly dayIndex: number
+    readonly setDayIndex: React.Dispatch<React.SetStateAction<number>>
+    readonly model: ReturnType<typeof useShiftsWeekModel>
+}
+
+/** Narrowed schedule data available after the access guard. */
+export type GridCellsInput = ShiftsGridControllerInput & {
+    bench: NonNullable<ShiftsGridControllerInput["bench"]>
+    model: NonNullable<ShiftsGridControllerInput["model"]>
+}

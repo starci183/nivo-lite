@@ -1,19 +1,3 @@
-import type {
-    ShiftsBenchType,
-    ShiftsFiguresType,
-    ShiftsMineType,
-    ShiftsPriorType,
-    ShiftsScheduleType,
-    ShiftsWeekType,
-} from "@/modules/api"
-import type {
-    ShiftsBenchView,
-    ShiftsFiguresView,
-    ShiftsMineView,
-    ShiftsScheduleView,
-    ShiftsSegView,
-    ShiftsWeekView,
-} from "@/modules/types"
 import {
     listOf,
     toAvailRowView,
@@ -24,6 +8,22 @@ import {
     toSwapRowView,
     toWorkItemView,
 } from "@/hooks/shiftsWire"
+import type {
+    ShiftsBenchType,
+    ShiftsFiguresType,
+    ShiftsMineType,
+    ShiftsPriorType,
+    ShiftsScheduleType,
+    ShiftsWeekType,
+} from "@/hooks/swr"
+import type {
+    ShiftsBenchView,
+    ShiftsFiguresView,
+    ShiftsMineView,
+    ShiftsScheduleView,
+    ShiftsSegView,
+    ShiftsWeekView,
+} from "@/modules/types"
 
 const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === "object" && value !== null
 

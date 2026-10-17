@@ -18,8 +18,8 @@ export const SMTP_PRESETS: ReadonlyArray<SmtpPreset> = [
                 port: 587,
                 security: "starttls",
                 userIsEmail: true,
-                passwordLabel: "google_workspace_app_password_passwordLabel",
-                passwordHint: "google_workspace_app_password_passwordHint",
+                passLabel: "google_workspace_app_password_passwordLabel",
+                passHint: "google_workspace_app_password_passwordHint",
                 steps: [
                     {
                         text: "google_workspace_app_password_step1",
@@ -48,8 +48,8 @@ export const SMTP_PRESETS: ReadonlyArray<SmtpPreset> = [
                 port: 587,
                 security: "starttls",
                 userIsEmail: true,
-                passwordLabel: "google_workspace_relay_passwordLabel",
-                passwordHint: "google_workspace_relay_passwordHint",
+                passLabel: "google_workspace_relay_passwordLabel",
+                passHint: "google_workspace_relay_passwordHint",
                 steps: [
                     {
                         text: "google_workspace_relay_step1",
@@ -80,8 +80,8 @@ export const SMTP_PRESETS: ReadonlyArray<SmtpPreset> = [
                 port: 587,
                 security: "starttls",
                 userIsEmail: true,
-                passwordLabel: "gmail_app_password_passwordLabel",
-                passwordHint: "gmail_app_password_passwordHint",
+                passLabel: "gmail_app_password_passwordLabel",
+                passHint: "gmail_app_password_passwordHint",
                 steps: [
                     {
                         text: "gmail_app_password_step1",
@@ -116,8 +116,8 @@ export const SMTP_PRESETS: ReadonlyArray<SmtpPreset> = [
                 port: 587,
                 security: "starttls",
                 userIsEmail: true,
-                passwordLabel: "microsoft365_smtp_auth_passwordLabel",
-                passwordHint: "microsoft365_smtp_auth_passwordHint",
+                passLabel: "microsoft365_smtp_auth_passwordLabel",
+                passHint: "microsoft365_smtp_auth_passwordHint",
                 steps: [
                     {
                         text: "microsoft365_smtp_auth_step1",
@@ -145,8 +145,8 @@ export const SMTP_PRESETS: ReadonlyArray<SmtpPreset> = [
                 port: 587,
                 security: "starttls",
                 userIsEmail: true,
-                passwordLabel: "zoho_custom_domain_passwordLabel",
-                passwordHint: "zoho_custom_domain_passwordHint",
+                passLabel: "zoho_custom_domain_passwordLabel",
+                passHint: "zoho_custom_domain_passwordHint",
                 steps: [
                     {
                         text: "zoho_custom_domain_step1",
@@ -167,8 +167,8 @@ export const SMTP_PRESETS: ReadonlyArray<SmtpPreset> = [
                 port: 587,
                 security: "starttls",
                 userIsEmail: true,
-                passwordLabel: "zoho_personal_passwordLabel",
-                passwordHint: "zoho_personal_passwordHint",
+                passLabel: "zoho_personal_passwordLabel",
+                passHint: "zoho_personal_passwordHint",
                 steps: [{ text: "zoho_personal_step1" }],
                 cautions: [],
             },
@@ -188,8 +188,8 @@ export const SMTP_PRESETS: ReadonlyArray<SmtpPreset> = [
                 security: "starttls",
                 hostEditable: true,
                 userIsEmail: true,
-                passwordLabel: "vn_hosting_hosting_passwordLabel",
-                passwordHint: "vn_hosting_hosting_passwordHint",
+                passLabel: "vn_hosting_hosting_passwordLabel",
+                passHint: "vn_hosting_hosting_passwordHint",
                 steps: [{ text: "vn_hosting_hosting_step1" }, { text: "vn_hosting_hosting_step2" }],
                 cautions: ["vn_hosting_hosting_caution1"],
             },
@@ -208,8 +208,8 @@ export const SMTP_PRESETS: ReadonlyArray<SmtpPreset> = [
                 port: 587,
                 security: "starttls",
                 fixedUser: "resend",
-                passwordLabel: "relay_service_resend_passwordLabel",
-                passwordHint: "relay_service_resend_passwordHint",
+                passLabel: "relay_service_resend_passwordLabel",
+                passHint: "relay_service_resend_passwordHint",
                 steps: [
                     {
                         text: "relay_service_resend_step1",
@@ -230,8 +230,8 @@ export const SMTP_PRESETS: ReadonlyArray<SmtpPreset> = [
                 port: 587,
                 security: "starttls",
                 fixedUser: "apikey",
-                passwordLabel: "relay_service_sendgrid_passwordLabel",
-                passwordHint: "relay_service_sendgrid_passwordHint",
+                passLabel: "relay_service_sendgrid_passwordLabel",
+                passHint: "relay_service_sendgrid_passwordHint",
                 steps: [
                     {
                         text: "relay_service_sendgrid_step1",
@@ -258,8 +258,8 @@ export const SMTP_PRESETS: ReadonlyArray<SmtpPreset> = [
                 port: 587,
                 security: "starttls",
                 hostEditable: true,
-                passwordLabel: "relay_service_ses_passwordLabel",
-                passwordHint: "relay_service_ses_passwordHint",
+                passLabel: "relay_service_ses_passwordLabel",
+                passHint: "relay_service_ses_passwordHint",
                 steps: [
                     {
                         text: "relay_service_ses_step1",

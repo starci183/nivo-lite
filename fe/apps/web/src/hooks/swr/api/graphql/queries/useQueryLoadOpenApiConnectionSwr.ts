@@ -1,5 +1,6 @@
 "use client"
 
+import { argumentKey } from "@/hooks/workspaceread"
 import useSWR from "swr"
 import type { SWRConfiguration } from "swr"
 import type { LoadOpenApiConnectionQuery } from "@/modules/api"
@@ -14,7 +15,7 @@ export const useQueryLoadOpenApiConnectionSwr = (
     options?: SWRConfiguration<LoadOpenApiConnectionQuery["loadOpenApiConnection"]>,
 ) =>
     useSWR(
-        connectionId === undefined ? null : ([QUERY_LOAD_OPEN_API_CONNECTION_SWR_KEY, connectionId] as const),
+        argumentKey(QUERY_LOAD_OPEN_API_CONNECTION_SWR_KEY, connectionId),
         async ([, id]) => {
             const result = await queryLoadOpenApiConnection({ request: { connectionId: id } })
             if (!result.data) throw new Error("loadOpenApiConnection answered no data")

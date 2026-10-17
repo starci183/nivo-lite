@@ -1,6 +1,6 @@
-import type { VideoBrandType, VideoMediaType, VideoProjectType } from "@/modules/api"
-import { ASPECTS, isGoal } from "@/modules/video"
-import type { Brand, MediaItem, ProjectStatus, ProjectView, RenderView, SceneRole } from "@/modules/video"
+import type { VideoBrandType, VideoMediaType, VideoProjectType } from "@/hooks/swr"
+import { ASPECTS, isGoal, Brand, MediaItem, ProjectStatus, ProjectView, SceneRole } from "@/modules/video"
+import type { RenderView } from "@/modules/video"
 
 export {
     aspectKey,

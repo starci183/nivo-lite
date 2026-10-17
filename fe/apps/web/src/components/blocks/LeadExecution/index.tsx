@@ -41,28 +41,18 @@ export const LeadExecution = (props: LeadExecutionProps) => {
                 ? ""
                 : ` · ${format.dateTime(new Date(draft.decided_at), { hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "Asia/Ho_Chi_Minh" })}`
         const isEditing = isWaiting && approval.isEditing
-        return {
-            id: draft.id,
-            view: {
-                nextAction:
-                    loaded.responsibilities.find((step) => step.id === draft.responsibility_id)?.next_action ??
-                    t("defaultNextAction"),
-                willSend: a("willSend", { lead: loaded.lead.contact_name, channel: loaded.lead.channel }),
-                agent: agentName === null ? null : { name: agentName, glyph: approvalAgentGlyph() },
-                status: isWaiting
-                    ? { label: a("needsApproval"), tone: "warning" }
-                    : { label: statusWord, tone: draft.status === "approved" ? "success" : "danger" },
-                draft: draft.draft,
-                characters: a("characters", { count: (isEditing ? approval.editText : draft.draft).length }),
-                settledLabel: `${a("decidedBy", { status: statusWord, who: draft.decided_by ?? a("teammate") })}${decidedAt}`,
-                isWaiting,
-                canDecide: approval.canDecide,
-                isEditing,
-                editText: approval.editText,
-                pendingDecision: isWaiting ? approval.pendingDecision : null,
-                error: isWaiting ? approval.error : null,
-            },
-        }
+        return buildExecutionDraftView({
+            draft,
+            loaded,
+            t,
+            a,
+            agentName,
+            isWaiting,
+            statusWord,
+            isEditing,
+            approval,
+            decidedAt,
+        })
     }
     const explanationOf = (): string => {
         if (currentStep === null) return t("noOpenNext")
@@ -83,31 +73,18 @@ export const LeadExecution = (props: LeadExecutionProps) => {
 
     return (
         <LeadExecutionBase
-            props={{
+            props={buildExecutionPanelView({
                 slot,
                 error,
                 isPending,
-                draftingText: actions.isPending ? t("isDrafting", { name: actorName }) : "",
-                labels: {
-                    cardLabel: t("followUp"),
-                    buttonLabel: t("draftWith", { name: actorName }),
-                    failTitle: t("draftFailed"),
-                    earlierTitle: t("earlierApprovals"),
-                    earlierMeta: t("decidedCount", { count: earlier.length }),
-                    slot: slotLabels(t("noOpenNext")),
-                    approval: {
-                        aiChip: common("aiChip"),
-                        draft: a("draftLabel"),
-                        copy: a("copy"),
-                        copied: a("copied"),
-                        waitingManager: a("waitingManager"),
-                        approveSend: a("approveSend"),
-                        edit: a("edit"),
-                        discardEdits: a("discardEdits"),
-                        reject: a("reject"),
-                    },
-                },
-            }}
+                actions,
+                t,
+                actorName,
+                earlier,
+                slotLabels,
+                common,
+                a,
+            })}
             on={{
                 draft,
                 toggleEdit: approval.toggleEdit,
@@ -117,3 +94,104 @@ export const LeadExecution = (props: LeadExecutionProps) => {
         />
     )
 }
+
+/** Inputs needed to build the LeadExecutionContent section. */
+interface BuildExecutionPanelViewContext {
+    readonly slot: DataSlot<ExecutionView>
+    readonly error: string | null
+    readonly isPending: boolean
+    readonly actions: ReturnType<typeof useLeadActions>
+    readonly t: ReturnType<typeof useTranslations<"lead">>
+    readonly actorName: string
+    readonly earlier: readonly ExecutionRecord[]
+    readonly slotLabels: ReturnType<typeof useSlotLabels>
+    readonly common: ReturnType<typeof useTranslations<"common">>
+    readonly a: ReturnType<typeof useTranslations<"approval">>
+}
+/** Builds the LeadExecutionContent section from the current view. */
+const buildExecutionPanelView = ({
+    slot,
+    error,
+    isPending,
+    actions,
+    t,
+    actorName,
+    earlier,
+    slotLabels,
+    common,
+    a,
+}: BuildExecutionPanelViewContext) =>
+    ({
+        slot,
+        error,
+        isPending,
+        draftingText: actions.isPending ? t("isDrafting", { name: actorName }) : "",
+        labels: {
+            cardLabel: t("followUp"),
+            buttonLabel: t("draftWith", { name: actorName }),
+            failTitle: t("draftFailed"),
+            earlierTitle: t("earlierApprovals"),
+            earlierMeta: t("decidedCount", { count: earlier.length }),
+            slot: slotLabels(t("noOpenNext")),
+            approval: {
+                aiChip: common("aiChip"),
+                draft: a("draftLabel"),
+                copy: a("copy"),
+                copied: a("copied"),
+                waitingManager: a("waitingManager"),
+                approveSend: a("approveSend"),
+                edit: a("edit"),
+                discardEdits: a("discardEdits"),
+                reject: a("reject"),
+            },
+        },
+    }) as const
+
+/** Inputs needed to build the LeadExecutionContent section. */
+interface BuildExecutionDraftViewContext {
+    readonly draft: ExecutionRecord
+    readonly loaded: LeadJourney
+    readonly t: ReturnType<typeof useTranslations<"lead">>
+    readonly a: ReturnType<typeof useTranslations<"approval">>
+    readonly agentName: string | null
+    readonly isWaiting: boolean
+    readonly statusWord: string
+    readonly isEditing: boolean
+    readonly approval: ReturnType<typeof useApprovalDecision>
+    readonly decidedAt: string
+}
+/** Builds the LeadExecutionContent section from the current view. */
+const buildExecutionDraftView = ({
+    draft,
+    loaded,
+    t,
+    a,
+    agentName,
+    isWaiting,
+    statusWord,
+    isEditing,
+    approval,
+    decidedAt,
+}: BuildExecutionDraftViewContext): DraftItem =>
+    ({
+        id: draft.id,
+        view: {
+            nextAction:
+                loaded.responsibilities.find((step) => step.id === draft.responsibility_id)?.next_action ??
+                t("defaultNextAction"),
+            willSend: a("willSend", { lead: loaded.lead.contact_name, channel: loaded.lead.channel }),
+            agent: agentName === null ? null : { name: agentName, glyph: approvalAgentGlyph() },
+            status: isWaiting
+                ? { label: a("needsApproval"), tone: "warning" }
+                : { label: statusWord, tone: draft.status === "approved" ? "success" : "danger" },
+            draft: draft.draft,
+            characters: a("characters", { count: (isEditing ? approval.editText : draft.draft).length }),
+            settledLabel: `${a("decidedBy", { status: statusWord, who: draft.decided_by ?? a("teammate") })}${decidedAt}`,
+            isWaiting,
+            canDecide: approval.canDecide,
+            isEditing,
+            editText: approval.editText,
+            pendingDecision: isWaiting ? approval.pendingDecision : null,
+            error: isWaiting ? approval.error : null,
+        },
+    }) as const

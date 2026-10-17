@@ -106,50 +106,49 @@ export const ConnectionLibraryBase = (props: ConnectionLibraryBaseProps) => (
         {props.props.cards.length === 0 ? (
             <EmptyNotice message={props.props.emptyMessage} description={props.props.emptyHint} />
         ) : (
-            <div className={classNames.grid}>
-                {props.props.cards.map((card) => (
-                    <div
-                        key={card.id}
-                        {...(card.guide === undefined ? {} : { "data-guide": `connections.${card.guide}` })}
-                    >
-                        <SurfaceCard label={card.name} headingLevel={3}>
-                            <div className={classNames.card}>
-                                <div className={classNames.cardHead}>
-                                    <ProviderLogo
-                                        glyph={card.glyph}
-                                        {...(card.logo === undefined ? {} : { src: card.logo })}
-                                    />
-                                    <Text size="sm" tone="muted">
-                                        {card.categoryLabel}
-                                    </Text>
-                                </div>
-                                <Text size="sm" tone="muted" overflow="clamp-2">
-                                    {card.blurb}
-                                </Text>
-                                <div className={classNames.cardFoot}>
-                                    {card.badge === null ? null : (
-                                        <Badge
-                                            tone={card.badge.tone}
-                                            isDot={card.badge.isDot}
-                                            isSkeleton={props.props.isLoading}
-                                        >
-                                            {card.badge.label}
-                                        </Badge>
-                                    )}
-                                    <Button
-                                        variant="outline"
-                                        size="sm"
-                                        isSkeleton={props.props.isLoading}
-                                        onPress={() => props.on.open(card.id)}
-                                    >
-                                        {card.actionLabel}
-                                    </Button>
-                                </div>
-                            </div>
-                        </SurfaceCard>
-                    </div>
-                ))}
-            </div>
+            renderConnectionCards(props)
         )}
+    </div>
+)
+
+/** Draws the div section of the ConnectionLibrary view. */
+const renderConnectionCards = (props: ConnectionLibraryBaseProps) => (
+    <div className={classNames.grid}>
+        {props.props.cards.map((card) => (
+            <div key={card.id} {...(card.guide === undefined ? {} : { "data-guide": `connections.${card.guide}` })}>
+                <SurfaceCard label={card.name} headingLevel={3}>
+                    <div className={classNames.card}>
+                        <div className={classNames.cardHead}>
+                            <ProviderLogo glyph={card.glyph} {...(card.logo === undefined ? {} : { src: card.logo })} />
+                            <Text size="sm" tone="muted">
+                                {card.categoryLabel}
+                            </Text>
+                        </div>
+                        <Text size="sm" tone="muted" overflow="clamp-2">
+                            {card.blurb}
+                        </Text>
+                        <div className={classNames.cardFoot}>
+                            {card.badge === null ? null : (
+                                <Badge
+                                    tone={card.badge.tone}
+                                    isDot={card.badge.isDot}
+                                    isSkeleton={props.props.isLoading}
+                                >
+                                    {card.badge.label}
+                                </Badge>
+                            )}
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                isSkeleton={props.props.isLoading}
+                                onPress={() => props.on.open(card.id)}
+                            >
+                                {card.actionLabel}
+                            </Button>
+                        </div>
+                    </div>
+                </SurfaceCard>
+            </div>
+        ))}
     </div>
 )

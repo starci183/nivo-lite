@@ -1,7 +1,7 @@
 "use client"
 
-import { useTranslations } from "next-intl"
 import { CONSOLE_ROUTES, agentSetupHref, leadFlowHref } from "@/modules/routes"
+import { useTranslations } from "next-intl"
 import type { useAgentChat } from "./useAgentChat"
 
 /** The prompts offered to the owner of a chat with a customer channel, and to one without. */
@@ -44,20 +44,7 @@ export const useAgentChatCopy = (chat: AgentChatState) => {
             { id: "modules", label: modules("catalogTitle"), href: "/agents" },
             isLoading ? { id: "agent", label: "", isSkeleton: true as const } : { id: "agent", label: name },
         ],
-        header: {
-            backLabel: t("backModules"),
-            name,
-            subtitle: subtitleOf(),
-            isSkeleton: isLoading,
-            badge: isCustomer ? t("realAiBadge") : null,
-            takeover:
-                isCustomer && chat.hasSelection
-                    ? { label: t(chat.isTakenOver ? "giveBack" : "takeOver"), isPending: chat.isTakingOver }
-                    : null,
-            openLeadLabel: chat.leadId === null ? null : t("openLead"),
-            historyLabel: t("historyToggle"),
-            setup: agent === undefined ? null : { label: t("setupLink"), href: agentSetupHref(agent.id) },
-        },
+        header: headerOf(t, name, subtitleOf, isLoading, isCustomer, chat, agent),
         channelTabs:
             agent?.hasCustomerChannel === true
                 ? {
@@ -84,19 +71,7 @@ export const useAgentChatCopy = (chat: AgentChatState) => {
             agentName: name,
             typing: chat.isAwaitingReply ? t("typing", { name }) : null,
         },
-        empty: {
-            agentName: name,
-            greeting: t("emptyGreeting", { name }),
-            help: t(isCustomer ? "customerEmptyHelp" : "emptyGreetingHelp"),
-            isCustomer,
-            visitorLabel: t("visitorName"),
-            visitorName: chat.visitorName,
-            prompts,
-            arePromptsDisabled: chat.isSending,
-            startLabel: t(isCustomer ? "startVisitor" : "startTest"),
-            isStarting: chat.isStarting,
-            steps: isCustomer ? NEXT_STEPS.map((step) => `${t(step.title)}. ${t(step.body)}`) : [],
-        },
+        empty: emptyOf(name, t, isCustomer, chat, prompts),
         composer: {
             formLabel: t("composerLabel"),
             messageLabel: t("messageLabel"),
@@ -109,5 +84,64 @@ export const useAgentChatCopy = (chat: AgentChatState) => {
             error: error ? { title: t(isLoading ? "loadingFailed" : "notSent"), text: error } : null,
             prompts: !isCustomer && chat.hasSelection ? prompts : [],
         },
+    }
+}
+
+const emptyOf = (
+    name: string,
+    t: ReturnType<typeof useTranslations<"agentChat">>,
+    isCustomer: boolean,
+    chat: AgentChatState,
+    prompts: string[],
+) => {
+    return {
+        agentName: name,
+        greeting: t("emptyGreeting", { name }),
+        help: t(isCustomer ? "customerEmptyHelp" : "emptyGreetingHelp"),
+        isCustomer,
+        visitorLabel: t("visitorName"),
+        visitorName: chat.visitorName,
+        prompts,
+        arePromptsDisabled: chat.isSending,
+        startLabel: t(isCustomer ? "startVisitor" : "startTest"),
+        isStarting: chat.isStarting,
+        steps: isCustomer ? NEXT_STEPS.map((step) => `${t(step.title)}. ${t(step.body)}`) : [],
+    }
+}
+
+const headerOf = (
+    t: ReturnType<typeof useTranslations<"agentChat">>,
+    name: string,
+    subtitleOf: () => string,
+    isLoading: boolean,
+    isCustomer: boolean,
+    chat: AgentChatState,
+    agent:
+        | {
+              id: string
+              module: string
+              name: string
+              handle: string
+              role: string
+              isActive: boolean
+              hasCustomerChannel: boolean
+              workspaceId: string
+              showWelcome: boolean
+          }
+        | undefined,
+) => {
+    return {
+        backLabel: t("backModules"),
+        name,
+        subtitle: subtitleOf(),
+        isSkeleton: isLoading,
+        badge: isCustomer ? t("realAiBadge") : null,
+        takeover:
+            isCustomer && chat.hasSelection
+                ? { label: t(chat.isTakenOver ? "giveBack" : "takeOver"), isPending: chat.isTakingOver }
+                : null,
+        openLeadLabel: chat.leadId === null ? null : t("openLead"),
+        historyLabel: t("historyToggle"),
+        setup: agent === undefined ? null : { label: t("setupLink"), href: agentSetupHref(agent.id) },
     }
 }

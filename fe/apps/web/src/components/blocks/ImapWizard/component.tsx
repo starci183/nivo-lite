@@ -1,3 +1,6 @@
+import type { useFormatter, useTranslations } from "next-intl"
+import type { useImapWizard } from "@/hooks/imap-wizard"
+import type { AgentOption } from "@/modules/types"
 import { Alert, Button, CheckboxGroup, RadioGroup, Text } from "@starci/grammar/common"
 import { ImapAccountFields } from "@/components/composites/ImapAccountFields"
 import type { ImapAccountFieldsProps } from "@/components/composites/ImapAccountFields"
@@ -174,43 +177,7 @@ export const ImapWizardBase = (props: ImapWizardBaseProps) => {
                     onTest={on.test}
                 />
             ) : null}
-            {view.step === "folders" ? (
-                <>
-                    <Text size="sm" weight="semibold">
-                        {text.foldersTitle}
-                    </Text>
-                    <Text size="sm" tone="muted">
-                        {text.foldersHint}
-                    </Text>
-                    <CheckboxGroup
-                        variant="secondary"
-                        label={text.foldersTitle}
-                        isLabelHidden
-                        options={view.folders.options}
-                        value={[...view.folders.value]}
-                        onValueChange={on.folders}
-                    />
-                    {view.folders.none === null ? null : (
-                        <Text size="xs" tone="muted">
-                            {view.folders.none}
-                        </Text>
-                    )}
-                    <Text size="sm" weight="semibold">
-                        {text.sinceTitle}
-                    </Text>
-                    <Text size="sm" tone="muted">
-                        {text.sinceHint}
-                    </Text>
-                    <RadioGroup
-                        variant="secondary"
-                        label={text.sinceTitle}
-                        isLabelHidden
-                        value={view.folders.since}
-                        onValueChange={on.since}
-                        options={view.folders.sinceOptions}
-                    />
-                </>
-            ) : null}
+            {view.step === "folders" ? <ImapFoldersStep {...props} /> : null}
             {view.step === "schedule" ? (
                 <>
                     <Text size="sm" tone="muted">
@@ -235,4 +202,83 @@ export const ImapWizardBase = (props: ImapWizardBaseProps) => {
             {view.error === null ? null : <Alert tone="negative" title={view.error} />}
         </WizardFrame>
     )
+}
+
+/** Folder selection and the starting point for the first sync. */
+const ImapFoldersStep = ({ props: view, on }: ImapWizardBaseProps) => {
+    const { text } = view
+    return (
+        <>
+            <Text size="sm" weight="semibold">
+                {text.foldersTitle}
+            </Text>
+            <Text size="sm" tone="muted">
+                {text.foldersHint}
+            </Text>
+            <CheckboxGroup
+                variant="secondary"
+                label={text.foldersTitle}
+                isLabelHidden
+                options={view.folders.options}
+                value={[...view.folders.value]}
+                onValueChange={on.folders}
+            />
+            {view.folders.none === null ? null : (
+                <Text size="xs" tone="muted">
+                    {view.folders.none}
+                </Text>
+            )}
+            <Text size="sm" weight="semibold">
+                {text.sinceTitle}
+            </Text>
+            <Text size="sm" tone="muted">
+                {text.sinceHint}
+            </Text>
+            <RadioGroup
+                variant="secondary"
+                label={text.sinceTitle}
+                isLabelHidden
+                value={view.folders.since}
+                onValueChange={on.since}
+                options={view.folders.sinceOptions}
+            />
+        </>
+    )
+}
+
+/** What the board hands the mailbox wizard. */
+export interface ImapWizardProps {
+    /** Workspace agents (any module): every agent may be given read access to the mailbox. */
+    readonly agents: ReadonlyArray<AgentOption>
+    /** Continue or edit this existing mailbox instead of creating a new one. */
+    readonly resumeId?: string
+    /** `changed` is true when something was saved, so the list should refresh. */
+    readonly onClose: (changed: boolean) => void
+}
+
+/** Inputs needed to build the ImapWizardContent section. */
+export interface BuildMailboxAccountViewContext {
+    readonly values: ReturnType<typeof useImapWizard>["values"]
+    readonly savedId: ReturnType<typeof useImapWizard>["savedId"]
+    readonly preset: ReturnType<typeof useImapWizard>["preset"]
+    readonly t: ReturnType<typeof useTranslations<"connectorImap">>
+    readonly isCustom: boolean
+    readonly isPending: ReturnType<typeof useImapWizard>["isPending"]
+    readonly wizard: ReturnType<typeof useImapWizard>
+    readonly format: ReturnType<typeof useFormatter>
+}
+
+/** Inputs needed to build the ImapWizardContent section. */
+export interface BuildImapWizardViewContext {
+    readonly wizard: ReturnType<typeof useImapWizard>
+    readonly t: ReturnType<typeof useTranslations<"connectorImap">>
+    readonly tc: ReturnType<typeof useTranslations<"connections">>
+    readonly tw: ReturnType<typeof useTranslations<"connectionWizard">>
+    readonly values: ReturnType<typeof useImapWizard>["values"]
+    readonly savedId: ReturnType<typeof useImapWizard>["savedId"]
+    readonly preset: ReturnType<typeof useImapWizard>["preset"]
+    readonly isCustom: boolean
+    readonly isPending: ReturnType<typeof useImapWizard>["isPending"]
+    readonly format: ReturnType<typeof useFormatter>
+    readonly props: ImapWizardProps
 }

@@ -2,9 +2,8 @@
 
 import { useTranslations } from "next-intl"
 import { mutate } from "swr"
-import { useMutateCreateVideoMediaUploadSwr, QUERY_VIDEO_MEDIA_SWR_KEY } from "@/hooks/swr"
+import { useMutateCreateVideoMediaUploadSwr, QUERY_VIDEO_MEDIA_SWR_KEY, usePutPresignedSwr } from "@/hooks/swr"
 import { useActiveWorkspace } from "@/hooks/workspaces"
-import { putPresigned } from "@/modules/api"
 import { useGraphQLWithToast, useRestWithToast } from "@/modules/toast"
 
 /** Uploads directly to the storage URL supplied by GraphQL, then refreshes the active workspace's media library. */
@@ -12,6 +11,7 @@ export const useVideoUpload = () => {
     const t = useTranslations("video")
     const runGraphQL = useGraphQLWithToast()
     const runRest = useRestWithToast()
+    const { trigger: putPresigned } = usePutPresignedSwr()
     const { trigger, isMutating } = useMutateCreateVideoMediaUploadSwr()
     const { activeWorkspaceId: workspaceId } = useActiveWorkspace()
     const uploadOne = async (file: File): Promise<string | undefined> => {

@@ -68,55 +68,66 @@ export const OfficeTasks = (props: OfficeTasksProps) => {
                     </Button>
                 ) : null}
             </div>
-            <SurfaceListCard
-                label={text("tasksLabel")}
-                headingLevel={2}
-                fact={text("tasksFact", { shown: visible.length, total: tasks.length })}
-                empty={
-                    tasks.length === 0 ? (
-                        <EmptyNotice
-                            message={text("noTasks")}
-                            description={text("noTasksHint")}
-                            actionLabel={text("openLeads")}
-                            actionVariant="secondary"
-                            onAction={props.on.openLeads}
-                        />
-                    ) : (
-                        <EmptyNotice
-                            message={text("noTasksMatch")}
-                            description={text("noTasksMatchHint")}
-                            actionLabel={text("clearFilters")}
-                            actionVariant="secondary"
-                            onAction={clear}
-                        />
-                    )
-                }
-            >
-                {visible.map((task) => (
-                    <ListItem key={task.id} className={ROW_CLASS_NAME}>
-                        <IconTile source={nivoIconSource("review", "leading")} tone="accent" size="md" />
-                        <div className={ROW_MAIN_CLASS_NAME}>
-                            <div className={ROW_TITLE_CLASS_NAME}>
-                                <Text weight="semibold">{task.title}</Text>
-                                <Badge tone={STATUS_TONES[task.status]} isDot>
-                                    {text(STATUS_KEYS[task.status])}
-                                </Badge>
-                            </div>
-                            <Text size="sm" tone="muted" overflow="clamp-2">
-                                {task.nextAction}
-                            </Text>
-                            <Text size="sm" tone="muted">
-                                {task.meta}
-                            </Text>
-                        </div>
-                        <div className={ROW_SIDE_CLASS_NAME}>
-                            <Button variant="outline" size="sm" href={task.leadHref}>
-                                {text("openArrow")}
-                            </Button>
-                        </div>
-                    </ListItem>
-                ))}
-            </SurfaceListCard>
+            {renderOfficeTasksVisibleTasks(text, visible, tasks, props, clear)}
         </div>
     )
 }
+
+/** Renders the OfficeTasks visible tasks section. */
+const renderOfficeTasksVisibleTasks = (
+    text: NonNullable<OfficeTasksProps["props"]["text"]>,
+    visible: NonNullable<OfficeTasksProps["props"]["tasks"]>,
+    tasks: NonNullable<OfficeTasksProps["props"]["tasks"]>,
+    props: OfficeTasksProps,
+    clear: () => void,
+) => (
+    <SurfaceListCard
+        label={text("tasksLabel")}
+        headingLevel={2}
+        fact={text("tasksFact", { shown: visible.length, total: tasks.length })}
+        empty={
+            tasks.length === 0 ? (
+                <EmptyNotice
+                    message={text("noTasks")}
+                    description={text("noTasksHint")}
+                    actionLabel={text("openLeads")}
+                    actionVariant="secondary"
+                    onAction={props.on.openLeads}
+                />
+            ) : (
+                <EmptyNotice
+                    message={text("noTasksMatch")}
+                    description={text("noTasksMatchHint")}
+                    actionLabel={text("clearFilters")}
+                    actionVariant="secondary"
+                    onAction={clear}
+                />
+            )
+        }
+    >
+        {visible.map((task) => (
+            <ListItem key={task.id} className={ROW_CLASS_NAME}>
+                <IconTile source={nivoIconSource("review", "leading")} tone="accent" size="md" />
+                <div className={ROW_MAIN_CLASS_NAME}>
+                    <div className={ROW_TITLE_CLASS_NAME}>
+                        <Text weight="semibold">{task.title}</Text>
+                        <Badge tone={STATUS_TONES[task.status]} isDot>
+                            {text(STATUS_KEYS[task.status])}
+                        </Badge>
+                    </div>
+                    <Text size="sm" tone="muted" overflow="clamp-2">
+                        {task.nextAction}
+                    </Text>
+                    <Text size="sm" tone="muted">
+                        {task.meta}
+                    </Text>
+                </div>
+                <div className={ROW_SIDE_CLASS_NAME}>
+                    <Button variant="outline" size="sm" href={task.leadHref}>
+                        {text("openArrow")}
+                    </Button>
+                </div>
+            </ListItem>
+        ))}
+    </SurfaceListCard>
+)

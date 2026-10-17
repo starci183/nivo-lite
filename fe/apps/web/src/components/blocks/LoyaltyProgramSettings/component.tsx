@@ -1,10 +1,14 @@
-import { Alert, Button, Form, Heading, Input, Select, SurfaceCard, Switch, Text } from "@starci/grammar/common"
-import { LoyaltyBirthdaySection } from "@/components/composites/LoyaltyBirthdaySection"
+import { LoyaltyTierCard } from "@/components/composites/LoyaltyTierCard"
 import { LoyaltyCategoryCard } from "@/components/composites/LoyaltyCategoryCard"
+import type { useTranslations } from "next-intl"
+import type { useLoyaltyProgramForm } from "@/hooks/rhf"
+import { LoyaltyTierRules } from "@/components/composites/LoyaltyTierRules"
+import { LoyaltyEarningRules } from "@/components/composites/LoyaltyEarningRules"
+import { Alert, Button, Form, Input, SurfaceCard, Switch, Text } from "@starci/grammar/common"
+import { LoyaltyBirthdaySection } from "@/components/composites/LoyaltyBirthdaySection"
 import { LoyaltyPromoSection } from "@/components/composites/LoyaltyPromoSection"
 import { LoyaltyField } from "@/components/leaves/LoyaltyField"
 import { LoyaltySettingsSection } from "@/components/leaves/LoyaltySettingsSection"
-import { LoyaltyTierCard } from "@/components/composites/LoyaltyTierCard"
 import type { ProgramValues } from "@/hooks/loyaltyProgram"
 import type {
     CategoryTextField,
@@ -12,7 +16,7 @@ import type {
     ProgramTextField,
     TierTextField,
 } from "@/hooks/loyaltyProgramFields"
-import { ACTIONS_CLASS_NAME, FIELD_PAIR_CLASS_NAME, FIELD_TRIPLE_CLASS_NAME, FORM_CLASS_NAME } from "./classNames"
+import { ACTIONS_CLASS_NAME, FIELD_PAIR_CLASS_NAME, FORM_CLASS_NAME } from "./classNames"
 import type { ProgramCopy, TierErrorView } from "@/modules/types"
 
 /** Props for {@link LoyaltyProgramSettingsBase}. */
@@ -71,206 +75,215 @@ export const LoyaltyProgramSettingsBase = (props: LoyaltyProgramSettingsBaseProp
                 </Text>
             </SurfaceCard>
         )
+    return renderSettingsForm({ copy, p, on, props, values, off })
+}
+
+/** Inputs needed to build the publicTitle section. */
+interface RenderPublicProgramPageContext {
+    readonly copy: ProgramCopy
+    readonly values: ProgramValues
+    readonly off: boolean
+    readonly on: LoyaltyProgramSettingsBaseProps["on"]
+    readonly p: LoyaltyProgramSettingsBaseProps["props"]
+}
+/** Builds the publicTitle section from the current view. */
+const renderPublicProgramPage = ({ copy, values, off, on, p }: RenderPublicProgramPageContext) => (
+    <LoyaltySettingsSection title={copy.publicTitle} hint={copy.publicHint}>
+        <Switch
+            label={copy.publicOn}
+            isSelected={values.enabled}
+            isDisabled={off}
+            onSelectedChange={(value) => on.toggle("enabled", value)}
+        />
+        {p.link === undefined ? null : (
+            <Input
+                id="lp-public-link"
+                name="publicLink"
+                label={copy.publicLink}
+                variant="secondary"
+                value={p.link}
+                isReadOnly
+                isCopyable
+                copyLabel={copy.copy}
+                copiedLabel={copy.copied}
+            />
+        )}
+    </LoyaltySettingsSection>
+)
+
+/** Inputs needed to build the expiryTitle section. */
+interface RenderPointsExpiryContext {
+    readonly copy: ProgramCopy
+    readonly values: ProgramValues
+    readonly off: boolean
+    readonly on: LoyaltyProgramSettingsBaseProps["on"]
+}
+/** Builds the expiryTitle section from the current view. */
+const renderPointsExpiry = ({ copy, values, off, on }: RenderPointsExpiryContext) => (
+    <LoyaltySettingsSection title={copy.expiryTitle} hint={copy.expiryHint}>
+        <div className={FIELD_PAIR_CLASS_NAME}>
+            <LoyaltyField
+                id="lp-expiry-months"
+                label={copy.expiryMonths}
+                hint={copy.expiryMonthsHint}
+                value={values.expiryMonths}
+                isDisabled={off}
+                onChange={(value) => on.change("expiryMonths", value)}
+            />
+            <LoyaltyField
+                id="lp-warn-days"
+                label={copy.warnDays}
+                hint={copy.warnDaysHint}
+                value={values.warnDays}
+                isDisabled={off}
+                onChange={(value) => on.change("warnDays", value)}
+            />
+        </div>
+    </LoyaltySettingsSection>
+)
+
+/** Inputs needed to build the save section. */
+interface RenderSettingsFormContext {
+    readonly copy: ProgramCopy
+    readonly p: LoyaltyProgramSettingsBaseProps["props"]
+    readonly on: LoyaltyProgramSettingsBaseProps["on"]
+    readonly props: LoyaltyProgramSettingsBaseProps
+    readonly values: ProgramValues
+    readonly off: boolean
+}
+/** Builds the save section from the current view. */
+const renderSettingsForm = ({ copy, p, on, props, values, off }: RenderSettingsFormContext) => (
+    <Form label={copy.save} isPending={p.isPending} onSubmit={on.submit}>
+        <div className={FORM_CLASS_NAME}>
+            {p.canEdit ? null : (
+                <Text size="sm" tone="muted">
+                    {copy.readOnlyNote}
+                </Text>
+            )}
+            {renderEarningRules(props)}
+
+            {renderTierRules(props)}
+
+            {renderPointsExpiry({ copy, values, off, on })}
+
+            <LoyaltyBirthdaySection
+                title={copy.birthdayTitle}
+                isOn={values.birthdayOn}
+                points={values.birthdayPoints}
+                rewardKey={values.birthdayReward}
+                note={values.birthdayNote}
+                isDisabled={off}
+                rewardOptions={p.rewardOptions}
+                onLabel={copy.birthdayOn}
+                pointsLabel={copy.birthdayPoints}
+                rewardLabel={copy.birthdayReward}
+                noteLabel={copy.birthdayNote}
+                noteHint={copy.birthdayNoteHint}
+                onToggle={(isOn) => on.toggle("birthdayOn", isOn)}
+                onChange={on.change}
+            />
+
+            <LoyaltyPromoSection
+                title={copy.promoTitle}
+                hint={copy.promoHint}
+                maxPerMonth={values.maxPerMonth}
+                batch={values.batch}
+                hourFrom={values.hourFrom}
+                hourTo={values.hourTo}
+                hourFromError={p.errors.hourFrom}
+                hourToError={p.errors.hourTo}
+                isDisabled={off}
+                maxPerMonthLabel={copy.maxPerMonth}
+                batchLabel={copy.batch}
+                batchHint={copy.batchHint}
+                hourFromLabel={copy.hourFrom}
+                hourToLabel={copy.hourTo}
+                onChange={on.change}
+            />
+
+            {renderPublicProgramPage({ copy, values, off, on, p })}
+
+            {p.canEdit ? (
+                <div className={ACTIONS_CLASS_NAME}>
+                    <Button type="submit" variant="primary" isPending={p.isPending}>
+                        {copy.save}
+                    </Button>
+                </div>
+            ) : null}
+        </div>
+    </Form>
+)
+
+/** Inputs needed to build the LoyaltyProgramSettingsContent section. */
+export interface BuildProgramCopyContext {
+    readonly t: ReturnType<typeof useTranslations<"loyalty">>
+}
+
+/** Inputs needed to build the LoyaltyProgramSettingsContent section. */
+export interface BuildProgramCommandsContext {
+    readonly form: ReturnType<typeof useLoyaltyProgramForm>
+    readonly touch: { shouldDirty: boolean; shouldValidate: boolean }
+    readonly values: import("@/hooks/loyaltyProgram").ProgramValues
+    readonly submit: (e?: React.BaseSyntheticEvent) => Promise<void>
+}
+
+/** Draws the category earning cards with their section controls. */
+const renderEarningRules = (props: LoyaltyProgramSettingsBaseProps) => {
+    const { props: p, on } = props
+    const { copy, values } = p
+    const off = !p.canEdit || p.isPending
     return (
-        <Form label={copy.save} isPending={p.isPending} onSubmit={on.submit}>
-            <div className={FORM_CLASS_NAME}>
-                {p.canEdit ? null : (
-                    <Text size="sm" tone="muted">
-                        {copy.readOnlyNote}
-                    </Text>
-                )}
-                <LoyaltySettingsSection title={copy.earnTitle} hint={copy.earnHint}>
-                    <LoyaltyField
-                        id="lp-name"
-                        label={copy.name}
-                        value={values.name}
-                        error={p.errors.name}
-                        isDisabled={off}
-                        onChange={(value) => on.change("name", value)}
-                    />
-                    <div className={FIELD_TRIPLE_CLASS_NAME}>
-                        <LoyaltyField
-                            id="lp-per-thousand"
-                            label={copy.perThousand}
-                            hint={copy.perThousandHint}
-                            value={values.perThousand}
-                            isDisabled={off}
-                            onChange={(value) => on.change("perThousand", value)}
-                        />
-                        <LoyaltyField
-                            id="lp-per-visit"
-                            label={copy.perVisit}
-                            value={values.perVisit}
-                            isDisabled={off}
-                            onChange={(value) => on.change("perVisit", value)}
-                        />
-                        <LoyaltyField
-                            id="lp-min-order"
-                            label={copy.minOrder}
-                            hint={copy.minOrderHint}
-                            value={values.minOrder}
-                            isDisabled={off}
-                            onChange={(value) => on.change("minOrder", value)}
-                        />
-                    </div>
-                    <Select
-                        label={copy.trigger}
-                        variant="secondary"
-                        description={copy.triggerHint}
-                        options={p.triggerOptions}
-                        value={values.trigger}
-                        isDisabled={off}
-                        onValueChange={(value) => on.change("trigger", value ?? "")}
-                    />
-                    <Heading level={3}>{copy.categories}</Heading>
-                    <Text size="sm" tone="muted">
-                        {copy.categoriesHint}
-                    </Text>
-                    {values.categories.map((category) => (
-                        <LoyaltyCategoryCard
-                            key={category.uid}
-                            category={category}
-                            canRemove={p.canEdit}
-                            isDisabled={off}
-                            isPending={p.isPending}
-                            ariaLabel={category.label || copy.categories}
-                            matchLabel={copy.catMatch}
-                            rateLabel={copy.catRate}
-                            labelLabel={copy.catLabel}
-                            removeLabel={copy.remove}
-                            onChange={on.changeCategory}
-                            onRemove={on.removeCategory}
-                        />
-                    ))}
-                    {p.canEdit && p.canAddCategory ? (
-                        <div>
-                            <Button variant="outline" size="sm" isDisabled={p.isPending} onPress={on.addCategory}>
-                                {copy.addCategory}
-                            </Button>
-                        </div>
-                    ) : null}
-                </LoyaltySettingsSection>
-
-                <LoyaltySettingsSection title={copy.tiersTitle} hint={copy.tiersHint}>
-                    {p.errors.tiers === undefined ? null : <Alert tone="negative" title={p.errors.tiers} />}
-                    {values.tiers.map((tier, position) => (
-                        <LoyaltyTierCard
-                            key={tier.uid}
-                            tier={tier}
-                            isFirst={position === 0}
-                            canRemove={p.canEdit && values.tiers.length > 1 && position > 0}
-                            isDisabled={off}
-                            isPending={p.isPending}
-                            nameError={p.tierErrors[position]?.name}
-                            spendError={p.tierErrors[position]?.minSpend}
-                            nameLabel={copy.tierName}
-                            spendLabel={copy.tierSpend}
-                            firstHint={copy.tierFirst}
-                            multiplierLabel={copy.tierMult}
-                            multiplierHint={copy.tierMultHint}
-                            winbackLabel={copy.tierWinback}
-                            winbackHint={copy.tierWinbackHint}
-                            benefitLabel={copy.tierBenefit}
-                            removeLabel={copy.remove}
-                            onChange={on.changeTier}
-                            onRemove={on.removeTier}
-                        />
-                    ))}
-                    {p.canEdit && p.canAddTier ? (
-                        <div>
-                            <Button variant="outline" size="sm" isDisabled={p.isPending} onPress={on.addTier}>
-                                {copy.addTier}
-                            </Button>
-                        </div>
-                    ) : null}
-                </LoyaltySettingsSection>
-
-                <LoyaltySettingsSection title={copy.expiryTitle} hint={copy.expiryHint}>
-                    <div className={FIELD_PAIR_CLASS_NAME}>
-                        <LoyaltyField
-                            id="lp-expiry-months"
-                            label={copy.expiryMonths}
-                            hint={copy.expiryMonthsHint}
-                            value={values.expiryMonths}
-                            isDisabled={off}
-                            onChange={(value) => on.change("expiryMonths", value)}
-                        />
-                        <LoyaltyField
-                            id="lp-warn-days"
-                            label={copy.warnDays}
-                            hint={copy.warnDaysHint}
-                            value={values.warnDays}
-                            isDisabled={off}
-                            onChange={(value) => on.change("warnDays", value)}
-                        />
-                    </div>
-                </LoyaltySettingsSection>
-
-                <LoyaltyBirthdaySection
-                    title={copy.birthdayTitle}
-                    isOn={values.birthdayOn}
-                    points={values.birthdayPoints}
-                    rewardKey={values.birthdayReward}
-                    note={values.birthdayNote}
+        <LoyaltyEarningRules {...props}>
+            {values.categories.map((category) => (
+                <LoyaltyCategoryCard
+                    key={category.uid}
+                    category={category}
+                    canRemove={p.canEdit}
                     isDisabled={off}
-                    rewardOptions={p.rewardOptions}
-                    onLabel={copy.birthdayOn}
-                    pointsLabel={copy.birthdayPoints}
-                    rewardLabel={copy.birthdayReward}
-                    noteLabel={copy.birthdayNote}
-                    noteHint={copy.birthdayNoteHint}
-                    onToggle={(isOn) => on.toggle("birthdayOn", isOn)}
-                    onChange={on.change}
+                    isPending={p.isPending}
+                    ariaLabel={category.label || copy.categories}
+                    matchLabel={copy.catMatch}
+                    rateLabel={copy.catRate}
+                    labelLabel={copy.catLabel}
+                    removeLabel={copy.remove}
+                    onChange={on.changeCategory}
+                    onRemove={on.removeCategory}
                 />
+            ))}
+        </LoyaltyEarningRules>
+    )
+}
 
-                <LoyaltyPromoSection
-                    title={copy.promoTitle}
-                    hint={copy.promoHint}
-                    maxPerMonth={values.maxPerMonth}
-                    batch={values.batch}
-                    hourFrom={values.hourFrom}
-                    hourTo={values.hourTo}
-                    hourFromError={p.errors.hourFrom}
-                    hourToError={p.errors.hourTo}
+/** Draws the membership tier cards with their section controls. */
+const renderTierRules = (props: LoyaltyProgramSettingsBaseProps) => {
+    const { props: p, on } = props
+    const { copy, values } = p
+    const off = !p.canEdit || p.isPending
+    return (
+        <LoyaltyTierRules {...props}>
+            {values.tiers.map((tier, position) => (
+                <LoyaltyTierCard
+                    key={tier.uid}
+                    tier={tier}
+                    isFirst={position === 0}
+                    canRemove={p.canEdit && values.tiers.length > 1 && position > 0}
                     isDisabled={off}
-                    maxPerMonthLabel={copy.maxPerMonth}
-                    batchLabel={copy.batch}
-                    batchHint={copy.batchHint}
-                    hourFromLabel={copy.hourFrom}
-                    hourToLabel={copy.hourTo}
-                    onChange={on.change}
+                    isPending={p.isPending}
+                    nameError={p.tierErrors[position]?.name}
+                    spendError={p.tierErrors[position]?.minSpend}
+                    nameLabel={copy.tierName}
+                    spendLabel={copy.tierSpend}
+                    firstHint={copy.tierFirst}
+                    multiplierLabel={copy.tierMult}
+                    multiplierHint={copy.tierMultHint}
+                    winbackLabel={copy.tierWinback}
+                    winbackHint={copy.tierWinbackHint}
+                    benefitLabel={copy.tierBenefit}
+                    removeLabel={copy.remove}
+                    onChange={on.changeTier}
+                    onRemove={on.removeTier}
                 />
-
-                <LoyaltySettingsSection title={copy.publicTitle} hint={copy.publicHint}>
-                    <Switch
-                        label={copy.publicOn}
-                        isSelected={values.enabled}
-                        isDisabled={off}
-                        onSelectedChange={(value) => on.toggle("enabled", value)}
-                    />
-                    {p.link === undefined ? null : (
-                        <Input
-                            id="lp-public-link"
-                            name="publicLink"
-                            label={copy.publicLink}
-                            variant="secondary"
-                            value={p.link}
-                            isReadOnly
-                            isCopyable
-                            copyLabel={copy.copy}
-                            copiedLabel={copy.copied}
-                        />
-                    )}
-                </LoyaltySettingsSection>
-
-                {p.canEdit ? (
-                    <div className={ACTIONS_CLASS_NAME}>
-                        <Button type="submit" variant="primary" isPending={p.isPending}>
-                            {copy.save}
-                        </Button>
-                    </div>
-                ) : null}
-            </div>
-        </Form>
+            ))}
+        </LoyaltyTierRules>
     )
 }

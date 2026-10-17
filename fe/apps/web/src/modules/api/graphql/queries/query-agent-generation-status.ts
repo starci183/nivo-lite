@@ -26,16 +26,22 @@ enum QueryAgentGenerationStatus {
     Query1 = "query1",
 }
 
+const queryMap: Record<QueryAgentGenerationStatus, Document> = { [QueryAgentGenerationStatus.Query1]: query1 }
+
 /** Parameters of the queued text status query. */
 type QueryAgentGenerationStatusParams = QueryParams<QueryAgentGenerationStatus, QueryAgentGenerationStatusRequest> & {
     request: QueryAgentGenerationStatusRequest
 }
 
 /** Reads where a queued text of the active workspace stands, with its output once done. */
-export const queryAgentGenerationStatus = async ({ request, signal }: QueryAgentGenerationStatusParams) => {
+export const queryAgentGenerationStatus = async ({
+    query = QueryAgentGenerationStatus.Query1,
+    request,
+    signal,
+}: QueryAgentGenerationStatusParams) => {
     const apollo = createAuthApolloClient({ signal })
     return apollo.query({
-        query: query1,
+        query: queryMap[query],
         variables: { input: request },
         fetchPolicy: "no-cache",
     })

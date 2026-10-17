@@ -1,13 +1,15 @@
 "use client"
 
-import { useMemo } from "react"
-import { answeredData, useSettledGraphQL } from "@/hooks/connection-wizard"
+import { useSettledGraphQL } from "@/hooks/connection-wizard"
 import type { Settled } from "@/hooks/connection-wizard"
 import { useConnectionsRefresh } from "@/hooks/connections"
-import { useMutateSaveDatabaseConnectionSwr } from "@/hooks/swr"
-import { queryPreviewDatabaseTable } from "@/modules/api/graphql/queries/query-preview-database-table"
-import { queryTestDatabase } from "@/modules/api/graphql/queries/query-test-database"
+import {
+    useMutateSaveDatabaseConnectionSwr,
+    useQueryPreviewDatabaseTableSwr,
+    useQueryTestDatabaseSwr,
+} from "@/hooks/swr"
 import type { DbPreviewRows, DbTableInfo, DbTableMapping, DbTarget } from "@/modules/types"
+import { useMemo } from "react"
 
 /** What saving a database connection takes. */
 export interface DatabaseSaveForm {
@@ -33,24 +35,18 @@ export interface DatabaseCommands {
 export const useDatabaseCommands = (): DatabaseCommands => {
     const { trigger: triggerSave } = useMutateSaveDatabaseConnectionSwr()
     const settle = useSettledGraphQL()
+    const { trigger: testDatabase } = useQueryTestDatabaseSwr()
+    const { trigger: previewTable } = useQueryPreviewDatabaseTableSwr()
     const refresh = useConnectionsRefresh()
     return useMemo(
         () => ({
             test: (connectionId, target) =>
                 settle(async () => {
-                    const data = answeredData(
-                        await queryTestDatabase({ request: { connectionId, target } }),
-                        "testDatabase",
-                    )
-                    return data.testDatabase
+                    return testDatabase({ connectionId, target })
                 }),
             preview: (connectionId, target, mapping) =>
                 settle(async () => {
-                    const data = answeredData(
-                        await queryPreviewDatabaseTable({ request: { connectionId, target, mapping } }),
-                        "previewDatabaseTable",
-                    )
-                    const { columns, rows } = data.previewDatabaseTable
+                    const { columns, rows } = await previewTable({ connectionId, target, mapping })
                     return { columns, rows: rows.map((row) => row.cells) }
                 }),
             save: async (form) => {
@@ -68,6 +64,6 @@ export const useDatabaseCommands = (): DatabaseCommands => {
                 return settled
             },
         }),
-        [settle, refresh, triggerSave],
+        [settle, refresh, triggerSave, testDatabase, previewTable],
     )
 }

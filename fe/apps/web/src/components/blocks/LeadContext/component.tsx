@@ -103,104 +103,123 @@ export const LeadContextBase = (props: LeadContextBaseProps) => {
     return (
         <LeadPanel anchor="context" label={l.title}>
             <SlotView slot={p.slot} placeholder={PLACEHOLDER} labels={l.slot}>
-                {(view, isSkeleton) => (
-                    <div className={STACK_CLASS_NAME}>
-                        {view.hasBrief ? (
-                            <div className={HEADER_CLASS_NAME}>
-                                <div className={HEADER_ACTIONS_CLASS_NAME}>
-                                    <Badge tone="neutral">{l.aiChip}</Badge>
-                                    <Text size="sm" tone="muted">
-                                        {view.statusText}
-                                    </Text>
-                                </div>
-                                <div className={HEADER_ACTIONS_CLASS_NAME}>
-                                    {view.hasConversation ? (
-                                        <Button variant="ghost" size="sm" href="#history">
-                                            {l.viewConversation}
-                                        </Button>
-                                    ) : null}
-                                    <Button variant="outline" size="sm" onPress={on.copy}>
-                                        {l.copy}
-                                    </Button>
-                                    <Button variant="outline" size="sm" isPending={p.isPending} onPress={on.refresh}>
-                                        {l.refresh}
-                                    </Button>
-                                </div>
-                            </div>
-                        ) : null}
-                        <div className={FACTS_GRID_CLASS_NAME}>
-                            <DescriptionList
-                                layout="stacked"
-                                isDivided
-                                isLoading={isSkeleton}
-                                items={[
-                                    { id: "contact", term: l.factContact, description: view.contact },
-                                    { id: "company", term: l.factCompany, description: view.company },
-                                ]}
-                            />
-                            <DescriptionList
-                                layout="stacked"
-                                isDivided
-                                isLoading={isSkeleton}
-                                items={[
-                                    { id: "channel", term: l.factChannel, description: view.channel },
-                                    { id: "captured", term: l.factCaptured, description: view.captured },
-                                ]}
-                            />
-                        </div>
-                        <div className={GROUP_CLASS_NAME}>
-                            <Heading level={3}>{l.customerWords}</Heading>
-                            <SurfaceCard depth="nested">
-                                <blockquote className={QUOTE_CLASS_NAME}>
-                                    <Text isSkeleton={isSkeleton}>{view.need}</Text>
-                                </blockquote>
-                            </SurfaceCard>
-                        </div>
-                        {view.hasBrief ? (
-                            <>
-                                <div className={GROUP_CLASS_NAME}>
-                                    <Heading level={3}>{l.briefLabel}</Heading>
-                                    {view.briefLines.length > 0 ? (
-                                        <List className={LIST_CLASS_NAME} label={l.briefLabel}>
-                                            {view.briefLines.map((line) => (
-                                                <ListItem key={line.id}>
-                                                    <Text startContent={<LeadMark icon={line.icon} />}>
-                                                        {line.text}
-                                                    </Text>
-                                                </ListItem>
-                                            ))}
-                                        </List>
-                                    ) : (
-                                        <Text>{view.briefText}</Text>
-                                    )}
-                                </div>
-                                {view.signals.length > 0 ? (
-                                    <div className={GROUP_CLASS_NAME}>
-                                        <Heading level={3}>{l.signalsLabel}</Heading>
-                                        <div className={CHIPS_CLASS_NAME}>
-                                            {view.signals.map((signal) => (
-                                                <Badge key={signal.id} tone="warning">
-                                                    {signal.label}
-                                                </Badge>
-                                            ))}
-                                        </div>
-                                    </div>
-                                ) : null}
-                            </>
-                        ) : (
-                            <EmptyNotice
-                                message={l.noBriefTitle}
-                                description={l.noBriefHint}
-                                actionLabel={l.prepare}
-                                actionVariant="secondary"
-                                isActionPending={p.isPending}
-                                onAction={on.refresh}
-                            />
-                        )}
-                        {p.error === null ? null : <Alert tone="negative" title={l.errorTitle} description={p.error} />}
-                    </div>
-                )}
+                {(view, isSkeleton) => renderContextBody({ view, l, on, p, isSkeleton })}
             </SlotView>
         </LeadPanel>
     )
 }
+
+/** Inputs needed to build the LeadContextContent section. */
+interface RenderBriefAndSignalsContext {
+    readonly l: ContextLabels
+    readonly view: ContextView
+}
+/** Builds the LeadContextContent section from the current view. */
+const renderBriefAndSignals = ({ l, view }: RenderBriefAndSignalsContext) => (
+    <>
+        <div className={GROUP_CLASS_NAME}>
+            <Heading level={3}>{l.briefLabel}</Heading>
+            {view.briefLines.length > 0 ? (
+                <List className={LIST_CLASS_NAME} label={l.briefLabel}>
+                    {view.briefLines.map((line) => (
+                        <ListItem key={line.id}>
+                            <Text startContent={<LeadMark icon={line.icon} />}>{line.text}</Text>
+                        </ListItem>
+                    ))}
+                </List>
+            ) : (
+                <Text>{view.briefText}</Text>
+            )}
+        </div>
+        {view.signals.length > 0 ? (
+            <div className={GROUP_CLASS_NAME}>
+                <Heading level={3}>{l.signalsLabel}</Heading>
+                <div className={CHIPS_CLASS_NAME}>
+                    {view.signals.map((signal) => (
+                        <Badge key={signal.id} tone="warning">
+                            {signal.label}
+                        </Badge>
+                    ))}
+                </div>
+            </div>
+        ) : null}
+    </>
+)
+
+/** Inputs needed to build the Stack section. */
+interface RenderContextBodyContext {
+    readonly view: ContextView
+    readonly l: ContextLabels
+    readonly on: LeadContextBaseProps["on"]
+    readonly p: LeadContextBaseProps["props"]
+    readonly isSkeleton: boolean
+}
+/** Builds the Stack section from the current view. */
+const renderContextBody = ({ view, l, on, p, isSkeleton }: RenderContextBodyContext) => (
+    <div className={STACK_CLASS_NAME}>
+        {view.hasBrief ? (
+            <div className={HEADER_CLASS_NAME}>
+                <div className={HEADER_ACTIONS_CLASS_NAME}>
+                    <Badge tone="neutral">{l.aiChip}</Badge>
+                    <Text size="sm" tone="muted">
+                        {view.statusText}
+                    </Text>
+                </div>
+                <div className={HEADER_ACTIONS_CLASS_NAME}>
+                    {view.hasConversation ? (
+                        <Button variant="ghost" size="sm" href="#history">
+                            {l.viewConversation}
+                        </Button>
+                    ) : null}
+                    <Button variant="outline" size="sm" onPress={on.copy}>
+                        {l.copy}
+                    </Button>
+                    <Button variant="outline" size="sm" isPending={p.isPending} onPress={on.refresh}>
+                        {l.refresh}
+                    </Button>
+                </div>
+            </div>
+        ) : null}
+        <div className={FACTS_GRID_CLASS_NAME}>
+            <DescriptionList
+                layout="stacked"
+                isDivided
+                isLoading={isSkeleton}
+                items={[
+                    { id: "contact", term: l.factContact, description: view.contact },
+                    { id: "company", term: l.factCompany, description: view.company },
+                ]}
+            />
+            <DescriptionList
+                layout="stacked"
+                isDivided
+                isLoading={isSkeleton}
+                items={[
+                    { id: "channel", term: l.factChannel, description: view.channel },
+                    { id: "captured", term: l.factCaptured, description: view.captured },
+                ]}
+            />
+        </div>
+        <div className={GROUP_CLASS_NAME}>
+            <Heading level={3}>{l.customerWords}</Heading>
+            <SurfaceCard depth="nested">
+                <blockquote className={QUOTE_CLASS_NAME}>
+                    <Text isSkeleton={isSkeleton}>{view.need}</Text>
+                </blockquote>
+            </SurfaceCard>
+        </div>
+        {view.hasBrief ? (
+            renderBriefAndSignals({ l, view })
+        ) : (
+            <EmptyNotice
+                message={l.noBriefTitle}
+                description={l.noBriefHint}
+                actionLabel={l.prepare}
+                actionVariant="secondary"
+                isActionPending={p.isPending}
+                onAction={on.refresh}
+            />
+        )}
+        {p.error === null ? null : <Alert tone="negative" title={l.errorTitle} description={p.error} />}
+    </div>
+)

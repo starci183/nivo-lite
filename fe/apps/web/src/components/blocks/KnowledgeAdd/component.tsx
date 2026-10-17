@@ -1,3 +1,6 @@
+import type { useTranslations } from "next-intl"
+import type { useAddDocuments, useAddInstances } from "@/hooks/knowledge"
+import type { AddMode, AddPreset, QueueItem } from "@/hooks/knowledge"
 import { Button, Drawer, SegmentedControl, Text } from "@starci/grammar/common"
 import { AddFilesPanel } from "@/components/composites/AddFilesPanel"
 import type { LinkRowView, QueueRowView } from "@/components/composites/AddFilesPanel"
@@ -116,66 +119,151 @@ export const KnowledgeAddBase = (props: KnowledgeAddBaseProps) =>
             <Button variant="primary" onPress={props.on.open}>
                 {props.props.buttonLabel}
             </Button>
-            <Drawer
-                isOpen={props.props.isOpen}
-                onOpenChange={(open) => {
-                    if (!open) props.on.close()
-                }}
-                title={props.props.title}
-                description={props.props.description}
-                closeLabel={props.props.closeLabel}
-                placement="right"
-                footer={
-                    <DrawerFooter
-                        cancelLabel={props.props.cancelLabel}
-                        submitLabel={props.props.submitLabel}
-                        isPending={props.props.isBusy}
-                        onCancel={props.on.close}
-                        onSubmit={props.on.submit}
-                    />
-                }
-            >
-                <div className={DRAWER_BODY_CLASS_NAME}>
-                    <SegmentedControl
-                        label={props.props.modeLabel}
-                        isLabelHidden
-                        options={props.props.modeOptions.map((one) => ({ value: one.id, label: one.label }))}
-                        value={props.props.mode}
-                        isDisabled={props.props.isBusy}
-                        onValueChange={props.on.setMode}
-                    />
-                    {props.props.mode === "files" ? (
-                        <AddFilesPanel
-                            {...props.props.files}
-                            isBusy={props.props.isBusy}
-                            onFiles={props.on.addFiles}
-                            onLink={props.on.setLink}
-                            onCheckLink={props.on.checkLink}
-                            onAddLink={props.on.addLink}
-                            onRemoveLink={props.on.removeLink}
-                            onRemoveItem={props.on.removeItem}
-                        />
-                    ) : (
-                        <AddNotePanel
-                            {...props.props.note}
-                            isBusy={props.props.isBusy}
-                            onTitle={props.on.setTitle}
-                            onContent={props.on.setContent}
-                            onPair={props.on.setPair}
-                            onAddPair={props.on.addPair}
-                            onRemovePair={props.on.removePair}
-                        />
-                    )}
-                    <AddOptionsPanel
-                        {...props.props.options}
-                        isBusy={props.props.isBusy}
-                        onTopic={props.on.setTopic}
-                        onTags={props.on.setTags}
-                        onModule={props.on.setModule}
-                        onVisibility={props.on.setVisibility}
-                    />
-                    <FormNotice failTitle={props.props.failTitle} error={props.props.error} done={props.props.notice} />
-                </div>
-            </Drawer>
+            <KnowledgeAddDrawer {...props} />
         </>
     )
+
+/** Draws the document entry panels and footer in the open drawer. */
+const KnowledgeAddDrawer = (props: KnowledgeAddBaseProps) => (
+    <Drawer
+        isOpen={props.props.isOpen}
+        onOpenChange={(open) => {
+            if (!open) props.on.close()
+        }}
+        title={props.props.title}
+        description={props.props.description}
+        closeLabel={props.props.closeLabel}
+        placement="right"
+        footer={
+            <DrawerFooter
+                cancelLabel={props.props.cancelLabel}
+                submitLabel={props.props.submitLabel}
+                isPending={props.props.isBusy}
+                onCancel={props.on.close}
+                onSubmit={props.on.submit}
+            />
+        }
+    >
+        <div className={DRAWER_BODY_CLASS_NAME}>
+            <SegmentedControl
+                label={props.props.modeLabel}
+                isLabelHidden
+                options={props.props.modeOptions.map((one) => ({ value: one.id, label: one.label }))}
+                value={props.props.mode}
+                isDisabled={props.props.isBusy}
+                onValueChange={props.on.setMode}
+            />
+            {props.props.mode === "files" ? (
+                <AddFilesPanel
+                    {...props.props.files}
+                    isBusy={props.props.isBusy}
+                    onFiles={props.on.addFiles}
+                    onLink={props.on.setLink}
+                    onCheckLink={props.on.checkLink}
+                    onAddLink={props.on.addLink}
+                    onRemoveLink={props.on.removeLink}
+                    onRemoveItem={props.on.removeItem}
+                />
+            ) : (
+                <AddNotePanel
+                    {...props.props.note}
+                    isBusy={props.props.isBusy}
+                    onTitle={props.on.setTitle}
+                    onContent={props.on.setContent}
+                    onPair={props.on.setPair}
+                    onAddPair={props.on.addPair}
+                    onRemovePair={props.on.removePair}
+                />
+            )}
+            <AddOptionsPanel
+                {...props.props.options}
+                isBusy={props.props.isBusy}
+                onTopic={props.on.setTopic}
+                onTags={props.on.setTags}
+                onModule={props.on.setModule}
+                onVisibility={props.on.setVisibility}
+            />
+            <FormNotice failTitle={props.props.failTitle} error={props.props.error} done={props.props.notice} />
+        </div>
+    </Drawer>
+)
+
+/** Props for the connected add documents drawer. */
+export interface KnowledgeAddProps {
+    /** The words shown instead of the button to members who may only read. */
+    readonly readOnlyNote: string
+    /** Whether the address asks for the drawer to be open. */
+    readonly isOpen: boolean
+    /** The idea the drawer was opened from, or null. */
+    readonly preset: AddPreset | null
+}
+
+/** Inputs needed to build the KnowledgeAddContent section. */
+export interface BuildDocumentFilesViewContext {
+    readonly t: ReturnType<typeof useTranslations<"knowledge">>
+    readonly add: ReturnType<typeof useAddDocuments>
+    readonly queue: ReturnType<typeof useAddDocuments>["queue"]
+    readonly queueRow: (item: QueueItem) => {
+        id: string
+        name: string
+        detail: string
+        statusLabel: string
+        statusTone: "success" | "danger" | "warning" | "neutral"
+        error: string | undefined
+        canRemove: boolean
+    }
+    readonly filesNote: () => string | undefined
+}
+
+/** Inputs needed to build the KnowledgeAddContent section. */
+export interface BuildAddDocumentsViewContext {
+    readonly t: ReturnType<typeof useTranslations<"knowledge">>
+    readonly submitLabel: () => string
+    readonly canWrite: ReturnType<typeof useAddInstances>["canWrite"]
+    readonly props: KnowledgeAddProps
+    readonly add: ReturnType<typeof useAddDocuments>
+    readonly queue: ReturnType<typeof useAddDocuments>["queue"]
+    readonly queueRow: (item: QueueItem) => {
+        id: string
+        name: string
+        detail: string
+        statusLabel: string
+        statusTone: "success" | "neutral" | "warning" | "danger"
+        error: string | undefined
+        canRemove: boolean
+    }
+    readonly filesNote: () => string | undefined
+    readonly note: ReturnType<typeof useAddDocuments>["note"]
+    readonly missingTitle: boolean
+    readonly missingBody: boolean
+    readonly options: ReturnType<typeof useAddDocuments>["options"]
+    readonly instances: ReturnType<typeof useAddInstances>["instances"]
+}
+
+/** Available document entry modes. */
+export const MODES: ReadonlyArray<AddMode> = ["files", "write", "faq"]
+
+/** Translation keys for the entry-mode tabs. */
+export const MODE_KEYS: Readonly<Record<AddMode, "tabFiles" | "tabWrite" | "tabFaq">> = {
+    files: "tabFiles",
+    write: "tabWrite",
+    faq: "tabFaq",
+}
+
+/** Feedback tone for each queued document status. */
+export const STATUS_TONE: Readonly<Record<QueueItem["status"], "neutral" | "warning" | "success" | "danger">> = {
+    waiting: "neutral",
+    uploading: "warning",
+    queued: "success",
+    failed: "danger",
+}
+
+/** Translation keys for queued document statuses. */
+export const QUEUE_STATUS_KEYS: Readonly<
+    Record<QueueItem["status"], "itemWaiting" | "itemUploading" | "itemQueued" | "itemFailed">
+> = {
+    waiting: "itemWaiting",
+    uploading: "itemUploading",
+    queued: "itemQueued",
+    failed: "itemFailed",
+}

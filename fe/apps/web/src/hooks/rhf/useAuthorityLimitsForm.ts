@@ -2,8 +2,8 @@
 
 import { useMemo } from "react"
 import { useForm } from "react-hook-form"
-import { draftsFrom } from "@/hooks/authority"
-import type { StoredRule, RuleDraft } from "@/hooks/authority"
+import { draftsFrom } from "@/modules/authority"
+import type { StoredRule, RuleDraft } from "@/modules/authority"
 
 /** The values of the limits form: the note and the required details of every action, by rule key. */
 export interface AuthorityLimitsValues {

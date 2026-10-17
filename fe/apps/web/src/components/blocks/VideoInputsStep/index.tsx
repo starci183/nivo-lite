@@ -21,6 +21,21 @@ interface VideoInputsStepProps {
     readonly focus: string | null
 }
 
+const copyOf = (t: ReturnType<typeof useTranslations<"video">>) => ({
+    heading: t("inputsHeading"),
+    sourcesHeading: t("sourcesHeading"),
+    sourcesHint: t("sourcesHint"),
+    sourcesEmpty: t("sourcesEmpty"),
+    notesLabel: t("notesLabel"),
+    notesHint: t("notesHint"),
+    mediaHeading: t("mediaHeading"),
+    mediaHint: t("mediaHint"),
+    mediaEmpty: t("mediaEmpty"),
+    uploadLabel: t("upload"),
+    backLabel: t("back"),
+    nextLabel: t("next"),
+})
+
 /** Step two of the wizard: public sources, what to stress, photos and clips. Moving on saves the choices on the video. */
 export const VideoInputsStep = (props: VideoInputsStepProps) => {
     const editor = useVideoProjectData(props)
@@ -61,26 +76,15 @@ export const VideoInputsStep = (props: VideoInputsStepProps) => {
     return (
         <VideoInputsStepBase
             props={{
-                heading: t("inputsHeading"),
-                sourcesHeading: t("sourcesHeading"),
-                sourcesHint: t("sourcesHint"),
-                sourcesEmpty: t("sourcesEmpty"),
+                ...copyOf(t),
                 sources: editor.sources.map((source) => ({
                     value: source.id,
                     label: source.topic === null ? source.title : `${source.topic} - ${source.title}`,
                     excerpt: source.excerpt,
                 })),
                 sourceIds: inputs.sourceIds,
-                notesLabel: t("notesLabel"),
-                notesHint: t("notesHint"),
                 notes: inputs.notes,
-                mediaHeading: t("mediaHeading"),
-                mediaHint: t("mediaHint"),
-                mediaEmpty: t("mediaEmpty"),
                 media: editor.media.map((item) => ({ ...item, selected: inputs.media.includes(item.path) })),
-                uploadLabel: t("upload"),
-                backLabel: t("back"),
-                nextLabel: t("next"),
                 canEdit: editor.canEdit,
                 busy: uploading || form.formState.isSubmitting,
                 message: validation ? { tone: "negative", text: validation } : message,

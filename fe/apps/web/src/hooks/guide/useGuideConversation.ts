@@ -1,12 +1,12 @@
 "use client"
 
-import { useTranslations } from "next-intl"
-import { useCallback, useEffect, useRef, useState } from "react"
 import { useMutateAskGuideSwr, useQueryAgentGenerationStatusSwr } from "@/hooks/swr"
-import type { AgentGenerationStatusType } from "@/modules/api"
+import type { AgentGenerationStatusType } from "@/hooks/swr"
 import { mapAnswer, modelAnswer } from "@/modules/guide"
 import type { GuideReply, GuideTurn } from "@/modules/guide"
 import { useGraphQLWithToast } from "@/modules/toast"
+import { useTranslations } from "next-intl"
+import { useCallback, useEffect, useRef, useState } from "react"
 import { useGuideText } from "./useGuideText"
 
 /** One line of the conversation: the member question or the guide reply. */

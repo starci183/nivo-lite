@@ -1,28 +1,8 @@
-import {
-    Alert,
-    Badge,
-    Button,
-    Checkbox,
-    CheckboxGroup,
-    EmptyNotice,
-    Input,
-    ListItem,
-    SurfaceCard,
-    SurfaceListCard,
-    Text,
-    Textarea,
-} from "@starci/grammar/common"
+import { LoyaltyCampaignMessage } from "@/components/composites/LoyaltyCampaignMessage"
+import { LoyaltyCampaignSegment } from "@/components/composites/LoyaltyCampaignSegment"
+import { Alert, Badge, EmptyNotice, ListItem, SurfaceCard, SurfaceListCard, Text } from "@starci/grammar/common"
 import type { BadgeTone } from "@starci/grammar/common"
-import {
-    BODY_CLASS_NAME,
-    CHECKS_CLASS_NAME,
-    CHIPS_CLASS_NAME,
-    FIELD_PAIR_CLASS_NAME,
-    FORM_CLASS_NAME,
-    QUOTE_CLASS_NAME,
-    ROW_CLASS_NAME,
-    ROW_MAIN_CLASS_NAME,
-} from "./classNames"
+import { BODY_CLASS_NAME, CHIPS_CLASS_NAME, QUOTE_CLASS_NAME, ROW_CLASS_NAME, ROW_MAIN_CLASS_NAME } from "./classNames"
 
 /** One line of the live count under the segment. */
 export interface LoyaltyPromoPreviewLine {
@@ -110,145 +90,11 @@ export interface LoyaltyPromoBaseProps {
 
 /** Draws the promotion builder (segment, live count, offer text, the drafted message) and the list of offers already prepared; staff see a notice instead of the builder. */
 export const LoyaltyPromoBase = (props: LoyaltyPromoBaseProps) => {
-    const { canManage, copy, values, result, failure, briefError } = props.props
-    const on = props.on
+    const { canManage, copy } = props.props
     return (
         <>
             {canManage ? (
-                <SurfaceCard label={copy.title} headingLevel={2}>
-                    <div className={BODY_CLASS_NAME}>
-                        <Text size="sm" tone="muted">
-                            {copy.body}
-                        </Text>
-                        <div className={FORM_CLASS_NAME}>
-                            <CheckboxGroup
-                                label={copy.tiers}
-                                description={copy.tiersHint}
-                                orientation="horizontal"
-                                variant="secondary"
-                                options={[...props.props.tierOptions]}
-                                value={[...values.tiers]}
-                                isDisabled={props.props.isBusy}
-                                onValueChange={on.setTiers}
-                            />
-                            <div className={FIELD_PAIR_CLASS_NAME}>
-                                <Input
-                                    id="seg-inactive"
-                                    name="inactive"
-                                    label={copy.inactive}
-                                    variant="secondary"
-                                    hint={copy.inactiveHint}
-                                    placeholder="45"
-                                    value={values.inactive}
-                                    isDisabled={props.props.isBusy}
-                                    onValueChange={on.setInactive}
-                                />
-                                <Input
-                                    id="seg-spend"
-                                    name="spend"
-                                    label={copy.spend}
-                                    variant="secondary"
-                                    hint={copy.spendHint}
-                                    placeholder="1000000"
-                                    value={values.spend}
-                                    isDisabled={props.props.isBusy}
-                                    onValueChange={on.setSpend}
-                                />
-                            </div>
-                            <div className={CHECKS_CLASS_NAME}>
-                                <Checkbox
-                                    label={copy.birthday}
-                                    variant="secondary"
-                                    isSelected={values.birthday}
-                                    isDisabled={props.props.isBusy}
-                                    onSelectedChange={on.setBirthday}
-                                />
-                            </div>
-                        </div>
-
-                        <SurfaceCard depth="nested">
-                            <div className={BODY_CLASS_NAME} aria-live="polite">
-                                {props.props.previewLines.map((line) => (
-                                    <Text
-                                        key={line.id}
-                                        size={line.emphasis ? "md" : "xs"}
-                                        weight={line.emphasis ? "semibold" : "normal"}
-                                        tone={line.emphasis ? "default" : "muted"}
-                                    >
-                                        {line.text}
-                                    </Text>
-                                ))}
-                            </div>
-                        </SurfaceCard>
-
-                        <div className={FORM_CLASS_NAME}>
-                            <Input
-                                id="promo-name"
-                                name="name"
-                                label={copy.name}
-                                variant="secondary"
-                                hint={copy.nameHint}
-                                value={values.name}
-                                isDisabled={props.props.isBusy}
-                                onValueChange={on.setName}
-                            />
-                            <Textarea
-                                label={copy.brief}
-                                variant="secondary"
-                                description={copy.briefHint}
-                                errorMessage={briefError}
-                                rows={4}
-                                maxLength={props.props.briefMax}
-                                value={values.brief}
-                                isRequired
-                                isDisabled={props.props.isBusy}
-                                onValueChange={on.setBrief}
-                            />
-                            <div>
-                                <Button
-                                    variant="primary"
-                                    isPending={props.props.isBusy}
-                                    isDisabled={props.props.isSubmitDisabled}
-                                    onPress={on.submit}
-                                >
-                                    {copy.submit}
-                                </Button>
-                            </div>
-                            {props.props.isDrafting ? (
-                                <Text size="sm" tone="muted" live="polite">
-                                    {copy.drafting}
-                                </Text>
-                            ) : null}
-                        </div>
-
-                        <div aria-live="polite">
-                            {failure === undefined ? null : (
-                                <Alert title={copy.failedTitle} description={failure} tone="negative" />
-                            )}
-                            {result === undefined ? null : (
-                                <SurfaceCard depth="nested">
-                                    <div className={BODY_CLASS_NAME}>
-                                        <Text weight="semibold">{result.title}</Text>
-                                        <Text size="sm">{result.recipients}</Text>
-                                        {result.time === "" ? null : (
-                                            <Text size="xs" tone="muted">
-                                                {result.time}
-                                            </Text>
-                                        )}
-                                        <div className={QUOTE_CLASS_NAME}>
-                                            <Text size="xs" tone="muted" weight="medium">
-                                                {copy.draftLabel}
-                                            </Text>
-                                            <Text as="p" size="sm">
-                                                {result.draft}
-                                            </Text>
-                                        </div>
-                                    </div>
-                                </SurfaceCard>
-                            )}
-                        </div>
-                    </div>
-                </SurfaceCard>
+                renderPromotionBuilder(props)
             ) : (
                 <SurfaceCard ariaLabel={copy.title}>
                     <EmptyNotice message={copy.managersOnly} description={copy.managersOnlyBody} />
@@ -290,5 +136,64 @@ export const LoyaltyPromoBase = (props: LoyaltyPromoBaseProps) => {
                 ))}
             </SurfaceListCard>
         </>
+    )
+}
+
+/** Draws the title section of the current view. */
+const renderPromotionBuilder = (props: LoyaltyPromoBaseProps) => {
+    const { copy, result, failure } = props.props
+    return (
+        <SurfaceCard label={copy.title} headingLevel={2}>
+            <div className={BODY_CLASS_NAME}>
+                <Text size="sm" tone="muted">
+                    {copy.body}
+                </Text>
+                <LoyaltyCampaignSegment {...props} />
+
+                <SurfaceCard depth="nested">
+                    <div className={BODY_CLASS_NAME} aria-live="polite">
+                        {props.props.previewLines.map((line) => (
+                            <Text
+                                key={line.id}
+                                size={line.emphasis ? "md" : "xs"}
+                                weight={line.emphasis ? "semibold" : "normal"}
+                                tone={line.emphasis ? "default" : "muted"}
+                            >
+                                {line.text}
+                            </Text>
+                        ))}
+                    </div>
+                </SurfaceCard>
+
+                <LoyaltyCampaignMessage {...props} />
+
+                <div aria-live="polite">
+                    {failure === undefined ? null : (
+                        <Alert title={copy.failedTitle} description={failure} tone="negative" />
+                    )}
+                    {result === undefined ? null : (
+                        <SurfaceCard depth="nested">
+                            <div className={BODY_CLASS_NAME}>
+                                <Text weight="semibold">{result.title}</Text>
+                                <Text size="sm">{result.recipients}</Text>
+                                {result.time === "" ? null : (
+                                    <Text size="xs" tone="muted">
+                                        {result.time}
+                                    </Text>
+                                )}
+                                <div className={QUOTE_CLASS_NAME}>
+                                    <Text size="xs" tone="muted" weight="medium">
+                                        {copy.draftLabel}
+                                    </Text>
+                                    <Text as="p" size="sm">
+                                        {result.draft}
+                                    </Text>
+                                </div>
+                            </div>
+                        </SurfaceCard>
+                    )}
+                </div>
+            </div>
+        </SurfaceCard>
     )
 }

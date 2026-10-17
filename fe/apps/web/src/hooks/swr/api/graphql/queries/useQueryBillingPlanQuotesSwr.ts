@@ -1,5 +1,6 @@
 "use client"
 
+import { workspaceArgumentKey } from "@/hooks/workspaceread"
 import useSWR from "swr"
 import { queryBillingPlanQuote } from "@/modules/api/graphql/queries/query-billing-plan-quote"
 import type { QueryBillingPlanQuoteRequest } from "@/modules/api/graphql/queries/query-billing-plan-quote"
@@ -16,9 +17,7 @@ export const useQueryBillingPlanQuotesSwr = (
     requests: ReadonlyArray<QueryBillingPlanQuoteRequest>,
 ) =>
     useSWR(
-        workspaceId === undefined || requests.length === 0
-            ? null
-            : [QUERY_BILLING_PLAN_QUOTES_SWR_KEY, workspaceId, JSON.stringify(requests)],
+        workspaceArgumentKey(QUERY_BILLING_PLAN_QUOTES_SWR_KEY, workspaceId, JSON.stringify(requests)),
         async () =>
             Promise.all(
                 requests.map(async (request) => {

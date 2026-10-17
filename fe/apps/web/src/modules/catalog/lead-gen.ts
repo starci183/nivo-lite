@@ -7,7 +7,7 @@ export const LEAD_GEN = {
     key: "lead_gen",
     order: 15,
     icon: "community",
-    glyph: "M4 5h16l-6 8v6l-4-2v-4z",
+    glyph: "moduleLeadGen",
     mascot: "/images/promo/mascot-chat.png",
     category: "sales_customer",
     status: "early",

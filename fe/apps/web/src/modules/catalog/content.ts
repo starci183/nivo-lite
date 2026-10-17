@@ -5,7 +5,7 @@ export const CONTENT = {
     key: "content",
     order: 90,
     icon: "blog",
-    glyph: "M5 4h14v16H5zM8 8h8M8 12h8M8 16h5",
+    glyph: "moduleContent",
     mascot: "/images/promo/mascot-celebrate.png",
     category: "marketing",
     status: "early",

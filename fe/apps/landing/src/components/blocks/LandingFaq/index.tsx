@@ -7,7 +7,9 @@ type FaqValues = Record<string, string | number>
 
 /** The landing FAQ with its copy and quoted numbers resolved on the server. */
 export const LandingFaq = async () => {
-    const [t, format] = await Promise.all([getTranslations("landingBottom"), getFormatter()])
+    const t = await getTranslations("landingBottom")
+
+    const format = await getFormatter()
     const terms: FaqValues = {
         percent: FOUNDING_OFFER.percentOff,
         cap: FOUNDING_OFFER.cap,

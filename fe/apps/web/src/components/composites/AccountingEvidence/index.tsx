@@ -1,36 +1,12 @@
-import { parseDate } from "@internationalized/date"
-import { Alert, Button, DateField, Form, Input, SurfaceCard, Text, Textarea } from "@starci/grammar/common"
+import { AccountingEvidenceFields } from "@/components/leaves/AccountingEvidenceFields"
+import type { EvidenceForm } from "@/components/leaves/AccountingEvidenceFields"
+
+import { Alert, Button, Form, SurfaceCard, Text } from "@starci/grammar/common"
 import { AccountingFormActions } from "@/components/branches/AccountingFormActions"
 import { AccountingRecordSection } from "@/components/branches/AccountingRecordSection"
 import type { AccountingRecordView } from "@/hooks/accountingRecords"
 import type { AccountingEvidenceValues } from "@/hooks/rhf"
-import { FORM_CLASS_NAME, FORM_GRID_CLASS_NAME, FORM_WIDE_CLASS_NAME, PANEL_CLASS_NAME } from "./classNames"
-
-/** The manual evidence form: its words, its values and how the last save went. */
-interface EvidenceForm {
-    readonly title: string
-    readonly intro: string
-    readonly amountLabel: string
-    readonly amountHint: string | null
-    readonly dateLabel: string
-    readonly contentLabel: string
-    readonly contentHint: string
-    readonly payerLabel: string
-    readonly noteLabel: string
-    readonly saveLabel: string
-    readonly cancelLabel: string
-    readonly foot: string
-    readonly amount: string
-    /** yyyy-mm-dd */
-    readonly date: string
-    readonly maxDate: string
-    readonly content: string
-    readonly payer: string
-    readonly note: string
-    readonly isSaving: boolean
-    readonly error: string | null
-    readonly notice: string | null
-}
+import { FORM_CLASS_NAME, PANEL_CLASS_NAME } from "./classNames"
 
 /** The resolved words and rows of the Evidence tab. */
 interface AccountingEvidenceProps {
@@ -79,67 +55,7 @@ const ManualEvidenceForm = (props: ManualEvidenceFormProps) => {
                     <Text size="sm" tone="muted">
                         {form.intro}
                     </Text>
-                    <div className={FORM_GRID_CLASS_NAME}>
-                        <Input
-                            id="wb-acc-amount"
-                            name="amount"
-                            label={form.amountLabel}
-                            variant="secondary"
-                            value={form.amount}
-                            isRequired
-                            isDisabled={form.isSaving}
-                            hint={form.amountHint ?? undefined}
-                            onValueChange={(value) => props.on.changeField("amount", value)}
-                        />
-                        <DateField
-                            name="date"
-                            label={form.dateLabel}
-                            variant="secondary"
-                            isRequired
-                            isDisabled={form.isSaving}
-                            value={parseDate(form.date)}
-                            maxValue={parseDate(form.maxDate)}
-                            onValueChange={(value) =>
-                                props.on.changeField("date", value === null ? "" : value.toString())
-                            }
-                        />
-                        <div className={FORM_WIDE_CLASS_NAME}>
-                            <Input
-                                id="wb-acc-content"
-                                name="content"
-                                label={form.contentLabel}
-                                variant="secondary"
-                                value={form.content}
-                                isRequired
-                                isDisabled={form.isSaving}
-                                hint={form.contentHint}
-                                onValueChange={(value) => props.on.changeField("content", value)}
-                            />
-                        </div>
-                        <div className={FORM_WIDE_CLASS_NAME}>
-                            <Input
-                                id="wb-acc-payer"
-                                name="payer"
-                                label={form.payerLabel}
-                                variant="secondary"
-                                value={form.payer}
-                                isDisabled={form.isSaving}
-                                onValueChange={(value) => props.on.changeField("payer", value)}
-                            />
-                        </div>
-                        <div className={FORM_WIDE_CLASS_NAME}>
-                            <Textarea
-                                id="wb-acc-note"
-                                name="note"
-                                label={form.noteLabel}
-                                variant="secondary"
-                                rows={3}
-                                value={form.note}
-                                isDisabled={form.isSaving}
-                                onValueChange={(value) => props.on.changeField("note", value)}
-                            />
-                        </div>
-                    </div>
+                    {<AccountingEvidenceFields form={form} onChange={props.on.changeField} />}
                     {form.error === null ? null : <Alert tone="negative" title={form.error} />}
                     {form.notice === null ? null : <Alert tone="cautionary" title={form.notice} />}
                     <AccountingFormActions

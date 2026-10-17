@@ -1,4 +1,8 @@
-import { Alert, AlertDialog, Badge, Button, Drawer, Heading, Text, Textarea } from "@starci/grammar/common"
+import type { useTranslations } from "next-intl"
+import type { reasonTone, scoreTone, useHiringFormat } from "@/hooks/hiring"
+import type { isPreviewable, useHiringCandidate } from "@/hooks/hiringCandidate"
+import type { CandidateView } from "@/hooks/hiringWire"
+import { Alert, AlertDialog, Badge, Drawer, Text } from "@starci/grammar/common"
 import type { BadgeTone } from "@starci/grammar/common"
 import { HiringCvSection } from "@/components/composites/HiringCvSection"
 import type { HiringCvSectionProps } from "@/components/composites/HiringCvSection"
@@ -12,7 +16,8 @@ import { HiringScoreSection } from "@/components/composites/HiringScoreSection"
 import type { HiringScoreSectionProps } from "@/components/composites/HiringScoreSection"
 import type { FieldOf, HiringSay } from "@/hooks/hiring"
 import type { CandidateDialog, InterviewValues, OfferValues } from "@/hooks/hiringCandidate"
-import { ACTIONS_CLASS_NAME, CHIPS_CLASS_NAME, FORM_CLASS_NAME, PAIR_CLASS_NAME, EVENTS_CLASS_NAME } from "./classNames"
+import { CHIPS_CLASS_NAME, FORM_CLASS_NAME } from "./classNames"
+import { HiringCandidateSections } from "@/components/composites/HiringCandidateSections"
 
 /** One line of text with an id and an optional heading line: an answer, an interview, an offer, an event. */
 interface CandidateLineView {
@@ -116,117 +121,28 @@ export const HiringCandidateBase = (props: HiringCandidateBaseProps) => {
                             </Text>
                         ))}
                     </div>
-                    <div className={ACTIONS_CLASS_NAME}>
-                        <Button
-                            variant="primary"
-                            size="sm"
-                            isDisabled={!p.canSchedule}
-                            onPress={() => on.openDialog("interview")}
-                        >
-                            {say("candSchedule")}
-                        </Button>
-                        <Button
-                            variant="secondary"
-                            size="sm"
-                            isDisabled={!p.canOffer}
-                            onPress={() => on.openDialog("offer")}
-                        >
-                            {say("candOffer")}
-                        </Button>
-                        {p.canShortlist ? (
-                            <Button variant="tertiary" size="sm" isDisabled={p.isBusy} onPress={on.shortlist}>
-                                {say("candShortlist")}
-                            </Button>
-                        ) : null}
-                        <Button
-                            variant="danger-soft"
-                            size="sm"
-                            isDisabled={!p.canReject}
-                            onPress={() => on.openDialog("reject")}
-                        >
-                            {say("candReject")}
-                        </Button>
-                    </div>
+                    <HiringCandidateSections {...props} section="actions" />{" "}
                     <HiringScoreSection
                         props={{ say, score: p.score, isBusy: p.isBusy }}
                         on={{ rescreen: on.rescreen }}
                     />
                     <HiringCvSection props={{ say, ...p.cv }} on={{ toggle: on.toggleCv }} />
-                    <Heading level={3}>{say("candAnswers")}</Heading>
-                    {p.answers.length === 0 ? <Text tone="muted">{say("candNoAnswers")}</Text> : null}
-                    {p.answers.map((answer) => (
-                        <div key={answer.id} className={PAIR_CLASS_NAME}>
-                            <Text size="sm" weight="medium">
-                                {answer.title}
-                            </Text>
-                            <Text size="sm">{answer.text}</Text>
-                        </div>
-                    ))}
-                    {p.interviews.length === 0 ? null : <Heading level={3}>{say("candInterviews")}</Heading>}
-                    {p.interviews.map((line) => (
-                        <Text key={line.id} size="sm">
-                            {line.text}
-                        </Text>
-                    ))}
-                    {p.offers.length === 0 ? null : <Heading level={3}>{say("candOffers")}</Heading>}
-                    {p.offers.map((offer) => (
-                        <div key={offer.id} className={ACTIONS_CLASS_NAME}>
-                            <Text size="sm">{offer.text}</Text>
-                            {offer.canCancel ? (
-                                <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    isDisabled={p.isBusy}
-                                    onPress={() => on.cancelOffer(offer.id)}
-                                >
-                                    {say("candCancelOffer")}
-                                </Button>
-                            ) : null}
-                        </div>
-                    ))}
-                    <Heading level={3}>{say("candNotes")}</Heading>
-                    <Textarea
-                        label={say("candNotesLabel")}
-                        isLabelHidden
-                        variant="secondary"
-                        rows={3}
-                        value={p.notes}
-                        onValueChange={on.notes}
-                        description={say("candNotesHint")}
-                    />
-                    <div className={ACTIONS_CLASS_NAME}>
-                        <Button
-                            variant="secondary"
-                            size="sm"
-                            isPending={p.isBusy}
-                            isDisabled={p.isBusy || !p.canSaveNotes}
-                            onPress={on.saveNotes}
-                        >
-                            {say("candNotesSave")}
-                        </Button>
-                    </div>
-                    <Heading level={3}>{say("candHistory")}</Heading>
-                    {p.events === undefined ? <Text tone="muted">{say("loading")}</Text> : null}
-                    {p.events?.length === 0 ? <Text tone="muted">{say("candNoHistory")}</Text> : null}
-                    {p.events?.map((event) => (
-                        <div key={event.id} className={EVENTS_CLASS_NAME}>
-                            <Text size="sm">{event.title}</Text>
-                            <Text size="xs" tone="muted">
-                                {event.text}
-                            </Text>
-                        </div>
-                    ))}
-                    <Heading level={3}>{say("candData")}</Heading>
-                    <Text size="sm" tone="muted">
-                        {p.retention}
-                    </Text>
-                    <div className={ACTIONS_CLASS_NAME}>
-                        <Button variant="danger-soft" size="sm" onPress={() => on.openDialog("delete")}>
-                            {say("candDelete")}
-                        </Button>
-                    </div>
+                    <HiringCandidateSections {...props} section="responses" />
+                    <HiringCandidateSections {...props} section="records" />{" "}
                 </div>
             </Drawer>
+            <CandidateDialogs {...props} />{" "}
+        </>
+    )
+}
+
+/** The active interview, offer, rejection or deletion dialog. */
+const CandidateDialogs = (props: HiringCandidateBaseProps) => {
+    const p = props.props
+    const { say } = p
+    const { on } = props
+    return (
+        <>
             {p.dialog === "interview" ? (
                 <HiringInterviewDialog
                     props={p.interview}
@@ -269,4 +185,85 @@ export const HiringCandidateBase = (props: HiringCandidateBaseProps) => {
             ) : null}
         </>
     )
+}
+
+type CvState = HiringCandidateBaseProps["props"]["cv"]["state"]
+
+/** Where the CV stands: there is none, the link is still loading, or it is ready. */
+const cvStateOf = (hasFile: boolean, isLoaded: boolean, hasLink: boolean): CvState => {
+    if (hasLink) return "ready"
+    return hasFile && !isLoaded ? "loading" : "none"
+}
+
+/** The screening, CV and activity already resolved for the candidate. */
+export const candidateDetailsOf = (
+    candidate: CandidateView,
+    view: ReturnType<typeof useHiringCandidate>,
+    format: ReturnType<typeof useHiringFormat>,
+    t: ReturnType<typeof useTranslations<"hiring">>,
+    tools: CandidateDetailTools,
+) => {
+    const { reasonTone, scoreTone, isPreviewable, openOfferStatuses } = tools
+    const cv = view.detail?.cv ?? null
+    return {
+        score:
+            candidate.score === null
+                ? null
+                : {
+                      value: t("pipeScore", { score: candidate.score }),
+                      label: candidate.scoreLabel === null ? "" : t(`score_${candidate.scoreLabel}`),
+                      tone: scoreTone(candidate.scoreLabel),
+                      summary: candidate.scoreSummary,
+                      reasons: candidate.scoreReasons.map((reason, index) => ({
+                          id: `${index}:${reason.criterion}`,
+                          criterion: reason.criterion,
+                          note: reason.note,
+                          statusLabel: format.label("reason", reason.status),
+                          tone: reasonTone(reason.status),
+                      })),
+                  },
+        cv: {
+            state: cvStateOf(candidate.cvPath !== null, view.detail !== undefined, cv !== null),
+            openLabel: cv === null ? "" : t("candCvOpen", { name: cv.name }),
+            url: cv?.url ?? "",
+            isPdf: cv?.mime === "application/pdf",
+            canPreview: cv !== null && isPreviewable(cv.mime),
+            isPreviewing: view.showCv,
+        },
+        answers: candidate.answers.map((answer) => ({
+            id: answer.questionId,
+            title: answer.question,
+            text: answer.answer,
+        })),
+        interviews: view.interviews.map((entry) => ({
+            id: entry.id,
+            title: "",
+            text: [
+                format.label("ivStatus", entry.status) +
+                    (entry.slotStart === null ? "" : `: ${format.dateTime(entry.slotStart)}`),
+                entry.interviewerName,
+            ]
+                .filter((part) => part !== "")
+                .join(" · "),
+        })),
+        offers: view.offers.map((entry) => ({
+            id: entry.id,
+            title: "",
+            text: `${format.label("offerStatus", entry.status)} · ${entry.pay}`,
+            canCancel: openOfferStatuses.includes(entry.status),
+        })),
+        events: view.detail?.events.map((event) => ({
+            id: event.id,
+            title: event.summary,
+            text: `${event.actor} · ${format.dateTime(event.createdAt)}`,
+        })),
+    }
+}
+
+/** Pure formatting utilities supplied by the connected candidate. */
+type CandidateDetailTools = {
+    readonly reasonTone: typeof reasonTone
+    readonly scoreTone: typeof scoreTone
+    readonly isPreviewable: typeof isPreviewable
+    readonly openOfferStatuses: ReadonlyArray<string>
 }

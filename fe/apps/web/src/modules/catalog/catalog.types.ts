@@ -1,3 +1,4 @@
+import type { ModuleIconName } from "@/modules/types"
 import type { ModulesCatalogQuery } from "@/modules/api"
 import type { ActionKey, ModuleCategoryKey, ModuleKey } from "./catalog.keys"
 
@@ -33,7 +34,7 @@ export type ModuleDef = {
     readonly key: ModuleKey
     readonly order: number
     readonly icon: string
-    readonly glyph: string
+    readonly glyph: ModuleIconName
     readonly mascot: string
     readonly category: ModuleCategoryKey
     readonly status: "stable" | "early"

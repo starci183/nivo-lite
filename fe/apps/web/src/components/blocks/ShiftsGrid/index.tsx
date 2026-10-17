@@ -1,5 +1,7 @@
 "use client"
 
+import type { ShiftsGridControllerInput } from "./component"
+import type { GridCellsInput } from "./component"
 import { useTranslations } from "next-intl"
 import { useState } from "react"
 import { useShiftsBenchData, useShiftsFormat } from "@/hooks/shifts"
@@ -23,19 +25,8 @@ const VIOLATION_KEYS = {
     position: "vPosition",
 } as const
 
-/** The schedule grid: people by days with drag or tap to reassign (a draft only), and the day list for phones. */
-export const ShiftsGrid = () => {
-    const t = useTranslations("shifts")
-    const format = useShiftsFormat()
-    const week = useShiftsWeekCommands()
-    const selected = useShiftsWeekStore((state) => state.monday)
-    const bench = useShiftsBenchData(selected).data
-    const [moves, setMoves] = useState<Readonly<Record<string, string | null>>>({})
-    const [picked, setPicked] = useState<string | null>(null)
-    const [over, setOver] = useState<string | null>(null)
-    const [dayIndex, setDayIndex] = useState(0)
-    const model = useShiftsWeekModel(bench, moves)
-    if (bench === undefined || model === undefined || bench.week.current === null || bench.role === "staff") return null
+const createGridCells = (context: GridCellsInput) => {
+    const { t, week, bench, setMoves, picked, setPicked, over, setOver, model } = context
 
     const { setup, week: weekView } = bench
     const editable = weekView.current?.status === "draft"
@@ -82,6 +73,12 @@ export const ShiftsGrid = () => {
             weekView.approvedLeaves.some((leave) => leave.staffId === staffId && leave.from <= date && leave.to >= date)
         return { id: key, date, chips, canDrop, isTarget: over === key && canDrop, isOff }
     }
+    return { ...context, weekView, editable, dates, live, people, move, chipOf, cellOf }
+}
+
+const createGridRows = (context: ReturnType<typeof createGridCells>) => {
+    const { t, format, dayIndex, model, weekView, dates, live, people, cellOf } = context
+
     const rows: Array<GridRowView> = [
         ...people.map((person) => {
             const minutes = model.cost.byStaff.get(person.id)?.minutes ?? 0
@@ -103,48 +100,96 @@ export const ShiftsGrid = () => {
         },
     ]
     const day = dates[dayIndex] ?? weekView.monday
+    return { ...context, rows, day }
+}
 
-    return (
-        <ShiftsGridBase
-            props={{
-                title: t("gridTitle"),
-                hint: t(editable ? "gridHintEdit" : "gridHintView"),
-                emptyDay: t("noShiftsDay"),
-                assignLabel: t("assignTo"),
-                onLeaveLabel: t("onLeave"),
-                openId: OPEN_ROW,
-                editable,
-                dates: dates.map((date) => ({ id: date, label: `${format.dayShort(date)} ${format.dayMonth(date)}` })),
-                rows,
-                selectedDay: day,
-                dayShifts: live
-                    .filter((shift) => shift.date === day)
-                    .sort((a, b) => a.start.localeCompare(b.start))
-                    .map((shift) => ({
-                        ...chipOf(shift),
-                        staffId: shift.staffId ?? OPEN_ROW,
-                        staffName: people.find((person) => person.id === shift.staffId)?.name ?? t("openShift"),
-                    })),
-                assignOptions: [
-                    { id: OPEN_ROW, label: t("openShift") },
-                    ...people.map((person) => ({ id: person.id, label: person.name })),
-                ],
-            }}
-            on={{
-                pick: (shiftId) => setPicked(picked === shiftId ? null : shiftId),
-                dragStart: setPicked,
-                dragEnd: () => {
-                    setPicked(null)
-                    setOver(null)
-                },
-                hover: setOver,
-                drop: (shiftId, rowId) => void move(shiftId, rowId === OPEN_ROW ? null : rowId),
-                place: (rowId) => {
-                    if (picked !== null) void move(picked, rowId === OPEN_ROW ? null : rowId)
-                },
-                day: (date) => setDayIndex(Math.max(0, dates.indexOf(date))),
-                assign: (shiftId, rowId) => void move(shiftId, rowId === OPEN_ROW ? null : rowId),
-            }}
-        />
-    )
+const createGridProps = (context: ReturnType<typeof createGridRows>): React.ComponentProps<typeof ShiftsGridBase> => {
+    const {
+        t,
+        format,
+        picked,
+        setPicked,
+        setOver,
+        setDayIndex,
+        editable,
+        dates,
+        live,
+        people,
+        move,
+        chipOf,
+        day,
+        rows,
+    } = context
+
+    return {
+        props: {
+            title: t("gridTitle"),
+            hint: t(editable ? "gridHintEdit" : "gridHintView"),
+            emptyDay: t("noShiftsDay"),
+            assignLabel: t("assignTo"),
+            onLeaveLabel: t("onLeave"),
+            openId: OPEN_ROW,
+            editable,
+            dates: dates.map((date) => ({ id: date, label: `${format.dayShort(date)} ${format.dayMonth(date)}` })),
+            rows,
+            selectedDay: day,
+            dayShifts: live
+                .filter((shift) => shift.date === day)
+                .sort((a, b) => a.start.localeCompare(b.start))
+                .map((shift) => ({
+                    ...chipOf(shift),
+                    staffId: shift.staffId ?? OPEN_ROW,
+                    staffName: people.find((person) => person.id === shift.staffId)?.name ?? t("openShift"),
+                })),
+            assignOptions: [
+                { id: OPEN_ROW, label: t("openShift") },
+                ...people.map((person) => ({ id: person.id, label: person.name })),
+            ],
+        },
+        on: {
+            pick: (shiftId) => setPicked(picked === shiftId ? null : shiftId),
+            dragStart: setPicked,
+            dragEnd: () => {
+                setPicked(null)
+                setOver(null)
+            },
+            hover: setOver,
+            drop: (shiftId, rowId) => void move(shiftId, rowId === OPEN_ROW ? null : rowId),
+            place: (rowId) => {
+                if (picked !== null) void move(picked, rowId === OPEN_ROW ? null : rowId)
+            },
+            day: (date) => setDayIndex(Math.max(0, dates.indexOf(date))),
+            assign: (shiftId, rowId) => void move(shiftId, rowId === OPEN_ROW ? null : rowId),
+        },
+    }
+}
+
+/** The schedule grid: people by days with drag or tap to reassign (a draft only), and the day list for phones. */
+export const ShiftsGrid = () => {
+    const t = useTranslations("shifts")
+    const format = useShiftsFormat()
+    const week = useShiftsWeekCommands()
+    const selected = useShiftsWeekStore((state) => state.monday)
+    const bench = useShiftsBenchData(selected).data
+    const [moves, setMoves] = useState<Readonly<Record<string, string | null>>>({})
+    const [picked, setPicked] = useState<string | null>(null)
+    const [over, setOver] = useState<string | null>(null)
+    const [dayIndex, setDayIndex] = useState(0)
+    const model = useShiftsWeekModel(bench, moves)
+    const state: ShiftsGridControllerInput = {
+        t,
+        format,
+        week,
+        bench,
+        setMoves,
+        picked,
+        setPicked,
+        over,
+        setOver,
+        dayIndex,
+        setDayIndex,
+        model,
+    }
+    if (bench === undefined || model === undefined || bench.week.current === null || bench.role === "staff") return null
+    return <ShiftsGridBase {...createGridProps(createGridRows(createGridCells({ ...state, bench, model })))} />
 }

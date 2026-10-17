@@ -4,8 +4,7 @@ import { useTranslations } from "next-intl"
 import type { FieldOf } from "@/hooks/hiring"
 import { useState } from "react"
 import type { UseFormReturn } from "react-hook-form"
-import { useMutateApplyToHiringJobSwr, useMutateCreateHiringCvUploadSwr } from "@/hooks/swr"
-import { putPresigned } from "@/modules/api"
+import { useMutateApplyToHiringJobSwr, useMutateCreateHiringCvUploadSwr, usePutPresignedSwr } from "@/hooks/swr"
 import { useGraphQLWithToast } from "@/modules/toast"
 import { CV_MAX_BYTES, NO_PUBLIC_JOB, answerGroups, availabilityOf, cvUploadUrl } from "./hiringPublic.shared"
 import type { ApplyValues, PublicJobView } from "./hiringPublic.shared"
@@ -38,6 +37,7 @@ export const useHiringApply = (
     const t = useTranslations("hiring")
     const job = read ?? NO_PUBLIC_JOB
     const runGraphQL = useGraphQLWithToast()
+    const { trigger: putPresigned } = usePutPresignedSwr()
     const { trigger: createUpload } = useMutateCreateHiringCvUploadSwr()
     const { trigger: apply } = useMutateApplyToHiringJobSwr()
     const [cv, setCv] = useState<File | null>(null)

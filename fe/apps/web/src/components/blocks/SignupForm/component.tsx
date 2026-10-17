@@ -1,3 +1,9 @@
+import type { useResendEmail } from "@/hooks/auth"
+import type { authActionsOf } from "@/hooks/auth"
+import type { useTranslations } from "next-intl"
+import type { navigation } from "@/modules/i18n"
+import type { useSignupForm } from "@/hooks/rhf"
+import type { useTransition } from "react"
 import { Input, Text, TextAction } from "@starci/grammar/common"
 import { AuthForm } from "../../composites/AuthForm"
 import { AuthPanel } from "../../composites/AuthPanel"
@@ -113,4 +119,28 @@ export const SignupFormBase = (props: SignupFormBaseProps) => {
             </AuthForm>
         </AuthPanel>
     )
+}
+
+/** State values and commands consumed by the connected surface. */
+export type SignupFormProps = {
+    /** The destination after the account exists (an invite page); already sanitised. */
+    readonly next?: string
+    readonly invited: boolean
+    readonly initialEmail?: string
+}
+
+/** State values and commands consumed by the connected surface. */
+export type SignupFormControllerInput = {
+    readonly props: SignupFormProps
+    readonly auth: ReturnType<typeof authActionsOf>
+    readonly t: ReturnType<typeof useTranslations<"auth">>
+    readonly router: ReturnType<typeof navigation.useRouter>
+    readonly form: ReturnType<typeof useSignupForm>
+    readonly failure: string | undefined
+    readonly setFailure: React.Dispatch<React.SetStateAction<string | undefined>>
+    readonly sentTo: string | null
+    readonly setSentTo: React.Dispatch<React.SetStateAction<string | null>>
+    readonly isPending: ReturnType<typeof useTransition>[0]
+    readonly startTransition: ReturnType<typeof useTransition>[1]
+    readonly resending: ReturnType<typeof useResendEmail>
 }

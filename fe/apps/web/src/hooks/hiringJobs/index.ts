@@ -5,6 +5,7 @@ export {
     PAY_UNITS,
     QUESTION_TYPES,
     jobDefaults,
+    type HiringJobFieldCommands,
     type HiringJobValues,
     type HiringQuestionValues,
 } from "./hiringJobs.shared"

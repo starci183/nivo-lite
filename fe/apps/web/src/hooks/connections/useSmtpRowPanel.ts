@@ -1,11 +1,11 @@
 "use client"
 
-import { useTranslations } from "next-intl"
-import { useState, useTransition } from "react"
 import { useSettledGraphQL } from "@/hooks/connection-wizard"
 import { useSmtpRowPasswordForm, useSmtpRowTestForm } from "@/hooks/rhf"
 import { useMutateChangeSmtpPasswordSwr, useMutateSendSmtpTestSwr, useMutateSetDefaultSmtpSwr } from "@/hooks/swr"
 import type { Connection, RowSmtpView } from "@/modules/types"
+import { useTranslations } from "next-intl"
+import { useState, useTransition } from "react"
 import { useConnectionsRefresh } from "./useConnectionsRefresh"
 
 /** The SMTP part of a row: what it shows and the commands behind its buttons. */
@@ -82,16 +82,7 @@ export const useSmtpRowPanel = (connection: Connection, ownerEmail: string): Smt
     return {
         view: {
             labels: {
-                defaultBadge: t("smtpDefault"),
-                test: t("smtpTest"),
-                changePassword: t("smtpChangePassword"),
-                setDefault: t("smtpSetDefault"),
-                testTo: t("smtpTestTo"),
-                testSend: t("smtpTestSend"),
-                newPassword: t("smtpNewPassword"),
-                passwordStored: t("smtpPasswordStored"),
-                savePassword: t("smtpSavePassword"),
-                cancel: t("cancel"),
+                ...labelsOf(t),
             },
             isDefault: connection.isDefault && connection.status === "connected",
             canSetDefault: connection.status === "connected" && !connection.isDefault,
@@ -113,3 +104,17 @@ export const useSmtpRowPanel = (connection: Connection, ownerEmail: string): Smt
         makeDefault,
     }
 }
+
+/** Resolves the action labels for the current locale. */
+const labelsOf = (t: ReturnType<typeof useTranslations<"connections">>) => ({
+    defaultBadge: t("smtpDefault"),
+    test: t("smtpTest"),
+    changePassword: t("smtpChangePassword"),
+    setDefault: t("smtpSetDefault"),
+    testTo: t("smtpTestTo"),
+    testSend: t("smtpTestSend"),
+    newPassword: t("smtpNewPassword"),
+    passwordStored: t("smtpPasswordStored"),
+    savePassword: t("smtpSavePassword"),
+    cancel: t("cancel"),
+})

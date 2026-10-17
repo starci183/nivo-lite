@@ -100,42 +100,7 @@ export const InventoryOrdersBase = (props: InventoryOrdersBaseProps) => {
                 </Text>
             </div>
             {p.hasOrders ? (
-                <HorizontalScrollRegion overflow="needed" aria-label={p.boardLabel}>
-                    <div className={BOARD_CLASS_NAME} role="group" aria-label={p.boardLabel}>
-                        {p.lanes.map((lane) => (
-                            <div key={lane.status} className={LANE_CLASS_NAME}>
-                                <SurfaceListCard label={lane.label} headingLevel={3} fact={lane.count}>
-                                    {lane.cards.map((card) => (
-                                        <ListItem key={card.id} className={LANE_ROW_CLASS_NAME}>
-                                            <div className={CHIPS_CLASS_NAME}>
-                                                <Text weight="semibold" size="sm">
-                                                    {card.poNo}
-                                                </Text>
-                                                <Badge tone={card.statusTone} isDot>
-                                                    {card.statusLabel}
-                                                </Badge>
-                                            </div>
-                                            <Text size="sm">{card.supplier}</Text>
-                                            <Text size="xs" tone="muted">
-                                                {card.facts}
-                                            </Text>
-                                            {card.copyNote === null ? null : (
-                                                <Text size="xs" tone="muted">
-                                                    {card.copyNote}
-                                                </Text>
-                                            )}
-                                            <div>
-                                                <Button variant="outline" size="sm" onPress={() => on.open(card.id)}>
-                                                    {p.openLabel}
-                                                </Button>
-                                            </div>
-                                        </ListItem>
-                                    ))}
-                                </SurfaceListCard>
-                            </div>
-                        ))}
-                    </div>
-                </HorizontalScrollRegion>
+                renderHorizontalScrollRegion(props)
             ) : (
                 <SurfaceCard ariaLabel={p.boardLabel}>
                     <EmptyNotice message={p.emptyTitle} description={p.emptyBody} />
@@ -177,5 +142,48 @@ export const InventoryOrdersBase = (props: InventoryOrdersBaseProps) => {
                 />
             )}
         </div>
+    )
+}
+
+/** Draws the HorizontalScrollRegion section of the current view. */
+const renderHorizontalScrollRegion = (props: InventoryOrdersBaseProps) => {
+    const { props: p, on } = props
+    return (
+        <HorizontalScrollRegion overflow="needed" aria-label={p.boardLabel}>
+            <div className={BOARD_CLASS_NAME} role="group" aria-label={p.boardLabel}>
+                {p.lanes.map((lane) => (
+                    <div key={lane.status} className={LANE_CLASS_NAME}>
+                        <SurfaceListCard label={lane.label} headingLevel={3} fact={lane.count}>
+                            {lane.cards.map((card) => (
+                                <ListItem key={card.id} className={LANE_ROW_CLASS_NAME}>
+                                    <div className={CHIPS_CLASS_NAME}>
+                                        <Text weight="semibold" size="sm">
+                                            {card.poNo}
+                                        </Text>
+                                        <Badge tone={card.statusTone} isDot>
+                                            {card.statusLabel}
+                                        </Badge>
+                                    </div>
+                                    <Text size="sm">{card.supplier}</Text>
+                                    <Text size="xs" tone="muted">
+                                        {card.facts}
+                                    </Text>
+                                    {card.copyNote === null ? null : (
+                                        <Text size="xs" tone="muted">
+                                            {card.copyNote}
+                                        </Text>
+                                    )}
+                                    <div>
+                                        <Button variant="outline" size="sm" onPress={() => on.open(card.id)}>
+                                            {p.openLabel}
+                                        </Button>
+                                    </div>
+                                </ListItem>
+                            ))}
+                        </SurfaceListCard>
+                    </div>
+                ))}
+            </div>
+        </HorizontalScrollRegion>
     )
 }

@@ -79,41 +79,8 @@ export interface HiringPipelineBaseProps {
 
 /** Draws the candidates tab: one lane per stage on wide screens (drag a card, or use "Move to"), a stacked list on phones. */
 export const HiringPipelineBase = (props: HiringPipelineBaseProps) => {
-    const { say, jobId, jobOptions, lanes, hasNoCandidates, withdrawnNote, overStage, isBusy, error } = props.props
+    const { say, jobId, jobOptions, lanes, hasNoCandidates, withdrawnNote, overStage, error } = props.props
     const { on } = props
-    const card = (view: PipelineCardView, isDraggable: boolean) => (
-        <ListRow
-            key={view.id}
-            title={view.name}
-            badges={<Badge tone={view.scoreTone}>{view.scoreLabel}</Badge>}
-            description={view.meta}
-        >
-            <div
-                className={isDraggable ? CARD_DRAG_CLASS_NAME : CARD_CLASS_NAME}
-                draggable={isDraggable}
-                onDragStart={isDraggable ? (event) => on.dragStart(view.id, event) : undefined}
-                onDragEnd={isDraggable ? on.dragEnd : undefined}
-            >
-                {view.suggestion === null ? null : <Text size="xs">{view.suggestion}</Text>}
-                <div className={ACTIONS_CLASS_NAME}>
-                    <Button variant="tertiary" size="sm" onPress={() => on.open(view.id)}>
-                        {say("pipeOpen")}
-                    </Button>
-                </div>
-                <Select
-                    label={say("pipeMoveTo")}
-                    isLabelHidden
-                    isDisabled={isBusy}
-                    placeholder={say("pipeMovePlaceholder")}
-                    value={null}
-                    options={view.moveOptions}
-                    onValueChange={(stage) => {
-                        if (stage !== null) on.move(view.id, stage)
-                    }}
-                />
-            </div>
-        </ListRow>
-    )
     return (
         <>
             <div className={HEAD_CLASS_NAME}>
@@ -155,7 +122,9 @@ export const HiringPipelineBase = (props: HiringPipelineBaseProps) => {
                                             fact={lane.count}
                                             empty={<EmptyNotice message={say("pipeLaneEmpty")} />}
                                         >
-                                            {lane.cards.map((view) => card(view, true))}
+                                            {lane.cards.map((view) => (
+                                                <PipelineCard key={view.id} {...props} view={view} isDraggable />
+                                            ))}
                                         </SurfaceListCard>
                                     </div>
                                 ))}
@@ -167,7 +136,9 @@ export const HiringPipelineBase = (props: HiringPipelineBaseProps) => {
                             .filter((lane) => lane.cards.length > 0)
                             .map((lane) => (
                                 <SurfaceListCard key={lane.stage} label={lane.label} fact={lane.count}>
-                                    {lane.cards.map((view) => card(view, false))}
+                                    {lane.cards.map((view) => (
+                                        <PipelineCard key={view.id} {...props} view={view} isDraggable={false} />
+                                    ))}
                                 </SurfaceListCard>
                             ))}
                     </div>
@@ -187,3 +158,45 @@ export const HiringPipelineBase = (props: HiringPipelineBaseProps) => {
         </>
     )
 }
+
+/** One candidate and the commands to move it. */
+const PipelineCard = (props: PipelineCardProps) => {
+    const { say, isBusy } = props.props
+    const { on, view, isDraggable } = props
+    return (
+        <ListRow
+            key={view.id}
+            title={view.name}
+            badges={<Badge tone={view.scoreTone}>{view.scoreLabel}</Badge>}
+            description={view.meta}
+        >
+            <div
+                className={isDraggable ? CARD_DRAG_CLASS_NAME : CARD_CLASS_NAME}
+                draggable={isDraggable}
+                onDragStart={isDraggable ? (event) => on.dragStart(view.id, event) : undefined}
+                onDragEnd={isDraggable ? on.dragEnd : undefined}
+            >
+                {view.suggestion === null ? null : <Text size="xs">{view.suggestion}</Text>}
+                <div className={ACTIONS_CLASS_NAME}>
+                    <Button variant="tertiary" size="sm" onPress={() => on.open(view.id)}>
+                        {say("pipeOpen")}
+                    </Button>
+                </div>
+                <Select
+                    label={say("pipeMoveTo")}
+                    isLabelHidden
+                    isDisabled={isBusy}
+                    placeholder={say("pipeMovePlaceholder")}
+                    value={null}
+                    options={view.moveOptions}
+                    onValueChange={(stage) => {
+                        if (stage !== null) on.move(view.id, stage)
+                    }}
+                />
+            </div>
+        </ListRow>
+    )
+}
+
+/** Inputs of the extracted list section. */
+type PipelineCardProps = HiringPipelineBaseProps & { readonly view: PipelineCardView; readonly isDraggable: boolean }

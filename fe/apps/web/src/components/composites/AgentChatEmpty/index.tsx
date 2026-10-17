@@ -1,3 +1,5 @@
+import { nivoIconSource } from "@/components/leaves/Icon"
+import type { ModuleIconName } from "@/modules/types"
 import { Button, Input, Text } from "@starci/grammar/common"
 import { AgentMark } from "@/components/leaves/AgentMark"
 import {
@@ -11,7 +13,7 @@ import {
 /** The greeting of a chat that has no conversation open yet, with the words and state it needs. */
 export interface AgentChatEmptyProps {
     readonly agentName: string
-    readonly glyph: string
+    readonly glyph: ModuleIconName
     readonly module: string
     readonly greeting: string
     readonly help: string
@@ -33,7 +35,12 @@ export interface AgentChatEmptyProps {
 /** The empty chat: who the agent is, how to begin, and in the customer channel what will happen next. */
 export const AgentChatEmpty = (props: AgentChatEmptyProps) => (
     <div className={EMPTY_CLASS_NAME}>
-        <AgentMark glyph={props.glyph} module={props.module} label={props.agentName} size="lg" />
+        <AgentMark
+            glyph={nivoIconSource(props.glyph, "leading")}
+            module={props.module}
+            label={props.agentName}
+            size="lg"
+        />
         <Text weight="semibold">{props.greeting}</Text>
         <Text as="p" size="sm" tone="muted">
             {props.help}

@@ -1,9 +1,9 @@
 "use client"
 
-import { useTranslations } from "next-intl"
 import { modeOf, SMTP_PRESETS } from "@/modules/mail"
 import type { SmtpPreset } from "@/modules/mail"
 import type { SmtpAccountView, SmtpGuideView, SmtpOption, SmtpText } from "@/modules/types"
+import { useTranslations } from "next-intl"
 import type { SmtpChoice, SmtpFields } from "./smtp-wizard.shared"
 
 /** What the view reads of the wizard state. */
@@ -56,8 +56,8 @@ export const useSmtpView = (input: SmtpViewInput) => {
         showHost: Boolean(mode.hostEditable),
         showUser: Boolean(mode.hostEditable) || (!mode.userIsEmail && mode.fixedUser === undefined),
         showPassword: input.needsPassword,
-        passwordLabel: say(mode.passwordLabel),
-        passwordHint: input.isLocked ? undefined : say(mode.passwordHint),
+        passwordLabel: say(mode.passLabel),
+        passwordHint: input.isLocked ? undefined : say(mode.passHint),
         fixedUserNote: mode.fixedUser === undefined ? null : t("fixedUser", { user: mode.fixedUser }),
         prefilledNote:
             !mode.hostEditable && mode.host !== ""
@@ -65,35 +65,7 @@ export const useSmtpView = (input: SmtpViewInput) => {
                 : null,
     }
     const text: SmtpText = {
-        back: t("back"),
-        next: t("next"),
-        close: t("close"),
-        done: t("done"),
-        saveContinue: t("saveContinue"),
-        testSend: t("testSend"),
-        testSending: t("testSending"),
-        chooseHint: t("chooseHint"),
-        modeTitle: t("modeTitle"),
-        stepsTitle: t("stepsTitle"),
-        cautionTitle: t("cautionTitle"),
-        fieldFromName: t("fieldFromName"),
-        fieldFromNameHint: t("fieldFromNameHint"),
-        fieldFromEmail: t("fieldFromEmail"),
-        fieldFromEmailHint: t("fieldFromEmailHint"),
-        fieldReplyTo: t("fieldReplyTo"),
-        fieldReplyToHint: t("fieldReplyToHint"),
-        fieldHost: t("fieldHost"),
-        fieldPort: t("fieldPort"),
-        fieldSecurity: t("fieldSecurity"),
-        fieldUser: t("fieldUser"),
-        fieldUserHint: t("fieldUserHint"),
-        passwordStored: t("passwordStored"),
-        notConnectedYet: t("notConnectedYet"),
-        testToLabel: t("testTo"),
-        testToHint: t("testToHint"),
-        makeDefault: t("makeDefault"),
-        makeDefaultHint: t("makeDefaultHint"),
-        stepProvider: t("stepProvider"),
+        ...textLabelsOf(t),
     }
     return {
         presets,
@@ -105,3 +77,36 @@ export const useSmtpView = (input: SmtpViewInput) => {
         steps: [t("stepProvider"), t("stepGuide"), t("stepAccount"), t("stepVerify")],
     }
 }
+
+/** Resolves the text labels for the current locale. */
+const textLabelsOf = (t: ReturnType<typeof useTranslations<"email">>) => ({
+    back: t("back"),
+    next: t("next"),
+    close: t("close"),
+    done: t("done"),
+    saveContinue: t("saveContinue"),
+    testSend: t("testSend"),
+    testSending: t("testSending"),
+    chooseHint: t("chooseHint"),
+    modeTitle: t("modeTitle"),
+    stepsTitle: t("stepsTitle"),
+    cautionTitle: t("cautionTitle"),
+    fieldFromName: t("fieldFromName"),
+    fieldFromNameHint: t("fieldFromNameHint"),
+    fieldFromEmail: t("fieldFromEmail"),
+    fieldFromEmailHint: t("fieldFromEmailHint"),
+    fieldReplyTo: t("fieldReplyTo"),
+    fieldReplyToHint: t("fieldReplyToHint"),
+    fieldHost: t("fieldHost"),
+    fieldPort: t("fieldPort"),
+    fieldSecurity: t("fieldSecurity"),
+    fieldUser: t("fieldUser"),
+    fieldUserHint: t("fieldUserHint"),
+    passwordStored: t("passwordStored"),
+    notConnectedYet: t("notConnectedYet"),
+    testToLabel: t("testTo"),
+    testToHint: t("testToHint"),
+    makeDefault: t("makeDefault"),
+    makeDefaultHint: t("makeDefaultHint"),
+    stepProvider: t("stepProvider"),
+})

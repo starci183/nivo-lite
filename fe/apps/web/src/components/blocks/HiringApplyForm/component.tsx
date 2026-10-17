@@ -112,7 +112,7 @@ const questionField = (question: PublicQuestionView, props: HiringApplyFormBaseP
 /** Draws the public job page: the post, then the apply form (or a notice when the post takes no applications). */
 export const HiringApplyFormBase = (props: HiringApplyFormBaseProps) => {
     const p = props.props
-    const { say, values, isBusy } = p
+    const { say, isBusy } = p
     const { on } = props
     if (p.state !== "ready") {
         return (
@@ -140,103 +140,8 @@ export const HiringApplyFormBase = (props: HiringApplyFormBaseProps) => {
                             onSubmit={on.submit}
                         >
                             <div className={CARD_CLASS_NAME}>
-                                <Input
-                                    id="apply-name"
-                                    name="name"
-                                    label={say("applyName")}
-                                    variant="secondary"
-                                    isRequired
-                                    isDisabled={isBusy}
-                                    value={values.name}
-                                    onValueChange={(name) => on.text("name", name)}
-                                />
-                                <Input
-                                    id="apply-phone"
-                                    name="phone"
-                                    label={say("applyPhone")}
-                                    hint={say("applyPhoneHint")}
-                                    variant="secondary"
-                                    isRequired
-                                    isDisabled={isBusy}
-                                    value={values.phone}
-                                    onValueChange={(phone) => on.text("phone", phone)}
-                                />
-                                <Input
-                                    id="apply-email"
-                                    name="email"
-                                    kind="email"
-                                    label={say("applyEmail")}
-                                    variant="secondary"
-                                    isDisabled={isBusy}
-                                    value={values.email}
-                                    onValueChange={(email) => on.text("email", email)}
-                                />
-                                {p.availabilityChoices.length > 0 ? (
-                                    <CheckboxGroup
-                                        variant="secondary"
-                                        label={say("applyAvailability")}
-                                        name="availability"
-                                        options={p.availabilityChoices.map((choice) => ({
-                                            value: choice,
-                                            label: choice,
-                                        }))}
-                                        value={values.availability}
-                                        isDisabled={isBusy}
-                                        onValueChange={(choices) => on.list("availability", choices)}
-                                    />
-                                ) : (
-                                    <Input
-                                        id="apply-availability"
-                                        name="availability"
-                                        label={say("applyAvailabilityText")}
-                                        variant="secondary"
-                                        isDisabled={isBusy}
-                                        value={values.availabilityText}
-                                        onValueChange={(text) => on.text("availabilityText", text)}
-                                    />
-                                )}
-                                {p.questions.map((question) => questionField(question, props))}
-                                <FileDropzone
-                                    label={say("applyCv")}
-                                    name="cv"
-                                    accept={p.cvAccept}
-                                    description={say("applyCvHint")}
-                                    isDisabled={isBusy}
-                                    prompt={say("applyCvPrompt")}
-                                    errorMessage={p.cvError}
-                                    onFilesChange={(files) => on.cv(files[0] ?? null)}
-                                />
-                                <div className={HONEYPOT_CLASS_NAME} inert>
-                                    <Input
-                                        id="apply-website"
-                                        name="website"
-                                        label={say("applyWebsite")}
-                                        value={values.website}
-                                        onValueChange={(website) => on.text("website", website)}
-                                    />
-                                </div>
-                                <Checkbox
-                                    name="consent"
-                                    variant="secondary"
-                                    label={say("applyConsent")}
-                                    description={p.consentText}
-                                    isRequired
-                                    isSelected={values.consent}
-                                    isDisabled={isBusy}
-                                    onSelectedChange={(consent) => on.flag("consent", consent)}
-                                />
-                                {p.isFailed ? <Alert tone="negative" title={say("applyFailed")} /> : null}
-                                <Button
-                                    type="submit"
-                                    variant="primary"
-                                    isPending={isBusy}
-                                    isDisabled={isBusy || !p.canSubmit}
-                                >
-                                    {say("applySubmit")}
-                                </Button>
-                                <Text size="xs" tone="muted">
-                                    {say("applyPrivacy")}
-                                </Text>
+                                <ApplicantDetails {...props} />
+                                <ApplicationSubmission {...props} />{" "}
                             </div>
                         </Form>
                     ) : null}
@@ -246,5 +151,119 @@ export const HiringApplyFormBase = (props: HiringApplyFormBaseProps) => {
                 <Text size="xs">{say("applyFoot", { company: p.company })}</Text>
             </div>
         </div>
+    )
+}
+
+/** Contact details and availability supplied with an application. */
+const ApplicantDetails = (props: HiringApplyFormBaseProps) => {
+    const p = props.props
+    const { say, values, isBusy } = p
+    const { on } = props
+    return (
+        <>
+            <Input
+                id="apply-name"
+                name="name"
+                label={say("applyName")}
+                variant="secondary"
+                isRequired
+                isDisabled={isBusy}
+                value={values.name}
+                onValueChange={(name) => on.text("name", name)}
+            />
+            <Input
+                id="apply-phone"
+                name="phone"
+                label={say("applyPhone")}
+                hint={say("applyPhoneHint")}
+                variant="secondary"
+                isRequired
+                isDisabled={isBusy}
+                value={values.phone}
+                onValueChange={(phone) => on.text("phone", phone)}
+            />
+            <Input
+                id="apply-email"
+                name="email"
+                kind="email"
+                label={say("applyEmail")}
+                variant="secondary"
+                isDisabled={isBusy}
+                value={values.email}
+                onValueChange={(email) => on.text("email", email)}
+            />
+            {p.availabilityChoices.length > 0 ? (
+                <CheckboxGroup
+                    variant="secondary"
+                    label={say("applyAvailability")}
+                    name="availability"
+                    options={p.availabilityChoices.map((choice) => ({
+                        value: choice,
+                        label: choice,
+                    }))}
+                    value={values.availability}
+                    isDisabled={isBusy}
+                    onValueChange={(choices) => on.list("availability", choices)}
+                />
+            ) : (
+                <Input
+                    id="apply-availability"
+                    name="availability"
+                    label={say("applyAvailabilityText")}
+                    variant="secondary"
+                    isDisabled={isBusy}
+                    value={values.availabilityText}
+                    onValueChange={(text) => on.text("availabilityText", text)}
+                />
+            )}
+        </>
+    )
+}
+
+/** Questions, CV, consent and submission feedback. */
+const ApplicationSubmission = (props: HiringApplyFormBaseProps) => {
+    const p = props.props
+    const { say, values, isBusy } = p
+    const { on } = props
+    return (
+        <>
+            {p.questions.map((question) => questionField(question, props))}
+            <FileDropzone
+                label={say("applyCv")}
+                name="cv"
+                accept={p.cvAccept}
+                description={say("applyCvHint")}
+                isDisabled={isBusy}
+                prompt={say("applyCvPrompt")}
+                errorMessage={p.cvError}
+                onFilesChange={(files) => on.cv(files[0] ?? null)}
+            />
+            <div className={HONEYPOT_CLASS_NAME} inert>
+                <Input
+                    id="apply-website"
+                    name="website"
+                    label={say("applyWebsite")}
+                    value={values.website}
+                    onValueChange={(website) => on.text("website", website)}
+                />
+            </div>
+            <Checkbox
+                name="consent"
+                variant="secondary"
+                label={say("applyConsent")}
+                description={p.consentText}
+                isRequired
+                isSelected={values.consent}
+                isDisabled={isBusy}
+                onSelectedChange={(consent) => on.flag("consent", consent)}
+            />
+            {p.isFailed ? <Alert tone="negative" title={say("applyFailed")} /> : null}
+            <Button type="submit" variant="primary" isPending={isBusy} isDisabled={isBusy || !p.canSubmit}>
+                {say("applySubmit")}
+            </Button>
+            <Text size="xs" tone="muted">
+                {say("applyPrivacy")}
+            </Text>
+        </>
     )
 }

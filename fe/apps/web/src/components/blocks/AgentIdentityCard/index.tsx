@@ -1,5 +1,6 @@
 "use client"
 
+import type { ModuleIconName } from "@/modules/types"
 import { useTranslations } from "next-intl"
 import { useState } from "react"
 import {
@@ -15,7 +16,7 @@ import { AgentIdentityCardBase } from "./component"
 type AgentIdentityCardProps = {
     readonly installationId: string
     readonly module: string
-    readonly glyph: string
+    readonly glyph: ModuleIconName
 }
 
 /** The connected name card: one name field for the agent (and its instance), saved on its own. */

@@ -1,4 +1,4 @@
-import type { InventoryTemplateType } from "@/modules/api"
+import type { InventoryTemplateType } from "@/hooks/swr"
 import type { InventoryTemplateChoice } from "@/modules/types"
 
 /** One starter set the back end offers, as the import card lists it. */

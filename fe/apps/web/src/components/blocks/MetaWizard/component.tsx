@@ -187,54 +187,7 @@ export const MetaWizardBase = (props: MetaWizardBaseProps) => {
             ) : null}
             {view.step === "test" ? (
                 <>
-                    <Text size="sm">{text.testIntro}</Text>
-                    {view.checked === null ? null : (
-                        <div className={classNames.copy}>
-                            <Text size="sm" weight="semibold">
-                                {view.checked.page}
-                            </Text>
-                            <Text size="xs" tone="muted">
-                                {view.checked.instagram}
-                            </Text>
-                            {view.lines.map((line) => (
-                                <Alert key={line.key} tone={line.tone} title={line.text} />
-                            ))}
-                            {view.checked.verdict === "ok" ? (
-                                <Alert tone="affirmative" title={text.testAllGood} />
-                            ) : null}
-                        </div>
-                    )}
-                    {view.isChecking ? (
-                        <Text size="sm" weight="medium" startContent={<Spinner size="sm" label={text.testWorking} />}>
-                            {text.testWorking}
-                        </Text>
-                    ) : null}
-                    <div className={classNames.buttons}>
-                        <ButtonRow
-                            run={text.testRun}
-                            repair={text.testRepair}
-                            canRepair={view.canRepair}
-                            isDisabled={view.isChecking}
-                            onRun={() => on.runCheck(false)}
-                            onRepair={() => on.runCheck(true)}
-                        />
-                    </div>
-                    {view.received === null ? (
-                        <>
-                            <Text
-                                size="sm"
-                                weight="medium"
-                                startContent={<Spinner size="sm" label={text.testWaiting} />}
-                            >
-                                {text.testWaiting}
-                            </Text>
-                            <Text size="xs" tone="muted">
-                                {text.testSkipNote}
-                            </Text>
-                        </>
-                    ) : (
-                        <Alert tone="affirmative" title={view.received} />
-                    )}
+                    <MetaTestStep {...props} />
                 </>
             ) : null}
             {view.note === null ? null : <Alert tone={view.note.tone} title={view.note.text} />}
@@ -271,3 +224,56 @@ const ButtonRow = (props: ButtonRowProps) => (
         ]}
     />
 )
+
+/** Renders the MetaTestStep section. */
+const MetaTestStep = (props: MetaWizardBaseProps) => {
+    const view = props.props
+    const text = view.text
+    const on = props.on
+    return (
+        <>
+            <Text size="sm">{text.testIntro}</Text>
+            {view.checked === null ? null : (
+                <div className={classNames.copy}>
+                    <Text size="sm" weight="semibold">
+                        {view.checked.page}
+                    </Text>
+                    <Text size="xs" tone="muted">
+                        {view.checked.instagram}
+                    </Text>
+                    {view.lines.map((line) => (
+                        <Alert key={line.key} tone={line.tone} title={line.text} />
+                    ))}
+                    {view.checked.verdict === "ok" ? <Alert tone="affirmative" title={text.testAllGood} /> : null}
+                </div>
+            )}
+            {view.isChecking ? (
+                <Text size="sm" weight="medium" startContent={<Spinner size="sm" label={text.testWorking} />}>
+                    {text.testWorking}
+                </Text>
+            ) : null}
+            <div className={classNames.buttons}>
+                <ButtonRow
+                    run={text.testRun}
+                    repair={text.testRepair}
+                    canRepair={view.canRepair}
+                    isDisabled={view.isChecking}
+                    onRun={() => on.runCheck(false)}
+                    onRepair={() => on.runCheck(true)}
+                />
+            </div>
+            {view.received === null ? (
+                <>
+                    <Text size="sm" weight="medium" startContent={<Spinner size="sm" label={text.testWaiting} />}>
+                        {text.testWaiting}
+                    </Text>
+                    <Text size="xs" tone="muted">
+                        {text.testSkipNote}
+                    </Text>
+                </>
+            ) : (
+                <Alert tone="affirmative" title={view.received} />
+            )}
+        </>
+    )
+}

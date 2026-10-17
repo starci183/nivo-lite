@@ -1,48 +1,18 @@
 "use client"
 
+import { MODES, MODE_KEYS, STATUS_TONE, QUEUE_STATUS_KEYS } from "./component"
+import type { KnowledgeAddProps, BuildDocumentFilesViewContext, BuildAddDocumentsViewContext } from "./component"
 import { useTranslations } from "next-intl"
 import { AGENT_MODULES, useAddDocuments, useAddInstances, useQueueActions } from "@/hooks/knowledge"
-import type { AddMode, AddPreset, QueueItem } from "@/hooks/knowledge"
+import type { QueueItem } from "@/hooks/knowledge"
 import { navigation } from "@/modules/i18n"
 import { KNOWLEDGE_ROUTES } from "@/modules/routes"
 import { KnowledgeAddBase } from "./component"
 import type { KnowledgeAddBaseProps } from "./component"
 
-/** Props for the connected add documents drawer. */
-interface KnowledgeAddProps {
-    /** The words shown instead of the button to members who may only read. */
-    readonly readOnlyNote: string
-    /** Whether the address asks for the drawer to be open. */
-    readonly isOpen: boolean
-    /** The idea the drawer was opened from, or null. */
-    readonly preset: AddPreset | null
-}
-
-const MODES: ReadonlyArray<AddMode> = ["files", "write", "faq"]
-
-const MODE_KEYS: Readonly<Record<AddMode, "tabFiles" | "tabWrite" | "tabFaq">> = {
-    files: "tabFiles",
-    write: "tabWrite",
-    faq: "tabFaq",
-}
-
-const STATUS_TONE: Readonly<Record<QueueItem["status"], "neutral" | "warning" | "success" | "danger">> = {
-    waiting: "neutral",
-    uploading: "warning",
-    queued: "success",
-    failed: "danger",
-}
-
-const DOCUMENT_STATUS_KEYS: Readonly<
-    Record<QueueItem["status"], "itemWaiting" | "itemUploading" | "itemQueued" | "itemFailed">
-> = {
-    waiting: "itemWaiting",
-    uploading: "itemUploading",
-    queued: "itemQueued",
-    failed: "itemFailed",
-}
-
-/** The connected add documents drawer: opens and closes through the address, uploads files and queues links and notes. */
+/**
+ * The connected add documents drawer: opens and closes through the address, uploads files and queues links and notes.
+ */
 export const KnowledgeAdd = (props: KnowledgeAddProps) => {
     const t = useTranslations("knowledge")
     const router = navigation.useRouter()
@@ -64,7 +34,7 @@ export const KnowledgeAdd = (props: KnowledgeAddProps) => {
         id: item.id,
         name: item.name,
         detail: [t(item.kind === "link" ? "itemLink" : "itemFile"), item.origin ?? ""].filter(Boolean).join(" · "),
-        statusLabel: t(DOCUMENT_STATUS_KEYS[item.status]),
+        statusLabel: t(QUEUE_STATUS_KEYS[item.status]),
         statusTone: STATUS_TONE[item.status],
         error: item.error === undefined ? undefined : t(item.error),
         canRemove: item.status !== "uploading" && !add.isBusy,
@@ -79,7 +49,89 @@ export const KnowledgeAdd = (props: KnowledgeAddProps) => {
         if (queue.isReading) return t("zipReading")
         return note.tried && !isNoteMode && add.pendingCount === 0 ? t("hintNoDocs") : undefined
     }
-    const view: KnowledgeAddBaseProps["props"] = {
+    const view: KnowledgeAddBaseProps["props"] = buildAddDocumentsView({
+        t,
+        submitLabel,
+        canWrite,
+        props,
+        add,
+        queue,
+        queueRow,
+        filesNote,
+        note,
+        missingTitle,
+        missingBody,
+        options,
+        instances,
+    })
+    return (
+        <KnowledgeAddBase
+            props={view}
+            on={{
+                open: () => router.push(`${KNOWLEDGE_ROUTES.library}?add=files`),
+                close: add.close,
+                setMode: add.pickMode,
+                addFiles: queue.addFiles,
+                setLink: add.linkRows.setValue,
+                checkLink: add.linkRows.validate,
+                addLink: add.linkRows.add,
+                removeLink: add.linkRows.remove,
+                removeItem: queue.removeItem,
+                setTitle: note.setTitle,
+                setContent: note.setContent,
+                setPair: note.setPair,
+                addPair: note.addPair,
+                removePair: note.removePair,
+                setTopic: options.setTopic,
+                setTags: options.setTags,
+                setModule: options.pickModule,
+                setVisibility: (value) => options.setVisibility(value === "public" ? "public" : "internal"),
+                submit: add.submit,
+            }}
+        />
+    )
+}
+/** Builds the KnowledgeAddContent section from the current view. */
+const buildDocumentFilesView = ({ t, add, queue, queueRow, filesNote }: BuildDocumentFilesViewContext) =>
+    ({
+        dropPrompt: t("filesDrop"),
+        dropHint: t("filesHint"),
+        linksLabel: t("linksField"),
+        linksHint: t("linksHint"),
+        linkPlaceholder: t("linkPlaceholder"),
+        linkRemoveLabel: t("linkRemoveLabel"),
+        addLinkLabel: t("linkAdd"),
+        queueTitle: t("queueTitle"),
+        removeLabel: t("itemRemove"),
+        links: add.linkRows.rows.map((row, index) => {
+            const problem = add.linkRows.errors[row.id]
+            return {
+                id: row.id,
+                label: t("linkRowN", { n: index + 1 }),
+                value: row.value,
+                error: problem === undefined ? undefined : t(problem),
+            }
+        }),
+        queue: queue.items.map(queueRow),
+        note: filesNote(),
+    }) as const
+/** Builds the KnowledgeAddContent section from the current view. */
+const buildAddDocumentsView = ({
+    t,
+    submitLabel,
+    canWrite,
+    props,
+    add,
+    queue,
+    queueRow,
+    filesNote,
+    note,
+    missingTitle,
+    missingBody,
+    options,
+    instances,
+}: BuildAddDocumentsViewContext) =>
+    ({
         buttonLabel: t("addButton"),
         title: t("addTitle"),
         description: t("drawerHint"),
@@ -93,28 +145,7 @@ export const KnowledgeAdd = (props: KnowledgeAddProps) => {
         modeLabel: t("addTitle"),
         modeOptions: MODES.map((mode) => ({ id: mode, label: t(MODE_KEYS[mode]) })),
         mode: add.mode,
-        files: {
-            dropPrompt: t("filesDrop"),
-            dropHint: t("filesHint"),
-            linksLabel: t("linksField"),
-            linksHint: t("linksHint"),
-            linkPlaceholder: t("linkPlaceholder"),
-            linkRemoveLabel: t("linkRemoveLabel"),
-            addLinkLabel: t("linkAdd"),
-            queueTitle: t("queueTitle"),
-            removeLabel: t("itemRemove"),
-            links: add.linkRows.rows.map((row, index) => {
-                const problem = add.linkRows.errors[row.id]
-                return {
-                    id: row.id,
-                    label: t("linkRowN", { n: index + 1 }),
-                    value: row.value,
-                    error: problem === undefined ? undefined : t(problem),
-                }
-            }),
-            queue: queue.items.map(queueRow),
-            note: filesNote(),
-        },
+        files: buildDocumentFilesView({ t, add, queue, queueRow, filesNote }),
         note: {
             titleLabel: t("fieldTitle"),
             titleHint: t("fieldTitleHint"),
@@ -154,31 +185,4 @@ export const KnowledgeAdd = (props: KnowledgeAddProps) => {
         },
         notice: add.queuedCount > 0 ? t("batchQueued", { count: add.queuedCount }) : undefined,
         error: add.failure === null ? undefined : t(add.failure),
-    }
-    return (
-        <KnowledgeAddBase
-            props={view}
-            on={{
-                open: () => router.push(`${KNOWLEDGE_ROUTES.library}?add=files`),
-                close: add.close,
-                setMode: add.pickMode,
-                addFiles: queue.addFiles,
-                setLink: add.linkRows.setValue,
-                checkLink: add.linkRows.validate,
-                addLink: add.linkRows.add,
-                removeLink: add.linkRows.remove,
-                removeItem: queue.removeItem,
-                setTitle: note.setTitle,
-                setContent: note.setContent,
-                setPair: note.setPair,
-                addPair: note.addPair,
-                removePair: note.removePair,
-                setTopic: options.setTopic,
-                setTags: options.setTags,
-                setModule: options.pickModule,
-                setVisibility: (value) => options.setVisibility(value === "public" ? "public" : "internal"),
-                submit: add.submit,
-            }}
-        />
-    )
-}
+    }) as const

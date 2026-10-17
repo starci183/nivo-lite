@@ -1,3 +1,5 @@
+import type { useTranslations } from "next-intl"
+import type { SceneRole, ScriptScene } from "@/hooks/video"
 import { Alert, Badge, Button, Select, SurfaceCard, Text, Textarea } from "@starci/grammar/common"
 import { VideoErrorAlert } from "@/components/leaves/VideoErrorAlert"
 import { VideoStepFooter } from "@/components/leaves/VideoStepFooter"
@@ -69,6 +71,125 @@ export interface VideoScriptStepBaseProps {
     }
 }
 
+/** The option that means a colour card without a file. */
+const NO_MEDIA = "none"
+
+const ROLE_TONE: Record<SceneRole, "accent" | "neutral" | "success"> = {
+    hook: "accent",
+    body: "neutral",
+    cta: "success",
+}
+
+/** Translated labels shared by the script controls. */
+export const scriptCopyOf = (t: ReturnType<typeof useTranslations<"video">>) => ({
+    heading: t("scriptHeading"),
+    writingLabel: t("scripting"),
+    emptyLabel: t("scriptEmpty"),
+    captionLabel: t("captionLabel"),
+    voiceLabel: t("voiceLabel"),
+    mediaLabel: t("mediaPick"),
+    moveUpLabel: t("moveUp"),
+    moveDownLabel: t("moveDown"),
+    removeLabel: t("removeScene"),
+    addLabel: t("addScene"),
+    backLabel: t("back"),
+    nextLabel: t("next"),
+    dismissLabel: t("back"),
+})
+
+/** Maps editable script scenes to the atoms drawn by each scene card. */
+export const sceneCardsOf = (scenes: ReadonlyArray<ScriptScene>, t: ReturnType<typeof useTranslations<"video">>) =>
+    scenes.map((scene, index) => ({
+        id: scene.id,
+        title: t("sceneN", { n: index + 1 }),
+        roleLabel: t(`role_${scene.role}`),
+        roleTone: ROLE_TONE[scene.role],
+        caption: scene.caption,
+        voiceover: scene.voiceover,
+        visualHint: scene.visual === "" ? null : t("visualHint", { text: scene.visual }),
+        media: scene.media ?? NO_MEDIA,
+        canMoveUp: index > 0,
+        canMoveDown: index < scenes.length - 1,
+        canRemove: scenes.length > 1,
+    }))
+
+const scenesOf = (props: VideoScriptStepBaseProps) => {
+    return (
+        <>
+            {props.props.scenes.map((scene, index) => (
+                <SurfaceCard
+                    key={scene.id}
+                    label={scene.title}
+                    headingLevel={3}
+                    labelEnd={
+                        <div className={SCRIPT_ROW}>
+                            <Badge tone={scene.roleTone}>{scene.roleLabel}</Badge>
+                            <Button
+                                size="sm"
+                                variant="ghost"
+                                isDisabled={props.props.locked || !scene.canMoveUp}
+                                onPress={() => props.on.move(index, -1)}
+                            >
+                                {props.props.moveUpLabel}
+                            </Button>
+                            <Button
+                                size="sm"
+                                variant="ghost"
+                                isDisabled={props.props.locked || !scene.canMoveDown}
+                                onPress={() => props.on.move(index, 1)}
+                            >
+                                {props.props.moveDownLabel}
+                            </Button>
+                            <Button
+                                size="sm"
+                                variant="danger-soft"
+                                isDisabled={props.props.locked || !scene.canRemove}
+                                onPress={() => props.on.remove(index)}
+                            >
+                                {props.props.removeLabel}
+                            </Button>
+                        </div>
+                    }
+                >
+                    <div className={SCRIPT_STACK}>
+                        <Textarea
+                            label={props.props.captionLabel}
+                            variant="secondary"
+                            rows={2}
+                            maxLength={160}
+                            value={scene.caption}
+                            isDisabled={props.props.locked}
+                            onValueChange={(value) => props.on.caption(index, value)}
+                        />
+                        <Textarea
+                            label={props.props.voiceLabel}
+                            variant="secondary"
+                            rows={3}
+                            maxLength={420}
+                            value={scene.voiceover}
+                            isDisabled={props.props.locked}
+                            onValueChange={(value) => props.on.voiceover(index, value)}
+                        />
+                        {scene.visualHint === null ? null : (
+                            <Text size="xs" tone="muted">
+                                {scene.visualHint}
+                            </Text>
+                        )}
+                        <Select
+                            label={props.props.mediaLabel}
+                            variant="secondary"
+                            value={scene.media}
+                            options={props.props.mediaOptions}
+                            isDisabled={props.props.locked}
+                            onValueChange={(value) => props.on.media(index, value)}
+                        />
+                    </div>
+                </SurfaceCard>
+            ))}
+        </>
+    )
+}
+
 /** Draws step three: ask NIVO to write the script, then edit it scene by scene. */
 export const VideoScriptStepBase = (props: VideoScriptStepBaseProps) => (
     <div className={SCRIPT_STACK}>
@@ -103,77 +224,7 @@ export const VideoScriptStepBase = (props: VideoScriptStepBaseProps) => (
             </div>
         </SurfaceCard>
 
-        {props.props.scenes.map((scene, index) => (
-            <SurfaceCard
-                key={scene.id}
-                label={scene.title}
-                headingLevel={3}
-                labelEnd={
-                    <div className={SCRIPT_ROW}>
-                        <Badge tone={scene.roleTone}>{scene.roleLabel}</Badge>
-                        <Button
-                            size="sm"
-                            variant="ghost"
-                            isDisabled={props.props.locked || !scene.canMoveUp}
-                            onPress={() => props.on.move(index, -1)}
-                        >
-                            {props.props.moveUpLabel}
-                        </Button>
-                        <Button
-                            size="sm"
-                            variant="ghost"
-                            isDisabled={props.props.locked || !scene.canMoveDown}
-                            onPress={() => props.on.move(index, 1)}
-                        >
-                            {props.props.moveDownLabel}
-                        </Button>
-                        <Button
-                            size="sm"
-                            variant="danger-soft"
-                            isDisabled={props.props.locked || !scene.canRemove}
-                            onPress={() => props.on.remove(index)}
-                        >
-                            {props.props.removeLabel}
-                        </Button>
-                    </div>
-                }
-            >
-                <div className={SCRIPT_STACK}>
-                    <Textarea
-                        label={props.props.captionLabel}
-                        variant="secondary"
-                        rows={2}
-                        maxLength={160}
-                        value={scene.caption}
-                        isDisabled={props.props.locked}
-                        onValueChange={(value) => props.on.caption(index, value)}
-                    />
-                    <Textarea
-                        label={props.props.voiceLabel}
-                        variant="secondary"
-                        rows={3}
-                        maxLength={420}
-                        value={scene.voiceover}
-                        isDisabled={props.props.locked}
-                        onValueChange={(value) => props.on.voiceover(index, value)}
-                    />
-                    {scene.visualHint === null ? null : (
-                        <Text size="xs" tone="muted">
-                            {scene.visualHint}
-                        </Text>
-                    )}
-                    <Select
-                        label={props.props.mediaLabel}
-                        variant="secondary"
-                        value={scene.media}
-                        options={props.props.mediaOptions}
-                        isDisabled={props.props.locked}
-                        onValueChange={(value) => props.on.media(index, value)}
-                    />
-                </div>
-            </SurfaceCard>
-        ))}
-
+        {scenesOf(props)}
         {props.props.canEdit ? (
             <div className={SCRIPT_ROW}>
                 <Button variant="outline" isDisabled={props.props.locked || !props.props.canAdd} onPress={props.on.add}>

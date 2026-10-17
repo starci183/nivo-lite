@@ -1,3 +1,4 @@
+import { nivoIconSource } from "@/components/leaves/Icon"
 import { AgentMark } from "@/components/leaves/AgentMark"
 import { PersonAvatar } from "@/components/leaves/PersonAvatar"
 import type { OfficeAvatarView } from "@/modules/types"
@@ -15,7 +16,14 @@ type OfficeAvatarProps = {
 export const OfficeAvatar = (props: OfficeAvatarProps) => {
     const { avatar } = props
     if (avatar.kind === "agent") {
-        return <AgentMark glyph={avatar.glyph} label={avatar.label} module={avatar.module} size={props.size} />
+        return (
+            <AgentMark
+                glyph={nivoIconSource(avatar.glyph, "leading")}
+                label={avatar.label}
+                module={avatar.module}
+                size={props.size}
+            />
+        )
     }
     return <PersonAvatar name={avatar.name} size={props.size} />
 }

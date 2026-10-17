@@ -73,9 +73,8 @@ const PLACEHOLDER: AutomationsBoardView = {
 
 /** The cards, their filters, the detail and the hidden list. Shared by the automations page and the module settings card. */
 export const AutomationsBoardBase = (props: AutomationsBoardBaseProps) => {
-    const { layout, labels, slot, notice } = props.props
-    const { on } = props
-    const isNested = layout === "module"
+    const { labels, slot, notice } = props.props
+
     if (notice?.kind === "forbidden")
         return notice.isPage ? (
             <AutomationsForbidden
@@ -91,110 +90,122 @@ export const AutomationsBoardBase = (props: AutomationsBoardBaseProps) => {
     if (notice?.kind === "failed") return <Alert tone="negative" title={notice.title} />
     return (
         <SlotView slot={slot} placeholder={PLACEHOLDER} labels={labels.slot}>
-            {(view, isSkeleton) => {
-                const collection = (
-                    <div
-                        className={collectionClass(isNested, view.detail !== undefined)}
-                        aria-busy={isSkeleton || undefined}
-                    >
-                        {isSkeleton
-                            ? SKELETONS.map((index) => (
-                                  <AutomationCardSkeleton
-                                      key={index}
-                                      loadingLabel={labels.loading}
-                                      statusLabel={labels.status}
-                                      selectLabel={labels.select}
-                                      isNested={isNested}
-                                  />
-                              ))
-                            : null}
-                        {view.emptyText === undefined ? null : <EmptyNotice message={view.emptyText} />}
-                        {view.cards.map((card) => (
-                            <AutomationCard
-                                key={card.dataKey}
-                                {...card}
-                                isNested={isNested}
-                                onSelect={() => on.select(card.dataKey)}
-                                onToggle={(next) => on.toggle(card.dataKey, next)}
-                            >
-                                {card.accounts === undefined ? null : (
-                                    <AutomationAccountPicker
-                                        {...card.accounts}
-                                        onPick={(id) => on.pickAccount(card.dataKey, id)}
-                                    />
-                                )}
-                            </AutomationCard>
-                        ))}
-                    </div>
-                )
-                const { detail: open } = view
-                const detail =
-                    open === undefined ? null : (
-                        <AutomationDetailFrame
-                            {...open.frame}
-                            {...(open.runNow === undefined ? {} : { runNow: { ...open.runNow, onPress: on.runNow } })}
-                            onClose={on.close}
-                            onDismiss={on.dismiss}
-                        >
-                            <div className={SECTIONS_CLASS}>
-                                <AutomationSettings
-                                    {...open.settings}
-                                    onChange={on.changeSetting}
-                                    onSave={on.saveSettings}
-                                />
-                                {open.message === undefined ? null : (
-                                    <AutomationMessage
-                                        {...open.message}
-                                        onChange={on.changeBody}
-                                        onEnable={on.enable}
-                                        onSave={on.saveBody}
-                                        onCompose={on.compose}
-                                    />
-                                )}
-                                {open.gate === undefined ? null : (
-                                    <AutomationGate
-                                        {...open.gate}
-                                        {...(open.gate.trust === undefined
-                                            ? {}
-                                            : { trustOffer: { ...open.gate.trust, onAnswer: on.answerTrust } })}
-                                    />
-                                )}
-                                <AutomationRuns {...open.runs} />
-                            </div>
-                        </AutomationDetailFrame>
-                    )
-                return (
-                    <>
-                        {isNested ? null : <AutomationFilters {...view.filters} onChange={on.setFilter} />}
-                        {view.errorAlert === undefined ? null : (
-                            <Alert
-                                title={view.errorAlert.title}
-                                tone="negative"
-                                dismissLabel={view.errorAlert.dismissLabel}
-                                onDismiss={on.dismissError}
-                            />
-                        )}
-                        {isNested ? (
-                            <>
-                                {collection}
-                                {detail}
-                            </>
-                        ) : (
-                            <PrimaryRailLayout
-                                primary={<div className={SOLO_CLASS}>{collection}</div>}
-                                rail={detail}
-                                railWidth="wide"
-                            />
-                        )}
-                        <AutomationHiddenList
-                            title={view.hidden.title}
-                            restoreLabel={view.hidden.restoreLabel}
-                            items={view.hidden.items}
-                            onRestore={on.restore}
-                        />
-                    </>
-                )
-            }}
+            {(view, isSkeleton) => renderAutomationsBoardView(view, isSkeleton, props)}
         </SlotView>
+    )
+}
+
+/** Draws the available cards, selected detail and hidden automations. */
+const renderAutomationsBoardView = (
+    view: AutomationsBoardView,
+    isSkeleton: boolean,
+    props: AutomationsBoardBaseProps,
+) => {
+    const { layout, labels } = props.props
+    const { on } = props
+    const isNested = layout === "module"
+
+    const collection = renderAutomationCards(isNested, view, isSkeleton, labels, on)
+    const { detail: open } = view
+    const detail =
+        open === undefined ? null : (
+            <AutomationDetailFrame
+                {...open.frame}
+                {...(open.runNow === undefined ? {} : { runNow: { ...open.runNow, onPress: on.runNow } })}
+                onClose={on.close}
+                onDismiss={on.dismiss}
+            >
+                <div className={SECTIONS_CLASS}>
+                    <AutomationSettings {...open.settings} onChange={on.changeSetting} onSave={on.saveSettings} />
+                    {open.message === undefined ? null : (
+                        <AutomationMessage
+                            {...open.message}
+                            onChange={on.changeBody}
+                            onEnable={on.enable}
+                            onSave={on.saveBody}
+                            onCompose={on.compose}
+                        />
+                    )}
+                    {open.gate === undefined ? null : (
+                        <AutomationGate
+                            {...open.gate}
+                            {...(open.gate.trust === undefined
+                                ? {}
+                                : { trustOffer: { ...open.gate.trust, onAnswer: on.answerTrust } })}
+                        />
+                    )}
+                    <AutomationRuns {...open.runs} />
+                </div>
+            </AutomationDetailFrame>
+        )
+    return (
+        <>
+            {isNested ? null : <AutomationFilters {...view.filters} onChange={on.setFilter} />}
+            {view.errorAlert === undefined ? null : (
+                <Alert
+                    title={view.errorAlert.title}
+                    tone="negative"
+                    dismissLabel={view.errorAlert.dismissLabel}
+                    onDismiss={on.dismissError}
+                />
+            )}
+            {isNested ? (
+                <>
+                    {collection}
+                    {detail}
+                </>
+            ) : (
+                <PrimaryRailLayout
+                    primary={<div className={SOLO_CLASS}>{collection}</div>}
+                    rail={detail}
+                    railWidth="wide"
+                />
+            )}
+            <AutomationHiddenList
+                title={view.hidden.title}
+                restoreLabel={view.hidden.restoreLabel}
+                items={view.hidden.items}
+                onRestore={on.restore}
+            />
+        </>
+    )
+}
+
+/** Draws the div section of the AutomationsBoard view. */
+const renderAutomationCards = (
+    isNested: boolean,
+    view: AutomationsBoardView,
+    isSkeleton: boolean,
+    labels: AutomationsBoardBaseProps["props"]["labels"],
+    on: AutomationsBoardBaseProps["on"],
+) => {
+    return (
+        <div className={collectionClass(isNested, view.detail !== undefined)} aria-busy={isSkeleton || undefined}>
+            {isSkeleton
+                ? SKELETONS.map((index) => (
+                      <AutomationCardSkeleton
+                          key={index}
+                          loadingLabel={labels.loading}
+                          statusLabel={labels.status}
+                          selectLabel={labels.select}
+                          isNested={isNested}
+                      />
+                  ))
+                : null}
+            {view.emptyText === undefined ? null : <EmptyNotice message={view.emptyText} />}
+            {view.cards.map((card) => (
+                <AutomationCard
+                    key={card.dataKey}
+                    {...card}
+                    isNested={isNested}
+                    onSelect={() => on.select(card.dataKey)}
+                    onToggle={(next) => on.toggle(card.dataKey, next)}
+                >
+                    {card.accounts === undefined ? null : (
+                        <AutomationAccountPicker {...card.accounts} onPick={(id) => on.pickAccount(card.dataKey, id)} />
+                    )}
+                </AutomationCard>
+            ))}
+        </div>
     )
 }

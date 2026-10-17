@@ -73,37 +73,7 @@ export const ContentCalendarPanelBase = (props: ContentCalendarPanelBaseProps) =
                 />
             ) : null}
             <ContentMonthBar title={title} t={t} onShift={props.on.shift} onToday={props.on.today} />
-            <div className={GRID_WRAP_CLASS_NAME}>
-                <ContentMonthGrid
-                    title={title}
-                    cells={props.props.cells}
-                    byDay={props.props.byDay}
-                    todayKey={props.props.todayKey}
-                    dragging={props.props.isDragging}
-                    overKey={props.props.overKey}
-                    expandedKey={props.props.expandedKey}
-                    canManage={props.props.canManage}
-                    weekdays={t("weekdays").split(",")}
-                    t={t}
-                    onOpen={props.on.open}
-                    onDragStart={props.on.dragStart}
-                    onDragEnd={props.on.dragEnd}
-                    onDragOver={props.on.dragOver}
-                    onDragLeave={props.on.dragLeave}
-                    onDrop={props.on.drop}
-                    onExpand={props.on.expand}
-                />
-                {props.props.canManage ? (
-                    <Text size="xs" tone="muted">
-                        {t("dragHint")}
-                    </Text>
-                ) : null}
-                {props.props.monthItems.length === 0 ? (
-                    <Text size="sm" tone="muted">
-                        {t("emptyMonthBody")}
-                    </Text>
-                ) : null}
-            </div>
+            {renderContentCalendarGrid(title, props, t)}
             <div className={AGENDA_CLASS_NAME}>
                 <SurfaceCard ariaLabel={title}>
                     {props.props.monthItems.length === 0 ? (
@@ -143,6 +113,47 @@ export const ContentCalendarPanelBase = (props: ContentCalendarPanelBaseProps) =
                         />
                     ))}
                 </SurfaceListCard>
+            ) : null}
+        </div>
+    )
+}
+
+/** Draws the div section of the ContentCalendarPanel view. */
+const renderContentCalendarGrid = (
+    title: ContentCalendarPanelBaseProps["props"]["title"],
+    props: ContentCalendarPanelBaseProps,
+    t: ContentCalendarPanelBaseProps["props"]["t"],
+) => {
+    return (
+        <div className={GRID_WRAP_CLASS_NAME}>
+            <ContentMonthGrid
+                title={title}
+                cells={props.props.cells}
+                byDay={props.props.byDay}
+                todayKey={props.props.todayKey}
+                dragging={props.props.isDragging}
+                overKey={props.props.overKey}
+                expandedKey={props.props.expandedKey}
+                canManage={props.props.canManage}
+                weekdays={t("weekdays").split(",")}
+                t={t}
+                onOpen={props.on.open}
+                onDragStart={props.on.dragStart}
+                onDragEnd={props.on.dragEnd}
+                onDragOver={props.on.dragOver}
+                onDragLeave={props.on.dragLeave}
+                onDrop={props.on.drop}
+                onExpand={props.on.expand}
+            />
+            {props.props.canManage ? (
+                <Text size="xs" tone="muted">
+                    {t("dragHint")}
+                </Text>
+            ) : null}
+            {props.props.monthItems.length === 0 ? (
+                <Text size="sm" tone="muted">
+                    {t("emptyMonthBody")}
+                </Text>
             ) : null}
         </div>
     )

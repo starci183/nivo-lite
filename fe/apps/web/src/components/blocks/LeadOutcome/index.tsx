@@ -58,28 +58,17 @@ export const LeadOutcome = (props: LeadOutcomeProps) => {
         const recorded = loaded.events.filter(isEvidenceEvent)
         const evidenceStep = recorded.length === 0 ? 1 : 2
         const isClosed = current === "won" || current === "lost"
-        return {
-            fact: t("currentStage", { stage: stageLabel(current) }),
-            steps: [
-                { id: "new", label: stageLabel("new") },
-                { id: "qualified", label: stageLabel("qualified") },
-                { id: "proposal", label: stageLabel("proposal") },
-                {
-                    id: "closed",
-                    label: isClosed ? stageLabel(current) : t("wonOrLost"),
-                    ...(current === "lost" ? { state: "error" as const } : {}),
-                },
-            ],
-            currentStepId: isClosed ? "closed" : current,
-            meterValue: evidenceStep - 1,
-            meterMax: ladder.length,
-            meterValueLabel: ladder[evidenceStep - 1] ?? "",
-            evidenceNote: t("evidenceNote", { ladder: ladder.join(" → ") }),
-            stage: chosen,
-            wonNote: chosen === "won" ? t("wonHandoff") : null,
-            recordedTitle: t("evidenceRecorded", { count: recorded.length }),
-            recorded: recorded.map(evidenceOf),
-        }
+        return buildOutcomeSummary({
+            t,
+            stageLabel,
+            current,
+            isClosed,
+            evidenceStep,
+            ladder,
+            chosen,
+            recorded,
+            evidenceOf,
+        })
     }
     const slot: DataSlot<OutcomeView> = mapSlot(query.slot, viewOf)
 
@@ -96,26 +85,7 @@ export const LeadOutcome = (props: LeadOutcomeProps) => {
 
     return (
         <LeadOutcomeBase
-            props={{
-                slot,
-                evidenceText: evidence,
-                error: error ?? form.formState.errors.evidence?.message ?? null,
-                isPending,
-                labels: {
-                    title: t("outcome"),
-                    stepperLabel: t("stageStepperLabel"),
-                    meterLabel: t("evidenceState"),
-                    stageLabel: t("fieldStage"),
-                    stageOptions: STAGE_ORDER.map((id) => ({ id, label: stageLabel(id) })),
-                    evidenceLabel: t("evidence"),
-                    evidenceHint: t("evidenceHint"),
-                    recordLabel: t("recordOutcome"),
-                    failTitle: t("outcomeFailed"),
-                    noEvidenceTitle: t("noEvidence"),
-                    noEvidenceHint: t("noEvidenceHint"),
-                    slot: slotLabels(t("noEvidence")),
-                },
-            }}
+            props={buildOutcomeCardView({ slot, evidence, error, form, isPending, t, stageLabel, slotLabels })}
             on={{
                 stage: (value) => form.setValue("stage", isStage(value) ? value : null),
                 evidence: (value) => form.setValue("evidence", value, { shouldDirty: true }),
@@ -126,3 +96,93 @@ export const LeadOutcome = (props: LeadOutcomeProps) => {
         />
     )
 }
+
+/** Inputs needed to build the LeadOutcomeContent section. */
+interface BuildOutcomeSummaryContext {
+    readonly t: ReturnType<typeof useTranslations<"lead">>
+    readonly stageLabel: (value: LeadStageId) => string
+    readonly current: LeadStageId
+    readonly isClosed: boolean
+    readonly evidenceStep: 1 | 2
+    readonly ladder: string[]
+    readonly chosen: LeadStageId
+    readonly recorded: EventRecord[]
+    readonly evidenceOf: (event: EventRecord) => { id: string; byline: string; text: string }
+}
+/** Builds the LeadOutcomeContent section from the current view. */
+const buildOutcomeSummary = ({
+    t,
+    stageLabel,
+    current,
+    isClosed,
+    evidenceStep,
+    ladder,
+    chosen,
+    recorded,
+    evidenceOf,
+}: BuildOutcomeSummaryContext) =>
+    ({
+        fact: t("currentStage", { stage: stageLabel(current) }),
+        steps: [
+            { id: "new", label: stageLabel("new") },
+            { id: "qualified", label: stageLabel("qualified") },
+            { id: "proposal", label: stageLabel("proposal") },
+            {
+                id: "closed",
+                label: isClosed ? stageLabel(current) : t("wonOrLost"),
+                ...(current === "lost" ? { state: "error" as const } : {}),
+            },
+        ],
+        currentStepId: isClosed ? "closed" : current,
+        meterValue: evidenceStep - 1,
+        meterMax: ladder.length,
+        meterValueLabel: ladder[evidenceStep - 1] ?? "",
+        evidenceNote: t("evidenceNote", { ladder: ladder.join(" → ") }),
+        stage: chosen,
+        wonNote: chosen === "won" ? t("wonHandoff") : null,
+        recordedTitle: t("evidenceRecorded", { count: recorded.length }),
+        recorded: recorded.map(evidenceOf),
+    }) as const
+
+/** Inputs needed to build the LeadOutcomeContent section. */
+interface BuildOutcomeCardViewContext {
+    readonly slot: DataSlot<OutcomeView>
+    readonly evidence: string
+    readonly error: string | null
+    readonly form: ReturnType<typeof useLeadOutcomeForm>
+    readonly isPending: boolean
+    readonly t: ReturnType<typeof useTranslations<"lead">>
+    readonly stageLabel: (value: LeadStageId) => string
+    readonly slotLabels: ReturnType<typeof useSlotLabels>
+}
+/** Builds the LeadOutcomeContent section from the current view. */
+const buildOutcomeCardView = ({
+    slot,
+    evidence,
+    error,
+    form,
+    isPending,
+    t,
+    stageLabel,
+    slotLabels,
+}: BuildOutcomeCardViewContext) =>
+    ({
+        slot,
+        evidenceText: evidence,
+        error: error ?? form.formState.errors.evidence?.message ?? null,
+        isPending,
+        labels: {
+            title: t("outcome"),
+            stepperLabel: t("stageStepperLabel"),
+            meterLabel: t("evidenceState"),
+            stageLabel: t("fieldStage"),
+            stageOptions: STAGE_ORDER.map((id) => ({ id, label: stageLabel(id) })),
+            evidenceLabel: t("evidence"),
+            evidenceHint: t("evidenceHint"),
+            recordLabel: t("recordOutcome"),
+            failTitle: t("outcomeFailed"),
+            noEvidenceTitle: t("noEvidence"),
+            noEvidenceHint: t("noEvidenceHint"),
+            slot: slotLabels(t("noEvidence")),
+        },
+    }) as const

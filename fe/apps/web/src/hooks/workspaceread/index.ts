@@ -1,3 +1,12 @@
 export { jobPolling, noData } from "./workspaceread.shared"
-export { useWorkspaceArgSwr } from "./useWorkspaceArgSwr"
-export { useWorkspaceSwr } from "./useWorkspaceSwr"
+
+export type { StatusPollOptions } from "./workspaceread.shared"
+export { answeredData } from "./workspaceread.shared"
+
+export { argumentKey, workspaceArgumentKey, terminalJobOptions, terminalStatusOptions } from "./workspaceread.shared"
+
+export type { WorkspaceReadKey } from "./workspaceread.shared"
+
+export { readField, readRequiredField } from "./workspaceread.shared"
+
+export type { JobStatusCallbacks } from "./workspaceread.shared"

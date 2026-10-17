@@ -1,7 +1,7 @@
 "use client"
 
 import { useTranslations } from "next-intl"
-import { useZaloReturn } from "@/hooks/connections"
+import { useQueryZaloReturnSwr } from "@/hooks/connections"
 import type { ZaloReturnInput } from "@/hooks/connections"
 import { ZaloReturnBase } from "./component"
 
@@ -11,6 +11,6 @@ type ZaloReturnProps = ZaloReturnInput
 /** Hands the Zalo return to the back end once, then lands the browser back on Connections with the verdict. */
 export const ZaloReturn = (props: ZaloReturnProps) => {
     const t = useTranslations("connections")
-    useZaloReturn(props)
+    useQueryZaloReturnSwr(props)
     return <ZaloReturnBase props={{ waiting: t("zaloReturning") }} />
 }

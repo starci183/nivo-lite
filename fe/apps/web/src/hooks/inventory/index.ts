@@ -27,3 +27,5 @@ export { useNewPoDrawer } from "./useNewPoDrawer"
 export { useRecipeDrawer } from "./useRecipeDrawer"
 export { useSay } from "./useSay"
 export { useSupplierDrawer } from "./useSupplierDrawer"
+
+export type { DrawerControl } from "./useDrawer"

@@ -1,9 +1,9 @@
 "use client"
 
-import { useState, useTransition } from "react"
-import { queryAskKnowledge } from "@/modules/api/graphql/queries/query-ask-knowledge"
+import { useQueryAskKnowledgeSwr } from "@/hooks/swr"
 import { AGENT_MODULES, toRetrievedPassage } from "@/modules/documents"
 import type { AgentModule, RetrievedPassage } from "@/modules/documents"
+import { useState, useTransition } from "react"
 
 /** Who the answer is for: customers see public passages only. */
 export type AskAudience = "customer" | "internal"
@@ -26,6 +26,7 @@ interface AskKnowledge {
 
 /** The "try a question" panel: asks the back end what an agent would retrieve, as a customer or as the business. */
 export const useAskKnowledge = (initialModule: AgentModule | undefined): AskKnowledge => {
+    const { trigger } = useQueryAskKnowledgeSwr()
     const [question, setQuestion] = useState("")
     const [chosen, setChosen] = useState<AgentModule | undefined>()
     const module = chosen ?? initialModule
@@ -39,8 +40,8 @@ export const useAskKnowledge = (initialModule: AgentModule | undefined): AskKnow
         setError(null)
         startTransition(async () => {
             try {
-                const result = await queryAskKnowledge({ request: { question: text, module, audience } })
-                setResults((result.data?.askKnowledge ?? []).map(toRetrievedPassage))
+                const passages = await trigger({ question: text, module, audience })
+                setResults(passages.map(toRetrievedPassage))
             } catch (failure) {
                 setResults(null)
                 setError(failure instanceof Error ? failure.message : null)

@@ -1,4 +1,4 @@
-import type { BookingBoardType } from "@/modules/api"
+import type { BookingBoardType } from "@/hooks/swr"
 import type { BookingBoard } from "@/modules/types"
 
 /** The board shown before the first answer: nothing booked, no setup, a closed public page. */
@@ -49,22 +49,7 @@ export const toBookingBoard = (data: BookingBoardType): BookingBoard => ({
     nowMs: data.nowMs,
     from: data.from,
     to: data.to,
-    settings: {
-        timezone: data.settings.timezone,
-        slotStepMin: data.settings.slotStepMin,
-        minLeadMin: data.settings.minLeadMin,
-        maxAdvanceDays: data.settings.maxAdvanceDays,
-        cancelWindowHours: data.settings.cancelWindowHours,
-        depositPct: data.settings.depositPct,
-        lateCancelFeePct: data.settings.lateCancelFeePct,
-        noShowFeeVnd: data.settings.noShowFeeVnd,
-        autoConfirm: data.settings.autoConfirm,
-        handoffOrder: data.settings.handoffOrder,
-        address: data.settings.address,
-        publicEnabled: data.settings.publicEnabled,
-        publicSlug: data.settings.publicSlug ?? null,
-        publicNote: data.settings.publicNote,
-    },
+    settings: settingsOf(data),
     services: data.services.map((service) => ({
         id: service.id,
         name: service.name,
@@ -100,34 +85,7 @@ export const toBookingBoard = (data: BookingBoardType): BookingBoard => ({
         end: row.end ?? null,
         note: row.note,
     })),
-    bookings: data.bookings.map((booking) => ({
-        id: booking.id,
-        customer: booking.customer,
-        phone: booking.phone ?? null,
-        serviceId: booking.serviceId,
-        service: booking.service,
-        resourceId: booking.resourceId,
-        startMs: booking.startMs,
-        endMs: booking.endMs,
-        date: booking.date,
-        startMin: booking.startMin,
-        endMin: booking.endMin,
-        startClock: booking.startClock,
-        endClock: booking.endClock,
-        status: booking.status,
-        holdsSlot: booking.holdsSlot,
-        party: booking.party,
-        priceVnd: booking.priceVnd ?? null,
-        depositVnd: booking.depositVnd,
-        depositStatus: booking.depositStatus,
-        feeVnd: booking.feeVnd,
-        checkedIn: booking.checkedIn,
-        note: booking.note,
-        conflictNote: booking.conflictNote,
-        source: booking.source,
-        leadId: booking.leadId ?? null,
-        reschedules: booking.reschedules,
-    })),
+    bookings: data.bookings.map(bookingRowMapper()),
     waitlist: data.waitlist.map((item) => ({
         id: item.id,
         customer: item.customer,
@@ -161,3 +119,53 @@ export const toBookingBoard = (data: BookingBoardType): BookingBoard => ({
         total: data.stats.total,
     },
 })
+
+const settingsOf = (data: BookingBoardType): BookingBoard["settings"] => {
+    return {
+        timezone: data.settings.timezone,
+        slotStepMin: data.settings.slotStepMin,
+        minLeadMin: data.settings.minLeadMin,
+        maxAdvanceDays: data.settings.maxAdvanceDays,
+        cancelWindowHours: data.settings.cancelWindowHours,
+        depositPct: data.settings.depositPct,
+        lateCancelFeePct: data.settings.lateCancelFeePct,
+        noShowFeeVnd: data.settings.noShowFeeVnd,
+        autoConfirm: data.settings.autoConfirm,
+        handoffOrder: data.settings.handoffOrder,
+        address: data.settings.address,
+        publicEnabled: data.settings.publicEnabled,
+        publicSlug: data.settings.publicSlug ?? null,
+        publicNote: data.settings.publicNote,
+    }
+}
+
+const bookingRowMapper = (): ((booking: BookingBoardType["bookings"][number]) => BookingBoard["bookings"][number]) => {
+    return (booking) => ({
+        id: booking.id,
+        customer: booking.customer,
+        phone: booking.phone ?? null,
+        serviceId: booking.serviceId,
+        service: booking.service,
+        resourceId: booking.resourceId,
+        startMs: booking.startMs,
+        endMs: booking.endMs,
+        date: booking.date,
+        startMin: booking.startMin,
+        endMin: booking.endMin,
+        startClock: booking.startClock,
+        endClock: booking.endClock,
+        status: booking.status,
+        holdsSlot: booking.holdsSlot,
+        party: booking.party,
+        priceVnd: booking.priceVnd ?? null,
+        depositVnd: booking.depositVnd,
+        depositStatus: booking.depositStatus,
+        feeVnd: booking.feeVnd,
+        checkedIn: booking.checkedIn,
+        note: booking.note,
+        conflictNote: booking.conflictNote,
+        source: booking.source,
+        leadId: booking.leadId ?? null,
+        reschedules: booking.reschedules,
+    })
+}

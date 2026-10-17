@@ -1,4 +1,3 @@
-import type { DescriptionListStatItem } from "@starci/grammar/common"
 import type {
     InventoryItemType,
     InventoryMovementType,
@@ -7,7 +6,7 @@ import type {
     InventoryRecipeType,
     InventorySupplierType,
     InventoryWorkbenchType,
-} from "@/modules/api"
+} from "@/hooks/swr"
 import type {
     InventoryWorkbenchData,
     ItemView,
@@ -17,6 +16,7 @@ import type {
     StockStatus,
     SupplierChannel,
 } from "@/modules/types"
+import type { DescriptionListStatItem } from "@starci/grammar/common"
 
 const STOCK_STATUSES: ReadonlyArray<StockStatus> = ["out", "low", "ok", "over"]
 

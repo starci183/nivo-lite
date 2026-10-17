@@ -12,7 +12,7 @@ import type {
     WebhookViewType,
     WizardConnectionType,
     ZaloWizardConnectionType,
-} from "@/modules/api"
+} from "@/hooks/swr"
 import type {
     Access,
     AgentOption,

@@ -1,3 +1,9 @@
+import type { useTelegramUserForm } from "@/hooks/rhf"
+import type { useTelegramUserBoot } from "./useTelegramUserBoot"
+import type { useTelegramUserLogin } from "./useTelegramUserLogin"
+import type { useTelegramUserPicks } from "./useTelegramUserPicks"
+import type { TelegramUserStep, TelegramUserField } from "./useTelegramUserWizard"
+
 /** What kind of chat a dialog is. */
 export type ChatKind = "user" | "group" | "channel"
 
@@ -53,4 +59,61 @@ export const BLANK_INITIAL: TelegramInitial = {
     stage: "phone",
     index: 0,
     editing: false,
+}
+
+/** Assembles the resolved domain state and commands for its drawing. */
+export const viewOf = (
+    step: TelegramUserStep,
+    boot: ReturnType<typeof useTelegramUserBoot>,
+    index: number,
+    login: ReturnType<typeof useTelegramUserLogin>,
+    picks: ReturnType<typeof useTelegramUserPicks>,
+    agentIds: readonly string[],
+    error: string | null,
+    isPending: boolean,
+    forms: ReturnType<typeof useTelegramUserForm>,
+    go: (to: number) => void,
+    setAgentIds: import("react").Dispatch<import("react").SetStateAction<ReadonlyArray<string>>>,
+    save: () => void,
+    finish: () => void,
+    field: (name: TelegramUserField, value: string) => void,
+    onClose: (changed: boolean) => void,
+    setError: import("react").Dispatch<import("react").SetStateAction<string | null>>,
+) => {
+    return {
+        status: step.started ? "ready" : boot.status,
+        bootError: boot.error,
+        index,
+        login,
+        picks,
+        agentIds,
+        error: error ?? picks.failure,
+        isPending,
+        values: {
+            name: forms.consent.watch("name"),
+            consent: forms.consent.watch("consent"),
+            phone: forms.phone.watch("phone"),
+            code: forms.code.watch("code"),
+            password: forms.password.watch("password"),
+        },
+        valid: {
+            consent: forms.consent.formState.isValid,
+            phone: forms.phone.formState.isValid,
+            code: forms.code.formState.isValid,
+            password: forms.password.formState.isValid,
+        },
+        on: {
+            go,
+            setAgentIds,
+            save,
+            finish,
+            field,
+            close: () => onClose(false),
+            consent: (on: boolean) => forms.consent.setValue("consent", on, { shouldValidate: true }),
+            reloadChats: () => {
+                setError(null)
+                picks.reload()
+            },
+        },
+    }
 }

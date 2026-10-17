@@ -1,8 +1,8 @@
 "use client"
 
-import { useFormatter, useTranslations } from "next-intl"
 import { findTier } from "@/hooks/loyalty"
-import type { LoyaltyConfigType } from "@/modules/api"
+import type { LoyaltyConfigType } from "@/hooks/swr"
+import { useFormatter, useTranslations } from "next-intl"
 import type { PromoSegment } from "./loyaltyPromo.shared"
 
 /** The words that describe a segment ("tier Gold or Silver, not back for 45 days"), built from the `loyalty` catalog and the programme's tier names. */

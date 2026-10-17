@@ -2,7 +2,8 @@
 
 import { useState, useTransition } from "react"
 import { useTranslations } from "next-intl"
-import { authErrorKey, inviteOfNext, useAuthActions } from "@/hooks/auth"
+import { authErrorKey, inviteOfNext } from "@/hooks/auth"
+import { authActionsOf } from "@/hooks/auth"
 import { useLoginForm } from "@/hooks/rhf"
 import { navigation } from "@/modules/i18n"
 import { AUTH_ROUTES, signupPath } from "@/modules/routes"
@@ -36,7 +37,7 @@ const initialInfo = (notice: string | undefined, reset: string, confirmed: strin
 
 /** The sign-in card: password and Google through the browser Auth client, with the friendly failure copy. */
 export const LoginForm = (props: LoginFormProps) => {
-    const auth = useAuthActions()
+    const auth = authActionsOf()
     const t = useTranslations("login")
     const a = useTranslations("auth")
     const router = navigation.useRouter()
@@ -99,34 +100,7 @@ export const LoginForm = (props: LoginFormProps) => {
 
     return (
         <LoginFormBase
-            props={{
-                title: t("signInTitle"),
-                text: t("signInText"),
-                failedTitle: t("failedTitle"),
-                resendLabel: t("resendConfirm"),
-                googleLabel: t("google"),
-                orLabel: t("or"),
-                emailLabel: a("emailLabel"),
-                emailPlaceholder: a("emailPlaceholder"),
-                passwordLabel: a("passwordLabel"),
-                showLabel: a("showPassword"),
-                hideLabel: a("hidePassword"),
-                forgotLabel: t("forgot"),
-                forgotHref: AUTH_ROUTES.forgotPassword,
-                submitLabel: t("submit"),
-                noAccountLabel: t("noAccount"),
-                signUpLabel: t("signUpLink"),
-                signUpHref: signupPath(invite),
-                email: form.watch("email"),
-                password: form.watch("password"),
-                emailError: form.formState.errors.email?.message,
-                passwordError: form.formState.errors.password?.message,
-                error: feedback.error,
-                notice: feedback.info,
-                canResend: feedback.canResend,
-                isPasswordPending,
-                isGooglePending,
-            }}
+            props={buildLoginFormView({ t, a, invite, form, feedback, isPasswordPending, isGooglePending })}
             on={{
                 setEmail: (value) => form.setValue("email", value, { shouldValidate: form.formState.isSubmitted }),
                 setPassword: (value) =>
@@ -138,3 +112,52 @@ export const LoginForm = (props: LoginFormProps) => {
         />
     )
 }
+
+/** Inputs needed to build the LoginFormContent section. */
+interface BuildLoginFormViewContext {
+    readonly t: ReturnType<typeof useTranslations<"login">>
+    readonly a: ReturnType<typeof useTranslations<"auth">>
+    readonly invite: string | undefined
+    readonly form: ReturnType<typeof useLoginForm>
+    readonly feedback: Feedback
+    readonly isPasswordPending: boolean
+    readonly isGooglePending: boolean
+}
+/** Builds the LoginFormContent section from the current view. */
+const buildLoginFormView = ({
+    t,
+    a,
+    invite,
+    form,
+    feedback,
+    isPasswordPending,
+    isGooglePending,
+}: BuildLoginFormViewContext) =>
+    ({
+        title: t("signInTitle"),
+        text: t("signInText"),
+        failedTitle: t("failedTitle"),
+        resendLabel: t("resendConfirm"),
+        googleLabel: t("google"),
+        orLabel: t("or"),
+        emailLabel: a("emailLabel"),
+        emailPlaceholder: a("emailPlaceholder"),
+        passwordLabel: a("passwordLabel"),
+        showLabel: a("showPassword"),
+        hideLabel: a("hidePassword"),
+        forgotLabel: t("forgot"),
+        forgotHref: AUTH_ROUTES.forgot,
+        submitLabel: t("submit"),
+        noAccountLabel: t("noAccount"),
+        signUpLabel: t("signUpLink"),
+        signUpHref: signupPath(invite),
+        email: form.watch("email"),
+        password: form.watch("password"),
+        emailError: form.formState.errors.email?.message,
+        passwordError: form.formState.errors.password?.message,
+        error: feedback.error,
+        notice: feedback.info,
+        canResend: feedback.canResend,
+        isPasswordPending,
+        isGooglePending,
+    }) as const

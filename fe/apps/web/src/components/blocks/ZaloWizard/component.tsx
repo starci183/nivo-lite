@@ -106,6 +106,45 @@ const actionsOf = ({ props, on }: ZaloWizardBaseProps): ReadonlyArray<WizardActi
     return [nextAction(text.done, on.finish, { isPending: props.isPending }), back]
 }
 
+const appFieldsOf = (props: ZaloWizardBaseProps) => {
+    const { props: view, on } = props
+    const locked = view.isLocked || view.isPending
+    return (
+        <div className={classNames.fields}>
+            <Input
+                id="zalo-name"
+                name="name"
+                label={view.text.fieldName}
+                variant="secondary"
+                hint={view.text.fieldNameHint}
+                isDisabled={locked}
+                value={view.fields.name}
+                onValueChange={on.name}
+            />
+            <Input
+                id="zalo-appId"
+                name="appId"
+                label={view.text.fieldAppId}
+                variant="secondary"
+                hint={view.text.fieldAppIdHint}
+                isDisabled={locked}
+                value={view.fields.appId}
+                onValueChange={on.appId}
+            />
+            <Input
+                id="zalo-appSecret"
+                name="appSecret"
+                label={view.text.fieldAppSecret}
+                variant="secondary"
+                kind="password"
+                isDisabled={locked}
+                value={view.fields.appSecret}
+                onValueChange={on.appSecret}
+            />
+        </div>
+    )
+}
+
 /** Zalo OA in the shared wizard frame: app keys, set up the Zalo app, connect the OA, check (message the OA), attach to the agents. */
 export const ZaloWizardBase = (props: ZaloWizardBaseProps) => {
     const { props: view, on } = props
@@ -123,7 +162,6 @@ export const ZaloWizardBase = (props: ZaloWizardBaseProps) => {
             </Button>
         </div>
     )
-    const locked = view.isLocked || view.isPending
     return (
         <WizardFrame
             title={view.title}
@@ -141,38 +179,7 @@ export const ZaloWizardBase = (props: ZaloWizardBaseProps) => {
                         onEdit={() => undefined}
                         onPaste={() => undefined}
                     />
-                    <div className={classNames.fields}>
-                        <Input
-                            id="zalo-name"
-                            name="name"
-                            label={view.text.fieldName}
-                            variant="secondary"
-                            hint={view.text.fieldNameHint}
-                            isDisabled={locked}
-                            value={view.fields.name}
-                            onValueChange={on.name}
-                        />
-                        <Input
-                            id="zalo-appId"
-                            name="appId"
-                            label={view.text.fieldAppId}
-                            variant="secondary"
-                            hint={view.text.fieldAppIdHint}
-                            isDisabled={locked}
-                            value={view.fields.appId}
-                            onValueChange={on.appId}
-                        />
-                        <Input
-                            id="zalo-appSecret"
-                            name="appSecret"
-                            label={view.text.fieldAppSecret}
-                            variant="secondary"
-                            kind="password"
-                            isDisabled={locked}
-                            value={view.fields.appSecret}
-                            onValueChange={on.appSecret}
-                        />
-                    </div>
+                    {appFieldsOf(props)}
                     {view.isLocked ? (
                         <Text size="xs" tone="muted">
                             {view.text.createdLocked}

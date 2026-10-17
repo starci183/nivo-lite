@@ -1,10 +1,10 @@
 "use client"
 
-import { useTranslations } from "next-intl"
-import { useCallback, useState } from "react"
 import { useSettledGraphQL } from "@/hooks/connection-wizard"
 import { useMutateRequestDataSyncSwr, useQueryDataSyncRunSwr } from "@/hooks/swr"
 import type { RowNote } from "@/modules/types"
+import { useTranslations } from "next-intl"
+import { useCallback, useState } from "react"
 import { useConnectionsRefresh } from "./useConnectionsRefresh"
 
 /** The sync-now command of a data connection: it queues the sync, follows its run until it ends and tells how it went. */
@@ -20,7 +20,7 @@ export interface SyncNow {
 /** "Sync now" for a data connection (owner): `requestDataSync`, then the run is polled until it is no longer running; the list is reloaded at the end. */
 export const useSyncNow = (): SyncNow => {
     const t = useTranslations("connections")
-    const toast = useTranslations("toast")
+    const tToast = useTranslations("toast")
     const settle = useSettledGraphQL()
     const refresh = useConnectionsRefresh()
     const { trigger } = useMutateRequestDataSyncSwr()
@@ -46,6 +46,6 @@ export const useSyncNow = (): SyncNow => {
     const ended = run !== undefined && run.state !== "running"
     let outcome: RowNote | null = refused
     if (ended && run.state === "ok") outcome = { tone: "affirmative", text: t("syncDone", { rows: run.rows }) }
-    else if (ended) outcome = { tone: "negative", text: run.error ?? toast("defaultError") }
+    else if (ended) outcome = { tone: "negative", text: run.error ?? tToast("defaultError") }
     return { start, isRunning: runId !== undefined && !ended, outcome }
 }

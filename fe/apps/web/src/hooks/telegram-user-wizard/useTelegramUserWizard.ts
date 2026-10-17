@@ -1,13 +1,16 @@
 "use client"
 
+import { viewOf, BLANK_INITIAL } from "./telegram-user-wizard.shared"
 import { useEffect, useReducer, useRef, useState, useTransition } from "react"
 import { useSetConnectionAgents } from "@/hooks/connections"
+import type { AgentWish } from "@/hooks/connections"
 import { useTelegramUserForm } from "@/hooks/rhf"
-import { BLANK_INITIAL } from "./telegram-user-wizard.shared"
 import { useTelegramUserBoot } from "./useTelegramUserBoot"
 import { useTelegramUserCommands } from "./useTelegramUserCommands"
+import type { TelegramUserCommands } from "./useTelegramUserCommands"
 import { useTelegramUserLogin } from "./useTelegramUserLogin"
 import { useTelegramUserPicks } from "./useTelegramUserPicks"
+import type { Settled } from "../connection-wizard"
 
 /** What the personal Telegram wizard needs from its drawer. */
 interface TelegramUserWizardInput {
@@ -18,7 +21,7 @@ interface TelegramUserWizardInput {
 }
 
 /** Where the wizard stands: the step shown, and whether it edits a connected account (saving then closes it). */
-interface TelegramUserStep {
+export interface TelegramUserStep {
     /** The server state was read and poured into the steps. */
     readonly started: boolean
     readonly index: number
@@ -31,7 +34,7 @@ const mergeStep = (state: TelegramUserStep, patch: Partial<TelegramUserStep>): T
 })
 
 /** The text fields of the personal Telegram wizard. */
-type TelegramUserField = "name" | "phone" | "code" | "password"
+export type TelegramUserField = "name" | "phone" | "code" | "password"
 
 /**
  * The state machine of the personal Telegram wizard: it first reads whether the server is set up and where a resumed login stands,
@@ -84,6 +87,53 @@ export const useTelegramUserWizard = (input: TelegramUserWizardInput) => {
         restorePicks(initial, resumeId)
     }, [boot.status, boot.initial, resetConsent, setStage, restorePicks, resumeId])
 
+    const { save, finish, field } = createTelegramUserWizardActions(
+        startTransition,
+        login,
+        commands,
+        picks,
+        setError,
+        editing,
+        onClose,
+        go,
+        setConnectionAgents,
+        agentIds,
+        forms,
+    )
+
+    return viewOf(
+        step,
+        boot,
+        index,
+        login,
+        picks,
+        agentIds,
+        error,
+        isPending,
+        forms,
+        go,
+        setAgentIds,
+        save,
+        finish,
+        field,
+        onClose,
+        setError,
+    )
+}
+
+const createTelegramUserWizardActions = (
+    startTransition: import("react").TransitionStartFunction,
+    login: ReturnType<typeof useTelegramUserLogin>,
+    commands: TelegramUserCommands,
+    picks: ReturnType<typeof useTelegramUserPicks>,
+    setError: import("react").Dispatch<import("react").SetStateAction<string | null>>,
+    editing: boolean,
+    onClose: (changed: boolean) => void,
+    go: (to: number) => void,
+    setConnectionAgents: (connectionId: string, wanted: ReadonlyArray<AgentWish>) => Promise<Settled<true>>,
+    agentIds: readonly string[],
+    forms: ReturnType<typeof useTelegramUserForm>,
+) => {
     const save = () =>
         startTransition(async () => {
             if (login.connId === null) return
@@ -112,41 +162,5 @@ export const useTelegramUserWizard = (input: TelegramUserWizardInput) => {
         if (name === "code") return forms.code.setValue("code", value, { shouldValidate: true })
         forms.password.setValue("password", value, { shouldValidate: true })
     }
-
-    return {
-        status: step.started ? "ready" : boot.status,
-        bootError: boot.error,
-        index,
-        login,
-        picks,
-        agentIds,
-        error: error ?? picks.failure,
-        isPending,
-        values: {
-            name: forms.consent.watch("name"),
-            consent: forms.consent.watch("consent"),
-            phone: forms.phone.watch("phone"),
-            code: forms.code.watch("code"),
-            password: forms.password.watch("password"),
-        },
-        valid: {
-            consent: forms.consent.formState.isValid,
-            phone: forms.phone.formState.isValid,
-            code: forms.code.formState.isValid,
-            password: forms.password.formState.isValid,
-        },
-        on: {
-            go,
-            setAgentIds,
-            save,
-            finish,
-            field,
-            close: () => onClose(false),
-            consent: (on: boolean) => forms.consent.setValue("consent", on, { shouldValidate: true }),
-            reloadChats: () => {
-                setError(null)
-                picks.reload()
-            },
-        },
-    }
+    return { save, finish, field }
 }

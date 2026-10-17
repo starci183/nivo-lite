@@ -1,12 +1,14 @@
+"use client"
+
 import { IconTile } from "@starci/grammar/common"
-import type { IconSource, IconSourceProps, IconTileSize } from "@starci/grammar/common"
+import type { IconSource, IconTileSize } from "@starci/grammar/common"
 
 /** What the square agent mark draws. */
 type AgentMarkProps = {
     /** Accept legacy caller metadata while the mark renders only its visual props. */
     readonly [metadata: string]: unknown
-    /** SVG path data of the module glyph (24 by 24 grid, stroked). */
-    readonly glyph: string
+    /** Module icon source resolved by the caller through the Icon leaf registry. */
+    readonly glyph: IconSource
     /** The spoken name of the mark. */
     readonly label: string
     readonly size?: "xs" | "sm" | "md" | "lg"
@@ -20,34 +22,7 @@ const TILE_SIZE: Record<NonNullable<AgentMarkProps["size"]>, IconTileSize> = {
     lg: "md",
 }
 
-/** One stable glyph component per path, so the grammar tile does not remount its icon on every render. */
-const GLYPHS = new Map<string, IconSource>()
-
-const glyphSource = (path: string): IconSource => {
-    const cached = GLYPHS.get(path)
-    if (cached) return cached
-    const Glyph = (props: IconSourceProps) => (
-        <svg viewBox="0 0 24 24" {...props}>
-            <path
-                d={path}
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.9"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-            />
-        </svg>
-    )
-    GLYPHS.set(path, Glyph)
-    return Glyph
-}
-
 /** An AI agent: the grammar's neutral `IconTile` with the module glyph, so an agent and a person are never confused. */
 export const AgentMark = (props: AgentMarkProps) => (
-    <IconTile
-        source={glyphSource(props.glyph)}
-        tone="neutral"
-        size={TILE_SIZE[props.size ?? "md"]}
-        ariaLabel={props.label}
-    />
+    <IconTile source={props.glyph} tone="neutral" size={TILE_SIZE[props.size ?? "md"]} ariaLabel={props.label} />
 )

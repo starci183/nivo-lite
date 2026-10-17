@@ -1,17 +1,16 @@
 "use client"
 
+import {
+    QUERY_INBOUND_EVENTS_SWR_KEY,
+    useMutateSimulateInboundSwr,
+    useQueryInboundSimulationStatusSwr,
+} from "@/hooks/swr"
+import type { InboundSimulationStatusType, MutateSimulateInboundRequest, SimulateInboundType } from "@/hooks/swr"
+import { useActiveWorkspace } from "@/hooks/workspaces"
+import { toast, useGraphQLWithToast } from "@/modules/toast"
 import { useTranslations } from "next-intl"
 import { useCallback, useRef, useState } from "react"
 import { mutate } from "swr"
-import {
-    useMutateSimulateInboundSwr,
-    QUERY_INBOUND_EVENTS_SWR_KEY,
-    useQueryInboundSimulationStatusSwr,
-} from "@/hooks/swr"
-import { useActiveWorkspace } from "@/hooks/workspaces"
-import type { InboundSimulationStatusType, SimulateInboundType } from "@/modules/api"
-import type { MutateSimulateInboundRequest } from "@/modules/api/graphql/mutations/mutation-simulate-inbound"
-import { toast, useGraphQLWithToast } from "@/modules/toast"
 import { errorMessage } from "./inbox.shared"
 
 /** The delivery the person just sent: which workspace it went to, its receipt and how many times it was sent. */

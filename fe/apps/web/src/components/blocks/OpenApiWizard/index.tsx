@@ -24,7 +24,7 @@ export const OpenApiWizard = (props: OpenApiWizardProps) => {
     const tc = useTranslations("connections")
     const wizard = useOpenApiWizard({ resumeId: props.resumeId, onClose: props.onClose })
     const view = useOpenApiView(wizard)
-    const { source, picks, test, on } = wizard
+    const { source, picks, test } = wizard
     const hasPulls = picks.pulls.length > 0
     return (
         <OpenApiWizardBase
@@ -46,24 +46,7 @@ export const OpenApiWizard = (props: OpenApiWizardProps) => {
                 },
                 authReady: wizard.auth.ready,
                 auth: { values: wizard.auth.values, options: view.authOptions, text: view.authText },
-                pulls: {
-                    rows: view.pullRows,
-                    entityOptions: view.entityOptions,
-                    query: picks.pullQuery,
-                    isEmpty: picks.noGets,
-                    tooMany: view.tooMany,
-                    text: {
-                        hint: t("pullsHint"),
-                        search: t("search"),
-                        empty: t("noGets"),
-                        entity: t("entity"),
-                        itemsPath: t("itemsPath"),
-                        itemsPathHint: t("itemsPathHint"),
-                        idField: t("idField"),
-                        titleField: t("titleField"),
-                        fixedQuery: t("fixedQuery"),
-                    },
-                },
+                pulls: openApiPulls(picks, view, t),
                 tools: {
                     options: view.toolOptions,
                     value: picks.toolValue,
@@ -71,21 +54,7 @@ export const OpenApiWizard = (props: OpenApiWizardProps) => {
                     text: { hint: t("toolsHint"), search: t("search"), empty: t("noOps"), label: t("toolsLabel") },
                 },
                 schedule: { hasPulls, options: view.scheduleOptions, value: picks.schedule },
-                test: {
-                    options: view.testOptions,
-                    value: test.activeTestId,
-                    showQuery: test.testOp !== null && test.testPull === undefined,
-                    query: test.testQuery,
-                    note: view.testNote,
-                    fields: view.testFields,
-                    text: {
-                        hint: t("testHint"),
-                        empty: t("noGets"),
-                        operation: t("fieldTestOp"),
-                        query: t("fixedQuery"),
-                        testing: t("testing"),
-                    },
-                },
+                test: openApiTest(test, view, t),
                 canTest: test.testOp !== null && wizard.auth.ready,
                 canSave: source.name.trim() !== "",
                 agentStep: {
@@ -114,28 +83,79 @@ export const OpenApiWizard = (props: OpenApiWizardProps) => {
                     scheduleHint: hasPulls ? t("scheduleHint") : t("scheduleNone"),
                 },
             }}
-            on={{
-                go: on.go,
-                close: on.close,
-                loadSpec: on.loadSpec,
-                save: on.save,
-                runTest: test.runTest,
-                finish: on.finish,
-                name: source.setName,
-                specUrl: source.setSpecUrl,
-                specText: source.setSpecText,
-                authField: on.authField,
-                authType: on.authType,
-                pullQuery: picks.setPullQuery,
-                togglePull: picks.togglePull,
-                patchPull: picks.patchPull,
-                toolQuery: picks.setToolQuery,
-                tools: picks.pickTools,
-                schedule: picks.setSchedule,
-                testOperation: test.pickOp,
-                testQuery: test.setTestQuery,
-                agents: on.setAgentIds,
-            }}
+            on={openApiCommands(wizard)}
         />
     )
 }
+
+/** Connects the wizard commands to the presentational contract. */
+const openApiCommands = (wizard: ReturnType<typeof useOpenApiWizard>) => {
+    const { on, source, picks, test } = wizard
+    return {
+        go: on.go,
+        close: on.close,
+        loadSpec: on.loadSpec,
+        save: on.save,
+        runTest: test.runTest,
+        finish: on.finish,
+        name: source.setName,
+        specUrl: source.setSpecUrl,
+        specText: source.setSpecText,
+        authField: on.authField,
+        authType: on.authType,
+        pullQuery: picks.setPullQuery,
+        togglePull: picks.togglePull,
+        patchPull: picks.patchPull,
+        toolQuery: picks.setToolQuery,
+        tools: picks.pickTools,
+        schedule: picks.setSchedule,
+        testOperation: test.pickOp,
+        testQuery: test.setTestQuery,
+        agents: on.setAgentIds,
+    }
+}
+
+/** Resolves the pull operation picker and its labels. */
+const openApiPulls = (
+    picks: ReturnType<typeof useOpenApiWizard>["picks"],
+    view: ReturnType<typeof useOpenApiView>,
+    t: ReturnType<typeof useTranslations<"connectorOpenapi">>,
+) => ({
+    rows: view.pullRows,
+    entityOptions: view.entityOptions,
+    query: picks.pullQuery,
+    isEmpty: picks.noGets,
+    tooMany: view.tooMany,
+    text: {
+        hint: t("pullsHint"),
+        search: t("search"),
+        empty: t("noGets"),
+        entity: t("entity"),
+        itemsPath: t("itemsPath"),
+        itemsPathHint: t("itemsPathHint"),
+        idField: t("idField"),
+        titleField: t("titleField"),
+        fixedQuery: t("fixedQuery"),
+    },
+})
+
+/** Resolves the selected test operation and its field labels. */
+const openApiTest = (
+    test: ReturnType<typeof useOpenApiWizard>["test"],
+    view: ReturnType<typeof useOpenApiView>,
+    t: ReturnType<typeof useTranslations<"connectorOpenapi">>,
+) => ({
+    options: view.testOptions,
+    value: test.activeTestId,
+    showQuery: test.testOp !== null && test.testPull === undefined,
+    query: test.testQuery,
+    note: view.testNote,
+    fields: view.testFields,
+    text: {
+        hint: t("testHint"),
+        empty: t("noGets"),
+        operation: t("fieldTestOp"),
+        query: t("fixedQuery"),
+        testing: t("testing"),
+    },
+})

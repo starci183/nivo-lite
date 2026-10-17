@@ -1,4 +1,5 @@
-import { isProvider } from "@/hooks/connection-providers"
+import type { useTranslations } from "next-intl"
+import { PROVIDER_GROUPS, isProvider, providerKey } from "@/hooks/connection-providers"
 import type { Connection, ConnectionStatus, Provider, ProviderGroupId } from "@/modules/types"
 
 /** The catalog key of a provider group heading. */
@@ -63,7 +64,9 @@ export const wizardQuery = (provider: Provider, connectionId?: string): string =
     return params.toString()
 }
 
-/** What the open wizard drawer is told by the URL: the provider, the connection it resumes and an OAuth return state. */
+/**
+ * What the open wizard drawer is told by the URL: the provider, the connection it resumes and an OAuth return state.
+ */
 export interface WizardTarget {
     readonly provider: Provider
     readonly resumeId?: string
@@ -86,8 +89,9 @@ const returnedOf = (read: ParamReader, name: string): { readonly returned?: stri
 }
 
 /**
- * Which wizard the URL asks for. An OAuth return names its connection with `id` (Zalo or Meta), a Google return has `google`,
- * and the console opens its own with `connect` and an optional `conn`. A resume id counts only when the workspace owns it.
+ * Which wizard the URL asks for. An OAuth return names its connection with `id` (Zalo or Meta), a Google return has
+ * `google`, and the console opens its own with `connect` and an optional `conn`. A resume id counts only when the
+ * workspace owns it.
  */
 export const wizardTargetOf = (
     read: ParamReader,
@@ -114,7 +118,10 @@ export const moneyProviderOf = (provider: Provider): MoneyProviderId | null => {
     return null
 }
 
-/** True when providers cannot reach the site: no address, plain http, or a local host (a webhook cannot be registered there). */
+/**
+ * True when providers cannot reach the site: no address, plain http, or a local host (a webhook cannot be registered
+ * there).
+ */
 export const isLocalOnly = (siteUrl: string | undefined): boolean => {
     if (siteUrl === undefined || !URL.canParse(siteUrl)) return true
     const url = new URL(siteUrl)
@@ -124,4 +131,30 @@ export const isLocalOnly = (siteUrl: string | undefined): boolean => {
         url.hostname === "127.0.0.1" ||
         url.hostname === "[::1]"
     return url.protocol !== "https:" || local
+}
+
+/** Build the provider groups and their connection rows for the overview. */
+export const connectionGroups = (
+    items: ReadonlyArray<Connection>,
+    agentNames: Readonly<Record<string, string>>,
+    t: ReturnType<typeof useTranslations<"connections">>,
+) => {
+    const namesOf = (agentIds: ReadonlyArray<string>) =>
+        agentIds.map((id) => agentNames[id]).filter((name): name is string => name !== undefined)
+    return PROVIDER_GROUPS.map((group) => ({
+        id: group.id,
+        title: t(GROUP_TITLE_KEY[group.id]),
+        count: items.filter((item) => group.providers.includes(item.provider)).length,
+        cards: group.providers
+            .filter((provider) => items.some((item) => item.provider === provider))
+            .map((provider) => {
+                const rows = sortRows(items.filter((item) => item.provider === provider))
+                return {
+                    provider,
+                    title: t(providerKey(provider, "title")),
+                    fact: t("connectionCount", { count: rows.length }),
+                    rows: rows.map((connection) => ({ connection, agentNames: namesOf(connection.agentIds) })),
+                }
+            }),
+    })).filter((group) => group.cards.length > 0)
 }

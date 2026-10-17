@@ -7,6 +7,7 @@ import type { PipelineLane } from "@/hooks/hiringPipeline"
 import { useHiringBenchStore } from "@/hooks/zustand/hiringBench"
 import type { CandidateView } from "@/hooks/hiringWire"
 import { HiringPipelineBase } from "./component"
+import type { HiringPipelineBaseProps } from "./component"
 
 /** The connected candidates tab: the pipeline of one job (or all) and the moves between its stages. */
 export const HiringPipeline = () => {
@@ -41,12 +42,6 @@ export const HiringPipeline = () => {
             label: t(`stage_${stage}`),
         })),
     })
-    const laneOf = (lane: PipelineLane) => ({
-        stage: lane.stage,
-        label: t(`stage_${lane.stage}`),
-        count: String(lane.candidates.length),
-        cards: lane.candidates.map(cardOf),
-    })
     return (
         <HiringPipelineBase
             props={{
@@ -56,7 +51,7 @@ export const HiringPipeline = () => {
                     { id: ALL_JOBS, label: t("pipeAllJobs") },
                     ...data.jobs.map((job) => ({ id: job.id, label: job.title })),
                 ],
-                lanes: pipeline.lanes.map(laneOf),
+                lanes: pipeline.lanes.map((lane) => laneOf(lane, t, cardOf)),
                 hasNoCandidates: data.candidates.length === 0,
                 withdrawnNote: pipeline.withdrawn > 0 ? t("pipeWithdrawn", { n: pipeline.withdrawn }) : null,
                 overStage: pipeline.overStage,
@@ -91,3 +86,15 @@ export const HiringPipeline = () => {
         />
     )
 }
+
+/** The resolved heading and cards in one stage. */
+const laneOf = (
+    lane: PipelineLane,
+    t: ReturnType<typeof useTranslations<"hiring">>,
+    cardOf: (candidate: CandidateView) => HiringPipelineBaseProps["props"]["lanes"][number]["cards"][number],
+) => ({
+    stage: lane.stage,
+    label: t(`stage_${lane.stage}`),
+    count: String(lane.candidates.length),
+    cards: lane.candidates.map(cardOf),
+})

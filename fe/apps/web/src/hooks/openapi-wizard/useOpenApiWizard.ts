@@ -1,15 +1,12 @@
 "use client"
 
-import { useState, useTransition } from "react"
+import { OPEN_API_EDIT_STEPS, OPEN_API_STEPS, openApiAuthTypeOf } from "./openapi-wizard.shared"
+import type { OpenApiStep, OpenApiAuthField } from "./openapi-wizard.shared"
+import { useOpenApiWizardCommands } from "./useOpenApiWizardCommands"
 import { useConnectionsRefresh, useSetConnectionAgents, useSyncNow } from "@/hooks/connections"
 import { useOpenApiAuthForm } from "@/hooks/rhf"
-import {
-    OPEN_API_EDIT_STEPS,
-    OPEN_API_STEPS,
-    openApiAuthTypeOf,
-    openApiScheduleMinutesOf,
-} from "./openapi-wizard.shared"
-import type { OpenApiAuthField } from "./openapi-wizard.shared"
+import type { OpenApiAuthValues } from "@/hooks/rhf"
+import { useState } from "react"
 import { useOpenApiCommands } from "./useOpenApiCommands"
 import { useOpenApiPicks } from "./useOpenApiPicks"
 import { useOpenApiResume } from "./useOpenApiResume"
@@ -39,11 +36,9 @@ export const useOpenApiWizard = ({ resumeId, onClose }: OpenApiWizardInput) => {
     const [connId, setConnId] = useState<string | null>(resumeId ?? null)
     const [agentIds, setAgentIds] = useState<ReadonlyArray<string>>([])
     const [error, setError] = useState<string | null>(null)
-    const [isPending, startTransition] = useTransition()
 
     const steps = editing ? OPEN_API_EDIT_STEPS : OPEN_API_STEPS
     const step = steps[index] ?? "source"
-    const auth = authForm.watch()
     const loadError = useOpenApiResume({
         resumeId,
         authForm,
@@ -52,20 +47,7 @@ export const useOpenApiWizard = ({ resumeId, onClose }: OpenApiWizardInput) => {
         restorePicks: picks.restore,
     })
 
-    const go = (to: number) => {
-        setError(null)
-        setIndex(to)
-    }
-    const authInput = () => {
-        const values = authForm.getValues()
-        return {
-            type: values.authType,
-            name: values.authName,
-            value: values.authValue,
-            user: values.authUser,
-            password: values.authPassword,
-        }
-    }
+    const authInput = () => openApiAuthInputOf(authForm.getValues())
     const test = useOpenApiTest({
         ops: source.ops,
         pulls: picks.pulls,
@@ -76,61 +58,69 @@ export const useOpenApiWizard = ({ resumeId, onClose }: OpenApiWizardInput) => {
         fail: setError,
     })
 
-    const loadSpec = () =>
-        startTransition(async () => {
-            setError(null)
-            const answer = await commands.loadSpec(source.specUrl, source.specText)
-            if (answer.kind !== "ok") return setError(answer.message)
-            const spec = answer.value
-            source.loaded(spec.ops)
-            if (!authForm.getValues("baseUrl").trim())
-                authForm.setValue("baseUrl", spec.baseUrl, { shouldValidate: true })
-            if (authForm.getValues("authType") === "none" && !source.hasSecret) {
-                authForm.setValue("authType", spec.authType, { shouldValidate: true })
-                authForm.setValue("authName", spec.authName, { shouldValidate: true })
-            }
-            if (!source.name.trim() && spec.title) source.setName(spec.title)
-            picks.keepOnly(new Set(spec.ops.map((op) => op.id)))
-            go(1)
-        })
+    const { loadSpec, save, go, finish, isPending } = useOpenApiWizardCommands(
+        setError,
+        commands,
+        source,
+        authForm,
+        picks,
+        connId,
+        authInput,
+        setConnId,
+        startSync,
+        editing,
+        onClose,
+        index,
+        setIndex,
+        setConnectionAgents,
+        agentIds,
+        refresh,
+    )
 
-    const save = () =>
-        startTransition(async () => {
-            setError(null)
-            const keep = new Set([...picks.pulls.map((pull) => pull.opId), ...picks.tools])
-            const values = authForm.getValues()
-            const answer = await commands.save({
-                connectionId: connId,
-                name: source.name,
-                auth: authInput(),
-                syncEveryMinutes: openApiScheduleMinutesOf(picks.schedule),
-                config: {
-                    v: 1,
-                    specUrl: source.specUrl.trim(),
-                    baseUrl: values.baseUrl.trim(),
-                    authType: values.authType,
-                    authName: values.authName.trim(),
-                    ops: source.ops.filter((op) => keep.has(op.id)),
-                    pulls: picks.pulls,
-                    tools: picks.tools,
-                },
-            })
-            if (answer.kind !== "ok") return setError(answer.message)
-            setConnId(answer.value)
-            if (picks.pulls.length > 0) void startSync(answer.value)
-            if (editing) return onClose(true)
-            go(index + 1)
-        })
+    return viewOf(
+        index,
+        steps,
+        step,
+        editing,
+        error,
+        loadError,
+        isPending,
+        authForm.watch(),
+        authForm,
+        source,
+        picks,
+        test,
+        agentIds,
+        go,
+        loadSpec,
+        save,
+        finish,
+        setAgentIds,
+        onClose,
+    )
+}
 
-    const finish = () =>
-        startTransition(async () => {
-            if (!connId) return onClose(false)
-            const answer = await setConnectionAgents(connId, agentIds)
-            if (answer.kind !== "ok") return setError(answer.message)
-            await refresh()
-            onClose(true)
-        })
-
+const viewOf = (
+    index: number,
+    steps: readonly OpenApiStep[],
+    step: OpenApiStep,
+    editing: boolean,
+    error: string | null,
+    loadError: ReturnType<typeof useOpenApiResume>,
+    isPending: boolean,
+    auth: OpenApiAuthValues,
+    authForm: ReturnType<typeof useOpenApiAuthForm>,
+    source: ReturnType<typeof useOpenApiSource>,
+    picks: ReturnType<typeof useOpenApiPicks>,
+    test: ReturnType<typeof useOpenApiTest>,
+    agentIds: readonly string[],
+    go: (to: number) => void,
+    loadSpec: () => void,
+    save: () => void,
+    finish: () => void,
+    setAgentIds: import("react").Dispatch<import("react").SetStateAction<ReadonlyArray<string>>>,
+    onClose: (changed: boolean) => void,
+) => {
     return {
         index,
         steps,
@@ -167,3 +157,12 @@ export const useOpenApiWizard = ({ resumeId, onClose }: OpenApiWizardInput) => {
         },
     }
 }
+
+/** The authentication values sent in an OpenAPI target. */
+const openApiAuthInputOf = (values: OpenApiAuthValues) => ({
+    type: values.authType,
+    name: values.authName,
+    value: values.authValue,
+    user: values.authUser,
+    password: values.authPassword,
+})

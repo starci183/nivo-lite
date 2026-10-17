@@ -1,10 +1,9 @@
 export {
-    agentChoicesOf,
-    answeredData,
-    allAgentIds,
     EMPTY_GUIDE_CONTEXT,
-    guideScreensOf,
     POLL_MS,
+    agentChoicesOf,
+    allAgentIds,
+    guideScreensOf,
     resumeNoteOf,
     verifyHelpOf,
 } from "./connection-wizard.shared"

@@ -49,6 +49,65 @@ type PayDrawerBaseProps = {
 
 /** Draws a paid confirmation, an expired transfer, or copyable bank details with a VietQR code. */
 export const PayDrawerBase = (props: PayDrawerBaseProps) => {
+    return (
+        <Drawer
+            title={props.props.title}
+            description={props.props.description}
+            isOpen={props.state.isOpen}
+            onOpenChange={(open) => {
+                if (!open) props.on.close()
+            }}
+            closeLabel={props.props.closeLabel}
+            placement="right"
+            footer={
+                <Button variant="secondary" onPress={props.on.close}>
+                    {props.props.closeLabel}
+                </Button>
+            }
+        >
+            <PaymentContent {...props} />
+        </Drawer>
+    )
+}
+
+/** Renders the PaymentQr section. */
+type PaymentQrProps = Pick<PayDrawerBaseProps, "props" | "state">
+
+const PaymentQr = (props: PaymentQrProps) => {
+    return (
+        <>
+            <div className={QR_WRAP_CLASS_NAME}>
+                <Text size="sm" weight="medium">
+                    {props.props.scanLabel}
+                </Text>
+                {props.state.isBankConfigured ? (
+                    <div className={QR_CLASS_NAME}>
+                        <MediaFrame aspect="square" fit="contain">
+                            <Image
+                                src={props.props.qrUrl}
+                                alt={props.props.qrAlt}
+                                width={256}
+                                height={256}
+                                aspect="square"
+                                fit="contain"
+                            />
+                        </MediaFrame>
+                    </div>
+                ) : (
+                    <Alert tone="cautionary" title={props.props.unconfiguredLabel} />
+                )}
+                {props.props.countdown === null ? null : (
+                    <Text size="sm" tone="muted">
+                        {props.props.countdown}
+                    </Text>
+                )}
+            </div>
+        </>
+    )
+}
+
+/** Selects the settlement notice or the awaiting transfer details. */
+const PaymentContent = (props: PayDrawerBaseProps) => {
     let content
     if (props.state.view === "paid") {
         content = <Alert tone="affirmative" title={props.props.paidTitle} description={props.props.paidDescription} />
@@ -77,32 +136,7 @@ export const PayDrawerBase = (props: PayDrawerBaseProps) => {
     } else {
         content = (
             <div className={PAY_CLASS_NAME}>
-                <div className={QR_WRAP_CLASS_NAME}>
-                    <Text size="sm" weight="medium">
-                        {props.props.scanLabel}
-                    </Text>
-                    {props.state.isBankConfigured ? (
-                        <div className={QR_CLASS_NAME}>
-                            <MediaFrame aspect="square" fit="contain">
-                                <Image
-                                    src={props.props.qrUrl}
-                                    alt={props.props.qrAlt}
-                                    width={256}
-                                    height={256}
-                                    aspect="square"
-                                    fit="contain"
-                                />
-                            </MediaFrame>
-                        </div>
-                    ) : (
-                        <Alert tone="cautionary" title={props.props.unconfiguredLabel} />
-                    )}
-                    {props.props.countdown === null ? null : (
-                        <Text size="sm" tone="muted">
-                            {props.props.countdown}
-                        </Text>
-                    )}
-                </div>
+                <PaymentQr {...props} />
                 <DescriptionList
                     layout="stacked"
                     items={[
@@ -144,23 +178,5 @@ export const PayDrawerBase = (props: PayDrawerBaseProps) => {
         )
     }
 
-    return (
-        <Drawer
-            title={props.props.title}
-            description={props.props.description}
-            isOpen={props.state.isOpen}
-            onOpenChange={(open) => {
-                if (!open) props.on.close()
-            }}
-            closeLabel={props.props.closeLabel}
-            placement="right"
-            footer={
-                <Button variant="secondary" onPress={props.on.close}>
-                    {props.props.closeLabel}
-                </Button>
-            }
-        >
-            {content}
-        </Drawer>
-    )
+    return content
 }

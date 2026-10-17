@@ -1,10 +1,10 @@
+import { ContentEditorAssets } from "@/components/composites/ContentEditorAssets"
 import { Alert, AlertDialog, Button, Dialog, Text, type BadgeTone } from "@starci/grammar/common"
 import { ContentEditorDetails } from "@/components/leaves/ContentEditorDetails"
 import { ContentEditorHistory } from "@/components/leaves/ContentEditorHistory"
-import { ContentEditorLinks, type LinkRow } from "@/components/leaves/ContentEditorLinks"
-import { ContentEditorMedia } from "@/components/leaves/ContentEditorMedia"
-import { ContentEditorPublish, type PublishProof } from "@/components/leaves/ContentEditorPublish"
-import { ContentEditorVariants, type OpenVariant } from "@/components/leaves/ContentEditorVariants"
+import type { LinkRow } from "@/components/leaves/ContentEditorLinks"
+import type { PublishProof } from "@/components/leaves/ContentEditorPublish"
+import type { OpenVariant } from "@/components/leaves/ContentEditorVariants"
 import { ContentStatusBadge } from "@/components/leaves/ContentStatusBadge"
 import type {
     ContentItem,
@@ -88,19 +88,9 @@ export interface ContentPostEditorBaseProps {
 
 /** Draws the post editor: details, the text of each channel, media, links, the "post it" step once approved, the history and the commands. */
 export const ContentPostEditorBase = (props: ContentPostEditorBaseProps) => {
-    const { t, item, form, isEditable, canManage, isPending, busy } = props.props
+    const { t, item, canManage, busy } = props.props
     const on = props.on
-    const status = item.status
-    const transitionButton = (kind: ItemTransition, label: string, variant: "outline" | "ghost") => (
-        <Button
-            variant={variant}
-            isPending={busy === "transition"}
-            isDisabled={isPending}
-            onPress={() => on.transition(kind)}
-        >
-            {label}
-        </Button>
-    )
+
     return (
         <Dialog
             isOpen
@@ -125,149 +115,9 @@ export const ContentPostEditorBase = (props: ContentPostEditorBaseProps) => {
                     ) : null}
                 </div>
             }
-            footer={
-                canManage ? (
-                    <div className={FOOTER_CLASS_NAME}>
-                        {["idea", "draft", "skipped"].includes(status) ? (
-                            <Button variant="danger-soft" isDisabled={isPending} onPress={() => on.deleteOpen(true)}>
-                                {t("remove")}
-                            </Button>
-                        ) : null}
-                        {["idea", "draft", "approved"].includes(status)
-                            ? transitionButton("skip", t("skip"), "ghost")
-                            : null}
-                        {status === "approved" ? transitionButton("reopen", t("reopen"), "outline") : null}
-                        {status === "skipped" ? transitionButton("restore", t("restore"), "outline") : null}
-                        {isEditable ? (
-                            <Button
-                                variant="outline"
-                                isPending={busy === "save"}
-                                isDisabled={isPending}
-                                onPress={on.save}
-                            >
-                                {t("save")}
-                            </Button>
-                        ) : null}
-                        {status === "draft" ? (
-                            <Button
-                                variant="primary"
-                                isPending={busy === "submit"}
-                                isDisabled={isPending || props.props.missingText}
-                                onPress={on.submit}
-                            >
-                                {t("submit")}
-                            </Button>
-                        ) : null}
-                    </div>
-                ) : undefined
-            }
+            footer={canManage ? renderEditorFooter(props) : undefined}
         >
-            <div className={FORM_CLASS_NAME}>
-                {props.props.note ? (
-                    <Alert
-                        title={props.props.note.text}
-                        tone={props.props.note.tone === "ok" ? "affirmative" : "negative"}
-                        dismissLabel={t("close")}
-                        onDismiss={on.dismissNote}
-                    />
-                ) : null}
-                {status === "waiting_approval" || status === "approved" ? (
-                    <Text size="sm" tone="muted">
-                        {t("frozenNote")}
-                    </Text>
-                ) : null}
-                {item.holiday_key ? (
-                    <Text size="sm" tone="muted">
-                        {t("holidayTag")}: {item.holiday_key}
-                    </Text>
-                ) : null}
-                {status === "draft" && props.props.missingText ? (
-                    <Text size="xs" tone="muted">
-                        {t("submitNeedText")}
-                    </Text>
-                ) : null}
-                <ContentEditorDetails
-                    title={form.title}
-                    brief={form.brief}
-                    pillarId={form.pillarId}
-                    channels={form.channels}
-                    channelOptions={props.props.channelOptions}
-                    date={form.date}
-                    time={form.time}
-                    pillars={props.props.pillars}
-                    hint={props.props.hint}
-                    warnings={props.props.warnings}
-                    isEditable={isEditable}
-                    isDateLocked={status === "published" || !canManage || isPending}
-                    isPending={isPending}
-                    isDrafting={busy === "draft"}
-                    hasDraftText={props.props.hasDraftText}
-                    t={t}
-                    onTitle={(title) => on.patch({ title })}
-                    onBrief={(brief) => on.patch({ brief })}
-                    onPillar={(pillarId) => on.patch({ pillarId })}
-                    onChannels={on.channels}
-                    onDate={(date) => on.patch({ date })}
-                    onTime={(time) => on.patch({ time })}
-                    onHint={on.hint}
-                    onDraft={on.draft}
-                />
-                {props.props.openVariant ? (
-                    <ContentEditorVariants
-                        tabs={props.props.tabs}
-                        open={props.props.openVariant}
-                        isEditable={isEditable && !isPending}
-                        t={t}
-                        onTab={on.tab}
-                        onText={on.text}
-                        onNote={on.note}
-                        onTags={on.tags}
-                    />
-                ) : null}
-                <ContentEditorMedia
-                    media={props.props.media}
-                    library={props.props.library}
-                    videos={props.props.videos}
-                    isEditable={isEditable}
-                    isPending={isPending}
-                    isUploading={busy === "upload"}
-                    isLibraryOpen={props.props.isLibraryOpen}
-                    t={t}
-                    onRemove={on.removeMedia}
-                    onToggleLibrary={on.toggleLibrary}
-                    onAttach={on.attach}
-                    onAttachVideo={on.attachVideo}
-                    onUpload={on.upload}
-                />
-                <ContentEditorLinks
-                    links={props.props.linkRows}
-                    isEditable={isEditable && !isPending}
-                    t={t}
-                    onChange={on.link}
-                    onAdd={on.addLink}
-                    onRemove={on.removeLink}
-                />
-                {status === "approved" || status === "published" ? (
-                    <ContentEditorPublish
-                        steps={props.props.steps}
-                        files={props.props.files}
-                        proof={props.props.proof}
-                        canManage={canManage}
-                        isPending={isPending}
-                        busy={busy}
-                        t={t}
-                        onProof={on.proof}
-                        onCopy={on.copy}
-                        onMark={on.mark}
-                    />
-                ) : null}
-                <ContentEditorHistory rows={props.props.history} t={t} />
-                {status === "approved" ? (
-                    <Text size="xs" tone="muted">
-                        {t("reopenNote")}
-                    </Text>
-                ) : null}
-            </div>
+            {renderEditorBody(props)}
             <AlertDialog
                 isOpen={props.props.isDeleteOpen}
                 onOpenChange={on.deleteOpen}
@@ -285,3 +135,128 @@ export const ContentPostEditorBase = (props: ContentPostEditorBaseProps) => {
         </Dialog>
     )
 }
+
+/** Draws the div section of the ContentPostEditor view. */
+const renderEditorFooter = (props: ContentPostEditorBaseProps) => {
+    const { t, item, isEditable, isPending, busy } = props.props
+    const on = props.on
+    const status = item.status
+    const transitionButton = (kind: ItemTransition, label: string, variant: "outline" | "ghost") => (
+        <Button
+            variant={variant}
+            isPending={busy === "transition"}
+            isDisabled={isPending}
+            onPress={() => on.transition(kind)}
+        >
+            {label}
+        </Button>
+    )
+
+    return (
+        <div className={FOOTER_CLASS_NAME}>
+            {["idea", "draft", "skipped"].includes(status) ? (
+                <Button variant="danger-soft" isDisabled={isPending} onPress={() => on.deleteOpen(true)}>
+                    {t("remove")}
+                </Button>
+            ) : null}
+            {["idea", "draft", "approved"].includes(status) ? transitionButton("skip", t("skip"), "ghost") : null}
+            {status === "approved" ? transitionButton("reopen", t("reopen"), "outline") : null}
+            {status === "skipped" ? transitionButton("restore", t("restore"), "outline") : null}
+            {isEditable ? (
+                <Button variant="outline" isPending={busy === "save"} isDisabled={isPending} onPress={on.save}>
+                    {t("save")}
+                </Button>
+            ) : null}
+            {status === "draft" ? (
+                <Button
+                    variant="primary"
+                    isPending={busy === "submit"}
+                    isDisabled={isPending || props.props.missingText}
+                    onPress={on.submit}
+                >
+                    {t("submit")}
+                </Button>
+            ) : null}
+        </div>
+    )
+}
+
+/** Draws the ContentEditorDetails section of the ContentPostEditor view. */
+const renderEditorDetails = (props: ContentPostEditorBaseProps) => {
+    const { t, item, form, isEditable, canManage, isPending, busy } = props.props
+    const on = props.on
+    const status = item.status
+
+    return (
+        <ContentEditorDetails
+            title={form.title}
+            brief={form.brief}
+            pillarId={form.pillarId}
+            channels={form.channels}
+            channelOptions={props.props.channelOptions}
+            date={form.date}
+            time={form.time}
+            pillars={props.props.pillars}
+            hint={props.props.hint}
+            warnings={props.props.warnings}
+            isEditable={isEditable}
+            isDateLocked={status === "published" || !canManage || isPending}
+            isPending={isPending}
+            isDrafting={busy === "draft"}
+            hasDraftText={props.props.hasDraftText}
+            t={t}
+            onTitle={(title) => on.patch({ title })}
+            onBrief={(brief) => on.patch({ brief })}
+            onPillar={(pillarId) => on.patch({ pillarId })}
+            onChannels={on.channels}
+            onDate={(date) => on.patch({ date })}
+            onTime={(time) => on.patch({ time })}
+            onHint={on.hint}
+            onDraft={on.draft}
+        />
+    )
+}
+
+/** Draws the editor notices, fields and publishing history. */
+const renderEditorBody = (props: ContentPostEditorBaseProps) => {
+    const { t, item } = props.props
+    const on = props.on
+    const status = item.status
+    return (
+        <div className={FORM_CLASS_NAME}>
+            {props.props.note ? (
+                <Alert
+                    title={props.props.note.text}
+                    tone={props.props.note.tone === "ok" ? "affirmative" : "negative"}
+                    dismissLabel={t("close")}
+                    onDismiss={on.dismissNote}
+                />
+            ) : null}
+            {status === "waiting_approval" || status === "approved" ? (
+                <Text size="sm" tone="muted">
+                    {t("frozenNote")}
+                </Text>
+            ) : null}
+            {item.holiday_key ? (
+                <Text size="sm" tone="muted">
+                    {t("holidayTag")}: {item.holiday_key}
+                </Text>
+            ) : null}
+            {status === "draft" && props.props.missingText ? (
+                <Text size="xs" tone="muted">
+                    {t("submitNeedText")}
+                </Text>
+            ) : null}
+            {renderEditorDetails(props)}
+            <ContentEditorAssets {...props} />
+            <ContentEditorHistory rows={props.props.history} t={t} />
+            {status === "approved" ? (
+                <Text size="xs" tone="muted">
+                    {t("reopenNote")}
+                </Text>
+            ) : null}
+        </div>
+    )
+}
+
+/** Draws the channel variants, attached media, links and publishing proof. */

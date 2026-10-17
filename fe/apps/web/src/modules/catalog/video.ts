@@ -5,7 +5,7 @@ export const VIDEO = {
     key: "video",
     order: 80,
     icon: "apps",
-    glyph: "M4 6h12v12H4zM16 10l5-3v10l-5-3z",
+    glyph: "moduleVideo",
     mascot: "/images/promo/mascot-celebrate.png",
     category: "marketing",
     status: "early",

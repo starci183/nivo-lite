@@ -5,7 +5,7 @@ export const BOOKING = {
     key: "booking",
     order: 50,
     icon: "saved",
-    glyph: "M5 5h14v15H5zM5 10h14M9 3v4M15 3v4M9 14h2v2H9z",
+    glyph: "moduleBooking",
     mascot: "/images/promo/mascot-point.png",
     category: "operations",
     status: "early",

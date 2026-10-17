@@ -1,8 +1,8 @@
 "use client"
 
-import { useTranslations } from "next-intl"
 import { useMutateRequestContentDraftSwr } from "@/hooks/swr"
-import type { ContentAiStatusType } from "@/modules/api"
+import type { ContentAiStatusType } from "@/hooks/swr"
+import { useTranslations } from "next-intl"
 import { useContentAiJob } from "./useContentAiJob"
 
 /** Requests a saved item draft and keeps the editor busy until its queued work finishes. */

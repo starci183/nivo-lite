@@ -1,8 +1,5 @@
 "use client"
 
-import { useLocale, useTranslations } from "next-intl"
-import { useCallback } from "react"
-import { useSWRConfig } from "swr"
 import {
     QUERY_AGENT_DASHBOARD_SWR_KEY,
     QUERY_CHAT_ANSWER_STATUS_SWR_KEY,
@@ -15,6 +12,9 @@ import {
 } from "@/hooks/swr"
 import { CHATBOT_IDLE, useChatbotStore } from "@/hooks/zustand/chatbot"
 import { useGraphQLWithToast } from "@/modules/toast"
+import { useLocale, useTranslations } from "next-intl"
+import { useCallback } from "react"
+import { useSWRConfig } from "swr"
 import type { ChatbotTranslator } from "./chatbot.shared"
 
 /** The SWR keys whose data a finished delivery or a decision changes. */
@@ -55,18 +55,7 @@ export const useChatbotActions = (workspaceId: string, userId: string) => {
         [mutate, workspaceId],
     )
 
-    const settle = (progress: DeliveryProgress) => {
-        if (job === undefined || (progress.status !== "succeeded" && progress.status !== "failed")) return
-        const message = noticeOf(t, job.kind, job.declined, progress.status)
-        const feedback =
-            progress.status === "failed" ? { conversationId: job.conversationId, kind: job.kind, message } : null
-        if (!useChatbotStore.getState().finish(identity, job, feedback)) return
-        void runGraphQL(
-            () => (progress.status === "failed" ? Promise.reject(new Error(message)) : Promise.resolve(progress)),
-            { successMessage: message },
-        )
-        void refresh()
-    }
+    const settle = createDeliverySettlement(t, job, identity, runGraphQL, refresh)
 
     const reportReadError = (error: unknown) => {
         if (job === undefined) return
@@ -128,3 +117,25 @@ export const useChatbotActions = (workspaceId: string, userId: string) => {
         busy: state.requesting ?? job?.kind ?? null,
     }
 }
+
+/** Builds the settle command from the current render state. */
+const createDeliverySettlement =
+    (
+        t: ChatbotTranslator,
+        job: ReturnType<typeof useChatbotStore.getState>["actions"][string]["job"],
+        identity: string,
+        runGraphQL: ReturnType<typeof useGraphQLWithToast>,
+        refresh: () => unknown,
+    ) =>
+    (progress: DeliveryProgress) => {
+        if (job === undefined || (progress.status !== "succeeded" && progress.status !== "failed")) return
+        const message = noticeOf(t, job.kind, job.declined, progress.status)
+        const feedback =
+            progress.status === "failed" ? { conversationId: job.conversationId, kind: job.kind, message } : null
+        if (!useChatbotStore.getState().finish(identity, job, feedback)) return
+        void runGraphQL(
+            () => (progress.status === "failed" ? Promise.reject(new Error(message)) : Promise.resolve(progress)),
+            { successMessage: message },
+        )
+        void refresh()
+    }

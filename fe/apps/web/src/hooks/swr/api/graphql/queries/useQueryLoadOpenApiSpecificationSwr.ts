@@ -1,11 +1,12 @@
 "use client"
 
-import useSWRMutation from "swr/mutation"
 import { queryLoadOpenApiSpec } from "@/modules/api/graphql/queries/query-load-open-api-specification"
+import type { queryLoadOpenApiSpec as QueryLoadOpenApiSpecOperation } from "@/modules/api/graphql/queries/query-load-open-api-specification"
+import useSWRMutation from "swr/mutation"
 
 /** What the loadOpenApiSpec query is triggered with. */
 interface LoadOpenApiSpecificationArg {
-    readonly arg: Parameters<typeof queryLoadOpenApiSpec>[0]["request"]
+    readonly arg: Parameters<typeof QueryLoadOpenApiSpecOperation>[0]["request"]
 }
 
 /** The SWR key of the loadOpenApiSpec query from a link or pasted text. */

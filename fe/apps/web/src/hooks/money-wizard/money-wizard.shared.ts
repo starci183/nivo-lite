@@ -1,7 +1,11 @@
+import { VN_BANK_CODES } from "@/hooks/banks"
 import type { GuideContext } from "@/hooks/connection-guides"
 import type { PROVIDERS } from "@/hooks/connection-providers"
-import { VN_BANK_CODES } from "@/hooks/banks"
-import type { Environment, MoneyProvider, WizardConnection } from "@/modules/types"
+import { resumeNoteOf } from "@/hooks/connection-wizard"
+import type { useFirstEvent } from "@/hooks/connections"
+import type { useQueryMoneyConnectionSwr } from "@/hooks/swr"
+import type { Environment, MoneyProvider, WizardConnection, WizardNote } from "@/modules/types"
+import type { MoneyWizardInput, NavInput1 } from "./useMoneyWizard"
 
 /** The steps of the bank and payment wizard, in order. */
 export const MONEY_STEPS = ["env", "account", "follow", "verify", "agent"] as const
@@ -89,5 +93,72 @@ export const moneyFlagsOf = (
         needsKeys,
         keysFilled: def.credentials.every((key) => (follow.values[key] ?? "").trim().length >= MIN_KEY_LENGTH),
         keysDone: !needsKeys || (follow.keysSaved && !Object.values(follow.values).some(Boolean)),
+    }
+}
+
+/** Assembles the resolved domain state and commands for its drawing. */
+export const viewOf = (
+    nav: NavInput1,
+    step: (typeof MONEY_STEPS)[number],
+    input: MoneyWizardInput,
+    resume: ReturnType<typeof useQueryMoneyConnectionSwr>,
+    form: AccountForm,
+    conn: WizardConnection | null,
+    follow: FollowDraft,
+    note: WizardNote | null,
+    agentIds: readonly string[],
+    isPending: boolean,
+    received: boolean,
+    watch: ReturnType<typeof useFirstEvent>,
+    flags: MoneyFlags,
+    go: (to: number) => void,
+    create: () => void,
+    followDone: () => void,
+    finish: () => void,
+    setNote: import("react").Dispatch<import("react").SetStateAction<WizardNote | null>>,
+    setNav: import("react").Dispatch<import("react").SetStateAction<{ index: number; skipped: boolean }>>,
+    setForm: import("react").Dispatch<import("react").SetStateAction<AccountForm>>,
+    setFollow: import("react").Dispatch<import("react").SetStateAction<FollowDraft>>,
+    setAgentIds: import("react").Dispatch<import("react").SetStateAction<ReadonlyArray<string>>>,
+) => {
+    return {
+        index: nav.index,
+        step,
+        isLoading: input.resumeId !== undefined && resume.data === undefined && resume.error === undefined,
+        form,
+        conn,
+        follow,
+        note: resumeNoteOf(note, resume.error),
+        agentIds,
+        isPending,
+        received,
+        firstEvent: watch.event ?? (conn === null ? null : conn.firstEvent),
+        hasCheckFailed: watch.failed,
+        hasSkipped: nav.skipped,
+        flags,
+        context: moneyContextOf(form, conn),
+        on: {
+            go,
+            create,
+            followDone,
+            finish,
+            skip: () => {
+                setNote(null)
+                setNav((current) => ({ ...current, index: 4, skipped: true }))
+            },
+            close: () => input.onClose(conn !== null),
+            environment: (environment: Environment) => setForm((current) => ({ ...current, environment })),
+            name: (name: string) => setForm((current) => ({ ...current, name })),
+            bank: (bank: string) => setForm((current) => ({ ...current, bank })),
+            account: (account: string) => setForm((current) => ({ ...current, account })),
+            holder: (holder: string) => setForm((current) => ({ ...current, holder })),
+            edit: (token: string, value: string) =>
+                setFollow((current) =>
+                    token === "webhookName" ? { ...current, webhookName: value } : { ...current, apiKey: value },
+                ),
+            paste: (field: string, value: string) =>
+                setFollow((current) => ({ ...current, values: { ...current.values, [field]: value } })),
+            agents: setAgentIds,
+        },
     }
 }

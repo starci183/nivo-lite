@@ -1,8 +1,8 @@
 "use client"
 
-import { useTranslations } from "next-intl"
 import { useMutateMarkOrderShippedSwr, useMutateSaveContractSwr, useMutateStopFailedStepSwr } from "@/hooks/swr"
-import type { MarkOrderShippedRequest, SaveContractRequest, StopFailedStepRequest } from "@/modules/api"
+import type { MarkOrderShippedRequest, SaveContractRequest, StopFailedStepRequest } from "@/hooks/swr"
+import { useTranslations } from "next-intl"
 import type { SalesActionRunner } from "./useSalesActionRunner"
 
 /** The Sales writes the back end answers at once: stopping a failed step, saving a contract and marking an order shipped. */

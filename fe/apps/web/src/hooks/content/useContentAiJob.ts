@@ -1,11 +1,11 @@
 "use client"
 
+import { useQueryContentAiStatusSwr } from "@/hooks/swr"
+import type { ContentAiRequestedType, ContentAiStatusType } from "@/hooks/swr"
+import { useActiveWorkspace } from "@/hooks/workspaces"
+import { useGraphQLWithToast } from "@/modules/toast"
 import { useTranslations } from "next-intl"
 import { useCallback, useRef, useState } from "react"
-import { useQueryContentAiStatusSwr } from "@/hooks/swr"
-import { useActiveWorkspace } from "@/hooks/workspaces"
-import type { ContentAiRequestedType, ContentAiStatusType } from "@/modules/api"
-import { useGraphQLWithToast } from "@/modules/toast"
 import { useContentRefresh } from "./useContentRefresh"
 
 /** What one queued content AI job needs from its caller. */

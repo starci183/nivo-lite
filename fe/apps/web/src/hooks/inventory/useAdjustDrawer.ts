@@ -1,11 +1,12 @@
 "use client"
 
-import { useTranslations } from "next-intl"
+import type { InventoryCommandSet } from "@/hooks/inventoryCommands"
 import type { ItemView, LocationView } from "@/modules/types"
+import { useTranslations } from "next-intl"
 import { isSmallAdjustment, num } from "./inventory.shared"
 import type { AdjustMode } from "./inventory.shared"
-import type { InventoryCommandSet } from "@/hooks/inventoryCommands"
 import { useDrawer } from "./useDrawer"
+import type { DrawerControl } from "./useDrawer"
 import { useInventoryFormat } from "./useInventoryFormat"
 import { useInventoryRun } from "./useInventoryRun"
 import { useSay } from "./useSay"
@@ -85,6 +86,24 @@ export const useAdjustDrawer = (
         )
     }
     const effect = state === null ? null : effectOf(state, several)
+    return viewOf(drawer, defaultLocationId, state, effect, say, t, format, several, nameOf, places, run, patch, submit)
+}
+
+const viewOf = (
+    drawer: DrawerControl<AdjustState>,
+    defaultLocationId: string | null,
+    state: AdjustState | null,
+    effect: { current: number; target: number; delta: number; small: boolean; move: boolean; submitKey: string } | null,
+    say: ReturnType<typeof useSay>,
+    t: ReturnType<typeof useTranslations<"workbenchInventory">>,
+    format: ReturnType<typeof useInventoryFormat>,
+    several: boolean,
+    nameOf: (id: string) => string,
+    places: { id: string; label: string }[],
+    run: ReturnType<typeof useInventoryRun>,
+    patch: (next: Partial<AdjustState>) => void,
+    submit: (open: AdjustState) => void,
+) => {
     return {
         open: (item: ItemView) =>
             drawer.open({ item, mode: "set", value: "", reason: "", from: defaultLocationId ?? "", to: "" }),

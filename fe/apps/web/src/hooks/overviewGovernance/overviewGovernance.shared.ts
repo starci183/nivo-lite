@@ -1,8 +1,8 @@
 import { REASON_CODES, figureOf, isTestRunName, medianOf, splitCount, sumOf } from "@/hooks/overviewFigures"
 import type { Governance, WaitingWork } from "@/hooks/overviewFigures"
-import type { ReasonCode } from "@/modules/types"
-import type { DashboardType } from "@/modules/api"
+import type { DashboardType } from "@/hooks/swr"
 import { MODULE_KEYS, MODULE_REGISTRY } from "@/modules/catalog"
+import type { ReasonCode } from "@/modules/types"
 
 /** The dashboard as the back end answers it. */
 type Dashboard = DashboardType
@@ -107,12 +107,7 @@ export const governanceFrom = (rows: GovernanceRows, since7: string): Governance
     const isTestDecision = (d: DecisionLinks) => has(test.leads, d.leadId) || has(test.work, d.workItemId)
     const decisions = rows.decisions7.filter((d) => !isTestDecision(d))
     const createdByItem = new Map(work.map((x) => [x.id, x.createdAt]))
-    const waits = decisions.flatMap((d) => {
-        const created = d.workItemId ? createdByItem.get(d.workItemId) : undefined
-        return wire(d.deciderKind) !== "policy" && created !== undefined
-            ? [(Date.parse(d.createdAt) - Date.parse(created)) / MINUTE_MS]
-            : []
-    })
+    const waits = decisionWaitsOf(decisions, createdByItem)
     const median = medianOf(waits)
     const won = leads.filter((x) => x.stage === "won")
     const everything = [...orders, ...invoices, ...matched, ...newLeads]
@@ -193,3 +188,12 @@ export const waitingWorkFrom = (exceptions: Dashboard["exceptions"]): Array<Wait
             summary: x.summary ?? null,
             leadName: x.lead?.contactName ?? null,
         }))
+
+/** Minutes between creation and a non-policy decision for each known work item. */
+const decisionWaitsOf = (decisions: GovernanceRows["decisions7"], createdByItem: ReadonlyMap<string, string>) =>
+    decisions.flatMap((decision) => {
+        const created = decision.workItemId ? createdByItem.get(decision.workItemId) : undefined
+        return wire(decision.deciderKind) !== "policy" && created !== undefined
+            ? [(Date.parse(decision.createdAt) - Date.parse(created)) / MINUTE_MS]
+            : []
+    })

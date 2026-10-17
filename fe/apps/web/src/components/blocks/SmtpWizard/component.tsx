@@ -131,34 +131,43 @@ export const SmtpWizardBase = (props: SmtpWizardBaseProps) => {
                     onSecurity={on.security}
                 />
             ) : null}
-            {view.step === "verify" ? (
-                <>
-                    <Text size="sm" tone="muted">
-                        {text.notConnectedYet}
-                    </Text>
-                    <Input
-                        id="smtp-test-to"
-                        name="testTo"
-                        label={text.testToLabel}
-                        variant="secondary"
-                        hint={text.testToHint}
-                        isDisabled={busy}
-                        value={view.testTo}
-                        onValueChange={on.testTo}
-                    />
-                    <CheckboxGroup
-                        variant="secondary"
-                        label={text.makeDefault}
-                        isLabelHidden
-                        isDisabled={busy}
-                        options={[{ value: "default", label: text.makeDefault, description: text.makeDefaultHint }]}
-                        value={view.makeDefault ? ["default"] : []}
-                        onValueChange={(v) => on.makeDefault(v.includes("default"))}
-                    />
-                    {view.sentNote === null ? null : <Alert tone="affirmative" title={view.sentNote} />}
-                </>
-            ) : null}
+            {view.step === "verify" ? renderSmtpVerification({ text, busy, view, on }) : null}
             {view.error === null ? null : <Alert tone="negative" title={view.error} />}
         </WizardFrame>
     )
+}
+
+const renderSmtpVerification = ({ text, busy, view, on }: RenderSmtpVerificationInput) => (
+    <>
+        <Text size="sm" tone="muted">
+            {text.notConnectedYet}
+        </Text>
+        <Input
+            id="smtp-test-to"
+            name="testTo"
+            label={text.testToLabel}
+            variant="secondary"
+            hint={text.testToHint}
+            isDisabled={busy}
+            value={view.testTo}
+            onValueChange={on.testTo}
+        />
+        <CheckboxGroup
+            variant="secondary"
+            label={text.makeDefault}
+            isLabelHidden
+            isDisabled={busy}
+            options={[{ value: "default", label: text.makeDefault, description: text.makeDefaultHint }]}
+            value={view.makeDefault ? ["default"] : []}
+            onValueChange={(v) => on.makeDefault(v.includes("default"))}
+        />
+        {view.sentNote === null ? null : <Alert tone="affirmative" title={view.sentNote} />}
+    </>
+)
+
+type RenderSmtpVerificationInput = {
+    text: SmtpText
+    busy: boolean
+    view: SmtpWizardBaseProps["props"]
+    on: SmtpWizardBaseProps["on"]
 }

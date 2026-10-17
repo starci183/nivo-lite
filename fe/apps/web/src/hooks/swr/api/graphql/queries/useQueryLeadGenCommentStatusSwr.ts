@@ -1,4 +1,8 @@
-import { useStatusPollSwr } from "@/hooks/reuseables"
+"use client"
+
+import { workspaceArgumentKey, terminalStatusOptions } from "@/hooks/workspaceread"
+import type { WorkspaceReadKey } from "@/hooks/workspaceread"
+import useSWR from "swr"
 import type { StatusPollOptions } from "@/hooks/reuseables"
 import { queryLeadGenCommentStatus } from "@/modules/api/graphql/queries/query-lead-gen-comment-status"
 
@@ -14,15 +18,12 @@ export const useQueryLeadGenCommentStatusSwr = (
     workItemId: string | undefined,
     options: StatusPollOptions = {},
 ) =>
-    useStatusPollSwr(
-        workspaceId === undefined || workItemId === undefined
-            ? null
-            : [QUERY_LEAD_GEN_COMMENT_STATUS_SWR_KEY, workspaceId, workItemId],
-        async ([, , id]) => {
+    useSWR(
+        workspaceArgumentKey(QUERY_LEAD_GEN_COMMENT_STATUS_SWR_KEY, workspaceId, workItemId),
+        async ([, , id]: WorkspaceReadKey<string>) => {
             const result = await queryLeadGenCommentStatus({ request: { workItemId: id } })
             if (!result.data) throw new Error("leadGenCommentStatus answered no data")
             return result.data.leadGenCommentStatus
         },
-        LEAD_GEN_COMMENT_STATUS_REFRESH_MS,
-        options,
+        terminalStatusOptions(LEAD_GEN_COMMENT_STATUS_REFRESH_MS, options),
     )

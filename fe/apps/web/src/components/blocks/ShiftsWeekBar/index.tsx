@@ -1,5 +1,7 @@
 "use client"
 
+import type { Busy, ShiftsWeekBarControllerInput } from "./component"
+import type { CreateShiftsWeekBarRowsInput } from "./component"
 import { useTranslations } from "next-intl"
 import { useState } from "react"
 import { useShiftsBenchData, useShiftsFormat } from "@/hooks/shifts"
@@ -9,22 +11,8 @@ import { useShiftsWeekStore } from "@/hooks/zustand/shiftsWeek"
 import { ShiftsWeekBarBase } from "./component"
 import type { WeekBarStatusView } from "./component"
 
-/** What the bar is waiting for, so the right button shows its pending state. */
-type Busy = "propose" | "explain" | "publish" | "decide" | null
-
-const WEEK_DAYS = 7
-
-/** The week bar: navigation, the status of the schedule, propose and publish, and the owner's decision on a waiting publish. */
-export const ShiftsWeekBar = () => {
-    const t = useTranslations("shifts")
-    const format = useShiftsFormat()
-    const selected = useShiftsWeekStore((state) => state.monday)
-    const setSelected = useShiftsWeekStore((state) => state.setMonday)
-    const bench = useShiftsBenchData(selected).data
-    const week = useShiftsWeekCommands()
-    const requests = useShiftsRequestCommands()
-    const [busy, setBusy] = useState<Busy>(null)
-    if (bench === undefined || bench.role === "staff") return null
+const createShiftsWeekBarRows = (context: CreateShiftsWeekBarRowsInput) => {
+    const { t, bench, week, requests, busy, setBusy } = context
 
     const { monday, current, publishItem } = bench.week
     const isDraft = current?.status === "draft"
@@ -54,54 +42,116 @@ export const ShiftsWeekBar = () => {
     const publish = () => run("publish", () => (current === null ? Promise.resolve() : week.publish(current.id)))
     const decide = (decision: "approved" | "rejected") =>
         run("decide", () => (publishItem === null ? Promise.resolve() : requests.decideItem(publishItem.id, decision)))
+    return {
+        ...context,
+        monday,
+        current,
+        publishItem,
+        isDraft,
+        isWaiting,
+        statusOf,
+        progressOf,
+        propose,
+        publish,
+        decide,
+    }
+}
 
-    return (
-        <ShiftsWeekBarBase
-            props={{
-                weekLabel: t("weekOf", { range: format.weekRange(monday) }),
-                status: statusOf(),
-                prevLabel: t("prevWeek"),
-                nextLabel: t("nextWeek"),
-                todayLabel: t("thisWeek"),
-                proposeLabel: t("propose"),
-                publishLabel: t("publish"),
-                progress: progressOf(),
-                isDraft,
-                canPublish: isDraft && !isWaiting,
-                isProposing: busy === "propose" || busy === "explain",
-                isPublishing: busy === "publish",
-                isDeciding: busy === "decide",
-                isIdle: busy === null,
-                empty:
-                    current === null
-                        ? {
-                              title: t("noScheduleTitle"),
-                              body: t(
-                                  bench.setup.blocks.length > 0 && bench.setup.staff.length > 0
-                                      ? "noScheduleBody"
-                                      : "needSetup",
-                              ),
-                          }
-                        : null,
-                waiting:
-                    isWaiting && publishItem !== null
-                        ? {
-                              title: t("waitingTitle"),
-                              description: publishItem.summary,
-                              approveLabel: t("approvePublish"),
-                              declineLabel: t("declinePublish"),
-                          }
-                        : null,
-            }}
-            on={{
-                previous: () => setSelected(isoAddDays(monday, -WEEK_DAYS)),
-                next: () => setSelected(isoAddDays(monday, WEEK_DAYS)),
-                today: () => setSelected(bench.today),
-                propose: () => void propose(),
-                publish: () => void publish(),
-                approve: () => void decide("approved"),
-                decline: () => void decide("rejected"),
-            }}
-        />
-    )
+const renderShiftsWeekBar = (
+    context: ReturnType<typeof createShiftsWeekBarRows>,
+): React.ComponentProps<typeof ShiftsWeekBarBase> => {
+    const {
+        t,
+        format,
+        setSelected,
+        bench,
+        busy,
+        monday,
+        current,
+        publishItem,
+        isDraft,
+        isWaiting,
+        statusOf,
+        progressOf,
+        propose,
+        publish,
+        decide,
+    } = context
+
+    return {
+        props: {
+            weekLabel: t("weekOf", { range: format.weekRange(monday) }),
+            status: statusOf(),
+            prevLabel: t("prevWeek"),
+            nextLabel: t("nextWeek"),
+            todayLabel: t("thisWeek"),
+            proposeLabel: t("propose"),
+            publishLabel: t("publish"),
+            progress: progressOf(),
+            isDraft,
+            canPublish: isDraft && !isWaiting,
+            isProposing: busy === "propose" || busy === "explain",
+            isPublishing: busy === "publish",
+            isDeciding: busy === "decide",
+            isIdle: busy === null,
+            empty:
+                current === null
+                    ? {
+                          title: t("noScheduleTitle"),
+                          body: t(
+                              bench.setup.blocks.length > 0 && bench.setup.staff.length > 0
+                                  ? "noScheduleBody"
+                                  : "needSetup",
+                          ),
+                      }
+                    : null,
+            waiting:
+                isWaiting && publishItem !== null
+                    ? {
+                          title: t("waitingTitle"),
+                          description: publishItem.summary,
+                          approveLabel: t("approvePublish"),
+                          declineLabel: t("declinePublish"),
+                      }
+                    : null,
+        },
+        on: {
+            previous: () => setSelected(isoAddDays(monday, -WEEK_DAYS)),
+            next: () => setSelected(isoAddDays(monday, WEEK_DAYS)),
+            today: () => setSelected(bench.today),
+            propose: () => void propose(),
+            publish: () => void publish(),
+            approve: () => void decide("approved"),
+            decline: () => void decide("rejected"),
+        },
+    }
+}
+
+/** What the bar is waiting for, so the right button shows its pending state. */
+
+const WEEK_DAYS = 7
+
+/** The week bar: navigation, the status of the schedule, propose and publish, and the owner's decision on a waiting publish. */
+export const ShiftsWeekBar = () => {
+    const t = useTranslations("shifts")
+    const format = useShiftsFormat()
+    const selected = useShiftsWeekStore((state) => state.monday)
+    const setSelected = useShiftsWeekStore((state) => state.setMonday)
+    const bench = useShiftsBenchData(selected).data
+    const week = useShiftsWeekCommands()
+    const requests = useShiftsRequestCommands()
+    const [busy, setBusy] = useState<Busy>(null)
+    const state: ShiftsWeekBarControllerInput = {
+        t,
+        format,
+        selected,
+        setSelected,
+        bench,
+        week,
+        requests,
+        busy,
+        setBusy,
+    }
+    if (bench === undefined || bench.role === "staff") return null
+    return <ShiftsWeekBarBase {...renderShiftsWeekBar(createShiftsWeekBarRows({ ...state, bench }))} />
 }

@@ -83,47 +83,7 @@ export const BrainFactFormBase = (props: BrainFactFormBaseProps) => (
         <Form label={props.props.title} onSubmit={props.on.submit} isPending={props.props.isPending}>
             <div className={FORM_CLASS_NAME}>
                 {props.props.question === undefined ? null : <Text weight="semibold">{props.props.question}</Text>}
-                <Select
-                    label={props.props.typeLabel}
-                    name="subjectType"
-                    options={props.props.typeOptions}
-                    value={props.props.subjectType}
-                    isDisabled={props.props.isPending}
-                    onValueChange={props.on.setType}
-                />
-                <Input
-                    id="brain-fact-subject"
-                    name="subject"
-                    label={props.props.subjectLabel}
-                    variant="secondary"
-                    hint={props.props.subjectHint}
-                    isRequired
-                    value={props.props.subject}
-                    isDisabled={props.props.isPending}
-                    onValueChange={props.on.setSubject}
-                />
-                <Input
-                    id="brain-fact-attribute"
-                    name="attribute"
-                    label={props.props.attributeLabel}
-                    variant="secondary"
-                    hint={props.props.attributeHint}
-                    isRequired
-                    value={props.props.attribute}
-                    isDisabled={props.props.isPending}
-                    onValueChange={props.on.setAttribute}
-                />
-                <Textarea
-                    id="brain-fact-value"
-                    name="value"
-                    label={props.props.valueLabel}
-                    variant="secondary"
-                    rows={3}
-                    isRequired
-                    value={props.props.value}
-                    isDisabled={props.props.isPending}
-                    onValueChange={props.on.setValue}
-                />
+                {renderFactSubjectFields(props)}
                 <RadioGroup
                     label={props.props.scopeLabel}
                     name="scope"
@@ -143,28 +103,7 @@ export const BrainFactFormBase = (props: BrainFactFormBaseProps) => (
                         onValueChange={props.on.setModules}
                     />
                 ) : null}
-                <div className={DAYS_CLASS_NAME}>
-                    <Input
-                        id="brain-fact-from"
-                        name="validFrom"
-                        label={props.props.fromLabel}
-                        variant="secondary"
-                        placeholder="2026-01-31"
-                        value={props.props.validFrom}
-                        isDisabled={props.props.isPending}
-                        onValueChange={props.on.setFrom}
-                    />
-                    <Input
-                        id="brain-fact-to"
-                        name="validTo"
-                        label={props.props.toLabel}
-                        variant="secondary"
-                        placeholder="2026-12-31"
-                        value={props.props.validTo}
-                        isDisabled={props.props.isPending}
-                        onValueChange={props.on.setTo}
-                    />
-                </div>
+                {renderFactValidityFields(props)}
                 <Input
                     id="brain-fact-note"
                     name="note"
@@ -180,4 +119,77 @@ export const BrainFactFormBase = (props: BrainFactFormBaseProps) => (
             </div>
         </Form>
     </Drawer>
+)
+
+/** Draws the div section of the BrainFactForm view. */
+const renderFactValidityFields = (props: BrainFactFormBaseProps) => (
+    <div className={DAYS_CLASS_NAME}>
+        <Input
+            id="brain-fact-from"
+            name="validFrom"
+            label={props.props.fromLabel}
+            variant="secondary"
+            placeholder="2026-01-31"
+            value={props.props.validFrom}
+            isDisabled={props.props.isPending}
+            onValueChange={props.on.setFrom}
+        />
+        <Input
+            id="brain-fact-to"
+            name="validTo"
+            label={props.props.toLabel}
+            variant="secondary"
+            placeholder="2026-12-31"
+            value={props.props.validTo}
+            isDisabled={props.props.isPending}
+            onValueChange={props.on.setTo}
+        />
+    </div>
+)
+
+/** Draws the subject, attribute and value being recorded. */
+const renderFactSubjectFields = (props: BrainFactFormBaseProps) => (
+    <>
+        <Select
+            label={props.props.typeLabel}
+            name="subjectType"
+            options={props.props.typeOptions}
+            value={props.props.subjectType}
+            isDisabled={props.props.isPending}
+            onValueChange={props.on.setType}
+        />
+        <Input
+            id="brain-fact-subject"
+            name="subject"
+            label={props.props.subjectLabel}
+            variant="secondary"
+            hint={props.props.subjectHint}
+            isRequired
+            value={props.props.subject}
+            isDisabled={props.props.isPending}
+            onValueChange={props.on.setSubject}
+        />
+        <Input
+            id="brain-fact-attribute"
+            name="attribute"
+            label={props.props.attributeLabel}
+            variant="secondary"
+            hint={props.props.attributeHint}
+            isRequired
+            value={props.props.attribute}
+            isDisabled={props.props.isPending}
+            onValueChange={props.on.setAttribute}
+        />
+        <Textarea
+            id="brain-fact-value"
+            name="value"
+            label={props.props.valueLabel}
+            variant="secondary"
+            rows={3}
+            isRequired
+            value={props.props.value}
+            isDisabled={props.props.isPending}
+            onValueChange={props.on.setValue}
+        />
+    </>
 )

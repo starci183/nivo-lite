@@ -1,6 +1,6 @@
+import { purposeFor } from "@/hooks/connection-access"
 import { fill, guideKey, tokenValue, VERIFY, verifyKey } from "@/hooks/connection-guides"
 import type { GuideContext, GuideStepDef, Token } from "@/hooks/connection-guides"
-import { purposeFor } from "@/hooks/connection-access"
 import type {
     AgentChoice,
     AgentOption,
@@ -129,17 +129,6 @@ export const agentChoicesOf = (
 /** The ids of every agent, the default ticks of a new connection. */
 export const allAgentIds = (agents: ReadonlyArray<AgentOption>): ReadonlyArray<string> =>
     agents.map((agent) => agent.id)
-
-/** The part of an Apollo answer {@link answeredData} reads. */
-interface GraphQLAnswer<T> {
-    readonly data?: T | null
-}
-
-/** The data of a GraphQL answer; a missing one is a failure named after the operation. */
-export const answeredData = <T>(result: GraphQLAnswer<T>, operation: string): T => {
-    if (!result.data) throw new Error(`${operation} answered no data`)
-    return result.data
-}
 
 /** The note a wizard shows: its own, else the failure of reading the stored connection it resumes. */
 export const resumeNoteOf = (note: WizardNote | null, resumeError: unknown): WizardNote | null => {

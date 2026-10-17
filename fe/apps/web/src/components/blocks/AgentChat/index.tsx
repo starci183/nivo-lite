@@ -4,7 +4,7 @@ import { useTranslations } from "next-intl"
 import { useState } from "react"
 import { useAgentChat, useAgentChatCopy } from "@/hooks/agentChat"
 import { useSlotLabels } from "@/hooks/slot"
-import { useModuleGlyph } from "@/hooks/installations"
+import { moduleGlyphOf } from "@/hooks/installations"
 import { navigation } from "@/modules/i18n"
 import { CONSOLE_ROUTES, agentChatHref, leadHref } from "@/modules/routes"
 import { AgentChatBase } from "./component"
@@ -32,7 +32,7 @@ export const AgentChat = (props: AgentChatProps) => {
     const [isWelcomeOpen, setIsWelcomeOpen] = useState(true)
     const agent = chat.agent
     const moduleKey = agent?.module ?? "chatbot"
-    const glyph = useModuleGlyph(moduleKey)
+    const glyph = moduleGlyphOf(moduleKey)
     const agentId = agent?.id ?? ""
     const closeWelcome = () => {
         setIsWelcomeOpen(false)

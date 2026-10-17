@@ -1,14 +1,15 @@
 "use client"
 
-import { useTranslations } from "next-intl"
-import { useState, useTransition } from "react"
-import { allAgentIds, resumeNoteOf, useAdoptOnce } from "@/hooks/connection-wizard"
 import { metaWizardOf } from "@/hooks/connection-wire"
+import { allAgentIds, resumeNoteOf, useAdoptOnce } from "@/hooks/connection-wizard"
 import { useFirstEvent, useSetConnectionAgents } from "@/hooks/connections"
 import { useQueryMetaConnectionSwr } from "@/hooks/swr"
 import type { AgentOption, MetaCheck, MetaWizardConnection, WizardNote } from "@/modules/types"
+import { useTranslations } from "next-intl"
+import { useState, useTransition } from "react"
 import { META_STEPS, metaFailureOf, metaStartStepOf } from "./meta-wizard.shared"
 import { useMetaCommands } from "./useMetaCommands"
+import type { MetaCommands } from "./useMetaCommands"
 
 /** What the Meta wizard needs from its drawer. */
 interface MetaWizardInput {
@@ -55,48 +56,20 @@ export const useMetaWizard = (input: MetaWizardInput) => {
         setIndex(metaStartStepOf(stored, failure !== null))
     })
 
-    const go = (to: number) => {
-        setNote(null)
-        setIndex(to)
-    }
-    const fail = (message: string) => setNote({ tone: "negative", text: message })
-
-    const runCheck = (repair: boolean) => {
-        if (conn === null) return
-        startChecking(async () => {
-            const answer = await commands.check(conn.id, repair)
-            if (answer.kind !== "ok") return fail(answer.message)
-            setCheck(answer.value)
-        })
-    }
-
-    const login = () =>
-        startTransition(async () => {
-            setNote(null)
-            const answer = await commands.authorize(conn === null ? undefined : conn.id)
-            if (answer.kind !== "ok") return fail(answer.message)
-            window.location.assign(answer.value)
-        })
-
-    const choose = () => {
-        if (conn === null || pageId === "") return setNote({ tone: "negative", text: tm("pickPick") })
-        startTransition(async () => {
-            const answer = await commands.choosePage(conn.id, pageId)
-            if (answer.kind !== "ok") return fail(answer.message)
-            setConn(answer.value)
-            go(2)
-        })
-    }
-
-    const saveAgents = () => {
-        if (conn === null) return go(3)
-        startTransition(async () => {
-            const answer = await setAgentsOf(conn.id, agentIds)
-            if (answer.kind !== "ok") return fail(answer.message)
-            go(3)
-            runCheck(false)
-        })
-    }
+    const { fail, go, runCheck, login, choose, saveAgents } = createMetaWizardActions(
+        setNote,
+        setIndex,
+        conn,
+        startChecking,
+        commands,
+        setCheck,
+        startTransition,
+        pageId,
+        tm,
+        setConn,
+        setAgentsOf,
+        agentIds,
+    )
 
     return {
         index,
@@ -122,4 +95,61 @@ export const useMetaWizard = (input: MetaWizardInput) => {
             agents: setAgentIds,
         },
     }
+}
+
+const createMetaWizardActions = (
+    setNote: import("react").Dispatch<import("react").SetStateAction<WizardNote | null>>,
+    setIndex: import("react").Dispatch<import("react").SetStateAction<number>>,
+    conn: MetaWizardConnection | null,
+    startChecking: import("react").TransitionStartFunction,
+    commands: MetaCommands,
+    setCheck: import("react").Dispatch<import("react").SetStateAction<MetaCheck | null>>,
+    startTransition: import("react").TransitionStartFunction,
+    pageId: string,
+    tm: ReturnType<typeof useTranslations<"metaWizard">>,
+    setConn: import("react").Dispatch<import("react").SetStateAction<MetaWizardConnection | null>>,
+    setAgentsOf: ReturnType<typeof useSetConnectionAgents>,
+    agentIds: ReadonlyArray<string>,
+) => {
+    const go = (to: number) => {
+        setNote(null)
+        setIndex(to)
+    }
+    const fail = (message: string) => setNote({ tone: "negative", text: message })
+
+    const runCheck = (repair: boolean) => {
+        if (conn === null) return
+        startChecking(async () => {
+            const answer = await commands.check(conn.id, repair)
+            if (answer.kind !== "ok") return fail(answer.message)
+            setCheck(answer.value)
+        })
+    }
+
+    const login = () =>
+        startTransition(async () => {
+            setNote(null)
+            const answer = await commands.authorize(conn === null ? undefined : conn.id)
+            if (answer.kind !== "ok") return fail(answer.message)
+            window.location.assign(answer.value)
+        })
+    const choose = () => {
+        if (conn === null || pageId === "") return setNote({ tone: "negative", text: tm("pickPick") })
+        startTransition(async () => {
+            const answer = await commands.choosePage(conn.id, pageId)
+            if (answer.kind !== "ok") return fail(answer.message)
+            setConn(answer.value)
+            go(2)
+        })
+    }
+    const saveAgents = () => {
+        if (conn === null) return go(3)
+        startTransition(async () => {
+            const answer = await setAgentsOf(conn.id, agentIds)
+            if (answer.kind !== "ok") return fail(answer.message)
+            go(3)
+            runCheck(false)
+        })
+    }
+    return { fail, go, runCheck, login, choose, saveAgents }
 }

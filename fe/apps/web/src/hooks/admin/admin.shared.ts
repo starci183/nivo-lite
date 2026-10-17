@@ -1,6 +1,6 @@
-import type { AdminHealthQuery, AdminWorkspaceQuery, AdminWorkspacesQuery } from "@/modules/api"
+import type { AdminHealthQuery, AdminWorkspaceQuery, AdminWorkspacesQuery } from "@/hooks/swr"
+import { isNotFoundFailure } from "@/modules/failure"
 import type { BadgeTone } from "@starci/grammar/common"
-import { isNotFoundFailure } from "@/modules/api"
 
 /** One customer workspace as the list shows it. */
 export type AdminWorkspaceItem = AdminWorkspacesQuery["adminWorkspaces"]["items"][number]

@@ -1,6 +1,5 @@
 "use client"
 
-import { useRef, useState } from "react"
 import {
     ARCHIVE_MAX_ENTRIES,
     UPLOAD_PARALLEL,
@@ -12,6 +11,7 @@ import {
     stripExt,
 } from "@/modules/documents"
 import type { BatchMeta, QueueActions, QueueItem } from "@/modules/documents"
+import { useRef, useState } from "react"
 
 /** What was skipped in an archive: its name and how many entries could not be read. */
 interface ZipSkip {
@@ -89,7 +89,45 @@ export const useAddQueue = (actions: QueueActions): AddQueue => {
         return fresh
     }
 
-    const sendOne = async (item: QueueItem, meta: BatchMeta): Promise<boolean> => {
+    const sendOne = sendOneOf(patch, actions)
+
+    const sendAll = sendAllOf(sendOne)
+
+    return {
+        items,
+        isReading,
+        zipTruncated,
+        zipSkips,
+        addFiles,
+        addLinks,
+        removeItem: (id) => setItems((now) => now.filter((one) => one.id !== id)),
+        sendAll,
+        reset: () => {
+            setItems([])
+            setZipTruncated(false)
+            setZipSkips([])
+            zipSeen.current = new Set()
+        },
+    }
+}
+
+const sendAllOf = (sendOne: (item: QueueItem, meta: BatchMeta) => Promise<boolean>) => {
+    return async (queue: ReadonlyArray<QueueItem>, meta: BatchMeta): Promise<number> => {
+        let next = 0
+        const lane = async (): Promise<number> => {
+            const item = queue[next]
+            next += 1
+            if (item === undefined) return 0
+            const sent = (await sendOne(item, meta)) ? 1 : 0
+            return sent + (await lane())
+        }
+        const lanes = await Promise.all(Array.from({ length: Math.min(UPLOAD_PARALLEL, queue.length) }, lane))
+        return lanes.reduce((sum, count) => sum + count, 0)
+    }
+}
+
+const sendOneOf = (patch: (id: string, change: Partial<QueueItem>) => void, actions: QueueActions) => {
+    return async (item: QueueItem, meta: BatchMeta): Promise<boolean> => {
         patch(item.id, { status: "uploading", error: undefined })
         const info = {
             topic: meta.topic ?? item.topic ?? null,
@@ -113,35 +151,5 @@ export const useAddQueue = (actions: QueueActions): AddQueue => {
         })
         patch(item.id, queued ? { status: "queued" } : { status: "failed", error: "errEnqueue" })
         return queued
-    }
-
-    const sendAll = async (queue: ReadonlyArray<QueueItem>, meta: BatchMeta): Promise<number> => {
-        let next = 0
-        const lane = async (): Promise<number> => {
-            const item = queue[next]
-            next += 1
-            if (item === undefined) return 0
-            const sent = (await sendOne(item, meta)) ? 1 : 0
-            return sent + (await lane())
-        }
-        const lanes = await Promise.all(Array.from({ length: Math.min(UPLOAD_PARALLEL, queue.length) }, lane))
-        return lanes.reduce((sum, count) => sum + count, 0)
-    }
-
-    return {
-        items,
-        isReading,
-        zipTruncated,
-        zipSkips,
-        addFiles,
-        addLinks,
-        removeItem: (id) => setItems((now) => now.filter((one) => one.id !== id)),
-        sendAll,
-        reset: () => {
-            setItems([])
-            setZipTruncated(false)
-            setZipSkips([])
-            zipSeen.current = new Set()
-        },
     }
 }

@@ -81,52 +81,7 @@ export const LeadHeaderBase = (props: LeadHeaderBaseProps) => {
                                             {view.stageLabel}
                                         </Badge>
                                     }
-                                    action={
-                                        isSkeleton ? undefined : (
-                                            <div className={ACTIONS_CLASS_NAME}>
-                                                {primary.kind === "review" ? (
-                                                    <Button variant="secondary" href="#execution">
-                                                        {l.reviewLabel}
-                                                    </Button>
-                                                ) : null}
-                                                {primary.kind === "draft" ? (
-                                                    <Button
-                                                        variant="primary"
-                                                        isPending={p.isPending}
-                                                        onPress={() => on.draft(primary.responsibilityId)}
-                                                    >
-                                                        {l.draftLabel}
-                                                    </Button>
-                                                ) : null}
-                                                {primary.kind === "propose" ? (
-                                                    <Button
-                                                        variant="primary"
-                                                        isPending={p.isPending}
-                                                        onPress={on.propose}
-                                                    >
-                                                        {l.proposeLabel}
-                                                    </Button>
-                                                ) : null}
-                                                <Button variant="outline" href={l.officeHref}>
-                                                    {l.officeLabel}
-                                                </Button>
-                                                <DropdownMenu
-                                                    placement="bottom end"
-                                                    entries={[
-                                                        { id: "refresh", label: l.menuRefresh, onAction: on.refresh },
-                                                        { id: "outcome", label: l.menuOutcome, href: "#outcome" },
-                                                        { id: "copy", label: l.menuCopy, onAction: on.copy },
-                                                    ]}
-                                                    trigger={
-                                                        <IconButton
-                                                            source={nivoIconSource("more", "leading")}
-                                                            label={l.menuMore}
-                                                        />
-                                                    }
-                                                />
-                                            </div>
-                                        )
-                                    }
+                                    action={isSkeleton ? undefined : renderHeaderActions(props, primary)}
                                 />
                             </div>
                         </div>
@@ -136,6 +91,43 @@ export const LeadHeaderBase = (props: LeadHeaderBaseProps) => {
             <Text size="sm" tone="muted" live="polite">
                 {p.notice ?? ""}
             </Text>
+        </div>
+    )
+}
+
+/** Available primary actions and the overflow menu for the lead. */
+const renderHeaderActions = (props: LeadHeaderBaseProps, primary: HeaderView["primary"]) => {
+    const { props: p, on } = props
+    const l = p.labels
+    return (
+        <div className={ACTIONS_CLASS_NAME}>
+            {primary.kind === "review" ? (
+                <Button variant="secondary" href="#execution">
+                    {l.reviewLabel}
+                </Button>
+            ) : null}
+            {primary.kind === "draft" ? (
+                <Button variant="primary" isPending={p.isPending} onPress={() => on.draft(primary.responsibilityId)}>
+                    {l.draftLabel}
+                </Button>
+            ) : null}
+            {primary.kind === "propose" ? (
+                <Button variant="primary" isPending={p.isPending} onPress={on.propose}>
+                    {l.proposeLabel}
+                </Button>
+            ) : null}
+            <Button variant="outline" href={l.officeHref}>
+                {l.officeLabel}
+            </Button>
+            <DropdownMenu
+                placement="bottom end"
+                entries={[
+                    { id: "refresh", label: l.menuRefresh, onAction: on.refresh },
+                    { id: "outcome", label: l.menuOutcome, href: "#outcome" },
+                    { id: "copy", label: l.menuCopy, onAction: on.copy },
+                ]}
+                trigger={<IconButton source={nivoIconSource("more", "leading")} label={l.menuMore} />}
+            />
         </div>
     )
 }

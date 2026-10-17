@@ -1,17 +1,13 @@
 import { Input, NumberField, Textarea } from "@starci/grammar/common"
-import type { FieldOf, HiringSay } from "@/hooks/hiring"
-import type { HiringJobValues } from "@/hooks/hiringJobs"
+import type { HiringSay } from "@/hooks/hiring"
+import type { HiringJobFieldCommands, HiringJobValues } from "@/hooks/hiringJobs"
 import { GRID_CLASS_NAME } from "./classNames"
 
 /** The words, values and changes of the requirement fields of a job. */
-interface HiringRequirementFieldsProps {
+interface HiringRequirementFieldsProps extends HiringJobFieldCommands {
     readonly say: HiringSay
     readonly values: HiringJobValues
-    readonly onText: (name: FieldOf<HiringJobValues, string>, value: string) => void
-    readonly onNumber: (name: FieldOf<HiringJobValues, number | null>, value: number | null) => void
 }
-
-const numberOrNull = (value: number): number | null => (Number.isFinite(value) ? value : null)
 
 /** What a job screens candidates on: skills, hours, must-haves, nice-to-haves, years and the experience note. */
 export const HiringRequirementFields = (props: HiringRequirementFieldsProps) => {
@@ -57,7 +53,7 @@ export const HiringRequirementFields = (props: HiringRequirementFieldsProps) => 
                 maxValue={50}
                 step={1}
                 value={values.years ?? undefined}
-                onValueChange={(value) => onNumber("years", numberOrNull(value))}
+                onValueChange={(value) => onNumber("years", Number.isFinite(value) ? value : null)}
             />
             <Input
                 id="job-exp-note"

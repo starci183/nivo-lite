@@ -56,7 +56,7 @@ export interface HiringJobsBaseProps {
 
 /** Draws the jobs tab: the job posts, what the owner can do with each, and the editor and ad dialogs. */
 export const HiringJobsBase = (props: HiringJobsBaseProps) => {
-    const { say, rows, isBusy, error, fact } = props.props
+    const { say, rows, error, fact } = props.props
     const { on } = props
     return (
         <>
@@ -80,51 +80,7 @@ export const HiringJobsBase = (props: HiringJobsBaseProps) => {
                 }
             >
                 {rows.map((row) => (
-                    <ListRow
-                        key={row.id}
-                        title={row.title}
-                        badges={
-                            <Badge tone={row.statusTone} isDot>
-                                {row.statusLabel}
-                            </Badge>
-                        }
-                        description={row.facts}
-                        actions={
-                            <div className={ACTIONS_CLASS_NAME}>
-                                {row.copyLabel === null ? null : (
-                                    <Button variant="tertiary" size="sm" onPress={() => on.copy(row.id)}>
-                                        {row.copyLabel}
-                                    </Button>
-                                )}
-                                <Button variant="secondary" size="sm" onPress={() => on.openAd(row.id)}>
-                                    {say("jobsWriteAd")}
-                                </Button>
-                                <Button variant="secondary" size="sm" onPress={() => on.edit(row.id)}>
-                                    {say("jobsEdit")}
-                                </Button>
-                                {row.transitions.map((transition) => (
-                                    <Button
-                                        key={transition.to}
-                                        variant={transition.isPrimary ? "primary" : "ghost"}
-                                        size="sm"
-                                        isDisabled={isBusy}
-                                        onPress={() => on.transition(row.id, transition.to)}
-                                    >
-                                        {transition.label}
-                                    </Button>
-                                ))}
-                            </div>
-                        }
-                    >
-                        <div className={FACTS_CLASS_NAME}>
-                            <Text size="sm">{row.counts}</Text>
-                            {row.publicUrl === null ? null : (
-                                <Text size="xs" tone="muted">
-                                    {row.publicUrl}
-                                </Text>
-                            )}
-                        </div>
-                    </ListRow>
+                    <HiringJobRow key={row.id} {...props} row={row} />
                 ))}
             </SurfaceListCard>
             {props.props.isEditorOpen ? (
@@ -151,3 +107,61 @@ export const HiringJobsBase = (props: HiringJobsBaseProps) => {
         </>
     )
 }
+
+/** One job?s facts, publication link and available commands. */
+const HiringJobRow = (props: HiringJobRowProps) => {
+    const { say, isBusy } = props.props
+    const { on, row } = props
+    return (
+        <>
+            <ListRow
+                key={row.id}
+                title={row.title}
+                badges={
+                    <Badge tone={row.statusTone} isDot>
+                        {row.statusLabel}
+                    </Badge>
+                }
+                description={row.facts}
+                actions={
+                    <div className={ACTIONS_CLASS_NAME}>
+                        {row.copyLabel === null ? null : (
+                            <Button variant="tertiary" size="sm" onPress={() => on.copy(row.id)}>
+                                {row.copyLabel}
+                            </Button>
+                        )}
+                        <Button variant="secondary" size="sm" onPress={() => on.openAd(row.id)}>
+                            {say("jobsWriteAd")}
+                        </Button>
+                        <Button variant="secondary" size="sm" onPress={() => on.edit(row.id)}>
+                            {say("jobsEdit")}
+                        </Button>
+                        {row.transitions.map((transition) => (
+                            <Button
+                                key={transition.to}
+                                variant={transition.isPrimary ? "primary" : "ghost"}
+                                size="sm"
+                                isDisabled={isBusy}
+                                onPress={() => on.transition(row.id, transition.to)}
+                            >
+                                {transition.label}
+                            </Button>
+                        ))}
+                    </div>
+                }
+            >
+                <div className={FACTS_CLASS_NAME}>
+                    <Text size="sm">{row.counts}</Text>
+                    {row.publicUrl === null ? null : (
+                        <Text size="xs" tone="muted">
+                            {row.publicUrl}
+                        </Text>
+                    )}
+                </div>
+            </ListRow>
+        </>
+    )
+}
+
+/** Inputs of the extracted list section. */
+type HiringJobRowProps = HiringJobsBaseProps & { readonly row: JobRowView }

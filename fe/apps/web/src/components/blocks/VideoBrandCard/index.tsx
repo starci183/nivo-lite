@@ -15,6 +15,22 @@ interface BrandMessage {
     readonly text: string
 }
 
+const copyOf = (t: ReturnType<typeof useTranslations<"video">>) => ({
+    title: t("brandTitle"),
+    hint: t("brandHint"),
+    shopNameLabel: t("shopName"),
+    primaryLabel: t("primary"),
+    secondaryLabel: t("secondary"),
+    colorHint: t("colorHint"),
+    logoLabel: t("logo"),
+    logoNone: t("logoNone"),
+    logoUpload: t("logoUpload"),
+    logoRemove: t("logoRemove"),
+    musicLabel: t("music"),
+    voiceLabel: t("voice"),
+    saveLabel: t("saveBrand"),
+})
+
 /** The brand kit of the workspace, used by every video: name, colours, logo, music and voice. */
 export const VideoBrandCard = () => {
     const kit = useVideoBrandKitData()
@@ -53,34 +69,22 @@ export const VideoBrandCard = () => {
     return (
         <VideoBrandCardBase
             props={{
-                title: t("brandTitle"),
-                hint: t("brandHint"),
-                shopNameLabel: t("shopName"),
+                ...copyOf(t),
                 shopName: draft.shopName,
-                primaryLabel: t("primary"),
                 primary: draft.primary,
-                secondaryLabel: t("secondary"),
                 secondary: draft.secondary,
-                colorHint: t("colorHint"),
-                logoLabel: t("logo"),
                 logoUrl: logo?.url ?? null,
-                logoNone: t("logoNone"),
-                logoUpload: t("logoUpload"),
-                logoRemove: t("logoRemove"),
                 hasLogo: logoPath !== null,
-                musicLabel: t("music"),
                 music: draft.musicTrack ?? NO_MUSIC,
                 musics: [
                     { id: NO_MUSIC, label: t("musicNone") },
                     ...MUSIC_TRACKS.map((track) => ({ id: track.id, label: t(`music_${track.id}`) })),
                 ],
-                voiceLabel: t("voice"),
                 voice: draft.voice,
                 voices: TTS_VOICES.map((voice) => ({
                     id: voice,
                     label: t(voice.includes("Hoai") ? "voice_f" : "voice_m"),
                 })),
-                saveLabel: t("saveBrand"),
                 canEdit: kit.canEdit,
                 pending: uploading || form.formState.isSubmitting,
                 message: Object.values(form.formState.errors)[0]?.message

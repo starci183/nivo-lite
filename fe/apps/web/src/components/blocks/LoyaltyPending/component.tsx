@@ -56,56 +56,7 @@ export const LoyaltyPendingBase = (props: LoyaltyPendingBaseProps) => {
         <SurfaceListCard ariaLabel={label} empty={<EmptyNotice message={emptyTitle} description={emptyBody} />}>
             {props.props.rows.map((row) => (
                 <ListItem key={row.id} className={ROW_CLASS_NAME}>
-                    <div className={ROW_MAIN_CLASS_NAME}>
-                        <div className={CHIPS_CLASS_NAME}>
-                            <Badge tone="warning" isDot>
-                                {row.actionLabel}
-                            </Badge>
-                            <Text as="span" size="xs" tone="muted">
-                                {row.age}
-                            </Text>
-                        </div>
-                        {row.customer === "" ? null : <Text weight="semibold">{row.customer}</Text>}
-                        {row.summary === "" ? null : <Text size="sm">{row.summary}</Text>}
-                        {row.reason === "" ? null : (
-                            <Text size="xs" tone="muted">
-                                {row.reason}
-                            </Text>
-                        )}
-                        {row.value === "" ? null : (
-                            <Text size="sm" weight="semibold">
-                                {row.value}
-                            </Text>
-                        )}
-                        {row.draft !== "" && !row.isEditing ? (
-                            <div className={QUOTE_CLASS_NAME}>
-                                <Text size="xs" tone="muted" weight="medium">
-                                    {props.props.draftLabel}
-                                </Text>
-                                <Text as="p" size="sm">
-                                    {row.draft}
-                                </Text>
-                            </div>
-                        ) : null}
-                        {row.canAct && row.isEditing && row.canEditDraft ? (
-                            <div className={FORM_CLASS_NAME}>
-                                <Textarea
-                                    label={props.props.draftLabel}
-                                    variant="secondary"
-                                    description={props.props.draftHint}
-                                    rows={5}
-                                    value={row.draft}
-                                    isDisabled={isPending}
-                                    onValueChange={(value) => props.on.setDraft(row.id, value)}
-                                />
-                            </div>
-                        ) : null}
-                        {row.canAct ? null : (
-                            <Text size="sm" weight="medium">
-                                {props.props.waitingManager}
-                            </Text>
-                        )}
-                    </div>
+                    {renderPendingDraft({ row, props, isPending })}
                     {row.canAct ? (
                         <div className={ROW_ACTIONS_CLASS_NAME}>
                             <Button
@@ -143,3 +94,63 @@ export const LoyaltyPendingBase = (props: LoyaltyPendingBaseProps) => {
         </SurfaceListCard>
     )
 }
+
+/** Inputs needed to build the RowMain section. */
+interface RenderPendingDraftContext {
+    readonly row: LoyaltyPendingRow
+    readonly props: LoyaltyPendingBaseProps
+    readonly isPending: LoyaltyPendingBaseProps["props"]["isPending"]
+}
+/** Builds the RowMain section from the current view. */
+const renderPendingDraft = ({ row, props, isPending }: RenderPendingDraftContext) => (
+    <div className={ROW_MAIN_CLASS_NAME}>
+        <div className={CHIPS_CLASS_NAME}>
+            <Badge tone="warning" isDot>
+                {row.actionLabel}
+            </Badge>
+            <Text as="span" size="xs" tone="muted">
+                {row.age}
+            </Text>
+        </div>
+        {row.customer === "" ? null : <Text weight="semibold">{row.customer}</Text>}
+        {row.summary === "" ? null : <Text size="sm">{row.summary}</Text>}
+        {row.reason === "" ? null : (
+            <Text size="xs" tone="muted">
+                {row.reason}
+            </Text>
+        )}
+        {row.value === "" ? null : (
+            <Text size="sm" weight="semibold">
+                {row.value}
+            </Text>
+        )}
+        {row.draft !== "" && !row.isEditing ? (
+            <div className={QUOTE_CLASS_NAME}>
+                <Text size="xs" tone="muted" weight="medium">
+                    {props.props.draftLabel}
+                </Text>
+                <Text as="p" size="sm">
+                    {row.draft}
+                </Text>
+            </div>
+        ) : null}
+        {row.canAct && row.isEditing && row.canEditDraft ? (
+            <div className={FORM_CLASS_NAME}>
+                <Textarea
+                    label={props.props.draftLabel}
+                    variant="secondary"
+                    description={props.props.draftHint}
+                    rows={5}
+                    value={row.draft}
+                    isDisabled={isPending}
+                    onValueChange={(value) => props.on.setDraft(row.id, value)}
+                />
+            </div>
+        ) : null}
+        {row.canAct ? null : (
+            <Text size="sm" weight="medium">
+                {props.props.waitingManager}
+            </Text>
+        )}
+    </div>
+)

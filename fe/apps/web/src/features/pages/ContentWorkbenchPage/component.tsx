@@ -66,6 +66,24 @@ const Commands = () => (
     </ContentWorkbenchGate>
 )
 
+/** The label used while the settings panel loads. */
+interface SettingsPanelProps {
+    readonly label: string
+}
+
+/** The brand, cadence and automation settings of the workbench. */
+const SettingsPanel = (props: SettingsPanelProps) => (
+    <Panel>
+        <ContentReadOnlyNotice />
+        <ContentWorkbenchGate placeholder={props.label}>
+            <ContentPillarsCard />
+            <ContentCadenceCard />
+            <ContentBrandCard />
+            <ContentAutomationCard />
+        </ContentWorkbenchGate>
+    </Panel>
+)
+
 /** Draws the content workbench: the agent dashboard frame around the five content tabs, and the post editor when one is open. */
 export const ContentWorkbenchPageBase = (props: ContentWorkbenchPageBaseProps) => {
     const { installationId, initialTab, focus, tabs } = props.props
@@ -127,17 +145,7 @@ export const ContentWorkbenchPageBase = (props: ContentWorkbenchPageBaseProps) =
                     {
                         id: "settings",
                         label: tabs.settings,
-                        content: (
-                            <Panel>
-                                <ContentReadOnlyNotice />
-                                <ContentWorkbenchGate placeholder={tabs.settings}>
-                                    <ContentPillarsCard />
-                                    <ContentCadenceCard />
-                                    <ContentBrandCard />
-                                    <ContentAutomationCard />
-                                </ContentWorkbenchGate>
-                            </Panel>
-                        ),
+                        content: <SettingsPanel label={tabs.settings} />,
                     },
                 ]}
             />

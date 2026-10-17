@@ -1,7 +1,7 @@
 "use client"
 
 import { useTranslations } from "next-intl"
-import { useAuthUser } from "@/hooks/auth"
+import { useQueryAuthUserSwr } from "@/hooks/auth"
 import { useQueryInvitePreviewSwr } from "@/hooks/swr"
 import { AUTH_ROUTES, invitePath, loginPath, signupPath } from "@/modules/routes"
 
@@ -51,7 +51,7 @@ const visitorOf = (signedInEmail: string | undefined, invitedEmail: string): Inv
  */
 export const useInviteView = (token: string): InviteView => {
     const t = useTranslations("invite")
-    const { data: user } = useAuthUser()
+    const { data: user } = useQueryAuthUserSwr()
     const { data: preview, error } = useQueryInvitePreviewSwr({ token })
     const next = invitePath(token)
     const email = user === undefined || user === null ? undefined : user.email

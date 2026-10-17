@@ -1,10 +1,10 @@
 "use client"
 
-import { useState } from "react"
-import type { MutateSaveBrainFactRequest } from "@/modules/api/graphql/mutations/mutation-save-brain-fact"
+import type { MutateSaveBrainFactRequest } from "@/hooks/swr"
 import { dayInstant } from "@/modules/brain"
 import type { FactPreset } from "@/modules/brain"
 import type { BrainFact, FactScope, FactSubjectType } from "@/modules/types"
+import { useState } from "react"
 
 /** The fields of the fact form. */
 interface FactFormState {

@@ -1,5 +1,6 @@
 "use client"
 
+import { workspaceArgumentKey } from "@/hooks/workspaceread"
 import useSWR from "swr"
 import { queryAgentChatConversations } from "@/modules/api/graphql/queries/query-agent-chat-conversations"
 
@@ -9,9 +10,7 @@ export const QUERY_AGENT_CHAT_CONVERSATIONS_SWR_KEY = "QUERY_AGENT_CHAT_CONVERSA
 /** Follows customer conversations and staff takeover through SWR polling. */
 export const useQueryAgentChatConversationsSwr = (workspaceId: string | undefined, agentId: string | undefined) =>
     useSWR(
-        workspaceId === undefined || agentId === undefined
-            ? null
-            : [QUERY_AGENT_CHAT_CONVERSATIONS_SWR_KEY, workspaceId, agentId],
+        workspaceArgumentKey(QUERY_AGENT_CHAT_CONVERSATIONS_SWR_KEY, workspaceId, agentId),
         async ([, scope, id]: [string, string, string]) => {
             const result = await queryAgentChatConversations({
                 request: { agentId: id },

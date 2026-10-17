@@ -48,6 +48,43 @@ export interface VideoBrandCardBaseProps {
     }
 }
 
+const logoOf = (props: VideoBrandCardBaseProps) => {
+    return (
+        <div className={BRAND_STACK}>
+            <Text as="span" size="sm" weight="medium">
+                {props.props.logoLabel}
+            </Text>
+            <div className={BRAND_LOGO}>
+                {props.props.logoUrl === null ? (
+                    <Text as="span" size="xs" tone="muted">
+                        {props.props.logoNone}
+                    </Text>
+                ) : (
+                    <div className={BRAND_LOGO_PREVIEW}>
+                        <Image src={props.props.logoUrl} alt={props.props.logoLabel} aspect="square" fit="contain" />
+                    </div>
+                )}
+                {props.props.canEdit ? (
+                    <FileDropzone
+                        label={props.props.logoUpload}
+                        isLabelHidden
+                        accept="image/png,image/jpeg,image/webp"
+                        hideFileList
+                        isDisabled={props.props.pending}
+                        prompt={props.props.logoUpload}
+                        onFilesChange={props.on.logoFiles}
+                    />
+                ) : null}
+                {props.props.canEdit && props.props.hasLogo ? (
+                    <Button size="sm" variant="ghost" isDisabled={props.props.pending} onPress={props.on.logoRemove}>
+                        {props.props.logoRemove}
+                    </Button>
+                ) : null}
+            </div>
+        </div>
+    )
+}
+
 /** Draws the brand kit: shop name, two colours, logo, background music and voice. */
 export const VideoBrandCardBase = (props: VideoBrandCardBaseProps) => {
     const off = !props.props.canEdit || props.props.pending
@@ -85,48 +122,7 @@ export const VideoBrandCardBase = (props: VideoBrandCardBaseProps) => {
                         onValueChange={props.on.secondary}
                     />
                 </div>
-                <div className={BRAND_STACK}>
-                    <Text as="span" size="sm" weight="medium">
-                        {props.props.logoLabel}
-                    </Text>
-                    <div className={BRAND_LOGO}>
-                        {props.props.logoUrl === null ? (
-                            <Text as="span" size="xs" tone="muted">
-                                {props.props.logoNone}
-                            </Text>
-                        ) : (
-                            <div className={BRAND_LOGO_PREVIEW}>
-                                <Image
-                                    src={props.props.logoUrl}
-                                    alt={props.props.logoLabel}
-                                    aspect="square"
-                                    fit="contain"
-                                />
-                            </div>
-                        )}
-                        {props.props.canEdit ? (
-                            <FileDropzone
-                                label={props.props.logoUpload}
-                                isLabelHidden
-                                accept="image/png,image/jpeg,image/webp"
-                                hideFileList
-                                isDisabled={props.props.pending}
-                                prompt={props.props.logoUpload}
-                                onFilesChange={props.on.logoFiles}
-                            />
-                        ) : null}
-                        {props.props.canEdit && props.props.hasLogo ? (
-                            <Button
-                                size="sm"
-                                variant="ghost"
-                                isDisabled={props.props.pending}
-                                onPress={props.on.logoRemove}
-                            >
-                                {props.props.logoRemove}
-                            </Button>
-                        ) : null}
-                    </div>
-                </div>
+                {logoOf(props)}
                 <div className={BRAND_ROW}>
                     <Select
                         label={props.props.musicLabel}

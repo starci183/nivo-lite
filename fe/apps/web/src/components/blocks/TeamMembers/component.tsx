@@ -1,3 +1,6 @@
+import type { useTranslations, useFormatter } from "next-intl"
+import type { useMember } from "@/hooks/member"
+import type { useTeam, useMemberCommands } from "@/hooks/team"
 import { AlertDialog, Badge, Button, DataTable, DropdownMenu, Text } from "@starci/grammar/common"
 import type { DataTableColumn, DataTableRow, DropdownMenuEntry } from "@starci/grammar/common"
 import { TeamSection } from "@/components/composites/TeamSection"
@@ -104,36 +107,63 @@ export const TeamMembersBase = (props: TeamMembersBaseProps) => {
             />
         )
     }
-    return (
-        <TeamSection
-            id="team-members-title"
-            title={props.props.title}
-            description={props.props.description}
-            failTitle={props.props.failTitle}
-            error={props.props.error}
-        >
-            <DataTable
-                label={props.props.title}
-                columns={props.props.columns}
-                rows={props.props.rows}
-                renderCell={renderCell}
-                isLoading={props.props.isSkeleton}
-                emptyContent={null}
-            />
-            <AlertDialog
-                isOpen={props.props.confirm !== undefined}
-                onOpenChange={(open) => {
-                    if (!open) props.on.cancelConfirm()
-                }}
-                title={props.props.confirm?.title ?? ""}
-                description={props.props.confirm?.description}
-                tone="negative"
-                confirmLabel={props.props.confirm?.confirmLabel ?? ""}
-                cancelLabel={props.props.cancelLabel}
-                isConfirmPending={props.props.isPending}
-                onConfirm={props.on.confirm}
-                onCancel={props.on.cancelConfirm}
-            />
-        </TeamSection>
-    )
+    return renderMembersSection({ props, renderCell })
+}
+
+const renderMembersSection = ({ props, renderCell }: RenderMembersSectionInput) => (
+    <TeamSection
+        id="team-members-title"
+        title={props.props.title}
+        description={props.props.description}
+        failTitle={props.props.failTitle}
+        error={props.props.error}
+    >
+        <DataTable
+            label={props.props.title}
+            columns={props.props.columns}
+            rows={props.props.rows}
+            renderCell={renderCell}
+            isLoading={props.props.isSkeleton}
+            emptyContent={null}
+        />
+        <AlertDialog
+            isOpen={props.props.confirm !== undefined}
+            onOpenChange={(open) => {
+                if (!open) props.on.cancelConfirm()
+            }}
+            title={props.props.confirm?.title ?? ""}
+            description={props.props.confirm?.description}
+            tone="negative"
+            confirmLabel={props.props.confirm?.confirmLabel ?? ""}
+            cancelLabel={props.props.cancelLabel}
+            isConfirmPending={props.props.isPending}
+            onConfirm={props.on.confirm}
+            onCancel={props.on.cancelConfirm}
+        />
+    </TeamSection>
+)
+
+type RenderMembersSectionInput = {
+    props: TeamMembersBaseProps
+    renderCell: (row: MemberRowView, columnId: string) => React.ReactNode
+}
+/** State values and commands consumed by the connected surface. */
+export interface Asking {
+    readonly userId: string
+    readonly kind: "remove" | "disable"
+}
+
+/** State values and commands consumed by the connected surface. */
+export type TeamMembersControllerInput = {
+    readonly t: ReturnType<typeof useTranslations<"team">>
+    readonly format: ReturnType<typeof useFormatter>
+    readonly member: ReturnType<typeof useMember>
+    readonly selfRole: NonNullable<NonNullable<ReturnType<typeof useMember>>["role"]>
+    readonly selfId: NonNullable<NonNullable<ReturnType<typeof useMember>>["userId"]>
+    readonly isAllowed: boolean
+    readonly views: ReturnType<typeof useTeam>["views"]
+    readonly isLoading: ReturnType<typeof useTeam>["isLoading"]
+    readonly commands: ReturnType<typeof useMemberCommands>
+    readonly asking: Asking | undefined
+    readonly setAsking: React.Dispatch<React.SetStateAction<Asking | undefined>>
 }

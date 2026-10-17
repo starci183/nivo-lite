@@ -1,12 +1,12 @@
 "use client"
 
-import { useTranslations } from "next-intl"
-import { useCallback, useRef, useState } from "react"
 import { useRevalidateLeadViews } from "@/hooks/leads"
 import { useQuerySalesActionStatusSwr } from "@/hooks/swr"
+import type { SalesActionType } from "@/hooks/swr"
 import { useActiveWorkspace } from "@/hooks/workspaces"
-import type { SalesActionType } from "@/modules/api"
 import { toast, useGraphQLWithToast } from "@/modules/toast"
+import { useTranslations } from "next-intl"
+import { useCallback, useRef, useState } from "react"
 
 /** The queued Sales job being observed, bound to the workspace it was queued in. */
 interface PendingSalesAction {
@@ -66,18 +66,7 @@ export const useSalesActionRunner = () => {
         },
         [activeWorkspaceId],
     )
-    const track = useCallback(
-        (result: SalesActionType | undefined) => {
-            if (result === undefined) return undefined
-            if (result.status === "failed")
-                toast.danger(t("salesActionFailed", { code: result.errorCode ?? result.status }))
-            else if (result.status === "succeeded") toast.success(t("salesActionCompleted"))
-            else toast.success(t("salesActionQueued"))
-            if (!isTerminal(result.status)) watch(result.id)
-            return result
-        },
-        [t, watch],
-    )
+    const track = useCallback((result: SalesActionType | undefined) => trackSalesAction(t, watch, result), [t, watch])
     const locked = useCallback(
         async <Result>(action: () => Promise<Result | undefined>) => {
             if (commandLock.current || pendingId) return undefined
@@ -116,3 +105,17 @@ export const useSalesActionRunner = () => {
 
 /** The runner the Sales action hooks share. */
 export type SalesActionRunner = ReturnType<typeof useSalesActionRunner>
+
+/** Reports the queued result and starts observing a nonterminal action. */
+const trackSalesAction = (
+    t: ReturnType<typeof useTranslations<"workbenchSales">>,
+    watch: (id: string) => void,
+    result: SalesActionType | undefined,
+) => {
+    if (result === undefined) return undefined
+    if (result.status === "failed") toast.danger(t("salesActionFailed", { code: result.errorCode ?? result.status }))
+    else if (result.status === "succeeded") toast.success(t("salesActionCompleted"))
+    else toast.success(t("salesActionQueued"))
+    if (!isTerminal(result.status)) watch(result.id)
+    return result
+}

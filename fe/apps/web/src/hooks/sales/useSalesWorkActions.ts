@@ -9,7 +9,7 @@ import type {
     DecideSalesWorkItemRequest,
     HandoffToAccountingRequest,
     RetryFailedStepRequest,
-} from "@/modules/api"
+} from "@/hooks/swr"
 import type { SalesActionRunner } from "./useSalesActionRunner"
 
 /** The Sales writes that queue work on the back end: draft and work item decisions, the accounting handoff and the retry. */

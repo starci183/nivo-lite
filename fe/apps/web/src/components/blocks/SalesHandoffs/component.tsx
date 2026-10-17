@@ -1,3 +1,7 @@
+import type { useTranslations, useFormatter } from "next-intl"
+import type { useSalesActions } from "@/hooks/sales"
+import type { useSalesWorkbench } from "@/hooks/salesworkbench"
+import type { useSalesShipmentForm } from "@/hooks/rhf"
 import { Alert, Badge, Button, EmptyNotice, SurfaceListCard, Text } from "@starci/grammar/common"
 import type { BadgeTone } from "@starci/grammar/common"
 import { SalesRow } from "@/components/branches/SalesRow"
@@ -67,86 +71,7 @@ export const SalesHandoffsBase = (props: SalesHandoffsBaseProps) => {
                 ariaLabel={p.label}
                 empty={<EmptyNotice message={p.emptyTitle} description={p.emptyBody} />}
             >
-                {p.rows.map((row) => (
-                    <SalesRow
-                        key={row.key}
-                        chips={
-                            <>
-                                <Badge tone={row.orderTone}>{row.orderLabel}</Badge>
-                                <Badge tone={row.invoiceTone} isDot>
-                                    {row.invoiceLabel}
-                                </Badge>
-                                {row.confirmed === null ? null : (
-                                    <Text as="span" size="xs" tone="muted">
-                                        {row.confirmed}
-                                    </Text>
-                                )}
-                            </>
-                        }
-                        customer={row.customer}
-                        customerHref={row.leadHref}
-                        actions={
-                            <>
-                                {row.canRun && row.orderId !== null ? (
-                                    <Button
-                                        variant="primary"
-                                        size="sm"
-                                        isPending={row.isRunBusy}
-                                        isDisabled={p.isBusy}
-                                        onPress={() => on.run(row.key, row.orderId ?? "")}
-                                    >
-                                        {row.runLabel}
-                                    </Button>
-                                ) : null}
-                                {row.canShip ? (
-                                    <Button variant="outline" size="sm" onPress={() => on.ship(row.key)}>
-                                        {p.shipLabel}
-                                    </Button>
-                                ) : null}
-                            </>
-                        }
-                    >
-                        <Text size="sm" tone="muted" overflow="clamp-2">
-                            {row.detail}
-                        </Text>
-                        <Text size="sm" weight="semibold">
-                            {row.amount}
-                        </Text>
-                        {row.invoiceLine === null ? null : (
-                            <Text size="xs" tone="muted">
-                                {row.invoiceLine}
-                            </Text>
-                        )}
-                        {row.shippedLine === null ? null : (
-                            <Text size="sm" weight="medium">
-                                {row.shippedLine}
-                            </Text>
-                        )}
-                        {row.workText === null ? null : (
-                            <Text size="sm" weight="medium">
-                                {row.workText}
-                            </Text>
-                        )}
-                        {row.errorText === null ? null : (
-                            <Alert tone="negative" urgency="polite" title={p.errorLabel} description={row.errorText} />
-                        )}
-                        {row.hint === null ? null : (
-                            <Text size="sm" tone="muted">
-                                {row.hint}
-                            </Text>
-                        )}
-                        {row.note === null ? null : (
-                            <Text size="sm" weight="medium" live="polite">
-                                {row.note}
-                            </Text>
-                        )}
-                        {row.error === null ? null : (
-                            <Text size="sm" live="assertive">
-                                {row.error}
-                            </Text>
-                        )}
-                    </SalesRow>
-                ))}
+                {p.rows.map((row) => renderHandoffRow({ row, p, on }))}
             </SurfaceListCard>
             {p.ship === null ? null : (
                 <SalesShipDrawer
@@ -156,4 +81,123 @@ export const SalesHandoffsBase = (props: SalesHandoffsBaseProps) => {
             )}
         </>
     )
+}
+
+const renderHandoffActions = ({ row, p, on }: RenderHandoffActionsInput) => (
+    <>
+        {row.canRun && row.orderId !== null ? (
+            <Button
+                variant="primary"
+                size="sm"
+                isPending={row.isRunBusy}
+                isDisabled={p.isBusy}
+                onPress={() => on.run(row.key, row.orderId ?? "")}
+            >
+                {row.runLabel}
+            </Button>
+        ) : null}
+        {row.canShip ? (
+            <Button variant="outline" size="sm" onPress={() => on.ship(row.key)}>
+                {p.shipLabel}
+            </Button>
+        ) : null}
+    </>
+)
+
+const renderHandoffRow = ({ row, p, on }: RenderHandoffRowInput) => (
+    <SalesRow
+        key={row.key}
+        chips={
+            <>
+                <Badge tone={row.orderTone}>{row.orderLabel}</Badge>
+                <Badge tone={row.invoiceTone} isDot>
+                    {row.invoiceLabel}
+                </Badge>
+                {row.confirmed === null ? null : (
+                    <Text as="span" size="xs" tone="muted">
+                        {row.confirmed}
+                    </Text>
+                )}
+            </>
+        }
+        customer={row.customer}
+        customerHref={row.leadHref}
+        actions={renderHandoffActions({ row, p, on })}
+    >
+        <Text size="sm" tone="muted" overflow="clamp-2">
+            {row.detail}
+        </Text>
+        <Text size="sm" weight="semibold">
+            {row.amount}
+        </Text>
+        {row.invoiceLine === null ? null : (
+            <Text size="xs" tone="muted">
+                {row.invoiceLine}
+            </Text>
+        )}
+        {row.shippedLine === null ? null : (
+            <Text size="sm" weight="medium">
+                {row.shippedLine}
+            </Text>
+        )}
+        {row.workText === null ? null : (
+            <Text size="sm" weight="medium">
+                {row.workText}
+            </Text>
+        )}
+        {row.errorText === null ? null : (
+            <Alert tone="negative" urgency="polite" title={p.errorLabel} description={row.errorText} />
+        )}
+        {row.hint === null ? null : (
+            <Text size="sm" tone="muted">
+                {row.hint}
+            </Text>
+        )}
+        {row.note === null ? null : (
+            <Text size="sm" weight="medium" live="polite">
+                {row.note}
+            </Text>
+        )}
+        {row.error === null ? null : (
+            <Text size="sm" live="assertive">
+                {row.error}
+            </Text>
+        )}
+    </SalesRow>
+)
+
+type RenderHandoffActionsInput = {
+    row: HandoffItemView
+    p: SalesHandoffsBaseProps["props"]
+    on: SalesHandoffsBaseProps["on"]
+}
+
+type RenderHandoffRowInput = {
+    row: HandoffItemView
+    p: SalesHandoffsBaseProps["props"]
+    on: SalesHandoffsBaseProps["on"]
+}
+/** State values and commands consumed by the connected surface. */
+export interface Shipping {
+    readonly key: string
+    readonly orderId: string
+    readonly orderNo: string | null
+    readonly customer: string
+}
+
+/** State values and commands consumed by the connected surface. */
+export type SalesHandoffsControllerInput = {
+    readonly t: ReturnType<typeof useTranslations<"workbenchSales">>
+    readonly format: ReturnType<typeof useFormatter>
+    readonly actions: ReturnType<typeof useSalesActions>
+    readonly data: ReturnType<typeof useSalesWorkbench>["data"]
+    readonly rows: NonNullable<NonNullable<ReturnType<typeof useSalesWorkbench>["data"]>["handoffs"]>
+    readonly form: ReturnType<typeof useSalesShipmentForm>
+    readonly values: { readonly carrier: string; readonly tracking: string }
+    readonly busyKey: string | null
+    readonly setBusyKey: React.Dispatch<React.SetStateAction<string | null>>
+    readonly notes: Readonly<Record<string, string>>
+    readonly setNotes: React.Dispatch<React.SetStateAction<Readonly<Record<string, string>>>>
+    readonly shipping: Shipping | null
+    readonly setShipping: React.Dispatch<React.SetStateAction<Shipping | null>>
 }

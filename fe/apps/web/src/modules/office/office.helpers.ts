@@ -1,10 +1,11 @@
+import type { ModuleIconName } from "@/modules/types"
 import { MODULE_REGISTRY, isModuleKey } from "@/modules/catalog"
 import type { OfficeBodyPart } from "@/modules/types"
 import { OPEN_WORK_STATUSES } from "./office.consts"
 import type { OfficeMessage, OfficeWork } from "./office.types"
 
 /** The glyph of a module's mark; an unknown module draws the chatbot glyph. */
-export const glyphOf = (module: string): string =>
+export const glyphOf = (module: string): ModuleIconName =>
     isModuleKey(module) ? MODULE_REGISTRY[module].glyph : MODULE_REGISTRY.chatbot.glyph
 
 /** True when the module accepts commands from the Office. */

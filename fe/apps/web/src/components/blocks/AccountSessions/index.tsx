@@ -3,14 +3,14 @@
 import { useTranslations } from "next-intl"
 import { useState } from "react"
 import { useAccountCommands, useAccountSessions, useSignOutOthers } from "@/hooks/account"
-import { useAuthActions } from "@/hooks/auth"
+import { authActionsOf } from "@/hooks/auth"
 import { navigation } from "@/modules/i18n"
 import { APP_ROUTES } from "@/modules/routes"
 import { AccountSessionsBase } from "./component"
 
 /** The connected sessions section: signs one other device out, signs all the others out, or ends this session. */
 export const AccountSessions = () => {
-    const auth = useAuthActions()
+    const auth = authActionsOf()
     const t = useTranslations("account")
     const router = navigation.useRouter()
     const { rows, isFailed, isLoading } = useAccountSessions()

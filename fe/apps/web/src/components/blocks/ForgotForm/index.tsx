@@ -2,7 +2,8 @@
 
 import { useState, useTransition } from "react"
 import { useTranslations } from "next-intl"
-import { authErrorKey, useResendEmail, useAuthActions } from "@/hooks/auth"
+import { authErrorKey, useResendEmail } from "@/hooks/auth"
+import { authActionsOf } from "@/hooks/auth"
 import { useForgotForm } from "@/hooks/rhf"
 import { AUTH_ROUTES } from "@/modules/routes"
 import { ForgotFormBase } from "./component"
@@ -12,7 +13,7 @@ type ForgotFormProps = { readonly initialEmail?: string }
 
 /** Forgot password: e-mail in, a generic "if the account exists" message out (no account enumeration). */
 export const ForgotForm = (props: ForgotFormProps) => {
-    const auth = useAuthActions()
+    const auth = authActionsOf()
     const t = useTranslations("auth")
     const form = useForgotForm(props.initialEmail)
     const [failure, setFailure] = useState<string>()

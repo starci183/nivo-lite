@@ -1,17 +1,17 @@
 "use client"
 
-import { useMemo } from "react"
+import { wizardConnectionOf } from "@/hooks/connection-wire"
 import { useSettledGraphQL } from "@/hooks/connection-wizard"
 import type { Settled } from "@/hooks/connection-wizard"
-import { wizardConnectionOf } from "@/hooks/connection-wire"
 import { useConnectionsRefresh } from "@/hooks/connections"
 import {
     useMutateSaveProviderKeysSwr,
     useMutateStartMoneyConnectionSwr,
     useMutateUpdateMoneyConnectionSwr,
 } from "@/hooks/swr"
-import type { MutateSaveProviderKeysRequest } from "@/modules/api/graphql/mutations/mutation-save-provider-keys"
+import type { MutateSaveProviderKeysRequest } from "@/hooks/swr"
 import type { MoneyProvider, ProviderKeysResult, WizardConnection } from "@/modules/types"
+import { useMemo } from "react"
 import type { AccountForm } from "./money-wizard.shared"
 
 /** The GraphQL commands of the bank and payment wizard (the active workspace travels in the request header). */

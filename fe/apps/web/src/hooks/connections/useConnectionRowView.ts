@@ -1,19 +1,19 @@
 "use client"
 
-import { useTranslations } from "next-intl"
+import { bankLogo, useBankName } from "@/hooks/banks"
+import { PROVIDER_LOGO } from "@/hooks/connection-providers"
 import {
     alertsOf,
-    dialogOf,
     connectionFactsOf,
+    dialogOf,
     menuOf,
     notesOf,
     primaryOf,
     showsBankLogo,
     usesAgents,
 } from "@/hooks/connection-rows"
-import { PROVIDER_LOGO } from "@/hooks/connection-providers"
-import { bankLogo, useBankName } from "@/hooks/banks"
 import type { AgentOption, Connection, RowPrimary, RowView } from "@/modules/types"
+import { useTranslations } from "next-intl"
 import { rowState, statusKey, statusTone } from "./connections.shared"
 import { useAgentAccess } from "./useAgentAccess"
 import type { AgentAccess } from "./useAgentAccess"
@@ -22,6 +22,7 @@ import { useConnectionRowActions } from "./useConnectionRowActions"
 import { useSetConnectionGrant } from "./useSetConnectionGrant"
 import { useSmtpRowPanel } from "./useSmtpRowPanel"
 import type { SmtpRowPanel } from "./useSmtpRowPanel"
+
 /** What a connection row is given by the page that read it. */
 export interface ConnectionRowViewInput {
     readonly connection: Connection
@@ -103,13 +104,32 @@ export const useConnectionRowView = (
                       keyLabel: t("apiKey"),
                       key: actions.keys.apiKey,
                   },
-        copy: { copy: t("copy"), copied: t("copied"), reveal: t("reveal"), hide: t("hide") },
+        copy: { ...copyLabelsOf(t) },
         note: actions.note,
         disconnect: dialogOf("disconnect", c, actions.confirm, actions.busy, t),
         remove: dialogOf("remove", c, actions.confirm, actions.busy, t),
     }
 
-    const on: ConnectionRowHandlers = {
+    const on: ConnectionRowHandlers = actionsOf(overlays, c, actions, access, smtp)
+    return { view, on }
+}
+
+/** Resolves the copy labels for the current locale. */
+const copyLabelsOf = (t: ReturnType<typeof useTranslations<"connections">>) => ({
+    copy: t("copy"),
+    copied: t("copied"),
+    reveal: t("reveal"),
+    hide: t("hide"),
+})
+
+const actionsOf = (
+    overlays: ReturnType<typeof useConnectionOverlays>,
+    c: Connection,
+    actions: ReturnType<typeof useConnectionRowActions>,
+    access: ReturnType<typeof useAgentAccess>,
+    smtp: ReturnType<typeof useSmtpRowPanel>,
+): ConnectionRowHandlers => {
+    return {
         primary: (id) => {
             if (id === "continue") overlays.openWizard(c.provider, c.id)
             else if (id === "reconnectGoogle") actions.reconnectGoogle()
@@ -136,5 +156,4 @@ export const useConnectionRowView = (
         smtpMakeDefault: smtp.makeDefault,
         smtpClose: smtp.close,
     }
-    return { view, on }
 }

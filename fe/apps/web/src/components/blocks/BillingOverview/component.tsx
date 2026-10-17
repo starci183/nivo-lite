@@ -1,3 +1,12 @@
+import type { useFormatter, useLocale, useTranslations } from "next-intl"
+import type {
+    useQueryBillingWorkspaceSwr,
+    useQueryPaymentOrdersSwr,
+    useQueryBillingPlanSwr,
+    useQueryBillingReviewTransactionsSwr,
+} from "@/hooks/swr"
+import type { useRequestPaymentOrder } from "@/hooks/billing"
+import type { useUsageCard } from "@/hooks/usageCard"
 import {
     Alert,
     Badge,
@@ -85,47 +94,7 @@ export const BillingOverviewBase = (props: BillingOverviewBaseProps) => {
                     </Button>
                 </div>
                 <SectionHeader level={1} title={props.props.title} description={props.props.description} />
-                <SurfaceCard label={props.props.planLabel} headingLevel={2}>
-                    <div className={STACK_CLASS_NAME}>
-                        <DescriptionList
-                            layout="columns"
-                            isDivided
-                            items={[
-                                {
-                                    id: "plan",
-                                    term: props.props.planLabel,
-                                    description: <Text weight="semibold">{props.props.planName}</Text>,
-                                },
-                                {
-                                    id: "status",
-                                    term: props.props.statusLabel,
-                                    description: (
-                                        <Badge tone={props.props.statusTone} isDot>
-                                            {props.props.status}
-                                        </Badge>
-                                    ),
-                                },
-                                {
-                                    id: "paidUntil",
-                                    term: props.props.paidUntilLabel,
-                                    description: <Text weight="semibold">{props.props.paidUntil}</Text>,
-                                },
-                            ]}
-                        />
-                        {props.state.canRenew ? (
-                            <div className={ACTIONS_CLASS_NAME}>
-                                <BillingRenewal
-                                    state={{ isRequesting: props.state.isRenewing }}
-                                    props={{ label: props.props.renewalLabel }}
-                                    on={{ renew: props.on.renew }}
-                                />
-                                <Text size="sm" tone="muted">
-                                    {props.props.renewalHint}
-                                </Text>
-                            </div>
-                        ) : null}
-                    </div>
-                </SurfaceCard>
+                {renderCurrentBillingPlan(props)}
                 <UsageCard
                     state={props.state.usage}
                     props={props.props.usage}
@@ -161,4 +130,126 @@ export const BillingOverviewBase = (props: BillingOverviewBaseProps) => {
             </div>
         </PageContainer>
     )
+}
+
+/** Draws the SurfaceCard section of the BillingOverview view. */
+const renderCurrentBillingPlan = (props: BillingOverviewBaseProps) => (
+    <SurfaceCard label={props.props.planLabel} headingLevel={2}>
+        <div className={STACK_CLASS_NAME}>
+            <DescriptionList
+                layout="columns"
+                isDivided
+                items={[
+                    {
+                        id: "plan",
+                        term: props.props.planLabel,
+                        description: <Text weight="semibold">{props.props.planName}</Text>,
+                    },
+                    {
+                        id: "status",
+                        term: props.props.statusLabel,
+                        description: (
+                            <Badge tone={props.props.statusTone} isDot>
+                                {props.props.status}
+                            </Badge>
+                        ),
+                    },
+                    {
+                        id: "paidUntil",
+                        term: props.props.paidUntilLabel,
+                        description: <Text weight="semibold">{props.props.paidUntil}</Text>,
+                    },
+                ]}
+            />
+            {props.state.canRenew ? (
+                <div className={ACTIONS_CLASS_NAME}>
+                    <BillingRenewal
+                        state={{ isRequesting: props.state.isRenewing }}
+                        props={{ label: props.props.renewalLabel }}
+                        on={{ renew: props.on.renew }}
+                    />
+                    <Text size="sm" tone="muted">
+                        {props.props.renewalHint}
+                    </Text>
+                </div>
+            ) : null}
+        </div>
+    </SurfaceCard>
+)
+
+/** Connects the state and commands used by BillingOverview. */
+export const buildBillingOverviewState = (
+    workspace: ReturnType<typeof useQueryBillingWorkspaceSwr>,
+    orders: ReturnType<typeof useQueryPaymentOrdersSwr>,
+    plan: ReturnType<typeof useQueryBillingPlanSwr>,
+    review: ReturnType<typeof useQueryBillingReviewTransactionsSwr>,
+    phase: BillingOverviewBaseProps["state"]["phase"],
+    error: unknown,
+    format: ReturnType<typeof useFormatter>,
+    t: ReturnType<typeof useTranslations<"billing">>,
+    locale: ReturnType<typeof useLocale>,
+    renewal: ReturnType<typeof useRequestPaymentOrder>,
+    usage: ReturnType<typeof useUsageCard>,
+    timeZone: string,
+) => {
+    const money = (amount: number) =>
+        format.number(amount, { style: "currency", currency: "VND", maximumFractionDigits: 0 })
+    const stamp = (value: string) =>
+        format.dateTime(new Date(value), { dateStyle: "medium", timeStyle: "short", timeZone })
+    const statusLabels: Record<string, string> = {
+        pending_payment: t("statusPending_payment"),
+        active: t("statusActive"),
+        past_due: t("statusPast_due"),
+        cancelled: t("statusCancelled"),
+    }
+    const orderLabels: Record<string, string> = {
+        pending: t("orderPending"),
+        paid: t("orderPaid"),
+        expired: t("orderExpired"),
+        cancelled: t("orderCancelled"),
+    }
+    const reviewLabels: Record<string, string> = {
+        underpaid: t("reviewUnderpaid"),
+        expired: t("reviewExpired"),
+        unmatched: t("reviewUnmatched"),
+    }
+    let planName = t("noPlan")
+    if (plan.data) planName = locale === "vi" ? plan.data.nameVi : plan.data.nameEn
+    const paidUntil = workspace.data?.paidUntil
+    return {
+        phase,
+        plan,
+        renewal,
+        usage,
+        t,
+        error,
+        planName,
+        statusLabels,
+        workspace,
+        statusTones,
+        paidUntil,
+        format,
+        orders,
+        money,
+        stamp,
+        orderLabels,
+        orderTones,
+        review,
+        reviewLabels,
+    }
+}
+
+/** Display tones for workspace and order billing states. */
+const statusTones: Record<string, BillingOverviewBaseProps["props"]["statusTone"]> = {
+    active: "success",
+    pending_payment: "warning",
+    past_due: "danger",
+    cancelled: "neutral",
+}
+
+const orderTones: Record<string, BillingOverviewBaseProps["props"]["statusTone"]> = {
+    paid: "success",
+    pending: "warning",
+    expired: "neutral",
+    cancelled: "neutral",
 }

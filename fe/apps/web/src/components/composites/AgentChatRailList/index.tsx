@@ -1,3 +1,5 @@
+import { nivoIconSource } from "@/components/leaves/Icon"
+import type { ModuleIconName } from "@/modules/types"
 import { ListBox } from "@starci/grammar/common"
 import { AgentMark } from "@/components/leaves/AgentMark"
 
@@ -15,7 +17,7 @@ export interface AgentChatRailRow {
 interface AgentChatRailListProps {
     readonly label: string
     readonly rows: ReadonlyArray<AgentChatRailRow>
-    readonly glyph: string
+    readonly glyph: ModuleIconName
     readonly module: string
     /** The rows are still loading: the list draws waiting rows. */
     readonly isSkeleton: boolean
@@ -38,7 +40,14 @@ export const AgentChatRailList = (props: AgentChatRailListProps) => (
             id: row.id,
             label: row.title,
             description: row.description,
-            leading: <AgentMark glyph={props.glyph} module={props.module} label={row.title} size="md" />,
+            leading: (
+                <AgentMark
+                    glyph={nivoIconSource(props.glyph, "leading")}
+                    module={props.module}
+                    label={row.title}
+                    size="md"
+                />
+            ),
         }))}
     />
 )

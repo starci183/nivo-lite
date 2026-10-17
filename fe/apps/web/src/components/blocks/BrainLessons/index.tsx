@@ -25,10 +25,12 @@ const STATUS_KEY: Readonly<Record<BrainLesson["status"], "statusActive" | "statu
 type LessonAction = "active" | "rejected" | "retired"
 
 /** The connected lessons: how each agent should work, the proposals to approve and the form that writes one. */
-export const BrainLessons = () => {
-    const t = useTranslations("brain")
-    const board = useBrainBoard()
-    const desk = useLessonDesk(board.lenses[0]?.module ?? "")
+/** Connects the state and commands used by BrainLessons. */
+const buildBrainLessonsState = (
+    t: ReturnType<typeof useTranslations<"brain">>,
+    board: ReturnType<typeof useBrainBoard>,
+    desk: ReturnType<typeof useLessonDesk>,
+) => {
     const agentName = (module: string | null): string =>
         module === null ? t("lessonsAll") : (board.lenses.find((lens) => lens.module === module)?.name ?? module)
     const noticeOf = (mined: MineOutcome): string => {
@@ -62,41 +64,21 @@ export const BrainLessons = () => {
             actions: board.canWrite ? [...approve, ...retire] : [],
         }
     }
+    return { desk, t, noticeOf, board, rowOf }
+}
+
+/** Draws the connected view from its current state. */
+export const BrainLessons = () => {
+    const t = useTranslations("brain")
+    const board = useBrainBoard()
+    const desk = useLessonDesk(board.lenses[0]?.module ?? "")
+
+    const connected = buildBrainLessonsState(t, board, desk)
+    if (connected === null) return null
+
     return (
         <BrainLessonsBase
-            props={{
-                list: {
-                    section: {
-                        id: "brain-lessons-title",
-                        title: t("tabLessons"),
-                        description: t("lessonsIntro"),
-                        failTitle: t("loadFailed"),
-                        notice: desk.mined === null ? undefined : noticeOf(desk.mined),
-                    },
-                    label: t("tabLessons"),
-                    rows: board.lessons.map(rowOf),
-                    isLoading: board.isLoading,
-                    isPending: desk.isPending,
-                    emptyTitle: t("lessonsEmpty"),
-                },
-                write: board.canWrite
-                    ? {
-                          agentLabel: t("lessonsAgent"),
-                          agentOptions: board.lenses.map((lens) => ({ id: lens.module, label: lens.name })),
-                          agent: desk.agent,
-                          mineLabel: t("mine"),
-                          addTitle: t("addLesson"),
-                          titleLabel: t("lTitle"),
-                          bodyLabel: t("lBody"),
-                          whenLabel: t("lWhen"),
-                          saveLabel: t("save"),
-                          lessonTitle: desk.draft.title,
-                          lessonBody: desk.draft.body,
-                          lessonWhen: desk.draft.appliesWhen,
-                          isPending: desk.isPending,
-                      }
-                    : undefined,
-            }}
+            props={brainLessonsProps(connected)}
             on={{
                 setAgent: desk.setAgent,
                 setLessonTitle: desk.setTitle,
@@ -107,4 +89,44 @@ export const BrainLessons = () => {
             }}
         />
     )
+}
+
+/** Builds the props supplied to BrainLessonsBase. */
+const brainLessonsProps = (
+    connected: NonNullable<ReturnType<typeof buildBrainLessonsState>>,
+): Parameters<typeof BrainLessonsBase>[0]["props"] => {
+    const { t, desk, noticeOf, board, rowOf } = connected
+    return {
+        list: {
+            section: {
+                id: "brain-lessons-title",
+                title: t("tabLessons"),
+                description: t("lessonsIntro"),
+                failTitle: t("loadFailed"),
+                notice: desk.mined === null ? undefined : noticeOf(desk.mined),
+            },
+            label: t("tabLessons"),
+            rows: board.lessons.map(rowOf),
+            isLoading: board.isLoading,
+            isPending: desk.isPending,
+            emptyTitle: t("lessonsEmpty"),
+        },
+        write: board.canWrite
+            ? {
+                  agentLabel: t("lessonsAgent"),
+                  agentOptions: board.lenses.map((lens) => ({ id: lens.module, label: lens.name })),
+                  agent: desk.agent,
+                  mineLabel: t("mine"),
+                  addTitle: t("addLesson"),
+                  titleLabel: t("lTitle"),
+                  bodyLabel: t("lBody"),
+                  whenLabel: t("lWhen"),
+                  saveLabel: t("save"),
+                  lessonTitle: desk.draft.title,
+                  lessonBody: desk.draft.body,
+                  lessonWhen: desk.draft.appliesWhen,
+                  isPending: desk.isPending,
+              }
+            : undefined,
+    }
 }

@@ -1,14 +1,15 @@
 "use client"
 
 import { useTranslations } from "next-intl"
-import { useAccount, useChangePassword } from "@/hooks/account"
+import { useChangePassword } from "@/hooks/account"
 import { usePasswordForm } from "@/hooks/rhf"
+import { useQueryMyAccountSwr } from "@/hooks/swr"
 import { AccountPasswordBase } from "./component"
 
 /** The connected password card: checks the current password, then sets the new one through Auth (outcome toasted). */
 export const AccountPassword = () => {
     const t = useTranslations("account")
-    const { isLoading } = useAccount()
+    const { isLoading } = useQueryMyAccountSwr()
     const { change, isPending, error } = useChangePassword()
     const form = usePasswordForm()
 

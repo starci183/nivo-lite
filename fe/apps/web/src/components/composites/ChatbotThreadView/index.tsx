@@ -9,6 +9,7 @@ import {
     Text,
 } from "@starci/grammar/common"
 import { useEffect, useRef } from "react"
+import type { RefObject } from "react"
 import { ChatbotChips } from "@/components/branches/ChatbotChips"
 import { ChatbotComposer } from "@/components/branches/ChatbotComposer"
 import { nivoIconSource } from "@/components/leaves/Icon"
@@ -113,40 +114,7 @@ export const ChatbotThreadView = (props: ChatbotThreadViewProps) => {
                     onPress={props.onToggleInfo}
                 />
             </div>
-            <div className={THREAD_SCROLL_CLASS_NAME}>
-                {props.entries.map((entry) => {
-                    if (entry.kind !== "bubble") return <Divider key={entry.id} label={entry.text} />
-                    return (
-                        <ChatBubble
-                            key={entry.id}
-                            side={entry.side}
-                            author={entry.author}
-                            meta={entry.meta}
-                            status={entry.aiMark === null ? undefined : <Badge tone="neutral">{entry.aiMark}</Badge>}
-                            avatar={
-                                entry.avatarName === null ? undefined : (
-                                    <Avatar name={entry.avatarName} size="sm" isDecorative />
-                                )
-                            }
-                            footer={
-                                entry.deliveryText === null ? undefined : (
-                                    <Text
-                                        size="xs"
-                                        weight="medium"
-                                        tone={entry.deliveryTone === "accent" ? "accent" : "muted"}
-                                        live="polite"
-                                    >
-                                        {entry.deliveryText}
-                                    </Text>
-                                )
-                            }
-                        >
-                            {entry.text}
-                        </ChatBubble>
-                    )
-                })}
-                <div ref={endRef} />
-            </div>
+            {renderChatbotThreadViewEntries(props, endRef)}
             <ChatbotComposer
                 canReply={props.canReply}
                 lockedText={props.lockedText}
@@ -164,3 +132,44 @@ export const ChatbotThreadView = (props: ChatbotThreadViewProps) => {
         </>
     )
 }
+
+/** Renders the ChatbotThreadView entries section. */
+const renderChatbotThreadViewEntries = (
+    props: Pick<ChatbotThreadViewProps, "entries">,
+    endRef: RefObject<HTMLDivElement | null>,
+) => (
+    <div className={THREAD_SCROLL_CLASS_NAME}>
+        {props.entries.map((entry) => {
+            if (entry.kind !== "bubble") return <Divider key={entry.id} label={entry.text} />
+            return (
+                <ChatBubble
+                    key={entry.id}
+                    side={entry.side}
+                    author={entry.author}
+                    meta={entry.meta}
+                    status={entry.aiMark === null ? undefined : <Badge tone="neutral">{entry.aiMark}</Badge>}
+                    avatar={
+                        entry.avatarName === null ? undefined : (
+                            <Avatar name={entry.avatarName} size="sm" isDecorative />
+                        )
+                    }
+                    footer={
+                        entry.deliveryText === null ? undefined : (
+                            <Text
+                                size="xs"
+                                weight="medium"
+                                tone={entry.deliveryTone === "accent" ? "accent" : "muted"}
+                                live="polite"
+                            >
+                                {entry.deliveryText}
+                            </Text>
+                        )
+                    }
+                >
+                    {entry.text}
+                </ChatBubble>
+            )
+        })}
+        <div ref={endRef} />
+    </div>
+)

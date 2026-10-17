@@ -28,20 +28,23 @@ const inMonth = (iso: string | null, y: number, m: number): boolean => {
 const WEEK = 7
 
 /** The Calendar tab: month grid with drag to reschedule, agenda on phones, and the posts without a date. */
-export const ContentCalendarPanel = () => {
-    const data = useContentData()
-    const t = useTranslations("content")
-    const command = useContentCommand()
-    const actions = useContentItemActions()
-    const focus = useContentFocus()
-    const now = useMemo(() => new Date(data.nowIso), [data.nowIso])
-    const [ym, setYm] = useState(() => {
-        const here = vietnamClock(now)
-        return { y: here.y, m: here.m }
-    })
-    const [dragId, setDragId] = useState<string | null>(null)
-    const [overKey, setOverKey] = useState<string | null>(null)
-    const [expandedKey, setExpandedKey] = useState<string | null>(null)
+/** Connects the state and commands used by ContentCalendarPanel. */
+const buildContentCalendarPanelState = (
+    ym: CalendarMonth,
+    data: ReturnType<typeof useContentData>,
+    t: ReturnType<typeof useTranslations<"content">>,
+    dragId: string | null,
+    setDragId: import("react").Dispatch<import("react").SetStateAction<string | null>>,
+    setOverKey: import("react").Dispatch<import("react").SetStateAction<string | null>>,
+    command: ReturnType<typeof useContentCommand>,
+    actions: ReturnType<typeof useContentItemActions>,
+    now: Date,
+    overKey: string | null,
+    expandedKey: string | null,
+    setYm: import("react").Dispatch<import("react").SetStateAction<CalendarMonth>>,
+    focus: ReturnType<typeof useContentFocus>,
+    setExpandedKey: import("react").Dispatch<import("react").SetStateAction<string | null>>,
+) => {
     const { y, m } = ym
     const monthItems = data.items
         .filter((i) => inMonth(i.scheduled_at, y, m))
@@ -70,6 +73,64 @@ export const ContentCalendarPanel = () => {
         const at = moveToDay(item.scheduled_at, y, m, day)
         if (at !== item.scheduled_at) command.run("move", () => actions.move(item.id, at))
     }
+    return {
+        t,
+        y,
+        m,
+        cells,
+        byDay,
+        monthItems,
+        pillarNames,
+        data,
+        now,
+        dragId,
+        overKey,
+        expandedKey,
+        hasSetup,
+        command,
+        setYm,
+        focus,
+        setDragId,
+        setOverKey,
+        drop,
+        setExpandedKey,
+    }
+}
+
+/** Draws the connected view from its current state. */
+export const ContentCalendarPanel = () => {
+    const data = useContentData()
+    const t = useTranslations("content")
+    const command = useContentCommand()
+    const actions = useContentItemActions()
+    const focus = useContentFocus()
+    const now = useMemo(() => new Date(data.nowIso), [data.nowIso])
+    const [ym, setYm] = useState(() => {
+        const here = vietnamClock(now)
+        return { y: here.y, m: here.m }
+    })
+    const [dragId, setDragId] = useState<string | null>(null)
+    const [overKey, setOverKey] = useState<string | null>(null)
+    const [expandedKey, setExpandedKey] = useState<string | null>(null)
+
+    const connected = buildContentCalendarPanelState(
+        ym,
+        data,
+        t,
+        dragId,
+        setDragId,
+        setOverKey,
+        command,
+        actions,
+        now,
+        overKey,
+        expandedKey,
+        setYm,
+        focus,
+        setExpandedKey,
+    )
+    if (connected === null) return null
+    const { y, m, cells, byDay, monthItems, pillarNames, hasSetup, drop } = connected
     return (
         <ContentCalendarPanelBase
             props={{
@@ -112,3 +173,6 @@ export const ContentCalendarPanel = () => {
         />
     )
 }
+
+/** The year and month selected in the content calendar. */
+type CalendarMonth = Pick<ReturnType<typeof vietnamClock>, "y" | "m">

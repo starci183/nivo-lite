@@ -121,33 +121,7 @@ export const ApiKeysSectionBase = (props: ApiKeysSectionBaseProps) => (
                 </Text>
             )}
             {props.props.revokeError === undefined ? null : <Alert tone="negative" title={props.props.revokeError} />}
-            {props.props.items.length === 0 ? null : (
-                <List className={KEY_LIST_CLASS} label={props.props.title}>
-                    {props.props.items.map((item) => (
-                        <ListItem key={item.id} className={KEY_ROW_CLASS}>
-                            <div className={KEY_MAIN_CLASS}>
-                                <Text weight="semibold">{item.name}</Text>
-                                <Text size="sm" tone="muted">
-                                    {item.prefixText}
-                                </Text>
-                                <Text size="xs" tone="muted">
-                                    {item.datesText}
-                                </Text>
-                            </div>
-                            <div className={ACTIONS_CLASS}>
-                                <Badge isDot tone={item.isRevoked ? "neutral" : "success"}>
-                                    {item.statusLabel}
-                                </Badge>
-                                {item.isRevoked ? null : (
-                                    <Button variant="danger-soft" onPress={() => props.on.askRevoke(item.id)}>
-                                        {props.props.revokeLabel}
-                                    </Button>
-                                )}
-                            </div>
-                        </ListItem>
-                    ))}
-                </List>
-            )}
+            {props.props.items.length === 0 ? null : renderApiKeysList(props)}
             {props.props.revoking === undefined ? null : (
                 <AlertDialog
                     isOpen
@@ -163,4 +137,33 @@ export const ApiKeysSectionBase = (props: ApiKeysSectionBaseProps) => (
             )}
         </div>
     </SurfaceCard>
+)
+
+/** Draws the List section of the ApiKeysSection view. */
+const renderApiKeysList = (props: ApiKeysSectionBaseProps) => (
+    <List className={KEY_LIST_CLASS} label={props.props.title}>
+        {props.props.items.map((item) => (
+            <ListItem key={item.id} className={KEY_ROW_CLASS}>
+                <div className={KEY_MAIN_CLASS}>
+                    <Text weight="semibold">{item.name}</Text>
+                    <Text size="sm" tone="muted">
+                        {item.prefixText}
+                    </Text>
+                    <Text size="xs" tone="muted">
+                        {item.datesText}
+                    </Text>
+                </div>
+                <div className={ACTIONS_CLASS}>
+                    <Badge isDot tone={item.isRevoked ? "neutral" : "success"}>
+                        {item.statusLabel}
+                    </Badge>
+                    {item.isRevoked ? null : (
+                        <Button variant="danger-soft" onPress={() => props.on.askRevoke(item.id)}>
+                            {props.props.revokeLabel}
+                        </Button>
+                    )}
+                </div>
+            </ListItem>
+        ))}
+    </List>
 )

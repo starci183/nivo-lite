@@ -35,17 +35,6 @@ export const MoneyWizard = (props: MoneyWizardProps) => {
     })
     const def = PROVIDERS[props.provider]
     const { form, follow, conn, flags } = wizard
-    const drafts =
-        props.provider === "sepay"
-            ? { webhookName: follow.webhookName, apiKey: follow.apiKey }
-            : { webhookName: follow.webhookName }
-    const receivedOf = (event: FirstEvent | null): string | null => {
-        if (event === null) return null
-        const amount = format.number(event.amount, { style: "currency", currency: "VND", maximumFractionDigits: 0 })
-        return event.content === ""
-            ? tw("verifyReceivedNoContent", { amount })
-            : tw("verifyReceived", { amount, content: event.content })
-    }
     const keysNote = !flags.needsKeys ? null : tw(follow.keysSaved ? "keysSaved" : "keysHint")
     return (
         <MoneyWizardBase
@@ -79,24 +68,13 @@ export const MoneyWizard = (props: MoneyWizardProps) => {
                 accountHint:
                     conn !== null && conn.account !== "" ? tw("accountKeep", { account: conn.account }) : undefined,
                 providerHref: def.dashboard[form.environment] ?? null,
-                screens: guideScreensOf(
-                    {
-                        provider: props.provider,
-                        brand: def.brand,
-                        steps: GUIDES[props.provider] ?? [],
-                        ctx: wizard.context,
-                        values: follow.values,
-                        drafts,
-                    },
-                    tc,
-                    tw,
-                ),
+                screens: moneyGuideScreens(props.provider, wizard, tc, tw),
                 copy,
                 followLabel: flags.keysDone ? tw("guideDone") : tw("saveKeys"),
                 canFollow: !(flags.needsKeys && !flags.keysFilled && !follow.keysSaved),
                 keysNote,
                 verifyHelp: verifyHelpOf(props.provider, form.environment, wizard.context, tc),
-                received: wizard.received ? receivedOf(wizard.firstEvent) : null,
+                received: wizard.received ? moneyReceived(wizard.firstEvent, format, tw) : null,
                 hasCheckFailed: wizard.hasCheckFailed,
                 agentStep: {
                     title: tw("agentTitleAccounting"),
@@ -108,29 +86,73 @@ export const MoneyWizard = (props: MoneyWizardProps) => {
                 },
                 note: wizard.note,
                 isPending: wizard.isPending,
-                text: {
-                    back: tw("back"),
-                    next: tw("next"),
-                    close: tw("close"),
-                    done: tw("done"),
-                    skip: tw("skip"),
-                    earlyAccess: tw("earlyAccess"),
-                    earlyAccessNote: tw("earlyAccessNote"),
-                    envHint: tw("envHint"),
-                    envBadge: tw("envBadgeTest"),
-                    openProvider: tw("openProvider", { brand: def.brand }),
-                    fieldName: tw("fieldName"),
-                    fieldNameHint: tw("fieldNameHint"),
-                    fieldBank: tw("fieldBank"),
-                    fieldBankPlaceholder: tw("fieldBankPlaceholder"),
-                    fieldAccount: tw("fieldAccount"),
-                    fieldHolder: tw("fieldHolder"),
-                    createdLocked: tw("createdLocked"),
-                    verifyWaiting: tw("verifyWaiting"),
-                    verifyError: tw("verifyError"),
-                },
+                text: { ...moneyWizardText(tw), openProvider: tw("openProvider", { brand: def.brand }) },
             }}
             on={wizard.on}
         />
     )
+}
+
+/** Resolves the labels for this form. */
+const moneyWizardText = (tw: ReturnType<typeof useTranslations<"connectionWizard">>) => {
+    return {
+        back: tw("back"),
+        next: tw("next"),
+        close: tw("close"),
+        done: tw("done"),
+        skip: tw("skip"),
+        earlyAccess: tw("earlyAccess"),
+        earlyAccessNote: tw("earlyAccessNote"),
+        envHint: tw("envHint"),
+        envBadge: tw("envBadgeTest"),
+        fieldName: tw("fieldName"),
+        fieldNameHint: tw("fieldNameHint"),
+        fieldBank: tw("fieldBank"),
+        fieldBankPlaceholder: tw("fieldBankPlaceholder"),
+        fieldAccount: tw("fieldAccount"),
+        fieldHolder: tw("fieldHolder"),
+        createdLocked: tw("createdLocked"),
+        verifyWaiting: tw("verifyWaiting"),
+        verifyError: tw("verifyError"),
+    }
+}
+
+/** Resolves the provider guide using its saved and drafted values. */
+const moneyGuideScreens = (
+    provider: MoneyProvider,
+    wizard: ReturnType<typeof useMoneyWizard>,
+    tc: ReturnType<typeof useTranslations<"connections">>,
+    tw: ReturnType<typeof useTranslations<"connectionWizard">>,
+) => {
+    const def = PROVIDERS[provider]
+    const { follow } = wizard
+    const drafts =
+        provider === "sepay"
+            ? { webhookName: follow.webhookName, apiKey: follow.apiKey }
+            : { webhookName: follow.webhookName }
+    return guideScreensOf(
+        {
+            provider,
+            brand: def.brand,
+            steps: GUIDES[provider] ?? [],
+            ctx: wizard.context,
+            values: follow.values,
+            drafts,
+        },
+        tc,
+        tw,
+    )
+}
+
+/** Formats the first bank event using its amount and optional transfer content. */
+const moneyReceived = (
+    event: FirstEvent | null,
+    format: ReturnType<typeof useFormatter>,
+    tw: ReturnType<typeof useTranslations<"connectionWizard">>,
+): string | null => {
+    if (event === null) return null
+    const amount = format.number(event.amount, { style: "currency", currency: "VND", maximumFractionDigits: 0 })
+    return event.content === ""
+        ? tw("verifyReceivedNoContent", { amount })
+        : tw("verifyReceived", { amount, content: event.content })
 }

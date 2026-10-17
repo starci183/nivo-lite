@@ -2,7 +2,8 @@
 
 import { useTranslations } from "next-intl"
 import { useState } from "react"
-import { useGuideConversation, useGuidePage, useGuideSpotlight } from "@/hooks/guide"
+import { useGuideConversation, useGuideSpotlight } from "@/hooks/guide"
+import { pageAt } from "@/hooks/guide"
 import { isManager, useMember } from "@/hooks/member"
 
 import { navigation } from "@/modules/i18n"
@@ -24,7 +25,7 @@ export const GuideBubble = () => {
     const [isOpen, setIsOpen] = useState(false)
     const { messages, isAsking, ask, restart } = useGuideConversation(isManagerRole)
     const [question, setQuestion] = useState("")
-    const here = useGuidePage(pathname)
+    const here = pageAt(pathname)
 
     const send = (text: string) => {
         if (text.trim() === "" || isAsking) return

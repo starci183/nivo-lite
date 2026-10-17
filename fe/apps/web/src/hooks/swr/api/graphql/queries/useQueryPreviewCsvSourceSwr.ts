@@ -1,14 +1,15 @@
 "use client"
 
-import useSWRMutation from "swr/mutation"
 import { queryPreviewCsvSource } from "@/modules/api/graphql/queries/query-preview-csv-source"
+import type { queryPreviewCsvSource as QueryPreviewCsvSourceOperation } from "@/modules/api/graphql/queries/query-preview-csv-source"
+import useSWRMutation from "swr/mutation"
 
 /** The SWR key of the previewCsvSource query. */
 export const QUERY_PREVIEW_CSV_SOURCE_SWR_KEY = "QUERY_PREVIEW_CSV_SOURCE_SWR"
 
 /** The argument the trigger of this hook is called with. */
 interface TriggerArg {
-    readonly arg: Parameters<typeof queryPreviewCsvSource>[0]["request"]
+    readonly arg: Parameters<typeof QueryPreviewCsvSourceOperation>[0]["request"]
 }
 
 /** Lazily previews an import source; `trigger(input)` answers the payload and rejects with the back end failure. */

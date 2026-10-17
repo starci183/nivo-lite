@@ -1,7 +1,5 @@
 "use client"
 
-import type { BadgeTone } from "@starci/grammar/common"
-import { useFormatter, useTranslations } from "next-intl"
 import type {
     LeadFlowDecisionType as DecisionRow,
     LeadFlowInvoiceType as Invoice,
@@ -9,7 +7,10 @@ import type {
     LeadFlowOrderType as Order,
     LeadFlowTransactionType as Transaction,
     LeadFlowWorkItemType as WorkItemView,
-} from "@/modules/api"
+} from "@/hooks/swr"
+import type { BadgeTone } from "@starci/grammar/common"
+import { useFormatter, useTranslations } from "next-intl"
+import { flowViewMapper } from "./leads.shared"
 
 /** One entry of the work flow card: what happened, when, how it stands and the lines that qualify it. */
 export interface FlowEntryView {
@@ -65,33 +66,7 @@ export const useLeadFlowView = (): ((flow: LeadFlow) => FlowView) => {
     const day = (iso: string): string =>
         format.dateTime(new Date(iso), { day: "2-digit", month: "short", year: "numeric" })
 
-    const stepOf = (item: WorkItemView): FlowEntryView => {
-        const summary = item.result?.summary ?? item.proposal.summary
-        return {
-            id: item.id,
-            head: joined([
-                g(`dept_${item.department}`),
-                g(`action_${item.action}`),
-                g(`status_${item.status}`),
-                item.decidedPath ? g(`path_${item.decidedPath}`) : null,
-            ]),
-            when: when(item.createdAt),
-            badge: { label: g(`status_${item.status}`), tone: toneOf(STEP_TONES, item.status, "neutral") },
-            reason: item.reason ? g(`reason_${item.reason}`) : null,
-            lines: [
-                ...line(
-                    "evidence",
-                    joined([
-                        g(`evidence_${item.evidenceState}`),
-                        item.origin === "simulated" ? g("origin_simulated") : null,
-                    ]),
-                ),
-                ...line("summary", summary, true),
-                ...line("error", item.error ? `${t("flowError")}: ${item.error}` : null),
-                ...line("staff", item.assignedStaffName ? t("flowAssignedTo", { name: item.assignedStaffName }) : null),
-            ],
-        }
-    }
+    const stepOf = stepOfOf(g, when, t)
     const orderOf = (order: Order): FlowEntryView => ({
         id: order.id,
         head: `${order.orderNo} · ${vnd(order.amountVnd)}`,
@@ -150,36 +125,38 @@ export const useLeadFlowView = (): ((flow: LeadFlow) => FlowView) => {
         ],
     })
 
-    return (flow) => {
-        const items = [...flow.workItems].sort((a, b) => a.createdAt.localeCompare(b.createdAt))
-        const orderNo = new Map(flow.orders.map((order) => [order.id, order.orderNo]))
-        const none = t("flowNone")
+    return flowViewMapper(t, stepOf, orderOf, invoiceOf, paymentOf, decisionOf)
+}
+
+const stepOfOf = (
+    g: ReturnType<typeof useTranslations<"governance">>,
+    when: (iso: string) => { iso: string; label: string },
+    t: ReturnType<typeof useTranslations<"lead">>,
+) => {
+    return (item: WorkItemView): FlowEntryView => {
+        const summary = item.result?.summary ?? item.proposal.summary
         return {
-            fact: t("flowFact", { count: items.length }),
-            steps: items.map(stepOf),
-            hasSimulated:
-                items.some((item) => item.origin === "simulated") ||
-                flow.orders.some((order) => order.origin === "simulated"),
-            sections: [
-                { id: "orders", title: t("flowOrders"), emptyText: none, entries: flow.orders.map(orderOf) },
-                {
-                    id: "invoices",
-                    title: t("flowInvoices"),
-                    emptyText: none,
-                    entries: flow.invoices.map((invoice) => invoiceOf(invoice, orderNo)),
-                },
-                {
-                    id: "payments",
-                    title: t("flowPayments"),
-                    emptyText: none,
-                    entries: flow.transactions.map(paymentOf),
-                },
-                {
-                    id: "decisions",
-                    title: t("flowDecisions"),
-                    emptyText: none,
-                    entries: flow.decisions.map(decisionOf),
-                },
+            id: item.id,
+            head: joined([
+                g(`dept_${item.department}`),
+                g(`action_${item.action}`),
+                g(`status_${item.status}`),
+                item.decidedPath ? g(`path_${item.decidedPath}`) : null,
+            ]),
+            when: when(item.createdAt),
+            badge: { label: g(`status_${item.status}`), tone: toneOf(STEP_TONES, item.status, "neutral") },
+            reason: item.reason ? g(`reason_${item.reason}`) : null,
+            lines: [
+                ...line(
+                    "evidence",
+                    joined([
+                        g(`evidence_${item.evidenceState}`),
+                        item.origin === "simulated" ? g("origin_simulated") : null,
+                    ]),
+                ),
+                ...line("summary", summary, true),
+                ...line("error", item.error ? `${t("flowError")}: ${item.error}` : null),
+                ...line("staff", item.assignedStaffName ? t("flowAssignedTo", { name: item.assignedStaffName }) : null),
             ],
         }
     }

@@ -1,11 +1,11 @@
 "use client"
 
+import { QUERY_AUTHORITY_SWR_KEY, useMutateUpdateAuthoritySwr } from "@/hooks/swr"
+import type { MutateUpdateAuthorityRequest } from "@/hooks/swr"
+import { useGraphQLWithToast } from "@/modules/toast"
 import { useTranslations } from "next-intl"
 import { useCallback } from "react"
 import { mutate } from "swr"
-import { QUERY_AUTHORITY_SWR_KEY, useMutateUpdateAuthoritySwr } from "@/hooks/swr"
-import type { MutateUpdateAuthorityRequest } from "@/modules/api/graphql/mutations/mutation-update-authority"
-import { useGraphQLWithToast } from "@/modules/toast"
 
 /** The profile fields one section writes (the back end keeps the rest). */
 export type AuthorityPatch = MutateUpdateAuthorityRequest["patch"]

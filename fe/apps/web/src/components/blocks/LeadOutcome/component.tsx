@@ -124,74 +124,82 @@ export const LeadOutcomeBase = (props: LeadOutcomeBaseProps) => {
                                 {view.evidenceNote}
                             </Text>
                         </div>
-                        {isSkeleton ? null : (
-                            <>
-                                <div className={FORM_STACK_CLASS_NAME}>
-                                    <Select
-                                        label={l.stageLabel}
-                                        options={l.stageOptions}
-                                        value={view.stage}
-                                        onValueChange={(value) => value && on.stage(value)}
-                                    />
-                                    {view.wonNote === null ? null : (
-                                        <Text as="p" size="sm" tone="muted">
-                                            {view.wonNote}
-                                        </Text>
-                                    )}
-                                    <Textarea
-                                        label={l.evidenceLabel}
-                                        description={l.evidenceHint}
-                                        rows={4}
-                                        value={p.evidenceText}
-                                        onValueChange={on.evidence}
-                                    />
-                                    {p.error === null ? null : (
-                                        <Alert title={l.failTitle} description={p.error} tone="negative" />
-                                    )}
-                                    <Button
-                                        variant="primary"
-                                        isPending={p.isPending}
-                                        isDisabled={p.evidenceText.trim().length === 0}
-                                        onPress={on.submit}
-                                    >
-                                        {l.recordLabel}
-                                    </Button>
-                                </div>
-                                {view.recorded.length === 0 ? (
-                                    <EmptyNotice message={l.noEvidenceTitle} description={l.noEvidenceHint} />
-                                ) : (
-                                    <div className={EVIDENCE_STACK_CLASS_NAME}>
-                                        <Heading level={3}>{view.recordedTitle}</Heading>
-                                        <List className={EVIDENCE_LIST_CLASS_NAME} label={view.recordedTitle}>
-                                            {view.recorded.map((item) => (
-                                                <ListItem key={item.id} className={EVIDENCE_ITEM_CLASS_NAME}>
-                                                    <div className={EVIDENCE_HEAD_CLASS_NAME}>
-                                                        <Text
-                                                            as="span"
-                                                            size="xs"
-                                                            tone="muted"
-                                                            weight="semibold"
-                                                            startContent={<Icon props={EVIDENCE_ICON} />}
-                                                        >
-                                                            {l.evidenceLabel}
-                                                        </Text>
-                                                        <Text as="span" size="xs" tone="muted">
-                                                            {item.byline}
-                                                        </Text>
-                                                    </div>
-                                                    <Text as="p" size="sm">
-                                                        {item.text}
-                                                    </Text>
-                                                </ListItem>
-                                            ))}
-                                        </List>
-                                    </div>
-                                )}
-                            </>
-                        )}
+                        {isSkeleton ? null : renderOutcomeFields({ l, view, on, p })}
                     </div>
                 )}
             </SlotView>
         </LeadPanel>
     )
 }
+
+/** Inputs needed to build the LeadOutcomeContent section. */
+interface RenderOutcomeFieldsContext {
+    readonly l: OutcomeLabels
+    readonly view: OutcomeView
+    readonly on: LeadOutcomeBaseProps["on"]
+    readonly p: LeadOutcomeBaseProps["props"]
+}
+/** Builds the LeadOutcomeContent section from the current view. */
+const renderOutcomeFields = ({ l, view, on, p }: RenderOutcomeFieldsContext) => (
+    <>
+        <div className={FORM_STACK_CLASS_NAME}>
+            <Select
+                label={l.stageLabel}
+                options={l.stageOptions}
+                value={view.stage}
+                onValueChange={(value) => value && on.stage(value)}
+            />
+            {view.wonNote === null ? null : (
+                <Text as="p" size="sm" tone="muted">
+                    {view.wonNote}
+                </Text>
+            )}
+            <Textarea
+                label={l.evidenceLabel}
+                description={l.evidenceHint}
+                rows={4}
+                value={p.evidenceText}
+                onValueChange={on.evidence}
+            />
+            {p.error === null ? null : <Alert title={l.failTitle} description={p.error} tone="negative" />}
+            <Button
+                variant="primary"
+                isPending={p.isPending}
+                isDisabled={p.evidenceText.trim().length === 0}
+                onPress={on.submit}
+            >
+                {l.recordLabel}
+            </Button>
+        </div>
+        {view.recorded.length === 0 ? (
+            <EmptyNotice message={l.noEvidenceTitle} description={l.noEvidenceHint} />
+        ) : (
+            <div className={EVIDENCE_STACK_CLASS_NAME}>
+                <Heading level={3}>{view.recordedTitle}</Heading>
+                <List className={EVIDENCE_LIST_CLASS_NAME} label={view.recordedTitle}>
+                    {view.recorded.map((item) => (
+                        <ListItem key={item.id} className={EVIDENCE_ITEM_CLASS_NAME}>
+                            <div className={EVIDENCE_HEAD_CLASS_NAME}>
+                                <Text
+                                    as="span"
+                                    size="xs"
+                                    tone="muted"
+                                    weight="semibold"
+                                    startContent={<Icon props={EVIDENCE_ICON} />}
+                                >
+                                    {l.evidenceLabel}
+                                </Text>
+                                <Text as="span" size="xs" tone="muted">
+                                    {item.byline}
+                                </Text>
+                            </div>
+                            <Text as="p" size="sm">
+                                {item.text}
+                            </Text>
+                        </ListItem>
+                    ))}
+                </List>
+            </div>
+        )}
+    </>
+)

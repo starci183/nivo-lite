@@ -33,6 +33,10 @@ enum MutationTakeOverAgentChatConversation {
     Mutation1 = "mutation1",
 }
 
+const mutationMap: Record<MutationTakeOverAgentChatConversation, Document> = {
+    [MutationTakeOverAgentChatConversation.Mutation1]: mutation1,
+}
+
 /** Parameters of the human takeover mutation. */
 type MutateTakeOverAgentChatConversationParams = MutateParams<
     MutationTakeOverAgentChatConversation,
@@ -41,10 +45,11 @@ type MutateTakeOverAgentChatConversationParams = MutateParams<
 
 /** Gives the conversation to a human or returns it to the agent. */
 export const mutateTakeOverAgentChatConversation = async ({
+    mutation = MutationTakeOverAgentChatConversation.Mutation1,
     request,
     signal,
     headers,
 }: MutateTakeOverAgentChatConversationParams) => {
     const apollo = createAuthApolloClient({ signal, headers })
-    return apollo.mutate({ mutation: mutation1, variables: { input: request }, context: { headers } })
+    return apollo.mutate({ mutation: mutationMap[mutation], variables: { input: request }, context: { headers } })
 }

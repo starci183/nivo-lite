@@ -1,5 +1,4 @@
-import type { BadgeTone } from "@starci/grammar/common"
-import type { LeadRecordType } from "@/modules/api"
+import type { LeadFlowType as LeadFlow, LeadRecordType } from "@/hooks/swr"
 import type {
     LeadJourney,
     LeadPrimaryAction,
@@ -8,6 +7,9 @@ import type {
     ResponsibilityRecord,
     StepStatus,
 } from "@/modules/types"
+import type { BadgeTone } from "@starci/grammar/common"
+import type { useTranslations } from "next-intl"
+import type { FlowEntryView, FlowView } from "./useLeadFlowView"
 
 /** The stages in journey order, as the tabs and the stage choice list them. */
 export const STAGE_ORDER: ReadonlyArray<LeadStageId> = ["new", "qualified", "proposal", "won", "lost"]
@@ -109,5 +111,49 @@ export const leadRecordOf = (lead: LeadRecordType): LeadRecord => {
         context_summary: lead.contextSummary ?? null,
         origin: lead.origin ?? null,
         created_at: lead.createdAt,
+    }
+}
+
+/** Groups lead activity into the sections drawn by the work-flow card. */
+export const flowViewMapper = (
+    t: ReturnType<typeof useTranslations<"lead">>,
+    stepOf: (item: LeadFlow["workItems"][number]) => FlowEntryView,
+    orderOf: (order: LeadFlow["orders"][number]) => FlowEntryView,
+    invoiceOf: (invoice: LeadFlow["invoices"][number], orderNo: ReadonlyMap<string, string>) => FlowEntryView,
+    paymentOf: (payment: LeadFlow["transactions"][number]) => FlowEntryView,
+    decisionOf: (decision: LeadFlow["decisions"][number]) => FlowEntryView,
+): ((flow: LeadFlow) => FlowView) => {
+    return (flow) => {
+        const items = [...flow.workItems].sort((a, b) => a.createdAt.localeCompare(b.createdAt))
+        const orderNo = new Map(flow.orders.map((order) => [order.id, order.orderNo]))
+        const none = t("flowNone")
+        return {
+            fact: t("flowFact", { count: items.length }),
+            steps: items.map(stepOf),
+            hasSimulated:
+                items.some((item) => item.origin === "simulated") ||
+                flow.orders.some((order) => order.origin === "simulated"),
+            sections: [
+                { id: "orders", title: t("flowOrders"), emptyText: none, entries: flow.orders.map(orderOf) },
+                {
+                    id: "invoices",
+                    title: t("flowInvoices"),
+                    emptyText: none,
+                    entries: flow.invoices.map((invoice) => invoiceOf(invoice, orderNo)),
+                },
+                {
+                    id: "payments",
+                    title: t("flowPayments"),
+                    emptyText: none,
+                    entries: flow.transactions.map(paymentOf),
+                },
+                {
+                    id: "decisions",
+                    title: t("flowDecisions"),
+                    emptyText: none,
+                    entries: flow.decisions.map(decisionOf),
+                },
+            ],
+        }
     }
 }

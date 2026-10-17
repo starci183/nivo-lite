@@ -28,6 +28,65 @@ const shapeOf = (aspect: string): "portrait" | "square" | "landscape" => {
     return aspect === "1:1" ? "square" : "landscape"
 }
 
+const copyOf = (t: ReturnType<typeof useTranslations<"video">>) => ({
+    heading: t("resultHeading"),
+    waitingLabel: t("status_rendering"),
+    approveLabel: t("approve"),
+    downloadLabel: t("download"),
+    shareLabel: t("share"),
+    postedLabel: t("markPublished"),
+    soonLabel: t("soon"),
+    tikTokLabel: t("postTikTok"),
+    facebookLabel: t("postFacebook"),
+    postNote: t("postNote"),
+    editLabel: t("editAgain"),
+    rerenderLabel: t("rerender"),
+})
+
+const badgesOf = (
+    project: ReturnType<typeof useVideoProjectData>["project"],
+    t: ReturnType<typeof useTranslations<"video">>,
+    format: ReturnType<typeof useFormatter>,
+): ReadonlyArray<VideoResultBadge> => {
+    const render = project.render
+    const approved = project.status === "approved" || project.status === "published"
+    return [
+        ...(render?.durationMs
+            ? [
+                  {
+                      id: "length",
+                      tone: "neutral" as const,
+                      text: t("seconds", { n: Math.round(render.durationMs / 1000) }),
+                  },
+              ]
+            : []),
+        ...(render?.sizeBytes
+            ? [
+                  {
+                      id: "size",
+                      tone: "neutral" as const,
+                      text: t("fileSize", {
+                          n: format.number(render.sizeBytes / 1_048_576, { maximumFractionDigits: 1 }),
+                      }),
+                  },
+              ]
+            : []),
+        { id: "aspect", tone: "neutral" as const, text: project.aspect },
+        ...(approved
+            ? [
+                  {
+                      id: "approved",
+                      tone: "success" as const,
+                      text:
+                          project.approvedByName === null
+                              ? t(`status_${project.status}`)
+                              : t("approvedBy", { name: project.approvedByName }),
+                  },
+              ]
+            : []),
+    ]
+}
+
 /** Step five of the wizard: the finished video, its approval, download, share and the owner's own posting. */
 export const VideoResultStep = (props: VideoResultStepProps) => {
     const editor = useVideoProjectData(props)
@@ -65,45 +124,11 @@ export const VideoResultStep = (props: VideoResultStepProps) => {
             return done !== undefined ? { tone: "informative", text: t("postedNote") } : null
         })
 
-    const badges: ReadonlyArray<VideoResultBadge> = [
-        ...(render?.durationMs
-            ? [
-                  {
-                      id: "length",
-                      tone: "neutral" as const,
-                      text: t("seconds", { n: Math.round(render.durationMs / 1000) }),
-                  },
-              ]
-            : []),
-        ...(render?.sizeBytes
-            ? [
-                  {
-                      id: "size",
-                      tone: "neutral" as const,
-                      text: t("fileSize", {
-                          n: format.number(render.sizeBytes / 1_048_576, { maximumFractionDigits: 1 }),
-                      }),
-                  },
-              ]
-            : []),
-        { id: "aspect", tone: "neutral" as const, text: project.aspect },
-        ...(approved
-            ? [
-                  {
-                      id: "approved",
-                      tone: "success" as const,
-                      text:
-                          project.approvedByName === null
-                              ? t(`status_${project.status}`)
-                              : t("approvedBy", { name: project.approvedByName }),
-                  },
-              ]
-            : []),
-    ]
+    const badges = badgesOf(project, t, format)
     return (
         <VideoResultStepBase
             props={{
-                heading: t("resultHeading"),
+                ...copyOf(t),
                 fact: `${t("version", { n: project.renderCount })} - ${t(`status_${project.status}`)}`,
                 title: project.title,
                 shape: shapeOf(project.aspect),
@@ -111,29 +136,18 @@ export const VideoResultStep = (props: VideoResultStepProps) => {
                 posterUrl: render?.posterUrl ?? null,
                 failedTitle: render?.status === "failed" ? t("renderFailed") : null,
                 failedDetail: render?.error ? failure(render.error) : null,
-                waitingLabel: t("status_rendering"),
                 badges,
                 approveHeading: approved ? t("status_approved") : t("approve"),
                 approveHelp: approved ? null : t("approveHelp"),
-                approveLabel: t("approve"),
                 showApprove: !approved,
                 approving: busy === "approve",
                 approveDisabled: !editor.canEdit || project.status !== "ready",
-                downloadLabel: t("download"),
                 downloadUrl: approved ? (render?.downloadUrl ?? null) : null,
-                shareLabel: t("share"),
                 showShare: approved,
                 sharing: busy === "share",
-                postedLabel: t("markPublished"),
                 showPosted: project.status === "approved",
                 posting: busy === "posted",
-                soonLabel: t("soon"),
-                tikTokLabel: t("postTikTok"),
-                facebookLabel: t("postFacebook"),
-                postNote: t("postNote"),
-                editLabel: t("editAgain"),
                 lockedNote: approved ? t("approvedLocked") : null,
-                rerenderLabel: t("rerender"),
                 canEdit: editor.canEdit,
                 rerenderDisabled: !editor.canEdit || project.status === "rendering",
                 message,

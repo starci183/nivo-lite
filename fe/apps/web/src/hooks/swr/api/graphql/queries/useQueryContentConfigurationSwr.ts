@@ -1,14 +1,17 @@
+"use client"
+
+import { useWorkspaceParamsKey } from "@/hooks/workspaceKey"
+import useSWR from "swr"
+import { answeredData } from "@/hooks/workspaceread"
 import { queryContentConfiguration } from "@/modules/api/graphql/queries/query-content-configuration"
-import { useWorkspaceQuerySwr } from "@/hooks/reuseables"
 
 /** The SWR key of the contentConfiguration query. */
 export const QUERY_CONTENT_CONFIGURATION_SWR_KEY = "QUERY_CONTENT_CONFIGURATION_SWR"
 
 /** The content configuration of the workspace. */
 export const useQueryContentConfigurationSwr = () =>
-    useWorkspaceQuerySwr(
-        QUERY_CONTENT_CONFIGURATION_SWR_KEY,
-        [],
-        () => queryContentConfiguration(),
-        (data) => data.contentConfiguration,
+    useSWR(
+        useWorkspaceParamsKey(QUERY_CONTENT_CONFIGURATION_SWR_KEY, [] as const),
+        async ([, , ...input]: readonly [string, string]) =>
+            answeredData(await queryContentConfiguration(), QUERY_CONTENT_CONFIGURATION_SWR_KEY).contentConfiguration,
     )

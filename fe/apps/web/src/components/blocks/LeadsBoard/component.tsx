@@ -1,3 +1,4 @@
+import type { useTranslations, useFormatter } from "next-intl"
 import {
     Badge,
     EmptyNotice,
@@ -111,74 +112,94 @@ export const LeadsBoardBase = (props: LeadsBoardBaseProps) => {
                             items={view.tabs}
                             onSelect={on.select}
                         />
-                        <SurfaceListCard
-                            ariaLabel={view.rows.length === 0 && !isSkeleton ? l.emptyAria : l.listAria}
-                            isLoading={isSkeleton}
-                            empty={
-                                view.hasLeads ? (
-                                    <EmptyNotice
-                                        message={l.noMatchTitle}
-                                        description={l.noMatchBody}
-                                        actionLabel={l.clearLabel}
-                                        actionVariant="secondary"
-                                        onAction={on.clear}
-                                    />
-                                ) : (
-                                    <EmptyNotice
-                                        message={l.emptyTitle}
-                                        description={l.emptyBody}
-                                        actionLabel={l.newLeadLabel}
-                                        actionVariant="secondary"
-                                        onAction={on.openForm}
-                                    />
-                                )
-                            }
-                        >
-                            {view.rows.map((row) => (
-                                <ListRow
-                                    key={row.id}
-                                    leading={<PersonAvatar name={row.name} size="md" />}
-                                    title={<TextAction href={row.href}>{row.name}</TextAction>}
-                                    description={row.subtitle}
-                                    badges={
-                                        <>
-                                            <Badge tone={row.stageTone} isDot>
-                                                {row.stageLabel}
-                                            </Badge>
-                                            <Text as="span" size="xs" tone="muted">
-                                                {row.ago}
-                                            </Text>
-                                        </>
-                                    }
-                                    actions={
-                                        <LeadRowMenu
-                                            leadId={row.id}
-                                            href={row.href}
-                                            officeHref={l.officeHref}
-                                            canPropose={row.canPropose}
-                                            isDisabled={p.isRowBusy}
-                                            openLabel={l.openLabel}
-                                            officeLabel={l.officeLabel}
-                                            proposeLabel={l.proposeLabel}
-                                            moreLabel={l.moreLabel}
-                                            onPropose={on.propose}
-                                        />
-                                    }
-                                >
-                                    <Text size="xs" tone="muted" overflow="truncate">
-                                        {row.who}
-                                    </Text>
-                                    {row.failure === null ? null : (
-                                        <Text size="xs" live="polite">
-                                            {row.failure}
-                                        </Text>
-                                    )}
-                                </ListRow>
-                            ))}
-                        </SurfaceListCard>
+                        {renderLeadRows({ view, isSkeleton, l, on, p })}
                     </>
                 )}
             </SlotView>
         </div>
     )
+}
+
+/** Inputs needed to build the SurfaceListCard section. */
+interface RenderLeadRowsContext {
+    readonly view: BoardView
+    readonly isSkeleton: boolean
+    readonly l: BoardLabels
+    readonly on: LeadsBoardBaseProps["on"]
+    readonly p: LeadsBoardBaseProps["props"]
+}
+/** Builds the SurfaceListCard section from the current view. */
+const renderLeadRows = ({ view, isSkeleton, l, on, p }: RenderLeadRowsContext) => (
+    <SurfaceListCard
+        ariaLabel={view.rows.length === 0 && !isSkeleton ? l.emptyAria : l.listAria}
+        isLoading={isSkeleton}
+        empty={
+            view.hasLeads ? (
+                <EmptyNotice
+                    message={l.noMatchTitle}
+                    description={l.noMatchBody}
+                    actionLabel={l.clearLabel}
+                    actionVariant="secondary"
+                    onAction={on.clear}
+                />
+            ) : (
+                <EmptyNotice
+                    message={l.emptyTitle}
+                    description={l.emptyBody}
+                    actionLabel={l.newLeadLabel}
+                    actionVariant="secondary"
+                    onAction={on.openForm}
+                />
+            )
+        }
+    >
+        {view.rows.map((row) => (
+            <ListRow
+                key={row.id}
+                leading={<PersonAvatar name={row.name} size="md" />}
+                title={<TextAction href={row.href}>{row.name}</TextAction>}
+                description={row.subtitle}
+                badges={
+                    <>
+                        <Badge tone={row.stageTone} isDot>
+                            {row.stageLabel}
+                        </Badge>
+                        <Text as="span" size="xs" tone="muted">
+                            {row.ago}
+                        </Text>
+                    </>
+                }
+                actions={
+                    <LeadRowMenu
+                        leadId={row.id}
+                        href={row.href}
+                        officeHref={l.officeHref}
+                        canPropose={row.canPropose}
+                        isDisabled={p.isRowBusy}
+                        openLabel={l.openLabel}
+                        officeLabel={l.officeLabel}
+                        proposeLabel={l.proposeLabel}
+                        moreLabel={l.moreLabel}
+                        onPropose={on.propose}
+                    />
+                }
+            >
+                <Text size="xs" tone="muted" overflow="truncate">
+                    {row.who}
+                </Text>
+                {row.failure === null ? null : (
+                    <Text size="xs" live="polite">
+                        {row.failure}
+                    </Text>
+                )}
+            </ListRow>
+        ))}
+    </SurfaceListCard>
+)
+
+/** Formatting context for a lead capture timestamp. */
+export interface LeadAgeContext {
+    readonly nowIso: string
+    readonly t: ReturnType<typeof useTranslations<"leads">>
+    readonly format: ReturnType<typeof useFormatter>
 }

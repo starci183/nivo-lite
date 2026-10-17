@@ -7,8 +7,7 @@ import {
     useMutateDuplicateVideoProjectSwr,
     useMutateUpdateVideoProjectSwr,
 } from "@/hooks/swr"
-import type { MutateCreateVideoProjectRequest } from "@/modules/api/graphql/mutations/mutation-create-video-project"
-import type { MutateUpdateVideoProjectRequest } from "@/modules/api/graphql/mutations/mutation-update-video-project"
+import type { MutateCreateVideoProjectRequest, MutateUpdateVideoProjectRequest } from "@/hooks/swr"
 import type { ProjectInputs, ScriptScene } from "@/modules/video"
 import { useVideoRefresh } from "./useVideoRefresh"
 

@@ -1,17 +1,17 @@
 "use client"
 
-import { useTranslations } from "next-intl"
 import {
     useMutateMarkContentPublishedSwr,
     useMutateRequestContentMediaUploadSwr,
     useMutateSaveContentItemSwr,
     useMutateSubmitContentForApprovalSwr,
     useMutateTransitionContentItemSwr,
+    usePutPresignedSwr,
 } from "@/hooks/swr"
-import { putPresigned } from "@/modules/api"
-import { useGraphQLWithToast, useRestWithToast } from "@/modules/toast"
-import type { MutateSaveContentItemRequest } from "@/modules/api/graphql/mutations/mutation-save-content-item"
+import type { MutateSaveContentItemRequest } from "@/hooks/swr"
 import type { EditorSave } from "@/modules/content"
+import { useGraphQLWithToast, useRestWithToast } from "@/modules/toast"
+import { useTranslations } from "next-intl"
 import type { ActionReply } from "./useContentCommand"
 import type { EditorActions } from "./useContentEditorCommands"
 
@@ -40,6 +40,7 @@ export const useContentEditorActions = (draftItem: EditorActions["draftItem"]): 
     const t = useTranslations("content")
     const runGraphQL = useGraphQLWithToast()
     const runRest = useRestWithToast()
+    const { trigger: putPresigned } = usePutPresignedSwr()
     const save = useMutateSaveContentItemSwr()
     const transition = useMutateTransitionContentItemSwr()
     const submit = useMutateSubmitContentForApprovalSwr()

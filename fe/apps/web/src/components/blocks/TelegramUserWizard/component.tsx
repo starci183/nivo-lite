@@ -1,3 +1,6 @@
+import type { AgentOption } from "@/modules/types"
+import type { useTranslations } from "next-intl"
+import type { useTelegramUserWizard } from "@/hooks/telegram-user-wizard"
 import { Alert, CheckboxGroup, Input, SegmentedControl, Text } from "@starci/grammar/common"
 import { TelegramUserChats } from "@/components/composites/TelegramUserChats"
 import { TelegramUserLogin } from "@/components/composites/TelegramUserLogin"
@@ -273,4 +276,23 @@ export const TelegramUserWizardBase = (props: TelegramUserWizardBaseProps) => {
             {view.status === "ready" && view.error !== null ? <Alert tone="negative" title={view.error} /> : null}
         </WizardFrame>
     )
+}
+
+/** State values and commands consumed by the connected surface. */
+export interface TelegramUserWizardProps {
+    /** Workspace agents (any module): every agent may be given read access to a data source. */
+    readonly agents: ReadonlyArray<AgentOption>
+    /** Continue or edit this existing connection instead of creating a new one. */
+    readonly resumeId?: string
+    /** `changed` is true when something was saved, so the list refreshes. */
+    readonly onClose: (changed: boolean) => void
+}
+
+/** State values and commands consumed by the connected surface. */
+export type TelegramUserWizardControllerInput = {
+    readonly props: TelegramUserWizardProps
+    readonly t: ReturnType<typeof useTranslations<"connectorTelegramUser">>
+    readonly tw: ReturnType<typeof useTranslations<"connectionWizard">>
+    readonly tc: ReturnType<typeof useTranslations<"connections">>
+    readonly wizard: ReturnType<typeof useTelegramUserWizard>
 }

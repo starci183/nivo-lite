@@ -109,92 +109,8 @@ export const InboxSimulatorBase = (props: InboxSimulatorBaseProps) => {
                 </div>
                 <Form label={view.title} onSubmit={on.submit} isPending={view.isPending}>
                     <div className={FORM_GRID_CLASS}>
-                        <InboxSelectField
-                            {...field}
-                            name="channel"
-                            label={view.labels.channel}
-                            options={view.channels}
-                            value={view.values.channel}
-                            error={view.errors.channel}
-                            onChange={(value) => on.change("channel", value)}
-                        />
-                        <InboxSelectField
-                            {...field}
-                            name="kind"
-                            label={view.labels.kind}
-                            options={view.kinds}
-                            value={view.values.kind}
-                            error={view.errors.kind}
-                            onChange={(value) => on.change("kind", value)}
-                        />
-                        <InboxTextField
-                            {...field}
-                            id="sim-name"
-                            name="sender_name"
-                            label={view.labels.name}
-                            hint={view.labels.nameHint}
-                            isRequired
-                            value={view.values.name}
-                            error={view.errors.name}
-                            onChange={(value) => on.change("name", value)}
-                        />
-                        <InboxTextField
-                            {...field}
-                            id="sim-contact"
-                            name="sender_contact"
-                            label={view.labels.contact}
-                            value={view.values.contact}
-                            error={view.errors.contact}
-                            onChange={(value) => on.change("contact", value)}
-                        />
-                        <div className={FORM_WIDE_CLASS}>
-                            <Textarea
-                                variant="secondary"
-                                label={view.labels.body}
-                                name="body"
-                                rows={3}
-                                isDisabled={view.isPending}
-                                value={view.values.body}
-                                isInvalid={view.errors.body !== undefined}
-                                errorMessage={view.errors.body}
-                                onValueChange={(value) => on.change("body", value)}
-                            />
-                        </div>
-                        {view.showItems ? (
-                            <div className={FORM_WIDE_CLASS}>
-                                <InboxTextField
-                                    {...field}
-                                    id="sim-items"
-                                    name="items"
-                                    label={view.labels.items}
-                                    value={view.values.items}
-                                    error={view.errors.items}
-                                    onChange={(value) => on.change("items", value)}
-                                />
-                            </div>
-                        ) : null}
-                        <NumberField
-                            variant="secondary"
-                            label={view.labels.amount}
-                            name="amount"
-                            minValue={0}
-                            step={1_000_000}
-                            formatOptions={{ maximumFractionDigits: 0 }}
-                            isDisabled={view.isPending}
-                            value={view.values.amount}
-                            isInvalid={view.errors.amount !== undefined}
-                            errorMessage={view.errors.amount}
-                            onValueChange={(value) => on.change("amount", value)}
-                        />
-                        <InboxTextField
-                            {...field}
-                            id="sim-ref"
-                            name="external_ref"
-                            label={view.labels.reference}
-                            value={view.values.reference}
-                            error={view.errors.reference}
-                            onChange={(value) => on.change("reference", value)}
-                        />
+                        <InboxContactFields {...props} />
+                        <InboxMessageFields {...props} />
                         <div className={EVENT_ID_ROW_CLASS}>
                             <div className={EVENT_ID_INPUT_CLASS}>
                                 <InboxTextField
@@ -217,29 +133,7 @@ export const InboxSimulatorBase = (props: InboxSimulatorBaseProps) => {
                                 <Alert title={view.labels.failTitle} description={view.failure} tone="negative" />
                             </div>
                         )}
-                        {view.result === undefined ? null : (
-                            <div className={FORM_WIDE_CLASS}>
-                                <Alert
-                                    title={view.result.title}
-                                    tone={view.result.tone}
-                                    description={
-                                        <div className={RESULT_LINKS_CLASS}>
-                                            {view.result.lines.map((line) => (
-                                                <Text key={line} size="sm">
-                                                    {line}
-                                                </Text>
-                                            ))}
-                                            {view.result.leadHref === null ? null : (
-                                                <TextAction href={view.result.leadHref}>
-                                                    {view.labels.resultLead}
-                                                </TextAction>
-                                            )}
-                                            <TextAction href={view.officeHref}>{view.labels.resultOffice}</TextAction>
-                                        </div>
-                                    }
-                                />
-                            </div>
-                        )}
+                        {view.result === undefined ? null : renderSimulatorResult({ view })}
                         <div className={SUBMIT_ROW_CLASS}>
                             <Button variant="primary" type="submit" isPending={view.isPending}>
                                 {view.labels.submit}
@@ -249,5 +143,143 @@ export const InboxSimulatorBase = (props: InboxSimulatorBaseProps) => {
                 </Form>
             </div>
         </SurfaceCard>
+    )
+}
+
+/** Sender identity and inbound message channel fields. */
+const InboxContactFields = (props: InboxSimulatorBaseProps) => {
+    const view = props.props
+    const on = props.on
+    const field = { isPending: view.isPending }
+    return (
+        <>
+            <InboxSelectField
+                {...field}
+                name="channel"
+                label={view.labels.channel}
+                options={view.channels}
+                value={view.values.channel}
+                error={view.errors.channel}
+                onChange={(value) => on.change("channel", value)}
+            />
+            <InboxSelectField
+                {...field}
+                name="kind"
+                label={view.labels.kind}
+                options={view.kinds}
+                value={view.values.kind}
+                error={view.errors.kind}
+                onChange={(value) => on.change("kind", value)}
+            />
+            <InboxTextField
+                {...field}
+                id="sim-name"
+                name="sender_name"
+                label={view.labels.name}
+                hint={view.labels.nameHint}
+                isRequired
+                value={view.values.name}
+                error={view.errors.name}
+                onChange={(value) => on.change("name", value)}
+            />
+            <InboxTextField
+                {...field}
+                id="sim-contact"
+                name="sender_contact"
+                label={view.labels.contact}
+                value={view.values.contact}
+                error={view.errors.contact}
+                onChange={(value) => on.change("contact", value)}
+            />
+        </>
+    )
+}
+
+/** Inputs needed to build the div section. */
+interface RenderSimulatorResultContext {
+    readonly view: InboxSimulatorBaseProps["props"]
+}
+/** Builds the div section from the current view. */
+const renderSimulatorResult = ({ view }: RenderSimulatorResultContext) => {
+    if (view.result === undefined) return null
+    return (
+        <div className={FORM_WIDE_CLASS}>
+            <Alert
+                title={view.result.title}
+                tone={view.result.tone}
+                description={
+                    <div className={RESULT_LINKS_CLASS}>
+                        {view.result.lines.map((line) => (
+                            <Text key={line} size="sm">
+                                {line}
+                            </Text>
+                        ))}
+                        {view.result.leadHref === null ? null : (
+                            <TextAction href={view.result.leadHref}>{view.labels.resultLead}</TextAction>
+                        )}
+                        <TextAction href={view.officeHref}>{view.labels.resultOffice}</TextAction>
+                    </div>
+                }
+            />
+        </div>
+    )
+}
+
+/** Message body, amount, items and external reference fields. */
+const InboxMessageFields = (props: InboxSimulatorBaseProps) => {
+    const view = props.props
+    const on = props.on
+    const field = { isPending: view.isPending }
+    return (
+        <>
+            <div className={FORM_WIDE_CLASS}>
+                <Textarea
+                    variant="secondary"
+                    label={view.labels.body}
+                    name="body"
+                    rows={3}
+                    isDisabled={view.isPending}
+                    value={view.values.body}
+                    isInvalid={view.errors.body !== undefined}
+                    errorMessage={view.errors.body}
+                    onValueChange={(value) => on.change("body", value)}
+                />
+            </div>
+            {view.showItems ? (
+                <div className={FORM_WIDE_CLASS}>
+                    <InboxTextField
+                        {...field}
+                        id="sim-items"
+                        name="items"
+                        label={view.labels.items}
+                        value={view.values.items}
+                        error={view.errors.items}
+                        onChange={(value) => on.change("items", value)}
+                    />
+                </div>
+            ) : null}
+            <NumberField
+                variant="secondary"
+                label={view.labels.amount}
+                name="amount"
+                minValue={0}
+                step={1_000_000}
+                formatOptions={{ maximumFractionDigits: 0 }}
+                isDisabled={view.isPending}
+                value={view.values.amount}
+                isInvalid={view.errors.amount !== undefined}
+                errorMessage={view.errors.amount}
+                onValueChange={(value) => on.change("amount", value)}
+            />
+            <InboxTextField
+                {...field}
+                id="sim-ref"
+                name="external_ref"
+                label={view.labels.reference}
+                value={view.values.reference}
+                error={view.errors.reference}
+                onChange={(value) => on.change("reference", value)}
+            />
+        </>
     )
 }

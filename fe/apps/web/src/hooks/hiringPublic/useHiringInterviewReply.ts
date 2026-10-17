@@ -4,6 +4,7 @@ import { useTranslations } from "next-intl"
 import { useState } from "react"
 import { useHiringFormat } from "@/hooks/hiring"
 import { useMutateRespondHiringInterviewSwr } from "@/hooks/swr"
+import { graphQLErrorCode } from "@/modules/failure"
 import { useGraphQLWithToast } from "@/modules/toast"
 
 /** What an answer to an invitation or an offer came to, in the reader's words. */
@@ -24,9 +25,18 @@ export const useHiringInterviewReply = (token: string) => {
     const [outcome, setOutcome] = useState<ReplyOutcome | null>(null)
     const pick = async (start: string | null) => {
         setPending(true)
-        const result = await runGraphQL(() => trigger({ token, ...(start === null ? {} : { start }) }), {
-            showSuccessToast: false,
-        })
+        const result = await runGraphQL(
+            async () => {
+                try {
+                    return await trigger({ token, ...(start === null ? {} : { start }) })
+                } catch (error) {
+                    if (graphQLErrorCode(error) === "HIRING_PUBLIC_NOT_FOUND")
+                        return { outcome: "invalid", slotStart: null }
+                    throw error
+                }
+            },
+            { showSuccessToast: false },
+        )
         setPending(false)
         if (result === undefined) return
         setOutcome({

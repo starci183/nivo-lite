@@ -85,30 +85,38 @@ export const MetaWizard = (props: MetaWizardProps) => {
                 note: wizard.note,
                 isPending: wizard.isPending,
                 isChecking: wizard.isChecking,
-                text: {
-                    back: tw("back"),
-                    next: tw("next"),
-                    close: tw("close"),
-                    done: tw("done"),
-                    connectBody: tm("connectBody"),
-                    connectScopes: tm("connectScopes"),
-                    devNote: tm("devNote"),
-                    connect: tm("connect"),
-                    reconnect: tm("reconnect"),
-                    pickBody: tm("pickBody"),
-                    pickNone: tm("pickNone"),
-                    pickSave: tm("pickSave"),
-                    pickSaved: tm("pickSaved"),
-                    testIntro: tm("testIntro"),
-                    testRun: tm("testRun"),
-                    testRepair: tm("testRepair"),
-                    testWorking: tm("testWorking"),
-                    testWaiting: tm("testWaiting"),
-                    testAllGood: tm("testAllGood"),
-                    testSkipNote: tm("testSkipNote"),
-                },
+                text: metaWizardText(tw, tm),
             }}
             on={wizard.on}
         />
     )
+}
+
+/** Resolves the labels for this form. */
+const metaWizardText = (
+    tw: ReturnType<typeof useTranslations<"connectionWizard">>,
+    tm: ReturnType<typeof useTranslations<"metaWizard">>,
+) => {
+    return {
+        back: tw("back"),
+        next: tw("next"),
+        close: tw("close"),
+        done: tw("done"),
+        connectBody: tm("connectBody"),
+        connectScopes: tm("connectScopes"),
+        devNote: tm("devNote"),
+        connect: tm("connect"),
+        reconnect: tm("reconnect"),
+        pickBody: tm("pickBody"),
+        pickNone: tm("pickNone"),
+        pickSave: tm("pickSave"),
+        pickSaved: tm("pickSaved"),
+        testIntro: tm("testIntro"),
+        testRun: tm("testRun"),
+        testRepair: tm("testRepair"),
+        testWorking: tm("testWorking"),
+        testWaiting: tm("testWaiting"),
+        testAllGood: tm("testAllGood"),
+        testSkipNote: tm("testSkipNote"),
+    }
 }

@@ -1,5 +1,3 @@
-export { graphQLErrorCode } from "./graphql/index"
-export { isForbiddenFailure, isNotFoundFailure, isRefusedByBackend, isUnauthenticatedFailure } from "./graphql/index"
 export type {
     ModulesCatalogQuery,
     AdminHealthQuery,
@@ -132,7 +130,6 @@ export type {
     NivoEntryType,
     OpenApiTestType,
     PreviewSampleType,
-    PublicBookingPageType,
     RetrievedPassageType,
     RunStepType,
     SalesActionType,

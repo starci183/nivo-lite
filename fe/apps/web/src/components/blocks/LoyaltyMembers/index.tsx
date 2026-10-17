@@ -32,57 +32,7 @@ export const LoyaltyMembers = () => {
     const isEmpty = list.rows.length === 0
     return (
         <LoyaltyMembersBase
-            props={{
-                title: t("membersTitle"),
-                countLabel: t("membersCount", { n: list.rows.length }),
-                search: { label: t("searchLabel"), placeholder: t("searchPlaceholder"), value: list.query },
-                tier: {
-                    label: t("filterTier"),
-                    value: list.tier,
-                    options: [
-                        { id: "all", label: t("filterAllTiers") },
-                        ...board.config.tiers.map((tier) => ({ id: tier.key, label: tier.name })),
-                    ],
-                },
-                sort: {
-                    label: t("sortLabel"),
-                    value: list.sort,
-                    options: MEMBER_SORTS.map((key) => ({ id: key, label: t(`sort_${key}`) })),
-                },
-                rows: list.shown.map((member) => {
-                    const tier = findTier(board.config, member.tierKey ?? null)
-                    return {
-                        id: member.id,
-                        label: member.name,
-                        description: [
-                            groupPhone(member.phone) || t("noPhone"),
-                            t("points", { n: format.number(member.points) }),
-                            visit(member.lastVisitAt),
-                            t("spentTotal", { value: money(member.lifetimeSpendVnd) }),
-                        ].join(" · "),
-                        ...(tier === null
-                            ? {}
-                            : { tier: { name: tier.name, tone: tierTone(board.config, member.tierKey ?? null) } }),
-                    }
-                }),
-                ...(isEmpty
-                    ? {
-                          empty: {
-                              title: board.members.length === 0 ? t("emptyMembersTitle") : t("noMatch"),
-                              body: board.members.length === 0 ? t("emptyMembersBodyStaff") : t("noMatchBody"),
-                          },
-                      }
-                    : {}),
-                selectedId: list.selected,
-                ...(list.remaining > 0 ? { showMoreLabel: t("showMore", { n: list.remaining }) } : {}),
-                detailId: DETAIL_ID,
-                panel: {
-                    ...("loading" in detail ? { loading: detail.loading } : {}),
-                    ...("failed" in detail ? { failed: detail.failed } : {}),
-                    ...("view" in detail ? { view: detail.view } : {}),
-                },
-                detailEmpty: { title: t("detailEmptyTitle"), body: t("detailEmptyBody") },
-            }}
+            props={buildLoyaltyMembersView({ t, list, board, format, visit, money, isEmpty, detail })}
             on={{
                 search: list.setQuery,
                 setTier: list.setTier,
@@ -96,3 +46,77 @@ export const LoyaltyMembers = () => {
         />
     )
 }
+
+/** Inputs needed to build the LoyaltyMembersContent section. */
+interface BuildLoyaltyMembersViewContext {
+    readonly t: ReturnType<typeof useTranslations<"loyalty">>
+    readonly list: ReturnType<typeof useMemberList>
+    readonly board: typeof EMPTY_LOYALTY_BOARD
+    readonly format: ReturnType<typeof useFormatter>
+    readonly visit: (iso: string | null | undefined) => string
+    readonly money: (value: number) => string
+    readonly isEmpty: boolean
+    readonly detail: ReturnType<typeof useMemberDetailView>
+}
+/** Builds the LoyaltyMembersContent section from the current view. */
+const buildLoyaltyMembersView = ({
+    t,
+    list,
+    board,
+    format,
+    visit,
+    money,
+    isEmpty,
+    detail,
+}: BuildLoyaltyMembersViewContext) =>
+    ({
+        title: t("membersTitle"),
+        countLabel: t("membersCount", { n: list.rows.length }),
+        search: { label: t("searchLabel"), placeholder: t("searchPlaceholder"), value: list.query },
+        tier: {
+            label: t("filterTier"),
+            value: list.tier,
+            options: [
+                { id: "all", label: t("filterAllTiers") },
+                ...board.config.tiers.map((tier) => ({ id: tier.key, label: tier.name })),
+            ],
+        },
+        sort: {
+            label: t("sortLabel"),
+            value: list.sort,
+            options: MEMBER_SORTS.map((key) => ({ id: key, label: t(`sort_${key}`) })),
+        },
+        rows: list.shown.map((member) => {
+            const tier = findTier(board.config, member.tierKey ?? null)
+            return {
+                id: member.id,
+                label: member.name,
+                description: [
+                    groupPhone(member.phone) || t("noPhone"),
+                    t("points", { n: format.number(member.points) }),
+                    visit(member.lastVisitAt),
+                    t("spentTotal", { value: money(member.lifetimeSpendVnd) }),
+                ].join(" · "),
+                ...(tier === null
+                    ? {}
+                    : { tier: { name: tier.name, tone: tierTone(board.config, member.tierKey ?? null) } }),
+            }
+        }),
+        ...(isEmpty
+            ? {
+                  empty: {
+                      title: board.members.length === 0 ? t("emptyMembersTitle") : t("noMatch"),
+                      body: board.members.length === 0 ? t("emptyMembersBodyStaff") : t("noMatchBody"),
+                  },
+              }
+            : {}),
+        selectedId: list.selected,
+        ...(list.remaining > 0 ? { showMoreLabel: t("showMore", { n: list.remaining }) } : {}),
+        detailId: DETAIL_ID,
+        panel: {
+            ...("loading" in detail ? { loading: detail.loading } : {}),
+            ...("failed" in detail ? { failed: detail.failed } : {}),
+            ...("view" in detail ? { view: detail.view } : {}),
+        },
+        detailEmpty: { title: t("detailEmptyTitle"), body: t("detailEmptyBody") },
+    }) as const

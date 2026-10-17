@@ -1,14 +1,15 @@
+import { nivoIconSource, type IconName } from "@/components/leaves/Icon"
 import { Badge, Button, EmptyNotice, ListRow, SurfaceListCard, Text, TextAction } from "@starci/grammar/common"
 import { AgentMark } from "@/components/leaves/AgentMark"
 import { TileIcon } from "@/components/composites/TileIcon"
-import type { IconName } from "@/components/leaves/Icon"
+import type { ModuleIconName } from "@/modules/types"
 import { RAIL_CLASS_NAME } from "./classNames"
 
 /** One agent row. */
 interface OverviewRailAgent {
     readonly id: string
     readonly module: string
-    readonly glyph: string
+    readonly glyph: ModuleIconName
     readonly name: string
     readonly isActive: boolean
     readonly statusLabel: string
@@ -63,7 +64,13 @@ export const OverviewRailBase = (props: OverviewRailBaseProps) => {
                 {props.props.agents.map((agent) => (
                     <ListRow
                         key={agent.id}
-                        leading={<AgentMark glyph={agent.glyph} label={agent.name} module={agent.module} />}
+                        leading={
+                            <AgentMark
+                                glyph={nivoIconSource(agent.glyph, "leading")}
+                                label={agent.name}
+                                module={agent.module}
+                            />
+                        }
                         title={agent.name}
                         badges={
                             <Badge tone={agent.isActive ? "success" : "neutral"} isDot>

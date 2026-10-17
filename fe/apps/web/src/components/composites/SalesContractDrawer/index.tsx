@@ -96,16 +96,7 @@ export const SalesContractDrawer = (props: SalesContractDrawerProps) => {
                 onValueChange={on.start}
                 isRequired
             />
-            <DatePicker
-                name="endsOn"
-                label={p.endLabel}
-                description={p.endHint}
-                variant="secondary"
-                value={p.end}
-                minValue={p.start ?? undefined}
-                onValueChange={on.end}
-                isRequired
-            />
+            {renderSalesContractDrawerEndDate(p, on)}
             <Input
                 id="contract-amount"
                 name="amount"
@@ -132,3 +123,17 @@ export const SalesContractDrawer = (props: SalesContractDrawerProps) => {
         </FormDrawer>
     )
 }
+
+/** Renders the SalesContractDrawer end date section. */
+const renderSalesContractDrawerEndDate = (p: SalesContractDrawerProps["props"], on: SalesContractDrawerProps["on"]) => (
+    <DatePicker
+        name="endsOn"
+        label={p.endLabel}
+        description={p.endHint}
+        variant="secondary"
+        value={p.end}
+        minValue={p.start ?? undefined}
+        onValueChange={on.end}
+        isRequired
+    />
+)

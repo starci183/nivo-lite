@@ -80,25 +80,8 @@ const playerOf = (props: VideoResultStepBaseProps["props"]) => {
     )
 }
 
-/** Draws step five: the player, the approval, download, share and the owner's own posting. */
-export const VideoResultStepBase = (props: VideoResultStepBaseProps) => (
-    <div className={RESULT_STACK}>
-        {props.props.message === null ? null : (
-            <Alert tone={props.props.message.tone} title={props.props.message.text} />
-        )}
-        <SurfaceCard label={props.props.heading} fact={props.props.fact}>
-            <div className={RESULT_STACK}>
-                {playerOf(props.props)}
-                <div className={RESULT_ROW}>
-                    {props.props.badges.map((badge) => (
-                        <Badge key={badge.id} tone={badge.tone}>
-                            {badge.text}
-                        </Badge>
-                    ))}
-                </div>
-            </div>
-        </SurfaceCard>
-
+const approvalOf = (props: VideoResultStepBaseProps) => {
+    return (
         <SurfaceCard label={props.props.approveHeading}>
             <div className={RESULT_STACK}>
                 {props.props.approveHelp === null ? null : (
@@ -164,7 +147,29 @@ export const VideoResultStepBase = (props: VideoResultStepBaseProps) => (
                 </Text>
             </div>
         </SurfaceCard>
+    )
+}
 
+/** Draws step five: the player, the approval, download, share and the owner's own posting. */
+export const VideoResultStepBase = (props: VideoResultStepBaseProps) => (
+    <div className={RESULT_STACK}>
+        {props.props.message === null ? null : (
+            <Alert tone={props.props.message.tone} title={props.props.message.text} />
+        )}
+        <SurfaceCard label={props.props.heading} fact={props.props.fact}>
+            <div className={RESULT_STACK}>
+                {playerOf(props.props)}
+                <div className={RESULT_ROW}>
+                    {props.props.badges.map((badge) => (
+                        <Badge key={badge.id} tone={badge.tone}>
+                            {badge.text}
+                        </Badge>
+                    ))}
+                </div>
+            </div>
+        </SurfaceCard>
+
+        {approvalOf(props)}
         <div className={RESULT_FOOTER}>
             <div className={RESULT_COPY}>
                 <Button variant="ghost" isDisabled={!props.props.canEdit} onPress={props.on.edit}>

@@ -1,7 +1,7 @@
 "use client"
 
+import type { LoyaltyBoardType } from "@/hooks/swr"
 import { useMemo, useState } from "react"
-import type { LoyaltyBoardType } from "@/modules/api"
 import { MEMBER_PAGE_SIZE, MEMBER_SORTS, matchesQuery, sortValue } from "./loyaltyMembers.shared"
 import type { MemberSortKey } from "./loyaltyMembers.shared"
 

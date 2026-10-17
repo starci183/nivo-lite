@@ -1,4 +1,8 @@
-import { noData, useWorkspaceArgSwr } from "@/hooks/workspaceread"
+"use client"
+
+import { workspaceArgumentKey, noData } from "@/hooks/workspaceread"
+import type { WorkspaceReadKey } from "@/hooks/workspaceread"
+import useSWR from "swr"
 import { queryAgentDashboard } from "@/modules/api/graphql/queries/query-agent-dashboard"
 import type { QueryAgentDashboardRequest } from "@/modules/api/graphql/queries/query-agent-dashboard"
 
@@ -7,10 +11,8 @@ export const QUERY_AGENT_DASHBOARD_SWR_KEY = "QUERY_AGENT_DASHBOARD_SWR"
 
 /** Reads agentDashboard. The workspace id is part of the cache identity; `undefined` pauses the read. */
 export const useQueryAgentDashboardSwr = (workspaceId: string | undefined, request: QueryAgentDashboardRequest) =>
-    useWorkspaceArgSwr(
-        QUERY_AGENT_DASHBOARD_SWR_KEY,
-        workspaceId,
-        request,
-        async (value) =>
-            (await queryAgentDashboard({ request: value })).data?.agentDashboard ?? noData("agentDashboard"),
+    useSWR(
+        workspaceArgumentKey(QUERY_AGENT_DASHBOARD_SWR_KEY, workspaceId, request),
+        async ([, , input]: WorkspaceReadKey<QueryAgentDashboardRequest>) =>
+            (await queryAgentDashboard({ request: input })).data?.agentDashboard ?? noData("agentDashboard"),
     )

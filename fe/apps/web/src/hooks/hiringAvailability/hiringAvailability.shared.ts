@@ -1,5 +1,5 @@
 import type { HiringMemberView } from "@/hooks/hiringWire"
-import type { HiringAvailabilityWindowRequest } from "@/modules/api"
+import type { HiringAvailabilityWindowRequest } from "@/hooks/swr"
 import { wallClockText } from "@/modules/i18n"
 
 /** The weekdays of the availability form, Monday first (0 is Sunday). */

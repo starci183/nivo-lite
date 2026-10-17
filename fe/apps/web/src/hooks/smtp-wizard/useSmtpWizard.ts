@@ -1,9 +1,9 @@
 "use client"
 
-import { useState, useTransition } from "react"
 import { useSmtpSenderForm } from "@/hooks/rhf"
 import { modeOf, SMTP_PRESETS } from "@/modules/mail"
-import type { Security } from "@/modules/mail"
+import type { Security, SmtpPreset } from "@/modules/mail"
+import { useState, useTransition } from "react"
 import { choiceOf, isReadyToSave, needsPasswordOf, presetOrFirst, SMTP_STEPS, usernameOf } from "./smtp-wizard.shared"
 import type { SmtpChoice, SmtpFields, SmtpTest, SmtpView } from "./smtp-wizard.shared"
 import { useSmtpCommands } from "./useSmtpCommands"
@@ -51,17 +51,7 @@ export const useSmtpWizard = (input: SmtpWizardInput) => {
     const save = () => {
         if (conn !== null) return go(3)
         startTransition(async () => {
-            const answer = await commands.start({
-                preset: preset.id,
-                host: choice.host,
-                port: Number(choice.port),
-                security: choice.security,
-                user: usernameOf(preset, choice, fields),
-                password: fields.password,
-                fromName: fields.fromName,
-                fromEmail: fields.fromEmail,
-                replyTo: fields.replyTo,
-            })
+            const answer = await commands.start(callbackOf(preset, choice, fields))
             if (answer.kind !== "ok") return setError(answer.message)
             setConn(answer.value)
             setValue("password", "")
@@ -106,5 +96,23 @@ export const useSmtpWizard = (input: SmtpWizardInput) => {
             testTo: (to: string) => setTest((current) => ({ ...current, to })),
             makeDefault: (makeDefault: boolean) => setTest((current) => ({ ...current, makeDefault })),
         },
+    }
+}
+
+const callbackOf = (
+    preset: SmtpPreset,
+    choice: SmtpChoice,
+    fields: SmtpFields,
+): import("@/hooks/smtp-wizard/smtp-wizard.shared").SmtpInput => {
+    return {
+        preset: preset.id,
+        host: choice.host,
+        port: Number(choice.port),
+        security: choice.security,
+        user: usernameOf(preset, choice, fields),
+        password: fields.password,
+        fromName: fields.fromName,
+        fromEmail: fields.fromEmail,
+        replyTo: fields.replyTo,
     }
 }

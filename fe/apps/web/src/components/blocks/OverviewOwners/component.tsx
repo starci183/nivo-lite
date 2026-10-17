@@ -1,3 +1,4 @@
+import { nivoIconSource, type IconName } from "@/components/leaves/Icon"
 import { useMemo } from "react"
 import type { ComponentProps } from "react"
 import {
@@ -13,7 +14,7 @@ import {
 } from "@starci/grammar/common"
 import type { BadgeTone } from "@starci/grammar/common"
 import { TileIcon } from "@/components/composites/TileIcon"
-import type { IconName } from "@/components/leaves/Icon"
+import type { ModuleIconName } from "@/modules/types"
 import { AgentMark } from "@/components/leaves/AgentMark"
 import { PersonAvatar } from "@/components/leaves/PersonAvatar"
 import {
@@ -52,7 +53,7 @@ export interface OverviewOwnersGroup {
     readonly countText: string
     readonly ariaLabel: string
     readonly cardsLabel: string
-    readonly glyph: string | null
+    readonly glyph: ModuleIconName | null
     readonly module: string
     readonly rows: ReadonlyArray<OverviewOwnersRow>
 }
@@ -114,7 +115,7 @@ export const OverviewOwnersBase = (props: OverviewOwnersBaseProps) => {
                                         <PersonAvatar name={group.name} size="md" />
                                     ) : (
                                         <AgentMark
-                                            glyph={group.glyph}
+                                            glyph={nivoIconSource(group.glyph, "leading")}
                                             label={group.name}
                                             module={group.module}
                                             size="md"
@@ -135,50 +136,7 @@ export const OverviewOwnersBase = (props: OverviewOwnersBaseProps) => {
                             </div>
                             <SurfaceListCard ariaLabel={group.cardsLabel}>
                                 {group.rows.map((row) => (
-                                    <ListRow
-                                        key={row.id}
-                                        leading={<TileIcon props={row.tileProps} />}
-                                        title={row.title}
-                                        badges={
-                                            <Badge tone={row.statusTone} isDot>
-                                                {row.statusLabel}
-                                            </Badge>
-                                        }
-                                        description={row.customer}
-                                        actions={
-                                            <>
-                                                {row.canDraft ? (
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="sm"
-                                                        isPending={props.props.isDrafting}
-                                                        onPress={() => props.on.draft(row.id)}
-                                                    >
-                                                        {props.props.draftLabel}
-                                                    </Button>
-                                                ) : null}
-                                                <Button variant="outline" href={row.openHref}>
-                                                    {row.openLabel}
-                                                </Button>
-                                            </>
-                                        }
-                                    >
-                                        <div className={META_CLASS_NAME}>
-                                            <Text size="xs" tone="muted">
-                                                {row.ownerText}
-                                            </Text>
-                                            {row.dueText === null ? null : (
-                                                <Text
-                                                    size="xs"
-                                                    tone={row.isOverdue ? "accent" : "muted"}
-                                                    weight={row.isOverdue ? "semibold" : "normal"}
-                                                >
-                                                    {row.dueText}
-                                                </Text>
-                                            )}
-                                        </div>
-                                        {row.nextText === null ? null : <Text size="sm">{row.nextText}</Text>}
-                                    </ListRow>
+                                    <OverviewOwnerRow key={row.id} row={row} {...props} />
                                 ))}
                             </SurfaceListCard>
                         </Region>
@@ -188,3 +146,54 @@ export const OverviewOwnersBase = (props: OverviewOwnersBaseProps) => {
         </div>
     )
 }
+
+type OverviewOwnerRowProps = OverviewOwnersBaseProps & {
+    readonly row: OverviewOwnersRow & { readonly tileProps: ComponentProps<typeof TileIcon>["props"] }
+}
+
+/** Renders one responsibility and its available actions. */
+const OverviewOwnerRow = ({ row, ...props }: OverviewOwnerRowProps) => (
+    <ListRow
+        leading={<TileIcon props={row.tileProps} />}
+        title={row.title}
+        badges={
+            <Badge tone={row.statusTone} isDot>
+                {row.statusLabel}
+            </Badge>
+        }
+        description={row.customer}
+        actions={
+            <>
+                {row.canDraft ? (
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        isPending={props.props.isDrafting}
+                        onPress={() => props.on.draft(row.id)}
+                    >
+                        {props.props.draftLabel}
+                    </Button>
+                ) : null}
+                <Button variant="outline" href={row.openHref}>
+                    {row.openLabel}
+                </Button>
+            </>
+        }
+    >
+        <div className={META_CLASS_NAME}>
+            <Text size="xs" tone="muted">
+                {row.ownerText}
+            </Text>
+            {row.dueText === null ? null : (
+                <Text
+                    size="xs"
+                    tone={row.isOverdue ? "accent" : "muted"}
+                    weight={row.isOverdue ? "semibold" : "normal"}
+                >
+                    {row.dueText}
+                </Text>
+            )}
+        </div>
+        {row.nextText === null ? null : <Text size="sm">{row.nextText}</Text>}
+    </ListRow>
+)

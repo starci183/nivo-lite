@@ -1,8 +1,8 @@
 "use client"
 
-import { useTranslations } from "next-intl"
 import { useMutateRequestContentQuickDraftSwr } from "@/hooks/swr"
-import type { ContentAiStatusType } from "@/modules/api"
+import type { ContentAiStatusType } from "@/hooks/swr"
+import { useTranslations } from "next-intl"
 import { useContentAiJob } from "./useContentAiJob"
 
 /** Requests a new quick draft and delivers the completed item after cache revalidation. */

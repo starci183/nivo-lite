@@ -61,19 +61,7 @@ export const OfficeApprovalCard = (props: OfficeApprovalCardProps) => {
                 </div>
             }
         >
-            <div className={STATUS_CLASS_NAME}>
-                <Badge tone={TONES[approval.status]} isDot>
-                    {approval.statusLabel}
-                </Badge>
-                <Badge tone="neutral">{text("aiBadge")}</Badge>
-                {approval.leadHref === null ? null : (
-                    <div className={LINK_CLASS_NAME}>
-                        <Button variant="ghost" size="sm" href={approval.leadHref}>
-                            {text("openLead")}
-                        </Button>
-                    </div>
-                )}
-            </div>
+            {renderOfficeApprovalCardStatus(approval, text)}
             {isWaiting && isEditing ? (
                 <Textarea
                     label={text("draftLabel")}
@@ -104,30 +92,63 @@ export const OfficeApprovalCard = (props: OfficeApprovalCardProps) => {
                     {text("waitingManager")}
                 </Text>
             ) : null}
-            {isWaiting && approval.canAct ? (
-                <div className={ACTIONS_CLASS_NAME}>
-                    <Button
-                        variant="primary"
-                        size="sm"
-                        isPending={props.isBusy}
-                        isDisabled={props.isBusy || (isEditing && trimmed.length === 0)}
-                        onPress={onApprove}
-                    >
-                        {isEditing ? text("approveEdited") : text("approveSend")}
-                    </Button>
-                    <Button variant="outline" size="sm" isDisabled={props.isBusy} onPress={onToggleEdit}>
-                        {isEditing ? text("cancelEdit") : text("edit")}
-                    </Button>
-                    <Button
-                        variant="ghost"
-                        size="sm"
-                        isDisabled={props.isBusy}
-                        onPress={() => props.onDecide(approval.id, "rejected", null)}
-                    >
-                        {text("reject")}
-                    </Button>
-                </div>
-            ) : null}
+            {isWaiting && approval.canAct
+                ? renderOfficeApprovalCardActions(props, isEditing, trimmed, onApprove, text, onToggleEdit, approval)
+                : null}
         </OfficeCardFrame>
     )
 }
+
+/** Renders the OfficeApprovalCard actions section. */
+const renderOfficeApprovalCardActions = (
+    props: Pick<OfficeApprovalCardProps, "isBusy" | "onDecide">,
+    isEditing: boolean,
+    trimmed: string,
+    onApprove: () => void,
+    text: NonNullable<OfficeApprovalCardProps["text"]>,
+    onToggleEdit: () => void,
+    approval: NonNullable<OfficeApprovalCardProps["approval"]>,
+) => (
+    <div className={ACTIONS_CLASS_NAME}>
+        <Button
+            variant="primary"
+            size="sm"
+            isPending={props.isBusy}
+            isDisabled={props.isBusy || (isEditing && trimmed.length === 0)}
+            onPress={onApprove}
+        >
+            {isEditing ? text("approveEdited") : text("approveSend")}
+        </Button>
+        <Button variant="outline" size="sm" isDisabled={props.isBusy} onPress={onToggleEdit}>
+            {isEditing ? text("cancelEdit") : text("edit")}
+        </Button>
+        <Button
+            variant="ghost"
+            size="sm"
+            isDisabled={props.isBusy}
+            onPress={() => props.onDecide(approval.id, "rejected", null)}
+        >
+            {text("reject")}
+        </Button>
+    </div>
+)
+
+/** Renders the OfficeApprovalCard status section. */
+const renderOfficeApprovalCardStatus = (
+    approval: NonNullable<OfficeApprovalCardProps["approval"]>,
+    text: NonNullable<OfficeApprovalCardProps["text"]>,
+) => (
+    <div className={STATUS_CLASS_NAME}>
+        <Badge tone={TONES[approval.status]} isDot>
+            {approval.statusLabel}
+        </Badge>
+        <Badge tone="neutral">{text("aiBadge")}</Badge>
+        {approval.leadHref === null ? null : (
+            <div className={LINK_CLASS_NAME}>
+                <Button variant="ghost" size="sm" href={approval.leadHref}>
+                    {text("openLead")}
+                </Button>
+            </div>
+        )}
+    </div>
+)

@@ -1,9 +1,9 @@
 "use client"
 
-import { useFormatter, useTranslations } from "next-intl"
 import { tierTone } from "@/hooks/loyalty"
-import type { LoyaltyBoardType } from "@/modules/api"
 import { useQueryLoyaltyMemberSwr } from "@/hooks/swr"
+import type { LoyaltyBoardType } from "@/hooks/swr"
+import { useFormatter, useTranslations } from "next-intl"
 import { groupPhone } from "./loyaltyMembers.shared"
 import { useMemberActions } from "./useMemberActions"
 import { useMemberDetailForms } from "./useMemberDetailForms"

@@ -1,5 +1,7 @@
 "use client"
 
+import type { ShiftsRequestsControllerInput } from "./component"
+import type { CreateShiftsRequestsRowsInput } from "./component"
 import { useTranslations } from "next-intl"
 import { useState } from "react"
 import { useShiftsBenchData, useShiftsFormat } from "@/hooks/shifts"
@@ -10,14 +12,8 @@ import type { RequestRowView, RequestSectionView } from "./component"
 
 const RECENT_LIMIT = 8
 
-/** The leave, swap and availability requests of the staff with approve and decline, through the back end GraphQL API. */
-export const ShiftsRequests = () => {
-    const t = useTranslations("shifts")
-    const bench = useShiftsBenchData(null).data
-    const format = useShiftsFormat()
-    const commands = useShiftsRequestCommands()
-    const [busy, setBusy] = useState(false)
-    if (bench === undefined || bench.role === "staff") return null
+const createShiftsRequestsRows = (context: CreateShiftsRequestsRowsInput) => {
+    const { t, bench, format } = context
 
     const { staff } = bench.setup
     const { leaves, swaps, availability } = bench.requests
@@ -49,6 +45,11 @@ export const ShiftsRequests = () => {
         kind === "claim"
             ? t("claimLine", { name: name(to), shift: shiftLine })
             : t("swapLine", { from: name(from), to: name(to), shift: shiftLine })
+    return { ...context, staff, leaves, swaps, availability, name, span, statusOf, itemRow, leaveTitle, swapTitle }
+}
+
+const createShiftsRequestsSections = (context: ReturnType<typeof createShiftsRequestsRows>) => {
+    const { t, format, leaves, swaps, availability, name, itemRow, leaveTitle, swapTitle } = context
 
     const sections: Array<RequestSectionView> = [
         {
@@ -99,6 +100,12 @@ export const ShiftsRequests = () => {
                 })),
         },
     ]
+    return { ...context, sections }
+}
+
+const createShiftsRequestsActions = (context: ReturnType<typeof createShiftsRequestsSections>) => {
+    const { t, commands, setBusy, leaves, swaps, name, span, statusOf, sections } = context
+
     const recent = [
         ...leaves
             .filter((leave) => leave.status !== "pending")
@@ -141,23 +148,48 @@ export const ShiftsRequests = () => {
                 ? commands.decideItem(targetId, approve ? "approved" : "rejected")
                 : commands.decideAvailability(targetId, approve),
         )
+    return { ...context, recent, openSections, decide }
+}
 
+const renderShiftsRequests = (
+    context: ReturnType<typeof createShiftsRequestsActions>,
+): React.ComponentProps<typeof ShiftsRequestsBase> => {
+    const { t, busy, openSections, decide, recent } = context
+
+    return {
+        props: {
+            emptyTitle: t("reqNoneTitle"),
+            emptyBody: t("reqNoneBody"),
+            recentTitle: t("reqRecent"),
+            approveLabel: t("approve"),
+            declineLabel: t("decline"),
+            sections: openSections,
+            recent,
+            isBusy: busy,
+        },
+        on: {
+            approve: (kind, targetId) => void decide(kind, targetId, true),
+            decline: (kind, targetId) => void decide(kind, targetId, false),
+        },
+    }
+}
+
+/** The leave, swap and availability requests of the staff with approve and decline, through the back end GraphQL API. */
+export const ShiftsRequests = () => {
+    const t = useTranslations("shifts")
+    const bench = useShiftsBenchData(null).data
+    const format = useShiftsFormat()
+    const commands = useShiftsRequestCommands()
+    const [busy, setBusy] = useState(false)
+    const state: ShiftsRequestsControllerInput = { t, bench, format, commands, busy, setBusy }
+    if (bench === undefined || bench.role === "staff") return null
     return (
         <ShiftsRequestsBase
-            props={{
-                emptyTitle: t("reqNoneTitle"),
-                emptyBody: t("reqNoneBody"),
-                recentTitle: t("reqRecent"),
-                approveLabel: t("approve"),
-                declineLabel: t("decline"),
-                sections: openSections,
-                recent,
-                isBusy: busy,
-            }}
-            on={{
-                approve: (kind, targetId) => void decide(kind, targetId, true),
-                decline: (kind, targetId) => void decide(kind, targetId, false),
-            }}
+            {...renderShiftsRequests(
+                createShiftsRequestsActions(
+                    createShiftsRequestsSections(createShiftsRequestsRows({ ...state, bench })),
+                ),
+            )}
         />
     )
 }

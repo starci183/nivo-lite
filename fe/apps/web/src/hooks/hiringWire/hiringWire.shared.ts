@@ -8,7 +8,7 @@ import type {
     HiringSettingsType,
     HiringSlotType,
     HiringWindowType,
-} from "@/modules/api"
+} from "@/hooks/swr"
 
 /** The requirements a job screens candidates on. */
 export interface RequirementsView {

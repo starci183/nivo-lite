@@ -66,111 +66,42 @@ export const LoyaltyRewardsBase = (props: LoyaltyRewardsBaseProps) => {
     const { props: p, on } = props
     return (
         <>
-            <SurfaceListCard
-                label={p.title}
-                headingLevel={2}
-                labelEnd={
-                    p.canManage && p.form === undefined ? (
-                        <Button variant="primary" size="sm" onPress={on.add}>
-                            {p.addLabel}
-                        </Button>
-                    ) : undefined
-                }
-                empty={
-                    p.canManage ? (
-                        <EmptyNotice
-                            message={p.emptyTitle}
-                            description={p.emptyBody}
-                            actionLabel={p.presetLabel}
-                            actionVariant="secondary"
-                            isActionPending={p.isPending}
-                            onAction={on.preset}
-                        />
-                    ) : (
-                        <EmptyNotice message={p.emptyTitle} description={p.emptyBody} />
-                    )
-                }
-                footer={
-                    p.canManage ? undefined : (
-                        <Text size="xs" tone="muted">
-                            {p.readOnlyNote}
-                        </Text>
-                    )
-                }
-            >
-                {p.rows.map((row) => (
-                    <ListItem key={row.id} className={ROW_CLASS_NAME}>
-                        <div className={ROW_MAIN_CLASS_NAME}>
-                            <div className={CHIPS_CLASS_NAME}>
-                                <Text as="span" weight="semibold">
-                                    {row.name}
-                                </Text>
-                                <Badge tone="neutral">{row.kindLabel}</Badge>
-                                <Badge tone={row.active ? "success" : "warning"}>{row.statusLabel}</Badge>
-                            </div>
-                            <Text size="sm">{row.cost}</Text>
-                            <Text size="sm" tone="muted">
-                                {row.facts}
+            {
+                <SurfaceListCard
+                    label={p.title}
+                    headingLevel={2}
+                    labelEnd={
+                        p.canManage && p.form === undefined ? (
+                            <Button variant="primary" size="sm" onPress={on.add}>
+                                {p.addLabel}
+                            </Button>
+                        ) : undefined
+                    }
+                    empty={
+                        p.canManage ? (
+                            <EmptyNotice
+                                message={p.emptyTitle}
+                                description={p.emptyBody}
+                                actionLabel={p.presetLabel}
+                                actionVariant="secondary"
+                                isActionPending={p.isPending}
+                                onAction={on.preset}
+                            />
+                        ) : (
+                            <EmptyNotice message={p.emptyTitle} description={p.emptyBody} />
+                        )
+                    }
+                    footer={
+                        p.canManage ? undefined : (
+                            <Text size="xs" tone="muted">
+                                {p.readOnlyNote}
                             </Text>
-                            {row.note === "" ? null : (
-                                <Text size="xs" tone="muted">
-                                    {row.note}
-                                </Text>
-                            )}
-                        </div>
-                        {p.canManage ? (
-                            <div className={ROW_ACTIONS_CLASS_NAME}>
-                                <Switch
-                                    label={p.activeLabel}
-                                    isSelected={row.active}
-                                    isDisabled={p.isPending}
-                                    onSelectedChange={(active) => on.toggle(row.id, active)}
-                                />
-                                <Button
-                                    variant="outline"
-                                    size="sm"
-                                    isDisabled={p.isPending}
-                                    onPress={() => on.edit(row.id)}
-                                >
-                                    {p.editLabel}
-                                </Button>
-                                {row.isConfirming ? (
-                                    <>
-                                        <Text as="span" size="sm" weight="medium" live="polite">
-                                            {p.askLabel}
-                                        </Text>
-                                        <Button
-                                            variant="danger"
-                                            size="sm"
-                                            isPending={p.isPending}
-                                            onPress={() => on.confirmRemove(row.id)}
-                                        >
-                                            {p.confirmLabel}
-                                        </Button>
-                                        <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            isDisabled={p.isPending}
-                                            onPress={on.cancelAsk}
-                                        >
-                                            {p.cancelLabel}
-                                        </Button>
-                                    </>
-                                ) : (
-                                    <Button
-                                        variant="danger-soft"
-                                        size="sm"
-                                        isDisabled={p.isPending}
-                                        onPress={() => on.ask(row.id)}
-                                    >
-                                        {p.deleteLabel}
-                                    </Button>
-                                )}
-                            </div>
-                        ) : null}
-                    </ListItem>
-                ))}
-            </SurfaceListCard>
+                        )
+                    }
+                >
+                    {p.rows.map((row) => renderRewardRow({ row, p, on }))}
+                </SurfaceListCard>
+            }
             {p.canManage && p.form !== undefined ? (
                 <SurfaceCard label={p.form.heading} headingLevel={2}>
                     <LoyaltyRewardForm
@@ -185,3 +116,68 @@ export const LoyaltyRewardsBase = (props: LoyaltyRewardsBaseProps) => {
         </>
     )
 }
+
+/** Inputs needed to build the Row section. */
+interface RenderRewardRowContext {
+    readonly row: RewardRowView
+    readonly p: LoyaltyRewardsBaseProps["props"]
+    readonly on: LoyaltyRewardsBaseProps["on"]
+}
+/** Builds the Row section from the current view. */
+const renderRewardRow = ({ row, p, on }: RenderRewardRowContext) => (
+    <ListItem key={row.id} className={ROW_CLASS_NAME}>
+        <div className={ROW_MAIN_CLASS_NAME}>
+            <div className={CHIPS_CLASS_NAME}>
+                <Text as="span" weight="semibold">
+                    {row.name}
+                </Text>
+                <Badge tone="neutral">{row.kindLabel}</Badge>
+                <Badge tone={row.active ? "success" : "warning"}>{row.statusLabel}</Badge>
+            </div>
+            <Text size="sm">{row.cost}</Text>
+            <Text size="sm" tone="muted">
+                {row.facts}
+            </Text>
+            {row.note === "" ? null : (
+                <Text size="xs" tone="muted">
+                    {row.note}
+                </Text>
+            )}
+        </div>
+        {p.canManage ? (
+            <div className={ROW_ACTIONS_CLASS_NAME}>
+                <Switch
+                    label={p.activeLabel}
+                    isSelected={row.active}
+                    isDisabled={p.isPending}
+                    onSelectedChange={(active) => on.toggle(row.id, active)}
+                />
+                <Button variant="outline" size="sm" isDisabled={p.isPending} onPress={() => on.edit(row.id)}>
+                    {p.editLabel}
+                </Button>
+                {row.isConfirming ? (
+                    <>
+                        <Text as="span" size="sm" weight="medium" live="polite">
+                            {p.askLabel}
+                        </Text>
+                        <Button
+                            variant="danger"
+                            size="sm"
+                            isPending={p.isPending}
+                            onPress={() => on.confirmRemove(row.id)}
+                        >
+                            {p.confirmLabel}
+                        </Button>
+                        <Button variant="ghost" size="sm" isDisabled={p.isPending} onPress={on.cancelAsk}>
+                            {p.cancelLabel}
+                        </Button>
+                    </>
+                ) : (
+                    <Button variant="danger-soft" size="sm" isDisabled={p.isPending} onPress={() => on.ask(row.id)}>
+                        {p.deleteLabel}
+                    </Button>
+                )}
+            </div>
+        ) : null}
+    </ListItem>
+)

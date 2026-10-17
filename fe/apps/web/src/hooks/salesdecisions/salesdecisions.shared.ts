@@ -1,5 +1,5 @@
 import { parseAmount } from "@/hooks/sales"
-import type { SalesWorkEditsRequest } from "@/modules/api"
+import type { SalesWorkEditsRequest } from "@/hooks/swr"
 import type { SalesDecision } from "@/modules/types"
 
 /** What a person has typed or toggled on the pending cards, by decision id. */

@@ -1,16 +1,17 @@
 "use client"
 
-import { useCallback, useLayoutEffect, useRef, useState } from "react"
-import { useTranslations } from "next-intl"
-import { mutate } from "swr"
 import {
+    QUERY_OPEN_PLAN_PAYMENT_ORDER_SWR_KEY,
+    QUERY_PAYMENT_ORDERS_SWR_KEY,
     useMutateRequestPaymentOrderSwr,
     useQueryPaymentOrderRequestStatusSwr,
-    QUERY_PAYMENT_ORDERS_SWR_KEY,
-    QUERY_OPEN_PLAN_PAYMENT_ORDER_SWR_KEY,
 } from "@/hooks/swr"
-import type { MutateRequestPaymentOrderRequest } from "@/modules/api/graphql/mutations/mutation-request-payment-order"
+import type { MutateRequestPaymentOrderRequest } from "@/hooks/swr"
 import { toast, useGraphQLWithToast } from "@/modules/toast"
+import { useTranslations } from "next-intl"
+import { useCallback, useRef, useState } from "react"
+import { mutate } from "swr"
+import { usePaymentOrderInvocation } from "./usePaymentOrderInvocation"
 
 const failureKey = (code: string | null | undefined): "errForbidden" | "errCustomPlan" | "paymentFailed" => {
     if (code === "BILLING_FORBIDDEN" || code === "BILLING_NOT_MEMBER") return "errForbidden"
@@ -32,23 +33,14 @@ export const useRequestPaymentOrder = (workspaceId: string | undefined) => {
         setRequestWorkspaceId(workspaceId)
         setPendingRequest(undefined)
     }
-    const invocation = useRef({ workspaceId, sequence: 0, live: true })
-    useLayoutEffect(() => {
-        const current = invocation.current
-        current.workspaceId = workspaceId
-        current.live = true
-        return () => {
-            current.live = false
-            current.sequence += 1
-        }
-    }, [workspaceId])
+    const invocation = usePaymentOrderInvocation(workspaceId)
     const requestId = pendingRequest?.workspaceId === workspaceId ? pendingRequest?.id : undefined
     const completed = useRef(new Set<string>())
     const notifiedErrors = useRef(new Set<string>())
     const { trigger, isMutating } = useMutateRequestPaymentOrderSwr()
     const onSuccess = useCallback(
         (progress: ReturnType<typeof useQueryPaymentOrderRequestStatusSwr>["data"]) => {
-            const current = invocation.current
+            const current = invocation.read()
             if (!current.live || current.workspaceId !== workspaceId || current.sequence !== pendingRequest?.sequence)
                 return
             if (!progress || progress.id !== requestId || completed.current.has(progress.id)) return
@@ -66,11 +58,11 @@ export const useRequestPaymentOrder = (workspaceId: string | undefined) => {
                     key[1] === workspaceId,
             )
         },
-        [pendingRequest?.sequence, requestId, t, workspaceId],
+        [invocation, pendingRequest?.sequence, requestId, t, workspaceId],
     )
     const onError = useCallback(
         (failure: unknown) => {
-            const current = invocation.current
+            const current = invocation.read()
             if (!current.live || current.workspaceId !== workspaceId || current.sequence !== pendingRequest?.sequence)
                 return
             if (!requestId || notifiedErrors.current.has(requestId)) return
@@ -79,25 +71,24 @@ export const useRequestPaymentOrder = (workspaceId: string | undefined) => {
                 description: failure instanceof Error ? failure.message : t("paymentFailed"),
             })
         },
-        [pendingRequest?.sequence, requestId, t, workspaceId],
+        [invocation, pendingRequest?.sequence, requestId, t, workspaceId],
     )
     const { data: status, error } = useQueryPaymentOrderRequestStatusSwr(workspaceId, requestId, { onSuccess, onError })
     const terminal = status?.status === "succeeded" || status?.status === "failed"
 
     const request = useCallback(
         async (input: MutateRequestPaymentOrderRequest) => {
-            const current = invocation.current
+            const current = invocation.read()
             if (!current.live || current.workspaceId !== workspaceId) return undefined
-            const sequence = current.sequence + 1
-            current.sequence = sequence
+            const sequence = invocation.begin()
             setPendingRequest(undefined)
             const queued = await runGraphQL(() => trigger(input), { successMessage: t("paymentQueued") })
-            const latest = invocation.current
+            const latest = invocation.read()
             if (!latest.live || latest.workspaceId !== workspaceId || latest.sequence !== sequence) return undefined
             if (queued !== undefined) setPendingRequest({ workspaceId, id: queued.id, sequence })
             return queued
         },
-        [runGraphQL, trigger, t, workspaceId],
+        [invocation, runGraphQL, trigger, t, workspaceId],
     )
 
     return {

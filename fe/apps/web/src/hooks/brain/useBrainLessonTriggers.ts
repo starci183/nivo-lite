@@ -1,6 +1,5 @@
 import { useMutateDecideBrainLessonSwr, useMutateMaintainBrainSwr, useMutateSaveBrainLessonSwr } from "@/hooks/swr"
-import type { MutateDecideBrainLessonRequest } from "@/modules/api/graphql/mutations/mutation-decide-brain-lesson"
-import type { MutateSaveBrainLessonRequest } from "@/modules/api/graphql/mutations/mutation-save-brain-lesson"
+import type { MutateDecideBrainLessonRequest, MutateSaveBrainLessonRequest } from "@/hooks/swr"
 
 /** The requests of the commands about lessons and upkeep, by the kind a card names. */
 export interface BrainLessonRequests {

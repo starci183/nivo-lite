@@ -79,31 +79,55 @@ export const LeadContext = (props: LeadContextProps) => {
 
     return (
         <LeadContextBase
-            props={{
-                slot,
-                error: error ?? actions.error,
-                isPending,
-                labels: {
-                    title: t("contextTitle"),
-                    factContact: t("factContact"),
-                    factCompany: t("factCompany"),
-                    factChannel: t("factChannel"),
-                    factCaptured: t("factCaptured"),
-                    customerWords: t("customerWords"),
-                    briefLabel: t("contextBrief"),
-                    signalsLabel: t("signals"),
-                    aiChip: tc("aiChip"),
-                    viewConversation: t("viewConversation"),
-                    copy: isCopied ? t("briefCopied") : t("copyBrief"),
-                    refresh: t("refreshContext"),
-                    noBriefTitle: t("noBrief"),
-                    noBriefHint: t("noBriefHint"),
-                    prepare: t("prepareContext"),
-                    errorTitle: t("somethingWrong"),
-                    slot: slotLabels(t("noBrief")),
-                },
-            }}
+            props={buildContextCardView({ slot, error, actions, isPending, t, tc, isCopied, slotLabels })}
             on={{ copy, refresh }}
         />
     )
 }
+
+/** Inputs needed to build the LeadContextContent section. */
+interface BuildContextCardViewContext {
+    readonly slot: DataSlot<ContextView>
+    readonly error: string | null
+    readonly actions: ReturnType<typeof useLeadActions>
+    readonly isPending: boolean
+    readonly t: ReturnType<typeof useTranslations<"lead">>
+    readonly tc: ReturnType<typeof useTranslations<"common">>
+    readonly isCopied: boolean
+    readonly slotLabels: ReturnType<typeof useSlotLabels>
+}
+/** Builds the LeadContextContent section from the current view. */
+const buildContextCardView = ({
+    slot,
+    error,
+    actions,
+    isPending,
+    t,
+    tc,
+    isCopied,
+    slotLabels,
+}: BuildContextCardViewContext) =>
+    ({
+        slot,
+        error: error ?? actions.error,
+        isPending,
+        labels: {
+            title: t("contextTitle"),
+            factContact: t("factContact"),
+            factCompany: t("factCompany"),
+            factChannel: t("factChannel"),
+            factCaptured: t("factCaptured"),
+            customerWords: t("customerWords"),
+            briefLabel: t("contextBrief"),
+            signalsLabel: t("signals"),
+            aiChip: tc("aiChip"),
+            viewConversation: t("viewConversation"),
+            copy: isCopied ? t("briefCopied") : t("copyBrief"),
+            refresh: t("refreshContext"),
+            noBriefTitle: t("noBrief"),
+            noBriefHint: t("noBriefHint"),
+            prepare: t("prepareContext"),
+            errorTitle: t("somethingWrong"),
+            slot: slotLabels(t("noBrief")),
+        },
+    }) as const

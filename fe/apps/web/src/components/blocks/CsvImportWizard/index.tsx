@@ -24,12 +24,15 @@ const KIND_ORDER = ["phone", "email", "number", "date"] as const
  * table, documents), the column mapping with a preview, the import itself, and the agents that may read it. Every file is parsed by
  * the back end over GraphQL. With `resumeId` it loads the saved import first, then adds more data to it with the saved mapping.
  */
-export const CsvImportWizard = (props: CsvImportWizardProps) => {
-    const t = useTranslations("connectorCsv")
-    const tw = useTranslations("connectionWizard")
-    const format = useFormatter()
-    const copy = useCsvImportCopy()
-    const wizard = useCsvImportWizard(props)
+/** Connects the state and commands used by CsvImportWizard. */
+const buildCsvImportWizardState = (
+    wizard: ReturnType<typeof useCsvImportWizard>,
+    copy: ReturnType<typeof useCsvImportCopy>,
+    t: ReturnType<typeof useTranslations<"connectorCsv">>,
+    tw: ReturnType<typeof useTranslations<"connectionWizard">>,
+    props: CsvImportWizardProps,
+    format: ReturnType<typeof useFormatter>,
+) => {
     const { preview, mapping, result, grid, saved, form } = wizard
     const headerOptions = (preview?.headers ?? []).map((header) => ({ id: header, label: header }))
     const kindList = KIND_ORDER.map((kind) => {
@@ -40,108 +43,151 @@ export const CsvImportWizard = (props: CsvImportWizardProps) => {
         .join("; ")
     const linkCount = form.link.trim() ? 1 : 0
     const sheets = preview?.sheets ?? []
-    return (
-        <CsvImportWizardBase
-            props={{
-                gate:
-                    wizard.isLoading || wizard.loadError !== null
-                        ? { message: t("loading"), failure: wizard.loadError }
-                        : null,
-                title: t("title"),
-                stepLabel: tw("stepOf", { n: wizard.index + 1, total: wizard.steps.length }),
-                steps: wizard.steps.map((step) => copy.steps[step]),
-                index: wizard.index,
-                step: wizard.step,
-                source: wizard.source,
-                resumeLine:
-                    saved === null
-                        ? null
-                        : [t("resumeFor", { name: saved.name }), saved.summary].filter(Boolean).join(" · "),
-                isResume: props.resumeId !== undefined,
-                isPending: wizard.isPending,
-                canGoBack: wizard.canGoBack,
-                form,
-                link: form.link,
-                paste: form.paste,
-                entityOptions: copy.entities,
-                sourceOptions: copy.sources,
-                scheduleOptions: copy.schedules,
-                fileChosen: wizard.file === null ? null : t("fileChosen", { name: wizard.file.name }),
-                docsReady: wizard.docs.length > 0 || linkCount > 0,
-                grid: {
-                    columns: grid.columns.map((column, at) => {
-                        const label = t("gridHeader", { n: at + 1 })
-                        return { id: column.id, name: column.name, label, cellLabel: column.name.trim() || label }
-                    }),
-                    rows: grid.rows,
-                    isFull: grid.rows.length >= MAX_GRID_ROWS,
-                    text: {
-                        title: copy.text.gridTitle,
-                        addRow: copy.text.gridAddRow,
-                        addColumn: copy.text.gridAddColumn,
-                        remove: copy.text.gridRemove,
-                        rows: t("gridRows", { n: format.number(grid.rows.length) }),
-                        tooBig: copy.text.gridTooBig,
-                    },
-                },
-                map:
-                    preview === null || mapping === null
-                        ? null
-                        : {
-                              missing: preview.missing.length
-                                  ? t("mapMissing", { columns: preview.missing.join(", ") })
-                                  : null,
-                              intro: `${t("mapIntro")} ${t("previewTotal", { n: format.number(preview.total) })}`,
-                              sheet:
-                                  sheets.length > 1
-                                      ? { value: preview.sheet, options: sheets.map((s) => ({ id: s, label: s })) }
-                                      : null,
-                              idOptions: [{ id: NO_COLUMN, label: t("mapRowNumber") }, ...headerOptions],
-                              optionalOptions: [{ id: NO_COLUMN, label: t("mapNone") }, ...headerOptions],
-                              values: {
-                                  idColumn: mapping.idColumn ?? NO_COLUMN,
-                                  titleColumn: mapping.titleColumn ?? NO_COLUMN,
-                                  dateColumn: mapping.dateColumn ?? NO_COLUMN,
-                              },
-                              kinds: kindList ? t("mapKinds", { list: kindList }) : null,
-                              headers: preview.headers,
-                              sample: preview.sample,
-                              text: copy.text,
-                          },
-                importIntro:
-                    wizard.source === "document"
-                        ? t("importIntroDocs", { n: wizard.docs.length + linkCount })
-                        : t("importIntro", {
-                              n: format.number(preview?.total ?? 0),
-                              entity: copy.entityLabel(form.entity),
-                          }),
-                done:
-                    result === null
-                        ? null
-                        : {
-                              title: t(wizard.source === "document" ? "importDoneDocs" : "importDone", {
-                                  added: format.number(result.added),
-                                  updated: format.number(result.updated),
-                              }),
-                              description: t("importSummary", { summary: result.summary }),
-                              skipped: result.skipped ? t("importSkipped", { n: result.skipped }) : null,
-                          },
-                note: wizard.note,
-                agentStep: {
-                    title: t("agentTitle"),
-                    notice: null,
-                    agents: agentChoicesOf(props.agents, "csv_import", tw),
-                    value: wizard.agentIds,
-                    hint: tw("agentHint"),
-                    none: tw("agentNone"),
-                },
-                text: {
-                    ...copy.text,
-                    readNext: wizard.isPending ? t("reading") : copy.text.next,
-                    importNow: wizard.isPending ? t("reading") : t("importRun"),
-                },
-            }}
-            on={wizard.on}
-        />
-    )
+    return {
+        wizard,
+        t,
+        tw,
+        copy,
+        saved,
+        props,
+        form,
+        linkCount,
+        grid,
+        format,
+        preview,
+        mapping,
+        sheets,
+        headerOptions,
+        kindList,
+        result,
+    }
+}
+
+/** Draws the connected view from its current state. */
+export const CsvImportWizard = (props: CsvImportWizardProps) => {
+    const t = useTranslations("connectorCsv")
+    const tw = useTranslations("connectionWizard")
+    const format = useFormatter()
+    const copy = useCsvImportCopy()
+    const wizard = useCsvImportWizard(props)
+
+    const connected = buildCsvImportWizardState(wizard, copy, t, tw, props, format)
+    if (connected === null) return null
+
+    return <CsvImportWizardBase props={csvImportWizardProps(connected)} on={wizard.on} />
+}
+
+/** Builds the props supplied to CsvImportWizardBase. */
+const csvImportWizardProps = (
+    connected: NonNullable<ReturnType<typeof buildCsvImportWizardState>>,
+): Parameters<typeof CsvImportWizardBase>[0]["props"] => {
+    const { wizard, t, tw, copy, saved, props, form, linkCount, format, preview, result } = connected
+    return {
+        gate:
+            wizard.isLoading || wizard.loadError !== null ? { message: t("loading"), failure: wizard.loadError } : null,
+        title: t("title"),
+        stepLabel: tw("stepOf", { n: wizard.index + 1, total: wizard.steps.length }),
+        steps: wizard.steps.map((step) => copy.steps[step]),
+        index: wizard.index,
+        step: wizard.step,
+        source: wizard.source,
+        resumeLine:
+            saved === null ? null : [t("resumeFor", { name: saved.name }), saved.summary].filter(Boolean).join(" · "),
+        isResume: props.resumeId !== undefined,
+        isPending: wizard.isPending,
+        canGoBack: wizard.canGoBack,
+        form,
+        link: form.link,
+        paste: form.paste,
+        entityOptions: copy.entities,
+        sourceOptions: copy.sources,
+        scheduleOptions: copy.schedules,
+        fileChosen: wizard.file === null ? null : t("fileChosen", { name: wizard.file.name }),
+        docsReady: wizard.docs.length > 0 || linkCount > 0,
+        grid: csvImportGrid(connected),
+        map: csvImportMap(connected),
+        importIntro:
+            wizard.source === "document"
+                ? t("importIntroDocs", { n: wizard.docs.length + linkCount })
+                : t("importIntro", {
+                      n: format.number(preview?.total ?? 0),
+                      entity: copy.entityLabel(form.entity),
+                  }),
+        done:
+            result === null
+                ? null
+                : {
+                      title: t(wizard.source === "document" ? "importDoneDocs" : "importDone", {
+                          added: format.number(result.added),
+                          updated: format.number(result.updated),
+                      }),
+                      description: t("importSummary", { summary: result.summary }),
+                      skipped: result.skipped ? t("importSkipped", { n: result.skipped }) : null,
+                  },
+        note: wizard.note,
+        agentStep: {
+            title: t("agentTitle"),
+            notice: null,
+            agents: agentChoicesOf(props.agents, "csv_import", tw),
+            value: wizard.agentIds,
+            hint: tw("agentHint"),
+            none: tw("agentNone"),
+        },
+        text: {
+            ...copy.text,
+            readNext: wizard.isPending ? t("reading") : copy.text.next,
+            importNow: wizard.isPending ? t("reading") : t("importRun"),
+        },
+    }
+}
+
+/** Builds the grid step of the import wizard. */
+const csvImportGrid = (
+    connected: NonNullable<ReturnType<typeof buildCsvImportWizardState>>,
+): Parameters<typeof CsvImportWizardBase>[0]["props"]["grid"] => {
+    const { t, copy, grid, format } = connected
+    return {
+        columns: grid.columns.map((column, at) => {
+            const label = t("gridHeader", { n: at + 1 })
+            return { id: column.id, name: column.name, label, cellLabel: column.name.trim() || label }
+        }),
+        rows: grid.rows,
+        isFull: grid.rows.length >= MAX_GRID_ROWS,
+        text: {
+            title: copy.text.gridTitle,
+            addRow: copy.text.gridAddRow,
+            addColumn: copy.text.gridAddColumn,
+            remove: copy.text.gridRemove,
+            rows: t("gridRows", { n: format.number(grid.rows.length) }),
+            tooBig: copy.text.gridTooBig,
+        },
+    }
+}
+
+/** Builds the map step of the import wizard. */
+const csvImportMap = (
+    connected: NonNullable<ReturnType<typeof buildCsvImportWizardState>>,
+): Parameters<typeof CsvImportWizardBase>[0]["props"]["map"] => {
+    const { t, copy, format, preview, mapping, sheets, headerOptions, kindList } = connected
+    return preview === null || mapping === null
+        ? null
+        : {
+              missing: preview.missing.length ? t("mapMissing", { columns: preview.missing.join(", ") }) : null,
+              intro: `${t("mapIntro")} ${t("previewTotal", { n: format.number(preview.total) })}`,
+              sheet:
+                  sheets.length > 1
+                      ? { value: preview.sheet, options: sheets.map((s) => ({ id: s, label: s })) }
+                      : null,
+              idOptions: [{ id: NO_COLUMN, label: t("mapRowNumber") }, ...headerOptions],
+              optionalOptions: [{ id: NO_COLUMN, label: t("mapNone") }, ...headerOptions],
+              values: {
+                  idColumn: mapping.idColumn ?? NO_COLUMN,
+                  titleColumn: mapping.titleColumn ?? NO_COLUMN,
+                  dateColumn: mapping.dateColumn ?? NO_COLUMN,
+              },
+              kinds: kindList ? t("mapKinds", { list: kindList }) : null,
+              headers: preview.headers,
+              sample: preview.sample,
+              text: copy.text,
+          }
 }

@@ -1,6 +1,6 @@
 import { isTestRunName } from "@/hooks/overviewFigures"
 import type { OwnerGroupModel } from "@/hooks/overviewRows"
-import type { DashboardType } from "@/modules/api"
+import type { DashboardType } from "@/hooks/swr"
 
 /** The dashboard as the back end answers it. */
 type Dashboard = DashboardType

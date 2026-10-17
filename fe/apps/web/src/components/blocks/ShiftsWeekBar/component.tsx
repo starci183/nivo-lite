@@ -1,3 +1,7 @@
+import type { useTranslations } from "next-intl"
+import type { useShiftsFormat, useShiftsBenchData } from "@/hooks/shifts"
+import type { useShiftsWeekStore } from "@/hooks/zustand/shiftsWeek"
+import type { useShiftsWeekCommands, useShiftsRequestCommands } from "@/hooks/shiftsCommands"
 import { Alert, Badge, Button, EmptyNotice, Text } from "@starci/grammar/common"
 import { ACTIONS_CLASS_NAME, BAR_CLASS_NAME, NAV_CLASS_NAME, PANEL_CLASS_NAME } from "./classNames"
 
@@ -114,3 +118,24 @@ export const ShiftsWeekBarBase = (props: ShiftsWeekBarBaseProps) => (
         )}
     </div>
 )
+
+/** State values and commands consumed by the connected surface. */
+export type Busy = "propose" | "explain" | "publish" | "decide" | null
+
+/** State values and commands consumed by the connected surface. */
+export type ShiftsWeekBarControllerInput = {
+    readonly t: ReturnType<typeof useTranslations<"shifts">>
+    readonly format: ReturnType<typeof useShiftsFormat>
+    readonly selected: ReturnType<typeof useShiftsWeekStore.getState>["monday"]
+    readonly setSelected: ReturnType<typeof useShiftsWeekStore.getState>["setMonday"]
+    readonly bench: NonNullable<ReturnType<typeof useShiftsBenchData>>["data"]
+    readonly week: ReturnType<typeof useShiftsWeekCommands>
+    readonly requests: ReturnType<typeof useShiftsRequestCommands>
+    readonly busy: Busy
+    readonly setBusy: React.Dispatch<React.SetStateAction<Busy>>
+}
+
+/** Narrowed schedule data available after the access guard. */
+export type CreateShiftsWeekBarRowsInput = ShiftsWeekBarControllerInput & {
+    bench: NonNullable<ShiftsWeekBarControllerInput["bench"]>
+}

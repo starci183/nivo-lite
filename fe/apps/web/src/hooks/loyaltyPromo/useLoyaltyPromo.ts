@@ -1,8 +1,5 @@
 "use client"
 
-import { useTranslations } from "next-intl"
-import { useEffect, useMemo, useState } from "react"
-import { useSWRConfig } from "swr"
 import { useLoyaltyCampaignForm } from "@/hooks/rhf"
 import {
     QUERY_LOYALTY_BOARD_SWR_KEY,
@@ -10,9 +7,12 @@ import {
     useQueryLoyaltyCampaignSwr,
     useQueryLoyaltySegmentPreviewSwr,
 } from "@/hooks/swr"
-import { matchesSwrKey } from "@/modules/utils"
-import type { LoyaltyBoardType } from "@/modules/api"
+import type { LoyaltyBoardType } from "@/hooks/swr"
 import { useGraphQLWithToast } from "@/modules/toast"
+import { matchesSwrKey } from "@/modules/utils"
+import { useTranslations } from "next-intl"
+import { useEffect, useMemo, useState } from "react"
+import { useSWRConfig } from "swr"
 import {
     CAMPAIGN_BRIEF_MAX,
     CAMPAIGN_NAME_MAX,

@@ -63,65 +63,18 @@ export const LoyaltyRewards = () => {
     const submit = form.handleSubmit((values) => actions.save(rewardInputOf(values, target), () => setEditing(null)))
     return (
         <LoyaltyRewardsBase
-            props={{
-                title: t("rewardsTitle"),
-                addLabel: t("rewardAdd"),
-                canManage: board.canManage,
-                isPending: actions.isPending,
-                emptyTitle: t("rewardsEmptyTitle"),
-                emptyBody: board.canManage ? t("rewardsEmptyBody") : t("rewardsEmptyBodyStaff"),
-                presetLabel: t("presetButton"),
-                readOnlyNote: t("readOnlyNote"),
-                activeLabel: t("rewardActive"),
-                editLabel: t("edit"),
-                deleteLabel: t("delete"),
-                askLabel: t("deleteAsk"),
-                confirmLabel: t("deleteConfirm"),
-                cancelLabel: t("cancel"),
-                rows: board.rewards.map((reward) => ({
-                    id: reward.id,
-                    name: reward.name,
-                    kindLabel: kindLabel(reward),
-                    statusLabel: reward.active ? t("rewardOn") : t("rewardOff"),
-                    active: reward.active,
-                    cost: costLine(reward),
-                    facts: factsLine(reward),
-                    note: reward.note,
-                    isConfirming: askingId === reward.id,
-                })),
-                ...(editing === null
-                    ? {}
-                    : {
-                          form: {
-                              heading: target === null ? t("rewardAdd") : t("rewardEditTitle"),
-                              values: form.watch(),
-                              isPending: actions.isPending,
-                              nameError: form.formState.errors.name?.message,
-                              costError: form.formState.errors.cost?.message,
-                              kindOptions: REWARD_KINDS.map((kind) => ({ id: kind, label: t(`rewardKind_${kind}`) })),
-                              tierOptions: [
-                                  { id: ANY_TIER, label: t("anyTier") },
-                                  ...board.config.tiers.map((tier) => ({ id: tier.key, label: tier.name })),
-                              ],
-                              noteMax: REWARD_NOTE_MAX,
-                              nameLabel: t("rewardName"),
-                              kindLabel: t("rewardKind"),
-                              costLabel: t("rewardCost"),
-                              valueLabel: t("rewardValue"),
-                              valueHint: t("rewardValueHint"),
-                              percentLabel: t("rewardPercent"),
-                              stockLabel: t("rewardStock"),
-                              stockHint: t("rewardStockHint"),
-                              limitLabel: t("rewardLimit"),
-                              limitHint: t("rewardLimitHint"),
-                              minTierLabel: t("rewardMinTier"),
-                              noteLabel: t("rewardNote"),
-                              activeLabel: t("rewardActive"),
-                              saveLabel: t("save"),
-                              cancelLabel: t("cancel"),
-                          },
-                      }),
-            }}
+            props={buildLoyaltyRewardsView({
+                t,
+                board,
+                actions,
+                kindLabel,
+                costLine,
+                factsLine,
+                askingId,
+                editing,
+                target,
+                form,
+            })}
             on={{
                 add: () => open(null),
                 preset: actions.preset,
@@ -143,3 +96,89 @@ export const LoyaltyRewards = () => {
         />
     )
 }
+
+/** Inputs needed to build the LoyaltyRewardsContent section. */
+interface BuildLoyaltyRewardsViewContext {
+    readonly t: ReturnType<typeof useTranslations<"loyalty">>
+    readonly board: typeof EMPTY_LOYALTY_BOARD
+    readonly actions: ReturnType<typeof useLoyaltyRewardActions>
+    readonly kindLabel: (reward: (typeof EMPTY_LOYALTY_BOARD)["rewards"][number]) => string
+    readonly costLine: (reward: (typeof EMPTY_LOYALTY_BOARD)["rewards"][number]) => string
+    readonly factsLine: (reward: (typeof EMPTY_LOYALTY_BOARD)["rewards"][number]) => string
+    readonly askingId: string | null
+    readonly editing: Editing | null
+    readonly target: (typeof EMPTY_LOYALTY_BOARD)["rewards"][number] | null
+    readonly form: ReturnType<typeof useLoyaltyRewardForm>
+}
+/** Builds the LoyaltyRewardsContent section from the current view. */
+const buildLoyaltyRewardsView = ({
+    t,
+    board,
+    actions,
+    kindLabel,
+    costLine,
+    factsLine,
+    askingId,
+    editing,
+    target,
+    form,
+}: BuildLoyaltyRewardsViewContext) =>
+    ({
+        title: t("rewardsTitle"),
+        addLabel: t("rewardAdd"),
+        canManage: board.canManage,
+        isPending: actions.isPending,
+        emptyTitle: t("rewardsEmptyTitle"),
+        emptyBody: board.canManage ? t("rewardsEmptyBody") : t("rewardsEmptyBodyStaff"),
+        presetLabel: t("presetButton"),
+        readOnlyNote: t("readOnlyNote"),
+        activeLabel: t("rewardActive"),
+        editLabel: t("edit"),
+        deleteLabel: t("delete"),
+        askLabel: t("deleteAsk"),
+        confirmLabel: t("deleteConfirm"),
+        cancelLabel: t("cancel"),
+        rows: board.rewards.map((reward) => ({
+            id: reward.id,
+            name: reward.name,
+            kindLabel: kindLabel(reward),
+            statusLabel: reward.active ? t("rewardOn") : t("rewardOff"),
+            active: reward.active,
+            cost: costLine(reward),
+            facts: factsLine(reward),
+            note: reward.note,
+            isConfirming: askingId === reward.id,
+        })),
+        ...(editing === null
+            ? {}
+            : {
+                  form: {
+                      heading: target === null ? t("rewardAdd") : t("rewardEditTitle"),
+                      values: form.watch(),
+                      isPending: actions.isPending,
+                      nameError: form.formState.errors.name?.message,
+                      costError: form.formState.errors.cost?.message,
+                      kindOptions: REWARD_KINDS.map((kind) => ({ id: kind, label: t(`rewardKind_${kind}`) })),
+                      tierOptions: [
+                          { id: ANY_TIER, label: t("anyTier") },
+                          ...board.config.tiers.map((tier) => ({ id: tier.key, label: tier.name })),
+                      ],
+                      noteMax: REWARD_NOTE_MAX,
+                      nameLabel: t("rewardName"),
+                      kindLabel: t("rewardKind"),
+                      costLabel: t("rewardCost"),
+                      valueLabel: t("rewardValue"),
+                      valueHint: t("rewardValueHint"),
+                      percentLabel: t("rewardPercent"),
+                      stockLabel: t("rewardStock"),
+                      stockHint: t("rewardStockHint"),
+                      limitLabel: t("rewardLimit"),
+                      limitHint: t("rewardLimitHint"),
+                      minTierLabel: t("rewardMinTier"),
+                      noteLabel: t("rewardNote"),
+                      activeLabel: t("rewardActive"),
+                      saveLabel: t("save"),
+                      cancelLabel: t("cancel"),
+                  },
+              }),
+    }) as const

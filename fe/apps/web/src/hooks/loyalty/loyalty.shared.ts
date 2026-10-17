@@ -1,5 +1,5 @@
+import type { LoyaltyBoardType, LoyaltyConfigType, LoyaltyTierType } from "@/hooks/swr"
 import type { BadgeTone } from "@starci/grammar/common"
-import type { LoyaltyBoardType, LoyaltyConfigType, LoyaltyTierType } from "@/modules/api"
 
 /** The board shown while the first answer is on its way: no members, rewards or campaigns, read-only. */
 export const EMPTY_LOYALTY_BOARD: LoyaltyBoardType = {

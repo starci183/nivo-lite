@@ -1,3 +1,6 @@
+import type { useTranslations } from "next-intl"
+import type { useShiftsBenchData, useShiftsFormat } from "@/hooks/shifts"
+import type { useShiftsRequestCommands } from "@/hooks/shiftsCommands"
 import {
     Badge,
     Button,
@@ -103,3 +106,18 @@ export const ShiftsRequestsBase = (props: ShiftsRequestsBaseProps) => (
             ))}
     </div>
 )
+
+/** State values and commands consumed by the connected surface. */
+export type ShiftsRequestsControllerInput = {
+    readonly t: ReturnType<typeof useTranslations<"shifts">>
+    readonly bench: NonNullable<ReturnType<typeof useShiftsBenchData>>["data"]
+    readonly format: ReturnType<typeof useShiftsFormat>
+    readonly commands: ReturnType<typeof useShiftsRequestCommands>
+    readonly busy: boolean
+    readonly setBusy: React.Dispatch<React.SetStateAction<boolean>>
+}
+
+/** Narrowed schedule data available after the access guard. */
+export type CreateShiftsRequestsRowsInput = ShiftsRequestsControllerInput & {
+    bench: NonNullable<ShiftsRequestsControllerInput["bench"]>
+}

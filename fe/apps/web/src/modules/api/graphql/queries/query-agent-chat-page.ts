@@ -32,16 +32,23 @@ enum QueryAgentChatPage {
     Query1 = "query1",
 }
 
+const queryMap: Record<QueryAgentChatPage, Document> = { [QueryAgentChatPage.Query1]: query1 }
+
 /** Parameters of the agent chat page query. */
 type QueryAgentChatPageParams = QueryParams<QueryAgentChatPage, QueryAgentChatPageRequest> & {
     request: QueryAgentChatPageRequest
 }
 
 /** Loads the selected agent's chat metadata and welcome eligibility. */
-export const queryAgentChatPage = async ({ request, signal, headers }: QueryAgentChatPageParams) => {
+export const queryAgentChatPage = async ({
+    query = QueryAgentChatPage.Query1,
+    request,
+    signal,
+    headers,
+}: QueryAgentChatPageParams) => {
     const apollo = createAuthApolloClient({ signal, headers })
     return apollo.query({
-        query: query1,
+        query: queryMap[query],
         variables: { input: request },
         context: { headers },
     })

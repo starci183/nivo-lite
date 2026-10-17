@@ -80,70 +80,7 @@ export const BookingServicesBase = (props: BookingServicesBaseProps) => {
             ) : (
                 <Form label={p.form.heading} isPending={p.isPending} onSubmit={on.save}>
                     <div className={STACK_CLASS}>
-                        <div className={GRID_CLASS}>
-                            <Input
-                                id="booking-service-name"
-                                name="name"
-                                label={p.form.nameLabel}
-                                variant="secondary"
-                                isRequired
-                                value={p.form.fields.name}
-                                onValueChange={(name) => on.change({ name })}
-                            />
-                            <NumberField
-                                label={p.form.durationLabel}
-                                variant="secondary"
-                                minValue={5}
-                                step={5}
-                                value={p.form.fields.durationMin}
-                                onValueChange={(durationMin) => on.change({ durationMin })}
-                            />
-                            <NumberField
-                                label={p.form.bufferLabel}
-                                variant="secondary"
-                                minValue={0}
-                                step={5}
-                                value={p.form.fields.bufferMin}
-                                onValueChange={(bufferMin) => on.change({ bufferMin })}
-                            />
-                            <Input
-                                id="booking-service-price"
-                                name="price"
-                                label={p.form.priceLabel}
-                                variant="secondary"
-                                placeholder={p.form.pricePlaceholder}
-                                value={p.form.fields.price}
-                                onValueChange={(price) => on.change({ price })}
-                            />
-                            <Input
-                                id="booking-service-kind"
-                                name="resourceKind"
-                                label={p.form.kindLabel}
-                                variant="secondary"
-                                placeholder={p.form.kindPlaceholder}
-                                value={p.form.fields.resourceKind}
-                                onValueChange={(resourceKind) => on.change({ resourceKind })}
-                            />
-                            <Input
-                                id="booking-service-followup"
-                                name="followup"
-                                label={p.form.followupLabel}
-                                variant="secondary"
-                                placeholder={p.form.followupPlaceholder}
-                                value={p.form.fields.followup}
-                                onValueChange={(followup) => on.change({ followup })}
-                            />
-                            <div className={WIDE_CLASS}>
-                                <Input
-                                    id="booking-service-description"
-                                    name="description"
-                                    label={p.form.descriptionLabel}
-                                    variant="secondary"
-                                    value={p.form.fields.description}
-                                    onValueChange={(description) => on.change({ description })}
-                                />
-                            </div>
-                        </div>
+                        {renderServiceFields(p, on)}
                         <BookingActiveFooter
                             activeLabel={p.form.activeLabel}
                             isActive={p.form.fields.active}
@@ -162,4 +99,93 @@ export const BookingServicesBase = (props: BookingServicesBaseProps) => {
             )}
         </BookingSetupSection>
     )
+}
+
+/** Draws the div section of the BookingServices view. */
+const renderServiceFields = (p: BookingServicesBaseProps["props"], on: BookingServicesBaseProps["on"]) => {
+    if (p.form === undefined) return null
+    return (
+        <div className={GRID_CLASS}>
+            <Input
+                id="booking-service-name"
+                name="name"
+                label={p.form.nameLabel}
+                variant="secondary"
+                isRequired
+                value={p.form.fields.name}
+                onValueChange={(name) => on.change({ name })}
+            />
+            <NumberField
+                label={p.form.durationLabel}
+                variant="secondary"
+                minValue={5}
+                step={5}
+                value={p.form.fields.durationMin}
+                onValueChange={(durationMin) => on.change({ durationMin })}
+            />
+            <NumberField
+                label={p.form.bufferLabel}
+                variant="secondary"
+                minValue={0}
+                step={5}
+                value={p.form.fields.bufferMin}
+                onValueChange={(bufferMin) => on.change({ bufferMin })}
+            />
+            <Input
+                id="booking-service-price"
+                name="price"
+                label={p.form.priceLabel}
+                variant="secondary"
+                placeholder={p.form.pricePlaceholder}
+                value={p.form.fields.price}
+                onValueChange={(price) => on.change({ price })}
+            />
+            <Input
+                id="booking-service-kind"
+                name="resourceKind"
+                label={p.form.kindLabel}
+                variant="secondary"
+                placeholder={p.form.kindPlaceholder}
+                value={p.form.fields.resourceKind}
+                onValueChange={(resourceKind) => on.change({ resourceKind })}
+            />
+            <Input
+                id="booking-service-followup"
+                name="followup"
+                label={p.form.followupLabel}
+                variant="secondary"
+                placeholder={p.form.followupPlaceholder}
+                value={p.form.fields.followup}
+                onValueChange={(followup) => on.change({ followup })}
+            />
+            <div className={WIDE_CLASS}>
+                <Input
+                    id="booking-service-description"
+                    name="description"
+                    label={p.form.descriptionLabel}
+                    variant="secondary"
+                    value={p.form.fields.description}
+                    onValueChange={(description) => on.change({ description })}
+                />
+            </div>
+        </div>
+    )
+}
+
+/** The initial values of a new booking service. */
+export const BLANK_SERVICE_FIELDS: ServiceFields = {
+    name: "",
+    durationMin: 30,
+    bufferMin: 0,
+    price: "",
+    resourceKind: "",
+    followup: "",
+    description: "",
+    active: true,
+}
+
+/** Reads a whole VND or day count from its editable text. */
+export const bookingServiceDigits = (value: string): number | null => {
+    const only = value.replace(/[^\d]/gu, "")
+    return only === "" ? null : Number(only)
 }

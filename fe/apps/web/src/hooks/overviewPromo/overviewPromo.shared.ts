@@ -1,4 +1,4 @@
-import type { DashboardType } from "@/modules/api"
+import type { DashboardType } from "@/hooks/swr"
 import type { OnboardingStep } from "@/modules/promo"
 
 /** The promo facts of the dashboard. */

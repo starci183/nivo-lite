@@ -1,5 +1,6 @@
 "use client"
 
+import { argumentKey } from "@/hooks/workspaceread"
 import { useRef } from "react"
 import useSWR from "swr"
 import type { AgentGenerationStatusType } from "@/modules/api"
@@ -28,7 +29,7 @@ export const useQueryAgentGenerationStatusSwr = (
 ) => {
     const failures = useRef(0)
     return useSWR(
-        generationId === undefined ? null : [QUERY_AGENT_GENERATION_STATUS_SWR_KEY, generationId],
+        argumentKey(QUERY_AGENT_GENERATION_STATUS_SWR_KEY, generationId),
         async ([, id]: [string, string]) => {
             const result = await queryAgentGenerationStatus({ request: { generationId: id } })
             if (!result.data) throw new Error("agentGenerationStatus answered no data")

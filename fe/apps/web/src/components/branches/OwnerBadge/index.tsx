@@ -1,3 +1,5 @@
+import { nivoIconSource } from "@/components/leaves/Icon"
+import type { ModuleIconName } from "@/modules/types"
 import { Text } from "@starci/grammar/common"
 import { AgentMark } from "@/components/leaves/AgentMark"
 import { PersonAvatar } from "@/components/leaves/PersonAvatar"
@@ -9,8 +11,8 @@ type OwnerBadgeProps = {
     readonly name: string
     /** The module key of the agent. */
     readonly handle: string | null
-    /** SVG path data of the agent glyph. */
-    readonly glyph: string
+    /** Semantic Icon name of the agent glyph. */
+    readonly glyph: ModuleIconName
     /** The words under the name: the role of the owner. */
     readonly role: string
 }
@@ -19,7 +21,12 @@ type OwnerBadgeProps = {
 export const OwnerBadge = (props: OwnerBadgeProps) => (
     <div className={OWNER_MARK_CLASS}>
         {props.kind === "agent" ? (
-            <AgentMark glyph={props.glyph} label={props.name} module={props.handle ?? "chatbot"} size="md" />
+            <AgentMark
+                glyph={nivoIconSource(props.glyph, "leading")}
+                label={props.name}
+                module={props.handle ?? "chatbot"}
+                size="md"
+            />
         ) : (
             <PersonAvatar name={props.name} size="md" />
         )}

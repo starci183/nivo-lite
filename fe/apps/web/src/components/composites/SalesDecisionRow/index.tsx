@@ -86,40 +86,7 @@ export const SalesDecisionRow = (props: SalesDecisionRowProps) => {
             }
             customer={row.customer}
             customerHref={row.leadHref}
-            actions={
-                row.canAct ? (
-                    <>
-                        <Button
-                            variant="primary"
-                            size="sm"
-                            isPending={row.isApproveBusy}
-                            isDisabled={row.isApproveDisabled}
-                            onPress={() => on.decide(row.id, "approved")}
-                        >
-                            {l.approveLabel}
-                        </Button>
-                        {row.canEdit ? (
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                isDisabled={row.isBusy}
-                                onPress={() => on.toggleEdit(row.id)}
-                            >
-                                {row.editLabel}
-                            </Button>
-                        ) : null}
-                        <Button
-                            variant="danger-soft"
-                            size="sm"
-                            isPending={row.isRejectBusy}
-                            isDisabled={row.isBusy}
-                            onPress={() => on.decide(row.id, "rejected")}
-                        >
-                            {l.rejectLabel}
-                        </Button>
-                    </>
-                ) : undefined
-            }
+            actions={row.canAct ? renderSalesDecisionRowActions(row, on, l) : undefined}
         >
             <Text size="sm" weight="medium">
                 {row.actionLabel}
@@ -149,22 +116,7 @@ export const SalesDecisionRow = (props: SalesDecisionRowProps) => {
                     </Text>
                 </SurfaceCard>
             )}
-            {row.canAct && (row.missing.length > 0 || row.isEditing) ? (
-                <SalesDecisionFields
-                    anchor={row.anchor}
-                    missing={row.missing}
-                    showDraftField={row.showDraftField}
-                    draftLabel={l.draftLabel}
-                    draftValue={row.draftValue}
-                    showAmountField={row.showAmountField}
-                    amountLabel={l.amountLabel}
-                    amountValue={row.amountValue}
-                    isBusy={row.isBusy}
-                    onField={(name, value) => on.field(row.id, name, value)}
-                    onDraft={(value) => on.draft(row.id, value)}
-                    onAmount={(value) => on.amount(row.id, value)}
-                />
-            ) : null}
+            {row.canAct && (row.missing.length > 0 || row.isEditing) ? renderSalesDecisionRowFields(row, l, on) : null}
             {row.error === null ? null : (
                 <Text size="sm" live="assertive">
                     {row.error}
@@ -183,3 +135,58 @@ export const SalesDecisionRow = (props: SalesDecisionRowProps) => {
         </SalesRow>
     )
 }
+
+/** Renders the SalesDecisionRow actions section. */
+const renderSalesDecisionRowActions = (
+    row: NonNullable<SalesDecisionRowProps["row"]>,
+    on: NonNullable<SalesDecisionRowProps["on"]>,
+    l: NonNullable<SalesDecisionRowProps["labels"]>,
+) => (
+    <>
+        <Button
+            variant="primary"
+            size="sm"
+            isPending={row.isApproveBusy}
+            isDisabled={row.isApproveDisabled}
+            onPress={() => on.decide(row.id, "approved")}
+        >
+            {l.approveLabel}
+        </Button>
+        {row.canEdit ? (
+            <Button variant="outline" size="sm" isDisabled={row.isBusy} onPress={() => on.toggleEdit(row.id)}>
+                {row.editLabel}
+            </Button>
+        ) : null}
+        <Button
+            variant="danger-soft"
+            size="sm"
+            isPending={row.isRejectBusy}
+            isDisabled={row.isBusy}
+            onPress={() => on.decide(row.id, "rejected")}
+        >
+            {l.rejectLabel}
+        </Button>
+    </>
+)
+
+/** Renders the SalesDecisionRow fields section. */
+const renderSalesDecisionRowFields = (
+    row: NonNullable<SalesDecisionRowProps["row"]>,
+    l: NonNullable<SalesDecisionRowProps["labels"]>,
+    on: NonNullable<SalesDecisionRowProps["on"]>,
+) => (
+    <SalesDecisionFields
+        anchor={row.anchor}
+        missing={row.missing}
+        showDraftField={row.showDraftField}
+        draftLabel={l.draftLabel}
+        draftValue={row.draftValue}
+        showAmountField={row.showAmountField}
+        amountLabel={l.amountLabel}
+        amountValue={row.amountValue}
+        isBusy={row.isBusy}
+        onField={(name, value) => on.field(row.id, name, value)}
+        onDraft={(value) => on.draft(row.id, value)}
+        onAmount={(value) => on.amount(row.id, value)}
+    />
+)

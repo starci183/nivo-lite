@@ -1,7 +1,7 @@
 export {
     attentionConnections,
+    connectionGroups,
     CONNECTION_ROUTES,
-    GROUP_TITLE_KEY,
     isLocalOnly,
     liveConnections,
     moneyProviderOf,
@@ -19,6 +19,8 @@ export { useSyncNow } from "./useSyncNow"
 export { useWantConnector } from "./useWantConnector"
 export { useAuthorizeGoogle } from "./useAuthorizeGoogle"
 export { useFirstEvent } from "./useFirstEvent"
-export { useZaloReturn } from "./useZaloReturn"
+export { useQueryZaloReturnSwr } from "@/hooks/swr"
 export type { ZaloReturnInput } from "./useReturnZaloAuthorization"
 export { useConnectionsData } from "./useConnectionsData"
+
+export type { AgentWish } from "./useSetConnectionAgents"

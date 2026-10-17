@@ -1,3 +1,6 @@
+import type { useTranslations } from "next-intl"
+import type { useShiftsBenchData, useShiftsFormat } from "@/hooks/shifts"
+import type { useShiftsSetupCommands } from "@/hooks/shiftsCommands"
 import {
     Button,
     CheckboxGroup,
@@ -103,63 +106,11 @@ export const ShiftsStaffBase = (props: ShiftsStaffBaseProps) => (
             {props.props.people.length === 0 ? (
                 <EmptyNotice message={props.props.emptyTitle} description={props.props.emptyBody} />
             ) : (
-                <List label={props.props.title} className={LIST_CLASS_NAME}>
-                    {props.props.people.map((person) => (
-                        <ListItem key={person.id} className={LIST_ITEM_CLASS_NAME}>
-                            <ShiftsLine title={person.title} notes={person.notes} />
-                            <Button size="sm" variant="outline" onPress={() => props.on.edit(person.id)}>
-                                {props.props.editLabel}
-                            </Button>
-                        </ListItem>
-                    ))}
-                </List>
+                renderStaffList({ props })
             )}
             <SectionHeader level={3} title={props.props.formTitle} />
             <div className={FORM_GRID_CLASS_NAME}>
-                <Input
-                    variant="secondary"
-                    id="shifts-staff-name"
-                    name="name"
-                    label={props.props.labels.name}
-                    value={props.props.form.name}
-                    onValueChange={(value) => props.on.text("name", value)}
-                />
-                <NumberField
-                    variant="secondary"
-                    label={props.props.labels.wage}
-                    name="wage"
-                    value={props.props.form.wage}
-                    minValue={0}
-                    step={1000}
-                    onValueChange={(value) => props.on.number("wage", value)}
-                />
-                <NumberField
-                    variant="secondary"
-                    label={props.props.labels.maxWeek}
-                    name="maxWeek"
-                    value={props.props.form.maxWeek}
-                    minValue={1}
-                    maxValue={100}
-                    onValueChange={(value) => props.on.number("maxWeek", value)}
-                />
-                <NumberField
-                    variant="secondary"
-                    label={props.props.labels.maxDay}
-                    name="maxDay"
-                    value={props.props.form.maxDay}
-                    minValue={1}
-                    maxValue={16}
-                    onValueChange={(value) => props.on.number("maxDay", value)}
-                />
-                <NumberField
-                    variant="secondary"
-                    label={props.props.labels.minRest}
-                    name="rest"
-                    value={props.props.form.minRest}
-                    minValue={0}
-                    maxValue={24}
-                    onValueChange={(value) => props.on.number("minRest", value)}
-                />
+                {renderStaffWorkLimits(props)}
                 <Input
                     variant="secondary"
                     id="shifts-staff-phone"
@@ -201,29 +152,115 @@ export const ShiftsStaffBase = (props: ShiftsStaffBaseProps) => (
                 value={props.props.form.positionIds}
                 onValueChange={props.on.positions}
             />
-            <div className={ROW_CLASS_NAME}>
-                <Button
-                    variant="primary"
-                    isPending={props.props.isBusy}
-                    isDisabled={!props.props.canSave}
-                    onPress={props.on.save}
-                >
-                    {props.props.saveLabel}
-                </Button>
-                {props.props.form.id === null ? null : (
-                    <>
-                        <Button variant="ghost" onPress={props.on.cancel}>
-                            {props.props.cancelLabel}
-                        </Button>
-                        <Switch
-                            label={props.props.labels.active}
-                            name="active"
-                            isSelected={props.props.form.active}
-                            onSelectedChange={props.on.active}
-                        />
-                    </>
-                )}
-            </div>
+            {renderStaffActions({ props })}
         </div>
     </SurfaceCard>
 )
+
+const renderStaffActions = ({ props }: RenderStaffActionsInput) => (
+    <div className={ROW_CLASS_NAME}>
+        <Button
+            variant="primary"
+            isPending={props.props.isBusy}
+            isDisabled={!props.props.canSave}
+            onPress={props.on.save}
+        >
+            {props.props.saveLabel}
+        </Button>
+        {props.props.form.id === null ? null : (
+            <>
+                <Button variant="ghost" onPress={props.on.cancel}>
+                    {props.props.cancelLabel}
+                </Button>
+                <Switch
+                    label={props.props.labels.active}
+                    name="active"
+                    isSelected={props.props.form.active}
+                    onSelectedChange={props.on.active}
+                />
+            </>
+        )}
+    </div>
+)
+
+const renderStaffList = ({ props }: RenderStaffListInput) => (
+    <List label={props.props.title} className={LIST_CLASS_NAME}>
+        {props.props.people.map((person) => (
+            <ListItem key={person.id} className={LIST_ITEM_CLASS_NAME}>
+                <ShiftsLine title={person.title} notes={person.notes} />
+                <Button size="sm" variant="outline" onPress={() => props.on.edit(person.id)}>
+                    {props.props.editLabel}
+                </Button>
+            </ListItem>
+        ))}
+    </List>
+)
+
+const renderStaffWorkLimits = (props: ShiftsStaffBaseProps) => (
+    <>
+        <Input
+            variant="secondary"
+            id="shifts-staff-name"
+            name="name"
+            label={props.props.labels.name}
+            value={props.props.form.name}
+            onValueChange={(value) => props.on.text("name", value)}
+        />
+        <NumberField
+            variant="secondary"
+            label={props.props.labels.wage}
+            name="wage"
+            value={props.props.form.wage}
+            minValue={0}
+            step={1000}
+            onValueChange={(value) => props.on.number("wage", value)}
+        />
+        <NumberField
+            variant="secondary"
+            label={props.props.labels.maxWeek}
+            name="maxWeek"
+            value={props.props.form.maxWeek}
+            minValue={1}
+            maxValue={100}
+            onValueChange={(value) => props.on.number("maxWeek", value)}
+        />
+        <NumberField
+            variant="secondary"
+            label={props.props.labels.maxDay}
+            name="maxDay"
+            value={props.props.form.maxDay}
+            minValue={1}
+            maxValue={16}
+            onValueChange={(value) => props.on.number("maxDay", value)}
+        />
+        <NumberField
+            variant="secondary"
+            label={props.props.labels.minRest}
+            name="rest"
+            value={props.props.form.minRest}
+            minValue={0}
+            maxValue={24}
+            onValueChange={(value) => props.on.number("minRest", value)}
+        />
+    </>
+)
+
+type RenderStaffActionsInput = { props: ShiftsStaffBaseProps }
+
+type RenderStaffListInput = { props: ShiftsStaffBaseProps }
+/** State values and commands consumed by the connected surface. */
+export type ShiftsStaffControllerInput = {
+    readonly t: ReturnType<typeof useTranslations<"shifts">>
+    readonly bench: NonNullable<ReturnType<typeof useShiftsBenchData>>["data"]
+    readonly format: ReturnType<typeof useShiftsFormat>
+    readonly commands: ReturnType<typeof useShiftsSetupCommands>
+    readonly form: StaffForm
+    readonly setForm: React.Dispatch<React.SetStateAction<StaffForm>>
+    readonly isBusy: boolean
+    readonly setIsBusy: React.Dispatch<React.SetStateAction<boolean>>
+}
+
+/** Narrowed schedule data available after the access guard. */
+export type CreateShiftsStaffRowsInput = ShiftsStaffControllerInput & {
+    bench: NonNullable<ShiftsStaffControllerInput["bench"]>
+}

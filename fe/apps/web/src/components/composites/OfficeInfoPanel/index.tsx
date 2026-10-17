@@ -116,53 +116,7 @@ export const OfficeInfoPanel = (props: OfficeInfoPanelProps) => {
                     rows={info.exceptions}
                     onJump={props.on.jumpException}
                 />
-                <Region label={text("membersTitle")} className={SECTION_CLASS_NAME}>
-                    <div className={TITLE_CLASS_NAME}>
-                        <Text weight="semibold">{text("membersTitle")}</Text>
-                        <Text size="sm" tone="muted">{`${info.members.length}`}</Text>
-                    </div>
-                    {info.members.map((member) => (
-                        <div key={member.id} className={MEMBER_ROW_CLASS_NAME}>
-                            <OfficeAvatar avatar={member.avatar} />
-                            <div className={TEXT_CLASS_NAME}>
-                                <Text weight="medium" overflow="truncate">
-                                    {member.name}
-                                </Text>
-                                <Text size="sm" tone="muted" overflow="truncate">
-                                    {member.detail}
-                                </Text>
-                                {member.seen === null ? null : (
-                                    <Text size="xs" tone="muted" overflow="truncate">
-                                        {member.seen}
-                                    </Text>
-                                )}
-                                {member.note === null ? null : (
-                                    <Text size="xs" tone="muted">
-                                        {member.note}
-                                    </Text>
-                                )}
-                                <div className={ACTIONS_CLASS_NAME}>
-                                    {member.mention === null ? null : (
-                                        <MentionButton
-                                            handle={member.mention}
-                                            label={text("mention")}
-                                            onMention={props.on.mention}
-                                        />
-                                    )}
-                                    {member.chatHref === null ? null : (
-                                        <Button variant="ghost" size="sm" href={member.chatHref}>
-                                            {text("chat11")}
-                                        </Button>
-                                    )}
-                                </div>
-                            </div>
-                            {member.isMe ? <Badge tone="accent">{text("youTag")}</Badge> : null}
-                        </div>
-                    ))}
-                    <Button variant="outline" size="sm" width="fill" href={info.addAgentHref}>
-                        {text("addAgent")}
-                    </Button>
-                </Region>
+                {renderOfficeInfoPanelMembers(text, info, props)}
                 <Region label={text("tasksTitle")} className={SECTION_CLASS_NAME}>
                     <div className={TITLE_CLASS_NAME}>
                         <Text weight="semibold">{text("tasksTitle")}</Text>
@@ -178,3 +132,58 @@ export const OfficeInfoPanel = (props: OfficeInfoPanelProps) => {
         </>
     )
 }
+
+/** Renders the OfficeInfoPanel members section. */
+const renderOfficeInfoPanelMembers = (
+    text: NonNullable<OfficeInfoPanelProps["props"]["text"]>,
+    info: NonNullable<OfficeInfoPanelProps["props"]["info"]>,
+    props: OfficeInfoPanelProps,
+) => (
+    <Region label={text("membersTitle")} className={SECTION_CLASS_NAME}>
+        <div className={TITLE_CLASS_NAME}>
+            <Text weight="semibold">{text("membersTitle")}</Text>
+            <Text size="sm" tone="muted">{`${info.members.length}`}</Text>
+        </div>
+        {info.members.map((member) => (
+            <div key={member.id} className={MEMBER_ROW_CLASS_NAME}>
+                <OfficeAvatar avatar={member.avatar} />
+                <div className={TEXT_CLASS_NAME}>
+                    <Text weight="medium" overflow="truncate">
+                        {member.name}
+                    </Text>
+                    <Text size="sm" tone="muted" overflow="truncate">
+                        {member.detail}
+                    </Text>
+                    {member.seen === null ? null : (
+                        <Text size="xs" tone="muted" overflow="truncate">
+                            {member.seen}
+                        </Text>
+                    )}
+                    {member.note === null ? null : (
+                        <Text size="xs" tone="muted">
+                            {member.note}
+                        </Text>
+                    )}
+                    <div className={ACTIONS_CLASS_NAME}>
+                        {member.mention === null ? null : (
+                            <MentionButton
+                                handle={member.mention}
+                                label={text("mention")}
+                                onMention={props.on.mention}
+                            />
+                        )}
+                        {member.chatHref === null ? null : (
+                            <Button variant="ghost" size="sm" href={member.chatHref}>
+                                {text("chat11")}
+                            </Button>
+                        )}
+                    </div>
+                </div>
+                {member.isMe ? <Badge tone="accent">{text("youTag")}</Badge> : null}
+            </div>
+        ))}
+        <Button variant="outline" size="sm" width="fill" href={info.addAgentHref}>
+            {text("addAgent")}
+        </Button>
+    </Region>
+)

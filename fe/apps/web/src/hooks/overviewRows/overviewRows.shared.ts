@@ -1,5 +1,5 @@
+import type { DashboardType } from "@/hooks/swr"
 import type { useFormatter, useTranslations } from "next-intl"
-import type { DashboardType } from "@/modules/api"
 
 /** The dashboard as the back end answers it. */
 type Dashboard = DashboardType

@@ -1,5 +1,6 @@
 "use client"
 
+import { workspaceArgumentKey } from "@/hooks/workspaceread"
 import useSWR from "swr"
 import type { AgentChatTurnStatusType } from "@/modules/api"
 import { queryAgentChatTurnStatus } from "@/modules/api/graphql/queries/query-agent-chat-turn-status"
@@ -18,7 +19,7 @@ export const useQueryAgentChatTurnStatusSwr = (
     onSettled: (turn: AgentChatTurnStatusType) => void,
 ) =>
     useSWR(
-        workspaceId === undefined || id === undefined ? null : [QUERY_AGENT_CHAT_TURN_STATUS_SWR_KEY, workspaceId, id],
+        workspaceArgumentKey(QUERY_AGENT_CHAT_TURN_STATUS_SWR_KEY, workspaceId, id),
         async ([, scope, messageId]: [string, string, string]) => {
             const result = await queryAgentChatTurnStatus({
                 request: { id: messageId },

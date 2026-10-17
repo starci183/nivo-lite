@@ -1,3 +1,5 @@
+import { nivoIconSource } from "@/components/leaves/Icon"
+import type { ModuleIconName } from "@/modules/types"
 import { ChatBubble, ChatBubbleSkeletons, Text } from "@starci/grammar/common"
 import { AgentMark } from "@/components/leaves/AgentMark"
 import { NOTICE_ROW_CLASS_NAME } from "./classNames"
@@ -16,7 +18,7 @@ export interface AgentChatMessagesProps {
     /** Who the own messages of the person are from: "you" in the test channel, the visitor in the customer channel. */
     readonly userAuthor: string
     readonly agentName: string
-    readonly glyph: string
+    readonly glyph: ModuleIconName
     readonly module: string
     /** The line that says the agent is writing, or null when it is not. */
     readonly typing: string | null
@@ -48,7 +50,7 @@ export const AgentChatMessages = (props: AgentChatMessagesProps) => {
                         avatar={
                             isUser ? undefined : (
                                 <AgentMark
-                                    glyph={props.glyph}
+                                    glyph={nivoIconSource(props.glyph, "leading")}
                                     module={props.module}
                                     label={props.agentName}
                                     size="sm"

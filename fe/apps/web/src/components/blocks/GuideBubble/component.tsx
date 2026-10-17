@@ -85,57 +85,7 @@ export const GuideBubbleBase = (props: GuideBubbleBaseProps) => (
                 <ChatBubble side="incoming">
                     <Text size="sm">{props.props.greeting}</Text>
                 </ChatBubble>
-                {props.props.messages.map((message) =>
-                    message.isUser ? (
-                        <ChatBubble key={message.id} side="outgoing">
-                            <Text size="sm">{message.text}</Text>
-                        </ChatBubble>
-                    ) : (
-                        <ChatBubble
-                            key={message.id}
-                            side="incoming"
-                            footer={
-                                message.note === null ? undefined : (
-                                    <Text size="xs" tone="muted">
-                                        {message.note}
-                                    </Text>
-                                )
-                            }
-                        >
-                            <div className={REPLY_CLASS}>
-                                <Text size="sm">{message.text}</Text>
-                                {message.steps.length === 0 ? null : (
-                                    <>
-                                        <Text size="xs" tone="muted">
-                                            {props.props.stepsLabel}
-                                        </Text>
-                                        <List as="ol" className={STEPS_CLASS} label={props.props.stepsLabel}>
-                                            {message.steps.map((step, position) => (
-                                                <ListItem key={step}>
-                                                    <Text size="sm">{`${position + 1}. ${step}`}</Text>
-                                                </ListItem>
-                                            ))}
-                                        </List>
-                                    </>
-                                )}
-                                {message.links.length === 0 ? null : (
-                                    <div className={LINKS_CLASS}>
-                                        {message.links.map((link) => (
-                                            <Button
-                                                key={link.id}
-                                                variant="outline"
-                                                size="sm"
-                                                onPress={() => props.on.go(message.id, link.id)}
-                                            >
-                                                {link.label}
-                                            </Button>
-                                        ))}
-                                    </div>
-                                )}
-                            </div>
-                        </ChatBubble>
-                    ),
-                )}
+                <GuideMessages {...props} />{" "}
                 {props.props.isThinking ? (
                     <ChatBubble side="incoming">
                         <Text size="sm" tone="muted">
@@ -159,6 +109,15 @@ export const GuideBubbleBase = (props: GuideBubbleBaseProps) => (
                     ))}
                 </div>
             )}
+            <GuideComposer {...props} />{" "}
+        </Drawer>
+    </>
+)
+
+/** The question form and conversation restart action. */
+const GuideComposer = (props: GuideBubbleBaseProps) => {
+    return (
+        <>
             <div className={FOOT_CLASS}>
                 <Form label={props.props.title} onSubmit={props.on.send} isPending={props.props.isThinking}>
                     <div className={ASK_ROW_CLASS}>
@@ -196,6 +155,65 @@ export const GuideBubbleBase = (props: GuideBubbleBaseProps) => (
                     </div>
                 )}
             </div>
-        </Drawer>
-    </>
-)
+        </>
+    )
+}
+
+/** Conversation replies with their ordered steps and navigation links. */
+const GuideMessages = (props: GuideBubbleBaseProps) => {
+    return (
+        <>
+            {props.props.messages.map((message) =>
+                message.isUser ? (
+                    <ChatBubble key={message.id} side="outgoing">
+                        <Text size="sm">{message.text}</Text>
+                    </ChatBubble>
+                ) : (
+                    <ChatBubble
+                        key={message.id}
+                        side="incoming"
+                        footer={
+                            message.note === null ? undefined : (
+                                <Text size="xs" tone="muted">
+                                    {message.note}
+                                </Text>
+                            )
+                        }
+                    >
+                        <div className={REPLY_CLASS}>
+                            <Text size="sm">{message.text}</Text>
+                            {message.steps.length === 0 ? null : (
+                                <>
+                                    <Text size="xs" tone="muted">
+                                        {props.props.stepsLabel}
+                                    </Text>
+                                    <List as="ol" className={STEPS_CLASS} label={props.props.stepsLabel}>
+                                        {message.steps.map((step, position) => (
+                                            <ListItem key={step}>
+                                                <Text size="sm">{`${position + 1}. ${step}`}</Text>
+                                            </ListItem>
+                                        ))}
+                                    </List>
+                                </>
+                            )}
+                            {message.links.length === 0 ? null : (
+                                <div className={LINKS_CLASS}>
+                                    {message.links.map((link) => (
+                                        <Button
+                                            key={link.id}
+                                            variant="outline"
+                                            size="sm"
+                                            onPress={() => props.on.go(message.id, link.id)}
+                                        >
+                                            {link.label}
+                                        </Button>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    </ChatBubble>
+                ),
+            )}
+        </>
+    )
+}

@@ -3,7 +3,7 @@
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useTranslations } from "next-intl"
 import { useMemo } from "react"
-import { useForm } from "react-hook-form"
+import { useForm, useWatch } from "react-hook-form"
 import { z } from "zod"
 
 /** Step fields shared by assignment, addition and changing its due date. */
@@ -33,8 +33,35 @@ export const useLeadStepForm = (mode: "reassign" | "add" | "due" | null) => {
             }),
         [mode, t],
     )
-    return useForm<LeadStepValues>({
+    const form = useForm<LeadStepValues>({
         resolver: zodResolver(schema),
         defaultValues: { title: "", owner: "human", nextAction: "", due: null },
     })
+    const values = useWatch({ control: form.control })
+    return { ...form, ...stepFormInputs(values, t) }
+}
+
+/** The supported responsibility edit modes. */
+type LeadStepMode = "add" | "due" | "reassign"
+
+/** Normalizes watched fields and supplies the labels for each edit mode. */
+const stepFormInputs = (values: Partial<LeadStepValues>, t: ReturnType<typeof useTranslations<"lead">>) => {
+    const fields: LeadStepValues = {
+        title: values.title ?? "",
+        owner: values.owner ?? "human",
+        nextAction: values.nextAction ?? "",
+        due: values.due ?? null,
+    }
+    const formLabels: Readonly<Record<LeadStepMode, string>> = {
+        add: t("formAdd"),
+        due: t("formDue"),
+        reassign: t("formReassign"),
+    }
+    const submitLabels: Readonly<Record<LeadStepMode, string>> = {
+        add: t("addStep"),
+        due: t("saveDue"),
+        reassign: t("saveChanges"),
+    }
+
+    return { fields, formLabels, submitLabels }
 }

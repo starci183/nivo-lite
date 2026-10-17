@@ -4,10 +4,12 @@ import {
     useMutateKeepCurrentBrainFactSwr,
     useMutateSaveBrainFactSwr,
 } from "@/hooks/swr"
-import type { MutateDecideBrainFactRequest } from "@/modules/api/graphql/mutations/mutation-decide-brain-fact"
-import type { MutateDismissKnowledgeGapRequest } from "@/modules/api/graphql/mutations/mutation-dismiss-knowledge-gap"
-import type { MutateKeepCurrentBrainFactRequest } from "@/modules/api/graphql/mutations/mutation-keep-current-brain-fact"
-import type { MutateSaveBrainFactRequest } from "@/modules/api/graphql/mutations/mutation-save-brain-fact"
+import type {
+    MutateDecideBrainFactRequest,
+    MutateDismissKnowledgeGapRequest,
+    MutateKeepCurrentBrainFactRequest,
+    MutateSaveBrainFactRequest,
+} from "@/hooks/swr"
 
 /** The requests of the commands about facts and questions, by the kind a card names. */
 export interface BrainFactRequests {

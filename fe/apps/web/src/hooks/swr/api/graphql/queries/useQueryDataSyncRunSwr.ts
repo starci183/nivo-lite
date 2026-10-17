@@ -1,5 +1,6 @@
 "use client"
 
+import { argumentKey } from "@/hooks/workspaceread"
 import useSWR from "swr"
 import { queryDataSyncRun } from "@/modules/api/graphql/queries/query-data-sync-run"
 import type { DataSyncRunType } from "@/modules/api"
@@ -18,7 +19,7 @@ interface DataSyncRunOptions {
 /** One sync run of a data connection, asked about every two seconds until it is no longer running. `undefined` pauses it. */
 export const useQueryDataSyncRunSwr = (runId: string | undefined, options?: DataSyncRunOptions) =>
     useSWR(
-        runId === undefined ? null : ([QUERY_DATA_SYNC_RUN_SWR_KEY, runId] as const),
+        argumentKey(QUERY_DATA_SYNC_RUN_SWR_KEY, runId),
         async ([, id]) => {
             const result = await queryDataSyncRun({ request: { runId: id } })
             if (!result.data) throw new Error("dataSyncRun answered no data")

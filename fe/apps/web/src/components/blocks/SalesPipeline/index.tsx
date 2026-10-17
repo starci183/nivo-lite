@@ -1,5 +1,6 @@
 "use client"
 
+import type { SalesPipelineControllerInput } from "./component"
 import { useFormatter, useTranslations } from "next-intl"
 import { useState } from "react"
 import { useLeadCommands } from "@/hooks/leads"
@@ -16,20 +17,9 @@ const LANES: ReadonlyArray<LeadStageId> = [...OPEN_LANES, "won", "lost"]
 const isClosing = (stage: LeadStageId): boolean => stage === "won" || stage === "lost"
 const isStage = (value: string): value is LeadStageId => DEAL_STAGES.some((stage) => stage === value)
 
-/** The pipeline surface: which deal is being moved, to which stage and why live here, the drawing in the pure half. */
-export const SalesPipeline = () => {
-    const t = useTranslations("workbenchSales")
-    const format = useFormatter()
-    const commands = useLeadCommands()
-    const actions = useSalesActions()
-    const { data } = useSalesWorkbench()
-    const deals = data?.deals ?? []
-    const closedHidden = data?.closedHidden ?? { won: 0, lost: 0 }
-    const form = useSalesPipelineForm()
-    const { target: selectedTarget, reason } = form.watch()
-    const target = selectedTarget || null
-    const isPending = actions.isMutating || commands.isMutating || form.formState.isSubmitting
-    const [movingId, setMovingId] = useState<string | null>(null)
+const createSalesPipelineState = (input: SalesPipelineControllerInput) => {
+    const { t, format, deals, closedHidden, form, movingId } = input
+
     const error = form.formState.errors.reason?.message ?? form.formState.errors.target?.message ?? null
     const moving = deals.find((deal) => deal.leadId === movingId) ?? null
 
@@ -75,6 +65,12 @@ export const SalesPipeline = () => {
             deals: stageDeals.map(dealOf),
         }
     }
+    return { ...input, error, moving, laneOf }
+}
+
+const createSalesPipelineActions = (input: SalesPipelineControllerInput) => {
+    const context = createSalesPipelineState(input)
+    const { t, commands, actions, form, reason, target, setMovingId, moving, error } = context
 
     const close = () => {
         setMovingId(null)
@@ -112,27 +108,65 @@ export const SalesPipeline = () => {
                   error,
                   isIncomplete: target === null || (needsReason && reason.trim().length < MIN_REASON_CHARS),
               }
+    return { ...context, close, confirm, dialog }
+}
+
+/** The pipeline surface: which deal is being moved, to which stage and why live here, the drawing in the pure half. */
+export const SalesPipeline = () => {
+    const t = useTranslations("workbenchSales")
+    const format = useFormatter()
+    const commands = useLeadCommands()
+    const actions = useSalesActions()
+    const { data } = useSalesWorkbench()
+    const deals = data?.deals ?? []
+    const closedHidden = data?.closedHidden ?? { won: 0, lost: 0 }
+    const form = useSalesPipelineForm()
+    const { target: selectedTarget, reason } = form.watch()
+    const target = selectedTarget || null
+    const isPending = actions.isMutating || commands.isMutating || form.formState.isSubmitting
+    const [movingId, setMovingId] = useState<string | null>(null)
+    const context = createSalesPipelineActions({
+        t,
+        format,
+        commands,
+        actions,
+        data,
+        deals,
+        closedHidden,
+        form,
+        selectedTarget,
+        reason,
+        target,
+        isPending,
+        movingId,
+        setMovingId,
+    })
 
     if (data === null) return null
-    return (
-        <SalesPipelineBase
-            props={{
-                label: t("tab_pipeline"),
-                lanes: LANES.map(laneOf),
-                emptyText: t("laneEmpty"),
-                moveLabel: t("moveButton"),
-                cancelLabel: t("cancel"),
-                confirmLabel: t("moveConfirm"),
-                dialog,
-                isPending,
-            }}
-            on={{
-                move: (leadId) => setMovingId(leadId),
-                target: (value) => form.setValue("target", isStage(value) ? value : ""),
-                reason: (value) => form.setValue("reason", value),
-                confirm,
-                close,
-            }}
-        />
-    )
+    return <SalesPipelineBase {...createSalesPipelineView(context)} />
+}
+
+const createSalesPipelineView = (
+    context: ReturnType<typeof createSalesPipelineActions>,
+): React.ComponentProps<typeof SalesPipelineBase> => {
+    const { t, form, setMovingId, laneOf, dialog, isPending, confirm, close } = context
+    return {
+        props: {
+            label: t("tab_pipeline"),
+            lanes: LANES.map(laneOf),
+            emptyText: t("laneEmpty"),
+            moveLabel: t("moveButton"),
+            cancelLabel: t("cancel"),
+            confirmLabel: t("moveConfirm"),
+            dialog,
+            isPending,
+        },
+        on: {
+            move: (leadId) => setMovingId(leadId),
+            target: (value) => form.setValue("target", isStage(value) ? value : ""),
+            reason: (value) => form.setValue("reason", value),
+            confirm,
+            close,
+        },
+    }
 }

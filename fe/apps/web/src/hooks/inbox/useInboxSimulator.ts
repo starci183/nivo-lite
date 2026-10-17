@@ -1,9 +1,9 @@
 "use client"
 
-import { useFormatter, useTranslations } from "next-intl"
 import { useInboxSimulatorForm } from "@/hooks/rhf"
 import type { InboxSimulatorFormValues } from "@/hooks/rhf"
 import { leadHref } from "@/modules/routes"
+import { useFormatter, useTranslations } from "next-intl"
 import { useSimulateInbound } from "./useSimulateInbound"
 
 /** What a preset fills; the event id is always fresh. */
@@ -51,28 +51,7 @@ export const useInboxSimulator = (initialEventId: string) => {
         amount,
         reference,
     })
-    const presets: Readonly<Record<string, PresetValues>> = {
-        zalo: {
-            ...EMPTY,
-            channel: "zalo",
-            kind: "message",
-            name: t("presetNameZalo"),
-            contact: "0901234567",
-            body: t("presetBodyZalo"),
-        },
-        o5: facebookOrder(5_000_000, "FB-5M-01"),
-        o45: facebookOrder(45_000_000, "FB-45M-01"),
-        o0: facebookOrder(Number.NaN, "FB-NOAMT-01"),
-        bank: {
-            ...EMPTY,
-            channel: "bank",
-            kind: "payment",
-            name: t("presetBankName"),
-            body: t("presetBankBody"),
-            amount: 5_000_000,
-            reference: t("presetBankRef"),
-        },
-    }
+    const presets: Readonly<Record<string, PresetValues>> = presetsOf(t, facebookOrder)
 
     const change = (field: keyof InboxSimulatorFormValues, value: string | number) => {
         const options = { shouldValidate: form.formState.isSubmitted }
@@ -97,35 +76,7 @@ export const useInboxSimulator = (initialEventId: string) => {
         })
     })
 
-    const resultOf = (): SimulatorResultView | undefined => {
-        if (status === undefined || status.status === "failed") return undefined
-        if (status.status !== "succeeded") {
-            return { title: t("simulationRunning"), tone: "cautionary", lines: [], leadHref: null }
-        }
-        const { event, workItem } = status
-        const department = workItem == null ? undefined : g(`dept_${workItem.department}`)
-        const received = t("resultReceived")
-        const routed = workItem?.status === "waiting_decision" ? "resultToWaiting" : "resultTo"
-        const routedLine = department === undefined ? received : `${received} → ${t(routed, { dept: department })}`
-        const amountLine =
-            event.amountVnd == null
-                ? []
-                : [
-                      t("amountLine", {
-                          amount: format.number(event.amountVnd, {
-                              style: "currency",
-                              currency: "VND",
-                              maximumFractionDigits: 0,
-                          }),
-                      }),
-                  ]
-        return {
-            title: duplicate ? t("resultDuplicate", { n: event.duplicateCount }) : routedLine,
-            tone: duplicate ? "cautionary" : "affirmative",
-            lines: [...(event.eventId ? [t("eventLine", { id: event.eventId })] : []), ...amountLine],
-            leadHref: event.leadId ? leadHref(event.leadId) : null,
-        }
-    }
+    const resultOf = resultOfOf(status, t, g, format, duplicate)
 
     return {
         values,
@@ -155,5 +106,71 @@ export const useInboxSimulator = (initialEventId: string) => {
             clearResult()
         },
         submit: () => void submit(),
+    }
+}
+
+const presetsOf = (
+    t: ReturnType<typeof useTranslations<"inbox">>,
+    facebookOrder: (amount: number, reference: string) => PresetValues,
+): Readonly<Record<string, PresetValues>> => {
+    return {
+        zalo: {
+            ...EMPTY,
+            channel: "zalo",
+            kind: "message",
+            name: t("presetNameZalo"),
+            contact: "0901234567",
+            body: t("presetBodyZalo"),
+        },
+        o5: facebookOrder(5000000, "FB-5M-01"),
+        o45: facebookOrder(45000000, "FB-45M-01"),
+        o0: facebookOrder(Number.NaN, "FB-NOAMT-01"),
+        bank: {
+            ...EMPTY,
+            channel: "bank",
+            kind: "payment",
+            name: t("presetBankName"),
+            body: t("presetBankBody"),
+            amount: 5000000,
+            reference: t("presetBankRef"),
+        },
+    }
+}
+
+const resultOfOf = (
+    status: ReturnType<typeof useSimulateInbound>["status"],
+    t: ReturnType<typeof useTranslations<"inbox">>,
+    g: ReturnType<typeof useTranslations<"governance">>,
+    format: ReturnType<typeof useFormatter>,
+    duplicate: ReturnType<typeof useSimulateInbound>["duplicate"],
+) => {
+    return (): SimulatorResultView | undefined => {
+        if (status === undefined || status.status === "failed") return undefined
+        if (status.status !== "succeeded") {
+            return { title: t("simulationRunning"), tone: "cautionary", lines: [], leadHref: null }
+        }
+        const { event, workItem } = status
+        const department = workItem == null ? undefined : g(`dept_${workItem.department}`)
+        const received = t("resultReceived")
+        const routed = workItem?.status === "waiting_decision" ? "resultToWaiting" : "resultTo"
+        const routedLine = department === undefined ? received : `${received} → ${t(routed, { dept: department })}`
+        const amountLine =
+            event.amountVnd == null
+                ? []
+                : [
+                      t("amountLine", {
+                          amount: format.number(event.amountVnd, {
+                              style: "currency",
+                              currency: "VND",
+                              maximumFractionDigits: 0,
+                          }),
+                      }),
+                  ]
+        return {
+            title: duplicate ? t("resultDuplicate", { n: event.duplicateCount }) : routedLine,
+            tone: duplicate ? "cautionary" : "affirmative",
+            lines: [...(event.eventId ? [t("eventLine", { id: event.eventId })] : []), ...amountLine],
+            leadHref: event.leadId ? leadHref(event.leadId) : null,
+        }
     }
 }

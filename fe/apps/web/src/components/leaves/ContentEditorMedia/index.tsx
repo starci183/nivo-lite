@@ -87,38 +87,7 @@ export const ContentEditorMedia = (props: ContentEditorMediaProps) => (
                 ))}
             </div>
         )}
-        {props.isEditable ? (
-            <div className={TOOLS_CLASS_NAME}>
-                <Button variant="outline" size="sm" isDisabled={props.isPending} onPress={props.onToggleLibrary}>
-                    {props.t("mediaAttachLibrary")}
-                </Button>
-                <FileDropzone
-                    label={props.t("mediaUpload")}
-                    isLabelHidden
-                    accept="image/jpeg,image/png,image/webp,video/mp4"
-                    hideFileList
-                    isDisabled={props.isPending}
-                    prompt={props.isUploading ? props.t("mediaUploading") : props.t("mediaUpload")}
-                    onFilesChange={(files) => {
-                        if (files[0] !== undefined) props.onUpload(files[0])
-                    }}
-                />
-                {props.videos.length > 0 ? (
-                    <Select
-                        variant="secondary"
-                        label={props.t("mediaVideo")}
-                        isLabelHidden
-                        placeholder={props.t("mediaVideo")}
-                        options={props.videos}
-                        value={null}
-                        isDisabled={props.isPending}
-                        onValueChange={(id) => {
-                            if (id) props.onAttachVideo(id)
-                        }}
-                    />
-                ) : null}
-            </div>
-        ) : null}
+        {props.isEditable ? renderContentEditorMediaTools(props) : null}
         {props.isEditable && props.isLibraryOpen && props.library.length === 0 ? (
             <Text size="sm" tone="muted">
                 {props.t("mediaLibraryEmpty")}
@@ -137,4 +106,43 @@ export const ContentEditorMedia = (props: ContentEditorMediaProps) => (
             </div>
         ) : null}
     </>
+)
+
+/** Renders the ContentEditorMedia tools section. */
+const renderContentEditorMediaTools = (
+    props: Pick<
+        ContentEditorMediaProps,
+        "isPending" | "onToggleLibrary" | "t" | "isUploading" | "onUpload" | "videos" | "onAttachVideo"
+    >,
+) => (
+    <div className={TOOLS_CLASS_NAME}>
+        <Button variant="outline" size="sm" isDisabled={props.isPending} onPress={props.onToggleLibrary}>
+            {props.t("mediaAttachLibrary")}
+        </Button>
+        <FileDropzone
+            label={props.t("mediaUpload")}
+            isLabelHidden
+            accept="image/jpeg,image/png,image/webp,video/mp4"
+            hideFileList
+            isDisabled={props.isPending}
+            prompt={props.isUploading ? props.t("mediaUploading") : props.t("mediaUpload")}
+            onFilesChange={(files) => {
+                if (files[0] !== undefined) props.onUpload(files[0])
+            }}
+        />
+        {props.videos.length > 0 ? (
+            <Select
+                variant="secondary"
+                label={props.t("mediaVideo")}
+                isLabelHidden
+                placeholder={props.t("mediaVideo")}
+                options={props.videos}
+                value={null}
+                isDisabled={props.isPending}
+                onValueChange={(id) => {
+                    if (id) props.onAttachVideo(id)
+                }}
+            />
+        ) : null}
+    </div>
 )

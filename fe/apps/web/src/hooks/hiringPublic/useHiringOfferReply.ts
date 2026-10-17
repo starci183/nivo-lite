@@ -3,6 +3,7 @@
 import { useTranslations } from "next-intl"
 import { useState } from "react"
 import { useMutateRespondHiringOfferSwr } from "@/hooks/swr"
+import { graphQLErrorCode } from "@/modules/failure"
 import { useGraphQLWithToast } from "@/modules/toast"
 import type { ReplyOutcome } from "./useHiringInterviewReply"
 
@@ -17,7 +18,17 @@ export const useHiringOfferReply = (token: string) => {
     const [outcome, setOutcome] = useState<ReplyOutcome | null>(null)
     const answer = async (accept: boolean) => {
         setPending(true)
-        const result = await runGraphQL(() => trigger({ token, accept }), { showSuccessToast: false })
+        const result = await runGraphQL(
+            async () => {
+                try {
+                    return await trigger({ token, accept })
+                } catch (error) {
+                    if (graphQLErrorCode(error) === "HIRING_PUBLIC_NOT_FOUND") return { outcome: "invalid" }
+                    throw error
+                }
+            },
+            { showSuccessToast: false },
+        )
         setPending(false)
         if (result !== undefined) {
             setOutcome({ isOk: ANSWERED_OUTCOMES.includes(result.outcome), text: t(`replyOffer_${result.outcome}`) })

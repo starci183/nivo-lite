@@ -1,5 +1,7 @@
 "use client"
 
+import type { ShiftsDemandControllerInput } from "./component"
+import type { CreateShiftsDemandRowsInput } from "./component"
 import { useTranslations } from "next-intl"
 import { useState } from "react"
 import { useShiftsBenchData, useShiftsFormat } from "@/hooks/shifts"
@@ -19,15 +21,8 @@ const INITIAL: DemandForm = {
 
 const WEEK = [0, 1, 2, 3, 4, 5, 6] as const
 
-/** The people needed per time block: the blocks by weekday and the form that adds blocks over several days. */
-export const ShiftsDemand = () => {
-    const t = useTranslations("shifts")
-    const [isBusy, setIsBusy] = useState(false)
-    const format = useShiftsFormat()
-    const [form, setForm] = useState<DemandForm>(INITIAL)
-    const bench = useShiftsBenchData(null).data
-    const commands = useShiftsSetupCommands()
-    if (bench === undefined || bench.role === "staff") return null
+const createShiftsDemandRows = (context: CreateShiftsDemandRowsInput) => {
+    const { setIsBusy, form, bench, commands } = context
 
     const { positions, blocks } = bench.setup
     const positionId = form.positionId === "" ? (positions[0]?.id ?? "") : form.positionId
@@ -51,61 +46,80 @@ export const ShiftsDemand = () => {
                 peak: form.peak,
             }),
         )
+    return { ...context, positions, blocks, positionId, positionName, run, add }
+}
 
-    return (
-        <ShiftsDemandBase
-            props={{
-                title: t("covTitle"),
-                hint: t("covHint"),
-                emptyLabel: t("covNone"),
-                addTitle: t("covAdd"),
-                addLabel: t("covAddBtn"),
-                removeLabel: t("remove"),
-                labels: {
-                    days: t("covDays"),
-                    from: t("fromTime"),
-                    to: t("toTime"),
-                    position: t("fPosition"),
-                    min: t("covMin"),
-                    ideal: t("covIdeal"),
-                    peak: t("covPeak"),
-                },
-                groups: WEEK.map((day) => ({
-                    id: String(day),
-                    label: format.weekdayName(day, "long"),
-                    blocks: blocks
-                        .filter((block) => block.weekday === day)
-                        .map((block) => ({
-                            id: block.id,
-                            label: [
-                                `${block.start}-${block.end}`,
-                                positionName(block.positionId),
-                                block.ideal > block.min ? `${block.min}-${block.ideal}` : String(block.min),
-                                block.peak ? t("peakTag") : "",
-                            ]
-                                .filter((part) => part !== "")
-                                .join(" "),
-                        })),
-                })),
-                dayOptions: WEEK.map((day) => ({ value: String(day), label: format.weekdayName(day, "short") })),
-                timeOptions: format.times,
-                positionOptions: positions.map((position) => ({ id: position.id, label: position.name })),
-                form: { ...form, positionId },
-                hasBlocks: blocks.length > 0,
-                isBusy,
-                canAdd: positionId !== "" && form.days.length > 0,
-            }}
-            on={{
-                days: (days) => setForm((current) => ({ ...current, days })),
-                start: (start) => setForm((current) => ({ ...current, start })),
-                end: (end) => setForm((current) => ({ ...current, end })),
-                position: (id) => setForm((current) => ({ ...current, positionId: id })),
-                min: (min) => setForm((current) => ({ ...current, min, ideal: Math.max(current.ideal, min) })),
-                ideal: (ideal) => setForm((current) => ({ ...current, ideal })),
-                peak: (peak) => setForm((current) => ({ ...current, peak })),
-                add: () => void add(),
-                remove: (id) => void run(() => commands.removeCoverage(id)),
-            }}
-        />
-    )
+const renderShiftsDemand = (
+    context: ReturnType<typeof createShiftsDemandRows>,
+): React.ComponentProps<typeof ShiftsDemandBase> => {
+    const { t, format, form, setForm, commands, positions, blocks, positionId, positionName, run, add, isBusy } =
+        context
+
+    return {
+        props: {
+            title: t("covTitle"),
+            hint: t("covHint"),
+            emptyLabel: t("covNone"),
+            addTitle: t("covAdd"),
+            addLabel: t("covAddBtn"),
+            removeLabel: t("remove"),
+            labels: {
+                days: t("covDays"),
+                from: t("fromTime"),
+                to: t("toTime"),
+                position: t("fPosition"),
+                min: t("covMin"),
+                ideal: t("covIdeal"),
+                peak: t("covPeak"),
+            },
+            groups: WEEK.map((day) => ({
+                id: String(day),
+                label: format.weekdayName(day, "long"),
+                blocks: blocks
+                    .filter((block) => block.weekday === day)
+                    .map((block) => ({
+                        id: block.id,
+                        label: [
+                            `${block.start}-${block.end}`,
+                            positionName(block.positionId),
+                            block.ideal > block.min ? `${block.min}-${block.ideal}` : String(block.min),
+                            block.peak ? t("peakTag") : "",
+                        ]
+                            .filter((part) => part !== "")
+                            .join(" "),
+                    })),
+            })),
+            dayOptions: WEEK.map((day) => ({ value: String(day), label: format.weekdayName(day, "short") })),
+            timeOptions: format.times,
+            positionOptions: positions.map((position) => ({ id: position.id, label: position.name })),
+            form: { ...form, positionId },
+            hasBlocks: blocks.length > 0,
+            isBusy,
+            canAdd: positionId !== "" && form.days.length > 0,
+        },
+        on: {
+            days: (days) => setForm((current) => ({ ...current, days })),
+            start: (start) => setForm((current) => ({ ...current, start })),
+            end: (end) => setForm((current) => ({ ...current, end })),
+            position: (id) => setForm((current) => ({ ...current, positionId: id })),
+            min: (min) => setForm((current) => ({ ...current, min, ideal: Math.max(current.ideal, min) })),
+            ideal: (ideal) => setForm((current) => ({ ...current, ideal })),
+            peak: (peak) => setForm((current) => ({ ...current, peak })),
+            add: () => void add(),
+            remove: (id) => void run(() => commands.removeCoverage(id)),
+        },
+    }
+}
+
+/** The people needed per time block: the blocks by weekday and the form that adds blocks over several days. */
+export const ShiftsDemand = () => {
+    const t = useTranslations("shifts")
+    const [isBusy, setIsBusy] = useState(false)
+    const format = useShiftsFormat()
+    const [form, setForm] = useState<DemandForm>(INITIAL)
+    const bench = useShiftsBenchData(null).data
+    const commands = useShiftsSetupCommands()
+    const state: ShiftsDemandControllerInput = { t, isBusy, setIsBusy, format, form, setForm, bench, commands }
+    if (bench === undefined || bench.role === "staff") return null
+    return <ShiftsDemandBase {...renderShiftsDemand(createShiftsDemandRows({ ...state, bench }))} />
 }

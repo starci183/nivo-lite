@@ -1,3 +1,5 @@
+import { nivoIconSource } from "@/components/leaves/Icon"
+import type { ModuleIconName } from "@/modules/types"
 import { Badge, Button, Divider, SurfaceCard, Text, Textarea } from "@starci/grammar/common"
 import type { BadgeTone } from "@starci/grammar/common"
 import { AgentMark } from "@/components/leaves/AgentMark"
@@ -16,7 +18,7 @@ import {
 /** The drafting agent: its mark and its spoken name. */
 interface ApprovalAgentView {
     readonly name: string
-    readonly glyph: string
+    readonly glyph: ModuleIconName
 }
 
 /** One drafted message with every word resolved and the state of its controls. */
@@ -77,7 +79,12 @@ export const ApprovalCard = (props: ApprovalCardProps) => {
                 <div className={APPROVAL_CARD_BAND_CLASS_NAME}>
                     <div className={APPROVAL_CARD_STATUS_ROW_CLASS_NAME}>
                         {view.agent === null ? null : (
-                            <AgentMark glyph={view.agent.glyph} label={view.agent.name} module="chatbot" size="sm" />
+                            <AgentMark
+                                glyph={nivoIconSource(view.agent.glyph, "leading")}
+                                label={view.agent.name}
+                                module="chatbot"
+                                size="sm"
+                            />
                         )}
                         <Badge tone={view.status.tone}>{view.status.label}</Badge>
                         {view.agent === null ? null : <AiMarkChip label={labels.aiChip} />}
@@ -88,69 +95,80 @@ export const ApprovalCard = (props: ApprovalCardProps) => {
                     </Text>
                 </div>
                 <Divider semantics="presentation" />
-                <div className={APPROVAL_CARD_BAND_DIVIDED_CLASS_NAME}>
-                    {view.isWaiting && view.isEditing ? (
-                        <Textarea
-                            variant="secondary"
-                            label={labels.draft}
-                            rows={8}
-                            value={view.editText}
-                            isDisabled={isBusy}
-                            onValueChange={on.editChange}
-                        />
-                    ) : (
-                        <div className={APPROVAL_CARD_QUOTE_CLASS_NAME}>
-                            <Text>{view.draft}</Text>
-                        </div>
-                    )}
-                    <div className={APPROVAL_CARD_META_ROW_CLASS_NAME}>
-                        <Text size="xs" tone="muted">
-                            {view.characters}
-                        </Text>
-                        <CopyTextButton text={shownText} copyLabel={labels.copy} copiedLabel={labels.copied} />
-                    </div>
-                    {view.error === null ? null : (
-                        <Text size="sm" live="assertive">
-                            {view.error}
-                        </Text>
-                    )}
-                    {view.isWaiting && !view.canDecide ? (
-                        <Text size="sm" weight="medium" live="polite">
-                            {labels.waitingManager}
-                        </Text>
-                    ) : null}
-                    {view.isWaiting && view.canDecide ? (
-                        <div className={APPROVAL_CARD_ACTIONS_CLASS_NAME}>
-                            <Button
-                                variant="primary"
-                                isPending={view.pendingDecision === "approved"}
-                                isDisabled={isBusy || (view.isEditing && view.editText.trim().length === 0)}
-                                onPress={() => on.decide("approved")}
-                            >
-                                {labels.approveSend}
-                            </Button>
-                            <Button variant="outline" isDisabled={isBusy} onPress={on.toggleEdit}>
-                                {view.isEditing ? labels.discardEdits : labels.edit}
-                            </Button>
-                            <Button
-                                variant="ghost"
-                                isPending={view.pendingDecision === "rejected"}
-                                isDisabled={isBusy}
-                                onPress={() => on.decide("rejected")}
-                            >
-                                {labels.reject}
-                            </Button>
-                        </div>
-                    ) : null}
-                    {view.isWaiting ? null : (
-                        <div className={APPROVAL_CARD_META_ROW_CLASS_NAME}>
-                            <Text size="sm" tone="muted">
-                                {view.settledLabel}
-                            </Text>
-                        </div>
-                    )}
-                </div>
+                {renderApprovalCardDraft(view, labels, isBusy, on, shownText)}
             </SurfaceCard>
         </div>
     )
 }
+
+/** Renders the ApprovalCard draft section. */
+const renderApprovalCardDraft = (
+    view: NonNullable<ApprovalCardProps["view"]>,
+    labels: NonNullable<ApprovalCardProps["labels"]>,
+    isBusy: boolean,
+    on: NonNullable<ApprovalCardProps["on"]>,
+    shownText: string,
+) => (
+    <div className={APPROVAL_CARD_BAND_DIVIDED_CLASS_NAME}>
+        {view.isWaiting && view.isEditing ? (
+            <Textarea
+                variant="secondary"
+                label={labels.draft}
+                rows={8}
+                value={view.editText}
+                isDisabled={isBusy}
+                onValueChange={on.editChange}
+            />
+        ) : (
+            <div className={APPROVAL_CARD_QUOTE_CLASS_NAME}>
+                <Text>{view.draft}</Text>
+            </div>
+        )}
+        <div className={APPROVAL_CARD_META_ROW_CLASS_NAME}>
+            <Text size="xs" tone="muted">
+                {view.characters}
+            </Text>
+            <CopyTextButton text={shownText} copyLabel={labels.copy} copiedLabel={labels.copied} />
+        </div>
+        {view.error === null ? null : (
+            <Text size="sm" live="assertive">
+                {view.error}
+            </Text>
+        )}
+        {view.isWaiting && !view.canDecide ? (
+            <Text size="sm" weight="medium" live="polite">
+                {labels.waitingManager}
+            </Text>
+        ) : null}
+        {view.isWaiting && view.canDecide ? (
+            <div className={APPROVAL_CARD_ACTIONS_CLASS_NAME}>
+                <Button
+                    variant="primary"
+                    isPending={view.pendingDecision === "approved"}
+                    isDisabled={isBusy || (view.isEditing && view.editText.trim().length === 0)}
+                    onPress={() => on.decide("approved")}
+                >
+                    {labels.approveSend}
+                </Button>
+                <Button variant="outline" isDisabled={isBusy} onPress={on.toggleEdit}>
+                    {view.isEditing ? labels.discardEdits : labels.edit}
+                </Button>
+                <Button
+                    variant="ghost"
+                    isPending={view.pendingDecision === "rejected"}
+                    isDisabled={isBusy}
+                    onPress={() => on.decide("rejected")}
+                >
+                    {labels.reject}
+                </Button>
+            </div>
+        ) : null}
+        {view.isWaiting ? null : (
+            <div className={APPROVAL_CARD_META_ROW_CLASS_NAME}>
+                <Text size="sm" tone="muted">
+                    {view.settledLabel}
+                </Text>
+            </div>
+        )}
+    </div>
+)

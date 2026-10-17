@@ -1,26 +1,15 @@
 "use client"
 
-import { useFormatter, useTranslations } from "next-intl"
-import { useEffect, useMemo, useRef, useState } from "react"
-import { useWatch } from "react-hook-form"
+import { createAccountingQuestionsActions, createDecisionLock, propsOf } from "./accounting.shared"
 import { useAccountingQuestionsForm } from "@/hooks/rhf"
 import { useQueryMyWorkspacesSwr } from "@/hooks/swr"
 import { useActiveWorkspace } from "@/hooks/workspaces"
-import type {
-    AccountingQuestion,
-    AccountingQuestionGroup,
-    AccountingQuestionsView,
-    AccountingQuestionValues,
-} from "@/modules/types"
-import {
-    accountingQuestionDefaults,
-    accountingQuestionDisplay,
-    accountingQuestionEdits,
-    accountingQuestionError,
-} from "@/modules/utils"
+import type { AccountingQuestion, AccountingQuestionsView } from "@/modules/types"
+import { accountingQuestionDefaults } from "@/modules/utils"
+import { useFormatter, useTranslations } from "next-intl"
+import { useEffect, useMemo, useState } from "react"
+import { useWatch } from "react-hook-form"
 import { useDecideAccountingQuestion } from "./useDecideAccountingQuestion"
-
-const GROUPS: ReadonlyArray<AccountingQuestionGroup> = ["unclear_payment", "over_limit", "missing_data", "other"]
 
 /** Prepares every question with independent validated form paths and one backend mutation lifecycle. */
 export const useAccountingQuestions = (
@@ -36,7 +25,7 @@ export const useAccountingQuestions = (
     const values = useWatch({ control: form.control })
     const { getValues, setValue } = form
     const [editing, setEditing] = useState<Record<string, boolean>>({})
-    const busy = useRef(false)
+    const [lock] = useState(createDecisionLock)
     const { decide, isDeciding } = useDecideAccountingQuestion()
     const { activeWorkspaceId } = useActiveWorkspace()
     const { data: workspaces, error: membershipError } = useQueryMyWorkspacesSwr()
@@ -52,82 +41,25 @@ export const useAccountingQuestions = (
         for (const item of items)
             if (!getValues(`items.${item.id}`)) setValue(`items.${item.id}`, accountingQuestionDefaults(item))
     }, [getValues, items, setValue])
-    const approve = async (id: string) => {
-        const item = items.find((candidate) => candidate.id === id)
-        if (!item || !canAct(item) || item.status !== "waiting_decision" || busy.current || isDeciding) return
-        busy.current = true
-        try {
-            if (!(await form.trigger(`items.${id}`))) return
-            const input = getValues(`items.${id}`)
-            await decide({
-                workItemId: id,
-                decision: "approved",
-                edits: accountingQuestionEdits(item, input),
-                basis: item.action === "reconcile_payment" ? input.basis.trim() : undefined,
-            })
-        } finally {
-            busy.current = false
-        }
-    }
-    const reject = async (id: string) => {
-        const item = items.find((candidate) => candidate.id === id)
-        if (
-            !item ||
-            !canAct(item) ||
-            !["waiting_decision", "failed"].includes(item.status) ||
-            busy.current ||
-            isDeciding
-        )
-            return
-        busy.current = true
-        try {
-            await decide({ workItemId: id, decision: "rejected" })
-        } finally {
-            busy.current = false
-        }
-    }
-    const cards = questions.map((question) => {
-        const item = question.item
-        const allowed = canAct(item)
-        const defaults = accountingQuestionDefaults(item)
-        const current = values.items?.[item.id]
-        const input: AccountingQuestionValues = {
-            ...defaults,
-            ...current,
-            fields: Object.fromEntries(
-                Object.keys(defaults.fields).map((name) => [name, current?.fields?.[name] ?? ""]),
-            ),
-        }
-        return {
-            group: question.group,
-            data: accountingQuestionDisplay({
-                item,
-                ownerName,
-                values: input,
-                t,
-                g,
-                format,
-                canAct: allowed,
-                isBusy: isDeciding || !allowed,
-                isEditing: editing[item.id] ?? false,
-                error: accountingQuestionError(form.formState.errors.items?.[item.id] ?? {}),
-            }),
-        }
-    })
-    const change = (id: string, name: Exclude<keyof AccountingQuestionValues, "fields">, value: string) =>
-        setValue(`items.${id}.${name}`, value, { shouldDirty: true })
+    const { cards, approve, reject, change } = createAccountingQuestionsActions(
+        items,
+        canAct,
+        lock,
+        isDeciding,
+        form,
+        getValues,
+        decide,
+        questions,
+        values,
+        ownerName,
+        t,
+        g,
+        format,
+        editing,
+        setValue,
+    )
     return {
-        props: {
-            intro: accounting("questionsIntro"),
-            empty: accounting("questionsEmpty"),
-            emptyBody: accounting("questionsEmptyBody"),
-            groups: GROUPS.map((group) => ({
-                id: group,
-                title: accounting(`group_${group}`),
-                hint: accounting(`groupHint_${group}`),
-                items: cards.filter((card) => card.group === group).map((card) => card.data),
-            })).filter((group) => group.items.length > 0),
-        },
+        props: propsOf(accounting, cards),
         on: {
             approve: (id) => void approve(id),
             reject: (id) => void reject(id),
@@ -147,4 +79,21 @@ export const useAccountingQuestions = (
             changeField: (id, name, value) => setValue(`items.${id}.fields.${name}`, value, { shouldDirty: true }),
         },
     }
+}
+
+/** The watched fields used to assemble independent accounting question cards. */
+export type ValuesInput1 = {
+    items?:
+        | {
+              [x: string]:
+                  | {
+                        fields?: { [x: string]: string | undefined } | undefined
+                        draft?: string | undefined
+                        amount?: string | undefined
+                        candidateId?: string | undefined
+                        basis?: string | undefined
+                    }
+                  | undefined
+          }
+        | undefined
 }

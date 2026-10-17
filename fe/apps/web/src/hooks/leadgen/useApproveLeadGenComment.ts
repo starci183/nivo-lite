@@ -1,9 +1,6 @@
 "use client"
 
-import { useTranslations } from "next-intl"
-import { useCallback } from "react"
-import { useSWRConfig } from "swr"
-import { useAuthUser } from "@/hooks/auth"
+import { useQueryAuthUserSwr } from "@/hooks/auth"
 import {
     QUERY_AGENT_DASHBOARD_SWR_KEY,
     QUERY_LEAD_GEN_COMMENT_STATUS_SWR_KEY,
@@ -11,10 +8,13 @@ import {
     useMutateApproveLeadGenCommentSwr,
     useQueryLeadGenCommentStatusSwr,
 } from "@/hooks/swr"
+import type { MutateApproveLeadGenCommentRequest } from "@/hooks/swr"
 import { useActiveWorkspace } from "@/hooks/workspaces"
 import { useLeadGenApprovalStore } from "@/hooks/zustand/leadgen"
-import type { MutateApproveLeadGenCommentRequest } from "@/modules/api/graphql/mutations/mutation-approve-lead-gen-comment"
 import { useGraphQLWithToast } from "@/modules/toast"
+import { useTranslations } from "next-intl"
+import { useCallback } from "react"
+import { useSWRConfig } from "swr"
 
 /** The SWR keys whose data a finished approval changes. */
 const REFRESHED_KEYS: ReadonlyArray<unknown> = [QUERY_LEAD_GEN_WORKBENCH_SWR_KEY, QUERY_AGENT_DASHBOARD_SWR_KEY]
@@ -29,7 +29,7 @@ export const useApproveLeadGenComment = () => {
     const t = useTranslations("workbenchLeadGen")
     const runGraphQL = useGraphQLWithToast()
     const { activeWorkspaceId } = useActiveWorkspace()
-    const { data: user } = useAuthUser()
+    const { data: user } = useQueryAuthUserSwr()
     const scopeId = activeWorkspaceId && user ? `${activeWorkspaceId}:${user.id}` : undefined
     const { mutate } = useSWRConfig()
     const { trigger, isMutating } = useMutateApproveLeadGenCommentSwr()

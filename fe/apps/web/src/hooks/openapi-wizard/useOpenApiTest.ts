@@ -1,8 +1,7 @@
 "use client"
 
+import type { OpenApiTestType, QueryTestOpenApiOperationRequest } from "@/hooks/swr"
 import { useMemo, useState } from "react"
-import type { OpenApiTestType } from "@/modules/api"
-import type { QueryTestOpenApiOperationRequest } from "@/modules/api/graphql/queries/query-test-open-api-operation"
 import { isOpenApiPullable } from "./openapi-wizard.shared"
 import type { OpenApiOp, OpenApiPullDef } from "./openapi-wizard.shared"
 import type { OpenApiCommands } from "./useOpenApiCommands"

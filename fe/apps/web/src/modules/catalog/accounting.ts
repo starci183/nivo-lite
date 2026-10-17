@@ -5,7 +5,7 @@ export const ACCOUNTING = {
     key: "accounting",
     order: 30,
     icon: "wallet",
-    glyph: "M6 3h9l3 3v15H6zM9 12h6M9 16h6M9 8h3",
+    glyph: "moduleAccounting",
     mascot: "/images/promo/mascot-checklist.png",
     category: "finance",
     status: "stable",

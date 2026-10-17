@@ -1,15 +1,15 @@
 "use client"
 
-import { useEffect, useState } from "react"
 import {
     useQueryBillingPlanQuotesSwr,
     useQueryBillingPlansSwr,
     useQueryBillingStorageSwr,
     useQueryBillingWorkspaceSwr,
 } from "@/hooks/swr"
-import type { BillingPlanType } from "@/modules/api"
+import type { BillingPlanType } from "@/hooks/swr"
 import { navigation } from "@/modules/i18n"
 import { workspaceRenewalPaymentPath } from "@/modules/routes"
+import { useEffect, useState } from "react"
 import { useRequestPaymentOrder } from "./useRequestPaymentOrder"
 
 /** How a plan is paid. */

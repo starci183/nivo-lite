@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import type { Dispatch, SetStateAction } from "react"
 import { useOfficeFrame, useOfficeJump, useOfficeMessenger } from "@/hooks/officeMessenger"
 import { navigation } from "@/modules/i18n"
 import { CONSOLE_ROUTES, agentChatHref, leadHref } from "@/modules/routes"
@@ -17,39 +18,13 @@ export const OfficeMessenger = () => {
     const { text } = office
     const isLoading = office.slot.isLoading === true
 
-    const onMention = (handle: string) => {
-        setDraft((current) => `${current}${current !== "" && !current.endsWith(" ") ? " " : ""}@${handle} `)
-        frame.showThread()
-        setFocusKey((key) => key + 1)
-    }
-
-    const onSend = () => {
-        const body = draft.trim()
-        if (body === "" || office.sender.isSending) return
-        office.sender.dismissFailed()
-        setDraft("")
-        void office.send(body).then((isSent) => {
-            if (!isSent) setDraft((current) => (current === "" ? body : current))
-        })
-    }
+    const { onMention, onSend } = composerCommands(draft, setDraft, setFocusKey, office, frame)
 
     const onChip = () => {
         const target = office.firstJump
         if (target === null) return
         if (target.kind === "approval") jump.jumpApproval(target.id)
         else jump.jumpException(target.id)
-    }
-
-    const subtitle = (): string => {
-        if (office.memberCount === 1) return text("memberCountOne")
-        if (office.agentCount > 0)
-            return text("memberCountAgents", { n: office.memberCount, agents: office.agentCount })
-        return text("memberCount", { n: office.memberCount })
-    }
-
-    const threadState = (): "loading" | "error" | "ready" => {
-        if (office.slot.isError === true) return "error"
-        return isLoading ? "loading" : "ready"
     }
 
     return (
@@ -61,20 +36,10 @@ export const OfficeMessenger = () => {
                 isLoading,
                 isInfoOpen: frame.isInfoOpen,
                 isInfoDocked: frame.isInfoDocked,
-                subtitle: subtitle(),
+                subtitle: officeSubtitle(office),
                 chip: office.firstJump === null ? null : text("needsApprovalChip", { n: office.waitingCount }),
                 list: office.panels.list,
-                thread: {
-                    state: threadState(),
-                    items: office.items,
-                    outbox: office.sender.outbox,
-                    reading: office.reading,
-                    typing: office.sender.typing === null ? "" : text("typing", { name: office.sender.typing }),
-                    busyId: office.decisions.busyId,
-                    hasEarlier: office.thread.hasEarlier,
-                    isLoadingEarlier: office.thread.isLoadingEarlier,
-                    text,
-                },
+                thread: officeThreadProps(office),
                 composer: {
                     draft,
                     mentions: office.panels.mentions,
@@ -114,4 +79,60 @@ export const OfficeMessenger = () => {
             }}
         />
     )
+}
+
+/** Resolves the loaded thread state and sender activity. */
+const officeThreadProps = (office: ReturnType<typeof useOfficeMessenger>) => {
+    const { text } = office
+    const isLoading = office.slot.isLoading === true
+    const threadState = (): "loading" | "error" | "ready" => {
+        if (office.slot.isError === true) return "error"
+        return isLoading ? "loading" : "ready"
+    }
+    return {
+        state: threadState(),
+        items: office.items,
+        outbox: office.sender.outbox,
+        reading: office.reading,
+        typing: office.sender.typing === null ? "" : text("typing", { name: office.sender.typing }),
+        busyId: office.decisions.busyId,
+        hasEarlier: office.thread.hasEarlier,
+        isLoadingEarlier: office.thread.isLoadingEarlier,
+        text,
+    }
+}
+
+/** Owns the composer draft and restores a message when sending fails. */
+const composerCommands = (
+    draft: string,
+    setDraft: Dispatch<SetStateAction<string>>,
+    setFocusKey: Dispatch<SetStateAction<number>>,
+    office: ReturnType<typeof useOfficeMessenger>,
+    frame: ReturnType<typeof useOfficeFrame>,
+) => {
+    const onMention = (handle: string) => {
+        setDraft((current) => `${current}${current !== "" && !current.endsWith(" ") ? " " : ""}@${handle} `)
+        frame.showThread()
+        setFocusKey((key) => key + 1)
+    }
+
+    const onSend = () => {
+        const body = draft.trim()
+        if (body === "" || office.sender.isSending) return
+        office.sender.dismissFailed()
+        setDraft("")
+        void office.send(body).then((isSent) => {
+            if (!isSent) setDraft((current) => (current === "" ? body : current))
+        })
+    }
+
+    return { onMention, onSend }
+}
+
+/** Resolves the member and agent count beneath the thread title. */
+const officeSubtitle = (office: ReturnType<typeof useOfficeMessenger>): string => {
+    const { text } = office
+    if (office.memberCount === 1) return text("memberCountOne")
+    if (office.agentCount > 0) return text("memberCountAgents", { n: office.memberCount, agents: office.agentCount })
+    return text("memberCount", { n: office.memberCount })
 }

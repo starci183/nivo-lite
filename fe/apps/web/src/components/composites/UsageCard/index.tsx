@@ -90,36 +90,39 @@ export const UsageCard = (props: UsageCardProps) => {
                         <Text tone="muted">{view.empty}</Text>
                     )}
                 </div>
-                {view.daily ? (
-                    <div className={USAGE_BLOCK_CLASS_NAME}>
-                        <Heading level={3}>{view.daily.title}</Heading>
-                        <div className={CHART_CLASS_NAME} role="img" aria-label={view.daily.accessibleLabel}>
-                            <ResponsiveContainer width="100%" height="100%" minWidth={0}>
-                                <BarChart data={view.daily.series} accessibilityLayer={false}>
-                                    <XAxis hide dataKey="day" />
-                                    <YAxis hide domain={[0, view.daily.maximum]} />
-                                    <Tooltip labelFormatter={props.on.formatDay} formatter={props.on.formatCredits} />
-                                    <Bar
-                                        dataKey="credits"
-                                        name={view.daily.creditsLabel}
-                                        fill="currentColor"
-                                        minPointSize={props.on.minimumBarSize}
-                                        isAnimationActive={false}
-                                    />
-                                </BarChart>
-                            </ResponsiveContainer>
-                        </div>
-                        <div className={CHART_AXIS_CLASS_NAME}>
-                            <Text size="sm" tone="muted">
-                                {view.daily.firstDay}
-                            </Text>
-                            <Text size="sm" tone="muted">
-                                {view.daily.lastDay}
-                            </Text>
-                        </div>
-                    </div>
-                ) : null}
+                {view.daily ? renderUsageCardDailyUsage(view.daily, props) : null}
             </div>
         </SurfaceCard>
     )
 }
+
+/** Renders the UsageCard daily usage section. */
+const renderUsageCardDailyUsage = (daily: NonNullable<UsageCardProps["props"]["daily"]>, props: UsageCardProps) => (
+    <div className={USAGE_BLOCK_CLASS_NAME}>
+        <Heading level={3}>{daily.title}</Heading>
+        <div className={CHART_CLASS_NAME} role="img" aria-label={daily.accessibleLabel}>
+            <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+                <BarChart data={daily.series} accessibilityLayer={false}>
+                    <XAxis hide dataKey="day" />
+                    <YAxis hide domain={[0, daily.maximum]} />
+                    <Tooltip labelFormatter={props.on.formatDay} formatter={props.on.formatCredits} />
+                    <Bar
+                        dataKey="credits"
+                        name={daily.creditsLabel}
+                        fill="currentColor"
+                        minPointSize={props.on.minimumBarSize}
+                        isAnimationActive={false}
+                    />
+                </BarChart>
+            </ResponsiveContainer>
+        </div>
+        <div className={CHART_AXIS_CLASS_NAME}>
+            <Text size="sm" tone="muted">
+                {daily.firstDay}
+            </Text>
+            <Text size="sm" tone="muted">
+                {daily.lastDay}
+            </Text>
+        </div>
+    </div>
+)

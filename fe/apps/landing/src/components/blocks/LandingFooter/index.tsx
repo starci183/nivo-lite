@@ -44,7 +44,9 @@ const COLUMNS = [
 
 /** The landing footer with its copy resolved on the server. */
 export const LandingFooter = async (props: LandingFooterProps) => {
-    const [t, locale] = await Promise.all([getTranslations("landingBottom"), getLocale()])
+    const t = await getTranslations("landingBottom")
+
+    const locale = await getLocale()
     const hrefs = {
         login: appHref(CONSOLE_PAGES.login, locale),
         privacy: LANDING_ROUTES.privacy,

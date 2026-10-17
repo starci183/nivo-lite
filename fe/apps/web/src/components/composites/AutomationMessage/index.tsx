@@ -75,29 +75,7 @@ export const AutomationMessage = (props: AutomationMessageProps) => (
                 items={props.variables.map((variable) => ({ id: variable, label: `{${variable}}` }))}
             />
         </div>
-        <div className={ACTIONS_CLASS}>
-            {props.enableLabel === undefined ? null : (
-                <Button
-                    variant="primary"
-                    isPending={props.isBusy}
-                    isDisabled={!props.canEnable}
-                    onPress={props.onEnable}
-                >
-                    {props.enableLabel}
-                </Button>
-            )}
-            <Button
-                variant={props.isFirstApproval ? "secondary" : "primary"}
-                isPending={props.isBusy}
-                isDisabled={!props.canSave}
-                onPress={props.onSave}
-            >
-                {props.saveLabel}
-            </Button>
-            <Button variant="outline" isPending={props.isComposing} isDisabled={props.isBusy} onPress={props.onCompose}>
-                {props.composeLabel}
-            </Button>
-        </div>
+        {renderAutomationMessageActions(props)}
         <div className={FACTS_CLASS}>
             <Text size="xs" tone="muted">
                 {props.previewTitle}
@@ -114,4 +92,41 @@ export const AutomationMessage = (props: AutomationMessageProps) => (
             )}
         </div>
     </Region>
+)
+
+/** Renders the AutomationMessage actions section. */
+const renderAutomationMessageActions = (
+    props: Pick<
+        AutomationMessageProps,
+        | "enableLabel"
+        | "isBusy"
+        | "canEnable"
+        | "onEnable"
+        | "isFirstApproval"
+        | "canSave"
+        | "onSave"
+        | "saveLabel"
+        | "isComposing"
+        | "onCompose"
+        | "composeLabel"
+    >,
+) => (
+    <div className={ACTIONS_CLASS}>
+        {props.enableLabel === undefined ? null : (
+            <Button variant="primary" isPending={props.isBusy} isDisabled={!props.canEnable} onPress={props.onEnable}>
+                {props.enableLabel}
+            </Button>
+        )}
+        <Button
+            variant={props.isFirstApproval ? "secondary" : "primary"}
+            isPending={props.isBusy}
+            isDisabled={!props.canSave}
+            onPress={props.onSave}
+        >
+            {props.saveLabel}
+        </Button>
+        <Button variant="outline" isPending={props.isComposing} isDisabled={props.isBusy} onPress={props.onCompose}>
+            {props.composeLabel}
+        </Button>
+    </div>
 )

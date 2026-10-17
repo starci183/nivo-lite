@@ -5,7 +5,7 @@ import { useState, useTransition } from "react"
 import { useSWRConfig } from "swr"
 import { QUERY_BOOKING_BOARD_SWR_KEY, useMutateAddBookingSwr, useMutateMoveBookingSwr } from "@/hooks/swr"
 import { matchesSwrKey } from "@/modules/utils"
-import { graphQLErrorCode } from "@/modules/api"
+import { graphQLErrorCode } from "@/modules/failure"
 import { wallInstant } from "@/modules/i18n"
 import { toast } from "@/modules/toast"
 

@@ -30,6 +30,10 @@ enum MutationStartAgentChatConversation {
     Mutation1 = "mutation1",
 }
 
+const mutationMap: Record<MutationStartAgentChatConversation, Document> = {
+    [MutationStartAgentChatConversation.Mutation1]: mutation1,
+}
+
 /** Parameters of the start conversation mutation. */
 type MutateStartAgentChatConversationParams = MutateParams<
     MutationStartAgentChatConversation,
@@ -38,13 +42,14 @@ type MutateStartAgentChatConversationParams = MutateParams<
 
 /** Opens a test or simulated customer conversation and stores its greeting. */
 export const mutateStartAgentChatConversation = async ({
+    mutation = MutationStartAgentChatConversation.Mutation1,
     request,
     signal,
     headers,
 }: MutateStartAgentChatConversationParams) => {
     const apollo = createAuthApolloClient({ signal, headers })
     return apollo.mutate({
-        mutation: mutation1,
+        mutation: mutationMap[mutation],
         variables: { input: request },
         context: { headers },
     })

@@ -1,9 +1,9 @@
 "use client"
 
-import { useTranslations } from "next-intl"
-import { useMutateCreateContentItemSwr, useMutateMoveContentItemSwr, useMutateDecideWorkItemSwr } from "@/hooks/swr"
-import type { MutateCreateContentItemRequest } from "@/modules/api/graphql/mutations/mutation-create-content-item"
+import { useMutateCreateContentItemSwr, useMutateDecideWorkItemSwr, useMutateMoveContentItemSwr } from "@/hooks/swr"
+import type { MutateCreateContentItemRequest } from "@/hooks/swr"
 import { useGraphQLWithToast } from "@/modules/toast"
+import { useTranslations } from "next-intl"
 
 /** The content list's create, reschedule and approval commands, with localized mutation feedback. */
 export const useContentItemActions = () => {

@@ -1,3 +1,6 @@
+import type { useTranslations } from "next-intl"
+import type { useShiftsFormat, useShiftsBenchData } from "@/hooks/shifts"
+import type { useShiftsSetupCommands } from "@/hooks/shiftsCommands"
 import {
     Button,
     CheckboxGroup,
@@ -118,56 +121,7 @@ export const ShiftsDemandBase = (props: ShiftsDemandBaseProps) => (
                 value={props.props.form.days}
                 onValueChange={props.on.days}
             />
-            <div className={FORM_GRID_CLASS_NAME}>
-                <Select
-                    variant="secondary"
-                    label={props.props.labels.from}
-                    name="cstart"
-                    value={props.props.form.start}
-                    options={props.props.timeOptions}
-                    onValueChange={(value) => {
-                        if (value !== null) props.on.start(value)
-                    }}
-                />
-                <Select
-                    variant="secondary"
-                    label={props.props.labels.to}
-                    name="cend"
-                    value={props.props.form.end}
-                    options={props.props.timeOptions}
-                    onValueChange={(value) => {
-                        if (value !== null) props.on.end(value)
-                    }}
-                />
-                <Select
-                    variant="secondary"
-                    label={props.props.labels.position}
-                    name="cpos"
-                    value={props.props.form.positionId}
-                    options={props.props.positionOptions}
-                    onValueChange={(value) => {
-                        if (value !== null) props.on.position(value)
-                    }}
-                />
-                <NumberField
-                    variant="secondary"
-                    label={props.props.labels.min}
-                    name="cmin"
-                    value={props.props.form.min}
-                    minValue={0}
-                    maxValue={50}
-                    onValueChange={props.on.min}
-                />
-                <NumberField
-                    variant="secondary"
-                    label={props.props.labels.ideal}
-                    name="cideal"
-                    value={props.props.form.ideal}
-                    minValue={props.props.form.min}
-                    maxValue={50}
-                    onValueChange={props.on.ideal}
-                />
-            </div>
+            {renderDemandFields({ props })}
             <div className={ROW_CLASS_NAME}>
                 <Switch
                     label={props.props.labels.peak}
@@ -187,3 +141,74 @@ export const ShiftsDemandBase = (props: ShiftsDemandBaseProps) => (
         </div>
     </SurfaceCard>
 )
+
+const renderDemandFields = ({ props }: RenderDemandFieldsInput) => (
+    <div className={FORM_GRID_CLASS_NAME}>
+        <Select
+            variant="secondary"
+            label={props.props.labels.from}
+            name="cstart"
+            value={props.props.form.start}
+            options={props.props.timeOptions}
+            onValueChange={(value) => {
+                if (value !== null) props.on.start(value)
+            }}
+        />
+        <Select
+            variant="secondary"
+            label={props.props.labels.to}
+            name="cend"
+            value={props.props.form.end}
+            options={props.props.timeOptions}
+            onValueChange={(value) => {
+                if (value !== null) props.on.end(value)
+            }}
+        />
+        <Select
+            variant="secondary"
+            label={props.props.labels.position}
+            name="cpos"
+            value={props.props.form.positionId}
+            options={props.props.positionOptions}
+            onValueChange={(value) => {
+                if (value !== null) props.on.position(value)
+            }}
+        />
+        <NumberField
+            variant="secondary"
+            label={props.props.labels.min}
+            name="cmin"
+            value={props.props.form.min}
+            minValue={0}
+            maxValue={50}
+            onValueChange={props.on.min}
+        />
+        <NumberField
+            variant="secondary"
+            label={props.props.labels.ideal}
+            name="cideal"
+            value={props.props.form.ideal}
+            minValue={props.props.form.min}
+            maxValue={50}
+            onValueChange={props.on.ideal}
+        />
+    </div>
+)
+
+type RenderDemandFieldsInput = { props: ShiftsDemandBaseProps }
+/** State values and commands consumed by the connected surface. */
+export type ShiftsDemandControllerInput = {
+    readonly t: ReturnType<typeof useTranslations<"shifts">>
+    readonly isBusy: boolean
+    readonly setIsBusy: React.Dispatch<React.SetStateAction<boolean>>
+    readonly format: ReturnType<typeof useShiftsFormat>
+    readonly form: DemandForm
+    readonly setForm: React.Dispatch<React.SetStateAction<DemandForm>>
+    readonly bench: NonNullable<ReturnType<typeof useShiftsBenchData>>["data"]
+    readonly commands: ReturnType<typeof useShiftsSetupCommands>
+}
+
+/** Narrowed schedule data available after the access guard. */
+export type CreateShiftsDemandRowsInput = ShiftsDemandControllerInput & {
+    bench: NonNullable<ShiftsDemandControllerInput["bench"]>
+}

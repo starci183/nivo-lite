@@ -1,15 +1,4 @@
 import type {
-    HiringBenchType,
-    HiringCandidateDetailType,
-    HiringCandidateType,
-    HiringInterviewType,
-    HiringJobQuestionType,
-    HiringJobRequirementsType,
-    HiringJobType,
-    HiringMemberType,
-    HiringOfferType,
-} from "@/modules/api"
-import type {
     AdView,
     CandidateDetailView,
     CandidateView,
@@ -21,6 +10,17 @@ import type {
     OfferView,
     RequirementsView,
 } from "@/hooks/hiringWire"
+import type {
+    HiringBenchType,
+    HiringCandidateDetailType,
+    HiringCandidateType,
+    HiringInterviewType,
+    HiringJobQuestionType,
+    HiringJobRequirementsType,
+    HiringJobType,
+    HiringMemberType,
+    HiringOfferType,
+} from "@/hooks/swr"
 
 const textOf = (source: unknown, key: string): string => {
     const value: unknown = typeof source === "object" && source !== null ? Reflect.get(source, key) : undefined

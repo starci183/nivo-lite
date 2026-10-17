@@ -1,5 +1,3 @@
-import { forecastRunout } from "@/modules/utils"
-import { dayjs } from "@/modules/dayjs"
 import type {
     BillingPlanType,
     BillingWorkspaceType,
@@ -7,11 +5,13 @@ import type {
     CreditPackType,
     CreditQuotaStatusType,
     CreditTopupLotType,
-} from "@/modules/api"
+} from "@/hooks/swr"
+import { dayjs } from "@/modules/dayjs"
+import type { CreditsOverviewView, CreditsData, PlanView } from "@/modules/types"
+import { forecastRunout } from "@/modules/utils"
+import type { useTranslations } from "next-intl"
 
 /** Plain data of the credits page, and the pure functions that compute it from the rows the page read. */
-
-import type { CreditsData, PlanView } from "@/modules/types"
 
 /** A credit is 0.00113 USD of model token cost (billing_config.credit_usd_value in the database): the forecast converts dollars with it. */
 const CREDIT_USD_VALUE = 0.00113
@@ -107,4 +107,65 @@ export const creditsDataOf = (input: CreditsInput): CreditsData => {
         orders: [],
         bank: { account: "", bank: "", holder: "" },
     }
+}
+
+/** Resolves balance, exhaustion, expiry and upgrade summaries for the current account. */
+export const creditsSummaryOf = (
+    data: CreditsData | null,
+    busy: string | null,
+    t: ReturnType<typeof useTranslations<"credits">>,
+    credit: (value: number) => string,
+    money: (value: number) => string,
+    day: (value: string) => string,
+    name: (plan: PlanView) => string,
+    allowance: (plan: PlanView) => string,
+) => {
+    let figure = t("loading")
+    let badge = ""
+    let badgeTone: "danger" | "warning" = "warning"
+    let topupText = t("loading")
+    let forecast = t("loading")
+    let carried = t("loading")
+    let upgrade: CreditsOverviewView["upgrade"] = null
+    let contact: CreditsOverviewView["contact"] = null
+    if (data) {
+        const planLabel = data.plan ? name(data.plan) : ""
+        if (data.limit === null)
+            figure = t(data.plan ? "balanceUnlimited" : "balanceNoPlan", { used: credit(data.used), plan: planLabel })
+        else if (data.plan)
+            figure = t("balanceFigure", { used: credit(data.used), limit: credit(data.limit), plan: planLabel })
+        else figure = t("balanceWithoutPlan", { used: credit(data.used), limit: credit(data.limit) })
+        if (data.limit !== null && data.used >= data.limit) {
+            badge = t(data.topup > 0 ? "exhaustedTopup" : "exhausted")
+            badgeTone = "danger"
+        } else if (data.limit !== null && data.limit > 0) {
+            const left = Math.floor(((data.limit - data.used) / data.limit) * 100)
+            if (left < 20) badge = t("leftPct", { pct: Math.max(0, left) })
+        }
+        topupText = t("topupValue", { n: credit(data.topup) })
+        if (data.topup > 0 && data.topupExpires)
+            topupText = t("topupExpires", { n: credit(data.topup), date: day(data.topupExpires) })
+        forecast = data.runout ? day(data.runout + "T00:00:00Z") : t("none")
+        carried = data.carried > 0 ? t("creditUnit", { n: credit(data.carried) }) : t("none")
+        if (data.next) {
+            const next = data.next.plan
+            upgrade = {
+                name: name(next),
+                line: t("planLine", { credits: allowance(next), storage: next.storageGb ?? 0 }),
+                price: t("priceLine", { price: money(next.price) }),
+                action: t("upgradeCta", { plan: name(next) }),
+                pending: busy === next.code,
+                disabled: busy !== null && busy !== next.code,
+                target: { kind: "upgrade", planCode: next.code, planName: name(next), price: next.price },
+            }
+        }
+        if (data.contact)
+            contact = {
+                name: data.contact.plan ? name(data.contact.plan) : t("contactTitle"),
+                text: t("contactText"),
+                action: t("contactCta"),
+                href: data.contact.href,
+            }
+    }
+    return { figure, badge, badgeTone, topupText, forecast, carried, upgrade, contact }
 }

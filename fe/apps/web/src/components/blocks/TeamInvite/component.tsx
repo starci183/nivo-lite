@@ -1,3 +1,8 @@
+import type { useTranslations } from "next-intl"
+import type { useMember } from "@/hooks/member"
+import type { useIndividualPlan } from "@/hooks/billing"
+import type { useTeam, useInviteCommands, InviteSentView } from "@/hooks/team"
+import type { useInviteForm } from "@/hooks/rhf"
 import { Form, Input, Select, SurfaceCard, Text } from "@starci/grammar/common"
 import { FormActions } from "@/components/composites/FormActions"
 import { InviteLink } from "@/components/composites/InviteLink"
@@ -123,3 +128,19 @@ export const TeamInviteBase = (props: TeamInviteBaseProps) => (
         </SurfaceCard>
     </div>
 )
+
+/** State values and commands consumed by the connected surface. */
+export type TeamInviteControllerInput = {
+    readonly t: ReturnType<typeof useTranslations<"team">>
+    readonly member: ReturnType<typeof useMember>
+    readonly isIndividual: ReturnType<typeof useIndividualPlan>
+    readonly isAllowed: boolean
+    readonly views: ReturnType<typeof useTeam>["views"]
+    readonly isLoading: ReturnType<typeof useTeam>["isLoading"]
+    readonly commands: ReturnType<typeof useInviteCommands>
+    readonly form: ReturnType<typeof useInviteForm>
+    readonly sent: InviteSentView | undefined
+    readonly setSent: React.Dispatch<React.SetStateAction<InviteSentView | undefined>>
+    readonly isCopied: boolean
+    readonly setCopied: React.Dispatch<React.SetStateAction<boolean>>
+}

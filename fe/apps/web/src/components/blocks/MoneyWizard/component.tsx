@@ -189,30 +189,7 @@ export const MoneyWizardBase = (props: MoneyWizardBaseProps) => {
             {view.earlyAccess ? (
                 <Alert tone="cautionary" title={view.text.earlyAccess} description={view.text.earlyAccessNote} />
             ) : null}
-            {view.step === "env" ? (
-                <>
-                    {view.showEnvHint ? (
-                        <Text size="sm" tone="muted">
-                            {view.text.envHint}
-                        </Text>
-                    ) : null}
-                    <RadioGroup
-                        variant="secondary"
-                        label={view.steps[0] ?? ""}
-                        isLabelHidden
-                        isDisabled={view.isPending}
-                        value={view.environment}
-                        onValueChange={(value) => on.environment(value === "test" ? "test" : "live")}
-                        options={[...view.environments]}
-                    />
-                    {view.noTestNote === null ? null : <Alert tone="informative" title={view.noTestNote} />}
-                    {view.isLocked ? (
-                        <Text size="xs" tone="muted">
-                            {view.text.createdLocked}
-                        </Text>
-                    ) : null}
-                </>
-            ) : null}
+            {view.step === "env" ? <MoneyEnvironmentStep {...props} /> : null}
             {view.step === "account" ? accountOf(props) : null}
             {view.step === "follow" ? (
                 <>
@@ -251,5 +228,34 @@ export const MoneyWizardBase = (props: MoneyWizardBaseProps) => {
             ) : null}
             {view.note === null ? null : <Alert tone={view.note.tone} title={view.note.text} />}
         </WizardFrame>
+    )
+}
+
+/** Renders the environment choices and their availability notices. */
+const MoneyEnvironmentStep = (props: MoneyWizardBaseProps) => {
+    const { props: view, on } = props
+    return (
+        <>
+            {view.showEnvHint ? (
+                <Text size="sm" tone="muted">
+                    {view.text.envHint}
+                </Text>
+            ) : null}
+            <RadioGroup
+                variant="secondary"
+                label={view.steps[0] ?? ""}
+                isLabelHidden
+                isDisabled={view.isPending}
+                value={view.environment}
+                onValueChange={(value) => on.environment(value === "test" ? "test" : "live")}
+                options={[...view.environments]}
+            />
+            {view.noTestNote === null ? null : <Alert tone="informative" title={view.noTestNote} />}
+            {view.isLocked ? (
+                <Text size="xs" tone="muted">
+                    {view.text.createdLocked}
+                </Text>
+            ) : null}
+        </>
     )
 }

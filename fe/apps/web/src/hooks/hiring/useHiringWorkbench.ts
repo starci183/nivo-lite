@@ -3,7 +3,7 @@
 import { useMemo } from "react"
 import { EMPTY_BOARD, toHiringWorkbenchData } from "@/hooks/hiringMap"
 import { useQueryHiringWorkbenchSwr } from "@/hooks/swr"
-import { isForbiddenFailure } from "@/modules/api"
+import { isForbiddenFailure } from "@/modules/failure"
 
 /**
  * The Hiring workbench through SWR, shared by every tab block (one cache entry). `board` is the empty board until the first read

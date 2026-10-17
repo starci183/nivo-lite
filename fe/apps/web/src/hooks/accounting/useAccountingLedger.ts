@@ -1,13 +1,12 @@
 "use client"
 
-import type { AccountingWorkbenchData } from "@/modules/types"
-import { useFormatter, useTranslations } from "next-intl"
-import { useState } from "react"
-import { lineageItemsOf, moneyOf, accountingStampOf } from "@/modules/utils"
-import { useCreateAccountingAdjustment } from "./useCreateAccountingAdjustment"
 import { ledgerRecordsOf } from "@/hooks/accountingRecords"
 import { useAccountingAdjustmentForm } from "@/hooks/rhf"
-import type { AccountingLedgerKind } from "@/modules/types"
+import type { AccountingLedgerKind, AccountingWorkbenchData } from "@/modules/types"
+import { accountingStampOf, lineageItemsOf, moneyOf } from "@/modules/utils"
+import { useFormatter, useTranslations } from "next-intl"
+import { useState } from "react"
+import { useCreateAccountingAdjustment } from "./useCreateAccountingAdjustment"
 
 type LedgerFilter = "all" | AccountingLedgerKind
 
@@ -70,17 +69,7 @@ export const useAccountingLedger = (data: AccountingWorkbenchData | undefined) =
     const rows = data.ledger.filter((entry) => filter === "all" || entry.kind === filter)
     return {
         props: {
-            title: t("ledgerTitle"),
-            intro: t("ledgerIntro"),
-            foot: t("ledgerFoot"),
-            empty: t("ledgerEmpty"),
-            emptyBody: t("ledgerEmptyBody"),
-            filterLabel: t("kindLabel"),
-            filterItems: [
-                { id: "all", label: t("kindAll") },
-                { id: "income", label: t("kind_income") },
-                { id: "receivable", label: t("kind_receivable") },
-            ],
+            ...propsLabelsOf(t),
             selectedFilter: filter,
             records: ledgerRecordsOf(t, format, rows),
             drawer: {
@@ -100,13 +89,7 @@ export const useAccountingLedger = (data: AccountingWorkbenchData | undefined) =
                 managersOnlyText: t("adjustManagersOnly"),
                 openLabel: t("adjustOpen"),
                 form: {
-                    intro: t("adjustIntro"),
-                    noteLabel: t("adjustNote"),
-                    noteHint: t("adjustNoteHint"),
-                    amountLabel: t("adjustAmount"),
-                    amountHint: t("adjustAmountHint"),
-                    saveLabel: t("adjustSave"),
-                    cancelLabel: t("cancel"),
+                    ...adjustmentFormLabelsOf(t),
                     note: values.note ?? "",
                     amount: values.amount ?? "",
                     isSaving,
@@ -117,3 +100,29 @@ export const useAccountingLedger = (data: AccountingWorkbenchData | undefined) =
         on: actions,
     }
 }
+
+/** Resolves the form labels for the current locale. */
+const adjustmentFormLabelsOf = (t: ReturnType<typeof useTranslations<"workbenchAccounting">>) => ({
+    intro: t("adjustIntro"),
+    noteLabel: t("adjustNote"),
+    noteHint: t("adjustNoteHint"),
+    amountLabel: t("adjustAmount"),
+    amountHint: t("adjustAmountHint"),
+    saveLabel: t("adjustSave"),
+    cancelLabel: t("cancel"),
+})
+
+/** Resolves the props labels for the current locale. */
+const propsLabelsOf = (t: ReturnType<typeof useTranslations<"workbenchAccounting">>) => ({
+    title: t("ledgerTitle"),
+    intro: t("ledgerIntro"),
+    foot: t("ledgerFoot"),
+    empty: t("ledgerEmpty"),
+    emptyBody: t("ledgerEmptyBody"),
+    filterLabel: t("kindLabel"),
+    filterItems: [
+        { id: "all", label: t("kindAll") },
+        { id: "income", label: t("kind_income") },
+        { id: "receivable", label: t("kind_receivable") },
+    ],
+})

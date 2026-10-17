@@ -45,23 +45,21 @@ const actionOf = (entry: CatalogEntry, count: number, t: Translate): string => {
  * The connector library tab: search (accents ignored), category and agent filters, sort by popularity or name. Pressing a card opens
  * the connector's detail drawer through the URL, so the library never needs to know who draws it.
  */
-export const ConnectionLibrary = (props: ConnectionLibraryProps) => {
-    const t = useTranslations("connections")
-    const locale = useLocale()
-    const overlays = useConnectionOverlays()
-    const [text, setText] = useState("")
-    const [category, setCategory] = useState<ConnectorCategory | "all">("all")
-    const [audience, setAudience] = useState<Audience | "all">("all")
-    const [sort, setSort] = useState<"popular" | "name">("popular")
-
-    const countOf = useMemo(() => {
-        const counts = new Map<string, number>()
-        for (const connection of props.items) {
-            if (connection.status !== "disconnected")
-                counts.set(connection.provider, (counts.get(connection.provider) ?? 0) + 1)
-        }
-        return counts
-    }, [props.items])
+const buildConnectionLibraryState = (
+    text: string,
+    t: ReturnType<typeof useTranslations<"connections">>,
+    audience: Audience | "all",
+    locale: ReturnType<typeof useLocale>,
+    category: ConnectorCategory | "all",
+    sort: "popular" | "name",
+    props: ConnectionLibraryProps,
+    countOf: Map<string, number>,
+    setText: import("react").Dispatch<import("react").SetStateAction<string>>,
+    setSort: import("react").Dispatch<import("react").SetStateAction<"popular" | "name">>,
+    setCategory: import("react").Dispatch<import("react").SetStateAction<ConnectorCategory | "all">>,
+    setAudience: import("react").Dispatch<import("react").SetStateAction<Audience | "all">>,
+    overlays: ReturnType<typeof useConnectionOverlays>,
+) => {
     const words = searchWords(text)
     const known = CATALOG.map((entry) => ({
         entry,
@@ -82,7 +80,6 @@ export const ConnectionLibrary = (props: ConnectionLibraryProps) => {
     const shown = searched
         .filter((item) => category === "all" || item.entry.category === category)
         .sort(sort === "name" ? byName : byPopularity)
-
     const isLoading = props.isLoading ?? false
     const cards: ReadonlyArray<LibraryCard> = shown.map(({ entry, name, blurb }) => {
         const count = entry.provider === undefined ? 0 : (countOf.get(entry.provider) ?? 0)
@@ -101,39 +98,62 @@ export const ConnectionLibrary = (props: ConnectionLibraryProps) => {
             actionLabel: actionOf(entry, count, t),
         }
     })
+    return {
+        setText,
+        setSort,
+        setCategory,
+        setAudience,
+        overlays,
+        text,
+        t,
+        sort,
+        category,
+        searched,
+        perCategory,
+        audience,
+        cards,
+        isLoading,
+    }
+}
+
+/** Draws the connected view from its current state. */
+export const ConnectionLibrary = (props: ConnectionLibraryProps) => {
+    const t = useTranslations("connections")
+    const locale = useLocale()
+    const overlays = useConnectionOverlays()
+    const [text, setText] = useState("")
+    const [category, setCategory] = useState<ConnectorCategory | "all">("all")
+    const [audience, setAudience] = useState<Audience | "all">("all")
+    const [sort, setSort] = useState<"popular" | "name">("popular")
+    const countOf = useMemo(() => {
+        const counts = new Map<string, number>()
+        for (const connection of props.items) {
+            if (connection.status !== "disconnected")
+                counts.set(connection.provider, (counts.get(connection.provider) ?? 0) + 1)
+        }
+        return counts
+    }, [props.items])
+
+    const connected = buildConnectionLibraryState(
+        text,
+        t,
+        audience,
+        locale,
+        category,
+        sort,
+        props,
+        countOf,
+        setText,
+        setSort,
+        setCategory,
+        setAudience,
+        overlays,
+    )
+    if (connected === null) return null
 
     return (
         <ConnectionLibraryBase
-            props={{
-                text,
-                searchLabel: t("libSearch"),
-                clearLabel: t("libClear"),
-                sort,
-                sortLabel: t("libSort"),
-                sortOptions: [
-                    { id: "popular", label: t("libSortPopular") },
-                    { id: "name", label: t("libSortName") },
-                ],
-                categoryLabel: t("libCategory"),
-                category,
-                categories: [
-                    { id: "all", label: t("libAll", { count: searched.length }) },
-                    ...CATEGORIES.filter((id) => perCategory(id) > 0).map((id) => ({
-                        id,
-                        label: `${t(`cat_${id}`)} · ${perCategory(id)}`,
-                    })),
-                ],
-                audienceLabel: t("libAudience"),
-                audience,
-                audiences: [
-                    { id: "all", label: t("libAnyAgent") },
-                    ...AUDIENCES.map((id) => ({ id, label: t(`aud_${id}`) })),
-                ],
-                emptyMessage: t("libEmpty"),
-                emptyHint: t("libEmptyHint"),
-                cards,
-                isLoading,
-            }}
+            props={connectionLibraryProps(connected)}
             on={{
                 text: setText,
                 sort: (value) => setSort(value === "name" ? "name" : "popular"),
@@ -143,4 +163,38 @@ export const ConnectionLibrary = (props: ConnectionLibraryProps) => {
             }}
         />
     )
+}
+
+/** Builds the props supplied to ConnectionLibraryBase. */
+const connectionLibraryProps = (
+    connected: NonNullable<ReturnType<typeof buildConnectionLibraryState>>,
+): Parameters<typeof ConnectionLibraryBase>[0]["props"] => {
+    const { text, t, sort, category, searched, perCategory, audience, cards, isLoading } = connected
+    return {
+        text,
+        searchLabel: t("libSearch"),
+        clearLabel: t("libClear"),
+        sort,
+        sortLabel: t("libSort"),
+        sortOptions: [
+            { id: "popular", label: t("libSortPopular") },
+            { id: "name", label: t("libSortName") },
+        ],
+        categoryLabel: t("libCategory"),
+        category,
+        categories: [
+            { id: "all", label: t("libAll", { count: searched.length }) },
+            ...CATEGORIES.filter((id) => perCategory(id) > 0).map((id) => ({
+                id,
+                label: `${t(`cat_${id}`)} · ${perCategory(id)}`,
+            })),
+        ],
+        audienceLabel: t("libAudience"),
+        audience,
+        audiences: [{ id: "all", label: t("libAnyAgent") }, ...AUDIENCES.map((id) => ({ id, label: t(`aud_${id}`) }))],
+        emptyMessage: t("libEmpty"),
+        emptyHint: t("libEmptyHint"),
+        cards,
+        isLoading,
+    }
 }

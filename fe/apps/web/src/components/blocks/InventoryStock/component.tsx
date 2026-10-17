@@ -1,3 +1,9 @@
+import type * as React from "react"
+import type { useInventoryBoard } from "@/hooks/inventoryBoard"
+import type { useTranslations } from "next-intl"
+import type { useAdjustDrawer, useInventoryFormat, useInventoryRun, useItemDrawer } from "@/hooks/inventory"
+import type { StockFilter } from "@/hooks/inventory"
+import type { ItemView } from "@/modules/types"
 import { InventoryNotices } from "@/components/leaves/InventoryNotices"
 import {
     Badge,
@@ -119,59 +125,7 @@ export const InventoryStockBase = (props: InventoryStockBaseProps) => {
                 onValueChange={on.filter}
             />
             <InventoryNotices error={p.error} notice={p.notice} />
-            <SurfaceListCard
-                ariaLabel={p.listLabel}
-                empty={<EmptyNotice message={p.emptyTitle} description={p.emptyBody} />}
-            >
-                {p.rows.map((row) => (
-                    <ListRow
-                        key={row.id}
-                        title={row.name}
-                        description={row.detail}
-                        badges={
-                            <>
-                                <Badge tone={row.statusTone} isDot>
-                                    {row.statusLabel}
-                                </Badge>
-                                {row.onOrderLabel === null ? null : <Badge tone="accent">{row.onOrderLabel}</Badge>}
-                            </>
-                        }
-                        actions={
-                            <div className={ACTIONS_CLASS_NAME}>
-                                <Text size="md" weight="semibold">
-                                    {row.total}
-                                </Text>
-                                <Button
-                                    variant="outline"
-                                    size="sm"
-                                    aria-label={row.lessLabel}
-                                    isDisabled={p.isPending}
-                                    onPress={() => on.quick(row.id, -1)}
-                                >
-                                    {`-${row.stepLabel}`}
-                                </Button>
-                                <Button
-                                    variant="outline"
-                                    size="sm"
-                                    aria-label={row.moreLabel}
-                                    isDisabled={p.isPending}
-                                    onPress={() => on.quick(row.id, 1)}
-                                >
-                                    {`+${row.stepLabel}`}
-                                </Button>
-                                <Button variant="ghost" size="sm" onPress={() => on.adjust(row.id)}>
-                                    {p.adjustLabel}
-                                </Button>
-                                {p.editLabel === null ? null : (
-                                    <Button variant="ghost" size="sm" onPress={() => on.edit(row.id)}>
-                                        {p.editLabel}
-                                    </Button>
-                                )}
-                            </div>
-                        }
-                    />
-                ))}
-            </SurfaceListCard>
+            {renderListLabel(props)}
             {p.toggleInactiveLabel === null ? null : (
                 <div>
                     <Button variant="ghost" size="sm" onPress={on.toggleInactive}>
@@ -201,4 +155,101 @@ export const InventoryStockBase = (props: InventoryStockBaseProps) => {
             )}
         </div>
     )
+}
+
+/** Draws the listLabel section of the current view. */
+const renderListLabel = (props: InventoryStockBaseProps) => {
+    const { props: p, on } = props
+    return (
+        <SurfaceListCard
+            ariaLabel={p.listLabel}
+            empty={<EmptyNotice message={p.emptyTitle} description={p.emptyBody} />}
+        >
+            {p.rows.map((row) => (
+                <ListRow
+                    key={row.id}
+                    title={row.name}
+                    description={row.detail}
+                    badges={
+                        <>
+                            <Badge tone={row.statusTone} isDot>
+                                {row.statusLabel}
+                            </Badge>
+                            {row.onOrderLabel === null ? null : <Badge tone="accent">{row.onOrderLabel}</Badge>}
+                        </>
+                    }
+                    actions={
+                        <div className={ACTIONS_CLASS_NAME}>
+                            <Text size="md" weight="semibold">
+                                {row.total}
+                            </Text>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                aria-label={row.lessLabel}
+                                isDisabled={p.isPending}
+                                onPress={() => on.quick(row.id, -1)}
+                            >
+                                {`-${row.stepLabel}`}
+                            </Button>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                aria-label={row.moreLabel}
+                                isDisabled={p.isPending}
+                                onPress={() => on.quick(row.id, 1)}
+                            >
+                                {`+${row.stepLabel}`}
+                            </Button>
+                            <Button variant="ghost" size="sm" onPress={() => on.adjust(row.id)}>
+                                {p.adjustLabel}
+                            </Button>
+                            {p.editLabel === null ? null : (
+                                <Button variant="ghost" size="sm" onPress={() => on.edit(row.id)}>
+                                    {p.editLabel}
+                                </Button>
+                            )}
+                        </div>
+                    }
+                />
+            ))}
+        </SurfaceListCard>
+    )
+}
+
+/** Inputs needed to build the InventoryStockContent section. */
+export interface BuildStockListViewContext {
+    readonly t: ReturnType<typeof useTranslations<"workbenchInventory">>
+    readonly board: ReturnType<typeof useInventoryBoard>
+    readonly lowCount: number
+    readonly empty: boolean
+    readonly hasInactive: boolean
+    readonly showInactive: boolean
+    readonly query: string
+    readonly filter: StockFilter
+    readonly rows: ItemView[]
+    readonly format: ReturnType<typeof useInventoryFormat>
+    readonly detailOf: (item: ItemView) => string
+    readonly run: ReturnType<typeof useInventoryRun>
+    readonly itemDrawer: ReturnType<typeof useItemDrawer>
+    readonly adjustDrawer: ReturnType<typeof useAdjustDrawer>
+}
+
+/** Inputs needed to build the InventoryStockContent section. */
+export interface BuildStockCommandsContext {
+    readonly setQuery: React.Dispatch<React.SetStateAction<string>>
+    readonly setFilter: React.Dispatch<React.SetStateAction<StockFilter>>
+    readonly itemDrawer: ReturnType<typeof useItemDrawer>
+    readonly draft: () => void
+    readonly quick: (id: string, sign: 1 | -1) => void
+    readonly board: ReturnType<typeof useInventoryBoard>
+    readonly adjustDrawer: ReturnType<typeof useAdjustDrawer>
+    readonly setShowInactive: React.Dispatch<React.SetStateAction<boolean>>
+}
+
+/** Data and formatting used for an inventory item description. */
+export interface StockDetailContext {
+    readonly board: ReturnType<typeof useInventoryBoard>
+    readonly format: ReturnType<typeof useInventoryFormat>
+    readonly t: ReturnType<typeof useTranslations<"workbenchInventory">>
 }

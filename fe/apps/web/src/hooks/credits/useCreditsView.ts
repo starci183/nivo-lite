@@ -1,8 +1,9 @@
 "use client"
 
-import { useFormatter, useLocale, useTranslations } from "next-intl"
 import { workspaceBillingPath } from "@/modules/routes"
 import type { CreditsData, CreditsOverviewView, PlanView } from "@/modules/types"
+import { useFormatter, useLocale, useTranslations } from "next-intl"
+import { creditsSummaryOf } from "./credits.shared"
 
 /** Resolves every locale-sensitive label before the pure credits drawing. */
 export const useCreditsView = (data: CreditsData | null, busy: string | null) => {
@@ -23,69 +24,81 @@ export const useCreditsView = (data: CreditsData | null, busy: string | null) =>
         balance: t("balanceLabel"),
         topups: data && data.addOns.length > 0 ? t("addOnTitle") : t("topupTitle"),
         topupFact: data && data.addOns.length > 0 ? t("addOnFact") : t("topupFact"),
-        upgrade: t("upgradeTitle"),
-        plans: t("allPlans"),
-        plansLabel: t("allPlansLabel"),
-        buy: t("buy"),
-        plansCta: t("plansCta"),
+        ...labelsOf(t),
         plansHref: data ? workspaceBillingPath(data.workspaceId) : "",
         loading: t("loading"),
         emptyPacks: t("packsEmpty"),
     }
     const slotLabels = {
-        empty: t("errorText"),
-        error: t("errorText"),
-        forbidden: t("errForbidden"),
-        retry: t("retry"),
+        ...slotLabelsOf(t),
     }
-    let figure = t("loading")
-    let badge = ""
-    let badgeTone: "danger" | "warning" = "warning"
-    let topupText = t("loading")
-    let forecast = t("loading")
-    let carried = t("loading")
-    let upgrade: CreditsOverviewView["upgrade"] = null
-    let contact: CreditsOverviewView["contact"] = null
-    if (data) {
-        const planLabel = data.plan ? name(data.plan) : ""
-        if (data.limit === null)
-            figure = t(data.plan ? "balanceUnlimited" : "balanceNoPlan", { used: credit(data.used), plan: planLabel })
-        else if (data.plan)
-            figure = t("balanceFigure", { used: credit(data.used), limit: credit(data.limit), plan: planLabel })
-        else figure = t("balanceWithoutPlan", { used: credit(data.used), limit: credit(data.limit) })
-        if (data.limit !== null && data.used >= data.limit) {
-            badge = t(data.topup > 0 ? "exhaustedTopup" : "exhausted")
-            badgeTone = "danger"
-        } else if (data.limit !== null && data.limit > 0) {
-            const left = Math.floor(((data.limit - data.used) / data.limit) * 100)
-            if (left < 20) badge = t("leftPct", { pct: Math.max(0, left) })
-        }
-        topupText = t("topupValue", { n: credit(data.topup) })
-        if (data.topup > 0 && data.topupExpires)
-            topupText = t("topupExpires", { n: credit(data.topup), date: day(data.topupExpires) })
-        forecast = data.runout ? day(data.runout + "T00:00:00Z") : t("none")
-        carried = data.carried > 0 ? t("creditUnit", { n: credit(data.carried) }) : t("none")
-        if (data.next) {
-            const next = data.next.plan
-            upgrade = {
-                name: name(next),
-                line: t("planLine", { credits: allowance(next), storage: next.storageGb ?? 0 }),
-                price: t("priceLine", { price: money(next.price) }),
-                action: t("upgradeCta", { plan: name(next) }),
-                pending: busy === next.code,
-                disabled: busy !== null && busy !== next.code,
-                target: { kind: "upgrade", planCode: next.code, planName: name(next), price: next.price },
-            }
-        }
-        if (data.contact)
-            contact = {
-                name: data.contact.plan ? name(data.contact.plan) : t("contactTitle"),
-                text: t("contactText"),
-                action: t("contactCta"),
-                href: data.contact.href,
-            }
-    }
-    const view: CreditsOverviewView = {
+    const { figure, badge, badgeTone, topupText, forecast, carried, upgrade, contact } = creditsSummaryOf(
+        data,
+        busy,
+        t,
+        credit,
+        money,
+        day,
+        name,
+        allowance,
+    )
+    const view: CreditsOverviewView = viewOf(
+        data,
+        t,
+        figure,
+        badge,
+        badgeTone,
+        credit,
+        topupText,
+        forecast,
+        carried,
+        money,
+        busy,
+        upgrade,
+        contact,
+        name,
+        planPrice,
+        allowance,
+    )
+    return { view, labels, slotLabels }
+}
+
+/** Resolves the action labels for the current locale. */
+const labelsOf = (t: ReturnType<typeof useTranslations<"credits">>) => ({
+    upgrade: t("upgradeTitle"),
+    plans: t("allPlans"),
+    plansLabel: t("allPlansLabel"),
+    buy: t("buy"),
+    plansCta: t("plansCta"),
+})
+
+/** Resolves the data-slot labels for the current locale. */
+const slotLabelsOf = (t: ReturnType<typeof useTranslations<"credits">>) => ({
+    empty: t("errorText"),
+    error: t("errorText"),
+    forbidden: t("errForbidden"),
+    retry: t("retry"),
+})
+
+const viewOf = (
+    data: CreditsData | null,
+    t: ReturnType<typeof useTranslations<"credits">>,
+    figure: string,
+    badge: string,
+    badgeTone: "danger" | "warning",
+    credit: (value: number) => string,
+    topupText: string,
+    forecast: string,
+    carried: string,
+    money: (value: number) => string,
+    busy: string | null,
+    upgrade: CreditsOverviewView["upgrade"],
+    contact: CreditsOverviewView["contact"],
+    name: (plan: PlanView) => string,
+    planPrice: (plan: PlanView) => string,
+    allowance: (plan: PlanView) => string,
+): CreditsOverviewView => {
+    return {
         canBuy: data?.canBuy ?? false,
         staffNote: t("staffNote"),
         balance: {
@@ -138,5 +151,4 @@ export const useCreditsView = (data: CreditsData | null, busy: string | null) =>
                 badge: plan.code === data.plan?.code ? t("currentPlan") : "",
             })) ?? [],
     }
-    return { view, labels, slotLabels }
 }

@@ -1,9 +1,10 @@
+import type { ModuleIconName } from "@/modules/types/module-icon"
 /** Resolves one Office message by key, with optional `{values}` (the next-intl translator of the `office` namespace). */
 export type OfficeText = (key: string, values?: Readonly<Record<string, string | number>>) => string
 
 /** Who is drawn beside a bubble. */
 export type OfficeAvatarView =
-    | { readonly kind: "agent"; readonly glyph: string; readonly module: string; readonly label: string }
+    | { readonly kind: "agent"; readonly glyph: ModuleIconName; readonly module: string; readonly label: string }
     | { readonly kind: "person"; readonly name: string }
 
 /** One piece of a message body: plain text or an @mention. */

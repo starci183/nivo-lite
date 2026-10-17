@@ -11,23 +11,16 @@ import {
     useVideoScript,
     VIDEO_MAX_SECONDS,
     type EditorStep,
-    type SceneRole,
     type ScriptScene,
 } from "@/hooks/video"
 import { useFormatter, useTranslations } from "next-intl"
 import { useEffect, useState } from "react"
 import { useVideoScriptForm } from "@/hooks/rhf"
 import { navigation } from "@/modules/i18n"
-import { VideoScriptStepBase } from "./component"
+import { VideoScriptStepBase, scriptCopyOf, sceneCardsOf } from "./component"
 
 /** The option that means a colour card without a file. */
 const NO_MEDIA = "none"
-
-const ROLE_TONE: Record<SceneRole, "accent" | "neutral" | "success"> = {
-    hook: "accent",
-    body: "neutral",
-    cta: "success",
-}
 
 /** What the page tells the step. */
 interface VideoScriptStepProps {
@@ -51,6 +44,79 @@ const estimateOf = (total: number, count: number): "none" | "long" | "ok" => {
     if (count === 0) return "none"
     return total > VIDEO_MAX_SECONDS ? "long" : "ok"
 }
+
+const sceneChangesOf = (form: ReturnType<typeof useVideoScriptForm>, scenes: ReadonlyArray<ScriptScene>) => {
+    const change = (next: ReadonlyArray<ScriptScene>) => {
+        form.setValue(
+            "scenes",
+            next.map((scene) => ({ ...scene })),
+            { shouldDirty: true, shouldValidate: true },
+        )
+    }
+    const edit = (index: number, patch: Partial<ScriptScene>) =>
+        change(scenes.map((scene, at) => (at === index ? { ...scene, ...patch } : scene)))
+
+    return { change, edit }
+}
+
+/** State projected into the script drawing. */
+interface ScriptViewContext {
+    editor: ReturnType<typeof useVideoProjectData>
+    t: ReturnType<typeof useTranslations<"video">>
+    format: ReturnType<typeof useFormatter>
+    project: ReturnType<typeof useVideoProjectData>["project"]
+    scripting: boolean
+    scenes: ReadonlyArray<ScriptScene>
+    dirty: boolean
+    estimate: ReturnType<typeof estimateOf>
+    total: number
+    form: ReturnType<typeof useVideoScriptForm>
+    error: string | null
+    scriptJob: ReturnType<typeof useVideoScript>
+    failure: ReturnType<typeof useVideoFailure>
+}
+
+const viewOf = ({
+    editor,
+    t,
+    format,
+    project,
+    scripting,
+    scenes,
+    dirty,
+    estimate,
+    total,
+    form,
+    error,
+    scriptJob,
+    failure,
+}: ScriptViewContext) => ({
+    ...scriptCopyOf(t),
+    tookLabel:
+        project.scriptMs === null
+            ? undefined
+            : t("scriptTook", { s: format.number(project.scriptMs / 1000, { maximumFractionDigits: 0 }) }),
+    writing: scripting,
+    hasScenes: scenes.length > 0,
+    writeLabel: scenes.length > 0 ? t("rewriteScript") : t("writeScript"),
+    rewriteWarn: scenes.length > 0 && dirty ? t("rewriteWarn") : null,
+    scenes: sceneCardsOf(scenes, t),
+    mediaOptions: [
+        { id: NO_MEDIA, label: t("mediaNone") },
+        ...editor.media.map((item) => ({ id: item.path, label: item.name })),
+    ],
+    canAdd: scenes.length < SCRIPT_MAX_SCENES,
+    estimateLabel: estimate === "none" ? null : t(estimate === "long" ? "tooLong" : "estimated", { n: total }),
+    canEdit: editor.canEdit,
+    locked: !editor.canEdit || scripting,
+    saving: form.formState.isSubmitting,
+    canContinue: estimate === "ok",
+    error:
+        error ??
+        (Object.keys(form.formState.errors).length > 0 ? t("err_default") : null) ??
+        (scriptJob.error instanceof Error ? scriptJob.error.message : null) ??
+        (project.lastError ? failure(project.lastError) : null),
+})
 
 /** Step three of the wizard: NIVO writes the script, the owner edits it scene by scene. Moving on saves the scenes. */
 export const VideoScriptStep = (props: VideoScriptStepProps) => {
@@ -78,15 +144,7 @@ export const VideoScriptStep = (props: VideoScriptStepProps) => {
     const total = estimateScriptSeconds(scenes)
     const estimate = estimateOf(total, scenes.length)
 
-    const change = (next: ReadonlyArray<ScriptScene>) => {
-        form.setValue(
-            "scenes",
-            next.map((scene) => ({ ...scene })),
-            { shouldDirty: true, shouldValidate: true },
-        )
-    }
-    const edit = (index: number, patch: Partial<ScriptScene>) =>
-        change(scenes.map((scene, at) => (at === index ? { ...scene, ...patch } : scene)))
+    const { change, edit } = sceneChangesOf(form, scenes)
 
     const write = async () => {
         setError(null)
@@ -103,58 +161,21 @@ export const VideoScriptStep = (props: VideoScriptStepProps) => {
 
     return (
         <VideoScriptStepBase
-            props={{
-                heading: t("scriptHeading"),
-                tookLabel:
-                    project.scriptMs === null
-                        ? undefined
-                        : t("scriptTook", { s: format.number(project.scriptMs / 1000, { maximumFractionDigits: 0 }) }),
-                writing: scripting,
-                writingLabel: t("scripting"),
-                emptyLabel: t("scriptEmpty"),
-                hasScenes: scenes.length > 0,
-                writeLabel: scenes.length > 0 ? t("rewriteScript") : t("writeScript"),
-                rewriteWarn: scenes.length > 0 && dirty ? t("rewriteWarn") : null,
-                scenes: scenes.map((scene, index) => ({
-                    id: scene.id,
-                    title: t("sceneN", { n: index + 1 }),
-                    roleLabel: t(`role_${scene.role}`),
-                    roleTone: ROLE_TONE[scene.role],
-                    caption: scene.caption,
-                    voiceover: scene.voiceover,
-                    visualHint: scene.visual === "" ? null : t("visualHint", { text: scene.visual }),
-                    media: scene.media ?? NO_MEDIA,
-                    canMoveUp: index > 0,
-                    canMoveDown: index < scenes.length - 1,
-                    canRemove: scenes.length > 1,
-                })),
-                mediaOptions: [
-                    { id: NO_MEDIA, label: t("mediaNone") },
-                    ...editor.media.map((item) => ({ id: item.path, label: item.name })),
-                ],
-                captionLabel: t("captionLabel"),
-                voiceLabel: t("voiceLabel"),
-                mediaLabel: t("mediaPick"),
-                moveUpLabel: t("moveUp"),
-                moveDownLabel: t("moveDown"),
-                removeLabel: t("removeScene"),
-                addLabel: t("addScene"),
-                canAdd: scenes.length < SCRIPT_MAX_SCENES,
-                backLabel: t("back"),
-                nextLabel: t("next"),
-                estimateLabel:
-                    estimate === "none" ? null : t(estimate === "long" ? "tooLong" : "estimated", { n: total }),
-                canEdit: editor.canEdit,
-                locked: !editor.canEdit || scripting,
-                saving: form.formState.isSubmitting,
-                canContinue: estimate === "ok",
-                error:
-                    error ??
-                    (Object.keys(form.formState.errors).length > 0 ? t("err_default") : null) ??
-                    (scriptJob.error instanceof Error ? scriptJob.error.message : null) ??
-                    (project.lastError ? failure(project.lastError) : null),
-                dismissLabel: t("back"),
-            }}
+            props={viewOf({
+                editor,
+                t,
+                format,
+                project,
+                scripting,
+                scenes,
+                dirty,
+                estimate,
+                total,
+                form,
+                error,
+                scriptJob,
+                failure,
+            })}
             on={{
                 write: () => void write(),
                 caption: (index, value) => edit(index, { caption: value }),

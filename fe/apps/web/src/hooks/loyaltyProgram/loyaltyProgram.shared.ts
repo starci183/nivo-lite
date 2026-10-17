@@ -1,4 +1,4 @@
-import type { LoyaltyConfigType } from "@/modules/api"
+import type { LoyaltyConfigType } from "@/hooks/swr"
 
 /** The most earn rules for single categories a programme keeps. */
 export const MAX_CATEGORIES = 12

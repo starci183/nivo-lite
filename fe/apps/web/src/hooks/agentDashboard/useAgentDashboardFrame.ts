@@ -1,14 +1,14 @@
 "use client"
 
-import { useFormatter, useTranslations } from "next-intl"
-import type { BadgeTone } from "@starci/grammar/common"
-import { useModuleName } from "@/hooks/installations"
-import type { ModuleKey } from "@/hooks/installations"
 import { isProvider, providerKey } from "@/hooks/connection-providers"
 import { decisionsHref } from "@/hooks/decisions"
+import { useModuleName } from "@/hooks/installations"
+import type { ModuleKey } from "@/hooks/installations"
 import { agentChatHref, AUTOMATION_ROUTES, KNOWLEDGE_ROUTES } from "@/modules/routes"
+import type { BadgeTone } from "@starci/grammar/common"
+import { useFormatter, useTranslations } from "next-intl"
 import { PENDING_DASHBOARD } from "./agentDashboard.shared"
-import type { ConnectionState, DashboardRow } from "./agentDashboard.shared"
+import type { AgentDashboardView, ConnectionState, DashboardRow } from "./agentDashboard.shared"
 import { useAgentDashboard } from "./useAgentDashboard"
 
 const CONNECTION_TONE: Readonly<Record<ConnectionState, BadgeTone>> = {
@@ -89,63 +89,10 @@ export const useAgentDashboardFrame = (input: AgentDashboardFrameInput) => {
         },
         connectionsLabel: t("connTitle"),
         connectionsFailed: isFailed || dashboard.connections.isFailed,
-        connections: {
-            manageLabel: t("connManage"),
-            manageHref: AUTOMATION_ROUTES.connections,
-            rows: dashboard.connections.items.map((connection) => ({
-                id: connection.id,
-                name: connection.name,
-                description: `${isProvider(connection.provider) ? tc(providerKey(connection.provider, "title")) : connection.provider} \u00b7 ${t(`connPurpose_${connection.purpose}`)}`,
-                statusLabel: t(`connStatus_${connection.status}`),
-                statusTone: CONNECTION_TONE[connection.status],
-                accessLabel: t(`connAccess_${connection.access}`),
-            })),
-            emptyMessage: t("connEmpty"),
-            emptyDescription: t("connEmptyBody"),
-        },
+        connections: connectionsOf(t, dashboard, tc),
         knowledgeLabel: t("knowTitle"),
         knowledgeFailed: isFailed || dashboard.knowledge.isFailed,
-        knowledge: {
-            openLabel: t("knowOpen"),
-            openHref: KNOWLEDGE_ROUTES.library,
-            footer: isInternal ? t("knowAudienceInternal") : t("knowAudienceCustomer"),
-            publicTitle: t("knowPublic"),
-            publicDescription: t("knowCounts", {
-                docs: dashboard.knowledge.documents.public,
-                facts: dashboard.knowledge.facts.public,
-            }),
-            internalTitle: t("knowInternal"),
-            internalDescription: isInternal
-                ? [
-                      t("knowCounts", {
-                          docs: dashboard.knowledge.documents.internal,
-                          facts: dashboard.knowledge.facts.internal,
-                      }),
-                      dashboard.knowledge.facts.restricted > 0
-                          ? t("knowRestricted", { n: dashboard.knowledge.facts.restricted })
-                          : "",
-                  ]
-                      .filter(Boolean)
-                      .join(" \u00b7 ")
-                : t("knowInternalOff"),
-            gaps:
-                gaps && !input.hasOwnGaps
-                    ? {
-                          label: t("gapsTitle"),
-                          count: gaps.openCount > 0 ? String(gaps.openCount) : null,
-                          openLabel: t("gapsOpen"),
-                          openHref: KNOWLEDGE_ROUTES.library,
-                          rows: gaps.items.map((gap) => ({
-                              id: gap.id,
-                              title: gap.question,
-                              description: whenOf(gap.lastSeenAt),
-                              asked: t("gapAsked", { n: gap.count }),
-                          })),
-                          emptyMessage: t("gapsEmpty"),
-                          emptyDescription: t("gapsEmptyBody"),
-                      }
-                    : null,
-        },
+        knowledge: knowledgeOf(t, isInternal, dashboard, gaps, input, whenOf),
     }
     const mode: { readonly label: string; readonly tone: BadgeTone } | null =
         agent === null
@@ -164,4 +111,84 @@ export const useAgentDashboardFrame = (input: AgentDashboardFrameInput) => {
     const tabLabel = (tab: FrameTab, waitingTab: string | undefined): string =>
         tab.id === waitingTab && dashboard.waiting.total > 0 ? `${tab.label} (${dashboard.waiting.total})` : tab.label
     return { head, view, tabsLabel: t("tabsLabel"), tabLabel, reload }
+}
+
+const connectionsOf = (
+    t: ReturnType<typeof useTranslations<"agentDashboard">>,
+    dashboard: AgentDashboardView,
+    tc: ReturnType<typeof useTranslations<"connections">>,
+) => {
+    return {
+        manageLabel: t("connManage"),
+        manageHref: AUTOMATION_ROUTES.connections,
+        rows: dashboard.connections.items.map((connection) => ({
+            id: connection.id,
+            name: connection.name,
+            description: `${isProvider(connection.provider) ? tc(providerKey(connection.provider, "title")) : connection.provider} \u00b7 ${t(`connPurpose_${connection.purpose}`)}`,
+            statusLabel: t(`connStatus_${connection.status}`),
+            statusTone: CONNECTION_TONE[connection.status],
+            accessLabel: t(`connAccess_${connection.access}`),
+        })),
+        emptyMessage: t("connEmpty"),
+        emptyDescription: t("connEmptyBody"),
+    }
+}
+
+const knowledgeOf = (
+    t: ReturnType<typeof useTranslations<"agentDashboard">>,
+    isInternal: boolean,
+    dashboard: AgentDashboardView,
+    gaps: {
+        readonly openCount: number
+        readonly items: ReadonlyArray<{
+            readonly id: string
+            readonly question: string
+            readonly count: number
+            readonly lastSeenAt: string
+        }>
+    } | null,
+    input: AgentDashboardFrameInput,
+    whenOf: (iso: string | null) => string,
+) => {
+    return {
+        openLabel: t("knowOpen"),
+        openHref: KNOWLEDGE_ROUTES.library,
+        footer: isInternal ? t("knowAudienceInternal") : t("knowAudienceCustomer"),
+        publicTitle: t("knowPublic"),
+        publicDescription: t("knowCounts", {
+            docs: dashboard.knowledge.documents.public,
+            facts: dashboard.knowledge.facts.public,
+        }),
+        internalTitle: t("knowInternal"),
+        internalDescription: isInternal
+            ? [
+                  t("knowCounts", {
+                      docs: dashboard.knowledge.documents.internal,
+                      facts: dashboard.knowledge.facts.internal,
+                  }),
+                  dashboard.knowledge.facts.restricted > 0
+                      ? t("knowRestricted", { n: dashboard.knowledge.facts.restricted })
+                      : "",
+              ]
+                  .filter(Boolean)
+                  .join(" \u00b7 ")
+            : t("knowInternalOff"),
+        gaps:
+            gaps && !input.hasOwnGaps
+                ? {
+                      label: t("gapsTitle"),
+                      count: gaps.openCount > 0 ? String(gaps.openCount) : null,
+                      openLabel: t("gapsOpen"),
+                      openHref: KNOWLEDGE_ROUTES.library,
+                      rows: gaps.items.map((gap) => ({
+                          id: gap.id,
+                          title: gap.question,
+                          description: whenOf(gap.lastSeenAt),
+                          asked: t("gapAsked", { n: gap.count }),
+                      })),
+                      emptyMessage: t("gapsEmpty"),
+                      emptyDescription: t("gapsEmptyBody"),
+                  }
+                : null,
+    }
 }

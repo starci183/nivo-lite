@@ -1,5 +1,6 @@
 "use client"
 
+import type { Shipping, SalesHandoffsControllerInput } from "./component"
 import type { BadgeTone } from "@starci/grammar/common"
 import { useFormatter, useTranslations } from "next-intl"
 import { useState } from "react"
@@ -18,25 +19,11 @@ const invoiceToneOf = (row: HandoffRow): BadgeTone => {
 }
 
 /** The order whose shipping drawer is open. */
-interface Shipping {
-    readonly key: string
-    readonly orderId: string
-    readonly orderNo: string | null
-    readonly customer: string
-}
 
 /** The hand-off surface: handing an order to Accounting and marking it shipped live here, the drawing in the pure half. */
-export const SalesHandoffs = () => {
-    const t = useTranslations("workbenchSales")
-    const format = useFormatter()
-    const actions = useSalesActions()
-    const { data } = useSalesWorkbench()
-    const rows = data?.handoffs ?? []
-    const form = useSalesShipmentForm()
-    const values = form.watch()
-    const [busyKey, setBusyKey] = useState<string | null>(null)
-    const [notes, setNotes] = useState<Readonly<Record<string, string>>>({})
-    const [shipping, setShipping] = useState<Shipping | null>(null)
+const createSalesHandoffsState = (input: SalesHandoffsControllerInput) => {
+    const { t, format, actions, rows, form, busyKey, setBusyKey, setNotes, shipping, setShipping } = input
+
     const shipError = form.formState.errors.carrier?.message ?? form.formState.errors.tracking?.message ?? null
     const isPending = actions.isMutating || form.formState.isSubmitting
     const activeKey = actions.isMutating ? busyKey : null
@@ -73,6 +60,12 @@ export const SalesHandoffs = () => {
         setNotes((previous) => ({ ...previous, [shipping.key]: t("shipDone", { no: result.orderNo }) }))
         setShipping(null)
     })
+    return { ...input, shipError, isPending, activeKey, money, day, run, openShip, submitShip }
+}
+
+const createSalesHandoffsActions = (input: SalesHandoffsControllerInput) => {
+    const context = createSalesHandoffsState(input)
+    const { t, notes, activeKey, money, day } = context
 
     const itemOf = (row: HandoffRow): HandoffItemView => {
         const isFailed = row.work?.status === "failed" && !row.invoice
@@ -109,47 +102,83 @@ export const SalesHandoffs = () => {
             isRunBusy: activeKey === row.key,
         }
     }
+    return { ...context, itemOf }
+}
+
+/** Connects the workspace state and commands to the visual surface. */
+export const SalesHandoffs = () => {
+    const t = useTranslations("workbenchSales")
+    const format = useFormatter()
+    const actions = useSalesActions()
+    const { data } = useSalesWorkbench()
+    const rows = data?.handoffs ?? []
+    const form = useSalesShipmentForm()
+    const values = form.watch()
+    const [busyKey, setBusyKey] = useState<string | null>(null)
+    const [notes, setNotes] = useState<Readonly<Record<string, string>>>({})
+    const [shipping, setShipping] = useState<Shipping | null>(null)
+    const context = createSalesHandoffsActions({
+        t,
+        format,
+        actions,
+        data,
+        rows,
+        form,
+        values,
+        busyKey,
+        setBusyKey,
+        notes,
+        setNotes,
+        shipping,
+        setShipping,
+    })
 
     if (data === null) return null
-    return (
-        <SalesHandoffsBase
-            props={{
-                label: t("tab_handoff"),
-                intro: t("handoffIntro"),
-                emptyTitle: t("handoffEmptyTitle"),
-                emptyBody: t("handoffEmptyBody"),
-                errorLabel: t("errorLabel"),
-                shipLabel: t("shipAction"),
-                rows: rows.map(itemOf),
-                isBusy: isPending,
-                ship:
-                    shipping === null
-                        ? null
-                        : {
-                              isOpen: true,
-                              title: t("shipTitle"),
-                              closeLabel: t("cancel"),
-                              saveLabel: t("shipSave"),
-                              cancelLabel: t("cancel"),
-                              noticeTitle: t("shipFor", { customer: shipping.customer, no: shipping.orderNo ?? "—" }),
-                              noticeText: t("shipNote"),
-                              carrierLabel: t("shipCarrier"),
-                              carrierHint: t("shipCarrierHint"),
-                              trackingLabel: t("shipTracking"),
-                              carrier: values.carrier,
-                              tracking: values.tracking,
-                              error: shipError,
-                              isPending,
-                          },
-            }}
-            on={{
-                run: (key, orderId) => void run(key, orderId),
-                ship: openShip,
-                carrier: (value) => form.setValue("carrier", value, { shouldValidate: form.formState.isSubmitted }),
-                tracking: (value) => form.setValue("tracking", value, { shouldValidate: form.formState.isSubmitted }),
-                submit: () => void submitShip(),
-                close: () => setShipping(null),
-            }}
-        />
-    )
+    return <SalesHandoffsBase {...createSalesHandoffsView(context)} />
+}
+
+const createSalesHandoffsView = (
+    context: ReturnType<typeof createSalesHandoffsActions>,
+): React.ComponentProps<typeof SalesHandoffsBase> => {
+    const { t, rows, form, values, shipping, setShipping, shipError, isPending, run, openShip, submitShip, itemOf } =
+        context
+    return {
+        props: {
+            label: t("tab_handoff"),
+            intro: t("handoffIntro"),
+            emptyTitle: t("handoffEmptyTitle"),
+            emptyBody: t("handoffEmptyBody"),
+            errorLabel: t("errorLabel"),
+            shipLabel: t("shipAction"),
+            rows: rows.map(itemOf),
+            isBusy: isPending,
+            ship:
+                shipping === null
+                    ? null
+                    : {
+                          isOpen: true,
+                          title: t("shipTitle"),
+                          closeLabel: t("cancel"),
+                          saveLabel: t("shipSave"),
+                          cancelLabel: t("cancel"),
+                          noticeTitle: t("shipFor", { customer: shipping.customer, no: shipping.orderNo ?? "—" }),
+                          noticeText: t("shipNote"),
+                          carrierLabel: t("shipCarrier"),
+                          carrierHint: t("shipCarrierHint"),
+                          trackingLabel: t("shipTracking"),
+                          carrier: values.carrier,
+                          tracking: values.tracking,
+                          error: shipError,
+                          isPending,
+                      },
+        },
+        on: {
+            run: (key, orderId) => void run(key, orderId),
+            ship: openShip,
+            carrier: (value) => form.setValue("carrier", value, { shouldValidate: form.formState.isSubmitted }),
+            tracking: (value) => form.setValue("tracking", value, { shouldValidate: form.formState.isSubmitted }),
+            submit: () => void submitShip(),
+            close: () => setShipping(null),
+        },
+    }
 }

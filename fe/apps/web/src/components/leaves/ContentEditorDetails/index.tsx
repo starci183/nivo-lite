@@ -89,46 +89,58 @@ export const ContentEditorDetails = (props: ContentEditorDetailsProps) => {
                 isDisabled={props.isDateLocked}
                 onValueChange={props.onTime}
             />
-            {props.isEditable ? (
-                <>
-                    <Input
-                        id="ce-hint"
-                        name="hint"
-                        label={t("draftHint")}
-                        variant="secondary"
-                        value={props.hint}
-                        isDisabled={props.isPending}
-                        onValueChange={props.onHint}
-                    />
-                    <div>
-                        <Button
-                            variant="secondary"
-                            isPending={props.isDrafting}
-                            isDisabled={props.isPending || props.channels.length === 0}
-                            onPress={props.onDraft}
-                        >
-                            {props.hasDraftText ? t("redraft") : t("draftWithAi")}
-                        </Button>
-                    </div>
-                </>
-            ) : null}
-            {props.warnings.length > 0 ? (
-                <Alert
-                    tone="cautionary"
-                    title={t("draftWarnTitle")}
-                    description={
-                        <List label={t("draftWarnTitle")}>
-                            {props.warnings.map((w) => (
-                                <ListItem key={w}>
-                                    <Text as="span" size="sm">
-                                        {w}
-                                    </Text>
-                                </ListItem>
-                            ))}
-                        </List>
-                    }
-                />
-            ) : null}
+            {props.isEditable ? renderContentEditorDetailsHintFields(t, props) : null}
+            {props.warnings.length > 0 ? renderContentEditorDetailsDraftWarning(t, props) : null}
         </>
     )
 }
+
+/** Renders the ContentEditorDetails hint fields section. */
+const renderContentEditorDetailsHintFields = (
+    t: NonNullable<ContentEditorDetailsProps["t"]>,
+    props: ContentEditorDetailsProps,
+) => (
+    <>
+        <Input
+            id="ce-hint"
+            name="hint"
+            label={t("draftHint")}
+            variant="secondary"
+            value={props.hint}
+            isDisabled={props.isPending}
+            onValueChange={props.onHint}
+        />
+        <div>
+            <Button
+                variant="secondary"
+                isPending={props.isDrafting}
+                isDisabled={props.isPending || props.channels.length === 0}
+                onPress={props.onDraft}
+            >
+                {props.hasDraftText ? t("redraft") : t("draftWithAi")}
+            </Button>
+        </div>
+    </>
+)
+
+/** Renders the ContentEditorDetails draft warning section. */
+const renderContentEditorDetailsDraftWarning = (
+    t: NonNullable<ContentEditorDetailsProps["t"]>,
+    props: ContentEditorDetailsProps,
+) => (
+    <Alert
+        tone="cautionary"
+        title={t("draftWarnTitle")}
+        description={
+            <List label={t("draftWarnTitle")}>
+                {props.warnings.map((w) => (
+                    <ListItem key={w}>
+                        <Text as="span" size="sm">
+                            {w}
+                        </Text>
+                    </ListItem>
+                ))}
+            </List>
+        }
+    />
+)

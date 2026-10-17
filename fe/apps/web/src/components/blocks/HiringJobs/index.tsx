@@ -39,40 +39,12 @@ export const HiringJobs = () => {
     }
     const editor = useHiringJobEditor(form, jobs.editorJob, closeEditor)
     const ad = useHiringJobAd(jobs.adJob)
-    const rowOf = (job: JobView) => {
-        const counts = countsOf(data, job.id)
-        return {
-            id: job.id,
-            title: job.title,
-            statusLabel: format.label("jobStatus", job.status),
-            statusTone: jobStatusTone(job.status),
-            facts: [
-                format.label("employment", job.employmentType),
-                format.pay(job.payMinVnd, job.payMaxVnd, job.payUnit),
-                job.location,
-                job.schedule,
-            ]
-                .filter((part) => part !== "")
-                .join(" · "),
-            counts: t("jobsCounts", { all: counts.all, fresh: counts.fresh, hired: counts.hired, need: job.headcount }),
-            publicUrl: job.publicUrl !== null && job.status !== "draft" ? job.publicUrl : null,
-            copyLabel:
-                job.publicUrl !== null && job.status === "open"
-                    ? t(jobs.copiedId === job.id ? "copiedLink" : "copyLink")
-                    : null,
-            transitions: (NEXT_JOB_STATUS[job.status] ?? []).map((to) => ({
-                to,
-                label: t(`jobAction_${job.status}_${to}`),
-                isPrimary: to === "open",
-            })),
-        }
-    }
     return (
         <HiringJobsBase
             props={{
                 say,
                 fact: t("jobsFact", { n: data.jobs.length }),
-                rows: data.jobs.map(rowOf),
+                rows: data.jobs.map((job) => rowOf(job, data, format, t, jobs.copiedId)),
                 isBusy: jobs.isPending,
                 error: jobs.error,
                 isEditorOpen: jobs.editing !== null,
@@ -121,4 +93,38 @@ export const HiringJobs = () => {
             }}
         />
     )
+}
+
+/** Resolves the job facts and available status transitions. */
+const rowOf = (
+    job: JobView,
+    data: HiringWorkbenchData,
+    format: ReturnType<typeof useHiringFormat>,
+    t: ReturnType<typeof useTranslations<"hiring">>,
+    copiedId: string | null,
+) => {
+    const counts = countsOf(data, job.id)
+    return {
+        id: job.id,
+        title: job.title,
+        statusLabel: format.label("jobStatus", job.status),
+        statusTone: jobStatusTone(job.status),
+        facts: [
+            format.label("employment", job.employmentType),
+            format.pay(job.payMinVnd, job.payMaxVnd, job.payUnit),
+            job.location,
+            job.schedule,
+        ]
+            .filter((part) => part !== "")
+            .join(" · "),
+        counts: t("jobsCounts", { all: counts.all, fresh: counts.fresh, hired: counts.hired, need: job.headcount }),
+        publicUrl: job.publicUrl !== null && job.status !== "draft" ? job.publicUrl : null,
+        copyLabel:
+            job.publicUrl !== null && job.status === "open" ? t(copiedId === job.id ? "copiedLink" : "copyLink") : null,
+        transitions: (NEXT_JOB_STATUS[job.status] ?? []).map((to) => ({
+            to,
+            label: t(`jobAction_${job.status}_${to}`),
+            isPrimary: to === "open",
+        })),
+    }
 }

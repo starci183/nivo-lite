@@ -5,7 +5,7 @@ export const HIRING = {
     key: "hiring",
     order: 100,
     icon: "jobs",
-    glyph: "M4 8h16v11H4zM9 8V5h6v3M4 13h16",
+    glyph: "moduleHiring",
     mascot: "/images/promo/mascot-point.png",
     category: "hr",
     status: "early",

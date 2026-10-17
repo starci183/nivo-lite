@@ -56,28 +56,8 @@ export interface HiringInterviewsBaseProps {
 
 /** Draws the interviews tab: a week calendar of confirmed interviews (an agenda on phones) and the invitations awaiting an answer. */
 export const HiringInterviewsBase = (props: HiringInterviewsBaseProps) => {
-    const { say, weekLabel, isThisWeek, days, invitations, invitationsFact, isBusy, error } = props.props
+    const { say, weekLabel, isThisWeek, days, invitations, invitationsFact, error } = props.props
     const { on } = props
-    const actions = (row: InterviewActionsView) => (
-        <div className={ACTIONS_CLASS_NAME}>
-            <Button variant="tertiary" size="sm" onPress={() => on.open(row.candidateId)}>
-                {say("pipeOpen")}
-            </Button>
-            {row.isConfirmed ? (
-                <Button variant="secondary" size="sm" isDisabled={isBusy} onPress={() => on.status(row.id, "done")}>
-                    {say("ivMarkDone")}
-                </Button>
-            ) : null}
-            {row.isConfirmed ? (
-                <Button variant="ghost" size="sm" isDisabled={isBusy} onPress={() => on.status(row.id, "no_show")}>
-                    {say("ivMarkNoShow")}
-                </Button>
-            ) : null}
-            <Button variant="ghost" size="sm" isDisabled={isBusy} onPress={() => on.status(row.id, "cancelled")}>
-                {say("ivCancel")}
-            </Button>
-        </div>
-    )
     return (
         <>
             <div className={HEAD_CLASS_NAME}>
@@ -118,7 +98,7 @@ export const HiringInterviewsBase = (props: HiringInterviewsBaseProps) => {
                     >
                         {day.items.map((row) => (
                             <ListRow key={row.id} title={row.title} description={row.meta}>
-                                {actions(row)}
+                                {<InterviewActions {...props} row={row} />}
                             </ListRow>
                         ))}
                     </SurfaceListCard>
@@ -146,7 +126,7 @@ export const HiringInterviewsBase = (props: HiringInterviewsBaseProps) => {
                                 {row.proposed}
                             </Text>
                             {row.note === null ? null : <Text size="sm">{row.note}</Text>}
-                            {actions(row)}
+                            {<InterviewActions {...props} row={row} />}
                         </div>
                     </ListRow>
                 ))}
@@ -154,3 +134,32 @@ export const HiringInterviewsBase = (props: HiringInterviewsBaseProps) => {
         </>
     )
 }
+
+/** Commands available for one interview. */
+const InterviewActions = (props: InterviewActionsProps) => {
+    const { say, isBusy } = props.props
+    const { on, row } = props
+    return (
+        <div className={ACTIONS_CLASS_NAME}>
+            <Button variant="tertiary" size="sm" onPress={() => on.open(row.candidateId)}>
+                {say("pipeOpen")}
+            </Button>
+            {row.isConfirmed ? (
+                <Button variant="secondary" size="sm" isDisabled={isBusy} onPress={() => on.status(row.id, "done")}>
+                    {say("ivMarkDone")}
+                </Button>
+            ) : null}
+            {row.isConfirmed ? (
+                <Button variant="ghost" size="sm" isDisabled={isBusy} onPress={() => on.status(row.id, "no_show")}>
+                    {say("ivMarkNoShow")}
+                </Button>
+            ) : null}
+            <Button variant="ghost" size="sm" isDisabled={isBusy} onPress={() => on.status(row.id, "cancelled")}>
+                {say("ivCancel")}
+            </Button>
+        </div>
+    )
+}
+
+/** Inputs of the extracted list section. */
+type InterviewActionsProps = HiringInterviewsBaseProps & { readonly row: InterviewActionsView }

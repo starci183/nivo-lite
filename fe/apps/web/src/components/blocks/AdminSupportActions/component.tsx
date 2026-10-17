@@ -128,30 +128,7 @@ export const AdminSupportActionsBase = (props: AdminSupportActionsBaseProps) =>
                             onPress={props.on.askPastDue}
                         />
                     </div>
-                    <div className={ACTION_ROW_CLASS_NAME}>
-                        <Select
-                            label={props.props.planLabel}
-                            options={props.props.planOptions}
-                            value={props.props.plan}
-                            onValueChange={props.on.setPlan}
-                        />
-                        <Field
-                            id="admin-credits"
-                            name="credits"
-                            label={props.props.creditsLabel}
-                            value={props.props.credits}
-                            error={props.props.isCreditsValid ? undefined : props.props.creditsInvalid}
-                            onChange={props.on.setCredits}
-                        />
-                        <Action
-                            label={props.props.setPlanLabel}
-                            variant="secondary"
-                            isDisabled={
-                                props.props.plan === null || !props.props.isCreditsValid || props.props.isPending
-                            }
-                            onPress={props.on.askPlan}
-                        />
-                    </div>
+                    {renderSupportPlanFields(props)}
                     {props.props.invites.length > 0 ? (
                         <div className={ACTION_ROW_CLASS_NAME}>
                             {props.props.invites.map((invite) => (
@@ -185,3 +162,29 @@ export const AdminSupportActionsBase = (props: AdminSupportActionsBaseProps) =>
             </div>
         </SurfaceCard>
     ) : null
+
+/** Draws the div section of the AdminSupportActions view. */
+const renderSupportPlanFields = (props: AdminSupportActionsBaseProps) => (
+    <div className={ACTION_ROW_CLASS_NAME}>
+        <Select
+            label={props.props.planLabel}
+            options={props.props.planOptions}
+            value={props.props.plan}
+            onValueChange={props.on.setPlan}
+        />
+        <Field
+            id="admin-credits"
+            name="credits"
+            label={props.props.creditsLabel}
+            value={props.props.credits}
+            error={props.props.isCreditsValid ? undefined : props.props.creditsInvalid}
+            onChange={props.on.setCredits}
+        />
+        <Action
+            label={props.props.setPlanLabel}
+            variant="secondary"
+            isDisabled={props.props.plan === null || !props.props.isCreditsValid || props.props.isPending}
+            onPress={props.on.askPlan}
+        />
+    </div>
+)

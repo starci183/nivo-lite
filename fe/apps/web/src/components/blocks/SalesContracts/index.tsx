@@ -17,66 +17,18 @@ import {
 import { useSalesWorkbench } from "@/hooks/salesworkbench"
 import type { SalesContract } from "@/modules/types"
 import { SalesContractsBase } from "./component"
-import type { ContractItemView } from "./component"
+import { createContractDrawer, createSalesContractsState } from "./component"
+import type { SalesContractsControllerInput } from "./component"
 
-const SOON_DAYS = 14
-
-/** The contracts surface: which contract the drawer edits, its form values, the save and the note after it live here, the drawing in the pure half. */
-export const SalesContracts = () => {
-    const t = useTranslations("workbenchSales")
-    const format = useFormatter()
-    const actions = useSalesActions()
-    const { data, nowIso } = useSalesWorkbench()
-    const contracts = data?.contracts ?? []
-    const leads = data?.leadOptions ?? []
-    const [editing, setEditing] = useState<SalesContract | null>(null)
-    const [isOpen, setOpen] = useState(false)
-    const [note, setNote] = useState("")
-    const today = vietnamDay(nowIso)
-    const form = useSalesContractForm(today)
-    const values = form.watch()
-    const errors = form.formState.errors
-    const error =
-        errors.customerName?.message ??
-        errors.startsOn?.message ??
-        errors.endsOn?.message ??
-        errors.amount?.message ??
-        errors.status?.message ??
-        errors.plan?.message ??
-        errors.note?.message ??
-        null
-    const isPending = actions.isMutating || form.formState.isSubmitting
-
-    const whenOf = (contract: SalesContract): ContractItemView["when"] => {
-        if (contract.status !== "active") return null
-        const left = contractDaysLeft(contract.ends_on, today)
-        if (left < 0) return { text: t("contractOverdue", { n: -left }), tone: "danger" }
-        if (left === 0) return { text: t("contractToday"), tone: "warning" }
-        return { text: t("contractInDays", { n: left }), tone: left <= SOON_DAYS ? "warning" : "neutral" }
-    }
-    const itemOf = (contract: SalesContract): ContractItemView => ({
-        id: contract.id,
-        title: contract.customer_name,
-        description: [
-            contract.plan,
-            `${isoDayText(contract.starts_on)} - ${isoDayText(contract.ends_on)}`,
-            contract.amount_vnd != null
-                ? format.number(contract.amount_vnd, { style: "currency", currency: "VND", maximumFractionDigits: 0 })
-                : "",
-        ]
-            .filter(Boolean)
-            .join(" · "),
-        statusLabel: t(`contractStatus_${contract.status}`),
-        statusTone: CONTRACT_TONES[contract.status],
-        when: whenOf(contract),
+const createSalesContractsActions = (input: SalesContractsControllerInput) => {
+    const context = createSalesContractsState(input, {
+        contractDaysLeft,
+        isoDayText,
+        contractTones: CONTRACT_TONES,
+        contractFormOf,
     })
+    const { t, actions, leads, editing, isOpen, setNote, form, values, close } = context
 
-    const open = (contract: SalesContract | null) => {
-        setEditing(contract)
-        form.reset(contractFormOf(contract, today))
-        setOpen(true)
-    }
-    const close = () => setOpen(false)
     const submit = form.handleSubmit(async (submitted) => {
         if (!isOpen || actions.isMutating) return
         const result = await actions.saveContract({
@@ -104,6 +56,40 @@ export const SalesContracts = () => {
                 shouldValidate: form.formState.isSubmitted,
             })
     }
+    return { ...context, submit, pickLead }
+}
+
+/** The contracts surface: which contract the drawer edits, its form values, the save and the note after it live here, the drawing in the pure half. */
+export const SalesContracts = () => {
+    const t = useTranslations("workbenchSales")
+    const format = useFormatter()
+    const actions = useSalesActions()
+    const { data, nowIso } = useSalesWorkbench()
+    const contracts = data?.contracts ?? []
+    const leads = data?.leadOptions ?? []
+    const [editing, setEditing] = useState<SalesContract | null>(null)
+    const [isOpen, setOpen] = useState(false)
+    const [note, setNote] = useState("")
+    const today = vietnamDay(nowIso)
+    const form = useSalesContractForm(today)
+    const context = createSalesContractsActions({
+        t,
+        format,
+        actions,
+        data,
+        nowIso,
+        contracts,
+        leads,
+        editing,
+        setEditing,
+        isOpen,
+        setOpen,
+        note,
+        setNote,
+        today,
+        form,
+    })
+    const { itemOf, open, close, submit, pickLead } = context
 
     if (data === null) return null
     return (
@@ -117,43 +103,11 @@ export const SalesContracts = () => {
                 emptyBody: t("contractsEmptyBody"),
                 note,
                 rows: contracts.map(itemOf),
-                drawer: !isOpen
-                    ? null
-                    : {
-                          title: editing ? t("contractEditTitle") : t("contractAddTitle"),
-                          closeLabel: t("cancel"),
-                          saveLabel: t("save"),
-                          cancelLabel: t("cancel"),
-                          leadLabel: t("contractLead"),
-                          leadOptions: [
-                              { id: NO_LEAD, label: t("contractLeadNone") },
-                              ...leads.map((lead) => ({ id: lead.id, label: lead.name })),
-                          ],
-                          lead: values.leadId,
-                          customerLabel: t("contractCustomer"),
-                          customer: values.customerName,
-                          planLabel: t("contractPlan"),
-                          planHint: t("contractPlanHint"),
-                          plan: values.plan,
-                          startLabel: t("contractStart"),
-                          start: contractDateOf(values.startsOn),
-                          endLabel: t("contractEnd"),
-                          endHint: t("contractEndHint"),
-                          end: contractDateOf(values.endsOn),
-                          amountLabel: t("contractAmount"),
-                          amount: values.amount,
-                          statusLabel: t("contractStatus"),
-                          statusOptions: CONTRACT_STATUS_KEYS.map((status) => ({
-                              id: status,
-                              label: t(`contractStatus_${status}`),
-                          })),
-                          status: values.status,
-                          noteLabel: t("contractNote"),
-                          note: values.note,
-                          error,
-                          isPending,
-                          canSave: values.customerName.trim() !== "" && values.endsOn.trim() !== "",
-                      },
+                drawer: createContractDrawer(context, {
+                    noLead: NO_LEAD,
+                    statusKeys: CONTRACT_STATUS_KEYS,
+                    dateOf: contractDateOf,
+                }),
             }}
             on={{
                 add: () => open(null),

@@ -6,7 +6,7 @@ import type {
     PublicQuestionType,
     PublicRequirementsType,
     PublicSlotType,
-} from "@/modules/api"
+} from "@/hooks/swr"
 import { supabaseUrl } from "@/modules/config"
 
 /** The largest CV the apply form takes, in bytes. */

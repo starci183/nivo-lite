@@ -1,11 +1,10 @@
 "use client"
 
-import { useMemo } from "react"
 import { useSettledGraphQL } from "@/hooks/connection-wizard"
 import type { Settled } from "@/hooks/connection-wizard"
 import { useConnectionsRefresh } from "@/hooks/connections"
-import { useMutateRunCsvImportSwr, useMutateRunDocumentImportSwr } from "@/hooks/swr"
-import { queryPreviewCsvSource } from "@/modules/api/graphql/queries/query-preview-csv-source"
+import { useMutateRunCsvImportSwr, useMutateRunDocumentImportSwr, useQueryPreviewCsvSourceSwr } from "@/hooks/swr"
+import { useMemo } from "react"
 import { parseMapping, uploadedFileOf } from "./csv-import-wizard.shared"
 import type { CsvImportResult, CsvMapping, CsvPreview } from "./csv-import-wizard.shared"
 
@@ -61,6 +60,7 @@ const sourceInput = async (source: CsvSourceArg) => ({
 /** The import wizard's preview and import operations bound to the toast helper. */
 export const useCsvImportCommands = (): CsvImportCommands => {
     const settle = useSettledGraphQL()
+    const { trigger: previewSource } = useQueryPreviewCsvSourceSwr()
     const refresh = useConnectionsRefresh()
     const { trigger: triggerImport } = useMutateRunCsvImportSwr()
     const { trigger: triggerDocuments } = useMutateRunDocumentImportSwr()
@@ -68,9 +68,7 @@ export const useCsvImportCommands = (): CsvImportCommands => {
         () => ({
             preview: async (source) => {
                 const settled = await settle(async () => {
-                    const result = await queryPreviewCsvSource({ request: await sourceInput(source) })
-                    if (!result.data) throw new Error("previewCsvSource answered no data")
-                    return result.data.previewCsvSource
+                    return previewSource(await sourceInput(source))
                 })
                 if (settled.kind !== "ok") return settled
                 const { mapping, ...rest } = settled.value
@@ -103,6 +101,6 @@ export const useCsvImportCommands = (): CsvImportCommands => {
                 return settled
             },
         }),
-        [settle, refresh, triggerImport, triggerDocuments],
+        [settle, refresh, triggerImport, triggerDocuments, previewSource],
     )
 }

@@ -4,8 +4,8 @@ import { landingUrl } from "@/modules/config"
 export const AUTH_ROUTES = {
     login: "/login",
     signup: "/signup",
-    forgotPassword: "/forgot-password",
-    resetPassword: "/reset-password",
+    forgot: "/forgot-password",
+    reset: "/reset-password",
     workspaces: "/workspaces",
 } as const
 

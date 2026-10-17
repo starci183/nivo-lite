@@ -2,7 +2,7 @@
 
 import { useTranslations } from "next-intl"
 import { useTransition } from "react"
-import { useAuthActions } from "@/hooks/auth"
+import { authActionsOf } from "@/hooks/auth"
 import { useAcceptInvite, useInviteView } from "@/hooks/invite"
 import { navigation } from "@/modules/i18n"
 import { APP_ROUTES, loginPath } from "@/modules/routes"
@@ -18,7 +18,7 @@ type InviteOverviewProps = { readonly token: string }
 export const InviteOverview = (props: InviteOverviewProps) => {
     const t = useTranslations("invite")
     const router = navigation.useRouter()
-    const auth = useAuthActions()
+    const auth = authActionsOf()
     const view = useInviteView(props.token)
     const { accept, isAccepting } = useAcceptInvite()
     const [isSwitching, startSwitch] = useTransition()

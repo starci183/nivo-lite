@@ -1,3 +1,7 @@
+import type { useTranslations, useFormatter } from "next-intl"
+import type { useMember } from "@/hooks/member"
+import type { useIndividualPlan } from "@/hooks/billing"
+import type { useTeam, useInviteCommands, useCopyInviteLink } from "@/hooks/team"
 import { Badge, Button, EmptyNotice, ListItem, SurfaceListCard, Text } from "@starci/grammar/common"
 import { InviteLink } from "@/components/composites/InviteLink"
 import { TeamSection } from "@/components/composites/TeamSection"
@@ -126,3 +130,28 @@ export const TeamInvitesBase = (props: TeamInvitesBaseProps) => (
         </SurfaceListCard>
     </TeamSection>
 )
+
+/** State values and commands consumed by the connected surface. */
+export interface Shown {
+    readonly id: string
+    readonly email: string
+    readonly link: string
+    readonly isCopied: boolean
+}
+
+/** State values and commands consumed by the connected surface. */
+export type TeamInvitesControllerInput = {
+    readonly t: ReturnType<typeof useTranslations<"team">>
+    readonly format: ReturnType<typeof useFormatter>
+    readonly member: ReturnType<typeof useMember>
+    readonly isIndividual: ReturnType<typeof useIndividualPlan>
+    readonly isAllowed: boolean
+    readonly views: ReturnType<typeof useTeam>["views"]
+    readonly isLoading: ReturnType<typeof useTeam>["isLoading"]
+    readonly commands: ReturnType<typeof useInviteCommands>
+    readonly copyToClipboard: ReturnType<typeof useCopyInviteLink>
+    readonly busyId: string | undefined
+    readonly setBusyId: React.Dispatch<React.SetStateAction<string | undefined>>
+    readonly shown: Shown | undefined
+    readonly setShown: React.Dispatch<React.SetStateAction<Shown | undefined>>
+}

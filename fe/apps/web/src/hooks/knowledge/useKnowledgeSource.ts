@@ -1,7 +1,7 @@
 "use client"
 
 import { useMemo } from "react"
-import { isNotFoundFailure } from "@/modules/api"
+import { isNotFoundFailure } from "@/modules/failure"
 import { useQueryKnowledgeSourceSwr } from "@/hooks/swr"
 import { toDocumentPassage, toKnowledgeDocumentDetail } from "@/modules/documents"
 import type { DocumentPassage, KnowledgeDocumentDetail } from "@/modules/types"

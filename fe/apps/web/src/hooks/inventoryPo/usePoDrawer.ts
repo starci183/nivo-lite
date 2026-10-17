@@ -1,10 +1,10 @@
 "use client"
 
-import { useTranslations } from "next-intl"
 import { useDrawer, useInventoryFormat, useInventoryRun, useSay } from "@/hooks/inventory"
-import type { InventoryDecisions } from "@/hooks/inventory"
+import type { InventoryDecisions, DrawerControl } from "@/hooks/inventory"
 import type { InventoryCommandSet } from "@/hooks/inventoryCommands"
 import type { PoView, SupplierView } from "@/modules/types"
+import { useTranslations } from "next-intl"
 import { draftInputOf, poDrawerProps, receiveInputOf, startPoState, withLine } from "./inventoryPo.shared"
 import type { PoDrawerState } from "./inventoryPo.shared"
 
@@ -52,59 +52,74 @@ export const usePoDrawer = (
                       error: run.error,
                       notice: run.notice,
                   }),
-        on: {
-            supplier: (supplierId: string) => change((current) => ({ ...current, supplierId })),
-            expected: (expected: string) => change((current) => ({ ...current, expected })),
-            line: (index: number, field: "qty" | "cost", value: string) =>
-                change((current) =>
-                    current.po.status === "draft"
-                        ? { ...current, lines: withLine(current.lines, index, field, value) }
-                        : { ...current, received: withLine(current.received, index, field, value) },
-                ),
-            invoice: (invoiceNo: string) => change((current) => ({ ...current, invoiceNo })),
-            message: (message: string) => change((current) => ({ ...current, message })),
-            saveDraft: whenOpen((open) =>
-                run.exec(
-                    () => commands.updatePoDraft(draftInputOf(open)),
-                    () => t("poDraftSaved"),
-                ),
+        on: actionsOf(change, whenOpen, run, commands, t, decisions, done, receivedText, copy, drawer),
+    }
+}
+
+const actionsOf = (
+    change: (apply: (current: PoDrawerState) => PoDrawerState) => void,
+    whenOpen: (act: (open: PoDrawerState) => void) => () => void,
+    run: ReturnType<typeof useInventoryRun>,
+    commands: InventoryCommandSet<"updatePoDraft" | "requestSend" | "cancelPo" | "receivePo">,
+    t: ReturnType<typeof useTranslations<"workbenchInventory">>,
+    decisions: InventoryDecisions,
+    done: () => undefined,
+    receivedText: (status: string, changes: ReadonlyArray<string>, accounting: boolean) => string,
+    copy: (text: string) => Promise<void>,
+    drawer: DrawerControl<PoDrawerState>,
+) => {
+    return {
+        supplier: (supplierId: string) => change((current) => ({ ...current, supplierId })),
+        expected: (expected: string) => change((current) => ({ ...current, expected })),
+        line: (index: number, field: "qty" | "cost", value: string) =>
+            change((current) =>
+                current.po.status === "draft"
+                    ? { ...current, lines: withLine(current.lines, index, field, value) }
+                    : { ...current, received: withLine(current.received, index, field, value) },
             ),
-            sendForApproval: whenOpen((open) =>
-                run.exec(
-                    async () => {
-                        await commands.updatePoDraft(draftInputOf(open))
-                        return commands.requestSend(open.po.id, "order")
-                    },
-                    (result) => t(result.status === "done" ? "poSent" : "poSentForApproval"),
-                ),
+        invoice: (invoiceNo: string) => change((current) => ({ ...current, invoiceNo })),
+        message: (message: string) => change((current) => ({ ...current, message })),
+        saveDraft: whenOpen((open) =>
+            run.exec(
+                () => commands.updatePoDraft(draftInputOf(open)),
+                () => t("poDraftSaved"),
             ),
-            approve: whenOpen((open) => {
-                const workItemId = open.po.workItemId
-                if (workItemId === null) return
-                const edited = open.message.trim() === open.po.message.trim() ? null : open.message
-                run.exec(() => decisions.approve(workItemId, edited), done)
-            }),
-            reject: whenOpen((open) => {
-                const workItemId = open.po.workItemId
-                if (workItemId !== null) run.exec(() => decisions.reject(workItemId, t("rejectNote")), done)
-            }),
-            receive: whenOpen((open) =>
-                run.exec(
-                    () => commands.receivePo(receiveInputOf(open)),
-                    (result) => receivedText(result.status, result.priceChanges, result.handedToAccounting),
-                ),
+        ),
+        sendForApproval: whenOpen((open) =>
+            run.exec(
+                async () => {
+                    await commands.updatePoDraft(draftInputOf(open))
+                    return commands.requestSend(open.po.id, "order")
+                },
+                (result) => t(result.status === "done" ? "poSent" : "poSentForApproval"),
             ),
-            remind: whenOpen((open) =>
-                run.exec(
-                    () => commands.requestSend(open.po.id, "reminder"),
-                    () => t("poReminded"),
-                ),
+        ),
+        approve: whenOpen((open) => {
+            const workItemId = open.po.workItemId
+            if (workItemId === null) return
+            const edited = open.message.trim() === open.po.message.trim() ? null : open.message
+            run.exec(() => decisions.approve(workItemId, edited), done)
+        }),
+        reject: whenOpen((open) => {
+            const workItemId = open.po.workItemId
+            if (workItemId !== null) run.exec(() => decisions.reject(workItemId, t("rejectNote")), done)
+        }),
+        receive: whenOpen((open) =>
+            run.exec(
+                () => commands.receivePo(receiveInputOf(open)),
+                (result) => receivedText(result.status, result.priceChanges, result.handedToAccounting),
             ),
-            copy: whenOpen((open) => {
-                void copy(open.po.message)
-            }),
-            cancel: whenOpen((open) => run.exec(() => commands.cancelPo(open.po.id), done)),
-            close: drawer.close,
-        },
+        ),
+        remind: whenOpen((open) =>
+            run.exec(
+                () => commands.requestSend(open.po.id, "reminder"),
+                () => t("poReminded"),
+            ),
+        ),
+        copy: whenOpen((open) => {
+            void copy(open.po.message)
+        }),
+        cancel: whenOpen((open) => run.exec(() => commands.cancelPo(open.po.id), done)),
+        close: drawer.close,
     }
 }

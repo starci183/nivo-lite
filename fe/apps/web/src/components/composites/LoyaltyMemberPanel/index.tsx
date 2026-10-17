@@ -63,65 +63,71 @@ export const LoyaltyMemberPanel = (props: LoyaltyMemberPanelProps) => {
             </SurfaceCard>
         )
     }
-    return (
-        <div className={STACK_CLASS_NAME}>
-            <SurfaceCard
-                label={view.name}
-                headingLevel={2}
-                labelEnd={
-                    <Button variant="ghost" size="sm" onPress={props.onClose}>
-                        {view.closeLabel}
-                    </Button>
-                }
-            >
-                <div className={BODY_CLASS_NAME}>
-                    <div className={CHIPS_CLASS_NAME}>
-                        {view.tier === undefined ? null : <Badge tone={view.tier.tone}>{view.tier.name}</Badge>}
-                        <Text as="span" size="md" weight="semibold">
-                            {view.points}
-                        </Text>
-                    </div>
-                    <Text size="sm" tone="muted">
-                        {view.contact}
-                    </Text>
-                    <Text size="sm">{view.spentLine}</Text>
-                    <Text size="sm" tone="muted">
-                        {view.joinedLine}
-                    </Text>
-                    <Text size="sm">{view.nextTierLine}</Text>
-                    {view.expiringLine === undefined ? null : (
-                        <Text size="sm" weight="medium">
-                            {view.expiringLine}
-                        </Text>
-                    )}
-                </div>
-            </SurfaceCard>
-            <SurfaceCard label={view.editTitle} headingLevel={3}>
-                <div className={BODY_CLASS_NAME}>
-                    {view.edit === undefined ? null : <LoyaltyMemberEditForm {...view.edit} />}
-                    {view.readOnly === undefined ? null : (
-                        <>
-                            <DescriptionList layout="columns" items={[...view.readOnly.items]} />
-                            <Text size="xs" tone="muted">
-                                {view.readOnly.note}
-                            </Text>
-                        </>
-                    )}
-                </div>
-            </SurfaceCard>
-            <SurfaceCard label={view.adjustTitle} headingLevel={3}>
-                <div className={BODY_CLASS_NAME}>
-                    <Text size="sm" tone="muted">
-                        {view.adjustBody}
-                    </Text>
-                    <LoyaltyMemberAdjustForm {...view.adjust} />
-                </div>
-            </SurfaceCard>
-            <LoyaltyRewardOptions {...view.rewards} />
-            <LoyaltyLedger {...view.ledger} />
-            <Text size="xs" tone="muted">
-                {view.asOf}
-            </Text>
-        </div>
-    )
+    return renderLoyaltyMemberPanelMember(view, props)
 }
+
+/** Renders the LoyaltyMemberPanel member section. */
+const renderLoyaltyMemberPanelMember = (
+    view: NonNullable<LoyaltyMemberPanelProps["view"]>,
+    props: LoyaltyMemberPanelProps,
+) => (
+    <div className={STACK_CLASS_NAME}>
+        <SurfaceCard
+            label={view.name}
+            headingLevel={2}
+            labelEnd={
+                <Button variant="ghost" size="sm" onPress={props.onClose}>
+                    {view.closeLabel}
+                </Button>
+            }
+        >
+            <div className={BODY_CLASS_NAME}>
+                <div className={CHIPS_CLASS_NAME}>
+                    {view.tier === undefined ? null : <Badge tone={view.tier.tone}>{view.tier.name}</Badge>}
+                    <Text as="span" size="md" weight="semibold">
+                        {view.points}
+                    </Text>
+                </div>
+                <Text size="sm" tone="muted">
+                    {view.contact}
+                </Text>
+                <Text size="sm">{view.spentLine}</Text>
+                <Text size="sm" tone="muted">
+                    {view.joinedLine}
+                </Text>
+                <Text size="sm">{view.nextTierLine}</Text>
+                {view.expiringLine === undefined ? null : (
+                    <Text size="sm" weight="medium">
+                        {view.expiringLine}
+                    </Text>
+                )}
+            </div>
+        </SurfaceCard>
+        <SurfaceCard label={view.editTitle} headingLevel={3}>
+            <div className={BODY_CLASS_NAME}>
+                {view.edit === undefined ? null : <LoyaltyMemberEditForm {...view.edit} />}
+                {view.readOnly === undefined ? null : (
+                    <>
+                        <DescriptionList layout="columns" items={[...view.readOnly.items]} />
+                        <Text size="xs" tone="muted">
+                            {view.readOnly.note}
+                        </Text>
+                    </>
+                )}
+            </div>
+        </SurfaceCard>
+        <SurfaceCard label={view.adjustTitle} headingLevel={3}>
+            <div className={BODY_CLASS_NAME}>
+                <Text size="sm" tone="muted">
+                    {view.adjustBody}
+                </Text>
+                <LoyaltyMemberAdjustForm {...view.adjust} />
+            </div>
+        </SurfaceCard>
+        <LoyaltyRewardOptions {...view.rewards} />
+        <LoyaltyLedger {...view.ledger} />
+        <Text size="xs" tone="muted">
+            {view.asOf}
+        </Text>
+    </div>
+)

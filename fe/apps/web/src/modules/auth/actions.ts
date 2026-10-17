@@ -82,7 +82,7 @@ export const requestPasswordReset = async (input: unknown): Promise<GraphQLRespo
     const parsed = parseEmailRequest(input)
     if (parsed === undefined) return authFailure("invalid", "email")
     const { error } = await authClient().auth.resetPasswordForEmail(parsed.email, {
-        redirectTo: confirmUrl(window.location.origin, AUTH_ROUTES.resetPassword),
+        redirectTo: confirmUrl(window.location.origin, AUTH_ROUTES.reset),
     })
     const failed = failureOf(error)
     return failed !== undefined && isRateLimited(failed.error ?? "") ? failed : authOk(true)

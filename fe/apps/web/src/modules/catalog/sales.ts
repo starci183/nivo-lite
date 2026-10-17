@@ -5,7 +5,7 @@ export const SALES = {
     key: "sales",
     order: 20,
     icon: "cart",
-    glyph: "M4 17l5-5 4 4 7-8M15 8h5v5",
+    glyph: "moduleSales",
     mascot: "/images/promo/mascot-point.png",
     category: "sales_customer",
     status: "stable",

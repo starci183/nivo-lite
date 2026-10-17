@@ -110,27 +110,7 @@ export const ChatbotSidePanel = (props: ChatbotSidePanelProps) => {
             {escalation === null ? null : (
                 <ChatbotEscalationForm {...escalation} onDraft={props.onEscalationDraft} onAnswer={props.onAnswer} />
             )}
-            <Region label={handling.title}>
-                <div className={SIDE_SECTION_CLASS_NAME}>
-                    <SectionHeader level={3} title={handling.title} />
-                    <Text size="sm">{handling.text}</Text>
-                    <div className={ACTIONS_CLASS_NAME}>
-                        <Button
-                            variant="outline"
-                            isPending={handling.isBusy}
-                            isDisabled={handling.isBusy}
-                            onPress={props.onToggleHandling}
-                        >
-                            {handling.buttonLabel}
-                        </Button>
-                    </div>
-                    {handling.hint === null ? null : (
-                        <Text size="xs" tone="muted">
-                            {handling.hint}
-                        </Text>
-                    )}
-                </div>
-            </Region>
+            {renderChatbotSidePanelHandling(handling, props)}
             <Region label={props.leadTitle}>
                 <div className={SIDE_SECTION_CLASS_NAME}>
                     <SectionHeader level={3} title={props.leadTitle} />
@@ -154,3 +134,31 @@ export const ChatbotSidePanel = (props: ChatbotSidePanelProps) => {
         </>
     )
 }
+
+/** Renders the ChatbotSidePanel handling section. */
+const renderChatbotSidePanelHandling = (
+    handling: NonNullable<ChatbotSidePanelProps["handling"]>,
+    props: ChatbotSidePanelProps,
+) => (
+    <Region label={handling.title}>
+        <div className={SIDE_SECTION_CLASS_NAME}>
+            <SectionHeader level={3} title={handling.title} />
+            <Text size="sm">{handling.text}</Text>
+            <div className={ACTIONS_CLASS_NAME}>
+                <Button
+                    variant="outline"
+                    isPending={handling.isBusy}
+                    isDisabled={handling.isBusy}
+                    onPress={props.onToggleHandling}
+                >
+                    {handling.buttonLabel}
+                </Button>
+            </div>
+            {handling.hint === null ? null : (
+                <Text size="xs" tone="muted">
+                    {handling.hint}
+                </Text>
+            )}
+        </div>
+    </Region>
+)

@@ -8,12 +8,9 @@ import { useSalesDecisionForm } from "@/hooks/rhf"
 import { ageParts, decisionAnchor, isStale, KNOWN_FIELDS, OUTCOME_TONES, useSalesActions } from "@/hooks/sales"
 import { editsOf, fieldKey } from "@/hooks/salesdecisions"
 import { useSalesWorkbench } from "@/hooks/salesworkbench"
-import type { FlowDecisionRow } from "@/modules/types"
-import { leadPath } from "@/modules/routes"
-import type { SalesDecision } from "@/modules/types"
-import { SalesDecisionsBase } from "./component"
-import type { DecidedView } from "./component"
-import type { DecisionRowView } from "@/components/composites/SalesDecisionRow"
+
+import { SalesDecisionsBase, pendingSalesRow, decidedSalesRow } from "./component"
+import type { SalesDecisionsControllerInput, SalesDecisionVocabulary } from "./component"
 
 /** The decision to highlight. */
 interface SalesDecisionsProps {
@@ -23,26 +20,19 @@ interface SalesDecisionsProps {
 
 type Decision = "approved" | "rejected"
 
-/** The decisions surface: the typed values, the edit toggles and the decisions themselves live here, the drawing in the pure half. */
-export const SalesDecisions = (props: SalesDecisionsProps) => {
-    const t = useTranslations("workbenchSales")
-    const g = useTranslations("governance")
-    const format = useFormatter()
-    const me = useMember()
-    const actions = useSalesActions()
-    const { data, nowIso } = useSalesWorkbench()
-    const pending = data?.decisions ?? []
-    const decided = data?.decided ?? []
-    const decisionForm = useSalesDecisionForm()
-    const [busy, setBusy] = useState<{ readonly id: string; readonly decision: Decision } | null>(null)
-    const { typed } = decisionForm
-    const [errors, setErrors] = useState<Readonly<Record<string, string>>>({})
-    const active = actions.isMutating ? busy : null
+const decisionVocabulary: SalesDecisionVocabulary = {
+    ageParts,
+    decisionAnchor,
+    isStale,
+    canDecideItem,
+    fieldKey,
+    splitBasis,
+    outcomeTones: OUTCOME_TONES,
+}
 
-    useEffect(() => {
-        if (props.focusId === null) return
-        document.getElementById(decisionAnchor(props.focusId))?.scrollIntoView({ block: "center", behavior: "smooth" })
-    }, [props.focusId])
+/** The decisions surface: the typed values, the edit toggles and the decisions themselves live here, the drawing in the pure half. */
+const createSalesDecisionsState = (input: SalesDecisionsControllerInput) => {
+    const { t, g, actions, pending, decisionForm, setBusy, typed, setErrors } = input
 
     const fieldLabel = (name: string): string =>
         KNOWN_FIELDS.some((known) => known === name) ? g(`field_${name}`) : name
@@ -81,75 +71,48 @@ export const SalesDecisions = (props: SalesDecisionsProps) => {
             setBusy(null)
         }
     }
+    return { ...input, fieldLabel, decide }
+}
 
-    const amountLineOf = (item: SalesDecision, isEditing: boolean): string | null => {
-        if (!item.hasAmount || item.missing.includes("amount_vnd") || isEditing) return null
-        if (item.amountVnd === null) return "—"
-        return format.number(item.amountVnd, { style: "currency", currency: "VND", maximumFractionDigits: 0 })
-    }
-    const rowOf = (item: SalesDecision): DecisionRowView => {
-        const isEditing = typed.editing[item.id] ?? false
-        const age = ageParts(item.createdAt, nowIso)
-        const amountMissing = item.missing.includes("amount_vnd")
-        const isIncomplete = item.missing.some((name) => !(typed.values[fieldKey(item.id, name)] ?? "").trim())
-        const mine = active?.id === item.id ? active.decision : null
-        return {
-            id: item.id,
-            anchor: decisionAnchor(item.id),
-            isFocused: props.focusId === item.id,
-            badge: item.reason ? g(`reason_${item.reason}`) : t("kind_decision"),
-            age: age.unit === "now" ? t("ageNow") : t(`age_${age.unit}`, { n: age.n }),
-            isStale: isStale(item.createdAt, nowIso),
-            customer: item.customer,
-            leadHref: item.leadId === null ? null : leadPath(item.leadId),
-            actionLabel: item.action === "follow_up" ? g("action_send_follow_up") : g(`action_${item.action}`),
-            summary: item.summary,
-            reasonHint: item.reason && item.reason !== "routine" ? g(`reasonHint_${item.reason}`) : null,
-            amountLine: amountLineOf(item, isEditing),
-            draft: item.draft && !isEditing ? item.draft : null,
-            canAct: canDecideItem(me, item.assignedStaffId),
-            assignedTo: item.assignedStaffName ? t("assignedTo", { name: item.assignedStaffName }) : null,
-            missing: item.missing.map((name) => ({
-                name,
-                label: fieldLabel(name),
-                value: typed.values[fieldKey(item.id, name)] ?? "",
-            })),
-            isEditing,
-            draftValue: typed.drafts[item.id] ?? item.draft,
-            showDraftField: isEditing && item.draft !== "",
-            amountValue: typed.amounts[item.id] ?? (item.amountVnd !== null ? String(item.amountVnd) : ""),
-            showAmountField: isEditing && item.hasAmount && !amountMissing,
-            canEdit: item.draft !== "" || item.hasAmount,
-            isBusy: actions.isMutating,
-            isApproveBusy: mine === "approved",
-            isRejectBusy: mine === "rejected",
-            isApproveDisabled: actions.isMutating || isIncomplete,
-            editLabel: isEditing ? t("editDone") : t("edit"),
-            error: errors[item.id] ? errors[item.id] : null,
-        }
-    }
-    const decidedOf = (row: FlowDecisionRow): DecidedView => {
-        const { basis, rest } = splitBasis(row.note)
-        return {
-            id: row.id,
-            action: g(`action_${row.action}`),
-            outcomeLabel: g(`outcome_${row.outcome}`),
-            outcomeTone: OUTCOME_TONES[row.outcome],
-            customer: row.lead_id ? (row.leadName ?? t("openCustomer")) : "",
-            href: row.lead_id ? leadPath(row.lead_id) : null,
-            byline: t("decidedBy", {
-                who: row.decider_kind === "policy" ? g("decider_policy") : row.decided_by,
-                time: format.dateTime(new Date(row.created_at), {
-                    day: "2-digit",
-                    month: "2-digit",
-                    hour: "2-digit",
-                    minute: "2-digit",
-                }),
-            }),
-            basis: basis ? t("basis", { basis }) : null,
-            rest: rest || null,
-        }
-    }
+/** Shows pending decisions and the completed decision history. */
+export const SalesDecisions = (props: SalesDecisionsProps) => {
+    const t = useTranslations("workbenchSales")
+    const g = useTranslations("governance")
+    const format = useFormatter()
+    const me = useMember()
+    const actions = useSalesActions()
+    const { data, nowIso } = useSalesWorkbench()
+    const pending = data?.decisions ?? []
+    const decided = data?.decided ?? []
+    const decisionForm = useSalesDecisionForm()
+    const [busy, setBusy] = useState<{ readonly id: string; readonly decision: Decision } | null>(null)
+    const { typed } = decisionForm
+    const [errors, setErrors] = useState<Readonly<Record<string, string>>>({})
+    const active = actions.isMutating ? busy : null
+
+    useEffect(() => {
+        if (props.focusId === null) return
+        document.getElementById(decisionAnchor(props.focusId))?.scrollIntoView({ block: "center", behavior: "smooth" })
+    }, [props.focusId])
+    const context = createSalesDecisionsState({
+        props,
+        t,
+        g,
+        format,
+        me,
+        actions,
+        data,
+        nowIso,
+        pending,
+        decided,
+        decisionForm,
+        busy,
+        setBusy,
+        typed,
+        errors,
+        setErrors,
+        active,
+    })
 
     if (data === null) return null
     return (
@@ -162,8 +125,8 @@ export const SalesDecisions = (props: SalesDecisionsProps) => {
                 decidedBody: t("decidedBody"),
                 decidedEmptyTitle: t("decidedEmptyTitle"),
                 decidedEmptyBody: t("decidedEmptyBody"),
-                pending: pending.map(rowOf),
-                decided: decided.map(decidedOf),
+                pending: pending.map((item) => pendingSalesRow(item, context, decisionVocabulary)),
+                decided: decided.map((row) => decidedSalesRow(row, context, decisionVocabulary)),
                 rowLabels: {
                     draftLabel: t("draftLabel"),
                     waitingManager: t("waitingManager"),
@@ -177,7 +140,7 @@ export const SalesDecisions = (props: SalesDecisionsProps) => {
                 draft: decisionForm.draft,
                 amount: decisionForm.amount,
                 toggleEdit: decisionForm.toggleEdit,
-                decide,
+                decide: context.decide,
             }}
         />
     )

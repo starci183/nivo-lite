@@ -1,3 +1,5 @@
+import { nivoIconSource } from "@/components/leaves/Icon"
+import type { ModuleIconName } from "@/modules/types"
 import { Button, Input, SurfaceCard, Text } from "@starci/grammar/common"
 import { AgentMark } from "../../leaves/AgentMark"
 import { ACTIONS, GROW, ROW, STACK } from "./classNames"
@@ -6,7 +8,7 @@ import { ACTIONS, GROW, ROW, STACK } from "./classNames"
 export interface AgentIdentityCardBaseProps {
     readonly props: {
         readonly title: string
-        readonly glyph: string
+        readonly glyph: ModuleIconName
         readonly module: string
         readonly markLabel: string
         readonly nameLabel: string
@@ -29,7 +31,7 @@ export const AgentIdentityCardBase = (props: AgentIdentityCardBaseProps) => (
         <div className={STACK}>
             <div className={ROW}>
                 <AgentMark
-                    glyph={props.props.glyph}
+                    glyph={nivoIconSource(props.props.glyph, "leading")}
                     module={props.props.module}
                     label={props.props.markLabel}
                     size="lg"

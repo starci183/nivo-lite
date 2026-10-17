@@ -1,5 +1,6 @@
 "use client"
 
+import { workspaceArgumentKey } from "@/hooks/workspaceread"
 import useSWR from "swr"
 import { queryBillingReviewTransactions } from "@/modules/api/graphql/queries/query-billing-review-transactions"
 
@@ -12,9 +13,7 @@ export const useQueryBillingReviewTransactionsSwr = (
     orderIds: ReadonlyArray<string> | undefined,
 ) =>
     useSWR(
-        workspaceId === undefined || orderIds === undefined
-            ? null
-            : ([QUERY_BILLING_REVIEW_TRANSACTIONS_SWR_KEY, workspaceId, orderIds] as const),
+        workspaceArgumentKey(QUERY_BILLING_REVIEW_TRANSACTIONS_SWR_KEY, workspaceId, orderIds),
         async ([, , requestedOrderIds]) => {
             const result = await queryBillingReviewTransactions({ request: { orderIds: [...requestedOrderIds] } })
             if (!result.data) throw new Error("billingReviewTransactions answered no data")

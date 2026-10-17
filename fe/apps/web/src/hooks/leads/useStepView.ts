@@ -1,5 +1,6 @@
 "use client"
 
+import type { ModuleIconName } from "@/modules/types"
 import type { BadgeTone } from "@starci/grammar/common"
 import { useFormatter, useTranslations } from "next-intl"
 import { MODULE_REGISTRY } from "@/modules/catalog"
@@ -17,8 +18,8 @@ export interface CurrentStepView {
     readonly due: { readonly date: string; readonly relative: string; readonly isOverdue: boolean } | null
     readonly isDone: boolean
     readonly isAgent: boolean
-    /** The glyph of the agent mark; empty for a person. */
-    readonly agentGlyph: string
+    /** The semantic Icon name used when the owner is an agent. */
+    readonly agentGlyph: ModuleIconName
 }
 
 /** Words one step of a lead: its status, its owner and how far its due date is, in the reader language. */
@@ -47,11 +48,11 @@ export const useStepView = (agents: ReadonlyArray<AgentRecord>): ((step: Respons
             statusTone: STATUS_TONES[step.status],
             nextAction: step.next_action,
             ownerName: ownerNameOf(step),
-            ownerKindText: `${isAgent ? t("aiAgent") : t("human")} · ${t("accountable")}`,
+            ownerKindText: `${isAgent ? t("aiAgent") : t("human")} \u00b7 ${t("accountable")}`,
             due: dueOf(step.due_at),
             isDone: step.status === "done",
             isAgent,
-            agentGlyph: isAgent ? MODULE_REGISTRY.chatbot.glyph : "",
+            agentGlyph: MODULE_REGISTRY.chatbot.glyph,
         }
     }
 }

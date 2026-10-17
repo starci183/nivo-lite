@@ -73,43 +73,52 @@ export const ContentEditorPublish = (props: ContentEditorPublishProps) => (
                                 {step.doneText}
                             </Text>
                         )}
-                        {step.doneText === null && props.canManage ? (
-                            <>
-                                <Input
-                                    id={`ce-url-${step.channel}`}
-                                    name={`url-${step.channel}`}
-                                    label={props.t("postedLink")}
-                                    variant="secondary"
-                                    value={proof?.url ?? ""}
-                                    hint={props.t("postedLinkHint")}
-                                    isDisabled={props.isPending}
-                                    onValueChange={(v) => props.onProof(step.channel, { url: v })}
-                                />
-                                <Input
-                                    id={`ce-how-${step.channel}`}
-                                    name={`how-${step.channel}`}
-                                    label={props.t("postedHow")}
-                                    variant="secondary"
-                                    value={proof?.how ?? ""}
-                                    isDisabled={props.isPending}
-                                    onValueChange={(v) => props.onProof(step.channel, { how: v })}
-                                />
-                                <div>
-                                    <Button
-                                        variant="primary"
-                                        size="sm"
-                                        isPending={props.busy === `posted-${step.channel}`}
-                                        isDisabled={props.isPending}
-                                        onPress={() => props.onMark(step.channel)}
-                                    >
-                                        {props.t("markPosted")}
-                                    </Button>
-                                </div>
-                            </>
-                        ) : null}
+                        {step.doneText === null && props.canManage
+                            ? renderContentEditorPublishProofFields(step, props, proof)
+                            : null}
                     </div>
                 </SurfaceCard>
             )
         })}
+    </>
+)
+
+/** Renders the ContentEditorPublish proof fields section. */
+const renderContentEditorPublishProofFields = (
+    step: Pick<PublishStep, "channel">,
+    props: ContentEditorPublishProps,
+    proof: PublishProof | undefined,
+) => (
+    <>
+        <Input
+            id={`ce-url-${step.channel}`}
+            name={`url-${step.channel}`}
+            label={props.t("postedLink")}
+            variant="secondary"
+            value={proof?.url ?? ""}
+            hint={props.t("postedLinkHint")}
+            isDisabled={props.isPending}
+            onValueChange={(v) => props.onProof(step.channel, { url: v })}
+        />
+        <Input
+            id={`ce-how-${step.channel}`}
+            name={`how-${step.channel}`}
+            label={props.t("postedHow")}
+            variant="secondary"
+            value={proof?.how ?? ""}
+            isDisabled={props.isPending}
+            onValueChange={(v) => props.onProof(step.channel, { how: v })}
+        />
+        <div>
+            <Button
+                variant="primary"
+                size="sm"
+                isPending={props.busy === `posted-${step.channel}`}
+                isDisabled={props.isPending}
+                onPress={() => props.onMark(step.channel)}
+            >
+                {props.t("markPosted")}
+            </Button>
+        </div>
     </>
 )

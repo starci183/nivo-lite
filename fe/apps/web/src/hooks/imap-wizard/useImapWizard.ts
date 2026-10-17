@@ -1,12 +1,14 @@
 "use client"
 
-import { useEffect, useReducer, useRef, useTransition } from "react"
+import { accountOf, requestOf, stateOf, IMAP_PRESETS, IMAP_STEPS, defaultPort, securityOf } from "./imap-wizard.shared"
+import type { ImapPresetId, ImapSecurity } from "./imap-wizard.shared"
 import { useSetConnectionAgents, useSyncNow } from "@/hooks/connections"
+import type { AgentWish } from "@/hooks/connections"
 import { useImapAccountForm } from "@/hooks/rhf"
-import type { ImapAccountValues } from "@/hooks/rhf"
-import { IMAP_PRESETS, IMAP_STEPS, defaultPort, presetOfHost, securityOf } from "./imap-wizard.shared"
-import type { ImapMailbox, ImapPresetId, ImapSecurity } from "./imap-wizard.shared"
+import { useEffect, useReducer, useRef, useTransition } from "react"
+import type { Settled } from "../connection-wizard"
 import { useImapCommands } from "./useImapCommands"
+import type { ImapCommands } from "./useImapCommands"
 import { useImapMailbox } from "./useImapMailbox"
 
 /** What the mailbox wizard needs from its drawer. */
@@ -18,7 +20,7 @@ interface ImapWizardInput {
 }
 
 /** The wizard's own state, besides the account form. */
-interface ImapWizardState {
+export interface ImapWizardState {
     readonly index: number
     readonly savedId: string | null
     readonly preset: ImapPresetId
@@ -32,32 +34,6 @@ interface ImapWizardState {
 }
 
 type TextField = "name" | "email" | "host" | "port" | "user" | "password"
-
-const stateOf = (mailbox: ImapMailbox | undefined): ImapWizardState => ({
-    index: 0,
-    savedId: mailbox === undefined ? null : mailbox.id,
-    preset: mailbox === undefined ? "gmail" : presetOfHost(mailbox.host),
-    folderList: mailbox === undefined ? [] : mailbox.folders,
-    tested: null,
-    folders: mailbox === undefined ? ["INBOX"] : mailbox.folders,
-    sinceDays: mailbox === undefined ? 30 : mailbox.sinceDays,
-    every: mailbox === undefined ? 60 : mailbox.syncEveryMinutes,
-    agentIds: mailbox === undefined ? [] : mailbox.agentIds,
-    error: null,
-})
-
-const accountOf = (mailbox: ImapMailbox | undefined): ImapAccountValues | undefined =>
-    mailbox === undefined
-        ? undefined
-        : {
-              name: mailbox.name,
-              email: mailbox.email,
-              host: mailbox.host,
-              port: String(mailbox.port),
-              security: mailbox.security,
-              user: mailbox.user,
-              password: "",
-          }
 
 const merge = (state: ImapWizardState, patch: Partial<ImapWizardState>): ImapWizardState => ({ ...state, ...patch })
 
@@ -87,17 +63,74 @@ export const useImapWizard = ({ resumeId, onClose }: ImapWizardInput) => {
 
     const user = values.user.trim() || values.email.trim()
     const stamp = `${values.host}|${values.port}|${values.security}|${user}|${values.password}`
-    const request = () => ({
-        ...(state.savedId === null ? {} : { connectionId: state.savedId }),
-        name: values.name.trim(),
-        email: values.email.trim(),
-        host: values.host,
-        port: Number(values.port),
-        security: values.security,
-        user,
-        password: values.password,
-    })
+    const request = requestOf(state, values, user)
 
+    const { go, setField, pickPreset, pickSecurity, check, save, finish } = createImapWizardActions(
+        patch,
+        form,
+        startTransition,
+        commands,
+        request,
+        stamp,
+        state,
+        onClose,
+        setConnectionAgents,
+        startSync,
+    )
+
+    return {
+        loading,
+        loadError,
+        step: IMAP_STEPS[state.index] ?? "account",
+        index: state.index,
+        savedId: state.savedId,
+        preset: state.preset,
+        folderList: state.folderList,
+        folders: state.folders,
+        sinceDays: state.sinceDays,
+        every: state.every,
+        agentIds: state.agentIds,
+        error: state.error,
+        values,
+        isPending,
+        isTested: state.tested === stamp,
+        wasTested: state.tested !== null,
+        ready: form.formState.isValid,
+        go,
+        setField,
+        pickPreset,
+        pickSecurity,
+        setFolders: (folders: ReadonlyArray<string>) => patch({ folders }),
+        setSinceDays: (sinceDays: number) => patch({ sinceDays }),
+        setEvery: (every: number | null) => patch({ every }),
+        setAgentIds: (agentIds: ReadonlyArray<string>) => patch({ agentIds }),
+        check,
+        save,
+        finish,
+    }
+}
+
+const createImapWizardActions = (
+    patch: import("react").Dispatch<Parameters<typeof merge>[1]>,
+    form: ReturnType<typeof useImapAccountForm>,
+    startTransition: import("react").TransitionStartFunction,
+    commands: ImapCommands,
+    request: () => {
+        name: string
+        email: string
+        host: string
+        port: number
+        security: "tls" | "starttls"
+        user: string
+        password: string
+        connectionId?: string | undefined
+    },
+    stamp: string,
+    state: ImapWizardState,
+    onClose: (changed: boolean) => void,
+    setConnectionAgents: (connectionId: string, wanted: ReadonlyArray<AgentWish>) => Promise<Settled<true>>,
+    startSync: (connectionId: string) => Promise<void>,
+) => {
     const setField = (key: TextField) => (value: string) => {
         patch({ tested: null })
         form.setValue(key, value, { shouldValidate: true, shouldDirty: true })
@@ -157,35 +190,5 @@ export const useImapWizard = ({ resumeId, onClose }: ImapWizardInput) => {
             onClose(true)
         })
     }
-
-    return {
-        loading,
-        loadError,
-        step: IMAP_STEPS[state.index] ?? "account",
-        index: state.index,
-        savedId: state.savedId,
-        preset: state.preset,
-        folderList: state.folderList,
-        folders: state.folders,
-        sinceDays: state.sinceDays,
-        every: state.every,
-        agentIds: state.agentIds,
-        error: state.error,
-        values,
-        isPending,
-        isTested: state.tested === stamp,
-        wasTested: state.tested !== null,
-        ready: form.formState.isValid,
-        go,
-        setField,
-        pickPreset,
-        pickSecurity,
-        setFolders: (folders: ReadonlyArray<string>) => patch({ folders }),
-        setSinceDays: (sinceDays: number) => patch({ sinceDays }),
-        setEvery: (every: number | null) => patch({ every }),
-        setAgentIds: (agentIds: ReadonlyArray<string>) => patch({ agentIds }),
-        check,
-        save,
-        finish,
-    }
+    return { go, setField, pickPreset, pickSecurity, check, save, finish }
 }

@@ -11,7 +11,9 @@ const HERO_ROWS = [
 
 /** The landing hero with its copy resolved on the server. */
 export const LandingHero = async () => {
-    const [t, locale] = await Promise.all([getTranslations("landing"), getLocale()])
+    const t = await getTranslations("landing")
+
+    const locale = await getLocale()
     return (
         <LandingHeroBase
             props={{

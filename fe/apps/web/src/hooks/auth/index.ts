@@ -10,6 +10,6 @@ export {
     strengthKey,
 } from "./auth.shared"
 export { useResendEmail } from "./useResendEmail"
-export { useAuthUser } from "./useAuthUser"
+export { useQueryAuthUserSwr } from "@/hooks/swr"
 export { useRedirectWhenSignedIn } from "./useRedirectWhenSignedIn"
-export { useAuthActions } from "./useAuthActions"
+export { authActionsOf } from "@/modules/auth-actions"

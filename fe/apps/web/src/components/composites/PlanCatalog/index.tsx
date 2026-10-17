@@ -96,16 +96,7 @@ export const PlanCatalog = (props: PlanCatalogProps) => {
                         {group.cards.map((card) => (
                             <SurfaceCard key={card.id} label={card.name} headingLevel={4} isHighlight={card.isCurrent}>
                                 <div className={CARD_CLASS_NAME}>
-                                    <div className={PRICE_CLASS_NAME}>
-                                        <Text size="metric-lead" weight="semibold" isSkeleton={card.isPriceLoading}>
-                                            {card.price}
-                                        </Text>
-                                        {card.notes.map((note) => (
-                                            <Text key={note} size="sm" tone="muted">
-                                                {note}
-                                            </Text>
-                                        ))}
-                                    </div>
+                                    {renderPlanCatalogPrice(card)}
                                     {card.badges.length > 0 ? (
                                         <div className={BADGES_CLASS_NAME}>
                                             {card.badges.map((badge) => (
@@ -144,29 +135,9 @@ export const PlanCatalog = (props: PlanCatalogProps) => {
                                             </Text>
                                         ))}
                                     </div>
-                                    {card.action.kind === "contact" ? (
-                                        <div>
-                                            <Button
-                                                variant="secondary"
-                                                href={card.action.href}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                            >
-                                                {card.action.label}
-                                            </Button>
-                                        </div>
-                                    ) : (
-                                        <div>
-                                            <Button
-                                                variant="primary"
-                                                isPending={card.action.isPending}
-                                                isDisabled={card.action.isDisabled}
-                                                onPress={() => props.on.choose(card.id)}
-                                            >
-                                                {card.action.label}
-                                            </Button>
-                                        </div>
-                                    )}
+                                    {card.action.kind === "contact"
+                                        ? renderPlanCatalogContactAction(card)
+                                        : renderPlanCatalogCheckoutAction(card, props)}
                                 </div>
                             </SurfaceCard>
                         ))}
@@ -176,3 +147,40 @@ export const PlanCatalog = (props: PlanCatalogProps) => {
         </div>
     )
 }
+
+/** Renders the PlanCatalog price section. */
+const renderPlanCatalogPrice = (card: Pick<PlanCardView, "isPriceLoading" | "price" | "notes">) => (
+    <div className={PRICE_CLASS_NAME}>
+        <Text size="metric-lead" weight="semibold" isSkeleton={card.isPriceLoading}>
+            {card.price}
+        </Text>
+        {card.notes.map((note) => (
+            <Text key={note} size="sm" tone="muted">
+                {note}
+            </Text>
+        ))}
+    </div>
+)
+
+/** Renders the PlanCatalog contact action section. */
+const renderPlanCatalogContactAction = (card: Pick<PlanCardView, "action">) => (
+    <div>
+        <Button variant="secondary" href={card.action.href} target="_blank" rel="noopener noreferrer">
+            {card.action.label}
+        </Button>
+    </div>
+)
+
+/** Renders the PlanCatalog checkout action section. */
+const renderPlanCatalogCheckoutAction = (card: Pick<PlanCardView, "action" | "id">, props: PlanCatalogProps) => (
+    <div>
+        <Button
+            variant="primary"
+            isPending={card.action.isPending}
+            isDisabled={card.action.isDisabled}
+            onPress={() => props.on.choose(card.id)}
+        >
+            {card.action.label}
+        </Button>
+    </div>
+)
