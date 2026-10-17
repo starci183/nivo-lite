@@ -17,6 +17,20 @@
 schema: starci/application-stacks@1
 sources:
   - repository: nivo-lite
+# CI custody by consumer (one key, one class): GitHub Actions reads these names; values live only in GitHub (owner sets them with
+# starci app ci secret set / var set). App containers never read them; sealed members under .starcistacks/*/secrets hold app keys only.
+ci:
+  github: {repository: starci183/nivo-lite, defaultBranch: main, workflow: ci.yml}
+  secrets:
+    - {name: SONAR_TOKEN, scope: repository, purpose: sonar.starci.org project token of nivo-lite for the release-tag scan and quality gate}
+    - {name: CODECOV_TOKEN, scope: repository, purpose: Codecov upload token fallback; uploads authenticate with GitHub OIDC, optional: true}
+    - {name: SOPS_AGE_KEY, scope: environment, environment: production, purpose: age identity that decrypts the sealed members in the deploy and database workflows}
+    - {name: VPS_SSH_KEY, scope: environment, environment: production, purpose: CI deploy SSH private key for the swarm manager}
+    - {name: VPS_KNOWN_HOSTS, scope: environment, environment: production, purpose: pinned SSH host keys of the swarm manager}
+  vars:
+    - {name: SONAR_HOST_URL, scope: repository, value: https://sonar.starci.org, purpose: public Sonar server of the host}
+    - {name: VPS_HOST, scope: environment, environment: production, value: 103.142.27.9, purpose: swarm manager address}
+    - {name: VPS_USER, scope: environment, environment: production, value: nivo, purpose: swarm manager SSH user}
 components:
   nivo-api:
     role: service
@@ -491,11 +505,44 @@ services:
       - { repository: nivo-lite, key: nivo-lite }
     ci:
       workflow: .github/workflows/ci.yml
-      wiring: optional-follow-up
-      secrets: []
-      vars:
-        - { name: SONAR_HOST_URL, value: https://sonar.starci.org }
+      wiring: required
+      token: SONAR_TOKEN
+      hostVar: SONAR_HOST_URL
       provisioning: >-
-        ci.yml scans on release tags only when SONAR_TOKEN exists. The host owns Sonar provisioning and token custody;
-        declaring its ownership here does not create credentials or enable scanning.
+        ci.yml scans release tags on sonar.starci.org with the repository secret SONAR_TOKEN and the repository variable SONAR_HOST_URL
+        (both declared in the top-level ci block). The host owns the Sonar server; the owner creates the nivo-lite project token.
+    ownerAction:
+      needed: the nivo-lite project token from sonar.starci.org as the repository secret SONAR_TOKEN (starci app ci secret set SONAR_TOKEN).
+      reason: the token is a credential only the owner can mint on the host Sonar server.
+  codecov:
+    provider: codecov
+    mode: hosted
+    purpose: Coverage uploads of be/coverage/lcov.info on release tags, authenticated with GitHub OIDC.
+    host: {public: https://codecov.io}
+    auth: oidc
+    target: 100
+    components: auto
+    required: true
+    ci:
+      workflow: .github/workflows/ci.yml
+      wiring: required
+      provisioning: The test job holds id-token write; codecov-action uses OIDC, so no repository token is needed (CODECOV_TOKEN stays an optional fallback).
+    ownerAction: none
+  dependabot:
+    provider: github
+    mode: hosted
+    purpose: Weekly dependency updates with grouped minor and patch releases, separate majors and immediate security updates; @starci packages move only through starci npm install.
+    ecosystems: [npm, github-actions, docker]
+    schedule: {interval: weekly}
+    groups: {minorPatch: grouped, major: per-package}
+    ignore: ['@starci/*']
+    security: immediate
+    ownerAction: none
+  audit:
+    provider: npm
+    mode: local
+    purpose: Production dependency vulnerability checks in the release gate and CI.
+    level: high
+    omitDev: true
+    in: [release-gate, ci]
     ownerAction: none
