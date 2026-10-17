@@ -1,0 +1,13 @@
+# Image inventory of the production stack. The three application images are built per release by the Deploy stack workflow; their immutable
+# digests are bound in each release record (/srv/nivo/releases/<release id>/release.json on the manager), never in this file. The third-party
+# images are pinned by digest in stack.yaml and listed here for review.
+schema: starci/images-lock@1
+environment: production
+status: digests-bound-per-release
+images:
+  nivo-api: ghcr.io/starci183/nivo-lite-api (digest per release)
+  nivo-web-app: ghcr.io/starci183/nivo-lite-web (digest per release)
+  nivo-landing: ghcr.io/starci183/nivo-lite-landing (digest per release)
+  nivo-openclaw: ghcr.io/openclaw/openclaw:2026.7.1@sha256:6a31d44b2944e7adcd2b582bf6fb463111264ebca97a0201795b799135bd102c
+  nivo-n8n: docker.n8n.io/n8nio/n8n:1.64.3@sha256:4d9116228d426ce24c442a744e9c11ee7c1187713f93f21dd5a34a12584708c1
+  ingress: traefik:v3.6@sha256:31267173a15b4944e797a76ffd9c419707c8d8b32fe5b610f80cd0cfa05f372d

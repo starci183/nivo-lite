@@ -1,0 +1,10 @@
+# Image inventory of the local development stack. The application images are built and pushed by the developer (README.md); their digests
+# go into the untracked override and never into this file.
+schema: starci/images-lock@1
+environment: dev
+status: local-development
+images:
+  api: ghcr.io/starci183/nivo-lite-api (built locally, digest in the untracked override)
+  web: ghcr.io/starci183/nivo-lite-web (built locally, digest in the untracked override)
+  landing: ghcr.io/starci183/nivo-lite-landing (built locally, digest in the untracked override)
+  ingress: traefik:v3.6@sha256:31267173a15b4944e797a76ffd9c419707c8d8b32fe5b610f80cd0cfa05f372d

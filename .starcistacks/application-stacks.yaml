@@ -10,7 +10,7 @@
 #                    `docker secret create nivo-<key>-v<keyed hash>` on the manager; the rendered stack keeps {external: true, name: <runtimeName>}.
 #                    The logical name -> runtime name map is each release's release.json (/srv/nivo/releases/<digest>/).
 #   Owner actions    (1) DNS at Tino: A records for nivo.vn, www.nivo.vn, app.nivo.vn and api.nivo.vn -> the VPS (nothing scripts DNS; receipt: nslookup).
-#                    (2) Approve `docker swarm init` on the VPS once (deploy/swarm/vps.sh prepare --init-swarm, NIVO_SWARM_INIT_APPROVED=1).
+#                    (2) Approve `docker swarm init` on the VPS once (starci app stack prepare --env production --init-swarm --owner-approved --execute).
 #                    (3) Keep the age identity backed up; set the GitHub environment secret SOPS_AGE_KEY and the reviewers of `production`.
 #   Platform         Ubuntu Server 24.04 LTS amd64 (22.04 LTS amd64 is a candidate); Docker Engine from Docker's signed apt repository.
 #   Runbook          .starcistacks/production/README.md; cutover: be/docs/runbooks/cutover.md; VPS: be/docs/runbooks/vps-stack.md.
@@ -18,19 +18,19 @@ schema: starci/application-stacks@1
 sources:
   - repository: nivo-lite
 components:
-  api:
+  nivo-api:
     role: service
     image: ghcr.io/starci183/nivo-lite-api
     compose: infra/swarm/stack.yaml
     purpose: The Nest api (GraphQL, provider webhooks, OAuth callbacks, the pgmq workers and schedulers, the job alert monitor). Liveness /healthz, readiness /readyz.
     required: true
-  web:
+  nivo-web-app:
     role: service
     image: ghcr.io/starci183/nivo-lite-web
     compose: infra/swarm/stack.yaml
     purpose: The Next.js console on app.nivo.vn (standalone output); no runtime secret, its public values are build arguments. Liveness /health/live.
     required: true
-  landing:
+  nivo-landing:
     role: service
     image: ghcr.io/starci183/nivo-lite-landing
     compose: infra/swarm/stack.yaml
@@ -42,22 +42,50 @@ components:
     compose: infra/swarm/stack.yaml
     purpose: Traefik, the only service that publishes ports (8787/3000 locally; 80/443 in production). Production retains its persisted certificates and routes in infra/swarm/edge/routes.yml.
     required: true
-  openclaw:
+  nivo-openclaw:
     role: stateful
     image: ghcr.io/openclaw/openclaw:2026.7.1@sha256:6a31d44b2944e7adcd2b582bf6fb463111264ebca97a0201795b799135bd102c
     compose: infra/swarm/stack.yaml
     purpose: The OpenClaw agent gateway. Private network only; the api reaches it by service DNS through the loopback relay of the entrypoint wrapper.
     required: true
-  n8n:
+  nivo-n8n:
     role: stateful
     image: docker.n8n.io/n8nio/n8n:1.64.3@sha256:4d9116228d426ce24c442a744e9c11ee7c1187713f93f21dd5a34a12584708c1
     compose: infra/swarm/stack.yaml
-    purpose: n8n automation editor and webhook runner; private (operator tunnel only), reached by the api as n8n:5678. Its database is SQLite (DB_TYPE=sqlite) on the persisted named volume nivo-engine_n8n-data; no self-hosted Postgres (owner ruling 2026-10-14).
+    purpose: n8n automation editor and webhook runner; private (operator tunnel only), reached by the api as nivo-n8n:5678. Its database is SQLite (DB_TYPE=sqlite) on the persisted named volume nivo-engine_n8n-data; no self-hosted Postgres (owner ruling 2026-10-14).
     required: true
 backing:
   supabase:
     provider: supabase
     managed: true
+# Recurring work, every entry bound to its app-owned CLI command (R268). The keys are the pg_cron job names of the migrations
+# (supabase/migrations/20261026000300_job-ticks.sql: each job is one pgmq.send to the queue its worker consumes) and the schedule is the exact
+# cron expression of the job. `cli jobs tick <id>` enqueues one tick by hand (replay of a missed tick).
+jobs:
+  agents-sync-all:
+    schedule: "*/5 * * * *"
+    command: node be/dist/apps/cli/src/main.js jobs tick agents-sync-all
+  automation-tick:
+    schedule: "*/1 * * * *"
+    command: node be/dist/apps/cli/src/main.js jobs tick automation-tick
+  connection-health-tick:
+    schedule: "*/15 * * * *"
+    command: node be/dist/apps/cli/src/main.js jobs tick connection-health-tick
+  content-tick:
+    schedule: "*/15 * * * *"
+    command: node be/dist/apps/cli/src/main.js jobs tick content-tick
+  data-sync-tick:
+    schedule: "*/1 * * * *"
+    command: node be/dist/apps/cli/src/main.js jobs tick data-sync-tick
+  decisions-drain-work:
+    schedule: "*/1 * * * *"
+    command: node be/dist/apps/cli/src/main.js jobs tick decisions-drain-work
+  shifts-tick:
+    schedule: "*/1 * * * *"
+    command: node be/dist/apps/cli/src/main.js jobs tick shifts-tick
+  zalo-refresh-tick:
+    schedule: "0 */6 * * *"
+    command: node be/dist/apps/cli/src/main.js jobs tick zalo-refresh-tick
 environments:
   dev:
     status: supported
@@ -65,20 +93,48 @@ environments:
     composeFiles:
       - infra/swarm/stack.yaml
     components:
-      api:
+      nivo-api:
         replicas: 1
         port: 8787
-      web:
+      nivo-web-app:
         replicas: 1
         port: 3000
-      landing:
+      nivo-landing:
         replicas: 1
         port: 3000
       ingress:
         replicas: 1
-        port: 3000
-        httpPort: 8787
+        port: 80
     runbook: README.md
+    # The one local ingress publishes port 80 in ingress mode; the hosts below resolve to the loopback address by themselves (RFC 6761),
+    # so no DNS record or certificate exists. The console answers on every other host (http://localhost).
+    ingress:
+      component: ingress
+      hosts: [api.localhost, landing.localhost]
+    dns:
+      - host: api.localhost
+        owner: Development operator
+        receipt: "README.md (the *.localhost names resolve to 127.0.0.1 in the browser and the OS; nothing to publish)"
+      - host: landing.localhost
+        owner: Development operator
+        receipt: "README.md (the *.localhost names resolve to 127.0.0.1 in the browser and the OS; nothing to publish)"
+    tls:
+      owner: Development operator
+      receipt: "README.md (local development serves plain HTTP on the loopback address; no certificate is issued or persisted)"
+    release:
+      imagesLock: .starcistacks/dev/infra/swarm/release/images.lock.yaml
+      pointer: .starcistacks/dev/infra/swarm/release/current.yaml
+      previous: .starcistacks/dev/infra/swarm/release/previous.yaml
+      healthAssertions:
+        - The api answers /healthz and /readyz on http://api.localhost.
+        - The console answers /health/live on http://localhost.
+        - The landing answers /health/live on http://landing.localhost.
+    backup:
+      - component: supabase
+        target: Local Supabase development data is disposable; `supabase db reset` rebuilds it from supabase/migrations and the seed.
+        retention: None; the repository migrations are the source, the local volume is recreated on demand.
+        owner: Development operator
+        restoreProof: .starcistacks/dev/infra/swarm/recovery/restore-proof.md
     # Local development holds no sealed secret: the Supabase CLI owns the local backing stack and the operator supplies its
     # development configuration through the untracked .starcistacks/dev/api.dev.env. It is not a deployed Swarm component.
     secrets: []
@@ -88,60 +144,136 @@ environments:
     composeFiles:
       - infra/swarm/stack.yaml
     components:
-      api:
+      nivo-api:
         replicas: 1
         port: 8787
-      web:
+      nivo-web-app:
         replicas: 1
         port: 3000
-      landing:
+      nivo-landing:
         replicas: 1
         port: 3000
-      openclaw:
+      nivo-openclaw:
         replicas: 1
         port: 18790
-      n8n:
+      nivo-n8n:
         replicas: 1
         port: 5678
     runbook: README.md
+    # The ingress is the shared Traefik of the VPS, its own docker stack (deploy.ingress.name); this stack renders no ingress and publishes no port.
+    ingress:
+      external: {stack: ingress}
+      hosts: [nivo.vn, www.nivo.vn, app.nivo.vn, api.nivo.vn, n8n.nivo.vn]
+    dns:
+      - host: nivo.vn
+        owner: Production operator
+        receipt: "README.md (owner action 1: A record at Tino; receipt nslookup nivo.vn 1.1.1.1)"
+      - host: www.nivo.vn
+        owner: Production operator
+        receipt: "README.md (owner action 1: A record at Tino; receipt nslookup www.nivo.vn 1.1.1.1)"
+      - host: app.nivo.vn
+        owner: Production operator
+        receipt: "README.md (owner action 1: A record at Tino; receipt nslookup app.nivo.vn 1.1.1.1)"
+      - host: api.nivo.vn
+        owner: Production operator
+        receipt: "README.md (owner action 1: A record at Tino; receipt nslookup api.nivo.vn 1.1.1.1)"
+      - host: n8n.nivo.vn
+        owner: Production operator
+        receipt: "README.md (owner action 1: A record at Tino; receipt nslookup n8n.nivo.vn 1.1.1.1)"
+    tls:
+      owner: Production operator
+      receipt: "README.md (the shared Traefik obtains one Let's Encrypt certificate per host and persists it in the external volume nivo-edge_acme)"
+    release:
+      imagesLock: .starcistacks/production/infra/swarm/release/images.lock.yaml
+      pointer: .starcistacks/production/infra/swarm/release/current.yaml
+      previous: .starcistacks/production/infra/swarm/release/previous.yaml
+      healthAssertions:
+        - https://api.nivo.vn/healthz answers 200 with status ok, /readyz answers 200 and a GraphQL {__typename} answers 200.
+        - https://nivo.vn/health/live and https://www.nivo.vn/health/live (landing) and https://app.nivo.vn/health/live (console) answer 200.
+        - https://nivo.vn/healthz reaches the api (legacy webhook path).
+        - The jobs watchdog of the running api task prints two non-negative integers.
+        - Desired and running replicas agree, no task failed, and every update completed (starci app stack converge).
+    # Stateful components and the managed Supabase project. The volumes are the external nivo-engine_* ones; encrypted tarballs are written by
+    # `starci app stack backup` (deploy.backup below) and copied off the VPS by the operator. Restore proofs: infra/swarm/recovery/restore-proof.md.
+    backup:
+      - component: supabase
+        target: Supabase Cloud managed backups of the project (database, auth and storage) plus the migration history in supabase/migrations.
+        retention: Per the Supabase plan of the project (the operator confirms the window in the Supabase dashboard); the job queues live in the same database.
+        owner: Production operator
+        restoreProof: .starcistacks/production/infra/swarm/recovery/restore-proof.md
+      - component: nivo-api
+        target: The video-cache volume holds only re-renderable voiceover clips (no backup needed); the openclaw-data volume it mounts is covered by the openclaw record.
+        retention: Not applicable for the cache; see the openclaw record.
+        owner: Production operator
+        restoreProof: .starcistacks/production/infra/swarm/recovery/restore-proof.md
+      - component: nivo-openclaw
+        target: age-encrypted tarball of nivo-engine_openclaw-data (starci app stack backup) in /srv/nivo/backups, copied off the VPS by the operator.
+        retention: 14 days on the VPS (deploy.backup.keepDays); off-host retention is the operator's.
+        owner: Production operator
+        restoreProof: .starcistacks/production/infra/swarm/recovery/restore-proof.md
+      - component: nivo-n8n
+        target: age-encrypted tarball of nivo-engine_n8n-data (the SQLite database and workflows; starci app stack backup) in /srv/nivo/backups, copied off the VPS by the operator.
+        retention: 14 days on the VPS (deploy.backup.keepDays); off-host retention is the operator's.
+        owner: Production operator
+        restoreProof: .starcistacks/production/infra/swarm/recovery/restore-proof.md
     secrets:
       - name: api
+        runtimeName: nivo-custody-api-v1
+        version: 1
         where: secrets/api
         recipientPolicy: SOPS/age to the project recipient in .sops.yaml (creation rule for .starcistacks/*/secrets/*.enc); the same recipient seals every member. Each key becomes one Swarm secret named nivo-<key>-v<keyed hash of the value>; rotation seals a new value, which creates a new name, updates the grant, waits for convergence, then removes the old name.
         keyCustody: The age identity is SOPS_AGE_KEY in the runtime .claude/secret.env on the owner machine (backed up by the owner; docs/host-secrets.md) and the GitHub environment secret SOPS_AGE_KEY of `production`. The VPS never holds it.
       - name: auth
+        runtimeName: nivo-custody-auth-v1
+        version: 1
         where: secrets/auth
         recipientPolicy: SOPS/age to the project recipient in .sops.yaml; granted to the api like the api member.
         keyCustody: The age identity is SOPS_AGE_KEY in the runtime .claude/secret.env on the owner machine and the GitHub environment secret SOPS_AGE_KEY of `production`.
       - name: stack
+        runtimeName: nivo-custody-stack-v1
+        version: 1
         where: secrets/stack
         recipientPolicy: SOPS/age to the project recipient in .sops.yaml; granted to openclaw and n8n (secrets) and read as configuration (OPENCLAW_MODEL, N8N_ALLOWED_HOSTS, job alert limits).
         keyCustody: The age identity is SOPS_AGE_KEY in the runtime .claude/secret.env on the owner machine and the GitHub environment secret SOPS_AGE_KEY of `production`.
       - name: web
+        runtimeName: nivo-custody-web-v1
+        version: 1
         where: secrets/web
         recipientPolicy: SOPS/age to the project recipient in .sops.yaml; holds the two public NEXT_PUBLIC_SUPABASE_* build values only (no runtime grant).
         keyCustody: The age identity is SOPS_AGE_KEY in the runtime .claude/secret.env on the owner machine and the GitHub environment secret SOPS_AGE_KEY of `production`.
       - name: app-be-db
+        runtimeName: nivo-custody-app-be-db-v1
+        version: 1
         where: secrets/app-be-db
         recipientPolicy: SOPS/age to the project recipient in .sops.yaml; used once by the cutover owner scripts to set the app_be role password and build PRIMARY_DB_URL.
         keyCustody: The age identity is SOPS_AGE_KEY in the runtime .claude/secret.env on the owner machine; never sent to GitHub or the VPS.
       - name: ops
+        runtimeName: nivo-custody-ops-v1
+        version: 1
         where: secrets/ops
         recipientPolicy: SOPS/age to the project recipient in .sops.yaml; operator and cutover script settings, never granted to a service.
         keyCustody: The age identity is SOPS_AGE_KEY in the runtime .claude/secret.env on the owner machine.
       - name: test-accounts
+        runtimeName: nivo-custody-test-accounts-v1
+        version: 1
         where: secrets/test-accounts
         recipientPolicy: SOPS/age to the project recipient in .sops.yaml; smoke-test accounts, never granted to a service.
         keyCustody: The age identity is SOPS_AGE_KEY in the runtime .claude/secret.env on the owner machine.
       - name: ci-ssh-key
+        runtimeName: nivo-custody-ci-ssh-key-v1
+        version: 1
         where: secrets/ci-ssh-key
         recipientPolicy: SOPS/age to the project recipient in .sops.yaml; JSON envelope of the CI deploy key material, set as the GitHub environment secret VPS_SSH_KEY.
         keyCustody: The age identity is SOPS_AGE_KEY in the runtime .claude/secret.env on the owner machine.
       - name: vps-ssh-key
+        runtimeName: nivo-custody-vps-ssh-key-v1
+        version: 1
         where: secrets/vps-ssh-key
         recipientPolicy: SOPS/age to the project recipient in .sops.yaml; JSON envelope of the operator SSH key for the VPS.
         keyCustody: The age identity is SOPS_AGE_KEY in the runtime .claude/secret.env on the owner machine.
       - name: vps-known-hosts
+        runtimeName: nivo-custody-vps-known-hosts-v1
+        version: 1
         where: secrets/vps-known-hosts
         recipientPolicy: SOPS/age to the project recipient in .sops.yaml; the pinned SSH host keys of the VPS (set as the GitHub environment secret VPS_KNOWN_HOSTS); first contact was owner-verified.
         keyCustody: The age identity is SOPS_AGE_KEY in the runtime .claude/secret.env on the owner machine.
@@ -153,47 +285,48 @@ environments:
         releasesBase: /srv/nivo
         sealed: {ops: ops, sshKey: vps-ssh-key, knownHosts: vps-known-hosts}
       images:
-        api: {app: api}
-        web:
+        nivo-api: {app: api}
+        nivo-web-app:
           app: web
           buildArgs:
             values: {NEXT_PUBLIC_SITE_URL: "https://app.nivo.vn", NEXT_PUBLIC_LANDING_URL: "https://nivo.vn", NEXT_PUBLIC_API_URL: "https://api.nivo.vn", NEXT_PUBLIC_DEVELOPER_API_URL: "https://api.nivo.vn"}
             sealed: {member: web, keys: [NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY]}
-        landing:
+        nivo-landing:
           app: landing
           buildArgs:
             values: {NEXT_PUBLIC_SITE_URL: "https://nivo.vn", NEXT_PUBLIC_APP_URL: "https://app.nivo.vn"}
       volumes: [nivo-engine_openclaw-data, nivo-engine_video-cache, nivo-engine_n8n-data, nivo-edge_acme]
       secrets:
         grants:
-          - service: api
+          - service: nivo-api
             filePointers: true
             from:
               - {member: api}
               - {member: auth}
               - {member: stack, keys: [OPENCLAW_GATEWAY_TOKEN, OPENCLAW_MANAGE_AGENTS], fill: true}
-          - service: openclaw
+          - service: nivo-openclaw
             from:
               - {member: stack, keys: [OPENCLAW_GATEWAY_TOKEN], required: true}
               - {member: stack, keys: [OPENROUTER_API_KEY, ANTHROPIC_API_KEY, OPENAI_API_KEY]}
               - {member: api, keys: [OPENROUTER_API_KEY, ANTHROPIC_API_KEY, OPENAI_API_KEY]}
-          - service: n8n
+          - service: nivo-n8n
+            filePointers: true
             from:
               - {member: stack, keys: [N8N_ENCRYPTION_KEY], required: true}
         settings: {member: stack, keys: [OPENCLAW_MODEL, N8N_ALLOWED_HOSTS, JOBS_FAILED_ALERT, JOBS_STALE_SECONDS]}
       environment:
-        api:
+        nivo-api:
           files: [infra/swarm/api-public.conf]
           values:
             PORT: "8787"
-            OPENCLAW_GATEWAY_URL: "ws://openclaw:18790"
+            OPENCLAW_GATEWAY_URL: "ws://nivo-openclaw:18790"
             OPENCLAW_CONFIG_DIR: /openclaw-state
             OPENCLAW_GATEWAY_STATE_DIR: /home/node/.openclaw
           settings:
-            N8N_ALLOWED_HOSTS: {key: N8N_ALLOWED_HOSTS, default: n8n}
+            N8N_ALLOWED_HOSTS: {key: N8N_ALLOWED_HOSTS, default: nivo-n8n}
             JOBS_ALERT_FAILED_MAX: {key: JOBS_FAILED_ALERT, default: "20"}
             JOBS_ALERT_STALE_SECONDS: {key: JOBS_STALE_SECONDS, default: "300"}
-        openclaw:
+        nivo-openclaw:
           settings:
             OPENCLAW_MODEL: {key: OPENCLAW_MODEL, default: openrouter/deepseek/deepseek-v4-flash}
       configs:
@@ -211,13 +344,15 @@ environments:
           - {name: legacy webhook path reaches the api, url: "https://nivo.vn/healthz", status: 200, retry: true}
         exec:
           - name: jobs watchdog prints two non-negative integers
-            service: api
+            service: nivo-api
             command: [node, be/dist/apps/cli/src/main.js, jobs, watchdog]
             stdout: '^\d+ \d+\r?\n?$'
-      jobs: {service: api, command: [node, be/dist/apps/cli/src/main.js, jobs]}
+      jobs: {service: nivo-api, command: [node, be/dist/apps/cli/src/main.js, jobs]}
       tasks:
-        seed-media:   {service: api, command: [node, be/dist/apps/cli/src/main.js, seed-media, upload, --dir, be/src/assets/media-seed]}
-        seed-modules: {service: api, command: [node, be/dist/apps/cli/src/main.js, seed-modules, run]}
+        # The music tracks live in the media bucket (already uploaded); their source files are outside the repository and the image. To seed again,
+        # place the files in /media-seed of the api task (the stack does not mount it) before running this task.
+        seed-media:   {service: nivo-api, command: [node, be/dist/apps/cli/src/main.js, seed-media, upload, --dir, /media-seed]}
+        seed-modules: {service: nivo-api, command: [node, be/dist/apps/cli/src/main.js, seed-modules, run]}
       backup:
         image: alpine:3.21@sha256:ce64758a109eb420d874a118f87920e625e12d3634e03b4a5573fd9f6e5d3507
         keepDays: 14

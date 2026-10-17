@@ -1,0 +1,6 @@
+schema: starci/release-pointer@1
+environment: dev
+status: no-release
+release: null
+verification: null
+# Local development has no accepted release; the developer deploys the images built from the working tree.

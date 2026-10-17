@@ -33,7 +33,7 @@
       ],
       "reads": ["supabase/types/"],
       "patterns": ["webhooks", "queue", "fenced-job"],
-      "optionalSlots": ["repo.docs", "be.contract.graphql"]
+      "optionalSlots": ["repo.docs", "be.contract.graphql", "repo.i18n-dynamic-keys"]
     },
     "fe": {
       "apps": [
@@ -47,7 +47,25 @@
         }
       ],
       "reads": ["be/contracts/", "supabase/types/"],
-      "optionalSlots": ["fe.package.i18n", "repo.packages"]
+      "optionalSlots": ["fe.package.i18n", "repo.packages", "repo.i18n-dynamic-keys"],
+      "extraPackages": [
+        {
+          "name": "@internationalized/date",
+          "reason": "Date values (CalendarDate, parseDate) consumed by the HeroUI date and calendar pickers in the booking, accounting and sales screens."
+        },
+        {
+          "name": "fflate",
+          "reason": "Browser-side ZIP expansion for the Add documents drawer (modules/documents/zip.ts); pure, no server code."
+        },
+        {
+          "name": "papaparse",
+          "reason": "Browser-side CSV parsing for the import wizard (hooks/csv-import-wizard) before rows are uploaded."
+        },
+        {
+          "name": "@types/papaparse",
+          "reason": "Type declarations for papaparse."
+        }
+      ]
     }
   }
 }

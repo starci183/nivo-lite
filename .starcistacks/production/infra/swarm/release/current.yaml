@@ -1,0 +1,7 @@
+schema: starci/release-pointer@1
+environment: production
+status: pointer-on-the-manager
+release: null
+verification: null
+# The accepted release is the `current` pointer in /srv/nivo on the Swarm manager (`starci app stack doctor --env production` prints it); it moves
+# only after `starci app stack deploy` verified the release. This tracked record states that rule and holds no live value.

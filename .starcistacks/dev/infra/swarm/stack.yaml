@@ -3,29 +3,30 @@
 #   docker build -f be/apps/api/Dockerfile -t <registry>/nivo-lite-api:dev .
 #   docker build -f fe/apps/web/Dockerfile -t <registry>/nivo-lite-web:dev \
 #     --build-arg NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321 --build-arg NEXT_PUBLIC_SUPABASE_ANON_KEY \
-#     --build-arg NEXT_PUBLIC_API_URL=http://localhost:8787 \
-#     --build-arg NEXT_PUBLIC_DEVELOPER_API_URL=http://localhost:8787 \
-#     --build-arg NEXT_PUBLIC_SITE_URL=http://localhost:3000 --build-arg NEXT_PUBLIC_LANDING_URL=http://landing.localhost:3000 .
+#     --build-arg NEXT_PUBLIC_API_URL=http://api.localhost \
+#     --build-arg NEXT_PUBLIC_DEVELOPER_API_URL=http://api.localhost \
+#     --build-arg NEXT_PUBLIC_SITE_URL=http://localhost --build-arg NEXT_PUBLIC_LANDING_URL=http://landing.localhost .
 #   docker build -f fe/apps/landing/Dockerfile -t <registry>/nivo-lite-landing:dev \
-#     --build-arg NEXT_PUBLIC_SITE_URL=http://landing.localhost:3000 --build-arg NEXT_PUBLIC_APP_URL=http://localhost:3000 .
+#     --build-arg NEXT_PUBLIC_SITE_URL=http://landing.localhost --build-arg NEXT_PUBLIC_APP_URL=http://localhost .
 # Push all three images, then write their digest references into a Compose override (services: api: {image: <ref>@sha256:...}, web: {image: ...}, landing: {image: ...});
 # the digests in this file are placeholders that the override replaces.
 # With Supabase running, supply the same local api.dev.env as before, then deploy from the root:
 #   docker stack config -c .starcistacks/dev/infra/swarm/stack.yaml -c dev.images.override.yaml | docker stack deploy -c - nivo-dev
-# The sole ingress preserves http://localhost:8787 (api) and http://localhost:3000 (web console); http://landing.localhost:3000 serves the landing.
+# The sole ingress publishes port 80 (ingress mode) and routes by host: http://api.localhost (api), http://landing.localhost (landing) and every other host,
+# such as http://localhost (web console). The *.localhost names resolve to the loopback address without any DNS record.
 # Use a local single-manager Swarm; the Supabase URLs must be reachable from its containers.
 version: "3.8"
 
 services:
-  api:
+  nivo-api:
     image: ghcr.io/starci183/nivo-lite-api@sha256:0000000000000000000000000000000000000000000000000000000000000000
     env_file:
       - ../../api.dev.env
     environment:
       PORT: "8787"
       PRIMARY_DB_SCHEMA: public
-      SITE_URL: http://localhost:3000
-      HTTP_SECURITY_ALLOWED_ORIGINS: http://localhost:3000,http://127.0.0.1:3000
+      SITE_URL: http://localhost
+      HTTP_SECURITY_ALLOWED_ORIGINS: http://localhost,http://127.0.0.1
       QUEUE_ENABLED: "true"
     extra_hosts:
       - host.docker.internal:host-gateway
@@ -45,15 +46,15 @@ services:
       replicas: 1
       labels:
         traefik.enable: "true"
-        traefik.http.routers.dev-api.entrypoints: api
-        traefik.http.routers.dev-api.rule: PathPrefix(`/`)
+        traefik.http.routers.dev-api.entrypoints: web
+        traefik.http.routers.dev-api.rule: Host(`api.localhost`)
         traefik.http.routers.dev-api.service: dev-api
         traefik.http.services.dev-api.loadbalancer.server.port: "8787"
       update_config: { order: start-first, failure_action: rollback, monitor: 60s }
       rollback_config: { order: start-first, monitor: 60s }
       restart_policy: { condition: any, delay: 5s }
 
-  web:
+  nivo-web-app:
     image: ghcr.io/starci183/nivo-lite-web@sha256:0000000000000000000000000000000000000000000000000000000000000000
     healthcheck:
       test:
@@ -79,7 +80,7 @@ services:
       rollback_config: { order: start-first, monitor: 60s }
       restart_policy: { condition: any, delay: 5s }
 
-  landing:
+  nivo-landing:
     image: ghcr.io/starci183/nivo-lite-landing@sha256:0000000000000000000000000000000000000000000000000000000000000000
     healthcheck:
       test:
@@ -112,15 +113,13 @@ services:
       - --providers.swarm.endpoint=unix:///var/run/docker.sock
       - --providers.swarm.exposedbydefault=false
       - --providers.swarm.network=nivo-dev_default
-      - --entrypoints.api.address=:8787
-      - --entrypoints.web.address=:3000
+      - --entrypoints.web.address=:80
       - --ping=true
       - --ping.entryPoint=ping
       - --entrypoints.ping.address=127.0.0.1:8082
       - --api.dashboard=false
     ports:
-      - { target: 8787, published: 8787, protocol: tcp, mode: host }
-      - { target: 3000, published: 3000, protocol: tcp, mode: host }
+      - { target: 80, published: 80, protocol: tcp, mode: ingress }
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
     healthcheck:

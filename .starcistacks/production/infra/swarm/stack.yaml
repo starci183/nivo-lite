@@ -1,16 +1,17 @@
 # NIVO production stack for ONE Ubuntu VPS: a single-manager Docker Swarm (canon docs/application-stacks.md, "Docker Swarm on a VPS").
-# This file is the SOURCE of the review model. A release renders it with `docker stack config` (deploy/swarm/render.mjs) together with the
-# generated override that adds the versioned secret grants and the `<KEY>_FILE` pointers, and deploys the rendered bytes with
-# `docker stack deploy --with-registry-auth nivo`. Nothing here is built on the VPS and no secret value appears in it.
+# This file is the SOURCE of the review model. A release renders it (`starci app stack render`, the first step of `starci app stack deploy`) with
+# `docker stack config` together with the generated override that adds the images, the versioned secret grants and the `<KEY>_FILE` pointers,
+# and deploys the rendered bytes with `docker stack deploy --with-registry-auth nivo`. Nothing here is built on the VPS and no secret value
+# appears in it.
 #
 # Topology: this stack publishes NO port. The VPS has ONE shared ingress (its own stack, `starci app stack ingress create`) that owns 80/443 and the
 # certificates, serves every tenant and routes nivo's hosts to the aliases below over the external overlay nivo-edge-swarm; nivo's routes are published
 # into the shared dynamic directory by `starci app stack ingress publish` (infra/swarm/edge/routes.yml). TLS covers nivo.vn, www.nivo.vn, app.nivo.vn, api.nivo.vn.
-#   landing   the Next.js landing on nivo.vn / www.nivo.vn, reached as nivo-landing:3000 on the edge network
-#   web       the Next.js console on app.nivo.vn, reached as nivo-web-swarm:3000 on the edge network (its own alias: nivo-web still names the old compose container until it is retired)
-#   api       the Nest api: GraphQL, webhooks, the pgmq workers, the job alert monitor; reached as nivo-api:8787 on the edge network
-#   openclaw  the agent gateway; the api reaches it by service DNS (openclaw:18790) on the private `agents` network
-#   n8n       private automation editor on the `automation` network (no published port); SQLite database on the persisted volume n8n-data
+#   nivo-landing   the Next.js landing on nivo.vn / www.nivo.vn, reached as nivo-landing:3000 on the edge network
+#   nivo-web-app   the Next.js console on app.nivo.vn, reached as nivo-web-swarm:3000 on the edge network (its own alias: nivo-web still names the old compose container until it is retired)
+#   nivo-api       the Nest api: GraphQL, webhooks, the pgmq workers, the job alert monitor; reached as nivo-api:8787 on the edge network
+#   nivo-openclaw  the agent gateway; the api reaches it by service DNS (nivo-openclaw:18790) on the private `agents` network
+#   nivo-n8n       private automation editor on the `automation` network (no published port); SQLite database on the persisted volume n8n-data
 #
 # Health signals: the container healthcheck is LIVENESS only (process-local /healthz; a Supabase outage never restarts the api). READINESS
 # (/readyz: the database answers) gates traffic at the shared ingress (Traefik health check in routes.yml) and the deploy acceptance, never a restart.
@@ -21,7 +22,7 @@ x-logging:
   options: { max-size: "10m", max-file: "5" }
 
 services:
-  web:
+  nivo-web-app:
     image: ghcr.io/starci183/nivo-lite-web@sha256:0000000000000000000000000000000000000000000000000000000000000000
     environment:
       PORT: "3000"
@@ -53,7 +54,7 @@ services:
       rollback_config: { parallelism: 1, order: start-first, monitor: 30s }
       restart_policy: { condition: any, delay: 5s }
 
-  landing:
+  nivo-landing:
     image: ghcr.io/starci183/nivo-lite-landing@sha256:0000000000000000000000000000000000000000000000000000000000000000
     environment:
       PORT: "3000"
@@ -85,9 +86,9 @@ services:
       rollback_config: { parallelism: 1, order: start-first, monitor: 30s }
       restart_policy: { condition: any, delay: 5s }
 
-  api:
+  nivo-api:
     image: ghcr.io/starci183/nivo-lite-api@sha256:0000000000000000000000000000000000000000000000000000000000000000
-    # environment, `<KEY>_FILE` pointers and the versioned secret grants are added by the generated override (render.mjs).
+    # environment, `<KEY>_FILE` pointers and the versioned secret grants are added by the generated override (starci app stack render).
     networks:
       edge:
         aliases: [nivo-api]
@@ -121,7 +122,7 @@ services:
       rollback_config: { parallelism: 1, order: start-first, monitor: 45s }
       restart_policy: { condition: any, delay: 5s }
 
-  openclaw:
+  nivo-openclaw:
     image: ghcr.io/openclaw/openclaw:2026.7.1@sha256:6a31d44b2944e7adcd2b582bf6fb463111264ebca97a0201795b799135bd102c
     # The image has no `_FILE` support: the wrapper exports the gateway token and provider keys from /run/secrets into the gateway process only,
     # merges the gateway settings into openclaw.json, and starts the relay that lets the api reach the loopback-only gateway (see the wrapper).
@@ -158,12 +159,12 @@ services:
       rollback_config: { parallelism: 1, order: stop-first, monitor: 45s }
       restart_policy: { condition: any, delay: 5s }
 
-  n8n:
-    # Upgrade deliberately: n8n migrates its SQLite database on start and a migrated database cannot go back (back up the n8n-data volume first: deploy/swarm/backup.sh).
+  nivo-n8n:
+    # Upgrade deliberately: n8n migrates its SQLite database on start and a migrated database cannot go back (back up the n8n-data volume first: starci app stack backup).
     image: docker.n8n.io/n8nio/n8n:1.64.3@sha256:4d9116228d426ce24c442a744e9c11ee7c1187713f93f21dd5a34a12584708c1
     environment:
       DB_TYPE: sqlite # owner ruling 2026-10-14: no self-hosted Postgres; database.sqlite lives on the persisted volume n8n-data (/home/node/.n8n)
-      N8N_ENCRYPTION_KEY_FILE: /run/secrets/N8N_ENCRYPTION_KEY
+      # N8N_ENCRYPTION_KEY_FILE=/run/secrets/N8N_ENCRYPTION_KEY and the secret grant are added by the generated override (deploy.secrets.grants, filePointers).
       N8N_HOST: n8n.nivo.vn
       N8N_PROTOCOL: https
       N8N_PORT: "5678"
@@ -179,7 +180,7 @@ services:
       EXECUTIONS_DATA_MAX_AGE: "336"
     volumes:
       - n8n-data:/home/node/.n8n
-    # automation is the private network the api reaches it on (n8n:5678); edge carries the public editor route (n8n.nivo.vn) under a unique alias.
+    # automation is the private network the api reaches it on (nivo-n8n:5678); edge carries the public editor route (n8n.nivo.vn) under a unique alias.
     networks:
       automation: {}
       edge: { aliases: [nivo-n8n] }
@@ -203,19 +204,34 @@ networks:
   # nivo-edge-swarm is the shared ingress overlay: created by `starci app stack ingress attach` (attachable), owned by the VPS and not by this stack,
   # so standalone containers of other products (namnivo-web, the Tayson and Academy services) and nivo's public services meet the ingress on it.
   edge: { external: true, name: nivo-edge-swarm }
-  # agents and automation are attachable for the operator tunnels only (deploy/swarm/vps.sh tunnel); no port is ever published.
+  # agents and automation are attachable for the operator tunnels only (a loopback-only socat container, see the production README); no port is ever published.
   agents: { driver: overlay, attachable: true }
   automation: { driver: overlay, attachable: true }
 
 # The volumes keep the names the compose projects gave them (nivo-engine_*, nivo-edge_acme): the data and the certificates survive the move to
-# Swarm, and the old compose stack can start again on them for a rollback. `vps.sh prepare` creates any that is missing on a fresh host.
+# Swarm. `starci app stack prepare` creates any that is missing on a fresh host.
 volumes:
   openclaw-data: { external: true, name: nivo-engine_openclaw-data }
   video-cache: { external: true, name: nivo-engine_video-cache }
   n8n-data: { external: true, name: nivo-engine_n8n-data }
 
-# Config objects are immutable and versioned by content: provision.mjs creates `nivo-<name>-c<digest>` and the render passes the names in.
+# Config objects are immutable and versioned by content: the provision step of `starci app stack deploy` creates `nivo-<name>-c<digest>` and the render passes the names in.
 configs:
   openclaw-entrypoint: { external: true, name: "${NIVO_CFG_OPENCLAW_ENTRYPOINT:?}" }
   openclaw-init: { external: true, name: "${NIVO_CFG_OPENCLAW_INIT:?}" }
   openclaw-relay: { external: true, name: "${NIVO_CFG_OPENCLAW_RELAY:?}" }
+
+# Custody records, declaration only: one external stub per sealed member of .starcistacks/production/secrets, named by the runtimeName and version
+# of environments.production.secrets. No service is granted a stub and no such Swarm secret is ever created: the real Swarm secrets are one per
+# KEY, named nivo-<key>-v<keyed hash of the value> by `starci app stack deploy` and added to the rendered stack by the generated override.
+secrets:
+  api: { external: true, name: nivo-custody-api-v1 }
+  auth: { external: true, name: nivo-custody-auth-v1 }
+  stack: { external: true, name: nivo-custody-stack-v1 }
+  web: { external: true, name: nivo-custody-web-v1 }
+  app-be-db: { external: true, name: nivo-custody-app-be-db-v1 }
+  ops: { external: true, name: nivo-custody-ops-v1 }
+  test-accounts: { external: true, name: nivo-custody-test-accounts-v1 }
+  ci-ssh-key: { external: true, name: nivo-custody-ci-ssh-key-v1 }
+  vps-ssh-key: { external: true, name: nivo-custody-vps-ssh-key-v1 }
+  vps-known-hosts: { external: true, name: nivo-custody-vps-known-hosts-v1 }

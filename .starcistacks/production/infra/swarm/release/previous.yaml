@@ -1,0 +1,6 @@
+schema: starci/release-pointer@1
+environment: production
+status: pointer-on-the-manager
+release: null
+verification: null
+# The `previous` pointer in /srv/nivo on the manager keeps the last accepted release for `starci app stack rollback`. It holds no live value here.

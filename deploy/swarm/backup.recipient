@@ -1,2 +1,0 @@
-# Public age recipient the backups are encrypted to (same as .sops.yaml). The private identity never lives on the VPS.
-age173qfq7f776syam9tpkyfej0h2jjt6rc4ha7r38ez40n5mn0lwyaqp9ejt7

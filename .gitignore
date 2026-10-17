@@ -66,6 +66,9 @@ next-env.d.ts
 .starcistacks/*/infra/terraform/files/
 .starcistacks/*/infra/terraform/*.tar.gz
 !.starcistacks/**/*.enc
+
+# Host-local agent credentials and app age identity never enter Git.
+.claude/
 # <<< starci app sync <<<
 # Lite stack sources outside the managed block (SWARM-CANON, integ/a14-int): the production and dev Swarm stacks live in infra/swarm/.
 # Value-free file types only; an env file or a key in these folders stays ignored by the rules above.
