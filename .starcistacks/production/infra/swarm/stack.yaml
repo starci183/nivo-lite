@@ -228,7 +228,6 @@ secrets:
   api: { external: true, name: nivo-custody-api-v1 }
   auth: { external: true, name: nivo-custody-auth-v1 }
   stack: { external: true, name: nivo-custody-stack-v1 }
-  web: { external: true, name: nivo-custody-web-v1 }
   app-be-db: { external: true, name: nivo-custody-app-be-db-v1 }
   ops: { external: true, name: nivo-custody-ops-v1 }
   test-accounts: { external: true, name: nivo-custody-test-accounts-v1 }

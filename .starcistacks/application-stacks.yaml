@@ -235,12 +235,6 @@ environments:
         where: secrets/stack
         recipientPolicy: SOPS/age to the project recipient in .sops.yaml; granted to openclaw and n8n (secrets) and read as configuration (OPENCLAW_MODEL, N8N_ALLOWED_HOSTS, job alert limits).
         keyCustody: The age identity is SOPS_AGE_KEY in the runtime .claude/secret.env on the owner machine and the GitHub environment secret SOPS_AGE_KEY of `production`.
-      - name: web
-        runtimeName: nivo-custody-web-v1
-        version: 1
-        where: secrets/web
-        recipientPolicy: SOPS/age to the project recipient in .sops.yaml; holds the two public NEXT_PUBLIC_SUPABASE_* build values only (no runtime grant).
-        keyCustody: The age identity is SOPS_AGE_KEY in the runtime .claude/secret.env on the owner machine and the GitHub environment secret SOPS_AGE_KEY of `production`.
       - name: app-be-db
         runtimeName: nivo-custody-app-be-db-v1
         version: 1

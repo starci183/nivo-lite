@@ -13,6 +13,11 @@ import { ReadinessLogEvent } from "./readiness.log-events"
 
 const PROBE_TIMEOUT_MS = 3000
 
+/** Releases the deadline timers of one readiness check. */
+const release = (cancels: ReadonlyArray<() => void>): void => {
+    for (const cancel of cancels) cancel()
+}
+
 @Injectable()
 /** Checks the primary database and jobs together before the API accepts traffic. */
 export class ReadinessService {
@@ -25,25 +30,31 @@ export class ReadinessService {
 
     /** Reports ready only when both dependency probes answer within three seconds. */
     async check(): Promise<ReadinessReport> {
-        const probes = Promise.all([
-            this.entityManager.query<unknown>(CHECK_READINESS_DATABASE),
-            this.entityManager.query<Array<ReadinessJobsRow>>(CHECK_READINESS_JOBS),
-        ])
+        // The executor runs synchronously, so the deadline timer is registered before the probes start.
+        const cancels: Array<() => void> = []
         const deadline = new Promise<never>((_resolve, reject) => {
-            const cancel = this.timeout.schedule(
-                () => reject(new LivenessError({ code: LivenessErrorCode.ReadinessUnavailable })),
-                PROBE_TIMEOUT_MS,
+            cancels.push(
+                this.timeout.schedule(
+                    () => reject(new LivenessError({ code: LivenessErrorCode.ReadinessUnavailable })),
+                    PROBE_TIMEOUT_MS,
+                ),
             )
-            // The timer is released as soon as both probes settle, whichever way.
-            void probes.then(cancel, cancel)
         })
         try {
-            const [, rows] = await Promise.race([probes, deadline])
+            const [, rows] = await Promise.race([
+                Promise.all([
+                    this.entityManager.query<unknown>(CHECK_READINESS_DATABASE),
+                    this.entityManager.query<Array<ReadinessJobsRow>>(CHECK_READINESS_JOBS),
+                ]),
+                deadline,
+            ])
             if (rows[0]?.stats?.checkedAt == null) {
                 throw new LivenessError({ code: LivenessErrorCode.ReadinessUnavailable })
             }
+            release(cancels)
             return { status: "ready", checks: { database: "ok", jobs: "ok" } }
         } catch (cause) {
+            release(cancels)
             this.logger.error(ReadinessLogEvent.CheckFailed, cause)
             throw new LivenessError({ code: LivenessErrorCode.ReadinessUnavailable, cause })
         }
