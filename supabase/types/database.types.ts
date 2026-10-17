@@ -1,4 +1,4 @@
-// migrations-sha256: cf9faa7b9d66c6cbd31726f854abe04b453fffb3bae9ab75302e04ba3246a0da
+// migrations-sha256: 885330898464f4b583cdde556337f121d8e9977b0c4985f3570d17eb7d783912
 
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[]
 
@@ -497,6 +497,19 @@ isOneToOne: false
                   }
                   Update: {
                     "definition"?: NonNullable<Json>,"executor"?: string,"key"?: string,"module_key"?: string | null,"pack"?: string,"position"?: number,"updated_at"?: string,"version"?: number
+                  }
+                  Relationships: [
+
+                  ]
+                },"bank_feed_inbox": {
+                  Row: {
+                    "delivery_id": string,"id": string,"payload": NonNullable<Json>,"processed_at": string | null,"provider": string,"received_at": string
+                  }
+                  Insert: {
+                    "delivery_id": string,"id"?: string,"payload": NonNullable<Json>,"processed_at"?: string | null,"provider": string,"received_at"?: string
+                  }
+                  Update: {
+                    "delivery_id"?: string,"id"?: string,"payload"?: NonNullable<Json>,"processed_at"?: string | null,"provider"?: string,"received_at"?: string
                   }
                   Relationships: [
 
@@ -1720,6 +1733,19 @@ isOneToOne: false
       referencedRelation: "workspaces"
       referencedColumns: ["id"]
     }
+                  ]
+                },"inbox": {
+                  Row: {
+                    "delivery_id": string,"source": string
+                  }
+                  Insert: {
+                    "delivery_id": string,"source": string
+                  }
+                  Update: {
+                    "delivery_id"?: string,"source"?: string
+                  }
+                  Relationships: [
+
                   ]
                 },"inventory_items": {
                   Row: {
@@ -3622,6 +3648,19 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"vietcombank_inbox": {
+                  Row: {
+                    "delivery_id": string,"id": string,"payload": NonNullable<Json>,"processed_at": string | null,"provider": string,"received_at": string
+                  }
+                  Insert: {
+                    "delivery_id": string,"id"?: string,"payload": NonNullable<Json>,"processed_at"?: string | null,"provider": string,"received_at"?: string
+                  }
+                  Update: {
+                    "delivery_id"?: string,"id"?: string,"payload"?: NonNullable<Json>,"processed_at"?: string | null,"provider"?: string,"received_at"?: string
+                  }
+                  Relationships: [
+
+                  ]
                 },"work_items": {
                   Row: {
                     "action": string,"assigned_staff_id": string | null,"chain_id": string | null,"completed_at": string | null,"created_at": string,"decided_path": string | null,"dedupe_key": string,"department": string,"depth": number,"error": string | null,"evidence_state": string,"execution_id": string | null,"id": string,"inbound_event_id": string | null,"installation_id": string | null,"lead_id": string | null,"missing_fields": (string)[],"origin": string,"parent_id": string | null,"proposal": NonNullable<Json>,"reason": string | null,"reasons": (string)[],"result": Json | null,"status": string,"subject_id": string | null,"subject_type": string,"updated_at": string,"workspace_id": string
@@ -4194,9 +4233,6 @@ isOneToOne: false
 "job_requeue_failed":
 { Args: { "p_hours"?: number }; Returns: Json
                            },
-"job_schedule":
-{ Args: { "p_message": string,"p_name": string,"p_queue": string,"p_schedule": string }; Returns: number
-                           },
 "job_stats":
 { Args: Record<PropertyKey, never>; Returns: Json
                            },
@@ -4316,6 +4352,11 @@ isOneToOne: false
                            },
 "revoke_workspace_invite":
 { Args: { "p_invite": string,"p_workspace": string }; Returns: undefined
+                           },
+"sales_action_find":
+{ Args: { "p_dedupe_key"?: string,"p_outbox"?: string,"p_workspace": string }; Returns: {
+              "id": string,"state": string,"target_found": boolean,"work_item_id": string,"work_status": string
+            }[]
                            },
 "session_bootstrap":
 { Args: Record<PropertyKey, never>; Returns: Json
