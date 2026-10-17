@@ -412,9 +412,9 @@ release:
 database:
   migrationsDir: supabase/migrations
   archiveDir: supabase/migrations/_archive
-  baseline: lite-baseline
-  standard: lite-baseline-standard
-  heldBack: [drop-engine-schema]
+  baseline: baseline
+  # v0.2.1 cutover (owner decision 2026-10-17): production was reset and the whole chain 000000..000600 applied on an empty schema, so nothing is held
+  # back. The pre-reset database lives only in the encrypted dump named in infra/swarm/recovery/db-backup-receipt-v0.2.1.md.
   projectRef: lytjlbytgqqykenajhgr
   restamp:
     - {from: "20261013100000", to: "20261012100100"}
@@ -443,8 +443,7 @@ database:
     - {from: "20261025120000", to: "20261012102400"}
   postCutover:
     schema: public
-    functionPrefixes: [engine_]
-    functionNames: [zalo_refresh_tick]
+    functionNames: [job_schedule]
     minAgeHours: 48
 k8s:
   status: deferred
