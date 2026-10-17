@@ -46,7 +46,7 @@ jobs:
         if: ${{ (env.STACK_ENVIRONMENT == 'production' && contains(fromJSON('["api","web","landing"]'), matrix.name)) }}
       - name: install SOPS
         if: ${{ (env.STACK_ENVIRONMENT == 'production' && contains(fromJSON('["api","web","landing"]'), matrix.name)) }}
-        uses: mdgreenwald/mozilla-sops-action@bb2d96a13ef438ad122e5827a57ebd75d6ff118d # v2.1.0
+        uses: mdgreenwald/mozilla-sops-action@d180aee439b894360c10dde0652df5d0fe0210dc # v2.1.2
         with:
           version: v3.13.2
       - name: public build values

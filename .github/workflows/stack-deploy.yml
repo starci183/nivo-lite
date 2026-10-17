@@ -63,7 +63,7 @@ jobs:
           cache: npm
       - run: npm ci --ignore-scripts
       - name: install SOPS
-        uses: mdgreenwald/mozilla-sops-action@bb2d96a13ef438ad122e5827a57ebd75d6ff118d # v2.1.0
+        uses: mdgreenwald/mozilla-sops-action@d180aee439b894360c10dde0652df5d0fe0210dc # v2.1.2
         with:
           version: v3.13.2
       - name: image repositories
@@ -175,7 +175,7 @@ jobs:
           cache: npm
       - run: npm ci --ignore-scripts
       - name: install SOPS
-        uses: mdgreenwald/mozilla-sops-action@bb2d96a13ef438ad122e5827a57ebd75d6ff118d # v2.1.0
+        uses: mdgreenwald/mozilla-sops-action@d180aee439b894360c10dde0652df5d0fe0210dc # v2.1.2
         with:
           version: v3.13.2
       - uses: docker/login-action@184bdaa0721073962dff0199f1fb9940f07167d1 # v3.5.0
