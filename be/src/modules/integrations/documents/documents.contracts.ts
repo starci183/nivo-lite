@@ -100,6 +100,14 @@ export interface DocumentFileTextResult {
     readonly pages: number
 }
 
+/** The document SDKs, each loaded on first use. */
+export interface DocumentLibrarySdks {
+    /** The Word text extractor. */
+    readonly mammoth: () => Promise<Pick<typeof import("mammoth"), "extractRawText">>
+    /** The PDF text extractor. */
+    readonly unpdf: () => Promise<Pick<typeof import("unpdf"), "extractText" | "getDocumentProxy">>
+}
+
 /** Library extraction results needed by uploaded-file consumers. */
 export interface DocumentFileReaders extends DocumentReaders {
     /** Merged PDF text together with the original page count. */

@@ -25,21 +25,20 @@ export class ReadinessService {
 
     /** Reports ready only when both dependency probes answer within three seconds. */
     async check(): Promise<ReadinessReport> {
-        let cancelDeadline: (() => void) | undefined
+        const probes = Promise.all([
+            this.entityManager.query<unknown>(CHECK_READINESS_DATABASE),
+            this.entityManager.query<Array<ReadinessJobsRow>>(CHECK_READINESS_JOBS),
+        ])
         const deadline = new Promise<never>((_resolve, reject) => {
-            cancelDeadline = this.timeout.schedule(
+            const cancel = this.timeout.schedule(
                 () => reject(new LivenessError({ code: LivenessErrorCode.ReadinessUnavailable })),
                 PROBE_TIMEOUT_MS,
             )
+            // The timer is released as soon as both probes settle, whichever way.
+            void probes.then(cancel, cancel)
         })
         try {
-            const [, rows] = await Promise.race([
-                Promise.all([
-                    this.entityManager.query<unknown>(CHECK_READINESS_DATABASE),
-                    this.entityManager.query<Array<ReadinessJobsRow>>(CHECK_READINESS_JOBS),
-                ]),
-                deadline,
-            ])
+            const [, rows] = await Promise.race([probes, deadline])
             if (rows[0]?.stats?.checkedAt == null) {
                 throw new LivenessError({ code: LivenessErrorCode.ReadinessUnavailable })
             }
@@ -47,8 +46,6 @@ export class ReadinessService {
         } catch (cause) {
             this.logger.error(ReadinessLogEvent.CheckFailed, cause)
             throw new LivenessError({ code: LivenessErrorCode.ReadinessUnavailable, cause })
-        } finally {
-            cancelDeadline?.()
         }
     }
 }

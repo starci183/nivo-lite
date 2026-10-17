@@ -1,7 +1,17 @@
 import { Secret } from "@modules/platform/config"
 import type { EnvSource } from "@modules/platform/config"
-import { libraryReaders } from "./library-readers.client"
+import { libraryReadersOf } from "./library-readers.client"
 import type { DocumentsGoogleClient, DocumentsOptions } from "./documents.options"
+import type { DocumentLibrarySdks } from "./documents.contracts"
+
+/** The SDKs load on first use, so a process that never reads a document never loads them. */
+const librarySdks: DocumentLibrarySdks = {
+    mammoth: () => import("mammoth"),
+    unpdf: () => import("unpdf"),
+}
+
+/** The readers every documents consumer shares. */
+export const libraryReaders = libraryReadersOf(librarySdks)
 
 const DEFAULT_DRIVE_BASE = "https://www.googleapis.com/drive/v3"
 
