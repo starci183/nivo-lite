@@ -16,11 +16,14 @@ concurrency:
 
 jobs:
   fast:
+    timeout-minutes: 20
     runs-on: ubuntu-latest
     env:
       SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          fetch-depth: 0
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 22
@@ -41,6 +44,22 @@ jobs:
             ${{ runner.os }}-node22-build-
       - run: npm ci --ignore-scripts
         if: steps.deps.outputs.cache-hit != 'true'
+      - name: lint baseline
+        shell: bash
+        env:
+          BASE_BRANCH: ${{ github.base_ref }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+          BEFORE: ${{ github.event.before }}
+        run: |
+          base="origin/$DEFAULT_BRANCH"
+          if [[ "$GITHUB_EVENT_NAME" == pull_request ]]; then
+            base="origin/$BASE_BRANCH"
+          elif [[ "$GITHUB_REF" == refs/tags/* ]]; then
+            base=$(git describe --tags --abbrev=0 "$GITHUB_REF^" 2>/dev/null) || base="origin/$DEFAULT_BRANCH"
+          elif [[ "$GITHUB_EVENT_NAME" == push && -n "$BEFORE" && ! "$BEFORE" =~ ^0+$ ]]; then
+            base="$BEFORE"
+          fi
+          echo "STARCI_BASE_REF=$base" >> "$GITHUB_ENV"
       - name: production dependency audit
         run: npm audit --omit=dev --audit-level=high
       - name: lint be
@@ -53,11 +72,28 @@ jobs:
         run: npm run lint -- --side fe
         env:
           NODE_OPTIONS: --max-old-space-size=6144
-      - name: lint with Sonar import
+      - name: lint be with Sonar import
         if: env.SONAR_TOKEN != ''
-        run: npm run lint -- --sonar reports/lint.sonar.json
+        run: npm run lint -- --side be --sonar reports/lint.be.sonar.json
         env:
           NODE_OPTIONS: --max-old-space-size=6144
+      - name: lint fe with Sonar import
+        if: env.SONAR_TOKEN != ''
+        run: npm run lint -- --side fe --sonar reports/lint.fe.sonar.json
+        env:
+          NODE_OPTIONS: --max-old-space-size=6144
+      - name: merge Sonar lint reports
+        if: always() && env.SONAR_TOKEN != ''
+        run: |
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          const files = ['reports/lint.be.sonar.json', 'reports/lint.fe.sonar.json'];
+          const reports = files.filter(file => fs.existsSync(file)).map(file => JSON.parse(fs.readFileSync(file, 'utf8')));
+          const rules = [...new Map(reports.flatMap(report => report.rules).map(rule => [rule.id, rule])).values()];
+          const issues = reports.flatMap(report => report.issues);
+          fs.mkdirSync('reports', { recursive: true });
+          fs.writeFileSync('reports/lint.sonar.json', JSON.stringify({ rules, issues }, null, 2) + '\n');
+          NODE
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         if: always() && env.SONAR_TOKEN != '' && hashFiles('reports/lint.sonar.json') != ''
         with:
@@ -69,6 +105,7 @@ jobs:
         run: npm run typecheck
 
   test:
+    timeout-minutes: 45
     runs-on: ubuntu-latest
     # Codecov OIDC authentication requires a job-scoped identity token.
     permissions:
@@ -76,6 +113,8 @@ jobs:
       id-token: write
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          fetch-depth: 0
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 22
@@ -96,10 +135,20 @@ jobs:
             ${{ runner.os }}-node22-build-
       - run: npm ci --ignore-scripts
         if: steps.deps.outputs.cache-hit != 'true'
+      - name: Jest cache
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: .jest-cache
+          key: ${{ runner.os }}-node22-jest-${{ hashFiles('package-lock.json') }}-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-node22-jest-${{ hashFiles('package-lock.json') }}-
+            ${{ runner.os }}-node22-jest-
       - name: unit
-        run: npm test -- --ci
+        run: npm test -- --ci --forceExit --cacheDirectory .jest-cache
       - name: coverage proof
         run: npx starci app check --coverage-from be/coverage/lcov.info
+        env:
+          NODE_OPTIONS: --max-old-space-size=6144
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         if: always() && hashFiles('be/coverage/lcov.info') != ''
         with:
@@ -110,19 +159,50 @@ jobs:
         run: |
           echo "::notice::codecov upload skipped: no coverage file at be/coverage/lcov.info (the test step failed or produced none)"
           exit 0
-      - name: coverage upload
-        uses: codecov/codecov-action@0fb7174895f61a3b6b78fc075e0cd60383518dac # v5.5.5
+      - name: Codecov availability
+        id: codecov-availability
         if: ${{ !cancelled() && startsWith(github.ref, 'refs/tags/v') && hashFiles('be/coverage/lcov.info') != '' }}
+        env:
+          CODECOV_AUTH: oidc
+        run: |
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          let available = false;
+          try {
+            const upload = await fetch('https://ingest.codecov.io/upload/v4', { signal: AbortSignal.timeout(10000) });
+            available = upload.status < 500;
+            if (available && process.env.CODECOV_AUTH === 'oidc') {
+              const url = new URL(process.env.ACTIONS_ID_TOKEN_REQUEST_URL);
+              url.searchParams.set('audience', 'https://codecov.io');
+              const identity = await fetch(url, { headers: { Authorization: 'Bearer ' + process.env.ACTIONS_ID_TOKEN_REQUEST_TOKEN }, signal: AbortSignal.timeout(10000) });
+              available = identity.ok && Boolean((await identity.json()).value);
+            }
+          } catch { available = false; }
+          fs.appendFileSync(process.env.GITHUB_OUTPUT, 'up=' + available + '\n');
+          if (!available) console.log('::notice::codecov upload skipped: upload endpoint or OIDC token unavailable (services.codecov.optional)');
+          NODE
+      - name: coverage upload
+        id: codecov-upload
+        continue-on-error: true
+        uses: codecov/codecov-action@0fb7174895f61a3b6b78fc075e0cd60383518dac # v5.5.5
+        if: ${{ !cancelled() && startsWith(github.ref, 'refs/tags/v') && hashFiles('be/coverage/lcov.info') != '' && steps.codecov-availability.outputs.up == 'true' }}
         with:
           use_oidc: true
           files: be/coverage/lcov.info
           disable_search: true
-          fail_ci_if_error: true
+          fail_ci_if_error: false
+      - name: Codecov upload unavailable
+        if: ${{ !cancelled() && steps.codecov-upload.outcome == 'failure' }}
+        run: |
+          echo "::notice::codecov upload skipped: upload unavailable (services.codecov.optional)"
 
   build:
+    timeout-minutes: 30
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          fetch-depth: 0
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 22
@@ -145,19 +225,35 @@ jobs:
         if: steps.deps.outputs.cache-hit != 'true'
       - name: build be
         run: npm run build:be
-      - name: build fe
-        run: npm run build:fe
+      - name: build fe web
+        run: npm run codegen --silent && npx --no-install turbo run build --filter=./fe/apps/web
+        env:
+          NEXT_PUBLIC_API_URL: "https://api.nivo.vn"
+          NEXT_PUBLIC_APP_URL: "https://app.nivo.vn"
+          NEXT_PUBLIC_DEVELOPER_API_URL: "https://api.nivo.vn"
+          NEXT_PUBLIC_LANDING_URL: "https://nivo.vn"
+          NEXT_PUBLIC_SITE_URL: "https://app.nivo.vn"
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: "sb_publishable_cOdpl9nzOJ3-a014rKmB6w_SzLbWRSI"
+          NEXT_PUBLIC_SUPABASE_URL: "https://lytjlbytgqqykenajhgr.supabase.co"
+      - name: build fe landing
+        run: npm run codegen --silent && npx --no-install turbo run build --filter=./fe/apps/landing
+        env:
+          NEXT_PUBLIC_APP_URL: "https://app.nivo.vn"
+          NEXT_PUBLIC_SITE_URL: "https://nivo.vn"
       - name: database migration checks
         run: npm run db:lint
 
   sonar:
     needs: [fast, test]
+    timeout-minutes: 20
     runs-on: ubuntu-latest
     env:
       SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
       SONAR_HOST_URL: ${{ vars.SONAR_HOST_URL }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          fetch-depth: 0
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 22
@@ -178,26 +274,39 @@ jobs:
             ${{ runner.os }}-node22-build-
       - run: npm ci --ignore-scripts
         if: steps.deps.outputs.cache-hit != 'true'
-      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+      - name: Sonar availability
+        id: sonar-availability
         if: ${{ !cancelled() && startsWith(github.ref, 'refs/tags/v') && env.SONAR_TOKEN != '' }}
+        run: |
+          if curl -fsS --max-time 10 "$SONAR_HOST_URL/api/system/status" | node -e "let s='';process.stdin.on('data',c=>s+=c);process.stdin.on('end',()=>{try{process.exit(JSON.parse(s).status==='UP'?0:1)}catch{process.exit(1)}})"; then
+            echo "up=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "up=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::sonar skipped: $SONAR_HOST_URL not reachable (services.sonar.optional)"
+          fi
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        if: ${{ !cancelled() && startsWith(github.ref, 'refs/tags/v') && env.SONAR_TOKEN != '' && steps.sonar-availability.outputs.up == 'true' }}
         with:
           name: coverage-lcov
           path: be/coverage
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
-        if: ${{ !cancelled() && startsWith(github.ref, 'refs/tags/v') && env.SONAR_TOKEN != '' }}
+        if: ${{ !cancelled() && startsWith(github.ref, 'refs/tags/v') && env.SONAR_TOKEN != '' && steps.sonar-availability.outputs.up == 'true' }}
         with:
           name: sonar-lint
           path: reports
       - uses: SonarSource/sonarqube-scan-action@c7ee0f9df90b7aa20e8dcf9695dcfe2e7da5b4f2 # v7.2.1
-        if: ${{ !cancelled() && startsWith(github.ref, 'refs/tags/v') && env.SONAR_TOKEN != '' }}
+        if: ${{ !cancelled() && startsWith(github.ref, 'refs/tags/v') && env.SONAR_TOKEN != '' && steps.sonar-availability.outputs.up == 'true' }}
       - uses: SonarSource/sonarqube-quality-gate-action@7a5fffe8e523c40e0c740b6bc2712ab503e52efa # v1.2.1
-        if: ${{ !cancelled() && startsWith(github.ref, 'refs/tags/v') && env.SONAR_TOKEN != '' }}
+        if: ${{ !cancelled() && startsWith(github.ref, 'refs/tags/v') && env.SONAR_TOKEN != '' && steps.sonar-availability.outputs.up == 'true' }}
         timeout-minutes: 10
 
   db-types:
+    timeout-minutes: 30
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          fetch-depth: 0
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 22

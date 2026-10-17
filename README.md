@@ -1,13 +1,13 @@
 # nivo-lite
 
-<!-- prettier-ignore-start -->
 <!-- >>> starci app sync (managed block; do not edit) >>> -->
+
 [![CI](https://github.com/starci183/nivo-lite/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/starci183/nivo-lite/actions/workflows/ci.yml)
 [![Codecov](https://codecov.io/gh/starci183/nivo-lite/branch/main/graph/badge.svg)](https://codecov.io/gh/starci183/nivo-lite)
 [![Quality Gate](https://sonar.starci.org/api/project_badges/measure?project=nivo-lite&metric=alert_status)](https://sonar.starci.org/dashboard?id=nivo-lite)
 [![Dependabot](https://github.com/starci183/nivo-lite/actions/workflows/dependabot/dependabot-updates/badge.svg)](https://github.com/starci183/nivo-lite/actions/workflows/dependabot/dependabot-updates)
+
 <!-- <<< starci app sync <<< -->
-<!-- prettier-ignore-end -->
 
 NIVO OS lite: the responsibility operating system for founder-led service businesses, one app with a Nest API, a Next web app and Supabase as the backing service.
 

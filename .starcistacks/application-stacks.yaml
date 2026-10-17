@@ -523,6 +523,7 @@ services:
     target: 100
     components: auto
     required: true
+    optional: true
     ci:
       workflow: .github/workflows/ci.yml
       wiring: required
