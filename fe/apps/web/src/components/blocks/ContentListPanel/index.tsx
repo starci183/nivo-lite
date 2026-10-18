@@ -24,7 +24,7 @@ export const ContentListPanel = () => {
                     { id: "all", label: t("filterAll") },
                     ...CONTENT_STATUSES.map((s) => ({
                         id: s,
-                        label: `${t(`status_${s}`)} (${data.items.filter((i) => i.status === s).length})`,
+                        label: `${t("status_" + s)} (${data.items.filter((i) => i.status === s).length})`,
                     })),
                 ],
                 filter,

@@ -71,7 +71,11 @@ export const adviceFor = (p: BrainFact, current: BrainFact | null, now: number):
         return {
             action: "split",
             reasonKey: "reasonSplit",
-            params: { value: p.value, current: current.value, situation: newConditions.join(", ").replace(/-/g, " ") },
+            params: {
+                value: p.value,
+                current: current.value,
+                situation: newConditions.join(", ").replaceAll("-", " "),
+            },
         }
     }
     if (p.sourceKind === "system" && p.evidence.some((item) => item.kind === "data_record")) {

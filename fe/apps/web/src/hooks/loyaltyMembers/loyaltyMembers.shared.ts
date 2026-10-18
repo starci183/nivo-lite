@@ -55,23 +55,22 @@ export const lastVisitOf = (
 }
 
 /** The reasons a reward cannot be redeemed, as the back end names them. */
-const BLOCK_CODES: ReadonlyArray<string> = [
+const BLOCK_CODES: ReadonlySet<string> = new Set([
     "inactive",
     "out_of_stock",
     "not_enough_points",
     "limit_reached",
     "tier_required",
-]
+])
 
 /** The message key for a redeem block code; an unknown code falls back to the generic message. */
-export const blockMessageKey = (code: string): string =>
-    BLOCK_CODES.includes(code) ? `block_${code}` : "blockFallback"
+export const blockMessageKey = (code: string): string => (BLOCK_CODES.has(code) ? `block_${code}` : "blockFallback")
 
 /** The ledger kinds the page has a label for. */
-const LEDGER_KINDS: ReadonlyArray<string> = ["earn", "redeem", "expire", "adjust"]
+const LEDGER_KINDS: ReadonlySet<string> = new Set(["earn", "redeem", "expire", "adjust"])
 
 /** True when the ledger kind has a `kind_*` label. */
-export const isLedgerKind = (kind: string): boolean => LEDGER_KINDS.includes(kind)
+export const isLedgerKind = (kind: string): boolean => LEDGER_KINDS.has(kind)
 
 /** The badge tone of a ledger kind (the label is always written too). */
 export const ledgerTone = (kind: string): BadgeTone => {

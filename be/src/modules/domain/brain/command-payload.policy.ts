@@ -151,15 +151,10 @@ const sourceUpdate = (payload: Payload, sourceId: string | undefined): BrainComm
               },
           }
 
-/** The command of one kind, read from its payload. */
-const read = (kind: BrainCommandKind, payload: Payload): BrainCommand | null => {
+/** Reads owner fact and lesson edits using each command's required fields. */
+const readDecision = (kind: BrainCommandKind, payload: Payload): BrainCommand | null => {
     const id = text(payload, "id")
-    const sourceId = text(payload, "sourceId")
     switch (kind) {
-        case "fact.save": {
-            const form = factForm(payload)
-            return form === null ? null : { kind, form }
-        }
         case "fact.decide": {
             const action = oneOf(FACT_ACTIONS, text(payload, "action"))
             if (id === undefined || action === undefined) return null
@@ -187,6 +182,35 @@ const read = (kind: BrainCommandKind, payload: Payload): BrainCommand | null => 
             const action = oneOf(LESSON_ACTIONS, text(payload, "action"))
             return id === undefined || action === undefined ? null : { kind, decision: { id, action } }
         }
+        case "brain.maintain":
+        case "drive.linked":
+        case "drive.picked":
+        case "fact.save":
+        case "gap.dismiss":
+        case "knowledge.ask":
+        case "knowledge.reembed":
+        case "lessons.mine":
+        case "source.delete":
+        case "source.reindex":
+        case "source.update":
+            return null
+    }
+}
+
+/** The command of one kind, read from its payload. */
+const read = (kind: BrainCommandKind, payload: Payload): BrainCommand | null => {
+    const id = text(payload, "id")
+    const sourceId = text(payload, "sourceId")
+    switch (kind) {
+        case "fact.save": {
+            const form = factForm(payload)
+            return form === null ? null : { kind, form }
+        }
+        case "fact.decide":
+        case "fact.keep":
+        case "lesson.save":
+        case "lesson.decide":
+            return readDecision(kind, payload)
         case "gap.dismiss":
             return id === undefined ? null : { kind, id }
         case "lessons.mine": {

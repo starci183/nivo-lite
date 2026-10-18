@@ -45,7 +45,10 @@ type OpenApiPullsStepProps = {
 }
 
 /** One row of the step and the step it belongs to. */
-type PullSettingsProps = { readonly row: OpenApiPullRow; readonly step: OpenApiPullsStepProps }
+type PullSettingsProps = {
+    readonly row: OpenApiPullRow
+    readonly step: Pick<OpenApiPullsStepProps, "text" | "isDisabled" | "entityOptions" | "onPatch">
+}
 
 /** The settings of one ticked operation, indented under its checkbox. */
 const PullSettings = (props: PullSettingsProps) => {

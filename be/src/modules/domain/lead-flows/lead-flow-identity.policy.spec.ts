@@ -247,3 +247,16 @@ describe("lead flow identity policy", () => {
         ).toBe("Facebook")
     })
 })
+
+describe("contact parser boundaries", () => {
+    it("keeps first address selection across stray at signs and rejects long incomplete addresses", async () => {
+        const policy = await build()
+        expect(policy.contactIn("broken@local@shop.example; second@other.example")).toEqual({
+            phone: null,
+            email: "local@shop.example",
+        })
+        expect(policy.normEmail("a@b..c.")).toBe("a@b..c.")
+        expect(policy.normEmail("a@b.")).toBeNull()
+        expect(policy.contactIn("x".repeat(20000))).toEqual({ phone: null, email: null })
+    })
+})

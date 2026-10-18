@@ -37,14 +37,15 @@ export class ErrorsService {
      * the request) is a plain not-found; anything else is logged, recorded in `app_errors` under the transport's `site` and masked
      * as internal.
      */
-    describe(error: unknown, site: FailureSite = { scope: "api" }): ErrorDescription {
+    describe(error: unknown, site?: FailureSite): ErrorDescription {
+        const failureSite: FailureSite = site ?? { scope: "api" }
         if (error instanceof NotFoundException) return this.build(ErrorsErrorCode.RouteNotFound, "not-found", {})
         if (error instanceof DomainError) {
             const kind = this.kinds.get(error.code)
             if (kind !== undefined) return this.build(error.code, kind, error.params)
         }
-        this.logger.error(ErrorsLogEvent.Unhandled, error, { scope: site.scope })
-        void this.reporter?.report(site.scope, error, site.context)
+        this.logger.error(ErrorsLogEvent.Unhandled, error, { scope: failureSite.scope })
+        void this.reporter?.report(failureSite.scope, error, failureSite.context)
         return this.build(ErrorsErrorCode.Internal, "internal", {})
     }
 

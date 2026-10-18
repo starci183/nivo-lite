@@ -1,16 +1,19 @@
 import type { useTranslations } from "next-intl"
-import type { useAddDocuments, useAddInstances } from "@/hooks/knowledge"
-import type { AddMode, AddPreset, QueueItem } from "@/hooks/knowledge"
+import type { useAddDocuments, useAddInstances, AddMode, AddPreset, QueueItem } from "@/hooks/knowledge"
+
 import { Button, Drawer, SegmentedControl, Text } from "@starci/grammar/common"
-import { AddFilesPanel } from "@/components/composites/AddFilesPanel"
-import type { LinkRowView, QueueRowView } from "@/components/composites/AddFilesPanel"
-import { AddNotePanel } from "@/components/composites/AddNotePanel"
-import type { PairView } from "@/components/composites/AddNotePanel"
+import { AddFilesPanel, type LinkRowView, type QueueRowView } from "@/components/composites/AddFilesPanel"
+
+import { AddNotePanel, type PairView } from "@/components/composites/AddNotePanel"
+
 import { DrawerFooter } from "@/components/composites/DrawerFooter"
 import { FormNotice } from "@/components/composites/FormNotice"
-import { AddOptionsPanel } from "@/components/composites/AddOptionsPanel"
-import type { ChoiceView } from "@/components/composites/AddOptionsPanel"
+import { AddOptionsPanel, type ChoiceView } from "@/components/composites/AddOptionsPanel"
+
 import { DRAWER_BODY_CLASS_NAME } from "./classNames"
+
+/** Badge tones used by the document upload queue. */
+type QueueStatusTone = "success" | "danger" | "warning" | "neutral"
 
 /** The words and values of the files and links panel. */
 interface FilesView {
@@ -208,7 +211,7 @@ export interface BuildDocumentFilesViewContext {
         name: string
         detail: string
         statusLabel: string
-        statusTone: "success" | "danger" | "warning" | "neutral"
+        statusTone: QueueStatusTone
         error: string | undefined
         canRemove: boolean
     }
@@ -228,7 +231,7 @@ export interface BuildAddDocumentsViewContext {
         name: string
         detail: string
         statusLabel: string
-        statusTone: "success" | "neutral" | "warning" | "danger"
+        statusTone: QueueStatusTone
         error: string | undefined
         canRemove: boolean
     }
@@ -251,7 +254,7 @@ export const MODE_KEYS: Readonly<Record<AddMode, "tabFiles" | "tabWrite" | "tabF
 }
 
 /** Feedback tone for each queued document status. */
-export const STATUS_TONE: Readonly<Record<QueueItem["status"], "neutral" | "warning" | "success" | "danger">> = {
+export const STATUS_TONE: Readonly<Record<QueueItem["status"], QueueStatusTone>> = {
     waiting: "neutral",
     uploading: "warning",
     queued: "success",

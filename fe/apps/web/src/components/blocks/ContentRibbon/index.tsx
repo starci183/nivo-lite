@@ -16,7 +16,7 @@ export const ContentRibbon = () => {
             props={{
                 label: frame("ribbonAria"),
                 isLoading: data === undefined && !workbench.error,
-                isFailed: Boolean(workbench.error) || (data !== undefined && data.figures === null),
+                isFailed: Boolean(workbench.error) || data?.figures === null,
                 failedTitle: t("loadFailedTitle"),
                 failedBody: t("loadFailedBody"),
                 items,

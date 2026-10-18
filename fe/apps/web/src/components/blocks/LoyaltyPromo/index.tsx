@@ -7,12 +7,17 @@ import {
     CAMPAIGN_BRIEF_MAX,
     campaignStatusKey,
     campaignStatusTone,
-    reasonKey,
+    promotionPreviewOf,
+    promotionResultOf,
     useLoyaltyPromo,
     useSegmentLabel,
 } from "@/hooks/loyaltyPromo"
-import { LoyaltyPromoBase } from "./component"
-import type { LoyaltyPromoBaseProps, LoyaltyPromoPreviewLine, LoyaltyPromoResult } from "./component"
+import {
+    LoyaltyPromoBase,
+    type LoyaltyPromoBaseProps,
+    type LoyaltyPromoPreviewLine,
+    type LoyaltyPromoResult,
+} from "./component"
 
 /** The connected promotion tab: build a segment with a live count, send the offer in (the back end drafts the message slowly, so the campaign is polled) and list the offers prepared so far. */
 /** The connected Promo tab: reads the loyalty board itself (SWR shares the one request with the other tabs). */
@@ -26,43 +31,8 @@ export const LoyaltyPromo = () => {
     const values = promo.form.watch()
     const { preview, created } = promo
 
-    const previewLines: Array<LoyaltyPromoPreviewLine> = []
-    if (preview.kind === "failed") previewLines.push({ id: "failed", text: t("previewFailed"), emphasis: false })
-    if (preview.kind === "loading") previewLines.push({ id: "loading", text: t("previewLoading"), emphasis: false })
-    if (preview.kind === "ready") {
-        const shown = preview.preview
-        previewLines.push({
-            id: "count",
-            text: t("previewCount", { total: format.number(shown.total), reachable: format.number(shown.reachable) }),
-            emphasis: true,
-        })
-        previewLines.push({ id: "who", text: t("previewWho", { who: promo.segmentLabel }), emphasis: false })
-        if (shown.names.length > 0)
-            previewLines.push({
-                id: "sample",
-                text: t("previewSample", { names: format.list([...shown.names], { type: "unit" }) }),
-                emphasis: false,
-            })
-    }
-
-    let result: LoyaltyPromoResult | undefined
-    let failure: string | undefined
-    if (created !== null && !promo.isWriting) {
-        if (created.status === "failed") failure = t(reasonKey(created.errorCode))
-        else {
-            const seconds = created.draftMs === null || created.draftMs === undefined ? null : created.draftMs / 1000
-            result = {
-                title:
-                    seconds === null
-                        ? t("createdWaitingTemplate")
-                        : t("createdWaiting", { s: Math.max(1, Math.round(seconds)) }),
-                recipients: t("createdRecipients", { n: created.recipients }),
-                time:
-                    seconds === null ? "" : t("draftTime", { s: format.number(seconds, { maximumFractionDigits: 1 }) }),
-                draft: created.draft,
-            }
-        }
-    }
+    const previewLines = promotionPreviewOf(preview, promo.segmentLabel, t, format)
+    const { result, failure } = promotionResultOf(created, promo.isWriting, t, format)
 
     const reachNobody = preview.kind === "ready" && preview.preview.total === 0
 

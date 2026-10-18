@@ -68,3 +68,24 @@ describe("staffHandles", () => {
         ])
     })
 })
+
+describe("handle annotation boundaries", () => {
+    it("preserves unmatched annotations and ignores complete nested annotations through their first closing parenthesis", async () => {
+        const policy = await build()
+        expect(policy.baseStaffHandle("An (team (morning) Minh")).toBe("minh")
+        expect(policy.baseStaffHandle("An (morning")).toBe("morning")
+        expect(policy.baseStaffHandle("An " + "(".repeat(20000))).toBe("an")
+        expect([
+            ...policy.staffHandles(
+                [
+                    { id: "a", name: "Ha" },
+                    { id: "b", name: "Ha" },
+                ],
+                ["ha", "ha2"],
+            ),
+        ]).toEqual([
+            ["a", "ha3"],
+            ["b", "ha4"],
+        ])
+    })
+})

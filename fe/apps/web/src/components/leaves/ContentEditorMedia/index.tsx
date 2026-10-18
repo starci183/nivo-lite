@@ -7,6 +7,7 @@ import {
     Select,
     Text,
     TextAction,
+    Video,
 } from "@starci/grammar/common"
 import type { ContentT, MediaTile } from "@/hooks/content"
 import { MEDIA_GRID_CLASS_NAME, MEDIA_TILE_CLASS_NAME, TOOLS_CLASS_NAME } from "./classNames"
@@ -41,7 +42,7 @@ const Thumb = (props: ThumbProps) => {
     if (props.tile.url !== null && props.tile.kind === "video") {
         return (
             <MediaFrame aspect="landscape">
-                <video src={props.tile.url} controls preload="metadata" aria-label={props.tile.name} />
+                <Video src={props.tile.url} title={props.tile.name} />
             </MediaFrame>
         )
     }

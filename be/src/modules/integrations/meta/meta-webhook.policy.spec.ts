@@ -84,6 +84,38 @@ const pageBody = (entry: object) => ({ object: "page", entry: [{ id: "PAGE", tim
 const igBody = (entry: object) => ({ object: "instagram", entry: [{ id: "IG", time: 1700000000, ...entry }] })
 
 describe("parseWebhook", () => {
+    it("keeps entry order and messaging before changes while ignoring malformed entries", async () => {
+        const { subject } = await buildSubject()
+        const events = subject.parseWebhook(
+            {
+                object: "page",
+                entry: [
+                    null,
+                    {
+                        id: "PAGE",
+                        time: 2,
+                        messaging: [{ sender: { id: "U" }, message: { text: "hello" } }],
+                        changes: [
+                            null,
+                            { field: "feed", value: { item: "comment", verb: "add", comment_id: "C" } },
+                            { field: "leadgen", value: { leadgen_id: "L" } },
+                        ],
+                    },
+                    { id: "PAGE2", messaging: [{ sender: { id: "U2" }, postback: { title: "Go" } }] },
+                ],
+            },
+            NOW,
+        )
+        expect(events.map(({ event_key, timestamp }) => [event_key, timestamp])).toEqual([
+            ["dm:U:2000", 2000],
+            ["comment:C", 2000],
+            ["leadgen:L", 2000],
+            [`postback:U2:${NOW}:Go`, NOW],
+        ])
+    })
+})
+
+describe("parseWebhook", () => {
     it("ignores unknown objects and garbage", async () => {
         const { subject } = await buildSubject()
 

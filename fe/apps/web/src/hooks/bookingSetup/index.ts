@@ -1,2 +1,2 @@
-export { WEEK, hoursLineOf, parseWeek } from "./bookingSetup.shared"
+export { WEEK, hoursLineOf, parseWeek, bookingServiceFormOf } from "./bookingSetup.shared"
 export { useBookingSetupSave } from "./useBookingSetupSave"

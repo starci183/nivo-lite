@@ -125,6 +125,11 @@ describe("booking-rules.policy", () => {
             const subject = await build()
 
             expect(subject.normaliseEmail("anna")).toBeNull()
+            expect(subject.normaliseEmail(`a@${"b".repeat(20000)}`)).toBeNull()
+            expect(subject.normaliseEmail("a@b..c")).toBe("a@b..c")
+            expect(subject.normaliseEmail("a@@b.c")).toBeNull()
+            expect(subject.normaliseEmail("a@.c")).toBeNull()
+            expect(subject.normaliseEmail("a@b.c.")).toBe("a@b.c.")
             expect(subject.normaliseEmail("")).toBeNull()
         })
 

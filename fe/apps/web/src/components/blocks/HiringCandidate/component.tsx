@@ -1,21 +1,25 @@
 import type { useTranslations } from "next-intl"
-import type { reasonTone, scoreTone, useHiringFormat } from "@/hooks/hiring"
-import type { isPreviewable, useHiringCandidate } from "@/hooks/hiringCandidate"
+import type { reasonTone, scoreTone, useHiringFormat, FieldOf, HiringSay } from "@/hooks/hiring"
+import type {
+    isPreviewable,
+    useHiringCandidate,
+    CandidateDialog,
+    InterviewValues,
+    OfferValues,
+} from "@/hooks/hiringCandidate"
 import type { CandidateView } from "@/hooks/hiringWire"
-import { Alert, AlertDialog, Badge, Drawer, Text } from "@starci/grammar/common"
-import type { BadgeTone } from "@starci/grammar/common"
-import { HiringCvSection } from "@/components/composites/HiringCvSection"
-import type { HiringCvSectionProps } from "@/components/composites/HiringCvSection"
-import { HiringInterviewDialog } from "@/components/composites/HiringInterviewDialog"
-import type { HiringInterviewDialogProps } from "@/components/composites/HiringInterviewDialog"
-import { HiringOfferDialog } from "@/components/composites/HiringOfferDialog"
-import type { HiringOfferDialogProps } from "@/components/composites/HiringOfferDialog"
-import { HiringRejectDialog } from "@/components/composites/HiringRejectDialog"
-import type { HiringRejectDialogProps } from "@/components/composites/HiringRejectDialog"
-import { HiringScoreSection } from "@/components/composites/HiringScoreSection"
-import type { HiringScoreSectionProps } from "@/components/composites/HiringScoreSection"
-import type { FieldOf, HiringSay } from "@/hooks/hiring"
-import type { CandidateDialog, InterviewValues, OfferValues } from "@/hooks/hiringCandidate"
+import { Alert, AlertDialog, Badge, Drawer, Text, type BadgeTone } from "@starci/grammar/common"
+
+import { HiringCvSection, type HiringCvSectionProps } from "@/components/composites/HiringCvSection"
+
+import { HiringInterviewDialog, type HiringInterviewDialogProps } from "@/components/composites/HiringInterviewDialog"
+
+import { HiringOfferDialog, type HiringOfferDialogProps } from "@/components/composites/HiringOfferDialog"
+
+import { HiringRejectDialog, type HiringRejectDialogProps } from "@/components/composites/HiringRejectDialog"
+
+import { HiringScoreSection, type HiringScoreSectionProps } from "@/components/composites/HiringScoreSection"
+
 import { CHIPS_CLASS_NAME, FORM_CLASS_NAME } from "./classNames"
 import { HiringCandidateSections } from "@/components/composites/HiringCandidateSections"
 

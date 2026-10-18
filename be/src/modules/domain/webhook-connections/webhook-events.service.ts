@@ -74,7 +74,7 @@ export class WebhookEventsService {
         const connection = await this.connections.find(job.workspaceId, job.connectionId)
         const shared = this.options.signingSecret
         const url = connection === null ? null : await this.urlOf(connection)
-        if (connection === null || connection.status !== "connected" || shared === undefined || url === null) {
+        if (connection?.status !== "connected" || shared === undefined || url === null) {
             this.logger.warn(WebhookConnectionsLogEvent.DeliveryDropped, { connectionId: job.connectionId })
             return
         }

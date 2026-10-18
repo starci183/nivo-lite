@@ -14,7 +14,7 @@ import { navigation } from "@/modules/i18n"
 import { VideoPreviewStepBase, type VideoFrameShape } from "./component"
 
 /** The stages the renderer reports. */
-const STAGES = ["tts", "scenes", "mix", "encode", "upload"]
+const STAGES: ReadonlySet<string> = new Set(["tts", "scenes", "mix", "encode", "upload"])
 
 const shapeOf = (aspect: string): VideoFrameShape => {
     if (aspect === "9:16") return "portrait"
@@ -85,7 +85,7 @@ export const VideoPreviewStep = (props: VideoPreviewStepProps) => {
                 }),
                 live: rendering,
                 progressTitle: t("rendering"),
-                stageLabel: STAGES.includes(stage) ? t(`stage_${stage}`) : t("stage_queued"),
+                stageLabel: STAGES.has(stage) ? t(`stage_${stage}`) : t("stage_queued"),
                 progressLabel: t("progressLabel"),
                 progress: renderJob.status?.progress ?? project.render?.progress ?? 0,
                 note: t("renderNote"),

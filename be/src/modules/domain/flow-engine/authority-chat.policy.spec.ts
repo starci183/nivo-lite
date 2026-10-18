@@ -88,6 +88,11 @@ describe("authority chat policy", () => {
         ["orders over 20 ask me", true],
         ["orders under 20m ask me", false],
         ["orders over 20m", false],
+        ["over 20\nask me", true],
+        ["over 20m\nask me", false],
+        ["over ... ask", true],
+        ["over 20m later ask", true],
+        ["over 20m\nunder 30 ask", false],
     ])("recognizes asking above a threshold in %s", async (text, expected) => {
         const subject = await build()
 
@@ -104,6 +109,9 @@ describe("authority chat policy", () => {
         ["den 2 ngan", 2000],
         ["up to 2.5", 3],
         ["over 0", null],
+        ["over nonsense then under 3 million", 3_000_000],
+        ["under 1.2.3 million", 1],
+        ["over 0 then under 3 million", null],
         ["no amount", null],
         [`over ${"9".repeat(310)}`, null],
     ])("reads the VND limit in %s", async (text, expected) => {

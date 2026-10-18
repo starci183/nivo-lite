@@ -1,3 +1,5 @@
+import { withoutParentheses } from "@/modules/i18n"
+
 /** Words a Vietnamese colleague is addressed with before the given name; they never make a handle. */
 const HONORIFICS: ReadonlySet<string> = new Set([
     "anh",
@@ -22,13 +24,12 @@ const fold = (text: string): string =>
     text
         .toLowerCase()
         .normalize("NFD")
-        .replace(/[̀-ͯ]/g, "")
-        .replace(/đ/g, "d")
-        .replace(/\([^)]*\)/g, " ")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replaceAll(String.fromCodePoint(0x111), "d")
 
 /** The handle of one name before de-duplication: the given name, folded to letters and digits. */
 const baseHandleOf = (name: string): string => {
-    const words = fold(name)
+    const words = withoutParentheses(fold(name))
         .split(/[^a-z0-9]+/)
         .filter(Boolean)
     const named = words.filter((word) => !HONORIFICS.has(word))
@@ -39,7 +40,11 @@ const baseHandleOf = (name: string): string => {
 /** The next free handle: `base`, then `base2`, `base3`... */
 const freeHandle = (base: string, taken: ReadonlySet<string>): string => {
     let handle = base
-    for (let n = 2; taken.has(handle); n += 1) handle = `${base}${n}`
+    let n = 2
+    while (taken.has(handle)) {
+        handle = `${base}${n}`
+        n += 1
+    }
     return handle
 }
 

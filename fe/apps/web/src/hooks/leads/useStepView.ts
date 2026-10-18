@@ -1,10 +1,10 @@
 "use client"
 
-import type { ModuleIconName } from "@/modules/types"
+import type { ModuleIconName, AgentRecord, ResponsibilityRecord } from "@/modules/types"
 import type { BadgeTone } from "@starci/grammar/common"
 import { useFormatter, useTranslations } from "next-intl"
 import { MODULE_REGISTRY } from "@/modules/catalog"
-import type { AgentRecord, ResponsibilityRecord } from "@/modules/types"
+
 import { daysUntil, STATUS_KEYS, STATUS_TONES } from "./leads.shared"
 
 /** The step being worked on, every word already resolved. */

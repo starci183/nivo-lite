@@ -15,7 +15,8 @@ export const PromoLeadWait = (props: PromoLeadWaitProps) => {
     const { data } = useLeadWait(props.leadId)
     const offer = usePromoOffer()
     if (!data?.show) return null
-    const detail = data.hours == null ? "" : ` ${t(data.replied ? "nudgeReplied" : "nudgeWaiting", { h: data.hours })}`
+    const nudgeKey = data.replied ? "nudgeReplied" : "nudgeWaiting"
+    const detail = data.hours == null ? "" : ` ${t(nudgeKey, { h: data.hours })}`
     return (
         <PromoLeadWaitBase
             props={{ text: `${t("nudgeBody")}${detail}`, seeLabel: t("seeChatbot"), seeHref: offer.ctaHref }}

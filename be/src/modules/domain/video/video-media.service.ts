@@ -20,7 +20,14 @@ import { SELECT_VIDEO_MEDIA_ID } from "./persistence/video-media.sql"
 import { workspaceMediaPath } from "./video-workbench.policy"
 
 const LINK_SECONDS = 3600
-const MEDIA_MIME = ["image/jpeg", "image/png", "image/webp", "video/mp4", "video/quicktime", "video/webm"]
+const MEDIA_MIME: ReadonlySet<string> = new Set([
+    "image/jpeg",
+    "image/png",
+    "image/webp",
+    "video/mp4",
+    "video/quicktime",
+    "video/webm",
+])
 
 @Injectable()
 /** Private workspace media: bounded uploads and short lived previews and render downloads. */
@@ -54,7 +61,7 @@ export class VideoMediaService {
     /** Gives a manager a one time address for a supported file within the workspace. */
     async createUpload(principalId: string, workspaceId: string, file: VideoMediaFile): Promise<VideoMediaTicket> {
         await this.members.require(principalId, workspaceId, ["owner", "manager"])
-        if (!MEDIA_MIME.includes(file.type) || file.size <= 0 || file.size > MEDIA_MAX_BYTES) {
+        if (!MEDIA_MIME.has(file.type) || file.size <= 0 || file.size > MEDIA_MAX_BYTES) {
             throw new VideoError({ code: VideoErrorCode.InputInvalid })
         }
         await this.entitlements.requireStorageFor(workspaceId, file.size)
@@ -80,13 +87,17 @@ export class VideoMediaService {
         if (row === null) return null
         const paths =
             row.status === "done"
-                ? [row.output_path, row.poster_path].filter(
+                ? [row.output_path, row.poster_path, row.captions_path ?? null].filter(
                       (path): path is string => path !== null && workspaceMediaPath(path, workspaceId),
                   )
                 : []
         const urls = paths.length === 0 ? [] : await this.links(VIDEOS_BUCKET, paths, LINK_SECONDS)
         const byPath = new Map(urls.map((entry) => [entry.path, entry.signedUrl]))
         const videoUrl = row.output_path === null ? null : (byPath.get(row.output_path) ?? null)
+        const captionsUrl =
+            row.captions_path === null || row.captions_path === undefined
+                ? null
+                : (byPath.get(row.captions_path) ?? null)
         const download =
             title
                 .normalize("NFD")
@@ -102,6 +113,8 @@ export class VideoMediaService {
             sizeBytes: row.size_bytes,
             errorCode: row.status === "failed" ? "VIDEO_RENDER_FAILED" : null,
             videoUrl,
+            captionsUrl,
+            captionsLang: captionsUrl === null ? null : (row.captions_lang ?? null),
             downloadUrl: videoUrl === null ? null : `${videoUrl}&download=${encodeURIComponent(download + ".mp4")}`,
             posterUrl: row.poster_path === null ? null : (byPath.get(row.poster_path) ?? null),
         }

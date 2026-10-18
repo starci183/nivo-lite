@@ -103,7 +103,7 @@ const LEDGER_TONES: Readonly<Record<AccountingLedgerStatus, AccountingTone>> = {
 /** Tone of a ledger line's status. */
 export const ledgerToneOf = (status: AccountingLedgerStatus): AccountingTone => LEDGER_TONES[status]
 
-const STEP_STATUSES: ReadonlyArray<string> = [
+const STEP_STATUSES: ReadonlySet<string> = new Set([
     "draft",
     "issued",
     "paid",
@@ -118,8 +118,8 @@ const STEP_STATUSES: ReadonlyArray<string> = [
     "approved",
     "edited",
     "rejected",
-]
-const STEP_ACTIONS: ReadonlyArray<string> = ["issue_invoice", "reconcile_payment"]
+])
+const STEP_ACTIONS: ReadonlySet<string> = new Set(["issue_invoice", "reconcile_payment"])
 
 /** One step of a lineage, as plain words ready for the timeline. */
 export interface AccountingLineageItem {
@@ -153,12 +153,12 @@ export const lineageItemsOf = (
 ): ReadonlyArray<AccountingLineageItem> =>
     steps.map((step, position) => ({
         id: `${step.kind}-${position}`,
-        title: step.kind === "decision" && STEP_ACTIONS.includes(step.title) ? t(`action_${step.title}`) : step.title,
+        title: step.kind === "decision" && STEP_ACTIONS.has(step.title) ? t(`action_${step.title}`) : step.title,
         dateTime: step.at,
         timeLabel: step.at === null ? null : accountingStampOf(format, step.at),
         kindLabel: t(`step_${step.kind}`),
         isCorrection: step.kind === "adjustment",
         amountText: stepAmountOf(t, format, step),
-        statusText: step.status !== null && STEP_STATUSES.includes(step.status) ? t(`stepStatus_${step.status}`) : null,
+        statusText: step.status !== null && STEP_STATUSES.has(step.status) ? t(`stepStatus_${step.status}`) : null,
         detail: step.detail,
     }))

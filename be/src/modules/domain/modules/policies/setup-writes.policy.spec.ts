@@ -122,13 +122,6 @@ describe("vndOf", () => {
         ["1.5k", 1500],
         ["2 ngh\u00ecn", 2000],
         ["2 ng\u00e0n", 2000],
-    ])("reads %s as VND", async (raw, expected) => {
-        const { vndOf } = await buildSubject()
-
-        expect(vndOf(raw)).toBe(expected)
-    })
-
-    it.each([
         ["1,5k ignored\nbody", 1500],
         ["1.5\u{1f642}\nbody", 15],
         [".k", null],
@@ -136,7 +129,12 @@ describe("vndOf", () => {
         ["1,2,3k", null],
         ["1..2\nbody", 12],
         ["24k:notes", 24000],
-    ])("preserves the numeric prefix and unit before trailing text: %s", async (raw, expected) => {
+        ["20 trieu ignored", 20000000],
+        ["1,5 ty", 1500000000],
+        ["20.000 ignored", 20000],
+        ["20x 4 trieu", 20],
+        ["invalid 20 trieu", null],
+    ])("reads numeric values and prefixes as VND: %s", async (raw, expected) => {
         const { vndOf } = await buildSubject()
 
         expect(vndOf(raw)).toBe(expected)

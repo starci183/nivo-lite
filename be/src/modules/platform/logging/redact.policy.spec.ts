@@ -172,3 +172,27 @@ describe("redactFields", () => {
         })
     })
 })
+
+describe("credential assignment boundaries", () => {
+    it.each([
+        ["safe=token=abc", "safe=token=[redacted]"],
+        ['{"password":"abc"}', '{"password":"[redacted]"}'],
+        ["?api-key=abc&safe=123", "?api-key=[redacted]&safe=123"],
+        ["token=ab", "token=ab"],
+        ["token=abc:def", "token=[redacted]"],
+        ["safe=abc token=def", "safe=abc token=[redacted]"],
+        ["prefixsecretSuffix = abc", "prefixsecretSuffix = [redacted]"],
+        ["\u017fecret=abc", "\u017fecret=[redacted]"],
+    ])("preserves exact masking for %s", async (input, expected) => {
+        const subject = await buildSubject()
+
+        expect(subject.redactString(input)).toBe(expected)
+    })
+
+    it("preserves a long ordinary name without an assignment", async () => {
+        const subject = await buildSubject()
+        const input = "ordinary".repeat(10000)
+
+        expect(subject.redactString(input)).toBe(input)
+    })
+})

@@ -61,25 +61,44 @@ export const BLANK_INITIAL: TelegramInitial = {
     editing: false,
 }
 
+type TelegramUserWizardViewInput = {
+    readonly step: TelegramUserStep
+    readonly boot: ReturnType<typeof useTelegramUserBoot>
+    readonly index: number
+    readonly login: ReturnType<typeof useTelegramUserLogin>
+    readonly picks: ReturnType<typeof useTelegramUserPicks>
+    readonly agentIds: readonly string[]
+    readonly error: string | null
+    readonly isPending: boolean
+    readonly forms: ReturnType<typeof useTelegramUserForm>
+    readonly go: (to: number) => void
+    readonly setAgentIds: import("react").Dispatch<import("react").SetStateAction<ReadonlyArray<string>>>
+    readonly save: () => void
+    readonly finish: () => void
+    readonly field: (name: TelegramUserField, value: string) => void
+    readonly onClose: (changed: boolean) => void
+    readonly setError: import("react").Dispatch<import("react").SetStateAction<string | null>>
+}
+
 /** Assembles the resolved domain state and commands for its drawing. */
-export const viewOf = (
-    step: TelegramUserStep,
-    boot: ReturnType<typeof useTelegramUserBoot>,
-    index: number,
-    login: ReturnType<typeof useTelegramUserLogin>,
-    picks: ReturnType<typeof useTelegramUserPicks>,
-    agentIds: readonly string[],
-    error: string | null,
-    isPending: boolean,
-    forms: ReturnType<typeof useTelegramUserForm>,
-    go: (to: number) => void,
-    setAgentIds: import("react").Dispatch<import("react").SetStateAction<ReadonlyArray<string>>>,
-    save: () => void,
-    finish: () => void,
-    field: (name: TelegramUserField, value: string) => void,
-    onClose: (changed: boolean) => void,
-    setError: import("react").Dispatch<import("react").SetStateAction<string | null>>,
-) => {
+export const viewOf = ({
+    step,
+    boot,
+    index,
+    login,
+    picks,
+    agentIds,
+    error,
+    isPending,
+    forms,
+    go,
+    setAgentIds,
+    save,
+    finish,
+    field,
+    onClose,
+    setError,
+}: TelegramUserWizardViewInput) => {
     return {
         status: step.started ? "ready" : boot.status,
         bootError: boot.error,

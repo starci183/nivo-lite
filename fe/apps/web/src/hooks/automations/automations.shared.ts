@@ -1,4 +1,4 @@
-import type { automationBoardOf, AutomationFilterKey, AutomationStatus, AutomationValues } from "@/modules/automations"
+import type { automationBoardOf, AutomationStatus, AutomationValues } from "@/modules/automations"
 import { AUTOMATION_ROUTES } from "@/modules/routes"
 import type {
     AutomationCardView,
@@ -6,7 +6,6 @@ import type {
     AutomationsLanguage,
     AutomationsTranslator,
     GoogleAccount,
-    ModuleScope,
     PreviewSample,
     ShopContext,
 } from "@/modules/types"
@@ -36,7 +35,7 @@ export interface AutomationPatch {
 /** What the board needs: the words, the scope and how it is embedded. */
 export interface AutomationsBoardInput {
     readonly layout: "page" | "module"
-    readonly moduleKey?: ModuleScope
+    readonly moduleKey?: string
     readonly focus?: string
     readonly t: AutomationsTranslator
     readonly locale: AutomationsLanguage
@@ -68,25 +67,43 @@ export interface AutomationsBoardActions {
     readonly answerTrust: (accept: boolean) => void
     readonly runNow: () => void
 }
+/** The resolved inputs for automation board view input. */
+interface AutomationBoardViewInput {
+    readonly t: AutomationsTranslator
+    readonly locale: AutomationsLanguage
+    readonly moduleNames: ModuleNamesInput1
+    readonly input: AutomationsBoardInput
+    readonly isNested: boolean
+    readonly cards: readonly AutomationCardView[]
+    readonly scoped: AutomationCardView[]
+    readonly shown: AutomationCardView[]
+    readonly filter: string
+    readonly selected: string | null
+    readonly data: AutomationsData
+    readonly busyKey: string | null
+    readonly current: AutomationCardView | null
+    readonly detail: ReturnType<typeof useAutomationDetail>
+    readonly awaiting: string | null
+}
 
 /** Collects loaded board data and the open editor into the automation display input. */
-export const automationBoardInputOf = (
-    t: AutomationsTranslator,
-    locale: AutomationsLanguage,
-    moduleNames: ModuleNamesInput1,
-    input: AutomationsBoardInput,
-    isNested: boolean,
-    cards: readonly AutomationCardView[],
-    scoped: AutomationCardView[],
-    shown: AutomationCardView[],
-    filter: string,
-    selected: string | null,
-    data: AutomationsData,
-    busyKey: string | null,
-    current: AutomationCardView | null,
-    detail: ReturnType<typeof useAutomationDetail>,
-    awaiting: string | null,
-): Parameters<typeof automationBoardOf>[0] => {
+export const automationBoardInputOf = ({
+    t,
+    locale,
+    moduleNames,
+    input,
+    isNested,
+    cards,
+    scoped,
+    shown,
+    filter,
+    selected,
+    data,
+    busyKey,
+    current,
+    detail,
+    awaiting,
+}: AutomationBoardViewInput): Parameters<typeof automationBoardOf>[0] => {
     return {
         t,
         locale,
@@ -119,21 +136,35 @@ export const automationBoardInputOf = (
 }
 
 type ModuleNamesInput1 = { [k: string]: string }
+/** The resolved inputs for automation board actions input. */
+interface AutomationBoardActionsInput {
+    readonly select: AutomationsBoardActions["select"]
+    readonly toggle: AutomationsBoardActions["toggle"]
+    readonly filters: ReadonlyArray<string>
+    readonly setFilter: (value: string) => void
+    readonly setSelected: (value: string | null) => void
+    readonly change: (key: string, patch: AutomationPatch) => Promise<boolean>
+    readonly current: AutomationCardView | null
+    readonly detail: ReturnType<typeof useAutomationDetail>
+    readonly saveSettings: () => Promise<void>
+    readonly saveBody: () => Promise<boolean>
+    readonly enable: () => Promise<void>
+}
 
 /** Connects board controls to selection, editing and pipeline changes. */
-export const automationBoardActionsOf = (
-    select: AutomationsBoardActions["select"],
-    toggle: AutomationsBoardActions["toggle"],
-    filters: ReadonlyArray<AutomationFilterKey>,
-    setFilter: (value: AutomationFilterKey) => void,
-    setSelected: (value: string | null) => void,
-    change: (key: string, patch: AutomationPatch) => Promise<boolean>,
-    current: AutomationCardView | null,
-    detail: ReturnType<typeof useAutomationDetail>,
-    saveSettings: () => Promise<void>,
-    saveBody: () => Promise<boolean>,
-    enable: () => Promise<void>,
-): AutomationsBoardActions => ({
+export const automationBoardActionsOf = ({
+    select,
+    toggle,
+    filters,
+    setFilter,
+    setSelected,
+    change,
+    current,
+    detail,
+    saveSettings,
+    saveBody,
+    enable,
+}: AutomationBoardActionsInput): AutomationsBoardActions => ({
     select,
     toggle,
     setFilter: (id) => {

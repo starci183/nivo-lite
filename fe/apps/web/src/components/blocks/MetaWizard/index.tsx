@@ -16,9 +16,9 @@ const metaTestVerdict = (ok: boolean): MetaTestVerdict => (ok ? "ok" : "failed")
 /** What the board hands the Meta wizard. */
 interface MetaWizardProps {
     /** Continue this unfinished connection instead of creating a new one. */
-    readonly resumeId?: string | undefined
+    readonly resumeId?: string
     /** How the Facebook login ended when the browser came back: ok, denied, failed, expired, nopages or unavailable. */
-    readonly returned?: string | undefined
+    readonly returned?: string
     /** The workspace agents that can work through Facebook and Instagram. */
     readonly agents: ReadonlyArray<AgentOption>
     /** `changed` is true when something was saved, so the list should refresh. */

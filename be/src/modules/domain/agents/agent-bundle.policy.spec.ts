@@ -137,8 +137,41 @@ describe("agent bundle policy", () => {
 
             expect(subject.withoutSetupBlock("Keep\n\n### NIVO setup\nold\n### end NIVO setup\n")).toBe("Keep")
         })
-    })
 
+        it("keeps word-boundary cuts for Unicode whitespace, whole words and unbroken text", async () => {
+            const subject = await buildSubject()
+
+            expect(subject.trimTo("one\u00a0two three", 8)).toBe("one\u00a0two ...")
+            expect(subject.trimTo("one   two three", 7)).toBe("one ...")
+            expect(subject.trimTo("one\n\tthree", 6)).toBe("one ...")
+            expect(subject.trimTo("abcdefgh", 4)).toBe("abcd ...")
+            expect(subject.trimTo("   text", 3)).toBe(" ...")
+            expect(subject.slugOf(`${"-".repeat(2000)}Hello${"!".repeat(2000)}`)).toBe("hello")
+        })
+
+        it("removes complete setup blocks while preserving unmatched markers and surrounding content", async () => {
+            const subject = await buildSubject()
+
+            expect(
+                subject.withoutSetupBlock(
+                    "Before\n\n### NIVO setup\nold\n### end NIVO setup \t\nBetween\n### NIVO setup\nnew\n### end NIVO setup\nAfter",
+                ),
+            ).toBe("BeforeBetweenAfter")
+            expect(
+                subject.withoutSetupBlock(
+                    "Keep\n### NIVO setup\nouter\n### NIVO setup\ninner\n### end NIVO setup\nTail",
+                ),
+            ).toBe("KeepTail")
+            expect(subject.withoutSetupBlock("Keep\n### NIVO setup\nunfinished")).toBe(
+                "Keep\n### NIVO setup\nunfinished",
+            )
+            const unfinished = `Keep${"\n".repeat(2000)}### NIVO setup${"pending".repeat(2000)}`
+            expect(subject.withoutSetupBlock(unfinished)).toBe(unfinished)
+        })
+    })
+})
+
+describe("agent bundle rule budgets", () => {
     describe("budgetRules", () => {
         it("trims each rule and stops when the budget is spent", async () => {
             const subject = await buildSubject()

@@ -1,13 +1,15 @@
 "use client"
 
-import type { ShiftsDemandControllerInput } from "./component"
-import type { CreateShiftsDemandRowsInput } from "./component"
+import {
+    type ShiftsDemandControllerInput,
+    type CreateShiftsDemandRowsInput,
+    ShiftsDemandBase,
+    type DemandForm,
+} from "./component"
 import { useTranslations } from "next-intl"
 import { useState } from "react"
 import { useShiftsBenchData, useShiftsFormat } from "@/hooks/shifts"
 import { useShiftsSetupCommands } from "@/hooks/shiftsCommands"
-import { ShiftsDemandBase } from "./component"
-import type { DemandForm } from "./component"
 
 const INITIAL: DemandForm = {
     days: ["0", "1", "2", "3", "4"],

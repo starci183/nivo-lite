@@ -1,16 +1,21 @@
-import { ChatbotConversationList } from "@/components/composites/ChatbotConversationList"
-import type { ChatbotConversationListProps } from "@/components/composites/ChatbotConversationList"
+import {
+    ChatbotConversationList,
+    type ChatbotConversationListProps,
+} from "@/components/composites/ChatbotConversationList"
+
 import { ChatbotInboxPanel } from "@/components/composites/ChatbotInboxPanel"
-import { ChatbotSidePanel } from "@/components/composites/ChatbotSidePanel"
-import type { ChatbotSidePanelProps } from "@/components/composites/ChatbotSidePanel"
-import { ChatbotThreadView } from "@/components/composites/ChatbotThreadView"
-import type { ChatbotThreadViewProps } from "@/components/composites/ChatbotThreadView"
-import { PanelPending } from "@/components/composites/PanelPending"
-import type { PanelPendingProps } from "@/components/composites/PanelPending"
+import { ChatbotSidePanel, type ChatbotSidePanelProps } from "@/components/composites/ChatbotSidePanel"
+
+import { ChatbotThreadView, type ChatbotThreadViewProps } from "@/components/composites/ChatbotThreadView"
+
+import { PanelPending, type PanelPendingProps } from "@/components/composites/PanelPending"
 
 type ListWords = Omit<ChatbotConversationListProps, "onQuery" | "onFilter" | "onSelect">
 type ThreadWords = Omit<ChatbotThreadViewProps, "onBack" | "onToggleInfo" | "onDraft" | "onSend">
-type SideWords = Omit<ChatbotSidePanelProps, "onClose" | "onToggleHandling" | "onEscalationDraft" | "onAnswer">
+type SideWords = Omit<
+    ChatbotSidePanelProps,
+    "onClose" | "onToggleHandling" | "onEscalationDraft" | "onSendAnswer" | "onDeclineAnswer"
+>
 
 /** The resolved words, rows and panes of the inbox. */
 interface ChatbotInboxView {
@@ -45,7 +50,8 @@ export interface ChatbotInboxBaseProps {
         readonly send: () => void
         readonly toggleHandling: () => void
         readonly escalationDraft: (draft: string) => void
-        readonly answer: (send: boolean) => void
+        readonly sendAnswer: () => void
+        readonly declineAnswer: () => void
     }
 }
 
@@ -83,7 +89,8 @@ export const ChatbotInboxBase = (props: ChatbotInboxBaseProps) => {
                     onClose={on.toggleInfo}
                     onToggleHandling={on.toggleHandling}
                     onEscalationDraft={on.escalationDraft}
-                    onAnswer={on.answer}
+                    onSendAnswer={on.sendAnswer}
+                    onDeclineAnswer={on.declineAnswer}
                 />
             }
         />

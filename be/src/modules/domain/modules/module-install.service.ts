@@ -250,7 +250,7 @@ export class ModuleInstallService {
             workspaceId,
             kind: "module.installed",
             actor: member.displayName,
-            summary: `${member.displayName}: ${typeName}${name === typeName ? "" : ` - ${name}`}`,
+            summary: `${member.displayName}: ${typeName}${name === typeName ? "" : " - " + name}`,
         })
         return { installationId, agentId, created: true }
     }

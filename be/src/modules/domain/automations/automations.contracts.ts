@@ -94,9 +94,9 @@ export interface AutomationCard {
     /** The trust ladder. */
     readonly trust: TrustView
     /** For templates that write to Google: the state of the connection. */
-    readonly google?: "ready" | "missing" | "lost" | "unavailable" | undefined
+    readonly google?: "ready" | "missing" | "lost" | "unavailable"
     /** For templates that write to Google: the spreadsheet link. */
-    readonly sheetUrl?: string | null | undefined
+    readonly sheetUrl?: string | null
 }
 
 /** One row of the run history as the screen shows it. */
@@ -152,17 +152,17 @@ export interface AutomationsOverview {
 /** What a request may change on one pipeline; every field is optional. */
 export interface PipelinePatch {
     /** Switch on or off. */
-    readonly enabled?: boolean | undefined
+    readonly enabled?: boolean
     /** Hide or restore ("not for me"). */
-    readonly dismissed?: boolean | undefined
+    readonly dismissed?: boolean
     /** New setting values; keys that are not settings are ignored. */
-    readonly values?: object | undefined
+    readonly values?: object
     /** The approved message template. */
-    readonly body?: string | undefined
+    readonly body?: string
     /** The answer to "send by itself": true accepts, false declines. */
-    readonly autoSend?: boolean | undefined
+    readonly autoSend?: boolean
     /** The Google account a spreadsheet automation writes with. */
-    readonly googleConnectionId?: string | undefined
+    readonly googleConnectionId?: string
 }
 
 /** A proposal for the wording of a message. */

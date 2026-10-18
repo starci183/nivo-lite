@@ -1,6 +1,5 @@
-import type { SalesShipment } from "@modules/domain/sales"
+import type { SalesShipment, SalesShipmentRequest } from "@modules/domain/sales"
 import type { Locale } from "@modules/platform/i18n"
-import type { SalesShipmentRequest } from "@modules/domain/sales"
 import type { MarkOrderShippedInput } from "./dto/mark-order-shipped.input"
 import type { MarkOrderShippedType } from "./dto/mark-order-shipped.type"
 

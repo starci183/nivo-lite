@@ -76,9 +76,17 @@ const hoursValid = (rows: ReadonlyArray<BookingHoursWindow>): boolean => {
         return (
             whole(row.weekday, 1, 7) &&
             timeWindow(row.start, row.end) &&
-            (previous === undefined || previous.weekday !== row.weekday || previous.end <= row.start)
+            (previous?.weekday !== row.weekday || previous.end <= row.start)
         )
     })
+}
+
+const trimSlug = (value: string): string => {
+    let start = 0
+    let end = value.length
+    while (start < end && value[start] === "-") start += 1
+    while (end > start && value[end - 1] === "-") end -= 1
+    return value.slice(start, end)
 }
 
 const isUniqueViolation = (cause: unknown): boolean => {
@@ -214,10 +222,11 @@ export class BookingSetupService {
     /** Saves the public page with a checked slug; the database unique constraint resolves concurrent claims. */
     async savePublicPage(userId: string, params: SaveBookingPublicPageParams): Promise<BookingSettingsSaved> {
         await this.authorize(userId, params.workspaceId)
-        const slug = text(params.slug, 100)
-            .toLowerCase()
-            .replace(/[^a-z0-9-]+/gu, "-")
-            .replace(/^-+|-+$/gu, "")
+        const slug = trimSlug(
+            text(params.slug, 100)
+                .toLowerCase()
+                .replace(/[^a-z0-9-]+/gu, "-"),
+        )
         ensure(typeof params.enabled === "boolean" && (slug === "" ? !params.enabled : SLUG.test(slug)))
         const note = text(params.note, 400)
         const [owner] = await this.settings.slugOwner(params.workspaceId, slug || null)

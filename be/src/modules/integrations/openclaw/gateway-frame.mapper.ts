@@ -169,7 +169,10 @@ export const readSessionMessage = (payload: unknown): SessionMessage => {
 }
 
 /** True for the contract answer: a JSON object with a `reply`; anything else may be an interim message of a tool-using run. */
-export const looksFinal = (text: string): boolean => /\{[\s\S]*"reply"\s*:/u.test(text)
+export const looksFinal = (text: string): boolean => {
+    const start = text.indexOf("{")
+    return start >= 0 && /"reply"\s*:/u.test(text.slice(start + 1))
+}
 
 /** The run status an `agent` event carries; null when there is none. */
 export const statusOf = (payload: unknown): string | null =>

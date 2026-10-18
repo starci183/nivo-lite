@@ -96,15 +96,16 @@ const listEntries = (data: Uint8Array): { readonly seen: ReadonlyArray<Seen>; re
         filter: (file) => {
             index++
             const path = decodeEntryName(file.name, flags === null ? true : ((flags[index] ?? 0) & 0x800) !== 0)
-            if (path.endsWith("/") || path.endsWith("\\")) return false
-            total += file.originalSize
-            seen.push({
-                index,
-                raw: file.name,
-                path: path.replace(/\\/g, "/"),
-                size: file.originalSize,
-                compressed: file.size,
-            })
+            if (!path.endsWith("/") && !path.endsWith("\\")) {
+                total += file.originalSize
+                seen.push({
+                    index,
+                    raw: file.name,
+                    path: path.replaceAll("\\", "/"),
+                    size: file.originalSize,
+                    compressed: file.size,
+                })
+            }
             return false
         },
     })

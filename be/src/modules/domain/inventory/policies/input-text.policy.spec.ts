@@ -140,3 +140,19 @@ describe("deriveSku", () => {
         expect(subject.deriveSku("!!!")).toBe("ITEM")
     })
 })
+
+describe("email address shape boundaries", () => {
+    it.each<[string, boolean]>([
+        ["a@b.c.", true],
+        ["a@.b.c", true],
+        ["a@b..", true],
+        ["a@.b", false],
+        ["a@b.", false],
+        ["a@@b.c", false],
+        ["a@b.c\n", false],
+        ["a@" + "b".repeat(20000), false],
+    ])("validates %s without changing the existing shape", async (value, expected) => {
+        const subject = await buildSubject()
+        expect(subject.isEmailAddress(value)).toBe(expected)
+    })
+})

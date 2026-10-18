@@ -124,11 +124,7 @@ export class SmtpWizardService {
 
     private async own(workspaceId: string, id: string, rejectDisconnected: boolean = true): Promise<ConnectionRecord> {
         const connection = await this.connections.find(workspaceId, id)
-        if (
-            connection === null ||
-            connection.provider !== "smtp" ||
-            (rejectDisconnected && connection.status === "disconnected")
-        ) {
+        if (connection?.provider !== "smtp" || (rejectDisconnected && connection.status === "disconnected")) {
             throw new EmailMessagesError({ code: EmailMessagesErrorCode.SmtpNone })
         }
         return connection

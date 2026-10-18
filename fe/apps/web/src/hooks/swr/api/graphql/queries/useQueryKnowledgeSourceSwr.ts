@@ -8,7 +8,7 @@ import { queryKnowledgeSource } from "@/modules/api/graphql/queries/query-knowle
 /** The SWR key of the document detail; mutations that change it revalidate the keys that lead with it. */
 export const QUERY_KNOWLEDGE_SOURCE_SWR_KEY = "QUERY_KNOWLEDGE_SOURCE_SWR"
 
-const ACTIVE_STATUSES: ReadonlyArray<string> = ["pending", "queued", "reading", "indexing", "extracting_facts"]
+const ACTIVE_STATUSES: ReadonlySet<string> = new Set(["pending", "queued", "reading", "indexing", "extracting_facts"])
 
 /**
  * One document of the active workspace with its text and passages (the back end `knowledgeSource` query). Polls while a
@@ -24,7 +24,7 @@ export const useQueryKnowledgeSourceSwr = (id: string | undefined) => {
             return result.data.knowledgeSource
         },
         {
-            refreshInterval: (data) => (data !== undefined && ACTIVE_STATUSES.includes(data.source.status) ? 3_000 : 0),
+            refreshInterval: (data) => (data !== undefined && ACTIVE_STATUSES.has(data.source.status) ? 3_000 : 0),
         },
     )
 }

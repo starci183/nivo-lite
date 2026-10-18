@@ -4,7 +4,7 @@ import { JobOpsService } from "./job-ops.service"
 
 const parseJobNumber = (value: string | undefined, fallback: number): number => {
     if (value === undefined) return fallback
-    return value.trim() === value && /^[0-9]+$/u.test(value) ? Number(value) : Number.NaN
+    return value.trim() === value && /^\d+$/u.test(value) ? Number(value) : Number.NaN
 }
 
 @Injectable()

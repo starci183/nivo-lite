@@ -235,7 +235,116 @@ describe("MailClient / sendThroughSmtp", () => {
     })
 })
 
-describe("MailClient / sendThroughPlatform", () => {
+describe("MailClient / sendThroughPlatform encryption modes", () => {
+    it.each([
+        { url: "smtp://smtp.example.com:587", options: PUBLIC, secure: false, requireTLS: true, strict: true },
+        { url: "smtps://smtp.example.com:465", options: PUBLIC, secure: true, requireTLS: true, strict: true },
+        { url: "smtp://localhost:1025", options: DEV, secure: false, requireTLS: false, strict: false },
+    ])("enforces the encryption policy for $url", async ({ url, options, secure, requireTLS, strict }) => {
+        const { close } = transportAnswering({ messageId: "<policy>" })
+        const client = await build({ ...options, platform: { url: new Secret(url), from: "sender@example.com" } })
+
+        await client.sendThroughPlatform(message)
+
+        expect(createTransport).toHaveBeenCalledWith(
+            expect.objectContaining({
+                secure,
+                requireTLS,
+                ignoreTLS: false,
+                opportunisticTLS: false,
+                secured: false,
+                tls: { rejectUnauthorized: strict, minVersion: "TLSv1.2" },
+            }),
+        )
+        expect(close).toHaveBeenCalledTimes(1)
+    })
+})
+
+describe("MailClient / sendThroughPlatform service and pooling options", () => {
+    it("resolves URL credentials and service settings before enforcing encryption", async () => {
+        transportAnswering({ messageId: "<service>" })
+        const client = await build({
+            ...PUBLIC,
+            platform: {
+                url: new Secret(
+                    "smtp://synthetic:fake-password@smtp.example.com:587?service=Gmail&pool=true&connectionTimeout=1234&greetingTimeout=2345&socketTimeout=3456",
+                ),
+                from: "sender@example.com",
+            },
+        })
+
+        await client.sendThroughPlatform(message)
+
+        expect(createTransport).toHaveBeenCalledWith(
+            expect.objectContaining({
+                host: "smtp.gmail.com",
+                port: 465,
+                secure: true,
+                requireTLS: true,
+                auth: { user: "synthetic", pass: "fake-password" },
+                pool: true,
+                connectionTimeout: 1234,
+                greetingTimeout: 2345,
+                socketTimeout: 3456,
+            }),
+        )
+        expect(createTransport).not.toHaveBeenCalledWith(expect.objectContaining({ service: expect.anything() }))
+        expect(createTransport).not.toHaveBeenCalledWith(expect.objectContaining({ url: expect.anything() }))
+    })
+})
+
+describe("MailClient / sendThroughPlatform encryption overrides", () => {
+    it("does not let URL query parameters disable encryption or choose another transport", async () => {
+        transportAnswering({ messageId: "<strict>" })
+        const client = await build({
+            ...PUBLIC,
+            platform: {
+                url: new Secret(
+                    "smtp://smtp.example.com:587?requireTLS=false&ignoreTLS=true&opportunisticTLS=true&secured=true&tls.rejectUnauthorized=false&tls.minVersion=TLSv1&sendmail=true&streamTransport=true&jsonTransport=true&url=smtp%3A%2F%2Flocalhost",
+                ),
+                from: "sender@example.com",
+            },
+        })
+
+        await client.sendThroughPlatform(message)
+
+        expect(createTransport).toHaveBeenCalledWith(
+            expect.objectContaining({
+                host: "smtp.example.com",
+                secure: false,
+                requireTLS: true,
+                ignoreTLS: false,
+                opportunisticTLS: false,
+                secured: false,
+                sendmail: false,
+                streamTransport: false,
+                jsonTransport: false,
+                tls: { rejectUnauthorized: true, minVersion: "TLSv1.2" },
+            }),
+        )
+        expect(createTransport).not.toHaveBeenCalledWith(expect.objectContaining({ url: expect.anything() }))
+    })
+    it("retains a stronger TLS minimum and an explicit server name", async () => {
+        transportAnswering({ messageId: "<tls13>" })
+        const client = await build({
+            ...PUBLIC,
+            platform: {
+                url: new Secret("smtps://smtp.example.com:465?tls.minVersion=TLSv1.3&tls.servername=mail.example.com"),
+                from: "sender@example.com",
+            },
+        })
+
+        await client.sendThroughPlatform(message)
+
+        expect(createTransport).toHaveBeenCalledWith(
+            expect.objectContaining({
+                tls: { rejectUnauthorized: true, minVersion: "TLSv1.3", servername: "mail.example.com" },
+            }),
+        )
+    })
+})
+
+describe("MailClient / sendThroughPlatform delivery", () => {
     it("sends an owner notice from the platform address", async () => {
         const { sendMail, close } = transportAnswering({ messageId: "<id-5>" })
         const client = await build(WITH_PLATFORM)
@@ -247,7 +356,9 @@ describe("MailClient / sendThroughPlatform", () => {
             }),
         ).resolves.toEqual({ messageId: "<id-5>" })
 
-        expect(createTransport).toHaveBeenCalledWith("smtp://platform")
+        expect(createTransport).toHaveBeenCalledWith(
+            expect.objectContaining({ host: "platform", secure: false, requireTLS: true }),
+        )
         expect(sendMail).toHaveBeenCalledWith(expect.objectContaining({ from: "NIVO <no-reply@nivo.test>" }))
         expect(close).toHaveBeenCalledTimes(1)
     })
@@ -272,7 +383,9 @@ describe("MailClient / sendNoticeThroughPlatform", () => {
             messageId: "<notice-1>",
         })
 
-        expect(createTransport.mock.calls).toEqual([["smtp://platform"]])
+        expect(createTransport).toHaveBeenCalledWith(
+            expect.objectContaining({ host: "platform", secure: false, requireTLS: true }),
+        )
         expect(sendMail.mock.calls).toEqual([
             [
                 {

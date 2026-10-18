@@ -1,11 +1,13 @@
 import type { ClaimedJob, JobClaims } from "@modules/platform/jobs"
-import { isSepayDeliveryRecorded } from "@modules/queues/sepay-delivery"
+import {
+    isSepayDeliveryRecorded,
+    SEPAY_DELIVERY_QUEUE,
+    type SepayDeliveryRecorded,
+} from "@modules/queues/sepay-delivery"
 import { InjectInbox } from "@modules/platform/inbox"
 import type { Inbox } from "@modules/platform/inbox"
 import { InjectQueueOutbox } from "@modules/platform/queue"
 import type { QueueOutbox } from "@modules/platform/queue"
-import { SEPAY_DELIVERY_QUEUE } from "@modules/queues/sepay-delivery"
-import type { SepayDeliveryRecorded } from "@modules/queues/sepay-delivery"
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { PaymentProofService, parseJsonObject, sepayPayloadOf } from "@modules/domain/billing"

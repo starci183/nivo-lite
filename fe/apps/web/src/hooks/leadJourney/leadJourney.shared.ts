@@ -9,7 +9,7 @@ export const toBullets = (summary: string): ReadonlyArray<string> =>
         .map((line) => line.slice(2).trim())
         .filter((line) => line.length > 0)
 
-const SIGNAL_PATTERN = /^(urgency|risk)\s*:\s*(.+)$/i
+const SIGNAL_PATTERN = /^(urgency|risk)\s*:\s*(\S.*|\s)$/i
 
 /** One warning signal read from a bullet. */
 export interface LeadSignal {

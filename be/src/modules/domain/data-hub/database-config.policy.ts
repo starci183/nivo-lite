@@ -7,6 +7,9 @@ import { DATABASE_WIZARD_COPY as COPY } from "./messages/database.messages"
 
 type DatabaseEngine = DatabaseTarget["engine"]
 
+const ENGINES: ReadonlySet<string> = new Set(DATABASE_ENGINES)
+const ENTITIES: ReadonlySet<string> = new Set(DATABASE_ENTITIES)
+
 const DEFAULT_PORT: Readonly<Record<DatabaseEngine, number>> = { postgres: 5432, mysql: 3306, mssql: 1433 }
 const ENGINE_LABEL: Readonly<Record<DatabaseEngine, string>> = {
     postgres: "PostgreSQL",
@@ -21,9 +24,9 @@ export const invalid = (detail: string, cause?: unknown): DataHubError =>
 const isObject = (value: unknown): value is Record<string, unknown> =>
     typeof value === "object" && value !== null && !Array.isArray(value)
 
-const isEngine = (value: unknown): value is DatabaseEngine => DATABASE_ENGINES.some((engine) => engine === value)
+const isEngine = (value: unknown): value is DatabaseEngine => typeof value === "string" && ENGINES.has(value)
 
-const isEntity = (value: unknown): value is DatabaseEntity => DATABASE_ENTITIES.some((entity) => entity === value)
+const isEntity = (value: unknown): value is DatabaseEntity => typeof value === "string" && ENTITIES.has(value)
 
 const text = (value: unknown): string => (typeof value === "string" ? value : "")
 

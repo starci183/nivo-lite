@@ -9,7 +9,7 @@ export const DAY_MS = 86_400_000
 const THANK_DELAY_MS = 90_000
 
 /** The events whose rows the spreadsheet automation records. */
-const SHEET_EVENTS: ReadonlyArray<string> = ["order.confirmed", "deal.won", "payment.received", "lead.created"]
+const SHEET_EVENTS: ReadonlySet<string> = new Set(["order.confirmed", "deal.won", "payment.received", "lead.created"])
 
 /** How one business event starts a run. */
 export interface TriggerPlan {
@@ -73,7 +73,7 @@ export const planTrigger = (input: TriggerInput): TriggerPlan | null => {
     if (templateKey === "contract_renewal" && event === "contract.expiring") {
         return plan(`renew:${dedupe}`, textOf(data.contract_id), { ...data })
     }
-    if (templateKey === "sheet_orders" && SHEET_EVENTS.includes(event)) {
+    if (templateKey === "sheet_orders" && SHEET_EVENTS.has(event)) {
         return plan(`sheet:${dedupe}`, textOf(data.order_no) || textOf(data.lead_id), { event, data, at })
     }
     if (templateKey === "after_hours" && event === "message.inbound") {

@@ -135,3 +135,14 @@ describe("sepay policy > sepayPayloadOf", () => {
         )
     })
 })
+
+describe("sepay authorization whitespace", () => {
+    it("handles long whitespace, empty keys and line breaks without accepting another scheme", async () => {
+        const { subject } = await buildSubject()
+        expect(subject.presentedApiKey(` Apikey ${" ".repeat(20000)}token  `)).toBe("token")
+        expect(subject.presentedApiKey("Apikey ")).toBeUndefined()
+        expect(subject.presentedApiKey("Apikey  ")).toBe(" ")
+        expect(subject.presentedApiKey("Apikey  \n")).toBe(" ")
+        expect(subject.presentedApiKey("Apikey a\nb")).toBeUndefined()
+    })
+})

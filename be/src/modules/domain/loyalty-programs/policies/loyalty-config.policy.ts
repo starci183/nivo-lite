@@ -54,7 +54,7 @@ const slugOf = (name: string): string =>
         .replace(/\u0111/giu, "d")
         .toLowerCase()
         .replace(/[^a-z0-9]+/gu, "-")
-        .replace(/^-+|-+$/gu, "")
+        .replace(/^-|-$/gu, "")
         .slice(0, 24) || "tier"
 
 const round2 = (value: number): number => Math.round(value * 100) / 100
@@ -136,7 +136,7 @@ export const resolveConfig = (saved: unknown): LoyaltyConfig => {
 
 /** The highest tier whose threshold the lifetime spend reaches, or null when the programme has no tiers. */
 export const tierFor = (config: LoyaltyConfig, lifetimeSpendVnd: number): TierMatch =>
-    config.tiers.filter((tier) => lifetimeSpendVnd >= tier.minSpendVnd).at(-1) ?? null
+    config.tiers.findLast((tier) => lifetimeSpendVnd >= tier.minSpendVnd) ?? null
 
 /** The tier with a key, or null. */
 export const tierOf = (config: LoyaltyConfig, key: TierKey): TierMatch =>

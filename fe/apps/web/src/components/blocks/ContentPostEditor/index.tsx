@@ -38,8 +38,6 @@ interface ContentPostEditorProps {
     readonly focus: string | null
 }
 
-const keyOf = (index: number): string => String(index)
-
 const warningLines = (t: ContentT, list: ReadonlyArray<ChannelWarning>): Array<string> => [
     ...new Set(
         list.map((w) => {
@@ -163,7 +161,7 @@ const contentPostEditorProps = (
                   },
         media: form.media.map(tile),
         library: library.map(tile),
-        linkRows: form.links.map((l, i) => ({ key: keyOf(i), url: l.url, label: l.label })),
+        linkRows: form.links.map((l, i) => ({ key: String(i), url: l.url, label: l.label })),
         steps: publishSteps(t, item),
         files: downloadFiles(form.media, data.urls),
         history: historyRows(item.evidence),

@@ -3,6 +3,7 @@ export {
     MOVE_TONES,
     PO_LANES,
     PO_TONES,
+    stockDetailOf,
     STOCK_FILTERS,
     STOCK_TONES,
     includesText,

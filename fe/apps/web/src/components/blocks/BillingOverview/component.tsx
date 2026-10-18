@@ -6,7 +6,7 @@ import type {
     useQueryBillingReviewTransactionsSwr,
 } from "@/hooks/swr"
 import type { useRequestPaymentOrder } from "@/hooks/billing"
-import type { useUsageCard } from "@/hooks/usageCard"
+import type { useUsageCard, UsageCardView } from "@/hooks/usageCard"
 import {
     Alert,
     Badge,
@@ -18,11 +18,11 @@ import {
     SurfaceCard,
     Text,
 } from "@starci/grammar/common"
-import { BillingHistoryList } from "@/components/composites/BillingHistoryList"
-import type { BillingHistoryRow } from "@/components/composites/BillingHistoryList"
+import { BillingHistoryList, type BillingHistoryRow } from "@/components/composites/BillingHistoryList"
+
 import { BillingRenewal } from "@/components/composites/BillingRenewal"
 import { UsageCard } from "@/components/composites/UsageCard"
-import type { UsageCardView } from "@/hooks/usageCard"
+
 import { ACTIONS_CLASS_NAME, PAGE_CLASS_NAME, SECTION_CLASS_NAME, STACK_CLASS_NAME } from "./classNames"
 
 type BillingTone = "success" | "warning" | "danger" | "neutral"
@@ -177,21 +177,37 @@ const renderCurrentBillingPlan = (props: BillingOverviewBaseProps) => (
     </SurfaceCard>
 )
 
-/** Connects the state and commands used by BillingOverview. */
-export const buildBillingOverviewState = (
-    workspace: ReturnType<typeof useQueryBillingWorkspaceSwr>,
-    orders: ReturnType<typeof useQueryPaymentOrdersSwr>,
-    plan: ReturnType<typeof useQueryBillingPlanSwr>,
-    review: ReturnType<typeof useQueryBillingReviewTransactionsSwr>,
-    phase: BillingOverviewBaseProps["state"]["phase"],
-    error: unknown,
-    format: ReturnType<typeof useFormatter>,
-    t: ReturnType<typeof useTranslations<"billing">>,
-    locale: ReturnType<typeof useLocale>,
-    renewal: ReturnType<typeof useRequestPaymentOrder>,
-    usage: ReturnType<typeof useUsageCard>,
-    timeZone: string,
-) => {
+/** Inputs owned by this display/state mapping. */
+interface BillingOverviewStateInput {
+    readonly workspace: ReturnType<typeof useQueryBillingWorkspaceSwr>
+    readonly orders: ReturnType<typeof useQueryPaymentOrdersSwr>
+    readonly plan: ReturnType<typeof useQueryBillingPlanSwr>
+    readonly review: ReturnType<typeof useQueryBillingReviewTransactionsSwr>
+    readonly phase: BillingOverviewBaseProps["state"]["phase"]
+    readonly error: unknown
+    readonly format: ReturnType<typeof useFormatter>
+    readonly t: ReturnType<typeof useTranslations<"billing">>
+    readonly locale: ReturnType<typeof useLocale>
+    readonly renewal: ReturnType<typeof useRequestPaymentOrder>
+    readonly usage: ReturnType<typeof useUsageCard>
+    readonly timeZone: string
+}
+
+/** Derives the billing display values and localized history labels. */
+export const buildBillingOverviewState = ({
+    workspace,
+    orders,
+    plan,
+    review,
+    phase,
+    error,
+    format,
+    t,
+    locale,
+    renewal,
+    usage,
+    timeZone,
+}: BillingOverviewStateInput) => {
     const money = (amount: number) =>
         format.number(amount, { style: "currency", currency: "VND", maximumFractionDigits: 0 })
     const stamp = (value: string) =>

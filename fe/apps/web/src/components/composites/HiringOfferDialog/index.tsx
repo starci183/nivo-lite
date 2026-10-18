@@ -37,7 +37,7 @@ export const HiringOfferDialog = (props: HiringOfferDialogProps) => {
             title={say("offerTitle", { name })}
             closeLabel={say("close")}
             description={say("offerHint")}
-            footer={() => (
+            footer={
                 <HiringDialogFooter
                     say={say}
                     sendKey="offerSend"
@@ -47,7 +47,7 @@ export const HiringOfferDialog = (props: HiringOfferDialogProps) => {
                     onSend={on.send}
                     onClose={on.close}
                 />
-            )}
+            }
         >
             {renderHiringOfferDialogFields(error, say, outcome, values, on, isWaiting)}
         </Dialog>

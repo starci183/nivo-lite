@@ -17,7 +17,8 @@ interface ChatbotEscalationFormProps {
     readonly noticeTitle: string
     readonly noticeText: string | null
     readonly onDraft: (draft: string) => void
-    readonly onAnswer: (send: boolean) => void
+    readonly onSendAnswer: () => void
+    readonly onDeclineAnswer: () => void
 }
 
 /** The recessed band of the customer pane where a person answers a question the AI could not. */
@@ -59,11 +60,11 @@ export const ChatbotEscalationForm = (props: ChatbotEscalationFormProps) => (
                     variant="primary"
                     isPending={props.isAnswering}
                     isDisabled={props.isAnswering || props.draft.trim().length === 0}
-                    onPress={() => props.onAnswer(true)}
+                    onPress={props.onSendAnswer}
                 >
                     {props.sendLabel}
                 </Button>
-                <Button variant="ghost" isDisabled={props.isAnswering} onPress={() => props.onAnswer(false)}>
+                <Button variant="ghost" isDisabled={props.isAnswering} onPress={props.onDeclineAnswer}>
                     {props.declineLabel}
                 </Button>
             </div>

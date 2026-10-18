@@ -1,5 +1,6 @@
 import { Avatar } from "@starci/grammar/common"
 import type { AvatarSize } from "@starci/grammar/common"
+import { withoutParentheses } from "@/modules/i18n"
 
 /** What the avatar draws for one person. */
 type PersonAvatarProps = {
@@ -19,14 +20,13 @@ const AVATAR_SIZE: Record<NonNullable<PersonAvatarProps["size"]>, AvatarSize> = 
 /** The initials of a name: first and last word that start with a letter ("Ada Lovelace" gives "AL"). */
 const initialsOf = (name: string): string => {
     // Only words that start with a letter count, and a bracketed note is dropped: "Ada L. (Facebook)" gives "AL".
-    const words = name
-        .replace(/\([^)]*\)/g, " ")
+    const words = withoutParentheses(name)
         .trim()
         .split(/\s+/)
         .filter((word) => /^\p{L}/u.test(word))
     if (words.length === 0) return "?"
     const first = words[0]?.[0] ?? ""
-    const last = words.length > 1 ? (words[words.length - 1]?.[0] ?? "") : ""
+    const last = words.length > 1 ? (words.at(-1)?.[0] ?? "") : ""
     return (first + last).toLocaleUpperCase("vi")
 }
 

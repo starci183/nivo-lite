@@ -1,6 +1,6 @@
 "use client"
 
-import type { LeadAgeContext } from "./component"
+import { type LeadAgeContext, LeadsBoardBase, type BoardView, type LeadRowView } from "./component"
 import { useFormatter, useTranslations } from "next-intl"
 import { useState } from "react"
 import { ageOf, STAGE_KEYS, STAGE_ORDER, STAGE_TONES, useLeadActions, useLeadBoard } from "@/hooks/leads"
@@ -8,8 +8,6 @@ import { mapSlot, useSlotLabels } from "@/hooks/slot"
 import { navigation } from "@/modules/i18n"
 import { LEADS_ROUTES, leadPath, newLeadPath } from "@/modules/routes"
 import type { LeadListItem, LeadStageId } from "@/modules/types"
-import { LeadsBoardBase } from "./component"
-import type { BoardView, LeadRowView } from "./component"
 
 const ALL = "all"
 

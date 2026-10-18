@@ -1,7 +1,11 @@
 import type { GoogleOptions } from "./google.options"
 import { GOOGLE_SCOPE } from "./google.contracts"
 
-const trimSlashes = (value: string): string => value.replace(/\/+$/u, "")
+const trimSlashes = (value: string): string => {
+    let end = value.length
+    while (end > 0 && value[end - 1] === "/") end -= 1
+    return value.slice(0, end)
+}
 
 /** The Google OAuth consent endpoint. */
 export const authEndpoint = (options: Pick<GoogleOptions, "oauthBase">): string =>

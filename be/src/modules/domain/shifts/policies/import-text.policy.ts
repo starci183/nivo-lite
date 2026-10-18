@@ -109,7 +109,7 @@ interface CoverageCaptures {
     readonly ideal: string | undefined
 }
 
-const EVERY_DAY: ReadonlyArray<string> = ["moingay", "hangngay", "t2-cn", "t2-t7-cn"]
+const EVERY_DAY: ReadonlySet<string> = new Set(["moingay", "hangngay", "t2-cn", "t2-t7-cn"])
 
 const MAX_WEEK_HOURS = 100
 
@@ -121,18 +121,12 @@ const MINUTES_PER_HOUR = 60
 
 /** Lower case, no accents, single spaces: how names and keywords are compared. */
 export const fold = (text: string): string =>
-    text
-        .toLowerCase()
-        .normalize("NFD")
-        .replace(/\p{M}/gu, "")
-        .replace(/\u0111/gu, "d")
-        .replace(/\s+/gu, " ")
-        .trim()
+    text.toLowerCase().normalize("NFD").replace(/\p{M}/gu, "").replaceAll("\u0111", "d").replace(/\s+/gu, " ").trim()
 
 /** The weekdays a day expression names (T2, T2-T6, T2,T4, CN, every day), or null when it is not one. */
 const parseDays = (raw: string): Array<number> | null => {
     const text = fold(raw).replace(/\s+/gu, "")
-    if (EVERY_DAY.includes(text)) return [...WEEK_ALL]
+    if (EVERY_DAY.has(text)) return [...WEEK_ALL]
     const days = new Set<number>()
     for (const part of text.split(",")) {
         const parsed: DayRangeResult = { range: null }
@@ -155,7 +149,7 @@ const parseDays = (raw: string): Array<number> | null => {
         if (to < from) return null
         for (let day = from; day <= to; day++) days.add(day)
     }
-    return [...days].sort()
+    return [...days].sort((a, b) => a - b)
 }
 
 /** An HH:MM time from the coverage pattern's numeric captures; null when out of range. */
@@ -232,28 +226,27 @@ const parseCoverageLine = (line: string, number: number, known: Known): Array<Pa
         if (ideal < min) return failed("coverage-ideal")
         return days.map((weekday) => ({ weekday, start, end, position, min, ideal, peak }))
     }
-    let parsed: Array<ParsedBlock> | ImportError = failed("coverage-format")
-    body.replace(
-        /^(?<days>.+?)\s+(?<startHours>\d{1,2})(?:[:h](?<startMinutes>\d{2}))?\s*[-–]\s*(?<endHours>\d{1,2})(?:[:h](?<endMinutes>\d{2}))?\s+(?<position>.+?)\s+(?<minimum>\d{1,2})(?:\s*[-–]\s*(?<ideal>\d{1,2}))?$/u,
-        (
-            _match: string,
-            _days: string,
-            _startHours: string,
-            _startMinutes: string | undefined,
-            _endHours: string,
-            _endMinutes: string | undefined,
-            _position: string,
-            _minimum: string,
-            _ideal: string | undefined,
-            _offset: number,
-            _text: string,
-            captures: CoverageCaptures,
-        ) => {
-            parsed = read(captures)
-            return ""
-        },
-    )
-    return parsed
+    const counts = / (?<minimum>\d{1,2})(?: ?[-–] ?(?<ideal>\d{1,2}))?$/u.exec(body)
+    if (counts?.groups === undefined) return failed("coverage-format")
+    const prefix = body.slice(0, counts.index)
+    const time =
+        / (?<startHours>\d{1,2})(?:[:h](?<startMinutes>\d{2}))? ?[-–] ?(?<endHours>\d{1,2})(?:[:h](?<endMinutes>\d{2}))? /u.exec(
+            prefix,
+        )
+    if (time?.groups === undefined) return failed("coverage-format")
+    const days = prefix.slice(0, time.index)
+    const position = prefix.slice(time.index + time[0].length)
+    if (days === "" || position === "") return failed("coverage-format")
+    return read({
+        days,
+        position,
+        startHours: time.groups.startHours ?? "",
+        startMinutes: time.groups.startMinutes,
+        endHours: time.groups.endHours ?? "",
+        endMinutes: time.groups.endMinutes,
+        minimum: counts.groups.minimum ?? "",
+        ideal: counts.groups.ideal,
+    })
 }
 
 const isError = (value: ParsedStaff | ImportError | Array<ParsedBlock>): value is ImportError => "code" in value

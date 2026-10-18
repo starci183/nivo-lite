@@ -1,5 +1,4 @@
-import type { useResendEmail } from "@/hooks/auth"
-import type { authActionsOf } from "@/hooks/auth"
+import type { useResendEmail, authActionsOf } from "@/hooks/auth"
 import type { useTranslations } from "next-intl"
 import type { navigation } from "@/modules/i18n"
 import type { useSignupForm } from "@/hooks/rhf"

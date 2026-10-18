@@ -51,7 +51,7 @@ interface ChatbotStore {
 }
 
 const matchesJob = (current: ChatbotJob | undefined, job: ChatbotJob): boolean =>
-    current !== undefined && current.id === job.id && current.kind === job.kind && current.attempt === job.attempt
+    current?.id === job.id && current.kind === job.kind && current.attempt === job.attempt
 
 /** Keeps action locks and status-toast deduplication across workbench remounts. */
 export const useChatbotStore = create<ChatbotStore>((set) => ({
@@ -95,7 +95,7 @@ export const useChatbotStore = create<ChatbotStore>((set) => ({
     release: (identity) => {
         set((state) => {
             const current = state.actions[identity]
-            if (current === undefined || current.requesting === null) return state
+            if (current?.requesting == null) return state
             return {
                 actions: { ...state.actions, [identity]: { ...current, requesting: null } },
             }

@@ -250,3 +250,16 @@ describe("hiring fairness policy", () => {
         expect(subject.stripUnfairLines("")).toBe("")
     })
 })
+
+describe("age phrase ordering", () => {
+    it("retains text order and non-overlapping birth-year phrases", async () => {
+        const subject = await buildSubject()
+        expect(subject.findFairnessViolations("nam sinh nam 2000")).toEqual([
+            { category: "age", excerpt: "nam sinh nam 2000", field: "" },
+        ])
+        const found = subject.findFairnessViolations("sinh nam 2000; five safe words between these phrases; do tuoi")
+        expect(found).toHaveLength(2)
+        expect(found[0]?.excerpt.startsWith("sinh nam 2000")).toBe(true)
+        expect(found[1]?.excerpt.endsWith("do tuoi")).toBe(true)
+    })
+})

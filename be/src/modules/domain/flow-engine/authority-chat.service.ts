@@ -90,7 +90,10 @@ export class AuthorityChatService {
         const current = await this.authority.profileOf(workspaceId)
         const rules = await this.rules.list(workspaceId)
         const listed = rules
-            .map((rule) => `${rule.action}=${rule.mode}${rule.limit_vnd === null ? "" : `(limit ${rule.limit_vnd})`}`)
+            .map((rule) => {
+                const limit = rule.limit_vnd === null ? "" : `(limit ${rule.limit_vnd})`
+                return `${rule.action}=${rule.mode}${limit}`
+            })
             .join(", ")
         const change = await this.ai.parseAuthorityChat({ workspaceId, locale }, text, listed)
         const parts: Array<string> = []
@@ -144,14 +147,14 @@ export class AuthorityChatService {
         }
         const revenue = wholeOf(change.goals.revenue_vnd)
         const customers = wholeOf(change.goals.new_customers)
-        const reply = wholeOf(change.goals.first_reply_minutes)
+        const reply = this.replyMinutes(change.goals.first_reply_minutes)
         const note = trimmed(change.goals.note)
         const replyStyle = trimmed(change.reply_style)
         const brandVoice = trimmed(change.brand_voice)
         const limits = trimmed(change.limits_note_add)
         if (revenue !== null) say("flowEngine.goalRevenue", { amount: formatVnd(revenue, locale) })
         if (customers !== null) say("flowEngine.goalCustomers", { n: customers })
-        if (reply !== null && reply > 0) say("flowEngine.goalReply", { n: reply })
+        if (reply !== null) say("flowEngine.goalReply", { n: reply })
         if (change.policies_add.length > 0) say("flowEngine.policies", { n: change.policies_add.length })
         if (replyStyle !== "") say("flowEngine.replyStyle")
         if (brandVoice !== "") say("flowEngine.brandVoice")
@@ -159,13 +162,18 @@ export class AuthorityChatService {
         return {
             ...(revenue === null ? {} : { goal_revenue_vnd: revenue }),
             ...(customers === null ? {} : { goal_new_customers: customers }),
-            ...(reply === null || reply <= 0 ? {} : { goal_first_reply_minutes: reply }),
+            ...(reply === null ? {} : { goal_first_reply_minutes: reply }),
             ...(note === "" ? {} : { goal_note: note }),
             ...(change.policies_add.length === 0 ? {} : { policies: appended(current?.policies, change.policies_add) }),
             ...(replyStyle === "" ? {} : { reply_style: replyStyle }),
             ...(brandVoice === "" ? {} : { brand_voice: brandVoice }),
             ...(limits === "" ? {} : { limits_note: appended(current?.limits_note, [limits]) }),
         }
+    }
+
+    private replyMinutes(value: unknown): number | null {
+        const minutes = wholeOf(value)
+        return minutes !== null && minutes > 0 ? minutes : null
     }
 
     /** Saves the rules the owner named and answers them; one line per change goes in `parts`. */
@@ -194,7 +202,7 @@ export class AuthorityChatService {
         for (const rule of asked) {
             const record = catalogue.get(rule.action)
             if (record === undefined || !namesAction(said, record)) continue
-            const limitAsked = record.amount_limit && rule.limit === null && amount !== null ? amount : rule.limit
+            const limitAsked = this.limitAsked(record, rule, amount)
             const existing = stored.find((x) => x.action === rule.action)
             // "orders over 20 million ask me" = do it alone strictly below 20M, ask otherwise.
             const mode: RuleMode =
@@ -217,6 +225,10 @@ export class AuthorityChatService {
         )
         parts.push(...(await Promise.all(saved.map(({ rule, plan }) => this.ruleLine(rule, plan, locale)))))
         return saved.map(({ rule }) => rule)
+    }
+
+    private limitAsked(record: AuthorityActionRecord, rule: ModelRule, amount: number | null): number | null {
+        return record.amount_limit && rule.limit === null && amount !== null ? amount : rule.limit
     }
 
     private saveRule(workspaceId: string, plan: PlannedRule): Promise<AuthorityRuleRecord> {

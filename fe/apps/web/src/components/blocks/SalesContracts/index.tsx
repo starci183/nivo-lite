@@ -16,9 +16,12 @@ import {
 } from "@/hooks/salescontracts"
 import { useSalesWorkbench } from "@/hooks/salesworkbench"
 import type { SalesContract } from "@/modules/types"
-import { SalesContractsBase } from "./component"
-import { createContractDrawer, createSalesContractsState } from "./component"
-import type { SalesContractsControllerInput } from "./component"
+import {
+    SalesContractsBase,
+    createContractDrawer,
+    createSalesContractsState,
+    type SalesContractsControllerInput,
+} from "./component"
 
 const createSalesContractsActions = (input: SalesContractsControllerInput) => {
     const context = createSalesContractsState(input, {

@@ -21,11 +21,11 @@ export const AUTO_APPLY_TRUST = 85
 export const keyOf = (text: string): string =>
     text
         .toLowerCase()
-        .replace(/\u0111/g, "d")
+        .replaceAll("\u0111", "d")
         .normalize("NFD")
         .replace(/\p{Diacritic}/gu, "")
         .replace(/[^a-z0-9]+/g, "-")
-        .replace(/^-+|-+$/g, "")
+        .replace(/^-|-$/g, "")
         .slice(0, 120)
 
 /** Vietnamese scale words as written with accents and without (billion, million, thousand), and the short forms tr and k. */
@@ -44,7 +44,7 @@ const scaleOf = (word: string): number => {
 /** A number written the Vietnamese way ("650.000", "1,2 tr", "8tr", "2 trieu", "1.5k") or null. */
 export const numberOf = (raw: string): number | null => {
     const text = raw.toLowerCase().replace(/\s+/g, " ").trim()
-    const match = text.match(NUMBER_WITH_SCALE)
+    const match = NUMBER_WITH_SCALE.exec(text)
     if (match === null) return null
     const digits = match[1] ?? ""
     const scale = scaleOf(match[2] ?? "")

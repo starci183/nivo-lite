@@ -79,7 +79,7 @@ describe("TtsClient", () => {
 
         const audio = await tts.synthesize({ ...REQUEST, ratePct: 12.4 }, new AbortController().signal)
 
-        expect(audio.length).toBe(900)
+        expect(audio).toHaveLength(900)
         expect(mockSessions()[0]).toMatchObject({ voice: "vi-VN-HoaiMyNeural", rate: "+12%" })
     })
     it("writes a negative rate with its own sign and reuses the connection for the same voice", async () => {

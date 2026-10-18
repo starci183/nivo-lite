@@ -18,7 +18,7 @@ type GateChange = { readonly action: "confirm" | "reopen" | "edit"; readonly evi
 type ApplyNote = { readonly tone: "idle" | "applied"; readonly version: number }
 
 const SETUP_KEYS: ReadonlyArray<string> = [QUERY_SETUP_STATE_SWR_KEY, QUERY_SETUP_VERSIONS_SWR_KEY]
-const isSetupKey = (key: unknown): boolean => Array.isArray(key) && SETUP_KEYS.some((name) => name === key[0])
+const isSetupKey = (key: unknown): boolean => Array.isArray(key) && SETUP_KEYS.includes(key[0])
 
 /** The gate checklist of the setup: confirm, reopen or edit one gate, and apply the draft as a version. A failure was already toasted. */
 export const useSetupGates = (setupSessionId: string, installationId: string) => {

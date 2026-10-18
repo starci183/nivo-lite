@@ -1,3 +1,4 @@
+import { quotesByLeadOf } from "./sales-quotes.mapper"
 import type { ContractResult } from "@modules/domain/contracts"
 import type { LeadDecisionRecord as DecisionRow } from "@modules/domain/decisions"
 import type { InvoiceViewRow as Invoice } from "@modules/domain/invoices"
@@ -11,7 +12,6 @@ import type {
     AttentionKind,
     AttentionRow,
     AutoActivity,
-    LeadStageId,
     SalesConversion,
     SalesDeal,
     SalesDecision,
@@ -106,7 +106,7 @@ export interface SalesRows {
 }
 
 const MIN = 60_000
-const OPEN_STAGES: ReadonlyArray<LeadStageId> = ["new", "qualified", "proposal"]
+const OPEN_STAGES: ReadonlySet<string> = new Set(["new", "qualified", "proposal"])
 const AWAITING_REPLY_AFTER_MS = 3 * MIN
 const BOARD_CLOSED_LIMIT = 8
 const CONVERSION_WINDOW_DAYS = 90
@@ -187,19 +187,7 @@ const lookupsOf = (rows: SalesRows): Lookups => {
     const orderByLead = new Map<string, Order>()
     for (const order of orders)
         if (order.lead_id && !orderByLead.has(order.lead_id)) orderByLead.set(order.lead_id, order)
-    const quoteByLead = new Map<string, number>()
-    for (const item of rows.items) {
-        const amount = item.proposal.amount_vnd
-        if (
-            item.action === "send_quote" &&
-            item.lead_id &&
-            item.status !== "rejected" &&
-            typeof amount === "number" &&
-            !quoteByLead.has(item.lead_id)
-        ) {
-            quoteByLead.set(item.lead_id, amount)
-        }
-    }
+    const quoteByLead = quotesByLeadOf(rows.items)
     const waitingByLead = new Map<string, WorkItemView>()
     for (const item of rows.items) {
         if (item.lead_id && item.status === "waiting_decision" && !waitingByLead.has(item.lead_id))
@@ -307,8 +295,7 @@ const awaitingReplies = (rows: SalesRows, look: Lookups): Array<AttentionRow> =>
     for (const conversation of rows.conversations) {
         const message = latest.get(conversation.id)
         const lead = conversation.lead_id ? look.leadById.get(conversation.lead_id) : undefined
-        if (!message || message.role !== "user" || !lead || !OPEN_STAGES.includes(lead.stage) || seen.has(lead.id))
-            continue
+        if (message?.role !== "user" || !lead || !OPEN_STAGES.has(lead.stage) || seen.has(lead.id)) continue
         if (rows.nowMs - Date.parse(message.created_at) < AWAITING_REPLY_AFTER_MS) continue
         seen.add(lead.id)
         rowsOut.push({
@@ -335,7 +322,7 @@ const attentionOf = (
     look: Lookups,
     decisions: ReadonlyArray<SalesDecision>,
 ): ReadonlyArray<AttentionRow> => {
-    const stageOf = (leadId: string | null): LeadStageId | null =>
+    const stageOf = (leadId: string | null): string | null =>
         leadId ? (look.leadById.get(leadId)?.stage ?? null) : null
     const companyOf = (leadId: string | null): string => (leadId ? (look.leadById.get(leadId)?.company ?? "") : "")
     const rowsOut: Array<AttentionRow> = []
@@ -382,7 +369,7 @@ const attentionOf = (
         const lead = look.leadById.get(step.lead_id)
         if (
             !lead ||
-            !OPEN_STAGES.includes(lead.stage) ||
+            !OPEN_STAGES.has(lead.stage) ||
             !step.due_at ||
             Date.parse(step.due_at) >= rows.nowMs ||
             step.status === "waiting_approval"
@@ -466,7 +453,7 @@ const metricsOf = (
 export const buildSalesWorkbench = (rows: SalesRows): SalesWorkbenchData => {
     const look = lookupsOf(rows)
     const allDeals = rows.leads.map((lead) => dealOf(lead, look))
-    const openDeals = allDeals.filter((deal) => OPEN_STAGES.includes(deal.stage))
+    const openDeals = allDeals.filter((deal) => OPEN_STAGES.has(deal.stage))
     const closed = (stage: "won" | "lost"): ReadonlyArray<SalesDeal> =>
         allDeals
             .filter((deal) => deal.stage === stage)

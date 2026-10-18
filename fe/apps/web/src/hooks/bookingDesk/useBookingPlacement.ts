@@ -26,7 +26,7 @@ export interface PlacementFields {
 export type PlacementDraft = { readonly kind: "add" } | { readonly kind: "move"; readonly id: string }
 
 /** Refusals the owner may override by stacking the booking anyway. */
-const FORCEABLE: ReadonlyArray<string> = ["closed", "full", "taken", "no_resource"]
+const FORCEABLE: ReadonlySet<string> = new Set(["closed", "full", "taken", "no_resource"])
 
 /** The `BOOKINGS_*` capability codes of the back end as the `reason_*` catalog keys the dialog shows. */
 const REASON_OF_CODE: Readonly<Record<string, string>> = {
@@ -105,7 +105,7 @@ export const useBookingPlacement = (timezone: string, onPlaced: (kind: Placement
         fields,
         reason,
         isBusy,
-        canForce: reason !== null && FORCEABLE.includes(reason),
+        canForce: reason !== null && FORCEABLE.has(reason),
         open: (next: PlacementDraft, start: PlacementFields) => {
             setReason(null)
             setFields(start)

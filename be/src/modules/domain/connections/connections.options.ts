@@ -9,5 +9,5 @@ export interface ConnectionsOptions {
     /** The public origin of the site (browsers are sent back to it), absent in a bare local setup. */
     readonly publicSiteUrl: string | undefined
     /** The public origin of the back end, where providers call webhooks and callbacks; the site origin when absent. */
-    readonly publicApiUrl?: string | undefined
+    readonly publicApiUrl?: string
 }

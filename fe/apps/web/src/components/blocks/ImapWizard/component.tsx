@@ -1,14 +1,19 @@
 import type { useFormatter, useTranslations } from "next-intl"
 import type { useImapWizard } from "@/hooks/imap-wizard"
-import type { AgentOption } from "@/modules/types"
+import type { AgentOption, AgentStepView } from "@/modules/types"
 import { Alert, Button, CheckboxGroup, RadioGroup, Text } from "@starci/grammar/common"
-import { ImapAccountFields } from "@/components/composites/ImapAccountFields"
-import type { ImapAccountFieldsProps } from "@/components/composites/ImapAccountFields"
+import { ImapAccountFields, type ImapAccountFieldsProps } from "@/components/composites/ImapAccountFields"
+
 import { WizardAgentStep } from "@/components/composites/WizardAgentStep"
-import { backAction, closeAction, nextAction, WizardFooter } from "@/components/composites/WizardFooter"
-import type { WizardAction } from "@/components/composites/WizardFooter"
+import {
+    backAction,
+    closeAction,
+    nextAction,
+    WizardFooter,
+    type WizardAction,
+} from "@/components/composites/WizardFooter"
+
 import { WizardFrame } from "@/components/composites/WizardFrame"
-import type { AgentStepView } from "@/modules/types"
 
 /** One option of a radio or checkbox list. */
 interface ImapChoice {

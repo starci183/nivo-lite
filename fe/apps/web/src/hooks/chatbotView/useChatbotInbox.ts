@@ -75,7 +75,7 @@ export const useChatbotInbox = (input: ChatbotInboxInput) => {
         if (threadQuery.error instanceof Error) return threadQuery.error.message
         return feedback?.kind === "handling" ? feedback.message : null
     }
-    return useChatbotInboxView(
+    return useChatbotInboxView({
         actionError,
         view,
         input,
@@ -97,7 +97,7 @@ export const useChatbotInbox = (input: ChatbotInboxInput) => {
         pathname,
         conversation,
         escalation,
-    )
+    })
 }
 
 const replyFormOf = (

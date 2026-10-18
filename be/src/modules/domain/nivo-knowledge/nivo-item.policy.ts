@@ -4,7 +4,7 @@ import type { Outcome } from "@modules/platform/primitives"
 import { NivoKnowledgeErrorCode } from "./errors/nivo-knowledge.error"
 
 /** The kinds a base knowledge item may have. */
-const KINDS: ReadonlyArray<string> = ["playbook", "authority", "escalation", "setup_checklist", "tone"]
+const KINDS: ReadonlySet<string> = new Set(["playbook", "authority", "escalation", "setup_checklist", "tone"])
 
 /** The folder of the knowledge every module shares. */
 export const CORE_FOLDER = "core"
@@ -24,8 +24,8 @@ export type NivoItemOutcome = Outcome<NivoItemInput, NivoKnowledgeErrorCode>
 const metaOf = (block: string): ReadonlyMap<string, string> => {
     const meta = new Map<string, string>()
     block.split("\n").forEach((line) => {
-        if (/^\w+:\s*.*$/.test(line)) {
-            const colon = line.indexOf(":")
+        const colon = line.indexOf(":")
+        if (/^\w+:/u.test(line) && !/[\r\n\u2028\u2029]/u.test(line.slice(colon + 1).trimStart())) {
             meta.set(
                 line.slice(0, colon),
                 line
@@ -43,7 +43,7 @@ const metaOf = (block: string): ReadonlyMap<string, string> => {
  * file sits in, which must be `core` or the knowledge folder of a module of the catalogue; the slug is the file name.
  */
 export const nivoItemOf = (file: NivoFile, folders: ReadonlyArray<string>): NivoItemOutcome => {
-    const raw = file.text.replace(/\r\n/g, "\n")
+    const raw = file.text.replaceAll("\r\n", "\n")
     if (!/^---\n[\s\S]*?\n---\n?[\s\S]*$/.test(raw)) {
         return refused(NivoKnowledgeErrorCode.FrontMatterMissing, { file: file.path })
     }
@@ -55,7 +55,7 @@ export const nivoItemOf = (file: NivoFile, folders: ReadonlyArray<string>): Nivo
         return refused(NivoKnowledgeErrorCode.ModuleUnknown, { file: file.path })
     }
     const kind = meta.get("kind") ?? ""
-    if (!KINDS.includes(kind)) return refused(NivoKnowledgeErrorCode.KindUnknown, { file: file.path })
+    if (!KINDS.has(kind)) return refused(NivoKnowledgeErrorCode.KindUnknown, { file: file.path })
     const title = meta.get("title") ?? ""
     if (title === "") return refused(NivoKnowledgeErrorCode.TitleMissing, { file: file.path })
     const name = file.path.slice(file.path.lastIndexOf("/") + 1)

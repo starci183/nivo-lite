@@ -1,10 +1,15 @@
 "use client"
 
-import { useSettledGraphQL } from "@/hooks/connection-wizard"
-import type { Settled } from "@/hooks/connection-wizard"
+import { useSettledGraphQL, type Settled } from "@/hooks/connection-wizard"
+
 import { useConnectionsRefresh } from "@/hooks/connections"
-import { useMutateSaveImapConnectionSwr, useQueryTestImapConnectionSwr } from "@/hooks/swr"
-import type { MutateSaveImapConnectionRequest, QueryTestImapConnectionRequest } from "@/hooks/swr"
+import {
+    useMutateSaveImapConnectionSwr,
+    useQueryTestImapConnectionSwr,
+    type MutateSaveImapConnectionRequest,
+    type QueryTestImapConnectionRequest,
+} from "@/hooks/swr"
+
 import { useMemo } from "react"
 
 /** The GraphQL commands of the mailbox wizard (the active workspace travels in the request header). */
@@ -29,8 +34,7 @@ export const useImapCommands = (): ImapCommands => {
                 }),
             save: async (request) => {
                 const settled = await settle(() => triggerSave(request))
-                if (settled.kind !== "ok") return settled
-                await refresh()
+                if (settled.kind === "ok") await refresh()
                 return settled
             },
         }),

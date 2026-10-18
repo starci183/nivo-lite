@@ -40,6 +40,12 @@ describe("isEmailAddress", () => {
     it.each([
         ["an@example.test", true],
         ["an@example", false],
+        ["a@b.c.", true],
+        ["a@.b.c", true],
+        ["a@.b", false],
+        ["a@@b.c", false],
+        ["a@b.c\n", false],
+        ["a@" + "b".repeat(20000), false],
         ["an example@x.test", false],
         ["", false],
     ] as const)("answers %s as %s", async (email, expected) => {

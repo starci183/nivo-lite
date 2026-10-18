@@ -1,7 +1,7 @@
 import type { ProposalFieldValue } from "@modules/domain/work-items"
 
 /** The stages of a lead the sales AI may move it to. */
-const LEAD_STAGES: ReadonlyArray<string> = ["new", "qualified", "proposal", "won", "lost"]
+const LEAD_STAGES: ReadonlySet<string> = new Set(["new", "qualified", "proposal", "won", "lost"])
 
 /** The text of a proposal field; an empty text when the field is missing. */
 export const textOf = (value: ProposalFieldValue | undefined): string =>
@@ -16,7 +16,7 @@ export const leadHref = (leadId: string | null | undefined): string =>
     leadId === undefined || leadId === null ? "/chat" : `/leads/${leadId}`
 
 /** The stage a text names, or null when it is not a stage. */
-export const stageOf = (raw: string): string | null => (LEAD_STAGES.includes(raw) ? raw : null)
+export const stageOf = (raw: string): string | null => (LEAD_STAGES.has(raw) ? raw : null)
 
 /** The non-empty parts joined with a middle dot. */
 export const dotted = (parts: ReadonlyArray<string | null | undefined>): string =>

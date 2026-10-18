@@ -38,7 +38,7 @@ export const usePublicBookingForm = (page: PublicBookingPageData | null | undefi
         label: whenText(iso),
         date: wallDate(Date.parse(iso), zone),
     }))
-    const succeeded = answer !== null && answer.ok
+    const succeeded = answer?.ok === true
     return {
         props: {
             formLabel: t("publicFormLabel"),

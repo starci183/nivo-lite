@@ -1,7 +1,13 @@
 import type { BadgeTone } from "@starci/grammar/common"
 import type { useFormatter, useTranslations } from "next-intl"
-import type { FlowWorkStatus } from "@/modules/types"
-import type { LeadGenComment, LeadGenHandoff, LeadGenLead, LeadGenSource, LeadScore } from "@/modules/types"
+import type {
+    FlowWorkStatus,
+    LeadGenComment,
+    LeadGenHandoff,
+    LeadGenLead,
+    LeadGenSource,
+    LeadScore,
+} from "@/modules/types"
 
 /** The translator of the Lead Gen catalog namespace. */
 export type LeadGenTranslator = ReturnType<typeof useTranslations>
@@ -22,7 +28,7 @@ const CLASSIFY_TONES: Readonly<Record<FlowWorkStatus, BadgeTone>> = {
 }
 
 /** The stages a lead can be in, as the handoff line names them. */
-const LEAD_STAGES: ReadonlyArray<string> = ["new", "qualified", "proposal", "won", "lost"]
+const LEAD_STAGES: ReadonlySet<string> = new Set(["new", "qualified", "proposal", "won", "lost"])
 
 /** The words of what a source points at: an ad, a form, else a post. */
 const REF_KEYS: Readonly<Record<string, string>> = { ad: "refAd", form: "refForm" }
@@ -97,7 +103,7 @@ export const sourcesViewOf = (t: LeadGenTranslator, rows: ReadonlyArray<LeadGenS
 
 /** A lead stage in words; a stage the catalog does not know is written as it came. */
 const stageNameOf = (t: LeadGenTranslator, stage: string): string =>
-    LEAD_STAGES.includes(stage) ? t(`stage_${stage}`) : stage
+    LEAD_STAGES.has(stage) ? t(`stage_${stage}`) : stage
 
 /** The words and rows of the hand-offs tab. */
 export const handoffsViewOf = (t: LeadGenTranslator, format: LeadGenFormat, rows: ReadonlyArray<LeadGenHandoff>) => ({

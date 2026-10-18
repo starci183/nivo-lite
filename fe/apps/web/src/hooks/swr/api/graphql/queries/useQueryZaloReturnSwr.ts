@@ -13,8 +13,10 @@ interface ZaloReturnInput {
 }
 
 /** The Connections address carrying the verdict shown by the wizard. */
-const connectionsHref = (verdict: string, connectionId?: string): string =>
-    `/connections?zalo=${verdict}${connectionId === undefined ? "" : `&id=${connectionId}`}`
+const connectionsHref = (verdict: string, connectionId?: string): string => {
+    const connection = connectionId === undefined ? "" : `&id=${connectionId}`
+    return `/connections?zalo=${verdict}${connection}`
+}
 
 /** The SWR key of one Zalo return. */
 const ZALO_RETURN_SWR_KEY = "zalo-return"

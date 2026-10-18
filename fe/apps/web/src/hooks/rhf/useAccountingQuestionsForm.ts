@@ -5,10 +5,9 @@ import { useTranslations } from "next-intl"
 import { useMemo } from "react"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
-import type { FlowWorkItemView } from "@/modules/types"
-import type { AccountingQuestionValues } from "@/modules/types"
-import { digitsToNumber } from "@/modules/utils"
-import type { AccountingTranslator } from "@/modules/utils"
+import type { FlowWorkItemView, AccountingQuestionValues } from "@/modules/types"
+
+import { digitsToNumber, type AccountingTranslator } from "@/modules/utils"
 
 interface AccountingQuestionsValues {
     items: Record<string, AccountingQuestionValues>

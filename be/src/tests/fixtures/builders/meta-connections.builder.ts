@@ -34,9 +34,10 @@ export const seal = (value: object) => ({ plain: JSON.stringify(value), webhookS
 export const state = { w: "ws-1", u: "owner-1", r: `/connections?connect=meta&id=${ID}`, e: 1_800_000_000_000 }
 export const callback = { state: "signed-state", code: "code-1", error: undefined }
 /** Build the expected OAuth browser redirect location. */
-export const location = (outcome: string, id: string | null = ID) => ({
-    location: `https://nivo.vn/connections?connect=meta&meta=${outcome}${id === null ? "" : `&id=${id}`}`,
-})
+export const location = (outcome: string, id: string | null = ID) => {
+    const idQuery = id === null ? "" : `&id=${id}`
+    return { location: `https://nivo.vn/connections?connect=meta&meta=${outcome}${idQuery}` }
+}
 export const emptyView = {
     id: ID,
     name: "Shop",

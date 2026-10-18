@@ -10,7 +10,11 @@ export const DEFAULT_GRAPH_VERSION = "v21.0"
 
 type Params = Readonly<Record<string, string | number | boolean | undefined>>
 
-const trimSlashes = (value: string): string => value.replace(/\/+$/u, "")
+const trimSlashes = (value: string): string => {
+    let end = value.length
+    while (end > 0 && value[end - 1] === "/") end -= 1
+    return value.slice(0, end)
+}
 
 /** The configured Graph version ("v21.0" or later); anything older or malformed falls back to v21.0. */
 export const graphVersion = (options: Pick<MetaOptions, "graphVersion">): string => {

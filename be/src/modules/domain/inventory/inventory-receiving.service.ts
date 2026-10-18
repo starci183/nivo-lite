@@ -35,6 +35,18 @@ interface IdRow {
     readonly id: string
 }
 
+/** Receipt facts used by the Office evidence and supplier price-change notice. */
+interface ReceiptReport {
+    readonly workspaceId: string
+    readonly actor: string
+    readonly poNo: string
+    readonly complete: boolean
+    readonly count: number
+    readonly value: number
+    readonly invoiceEvidence: string | null
+    readonly priceChanges: ReadonlyArray<string>
+}
+
 @Injectable()
 /** Receiving goods against a purchase order, in full or in part. */
 export class InventoryReceivingService {
@@ -80,7 +92,7 @@ export class InventoryReceivingService {
         await eachInOrder(request.lines, async (entry) => {
             const qty = parseNumber(entry.qty)
             const line = po.lines.find((candidate) => candidate.id === entry.lineId)
-            if (line === undefined || uuidOrNull(entry.lineId) === null || !(qty > 0)) return
+            if (line === undefined || uuidOrNull(entry.lineId) === null || qty <= 0 || Number.isNaN(qty)) return
             const typedCost = entry.unitCost.trim() === "" ? -1 : Math.max(0, parseNumber(entry.unitCost))
             const cost = typedCost >= 0 ? typedCost : line.unitCost
             const applied = await this.movements.apply(workspaceId, {
@@ -121,16 +133,16 @@ export class InventoryReceivingService {
         const status = complete ? "received" : "partially_received"
         await this.entityManager.query(SET_PO_STATUS, [po.id, status])
         await this.entityManager.query(RECOMPUTE_PO_TOTAL, [po.id])
-        await this.reportReceipt(
+        await this.reportReceipt({
             workspaceId,
             actor,
-            po.poNo,
+            poNo: po.poNo,
             complete,
-            touched.length,
+            count: touched.length,
             value,
             invoiceEvidence,
             priceChanges,
-        )
+        })
         const handedToAccounting = value > 0 && (await this.accountingInstalled(workspaceId))
         if (handedToAccounting)
             await this.handToAccounting(workspaceId, po.supplier?.name ?? null, po.poNo, invoiceNo, value)
@@ -164,16 +176,16 @@ export class InventoryReceivingService {
         })
     }
 
-    private async reportReceipt(
-        workspaceId: string,
-        actor: string,
-        poNo: string,
-        complete: boolean,
-        count: number,
-        value: number,
-        invoiceEvidence: string | null,
-        priceChanges: ReadonlyArray<string>,
-    ): Promise<void> {
+    private async reportReceipt({
+        workspaceId,
+        actor,
+        poNo,
+        complete,
+        count,
+        value,
+        invoiceEvidence,
+        priceChanges,
+    }: ReceiptReport): Promise<void> {
         await this.office.logEvidence(workspaceId, {
             kind: "inventory.received",
             actor,

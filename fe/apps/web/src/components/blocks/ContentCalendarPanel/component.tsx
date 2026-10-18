@@ -28,7 +28,7 @@ export interface ContentCalendarPanelBaseProps {
         readonly monthItems: ReadonlyArray<PostView>
         readonly unscheduled: ReadonlyArray<PostView>
         readonly todayKey: string
-        readonly isDragging: boolean
+        readonly pickedId: string | null
         readonly overKey: string | null
         readonly expandedKey: string | null
         readonly canManage: boolean
@@ -40,6 +40,7 @@ export interface ContentCalendarPanelBaseProps {
         readonly today: () => void
         readonly open: (id: string) => void
         readonly dragStart: (id: string) => void
+        readonly pick: (id: string) => void
         readonly dragEnd: () => void
         readonly dragOver: (key: string) => void
         readonly dragLeave: (key: string) => void
@@ -131,7 +132,7 @@ const renderContentCalendarGrid = (
                 cells={props.props.cells}
                 byDay={props.props.byDay}
                 todayKey={props.props.todayKey}
-                dragging={props.props.isDragging}
+                pickedId={props.props.pickedId}
                 overKey={props.props.overKey}
                 expandedKey={props.props.expandedKey}
                 canManage={props.props.canManage}
@@ -139,6 +140,7 @@ const renderContentCalendarGrid = (
                 t={t}
                 onOpen={props.on.open}
                 onDragStart={props.on.dragStart}
+                onPick={props.on.pick}
                 onDragEnd={props.on.dragEnd}
                 onDragOver={props.on.dragOver}
                 onDragLeave={props.on.dragLeave}

@@ -34,7 +34,7 @@ const decodeEntities = (text: string): string =>
 
 /** The decoded value of one attribute of a tag, or null when the tag does not carry it. */
 const attributeOf = (tag: string, name: string): string | null => {
-    const match = new RegExp(`(?:^|[\\s:])${name}="([^"]*)"`, "u").exec(tag)
+    const match = new RegExp(String.raw`(?:^|[\s:])${name}="([^"]*)"`, "u").exec(tag)
     return match === null ? null : decodeEntities(captured(match, 1))
 }
 
@@ -46,19 +46,19 @@ const partsOf = (bytes: Uint8Array, wanted: (name: string) => boolean): Record<s
 
 /** The text of every `<tag>` run of an XML fragment, joined. */
 const textRuns = (xml: string, tag: string): string =>
-    [...xml.matchAll(new RegExp(`<${tag}(?:\\s[^>]*)?>([\\s\\S]*?)</${tag}>`, "gu"))]
+    [...xml.matchAll(new RegExp(String.raw`<${tag}(?:\s[^>]*)?>([\s\S]*?)</${tag}>`, "gu"))]
         .map((match) => decodeEntities(captured(match, 1)))
         .join("")
 
 /** The zero-based column of a cell reference such as `C7`. */
-const columnOf = (reference: string): number =>
-    Math.max(
+const columnOf = (reference: string): number => {
+    const lineBreak = Math.max(...["\n", "\r", "\u2028", "\u2029"].map((ending) => reference.lastIndexOf(ending)))
+    const letters = lineBreak < 0 ? (reference.match(/^[A-Za-z]*/u)?.[0] ?? "") : reference.slice(0, lineBreak)
+    return Math.max(
         0,
-        [...reference.replace(/[^A-Za-z].*$/u, "")].reduce(
-            (column, letter) => column * 26 + ALPHABET.indexOf(letter.toUpperCase()) + 1,
-            0,
-        ) - 1,
+        [...letters].reduce((column, letter) => column * 26 + ALPHABET.indexOf(letter.toUpperCase()) + 1, 0) - 1,
     )
+}
 
 /** The relationship ids of a `.rels` part with the target each one names. */
 const relationshipTargets = (xml: string): Map<string, string> => {
@@ -99,7 +99,7 @@ const rowCells = (row: string, shared: ReadonlyArray<string>): Array<string> => 
         while (cells.length < at) cells.push("")
         cells[at] = cellText(attributeOf(attributes, "t"), captured(cell, 2), shared).replace(/\s+/gu, " ").trim()
     }
-    while (cells.length > 0 && cells[cells.length - 1] === "") cells.pop()
+    while (cells.length > 0 && cells.at(-1) === "") cells.pop()
     return cells
 }
 

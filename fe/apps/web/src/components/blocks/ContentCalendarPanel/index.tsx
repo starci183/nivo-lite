@@ -3,8 +3,6 @@
 import { useTranslations } from "next-intl"
 import { useMemo, useState } from "react"
 import {
-    daysInMonth,
-    isoWeekdayOf,
     moveToDay,
     pad2,
     shiftMonth,
@@ -14,56 +12,50 @@ import {
     vnDateKey,
     postView,
     useContentItemActions,
-    type PostView,
     useContentData,
 } from "@/hooks/content"
+import { calendarMonthView } from "@/hooks/contentCalendar"
 import { ContentCalendarPanelBase } from "./component"
-
-const inMonth = (iso: string | null, y: number, m: number): boolean => {
-    if (iso === null) return false
-    const p = vietnamClock(new Date(iso))
-    return p.y === y && p.m === m
-}
-
-const WEEK = 7
 
 /** The Calendar tab: month grid with drag to reschedule, agenda on phones, and the posts without a date. */
 /** Connects the state and commands used by ContentCalendarPanel. */
-const buildContentCalendarPanelState = (
-    ym: CalendarMonth,
-    data: ReturnType<typeof useContentData>,
-    t: ReturnType<typeof useTranslations<"content">>,
-    dragId: string | null,
-    setDragId: import("react").Dispatch<import("react").SetStateAction<string | null>>,
-    setOverKey: import("react").Dispatch<import("react").SetStateAction<string | null>>,
-    command: ReturnType<typeof useContentCommand>,
-    actions: ReturnType<typeof useContentItemActions>,
-    now: Date,
-    overKey: string | null,
-    expandedKey: string | null,
-    setYm: import("react").Dispatch<import("react").SetStateAction<CalendarMonth>>,
-    focus: ReturnType<typeof useContentFocus>,
-    setExpandedKey: import("react").Dispatch<import("react").SetStateAction<string | null>>,
-) => {
+/** Inputs for the connected state mapping. */
+interface BuildContentCalendarPanelStateInput {
+    readonly ym: CalendarMonth
+    readonly data: ReturnType<typeof useContentData>
+    readonly t: ReturnType<typeof useTranslations<"content">>
+    readonly dragId: string | null
+    readonly setDragId: import("react").Dispatch<import("react").SetStateAction<string | null>>
+    readonly setOverKey: import("react").Dispatch<import("react").SetStateAction<string | null>>
+    readonly command: ReturnType<typeof useContentCommand>
+    readonly actions: ReturnType<typeof useContentItemActions>
+    readonly now: Date
+    readonly overKey: string | null
+    readonly expandedKey: string | null
+    readonly setYm: import("react").Dispatch<import("react").SetStateAction<CalendarMonth>>
+    readonly focus: ReturnType<typeof useContentFocus>
+    readonly setExpandedKey: import("react").Dispatch<import("react").SetStateAction<string | null>>
+}
+
+/** Derives display values and interactions from the supplied state. */
+const buildContentCalendarPanelState = ({
+    ym,
+    data,
+    t,
+    dragId,
+    setDragId,
+    setOverKey,
+    command,
+    actions,
+    now,
+    overKey,
+    expandedKey,
+    setYm,
+    focus,
+    setExpandedKey,
+}: BuildContentCalendarPanelStateInput) => {
     const { y, m } = ym
-    const monthItems = data.items
-        .filter((i) => inMonth(i.scheduled_at, y, m))
-        .sort((a, b) => (a.scheduled_at ?? "").localeCompare(b.scheduled_at ?? ""))
-    const pillarNames = Object.fromEntries(data.pillars.map((p) => [p.id, p.name]))
-    const byDay = new Map<string, Array<PostView>>()
-    for (const item of monthItems) {
-        const key = vnDateKey(new Date(item.scheduled_at ?? ""))
-        byDay.set(key, [...(byDay.get(key) ?? []), postView(t, item, pillarNames)])
-    }
-    const lead = isoWeekdayOf(y, m, 1) - 1
-    const days = daysInMonth(y, m)
-    const total = Math.ceil((lead + days) / WEEK) * WEEK
-    const cells = Array.from({ length: total }, (_, i) => {
-        const day = i - lead + 1
-        return day >= 1 && day <= days
-            ? { key: `d${day}`, day, dateKey: `${y}-${pad2(m)}-${pad2(day)}` }
-            : { key: `x${i}`, day: null, dateKey: "" }
-    })
+    const { monthItems, pillarNames, byDay, cells } = calendarMonthView(data, t, y, m)
     const hasSetup = data.pillars.some((p) => p.active) && data.cadence.some((c) => c.posts_per_week > 0)
     const drop = (day: number) => {
         const item = data.items.find((i) => i.id === dragId)
@@ -113,7 +105,7 @@ export const ContentCalendarPanel = () => {
     const [overKey, setOverKey] = useState<string | null>(null)
     const [expandedKey, setExpandedKey] = useState<string | null>(null)
 
-    const connected = buildContentCalendarPanelState(
+    const connected = buildContentCalendarPanelState({
         ym,
         data,
         t,
@@ -128,7 +120,7 @@ export const ContentCalendarPanel = () => {
         setYm,
         focus,
         setExpandedKey,
-    )
+    })
     if (connected === null) return null
     const { y, m, cells, byDay, monthItems, pillarNames, hasSetup, drop } = connected
     return (
@@ -145,7 +137,7 @@ export const ContentCalendarPanel = () => {
                     .filter((i) => i.scheduled_at === null && i.status !== "skipped" && i.status !== "published")
                     .map((i) => postView(t, i, pillarNames)),
                 todayKey: vnDateKey(now),
-                isDragging: dragId !== null,
+                pickedId: dragId,
                 overKey,
                 expandedKey,
                 canManage: data.canManage,
@@ -160,6 +152,10 @@ export const ContentCalendarPanel = () => {
                 },
                 open: focus.open,
                 dragStart: setDragId,
+                pick: (id) => {
+                    setDragId((current) => (current === id ? null : id))
+                    setOverKey(null)
+                },
                 dragEnd: () => {
                     setDragId(null)
                     setOverKey(null)

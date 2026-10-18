@@ -10,7 +10,7 @@ type Block =
     | { readonly kind: "ul"; readonly items: ReadonlyArray<string> }
 
 const escapeHtml = (text: string): string =>
-    text.replace(/&/gu, "&amp;").replace(/</gu, "&lt;").replace(/>/gu, "&gt;").replace(/"/gu, "&quot;")
+    text.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;")
 
 /** Fills `{name}` or `{{name}}` from `vars` (an unknown name becomes empty); control characters never survive. */
 export const renderTemplate = (template: string, vars: TemplateVars): string =>
@@ -55,7 +55,7 @@ const blocksOfParagraph = (paragraph: string): ReadonlyArray<Block> => {
 /** A blank line starts a new paragraph; consecutive lines starting with "- " are a bullet list; other lines stay together. */
 const blocksOf = (text: string): ReadonlyArray<Block> =>
     text
-        .replace(/\r\n/gu, "\n")
+        .replaceAll("\r\n", "\n")
         .split(/\n{2,}/u)
         .flatMap(blocksOfParagraph)
 
@@ -64,11 +64,13 @@ export const renderEmail = (input: EmailLayoutInput): RenderedEmail => {
     const accent = input.accent !== undefined && /^#[0-9a-f]{6}$/iu.test(input.accent) ? input.accent : NIVO_ACCENT
     const shop = escapeHtml(oneLine(input.shopName, 80))
     const body = blocksOf(input.body)
-        .map((block) =>
-            block.kind === "ul"
-                ? `<ul style="margin:0 0 16px;padding-left:20px">${block.items.map((item) => `<li style="margin:0 0 6px">${escapeHtml(item)}</li>`).join("")}</ul>`
-                : `<p style="margin:0 0 16px">${block.lines.map(escapeHtml).join("<br>")}</p>`,
-        )
+        .map((block) => {
+            if (block.kind === "ul") {
+                const items = block.items.map((item) => `<li style="margin:0 0 6px">${escapeHtml(item)}</li>`).join("")
+                return `<ul style="margin:0 0 16px;padding-left:20px">${items}</ul>`
+            }
+            return `<p style="margin:0 0 16px">${block.lines.map(escapeHtml).join("<br>")}</p>`
+        })
         .join("")
     const footer = escapeHtml(input.footer)
     const html = `<!doctype html>
@@ -80,6 +82,6 @@ export const renderEmail = (input: EmailLayoutInput): RenderedEmail => {
 <tr><td style="padding:24px;font-size:16px;line-height:1.55">${body}</td></tr>
 <tr><td style="padding:14px 24px;background:#fafafa;color:#71717a;font-size:12px;line-height:1.5">${footer}</td></tr>
 </table></td></tr></table></body></html>`
-    const text = `${oneLine(input.shopName, 80)}\n\n${input.body.replace(/\r\n/gu, "\n").trim()}\n\n--\n${input.footer}\n`
+    const text = `${oneLine(input.shopName, 80)}\n\n${input.body.replaceAll("\r\n", "\n").trim()}\n\n--\n${input.footer}\n`
     return { html, text }
 }

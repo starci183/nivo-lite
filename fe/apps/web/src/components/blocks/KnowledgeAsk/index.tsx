@@ -1,8 +1,8 @@
 "use client"
 
 import { useTranslations } from "next-intl"
-import { AGENT_MODULES, useAskKnowledge, useAskModule } from "@/hooks/knowledge"
-import type { ModuleKey } from "@/hooks/knowledge"
+import { AGENT_MODULES, useAskKnowledge, useAskModule, type ModuleKey } from "@/hooks/knowledge"
+
 import { KnowledgeAskBase } from "./component"
 
 /** Props for the connected question panel. */
@@ -65,7 +65,7 @@ export const KnowledgeAsk = (props: KnowledgeAskProps) => {
                                   ],
                               })),
                           },
-                error: ask.error === null ? undefined : ask.error,
+                error: ask.error ?? undefined,
             }}
             on={{
                 setQuestion: ask.setQuestion,

@@ -35,11 +35,11 @@ const isRecordObject = (value: unknown): value is Readonly<Record<string, unknow
     typeof value === "object" && value !== null && !Array.isArray(value)
 
 /** Meta keys a person may have stored as a number (a Telegram chat id is one): they are read as text. */
-const NUMERIC_TEXT_KEYS: ReadonlyArray<string> = ["owner_chat_id"]
+const NUMERIC_TEXT_KEYS: ReadonlySet<string> = new Set(["owner_chat_id"])
 
 const metaText = (key: string, value: unknown): string | null => {
     if (typeof value === "string") return value
-    return typeof value === "number" && Number.isFinite(value) && NUMERIC_TEXT_KEYS.includes(key) ? String(value) : null
+    return typeof value === "number" && Number.isFinite(value) && NUMERIC_TEXT_KEYS.has(key) ? String(value) : null
 }
 
 const asMeta = (value: unknown): Readonly<Record<string, string>> =>

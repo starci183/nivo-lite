@@ -21,7 +21,7 @@ export interface HiringRejectDialogProps {
 
 /** The dialog that asks for the reason before a candidate is rejected: rejecting is always a person's decision. */
 export const HiringRejectDialog = (props: HiringRejectDialogProps) => {
-    const { say, name, reason, canConfirm, isBusy, error } = props.props
+    const { say, name, reason, error } = props.props
     const { on } = props
     return (
         <Dialog
@@ -33,16 +33,7 @@ export const HiringRejectDialog = (props: HiringRejectDialogProps) => {
             title={say("rejectTitle", { name })}
             closeLabel={say("close")}
             description={say("rejectHint")}
-            footer={(close) => (
-                <>
-                    <Button variant="tertiary" onPress={close}>
-                        {say("cancel")}
-                    </Button>
-                    <Button variant="danger" isPending={isBusy} isDisabled={isBusy || !canConfirm} onPress={on.confirm}>
-                        {say("rejectConfirm")}
-                    </Button>
-                </>
-            )}
+            footer={<HiringRejectDialogFooter {...props} />}
         >
             <div className={FORM_CLASS_NAME}>
                 {error === null ? null : <Alert tone="negative" title={say("rejectFailed")} description={error} />}
@@ -58,5 +49,21 @@ export const HiringRejectDialog = (props: HiringRejectDialogProps) => {
                 </Text>
             </div>
         </Dialog>
+    )
+}
+
+/** Keeps the dialog footer component stable as its fields change. */
+const HiringRejectDialogFooter = (props: HiringRejectDialogProps) => {
+    const { say, canConfirm, isBusy } = props.props
+    const { on } = props
+    return (
+        <>
+            <Button variant="tertiary" onPress={on.close}>
+                {say("cancel")}
+            </Button>
+            <Button variant="danger" isPending={isBusy} isDisabled={isBusy || !canConfirm} onPress={on.confirm}>
+                {say("rejectConfirm")}
+            </Button>
+        </>
     )
 }

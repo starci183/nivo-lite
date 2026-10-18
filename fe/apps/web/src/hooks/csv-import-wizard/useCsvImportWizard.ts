@@ -1,21 +1,21 @@
 "use client"
 
+import { useCsvImportFields } from "./useCsvImportFields"
 import { useCsvImportWorkflow } from "./useCsvImportWorkflow"
-import { allAgentIds } from "@/hooks/connection-wizard"
 import { useSetConnectionAgents } from "@/hooks/connections"
 import { useCsvImportForm } from "@/hooks/rhf"
 import type { AgentOption, WizardNote } from "@/modules/types"
 import { useTranslations } from "next-intl"
-import { useState } from "react"
-import { CSV_SOURCES, DOC_STEPS, NO_COLUMN, TABLE_STEPS, tableEntityOf } from "./csv-import-wizard.shared"
-import type {
-    CsvEntity,
-    CsvImportResult,
-    CsvMapping,
-    CsvPreview,
-    CsvSavedImport,
-    CsvSource,
-    CsvStep,
+import {
+    CSV_SOURCES,
+    tableEntityOf,
+    type CsvEntity,
+    type CsvImportResult,
+    type CsvMapping,
+    type CsvPreview,
+    type CsvSavedImport,
+    type CsvSource,
+    type CsvStep,
 } from "./csv-import-wizard.shared"
 import { useCsvImportCommands } from "./useCsvImportCommands"
 import { useCsvImportGrid } from "./useCsvImportGrid"
@@ -46,8 +46,6 @@ export interface CsvImportFields {
     readonly note: WizardNote | null
 }
 
-const START: CsvImportFields = { file: null, docs: [], preview: null, mapping: null, result: null, note: null }
-
 /**
  * The import wizard's state machine: name, kind of rows and source; the data (file, Google Sheets link, typed grid or documents); the
  * column mapping with a preview; the import; the agents that may read it. When resuming it loads the saved import first, then starts
@@ -61,21 +59,10 @@ export const useCsvImportWizard = (input: CsvImportWizardInput) => {
     const setAgentsOf = useSetConnectionAgents()
     const form = useCsvImportForm()
     const gridState = useCsvImportGrid({ savedColumns: saved === null ? null : saved.config.columns })
-    const [fields, setFields] = useState<CsvImportFields>(START)
+    const { fields, patch, name, entity, source, schedule, link, index, steps, connectionId, agentIds, column } =
+        useCsvImportFields(input, saved, form, gridState)
 
-    const patch = (next: Partial<CsvImportFields>) => setFields((current) => ({ ...current, ...next }))
-
-    const name = form.watch("name")
-    const savedEntity = saved && saved.config.entity !== "document" ? saved.config.entity : "customer"
-    const entity = fields.entity ?? savedEntity
-    const source = fields.source ?? saved?.config.source ?? "file"
-    const schedule = fields.schedule ?? (saved?.scheduleMinutes ? String(saved.scheduleMinutes) : "")
-    const link = fields.link ?? saved?.config.link ?? ""
-    const index = fields.index ?? (saved ? 1 : 0)
-    const steps = source === "document" ? DOC_STEPS : TABLE_STEPS
-    const connectionId = input.resumeId ?? fields.result?.connectionId
-    const agentIds = fields.agentIds ?? (saved?.agentIds.length ? saved.agentIds : allAgentIds(input.agents))
-    const { go, read, runImport, finish, isPending } = useCsvImportWorkflow(
+    const { go, read, runImport, finish, isPending } = useCsvImportWorkflow({
         patch,
         entity,
         connectionId,
@@ -90,14 +77,9 @@ export const useCsvImportWizard = (input: CsvImportWizardInput) => {
         input,
         setAgentsOf,
         agentIds,
-    )
+    })
 
-    const column = (key: "idColumn" | "titleColumn" | "dateColumn", value: string | null) => {
-        if (fields.mapping)
-            patch({ mapping: { ...fields.mapping, [key]: !value || value === NO_COLUMN ? null : value } })
-    }
-
-    return viewOf(
+    return viewOf({
         resume,
         saved,
         index,
@@ -119,32 +101,56 @@ export const useCsvImportWizard = (input: CsvImportWizardInput) => {
         form,
         patch,
         column,
-    )
+    })
+}
+/** The resolved inputs for csv import view input. */
+interface CsvImportViewInput {
+    readonly resume: ReturnType<typeof useCsvImportResume>
+    readonly saved: CsvSavedImport | null
+    readonly index: number
+    readonly steps: readonly CsvStep[]
+    readonly input: CsvImportWizardInput
+    readonly fields: CsvImportFields
+    readonly name: string
+    readonly entity: Exclude<CsvEntity, "document">
+    readonly schedule: string
+    readonly link: string
+    readonly gridState: ReturnType<typeof useCsvImportGrid>
+    readonly source: CsvSource
+    readonly agentIds: readonly string[]
+    readonly isPending: boolean
+    readonly go: (to: number) => void
+    readonly read: (sheet?: string) => Promise<void>
+    readonly runImport: () => Promise<void>
+    readonly finish: () => Promise<void>
+    readonly form: ReturnType<typeof useCsvImportForm>
+    readonly patch: (next: Partial<CsvImportFields>) => void
+    readonly column: (key: "idColumn" | "titleColumn" | "dateColumn", value: string | null) => void
 }
 
-const viewOf = (
-    resume: ReturnType<typeof useCsvImportResume>,
-    saved: CsvSavedImport | null,
-    index: number,
-    steps: readonly CsvStep[],
-    input: CsvImportWizardInput,
-    fields: CsvImportFields,
-    name: string,
-    entity: Exclude<CsvEntity, "document">,
-    schedule: string,
-    link: string,
-    gridState: ReturnType<typeof useCsvImportGrid>,
-    source: CsvSource,
-    agentIds: readonly string[],
-    isPending: boolean,
-    go: (to: number) => void,
-    read: (sheet?: string) => Promise<void>,
-    runImport: () => Promise<void>,
-    finish: () => Promise<void>,
-    form: ReturnType<typeof useCsvImportForm>,
-    patch: (next: Partial<CsvImportFields>) => void,
-    column: (key: "idColumn" | "titleColumn" | "dateColumn", value: string | null) => void,
-) => {
+const viewOf = ({
+    resume,
+    saved,
+    index,
+    steps,
+    input,
+    fields,
+    name,
+    entity,
+    schedule,
+    link,
+    gridState,
+    source,
+    agentIds,
+    isPending,
+    go,
+    read,
+    runImport,
+    finish,
+    form,
+    patch,
+    column,
+}: CsvImportViewInput) => {
     return {
         isLoading: resume.isLoading,
         loadError: resume.error ?? null,

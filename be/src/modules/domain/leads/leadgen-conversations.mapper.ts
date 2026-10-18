@@ -17,6 +17,17 @@ export const median = (values: ReadonlyArray<number>): number | null => {
     return sorted.length % 2 ? (sorted[mid] ?? null) : ((sorted[mid - 1] ?? 0) + (sorted[mid] ?? 0)) / 2
 }
 
+/** Keeps the newest non-system message across a lead's conversations. */
+const retainLast = (
+    last: Map<string, LeadGenLastMessage>,
+    leadId: string | null | undefined,
+    final: LeadGenMessageRow | undefined,
+): void => {
+    if (!leadId || !final) return
+    const current = last.get(leadId)
+    if (!current || final.created_at > current.at) last.set(leadId, { text: clip(final.body), at: final.created_at })
+}
+
 /** Last message per lead and the minutes from a first message to its first reply inside the reply window. */
 export const conversationFacts = (rows: LeadGenWorkbenchRow): LeadGenConversationFacts => {
     const leadOfConversation = new Map(
@@ -36,11 +47,7 @@ export const conversationFacts = (rows: LeadGenWorkbenchRow): LeadGenConversatio
         const talk = list.filter((message) => message.role !== "system")
         const leadId = leadOfConversation.get(conversationId)
         const final = talk.at(-1)
-        if (leadId && final) {
-            const current = last.get(leadId)
-            if (!current || final.created_at > current.at)
-                last.set(leadId, { text: clip(final.body), at: final.created_at })
-        }
+        retainLast(last, leadId, final)
         const firstUser = talk.find((message) => message.role === "user")
         const firstReply = firstUser
             ? talk.find((message) => message.role === "agent" && message.created_at > firstUser.created_at)

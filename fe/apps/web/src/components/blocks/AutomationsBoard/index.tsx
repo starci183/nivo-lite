@@ -1,19 +1,17 @@
 "use client"
 
 import { useFormatter, useLocale, useTranslations } from "next-intl"
-import { useAutomationsBoard } from "@/hooks/automations"
-import type { AutomationsBoardState } from "@/hooks/automations"
+import { useAutomationsBoard, type AutomationsBoardState } from "@/hooks/automations"
+
 import { loadingSlot, useSlotLabels } from "@/hooks/slot"
 import { CONSOLE_ROUTES } from "@/modules/routes"
-import type { ModuleScope } from "@/modules/types"
-import { AutomationsBoardBase } from "./component"
-import type { AutomationsBoardNotice } from "./component"
+import { AutomationsBoardBase, type AutomationsBoardNotice } from "./component"
 
 /** What the pages tell the board. */
 interface AutomationsBoardProps {
     /** "page": filters and a grid with the detail beside it. "module": one module's cards as a compact list, detail below. */
     readonly layout: "page" | "module"
-    readonly moduleKey?: ModuleScope
+    readonly moduleKey?: string
     /** The card to open when the board appears; none stays closed. */
     readonly focus?: string
 }

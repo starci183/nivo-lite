@@ -3,7 +3,7 @@ import type { BrainExtraction, BrainFact, BrainLesson, KnowledgeDocument } from 
 import { reviewBoardOf } from "./board"
 
 /** The statuses of a document that mean a worker is still on it. */
-const READING_STATUSES: ReadonlyArray<string> = ["queued", "running"]
+const READING_STATUSES: ReadonlySet<string> = new Set(["queued", "running"])
 
 /** The numbers the Second Brain page opens with. */
 export interface BrainFigures {
@@ -33,7 +33,7 @@ interface FiguresInput {
 export const figuresOf = (input: FiguresInput): BrainFigures => {
     const plan = reviewBoardOf(input.facts)
     const indexing = input.documents.filter((one) => isDocumentActive(one.status)).length
-    const reading = input.extractions.filter((one) => READING_STATUSES.includes(one.status)).length
+    const reading = input.extractions.filter((one) => READING_STATUSES.has(one.status)).length
     return {
         documents: input.documents.length,
         indexing,

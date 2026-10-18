@@ -1,17 +1,19 @@
 "use client"
 
-import { useSettledGraphQL } from "@/hooks/connection-wizard"
-import type { Settled } from "@/hooks/connection-wizard"
+import { useSettledGraphQL, type Settled } from "@/hooks/connection-wizard"
+
 import { useConnectionsRefresh } from "@/hooks/connections"
 import {
     useMutateSaveOpenApiConnectionSwr,
     useQueryLoadOpenApiSpecificationSwr,
     useQueryTestOpenApiOperationSwr,
+    type MutateSaveOpenApiConnectionRequest,
+    type OpenApiTestType,
+    type QueryTestOpenApiOperationRequest,
 } from "@/hooks/swr"
-import type { MutateSaveOpenApiConnectionRequest, OpenApiTestType, QueryTestOpenApiOperationRequest } from "@/hooks/swr"
+
 import { useMemo } from "react"
-import { OPEN_API_AUTH_TYPES, parseOpenApiOps } from "./openapi-wizard.shared"
-import type { OpenApiOp } from "./openapi-wizard.shared"
+import { OPEN_API_AUTH_TYPES, parseOpenApiOps, type OpenApiOp } from "./openapi-wizard.shared"
 
 /** A spec read by the back end. */
 export interface OpenApiSpecView {
@@ -63,8 +65,7 @@ export const useOpenApiCommands = (): OpenApiCommands => {
                 }),
             save: async (request) => {
                 const settled = await settle(() => triggerSave(request))
-                if (settled.kind !== "ok") return settled
-                await refresh()
+                if (settled.kind === "ok") await refresh()
                 return settled
             },
         }),

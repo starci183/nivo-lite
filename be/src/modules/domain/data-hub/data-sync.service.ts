@@ -14,8 +14,7 @@ import type { MessageCatalog } from "@modules/platform/i18n"
 import { eachInOrder } from "@modules/platform/primitives"
 import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
-import { DataSyncQueue } from "@modules/queues/data-sync"
-import { isDataSyncPayload, isDataSyncTickPayload } from "@modules/queues/data-sync"
+import { DataSyncQueue, isDataSyncPayload, isDataSyncTickPayload } from "@modules/queues/data-sync"
 import type { DataSyncPayload } from "@modules/queues/data-sync"
 import { CsvImportSyncService } from "./csv-import-sync.service"
 import { DATA_PROVIDERS } from "./data-hub.contracts"
@@ -148,8 +147,8 @@ export class DataSyncService {
     private async markFailed(payload: DataSyncPayload, reason: string): Promise<void> {
         try {
             await this.connections.markSyncFailed(payload.connectionId, reason)
-        } catch (failure) {
-            this.logger.error(DataHubLogEvent.SyncCrashed, failure, { ...payload })
+        } catch (error_) {
+            this.logger.error(DataHubLogEvent.SyncCrashed, error_, { ...payload })
         }
     }
 

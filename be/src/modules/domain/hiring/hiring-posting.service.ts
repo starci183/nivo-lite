@@ -21,19 +21,16 @@ export class HiringPostingService {
         if (typeof ws !== "string" || !ws || ws.length > 80 || typeof slug !== "string" || !slug || slug.length > 120)
             throw new HiringError({ code: HiringErrorCode.PublicNotFound })
         const settings = await this.data.settingsBySlug(ws)
-        if (settings === undefined || settings.publicSlug !== ws)
-            throw new HiringError({ code: HiringErrorCode.PublicNotFound })
+        if (settings?.publicSlug !== ws) throw new HiringError({ code: HiringErrorCode.PublicNotFound })
         const job = await this.data.jobBySlug(settings.workspaceId, slug)
-        if (
-            job === undefined ||
-            job.workspaceId !== settings.workspaceId ||
-            job.slug !== slug ||
-            job.status === "draft"
-        )
+        if (job?.workspaceId !== settings.workspaceId || job.slug !== slug || job.status === "draft")
             throw new HiringError({ code: HiringErrorCode.PublicNotFound })
         if (job.status !== "open" || !job.channels.includes("page"))
             throw new HiringError({ code: HiringErrorCode.JobNotOpen })
-        if (job.closesAt !== null && !(Date.parse(job.closesAt) >= this.clock.now().getTime()))
+        if (
+            job.closesAt !== null &&
+            (Number.isNaN(Date.parse(job.closesAt)) || Date.parse(job.closesAt) < this.clock.now().getTime())
+        )
             throw new HiringError({ code: HiringErrorCode.JobExpired })
         return { kind: "posting", subject: job.id, workspaceId: job.workspaceId }
     }

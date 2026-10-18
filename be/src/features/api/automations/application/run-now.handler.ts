@@ -4,11 +4,10 @@ import { ICQRSHandler } from "@modules/platform/cqrs"
 import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { RunNowCommand } from "./run-now.command"
-import type { RunNowResult } from "./run-now.contracts"
 
 @CommandHandler(RunNowCommand)
 /** Runs a scheduled n8n template once now. */
-export class RunNowHandler extends ICQRSHandler<RunNowCommand, RunNowResult> {
+export class RunNowHandler extends ICQRSHandler<RunNowCommand, void> {
     constructor(
         @InjectLogger() logger: Logger,
         private readonly automations: AutomationsService,
@@ -16,7 +15,7 @@ export class RunNowHandler extends ICQRSHandler<RunNowCommand, RunNowResult> {
         super(logger)
     }
 
-    protected override process(message: RunNowCommand): Promise<RunNowResult> {
+    protected override process(message: RunNowCommand): Promise<void> {
         return this.automations.runNow(
             message.params.principal.id,
             message.params.request.workspaceId,

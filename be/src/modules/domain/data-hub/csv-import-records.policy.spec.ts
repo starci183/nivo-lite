@@ -215,6 +215,8 @@ describe("recordFromDocument", () => {
     it.each([
         ["\n \n  First non-empty line\nSecond line", "First non-empty line"],
         ["Intro\n\n## Later heading\nBody", "Later heading"],
+        ["Intro\n##   \n", "Intro"],
+        [`# ${" ".repeat(20000)}Heading`, "Heading"],
         ["###\nBody", "Body"],
         ["x".repeat(121), "x".repeat(120)],
     ])("chooses the title from uploaded text %p", async (text, title) => {
@@ -251,7 +253,7 @@ describe("recordFromDocument", () => {
         expect(subject.recordFromDocument("long.txt", { text }).data).toMatchObject({ truncated: true })
         const actualText = subject.recordFromDocument("long.txt", { text }).data.text
         expect(typeof actualText).toBe("string")
-        if (typeof actualText === "string") expect(actualText.length).toBe(DOCUMENT_MAX_TEXT)
+        if (typeof actualText === "string") expect(actualText).toHaveLength(DOCUMENT_MAX_TEXT)
         expect(() => subject.recordFromDocument("empty.txt", { text: " \n " })).toThrow(
             expect.objectContaining({
                 code: DataHubErrorCode.Invalid,

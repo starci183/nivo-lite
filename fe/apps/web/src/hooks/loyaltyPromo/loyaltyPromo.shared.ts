@@ -1,3 +1,5 @@
+import type { useTranslations, useFormatter } from "next-intl"
+import type { useLoyaltyPromo } from "./useLoyaltyPromo"
 import type { BadgeTone } from "@starci/grammar/common"
 import { digitsOnly, parseDigits } from "@/hooks/loyalty"
 
@@ -67,4 +69,69 @@ export const reasonKey = (errorCode: string | null | undefined): string => {
     const code = (errorCode ?? "").toLowerCase()
     const known = KNOWN_REASONS.find((reason) => code.endsWith(reason))
     return `reason_${known ?? "error"}`
+}
+
+/** Resolves count, audience and sample lines for the current segment preview. */
+export const promotionPreviewOf = (
+    preview: ReturnType<typeof useLoyaltyPromo>["preview"],
+    segmentLabel: string,
+    t: ReturnType<typeof useTranslations<"loyalty">>,
+    format: ReturnType<typeof useFormatter>,
+): Array<{ readonly id: string; readonly text: string; readonly emphasis: boolean }> => {
+    const previewLines: Array<{ readonly id: string; readonly text: string; readonly emphasis: boolean }> = []
+    if (preview.kind === "failed") previewLines.push({ id: "failed", text: t("previewFailed"), emphasis: false })
+    if (preview.kind === "loading") previewLines.push({ id: "loading", text: t("previewLoading"), emphasis: false })
+    if (preview.kind === "ready") {
+        const shown = preview.preview
+        previewLines.push(
+            {
+                id: "count",
+                text: t("previewCount", {
+                    total: format.number(shown.total),
+                    reachable: format.number(shown.reachable),
+                }),
+                emphasis: true,
+            },
+            { id: "who", text: t("previewWho", { who: segmentLabel }), emphasis: false },
+        )
+        if (shown.names.length > 0)
+            previewLines.push({
+                id: "sample",
+                text: t("previewSample", { names: format.list([...shown.names], { type: "unit" }) }),
+                emphasis: false,
+            })
+    }
+
+    return previewLines
+}
+
+/** Resolves the generated campaign result or its localized failure. */
+export const promotionResultOf = (
+    created: ReturnType<typeof useLoyaltyPromo>["created"],
+    isWriting: boolean,
+    t: ReturnType<typeof useTranslations<"loyalty">>,
+    format: ReturnType<typeof useFormatter>,
+) => {
+    let result:
+        | { readonly title: string; readonly recipients: string; readonly time: string; readonly draft: string }
+        | undefined
+    let failure: string | undefined
+    if (created !== null && !isWriting) {
+        if (created.status === "failed") failure = t(reasonKey(created.errorCode))
+        else {
+            const seconds = created.draftMs === null || created.draftMs === undefined ? null : created.draftMs / 1000
+            result = {
+                title:
+                    seconds === null
+                        ? t("createdWaitingTemplate")
+                        : t("createdWaiting", { s: Math.max(1, Math.round(seconds)) }),
+                recipients: t("createdRecipients", { n: created.recipients }),
+                time:
+                    seconds === null ? "" : t("draftTime", { s: format.number(seconds, { maximumFractionDigits: 1 }) }),
+                draft: created.draft,
+            }
+        }
+    }
+
+    return { result, failure }
 }

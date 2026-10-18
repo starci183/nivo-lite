@@ -66,6 +66,7 @@ export const useAccountingLedger = (data: AccountingWorkbenchData | undefined) =
         submitAdjust: submit,
     }
     if (!data) return { props: null, on: actions }
+    const openKind = open === null ? "" : t(`kind_${open.kind}`)
     const rows = data.ledger.filter((entry) => filter === "all" || entry.kind === filter)
     return {
         props: {
@@ -78,7 +79,7 @@ export const useAccountingLedger = (data: AccountingWorkbenchData | undefined) =
                 subtitle:
                     open === null
                         ? null
-                        : `${accountingStampOf(format, open.at)} · ${t(`kind_${open.kind}`)} · ${moneyOf(format, open.amount)}`,
+                        : `${accountingStampOf(format, open.at)} · ${openKind} · ${moneyOf(format, open.amount)}`,
                 closeLabel: t("close"),
                 lineageTitle: t("lineageTitle"),
                 lineageIntro: t("lineageIntro"),

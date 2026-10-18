@@ -20,6 +20,7 @@ describe("programSlug", () => {
         ["", "cua-hang"],
         [" !!! ", "cua-hang"],
         ["abc", "abc"],
+        ["!".repeat(20000) + "abc" + "!".repeat(20000), "abc"],
         ["ABCDEFGHIJKLMNOPQRSTUVWXYZ12345", "abcdefghijklmnopqrstuvwxyz12"],
         [`${"a".repeat(27)} & longer`, "a".repeat(27)],
     ])("turns %j into the bounded public slug %j", async (name, expected) => {

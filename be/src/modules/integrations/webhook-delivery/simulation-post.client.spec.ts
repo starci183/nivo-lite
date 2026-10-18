@@ -2,6 +2,7 @@ import { Test } from "@nestjs/testing"
 import { mock } from "@starci/jest-preset"
 import { HTTP_CLIENT, HttpError, HttpErrorCode } from "@modules/platform/http"
 import type { HttpClient } from "@modules/platform/http"
+import { WebhookDeliveryErrorCode } from "./errors/webhook-delivery.error"
 import { SimulationPostClient } from "./simulation-post.client"
 
 const build = async () => {
@@ -45,13 +46,18 @@ describe("SimulationPostClient", () => {
             expect(http.request).toHaveBeenCalledTimes(1)
         },
     )
+})
 
-    it("rejects with the original cause of an HTTP transport error", async () => {
+describe("SimulationPostClient transport failures", () => {
+    it("keeps the original HTTP failure as the owning simulation error's cause", async () => {
         const { client, http } = await build()
         const cause = new Error("socket closed")
         http.request.mockRejectedValue(new HttpError({ code: HttpErrorCode.Network, cause }))
 
-        await expect(client.post(delivery)).rejects.toBe(cause)
+        await expect(client.post(delivery)).rejects.toMatchObject({
+            code: WebhookDeliveryErrorCode.SimulationFailed,
+            cause,
+        })
         expect(http.request).toHaveBeenCalledTimes(1)
     })
 
@@ -60,7 +66,21 @@ describe("SimulationPostClient", () => {
         const cause = { reason: "connection refused" }
         http.request.mockRejectedValue(cause)
 
-        await expect(client.post(delivery)).rejects.toBe(cause)
+        await expect(client.post(delivery)).rejects.toMatchObject({
+            code: WebhookDeliveryErrorCode.SimulationFailed,
+            cause,
+        })
+        expect(http.request).toHaveBeenCalledTimes(1)
+    })
+    it("keeps an HTTP error without a nested cause intact for diagnostics", async () => {
+        const { client, http } = await build()
+        const cause = new HttpError({ code: HttpErrorCode.Network })
+        http.request.mockRejectedValue(cause)
+
+        await expect(client.post(delivery)).rejects.toMatchObject({
+            code: WebhookDeliveryErrorCode.SimulationFailed,
+            cause,
+        })
         expect(http.request).toHaveBeenCalledTimes(1)
     })
 })

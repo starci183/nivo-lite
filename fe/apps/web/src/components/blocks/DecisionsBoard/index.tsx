@@ -15,8 +15,7 @@ import { mapSlot, useSlotLabels } from "@/hooks/slot"
 import { navigation } from "@/modules/i18n"
 import { CONSOLE_ROUTES, leadHref } from "@/modules/routes"
 import type { DecisionKind, DecisionRecord } from "@/modules/types"
-import { DecisionsBoardBase } from "./component"
-import type { DecisionListView, DecisionsBoardRowView } from "./component"
+import { DecisionsBoardBase, type DecisionListView, type DecisionsBoardRowView } from "./component"
 
 const ALL = "all"
 
@@ -52,7 +51,7 @@ export const DecisionsBoard = (props: DecisionsBoardProps) => {
             reason:
                 row.reason === null || row.reason === "routine"
                     ? null
-                    : `${g(`reason_${row.reason}`)} - ${g(`reasonHint_${row.reason}`)}`,
+                    : `${g("reason_" + row.reason)} - ${g("reasonHint_" + row.reason)}`,
             basis: parts.basis === null ? null : t("basis", { basis: parts.basis }),
             note: parts.rest === null ? null : t("note", { note: parts.rest }),
             leadHref: row.lead_id === null ? null : leadHref(row.lead_id),

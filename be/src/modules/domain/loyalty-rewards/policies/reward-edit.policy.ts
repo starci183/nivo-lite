@@ -6,15 +6,20 @@ const integer = (value: number, min: number, max = INTEGER_MAX): number =>
     Number.isFinite(value) ? Math.min(max, Math.max(min, Math.round(value))) : min
 
 /** A catalogue key safe for the database, with space left for a collision suffix. */
-export const rewardKey = (name: string): string =>
-    name
+export const rewardKey = (name: string): string => {
+    const normalized = name
         .normalize("NFD")
         .replace(/\p{M}/gu, "")
         .replace(/\u0111/giu, "d")
         .toLowerCase()
         .replace(/[^a-z0-9_-]+/gu, "-")
         .slice(0, 30)
-        .replace(/^[-_]+|[-_]+$/gu, "") || "reward"
+    let start = 0
+    let end = normalized.length
+    while (start < end && (normalized[start] === "-" || normalized[start] === "_")) start += 1
+    while (end > start && (normalized[end - 1] === "-" || normalized[end - 1] === "_")) end -= 1
+    return normalized.slice(start, end) || "reward"
+}
 
 /** The catalogue fields bounded for storage; required name and cost are checked by the authorised facade. */
 export const sanitizeReward = (edit: RewardEdit): RewardEdit => ({

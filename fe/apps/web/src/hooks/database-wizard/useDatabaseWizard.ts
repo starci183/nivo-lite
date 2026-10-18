@@ -1,21 +1,18 @@
 "use client"
 
-import { databaseTargetOf, stateOf, DB_SCHEDULES, DB_STEPS, dbEngineOf, dbPortOf } from "./database-wizard.shared"
+import { useDatabaseWizardActions } from "./useDatabaseWizardActions"
+import { databaseTargetOf, stateOf, DB_SCHEDULES, DB_STEPS } from "./database-wizard.shared"
 import { useSetConnectionAgents } from "@/hooks/connections"
-import type { AgentWish } from "@/hooks/connections"
 import { useDatabaseTargetForm } from "@/hooks/rhf"
-import type { DatabaseTargetValues } from "@/hooks/rhf"
-import type { DbEngine, DbTableInfo, DbTableMapping, DbTarget } from "@/modules/types"
+import type { DbTableInfo, DbTableMapping } from "@/modules/types"
 import { DB_DEFAULT_PORT } from "@/modules/utils"
-import { useEffect, useReducer, useRef, useTransition } from "react"
-import type { Settled } from "../connection-wizard"
+import { useEffect, useReducer, useRef } from "react"
 import { useDatabaseCommands } from "./useDatabaseCommands"
-import type { DatabaseCommands } from "./useDatabaseCommands"
 import { useDatabaseSaved } from "./useDatabaseSaved"
 import { useDatabaseTables } from "./useDatabaseTables"
 
 /** What the database wizard needs from its drawer. */
-interface DatabaseWizardInput {
+export interface DatabaseWizardInput {
     /** The connection being continued or edited; absent for a new one. */
     readonly resumeId: string | undefined
     /** `changed` is true when something was saved, so the list should refresh. */
@@ -37,9 +34,8 @@ export interface DatabaseWizardState {
 }
 
 /** One change to the state: a partial patch, or one computed from the latest state. */
-type DatabasePatch = Partial<DatabaseWizardState> | ((state: DatabaseWizardState) => Partial<DatabaseWizardState>)
-
-type TextField = "name" | "host" | "port" | "database" | "user" | "password"
+export type DatabasePatch =
+    Partial<DatabaseWizardState> | ((state: DatabaseWizardState) => Partial<DatabaseWizardState>)
 
 const merge = (state: DatabaseWizardState, patch: DatabasePatch): DatabaseWizardState => ({
     ...state,
@@ -62,7 +58,6 @@ export const useDatabaseWizard = (input: DatabaseWizardInput) => {
         seeded.current = true
         patch(stateOf(input.resumeId, saved, loadError))
     }, [isLoading, input.resumeId, saved, loadError])
-    const [isPending, startTransition] = useTransition()
     const passwordSaved = state.passwordKept || Boolean(saved?.hasPassword)
     const form = useDatabaseTargetForm(passwordSaved, saved, DB_DEFAULT_PORT.postgres)
     const values = form.watch()
@@ -76,17 +71,16 @@ export const useDatabaseWizard = (input: DatabaseWizardInput) => {
         update: (change) => patch((s) => ({ picked: change(s.picked) })),
     })
 
-    const { go, test, save, finish, setField, setEngine, setSsl } = createDatabaseWizardActions(
+    const { go, test, save, finish, setField, setEngine, setSsl, isPending } = useDatabaseWizardActions({
         patch,
         form,
         values,
-        startTransition,
         commands,
         state,
         typed,
         input,
         setConnectionAgents,
-    )
+    })
 
     return {
         isLoading,
@@ -125,75 +119,3 @@ export const useDatabaseWizard = (input: DatabaseWizardInput) => {
         },
     }
 }
-
-const createDatabaseWizardActions = (
-    patch: import("react").Dispatch<Parameters<typeof merge>[1]>,
-    form: ReturnType<typeof useDatabaseTargetForm>,
-    values: DatabaseTargetValues,
-    startTransition: import("react").TransitionStartFunction,
-    commands: DatabaseCommands,
-    state: DatabaseWizardState,
-    typed: () => DbTarget,
-    input: DatabaseWizardInput,
-    setConnectionAgents: (connectionId: string, wanted: ReadonlyArray<AgentWish>) => Promise<Settled<true>>,
-) => {
-    const go = (to: number) => patch({ error: null, found: null, index: to })
-    const fail = (message: string) => patch({ error: message, found: null })
-    const setField = (field: TextField) => (value: string) => {
-        form.setValue(field, field === "port" ? dbPortOf(value) : value, { shouldValidate: true, shouldDirty: true })
-        patch({ tables: null })
-    }
-    const setEngine = (value: string | null) => {
-        const engine: DbEngine = dbEngineOf(value ?? "") ?? "postgres"
-        if (values.port === String(DB_DEFAULT_PORT[values.engine]))
-            form.setValue("port", String(DB_DEFAULT_PORT[engine]))
-        form.setValue("engine", engine, { shouldValidate: true, shouldDirty: true })
-        patch({ tables: null })
-    }
-    const setSsl = (on: boolean) => {
-        form.setValue("ssl", on, { shouldValidate: true, shouldDirty: true })
-        patch({ tables: null })
-    }
-
-    const test = () => {
-        patch({ error: null, found: null })
-        startTransition(async () => {
-            const answer = await commands.test(state.connId, typed())
-            if (answer.kind !== "ok") return fail(answer.message)
-            const found = answer.value
-            // Keep the saved mapping for tables that still exist.
-            patch((s) => ({
-                tables: found,
-                found: found.length,
-                picked: s.picked.filter((m) => found.some((x) => x.schema === m.schema && x.name === m.table)),
-            }))
-        })
-    }
-
-    const save = () =>
-        startTransition(async () => {
-            const answer = await commands.save({
-                connectionId: state.connId,
-                name: values.name,
-                target: typed(),
-                tables: state.picked,
-                everyMinutes: state.everyMinutes,
-            })
-            if (answer.kind !== "ok") return fail(answer.message)
-            form.setValue("password", "", { shouldValidate: true })
-            patch({ connId: answer.value, passwordKept: true, error: null, found: null, index: 3 })
-        })
-
-    const finish = () => {
-        const id = state.connId
-        if (!id) return input.onClose(false)
-        startTransition(async () => {
-            const answer = await setConnectionAgents(id, state.agentIds)
-            if (answer.kind !== "ok") return fail(answer.message)
-            input.onClose(true)
-        })
-    }
-    return { go, test, save, finish, setField, setEngine, setSsl }
-}
-
-/** Builds the normalized target sent by database commands. */

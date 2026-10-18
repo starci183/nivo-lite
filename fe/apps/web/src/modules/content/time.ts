@@ -121,7 +121,7 @@ export const parseTimeText = (value: string): { readonly h: number; readonly min
 export type InstantError = "date_invalid" | "time_invalid"
 
 /** Date text plus time text to an ISO instant (Vietnam time); null when the date is empty; an error code when either is malformed. */
-export const toInstant = (date: string, time: string, fallbackTime = "09:00"): string | null | InstantError => {
+export const toInstant = (date: string, time: string, fallbackTime = "09:00"): string | null => {
     if (date.trim() === "") return null
     const d = parseDateText(date)
     if (d === null) return "date_invalid"

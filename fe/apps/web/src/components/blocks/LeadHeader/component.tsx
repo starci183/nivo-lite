@@ -7,8 +7,10 @@ import {
     IconButton,
     SectionHeader,
     Text,
+    type BadgeTone,
+    type BreadcrumbItem,
 } from "@starci/grammar/common"
-import type { BadgeTone, BreadcrumbItem } from "@starci/grammar/common"
+
 import { SlotView } from "@/components/composites/SlotView"
 import { nivoIconSource } from "@/components/leaves/Icon"
 import type { LeadPrimaryAction, DataSlot, SlotLabels } from "@/modules/types"
@@ -59,7 +61,7 @@ const PLACEHOLDER: HeaderView = { name: "", meta: "", stageLabel: "", stageTone:
 
 /** Lead page header: the trail, the avatar with the name, the stage and the action bar. */
 export const LeadHeaderBase = (props: LeadHeaderBaseProps) => {
-    const { props: p, on } = props
+    const { props: p } = props
     const l = p.labels
     return (
         <div className={HEADER_CLASS_NAME}>

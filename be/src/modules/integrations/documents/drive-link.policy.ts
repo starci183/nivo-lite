@@ -49,14 +49,16 @@ const UPLOADED_MIME =
 
 /** The id after `/marker/` in a path, when it looks like a Drive id. */
 const idAfter = (path: string, marker: string): string | null => {
-    const match = new RegExp(`/${marker}/([\\w-]+)`, "u").exec(path)
+    const match = new RegExp(String.raw`/${marker}/([\w-]+)`, "u").exec(path)
     const id = match?.[1]
     return id !== undefined && ID.test(id) ? id : null
 }
 
 /** The URL with tracking params removed and, on Google hosts, the account switch segment (`/u/2/`) dropped. */
 const tidy = (url: URL): URL => {
-    for (const key of [...url.searchParams.keys()]) if (TRACKING.test(key)) url.searchParams.delete(key)
+    const tracked: Array<string> = []
+    for (const key of url.searchParams.keys()) if (TRACKING.test(key)) tracked.push(key)
+    for (const key of tracked) url.searchParams.delete(key)
     if (GOOGLE_HOSTS.test(url.hostname)) url.pathname = url.pathname.replace(/\/u\/\d+(?=\/|$)/u, "")
     return url
 }

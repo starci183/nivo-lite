@@ -58,6 +58,8 @@ const RENDER: WorkbenchRender = {
     sizeBytes: 2048,
     errorCode: null,
     videoUrl: "https://cdn/v",
+    captionsUrl: null,
+    captionsLang: null,
     downloadUrl: "https://cdn/v&download=x.mp4",
     posterUrl: null,
 }

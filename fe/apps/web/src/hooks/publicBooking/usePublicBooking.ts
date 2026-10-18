@@ -5,10 +5,9 @@ import { graphQLErrorCode } from "@/modules/failure"
 import type { PublicBookingPageData } from "@/modules/types"
 import { wallDate } from "@/modules/i18n"
 import { newIdempotencyToken } from "@/modules/utils"
-import { useState } from "react"
-import type { Dispatch, SetStateAction } from "react"
-import { bookingStateOf, publicCodeOf, timesOf } from "./publicBooking.shared"
-import type { PublicBookingResult } from "./publicBooking.shared"
+import { useState, type Dispatch, type SetStateAction } from "react"
+
+import { bookingStateOf, publicCodeOf, timesOf, type PublicBookingResult } from "./publicBooking.shared"
 
 /** The fields of the form, in the order the visitor fills them. */
 export interface PublicBookingFields {
@@ -43,7 +42,7 @@ export const usePublicBooking = (page: PublicBookingPageData | null | undefined)
     }
     const request = useMutateRequestPublicBookingSwr()
     const timesQuery = useQueryPublicBookingTimesSwr(
-        page == null || session.slug !== page.slug || fields.serviceId === ""
+        session.slug !== page?.slug || fields.serviceId === ""
             ? null
             : { slug: page.slug, serviceId: fields.serviceId, date: fields.date, party: fields.party },
     )

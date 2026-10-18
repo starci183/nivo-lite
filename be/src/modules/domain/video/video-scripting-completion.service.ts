@@ -32,8 +32,7 @@ export class VideoScriptingCompletionService {
         const state = await this.generations.state(workspaceId, generationId)
         const projectId = state === null ? undefined : videoRecord(state.input.context).projectId
         if (
-            state === null ||
-            state.purpose !== "video_script" ||
+            state?.purpose !== "video_script" ||
             typeof projectId !== "string" ||
             state.status === "queued" ||
             state.status === "running"
@@ -41,7 +40,7 @@ export class VideoScriptingCompletionService {
             return
         await this.entityManager.transaction(async (tx) => {
             const [project] = await tx.query<Array<VideoScriptingRow>>(LOCK_SCRIPT_PROJECT, [workspaceId, projectId])
-            if (project === undefined || project.status !== "scripting") return
+            if (project?.status !== "scripting") return
             const meta = videoRecord(project.script_meta)
             if (meta.generation_id !== generationId || typeof meta.script_request_id !== "string") return
             if (state.status !== "done" || state.text === null) {

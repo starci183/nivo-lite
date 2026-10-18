@@ -75,34 +75,32 @@ type PaymentQrProps = Pick<PayDrawerBaseProps, "props" | "state">
 
 const PaymentQr = (props: PaymentQrProps) => {
     return (
-        <>
-            <div className={QR_WRAP_CLASS_NAME}>
-                <Text size="sm" weight="medium">
-                    {props.props.scanLabel}
+        <div className={QR_WRAP_CLASS_NAME}>
+            <Text size="sm" weight="medium">
+                {props.props.scanLabel}
+            </Text>
+            {props.state.isBankConfigured ? (
+                <div className={QR_CLASS_NAME}>
+                    <MediaFrame aspect="square" fit="contain">
+                        <Image
+                            src={props.props.qrUrl}
+                            alt={props.props.qrAlt}
+                            width={256}
+                            height={256}
+                            aspect="square"
+                            fit="contain"
+                        />
+                    </MediaFrame>
+                </div>
+            ) : (
+                <Alert tone="cautionary" title={props.props.unconfiguredLabel} />
+            )}
+            {props.props.countdown === null ? null : (
+                <Text size="sm" tone="muted">
+                    {props.props.countdown}
                 </Text>
-                {props.state.isBankConfigured ? (
-                    <div className={QR_CLASS_NAME}>
-                        <MediaFrame aspect="square" fit="contain">
-                            <Image
-                                src={props.props.qrUrl}
-                                alt={props.props.qrAlt}
-                                width={256}
-                                height={256}
-                                aspect="square"
-                                fit="contain"
-                            />
-                        </MediaFrame>
-                    </div>
-                ) : (
-                    <Alert tone="cautionary" title={props.props.unconfiguredLabel} />
-                )}
-                {props.props.countdown === null ? null : (
-                    <Text size="sm" tone="muted">
-                        {props.props.countdown}
-                    </Text>
-                )}
-            </div>
-        </>
+            )}
+        </div>
     )
 }
 

@@ -77,7 +77,7 @@ export class EntitlementsService {
     /** The plan of a workspace, or null when it has none (a workspace that has not paid yet is not limited). */
     private async planOf(workspaceId: string): Promise<Plan | null> {
         const workspace = await this.billing.findWorkspaceBilling(workspaceId)
-        return workspace === null || workspace.planCode === null ? null : this.billing.findPlan(workspace.planCode)
+        return workspace?.planCode == null ? null : this.billing.findPlan(workspace.planCode)
     }
 
     /** The paid seats of a per-seat plan; null when the plan is not per seat or the workspace does not track seats. */

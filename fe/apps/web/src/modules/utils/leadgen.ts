@@ -1,6 +1,12 @@
-import type { FlowWorkStatus } from "@/modules/types"
 import type { LeadGenWorkbenchQuery } from "@/modules/api"
-import type { LeadGenWorkbenchData, LeadOrigin, LeadPlatform, LeadScore, LeadSourceKind } from "@/modules/types"
+import type {
+    FlowWorkStatus,
+    LeadGenWorkbenchData,
+    LeadOrigin,
+    LeadPlatform,
+    LeadScore,
+    LeadSourceKind,
+} from "@/modules/types"
 
 const platformOf = (value: string): LeadPlatform => (value === "facebook" || value === "instagram" ? value : "other")
 const kindOf = (value: string): LeadSourceKind =>

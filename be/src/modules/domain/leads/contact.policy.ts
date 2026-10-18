@@ -28,7 +28,7 @@ export const normaliseContact = (raw: RawContact): StoredContact => {
 export const contactParts = (raw: RawContact): ContactParts => {
     const contact = normaliseContact(raw)
     return {
-        phone: contact !== null && !contact.includes("@") ? contact : null,
-        email: contact !== null && contact.includes("@") ? contact : null,
+        phone: !contact?.includes("@") ? contact : null,
+        email: contact?.includes("@") ? contact : null,
     }
 }

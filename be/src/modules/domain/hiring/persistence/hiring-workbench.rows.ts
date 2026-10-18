@@ -1,5 +1,5 @@
 import type { ScoreLabel, ScoreReason, Stage } from "../hiring.contracts"
-import type { AnswerRow, QuestionRow, RequirementsRow, SlotRow, TermsRow } from "./hiring.rows"
+import type { AnswerRow, NullableDateRow, QuestionRow, RequirementsRow, SlotRow, TermsRow } from "./hiring.rows"
 
 /** The columns of public.hiring_jobs the workbench reads. */
 export interface WorkbenchJobRow {
@@ -40,7 +40,7 @@ export interface WorkbenchJobRow {
     /** The generated ad texts, when made. */
     readonly ad_variants: Record<string, unknown> | null
     /** When applications close. */
-    readonly closes_at: Date | string | null
+    readonly closes_at: NullableDateRow
     /** When the job was created. */
     readonly created_at: Date | string
     /** When the job was last edited. */
@@ -86,7 +86,7 @@ export interface WorkbenchCandidateRow {
     /** The screening's one-paragraph summary. */
     readonly score_summary: string | null
     /** When the screening ran. */
-    readonly screened_at: Date | string | null
+    readonly screened_at: NullableDateRow
     /** The pipeline stage. */
     readonly stage: Stage
     /** When the stage last changed. */
@@ -124,9 +124,9 @@ export interface WorkbenchInterviewRow {
     /** The slots proposed to the candidate. */
     readonly proposed_slots: Array<SlotRow> | null
     /** The chosen slot's start. */
-    readonly slot_start: Date | string | null
+    readonly slot_start: NullableDateRow
     /** The chosen slot's end. */
-    readonly slot_end: Date | string | null
+    readonly slot_end: NullableDateRow
     /** proposed, confirmed, done, cancelled or declined. */
     readonly status: string
     /** The public answer token. */
@@ -134,7 +134,7 @@ export interface WorkbenchInterviewRow {
     /** The approval the sending waits on, when it does. */
     readonly work_item_id: string | null
     /** When the reminder went out. */
-    readonly reminder_sent_at: Date | string | null
+    readonly reminder_sent_at: NullableDateRow
     /** A note for the interviewer. */
     readonly note: string
     /** When it was created. */
@@ -164,11 +164,11 @@ export interface WorkbenchOfferRow {
     /** How it was sent. */
     readonly sent_via: string | null
     /** When it was sent. */
-    readonly sent_at: Date | string | null
+    readonly sent_at: NullableDateRow
     /** When it lapses. */
-    readonly expires_at: Date | string | null
+    readonly expires_at: NullableDateRow
     /** When the candidate answered. */
-    readonly responded_at: Date | string | null
+    readonly responded_at: NullableDateRow
     /** When it was created. */
     readonly created_at: Date | string
 }
@@ -184,7 +184,7 @@ export interface WorkbenchOnboardingRow {
     /** Whether it is done. */
     readonly done: boolean
     /** When it was done. */
-    readonly done_at: Date | string | null
+    readonly done_at: NullableDateRow
     /** Its place in the list. */
     readonly sort: number
 }

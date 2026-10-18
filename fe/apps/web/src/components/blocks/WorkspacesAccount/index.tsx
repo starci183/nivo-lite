@@ -1,8 +1,7 @@
 "use client"
 
 import { useTranslations } from "next-intl"
-import { useQueryAuthUserSwr } from "@/hooks/auth"
-import { authActionsOf } from "@/hooks/auth"
+import { useQueryAuthUserSwr, authActionsOf } from "@/hooks/auth"
 import { useSignOut } from "@/hooks/console"
 import { useWorkspaceCards } from "@/hooks/workspaces"
 import { APP_ROUTES } from "@/modules/routes"

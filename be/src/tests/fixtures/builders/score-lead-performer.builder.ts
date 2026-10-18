@@ -1,10 +1,6 @@
 import { builder } from "@starci/jest-preset"
 import type { WorkContext, WorkItem } from "@modules/domain/decisions"
-import { EMPTY_SIGNALS } from "@modules/domain/lead-flows"
-import { parseAnalysis } from "@modules/domain/lead-flows"
-import type { LeadFlow } from "@modules/domain/lead-flows"
-import type { Analysis } from "@modules/domain/lead-flows"
-import type { FlowFields } from "@modules/domain/lead-flows"
+import { EMPTY_SIGNALS, parseAnalysis, type LeadFlow, type Analysis, type FlowFields } from "@modules/domain/lead-flows"
 /** Shared, complete test data for the capability cases. */
 export const NOW = "2026-10-12T10:00:00.000Z"
 

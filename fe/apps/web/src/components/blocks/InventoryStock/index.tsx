@@ -1,11 +1,12 @@
 "use client"
 
-import type { StockDetailContext } from "./component"
-import type { BuildStockListViewContext, BuildStockCommandsContext } from "./component"
+import { type BuildStockListViewContext, type BuildStockCommandsContext, InventoryStockBase } from "./component"
+
 import { useInventoryBoard } from "@/hooks/inventoryBoard"
 import { useTranslations } from "next-intl"
 import { useState } from "react"
 import {
+    stockDetailOf,
     STOCK_FILTERS,
     STOCK_TONES,
     includesText,
@@ -16,11 +17,11 @@ import {
     useInventoryFormat,
     useInventoryRun,
     useItemDrawer,
+    type StockFilter,
 } from "@/hooks/inventory"
-import type { StockFilter } from "@/hooks/inventory"
+
 import type { ItemView } from "@/modules/types"
 import { useInventoryCatalogCommands, useInventoryStockCommands } from "@/hooks/inventoryCommands"
-import { InventoryStockBase } from "./component"
 
 const filterOf = (value: string): StockFilter => STOCK_FILTERS.find((filter) => filter === value) ?? "all"
 
@@ -125,8 +126,7 @@ const buildStockListView = ({
         emptyBody: t(empty ? "stockEmptyBody" : "stockNoMatchBody"),
         adjustLabel: t("stockAdjust"),
         editLabel: board.canManage ? t("edit") : null,
-        toggleInactiveLabel:
-            board.canManage && hasInactive ? t(showInactive ? "stockShowActive" : "stockShowInactive") : null,
+        toggleInactiveLabel: stockToggleLabel(t, board.canManage && hasInactive, showInactive),
         query,
         filter,
         rows: rows.map((item) => ({
@@ -181,19 +181,8 @@ const buildStockCommands = ({
         adjustClose: adjustDrawer.on.close,
     }) as const
 
-/** Item identity, supplier, location totals and replenishment details. */
-const stockDetailOf = (item: ItemView, { board, format, t }: StockDetailContext): string => {
-    const placeName = (id: string): string => board.locations.find((location) => location.id === id)?.name ?? ""
-    return [
-        item.sku,
-        item.category,
-        board.suppliers.find((supplier) => supplier.id === item.supplierId)?.name ?? "",
-        board.locations.length > 1
-            ? item.levels.map((level) => `${placeName(level.locationId)} ${format.qty(level.qty)}`).join(", ")
-            : "",
-        item.reorderPoint > 0 ? t("stockMin", { qty: format.qty(item.reorderPoint) }) : "",
-        item.costVnd > 0 ? t("stockCost", { cost: format.money(item.costVnd), unit: item.unit }) : "",
-    ]
-        .filter((part) => part !== "")
-        .join(" · ")
+/** Resolves the inactive catalogue toggle only when it is available. */
+const stockToggleLabel = (t: BuildStockListViewContext["t"], isAvailable: boolean, showInactive: boolean) => {
+    if (!isAvailable) return null
+    return t(showInactive ? "stockShowActive" : "stockShowInactive")
 }

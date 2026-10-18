@@ -46,6 +46,10 @@ export interface WorkbenchRender {
     readonly errorCode: string | null
     /** Playback address. */
     readonly videoUrl: string | null
+    /** A nonempty timed WebVTT artifact; null for legacy or captionless renders. */
+    readonly captionsUrl: string | null
+    /** Actual caption locale when recorded, otherwise null. */
+    readonly captionsLang: string | null
     /** Download address. */
     readonly downloadUrl: string | null
     /** Poster address. */

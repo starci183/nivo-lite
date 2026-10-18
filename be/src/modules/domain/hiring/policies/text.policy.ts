@@ -2,7 +2,7 @@
 const D_WITH_STROKE = new RegExp(String.fromCodePoint(0x111), "gu")
 
 /** A mail address as the apply form accepts it. */
-const EMAIL_PATTERN = /^[^\s@<>(),;:"\\]+@[^\s@<>(),;:"\\]+\.[^\s@<>(),;:"\\]{2,}$/u
+const EMAIL_PART = /^[^\s@<>(),;:"\\]+$/u
 
 /** A Vietnamese phone number once normalized: a leading zero and nine or ten more digits. */
 const PHONE_PATTERN = /^0\d{9,10}$/u
@@ -23,19 +23,31 @@ export const clip = (value: string, max: number): string => value.trim().slice(0
 export const fold = (text: string): string =>
     text.toLowerCase().normalize("NFD").replace(/\p{M}/gu, "").replace(D_WITH_STROKE, "d")
 
+/** Removes boundary dashes in one pass. */
+const trimDashes = (text: string): string => {
+    let start = 0
+    let end = text.length
+    while (start < end && text[start] === "-") start += 1
+    while (end > start && text[end - 1] === "-") end -= 1
+    return text.slice(start, end)
+}
+
 /** The URL slug of a title: ascii, lower case, dashes, cut to `max` characters. */
 export const slugify = (text: string, max = 60): string =>
-    fold(text)
-        .replace(/[^a-z0-9]+/gu, "-")
-        .replace(/^-+|-+$/gu, "")
-        .slice(0, max)
-        .replace(/-+$/gu, "")
+    trimDashes(trimDashes(fold(text).replace(/[^a-z0-9]+/gu, "-")).slice(0, max))
 
 /** True for the token shape of an interview or offer link. */
 export const isToken = (value: string): boolean => TOKEN_PATTERN.test(value)
 
 /** True for something shaped like an email address. */
-export const isEmailAddress = (value: string): boolean => EMAIL_PATTERN.test(value)
+export const isEmailAddress = (value: string): boolean => {
+    const at = value.indexOf("@")
+    const domain = value.slice(at + 1)
+    const dot = domain.indexOf(".", 1)
+    return (
+        at > 0 && dot > 0 && domain.length - dot > 2 && EMAIL_PART.test(value.slice(0, at)) && EMAIL_PART.test(domain)
+    )
+}
 
 /** A Vietnamese phone number as digits with a leading zero (+84 and 84 are rewritten); null when it cannot be one. */
 export const normalizePhone = (raw: string): string | null => {

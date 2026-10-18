@@ -107,12 +107,7 @@ export class DatabaseWizardService {
         if (typed.password !== "" || connectionId === null) return typed
         await this.hub.own(workspaceId, connectionId, "database")
         const stored = await this.storedTarget(connectionId)
-        if (
-            stored === null ||
-            stored.engine !== typed.engine ||
-            stored.host !== typed.host ||
-            stored.user !== typed.user
-        ) {
+        if (stored?.engine !== typed.engine || stored.host !== typed.host || stored.user !== typed.user) {
             throw invalid(COPY.needPassword)
         }
         return { ...typed, password: stored.password }

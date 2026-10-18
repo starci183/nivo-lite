@@ -1,8 +1,6 @@
 import type { useTranslations } from "next-intl"
 import type { usePlanChoices } from "@/hooks/billing"
-import type { PlanCardView } from "@/components/composites/PlanCatalog"
-import { PlanCatalog } from "@/components/composites/PlanCatalog"
-import type { PlanGroupView } from "@/components/composites/PlanCatalog"
+import { type PlanCardView, PlanCatalog, type PlanGroupView } from "@/components/composites/PlanCatalog"
 
 /** Settled copy, prices and interactions of the plan catalogue. */
 export interface BillingPlansBaseProps {
@@ -53,27 +51,7 @@ export const planCardOf = (plan: Plan, context: PlanCardContext): PlanCardView =
     const index = buyable.findIndex((candidate) => candidate.code === plan.code)
     const quote = choices.quotes?.[index]
     const selection = choices.selections[index]
-    const badges: PlanCardView["badges"][number][] = []
-    const notes: string[] = []
-    let price = ""
-    if (quote) {
-        if (plan.perSeat) {
-            price = t("priceSeatMonth", { price: money(quote.listMonthlyVnd / quote.seats) })
-            notes.push(t("seatsTotal", { seats: quote.seats, total: money(quote.amountVnd) }))
-        } else if (quote.cycle === "annual") {
-            price = t("priceYear", { price: money(quote.amountVnd) })
-            notes.push(t("yearlyNote", { price: money(quote.listMonthlyVnd) }))
-            if (plan.annualDiscountPct)
-                badges.push({ label: t("saveBadge", { pct: plan.annualDiscountPct }), tone: "success" })
-        } else {
-            price = t("priceMonth", { price: money(quote.amountVnd) })
-            if (quote.promo && plan.promoMonths) {
-                const pct = Math.round((1 - quote.amountVnd / quote.listMonthlyVnd) * 100)
-                badges.push({ label: t("promoBadge", { pct, months: plan.promoMonths }), tone: "accent" })
-                notes.push(t("promoThen", { price: money(quote.listMonthlyVnd) }))
-            }
-        }
-    }
+    const { price, badges, notes } = quotedPlanPrice(plan, quote, context)
     const tierOptions = plan.tiers.map((tier) => ({
         id: String(tier.creditsPerMonth),
         label: t("tierOption", { credits: count(tier.creditsPerMonth) }),
@@ -82,8 +60,7 @@ export const planCardOf = (plan: Plan, context: PlanCardContext): PlanCardView =
     const facts: string[] = []
     if (!plan.perSeat && quote?.creditsPerMonth != null)
         facts.push(t("creditsLine", { n: count(quote.creditsPerMonth) }))
-    facts.push(plan.storageGb ? t("storageLine", { n: plan.storageGb }) : t("storageUnlimited"))
-    facts.push(...features)
+    facts.push(plan.storageGb ? t("storageLine", { n: plan.storageGb }) : t("storageUnlimited"), ...features)
     return {
         id: plan.code,
         name,
@@ -135,4 +112,34 @@ const customPlanCard = (plan: Plan, context: PlanCardContext): PlanCardView => {
             isDisabled: false,
         },
     }
+}
+
+/** Formats the quoted price with its cycle, discount and seat notes. */
+const quotedPlanPrice = (
+    plan: Plan,
+    quote: NonNullable<ReturnType<typeof usePlanChoices>["quotes"]>[number] | undefined,
+    { t, money }: PlanCardContext,
+) => {
+    const badges: PlanCardView["badges"][number][] = []
+    const notes: string[] = []
+    let price = ""
+    if (quote) {
+        if (plan.perSeat) {
+            price = t("priceSeatMonth", { price: money(quote.listMonthlyVnd / quote.seats) })
+            notes.push(t("seatsTotal", { seats: quote.seats, total: money(quote.amountVnd) }))
+        } else if (quote.cycle === "annual") {
+            price = t("priceYear", { price: money(quote.amountVnd) })
+            notes.push(t("yearlyNote", { price: money(quote.listMonthlyVnd) }))
+            if (plan.annualDiscountPct)
+                badges.push({ label: t("saveBadge", { pct: plan.annualDiscountPct }), tone: "success" })
+        } else {
+            price = t("priceMonth", { price: money(quote.amountVnd) })
+            if (quote.promo && plan.promoMonths) {
+                const pct = Math.round((1 - quote.amountVnd / quote.listMonthlyVnd) * 100)
+                badges.push({ label: t("promoBadge", { pct, months: plan.promoMonths }), tone: "accent" })
+                notes.push(t("promoThen", { price: money(quote.listMonthlyVnd) }))
+            }
+        }
+    }
+    return { price, badges, notes }
 }

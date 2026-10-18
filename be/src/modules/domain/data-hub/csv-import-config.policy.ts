@@ -4,8 +4,10 @@ import { CSV_COLUMN_KINDS, CSV_NO_COLUMN, CSV_SCHEDULES, CSV_TABLE_ENTITIES } fr
 import type { CsvColumnKind, CsvConfig, CsvEntity, CsvMapping, CsvSource } from "./csv-import.contracts"
 
 const SUMMARY_FORMAT = new Intl.NumberFormat("vi-VN")
-const SOURCES: ReadonlyArray<string> = ["file", "sheet", "manual", "document"]
-const ENTITIES: ReadonlyArray<string> = [...CSV_TABLE_ENTITIES, "document"]
+const SOURCES: ReadonlySet<string> = new Set(["file", "sheet", "manual", "document"])
+const ENTITIES: ReadonlySet<string> = new Set([...CSV_TABLE_ENTITIES, "document"])
+const COLUMN_KINDS: ReadonlySet<string> = new Set(CSV_COLUMN_KINDS)
+const SCHEDULES: ReadonlySet<number | null> = new Set(CSV_SCHEDULES)
 
 /** The refusal of an import, with the plain-Vietnamese sentence the owner reads. */
 export const invalid = (detail: string): DataHubError =>
@@ -31,12 +33,11 @@ export const isPlainObject = (value: unknown): value is Record<string, unknown> 
 
 const asText = (value: unknown): string | null => (typeof value === "string" && value !== "" ? value : null)
 
-const isSource = (value: unknown): value is CsvSource => typeof value === "string" && SOURCES.includes(value)
+const isSource = (value: unknown): value is CsvSource => typeof value === "string" && SOURCES.has(value)
 
-const isEntity = (value: unknown): value is CsvEntity => typeof value === "string" && ENTITIES.includes(value)
+const isEntity = (value: unknown): value is CsvEntity => typeof value === "string" && ENTITIES.has(value)
 
-const isKind = (value: unknown): value is CsvColumnKind =>
-    typeof value === "string" && CSV_COLUMN_KINDS.some((kind) => kind === value)
+const isKind = (value: unknown): value is CsvColumnKind => typeof value === "string" && COLUMN_KINDS.has(value)
 
 const kindsOf = (value: unknown): Record<string, CsvColumnKind> => {
     const kinds: Record<string, CsvColumnKind> = {}
@@ -84,7 +85,8 @@ export const readConfig = (meta: Readonly<Record<string, string>> | null | undef
 }
 
 /** True for a schedule a Google Sheets link may take. */
-export const isSchedule = (value: unknown): value is number | null => CSV_SCHEDULES.some((item) => item === value)
+export const isSchedule = (value: unknown): value is number | null =>
+    (typeof value === "number" || value === null) && SCHEDULES.has(value)
 
 /** The mapping stored in a config. */
 export const mappingOf = (config: CsvConfig): CsvMapping => ({

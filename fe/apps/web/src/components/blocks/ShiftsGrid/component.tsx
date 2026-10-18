@@ -4,28 +4,25 @@ import type { useShiftsWeekCommands } from "@/hooks/shiftsCommands"
 import type { useShiftsWeekModel } from "@/hooks/shiftsCoverage"
 import {
     Button,
+    DataTable,
+    type DataTableCellInteraction,
+    DragItem,
     EmptyNotice,
-    HorizontalScrollRegion,
     ListItem,
     Region,
     SectionHeader,
     Select,
-    SurfaceCard,
     SurfaceListCard,
     Tabs,
     Text,
 } from "@starci/grammar/common"
-import { Fragment } from "react"
 import {
     DAYLIST_CLASS_NAME,
     DAY_ROW_CLASS_NAME,
     FRAME_CLASS_NAME,
-    GRID_CLASS_NAME,
-    HEAD_CLASS_NAME,
     NAME_CLASS_NAME,
     SECTION_CLASS_NAME,
-    cellClassName,
-    chipClassName,
+    CELL_CLASS_NAME,
 } from "./classNames"
 
 /** One shift as a chip of the grid or a line of the day list. */
@@ -102,33 +99,17 @@ export const ShiftsGridBase = (props: ShiftsGridBaseProps) => (
         <div className={SECTION_CLASS_NAME}>
             <SectionHeader level={2} title={props.props.title} description={props.props.hint} />
             <div className={FRAME_CLASS_NAME}>
-                <SurfaceCard ariaLabel={props.props.title} composition="joined">
-                    <HorizontalScrollRegion overflow="needed" aria-label={props.props.title}>
-                        <div className={GRID_CLASS_NAME} role="grid" aria-label={props.props.title}>
-                            <div className={HEAD_CLASS_NAME} />
-                            {props.props.dates.map((date) => (
-                                <div key={date.id} className={HEAD_CLASS_NAME} role="columnheader">
-                                    <Text as="span" size="xs" weight="medium">
-                                        {date.label}
-                                    </Text>
-                                </div>
-                            ))}
-                            {props.props.rows.map((row) => (
-                                <Fragment key={row.id}>
-                                    <div className={NAME_CLASS_NAME} role="rowheader">
-                                        <Text size="sm" weight="medium">
-                                            {row.name}
-                                        </Text>
-                                        <Text size="xs" tone="muted">
-                                            {row.sub}
-                                        </Text>
-                                    </div>
-                                    {row.cells.map((cell) => renderGridCell({ cell, props, row }))}
-                                </Fragment>
-                            ))}
-                        </div>
-                    </HorizontalScrollRegion>
-                </SurfaceCard>
+                <DataTable
+                    label={props.props.title}
+                    columns={[
+                        { id: "staff", label: "", isRowHeader: true },
+                        ...props.props.dates.map((date) => ({ id: date.id, label: date.label })),
+                    ]}
+                    rows={props.props.rows}
+                    emptyContent={<EmptyNotice message={props.props.emptyDay} />}
+                    renderCell={(row, columnId) => renderTableCell(props, row, columnId)}
+                    getCellInteraction={(row, columnId) => gridCellInteraction(props, row, columnId)}
+                />
             </div>
             <div className={DAYLIST_CLASS_NAME}>
                 <Tabs
@@ -170,32 +151,59 @@ export const ShiftsGridBase = (props: ShiftsGridBaseProps) => (
     </Region>
 )
 
-const renderGridCell = ({ cell, props, row }: RenderGridCellInput) => (
-    <div
-        key={cell.id}
-        role="gridcell"
-        className={cellClassName(cell.isTarget, cell.isOff)}
-        onDragOver={(event) => {
+/** Places a picked shift through the same cell action for pointer and keyboard users. */
+const gridCellInteraction = (
+    props: ShiftsGridBaseProps,
+    row: GridRowView,
+    columnId: string,
+): DataTableCellInteraction | undefined => {
+    const cell = row.cells.find((candidate) => candidate.date === columnId)
+    if (cell === undefined) return undefined
+    return {
+        isHighlighted: cell.isTarget,
+        tone: cell.isOff ? "muted" : "neutral",
+        onAction: cell.canDrop ? () => props.on.place(row.id) : undefined,
+        onDragOver: (event) => {
             if (!cell.canDrop) return
             event.preventDefault()
             props.on.hover(cell.id)
-        }}
-        onDragLeave={() => props.on.hover(null)}
-        onDrop={(event) => {
+        },
+        onDragLeave: () => props.on.hover(null),
+        onDrop: (event) => {
             event.preventDefault()
             const shiftId = event.dataTransfer.getData("text/plain")
             if (shiftId !== "") props.on.drop(shiftId, row.id)
-        }}
-        onClick={() => {
-            if (cell.canDrop) props.on.place(row.id)
-        }}
-    >
+        },
+    }
+}
+
+const renderTableCell = (props: ShiftsGridBaseProps, row: GridRowView, columnId: string) => {
+    if (columnId === "staff") {
+        return (
+            <div className={NAME_CLASS_NAME}>
+                <Text size="sm" weight="medium">
+                    {row.name}
+                </Text>
+                <Text size="xs" tone="muted">
+                    {row.sub}
+                </Text>
+            </div>
+        )
+    }
+    const cell = row.cells.find((candidate) => candidate.date === columnId)
+    return cell === undefined ? null : renderGridCell({ cell, props })
+}
+
+const renderGridCell = ({ cell, props }: RenderGridCellInput) => (
+    <div className={CELL_CLASS_NAME}>
         {cell.chips.map((chip) => (
-            <div
+            <DragItem
                 key={chip.id}
-                draggable={props.props.editable}
-                className={chipClassName(chip.isPicked, chip.why !== "", chip.isOpen)}
-                style={{ borderLeftColor: chip.color || undefined }}
+                isDisabled={!props.props.editable}
+                isSelected={chip.isPicked}
+                isInvalid={chip.why !== ""}
+                isDashed={chip.isOpen}
+                leadingColor={chip.color || undefined}
                 onDragStart={(event) => {
                     event.dataTransfer.setData("text/plain", chip.id)
                     props.on.dragStart(chip.id)
@@ -206,6 +214,7 @@ const renderGridCell = ({ cell, props, row }: RenderGridCellInput) => (
                     size="sm"
                     variant="ghost"
                     isDisabled={!props.props.editable}
+                    aria-pressed={chip.isPicked}
                     onPress={() => props.on.pick(chip.id)}
                 >
                     {chip.time}
@@ -218,7 +227,7 @@ const renderGridCell = ({ cell, props, row }: RenderGridCellInput) => (
                         {chip.why}
                     </Text>
                 )}
-            </div>
+            </DragItem>
         ))}
         {cell.isOff && cell.chips.length === 0 ? (
             <Text as="span" size="xs" tone="muted">
@@ -228,7 +237,7 @@ const renderGridCell = ({ cell, props, row }: RenderGridCellInput) => (
     </div>
 )
 
-type RenderGridCellInput = { cell: GridCellView; props: ShiftsGridBaseProps; row: GridRowView }
+type RenderGridCellInput = { readonly cell: GridCellView; readonly props: ShiftsGridBaseProps }
 /** State values and commands consumed by the connected surface. */
 export type ShiftsGridControllerInput = {
     readonly t: ReturnType<typeof useTranslations<"shifts">>

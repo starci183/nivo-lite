@@ -18,25 +18,25 @@ export class TemplateSettingType {
 
     /** A line of help under the field. */
     @Field(() => LocalizedTextType, { nullable: true })
-    hint?: LocalizedTextType | undefined
+    hint?: LocalizedTextType
 
     /** The smallest number (kind number). */
     @Field(() => Float, { nullable: true })
-    min?: number | undefined
+    min?: number
 
     /** The biggest number (kind number). */
     @Field(() => Float, { nullable: true })
-    max?: number | undefined
+    max?: number
 
     /** The unit shown after the number. */
     @Field(() => LocalizedTextType, { nullable: true })
-    suffix?: LocalizedTextType | undefined
+    suffix?: LocalizedTextType
 
     /** The longest text. */
     @Field(() => Int, { nullable: true })
-    maxLength?: number | undefined
+    maxLength?: number
 
     /** True when the field must be filled. */
     @Field(() => Boolean, { nullable: true })
-    required?: boolean | undefined
+    required?: boolean
 }

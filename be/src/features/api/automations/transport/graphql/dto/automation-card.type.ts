@@ -81,9 +81,9 @@ export class AutomationCardType {
 
     /** `ready`, `missing`, `lost` or `unavailable` for templates that write to Google. */
     @Field(() => String, { nullable: true })
-    google?: string | undefined
+    google?: string
 
     /** The spreadsheet link for templates that write to Google. */
     @Field(() => String, { nullable: true })
-    sheetUrl?: string | null | undefined
+    sheetUrl?: string | null
 }

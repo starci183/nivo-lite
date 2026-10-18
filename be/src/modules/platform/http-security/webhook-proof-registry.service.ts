@@ -22,9 +22,7 @@ export class WebhookProofRegistryService implements WebhookProofRegistry {
     async verify(provider: string, request: WebhookProofRequest): Promise<void> {
         const proof = this.proofs.get(provider)
         if (proof === undefined) {
-            return Promise.reject(
-                new HttpSecurityError({ code: HttpSecurityErrorCode.WebhookProviderUnknown, params: { provider } }),
-            )
+            throw new HttpSecurityError({ code: HttpSecurityErrorCode.WebhookProviderUnknown, params: { provider } })
         }
         if (!(await proof.prove(request))) {
             throw new HttpSecurityError({ code: HttpSecurityErrorCode.WebhookSignatureInvalid })

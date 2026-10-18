@@ -35,7 +35,7 @@ const FADE_TAG = String.raw`{\fad(220,180)}`
 const escaped = (text: string): string =>
     text
         .replace(/[{}]/gu, (char) => (char === "{" ? "(" : ")"))
-        .replace(/\\/gu, "/")
+        .replaceAll("\\", "/")
         .replace(/\r?\n+/gu, NEWLINE_TAG)
 
 /** How far above the bottom edge the caption sits, as a share of the frame height. */
@@ -130,7 +130,7 @@ export const buildAss = (aspect: Aspect, cues: ReadonlyArray<TextCue>, units: Re
 /** Relative luminance of #rrggbb (0..1): picks dark or light headline text for a card. */
 export const luminance = (hex: string): number => {
     const channel = (index: number): number => {
-        const value = parseInt(hex.slice(1 + index * 2, 3 + index * 2), 16) / 255
+        const value = Number.parseInt(hex.slice(1 + index * 2, 3 + index * 2), 16) / 255
         return value <= 0.03928 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4
     }
     return 0.2126 * channel(0) + 0.7152 * channel(1) + 0.0722 * channel(2)

@@ -12,11 +12,10 @@ export const isJsonRecord = (value: unknown): value is JsonRecord =>
     typeof value === "object" && value !== null && !Array.isArray(value)
 
 /** The model's answer without a surrounding code fence. */
-export const unfenced = (raw: string): string =>
-    raw
-        .replace(/^```(?:json)?\s*/iu, "")
-        .replace(/\s*```$/u, "")
-        .trim()
+export const unfenced = (raw: string): string => {
+    const opened = raw.replace(/^```(?:json)?\s*/iu, "")
+    return opened.replace(/```$/u, "").trim()
+}
 
 /** The first `{...}` block inside prose, or null when there is none. */
 export const embeddedObject = (text: string): string | null => {

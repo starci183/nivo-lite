@@ -2,14 +2,13 @@
 
 import { useFormatter, useTranslations } from "next-intl"
 import { useAgentRights } from "@/hooks/agentSettings"
-import { useSetupChat, useSetupState, useSetupVersions, useThreadScroll } from "@/hooks/agentSetup"
-import { setupThreadOf } from "@/hooks/agentSetup"
+import { useSetupChat, useSetupState, useSetupVersions, useThreadScroll, setupThreadOf } from "@/hooks/agentSetup"
+
 import { mapSlot, useSlotLabels } from "@/hooks/slot"
 import { useSetupWriteWords } from "@/hooks/setupCards"
-import { useModuleName } from "@/hooks/installations"
-import type { ModuleKey } from "@/hooks/installations"
-import { AgentSetupChatBase } from "./component"
-import type { AgentSetupChatContent } from "./component"
+import { useModuleName, type ModuleKey } from "@/hooks/installations"
+
+import { AgentSetupChatBase, type AgentSetupChatContent } from "./component"
 
 /** What the Setup page hands the chat: the instance and catalogue key of the url. */
 type AgentSetupChatProps = {

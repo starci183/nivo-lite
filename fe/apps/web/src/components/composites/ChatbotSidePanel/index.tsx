@@ -68,7 +68,8 @@ export interface ChatbotSidePanelProps {
     readonly onClose: () => void
     readonly onToggleHandling: () => void
     readonly onEscalationDraft: (draft: string) => void
-    readonly onAnswer: (send: boolean) => void
+    readonly onSendAnswer: () => void
+    readonly onDeclineAnswer: () => void
 }
 
 /** The right pane of the inbox: customer, who is replying (take over / hand back), the waiting escalation and the lead. */
@@ -108,7 +109,12 @@ export const ChatbotSidePanel = (props: ChatbotSidePanelProps) => {
                 </div>
             </div>
             {escalation === null ? null : (
-                <ChatbotEscalationForm {...escalation} onDraft={props.onEscalationDraft} onAnswer={props.onAnswer} />
+                <ChatbotEscalationForm
+                    {...escalation}
+                    onDraft={props.onEscalationDraft}
+                    onSendAnswer={props.onSendAnswer}
+                    onDeclineAnswer={props.onDeclineAnswer}
+                />
             )}
             {renderChatbotSidePanelHandling(handling, props)}
             <Region label={props.leadTitle}>

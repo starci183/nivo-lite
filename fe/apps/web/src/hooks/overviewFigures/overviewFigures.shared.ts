@@ -96,8 +96,8 @@ type Nullable<Value> = Value | null | undefined
 
 /** A record that carries an origin and an amount. */
 export interface MoneyRow {
-    readonly origin?: Nullable<string>
-    readonly amountVnd?: Nullable<number>
+    readonly origin?: string | null
+    readonly amountVnd?: number | null
 }
 
 const emptySplit = (): OriginSplit => ({ live: 0, simulated: 0, unlabelled: 0 })

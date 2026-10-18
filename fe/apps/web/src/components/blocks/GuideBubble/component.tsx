@@ -117,45 +117,38 @@ export const GuideBubbleBase = (props: GuideBubbleBaseProps) => (
 /** The question form and conversation restart action. */
 const GuideComposer = (props: GuideBubbleBaseProps) => {
     return (
-        <>
-            <div className={FOOT_CLASS}>
-                <Form label={props.props.title} onSubmit={props.on.send} isPending={props.props.isThinking}>
-                    <div className={ASK_ROW_CLASS}>
-                        <div className={ASK_INPUT_CLASS}>
-                            <Input
-                                id="guide-question"
-                                name="question"
-                                label={props.props.questionLabel}
-                                placeholder={props.props.placeholder}
-                                variant="secondary"
-                                value={props.props.question}
-                                onValueChange={props.on.changeQuestion}
-                            />
-                        </div>
-                        <Button
-                            type="submit"
-                            variant="primary"
-                            isPending={props.props.isThinking}
-                            isDisabled={props.props.question.trim() === ""}
-                        >
-                            {props.props.sendLabel}
-                        </Button>
+        <div className={FOOT_CLASS}>
+            <Form label={props.props.title} onSubmit={props.on.send} isPending={props.props.isThinking}>
+                <div className={ASK_ROW_CLASS}>
+                    <div className={ASK_INPUT_CLASS}>
+                        <Input
+                            id="guide-question"
+                            name="question"
+                            label={props.props.questionLabel}
+                            placeholder={props.props.placeholder}
+                            variant="secondary"
+                            value={props.props.question}
+                            onValueChange={props.on.changeQuestion}
+                        />
                     </div>
-                </Form>
-                {props.props.messages.length === 0 ? null : (
-                    <div>
-                        <Button
-                            variant="ghost"
-                            size="sm"
-                            isDisabled={props.props.isThinking}
-                            onPress={props.on.restart}
-                        >
-                            {props.props.restartLabel}
-                        </Button>
-                    </div>
-                )}
-            </div>
-        </>
+                    <Button
+                        type="submit"
+                        variant="primary"
+                        isPending={props.props.isThinking}
+                        isDisabled={props.props.question.trim() === ""}
+                    >
+                        {props.props.sendLabel}
+                    </Button>
+                </div>
+            </Form>
+            {props.props.messages.length === 0 ? null : (
+                <div>
+                    <Button variant="ghost" size="sm" isDisabled={props.props.isThinking} onPress={props.on.restart}>
+                        {props.props.restartLabel}
+                    </Button>
+                </div>
+            )}
+        </div>
     )
 }
 

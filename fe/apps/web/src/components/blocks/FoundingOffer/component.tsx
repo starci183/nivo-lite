@@ -5,6 +5,7 @@ import {
     DescriptionList,
     Image,
     Meter,
+    Region,
     SectionHeader,
     SurfaceCard,
     Text,
@@ -53,7 +54,7 @@ const Pill = ({ props }: PartProps) => (
 )
 
 const Strip = ({ props, on }: PartProps) => (
-    <div className={STRIP} role="region" aria-label={props.offerAria}>
+    <Region className={STRIP} label={props.offerAria}>
         <Alert
             tone="informative"
             title={props.stripTitle}
@@ -69,7 +70,7 @@ const Strip = ({ props, on }: PartProps) => (
             dismissLabel={props.dismissLabel}
             onDismiss={on.dismiss}
         />
-    </div>
+    </Region>
 )
 
 const Hero = ({ props }: PartProps) => (

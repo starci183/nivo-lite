@@ -72,6 +72,19 @@ export const pageInput = (paging: PullPaging, page: number): Record<string, numb
     return input
 }
 
+const nextHeaderLink = (header: string): string | null => {
+    let start = header.indexOf("<")
+    while (start >= 0) {
+        const end = header.indexOf(">", start + 1)
+        if (end < 0) return null
+        if (end > start + 1 && /^\s*;\s*rel="?next"?/iu.test(header.slice(end + 1))) {
+            return header.slice(start + 1, end)
+        }
+        start = header.indexOf("<", end + 1)
+    }
+    return null
+}
+
 /** The "next page" link an answer offers (in the body or the Link header), resolved against `base`. */
 export const nextLinkOf = (body: unknown, headers: Readonly<Record<string, string>>, base: URL): URL | null => {
     const candidates: Array<string> = []
@@ -80,8 +93,8 @@ export const nextLinkOf = (body: unknown, headers: Readonly<Record<string, strin
         if (typeof value === "string" && value) candidates.push(value)
         else if (isApiJsonObject(value) && typeof value.href === "string") candidates.push(value.href)
     }
-    const link = headers.link?.match(/<([^>]+)>\s*;\s*rel="?next"?/iu)
-    if (link?.[1]) candidates.push(link[1])
+    const link = nextHeaderLink(headers.link ?? "")
+    if (link !== null) candidates.push(link)
     for (const candidate of candidates) {
         if (URL.canParse(candidate, base.toString())) return new URL(candidate, base)
     }

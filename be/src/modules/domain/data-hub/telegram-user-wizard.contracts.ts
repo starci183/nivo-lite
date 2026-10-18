@@ -72,7 +72,7 @@ export interface TelegramLoginDraft {
     /** True when the owner agreed to the commitment text. */
     readonly consent: boolean
     /** A pending connection to reuse (a corrected number). */
-    readonly connectionId?: string | null | undefined
+    readonly connectionId?: string | null
 }
 
 /** What starting a login answers. */
@@ -92,7 +92,7 @@ export interface SaveTelegramSetupInput {
     /** The first window. */
     readonly sinceDays: number
     /** The schedule, null or absent is manual. */
-    readonly everyMinutes?: number | null | undefined
+    readonly everyMinutes?: number | null
 }
 
 /** Where a login stands after a step. */

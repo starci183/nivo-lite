@@ -4,7 +4,7 @@ import type { GuidePage } from "./sitemap"
 export const normalize = (value: string): string =>
     value
         .toLowerCase()
-        .replace(/\u0111/gu, "d")
+        .replaceAll(String.fromCodePoint(0x111), "d")
         .normalize("NFD")
         .replace(/\p{Diacritic}/gu, "")
         .replace(/[^a-z0-9@.]+/gu, " ")

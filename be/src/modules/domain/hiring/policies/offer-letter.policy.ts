@@ -78,7 +78,15 @@ export const composeOffer = (parts: OfferLetterParts, t: TextOf): string =>
 
 /** A model paragraph for the letter when it is plain words: no markdown, no figures, nothing about protected traits, a sensible length; null otherwise. */
 export const cleanLetterPart = (value: string): string | null => {
-    const text = value.replace(/\*\*?|__|#+ /gu, "").trim()
+    const text = value
+        .split(/(#+)/u)
+        .map((part, index, parts) => {
+            if (index % 2 === 1) return parts[index + 1]?.startsWith(" ") ? "" : part
+            const plain = index > 0 && part.startsWith(" ") ? part.slice(1) : part
+            return plain.replace(/\*\*?|__/gu, "")
+        })
+        .join("")
+        .trim()
     const plain = text.length >= PART_MIN && text.length <= PART_MAX && !/\d/u.test(text)
     return plain && findFairnessViolations(text).length === 0 ? text : null
 }

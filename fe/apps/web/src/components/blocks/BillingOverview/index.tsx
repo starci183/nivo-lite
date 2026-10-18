@@ -12,8 +12,7 @@ import { navigation, PRODUCT_TIME_ZONE } from "@/modules/i18n"
 import { AUTH_ROUTES, workspaceRenewalPaymentPath } from "@/modules/routes"
 import { useRequestPaymentOrder } from "@/hooks/billing"
 import { useUsageCard } from "@/hooks/usageCard"
-import { BillingOverviewBase, buildBillingOverviewState } from "./component"
-import type { BillingOverviewBaseProps } from "./component"
+import { BillingOverviewBase, buildBillingOverviewState, type BillingOverviewBaseProps } from "./component"
 
 interface BillingOverviewProps {
     readonly workspaceId: string
@@ -44,7 +43,7 @@ export const BillingOverview = (props: BillingOverviewProps) => {
     let phase: BillingOverviewBaseProps["state"]["phase"] = "ready"
     if (!workspace.data || !orders.data || !review.data || plan.isLoading) phase = "loading"
     if (error || (workspace.data && !allowed)) phase = "error"
-    const connected = buildBillingOverviewState(
+    const connected = buildBillingOverviewState({
         workspace,
         orders,
         plan,
@@ -56,8 +55,8 @@ export const BillingOverview = (props: BillingOverviewProps) => {
         locale,
         renewal,
         usage,
-        PRODUCT_TIME_ZONE,
-    )
+        timeZone: PRODUCT_TIME_ZONE,
+    })
     if (connected === null) return null
     return (
         <BillingOverviewBase

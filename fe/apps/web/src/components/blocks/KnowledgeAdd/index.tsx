@@ -1,14 +1,22 @@
 "use client"
 
-import { MODES, MODE_KEYS, STATUS_TONE, QUEUE_STATUS_KEYS } from "./component"
-import type { KnowledgeAddProps, BuildDocumentFilesViewContext, BuildAddDocumentsViewContext } from "./component"
+import {
+    MODES,
+    MODE_KEYS,
+    STATUS_TONE,
+    QUEUE_STATUS_KEYS,
+    type KnowledgeAddProps,
+    type BuildDocumentFilesViewContext,
+    type BuildAddDocumentsViewContext,
+    KnowledgeAddBase,
+    type KnowledgeAddBaseProps,
+} from "./component"
+
 import { useTranslations } from "next-intl"
-import { AGENT_MODULES, useAddDocuments, useAddInstances, useQueueActions } from "@/hooks/knowledge"
-import type { QueueItem } from "@/hooks/knowledge"
+import { AGENT_MODULES, useAddDocuments, useAddInstances, useQueueActions, type QueueItem } from "@/hooks/knowledge"
+
 import { navigation } from "@/modules/i18n"
 import { KNOWLEDGE_ROUTES } from "@/modules/routes"
-import { KnowledgeAddBase } from "./component"
-import type { KnowledgeAddBaseProps } from "./component"
 
 /**
  * The connected add documents drawer: opens and closes through the address, uploads files and queues links and notes.

@@ -14,7 +14,10 @@ const zonedFormatter = (timeZone: string): Intl.DateTimeFormat =>
 
 const FIELDS = ["year", "month", "day", "hour", "minute", "second"] as const
 
-const isField = (type: string): type is (typeof FIELDS)[number] => FIELDS.some((field) => field === type)
+const isField = (type: string): type is (typeof FIELDS)[number] => {
+    const fields: ReadonlyArray<string> = FIELDS
+    return fields.includes(type)
+}
 
 /** The wall-clock fields of an instant in a time zone. */
 const partsOf = (ms: number, timeZone: string) => {

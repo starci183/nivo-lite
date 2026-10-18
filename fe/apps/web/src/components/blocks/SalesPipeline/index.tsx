@@ -1,6 +1,12 @@
 "use client"
 
-import type { SalesPipelineControllerInput } from "./component"
+import {
+    type SalesPipelineControllerInput,
+    SalesPipelineBase,
+    type DealView,
+    type LaneView,
+    type MoveDialogView,
+} from "./component"
 import { useFormatter, useTranslations } from "next-intl"
 import { useState } from "react"
 import { useLeadCommands } from "@/hooks/leads"
@@ -9,13 +15,13 @@ import { useSalesWorkbench } from "@/hooks/salesworkbench"
 import { useSalesPipelineForm } from "@/hooks/rhf"
 import { leadPath } from "@/modules/routes"
 import type { LeadStageId, SalesDeal } from "@/modules/types"
-import { SalesPipelineBase } from "./component"
-import type { DealView, LaneView, MoveDialogView } from "./component"
 
 const MIN_REASON_CHARS = 5
 const LANES: ReadonlyArray<LeadStageId> = [...OPEN_LANES, "won", "lost"]
 const isClosing = (stage: LeadStageId): boolean => stage === "won" || stage === "lost"
-const isStage = (value: string): value is LeadStageId => DEAL_STAGES.some((stage) => stage === value)
+const isStage = (value: string): value is LeadStageId => {
+    return DEAL_STAGES.some((stage) => stage === value)
+}
 
 const createSalesPipelineState = (input: SalesPipelineControllerInput) => {
     const { t, format, deals, closedHidden, form, movingId } = input
@@ -33,6 +39,10 @@ const createSalesPipelineState = (input: SalesPipelineControllerInput) => {
         deal.closedReason ? t("closedReason", { reason: deal.closedReason }) : t("closedNoReason")
     const openLineOf = (deal: SalesDeal): string =>
         deal.nextStep ? t("nextStep", { step: deal.nextStep }) : t("nextStepNone")
+    const valueSourceOf = (source: SalesDeal["valueSource"]): string | null => {
+        if (!source) return null
+        return t(source === "order" ? "valueOrder" : "valueQuote")
+    }
     const dealOf = (deal: SalesDeal): DealView => {
         const closed = deal.stage === "won" || deal.stage === "lost"
         return {
@@ -41,7 +51,7 @@ const createSalesPipelineState = (input: SalesPipelineControllerInput) => {
             customer: deal.customer,
             company: deal.company,
             value: deal.valueVnd !== null ? money(deal.valueVnd) : t("noValue"),
-            source: deal.valueSource ? t(deal.valueSource === "order" ? "valueOrder" : "valueQuote") : null,
+            source: valueSourceOf(deal.valueSource),
             nextLine: closed ? closedLineOf(deal) : openLineOf(deal),
             isClosed: closed,
             facts: [

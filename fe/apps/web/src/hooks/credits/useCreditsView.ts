@@ -16,10 +16,10 @@ export const useCreditsView = (data: CreditsData | null, busy: string | null) =>
     const day = (value: string) => formatter.dateTime(new Date(value), { dateStyle: "medium" })
     const name = (plan: PlanView) => (locale === "vi" ? plan.nameVi : plan.nameEn)
     const allowance = (plan: PlanView) => (plan.credits === null ? "∞" : credit(plan.credits))
-    const planPrice = (plan: PlanView) =>
-        plan.isCustom
-            ? t("planPriceContract")
-            : t(plan.perSeat ? "planPriceSeat" : "planPriceMonth", { price: money(plan.price) })
+    const planPrice = (plan: PlanView) => {
+        if (plan.isCustom) return t("planPriceContract")
+        return t(plan.perSeat ? "planPriceSeat" : "planPriceMonth", { price: money(plan.price) })
+    }
     const labels = {
         balance: t("balanceLabel"),
         topups: data && data.addOns.length > 0 ? t("addOnTitle") : t("topupTitle"),
@@ -32,7 +32,7 @@ export const useCreditsView = (data: CreditsData | null, busy: string | null) =>
     const slotLabels = {
         ...slotLabelsOf(t),
     }
-    const { figure, badge, badgeTone, topupText, forecast, carried, upgrade, contact } = creditsSummaryOf(
+    const { figure, badge, badgeTone, topupText, forecast, carried, upgrade, contact } = creditsSummaryOf({
         data,
         busy,
         t,
@@ -41,8 +41,8 @@ export const useCreditsView = (data: CreditsData | null, busy: string | null) =>
         day,
         name,
         allowance,
-    )
-    const view: CreditsOverviewView = viewOf(
+    })
+    const view: CreditsOverviewView = viewOf({
         data,
         t,
         figure,
@@ -59,7 +59,7 @@ export const useCreditsView = (data: CreditsData | null, busy: string | null) =>
         name,
         planPrice,
         allowance,
-    )
+    })
     return { view, labels, slotLabels }
 }
 
@@ -79,25 +79,44 @@ const slotLabelsOf = (t: ReturnType<typeof useTranslations<"credits">>) => ({
     forbidden: t("errForbidden"),
     retry: t("retry"),
 })
+/** The resolved inputs for credits view input. */
+interface CreditsViewInput {
+    readonly data: CreditsData | null
+    readonly t: ReturnType<typeof useTranslations<"credits">>
+    readonly figure: string
+    readonly badge: string
+    readonly badgeTone: "danger" | "warning"
+    readonly credit: (value: number) => string
+    readonly topupText: string
+    readonly forecast: string
+    readonly carried: string
+    readonly money: (value: number) => string
+    readonly busy: string | null
+    readonly upgrade: CreditsOverviewView["upgrade"]
+    readonly contact: CreditsOverviewView["contact"]
+    readonly name: (plan: PlanView) => string
+    readonly planPrice: (plan: PlanView) => string
+    readonly allowance: (plan: PlanView) => string
+}
 
-const viewOf = (
-    data: CreditsData | null,
-    t: ReturnType<typeof useTranslations<"credits">>,
-    figure: string,
-    badge: string,
-    badgeTone: "danger" | "warning",
-    credit: (value: number) => string,
-    topupText: string,
-    forecast: string,
-    carried: string,
-    money: (value: number) => string,
-    busy: string | null,
-    upgrade: CreditsOverviewView["upgrade"],
-    contact: CreditsOverviewView["contact"],
-    name: (plan: PlanView) => string,
-    planPrice: (plan: PlanView) => string,
-    allowance: (plan: PlanView) => string,
-): CreditsOverviewView => {
+const viewOf = ({
+    data,
+    t,
+    figure,
+    badge,
+    badgeTone,
+    credit,
+    topupText,
+    forecast,
+    carried,
+    money,
+    busy,
+    upgrade,
+    contact,
+    name,
+    planPrice,
+    allowance,
+}: CreditsViewInput): CreditsOverviewView => {
     return {
         canBuy: data?.canBuy ?? false,
         staffNote: t("staffNote"),

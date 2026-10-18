@@ -1,5 +1,12 @@
 import { PROVIDERS, providerKey } from "@/hooks/connection-providers"
-import type { ConnectorAudience, ConnectorCategory, ConnectorGlyph, ConnectorStatus, Provider } from "@/modules/types"
+import type {
+    Connection,
+    ConnectorAudience,
+    ConnectorCategory,
+    ConnectorGlyph,
+    ConnectorStatus,
+    Provider,
+} from "@/modules/types"
 
 /** One connector of the library as data. Its words are catalog keys (`catalogKey`), never strings. */
 export interface CatalogEntry {
@@ -113,14 +120,16 @@ export const catalogKey = (entry: CatalogEntry, part: "name" | "blurb" | "brings
     return `catalog_${entry.id}_${part}`
 }
 
+/** Unicode Latin small d with stroke does not decompose under NFD. */
+const STROKED_D = String.fromCodePoint(0x0111)
+
 /** Lower-cases a text and drops accents so a search ignores them. */
 const foldText = (text: string): string =>
     text
         .normalize("NFD")
         .replace(/[\u0300-\u036f]/g, "")
-        .replace(/\u0111/g, "d")
-        .replace(/\u0110/g, "d")
         .toLowerCase()
+        .replaceAll(STROKED_D, "d")
 
 /** The words of a search (accents ignored). */
 export const searchWords = (text: string): ReadonlyArray<string> => foldText(text).split(/\s+/u).filter(Boolean)
@@ -139,4 +148,40 @@ export const passesFilters = (
 export const matchesWords = (haystack: string, words: ReadonlyArray<string>): boolean => {
     const folded = foldText(haystack)
     return words.every((word) => folded.includes(word))
+}
+
+type Audience = Exclude<ConnectorAudience, "any">
+type Translate = (key: string, values?: Record<string, string | number>) => string
+
+/** Resolves a supported category from a control value. */
+export const asCategory = (id: string): ConnectorCategory | "all" =>
+    CATEGORIES.find((category) => category === id) ?? "all"
+/** Resolves a supported audience from a control value. */
+export const asAudience = (id: string): Audience | "all" => AUDIENCES.find((audience) => audience === id) ?? "all"
+
+/** Summarizes connection count or catalog availability. */
+export const catalogBadgeOf = (
+    entry: CatalogEntry,
+    count: number,
+    t: Translate,
+): { readonly tone: "success" | "neutral"; readonly label: string; readonly isDot: boolean } | null => {
+    if (count > 0) return { tone: "success", label: t("libConnected", { count }), isDot: true }
+    if (entry.status === "soon") return { tone: "neutral", label: t("statusSoon"), isDot: false }
+    return entry.status === "early" ? { tone: "neutral", label: t("statusEarly"), isDot: false } : null
+}
+
+/** Names the command available for this catalog entry. */
+export const actionOf = (entry: CatalogEntry, count: number, t: Translate): string => {
+    if (entry.status === "soon") return t("libDetails")
+    return count > 0 ? t("libManage") : t("connect")
+}
+
+/** Counts active workspace connections for each provider in the catalog. */
+export const connectionCountsOf = (items: ReadonlyArray<Connection>): Map<string, number> => {
+    const counts = new Map<string, number>()
+    for (const connection of items) {
+        if (connection.status !== "disconnected")
+            counts.set(connection.provider, (counts.get(connection.provider) ?? 0) + 1)
+    }
+    return counts
 }

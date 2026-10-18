@@ -192,7 +192,8 @@ export class InventoryStockService {
         if (request.fromLocationId === request.toLocationId) {
             throw new InventoryError({ code: InventoryErrorCode.TransferSameLocation })
         }
-        if (!(request.qty > 0)) throw new InventoryError({ code: InventoryErrorCode.TransferQtyRequired })
+        if (request.qty <= 0 || Number.isNaN(request.qty))
+            throw new InventoryError({ code: InventoryErrorCode.TransferQtyRequired })
         const [item] = await this.entityManager.query<Array<ItemLabelRow>>(SELECT_ITEM_LABEL, [
             workspaceId,
             request.itemId,

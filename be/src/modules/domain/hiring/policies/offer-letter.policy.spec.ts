@@ -301,3 +301,13 @@ describe("offer letter policy", () => {
         })
     })
 })
+
+describe("letter markup boundaries", () => {
+    it("retains literal hash runs and removes only headings followed by a space", async () => {
+        const subject = await buildSubject()
+        expect(subject.cleanLetterPart("Welcome ###aboard today.")).toBe("Welcome ###aboard today.")
+        expect(subject.cleanLetterPart("Welcome ### aboard today.")).toBe("Welcome aboard today.")
+        expect(subject.cleanLetterPart(`${"#".repeat(20000)} Welcome aboard.`)).toBe("Welcome aboard.")
+        expect(subject.cleanLetterPart("Welcome ###**aboard** today.")).toBe("Welcome ###aboard today.")
+    })
+})

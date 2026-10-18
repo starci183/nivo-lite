@@ -1,8 +1,8 @@
 "use client"
 
 import { mutate } from "swr"
-import { canDecideItem } from "@/hooks/member"
-import type { ShellMember } from "@/hooks/member"
+import { canDecideItem, type ShellMember } from "@/hooks/member"
+
 import {
     QUERY_OFFICE_COMMAND_CANDIDATES_SWR_KEY,
     QUERY_OFFICE_DECIDED_APPROVALS_SWR_KEY,
@@ -38,17 +38,17 @@ export interface OfficeBoard {
     readonly tasks: ReadonlyArray<OfficeTask>
 }
 
-const OFFICE_KEYS: ReadonlyArray<string> = [
+const OFFICE_KEYS: ReadonlySet<string> = new Set([
     QUERY_OFFICE_MESSAGES_SWR_KEY,
     QUERY_OFFICE_PENDING_APPROVALS_SWR_KEY,
     QUERY_OFFICE_DECIDED_APPROVALS_SWR_KEY,
     QUERY_OFFICE_COMMAND_CANDIDATES_SWR_KEY,
     QUERY_WORK_ITEMS_SWR_KEY,
-]
+])
 
 const isOfficeKey = (key: unknown): boolean => {
     const head: unknown = Array.isArray(key) ? key[0] : key
-    return typeof head === "string" && OFFICE_KEYS.includes(head)
+    return typeof head === "string" && OFFICE_KEYS.has(head)
 }
 
 /** Reads the thread, the approvals, the command cards and the work items again. */

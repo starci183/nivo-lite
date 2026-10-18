@@ -33,14 +33,14 @@ const copyProblems = (module: ModuleDefinition): ReadonlyArray<string> => {
 }
 
 const gateProblems = (module: ModuleDefinition): ReadonlyArray<string> => {
-    const actions = module.authorityActions.map((action) => action.action)
+    const actions = new Set(module.authorityActions.map((action) => action.action))
     const keys = module.gates.map((gate) => gate.key)
     const blankGate = module.gates.filter((gate) =>
         [gate.key, gate.label_vi, gate.label_en, gate.hint_vi, gate.hint_en].some(blank),
     )
     const strayRules = module.gates
         .flatMap((gate) => gate.writes ?? [])
-        .filter((write) => write.kind === "rule" && !actions.includes(write.action))
+        .filter((write) => write.kind === "rule" && !actions.has(write.action))
     return [
         ...(module.gates.length === 0 ? [`${module.key}: gates must not be empty`] : []),
         ...(blankGate.length > 0
@@ -88,13 +88,13 @@ export const checkCatalog = (
     catalog: ReadonlyArray<ModuleDefinition>,
     categories: ReadonlyArray<ModuleCategory>,
 ): ReadonlyArray<string> => {
-    const categoryKeys = categories.map((category) => category.key)
+    const categoryKeys = new Set(categories.map((category) => category.key))
     const allActions = catalog.flatMap((module) => module.authorityActions.map((action) => action.action))
     return [
         ...duplicates(catalog.map((module) => module.key)).map((key) => `duplicate module ${key}`),
         ...duplicates(allActions).map((action) => `action ${action} is declared by two modules`),
         ...catalog
-            .filter((module) => !categoryKeys.includes(module.category))
+            .filter((module) => !categoryKeys.has(module.category))
             .map((module) => `${module.key}: unknown category ${module.category}`),
         ...catalog
             .flatMap((module) => module.authorityActions.flatMap((action) => action.next))

@@ -14,11 +14,15 @@ type OpenApiMethod = OpenApiOperation["method"]
 type OpenApiParam = OpenApiOperation["params"][number]
 type OpenApiPullEntity = OpenApiPull["entity"]
 
+const METHODS: ReadonlySet<string> = new Set(OPENAPI_METHODS)
+const AUTH_TYPES: ReadonlySet<string> = new Set(OPENAPI_AUTH_TYPES)
+const PULL_ENTITIES: ReadonlySet<string> = new Set(OPENAPI_PULL_ENTITIES)
+
 const clip = (value: unknown, max = 500): string => (typeof value === "string" ? value.trim().slice(0, max) : "")
 
-const isMethod = (value: string): value is OpenApiMethod => OPENAPI_METHODS.some((method) => method === value)
-const isAuthType = (value: string): value is OpenApiAuthType => OPENAPI_AUTH_TYPES.some((type) => type === value)
-const isEntity = (value: string): value is OpenApiPullEntity => OPENAPI_PULL_ENTITIES.some((entity) => entity === value)
+const isMethod = (value: string): value is OpenApiMethod => METHODS.has(value)
+const isAuthType = (value: string): value is OpenApiAuthType => AUTH_TYPES.has(value)
+const isEntity = (value: string): value is OpenApiPullEntity => PULL_ENTITIES.has(value)
 
 const cleanParams = (raw: unknown): ReadonlyArray<OpenApiParam> =>
     (Array.isArray(raw) ? raw : []).filter(isApiJsonObject).flatMap((param): Array<OpenApiParam> => {
@@ -50,7 +54,7 @@ const cleanOps = (raw: unknown): ReadonlyArray<OpenApiOperation> =>
 const cleanPulls = (raw: unknown, ops: ReadonlyArray<OpenApiOperation>): ReadonlyArray<OpenApiPull> =>
     (Array.isArray(raw) ? raw : []).filter(isApiJsonObject).flatMap((pull): Array<OpenApiPull> => {
         const op = ops.find((candidate) => candidate.id === clip(pull.opId))
-        if (!op || op.method !== "GET") return []
+        if (op?.method !== "GET") return []
         const entity = clip(pull.entity)
         return [
             {
@@ -64,6 +68,12 @@ const cleanPulls = (raw: unknown, ops: ReadonlyArray<OpenApiOperation>): Readonl
         ]
     })
 
+const trimTrailingSlashes = (value: string): string => {
+    let end = value.length
+    while (end > 0 && value[end - 1] === "/") end -= 1
+    return value.slice(0, end)
+}
+
 /** Cleans a config that came from the browser or storage: unknown values are dropped, never trusted. */
 export const normalizeConfig = (raw: unknown): OpenApiConfig => {
     const source = isApiJsonObject(raw) ? raw : {}
@@ -76,7 +86,7 @@ export const normalizeConfig = (raw: unknown): OpenApiConfig => {
     return {
         v: 1,
         specUrl: clip(source.specUrl, 1000),
-        baseUrl: clip(source.baseUrl, 1000).replace(/\/+$/u, ""),
+        baseUrl: trimTrailingSlashes(clip(source.baseUrl, 1000)),
         authType: isAuthType(authType) ? authType : "none",
         authName: clip(source.authName, 100),
         ops,
@@ -111,7 +121,7 @@ export const parseAuth = (raw: string): OpenApiAuth => {
 
 /** The typed auth with blank secrets filled from the stored one when the type is unchanged (edit mode). */
 export const mergeAuth = (typed: OpenApiAuth, stored: OpenApiAuth | null): OpenApiAuth => {
-    if (stored === null || stored.type !== typed.type) return typed
+    if (stored?.type !== typed.type) return typed
     return {
         ...typed,
         value: typed.value || stored.value,

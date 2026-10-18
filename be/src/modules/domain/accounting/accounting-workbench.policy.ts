@@ -46,6 +46,11 @@ interface MutableMeasure {
     vnd: MutableSplit
     count: MutableSplit
 }
+/** Invoice measures accumulated within a reporting period. */
+interface InvoiceMeasures {
+    readonly income: MutableMeasure
+    readonly receivable: MutableMeasure
+}
 /** The records kept after excluding test data. */
 interface KeptRows<Row> {
     rows: ReadonlyArray<Row>
@@ -136,21 +141,15 @@ const withoutTests = <Row>(rows: ReadonlyArray<Row>, isTest: (row: Row) => boole
 
 /* ------------------------------------------------------------------ periods, ageing, waiting */
 
-const buildPeriod = (
-    key: AccountingPeriodKey,
-    now: Date,
+/** Counts paid income and issued receivables within one period, keeping income in its existing week bar. */
+const invoiceMeasuresOf = (
     invoices: ReadonlyArray<BookInvoice>,
-    transactions: ReadonlyArray<BookTransaction>,
-): AccountingPeriod => {
-    const from = monthStart(now, key === "this" ? 0 : 1)
-    const to = monthStart(now, key === "this" ? -1 : 0)
+    from: number,
+    to: number,
+    bars: Map<number, MutableWeek>,
+): InvoiceMeasures => {
     const income = emptyMeasure()
     const receivable = emptyMeasure()
-    const unmatched = emptyMeasure()
-    const bars = new Map<number, MutableWeek>()
-    for (let week = weekStart(from); week < to; week += 7 * DAY) {
-        bars.set(week, { startIso: new Date(week).toISOString(), live: 0, simulated: 0 })
-    }
     for (const invoice of invoices) {
         if (invoice.status === "paid") {
             const at = invoice.paid_at ?? invoice.issued_at ?? invoice.created_at
@@ -162,6 +161,23 @@ const buildPeriod = (
             addTo(receivable, invoice.origin, invoice.amount_vnd)
         }
     }
+    return { income, receivable }
+}
+
+const buildPeriod = (
+    key: AccountingPeriodKey,
+    now: Date,
+    invoices: ReadonlyArray<BookInvoice>,
+    transactions: ReadonlyArray<BookTransaction>,
+): AccountingPeriod => {
+    const from = monthStart(now, key === "this" ? 0 : 1)
+    const to = monthStart(now, key === "this" ? -1 : 0)
+    const unmatched = emptyMeasure()
+    const bars = new Map<number, MutableWeek>()
+    for (let week = weekStart(from); week < to; week += 7 * DAY) {
+        bars.set(week, { startIso: new Date(week).toISOString(), live: 0, simulated: 0 })
+    }
+    const { income, receivable } = invoiceMeasuresOf(invoices, from, to, bars)
     for (const tx of transactions) {
         if (!inRange(tx.occurred_at, from, to)) continue
         if (tx.status === "matched" && tx.invoice_id !== null) continue

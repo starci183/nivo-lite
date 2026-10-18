@@ -46,6 +46,16 @@ The capability is off while its keys are absent; a group is all-or-none where no
 | `OPENROUTER_API_KEY` | Language-model provider keys: read by the api model client (`llm.config.ts`) and, from the sealed `api` member, granted to openclaw. |
 | `DEEPSEEK_API_KEY` | Language-model provider keys: read by the api model client (`llm.config.ts`) and, from the sealed `api` member, granted to openclaw. |
 
+## api: optional executable paths
+
+These nonsecret keys select operator-installed executables. Omission retains the platform installation defaults. Paths must be absolute and local; the executable and every parent directory must be unwritable by untrusted users. PATH is never searched.
+
+| Key | Semantics |
+| --- | --- |
+| `VIDEO_FFMPEG_PATH` | Optional trusted FFmpeg executable path. |
+| `VIDEO_FFPROBE_PATH` | Optional trusted FFprobe executable path. |
+| `VIDEO_NICE_PATH` | Optional trusted priority-lowering executable path, used when priority lowering is enabled. |
+
 ## Stack settings (sealed `stack`, read at render time)
 
 | Key | Semantics |

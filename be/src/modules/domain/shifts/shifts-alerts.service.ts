@@ -152,7 +152,7 @@ export class ShiftsAlertsService implements OnModuleInit {
     async remind(workspaceId: string, shiftId: string): Promise<string> {
         if (!(await this.isOn(workspaceId))) return "skipped: automation off"
         const item = await this.alertShift(workspaceId, shiftId)
-        if (item === undefined || item.shift.staffId === null) return "skipped: shift not active"
+        if (item?.shift.staffId === undefined || item.shift.staffId === null) return "skipped: shift not active"
         if (item.reminded) return "skipped: already reminded"
         const setup = await this.data.loadSetup(workspaceId, false)
         const verdict = await this.gate.request({
@@ -175,7 +175,7 @@ export class ShiftsAlertsService implements OnModuleInit {
     async noShow(workspaceId: string, shiftId: string, now: Date): Promise<string> {
         if (!(await this.isOn(workspaceId))) return "skipped: automation off"
         const item = await this.alertShift(workspaceId, shiftId)
-        if (item === undefined || item.shift.staffId === null) return "skipped: shift not active"
+        if (item?.shift.staffId === undefined || item.shift.staffId === null) return "skipped: shift not active"
         if (shiftWindow(item.shift).endMs <= now.getTime()) return "skipped: shift is over"
         if (item.checkedIn) return "checked in"
         if (item.alerted) return "already alerted"
@@ -209,7 +209,7 @@ export class ShiftsAlertsService implements OnModuleInit {
     async performRemind(context: PerformContext): Promise<PerformResult> {
         const { workspaceId } = context
         const item = await this.alertShift(workspaceId, fieldText(context.fields, "shift_id"))
-        if (item === undefined || item.shift.staffId === null)
+        if (item?.shift.staffId === undefined || item.shift.staffId === null)
             return { summary: this.words.text("shifts.remindInactive"), evidence: "pending" }
         const { shift } = item
         const setup = await this.data.loadSetup(workspaceId, false)

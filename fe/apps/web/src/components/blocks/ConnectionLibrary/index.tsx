@@ -10,12 +10,16 @@ import {
     matchesWords,
     passesFilters,
     searchWords,
+    asCategory,
+    asAudience,
+    catalogBadgeOf,
+    connectionCountsOf,
+    actionOf,
 } from "@/hooks/connection-catalog"
-import type { CatalogEntry } from "@/hooks/connection-catalog"
+
 import { useConnectionOverlays } from "@/hooks/connections"
 import type { Connection, ConnectorAudience, ConnectorCategory } from "@/modules/types"
-import { ConnectionLibraryBase } from "./component"
-import type { LibraryBadge, LibraryCard } from "./component"
+import { ConnectionLibraryBase, type LibraryCard } from "./component"
 
 /** What the page hands the library. */
 type ConnectionLibraryProps = {
@@ -25,41 +29,43 @@ type ConnectionLibraryProps = {
 }
 
 type Audience = Exclude<ConnectorAudience, "any">
-type Translate = (key: string, values?: Record<string, string | number>) => string
-
-const asCategory = (id: string): ConnectorCategory | "all" => CATEGORIES.find((category) => category === id) ?? "all"
-const asAudience = (id: string): Audience | "all" => AUDIENCES.find((audience) => audience === id) ?? "all"
-
-const badgeOf = (entry: CatalogEntry, count: number, t: Translate): LibraryBadge | null => {
-    if (count > 0) return { tone: "success", label: t("libConnected", { count }), isDot: true }
-    if (entry.status === "soon") return { tone: "neutral", label: t("statusSoon"), isDot: false }
-    return entry.status === "early" ? { tone: "neutral", label: t("statusEarly"), isDot: false } : null
-}
-
-const actionOf = (entry: CatalogEntry, count: number, t: Translate): string => {
-    if (entry.status === "soon") return t("libDetails")
-    return count > 0 ? t("libManage") : t("connect")
-}
-
 /**
  * The connector library tab: search (accents ignored), category and agent filters, sort by popularity or name. Pressing a card opens
  * the connector's detail drawer through the URL, so the library never needs to know who draws it.
  */
-const buildConnectionLibraryState = (
-    text: string,
-    t: ReturnType<typeof useTranslations<"connections">>,
-    audience: Audience | "all",
-    locale: ReturnType<typeof useLocale>,
-    category: ConnectorCategory | "all",
-    sort: "popular" | "name",
-    props: ConnectionLibraryProps,
-    countOf: Map<string, number>,
-    setText: import("react").Dispatch<import("react").SetStateAction<string>>,
-    setSort: import("react").Dispatch<import("react").SetStateAction<"popular" | "name">>,
-    setCategory: import("react").Dispatch<import("react").SetStateAction<ConnectorCategory | "all">>,
-    setAudience: import("react").Dispatch<import("react").SetStateAction<Audience | "all">>,
-    overlays: ReturnType<typeof useConnectionOverlays>,
-) => {
+/** Inputs for the connected state mapping. */
+interface BuildConnectionLibraryStateInput {
+    readonly text: string
+    readonly t: ReturnType<typeof useTranslations<"connections">>
+    readonly audience: Audience | "all"
+    readonly locale: ReturnType<typeof useLocale>
+    readonly category: ConnectorCategory | "all"
+    readonly sort: "popular" | "name"
+    readonly props: ConnectionLibraryProps
+    readonly countOf: Map<string, number>
+    readonly setText: import("react").Dispatch<import("react").SetStateAction<string>>
+    readonly setSort: import("react").Dispatch<import("react").SetStateAction<"popular" | "name">>
+    readonly setCategory: import("react").Dispatch<import("react").SetStateAction<ConnectorCategory | "all">>
+    readonly setAudience: import("react").Dispatch<import("react").SetStateAction<Audience | "all">>
+    readonly overlays: ReturnType<typeof useConnectionOverlays>
+}
+
+/** Derives display values and interactions from the supplied state. */
+const buildConnectionLibraryState = ({
+    text,
+    t,
+    audience,
+    locale,
+    category,
+    sort,
+    props,
+    countOf,
+    setText,
+    setSort,
+    setCategory,
+    setAudience,
+    overlays,
+}: BuildConnectionLibraryStateInput) => {
     const words = searchWords(text)
     const known = CATALOG.map((entry) => ({
         entry,
@@ -84,7 +90,7 @@ const buildConnectionLibraryState = (
     const cards: ReadonlyArray<LibraryCard> = shown.map(({ entry, name, blurb }) => {
         const count = entry.provider === undefined ? 0 : (countOf.get(entry.provider) ?? 0)
         const badge =
-            badgeOf(entry, count, t) ??
+            catalogBadgeOf(entry, count, t) ??
             (isLoading ? { tone: "neutral" as const, label: t("statusSoon"), isDot: false } : null)
         return {
             id: entry.id,
@@ -125,16 +131,9 @@ export const ConnectionLibrary = (props: ConnectionLibraryProps) => {
     const [category, setCategory] = useState<ConnectorCategory | "all">("all")
     const [audience, setAudience] = useState<Audience | "all">("all")
     const [sort, setSort] = useState<"popular" | "name">("popular")
-    const countOf = useMemo(() => {
-        const counts = new Map<string, number>()
-        for (const connection of props.items) {
-            if (connection.status !== "disconnected")
-                counts.set(connection.provider, (counts.get(connection.provider) ?? 0) + 1)
-        }
-        return counts
-    }, [props.items])
+    const countOf = useMemo(() => connectionCountsOf(props.items), [props.items])
 
-    const connected = buildConnectionLibraryState(
+    const connected = buildConnectionLibraryState({
         text,
         t,
         audience,
@@ -148,7 +147,7 @@ export const ConnectionLibrary = (props: ConnectionLibraryProps) => {
         setCategory,
         setAudience,
         overlays,
-    )
+    })
     if (connected === null) return null
 
     return (
@@ -186,7 +185,7 @@ const connectionLibraryProps = (
             { id: "all", label: t("libAll", { count: searched.length }) },
             ...CATEGORIES.filter((id) => perCategory(id) > 0).map((id) => ({
                 id,
-                label: `${t(`cat_${id}`)} · ${perCategory(id)}`,
+                label: `${t("cat_" + id)} · ${perCategory(id)}`,
             })),
         ],
         audienceLabel: t("libAudience"),

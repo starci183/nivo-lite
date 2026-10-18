@@ -4,7 +4,7 @@ import type { Locale } from "@modules/platform/i18n"
 import type { ModuleDefinition, ModuleGate } from "../modules.contracts"
 
 const BLOCK_END = "### end NIVO setup"
-const BLOCK_PATTERN = /\n*### NIVO setup[\s\S]*?### end NIVO setup\s*/gu
+const BLOCK_START = "### NIVO setup"
 
 /** What the owner does to a gate of the draft. */
 export type GateAction = "confirm" | "reopen" | "edit"
@@ -77,4 +77,19 @@ export const agentTextsOf = (
 }
 
 /** An agent text without the setup block of an earlier version. */
-export const stripSetupBlock = (value: string): string => value.replace(BLOCK_PATTERN, "").trimEnd()
+export const stripSetupBlock = (value: string): string => {
+    const parts: Array<string> = []
+    let cursor = 0
+    let start = value.indexOf(BLOCK_START)
+    while (start >= 0) {
+        const closing = value.indexOf(BLOCK_END, start + BLOCK_START.length)
+        if (closing < 0) break
+        let from = start
+        while (from > cursor && value[from - 1] === "\n") from -= 1
+        parts.push(value.slice(cursor, from))
+        cursor = closing + BLOCK_END.length
+        while (cursor < value.length && /\s/u.test(value[cursor] ?? "")) cursor += 1
+        start = value.indexOf(BLOCK_START, cursor)
+    }
+    return (parts.join("") + value.slice(cursor)).trimEnd()
+}

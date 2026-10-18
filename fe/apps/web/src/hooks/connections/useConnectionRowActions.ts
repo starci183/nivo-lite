@@ -6,7 +6,6 @@ import type { Connection, RowNote, SepayKeys } from "@/modules/types"
 import { useTranslations } from "next-intl"
 import { useState, useTransition } from "react"
 import { useConnectionRowCommands } from "./useConnectionRowCommands"
-import { useConnectionsRefresh } from "./useConnectionsRefresh"
 import { useSyncNow } from "./useSyncNow"
 
 /** Whether two row notes say the same thing. A finished sync builds a new object on every read. */
@@ -37,7 +36,6 @@ export interface ConnectionRowActions {
 export const useConnectionRowActions = (connection: Connection): ConnectionRowActions => {
     const t = useTranslations("connections")
     const commands = useConnectionRowCommands(connection.id)
-    const refresh = useConnectionsRefresh()
     const syncNow = useSyncNow()
     const [, startTransition] = useTransition()
     const [busy, setBusy] = useState<RowBusy>(null)

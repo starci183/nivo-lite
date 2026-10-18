@@ -43,7 +43,7 @@ export class PaymentSecretsService {
         const [row] = await this.entityManager.query<Array<ConnectionSecretRow>>(SELECT_CONNECTION_SECRET, [
             connectionId,
         ])
-        if (row === undefined || row.provider !== provider || row.status === "disconnected") return null
+        if (row?.provider !== provider || row.status === "disconnected") return null
         try {
             const credential = decryptSecret(row.ciphertext, this.options.channelTokenKey?.reveal())
             return { workspaceId: row.workspace_id, credential, webhookSecret: row.webhook_secret }

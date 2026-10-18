@@ -5,11 +5,6 @@ import type { EvidenceState, ReasonCode } from "@modules/domain/work-items"
 import type { ContractResult } from "@modules/domain/contracts"
 import type { WorkItemView } from "./work-item-view.contracts"
 
-/** A module action key. */
-type FlowAction = string
-/** A lead journey stage. */
-export type LeadStageId = string
-
 /** What needs a person on the Sales workbench. */
 export type AttentionKind = "decision" | "failed" | "clarify" | "overdue" | "awaiting_reply"
 
@@ -26,7 +21,7 @@ export interface AttentionRow {
     /** company. */
     readonly company: string
     /** stage. */
-    readonly stage: LeadStageId | null
+    readonly stage: string | null
     /** The need in one line: what NIVO proposes, the missing data, the overdue step or the last customer message. */
     readonly need: string
     /** since. */
@@ -38,7 +33,7 @@ export interface AttentionRow {
     /** The pending decision this row opens in the Decisions surface (work item or legacy approval card). */
     readonly decisionId: string | null
     /** action. */
-    readonly action: FlowAction | null
+    readonly action: string | null
     /** The fields NIVO is missing (clarification). */
     readonly missing: ReadonlyArray<string>
 }
@@ -56,7 +51,7 @@ export interface SalesDeal {
     /** need. */
     readonly need: string
     /** stage. */
-    readonly stage: LeadStageId
+    readonly stage: string
     /** valueVnd. */
     readonly valueVnd: number | null
     /** valueSource. */
@@ -90,7 +85,7 @@ export interface SalesDecision {
     /** customer. */
     readonly customer: string
     /** action. */
-    readonly action: FlowAction | "follow_up"
+    readonly action: string
     /** reason. */
     readonly reason: ReasonCode | null
     /** summary. */
@@ -128,7 +123,7 @@ export interface HandoffRow {
     /** amountVnd. */
     readonly amountVnd: number | null
     /** orderStatus. */
-    readonly orderStatus: Order["status"] | "won_without_order"
+    readonly orderStatus: Order["status"]
     /** confirmedAt. */
     readonly confirmedAt: string | null
     /** invoice. */
@@ -163,7 +158,7 @@ export interface AutoActivity {
     /** id. */
     readonly id: string
     /** action. */
-    readonly action: FlowAction
+    readonly action: string
     /** leadId. */
     readonly leadId: string | null
     /** customer. */

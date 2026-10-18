@@ -12,7 +12,16 @@ import { MetaConnectionsLogEvent } from "./meta-connections.log-events"
 import { parseMetaSecret } from "./meta-secret.policy"
 
 /** The customer id on the channel is the part before the colon (archived conversations carry a suffix). */
-const personOf = (externalId: string): string => externalId.replace(/:.*$/u, "")
+const personOf = (externalId: string): string => {
+    const end = externalId.length
+    let colon = -1
+    for (let at = end - 1; at >= 0; at -= 1) {
+        const char = externalId[at] ?? ""
+        if (/[\r\n\u2028\u2029]/u.test(char)) break
+        if (char === ":") colon = at
+    }
+    return colon < 0 ? externalId : externalId.slice(0, colon)
+}
 
 @Injectable()
 /** Sends the company side of a Facebook or Instagram conversation through the Page of the connection the conversation came in on. */

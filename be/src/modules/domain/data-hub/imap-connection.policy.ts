@@ -5,7 +5,7 @@ import type { ImapConfig, ImapParsedJson, ImapCredential, ImapInput, ImapSetting
 /** The look-back choices for a first read, in days. */
 export const SINCE_CHOICES: ReadonlyArray<number> = [7, 30, 90]
 
-const EVERY_CHOICES: ReadonlyArray<number> = [15, 60, 360]
+const EVERY_CHOICES: ReadonlySet<number> = new Set([15, 60, 360])
 const DEFAULT_SINCE_DAYS = 30
 
 const invalid = (detail: string): DataHubError =>
@@ -86,7 +86,7 @@ export const settingsFromInput = (input: ImapInput): ImapSettings => {
     const sinceDays = input.sinceDays ?? DEFAULT_SINCE_DAYS
     if (!SINCE_CHOICES.includes(sinceDays)) throw invalid(IMAP_CONNECTION_TEXT.sinceInvalid)
     const every = input.syncEveryMinutes ?? null
-    if (every !== null && !EVERY_CHOICES.includes(every)) throw invalid(IMAP_CONNECTION_TEXT.everyInvalid)
+    if (every !== null && !EVERY_CHOICES.has(every)) throw invalid(IMAP_CONNECTION_TEXT.everyInvalid)
     return { name, email, folders, sinceDays, every }
 }
 

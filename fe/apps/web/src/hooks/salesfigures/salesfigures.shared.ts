@@ -16,7 +16,7 @@ export interface SalesWords {
 const conversionMeta = (conversion: SalesConversion, words: SalesWords): string => {
     if (conversion.leads === 0) return words.t("metricConversionNone", { days: conversion.windowDays })
     const sourceName = (source: string): string =>
-        words.t(`source_${SOURCE_KEYS.some((key) => key === source) ? source : "other"}`)
+        words.t(`source_${SOURCE_KEYS.some((known) => known === source) ? source : "other"}`)
     const sources = conversion.sources
         .slice(0, MAX_SOURCES_SHOWN)
         .map(

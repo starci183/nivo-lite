@@ -244,3 +244,18 @@ export const VideoScriptStepBase = (props: VideoScriptStepBaseProps) => (
         />
     </div>
 )
+
+/** Reorders two valid scene positions without changing scene identities. */
+export const swapped = (
+    scenes: ReadonlyArray<ScriptScene>,
+    index: number,
+    target: number,
+): ReadonlyArray<ScriptScene> => {
+    const from = scenes[index]
+    const to = scenes[target]
+    if (from === undefined || to === undefined) return scenes
+    return scenes.map((scene, at) => {
+        if (at === index) return to
+        return at === target ? from : scene
+    })
+}

@@ -41,7 +41,7 @@ export interface NoteParts {
     readonly rest: string | null
 }
 
-const BASIS_PATTERN = /^(?:Căn cứ|Basis):\s*([\s\S]+)$/ // vn-ok: matches the stored vi prefix of the basis note
+const BASIS_PATTERN = /^(?:Căn cứ|Basis):([\s\S]+)$/ // vn-ok: matches the stored vi prefix of the basis note
 
 /** Splits the owner's written basis out of a decision note; any other note is returned whole as the rest. */
 export const splitBasis = (note: string | null): NoteParts => {

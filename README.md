@@ -54,6 +54,12 @@ Run it locally:
 
 Images: `npm run docker:build` builds the API and command line images; the web image is `docker build -f fe/apps/web/Dockerfile .` from the root. Deploys are manual workflows, described with the cutover in `be/docs/runbooks/cutover.md`.
 
+### Native FFmpeg setup
+
+Video rendering needs owner-installed FFmpeg and FFprobe. Fixed defaults are `/usr/bin/ffmpeg` and `/usr/bin/ffprobe` on Linux (including the API image), `/opt/homebrew/bin` on Apple Silicon macOS, `/usr/local/bin` on Intel macOS, and `C:/Program Files/ffmpeg/bin/ffmpeg.exe` plus `ffprobe.exe` on Windows. Install into these locations or supply `VIDEO_FFMPEG_PATH` and `VIDEO_FFPROBE_PATH` as absolute local executable paths before `npm run dev:be`; spaces are supported without shell quoting inside the values. Executables and their parent directories must be controlled by the trusted operator, with no write access for untrusted users. The integration never searches PATH.
+
+`VIDEO_FFMPEG_NICE` defaults to true on Linux and false elsewhere. Priority lowering uses `/bin/nice` on Linux and `/usr/bin/nice` on macOS; `VIDEO_NICE_PATH` selects another trusted absolute executable. Enabling it on Windows requires an explicit compatible nice executable. Relative paths and Windows network shares are rejected; unavailable executables fail the rendering call visibly.
+
 Guides and runbooks live in `be/docs`: `guides` for how the system works (jobs, second brain, connecting channels, adding an agent module) and `runbooks` for operating it (cutover, VPS stack, job operations, DNS at Tino, lite baseline, migration re-stamp map).
 
 ## Work

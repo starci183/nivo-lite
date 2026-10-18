@@ -7,11 +7,11 @@ import {
     type ContentItem,
     type ItemTransition,
     type MediaRef,
+    type EditorSave,
 } from "@/modules/content"
 import { channelLabel } from "./content.shared"
 import type { ActionReply, ContentCommand } from "./useContentCommand"
 import type { ContentEditorFormState } from "@/hooks/rhf"
-import type { EditorSave } from "@/modules/content"
 
 /** An answer that may carry a value. */
 export interface ValuedReply<V> extends ActionReply {

@@ -104,7 +104,7 @@ export interface CsvSavedImport {
 }
 
 const KINDS: ReadonlyArray<string> = ["text", "phone", "email", "number", "date"]
-const ENTITIES: ReadonlyArray<string> = [...TABLE_ENTITIES, "document"]
+const ENTITIES: ReadonlySet<string> = new Set([...TABLE_ENTITIES, "document"])
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
     typeof value === "object" && value !== null && !Array.isArray(value)
@@ -139,7 +139,7 @@ const entityOf = (value: unknown): CsvEntity => {
 
 /** Narrows the saved `DataJson` config; null when it is not a config. */
 export const parseConfig = (value: unknown): CsvConfig | null => {
-    if (!isRecord(value) || !ENTITIES.includes(String(value.entity))) return null
+    if (!isRecord(value) || !ENTITIES.has(String(value.entity))) return null
     const source = CSV_SOURCES.find((candidate) => candidate === value.source)
     if (source === undefined) return null
     const sheet = typeof value.sheet === "string" ? value.sheet : undefined

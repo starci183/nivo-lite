@@ -45,7 +45,7 @@ export const HiringInterviewDialog = (props: HiringInterviewDialogProps) => {
             title={say("ivTitle", { name })}
             closeLabel={say("close")}
             description={say("ivHint")}
-            footer={() => (
+            footer={
                 <HiringDialogFooter
                     say={say}
                     sendKey="ivSend"
@@ -55,7 +55,7 @@ export const HiringInterviewDialog = (props: HiringInterviewDialogProps) => {
                     onSend={on.send}
                     onClose={on.close}
                 />
-            )}
+            }
         >
             <div className={FORM_CLASS_NAME}>
                 {error === null ? null : <Alert tone="negative" title={say("ivFailed")} description={error} />}

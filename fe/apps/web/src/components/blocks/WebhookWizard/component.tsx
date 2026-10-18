@@ -136,7 +136,7 @@ const addressOf = (props: WebhookWizardBaseProps) => {
 
 /** n8n / Make / Zapier webhook in the shared wizard frame: address and events, signing key, a test send, done. */
 export const WebhookWizardBase = (props: WebhookWizardBaseProps) => {
-    const { props: view, on } = props
+    const { props: view } = props
     return (
         <WizardFrame
             title={view.title}

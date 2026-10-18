@@ -129,6 +129,27 @@ const closersOf = (stack: ReadonlyArray<string>, upTo: string): string => {
         .join("")
 }
 
+interface JsonStringState {
+    inString: boolean
+    escaped: boolean
+}
+
+/** Advances quote state without treating escaped quotes or brackets as JSON structure. */
+const consumeQuotedChar = (state: JsonStringState, char: string): void => {
+    if (state.escaped) state.escaped = false
+    else if (char === "\\") state.escaped = true
+    else if (char === '"') state.inString = false
+}
+
+/** Repairs missing inner closers and ignores a closer without a matching opener. */
+const closeJsonBracket = (stack: Array<string>, out: string, char: string): string => {
+    const want = char === "}" ? "{" : "["
+    if (!stack.includes(want)) return out
+    const closed = out + closersOf(stack, want)
+    stack.length = stack.lastIndexOf(want)
+    return closed.replace(/,\s*$/, "") + char
+}
+
 /**
  * The first JSON object of a model answer, with its brackets repaired when the model got the nesting wrong (a missing closer
  * before a bracket is the usual slip). Null when the object is cut off: half a scene is worse than asking again.
@@ -139,18 +160,15 @@ export const extractJsonObject = (text: string): string | null => {
     if (start < 0) return null
     const stack: Array<string> = []
     let out = ""
-    let inString = false
-    let escaped = false
+    const state: JsonStringState = { inString: false, escaped: false }
     for (const char of body.slice(start)) {
-        if (inString) {
+        if (state.inString) {
             out += char
-            if (escaped) escaped = false
-            else if (char === "\\") escaped = true
-            else if (char === '"') inString = false
+            consumeQuotedChar(state, char)
             continue
         }
         if (char === '"') {
-            inString = true
+            state.inString = true
             out += char
             continue
         }
@@ -160,11 +178,7 @@ export const extractJsonObject = (text: string): string | null => {
             continue
         }
         if (char === "}" || char === "]") {
-            const want = char === "}" ? "{" : "["
-            if (!stack.includes(want)) continue
-            out += closersOf(stack, want)
-            stack.length = stack.lastIndexOf(want)
-            out = out.replace(/,\s*$/, "") + char
+            out = closeJsonBracket(stack, out, char)
             if (stack.length === 0) return out
             continue
         }

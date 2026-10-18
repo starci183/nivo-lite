@@ -7,10 +7,9 @@ import { zaloWizardOf } from "@/hooks/connection-wire"
 import { useFirstEvent, useSetConnectionAgents } from "@/hooks/connections"
 import { useQueryZaloConnectionSwr } from "@/hooks/swr"
 import type { AgentOption, WizardNote, ZaloWizardConnection } from "@/modules/types"
-import { canSaveOaSecret, ZALO_STEPS, zaloFailureOf, zaloStartStepOf } from "./zalo-wizard.shared"
-import type { ZaloFields } from "./zalo-wizard.shared"
-import { useZaloCommands } from "./useZaloCommands"
-import type { ZaloCommands } from "./useZaloCommands"
+import { canSaveOaSecret, ZALO_STEPS, zaloFailureOf, zaloStartStepOf, type ZaloFields } from "./zalo-wizard.shared"
+
+import { useZaloCommands, type ZaloCommands } from "./useZaloCommands"
 
 /** What the Zalo wizard needs from its drawer. */
 interface ZaloWizardInput {
@@ -52,7 +51,7 @@ export const useZaloWizard = (input: ZaloWizardInput) => {
     const watch = useFirstEvent({ connectionId: conn === null ? null : conn.id, isActive: step === "verify" })
     const firstEvent = watch.event ?? (conn === null ? null : conn.firstEvent)
 
-    const { saveSecret, authorize, go, fail, create, finish } = createZaloWizardActions(
+    const { saveSecret, authorize, go, create, finish } = createZaloWizardActions({
         conn,
         fields,
         startTransition,
@@ -64,7 +63,7 @@ export const useZaloWizard = (input: ZaloWizardInput) => {
         input,
         setAgentsOf,
         agentIds,
-    )
+    })
 
     return {
         index,
@@ -93,19 +92,33 @@ export const useZaloWizard = (input: ZaloWizardInput) => {
     }
 }
 
-const createZaloWizardActions = (
-    conn: ZaloWizardConnection | null,
-    fields: ZaloFields,
-    startTransition: import("react").TransitionStartFunction,
-    commands: ZaloCommands,
-    setConn: import("react").Dispatch<import("react").SetStateAction<ZaloWizardConnection | null>>,
-    setFields: import("react").Dispatch<import("react").SetStateAction<ZaloFields>>,
-    setNote: import("react").Dispatch<import("react").SetStateAction<WizardNote | null>>,
-    setIndex: import("react").Dispatch<import("react").SetStateAction<number>>,
-    input: ZaloWizardInput,
-    setAgentsOf: ReturnType<typeof useSetConnectionAgents>,
-    agentIds: ReadonlyArray<string>,
-) => {
+type ZaloWizardActionsInput = {
+    readonly conn: ZaloWizardConnection | null
+    readonly fields: ZaloFields
+    readonly startTransition: import("react").TransitionStartFunction
+    readonly commands: ZaloCommands
+    readonly setConn: import("react").Dispatch<import("react").SetStateAction<ZaloWizardConnection | null>>
+    readonly setFields: import("react").Dispatch<import("react").SetStateAction<ZaloFields>>
+    readonly setNote: import("react").Dispatch<import("react").SetStateAction<WizardNote | null>>
+    readonly setIndex: import("react").Dispatch<import("react").SetStateAction<number>>
+    readonly input: ZaloWizardInput
+    readonly setAgentsOf: ReturnType<typeof useSetConnectionAgents>
+    readonly agentIds: ReadonlyArray<string>
+}
+
+const createZaloWizardActions = ({
+    conn,
+    fields,
+    startTransition,
+    commands,
+    setConn,
+    setFields,
+    setNote,
+    setIndex,
+    input,
+    setAgentsOf,
+    agentIds,
+}: ZaloWizardActionsInput) => {
     const saveSecret = () => {
         if (conn === null) return
         if (conn.oaSecretSaved && fields.oaSecret.trim() === "") return go(2)

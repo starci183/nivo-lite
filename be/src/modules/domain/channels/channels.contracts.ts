@@ -54,7 +54,7 @@ export interface ZaloReturn {
     /** The authorization code to exchange for tokens. */
     readonly code: string
     /** The OA id Zalo reports, when it does. */
-    readonly oaId?: string | undefined
+    readonly oaId?: string
 }
 
 /** How a caller asks for an access token. */

@@ -1,7 +1,7 @@
 "use client"
 
-import { useSettledGraphQL } from "@/hooks/connection-wizard"
-import type { Settled } from "@/hooks/connection-wizard"
+import { useSettledGraphQL, type Settled } from "@/hooks/connection-wizard"
+
 import { useConnectionsRefresh } from "@/hooks/connections"
 import {
     useMutateSaveDatabaseConnectionSwr,
@@ -59,8 +59,7 @@ export const useDatabaseCommands = (): DatabaseCommands => {
                         everyMinutes: form.everyMinutes,
                     }),
                 )
-                if (settled.kind !== "ok") return settled
-                await refresh()
+                if (settled.kind === "ok") await refresh()
                 return settled
             },
         }),

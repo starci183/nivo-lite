@@ -45,6 +45,15 @@ const build = async () => {
 }
 
 describe("WorkspaceWriterService", () => {
+    it("keeps manifest paths in locale-independent ordinal order", async () => {
+        const { writer, disk } = await build()
+        writer.write(
+            ROOT,
+            ["a.md", "Z.md", "A.md"].map((path) => ({ path, content: path })),
+        )
+        expect(disk.store.get(MANIFEST)).toBe(JSON.stringify(["A.md", "Z.md", "a.md"], null, 2))
+    })
+
     describe("contentHash and metaOf", () => {
         it("hashes the bundle independent of file order", async () => {
             const { writer } = await build()

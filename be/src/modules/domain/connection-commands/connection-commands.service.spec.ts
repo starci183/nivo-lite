@@ -1,4 +1,3 @@
-import { strict as assert } from "node:assert"
 import { Test } from "@nestjs/testing"
 import { SELF_DECLARED_DEPS_METADATA } from "@nestjs/common/constants"
 import { mock, mockEntityManager } from "@starci/jest-preset"
@@ -12,16 +11,10 @@ import { MetaConnectionsService } from "@modules/domain/meta-connections"
 import { WebhookConnectionsService } from "@modules/domain/webhook-connections"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import type { ErrorsService } from "@modules/platform/errors"
+import { ERRORS_SERVICE } from "@modules/platform/errors"
 import { ConnectionCommandsService } from "./connection-commands.service"
 import type { ConnectionCommandRow } from "./persistence/connection-commands.rows"
 import { FIND_COMMAND, FINISH_COMMAND } from "./persistence/connection-commands.sql"
-
-// Read the actual injection token because the errors public entry exports only its decorator.
-const injectionTokens: ReadonlyArray<{ readonly index: number; readonly param: typeof ERRORS_SERVICE }> =
-    Reflect.getMetadata(SELF_DECLARED_DEPS_METADATA, ConnectionCommandsService)
-const errorsInjection = injectionTokens.find(({ index }) => index === 1)
-assert.ok(errorsInjection, "ConnectionCommandsService must declare its errors injection token")
-const ERRORS_SERVICE: unique symbol = errorsInjection.param
 
 const CONNECTION_ID = "00000000-0000-0000-0000-000000000001"
 const row: ConnectionCommandRow = {
@@ -61,6 +54,15 @@ const build = async (entityManager: MockEntityManager) => {
 }
 
 describe("ConnectionCommandsService", () => {
+    it("declares the platform errors service injection token", () => {
+        const tokens: ReadonlyArray<{ readonly index: number; readonly param: symbol }> = Reflect.getMetadata(
+            SELF_DECLARED_DEPS_METADATA,
+            ConnectionCommandsService,
+        )
+        const injection = tokens.find(({ index }) => index === 1)
+        expect(injection?.param).toBe(ERRORS_SERVICE)
+    })
+
     it("leaves an unknown command untouched", async () => {
         const entityManager = mockEntityManager({ query: [FIND_COMMAND, []] })
         const { service, connections, errors } = await build(entityManager)

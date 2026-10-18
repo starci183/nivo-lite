@@ -13,6 +13,21 @@ const buildSubject = async () => {
     return moduleRef.get<typeof import("./openapi-request.policy")>(SUBJECT)
 }
 
+const registerRequestEdgeCases = () => {
+    it("trims long slash suffixes and lets authentication override fixed and input query parameters", async () => {
+        const subject = await buildSubject()
+        const built = subject.buildRequest(
+            call({
+                baseUrl: `https://api.example/v1${"/".repeat(100_000)}`,
+                fixedQuery: "q=fixed",
+                auth: auth({ type: "query", name: "q", value: "credential" }),
+                input: { id: false, q: 0 },
+            }),
+        )
+        expect(built.url.toString()).toBe("https://api.example/v1/orders/false?q=credential")
+    })
+}
+
 const registerRequestParameters = () => {
     it("fills the path, the fixed query, the query and the header, and strips a trailing slash", async () => {
         const subject = await buildSubject()
@@ -158,6 +173,7 @@ const call = (partial: Partial<OpenApiCall> = {}): OpenApiCall => ({
 })
 
 describe("buildRequest", () => {
+    registerRequestEdgeCases()
     registerRequestParameters()
     registerRequestBodies()
 })

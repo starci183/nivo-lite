@@ -8,8 +8,7 @@ import type { AgentOption, MetaCheck, MetaWizardConnection, WizardNote } from "@
 import { useTranslations } from "next-intl"
 import { useState, useTransition } from "react"
 import { META_STEPS, metaFailureOf, metaStartStepOf } from "./meta-wizard.shared"
-import { useMetaCommands } from "./useMetaCommands"
-import type { MetaCommands } from "./useMetaCommands"
+import { useMetaCommands, type MetaCommands } from "./useMetaCommands"
 
 /** What the Meta wizard needs from its drawer. */
 interface MetaWizardInput {
@@ -56,7 +55,7 @@ export const useMetaWizard = (input: MetaWizardInput) => {
         setIndex(metaStartStepOf(stored, failure !== null))
     })
 
-    const { fail, go, runCheck, login, choose, saveAgents } = createMetaWizardActions(
+    const { go, runCheck, login, choose, saveAgents } = createMetaWizardActions({
         setNote,
         setIndex,
         conn,
@@ -69,7 +68,7 @@ export const useMetaWizard = (input: MetaWizardInput) => {
         setConn,
         setAgentsOf,
         agentIds,
-    )
+    })
 
     return {
         index,
@@ -96,21 +95,36 @@ export const useMetaWizard = (input: MetaWizardInput) => {
         },
     }
 }
+/** The resolved inputs for meta wizard actions input. */
+interface MetaWizardActionsInput {
+    readonly setNote: import("react").Dispatch<import("react").SetStateAction<WizardNote | null>>
+    readonly setIndex: import("react").Dispatch<import("react").SetStateAction<number>>
+    readonly conn: MetaWizardConnection | null
+    readonly startChecking: import("react").TransitionStartFunction
+    readonly commands: MetaCommands
+    readonly setCheck: import("react").Dispatch<import("react").SetStateAction<MetaCheck | null>>
+    readonly startTransition: import("react").TransitionStartFunction
+    readonly pageId: string
+    readonly tm: ReturnType<typeof useTranslations<"metaWizard">>
+    readonly setConn: import("react").Dispatch<import("react").SetStateAction<MetaWizardConnection | null>>
+    readonly setAgentsOf: ReturnType<typeof useSetConnectionAgents>
+    readonly agentIds: ReadonlyArray<string>
+}
 
-const createMetaWizardActions = (
-    setNote: import("react").Dispatch<import("react").SetStateAction<WizardNote | null>>,
-    setIndex: import("react").Dispatch<import("react").SetStateAction<number>>,
-    conn: MetaWizardConnection | null,
-    startChecking: import("react").TransitionStartFunction,
-    commands: MetaCommands,
-    setCheck: import("react").Dispatch<import("react").SetStateAction<MetaCheck | null>>,
-    startTransition: import("react").TransitionStartFunction,
-    pageId: string,
-    tm: ReturnType<typeof useTranslations<"metaWizard">>,
-    setConn: import("react").Dispatch<import("react").SetStateAction<MetaWizardConnection | null>>,
-    setAgentsOf: ReturnType<typeof useSetConnectionAgents>,
-    agentIds: ReadonlyArray<string>,
-) => {
+const createMetaWizardActions = ({
+    setNote,
+    setIndex,
+    conn,
+    startChecking,
+    commands,
+    setCheck,
+    startTransition,
+    pageId,
+    tm,
+    setConn,
+    setAgentsOf,
+    agentIds,
+}: MetaWizardActionsInput) => {
     const go = (to: number) => {
         setNote(null)
         setIndex(to)

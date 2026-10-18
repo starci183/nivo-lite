@@ -104,10 +104,10 @@ export class KnowledgeRecallService {
             (groups, fact) => new Map([...groups, [fact.subjectKey, [...(groups.get(fact.subjectKey) ?? []), fact]]]),
             new Map(),
         )
-        const blocks = [...subjects.values()].map(
-            (group) =>
-                `### ${group[0]?.subjectLabel ?? ""}\n${group.map((fact) => `- ${fact.attributeLabel}: ${fact.value}`).join("\n")}`,
-        )
+        const blocks = [...subjects.values()].map((group) => {
+            const lines = group.map((fact) => `- ${fact.attributeLabel}: ${fact.value}`).join("\n")
+            return `### ${group[0]?.subjectLabel ?? ""}\n${lines}`
+        })
         return this.catalog.get(
             "bundle.memoryFacts",
             { body: withinBudget(blocks, budget).join("\n\n") },

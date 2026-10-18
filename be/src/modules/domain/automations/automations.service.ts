@@ -157,8 +157,7 @@ export class AutomationsService {
             throw new AutomationsError({ code: AutomationsErrorCode.RunNowUnavailable })
         }
         const pipeline = await this.pipelines.findPipeline(workspaceId, templateKey)
-        if (pipeline === null || !pipeline.enabled)
-            throw new AutomationsError({ code: AutomationsErrorCode.PipelineOff })
+        if (!pipeline?.enabled) throw new AutomationsError({ code: AutomationsErrorCode.PipelineOff })
         const now = this.clock.now()
         const today = vnClock(now).day
         const id = await this.n8nRuns.startRun({

@@ -1,5 +1,6 @@
 import type { EditorScene } from "./video-workbench.contracts"
 import { editorScenesOf, videoRecord } from "./video-workbench.policy"
+import type { VideoScriptQuoteState } from "./types/video-scripting.contracts"
 
 /** Maximum age of a script operation before a fresh request may replace it. */
 export const VIDEO_SCRIPT_STALE_MS = 5 * 60_000
@@ -43,6 +44,14 @@ export const videoScriptRoleAt = (index: number, count: number): string => {
     return index === count - 1 ? "cta" : "body"
 }
 
+const openingOf = (closer: string): string => (closer === "}" ? "{" : "[")
+
+const quoteState = (character: string, escaped: boolean): VideoScriptQuoteState => {
+    if (escaped) return { quoted: true, escaped: false }
+    if (character === "\\") return { quoted: true, escaped: true }
+    return { quoted: character !== '"', escaped: false }
+}
+
 /** Extracts the first complete JSON object, repairing missing nested closers but refusing truncation. */
 export const extractVideoScriptJson = (text: string): string | null => {
     const body = text.replace(/```(?:json)?/giu, "").trim()
@@ -55,9 +64,9 @@ export const extractVideoScriptJson = (text: string): string | null => {
     for (const character of body.slice(start)) {
         if (quoted) {
             output += character
-            if (escaped) escaped = false
-            else if (character === "\\") escaped = true
-            else if (character === '"') quoted = false
+            const state = quoteState(character, escaped)
+            escaped = state.escaped
+            quoted = state.quoted
         } else if (character === '"') {
             quoted = true
             output += character
@@ -65,7 +74,7 @@ export const extractVideoScriptJson = (text: string): string | null => {
             stack.push(character)
             output += character
         } else if (character === "}" || character === "]") {
-            const open = character === "}" ? "{" : "["
+            const open = openingOf(character)
             if (!stack.includes(open)) continue
             output += closeBefore(stack, open)
             stack.length = stack.lastIndexOf(open)

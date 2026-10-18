@@ -52,6 +52,13 @@ describe("connectionIdOfReturn", () => {
         expect(subject.connectionIdOfReturn(`https://nivo.vn/connections?id=${upper}&connect=meta`)).toBe(upper)
     })
 
+    it("ignores fragments and decodes the query of a relative return path", async () => {
+        const subject = await buildSubject()
+
+        expect(subject.connectionIdOfReturn(`/connections?id=${encodeURIComponent(id)}#id=invalid`)).toBe(id)
+        expect(subject.connectionIdOfReturn(`/connections#id=${id}`)).toBeNull()
+    })
+
     it.each([
         "/connections?connect=meta",
         "/connections?id=",

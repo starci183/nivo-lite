@@ -4,7 +4,7 @@ const VIETNAMESE_LABEL = ["th", 0xf4, "ng tin chuy", 0x1ec3, "n kho", 0x1ea3, "n
     .join("")
 
 const DETAILS_LINE = new RegExp(
-    `^\\s*[-*\\u2022]?\\s*(?:${VIETNAMESE_LABEL}|bank transfer details|payment details)\\s*[:\\uff1a]\\s*(.+?)\\s*$`,
+    String.raw`^\s*[-*\u2022]?\s*(?:${VIETNAMESE_LABEL}|bank transfer details|payment details)\s*[:\uff1a]\s*(.+?)\s*$`,
     "iu",
 )
 

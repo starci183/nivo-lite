@@ -1,3 +1,6 @@
+/** A nullable timestamp returned by the database driver. */
+export type NullableDateRow = Date | string | null
+
 /** The requirements column of public.hiring_jobs as stored (snake case keys, any key may be missing). */
 export interface RequirementsRow {
     /** Skills. */
@@ -119,7 +122,7 @@ export interface HiringJobsRow {
     /** The channels. */
     readonly channels: Array<string>
     /** When applications stop. */
-    readonly closes_at: Date | string | null
+    readonly closes_at: NullableDateRow
 }
 
 /** The columns of public.hiring_candidates the domain reads. */
@@ -179,9 +182,9 @@ export interface HiringInterviewsRow {
     /** The proposed slots. */
     readonly proposed_slots: Array<SlotRow> | null
     /** The confirmed start. */
-    readonly slot_start: Date | string | null
+    readonly slot_start: NullableDateRow
     /** The confirmed end. */
-    readonly slot_end: Date | string | null
+    readonly slot_end: NullableDateRow
     /** The status. */
     readonly status: string
     /** The link token. */
@@ -213,7 +216,7 @@ export interface HiringOffersRow {
     /** The decision. */
     readonly work_item_id: string | null
     /** When the offer lapses. */
-    readonly expires_at: Date | string | null
+    readonly expires_at: NullableDateRow
 }
 
 /** A workspace that uses hiring, with what the tick needs. */
@@ -329,9 +332,9 @@ export interface AvailabilityRow {
 /** The slots of an interviewer that are not free. */
 export interface BusyRow {
     /** The confirmed start. */
-    readonly slot_start: Date | string | null
+    readonly slot_start: NullableDateRow
     /** The confirmed end. */
-    readonly slot_end: Date | string | null
+    readonly slot_end: NullableDateRow
     /** The proposed slots. */
     readonly proposed_slots: Array<SlotRow> | null
     /** The status. */

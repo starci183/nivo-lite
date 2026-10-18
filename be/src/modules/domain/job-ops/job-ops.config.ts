@@ -3,8 +3,8 @@ import { JobOpsError, JobOpsErrorCode } from "./errors/job-ops.error"
 import type { JobsAlertOptions } from "./job-ops.options"
 
 const TIMER_DELAY_MAX = 2_147_483_647
-const INTEGER_PATTERN = /^[0-9]+$(?![\s\S])/u
-const DURATION_PATTERN = /^[0-9]+(?:ms|s|m|h)?$(?![\s\S])/u
+const INTEGER_PATTERN = /^\d+$(?![\s\S])/u
+const DURATION_PATTERN = /^\d+(?:ms|s|m|h)?$(?![\s\S])/u
 
 const requireValue = (value: number, key: string, minimum: number, maximum = Number.MAX_SAFE_INTEGER): number => {
     if (!Number.isSafeInteger(value) || value < minimum || value > maximum) {

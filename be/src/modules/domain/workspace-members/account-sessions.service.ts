@@ -47,7 +47,6 @@ export class AccountSessionsService {
         if (sessionId === currentSessionId)
             throw new WorkspaceMembersError({ code: WorkspaceMembersErrorCode.CurrentSession })
         const [row] = await this.entityManager.query<Array<RevokedRow>>(REVOKE_SESSION, [userId, sessionId])
-        if (row === undefined || !row.revoked)
-            throw new WorkspaceMembersError({ code: WorkspaceMembersErrorCode.SessionNotFound })
+        if (!row?.revoked) throw new WorkspaceMembersError({ code: WorkspaceMembersErrorCode.SessionNotFound })
     }
 }

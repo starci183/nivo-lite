@@ -8,8 +8,8 @@ import {
     SurfaceCard,
     Text,
 } from "@starci/grammar/common"
-import { AgentCatalogCard } from "@/components/composites/AgentCatalogCard"
-import type { AgentCatalogCardProps } from "@/components/composites/AgentCatalogCard"
+import { AgentCatalogCard, type AgentCatalogCardProps } from "@/components/composites/AgentCatalogCard"
+
 import { SlotView } from "@/components/composites/SlotView"
 import type { DataSlot, SlotLabels } from "@/modules/types"
 import {
@@ -115,9 +115,7 @@ export const AgentCatalogBase = (props: AgentCatalogBaseProps) => (
                             <EmptyNotice
                                 message={props.props.emptyTitle}
                                 description={props.props.emptyHint}
-                                {...(props.props.emptyAction === undefined
-                                    ? {}
-                                    : { actionLabel: props.props.emptyAction, onAction: props.on.clear })}
+                                {...catalogEmptyActionOf(props)}
                             />
                         </SurfaceCard>
                     ) : null}
@@ -144,3 +142,7 @@ export const AgentCatalogBase = (props: AgentCatalogBaseProps) => (
         </SlotView>
     </div>
 )
+
+/** Adds the clear action only when its localized label is available. */
+const catalogEmptyActionOf = (props: AgentCatalogBaseProps) =>
+    props.props.emptyAction === undefined ? {} : { actionLabel: props.props.emptyAction, onAction: props.on.clear }

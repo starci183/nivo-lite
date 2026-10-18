@@ -25,7 +25,7 @@ export const parseWindows = (weekday: number, text: string): Array<HiringAvailab
         .split(",")
         .map((entry) => entry.trim())
         .filter((entry) => entry !== "")) {
-        const [from, to] = part.split(/\s*-\s*/)
+        const [from, to] = part.split("-")
         const startMin = minutesOf(from ?? "")
         const endMin = minutesOf(to ?? "")
         if (startMin === null || endMin === null || endMin <= startMin) return null

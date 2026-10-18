@@ -9,8 +9,10 @@ import {
     Tabs,
     Text,
     TextAction,
+    type BadgeTone,
+    type BreadcrumbItem,
 } from "@starci/grammar/common"
-import type { BadgeTone, BreadcrumbItem } from "@starci/grammar/common"
+
 import { SlotView } from "@/components/composites/SlotView"
 import type { DataSlot, SlotLabels } from "@/modules/types"
 import { FILTERS, HEAD, PAGE, TABS } from "./classNames"
@@ -155,35 +157,33 @@ export const DecisionsBoardBase = (props: DecisionsBoardBaseProps) => {
 const DecisionRow = (props: DecisionRowProps) => {
     const { row } = props
     return (
-        <>
-            <ListRow
-                key={row.id}
-                title={row.actionLabel}
-                description={`${row.departmentLabel} · ${row.decider} · ${row.when}`}
-                badges={<Badge tone={row.outcomeTone}>{row.outcomeLabel}</Badge>}
-            >
-                {row.reason === null ? null : <Text size="sm">{row.reason}</Text>}
-                {row.basis === null ? null : (
-                    <Text size="sm" weight="medium">
-                        {row.basis}
-                    </Text>
-                )}
-                {row.note === null ? null : (
-                    <Text size="sm" tone="muted">
-                        {row.note}
-                    </Text>
-                )}
-                {row.leadHref === null ? (
-                    <Text size="xs" tone="muted">
-                        {row.noLead}
-                    </Text>
-                ) : (
-                    <TextAction href={row.leadHref} size="sm">
-                        {row.leadLabel}
-                    </TextAction>
-                )}
-            </ListRow>
-        </>
+        <ListRow
+            key={row.id}
+            title={row.actionLabel}
+            description={`${row.departmentLabel} · ${row.decider} · ${row.when}`}
+            badges={<Badge tone={row.outcomeTone}>{row.outcomeLabel}</Badge>}
+        >
+            {row.reason === null ? null : <Text size="sm">{row.reason}</Text>}
+            {row.basis === null ? null : (
+                <Text size="sm" weight="medium">
+                    {row.basis}
+                </Text>
+            )}
+            {row.note === null ? null : (
+                <Text size="sm" tone="muted">
+                    {row.note}
+                </Text>
+            )}
+            {row.leadHref === null ? (
+                <Text size="xs" tone="muted">
+                    {row.noLead}
+                </Text>
+            ) : (
+                <TextAction href={row.leadHref} size="sm">
+                    {row.leadLabel}
+                </TextAction>
+            )}
+        </ListRow>
     )
 }
 

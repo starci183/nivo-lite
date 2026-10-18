@@ -43,10 +43,9 @@ export const conversationRowMapper = (
         }
     }
 }
-
-/** Assembles the resolved domain state and commands for its drawing. */
-export const viewOf = (
-    loaded:
+/** The resolved inputs for agent chat view input. */
+interface AgentChatViewInput {
+    readonly loaded:
         | {
               id: string
               module: string
@@ -58,18 +57,18 @@ export const viewOf = (
               workspaceId: string
               showWelcome: boolean
           }
-        | undefined,
-    page: ReturnType<typeof useQueryAgentChatPageSwr>,
-    tab: ChatTab,
-    rows: ReturnType<typeof useAgentChatThreadView>["rows"],
-    thread: ReturnType<typeof useAgentChatThreadView>["thread"],
-    actions: ReturnType<typeof useAgentChatActions>,
-    queryError: unknown,
-    history: ReturnType<typeof useQueryAgentChatConversationsSwr>,
-    messages: ReturnType<typeof useQueryAgentChatMessagesSwr>,
-    isTakenOver: boolean,
-    selectedId: string | null,
-    selectedConversation:
+        | undefined
+    readonly page: ReturnType<typeof useQueryAgentChatPageSwr>
+    readonly tab: ChatTab
+    readonly rows: ReturnType<typeof useAgentChatThreadView>["rows"]
+    readonly thread: ReturnType<typeof useAgentChatThreadView>["thread"]
+    readonly actions: ReturnType<typeof useAgentChatActions>
+    readonly queryError: unknown
+    readonly history: ReturnType<typeof useQueryAgentChatConversationsSwr>
+    readonly messages: ReturnType<typeof useQueryAgentChatMessagesSwr>
+    readonly isTakenOver: boolean
+    readonly selectedId: string | null
+    readonly selectedConversation:
         | {
               id: string
               kind: string
@@ -79,10 +78,28 @@ export const viewOf = (
               handledBy: string | null
               createdAt: string
           }
-        | undefined,
-    changeTab: ReturnType<typeof useAgentChatThreadView>["changeTab"],
-    opened: ReturnType<typeof useAgentChatNavigation>["opened"],
-) => {
+        | undefined
+    readonly changeTab: ReturnType<typeof useAgentChatThreadView>["changeTab"]
+    readonly opened: ReturnType<typeof useAgentChatNavigation>["opened"]
+}
+
+/** Assembles the resolved domain state and commands for its drawing. */
+export const viewOf = ({
+    loaded,
+    page,
+    tab,
+    rows,
+    thread,
+    actions,
+    queryError,
+    history,
+    messages,
+    isTakenOver,
+    selectedId,
+    selectedConversation,
+    changeTab,
+    opened,
+}: AgentChatViewInput) => {
     return {
         agent: loaded,
         pageError: page.error instanceof Error ? page.error.message : null,

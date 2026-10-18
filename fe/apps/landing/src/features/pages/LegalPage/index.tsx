@@ -11,7 +11,8 @@ interface LegalPageProps {
 /** The document title of a legal page: the document's name and the product. */
 export const legalMetadata = async (doc: LegalDocKey): Promise<Metadata> => {
     const t = await getTranslations("legal")
-    return { title: `${t(`${doc}.title`)} - ${t("siteName")}` }
+    const title = t(`${doc}.title`)
+    return { title: `${title} - ${t("siteName")}` }
 }
 
 /** The public legal document with its wording resolved on the server. */

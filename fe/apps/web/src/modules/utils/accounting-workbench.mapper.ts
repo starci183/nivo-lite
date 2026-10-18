@@ -1,5 +1,4 @@
 import { z } from "zod"
-import type { FlowWorkItemView } from "@/modules/types"
 import { isActionKey, isModuleKey } from "@/modules/catalog"
 import { agentHref } from "@/modules/installations"
 import type {
@@ -10,6 +9,7 @@ import type {
 } from "@/modules/api"
 import type {
     AccountingCredit,
+    FlowWorkItemView,
     AccountingInvoice,
     AccountingLedgerEntry,
     AccountingOrder,

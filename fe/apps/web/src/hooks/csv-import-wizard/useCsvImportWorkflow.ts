@@ -2,25 +2,38 @@
 
 import { useState } from "react"
 import type { useSetConnectionAgents } from "@/hooks/connections"
-import { MAX_FILE_BYTES } from "./csv-import-wizard.shared"
-import type { CsvEntity, CsvSource } from "./csv-import-wizard.shared"
+import { MAX_FILE_BYTES, type CsvEntity, type CsvSource } from "./csv-import-wizard.shared"
 import type { CsvImportWizardInput, CsvImportFields } from "./useCsvImportWizard"
 import type { useTranslations } from "next-intl"
 import type { useCsvImportCommands, CsvImportCommands, CsvSourceArg } from "./useCsvImportCommands"
 import type { useCsvImportGrid } from "./useCsvImportGrid"
 
-const importNowOf = (
-    source: CsvSource,
-    fields: CsvImportFields,
-    fail: (text: string) => void,
-    t: ReturnType<typeof useTranslations<"connectorCsv">>,
-    commands: ReturnType<typeof useCsvImportCommands>,
-    name: string,
-    connectionId: string | undefined,
-    link: string,
-    sourceArg: (sheet?: string) => CsvSourceArg | null,
-    schedule: string,
-) => {
+/** The resolved inputs for csv import now input. */
+interface CsvImportNowInput {
+    readonly source: CsvSource
+    readonly fields: CsvImportFields
+    readonly fail: (text: string) => void
+    readonly t: ReturnType<typeof useTranslations<"connectorCsv">>
+    readonly commands: ReturnType<typeof useCsvImportCommands>
+    readonly name: string
+    readonly connectionId: string | undefined
+    readonly link: string
+    readonly sourceArg: (sheet?: string) => CsvSourceArg | null
+    readonly schedule: string
+}
+
+const importNowOf = ({
+    source,
+    fields,
+    fail,
+    t,
+    commands,
+    name,
+    connectionId,
+    link,
+    sourceArg,
+    schedule,
+}: CsvImportNowInput) => {
     return async () => {
         if (source === "document") {
             if (fields.docs.reduce((sum, doc) => sum + doc.size, 0) > MAX_FILE_BYTES) return fail(t("tooBig"))
@@ -33,19 +46,32 @@ const importNowOf = (
         return commands.runImport(arg, { name, mapping: fields.mapping, schedule: minutes })
     }
 }
+/** The resolved inputs for csv import actions input. */
+interface CsvImportActionsInput {
+    readonly patch: (next: Partial<CsvImportFields>) => void
+    readonly entity: Exclude<CsvEntity, "document">
+    readonly connectionId: string | undefined
+    readonly fields: CsvImportFields
+    readonly t: ReturnType<typeof useTranslations<"connectorCsv">>
+    readonly source: CsvSource
+    readonly link: string
+    readonly gridState: ReturnType<typeof useCsvImportGrid>
+    readonly setPending: import("react").Dispatch<import("react").SetStateAction<boolean>>
+    readonly commands: CsvImportCommands
+}
 
-const createCsvImportWizardActions = (
-    patch: (next: Partial<CsvImportFields>) => void,
-    entity: Exclude<CsvEntity, "document">,
-    connectionId: string | undefined,
-    fields: CsvImportFields,
-    t: ReturnType<typeof useTranslations<"connectorCsv">>,
-    source: CsvSource,
-    link: string,
-    gridState: ReturnType<typeof useCsvImportGrid>,
-    setPending: import("react").Dispatch<import("react").SetStateAction<boolean>>,
-    commands: CsvImportCommands,
-) => {
+const createCsvImportWizardActions = ({
+    patch,
+    entity,
+    connectionId,
+    fields,
+    t,
+    source,
+    link,
+    gridState,
+    setPending,
+    commands,
+}: CsvImportActionsInput) => {
     const fail = (text: string) => patch({ note: { tone: "negative", text } })
     const go = (to: number) => patch({ note: null, index: to })
 
@@ -93,26 +119,43 @@ const createCsvImportRunner =
         if (answer.kind !== "ok") return fail(answer.message)
         patch({ result: answer.value, note: null })
     }
+/** The resolved inputs for csv import workflow input. */
+interface CsvImportWorkflowInput {
+    readonly patch: (next: Partial<CsvImportFields>) => void
+    readonly entity: Exclude<CsvEntity, "document">
+    readonly connectionId: string | undefined
+    readonly fields: CsvImportFields
+    readonly t: ReturnType<typeof useTranslations<"connectorCsv">>
+    readonly source: CsvSource
+    readonly link: string
+    readonly gridState: ReturnType<typeof useCsvImportGrid>
+    readonly commands: CsvImportCommands
+    readonly name: string
+    readonly schedule: string
+    readonly input: CsvImportWizardInput
+    readonly setAgentsOf: ReturnType<typeof useSetConnectionAgents>
+    readonly agentIds: ReadonlyArray<string>
+}
 
 /** Owns preview/import progress and completion of the selected CSV or document source. */
-export const useCsvImportWorkflow = (
-    patch: (next: Partial<CsvImportFields>) => void,
-    entity: Exclude<CsvEntity, "document">,
-    connectionId: string | undefined,
-    fields: CsvImportFields,
-    t: ReturnType<typeof useTranslations<"connectorCsv">>,
-    source: CsvSource,
-    link: string,
-    gridState: ReturnType<typeof useCsvImportGrid>,
-    commands: CsvImportCommands,
-    name: string,
-    schedule: string,
-    input: CsvImportWizardInput,
-    setAgentsOf: ReturnType<typeof useSetConnectionAgents>,
-    agentIds: ReadonlyArray<string>,
-) => {
+export const useCsvImportWorkflow = ({
+    patch,
+    entity,
+    connectionId,
+    fields,
+    t,
+    source,
+    link,
+    gridState,
+    commands,
+    name,
+    schedule,
+    input,
+    setAgentsOf,
+    agentIds,
+}: CsvImportWorkflowInput) => {
     const [isPending, setPending] = useState(false)
-    const { fail, sourceArg, go, read } = createCsvImportWizardActions(
+    const { fail, sourceArg, go, read } = createCsvImportWizardActions({
         patch,
         entity,
         connectionId,
@@ -123,8 +166,19 @@ export const useCsvImportWorkflow = (
         gridState,
         setPending,
         commands,
-    )
-    const importNow = importNowOf(source, fields, fail, t, commands, name, connectionId, link, sourceArg, schedule)
+    })
+    const importNow = importNowOf({
+        source,
+        fields,
+        fail,
+        t,
+        commands,
+        name,
+        connectionId,
+        link,
+        sourceArg,
+        schedule,
+    })
     const runImport = createCsvImportRunner(setPending, importNow, fail, patch)
     const finish = async () => {
         const id = fields.result?.connectionId ?? input.resumeId

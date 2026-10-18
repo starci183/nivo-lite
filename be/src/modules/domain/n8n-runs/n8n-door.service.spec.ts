@@ -2,7 +2,7 @@ import { Test } from "@nestjs/testing"
 import { mock } from "@starci/jest-preset"
 import { AutomationTemplatesService } from "@modules/domain/automation-templates"
 import type { TemplateDefinition } from "@modules/domain/automation-templates"
-import { N8nRunsErrorCode } from "./errors/n8n-runs.error"
+import { N8nRunsError, N8nRunsErrorCode } from "./errors/n8n-runs.error"
 import { N8nDataService } from "./n8n-data.service"
 import { N8nDoorService } from "./n8n-door.service"
 import { N8nEmailService } from "./n8n-email.service"
@@ -162,5 +162,35 @@ describe("N8nDoorService", () => {
             expect(runs.verifyRun).toHaveBeenCalledWith({ authorization: "Bearer t", expectedRunId: "run-1" })
             expect(runs.completeRun).toHaveBeenCalledWith(RUN, { status: "done" })
         })
+    })
+})
+
+describe("missing callback authorization", () => {
+    it("forwards absent credentials and stops every callback before data, email or completion effects", async () => {
+        const { door, runs, data, email, templates } = await build()
+        const unauthorized = new N8nRunsError({ code: N8nRunsErrorCode.RunUnauthorized })
+        const refuse = (): never => {
+            throw unauthorized
+        }
+        runs.verifyRun.mockResolvedValue(null)
+        runs.requireRun.mockImplementation(refuse)
+        runs.requireWorkflow.mockImplementation(refuse)
+
+        await expect(door.daySummary(undefined, "")).rejects.toBe(unauthorized)
+        await expect(door.monthLedger(undefined, "")).rejects.toBe(unauthorized)
+        await expect(
+            door.sendEmail(undefined, { to: "", variables: {}, refs: {}, dedupe: undefined, attachments: [] }),
+        ).rejects.toBe(unauthorized)
+        await expect(door.completeRun(undefined, "run-1", { status: "done" })).rejects.toBe(unauthorized)
+
+        expect(runs.verifyRun).toHaveBeenNthCalledWith(1, { authorization: undefined, expectedRunId: undefined })
+        expect(runs.verifyRun).toHaveBeenNthCalledWith(2, { authorization: undefined, expectedRunId: undefined })
+        expect(runs.verifyRun).toHaveBeenNthCalledWith(3, { authorization: undefined, expectedRunId: undefined })
+        expect(runs.verifyRun).toHaveBeenNthCalledWith(4, { authorization: undefined, expectedRunId: "run-1" })
+        expect(data.dailySummary).not.toHaveBeenCalled()
+        expect(data.monthLedger).not.toHaveBeenCalled()
+        expect(templates.templateOf).not.toHaveBeenCalled()
+        expect(email.sendEmail).not.toHaveBeenCalled()
+        expect(runs.completeRun).not.toHaveBeenCalled()
     })
 })

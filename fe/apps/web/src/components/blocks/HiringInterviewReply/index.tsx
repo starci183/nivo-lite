@@ -2,10 +2,9 @@
 
 import { useTranslations } from "next-intl"
 import { useHiringFormat, useHiringSay } from "@/hooks/hiring"
-import { useHiringInterviewReply, usePublicHiringInterview } from "@/hooks/hiringPublic"
-import type { PublicInterviewView } from "@/hooks/hiringPublic"
-import { HiringInterviewReplyBase } from "./component"
-import type { HiringInterviewReplyBaseProps } from "./component"
+import { useHiringInterviewReply, usePublicHiringInterview, type PublicInterviewView } from "@/hooks/hiringPublic"
+
+import { HiringInterviewReplyBase, type HiringInterviewReplyBaseProps } from "./component"
 
 /** The token of the candidate's own link. */
 interface HiringInterviewReplyProps {
@@ -30,8 +29,8 @@ export const HiringInterviewReply = (props: HiringInterviewReplyProps) => {
     const read = usePublicHiringInterview(props.token)
     const reply = useHiringInterviewReply(props.token)
     const view = read.view
-    const where =
-        view === undefined ? "" : `${t(`ivMode_${view.mode}`)}${view.location === "" ? "" : `: ${view.location}`}`
+    const location = view === undefined || view.location === "" ? "" : ": " + view.location
+    const where = view === undefined ? "" : t("ivMode_" + view.mode) + location
     return (
         <HiringInterviewReplyBase
             props={{

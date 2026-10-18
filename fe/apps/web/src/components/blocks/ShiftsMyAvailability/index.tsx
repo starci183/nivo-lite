@@ -40,7 +40,7 @@ export const ShiftsMyAvailability = () => {
     const date = form.date === "" ? today : form.date
     const isWeekly = form.mode === "weekday"
     const when = useShiftsWhenFields({ ...form, date }, today)
-    if (mine === undefined || mine.profileId === null) return null
+    if (mine?.profileId === undefined || mine.profileId === null) return null
 
     const send = async () => {
         setIsBusy(true)

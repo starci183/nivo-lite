@@ -25,7 +25,10 @@ export const expiringSoon = (entries: ReadonlyArray<ExpiryEntry>, nowMs: number,
     const coming = entries
         .flatMap((entry) => (entry.kind === "earn" && entry.expiresAt !== null ? [entry.expiresAt] : []))
         .filter((at) => Date.parse(at) > nowMs && Date.parse(at) <= horizon)
-        .sort()
+        .sort((a, b) => {
+            if (a === b) return 0
+            return a < b ? -1 : 1
+        })
     return {
         points: Math.max(0, expirablePoints(entries, horizon) - expirablePoints(entries, nowMs)),
         firstAt: coming[0] ?? null,

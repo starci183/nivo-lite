@@ -180,6 +180,7 @@ describe("InventoryReceivingService / receivePo", () => {
                 { lineId: UUID_2, qty: "5", unitCost: "" },
                 { lineId: "line-unknown", qty: "1", unitCost: "" },
                 { lineId: UUID, qty: "0", unitCost: "" },
+                { lineId: UUID, qty: "NaN", unitCost: "" },
             ],
         })
 

@@ -30,6 +30,6 @@ export const sniffTextKind = (bytes: Uint8Array, contentType: string): TextKindR
     if (/wordprocessingml/iu.test(contentType)) return "docx"
     if (/spreadsheetml/iu.test(contentType)) return "xlsx"
     if (/presentationml/iu.test(contentType)) return "pptx"
-    if (/^text\/(?!html)|csv|json|markdown|xml/iu.test(contentType)) return "text"
+    if (/(?:^text\/(?!html))|(?:csv|json|markdown|xml)/iu.test(contentType)) return "text"
     return null
 }

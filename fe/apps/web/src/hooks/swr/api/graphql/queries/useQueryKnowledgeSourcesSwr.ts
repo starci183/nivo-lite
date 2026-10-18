@@ -3,13 +3,15 @@
 import type { WorkspaceReadKey } from "@/hooks/workspaceread"
 import useSWR from "swr"
 import { useWorkspaceKey } from "@/hooks/workspaceKey"
-import { queryKnowledgeSources } from "@/modules/api/graphql/queries/query-knowledge-sources"
-import type { QueryKnowledgeSourcesRequest } from "@/modules/api/graphql/queries/query-knowledge-sources"
+import {
+    queryKnowledgeSources,
+    type QueryKnowledgeSourcesRequest,
+} from "@/modules/api/graphql/queries/query-knowledge-sources"
 
 /** The SWR key of the documents list; mutations that change it revalidate the keys that lead with it. */
 export const QUERY_KNOWLEDGE_SOURCES_SWR_KEY = "QUERY_KNOWLEDGE_SOURCES_SWR"
 
-const ACTIVE_STATUSES: ReadonlyArray<string> = ["pending", "queued", "reading", "indexing", "extracting_facts"]
+const ACTIVE_STATUSES: ReadonlySet<string> = new Set(["pending", "queued", "reading", "indexing", "extracting_facts"])
 
 /**
  * The documents of the active workspace, optionally filtered to one module (the back end `knowledgeSources` query).
@@ -25,7 +27,7 @@ export const useQueryKnowledgeSourcesSwr = (input?: QueryKnowledgeSourcesRequest
             return result.data.knowledgeSources
         },
         {
-            refreshInterval: (data) => (data?.some((one) => ACTIVE_STATUSES.includes(one.status)) ? 3_000 : 0),
+            refreshInterval: (data) => (data?.some((one) => ACTIVE_STATUSES.has(one.status)) ? 3_000 : 0),
         },
     )
 }

@@ -32,15 +32,16 @@ import type {
 } from "./knowledge-sources.contracts"
 import { InjectKnowledgeStorage } from "./knowledge-sources.decorators"
 import { KnowledgeSourcesLogEvent } from "./knowledge-sources.log-events"
-import type { KnowledgeSourcesRow } from "./persistence/knowledge-sources.rows"
 import type {
     GeneratedIdRow,
     KnowledgeInstallationRow,
+    KnowledgeSourcesRow,
+    ReadableCountRow,
+    ReadableSourceRow,
     SourceIdRow,
     SourceListRow,
     SourceTitleRow,
 } from "./persistence/knowledge-sources.rows"
-import type { ReadableCountRow, ReadableSourceRow } from "./persistence/knowledge-sources.rows"
 import {
     COUNT_READABLE_SOURCES,
     DELETE_SOURCE,

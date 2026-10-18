@@ -88,8 +88,7 @@ export class AutomationScansService {
                 withChat,
                 priorRunsOf(prior),
                 item.config,
-                now,
-                batch,
+                { now, batch },
             ),
             events: [],
         }

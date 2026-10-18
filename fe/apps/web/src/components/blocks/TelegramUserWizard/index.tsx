@@ -1,12 +1,15 @@
 "use client"
 
-import type { TelegramUserWizardProps, TelegramUserWizardControllerInput } from "./component"
+import {
+    type TelegramUserWizardProps,
+    type TelegramUserWizardControllerInput,
+    TelegramUserWizardBase,
+    type TelegramUserWizardBaseProps,
+} from "./component"
 import { useTranslations } from "next-intl"
 import { providerKey } from "@/hooks/connection-providers"
 import { agentChoicesOf } from "@/hooks/connection-wizard"
 import { MAX_CHATS, useTelegramUserWizard } from "@/hooks/telegram-user-wizard"
-import { TelegramUserWizardBase } from "./component"
-import type { TelegramUserWizardBaseProps } from "./component"
 
 /** What the board hands the personal Telegram wizard. */
 

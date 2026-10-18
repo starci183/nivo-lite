@@ -41,6 +41,24 @@ const a1 = (tab: string, range: string): string => encodeURIComponent(`'${tab}'!
 
 const columnLetter = (width: number): string => String.fromCodePoint(64 + width)
 
+/** Reads a cell reference ending at an offset without retrying an unanchored pattern at every letter. */
+const endingCell = (range: string, end: number): { readonly start: number; readonly row: number } | null => {
+    let digits = end
+    while (digits > 0 && /[0-9]/u.test(range[digits - 1] ?? "")) digits -= 1
+    if (digits === end) return null
+    let start = digits
+    while (start > 0 && /[A-Z]/u.test(range[start - 1] ?? "")) start -= 1
+    return start === digits ? null : { start, row: Number(range.slice(digits, end)) }
+}
+
+/** The first row of the final cell or cell range reported by Sheets; zero when no reference ends it. */
+const appendedRow = (range: string): number => {
+    const final = endingCell(range, range.length)
+    if (final === null) return 0
+    const first = range[final.start - 1] === ":" ? endingCell(range, final.start - 1) : null
+    return first?.row ?? final.row
+}
+
 @Injectable()
 /** Talks to Google OAuth and the Sheets API for the connections capability: consent urls, tokens, spreadsheets and rows. */
 export class GoogleClient {
@@ -186,8 +204,7 @@ export class GoogleClient {
             body: { majorDimension: "ROWS", values: [row] },
         })
         const updates = isJson(body.updates) ? body.updates : {}
-        const matched = /!?[A-Z]+(\d+)(?::[A-Z]+\d+)?$/u.exec(textOf(updates.updatedRange) ?? "")
-        return matched?.[1] ? Number(matched[1]) : 0
+        return appendedRow(textOf(updates.updatedRange) ?? "")
     }
 
     private async updateCells(

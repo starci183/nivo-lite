@@ -60,7 +60,7 @@ export interface UpdateMoneyInput {
     /** The account holder (bank feeds). */
     readonly holder: string
     /** SePay: the API key NIVO generated or the one typed into SePay. */
-    readonly apiKey?: string | undefined
+    readonly apiKey?: string
 }
 
 /** The wizard view of a bank or payment feed. */
@@ -98,13 +98,13 @@ export interface WizardConnection {
 /** The keys a payOS or Casso connection stores, by name; the ones the provider does not use stay absent. */
 export interface ProviderKeyValues {
     /** payOS client id. */
-    readonly clientId?: string | undefined
+    readonly clientId?: string
     /** payOS API key. */
-    readonly apiKey?: string | undefined
+    readonly apiKey?: string
     /** payOS checksum key. */
-    readonly checksumKey?: string | undefined
+    readonly checksumKey?: string
     /** Casso secure key. */
-    readonly secureKey?: string | undefined
+    readonly secureKey?: string
 }
 
 /** What saving provider keys answers. */

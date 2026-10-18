@@ -1,5 +1,4 @@
-import type { GetGoogleStateRequest } from "../../application/get-google-state.contracts"
-import type { GoogleStateResult } from "../../application/get-google-state.contracts"
+import type { GetGoogleStateRequest, GoogleStateResult } from "../../application/get-google-state.contracts"
 import type { GoogleStateType } from "./dto/google-state.type"
 
 /** Maps the GraphQL arguments of googleConnectionState to the request. */

@@ -82,6 +82,10 @@ const registerTextAndVerdicts = () => {
         ["45 tri\u1ec7u", 45_000_000],
         ["3,5 trieu", 3_500_000],
         ["2.75m", 2_750_000],
+        ["1.2.3m", 2_300_000],
+        ["3,000,000 million", 0],
+        ["12x then 3m", 3_000_000],
+        ["3mismatch", null],
         ["45.000.000", 45_000_000],
         ["3,000,000 vnd", 3_000_000],
         ["3000000 vnd", 3_000_000],
@@ -91,7 +95,9 @@ const registerTextAndVerdicts = () => {
 
         expect(subject.parseVnd(text)).toBe(expected)
     })
+}
 
+const registerReferences = () => {
     it("prefers a lead name, then customer and payer strings, and trims the result", async () => {
         const subject = await buildSubject()
 
@@ -280,6 +286,7 @@ const idsOf = (
 
 describe("owner chat policy", () => {
     registerTextAndVerdicts()
+    registerReferences()
     registerProposalValues()
     registerAmountMatching()
 })

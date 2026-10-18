@@ -26,12 +26,14 @@ const RULE_MATRIX: ReadonlyArray<RuleGroup> = MODULE_KEYS.map((department) => ({
 }))
 
 /** Actions where a VND limit is meaningful. */
-const AMOUNT_ACTIONS: ReadonlyArray<ActionKey> = MODULE_KEYS.flatMap((department) =>
-    MODULE_REGISTRY[department].authorityActions.filter((entry) => entry.amountLimit).map((entry) => entry.action),
+const AMOUNT_ACTIONS: ReadonlySet<ActionKey> = new Set(
+    MODULE_KEYS.flatMap((department) =>
+        MODULE_REGISTRY[department].authorityActions.filter((entry) => entry.amountLimit).map((entry) => entry.action),
+    ),
 )
 
 /** Does a VND limit mean something for this action? */
-export const hasAmountLimit = (action: ActionKey): boolean => AMOUNT_ACTIONS.includes(action)
+export const hasAmountLimit = (action: ActionKey): boolean => AMOUNT_ACTIONS.has(action)
 
 /** The modes an action may be set to: an action the catalog caps at "ask" (publishing) can never run alone. */
 export const modesFor = (action: ActionKey): ReadonlyArray<AuthorityMode> =>
@@ -155,7 +157,7 @@ export const ruleChanges = (
     )
 
 /** Number field value: empty is NaN. */
-export const toField = (value: number | null): number => (value === null ? Number.NaN : value)
+export const toField = (value: number | null): number => value ?? Number.NaN
 
 /** Number from a number field: NaN means empty. */
 export const fromField = (value: number): number | null => (Number.isFinite(value) ? value : null)

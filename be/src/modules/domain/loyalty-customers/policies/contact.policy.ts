@@ -1,7 +1,7 @@
+import { hasEmailAddressShape } from "@modules/platform/primitives"
 import type { MaybeText } from "../loyalty-customers.contracts"
 
 const PHONE = /^84\d{9,10}$/u
-const EMAIL = /^[^@\s]+@[^@\s]+\.[^@\s]+$/u
 
 /** A Vietnamese phone as `84` followed by nine or ten digits, or null when it is not a plausible number. */
 export const toLoyaltyPhone = (raw: MaybeText): MaybeText => {
@@ -15,5 +15,5 @@ export const toLoyaltyPhone = (raw: MaybeText): MaybeText => {
 /** A lower-case email address, or null when the text is not one. */
 export const toLoyaltyEmail = (raw: MaybeText): MaybeText => {
     const value = (raw ?? "").trim().toLowerCase()
-    return EMAIL.test(value) ? value : null
+    return hasEmailAddressShape(value) ? value : null
 }

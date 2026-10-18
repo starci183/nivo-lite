@@ -16,8 +16,15 @@ import {
 import { Fragment } from "react"
 import { SetupWriteCard } from "@/components/branches/SetupWriteCard"
 import { SlotView } from "@/components/composites/SlotView"
-import type { SetupWrite, SetupWriteDecision } from "@/modules/types"
-import type { DataSlot, SetupWriteInstance, SetupWriteWords, SlotLabels } from "@/modules/types"
+import type {
+    SetupWrite,
+    SetupWriteDecision,
+    DataSlot,
+    SetupWriteInstance,
+    SetupWriteWords,
+    SlotLabels,
+} from "@/modules/types"
+
 import { CHAT_BAND, COMPOSER, COMPOSER_FIELD, COMPOSER_ROW, SENDING, THREAD, WRITES } from "./classNames"
 
 /** One message of the chat with the confirm cards that sit under it. */

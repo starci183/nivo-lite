@@ -83,6 +83,10 @@ export interface RenderView {
     readonly error: string | null
     /** Playback URL. */
     readonly videoUrl: string | null
+    /** Genuine timed WebVTT for this render; absent on historical or non-captioned output. */
+    readonly captionsUrl: string | null
+    /** Actual recorded caption language when known. */
+    readonly captionsLang: string | null
     /** Download URL. */
     readonly downloadUrl: string | null
     /** Poster URL. */

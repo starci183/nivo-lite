@@ -18,7 +18,7 @@ export const isAcceptedMedia = (file: MediaFile): boolean =>
     file.sizeBytes <= CONTENT_MEDIA_MAX_BYTES &&
     CONTENT_MEDIA_MIME.includes(file.contentType)
 
-const COMBINING_MARKS = new RegExp("[\u0300-\u036f]", "g")
+const COMBINING_MARKS = /[\u0300-\u036f]/g
 const D_STROKE = new RegExp(String.fromCodePoint(0x111), "gi")
 const INVALID_PATH_CHARACTERS = /[%\\\p{Cc}]/u
 
@@ -39,7 +39,7 @@ const safeName = (name: string): string => {
             .replace(COMBINING_MARKS, "")
             .replace(D_STROKE, "d")
             .replace(/[^a-zA-Z0-9]+/g, "-")
-            .replace(/^-+|-+$/g, "")
+            .replace(/^-|-$/g, "")
             .slice(0, 40) || "file"
     return ext === "" ? stem : `${stem}.${ext}`
 }

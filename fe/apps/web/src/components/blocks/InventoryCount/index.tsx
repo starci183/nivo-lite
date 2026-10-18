@@ -20,7 +20,7 @@ export const InventoryCount = () => {
         (item) => item.active && includesText(`${item.name} ${item.sku} ${item.category}`, query),
     )
     const entered = Object.entries(counts).filter(
-        ([, value]) => value.trim() !== "" && Number.isFinite(num(value, NaN)),
+        ([, value]) => value.trim() !== "" && Number.isFinite(num(value, Number.NaN)),
     )
     const submit = () =>
         run.exec(

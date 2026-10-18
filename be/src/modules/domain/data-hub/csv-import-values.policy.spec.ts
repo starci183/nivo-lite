@@ -81,6 +81,17 @@ describe("parseNumberLoose", () => {
 })
 
 describe("parseDateLoose", () => {
+    it("handles long separators and preserves time-zone and newline boundaries", async () => {
+        const subject = await buildSubject()
+
+        expect(subject.parseDateLoose(`2026-10-14${"T ".repeat(10000)}09:30 Z`)).toBe("2026-10-14T09:30:00.000Z")
+        expect(subject.parseDateLoose("2026-10-14\n09:30")).toBe("2026-10-14T02:30:00.000Z")
+        expect(subject.parseDateLoose("14/10/2026T09:30+0700")).toBe("2026-10-14T02:30:00.000Z")
+        expect(subject.parseDateLoose("2026-10-14x09:30")).toBeNull()
+        expect(subject.parseDateLoose("2026-10-14T09:30\nZ\nextra")).toBeNull()
+        expect(subject.parseDateLoose(`2026-10-14T${" ".repeat(10000)}noon`)).toBeNull()
+    })
+
     it("reads a date-only value as midnight in Vietnam", async () => {
         const subject = await buildSubject()
 
@@ -101,7 +112,9 @@ describe("parseDateLoose", () => {
         expect(subject.parseDateLoose("2026-10-14T09:30Z")).toBe("2026-10-14T09:30:00.000Z")
         expect(subject.parseDateLoose("2026-10-14T09:30+0700")).toBe("2026-10-14T02:30:00.000Z")
     })
+})
 
+describe("parseDateLoose validation and precision", () => {
     it.each([
         "",
         "nope",

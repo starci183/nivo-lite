@@ -93,7 +93,7 @@ export const useWorkspacePayment = (selectors: WorkspacePaymentSelectors) => {
         loading,
         creating: requesting.isRequesting,
         paid,
-        expired: !payment || payment.status !== "pending" || left === 0,
+        expired: payment?.status !== "pending" || left === 0,
         canRegenerate: Boolean(planCode && plan.data && !plan.data.isCustom),
         regenerate,
         returnTo,

@@ -42,7 +42,7 @@ const build = async (listings: ReadonlyArray<string>, files: ReadonlyArray<unkno
             { provide: LOGGER, useValue: logger },
         ],
     }).compile()
-    return { host: moduleRef.get(N8nHostService), commands, logger }
+    return { host: moduleRef.get(N8nHostService), commands, logger, shell }
 }
 
 describe("N8nHostService", () => {
@@ -76,13 +76,22 @@ describe("N8nHostService", () => {
             expect(imported?.input).toBe(
                 '[{"name":"Daily","nodes":[],"id":"7","active":false},{"name":"Debt","nodes":[],"active":false}]',
             )
+            expect(imported?.command).toContain("docker exec -i n8n-1 sh -c")
+            expect(imported?.command).toContain("umask 077; directory=$(mktemp -d) || exit 1")
+            expect(imported?.command).toContain('rm -rf -- "$directory"')
+            expect(imported?.command).toContain('cat > "$directory/workflows.json" && n8n import:workflow')
+            expect(imported?.command).not.toContain("docker cp")
             expect(commands.every((request) => request.local)).toBe(true)
             expect(commands.map((request) => request.command)).toContain("docker restart n8n-1")
             expect(commands.map((request) => request.command)).toContain(
                 "docker exec n8n-1 n8n update:workflow --id=8 --active=true",
             )
         })
+    })
+})
 
+describe("N8nHostService sync completion and failures", () => {
+    describe("sync", () => {
         it("skips the restart when asked", async () => {
             const { host, commands } = await build(["", "1|Daily\n2|Debt"])
 
@@ -98,6 +107,23 @@ describe("N8nHostService", () => {
             await expect(host.sync({ dryRun: false, restart: true, local: false })).rejects.toMatchObject({
                 code: N8nHostErrorCode.WorkflowMissing,
             })
+        })
+
+        it("does not activate or restart when importing fails", async () => {
+            const { host, commands, shell } = await build(["7|Daily"])
+            const failure = new Error("import failed")
+            shell.run.mockImplementation((request) => {
+                commands.push(request)
+                return request.command.includes("import:workflow")
+                    ? Promise.reject(failure)
+                    : Promise.resolve("7|Daily")
+            })
+
+            await expect(host.sync({ dryRun: false, restart: true, local: false })).rejects.toBe(failure)
+
+            expect(commands).toHaveLength(2)
+            expect(commands.some((request) => request.command.includes("update:workflow"))).toBe(false)
+            expect(commands.some((request) => request.command.includes("docker restart"))).toBe(false)
         })
 
         it("refuses a sync with nothing to import", async () => {

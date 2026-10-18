@@ -1,11 +1,17 @@
 "use client"
 
-import { OPEN_API_EDIT_STEPS, OPEN_API_STEPS, openApiAuthTypeOf } from "./openapi-wizard.shared"
-import type { OpenApiStep, OpenApiAuthField } from "./openapi-wizard.shared"
+import {
+    OPEN_API_EDIT_STEPS,
+    OPEN_API_STEPS,
+    openApiAuthTypeOf,
+    type OpenApiStep,
+    type OpenApiAuthField,
+} from "./openapi-wizard.shared"
+
 import { useOpenApiWizardCommands } from "./useOpenApiWizardCommands"
 import { useConnectionsRefresh, useSetConnectionAgents, useSyncNow } from "@/hooks/connections"
-import { useOpenApiAuthForm } from "@/hooks/rhf"
-import type { OpenApiAuthValues } from "@/hooks/rhf"
+import { useOpenApiAuthForm, type OpenApiAuthValues } from "@/hooks/rhf"
+
 import { useState } from "react"
 import { useOpenApiCommands } from "./useOpenApiCommands"
 import { useOpenApiPicks } from "./useOpenApiPicks"
@@ -58,7 +64,7 @@ export const useOpenApiWizard = ({ resumeId, onClose }: OpenApiWizardInput) => {
         fail: setError,
     })
 
-    const { loadSpec, save, go, finish, isPending } = useOpenApiWizardCommands(
+    const { loadSpec, save, go, finish, isPending } = useOpenApiWizardCommands({
         setError,
         commands,
         source,
@@ -75,9 +81,9 @@ export const useOpenApiWizard = ({ resumeId, onClose }: OpenApiWizardInput) => {
         setConnectionAgents,
         agentIds,
         refresh,
-    )
+    })
 
-    return viewOf(
+    return viewOf({
         index,
         steps,
         step,
@@ -85,7 +91,7 @@ export const useOpenApiWizard = ({ resumeId, onClose }: OpenApiWizardInput) => {
         error,
         loadError,
         isPending,
-        authForm.watch(),
+        auth: authForm.watch(),
         authForm,
         source,
         picks,
@@ -97,30 +103,52 @@ export const useOpenApiWizard = ({ resumeId, onClose }: OpenApiWizardInput) => {
         finish,
         setAgentIds,
         onClose,
-    )
+    })
 }
 
-const viewOf = (
-    index: number,
-    steps: readonly OpenApiStep[],
-    step: OpenApiStep,
-    editing: boolean,
-    error: string | null,
-    loadError: ReturnType<typeof useOpenApiResume>,
-    isPending: boolean,
-    auth: OpenApiAuthValues,
-    authForm: ReturnType<typeof useOpenApiAuthForm>,
-    source: ReturnType<typeof useOpenApiSource>,
-    picks: ReturnType<typeof useOpenApiPicks>,
-    test: ReturnType<typeof useOpenApiTest>,
-    agentIds: readonly string[],
-    go: (to: number) => void,
-    loadSpec: () => void,
-    save: () => void,
-    finish: () => void,
-    setAgentIds: import("react").Dispatch<import("react").SetStateAction<ReadonlyArray<string>>>,
-    onClose: (changed: boolean) => void,
-) => {
+type OpenApiWizardViewInput = {
+    readonly index: number
+    readonly steps: readonly OpenApiStep[]
+    readonly step: OpenApiStep
+    readonly editing: boolean
+    readonly error: string | null
+    readonly loadError: ReturnType<typeof useOpenApiResume>
+    readonly isPending: boolean
+    readonly auth: OpenApiAuthValues
+    readonly authForm: ReturnType<typeof useOpenApiAuthForm>
+    readonly source: ReturnType<typeof useOpenApiSource>
+    readonly picks: ReturnType<typeof useOpenApiPicks>
+    readonly test: ReturnType<typeof useOpenApiTest>
+    readonly agentIds: readonly string[]
+    readonly go: (to: number) => void
+    readonly loadSpec: () => void
+    readonly save: () => void
+    readonly finish: () => void
+    readonly setAgentIds: import("react").Dispatch<import("react").SetStateAction<ReadonlyArray<string>>>
+    readonly onClose: (changed: boolean) => void
+}
+
+const viewOf = ({
+    index,
+    steps,
+    step,
+    editing,
+    error,
+    loadError,
+    isPending,
+    auth,
+    authForm,
+    source,
+    picks,
+    test,
+    agentIds,
+    go,
+    loadSpec,
+    save,
+    finish,
+    setAgentIds,
+    onClose,
+}: OpenApiWizardViewInput) => {
     return {
         index,
         steps,

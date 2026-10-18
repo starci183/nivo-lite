@@ -3,8 +3,14 @@
 import type { SignupFormProps, SignupFormControllerInput } from "./component"
 import { useState, useTransition } from "react"
 import { useTranslations } from "next-intl"
-import { authErrorKey, passwordStrength, strengthKey, useResendEmail, useRedirectWhenSignedIn } from "@/hooks/auth"
-import { authActionsOf } from "@/hooks/auth"
+import {
+    authErrorKey,
+    passwordStrength,
+    strengthKey,
+    useResendEmail,
+    useRedirectWhenSignedIn,
+    authActionsOf,
+} from "@/hooks/auth"
 import { useSignupForm } from "@/hooks/rhf"
 import { navigation } from "@/modules/i18n"
 import { loginPath } from "@/modules/routes"

@@ -1,16 +1,28 @@
 import type { Dispatch, SetStateAction } from "react"
-import type { useBookingRange, useBookingActions, useBookingPlacement, blankPlacementOf } from "@/hooks/bookingDesk"
-import type { useTranslations, useFormatter } from "next-intl"
+import type { useBookingRange, useBookingActions, useBookingPlacement } from "@/hooks/bookingDesk"
 import { shiftDate } from "@/modules/i18n"
 import { BookingDeskNavigation } from "@/components/composites/BookingDeskNavigation"
-import { Alert, AlertDialog, Badge, EmptyNotice, SurfaceListCard, Button } from "@starci/grammar/common"
-import type { BadgeTone } from "@starci/grammar/common"
-import { BookingAgendaRow } from "@/components/composites/BookingAgendaRow"
-import type { BookingAgendaRowView } from "@/components/composites/BookingAgendaRow"
-import { BookingDetailDialog } from "@/components/composites/BookingDetailDialog"
-import type { BookingDetailDialogProps } from "@/components/composites/BookingDetailDialog"
-import { BookingPlacementDialog } from "@/components/composites/BookingPlacementDialog"
-import type { BookingPlacementDialogProps } from "@/components/composites/BookingPlacementDialog"
+import {
+    Alert,
+    AlertDialog,
+    Badge,
+    EmptyNotice,
+    List,
+    ListItem,
+    SurfaceListCard,
+    Button,
+    type BadgeTone,
+} from "@starci/grammar/common"
+
+import { BookingAgendaRow, type BookingAgendaRowView } from "@/components/composites/BookingAgendaRow"
+
+import { BookingDetailDialog, type BookingDetailDialogProps } from "@/components/composites/BookingDetailDialog"
+
+import {
+    BookingPlacementDialog,
+    type BookingPlacementDialogProps,
+} from "@/components/composites/BookingPlacementDialog"
+
 import { LEGEND_CLASS, STACK_CLASS, TOOLBAR_CLASS } from "./classNames"
 
 /** The agenda of one day. */
@@ -73,13 +85,15 @@ export const BookingDeskBase = (props: BookingDeskBaseProps) => {
     const { props: p, on } = props
     return (
         <div className={STACK_CLASS}>
-            <div className={LEGEND_CLASS} role="group" aria-label={p.label}>
+            <List className={LEGEND_CLASS} label={p.label}>
                 {p.legend.map((item) => (
-                    <Badge key={item.text} tone={item.tone} isDot>
-                        {item.text}
-                    </Badge>
+                    <ListItem key={item.text}>
+                        <Badge tone={item.tone} isDot>
+                            {item.text}
+                        </Badge>
+                    </ListItem>
                 ))}
-            </div>
+            </List>
             {p.add === undefined ? null : (
                 <div className={TOOLBAR_CLASS}>
                     <Button size="sm" variant="primary" isDisabled={p.add.isDisabled} onPress={on.add}>
@@ -147,8 +161,6 @@ export const BookingDeskBase = (props: BookingDeskBaseProps) => {
     )
 }
 
-/** Draws the div section of the BookingDesk view. */
-
 /** State and injected commands needed by the booking desk interactions. */
 interface BookingDeskEventsInput {
     readonly openAdd: () => unknown
@@ -215,80 +227,3 @@ export const buildBookingDeskEvents = (
         closeDetail: () => setOpenId(null),
     }
 }
-
-/** Derives the visible agenda and navigation copy from the supplied booking data. */
-export const buildBookingDeskDisplay = (
-    board: NonNullable<ReturnType<typeof useBookingRange>["board"]>,
-    anchorValue: string,
-    t: ReturnType<typeof useTranslations<"workbenchBooking">>,
-    format: ReturnType<typeof useFormatter>,
-    isToday: boolean,
-    showCancelled: boolean,
-    openId: string | null,
-    cancelId: string | null,
-    placement: typeof blankPlacementOf,
-    loadingSuffix: string,
-) => {
-    const words = {
-        say: t,
-        resourceName: (id: string) => board.resources.find((resource) => resource.id === id)?.name ?? "",
-        money: (value: number) =>
-            format.number(value, { style: "currency", currency: "VND", maximumFractionDigits: 0 }),
-    }
-    const dayText = (date: string) =>
-        format.dateTime(new Date(`${date}T12:00:00Z`), {
-            weekday: "long",
-            day: "2-digit",
-            month: "2-digit",
-            timeZone: "UTC",
-        })
-    const visible = board.bookings.filter(
-        (booking) => (!isToday || booking.date === board.today) && (showCancelled || booking.status !== "cancelled"),
-    )
-    const open = board.bookings.find((booking) => booking.id === openId)
-    const cancelling = board.bookings.find((booking) => booking.id === cancelId)
-    const activeServices = board.services.filter((service) => service.active)
-    const blank = placement(activeServices[0]?.id ?? "", board.today)
-    const resourceOptions = board.resources
-        .filter((resource) => resource.active)
-        .map((resource) => ({ id: resource.id, label: resource.name }))
-    const anchor = anchorValue === "" ? board.today : anchorValue
-    const nav = {
-        prevLabel: t("prev"),
-        nextLabel: t("next"),
-        thisWeekLabel: t("today"),
-        dateLabel: t("pickDate"),
-        date: anchor,
-        showCancelledLabel: t("showCancelled"),
-        showCancelled,
-        rangeText: `${dayText(board.from)} - ${dayText(board.to)}${loadingSuffix}`,
-    }
-    return { words, dayText, visible, open, cancelling, activeServices, blank, resourceOptions, anchor, nav }
-}
-
-/** Builds the confirmation copy for the booking awaiting cancellation. */
-export const buildBookingCancel = (
-    cancelling: BookingDeskEventsInput["open"],
-    t: ReturnType<typeof useTranslations<"workbenchBooking">>,
-): Pick<BookingDeskBaseProps["props"], "cancel"> =>
-    cancelling === undefined
-        ? {}
-        : {
-              cancel: {
-                  title: t("confirmCancelTitle", {
-                      name: cancelling.customer === "" ? t("customerFallback") : cancelling.customer,
-                  }),
-                  confirmLabel: t("confirmCancelYes"),
-                  keepLabel: t("confirmCancelKeep"),
-              },
-          }
-
-/** Resolves the legend labels for each booking status tone. */
-export const buildBookingLegend = (
-    tones: Readonly<Record<string, BadgeTone>>,
-    t: ReturnType<typeof useTranslations<"workbenchBooking">>,
-): BookingDeskBaseProps["props"]["legend"] =>
-    Object.entries(tones).map(([status, tone]) => ({
-        text: t(`status_${status}`),
-        tone,
-    }))

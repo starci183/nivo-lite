@@ -100,6 +100,17 @@ describe("LoyaltyCustomerLinksService / customerOfChat", () => {
         expect(manager.query).toHaveBeenCalledWith(SELECT_CHAT_CUSTOMER, ["ws-1", "v1", "l1", "telegram:123"])
     })
 
+    it.each([
+        ["first:suffix\nlast:message", "first:suffix\nlast"],
+        ["account:message\n", "account:message\n"],
+        ["a" + ":".repeat(20000), "a"],
+    ])("keeps the final-line suffix boundary for %s", async (externalId, account) => {
+        const manager = mockEntityManager({ query: [SELECT_CHAT_CUSTOMER, [{ customer_id: "c1" }]] })
+        const links = await build(manager)
+        await expect(links.customerOfChat(refOf(externalId))).resolves.toBe("c1")
+        expect(manager.query).toHaveBeenCalledWith(SELECT_CHAT_CUSTOMER, ["ws-1", "v1", "l1", "telegram:" + account])
+    })
+
     it("preserves an external account without a message suffix", async () => {
         const manager = mockEntityManager({ query: [SELECT_CHAT_CUSTOMER, [{ customer_id: "c1" }]] })
         const links = await build(manager)

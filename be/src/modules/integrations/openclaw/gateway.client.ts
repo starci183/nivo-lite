@@ -6,7 +6,7 @@ import type { Logger } from "@modules/platform/logging"
 import { OpenclawError, OpenclawErrorCode } from "./errors/openclaw.error"
 import { connectParams, frameOf, looksFinal, readSessionMessage, statusOf } from "./gateway-frame.mapper"
 import type { GatewayErrorBody, MessageUsage, OptionalGatewayFrame } from "./gateway-frame.mapper"
-import type { RunTally, RunUsage, TurnRequest, TurnResult } from "./openclaw.contracts"
+import type { ReceiverOptions, RunTally, RunUsage, TurnRequest, TurnResult } from "./openclaw.contracts"
 import { InjectOpenclawOptions, InjectOpenclawSocketFactory } from "./openclaw.decorators"
 import { OpenclawLogEvent } from "./openclaw.log-events"
 import type { OpenclawAuth, OpenclawOptions } from "./openclaw.options"
@@ -96,16 +96,16 @@ const usageTracker = () => {
 }
 
 /** Receives replies and session events for one subscribed turn. */
-const receiverFor = (
-    req: TurnRequest,
-    pending: Map<string, Responder>,
-    readFrame: (raw: string) => OptionalGatewayFrame,
-    isSettled: () => boolean,
-    startTurn: () => Promise<void>,
-    finish: (failure: OpenclawError | null, value?: string) => void,
-    addUsage: (usage: MessageUsage | null) => void,
-    settleOn: (reply: string) => void,
-): ((data: string) => void) => {
+const receiverFor = ({
+    req,
+    pending,
+    readFrame,
+    isSettled,
+    startTurn,
+    finish,
+    addUsage,
+    settleOn,
+}: ReceiverOptions): ((data: string) => void) => {
     let candidate: string | null = null
     return (data) => {
         const frame = readFrame(data)
@@ -336,16 +336,16 @@ export class GatewayClient {
             const settleOn = settlerFor(this.options.settleMs, settlement, finish)
 
             socket.onMessage(
-                receiverFor(
-                    req,
-                    pending,
-                    (data) => this.frameOf(data),
-                    () => settled,
-                    () => this.startTurn(req, gateway.auth, request, mark),
-                    finish,
-                    usage.add,
-                    settleOn,
-                ),
+                receiverFor({
+                    req: req,
+                    pending: pending,
+                    readFrame: (data) => this.frameOf(data),
+                    isSettled: () => settled,
+                    startTurn: () => this.startTurn(req, gateway.auth, request, mark),
+                    finish: finish,
+                    addUsage: usage.add,
+                    settleOn: settleOn,
+                }),
             )
             socket.onError((message) =>
                 finish(new OpenclawError({ code: OpenclawErrorCode.GatewaySocketFailed, params: { reason: message } })),

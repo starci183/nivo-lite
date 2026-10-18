@@ -113,6 +113,18 @@ describe("pagingOf and pageInput", () => {
 })
 
 describe("nextLinkOf", () => {
+    it("handles unterminated and unrelated Link headers before a usable next relation", async () => {
+        const subject = await buildSubject()
+
+        expect(subject.nextLinkOf({}, { link: "<".repeat(20000) }, base)).toBeNull()
+        expect(
+            subject.nextLinkOf({}, { link: '</previous>; rel="prev", </page/2> \t; \trel="next"' }, base)?.href,
+        ).toBe("https://api.example/page/2")
+        expect(subject.nextLinkOf({}, { link: '<>; rel="next", </page/3>; rel=next' }, base)?.href).toBe(
+            "https://api.example/page/3",
+        )
+    })
+
     it.each([
         { next: "?page=2" },
         { links: { next: "?page=2" } },

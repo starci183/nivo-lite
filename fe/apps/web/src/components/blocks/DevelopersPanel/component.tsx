@@ -38,61 +38,7 @@ interface DevelopersWebhooksProps {
 /** The outgoing webhooks: the connected ones as rows of one list, or the provider offered under "Not connected". */
 const DevelopersWebhooks = (props: DevelopersWebhooksProps) => (
     <div data-guide="connections.webhook">
-        {props.rows.length > 0 ? (
-            <SurfaceListCard
-                label={props.view.title}
-                headingLevel={3}
-                fact={props.view.fact}
-                {...(props.canManage
-                    ? {
-                          labelEnd: (
-                              <Button variant="ghost" onPress={props.onAdd}>
-                                  {props.view.addLabel}
-                              </Button>
-                          ),
-                      }
-                    : {})}
-            >
-                {props.rows.map((row) => (
-                    <ListRow
-                        key={row.id}
-                        title={row.name}
-                        badges={<Badge tone={row.tone}>{row.statusLabel}</Badge>}
-                        {...(props.canManage
-                            ? {
-                                  actions: (
-                                      <Button variant="outline" onPress={() => props.onEdit(row.id)}>
-                                          {props.view.editLabel}
-                                      </Button>
-                                  ),
-                              }
-                            : {})}
-                    />
-                ))}
-            </SurfaceListCard>
-        ) : (
-            <SurfaceListCard label={props.view.notConnected} headingLevel={3}>
-                <ListRow
-                    leading={
-                        <ProviderLogo
-                            glyph="email"
-                            {...(props.view.logo === undefined ? {} : { src: props.view.logo })}
-                        />
-                    }
-                    title={props.view.title}
-                    description={props.view.blurb}
-                    {...(props.canManage
-                        ? {
-                              actions: (
-                                  <Button variant="outline" onPress={props.onAdd}>
-                                      {props.view.connectLabel}
-                                  </Button>
-                              ),
-                          }
-                        : {})}
-                />
-            </SurfaceListCard>
-        )}
+        {props.rows.length > 0 ? <ConnectedWebhooks {...props} /> : <AvailableWebhook {...props} />}
     </div>
 )
 
@@ -176,3 +122,60 @@ export const DevelopersPanelBase = (props: DevelopersPanelBaseProps) =>
             </div>
         </>
     )
+
+/** Draws the connected outgoing webhook rows and their available actions. */
+const ConnectedWebhooks = (props: DevelopersWebhooksProps) => (
+    <SurfaceListCard
+        label={props.view.title}
+        headingLevel={3}
+        fact={props.view.fact}
+        {...(props.canManage
+            ? {
+                  labelEnd: (
+                      <Button variant="ghost" onPress={props.onAdd}>
+                          {props.view.addLabel}
+                      </Button>
+                  ),
+              }
+            : {})}
+    >
+        {props.rows.map((row) => (
+            <ListRow
+                key={row.id}
+                title={row.name}
+                badges={<Badge tone={row.tone}>{row.statusLabel}</Badge>}
+                {...(props.canManage
+                    ? {
+                          actions: (
+                              <Button variant="outline" onPress={() => props.onEdit(row.id)}>
+                                  {props.view.editLabel}
+                              </Button>
+                          ),
+                      }
+                    : {})}
+            />
+        ))}
+    </SurfaceListCard>
+)
+
+/** Offers the provider connection when no outgoing webhook exists. */
+const AvailableWebhook = (props: Pick<DevelopersWebhooksProps, "canManage" | "view" | "onAdd">) => (
+    <SurfaceListCard label={props.view.notConnected} headingLevel={3}>
+        <ListRow
+            leading={
+                <ProviderLogo glyph="email" {...(props.view.logo === undefined ? {} : { src: props.view.logo })} />
+            }
+            title={props.view.title}
+            description={props.view.blurb}
+            {...(props.canManage
+                ? {
+                      actions: (
+                          <Button variant="outline" onPress={props.onAdd}>
+                              {props.view.connectLabel}
+                          </Button>
+                      ),
+                  }
+                : {})}
+        />
+    </SurfaceListCard>
+)

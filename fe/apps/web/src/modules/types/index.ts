@@ -161,7 +161,6 @@ export type {
     BilingualLabel,
     MessageView,
     Missing,
-    ModuleScope,
     PipelineConfig,
     PreviewSample,
     Requires,

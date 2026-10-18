@@ -13,7 +13,8 @@ import { GraphqlModule } from "@modules/platform/graphql"
 import type { ApiOptions } from "../api.options"
 /** The automations area of the API, in registration order. */
 export const automationsModules = (options: ApiOptions): Array<DynamicModule> => [
-    ...[HttpModule.register({ isGlobal: true }), GraphqlModule.register({ isGlobal: true })],
+    HttpModule.register({ isGlobal: true }),
+    GraphqlModule.register({ isGlobal: true }),
     N8nModule.register({ isGlobal: true, ...options.n8n }),
     AutomationPortsModule.register({ isGlobal: true }),
     AutomationTemplatesModule.register({ isGlobal: true }),

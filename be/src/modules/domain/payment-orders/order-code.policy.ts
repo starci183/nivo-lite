@@ -31,7 +31,7 @@ export const orderCodesIn = (...texts: ReadonlyArray<TransferText>): Array<strin
         for (let at = compact.indexOf(ORDER_PREFIX); at >= 0; at = compact.indexOf(ORDER_PREFIX, at + 1)) {
             pattern.lastIndex = at
             const match = pattern.exec(compact)
-            if (match && match.index === at) found.add(match[0])
+            if (match?.index === at) found.add(match[0])
         }
     }
     return [...found]

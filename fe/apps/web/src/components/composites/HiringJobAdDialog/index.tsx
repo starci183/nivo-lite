@@ -39,16 +39,7 @@ export const HiringJobAdDialog = (props: HiringJobAdDialogProps) => {
             title={props.props.title}
             closeLabel={say("close")}
             description={say("adHint")}
-            footer={(close) => (
-                <>
-                    <Button variant="tertiary" onPress={close}>
-                        {say("close")}
-                    </Button>
-                    <Button variant="primary" isPending={isBusy} isDisabled={isBusy} onPress={on.generate}>
-                        {say(ads === null ? "adWrite" : "adRewrite")}
-                    </Button>
-                </>
-            )}
+            footer={<HiringJobAdDialogFooter {...props} />}
         >
             <div className={GRID_CLASS_NAME}>
                 {error === null ? null : <Alert tone="negative" title={say("adFailed")} description={error} />}
@@ -91,5 +82,21 @@ export const HiringJobAdDialog = (props: HiringJobAdDialogProps) => {
                 )}
             </div>
         </Dialog>
+    )
+}
+
+/** Keeps the dialog footer component stable as its fields change. */
+const HiringJobAdDialogFooter = (props: HiringJobAdDialogProps) => {
+    const { say, ads, isBusy } = props.props
+    const { on } = props
+    return (
+        <>
+            <Button variant="tertiary" onPress={on.close}>
+                {say("close")}
+            </Button>
+            <Button variant="primary" isPending={isBusy} isDisabled={isBusy} onPress={on.generate}>
+                {say(ads === null ? "adWrite" : "adRewrite")}
+            </Button>
+        </>
     )
 }

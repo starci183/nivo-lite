@@ -18,21 +18,35 @@ type Pending =
     | { readonly kind: "invite"; readonly id: string; readonly email: string }
     | { readonly kind: "plan"; readonly code: string; readonly credits: number | null }
 
-/** The connected support actions card: extend, set status, set plan and resend an invitation, each confirmed first and toasted. */
-/** Connects the state and commands used by AdminSupportActions. */
-const buildAdminSupportActionsState = (
-    typedPlan: string | null | undefined,
-    data: ReturnType<typeof useQueryAdminWorkspaceSwr>["data"],
-    typedCredits: string | undefined,
-    days: string,
-    pending: Pending | null,
-    commands: ReturnType<typeof useAdminCommands>,
-    setPending: import("react").Dispatch<import("react").SetStateAction<Pending | null>>,
-    t: ReturnType<typeof useTranslations<"admin">>,
-    setDays: import("react").Dispatch<import("react").SetStateAction<string>>,
-    setPlan: import("react").Dispatch<import("react").SetStateAction<string | null | undefined>>,
-    setCredits: import("react").Dispatch<import("react").SetStateAction<string | undefined>>,
-) => {
+/** Inputs owned by this display/state mapping. */
+interface AdminSupportActionsStateInput {
+    readonly typedPlan: string | null | undefined
+    readonly data: ReturnType<typeof useQueryAdminWorkspaceSwr>["data"]
+    readonly typedCredits: string | undefined
+    readonly days: string
+    readonly pending: Pending | null
+    readonly commands: ReturnType<typeof useAdminCommands>
+    readonly setPending: import("react").Dispatch<import("react").SetStateAction<Pending | null>>
+    readonly t: ReturnType<typeof useTranslations<"admin">>
+    readonly setDays: import("react").Dispatch<import("react").SetStateAction<string>>
+    readonly setPlan: import("react").Dispatch<import("react").SetStateAction<string | null | undefined>>
+    readonly setCredits: import("react").Dispatch<import("react").SetStateAction<string | undefined>>
+}
+
+/** Derives the support action values and confirmation command. */
+const buildAdminSupportActionsState = ({
+    typedPlan,
+    data,
+    typedCredits,
+    days,
+    pending,
+    commands,
+    setPending,
+    t,
+    setDays,
+    setPlan,
+    setCredits,
+}: AdminSupportActionsStateInput) => {
     const plan = typedPlan === undefined ? (data?.workspace.planCode ?? null) : typedPlan
     const ownLimit = data?.credits.ownLimit
     const credits = typedCredits ?? (typeof ownLimit === "number" ? String(ownLimit) : "")
@@ -82,11 +96,11 @@ export const AdminSupportActions = (props: AdminSupportActionsProps) => {
     const commands = useAdminCommands(props.workspaceId)
     const { data } = useQueryAdminWorkspaceSwr({ workspaceId: props.workspaceId })
     const [days, setDays] = useState("30")
-    const [typedPlan, setPlan] = useState<string | null>()
-    const [typedCredits, setCredits] = useState<string>()
+    const [typedPlan, setTypedPlan] = useState<string | null>()
+    const [typedCredits, setTypedCredits] = useState<string>()
     const [pending, setPending] = useState<Pending | null>(null)
 
-    const connected = buildAdminSupportActionsState(
+    const connected = buildAdminSupportActionsState({
         typedPlan,
         data,
         typedCredits,
@@ -96,9 +110,9 @@ export const AdminSupportActions = (props: AdminSupportActionsProps) => {
         setPending,
         t,
         setDays,
-        setPlan,
-        setCredits,
-    )
+        setPlan: setTypedPlan,
+        setCredits: setTypedCredits,
+    })
     if (connected === null) return null
     const { parsedDays, plan, parsedCredits, invitations, confirm } = connected
     return (
@@ -106,8 +120,8 @@ export const AdminSupportActions = (props: AdminSupportActionsProps) => {
             props={adminSupportActionsProps(connected)}
             on={{
                 setDays,
-                setPlan,
-                setCredits,
+                setPlan: setTypedPlan,
+                setCredits: setTypedCredits,
                 askExtend: () => parsedDays !== undefined && setPending({ kind: "extend", days: parsedDays }),
                 askActive: () => setPending({ kind: "status", to: "active" }),
                 askPastDue: () => setPending({ kind: "status", to: "past_due" }),

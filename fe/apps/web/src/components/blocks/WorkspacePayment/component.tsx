@@ -71,28 +71,8 @@ const PaymentSituation = (props: WorkspacePaymentBaseProps) => {
             </>
         )
     }
-    if (view.phase === "paid" || view.phase === "expired") {
-        const paid = view.phase === "paid"
-        const title = paid ? view.paidTitle : view.expiredTitle
-        const description = paid ? view.paidText : view.expiredText
-        const mascot = paid ? "/images/promo/mascot-celebrate.png" : "/images/promo/mascot-night.png"
-        return (
-            <SurfaceCard ariaLabel={title}>
-                <div className={CENTERED_CLASS_NAME} role={paid ? "status" : undefined}>
-                    <div className={MASCOT_CLASS_NAME}>
-                        <MediaFrame treatment="plain" aspect="portrait" fit="contain">
-                            <Image src={mascot} alt="" aspect="portrait" fit="contain" plate="none" />
-                        </MediaFrame>
-                    </div>
-                    <SectionHeader level={1} title={title} description={description} />
-                    {view.error ? <Alert tone="negative" title={view.errorTitle} description={view.error} /> : null}
-                    <div className={ACTIONS_CLASS_NAME}>
-                        <PaymentActions {...props} />
-                    </div>
-                </div>
-            </SurfaceCard>
-        )
-    }
+    if (view.phase === "paid" || view.phase === "expired") return <PaymentOutcome {...props} />
+
     return (
         <>
             <SectionHeader level={1} title={view.title} description={view.description} />
@@ -113,3 +93,28 @@ export const WorkspacePaymentBase = (props: WorkspacePaymentBaseProps) => (
         <PaymentSituation {...props} />
     </div>
 )
+
+/** The settled payment result retains its heading and exposes the result as output. */
+const PaymentOutcome = (props: WorkspacePaymentBaseProps) => {
+    const view = props.props
+    const paid = view.phase === "paid"
+    const title = paid ? view.paidTitle : view.expiredTitle
+    const description = paid ? view.paidText : view.expiredText
+    const mascot = paid ? "/images/promo/mascot-celebrate.png" : "/images/promo/mascot-night.png"
+    return (
+        <SurfaceCard ariaLabel={title}>
+            <div className={CENTERED_CLASS_NAME}>
+                <div className={MASCOT_CLASS_NAME}>
+                    <MediaFrame treatment="plain" aspect="portrait" fit="contain">
+                        <Image src={mascot} alt="" aspect="portrait" fit="contain" plate="none" />
+                    </MediaFrame>
+                </div>
+                <SectionHeader level={1} title={paid ? <output>{title}</output> : title} description={description} />
+                {view.error ? <Alert tone="negative" title={view.errorTitle} description={view.error} /> : null}
+                <div className={ACTIONS_CLASS_NAME}>
+                    <PaymentActions {...props} />
+                </div>
+            </div>
+        </SurfaceCard>
+    )
+}

@@ -5,6 +5,7 @@ interface FairnessRule {
     readonly category: FairnessCategory
     readonly on: "lower" | "fold"
     readonly re: RegExp
+    readonly additional?: RegExp
 }
 
 /** Words of context kept on each side of a found phrase. */
@@ -14,10 +15,10 @@ const CONTEXT_WORDS = 2
 export const QUOTED_VIOLATIONS = 4
 
 /** Ages that are the legal minimum working age, never a screening criterion. */
-const LEGAL_MINIMUM_AGES: ReadonlyArray<number> = [15, 16, 18]
+const LEGAL_MINIMUM_AGES: ReadonlySet<number> = new Set([15, 16, 18])
 
 /** Prefixes that make a legal minimum age ("tu 18 tuoi"). */
-const MINIMUM_PREFIXES: ReadonlyArray<string> = ["tu", "du", "toi thieu", "it nhat"]
+const MINIMUM_PREFIXES: ReadonlySet<string> = new Set(["tu", "du", "toi thieu", "it nhat"])
 
 const NOT_LETTER_BEFORE = String.raw`(?<![\p{L}\p{N}])`
 const NOT_LETTER_AFTER = String.raw`(?![\p{L}\p{N}])`
@@ -53,10 +54,7 @@ const FAIRNESS_RULES: ReadonlyArray<FairnessRule> = [
     {
         category: "gender",
         on: "fold",
-        re: new RegExp(
-            "(?<![a-z0-9])(?:nu(?! trang)|gioi tinh|nam gioi|nu gioi|phu nu|dan ong|con gai|con trai)(?![a-z0-9])",
-            "gu",
-        ),
+        re: /(?<![a-z0-9])(?:nu(?! trang)|gioi tinh|nam gioi|nu gioi|phu nu|dan ong|con gai|con trai)(?![a-z0-9])/gu,
     },
     { category: "age", on: "fold", re: /(\d{2})\s*(?:-|~|den|toi)\s*(\d{2})\s*tuoi/gu },
     {
@@ -67,7 +65,8 @@ const FAIRNESS_RULES: ReadonlyArray<FairnessRule> = [
     {
         category: "age",
         on: "fold",
-        re: /(?<![a-z])(?:do tuoi|tuoi tu|tuoi duoi|tuoi tren|bao nhieu tuoi|may tuoi|tuoi cua ban|nam sinh|sinh nam\s*\d{4}|(?:19|20)\d{2}\s*tro (?:ve sau|lai))/gu,
+        re: /(?<![a-z])(?:do tuoi|tuoi tu|tuoi duoi|tuoi tren|bao nhieu tuoi|may tuoi|tuoi cua ban|nam sinh)/gu,
+        additional: /(?<![a-z])(?:sinh nam\s*\d{4}|(?:19|20)\d{2}\s*tro (?:ve sau|lai))/gu,
     },
     { category: "age", on: "fold", re: plain("tre trung|tre khoe|con tre|lon tuoi|trung nien|tuoi tre|qua tuoi") },
     {
@@ -155,8 +154,21 @@ const wordsAfter = (text: string, from: number, count: number): number =>
 
 /** True for "tu 18 tuoi", "du 16 tuoi" and "18 tuoi tro len": the legal minimum working age. */
 const isLegalMinimumAge = (prefix: string | undefined, age: number, after: string): boolean =>
-    LEGAL_MINIMUM_AGES.includes(age) &&
-    ((prefix !== undefined && MINIMUM_PREFIXES.includes(prefix)) || /^\s*tro len/u.test(after))
+    LEGAL_MINIMUM_AGES.has(age) &&
+    ((prefix !== undefined && MINIMUM_PREFIXES.has(prefix)) || /^\s*tro len/u.test(after))
+
+/** Combines related recognizers in textual order, retaining the original non-overlapping match semantics. */
+const matchesOf = (text: string, rule: FairnessRule): Array<RegExpExecArray> => {
+    const matches = [...text.matchAll(rule.re)]
+    if (rule.additional !== undefined) matches.push(...text.matchAll(rule.additional))
+    matches.sort((left, right) => left.index - right.index)
+    let end = 0
+    return matches.filter((match) => {
+        if (match.index < end) return false
+        end = match.index + match[0].length
+        return true
+    })
+}
 
 /** Every place a text asks for, or screens on, a protected trait; empty means fine. `field` names where it was found. */
 export const findFairnessViolations = (text: string, field: FairnessField | "" = ""): Array<FairnessViolation> => {
@@ -167,7 +179,7 @@ export const findFairnessViolations = (text: string, field: FairnessField | "" =
     const found = new Map<string, FairnessViolation>()
     FAIRNESS_RULES.filter((rule) => hasMarks || rule.on !== "lower" || rule.category !== "gender").forEach((rule) => {
         const hay = rule.on === "fold" ? folded : lower
-        for (const match of hay.matchAll(rule.re)) {
+        for (const match of matchesOf(hay, rule)) {
             const start = match.index
             const prefix = rule.category === "age" ? match[1] : undefined
             const ageText = rule.category === "age" ? match[2] : undefined

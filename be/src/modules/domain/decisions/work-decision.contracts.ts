@@ -19,9 +19,9 @@ export interface WorkDecisionRequest {
     /** What the person changed before approving; nothing when absent. */
     readonly edits?: WireEdits
     /** A note from the decider. */
-    readonly note?: OptionalNote
+    readonly note?: string | null
     /** The written reason the outcome is true; required to approve a payment reconciliation. */
-    readonly basis?: OptionalNote
+    readonly basis?: string | null
     /** The language of the generated text. */
     readonly locale: Locale
 }
@@ -53,7 +53,7 @@ export interface ExecutionDecisionRequest {
     /** Approve or reject. */
     readonly decision: DecisionVerdict
     /** The draft the person edited, when they did. */
-    readonly editedDraft?: OptionalNote
+    readonly editedDraft?: string | null
     /** The language of the generated text. */
     readonly locale: Locale
 }

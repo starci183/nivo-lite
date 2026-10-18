@@ -2,7 +2,9 @@ import { lookup } from "node:dns/promises"
 import { isIP } from "node:net"
 import { Injectable } from "@nestjs/common"
 import nodemailer from "nodemailer"
+import { parseConnectionUrl } from "nodemailer/lib/shared"
 import type SMTPTransport from "nodemailer/lib/smtp-transport"
+import wellKnown from "nodemailer/lib/well-known"
 import { MailError, MailErrorCode } from "./errors/mail.error"
 import { oneLine, renderEmail } from "./mail-layout.policy"
 import { InjectMailOptions } from "./mail.decorators"
@@ -42,7 +44,14 @@ export class MailClient {
     /** Sends one message through a workspace SMTP account. Throws a MailError. */
     async sendThroughSmtp(config: SmtpConfig, message: MailMessage): Promise<SentMail> {
         await this.assertSmtpTarget(config.host, config.port)
-        const transport = nodemailer.createTransport(this.transportOptions(config))
+        const relaxed = this.options.allowPrivateHosts
+        const transport = nodemailer.createTransport({
+            ...this.transportOptions(config),
+            secure: config.security === "tls",
+            requireTLS: config.security === "starttls" && !relaxed,
+            // Only the development mail catcher may use a self-signed certificate.
+            tls: { rejectUnauthorized: !relaxed, minVersion: "TLSv1.2" },
+        })
         return transport
             .sendMail({
                 from: { name: config.fromName, address: config.fromEmail },
@@ -68,7 +77,28 @@ export class MailClient {
     sendThroughPlatform(message: MailMessage): Promise<SentMail> {
         const platform = this.options.platform
         if (platform === null) return Promise.reject(new MailError({ code: MailErrorCode.NotConfigured }))
-        const transport = nodemailer.createTransport(platform.url.reveal())
+        const { service, url: _url, ...parsed } = parseConnectionUrl(platform.url.reveal())
+        const preset = service === undefined ? false : wellKnown(service)
+        const resolved = { ...parsed, ...(preset || {}) }
+        const relaxed = this.options.allowPrivateHosts
+        const transport = nodemailer.createTransport({
+            ...resolved,
+            port: resolved.port === undefined ? undefined : Number(resolved.port),
+            // URL and service options are resolved before enforcing the transport policy.
+            secure: resolved.secure === true || (resolved.secure === undefined && Number(resolved.port) === 465),
+            requireTLS: !relaxed,
+            ignoreTLS: false,
+            opportunisticTLS: false,
+            secured: false,
+            sendmail: false,
+            streamTransport: false,
+            jsonTransport: false,
+            tls: {
+                ...resolved.tls,
+                rejectUnauthorized: !relaxed,
+                minVersion: resolved.tls?.minVersion === "TLSv1.3" ? "TLSv1.3" : "TLSv1.2",
+            },
+        })
         return transport
             .sendMail({
                 from: platform.from,
@@ -118,14 +148,9 @@ export class MailClient {
     }
 
     private transportOptions(config: SmtpConfig): SMTPTransport.Options {
-        const relaxed = this.options.allowPrivateHosts
         return {
             host: config.host,
             port: config.port,
-            secure: config.security === "tls",
-            requireTLS: config.security === "starttls" && !relaxed,
-            // A mail catcher on localhost has a self-signed certificate; a real server must present a valid one.
-            tls: { rejectUnauthorized: !relaxed, minVersion: "TLSv1.2" },
             auth: config.user !== "" || config.pass !== "" ? { user: config.user, pass: config.pass } : undefined,
             connectionTimeout: 10_000,
             greetingTimeout: 10_000,

@@ -116,8 +116,9 @@ const fromMessaging = (
         const mid = str(postback.mid)
         const payload = str(postback.payload)
         const title = str(postback.title)
+        const identity = mid ?? `${senderId}:${when}:${payload ?? title ?? ""}`
         return {
-            ...blank(platform, "postback", when, `postback:${mid ?? `${senderId}:${when}:${payload ?? title ?? ""}`}`),
+            ...blank(platform, "postback", when, `postback:${identity}`),
             ...idsFor(platform, entryId),
             ...senderFor(platform, senderId),
             text: title ?? payload,
@@ -132,8 +133,9 @@ const fromMessaging = (
         const hasAttachment = arr(message.attachments).length > 0
         const text = str(message.text)
         if (!text && !hasAttachment && !quick) return null
+        const identity = mid ?? `${senderId}:${when}`
         return {
-            ...blank(platform, "dm", when, `dm:${mid ?? `${senderId}:${when}`}`),
+            ...blank(platform, "dm", when, `dm:${identity}`),
             ...idsFor(platform, entryId),
             ...senderFor(platform, senderId),
             text: text ?? quick,
@@ -145,45 +147,51 @@ const fromMessaging = (
     return null
 }
 
+/** A leadgen notification needs its provider id before it can be deduplicated. */
+const fromFacebookLead = (entryId: string | null, value: Obj, time: number): MetaEvent | null => {
+    const leadgenId = str(value.leadgen_id)
+    if (!leadgenId) return null
+    return {
+        ...blank("facebook", "leadgen", ms(num(value.created_time), "s") ?? time, `leadgen:${leadgenId}`),
+        page_id: str(value.page_id) ?? entryId,
+        leadgen_id: leadgenId,
+        form_id: str(value.form_id),
+        ad_id: str(value.ad_id),
+    }
+}
+
+/** Normalizes added comments and mentions, ignoring the page's own actions. */
+const fromFacebookComment = (entryId: string | null, field: string, value: Obj, time: number): MetaEvent | null => {
+    const item = str(value.item)
+    const verb = str(value.verb)
+    const from = obj(value.from)
+    const fromId = str(from?.id)
+    if (fromId && fromId === entryId) return null
+    if (field === "feed" && !(item === "comment" && verb === "add")) return null
+    if (field === "mention" && verb !== null && verb !== "add") return null
+    const commentId = str(value.comment_id)
+    const postId = str(value.post_id)
+    const key = field === "mention" ? `mention:${commentId ?? postId ?? ""}` : `comment:${commentId ?? ""}`
+    if (key.endsWith(":")) return null
+    return {
+        ...blank(
+            "facebook",
+            field === "mention" ? "mention" : "comment",
+            ms(num(value.created_time), "s") ?? time,
+            key,
+        ),
+        page_id: entryId,
+        ...senderFor("facebook", fromId),
+        sender_name: str(from?.name),
+        text: str(value.message),
+        comment_id: commentId,
+        post_id: postId,
+    }
+}
+
 const fromFacebookChange = (entryId: string | null, field: string, value: Obj, time: number): MetaEvent | null => {
-    if (field === "leadgen") {
-        const leadgenId = str(value.leadgen_id)
-        if (!leadgenId) return null
-        return {
-            ...blank("facebook", "leadgen", ms(num(value.created_time), "s") ?? time, `leadgen:${leadgenId}`),
-            page_id: str(value.page_id) ?? entryId,
-            leadgen_id: leadgenId,
-            form_id: str(value.form_id),
-            ad_id: str(value.ad_id),
-        }
-    }
-    if (field === "feed" || field === "mention") {
-        const item = str(value.item)
-        const verb = str(value.verb)
-        const from = obj(value.from)
-        const fromId = str(from?.id)
-        if (fromId && fromId === entryId) return null
-        if (field === "feed" && !(item === "comment" && verb === "add")) return null
-        if (field === "mention" && verb !== null && verb !== "add") return null
-        const commentId = str(value.comment_id)
-        const postId = str(value.post_id)
-        const key = field === "mention" ? `mention:${commentId ?? postId ?? ""}` : `comment:${commentId ?? ""}`
-        if (key.endsWith(":")) return null
-        return {
-            ...blank(
-                "facebook",
-                field === "mention" ? "mention" : "comment",
-                ms(num(value.created_time), "s") ?? time,
-                key,
-            ),
-            page_id: entryId,
-            ...senderFor("facebook", fromId),
-            sender_name: str(from?.name),
-            text: str(value.message),
-            comment_id: commentId,
-            post_id: postId,
-        }
-    }
+    if (field === "leadgen") return fromFacebookLead(entryId, value, time)
+    if (field === "feed" || field === "mention") return fromFacebookComment(entryId, field, value, time)
     return null
 }
 
@@ -243,24 +251,26 @@ export const parseWebhook = (body: unknown, now: number): Array<MetaEvent> => {
     const object = root ? str(root.object) : null
     const platform = platformOf(object)
     if (!root || !platform) return []
-    const out: Array<MetaEvent> = []
-    for (const rawEntry of arr(root.entry)) {
-        const entry = obj(rawEntry)
-        if (!entry) continue
-        const entryId = str(entry.id)
-        const time = ms(num(entry.time), "s") ?? now
-        for (const item of arr(entry.messaging)) {
-            const event = fromMessaging(platform, entryId, item, time)
-            if (event) out.push(event)
-        }
-        for (const rawChange of arr(entry.changes)) {
-            const change = obj(rawChange)
-            if (!change) continue
-            const event = fromChange(platform, entryId, change, time)
-            if (event) out.push(event)
-        }
-    }
-    return out
+    return arr(root.entry).flatMap((entry) => eventsOfEntry(platform, entry, now))
+}
+
+/** Keeps provider order within an entry: direct messaging precedes field changes. */
+const eventsOfEntry = (platform: MetaPlatform, raw: unknown, now: number): Array<MetaEvent> => {
+    const entry = obj(raw)
+    if (!entry) return []
+    const entryId = str(entry.id)
+    const time = ms(num(entry.time), "s") ?? now
+    const messaging = arr(entry.messaging).flatMap((item) => {
+        const event = fromMessaging(platform, entryId, item, time)
+        return event ? [event] : []
+    })
+    const changes = arr(entry.changes).flatMap((rawChange) => {
+        const change = obj(rawChange)
+        if (!change) return []
+        const event = fromChange(platform, entryId, change, time)
+        return event ? [event] : []
+    })
+    return [...messaging, ...changes]
 }
 
 /** GET /{leadgen_id} to the contact and every answer. Phone numbers keep their digits and a leading plus. */

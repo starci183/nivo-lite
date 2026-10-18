@@ -12,8 +12,10 @@ export interface ZaloReturnInput {
 }
 
 /** The Connections address the browser lands on, with the verdict the wizard shows on its check step. */
-const connectionsHref = (verdict: string, connectionId?: string): string =>
-    `/connections?zalo=${verdict}${connectionId === undefined ? "" : `&id=${connectionId}`}`
+const connectionsHref = (verdict: string, connectionId?: string): string => {
+    const connection = connectionId === undefined ? "" : `&id=${connectionId}`
+    return `/connections?zalo=${verdict}${connection}`
+}
 
 /**
  * Hands the Zalo return to the back end: the state names the connection and carries a one-time nonce; the back end proves the

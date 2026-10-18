@@ -54,7 +54,7 @@ export interface InventoryWorkbenchRows {
 }
 
 /** The statuses of purchase orders that still owe goods. */
-const OPEN_STATUSES: ReadonlyArray<string> = ["draft", "waiting_approval", "sent", "partially_received"]
+const OPEN_STATUSES: ReadonlySet<string> = new Set(["draft", "waiting_approval", "sent", "partially_received"])
 
 const PO_STATUSES: ReadonlyArray<InventoryPoStatus> = [
     "draft",
@@ -127,7 +127,7 @@ const onOrderByItem = (
     pos: ReadonlyArray<WorkbenchPoRow>,
     lines: ReadonlyArray<WorkbenchPoLineRow>,
 ): ReadonlyMap<string, number> => {
-    const open = new Set(pos.filter((po) => OPEN_STATUSES.includes(po.status)).map((po) => po.id))
+    const open = new Set(pos.filter((po) => OPEN_STATUSES.has(po.status)).map((po) => po.id))
     const totals = new Map<string, number>()
     for (const line of lines) {
         if (!open.has(line.po_id)) continue
@@ -260,7 +260,7 @@ const metricsOf = (
     itemCount: active.length,
     lowCount: active.filter((item) => item.status === "low").length,
     outCount: active.filter((item) => item.status === "out").length,
-    openPos: pos.filter((po) => OPEN_STATUSES.includes(po.status)).length,
+    openPos: pos.filter((po) => OPEN_STATUSES.has(po.status)).length,
     pendingCount: pending.length,
 })
 

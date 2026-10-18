@@ -10,6 +10,19 @@ const build = async () => {
 }
 
 describe("foldText", () => {
+    it.each([
+        { label: "separate spans", text: "Lan (sales) Ha (team)", expected: "lan ha" },
+        { label: "nested opening", text: "Lan (sales(team) Ha)", expected: "lan ha)" },
+        {
+            label: "long unmatched span",
+            text: "Lan " + "(".repeat(20_000) + "sales",
+            expected: "lan " + "(".repeat(20_000) + "sales",
+        },
+    ])("keeps unmatched name text while dropping complete spans: $label", async ({ text, expected }) => {
+        const subject = await build()
+        expect(subject.foldText(text)).toBe(expected)
+    })
+
     it("lowercases, strips accents, \u0111, parentheses and extra spaces", async () => {
         const subject = await build()
 

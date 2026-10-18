@@ -1,5 +1,10 @@
-import type { ModuleDefinition, ModulesCatalog } from "@modules/domain/modules"
-import type { InstallResult, SetupState, SetupVersions } from "@modules/domain/modules"
+import type {
+    InstallResult,
+    ModuleDefinition,
+    ModulesCatalog,
+    SetupState,
+    SetupVersions,
+} from "@modules/domain/modules"
 import type { AgentSyncStatus, InstallationRecord, RequirementFacts } from "@modules/domain/module-installations"
 import type { SetupMessageRecord } from "@modules/domain/module-setup-messages"
 import type { SetupSessionRecord } from "@modules/domain/module-setup-sessions"

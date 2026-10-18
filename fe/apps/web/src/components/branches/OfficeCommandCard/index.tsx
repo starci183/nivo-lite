@@ -65,7 +65,7 @@ export const OfficeCommandCard = (props: OfficeCommandCardProps) => {
             <Text size="xs" tone="muted" isSkeleton={isLoading} live="polite">
                 {command?.note ?? text("cmdGateNote", { agent: props.agent })}
             </Text>
-            {command === null || command.detail === null ? null : (
+            {command?.detail === undefined || command.detail === null ? null : (
                 <Alert tone="negative" title={text("cmdFailed")} description={command.detail} />
             )}
             {isLoading || status === "pending" ? (
@@ -91,7 +91,7 @@ export const OfficeCommandCard = (props: OfficeCommandCardProps) => {
                     </Button>
                 </div>
             ) : null}
-            {command === null || command.workHref === null ? null : (
+            {command?.workHref === undefined || command.workHref === null ? null : (
                 <div className={ACTIONS_CLASS_NAME}>
                     <Button variant="secondary" size="sm" href={command.workHref}>
                         {text("cmdOpenWork")}

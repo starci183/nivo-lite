@@ -62,7 +62,7 @@ export interface PriorRuns {
 }
 
 const NOTHING: Seen = { n: 0, last: 0, waiting: false }
-const OPEN: ReadonlyArray<string> = ["waiting_approval", "queued", "running"]
+const OPEN: ReadonlySet<string> = new Set(["waiting_approval", "queued", "running"])
 
 /** Groups the history rows per trigger reference. */
 export const priorRunsOf = (rows: ReadonlyArray<PriorRunRow>): PriorRuns => {
@@ -75,7 +75,7 @@ export const priorRunsOf = (rows: ReadonlyArray<PriorRunRow>): PriorRuns => {
         seen.set(row.trigger_ref, {
             n: current.n + 1,
             last: Math.max(current.last, Date.parse(row.created_at)),
-            waiting: current.waiting || OPEN.includes(row.status),
+            waiting: current.waiting || OPEN.has(row.status),
         })
     }
     return { seen, used }
@@ -87,6 +87,33 @@ export const lookbackIso = (now: Date, kind: "nurture" | "win_back"): string =>
         now.getTime() - (kind === "nurture" ? NURTURE_LOOKBACK_DAYS : WIN_BACK_LOOKBACK_DAYS) * DAY_MS,
     ).toISOString()
 
+/** The clock and maximum number of runs for one scan. */
+interface ScanWindowParams {
+    /** The instant at which eligibility is evaluated. */
+    readonly now: Date
+    /** The maximum number of plans returned. */
+    readonly batch: number
+}
+
+const leadPlan = (
+    kind: "nurture" | "win_back",
+    leadId: string,
+    seen: Seen,
+    prior: PriorRuns,
+    config: PipelineConfig,
+    month: string,
+): ScanPlan | null => {
+    if (kind === "nurture") {
+        const k = seen.n + 1
+        const dedupe = `nurture:${leadId}:${k}`
+        if (k > Number(config.maxFollowUps) || prior.used.has(dedupe)) return null
+        return { dedupe, triggerRef: leadId, payload: { lead_id: leadId, k, dedupe } }
+    }
+    const dedupe = `winback:${leadId}:${month}`
+    if (seen.n > 0 || prior.used.has(dedupe)) return null
+    return { dedupe, triggerRef: leadId, payload: { lead_id: leadId, dedupe } }
+}
+
 /** The leads of a scan that are due a nudge ("nurture") or an invitation back ("win_back"). */
 export const planLeadScan = (
     kind: "nurture" | "win_back",
@@ -95,9 +122,9 @@ export const planLeadScan = (
     withChat: ReadonlySet<string>,
     prior: PriorRuns,
     config: PipelineConfig,
-    now: Date,
-    batch: number,
+    window: ScanWindowParams,
 ): ReadonlyArray<ScanPlan> => {
+    const { now, batch } = window
     const quietMs = (kind === "nurture" ? Number(config.afterHours) : Number(config.afterDays) * 24) * HOUR_MS
     const month = vnClock(now).day.slice(0, 7)
     const plans: Array<ScanPlan> = []
@@ -106,16 +133,8 @@ export const planLeadScan = (
         if (!withChat.has(lead.id) || now.getTime() - (activity.get(lead.id) ?? 0) < quietMs) continue
         const seen = prior.seen.get(lead.id) ?? NOTHING
         if (seen.waiting || (seen.n > 0 && now.getTime() - seen.last < quietMs)) continue
-        if (kind === "nurture") {
-            const k = seen.n + 1
-            const dedupe = `nurture:${lead.id}:${k}`
-            if (k > Number(config.maxFollowUps) || prior.used.has(dedupe)) continue
-            plans.push({ dedupe, triggerRef: lead.id, payload: { lead_id: lead.id, k, dedupe } })
-        } else {
-            const dedupe = `winback:${lead.id}:${month}`
-            if (seen.n > 0 || prior.used.has(dedupe)) continue
-            plans.push({ dedupe, triggerRef: lead.id, payload: { lead_id: lead.id, dedupe } })
-        }
+        const plan = leadPlan(kind, lead.id, seen, prior, config, month)
+        if (plan !== null) plans.push(plan)
     }
     return plans
 }

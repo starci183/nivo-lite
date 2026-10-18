@@ -7561,6 +7561,8 @@ type VideoRenderStatusType {
 }
 
 type VideoRenderType {
+  captionsLang: String
+  captionsUrl: String
   downloadUrl: String
   durationMs: Int
   errorCode: String

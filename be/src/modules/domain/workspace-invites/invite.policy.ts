@@ -1,15 +1,13 @@
-import { ok, refused } from "@modules/platform/primitives"
+import { ok, refused, hasEmailAddressShape } from "@modules/platform/primitives"
 import type { Outcome } from "@modules/platform/primitives"
 import { WorkspaceInvitesErrorCode } from "./errors/workspace-invites.error"
 import type { InviteState } from "./workspace-invites.contracts"
-
-const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
 /** The address the way it is stored and compared: trimmed and lower case. */
 export const normaliseEmail = (email: string): string => email.trim().toLowerCase()
 
 /** Whether the text looks like an email address. */
-export const isEmailAddress = (email: string): boolean => EMAIL_PATTERN.test(email)
+export const isEmailAddress = (email: string): boolean => hasEmailAddressShape(email)
 
 /**
  * Judges an invitation for the signed-in person: it must exist, be neither revoked, used nor expired, and name the

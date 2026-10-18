@@ -48,7 +48,7 @@ export class ConnectionSecretsService {
         manager: EntityManager = this.entityManager,
     ): Promise<Outcome<ConnectionSecret, ConnectionSecretsErrorCode>> {
         const row = (await manager.query<Array<ConnectionSecretRow>>(FIND_CONNECTION_SECRET, [connectionId]))[0]
-        if (row === undefined || row.provider !== provider || row.status === "disconnected") {
+        if (row?.provider !== provider || row.status === "disconnected") {
             return refused(ConnectionSecretsErrorCode.NotFound)
         }
         try {

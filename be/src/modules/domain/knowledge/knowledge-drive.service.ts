@@ -14,7 +14,7 @@ import { isPickerToken } from "./picker-token.policy"
 const MANAGERS: ReadonlyArray<WorkspaceRole> = ["owner", "manager"]
 
 /** The statuses Google answers for a folder the picked token cannot list. */
-const NOT_LISTABLE: ReadonlyArray<number> = [403, 404]
+const NOT_LISTABLE: ReadonlySet<number> = new Set([403, 404])
 
 @Injectable()
 /** The Google Drive folders an owner adds to the knowledge: a pasted folder link read with the workspace grant, or a folder picked in the Google Picker. */
@@ -53,7 +53,7 @@ export class KnowledgeDriveService {
             return { ...listing, empty: listing.files.length === 0 }
         } catch (cause) {
             const status = cause instanceof DocumentsError ? Number(cause.params.status) : 0
-            if (!NOT_LISTABLE.includes(status)) throw cause
+            if (!NOT_LISTABLE.has(status)) throw cause
             this.logger.warn(KnowledgeLogEvent.PickedFolderRefused, { workspaceId, status })
             return { name: "", files: [], truncated: false, empty: true }
         }

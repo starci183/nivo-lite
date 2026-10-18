@@ -82,7 +82,7 @@ export class VideoScriptingService {
         await this.members.require(principalId, workspaceId, ["owner", "manager"])
         const state = await this.generations.state(workspaceId, id)
         const projectId = state === null ? undefined : videoRecord(state.input.context).projectId
-        if (state === null || state.purpose !== "video_script" || typeof projectId !== "string") {
+        if (state?.purpose !== "video_script" || typeof projectId !== "string") {
             throw new VideoError({ code: VideoErrorCode.ProjectNotFound, params: { projectId: id } })
         }
         const project = await this.project(this.entityManager, workspaceId, projectId)

@@ -175,12 +175,6 @@ export interface AutomationsBoardView {
 /** A text in both languages, as the template definitions carry it. */
 export type BilingualLabel = { readonly vi: string; readonly en: string }
 
-/** The module an automation belongs to. */
-export type ModuleScope = string
-
-/** The key of one automation template. */
-export type TemplateKey = string
-
 /** One setting value of a pipeline. */
 export type ConfigValue = string | number | boolean
 
@@ -205,7 +199,7 @@ export type ConnectionNeed = "google" | "webhook" | "smtp"
 
 /** What a template needs before it can be switched on. */
 export type Requires = {
-    readonly modules: ReadonlyArray<ModuleScope>
+    readonly modules: ReadonlyArray<string>
     readonly channels: ReadonlyArray<ChannelNeed>
     readonly connections: ReadonlyArray<ConnectionNeed>
     readonly capabilities: ReadonlyArray<Capability>
@@ -247,7 +241,7 @@ export type TemplateExecutor = "implemented" | "n8n" | "definition"
 
 /** One ready-made automation of the catalogue, as the back end answers it. */
 export type TemplateDef = {
-    readonly key: TemplateKey
+    readonly key: string
     readonly version: number
     readonly position: number
     readonly pack: TemplatePack
@@ -259,7 +253,7 @@ export type TemplateDef = {
         readonly data?: ReadonlyArray<string>
     }
     /** Exactly one owner: a module, or null for a workspace-wide automation. */
-    readonly moduleKey: ModuleScope | null
+    readonly moduleKey: string | null
     readonly icon: AutomationIconWord
     readonly name: BilingualLabel
     /** One line. */
@@ -293,7 +287,7 @@ export type RunStep = {
 export type AutomationRunView = {
     readonly id: string
     readonly pipelineId: string
-    readonly templateKey: TemplateKey
+    readonly templateKey: string
     readonly status: AutomationRunStatus
     readonly triggerRef: string
     /** Plain-words one line: "Sent a thank-you to the customer". */
@@ -322,7 +316,7 @@ export type AutomationGateKind = "auto" | "ask" | "never" | null
 
 /** A template card's state, assembled by the back end. */
 export type AutomationCardView = {
-    readonly key: TemplateKey
+    readonly key: string
     readonly def: TemplateDef
     readonly pipelineId: string | null
     readonly enabled: boolean

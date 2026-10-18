@@ -6,11 +6,18 @@ import type { OfficeWork } from "./office.types"
 import { NIVO_AVATAR, agentAvatarOf, departmentAgentOf, leadNameOf } from "./office.words"
 import type { OfficeContext, OfficeWords } from "./office.words"
 
-const BASIS_FIELDS: ReadonlyArray<string> = ["contact_name", "need", "contact", "customer", "items", "amount_vnd"]
+const BASIS_FIELDS: ReadonlySet<string> = new Set([
+    "contact_name",
+    "need",
+    "contact",
+    "customer",
+    "items",
+    "amount_vnd",
+])
 
 const missingFieldOf = (name: string, words: OfficeWords): OfficeMissingField => ({
     name,
-    label: BASIS_FIELDS.includes(name) ? words.g(`field_${name}`) : name,
+    label: BASIS_FIELDS.has(name) ? words.g(`field_${name}`) : name,
 })
 
 const workBadgeOf = (work: OfficeWork, isReconcile: boolean, words: OfficeWords): string => {
@@ -56,6 +63,20 @@ const creditLineOf = (work: OfficeWork, words: OfficeWords): string => {
     })
 }
 
+const candidateChoicesOf = (work: OfficeWork, words: OfficeWords): OfficeExceptionView["choices"] =>
+    work.candidates.map((candidate) => ({
+        id: candidate.id,
+        label: candidate.label,
+        description: candidate.label.includes(words.money(candidate.amountVnd))
+            ? null
+            : words.money(candidate.amountVnd),
+    }))
+
+const workTitleOf = (work: OfficeWork, words: OfficeWords, leadName: string | null): string => {
+    const action = words.g(`action_${work.action}`)
+    return leadName === null ? action : [action, leadName].join(" · ")
+}
+
 /** An exception with its words, its choices and who may decide it. */
 export const exceptionView = (work: OfficeWork, words: OfficeWords, context: OfficeContext): OfficeExceptionView => {
     const isOpen = isOpenWork(work)
@@ -65,7 +86,7 @@ export const exceptionView = (work: OfficeWork, words: OfficeWords, context: Off
     const leadName = leadNameOf(context, work.leadId)
     const missing = isFailed ? [] : work.missingFields
     const basis = fieldTextOf(work.fields, "basis")
-    const title = `${words.g(`action_${work.action}`)}${leadName === null ? "" : ` · ${leadName}`}`
+    const title = workTitleOf(work, words, leadName)
     return {
         kind: "exception",
         key: `exception-${work.id}`,
@@ -89,13 +110,7 @@ export const exceptionView = (work: OfficeWork, words: OfficeWords, context: Off
         draft: work.draft === null || work.draft === "" ? null : work.draft,
         amount: missing.includes("amount_vnd") ? null : work.amountVnd,
         missing: missing.map((name) => missingFieldOf(name, words)),
-        choices: work.candidates.map((candidate) => ({
-            id: candidate.id,
-            label: candidate.label,
-            description: candidate.label.includes(words.money(candidate.amountVnd))
-                ? null
-                : words.money(candidate.amountVnd),
-        })),
+        choices: candidateChoicesOf(work, words),
         creditLine: isOpen && !isFailed && isReconcile ? creditLineOf(work, words) : null,
         result: isOpen ? null : work.resultSummary,
         decidedBasis: basis === "" || isOpen ? null : words.t("decidedBasis", { basis }),

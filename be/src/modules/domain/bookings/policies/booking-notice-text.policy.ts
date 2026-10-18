@@ -175,5 +175,5 @@ export const fillReminderBody = (
     body
         .replace(/\{([a-z_]+)\}/g, (_whole, name: string) => (variables[name] ?? "").trim() || (neutral[name] ?? ""))
         .replace(/[ \t]{2,}/g, " ")
-        .replace(/[ \t]+([.,!?])/g, "$1")
+        .replace(/[ \t]([.,!?])/g, "$1")
         .trim()

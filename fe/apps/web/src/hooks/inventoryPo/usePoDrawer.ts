@@ -1,12 +1,24 @@
 "use client"
 
-import { useDrawer, useInventoryFormat, useInventoryRun, useSay } from "@/hooks/inventory"
-import type { InventoryDecisions, DrawerControl } from "@/hooks/inventory"
+import {
+    useDrawer,
+    useInventoryFormat,
+    useInventoryRun,
+    useSay,
+    type InventoryDecisions,
+    type DrawerControl,
+} from "@/hooks/inventory"
 import type { InventoryCommandSet } from "@/hooks/inventoryCommands"
 import type { PoView, SupplierView } from "@/modules/types"
 import { useTranslations } from "next-intl"
-import { draftInputOf, poDrawerProps, receiveInputOf, startPoState, withLine } from "./inventoryPo.shared"
-import type { PoDrawerState } from "./inventoryPo.shared"
+import {
+    draftInputOf,
+    poDrawerProps,
+    receiveInputOf,
+    startPoState,
+    withLine,
+    type PoDrawerState,
+} from "./inventoryPo.shared"
 
 /** Opens, fills and acts on one purchase order; `props` is null while the drawer is closed. */
 export const usePoDrawer = (
@@ -52,22 +64,46 @@ export const usePoDrawer = (
                       error: run.error,
                       notice: run.notice,
                   }),
-        on: actionsOf(change, whenOpen, run, commands, t, decisions, done, receivedText, copy, drawer),
+        on: actionsOf({
+            change,
+            whenOpen,
+            run,
+            commands,
+            t,
+            decisions,
+            done,
+            receivedText,
+            copy,
+            drawer,
+        }),
     }
 }
+/** The resolved inputs for po drawer actions input. */
+interface PoDrawerActionsInput {
+    readonly change: (apply: (current: PoDrawerState) => PoDrawerState) => void
+    readonly whenOpen: (act: (open: PoDrawerState) => void) => () => void
+    readonly run: ReturnType<typeof useInventoryRun>
+    readonly commands: InventoryCommandSet<"updatePoDraft" | "requestSend" | "cancelPo" | "receivePo">
+    readonly t: ReturnType<typeof useTranslations<"workbenchInventory">>
+    readonly decisions: InventoryDecisions
+    readonly done: () => undefined
+    readonly receivedText: (status: string, changes: ReadonlyArray<string>, accounting: boolean) => string
+    readonly copy: (text: string) => Promise<void>
+    readonly drawer: DrawerControl<PoDrawerState>
+}
 
-const actionsOf = (
-    change: (apply: (current: PoDrawerState) => PoDrawerState) => void,
-    whenOpen: (act: (open: PoDrawerState) => void) => () => void,
-    run: ReturnType<typeof useInventoryRun>,
-    commands: InventoryCommandSet<"updatePoDraft" | "requestSend" | "cancelPo" | "receivePo">,
-    t: ReturnType<typeof useTranslations<"workbenchInventory">>,
-    decisions: InventoryDecisions,
-    done: () => undefined,
-    receivedText: (status: string, changes: ReadonlyArray<string>, accounting: boolean) => string,
-    copy: (text: string) => Promise<void>,
-    drawer: DrawerControl<PoDrawerState>,
-) => {
+const actionsOf = ({
+    change,
+    whenOpen,
+    run,
+    commands,
+    t,
+    decisions,
+    done,
+    receivedText,
+    copy,
+    drawer,
+}: PoDrawerActionsInput) => {
     return {
         supplier: (supplierId: string) => change((current) => ({ ...current, supplierId })),
         expected: (expected: string) => change((current) => ({ ...current, expected })),

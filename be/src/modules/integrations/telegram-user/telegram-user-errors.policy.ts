@@ -30,12 +30,14 @@ export const isTelegramRevoked = (error: unknown): boolean => REVOKED.has(telegr
 
 /** The plain-language sentence for a known Telegram code, or null when the code is not one the owner can act on. */
 const knownSentence = (code: string): string | null => {
-    if (/^PHONE_CODE_INVALID|^PHONE_CODE_EMPTY/u.test(code)) return TELEGRAM_USER_TEXT.codeInvalid
-    if (/^PHONE_CODE_EXPIRED/u.test(code)) return TELEGRAM_USER_TEXT.codeExpired
-    if (/^PASSWORD_HASH_INVALID/u.test(code)) return TELEGRAM_USER_TEXT.passwordInvalid
-    if (/^PHONE_NUMBER_INVALID/u.test(code)) return TELEGRAM_USER_TEXT.phoneInvalid
-    if (/^PHONE_NUMBER_BANNED/u.test(code)) return TELEGRAM_USER_TEXT.phoneBanned
-    if (/^PHONE_NUMBER_FLOOD|^FLOOD|^SEND_CODE_UNAVAILABLE/u.test(code)) return TELEGRAM_USER_TEXT.flood
+    if (code.startsWith("PHONE_CODE_INVALID") || code.startsWith("PHONE_CODE_EMPTY"))
+        return TELEGRAM_USER_TEXT.codeInvalid
+    if (code.startsWith("PHONE_CODE_EXPIRED")) return TELEGRAM_USER_TEXT.codeExpired
+    if (code.startsWith("PASSWORD_HASH_INVALID")) return TELEGRAM_USER_TEXT.passwordInvalid
+    if (code.startsWith("PHONE_NUMBER_INVALID")) return TELEGRAM_USER_TEXT.phoneInvalid
+    if (code.startsWith("PHONE_NUMBER_BANNED")) return TELEGRAM_USER_TEXT.phoneBanned
+    if (code.startsWith("PHONE_NUMBER_FLOOD") || code.startsWith("FLOOD") || code.startsWith("SEND_CODE_UNAVAILABLE"))
+        return TELEGRAM_USER_TEXT.flood
     if (REVOKED.has(code)) return TELEGRAM_USER_TEXT.revoked
     return null
 }

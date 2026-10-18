@@ -10,7 +10,7 @@ import type { Tts } from "@modules/integrations/tts"
 import { CLOCK } from "@modules/platform/clock"
 import { MESSAGE_CATALOG } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
-import { VideoErrorCode } from "./errors/video.error"
+import { VideoError, VideoErrorCode } from "./errors/video.error"
 import { RendererService } from "./renderer.service"
 import type { RenderInput } from "./renderer.service"
 import type { VideoAssets } from "./video.contracts"
@@ -106,6 +106,31 @@ const build = async (maxSeconds = 90) => {
 }
 
 describe("RendererService", () => {
+    it("writes timed WebVTT from the measured voice clips used by the same audio mix", async () => {
+        const { renderer, ffmpeg, tts, inputOf } = await build()
+        tts.clip
+            .mockResolvedValueOnce({ file: "first.mp3", cached: false, provider: "edge" })
+            .mockResolvedValueOnce({ file: "second.mp3", cached: false, provider: "edge" })
+        ffmpeg.probeDuration.mockImplementation((file) =>
+            Promise.resolve(file === "first.mp3" ? 2 : file === "second.mp3" ? 3 : 9),
+        )
+        const spec = specOf({
+            scenes: [sceneOf({ voiceover: "First", duration_s: 4 }), sceneOf({ voiceover: "Second", duration_s: 5 })],
+        })
+
+        const output = await renderer.render(inputOf(spec))
+
+        expect(output.captionsLang).toBe("vi-VN")
+        expect(output.captionsFile).not.toBeNull()
+        if (output.captionsFile === null) throw new VideoError({ code: VideoErrorCode.RenderRejected })
+        expect(await readFile(output.captionsFile, "utf8")).toBe(
+            "WEBVTT\n\n00:00:00.250 --> 00:00:02.250\nFirst\n\n00:00:04.250 --> 00:00:07.250\nSecond\n",
+        )
+        const graphs = ffmpeg.run.mock.calls.flatMap((call) => call[1]).join(" ")
+        expect(graphs).toContain("adelay=250|250")
+        expect(graphs).toContain("adelay=4250|4250")
+    })
+
     it("renders a spoken scene, a picture, a gradient card and a logo with music into an MP4 and a poster", async () => {
         const { renderer, ffmpeg, tts, assets, inputOf, progress, options } = await build()
         const spec = specOf({
@@ -167,6 +192,8 @@ describe("RendererService", () => {
             music: null,
             loudness: { measured_lufs: null, normalised: false },
         })
+        expect(output.captionsFile).toBeNull()
+        expect(output.captionsLang).toBeNull()
         expect(tts.clip).not.toHaveBeenCalled()
         expect(ffmpeg.run).toHaveBeenCalledTimes(1 + 1 + 1 + 1 + 1)
     })

@@ -6,7 +6,7 @@ import type { DecisionAssignee, OptionalNote } from "./work-decision.contracts"
 export const BASIS_MIN_CHARS = 10
 
 /** Actions whose approval must carry a written basis: a matching amount alone is not evidence. */
-const NEEDS_BASIS: ReadonlyArray<string> = ["reconcile_payment"]
+const NEEDS_BASIS = new Set(["reconcile_payment"])
 
 /** Who a decision is recorded as: the member's own name; staff accounts are `staff`, owner and manager are `owner`. */
 export const deciderOf = (member: WorkspaceMember): Decider => ({
@@ -25,7 +25,7 @@ export const cleanBasis = (raw: OptionalNote): string => (raw ?? "").trim().repl
 
 /** True when the action needs a written basis to be approved and the one given is too short. */
 export const basisMissing = (action: string, basis: string): boolean =>
-    NEEDS_BASIS.includes(action) && basis.length < BASIS_MIN_CHARS
+    NEEDS_BASIS.has(action) && basis.length < BASIS_MIN_CHARS
 
 /** The decision note: the basis line and the person's own note, whichever exist; null when neither does. */
 export const decisionNote = (basisLine: string, note: OptionalNote): OptionalNote => {

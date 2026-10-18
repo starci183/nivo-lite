@@ -38,8 +38,12 @@ export const graphqlTuning = {
 } as const
 
 /** The public origin of the landing site (privacy and terms live there, not in the console). */
-export const landingUrl = (): string =>
-    required("NEXT_PUBLIC_LANDING_URL", process.env.NEXT_PUBLIC_LANDING_URL).replace(/\/+$/u, "")
+export const landingUrl = (): string => {
+    const value = required("NEXT_PUBLIC_LANDING_URL", process.env.NEXT_PUBLIC_LANDING_URL)
+    let end = value.length
+    while (value[end - 1] === "/") end -= 1
+    return value.slice(0, end)
+}
 
 /** The public origin of the site (providers call back to it); `undefined` when it is not set. */
 export const webSiteOrigin = (): string | undefined => process.env.NEXT_PUBLIC_SITE_URL

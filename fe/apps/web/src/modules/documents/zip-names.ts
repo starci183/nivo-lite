@@ -27,7 +27,7 @@ export const isJunkEntry = (path: string): boolean => {
     if (path.endsWith("/") || path.endsWith("\\")) return true
     const parts = path.split(/[\\/]/)
     if (parts[0] === "__MACOSX") return true
-    return parts.some((part) => part.startsWith(".")) || /^thumbs\.db$/i.test(parts[parts.length - 1] ?? "")
+    return parts.some((part) => part.startsWith(".")) || /^thumbs\.db$/i.test(parts.at(-1) ?? "")
 }
 
 const CP437: ReadonlyArray<number> = [

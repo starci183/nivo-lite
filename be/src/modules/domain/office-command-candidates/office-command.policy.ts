@@ -77,7 +77,7 @@ export const matchLeads = (body: string, leads: ReadonlyArray<LeadRef>): Readonl
 export const acceptsText = (locale: Locale, accepts: ReadonlyArray<ModuleCommand>): string =>
     accepts.map((accepted) => accepted.description[locale]).join("; ")
 
-const ID_KEYS: ReadonlyArray<string> = ["subject_id", "lead_id"]
+const ID_KEYS: ReadonlySet<string> = new Set(["subject_id", "lead_id"])
 
 const soleOf = <T>(items: ReadonlyArray<T>): T | undefined => (items.length === 1 ? items[0] : undefined)
 
@@ -139,7 +139,7 @@ export const resolveCandidate = (
     const missing: Array<string> = []
     for (const key of accepted.requiredFields) {
         const value = choice.fields[key]
-        if (ID_KEYS.includes(key)) {
+        if (ID_KEYS.has(key)) {
             if (payload[key] === undefined) missing.push(key)
         } else if (value === undefined) {
             missing.push(key)

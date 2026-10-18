@@ -100,7 +100,7 @@ export class TtsService implements Tts, OnModuleDestroy {
             const temp = `${file}.${process.pid}.tmp`
             await writeFile(temp, audio)
             await rename(temp, file)
-            this.prune().catch((pruneCause: unknown) => this.logger.error(TtsLogEvent.CachePruneFailed, pruneCause))
+            this.prune().catch((error_: unknown) => this.logger.error(TtsLogEvent.CachePruneFailed, error_))
             return file
         } catch (cause) {
             this.logger.error(TtsLogEvent.CacheWriteFailed, cause)

@@ -150,13 +150,13 @@ export const publishSteps = (t: ContentT, item: ContentItem): Array<PublishStep>
     item.channels.map((channel) => {
         const done = item.published[channel]
         const proof = done?.url || done?.how
+        const postedAt = done ? t("postedAt", { when: dateTimeText(done.at), who: done.by }) : null
+        const postedProof = proof ? ` · ${t("postedProof", { proof })}` : ""
         return {
             channel,
             label: channelLabel(t, channel),
             text: copyReadyText(item.variants[channel]),
-            doneText: done
-                ? `${t("postedAt", { when: dateTimeText(done.at), who: done.by })}${proof ? ` · ${t("postedProof", { proof })}` : ""}`
-                : null,
+            doneText: done ? `${postedAt}${postedProof}` : null,
             isZalo: channel === "zalo",
         }
     })

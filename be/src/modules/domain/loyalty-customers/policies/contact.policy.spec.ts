@@ -55,3 +55,16 @@ describe("contact.policy", () => {
         })
     })
 })
+
+describe("loyalty email shape boundaries", () => {
+    it.each<[string, string | null]>([
+        [" A@B.C. ", "a@b.c."],
+        ["a@.b.c", "a@.b.c"],
+        ["a@.b", null],
+        ["a@@b.c", null],
+        ["a@" + "b".repeat(20000), null],
+    ])("normalizes %s while retaining the address shape", async (value, expected) => {
+        const subject = await buildSubject()
+        expect(subject.toLoyaltyEmail(value)).toBe(expected)
+    })
+})

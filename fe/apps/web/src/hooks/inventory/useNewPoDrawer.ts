@@ -1,6 +1,5 @@
 "use client"
 
-import { useTranslations } from "next-intl"
 import type { InventoryWorkbenchData } from "@/modules/types"
 import { changeAt } from "./inventory.shared"
 import type { InventoryCommandSet } from "@/hooks/inventoryCommands"
@@ -27,7 +26,6 @@ const blankLine = (serial: number): TypedLine => ({ key: `line-${serial}`, itemI
 
 /** Opens, fills and saves the new purchase order form; `props` is null while the drawer is closed. */
 export const useNewPoDrawer = (data: InventoryWorkbenchData, commands: InventoryCommandSet<"createPo">) => {
-    const t = useTranslations("workbenchInventory")
     const say = useSay()
     const run = useInventoryRun()
     const drawer = useDrawer<NewPoState>()

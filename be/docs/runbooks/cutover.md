@@ -147,7 +147,7 @@ Agents, models, automation
 - `VPS_HOST`, `VPS_USER`, `VPS_SSH_KEY`, `VPS_KNOWN_HOSTS` (O; n8n host control by the CLI; the key and known hosts are the file CONTENT, read through `_FILE`)
 - `SMTP_URL`, `SMTP_FROM` (O as a pair), `SMTP_HELLO_NAME`, `SMTP_ALLOW_PRIVATE_HOSTS`; `DATA_ALLOW_PRIVATE_HOSTS`
 - `QUEUE_ENABLED`, `QUEUE_CONCURRENCY`, `QUEUE_WORKSPACE_CONCURRENCY`, `QUEUE_POLL_INTERVAL`, `QUEUE_VISIBILITY_TIMEOUT`, `QUEUE_SHUTDOWN_GRACE`, `JOBS_LEASE`, `JOBS_WORKER_ID` (T)
-- `VIDEO_CACHE_DIR`, `VIDEO_WORK_DIR`, `VIDEO_FONTS_DIR`, `VIDEO_FFMPEG_NICE`, `VIDEO_FFMPEG_THREADS`, `VIDEO_MAX_SECONDS`, `VIDEO_TTS_PROVIDER`, `VIDEO_TTS_MIN_GAP_MS` (T)
+- `VIDEO_CACHE_DIR`, `VIDEO_WORK_DIR`, `VIDEO_FONTS_DIR`, `VIDEO_FFMPEG_NICE`, `VIDEO_FFMPEG_THREADS`, `VIDEO_MAX_SECONDS`, `VIDEO_TTS_PROVIDER`, `VIDEO_TTS_MIN_GAP_MS` (T); optional `VIDEO_FFMPEG_PATH`, `VIDEO_FFPROBE_PATH` and `VIDEO_NICE_PATH` select trusted operator-installed absolute local executables. Keep the executable and every parent directory unwritable by untrusted users. The API image uses its installed Linux defaults; native installation locations and priority behavior are described in the root README's "Native FFmpeg setup" subsection. PATH is never searched.
 
 Stack settings (`.starcistacks/production/secrets/stack.enc`, read by the render): the OpenClaw model, `N8N_ALLOWED_HOSTS`, the failed-jobs alert limit (the api sees `JOBS_ALERT_FAILED_MAX`, default 20) and the stale age in seconds (`JOBS_ALERT_STALE_SECONDS`, default 300). The old image, tag and bind-address settings are obsolete: the images are pinned by digest in the stack source.
 

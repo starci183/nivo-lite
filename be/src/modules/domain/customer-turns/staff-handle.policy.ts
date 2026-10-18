@@ -23,12 +23,7 @@ const ADVISOR_ROLE = /tu van|sales|ban hang|kinh doanh|cskh|cham soc khach|advis
 
 /** Lowercase, accents and parentheses removed. */
 export const foldText = (text: string): string =>
-    text
-        .toLowerCase()
-        .normalize("NFD")
-        .replace(COMBINING_MARKS, "")
-        .replace(D_STROKE, "d")
-        .replace(/\([^)]*\)/gu, " ")
+    withoutParentheses(text.toLowerCase().normalize("NFD").replace(COMBINING_MARKS, "").replace(D_STROKE, "d"))
         .replace(/\s+/gu, " ")
         .trim()
 
@@ -63,3 +58,19 @@ export const handleAmong = (
 
 /** True when a role answers customers first. */
 export const isAdvisorRole = (role: string): boolean => ADVISOR_ROLE.test(foldText(role))
+
+/** Removes each complete parenthesized span; unmatched opening text stays visible. */
+const withoutParentheses = (text: string): string => {
+    const parts: Array<string> = []
+    let start = 0
+    let open = text.indexOf("(")
+    while (open >= 0) {
+        const close = text.indexOf(")", open + 1)
+        if (close < 0) break
+        parts.push(text.slice(start, open), " ")
+        start = close + 1
+        open = text.indexOf("(", start)
+    }
+    parts.push(text.slice(start))
+    return parts.join("")
+}

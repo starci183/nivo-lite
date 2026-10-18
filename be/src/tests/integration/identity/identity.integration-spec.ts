@@ -8,7 +8,7 @@ import { identityComposition } from "../../world/identity-composition.options"
 
 @Credential({ kind: "api-key" })
 class CredentialDoor {}
-class SessionDoor {}
+const SessionDoor = Object
 
 const buildComposedGuard = (world: LiteWorld) => {
     const request = mock<OperationRequest>({ headers: {}, principal: undefined })

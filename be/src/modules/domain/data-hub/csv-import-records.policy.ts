@@ -24,6 +24,36 @@ export interface CsvBuiltRecords {
     readonly duplicates: number
 }
 
+const rowData = (
+    headers: ReadonlyArray<string>,
+    row: ReadonlyArray<string>,
+    mapping: CsvMapping,
+): Record<string, unknown> => {
+    const data: Record<string, unknown> = {}
+    headers.forEach((header, index) => {
+        const raw = (row[index] ?? "").trim()
+        if (raw === "") return
+        const kind = mapping.kinds[header] ?? "text"
+        if (kind === "phone") {
+            const phone = normalisePhone(raw)
+            data[header] = phone || raw
+            if (phone !== "" && phone !== raw) data[`${header}__raw`] = raw
+        } else if (kind === "email") data[header] = raw.toLowerCase()
+        else {
+            data[header] = raw
+            if (kind === "number") {
+                const value = parseNumberLoose(raw)
+                if (value !== null) data[`${header}__number`] = value
+            }
+            if (kind === "date") {
+                const value = parseDateLoose(raw)
+                if (value !== null) data[`${header}__date`] = value
+            }
+        }
+    })
+    return data
+}
+
 /** Rows to hub records: trimmed text, phones as digit text, parsed numbers and dates in separate fields, the original text kept. */
 export const buildRecords = (table: Pick<Table, "headers" | "rows">, mapping: CsvMapping): CsvBuiltRecords => {
     const { headers, rows } = table
@@ -35,28 +65,7 @@ export const buildRecords = (table: Pick<Table, "headers" | "rows">, mapping: Cs
     let skipped = 0
     let duplicates = 0
     rows.forEach((row, n) => {
-        const data: Record<string, unknown> = {}
-        headers.forEach((header, index) => {
-            const raw = (row[index] ?? "").trim()
-            if (raw === "") return
-            const kind = mapping.kinds[header] ?? "text"
-            if (kind === "phone") {
-                const phone = normalisePhone(raw)
-                data[header] = phone || raw
-                if (phone !== "" && phone !== raw) data[`${header}__raw`] = raw
-            } else if (kind === "email") data[header] = raw.toLowerCase()
-            else {
-                data[header] = raw
-                if (kind === "number") {
-                    const value = parseNumberLoose(raw)
-                    if (value !== null) data[`${header}__number`] = value
-                }
-                if (kind === "date") {
-                    const value = parseDateLoose(raw)
-                    if (value !== null) data[`${header}__date`] = value
-                }
-            }
-        })
+        const data = rowData(headers, row, mapping)
         if (Object.keys(data).length === 0) return
         const lineNo = n + 1
         let externalId: string
@@ -81,10 +90,7 @@ export const buildRecords = (table: Pick<Table, "headers" | "rows">, mapping: Cs
 }
 
 const clip = (text: string): ClippedText => {
-    const clean = text
-        .replace(/\r\n?/gu, "\n")
-        .replace(/\u0000/gu, "")
-        .trim()
+    const clean = text.replace(/\r\n?/gu, "\n").replaceAll(String.fromCodePoint(0), "").trim()
     return clean.length > DOCUMENT_MAX_TEXT
         ? { text: clean.slice(0, DOCUMENT_MAX_TEXT), truncated: true }
         : { text: clean, truncated: false }
@@ -92,7 +98,7 @@ const clip = (text: string): ClippedText => {
 
 /** The first heading ("# Title") or the first non-empty line, else the fallback. */
 const titleFrom = (text: string, fallback: string): string => {
-    const heading = /^\s{0,3}#{1,6}\s+(.+)$/mu.exec(text)?.[1]
+    const heading = /^\s{0,3}#{1,6}\s+(\S.*|[^\S\r\n])$/mu.exec(text)?.[1]
     const line = heading ?? text.split("\n").find((candidate) => candidate.trim() !== "")
     return (
         (line ?? fallback)

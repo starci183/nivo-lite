@@ -8,8 +8,7 @@ import { mapSlot, useSlotLabels } from "@/hooks/slot"
 import { useWatch } from "react-hook-form"
 import { useLeadOutcomeForm } from "@/hooks/rhf"
 import type { EventRecord, LeadJourney, LeadStageId, DataSlot } from "@/modules/types"
-import { LeadOutcomeBase } from "./component"
-import type { OutcomeView } from "./component"
+import { LeadOutcomeBase, type OutcomeView } from "./component"
 
 /** The lead the card acts on and its workspace; a null detail draws the loading card. */
 interface LeadOutcomeProps {

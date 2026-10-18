@@ -9,6 +9,30 @@ const buildSubject = async () => {
     }).compile()
     return moduleRef.get<typeof import("./openapi-spec.policy")>(SUBJECT)
 }
+const registerSpecEdgeCases = () => {
+    it("keeps stable collision suffixes, trims long ids, and decodes repeated JSON pointer escapes", async () => {
+        const subject = await buildSubject()
+        const spec = subject.describeSpec(
+            {
+                openapi: "3.0.0",
+                servers: [{ url: `https://api.example/v1${"/".repeat(100_000)}` }],
+                paths: {
+                    "/one": get("entry_9"),
+                    "/two": get("entry_9"),
+                    "/three": get("entry_2"),
+                    "/four": get("entry_9"),
+                    "/long": get(`${"_".repeat(100_000)}${String.fromCodePoint(0xe9)}A-b${"_".repeat(100_000)}`),
+                    "/ref": { $ref: "#/components/pathItems/a~1b~1c~0d~0e" },
+                },
+                components: { pathItems: { "a/b/c~d~e": get("referenced") } },
+            },
+            "",
+        )
+        expect(spec.baseUrl).toBe("https://api.example/v1")
+        expect(spec.ops.map((op) => op.id)).toEqual(["entry_9", "entry_2", "entry_3", "entry_4", "A_b", "referenced"])
+    })
+}
+
 const registerSpecValidation = () => {
     it("refuses a document that is not OpenAPI 3 or Swagger 2", async () => {
         const subject = await buildSubject()
@@ -351,36 +375,16 @@ const registerAuthHints = () => {
             ).authHint,
         ).toEqual({ type: "header", name: "X-Key" })
     })
-    it("builds a swagger base from the host, the scheme list, or the spec url", async () => {
+    it.each<readonly [Record<string, unknown>, string, string]>([
+        [{ swagger: "2.0", schemes: ["http", "https"], host: "api.example" }, "", "https://api.example"],
+        [{ swagger: "2.0", host: "api.example", basePath: "/" }, "", "https://api.example"],
+        [{ swagger: "2.0", basePath: "/v1/" }, "https://files.example/a/spec.json", "https://files.example/v1"],
+        [{ swagger: "2.0" }, "", ""],
+        [{ openapi: "3.0.0", servers: [{ url: "https://api.example/v1/" }] }, "", "https://api.example/v1"],
+        [{ openapi: "3.0.0", servers: "nope" }, "", ""],
+    ])("builds a base from host, schemes, servers and the spec url", async (document, url, expected) => {
         const subject = await buildSubject()
-        expect(
-            subject.describeSpec(
-                { swagger: "2.0", schemes: ["http", "https"], host: "api.example", paths: { "/ping": get("ping") } },
-                "",
-            ).baseUrl,
-        ).toBe("https://api.example")
-        expect(
-            subject.describeSpec(
-                { swagger: "2.0", host: "api.example", basePath: "/", paths: { "/ping": get("ping") } },
-                "",
-            ).baseUrl,
-        ).toBe("https://api.example")
-        expect(
-            subject.describeSpec(
-                { swagger: "2.0", basePath: "/v1/", paths: { "/ping": get("ping") } },
-                "https://files.example/a/spec.json",
-            ).baseUrl,
-        ).toBe("https://files.example/v1")
-        expect(subject.describeSpec({ swagger: "2.0", paths: { "/ping": get("ping") } }, "").baseUrl).toBe("")
-        expect(
-            subject.describeSpec(
-                { openapi: "3.0.0", servers: [{ url: "https://api.example/v1/" }], paths: { "/ping": get("ping") } },
-                "",
-            ).baseUrl,
-        ).toBe("https://api.example/v1")
-        expect(
-            subject.describeSpec({ openapi: "3.0.0", servers: "nope", paths: { "/ping": get("ping") } }, "").baseUrl,
-        ).toBe("")
+        expect(subject.describeSpec({ ...document, paths: { "/ping": get("ping") } }, url).baseUrl).toBe(expected)
     })
     it("keeps an absolute HTTP server URL when the spec URL cannot be parsed", async () => {
         const subject = await buildSubject()
@@ -474,6 +478,7 @@ const get = (operationId: string, extra: Record<string, unknown> = {}) => ({
 })
 
 describe("describeSpec", () => {
+    registerSpecEdgeCases()
     registerSpecValidation()
     registerOperationParameters()
     registerResponseFields()

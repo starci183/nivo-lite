@@ -3,8 +3,7 @@
 import type { CreditsHistoryRow } from "@/modules/types"
 import { useFormatter, useLocale, useTranslations } from "next-intl"
 import { useRequireActiveWorkspace } from "@/hooks/workspaces"
-import { useQueryBillingPlansSwr } from "@/hooks/swr"
-import { useQueryPaymentOrdersSwr } from "@/hooks/swr"
+import { useQueryBillingPlansSwr, useQueryPaymentOrdersSwr } from "@/hooks/swr"
 
 /** Resolves the payment-history slot independently from the credits balance. */
 export const useCreditsHistory = () => {

@@ -17,7 +17,7 @@ interface Drafting {
     readonly responsibilityId: string
 }
 
-const ENDED = ["succeeded", "failed"]
+const ENDED: ReadonlySet<string> = new Set(["succeeded", "failed"])
 
 /**
  * Asks the owning agent to draft the next message of a responsibility. The back end queues the work; the status is polled
@@ -31,9 +31,9 @@ export const useDraftExecution = () => {
     const [starting, setStarting] = useState<string | null>(null)
     const [drafting, setDrafting] = useState<Drafting | null>(null)
     useQueryLeadActionStatusSwr(activeWorkspaceId, drafting?.actionId, {
-        refreshInterval: (data) => (data !== undefined && ENDED.includes(data.status) ? 0 : 2000),
+        refreshInterval: (data) => (data !== undefined && ENDED.has(data.status) ? 0 : 2000),
         onSuccess: (data) => {
-            if (!ENDED.includes(data.status)) return
+            if (!ENDED.has(data.status)) return
             const failure = data.status === "failed" ? new Error(t("draftFailed")) : null
             void runGraphQL(
                 async () => {

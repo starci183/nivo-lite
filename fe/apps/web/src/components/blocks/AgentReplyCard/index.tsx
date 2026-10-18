@@ -61,7 +61,7 @@ export const AgentReplyCard = (props: AgentReplyCardProps) => {
                 isPending: isSaving,
             }}
             on={{
-                timeout: (value) => setTimeoutDraft(value.replace(/[^0-9]/gu, "").slice(0, TIMEOUT_DIGITS)),
+                timeout: (value) => setTimeoutDraft(value.replace(/\D/gu, "").slice(0, TIMEOUT_DIGITS)),
                 holding: (value) => setHoldingDraft(value.slice(0, HOLDING_MAX)),
                 saveTimeout: () => void submitTimeout(),
                 saveHolding: () => void submitHolding(),

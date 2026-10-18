@@ -16,7 +16,8 @@ export const videoScriptSourcesText = (sources: ReadonlyArray<VideoScriptSourceR
             .slice(0, Math.min(1600, remaining))
         if (body === "") continue
         remaining -= body.length
-        selected.push(`### ${source.topic === null ? "" : `${source.topic} / `}${source.title}\n${body}`)
+        const topic = source.topic === null ? "" : `${source.topic} / `
+        selected.push(`### ${topic}${source.title}\n${body}`)
         if (remaining <= 0) break
     }
     return selected.join("\n\n")

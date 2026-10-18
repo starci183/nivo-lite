@@ -72,7 +72,10 @@ export const monthRange = (month: string): MonthBounds => {
 export const previousMonth = (day: string): string => addDays(`${day.slice(0, 7)}-01`, -1).slice(0, 7)
 
 /** The first day of the month after the month a day belongs to. */
-export const nextMonthStart = (day: string): string => `${addDays(`${day.slice(0, 7)}-01`, 31).slice(0, 7)}-01`
+export const nextMonthStart = (day: string): string => {
+    const first = `${day.slice(0, 7)}-01`
+    return `${addDays(first, 31).slice(0, 7)}-01`
+}
 
 /** The minutes between two HH:MM times of one day. */
 export const spanMin = (start: string, end: string): number => toMin(end) - toMin(start)

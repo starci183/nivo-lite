@@ -44,7 +44,7 @@ const isNested = (value: unknown): value is Readonly<Record<string, unknown>> =>
 // Same as Casso's published sample (CassoHQ/casso-webhook-v2-verify-signature): keys sorted A-Z at every level.
 const sortKeys = (data: Readonly<Record<string, unknown>>): Record<string, unknown> => {
     const sorted: Record<string, unknown> = {}
-    for (const name of Object.keys(data).sort()) {
+    for (const name of Object.keys(data).sort((left, right) => (left < right ? -1 : Number(left > right)))) {
         const value = data[name]
         sorted[name] = isNested(value) ? sortKeys(value) : value
     }

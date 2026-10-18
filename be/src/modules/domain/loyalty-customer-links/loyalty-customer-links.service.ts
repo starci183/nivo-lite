@@ -60,9 +60,7 @@ export class LoyaltyCustomerLinksService {
     /** The member behind a chat, only through what NIVO already links to it: a stranger who types a phone number learns nothing. */
     async customerOfChat(ref: ChatCustomerRef): Promise<ChatCustomerId> {
         const account =
-            ref.externalId === null || ref.externalId === ""
-                ? null
-                : `${ref.channel}:${ref.externalId.replace(/:.*$/u, "")}`
+            ref.externalId === null || ref.externalId === "" ? null : `${ref.channel}:${accountIdOf(ref.externalId)}`
         const [row] = await this.entityManager.query<Array<{ customer_id: string }>>(SELECT_CHAT_CUSTOMER, [
             ref.workspaceId,
             ref.conversationId,
@@ -71,4 +69,17 @@ export class LoyaltyCustomerLinksService {
         ])
         return row?.customer_id ?? null
     }
+}
+
+/** Removes a message suffix only from the final line of the external identity. */
+const accountIdOf = (value: string): string => {
+    const lineStart =
+        Math.max(
+            value.lastIndexOf("\n"),
+            value.lastIndexOf("\r"),
+            value.lastIndexOf("\u2028"),
+            value.lastIndexOf("\u2029"),
+        ) + 1
+    const separator = value.indexOf(":", lineStart)
+    return separator < 0 ? value : value.slice(0, separator)
 }

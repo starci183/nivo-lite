@@ -6,6 +6,9 @@ import type {
     PublishMark,
 } from "../content-editor.contracts"
 
+/** A nullable timestamp returned by the PostgreSQL driver. */
+type NullableTimestamp = Date | string | null
+
 /** A complete content_items row, with PostgreSQL timestamps returned as Date or ISO text. */
 export interface ContentEditorRow {
     /** The stored row identifier. */
@@ -23,7 +26,7 @@ export interface ContentEditorRow {
     /** The channels selected for publication. */
     readonly channels: Array<string>
     /** The scheduled publication instant, when set. */
-    readonly scheduled_at: Date | string | null
+    readonly scheduled_at: NullableTimestamp
     /** The current editorial lifecycle state. */
     readonly status: string
     /** The channel-specific draft texts. */
@@ -43,13 +46,13 @@ export interface ContentEditorRow {
     /** The associated approval decision, when any. */
     readonly work_item_id: string | null
     /** The first draft instant, when any. */
-    readonly drafted_at: Date | string | null
+    readonly drafted_at: NullableTimestamp
     /** The approving actor, when any. */
     readonly approved_by: string | null
     /** The approval instant, when any. */
-    readonly approved_at: Date | string | null
+    readonly approved_at: NullableTimestamp
     /** The publication instant, when any. */
-    readonly published_at: Date | string | null
+    readonly published_at: NullableTimestamp
     /** The source that created the idea. */
     readonly source: string
     /** The actor that created the post. */

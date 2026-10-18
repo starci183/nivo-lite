@@ -12,7 +12,7 @@ export const useAccountingAdjustmentForm = () => {
         note: z.string().trim().min(5, t("errAdjustNote")).max(1000, t("errAdjustNote")),
         amount: z.string().refine((value) => {
             if (value === "") return true
-            if (!/^[\d\s.,]*\d[\d\s.,]*$/u.test(value)) return false
+            if (!/^[\d\s.,]+$/u.test(value) || !/\d/u.test(value)) return false
             const parsed = Number(value.replace(/\D/gu, ""))
             return Number.isSafeInteger(parsed) && parsed >= 0
         }, t("errAmount")),

@@ -90,11 +90,11 @@ export const vndOf = (value: unknown): number | null => {
         .normalize("NFD")
         .replace(/\p{Diacritic}/gu, "")
         .replace(/\s+/g, " ")
-    const found = normalized.match(/^([\d.,]+)\s*(ty|trieu|tr|m|k|nghin|ngan)?/u)
+    const found = /^([\d.,]+)\s*(ty|trieu|tr|m|k|nghin|ngan)?/u.exec(normalized)
     if (found === null) return null
     const unit = found[2] ?? ""
     // The successful anchored match guarantees this maximal numeric prefix is nonempty.
-    const prefix = normalized.replace(/[^\d.,][\s\S]*$/u, "")
+    const prefix = found[1] ?? ""
     const digits = unit === "" ? prefix.replace(/[.,]/g, "") : prefix.replace(",", ".")
     const amount = Number(digits)
     if (!Number.isFinite(amount)) return null

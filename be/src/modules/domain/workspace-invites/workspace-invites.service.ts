@@ -217,7 +217,7 @@ export class WorkspaceInvitesService {
     }
 
     private redirectOf(token: string): string {
-        return `${this.options.siteUrl}/auth/confirm?next=${encodeURIComponent(`/invite/${token}`)}`
+        return `${this.options.siteUrl}/auth/confirm?next=${encodeURIComponent("/invite/" + token)}`
     }
 
     private async requireStaffFree(

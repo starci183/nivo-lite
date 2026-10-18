@@ -1,7 +1,14 @@
 import { isRecord } from "@modules/platform/primitives"
 import { GoogleError, GoogleErrorCode } from "./errors/google.error"
 import { GOOGLE_MESSAGES } from "./messages/google.messages"
-import type { SheetCell, SheetConfig, SheetEventIn, SheetEventResult, SheetsApi } from "./google.contracts"
+import type {
+    SheetCell,
+    SheetConfig,
+    SheetEventIn,
+    SheetEventResult,
+    SheetsApi,
+    SheetPaymentContext,
+} from "./google.contracts"
 
 /** The money column format: thousands separators and the dong sign. */
 export const MONEY_PATTERN = '#,##0" ₫"'
@@ -53,7 +60,7 @@ export const formatVnTime = (iso: string, now: Date): string => {
 export const sheetVnd = (amount: number): string => `${new Intl.NumberFormat("vi-VN").format(Math.round(amount))} ₫`
 
 /** The code a row of a won deal carries before any order number exists. */
-export const leadKey = (leadId: string): string => `KH-${leadId.replace(/-/gu, "").slice(0, 8)}`
+export const leadKey = (leadId: string): string => `KH-${leadId.replaceAll("-", "").slice(0, 8)}`
 
 const textCell = (value: string, bold = false) => ({
     userEnteredValue: { stringValue: value },
@@ -171,12 +178,9 @@ const applyPayment = async (
     config: SheetConfig,
     event: SheetEventIn,
     now: Date,
-    id: string,
-    at: string,
-    orderNo: string,
-    leadCode: string,
-    where: (row: number, what: string) => string,
+    context: SheetPaymentContext,
 ): Promise<SheetEventResult> => {
+    const { id, at, orderNo, leadCode, where } = context
     const data = event.data
     if (!flagOn(config, "markPaid")) return skipped("evidence.why.paidOff")
     const amount = asNumber(data.amount_vnd)
@@ -239,7 +243,7 @@ export const applySheetEvent = async (
     }
 
     if (event.event === "payment.received") {
-        return applyPayment(api, config, event, now, id, at, orderNo, leadCode, where)
+        return applyPayment(api, config, event, now, { id, at, orderNo, leadCode, where })
     }
 
     // order.confirmed | deal.won

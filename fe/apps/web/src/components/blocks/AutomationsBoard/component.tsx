@@ -42,7 +42,7 @@ export interface AutomationsBoardBaseProps {
         readonly slot: DataSlot<AutomationsBoardView>
         /** "page": filters and a grid with the detail beside it. "module": one module's cards as a compact list, detail below. */
         readonly layout: "page" | "module"
-        readonly notice?: AutomationsBoardNotice | undefined
+        readonly notice?: AutomationsBoardNotice
         readonly labels: AutomationsBoardLabels
     }
     readonly on: {
@@ -107,37 +107,7 @@ const renderAutomationsBoardView = (
 
     const collection = renderAutomationCards(isNested, view, isSkeleton, labels, on)
     const { detail: open } = view
-    const detail =
-        open === undefined ? null : (
-            <AutomationDetailFrame
-                {...open.frame}
-                {...(open.runNow === undefined ? {} : { runNow: { ...open.runNow, onPress: on.runNow } })}
-                onClose={on.close}
-                onDismiss={on.dismiss}
-            >
-                <div className={SECTIONS_CLASS}>
-                    <AutomationSettings {...open.settings} onChange={on.changeSetting} onSave={on.saveSettings} />
-                    {open.message === undefined ? null : (
-                        <AutomationMessage
-                            {...open.message}
-                            onChange={on.changeBody}
-                            onEnable={on.enable}
-                            onSave={on.saveBody}
-                            onCompose={on.compose}
-                        />
-                    )}
-                    {open.gate === undefined ? null : (
-                        <AutomationGate
-                            {...open.gate}
-                            {...(open.gate.trust === undefined
-                                ? {}
-                                : { trustOffer: { ...open.gate.trust, onAnswer: on.answerTrust } })}
-                        />
-                    )}
-                    <AutomationRuns {...open.runs} />
-                </div>
-            </AutomationDetailFrame>
-        )
+    const detail = renderAutomationDetail(open, on)
     return (
         <>
             {isNested ? null : <AutomationFilters {...view.filters} onChange={on.setFilter} />}
@@ -207,5 +177,35 @@ const renderAutomationCards = (
                 </AutomationCard>
             ))}
         </div>
+    )
+}
+
+/** Draws the selected automation settings, message and gate. */
+const renderAutomationDetail = (open: AutomationsBoardView["detail"], on: AutomationsBoardBaseProps["on"]) => {
+    if (open === undefined) return null
+    const trust = open.gate?.trust
+    const trustProps = trust === undefined ? {} : { trustOffer: { ...trust, onAnswer: on.answerTrust } }
+    return (
+        <AutomationDetailFrame
+            {...open.frame}
+            {...(open.runNow === undefined ? {} : { runNow: { ...open.runNow, onPress: on.runNow } })}
+            onClose={on.close}
+            onDismiss={on.dismiss}
+        >
+            <div className={SECTIONS_CLASS}>
+                <AutomationSettings {...open.settings} onChange={on.changeSetting} onSave={on.saveSettings} />
+                {open.message === undefined ? null : (
+                    <AutomationMessage
+                        {...open.message}
+                        onChange={on.changeBody}
+                        onEnable={on.enable}
+                        onSave={on.saveBody}
+                        onCompose={on.compose}
+                    />
+                )}
+                {open.gate === undefined ? null : <AutomationGate {...open.gate} {...trustProps} />}
+                <AutomationRuns {...open.runs} />
+            </div>
+        </AutomationDetailFrame>
     )
 }

@@ -25,12 +25,12 @@ const ACTION_WORDS: Readonly<Record<string, ReadonlyArray<string>>> = {
     send_email: ["gui email", "gui mail", "email khach", "send email", "email the customer"],
 }
 
-/** "over <amount> ... ask" (Vietnamese "tren / qua / hon / vuot ... hoi"): an amount threshold. */
-const THRESHOLD = /(tren|qua|hon|vuot|over|above|more than)\s*[\d.,]+\s*(trieu|tr|m|k|nghin|million)?.*(hoi|ask)/
-
-/** An amount limit named in the message ("duoi 20 trieu", "tren 1,5 ty", "over 20m"). */
-const AMOUNT =
-    /(?:duoi|tren|qua|toi da|toi|den|khong qua|hon|vuot|under|below|over|above|up to|max)\s*(\d+(?:[.,]\d+)?)\s*(ty|trieu|tr|m|k|nghin|ngan|million|billion)?/
+/** Prefixes that introduce an amount threshold or limit. */
+const THRESHOLD_PREFIX = /tren|qua|hon|vuot|over|above|more than/g
+const AMOUNT_PREFIX = /duoi|tren|qua|toi da|toi|den|khong qua|hon|vuot|under|below|over|above|up to|max/g
+const NUMBER = /^\s*(\d+(?:[.,]\d+)?)\s*/
+const UNIT = /^(ty|trieu|tr|m|k|nghin|ngan|million|billion)/
+const THRESHOLD_NUMBER = /^\s*[\d.,]+/
 
 /** The VND multiplier of an amount unit. */
 const multiplierOf = (unit: string): number => {
@@ -55,14 +55,42 @@ export const namesAction = (said: string, record: AuthorityActionRecord): boolea
 export const namesOrder = (said: string): boolean => ORDER_WORDS.some((word) => hasWord(said, word))
 
 /** Whether the message states "over <amount> ask me". */
-export const isThresholdSaid = (said: string): boolean => THRESHOLD.test(said)
+export const isThresholdSaid = (said: string): boolean => {
+    const candidates: Array<number> = []
+    for (const prefix of said.matchAll(THRESHOLD_PREFIX)) {
+        const start = prefix.index + prefix[0].length
+        const number = THRESHOLD_NUMBER.exec(said.slice(start))
+        if (number === null) continue
+        const end = start + number[0].length
+        const spaces = /^\s*/.exec(said.slice(end))?.[0].length ?? 0
+        candidates.push(end + spaces)
+    }
+    // Candidate positions are ordered. Once a line break passes one, only later candidates can match.
+    let candidate = 0
+    let lineStart = 0
+    for (const token of said.matchAll(/hoi|ask|[\n\r\u2028\u2029]/g)) {
+        if (token[0].length === 1) {
+            lineStart = token.index + 1
+            continue
+        }
+        while (candidate < candidates.length && (candidates[candidate] ?? 0) < lineStart) candidate++
+        const start = candidates[candidate]
+        if (start !== undefined && start <= token.index) return true
+    }
+    return false
+}
 
 /** "duoi 20 trieu" / "tren 1,5 ty" / "over 20m" as VND; null when the message names no amount limit. */
 export const amountIn = (said: string): number | null => {
-    const match = AMOUNT.exec(said)
-    if (match?.[1] === undefined) return null
-    const vnd = Math.round(Number(match[1].replace(",", ".")) * multiplierOf(match[2] ?? ""))
-    return Number.isFinite(vnd) && vnd > 0 ? vnd : null
+    for (const prefix of said.matchAll(AMOUNT_PREFIX)) {
+        const tail = said.slice(prefix.index + prefix[0].length)
+        const match = NUMBER.exec(tail)
+        if (match?.[1] === undefined) continue
+        const unit = UNIT.exec(tail.slice(match[0].length))?.[1] ?? ""
+        const vnd = Math.round(Number(match[1].replace(",", ".")) * multiplierOf(unit))
+        return Number.isFinite(vnd) && vnd > 0 ? vnd : null
+    }
+    return null
 }
 
 /** A whole non-negative number the model returned, or null. */

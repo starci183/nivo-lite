@@ -23,6 +23,14 @@ interface Busy {
     readonly kind: "retry" | "stop"
 }
 
+/** Resolves navigation and customer identity for an attention row. */
+const hrefOf = (row: AttentionRow): string | null =>
+    (row.kind === "decision" || row.kind === "clarify") && row.decisionId !== null ? decisionHref(row.decisionId) : null
+const customerOf = (row: AttentionRow): string => {
+    const company = row.company ? ` · ${row.company}` : ""
+    return `${row.customer}${company}`
+}
+
 /** The attention surface: retrying or stopping a failed step lives here, the drawing in the pure half. */
 export const SalesAttention = () => {
     const t = useTranslations("workbenchSales")
@@ -33,8 +41,9 @@ export const SalesAttention = () => {
     const [errors, setErrors] = useState<Readonly<Record<string, string>>>({})
     const active = actions.isMutating ? busy : null
 
-    const fieldLabel = (name: string): string =>
-        KNOWN_FIELDS.some((known) => known === name) ? g(`field_${name}`) : name
+    const fieldLabel = (name: string): string => {
+        return KNOWN_FIELDS.some((field) => field === name) ? g(`field_${name}`) : name
+    }
     const ageText = (since: string): string => {
         const age = ageParts(since, nowIso)
         return age.unit === "now" ? t("ageNow") : t(`age_${age.unit}`, { n: age.n })
@@ -57,10 +66,6 @@ export const SalesAttention = () => {
             : row.need
     const titleOf = (row: AttentionRow): string | null =>
         row.action && row.kind !== "overdue" && row.kind !== "awaiting_reply" ? g(`action_${row.action}`) : null
-    const hrefOf = (row: AttentionRow): string | null =>
-        (row.kind === "decision" || row.kind === "clarify") && row.decisionId !== null
-            ? decisionHref(row.decisionId)
-            : null
     const itemOf = (row: AttentionRow): AttentionItemView => ({
         key: row.key,
         kind: row.kind,
@@ -69,7 +74,7 @@ export const SalesAttention = () => {
         stage: row.stage === null ? null : { label: t(`stage_${row.stage}`), tone: stageToneOf(row.stage) },
         age: ageText(row.since),
         isStale: isStale(row.since, nowIso),
-        customer: `${row.customer}${row.company ? ` · ${row.company}` : ""}`,
+        customer: customerOf(row),
         leadHref: row.leadId === null ? null : leadPath(row.leadId),
         title: titleOf(row),
         need: needOf(row),

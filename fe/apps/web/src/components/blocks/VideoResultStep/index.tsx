@@ -31,6 +31,7 @@ const shapeOf = (aspect: string): "portrait" | "square" | "landscape" => {
 const copyOf = (t: ReturnType<typeof useTranslations<"video">>) => ({
     heading: t("resultHeading"),
     waitingLabel: t("status_rendering"),
+    captionsLabel: t("captionsLabel"),
     approveLabel: t("approve"),
     downloadLabel: t("download"),
     shareLabel: t("share"),
@@ -125,15 +126,18 @@ export const VideoResultStep = (props: VideoResultStepProps) => {
         })
 
     const badges = badgesOf(project, t, format)
+    const statusLabel = t(`status_${project.status}`)
     return (
         <VideoResultStepBase
             props={{
                 ...copyOf(t),
-                fact: `${t("version", { n: project.renderCount })} - ${t(`status_${project.status}`)}`,
+                fact: `${t("version", { n: project.renderCount })} - ${statusLabel}`,
                 title: project.title,
                 shape: shapeOf(project.aspect),
                 videoUrl: render?.videoUrl ?? null,
                 posterUrl: render?.posterUrl ?? null,
+                captionsUrl: render?.captionsUrl ?? null,
+                captionsLang: render?.captionsLang ?? null,
                 failedTitle: render?.status === "failed" ? t("renderFailed") : null,
                 failedDetail: render?.error ? failure(render.error) : null,
                 badges,

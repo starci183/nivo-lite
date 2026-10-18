@@ -1,3 +1,6 @@
+import type { OpenclawError } from "./errors/openclaw.error"
+import type { GatewayErrorBody, MessageUsage, OptionalGatewayFrame } from "./gateway-frame.mapper"
+
 /** What a finished run cost, summed over its assistant messages: prompt tokens include the cached ones. */
 export interface RunUsage {
     /** Prompt tokens, cached ones included. */
@@ -136,4 +139,23 @@ export interface RunTally {
     model: string | null
     /** True once a message carried usage. */
     seen: boolean
+}
+/** The callbacks and pending requests used by one subscribed turn's frame receiver. */
+export interface ReceiverOptions {
+    /** The subscribed turn. */
+    readonly req: TurnRequest
+    /** The response handlers keyed by outbound request id. */
+    readonly pending: Map<string, (ok: boolean, payload: unknown, error: GatewayErrorBody | null) => void>
+    /** Decodes one socket frame. */
+    readonly readFrame: (raw: string) => OptionalGatewayFrame
+    /** Whether the turn has already completed. */
+    readonly isSettled: () => boolean
+    /** Starts the turn after the gateway challenge. */
+    readonly startTurn: () => Promise<void>
+    /** Completes the turn with a reply or owning error. */
+    readonly finish: (failure: OpenclawError | null, value?: string) => void
+    /** Records the provider usage for a message. */
+    readonly addUsage: (usage: MessageUsage | null) => void
+    /** Arms completion for a candidate reply. */
+    readonly settleOn: (reply: string) => void
 }

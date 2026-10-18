@@ -34,8 +34,9 @@ const decisionVocabulary: SalesDecisionVocabulary = {
 const createSalesDecisionsState = (input: SalesDecisionsControllerInput) => {
     const { t, g, actions, pending, decisionForm, setBusy, typed, setErrors } = input
 
-    const fieldLabel = (name: string): string =>
-        KNOWN_FIELDS.some((known) => known === name) ? g(`field_${name}`) : name
+    const fieldLabel = (name: string): string => {
+        return KNOWN_FIELDS.some((field) => field === name) ? g(`field_${name}`) : name
+    }
     const decide = async (id: string, decision: Decision) => {
         const item = pending.find((candidate) => candidate.id === id)
         if (item === undefined) return

@@ -125,6 +125,12 @@ export class VideoRenderService implements OnApplicationBootstrap {
         const began = this.clock.now().getTime()
         await this.upload(`${base}/video.mp4`, await readFile(output.videoFile), "video/mp4")
         await this.upload(`${base}/poster.jpg`, await readFile(output.posterFile), "image/jpeg")
+        const captions = output.captionsFile === null ? null : await readFile(output.captionsFile)
+        let captionsPath: string | null = null
+        if (captions !== null && captions.length > 0) {
+            captionsPath = `${base}/captions.vtt`
+            await this.upload(captionsPath, captions, "text/vtt; charset=utf-8")
+        }
         await this.video.completeRender(renderId, {
             outputPath: `${base}/video.mp4`,
             posterPath: `${base}/poster.jpg`,
@@ -132,6 +138,8 @@ export class VideoRenderService implements OnApplicationBootstrap {
             sizeBytes: output.sizeBytes,
             meta: {
                 ...output.meta,
+                captions_path: captionsPath,
+                captions_lang: captionsPath === null ? null : output.captionsLang,
                 timings: { ...output.meta.timings, upload_ms: this.clock.now().getTime() - began },
             },
         })

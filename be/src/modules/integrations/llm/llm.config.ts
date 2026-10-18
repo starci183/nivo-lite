@@ -20,7 +20,9 @@ const baseUrlOf = (env: EnvSource, key: string): string => {
     if (!URL.canParse(declared) || !/^https?:$/u.test(new URL(declared).protocol)) {
         return DEFAULT_BASE_URL
     }
-    return declared.replace(/\/+$/u, "")
+    let end = declared.length
+    while (end > 0 && declared[end - 1] === "/") end -= 1
+    return declared.slice(0, end)
 }
 
 const endpointOf = (

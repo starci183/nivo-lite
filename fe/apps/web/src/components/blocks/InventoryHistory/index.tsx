@@ -3,8 +3,8 @@
 import { useInventoryBoard } from "@/hooks/inventoryBoard"
 import { useTranslations } from "next-intl"
 import { useState } from "react"
-import { MOVE_KINDS, MOVE_TONES, includesText } from "@/hooks/inventory"
-import { useInventoryFormat } from "@/hooks/inventory"
+import { MOVE_KINDS, MOVE_TONES, includesText, useInventoryFormat } from "@/hooks/inventory"
+
 import { InventoryHistoryBase } from "./component"
 
 const ALL = "all"

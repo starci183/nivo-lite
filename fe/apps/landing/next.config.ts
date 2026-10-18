@@ -16,7 +16,7 @@ const WORKSPACE_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..",
  * origin. `/api/**` and `/graphql` never reach this app (the edge sends them to the api first).
  */
 const LANDING_OWNED =
-    "privacy$|terms$|health/|_next/|brand/|images/|api/|graphql$|favicon\.ico$|icon\.png$|robots\.txt$|sitemap\.xml$"
+    "privacy$|terms$|health/|_next/|brand/|images/|api/|graphql$|favicon.ico$|icon.png$|robots.txt$|sitemap.xml$"
 
 const nextConfig: NextConfig = {
     output: "standalone",

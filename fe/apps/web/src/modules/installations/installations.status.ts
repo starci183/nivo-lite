@@ -20,13 +20,13 @@ export const AGENT_STATUS_TONE: Readonly<Record<ShownStatus, "neutral" | "accent
 
 /** The filters of the catalogue by status. */
 export const STATUS_FILTERS = ["all", "installed", "notInstalled", "early"] as const
+const STATUS_FILTER_SET: ReadonlySet<unknown> = new Set(STATUS_FILTERS)
 
 /** One status filter of the catalogue. */
 export type StatusFilter = (typeof STATUS_FILTERS)[number]
 
 /** Whether a text is a status filter of the catalogue. */
-export const isStatusFilter = (value: string | null | undefined): value is StatusFilter =>
-    STATUS_FILTERS.some((filter) => filter === value)
+export const isStatusFilter = (value: string | null | undefined): value is StatusFilter => STATUS_FILTER_SET.has(value)
 
 /** Accent-insensitive text for matching: NFD, marks stripped, d-stroke folded, lower case. */
 export const foldText = (text: string): string =>

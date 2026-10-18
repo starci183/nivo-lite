@@ -1,21 +1,13 @@
 "use client"
 
-import { isProvider, providerKey } from "@/hooks/connection-providers"
+import { useAgentDashboardConnections } from "./useAgentDashboardConnections"
 import { decisionsHref } from "@/hooks/decisions"
-import { useModuleName } from "@/hooks/installations"
-import type { ModuleKey } from "@/hooks/installations"
-import { agentChatHref, AUTOMATION_ROUTES, KNOWLEDGE_ROUTES } from "@/modules/routes"
+import { useModuleName, type ModuleKey } from "@/hooks/installations"
+import { agentChatHref, KNOWLEDGE_ROUTES } from "@/modules/routes"
 import type { BadgeTone } from "@starci/grammar/common"
 import { useFormatter, useTranslations } from "next-intl"
-import { PENDING_DASHBOARD } from "./agentDashboard.shared"
-import type { AgentDashboardView, ConnectionState, DashboardRow } from "./agentDashboard.shared"
+import { PENDING_DASHBOARD, type AgentDashboardView, type DashboardRow } from "./agentDashboard.shared"
 import { useAgentDashboard } from "./useAgentDashboard"
-
-const CONNECTION_TONE: Readonly<Record<ConnectionState, BadgeTone>> = {
-    connected: "success",
-    error: "danger",
-    pending: "neutral",
-}
 
 /** One tab of the frame as the strip names it. */
 interface FrameTab {
@@ -37,12 +29,12 @@ interface AgentDashboardFrameInput {
 export const useAgentDashboardFrame = (input: AgentDashboardFrameInput) => {
     const t = useTranslations("agentDashboard")
     const g = useTranslations("governance")
-    const tc = useTranslations("connections")
     const format = useFormatter()
     const moduleName = useModuleName(input.module)
     const { slot, reload } = useAgentDashboard(input.module, input.installationId ?? null)
     const dashboard = slot.items ?? PENDING_DASHBOARD
     const isDashboardLoading = slot.isLoading === true
+    const connections = useAgentDashboardConnections(dashboard)
     const agent = dashboard.agent
 
     const whenOf = (iso: string | null): string =>
@@ -89,7 +81,7 @@ export const useAgentDashboardFrame = (input: AgentDashboardFrameInput) => {
         },
         connectionsLabel: t("connTitle"),
         connectionsFailed: isFailed || dashboard.connections.isFailed,
-        connections: connectionsOf(t, dashboard, tc),
+        connections,
         knowledgeLabel: t("knowTitle"),
         knowledgeFailed: isFailed || dashboard.knowledge.isFailed,
         knowledge: knowledgeOf(t, isInternal, dashboard, gaps, input, whenOf),
@@ -111,27 +103,6 @@ export const useAgentDashboardFrame = (input: AgentDashboardFrameInput) => {
     const tabLabel = (tab: FrameTab, waitingTab: string | undefined): string =>
         tab.id === waitingTab && dashboard.waiting.total > 0 ? `${tab.label} (${dashboard.waiting.total})` : tab.label
     return { head, view, tabsLabel: t("tabsLabel"), tabLabel, reload }
-}
-
-const connectionsOf = (
-    t: ReturnType<typeof useTranslations<"agentDashboard">>,
-    dashboard: AgentDashboardView,
-    tc: ReturnType<typeof useTranslations<"connections">>,
-) => {
-    return {
-        manageLabel: t("connManage"),
-        manageHref: AUTOMATION_ROUTES.connections,
-        rows: dashboard.connections.items.map((connection) => ({
-            id: connection.id,
-            name: connection.name,
-            description: `${isProvider(connection.provider) ? tc(providerKey(connection.provider, "title")) : connection.provider} \u00b7 ${t(`connPurpose_${connection.purpose}`)}`,
-            statusLabel: t(`connStatus_${connection.status}`),
-            statusTone: CONNECTION_TONE[connection.status],
-            accessLabel: t(`connAccess_${connection.access}`),
-        })),
-        emptyMessage: t("connEmpty"),
-        emptyDescription: t("connEmptyBody"),
-    }
 }
 
 const knowledgeOf = (

@@ -40,7 +40,7 @@ export class SetupTurnService {
     private async answer(job: SetupTurnPayload): Promise<void> {
         const session = await this.sessions.find(job.workspaceId, job.setupSessionId)
         const message = await this.messages.find(job.workspaceId, job.messageId)
-        if (session === null || session.status !== "draft" || message === null) return
+        if (session?.status !== "draft" || message === null) return
         const chat = await this.messages.ofSession(session.id)
         const at = chat.findIndex((line) => line.id === message.id)
         if (at < 0 || chat.slice(at + 1).some((line) => line.role === "assistant")) return

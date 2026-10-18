@@ -272,9 +272,9 @@ describe("loudness", () => {
         ])
     })
 
-    it("reads what loudnorm printed", async () => {
+    it.each([PRINTED, "{} log " + PRINTED])("reads the loudnorm block from %s", async (printed) => {
         const { loudnessOf } = await buildSubject()
-        expect(loudnessOf(PRINTED)).toEqual({
+        expect(loudnessOf(printed)).toEqual({
             input_i: -23.57,
             input_tp: -4.1,
             input_lra: 6.3,
@@ -288,6 +288,7 @@ describe("loudness", () => {
         ["a silent mix", PRINTED.replace('"-23.57"', '"-inf"')],
         ["a mix below the gate", PRINTED.replace('"-23.57"', '"-80.00"')],
         ["a value that is no number", PRINTED.replace('"6.30"', '"n/a"')],
+        ["a long unfinished block", "{".repeat(20000)],
     ])("reads nothing from %s", async (_label, text) => {
         const { loudnessOf } = await buildSubject()
         expect(loudnessOf(text)).toBeNull()

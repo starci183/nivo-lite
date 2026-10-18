@@ -1,9 +1,8 @@
 "use client"
 
-import { useTranslations } from "next-intl"
 import type { ItemView, SupplierView } from "@/modules/types"
-import { unitsText } from "./inventory.shared"
-import type { ItemFormField, ItemFormValues } from "./inventory.shared"
+import { unitsText, type ItemFormField, type ItemFormValues } from "./inventory.shared"
+
 import type { InventoryCommandSet } from "@/hooks/inventoryCommands"
 import { useDrawer } from "./useDrawer"
 import { useInventoryRun } from "./useInventoryRun"
@@ -38,7 +37,6 @@ export const useItemDrawer = (
     suppliers: ReadonlyArray<SupplierView>,
     commands: InventoryCommandSet<"saveItem" | "setItemActive">,
 ) => {
-    const t = useTranslations("workbenchInventory")
     const say = useSay()
     const run = useInventoryRun()
     const drawer = useDrawer<ItemDrawerState>()

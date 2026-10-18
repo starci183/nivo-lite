@@ -15,7 +15,19 @@ const MINUTE_MS = 60_000
 const DATE_TEXT = /^\d{4}-\d{2}-\d{2}$/u
 const TIME_TEXT = /^\d{2}:\d{2}$/u
 const TOKEN_TEXT = /^[A-Za-z0-9-]{8,64}$/u
-const EMAIL = /^[^@\s]+@[^@\s]+\.[^@\s]+$/u
+const EMAIL_PART = /^[^@\s]+$/u
+
+const isEmail = (value: string): boolean => {
+    const at = value.indexOf("@")
+    const dot = value.indexOf(".", at + 2)
+    return (
+        at > 0 &&
+        dot > at + 1 &&
+        dot < value.length - 1 &&
+        EMAIL_PART.test(value.slice(0, at)) &&
+        EMAIL_PART.test(value.slice(at + 1))
+    )
+}
 
 /** The part of a booking the figures read. */
 export interface FigureRow {
@@ -58,7 +70,7 @@ export interface LeaveDay {
 /** A party size no resource can hold: a leave blocks its resource for the whole day. */
 const LEAVE_PARTY = 1000
 
-const BOOKED_STATUSES: ReadonlyArray<string> = ["confirmed", "rescheduled", "done"]
+const BOOKED_STATUSES: ReadonlySet<string> = new Set(["confirmed", "rescheduled", "done"])
 
 /** A phone number as `84` followed by digits, or null when there is nothing to read. */
 export const normalisePhone = (raw: string): string | null => {
@@ -84,7 +96,7 @@ export const isPlausibleBookingPhone = (phone: OptionalBookingPhone): phone is s
 /** A lower-case email of at most 120 characters, or null when it is not an address. */
 export const normaliseEmail = (raw: string): string | null => {
     const value = raw.trim()
-    return EMAIL.test(value) ? value.toLowerCase().slice(0, 120) : null
+    return isEmail(value) ? value.toLowerCase().slice(0, 120) : null
 }
 
 /** The deposit due for a price, rounded to a whole VND; none without a price or a percentage. */
@@ -98,7 +110,7 @@ export const summariseRange = (rows: ReadonlyArray<FigureRow>): RangeSummary => 
     let doneRevenueVnd = 0
     for (const row of rows) {
         byStatus[row.status] = (byStatus[row.status] ?? 0) + 1
-        if (BOOKED_STATUSES.includes(row.status)) {
+        if (BOOKED_STATUSES.has(row.status)) {
             const minutes = ((row.endMs - row.startMs) / MINUTE_MS) * row.partySize
             bookedByResource.set(row.resourceId, (bookedByResource.get(row.resourceId) ?? 0) + minutes)
         }
@@ -181,4 +193,7 @@ export const planInputOf = (
 })
 
 /** Whether a booking status is still ahead of the customer. */
-export const isActiveStatus = (status: string): boolean => ACTIVE_STATUSES.some((active) => active === status)
+export const isActiveStatus = (status: string): boolean => {
+    const statuses: ReadonlyArray<string> = ACTIVE_STATUSES
+    return statuses.includes(status)
+}

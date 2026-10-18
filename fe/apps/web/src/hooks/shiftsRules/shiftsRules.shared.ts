@@ -78,35 +78,36 @@ const violationsForSegs = (
 ): Array<Array<ShiftsViolationKind>> => {
     const out: Array<Array<ShiftsViolationKind>> = segs.map(() => [])
     const person = env.staff.get(staffId)
-    if (person === undefined) return out
-    const ordered = segs.map((seg, index) => ({ seg, index })).sort((a, b) => byDayThenStart(a.seg, b.seg))
-    const prior = [...(env.prior.get(staffId) ?? [])].sort((a, b) => a.date.localeCompare(b.date) || a.e - b.e)
-    const chrono = [...prior.map((seg) => ({ seg, index: -1 })), ...ordered]
-    const perDay = new Map<string, number>()
-    let week = 0
-    chrono.forEach((current, position) => {
-        if (current.index < 0) return
-        const { seg, index } = current
-        const add = (kind: ShiftsViolationKind) => out[index]?.push(kind)
-        if (!person.positionIds.includes(seg.pos)) add("position")
-        if (!isAvailable(env.avail, staffId, seg.date, seg.s, seg.e)) add("unavailable")
-        if (env.leaves.some((leave) => leave.staffId === staffId && leave.from <= seg.date && leave.to >= seg.date))
-            add("leave")
-        if (ordered.some((o) => o.index !== index && o.seg.date === seg.date && o.seg.s < seg.e && o.seg.e > seg.s))
-            add("overlap")
-        week += seg.e - seg.s
-        const day = (perDay.get(seg.date) ?? 0) + seg.e - seg.s
-        perDay.set(seg.date, day)
-        if (day > person.maxDay * 60 + 0.01) add("max_day")
-        if (week > person.maxWeek * 60 + 0.01) add("max_week")
-        const before = chrono
-            .slice(0, position)
-            .reverse()
-            .find((item) => item.seg.date !== seg.date)
-        if (before === undefined) return
-        const gap = dayGap(before.seg.date, seg.date) * DAY_MIN + seg.s - before.seg.e
-        if (gap < person.minRest * 60) add("rest")
-    })
+    if (person !== undefined) {
+        const ordered = segs.map((seg, index) => ({ seg, index })).sort((a, b) => byDayThenStart(a.seg, b.seg))
+        const prior = [...(env.prior.get(staffId) ?? [])].sort((a, b) => a.date.localeCompare(b.date) || a.e - b.e)
+        const chrono = [...prior.map((seg) => ({ seg, index: -1 })), ...ordered]
+        const perDay = new Map<string, number>()
+        let week = 0
+        chrono.forEach((current, position) => {
+            if (current.index < 0) return
+            const { seg, index } = current
+            const add = (kind: ShiftsViolationKind) => out[index]?.push(kind)
+            if (!person.positionIds.includes(seg.pos)) add("position")
+            if (!isAvailable(env.avail, staffId, seg.date, seg.s, seg.e)) add("unavailable")
+            if (env.leaves.some((leave) => leave.staffId === staffId && leave.from <= seg.date && leave.to >= seg.date))
+                add("leave")
+            if (ordered.some((o) => o.index !== index && o.seg.date === seg.date && o.seg.s < seg.e && o.seg.e > seg.s))
+                add("overlap")
+            week += seg.e - seg.s
+            const day = (perDay.get(seg.date) ?? 0) + seg.e - seg.s
+            perDay.set(seg.date, day)
+            if (day > person.maxDay * 60 + 0.01) add("max_day")
+            if (week > person.maxWeek * 60 + 0.01) add("max_week")
+            const before = chrono
+                .slice(0, position)
+                .reverse()
+                .find((item) => item.seg.date !== seg.date)
+            if (before === undefined) return
+            const gap = dayGap(before.seg.date, seg.date) * DAY_MIN + seg.s - before.seg.e
+            if (gap < person.minRest * 60) add("rest")
+        })
+    }
     return out
 }
 

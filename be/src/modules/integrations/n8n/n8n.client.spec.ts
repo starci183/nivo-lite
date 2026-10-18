@@ -53,6 +53,21 @@ const build = async (overrides: Partial<N8nOptions> = {}) => {
 
 describe("N8nClient", () => {
     describe("deliver", () => {
+        it("joins a configured base with a long trailing separator run to one provider path", async () => {
+            const { client, http } = await build({
+                webhookBase: "https://n8n.example.com/webhook" + "/".repeat(20_000),
+                allowedHosts: ["n8n.example.com"],
+            })
+            await client.deliver(deliveryOf({ urls: [], paths: ["/task"] }))
+            expect(http.request).toHaveBeenCalledWith(
+                expect.objectContaining({ url: "https://n8n.example.com/webhook/task" }),
+            )
+        })
+    })
+})
+
+describe("N8nClient", () => {
+    describe("deliver", () => {
         it("posts the signed body to the target and answers what it said", async () => {
             const { client, http } = await build()
 

@@ -189,3 +189,22 @@ export const bookingServiceDigits = (value: string): number | null => {
     const only = value.replace(/[^\d]/gu, "")
     return only === "" ? null : Number(only)
 }
+
+/** Stored service values whose amounts are converted to editable text. */
+interface StoredServiceFields extends Omit<ServiceFields, "price" | "followup" | "resourceKind"> {
+    readonly priceVnd: number | null
+    readonly followupDays: number | null
+    readonly resourceKind: string | null
+}
+
+/** Converts stored numeric amounts to the text fields owned by this form. */
+export const serviceFieldsOf = (service: StoredServiceFields): ServiceFields => ({
+    name: service.name,
+    durationMin: service.durationMin,
+    bufferMin: service.bufferMin,
+    price: service.priceVnd === null ? "" : String(service.priceVnd),
+    resourceKind: service.resourceKind ?? "",
+    followup: service.followupDays === null ? "" : String(service.followupDays),
+    description: service.description,
+    active: service.active,
+})

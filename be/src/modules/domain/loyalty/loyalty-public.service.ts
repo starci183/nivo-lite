@@ -27,7 +27,7 @@ const CODE_LIFETIME_MIN = 10
 const CODES_PER_CUSTOMER = 3
 const CODES_PER_WORKSPACE_HOUR = 30
 const STORED_LOCALE = "vi"
-const PUSH_CHANNELS: ReadonlyArray<string> = ["telegram", "zalo"]
+const PUSH_CHANNELS: ReadonlySet<string> = new Set(["telegram", "zalo"])
 const SAME_ANSWER: RequestCodeAnswer = { ok: true, code: "none" }
 const WRONG: VerifyCodeAnswer = { ok: false, code: "wrong", points: null }
 
@@ -80,7 +80,8 @@ export class LoyaltyPublicService {
         )
         if (recent >= CODES_PER_CUSTOMER) return SAME_ANSWER
         const target = await this.links.pushConversation(workspaceId, customer.id)
-        if (target === null || target.channel === null || !PUSH_CHANNELS.includes(target.channel)) return SAME_ANSWER
+        if (target?.channel === undefined || target.channel === null || !PUSH_CHANNELS.has(target.channel))
+            return SAME_ANSWER
         const issued = await this.otps.issue(
             workspaceId,
             customer.id,

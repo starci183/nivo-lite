@@ -67,10 +67,8 @@ export class CarePerformerService implements WorkPerformer {
             item.subject_type === "transaction" && item.subject_id !== null
                 ? await this.transactions.find(ctx.workspaceId, item.subject_id)
                 : null
-        const invoiceId =
-            namedInvoiceId !== ""
-                ? namedInvoiceId
-                : (transaction?.invoice_id ?? (item.subject_type === "invoice" ? item.subject_id : null))
+        const subjectInvoiceId = item.subject_type === "invoice" ? item.subject_id : null
+        const invoiceId = namedInvoiceId !== "" ? namedInvoiceId : (transaction?.invoice_id ?? subjectInvoiceId)
         const invoice = invoiceId === null ? null : await this.invoices.find(ctx.workspaceId, invoiceId)
         const [order] =
             invoice?.order_id === undefined || invoice.order_id === null

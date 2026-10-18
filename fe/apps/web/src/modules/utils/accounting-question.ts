@@ -1,6 +1,5 @@
 import type { FieldErrors } from "react-hook-form"
-import type { AccountingQuestionValues, AccountingQuestionCardData } from "@/modules/types"
-import type { FlowWorkItemView } from "@/modules/types"
+import type { AccountingQuestionValues, AccountingQuestionCardData, FlowWorkItemView } from "@/modules/types"
 import type { MutateDecideWorkItemRequest } from "@/modules/api/graphql/mutations/mutation-decide-work-item"
 import { digitsToNumber, moneyOf, accountingStampOf } from "./accounting"
 import type { AccountingFormat, AccountingTranslator } from "./accounting"
@@ -79,9 +78,26 @@ interface AccountingQuestionDisplayParams {
     readonly error: string | null
 }
 
+const questionFooterOf = (params: AccountingQuestionDisplayParams, isOpen: boolean): string | null => {
+    const { item, ownerName, t, g, format } = params
+    const time = accountingStampOf(format, item.completed_at ?? item.updated_at)
+    if (item.assignedStaffName) return t("exceptionAssigned", { name: item.assignedStaffName, time })
+    if (isOpen) return null
+    return t("exceptionDecided", {
+        status: accountingQuestionStatus(item, t, g),
+        who: item.decidedBy || ownerName,
+        time,
+    })
+}
+
+const questionExplanationOf = (item: FlowWorkItemView, g: AccountingTranslator): string | null => {
+    if (item.status === "failed") return item.error
+    return item.reason && g.has(`reasonHint_${item.reason}`) ? g(`reasonHint_${item.reason}`) : null
+}
+
 /** Resolves proposal copy and inputs into atoms for the accounting card. */
 export const accountingQuestionDisplay = (params: AccountingQuestionDisplayParams): AccountingQuestionCardData => {
-    const { item, ownerName, values, t, g, format, canAct, isBusy, isEditing, error } = params
+    const { item, values, t, g, format, canAct, isBusy, isEditing, error } = params
     const isOpen = item.status === "waiting_decision" || item.status === "failed"
     const isFailed = item.status === "failed"
     const isReconcile = item.action === "reconcile_payment"
@@ -90,22 +106,13 @@ export const accountingQuestionDisplay = (params: AccountingQuestionDisplayParam
         label: g.has(`field_${name}`) ? g(`field_${name}`) : name,
         value: values.fields?.[name] ?? "",
     }))
-    const time = accountingStampOf(format, item.completed_at ?? item.updated_at)
-    let footer: string | null = null
-    if (item.assignedStaffName) footer = t("exceptionAssigned", { name: item.assignedStaffName, time })
-    else if (!isOpen)
-        footer = t("exceptionDecided", {
-            status: accountingQuestionStatus(item, t, g),
-            who: item.decidedBy || ownerName,
-            time,
-        })
-    let explanation: string | null = null
-    if (isFailed) explanation = item.error
-    else if (item.reason && g.has(`reasonHint_${item.reason}`)) explanation = g(`reasonHint_${item.reason}`)
+    const footer = questionFooterOf(params, isOpen)
+    const explanation = questionExplanationOf(item, g)
+    const action = g(`action_${item.action}`)
     const textOf = (name: string) => String(item.proposal.fields?.[name] ?? "")
     return {
         id: item.id,
-        title: `${g(`action_${item.action}`)}${item.lead ? ` · ${item.lead.contact_name}` : ""}`,
+        title: item.lead ? [action, item.lead.contact_name].join(" · ") : action,
         status: accountingQuestionStatus(item, t, g),
         statusTone: accountingQuestionTone(item),
         origin: item.origin === "simulated" ? t("simulatedTag") : null,

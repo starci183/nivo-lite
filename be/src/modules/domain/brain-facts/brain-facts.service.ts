@@ -239,8 +239,7 @@ export class BrainFactsService {
     /** Chooses one of several competing proposals: it is applied and every other waiting proposal of the key is rejected. */
     async choose(workspaceId: string, id: string, decidedBy: string): Promise<FactRecord> {
         const winner = await this.get(workspaceId, id)
-        if (winner === null || winner.status !== "proposed")
-            throw new BrainFactsError({ code: BrainFactsErrorCode.NotProposed })
+        if (winner?.status !== "proposed") throw new BrainFactsError({ code: BrainFactsErrorCode.NotProposed })
         if (winner.proposalKind !== "set") throw new BrainFactsError({ code: BrainFactsErrorCode.NotAValue })
         const fact = await this.apply(workspaceId, id, decidedBy, "Chosen among several different values")
         const others = await this.byKey(
@@ -283,8 +282,7 @@ export class BrainFactsService {
     /** Keeps both values: the proposal becomes its own fact for the situation it names, and the current value stays. */
     async split(workspaceId: string, id: string, situation: string, decidedBy: string): Promise<FactRecord> {
         const proposal = await this.get(workspaceId, id)
-        if (proposal === null || proposal.status !== "proposed")
-            throw new BrainFactsError({ code: BrainFactsErrorCode.NotProposed })
+        if (proposal?.status !== "proposed") throw new BrainFactsError({ code: BrainFactsErrorCode.NotProposed })
         if (proposal.proposalKind !== "set") throw new BrainFactsError({ code: BrainFactsErrorCode.NotAValue })
         const label = situation.trim()
         if (label === "") throw new BrainFactsError({ code: BrainFactsErrorCode.SituationRequired })
@@ -373,7 +371,7 @@ export class BrainFactsService {
         let filed = 0
         await eachInOrder(ids, async (id) => {
             const fact = await this.get(workspaceId, id)
-            if (fact === null || fact.status !== "active" || fact.evidence.length > 0) return
+            if (fact?.status !== "active" || fact.evidence.length > 0) return
             const waiting = await this.byKey(
                 workspaceId,
                 fact.subjectKey,

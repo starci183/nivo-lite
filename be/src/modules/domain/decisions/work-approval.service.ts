@@ -115,11 +115,12 @@ export class WorkApprovalService {
     /** "Auto below 20,000,000 - this one 45,000,000" when the ask is because the amount reached the limit; empty otherwise. */
     private limitNote(ctx: WorkContext, rule: OptionalAuthorityRule, proposal: Proposal): string {
         const amount = proposal.amount_vnd
-        if (rule === null || rule.limit_vnd === null || typeof amount !== "number") return ""
-        if (!isOverLimit(rule.limit_vnd, amount)) return ""
+        const limit = rule?.limit_vnd
+        if (typeof limit !== "number" || typeof amount !== "number") return ""
+        if (!isOverLimit(limit, amount)) return ""
         return this.catalog.get(
             "engine.limitReached",
-            { limit: formatVnd(rule.limit_vnd, ctx.locale), amount: formatVnd(amount, ctx.locale) },
+            { limit: formatVnd(limit, ctx.locale), amount: formatVnd(amount, ctx.locale) },
             ctx.locale,
         )
     }

@@ -107,7 +107,9 @@ export class ConnectionsService {
 
     /** The configured site origin browsers are sent back to, with no trailing slash. */
     siteBase(): string {
-        return this.siteUrl.replace(/\/+$/u, "")
+        let end = this.siteUrl.length
+        while (end > 0 && this.siteUrl[end - 1] === "/") end -= 1
+        return this.siteUrl.slice(0, end)
     }
 
     /** The public https origin providers can reach, or null on localhost, plain http or when unset. */
@@ -121,7 +123,8 @@ export class ConnectionsService {
             actor.workspaceId,
             actor.principalId,
         ])
-        if (row === undefined || !roles.some((role) => role === row.role)) {
+        const acceptedRoles: ReadonlyArray<string> = roles
+        if (row === undefined || !acceptedRoles.includes(row.role)) {
             throw new ConnectionsError({ code: ConnectionsErrorCode.Forbidden })
         }
         return { role: row.role, displayName: row.display_name }

@@ -99,7 +99,7 @@ export const OfficeExceptionForm = (props: OfficeExceptionFormProps) => {
                 </Text>
             )}
             {item.canAct
-                ? renderOfficeExceptionFormActions(
+                ? renderOfficeExceptionFormActions({
                       isFailed,
                       props,
                       isLocked,
@@ -110,25 +110,38 @@ export const OfficeExceptionForm = (props: OfficeExceptionFormProps) => {
                       text,
                       item,
                       setIsEditing,
-                  )
+                  })
                 : null}
         </>
     )
 }
 
 /** Renders the OfficeExceptionForm actions section. */
-const renderOfficeExceptionFormActions = (
-    isFailed: boolean,
-    props: OfficeExceptionFormProps,
-    isLocked: boolean,
-    isOtherIncomplete: boolean,
-    isBasisMissing: boolean,
-    onApprove: () => void,
-    isEditing: boolean,
-    text: NonNullable<OfficeExceptionFormProps["text"]>,
-    item: NonNullable<OfficeExceptionFormProps["item"]>,
-    setIsEditing: Dispatch<SetStateAction<boolean>>,
-) => (
+type OfficeExceptionActionsInput = {
+    readonly isFailed: boolean
+    readonly props: OfficeExceptionFormProps
+    readonly isLocked: boolean
+    readonly isOtherIncomplete: boolean
+    readonly isBasisMissing: boolean
+    readonly onApprove: () => void
+    readonly isEditing: boolean
+    readonly text: NonNullable<OfficeExceptionFormProps["text"]>
+    readonly item: NonNullable<OfficeExceptionFormProps["item"]>
+    readonly setIsEditing: Dispatch<SetStateAction<boolean>>
+}
+
+const renderOfficeExceptionFormActions = ({
+    isFailed,
+    props,
+    isLocked,
+    isOtherIncomplete,
+    isBasisMissing,
+    onApprove,
+    isEditing,
+    text,
+    item,
+    setIsEditing,
+}: OfficeExceptionActionsInput) => (
     <div className={ACTIONS_CLASS_NAME}>
         {isFailed ? null : (
             <Button

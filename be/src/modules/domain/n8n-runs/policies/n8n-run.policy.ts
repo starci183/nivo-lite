@@ -9,7 +9,7 @@ const BEARER = /^Bearer\s+(\S+)$/i
 const RUN_ID = /^[0-9a-f-]{36}$/i
 const TEMPLATE_KEY = /^[a-z][a-z0-9-]{2,60}$/
 const VARIABLE_NAME = /^[a-z0-9_]{1,40}$/i
-const FINAL: ReadonlyArray<string> = ["done", "failed", "skipped"]
+const FINAL: ReadonlySet<string> = new Set(["done", "failed", "skipped"])
 const VALUE_MAX = 4000
 const REF_MAX = 200
 const RESULT_MAX = 8000
@@ -39,7 +39,7 @@ export const tokenMatches = (storedHash: string, token: string): boolean => {
 export const isWorkflowKey = (key: string): boolean => TEMPLATE_KEY.test(key)
 
 /** True while a run can still be reported on: it is not finished. */
-export const runIsOpen = (status: string): boolean => !FINAL.includes(status)
+export const runIsOpen = (status: string): boolean => !FINAL.has(status)
 
 /** The final status an n8n callback names; anything else counts as done. */
 export const finalStatusOf = (value: unknown): "done" | "failed" | "skipped" =>

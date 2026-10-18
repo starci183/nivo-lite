@@ -16,13 +16,15 @@ export const shopBlock = (shop: ShopContext, contextText: string): string =>
         .join("\n")
 
 /** The instructions that make a model write the shop's own wording of a template, once, when the owner switches it on. */
-export const proposalSystem = (def: TemplateDefinition, base: string): string =>
-    [
+export const proposalSystem = (def: TemplateDefinition, base: string): string => {
+    const placeholders = [...placeholdersOf(base)].map((name) => `{${name}}`).join(", ")
+    return [
         "Rewrite the message template for THIS shop, in the shop's tone and the way it addresses customers (anh/chi/ban, em/minh...), taking the style from the shop information.",
-        `Keep every placeholder in curly braces EXACTLY as written (${[...placeholdersOf(base)].map((name) => `{${name}}`).join(", ")}), and use no other placeholders. Do not add facts, prices, hours or promises that are not in the shop information.`,
+        `Keep every placeholder in curly braces EXACTLY as written (${placeholders}), and use no other placeholders. Do not add facts, prices, hours or promises that are not in the shop information.`,
         `Guardrails: ${def.guardrails.map((guardrail) => guardrail.vi).join(" ")}`,
         "Vietnamese. Plain text for a chat app: no markdown, no emojis unless the shop's tone clearly uses them. Max 60 words. Output only the message template.",
     ].join("\n")
+}
 
 /** The instructions that make a model write ONE message to one customer inside the approved wording. */
 export const caseSystem = (def: TemplateDefinition): string =>

@@ -65,7 +65,7 @@ export const daysLate = (dueAt: string | Date, now: Date): number =>
 
 const csvCell = (value: string | number | null | undefined): string => {
     const text = String(value ?? "")
-    return /[",\n\r]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text
+    return /[",\n\r]/.test(text) ? `"${text.replaceAll('"', '""')}"` : text
 }
 
 /** Rows as CSV: a byte order mark so Excel reads Vietnamese, CRLF line ends, cells quoted when they need it. */

@@ -48,6 +48,8 @@ export interface NormalizedUpdate {
 export type NormalizedSourceOutcome = Outcome<NormalizedSource, KnowledgeSourcesErrorCode>
 
 const HTTP = /^https?:\/\//iu
+const D_STROKE = String.fromCodePoint(0x111)
+const CAPITAL_D_STROKE = String.fromCodePoint(0x110)
 
 /** Distinct, trimmed tags of at most forty characters, twelve at most. */
 export const tagsOf = (tags: ReadonlyArray<string> | undefined): Array<string> =>
@@ -161,9 +163,13 @@ export const safeFileName = (name: string): string => {
         .replace(/^.*[\\/]/u, "")
         .normalize("NFD")
         .replace(/\p{Diacritic}/gu, "")
-        .replace(/\u0111/gu, "d")
-        .replace(/\u0110/gu, "D")
+        .replaceAll(D_STROKE, "d")
+        .replaceAll(CAPITAL_D_STROKE, "D")
         .replace(/[^\w.-]+/gu, "_")
-        .replace(/^_+|_+$/gu, "")
-    return (base === "" ? "file" : base).slice(-120)
+    let start = 0
+    let end = base.length
+    while (start < end && base[start] === "_") start += 1
+    while (end > start && base[end - 1] === "_") end -= 1
+    const trimmed = base.slice(start, end)
+    return (trimmed === "" ? "file" : trimmed).slice(-120)
 }

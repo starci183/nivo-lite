@@ -9,22 +9,41 @@ import { ApiKeysSectionBase } from "./component"
 
 /** The connected API keys card: lists, creates (the secret is shown once) and revokes keys through the back end GraphQL API. */
 /** Connects the state and commands used by ApiKeysSection. */
-const buildApiKeysSectionState = (
-    form: ReturnType<typeof useApiKeyForm>,
-    format: ReturnType<typeof useFormatter>,
-    items: ReturnType<typeof useApiKeys>["items"],
-    revokingId: string | undefined,
-    create: ReturnType<typeof useApiKeys>["create"],
-    setFresh: import("react").Dispatch<import("react").SetStateAction<string | undefined>>,
-    revoke: ReturnType<typeof useApiKeys>["revoke"],
-    setRevokingId: import("react").Dispatch<import("react").SetStateAction<string | undefined>>,
-    member: ReturnType<typeof useMember>,
-    t: ReturnType<typeof useTranslations<"developers">>,
-    isCreating: ReturnType<typeof useApiKeys>["isCreating"],
-    fresh: string | undefined,
-    loadFailed: ReturnType<typeof useApiKeys>["loadFailed"],
-    isRevoking: ReturnType<typeof useApiKeys>["isRevoking"],
-) => {
+/** Inputs for the connected state mapping. */
+interface BuildApiKeysSectionStateInput {
+    readonly form: ReturnType<typeof useApiKeyForm>
+    readonly format: ReturnType<typeof useFormatter>
+    readonly items: ReturnType<typeof useApiKeys>["items"]
+    readonly revokingId: string | undefined
+    readonly create: ReturnType<typeof useApiKeys>["create"]
+    readonly setFresh: import("react").Dispatch<import("react").SetStateAction<string | undefined>>
+    readonly revoke: ReturnType<typeof useApiKeys>["revoke"]
+    readonly setRevokingId: import("react").Dispatch<import("react").SetStateAction<string | undefined>>
+    readonly member: ReturnType<typeof useMember>
+    readonly t: ReturnType<typeof useTranslations<"developers">>
+    readonly isCreating: ReturnType<typeof useApiKeys>["isCreating"]
+    readonly fresh: string | undefined
+    readonly loadFailed: ReturnType<typeof useApiKeys>["loadFailed"]
+    readonly isRevoking: ReturnType<typeof useApiKeys>["isRevoking"]
+}
+
+/** Derives display values and interactions from the supplied state. */
+const buildApiKeysSectionState = ({
+    form,
+    format,
+    items,
+    revokingId,
+    create,
+    setFresh,
+    revoke,
+    setRevokingId,
+    member,
+    t,
+    isCreating,
+    fresh,
+    loadFailed,
+    isRevoking,
+}: BuildApiKeysSectionStateInput) => {
     const name = form.watch("name")
     const date = (iso: string) => format.dateTime(new Date(iso), { dateStyle: "medium", timeStyle: "short" })
     const revoking = items.find((item) => item.id === revokingId)
@@ -68,7 +87,7 @@ export const ApiKeysSection = () => {
     const [fresh, setFresh] = useState<string>()
     const [revokingId, setRevokingId] = useState<string>()
 
-    const connected = buildApiKeysSectionState(
+    const connected = buildApiKeysSectionState({
         form,
         format,
         items,
@@ -83,7 +102,7 @@ export const ApiKeysSection = () => {
         fresh,
         loadFailed,
         isRevoking,
-    )
+    })
     if (connected === null) return null
     const { submit, confirmRevoke } = connected
     return (

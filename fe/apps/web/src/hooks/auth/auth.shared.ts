@@ -6,7 +6,7 @@ export const NAME_MIN_LENGTH = 2
 export const RESEND_COOLDOWN_SECONDS = 60
 
 /** One address: a local part, one `@`, a domain with a dot. */
-export const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/u
+export const EMAIL_PATTERN = /^[^\s@]+@[^\s@][^\s@.]*\.[^\s@]+$/u
 
 /** How strong a password looks. */
 export type Strength = "weak" | "ok" | "strong"

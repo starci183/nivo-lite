@@ -1,6 +1,5 @@
-import type { ModuleIconName } from "@/modules/types"
+import type { ModuleIconName, OfficeBodyPart } from "@/modules/types"
 import { MODULE_REGISTRY, isModuleKey } from "@/modules/catalog"
-import type { OfficeBodyPart } from "@/modules/types"
 import { OPEN_WORK_STATUSES } from "./office.consts"
 import type { OfficeMessage, OfficeWork } from "./office.types"
 

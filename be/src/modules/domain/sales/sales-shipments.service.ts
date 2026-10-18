@@ -36,7 +36,7 @@ export class SalesShipmentsService {
         }
         return this.entityManager.transaction(async (tx) => {
             const order = await this.orders.ship(request.workspaceId, request.orderId, carrier, trackingCode, tx)
-            if (order === null || order.shipped_at === null)
+            if (order?.shipped_at === undefined || order.shipped_at === null)
                 throw new OrdersError({ code: OrdersErrorCode.NotShippable })
             await this.evidence.log(
                 { workspaceId: request.workspaceId, actor: member.displayName, locale: request.locale },

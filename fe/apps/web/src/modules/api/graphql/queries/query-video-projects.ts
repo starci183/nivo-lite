@@ -30,6 +30,8 @@ const query1: Document = gql`
             lastErrorCode
             publishedAt
             render {
+                captionsUrl
+                captionsLang
                 downloadUrl
                 durationMs
                 errorCode

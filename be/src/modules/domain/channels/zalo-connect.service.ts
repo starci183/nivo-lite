@@ -15,7 +15,7 @@ import { ZaloCredentialsService } from "./zalo-credentials.service"
 const OWNER = ["owner"] as const
 const MANAGER = ["owner", "manager"] as const
 const PROVIDER = "zalo_oa"
-const APP_ID = /^[0-9]{6,30}$/u
+const APP_ID = /^\d{6,30}$/u
 const KEY_MIN = 8
 const KEY_MAX = 200
 

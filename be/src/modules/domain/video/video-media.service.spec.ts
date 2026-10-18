@@ -175,6 +175,39 @@ describe("VideoMediaService", () => {
 
 describe("VideoMediaService", () => {
     describe("render", () => {
+        it("signs only workspace-local caption artifacts and preserves unknown language", async () => {
+            const { media, storage } = await build(mockEntityManager({}))
+            const path = `${WS}/render-1/captions.vtt`
+
+            expect(
+                await media.render({ ...DONE, captions_path: path, captions_lang: "vi-VN" }, WS, "Video"),
+            ).toMatchObject({ captionsUrl: `https://cdn/${path}?token=1`, captionsLang: "vi-VN" })
+            expect(storage.signedUrls).toHaveBeenCalledWith("videos", [DONE.output_path, DONE.poster_path, path], 3600)
+            expect(await media.render({ ...DONE, captions_path: path }, WS, "Video")).toMatchObject({
+                captionsUrl: `https://cdn/${path}?token=1`,
+                captionsLang: null,
+            })
+            expect(
+                await media.render(
+                    { ...DONE, captions_path: "other/captions.vtt", captions_lang: "vi-VN" },
+                    WS,
+                    "Video",
+                ),
+            ).toMatchObject({ captionsUrl: null, captionsLang: null })
+            expect(storage.signedUrls).toHaveBeenLastCalledWith("videos", [DONE.output_path, DONE.poster_path], 3600)
+            expect(
+                await media.render(
+                    { ...DONE, status: "failed", captions_path: path, captions_lang: "vi-VN" },
+                    WS,
+                    "Video",
+                ),
+            ).toMatchObject({ captionsUrl: null, captionsLang: null })
+        })
+    })
+})
+
+describe("VideoMediaService", () => {
+    describe("render", () => {
         it("answers nothing before the first render", async () => {
             const { media } = await build(mockEntityManager({}))
 
@@ -193,6 +226,8 @@ describe("VideoMediaService", () => {
                 sizeBytes: 2048,
                 errorCode: null,
                 videoUrl: `https://cdn/${WS}/render-1/video.mp4?token=1`,
+                captionsUrl: null,
+                captionsLang: null,
                 downloadUrl: `https://cdn/${WS}/render-1/video.mp4?token=1&download=Banh-mi-sale-.mp4`,
                 posterUrl: `https://cdn/${WS}/render-1/poster.jpg?token=1`,
             })
@@ -230,6 +265,8 @@ describe("VideoMediaService", () => {
                 sizeBytes: 2048,
                 errorCode: null,
                 videoUrl: null,
+                captionsUrl: null,
+                captionsLang: null,
                 downloadUrl: null,
                 posterUrl: `https://cdn/${WS}/render-1/poster.jpg?token=1`,
             })

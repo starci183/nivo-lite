@@ -78,7 +78,11 @@ export class InventoryImportService {
             const sku = (row.sku || skuFromName(row.name)).toUpperCase()
             const knownId = bySku.get(sku.toLowerCase()) ?? byName.get(row.name.trim().toLowerCase()) ?? null
             let finalSku = sku
-            for (let n = 2; knownId === null && used.has(finalSku.toLowerCase()); n += 1) finalSku = `${sku}-${n}`
+            let suffix = 2
+            while (knownId === null && used.has(finalSku.toLowerCase())) {
+                finalSku = `${sku}-${suffix}`
+                suffix += 1
+            }
             used.add(finalSku.toLowerCase())
             const supplierId =
                 row.supplier === "" ? null : await this.supplierByName(workspaceId, row.supplier, suppliers)

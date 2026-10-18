@@ -1,4 +1,4 @@
-import type { AgentOption } from "@/modules/types"
+import type { AgentOption, AgentStepView } from "@/modules/types"
 import type { useTranslations } from "next-intl"
 import type { useTelegramUserWizard } from "@/hooks/telegram-user-wizard"
 import { Alert, CheckboxGroup, Input, SegmentedControl, Text } from "@starci/grammar/common"
@@ -8,7 +8,6 @@ import { WizardAgentStep } from "@/components/composites/WizardAgentStep"
 import { backAction, closeAction, nextAction, WizardFooter } from "@/components/composites/WizardFooter"
 import type { WizardAction } from "@/components/composites/WizardFooter"
 import { WizardFrame } from "@/components/composites/WizardFrame"
-import type { AgentStepView } from "@/modules/types"
 import { telegramUserWizardClassNames as classNames } from "./classNames"
 
 /** A field of the personal Telegram login, also its stage. */

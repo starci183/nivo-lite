@@ -4,7 +4,7 @@ import type { useQueryWorkItemsSwr } from "@/hooks/swr"
 type WorkItem = NonNullable<ReturnType<typeof useQueryWorkItemsSwr>["data"]>["items"][number]
 
 /** The work item actions the loyalty tab decides. */
-const LOYALTY_ACTIONS: ReadonlyArray<string> = ["award_points", "redeem_reward", "send_promo", "adjust_points"]
+const LOYALTY_ACTIONS: ReadonlySet<string> = new Set(["award_points", "redeem_reward", "send_promo", "adjust_points"])
 
 /** One loyalty decision waiting for a person, as the tab shows it. */
 export interface LoyaltyPendingItem {
@@ -30,7 +30,7 @@ const customerOf = (fields: unknown): string => {
 /** The loyalty items among the waiting work items, in the shape the tab draws. */
 export const pendingOf = (items: ReadonlyArray<WorkItem>): ReadonlyArray<LoyaltyPendingItem> =>
     items
-        .filter((item) => LOYALTY_ACTIONS.includes(item.action))
+        .filter((item) => LOYALTY_ACTIONS.has(item.action))
         .map((item) => ({
             id: item.id,
             action: item.action,

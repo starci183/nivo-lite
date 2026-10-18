@@ -40,7 +40,7 @@ const NOTICE_LOCALE = "vi"
 const OFFERS_PER_TICK = 2
 
 /** The statuses of a post that is still to be written, approved or posted. */
-const OPEN_STATUSES: ReadonlyArray<string> = ["approved", "draft", "waiting_approval"]
+const OPEN_STATUSES: ReadonlySet<string> = new Set(["approved", "draft", "waiting_approval"])
 
 @Injectable()
 /**
@@ -75,7 +75,7 @@ export class ContentService {
         await eachInOrder(page, async (workspace) => {
             done.push(...(await this.runWorkspace(workspace, now, force)))
         })
-        const last = page[page.length - 1]
+        const last = page.at(-1)
         if (last === undefined || page.length < TICK_PAGE) return done
         return [...done, ...(await this.scan(now, force, last.workspaceId, only))]
     }
@@ -165,7 +165,7 @@ export class ContentService {
                 count: items.filter((item) => item.pillarId === pillar.id && item.status !== "skipped").length,
             }))
             .filter((entry) => entry.count > 0)
-        const missed = items.filter((item) => OPEN_STATUSES.includes(item.status)).length
+        const missed = items.filter((item) => OPEN_STATUSES.has(item.status)).length
         const lines = [
             this.text("content.summary.body", {
                 total: items.length,

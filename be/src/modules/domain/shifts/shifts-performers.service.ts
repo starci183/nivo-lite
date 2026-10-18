@@ -17,14 +17,14 @@ import { nameOf } from "./policies/labels.policy"
 import { toMin } from "./policies/time.policy"
 
 /** Findings that no decision can overrule: the request no longer makes sense. */
-const HARD_FINDINGS: ReadonlyArray<string> = [
+const HARD_FINDINGS: ReadonlySet<string> = new Set([
     "shift-missing",
     "not-posted",
     "not-owner",
     "taken",
     "taker-gone",
     "started",
-]
+])
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
     typeof value === "object" && value !== null && !Array.isArray(value)
@@ -163,7 +163,7 @@ export class ShiftsPerformersService implements OnModuleInit {
             { kind, fromStaffId: request.from_staff_id, toStaffId: request.to_staff_id },
             request.shift_id,
         )
-        const hard = checked.findings.filter((finding) => HARD_FINDINGS.includes(finding.code))
+        const hard = checked.findings.filter((finding) => HARD_FINDINGS.has(finding.code))
         if (hard.length > 0 || checked.shift === undefined) {
             throw new ShiftsError({
                 code: ShiftsErrorCode.SwapRefused,
@@ -303,6 +303,6 @@ export class ShiftsPerformersService implements OnModuleInit {
         load: (workspaceId: string, id: string) => Promise<T | undefined>,
     ): Promise<T | undefined> {
         const request = await load(context.workspaceId, fieldText(context.fields, field))
-        return request !== undefined && request.status === "pending" ? request : undefined
+        return request?.status === "pending" ? request : undefined
     }
 }

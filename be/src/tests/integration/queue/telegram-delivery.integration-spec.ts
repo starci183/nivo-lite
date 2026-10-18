@@ -1,9 +1,11 @@
-import { TELEGRAM_DELIVERY_QUEUE as DOMAIN_QUEUE } from "@modules/queues/telegram-delivery"
-import { TELEGRAM_DELIVERY_QUEUE, isTelegramDeliveryRecorded } from "@modules/queues/telegram-delivery"
-import { telegramDeliveryBuilder as build } from "../../world/telegram-delivery-proof.service"
+import {
+    TELEGRAM_DELIVERY_QUEUE as DOMAIN_QUEUE,
+    TELEGRAM_DELIVERY_QUEUE,
+    isTelegramDeliveryRecorded,
+} from "@modules/queues/telegram-delivery"
+import { telegramDeliveryBuilder as build, telegramDeliveryState } from "../../world/telegram-delivery-proof.service"
 import { useTestWorld } from "../../world/use-test-world"
 import { QUEUE_MODULES } from "../../world/test-capabilities.options"
-import { telegramDeliveryState } from "../../world/telegram-delivery-proof.service"
 
 describe("Telegram delivery publication (persisted integration)", () => {
     const world = useTestWorld({ modules: [...QUEUE_MODULES] })

@@ -359,6 +359,9 @@ describe("InventoryStockService / transferStock", () => {
         await expect(
             service.transferStock("user-1", "ws-1", { ...request, toLocationId: "loc-1" }),
         ).rejects.toMatchObject({ code: InventoryErrorCode.TransferSameLocation })
+        await expect(service.transferStock("user-1", "ws-1", { ...request, qty: Number.NaN })).rejects.toMatchObject({
+            code: InventoryErrorCode.TransferQtyRequired,
+        })
         await expect(service.transferStock("user-1", "ws-1", { ...request, qty: 0 })).rejects.toMatchObject({
             code: InventoryErrorCode.TransferQtyRequired,
         })

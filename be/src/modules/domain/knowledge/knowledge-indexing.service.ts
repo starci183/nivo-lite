@@ -15,7 +15,7 @@ import { SourceReaderService } from "./source-reader.service"
 import { UsageMeterService } from "./usage-meter.service"
 
 /** The statuses from which a source is not indexed again: it is done, past this stage, or closed. */
-const CLOSED: ReadonlyArray<string> = ["ready", "extracting_facts", "failed", "blocked_credits"]
+const CLOSED: ReadonlySet<string> = new Set(["ready", "extracting_facts", "failed", "blocked_credits"])
 
 /** How long one embeddings batch may take while a document is indexed. */
 const EMBED_TIMEOUT_MS = 20_000
@@ -46,7 +46,7 @@ export class KnowledgeIndexingService {
      */
     async index(run: IndexRun): Promise<IndexOutcome> {
         const source = await this.sources.sourceOf(run.workspaceId, run.sourceId)
-        if (source === null || CLOSED.includes(source.status)) return "skipped"
+        if (source === null || CLOSED.has(source.status)) return "skipped"
         try {
             await this.sources.begin(source.workspaceId, source.id)
             const read = await this.reader.read(source)

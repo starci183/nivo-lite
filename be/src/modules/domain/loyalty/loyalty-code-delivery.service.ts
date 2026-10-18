@@ -7,7 +7,7 @@ import type { Logger } from "@modules/platform/logging"
 import type { CodeDelivery, CodeDeliveryParams } from "./loyalty.contracts"
 import { LoyaltyLogEvent } from "./loyalty.log-events"
 
-const PUSH_CHANNELS: ReadonlyArray<string> = ["telegram", "zalo"]
+const PUSH_CHANNELS: ReadonlySet<string> = new Set(["telegram", "zalo"])
 
 @Injectable()
 /** Carries a public loyalty code into the customer's existing chat with the shop. */
@@ -25,7 +25,7 @@ export class LoyaltyCodeDeliveryService implements CodeDelivery {
         if (
             target.kind !== "ok" ||
             target.value.workspaceId !== params.workspaceId ||
-            !PUSH_CHANNELS.includes(target.value.channel)
+            !PUSH_CHANNELS.has(target.value.channel)
         )
             return false
         const messageId = await this.messages.storeAgentMessage(params.workspaceId, params.conversationId, params.text)

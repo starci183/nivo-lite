@@ -40,7 +40,7 @@ import type { ApplicationInput } from "./policies/application.policy"
 import { findFairnessViolations } from "./policies/fairness.policy"
 import { isStage } from "./policies/row-mappers.policy"
 
-const CLOSED_STAGES: ReadonlyArray<string> = ["rejected", "withdrawn", "hired"]
+const CLOSED_STAGES: ReadonlySet<string> = new Set(["rejected", "withdrawn", "hired"])
 const REASON_MIN = 3
 const REASON_MAX = 300
 const NOTES_MAX = 4000
@@ -100,7 +100,7 @@ export class HiringCandidatesService {
     /** One candidate who is still in the pipeline; throws when there is none or when the candidate is rejected, withdrawn or hired. */
     async requireOpenCandidate(workspaceId: string, candidateId: string): Promise<CandidateRecord> {
         const candidate = await this.requireCandidate(workspaceId, candidateId)
-        if (CLOSED_STAGES.includes(candidate.stage)) {
+        if (CLOSED_STAGES.has(candidate.stage)) {
             throw new HiringError({
                 code: HiringErrorCode.CandidateClosed,
                 params: { stage: this.words.text(`hiring.stage.${candidate.stage}`) },
@@ -295,7 +295,7 @@ export class HiringCandidatesService {
     /** Closes a job once enough people accepted, when the workspace asked for it; answers whether it closed. */
     async closeJobIfFilled(workspaceId: string, jobId: string): Promise<boolean> {
         const [row] = await this.entityManager.query<Array<FilledRow>>(FILL_CHECK, [workspaceId, jobId])
-        if (row === undefined || !row.closed) return false
+        if (!row?.closed) return false
         await this.office.postOffice(
             workspaceId,
             this.words.text("hiring.office.jobFilled", {

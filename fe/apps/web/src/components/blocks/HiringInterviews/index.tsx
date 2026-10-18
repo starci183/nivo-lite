@@ -35,7 +35,7 @@ export const HiringInterviews = () => {
         isConfirmed: interview.status === "confirmed",
     })
     const first = view.days[0]
-    const last = view.days[view.days.length - 1]
+    const last = view.days.at(-1)
     const range =
         first === undefined || last === undefined
             ? ""

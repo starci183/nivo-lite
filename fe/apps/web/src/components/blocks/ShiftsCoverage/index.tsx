@@ -36,8 +36,14 @@ export const ShiftsCoverage = () => {
         return null
     const { positions } = bench.setup
     const positionName = (id: string): string => positions.find((position) => position.id === id)?.name ?? ""
-    const reading = (cell: ShiftsCoverageCell): string =>
-        `${cell.have}/${cell.min}${cell.ideal > cell.min ? `-${cell.ideal}` : ""} ${t(READING_KEYS[cell.status])}`
+    const reading = (cell: ShiftsCoverageCell): string => {
+        const ideal = cell.ideal > cell.min ? `-${cell.ideal}` : ""
+        return `${cell.have}/${cell.min}${ideal} ${t(READING_KEYS[cell.status])}`
+    }
+    const labelOf = (cell: ShiftsCoverageCell): string => {
+        const peak = cell.peak ? ` ${t("peakTag")}` : ""
+        return `${positionName(cell.positionId)} ${cell.start.slice(0, 2)}-${cell.end.slice(0, 2)}${peak}`
+    }
 
     return (
         <ShiftsCoverageBase
@@ -52,7 +58,7 @@ export const ShiftsCoverage = () => {
                         .sort((a, b) => a.start.localeCompare(b.start))
                         .map((cell) => ({
                             id: cell.blockId,
-                            label: `${positionName(cell.positionId)} ${cell.start.slice(0, 2)}-${cell.end.slice(0, 2)}${cell.peak ? ` ${t("peakTag")}` : ""}`,
+                            label: labelOf(cell),
                             value: Math.min(cell.have, Math.max(1, cell.ideal)),
                             max: Math.max(1, cell.ideal),
                             reading: reading(cell),

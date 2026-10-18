@@ -31,22 +31,9 @@ describe("sales contract policy", () => {
             expect(subject.isIsoDay("2026-02-28")).toBe(true)
         })
 
-        it("refuses a day that does not exist", async () => {
+        it.each(["2026-02-30", "31/10/2026", "2026-13-45"])("refuses invalid calendar day %s", async (value) => {
             const subject = await buildSubject()
-
-            expect(subject.isIsoDay("2026-02-30")).toBe(false)
-        })
-
-        it("refuses text that is not YYYY-MM-DD", async () => {
-            const subject = await buildSubject()
-
-            expect(subject.isIsoDay("31/10/2026")).toBe(false)
-        })
-
-        it("refuses a well-formed shape that is not a date", async () => {
-            const subject = await buildSubject()
-
-            expect(subject.isIsoDay("2026-13-45")).toBe(false)
+            expect(subject.isIsoDay(value)).toBe(false)
         })
     })
 })

@@ -14,7 +14,7 @@ import {
 } from "@/hooks/swr"
 import { useActiveWorkspace } from "@/hooks/workspaces"
 
-const LEAD_VIEW_KEYS: ReadonlyArray<string> = [
+const LEAD_VIEW_KEYS: ReadonlySet<string> = new Set([
     QUERY_LEAD_BOARD_SWR_KEY,
     QUERY_LEAD_JOURNEY_SWR_KEY,
     QUERY_LEAD_FLOW_SWR_KEY,
@@ -23,17 +23,14 @@ const LEAD_VIEW_KEYS: ReadonlyArray<string> = [
     QUERY_PROMO_CHATBOT_STATE_SWR_KEY,
     QUERY_AGENT_DASHBOARD_SWR_KEY,
     QUERY_SALES_WORKBENCH_SWR_KEY,
-]
+])
 
 /** Reads again every lead-derived view of the active workspace (board, journey, flow, workbenches, dashboards) after a write. */
 export const useRevalidateLeadViews = () => {
     const { mutate } = useSWRConfig()
     const { activeWorkspaceId } = useActiveWorkspace()
     return useCallback(
-        () =>
-            mutate(
-                (key) => Array.isArray(key) && key[1] === activeWorkspaceId && LEAD_VIEW_KEYS.includes(String(key[0])),
-            ),
+        () => mutate((key) => Array.isArray(key) && key[1] === activeWorkspaceId && LEAD_VIEW_KEYS.has(String(key[0]))),
         [activeWorkspaceId, mutate],
     )
 }

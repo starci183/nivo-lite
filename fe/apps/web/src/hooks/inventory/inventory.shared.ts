@@ -1,4 +1,6 @@
-import type { ItemView, PoStatus, StockStatus } from "@/modules/types"
+import type { useTranslations } from "next-intl"
+import type { useInventoryFormat } from "./useInventoryFormat"
+import type { InventoryWorkbenchData, ItemView, PoStatus, StockStatus } from "@/modules/types"
 
 /** The stock filter of the item list. */
 export type StockFilter = "all" | "low" | "out" | "over"
@@ -144,3 +146,27 @@ export interface SupplierFormValues {
 
 /** The field names the supplier form changes one at a time. */
 export type SupplierFormField = keyof SupplierFormValues
+
+/** Data and formatting needed for an item summary. */
+interface StockDetailInput {
+    readonly board: Pick<InventoryWorkbenchData, "locations" | "suppliers">
+    readonly format: ReturnType<typeof useInventoryFormat>
+    readonly t: ReturnType<typeof useTranslations<"workbenchInventory">>
+}
+
+/** Item identity, supplier, location totals and replenishment details. */
+export const stockDetailOf = (item: ItemView, { board, format, t }: StockDetailInput): string => {
+    const placeName = (id: string): string => board.locations.find((location) => location.id === id)?.name ?? ""
+    return [
+        item.sku,
+        item.category,
+        board.suppliers.find((supplier) => supplier.id === item.supplierId)?.name ?? "",
+        board.locations.length > 1
+            ? item.levels.map((level) => `${placeName(level.locationId)} ${format.qty(level.qty)}`).join(", ")
+            : "",
+        item.reorderPoint > 0 ? t("stockMin", { qty: format.qty(item.reorderPoint) }) : "",
+        item.costVnd > 0 ? t("stockCost", { cost: format.money(item.costVnd), unit: item.unit }) : "",
+    ]
+        .filter((part) => part !== "")
+        .join(" · ")
+}

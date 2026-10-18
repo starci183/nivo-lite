@@ -60,7 +60,7 @@ export const ARCHIVE_MAX_ENTRIES = 300
 /** Uploads in flight at once. Only bytes travel from the browser; nothing is read or indexed here. */
 export const UPLOAD_PARALLEL = 4
 
-const NO_RETRY: ReadonlyArray<string> = [
+const NO_RETRY: ReadonlySet<string> = new Set([
     "errBadType",
     "errTooBig",
     "errBadLink",
@@ -71,11 +71,11 @@ const NO_RETRY: ReadonlyArray<string> = [
     "errZipTotal",
     "errZipBomb",
     "errZipEmpty",
-]
+])
 
 /** Whether an item can be sent (again): waiting, or failed for a reason that may pass. */
 export const canRetry = (item: Pick<QueueItem, "status" | "error">): boolean =>
-    item.status === "waiting" || (item.status === "failed" && !NO_RETRY.includes(item.error ?? ""))
+    item.status === "waiting" || (item.status === "failed" && !NO_RETRY.has(item.error ?? ""))
 
 /** The links typed in the rows that are not in the queue yet and can be added. */
 export const typedLinks = (links: string, items: ReadonlyArray<QueueItem>): ReadonlyArray<string> =>

@@ -56,13 +56,29 @@ const parseYesNo = (answer: string): "yes" | "no" | null => {
     return NO.test(folded) ? "no" : null
 }
 
+const experienceNumberBefore = (text: string, offset: number): number | null => {
+    let end = offset
+    while (end > 0 && /\s/u.test(text[end - 1] ?? "")) end -= 1
+    let start = end
+    while (start > 0 && /\d/u.test(text[start - 1] ?? "")) start -= 1
+    if (start === end) return null
+    if (text[start - 1] === "." && /\d/u.test(text[start - 2] ?? "")) {
+        start -= 1
+        while (start > 0 && /\d/u.test(text[start - 1] ?? "")) start -= 1
+    }
+    return Number(text.slice(start, end))
+}
+
 /** The longest experience a text states, in years ("2 nam", "18 thang"); null when it states none. */
 const experienceYears = (text: string): number | null => {
-    const years = [
-        ...fold(text)
-            .replace(/,/gu, ".")
-            .matchAll(/(\d+(?:\.\d+)?)\s*(nam|thang|year|month)/gu),
-    ].map((found) => Number(found[1]) / (found[2] === "thang" || found[2] === "month" ? MONTHS_PER_YEAR : 1))
+    const folded = fold(text).replaceAll(",", ".")
+    const years: Array<number> = []
+    for (const unit of folded.matchAll(/nam|thang|year|month/gu)) {
+        const numeric = experienceNumberBefore(folded, unit.index)
+        if (numeric === null) continue
+        const divisor = unit[0] === "thang" || unit[0] === "month" ? MONTHS_PER_YEAR : 1
+        years.push(numeric / divisor)
+    }
     return years.length === 0 ? null : Math.max(...years)
 }
 
@@ -76,6 +92,20 @@ const entry = (criterion: string, status: ReasonStatus, note: string, weight: nu
 
 const clipText = (text: string, max: number): string => (text.length > max ? `${text.slice(0, max - 3)}...` : text)
 
+const yesNoEntry = (
+    question: JobQuestion,
+    given: string,
+    quote: string,
+    t: TextOf,
+    make: (status: ReasonStatus, note: string) => Entry,
+): Entry => {
+    const said = parseYesNo(given)
+    if (said === null) return make("unknown", t("hiring.screen.yesnoUnclear", { answer: quote }))
+    if (said === question.expect)
+        return make("met", t(said === "yes" ? "hiring.screen.yesnoYes" : "hiring.screen.yesnoNoOk", {}))
+    return make("unmet", t(said === "yes" ? "hiring.screen.yesnoNeedNo" : "hiring.screen.yesnoNeedYes", {}))
+}
+
 /** One scored question against the answer given. */
 const questionEntry = (question: JobQuestion, given: string, t: TextOf): Entry => {
     const weight = question.required ? REQUIRED_WEIGHT : OPTIONAL_WEIGHT
@@ -84,13 +114,10 @@ const questionEntry = (question: JobQuestion, given: string, t: TextOf): Entry =
         entry(label, status, t(key, params), weight, question.required)
     const quote = given.slice(0, ANSWER_QUOTE_MAX)
     if (given === "") return make("unknown", "hiring.screen.unanswered")
-    if (question.type === "yesno") {
-        const said = parseYesNo(given)
-        if (said === null) return make("unknown", "hiring.screen.yesnoUnclear", { answer: quote })
-        if (said === question.expect)
-            return make("met", said === "yes" ? "hiring.screen.yesnoYes" : "hiring.screen.yesnoNoOk")
-        return make("unmet", said === "yes" ? "hiring.screen.yesnoNeedNo" : "hiring.screen.yesnoNeedYes")
-    }
+    if (question.type === "yesno")
+        return yesNoEntry(question, given, quote, t, (status, note) =>
+            entry(label, status, note, weight, question.required),
+        )
     if (question.type === "number" && typeof question.expect === "number") {
         const number = firstNumber(given)
         if (number === null) return make("unknown", "hiring.screen.numberNone", { answer: quote })
@@ -245,7 +272,8 @@ export const experienceLine = (years: number | null, note: string, family: Exper
         const yearsKey = facts ? "hiring.facts.experienceYears" : "hiring.criteria.experienceYears"
         return t(yearsKey, { years, note: note === "" ? "" : ` (${note})` })
     }
-    return note === "" ? "" : t(facts ? "hiring.facts.experienceNote" : "hiring.criteria.experienceNote", { note })
+    if (note === "") return ""
+    return t(facts ? "hiring.facts.experienceNote" : "hiring.criteria.experienceNote", { note })
 }
 
 /** A short plain description of the job criteria: what the model is told to compare against. */

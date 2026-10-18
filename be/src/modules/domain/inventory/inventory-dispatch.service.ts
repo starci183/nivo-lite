@@ -110,7 +110,7 @@ export class InventoryDispatchService {
     async performSendPurchaseOrder(context: PerformContext): Promise<PerformResult> {
         const po = await this.orders.loadPo(context.workspaceId, fieldText(context.fields, "po_id"))
         const reminder = fieldText(context.fields, "kind") === "reminder"
-        if (!reminder && po.status !== "waiting_approval" && po.status !== "draft") {
+        if (!isDispatchableStatus(po.status, reminder)) {
             return {
                 summary: this.text("inventory.poAlreadyHandled", { poNo: po.poNo, status: po.status }),
                 evidence: "pending",
@@ -223,3 +223,7 @@ export class InventoryDispatchService {
         return { via, note }
     }
 }
+
+/** Reminders retain their existing status path; initial sends require an unsent order. */
+const isDispatchableStatus = (status: string, reminder: boolean): boolean =>
+    reminder || status === "waiting_approval" || status === "draft"

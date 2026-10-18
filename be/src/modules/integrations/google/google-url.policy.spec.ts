@@ -37,6 +37,14 @@ const build = async () => {
 const CLIENT = { clientId: "client-1", clientSecret: new Secret("secret-1") }
 
 describe("endpoints", () => {
+    it("removes long terminal slash runs while preserving path slashes", async () => {
+        const subject = await build()
+
+        expect(subject.sheetsBase({ sheetsBase: `http://fake.test/a/b${"/".repeat(10000)}` })).toBe(
+            "http://fake.test/a/b",
+        )
+    })
+
     it("point at Google by default", async () => {
         const subject = await build()
 

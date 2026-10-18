@@ -1,14 +1,12 @@
-import { isVietcombankDeliveryRecorded } from "@modules/queues/vietcombank-delivery"
+import { VIETCOMBANK_DELIVERY_QUEUE, isVietcombankDeliveryRecorded } from "@modules/queues/vietcombank-delivery"
 import type { ClaimedJob, JobClaims } from "@modules/platform/jobs"
 import { VietcombankReceiptService } from "@modules/domain/vietcombank-inbox"
 import { BankFeedReceiptService } from "@modules/domain/bank-feed-inbox"
 import type { IncomingCredit } from "@modules/domain/bank-feed-inbox"
 import { InjectQueueOutbox } from "@modules/platform/queue"
 import type { QueueOutbox } from "@modules/platform/queue"
-import { VIETCOMBANK_DELIVERY_QUEUE } from "@modules/queues/vietcombank-delivery"
 import { BANK_FEED_DELIVERY_QUEUE } from "@modules/queues/bank-feed-delivery"
 import type { BankFeedDeliveryRecorded } from "@modules/queues/bank-feed-delivery"
-import type { VietcombankDeliveryRecorded } from "./billing.contracts"
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { EventsService } from "@modules/domain/events"
@@ -28,6 +26,7 @@ import { SIMULATED_BANK, simulatedBankEventId, simulatedCreditOf } from "./bank.
 import { InjectBillingOptions } from "./billing.decorators"
 import type { BillingOptions } from "./billing.options"
 import type {
+    VietcombankDeliveryRecorded,
     RawBody,
     HeaderValue,
     BankFeedProvider,

@@ -10,7 +10,7 @@ const LIST_LIMIT = 8
 export const ShiftsMySwaps = () => {
     const t = useTranslations("shifts")
     const mine = useShiftsMineData().data
-    if (mine === undefined || mine.profileId === null) return null
+    if (mine?.profileId === undefined || mine.profileId === null) return null
 
     const name = (id: string | null): string => mine.colleagues.find((person) => person.id === id)?.name ?? t("you")
     const lineOf = (kind: string, from: string | null, to: string, shift: string): string =>

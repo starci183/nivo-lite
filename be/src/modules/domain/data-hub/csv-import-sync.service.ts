@@ -21,7 +21,7 @@ export class CsvImportSyncService implements DataConnector {
     /** Re-reads the saved Google Sheets link with the saved mapping and upserts the rows. */
     async sync(context: DataSyncContext): Promise<DataSyncResult> {
         const config = readConfig(context.connection.meta)
-        if (config === null || config.source !== "sheet" || config.link === undefined) {
+        if (config?.source !== "sheet" || config.link === undefined) {
             return { rows: 0, note: CSV_COPY.uploadAgain }
         }
         const table = await this.table.readSheetLink(config.link)

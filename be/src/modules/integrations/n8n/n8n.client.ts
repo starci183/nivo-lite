@@ -77,7 +77,10 @@ export class N8nClient {
     }
 
     private pathTargets(paths: ReadonlyArray<string>): ReadonlyArray<string> {
-        const base = this.options.webhookBase?.replace(/\/+$/, "")
+        const configured = this.options.webhookBase
+        let end = configured?.length ?? 0
+        while (end > 0 && configured?.[end - 1] === "/") end -= 1
+        const base = configured?.slice(0, end)
         return base === undefined ? [] : paths.map((path) => `${base}/${path.replace(/^\/+/, "")}`)
     }
 

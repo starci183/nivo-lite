@@ -79,7 +79,10 @@ export const createLiteWorld = (modules: ReadonlyArray<DynamicModule>) => {
         },
         async close(): Promise<void> {
             try {
-                if (source?.isInitialized) await eachInOrder(cleanups.reverse(), (cleanup) => cleanup())
+                if (source?.isInitialized) {
+                    cleanups.reverse()
+                    await eachInOrder(cleanups, (cleanup) => cleanup())
+                }
             } finally {
                 try {
                     await container?.close()

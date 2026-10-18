@@ -1,4 +1,8 @@
-import { CustomerTurnRuntimeService, CustomerOutcomesService } from "@modules/domain/customer-turns"
+import {
+    CustomerTurnRuntimeService,
+    CustomerOutcomesService,
+    CustomerTurnsModule,
+} from "@modules/domain/customer-turns"
 import type { DynamicModule } from "@nestjs/common"
 import { InboundEventsModule } from "@modules/domain/inbound-events"
 import { AgentConversationsModule } from "@modules/domain/agent-conversations"
@@ -13,7 +17,6 @@ import { ZaloWizardDraftsModule } from "@modules/domain/zalo-wizard-drafts"
 import { MailModule } from "@modules/integrations/mail"
 import { TelegramModule } from "@modules/integrations/telegram"
 import { ZaloModule } from "@modules/integrations/zalo"
-import { CustomerTurnsModule } from "@modules/domain/customer-turns"
 import type { ApiOptions } from "../api.options"
 /** The messaging area of the API, in registration order. */
 export const messagingModules = (options: ApiOptions): Array<DynamicModule> => [

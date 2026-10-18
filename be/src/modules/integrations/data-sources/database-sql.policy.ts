@@ -21,9 +21,9 @@ export const isUsableIdentifier = (id: string): boolean =>
 
 /** Quotes a table or column name for the engine; the name must pass isUsableIdentifier. */
 export const quoteId = (engine: DatabaseEngine, id: string): string => {
-    if (engine === "mysql") return `\`${id.replace(/`/gu, "``")}\``
-    if (engine === "mssql") return `[${id.replace(/\]/gu, "]]")}]`
-    return `"${id.replace(/"/gu, '""')}"`
+    if (engine === "mysql") return `\`${id.replaceAll("`", "``")}\``
+    if (engine === "mssql") return `[${id.replaceAll("]", "]]")}]`
+    return `"${id.replaceAll('"', '""')}"`
 }
 
 const castText = (engine: DatabaseEngine, column: string): string => {
@@ -74,8 +74,8 @@ export const buildSelect = (
     if (engine === "postgres") marker = "$1"
     else if (engine === "mysql") marker = "?"
     const where = incremental ? ` WHERE ${q(selection.updatedColumn)} >= ${marker}` : ""
-    const order =
-        options.ordered === false ? "" : ` ORDER BY ${q(hasUpdated ? selection.updatedColumn : selection.idColumn)} ASC`
+    const orderColumn = hasUpdated ? selection.updatedColumn : selection.idColumn
+    const order = options.ordered === false ? "" : ` ORDER BY ${q(orderColumn)} ASC`
     const n = Math.max(1, Math.min(Math.floor(options.limit), DATABASE_MAX_ROWS))
     const from = ` FROM ${q(selection.schema)}.${q(selection.table)}${where}${order}`
     const sql =

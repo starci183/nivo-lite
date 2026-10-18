@@ -2,15 +2,15 @@ import { isMailAddress } from "./email-address.policy"
 import { EmailMessagesErrorCode } from "./errors/email-messages.error"
 import type { SmtpForm, SmtpFormInput } from "./smtp-wizard.contracts"
 
-const PRESETS: ReadonlyArray<string> = [
+const PRESETS: ReadonlySet<string> = new Set([
     "google_workspace",
     "gmail",
     "microsoft365",
     "zoho",
     "vn_hosting",
     "relay_service",
-]
-const GOOGLE_PRESETS: ReadonlyArray<string> = ["gmail", "google_workspace"]
+])
+const GOOGLE_PRESETS: ReadonlySet<string> = new Set(["gmail", "google_workspace"])
 const GOOGLE_RELAY_HOST = "smtp-relay.gmail.com"
 const PORT_MAX = 65535
 
@@ -21,11 +21,11 @@ export type SmtpFormVerdict =
 const clean = (text: string, max: number): string => text.trim().slice(0, max)
 
 /** Whether the id is one of the providers the wizard offers. */
-export const isSmtpPreset = (preset: string): boolean => PRESETS.includes(preset)
+export const isSmtpPreset = (preset: string): boolean => PRESETS.has(preset)
 
 /** The password as the provider wants it: Google app passwords lose every whitespace, the others are trimmed. */
 export const cleanSmtpPassword = (preset: string, password: string): string =>
-    GOOGLE_PRESETS.includes(preset) ? password.replace(/\s+/gu, "") : password.trim()
+    GOOGLE_PRESETS.has(preset) ? password.replace(/\s+/gu, "") : password.trim()
 
 /** Validates and cleans the wizard form; the first problem found decides the answer. */
 export const cleanSmtpForm = (input: SmtpFormInput): SmtpFormVerdict => {

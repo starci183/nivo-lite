@@ -5,7 +5,7 @@ import type { SplitPayload } from "./work-engine.contracts"
 export const MAX_COMMAND_DEPTH = 6
 
 /** Payload keys that address the work item itself; every other payload key becomes a field of the receiver's proposal. */
-const ENVELOPE_KEYS: ReadonlyArray<string> = ["subject_type", "subject_id", "lead_id"]
+const ENVELOPE_KEYS = new Set(["subject_type", "subject_id", "lead_id"])
 
 const isEmpty = (value: unknown): boolean =>
     value === null || value === undefined || (typeof value === "string" && value.trim() === "")
@@ -18,7 +18,7 @@ export const missingPayload = (
     payload: Readonly<Record<string, unknown>>,
 ): ReadonlyArray<string> => requiredFields.filter((field) => isEmpty(payload[field]))
 
-const SUBJECT_TYPES: ReadonlyArray<string> = [
+const SUBJECT_TYPES = new Set([
     "lead",
     "order",
     "invoice",
@@ -27,10 +27,10 @@ const SUBJECT_TYPES: ReadonlyArray<string> = [
     "inbound",
     "purchase_order",
     "stock",
-]
+])
 
 /** Whether text names a kind of record a work item can be about. */
-export const isSubjectType = (value: string): value is SubjectType => SUBJECT_TYPES.includes(value)
+export const isSubjectType = (value: string): value is SubjectType => SUBJECT_TYPES.has(value)
 
 /** A payload value as a proposal field: text, numbers and null stay, a missing value is dropped, anything else is kept as JSON text. */
 const fieldValue = (value: unknown): ProposalFieldValue | undefined => {
@@ -46,7 +46,7 @@ export const splitPayload = (payload: Readonly<Record<string, unknown>>, default
     leadId: textOf(payload.lead_id),
     fields: Object.fromEntries(
         Object.entries(payload)
-            .filter(([key]) => !ENVELOPE_KEYS.includes(key))
+            .filter(([key]) => !ENVELOPE_KEYS.has(key))
             .flatMap(([key, value]) => {
                 const field = fieldValue(value)
                 return field === undefined ? [] : [[key, field]]

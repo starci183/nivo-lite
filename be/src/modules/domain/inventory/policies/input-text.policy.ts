@@ -1,11 +1,10 @@
+import { hasEmailAddressShape } from "@modules/platform/primitives"
 import type { UnitConversion } from "../inventory.contracts"
 import { foldText, parseNumber } from "./number-format.policy"
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/iu
 
 const ISO_DAY_PATTERN = /^\d{4}-\d{2}-\d{2}$/u
-
-const EMAIL_PATTERN = /^[^@\s]+@[^@\s]+\.[^@\s]+$/u
 
 /** The longest SKU derived from a name. */
 const DERIVED_SKU_MAX = 20
@@ -30,7 +29,7 @@ export const uuidOrNull = (value: string | undefined): string | null =>
 export const isIsoDay = (value: string): boolean => ISO_DAY_PATTERN.test(value)
 
 /** True for something shaped like an email address. */
-export const isEmailAddress = (value: string): boolean => EMAIL_PATTERN.test(value)
+export const isEmailAddress = (value: string): boolean => hasEmailAddressShape(value)
 
 /** Reads `unit=factor` pairs separated by commas, semicolons or line breaks; pairs without a positive factor are dropped. */
 export const parseUnitPairs = (text: string): Array<UnitConversion> =>

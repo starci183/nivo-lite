@@ -35,7 +35,7 @@ export const MoneyWizard = (props: MoneyWizardProps) => {
     })
     const def = PROVIDERS[props.provider]
     const { form, follow, conn, flags } = wizard
-    const keysNote = !flags.needsKeys ? null : tw(follow.keysSaved ? "keysSaved" : "keysHint")
+    const keysNote = moneyKeysNote(flags.needsKeys, follow.keysSaved, tw)
     return (
         <MoneyWizardBase
             props={{
@@ -155,4 +155,14 @@ const moneyReceived = (
     return event.content === ""
         ? tw("verifyReceivedNoContent", { amount })
         : tw("verifyReceived", { amount, content: event.content })
+}
+
+/** Describes saved or missing keys only for a provider requiring keys. */
+const moneyKeysNote = (
+    needsKeys: boolean,
+    keysSaved: boolean,
+    tw: ReturnType<typeof useTranslations<"connectionWizard">>,
+) => {
+    if (!needsKeys) return null
+    return tw(keysSaved ? "keysSaved" : "keysHint")
 }

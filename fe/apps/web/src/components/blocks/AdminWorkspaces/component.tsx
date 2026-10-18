@@ -5,12 +5,15 @@ import {
     EmptyNotice,
     Form,
     Input,
+    List,
+    ListItem,
     Region,
     SectionHeader,
     Text,
     TextAction,
+    type DataTableColumn,
 } from "@starci/grammar/common"
-import type { DataTableColumn } from "@starci/grammar/common"
+
 import { AdminBadges } from "@/components/leaves/AdminBadges"
 import type { AdminWorkspaceRowView } from "@/hooks/admin"
 import { ADMIN_ROUTES } from "@/modules/routes"
@@ -22,8 +25,7 @@ import {
     SEARCH_FORM_CLASS_NAME,
     STACK_CLASS_NAME,
 } from "./classNames"
-import { AdminLoadState } from "@/components/composites/AdminLoadState"
-import type { AdminLoad } from "@/components/composites/AdminLoadState"
+import { AdminLoadState, type AdminLoad } from "@/components/composites/AdminLoadState"
 
 /** One filter chip of the list. */
 interface FilterView {
@@ -145,19 +147,20 @@ const renderWorkspaceFilters = (props: AdminWorkspacesViewProps) => (
                 </Button>
             </div>
         </Form>
-        <div className={CHIPS_CLASS_NAME} role="group" aria-label={props.props.filtersLabel}>
+        <List className={CHIPS_CLASS_NAME} label={props.props.filtersLabel}>
             {props.props.filters.map((filter) => (
-                <TextAction
-                    key={filter.id}
-                    appearance="choice"
-                    size="sm"
-                    isCurrent={props.props.filter === filter.id}
-                    href={filter.href}
-                >
-                    {filter.label}
-                </TextAction>
+                <ListItem key={filter.id}>
+                    <TextAction
+                        appearance="choice"
+                        size="sm"
+                        isCurrent={props.props.filter === filter.id}
+                        href={filter.href}
+                    >
+                        {filter.label}
+                    </TextAction>
+                </ListItem>
             ))}
-        </div>
+        </List>
     </div>
 )
 

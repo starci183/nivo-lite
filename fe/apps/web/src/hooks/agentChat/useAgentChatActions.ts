@@ -1,20 +1,16 @@
 "use client"
 
 import { useAgentChatCommands } from "./useAgentChatCommands"
+import { useAgentChatTurnLifecycle } from "./useAgentChatTurnLifecycle"
 import { useAgentChatMessageForm, useAgentChatVisitorForm } from "@/hooks/rhf"
 import {
-    QUERY_AGENT_CHAT_CONVERSATIONS_SWR_KEY,
-    QUERY_AGENT_CHAT_MESSAGES_SWR_KEY,
     useMutateSendAgentChatMessageSwr,
     useMutateStartAgentChatConversationSwr,
     useMutateTakeOverAgentChatConversationSwr,
-    useQueryAgentChatTurnStatusSwr,
 } from "@/hooks/swr"
-import type { AgentChatTurnStatusType } from "@/hooks/swr"
-import { toast, useGraphQLWithToast } from "@/modules/toast"
+import { useGraphQLWithToast } from "@/modules/toast"
 import { useTranslations } from "next-intl"
 import { useState } from "react"
-import { useSWRConfig } from "swr"
 import type { AgentChatAgent, ChatTab } from "./useAgentChat"
 
 /** The selected thread and the way an opened thread becomes selected. */
@@ -34,26 +30,11 @@ export interface PendingTurn {
     readonly delivery: boolean
 }
 
-/** A claim that settles each finished turn once; false when that turn was already settled. */
-const createTurnClaim = (): ((id: string) => boolean) => {
-    let settled: string | undefined
-    return (id) => {
-        if (settled === id) return false
-        settled = id
-        return true
-    }
-}
-
-/** The line the queued-turn failure shows. */
-const failureKeyOf = (turn: AgentChatTurnStatusType) =>
-    turn.errorCode === "CHAT_DELIVERY_FAILED" ? "deliveryFailed" : "turnFailed"
-
 /** Validated chat writes, mutation feedback and the authoritative queued-turn lifecycle. */
 export const useAgentChatActions = (target: AgentChatActionTarget) => {
     const t = useTranslations("agentChat")
     const system = useTranslations("system")
     const runGraphQL = useGraphQLWithToast()
-    const { mutate } = useSWRConfig()
     const message = useAgentChatMessageForm()
     const visitor = useAgentChatVisitorForm()
     const workspaceId = target.agent?.workspaceId
@@ -61,22 +42,11 @@ export const useAgentChatActions = (target: AgentChatActionTarget) => {
     const sendMutation = useMutateSendAgentChatMessageSwr(workspaceId ?? "")
     const takeoverMutation = useMutateTakeOverAgentChatConversationSwr(workspaceId ?? "")
 
-    const [isOpening, setOpening] = useState(false)
-    const [pendingTurn, setPending] = useState<PendingTurn>()
+    const [isOpening, setIsOpening] = useState(false)
+    const [pendingTurn, setPendingTurn] = useState<PendingTurn>()
     const pending = pendingTurn?.workspaceId === workspaceId ? pendingTurn : undefined
     const [turnError, setTurnError] = useState<string | null>(null)
-    const [claimTurn] = useState(createTurnClaim)
-
-    const { settle, refresh } = createAgentChatActionsActions3(
-        target,
-        mutate,
-        pending,
-        claimTurn,
-        setPending,
-        t,
-        setTurnError,
-    )
-    const status = useQueryAgentChatTurnStatusSwr(workspaceId, pending?.id, settle)
+    const { status, refresh } = useAgentChatTurnLifecycle({ target, pending, setPendingTurn, setTurnError })
 
     const { start, send } = useAgentChatCommands({
         target,
@@ -86,12 +56,12 @@ export const useAgentChatActions = (target: AgentChatActionTarget) => {
         t,
         refresh,
         pending,
-        setOpening,
+        setOpening: setIsOpening,
         setTurnError,
         message,
         workspaceId,
         sendMutation,
-        setPending,
+        setPending: setPendingTurn,
     })
 
     const toggleTakeover = async () => {
@@ -118,7 +88,7 @@ export const useAgentChatActions = (target: AgentChatActionTarget) => {
         send,
         toggleTakeover,
         isSending: sendMutation.isMutating || message.formState.isSubmitting || pending !== undefined,
-        isAwaitingReply: pending !== undefined && pending.conversationId === target.selectedId,
+        isAwaitingReply: pending?.conversationId === target.selectedId,
         isStarting: isOpening || startMutation.isMutating,
         isTakingOver: takeoverMutation.isMutating,
         error:
@@ -127,35 +97,4 @@ export const useAgentChatActions = (target: AgentChatActionTarget) => {
             visitor.formState.errors.visitorName?.message ??
             (status.error instanceof Error ? status.error.message : null),
     }
-}
-
-const createAgentChatActionsActions3 = (
-    target: AgentChatActionTarget,
-    mutate: ReturnType<typeof useSWRConfig>["mutate"],
-    pending: PendingTurn | undefined,
-    claimTurn: (id: string) => boolean,
-    setPending: import("react").Dispatch<import("react").SetStateAction<PendingTurn | undefined>>,
-    t: ReturnType<typeof useTranslations<"agentChat">>,
-    setTurnError: import("react").Dispatch<import("react").SetStateAction<string | null>>,
-) => {
-    const refresh = async (conversationId: string) => {
-        if (target.agent === undefined) return
-        await Promise.all([
-            mutate([QUERY_AGENT_CHAT_CONVERSATIONS_SWR_KEY, target.agent.workspaceId, target.agent.agentId]),
-            mutate([QUERY_AGENT_CHAT_MESSAGES_SWR_KEY, target.agent.workspaceId, conversationId]),
-        ])
-    }
-
-    const settle = (turn: AgentChatTurnStatusType) => {
-        if (pending === undefined || turn.id !== pending.id || !claimTurn(turn.id)) return
-        setPending(undefined)
-        if (turn.status === "succeeded") toast.success(t(pending.delivery ? "deliverySucceeded" : "replyReady"))
-        else {
-            const reason = t(failureKeyOf(turn))
-            setTurnError(reason)
-            toast.danger(reason)
-        }
-        void refresh(turn.conversationId)
-    }
-    return { settle, refresh }
 }

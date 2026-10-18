@@ -225,3 +225,11 @@ describe("loyalty-config.policy", () => {
         })
     })
 })
+
+describe("loyalty tier key normalization boundaries", () => {
+    it("collapses long punctuation runs before trimming the key", async () => {
+        const { subject } = await buildSubject()
+        const config = subject.resolveConfig({ tiers: [{ name: "!".repeat(20000) }] })
+        expect(config.tiers[0]?.key).toBe("tier")
+    })
+})

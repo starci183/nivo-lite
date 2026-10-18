@@ -84,25 +84,26 @@ const violationsForItems = <T>(
 ): Array<Checked<T>> => {
     const out = items.map((item, index): Checked<T> => ({ item, seg: selectSeg(item), index, violations: [] }))
     const staff = env.staff.get(staffId)
-    if (staff === undefined) return out
-    const ordered = out.slice().sort(byDayThenStart)
-    const prior = [...(env.prior?.get(staffId) ?? [])]
-        .sort(byDayThenEnd)
-        .map((seg): Placed => ({ seg, index: -1, violations: [] }))
-    const chrono = [...prior, ...ordered]
-    const days = new Map<string, number>()
-    let week = 0
-    chrono.forEach((placed, at) => {
-        if (placed.index < 0) return
-        const length = placed.seg.e - placed.seg.s
-        week += length
-        const day = (days.get(placed.seg.date) ?? 0) + length
-        days.set(placed.seg.date, day)
-        placed.violations.push(
-            ...violationsOfOne(env, staff, placed, ordered, day, week),
-            ...restViolation(chrono, at, placed.seg, staff.minRest),
-        )
-    })
+    if (staff !== undefined) {
+        const ordered = out.slice().sort(byDayThenStart)
+        const prior = [...(env.prior?.get(staffId) ?? [])]
+            .sort(byDayThenEnd)
+            .map((seg): Placed => ({ seg, index: -1, violations: [] }))
+        const chrono = [...prior, ...ordered]
+        const days = new Map<string, number>()
+        let week = 0
+        chrono.forEach((placed, at) => {
+            if (placed.index < 0) return
+            const length = placed.seg.e - placed.seg.s
+            week += length
+            const day = (days.get(placed.seg.date) ?? 0) + length
+            days.set(placed.seg.date, day)
+            placed.violations.push(
+                ...violationsOfOne(env, staff, placed, ordered, day, week),
+                ...restViolation(chrono, at, placed.seg, staff.minRest),
+            )
+        })
+    }
     return out
 }
 

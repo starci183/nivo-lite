@@ -5,7 +5,7 @@ import { segOf, violationsForSegs } from "./work-rules.policy"
 const HOUR_MS = 3_600_000
 
 /** A shift is on the wall only once published (or after a swap). */
-const POSTED: ReadonlyArray<string> = ["published", "swapped"]
+const POSTED: ReadonlySet<string> = new Set(["published", "swapped"])
 
 /** What a swap or claim asks for. */
 export interface SwapAsk {
@@ -42,7 +42,7 @@ const finding = (code: string, params: Readonly<Record<string, string | number>>
 const shiftFindings = (ask: SwapAsk, shift: Shift | undefined): Array<SwapFinding> => {
     if (shift === undefined) return [finding("shift-missing")]
     return [
-        ...(POSTED.includes(shift.status) ? [] : [finding("not-posted")]),
+        ...(POSTED.has(shift.status) ? [] : [finding("not-posted")]),
         ...(ask.kind === "swap" && shift.staffId !== ask.fromStaffId ? [finding("not-owner")] : []),
         ...(ask.kind === "claim" && shift.staffId !== null ? [finding("taken")] : []),
     ]
@@ -79,7 +79,7 @@ export const swapFindings = (check: SwapCheck): Array<SwapFinding> => {
     const base = shiftFindings(ask, shift)
     if (shift === undefined) return base
     const taker = setup.staff.find((person) => person.id === ask.toStaffId)
-    if (taker === undefined || !taker.active) return [...base, finding("taker-gone")]
+    if (!taker?.active) return [...base, finding("taker-gone")]
     return [...base, ...noticeFindings(shift, setup, now), ...takerFindings(check, shift, taker)]
 }
 

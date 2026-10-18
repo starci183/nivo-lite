@@ -34,7 +34,8 @@ export const ChatbotInbox = (props: ChatbotInboxProps) => {
                 send: () => inbox?.on.send(),
                 toggleHandling: () => inbox?.on.toggleHandling(),
                 escalationDraft: (draft) => inbox?.on.escalationDraft(draft),
-                answer: (send) => inbox?.on.answer(send),
+                sendAnswer: () => inbox?.on.sendAnswer(),
+                declineAnswer: () => inbox?.on.declineAnswer(),
             }}
         />
     )

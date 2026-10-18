@@ -1,3 +1,4 @@
+import type { DecisionLock } from "./useAccountingDecisionLock"
 import type { useAccountingQuestionsForm } from "@/hooks/rhf"
 import type { MutateDecideWorkItemRequest } from "@/hooks/swr"
 import type {
@@ -16,8 +17,9 @@ import {
     accountingQuestionEdits,
     accountingQuestionError,
     moneyOf,
+    type AccountingFormat,
+    type AccountingTranslator,
 } from "@/modules/utils"
-import type { AccountingFormat, AccountingTranslator } from "@/modules/utils"
 import type { DescriptionListStatItem } from "@starci/grammar/common"
 import type { useFormatter, useTranslations } from "next-intl"
 import type { ValuesInput1 } from "./useAccountingQuestions"
@@ -81,46 +83,43 @@ export const propsOf = (
         })).filter((group) => group.items.length > 0),
     }
 }
-
-/** The single-flight lock of the approve and reject decisions. */
-export interface DecisionLock {
-    readonly acquire: () => boolean
-    readonly release: () => void
-}
-
-/** A decision lock: acquire answers false while another decision holds it. */
-export const createDecisionLock = (): DecisionLock => {
-    let held = false
-    return {
-        acquire: () => {
-            if (held) return false
-            held = true
-            return true
-        },
-        release: () => {
-            held = false
-        },
-    }
+/** The resolved inputs for accounting questions actions input. */
+interface AccountingQuestionsActionsInput {
+    readonly items: FlowWorkItemView[]
+    readonly canAct: (item: AccountingQuestion["item"]) => boolean
+    readonly lock: DecisionLock
+    readonly isDeciding: boolean
+    readonly form: ReturnType<typeof useAccountingQuestionsForm>
+    readonly getValues: ReturnType<typeof useAccountingQuestionsForm>["getValues"]
+    readonly decide: (request: MutateDecideWorkItemRequest) => Promise<{ id: string; status: string } | undefined>
+    readonly questions: readonly AccountingQuestion[]
+    readonly values: ValuesInput1
+    readonly ownerName: string
+    readonly t: ReturnType<typeof useTranslations<"office">>
+    readonly g: ReturnType<typeof useTranslations<"governance">>
+    readonly format: ReturnType<typeof useFormatter>
+    readonly editing: Record<string, boolean>
+    readonly setValue: ReturnType<typeof useAccountingQuestionsForm>["setValue"]
 }
 
 /** Builds validated accounting decisions, question cards and edit handlers. */
-export const createAccountingQuestionsActions = (
-    items: FlowWorkItemView[],
-    canAct: (item: AccountingQuestion["item"]) => boolean,
-    lock: DecisionLock,
-    isDeciding: boolean,
-    form: ReturnType<typeof useAccountingQuestionsForm>,
-    getValues: ReturnType<typeof useAccountingQuestionsForm>["getValues"],
-    decide: (request: MutateDecideWorkItemRequest) => Promise<{ id: string; status: string } | undefined>,
-    questions: readonly AccountingQuestion[],
-    values: ValuesInput1,
-    ownerName: string,
-    t: ReturnType<typeof useTranslations<"office">>,
-    g: ReturnType<typeof useTranslations<"governance">>,
-    format: ReturnType<typeof useFormatter>,
-    editing: Record<string, boolean>,
-    setValue: ReturnType<typeof useAccountingQuestionsForm>["setValue"],
-) => {
+export const createAccountingQuestionsActions = ({
+    items,
+    canAct,
+    lock,
+    isDeciding,
+    form,
+    getValues,
+    decide,
+    questions,
+    values,
+    ownerName,
+    t,
+    g,
+    format,
+    editing,
+    setValue,
+}: AccountingQuestionsActionsInput) => {
     const approve = async (id: string) => {
         const item = items.find((candidate) => candidate.id === id)
         if (!item || !canAct(item) || item.status !== "waiting_decision" || isDeciding || !lock.acquire()) return

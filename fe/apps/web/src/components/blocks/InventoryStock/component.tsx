@@ -1,8 +1,15 @@
 import type * as React from "react"
 import type { useInventoryBoard } from "@/hooks/inventoryBoard"
 import type { useTranslations } from "next-intl"
-import type { useAdjustDrawer, useInventoryFormat, useInventoryRun, useItemDrawer } from "@/hooks/inventory"
-import type { StockFilter } from "@/hooks/inventory"
+import type {
+    useAdjustDrawer,
+    useInventoryFormat,
+    useInventoryRun,
+    useItemDrawer,
+    StockFilter,
+    ItemFormField,
+} from "@/hooks/inventory"
+
 import type { ItemView } from "@/modules/types"
 import { InventoryNotices } from "@/components/leaves/InventoryNotices"
 import {
@@ -14,13 +21,13 @@ import {
     SegmentedControl,
     SurfaceListCard,
     Text,
+    type BadgeTone,
 } from "@starci/grammar/common"
-import type { BadgeTone } from "@starci/grammar/common"
-import type { ItemFormField } from "@/hooks/inventory"
-import { InventoryAdjustDrawer } from "@/components/composites/InventoryAdjustDrawer"
-import type { InventoryAdjustDrawerProps } from "@/components/composites/InventoryAdjustDrawer"
-import { InventoryItemDrawer } from "@/components/composites/InventoryItemDrawer"
-import type { InventoryItemDrawerProps } from "@/components/composites/InventoryItemDrawer"
+
+import { InventoryAdjustDrawer, type InventoryAdjustDrawerProps } from "@/components/composites/InventoryAdjustDrawer"
+
+import { InventoryItemDrawer, type InventoryItemDrawerProps } from "@/components/composites/InventoryItemDrawer"
+
 import { ACTIONS_CLASS_NAME, STACK_CLASS_NAME, TOOLBAR_CLASS_NAME, TOOLBAR_FIELD_CLASS_NAME } from "./classNames"
 
 /** One catalogue item, every word already resolved. */
@@ -245,11 +252,4 @@ export interface BuildStockCommandsContext {
     readonly board: ReturnType<typeof useInventoryBoard>
     readonly adjustDrawer: ReturnType<typeof useAdjustDrawer>
     readonly setShowInactive: React.Dispatch<React.SetStateAction<boolean>>
-}
-
-/** Data and formatting used for an inventory item description. */
-export interface StockDetailContext {
-    readonly board: ReturnType<typeof useInventoryBoard>
-    readonly format: ReturnType<typeof useInventoryFormat>
-    readonly t: ReturnType<typeof useTranslations<"workbenchInventory">>
 }

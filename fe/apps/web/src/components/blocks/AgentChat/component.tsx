@@ -1,24 +1,23 @@
-import type { ModuleIconName } from "@/modules/types"
 import { useState } from "react"
-import { Breadcrumbs, FillViewport, Region, SurfaceCard, Tabs } from "@starci/grammar/common"
-import type { BreadcrumbItem } from "@starci/grammar/common"
-import { AgentChatComposer } from "@/components/composites/AgentChatComposer"
-import type { AgentChatComposerProps } from "@/components/composites/AgentChatComposer"
-import { AgentChatEmpty } from "@/components/composites/AgentChatEmpty"
-import type { AgentChatEmptyProps } from "@/components/composites/AgentChatEmpty"
-import { AgentChatHeader } from "@/components/composites/AgentChatHeader"
-import type { AgentChatHeaderProps } from "@/components/composites/AgentChatHeader"
-import { AgentChatMessages } from "@/components/composites/AgentChatMessages"
-import type { AgentChatMessagesProps } from "@/components/composites/AgentChatMessages"
+import { Breadcrumbs, FillViewport, Region, SurfaceCard, Tabs, type BreadcrumbItem } from "@starci/grammar/common"
+
+import { AgentChatComposer, type AgentChatComposerProps } from "@/components/composites/AgentChatComposer"
+
+import { AgentChatEmpty, type AgentChatEmptyProps } from "@/components/composites/AgentChatEmpty"
+
+import { AgentChatHeader, type AgentChatHeaderProps } from "@/components/composites/AgentChatHeader"
+
+import { AgentChatMessages, type AgentChatMessagesProps } from "@/components/composites/AgentChatMessages"
+
 import { AgentChatRailHead } from "@/components/composites/AgentChatRailHead"
-import { AgentChatRailList } from "@/components/composites/AgentChatRailList"
-import type { AgentChatRailRow } from "@/components/composites/AgentChatRailList"
-import { AgentChatThread } from "@/components/composites/AgentChatThread"
-import type { AgentChatThreadProps } from "@/components/composites/AgentChatThread"
-import { PromoWelcomeBand } from "@/components/composites/PromoWelcomeBand"
-import type { PromoWelcomeBandProps } from "@/components/composites/PromoWelcomeBand"
+import { AgentChatRailList, type AgentChatRailRow } from "@/components/composites/AgentChatRailList"
+
+import { AgentChatThread, type AgentChatThreadProps } from "@/components/composites/AgentChatThread"
+
+import { PromoWelcomeBand, type PromoWelcomeBandProps } from "@/components/composites/PromoWelcomeBand"
+
 import { SlotView } from "@/components/composites/SlotView"
-import type { DataSlot, SlotLabels } from "@/modules/types"
+import type { ModuleIconName, DataSlot, SlotLabels } from "@/modules/types"
 import {
     CHANNEL_BAR_CLASS_NAME,
     FRAME_CLASS_NAME,

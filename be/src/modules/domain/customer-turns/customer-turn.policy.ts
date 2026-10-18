@@ -22,7 +22,7 @@ export const isRecentlyPaid = (paidAt: string | null, now: Date): boolean =>
 
 /** The customer's latest question in the transcript, else the message of the turn. */
 export const latestQuestionOf = (transcript: ReadonlyArray<TranscriptLine>, body: string): string =>
-    transcript.filter((line) => line.role === "user").at(-1)?.body ?? body
+    transcript.findLast((line) => line.role === "user")?.body ?? body
 
 /** The transcript a lead hand-off carries: the conversation and the reply about to leave, one line each. */
 export const handoffTranscriptOf = (

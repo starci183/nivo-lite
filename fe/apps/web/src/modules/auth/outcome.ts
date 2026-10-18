@@ -20,14 +20,14 @@ interface SupabaseAuthFailure {
     readonly message: string
 }
 
-const REFUSED = ["401", "403", "invalid_credentials"]
+const REFUSED: ReadonlySet<string> = new Set(["401", "403", "invalid_credentials"])
 
 /** Maps the error of a Supabase Auth call (null when it succeeded) into a failed outcome. */
 export const failureOf = <T = never>(error: SupabaseAuthFailure | null): GraphQLResponse<T> | undefined => {
     if (error === null) return undefined
     const code = error.code ?? String(error.status ?? "transport")
     const signals = [error.code, error.status === undefined ? undefined : String(error.status)]
-    return signals.some((signal) => signal !== undefined && REFUSED.includes(signal))
+    return signals.some((signal) => signal !== undefined && REFUSED.has(signal))
         ? authFailure("refused", code)
         : authFailure("unavailable", code)
 }

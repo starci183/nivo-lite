@@ -1,10 +1,16 @@
-import type { SetupWriteDraft as Draft } from "@/modules/types"
+import {
+    type SetupWriteDraft as Draft,
+    FACT_SCOPES,
+    type FlowRuleMode,
+    type SetupResolution,
+    type SetupWrite,
+    type SetupWriteDecision,
+    type SetupWriteInstance,
+    type SetupWriteProposal,
+    type SetupWriteWords,
+} from "@/modules/types"
 import { useState } from "react"
-import { FACT_SCOPES } from "@/modules/types"
-import type { FlowRuleMode } from "@/modules/types"
-import type { SetupResolution, SetupWrite, SetupWriteDecision } from "@/modules/types"
 import { SetupWriteView } from "@/components/leaves/SetupWriteView"
-import type { SetupWriteDecided, SetupWriteInstance, SetupWriteProposal, SetupWriteWords } from "@/modules/types"
 
 /** What the chat hands the card: the write, the words, the way to settle it and the instance the chat is for. */
 type SetupWriteCardProps = {
@@ -33,27 +39,6 @@ const startOf = (write: SetupWrite): Draft => ({
     onlyThis: false,
 })
 
-const ruleLine = (write: SetupWrite, words: SetupWriteWords): string => {
-    if (write.kind !== "rule") return ""
-    const limit = words.actionRules(write.payload.action).hasLimit ? ` · ${words.money(write.payload.limitVnd)}` : ""
-    return `${words.actionLabel(write.payload.action)} · ${words.modeLabel(write.payload.mode)}${limit}`
-}
-
-const decidedOf = (write: SetupWrite, words: SetupWriteWords): SetupWriteDecided | null => {
-    if (write.status === "proposed") return null
-    const line =
-        write.kind === "fact"
-            ? `${write.payload.subjectLabel} · ${write.payload.attributeLabel}: ${write.payload.value}`
-            : ruleLine(write, words)
-    const rejectedLabel = write.result?.resolution === "keep" ? words.kept : words.rejected
-    const appliedLabel = write.kind === "fact" ? words.applied : words.appliedRule
-    return {
-        line,
-        label: write.status === "rejected" ? rejectedLabel : appliedLabel,
-        tone: write.status === "applied" ? "success" : "neutral",
-    }
-}
-
 const itemsOf = (write: SetupWrite, draft: Draft, forLabel: string, words: SetupWriteWords) => {
     if (write.kind === "fact") {
         return [
@@ -67,9 +52,8 @@ const itemsOf = (write: SetupWrite, draft: Draft, forLabel: string, words: Setup
         ]
     }
     const rules = words.actionRules(write.payload.action)
-    const inForce = write.current
-        ? `${words.modeLabel(write.current.mode)}${rules.hasLimit ? ` · ${words.money(write.current.limitVnd)}` : ""}`
-        : words.nowNone
+    const currentLimit = rules.hasLimit && write.current ? ` · ${words.money(write.current.limitVnd)}` : ""
+    const inForce = write.current ? `${words.modeLabel(write.current.mode)}${currentLimit}` : words.nowNone
     return [
         { id: "action", term: words.action, description: words.actionLabel(write.payload.action) },
         ...(draft.isEditing ? [] : [{ id: "mode", term: words.mode, description: words.modeLabel(draft.mode) }]),
@@ -111,7 +95,7 @@ export const SetupWriteCard = (props: SetupWriteCardProps) => {
     return (
         <SetupWriteView
             props={{
-                decided: decidedOf(write, words),
+                decided: words.decidedOf(write),
                 proposal: proposalOf(props, draft, isConflict, forAllLabel, forThisLabel, rules),
             }}
             on={{

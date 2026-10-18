@@ -9,5 +9,5 @@ export class TemplateAuthorityType {
 
     /** True when the owner always decides. */
     @Field(() => Boolean, { nullable: true })
-    alwaysAsk?: boolean | undefined
+    alwaysAsk?: boolean
 }

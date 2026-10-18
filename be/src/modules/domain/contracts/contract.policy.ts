@@ -31,7 +31,10 @@ export const isIsoDay = (value: string): boolean =>
     !Number.isNaN(Date.parse(`${value}T00:00:00Z`)) &&
     new Date(`${value}T00:00:00Z`).toISOString().startsWith(value)
 
-const isKnownStatus = (status: string): boolean => CONTRACT_STATUSES.some((known) => known === status)
+const isKnownStatus = (status: string): boolean => {
+    const statuses: ReadonlyArray<string> = CONTRACT_STATUSES
+    return statuses.includes(status)
+}
 
 /** Judges what a contract form submits and answers it trimmed and bounded with real days, or the first reason it is refused. */
 export const checkContract = (draft: ContractDraft): Outcome<ContractDraft, ContractsErrorCode> => {

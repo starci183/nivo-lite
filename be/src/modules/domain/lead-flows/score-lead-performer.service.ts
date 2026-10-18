@@ -138,13 +138,7 @@ export class ScoreLeadPerformerService implements WorkPerformer, OnModuleInit {
             ...(step === "hold" && flow.state === "new" ? { state: "scored" as const } : {}),
         }
         const next = await this.kit.store.patch(flow, patch)
-        if (flow.lead_id !== null && (contact.phone !== null || contact.email !== null))
-            await this.leads.fillContact({
-                workspaceId: ctx.workspaceId,
-                leadId: flow.lead_id,
-                phone: contact.phone,
-                email: contact.email,
-            })
+        await this.fillContact(ctx, flow, contact)
         const evidence = [
             field(fields, "score_reasons"),
             next.answers.length > 0 ? this.kit.text(ctx.locale, "score.answers", { count: next.answers.length }) : "",
@@ -155,9 +149,19 @@ export class ScoreLeadPerformerService implements WorkPerformer, OnModuleInit {
         return this.kit.done(proposal.summary, flow)
     }
 
+    private async fillContact(ctx: WorkContext, flow: LeadFlow, contact: ReturnType<typeof contactIn>): Promise<void> {
+        if (flow.lead_id !== null && (contact.phone !== null || contact.email !== null))
+            await this.leads.fillContact({
+                workspaceId: ctx.workspaceId,
+                leadId: flow.lead_id,
+                phone: contact.phone,
+                email: contact.email,
+            })
+    }
+
     /** One metered model call per turn; none when the turn already has its reading (a retried step) or carries no text to read. */
     private async read(ctx: WorkContext, context: TurnContext, fields: FlowFields): Promise<TurnRead> {
-        const { flow, kind, turn, text, setup } = context
+        const { flow, kind, turn, text } = context
         if (flow.analysis?.turn === turn) return { analysis: flow.analysis, aiFailed: false }
         let analysis: Analysis | null = null
         let aiFailed = false
@@ -175,19 +179,7 @@ export class ScoreLeadPerformerService implements WorkPerformer, OnModuleInit {
         } else if (kind === "dm" && text === "") {
             aiFailed = true
         } else {
-            const agent = await this.kit.transcript.leadGenAgent(ctx.workspaceId, flow.connection_id)
-            const pending = flow.pending_question === null ? null : (setup.questions[flow.pending_question] ?? null)
-            const reading = await this.turns.read(ctx, {
-                agent,
-                turn,
-                kind,
-                text,
-                name: flow.name,
-                pendingQuestion: pending,
-                criteriaText: setup.criteriaText,
-                first: flow.state === "new" && kind === "dm",
-            })
-            analysis = reading.analysis
+            analysis = await this.readModel(ctx, context)
             aiFailed = analysis === null
         }
         if (analysis !== null) await this.kit.store.patch(flow, { analysis })
@@ -195,6 +187,24 @@ export class ScoreLeadPerformerService implements WorkPerformer, OnModuleInit {
         if (gap !== null && flow.conversation_id !== null)
             await this.turns.noteGap(ctx.workspaceId, { ...gap, conversationId: flow.conversation_id })
         return { analysis, aiFailed }
+    }
+
+    /** Reads the model with the pending question and the connection's bound agent. */
+    private async readModel(ctx: WorkContext, context: TurnContext): Promise<Analysis | null> {
+        const { flow, kind, turn, text, setup } = context
+        const agent = await this.kit.transcript.leadGenAgent(ctx.workspaceId, flow.connection_id)
+        const pending = flow.pending_question === null ? null : (setup.questions[flow.pending_question] ?? null)
+        const reading = await this.turns.read(ctx, {
+            agent,
+            turn,
+            kind,
+            text,
+            name: flow.name,
+            pendingQuestion: pending,
+            criteriaText: setup.criteriaText,
+            first: flow.state === "new" && kind === "dm",
+        })
+        return reading.analysis
     }
 
     /** Signals, score and the state machine's step. */

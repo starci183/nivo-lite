@@ -364,3 +364,20 @@ describe("stripSetupBlock", () => {
         expect(stripSetupBlock("Keep only\n")).toBe("Keep only")
     })
 })
+
+describe("setup block boundaries", () => {
+    it("removes complete blocks independently while retaining an unfinished final block", async () => {
+        const { stripSetupBlock } = await buildSubject()
+        const value =
+            "Keep\n### NIVO setup one\n### end NIVO setup \nMiddle\n### NIVO setup two\n### end NIVO setup\nTail\n### NIVO setup unfinished"
+
+        expect(stripSetupBlock(value)).toBe("KeepMiddleTail\n### NIVO setup unfinished")
+    })
+
+    it("retains a long unfinished block and trims only its trailing whitespace", async () => {
+        const { stripSetupBlock } = await buildSubject()
+        const value = `Keep\n### NIVO setup${"\n".repeat(10000)}`
+
+        expect(stripSetupBlock(value)).toBe("Keep\n### NIVO setup")
+    })
+})

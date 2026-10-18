@@ -5,11 +5,19 @@ import { BillingError, BillingErrorCode } from "./errors/billing.error"
 import { numberOf, textOf, textOrNull } from "./webhook-body.policy"
 import type { JsonObject } from "./webhook-body.policy"
 
-const APIKEY_HEADER = /^\s*Apikey\s+(.+?)\s*$/i
+const APIKEY_HEADER = /^Apikey\s/iu
+const LINE_BREAK = /[\r\n\u2028\u2029]/u
 
 /** The key a sender presented as `Authorization: Apikey <key>`, or undefined when the header is missing or another scheme. */
-export const presentedApiKey = (header: string | undefined): string | undefined =>
-    header === undefined ? undefined : APIKEY_HEADER.exec(header)?.[1]
+export const presentedApiKey = (header: string | undefined): string | undefined => {
+    if (header === undefined) return undefined
+    const value = header.trimStart()
+    if (!APIKEY_HEADER.test(value)) return undefined
+    const rest = value.slice(7)
+    const key = rest.trim()
+    if (key !== "") return LINE_BREAK.test(key) ? undefined : key
+    return [...rest].reverse().find((character) => !LINE_BREAK.test(character))
+}
 
 /** True when `header` is `Authorization: Apikey <key>` with exactly the configured key, compared in constant time. */
 export const isValidApiKey = (header: string | undefined, expected: string | undefined): boolean => {

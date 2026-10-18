@@ -4,6 +4,8 @@ export const CHUNK_SIZE = 800
 /** The tail of the previous passage that starts the next prose passage. */
 export const CHUNK_OVERLAP = 120
 
+const D_STROKE = String.fromCodePoint(0x111)
+
 /** The most common count of a delimiter per line and how many lines carry it. */
 interface Mode {
     /** The count. */
@@ -41,7 +43,7 @@ export const normalizeText = (text: string): string =>
 const sameKey = (text: string): string =>
     text
         .toLowerCase()
-        .replace(/\u0111/gu, "d")
+        .replaceAll(D_STROKE, "d")
         .normalize("NFD")
         .replace(/\p{Diacritic}/gu, "")
         .replace(/[^a-z0-9]+/gu, " ")

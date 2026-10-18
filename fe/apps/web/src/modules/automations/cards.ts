@@ -7,7 +7,7 @@ import {
     moduleOfAutomationFilter,
     startsAutomationConnection,
 } from "./status"
-import type { AutomationFilterKey, AutomationStatus } from "./status"
+import type { AutomationStatus } from "./status"
 import type {
     AccountsView,
     AutomationCardView,
@@ -127,7 +127,7 @@ export const automationCardOf = (card: AutomationCardView, ctx: CardContext): Ca
 
 /** The words of one filter chip: a fixed word, or the name of a module. */
 export const automationFilterLabel = (
-    key: AutomationFilterKey,
+    key: string,
     t: AutomationsTranslator,
     moduleNames: Readonly<Partial<Record<ModuleKey, string>>>,
 ): string => {
@@ -140,7 +140,7 @@ export const automationFilterLabel = (
 /** Why the collection is empty, or undefined when it is not. */
 export const automationEmptyText = (
     shown: number,
-    filter: AutomationFilterKey,
+    filter: string,
     isNested: boolean,
     t: AutomationsTranslator,
 ): string | undefined => {

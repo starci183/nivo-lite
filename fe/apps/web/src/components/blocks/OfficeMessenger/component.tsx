@@ -5,8 +5,14 @@ import { OfficeInfoPanel } from "@/components/composites/OfficeInfoPanel"
 import { OfficeTasks } from "@/components/composites/OfficeTasks"
 import { OfficeThread } from "@/components/composites/OfficeThread"
 import { nivoIconSource } from "@/components/leaves/Icon"
-import type { OfficeInfoView, OfficeListView, OfficeTaskView, OfficeText } from "@/modules/types"
-import type { OfficeComposerProps, OfficeThreadProps } from "@/modules/types"
+import type {
+    OfficeInfoView,
+    OfficeListView,
+    OfficeTaskView,
+    OfficeText,
+    OfficeComposerProps,
+    OfficeThreadProps,
+} from "@/modules/types"
 import {
     BODY_CLASS_NAME,
     HEAD_ACTIONS_CLASS_NAME,
@@ -142,44 +148,42 @@ const OfficeMessengerHeader = (props: OfficeMessengerBaseProps) => {
     const { text } = view
     const isTasks = view.centre === "tasks"
     return (
-        <>
-            <div className={HEAD_CLASS_NAME}>
-                <div className={PHONE_ONLY_CLASS_NAME}>
-                    <IconButton source={nivoIconSource("back", "leading")} label={text("back")} onPress={on.back} />
-                </div>
-                <div className={HEAD_AVATAR_CLASS_NAME}>
-                    <IconTile source={nivoIconSource("community", "leading")} tone="neutral" />
-                </div>
-                <div className={HEAD_TEXT_CLASS_NAME}>
-                    <Heading level={1}>{isTasks ? text("tasksTitle") : text("title")}</Heading>
-                    {isTasks ? null : (
-                        <Text size="sm" tone="muted" overflow="truncate" isSkeleton={view.isLoading}>
-                            {view.subtitle}
-                        </Text>
-                    )}
-                </div>
-                <div className={HEAD_ACTIONS_CLASS_NAME}>
-                    {isTasks ? (
-                        <div className={WIDE_ONLY_CLASS_NAME}>
-                            <Button variant="ghost" size="sm" onPress={on.showChat}>
-                                {text("tasksBack")}
-                            </Button>
-                        </div>
-                    ) : null}
-                    {!isTasks && view.chip !== null ? (
-                        <Button variant="outline" size="sm" onPress={on.chip}>
-                            {view.chip}
-                        </Button>
-                    ) : null}
-                    <IconButton
-                        source={nivoIconSource("sidebar", "leading")}
-                        label={view.isInfoOpen ? text("infoClose") : text("infoOpen")}
-                        isActive={view.isInfoOpen}
-                        onPress={on.toggleInfo}
-                    />
-                </div>
+        <div className={HEAD_CLASS_NAME}>
+            <div className={PHONE_ONLY_CLASS_NAME}>
+                <IconButton source={nivoIconSource("back", "leading")} label={text("back")} onPress={on.back} />
             </div>
-        </>
+            <div className={HEAD_AVATAR_CLASS_NAME}>
+                <IconTile source={nivoIconSource("community", "leading")} tone="neutral" />
+            </div>
+            <div className={HEAD_TEXT_CLASS_NAME}>
+                <Heading level={1}>{isTasks ? text("tasksTitle") : text("title")}</Heading>
+                {isTasks ? null : (
+                    <Text size="sm" tone="muted" overflow="truncate" isSkeleton={view.isLoading}>
+                        {view.subtitle}
+                    </Text>
+                )}
+            </div>
+            <div className={HEAD_ACTIONS_CLASS_NAME}>
+                {isTasks ? (
+                    <div className={WIDE_ONLY_CLASS_NAME}>
+                        <Button variant="ghost" size="sm" onPress={on.showChat}>
+                            {text("tasksBack")}
+                        </Button>
+                    </div>
+                ) : null}
+                {!isTasks && view.chip !== null ? (
+                    <Button variant="outline" size="sm" onPress={on.chip}>
+                        {view.chip}
+                    </Button>
+                ) : null}
+                <IconButton
+                    source={nivoIconSource("sidebar", "leading")}
+                    label={view.isInfoOpen ? text("infoClose") : text("infoOpen")}
+                    isActive={view.isInfoOpen}
+                    onPress={on.toggleInfo}
+                />
+            </div>
+        </div>
     )
 }
 

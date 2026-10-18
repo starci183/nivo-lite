@@ -10,6 +10,8 @@ import type {
     SetupRuleWrite,
     SetupWrite,
     SetupWriteDecision,
+    SetupWriteDecided,
+    SetupWriteWords,
     SetupWriteStatus,
 } from "@/modules/types"
 
@@ -127,3 +129,28 @@ export const WRITE_SCOPE_KEY = {
     internal: "wScopeInternal",
     restricted: "wScopeRestricted",
 } as const
+
+const ruleLine = (write: SetupWrite, words: Omit<SetupWriteWords, "decidedOf">): string => {
+    if (write.kind !== "rule") return ""
+    const limit = words.actionRules(write.payload.action).hasLimit ? ` · ${words.money(write.payload.limitVnd)}` : ""
+    return `${words.actionLabel(write.payload.action)} · ${words.modeLabel(write.payload.mode)}${limit}`
+}
+
+/** Resolves the settled card summary; proposed writes continue to show their editor. */
+export const setupWriteDecidedOf = (
+    write: SetupWrite,
+    words: Omit<SetupWriteWords, "decidedOf">,
+): SetupWriteDecided | null => {
+    if (write.status === "proposed") return null
+    const line =
+        write.kind === "fact"
+            ? `${write.payload.subjectLabel} · ${write.payload.attributeLabel}: ${write.payload.value}`
+            : ruleLine(write, words)
+    const rejectedLabel = write.result?.resolution === "keep" ? words.kept : words.rejected
+    const appliedLabel = write.kind === "fact" ? words.applied : words.appliedRule
+    return {
+        line,
+        label: write.status === "rejected" ? rejectedLabel : appliedLabel,
+        tone: write.status === "applied" ? "success" : "neutral",
+    }
+}

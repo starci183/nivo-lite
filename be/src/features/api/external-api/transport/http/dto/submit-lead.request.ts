@@ -6,7 +6,7 @@ import type { LeadStage } from "@modules/domain/public-api"
 const PHONE = /^$|^[+\d][\d\s().-]{5,}$/
 
 /** An email address, or empty. */
-const EMAIL = /^$|^[^@\s]+@[^@\s]+\.[^@\s]+$/
+const EMAIL = /^$|^[^@\s]+@[^@\s](?=[^@\s]*\.[^@\s])[^@\s]+$/
 
 /** The JSON body of POST /api/v1/leads: a customer to hand over to the sales flow. */
 export class SubmitLeadRequest {

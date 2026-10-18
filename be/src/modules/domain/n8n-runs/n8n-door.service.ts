@@ -5,6 +5,7 @@ import { N8nDataService } from "./n8n-data.service"
 import { N8nEmailService } from "./n8n-email.service"
 import type {
     DaySummary,
+    RunAuthorization,
     MonthLedger,
     N8nCompletion,
     N8nEmailAnswer,
@@ -33,25 +34,25 @@ export class N8nDoorService {
     ) {}
 
     /** The figures of a day (today when `date` is empty) and the owners to mail, for the daily report workflow. */
-    async daySummary(authorization: string, date: string): Promise<DaySummary> {
+    async daySummary(authorization: RunAuthorization, date: string): Promise<DaySummary> {
         const run = await this.workflowRun(authorization, DAILY_REPORT)
         return this.data.dailySummary(run.workspaceId, date || null)
     }
 
     /** The overdue invoices a debt reminder workflow mails about. */
-    async overdueInvoices(authorization: string): Promise<OverdueInvoices> {
+    async overdueInvoices(authorization: RunAuthorization): Promise<OverdueInvoices> {
         const run = await this.workflowRun(authorization, DEBT_REMINDER)
         return this.data.overdueInvoices(run.workspaceId, run.config)
     }
 
     /** A month of the ledger (last month when `period` is empty) for the accountant workflow. */
-    async monthLedger(authorization: string, period: string): Promise<MonthLedger> {
+    async monthLedger(authorization: RunAuthorization, period: string): Promise<MonthLedger> {
         const run = await this.workflowRun(authorization, MONTH_LEDGER)
         return this.data.monthLedger(run.workspaceId, period || null)
     }
 
     /** Sends ONE email of the running workflow; the template says whether it goes to an owner or to a customer. */
-    async sendEmail(authorization: string, raw: N8nRawEmail): Promise<N8nEmailAnswer> {
+    async sendEmail(authorization: RunAuthorization, raw: N8nRawEmail): Promise<N8nEmailAnswer> {
         const run = await this.runOf(authorization, undefined)
         const audience = (await this.templates.templateOf(run.templateKey)).n8n?.audience
         if (audience === undefined) throw new N8nRunsError({ code: N8nRunsErrorCode.WorkflowMismatch })
@@ -65,15 +66,15 @@ export class N8nDoorService {
     }
 
     /** Closes the run with how it ended; the token stops working right after. */
-    async completeRun(authorization: string, runId: string, report: N8nCompletion): Promise<void> {
+    async completeRun(authorization: RunAuthorization, runId: string, report: N8nCompletion): Promise<void> {
         await this.runs.completeRun(await this.runOf(authorization, runId), report)
     }
 
-    private async runOf(authorization: string, runId: string | undefined): Promise<N8nRunContext> {
+    private async runOf(authorization: RunAuthorization, runId: string | undefined): Promise<N8nRunContext> {
         return this.runs.requireRun(await this.runs.verifyRun({ authorization, expectedRunId: runId }))
     }
 
-    private async workflowRun(authorization: string, templateKey: string): Promise<N8nRunContext> {
+    private async workflowRun(authorization: RunAuthorization, templateKey: string): Promise<N8nRunContext> {
         return this.runs.requireWorkflow(
             await this.runs.verifyRun({ authorization, expectedRunId: undefined }),
             templateKey,

@@ -13,6 +13,7 @@ import type {
 import { isAvailable, onLeave } from "./availability.policy"
 import { CELL_MIN, fromMin, toMin, weekDates } from "./time.policy"
 import { laborCost, minutesOf, violationsForSegs, weekCost } from "./work-rules.policy"
+import type { Candidate, TransferPiece } from "../types/solver.contracts"
 
 /** A block longer than one working day is cut into pieces of at most this many minutes. */
 const SLOT_MAX_MIN = 480
@@ -36,16 +37,6 @@ interface Slot {
 
 type State = Map<string, Array<Seg>>
 
-/**
- * A person who could take a piece: their work with it added, what it costs extra, and the minutes they already have.
- */
-interface Candidate {
-    readonly staff: ShiftStaff
-    readonly next: Array<Seg>
-    readonly cost: number
-    readonly minutes: number
-}
-
 /** The score of one finished start. */
 interface Result {
     readonly state: State
@@ -59,7 +50,8 @@ interface Result {
 const generator = (seed: number): (() => number) => {
     let state = seed
     return () => {
-        state = (state + 0x6d2b79f5) | 0
+        // Mulberry32 requires signed 32-bit wrapping before mixing the next value.
+        state = Math.imul(1, state + 0x6d2b79f5)
         let t = Math.imul(state ^ (state >>> 15), 1 | state)
         t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t
         return ((t ^ (t >>> 14)) >>> 0) / 4294967296
@@ -172,6 +164,20 @@ const fill = (
     }
 }
 
+/** Applies the first feasible transfer in staff order. */
+const transferPiece = (env: Env, staff: ReadonlyArray<ShiftStaff>, state: State, transfer: TransferPiece): boolean => {
+    const { person, piece, takes } = transfer
+    for (const other of staff) {
+        if (other.id === person.id || !other.positionIds.includes(piece.pos)) continue
+        const moved = tryAdd(env, state, other, piece)
+        if (moved === null) continue
+        state.set(other.id, moved.next)
+        state.set(person.id, takes.next)
+        return true
+    }
+    return false
+}
+
 /**
  * A person who cannot take the piece only because of other work they have: hand one of those pieces to somebody else,
  * then take it.
@@ -187,14 +193,7 @@ const repair = (env: Env, staff: ReadonlyArray<ShiftStaff>, state: State, slot: 
         for (const piece of pieces) {
             const takes = tryAdd(env, new Map([...state, [person.id, cur.filter((x) => x !== piece)]]), person, seg)
             if (takes === null) continue
-            for (const other of staff) {
-                if (other.id === person.id || !other.positionIds.includes(piece.pos)) continue
-                const moved = tryAdd(env, state, other, piece)
-                if (moved === null) continue
-                state.set(other.id, moved.next)
-                state.set(person.id, takes.next)
-                return true
-            }
+            if (transferPiece(env, staff, state, { person, piece, takes })) return true
         }
     }
     return false
@@ -284,7 +283,25 @@ export const solveWeek = (input: SolveInput): SolveOutput => {
         iterations += 1
         if (better(result, best) < 0) best = result
     }
-    return finish(input, env, staff, slots, best.state, iterations, startedAt, whyNot)
+    return finish(input, env, staff, slots, best.state, iterations, startedAt)
+}
+
+/** The people worth asking for one uncovered slot, in staff order. */
+const askCandidates = (env: Env, staff: ReadonlyArray<ShiftStaff>, state: State, slot: Slot): Array<AskCandidate> => {
+    const asks: Array<AskCandidate> = []
+    const seg = segOfSlot(slot)
+    for (const person of staff) {
+        const cur = state.get(person.id) ?? []
+        if (!person.positionIds.includes(seg.pos) || onLeave(env.leaves, person.id, slot.date)) continue
+        if (covers(cur, slot.date, seg.pos, slot.s, slot.e)) continue
+        const kinds = violationsForSegs(env, person.id, withSeg(cur, seg))
+            .flat()
+            .map((v) => v.kind)
+        const reason = whyNot(kinds)
+        if (kinds.length > 0 && reason !== "other")
+            asks.push({ blockId: slot.block.id, date: slot.date, staffId: person.id, why: reason })
+    }
+    return asks
 }
 
 /** Shifts from the winning pieces, then an open shift for every head nobody could cover, and the report. */
@@ -296,7 +313,6 @@ const finish = (
     state: State,
     iterations: number,
     startedAt: number,
-    why: (kinds: ReadonlyArray<string>) => AskReason,
 ): SolveOutput => {
     const assigned = [...state].flatMap(([staffId, segs]) =>
         [...segs].sort(byDateThenStart).map((g): Shift => ({
@@ -334,18 +350,7 @@ const finish = (
                 status: "draft",
             })
         }
-        const seg = segOfSlot(slot)
-        for (const person of staff) {
-            const cur = state.get(person.id) ?? []
-            if (!person.positionIds.includes(seg.pos) || onLeave(env.leaves, person.id, slot.date)) continue
-            if (covers(cur, slot.date, seg.pos, slot.s, slot.e)) continue
-            const kinds = violationsForSegs(env, person.id, withSeg(cur, seg))
-                .flat()
-                .map((v) => v.kind)
-            const reason = why(kinds)
-            if (kinds.length > 0 && reason !== "other")
-                asks.push({ blockId: slot.block.id, date: slot.date, staffId: person.id, why: reason })
-        }
+        asks.push(...askCandidates(env, staff, state, slot))
     }
     const shifts = [...assigned, ...open].map((shift, index): Shift => ({ ...shift, id: `new-${index}` }))
     const cost = laborCost(env, shifts)

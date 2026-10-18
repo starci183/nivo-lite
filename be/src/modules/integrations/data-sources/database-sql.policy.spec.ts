@@ -37,6 +37,9 @@ const registerIdentifiers = () => {
             expect(subject.quoteId("mysql", "a`b")).toBe("`a``b`")
             expect(subject.quoteId("mssql", "a]b")).toBe("[a]]b]")
             expect(subject.quoteId("postgres", 'a"b')).toBe('"a""b"')
+            expect(subject.quoteId("mysql", "a``b`")).toBe("`a````b```")
+            expect(subject.quoteId("mssql", "a]]b]")).toBe("[a]]]]b]]]")
+            expect(subject.quoteId("postgres", 'a""b"')).toBe('"a""""b"""')
         })
         it("lists each mapped column once, skipping an empty title or updated column", async () => {
             const subject = await buildSubject()

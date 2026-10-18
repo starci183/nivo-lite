@@ -1,14 +1,18 @@
 "use client"
 
-import type { ShiftsStaffControllerInput } from "./component"
-import type { CreateShiftsStaffRowsInput } from "./component"
+import {
+    type ShiftsStaffControllerInput,
+    type CreateShiftsStaffRowsInput,
+    ShiftsStaffBase,
+    type StaffForm,
+    type StaffNumberField,
+    type StaffTextField,
+} from "./component"
 import { useTranslations } from "next-intl"
 import { useState } from "react"
 import { useShiftsBenchData, useShiftsFormat } from "@/hooks/shifts"
 import { useShiftsSetupCommands } from "@/hooks/shiftsCommands"
 import type { ShiftsStaffView } from "@/modules/types"
-import { ShiftsStaffBase } from "./component"
-import type { StaffForm, StaffNumberField, StaffTextField } from "./component"
 
 const BLANK: StaffForm = {
     id: null,

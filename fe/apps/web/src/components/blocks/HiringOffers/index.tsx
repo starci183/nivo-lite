@@ -44,7 +44,7 @@ export const HiringOffers = () => {
             .join(" · "),
         sent: sentOf(offer),
         isWaiting: offer.status === "waiting",
-        copyLabel: offer.status === "sent" ? t(view.copiedId === offer.id ? "copiedLink" : "offersCopy") : null,
+        copyLabel: offerCopyLabel(offer, view.copiedId, t),
         canCancel: OPEN_OFFER_STATUSES.includes(offer.status),
     })
     return (
@@ -69,4 +69,10 @@ export const HiringOffers = () => {
             }}
         />
     )
+}
+
+/** Resolves the offer link label only after it has been sent. */
+const offerCopyLabel = (offer: OfferView, copiedId: string | null, t: ReturnType<typeof useTranslations<"hiring">>) => {
+    if (offer.status !== "sent") return null
+    return t(copiedId === offer.id ? "copiedLink" : "offersCopy")
 }

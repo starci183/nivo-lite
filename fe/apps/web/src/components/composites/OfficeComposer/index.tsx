@@ -1,22 +1,25 @@
 import { useEffect, useRef } from "react"
-import { Button, Icon, Text, Textarea } from "@starci/grammar/common"
+import { Button, Fieldset, Icon, Text, Textarea } from "@starci/grammar/common"
 import { nivoIconSource } from "@/components/leaves/Icon"
 import type { OfficeComposerProps } from "@/modules/types"
 import { CHIPS_CLASS_NAME, COMPOSER_CLASS_NAME, FIELD_CLASS_NAME, HINT_CLASS_NAME, ROW_CLASS_NAME } from "./classNames"
+
+/** Resolves quick questions, including the optional connected chatbot. */
+const promptsOf = (view: OfficeComposerProps["props"]): ReadonlyArray<string> => [
+    view.text("promptNivoAuthority"),
+    view.text("promptNivoExceptions"),
+    view.text("promptAttention"),
+    view.text("promptSummary"),
+    view.text("promptInvoices"),
+    ...(view.chatbotHandle === null ? [] : [view.text("promptChatbot", { handle: view.chatbotHandle })]),
+]
 
 /** The pinned composer: a slim row of quick questions, then "@", the message field and Send. */
 export const OfficeComposer = (props: OfficeComposerProps) => {
     const view = props.props
     const { text } = view
     const hostRef = useRef<HTMLDivElement | null>(null)
-    const prompts = [
-        text("promptNivoAuthority"),
-        text("promptNivoExceptions"),
-        text("promptAttention"),
-        text("promptSummary"),
-        text("promptInvoices"),
-        ...(view.chatbotHandle === null ? [] : [text("promptChatbot", { handle: view.chatbotHandle })]),
-    ]
+    const prompts = promptsOf(view)
 
     const focusField = () => hostRef.current?.querySelector("textarea")?.focus()
 
@@ -36,19 +39,21 @@ export const OfficeComposer = (props: OfficeComposerProps) => {
 
     return (
         <div className={COMPOSER_CLASS_NAME}>
-            <div className={CHIPS_CLASS_NAME} role="group" aria-label={text("quickLabel")}>
-                {prompts.map((prompt) => (
-                    <Button
-                        key={prompt}
-                        variant="secondary"
-                        size="sm"
-                        isDisabled={view.isLoading}
-                        onPress={() => onPrompt(prompt)}
-                    >
-                        {prompt}
-                    </Button>
-                ))}
-            </div>
+            <Fieldset legend={text("quickLabel")} isLegendHidden>
+                <div className={CHIPS_CLASS_NAME}>
+                    {prompts.map((prompt) => (
+                        <Button
+                            key={prompt}
+                            variant="secondary"
+                            size="sm"
+                            isDisabled={view.isLoading}
+                            onPress={() => onPrompt(prompt)}
+                        >
+                            {prompt}
+                        </Button>
+                    ))}
+                </div>
+            </Fieldset>
             <div className={ROW_CLASS_NAME}>
                 <Button variant="ghost" aria-label={text("mentionButton")} isDisabled={view.isLoading} onPress={onAt}>
                     @

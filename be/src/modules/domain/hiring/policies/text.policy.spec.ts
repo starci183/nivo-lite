@@ -124,3 +124,15 @@ describe("hiring text policy", () => {
         expect(subject.cleanTextList(["one"], 0, 3)).toEqual([])
     })
 })
+
+describe("linear text boundaries", () => {
+    it("retains permissive email suffixes and handles long near misses", async () => {
+        const subject = await buildSubject()
+        expect(subject.isEmailAddress("a@b.co.")).toBe(true)
+        expect(subject.isEmailAddress("a@.abc")).toBe(false)
+        expect(subject.isEmailAddress("a@b..ab")).toBe(true)
+        expect(subject.isEmailAddress(`a@${"a".repeat(20000)}`)).toBe(false)
+        expect(subject.slugify("-".repeat(20000))).toBe("")
+        expect(subject.slugify("--abc def--", 4)).toBe("abc")
+    })
+})

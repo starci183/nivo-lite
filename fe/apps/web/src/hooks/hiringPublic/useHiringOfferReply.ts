@@ -7,7 +7,7 @@ import { graphQLErrorCode } from "@/modules/failure"
 import { useGraphQLWithToast } from "@/modules/toast"
 import type { ReplyOutcome } from "./useHiringInterviewReply"
 
-const ANSWERED_OUTCOMES: ReadonlyArray<string> = ["accepted", "declined", "already_accepted", "already_declined"]
+const ANSWERED_OUTCOMES: ReadonlySet<string> = new Set(["accepted", "declined", "already_accepted", "already_declined"])
 
 /** The candidate's answer to a job offer: accept it or decline it. */
 export const useHiringOfferReply = (token: string) => {
@@ -31,7 +31,7 @@ export const useHiringOfferReply = (token: string) => {
         )
         setPending(false)
         if (result !== undefined) {
-            setOutcome({ isOk: ANSWERED_OUTCOMES.includes(result.outcome), text: t(`replyOffer_${result.outcome}`) })
+            setOutcome({ isOk: ANSWERED_OUTCOMES.has(result.outcome), text: t(`replyOffer_${result.outcome}`) })
         }
     }
     return { outcome, isPending, answer: (accept: boolean) => void answer(accept) }

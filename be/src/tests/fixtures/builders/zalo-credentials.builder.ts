@@ -1,8 +1,10 @@
 import type { MockOf } from "@starci/jest-preset"
-import type { ConnectionSecretsService } from "@modules/domain/connection-secrets"
+import {
+    type ConnectionSecretsService,
+    type ConnectionSecret,
+    ConnectionSecretsErrorCode,
+} from "@modules/domain/connection-secrets"
 import type { ConnectionsService } from "@modules/domain/connections"
-import type { ConnectionSecret } from "@modules/domain/connection-secrets"
-import { ConnectionSecretsErrorCode } from "@modules/domain/connection-secrets"
 import { ZaloError, ZaloErrorCode } from "@modules/integrations/zalo"
 import { ok, refused } from "@modules/platform/primitives"
 import type { ZaloCredentialsService } from "@modules/domain/channels"

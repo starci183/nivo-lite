@@ -1,6 +1,6 @@
 import { Secret } from "@modules/platform/config"
 import type { Logger } from "@modules/platform/logging"
-import { ROW, connectionsCase, connectionsScenarios } from "@tests/fixtures/builders/connections.builder"
+import { ROW, connectionsCase, connectionsScenarios, siteUrlCases } from "@tests/fixtures/builders/connections.builder"
 import type { Urls } from "@tests/fixtures/builders/connections.builder"
 import { fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
@@ -78,13 +78,11 @@ const OWNER = [FIND_ACTIVE_MEMBER, [{ role: "owner", display_name: "Lan" }]] as 
 const { actor, forbidden, invalidName, missing } = connectionsCase
 
 describe("ConnectionsService > addresses", () => {
-    it("uses the required site URL and trims every trailing slash", async () => {
-        const service = await build(mockEntityManager())
-        expect(service.siteBase()).toBe("https://site.example.com")
-        expect(service.webhookUrl("telegram", "c1")).toBe("https://site.example.com/api/telegram/c1")
+    it.each(siteUrlCases)("trims trailing slashes and keeps the site path: %s", async (siteUrl, expected) => {
+        const service = await build(mockEntityManager(), { siteUrl })
+        expect(service.siteBase()).toBe(expected)
+        expect(service.webhookUrl("telegram", "c1")).toBe(`${expected}/api/telegram/c1`)
         expect(service.publicOrigin()).toBeNull()
-        const trimmed = await build(mockEntityManager(), { siteUrl: "https://nivo.vn/app///" })
-        expect(trimmed.siteBase()).toBe("https://nivo.vn/app")
     })
 
     it.each([undefined, "https://api.nivo.vn/app"])("uses public URL precedence: %s", async (publicApiUrl) => {

@@ -83,7 +83,7 @@ export class SetupChatService {
             revisions,
             messages,
             cards,
-            turnPending: messages.filter((message) => message.setupSessionId === session.id).at(-1)?.role === "user",
+            turnPending: messages.findLast((message) => message.setupSessionId === session.id)?.role === "user",
         }
     }
 
@@ -267,7 +267,7 @@ export class SetupChatService {
 
     private async draftOf(workspaceId: string, sessionId: string): Promise<SetupSessionRecord> {
         const session = await this.sessions.find(workspaceId, sessionId)
-        if (session === null || session.status !== "draft") {
+        if (session?.status !== "draft") {
             throw new ModulesError({ code: ModulesErrorCode.SetupSessionClosed })
         }
         return session

@@ -111,7 +111,7 @@ export class AutomationOperationsExecutorsService {
         const [order] = orderId
             ? await this.entityManager.query<Array<OrderReadRow>>(SELECT_ORDER, [context.workspaceId, orderId])
             : []
-        if (order === undefined || !order.shipped_at) return this.messages.skipped(say("delivery.notShipped"))
+        if (!order?.shipped_at) return this.messages.skipped(say("delivery.notShipped"))
         const lead = await this.messages.leadOf(context.workspaceId, order.lead_id ?? "")
         if (lead === null) return this.messages.skipped(say("delivery.noLead", { order: order.order_no }))
         const conversation = await this.messages.conversationOf(context.workspaceId, lead.id)
@@ -150,7 +150,7 @@ export class AutomationOperationsExecutorsService {
         const [contract] = contractId
             ? await this.entityManager.query<Array<ContractReadRow>>(SELECT_CONTRACT, [context.workspaceId, contractId])
             : []
-        if (contract === undefined || contract.status !== "active") return this.messages.skipped(say("renewal.gone"))
+        if (contract?.status !== "active") return this.messages.skipped(say("renewal.gone"))
         if (textOf(payload.ends_on) && contract.ends_on !== textOf(payload.ends_on)) {
             return this.messages.skipped(say("renewal.moved"))
         }

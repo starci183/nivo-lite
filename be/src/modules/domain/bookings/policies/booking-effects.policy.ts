@@ -10,7 +10,7 @@ import type {
 const HOUR_MS = 3_600_000
 
 /** Reasons an owner gives when cancelling: the customer owes nothing for these. */
-const OWNER_REASONS: ReadonlyArray<string> = ["owner", "owner_cancelled"]
+const OWNER_REASONS: ReadonlySet<string> = new Set(["owner", "owner_cancelled"])
 
 /** The kinds of notice a booking change earns (a reminder comes from the clock). */
 export type NoticeKind = Exclude<BookingNoticeKind, "reminder">
@@ -21,7 +21,7 @@ export const isLateCancel = (startMs: number, cancelledMs: number | null, window
 
 /** The fee of a cancellation: the late-cancel percentage of the price when the customer cancelled late, otherwise none. An owner's own cancellation is free. */
 export const cancelFeeOf = (row: CancelFeeFacts, windowHours: number, feePct: number): number => {
-    if (row.cancel_reason !== null && OWNER_REASONS.includes(row.cancel_reason)) return 0
+    if (row.cancel_reason !== null && OWNER_REASONS.has(row.cancel_reason)) return 0
     if (row.price_vnd === null || row.price_vnd <= 0 || feePct <= 0) return 0
     return isLateCancel(row.start_ms, row.cancelled_ms, windowHours) ? Math.round((row.price_vnd * feePct) / 100) : 0
 }

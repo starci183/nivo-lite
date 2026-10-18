@@ -18,12 +18,12 @@ import { useSWRConfig } from "swr"
 import type { ChatbotTranslator } from "./chatbot.shared"
 
 /** The SWR keys whose data a finished delivery or a decision changes. */
-const REFRESHED_KEYS: ReadonlyArray<unknown> = [
+const REFRESHED_KEYS: ReadonlySet<unknown> = new Set([
     "QUERY_CHATBOT_OVERVIEW_SWR",
     "QUERY_CHATBOT_THREAD_SWR",
     "QUERY_CHATBOT_GAPS_SWR",
     QUERY_AGENT_DASHBOARD_SWR_KEY,
-]
+])
 
 /** What the status poll reports about a queued delivery. */
 interface DeliveryProgress {
@@ -51,7 +51,7 @@ export const useChatbotActions = (workspaceId: string, userId: string) => {
     const handling = useMutateSetChatHandlingSwr()
 
     const refresh = useCallback(
-        () => mutate((key) => Array.isArray(key) && key[1] === workspaceId && REFRESHED_KEYS.includes(key[0])),
+        () => mutate((key) => Array.isArray(key) && key[1] === workspaceId && REFRESHED_KEYS.has(key[0])),
         [mutate, workspaceId],
     )
 

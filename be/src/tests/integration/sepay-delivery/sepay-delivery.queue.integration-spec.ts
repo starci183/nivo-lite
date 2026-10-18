@@ -1,8 +1,11 @@
 import assert from "node:assert/strict"
 import { QUEUE_OUTBOX } from "@modules/platform/queue"
 import type { QueueOutbox } from "@modules/platform/queue"
-import { SEPAY_DELIVERY_QUEUE as DOMAIN_QUEUE } from "@modules/queues/sepay-delivery"
-import { SEPAY_DELIVERY_QUEUE, isSepayDeliveryRecorded } from "@modules/queues/sepay-delivery"
+import {
+    SEPAY_DELIVERY_QUEUE as DOMAIN_QUEUE,
+    SEPAY_DELIVERY_QUEUE,
+    isSepayDeliveryRecorded,
+} from "@modules/queues/sepay-delivery"
 import { SepayDeliveryQueueModule } from "@features/jobs/sepay-delivery"
 import { deliveryIntakeFixture, persistDeliveryWorkspace } from "../../world/delivery-jobs-proof.service"
 import { deliveryCapabilities } from "../../world/delivery-capabilities.options"

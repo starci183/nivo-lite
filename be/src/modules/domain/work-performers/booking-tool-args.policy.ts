@@ -9,8 +9,14 @@ import type {
 export { isPlausibleBookingPhone, normaliseBookingPhone } from "@modules/domain/bookings"
 
 const DATE_TEXT = /^\d{4}-\d{2}-\d{2}$/u
-const ISO_START =
-    /^\d{4}-\d{2}-\d{2}T(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:\.\d+)?)?(?:Z|[+-](?:[01]\d|2[0-3]):[0-5]\d)$/u
+const ISO_CLOCK = /^([01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:\.\d+)?)?$/u
+const ISO_ZONE = /(?:Z|[+-](?:[01]\d|2[0-3]):[0-5]\d)$/u
+
+const isIsoStart = (value: string): boolean => {
+    if (!DATE_TEXT.test(value.slice(0, 10)) || value[10] !== "T") return false
+    const zone = ISO_ZONE.exec(value)
+    return zone !== null && ISO_CLOCK.test(value.slice(11, zone.index))
+}
 
 const textOf = (value: unknown, max: number): string => (typeof value === "string" ? value.trim().slice(0, max) : "")
 
@@ -29,19 +35,14 @@ const dateOf = (value: unknown): string | null => {
 const startOf = (value: unknown): string => {
     if (typeof value !== "string") return ""
     const start = value.trim()
-    return ISO_START.test(start) && validDate(start.slice(0, 10)) && Number.isFinite(Date.parse(start)) ? start : ""
+    return isIsoStart(start) && validDate(start.slice(0, 10)) && Number.isFinite(Date.parse(start)) ? start : ""
 }
 
 const partyOf = (value: unknown): number =>
     typeof value === "number" && Number.isFinite(value) ? Math.min(20, Math.max(1, Math.round(value) || 1)) : 1
 
 const serviceText = (value: string): string =>
-    value
-        .trim()
-        .normalize("NFD")
-        .replace(/\p{M}/gu, "")
-        .toLowerCase()
-        .replace(/\u0111/gu, "d")
+    value.trim().normalize("NFD").replace(/\p{M}/gu, "").toLowerCase().replaceAll("\u0111", "d")
 
 /** Reads today's calendar date in the shop's timezone when a slot search omits its date. */
 export const bookingDateIn = (nowMs: number, timezone: string): string => {

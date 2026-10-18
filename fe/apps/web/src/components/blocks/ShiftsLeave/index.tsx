@@ -25,7 +25,7 @@ export const ShiftsLeave = () => {
     const mine = useShiftsMineData().data
     const [form, setForm] = useState<LeaveForm>({ from: "", to: "", reason: "" })
     const [isBusy, setIsBusy] = useState(false)
-    if (mine === undefined || mine.profileId === null) return null
+    if (mine?.profileId === undefined || mine.profileId === null) return null
 
     const from = form.from === "" ? mine.today : form.from
     const to = form.to === "" || form.to < from ? from : form.to

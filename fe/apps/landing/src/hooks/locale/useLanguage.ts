@@ -1,7 +1,6 @@
 import { useLocale, useTranslations } from "next-intl"
 import { useTransition } from "react"
-import { LOCALE_COOKIE, appLocaleOf } from "@/modules/i18n"
-import { navigation } from "@/modules/i18n"
+import { LOCALE_COOKIE, appLocaleOf, navigation } from "@/modules/i18n"
 
 /** The reader's language as the landing offers it: the words of the switch, the current language and the command that changes it. */
 export const useLanguage = () => {

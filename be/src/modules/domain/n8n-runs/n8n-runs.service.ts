@@ -161,7 +161,7 @@ export class N8nRunsService {
 
     /** The run that must belong to a workflow; any other run is refused. */
     requireWorkflow(run: RunContextOrNone, templateKey: string): N8nRunContext {
-        if (run === null || run.templateKey !== templateKey) {
+        if (run?.templateKey !== templateKey) {
             throw new N8nRunsError({ code: N8nRunsErrorCode.WorkflowMismatch })
         }
         return run

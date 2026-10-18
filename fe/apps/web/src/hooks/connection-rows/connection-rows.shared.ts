@@ -67,10 +67,8 @@ export const primaryOf = (c: Connection, canManage: boolean, busy: RowBusy, t: R
     const settled = c.status !== "disconnected" && c.status !== "pending"
     const broken = c.status === "error"
     const reconnects = c.provider === "zalo_oa" || c.provider === "meta"
-    if (canManage && canReopen(c.provider) && (c.status === "pending" || (broken && reconnects))) {
-        const label = broken ? t(c.provider === "zalo_oa" ? "zaloReauthorize" : "metaReconnect") : t("continue")
-        return { id: "continue", label, variant: "secondary", isPending: false }
-    }
+    const reopening = reopenPrimaryOf(c, canManage, t)
+    if (reopening !== null) return reopening
     if (canManage && c.provider === "google" && broken) {
         return {
             id: "reconnectGoogle",
@@ -150,4 +148,14 @@ export const notesOf = (c: Connection, localOnly: boolean, t: RowTranslate): Rea
         ...(c.provider === "telegram" && live && localOnly ? [t("localNote")] : []),
         ...(c.provider === "zalo_oa" && live ? [t("zaloSoon")] : []),
     ]
+}
+
+/** Offers continuation or reauthorization when an editable provider can resume its wizard. */
+const reopenPrimaryOf = (c: Connection, canManage: boolean, t: RowTranslate): RowPrimary | null => {
+    const broken = c.status === "error"
+    const reconnects = c.provider === "zalo_oa" || c.provider === "meta"
+    const reopens = c.status === "pending" || (broken && reconnects)
+    if (!canManage || !canReopen(c.provider) || !reopens) return null
+    const reconnectLabel = c.provider === "zalo_oa" ? "zaloReauthorize" : "metaReconnect"
+    return { id: "continue", label: broken ? t(reconnectLabel) : t("continue"), variant: "secondary", isPending: false }
 }

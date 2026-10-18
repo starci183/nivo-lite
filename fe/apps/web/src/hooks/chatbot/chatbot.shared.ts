@@ -65,8 +65,11 @@ export const FAILED_KEYS: Readonly<Record<ChatbotChannel, string>> = {
 const DAY_MS = 86_400_000
 const VIETNAM_OFFSET_MS = 7 * 3_600_000
 
-/** Whether a string names a filter. */
-export const isInboxFilter = (value: string): value is InboxFilter => INBOX_FILTERS.some((filter) => filter === value)
+/** Membership index of the supported inbox filters. */
+const INBOX_FILTER_KEYS: ReadonlySet<string> = new Set(INBOX_FILTERS)
+
+/** Whether a string names a supported inbox filter. */
+export const isInboxFilter = (value: string): value is InboxFilter => INBOX_FILTER_KEYS.has(value)
 
 /** Calendar-day key (Vietnam time) used to group messages. */
 export const dayKeyOf = (iso: string): string =>
@@ -138,7 +141,7 @@ export const listTimeOf = (t: ChatbotTranslator, format: ChatbotFormat, iso: str
     return key === dayKeyOf(nowIso) ? clockOf(format, iso) : dayWordOf(t, format, key, nowIso)
 }
 
-const STAGES: ReadonlyArray<string> = ["new", "qualified", "proposal", "won", "lost"]
+const STAGES: ReadonlySet<string> = new Set(["new", "qualified", "proposal", "won", "lost"])
 
 /** The lead's facts as term and value pairs; a fact without a value is left out. */
 export const leadFactsOf = (
@@ -149,7 +152,7 @@ export const leadFactsOf = (
         {
             id: "stage",
             term: t("leadStage"),
-            description: STAGES.includes(lead.stage) ? t(`stage_${lead.stage}`) : lead.stage,
+            description: STAGES.has(lead.stage) ? t(`stage_${lead.stage}`) : lead.stage,
         },
         { id: "need", term: t("leadNeed"), description: lead.need },
         { id: "phone", term: t("leadPhone"), description: lead.phone ?? "" },

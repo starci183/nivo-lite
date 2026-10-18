@@ -5,7 +5,7 @@ import type {
     CreditPacksBoughtQuery,
     AccountingWorkbenchQuery,
     AgentChatTurnStatusQuery,
-    ApproveVideoProjectMutation,
+    VideoProjectQuery,
     AskKnowledgeQuery,
     AutomationGoogleAccountsQuery,
     AutomationsQuery,
@@ -341,7 +341,7 @@ export type VideoBrandType = SaveVideoBrandMutation["saveVideoBrand"]
 /** The `VideoMediaType` object of the back end contract, as the operations of this app select it. */
 export type VideoMediaType = VideoMediaQuery["videoMedia"][number]
 /** The `VideoProjectType` object of the back end contract, as the operations of this app select it. */
-export type VideoProjectType = ApproveVideoProjectMutation["approveVideoProject"]
+export type VideoProjectType = VideoProjectQuery["videoProject"]
 /** The `VideoRenderStatusType` object of the back end contract, as the operations of this app select it. */
 export type VideoRenderStatusType = VideoRenderStatusQuery["videoRenderStatus"]
 /** The `VideoScriptStatusType` object of the back end contract, as the operations of this app select it. */

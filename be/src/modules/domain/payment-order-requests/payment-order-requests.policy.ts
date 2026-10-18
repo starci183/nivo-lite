@@ -7,12 +7,18 @@ import type {
 } from "./payment-order-requests.contracts"
 import type { RequestStatusRow } from "./persistence/payment-order-requests.rows"
 
-const REQUEST_KINDS: ReadonlyArray<PaymentOrderRequestKind> = ["plan", "renew", "topup", "upgrade", "credit_pack"]
+const REQUEST_KINDS: ReadonlySet<PaymentOrderRequestKind> = new Set([
+    "plan",
+    "renew",
+    "topup",
+    "upgrade",
+    "credit_pack",
+])
 const TARGET_PATTERN = /^[a-z0-9_-]{1,40}$/
 
 /** Checks the request operation and bounds its target before either reaches persistence. */
 export const targetOf = (params: PaymentOrderRequestParams): string | null => {
-    if (!REQUEST_KINDS.includes(params.kind)) {
+    if (!REQUEST_KINDS.has(params.kind)) {
         throw new PaymentOrderRequestsError({ code: PaymentOrderRequestsErrorCode.Invalid })
     }
     if (params.kind === "renew") return null

@@ -32,18 +32,54 @@ const addresses = (value: AddressObject | Array<AddressObject> | undefined): Arr
     }))
 }
 
+const stripBlocks = (html: string): string => {
+    const lower = html.replaceAll(/[A-Z]/gu, (letter) => letter.toLowerCase()).replaceAll("ſ", "s")
+    const ends = { script: lower.indexOf("</script>"), style: lower.indexOf("</style>") }
+    const parts: Array<string> = []
+    let start = 0
+    for (let index = 0; index < html.length; index++) {
+        if (html[index] !== "<") continue
+        const kind = lower.startsWith("script", index + 1) ? "script" : "style"
+        if (!lower.startsWith(kind, index + 1)) continue
+        if (ends[kind] >= 0 && ends[kind] < index) ends[kind] = lower.indexOf(`</${kind}>`, index)
+        if (ends[kind] < 0) continue
+        parts.push(html.slice(start, index), " ")
+        index = ends[kind] + kind.length + 2
+        start = index + 1
+    }
+    parts.push(html.slice(start))
+    return parts.join("")
+}
+
+const stripTags = (withoutBlocks: string): string => {
+    const text: Array<string> = []
+    let start = 0
+    let open = withoutBlocks.indexOf("<")
+    while (open >= 0) {
+        const end = withoutBlocks.indexOf(">", open + 1)
+        if (end < 0) break
+        if (end > open + 1) {
+            text.push(withoutBlocks.slice(start, open), " ")
+            start = end + 1
+        }
+        open = withoutBlocks.indexOf("<", end + 1)
+    }
+    text.push(withoutBlocks.slice(start))
+    return text.join("")
+}
+
 const stripHtml = (html: string): string =>
-    html
-        .replace(/<(script|style)[\s\S]*?<\/\1>/giu, " ")
-        .replace(/<[^>]+>/gu, " ")
-        .replace(/&nbsp;/gu, " ")
-        .replace(/&amp;/gu, "&")
-        .replace(/&lt;/gu, "<")
-        .replace(/&gt;/gu, ">")
+    stripTags(stripBlocks(html))
+        .replaceAll("&nbsp;", " ")
+        .replaceAll("&amp;", "&")
+        .replaceAll("&lt;", "<")
+        .replaceAll("&gt;", ">")
         .replace(/\s+/gu, " ")
         .trim()
 
-const validDate = (value: Date | string | null | undefined): Date | null => {
+type MailDate = Date | string | null | undefined
+
+const validDate = (value: MailDate): Date | null => {
     if (value === null || value === undefined) return null
     const date = new Date(value)
     return Number.isNaN(date.getTime()) ? null : date
@@ -55,7 +91,7 @@ export const messageToRow = (
     uidValidity: string,
     uid: number,
     mail: ParsedMail,
-    fallbackDate: Date | string | null | undefined,
+    fallbackDate: MailDate,
 ): ImapMessageRow => {
     const body = (mail.text ?? (typeof mail.html === "string" ? stripHtml(mail.html) : "")).trim()
     return {
@@ -87,7 +123,7 @@ export const unreadableRow = (
     folder: string,
     uidValidity: string,
     uid: number,
-    fallbackDate: Date | string | null | undefined,
+    fallbackDate: MailDate,
 ): ImapMessageRow => ({
     externalId: `${folder}:${uidValidity}:${uid}`,
     title: "",

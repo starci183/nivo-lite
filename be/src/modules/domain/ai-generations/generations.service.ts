@@ -30,7 +30,7 @@ import { InjectAiGenerationsOptions, InjectUsage } from "./ai-generations.decora
 import { AiGenerationsLogEvent } from "./ai-generations.log-events"
 import type { AiGenerationsOptions } from "./ai-generations.options"
 import type { UsageGate } from "./ai-generations.port"
-import { EngineStatusService } from "@modules/domain/agents"
+import { EngineStatusService, PauseClient } from "@modules/domain/agents"
 import { AiGenerationsError, AiGenerationsErrorCode } from "./errors/ai-generations.error"
 import { isRequestableKind } from "./request-kind.policy"
 import {
@@ -57,7 +57,6 @@ import {
     RECORD_GENERATION_RESULT,
     SET_GENERATION_CONTEXT,
 } from "./persistence/ai-generations.sql"
-import { PauseClient } from "@modules/domain/agents"
 
 const failure = (reason: GenerationFailureReason, message: string): GenerationFailure => ({
     ok: false,

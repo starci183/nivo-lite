@@ -76,29 +76,36 @@ export const departmentsOf = (
     format: GovFormat,
     governance: Governance,
 ): ReadonlyArray<GovDepartment> =>
-    governance.departments.map((department) => ({
-        id: department.department,
-        name: g(`dept_${department.department}`),
-        done: t("deptDone", { n: department.done7d }),
-        waiting: t("deptWaiting", { n: department.waiting }),
-        hasWaiting: department.waiting > 0,
-        last:
-            department.lastActivityAt === null
-                ? t("deptNoActivity")
-                : t("deptLast", { time: whenOf(format, department.lastActivityAt) }),
-        label: `${g(`dept_${department.department}`)}: ${t("deptWaiting", { n: department.waiting })}`,
-    }))
+    governance.departments.map((department) => {
+        const name = g(`dept_${department.department}`)
+        return {
+            id: department.department,
+            name,
+            done: t("deptDone", { n: department.done7d }),
+            waiting: t("deptWaiting", { n: department.waiting }),
+            hasWaiting: department.waiting > 0,
+            last:
+                department.lastActivityAt === null
+                    ? t("deptNoActivity")
+                    : t("deptLast", { time: whenOf(format, department.lastActivityAt) }),
+            label: `${name}: ${t("deptWaiting", { n: department.waiting })}`,
+        }
+    })
 
 /** The waiting items shown on the overview: the oldest few. */
 export const waitingItemsOf = (g: GovTranslator, waiting: ReadonlyArray<WaitingWork>): ReadonlyArray<GovWaitingItem> =>
-    waiting.slice(0, TOP_WAITING).map((item) => ({
-        id: item.id,
-        title: `${g(`action_${item.action}`)}${item.leadName ? ` · ${item.leadName}` : ""}`,
-        department: g(`dept_${item.department}`),
-        reason: item.reason ? g(`reason_${item.reason}`) : null,
-        isSimulated: item.isSimulated,
-        summary: item.summary || null,
-    }))
+    waiting.slice(0, TOP_WAITING).map((item) => {
+        const action = g(`action_${item.action}`)
+        const leadName = item.leadName ? ` · ${item.leadName}` : ""
+        return {
+            id: item.id,
+            title: `${action}${leadName}`,
+            department: g(`dept_${item.department}`),
+            reason: item.reason ? g(`reason_${item.reason}`) : null,
+            isSimulated: item.isSimulated,
+            summary: item.summary || null,
+        }
+    })
 
 /** The exception counts as chips, in the order the owner reads them. */
 export const exceptionChipsOf = (
@@ -107,11 +114,10 @@ export const exceptionChipsOf = (
     governance: Governance,
 ): ReadonlyArray<GovExceptionChip> => {
     const chips: Array<GovExceptionChip> = EXCEPTION_ORDER.filter((key) => governance.exceptions[key] > 0).map(
-        (key) => ({
-            id: key,
-            label: `${g(`reason_${key}`)} · ${governance.exceptions[key]}`,
-            tone: "warning",
-        }),
+        (key) => {
+            const reason = g(`reason_${key}`)
+            return { id: key, label: `${reason} · ${governance.exceptions[key]}`, tone: "warning" }
+        },
     )
     if (governance.exceptions.failed > 0) {
         chips.push({
@@ -133,12 +139,16 @@ export const historyRowsOf = (
     format: GovFormat,
     governance: Governance,
 ): ReadonlyArray<GovHistoryRow> =>
-    governance.recentDecisions.slice(0, TOP_HISTORY).map((row) => ({
-        id: row.id,
-        action: g(`action_${row.action}`),
-        outcome: g(`outcome_${row.outcome}`),
-        outcomeTone: OUTCOME_TONES[row.outcome] ?? "danger",
-        when: whenOf(format, row.createdAt),
-        exact: exactOf(format, row.createdAt),
-        detail: `${g(`dept_${row.department}`)} · ${row.deciderKind === "policy" ? g("decider_policy") : row.decidedBy}${row.leadName ? ` · ${row.leadName}` : ""}`,
-    }))
+    governance.recentDecisions.slice(0, TOP_HISTORY).map((row) => {
+        const department = g(`dept_${row.department}`)
+        const leadName = row.leadName ? ` · ${row.leadName}` : ""
+        return {
+            id: row.id,
+            action: g(`action_${row.action}`),
+            outcome: g(`outcome_${row.outcome}`),
+            outcomeTone: OUTCOME_TONES[row.outcome] ?? "danger",
+            when: whenOf(format, row.createdAt),
+            exact: exactOf(format, row.createdAt),
+            detail: `${department} · ${row.deciderKind === "policy" ? g("decider_policy") : row.decidedBy}${leadName}`,
+        }
+    })

@@ -91,16 +91,24 @@ export class BookingChatService {
             conversationId: turn.conversationId,
             leadId: turn.leadId,
         })
+        return this.bookingAnswer(result, service.name, zone)
+    }
+
+    private bookingAnswer(
+        result: Awaited<ReturnType<BookingPublicService["requestIn"]>>,
+        serviceName: string,
+        zone: string,
+    ): BookingChatAnswer {
         if (result.state === "confirmed") return { reply: null, state: "confirmed" }
         if (result.state === "waiting" && result.code === "received_free")
-            return this.say("requestHeld", { service: service.name })
+            return this.say("requestHeld", { service: serviceName })
         if (result.state === "waiting") {
             const offered = offeredTimes(result.alternatives, zone, OFFER_MAX)
             return offered === ""
-                ? this.say("requestTaken", { service: service.name })
-                : this.say("requestTakenOffer", { service: service.name, times: offered })
+                ? this.say("requestTaken", { service: serviceName })
+                : this.say("requestTakenOffer", { service: serviceName, times: offered })
         }
-        return this.say("requestInvalid", { service: service.name })
+        return this.say("requestInvalid", { service: serviceName })
     }
 
     private async joinWaitlist(

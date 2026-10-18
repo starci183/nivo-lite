@@ -13,7 +13,6 @@ import type { CardContext } from "./cards"
 import { automationDetailOf } from "./detail"
 import type { DetailInput } from "./detail"
 import { automationFiltersFor, automationText, hiddenAutomations } from "./status"
-import type { AutomationFilterKey } from "./status"
 
 /** What the board is drawn from. */
 export interface BoardInput {
@@ -26,7 +25,7 @@ export interface BoardInput {
     readonly cards: ReadonlyArray<AutomationCardView>
     readonly scoped: ReadonlyArray<AutomationCardView>
     readonly shown: ReadonlyArray<AutomationCardView>
-    readonly filter: AutomationFilterKey
+    readonly filter: string
     readonly selected: string | null
     readonly busyKey: string | null
     readonly accounts: CardContext["accounts"]

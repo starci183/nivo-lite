@@ -179,7 +179,7 @@ export class GoogleConnectionsService {
             row,
             provider: "google",
             name: email === null ? "Google" : `Google - ${email}`,
-            meta: { ...(row?.meta ?? {}), email: email ?? row?.meta.email ?? "" },
+            meta: { ...row?.meta, email: email ?? row?.meta.email ?? "" },
             tokens: { access_token: tokens.accessToken, refresh_token: refresh, expires_at: tokens.expiresAt },
         })
     }

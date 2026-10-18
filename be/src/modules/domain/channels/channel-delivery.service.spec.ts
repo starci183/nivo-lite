@@ -94,6 +94,26 @@ describe("ChannelDeliveryService", () => {
     })
 
     describe("telegram", () => {
+        it.each([
+            { label: "plain", externalId: "555", recipient: "555" },
+            { label: "archive with extra separator", externalId: "555:archive:extra", recipient: "555" },
+            {
+                label: "long incomplete final line",
+                externalId: "555:" + ":".repeat(20_000) + "\n",
+                recipient: "555:" + ":".repeat(20_000) + "\n",
+            },
+            { label: "archived final line", externalId: "prefix\n555:archive", recipient: "prefix\n555" },
+        ])("preserves the channel recipient for $label", async ({ externalId, recipient }) => {
+            const { service, telegram, secrets } = await build(target({ externalId }))
+            secrets.botToken.mockResolvedValue({ kind: "ok", value: "123:token" })
+            await service.deliver(request)
+            expect(telegram.sendMessage).toHaveBeenCalledWith("123:token", recipient, "Hello")
+        })
+    })
+})
+
+describe("ChannelDeliveryService", () => {
+    describe("telegram", () => {
         it("sends to the chat of the conversation, ignoring the archive suffix, and marks the message sent", async () => {
             const { service, messages, telegram, secrets } = await build()
             secrets.botToken.mockResolvedValue({ kind: "ok", value: "123:token" })

@@ -66,7 +66,7 @@ export const useLeadGenApprovalStore = create<LeadGenApprovalStore>((set, get) =
     },
     finish: (scopeId, jobId, status) => {
         const approval = get().approvals[scopeId]
-        if (!approval || approval.jobId !== jobId || approval.terminalReported === status) return false
+        if (approval?.jobId !== jobId || approval.terminalReported === status) return false
         set((state) => ({
             approvals: {
                 ...state.approvals,

@@ -92,12 +92,7 @@ export class WorkChainService {
                 dedupeKey: `issue_invoice:order:${item.subject_id}`,
                 payload: { subject_type: "order", subject_id: item.subject_id, lead_id: leadId },
             })
-        } else if (
-            next === "send_care" &&
-            (item.subject_type === "transaction" || item.subject_type === "invoice") &&
-            item.subject_id !== null &&
-            leadId !== null
-        ) {
+        } else if (next === "send_care" && this.isPaymentSubject(item) && item.subject_id !== null && leadId !== null) {
             // One care message per paid invoice, whichever way it was confirmed (a bank credit, or the owner checking a claim).
             const invoiceId = this.settledInvoice(item)
             await this.enqueue(ctx, {
@@ -113,6 +108,10 @@ export class WorkChainService {
                 },
             })
         }
+    }
+
+    private isPaymentSubject(item: WorkItem): boolean {
+        return item.subject_type === "transaction" || item.subject_type === "invoice"
     }
 
     /** A lost lead, a customer who already bought and a customer with a follow-up already waiting get no new follow-up. */

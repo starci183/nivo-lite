@@ -55,8 +55,7 @@ const pick = <Value extends string>(list: ReadonlyArray<Value>, text: string, fa
     list.find((item) => item === text) ?? fallback
 
 /** True for a stage name. */
-export const isStage = (value: unknown): value is Stage =>
-    typeof value === "string" && STAGES.some((stage) => stage === value)
+export const isStage = (value: unknown): value is Stage => STAGES.some((stage) => stage === value)
 
 const numberOrNull = (value: number | string | null): number | null => (value === null ? null : Number(value))
 

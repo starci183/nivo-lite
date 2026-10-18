@@ -32,7 +32,7 @@ export class TemplateDefinitionType {
 
     /** For executor `n8n`: the webhook and the audience. */
     @Field(() => TemplateN8nType, { nullable: true })
-    n8n?: TemplateN8nType | undefined
+    n8n?: TemplateN8nType
 
     /** The one module that owns it, or null. */
     @Field(() => String, { nullable: true })

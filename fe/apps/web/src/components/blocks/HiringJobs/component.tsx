@@ -1,9 +1,19 @@
-import { Alert, Badge, Button, EmptyNotice, Heading, ListRow, SurfaceListCard, Text } from "@starci/grammar/common"
-import type { BadgeTone } from "@starci/grammar/common"
-import { HiringJobAdDialog } from "@/components/composites/HiringJobAdDialog"
-import type { HiringJobAdDialogProps } from "@/components/composites/HiringJobAdDialog"
-import { HiringJobEditorDialog } from "@/components/composites/HiringJobEditorDialog"
-import type { HiringJobEditorDialogProps } from "@/components/composites/HiringJobEditorDialog"
+import {
+    Alert,
+    Badge,
+    Button,
+    EmptyNotice,
+    Heading,
+    ListRow,
+    SurfaceListCard,
+    Text,
+    type BadgeTone,
+} from "@starci/grammar/common"
+
+import { HiringJobAdDialog, type HiringJobAdDialogProps } from "@/components/composites/HiringJobAdDialog"
+
+import { HiringJobEditorDialog, type HiringJobEditorDialogProps } from "@/components/composites/HiringJobEditorDialog"
+
 import type { FieldOf, HiringSay } from "@/hooks/hiring"
 import type { HiringJobValues, HiringQuestionValues } from "@/hooks/hiringJobs"
 import { ACTIONS_CLASS_NAME, FACTS_CLASS_NAME, HEAD_CLASS_NAME } from "./classNames"
@@ -113,53 +123,51 @@ const HiringJobRow = (props: HiringJobRowProps) => {
     const { say, isBusy } = props.props
     const { on, row } = props
     return (
-        <>
-            <ListRow
-                key={row.id}
-                title={row.title}
-                badges={
-                    <Badge tone={row.statusTone} isDot>
-                        {row.statusLabel}
-                    </Badge>
-                }
-                description={row.facts}
-                actions={
-                    <div className={ACTIONS_CLASS_NAME}>
-                        {row.copyLabel === null ? null : (
-                            <Button variant="tertiary" size="sm" onPress={() => on.copy(row.id)}>
-                                {row.copyLabel}
-                            </Button>
-                        )}
-                        <Button variant="secondary" size="sm" onPress={() => on.openAd(row.id)}>
-                            {say("jobsWriteAd")}
+        <ListRow
+            key={row.id}
+            title={row.title}
+            badges={
+                <Badge tone={row.statusTone} isDot>
+                    {row.statusLabel}
+                </Badge>
+            }
+            description={row.facts}
+            actions={
+                <div className={ACTIONS_CLASS_NAME}>
+                    {row.copyLabel === null ? null : (
+                        <Button variant="tertiary" size="sm" onPress={() => on.copy(row.id)}>
+                            {row.copyLabel}
                         </Button>
-                        <Button variant="secondary" size="sm" onPress={() => on.edit(row.id)}>
-                            {say("jobsEdit")}
-                        </Button>
-                        {row.transitions.map((transition) => (
-                            <Button
-                                key={transition.to}
-                                variant={transition.isPrimary ? "primary" : "ghost"}
-                                size="sm"
-                                isDisabled={isBusy}
-                                onPress={() => on.transition(row.id, transition.to)}
-                            >
-                                {transition.label}
-                            </Button>
-                        ))}
-                    </div>
-                }
-            >
-                <div className={FACTS_CLASS_NAME}>
-                    <Text size="sm">{row.counts}</Text>
-                    {row.publicUrl === null ? null : (
-                        <Text size="xs" tone="muted">
-                            {row.publicUrl}
-                        </Text>
                     )}
+                    <Button variant="secondary" size="sm" onPress={() => on.openAd(row.id)}>
+                        {say("jobsWriteAd")}
+                    </Button>
+                    <Button variant="secondary" size="sm" onPress={() => on.edit(row.id)}>
+                        {say("jobsEdit")}
+                    </Button>
+                    {row.transitions.map((transition) => (
+                        <Button
+                            key={transition.to}
+                            variant={transition.isPrimary ? "primary" : "ghost"}
+                            size="sm"
+                            isDisabled={isBusy}
+                            onPress={() => on.transition(row.id, transition.to)}
+                        >
+                            {transition.label}
+                        </Button>
+                    ))}
                 </div>
-            </ListRow>
-        </>
+            }
+        >
+            <div className={FACTS_CLASS_NAME}>
+                <Text size="sm">{row.counts}</Text>
+                {row.publicUrl === null ? null : (
+                    <Text size="xs" tone="muted">
+                        {row.publicUrl}
+                    </Text>
+                )}
+            </div>
+        </ListRow>
     )
 }
 

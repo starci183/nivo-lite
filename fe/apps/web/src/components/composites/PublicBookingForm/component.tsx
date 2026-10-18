@@ -148,31 +148,29 @@ export const PublicBookingForm = (props: PublicBookingFormProps) => {
 const BookingServiceFields = (props: PublicBookingFormProps) => {
     const { props: p, on } = props
     return (
-        <>
-            <SurfaceCard ariaLabel={p.labels.step1}>
-                {p.services.length === 0 ? (
-                    <div className={STACK_CLASS}>
-                        <Heading level={2}>{p.labels.step1}</Heading>
-                        <Text size="sm" tone="muted">
-                            {p.noServicesText}
-                        </Text>
-                    </div>
-                ) : (
-                    <RadioGroup
-                        label={p.labels.step1}
-                        name="service"
-                        variant="secondary"
-                        options={p.services.map((service) => ({
-                            value: service.value,
-                            label: service.label,
-                            description: service.description,
-                        }))}
-                        value={p.fields.serviceId}
-                        onValueChange={(serviceId) => on.change({ serviceId })}
-                    />
-                )}
-            </SurfaceCard>
-        </>
+        <SurfaceCard ariaLabel={p.labels.step1}>
+            {p.services.length === 0 ? (
+                <div className={STACK_CLASS}>
+                    <Heading level={2}>{p.labels.step1}</Heading>
+                    <Text size="sm" tone="muted">
+                        {p.noServicesText}
+                    </Text>
+                </div>
+            ) : (
+                <RadioGroup
+                    label={p.labels.step1}
+                    name="service"
+                    variant="secondary"
+                    options={p.services.map((service) => ({
+                        value: service.value,
+                        label: service.label,
+                        description: service.description,
+                    }))}
+                    value={p.fields.serviceId}
+                    onValueChange={(serviceId) => on.change({ serviceId })}
+                />
+            )}
+        </SurfaceCard>
     )
 }
 

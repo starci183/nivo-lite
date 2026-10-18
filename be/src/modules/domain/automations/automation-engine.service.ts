@@ -277,9 +277,7 @@ export class AutomationEngineService {
         ])
         return rows.flatMap((pipeline) => {
             const def = templates.find((template) => template.key === pipeline.template_key)
-            return def !== undefined && def.executor === executor
-                ? [{ pipeline, def, config: resolveConfig(def, pipeline.config) }]
-                : []
+            return def?.executor === executor ? [{ pipeline, def, config: resolveConfig(def, pipeline.config) }] : []
         })
     }
 

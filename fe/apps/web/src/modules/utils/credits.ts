@@ -16,7 +16,7 @@ const addDays = (day: string, n: number): string => dayjs.utc(`${day}T00:00:00Z`
  */
 export const forecastRunout = (a: RunoutInput): string | null => {
     const avg = a.last7Credits / 7
-    if (!(a.remaining > 0) || !(avg > 0)) return null
+    if (Number.isNaN(a.remaining) || Number.isNaN(avg) || a.remaining <= 0 || avg <= 0) return null
     const date = addDays(a.today, Math.floor(a.remaining / avg))
     return date.slice(0, 7) === a.today.slice(0, 7) ? date : null
 }

@@ -142,11 +142,8 @@ export class OwnerChatService {
     private async describe(view: WaitingView, locale: Locale, amountOverride?: number): Promise<string> {
         const label = (await this.modules.actionOf(view.item.action))?.label[locale] ?? view.item.action
         const amount = amountOverride ?? view.amount
-        return [
-            `${label}${view.ref === "" ? "" : ` ${view.ref}`}`,
-            view.customer,
-            amount === null ? "" : moneyOf(amount, locale),
-        ]
+        const reference = view.ref === "" ? "" : " " + view.ref
+        return [`${label}${reference}`, view.customer, amount === null ? "" : moneyOf(amount, locale)]
             .filter((part) => part !== "")
             .join(" \u00b7 ")
     }

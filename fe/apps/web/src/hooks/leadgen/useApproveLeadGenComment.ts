@@ -7,8 +7,9 @@ import {
     QUERY_LEAD_GEN_WORKBENCH_SWR_KEY,
     useMutateApproveLeadGenCommentSwr,
     useQueryLeadGenCommentStatusSwr,
+    type MutateApproveLeadGenCommentRequest,
 } from "@/hooks/swr"
-import type { MutateApproveLeadGenCommentRequest } from "@/hooks/swr"
+
 import { useActiveWorkspace } from "@/hooks/workspaces"
 import { useLeadGenApprovalStore } from "@/hooks/zustand/leadgen"
 import { useGraphQLWithToast } from "@/modules/toast"
@@ -17,7 +18,7 @@ import { useCallback } from "react"
 import { useSWRConfig } from "swr"
 
 /** The SWR keys whose data a finished approval changes. */
-const REFRESHED_KEYS: ReadonlyArray<unknown> = [QUERY_LEAD_GEN_WORKBENCH_SWR_KEY, QUERY_AGENT_DASHBOARD_SWR_KEY]
+const REFRESHED_KEYS: ReadonlySet<unknown> = new Set([QUERY_LEAD_GEN_WORKBENCH_SWR_KEY, QUERY_AGENT_DASHBOARD_SWR_KEY])
 
 /** What the status poll reports about an approval. */
 interface ApprovalProgress {
@@ -45,9 +46,7 @@ export const useApproveLeadGenComment = () => {
         void runGraphQL(() => (result === "failed" ? Promise.reject(new Error(message)) : Promise.resolve(progress)), {
             successMessage: message,
         })
-        void mutate(
-            (key: unknown) => Array.isArray(key) && key[1] === activeWorkspaceId && REFRESHED_KEYS.includes(key[0]),
-        )
+        void mutate((key: unknown) => Array.isArray(key) && key[1] === activeWorkspaceId && REFRESHED_KEYS.has(key[0]))
     }
 
     const reportReadError = (error: unknown) => {

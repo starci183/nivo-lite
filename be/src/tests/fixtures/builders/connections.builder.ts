@@ -4,6 +4,13 @@ import type { ConnectionsService, ConnectionActor } from "@modules/domain/connec
 type ConnectionsOptions = ConstructorParameters<typeof ConnectionsService>[1]
 /** URL precedence overrides accepted by the connection subject. */
 export type Urls = Partial<Pick<ConnectionsOptions, "siteUrl" | "publicSiteUrl" | "publicApiUrl">>
+/** Plain URLs, short suffixes and long suffixes keep the same site path. */
+export const siteUrlCases = [
+    ["https://site.example.com", "https://site.example.com"],
+    ["https://nivo.vn/app///", "https://nivo.vn/app"],
+    ["https://site.example.com/path" + "/".repeat(20_000), "https://site.example.com/path"],
+] as const
+
 /** The pending live bank connection shared by connection service scenarios. */
 export const ROW = {
     id: "c1",

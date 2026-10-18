@@ -9,20 +9,20 @@ import {
     blankPlacementOf,
     dayGroups,
     detailOf,
-    placementLabelsOf,
     bookingRowOf,
     useBookingActions,
     useBookingPlacement,
     useBookingRange,
 } from "@/hooks/bookingDesk"
 import { AUTO_RESOURCE } from "@/components/composites/BookingPlacementDialog"
+import { BookingDeskBase, buildBookingDeskEvents } from "./component"
+
 import {
-    BookingDeskBase,
-    buildBookingDeskEvents,
     buildBookingDeskDisplay,
     buildBookingCancel,
     buildBookingLegend,
-} from "./component"
+    bookingPlacementView,
+} from "@/hooks/bookingDeskView"
 
 /** What the workbench hands the connected desk. */
 interface BookingDeskProps {
@@ -30,37 +30,52 @@ interface BookingDeskProps {
     readonly mode: "week" | "today"
 }
 
-/** The connected desk: the agenda of a week or of today, with the owner's commands on each booking. The board comes from the `bookingBoard` query through SWR. */
-/** Connects the state and commands used by BookingDesk. */
-const buildBookingDeskState = (
-    range: ReturnType<typeof useBookingRange>,
-    props: BookingDeskProps,
-    t: ReturnType<typeof useTranslations<"workbenchBooking">>,
-    format: ReturnType<typeof useFormatter>,
-    showCancelled: boolean,
-    openId: string | null,
-    cancelId: string | null,
-    desk: ReturnType<typeof useBookingActions>,
-    place: ReturnType<typeof useBookingPlacement>,
-    setCancelId: import("react").Dispatch<import("react").SetStateAction<string | null>>,
-    setOpenId: import("react").Dispatch<import("react").SetStateAction<string | null>>,
-    setShowCancelled: import("react").Dispatch<import("react").SetStateAction<boolean>>,
-) => {
+/** Inputs owned by this display/state mapping. */
+interface BookingDeskStateInput {
+    readonly range: ReturnType<typeof useBookingRange>
+    readonly props: BookingDeskProps
+    readonly t: ReturnType<typeof useTranslations<"workbenchBooking">>
+    readonly format: ReturnType<typeof useFormatter>
+    readonly showCancelled: boolean
+    readonly openId: string | null
+    readonly cancelId: string | null
+    readonly desk: ReturnType<typeof useBookingActions>
+    readonly place: ReturnType<typeof useBookingPlacement>
+    readonly setCancelId: import("react").Dispatch<import("react").SetStateAction<string | null>>
+    readonly setOpenId: import("react").Dispatch<import("react").SetStateAction<string | null>>
+    readonly setShowCancelled: import("react").Dispatch<import("react").SetStateAction<boolean>>
+}
+
+/** Connects booking data, placement state and agenda commands. */
+const buildBookingDeskState = ({
+    range,
+    props,
+    t,
+    format,
+    showCancelled,
+    openId,
+    cancelId,
+    desk,
+    place,
+    setCancelId,
+    setOpenId,
+    setShowCancelled,
+}: BookingDeskStateInput) => {
     const { board } = range
     if (board === undefined) return null
     const isToday = props.mode === "today"
-    const display = buildBookingDeskDisplay(
+    const display = buildBookingDeskDisplay({
         board,
-        range.anchor,
+        anchorValue: range.anchor,
         t,
         format,
         isToday,
         showCancelled,
         openId,
         cancelId,
-        blankPlacementOf,
-        range.isValidating ? ` · ${t("loadingRange")}` : "",
-    )
+        placement: blankPlacementOf,
+        loadingSuffix: range.isValidating ? ` · ${t("loadingRange")}` : "",
+    })
     const openAdd = () => {
         if (display.activeServices.length === 0) return desk.announce("addNoServices", "negative")
         place.open({ kind: "add" }, display.blank)
@@ -117,7 +132,7 @@ export const BookingDesk = (props: BookingDeskProps) => {
     const [cancelId, setCancelId] = useState<string | null>(null)
     const [showCancelled, setShowCancelled] = useState(false)
 
-    const connected = buildBookingDeskState(
+    const connected = buildBookingDeskState({
         range,
         props,
         t,
@@ -130,7 +145,7 @@ export const BookingDesk = (props: BookingDeskProps) => {
         setCancelId,
         setOpenId,
         setShowCancelled,
-    )
+    })
     if (connected === null) return null
 
     return <BookingDeskBase props={bookingDeskProps(connected)} on={buildBookingDeskEvents(connected, MOVE_ACTION)} />
@@ -167,32 +182,7 @@ const bookingDeskProps = (
         ...(connected.open === undefined
             ? {}
             : { detail: { ...detailOf(connected.open, connected.words), isPending: connected.desk.isBusy } }),
-        ...(connected.place.draft === null || connected.place.fields === null
-            ? {}
-            : {
-                  placement: {
-                      mode: connected.place.draft.kind,
-                      title: connected.t(connected.place.draft.kind === "add" ? "addBooking" : "moveTitle"),
-                      fields: connected.place.fields,
-                      serviceOptions: connected.activeServices.map((service) => ({
-                          id: service.id,
-                          label: service.name,
-                      })),
-                      resourceOptions:
-                          connected.place.draft.kind === "add"
-                              ? [
-                                    { id: AUTO_RESOURCE, label: connected.t("autoResource") },
-                                    ...connected.resourceOptions,
-                                ]
-                              : connected.resourceOptions,
-                      labels: placementLabelsOf(connected.t, connected.place.draft.kind),
-                      ...(connected.place.reason === null
-                          ? {}
-                          : { refusal: connected.t(`reason_${connected.place.reason}`) }),
-                      canForce: connected.place.canForce,
-                      isPending: connected.place.isBusy,
-                  },
-              }),
+        ...bookingPlacementView(connected, AUTO_RESOURCE),
         ...buildBookingCancel(connected.cancelling, connected.t),
     }
 }

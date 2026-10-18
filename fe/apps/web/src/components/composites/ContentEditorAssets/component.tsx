@@ -1,7 +1,10 @@
 import type { useTranslations } from "next-intl"
-import type { ChannelWarning, channelLimits, mediaTile, postView, claimWarnings } from "@/hooks/content"
-import type { Dispatch, SetStateAction } from "react"
 import type {
+    ChannelWarning,
+    channelLimits,
+    mediaTile,
+    postView,
+    claimWarnings,
     useContentFocus,
     useContentCommand,
     useContentEditorCommands,
@@ -10,13 +13,18 @@ import type {
     MediaRef,
     EditorForm,
     ItemTransition,
+    ContentT,
+    ContentItem,
+    MediaTile,
+    PublishStep,
+    DownloadFile,
 } from "@/hooks/content"
+import type { Dispatch, SetStateAction } from "react"
 import type { useContentEditorForm } from "@/hooks/rhf"
 import { ContentEditorLinks, type LinkRow } from "@/components/leaves/ContentEditorLinks"
 import { ContentEditorMedia } from "@/components/leaves/ContentEditorMedia"
 import { ContentEditorPublish, type PublishProof } from "@/components/leaves/ContentEditorPublish"
 import { ContentEditorVariants, type OpenVariant } from "@/components/leaves/ContentEditorVariants"
-import type { ContentT, ContentItem, MediaTile, PublishStep, DownloadFile } from "@/hooks/content"
 
 /** The channel variants, media, links and publish proof the editor supplies. */
 interface ContentEditorAssetsProps {
@@ -245,7 +253,7 @@ interface ContentEditorStateInput {
     readonly data: ReturnType<typeof useContentFocusedItem>["data"]
     readonly item: ReturnType<typeof useContentFocusedItem>["item"]
     readonly isPending: boolean
-    readonly busy: ReturnType<typeof useContentCommand>["busy"] | "draft"
+    readonly busy: ReturnType<typeof useContentCommand>["busy"]
     readonly command: ReturnType<typeof useContentCommand>
     readonly isLibraryOpen: boolean
     readonly warnings: ReadonlyArray<ChannelWarning>

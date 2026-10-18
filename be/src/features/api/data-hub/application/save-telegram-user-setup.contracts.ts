@@ -11,5 +11,5 @@ export interface SaveTelegramUserSetupRequest {
     /** The first window in days, 7 or 30. */
     readonly sinceDays: number
     /** Minutes between syncs, 15 or 60; null is manual. */
-    readonly everyMinutes?: number | null | undefined
+    readonly everyMinutes?: number | null
 }

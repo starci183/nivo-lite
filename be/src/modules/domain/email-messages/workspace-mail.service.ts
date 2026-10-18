@@ -167,7 +167,7 @@ export class WorkspaceMailService {
             providerMessageId: verdict.messageId ?? null,
             error: verdict.error ?? null,
             refs: {
-                ...(input.refs ?? {}),
+                ...input.refs,
                 ...(input.workItemId === undefined ? {} : { work_item_id: input.workItemId }),
             },
         })

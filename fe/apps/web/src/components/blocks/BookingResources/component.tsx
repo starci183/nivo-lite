@@ -251,7 +251,7 @@ export const buildBookingResourcesState = (context: ResourceContext) => {
         })
     }
     const saveHours = () => {
-        if (draft === null || draft.id === null) return
+        if (draft?.id === undefined || draft.id === null) return
         const week = parseWeek(draft.lines)
         if ("badWeekday" in week)
             return setNotice({ ok: false, text: t("hoursInvalid", { day: weekdayName(week.badWeekday) }) })

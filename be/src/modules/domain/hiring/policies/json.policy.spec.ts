@@ -88,3 +88,11 @@ describe("hiring JSON policy", () => {
         expect(subject.textList(null, "skills")).toEqual([])
     })
 })
+
+describe("JSON fence boundaries", () => {
+    it("reads a fenced object with long whitespace and rejects a missing object", async () => {
+        const subject = await buildSubject()
+        expect(subject.parseLooseJson('```json\n{"ok":true}' + " ".repeat(20000) + "```")).toEqual({ ok: true })
+        expect(subject.parseLooseJson(" ".repeat(20000))).toBeNull()
+    })
+})

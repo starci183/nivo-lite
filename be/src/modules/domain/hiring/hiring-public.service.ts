@@ -20,7 +20,7 @@ import { HiringPostingService } from "./hiring-posting.service"
 import { HiringDataService } from "./hiring-data.service"
 import { slugify } from "./policies/text.policy"
 
-const CV_EXTENSIONS: ReadonlyArray<string> = ["pdf", "doc", "docx", "jpg", "jpeg", "png"]
+const CV_EXTENSIONS: ReadonlySet<string> = new Set(["pdf", "doc", "docx", "jpg", "jpeg", "png"])
 const CV_MIME: Readonly<Record<string, string>> = {
     pdf: "application/pdf",
     doc: "application/msword",
@@ -109,7 +109,7 @@ export class HiringPublicService {
         const { workspaceId, job } = await this.resolve(request)
         const dot = request.fileName.lastIndexOf(".")
         const extension = dot < 0 ? "" : request.fileName.slice(dot + 1).toLowerCase()
-        if (!CV_EXTENSIONS.includes(extension)) throw new HiringError({ code: HiringErrorCode.PublicNotFound })
+        if (!CV_EXTENSIONS.has(extension)) throw new HiringError({ code: HiringErrorCode.PublicNotFound })
         const name = slugify(request.fileName.slice(0, dot), CV_NAME_MAX) || "cv"
         const path = `${workspaceId}/${job.id}/${await this.data.newToken()}/${name}.${extension}`
         const token = await this.storage.signedUpload(path)

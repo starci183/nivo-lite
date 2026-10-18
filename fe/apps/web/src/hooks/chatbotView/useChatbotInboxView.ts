@@ -1,9 +1,8 @@
 "use client"
 
-import { useState } from "react"
+import { useChatbotInboxFilters } from "./useChatbotInboxFilters"
 import { useTranslations, useFormatter } from "next-intl"
-import { matchesInboxFilter, isInboxFilter } from "@/hooks/chatbot"
-import type { useChatbotActions, useChatbotThread } from "@/hooks/chatbot"
+import { type useChatbotActions, type useChatbotThread } from "@/hooks/chatbot"
 import type { useChatbotTextForm } from "@/hooks/rhf"
 import type { navigation } from "@/modules/i18n"
 import type { ChatbotConversation, ChatbotOverview, ChatbotThread } from "@/modules/types"
@@ -11,43 +10,62 @@ import { listViewOf, sideViewOf, threadViewOf } from "./chatbotView.shared"
 import type { ChatbotFeedback } from "@/hooks/zustand/chatbot"
 import type { ChatbotInboxInput, InboxView, InboxFilters } from "./useChatbotInbox"
 
+/** The resolved inputs for chatbot inbox view input. */
+interface ChatbotInboxViewInput {
+    readonly actionError: () => string | null
+    readonly view: InboxView
+    readonly input: ChatbotInboxInput
+    readonly selectedId: string | null
+    readonly overview: ChatbotOverview | undefined
+    readonly thread: ChatbotThread | null
+    readonly threadQuery: ReturnType<typeof useChatbotThread>
+    readonly name: string
+    readonly userName: string
+    readonly replyDraft: string
+    readonly replyForm: ReturnType<typeof useChatbotTextForm>
+    readonly feedback: ChatbotFeedback | null
+    readonly actions: ReturnType<typeof useChatbotActions>
+    readonly answerDraft: string
+    readonly answerForm: ReturnType<typeof useChatbotTextForm>
+    readonly setView: import("react").Dispatch<import("react").SetStateAction<InboxView>>
+    readonly startNavigation: import("react").TransitionStartFunction
+    readonly router: ReturnType<typeof navigation.useRouter>
+    readonly pathname: string
+    readonly conversation: ChatbotConversation | null
+    readonly escalation: ChatbotEscalation | null
+}
+
 /** Builds inbox panes and controls while retaining the list filter. */
-export const useChatbotInboxView = (
-    actionError: () => string | null,
-    view: InboxView,
-    input: ChatbotInboxInput,
-    selectedId: string | null,
-    overview: ChatbotOverview | undefined,
-    thread: ChatbotThread | null,
-    threadQuery: ReturnType<typeof useChatbotThread>,
-    name: string,
-    userName: string,
-    replyDraft: string,
-    replyForm: ReturnType<typeof useChatbotTextForm>,
-    feedback: ChatbotFeedback | null,
-    actions: ReturnType<typeof useChatbotActions>,
-    answerDraft: string,
-    answerForm: ReturnType<typeof useChatbotTextForm>,
-    setView: import("react").Dispatch<import("react").SetStateAction<InboxView>>,
-    startNavigation: import("react").TransitionStartFunction,
-    router: ReturnType<typeof navigation.useRouter>,
-    pathname: string,
-    conversation: ChatbotConversation | null,
-    escalation: ChatbotEscalation | null,
-) => {
+export const useChatbotInboxView = ({
+    actionError,
+    view,
+    input,
+    selectedId,
+    overview,
+    thread,
+    threadQuery,
+    name,
+    userName,
+    replyDraft,
+    replyForm,
+    feedback,
+    actions,
+    answerDraft,
+    answerForm,
+    setView,
+    startNavigation,
+    router,
+    pathname,
+    conversation,
+    escalation,
+}: ChatbotInboxViewInput) => {
     const t = useTranslations("workbenchChatbot")
     const format = useFormatter()
-    const [filters, setFilters] = useState<InboxFilters>({ filter: "all", query: "" })
+    const { filters, visible, setQuery, setFilter } = useChatbotInboxFilters(overview)
     if (overview === undefined) return null
-    const query = filters.query.trim().toLocaleLowerCase()
-    const visible = overview.conversations.filter(
-        (item) =>
-            matchesInboxFilter(item, filters.filter, overview.nowIso) &&
-            (query === "" || `${item.name} ${item.lastText}`.toLocaleLowerCase().includes(query)),
-    )
 
     return {
-        props: propsOf(
+        props: propsOf({
             t,
             actionError,
             view,
@@ -67,11 +85,10 @@ export const useChatbotInboxView = (
             actions,
             answerDraft,
             answerForm,
-        ),
+        }),
         on: {
-            query: (value: string) => setFilters((current) => ({ ...current, query: value })),
-            filter: (value: string) =>
-                setFilters((current) => ({ ...current, filter: isInboxFilter(value) ? value : current.filter })),
+            query: setQuery,
+            filter: setFilter,
             select: (id: string) => {
                 setView((current) => ({ ...current, pane: "thread", pickedId: id }))
                 const params = new URLSearchParams(window.location.search)
@@ -89,36 +106,49 @@ export const useChatbotInboxView = (
                     void actions.toggleHandling(selectedId, conversation.handledBy === null)
             },
             escalationDraft: answerForm.setDraft,
-            answer: (send: boolean) => {
-                if (send) void answerForm.submit()
-                else if (selectedId !== null && escalation !== null)
+            sendAnswer: () => {
+                void answerForm.submit()
+            },
+            declineAnswer: () => {
+                if (selectedId !== null && escalation !== null)
                     void actions.sendAnswer(selectedId, escalation.workItemId, null)
             },
         },
     }
 }
+/** The display inputs shared by the list, thread and side panes. */
+interface ChatbotInboxPropsInput extends Omit<
+    ChatbotInboxViewInput,
+    "overview" | "setView" | "startNavigation" | "router" | "pathname" | "conversation" | "escalation"
+> {
+    readonly t: ReturnType<typeof useTranslations<"workbenchChatbot">>
+    readonly format: ReturnType<typeof useFormatter>
+    readonly visible: ChatbotConversation[]
+    readonly overview: ChatbotOverview
+    readonly filters: InboxFilters
+}
 
-const propsOf = (
-    t: ReturnType<typeof useTranslations<"workbenchChatbot">>,
-    actionError: () => string | null,
-    view: InboxView,
-    input: ChatbotInboxInput,
-    selectedId: string | null,
-    format: ReturnType<typeof useFormatter>,
-    visible: ChatbotConversation[],
-    overview: ChatbotOverview,
-    filters: InboxFilters,
-    thread: ChatbotThread | null,
-    threadQuery: ReturnType<typeof useChatbotThread>,
-    name: string,
-    userName: string,
-    replyDraft: string,
-    replyForm: ReturnType<typeof useChatbotTextForm>,
-    feedback: ChatbotFeedback | null,
-    actions: ReturnType<typeof useChatbotActions>,
-    answerDraft: string,
-    answerForm: ReturnType<typeof useChatbotTextForm>,
-) => {
+const propsOf = ({
+    t,
+    actionError,
+    view,
+    input,
+    selectedId,
+    format,
+    visible,
+    overview,
+    filters,
+    thread,
+    threadQuery,
+    name,
+    userName,
+    replyDraft,
+    replyForm,
+    feedback,
+    actions,
+    answerDraft,
+    answerForm,
+}: ChatbotInboxPropsInput) => {
     return {
         title: t("title"),
         actionFailedTitle: t("actionFailed"),

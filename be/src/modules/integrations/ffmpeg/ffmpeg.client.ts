@@ -5,6 +5,7 @@ import type { FfmpegResult, FfmpegRun, FfmpegTool } from "./ffmpeg.contracts"
 import { InjectFfmpegOptions } from "./ffmpeg.decorators"
 import type { FfmpegOptions } from "./ffmpeg.options"
 import type { Ffmpeg } from "./ffmpeg.port"
+import { ffmpegExecutablePaths } from "./ffmpeg-executable.policy"
 
 /** The longest one ffmpeg run may take before it is killed. */
 const DEFAULT_TIMEOUT_MS = 20 * 60_000
@@ -38,9 +39,12 @@ export class FfmpegClient implements Ffmpeg {
             const stop = AbortSignal.any([run.signal, AbortSignal.timeout(run.timeoutMs ?? DEFAULT_TIMEOUT_MS)])
             const full = tool === "ffmpeg" ? ffmpegArgs(args, run.onTime !== undefined) : [...args]
             const lowered = this.options.nice && run.urgent !== true
-            const child = lowered
-                ? spawn("nice", ["-n", "10", tool, ...full], { cwd: run.cwd })
-                : spawn(tool, full, { cwd: run.cwd })
+            const executables = ffmpegExecutablePaths(this.options, process.platform, process.arch)
+            const executable = executables[tool]
+            const child =
+                lowered && executables.nice !== undefined
+                    ? spawn(executables.nice, ["-n", "10", executable, ...full], { cwd: run.cwd })
+                    : spawn(executable, full, { cwd: run.cwd })
             let stdout = ""
             let stderr = ""
             let settled = false

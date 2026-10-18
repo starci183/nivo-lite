@@ -31,4 +31,4 @@ export const zaloStartStepOf = (conn: ZaloWizardConnection, failed: boolean): nu
 
 /** Whether the follow-along step may go on: the OA Secret Key is stored, or a long enough one is typed. */
 export const canSaveOaSecret = (conn: ZaloWizardConnection | null, fields: ZaloFields): boolean =>
-    (conn !== null && conn.oaSecretSaved) || fields.oaSecret.trim().length >= MIN_SECRET_LENGTH
+    conn?.oaSecretSaved || fields.oaSecret.trim().length >= MIN_SECRET_LENGTH

@@ -36,7 +36,7 @@ export class AuthorityRulesService {
         installationId: OptionalRuleInstallation,
     ): Promise<OptionalAuthorityRule> {
         const rule = (await this.entityManager.query<Array<RuleRow>>(FIND_RULE, [scope.workspaceId, action]))[0]
-        if (rule === undefined || rule.mode !== "auto") return rule ?? null
+        if (rule?.mode !== "auto") return rule ?? null
         const installed = (
             await this.entityManager.query<Array<OperatingModeRow>>(FIND_OPERATING_MODE, [
                 scope.workspaceId,

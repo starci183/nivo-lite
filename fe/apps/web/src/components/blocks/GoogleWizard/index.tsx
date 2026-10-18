@@ -25,7 +25,7 @@ const FAILURE_KEYS = {
 type GoogleFailureMessage = (typeof FAILURE_KEYS)[GoogleFailure] | "failGeneric"
 
 /** Whether the return address names one of the known Google failures. */
-const isGoogleFailure = (value: string): value is GoogleFailure => GOOGLE_FAILURES.some((key) => key === value)
+const isGoogleFailure = (value: string): value is GoogleFailure => GOOGLE_FAILURES.some((failure) => failure === value)
 
 /** The sentence key for a Google failure, or the generic one when the reason is unknown. */
 const googleFailureMessage = (reason: string): GoogleFailureMessage =>

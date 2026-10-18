@@ -46,8 +46,6 @@ const DEFAULT_DEBT_REPEAT_DAYS = 7
 const DAY_MS = 86_400_000
 const REMINDERS_MAX = 50
 
-const money = (value: string | number): number => Number(value)
-
 @Injectable()
 /** The data the shared n8n workflows fetch (the day's figures, overdue invoices, a month of the ledger) and the owners they mail. */
 export class N8nDataService {
@@ -95,13 +93,13 @@ export class N8nDataService {
         const numbers = {
             new_leads: row?.new_leads ?? 0,
             orders_confirmed: row?.orders_confirmed ?? 0,
-            money_in: money(row?.money_in ?? 0),
+            money_in: Number(row?.money_in ?? 0),
             money_in_count: row?.money_in_count ?? 0,
-            invoiced: money(row?.invoiced ?? 0),
+            invoiced: Number(row?.invoiced ?? 0),
             invoices_issued: row?.invoices_issued ?? 0,
             waiting_decisions: row?.waiting_decisions ?? 0,
             overdue_count: row?.overdue_count ?? 0,
-            overdue_total: money(row?.overdue_total ?? 0),
+            overdue_total: Number(row?.overdue_total ?? 0),
         }
         const lines = [
             this.say("newLeads", { count: numbers.new_leads }),
@@ -254,7 +252,7 @@ export class N8nDataService {
             workspaceId,
             resolvedInvoice,
         ])
-        if (invoice === undefined || invoice.lead_id === null) return null
+        if (invoice?.lead_id === undefined || invoice.lead_id === null) return null
         const [lead] = await this.entityManager.query<Array<LeadContactRow>>(SELECT_LEAD_CONTACTS, [[invoice.lead_id]])
         if (!lead?.email) return null
         const shop = await this.shopName(workspaceId)

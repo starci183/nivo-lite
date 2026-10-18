@@ -1,7 +1,6 @@
 import type { BadgeTone } from "@starci/grammar/common"
-import type { FlowDecisionRow, FlowEvidenceState } from "@/modules/types"
+import type { FlowDecisionRow, FlowEvidenceState, AttentionKind, LeadStageId } from "@/modules/types"
 import { agentHref } from "@/modules/installations"
-import type { AttentionKind, LeadStageId } from "@/modules/types"
 
 const MIN = 60_000
 const HOUR = 60 * MIN

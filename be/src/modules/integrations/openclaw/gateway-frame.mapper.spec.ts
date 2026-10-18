@@ -197,6 +197,13 @@ describe("gateway frame mapper", () => {
 
 describe("gateway frame mapper", () => {
     describe("looksFinal", () => {
+        it("does not accept a reply marker before an object and handles a long unfinished object prefix", async () => {
+            const subject = await build()
+            expect(subject.looksFinal('"reply": "before" {')).toBe(false)
+            expect(subject.looksFinal("{".repeat(20_000) + "pending")).toBe(false)
+            expect(subject.looksFinal("{".repeat(20_000) + '"reply" : "ok"')).toBe(true)
+        })
+
         it("recognises the contract answer only", async () => {
             const subject = await build()
             expect(subject.looksFinal('{"reply": "ok"}')).toBe(true)

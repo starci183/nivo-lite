@@ -6,5 +6,5 @@ export const fillBody = (body: string, variables: MessageVars, neutral: MessageV
     body
         .replace(/\{([a-z_]+)\}/g, (_, key: string) => (variables[key] ?? "").trim() || (neutral[key] ?? ""))
         .replace(/[ \t]{2,}/g, " ")
-        .replace(/[ \t]+([.,!?])/g, "$1")
+        .replace(/[ \t]([.,!?])/g, "$1")
         .trim()

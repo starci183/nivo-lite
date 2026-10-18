@@ -7,19 +7,33 @@ import type { useQueryAgentChatConversationsSwr, useQueryAgentChatMessagesSwr } 
 import type { useAgentChatActions } from "./useAgentChatActions"
 import type { ChatTab, Selection } from "./useAgentChat"
 
+/** The resolved inputs for agent chat thread input. */
+interface AgentChatThreadInput {
+    readonly hasCustomerChannel: boolean
+    readonly setTab: import("react").Dispatch<import("react").SetStateAction<ChatTab>>
+    readonly actions: ReturnType<typeof useAgentChatActions>
+    readonly navigate: (kind: ChatTab, id: string | null) => void
+    readonly selected: Selection
+    readonly format: ReturnType<typeof useFormatter>
+    readonly history: ReturnType<typeof useQueryAgentChatConversationsSwr>
+    readonly t: ReturnType<typeof useTranslations<"agentChat">>
+    readonly selectedId: string | null
+    readonly messages: ReturnType<typeof useQueryAgentChatMessagesSwr>
+}
+
 /** Formats conversation history and message rows and switches the selected channel. */
-export const useAgentChatThreadView = (
-    hasCustomerChannel: boolean,
-    setTab: import("react").Dispatch<import("react").SetStateAction<ChatTab>>,
-    actions: ReturnType<typeof useAgentChatActions>,
-    navigate: (kind: ChatTab, id: string | null) => void,
-    selected: Selection,
-    format: ReturnType<typeof useFormatter>,
-    history: ReturnType<typeof useQueryAgentChatConversationsSwr>,
-    t: ReturnType<typeof useTranslations<"agentChat">>,
-    selectedId: string | null,
-    messages: ReturnType<typeof useQueryAgentChatMessagesSwr>,
-) => {
+export const useAgentChatThreadView = ({
+    hasCustomerChannel,
+    setTab,
+    actions,
+    navigate,
+    selected,
+    format,
+    history,
+    t,
+    selectedId,
+    messages,
+}: AgentChatThreadInput) => {
     const changeTab = (next: ChatTab) => {
         if (next === "customer" && !hasCustomerChannel) return
         setTab(next)

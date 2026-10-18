@@ -83,6 +83,21 @@ const registerMessageFields = () => {
     })
 }
 
+const registerHtmlEdgeCases = () => {
+    it.each<[string, string]>([
+        ["İ<ſCRIPT>hidden</SCRIPT><STYLE>css</style><p>shown</p>", "İ shown"],
+        ["<script>unclosed<b>visible</b>", "unclosed visible"],
+        ["<><b>shown</b><unfinished", "<> shown <unfinished"],
+        ["<script".repeat(10_000), "<script".repeat(10_000).slice(0, IMAP_MAX_TEXT)],
+        ["<".repeat(100_000), "<".repeat(IMAP_MAX_TEXT)],
+        ["<script>one</script><script>two</script>tail", "tail"],
+    ])("extracts HTML text without rescanning unmatched openings (%#)", async (html, expected) => {
+        const subject = await buildSubject()
+        const row = subject.messageToRow("INBOX", "1", 1, mail({ html }), null)
+        expect(row.data.text).toBe(expected)
+    })
+}
+
 const registerMessageFallbacks = () => {
     it("reads HTML when there is no text, cuts a long body and falls back to the received date", async () => {
         const subject = await buildSubject()
@@ -175,6 +190,7 @@ describe("imap message policy", () => {
     })
 
     describe("messageToRow", () => {
+        registerHtmlEdgeCases()
         registerMessageFields()
         registerMessageFallbacks()
     })

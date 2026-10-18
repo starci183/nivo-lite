@@ -40,8 +40,8 @@ export const describe = (correction: Correction): string => {
     }
     const names = new Set([...Object.keys(before.fields ?? {}), ...Object.keys(after.fields ?? {})])
     names.forEach((name) => {
-        const was = JSON.stringify((before.fields ?? {})[name] ?? null)
-        const now = JSON.stringify((after.fields ?? {})[name] ?? null)
+        const was = JSON.stringify(before.fields?.[name] ?? null)
+        const now = JSON.stringify(after.fields?.[name] ?? null)
         if (was !== now) lines.push(`Field ${name}: ${clip(was, 120)} -> ${clip(now, 120)}`)
     })
     if (correction.note) lines.push(`Owner's note: ${clip(correction.note, 300)}`)
@@ -52,7 +52,8 @@ export const describe = (correction: Correction): string => {
 export const learnPrompt = (existing: ReadonlyArray<string>, corrections: ReadonlyArray<Correction>): string =>
     [
         `EXISTING LESSONS:\n${existing.join("\n") || "(none)"}`,
-        `CORRECTIONS (newest first):\n${corrections.map((item) => `[${item.decisionId}]\n${describe(item)}`).join("\n\n")}`,
+        "CORRECTIONS (newest first):\n" +
+            corrections.map((item) => `[${item.decisionId}]\n${describe(item)}`).join("\n\n"),
     ].join("\n\n")
 
 /** The text of a JSON field when it is one. */

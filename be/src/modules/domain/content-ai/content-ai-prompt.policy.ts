@@ -228,7 +228,7 @@ const joined = (parts: ReadonlyArray<string>): string =>
 
 const fittingSources = (sources: BrandMaterial["sources"]): Array<string> => {
     const blocks = sources.map(
-        (s) => `### ${s.title}${s.topic ? ` (${s.topic})` : ""}\n${clip(s.content.trim(), PER_SOURCE_BUDGET)}`,
+        (s) => `### ${s.title}${s.topic ? " (" + s.topic + ")" : ""}\n${clip(s.content.trim(), PER_SOURCE_BUDGET)}`,
     )
     const out: Array<string> = []
     let used = 0
@@ -245,11 +245,11 @@ export const buildBrand = (material: BrandMaterial, settings: BrandSettings): Br
     const { setup } = material
     const brain =
         material.brainFacts.length > 0
-            ? `Approved public business facts:\n${clip(material.brainFacts.map((f) => `- ${f.subject} - ${f.attribute}: ${f.value}`).join("\n"), 2500)}`
+            ? `Approved public business facts:\n${clip(material.brainFacts.map((f) => "- " + f.subject + " - " + f.attribute + ": " + f.value).join("\n"), 2500)}`
             : ""
     const knowledge = [
         setup.summary ? `Business summary:\n${setup.summary}` : "",
-        setup.facts.length > 0 ? `Confirmed business facts:\n${setup.facts.map((fact) => `- ${fact}`).join("\n")}` : "",
+        setup.facts.length > 0 ? `Confirmed business facts:\n${setup.facts.map((fact) => "- " + fact).join("\n")}` : "",
         brain,
         ...fittingSources(material.sources),
     ]
@@ -287,7 +287,7 @@ export const brandBlock = (brand: BrandContext): string =>
 
 /** Never-break rules, including the public-only information boundary. */
 export const guardrailBlock = (): string =>
-    `Mandatory rules:\n${CONTENT_AI_GUARDRAILS.map((rule) => `- ${rule}`).join("\n")}`
+    `Mandatory rules:\n${CONTENT_AI_GUARDRAILS.map((rule) => "- " + rule).join("\n")}`
 
 /** Whether a knowledge line mentions an offer or event. */
 export const isOfferLine = (line: string): boolean => OFFER.test(line)
@@ -315,7 +315,7 @@ export const planSystem = (brand: BrandContext): string =>
 
 /** A fixed slot, its theme, and optional pinned occasion. */
 export const slotLine = (slot: PlanSlot, pillar: PlanPillar, holiday: PlanEvent | undefined | null): string =>
-    `Slot ${slot.n}: ${localLabel(slot.at)}; channels: ${slot.channels.map((channel) => channelRule(channel).label).join(", ")}; theme: ${pillar.name}${pillar.description ? ` (${pillar.description})` : ""}${holiday ? `; occasion: ${occasionText(holiday)}` : ""}`
+    `Slot ${slot.n}: ${localLabel(slot.at)}; channels: ${slot.channels.map((channel) => channelRule(channel).label).join(", ")}; theme: ${pillar.name}${pillarDescription(pillar)}${holiday ? "; occasion: " + occasionText(holiday) : ""}`
 
 /** The user prompt for one chunk of the month plan. */
 export const planUser = (input: PlanUserInput): string =>
@@ -324,7 +324,7 @@ export const planUser = (input: PlanUserInput): string =>
         `Required slots:\n${input.lines.join("\n")}`,
         `Actual offers in the knowledge:\n${input.offers}`,
         input.existing.length > 0
-            ? `Existing titles to avoid repeating:\n${input.existing.map((title) => `- ${title}`).join("\n")}`
+            ? `Existing titles to avoid repeating:\n${input.existing.map((title) => "- " + title).join("\n")}`
             : "",
         CONTENT_AI_PROMPTS.planRules,
     ]
@@ -380,22 +380,25 @@ export const draftSystem = (brand: BrandContext, channels: ReadonlyArray<PlanCha
     ].join("\n\n")
 }
 
+/** The optional description attached to a theme in planner and writer prompts. */
+const pillarDescription = (pillar: PlanPillar): string => (pillar.description ? ` (${pillar.description})` : "")
+
 /** The post-specific user prompt. */
 export const draftUser = (brief: DraftBrief): string =>
     [
         `Idea: ${brief.title}`,
         brief.brief ? `Brief: ${brief.brief}` : "",
         brief.pillar
-            ? `Theme: ${brief.pillar.name}${brief.pillar.description ? ` (${brief.pillar.description})` : ""}`
+            ? `Theme: ${brief.pillar.name}${pillarDescription(brief.pillar)}`
             : `Choose one theme: ${brief.pillarNames.join("; ") || "none supplied"}`,
         brief.scheduledAt ? `Scheduled: ${localLabel(brief.scheduledAt)}` : "",
         brief.holiday ? `Occasion: ${occasionText(brief.holiday)}` : "",
         brief.hint ? `Owner hint: ${brief.hint}` : "",
         brief.recent.length > 0
-            ? `Recent titles to avoid repeating:\n${brief.recent.map((title) => `- ${title}`).join("\n")}`
+            ? `Recent titles to avoid repeating:\n${brief.recent.map((title) => "- " + title).join("\n")}`
             : "",
         brief.library.length > 0
-            ? `Available media library:\n${brief.library.map((name, i) => `${i + 1}. ${name}`).join("\n")}`
+            ? `Available media library:\n${brief.library.map((name, i) => String(i + 1) + ". " + name).join("\n")}`
             : "No media library is available. Do not suggest media indices.",
     ]
         .filter((part) => part !== "")

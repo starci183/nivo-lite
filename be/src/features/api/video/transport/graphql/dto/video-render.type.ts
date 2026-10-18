@@ -35,6 +35,14 @@ export class VideoRenderType {
     @Field(() => String, { nullable: true })
     videoUrl!: string | null
 
+    /** Timed caption artifact, when this render produced one. */
+    @Field(() => String, { nullable: true })
+    captionsUrl!: string | null
+
+    /** Recorded caption locale, when known. */
+    @Field(() => String, { nullable: true })
+    captionsLang!: string | null
+
     /** downloadUrl of this video. */
     @Field(() => String, { nullable: true })
     downloadUrl!: string | null

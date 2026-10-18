@@ -201,7 +201,7 @@ export class MetaConnectionsService {
         const state = this.safeVerify(input.state)
         const connectionId = state === null ? null : connectionIdOfReturn(state.r)
         const back = (result: string, id?: string): MetaCallbackResult => ({
-            location: `${this.connections.siteBase()}/connections?connect=meta&meta=${result}${id ? `&id=${id}` : ""}`,
+            location: `${this.connections.siteBase()}/connections?connect=meta&meta=${result}${id ? "&id=" + id : ""}`,
         })
         if (state === null || connectionId === null) return back(state === null ? "expired" : "failed")
         if (!this.meta.isConfigured()) return back("unavailable", connectionId)
@@ -209,7 +209,7 @@ export class MetaConnectionsService {
         try {
             await this.connections.authorize(actor, MANAGER)
             const connection = await this.connections.find(state.w, connectionId)
-            if (connection === null || connection.provider !== "meta" || connection.status === "disconnected") {
+            if (connection?.provider !== "meta" || connection.status === "disconnected") {
                 return back("denied", connectionId)
             }
             if (input.error || !input.code) return back("denied", connectionId)

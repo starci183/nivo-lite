@@ -149,33 +149,21 @@ const CandidateActions = (props: CandidateSectionContentProps) => {
     const { say } = p
     const { on } = props
     return (
-        <>
-            <div className={ACTIONS_CLASS_NAME}>
-                <Button
-                    variant="primary"
-                    size="sm"
-                    isDisabled={!p.canSchedule}
-                    onPress={() => on.openDialog("interview")}
-                >
-                    {say("candSchedule")}
+        <div className={ACTIONS_CLASS_NAME}>
+            <Button variant="primary" size="sm" isDisabled={!p.canSchedule} onPress={() => on.openDialog("interview")}>
+                {say("candSchedule")}
+            </Button>
+            <Button variant="secondary" size="sm" isDisabled={!p.canOffer} onPress={() => on.openDialog("offer")}>
+                {say("candOffer")}
+            </Button>
+            {p.canShortlist ? (
+                <Button variant="tertiary" size="sm" isDisabled={p.isBusy} onPress={on.shortlist}>
+                    {say("candShortlist")}
                 </Button>
-                <Button variant="secondary" size="sm" isDisabled={!p.canOffer} onPress={() => on.openDialog("offer")}>
-                    {say("candOffer")}
-                </Button>
-                {p.canShortlist ? (
-                    <Button variant="tertiary" size="sm" isDisabled={p.isBusy} onPress={on.shortlist}>
-                        {say("candShortlist")}
-                    </Button>
-                ) : null}
-                <Button
-                    variant="danger-soft"
-                    size="sm"
-                    isDisabled={!p.canReject}
-                    onPress={() => on.openDialog("reject")}
-                >
-                    {say("candReject")}
-                </Button>
-            </div>
-        </>
+            ) : null}
+            <Button variant="danger-soft" size="sm" isDisabled={!p.canReject} onPress={() => on.openDialog("reject")}>
+                {say("candReject")}
+            </Button>
+        </div>
     )
 }

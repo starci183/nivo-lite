@@ -1,7 +1,7 @@
 import { Body, Controller, Get, Headers, HttpCode, HttpStatus, Param, Post, Query } from "@nestjs/common"
 import type { CommandBus, QueryBus } from "@nestjs/cqrs"
 import { Credential } from "@modules/domain/identity"
-import type { DaySummary, MonthLedger, OverdueInvoices } from "@modules/domain/n8n-runs"
+import type { DaySummary, MonthLedger, OverdueInvoices, RunAuthorization } from "@modules/domain/n8n-runs"
 import { InjectCommandBus, InjectQueryBus } from "@modules/platform/cqrs"
 import { RateLimit, RateTier } from "@modules/platform/http-security"
 import { CompleteRunCommand } from "../../application/complete-run.command"
@@ -34,8 +34,15 @@ export class N8nPipelinesController {
     /** The figures of a day and the owners to mail. */
     @Get("data/daily-summary")
     @Credential({ kind: "run-token", workflow: "email-daily-report" })
-    daySummary(@Headers("authorization") authorization = "", @Query() query: DayRequest): Promise<DaySummary> {
-        return this.queryBus.execute(new FetchDaySummaryQuery({ request: { authorization, date: query.date } }))
+    daySummary(
+        @Headers("authorization") authorization: RunAuthorization,
+        @Query() query: DayRequest,
+    ): Promise<DaySummary> {
+        return this.queryBus.execute(
+            new FetchDaySummaryQuery({
+                request: { authorization, date: query.date },
+            }),
+        )
     }
 
     /** The overdue invoices of customers with an address, one item per reminder. */
@@ -48,19 +55,28 @@ export class N8nPipelinesController {
     /** A month of the ledger as CSV text and as the variables of the email. */
     @Get("data/month-ledger")
     @Credential({ kind: "run-token", workflow: "email-month-ledger" })
-    monthLedger(@Headers("authorization") authorization = "", @Query() query: PeriodRequest): Promise<MonthLedger> {
-        return this.queryBus.execute(new FetchMonthLedgerQuery({ request: { authorization, period: query.period } }))
+    monthLedger(
+        @Headers("authorization") authorization: RunAuthorization,
+        @Query() query: PeriodRequest,
+    ): Promise<MonthLedger> {
+        return this.queryBus.execute(
+            new FetchMonthLedgerQuery({
+                request: { authorization, period: query.period },
+            }),
+        )
     }
 
     /** Sends one email of the running workflow. */
     @Post("email")
     @HttpCode(HttpStatus.OK)
     async email(
-        @Headers("authorization") authorization = "",
+        @Headers("authorization") authorization: RunAuthorization,
         @Body() input: SendEmailRequest,
     ): Promise<SendEmailResponse> {
         const result = await this.commandBus.execute(
-            new SendEmailCommand({ request: { authorization, email: toRawEmail(input) } }),
+            new SendEmailCommand({
+                request: { authorization, email: toRawEmail(input) },
+            }),
         )
         return toSendEmailResponse(result)
     }
@@ -69,12 +85,18 @@ export class N8nPipelinesController {
     @Post("runs/:id/complete")
     @HttpCode(HttpStatus.OK)
     complete(
-        @Headers("authorization") authorization = "",
+        @Headers("authorization") authorization: RunAuthorization,
         @Param() params: RunIdRequest,
         @Body() input: CompleteRunRequest,
     ): Promise<void> {
         return this.commandBus.execute(
-            new CompleteRunCommand({ request: { authorization, runId: params.id, report: toCompletion(input) } }),
+            new CompleteRunCommand({
+                request: {
+                    authorization,
+                    runId: params.id,
+                    report: toCompletion(input),
+                },
+            }),
         )
     }
 }

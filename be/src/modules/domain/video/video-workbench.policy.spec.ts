@@ -294,6 +294,8 @@ describe("workbenchProjectOf", () => {
             sizeBytes: 2048,
             errorCode: null,
             videoUrl: "https://media/video",
+            captionsUrl: null,
+            captionsLang: null,
             downloadUrl: "https://media/download",
             posterUrl: null,
         }

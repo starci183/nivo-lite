@@ -1,6 +1,5 @@
-import type { SalesAction } from "@modules/domain/sales"
+import type { SalesAction, SalesDraftRequest } from "@modules/domain/sales"
 import type { Locale } from "@modules/platform/i18n"
-import type { SalesDraftRequest } from "@modules/domain/sales"
 import type { DecideSalesDraftInput } from "./dto/decide-sales-draft.input"
 import type { SalesActionType } from "./dto/sales-action.type"
 

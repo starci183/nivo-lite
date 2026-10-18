@@ -3,7 +3,7 @@ import { sql } from "@modules/platform/database"
 /** Projects in the current workspace ($1 workspace, $2 optional project, $3 include archived). */
 export const LIST_WORKBENCH_PROJECTS = sql`SELECT p.*, CASE WHEN r.id IS NULL THEN NULL ELSE
 jsonb_build_object('id',r.id,'status',r.status,'progress',r.progress,'stage',r.stage,'duration_ms',r.duration_ms,
-'size_bytes',r.size_bytes,'output_path',r.output_path,'poster_path',r.poster_path) END AS render
+'size_bytes',r.size_bytes,'output_path',r.output_path,'poster_path',r.poster_path,'captions_path',r.meta->>'captions_path','captions_lang',r.meta->>'captions_lang') END AS render
 FROM public.video_projects p LEFT JOIN public.video_renders r ON r.id=p.render_id AND r.workspace_id=p.workspace_id
 WHERE p.workspace_id=$1 AND ($2::uuid IS NULL OR p.id=$2) AND ($3::boolean OR p.status<>'archived')
 ORDER BY p.updated_at DESC LIMIT 60`

@@ -104,6 +104,7 @@ const rowOf = (
     copiedId: string | null,
 ) => {
     const counts = countsOf(data, job.id)
+    const copyKey = copiedId === job.id ? "copiedLink" : "copyLink"
     return {
         id: job.id,
         title: job.title,
@@ -119,8 +120,7 @@ const rowOf = (
             .join(" · "),
         counts: t("jobsCounts", { all: counts.all, fresh: counts.fresh, hired: counts.hired, need: job.headcount }),
         publicUrl: job.publicUrl !== null && job.status !== "draft" ? job.publicUrl : null,
-        copyLabel:
-            job.publicUrl !== null && job.status === "open" ? t(copiedId === job.id ? "copiedLink" : "copyLink") : null,
+        copyLabel: job.publicUrl !== null && job.status === "open" ? t(copyKey) : null,
         transitions: (NEXT_JOB_STATUS[job.status] ?? []).map((to) => ({
             to,
             label: t(`jobAction_${job.status}_${to}`),

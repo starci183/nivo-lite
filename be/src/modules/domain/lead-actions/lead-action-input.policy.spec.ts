@@ -25,6 +25,21 @@ const invalid = (field: string) => ({
 })
 
 describe("lead action input policy", () => {
+    it.each(["a@...", "a@b.c.", "a.b@c.d", "a@b..c"])("retains the accepted email shape %s", async (email) => {
+        const subject = await buildSubject()
+
+        expect(subject.inputOf("create", { ...create, email })).toMatchObject({ kind: "ok", value: { email } })
+    })
+
+    it.each(["a@.b", "a@b.", "a@@b.c", "a@b c.d", `a@${"b".repeat(310)}`])(
+        "refuses malformed email %s",
+        async (email) => {
+            const subject = await buildSubject()
+
+            expect(subject.inputOf("create", { ...create, email })).toEqual(invalid("email"))
+        },
+    )
+
     it.each([undefined, null, "unknown", 42])("refuses an unsupported action %p", async (action) => {
         const subject = await buildSubject()
 

@@ -18,45 +18,43 @@ type CreditsOverviewBaseProps = {
 export const CreditsOverviewBase = (props: CreditsOverviewBaseProps) => {
     const copy = props.props
     return (
-        <>
-            <div className={PAGE_CLASS_NAME}>
-                <SlotView slot={copy.slot} placeholder={copy.view} labels={copy.slotLabels} onRetry={props.on.retry}>
-                    {(view, isSkeleton) => (
-                        <>
-                            {view.canBuy || isSkeleton ? null : <Alert tone="informative" title={view.staffNote} />}
-                            <CreditsBalance props={{ balance: view.balance, label: copy.labels.balance, isSkeleton }} />
-                            <div className={COLUMNS_CLASS_NAME}>
-                                <CreditsCatalogue
-                                    props={{
-                                        packs: view.packs,
-                                        canBuy: view.canBuy,
-                                        label: copy.labels.topups,
-                                        fact: copy.labels.topupFact,
-                                        buy: copy.labels.buy,
-                                        empty: copy.labels.emptyPacks,
-                                        loading: copy.labels.loading,
-                                        isSkeleton,
-                                    }}
-                                    on={{ buy: props.on.buy }}
-                                />
-                                <CreditsUpgrade
-                                    props={{
-                                        view,
-                                        title: copy.labels.upgrade,
-                                        plansTitle: copy.labels.plans,
-                                        plansLabel: copy.labels.plansLabel,
-                                        plansCta: copy.labels.plansCta,
-                                        plansHref: copy.labels.plansHref,
-                                        loading: copy.labels.loading,
-                                        isSkeleton,
-                                    }}
-                                    on={{ upgrade: props.on.buy }}
-                                />
-                            </div>
-                        </>
-                    )}
-                </SlotView>
-            </div>
-        </>
+        <div className={PAGE_CLASS_NAME}>
+            <SlotView slot={copy.slot} placeholder={copy.view} labels={copy.slotLabels} onRetry={props.on.retry}>
+                {(view, isSkeleton) => (
+                    <>
+                        {view.canBuy || isSkeleton ? null : <Alert tone="informative" title={view.staffNote} />}
+                        <CreditsBalance props={{ balance: view.balance, label: copy.labels.balance, isSkeleton }} />
+                        <div className={COLUMNS_CLASS_NAME}>
+                            <CreditsCatalogue
+                                props={{
+                                    packs: view.packs,
+                                    canBuy: view.canBuy,
+                                    label: copy.labels.topups,
+                                    fact: copy.labels.topupFact,
+                                    buy: copy.labels.buy,
+                                    empty: copy.labels.emptyPacks,
+                                    loading: copy.labels.loading,
+                                    isSkeleton,
+                                }}
+                                on={{ buy: props.on.buy }}
+                            />
+                            <CreditsUpgrade
+                                props={{
+                                    view,
+                                    title: copy.labels.upgrade,
+                                    plansTitle: copy.labels.plans,
+                                    plansLabel: copy.labels.plansLabel,
+                                    plansCta: copy.labels.plansCta,
+                                    plansHref: copy.labels.plansHref,
+                                    loading: copy.labels.loading,
+                                    isSkeleton,
+                                }}
+                                on={{ upgrade: props.on.buy }}
+                            />
+                        </div>
+                    </>
+                )}
+            </SlotView>
+        </div>
     )
 }

@@ -3,10 +3,10 @@
 import { useFormatter, useLocale, useTranslations } from "next-intl"
 import { useModuleCatalog } from "@/hooks/moduleCatalog"
 import { sameValue } from "@/modules/brain"
-import type { FactScope, FlowRuleMode } from "@/modules/types"
+import type { FactScope, FlowRuleMode, SetupWriteWords } from "@/modules/types"
 import { actionDef, isActionKey, pickCopy } from "@/modules/catalog"
-import type { SetupWriteWords } from "@/modules/types"
-import { WRITE_SCOPE_KEY } from "./setupCards.shared"
+
+import { WRITE_SCOPE_KEY, setupWriteDecidedOf } from "./setupCards.shared"
 
 /** The words and the small formatters of the confirm cards of the setup chat, in the reader language. */
 export const useSetupWriteWords = (): SetupWriteWords => {
@@ -15,7 +15,7 @@ export const useSetupWriteWords = (): SetupWriteWords => {
     const format = useFormatter()
     const { modules, slot } = useModuleCatalog()
     const actionCopies = Object.values(modules).flatMap((module) => module?.authorityActions ?? [])
-    return {
+    const words: Omit<SetupWriteWords, "decidedOf"> = {
         factTitle: t("wFactTitle"),
         ruleTitle: t("wRuleTitle"),
         gap: t("wGap"),
@@ -64,4 +64,5 @@ export const useSetupWriteWords = (): SetupWriteWords => {
         isSameValue: sameValue,
         ruleShared: (typeName: string) => t("wRuleShared", { type: typeName }),
     }
+    return { ...words, decidedOf: (write) => setupWriteDecidedOf(write, words) }
 }

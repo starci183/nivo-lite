@@ -113,8 +113,7 @@ describe("planLeadScan", () => {
             all,
             prior(subject),
             { afterHours: 24, maxFollowUps: 3 },
-            NOW,
-            BATCH,
+            { now: NOW, batch: BATCH },
         )
 
         expect(plans).toEqual([
@@ -134,14 +133,23 @@ describe("planLeadScan", () => {
 
         expect(
             subject
-                .planLeadScan("nurture", leads, quiet, new Set(["l-2"]), prior(subject), config, NOW, BATCH)
+                .planLeadScan("nurture", leads, quiet, new Set(["l-2"]), prior(subject), config, {
+                    now: NOW,
+                    batch: BATCH,
+                })
                 .map((p) => p.triggerRef),
         ).toEqual(["l-2"])
         expect(
-            subject.planLeadScan("nurture", leads.slice(0, 1), recent, all, prior(subject), config, NOW, BATCH),
+            subject.planLeadScan("nurture", leads.slice(0, 1), recent, all, prior(subject), config, {
+                now: NOW,
+                batch: BATCH,
+            }),
         ).toEqual([])
         expect(
-            subject.planLeadScan("nurture", leads.slice(0, 1), new Map(), all, prior(subject), config, NOW, BATCH),
+            subject.planLeadScan("nurture", leads.slice(0, 1), new Map(), all, prior(subject), config, {
+                now: NOW,
+                batch: BATCH,
+            }),
         ).toHaveLength(1)
     })
 })
@@ -169,9 +177,12 @@ describe("planLeadScan", () => {
         ])
 
         for (const history of [waiting, justSent, exhausted, used]) {
-            expect(subject.planLeadScan("nurture", leads.slice(0, 1), quiet, all, history, config, NOW, BATCH)).toEqual(
-                [],
-            )
+            expect(
+                subject.planLeadScan("nurture", leads.slice(0, 1), quiet, all, history, config, {
+                    now: NOW,
+                    batch: BATCH,
+                }),
+            ).toEqual([])
         }
     })
 
@@ -179,16 +190,10 @@ describe("planLeadScan", () => {
         const subject = await buildSubject()
 
         const config = { afterDays: 2 }
-        const plans = subject.planLeadScan(
-            "win_back",
-            leads.slice(0, 1),
-            quiet,
-            all,
-            prior(subject),
-            config,
-            NOW,
-            BATCH,
-        )
+        const plans = subject.planLeadScan("win_back", leads.slice(0, 1), quiet, all, prior(subject), config, {
+            now: NOW,
+            batch: BATCH,
+        })
         const done = prior(subject, [
             { ref: "l-1", status: "done", at: "2026-01-01T00:00:00.000Z", dedupe: "winback:l-1:2026-01" },
         ])
@@ -203,10 +208,15 @@ describe("planLeadScan", () => {
                 payload: { lead_id: "l-1", dedupe: "winback:l-1:2026-10" },
             },
         ])
-        expect(subject.planLeadScan("win_back", leads.slice(0, 1), quiet, all, done, config, NOW, BATCH)).toEqual([])
-        expect(subject.planLeadScan("win_back", leads.slice(0, 1), quiet, all, sameMonth, config, NOW, BATCH)).toEqual(
-            [],
-        )
+        expect(
+            subject.planLeadScan("win_back", leads.slice(0, 1), quiet, all, done, config, { now: NOW, batch: BATCH }),
+        ).toEqual([])
+        expect(
+            subject.planLeadScan("win_back", leads.slice(0, 1), quiet, all, sameMonth, config, {
+                now: NOW,
+                batch: BATCH,
+            }),
+        ).toEqual([])
     })
 })
 
@@ -228,8 +238,7 @@ describe("planLeadScan", () => {
                 all,
                 prior(subject),
                 { afterHours: 24, maxFollowUps: 3 },
-                NOW,
-                2,
+                { now: NOW, batch: 2 },
             ),
         ).toHaveLength(2)
     })

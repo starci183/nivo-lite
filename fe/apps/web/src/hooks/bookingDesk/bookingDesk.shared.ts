@@ -161,7 +161,7 @@ export const detailOf = (booking: BookingView, words: DeskWords) => ({
 
 /** The bookings of a range grouped by local day, oldest first. */
 export const dayGroups = (bookings: ReadonlyArray<BookingView>) => {
-    const days = [...new Set(bookings.map((booking) => booking.date))].sort()
+    const days = [...new Set(bookings.map((booking) => booking.date))].sort((left, right) => left.localeCompare(right))
     return days.map((day) => ({ id: day, rows: bookings.filter((booking) => booking.date === day) }))
 }
 

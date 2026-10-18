@@ -1,9 +1,9 @@
 "use client"
 
 import { useState, useTransition } from "react"
-import { WEBHOOK_EVENTS } from "./webhook-wizard.shared"
+import { WEBHOOK_EVENTS, WEBHOOK_STEPS } from "./webhook-wizard.shared"
 import type { WebhookTestVerdict, WebhookView } from "@/modules/types"
-import { WEBHOOK_STEPS } from "./webhook-wizard.shared"
+
 import { useWebhookCommands } from "./useWebhookCommands"
 
 /** What the webhook wizard needs from its drawer. */

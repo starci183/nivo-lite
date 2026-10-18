@@ -177,7 +177,7 @@ export class OpenApiSyncService implements DataConnector {
         if (!items.length) return { rows: run.total, cursor: "" }
         // A next link is followed only on the host of the base URL, so the credential never goes elsewhere.
         const next = nextLinkOf(body, answer.headers, run.link ?? new URL(run.config.baseUrl))
-        if (next && next.origin === run.origin && next.toString() !== run.link?.toString()) {
+        if (next?.origin === run.origin && next.toString() !== run.link?.toString()) {
             run.link = next
             return this.readPage(run, page + 1)
         }

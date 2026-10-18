@@ -1,6 +1,7 @@
 "use client"
 
-import { createAccountingQuestionsActions, createDecisionLock, propsOf } from "./accounting.shared"
+import { useAccountingDecisionLock } from "./useAccountingDecisionLock"
+import { createAccountingQuestionsActions, propsOf } from "./accounting.shared"
 import { useAccountingQuestionsForm } from "@/hooks/rhf"
 import { useQueryMyWorkspacesSwr } from "@/hooks/swr"
 import { useActiveWorkspace } from "@/hooks/workspaces"
@@ -25,7 +26,7 @@ export const useAccountingQuestions = (
     const values = useWatch({ control: form.control })
     const { getValues, setValue } = form
     const [editing, setEditing] = useState<Record<string, boolean>>({})
-    const [lock] = useState(createDecisionLock)
+    const lock = useAccountingDecisionLock()
     const { decide, isDeciding } = useDecideAccountingQuestion()
     const { activeWorkspaceId } = useActiveWorkspace()
     const { data: workspaces, error: membershipError } = useQueryMyWorkspacesSwr()
@@ -41,7 +42,7 @@ export const useAccountingQuestions = (
         for (const item of items)
             if (!getValues(`items.${item.id}`)) setValue(`items.${item.id}`, accountingQuestionDefaults(item))
     }, [getValues, items, setValue])
-    const { cards, approve, reject, change } = createAccountingQuestionsActions(
+    const { cards, approve, reject, change } = createAccountingQuestionsActions({
         items,
         canAct,
         lock,
@@ -57,7 +58,7 @@ export const useAccountingQuestions = (
         format,
         editing,
         setValue,
-    )
+    })
     return {
         props: propsOf(accounting, cards),
         on: {
@@ -83,17 +84,15 @@ export const useAccountingQuestions = (
 
 /** The watched fields used to assemble independent accounting question cards. */
 export type ValuesInput1 = {
-    items?:
-        | {
-              [x: string]:
-                  | {
-                        fields?: { [x: string]: string | undefined } | undefined
-                        draft?: string | undefined
-                        amount?: string | undefined
-                        candidateId?: string | undefined
-                        basis?: string | undefined
-                    }
-                  | undefined
-          }
-        | undefined
+    items?: {
+        [x: string]:
+            | {
+                  fields?: { [x: string]: string | undefined }
+                  draft?: string
+                  amount?: string
+                  candidateId?: string
+                  basis?: string
+              }
+            | undefined
+    }
 }

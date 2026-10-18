@@ -30,14 +30,36 @@ import { cardOf } from "./policies/setup-writes.policy"
 import type { OpenGap, ProposedWrite } from "./policies/setup-writes.policy"
 
 const GOVERNORS: ReadonlyArray<WorkspaceRole> = ["owner", "manager"]
-const SCOPES: ReadonlyArray<Scope> = ["public", "internal", "restricted"]
+const SCOPES: ReadonlySet<Scope> = new Set(["public", "internal", "restricted"])
 const GAPS_PER_TURN = 5
+
+const factScopeOf = (scope: Scope | undefined, fallback: Scope): Scope =>
+    scope !== undefined && SCOPES.has(scope) ? scope : fallback
 
 /** The rule of an action as it stands: the stored row, else what installing the module grants. */
 interface RuleInForce {
     readonly mode: RuleCardPayload["mode"]
     readonly limitVnd: number | null
     readonly requiredFields: ReadonlyArray<string>
+}
+
+/** Closes a decided setup card with its resulting payload. */
+type CardCloser = (
+    status: "applied" | "rejected",
+    payload: FactCardPayload | RuleCardPayload,
+    result: NonNullable<CardRecord["result"]>,
+) => Promise<CardRecord>
+
+/** The authority and selected fact card for confirmation. */
+interface ConfirmFactParams {
+    readonly workspaceId: string
+    readonly actor: string
+    readonly module: ModuleDefinition
+    readonly installation: InstallationRecord
+    readonly card: CardRecord & { readonly kind: "fact" }
+    readonly change: CardDecision
+    readonly locale: Locale
+    readonly close: CardCloser
 }
 
 @Injectable()
@@ -159,7 +181,16 @@ export class SetupCardsService {
         if (card.kind === "rule") {
             return this.confirmRule(workspaceId, member.displayName, module, card.payload, change, locale, close)
         }
-        return this.confirmFact(workspaceId, member.displayName, module, installation, card, change, locale, close)
+        return this.confirmFact({
+            workspaceId,
+            actor: member.displayName,
+            module,
+            installation,
+            card,
+            change,
+            locale,
+            close,
+        })
     }
 
     private async confirmRule(
@@ -201,23 +232,11 @@ export class SetupCardsService {
         return close("applied", { ...base, mode, limitVnd: saved.limit_vnd }, { outcome: "applied", ruleId: saved.id })
     }
 
-    private async confirmFact(
-        workspaceId: string,
-        actor: string,
-        module: ModuleDefinition,
-        installation: InstallationRecord,
-        card: CardRecord & { readonly kind: "fact" },
-        change: CardDecision,
-        locale: Locale,
-        close: (
-            status: "applied" | "rejected",
-            payload: FactCardPayload | RuleCardPayload,
-            result: NonNullable<CardRecord["result"]>,
-        ) => Promise<CardRecord>,
-    ): Promise<CardRecord> {
+    private async confirmFact(params: ConfirmFactParams): Promise<CardRecord> {
+        const { workspaceId, actor, module, installation, card, change, locale, close } = params
         const base = card.payload
         const value = (change.value ?? base.value).trim()
-        const scope = change.scope !== undefined && SCOPES.includes(change.scope) ? change.scope : base.scope
+        const scope = factScopeOf(change.scope, base.scope)
         const subjectLabel = (change.subjectLabel ?? base.subjectLabel).trim()
         const baseAttribute = (change.attributeLabel ?? base.attributeLabel).trim()
         if (value === "" || subjectLabel === "" || baseAttribute === "") {
@@ -243,15 +262,7 @@ export class SetupCardsService {
             throw new ModulesError({ code: ModulesErrorCode.CardNeedsSituation })
         }
         const attributeLabel = resolution === "both" ? `${baseAttribute} (${situation})`.slice(0, 120) : baseAttribute
-        const source =
-            card.sourceMessageId === null ? null : await this.messages.find(workspaceId, card.sourceMessageId)
-        const evidence: Evidence = {
-            kind: "message",
-            ref: card.sourceMessageId ?? `setup:${card.setupSessionId}`,
-            label: `${module.name[locale]} - setup chat (${card.gateKey})`,
-            ...(source === null ? {} : { quote: source.body.slice(0, 300) }),
-            at: this.clock.now().toISOString(),
-        }
+        const evidence = await this.factEvidence(workspaceId, card, module, locale)
         const { fact, outcome } = await this.facts.propose(workspaceId, {
             subjectType: base.subjectType,
             subjectLabel,
@@ -272,6 +283,23 @@ export class SetupCardsService {
             { ...edited, attributeLabel },
             { outcome, factId: fact.id, ...(resolution === undefined ? {} : { resolution }) },
         )
+    }
+
+    private async factEvidence(
+        workspaceId: string,
+        card: CardRecord,
+        module: ModuleDefinition,
+        locale: Locale,
+    ): Promise<Evidence> {
+        const source =
+            card.sourceMessageId === null ? null : await this.messages.find(workspaceId, card.sourceMessageId)
+        return {
+            kind: "message",
+            ref: card.sourceMessageId ?? `setup:${card.setupSessionId}`,
+            label: `${module.name[locale]} - setup chat (${card.gateKey})`,
+            ...(source === null ? {} : { quote: source.body.slice(0, 300) }),
+            at: this.clock.now().toISOString(),
+        }
     }
 
     private async currentOf(

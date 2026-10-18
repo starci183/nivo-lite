@@ -85,6 +85,7 @@ export const ConnectionWizardOverlayBase = (props: ConnectionWizardOverlayBasePr
     const wizard = props.props
     const target = wizard.target
     const onClose = props.on.close
+    const resume = target?.resumeId === undefined ? {} : { resumeId: target.resumeId }
     return (
         <Drawer
             isOpen={target !== null}
@@ -110,7 +111,7 @@ export const ConnectionWizardOverlayBase = (props: ConnectionWizardOverlayBasePr
                     key={target.resumeId ?? "new"}
                     provider={target.provider}
                     agents={wizard.agents}
-                    {...(target.resumeId === undefined ? {} : { resumeId: target.resumeId })}
+                    {...resume}
                     onClose={onClose}
                 />
             ) : null}

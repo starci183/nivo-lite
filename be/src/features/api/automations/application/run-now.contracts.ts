@@ -5,6 +5,3 @@ export interface RunNowRequest {
     /** The template. */
     readonly templateKey: string
 }
-
-/** What run now answers. */
-export type RunNowResult = void

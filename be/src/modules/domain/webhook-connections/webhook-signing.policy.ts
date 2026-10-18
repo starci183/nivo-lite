@@ -2,9 +2,11 @@ import { createHmac } from "node:crypto"
 import { WEBHOOK_EVENTS } from "./webhook-connections.contracts"
 import type { WebhookEvent } from "./webhook-connections.contracts"
 
+const webhookEvents: ReadonlyArray<string> = WEBHOOK_EVENTS
+
 /** True for one of the outgoing events. */
 export const isWebhookEvent = (value: unknown): value is WebhookEvent =>
-    typeof value === "string" && WEBHOOK_EVENTS.some((event) => event === value)
+    typeof value === "string" && webhookEvents.includes(value)
 
 /** The distinct valid events of a list, in the order given. */
 export const pickEvents = (events: ReadonlyArray<string>): Array<WebhookEvent> => [

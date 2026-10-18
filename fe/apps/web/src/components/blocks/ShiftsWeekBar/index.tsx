@@ -1,15 +1,18 @@
 "use client"
 
-import type { Busy, ShiftsWeekBarControllerInput } from "./component"
-import type { CreateShiftsWeekBarRowsInput } from "./component"
+import {
+    type Busy,
+    type ShiftsWeekBarControllerInput,
+    type CreateShiftsWeekBarRowsInput,
+    ShiftsWeekBarBase,
+    type WeekBarStatusView,
+} from "./component"
 import { useTranslations } from "next-intl"
 import { useState } from "react"
 import { useShiftsBenchData, useShiftsFormat } from "@/hooks/shifts"
 import { useShiftsRequestCommands, useShiftsWeekCommands } from "@/hooks/shiftsCommands"
 import { isoAddDays } from "@/hooks/shiftsTime"
 import { useShiftsWeekStore } from "@/hooks/zustand/shiftsWeek"
-import { ShiftsWeekBarBase } from "./component"
-import type { WeekBarStatusView } from "./component"
 
 const createShiftsWeekBarRows = (context: CreateShiftsWeekBarRowsInput) => {
     const { t, bench, week, requests, busy, setBusy } = context

@@ -8,13 +8,12 @@ import { InjectDriveAccessSource } from "./knowledge.decorators"
 import type { DriveAccessSource, ReadOutcome } from "./knowledge.contracts"
 
 /** The part of the text of a link without its scheme, lower case, for comparing a title with its address. */
-const bare = (value: string): string =>
-    value
-        .trim()
-        .replace(/^https?:\/\//iu, "")
-        .replace(/\/+$/u, "")
-        .slice(0, 160)
-        .toLowerCase()
+const bare = (value: string): string => {
+    const address = value.trim().replace(/^https?:\/\//iu, "")
+    let end = address.length
+    while (end > 0 && address[end - 1] === "/") end -= 1
+    return address.slice(0, end).slice(0, 160).toLowerCase()
+}
 
 /** The name of an uploaded object, without its folders. */
 const nameOf = (path: string): string => path.replace(/^.*\//u, "")

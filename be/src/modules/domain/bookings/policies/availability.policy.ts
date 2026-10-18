@@ -117,21 +117,24 @@ const candidates = (input: PlanInput, fromMs: number, toMs: number): ReadonlyArr
     const buffer = service.bufferMin * MINUTE_MS
     const dates = datesAround(from, to, policy.timezone)
     const found: Array<Candidate> = []
+    const addWindow = (resource: BookingResource, window: OpenWindow): void => {
+        for (let start = window.startMs; start + duration <= window.endMs; start += step) {
+            if (start < from || start >= to) continue
+            const load = peakLoad(taken, resource.id, start, start + duration + buffer, input.excludeId ?? null)
+            if (load + party > resource.capacity) continue
+            found.push({
+                startMs: start,
+                endMs: start + duration,
+                blockEndMs: start + duration + buffer,
+                resourceId: resource.id,
+                ratio: load / resource.capacity,
+            })
+        }
+    }
     for (const resource of eligible(input).filter((r) => r.capacity >= party)) {
         for (const date of dates) {
             for (const window of windowsOf(resource, date, hours, exceptions, policy.timezone)) {
-                for (let start = window.startMs; start + duration <= window.endMs; start += step) {
-                    if (start < from || start >= to) continue
-                    const load = peakLoad(taken, resource.id, start, start + duration + buffer, input.excludeId ?? null)
-                    if (load + party > resource.capacity) continue
-                    found.push({
-                        startMs: start,
-                        endMs: start + duration,
-                        blockEndMs: start + duration + buffer,
-                        resourceId: resource.id,
-                        ratio: load / resource.capacity,
-                    })
-                }
+                addWindow(resource, window)
             }
         }
     }

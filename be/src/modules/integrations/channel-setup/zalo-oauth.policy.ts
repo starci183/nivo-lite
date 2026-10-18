@@ -1,7 +1,11 @@
 import { createHash, randomBytes } from "node:crypto"
 import type { ChannelSetupOptions } from "./channel-setup.options"
 
-const trimSlashes = (value: string): string => value.replace(/\/+$/u, "")
+const trimSlashes = (value: string): string => {
+    let end = value.length
+    while (end > 0 && value[end - 1] === "/") end -= 1
+    return value.slice(0, end)
+}
 
 /** A fresh PKCE code verifier. */
 export const newZaloVerifier = (): string => randomBytes(48).toString("base64url")

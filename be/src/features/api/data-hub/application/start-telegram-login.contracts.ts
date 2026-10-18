@@ -9,5 +9,5 @@ export interface StartTelegramLoginRequest {
     /** True when the owner agreed to the commitment. */
     readonly consent: boolean
     /** A pending connection to reuse. */
-    readonly connectionId?: string | null | undefined
+    readonly connectionId?: string | null
 }

@@ -1,7 +1,7 @@
 const char = (code: number): string => String.fromCodePoint(code)
 const COMBINING_MARKS = new RegExp(`[${char(0x300)}-${char(0x36f)}]`, "gu")
 const D_STROKE = new RegExp(`[${char(0x110)}${char(0x111)}]`, "gu")
-const CURRENCY_MARKS = new RegExp(`(vn${char(0x111)}|vnd|${char(0x111)}|${char(0x20ab)}|\\$|usd|%)`, "giu")
+const CURRENCY_MARKS = new RegExp(String.raw`(vn${char(0x111)}|vnd|${char(0x111)}|${char(0x20ab)}|\$|usd|%)`, "giu")
 
 /** Lower-case, accent-free text for matching headers, so a Vietnamese phone heading becomes "so dien thoai". */
 export const fold = (text: string): string =>
@@ -24,20 +24,7 @@ export const normalisePhone = (raw: string): string => {
 
 const count = (text: string, char: string): number => text.split(char).length - 1
 
-/** "1.200.000" gives 1200000, "1,200,000" gives 1200000, "1.234,56" gives 1234.56, "12.5" gives 12.5, "(300)" gives -300. Null when it is not a number. */
-export const parseNumberLoose = (raw: string): number | null => {
-    let text = raw.trim().replace(/\s+/gu, "").replace(CURRENCY_MARKS, "")
-    if (text === "") return null
-    let negative = false
-    if (/^\(.*\)$/u.test(text)) {
-        negative = true
-        text = text.slice(1, -1)
-    }
-    if (text.startsWith("-")) {
-        negative = !negative
-        text = text.slice(1)
-    } else if (text.startsWith("+")) text = text.slice(1)
-    if (!/^[\d.,]+$/u.test(text) || !/\d/u.test(text)) return null
+const normalizedNumber = (text: string): string => {
     const dots = count(text, ".")
     const commas = count(text, ",")
     let out: string
@@ -53,6 +40,24 @@ export const parseNumberLoose = (raw: string): number | null => {
         const thousands = tail.length === 3 && head.length >= 1 && head.length <= 3 && head !== "0"
         out = thousands ? `${head}${tail}` : `${head}.${tail}`
     } else out = text
+    return out
+}
+
+/** "1.200.000" gives 1200000, "1,200,000" gives 1200000, "1.234,56" gives 1234.56, "12.5" gives 12.5, "(300)" gives -300. Null when it is not a number. */
+export const parseNumberLoose = (raw: string): number | null => {
+    let text = raw.trim().replace(/\s+/gu, "").replace(CURRENCY_MARKS, "")
+    if (text === "") return null
+    let negative = false
+    if (/^\(.*\)$/u.test(text)) {
+        negative = true
+        text = text.slice(1, -1)
+    }
+    if (text.startsWith("-")) {
+        negative = !negative
+        text = text.slice(1)
+    } else if (text.startsWith("+")) text = text.slice(1)
+    if (!/^[\d.,]+$/u.test(text) || !/\d/u.test(text)) return null
+    const out = normalizedNumber(text)
     if (!/^\d+(\.\d+)?$/u.test(out)) return null
     const value = Number(out)
     if (!Number.isFinite(value)) return null
@@ -74,13 +79,20 @@ const fullYear = (text: string): number => {
     return year + (year <= 69 ? 2000 : 1900)
 }
 
+const dateRest = (rest: string): string => {
+    if (rest === "") return ""
+    if (!/^[T\s]/u.test(rest)) return "invalid"
+    return rest.replace(/^[T\s]+/u, "")
+}
+
 const datePartsOf = (text: string): DateParts | null => {
-    const iso = /^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})(?:[T\s]+(.*))?$/u.exec(text)
-    if (iso !== null) return { year: Number(iso[1]), month: Number(iso[2]), day: Number(iso[3]), rest: iso[4] ?? "" }
-    const local = /^(\d{1,2})[-/.](\d{1,2})[-/.](\d{2}|\d{4})(?:[T\s]+(.*))?$/u.exec(text)
+    const iso = /^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})([\s\S]*)$/u.exec(text)
+    if (iso !== null)
+        return { year: Number(iso[1]), month: Number(iso[2]), day: Number(iso[3]), rest: dateRest(iso[4] ?? "") }
+    const local = /^(\d{1,2})[-/.](\d{1,2})[-/.](\d{4}|\d{2})([\s\S]*)$/u.exec(text)
     if (local === null) return null
     const year = fullYear(local[3] ?? "")
-    return { year, month: Number(local[2]), day: Number(local[1]), rest: local[4] ?? "" }
+    return { year, month: Number(local[2]), day: Number(local[1]), rest: dateRest(local[4] ?? "") }
 }
 
 /** A date from the common Vietnamese and ISO spellings, as an ISO instant (date-only values are midnight in Vietnam, +07:00). */
@@ -94,9 +106,11 @@ export const parseDateLoose = (raw: string): string | null => {
     if (new Date(Date.UTC(year, month - 1, day)).getUTCMonth() !== month - 1) return null
     const date = `${year}-${pad(month)}-${pad(day)}`
     if (rest === "") return new Date(`${date}T00:00:00+07:00`).toISOString()
-    const time = /^(\d{1,2}):(\d{2})(?::(\d{2}))?(?:\.\d+)?\s*(Z|[+-]\d{2}:?\d{2})?$/iu.exec(rest)
+    const zoneMatch = /(Z|[+-]\d{2}:?\d{2})$/iu.exec(rest)
+    const clock = (zoneMatch === null ? rest : rest.slice(0, zoneMatch.index)).trimEnd()
+    const time = /^(\d{1,2}):(\d{2})(?::(\d{2}))?(?:\.\d+)?$/u.exec(clock)
     if (time === null || Number(time[1]) > 23 || Number(time[2]) > 59) return null
-    let zone = time[4] ?? "+07:00"
+    let zone = zoneMatch?.[1] ?? "+07:00"
     if (/^[+-]\d{4}$/u.test(zone)) zone = `${zone.slice(0, 3)}:${zone.slice(3)}`
     const instant = new Date(`${date}T${pad(Number(time[1]))}:${time[2]}:${time[3] ?? "00"}${zone.toUpperCase()}`)
     return Number.isNaN(instant.getTime()) ? null : instant.toISOString()

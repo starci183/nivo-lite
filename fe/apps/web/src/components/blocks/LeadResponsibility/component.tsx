@@ -1,16 +1,16 @@
 import { nivoIconSource } from "@/components/leaves/Icon"
 import type { useTranslations } from "next-intl"
-import type { useLeadActions } from "@/hooks/leads"
+import type { useLeadActions, CurrentStepView } from "@/hooks/leads"
 import type { useSlotLabels } from "@/hooks/slot"
-import type { useLeadStepForm } from "@/hooks/rhf"
-import type { LeadStepValues } from "@/hooks/rhf"
+import type { useLeadStepForm, LeadStepValues } from "@/hooks/rhf"
+
 import type * as React from "react"
 import type { DateValue } from "@internationalized/date"
 import { Alert, Badge, Button, DescriptionList, EmptyNotice, SurfaceCard, Text } from "@starci/grammar/common"
-import type { CurrentStepView } from "@/hooks/leads"
+
 import { SlotView } from "@/components/composites/SlotView"
-import { StepForm } from "@/components/composites/StepForm"
-import type { StepFormLabels, StepFormView } from "@/components/composites/StepForm"
+import { StepForm, type StepFormLabels, type StepFormView } from "@/components/composites/StepForm"
+
 import { AgentMark } from "@/components/leaves/AgentMark"
 import { PersonAvatar } from "@/components/leaves/PersonAvatar"
 import type { DataSlot, SlotLabels } from "@/modules/types"

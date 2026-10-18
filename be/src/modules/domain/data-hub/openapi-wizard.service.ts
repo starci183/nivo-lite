@@ -35,7 +35,7 @@ import type {
 } from "./openapi-wizard.contracts"
 
 const SPEC_LIMIT = 5_000_000
-const SCHEDULES: ReadonlyArray<number | null> = [null, 15, 60, 360, 1440]
+const SCHEDULES: ReadonlySet<number | null> = new Set([null, 15, 60, 360, 1440])
 
 const invalid = (detail: string): DataHubError =>
     new DataHubError({ code: DataHubErrorCode.Invalid, params: { detail } })
@@ -132,7 +132,7 @@ export class OpenApiWizardService {
         const syncEvery = draft.syncEveryMinutes ?? null
         const name = draft.name.trim().slice(0, 80)
         if (!name) throw invalid(OPENAPI_WIZARD_TEXT.nameRequired)
-        if (!SCHEDULES.includes(syncEvery)) throw invalid(OPENAPI_WIZARD_TEXT.badSchedule)
+        if (!SCHEDULES.has(syncEvery)) throw invalid(OPENAPI_WIZARD_TEXT.badSchedule)
         const config = normalizeConfig(draft.config)
         if (!/^https?:\/\/[^\s]+$/iu.test(config.baseUrl)) throw invalid(OPENAPI_WIZARD_TEXT.baseUrlScheme)
         await this.publicHost.resolve(new URL(config.baseUrl).hostname)

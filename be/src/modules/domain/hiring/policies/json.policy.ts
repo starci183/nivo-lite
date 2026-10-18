@@ -1,5 +1,4 @@
 const FENCE_START = /^```(?:json)?\s*/iu
-const FENCE_END = /\s*```$/u
 
 /** The outcome of reading JSON text: the value, or the error the parser raised. */
 export type Parsed = { readonly ok: true; readonly value: unknown } | { readonly ok: false; readonly cause: unknown }
@@ -22,12 +21,13 @@ const asRecord = (text: string): Record<string, unknown> | null => {
 
 /** The JSON object a model answered, with or without a code fence or words around it; null when there is none. */
 export const parseLooseJson = (raw: string): Record<string, unknown> | null => {
-    const body = raw.replace(FENCE_START, "").replace(FENCE_END, "").trim()
-    const whole = asRecord(body)
+    const body = raw.replace(FENCE_START, "").trimEnd()
+    const unfenced = body.endsWith("```") ? body.slice(0, -3).trim() : body.trim()
+    const whole = asRecord(unfenced)
     if (whole !== null) return whole
-    const start = body.indexOf("{")
-    const end = body.lastIndexOf("}")
-    return start >= 0 && end > start ? asRecord(body.slice(start, end + 1)) : null
+    const start = unfenced.indexOf("{")
+    const end = unfenced.lastIndexOf("}")
+    return start >= 0 && end > start ? asRecord(unfenced.slice(start, end + 1)) : null
 }
 
 /** A text field of a parsed model answer, trimmed; empty when it is missing or not text. */

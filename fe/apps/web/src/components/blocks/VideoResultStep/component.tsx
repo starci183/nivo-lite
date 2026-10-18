@@ -1,4 +1,4 @@
-import { Alert, Badge, Button, MediaFrame, SurfaceCard, Text } from "@starci/grammar/common"
+import { Alert, Badge, Button, MediaFrame, SurfaceCard, Text, Video } from "@starci/grammar/common"
 import { RESULT_COPY, RESULT_FOOTER, RESULT_ROW, RESULT_STACK } from "./classNames"
 
 /** One badge under the player. */
@@ -17,6 +17,9 @@ export interface VideoResultStepBaseProps {
         readonly shape: "portrait" | "square" | "landscape"
         readonly videoUrl: string | null
         readonly posterUrl: string | null
+        readonly captionsUrl: string | null
+        readonly captionsLang: string | null
+        readonly captionsLabel: string
         readonly failedTitle: string | null
         readonly failedDetail: string | null
         readonly waitingLabel: string
@@ -59,13 +62,20 @@ const playerOf = (props: VideoResultStepBaseProps["props"]) => {
     if (props.videoUrl !== null) {
         return (
             <MediaFrame aspect={props.shape} fit="contain">
-                <video
-                    controls
-                    playsInline
-                    preload="metadata"
+                <Video
+                    title={props.title}
                     poster={props.posterUrl ?? undefined}
                     src={props.videoUrl}
-                    aria-label={props.title}
+                    captions={
+                        props.captionsUrl === null
+                            ? null
+                            : {
+                                  src: props.captionsUrl,
+                                  label: props.captionsLabel,
+                                  ...(props.captionsLang === null ? {} : { srcLang: props.captionsLang }),
+                              }
+                    }
+                    crossOrigin={props.captionsUrl === null ? undefined : "anonymous"}
                 />
             </MediaFrame>
         )

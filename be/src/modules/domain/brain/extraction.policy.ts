@@ -54,7 +54,7 @@ export interface WindowPrompt {
 /** The user message of one window. */
 export const userPrompt = (window: WindowPrompt): string =>
     [
-        `Document: "${window.title.replace(/"/g, "'").slice(0, 160)}"`,
+        `Document: "${window.title.replaceAll('"', "'").slice(0, 160)}"`,
         `Updated: ${window.updatedAt.slice(0, 10)}`,
         `Part ${window.index + 1} of ${window.total}`,
         "EXCERPT:",
@@ -97,7 +97,7 @@ export interface ParsedFacts {
 const fold = (text: string): string =>
     text
         .toLowerCase()
-        .replace(/\u0111/g, "d")
+        .replaceAll("\u0111", "d")
         .normalize("NFD")
         .replace(/\p{Diacritic}/gu, "")
         .replace(/[^a-z0-9]+/g, " ")
@@ -129,6 +129,37 @@ const itemsOf = (parsed: unknown): ReadonlyArray<unknown> | null => {
     return Array.isArray(facts) ? facts : null
 }
 
+/** Validates labels and checks whether a fact is supported by the current window. */
+const groundedFact = (
+    fields: ReadonlyMap<string, unknown>,
+    grounded: string,
+    compact: string,
+): ExtractedFact | null => {
+    const subjectLabel = textOf(fields.get("subjectLabel"), 160)
+    const attributeLabel = textOf(fields.get("attributeLabel"), 120)
+    const value = textOf(fields.get("value"), 500)
+    if (keyOf(subjectLabel) === "" || keyOf(attributeLabel) === "" || fold(value) === "") return null
+    const quote = textOf(fields.get("quote"), 300)
+    const quoteOk = fold(quote).length >= 3 && grounded.includes(fold(quote).slice(0, 60))
+    // Grounded = the quote is in the text, or the value is (a number may be rewritten: spaces and dots are ignored for it).
+    const folded = fold(value)
+    const valueOk =
+        grounded.includes(folded) ||
+        (folded.replaceAll(" ", "").length >= 3 && compact.includes(folded.replaceAll(" ", "")))
+    if (!quoteOk && !valueOk) return null
+    const type = textOf(fields.get("subjectType"), 20).toLowerCase()
+    return {
+        subjectType: SUBJECT_TYPES.find((known) => known === type) ?? "other",
+        subjectLabel,
+        attributeLabel,
+        value,
+        unit: textOf(fields.get("unit"), 20) || null,
+        validFrom: dateOf(fields.get("validFrom")),
+        scope: fields.get("scope") === "public" ? "public" : "internal",
+        quote: quoteOk ? quote : null,
+    }
+}
+
 /**
  * The valid facts of one parsed model answer for one window. An answer that is not JSON (null) or holds no facts list gives no facts
  * (`valid: false`). An item is dropped when a label or value is empty, or it is not grounded in the window (neither its quote nor
@@ -138,39 +169,19 @@ export const parseFacts = (answer: unknown, window: string): ParsedFacts => {
     const parsed = itemsOf(answer)
     const found = parsed ?? []
     const grounded = fold(window)
-    const compact = grounded.replace(/ /g, "")
+    const compact = grounded.replaceAll(" ", "")
     const seen = new Set<string>()
     const facts: Array<ExtractedFact> = []
     for (const item of found) {
         if (facts.length >= MAX_FACTS_PER_WINDOW) break
         const fields = fieldsOf(item)
         if (fields === null) continue
-        const subjectLabel = textOf(fields.get("subjectLabel"), 160)
-        const attributeLabel = textOf(fields.get("attributeLabel"), 120)
-        const value = textOf(fields.get("value"), 500)
-        if (keyOf(subjectLabel) === "" || keyOf(attributeLabel) === "" || fold(value) === "") continue
-        const quote = textOf(fields.get("quote"), 300)
-        const quoteOk = fold(quote).length >= 3 && grounded.includes(fold(quote).slice(0, 60))
-        // Grounded = the quote is in the text, or the value is (a number may be rewritten: spaces and dots are ignored for it).
-        const folded = fold(value)
-        const valueOk =
-            grounded.includes(folded) ||
-            (folded.replace(/ /g, "").length >= 3 && compact.includes(folded.replace(/ /g, "")))
-        if (!quoteOk && !valueOk) continue
-        const dedupe = `${keyOf(subjectLabel)}|${keyOf(attributeLabel)}|${folded}`
+        const fact = groundedFact(fields, grounded, compact)
+        if (fact === null) continue
+        const dedupe = `${keyOf(fact.subjectLabel)}|${keyOf(fact.attributeLabel)}|${fold(fact.value)}`
         if (seen.has(dedupe)) continue
         seen.add(dedupe)
-        const type = textOf(fields.get("subjectType"), 20).toLowerCase()
-        facts.push({
-            subjectType: SUBJECT_TYPES.find((known) => known === type) ?? "other",
-            subjectLabel,
-            attributeLabel,
-            value,
-            unit: textOf(fields.get("unit"), 20) || null,
-            validFrom: dateOf(fields.get("validFrom")),
-            scope: fields.get("scope") === "public" ? "public" : "internal",
-            quote: quoteOk ? quote : null,
-        })
+        facts.push(fact)
     }
     return { facts, dropped: found.length - facts.length, valid: parsed !== null }
 }

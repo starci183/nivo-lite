@@ -1,18 +1,17 @@
 "use client"
 
+import { useAdjustmentPreview } from "./useAdjustmentPreview"
 import type { InventoryCommandSet } from "@/hooks/inventoryCommands"
 import type { ItemView, LocationView } from "@/modules/types"
 import { useTranslations } from "next-intl"
-import { isSmallAdjustment, num } from "./inventory.shared"
-import type { AdjustMode } from "./inventory.shared"
-import { useDrawer } from "./useDrawer"
-import type { DrawerControl } from "./useDrawer"
+import { num, type AdjustMode } from "./inventory.shared"
+import { useDrawer, type DrawerControl } from "./useDrawer"
 import { useInventoryFormat } from "./useInventoryFormat"
 import { useInventoryRun } from "./useInventoryRun"
 import { useSay } from "./useSay"
 
 /** The quantity drawer while it is open: the item and what was typed. */
-interface AdjustState {
+export interface AdjustState {
     readonly item: ItemView
     readonly mode: AdjustMode
     readonly value: string
@@ -23,25 +22,6 @@ interface AdjustState {
 
 const modeOf = (value: string): AdjustMode => (value === "delta" || value === "move" ? value : "set")
 
-/** What the typed value would do to the level: where it goes, whether it is small, and the text of the button. */
-const effectOf = (open: AdjustState, several: boolean) => {
-    const { item } = open
-    const here = item.levels.find((level) => level.locationId === open.from)?.qty ?? 0
-    const current = several ? here : item.total
-    const target = open.mode === "set" ? num(open.value, current) : current + num(open.value)
-    const delta = target - current
-    const small = isSmallAdjustment(delta, item.costVnd)
-    const changeKey = small ? "adjustApply" : "adjustAsk"
-    return {
-        current,
-        target,
-        delta,
-        small,
-        move: open.mode === "move",
-        submitKey: open.mode === "move" ? "adjustMove" : changeKey,
-    }
-}
-
 /** Opens, fills and applies the quantity form (set, change or move); `props` is null while the drawer is closed. */
 export const useAdjustDrawer = (
     locations: ReadonlyArray<LocationView>,
@@ -49,7 +29,6 @@ export const useAdjustDrawer = (
     commands: InventoryCommandSet<"adjustStock" | "transferStock">,
 ) => {
     const t = useTranslations("workbenchInventory")
-    const format = useInventoryFormat()
     const say = useSay()
     const run = useInventoryRun()
     const drawer = useDrawer<AdjustState>()
@@ -85,25 +64,65 @@ export const useAdjustDrawer = (
             (result) => (result.state === "applied" ? drawer.done() : t("adjustWaiting")),
         )
     }
-    const effect = state === null ? null : effectOf(state, several)
-    return viewOf(drawer, defaultLocationId, state, effect, say, t, format, several, nameOf, places, run, patch, submit)
+    const { format, effect } = useAdjustmentPreview(state, several)
+    return viewOf({
+        drawer,
+        defaultLocationId,
+        state,
+        effect,
+        say,
+        t,
+        format,
+        several,
+        nameOf,
+        places,
+        run,
+        patch,
+        submit,
+    })
+}
+/** The resolved inputs for adjustment view input. */
+interface AdjustmentViewInput {
+    readonly drawer: DrawerControl<AdjustState>
+    readonly defaultLocationId: string | null
+    readonly state: AdjustState | null
+    readonly effect: {
+        current: number
+        target: number
+        delta: number
+        small: boolean
+        move: boolean
+        submitKey: string
+    } | null
+    readonly say: ReturnType<typeof useSay>
+    readonly t: ReturnType<typeof useTranslations<"workbenchInventory">>
+    readonly format: ReturnType<typeof useInventoryFormat>
+    readonly several: boolean
+    readonly nameOf: (id: string) => string
+    readonly places: { id: string; label: string }[]
+    readonly run: ReturnType<typeof useInventoryRun>
+    readonly patch: (next: Partial<AdjustState>) => void
+    readonly submit: (open: AdjustState) => void
 }
 
-const viewOf = (
-    drawer: DrawerControl<AdjustState>,
-    defaultLocationId: string | null,
-    state: AdjustState | null,
-    effect: { current: number; target: number; delta: number; small: boolean; move: boolean; submitKey: string } | null,
-    say: ReturnType<typeof useSay>,
-    t: ReturnType<typeof useTranslations<"workbenchInventory">>,
-    format: ReturnType<typeof useInventoryFormat>,
-    several: boolean,
-    nameOf: (id: string) => string,
-    places: { id: string; label: string }[],
-    run: ReturnType<typeof useInventoryRun>,
-    patch: (next: Partial<AdjustState>) => void,
-    submit: (open: AdjustState) => void,
-) => {
+const viewOf = ({
+    drawer,
+    defaultLocationId,
+    state,
+    effect,
+    say,
+    t,
+    format,
+    several,
+    nameOf,
+    places,
+    run,
+    patch,
+    submit,
+}: AdjustmentViewInput) => {
+    const placeSummary =
+        state?.item.levels.map((level) => `${nameOf(level.locationId)} ${format.qty(level.qty)}`).join(" · ") ?? ""
+    const previewKey = effect?.small ? "adjustPreviewSmall" : "adjustPreviewBig"
     return {
         open: (item: ItemView) =>
             drawer.open({ item, mode: "set", value: "", reason: "", from: defaultLocationId ?? "", to: "" }),
@@ -117,9 +136,7 @@ const viewOf = (
                       summary: t("adjustSummary", {
                           total: format.qty(state.item.total),
                           unit: state.item.unit,
-                          places: several
-                              ? ` · ${state.item.levels.map((level) => `${nameOf(level.locationId)} ${format.qty(level.qty)}`).join(" · ")}`
-                              : "",
+                          places: several ? ` · ${placeSummary}` : "",
                       }),
                       modes: [
                           { value: "set", label: t("adjustSet") },
@@ -137,7 +154,7 @@ const viewOf = (
                       reason: state.reason,
                       preview:
                           state.value.trim() !== "" && !effect.move
-                              ? t(effect.small ? "adjustPreviewSmall" : "adjustPreviewBig", {
+                              ? t(previewKey, {
                                     from: format.qty(effect.current),
                                     to: format.qty(effect.target),
                                     unit: state.item.unit,

@@ -17,7 +17,10 @@ const DEFAULT_DRIVE_BASE = "https://www.googleapis.com/drive/v3"
 
 const urlOf = (env: EnvSource, key: string): string | null => {
     const value = env.optional(key)
-    return value !== undefined && URL.canParse(value) && /^https?:\/\//u.test(value) ? value.replace(/\/+$/u, "") : null
+    if (value === undefined || !URL.canParse(value) || !/^https?:\/\//u.test(value)) return null
+    let end = value.length
+    while (end > 0 && value[end - 1] === "/") end -= 1
+    return value.slice(0, end)
 }
 
 const googleOf = (env: EnvSource): DocumentsGoogleClient | null => {

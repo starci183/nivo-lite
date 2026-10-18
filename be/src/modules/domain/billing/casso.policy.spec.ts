@@ -172,3 +172,12 @@ describe("casso policy > cassoCredits", () => {
         expect(cassoCredits({})).toEqual([])
     })
 })
+
+describe("casso canonical key ordering", () => {
+    it("keeps uppercase keys before lowercase keys in the signed bytes", async () => {
+        const { cassoSignature } = await buildSubject()
+        expect(cassoSignature({ a: 1, Z: 2, A: 3 }, "1700", KEY)).toBe(
+            createHmac("sha512", KEY).update('1700.{"A":3,"Z":2,"a":1}').digest("hex"),
+        )
+    })
+})

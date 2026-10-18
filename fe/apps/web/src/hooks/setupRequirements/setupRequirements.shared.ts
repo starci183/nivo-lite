@@ -17,7 +17,7 @@ export interface UnmetRequirement {
 }
 
 const CHAT_PROVIDERS = ["telegram", "zalo_oa"]
-const KNOWN_CONNECTIONS = ["google", "smtp", "webhook", "telegram", "zalo_oa"]
+const KNOWN_CONNECTIONS: ReadonlySet<string> = new Set(["google", "smtp", "webhook", "telegram", "zalo_oa"])
 
 /** What each capability a module declares needs, and where the owner fixes it. A capability the platform itself provides is always met. */
 const CAPABILITY: Readonly<
@@ -66,7 +66,7 @@ export const unmetRequirementsOf = (
     const connections = requires.connections
         .filter((key) => !providers.has(key))
         .map((key) => ({
-            messageKey: KNOWN_CONNECTIONS.includes(key) ? `req_conn_${key}` : "",
+            messageKey: KNOWN_CONNECTIONS.has(key) ? `req_conn_${key}` : "",
             key,
             href: AUTOMATION_ROUTES.connections,
         }))

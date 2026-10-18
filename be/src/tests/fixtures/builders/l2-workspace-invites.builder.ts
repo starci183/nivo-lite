@@ -21,7 +21,7 @@ export const TOKEN = createHash("sha256").update("fixture-workspace-invite-token
 /** Shared L2 service proof fixture. */
 export const LINK = `https://app.test/invite/${TOKEN}`
 /** Shared L2 service proof fixture. */
-export const REDIRECT = `https://app.test/auth/confirm?next=${encodeURIComponent(`/invite/${TOKEN}`)}`
+export const REDIRECT = `https://app.test/auth/confirm?next=${encodeURIComponent("/invite/" + TOKEN)}`
 /** Shared L2 service proof fixture. */
 export const EXPIRES = new Date("2026-10-19T00:00:00.000Z")
 

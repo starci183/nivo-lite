@@ -106,7 +106,8 @@ export const updatePassword = async (input: unknown): Promise<GraphQLResponse<tr
 export const startOAuth = async (next: string | undefined): Promise<GraphQLResponse<{ readonly url: string }>> => {
     const origin = window.location.origin
     const safe = safeNext(next, origin)
-    const redirectTo = `${origin}${APP_ROUTES.authCallback}${safe === undefined ? "" : `?next=${encodeURIComponent(safe)}`}`
+    const query = safe === undefined ? "" : `?next=${encodeURIComponent(safe)}`
+    const redirectTo = `${origin}${APP_ROUTES.authCallback}${query}`
     const { data, error } = await authClient().auth.signInWithOAuth({
         provider: "google",
         options: { redirectTo, skipBrowserRedirect: true },

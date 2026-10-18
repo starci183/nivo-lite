@@ -41,10 +41,12 @@ const ESCALATION_PATTERNS: ReadonlyArray<readonly [EscalationReason, RegExp]> = 
         "angry",
         /\b(buc minh|buc xuc|tuc gian|qua doi|vo trach nhiem|dm|dcm|vcl|do ngu|ngu qua|cut|angry|furious|worst|terrible|unacceptable|ridiculous)\b/,
     ],
+    ["real_person", /\b(?:co phai|la)\s+(?:nguoi that|nguoi hay may|bot|robot|ai|may)\b/],
     [
         "real_person",
-        /(\b(co phai|la)\s+(nguoi that|nguoi hay may|bot|robot|ai|may)\b|\b(nguoi that|nguoi that khong|nguoi that ko|ban la bot|ban la ai|are you (a )?(real|human|bot|robot|person)|real person|talk to (a )?(human|person|someone)|noi chuyen voi nguoi|gap nguoi that|nhan vien that|cho gap nhan vien)\b)/,
+        /\b(?:nguoi that|nguoi that khong|nguoi that ko|ban la bot|ban la ai|real person|noi chuyen voi nguoi|gap nguoi that|nhan vien that|cho gap nhan vien)\b/,
     ],
+    ["real_person", /\b(?:are you (?:a )?(?:real|human|bot|robot|person)|talk to (?:a )?(?:human|person|someone))\b/],
 ]
 
 /** Keyword triggers, free of any model call; the first match wins. */
@@ -151,12 +153,11 @@ export const composeAsk = (parts: ComposeAsk): string =>
     [parts.reply.trim() || parts.thanks, parts.question.trim()].filter((part) => part !== "").join("\n\n")
 
 /** The package Sales receives with a hot lead: need, answers, score and why, source, last message time. */
-export const handoffNeed = (pack: HandoffPack): string =>
-    [
+export const handoffNeed = (pack: HandoffPack): string => {
+    const answers = pack.answers.map((answer) => `${answer.question} → ${answer.answer}`).join(" | ")
+    return [
         pack.need ?? "",
-        pack.answers.length > 0
-            ? `${pack.labels.answers}: ${pack.answers.map((answer) => `${answer.question} → ${answer.answer}`).join(" | ")}`
-            : "",
+        pack.answers.length > 0 ? `${pack.labels.answers}: ${answers}` : "",
         `${pack.labels.score}: ${pack.score.level} (${pack.score.reasons.join(", ")})`,
         `${pack.labels.source}: ${pack.sourceLine}`,
         pack.lastUserAt === null ? "" : `${pack.labels.lastMessage}: ${pack.lastUserAt}`,
@@ -164,3 +165,4 @@ export const handoffNeed = (pack: HandoffPack): string =>
         .filter((line) => line !== "")
         .join("\n")
         .slice(0, 900)
+}

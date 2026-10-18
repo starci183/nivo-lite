@@ -1,6 +1,6 @@
 import { MODULE_KEYS, MODULE_REGISTRY, isModuleKey } from "@/modules/catalog"
 import type { ModuleKey } from "@/modules/catalog"
-import type { AutomationCardView, ConfigValue, ModuleScope, TemplateDef } from "@/modules/types"
+import type { AutomationCardView, ConfigValue, TemplateDef } from "@/modules/types"
 
 /** A text in both languages as the definitions carry it. */
 type Localized = { readonly vi: string; readonly en: string }
@@ -14,11 +14,8 @@ export const automationText = (text: Localized, locale: CopyLocale): string => t
 /** The scope key of the whole workspace. */
 const WORKSPACE_SCOPE = "workspace"
 
-/** The module a card belongs to, or the workspace. */
-export type AutomationScope = ModuleScope | typeof WORKSPACE_SCOPE
-
 /** Where a template belongs. */
-export const automationScopeOf = (def: TemplateDef): AutomationScope => def.moduleKey ?? WORKSPACE_SCOPE
+export const automationScopeOf = (def: TemplateDef): string => def.moduleKey ?? WORKSPACE_SCOPE
 
 /** The one fact a card shows as its badge. */
 export type AutomationStatus =
@@ -61,9 +58,6 @@ export const isSwitchLocked = (status: AutomationStatus): boolean =>
 export const startsAutomationConnection = (status: AutomationStatus): boolean =>
     status === "needsGoogle" || status === "needsWebhook" || status === "needsEmail" || status === "googleLost"
 
-/** One chip of the filter: all, a module, the whole workspace, or what is on. */
-export type AutomationFilterKey = "all" | ModuleScope | typeof WORKSPACE_SCOPE | "on"
-
 const MODULES = MODULE_KEYS.map((key) => MODULE_REGISTRY[key])
 
 const STABLE_MODULES: ReadonlyArray<ModuleKey> = MODULES.filter((module) => module.status === "stable").map(
@@ -71,19 +65,19 @@ const STABLE_MODULES: ReadonlyArray<ModuleKey> = MODULES.filter((module) => modu
 )
 
 /** The chips that always show: all, the stable modules, the whole workspace, what is on. */
-const BASE_FILTERS: ReadonlyArray<AutomationFilterKey> = ["all", ...STABLE_MODULES, WORKSPACE_SCOPE, "on"]
+const BASE_FILTERS: ReadonlyArray<string> = ["all", ...STABLE_MODULES, WORKSPACE_SCOPE, "on"]
 
 /** The chips for these cards: the base chips plus any other module that owns a card. */
-export const automationFiltersFor = (cards: ReadonlyArray<AutomationCardView>): ReadonlyArray<AutomationFilterKey> => {
+export const automationFiltersFor = (cards: ReadonlyArray<AutomationCardView>): ReadonlyArray<string> => {
     const extra = MODULES.filter(
         (module) => module.status !== "stable" && cards.some((card) => automationScopeOf(card.def) === module.key),
-    ).map((module): AutomationFilterKey => module.key)
+    ).map((module): string => module.key)
     const at = BASE_FILTERS.indexOf(WORKSPACE_SCOPE)
     return [...BASE_FILTERS.slice(0, at), ...extra, ...BASE_FILTERS.slice(at)]
 }
 
 /** Whether a card passes the chip. */
-export const matchesAutomationFilter = (card: AutomationCardView, filter: AutomationFilterKey): boolean => {
+export const matchesAutomationFilter = (card: AutomationCardView, filter: string): boolean => {
     if (filter === "all") return true
     return filter === "on" ? card.enabled : automationScopeOf(card.def) === filter
 }
@@ -100,8 +94,7 @@ export const hiddenAutomations = (cards: ReadonlyArray<AutomationCardView>): Arr
 export type AutomationValues = Record<string, ConfigValue>
 
 /** The module a filter chip names, or null for the chips that are not a module. */
-export const moduleOfAutomationFilter = (filter: AutomationFilterKey): ModuleKey | null =>
-    isModuleKey(filter) ? filter : null
+export const moduleOfAutomationFilter = (filter: string): ModuleKey | null => (isModuleKey(filter) ? filter : null)
 
 /** The hours and minutes of a `HH:MM` setting. */
 export const automationTimeParts = (

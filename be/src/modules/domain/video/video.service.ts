@@ -15,7 +15,7 @@ import { readScript, specOf } from "./video-script.policy"
 import { validateVideoSpec } from "./video-spec.policy"
 
 /** The render statuses that keep a project busy. */
-const OPEN_RENDER_STATUSES: ReadonlyArray<string | null> = ["queued", "rendering"]
+const OPEN_RENDER_STATUSES: ReadonlySet<string | null> = new Set(["queued", "rendering"])
 
 @Injectable()
 /**
@@ -45,7 +45,7 @@ export class VideoService {
                 throw new VideoError({ code: VideoErrorCode.ProjectNotFound, params: { projectId } })
             }
             await this.members.require(principalId, project.workspaceId, ["owner", "manager"])
-            if (project.status === "scripting" || OPEN_RENDER_STATUSES.includes(project.renderStatus)) {
+            if (project.status === "scripting" || OPEN_RENDER_STATUSES.has(project.renderStatus)) {
                 throw new VideoError({ code: VideoErrorCode.ProjectBusy, params: { projectId } })
             }
             const saved = project.brand.shopName

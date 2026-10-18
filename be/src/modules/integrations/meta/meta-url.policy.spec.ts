@@ -92,6 +92,13 @@ describe("graphUrl and dialogUrl", () => {
 })
 
 describe("callback urls", () => {
+    it("drops a long trailing separator run and keeps the provider callback path", async () => {
+        const { subject } = await buildSubject()
+        expect(subject.redirectUri({ siteUrl: "https://nivo.vn/app" + "/".repeat(20_000) })).toBe(
+            "https://nivo.vn/app/api/connections/meta/callback",
+        )
+    })
+
     it("keep the provider paths byte-identical and need a site url", async () => {
         const { subject } = await buildSubject()
 

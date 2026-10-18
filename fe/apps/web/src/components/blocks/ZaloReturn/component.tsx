@@ -10,7 +10,11 @@ export interface ZaloReturnBaseProps {
 
 /** Draws the line shown while the Zalo return is handed to the back end. */
 export const ZaloReturnBase = (props: ZaloReturnBaseProps) => (
-    <div className={WAIT_CLASS_NAME} role="status">
-        <Text tone="muted">{props.props.waiting}</Text>
+    <div className={WAIT_CLASS_NAME}>
+        <output>
+            <Text as="span" tone="muted">
+                {props.props.waiting}
+            </Text>
+        </output>
     </div>
 )

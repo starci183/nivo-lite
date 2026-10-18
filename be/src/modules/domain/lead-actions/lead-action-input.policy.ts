@@ -3,15 +3,9 @@ import type { Outcome } from "@modules/platform/primitives"
 import { LeadActionsErrorCode } from "./errors/lead-actions.error"
 import type { LeadAction, LeadActionInput } from "./lead-actions.contracts"
 
-const ACTIONS: ReadonlyArray<LeadAction> = [
-    "create",
-    "refresh-context",
-    "suggest-owner",
-    "draft-execution",
-    "settle-won",
-]
+const ACTIONS: ReadonlyArray<string> = ["create", "refresh-context", "suggest-owner", "draft-execution", "settle-won"]
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/iu
-const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/u
+const EMAIL_PART = /^[^\s@]+$/u
 const NAME_MAX = 200
 const CHANNEL_MAX = 100
 const NEED_MAX = 2000
@@ -19,7 +13,16 @@ const PHONE_MAX = 80
 const EMAIL_MAX = 320
 const EVIDENCE_MAX = 2000
 
-const isAction = (value: unknown): value is LeadAction => ACTIONS.some((action) => action === value)
+const isAction = (value: unknown): value is LeadAction => typeof value === "string" && ACTIONS.includes(value)
+
+/** Checks the email shape in linear scans, with text on both sides of a domain dot. */
+const isEmail = (value: string): boolean => {
+    const at = value.indexOf("@")
+    const local = value.slice(0, at)
+    const domain = value.slice(at + 1)
+    const dot = domain.indexOf(".", 1)
+    return at > 0 && EMAIL_PART.test(local) && EMAIL_PART.test(domain) && dot > 0 && dot < domain.length - 1
+}
 
 const textOf = (value: unknown, min: number, max: number): string | undefined => {
     if (typeof value !== "string" || value.length > max) return undefined
@@ -50,7 +53,7 @@ const createInputOf = (input: Record<string, unknown>): Outcome<LeadActionInput,
     const phone = optionalTextOf(input.phone, PHONE_MAX)
     if (phone === undefined) return refused(LeadActionsErrorCode.InvalidInput, { field: "phone" })
     const email = optionalTextOf(input.email, EMAIL_MAX)
-    if (email === undefined || (email !== null && !EMAIL.test(email))) {
+    if (email === undefined || (email !== null && !isEmail(email))) {
         return refused(LeadActionsErrorCode.InvalidInput, { field: "email" })
     }
     return ok({ contactName, company, channel, need, phone, email })

@@ -13,6 +13,6 @@ export const parseMetaSecret = (plain: string): MetaSecret => {
 
 /** The connection id a callback state names in its return path (`/connections?connect=meta&id=<uuid>`), or null. */
 export const connectionIdOfReturn = (returnTo: string): string | null => {
-    const id = new URL(returnTo, "http://local").searchParams.get("id")
+    const id = new URL(returnTo, "https://local").searchParams.get("id")
     return id !== null && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/iu.test(id) ? id : null
 }

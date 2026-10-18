@@ -46,10 +46,13 @@ export type RunContextOrNone = N8nRunContext | null
 /** A run id, or none when the occurrence already started one. */
 export type OptionalRunId = string | null
 
+/** The authorization header presented by a callback, absent when no credential was supplied. */
+export type RunAuthorization = string | undefined
+
 /** What a request presents to prove the run it speaks for. */
 export interface RunVerification {
     /** The `Authorization` header. */
-    readonly authorization: string | undefined
+    readonly authorization: RunAuthorization
     /** The run the URL names, when it names one. */
     readonly expectedRunId: string | undefined
 }
@@ -169,15 +172,15 @@ export interface MailOutcome {
     /** `sent`, `waiting_decision`, `no_smtp`, `blocked`, `failed`, `rate_limited`, `duplicate`. */
     readonly status: string
     /** How it went out (`smtp`, `platform`, `none`). */
-    readonly via?: string | undefined
+    readonly via?: string
     /** The work item the gate opened. */
-    readonly workItemId?: string | null | undefined
+    readonly workItemId?: string | null
     /** The row of the email log. */
-    readonly emailMessageId?: string | null | undefined
+    readonly emailMessageId?: string | null
     /** The id the mail server gave. */
-    readonly messageId?: string | null | undefined
+    readonly messageId?: string | null
     /** Why it did not go out. */
-    readonly error?: string | null | undefined
+    readonly error?: string | null
 }
 
 /** The mail of the product: owners are mailed straight, customers through the gate. */

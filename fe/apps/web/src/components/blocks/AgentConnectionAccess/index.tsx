@@ -7,16 +7,16 @@ import {
     useAgentConnectionAccess,
     useAgentInstallation,
     useAgentRights,
+    type AgentConnectionView,
 } from "@/hooks/agentSettings"
-import type { AgentConnectionView } from "@/hooks/agentSettings"
+
 import { mapSlot, useSlotLabels } from "@/hooks/slot"
 import { AUTOMATION_ROUTES } from "@/modules/routes"
-import { AgentConnectionAccessBase } from "./component"
-import type { AgentConnectionAccessRow } from "./component"
+import { AgentConnectionAccessBase, type AgentConnectionAccessRow } from "./component"
 
 const NONE = "none"
 const LEVELS = ["read", "ask", "auto"] as const
-const PURPOSES = ["inbound_chat", "outbound_chat", "bank_feed", "lead_source"] as const
+const PURPOSES: ReadonlyArray<string> = ["inbound_chat", "outbound_chat", "bank_feed", "lead_source"]
 const STATUS_TONE = { connected: "success", error: "danger", pending: "warning", disconnected: "neutral" } as const
 const PLACEHOLDER: ReadonlyArray<AgentConnectionAccessRow> = []
 
@@ -45,9 +45,7 @@ export const AgentConnectionAccess = (props: AgentConnectionAccessProps) => {
             label: connection.label,
             statusLabel: t(`connStatus_${connection.status}`),
             statusTone: STATUS_TONE[connection.status],
-            purposeLabel: PURPOSES.some((purpose) => purpose === connection.purpose)
-                ? t(`grantPurpose_${connection.purpose}`)
-                : "",
+            purposeLabel: PURPOSES.includes(connection.purpose) ? t(`grantPurpose_${connection.purpose}`) : "",
             access: levelOf(connection),
             isDisconnected: connection.status === "disconnected",
         }))

@@ -15,12 +15,12 @@ const PASSWORD_MIN = 8
 const PASSWORD_MAX = 256
 
 /** Supabase codes (or the HTTP status) that mean "slow down". */
-const RATE_LIMIT_CODES: ReadonlyArray<string> = [
+const RATE_LIMIT_CODES: ReadonlySet<string> = new Set([
     "over_request_rate_limit",
     "over_email_send_rate_limit",
     "over_sms_send_rate_limit",
     "429",
-]
+])
 
 /** The request-bound facts a sign-up needs. */
 export interface SignUpInput {
@@ -50,7 +50,7 @@ const emailOf = (input: unknown): string | undefined => {
 }
 
 /** Whether a failure code means the caller hit a rate limit. */
-export const isRateLimited = (code: string): boolean => RATE_LIMIT_CODES.includes(code)
+export const isRateLimited = (code: string): boolean => RATE_LIMIT_CODES.has(code)
 
 /** The bounded fields of a sign-up request, or `undefined` when one is missing or out of range. */
 export const parseSignUp = (input: unknown): SignUpInput | undefined => {

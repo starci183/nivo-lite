@@ -159,15 +159,15 @@ export class GenerationRunnerService {
                 generation.workspaceId,
                 this.clock.now().toISOString(),
             ])
-            return "error"
+        } else {
+            await this.entityManager.query(FAIL_GENERATION, [
+                generation.id,
+                generation.workspaceId,
+                attempt.reason,
+                JSON.stringify(this.timingsOf(attempt, startedAt)),
+                this.clock.now().toISOString(),
+            ])
         }
-        await this.entityManager.query(FAIL_GENERATION, [
-            generation.id,
-            generation.workspaceId,
-            attempt.reason,
-            JSON.stringify(this.timingsOf(attempt, startedAt)),
-            this.clock.now().toISOString(),
-        ])
         return "error"
     }
 

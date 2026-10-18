@@ -1,12 +1,17 @@
 "use client"
 
-import { useSettledGraphQL } from "@/hooks/connection-wizard"
-import type { Settled } from "@/hooks/connection-wizard"
+import { useSettledGraphQL, type Settled } from "@/hooks/connection-wizard"
+
 import { useConnectionsRefresh } from "@/hooks/connections"
 import { useMutateRunCsvImportSwr, useMutateRunDocumentImportSwr, useQueryPreviewCsvSourceSwr } from "@/hooks/swr"
 import { useMemo } from "react"
-import { parseMapping, uploadedFileOf } from "./csv-import-wizard.shared"
-import type { CsvImportResult, CsvMapping, CsvPreview } from "./csv-import-wizard.shared"
+import {
+    parseMapping,
+    uploadedFileOf,
+    type CsvImportResult,
+    type CsvMapping,
+    type CsvPreview,
+} from "./csv-import-wizard.shared"
 
 /** The rows typed or pasted into the grid. */
 export interface CsvGridSource {
@@ -83,8 +88,7 @@ export const useCsvImportCommands = (): CsvImportCommands => {
                         schedule: form.schedule,
                     }),
                 )
-                if (settled.kind !== "ok") return settled
-                await refresh()
+                if (settled.kind === "ok") await refresh()
                 return settled
             },
             runDocuments: async (form) => {
@@ -96,8 +100,7 @@ export const useCsvImportCommands = (): CsvImportCommands => {
                         files: await Promise.all(form.files.map(uploadedFileOf)),
                     }),
                 )
-                if (settled.kind !== "ok") return settled
-                await refresh()
+                if (settled.kind === "ok") await refresh()
                 return settled
             },
         }),

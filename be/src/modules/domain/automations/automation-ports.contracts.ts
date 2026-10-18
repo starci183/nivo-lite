@@ -23,7 +23,7 @@ export interface FollowUp {
 /** A line in the evidence log. */
 export interface AutomationEvidenceEntry {
     /** The lead it is about. */
-    readonly leadId?: string | undefined
+    readonly leadId?: string
     /** The kind, for example `automation.owner_notified`. */
     readonly kind: string
     /** Who did it. */
@@ -31,7 +31,7 @@ export interface AutomationEvidenceEntry {
     /** What happened. */
     readonly summary: string
     /** The proof. */
-    readonly evidence?: string | undefined
+    readonly evidence?: string
 }
 
 /** The Office of a workspace, which owns its line, its tasks and its evidence log: the automations write to them only through it. */

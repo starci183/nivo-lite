@@ -10,6 +10,7 @@ import type { Clock } from "@modules/platform/clock"
 import { InjectMessageCatalog } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
 import { eachInOrder } from "@modules/platform/primitives"
+import { videoCaptions } from "./video-captions.policy"
 import { buildAss } from "./captions.policy"
 import { VideoError, VideoErrorCode } from "./errors/video.error"
 import { gradientPng } from "./gradient-png.policy"
@@ -103,6 +104,10 @@ export interface RenderOutput {
     readonly videoFile: string
     /** The poster frame. */
     readonly posterFile: string
+    /** A nonempty WebVTT track, or null when the render has no caption content. */
+    readonly captionsFile: string | null
+    /** Known locale of all caption cues, otherwise null. */
+    readonly captionsLang: string | null
     /** Real length of the video in milliseconds. */
     readonly durationMs: number
     /** Size of the MP4 in bytes. */
@@ -176,12 +181,7 @@ export class RendererService {
         const voiced = await lap("tts_ms", () => this.voiceover(input, warnings))
         const lengths = sceneLengths(spec.scenes, voiced.clips)
         const total = lengths.reduce((sum, length) => sum + length, 0)
-        if (total > this.options.maxSeconds + 0.5) {
-            throw new VideoError({
-                code: VideoErrorCode.RenderRejected,
-                params: { reason: `video_too_long: ${Math.round(total)} s (max ${this.options.maxSeconds} s)` },
-            })
-        }
+        this.assertDuration(total)
         const starts = startsOf(lengths)
         const crossfades = crossfadesOf(spec.scenes)
 
@@ -209,10 +209,19 @@ export class RendererService {
 
         const sizeBytes = (await stat(videoFile)).size
         const duration = await this.ffmpeg.probeDuration(videoFile, signal)
+        const durationMs = Math.round(duration * 1000)
+        const captions = videoCaptions(spec, starts, lengths, voiced.clips, durationMs)
+        let captionsFile: string | null = null
+        if (captions !== null) {
+            captionsFile = join(workDir, "captions.vtt")
+            await writeFile(captionsFile, captions.text, "utf8")
+        }
         return {
             videoFile,
             posterFile,
-            durationMs: Math.round(duration * 1000),
+            durationMs,
+            captionsFile,
+            captionsLang: captions?.language ?? null,
             sizeBytes,
             meta: {
                 width: size.width,
@@ -231,6 +240,16 @@ export class RendererService {
                 loudness: audio.loudness,
                 timings,
             },
+        }
+    }
+
+    /** Rejects an oversized timeline before any scene rendering begins. */
+    private assertDuration(total: number): void {
+        if (total > this.options.maxSeconds + 0.5) {
+            throw new VideoError({
+                code: VideoErrorCode.RenderRejected,
+                params: { reason: `video_too_long: ${Math.round(total)} s (max ${this.options.maxSeconds} s)` },
+            })
         }
     }
 

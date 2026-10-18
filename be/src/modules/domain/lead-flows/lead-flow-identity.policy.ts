@@ -56,12 +56,29 @@ export const normPhone = (raw: unknown): string | null => {
 /** An email in lower case, or null. */
 export const normEmail = (raw: unknown): string | null => {
     const value = textOf(raw).toLowerCase()
-    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value) ? value : null
+    const parts = value.split("@")
+    const local = parts[0] ?? ""
+    const domain = parts[1] ?? ""
+    const dot = domain.lastIndexOf(".", domain.length - 2)
+    return parts.length === 2 && local !== "" && dot > 0 && !/\s/.test(value) ? value : null
+}
+
+/** Finds the first adjacent address parts without retrying an unbounded regex at every character. */
+const emailIn = (text: string): string | null => {
+    for (const token of text.split(/[\s,;]+/)) {
+        const parts = token.split("@")
+        for (let index = 1; index < parts.length; index += 1) {
+            const local = parts[index - 1] ?? ""
+            const domain = parts[index] ?? ""
+            if (local !== "" && domain.lastIndexOf(".", domain.length - 2) > 0) return `${local}@${domain}`
+        }
+    }
+    return null
 }
 
 /** The first phone number and email written in a free text, normalised. */
 export const contactIn = (text: string): ContactFound => {
-    const email = /[^\s@,;]+@[^\s@,;]+\.[^\s@,;]+/.exec(text)?.[0] ?? null
+    const email = emailIn(text)
     const phone = /(?:\+?84|0)[\s.-]?\d(?:[\s.-]?\d){7,9}/.exec(text.replace(email ?? "", " "))?.[0] ?? null
     return { phone: normPhone(phone), email: normEmail(email) }
 }

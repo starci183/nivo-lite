@@ -33,7 +33,7 @@ export class InviteSupportService {
             expiresAt,
         ])
         if (invite === undefined) throw new WorkspaceInvitesError({ code: WorkspaceInvitesErrorCode.NotFound })
-        const redirectTo = `${this.options.siteUrl}/auth/confirm?next=${encodeURIComponent(`/invite/${minted.token}`)}`
+        const redirectTo = `${this.options.siteUrl}/auth/confirm?next=${encodeURIComponent("/invite/" + minted.token)}`
         const delivery = await this.delivery.deliverInvite(invite.email, redirectTo)
         return { email: invite.email, link: `${this.options.siteUrl}/invite/${minted.token}`, delivery }
     }

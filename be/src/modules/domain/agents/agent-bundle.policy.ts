@@ -19,7 +19,9 @@ export const INLINE_KNOWLEDGE_MAX = 6000
 const SLUG_MAX = 48
 const COMBINING_MARKS = new RegExp(`[${String.fromCodePoint(0x300)}-${String.fromCodePoint(0x36f)}]`, "gu")
 const D_STROKE = new RegExp(String.fromCodePoint(0x111), "giu")
-const SETUP_BLOCK = /\n*### NIVO setup[\s\S]*?### end NIVO setup\s*/gu
+const SETUP_START = "### NIVO setup"
+const SETUP_END = "### end NIVO setup"
+const WHITESPACE = /\s/u
 
 /** The file name part of a title: ASCII lower case words joined by dashes. */
 export const slugOf = (title: string): string => {
@@ -29,7 +31,7 @@ export const slugOf = (title: string): string => {
         .replace(D_STROKE, "d")
         .toLowerCase()
         .replace(/[^a-z0-9]+/gu, "-")
-        .replace(/^-+|-+$/gu, "")
+        .replace(/^-|-$/gu, "")
         .slice(0, SLUG_MAX)
     return slug === "" ? "source" : slug
 }
@@ -38,15 +40,38 @@ export const slugOf = (title: string): string => {
 export const stripMarkdown = (text: string): string =>
     text
         .replace(/^#{1,6}\s*/gmu, "")
-        .replace(/\*\*/gu, "")
+        .replaceAll("**", "")
         .trim()
 
 /** The text cut to `max` characters at a word boundary, with " ..." when it was cut. */
-export const trimTo = (text: string, max: number): string =>
-    text.length <= max ? text : `${text.slice(0, max).replace(/\s+\S*$/u, "")} ...`
+export const trimTo = (text: string, max: number): string => {
+    if (text.length <= max) return text
+    const prefix = text.slice(0, max)
+    let end = prefix.length
+    while (end > 0 && !WHITESPACE.test(prefix.charAt(end - 1))) end -= 1
+    if (end === 0) return `${prefix} ...`
+    while (end > 0 && WHITESPACE.test(prefix.charAt(end - 1))) end -= 1
+    return `${prefix.slice(0, end)} ...`
+}
 
 /** The text without the block the setup chat appended, trimmed. */
-export const withoutSetupBlock = (text: string): string => text.replace(SETUP_BLOCK, "").trim()
+export const withoutSetupBlock = (text: string): string => {
+    const parts: Array<string> = []
+    let at = 0
+    let start = text.indexOf(SETUP_START, at)
+    while (start !== -1) {
+        const end = text.indexOf(SETUP_END, start + SETUP_START.length)
+        if (end === -1) break
+        let before = start
+        while (before > at && text[before - 1] === "\n") before -= 1
+        parts.push(text.slice(at, before))
+        at = end + SETUP_END.length
+        while (WHITESPACE.test(text[at] ?? "")) at += 1
+        start = text.indexOf(SETUP_START, at)
+    }
+    parts.push(text.slice(at))
+    return parts.join("").trim()
+}
 
 /** The base rules cut to their budget, in order, until the budget is spent. */
 export const budgetRules = (rules: ReadonlyArray<BaseRule>): ReadonlyArray<BaseRuleText> =>

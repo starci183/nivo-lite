@@ -17,6 +17,8 @@ export interface SetupActionRules {
 
 /** Every word and small formatter a confirm card of the setup chat needs, in the reader language. */
 export interface SetupWriteWords {
+    /** Resolves the localized settled summary; null keeps a proposed card in its editor. */
+    readonly decidedOf: (write: SetupWrite) => SetupWriteDecided | null
     readonly factTitle: string
     readonly ruleTitle: string
     readonly gap: string

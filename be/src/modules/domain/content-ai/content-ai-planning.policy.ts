@@ -131,8 +131,10 @@ const DEFAULT_DAYS: ReadonlyArray<ReadonlyArray<number>> = [
     [1, 2, 3, 4, 5, 6, 7],
 ]
 
+const PLAN_CHANNEL_VALUES: ReadonlyArray<unknown> = CONTENT_AI_CHANNELS
+
 /** Checks a stored or incoming channel. */
-export const isPlanChannel = (value: unknown): value is PlanChannel => CONTENT_AI_CHANNELS.some((c) => c === value)
+export const isPlanChannel = (value: unknown): value is PlanChannel => PLAN_CHANNEL_VALUES.includes(value)
 
 /** Parses a plausible YYYY-MM month. */
 export const parseMonth = (value: string): YearMonth | null => {
@@ -262,8 +264,8 @@ export const pinHolidays = (
         const before = free.filter(
             (s) => dayNumber(s.at) <= day && dayNumber(s.at) >= day - Math.min(holiday.leadDays ?? 0, 7),
         )
-        const after = free.filter((s) => dayNumber(s.at) > day && dayNumber(s.at) <= day + 2)
-        const pick = before.at(-1) ?? after[0]
+        const after = free.find((s) => dayNumber(s.at) > day && dayNumber(s.at) <= day + 2)
+        const pick = before.at(-1) ?? after
         if (pick !== undefined) pinned.set(pick.n, holiday.key)
     }
     return pinned

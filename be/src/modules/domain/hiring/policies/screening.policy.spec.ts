@@ -20,11 +20,7 @@ import {
 } from "./screening.policy"
 
 const SUBJECT = Symbol("subject")
-type Subject = {
-    criteriaText: typeof criteriaTextImplementation
-    experienceLine: typeof experienceLineImplementation
-    screenAgainstRequirements: typeof screenAgainstRequirementsImplementation
-}
+type Subject = typeof import("./screening.policy")
 type Params = Readonly<Record<string, string | number>>
 type ScreenedJob = Pick<JobRecord, "title" | "requirements" | "questions" | "employmentType" | "schedule" | "location">
 type QuestionCase = [title: string, question: Partial<JobQuestion>, answer: string, expected: Screening]
@@ -437,6 +433,9 @@ describe("screening policy", () => {
                 text("hiring.criteria.experienceNote", { note: "Retail" }),
             )
             expect(subject.experienceLine(years, "", "criteria", textOf)).toBe("")
+            expect(subject.experienceLine(years, "Retail", "facts", textOf)).toBe(
+                text("hiring.facts.experienceNote", { note: "Retail" }),
+            )
         })
     })
 })
@@ -481,12 +480,17 @@ describe("screening policy", () => {
     })
 })
 
-describe("screening policy experienceLine", () => {
-    it("writes a facts note when no positive years are supplied", async () => {
-        const { textOf, subject } = await build()
-
-        expect(subject.experienceLine(null, "Retail", "facts", textOf)).toBe(
-            text("hiring.facts.experienceNote", { note: "Retail" }),
+describe("experience number boundaries", () => {
+    it.each(["1,5 years", "18 months", "1.2.1,5 years"])("reads a decimal or month suffix from %s", async (answer) => {
+        const { check } = await build()
+        expect(check(jobOf({ requirements: requirementsOf({ experienceYears: 1.5 }) }), evidence(answer))).toEqual(
+            fit(rr("experience", { years: 1.5 }, "met", "experienceGot", { years: 1.5 })),
         )
+    })
+    it("ignores a long numeric near miss with no experience unit", async () => {
+        const { check } = await build()
+        expect(
+            check(jobOf({ requirements: requirementsOf({ experienceYears: 2 }) }), evidence("9".repeat(20000))),
+        ).toEqual(consider(rr("experience", { years: 2 }, "unknown", "experienceUnknown")))
     })
 })

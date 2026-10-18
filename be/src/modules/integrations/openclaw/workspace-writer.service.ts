@@ -59,7 +59,7 @@ export class WorkspaceWriterService {
             this.files.remove(target)
             this.prune(root, posix.dirname(target))
         }
-        const manifest = JSON.stringify(files.map((file) => file.path).sort(), null, 2)
+        const manifest = JSON.stringify(files.map((file) => file.path).sort(byOrdinal), null, 2)
         this.files.writeText(posix.join(root, MANIFEST), manifest, FILE_MODE)
         return { written: changed.length, removed: stale.length }
     }
@@ -96,4 +96,10 @@ export class WorkspaceWriterService {
             this.prune(root, posix.dirname(directory))
         }
     }
+}
+
+/** Manifest order is UTF-16 ordinal, independent of the host locale. */
+const byOrdinal = (left: string, right: string): number => {
+    if (left < right) return -1
+    return left > right ? 1 : 0
 }

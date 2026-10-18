@@ -4,7 +4,6 @@ import type { PipelineConfig } from "@modules/domain/automation-pipelines"
 
 const TEMPLATE_KEY = /^[a-z][a-z0-9_-]{2,60}$/
 const HHMM = /^([01]\d|2[0-3]):[0-5]\d$/
-const EMAIL = /^[^@\s]+@[^@\s]+\.[^@\s]+$/
 const PLACEHOLDER = /\{([a-z_]+)\}/g
 const DEFAULT_TEXT_MAX = 200
 const PROPOSAL_MAX = 600
@@ -14,6 +13,16 @@ export const isTemplateKey = (value: unknown): value is string => typeof value =
 
 const isConfigValue = (value: unknown): value is ConfigValue =>
     typeof value === "string" || typeof value === "number" || typeof value === "boolean"
+
+// Find address boundaries directly so long invalid domains cannot cause regex backtracking.
+const normalizeEmail = (value: ConfigValue | undefined): string => {
+    const email = String(value ?? "").trim()
+    const at = email.indexOf("@")
+    const domain = email.slice(at + 1)
+    return at > 0 && email.indexOf("@", at + 1) === -1 && !/\s/.test(email) && domain.slice(1, -1).includes(".")
+        ? email.toLowerCase()
+        : ""
+}
 
 /** The saved config over the template defaults, every setting coerced to its kind and clamped. Keys that are not settings are kept as they are. */
 export const resolveConfig = (
@@ -35,8 +44,7 @@ export const resolveConfig = (
         } else if (setting.kind === "time") {
             out[setting.key] = HHMM.test(String(value)) ? String(value) : String(fallback ?? "00:00")
         } else if (setting.kind === "email") {
-            const email = String(value ?? "").trim()
-            out[setting.key] = EMAIL.test(email) ? email.toLowerCase() : ""
+            out[setting.key] = normalizeEmail(value)
         } else {
             out[setting.key] =
                 String(value ?? "")
@@ -63,11 +71,11 @@ export const fillBody = (
     body
         .replace(PLACEHOLDER, (_whole, name: string) => (variables[name] ?? "").trim() || (neutral[name] ?? ""))
         .replace(/[ \t]{2,}/g, " ")
-        .replace(/[ \t]+([.,!?])/g, "$1")
+        .replace(/[ \t]([.,!?])/g, "$1")
         .trim()
 
 /** The reason a body is refused, or null when it is fine: too short, or a blank the template does not offer. */
-export const bodyProblem = (def: TemplateDefinition, body: string, minLength: number): "short" | string | null => {
+export const bodyProblem = (def: TemplateDefinition, body: string, minLength: number): string | null => {
     if (body.length < minLength) return "short"
     return [...placeholdersOf(body)].find((name) => !def.variables.includes(name)) ?? null
 }

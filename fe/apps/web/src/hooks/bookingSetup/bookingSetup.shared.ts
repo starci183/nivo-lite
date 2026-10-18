@@ -1,3 +1,4 @@
+import type { useTranslations } from "next-intl"
 import type { BookingHoursView } from "@/modules/types"
 
 /** One weekly opening window as the database writer takes it. */
@@ -8,7 +9,7 @@ export interface HoursWindow {
 }
 
 const WINDOW = /^(\d{1,2}):?(\d{2})?\s*-\s*(\d{1,2}):?(\d{2})?$/u
-const OFF_WORDS: ReadonlyArray<string> = ["off", "closed"]
+const OFF_WORDS: ReadonlySet<string> = new Set(["off", "closed"])
 
 /** The seven days of a week, Monday first. */
 export const WEEK = [1, 2, 3, 4, 5, 6, 7] as const
@@ -29,7 +30,7 @@ export const parseHoursLine = (
     line: string,
 ): ReadonlyArray<{ readonly start: string; readonly end: string }> | null => {
     const text = line.trim()
-    if (text === "" || OFF_WORDS.includes(text.toLowerCase())) return []
+    if (text === "" || OFF_WORDS.has(text.toLowerCase())) return []
     const windows: Array<{ readonly start: string; readonly end: string }> = []
     for (const part of text.split(/[,;]/u)) {
         const match = WINDOW.exec(part.trim())
@@ -51,3 +52,31 @@ export const parseWeek = (
     }
     return { rows }
 }
+
+/** An open service form retains the caller's complete field contract. */
+interface ServiceFormDraft<Fields> {
+    readonly id: string | null
+    readonly fields: Fields
+}
+
+/** Resolves the service form heading and field copy for its existing draft. */
+export const bookingServiceFormOf = <Fields extends { readonly name: string }>(
+    draft: ServiceFormDraft<Fields>,
+    t: ReturnType<typeof useTranslations<"workbenchBooking">>,
+) => ({
+    heading: draft.id === null ? t("serviceAdd") : draft.fields.name,
+    fields: draft.fields,
+    nameLabel: t("serviceName"),
+    durationLabel: t("serviceDuration"),
+    bufferLabel: t("serviceBuffer"),
+    priceLabel: t("servicePrice"),
+    pricePlaceholder: t("servicePricePlaceholder"),
+    kindLabel: t("serviceKind"),
+    kindPlaceholder: t("serviceKindPlaceholder"),
+    followupLabel: t("serviceFollowup"),
+    followupPlaceholder: t("serviceFollowupPlaceholder"),
+    descriptionLabel: t("serviceDescription"),
+    activeLabel: t("serviceActive"),
+    saveLabel: t("save"),
+    cancelLabel: t("cancel"),
+})

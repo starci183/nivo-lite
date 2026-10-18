@@ -122,8 +122,23 @@ export const sceneArgs = (clip: SceneClip): Array<string> => {
     const { width, height } = size
     const encode = [
         "-an",
-        ...["-c:v", "libx264", "-preset", "ultrafast", "-crf", "18", "-pix_fmt", "yuv420p"],
-        ...["-r", String(FPS), "-g", String(FPS), "-threads", String(threads), "-t", fixed(length), output],
+        "-c:v",
+        "libx264",
+        "-preset",
+        "ultrafast",
+        "-crf",
+        "18",
+        "-pix_fmt",
+        "yuv420p",
+        "-r",
+        String(FPS),
+        "-g",
+        String(FPS),
+        "-threads",
+        String(threads),
+        "-t",
+        fixed(length),
+        output,
     ]
     const background = scene.background
     const local = (path: string): string => {
@@ -223,24 +238,42 @@ export const premixArgs = (mix: Premix): Array<string> => {
     }
     return [
         ...inputs,
-        ...["-filter_complex", graph.join(";"), "-map", `[${label}]`, "-t", fixed(mix.total)],
-        ...["-c:a", "pcm_s16le", "-ar", "44100", mix.output],
+        "-filter_complex",
+        graph.join(";"),
+        "-map",
+        `[${label}]`,
+        "-t",
+        fixed(mix.total),
+        "-c:a",
+        "pcm_s16le",
+        "-ar",
+        "44100",
+        mix.output,
     ]
 }
 
 /** The first loudness pass: measure the premix. */
 export const loudnessMeasureArgs = (premix: string): Array<string> => [
-    ...["-i", premix, "-af", `loudnorm=${LOUDNESS_TARGET}:print_format=json`, "-f", "null", "-"],
+    "-i",
+    premix,
+    "-af",
+    `loudnorm=${LOUDNESS_TARGET}:print_format=json`,
+    "-f",
+    "null",
+    "-",
 ]
 
 const readMeasured = (block: string, key: string): number => {
     const match = new RegExp(String.raw`"${key}"\s*:\s*"?(-?[0-9.]+|-?inf)"?`, "u").exec(block)
-    return match?.[1] === undefined ? NaN : Number(match[1])
+    return match?.[1] === undefined ? Number.NaN : Number(match[1])
 }
 
 /** The loudness the first pass printed in its stderr, or null when it printed none that can be used. */
 export const loudnessOf = (stderr: string): Loudness | null => {
-    const block = /\{[\s\S]*?"target_offset"[\s\S]*?\}/u.exec(stderr)?.[0]
+    const start = stderr.indexOf("{")
+    const target = stderr.indexOf('"target_offset"', Math.max(0, start))
+    const end = target < 0 ? -1 : stderr.indexOf("}", target)
+    const block = start >= 0 && target > start && end >= 0 ? stderr.slice(start, end + 1) : undefined
     if (block === undefined) return null
     const measured = {
         input_i: readMeasured(block, "input_i"),
@@ -264,7 +297,17 @@ export const audioFilterOf = (measured: Loudness | null): AudioFilter => {
 
 /** The second pass: encode the premix to AAC with the filter. */
 export const aacArgs = (premix: string, filter: string, output: string): Array<string> => [
-    ...["-i", premix, "-af", filter, "-c:a", "aac", "-b:a", "160k", "-ar", "44100", output],
+    "-i",
+    premix,
+    "-af",
+    filter,
+    "-c:a",
+    "aac",
+    "-b:a",
+    "160k",
+    "-ar",
+    "44100",
+    output,
 ]
 
 /** The loudness report the render keeps in its meta. */
@@ -369,10 +412,41 @@ export const finalArgs = (pass: FinalPass): Array<string> => {
     graph.push(`[${last}]ass=subs.ass:fontsdir=${pass.fontsDir},format=yuv420p[v]`)
     return [
         ...inputs,
-        ...["-filter_complex", graph.join(";"), "-map", "[v]", "-map", `${audioIndex}:a`, "-t", fixed(pass.total)],
-        ...["-c:v", "libx264", "-preset", "veryfast", "-crf", "22", "-maxrate", "3500k", "-bufsize", "7000k"],
-        ...["-profile:v", "high", "-pix_fmt", "yuv420p", "-r", String(FPS), "-c:a", "copy", "-movflags", "+faststart"],
-        ...["-threads", String(pass.threads), "-filter_threads", "2", "-filter_complex_threads", "2", pass.output],
+        "-filter_complex",
+        graph.join(";"),
+        "-map",
+        "[v]",
+        "-map",
+        `${audioIndex}:a`,
+        "-t",
+        fixed(pass.total),
+        "-c:v",
+        "libx264",
+        "-preset",
+        "veryfast",
+        "-crf",
+        "22",
+        "-maxrate",
+        "3500k",
+        "-bufsize",
+        "7000k",
+        "-profile:v",
+        "high",
+        "-pix_fmt",
+        "yuv420p",
+        "-r",
+        String(FPS),
+        "-c:a",
+        "copy",
+        "-movflags",
+        "+faststart",
+        "-threads",
+        String(pass.threads),
+        "-filter_threads",
+        "2",
+        "-filter_complex_threads",
+        "2",
+        pass.output,
     ]
 }
 

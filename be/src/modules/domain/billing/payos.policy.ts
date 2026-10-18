@@ -35,7 +35,7 @@ export const payosSignature = (data: Readonly<Record<string, unknown>>, checksum
     createHmac("sha256", checksumKey)
         .update(
             Object.keys(data)
-                .sort()
+                .sort((left, right) => (left < right ? -1 : Number(left > right)))
                 .map((name) => `${name}=${text(data[name])}`)
                 .join("&"),
         )

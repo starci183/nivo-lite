@@ -1,19 +1,15 @@
 import "server-only"
 
 import { NextResponse, type NextRequest } from "next/server"
+import { callbackNext } from "@/modules/auth"
 import { exchangeAuthCode, verifyOtp } from "@/modules/auth/server"
-import { APP_ROUTES, AUTH_ROUTES, requestOrigin, safeNextPath } from "@/modules/routes"
+import { APP_ROUTES, AUTH_ROUTES, requestOrigin } from "@/modules/routes"
 
 /** Exchanges one provider credential and redirects to the validated destination, preserving legacy email links. */
 export const GET = async (request: NextRequest): Promise<NextResponse> => {
     const { searchParams } = request.nextUrl
     const origin = requestOrigin(request)
-    const rawNext = searchParams.get("next")
-    const inner = rawNext ? safeNextPath(rawNext, origin) : null
-    const innerUrl = new URL(inner ?? "/", origin)
-    const directNext = inner === "/" && rawNext !== "/" ? null : inner
-    const isNested = innerUrl.pathname === "/auth/confirm" || innerUrl.pathname === APP_ROUTES.authCallback
-    const next = directNext !== null && isNested ? safeNextPath(innerUrl.searchParams.get("next"), origin) : directNext
+    const next = callbackNext(searchParams.get("next"), origin)
     const type = searchParams.get("type")
     const isRecovery = type === "recovery" || next?.startsWith("/reset-password") === true
     const providerError = searchParams.get("error_code") ?? searchParams.get("error")
@@ -26,29 +22,18 @@ export const GET = async (request: NextRequest): Promise<NextResponse> => {
 
     const code = searchParams.get("code")
     const tokenHash = searchParams.get("token_hash")
+    const successDestination = isRecovery ? "/reset-password" : (next ?? AUTH_ROUTES.workspaces)
+    const failureDestination = isRecovery ? "/reset-password?error=invalid" : `${APP_ROUTES.login}?error=link_expired`
     if (code) {
-        if (!(await exchangeAuthCode(code)).success) {
-            return NextResponse.redirect(
-                new URL(
-                    isRecovery ? "/reset-password?error=invalid" : `${APP_ROUTES.login}?error=link_expired`,
-                    origin,
-                ),
-            )
-        }
-    } else if (tokenHash && type) {
-        if (!(await verifyOtp({ token_hash: tokenHash, type })).success) {
-            return NextResponse.redirect(
-                new URL(
-                    isRecovery ? "/reset-password?error=invalid" : `${APP_ROUTES.login}?error=link_expired`,
-                    origin,
-                ),
-            )
-        }
-    } else {
-        const error = type === null ? "missing_code" : "link_expired"
-        return NextResponse.redirect(
-            new URL(isRecovery ? "/reset-password?error=invalid" : `${APP_ROUTES.login}?error=${error}`, origin),
-        )
+        const result = await exchangeAuthCode(code)
+        return NextResponse.redirect(new URL(result.success ? successDestination : failureDestination, origin))
     }
-    return NextResponse.redirect(new URL(isRecovery ? "/reset-password" : (next ?? AUTH_ROUTES.workspaces), origin))
+    if (tokenHash && type) {
+        const result = await verifyOtp({ token_hash: tokenHash, type })
+        return NextResponse.redirect(new URL(result.success ? successDestination : failureDestination, origin))
+    }
+    const error = type === null ? "missing_code" : "link_expired"
+    return NextResponse.redirect(
+        new URL(isRecovery ? "/reset-password?error=invalid" : `${APP_ROUTES.login}?error=${error}`, origin),
+    )
 }

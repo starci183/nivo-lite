@@ -17,7 +17,7 @@ import { useFormatter, useTranslations } from "next-intl"
 import { useEffect, useState } from "react"
 import { useVideoScriptForm } from "@/hooks/rhf"
 import { navigation } from "@/modules/i18n"
-import { VideoScriptStepBase, scriptCopyOf, sceneCardsOf } from "./component"
+import { VideoScriptStepBase, scriptCopyOf, sceneCardsOf, swapped } from "./component"
 
 /** The option that means a colour card without a file. */
 const NO_MEDIA = "none"
@@ -28,16 +28,6 @@ interface VideoScriptStepProps {
     readonly tab: string | null
     /** The video named in the address, or the new-video command. */
     readonly focus: string | null
-}
-
-const swapped = (scenes: ReadonlyArray<ScriptScene>, index: number, target: number): ReadonlyArray<ScriptScene> => {
-    const from = scenes[index]
-    const to = scenes[target]
-    if (from === undefined || to === undefined) return scenes
-    return scenes.map((scene, at) => {
-        if (at === index) return to
-        return at === target ? from : scene
-    })
 }
 
 const estimateOf = (total: number, count: number): "none" | "long" | "ok" => {
@@ -76,6 +66,11 @@ interface ScriptViewContext {
     failure: ReturnType<typeof useVideoFailure>
 }
 
+const estimateLabelOf = (estimate: "none" | "long" | "ok", total: number, t: ScriptViewContext["t"]): string | null => {
+    if (estimate === "none") return null
+    return t(estimate === "long" ? "tooLong" : "estimated", { n: total })
+}
+
 const viewOf = ({
     editor,
     t,
@@ -106,7 +101,7 @@ const viewOf = ({
         ...editor.media.map((item) => ({ id: item.path, label: item.name })),
     ],
     canAdd: scenes.length < SCRIPT_MAX_SCENES,
-    estimateLabel: estimate === "none" ? null : t(estimate === "long" ? "tooLong" : "estimated", { n: total }),
+    estimateLabel: estimateLabelOf(estimate, total, t),
     canEdit: editor.canEdit,
     locked: !editor.canEdit || scripting,
     saving: form.formState.isSubmitting,

@@ -3,10 +3,10 @@ export type ContentChannel = "facebook" | "zalo" | "tiktok" | "instagram"
 
 /** Every channel, in display order. */
 export const CONTENT_CHANNELS: ReadonlyArray<ContentChannel> = ["facebook", "zalo", "tiktok", "instagram"]
+const CHANNEL_SET: ReadonlySet<unknown> = new Set(CONTENT_CHANNELS)
 
 /** Narrows an unknown value to a channel. */
-export const isContentChannel = (value: unknown): value is ContentChannel =>
-    CONTENT_CHANNELS.some((channel) => channel === value)
+export const isContentChannel = (value: unknown): value is ContentChannel => CHANNEL_SET.has(value)
 
 /** Where a post stands between idea and published. */
 export type ContentStatus = "idea" | "draft" | "waiting_approval" | "approved" | "published" | "skipped"
@@ -21,9 +21,10 @@ export const CONTENT_STATUSES: ReadonlyArray<ContentStatus> = [
     "skipped",
 ]
 
+const STATUS_SET: ReadonlySet<unknown> = new Set(CONTENT_STATUSES)
+
 /** Narrows an unknown value to a status. */
-export const isContentStatus = (value: unknown): value is ContentStatus =>
-    CONTENT_STATUSES.some((status) => status === value)
+export const isContentStatus = (value: unknown): value is ContentStatus => STATUS_SET.has(value)
 
 /** The per-channel limits (content.templates.ts). */
 export interface ChannelRule {

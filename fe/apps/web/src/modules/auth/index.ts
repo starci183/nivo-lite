@@ -12,3 +12,4 @@ export {
 } from "./actions"
 export { sessionAccessToken, sessionUser, renewSessionToken, subscribeToAuthChange } from "./session"
 export type { PasswordChange } from "./actions"
+export { callbackNext } from "./callback"

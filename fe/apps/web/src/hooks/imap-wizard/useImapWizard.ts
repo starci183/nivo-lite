@@ -1,14 +1,11 @@
 "use client"
 
-import { accountOf, requestOf, stateOf, IMAP_PRESETS, IMAP_STEPS, defaultPort, securityOf } from "./imap-wizard.shared"
-import type { ImapPresetId, ImapSecurity } from "./imap-wizard.shared"
+import { useImapWizardActions } from "./useImapWizardActions"
+import { accountOf, requestOf, stateOf, IMAP_STEPS, type ImapPresetId } from "./imap-wizard.shared"
 import { useSetConnectionAgents, useSyncNow } from "@/hooks/connections"
-import type { AgentWish } from "@/hooks/connections"
 import { useImapAccountForm } from "@/hooks/rhf"
-import { useEffect, useReducer, useRef, useTransition } from "react"
-import type { Settled } from "../connection-wizard"
+import { useEffect, useReducer, useRef } from "react"
 import { useImapCommands } from "./useImapCommands"
-import type { ImapCommands } from "./useImapCommands"
 import { useImapMailbox } from "./useImapMailbox"
 
 /** What the mailbox wizard needs from its drawer. */
@@ -33,8 +30,6 @@ export interface ImapWizardState {
     readonly error: string | null
 }
 
-type TextField = "name" | "email" | "host" | "port" | "user" | "password"
-
 const merge = (state: ImapWizardState, patch: Partial<ImapWizardState>): ImapWizardState => ({ ...state, ...patch })
 
 /**
@@ -48,7 +43,6 @@ export const useImapWizard = ({ resumeId, onClose }: ImapWizardInput) => {
     const { start: startSync } = useSyncNow()
     const { loading, view: mailbox, error: loadError } = useImapMailbox(resumeId)
     const [state, patch] = useReducer(merge, undefined, stateOf)
-    const [isPending, startTransition] = useTransition()
     const form = useImapAccountForm(state.savedId !== null)
     const { reset } = form
     const seeded = useRef<string | null>(null)
@@ -65,10 +59,9 @@ export const useImapWizard = ({ resumeId, onClose }: ImapWizardInput) => {
     const stamp = `${values.host}|${values.port}|${values.security}|${user}|${values.password}`
     const request = requestOf(state, values, user)
 
-    const { go, setField, pickPreset, pickSecurity, check, save, finish } = createImapWizardActions(
+    const { go, setField, pickPreset, pickSecurity, check, save, finish, isPending } = useImapWizardActions({
         patch,
         form,
-        startTransition,
         commands,
         request,
         stamp,
@@ -76,7 +69,7 @@ export const useImapWizard = ({ resumeId, onClose }: ImapWizardInput) => {
         onClose,
         setConnectionAgents,
         startSync,
-    )
+    })
 
     return {
         loading,
@@ -108,87 +101,4 @@ export const useImapWizard = ({ resumeId, onClose }: ImapWizardInput) => {
         save,
         finish,
     }
-}
-
-const createImapWizardActions = (
-    patch: import("react").Dispatch<Parameters<typeof merge>[1]>,
-    form: ReturnType<typeof useImapAccountForm>,
-    startTransition: import("react").TransitionStartFunction,
-    commands: ImapCommands,
-    request: () => {
-        name: string
-        email: string
-        host: string
-        port: number
-        security: "tls" | "starttls"
-        user: string
-        password: string
-        connectionId?: string | undefined
-    },
-    stamp: string,
-    state: ImapWizardState,
-    onClose: (changed: boolean) => void,
-    setConnectionAgents: (connectionId: string, wanted: ReadonlyArray<AgentWish>) => Promise<Settled<true>>,
-    startSync: (connectionId: string) => Promise<void>,
-) => {
-    const setField = (key: TextField) => (value: string) => {
-        patch({ tested: null })
-        form.setValue(key, value, { shouldValidate: true, shouldDirty: true })
-    }
-    const pickPreset = (id: string) => {
-        const next = IMAP_PRESETS.find((candidate) => candidate.id === id) ?? IMAP_PRESETS[0]
-        patch({ preset: next.id, tested: null })
-        if (next.id === "other") return
-        form.setValue("security", "tls", { shouldValidate: true })
-        form.setValue("host", next.host, { shouldValidate: true })
-        form.setValue("port", String(next.port), { shouldValidate: true })
-    }
-    const pickSecurity = (value: string) => {
-        const security: ImapSecurity = securityOf(value)
-        patch({ tested: null })
-        form.setValue("security", security, { shouldValidate: true })
-        form.setValue("port", String(defaultPort(security)), { shouldValidate: true })
-    }
-    const go = (to: number) => patch({ error: null, index: to })
-
-    const check = () =>
-        startTransition(async () => {
-            patch({ error: null })
-            const answer = await commands.test(request())
-            if (answer.kind !== "ok") return patch({ error: answer.message })
-            const found = answer.value
-            patch({
-                tested: stamp,
-                folderList: [...new Set([...found, ...state.folders])],
-                ...(state.folders.length === 0
-                    ? { folders: found.includes("INBOX") ? ["INBOX"] : found.slice(0, 1) }
-                    : {}),
-            })
-        })
-
-    const save = () =>
-        startTransition(async () => {
-            patch({ error: null })
-            const answer = await commands.save({
-                ...request(),
-                folders: [...state.folders],
-                sinceDays: state.sinceDays,
-                syncEveryMinutes: state.every,
-            })
-            if (answer.kind !== "ok") return patch({ error: answer.message })
-            form.setValue("password", "")
-            patch({ savedId: answer.value, index: 3 })
-        })
-
-    const finish = () => {
-        if (state.savedId === null) return onClose(false)
-        const id = state.savedId
-        startTransition(async () => {
-            const answer = await setConnectionAgents(id, state.agentIds)
-            if (answer.kind !== "ok") return patch({ error: answer.message })
-            void startSync(id)
-            onClose(true)
-        })
-    }
-    return { go, setField, pickPreset, pickSecurity, check, save, finish }
 }

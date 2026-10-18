@@ -1,14 +1,17 @@
 "use client"
 
-import type { ShiftsRequestsControllerInput } from "./component"
-import type { CreateShiftsRequestsRowsInput } from "./component"
+import {
+    type ShiftsRequestsControllerInput,
+    type CreateShiftsRequestsRowsInput,
+    ShiftsRequestsBase,
+    type RequestRowView,
+    type RequestSectionView,
+} from "./component"
 import { useTranslations } from "next-intl"
 import { useState } from "react"
 import { useShiftsBenchData, useShiftsFormat } from "@/hooks/shifts"
 import { useShiftsRequestCommands } from "@/hooks/shiftsCommands"
 import type { ShiftsWorkItemView } from "@/modules/types"
-import { ShiftsRequestsBase } from "./component"
-import type { RequestRowView, RequestSectionView } from "./component"
 
 const RECENT_LIMIT = 8
 
@@ -39,8 +42,10 @@ const createShiftsRequestsRows = (context: CreateShiftsRequestsRowsInput) => {
         ...statusOf(status, item),
         decision: item?.status === "waiting_decision" ? { kind: "item", targetId: item.id } : null,
     })
-    const leaveTitle = (from: string, to: string, staffId: string): string =>
-        `${name(staffId)}: ${format.dayFull(from)}${to === from ? "" : ` - ${format.dayMonth(to)}`}`
+    const leaveTitle = (from: string, to: string, staffId: string): string => {
+        const end = to === from ? "" : ` - ${format.dayMonth(to)}`
+        return `${name(staffId)}: ${format.dayFull(from)}${end}`
+    }
     const swapTitle = (kind: string, from: string | null, to: string, shiftLine: string): string =>
         kind === "claim"
             ? t("claimLine", { name: name(to), shift: shiftLine })
@@ -142,12 +147,12 @@ const createShiftsRequestsActions = (context: ReturnType<typeof createShiftsRequ
         await job()
         setBusy(false)
     }
-    const decide = (kind: "item" | "availability", targetId: string, approve: boolean): Promise<void> =>
-        run(() =>
-            kind === "item"
-                ? commands.decideItem(targetId, approve ? "approved" : "rejected")
-                : commands.decideAvailability(targetId, approve),
+    const decide = (kind: "item" | "availability", targetId: string, approve: boolean): Promise<void> => {
+        const status = approve ? "approved" : "rejected"
+        return run(() =>
+            kind === "item" ? commands.decideItem(targetId, status) : commands.decideAvailability(targetId, approve),
         )
+    }
     return { ...context, recent, openSections, decide }
 }
 

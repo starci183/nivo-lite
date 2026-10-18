@@ -14,6 +14,10 @@ export interface WorkbenchRenderRow {
     readonly size_bytes: number | null
     /** Output path. */
     readonly output_path: string | null
+    /** Caption artifact recorded by newer renders; absent on legacy rows. */
+    readonly captions_path?: string | null
+    /** Recorded caption locale, when known. */
+    readonly captions_lang?: string | null
     /** Poster path. */
     readonly poster_path: string | null
 }

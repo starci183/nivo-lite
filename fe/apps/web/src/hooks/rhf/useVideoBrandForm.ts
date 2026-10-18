@@ -5,8 +5,7 @@ import { useTranslations } from "next-intl"
 import { useMemo } from "react"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
-import { MUSIC_TRACKS, TTS_VOICES } from "@/modules/video"
-import type { Brand } from "@/modules/video"
+import { MUSIC_TRACKS, TTS_VOICES, type Brand } from "@/modules/video"
 
 /** Validates the brand kit with localized messages before it is saved. */
 export const useVideoBrandForm = (initial: Brand) => {

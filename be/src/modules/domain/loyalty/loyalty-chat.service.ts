@@ -99,7 +99,7 @@ export class LoyaltyChatService {
     /** What a redeem the model proposed comes to: a request to open for the gate, a refusal with its reason, or nothing to do. */
     async redeemIntent(ref: ChatCustomerRef, rewardKey: string): Promise<ChatRedeemIntent> {
         const facts = await this.factsOf(ref)
-        if (facts === null || facts.member === null) return { kind: "none" }
+        if (facts?.member === undefined || facts.member === null) return { kind: "none" }
         const { member, config } = facts
         const reward = facts.rewards.find((candidate) => candidate.key === rewardKey)
         if (reward === undefined) return { kind: "none" }

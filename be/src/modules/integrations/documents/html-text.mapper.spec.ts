@@ -11,6 +11,17 @@ const build = async () => {
 }
 
 describe("htmlToText", () => {
+    it.each([
+        ["a<>b<x>c", "a<>b c"],
+        ["a<<x>b", "a b"],
+        ["a<broken", "a<broken"],
+        ["<".repeat(10000), "<".repeat(10000)],
+    ])("retains unmatched or empty brackets while removing tag runs", async (html, expected) => {
+        const subject = await build()
+
+        expect(subject.htmlToText(html)).toBe(expected)
+    })
+
     it("drops scripts, styles and tags and keeps block ends as line breaks", async () => {
         const subject = await build()
 

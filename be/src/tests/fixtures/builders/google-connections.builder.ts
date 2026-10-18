@@ -50,6 +50,7 @@ export const callback = (extra: Partial<GoogleCallbackInput> = {}): GoogleCallba
     ...extra,
 })
 /** The same-site callback redirect expected for the result and optional failure reason. */
-export const location = (result: "ok" | "error", reason?: string, key = "google") => ({
-    location: `https://nivo.vn/connections?${key}=${result}${reason === undefined ? "" : `&reason=${reason}`}`,
-})
+export const location = (result: "ok" | "error", reason?: string, key = "google") => {
+    const reasonQuery = reason === undefined ? "" : `&reason=${reason}`
+    return { location: `https://nivo.vn/connections?${key}=${result}${reasonQuery}` }
+}

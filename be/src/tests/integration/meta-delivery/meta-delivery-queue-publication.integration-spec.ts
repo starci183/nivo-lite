@@ -1,6 +1,9 @@
 import { TestWorldError, TestWorldErrorCode } from "@tests/world/test-world.error"
-import { META_DELIVERY_QUEUE as DOMAIN_QUEUE } from "@modules/queues/meta-delivery"
-import { META_DELIVERY_QUEUE, isMetaDeliveryRecorded } from "@modules/queues/meta-delivery"
+import {
+    META_DELIVERY_QUEUE as DOMAIN_QUEUE,
+    META_DELIVERY_QUEUE,
+    isMetaDeliveryRecorded,
+} from "@modules/queues/meta-delivery"
 import type { MetaDeliveryRecorded } from "@modules/queues/meta-delivery"
 import { buildMetaDelivery } from "@tests/fixtures/builders/meta-delivery.builder"
 import { useTestWorld } from "../../world/use-test-world"

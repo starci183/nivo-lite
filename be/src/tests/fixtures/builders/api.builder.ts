@@ -1,3 +1,4 @@
+import { fakeIds } from "@starci/jest-preset"
 import type { InjectionToken } from "@nestjs/common"
 import { Secret } from "@modules/platform/config"
 import { HTTP_CLIENT, HttpError, HttpErrorCode } from "@modules/platform/http"
@@ -7,6 +8,7 @@ import { SupabaseModule } from "@modules/integrations/supabase"
 import { IdentityModule } from "@modules/domain/identity"
 
 const PRIMARY_DATA_SOURCE = "primaryDataSource"
+const wiringIds = fakeIds()
 
 /** Refuses infrastructure operations during construction of the module graph. */
 const refuseWiringOperation = (): never => {
@@ -18,7 +20,7 @@ const wiringSettings = {
     database: {
         name: "primary",
         provider: "supabase" as const,
-        url: new Secret("postgresql://wiring:wiring@database.invalid:5432/wiring"),
+        url: new Secret(`postgresql://wiring:${wiringIds.next()}@database.invalid:5432/wiring`),
         schema: "public",
     },
     supabase: { url: "https://supabase.invalid", serviceRoleKey: new Secret("wiring-fixture") },

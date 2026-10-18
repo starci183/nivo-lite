@@ -7,8 +7,8 @@ import {
 } from "./content-editor-json.mapper"
 import { CONTENT_CHANNELS } from "./content-editor.contracts"
 
-const CONTENT_STATUSES = ["idea", "draft", "waiting_approval", "approved", "published", "skipped"]
-const CONTENT_SOURCES = ["manual", "plan", "quick", "offer", "automation"]
+const CONTENT_STATUSES = new Set(["idea", "draft", "waiting_approval", "approved", "published", "skipped"])
+const CONTENT_SOURCES = new Set(["manual", "plan", "quick", "offer", "automation"])
 const readChannels = (values: ReadonlyArray<string>): Array<string> => {
     const channels = values.filter((channel) => CONTENT_CHANNELS.includes(channel))
     return channels.length === 0 ? ["facebook"] : channels
@@ -31,7 +31,7 @@ export const toContentItem = (row: ContentEditorRow): ContentItem => ({
     pillarId: row.pillar_id,
     channels: readChannels(row.channels),
     scheduledAt: optionalInstant(row.scheduled_at),
-    status: CONTENT_STATUSES.includes(row.status) ? row.status : "idea",
+    status: CONTENT_STATUSES.has(row.status) ? row.status : "idea",
     variants: readContentVariants(row.variants),
     hashtags: row.hashtags,
     media: readContentMedia(row.media),
@@ -44,7 +44,7 @@ export const toContentItem = (row: ContentEditorRow): ContentItem => ({
     approvedBy: row.approved_by,
     approvedAt: optionalInstant(row.approved_at),
     publishedAt: optionalInstant(row.published_at),
-    source: CONTENT_SOURCES.includes(row.source) ? row.source : "manual",
+    source: CONTENT_SOURCES.has(row.source) ? row.source : "manual",
     createdBy: row.created_by,
     createdAt: contentInstant(row.created_at),
     updatedAt: contentInstant(row.updated_at),

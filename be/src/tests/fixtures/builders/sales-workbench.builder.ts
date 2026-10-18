@@ -1,11 +1,16 @@
 import type { ContractResult } from "@modules/domain/contracts"
-import type { SalesDeal, AutoActivity, SalesDecision, AttentionRow } from "@modules/domain/sales-workbench"
+import type {
+    SalesDeal,
+    AutoActivity,
+    SalesDecision,
+    AttentionRow,
+    WorkItemView,
+    SalesRows,
+} from "@modules/domain/sales-workbench"
 import { builder, mock } from "@starci/jest-preset"
 import type { LeadView } from "@modules/domain/leads"
 import type { OrdersWorkbenchRow } from "@modules/domain/orders"
 import type { ResponsibilityRecord } from "@modules/domain/responsibilities"
-import type { WorkItemView } from "@modules/domain/sales-workbench"
-import type { SalesRows } from "@modules/domain/sales-workbench"
 
 const CREATED = "2026-10-12T10:00:00.000Z"
 const UPDATED = "2026-10-12T11:00:00.000Z"
@@ -120,9 +125,14 @@ export const dealOf = builder<SalesDeal>({
     channel: "web",
     need: "Tea",
     stage: "proposal",
-    ...{ valueVnd: null, valueSource: null, nextStep: null, dueAt: null, owner: null },
+    valueVnd: null,
+    valueSource: null,
+    nextStep: null,
+    dueAt: null,
+    owner: null,
     createdAt: CREATED,
-    ...{ closedReason: null, closedAt: null },
+    closedReason: null,
+    closedAt: null,
 })
 /** Builds the expected automatic activity view. */
 export const activityOf = builder<AutoActivity>({
@@ -140,7 +150,10 @@ export const activityOf = builder<AutoActivity>({
 export const decisionOf = builder<SalesDecision>({
     id: "legacy",
     source: "work_item",
-    ...{ workItemId: null, executionId: null, leadId: null, customer: "\u2014" },
+    workItemId: null,
+    executionId: null,
+    leadId: null,
+    customer: "\u2014",
     action: "follow_up",
     reason: "routine",
     summary: "Call",
@@ -148,7 +161,8 @@ export const decisionOf = builder<SalesDecision>({
     amountVnd: null,
     hasAmount: false,
     missing: [],
-    ...{ assignedStaffId: null, assignedStaffName: null },
+    assignedStaffId: null,
+    assignedStaffName: null,
     createdAt: CREATED,
 })
 /** Builds the expected attention view. */
@@ -162,7 +176,10 @@ export const attentionOf = builder<AttentionRow>({
     need: "Quote",
     since: CREATED,
     owner: null,
-    ...{ workItemId: null, decisionId: null, action: "send_quote", missing: [] },
+    workItemId: null,
+    decisionId: null,
+    action: "send_quote",
+    missing: [],
 })
 /** Builds failed-item attention. */
 export const failureOf = builder<AttentionRow>(attentionOf({ kind: "failed", since: UPDATED }))

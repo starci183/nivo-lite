@@ -7,10 +7,14 @@ import { INBOX, InboxService } from "@modules/platform/inbox"
 import { MESSAGE_CATALOG } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
 import type { Logger } from "@modules/platform/logging"
-import { PgmqQueueTransportClient, QUEUE_OUTBOX, QueueOutboxService } from "@modules/platform/queue"
+import {
+    PgmqQueueTransportClient,
+    QUEUE_OUTBOX,
+    QueueOutboxService,
+    type QueueOptions,
+    type QueueOutbox,
+} from "@modules/platform/queue"
 import type { EntityManager } from "typeorm"
-import type { QueueOptions } from "@modules/platform/queue"
-import type { QueueOutbox } from "@modules/platform/queue"
 import {
     TelegramDeliveryQueue,
     isTelegramDeliveryRecorded,

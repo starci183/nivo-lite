@@ -87,7 +87,7 @@ export const useAgentChat = (route: AgentChatRoute) => {
     const { opened, navigate } = useAgentChatNavigation(agent, router, setSelected, setTab)
     const actions = useAgentChatActions({ agent, tab, selectedId, isTakenOver, opened })
 
-    const { rows, thread, changeTab } = useAgentChatThreadView(
+    const { rows, thread, changeTab } = useAgentChatThreadView({
         hasCustomerChannel,
         setTab,
         actions,
@@ -98,10 +98,10 @@ export const useAgentChat = (route: AgentChatRoute) => {
         t,
         selectedId,
         messages,
-    )
+    })
 
     const queryError = history.error ?? messages.error
-    return viewOf(
+    return viewOf({
         loaded,
         page,
         tab,
@@ -116,5 +116,5 @@ export const useAgentChat = (route: AgentChatRoute) => {
         selectedConversation,
         changeTab,
         opened,
-    )
+    })
 }

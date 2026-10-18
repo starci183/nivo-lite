@@ -139,22 +139,20 @@ const decisionSteps = (
 ): ReadonlyArray<AccountingLineageStep> => {
     const seen = new Set<string>()
     const steps: Array<AccountingLineageStep> = []
-    for (const subjectId of subjectIds) {
-        if (subjectId === null) continue
-        for (const work of bucket(workBySubject, subjectId)) {
-            for (const decision of bucket(decisionsByWork, work.id)) {
-                if (seen.has(decision.id)) continue
-                seen.add(decision.id)
-                const who = decision.decider_kind === "policy" ? null : decision.decided_by
-                steps.push({
-                    kind: "decision",
-                    title: decision.action,
-                    detail: [who, decision.note].filter(Boolean).join(" / ") || null,
-                    at: decision.created_at,
-                    status: decision.outcome,
-                    amount: null,
-                })
-            }
+    const works = subjectIds.flatMap((subjectId) => (subjectId === null ? [] : bucket(workBySubject, subjectId)))
+    for (const work of works) {
+        for (const decision of bucket(decisionsByWork, work.id)) {
+            if (seen.has(decision.id)) continue
+            seen.add(decision.id)
+            const who = decision.decider_kind === "policy" ? null : decision.decided_by
+            steps.push({
+                kind: "decision",
+                title: decision.action,
+                detail: [who, decision.note].filter(Boolean).join(" / ") || null,
+                at: decision.created_at,
+                status: decision.outcome,
+                amount: null,
+            })
         }
     }
     return steps
@@ -188,36 +186,15 @@ export const buildLedger = (input: LedgerInput): ReadonlyArray<AccountingLedgerE
     const ledger: Array<AccountingLedgerEntry> = []
     for (const invoice of input.invoices) {
         if (invoice.status === "draft") continue
-        const txs = bucket(txByInvoice, invoice.id)
-        const settledByPayment = invoice.status === "paid" && txs.length > 0
-        // A paid invoice with a matched bank credit is already counted as income by that credit's row; without one (a
-        // customer
-        // claim confirmed by a person) the invoice row itself is the income entry, its basis is in the decision.
-        const kind: AccountingLedgerKind = invoice.status === "paid" && !settledByPayment ? "income" : "receivable"
-        ledger.push({
-            id: `inv:${invoice.id}`,
-            targetType: "invoice",
-            targetId: invoice.id,
-            at: (kind === "income" ? invoice.paid_at : null) ?? invoice.issued_at ?? invoice.created_at,
-            description: [invoice.invoice_no, customerOf(invoice.lead)].filter(Boolean).join(" / "),
-            kind,
-            amount: Number(invoice.amount_vnd),
-            status: invoiceLedgerStatus(invoice, settledByPayment),
-            linked: invoice.order?.order_no ?? null,
-            origin: originOf(invoice.origin),
-            lineage: sortSteps([
-                orderStep(invoice),
-                invoiceStep(invoice),
-                ...txs.map(paymentStep),
-                ...decisionSteps(workBySubject, decisionsByWork, [
-                    invoice.id,
-                    invoice.order_id,
-                    ...txs.map((tx) => tx.id),
-                ]),
-                ...adjustmentSteps(adjustmentsByTarget, `invoice:${invoice.id}`),
-            ]),
-            adjustmentCount: bucket(adjustmentsByTarget, `invoice:${invoice.id}`).length,
-        })
+        ledger.push(
+            invoiceEntryOf(
+                invoice,
+                bucket(txByInvoice, invoice.id),
+                workBySubject,
+                decisionsByWork,
+                adjustmentsByTarget,
+            ),
+        )
     }
     for (const tx of input.transactions) {
         const invoice = tx.invoice_id === null ? undefined : invoiceById.get(tx.invoice_id)
@@ -246,5 +223,41 @@ export const buildLedger = (input: LedgerInput): ReadonlyArray<AccountingLedgerE
             adjustmentCount: bucket(adjustmentsByTarget, `transaction:${tx.id}`).length,
         })
     }
-    return ledger.sort((a, b) => toMs(b.at) - toMs(a.at)).slice(0, LEDGER_LIMIT)
+    ledger.sort((a, b) => toMs(b.at) - toMs(a.at))
+    return ledger.slice(0, LEDGER_LIMIT)
+}
+
+/** Derives one non-draft invoice entry without double counting a matched payment. */
+const invoiceEntryOf = (
+    invoice: LedgerInvoice,
+    txs: ReadonlyArray<LedgerTransaction>,
+    workBySubject: ReadonlyMap<string, ReadonlyArray<LedgerWork>>,
+    decisionsByWork: ReadonlyMap<string, ReadonlyArray<LedgerDecision>>,
+    adjustmentsByTarget: ReadonlyMap<string, ReadonlyArray<LedgerAdjustment>>,
+): AccountingLedgerEntry => {
+    const settledByPayment = invoice.status === "paid" && txs.length > 0
+    // A paid invoice with a matched bank credit is already counted as income by that credit's row; without one (a
+    // customer
+    // claim confirmed by a person) the invoice row itself is the income entry, its basis is in the decision.
+    const kind: AccountingLedgerKind = invoice.status === "paid" && !settledByPayment ? "income" : "receivable"
+    return {
+        id: `inv:${invoice.id}`,
+        targetType: "invoice",
+        targetId: invoice.id,
+        at: (kind === "income" ? invoice.paid_at : null) ?? invoice.issued_at ?? invoice.created_at,
+        description: [invoice.invoice_no, customerOf(invoice.lead)].filter(Boolean).join(" / "),
+        kind,
+        amount: Number(invoice.amount_vnd),
+        status: invoiceLedgerStatus(invoice, settledByPayment),
+        linked: invoice.order?.order_no ?? null,
+        origin: originOf(invoice.origin),
+        lineage: sortSteps([
+            orderStep(invoice),
+            invoiceStep(invoice),
+            ...txs.map(paymentStep),
+            ...decisionSteps(workBySubject, decisionsByWork, [invoice.id, invoice.order_id, ...txs.map((tx) => tx.id)]),
+            ...adjustmentSteps(adjustmentsByTarget, `invoice:${invoice.id}`),
+        ]),
+        adjustmentCount: bucket(adjustmentsByTarget, `invoice:${invoice.id}`).length,
+    }
 }

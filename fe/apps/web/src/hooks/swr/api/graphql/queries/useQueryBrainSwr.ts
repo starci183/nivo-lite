@@ -7,7 +7,7 @@ import { queryBrain } from "@/modules/api/graphql/queries/query-brain"
 /** The SWR key of the brain read; mutations that change it revalidate the keys that lead with it. */
 export const QUERY_BRAIN_SWR_KEY = "QUERY_BRAIN_SWR"
 
-const READING_STATUSES: ReadonlyArray<string> = ["queued", "running"]
+const READING_STATUSES: ReadonlySet<string> = new Set(["queued", "running"])
 
 /**
  * The shared Second Brain of the active workspace (the back end `brain` query). Polls while a document reading is still
@@ -23,8 +23,7 @@ export const useQueryBrainSwr = () => {
             return result.data.brain
         },
         {
-            refreshInterval: (data) =>
-                data?.extractions.some((one) => READING_STATUSES.includes(one.status)) ? 4_000 : 0,
+            refreshInterval: (data) => (data?.extractions.some((one) => READING_STATUSES.has(one.status)) ? 4_000 : 0),
         },
     )
 }

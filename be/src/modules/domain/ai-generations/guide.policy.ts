@@ -73,20 +73,22 @@ export const guideAskerKey = (workspaceId: string, userId: string): string => `g
 export const guidePrompt = (ask: GuideAsk, isManager: boolean, words: GuideWords): ReadonlyArray<GenMessage> => {
     const title = (id: GuidePageId): string => words.text(`guide.page.${id}.title`)
     const lines = pagesFor(isManager)
-        .map(
-            (entry) =>
-                `- ${entry.id} | ${title(entry.id)} | ${words.text(`guide.page.${entry.id}.what`)} | ${words.text(`guide.page.${entry.id}.how`)}`,
-        )
+        .map((entry) => {
+            const what = words.text(`guide.page.${entry.id}.what`)
+            const how = words.text(`guide.page.${entry.id}.how`)
+            return `- ${entry.id} | ${title(entry.id)} | ${what} | ${how}`
+        })
         .join("\n")
     const path = ask.path.slice(0, GUIDE_PATH_MAX)
     const here = pageAt(path)
+    const currentPage = here === undefined ? path : `${here.id} (${title(here.id)})`
     const history = ask.history
         .slice(-GUIDE_HISTORY_TURNS)
         .map((turn) => `${turn.role === "user" ? "User" : "Guide"}: ${clip(turn.text, GUIDE_TURN_MAX)}`)
         .join("\n")
     const user = [
         `PAGES (id | name | what it is for | how):\n${lines}`,
-        `CURRENT PAGE: ${here === undefined ? path : `${here.id} (${title(here.id)})`}`,
+        `CURRENT PAGE: ${currentPage}`,
         history === "" ? "" : `CONVERSATION SO FAR:\n${history}`,
         `QUESTION: ${ask.question.trim().slice(0, GUIDE_QUESTION_MAX)}`,
     ]

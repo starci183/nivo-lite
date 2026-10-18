@@ -269,7 +269,9 @@ describe("GoogleClient sheet operations", () => {
 
         await expect(client.sheets("tok").findRow("s", ["A"])).resolves.toBeNull()
     })
+})
 
+describe("GoogleClient sheet writes", () => {
     it("appends a row as raw values and reads the row it landed on", async () => {
         const { client, http } = await build()
         http.request.mockResolvedValueOnce(answer({ updates: { updatedRange: "'Tab'!A12:I12" } }))
@@ -288,6 +290,20 @@ describe("GoogleClient sheet operations", () => {
                 headers: { authorization: "Bearer tok" },
             }),
         )
+    })
+
+    it.each([
+        ["A12:I15", 12],
+        ["junkA7", 7],
+        ["a1:B9", 9],
+        ["A1:B2:C3", 2],
+        ["A".repeat(10000), 0],
+        ["A12:invalid", 0],
+    ])("reads the same final range suffix %s", async (updatedRange, row) => {
+        const { client, http } = await build()
+        http.request.mockResolvedValue(answer({ updates: { updatedRange } }))
+
+        await expect(client.sheets("tok").appendRow("s", "Tab", 9, [])).resolves.toBe(row)
     })
 
     it("updates the given cells of one row", async () => {

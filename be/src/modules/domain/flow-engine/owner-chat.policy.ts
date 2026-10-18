@@ -97,7 +97,7 @@ export const fold = (text: string): string =>
         .toLowerCase()
         .normalize("NFD")
         .replace(/[\u0300-\u036f]/g, "")
-        .replace(/\u0111/g, "d")
+        .replaceAll("\u0111", "d")
         .replace(/\s+/g, " ")
         .trim()
 
@@ -127,8 +127,14 @@ export const verdictOf = (body: string, addressed: boolean): OptionalChatVerdict
 /** "45 trieu", "45tr", "3,5 trieu", "45.000.000", "3000000 vnd" as VND; null when the text names no amount. */
 export const parseVnd = (text: string): number | null => {
     const folded = fold(text)
-    const millions = /(\d+(?:[.,]\d+)?)\s*(trieu|tr\b|m\b|million)/.exec(folded)
-    if (millions?.[1] !== undefined) return Math.round(Number(millions[1].replace(",", ".")) * 1_000_000)
+    for (const number of folded.matchAll(/\d+(?:[.,]\d+)*/g)) {
+        const suffix = folded.slice(number.index + number[0].length)
+        if (/^\s*(trieu|tr\b|m\b|million)/.test(suffix)) {
+            const groups = number[0].split(/[.,]/)
+            const numeric = groups.length <= 2 ? number[0] : groups.slice(-2).join(".")
+            return Math.round(Number(numeric.replace(",", ".")) * 1_000_000)
+        }
+    }
     const plain = /(\d{1,3}(?:[.,]\d{3})+|\d{5,})/.exec(folded)
     if (plain?.[1] !== undefined) return Number(plain[1].replace(/[.,]/g, ""))
     return null
@@ -166,8 +172,7 @@ const nameHitsOf = (folded: string, waiting: ReadonlyArray<WaitingView>): Map<st
     }
     // "Minh Anh" named: the item of plain "Minh" is not meant too.
     const names = [...hits.values()]
-    for (const [id, name] of [...hits])
-        if (names.some((other) => other !== name && other.includes(name))) hits.delete(id)
+    for (const [id, name] of hits) if (names.some((other) => other !== name && other.includes(name))) hits.delete(id)
     return hits
 }
 
@@ -199,10 +204,10 @@ export const matchWaiting = (text: string, waiting: ReadonlyArray<WaitingView>):
     const folded = fold(text)
     const nameHits = nameHitsOf(folded, waiting)
     const mentions = mentionsOf(text, folded)
-    const refTokens = [...folded.matchAll(REF_RE)].map((match) => match[0].replace(/-/g, ""))
+    const refTokens = [...folded.matchAll(REF_RE)].map((match) => match[0].replaceAll("-", ""))
     const refHit = (view: WaitingView): boolean => {
         const ref = fold(view.ref)
-        return ref !== "" && (refTokens.includes(ref.replace(/-/g, "")) || hasWord(folded, ref))
+        return ref !== "" && (refTokens.includes(ref.replaceAll("-", "")) || hasWord(folded, ref))
     }
     const refNamed = refTokens.length > 0 || waiting.some(refHit)
     const amount = parseVnd(text.replace(REF_RE, " "))

@@ -1,6 +1,6 @@
 "use client"
 
-import type { Shipping, SalesHandoffsControllerInput } from "./component"
+import { type Shipping, type SalesHandoffsControllerInput, SalesHandoffsBase, type HandoffItemView } from "./component"
 import type { BadgeTone } from "@starci/grammar/common"
 import { useFormatter, useTranslations } from "next-intl"
 import { useState } from "react"
@@ -9,8 +9,6 @@ import { INVOICE_TONES, useSalesActions } from "@/hooks/sales"
 import { useSalesWorkbench } from "@/hooks/salesworkbench"
 import { leadPath } from "@/modules/routes"
 import type { HandoffRow } from "@/modules/types"
-import { SalesHandoffsBase } from "./component"
-import type { HandoffItemView } from "./component"
 
 /** The tone of the invoice chip: the invoice status, else a failed or waiting hand-off. */
 const invoiceToneOf = (row: HandoffRow): BadgeTone => {
@@ -39,7 +37,7 @@ const createSalesHandoffsState = (input: SalesHandoffsControllerInput) => {
     }
     const openShip = (key: string) => {
         const row = rows.find((candidate) => candidate.key === key)
-        if (row === undefined || row.orderId === null || actions.isMutating) return
+        if (row?.orderId === undefined || row.orderId === null || actions.isMutating) return
         form.reset({ carrier: "", tracking: "" })
         setShipping({
             key,
@@ -67,10 +65,11 @@ const createSalesHandoffsActions = (input: SalesHandoffsControllerInput) => {
     const context = createSalesHandoffsState(input)
     const { t, notes, activeKey, money, day } = context
 
+    const canRunOf = (row: HandoffRow, isFailed: boolean): boolean =>
+        row.orderId !== null && row.orderStatus === "confirmed" && !row.invoice && (row.canHandoff || isFailed)
     const itemOf = (row: HandoffRow): HandoffItemView => {
         const isFailed = row.work?.status === "failed" && !row.invoice
-        const canRun =
-            row.orderId !== null && row.orderStatus === "confirmed" && !row.invoice && (row.canHandoff || isFailed)
+        const canRun = canRunOf(row, isFailed)
         return {
             key: row.key,
             orderId: row.orderId,

@@ -25,7 +25,7 @@ export class InboxSimulationWorkerService {
     async run(payload: SimulateInboundPayload): Promise<void> {
         const member = await this.members.require(payload.userId, payload.workspaceId)
         const event = await this.inboundEvents.find(payload.workspaceId, payload.inboundEventId)
-        if (event === null || event.origin !== "simulated") {
+        if (event?.origin !== "simulated") {
             throw new InboxSimulationError({ code: InboxSimulationErrorCode.NotFound })
         }
         const ctx: WorkContext = { workspaceId: payload.workspaceId, actor: member.displayName, locale: payload.locale }

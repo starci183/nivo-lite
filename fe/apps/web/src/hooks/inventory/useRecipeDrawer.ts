@@ -1,6 +1,5 @@
 "use client"
 
-import { useTranslations } from "next-intl"
 import type { ItemView, RecipeView } from "@/modules/types"
 import { changeAt } from "./inventory.shared"
 import type { InventoryCommandSet } from "@/hooks/inventoryCommands"
@@ -37,7 +36,6 @@ export const useRecipeDrawer = (
     items: ReadonlyArray<ItemView>,
     commands: InventoryCommandSet<"saveRecipe" | "deleteRecipe">,
 ) => {
-    const t = useTranslations("workbenchInventory")
     const say = useSay()
     const run = useInventoryRun()
     const drawer = useDrawer<RecipeDrawerState>()

@@ -54,6 +54,17 @@ const isObject = (value: unknown): value is Record<string, unknown> =>
 
 const clean = (value: unknown, max: number): string => (typeof value === "string" ? value.trim().slice(0, max) : "")
 
+const factKeyOf = (value: unknown): string => {
+    const key = clean(value, 60)
+        .toLowerCase()
+        .replace(/[^a-z0-9_]+/gu, "_")
+    let start = 0
+    let end = key.length
+    while (start < end && key[start] === "_") start += 1
+    while (end > start && key[end - 1] === "_") end -= 1
+    return key.slice(start, end)
+}
+
 /** What reading a JSON text gave: the value, or why there is none. */
 interface JsonRead {
     /** True when the text parsed. */
@@ -76,7 +87,7 @@ const parseJson = (text: string): JsonRead => {
 export const parseLoose = (raw: string): unknown => {
     const text = raw
         .replace(/^```(?:json)?\s*/i, "")
-        .replace(/\s*```$/, "")
+        .replace(/```$/, "")
         .trim()
     const direct = parseJson(text)
     if (direct.read) return direct.value
@@ -168,10 +179,7 @@ const factsOf = (value: unknown): ReadonlyArray<SetupFact> => {
     if (!Array.isArray(value)) return []
     return value.flatMap((item): ReadonlyArray<SetupFact> => {
         if (!isObject(item)) return []
-        const key = clean(item.key, 60)
-            .toLowerCase()
-            .replace(/[^a-z0-9_]+/g, "_")
-            .replace(/^_+|_+$/g, "")
+        const key = factKeyOf(item.key)
         const text = clean(item.text, 300)
         return key !== "" && text !== "" ? [{ key, text }] : []
     })

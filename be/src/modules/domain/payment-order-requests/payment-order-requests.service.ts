@@ -81,7 +81,7 @@ export class PaymentOrderRequestsService {
             payload.requestId,
             payload.workspaceId,
         ])
-        if (request === undefined || request.status !== "pending") return "ignored"
+        if (request?.status !== "pending") return "ignored"
         try {
             const orderId = await this.place(request)
             await this.entityManager.query(MARK_REQUEST_DONE, [request.id, orderId])

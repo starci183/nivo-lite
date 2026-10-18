@@ -32,6 +32,8 @@ describe("rewardKey", () => {
         ["---___!!!", "reward"],
         ["ABCDEFGHIJKLMNOPQRSTUVWXYZ123456789", "abcdefghijklmnopqrstuvwxyz1234"],
         ["voucher_50k", "voucher_50k"],
+        ["_".repeat(20000), "reward"],
+        ["__a_b--__", "a_b"],
     ])("normalizes %s to the safe key %s", async (name, expected) => {
         const subject = await build()
 

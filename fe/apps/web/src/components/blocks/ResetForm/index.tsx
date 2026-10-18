@@ -2,8 +2,14 @@
 
 import { useState, useTransition } from "react"
 import { useTranslations } from "next-intl"
-import { authErrorKey, isLinkInvalid, passwordStrength, strengthKey, useQueryAuthUserSwr } from "@/hooks/auth"
-import { authActionsOf } from "@/hooks/auth"
+import {
+    authErrorKey,
+    isLinkInvalid,
+    passwordStrength,
+    strengthKey,
+    useQueryAuthUserSwr,
+    authActionsOf,
+} from "@/hooks/auth"
 import { useResetForm } from "@/hooks/rhf"
 import { navigation } from "@/modules/i18n"
 import { AUTH_ROUTES, loginResetPath } from "@/modules/routes"

@@ -1,3 +1,6 @@
+/** Timestamp returned by the database, including an unset value. */
+type RowTimestamp = Date | string | null
+
 /** One row of public.lead_flows as PostgreSQL returns it; the jsonb columns are read through the mapper. */
 export interface LeadFlowRow {
     /** The id. */
@@ -37,7 +40,7 @@ export interface LeadFlowRow {
     /** The question waiting for an answer. */
     readonly pending_question: number | null
     /** When the contact was asked for. */
-    readonly contact_asked_at: Date | string | null
+    readonly contact_asked_at: RowTimestamp
     /** The signals (jsonb). */
     readonly signals: unknown
     /** The score. */
@@ -45,23 +48,23 @@ export interface LeadFlowRow {
     /** Why (jsonb). */
     readonly score_reasons: unknown
     /** When it was scored. */
-    readonly scored_at: Date | string | null
+    readonly scored_at: RowTimestamp
     /** The last turn's reading (jsonb). */
     readonly analysis: unknown
     /** When the person last wrote. */
-    readonly last_user_at: Date | string | null
+    readonly last_user_at: RowTimestamp
     /** What they last wrote. */
     readonly last_user_text: string | null
     /** When they were greeted. */
-    readonly greeted_at: Date | string | null
+    readonly greeted_at: RowTimestamp
     /** When they went to Sales. */
-    readonly handed_off_at: Date | string | null
+    readonly handed_off_at: RowTimestamp
     /** When they were followed up. */
-    readonly followed_up_at: Date | string | null
+    readonly followed_up_at: RowTimestamp
     /** When the flow closed. */
-    readonly closed_at: Date | string | null
+    readonly closed_at: RowTimestamp
     /** When a person took over. */
-    readonly escalated_at: Date | string | null
+    readonly escalated_at: RowTimestamp
     /** Why. */
     readonly escalation_reason: string | null
 }

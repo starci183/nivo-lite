@@ -1,13 +1,16 @@
 "use client"
 
-import type { Hours, ShiftsRulesControllerInput } from "./component"
-import type { CreateShiftsRulesRowsInput } from "./component"
+import {
+    type Hours,
+    type ShiftsRulesControllerInput,
+    type CreateShiftsRulesRowsInput,
+    ShiftsRulesBase,
+    type RuleField,
+} from "./component"
 import { useTranslations } from "next-intl"
 import { useState } from "react"
 import { useShiftsBenchData, useShiftsFormat } from "@/hooks/shifts"
 import { useShiftsRuleCommands } from "@/hooks/shiftsCommands"
-import { ShiftsRulesBase } from "./component"
-import type { RuleField } from "./component"
 
 const createShiftsRulesRows = (context: CreateShiftsRulesRowsInput) => {
     const { commands, bench, ruleEdits, hourEdits, setHourEdits, setIsBusy } = context

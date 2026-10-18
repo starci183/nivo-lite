@@ -133,6 +133,25 @@ describe("resolveConfig", () => {
     })
 })
 
+describe("email configuration", () => {
+    const def = buildTemplate({ settings: [{ key: "mail", kind: "email", label: TEXT }] })
+
+    it.each([
+        ["a@b..", "a@b.."],
+        ["a@...", "a@..."],
+        ["a@.b", ""],
+        ["a@b.", ""],
+        ["@b.c", ""],
+        ["a@@b.c", ""],
+        ["a@b c.d", ""],
+        ["a@" + "b".repeat(20000), ""],
+    ])("preserves email validation case %#", async (mail, expected) => {
+        const subject = await buildSubject()
+
+        expect(subject.resolveConfig(def, { mail }).mail).toBe(expected)
+    })
+})
+
 describe("placeholders", () => {
     it("lists the names of the blanks of a text", async () => {
         const subject = await buildSubject()
@@ -153,6 +172,13 @@ describe("placeholders", () => {
         )
 
         expect(text).toBe("Hi An, you owe your invoice.")
+    })
+
+    it("tidies long mixed spaces and tabs before punctuation without consuming line breaks", async () => {
+        const subject = await buildSubject()
+
+        expect(subject.fillBody("A" + " \t".repeat(20000) + ", B\n \t!", {}, {})).toBe("A, B\n!")
+        expect(subject.fillBody("A" + " \t".repeat(20000) + "B", {}, {})).toBe("A B")
     })
 
     it("reads a blank with no value and no neutral word as nothing", async () => {

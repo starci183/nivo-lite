@@ -34,6 +34,13 @@ const build = async () => {
 const HOLD = "One moment."
 
 describe("parseJsonLoose", () => {
+    it("reads fenced objects after long padding and rejects a padded non-object", async () => {
+        const subject = await build()
+        const padding = " ".repeat(20_000)
+        expect(subject.parseJsonLoose('```json\n{"a":1}' + padding + "```")).toEqual({ a: 1 })
+        expect(subject.parseJsonLoose(padding + "no object")).toBeNull()
+    })
+
     it("reads a whole object, a fenced block, and the outermost braces", async () => {
         const subject = await build()
 

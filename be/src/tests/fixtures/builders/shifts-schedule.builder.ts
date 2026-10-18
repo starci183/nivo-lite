@@ -1,6 +1,5 @@
 import { builder } from "@starci/jest-preset"
-import type { ProposeWeekOutput } from "@modules/domain/shifts"
-import type { Block, Shift, ShiftStaff } from "@modules/domain/shifts"
+import type { ProposeWeekOutput, Block, Shift, ShiftStaff } from "@modules/domain/shifts"
 
 /** Renders localization keys and parameters deterministically for expected views. */
 export const text = (key: string, params: Record<string, string | number> = {}): string =>

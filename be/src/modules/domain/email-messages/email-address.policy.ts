@@ -1,4 +1,4 @@
-const EMAIL_PATTERN = /^[^\s@<>(),;:"\\]+@[^\s@<>(),;:"\\]+\.[^\s@<>(),;:"\\]{2,}$/u
+const EMAIL_PATTERN = /^[^\s@<>(),;:"\\]+@[^\s@<>(),;:"\\](?=[^\s@<>(),;:"\\]*\.[^\s@<>(),;:"\\]{2})[^\s@<>(),;:"\\]+$/u
 const ADDRESS_MAX = 254
 
 /** Whether the text is a plausible email address. */

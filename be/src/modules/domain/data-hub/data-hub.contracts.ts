@@ -13,9 +13,10 @@ export const DATA_PROVIDERS: ReadonlyArray<DataProvider> = [
     "telegram_user",
 ]
 
+const DATA_PROVIDER_SET: ReadonlySet<string> = new Set(DATA_PROVIDERS)
+
 /** True when a connection provider is one of the data providers. */
-export const isDataProvider = (provider: string): provider is DataProvider =>
-    DATA_PROVIDERS.some((candidate) => candidate === provider)
+export const isDataProvider = (provider: string): provider is DataProvider => DATA_PROVIDER_SET.has(provider)
 
 /** The provider a lookup is narrowed to; absent means any data provider. */
 export type ProviderFilter = DataProvider | undefined

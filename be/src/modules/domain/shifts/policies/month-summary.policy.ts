@@ -36,7 +36,7 @@ export const monthSummaryOf = (setup: PayeeSource, items: ReadonlyArray<AlertShi
     }
 }
 
-const cell = (value: string | number): string => `"${String(value).replace(/"/gu, '""')}"`
+const cell = (value: string | number): string => `"${String(value).replaceAll('"', '""')}"`
 
 /** The CSV of a month summary: a header line, one line per person and the total line. */
 export const monthCsvOf = (summary: MonthSummary, header: string, totalLabel: string): string =>

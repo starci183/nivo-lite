@@ -78,12 +78,13 @@ export class InventoryAutomationService {
      */
     async runLowStock(workspaceId: string, actor: string): Promise<DraftOutcome> {
         const outcome = await this.replenish.draftLow(workspaceId, { by: actor, requestApproval: false })
-        if (outcome.poIds.length === 0) return outcome
-        await this.office.postOffice(
-            workspaceId,
-            this.text("inventory.lowStockNote", { low: outcome.lowCount, orders: outcome.poIds.length }),
-        )
-        await this.replenish.requestApprovals(workspaceId, actor, outcome.poIds)
+        if (outcome.poIds.length > 0) {
+            await this.office.postOffice(
+                workspaceId,
+                this.text("inventory.lowStockNote", { low: outcome.lowCount, orders: outcome.poIds.length }),
+            )
+            await this.replenish.requestApprovals(workspaceId, actor, outcome.poIds)
+        }
         return outcome
     }
 

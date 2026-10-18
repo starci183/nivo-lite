@@ -1,3 +1,4 @@
+import { fakeIds } from "@starci/jest-preset"
 import type { InjectionToken } from "@nestjs/common"
 import { Secret } from "@modules/platform/config"
 import { HTTP_CLIENT, HttpError, HttpErrorCode } from "@modules/platform/http"
@@ -7,6 +8,7 @@ import { SupabaseModule } from "@modules/integrations/supabase"
 import { SimulationPostClient } from "@modules/integrations/webhook-delivery"
 
 const PRIMARY_DATA_SOURCE = "primaryDataSource"
+const wiringIds = fakeIds()
 
 /** Refuses infrastructure operations during construction of the module graph. */
 const refuseWiringOperation = (): never => {
@@ -18,7 +20,7 @@ const wiringSettings = {
     database: {
         name: "primary",
         provider: "supabase" as const,
-        url: new Secret("postgresql://wiring:wiring@database.invalid:5432/wiring"),
+        url: new Secret(`postgresql://wiring:${wiringIds.next()}@database.invalid:5432/wiring`),
         schema: "public",
     },
     supabase: { url: "https://supabase.invalid", serviceRoleKey: new Secret("wiring-fixture") },
@@ -88,6 +90,13 @@ const resourceDoubles = (): ReadonlyMap<string, unknown> => {
     ])
 }
 
+/** Resolves the diagnostic name of a registered private resource token. */
+const resourceName = (token: InjectionToken): string | undefined => {
+    if (typeof token === "symbol") return token.description
+    if (typeof token === "function") return token.name
+    return undefined
+}
+
 /** Reads private Supabase and producer-only queue tokens through their public registrations. */
 const resourceOverrides = (): Array<{ token: InjectionToken; value: unknown }> => {
     const resources = resourceDoubles()
@@ -107,9 +116,7 @@ const resourceOverrides = (): Array<{ token: InjectionToken; value: unknown }> =
     for (const definition of definitions) {
         for (const provider of definition.providers ?? []) {
             const token = typeof provider === "function" ? provider : provider.provide
-            let name: string | undefined
-            if (typeof token === "symbol") name = token.description
-            if (typeof token === "function") name = token.name
+            const name = resourceName(token)
             if (name !== undefined && resources.has(name)) overrides.push({ token, value: resources.get(name) })
         }
     }

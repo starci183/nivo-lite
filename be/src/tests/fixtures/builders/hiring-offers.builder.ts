@@ -1,7 +1,5 @@
 import { createHash } from "node:crypto"
-import type { OfferRecord } from "@modules/domain/hiring"
-import type { HiringBenchView, RequestOfferParams } from "@modules/domain/hiring"
-import type { HiringCandidatesService } from "@modules/domain/hiring"
+import type { OfferRecord, HiringBenchView, RequestOfferParams, HiringCandidatesService } from "@modules/domain/hiring"
 import { builder } from "@starci/jest-preset"
 import type { PerformContext } from "@modules/domain/module-ops"
 

@@ -342,3 +342,28 @@ describe("import text policy", () => {
         })
     })
 })
+
+describe("coverage parsing boundaries", () => {
+    it("retains spaced day ranges, clock separators and numeric head ranges", async () => {
+        const policy = await build()
+        const parsed = policy.parseImport(
+            { positions: "", staff: "", coverage: "T2 - T3 7h00 - 11:00 Front Desk 1 - 2 peak" },
+            ["Front Desk"],
+        )
+        expect(parsed.errors).toEqual([])
+        expect(parsed.blocks).toEqual(
+            [0, 1].map((weekday) => ({
+                weekday,
+                start: "07:00",
+                end: "11:00",
+                position: "Front Desk",
+                min: 1,
+                ideal: 2,
+                peak: true,
+            })),
+        )
+        expect(
+            policy.parseImport({ positions: "", staff: "", coverage: "T2 " + "x".repeat(20000) }, []).errors,
+        ).toEqual([{ code: "coverage-format", line: 1, subject: "" }])
+    })
+})

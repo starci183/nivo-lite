@@ -167,7 +167,7 @@ export class CreditsService {
     /** The plan of a workspace whose status is one of `statuses`; refuses a workspace that is not, or whose plan is gone. */
     private async requireActivePlan(workspaceId: string, statuses: ReadonlyArray<string>): Promise<Plan> {
         const workspace = await this.billing.findWorkspaceBilling(workspaceId)
-        if (workspace === null || workspace.planCode === null || !statuses.includes(workspace.status)) {
+        if (workspace?.planCode == null || !statuses.includes(workspace.status)) {
             throw new CreditsError({ code: CreditsErrorCode.WorkspaceNotActive })
         }
         const plan = await this.billing.findPlan(workspace.planCode)

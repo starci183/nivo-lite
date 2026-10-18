@@ -1,3 +1,6 @@
+/** A nullable numeric value returned by the SQL driver. */
+type NullableNumeric = string | number | null
+
 // The shapes the platform-admin statements answer; timestamps and bigints may arrive as text or as Date and number.
 
 /** The workspace columns the list and the detail read. */
@@ -219,7 +222,7 @@ export interface TransferRow {
     /** The sepay id. */
     readonly sepay_id: string | number
     /** The transfer amount. */
-    readonly transfer_amount: string | number | null
+    readonly transfer_amount: NullableNumeric
     /** The content. */
     readonly content: string | null
     /** The status. */
@@ -241,9 +244,9 @@ export interface ActivityRow {
 /** One ai_quota_status() row; numerics may arrive as text. */
 export interface QuotaRow {
     /** The credits used. */
-    readonly credits_used: string | number | null
+    readonly credits_used: NullableNumeric
     /** The credits limit. */
-    readonly credits_limit: string | number | null
+    readonly credits_limit: NullableNumeric
     /** The cost usd. */
     readonly cost_usd: string | number
 }
@@ -251,7 +254,7 @@ export interface QuotaRow {
 /** The own allowance row. */
 export interface QuotaOverrideRow {
     /** The credits limit. */
-    readonly credits_limit: string | number | null
+    readonly credits_limit: NullableNumeric
 }
 
 /** One sign-up day. */
@@ -267,7 +270,7 @@ export interface RecentTransferRow {
     /** The status. */
     readonly status: string
     /** The transfer amount. */
-    readonly transfer_amount: string | number | null
+    readonly transfer_amount: NullableNumeric
     /** The content. */
     readonly content: string | null
     /** The received at. */

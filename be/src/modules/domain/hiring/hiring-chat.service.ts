@@ -94,7 +94,7 @@ export class HiringChatService {
     ): Promise<ChatRegistration> {
         try {
             const job = await this.data.jobBySlug(workspaceId, application.job)
-            if (job === undefined || !job.channels.includes("chat")) {
+            if (!job?.channels.includes("chat")) {
                 return { ok: false, message: this.words.text("hiring.chat.noJob") }
             }
             const submitted = await this.candidates.submit(workspaceId, job, "chat", application, { conversationId })

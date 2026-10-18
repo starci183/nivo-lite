@@ -38,7 +38,7 @@ const compact = (text: string): string =>
         .toUpperCase()
         .replace(/[^A-Z0-9]/gu, "")
 
-const isDigit = (char: string | undefined): boolean => char !== undefined && /[0-9]/u.test(char)
+const isDigit = (char: string | undefined): boolean => char !== undefined && /\d/u.test(char)
 
 const mentionsFrom = (text: string, want: string, from: number): boolean => {
     const at = text.indexOf(want, from)

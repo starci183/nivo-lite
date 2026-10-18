@@ -6,8 +6,8 @@ import { useMemo } from "react"
 import { useForm, useWatch } from "react-hook-form"
 import { z } from "zod"
 import { parseAmount } from "@/hooks/sales"
-import { EMPTY_TYPED, fieldKey } from "@/hooks/salesdecisions"
-import type { TypedDecisionValues } from "@/hooks/salesdecisions"
+import { EMPTY_TYPED, fieldKey, type TypedDecisionValues } from "@/hooks/salesdecisions"
+
 import type { SalesDecision } from "@/modules/types"
 
 /** The typed edits of Sales cards, validated before an approval is queued. */
@@ -26,6 +26,13 @@ export const useSalesDecisionForm = () => {
     const form = useForm<TypedDecisionValues>({ resolver: zodResolver(schema), defaultValues: EMPTY_TYPED })
     useWatch({ control: form.control })
     const typed = form.getValues()
+    const validateEditedAmount = (item: SalesDecision, amount: z.ZodString): string | undefined => {
+        if (!typed.editing[item.id] || !item.hasAmount || item.missing.includes("amount_vnd")) return undefined
+        const raw = typed.amounts[item.id] ?? (item.amountVnd === null ? "" : String(item.amountVnd))
+        if (!raw) return undefined
+        const parsed = amount.safeParse(raw)
+        return parsed.success ? undefined : parsed.error.issues[0]?.message
+    }
     const validateDecision = (item: SalesDecision): string | undefined => {
         const required = z
             .string()
@@ -52,14 +59,7 @@ export const useSalesDecisionForm = () => {
             const parsed = (name === "amount_vnd" ? amount : required).safeParse(raw)
             if (!parsed.success) return parsed.error.issues[0]?.message
         }
-        if (typed.editing[item.id] && item.hasAmount && !item.missing.includes("amount_vnd")) {
-            const raw = typed.amounts[item.id] ?? (item.amountVnd === null ? "" : String(item.amountVnd))
-            if (raw) {
-                const parsed = amount.safeParse(raw)
-                if (!parsed.success) return parsed.error.issues[0]?.message
-            }
-        }
-        return undefined
+        return validateEditedAmount(item, amount)
     }
     return {
         typed,

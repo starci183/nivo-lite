@@ -13,3 +13,13 @@ local ones.
 | `NEXT_PUBLIC_SITE_URL` | The console `http://localhost` and the landing `http://landing.localhost`. |
 | `NEXT_PUBLIC_LANDING_URL` | The console `http://localhost` and the landing `http://landing.localhost`. |
 | `NEXT_PUBLIC_APP_URL` | The console `http://localhost` and the landing `http://landing.localhost`. |
+
+## api: optional executable paths
+
+These nonsecret keys select operator-installed executables. Omission retains the platform installation defaults. Paths must be absolute and local; the executable and every parent directory must be unwritable by untrusted users. PATH is never searched.
+
+| Key | Semantics |
+| --- | --- |
+| `VIDEO_FFMPEG_PATH` | Optional trusted FFmpeg executable path. |
+| `VIDEO_FFPROBE_PATH` | Optional trusted FFprobe executable path. |
+| `VIDEO_NICE_PATH` | Optional trusted priority-lowering executable path, used when priority lowering is enabled. |

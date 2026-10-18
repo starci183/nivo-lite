@@ -210,6 +210,16 @@ describe("tagsOf", () => {
 })
 
 describe("safeFileName", () => {
+    it.each([
+        ["__a__b___", "a__b"],
+        ["_".repeat(10000), "file"],
+        [`__${String.fromCodePoint(0x110, 0x111)}__.txt__`, "Dd__.txt"],
+    ])("trims boundary underscores in %s", async (name, expected) => {
+        const subject = await buildSubject()
+
+        expect(subject.safeFileName(name)).toBe(expected)
+    })
+
     it("drops folders, marks and spaces", async () => {
         const subject = await buildSubject()
 

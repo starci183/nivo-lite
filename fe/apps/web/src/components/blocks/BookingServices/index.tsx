@@ -4,9 +4,14 @@ import { useBookingBoard } from "@/hooks/bookingBoard"
 import { useFormatter, useTranslations } from "next-intl"
 import { useState, useTransition } from "react"
 import { useMutateRemoveBookingServiceSwr, useMutateSaveBookingServiceSwr } from "@/hooks/swr"
-import { useBookingSetupSave } from "@/hooks/bookingSetup"
-import { BookingServicesBase, BLANK_SERVICE_FIELDS, bookingServiceDigits } from "./component"
-import type { ServiceFields } from "./component"
+import { bookingServiceFormOf, useBookingSetupSave } from "@/hooks/bookingSetup"
+import {
+    BookingServicesBase,
+    BLANK_SERVICE_FIELDS,
+    bookingServiceDigits,
+    serviceFieldsOf,
+    type ServiceFields,
+} from "./component"
 
 /** The form being edited: a new service has no id. */
 interface Draft {
@@ -16,20 +21,37 @@ interface Draft {
 
 /** The connected services list: add, edit and remove the services the shop sells by appointment. */
 /** Connects the state and commands used by BookingServices. */
-const buildBookingServicesState = (
-    board: ReturnType<typeof useBookingBoard>["board"],
-    removeId: string | null,
-    draft: Draft | null,
-    startTransition: ReturnType<typeof useTransition>[1],
-    persist: ReturnType<typeof useBookingSetupSave>,
-    saveService: ReturnType<typeof useMutateSaveBookingServiceSwr>,
-    setDraft: import("react").Dispatch<import("react").SetStateAction<Draft | null>>,
-    removeService: ReturnType<typeof useMutateRemoveBookingServiceSwr>,
-    setRemoveId: import("react").Dispatch<import("react").SetStateAction<string | null>>,
-    t: ReturnType<typeof useTranslations<"workbenchBooking">>,
-    format: ReturnType<typeof useFormatter>,
-    isPending: ReturnType<typeof useTransition>[0],
-) => {
+/** Inputs for the connected state mapping. */
+interface BuildBookingServicesStateInput {
+    readonly board: ReturnType<typeof useBookingBoard>["board"]
+    readonly removeId: string | null
+    readonly draft: Draft | null
+    readonly startTransition: ReturnType<typeof useTransition>[1]
+    readonly persist: ReturnType<typeof useBookingSetupSave>
+    readonly saveService: ReturnType<typeof useMutateSaveBookingServiceSwr>
+    readonly setDraft: import("react").Dispatch<import("react").SetStateAction<Draft | null>>
+    readonly removeService: ReturnType<typeof useMutateRemoveBookingServiceSwr>
+    readonly setRemoveId: import("react").Dispatch<import("react").SetStateAction<string | null>>
+    readonly t: ReturnType<typeof useTranslations<"workbenchBooking">>
+    readonly format: ReturnType<typeof useFormatter>
+    readonly isPending: ReturnType<typeof useTransition>[0]
+}
+
+/** Derives display values and interactions from the supplied state. */
+const buildBookingServicesState = ({
+    board,
+    removeId,
+    draft,
+    startTransition,
+    persist,
+    saveService,
+    setDraft,
+    removeService,
+    setRemoveId,
+    t,
+    format,
+    isPending,
+}: BuildBookingServicesStateInput) => {
     const removing = board.services.find((service) => service.id === removeId)
     const save = () => {
         if (draft === null) return
@@ -75,7 +97,7 @@ export const BookingServices = () => {
     const [removeId, setRemoveId] = useState<string | null>(null)
     const [isPending, startTransition] = useTransition()
 
-    const connected = buildBookingServicesState(
+    const connected = buildBookingServicesState({
         board,
         removeId,
         draft,
@@ -88,7 +110,7 @@ export const BookingServices = () => {
         t,
         format,
         isPending,
-    )
+    })
     if (connected === null) return null
 
     return <BookingServicesBase props={bookingServicesProps(connected)} on={bookingServicesOn(connected)} />
@@ -130,23 +152,7 @@ const bookingServicesProps = (
         ...(draft === null
             ? {}
             : {
-                  form: {
-                      heading: draft.id === null ? t("serviceAdd") : draft.fields.name,
-                      fields: draft.fields,
-                      nameLabel: t("serviceName"),
-                      durationLabel: t("serviceDuration"),
-                      bufferLabel: t("serviceBuffer"),
-                      priceLabel: t("servicePrice"),
-                      pricePlaceholder: t("servicePricePlaceholder"),
-                      kindLabel: t("serviceKind"),
-                      kindPlaceholder: t("serviceKindPlaceholder"),
-                      followupLabel: t("serviceFollowup"),
-                      followupPlaceholder: t("serviceFollowupPlaceholder"),
-                      descriptionLabel: t("serviceDescription"),
-                      activeLabel: t("serviceActive"),
-                      saveLabel: t("save"),
-                      cancelLabel: t("cancel"),
-                  },
+                  form: bookingServiceFormOf(draft, t),
               }),
         ...(removing === undefined
             ? {}
@@ -172,19 +178,7 @@ const bookingServicesOn = (
         edit: (id) => {
             const service = board.services.find((candidate) => candidate.id === id)
             if (service === undefined) return
-            setDraft({
-                id,
-                fields: {
-                    name: service.name,
-                    durationMin: service.durationMin,
-                    bufferMin: service.bufferMin,
-                    price: service.priceVnd === null ? "" : String(service.priceVnd),
-                    resourceKind: service.resourceKind ?? "",
-                    followup: service.followupDays === null ? "" : String(service.followupDays),
-                    description: service.description,
-                    active: service.active,
-                },
-            })
+            setDraft({ id, fields: serviceFieldsOf(service) })
         },
         ask: setRemoveId,
         change: (patch) => draft !== null && setDraft({ ...draft, fields: { ...draft.fields, ...patch } }),

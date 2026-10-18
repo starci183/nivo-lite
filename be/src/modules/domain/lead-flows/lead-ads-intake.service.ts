@@ -30,7 +30,7 @@ const LASTING_FAILURES: ReadonlySet<string> = new Set(["token", "permission", "n
 const answersOf = (lead: MetaLead): string =>
     Object.entries(lead.fields)
         .filter(([key]) => !CONTACT_FIELDS.has(key))
-        .map(([key, value]) => `${key.replace(/_/g, " ")}: ${value}`)
+        .map(([key, value]) => `${key.replaceAll("_", " ")}: ${value}`)
         .join("\n")
 
 @Injectable()
@@ -146,7 +146,8 @@ export class LeadAdsIntakeService {
                   ]
                       .filter((part) => part !== "")
                       .join(", ")
-        const head = `${this.kit.text(LOCALE, "channel.lead-ads")}${form === "" ? "" : ` (${form})`}`
+        const suffix = form === "" ? "" : ` (${form})`
+        const head = `${this.kit.text(LOCALE, "channel.lead-ads")}${suffix}`
         return [head, answersOf(lead)]
             .filter((part) => part !== "")
             .join("\n")

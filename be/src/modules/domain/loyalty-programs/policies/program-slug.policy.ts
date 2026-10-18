@@ -7,6 +7,6 @@ export const programSlug = (name: string): string => {
         .toLowerCase()
         .replace(/[^a-z0-9]+/gu, "-")
         .slice(0, 28)
-        .replace(/^-+|-+$/gu, "")
+        .replace(/^-|-$/gu, "")
     return slug.length >= 3 ? slug : `${slug || "cua"}-hang`
 }

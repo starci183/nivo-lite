@@ -1,6 +1,5 @@
-import type { SalesAction } from "@modules/domain/sales"
+import type { SalesAction, SalesItemRequest } from "@modules/domain/sales"
 import type { Locale } from "@modules/platform/i18n"
-import type { SalesItemRequest } from "@modules/domain/sales"
 import type { RetryFailedStepInput } from "./dto/retry-failed-step.input"
 import type { SalesActionType } from "./dto/sales-action.type"
 

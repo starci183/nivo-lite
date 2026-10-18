@@ -95,32 +95,57 @@ export const moneyFlagsOf = (
         keysDone: !needsKeys || (follow.keysSaved && !Object.values(follow.values).some(Boolean)),
     }
 }
+/** The resolved inputs for money wizard view input. */
+interface MoneyWizardViewInput {
+    readonly nav: NavInput1
+    readonly step: (typeof MONEY_STEPS)[number]
+    readonly input: MoneyWizardInput
+    readonly resume: ReturnType<typeof useQueryMoneyConnectionSwr>
+    readonly form: AccountForm
+    readonly conn: WizardConnection | null
+    readonly follow: FollowDraft
+    readonly note: WizardNote | null
+    readonly agentIds: readonly string[]
+    readonly isPending: boolean
+    readonly received: boolean
+    readonly watch: ReturnType<typeof useFirstEvent>
+    readonly flags: MoneyFlags
+    readonly go: (to: number) => void
+    readonly create: () => void
+    readonly followDone: () => void
+    readonly finish: () => void
+    readonly setNote: import("react").Dispatch<import("react").SetStateAction<WizardNote | null>>
+    readonly setNav: import("react").Dispatch<import("react").SetStateAction<{ index: number; skipped: boolean }>>
+    readonly setForm: import("react").Dispatch<import("react").SetStateAction<AccountForm>>
+    readonly setFollow: import("react").Dispatch<import("react").SetStateAction<FollowDraft>>
+    readonly setAgentIds: import("react").Dispatch<import("react").SetStateAction<ReadonlyArray<string>>>
+}
 
 /** Assembles the resolved domain state and commands for its drawing. */
-export const viewOf = (
-    nav: NavInput1,
-    step: (typeof MONEY_STEPS)[number],
-    input: MoneyWizardInput,
-    resume: ReturnType<typeof useQueryMoneyConnectionSwr>,
-    form: AccountForm,
-    conn: WizardConnection | null,
-    follow: FollowDraft,
-    note: WizardNote | null,
-    agentIds: readonly string[],
-    isPending: boolean,
-    received: boolean,
-    watch: ReturnType<typeof useFirstEvent>,
-    flags: MoneyFlags,
-    go: (to: number) => void,
-    create: () => void,
-    followDone: () => void,
-    finish: () => void,
-    setNote: import("react").Dispatch<import("react").SetStateAction<WizardNote | null>>,
-    setNav: import("react").Dispatch<import("react").SetStateAction<{ index: number; skipped: boolean }>>,
-    setForm: import("react").Dispatch<import("react").SetStateAction<AccountForm>>,
-    setFollow: import("react").Dispatch<import("react").SetStateAction<FollowDraft>>,
-    setAgentIds: import("react").Dispatch<import("react").SetStateAction<ReadonlyArray<string>>>,
-) => {
+export const viewOf = ({
+    nav,
+    step,
+    input,
+    resume,
+    form,
+    conn,
+    follow,
+    note,
+    agentIds,
+    isPending,
+    received,
+    watch,
+    flags,
+    go,
+    create,
+    followDone,
+    finish,
+    setNote,
+    setNav,
+    setForm,
+    setFollow,
+    setAgentIds,
+}: MoneyWizardViewInput) => {
     return {
         index: nav.index,
         step,

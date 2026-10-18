@@ -9,7 +9,7 @@ export type LinkKind = "web" | "google" | "drive-folder" | "invalid"
 
 /** The address with tracking parameters removed and, on Google hosts, the account switch segment (/u/2/) dropped. */
 const tidy = (url: URL): URL => {
-    for (const key of [...url.searchParams.keys()]) {
+    for (const key of new Set(url.searchParams.keys())) {
         if (TRACKING.test(key)) url.searchParams.delete(key)
     }
     if (GOOGLE_HOSTS.test(url.hostname)) url.pathname = url.pathname.replace(/\/u\/\d+(?=\/|$)/, "")
@@ -33,13 +33,7 @@ export const linesOfLinks = (text: string): ReadonlyArray<string> => [
 ]
 
 /** Pasted text with newlines, spaces or commas between the links becomes distinct links. */
-export const splitLinks = (text: string): ReadonlyArray<string> =>
-    linesOfLinks(
-        text
-            .trim()
-            .split(/[\s,]+/)
-            .join("\n"),
-    )
+export const splitLinks = (text: string): ReadonlyArray<string> => linesOfLinks(text.trim().replaceAll(/[\s,]+/g, "\n"))
 
 /** What one pasted link points at: a plain page, a Google file, a Drive folder, or no web address at all. */
 export const linkKindOf = (raw: string): LinkKind => {

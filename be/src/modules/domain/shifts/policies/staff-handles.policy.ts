@@ -21,13 +21,28 @@ const HONORIFICS: ReadonlySet<string> = new Set([
     "sep",
 ])
 
+const withoutParentheses = (text: string): string => {
+    let cursor = 0
+    let out = ""
+    while (cursor < text.length) {
+        const opening = text.indexOf("(", cursor)
+        if (opening < 0) break
+        const closing = text.indexOf(")", opening + 1)
+        if (closing < 0) break
+        out += text.slice(cursor, opening) + " "
+        cursor = closing + 1
+    }
+    return out + text.slice(cursor)
+}
+
 const fold = (text: string): string =>
-    text
-        .toLowerCase()
-        .normalize("NFD")
-        .replace(/[\u0300-\u036f]/gu, "")
-        .replace(/\u0111/gu, "d")
-        .replace(/\([^)]*\)/gu, " ")
+    withoutParentheses(
+        text
+            .toLowerCase()
+            .normalize("NFD")
+            .replace(/[\u0300-\u036f]/gu, "")
+            .replaceAll("\u0111", "d"),
+    )
 
 /** The base handle of one name, before de-duplication. */
 export const baseStaffHandle = (name: string): string => {
@@ -57,7 +72,11 @@ export const staffHandles = (
         staff.map((person) => {
             const base = baseStaffHandle(person.name)
             let handle = base
-            for (let n = 2; taken.has(handle); n += 1) handle = `${base}${n}`
+            let suffix = 2
+            while (taken.has(handle)) {
+                handle = `${base}${suffix}`
+                suffix += 1
+            }
             taken.add(handle)
             return [person.id, handle] as const
         }),

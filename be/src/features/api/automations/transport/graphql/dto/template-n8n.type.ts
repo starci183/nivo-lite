@@ -9,7 +9,7 @@ export class TemplateN8nType {
 
     /** The data endpoints the workflow reads. */
     @Field(() => [String], { nullable: true })
-    data?: ReadonlyArray<string> | undefined
+    data?: ReadonlyArray<string>
 
     /** `owner` or `customer`. */
     @Field()

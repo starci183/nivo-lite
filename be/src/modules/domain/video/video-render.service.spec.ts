@@ -38,6 +38,8 @@ const claimOf = builder<ClaimedRender>({ renderId: "render-1", workspaceId: WORK
 const outputOf = (dir: string): RenderOutput => ({
     videoFile: join(dir, "out.mp4"),
     posterFile: join(dir, "poster.jpg"),
+    captionsFile: null,
+    captionsLang: null,
     durationMs: 9000,
     sizeBytes: 5,
     meta: {
@@ -88,6 +90,62 @@ const build = async () => {
     const service = moduleRef.get(VideoRenderService)
     return { service, video, renders, renderer, logger, clock, assets, options, root }
 }
+
+describe("VideoRenderService", () => {
+    describe("render", () => {
+        it("uploads a real nonempty caption artifact and records its private object path and locale", async () => {
+            const { service, renderer, video, assets } = await build()
+            renderer.render.mockImplementation(async (input) => {
+                const output = outputOf(input.workDir)
+                await writeFile(output.videoFile, "video")
+                await writeFile(output.posterFile, "poster")
+                const captionsFile = join(input.workDir, "captions.vtt")
+                await writeFile(captionsFile, "WEBVTT\n\n00:00:00.250 --> 00:00:01.500\nHello\n")
+                return { ...output, captionsFile, captionsLang: "vi-VN" }
+            })
+
+            await service.render({ renderId: "render-1" })
+
+            expect(assets.upload).toHaveBeenCalledWith(
+                "videos",
+                `${WORKSPACE}/render-1/captions.vtt`,
+                expect.any(Buffer),
+                "text/vtt; charset=utf-8",
+            )
+            expect(video.completeRender).toHaveBeenCalledWith(
+                "render-1",
+                expect.objectContaining({
+                    meta: expect.objectContaining({
+                        captions_path: `${WORKSPACE}/render-1/captions.vtt`,
+                        captions_lang: "vi-VN",
+                    }),
+                }),
+            )
+        })
+
+        it("does not publish an empty caption artifact", async () => {
+            const { service, renderer, video, assets } = await build()
+            renderer.render.mockImplementation(async (input) => {
+                const output = outputOf(input.workDir)
+                await writeFile(output.videoFile, "video")
+                await writeFile(output.posterFile, "poster")
+                const captionsFile = join(input.workDir, "captions.vtt")
+                await writeFile(captionsFile, "")
+                return { ...output, captionsFile, captionsLang: "vi-VN" }
+            })
+
+            await service.render({ renderId: "render-1" })
+
+            expect(assets.upload).toHaveBeenCalledTimes(2)
+            expect(video.completeRender).toHaveBeenCalledWith(
+                "render-1",
+                expect.objectContaining({
+                    meta: expect.objectContaining({ captions_path: null, captions_lang: null }),
+                }),
+            )
+        })
+    })
+})
 
 describe("VideoRenderService", () => {
     describe("render", () => {

@@ -87,6 +87,20 @@ export interface SheetRowRef {
     readonly code: string
 }
 
+/** The sheet identity and display values shared by the payment write and its evidence. */
+export interface SheetPaymentContext {
+    /** The spreadsheet id. */
+    readonly id: string
+    /** The formatted event time. */
+    readonly at: string
+    /** The order number, when supplied. */
+    readonly orderNo: string
+    /** The lead-derived fallback code. */
+    readonly leadCode: string
+    /** Formats evidence at a row of this spreadsheet. */
+    readonly where: (row: number, what: string) => string
+}
+
 /** The sheet operations the event application needs; the client implements them against the Sheets API. */
 export interface SheetsApi {
     /** The first row of the orders tab whose code equals one of `codes`, in priority order. */

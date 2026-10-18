@@ -180,3 +180,12 @@ describe("payos policy > payosBodyOf", () => {
         expect(payosBodyOf({ data: null })).toMatchObject({ data: null })
     })
 })
+
+describe("payos canonical key ordering", () => {
+    it("keeps uppercase keys before lowercase keys in the signed bytes", async () => {
+        const { payosSignature } = await buildSubject()
+        expect(payosSignature({ a: 1, Z: 2, A: 3 }, KEY)).toBe(
+            createHmac("sha256", KEY).update("A=3&Z=2&a=1").digest("hex"),
+        )
+    })
+})

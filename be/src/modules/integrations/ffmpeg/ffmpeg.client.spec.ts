@@ -32,7 +32,11 @@ const spawnChild = (): ChildProcess => {
 
 const spawnSpy = jest.spyOn(childProcess, "spawn")
 
-const optionsOf = builder<FfmpegOptions>({ nice: false })
+const executableRoot = process.platform === "win32" ? "C:/trusted/bin" : "/trusted/bin"
+const ffmpegPath = `${executableRoot}/ffmpeg`
+const ffprobePath = `${executableRoot}/ffprobe`
+const nicePath = `${executableRoot}/nice`
+const optionsOf = builder<FfmpegOptions>({ nice: false, ffmpegPath, ffprobePath, nicePath })
 
 const build = async (inputOptions: FfmpegOptions) => {
     const options = builder<FfmpegOptions>(inputOptions)()
@@ -55,7 +59,7 @@ afterAll(() => {
 
 describe("FfmpegClient", () => {
     describe("run", () => {
-        it("runs ffmpeg with the quiet arguments and answers what it printed", async () => {
+        it("runs the installed ffmpeg without resolving a program from the working directory or PATH", async () => {
             const ffmpeg = await build(optionsOf())
             const running = ffmpeg.run("ffmpeg", ["-i", "in.mp4", "out.mp4"], {
                 signal: new AbortController().signal,
@@ -68,8 +72,23 @@ describe("FfmpegClient", () => {
             await expect(running).resolves.toEqual({ stdout: "ignored", stderr: "frame done" })
 
             expect(spawnSpy.mock.calls).toEqual([
-                ["ffmpeg", ["-hide_banner", "-nostdin", "-y", "-i", "in.mp4", "out.mp4"], { cwd: "work" }],
+                [ffmpegPath, ["-hide_banner", "-nostdin", "-y", "-i", "in.mp4", "out.mp4"], { cwd: "work" }],
             ])
+        })
+
+        it("refuses a relative executable before spawning any process", async () => {
+            const ffmpeg = await build(optionsOf({ ffmpegPath: "ffmpeg" }))
+
+            await expect(
+                ffmpeg.run("ffmpeg", ["-version"], {
+                    signal: new AbortController().signal,
+                    cwd: ".",
+                }),
+            ).rejects.toMatchObject({
+                code: FfmpegErrorCode.Failed,
+                params: { tool: "ffmpeg", reason: "executable path must be a local absolute path" },
+            })
+            expect(spawnSpy).not.toHaveBeenCalled()
         })
     })
 })
@@ -87,8 +106,8 @@ describe("FfmpegClient", () => {
             await urgent
 
             expect(spawnSpy.mock.calls).toEqual([
-                ["nice", ["-n", "10", "ffmpeg", "-hide_banner", "-nostdin", "-y", "a"], { cwd: "." }],
-                ["ffprobe", ["b"], { cwd: "." }],
+                [nicePath, ["-n", "10", ffmpegPath, "-hide_banner", "-nostdin", "-y", "a"], { cwd: "." }],
+                [ffprobePath, ["b"], { cwd: "." }],
             ])
         })
     })
@@ -209,7 +228,7 @@ describe("FfmpegClient", () => {
             await expect(measuring).resolves.toBe(12.5)
             expect(spawnSpy.mock.calls).toEqual([
                 [
-                    "ffprobe",
+                    ffprobePath,
                     ["-v", "error", "-show_entries", "format=duration", "-of", "default=nw=1:nk=1", "clip.mp3"],
                     { cwd: "." },
                 ],

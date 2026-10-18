@@ -12,9 +12,9 @@ export type GradientDirection = "vertical" | "diagonal"
 
 /** The red, green and blue values of a #rrggbb colour. */
 const channelsOf = (hex: string): readonly [number, number, number] => [
-    parseInt(hex.slice(1, 3), 16),
-    parseInt(hex.slice(3, 5), 16),
-    parseInt(hex.slice(5, 7), 16),
+    Number.parseInt(hex.slice(1, 3), 16),
+    Number.parseInt(hex.slice(3, 5), 16),
+    Number.parseInt(hex.slice(5, 7), 16),
 ]
 
 const chunk = (type: string, data: Buffer): Buffer => {

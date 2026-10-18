@@ -1,5 +1,4 @@
-import type { AuthorizeGoogleRequest } from "../../application/authorize-google.contracts"
-import type { AuthorizeGoogleResult } from "../../application/authorize-google.contracts"
+import type { AuthorizeGoogleRequest, AuthorizeGoogleResult } from "../../application/authorize-google.contracts"
 import type { AuthorizeGoogleInput } from "./dto/authorize-google.input"
 import type { AuthorizeUrlType } from "./dto/authorize-url.type"
 

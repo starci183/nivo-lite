@@ -1,3 +1,6 @@
+/** A nullable PostgreSQL numeric value before conversion by the usage mapper. */
+type NullableNumeric = number | string | null
+
 /** The row public.ai_quota_status answers; bigint and numeric columns arrive as text from PostgreSQL. */
 export interface QuotaStatusRow {
     /** The first day of the month. */
@@ -9,15 +12,15 @@ export interface QuotaStatusRow {
     /** Cost this month in US dollars. */
     readonly cost_usd: number | string
     /** The reply allowance, or null. */
-    readonly messages_limit: number | string | null
+    readonly messages_limit: NullableNumeric
     /** The token allowance, or null. */
-    readonly tokens_limit: number | string | null
+    readonly tokens_limit: NullableNumeric
     /** Credits used this month, when the function reports them. */
-    readonly credits_used: number | string | null
+    readonly credits_used: NullableNumeric
     /** The credit allowance, or null. */
-    readonly credits_limit: number | string | null
+    readonly credits_limit: NullableNumeric
     /** Credits topped up and not yet used, when the function reports them. */
-    readonly topup_balance: number | string | null
+    readonly topup_balance: NullableNumeric
 }
 
 /** Whether a notice was posted by this call. */

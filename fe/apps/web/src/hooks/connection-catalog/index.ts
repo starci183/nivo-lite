@@ -8,4 +8,5 @@ export {
     passesFilters,
     searchWords,
 } from "./connection-catalog.shared"
-export type { CatalogEntry } from "./connection-catalog.shared"
+
+export { asCategory, asAudience, catalogBadgeOf, connectionCountsOf, actionOf } from "./connection-catalog.shared"

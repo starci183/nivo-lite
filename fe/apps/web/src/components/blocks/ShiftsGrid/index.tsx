@@ -1,7 +1,13 @@
 "use client"
 
-import type { ShiftsGridControllerInput } from "./component"
-import type { GridCellsInput } from "./component"
+import {
+    type ShiftsGridControllerInput,
+    type GridCellsInput,
+    ShiftsGridBase,
+    type GridCellView,
+    type GridChipView,
+    type GridRowView,
+} from "./component"
 import { useTranslations } from "next-intl"
 import { useState } from "react"
 import { useShiftsBenchData, useShiftsFormat } from "@/hooks/shifts"
@@ -10,8 +16,6 @@ import { useShiftsWeekStore } from "@/hooks/zustand/shiftsWeek"
 import { useShiftsWeekModel } from "@/hooks/shiftsCoverage"
 import { isoWeekDates } from "@/hooks/shiftsTime"
 import type { ShiftsShiftView } from "@/modules/types"
-import { ShiftsGridBase } from "./component"
-import type { GridCellView, GridChipView, GridRowView } from "./component"
 
 const OPEN_ROW = "open"
 
@@ -67,7 +71,7 @@ const createGridCells = (context: GridCellsInput) => {
             .filter((shift) => shift.staffId === staffId && shift.date === date)
             .sort((a, b) => a.start.localeCompare(b.start))
             .map(chipOf)
-        const canDrop = editable && pickedShift !== undefined && pickedShift.date === date
+        const canDrop = editable && pickedShift?.date === date
         const isOff =
             staffId !== null &&
             weekView.approvedLeaves.some((leave) => leave.staffId === staffId && leave.from <= date && leave.to >= date)

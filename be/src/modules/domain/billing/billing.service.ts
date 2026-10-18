@@ -49,7 +49,7 @@ const selectionOf = (selection: PlanSelectionInput | undefined): PlanSelection =
 })
 
 /** Roles that may pay for a workspace. */
-const MANAGER_ROLES: ReadonlyArray<string> = ["owner", "manager"]
+const MANAGER_ROLES: ReadonlySet<string> = new Set(["owner", "manager"])
 
 @Injectable()
 /** Plans, who may pay for a workspace, and the payment orders a workspace asks for; every figure that charges money is read from the database. */
@@ -119,14 +119,14 @@ export class BillingService {
     /** Refuses anyone who is not an active owner or manager of the workspace. */
     async requireManager(userId: string, workspaceId: string): Promise<void> {
         const role = await this.roleOf(userId, workspaceId)
-        if (role === null || !MANAGER_ROLES.includes(role)) throw new BillingError({ code: BillingErrorCode.Forbidden })
+        if (role === null || !MANAGER_ROLES.has(role)) throw new BillingError({ code: BillingErrorCode.Forbidden })
     }
 
     /** "Renew": a new payment order for what the workspace has now - same plan, usage tier, seats and cycle (owner or manager). */
     async renew(userId: string, params: RenewalParams): Promise<PayableOrder> {
         await this.requireManager(userId, params.workspaceId)
         const workspace = await this.findWorkspaceBilling(params.workspaceId)
-        if (workspace === null || workspace.planCode === null) {
+        if (workspace?.planCode == null) {
             throw new BillingError({ code: BillingErrorCode.WorkspaceNotFound })
         }
         return this.orderPlanOf(userId, params.workspaceId, workspace.planCode, {

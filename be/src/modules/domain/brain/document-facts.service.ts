@@ -150,7 +150,7 @@ export class DocumentFactsService {
             })
         }
         const parsed = answer === null ? null : parseFacts(this.json.jsonOf(answer.text), text)
-        if (parsed === null || !parsed.valid) {
+        if (!parsed?.valid) {
             const attempts = state.attempts + 1
             const note = answer === null ? ExtractionNote.ModelBusy : ExtractionNote.AnswerUnreadable
             if (attempts >= MAX_ATTEMPTS) {

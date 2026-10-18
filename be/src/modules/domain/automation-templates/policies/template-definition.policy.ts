@@ -5,11 +5,11 @@ import { AutomationTemplatesError, AutomationTemplatesErrorCode } from "../error
 type Check = (value: unknown, whole: Record<string, unknown>) => boolean
 
 const KEY_PATTERN = /^[a-z][a-z0-9_-]{2,60}$/
-const EXECUTORS: ReadonlyArray<unknown> = ["implemented", "n8n", "definition"]
-const CONTENT_MODES: ReadonlyArray<unknown> = ["fixed", "ai_per_case", "none"]
-const TRIGGER_KINDS: ReadonlyArray<unknown> = ["event", "schedule"]
-const SETTING_KINDS: ReadonlyArray<unknown> = ["number", "text", "email", "time", "toggle", "textarea"]
-const AUDIENCES: ReadonlyArray<unknown> = ["owner", "customer"]
+const EXECUTORS: ReadonlySet<unknown> = new Set(["implemented", "n8n", "definition"])
+const CONTENT_MODES: ReadonlySet<unknown> = new Set(["fixed", "ai_per_case", "none"])
+const TRIGGER_KINDS: ReadonlySet<unknown> = new Set(["event", "schedule"])
+const SETTING_KINDS: ReadonlySet<unknown> = new Set(["number", "text", "email", "time", "toggle", "textarea"])
+const AUDIENCES: ReadonlySet<unknown> = new Set(["owner", "customer"])
 
 const isText = (value: unknown): boolean => typeof value === "string" && value.length > 0
 const isLocalized = (value: unknown): boolean => isRecord(value) && isText(value.vi) && isText(value.en)
@@ -21,22 +21,21 @@ const isScalar = (value: unknown): boolean =>
     typeof value === "string" || typeof value === "number" || typeof value === "boolean"
 
 const isSetting: Check = (value) =>
-    isRecord(value) && isText(value.key) && SETTING_KINDS.includes(value.kind) && isLocalized(value.label)
+    isRecord(value) && isText(value.key) && SETTING_KINDS.has(value.kind) && isLocalized(value.label)
 
 /** The fields of a template and what each must be; the first one that fails names itself in the error. */
 const FIELDS: ReadonlyArray<readonly [name: string, check: Check]> = [
     ["version", isCount],
     ["position", isCount],
     ["pack", isText],
-    ["executor", (value) => EXECUTORS.includes(value)],
+    ["executor", (value) => EXECUTORS.has(value)],
     ["moduleKey", (value) => value === null || isText(value)],
     ["icon", isText],
     ["name", isLocalized],
     ["description", isLocalized],
     [
         "trigger",
-        (value) =>
-            isRecord(value) && TRIGGER_KINDS.includes(value.kind) && isText(value.event) && isLocalized(value.line),
+        (value) => isRecord(value) && TRIGGER_KINDS.has(value.kind) && isText(value.event) && isLocalized(value.line),
     ],
     [
         "requires",
@@ -48,7 +47,7 @@ const FIELDS: ReadonlyArray<readonly [name: string, check: Check]> = [
             isTextList(value.capabilities),
     ],
     ["settings", (value) => everyItem(value, isSetting)],
-    ["contentMode", (value) => CONTENT_MODES.includes(value)],
+    ["contentMode", (value) => CONTENT_MODES.has(value)],
     ["guardrails", (value) => everyItem(value, isLocalized)],
     ["variables", isTextList],
     ["defaultBody", (value) => value === null || isLocalized(value)],
@@ -57,8 +56,7 @@ const FIELDS: ReadonlyArray<readonly [name: string, check: Check]> = [
     [
         "n8n",
         (value, whole) =>
-            whole.executor !== "n8n" ||
-            (isRecord(value) && isText(value.webhook) && AUDIENCES.includes(value.audience)),
+            whole.executor !== "n8n" || (isRecord(value) && isText(value.webhook) && AUDIENCES.has(value.audience)),
     ],
 ]
 

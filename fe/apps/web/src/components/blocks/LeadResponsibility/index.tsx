@@ -1,14 +1,16 @@
 "use client"
 
-import { HUMAN } from "./component"
-
-import type {
-    LeadResponsibilityProps,
-    Mode,
-    BuildResponsibilityPanelViewContext,
-    BuildStepFormViewContext,
-    LeadResponsibilityBaseProps,
+import {
+    HUMAN,
+    type LeadResponsibilityProps,
+    type Mode,
+    type BuildResponsibilityPanelViewContext,
+    type BuildStepFormViewContext,
+    type LeadResponsibilityBaseProps,
+    LeadResponsibilityBase,
+    type ResponsibilityView,
 } from "./component"
+
 import { parseDate } from "@internationalized/date"
 import { useTranslations } from "next-intl"
 import { useState } from "react"
@@ -23,12 +25,10 @@ import {
     useStepView,
 } from "@/hooks/leads"
 import { mapSlot, useSlotLabels } from "@/hooks/slot"
-import { useLeadStepForm } from "@/hooks/rhf"
-import type { LeadStepValues } from "@/hooks/rhf"
+import { useLeadStepForm, type LeadStepValues } from "@/hooks/rhf"
+
 import { LEADS_ROUTES } from "@/modules/routes"
 import type { LeadJourney, ResponsibilityRecord, DataSlot } from "@/modules/types"
-import { LeadResponsibilityBase } from "./component"
-import type { ResponsibilityView } from "./component"
 
 const ownerIdOf = (step: ResponsibilityRecord | null): string =>
     step?.owner_kind === "agent" && step.owner_agent_id ? step.owner_agent_id : HUMAN

@@ -2,8 +2,8 @@
 
 import { useState, useTransition } from "react"
 import { useTranslations } from "next-intl"
-import { authErrorKey, useResendEmail } from "@/hooks/auth"
-import { authActionsOf } from "@/hooks/auth"
+import { authErrorKey, useResendEmail, authActionsOf } from "@/hooks/auth"
+
 import { useForgotForm } from "@/hooks/rhf"
 import { AUTH_ROUTES } from "@/modules/routes"
 import { ForgotFormBase } from "./component"

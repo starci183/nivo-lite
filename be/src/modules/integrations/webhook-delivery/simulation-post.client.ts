@@ -1,6 +1,7 @@
 import { Injectable } from "@nestjs/common"
 import { HttpError, InjectHttpClient } from "@modules/platform/http"
 import type { HttpClient } from "@modules/platform/http"
+import { WebhookDeliveryError, WebhookDeliveryErrorCode } from "./errors/webhook-delivery.error"
 import type { SimulationWebhookDelivery, SimulationWebhookReply } from "./simulation-post.contracts"
 
 /** How long the operator's simulated delivery waits for the api. */
@@ -24,7 +25,12 @@ export class SimulationPostClient {
                 read: "text",
                 timeoutMs: SIMULATION_TIMEOUT_MS,
             })
-            .catch((cause: unknown) => Promise.reject(cause instanceof HttpError ? cause.cause : cause))
+            .catch((cause: unknown) => {
+                throw new WebhookDeliveryError({
+                    code: WebhookDeliveryErrorCode.SimulationFailed,
+                    cause: cause instanceof HttpError ? (cause.cause ?? cause) : cause,
+                })
+            })
         return { status: reply.status, text: typeof reply.body === "string" ? reply.body : "" }
     }
 }

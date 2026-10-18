@@ -7,6 +7,7 @@ export { N8nRunsModule } from "./n8n-runs.module"
 export { N8nRunsService } from "./n8n-runs.service"
 export type {
     CustomerEmail,
+    RunAuthorization,
     DaySummary,
     MailOutcome,
     MonthLedger,

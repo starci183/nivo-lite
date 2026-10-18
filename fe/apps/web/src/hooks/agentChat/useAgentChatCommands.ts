@@ -21,23 +21,27 @@ const createCommandLock = (): CommandLock => {
         },
     }
 }
+/** A command batch adds the shared single-flight lock to the selected conversation inputs. */
+interface AgentChatCommandInput extends AgentChatCommandsInput {
+    readonly lock: CommandLock
+}
 
-const createAgentChatActionsActions = (
-    target: AgentChatActionTarget,
-    visitor: ReturnType<typeof useAgentChatVisitorForm>,
-    runGraphQL: ReturnType<typeof useGraphQLWithToast>,
-    startMutation: ReturnType<typeof useMutateStartAgentChatConversationSwr>,
-    t: ReturnType<typeof useTranslations<"agentChat">>,
-    refresh: (conversationId: string) => Promise<void>,
-    lock: CommandLock,
-    pending: PendingTurn | undefined,
-    setOpening: import("react").Dispatch<import("react").SetStateAction<boolean>>,
-    setTurnError: import("react").Dispatch<import("react").SetStateAction<string | null>>,
-    message: ReturnType<typeof useAgentChatMessageForm>,
-    workspaceId: string | undefined,
-    sendMutation: ReturnType<typeof useMutateSendAgentChatMessageSwr>,
-    setPending: import("react").Dispatch<import("react").SetStateAction<PendingTurn | undefined>>,
-) => {
+const createAgentChatActionsActions = ({
+    target,
+    visitor,
+    runGraphQL,
+    startMutation,
+    t,
+    refresh,
+    lock,
+    pending,
+    setOpening,
+    setTurnError,
+    message,
+    workspaceId,
+    sendMutation,
+    setPending,
+}: AgentChatCommandInput) => {
     const open = async (): Promise<string | undefined> => {
         if (target.agent === undefined) return undefined
         const agentId = target.agent.agentId
@@ -114,7 +118,7 @@ export const useAgentChatCommands = (input: AgentChatCommandsInput) => {
     } = input
 
     const [lock] = useState(createCommandLock)
-    return createAgentChatActionsActions(
+    return createAgentChatActionsActions({
         target,
         visitor,
         runGraphQL,
@@ -129,7 +133,7 @@ export const useAgentChatCommands = (input: AgentChatCommandsInput) => {
         workspaceId,
         sendMutation,
         setPending,
-    )
+    })
 }
 
 /** The single-flight lock shared by start and send. */

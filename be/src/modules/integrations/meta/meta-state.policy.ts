@@ -29,5 +29,5 @@ export const signMetaState = (key: Buffer, input: MetaStateInput, now: number): 
 /** The state when the signature is valid, it has not expired and it carries the Meta purpose; otherwise null. */
 export const verifyMetaState = (key: Buffer, value: ReceivedText, now: number): OptionalMetaState => {
     const state = verifyStateToken(key, value, now)
-    return state === null || state.p !== META_STATE_PURPOSE ? null : { ...state, r: metaReturnTo(state.r) }
+    return state?.p !== META_STATE_PURPOSE ? null : { ...state, r: metaReturnTo(state.r) }
 }

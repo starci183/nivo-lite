@@ -7,6 +7,3 @@ export interface EmitEventRequest {
     /** The event. */
     readonly event: BusinessEventInput
 }
-
-/** What emit event answers. */
-export type EmitEventResult = void

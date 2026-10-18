@@ -2,8 +2,8 @@
 
 import { useState, useTransition } from "react"
 import { useTranslations } from "next-intl"
-import { authErrorKey, inviteOfNext } from "@/hooks/auth"
-import { authActionsOf } from "@/hooks/auth"
+import { authErrorKey, inviteOfNext, authActionsOf } from "@/hooks/auth"
+
 import { useLoginForm } from "@/hooks/rhf"
 import { navigation } from "@/modules/i18n"
 import { AUTH_ROUTES, signupPath } from "@/modules/routes"

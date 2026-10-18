@@ -204,3 +204,18 @@ describe("booking tool arguments", () => {
         expect(policy.resolveBookingService([active], "unknown")).toBeUndefined()
     })
 })
+
+describe("booking instant boundaries", () => {
+    it.each([
+        ["2026-10-12T23:59:59.123+23:59", true],
+        ["2026-10-12T07:00Z", true],
+        ["2026-10-12T24:00Z", false],
+        ["2026-10-12T07:60Z", false],
+        ["2026-10-12T07:00+24:00", false],
+        ["2026-02-30T07:00Z", false],
+        ["2026-10-12T07:00", false],
+    ])("validates %s before booking placement", async (slot, valid) => {
+        const policy = await buildSubject()
+        expect(policy.readBookingRequestArgs({ slot }).start).toBe(valid ? slot : "")
+    })
+})

@@ -35,7 +35,7 @@ import { addDays } from "./policies/vn-time.policy"
 
 /** Days an offer stays valid after it is sent. */
 const OFFER_DAYS = 7
-const HIDDEN_STATUSES: ReadonlyArray<string> = ["draft", "waiting", "cancelled"]
+const HIDDEN_STATUSES: ReadonlySet<string> = new Set(["draft", "waiting", "cancelled"])
 /** The status an offer takes from what the gate answered. */
 const STATUS_OF_DECISION: Readonly<Record<string, string>> = { waiting_decision: "waiting", done: "sent" }
 const AI_TIMEOUT_MS = 75_000
@@ -266,7 +266,7 @@ export class HiringOffersService {
     async publicView(request: PublicOfferParams, principal?: CredentialPrincipal): Promise<PublicOfferOutput> {
         if (principal !== undefined) requireHiringLinkBinding(principal, await this.authenticateLink(request.token))
         const offer = isToken(request.token) ? await this.data.offerByToken(request.token) : undefined
-        if (offer === undefined || HIDDEN_STATUSES.includes(offer.status))
+        if (offer === undefined || HIDDEN_STATUSES.has(offer.status))
             throw new HiringError({ code: HiringErrorCode.PublicNotFound })
         const heads = await this.data.heads(offer.candidateId, offer.jobId)
         if (heads === undefined) throw new HiringError({ code: HiringErrorCode.PublicNotFound })
@@ -288,18 +288,21 @@ export class HiringOffersService {
         }
     }
 
+    private expired(offer: OfferRecord): boolean {
+        return offer.expiresAt !== null && Date.parse(offer.expiresAt) < this.clock.now().getTime()
+    }
+
     /** The candidate answers a sent offer: accepting makes them hired with the onboarding checklist, declining withdraws them. */
     async respond(request: RespondOfferParams, principal?: CredentialPrincipal): Promise<RespondOfferOutput> {
         const offer = isToken(request.token) ? await this.data.offerByToken(request.token) : undefined
         if (offer === undefined) return { outcome: "invalid" }
         if (principal !== undefined) requireHiringLinkBinding(principal, hiringLinkPrincipal(offer))
-        if (HIDDEN_STATUSES.includes(offer.status)) return { outcome: "invalid" }
+        if (HIDDEN_STATUSES.has(offer.status)) return { outcome: "invalid" }
         if (offer.status === "accepted") return { outcome: "already_accepted" }
         if (offer.status === "declined") return { outcome: "already_declined" }
         if (offer.status === "expired") return { outcome: "expired" }
         if (offer.status !== "sent") return { outcome: "closed" }
-        if (offer.expiresAt !== null && Date.parse(offer.expiresAt) < this.clock.now().getTime())
-            return { outcome: "expired" }
+        if (this.expired(offer)) return { outcome: "expired" }
         const candidate = await this.data.candidateHead(offer.candidateId)
         const job = await this.data.jobHead(offer.jobId)
         const name = candidate?.name ?? ""

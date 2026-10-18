@@ -3,16 +3,18 @@ import {
     Button,
     EmptyNotice,
     HorizontalScrollRegion,
+    List,
     ListItem,
     SurfaceCard,
     SurfaceListCard,
     Text,
+    type BadgeTone,
 } from "@starci/grammar/common"
-import type { BadgeTone } from "@starci/grammar/common"
-import { InventoryNewPoDrawer } from "@/components/composites/InventoryNewPoDrawer"
-import type { InventoryNewPoDrawerProps } from "@/components/composites/InventoryNewPoDrawer"
-import { InventoryPoDrawer } from "@/components/composites/InventoryPoDrawer"
-import type { InventoryPoDrawerProps } from "@/components/composites/InventoryPoDrawer"
+
+import { InventoryNewPoDrawer, type InventoryNewPoDrawerProps } from "@/components/composites/InventoryNewPoDrawer"
+
+import { InventoryPoDrawer, type InventoryPoDrawerProps } from "@/components/composites/InventoryPoDrawer"
+
 import {
     ACTIONS_CLASS_NAME,
     BOARD_CLASS_NAME,
@@ -150,9 +152,9 @@ const renderHorizontalScrollRegion = (props: InventoryOrdersBaseProps) => {
     const { props: p, on } = props
     return (
         <HorizontalScrollRegion overflow="needed" aria-label={p.boardLabel}>
-            <div className={BOARD_CLASS_NAME} role="group" aria-label={p.boardLabel}>
+            <List className={BOARD_CLASS_NAME} label={p.boardLabel}>
                 {p.lanes.map((lane) => (
-                    <div key={lane.status} className={LANE_CLASS_NAME}>
+                    <ListItem key={lane.status} className={LANE_CLASS_NAME}>
                         <SurfaceListCard label={lane.label} headingLevel={3} fact={lane.count}>
                             {lane.cards.map((card) => (
                                 <ListItem key={card.id} className={LANE_ROW_CLASS_NAME}>
@@ -181,9 +183,9 @@ const renderHorizontalScrollRegion = (props: InventoryOrdersBaseProps) => {
                                 </ListItem>
                             ))}
                         </SurfaceListCard>
-                    </div>
+                    </ListItem>
                 ))}
-            </div>
+            </List>
         </HorizontalScrollRegion>
     )
 }

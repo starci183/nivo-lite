@@ -60,10 +60,8 @@ const tryObject = (text: string): Loose | null => {
 
 /** The JSON object in a model answer: the whole text, a fenced block, or the outermost braces; null when there is none. */
 export const parseJsonLoose = (raw: string): Loose | null => {
-    const body = raw
-        .replace(/^```(?:json)?\s*/iu, "")
-        .replace(/\s*```$/u, "")
-        .trim()
+    const unfenced = raw.replace(/^```(?:json)?\s*/iu, "")
+    const body = (unfenced.endsWith("```") ? unfenced.slice(0, -3) : unfenced).trim()
     const whole = tryObject(body)
     if (whole !== null) return whole
     const start = body.indexOf("{")

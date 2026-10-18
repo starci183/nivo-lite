@@ -10,7 +10,7 @@ import {
     matchesAutomationFilter,
     visibleAutomations,
 } from "@/modules/automations"
-import type { AutomationFilterKey, AutomationStatus } from "@/modules/automations"
+import type { AutomationStatus } from "@/modules/automations"
 import { pickCopy } from "@/modules/catalog"
 import { navigation } from "@/modules/i18n"
 import { automationFocusPath } from "@/modules/routes"
@@ -43,7 +43,7 @@ export const useAutomationsBoard = (input: AutomationsBoardInput): AutomationsBo
     const moduleNames = Object.fromEntries(
         Object.entries(catalog.modules).map(([key, module]) => [key, pickCopy(module.name, locale)]),
     )
-    const [filter, setFilter] = useState<AutomationFilterKey>("all")
+    const [filter, setFilter] = useState<string>("all")
     const isNested = input.layout === "module"
     const cards = automations.data?.cards ?? []
 
@@ -68,7 +68,7 @@ export const useAutomationsBoard = (input: AutomationsBoardInput): AutomationsBo
         automations.data === undefined || catalog.slot.items === undefined
             ? undefined
             : automationBoardOf(
-                  automationBoardInputOf(
+                  automationBoardInputOf({
                       t,
                       locale,
                       moduleNames,
@@ -79,16 +79,16 @@ export const useAutomationsBoard = (input: AutomationsBoardInput): AutomationsBo
                       shown,
                       filter,
                       selected,
-                      automations.data,
-                      automations.busyKey,
+                      data: automations.data,
+                      busyKey: automations.busyKey,
                       current,
                       detail,
                       awaiting,
-                  ),
+                  }),
               )
     const filters = automationFiltersFor(cards)
 
-    const on: AutomationsBoardActions = automationBoardActionsOf(
+    const on: AutomationsBoardActions = automationBoardActionsOf({
         select,
         toggle,
         filters,
@@ -100,7 +100,7 @@ export const useAutomationsBoard = (input: AutomationsBoardInput): AutomationsBo
         saveSettings,
         saveBody,
         enable,
-    )
+    })
     return {
         view,
         on,

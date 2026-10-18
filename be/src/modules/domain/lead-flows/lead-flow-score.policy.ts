@@ -54,7 +54,11 @@ const cleanQuestion = (line: string): string =>
         .replace(/\s+/g, " ")
         .trim()
 
-const questionsIn = (line: string): Array<string> => line.match(/[^?]+\?/g) ?? []
+const questionsIn = (line: string): Array<string> => {
+    const parts = line.split("?")
+    parts.pop()
+    return parts.filter((part) => part !== "").map((part) => `${part}?`)
+}
 
 /**
  * The qualification questions the owner wrote (one fact, one or many lines): at most four, in order. Accepts a numbered or bulleted list,

@@ -2,8 +2,8 @@
 
 import { useSearchParams } from "next/navigation"
 import { useEffect, useRef, useState } from "react"
-import { isStatusFilter } from "@/modules/installations"
-import type { StatusFilter } from "@/modules/installations"
+import { isStatusFilter, type StatusFilter } from "@/modules/installations"
+
 import { navigation } from "@/modules/i18n"
 import { ALL_CATEGORIES } from "./modules.shared"
 
@@ -34,14 +34,14 @@ export const useCatalogFilters = (categoryKeys: ReadonlyArray<string>): CatalogF
     const categoryParam = params.get("category")
     const status: StatusFilter = isStatusFilter(statusParam) ? statusParam : "all"
     const category = categoryParam !== null && categoryKeys.includes(categoryParam) ? categoryParam : ALL_CATEGORIES
-    const [query, setLocalQuery] = useState(urlQuery)
+    const [query, setQuery] = useState(urlQuery)
     const written = useRef(urlQuery)
     const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
     useEffect(() => {
         // Back and forward changed the URL under us: follow it.
         if (urlQuery !== written.current) {
             written.current = urlQuery
-            setLocalQuery(urlQuery)
+            setQuery(urlQuery)
         }
     }, [urlQuery])
     useEffect(() => () => clearTimeout(timer.current), [])
@@ -64,7 +64,7 @@ export const useCatalogFilters = (categoryKeys: ReadonlyArray<string>): CatalogF
         category,
         isFiltered: query.trim() !== "" || status !== "all" || category !== ALL_CATEGORIES,
         setQuery: (value) => {
-            setLocalQuery(value)
+            setQuery(value)
             clearTimeout(timer.current)
             timer.current = setTimeout(() => write({ q: value }), SEARCH_URL_DELAY_MS)
         },
@@ -72,7 +72,7 @@ export const useCatalogFilters = (categoryKeys: ReadonlyArray<string>): CatalogF
         setCategory: (value) => write({ category: value ?? ALL_CATEGORIES }),
         clear: () => {
             clearTimeout(timer.current)
-            setLocalQuery("")
+            setQuery("")
             written.current = ""
             router.replace(pathname, { scroll: false })
         },

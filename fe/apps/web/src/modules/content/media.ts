@@ -18,7 +18,7 @@ export interface ContentMediaFile {
 export const isAcceptedMedia = (file: ContentMediaFile): boolean =>
     file.size > 0 && file.size <= CONTENT_MEDIA_MAX_BYTES && CONTENT_MEDIA_MIME.includes(file.type)
 
-const COMBINING_MARKS = new RegExp("[\u0300-\u036f]", "g")
+const COMBINING_MARKS = /[\u0300-\u036f]/g
 const D_STROKE = new RegExp(String.fromCodePoint(0x111), "gi")
 
 /** An ASCII, URL-safe version of a file name that keeps its extension. */
@@ -38,7 +38,7 @@ const safeName = (name: string): string => {
             .replace(COMBINING_MARKS, "")
             .replace(D_STROKE, "d")
             .replace(/[^a-zA-Z0-9]+/g, "-")
-            .replace(/^-+|-+$/g, "")
+            .replace(/^-|-$/g, "")
             .slice(0, 40) || "file"
     return ext === "" ? stem : `${stem}.${ext}`
 }

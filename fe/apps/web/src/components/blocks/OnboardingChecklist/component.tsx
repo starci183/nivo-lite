@@ -71,14 +71,16 @@ const Checklist = ({ props, on }: OnboardingChecklistBaseProps) => {
     if (props.steps.length === 0) return null
     if (doneCount === props.steps.length) {
         return (
-            <div role="status">
-                <SurfaceCard>
-                    <div className={ALL_SET}>
-                        <Text weight="medium">{props.allSet}</Text>
-                        <Text size="xs">{props.allSetCount}</Text>
-                    </div>
-                </SurfaceCard>
-            </div>
+            <SurfaceCard>
+                <output className={ALL_SET}>
+                    <Text as="span" weight="medium">
+                        {props.allSet}
+                    </Text>
+                    <Text as="span" size="xs">
+                        {props.allSetCount}
+                    </Text>
+                </output>
+            </SurfaceCard>
         )
     }
     return (

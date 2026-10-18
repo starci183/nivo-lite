@@ -196,7 +196,7 @@ const decodePath = (text: string): string =>
                 run
                     .split("%")
                     .slice(1)
-                    .map((hex) => parseInt(hex, 16)),
+                    .map((hex) => Number.parseInt(hex, 16)),
             ),
         ),
     )
@@ -231,7 +231,7 @@ export const mediaPathOf = (value: unknown, workspaceId?: string): string | null
 
 const numeric = (value: unknown): number => {
     if (typeof value === "number") return value
-    return typeof value === "string" && value.trim() !== "" ? Number(value) : NaN
+    return typeof value === "string" && value.trim() !== "" ? Number(value) : Number.NaN
 }
 
 const number = (value: unknown, fallback: number, min: number, max: number): number => {

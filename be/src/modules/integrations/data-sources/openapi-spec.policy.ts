@@ -4,6 +4,7 @@ import { isApiJsonObject, suggestFields } from "./openapi-items.policy"
 import type { ApiJsonObject } from "./openapi-items.policy"
 import { OPENAPI_TEXT } from "./messages/openapi.messages"
 import { DataSourcesError, DataSourcesErrorCode } from "./errors/data-sources.error"
+import { trimUrlSlashes } from "./openapi-text.policy"
 
 const MAX_OPS = 500
 const MAX_REF_DEPTH = 8
@@ -26,7 +27,7 @@ const resolveRef = (doc: ApiJsonObject, ref: string): unknown => {
     let current: unknown = doc
     for (const part of ref.slice(2).split("/")) {
         if (!isApiJsonObject(current)) return undefined
-        current = current[part.replace(/~1/gu, "/").replace(/~0/gu, "~")]
+        current = current[part.replaceAll("~1", "/").replaceAll("~0", "~")]
     }
     return current
 }
@@ -74,25 +75,28 @@ const suggestFor = (doc: ApiJsonObject, operation: ApiJsonObject): OpenApiSugges
     return { itemsPath: found.path, ...suggestFields(keys) }
 }
 
+const v3ServerUrl = (doc: ApiJsonObject): string => {
+    const server = Array.isArray(doc.servers) ? doc.servers.find(isApiJsonObject) : undefined
+    const raw = server ? text(server.url) : "/"
+    const variables = server && isApiJsonObject(server.variables) ? server.variables : {}
+    return raw.replace(/\{(\w+)\}/gu, (_match, name: string) => {
+        const variable = variables[name]
+        return isApiJsonObject(variable) ? text(variable.default) : ""
+    })
+}
+
+const v2ServerUrl = (doc: ApiJsonObject): string => {
+    const schemes = Array.isArray(doc.schemes) ? doc.schemes.map(String) : []
+    const scheme = schemes.includes("https") || schemes.length === 0 ? "https" : (schemes[0] ?? "https")
+    const basePath = text(doc.basePath)
+    return doc.host ? `${scheme}://${text(doc.host)}${basePath}` : basePath || "/"
+}
+
 const baseUrlOf = (doc: ApiJsonObject, specUrl: string): string => {
-    let raw: string
-    if (typeof doc.openapi === "string") {
-        const server = Array.isArray(doc.servers) ? doc.servers.find(isApiJsonObject) : undefined
-        raw = server ? text(server.url) : "/"
-        const variables = server && isApiJsonObject(server.variables) ? server.variables : {}
-        raw = raw.replace(/\{(\w+)\}/gu, (_match, name: string) => {
-            const variable = variables[name]
-            return isApiJsonObject(variable) ? text(variable.default) : ""
-        })
-    } else {
-        const schemes = Array.isArray(doc.schemes) ? doc.schemes.map(String) : []
-        const scheme = schemes.includes("https") || schemes.length === 0 ? "https" : (schemes[0] ?? "https")
-        const basePath = text(doc.basePath)
-        raw = doc.host ? `${scheme}://${text(doc.host)}${basePath}` : basePath || "/"
-    }
+    const raw = typeof doc.openapi === "string" ? v3ServerUrl(doc) : v2ServerUrl(doc)
     const base = specUrl === "" ? undefined : specUrl
-    if (URL.canParse(raw, base)) return new URL(raw, base).toString().replace(/\/+$/u, "")
-    return raw.startsWith("http") ? raw.replace(/\/+$/u, "") : ""
+    if (URL.canParse(raw, base)) return trimUrlSlashes(new URL(raw, base).toString())
+    return raw.startsWith("http") ? trimUrlSlashes(raw) : ""
 }
 
 const schemesOf = (doc: ApiJsonObject): ApiJsonObject => {
@@ -117,11 +121,27 @@ const authHintOf = (doc: ApiJsonObject): OpenApiAuthHint => {
     return { type: "none", name: "" }
 }
 
-const cleanId = (value: string): string =>
-    value
-        .replace(/[^A-Za-z0-9_]+/gu, "_")
-        .replace(/^_+|_+$/gu, "")
-        .slice(0, 80)
+const cleanId = (value: string): string => {
+    const normalized = value.replace(/\W+/gu, "_")
+    let start = 0
+    let end = normalized.length
+    while (start < end && normalized[start] === "_") start++
+    while (end > start && normalized[end - 1] === "_") end--
+    return normalized.slice(start, end).slice(0, 80)
+}
+
+const uniqueId = (candidate: string, used: ReadonlySet<string>): string => {
+    let id = candidate
+    let n = 2
+    while (used.has(id)) {
+        const separator = id.lastIndexOf("_")
+        const suffix = id.slice(separator + 1)
+        const stem = separator >= 0 && /^\d+$/u.test(suffix) ? id.slice(0, separator) : id
+        id = `${stem}_${n}`
+        n++
+    }
+    return id
+}
 
 const paramsOf = (
     doc: ApiJsonObject,
@@ -149,11 +169,7 @@ const paramsOf = (
     return { params: [...byKey.values()], hasBody }
 }
 
-/** Describes an already parsed OpenAPI 3.x / Swagger 2.0 document; throws a plain Vietnamese refusal when it is not one. */
-export const describeSpec = (doc: unknown, specUrl: string): OpenApiSpec => {
-    const isV3 = isApiJsonObject(doc) && typeof doc.openapi === "string" && doc.openapi.startsWith("3")
-    const isV2 = isApiJsonObject(doc) && doc.swagger === "2.0"
-    if (!isApiJsonObject(doc) || !(isV3 || isV2)) throw reject(OPENAPI_TEXT.notSpec)
+const operationsOf = (doc: ApiJsonObject): Array<OpenApiOperation> => {
     const paths = isApiJsonObject(doc.paths) ? doc.paths : {}
     const ops: Array<OpenApiOperation> = []
     const used = new Set<string>()
@@ -164,24 +180,44 @@ export const describeSpec = (doc: unknown, specUrl: string): OpenApiSpec => {
         for (const method of OPENAPI_METHODS) {
             const operation = deref(doc, item[method.toLowerCase()])
             if (!operation || ops.length >= MAX_OPS) continue
-            const own = Array.isArray(operation.parameters) ? operation.parameters : []
-            const { params, hasBody } = paramsOf(doc, shared, own, isApiJsonObject(operation.requestBody))
-            let id = cleanId(text(operation.operationId)) || cleanId(`${method.toLowerCase()}_${path}`)
-            for (let n = 2; used.has(id); n++) id = `${id.replace(/_\d+$/u, "")}_${n}`
-            used.add(id)
-            const summary = text(operation.summary) || text(operation.description)
-            const suggest = method === "GET" ? suggestFor(doc, operation) : undefined
-            ops.push({
-                id,
-                method,
-                path,
-                summary: summary.replace(/\s+/gu, " ").slice(0, 120),
-                params,
-                hasBody,
-                ...(suggest ? { suggest } : {}),
-            })
+            const op = operationOf(doc, operation, method, path, shared, used)
+            used.add(op.id)
+            ops.push(op)
         }
     }
+    return ops
+}
+
+const operationOf = (
+    doc: ApiJsonObject,
+    operation: ApiJsonObject,
+    method: OpenApiOperation["method"],
+    path: string,
+    shared: ReadonlyArray<unknown>,
+    used: ReadonlySet<string>,
+): OpenApiOperation => {
+    const own = Array.isArray(operation.parameters) ? operation.parameters : []
+    const { params, hasBody } = paramsOf(doc, shared, own, isApiJsonObject(operation.requestBody))
+    const candidate = cleanId(text(operation.operationId)) || cleanId(`${method.toLowerCase()}_${path}`)
+    const summary = text(operation.summary) || text(operation.description)
+    const suggest = method === "GET" ? suggestFor(doc, operation) : undefined
+    return {
+        id: uniqueId(candidate, used),
+        method,
+        path,
+        summary: summary.replace(/\s+/gu, " ").slice(0, 120),
+        params,
+        hasBody,
+        ...(suggest ? { suggest } : {}),
+    }
+}
+
+/** Describes an already parsed OpenAPI 3.x / Swagger 2.0 document; throws a plain Vietnamese refusal when it is not one. */
+export const describeSpec = (doc: unknown, specUrl: string): OpenApiSpec => {
+    if (!isApiJsonObject(doc)) throw reject(OPENAPI_TEXT.notSpec)
+    const isV3 = typeof doc.openapi === "string" && doc.openapi.startsWith("3")
+    if (!isV3 && doc.swagger !== "2.0") throw reject(OPENAPI_TEXT.notSpec)
+    const ops = operationsOf(doc)
     if (ops.length === 0) throw reject(OPENAPI_TEXT.noOperations)
     const info = isApiJsonObject(doc.info) ? doc.info : {}
     return { title: text(info.title).slice(0, 80), baseUrl: baseUrlOf(doc, specUrl), ops, authHint: authHintOf(doc) }

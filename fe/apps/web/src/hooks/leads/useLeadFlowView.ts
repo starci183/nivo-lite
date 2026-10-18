@@ -67,14 +67,8 @@ export const useLeadFlowView = (): ((flow: LeadFlow) => FlowView) => {
         format.dateTime(new Date(iso), { day: "2-digit", month: "short", year: "numeric" })
 
     const stepOf = stepOfOf(g, when, t)
-    const orderOf = (order: Order): FlowEntryView => ({
-        id: order.id,
-        head: `${order.orderNo} · ${vnd(order.amountVnd)}`,
-        when: null,
-        badge: { label: g(`order_${order.status}`), tone: toneOf(ORDER_TONES, order.status, "success") },
-        reason: null,
-        lines: line("items", order.items || null),
-    })
+    const orderOf = orderEntryMapper(g, vnd)
+
     const invoiceOf = (invoice: Invoice, orderNo: ReadonlyMap<string, string>): FlowEntryView => ({
         id: invoice.id,
         head: `${invoice.invoiceNo} · ${vnd(invoice.amountVnd)}`,
@@ -106,24 +100,32 @@ export const useLeadFlowView = (): ((flow: LeadFlow) => FlowView) => {
             ]),
         ),
     })
-    const decisionOf = (decision: DecisionRow): FlowEntryView => ({
-        id: decision.id,
-        head: `${g(`dept_${decision.department}`)} · ${g(`action_${decision.action}`)}`,
-        when: null,
-        badge: { label: g(`outcome_${decision.outcome}`), tone: toneOf(DECISION_TONES, decision.outcome, "success") },
-        reason: null,
-        lines: [
-            ...line(
-                "by",
-                t("flowDecidedBy", {
-                    name: decision.deciderKind === "policy" ? g("decider_policy") : decision.decidedBy,
-                    time: when(decision.createdAt).label,
-                }),
-            ),
-            ...line("gate", decision.reason ? `${t("flowGate")}: ${g(`reason_${decision.reason}`)}` : null),
-            ...line("note", decision.note, true),
-        ],
-    })
+    const decisionOf = (decision: DecisionRow): FlowEntryView => {
+        const department = g(`dept_${decision.department}`)
+        const action = g(`action_${decision.action}`)
+        const gateReason = decision.reason ? g(`reason_${decision.reason}`) : null
+        return {
+            id: decision.id,
+            head: `${department} · ${action}`,
+            when: null,
+            badge: {
+                label: g(`outcome_${decision.outcome}`),
+                tone: toneOf(DECISION_TONES, decision.outcome, "success"),
+            },
+            reason: null,
+            lines: [
+                ...line(
+                    "by",
+                    t("flowDecidedBy", {
+                        name: decision.deciderKind === "policy" ? g("decider_policy") : decision.decidedBy,
+                        time: when(decision.createdAt).label,
+                    }),
+                ),
+                ...line("gate", decision.reason ? `${t("flowGate")}: ${gateReason}` : null),
+                ...line("note", decision.note, true),
+            ],
+        }
+    }
 
     return flowViewMapper(t, stepOf, orderOf, invoiceOf, paymentOf, decisionOf)
 }
@@ -161,3 +163,15 @@ const stepOfOf = (
         }
     }
 }
+
+/** Presents the order identity, value and status for the lead flow. */
+const orderEntryMapper =
+    (g: ReturnType<typeof useTranslations<"governance">>, vnd: (amount: number | null | undefined) => string) =>
+    (order: Order): FlowEntryView => ({
+        id: order.id,
+        head: `${order.orderNo} · ${vnd(order.amountVnd)}`,
+        when: null,
+        badge: { label: g(`order_${order.status}`), tone: toneOf(ORDER_TONES, order.status, "success") },
+        reason: null,
+        lines: line("items", order.items || null),
+    })

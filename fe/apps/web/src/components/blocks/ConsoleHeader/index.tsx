@@ -20,20 +20,37 @@ import { ConsoleHeaderBase } from "./component"
 
 /** The connected console top bar: workspace, search, New menu, language, notifications and the account menu. */
 /** Connects the state and commands used by ConsoleHeader. */
-const buildConsoleHeaderState = (
-    t: ReturnType<typeof useTranslations<"shell">>,
-    session: ReturnType<typeof useCurrentConsoleSession>,
-    switchWorkspace: ReturnType<typeof useSwitchWorkspace>,
-    signOut: ReturnType<typeof useSignOut>,
-    shell: ReturnType<typeof useConsoleShell>,
-    setQuery: import("react").Dispatch<import("react").SetStateAction<string>>,
-    router: ReturnType<typeof navigation.useRouter>,
-    language: ReturnType<typeof useLocaleSwitch>,
-    setNotificationsOpen: import("react").Dispatch<import("react").SetStateAction<boolean>>,
-    tPromo: ReturnType<typeof useTranslations<"promo">>,
-    query: string,
-    isNotificationsOpen: boolean,
-) => {
+/** Inputs for the connected state mapping. */
+interface BuildConsoleHeaderStateInput {
+    readonly t: ReturnType<typeof useTranslations<"shell">>
+    readonly session: ReturnType<typeof useCurrentConsoleSession>
+    readonly switchWorkspace: ReturnType<typeof useSwitchWorkspace>
+    readonly signOut: ReturnType<typeof useSignOut>
+    readonly shell: ReturnType<typeof useConsoleShell>
+    readonly setQuery: import("react").Dispatch<import("react").SetStateAction<string>>
+    readonly router: ReturnType<typeof navigation.useRouter>
+    readonly language: ReturnType<typeof useLocaleSwitch>
+    readonly setNotificationsOpen: import("react").Dispatch<import("react").SetStateAction<boolean>>
+    readonly tPromo: ReturnType<typeof useTranslations<"promo">>
+    readonly query: string
+    readonly isNotificationsOpen: boolean
+}
+
+/** Derives display values and interactions from the supplied state. */
+const buildConsoleHeaderState = ({
+    t,
+    session,
+    switchWorkspace,
+    signOut,
+    shell,
+    setQuery,
+    router,
+    language,
+    setNotificationsOpen,
+    tPromo,
+    query,
+    isNotificationsOpen,
+}: BuildConsoleHeaderStateInput) => {
     const roleLabel = t(ROLE_LABELS[session.member.role])
     const workspaces = workspaceEntries(session.workspaces, session.currentWorkspaceId, switchWorkspace)
     const accountEntries: ReadonlyArray<DropdownMenuEntry> = [
@@ -89,7 +106,7 @@ export const ConsoleHeader = () => {
     const [query, setQuery] = useState("")
     const [isNotificationsOpen, setNotificationsOpen] = useState(false)
 
-    const connected = buildConsoleHeaderState(
+    const connected = buildConsoleHeaderState({
         t,
         session,
         switchWorkspace,
@@ -102,7 +119,7 @@ export const ConsoleHeader = () => {
         tPromo,
         query,
         isNotificationsOpen,
-    )
+    })
     if (connected === null) return null
 
     return (

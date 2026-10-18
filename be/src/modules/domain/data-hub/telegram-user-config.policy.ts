@@ -31,8 +31,10 @@ export const normalizePhone = (raw: string): string | null => {
 export const maskPhone = (phone: string): string => `…${phone.replace(/\D/gu, "").slice(-3)}`
 
 /** The account label kept in the public facts. */
-export const accountLabel = (name: string, username: string | null, phone: string): string =>
-    `${name.trim() === "" ? "Telegram" : name.trim()}${username === null ? "" : ` (@${username})`} ${maskPhone(phone)}`
+export const accountLabel = (name: string, username: string | null, phone: string): string => {
+    const usernameLabel = username === null ? "" : ` (@${username})`
+    return `${name.trim() === "" ? "Telegram" : name.trim()}${usernameLabel} ${maskPhone(phone)}`
+}
 
 /** Cleans a list of picked chats: valid unique ids, bounded titles, at most MAX_CHATS. */
 export const cleanChats = (value: unknown): ReadonlyArray<PickedChat> => {

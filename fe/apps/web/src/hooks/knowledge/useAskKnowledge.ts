@@ -1,8 +1,8 @@
 "use client"
 
 import { useQueryAskKnowledgeSwr } from "@/hooks/swr"
-import { AGENT_MODULES, toRetrievedPassage } from "@/modules/documents"
-import type { AgentModule, RetrievedPassage } from "@/modules/documents"
+import { AGENT_MODULES, toRetrievedPassage, type AgentModule, type RetrievedPassage } from "@/modules/documents"
+
 import { useState, useTransition } from "react"
 
 /** Who the answer is for: customers see public passages only. */
@@ -42,9 +42,9 @@ export const useAskKnowledge = (initialModule: AgentModule | undefined): AskKnow
             try {
                 const passages = await trigger({ question: text, module, audience })
                 setResults(passages.map(toRetrievedPassage))
-            } catch (failure) {
+            } catch (error_) {
                 setResults(null)
-                setError(failure instanceof Error ? failure.message : null)
+                setError(error_ instanceof Error ? error_.message : null)
             }
         })
     }

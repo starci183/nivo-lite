@@ -27,21 +27,7 @@ export const FormDrawer = (props: FormDrawerProps) => (
         title={props.title}
         closeLabel={props.closeLabel}
         placement="right"
-        footer={(close) => (
-            <>
-                <Button
-                    variant="primary"
-                    isPending={props.isPending}
-                    isDisabled={!props.canSave}
-                    onPress={props.onSubmit}
-                >
-                    {props.saveLabel}
-                </Button>
-                <Button variant="ghost" onPress={close}>
-                    {props.cancelLabel}
-                </Button>
-            </>
-        )}
+        footer={<FormDrawerFooter {...props} />}
     >
         <Form label={props.title} onSubmit={props.onSubmit} isPending={props.isPending}>
             <div className={FORM_CLASS_NAME}>
@@ -50,4 +36,21 @@ export const FormDrawer = (props: FormDrawerProps) => (
             </div>
         </Form>
     </Drawer>
+)
+
+type FormDrawerFooterProps = Pick<
+    FormDrawerProps,
+    "isPending" | "canSave" | "onSubmit" | "saveLabel" | "onClose" | "cancelLabel"
+>
+
+/** Footer identity stays stable while fields and validation change. */
+const FormDrawerFooter = (props: FormDrawerFooterProps) => (
+    <>
+        <Button variant="primary" isPending={props.isPending} isDisabled={!props.canSave} onPress={props.onSubmit}>
+            {props.saveLabel}
+        </Button>
+        <Button variant="ghost" onPress={props.onClose}>
+            {props.cancelLabel}
+        </Button>
+    </>
 )

@@ -1,7 +1,13 @@
 import { Alert, RadioGroup, Spinner, Text } from "@starci/grammar/common"
 import { WizardAgentStep } from "@/components/composites/WizardAgentStep"
-import { backAction, closeAction, nextAction, WizardFooter } from "@/components/composites/WizardFooter"
-import type { WizardAction } from "@/components/composites/WizardFooter"
+import {
+    backAction,
+    closeAction,
+    nextAction,
+    WizardFooter,
+    type WizardAction,
+} from "@/components/composites/WizardFooter"
+
 import { WizardFrame } from "@/components/composites/WizardFrame"
 import type { AgentStepView, WizardNote } from "@/modules/types"
 import { metaWizardClassNames as classNames } from "./classNames"
@@ -185,11 +191,7 @@ export const MetaWizardBase = (props: MetaWizardBaseProps) => {
                     <WizardAgentStep {...view.agentStep} isDisabled={view.isPending} onChange={on.agents} />
                 </>
             ) : null}
-            {view.step === "test" ? (
-                <>
-                    <MetaTestStep {...props} />
-                </>
-            ) : null}
+            {view.step === "test" ? <MetaTestStep {...props} /> : null}
             {view.note === null ? null : <Alert tone={view.note.tone} title={view.note.text} />}
         </WizardFrame>
     )

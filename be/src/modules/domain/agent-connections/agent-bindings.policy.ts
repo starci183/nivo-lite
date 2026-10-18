@@ -27,7 +27,10 @@ export const PURPOSES: ReadonlyArray<Purpose> = [
 ]
 
 /** True when a stored text is one of the purposes. */
-export const isPurpose = (value: string): value is Purpose => PURPOSES.some((purpose) => purpose === value)
+export const isPurpose = (value: string): value is Purpose => {
+    const purposes: ReadonlyArray<string> = PURPOSES
+    return purposes.includes(value)
+}
 
 /** True when a stored text is one of the three access levels. */
 export const isAccess = (value: string): value is Access => value === "read" || value === "ask" || value === "auto"

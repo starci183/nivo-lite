@@ -84,6 +84,8 @@ export const projectViewOf = (project: VideoProjectType): ProjectView => {
                   sizeBytes: render.sizeBytes ?? null,
                   error: render.errorCode ?? null,
                   videoUrl: render.videoUrl ?? null,
+                  captionsUrl: render.captionsUrl ?? null,
+                  captionsLang: render.captionsLang ?? null,
                   downloadUrl: render.downloadUrl ?? null,
                   posterUrl: render.posterUrl ?? null,
               }

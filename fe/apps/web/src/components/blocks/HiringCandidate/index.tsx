@@ -25,8 +25,7 @@ import { NO_CANDIDATE } from "@/hooks/hiringMap"
 import { useHiringBenchStore } from "@/hooks/zustand/hiringBench"
 import { useHiringInterviewForm, useHiringOfferForm } from "@/hooks/rhf"
 import type { CandidateView, HiringWorkbenchData } from "@/hooks/hiringWire"
-import { HiringCandidateBase } from "./component"
-import { candidateDetailsOf } from "./component"
+import { HiringCandidateBase, candidateDetailsOf } from "./component"
 
 const candidateDetailTools = { reasonTone, scoreTone, isPreviewable, openOfferStatuses: OPEN_OFFER_STATUSES }
 

@@ -265,3 +265,26 @@ describe("SMTP wizard policy", () => {
         )
     })
 })
+
+describe("SMTP address compatibility", () => {
+    it.each(["a@b.cd", "a@b..cd", "a@b.cd."])("preserves plausible address %s", async (fromEmail) => {
+        const subject = await build()
+
+        expect(subject.cleanSmtpForm(formOf({ fromEmail }))).toEqual({
+            ok: true,
+            form: { ...formOf(), fromEmail, password: "abcdefghijklmnop" },
+        })
+    })
+
+    it.each(["a@b.c", "a@.cd", "a@@b.cd", "a@b cd", `a@${"b".repeat(250)}`])(
+        "rejects malformed address %s",
+        async (fromEmail) => {
+            const subject = await build()
+
+            expect(subject.cleanSmtpForm(formOf({ fromEmail }))).toEqual({
+                ok: false,
+                code: EmailMessagesErrorCode.SmtpEmail,
+            })
+        },
+    )
+})

@@ -1,5 +1,8 @@
 import type { BrainSubjectType, Evidence, FactSource, FactStatus, ProposalKind, Scope } from "../brain-facts.contracts"
 
+/** A nullable timestamp returned by the PostgreSQL driver. */
+type NullableTimestamp = Date | string | null
+
 /** One row of public.brain_facts; timestamps arrive as Date or text depending on the driver. */
 export interface BrainFactRow {
     /** The fact id. */
@@ -35,9 +38,9 @@ export interface BrainFactRow {
     /** The trust of the source. */
     readonly trust: number
     /** From when it holds. */
-    readonly valid_from: Date | string | null
+    readonly valid_from: NullableTimestamp
     /** Until when it holds. */
-    readonly valid_to: Date | string | null
+    readonly valid_to: NullableTimestamp
     /** The fact it replaced. */
     readonly supersedes_id: string | null
     /** The fact it disagrees with. */
@@ -53,7 +56,7 @@ export interface BrainFactRow {
     /** Who decided. */
     readonly decided_by: string | null
     /** When it was decided. */
-    readonly decided_at: Date | string | null
+    readonly decided_at: NullableTimestamp
     /** The reason for the decision. */
     readonly decision_note: string | null
 }

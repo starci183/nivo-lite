@@ -21,7 +21,7 @@ export const splitPage = <R extends { readonly id: string; readonly cursor_at: s
     size: number,
 ): PageSplit<R> => {
     const rows = fetched.slice(0, size)
-    const last = rows[rows.length - 1]
+    const last = rows.at(-1)
     return {
         rows,
         next: fetched.length > size && last !== undefined ? { createdAt: last.cursor_at, id: last.id } : null,

@@ -18,7 +18,7 @@ import type {
 import { ContentPublishingError, ContentPublishingErrorCode } from "./errors/content-publishing.error"
 
 const MANAGERS: ReadonlyArray<WorkspaceRole> = ["owner", "manager"]
-const CHANNELS: ReadonlyArray<string> = ["facebook", "zalo", "tiktok", "instagram"]
+const CHANNELS: ReadonlySet<string> = new Set(["facebook", "zalo", "tiktok", "instagram"])
 
 @Injectable()
 /** Submits complete drafts through the policy gate and records manually published proof; approval always follows a decision. */
@@ -112,7 +112,7 @@ export class ContentPublishingService {
         if (item.status !== "approved" && item.status !== "published") {
             throw new ContentPublishingError({ code: ContentPublishingErrorCode.WrongStatus })
         }
-        if (!CHANNELS.includes(request.channel) || !item.channels.includes(request.channel)) {
+        if (!CHANNELS.has(request.channel) || !item.channels.includes(request.channel)) {
             throw new ContentPublishingError({ code: ContentPublishingErrorCode.ChannelInvalid })
         }
         const url = request.url.trim()

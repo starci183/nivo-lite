@@ -8,31 +8,54 @@ import type { OpenApiCommands } from "./useOpenApiCommands"
 import type { useOpenApiPicks } from "./useOpenApiPicks"
 import type { useOpenApiSource } from "./useOpenApiSource"
 
-const createOpenApiWizardActions = (
-    startTransition: import("react").TransitionStartFunction,
-    setError: import("react").Dispatch<import("react").SetStateAction<string | null>>,
-    commands: OpenApiCommands,
-    source: ReturnType<typeof useOpenApiSource>,
-    authForm: ReturnType<typeof useOpenApiAuthForm>,
-    picks: ReturnType<typeof useOpenApiPicks>,
-    connId: string | null,
-    authInput: () => {
+type OpenApiWizardCommandsInput = {
+    readonly setError: import("react").Dispatch<import("react").SetStateAction<string | null>>
+    readonly commands: OpenApiCommands
+    readonly source: ReturnType<typeof useOpenApiSource>
+    readonly authForm: ReturnType<typeof useOpenApiAuthForm>
+    readonly picks: ReturnType<typeof useOpenApiPicks>
+    readonly connId: string | null
+    readonly authInput: () => {
         type: "query" | "header" | "none" | "bearer" | "basic"
         name: string
         value: string
         user: string
         password: string
-    },
-    setConnId: import("react").Dispatch<import("react").SetStateAction<string | null>>,
-    startSync: (connectionId: string) => Promise<void>,
-    editing: boolean,
-    onClose: (changed: boolean) => void,
-    index: number,
-    setIndex: import("react").Dispatch<import("react").SetStateAction<number>>,
-    setConnectionAgents: ReturnType<typeof useSetConnectionAgents>,
-    agentIds: ReadonlyArray<string>,
-    refresh: ReturnType<typeof useConnectionsRefresh>,
-) => {
+    }
+    readonly setConnId: import("react").Dispatch<import("react").SetStateAction<string | null>>
+    readonly startSync: (connectionId: string) => Promise<void>
+    readonly editing: boolean
+    readonly onClose: (changed: boolean) => void
+    readonly index: number
+    readonly setIndex: import("react").Dispatch<import("react").SetStateAction<number>>
+    readonly setConnectionAgents: ReturnType<typeof useSetConnectionAgents>
+    readonly agentIds: ReadonlyArray<string>
+    readonly refresh: ReturnType<typeof useConnectionsRefresh>
+}
+
+type OpenApiWizardActionsInput = OpenApiWizardCommandsInput & {
+    readonly startTransition: import("react").TransitionStartFunction
+}
+
+const createOpenApiWizardActions = ({
+    startTransition,
+    setError,
+    commands,
+    source,
+    authForm,
+    picks,
+    connId,
+    authInput,
+    setConnId,
+    startSync,
+    editing,
+    onClose,
+    index,
+    setIndex,
+    setConnectionAgents,
+    agentIds,
+    refresh,
+}: OpenApiWizardActionsInput) => {
     const loadSpec = () =>
         startTransition(async () => {
             setError(null)
@@ -94,51 +117,10 @@ const createOpenApiWizardActions = (
 }
 
 /** Owns the OpenAPI command transition and its actions. */
-export const useOpenApiWizardCommands = (
-    setError: import("react").Dispatch<import("react").SetStateAction<string | null>>,
-    commands: OpenApiCommands,
-    source: ReturnType<typeof useOpenApiSource>,
-    authForm: ReturnType<typeof useOpenApiAuthForm>,
-    picks: ReturnType<typeof useOpenApiPicks>,
-    connId: string | null,
-    authInput: () => {
-        type: "query" | "header" | "none" | "bearer" | "basic"
-        name: string
-        value: string
-        user: string
-        password: string
-    },
-    setConnId: import("react").Dispatch<import("react").SetStateAction<string | null>>,
-    startSync: (connectionId: string) => Promise<void>,
-    editing: boolean,
-    onClose: (changed: boolean) => void,
-    index: number,
-    setIndex: import("react").Dispatch<import("react").SetStateAction<number>>,
-    setConnectionAgents: ReturnType<typeof useSetConnectionAgents>,
-    agentIds: ReadonlyArray<string>,
-    refresh: ReturnType<typeof useConnectionsRefresh>,
-) => {
+export const useOpenApiWizardCommands = (input: OpenApiWizardCommandsInput) => {
     const [isPending, startTransition] = useTransition()
     return {
-        ...createOpenApiWizardActions(
-            startTransition,
-            setError,
-            commands,
-            source,
-            authForm,
-            picks,
-            connId,
-            authInput,
-            setConnId,
-            startSync,
-            editing,
-            onClose,
-            index,
-            setIndex,
-            setConnectionAgents,
-            agentIds,
-            refresh,
-        ),
+        ...createOpenApiWizardActions({ ...input, startTransition }),
         isPending,
     }
 }

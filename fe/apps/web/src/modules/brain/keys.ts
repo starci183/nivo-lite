@@ -4,11 +4,11 @@ import type { FactSource } from "@/modules/types"
 export const keyOf = (text: string): string =>
     text
         .toLowerCase()
-        .replace(/\u0111/g, "d")
+        .replaceAll(String.fromCodePoint(0x111), "d")
         .normalize("NFD")
         .replace(/\p{Diacritic}/gu, "")
         .replace(/[^a-z0-9]+/g, "-")
-        .replace(/^-+|-+$/g, "")
+        .replace(/^-|-$/g, "")
         .slice(0, 120)
 
 /** How far a source is believed, 0 to 100. */
@@ -32,7 +32,7 @@ const scaleOf = (word: string): number => {
 
 /** A number written the Vietnamese way ("650.000", "1,2 tr", "8tr", "1.5k") or null. */
 const numberOf = (raw: string): number | null => {
-    const match = raw.toLowerCase().replace(/\s+/g, " ").trim().match(NUMBER_WITH_SCALE)
+    const match = NUMBER_WITH_SCALE.exec(raw.toLowerCase().replace(/\s+/g, " ").trim())
     if (match === null) return null
     const digits = match[1] ?? ""
     const scale = scaleOf(match[2] ?? "")

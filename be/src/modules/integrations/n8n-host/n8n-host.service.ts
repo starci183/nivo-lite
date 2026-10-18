@@ -9,7 +9,13 @@ import { N8nHostLogEvent } from "./n8n-host.log-events"
 import type { N8nHostOptions } from "./n8n-host.options"
 import { idsByName, importDocument, workflowsOf } from "./n8n-host.policy"
 
-const REMOTE_FILE = "/tmp/nivo-n8n-templates.json"
+/** A private, atomically allocated container directory prevents shared-host symlink races; the trap cleans up failed imports too. */
+const IMPORT_COMMAND = [
+    "umask 077",
+    "directory=$(mktemp -d) || exit 1",
+    "trap 'rm -rf -- \"$directory\"' EXIT",
+    'cat > "$directory/workflows.json" && n8n import:workflow --input="$directory/workflows.json"',
+].join("; ")
 
 @Injectable()
 /**
@@ -48,7 +54,7 @@ export class N8nHostService implements N8nHost {
         }))
         if (options.dryRun) return planned
         await host(
-            `cat > ${REMOTE_FILE} && docker cp ${REMOTE_FILE} ${container}:${REMOTE_FILE} && rm ${REMOTE_FILE} && docker exec ${container} n8n import:workflow --input=${REMOTE_FILE}`,
+            `docker exec -i ${container} sh -c '${IMPORT_COMMAND.replaceAll("'", String.raw`'\''`)}'`,
             importDocument(plan),
         )
         const imported = await listing()

@@ -13,7 +13,7 @@ export interface ReplyOutcome {
     readonly text: string
 }
 
-const PICKED_OUTCOMES: ReadonlyArray<string> = ["confirmed", "already_confirmed", "none_fit"]
+const PICKED_OUTCOMES: ReadonlySet<string> = new Set(["confirmed", "already_confirmed", "none_fit"])
 
 /** The candidate's answer to an interview invitation: pick a time, or say none fits. */
 export const useHiringInterviewReply = (token: string) => {
@@ -40,7 +40,7 @@ export const useHiringInterviewReply = (token: string) => {
         setPending(false)
         if (result === undefined) return
         setOutcome({
-            isOk: PICKED_OUTCOMES.includes(result.outcome),
+            isOk: PICKED_OUTCOMES.has(result.outcome),
             text:
                 result.outcome === "confirmed" && result.slotStart !== undefined && result.slotStart !== null
                     ? t("replyConfirmedAt", { when: format.dateTime(result.slotStart) })

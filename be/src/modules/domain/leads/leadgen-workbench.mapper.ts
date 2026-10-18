@@ -12,7 +12,7 @@ import { clip, firstText, leadOriginOf, platformOf, scoreFromFields, text } from
 
 const DAY_MS = 86_400_000
 const CONVERSION_WINDOW_DAYS = 90
-const OPEN_STAGES: ReadonlyArray<string> = ["new", "qualified", "proposal"]
+const OPEN_STAGES: ReadonlySet<string> = new Set(["new", "qualified", "proposal"])
 const MAX_LEAD_ROWS = 100
 const fieldsOf = (item: Pick<LeadGenWorkItemRow, "proposal">): Record<string, unknown> => item.proposal?.fields ?? {}
 
@@ -154,8 +154,7 @@ export const buildLeadGenWorkbench = (rows: LeadGenWorkbenchRow): LeadGenWorkben
         metrics: {
             newToday: leads.filter((lead) => lead.created_at >= dayStart).length,
             hotWaiting: leadRows.filter(
-                (row) =>
-                    row.score === "hot" && OPEN_STAGES.includes(row.stage) && classify.get(row.id)?.status !== "done",
+                (row) => row.score === "hot" && OPEN_STAGES.has(row.stage) && classify.get(row.id)?.status !== "done",
             ).length,
             firstReplyP50Min: p50 === null ? null : Math.round(p50 * 10) / 10,
             firstReplySample: facts.replyMinutes.length,

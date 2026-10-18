@@ -21,46 +21,8 @@ export const AccountingQuestionCard = (props: AccountingQuestionCardProps) => (
                     </Text>
                 ) : null}
                 {renderAccountingQuestionCardProposal(props)}
-                {props.props.draft !== null && !props.props.isEditing ? (
-                    <Text size="sm" tone="muted">
-                        {props.props.draft}
-                    </Text>
-                ) : null}
-                {props.props.isOpen && props.props.isEditing && props.props.draft !== null ? (
-                    <Textarea
-                        label={props.props.draftLabel}
-                        rows={4}
-                        value={props.props.draft}
-                        isDisabled={props.props.isBusy}
-                        onValueChange={props.on.changeDraft}
-                    />
-                ) : null}
-                {props.props.isOpen && props.props.isEditing && props.props.amount !== null
-                    ? renderAccountingQuestionCardAmount(props, props.props.amount)
-                    : null}
-                {props.props.isOpen && !props.props.isFailed && props.props.fields.length
-                    ? renderAccountingQuestionCardMissingFields(props)
-                    : null}
-                {props.props.isOpen && !props.props.isFailed && props.props.reconcileCredit !== null ? (
-                    <div>
-                        <Text size="sm">{props.props.reconcileCredit}</Text>
-                        <Text size="sm" tone="muted">
-                            {props.props.reconcileWarning}
-                        </Text>
-                    </div>
-                ) : null}
-                {props.props.isOpen && !props.props.isFailed && props.props.candidates.length ? (
-                    <RadioGroup
-                        label={props.props.candidateLabel}
-                        value={props.props.candidateId || null}
-                        isDisabled={props.props.isBusy}
-                        options={props.props.candidates}
-                        onValueChange={props.on.changeCandidate}
-                    />
-                ) : null}
-                {props.props.isOpen && !props.props.isFailed && props.props.basis !== null
-                    ? renderAccountingQuestionCardBasis(props, props.props.basis)
-                    : null}
+                {renderAccountingQuestionEditing(props)}
+                {renderAccountingQuestionDetails(props)}
                 {props.props.footer ? (
                     <Text size="xs" tone="muted">
                         {props.props.footer}
@@ -170,4 +132,56 @@ const renderAccountingQuestionCardAmount = (
         isDisabled={props.props.isBusy}
         onValueChange={props.on.changeAmount}
     />
+)
+
+/** The editable draft and amount share the proposal editing state. */
+const renderAccountingQuestionEditing = (props: AccountingQuestionCardProps) => (
+    <>
+        {props.props.draft !== null && !props.props.isEditing ? (
+            <Text size="sm" tone="muted">
+                {props.props.draft}
+            </Text>
+        ) : null}
+        {props.props.isOpen && props.props.isEditing && props.props.draft !== null ? (
+            <Textarea
+                label={props.props.draftLabel}
+                rows={4}
+                value={props.props.draft}
+                isDisabled={props.props.isBusy}
+                onValueChange={props.on.changeDraft}
+            />
+        ) : null}
+        {props.props.isOpen && props.props.isEditing && props.props.amount !== null
+            ? renderAccountingQuestionCardAmount(props, props.props.amount)
+            : null}
+    </>
+)
+
+/** Pending reconciliation, missing fields and candidate choices. */
+const renderAccountingQuestionDetails = (props: AccountingQuestionCardProps) => (
+    <>
+        {props.props.isOpen && !props.props.isFailed && props.props.fields.length
+            ? renderAccountingQuestionCardMissingFields(props)
+            : null}
+        {props.props.isOpen && !props.props.isFailed && props.props.reconcileCredit !== null ? (
+            <div>
+                <Text size="sm">{props.props.reconcileCredit}</Text>
+                <Text size="sm" tone="muted">
+                    {props.props.reconcileWarning}
+                </Text>
+            </div>
+        ) : null}
+        {props.props.isOpen && !props.props.isFailed && props.props.candidates.length ? (
+            <RadioGroup
+                label={props.props.candidateLabel}
+                value={props.props.candidateId || null}
+                isDisabled={props.props.isBusy}
+                options={props.props.candidates}
+                onValueChange={props.on.changeCandidate}
+            />
+        ) : null}
+        {props.props.isOpen && !props.props.isFailed && props.props.basis !== null
+            ? renderAccountingQuestionCardBasis(props, props.props.basis)
+            : null}
+    </>
 )

@@ -7,7 +7,8 @@ const fieldKey = (field: FairnessField): `hiring.field.${FairnessField}` => `hir
 /** One found phrase as the owner reads it: where it is, the words and the trait. */
 const quote = (violation: FairnessViolation, t: TextOf): string => {
     const field = violation.field === "" ? "" : `${t(fieldKey(violation.field), {})}: `
-    return `${field}"${violation.excerpt}" (${t(`hiring.fairness.${violation.category}`, {})})`
+    const trait = t(`hiring.fairness.${violation.category}`, {})
+    return `${field}"${violation.excerpt}" (${trait})`
 }
 
 /** The refusal shown to the owner: what was found, where, and what to write instead. */

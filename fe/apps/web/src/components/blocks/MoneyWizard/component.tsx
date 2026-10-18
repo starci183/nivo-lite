@@ -1,7 +1,13 @@
 import { Alert, Badge, Button, Input, RadioGroup, Select, Text } from "@starci/grammar/common"
 import { WizardAgentStep } from "@/components/composites/WizardAgentStep"
-import { backAction, nextAction, startActions, WizardFooter } from "@/components/composites/WizardFooter"
-import type { WizardAction } from "@/components/composites/WizardFooter"
+import {
+    backAction,
+    nextAction,
+    startActions,
+    WizardFooter,
+    type WizardAction,
+} from "@/components/composites/WizardFooter"
+
 import { WizardFrame } from "@/components/composites/WizardFrame"
 import { WizardGuideView } from "@/components/composites/WizardGuideView"
 import { WizardVerifyStep } from "@/components/composites/WizardVerifyStep"
@@ -191,30 +197,7 @@ export const MoneyWizardBase = (props: MoneyWizardBaseProps) => {
             ) : null}
             {view.step === "env" ? <MoneyEnvironmentStep {...props} /> : null}
             {view.step === "account" ? accountOf(props) : null}
-            {view.step === "follow" ? (
-                <>
-                    <div className={classNames.buttons}>
-                        {view.providerHref === null ? null : (
-                            <Button variant="outline" href={view.providerHref} target="_blank" rel="noreferrer">
-                                {view.text.openProvider}
-                            </Button>
-                        )}
-                        {view.isTest ? <Badge tone="neutral">{view.text.envBadge}</Badge> : null}
-                    </div>
-                    <WizardGuideView
-                        screens={view.screens}
-                        copy={view.copy}
-                        isDisabled={view.isPending}
-                        onEdit={on.edit}
-                        onPaste={on.paste}
-                    />
-                    {view.keysNote === null ? null : (
-                        <Text size="xs" tone="muted">
-                            {view.keysNote}
-                        </Text>
-                    )}
-                </>
-            ) : null}
+            {view.step === "follow" ? moneyFollowStepOf(props) : null}
             {view.step === "verify" ? (
                 <WizardVerifyStep
                     help={view.verifyHelp}
@@ -259,3 +242,29 @@ const MoneyEnvironmentStep = (props: MoneyWizardBaseProps) => {
         </>
     )
 }
+
+/** Draws the provider setup guide and any saved-key note. */
+const moneyFollowStepOf = ({ props: view, on }: MoneyWizardBaseProps) => (
+    <>
+        <div className={classNames.buttons}>
+            {view.providerHref === null ? null : (
+                <Button variant="outline" href={view.providerHref} target="_blank" rel="noreferrer">
+                    {view.text.openProvider}
+                </Button>
+            )}
+            {view.isTest ? <Badge tone="neutral">{view.text.envBadge}</Badge> : null}
+        </div>
+        <WizardGuideView
+            screens={view.screens}
+            copy={view.copy}
+            isDisabled={view.isPending}
+            onEdit={on.edit}
+            onPaste={on.paste}
+        />
+        {view.keysNote === null ? null : (
+            <Text size="xs" tone="muted">
+                {view.keysNote}
+            </Text>
+        )}
+    </>
+)
