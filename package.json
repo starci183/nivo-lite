@@ -1,6 +1,6 @@
 {
   "name": "nivo-lite",
-  "version": "0.2.4",
+  "version": "0.2.5",
   "private": true,
   "packageManager": "npm@11.6.2",
   "workspaces": [
@@ -44,10 +44,10 @@
   },
   "devDependencies": {
     "@nestjs/testing": "11.2.5",
-    "@starci/cli": "1.7.3",
-    "@starci/eslint-canon-be": "3.4.9",
-    "@starci/eslint-canon-fe": "8.4.9",
-    "@starci/hfs": "4.7.3",
+    "@starci/cli": "1.7.4",
+    "@starci/eslint-canon-be": "3.4.10",
+    "@starci/eslint-canon-fe": "8.4.10",
+    "@starci/hfs": "4.7.4",
     "@starci/jest-preset": "2.3.2",
     "@starci/prettier-config": "1.0.3",
     "@starci/stylelint-canon": "2.0.9",
