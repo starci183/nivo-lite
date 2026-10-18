@@ -105,7 +105,10 @@ describe("TtsService / clip", () => {
     it("lets the next clip go on after one failed", async () => {
         const { tts, client } = await build(await sandbox())
         const failure = new Error("throttled")
-        client.synthesize.mockRejectedValueOnce(failure)
+        // Keyed by text, not by call order: the two clips race through the cache lookup before either reaches the provider.
+        client.synthesize.mockImplementation((request) =>
+            request.text === "One" ? Promise.reject(failure) : Promise.resolve(AUDIO),
+        )
 
         const [first, second] = await Promise.allSettled([
             tts.clip("One", "v", 0, signal),
