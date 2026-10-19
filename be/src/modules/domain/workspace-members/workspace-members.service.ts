@@ -9,8 +9,10 @@ import { WorkspaceMembersError, WorkspaceMembersErrorCode } from "./errors/works
 import type { MemberRow } from "./persistence/workspace-members.rows"
 import {
     DELETE_MEMBER,
+    ENSURE_MEMBER,
     FIND_MEMBER,
     LIST_MEMBERS,
+    LOCK_MEMBER,
     RENAME_MEMBER_EVERYWHERE,
     UPDATE_MEMBER_ROLE,
     UPDATE_MEMBER_STATUS,
@@ -164,6 +166,26 @@ export class WorkspaceMembersService {
             entry.staffId,
             entry.displayName,
         ])
+    }
+
+    /** An authenticated owner may add a missing seat; reruns retain existing state and refuse conflicting roles. */
+    ensure(actorId: string, entry: JoinEntry): Promise<WorkspaceMember> {
+        return this.entityManager.transaction(async (tx) => {
+            const [actor] = await tx.query<Array<MemberRow>>(LOCK_MEMBER, [entry.workspaceId, actorId])
+            if (actor === undefined) throw new WorkspaceMembersError({ code: WorkspaceMembersErrorCode.NotMember })
+            unwrapOutcome(admitMember(toMember(actor), ["owner"]), WorkspaceMembersError)
+            await tx.query(ENSURE_MEMBER, [
+                entry.workspaceId,
+                entry.userId,
+                entry.role,
+                entry.staffId,
+                entry.displayName,
+            ])
+            const [row] = await tx.query<Array<MemberRow>>(FIND_MEMBER, [entry.workspaceId, entry.userId])
+            if (row === undefined || row.role !== entry.role || row.status !== "active")
+                throw new WorkspaceMembersError({ code: WorkspaceMembersErrorCode.EnsureConflict })
+            return toMember(row)
+        })
     }
 
     private async seats(actorId: string, workspaceId: string, targetId: string, rule: SeatRule): Promise<SeatPair> {

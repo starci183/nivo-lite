@@ -21,6 +21,8 @@ export enum WorkspaceMembersErrorCode {
     CurrentSession = "WORKSPACE_MEMBERS_CURRENT_SESSION",
     /** The caller has no such session. */
     SessionNotFound = "WORKSPACE_MEMBERS_SESSION_NOT_FOUND",
+    /** Ensure found an existing seat with different role or disabled status; explicit change policy is required. */
+    EnsureConflict = "WORKSPACE_MEMBERS_ENSURE_CONFLICT",
 }
 
 /** How each workspace-members code travels. */
@@ -34,6 +36,7 @@ export const WORKSPACE_MEMBERS_ERROR_KINDS: Record<WorkspaceMembersErrorCode, Er
     [WorkspaceMembersErrorCode.LastOwner]: "conflict",
     [WorkspaceMembersErrorCode.CurrentSession]: "invalid",
     [WorkspaceMembersErrorCode.SessionNotFound]: "not-found",
+    [WorkspaceMembersErrorCode.EnsureConflict]: "conflict",
 }
 
 /** The one error class of the workspace-members capability. */

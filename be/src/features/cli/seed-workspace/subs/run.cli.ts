@@ -3,10 +3,9 @@ import { WorkspaceSeedService } from "@modules/domain/workspace-seed"
 
 @SubCommand({
     name: "run",
-    description:
-        "Seed the demo accounts, the owner workspace and both memberships; fresh passwords are shown once and never stored",
+    description: "Ensure the explicitly selected workspace from private target input without rotating credentials",
 })
-/** `cli seed-workspace run`: seeds the demo account; fresh passwords are shown once in the terminal and never stored. */
+/** The safe run alias requires the same private target input as ensure and emits no credentials. */
 export class RunSeedWorkspaceCli extends CommandRunner {
     constructor(private readonly workspaceSeed: WorkspaceSeedService) {
         super()

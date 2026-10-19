@@ -1,4 +1,103 @@
-import { randomBytes } from "node:crypto"
+import { Secret } from "@modules/platform/config"
+import { WorkspaceSeedError, WorkspaceSeedErrorCode } from "./errors/workspace-seed.error"
+import type { SeedAccount, SeedInput, SeedRequest, SeedRoleRequest } from "./workspace-seed.contracts"
 
-/** A fresh strong password, 24 url-safe characters. */
-export const newPassword = (): string => randomBytes(18).toString("base64url")
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+    value !== null && typeof value === "object" && !Array.isArray(value)
+
+function invalid(): never {
+    throw new WorkspaceSeedError({ code: WorkspaceSeedErrorCode.InputInvalid })
+}
+
+const text = (value: unknown, max: number): string =>
+    typeof value === "string" && value.length > 0 && value.length <= max ? value : invalid()
+
+const optionalSecret = (value: unknown): Secret | undefined =>
+    value === undefined ? undefined : new Secret(text(value, 65_536))
+
+/** Validates and returns one explicit selector while keeping the three account identities distinct. */
+export const assertSeedScope = (request: SeedRequest): Readonly<{ id: string } | { name: string }> => {
+    if (new Set([request.owner.email, request.manager.email, request.staff.email]).size !== 3) invalid()
+    if (request.workspaceId !== undefined) {
+        if (request.workspaceName !== undefined || !UUID.test(request.workspaceId)) invalid()
+        return { id: request.workspaceId }
+    }
+    if (request.workspaceName === undefined || !request.workspaceName.trim() || request.workspaceName.length > 120)
+        invalid()
+    return { name: request.workspaceName }
+}
+
+/** Requires the initial password only at a missing-account boundary; existing users retain their credential. */
+export const seedPassword = (account: SeedAccount): Secret => {
+    if (account.password === undefined) throw new WorkspaceSeedError({ code: WorkspaceSeedErrorCode.PasswordRequired })
+    return account.password
+}
+
+const account = (value: unknown): SeedAccount => {
+    if (!isRecord(value) || Object.keys(value).some((key) => !["email", "name", "password"].includes(key))) invalid()
+    const email = text(value.email, 254).toLowerCase()
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) invalid()
+    const name = text(value.name, 120).trim()
+    if (name.length === 0) invalid()
+    return { email, name, password: optionalSecret(value.password) }
+}
+
+const ensureRequest = (value: Record<string, unknown>): SeedRequest => {
+    const keys = [
+        "schema",
+        "action",
+        "workspaceId",
+        "workspaceName",
+        "owner",
+        "manager",
+        "staff",
+        "principalToken",
+        "bootstrapOwner",
+    ]
+    if (Object.keys(value).some((key) => !keys.includes(key))) invalid()
+    if ((value.workspaceId === undefined) === (value.workspaceName === undefined)) invalid()
+    const workspaceId = value.workspaceId === undefined ? undefined : text(value.workspaceId, 36)
+    if (workspaceId !== undefined && !UUID.test(workspaceId)) invalid()
+    const workspaceName = value.workspaceName === undefined ? undefined : text(value.workspaceName, 120).trim()
+    if (workspaceName === "") invalid()
+    const owner = account(value.owner),
+        manager = account(value.manager),
+        staff = account(value.staff)
+    if (new Set([owner.email, manager.email, staff.email]).size !== 3) invalid()
+    if (value.bootstrapOwner !== undefined && typeof value.bootstrapOwner !== "boolean") invalid()
+    return {
+        workspaceId,
+        workspaceName,
+        owner,
+        manager,
+        staff,
+        principalToken: optionalSecret(value.principalToken),
+        bootstrapOwner: value.bootstrapOwner,
+    }
+}
+
+const roleRequest = (value: Record<string, unknown>): SeedRoleRequest => {
+    const keys = ["schema", "action", "workspaceId", "memberId", "role", "principalToken"]
+    if (Object.keys(value).some((key) => !keys.includes(key))) invalid()
+    const workspaceId = text(value.workspaceId, 36),
+        memberId = text(value.memberId, 36),
+        role = value.role
+    if (!UUID.test(workspaceId) || !UUID.test(memberId) || (role !== "owner" && role !== "manager" && role !== "staff"))
+        invalid()
+    return { workspaceId, memberId, role, principalToken: new Secret(text(value.principalToken, 65_536)) }
+}
+
+/** Parses the private wire input without including its content or parser errors in public diagnostics. */
+export const readSeedInput = (input: Secret | undefined): SeedInput => {
+    if (input === undefined) throw new WorkspaceSeedError({ code: WorkspaceSeedErrorCode.InputRequired })
+    try {
+        const value: unknown = JSON.parse(input.reveal())
+        if (!isRecord(value) || value.schema !== "starci/app-workspace-input@1") invalid()
+        if (value.action === "ensure") return { action: "ensure", request: ensureRequest(value) }
+        if (value.action === "role") return { action: "role", request: roleRequest(value) }
+        return invalid()
+    } catch (cause) {
+        throw new WorkspaceSeedError({ code: WorkspaceSeedErrorCode.InputInvalid, cause })
+    }
+}

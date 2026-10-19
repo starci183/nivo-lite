@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common"
-import type { SupabaseAdminClient } from "./supabase.client"
-import { InjectSupabaseAdminClient } from "./supabase.decorators"
+import type { SupabaseAdminClient, SupabasePublicClient, SupabaseUserSession } from "./supabase.client"
+import { InjectSupabaseAdminClient, InjectSupabasePublicClient } from "./supabase.decorators"
 
 type Admin = SupabaseAdminClient["auth"]
 
@@ -15,7 +15,20 @@ export interface AccountsPage {
 @Injectable()
 /** Account administration through Supabase Auth for the operator commands: list, create and update users. */
 export class SupabaseAccountsService {
-    constructor(@InjectSupabaseAdminClient() private readonly admin: SupabaseAdminClient) {}
+    constructor(
+        @InjectSupabaseAdminClient() private readonly admin: SupabaseAdminClient,
+        @InjectSupabasePublicClient() private readonly publicClient: SupabasePublicClient,
+    ) {}
+
+    /** Opens a user-owned password session whose local cleanup the operator must await. */
+    openPasswordPrincipal(email: string, password: string): Promise<SupabaseUserSession | null> {
+        return this.publicClient.openPasswordPrincipal(email, password)
+    }
+
+    /** Authenticates an existing user session against Auth rather than trusting a supplied actor identifier. */
+    verifyUser(token: string): Promise<string | null> {
+        return this.publicClient.verifyUser(token)
+    }
 
     /** One page of users. */
     listUsers(params: AccountsPage): ReturnType<Admin["listUsers"]> {

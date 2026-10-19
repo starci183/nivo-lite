@@ -15,6 +15,12 @@ export enum WorkspacesErrorCode {
     KeepNotFound = "WORKSPACES_KEEP_NOT_FOUND",
     /** Some workspaces could not be deleted. */
     DeleteFailed = "WORKSPACES_DELETE_FAILED",
+    /** An explicit workspace name is missing or exceeds the supported bound. */
+    NameInvalid = "WORKSPACES_NAME_INVALID",
+    /** More than one owned active workspace has the requested exact name. */
+    NameAmbiguous = "WORKSPACES_NAME_AMBIGUOUS",
+    /** The named workspace or owner seat is inactive and must be restored explicitly. */
+    NameUnavailable = "WORKSPACES_NAME_UNAVAILABLE",
 }
 
 /** How each workspaces code travels. */
@@ -25,6 +31,9 @@ export const WORKSPACES_ERROR_KINDS: Record<WorkspacesErrorCode, ErrorKind> = {
     [WorkspacesErrorCode.NothingToKeep]: "invalid",
     [WorkspacesErrorCode.KeepNotFound]: "not-found",
     [WorkspacesErrorCode.DeleteFailed]: "internal",
+    [WorkspacesErrorCode.NameInvalid]: "invalid",
+    [WorkspacesErrorCode.NameAmbiguous]: "conflict",
+    [WorkspacesErrorCode.NameUnavailable]: "conflict",
 }
 
 /** The one error class of the workspaces capability. */

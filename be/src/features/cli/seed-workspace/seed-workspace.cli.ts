@@ -1,12 +1,15 @@
 import { Command, CommandRunner } from "nest-commander"
 import { RunSeedWorkspaceCli } from "./subs/run.cli"
+import { EnsureSeedWorkspaceCli } from "./subs/ensure.cli"
+import { RoleSeedWorkspaceCli } from "./subs/role.cli"
+import { VerifySeedWorkspaceCli } from "./subs/verify.cli"
 
 @Command({
     name: "seed-workspace",
-    description: "The ready-to-use demo workspace",
-    subCommands: [RunSeedWorkspaceCli],
+    description: "Explicit workspace accounts and authenticated member roles",
+    subCommands: [RunSeedWorkspaceCli, EnsureSeedWorkspaceCli, RoleSeedWorkspaceCli, VerifySeedWorkspaceCli],
 })
-/** `cli seed-workspace`: the demo workspace group; its commands are the sub-commands (`cli seed-workspace run`). */
+/** Groups explicit workspace access operations; private credentials are supplied by the selected target runner. */
 export class SeedWorkspaceCli extends CommandRunner {
     /** Without a sub-command the group shows its help. */
     run(): Promise<void> {

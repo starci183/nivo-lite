@@ -2,9 +2,16 @@ import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { WorkspacesError, WorkspacesErrorCode } from "./errors/workspaces.error"
-import type { CreatedRow, MembershipRow, TakenRow, WorkspaceNameRow } from "./persistence/workspaces.rows"
+import type {
+    CreatedRow,
+    MembershipRow,
+    NamedWorkspaceRow,
+    TakenRow,
+    WorkspaceNameRow,
+} from "./persistence/workspaces.rows"
 import {
     FIND_WORKSPACE_NAME,
+    FIND_NAMED_OWNED_WORKSPACE,
     HAS_ANY_WORKSPACE,
     INSERT_FREE_WORKSPACE,
     LIST_MEMBERSHIPS,
@@ -57,6 +64,25 @@ export class WorkspacesService {
         if (!this.options.allowFreeWorkspace) throw new WorkspacesError({ code: WorkspacesErrorCode.SignupDisabled })
         const [created] = await this.entityManager.query<[CreatedRow]>(INSERT_FREE_WORKSPACE, [userId, name])
         return { id: created.id }
+    }
+
+    /** Ensures one explicitly named owned workspace under the existing per-owner creation lock. */
+    ensureNamed(userId: string, name: string): Promise<CreatedWorkspace> {
+        if (name.trim().length === 0 || name.length > 120)
+            throw new WorkspacesError({ code: WorkspacesErrorCode.NameInvalid })
+        return this.entityManager.transaction(async (tx) => {
+            await tx.query(LOCK_FIRST_WORKSPACE, [userId])
+            const found = await tx.query<Array<NamedWorkspaceRow>>(FIND_NAMED_OWNED_WORKSPACE, [userId, name])
+            if (found.length > 1) throw new WorkspacesError({ code: WorkspacesErrorCode.NameAmbiguous })
+            const existing = found[0]
+            if (existing !== undefined && !existing.active)
+                throw new WorkspacesError({ code: WorkspacesErrorCode.NameUnavailable })
+            if (existing !== undefined) return { id: existing.id }
+            if (!this.options.allowFreeWorkspace)
+                throw new WorkspacesError({ code: WorkspacesErrorCode.SignupDisabled })
+            const [created] = await tx.query<[CreatedRow]>(INSERT_FREE_WORKSPACE, [userId, name])
+            return { id: created.id }
+        })
     }
 
     /**

@@ -71,6 +71,7 @@ export const cliModules = (options: CliAppOptions): Array<DynamicModule> => [
         isGlobal: true,
         auth: SUPABASE_ACCOUNTS,
         print: printConsoleLine,
+        ...options.workspaceSeed,
     }),
     AuthorityActionsModule.register({ isGlobal: true }),
     ConnectionSecretsModule.register({

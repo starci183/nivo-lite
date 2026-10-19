@@ -1,5 +1,6 @@
 import { parseLlmConfig } from "@modules/integrations/llm"
 import { parseChannelProvisioningConfig } from "@modules/domain/channel-provisioning"
+import { parseWorkspaceSeedConfig } from "@modules/domain/workspace-seed"
 import { parseConnectionsConfig } from "@modules/domain/connections"
 import { parseChannelSetupConfig } from "@modules/integrations/channel-setup"
 import { parseN8nHostConfig } from "@modules/integrations/n8n-host"
@@ -10,6 +11,8 @@ import type { EnvSource } from "@modules/platform/config"
 
 /** Everything the lite cli needs: the Supabase PostgreSQL connection and the Supabase project it administers. */
 export interface CliAppOptions {
+    /** Private target-runner input for explicit account and membership operations. */
+    readonly workspaceSeed: ReturnType<typeof parseWorkspaceSeedConfig>
     /** The connections the built-in migrate and seed groups operate on. */
     readonly connections: ReadonlyArray<ReturnType<typeof parsePrimaryDatabaseConfig>>
     /** Where the shared n8n container runs, for `sync-n8n`. */
@@ -33,6 +36,7 @@ export interface CliAppOptions {
  * project.
  */
 export const readCliEnv = (env: EnvSource): CliAppOptions => ({
+    workspaceSeed: parseWorkspaceSeedConfig(env),
     connections: [parsePrimaryDatabaseConfig(env)],
     n8nHost: parseN8nHostConfig(env),
     supabase: parseSupabaseConfig(env),

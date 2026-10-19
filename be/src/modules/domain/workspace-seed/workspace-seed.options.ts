@@ -1,4 +1,5 @@
 import type { InjectionToken } from "@nestjs/common"
+import type { Secret } from "@modules/platform/config"
 
 /** One user the Auth administrator returns. */
 export interface SeedAuthUser {
@@ -70,36 +71,32 @@ export interface SeedUserCreated {
     readonly error: SeedAuthFailure | null
 }
 
-/** What changes on an existing user. */
-export interface SeedUserUpdate {
-    /** The new password. */
-    readonly password: string
-    /** Whether the email counts as confirmed. */
-    readonly email_confirm: boolean
-    /** The profile metadata. */
-    readonly user_metadata: Readonly<Record<string, unknown>>
+/** One authenticated password session whose private tokens stay inside the integration. */
+export interface SeedPrincipalSession {
+    /** The user Auth actually authenticated. */
+    readonly id: string
+    /** Revokes this call's refresh session only and acknowledges cleanup without returning credentials. */
+    readonly close: () => Promise<boolean>
 }
 
-/** The failure of an update, if any. */
-export interface SeedUserUpdated {
-    /** The failure, when there is one. */
-    readonly error: SeedAuthFailure | null
-}
-
-/** The Auth administration the seed needs; the composition root hands the Supabase accounts service in. */
+/** Account and authenticated-session operations needed by the explicit workspace runner. */
 export interface SeedAuth {
     /** One page of users. */
     listUsers(page: SeedUsersPage): Promise<SeedUsersResult>
     /** Creates a confirmed user. */
     createUser(user: SeedNewUser): Promise<SeedUserCreated>
-    /** Updates a user's password, confirmation and metadata. */
-    updateUserById(id: string, update: SeedUserUpdate): Promise<SeedUserUpdated>
+    /** Opens a user password session; the caller must close only this owned session. */
+    openPasswordPrincipal(email: string, password: string): Promise<SeedPrincipalSession | null>
+    /** Authenticates a session through Auth, returning only the verified user id. */
+    verifyUser(token: string): Promise<string | null>
 }
 
 /** What the workspace seed takes from the app root. */
 export interface WorkspaceSeedOptions {
     /** The provider token of the Auth administration (a `SeedAuth`) in the app. */
     readonly auth: InjectionToken
-    /** Writes one credential, guidance or report line to the operator's terminal. */
+    /** Private command input supplied by the selected target runner. */
+    readonly input?: Secret
+    /** Writes the closed public receipt, never credentials. */
     readonly print: (line: string) => void
 }

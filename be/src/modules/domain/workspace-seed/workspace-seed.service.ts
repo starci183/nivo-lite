@@ -1,26 +1,34 @@
 import { Injectable } from "@nestjs/common"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { WorkspacesService } from "@modules/domain/workspaces"
+import type { Secret } from "@modules/platform/config"
 import { WorkspaceSeedError, WorkspaceSeedErrorCode } from "./errors/workspace-seed.error"
-import {
-    SEED_CREDENTIALS_GUIDANCE,
-    SEED_OWNER,
-    SEED_STAFF,
-    SEED_WORKSPACE_NAME,
-} from "./messages/workspace-seed.messages"
-import type { SeedAccount, SeedReport, SeedRequest } from "./workspace-seed.contracts"
+import { WORKSPACE_RECEIPT_PREFIX } from "./messages/workspace-seed.messages"
+import type { SeedAccount, SeedReport, SeedRequest, SeedRoleRequest } from "./workspace-seed.contracts"
 import { InjectSeedAuth, InjectWorkspaceSeedOptions } from "./workspace-seed.decorators"
 import type { SeedAuth, SeedAuthUser, WorkspaceSeedOptions } from "./workspace-seed.options"
-import { newPassword } from "./workspace-seed.policy"
+import { assertSeedScope, readSeedInput, seedPassword } from "./workspace-seed.policy"
 
 const USERS_PER_PAGE = 200
 const USER_PAGES_MAX = 50
 
+const report = (
+    action: SeedReport["action"],
+    workspaceId: string,
+    authentication: SeedReport["authentication"] = "existing-session",
+): SeedReport => ({
+    schema: "starci/app-workspace-access@1",
+    ok: true,
+    action,
+    workspaceId,
+    publicReadback: true,
+    consumerVerified: false,
+    authentication,
+    sessionCleanup: authentication === "password-session" ? "acknowledged" : "not-created",
+})
+
 @Injectable()
-/**
- * Seeds the demo account: its two sign-in accounts, the workspace the owner runs and both memberships. It is idempotent:
- * accounts are updated, and a workspace the owner already has is kept. Modules and knowledge are seeded by their own commands.
- */
+/** Ensures explicitly selected accounts and workspace memberships without rotating existing credentials. */
 export class WorkspaceSeedService {
     constructor(
         @InjectWorkspaceSeedOptions() private readonly options: WorkspaceSeedOptions,
@@ -29,83 +37,182 @@ export class WorkspaceSeedService {
         private readonly members: WorkspaceMembersService,
     ) {}
 
-    /** Seeds with fresh passwords on every run and shows the credentials once in the operator's terminal. */
+    /** Runs the private ensure input and emits only the closed public receipt; the legacy run alias is equally safe. */
     async seedOperator(): Promise<SeedReport> {
-        const { print } = this.options
-        const accounts = [
-            { role: "OWNER", email: SEED_OWNER.email, name: SEED_OWNER.name, password: newPassword() },
-            { role: "STAFF", email: SEED_STAFF.email, name: SEED_STAFF.name, password: newPassword() },
-        ] as const
-        const [owner, staff] = accounts
-        const report = await this.seed({ owner, staff })
-        const lines = [
-            ...accounts.flatMap((account) => [
-                `READY_${account.role}_EMAIL=${account.email}`,
-                `READY_${account.role}_PASSWORD=${account.password}`,
-            ]),
-            SEED_CREDENTIALS_GUIDANCE,
-            ...report.lines,
-        ]
-        for (const line of lines) print(line)
-        return report
+        const input = readSeedInput(this.options.input)
+        if (input.action !== "ensure") throw new WorkspaceSeedError({ code: WorkspaceSeedErrorCode.InputInvalid })
+        return this.print(await this.seed(input.request))
     }
 
-    /** Seeds both accounts, the owner's workspace and both memberships. */
+    /** Runs an explicit role change using a provider-authenticated actor and the existing membership policy. */
+    async roleOperator(): Promise<SeedReport> {
+        const input = readSeedInput(this.options.input)
+        if (input.action !== "role") throw new WorkspaceSeedError({ code: WorkspaceSeedErrorCode.InputInvalid })
+        return this.print(await this.changeRole(input.request))
+    }
+
+    /** Reconciles by authenticated readback without domain writes; password authentication owns and closes its session. */
+    async verifyOperator(): Promise<SeedReport> {
+        const input = readSeedInput(this.options.input)
+        const workspaceId =
+            input.action === "ensure" ? await this.verifySeed(input.request) : await this.verifyRole(input.request)
+        const authentication =
+            input.action === "ensure" && input.request.principalToken === undefined
+                ? "password-session"
+                : "existing-session"
+        return this.print(report("verify", workspaceId, authentication))
+    }
+
+    /** Ensures owner, manager and staff for one explicit workspace; existing account and seat state is retained. */
     async seed(request: SeedRequest): Promise<SeedReport> {
-        const lines: Array<string> = []
-        const ownerId = await this.ensureUser(request.owner, lines)
-        const staffId = await this.ensureUser(request.staff, lines)
-        const owned = (await this.workspaces.memberships(ownerId)).find((entry) => entry.member.role === "owner")
-        const workspaceId = owned?.workspace.id ?? (await this.workspaces.createFree(ownerId, SEED_WORKSPACE_NAME)).id
-        lines.push(owned === undefined ? `workspace created ${workspaceId}` : `workspace kept ${workspaceId}`)
-        await this.members.join({
-            workspaceId,
-            userId: staffId,
-            role: "staff",
-            staffId: null,
-            displayName: request.staff.name,
+        const scope = assertSeedScope(request)
+        const found = await this.findUsers()
+        for (const account of [request.owner, request.manager, request.staff]) {
+            if (!found.has(account.email)) seedPassword(account)
+        }
+        return this.withOwnerPrincipal(request, found, true, async (ownerId) => {
+            const workspaceId = "id" in scope ? scope.id : (await this.workspaces.ensureNamed(ownerId, scope.name)).id
+            await this.members.require(ownerId, workspaceId, ["owner"])
+            const managerId = await this.ensureUser(request.manager, found)
+            const staffId = await this.ensureUser(request.staff, found)
+            await this.members.ensure(ownerId, {
+                workspaceId,
+                userId: managerId,
+                role: "manager",
+                staffId: null,
+                displayName: request.manager.name,
+            })
+            await this.members.ensure(ownerId, {
+                workspaceId,
+                userId: staffId,
+                role: "staff",
+                staffId: null,
+                displayName: request.staff.name,
+            })
+            await this.readSeats(ownerId, managerId, staffId, workspaceId)
+            return report(
+                "ensure",
+                workspaceId,
+                request.principalToken === undefined ? "password-session" : "existing-session",
+            )
         })
-        lines.push(`members: ${request.owner.email} owner, ${request.staff.email} staff`)
-        return { workspaceId, lines }
     }
 
-    private async ensureUser(account: SeedAccount, lines: Array<string>): Promise<string> {
-        const metadata = { full_name: account.name }
-        const existing = await this.findUser(account.email)
-        if (existing !== undefined) {
-            const { error } = await this.auth.updateUserById(existing.id, {
-                password: account.password,
-                email_confirm: true,
-                user_metadata: { ...existing.user_metadata, ...metadata },
-            })
-            if (error !== null) this.authFailed(`update ${account.email}`, error.message)
-            lines.push(`user exists: ${account.email} (password set)`)
-            return existing.id
+    /** Delegates role authorization to WorkspaceMembersService after authenticating the actual session. */
+    async changeRole(request: SeedRoleRequest): Promise<SeedReport> {
+        const actorId = await this.sessionPrincipal(request.principalToken)
+        await this.members.changeRole(actorId, request.workspaceId, request.memberId, request.role)
+        await this.members.require(request.memberId, request.workspaceId, [request.role])
+        return report("role", request.workspaceId)
+    }
+
+    private print(receipt: SeedReport): SeedReport {
+        this.options.print(`${WORKSPACE_RECEIPT_PREFIX}${JSON.stringify(receipt)}`)
+        return receipt
+    }
+
+    /** Holds one authenticated identity for the action and closes only a password session it created. */
+    private async withOwnerPrincipal<T>(
+        request: SeedRequest,
+        found: ReadonlyMap<string, SeedAuthUser>,
+        create: boolean,
+        action: (id: string) => Promise<T>,
+    ): Promise<T> {
+        const existing = found.get(request.owner.email)
+        if (request.principalToken !== undefined) {
+            const id = await this.sessionPrincipal(request.principalToken)
+            if (existing?.id !== id) throw new WorkspaceSeedError({ code: WorkspaceSeedErrorCode.PrincipalInvalid })
+            return action(id)
         }
+        if (request.owner.password === undefined)
+            throw new WorkspaceSeedError({ code: WorkspaceSeedErrorCode.PrincipalInvalid })
+        if (existing === undefined && (!create || request.bootstrapOwner !== true))
+            throw new WorkspaceSeedError({ code: WorkspaceSeedErrorCode.BootstrapRequired })
+        const ownerId = existing?.id ?? (await this.ensureUser(request.owner, found))
+        const session = await this.auth.openPasswordPrincipal(request.owner.email, request.owner.password.reveal())
+        if (session === null) throw new WorkspaceSeedError({ code: WorkspaceSeedErrorCode.PrincipalInvalid })
+        try {
+            if (session.id !== ownerId) throw new WorkspaceSeedError({ code: WorkspaceSeedErrorCode.PrincipalInvalid })
+            return await action(session.id)
+        } finally {
+            if (!(await session.close()))
+                throw new WorkspaceSeedError({ code: WorkspaceSeedErrorCode.SessionCleanupFailed })
+        }
+    }
+
+    private async sessionPrincipal(token: Secret): Promise<string> {
+        const id = await this.auth.verifyUser(token.reveal())
+        if (id === null) throw new WorkspaceSeedError({ code: WorkspaceSeedErrorCode.PrincipalInvalid })
+        return id
+    }
+
+    private async ensureUser(account: SeedAccount, found: ReadonlyMap<string, SeedAuthUser>): Promise<string> {
+        const existing = found.get(account.email)
+        if (existing !== undefined) return existing.id
         const created = await this.auth.createUser({
             email: account.email,
-            password: account.password,
+            password: seedPassword(account).reveal(),
             email_confirm: true,
-            user_metadata: metadata,
+            user_metadata: { full_name: account.name },
         })
-        if (created.error !== null) this.authFailed(`create ${account.email}`, created.error.message)
-        if (created.data.user === null) {
-            throw new WorkspaceSeedError({ code: WorkspaceSeedErrorCode.RowMissing, params: { what: account.email } })
+        if (created.error !== null) {
+            const reconciled = (await this.findUsers()).get(account.email)
+            if (reconciled !== undefined) return reconciled.id
+            throw new WorkspaceSeedError({ code: WorkspaceSeedErrorCode.AuthFailed })
         }
-        lines.push(`user created: ${account.email}`)
+        if (created.data.user === null) throw new WorkspaceSeedError({ code: WorkspaceSeedErrorCode.RowMissing })
         return created.data.user.id
     }
 
-    private async findUser(email: string, page = 1): Promise<SeedAuthUser | undefined> {
-        if (page >= USER_PAGES_MAX) return undefined
-        const { data, error } = await this.auth.listUsers({ page, perPage: USERS_PER_PAGE })
-        if (error !== null) this.authFailed("listUsers", error.message)
-        const hit = data.users.find((user) => (user.email ?? "").toLowerCase() === email)
-        if (hit !== undefined) return hit
-        return data.users.length < USERS_PER_PAGE ? undefined : this.findUser(email, page + 1)
+    private async findUsers(
+        page = 1,
+        users = new Map<string, SeedAuthUser>(),
+    ): Promise<ReadonlyMap<string, SeedAuthUser>> {
+        const result = await this.auth.listUsers({ page, perPage: USERS_PER_PAGE })
+        if (result.error !== null) throw new WorkspaceSeedError({ code: WorkspaceSeedErrorCode.AuthFailed })
+        for (const user of result.data.users) {
+            if (user.email !== undefined) users.set(user.email.toLowerCase(), user)
+        }
+        if (result.data.users.length < USERS_PER_PAGE) return users
+        if (page >= USER_PAGES_MAX) throw new WorkspaceSeedError({ code: WorkspaceSeedErrorCode.ScanIncomplete })
+        return this.findUsers(page + 1, users)
     }
 
-    private authFailed(step: string, message: string): never {
-        throw new WorkspaceSeedError({ code: WorkspaceSeedErrorCode.AuthFailed, params: { step, message } })
+    private async readSeats(ownerId: string, managerId: string, staffId: string, workspaceId: string): Promise<void> {
+        await Promise.all([
+            this.members.require(ownerId, workspaceId, ["owner"]),
+            this.members.require(managerId, workspaceId, ["manager"]),
+            this.members.require(staffId, workspaceId, ["staff"]),
+        ])
+    }
+
+    private async verifySeed(request: SeedRequest): Promise<string> {
+        assertSeedScope(request)
+        const found = await this.findUsers()
+        const owner = found.get(request.owner.email),
+            manager = found.get(request.manager.email),
+            staff = found.get(request.staff.email)
+        if (owner === undefined || manager === undefined || staff === undefined)
+            throw new WorkspaceSeedError({ code: WorkspaceSeedErrorCode.VerificationFailed })
+        return this.withOwnerPrincipal(request, found, false, async (actorId) => {
+            const owned = (await this.workspaces.memberships(actorId)).filter(
+                (entry) =>
+                    entry.member.role === "owner" &&
+                    entry.member.status === "active" &&
+                    entry.workspace.name === request.workspaceName,
+            )
+            const workspaceId = request.workspaceId ?? (owned.length === 1 ? owned[0]?.workspace.id : undefined)
+            if (workspaceId === undefined)
+                throw new WorkspaceSeedError({ code: WorkspaceSeedErrorCode.VerificationFailed })
+            await this.readSeats(owner.id, manager.id, staff.id, workspaceId)
+            return workspaceId
+        })
+    }
+
+    private async verifyRole(request: SeedRoleRequest): Promise<string> {
+        const actorId = await this.sessionPrincipal(request.principalToken)
+        await this.members.require(actorId, request.workspaceId, ["owner", "manager"])
+        await this.members.require(request.memberId, request.workspaceId, [request.role])
+        return request.workspaceId
     }
 }

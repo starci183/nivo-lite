@@ -1,4 +1,4 @@
-import { builder, mock, mockEntityManager } from "@starci/jest-preset"
+import { builder, fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { Test } from "@nestjs/testing"
 import { EventsService } from "@modules/domain/events"
@@ -9,8 +9,10 @@ import { WorkspaceMembersErrorCode } from "./errors/workspace-members.error"
 import type { MemberRow } from "./persistence/workspace-members.rows"
 import {
     DELETE_MEMBER,
+    ENSURE_MEMBER,
     FIND_MEMBER,
     LIST_MEMBERS,
+    LOCK_MEMBER,
     RENAME_MEMBER_EVERYWHERE,
     UPDATE_MEMBER_ROLE,
     UPDATE_MEMBER_STATUS,
@@ -53,6 +55,63 @@ const build = async (entityManager: MockEntityManager) => {
     }).compile()
     return { service: moduleRef.get(WorkspaceMembersService), auth, events, staff }
 }
+
+describe("WorkspaceMembersService / ensure", () => {
+    const entry = { workspaceId: "ws-1", userId: "target-1", role: "manager", staffId: null, displayName: "Target" }
+
+    it("locks the owner's authority and inserts without overwriting an existing seat", async () => {
+        const em = mockEntityManager({
+            query: [
+                [LOCK_MEMBER, [rowOf({ role: "owner" })]],
+                [ENSURE_MEMBER, []],
+                [FIND_MEMBER, [rowOf({ user_id: "target-1", role: "manager" })]],
+            ],
+        })
+        const transaction = fakeTransaction(em)
+        const { service } = await build(em)
+        await expect(service.ensure("user-1", entry)).resolves.toMatchObject({ userId: "target-1", role: "manager" })
+        expect(em.query.mock.calls).toEqual([
+            [LOCK_MEMBER, ["ws-1", "user-1"]],
+            [ENSURE_MEMBER, ["ws-1", "target-1", "manager", null, "Target"]],
+            [FIND_MEMBER, ["ws-1", "target-1"]],
+        ])
+        expect(transaction.commits).toBe(1)
+    })
+
+    it.each([
+        { actor: [], code: WorkspaceMembersErrorCode.NotMember },
+        { actor: [rowOf({ role: "manager" })], code: WorkspaceMembersErrorCode.RoleForbidden },
+        { actor: [rowOf({ role: "owner", status: "disabled" })], code: WorkspaceMembersErrorCode.NotMember },
+    ])("refuses missing or insufficient actor authority before insertion", async ({ actor, code }) => {
+        const em = mockEntityManager({ query: [LOCK_MEMBER, actor] }),
+            transaction = fakeTransaction(em)
+        const { service } = await build(em)
+        await expect(service.ensure("user-1", entry)).rejects.toMatchObject({ code })
+        expect(transaction.rollbacks).toBe(1)
+        expect(em.query).not.toHaveBeenCalledWith(ENSURE_MEMBER, expect.anything())
+    })
+
+    it.each([
+        { target: [] },
+        { target: [rowOf({ role: "staff" })] },
+        { target: [rowOf({ role: "manager", status: "disabled" })] },
+    ])("preserves a conflicting existing seat", async ({ target }) => {
+        const em = mockEntityManager({
+            query: [
+                [LOCK_MEMBER, [rowOf({ role: "owner" })]],
+                [ENSURE_MEMBER, []],
+                [FIND_MEMBER, target],
+            ],
+        })
+        const transaction = fakeTransaction(em),
+            { service } = await build(em)
+        await expect(service.ensure("user-1", entry)).rejects.toMatchObject({
+            code: WorkspaceMembersErrorCode.EnsureConflict,
+        })
+        expect(transaction.rollbacks).toBe(1)
+        expect(em.query).not.toHaveBeenCalledWith(UPDATE_MEMBER_ROLE, expect.anything())
+    })
+})
 
 describe("WorkspaceMembersService / require", () => {
     it("answers the active membership", async () => {

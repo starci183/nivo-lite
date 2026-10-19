@@ -6,6 +6,7 @@ import { WorkspacesErrorCode } from "./errors/workspaces.error"
 import type { MembershipRow } from "./persistence/workspaces.rows"
 import {
     FIND_WORKSPACE_NAME,
+    FIND_NAMED_OWNED_WORKSPACE,
     HAS_ANY_WORKSPACE,
     INSERT_FREE_WORKSPACE,
     LIST_MEMBERSHIPS,
@@ -43,6 +44,74 @@ const build = async (entityManager: MockEntityManager, overrides: Partial<Worksp
     }).compile()
     return moduleRef.get(WorkspacesService)
 }
+
+describe("WorkspacesService", () => {
+    describe("ensureNamed", () => {
+        it("keeps the exact owned name even when new signup is disabled", async () => {
+            const em = mockEntityManager({
+                query: [
+                    [LOCK_FIRST_WORKSPACE, []],
+                    [FIND_NAMED_OWNED_WORKSPACE, [{ id: "ws-1", active: true }]],
+                ],
+            })
+            const transaction = fakeTransaction(em)
+            await expect((await build(em)).ensureNamed("owner-1", "Explicit")).resolves.toEqual({ id: "ws-1" })
+            expect(em.query.mock.calls).toEqual([
+                [LOCK_FIRST_WORKSPACE, ["owner-1"]],
+                [FIND_NAMED_OWNED_WORKSPACE, ["owner-1", "Explicit"]],
+            ])
+            expect(transaction.commits).toBe(1)
+        })
+
+        it("creates only after the serialized exact-name lookup found none", async () => {
+            const em = mockEntityManager({
+                query: [
+                    [LOCK_FIRST_WORKSPACE, []],
+                    [FIND_NAMED_OWNED_WORKSPACE, []],
+                    [INSERT_FREE_WORKSPACE, [{ id: "ws-new" }]],
+                ],
+            })
+            const transaction = fakeTransaction(em)
+            await expect(
+                (await build(em, { allowFreeWorkspace: true })).ensureNamed("owner-1", "Explicit"),
+            ).resolves.toEqual({ id: "ws-new" })
+            expect(em.query).toHaveBeenLastCalledWith(INSERT_FREE_WORKSPACE, ["owner-1", "Explicit"])
+            expect(transaction.commits).toBe(1)
+        })
+
+        it.each([
+            {
+                rows: [
+                    { id: "ws-1", active: true },
+                    { id: "ws-2", active: true },
+                ],
+                code: WorkspacesErrorCode.NameAmbiguous,
+            },
+            { rows: [{ id: "ws-1", active: false }], code: WorkspacesErrorCode.NameUnavailable },
+            { rows: [], code: WorkspacesErrorCode.SignupDisabled },
+        ])("refuses a non-unique or unavailable selector without creating", async ({ rows, code }) => {
+            const em = mockEntityManager({
+                query: [
+                    [LOCK_FIRST_WORKSPACE, []],
+                    [FIND_NAMED_OWNED_WORKSPACE, rows],
+                ],
+            })
+            const transaction = fakeTransaction(em)
+            await expect((await build(em)).ensureNamed("owner-1", "Explicit")).rejects.toMatchObject({ code })
+            expect(transaction.rollbacks).toBe(1)
+            expect(em.query).not.toHaveBeenCalledWith(INSERT_FREE_WORKSPACE, expect.anything())
+        })
+
+        it.each([" ", "x".repeat(121)])("refuses an invalid exact name before opening a transaction", async (name) => {
+            const em = mockEntityManager(),
+                service = await build(em)
+            expect(() => service.ensureNamed("owner-1", name)).toThrow(
+                expect.objectContaining({ code: WorkspacesErrorCode.NameInvalid }),
+            )
+            expect(em.transaction).not.toHaveBeenCalled()
+        })
+    })
+})
 
 describe("WorkspacesService", () => {
     describe("nameOf", () => {

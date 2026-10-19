@@ -7,6 +7,19 @@ export const FIND_MEMBER = sql`
     WHERE m.workspace_id = $1 AND m.user_id = $2
     LIMIT 1`
 
+/** Holds the actor's membership while an operator ensures a new seat, preventing a concurrent authority change. */
+export const LOCK_MEMBER = sql`
+    SELECT workspace_id, user_id, role, staff_id, display_name, status
+    FROM public.workspace_members
+    WHERE workspace_id = $1 AND user_id = $2
+    LIMIT 1 FOR UPDATE`
+
+/** Inserts a missing seat only; an existing role, status, staff link or name is never overwritten. */
+export const ENSURE_MEMBER = sql`
+    INSERT INTO public.workspace_members (workspace_id, user_id, role, staff_id, display_name)
+    VALUES ($1, $2, $3, $4, $5)
+    ON CONFLICT (workspace_id, user_id) DO NOTHING`
+
 /** Everyone in a workspace, owners first. */
 export const LIST_MEMBERS = sql`
     SELECT m.workspace_id, m.user_id, m.role, m.staff_id, m.display_name, m.status

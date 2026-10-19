@@ -23,6 +23,14 @@ export const INSERT_FREE_WORKSPACE = sql`
 /** Serializes the first-workspace start of one person ($1 user) until the transaction ends. */
 export const LOCK_FIRST_WORKSPACE = sql`SELECT pg_advisory_xact_lock(hashtext('workspace-first:' || $1::text))`
 
+/** Resolves an exact active owned name; two rows are enough to detect an ambiguous selector. */
+export const FIND_NAMED_OWNED_WORKSPACE = sql`
+    SELECT w.id, coalesce(w.status = 'active' AND m.role = 'owner' AND m.status = 'active', false) AS active
+    FROM public.workspaces w
+    LEFT JOIN public.workspace_members m ON m.workspace_id = w.id AND m.user_id = $1
+    WHERE w.owner_id = $1 AND w.name = $2
+    LIMIT 2`
+
 /** Whether the person already owns a workspace or holds any membership, active or not ($1 user). */
 export const HAS_ANY_WORKSPACE = sql`
     SELECT EXISTS (SELECT 1 FROM public.workspace_members m WHERE m.user_id = $1)

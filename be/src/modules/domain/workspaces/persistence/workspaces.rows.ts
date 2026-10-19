@@ -41,3 +41,11 @@ export interface WorkspaceNameRow {
     /** The workspace name. */
     name: string
 }
+
+/** An owned name remains discoverable while disabled, so ensure cannot create a duplicate. */
+export interface NamedWorkspaceRow {
+    /** The existing workspace identity. */
+    id: string
+    /** True only when the workspace and owner seat remain active. */
+    active: boolean
+}
