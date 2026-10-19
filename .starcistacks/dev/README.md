@@ -1,10 +1,29 @@
 # dev
 
-Local development of NIVO runs Supabase in Supabase CLI-managed Docker containers (Postgres, Auth, Storage and Studio). Start Docker first, then start Supabase with `npm run db:start` from the repository root. `supabase/config.toml` owns the local Supabase configuration and ports. Starting Supabase does not start the api, console or landing: run them separately as host processes (`npm run dev:be`, `npm run dev:fe:web`, `npm run dev:fe:landing`) or as services from the declared `infra/swarm/stack.yaml` in a local single-manager Docker Swarm. Production has its own stack and runbook (`../production/README.md`).
+Local development of NIVO uses Supabase CLI-managed Docker containers for PostgreSQL, Auth, Storage and Studio. `supabase/config.toml` owns the local project and ports. The native StarCi Supabase lifecycle applies its project, port and protected-stack policy; preserve a running stack when that owner refuses an operation. Starting Docker or Supabase does not configure or start the API, web console or landing. Production has its own stack and runbook (`../production/README.md`).
 
-The local stack needs no sealed secret: Supabase prints its own demo credentials. The api service reads them from the untracked file api.dev.env in this directory, which the stacks custody rules ignore. Use Supabase URLs that the service containers can reach; `host.docker.internal` points to the host gateway. Keep browser-facing Supabase URLs reachable from the browser.
+The API's required base settings are below. `be/apps/api/src/api.env.ts` composes the typed config readers; missing or malformed inputs fail boot. Optional integrations can require additional settings when enabled, so this list is not proof that an arbitrary supplied configuration is ready.
 
-Run commands from the repository root. Start Supabase, run `npm run codegen`, and write api.dev.env from `supabase status -o env`: `PRIMARY_DB_URL` for the `app_be` role, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `CHANNEL_TOKEN_KEY` and `N8N_SIGNING_SECRET` use local throwaway values. Export `NEXT_PUBLIC_SUPABASE_ANON_KEY` from the local Supabase output for the web build. Run `npm run migrate` against the local database before deploying the services.
+| Setting | Local API requirement |
+| --- | --- |
+| `PORT` | Integer listener port from the selected application placement. |
+| `HTTP_SECURITY_ALLOWED_ORIGINS` | Comma-separated canonical browser origins permitted by the HTTP security reader. |
+| `PRIMARY_DB_URL` | Private connection to the local database as the least-privilege `app_be` role, with its existing matching password. The administrative `postgres` connection is not the application credential. |
+| `PRIMARY_DB_SCHEMA` | Nonempty application schema name from the selected database configuration. |
+| `SUPABASE_URL` | Absolute local Supabase API URL reachable from the API's network context. |
+| `SUPABASE_SERVICE_ROLE_KEY` | Private server-side key of that same local Supabase project. |
+| `CHANNEL_TOKEN_KEY` | Private base64 value that decodes to exactly 32 bytes; preserve it for existing encrypted connection data. |
+| `OTP_PEPPER` | Independent private pepper of at least 32 characters for loyalty code hashes. |
+| `SITE_URL` | Absolute public origin of the local web app, used for provider return addresses. |
+| `N8N_SIGNING_SECRET` | Nonempty private signing secret; it must match any enabled n8n workflow consumer. |
+
+Supply private values through the existing native custody owner, never chat, command arguments or shared logs. Sealed application custody belongs in `.starcistacks/<env>/secrets/<slug>.enc`; the API's `EnvSource` prefers the corresponding `<NAME>_FILE` input and fails if that file cannot be read. Existing local keys must be retained; fresh keys belong only to an explicitly initialized fresh environment. Do not substitute production custody for a missing local binding.
+
+The current `infra/swarm/stack.yaml` still consumes the untracked legacy `api.dev.env` input in this directory. That reference does not create or validate the file. Existing `starci app secret` commands can manage and materialize sealed values, but they do not assemble this complete API input, initialize the `app_be` password, or adopt a protected Supabase stack. Native status output and a successful secret-shape check do not establish those steps or application readiness.
+
+Use component-specific endpoints: host application processes reach local dependencies through their published loopback ports, while service containers need the declared reachable host gateway. Browser-facing Supabase URLs must remain browser-reachable. The web app receives only its public `NEXT_PUBLIC_*` build settings, including the local anon/publishable key; the database URL and service-role key remain backend-only. Backend Auth flows using an existing user token or password also need the local project's `SUPABASE_ANON_KEY`.
+
+After the selected local configuration and database migration state are verified, the existing package scripts can run the application processes (`npm run dev:be`, `npm run dev:fe:web`, `npm run dev:fe:landing`), or the declared Swarm recipe can run the services. These scripts consume configuration; they are not a local credential bootstrap. Run repository commands from the application root and retain separate liveness, database readiness and browser verification.
 
 Swarm does not build images. Choose a registry reachable from the local Swarm, build and push all three images, and copy each pushed image's digest reference:
 
