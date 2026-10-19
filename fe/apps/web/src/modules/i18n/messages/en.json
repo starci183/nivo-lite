@@ -1,8 +1,5 @@
 {
   "access": {
-    "roleOwner": "Owner",
-    "roleManager": "Manager",
-    "roleStaff": "Staff",
     "forbidden": "You do not have permission to do this. Ask an owner or manager.",
     "noWorkspace": "You are not a member of any workspace yet. Ask an owner to invite you."
   },
@@ -457,7 +454,6 @@
     "staffHasAccount": "Has an account",
     "readOnlyTitle": "View only",
     "readOnlyBody": "Only the owner and managers can change authority. You can read it here.",
-    "loading": "Loading authority",
     "loadFailTitle": "Could not load authority",
     "loadFailBody": "The authority settings are not available yet. Try again in a moment.",
     "errNumber": "Enter a whole number, zero or more.",
@@ -790,11 +786,7 @@
     "maintainAction": "Update now"
   },
   "common": {
-    "loading": "Loading...",
     "open": "Open",
-    "cancel": "Cancel",
-    "save": "Save",
-    "copy": "Copy",
     "more": "More",
     "updated": "Updated {time}",
     "aiChip": "AI",
@@ -863,7 +855,6 @@
     "agentHint": "Tick the agents that work through this connection. You can change this later in the agent Settings.",
     "agentNone": "There is no agent for this connection yet. Create one in Agents, then tick it in the agent Settings.",
     "continue": "Continue",
-    "edit": "Edit",
     "tgChecking": "Checking the bot…",
     "tgRetry": "Check again",
     "tgTokenHint": "Keep the token private: anyone with it controls your bot.",
@@ -939,7 +930,6 @@
     "purpose_lead_source": "Receives the leads of your lead ads",
     "agentCardTitle": "Connections this agent uses",
     "errName": "Give the connection a name (at least 2 characters).",
-    "errGeneric": "Something went wrong. Please try again.",
     "statusPending": "Unfinished",
     "accessAssign": "Give to an agent",
     "accessButton": "Agents ({count})",
@@ -2106,7 +2096,6 @@
     "notConnectedYet": "The connection becomes active after one test email is sent successfully."
   },
   "engine": {
-    "title": "Agent copy",
     "syncing": "Syncing...",
     "resync": "Sync again"
   },
@@ -2128,9 +2117,7 @@
     "failUnavailable": "NIVO has not turned on the Google integration yet. Please try again later.",
     "failState": "The connection link expired. Press Connect Google again.",
     "failGeneric": "Something went wrong while connecting. Press Connect Google again.",
-    "failNoRefresh": "Google did not grant lasting access. Press Connect Google again and accept every permission.",
-    "close": "Close",
-    "back": "Back"
+    "failNoRefresh": "Google did not grant lasting access. Press Connect Google again and accept every permission."
   },
   "governance": {
     "dept_chatbot": "Chatbot AI",
@@ -2789,7 +2776,6 @@
     "daysAgo": "{n} days ago",
     "loadFailTitle": "Could not load inbound",
     "loadFailBody": "The inbound feed is not available yet. Try again in a moment.",
-    "loading": "Loading inbound",
     "feedAria": "Received inputs",
     "unnamed": "Unknown sender",
     "simulationQueued": "Input received. Processing has been queued.",
@@ -2949,7 +2935,6 @@
     "visInternalLong": "Internal: only internal agents and staff",
     "noVectors": "Keyword search only",
     "open": "Open",
-    "back": "All documents",
     "detailMeta": "Added {when}",
     "passagesTitle": "Passages",
     "passagesHint": "How the source was cut. Agents retrieve these passages.",
@@ -3747,8 +3732,7 @@
     "testSkipNote": "The connection is saved. You can finish now; the first message will show in the list.",
     "pageLine": "Page: {page}",
     "igLine": "Instagram: @{handle}",
-    "noIgLine": "No Instagram account linked.",
-    "errGeneric": "Something went wrong with Meta. Please try again."
+    "noIgLine": "No Instagram account linked."
   },
   "moduleSetup": {
     "chatTitle": "Setup chat with NIVO",
@@ -3774,13 +3758,11 @@
     "editCancel": "Cancel",
     "unconfirm": "Reopen",
     "evidencePlaceholder": "Write what is true for your business",
-    "evidenceEmpty": "Not discussed yet",
     "apply": "Apply",
     "applying": "Applying...",
     "applyHint": "Confirm every item to apply. The agent then works from this version.",
     "applyUnchanged": "This draft is already the version in use.",
     "applied": "Version {version} applied. The agent now uses it.",
-    "applyFailed": "Could not apply",
     "requirementsTitle": "This agent works best once these are set up",
     "requirementsBody": "Not set up yet:",
     "requirementsFix": "Set up",
@@ -3854,7 +3836,6 @@
     "catalogTitle": "Agent catalog",
     "catalogDescription": "Buy an agent to add another operator to your team. Included agents are ready to use.",
     "open": "Open {name}",
-    "statusActive": "Active",
     "statusPaused": "Paused",
     "chat": "Chat",
     "hintName": "Shown to customers and teammates.",
@@ -4054,7 +4035,6 @@
     "simulatedTag": "Simulated",
     "today": "Today",
     "yesterday": "Yesterday",
-    "you": "You",
     "aiBadge": "AI",
     "copyText": "Copy",
     "copied": "Copied",
@@ -4197,8 +4177,6 @@
     "scanTitle": "Scan with your banking app",
     "trust": "Bank transfer, confirmed automatically within seconds. No card needed.",
     "allWorkspaces": "All workspaces",
-    "next": "Continue",
-    "back": "Back",
     "workspaceName": "Workspace name",
     "workspaceNameHint": "Usually your business name. You can change it later.",
     "creating": "Creating...",
@@ -4791,7 +4769,6 @@
     "confirmYesRemove": "Remove",
     "confirmYesDisable": "Disable",
     "confirmNo": "Cancel",
-    "done": "Saved.",
     "invitesTitle": "Pending invitations",
     "invitesDesc": "People who have been invited but have not joined yet.",
     "invitesEmpty": "No pending invitations.",
@@ -4836,7 +4813,6 @@
   },
   "video": {
     "eyebrow": "Video maker",
-    "title": "Short videos for your business",
     "description": "Pick what the video is for, NIVO writes the script, you edit it, then it is rendered for TikTok, Reels, Zalo or Facebook.",
     "loadFailedTitle": "The video workbench could not be loaded",
     "loadFailedBody": "The data may not be ready yet. Try again in a moment.",
@@ -5051,7 +5027,6 @@
     "event_decision_made": "The owner approved or rejected something",
     "testHttpError": "The receiver answered HTTP {status}.",
     "testUnreachable": "The receiver did not answer in 10 seconds, or the address could not be reached.",
-    "errGeneric": "Something went wrong. Please try again.",
     "snippet": "const crypto = require('crypto');\nconst signingKey = '<PASTE_THE_SIGNING_KEY_HERE>';\n\nconst headers = $input.first().json.headers;\nconst raw = (await this.helpers.getBinaryDataBuffer(0, 'data')).toString('utf8');\nconst ts = String(headers['x-nivo-timestamp'] || '');\n\n// Only accept messages from the last 5 minutes\nif (!ts || Math.abs(Date.now() - Number(ts)) > 5 * 60 * 1000) throw new Error('Message too old');\n\nconst expected = Buffer.from(crypto.createHmac('sha256', signingKey).update(ts + '.' + raw).digest('hex'));\nconst got = Buffer.from(String(headers['x-nivo-signature'] || ''));\nif (expected.length !== got.length || !crypto.timingSafeEqual(expected, got)) throw new Error('Wrong signature');\n\n// headers['x-nivo-delivery'] stays the same on a retry: use it to skip a message you already handled\nreturn [{ json: JSON.parse(raw) }];",
     "urlPlaceholder": "https://"
   },

@@ -1,6 +1,6 @@
 # dev
 
-Local development of NIVO uses local Supabase (`supabase start`, the Supabase CLI stack: Postgres, Auth, Storage, Studio) plus the api, console and landing, either as host processes (`npm run dev:be`, `npm run dev:fe:web`, `npm run dev:fe:landing`) or as services from `infra/swarm/stack.yaml` in a local single-manager Docker Swarm. Production has its own stack and runbook (`../production/README.md`).
+Local development of NIVO runs Supabase in Supabase CLI-managed Docker containers (Postgres, Auth, Storage and Studio). Start Docker first, then start Supabase with `npm run db:start` from the repository root. `supabase/config.toml` owns the local Supabase configuration and ports. Starting Supabase does not start the api, console or landing: run them separately as host processes (`npm run dev:be`, `npm run dev:fe:web`, `npm run dev:fe:landing`) or as services from the declared `infra/swarm/stack.yaml` in a local single-manager Docker Swarm. Production has its own stack and runbook (`../production/README.md`).
 
 The local stack needs no sealed secret: Supabase prints its own demo credentials. The api service reads them from the untracked file api.dev.env in this directory, which the stacks custody rules ignore. Use Supabase URLs that the service containers can reach; `host.docker.internal` points to the host gateway. Keep browser-facing Supabase URLs reachable from the browser.
 
@@ -11,7 +11,7 @@ Swarm does not build images. Choose a registry reachable from the local Swarm, b
 ```sh
 docker build -f be/apps/api/Dockerfile -t <registry>/nivo-lite-api:dev .
 docker build -f fe/apps/web/Dockerfile -t <registry>/nivo-lite-web:dev \
-    --build-arg NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321 \
+    --build-arg NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:55321 \
     --build-arg NEXT_PUBLIC_SUPABASE_ANON_KEY \
     --build-arg NEXT_PUBLIC_API_URL=http://api.localhost \
     --build-arg NEXT_PUBLIC_DEVELOPER_API_URL=http://api.localhost \
@@ -48,7 +48,7 @@ docker stack config -c .starcistacks/dev/infra/swarm/stack.yaml -c dev.images.ov
 | Command      | What it does                                                                                                                                                                                                                                                       |
 | ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | prepare      | Start Supabase, prepare api.dev.env, build and push the images, and write the digest override as described above.                                                                                                                                                |
-| doctor       | `docker version`, `docker info` (check Swarm is active and this node is a manager), `supabase status`, and a check that ports 54321, 54322 and 80 are free or owned by this stack. Read-only.                                                              |
+| doctor       | `docker version`, `docker info` (check Swarm is active and this node is a manager), `supabase status`, and a check that ports 55321, 55322 and 80 are free or owned by this stack. Read-only.                                                              |
 | up           | Migrate the local database, then run the `docker stack config` / `docker stack deploy` pipeline above; or start the host processes `npm run dev:be` and `npm run dev:fe:web`.                                                                                          |
 | status       | `docker stack services nivo-dev`, `docker stack ps nivo-dev` and `supabase status`.                                                                                                                                                                                |
 | logs         | `docker service logs -f nivo-dev_nivo-api`, `docker service logs -f nivo-dev_nivo-web-app` or `docker service logs -f nivo-dev_nivo-landing`.                                                                                                                                                                                    |

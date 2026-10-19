@@ -49,7 +49,7 @@ Secrets: the only custody is the sealed files `.starcistacks/<env>/secrets/<slug
 
 Run it locally:
 
-1. Start the local Supabase stack with `npm run db:start` (it applies the migrations and prints the local URL and the anon and service role keys). Local ports are the Supabase defaults plus 1000 so it runs next to other local stacks, and local email (invites, password reset) lands in its Inbucket mail catcher.
+1. Start Docker first, then run `npm run db:start` to start the local Supabase CLI-managed Docker containers (it applies the migrations and prints the local URL and the anon and service role keys). `supabase/config.toml` owns the local ports. Local email (invites, password reset) lands in the mail catcher. This command starts Supabase only; start the API and web apps separately as described below.
 2. Export the API's required names in your shell (the local stack values; `PRIMARY_DB_URL` uses the `app_be` role of the local database) and run `npm run dev:be`. Run the web app with `NEXT_PUBLIC_*` exported the same way and `npm run dev:fe:web` (port 3000; `npm run dev:fe:landing` runs the landing site). Nothing writes a plaintext secrets file; for a one-off with production-shaped values materialize them outside the checkout (`starci app secret materialize production`) and delete them afterwards.
 
 Images: `npm run docker:build` builds the API and command line images; the web image is `docker build -f fe/apps/web/Dockerfile .` from the root. Deploys are manual workflows, described with the cutover in `be/docs/runbooks/cutover.md`.

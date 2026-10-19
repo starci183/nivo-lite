@@ -1,8 +1,5 @@
 {
   "access": {
-    "roleOwner": "Chủ sở hữu",
-    "roleManager": "Quản lý",
-    "roleStaff": "Nhân viên",
     "forbidden": "Bạn không có quyền thực hiện thao tác này. Hãy nhờ chủ sở hữu hoặc quản lý.",
     "noWorkspace": "Bạn chưa thuộc workspace nào. Hãy nhờ chủ sở hữu mời bạn."
   },
@@ -457,7 +454,6 @@
     "staffHasAccount": "Đã có tài khoản",
     "readOnlyTitle": "Chỉ xem",
     "readOnlyBody": "Chỉ chủ sở hữu và quản lý mới sửa được Giao quyền. Bạn xem được nội dung ở đây.",
-    "loading": "Đang tải phần giao quyền",
     "loadFailTitle": "Chưa tải được phần giao quyền",
     "loadFailBody": "Cài đặt giao quyền chưa sẵn sàng. Hãy thử lại sau ít phút.",
     "errNumber": "Nhập một số nguyên từ 0 trở lên.",
@@ -790,11 +786,7 @@
     "maintainAction": "Cập nhật ngay"
   },
   "common": {
-    "loading": "Đang tải...",
     "open": "Mở",
-    "cancel": "Hủy",
-    "save": "Lưu",
-    "copy": "Sao chép",
     "more": "Thêm",
     "updated": "Cập nhật {time}",
     "aiChip": "AI",
@@ -863,7 +855,6 @@
     "agentHint": "Tick những agent làm việc qua kết nối này. Bạn đổi lại được trong Cài đặt của agent.",
     "agentNone": "Chưa có agent cho kết nối này. Hãy tạo trong Agent, rồi tick trong Cài đặt của agent.",
     "continue": "Tiếp tục",
-    "edit": "Sửa",
     "tgChecking": "Đang kiểm tra bot…",
     "tgRetry": "Kiểm tra lại",
     "tgTokenHint": "Giữ kín token: ai có token là điều khiển được bot của bạn.",
@@ -939,7 +930,6 @@
     "purpose_lead_source": "Nhận lead từ quảng cáo biểu mẫu của bạn",
     "agentCardTitle": "Kết nối dùng cho agent này",
     "errName": "Hãy đặt tên cho kết nối (ít nhất 2 ký tự).",
-    "errGeneric": "Có lỗi xảy ra. Bạn thử lại nhé.",
     "statusPending": "Chưa hoàn tất",
     "accessAssign": "Giao cho agent",
     "accessButton": "Agent ({count})",
@@ -2106,7 +2096,6 @@
     "notConnectedYet": "Kết nối sẽ hoạt động sau khi gửi thử thành công một email."
   },
   "engine": {
-    "title": "Bản sao của agent",
     "syncing": "Đang đồng bộ…",
     "resync": "Đồng bộ lại"
   },
@@ -2128,9 +2117,7 @@
     "failUnavailable": "NIVO chưa bật tích hợp Google. Bạn vui lòng thử lại sau.",
     "failState": "Liên kết kết nối đã hết hạn. Hãy bấm Kết nối Google lại.",
     "failGeneric": "Có lỗi khi kết nối. Hãy bấm Kết nối Google lại.",
-    "failNoRefresh": "Google chưa cấp quyền lâu dài. Hãy bấm Kết nối Google lại và đồng ý mọi quyền.",
-    "close": "Đóng",
-    "back": "Quay lại"
+    "failNoRefresh": "Google chưa cấp quyền lâu dài. Hãy bấm Kết nối Google lại và đồng ý mọi quyền."
   },
   "governance": {
     "dept_chatbot": "Chatbot AI",
@@ -2789,7 +2776,6 @@
     "daysAgo": "{n} ngày trước",
     "loadFailTitle": "Chưa tải được đầu vào",
     "loadFailBody": "Danh sách đầu vào chưa sẵn sàng. Hãy thử lại sau ít phút.",
-    "loading": "Đang tải đầu vào",
     "feedAria": "Đầu vào đã nhận",
     "unnamed": "Người gửi chưa rõ",
     "simulationQueued": "Đã nhận đầu vào và xếp hàng xử lý.",
@@ -2949,7 +2935,6 @@
     "visInternalLong": "Nội bộ: chỉ agent nội bộ và nhân viên",
     "noVectors": "Chỉ tìm theo từ khóa",
     "open": "Mở",
-    "back": "Tất cả tài liệu",
     "detailMeta": "Thêm {when}",
     "passagesTitle": "Các đoạn",
     "passagesHint": "Cách nguồn này được chia nhỏ. Agent lấy đúng những đoạn này.",
@@ -3747,8 +3732,7 @@
     "testSkipNote": "Kết nối đã được lưu. Bạn có thể hoàn tất ngay; tin nhắn đầu tiên sẽ hiện trong danh sách.",
     "pageLine": "Page: {page}",
     "igLine": "Instagram: @{handle}",
-    "noIgLine": "Chưa liên kết tài khoản Instagram.",
-    "errGeneric": "Meta gặp sự cố. Vui lòng thử lại."
+    "noIgLine": "Chưa liên kết tài khoản Instagram."
   },
   "moduleSetup": {
     "chatTitle": "Chat thiết lập với NIVO",
@@ -3774,13 +3758,11 @@
     "editCancel": "Hủy",
     "unconfirm": "Mở lại",
     "evidencePlaceholder": "Ghi điều đúng với doanh nghiệp của bạn",
-    "evidenceEmpty": "Chưa bàn đến",
     "apply": "Áp dụng",
     "applying": "Đang áp dụng...",
     "applyHint": "Xác nhận đủ mọi mục mới áp dụng được. Sau đó agent chạy theo bản này.",
     "applyUnchanged": "Bản nháp này đã là bản đang dùng.",
     "applied": "Đã áp dụng bản {version}. Trợ lý đang dùng bản này.",
-    "applyFailed": "Chưa áp dụng được",
     "requirementsTitle": "Agent chạy tốt nhất khi đã có những thứ này",
     "requirementsBody": "Chưa có:",
     "requirementsFix": "Thiết lập",
@@ -3854,7 +3836,6 @@
     "catalogTitle": "Danh mục agent",
     "catalogDescription": "Mua agent để thêm một trợ lý AI vào đội ngũ. Agent có sẵn có thể dùng ngay.",
     "open": "Mở {name}",
-    "statusActive": "Đang hoạt động",
     "statusPaused": "Tạm dừng",
     "chat": "Chat",
     "hintName": "Hiển thị cho khách và đồng đội.",
@@ -4054,7 +4035,6 @@
     "simulatedTag": "Mô phỏng",
     "today": "Hôm nay",
     "yesterday": "Hôm qua",
-    "you": "Bạn",
     "aiBadge": "AI",
     "copyText": "Sao chép",
     "copied": "Đã sao chép",
@@ -4197,8 +4177,6 @@
     "scanTitle": "Quét mã bằng app ngân hàng",
     "trust": "Chuyển khoản ngân hàng, tự động xác nhận trong vài giây. Không cần thẻ.",
     "allWorkspaces": "Tất cả workspace",
-    "next": "Tiếp tục",
-    "back": "Quay lại",
     "workspaceName": "Tên workspace",
     "workspaceNameHint": "Thường là tên doanh nghiệp của bạn. Có thể đổi sau.",
     "creating": "Đang tạo...",
@@ -4791,7 +4769,6 @@
     "confirmYesRemove": "Xóa",
     "confirmYesDisable": "Tắt",
     "confirmNo": "Hủy",
-    "done": "Đã lưu.",
     "invitesTitle": "Lời mời đang chờ",
     "invitesDesc": "Những người đã được mời nhưng chưa tham gia.",
     "invitesEmpty": "Không có lời mời nào đang chờ.",
@@ -4836,7 +4813,6 @@
   },
   "video": {
     "eyebrow": "Tạo video",
-    "title": "Video ngắn cho cửa hàng của bạn",
     "description": "Chọn video để làm gì, NIVO soạn kịch bản, bạn sửa lại, rồi dựng thành video đăng TikTok, Reels, Zalo hoặc Facebook.",
     "loadFailedTitle": "Chưa mở được trang Tạo video",
     "loadFailedBody": "Dữ liệu có thể chưa sẵn sàng. Bạn thử lại sau ít phút.",
@@ -5051,7 +5027,6 @@
     "event_decision_made": "Chủ shop đã duyệt hoặc từ chối",
     "testHttpError": "Nơi nhận trả lời lỗi HTTP {status}.",
     "testUnreachable": "Nơi nhận không trả lời trong 10 giây, hoặc không kết nối được tới địa chỉ webhook.",
-    "errGeneric": "Có lỗi xảy ra. Bạn thử lại nhé.",
     "snippet": "const crypto = require('crypto');\nconst signingKey = '<DÁN_KHOÁ_KÝ_VÀO_ĐÂY>';\n\nconst headers = $input.first().json.headers;\nconst raw = (await this.helpers.getBinaryDataBuffer(0, 'data')).toString('utf8');\nconst ts = String(headers['x-nivo-timestamp'] || '');\n\n// Chỉ nhận tin trong vòng 5 phút\nif (!ts || Math.abs(Date.now() - Number(ts)) > 5 * 60 * 1000) throw new Error('Tin quá cũ');\n\nconst expected = Buffer.from(crypto.createHmac('sha256', signingKey).update(ts + '.' + raw).digest('hex'));\nconst got = Buffer.from(String(headers['x-nivo-signature'] || ''));\nif (expected.length !== got.length || !crypto.timingSafeEqual(expected, got)) throw new Error('Sai chữ ký');\n\n// headers['x-nivo-delivery'] giữ nguyên khi gửi lại: dùng để bỏ qua tin trùng\nreturn [{ json: JSON.parse(raw) }];",
     "urlPlaceholder": "https://"
   },
