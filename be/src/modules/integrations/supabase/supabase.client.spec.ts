@@ -34,15 +34,15 @@ const options: SupabaseOptions = {
 }
 
 const withPublicKey: SupabaseOptions = { ...options, anonKey: new Secret("publishable-key") }
-const passwordResponse = (): Response =>
+const passwordResponse = (id = "user-1", accessToken = "fixture-access"): Response =>
     new Response(
         JSON.stringify({
-            access_token: "fixture-access",
+            access_token: accessToken,
             refresh_token: "fixture-refresh",
             expires_in: 3600,
             token_type: "bearer",
             user: {
-                id: "user-1",
+                id,
                 aud: "authenticated",
                 role: "authenticated",
                 email: "a@example.test",
@@ -163,11 +163,16 @@ describe("createSupabasePublicClient / owned password sessions", () => {
                 throw new SupabaseError({ code: SupabaseErrorCode.ProviderUnavailable })
             },
         })
-        jest.spyOn(globalThis, "fetch").mockResolvedValueOnce(passwordResponse()).mockResolvedValue(response)
+        const fetch = jest
+            .spyOn(globalThis, "fetch")
+            .mockResolvedValueOnce(passwordResponse())
+            .mockResolvedValue(response)
         const session = await subject
             .createSupabasePublicClient(withPublicKey)
             .openPasswordPrincipal("a@example.test", "fixture-password")
         await expect(session?.close()).rejects.toMatchObject({ code: SupabaseErrorCode.ProviderUnavailable })
+        await expect(session?.close()).resolves.toBe(false)
+        expect(fetch).toHaveBeenCalledTimes(2)
     })
 })
 
@@ -234,5 +239,55 @@ describe("createSupabasePublicClient / authenticated identity readback", () => {
                 ? client.openPasswordPrincipal("a@example.test", "fixture-password")
                 : client.verifyUser("fixture-session")
         await expect(result).rejects.toMatchObject({ code: SupabaseErrorCode.ProviderUnavailable })
+    })
+})
+
+describe("createSupabasePublicClient / principal isolation", () => {
+    afterEach(() => {
+        jest.restoreAllMocks()
+    })
+
+    it.each(["password", "session"])(
+        "refuses an empty %s identity without retaining an owned session",
+        async (kind) => {
+            const subject = await build()
+            const response =
+                kind === "password" ? passwordResponse("") : new Response(JSON.stringify({ id: "" }), { status: 200 })
+            const fetch = jest
+                .spyOn(globalThis, "fetch")
+                .mockResolvedValueOnce(response)
+                .mockResolvedValue(new Response(null, { status: 204 }))
+            const client = subject.createSupabasePublicClient(withPublicKey)
+            const result =
+                kind === "password"
+                    ? client.openPasswordPrincipal("a@example.test", "fixture-password")
+                    : client.verifyUser("fixture-session")
+            await expect(result).resolves.toBeNull()
+            expect(fetch).toHaveBeenCalledTimes(kind === "password" ? 2 : 1)
+            if (kind === "password")
+                expect(fetch).toHaveBeenLastCalledWith(
+                    expect.stringContaining("/logout?scope=local"),
+                    expect.any(Object),
+                )
+        },
+    )
+
+    it("closes each concurrent password principal with its own access token", async () => {
+        const subject = await build()
+        const fetch = jest
+            .spyOn(globalThis, "fetch")
+            .mockResolvedValueOnce(passwordResponse("user-1", "first-fixture-access"))
+            .mockResolvedValueOnce(passwordResponse("user-2", "second-fixture-access"))
+            .mockResolvedValue(new Response(null, { status: 204 }))
+        const client = subject.createSupabasePublicClient(withPublicKey)
+        const first = await client.openPasswordPrincipal("a@example.test", "first-fixture-password")
+        const second = await client.openPasswordPrincipal("b@example.test", "second-fixture-password")
+        expect(first?.id).toBe("user-1")
+        expect(second?.id).toBe("user-2")
+        await expect(first?.close()).resolves.toBe(true)
+        await expect(second?.close()).resolves.toBe(true)
+        expect(fetch).toHaveBeenCalledTimes(4)
+        expect(new Headers(fetch.mock.calls[2]?.[1]?.headers).get("authorization")).toBe("Bearer first-fixture-access")
+        expect(new Headers(fetch.mock.calls[3]?.[1]?.headers).get("authorization")).toBe("Bearer second-fixture-access")
     })
 })

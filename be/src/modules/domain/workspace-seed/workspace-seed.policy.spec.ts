@@ -94,6 +94,7 @@ describe("workspace seed input refusal", () => {
     it.each([
         null,
         [],
+        "private-scalar",
         { ...WIRE, schema: "wrong" },
         { ...WIRE, action: "unknown" },
         { ...WIRE, workspaceId: undefined },
