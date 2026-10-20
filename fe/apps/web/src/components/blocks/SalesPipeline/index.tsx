@@ -19,8 +19,9 @@ import type { LeadStageId, SalesDeal } from "@/modules/types"
 const MIN_REASON_CHARS = 5
 const LANES: ReadonlyArray<LeadStageId> = [...OPEN_LANES, "won", "lost"]
 const isClosing = (stage: LeadStageId): boolean => stage === "won" || stage === "lost"
+const STAGE_IDS: ReadonlySet<string> = new Set(DEAL_STAGES)
 const isStage = (value: string): value is LeadStageId => {
-    return DEAL_STAGES.some((stage) => stage === value)
+    return STAGE_IDS.has(value)
 }
 
 const createSalesPipelineState = (input: SalesPipelineControllerInput) => {

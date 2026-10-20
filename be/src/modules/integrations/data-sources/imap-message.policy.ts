@@ -37,15 +37,18 @@ const stripBlocks = (html: string): string => {
     const ends = { script: lower.indexOf("</script>"), style: lower.indexOf("</style>") }
     const parts: Array<string> = []
     let start = 0
-    for (let index = 0; index < html.length; index++) {
+    let cursor = 0
+    while (cursor < html.length) {
+        const index = cursor
+        cursor += 1
         if (html[index] !== "<") continue
         const kind = lower.startsWith("script", index + 1) ? "script" : "style"
         if (!lower.startsWith(kind, index + 1)) continue
         if (ends[kind] >= 0 && ends[kind] < index) ends[kind] = lower.indexOf(`</${kind}>`, index)
         if (ends[kind] < 0) continue
         parts.push(html.slice(start, index), " ")
-        index = ends[kind] + kind.length + 2
-        start = index + 1
+        cursor = ends[kind] + kind.length + 3
+        start = cursor
     }
     parts.push(html.slice(start))
     return parts.join("")

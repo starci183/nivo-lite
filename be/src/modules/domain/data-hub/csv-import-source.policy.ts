@@ -13,11 +13,10 @@ export const decodeUpload = (file: CsvUploadedFile | null | undefined): CsvDecod
 }
 
 /** The pasted text; a refusal when it is empty or over ten megabytes. */
-export const pastedText = (raw: string | null | undefined): string => {
-    const text = raw ?? ""
-    if (text.trim() === "") throw invalid(CSV_COPY.pasteTable)
-    if (Buffer.byteLength(text) > TABLE_MAX_BYTES) throw invalid(CSV_COPY.textTooLarge)
-    return text
+export const pastedText = (raw: string | null = ""): string => {
+    if (raw === null || raw.trim() === "") throw invalid(CSV_COPY.pasteTable)
+    if (Buffer.byteLength(raw) > TABLE_MAX_BYTES) throw invalid(CSV_COPY.textTooLarge)
+    return raw
 }
 
 /** The typed grid ({headers, rows}) cleaned and bounded; a refusal when no column has a name. */

@@ -17,7 +17,8 @@ interface LeadsBoardProps {
     readonly isLoading?: boolean
 }
 
-const isStage = (key: string): key is LeadStageId => STAGE_ORDER.some((stage) => stage === key)
+const STAGE_IDS: ReadonlySet<string> = new Set(STAGE_ORDER)
+const isStage = (key: string): key is LeadStageId => STAGE_IDS.has(key)
 
 /** The Leads list: the search, the stage tabs and the proposal of an owner live here, the drawing in the pure half. */
 export const LeadsBoard = (props: LeadsBoardProps) => {

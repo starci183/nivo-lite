@@ -53,7 +53,7 @@ const textRuns = (xml: string, tag: string): string =>
 /** The zero-based column of a cell reference such as `C7`. */
 const columnOf = (reference: string): number => {
     const lineBreak = Math.max(...["\n", "\r", "\u2028", "\u2029"].map((ending) => reference.lastIndexOf(ending)))
-    const letters = lineBreak < 0 ? reference.replace(/^([A-Za-z]*)[\s\S]*$/u, "$1") : reference.slice(0, lineBreak)
+    const letters = lineBreak < 0 ? reference.replace(/[^A-Za-z][\s\S]*/u, "") : reference.slice(0, lineBreak)
     return Math.max(
         0,
         [...letters].reduce((column, letter) => column * 26 + ALPHABET.indexOf(letter.toUpperCase()) + 1, 0) - 1,

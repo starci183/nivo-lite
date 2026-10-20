@@ -54,6 +54,21 @@ const rowData = (
     return data
 }
 
+/** The external id of a row: its id cell (null when empty or too long), or its line when the table has no id column. */
+const externalIdOf = (
+    row: ReadonlyArray<string>,
+    idIndex: number,
+    mapping: CsvMapping,
+    lineNo: number,
+): string | null => {
+    if (idIndex < 0) return `row-${lineNo}`
+    const value = (row[idIndex] ?? "").trim()
+    if (value === "" || value.length > 300) return null
+    return mapping.idColumn !== null && mapping.kinds[mapping.idColumn] === "phone"
+        ? normalisePhone(value) || value
+        : value
+}
+
 /** Rows to hub records: trimmed text, phones as digit text, parsed numbers and dates in separate fields, the original text kept. */
 export const buildRecords = (table: Pick<Table, "headers" | "rows">, mapping: CsvMapping): CsvBuiltRecords => {
     const { headers, rows } = table
@@ -68,18 +83,11 @@ export const buildRecords = (table: Pick<Table, "headers" | "rows">, mapping: Cs
         const data = rowData(headers, row, mapping)
         if (Object.keys(data).length === 0) return
         const lineNo = n + 1
-        let externalId: string
-        if (idIndex >= 0) {
-            const value = (row[idIndex] ?? "").trim()
-            if (value === "" || value.length > 300) {
-                skipped += 1
-                return
-            }
-            externalId =
-                mapping.idColumn !== null && mapping.kinds[mapping.idColumn] === "phone"
-                    ? normalisePhone(value) || value
-                    : value
-        } else externalId = `row-${lineNo}`
+        const externalId = externalIdOf(row, idIndex, mapping, lineNo)
+        if (externalId === null) {
+            skipped += 1
+            return
+        }
         const titled = titleIndex >= 0 ? (row[titleIndex] ?? "").trim() : ""
         const title = titled || (idIndex >= 0 ? externalId : CSV_COPY.rowTitle(lineNo))
         const when = dateIndex >= 0 ? parseDateLoose((row[dateIndex] ?? "").trim()) : null

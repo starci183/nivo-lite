@@ -23,8 +23,7 @@ export const assertSeedScope = (request: SeedRequest): Readonly<{ id: string } |
         if (request.workspaceName !== undefined || !UUID.test(request.workspaceId)) invalid()
         return { id: request.workspaceId }
     }
-    if (request.workspaceName === undefined || !request.workspaceName.trim() || request.workspaceName.length > 120)
-        invalid()
+    if (!request.workspaceName?.trim() || request.workspaceName.length > 120) invalid()
     return { name: request.workspaceName }
 }
 
@@ -34,28 +33,44 @@ export const seedPassword = (account: SeedAccount): Secret => {
     return account.password
 }
 
+const ACCOUNT_KEYS: ReadonlySet<string> = new Set(["email", "name", "password"])
+const ENSURE_KEYS: ReadonlySet<string> = new Set([
+    "schema",
+    "action",
+    "workspaceId",
+    "workspaceName",
+    "owner",
+    "manager",
+    "staff",
+    "principalToken",
+    "bootstrapOwner",
+])
+const ROLE_KEYS: ReadonlySet<string> = new Set([
+    "schema",
+    "action",
+    "workspaceId",
+    "memberId",
+    "role",
+    "principalToken",
+])
+
+/** One "@" with text before it and a dot inside the domain, no whitespace; checked in linear scans. */
+const isEmailShape = (email: string): boolean => {
+    const at = email.indexOf("@")
+    return at > 0 && !email.includes("@", at + 1) && !/\s/.test(email) && email.slice(at + 2, -1).includes(".")
+}
+
 const account = (value: unknown): SeedAccount => {
-    if (!isRecord(value) || Object.keys(value).some((key) => !["email", "name", "password"].includes(key))) invalid()
+    if (!isRecord(value) || Object.keys(value).some((key) => !ACCOUNT_KEYS.has(key))) invalid()
     const email = text(value.email, 254).toLowerCase()
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) invalid()
+    if (!isEmailShape(email)) invalid()
     const name = text(value.name, 120).trim()
     if (name.length === 0) invalid()
     return { email, name, password: optionalSecret(value.password) }
 }
 
 const ensureRequest = (value: Record<string, unknown>): SeedRequest => {
-    const keys = [
-        "schema",
-        "action",
-        "workspaceId",
-        "workspaceName",
-        "owner",
-        "manager",
-        "staff",
-        "principalToken",
-        "bootstrapOwner",
-    ]
-    if (Object.keys(value).some((key) => !keys.includes(key))) invalid()
+    if (Object.keys(value).some((key) => !ENSURE_KEYS.has(key))) invalid()
     if ((value.workspaceId === undefined) === (value.workspaceName === undefined)) invalid()
     const workspaceId = value.workspaceId === undefined ? undefined : text(value.workspaceId, 36)
     if (workspaceId !== undefined && !UUID.test(workspaceId)) invalid()
@@ -78,8 +93,7 @@ const ensureRequest = (value: Record<string, unknown>): SeedRequest => {
 }
 
 const roleRequest = (value: Record<string, unknown>): SeedRoleRequest => {
-    const keys = ["schema", "action", "workspaceId", "memberId", "role", "principalToken"]
-    if (Object.keys(value).some((key) => !keys.includes(key))) invalid()
+    if (Object.keys(value).some((key) => !ROLE_KEYS.has(key))) invalid()
     const workspaceId = text(value.workspaceId, 36),
         memberId = text(value.memberId, 36),
         role = value.role

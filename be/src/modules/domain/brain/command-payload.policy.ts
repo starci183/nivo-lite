@@ -188,6 +188,22 @@ const readDecision = (
     }
 }
 
+/** Reads a knowledge question: it needs its question, module and audience. */
+const knowledgeAsk = (payload: Payload): BrainCommand | null => {
+    const question = text(payload, "question")
+    const module = text(payload, "module")
+    const audience = text(payload, "audience")
+    if (question === undefined || module === undefined || audience === undefined) return null
+    return { kind: "knowledge.ask", ask: { question, module, audience } }
+}
+
+/** Reads a picked Drive folder: it needs its folder id and token. */
+const drivePicked = (payload: Payload): BrainCommand | null => {
+    const folderId = text(payload, "folderId")
+    const token = text(payload, "token")
+    return folderId === undefined || token === undefined ? null : { kind: "drive.picked", picked: { folderId, token } }
+}
+
 /** The command of one kind, read from its payload. */
 const read = (kind: BrainCommandKind, payload: Payload): BrainCommand | null => {
     const id = text(payload, "id")
@@ -214,22 +230,14 @@ const read = (kind: BrainCommandKind, payload: Payload): BrainCommand | null => 
             return sourceId === undefined ? null : { kind, reindex: { sourceId, content: text(payload, "content") } }
         case "source.update":
             return sourceUpdate(payload, sourceId)
-        case "knowledge.ask": {
-            const question = text(payload, "question")
-            const module = text(payload, "module")
-            const audience = text(payload, "audience")
-            if (question === undefined || module === undefined || audience === undefined) return null
-            return { kind, ask: { question, module, audience } }
-        }
+        case "knowledge.ask":
+            return knowledgeAsk(payload)
         case "drive.linked": {
             const url = text(payload, "url")
             return url === undefined ? null : { kind, url }
         }
-        case "drive.picked": {
-            const folderId = text(payload, "folderId")
-            const token = text(payload, "token")
-            return folderId === undefined || token === undefined ? null : { kind, picked: { folderId, token } }
-        }
+        case "drive.picked":
+            return drivePicked(payload)
         case "brain.maintain":
             return { kind }
         case "knowledge.reembed":

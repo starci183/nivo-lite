@@ -72,7 +72,7 @@ export const useInviteView = (token: string): InviteView => {
     }
     const isLoading = (preview === undefined && error === undefined) || user === undefined
     if (isLoading) return { ...base, state: "loading", title: t("eyebrow"), body: "" }
-    if (preview === undefined || preview.state !== "pending") {
+    if (preview?.state !== "pending") {
         return { ...base, state: "unavailable", ...unavailableCopy(t, preview?.state ?? "invalid") }
     }
     return {

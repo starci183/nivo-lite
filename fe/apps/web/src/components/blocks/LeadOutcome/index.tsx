@@ -15,7 +15,8 @@ interface LeadOutcomeProps {
     readonly leadId?: string
 }
 
-const isStage = (value: string): value is LeadStageId => STAGE_ORDER.some((stage) => stage === value)
+const STAGE_IDS: ReadonlySet<string> = new Set(STAGE_ORDER)
+const isStage = (value: string): value is LeadStageId => STAGE_IDS.has(value)
 
 /** The outcome card: the stage choice and the evidence text live here, the drawing in the pure half. */
 export const LeadOutcome = (props: LeadOutcomeProps) => {

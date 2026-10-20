@@ -19,7 +19,7 @@ const normalizeEmail = (value: ConfigValue | undefined): string => {
     const email = String(value ?? "").trim()
     const at = email.indexOf("@")
     const domain = email.slice(at + 1)
-    return at > 0 && email.indexOf("@", at + 1) === -1 && !/\s/.test(email) && domain.slice(1, -1).includes(".")
+    return at > 0 && !email.includes("@", at + 1) && !/\s/.test(email) && domain.slice(1, -1).includes(".")
         ? email.toLowerCase()
         : ""
 }

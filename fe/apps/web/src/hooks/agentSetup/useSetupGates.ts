@@ -17,8 +17,8 @@ type GateChange = { readonly action: "confirm" | "reopen" | "edit"; readonly evi
 /** What the last apply said: nothing yet, or applied with the new version. */
 type ApplyNote = { readonly tone: "idle" | "applied"; readonly version: number }
 
-const SETUP_KEYS: ReadonlyArray<string> = [QUERY_SETUP_STATE_SWR_KEY, QUERY_SETUP_VERSIONS_SWR_KEY]
-const isSetupKey = (key: unknown): boolean => Array.isArray(key) && SETUP_KEYS.includes(key[0])
+const SETUP_KEYS: ReadonlySet<unknown> = new Set([QUERY_SETUP_STATE_SWR_KEY, QUERY_SETUP_VERSIONS_SWR_KEY])
+const isSetupKey = (key: unknown): boolean => Array.isArray(key) && SETUP_KEYS.has(key[0])
 
 /** The gate checklist of the setup: confirm, reopen or edit one gate, and apply the draft as a version. A failure was already toasted. */
 export const useSetupGates = (setupSessionId: string, installationId: string) => {

@@ -128,5 +128,5 @@ export const proxy = async (original: NextRequest): Promise<NextResponse> => {
 
 /** Routes that pass through the proxy: everything except static assets. */
 export const config = {
-    matcher: ["/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|webp)$).*)"],
+    matcher: ["/((?!_next/static|_next/image|favicon.ico|.*[.](?:svg|png|jpg|jpeg|webp)$).*)"],
 }

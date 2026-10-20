@@ -44,7 +44,7 @@ const columnLetter = (width: number): string => String.fromCodePoint(64 + width)
 /** Reads a cell reference ending at an offset without retrying an unanchored pattern at every letter. */
 const endingCell = (range: string, end: number): { readonly start: number; readonly row: number } | null => {
     let digits = end
-    while (digits > 0 && /[0-9]/u.test(range.charAt(digits - 1))) digits -= 1
+    while (digits > 0 && /\d/u.test(range.charAt(digits - 1))) digits -= 1
     if (digits === end) return null
     let start = digits
     while (start > 0 && /[A-Z]/u.test(range.charAt(start - 1))) start -= 1

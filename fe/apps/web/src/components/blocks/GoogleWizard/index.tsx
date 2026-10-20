@@ -24,8 +24,10 @@ const FAILURE_KEYS = {
 /** The sentence key of a Google failure, including the generic one. */
 type GoogleFailureMessage = (typeof FAILURE_KEYS)[GoogleFailure] | "failGeneric"
 
+const GOOGLE_FAILURE_SET: ReadonlySet<string> = new Set(GOOGLE_FAILURES)
+
 /** Whether the return address names one of the known Google failures. */
-const isGoogleFailure = (value: string): value is GoogleFailure => GOOGLE_FAILURES.some((failure) => failure === value)
+const isGoogleFailure = (value: string): value is GoogleFailure => GOOGLE_FAILURE_SET.has(value)
 
 /** The sentence key for a Google failure, or the generic one when the reason is unknown. */
 const googleFailureMessage = (reason: string): GoogleFailureMessage =>

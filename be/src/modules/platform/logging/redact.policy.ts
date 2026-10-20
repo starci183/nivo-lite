@@ -19,11 +19,11 @@ const ASSIGNMENT_KEYS: ReadonlyArray<RegExp> = [
 const redactAssignments = (input: string): string => {
     const parts: Array<string> = []
     let cursor = 0
-    const heads = /(?<![\w-])([?&;\s"']?[\w-]+["']?\s*[=:]\s*["']?)/giu
+    const heads = /(?<![\w-])([?&;\s"']?([\w-]+)["']?\s*[=:]\s*["']?)/giu
     for (const found of input.matchAll(heads)) {
         if (found.index < cursor) continue
         const head = found[0]
-        const name = head.replace(/^[^\w-]*([\w-]*)[\s\S]*$/iu, "$1")
+        const name = String(found[2])
         if (!ASSIGNMENT_KEYS.some((pattern) => pattern.test(name))) continue
         const end = found.index + head.length
         const value = /^[^\s"'&,;}]{3,}/u.exec(input.slice(end))?.[0]

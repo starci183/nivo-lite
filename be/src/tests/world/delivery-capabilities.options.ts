@@ -38,7 +38,9 @@ import { TestWorldError, TestWorldErrorCode } from "./test-world.error"
 /** Receipt proofs stop before downstream Meta event jobs are consumed. */
 class DeferredMetaEvents {
     take(): Promise<boolean> {
-        return Promise.reject(new TestWorldError({ code: TestWorldErrorCode.TransactionRefused }))
+        return Promise.resolve().then(() => {
+            throw new TestWorldError({ code: TestWorldErrorCode.TransactionRefused })
+        })
     }
 }
 

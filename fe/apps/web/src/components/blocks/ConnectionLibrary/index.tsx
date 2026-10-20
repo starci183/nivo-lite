@@ -41,7 +41,7 @@ interface BuildConnectionLibraryStateInput {
     readonly locale: ReturnType<typeof useLocale>
     readonly category: ConnectorCategory | "all"
     readonly sort: "popular" | "name"
-    readonly props: ConnectionLibraryProps
+    readonly isLoading: boolean
     readonly countOf: Map<string, number>
     readonly setText: import("react").Dispatch<import("react").SetStateAction<string>>
     readonly setSort: import("react").Dispatch<import("react").SetStateAction<"popular" | "name">>
@@ -58,7 +58,7 @@ const buildConnectionLibraryState = ({
     locale,
     category,
     sort,
-    props,
+    isLoading,
     countOf,
     setText,
     setSort,
@@ -86,7 +86,6 @@ const buildConnectionLibraryState = ({
     const shown = searched
         .filter((item) => category === "all" || item.entry.category === category)
         .sort(sort === "name" ? byName : byPopularity)
-    const isLoading = props.isLoading ?? false
     const cards: ReadonlyArray<LibraryCard> = shown.map(({ entry, name, blurb }) => {
         const count = entry.provider === undefined ? 0 : (countOf.get(entry.provider) ?? 0)
         const badge =
@@ -140,7 +139,7 @@ export const ConnectionLibrary = (props: ConnectionLibraryProps) => {
         locale,
         category,
         sort,
-        props,
+        isLoading: props.isLoading ?? false,
         countOf,
         setText,
         setSort,

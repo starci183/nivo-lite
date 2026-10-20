@@ -24,6 +24,8 @@ interface Busy {
 }
 
 /** Resolves navigation and customer identity for an attention row. */
+const FIELD_NAMES: ReadonlySet<string> = new Set(KNOWN_FIELDS)
+
 const hrefOf = (row: AttentionRow): string | null =>
     (row.kind === "decision" || row.kind === "clarify") && row.decisionId !== null ? decisionHref(row.decisionId) : null
 const customerOf = (row: AttentionRow): string => {
@@ -42,7 +44,7 @@ export const SalesAttention = () => {
     const active = actions.isMutating ? busy : null
 
     const fieldLabel = (name: string): string => {
-        return KNOWN_FIELDS.some((field) => field === name) ? g(`field_${name}`) : name
+        return FIELD_NAMES.has(name) ? g(`field_${name}`) : name
     }
     const ageText = (since: string): string => {
         const age = ageParts(since, nowIso)

@@ -3,7 +3,13 @@ import type { Outcome } from "@modules/platform/primitives"
 import { LeadActionsErrorCode } from "./errors/lead-actions.error"
 import type { LeadAction, LeadActionInput } from "./lead-actions.contracts"
 
-const ACTIONS: ReadonlyArray<string> = ["create", "refresh-context", "suggest-owner", "draft-execution", "settle-won"]
+const ACTIONS: ReadonlySet<string> = new Set([
+    "create",
+    "refresh-context",
+    "suggest-owner",
+    "draft-execution",
+    "settle-won",
+])
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/iu
 const EMAIL_PART = /^[^\s@]+$/u
 const NAME_MAX = 200
@@ -13,7 +19,7 @@ const PHONE_MAX = 80
 const EMAIL_MAX = 320
 const EVIDENCE_MAX = 2000
 
-const isAction = (value: unknown): value is LeadAction => typeof value === "string" && ACTIONS.includes(value)
+const isAction = (value: unknown): value is LeadAction => typeof value === "string" && ACTIONS.has(value)
 
 /** Checks the email shape in linear scans, with text on both sides of a domain dot. */
 const isEmail = (value: string): boolean => {

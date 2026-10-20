@@ -19,7 +19,7 @@ export const useConsoleGate = (): boolean => {
     const session = useConsoleSession()
     const router = navigation.useRouter()
     useSyncActiveWorkspace(session?.currentWorkspaceId)
-    const isEmpty = memberships.data !== undefined && memberships.data.length === 0
+    const isEmpty = memberships.data?.length === 0
     const first = useMutateStartFirstWorkspaceSwr(isEmpty)
     const noFirstWorkspace = first.data === null || first.error !== undefined
     const current = memberships.data?.find((entry) => entry.workspace.id === session?.currentWorkspaceId)

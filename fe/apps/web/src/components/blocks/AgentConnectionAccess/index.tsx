@@ -16,7 +16,7 @@ import { AgentConnectionAccessBase, type AgentConnectionAccessRow } from "./comp
 
 const NONE = "none"
 const LEVELS = ["read", "ask", "auto"] as const
-const PURPOSES: ReadonlyArray<string> = ["inbound_chat", "outbound_chat", "bank_feed", "lead_source"]
+const PURPOSES: ReadonlySet<string> = new Set(["inbound_chat", "outbound_chat", "bank_feed", "lead_source"])
 const STATUS_TONE = { connected: "success", error: "danger", pending: "warning", disconnected: "neutral" } as const
 const PLACEHOLDER: ReadonlyArray<AgentConnectionAccessRow> = []
 
@@ -45,7 +45,7 @@ export const AgentConnectionAccess = (props: AgentConnectionAccessProps) => {
             label: connection.label,
             statusLabel: t(`connStatus_${connection.status}`),
             statusTone: STATUS_TONE[connection.status],
-            purposeLabel: PURPOSES.includes(connection.purpose) ? t(`grantPurpose_${connection.purpose}`) : "",
+            purposeLabel: PURPOSES.has(connection.purpose) ? t(`grantPurpose_${connection.purpose}`) : "",
             access: levelOf(connection),
             isDisconnected: connection.status === "disconnected",
         }))

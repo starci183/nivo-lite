@@ -22,7 +22,7 @@ export const useTelegramUserBoot = (resumeId: string | undefined): TelegramBoot 
     const ready = useQueryTelegramUserReadySwr(FRESH)
     const setup = useQueryLoadTelegramUserSetupSwr(resumeId, FRESH)
     if (ready.isLoading || ready.isValidating) return { status: "loading", error: null, initial: BLANK_INITIAL }
-    if (ready.data === undefined || !ready.data.configured) {
+    if (!ready.data?.configured) {
         return { status: "unconfigured", error: null, initial: BLANK_INITIAL }
     }
     if (resumeId === undefined) return { status: "ready", error: null, initial: BLANK_INITIAL }

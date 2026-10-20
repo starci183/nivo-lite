@@ -77,6 +77,21 @@ const workTitleOf = (work: OfficeWork, words: OfficeWords, leadName: string | nu
     return leadName === null ? action : [action, leadName].join(" · ")
 }
 
+/** Which state an exception is in. */
+type ExceptionFlags = { readonly isOpen: boolean; readonly isFailed: boolean; readonly isReconcile: boolean }
+
+const reasonViewOf = (
+    work: OfficeWork,
+    words: OfficeWords,
+    flags: ExceptionFlags,
+): Pick<OfficeExceptionView, "hint" | "reasonBadge"> => {
+    if (work.reason === null || !flags.isOpen || flags.isFailed) return { hint: null, reasonBadge: null }
+    return {
+        hint: words.g(`reasonHint_${work.reason}`),
+        reasonBadge: flags.isReconcile ? words.g(`reason_${work.reason}`) : null,
+    }
+}
+
 /** An exception with its words, its choices and who may decide it. */
 export const exceptionView = (work: OfficeWork, words: OfficeWords, context: OfficeContext): OfficeExceptionView => {
     const isOpen = isOpenWork(work)
@@ -87,6 +102,7 @@ export const exceptionView = (work: OfficeWork, words: OfficeWords, context: Off
     const missing = isFailed ? [] : work.missingFields
     const basis = fieldTextOf(work.fields, "basis")
     const title = workTitleOf(work, words, leadName)
+    const reason = reasonViewOf(work, words, { isOpen, isFailed, isReconcile })
     return {
         kind: "exception",
         key: `exception-${work.id}`,
@@ -97,12 +113,11 @@ export const exceptionView = (work: OfficeWork, words: OfficeWords, context: Off
         isAi: agent !== null,
         time: words.time(work.createdAt),
         title,
-        hint: work.reason !== null && isOpen && !isFailed ? words.g(`reasonHint_${work.reason}`) : null,
+        hint: reason.hint,
         status: workStatusOf(work),
         badge: isOpen ? workBadgeOf(work, isReconcile, words) : words.g(`status_${work.status}`),
         department: words.g(`dept_${work.department}`),
-        reasonBadge:
-            isReconcile && isOpen && !isFailed && work.reason !== null ? words.g(`reason_${work.reason}`) : null,
+        reasonBadge: reason.reasonBadge,
         isSimulated: work.origin === "simulated",
         isReconcile,
         errorText: isFailed ? work.error : null,

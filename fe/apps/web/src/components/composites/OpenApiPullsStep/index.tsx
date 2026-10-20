@@ -111,38 +111,46 @@ const PullSettings = (props: PullSettingsProps) => {
 }
 
 /** Step "pulls" of the OpenAPI wizard: tick the GET operations NIVO pulls on a schedule, and map their response. */
-export const OpenApiPullsStep = (props: OpenApiPullsStepProps) => (
-    <div className={classNames.column}>
-        <Text size="sm" tone="muted">
-            {props.text.hint}
-        </Text>
-        <Input
-            id="oa-pull-search"
-            name="pullSearch"
-            label={props.text.search}
-            variant="secondary"
-            value={props.query}
-            onValueChange={props.onQuery}
-        />
-        {props.isEmpty ? <Text size="sm">{props.text.empty}</Text> : null}
-        <div className={classNames.list}>
-            {props.rows.map((row) => (
-                <div key={row.id} className={classNames.row}>
-                    <Checkbox
-                        label={row.label}
-                        description={row.description}
-                        isDisabled={props.isDisabled || !row.isPullable}
-                        isSelected={row.pull !== null}
-                        onSelectedChange={(on) => props.onToggle(row.id, on)}
-                    />
-                    <PullSettings row={row} step={props} />
-                </div>
-            ))}
-        </div>
-        {props.tooMany === null ? null : (
+export const OpenApiPullsStep = (props: OpenApiPullsStepProps) => {
+    const step = {
+        text: props.text,
+        isDisabled: props.isDisabled,
+        entityOptions: props.entityOptions,
+        onPatch: props.onPatch,
+    }
+    return (
+        <div className={classNames.column}>
             <Text size="sm" tone="muted">
-                {props.tooMany}
+                {props.text.hint}
             </Text>
-        )}
-    </div>
-)
+            <Input
+                id="oa-pull-search"
+                name="pullSearch"
+                label={props.text.search}
+                variant="secondary"
+                value={props.query}
+                onValueChange={props.onQuery}
+            />
+            {props.isEmpty ? <Text size="sm">{props.text.empty}</Text> : null}
+            <div className={classNames.list}>
+                {props.rows.map((row) => (
+                    <div key={row.id} className={classNames.row}>
+                        <Checkbox
+                            label={row.label}
+                            description={row.description}
+                            isDisabled={props.isDisabled || !row.isPullable}
+                            isSelected={row.pull !== null}
+                            onSelectedChange={(on) => props.onToggle(row.id, on)}
+                        />
+                        <PullSettings row={row} step={step} />
+                    </div>
+                ))}
+            </div>
+            {props.tooMany === null ? null : (
+                <Text size="sm" tone="muted">
+                    {props.tooMany}
+                </Text>
+            )}
+        </div>
+    )
+}

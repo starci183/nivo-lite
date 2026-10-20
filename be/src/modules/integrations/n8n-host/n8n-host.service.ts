@@ -16,6 +16,7 @@ const IMPORT_COMMAND = [
     "trap 'rm -rf -- \"$directory\"' EXIT",
     'cat > "$directory/workflows.json" && n8n import:workflow --input="$directory/workflows.json"',
 ].join("; ")
+const QUOTED_IMPORT_COMMAND = IMPORT_COMMAND.replaceAll("'", String.raw`'\''`)
 
 @Injectable()
 /**
@@ -53,10 +54,7 @@ export class N8nHostService implements N8nHost {
             id,
         }))
         if (options.dryRun) return planned
-        await host(
-            `docker exec -i ${container} sh -c '${IMPORT_COMMAND.replaceAll("'", String.raw`'\''`)}'`,
-            importDocument(plan),
-        )
+        await host(`docker exec -i ${container} sh -c '${QUOTED_IMPORT_COMMAND}'`, importDocument(plan))
         const imported = await listing()
         const activated: Array<N8nSyncStep> = []
         await eachInOrder(plan, async ({ workflow }) => {

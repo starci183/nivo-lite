@@ -15,11 +15,10 @@ import { GoogleConnectionsService } from "./google-connections.service"
 
 /** The template this extension owns. */
 const SHEET_ORDERS = "sheet_orders"
-const SHEET_EVENTS: ReadonlyArray<string> = ["order.confirmed", "deal.won", "payment.received", "lead.created"]
+const SHEET_EVENTS: ReadonlySet<string> = new Set(["order.confirmed", "deal.won", "payment.received", "lead.created"])
 const FALLBACK_NAME = "NIVO"
 
-const isSheetEvent = (value: unknown): value is SheetEventName =>
-    typeof value === "string" && SHEET_EVENTS.includes(value)
+const isSheetEvent = (value: unknown): value is SheetEventName => typeof value === "string" && SHEET_EVENTS.has(value)
 
 const recordOf = (value: unknown): Readonly<Record<string, unknown>> =>
     typeof value === "object" && value !== null && !Array.isArray(value)

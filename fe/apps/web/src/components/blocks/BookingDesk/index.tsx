@@ -33,7 +33,7 @@ interface BookingDeskProps {
 /** Inputs owned by this display/state mapping. */
 interface BookingDeskStateInput {
     readonly range: ReturnType<typeof useBookingRange>
-    readonly props: BookingDeskProps
+    readonly mode: BookingDeskProps["mode"]
     readonly t: ReturnType<typeof useTranslations<"workbenchBooking">>
     readonly format: ReturnType<typeof useFormatter>
     readonly showCancelled: boolean
@@ -49,7 +49,7 @@ interface BookingDeskStateInput {
 /** Connects booking data, placement state and agenda commands. */
 const buildBookingDeskState = ({
     range,
-    props,
+    mode,
     t,
     format,
     showCancelled,
@@ -63,7 +63,7 @@ const buildBookingDeskState = ({
 }: BookingDeskStateInput) => {
     const { board } = range
     if (board === undefined) return null
-    const isToday = props.mode === "today"
+    const isToday = mode === "today"
     const display = buildBookingDeskDisplay({
         board,
         anchorValue: range.anchor,
@@ -134,7 +134,7 @@ export const BookingDesk = (props: BookingDeskProps) => {
 
     const connected = buildBookingDeskState({
         range,
-        props,
+        mode: props.mode,
         t,
         format,
         showCancelled,

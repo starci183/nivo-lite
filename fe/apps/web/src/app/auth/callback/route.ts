@@ -12,18 +12,17 @@ export const GET = async (request: NextRequest): Promise<NextResponse> => {
     const next = callbackNext(searchParams.get("next"), origin)
     const type = searchParams.get("type")
     const isRecovery = type === "recovery" || next?.startsWith("/reset-password") === true
+    const recoveryFailure = isRecovery ? "/reset-password?error=invalid" : null
     const providerError = searchParams.get("error_code") ?? searchParams.get("error")
     if (providerError) {
         const error = providerError === "access_denied" ? "oauth_denied" : "link_expired"
-        return NextResponse.redirect(
-            new URL(isRecovery ? "/reset-password?error=invalid" : `${APP_ROUTES.login}?error=${error}`, origin),
-        )
+        return NextResponse.redirect(new URL(recoveryFailure ?? `${APP_ROUTES.login}?error=${error}`, origin))
     }
 
     const code = searchParams.get("code")
     const tokenHash = searchParams.get("token_hash")
     const successDestination = isRecovery ? "/reset-password" : (next ?? AUTH_ROUTES.workspaces)
-    const failureDestination = isRecovery ? "/reset-password?error=invalid" : `${APP_ROUTES.login}?error=link_expired`
+    const failureDestination = recoveryFailure ?? `${APP_ROUTES.login}?error=link_expired`
     if (code) {
         const result = await exchangeAuthCode(code)
         return NextResponse.redirect(new URL(result.success ? successDestination : failureDestination, origin))
@@ -33,7 +32,5 @@ export const GET = async (request: NextRequest): Promise<NextResponse> => {
         return NextResponse.redirect(new URL(result.success ? successDestination : failureDestination, origin))
     }
     const error = type === null ? "missing_code" : "link_expired"
-    return NextResponse.redirect(
-        new URL(isRecovery ? "/reset-password?error=invalid" : `${APP_ROUTES.login}?error=${error}`, origin),
-    )
+    return NextResponse.redirect(new URL(recoveryFailure ?? `${APP_ROUTES.login}?error=${error}`, origin))
 }

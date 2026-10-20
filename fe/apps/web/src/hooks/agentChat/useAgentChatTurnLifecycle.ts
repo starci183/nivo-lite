@@ -42,7 +42,7 @@ export const useAgentChatTurnLifecycle = ({
         ])
     }
     const status = useQueryAgentChatTurnStatusSwr(target.agent?.workspaceId, pending?.id, (turn) => {
-        if (pending === undefined || turn.id !== pending.id || settledTurn.current === turn.id) return
+        if (turn.id !== pending?.id || settledTurn.current === turn.id) return
         settledTurn.current = turn.id
         setPendingTurn(undefined)
         if (turn.status === "succeeded") toast.success(t(pending.delivery ? "deliverySucceeded" : "replyReady"))

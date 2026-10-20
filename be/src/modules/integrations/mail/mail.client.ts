@@ -79,7 +79,7 @@ export class MailClient {
         if (platform === null) return Promise.reject(new MailError({ code: MailErrorCode.NotConfigured }))
         const { service, url: _url, ...parsed } = parseConnectionUrl(platform.url.reveal())
         const preset = service === undefined ? false : wellKnown(service)
-        const resolved = { ...parsed, ...(preset || {}) }
+        const resolved = { ...parsed, ...preset }
         const relaxed = this.options.allowPrivateHosts
         const transport = nodemailer.createTransport({
             ...resolved,

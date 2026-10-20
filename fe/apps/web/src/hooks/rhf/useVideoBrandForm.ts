@@ -7,6 +7,8 @@ import { useForm } from "react-hook-form"
 import { z } from "zod"
 import { MUSIC_TRACKS, TTS_VOICES, type Brand } from "@/modules/video"
 
+const VOICE_IDS: ReadonlySet<string> = new Set(TTS_VOICES)
+
 /** Validates the brand kit with localized messages before it is saved. */
 export const useVideoBrandForm = (initial: Brand) => {
     const t = useTranslations("video")
@@ -25,7 +27,7 @@ export const useVideoBrandForm = (initial: Brand) => {
                 .string({ error })
                 .refine((value) => MUSIC_TRACKS.some((track) => track.id === value), error)
                 .nullable(),
-            voice: z.string({ error }).refine((value) => TTS_VOICES.some((voice) => voice === value), error),
+            voice: z.string({ error }).refine((value) => VOICE_IDS.has(value), error),
         })
     }, [t])
     return useForm<Brand>({

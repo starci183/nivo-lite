@@ -182,7 +182,7 @@ export class WorkspaceMembersService {
                 entry.displayName,
             ])
             const [row] = await tx.query<Array<MemberRow>>(FIND_MEMBER, [entry.workspaceId, entry.userId])
-            if (row === undefined || row.role !== entry.role || row.status !== "active")
+            if (row?.role !== entry.role || row.status !== "active")
                 throw new WorkspaceMembersError({ code: WorkspaceMembersErrorCode.EnsureConflict })
             return toMember(row)
         })

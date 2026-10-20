@@ -54,8 +54,10 @@ const OFFER_STATUSES: ReadonlyArray<OfferStatus> = [
 const pick = <Value extends string>(list: ReadonlyArray<Value>, text: string, fallback: Value): Value =>
     list.find((item) => item === text) ?? fallback
 
+const STAGE_NAMES: ReadonlySet<unknown> = new Set(STAGES)
+
 /** True for a stage name. */
-export const isStage = (value: unknown): value is Stage => STAGES.some((stage) => stage === value)
+export const isStage = (value: unknown): value is Stage => STAGE_NAMES.has(value)
 
 const numberOrNull = (value: number | string | null): number | null => (value === null ? null : Number(value))
 

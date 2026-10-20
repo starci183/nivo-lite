@@ -20,6 +20,8 @@ interface SalesDecisionsProps {
 
 type Decision = "approved" | "rejected"
 
+const FIELD_NAMES: ReadonlySet<string> = new Set(KNOWN_FIELDS)
+
 const decisionVocabulary: SalesDecisionVocabulary = {
     ageParts,
     decisionAnchor,
@@ -35,7 +37,7 @@ const createSalesDecisionsState = (input: SalesDecisionsControllerInput) => {
     const { t, g, actions, pending, decisionForm, setBusy, typed, setErrors } = input
 
     const fieldLabel = (name: string): string => {
-        return KNOWN_FIELDS.some((field) => field === name) ? g(`field_${name}`) : name
+        return FIELD_NAMES.has(name) ? g(`field_${name}`) : name
     }
     const decide = async (id: string, decision: Decision) => {
         const item = pending.find((candidate) => candidate.id === id)

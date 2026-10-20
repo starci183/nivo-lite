@@ -13,10 +13,11 @@ export interface SalesWords {
     readonly money: (amount: number | null) => string
 }
 
+const SOURCE_NAMES: ReadonlySet<string> = new Set(SOURCE_KEYS)
+
 const conversionMeta = (conversion: SalesConversion, words: SalesWords): string => {
     if (conversion.leads === 0) return words.t("metricConversionNone", { days: conversion.windowDays })
-    const sourceName = (source: string): string =>
-        words.t(`source_${SOURCE_KEYS.some((known) => known === source) ? source : "other"}`)
+    const sourceName = (source: string): string => words.t(`source_${SOURCE_NAMES.has(source) ? source : "other"}`)
     const sources = conversion.sources
         .slice(0, MAX_SOURCES_SHOWN)
         .map(
