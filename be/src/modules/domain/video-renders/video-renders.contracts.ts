@@ -7,8 +7,8 @@ export interface NewRender {
     readonly workspaceId: string
     /** The validated spec as JSON text. */
     readonly spec: string
-    /** The person who asked for it. */
-    readonly createdBy: string
+    /** The person who asked for it, or null when an agent did (AI Editor on a delegated script). */
+    readonly createdBy: string | null
 }
 
 /** One delivery of a render job, taken from the queue. */

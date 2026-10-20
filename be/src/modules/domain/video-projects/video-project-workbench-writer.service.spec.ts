@@ -6,6 +6,7 @@ import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import {
     APPROVE_VIDEO_PROJECT,
     ARCHIVE_WORKBENCH_PROJECT,
+    CREATE_DELEGATED_PROJECT,
     CREATE_WORKBENCH_PROJECT,
     DUPLICATE_WORKBENCH_PROJECT,
     PUBLISH_WORKBENCH_PROJECT,
@@ -150,5 +151,39 @@ describe("VideoProjectWorkbenchWriterService > approve", () => {
         const writer = await build(em)
 
         await expect(writer.approve("workspace-1", "project-1", "render-0", "Lan")).resolves.toBe(false)
+    })
+})
+
+describe("VideoProjectWorkbenchWriterService > createDelegated", () => {
+    it("saves the delegated script with no creator and answers the new project id", async () => {
+        const tx = mockEntityManager({ query: [CREATE_DELEGATED_PROJECT, [{ id: "project-1" }]] })
+        const writer = await build()
+        const draft = { title: "Weekend", goal: "offer", aspect: "9:16", targetSeconds: 15, script: [{ caption: "A" }] }
+
+        await expect(writer.createDelegated(tx, "workspace-1", draft)).resolves.toBe("project-1")
+
+        expect(tx.query).toHaveBeenCalledWith(CREATE_DELEGATED_PROJECT, [
+            "workspace-1",
+            "Weekend",
+            "offer",
+            "9:16",
+            15,
+            '[{"caption":"A"}]',
+        ])
+    })
+
+    it("answers null when nothing was written", async () => {
+        const tx = mockEntityManager({ query: [CREATE_DELEGATED_PROJECT, []] })
+        const writer = await build()
+
+        await expect(
+            writer.createDelegated(tx, "workspace-1", {
+                title: "W",
+                goal: "offer",
+                aspect: "9:16",
+                targetSeconds: 15,
+                script: [],
+            }),
+        ).resolves.toBeNull()
     })
 })

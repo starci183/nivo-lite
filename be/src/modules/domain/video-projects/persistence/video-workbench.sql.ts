@@ -5,6 +5,11 @@ export const CREATE_WORKBENCH_PROJECT = sql`INSERT INTO public.video_projects
 (workspace_id,title,goal,aspect,target_seconds,inputs,script_meta,created_by)
 VALUES($1,$2,$3,$4,$5,$6::jsonb,$7::jsonb,$8) RETURNING id`
 
+/** A project AI Editor renders from a delegated script; no person created it ($1 workspace, $2 title, $3 goal, $4 aspect, $5 seconds, $6 script). */
+export const CREATE_DELEGATED_PROJECT = sql`INSERT INTO public.video_projects
+(workspace_id,title,goal,aspect,target_seconds,script,inputs,script_meta,created_by)
+VALUES($1,$2,$3,$4,$5,$6::jsonb,'{}'::jsonb,'{"delegated":true}'::jsonb,NULL) RETURNING id`
+
 /** Guarded field edits ($1 workspace, $2 project, $3 title, $4 goal, $5 aspect, $6 seconds, $7 inputs, $8 script). */
 export const UPDATE_WORKBENCH_PROJECT = sql`WITH changed AS (UPDATE public.video_projects SET title=COALESCE(NULLIF($3,''),title),
 goal=COALESCE($4,goal),aspect=COALESCE($5,aspect),target_seconds=COALESCE($6,target_seconds),

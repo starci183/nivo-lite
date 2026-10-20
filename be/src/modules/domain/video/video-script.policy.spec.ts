@@ -169,6 +169,14 @@ describe("specOf", () => {
         })
     })
 
+    it("adds the brand frame when the render is framed", async () => {
+        const subject = await build()
+
+        const spec = subject.specOf([{ caption: "One", voiceover: "", media: null }], "9:16", brand, "Shop", true)
+
+        expect(spec).toMatchObject({ brand: { frame: true } })
+    })
+
     it("falls back to the default shape, name, music and voice", async () => {
         const subject = await build()
 

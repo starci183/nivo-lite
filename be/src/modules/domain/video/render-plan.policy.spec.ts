@@ -460,13 +460,13 @@ describe("finalArgs", () => {
         ["1:1", "overlay=49:38"],
     ] as const)("overlays the logo of a %s video", async (aspect, overlay) => {
         const { finalArgs } = await buildSubject()
-        const args = finalArgs({ ...pass, spec: specOf({ aspect }), logoFile: "logo.png" })
+        const frame = { ...specOf().brand, frame: true }
+        const args = finalArgs({ ...pass, spec: specOf({ aspect, brand: frame }), logoFile: "logo.png" })
         const graph = args[args.indexOf("-filter_complex") + 1] ?? ""
-
         expect(args).toContain("logo.png")
         expect(graph).toContain("[4:v]scale=184:-1:force_original_aspect_ratio=decrease,format=rgba[lg]")
         expect(graph).toContain(`[x2][lg]${overlay}:shortest=1[lo]`)
-        expect(graph).toContain("[lo]ass=subs.ass")
+        expect(graph).toContain("[lo]drawbox=x=0:y=0:w=iw:h=ih:color=0x16a34a")
     })
 
     it("crossfades without a timing as an instant cut at the start", async () => {

@@ -101,6 +101,17 @@ export const VIDEO_MODULE: ModuleDefinition = {
             next: [],
         },
         {
+            action: "render_script",
+            label: catalogText("modulesCatalog.video.authorityActions.render_script.label"),
+            mode: "auto",
+            limitVnd: null,
+            requiredFields: [],
+            amountLimit: false,
+            maxMode: null,
+            note: catalogCopy("modulesCatalog.video.authorityActions.render_script.note", "en"),
+            next: [],
+        },
+        {
             action: "publish_video",
             label: catalogText("modulesCatalog.video.authorityActions.publish_video.label"),
             mode: "ask",
@@ -119,6 +130,13 @@ export const VIDEO_MODULE: ModuleDefinition = {
             subjectType: "video_project",
             requiredFields: ["subject_id"],
             description: catalogText("modulesCatalog.video.accepts.render_draft.description"),
+        },
+        {
+            command: "render_script",
+            action: "render_script",
+            subjectType: "video_project",
+            requiredFields: ["title", "script"],
+            description: catalogText("modulesCatalog.video.accepts.render_script.description"),
         },
         {
             command: "publish_video",

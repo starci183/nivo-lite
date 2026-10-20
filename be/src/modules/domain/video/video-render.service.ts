@@ -17,6 +17,7 @@ import type { VideoAssets } from "./video.contracts"
 import { VideoLogEvent } from "./video.log-events"
 import type { VideoOptions } from "./video.options"
 import { VideoService } from "./video.service"
+import { EditorDeliveryService } from "./editor-delivery.service"
 import { MEDIA_BUCKET, MEDIA_MAX_BYTES, VIDEOS_BUCKET, validateVideoSpec } from "./video-spec.policy"
 import type { VideoSpec } from "./video-spec.policy"
 
@@ -56,6 +57,7 @@ export class VideoRenderService implements OnApplicationBootstrap {
         @InjectVideoAssets() private readonly assets: VideoAssets,
         @InjectClock() private readonly clock: Clock,
         @InjectLogger() private readonly logger: Logger,
+        private readonly delivery: EditorDeliveryService,
     ) {}
 
     /** Sweeps the leftovers of a crashed render: any work directory older than an hour. */
@@ -89,6 +91,7 @@ export class VideoRenderService implements OnApplicationBootstrap {
             })
             if (rejected || claimed.attempts >= LAST_ATTEMPT) {
                 await this.video.failRender(claimed.renderId, cause instanceof Error ? cause.message : "render failed")
+                await this.deliver(claimed.renderId)
             }
             if (!rejected) throw cause
         } finally {
@@ -143,10 +146,18 @@ export class VideoRenderService implements OnApplicationBootstrap {
                 timings: { ...output.meta.timings, upload_ms: this.clock.now().getTime() - began },
             },
         })
+        await this.deliver(renderId)
         this.logger.info(VideoLogEvent.RenderDone, {
             renderId,
             durationMs: output.durationMs,
             sizeBytes: output.sizeBytes,
+        })
+    }
+
+    /** Hands a settled render to AI Editor's delivery (the cards of a delegated script); a failure there never fails or retries the render. */
+    private async deliver(renderId: string): Promise<void> {
+        await this.delivery.settle(renderId).catch((cause: unknown) => {
+            this.logger.error(VideoLogEvent.DelegationNotDelivered, cause, { renderId })
         })
     }
 

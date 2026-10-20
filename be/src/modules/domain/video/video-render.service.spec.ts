@@ -16,6 +16,7 @@ import { VideoLogEvent } from "./video.log-events"
 import type { VideoOptions } from "./video.options"
 import { VideoService } from "./video.service"
 import { VideoRenderService } from "./video-render.service"
+import { EditorDeliveryService } from "./editor-delivery.service"
 
 const WORKSPACE = "0a1b2c3d-0a1b-4c3d-8a1b-0a1b2c3d4e5f"
 const IMAGE = `${WORKSPACE}/photo.jpg`
@@ -67,6 +68,8 @@ const build = async () => {
     const logger = mock<Logger>()
     const clock = new FakeClock("2026-10-12T00:00:00.000Z")
     const assets = mock<VideoAssets>()
+    const delivery = mock<EditorDeliveryService>()
+    delivery.settle.mockResolvedValue(undefined)
     assets.download.mockResolvedValue({ data: new Blob(["bytes"]), error: null })
     assets.upload.mockResolvedValue({ error: null })
     renders.claim.mockResolvedValue(claimOf())
@@ -85,10 +88,11 @@ const build = async () => {
             { provide: VIDEO_ASSETS, useValue: assets },
             { provide: CLOCK, useValue: clock },
             { provide: LOGGER, useValue: logger },
+            { provide: EditorDeliveryService, useValue: delivery },
         ],
     }).compile()
     const service = moduleRef.get(VideoRenderService)
-    return { service, video, renders, renderer, logger, clock, assets, options, root }
+    return { service, video, renders, renderer, logger, clock, assets, options, root, delivery }
 }
 
 describe("VideoRenderService", () => {
@@ -247,6 +251,31 @@ describe("VideoRenderService", () => {
             await expect(service.render({ renderId: "render-1" })).rejects.toBe(failure)
 
             expect(video.failRender).toHaveBeenCalledWith("render-1", "ffmpeg crashed")
+        })
+
+        it("hands the settled render to AI Editor's delivery after a success and after the last failure", async () => {
+            const { service, renderer, renders, delivery } = await build()
+
+            await service.render({ renderId: "render-1" })
+            expect(delivery.settle).toHaveBeenCalledWith("render-1")
+
+            renderer.render.mockRejectedValue(new Error("ffmpeg crashed"))
+            renders.claim.mockResolvedValue(claimOf({ attempts: 5 }))
+            await expect(service.render({ renderId: "render-1" })).rejects.toThrow("ffmpeg crashed")
+            expect(delivery.settle).toHaveBeenCalledTimes(2)
+        })
+
+        it("logs a delivery that failed and keeps the render done", async () => {
+            const { service, video, delivery, logger } = await build()
+            const failure = new Error("hub down")
+            delivery.settle.mockRejectedValue(failure)
+
+            await service.render({ renderId: "render-1" })
+
+            expect(video.completeRender).toHaveBeenCalled()
+            expect(logger.error).toHaveBeenCalledWith(VideoLogEvent.DelegationNotDelivered, failure, {
+                renderId: "render-1",
+            })
         })
 
         it("gives a failure that is no error a generic reason", async () => {

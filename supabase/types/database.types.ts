@@ -3681,6 +3681,37 @@ isOneToOne: true
       referencedColumns: ["id"]
     }
                   ]
+                },"video_delegations": {
+                  Row: {
+                    "approval_work_item_id": string | null,"card": Json | null,"channels": (string)[],"content_item_id": string | null,"created_at": string,"error": string | null,"id": string,"project_id": string,"render_id": string | null,"source_module": string,"status": string,"updated_at": string,"work_item_id": string,"workspace_id": string
+                  }
+                  Insert: {
+                    "approval_work_item_id"?: string | null,"card"?: Json | null,"channels"?: (string)[],"content_item_id"?: string | null,"created_at"?: string,"error"?: string | null,"id"?: string,"project_id": string,"render_id"?: string | null,"source_module": string,"status"?: string,"updated_at"?: string,"work_item_id": string,"workspace_id": string
+                  }
+                  Update: {
+                    "approval_work_item_id"?: string | null,"card"?: Json | null,"channels"?: (string)[],"content_item_id"?: string | null,"created_at"?: string,"error"?: string | null,"id"?: string,"project_id"?: string,"render_id"?: string | null,"source_module"?: string,"status"?: string,"updated_at"?: string,"work_item_id"?: string,"workspace_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "video_delegations_project_id_fkey"
+      columns: ["project_id"]
+isOneToOne: false
+      referencedRelation: "video_projects"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "video_delegations_work_item_id_fkey"
+      columns: ["work_item_id"]
+isOneToOne: false
+      referencedRelation: "work_items"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "video_delegations_workspace_id_fkey"
+      columns: ["workspace_id"]
+isOneToOne: false
+      referencedRelation: "workspaces"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"video_project_versions": {
                   Row: {
                     "created_at": string,"created_by": string | null,"id": string,"note": string | null,"project_id": string,"render_id": string | null,"script": NonNullable<Json>,"spec": Json | null,"version": number,"workspace_id": string

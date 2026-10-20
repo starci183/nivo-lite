@@ -12,6 +12,20 @@ export interface NewVideoProjectDraft {
     readonly inputs?: unknown
 }
 
+/** The project AI Editor makes of a script another agent delegated. */
+export interface DelegatedVideoProjectDraft {
+    /** The title. */
+    readonly title: string
+    /** Business goal. */
+    readonly goal: string
+    /** Output shape. */
+    readonly aspect: string
+    /** Target duration. */
+    readonly targetSeconds: number
+    /** The scenes, stored as they are. */
+    readonly script: unknown
+}
+
 /** Optional changes a checked manager applies to an idle project. */
 export interface ChangeVideoProjectDraft {
     /** New title. */

@@ -27,6 +27,7 @@ const SUBJECT_TYPES = new Set([
     "inbound",
     "purchase_order",
     "stock",
+    "video_project",
 ])
 
 /** Whether text names a kind of record a work item can be about. */

@@ -77,12 +77,16 @@ const sceneOf = (scene: ScriptScene, index: number, primary: string, secondary: 
     }
 }
 
-/** The spec the script and the brand make, not yet validated: callers pass it to `validateVideoSpec`. `shopFallback` names a shop that has no name yet. */
+/**
+ * The spec the script and the brand make, not yet validated: callers pass it to `validateVideoSpec`. `shopFallback` names a shop that has
+ * no name yet; `framed` adds the brand frame (AI Editor renders delegated by another agent always carry it).
+ */
 export const specOf = (
     scenes: ReadonlyArray<ScriptScene>,
     aspect: string,
     brand: BrandKit,
     shopFallback: string,
+    framed = false,
 ): unknown => {
     const primary = normaliseColor(brand.primary) ?? DEFAULT_PRIMARY
     const secondary = normaliseColor(brand.secondary) ?? DEFAULT_SECONDARY
@@ -96,6 +100,7 @@ export const specOf = (
             primary,
             secondary,
             logo: brand.logoPath,
+            ...(framed ? { frame: true } : {}),
         },
         music: track === undefined ? null : { track: track.id, volume: 0.45 },
         voice: {
