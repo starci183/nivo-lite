@@ -2,7 +2,14 @@
 
 import { useFormatter, useTranslations } from "next-intl"
 import { useAgentRights } from "@/hooks/agentSettings"
-import { useSetupChat, useSetupState, useSetupVersions, useThreadScroll, setupThreadOf } from "@/hooks/agentSetup"
+import {
+    useSetupBrandCards,
+    useSetupChat,
+    useSetupState,
+    useSetupVersions,
+    useThreadScroll,
+    setupThreadOf,
+} from "@/hooks/agentSetup"
 
 import { mapSlot, useSlotLabels } from "@/hooks/slot"
 import { useSetupWriteWords } from "@/hooks/setupCards"
@@ -30,14 +37,18 @@ export const AgentSetupChat = (props: AgentSetupChatProps) => {
     const { slot, reload } = useSetupState(props.installationId)
     const versions = useSetupVersions(props.installationId).items?.versions ?? NO_VERSIONS
     const state = slot.items
-    const chat = useSetupChat(state?.session.id ?? "", state?.turnPending === true)
-    useThreadScroll(`${state?.messages.length ?? 0}:${chat.isSending}:${state?.revisions.length ?? 0}`)
+    const sessionId = state?.session.id ?? ""
+    const chat = useSetupChat(sessionId, state?.turnPending === true)
+    const brand = useSetupBrandCards(props.installationId, sessionId, props.module === "content" && canEdit, reload)
+    useThreadScroll(
+        `${state?.messages.length ?? 0}:${chat.isSending}:${state?.revisions.length ?? 0}:${brand.scrollKey}`,
+    )
     const groups = setupThreadOf(
         state?.revisions ?? NO_VERSIONS,
         state?.messages ?? NO_VERSIONS,
         state?.writes ?? NO_VERSIONS,
         versions,
-        state?.session.id ?? "",
+        sessionId,
         {
             applied: (version, appliedAt, who) =>
                 t("revisionApplied", {
@@ -72,6 +83,7 @@ export const AgentSetupChat = (props: AgentSetupChatProps) => {
         sendLabel: t("send"),
         words,
         decidingId: chat.decidingId,
+        brand: brand.content,
     }
     return (
         <AgentSetupChatBase
@@ -86,6 +98,7 @@ export const AgentSetupChat = (props: AgentSetupChatProps) => {
                 send: () => void chat.send(),
                 decide: (id, change) => void chat.decide(id, change),
                 retry: reload,
+                ...brand.on,
             }}
         />
     )

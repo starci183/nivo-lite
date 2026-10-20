@@ -5,6 +5,7 @@ import {
     ChatWorkspace,
     Divider,
     EmptyNotice,
+    FileDropzone,
     FillViewport,
     Form,
     Heading,
@@ -15,6 +16,8 @@ import {
 } from "@starci/grammar/common"
 import { Fragment } from "react"
 import { SetupWriteCard } from "@/components/branches/SetupWriteCard"
+import { BrandProposalView, type BrandProposalCommands } from "@/components/leaves/BrandProposalView"
+import type { BrandKitText, BrandProposalCardView } from "@/hooks/content"
 import { SlotView } from "@/components/composites/SlotView"
 import type {
     SetupWrite,
@@ -60,6 +63,17 @@ export interface AgentSetupChatContent {
     readonly words: SetupWriteWords
     /** The card being settled now; empty when none. */
     readonly decidingId: string
+    /** The brand guideline flow of the AI Marketing agent; null for the other agents. */
+    readonly brand: AgentSetupBrand | null
+}
+
+/** The brand guideline flow of the chat: the PDF dropzone and the brand kits read from it. */
+export interface AgentSetupBrand {
+    readonly attachLabel: string
+    readonly attachPrompt: string
+    readonly isReading: boolean
+    readonly readingLabel: string
+    readonly cards: ReadonlyArray<BrandProposalCardView>
 }
 
 /** The chat as a slot, the notice for anyone who may not set an agent up, and the commands. */
@@ -76,6 +90,11 @@ export interface AgentSetupChatBaseProps {
         readonly send: () => void
         readonly decide: (id: string, change: SetupWriteDecision) => void
         readonly retry: () => void
+        readonly attach: (files: ReadonlyArray<File>) => void
+        readonly brandField: (name: keyof BrandKitText, value: string) => void
+        readonly brandConfirm: (id: string) => void
+        readonly brandToggleEdit: (id: string) => void
+        readonly brandReject: (id: string) => void
     }
 }
 
@@ -84,6 +103,28 @@ interface ChatPartProps {
     readonly content: AgentSetupChatContent
     readonly isSkeleton: boolean
     readonly on: AgentSetupChatBaseProps["on"]
+}
+
+const sendingOf = (content: AgentSetupChatContent) =>
+    content.brand?.isReading === true ? content.brand.readingLabel : content.sendingLabel
+
+/** The brand proposal cards with the commands that settle them. */
+type BrandCardsProps = Pick<ChatPartProps, "content" | "on">
+
+const BrandCards = (props: BrandCardsProps) => {
+    const on: BrandProposalCommands = {
+        field: props.on.brandField,
+        confirm: props.on.brandConfirm,
+        toggleEdit: props.on.brandToggleEdit,
+        reject: props.on.brandReject,
+    }
+    return (
+        <>
+            {props.content.brand?.cards.map((card) => (
+                <BrandProposalView key={card.id} props={card} on={on} />
+            ))}
+        </>
+    )
 }
 
 const Conversation = (props: ChatPartProps) => (
@@ -122,10 +163,11 @@ const Conversation = (props: ChatPartProps) => (
                 {group.divider === "" ? null : <Divider label={group.divider} />}
             </Fragment>
         ))}
-        {props.content.isSending ? (
+        <BrandCards content={props.content} on={props.on} />
+        {props.content.isSending || props.content.brand?.isReading === true ? (
             <div className={SENDING}>
-                <Text size="sm" tone="muted" startContent={<Spinner size="sm" label={props.content.sendingLabel} />}>
-                    {props.content.sendingLabel}
+                <Text size="sm" tone="muted" startContent={<Spinner size="sm" label={sendingOf(props.content)} />}>
+                    {sendingOf(props.content)}
                 </Text>
             </div>
         ) : null}
@@ -167,6 +209,16 @@ const Composer = (props: ChatPartProps) => (
                     {props.content.sendLabel}
                 </Button>
             </div>
+            {props.content.brand === null ? null : (
+                <FileDropzone
+                    label={props.content.brand.attachLabel}
+                    accept=".pdf,application/pdf"
+                    prompt={props.content.brand.attachPrompt}
+                    isDisabled={props.isSkeleton || props.content.brand.isReading}
+                    hideFileList
+                    onFilesChange={props.on.attach}
+                />
+            )}
         </div>
     </Form>
 )

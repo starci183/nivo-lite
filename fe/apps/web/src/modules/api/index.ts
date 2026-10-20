@@ -140,6 +140,8 @@ export type {
 } from "./graphql/index"
 export { putPresigned } from "./rest/uploads/put-presigned"
 export type {
+    BrandProposalType,
+    WeeklyReportType,
     ContentAiRequestedType,
     ContentAiStatusType,
     ContentAiWarningType,

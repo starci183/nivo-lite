@@ -7,7 +7,7 @@ import { AGENTS_ROUTE, APP_ROUTES } from "@/modules/routes"
 import { AgentsErrorPageBase } from "./component"
 
 /** Where in the agents area the failure happened. */
-type AgentsErrorScope = "catalog" | "frame" | "list" | "setup" | "settings" | "workbench"
+type AgentsErrorScope = "catalog" | "frame" | "list" | "setup" | "settings" | "workbench" | "performance"
 
 type AgentsErrorPageProps = {
     readonly scope: AgentsErrorScope
@@ -31,6 +31,7 @@ export const AgentsErrorPage = (props: AgentsErrorPageProps) => {
         setup: t("tab_setup"),
         settings: t("tab_settings"),
         workbench: t("tab_workbench"),
+        performance: t("tab_performance"),
     }
     const tab = { id: "module", label: typeName, href: agentHref(known ?? "chatbot", null) }
     const crumbs = {
@@ -40,6 +41,7 @@ export const AgentsErrorPage = (props: AgentsErrorPageProps) => {
         setup: [home, agents, tab],
         settings: [home, agents, tab],
         workbench: [home, agents, tab],
+        performance: [home, agents, tab],
     }
     return (
         <AgentsErrorPageBase

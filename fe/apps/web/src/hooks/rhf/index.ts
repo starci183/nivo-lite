@@ -70,3 +70,4 @@ export type { ChatbotTextFormOptions } from "./useChatbotTextForm"
 export type { DatabaseTargetValues } from "./useDatabaseTargetForm"
 
 export type { OpenApiAuthValues } from "./useOpenApiAuthForm"
+export { useBrandKitForm } from "./useBrandKitForm"
