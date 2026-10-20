@@ -47,7 +47,7 @@ export class AppModule {
                 ...videoModules(options),
                 ...businessModules(options),
                 ...API_JOB_QUEUES,
-                ...contentModules(),
+                ...contentModules(options),
                 ...systemModules(),
                 ...knowledgeModules(options),
                 ...bookingsModules(),

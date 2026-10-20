@@ -27,3 +27,46 @@ export interface TickWorkspace {
     /** What they last did. */
     readonly marks: AutomationMarks
 }
+
+/** One named brand color, `#rrggbb`. */
+export interface GuidelineColor {
+    /** The name the guideline gives it. */
+    readonly name: string
+    /** The hex value. */
+    readonly hex: string
+}
+
+/** The brand read from a guideline and confirmed by the owner, as the content settings keep it. */
+export interface GuidelineBrand {
+    /** The palette, primary first. */
+    readonly colors: ReadonlyArray<GuidelineColor>
+    /** The font families. */
+    readonly fonts: ReadonlyArray<string>
+    /** The tone of voice. */
+    readonly tone: string
+    /** The imagery the guideline asks for. */
+    readonly imagery: ReadonlyArray<string>
+    /** The file the brand was read from. */
+    readonly source: string
+    /** The brand voice line drafts follow. */
+    readonly voice: string
+    /** What drafts avoid, one per line. */
+    readonly avoid: string
+}
+
+/** The stored guideline brand of a workspace; the colors are as stored (validated by the reader). */
+export interface StoredGuidelineBrand {
+    /** The stored palette JSON. */
+    readonly colors: unknown
+    /** The font families. */
+    readonly fonts: ReadonlyArray<string>
+    /** The tone of voice. */
+    readonly tone: string
+    /** The imagery. */
+    readonly imagery: ReadonlyArray<string>
+    /** What drafts avoid, one per line. */
+    readonly avoid: string
+}
+
+/** The stored guideline brand, or null when the workspace has no settings. */
+export type OptionalStoredGuidelineBrand = StoredGuidelineBrand | null

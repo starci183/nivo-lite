@@ -1,4 +1,4 @@
-import { MetaMessagingClient } from "./meta-messaging.client"
+import { MetaPublishingClient } from "./meta-publishing.client"
 import { Injectable } from "@nestjs/common"
 import { MetaLogEvent } from "./meta.log-events"
 import { MetaError, MetaErrorCode } from "./errors/meta.error"
@@ -61,7 +61,7 @@ const missingOf = (want: ReadonlyArray<string>, have: ReadonlyArray<string>): Ar
 
 @Injectable()
 /** Talks to the Meta Graph API for the connections capability: login, Pages, webhook subscriptions, sends and lead reads. */
-export class MetaClient extends MetaMessagingClient {
+export class MetaClient extends MetaPublishingClient {
     /** True when this deployment has a Meta app and a site url to return to. */
     isConfigured(): boolean {
         return this.options.app !== null && redirectUri(this.options) !== null

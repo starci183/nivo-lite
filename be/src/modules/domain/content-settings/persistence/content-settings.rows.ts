@@ -9,3 +9,17 @@ export interface TickWorkspaceRow {
     /** What they last did. */
     readonly marks: AutomationMarks
 }
+
+/** The guideline brand columns of one workspace. */
+export interface GuidelineBrandRow {
+    /** The palette JSON. */
+    readonly brand_colors: unknown
+    /** The font families. */
+    readonly brand_fonts: ReadonlyArray<string>
+    /** The tone of voice. */
+    readonly brand_tone: string
+    /** The imagery. */
+    readonly brand_imagery: ReadonlyArray<string>
+    /** What drafts avoid. */
+    readonly avoid: string
+}

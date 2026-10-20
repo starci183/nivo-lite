@@ -4,7 +4,7 @@ import type { HttpClient } from "@modules/platform/http"
 import { isRecord } from "@modules/platform/primitives"
 import { ZaloError, ZaloErrorCode } from "./errors/zalo.error"
 import { InjectZaloOptions } from "./zalo.decorators"
-import type { ZaloTokens } from "./zalo.contracts"
+import type { ZaloArticle, ZaloTokens } from "./zalo.contracts"
 import type { ZaloOptions } from "./zalo.options"
 import { challengeOf } from "./zalo-oauth.policy"
 
@@ -64,6 +64,30 @@ export class ZaloClient {
         )
         const name = data.display_name ?? data.user_alias
         return typeof name === "string" ? name.trim() : ""
+    }
+
+    /**
+     * Creates an OA article (Zalo Article API v2.0): a cover photo, the description and the body paragraphs. `status: "hide"` keeps it
+     * unpublished until the scheduled moment. Answers the creation token Zalo gives to verify the article id later.
+     */
+    async createArticle(accessToken: string, article: ZaloArticle): Promise<string> {
+        const data = await this.apiCall(accessToken, "POST", "/v2.0/article/create", {
+            type: "normal",
+            title: article.title.slice(0, 150),
+            author: article.author.slice(0, 50),
+            cover: { cover_type: "photo", photo_url: article.coverUrl, status: "show" },
+            description: article.description.slice(0, 300),
+            body: article.paragraphs.map((content) => ({ type: "text", content })),
+            status: article.publish ? "show" : "hide",
+            comment: "show",
+        })
+        if (typeof data.token !== "string" || data.token === "") {
+            throw new ZaloError({
+                code: ZaloErrorCode.Rejected,
+                params: { path: "/v2.0/article/create", reason: "no token" },
+            })
+        }
+        return data.token
     }
 
     private async tokenCall(secret: string, form: Record<string, string>): Promise<ZaloTokens> {

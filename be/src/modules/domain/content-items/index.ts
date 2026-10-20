@@ -13,7 +13,7 @@ export type {
     CreateContentItem,
     SaveContentItem,
 } from "./content-editor.contracts"
-export type { DueItem } from "./content-items.contracts"
+export type { AgentDraftRef, DueItem, ScheduleView } from "./content-items.contracts"
 
 export { ContentApprovalStoreService } from "./content-approval-store.service"
 export { ContentAiStoreService } from "./content-ai-store.service"

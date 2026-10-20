@@ -3,7 +3,12 @@ import { mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { ContentSettingsService } from "./content-settings.service"
-import { MERGE_MARKS, SELECT_TICK_WORKSPACES } from "./persistence/content-settings.sql"
+import {
+    MERGE_MARKS,
+    SAVE_GUIDELINE_BRAND,
+    SELECT_GUIDELINE_BRAND,
+    SELECT_TICK_WORKSPACES,
+} from "./persistence/content-settings.sql"
 
 const build = async (entityManager: MockEntityManager) => {
     const moduleRef = await Test.createTestingModule({
@@ -54,6 +59,58 @@ describe("ContentSettingsService", () => {
             await (await build(em)).mergeMarks("workspace-1", { summary_week: "2026-10-12" })
 
             expect(em.query).toHaveBeenCalledWith(MERGE_MARKS, ["workspace-1", '{"summary_week":"2026-10-12"}'])
+        })
+    })
+})
+
+describe("ContentSettingsService (continued)", () => {
+    describe("guideline brand", () => {
+        it("writes the confirmed brand", async () => {
+            const em = mockEntityManager({ query: [SAVE_GUIDELINE_BRAND, []] })
+            const settings = await build(em)
+
+            await settings.saveGuidelineBrand("workspace-1", {
+                colors: [{ name: "Gold", hex: "#c2996b" }],
+                fonts: ["F"],
+                tone: "Warm",
+                imagery: ["spa"],
+                source: "guide.pdf",
+                voice: "Warm voice",
+                avoid: "cheap",
+            })
+
+            expect(em.query).toHaveBeenCalledWith(SAVE_GUIDELINE_BRAND, [
+                "workspace-1",
+                '[{"name":"Gold","hex":"#c2996b"}]',
+                ["F"],
+                "Warm",
+                ["spa"],
+                "guide.pdf",
+                "Warm voice",
+                "cheap",
+            ])
+        })
+
+        it("reads the stored brand, or null without settings", async () => {
+            const em = mockEntityManager({
+                query: [
+                    [
+                        SELECT_GUIDELINE_BRAND,
+                        [{ brand_colors: [], brand_fonts: ["F"], brand_tone: "Warm", brand_imagery: [], avoid: "" }],
+                    ],
+                    [SELECT_GUIDELINE_BRAND, []],
+                ],
+            })
+            const settings = await build(em)
+
+            await expect(settings.guidelineBrandOf("workspace-1")).resolves.toEqual({
+                colors: [],
+                fonts: ["F"],
+                tone: "Warm",
+                imagery: [],
+                avoid: "",
+            })
+            await expect(settings.guidelineBrandOf("workspace-1")).resolves.toBeNull()
         })
     })
 })

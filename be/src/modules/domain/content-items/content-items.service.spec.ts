@@ -4,7 +4,14 @@ import type { MockEntityManager } from "@starci/jest-preset"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { ContentItemsService } from "./content-items.service"
 import { ContentItemsErrorCode } from "./errors/content-items.error"
-import { INSERT_OFFER_IDEA, SELECT_ITEMS_BETWEEN, SELECT_OFFER_ITEM } from "./persistence/content-items.sql"
+import {
+    INSERT_AGENT_DRAFT,
+    INSERT_OFFER_IDEA,
+    MARK_ITEM_SCHEDULED,
+    SELECT_ITEMS_BETWEEN,
+    SELECT_OFFER_ITEM,
+    SELECT_SCHEDULE_ITEM,
+} from "./persistence/content-items.sql"
 
 const IDEA = {
     workspaceId: "workspace-1",
@@ -92,6 +99,97 @@ describe("ContentItemsService", () => {
             await expect((await build(em)).createOfferIdea(IDEA)).rejects.toMatchObject({
                 code: ContentItemsErrorCode.NotWritten,
             })
+        })
+    })
+})
+
+describe("ContentItemsService (continued)", () => {
+    describe("agent drafts", () => {
+        const draft = {
+            workspaceId: "workspace-1",
+            title: "T".repeat(210),
+            brief: "brief",
+            channels: ["facebook"],
+            scheduledAt: "2026-10-21T02:00:00.000Z",
+            variants: { facebook: { text: "text", hashtags: ["#A"], note: "" } },
+            hashtags: ["#A"],
+            imagePaths: ["workspace-1/marketing/1-1.png"],
+            actor: "Mai Linh",
+            evidenceText: "request",
+            at: "2026-10-20T07:00:00.000Z",
+        }
+
+        it("stores the draft with its images and history and answers the snapshot", async () => {
+            const em = mockEntityManager({
+                query: [INSERT_AGENT_DRAFT, [{ id: "item-1", variants: draft.variants, channels: ["facebook"] }]],
+            })
+            const items = await build(em)
+
+            await expect(items.createAgentDraft(draft)).resolves.toEqual({
+                id: "item-1",
+                variants: draft.variants,
+                channels: ["facebook"],
+            })
+            const args = em.query.mock.calls[0]?.[1] ?? []
+            expect(args[1]).toHaveLength(200)
+            expect(args[7]).toBe('[{"kind":"image","name":"1.png","path":"workspace-1/marketing/1-1.png"}]')
+        })
+
+        it("fails when nothing was stored", async () => {
+            const items = await build(mockEntityManager({ query: [INSERT_AGENT_DRAFT, []] }))
+
+            await expect(items.createAgentDraft(draft)).rejects.toMatchObject({
+                code: ContentItemsErrorCode.NotWritten,
+            })
+        })
+    })
+})
+
+describe("ContentItemsService (continued) (continued)", () => {
+    describe("agent drafts (continued)", () => {
+        it("reads a post for the scheduler, or null when it is gone", async () => {
+            const em = mockEntityManager({
+                query: [
+                    [
+                        SELECT_SCHEDULE_ITEM,
+                        [
+                            {
+                                id: "item-1",
+                                title: "T",
+                                channels: ["facebook", "zalo"],
+                                variants: { facebook: { text: "fb" }, zalo: {} },
+                                media: [{ path: "p1" }, {}],
+                                scheduled_at: null,
+                            },
+                        ],
+                    ],
+                    [SELECT_SCHEDULE_ITEM, []],
+                ],
+            })
+            const items = await build(em)
+
+            await expect(items.scheduleViewOf("workspace-1", "item-1")).resolves.toEqual({
+                id: "item-1",
+                title: "T",
+                channels: ["facebook", "zalo"],
+                texts: { facebook: "fb", zalo: "" },
+                mediaPaths: ["p1"],
+                scheduledAt: null,
+            })
+            await expect(items.scheduleViewOf("workspace-1", "item-1")).resolves.toBeNull()
+        })
+
+        it("records the scheduled refs", async () => {
+            const em = mockEntityManager({ query: [MARK_ITEM_SCHEDULED, []] })
+            const items = await build(em)
+
+            await items.markScheduled("workspace-1", "item-1", [{ channel: "facebook", ref: "p_1", scheduledAt: "x" }])
+
+            expect(em.query).toHaveBeenCalledWith(MARK_ITEM_SCHEDULED, [
+                "workspace-1",
+                "item-1",
+                '{"facebook":{"ref":"p_1","scheduled_at":"x"}}',
+            ])
         })
     })
 })
