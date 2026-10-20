@@ -56,6 +56,21 @@ These nonsecret keys select operator-installed executables. Omission retains the
 | `VIDEO_FFPROBE_PATH` | Optional trusted FFprobe executable path. |
 | `VIDEO_NICE_PATH` | Optional trusted priority-lowering executable path, used when priority lowering is enabled. |
 
+## mcp (the NIVO MCP gateway, `be/apps/mcp`)
+
+The gateway reads only these keys (`be/apps/mcp/src/mcp.env.ts`). Its secrets come from the same sealed `api` member as the api's, granted key by key
+(`deploy.secrets.grants`, service `nivo-mcp`); the non-secret values are `deploy.environment.nivo-mcp.values`.
+
+| Key | Where | Semantics |
+| --- | --- | --- |
+| `PORT` | stack environment | The listener port (`8790`); internal only, on the private `agents` network as `nivo-mcp`. |
+| `PRIMARY_DB_URL` | sealed `api` (required) | The same `app_be` connection as the api: connectors, grants and the call audit. |
+| `PRIMARY_DB_SCHEMA` | stack environment | `public`. |
+| `MCP_GATEWAY_CREDENTIALS` | sealed `api` (optional until O14) | Comma-separated credential NAMES a remote connector row may reference (value `MCP_HAKUEN_CLIENT_SECRET`). Not itself a secret, but sealed because every `*_CREDENTIALS` binding is classed sensitive; the api receives it through its whole-member grant. |
+| `MCP_HAKUEN_CLIENT_SECRET` | sealed `api` (optional until O14) | Bearer credential the gateway sends to the HAKUEN MCP server; read through `MCP_HAKUEN_CLIENT_SECRET_FILE`. Absent = the `hakuen` connector is unavailable. |
+| `MCP_GATEWAY_AGENT_TOKEN` | not granted in production | The token an agent presents to `POST /mcp/<workspaceId>`. Not declared for the demo: the agent endpoint stays closed (the api's chat turns call the gateway in-process). |
+| `MCP_GATEWAY_TIMEOUT_MS` | not set | Per-call timeout, default 4000. |
+
 ## Stack settings (sealed `stack`, read at render time)
 
 | Key | Semantics |

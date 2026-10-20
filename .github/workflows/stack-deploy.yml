@@ -73,6 +73,7 @@ jobs:
           owner="${GITHUB_REPOSITORY_OWNER,,}"
           echo "nivo-api=ghcr.io/${owner}/nivo-lite-api" >> "$GITHUB_OUTPUT"
           echo "nivo-landing=ghcr.io/${owner}/nivo-lite-landing" >> "$GITHUB_OUTPUT"
+          echo "nivo-mcp=ghcr.io/${owner}/nivo-lite-mcp" >> "$GITHUB_OUTPUT"
           echo "nivo-web-app=ghcr.io/${owner}/nivo-lite-web" >> "$GITHUB_OUTPUT"
       - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3.12.0
       - uses: docker/login-action@184bdaa0721073962dff0199f1fb9940f07167d1 # v3.5.0
@@ -108,6 +109,17 @@ jobs:
           build-args: ${{ steps.args-nivo-landing.outputs.args }}
           cache-from: type=gha,scope=nivo-landing
           cache-to: type=gha,scope=nivo-landing,mode=max
+      - name: build and push nivo-mcp
+        id: build-nivo-mcp
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
+        with:
+          context: .
+          file: be/apps/mcp/Dockerfile
+          push: true
+          provenance: false
+          tags: ${{ steps.names.outputs.nivo-mcp }}:${{ github.sha }}
+          cache-from: type=gha,scope=nivo-mcp
+          cache-to: type=gha,scope=nivo-mcp,mode=max
       - name: public build values of nivo-web-app
         id: args-nivo-web-app
         env:
@@ -139,11 +151,13 @@ jobs:
           SOPS_AGE_KEY: ${{ secrets.SOPS_AGE_KEY }}
           IMAGE_NIVO_API: ${{ steps.names.outputs.nivo-api }}@${{ steps.build-nivo-api.outputs.digest }}
           IMAGE_NIVO_LANDING: ${{ steps.names.outputs.nivo-landing }}@${{ steps.build-nivo-landing.outputs.digest }}
+          IMAGE_NIVO_MCP: ${{ steps.names.outputs.nivo-mcp }}@${{ steps.build-nivo-mcp.outputs.digest }}
           IMAGE_NIVO_WEB_APP: ${{ steps.names.outputs.nivo-web-app }}@${{ steps.build-nivo-web-app.outputs.digest }}
         run: |
           npx --no-install starci app stack deploy --env "$STACK_ENVIRONMENT" \
             --image "nivo-api=$IMAGE_NIVO_API" \
             --image "nivo-landing=$IMAGE_NIVO_LANDING" \
+            --image "nivo-mcp=$IMAGE_NIVO_MCP" \
             --image "nivo-web-app=$IMAGE_NIVO_WEB_APP" \
             --source-sha "$GITHUB_SHA" --execute
       - name: disconnect from the swarm manager
