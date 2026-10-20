@@ -24,6 +24,25 @@ export interface CsvBuiltRecords {
     readonly duplicates: number
 }
 
+/** Writes one non-empty cell into the row data: phones as digit text with the original kept, emails lowercased, numbers and dates also parsed. */
+const writeCell = (data: Record<string, unknown>, header: string, raw: string, kind: string): void => {
+    if (kind === "phone") {
+        const phone = normalisePhone(raw)
+        data[header] = phone || raw
+        if (phone !== "" && phone !== raw) data[`${header}__raw`] = raw
+        return
+    }
+    if (kind === "email") {
+        data[header] = raw.toLowerCase()
+        return
+    }
+    data[header] = raw
+    const number = kind === "number" ? parseNumberLoose(raw) : null
+    if (number !== null) data[`${header}__number`] = number
+    const date = kind === "date" ? parseDateLoose(raw) : null
+    if (date !== null) data[`${header}__date`] = date
+}
+
 const rowData = (
     headers: ReadonlyArray<string>,
     row: ReadonlyArray<string>,
@@ -32,24 +51,7 @@ const rowData = (
     const data: Record<string, unknown> = {}
     headers.forEach((header, index) => {
         const raw = (row[index] ?? "").trim()
-        if (raw === "") return
-        const kind = mapping.kinds[header] ?? "text"
-        if (kind === "phone") {
-            const phone = normalisePhone(raw)
-            data[header] = phone || raw
-            if (phone !== "" && phone !== raw) data[`${header}__raw`] = raw
-        } else if (kind === "email") data[header] = raw.toLowerCase()
-        else {
-            data[header] = raw
-            if (kind === "number") {
-                const value = parseNumberLoose(raw)
-                if (value !== null) data[`${header}__number`] = value
-            }
-            if (kind === "date") {
-                const value = parseDateLoose(raw)
-                if (value !== null) data[`${header}__date`] = value
-            }
-        }
+        if (raw !== "") writeCell(data, header, raw, mapping.kinds[header] ?? "text")
     })
     return data
 }
