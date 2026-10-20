@@ -13,28 +13,43 @@ interface ThreadCursor {
     readonly id: string
 }
 
-/** The Office thread: the newest page, read again every few seconds, and the earlier pages the person asked for. */
-export const useOfficeThread = (): {
+/** The earlier pages read in one room. */
+interface EarlierPages {
+    readonly room: string | null
+    readonly lines: ReadonlyArray<OfficeMessage>
+    readonly cursor: ThreadCursor | null | undefined
+}
+
+/**
+ * The thread of one Hub room (null = the Office room, every line): the newest page, read again every few seconds, and the earlier
+ * pages the person asked for in that room.
+ */
+export const useOfficeThread = (
+    room: string | null,
+): {
     readonly slot: DataSlot<ReadonlyArray<OfficeMessage>>
     readonly reload: () => void
     readonly hasEarlier: boolean
     readonly isLoadingEarlier: boolean
     readonly loadEarlier: () => void
 } => {
-    const latest = useQueryOfficeMessagesSwr({ limit: OFFICE_PAGE_SIZE }, { refreshInterval: OFFICE_POLL_MS })
-    const [earlier, setEarlier] = useState<ReadonlyArray<OfficeMessage>>([])
-    const [cursor, setCursor] = useState<ThreadCursor | null | undefined>(undefined)
+    const latest = useQueryOfficeMessagesSwr({ limit: OFFICE_PAGE_SIZE, room }, { refreshInterval: OFFICE_POLL_MS })
+    const [pages, setPages] = useState<EarlierPages>({ room, lines: [], cursor: undefined })
+    const current: EarlierPages = pages.room === room ? pages : { room, lines: [], cursor: undefined }
     const page = latest.earlier
-    const next = cursor === undefined ? (latest.data?.next ?? null) : cursor
+    const next = current.cursor === undefined ? (latest.data?.next ?? null) : current.cursor
     const loadEarlier = useCallback(() => {
         if (next === null) return
-        void page.trigger({ createdAt: next.createdAt, id: next.id }).then((read) => {
-            setEarlier((current) => mergeMessages([current, read.messages.map(toOfficeMessage)]))
-            setCursor(read.next ?? null)
+        void page.trigger({ before: { createdAt: next.createdAt, id: next.id }, room }).then((read) => {
+            setPages((was) => ({
+                room,
+                lines: mergeMessages([was.room === room ? was.lines : [], read.messages.map(toOfficeMessage)]),
+                cursor: read.next ?? null,
+            }))
         })
-    }, [next, page])
+    }, [next, page, room])
     const newest = latest.data?.messages.map(toOfficeMessage)
-    const joined = newest === undefined ? undefined : mergeMessages([earlier, newest])
+    const joined = newest === undefined ? undefined : mergeMessages([current.lines, newest])
     return {
         slot: slotOfSwr({ data: joined, error: latest.error, isLoading: latest.isLoading }),
         reload: () => void latest.mutate(),

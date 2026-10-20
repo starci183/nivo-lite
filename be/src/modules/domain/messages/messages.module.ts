@@ -3,6 +3,7 @@ import type { DynamicModule } from "@nestjs/common"
 import { AGENT_DIRECTORY } from "./office-lines.decorators"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./messages.module-definition"
 import { MessagesService } from "./messages.service"
+import { OfficeCardsService } from "./office-cards.service"
 import { OfficeLinesService } from "./office-lines.service"
 import { TeamChatService } from "./team-chat.service"
 
@@ -19,9 +20,10 @@ export class MessagesModule extends ConfigurableModuleClass {
                 { provide: AGENT_DIRECTORY, useExisting: options.agentDirectory },
                 MessagesService,
                 OfficeLinesService,
+                OfficeCardsService,
                 TeamChatService,
             ],
-            exports: [MessagesService, OfficeLinesService, TeamChatService],
+            exports: [MessagesService, OfficeLinesService, OfficeCardsService, TeamChatService],
         }
     }
 }

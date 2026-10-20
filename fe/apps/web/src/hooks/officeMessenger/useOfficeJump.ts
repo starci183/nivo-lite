@@ -1,7 +1,7 @@
 "use client"
 
 import { useCallback, useEffect, useState } from "react"
-import { approvalCardAnchor, exceptionCardAnchor } from "@/modules/office"
+import { approvalCardAnchor, exceptionCardAnchor, resultCardAnchor } from "@/modules/office"
 
 const FOCUS_MS = 2400
 
@@ -24,5 +24,6 @@ export const useOfficeJump = () => {
 
     const jumpApproval = useCallback((id: string) => setTarget({ id, anchor: approvalCardAnchor(id) }), [])
     const jumpException = useCallback((id: string) => setTarget({ id, anchor: exceptionCardAnchor(id) }), [])
-    return { focusedId: target?.id ?? null, jumpApproval, jumpException }
+    const jumpCard = useCallback((id: string) => setTarget({ id, anchor: resultCardAnchor(id) }), [])
+    return { focusedId: target?.id ?? null, jumpApproval, jumpException, jumpCard }
 }

@@ -1,4 +1,4 @@
-import type { OfficeApproval, OfficeCandidate, OfficeMessage, OfficeWork } from "./office.types"
+import type { OfficeApproval, OfficeCandidate, OfficeCardPayload, OfficeMessage, OfficeWork } from "./office.types"
 
 /** Two lines of one author closer than this form one group. */
 const GROUP_WINDOW_MS = 5 * 60_000
@@ -19,6 +19,7 @@ export type ThreadEntry =
     | { readonly kind: "approval"; readonly key: string; readonly approval: OfficeApproval }
     | { readonly kind: "exception"; readonly key: string; readonly work: OfficeWork }
     | { readonly kind: "command"; readonly key: string; readonly candidate: OfficeCandidate }
+    | { readonly kind: "card"; readonly key: string; readonly message: OfficeMessage; readonly card: OfficeCardPayload }
 
 /** A moment on the timeline: a line, an approval request or an exception. */
 interface TimelineEntry {
@@ -89,6 +90,14 @@ export const buildThreadEntries = (
             previous = null
         } else if (entry.work) {
             items.push({ kind: "exception", key: `exception-${entry.work.id}`, work: entry.work })
+            previous = null
+        } else if (entry.message?.card) {
+            items.push({
+                kind: "card",
+                key: `card-${entry.message.id}`,
+                message: entry.message,
+                card: entry.message.card,
+            })
             previous = null
         } else if (entry.message) {
             const message = entry.message

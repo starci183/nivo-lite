@@ -4,4 +4,6 @@ export interface PostOfficeMessageRequest {
     readonly workspaceId: string
     /** The text of the line. */
     readonly body: string
+    /** The Hub room; null (or absent) is the general Office room. */
+    readonly room: string | null
 }

@@ -6,6 +6,8 @@ import { CONTENT_AI_ERROR_KINDS } from "@modules/domain/content-ai"
 import { CONTENT_PLANS_ERROR_KINDS } from "@modules/domain/content-plans"
 import { CONTENT_PUBLISHING_ERROR_KINDS } from "@modules/domain/content-publishing"
 import { CONTENT_MEDIA_ERROR_KINDS } from "@modules/domain/content-media"
+import { MESSAGES_ERROR_KINDS } from "@modules/domain/messages"
+import { OFFICE_ROOMS_ERROR_KINDS } from "@modules/domain/office-rooms"
 
 /** App-wide errors catalog, preserving registration order. */
 export const API_ERROR_KINDS_4 = [
@@ -17,4 +19,6 @@ export const API_ERROR_KINDS_4 = [
     CONTENT_PLANS_ERROR_KINDS,
     CONTENT_PUBLISHING_ERROR_KINDS,
     CONTENT_MEDIA_ERROR_KINDS,
+    MESSAGES_ERROR_KINDS,
+    OFFICE_ROOMS_ERROR_KINDS,
 ]

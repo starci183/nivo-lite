@@ -3,6 +3,7 @@ import { builder, mock, mockEntityManager } from "@starci/jest-preset"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import type { WorkspaceMember } from "@modules/domain/workspace-members"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
+import { MessagesErrorCode } from "./errors/messages.error"
 import type { PostedMessage } from "./messages.contracts"
 import { INSERT_HUMAN_MESSAGE } from "./persistence/team-chat.sql"
 import { TeamChatService } from "./team-chat.service"
@@ -25,6 +26,7 @@ const posted = builder<PostedMessage>({
     body: "Hello team",
     lead_id: null,
     work_item_id: null,
+    room: null,
     created_at: "2026-10-13T10:00:00.000Z",
 })
 
@@ -52,7 +54,7 @@ describe("TeamChatService", () => {
 
             expect(members.require.mock.calls).toEqual([["user-1", "ws-1"]])
             expect(entityManager.query.mock.calls).toEqual([
-                [INSERT_HUMAN_MESSAGE, ["ws-1", "Minh", "staff-1", "Hello team"]],
+                [INSERT_HUMAN_MESSAGE, ["ws-1", "Minh", "staff-1", "Hello team", null]],
             ])
         })
 
@@ -63,7 +65,28 @@ describe("TeamChatService", () => {
 
             await expect(service.postHuman("user-1", "ws-1", "Noted")).resolves.toEqual(line)
 
-            expect(entityManager.query.mock.calls).toEqual([[INSERT_HUMAN_MESSAGE, ["ws-1", "Lan", null, "Noted"]]])
+            expect(entityManager.query.mock.calls).toEqual([[INSERT_HUMAN_MESSAGE, ["ws-1", "Lan", null, "Noted", null]]])
+        })
+
+        it("posts in a Hub room", async () => {
+            const line = posted({ room: "marketing" })
+            const { service, entityManager } = await build(line)
+
+            await expect(service.postHuman("user-1", "ws-1", "Hello team", "marketing")).resolves.toEqual(line)
+
+            expect(entityManager.query.mock.calls).toEqual([
+                [INSERT_HUMAN_MESSAGE, ["ws-1", "Minh", "staff-1", "Hello team", "marketing"]],
+            ])
+        })
+
+        it("refuses a room that is not a Hub room", async () => {
+            const { service, entityManager } = await build()
+
+            await expect(service.postHuman("user-1", "ws-1", "Hello", "lobby")).rejects.toMatchObject({
+                code: MessagesErrorCode.RoomInvalid,
+                params: { room: "lobby" },
+            })
+            expect(entityManager.query).not.toHaveBeenCalled()
         })
 
         it("does not write a line when membership is refused", async () => {

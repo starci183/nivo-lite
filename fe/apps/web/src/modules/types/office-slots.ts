@@ -34,6 +34,13 @@ export interface OfficeThreadProps {
     readonly on: {
         readonly decideApproval: (id: string, decision: "approved" | "rejected", editedDraft: string | null) => void
         readonly decideWork: (id: string, choice: OfficeWorkDecision) => void
+        /** Decides the execution or work item a result card names; `edited` is the edited draft, if any. */
+        readonly decideCard: (
+            kind: "execution" | "work_item",
+            id: string,
+            decision: "approved" | "rejected",
+            edited: string | null,
+        ) => void
         readonly sendCommand: (id: string) => void
         readonly cancelCommand: (id: string) => void
         readonly reply: (handle: string) => void
@@ -69,7 +76,7 @@ export interface OfficeConversationsProps {
         readonly text: OfficeText
     }
     readonly on: {
-        readonly openGroup: () => void
+        readonly openGroup: (id: string) => void
         readonly openAgent: (id: string) => void
         readonly openCustomer: (id: string) => void
     }
@@ -86,6 +93,7 @@ export interface OfficeInfoPanelProps {
     readonly on: {
         readonly jumpApproval: (id: string) => void
         readonly jumpException: (id: string) => void
+        readonly jumpCard: (id: string) => void
         readonly mention: (handle: string) => void
         readonly openTasks: () => void
         readonly close: () => void

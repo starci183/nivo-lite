@@ -1,6 +1,7 @@
 import { Field, InputType, Int } from "@nestjs/graphql"
 import { Type } from "class-transformer"
-import { IsInt, IsOptional, Max, Min, ValidateNested } from "class-validator"
+import { IsIn, IsInt, IsOptional, Max, MaxLength, Min, ValidateNested } from "class-validator"
+import { OFFICE_ROOM_KEYS } from "@modules/domain/messages"
 import { OfficeThreadCursorInput } from "./office-thread-cursor.input"
 
 @InputType()
@@ -20,4 +21,11 @@ export class ListOfficeMessagesInput {
     @Min(1)
     @Max(100)
     limit: number = 50
+
+    /** Only this Hub room; absent or null reads every room (the Office room). */
+    @Field(() => String, { nullable: true })
+    @IsOptional()
+    @IsIn(OFFICE_ROOM_KEYS)
+    @MaxLength(20)
+    room: string | null = null
 }

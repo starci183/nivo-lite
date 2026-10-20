@@ -7,6 +7,7 @@ import { OfficeExceptionCard } from "@/components/branches/OfficeExceptionCard"
 import { OfficeExceptionForm } from "@/components/branches/OfficeExceptionForm"
 import { OfficeMessageRow } from "@/components/branches/OfficeMessageRow"
 import { OfficeOutboxBubble } from "@/components/branches/OfficeOutboxBubble"
+import { OfficeResultCard } from "@/components/branches/OfficeResultCard"
 import type { OfficeThreadProps, OfficeExceptionView, OfficeCommandView, OfficeApprovalView } from "@/modules/types"
 import { BODY_CLASS_NAME, DAY_CLASS_NAME, SCROLL_CLASS_NAME, TYPING_CLASS_NAME } from "./classNames"
 
@@ -170,6 +171,18 @@ const renderOfficeThreadItems = (props: OfficeThreadProps) => {
               }
               if (item.kind === "command") {
                   return renderOfficeThreadCommand(item, text, view, props)
+              }
+              if (item.kind === "card") {
+                  return (
+                      <OfficeResultCard
+                          key={item.key}
+                          card={item}
+                          avatar={<OfficeAvatar avatar={item.avatar} size="sm" />}
+                          text={text}
+                          isBusy={item.refId !== null && view.busyId === item.refId}
+                          onDecide={props.on.decideCard}
+                      />
+                  )
               }
               return (
                   <OfficeMessageRow

@@ -1,6 +1,7 @@
 import type { OfficeThreadItem } from "@/modules/types"
 import { exceptionView } from "./office.exception-view"
 import { approvalView, commandView, dayLabelOf, messageView } from "./office.message-view"
+import { resultCardView } from "./office.rooms"
 import type { ThreadEntry } from "./office.thread"
 import type { OfficeContext, OfficeWords } from "./office.words"
 
@@ -16,5 +17,6 @@ export const threadViewsOf = (
         if (entry.kind === "approval") return approvalView(entry.approval, words, context)
         if (entry.kind === "exception") return exceptionView(entry.work, words, context)
         if (entry.kind === "command") return commandView(entry.candidate, words, context)
+        if (entry.kind === "card") return resultCardView(entry, words, context)
         return messageView(entry, words, context)
     })

@@ -24,6 +24,9 @@ const line = (id: string, createdAt: string): MessageView => ({
     work_item_id: null,
     lead_name: null,
     department: null,
+    room: null,
+    card_json: null,
+    card_state: null,
     created_at: createdAt,
 })
 

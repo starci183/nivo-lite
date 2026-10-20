@@ -12,3 +12,6 @@ export const ACTIONS = "flex min-w-0 items-center gap-2"
 
 /** Search sits in the bar from lg; below that it leaves the row. */
 export const SEARCH = "hidden w-full max-w-md lg:block"
+
+/** The workspace logo: a fixed square before the workspace name. */
+export const WORKSPACE_LOGO = "size-8 shrink-0"

@@ -5,10 +5,12 @@ import type {
     MessagePage,
     ProposeOutcome,
 } from "@modules/domain/office-command-candidates"
+import type { RoomView } from "@modules/domain/office-rooms"
 import type { PostedMessage } from "@modules/domain/messages"
 import type { Locale } from "@modules/platform/i18n"
 import type { CancelCommandRequest } from "../../application/cancel-command.contracts"
 import type { ConfirmCommandRequest } from "../../application/confirm-command.contracts"
+import type { MarkRoomReadRequest } from "../../application/mark-room-read.contracts"
 import type { ListThreadMessagesRequest } from "../../application/list-thread-messages.contracts"
 import type { PostOfficeMessageRequest } from "../../application/post-office-message.contracts"
 import type { ProposeCommandRequest } from "../../application/propose-command.contracts"
@@ -20,6 +22,8 @@ import type { OfficeCandidateType } from "./dto/office-candidate.type"
 import type { OfficeConfirmResultType } from "./dto/office-confirm-result.type"
 import type { OfficeMessageType } from "./dto/office-message.type"
 import type { OfficeMessagePageType } from "./dto/office-message-page.type"
+import type { OfficeRoomKeyInput } from "./dto/office-room-key.input"
+import type { OfficeRoomType } from "./dto/office-room.type"
 import type { OfficeProposeOutcomeType } from "./dto/office-propose-outcome.type"
 import type { PostOfficeMessageInput } from "./dto/post-office-message.input"
 import type { ProposeOfficeCommandInput } from "./dto/propose-office-command.input"
@@ -90,3 +94,19 @@ export const toOfficeAckType = (): OfficeAckType => ({ ok: true })
 
 /** Maps the stored line to the GraphQL type. */
 export const toOfficeMessageType = (message: PostedMessage): OfficeMessageType => ({ ...message })
+
+/** Maps the Hub rooms to the GraphQL type. */
+export const toOfficeRoomsType = (rooms: ReadonlyArray<RoomView>): Array<OfficeRoomType> =>
+    rooms.map((room) => ({
+        ...room,
+        agent_ids: [...room.agent_ids],
+        home_agent_ids: [...room.home_agent_ids],
+        user_ids: [...room.user_ids],
+        pins: room.pins.map((pin) => ({ ...pin })),
+    }))
+
+/** Maps the room of the GraphQL input, with the workspace, to the command request. */
+export const toMarkRoomReadRequest = (workspaceId: string, input: OfficeRoomKeyInput): MarkRoomReadRequest => ({
+    workspaceId,
+    room: input.room,
+})

@@ -13,6 +13,7 @@ import {
     useCurrentConsoleSession,
     useSignOut,
     useSwitchWorkspace,
+    useWorkspaceLogo,
     workspaceEntries,
 } from "@/hooks/console"
 import { useLocaleSwitch } from "@/hooks/locale"
@@ -105,6 +106,7 @@ export const ConsoleHeader = () => {
     const language = useLocaleSwitch()
     const [query, setQuery] = useState("")
     const [isNotificationsOpen, setNotificationsOpen] = useState(false)
+    const workspaceLogoUrl = useWorkspaceLogo()
 
     const connected = buildConsoleHeaderState({
         t,
@@ -124,7 +126,7 @@ export const ConsoleHeader = () => {
 
     return (
         <ConsoleHeaderBase
-            props={consoleHeaderProps(connected)}
+            props={{ ...consoleHeaderProps(connected), workspaceLogoUrl }}
             on={{
                 setQuery,
                 search: (text) => router.push(`${LEADS_ROUTE}?q=${encodeURIComponent(text)}`),
@@ -159,6 +161,7 @@ const consoleHeaderProps = (
     return {
         logoLabel: t("brandLogo"),
         workspaceName: session.workspaceName,
+        workspaceLogoUrl: null,
         userName: session.userName,
         avatarUrl: session.avatarUrl,
         roleLabel,

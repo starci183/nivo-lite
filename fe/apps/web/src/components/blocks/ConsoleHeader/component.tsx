@@ -1,4 +1,4 @@
-import { Badge, Button, DropdownMenu, SearchField, TopBar } from "@starci/grammar/common"
+import { Badge, Button, DropdownMenu, Image, SearchField, TopBar } from "@starci/grammar/common"
 import type { DropdownMenuEntry } from "@starci/grammar/common"
 import type { ConsolePending } from "@/modules/types"
 import { ConsoleAccountMenu } from "../../composites/ConsoleAccountMenu"
@@ -7,13 +7,15 @@ import { ConsoleWorkspaceMenu } from "../../composites/ConsoleWorkspaceMenu"
 import { FoundingBadge } from "../../composites/FoundingBadge"
 import { LocaleSegments } from "@/components/composites/LocaleSegments"
 import { NivoLogo } from "../../leaves/NivoLogo"
-import { ACTIONS, BADGE, BRAND, SEARCH, WORKSPACE_NAME } from "./classNames"
+import { ACTIONS, BADGE, BRAND, SEARCH, WORKSPACE_LOGO, WORKSPACE_NAME } from "./classNames"
 
 /** Everything the console top bar draws, resolved by the connected block. */
 export interface ConsoleHeaderBaseProps {
     readonly props: {
         readonly logoLabel: string
         readonly workspaceName: string
+        /** The workspace logo (brand kit), shown before the workspace name; null without one. */
+        readonly workspaceLogoUrl: string | null
         readonly userName: string
         readonly avatarUrl?: string
         readonly roleLabel: string
@@ -55,6 +57,18 @@ type BrandProps = Pick<ConsoleHeaderBaseProps, "props">
 const Brand = ({ props }: BrandProps) => (
     <div className={BRAND}>
         <NivoLogo variant="mark" height={28} label={props.logoLabel} />
+        {props.workspaceLogoUrl === null ? null : (
+            <div className={WORKSPACE_LOGO}>
+                <Image
+                    src={props.workspaceLogoUrl}
+                    alt={props.workspaceName}
+                    width={32}
+                    height={32}
+                    aspect="square"
+                    fit="contain"
+                />
+            </div>
+        )}
         <div className={WORKSPACE_NAME}>
             <ConsoleWorkspaceMenu workspaceName={props.workspaceName} entries={props.workspaceEntries} />
         </div>

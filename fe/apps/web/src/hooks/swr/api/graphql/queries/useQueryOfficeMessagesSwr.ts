@@ -25,7 +25,9 @@ export const useQueryOfficeMessagesSwr = (request: QueryOfficeMessagesRequest | 
         config,
     )
     const earlier = useSWRMutation("OFFICE_EARLIER_PAGE", async (_key: string, { arg }: TriggerArg) => {
-        const result = await queryOfficeMessages({ request: { before: arg, limit: OFFICE_PAGE_SIZE } })
+        const result = await queryOfficeMessages({
+            request: { before: arg.before, limit: OFFICE_PAGE_SIZE, room: arg.room },
+        })
         if (!result.data) throw new Error("officeMessages answered no data")
         return result.data.officeMessages
     })
@@ -50,5 +52,8 @@ export const useQueryOfficeMessagesSwr = (request: QueryOfficeMessagesRequest | 
 
 /** The request accepted by this operation trigger. */
 interface TriggerArg {
-    readonly arg: NonNullable<QueryOfficeMessagesRequest["before"]>
+    readonly arg: {
+        readonly before: NonNullable<QueryOfficeMessagesRequest["before"]>
+        readonly room: string | null
+    }
 }

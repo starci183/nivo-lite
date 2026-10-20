@@ -1,5 +1,11 @@
 import { leadHref } from "@/modules/routes"
-import type { OfficeChatRowView, OfficeListView, OfficeMentionView, OfficeTaskView } from "@/modules/types"
+import type {
+    OfficeChatRowView,
+    OfficeListView,
+    OfficeMentionView,
+    OfficeRoomRowView,
+    OfficeTaskView,
+} from "@/modules/types"
 import { RECENT_CUSTOMERS } from "./office.consts"
 import { threadDayKey } from "./office.thread"
 import type { OfficeAgent, OfficeMessage, OfficeStaff, OfficeTask } from "./office.types"
@@ -7,7 +13,7 @@ import { agentAvatarOf } from "./office.words"
 import type { OfficeContext, OfficeWords } from "./office.words"
 
 /** List time: the clock today, otherwise "Yesterday" or a short date. */
-const listTimeOf = (iso: string, words: OfficeWords, context: OfficeContext): string =>
+export const officeListTimeOf = (iso: string, words: OfficeWords, context: OfficeContext): string =>
     threadDayKey(iso) === threadDayKey(context.nowIso) ? words.time(iso) : words.day(iso)
 
 const lastBy = (messages: ReadonlyArray<OfficeMessage>, agentId: string): OfficeMessage | null =>
@@ -25,9 +31,16 @@ const agentRowOf = (
         id: agent.id,
         label: agent.name,
         description: agent.isActive ? (said?.body ?? role) : words.t("agentPreviewPaused"),
-        time: said === null ? null : listTimeOf(said.createdAt, words, context),
+        time: said === null ? null : officeListTimeOf(said.createdAt, words, context),
         avatar: agentAvatarOf(agent.module, agent.name),
     }
+}
+
+/** The Hub rooms of the left column and the one on screen. */
+export interface OfficeRoomListInput {
+    readonly rows: ReadonlyArray<OfficeRoomRowView>
+    /** The id of the room on screen ("office" for the Office room). */
+    readonly selected: string
 }
 
 /** The left column: the group, the agents and the recent customers. */
@@ -36,20 +49,23 @@ export const officeListViewOf = (
     pendingCount: number,
     words: OfficeWords,
     context: OfficeContext,
+    rooms: OfficeRoomListInput,
 ): OfficeListView => {
     const last = messages.at(-1) ?? null
     const prefix = last === null || last.authorKind === "system" ? "" : `${last.authorName}: `
     return {
+        rooms: rooms.rows,
+        selectedRoom: rooms.selected,
         groupLabel: words.t("title"),
         groupPreview: last === null ? words.t("groupPreviewEmpty") : `${prefix}${last.body}`,
-        groupTime: last === null ? null : listTimeOf(last.createdAt, words, context),
+        groupTime: last === null ? null : officeListTimeOf(last.createdAt, words, context),
         pendingCount,
         agents: context.agents.map((agent) => agentRowOf(agent, messages, words, context)),
         customers: context.leads.slice(0, RECENT_CUSTOMERS).map((lead) => ({
             id: lead.id,
             label: lead.name,
             description: lead.preview ?? words.t("customerPreviewNone"),
-            time: listTimeOf(lead.createdAt, words, context),
+            time: officeListTimeOf(lead.createdAt, words, context),
             avatar: { kind: "person", name: lead.name },
         })),
     }

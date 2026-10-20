@@ -1,9 +1,26 @@
 "use client"
 
-import { useCallback } from "react"
+import { useCallback, useMemo } from "react"
 import { isManager, useMember } from "@/hooks/member"
-import { useOfficeBoard, useOfficeDecisions, useOfficeSend, useOfficeThread, useOfficeWords } from "@/hooks/office"
-import { NIVO_AVATAR, acceptsCommands, mentionsOf } from "@/modules/office"
+import {
+    useOfficeBoard,
+    useOfficeDecisions,
+    useOfficeRooms,
+    useOfficeSend,
+    useOfficeThread,
+    useOfficeWords,
+} from "@/hooks/office"
+import type { OfficeBoard } from "@/hooks/office"
+import {
+    NIVO_AVATAR,
+    acceptsCommands,
+    mentionsOf,
+    roomAgentsOf,
+    roomApprovalsOf,
+    roomOf,
+    roomWorksOf,
+} from "@/modules/office"
+import type { OfficeRoom } from "@/modules/office"
 import { useOfficePanels } from "./useOfficePanels"
 import { useOfficeThreadView } from "./useOfficeThreadView"
 
@@ -25,18 +42,43 @@ const firstJumpOf = (approval: Waiting | undefined, exception: Waiting | undefin
     return exception === undefined ? null : { kind: "exception", id: exception.id }
 }
 
-/** The whole Office messenger: its data, its words and its commands, ready for the block to draw. */
-export const useOfficeMessenger = (focusedId: string | null) => {
+/** The board scoped to a room: the approvals of its agents and the exceptions of their departments. */
+const scopedBoard = (full: OfficeBoard, current: OfficeRoom | null): OfficeBoard => ({
+    ...full,
+    pending: roomApprovalsOf(current, full.pending),
+    decided: roomApprovalsOf(current, full.decided),
+    exceptions: roomWorksOf(current, full.exceptions, full.agents),
+    decidedCards: roomWorksOf(current, full.decidedCards, full.agents),
+})
+
+/** The people of a room: its seated people, else the accounts (and, in the Office room, the staff without one). */
+const roomPeopleOf = (board: OfficeBoard, current: OfficeRoom | null): number => {
+    if (current !== null && current.userIds.length > 0) return current.userIds.length
+    const linked = board.people.filter((person) => person.staffId !== null).length
+    return board.people.length + (current === null ? board.staff.length - linked : 0)
+}
+
+/** The whole Office messenger for one Hub room (null = the Office room): its data, its words and its commands. */
+export const useOfficeMessenger = (focusedId: string | null, roomKey: string | null) => {
     const words = useOfficeWords()
     const me = useMember()
-    const thread = useOfficeThread()
-    const board = useOfficeBoard()
+    const thread = useOfficeThread(roomKey)
+    const hub = useOfficeRooms(roomKey)
+    const fullBoard = useOfficeBoard()
     const sender = useOfficeSend()
     const decisions = useOfficeDecisions()
+    const current = roomOf(hub.rooms, roomKey)
+    const roomAgents = roomAgentsOf(current, fullBoard.agents)
+    const board = useMemo(() => scopedBoard(fullBoard, current), [fullBoard, current])
     const messages = thread.slot.items
-    const waitingCount = board.pending.length + board.exceptions.length
+    const pendingCards = (messages ?? []).filter((line) => line.card !== null && line.cardState === "pending").length
+    const waitingCount = board.pending.length + board.exceptions.length + pendingCards
     const items = useOfficeThreadView(messages, board, words, focusedId, decisions.alreadyIds)
-    const panels = useOfficePanels(messages ?? [], board, words, waitingCount)
+    const panelRoom = useMemo(
+        () => ({ current, key: roomKey, rooms: hub.rooms, channels: hub.channels, agents: roomAgents }),
+        [current, roomKey, hub.rooms, hub.channels, roomAgents],
+    )
+    const panels = useOfficePanels(messages ?? [], board, words, waitingCount, panelRoom)
 
     const send = useCallback(
         (body: string): Promise<boolean> => {
@@ -46,6 +88,7 @@ export const useOfficeMessenger = (focusedId: string | null) => {
             const canRead = isManager(me)
             return sender.send({
                 body,
+                room: roomKey,
                 shouldPropose: canRead && called.length > 0,
                 callNames: active.filter((agent) => called.includes(agent.handle)).map((agent) => agent.name),
                 reading:
@@ -54,11 +97,10 @@ export const useOfficeMessenger = (focusedId: string | null) => {
                         : null,
             })
         },
-        [board.agents, me, sender],
+        [board.agents, me, sender, roomKey],
     )
 
     const oldestPending = [...board.pending].sort((a, b) => a.createdAt.localeCompare(b.createdAt))[0]
-    const linked = board.people.filter((person) => person.staffId !== null).length
     return {
         slot: thread.slot,
         items,
@@ -69,8 +111,10 @@ export const useOfficeMessenger = (focusedId: string | null) => {
         waitingCount,
         firstJump: firstJumpOf(oldestPending, board.exceptions[0]),
         taskCount: board.tasks.length,
-        memberCount: board.agents.length + board.people.length + board.staff.length - linked,
-        agentCount: board.agents.length,
+        memberCount: roomAgents.length + roomPeopleOf(board, current),
+        agentCount: roomAgents.length,
+        roomTitle: current === null ? null : current.name,
+        roomOnDuty: roomAgents.filter((agent) => agent.isActive).map((agent) => agent.name),
         reading:
             sender.reading === null
                 ? null
@@ -82,5 +126,6 @@ export const useOfficeMessenger = (focusedId: string | null) => {
         chatbotHandle: board.agents.find((agent) => agent.module === "chatbot" && agent.isActive)?.handle ?? null,
         text: words.t,
         send,
+        markRead: hub.markRead,
     }
 }

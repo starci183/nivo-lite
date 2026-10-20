@@ -10,12 +10,26 @@ export {
 export { acceptsCommands, bodyPartsOf, mentionsOf, mergeMessages } from "./office.helpers"
 export { staffHandlesOf } from "./office.handles"
 export { infoViewOf } from "./office.info-view"
-export { officeListViewOf, mentionOptionsOf, taskViewsOf } from "./office.list-view"
+export { officeListTimeOf, officeListViewOf, mentionOptionsOf, taskViewsOf } from "./office.list-view"
 export { approvalCardAnchor, exceptionCardAnchor } from "./office.message-view"
 export { buildThreadEntries } from "./office.thread"
 export { threadViewsOf } from "./office.thread-view"
+export {
+    pendingCardRowsOf,
+    resultCardAnchor,
+    roomAgentsOf,
+    roomApprovalsOf,
+    roomChannelsOf,
+    roomOf,
+    roomPinsOf,
+    roomRowsOf,
+    roomWorksOf,
+    toOfficeRoom,
+} from "./office.rooms"
+export type { OfficeChannelWire } from "./office.rooms"
 export type {
     OfficeAgent,
+    OfficeRoom,
     OfficeApproval,
     OfficeCandidate,
     OfficeLead,
