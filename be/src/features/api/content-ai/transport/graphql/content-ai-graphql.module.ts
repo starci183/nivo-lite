@@ -1,6 +1,8 @@
 import { Module } from "@nestjs/common"
 import { ContentAiApiModule } from "../../content-ai.module"
+import { BrandKitResolver } from "./brand-kit.resolver"
 import { ConfigurableModuleClass } from "./content-ai-graphql.module-definition"
+import { MarketingReportResolver } from "./marketing-report.resolver"
 import { GetBrandMaterialResolver } from "./get-brand-material.resolver"
 import { GetDraftingBlockedResolver } from "./get-drafting-blocked.resolver"
 import { GetRecentTitlesResolver } from "./get-recent-titles.resolver"
@@ -19,6 +21,8 @@ import { RequestContentMonthPlanResolver } from "./request-content-month-plan.re
         RequestContentDraftResolver,
         RequestContentQuickDraftResolver,
         RequestContentMonthPlanResolver,
+        BrandKitResolver,
+        MarketingReportResolver,
     ],
 })
 /** GraphQL transport of the content AI workbench. */

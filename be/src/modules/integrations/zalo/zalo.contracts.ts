@@ -41,3 +41,19 @@ export interface ZaloEvent {
 /** Why a consultation message could not be delivered, in terms the workbench can show. */
 export type ZaloFailure =
     "zalo_window_expired" | "zalo_unfollowed" | "zalo_night_hours" | "zalo_token" | "zalo_not_connected" | "zalo_error"
+
+/** One OA article to create. */
+export interface ZaloArticle {
+    /** The title (150 characters at most). */
+    readonly title: string
+    /** The author shown (50 characters at most). */
+    readonly author: string
+    /** The public https url of the cover photo. */
+    readonly coverUrl: string
+    /** The short description (300 characters at most). */
+    readonly description: string
+    /** The body, one text paragraph per entry. */
+    readonly paragraphs: ReadonlyArray<string>
+    /** True to show it right away, false to keep it hidden (draft). */
+    readonly publish: boolean
+}

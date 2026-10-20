@@ -1,0 +1,33 @@
+import type { MessageBundle } from "@modules/platform/i18n"
+
+/** AI Marketing errors and the text lines of its Hub cards. */
+export const CONTENT_AGENT_MESSAGES: MessageBundle = {
+    vi: {
+        "errors.CONTENT_AI_FILE_INVALID": "Hãy đính kèm một tệp PDF đọc được, tối đa 20 MB.",
+        "errors.CONTENT_AI_BRAND_UNREADABLE": "Chưa đọc được bộ nhận diện từ tệp này. Hãy thử lại hoặc gửi tệp khác.",
+        "errors.CONTENT_AI_PROPOSAL_NOT_FOUND": "Không tìm thấy bộ nhận diện này.",
+        "errors.CONTENT_AI_PROPOSAL_DECIDED": "Bộ nhận diện này đã được xác nhận hoặc bỏ qua.",
+        "errors.CONTENT_AI_KIT_INVALID": "Bộ nhận diện cần ít nhất một màu hoặc giọng điệu.",
+        "errors.CONTENT_AI_CHANNEL_REFUSED": "Kênh chưa nhận lịch đăng: {{reason}}.",
+        "marketing.brandRead": "Em đã đọc {{file}}. Đây là bộ nhận diện em sẽ dùng khi tạo nội dung, chị xác nhận giúp em.",
+        "marketing.draftCard": "Em đã chuẩn bị nội dung \"{{title}}\" theo bộ nhận diện. Chị xem và duyệt trước khi em lên lịch nhé.",
+        "marketing.draftFailed": "Em chưa soạn được bài cho yêu cầu này: {{reason}}",
+        "marketing.approvalCard": "Cần duyệt: \"{{title}}\" đăng trên {{channels}}.",
+        "marketing.scheduledCard": "Đã lên lịch \"{{title}}\" lúc {{at}} trên {{channels}}.",
+        "marketing.reportCard": "Báo cáo Marketing tuần {{from}} - {{to}}: tiếp cận {{reach}}, tương tác {{engagements}}, tin nhắn mới {{messages}}.",
+    },
+    en: {
+        "errors.CONTENT_AI_FILE_INVALID": "Attach a readable PDF of at most 20 MB.",
+        "errors.CONTENT_AI_BRAND_UNREADABLE": "No brand kit could be read from this file. Try again or send another file.",
+        "errors.CONTENT_AI_PROPOSAL_NOT_FOUND": "This brand kit was not found.",
+        "errors.CONTENT_AI_PROPOSAL_DECIDED": "This brand kit was confirmed or dismissed already.",
+        "errors.CONTENT_AI_KIT_INVALID": "A brand kit needs at least one color or a tone.",
+        "errors.CONTENT_AI_CHANNEL_REFUSED": "The channel did not take the schedule: {{reason}}.",
+        "marketing.brandRead": "I read {{file}}. This is the brand kit I will use for content; please confirm it.",
+        "marketing.draftCard": "The post \"{{title}}\" is ready in the brand kit. Review and approve it before I schedule it.",
+        "marketing.draftFailed": "I could not draft this request: {{reason}}",
+        "marketing.approvalCard": "Needs approval: \"{{title}}\" on {{channels}}.",
+        "marketing.scheduledCard": "Scheduled \"{{title}}\" for {{at}} on {{channels}}.",
+        "marketing.reportCard": "Weekly marketing report {{from}} - {{to}}: reach {{reach}}, engagements {{engagements}}, new messages {{messages}}.",
+    },
+}

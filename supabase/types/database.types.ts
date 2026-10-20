@@ -1,4 +1,4 @@
-// migrations-sha256: 0b84751360cf359d150904cd52b7ea2337e3002f73d285027661b75129daf999
+// migrations-sha256: 92a799f9df6f868477e1075c418b41ad21370ef902912ee7d326be39d7e32240
 
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[]
 
@@ -1052,6 +1052,25 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"content_brand_proposals": {
+                  Row: {
+                    "created_at": string,"decided_at": string | null,"decided_by": string | null,"file_name": string,"file_size": number,"id": string,"installation_id": string | null,"payload": NonNullable<Json>,"setup_session_id": string | null,"status": string,"workspace_id": string
+                  }
+                  Insert: {
+                    "created_at"?: string,"decided_at"?: string | null,"decided_by"?: string | null,"file_name": string,"file_size"?: number,"id"?: string,"installation_id"?: string | null,"payload": NonNullable<Json>,"setup_session_id"?: string | null,"status"?: string,"workspace_id": string
+                  }
+                  Update: {
+                    "created_at"?: string,"decided_at"?: string | null,"decided_by"?: string | null,"file_name"?: string,"file_size"?: number,"id"?: string,"installation_id"?: string | null,"payload"?: NonNullable<Json>,"setup_session_id"?: string | null,"status"?: string,"workspace_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "content_brand_proposals_workspace_id_fkey"
+      columns: ["workspace_id"]
+isOneToOne: false
+      referencedRelation: "workspaces"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"content_cadence": {
                   Row: {
                     "channel": string,"created_at": string,"days": (number)[],"id": string,"post_time": string,"posts_per_week": number,"workspace_id": string
@@ -1065,6 +1084,25 @@ isOneToOne: false
                   Relationships: [
                     {
       foreignKeyName: "content_cadence_workspace_id_fkey"
+      columns: ["workspace_id"]
+isOneToOne: false
+      referencedRelation: "workspaces"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"content_engagement_daily": {
+                  Row: {
+                    "channel": string,"day": string,"engagements": number,"messages": number,"reach": number,"synced_at": string,"workspace_id": string
+                  }
+                  Insert: {
+                    "channel": string,"day": string,"engagements"?: number,"messages"?: number,"reach"?: number,"synced_at"?: string,"workspace_id": string
+                  }
+                  Update: {
+                    "channel"?: string,"day"?: string,"engagements"?: number,"messages"?: number,"reach"?: number,"synced_at"?: string,"workspace_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "content_engagement_daily_workspace_id_fkey"
       columns: ["workspace_id"]
 isOneToOne: false
       referencedRelation: "workspaces"
@@ -1142,13 +1180,13 @@ isOneToOne: false
                   ]
                 },"content_settings": {
                   Row: {
-                    "automations": NonNullable<Json>,"avoid": string,"brand_voice": string,"cta": string,"hashtags": (string)[],"marks": NonNullable<Json>,"updated_at": string,"workspace_id": string
+                    "automations": NonNullable<Json>,"avoid": string,"brand_colors": NonNullable<Json>,"brand_fonts": (string)[],"brand_imagery": (string)[],"brand_source": string,"brand_tone": string,"brand_voice": string,"cta": string,"hashtags": (string)[],"marks": NonNullable<Json>,"updated_at": string,"workspace_id": string
                   }
                   Insert: {
-                    "automations"?: NonNullable<Json>,"avoid"?: string,"brand_voice"?: string,"cta"?: string,"hashtags"?: (string)[],"marks"?: NonNullable<Json>,"updated_at"?: string,"workspace_id": string
+                    "automations"?: NonNullable<Json>,"avoid"?: string,"brand_colors"?: NonNullable<Json>,"brand_fonts"?: (string)[],"brand_imagery"?: (string)[],"brand_source"?: string,"brand_tone"?: string,"brand_voice"?: string,"cta"?: string,"hashtags"?: (string)[],"marks"?: NonNullable<Json>,"updated_at"?: string,"workspace_id": string
                   }
                   Update: {
-                    "automations"?: NonNullable<Json>,"avoid"?: string,"brand_voice"?: string,"cta"?: string,"hashtags"?: (string)[],"marks"?: NonNullable<Json>,"updated_at"?: string,"workspace_id"?: string
+                    "automations"?: NonNullable<Json>,"avoid"?: string,"brand_colors"?: NonNullable<Json>,"brand_fonts"?: (string)[],"brand_imagery"?: (string)[],"brand_source"?: string,"brand_tone"?: string,"brand_voice"?: string,"cta"?: string,"hashtags"?: (string)[],"marks"?: NonNullable<Json>,"updated_at"?: string,"workspace_id"?: string
                   }
                   Relationships: [
                     {

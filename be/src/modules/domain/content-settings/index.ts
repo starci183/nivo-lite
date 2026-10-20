@@ -1,6 +1,6 @@
 export { ContentSettingsModule } from "./content-settings.module"
 export { ContentSettingsService } from "./content-settings.service"
-export type { TickWorkspace } from "./content-settings.contracts"
+export type { StoredGuidelineBrand, TickWorkspace } from "./content-settings.contracts"
 export { ContentConfigurationService } from "./content-configuration.service"
 export { CONTENT_SETTINGS_ERROR_KINDS } from "./errors/content-settings.error"
 export { CONTENT_SETTINGS_MESSAGES } from "./messages/content-settings.messages"

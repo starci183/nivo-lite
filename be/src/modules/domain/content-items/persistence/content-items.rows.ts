@@ -27,3 +27,51 @@ export interface InsertedRow {
     /** The new row. */
     readonly id: string
 }
+
+/** One stored channel draft. */
+export interface AgentDraftVariantRow {
+    /** The post text. */
+    readonly text: string
+    /** The hashtags. */
+    readonly hashtags: ReadonlyArray<string>
+    /** The channel note. */
+    readonly note: string
+}
+
+/** A stored agent draft. */
+export interface AgentDraftRow {
+    /** The id. */
+    readonly id: string
+    /** The stored variants. */
+    readonly variants: Readonly<Record<string, AgentDraftVariantRow>>
+    /** The stored channels. */
+    readonly channels: ReadonlyArray<string>
+}
+
+/** One stored channel text. */
+export interface VariantTextRow {
+    /** The text, when written. */
+    readonly text?: string
+}
+
+/** One stored attachment. */
+export interface MediaPathRow {
+    /** The storage path, when present. */
+    readonly path?: string
+}
+
+/** A post as the scheduler reads it. */
+export interface ScheduleItemRow {
+    /** The id. */
+    readonly id: string
+    /** The title. */
+    readonly title: string
+    /** The channels. */
+    readonly channels: ReadonlyArray<string>
+    /** The variants. */
+    readonly variants: Readonly<Record<string, VariantTextRow>>
+    /** The attachments. */
+    readonly media: ReadonlyArray<MediaPathRow>
+    /** When it should be published. */
+    readonly scheduled_at: string | null
+}

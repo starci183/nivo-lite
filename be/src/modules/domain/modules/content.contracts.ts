@@ -124,7 +124,7 @@ export const CONTENT_MODULE: ModuleDefinition = {
             command: "draft_post",
             action: "draft_post",
             subjectType: "inbound",
-            requiredFields: [],
+            requiredFields: ["request"],
             description: catalogText("modulesCatalog.content.accepts.draft_post.description"),
         },
         {

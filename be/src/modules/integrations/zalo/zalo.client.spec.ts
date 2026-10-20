@@ -192,3 +192,57 @@ describe("ZaloClient / userDisplayName", () => {
         })
     })
 })
+
+describe("ZaloClient / createArticle", () => {
+    const article = {
+        title: "A weekend",
+        author: "HAKUEN",
+        coverUrl: "https://x/cover.png",
+        description: "Offer",
+        paragraphs: ["Paragraph 1", "Paragraph 2"],
+        publish: false,
+    }
+
+    it("creates a hidden article with the cover and paragraphs and answers its token", async () => {
+        const { client, http } = await build()
+        http.request.mockResolvedValueOnce({ status: 200, body: { error: 0, data: { token: "tok-1" } } })
+
+        await expect(client.createArticle("access", article)).resolves.toBe("tok-1")
+        expect(http.request).toHaveBeenCalledWith(
+            expect.objectContaining({
+                method: "POST",
+                url: "https://api.test/v2.0/article/create",
+                headers: { access_token: "access" },
+                body: expect.objectContaining({
+                    type: "normal",
+                    status: "hide",
+                    cover: { cover_type: "photo", photo_url: "https://x/cover.png", status: "show" },
+                    body: [
+                        { type: "text", content: "Paragraph 1" },
+                        { type: "text", content: "Paragraph 2" },
+                    ],
+                }),
+            }),
+        )
+    })
+
+    it("shows the article when asked to publish", async () => {
+        const { client, http } = await build()
+        http.request.mockResolvedValueOnce({ status: 200, body: { error: 0, data: { token: "tok-2" } } })
+
+        await client.createArticle("access", { ...article, publish: true })
+
+        expect(http.request).toHaveBeenCalledWith(
+            expect.objectContaining({ body: expect.objectContaining({ status: "show" }) }),
+        )
+    })
+
+    it("is a rejection when Zalo answers without a token", async () => {
+        const { client, http } = await build()
+        http.request.mockResolvedValueOnce({ status: 200, body: { error: 0, data: {} } })
+
+        await expect(client.createArticle("access", article)).rejects.toMatchObject({
+            code: ZaloErrorCode.Rejected,
+        })
+    })
+})

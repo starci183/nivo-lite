@@ -18,3 +18,22 @@ LIMIT 1`
 export const INSERT_OFFER_IDEA = sql`INSERT INTO public.content_items (workspace_id, title, brief, pillar_id, channels, status, source, created_by, evidence)
 VALUES ($1, $2, $3, $4, $5::text[], 'idea', 'offer', 'NIVO', $6::jsonb)
 RETURNING id`
+
+/**
+ * Stores an agent-written draft ($1 workspace, $2 title, $3 brief, $4 channels, $5 scheduled_at, $6 variants json, $7 hashtags,
+ * $8 media json, $9 evidence json, $10 actor); answers the id and the stored variants and channels.
+ */
+export const INSERT_AGENT_DRAFT = sql`INSERT INTO public.content_items
+(workspace_id, title, brief, channels, scheduled_at, status, variants, hashtags, media, evidence, source, created_by, drafted_at)
+VALUES ($1, $2, $3, $4, $5, 'draft', $6::jsonb, $7, $8::jsonb, $9::jsonb, 'quick', $10, now())
+RETURNING id, variants, channels`
+
+/** One post as the scheduler reads it ($1 workspace, $2 item). */
+export const SELECT_SCHEDULE_ITEM = sql`SELECT id, title, channels, variants, media, to_json(scheduled_at) #>> '{}' AS scheduled_at
+FROM public.content_items
+WHERE workspace_id = $1 AND id = $2
+LIMIT 1`
+
+/** Records where networks scheduled the post ($1 workspace, $2 item, $3 published json). */
+export const MARK_ITEM_SCHEDULED = sql`UPDATE public.content_items SET published = published || $3::jsonb, updated_at = now()
+WHERE workspace_id = $1 AND id = $2`
