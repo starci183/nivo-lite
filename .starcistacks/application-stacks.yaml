@@ -82,6 +82,9 @@ backing:
 # (supabase/migrations/20261026000300_job-ticks.sql: each job is one pgmq.send to the queue its worker consumes) and the schedule is the exact
 # cron expression of the job. `cli jobs tick <id>` enqueues one tick by hand (replay of a missed tick).
 jobs:
+  accounting-desk-morning:
+    schedule: "30 23 * * *"
+    command: node be/dist/apps/cli/src/main.js jobs tick accounting-desk-morning
   agents-sync-all:
     schedule: "*/5 * * * *"
     command: node be/dist/apps/cli/src/main.js jobs tick agents-sync-all

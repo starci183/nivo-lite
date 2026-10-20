@@ -39,6 +39,7 @@ import { DeductOrderQueueModule } from "@features/jobs/deduct-order"
 import { ReplenishStockQueueModule } from "@features/jobs/replenish-stock"
 import { HiringTickQueueModule } from "@features/jobs/hiring-tick"
 import { RunShiftsAlertsQueueModule } from "@features/jobs/run-shifts-alerts"
+import { RunAccountingMorningQueueModule } from "@features/jobs/run-accounting-morning"
 import { RunLeadGenQueueModule } from "@features/jobs/run-lead-gen"
 
 /** The background jobs the api runs: each queue module registers its processor with the job runner. */
@@ -84,4 +85,5 @@ export const API_JOB_QUEUES: Array<DynamicModule> = [
     ReplenishStockQueueModule.register({}),
     HiringTickQueueModule.register({}),
     RunShiftsAlertsQueueModule.register({}),
+    RunAccountingMorningQueueModule.register({}),
 ]

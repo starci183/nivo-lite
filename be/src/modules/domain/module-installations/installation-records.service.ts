@@ -31,6 +31,7 @@ import {
     LIST_INSTALLATIONS,
     LIST_INSTANCE_NAMES,
     LIST_ON_OPENCLAW,
+    LIST_WORKSPACES_OF_MODULE,
     RENAME_INSTALLATION,
     SAVE_SETTINGS,
     SET_LIVE,
@@ -93,6 +94,12 @@ export class InstallationRecordsService {
             moduleKey,
         ])
         return row ?? null
+    }
+
+    /** The workspaces where a module is installed, whatever their state. */
+    async workspacesOf(moduleKey: string): Promise<ReadonlyArray<string>> {
+        const rows = await this.entityManager.query<Array<IdRow>>(LIST_WORKSPACES_OF_MODULE, [moduleKey])
+        return rows.map((row) => row.id)
     }
 
     /** The installation that owns an agent; null when the agent drives none. */
