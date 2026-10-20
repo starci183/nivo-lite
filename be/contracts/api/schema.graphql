@@ -4243,6 +4243,46 @@ input MarkVideoPublishedInput {
   projectId: ID!
 }
 
+type McpCallLogType {
+  agentName: String!
+  approvedBy: String
+  argsMasked: String!
+  at: String!
+  durationMs: Int!
+  errorCode: String
+  id: String!
+  outcome: String!
+  resultSummary: String!
+  tool: String!
+}
+
+type McpConnectorType {
+  contractVersion: String!
+  credentialRef: String
+  key: String!
+  kind: String!
+  name: String!
+  status: String!
+  timeoutMs: Int!
+  tools: [McpToolType!]!
+  url: String
+}
+
+type McpToolGrantType {
+  agentId: String!
+  agentName: String!
+  constraintsJson: String!
+  limitVnd: Float
+  mode: String!
+  tool: String!
+}
+
+type McpToolType {
+  description: String!
+  name: String!
+  scope: String!
+}
+
 type MemberListingType {
   displayName: String!
   email: String!
@@ -4616,6 +4656,7 @@ type Mutation {
   redeemLoyaltyReward(input: RedeemLoyaltyRewardInput!): RedeemLoyaltyRewardType!
   reembedKnowledge: Boolean!
   refreshLeadContext(input: RefreshLeadContextInput!): LeadActionQueuedType!
+  registerMcpConnector(input: RegisterMcpConnectorInput!): Boolean!
   reindexKnowledgeSource(input: ReindexKnowledgeSourceInput!): SourceRefType!
   removeBookingException(input: RemoveBookingExceptionInput!): RemoveBookingExceptionType!
   removeBookingResource(input: RemoveBookingResourceInput!): RemoveBookingResourceType!
@@ -4722,6 +4763,7 @@ type Mutation {
   setHiringJobStatus(input: SetHiringJobStatusInput!): HiringStatusType!
   setInventoryItemActive(input: SetInventoryItemActiveInput!): Boolean!
   setKnowledgeSuggestionState(input: SetKnowledgeSuggestionStateInput!): Boolean!
+  setMcpToolGrant(input: SetMcpToolGrantInput!): Boolean!
   setMemberStatus(input: SetMemberStatusInput!): Boolean!
   setModuleLive(input: SetModuleLiveInput!): ModuleInstallationType!
   setOperatingMode(input: SetOperatingModeInput!): ModuleInstallationType!
@@ -4746,6 +4788,7 @@ type Mutation {
   submitTelegramPassword(input: SubmitTelegramPasswordInput!): TelegramLoginStageType!
   suggestLeadOwner(input: SuggestLeadOwnerInput!): LeadActionQueuedType!
   syncLoyaltyMembers: SyncLoyaltyMembersType!
+  syncMcpConnector(key: String!): Int!
   takeInventoryStock(input: TakeInventoryStockInput!): TakeStockType!
   takeOverAgentChatConversation(input: TakeOverAgentChatConversationInput!): AgentChatHolderType!
   testWebhookConnection(input: TestWebhookConnectionInput!): WebhookTestResultType!
@@ -5394,6 +5437,9 @@ type Query {
   loyaltyCampaign(input: LoyaltyCampaignInput!): LoyaltyCampaignViewType!
   loyaltyMember(input: LoyaltyMemberInput!): LoyaltyMemberDetailType!
   loyaltyProgram: LoyaltyProgramSettingsType!
+  mcpCallLog(limit: Int): [McpCallLogType!]!
+  mcpConnectors: [McpConnectorType!]!
+  mcpToolGrants: [McpToolGrantType!]!
   metaConnection(input: GetMetaConnectionInput!): MetaWizardConnectionType!
   moduleDefinition(input: ModuleKeyInput!): ModuleDefinitionType!
   moduleInstallation(input: ModuleInstallationIdInput!): ModuleInstallationType!
@@ -5566,6 +5612,15 @@ type RedeemLoyaltyRewardType {
 
 input RefreshLeadContextInput {
   leadId: String!
+}
+
+input RegisterMcpConnectorInput {
+  contractVersion: String!
+  credentialRef: String
+  key: String!
+  name: String!
+  timeoutMs: Int
+  url: String!
 }
 
 input ReindexKnowledgeSourceInput {
@@ -6648,6 +6703,14 @@ input SetInventoryItemActiveInput {
 input SetKnowledgeSuggestionStateInput {
   key: String!
   state: String
+}
+
+input SetMcpToolGrantInput {
+  agentId: String!
+  constraintsJson: String
+  limitVnd: Float
+  mode: String!
+  tool: String!
 }
 
 input SetMemberStatusInput {

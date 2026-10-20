@@ -88,7 +88,14 @@ const validDate = (value: MailDate): Date | null => {
     return Number.isNaN(date.getTime()) ? null : date
 }
 
-/** One parsed email as a hub row: 20 KB of text, attachments as name/type/size only. */
+/** The largest XML attachment kept whole: an e-invoice (TT78) is a few kilobytes. */
+const INVOICE_XML_MAX = 200_000
+
+/** True for a small XML attachment, the shape of a Vietnamese e-invoice (TT78), whose text the e-invoice tools read. */
+export const isInvoiceXml = (filename: string, contentType: string, size: number): boolean =>
+    size <= INVOICE_XML_MAX && (filename.toLowerCase().endsWith(".xml") || contentType.includes("xml"))
+
+/** One parsed email as a hub row: 20 KB of text, attachments as name/type/size only (a small XML e-invoice also keeps its text). */
 export const messageToRow = (
     folder: string,
     uidValidity: string,
@@ -114,6 +121,9 @@ export const messageToRow = (
                 name: attachment.filename ?? null,
                 type: attachment.contentType,
                 size: attachment.size,
+                ...(isInvoiceXml(attachment.filename ?? "", attachment.contentType, attachment.size)
+                    ? { xml: attachment.content.toString("utf8") }
+                    : {}),
             })),
             messageId: mail.messageId ?? null,
             inReplyTo: mail.inReplyTo ?? null,

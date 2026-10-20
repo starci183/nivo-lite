@@ -5,6 +5,8 @@ import type { WorkPerformer, WorkPerformerRegistry } from "@modules/domain/decis
 import { BookingPerformerService } from "./booking-performer.service"
 import { BookingRemindPerformerService } from "./booking-remind-performer.service"
 import { CarePerformerService } from "./care-performer.service"
+import { EarlyCheckinPerformerService } from "./early-checkin-performer.service"
+import { GatewayCallPerformerService } from "./gateway-call-performer.service"
 import { ClassifyLeadPerformerService } from "./classify-lead-performer.service"
 import { ConfirmOrderPerformerService } from "./confirm-order-performer.service"
 import { FollowUpPerformerService } from "./follow-up-performer.service"
@@ -32,6 +34,8 @@ const build = async () => {
     const booking = mock<BookingPerformerService>()
     const remind = mock<BookingRemindPerformerService>()
     const redeem = mock<RedeemRewardPerformerService>()
+    const gatewayCall = mock<GatewayCallPerformerService>()
+    const earlyCheckin = mock<EarlyCheckinPerformerService>()
     const moduleRef = await Test.createTestingModule({
         providers: [
             WorkPerformersRegistrarService,
@@ -49,6 +53,8 @@ const build = async () => {
             { provide: BookingPerformerService, useValue: booking },
             { provide: BookingRemindPerformerService, useValue: remind },
             { provide: RedeemRewardPerformerService, useValue: redeem },
+            { provide: GatewayCallPerformerService, useValue: gatewayCall },
+            { provide: EarlyCheckinPerformerService, useValue: earlyCheckin },
         ],
     }).compile()
 
@@ -68,6 +74,8 @@ const build = async () => {
         booking,
         remind,
         redeem,
+        gatewayCall,
+        earlyCheckin,
     }
 }
 
@@ -89,6 +97,8 @@ describe("WorkPerformersRegistrarService", () => {
             booking,
             remind,
             redeem,
+            gatewayCall,
+            earlyCheckin,
         } = await build()
 
         const registered = new Map<string, WorkPerformer>()
@@ -115,7 +125,11 @@ describe("WorkPerformersRegistrarService", () => {
             "reschedule",
             "remind_booking",
             "redeem_reward",
+            "gateway_call",
+            "care_early_checkin",
         ])
+        expect(registered.get("gateway_call")).toBe(gatewayCall)
+        expect(registered.get("care_early_checkin")).toBe(earlyCheckin)
         expect(registered.get("handoff_lead")).toBe(handoff)
         expect(registered.get("classify_lead")).toBe(classify)
         expect(registered.get("send_follow_up")).toBe(followUp)
@@ -132,7 +146,7 @@ describe("WorkPerformersRegistrarService", () => {
         expect(registered.get("reschedule")).toBe(booking)
         expect(registered.get("remind_booking")).toBe(remind)
         expect(registered.get("redeem_reward")).toBe(redeem)
-        expect(registry.add).toHaveBeenCalledTimes(16)
+        expect(registry.add).toHaveBeenCalledTimes(18)
         expect(registry.add).toHaveBeenCalledWith("cancel_booking", booking)
         expect(registry.add).toHaveBeenCalledWith("cancel_with_fee", booking)
         expect(registry.add).toHaveBeenCalledWith("confirm_booking", booking)

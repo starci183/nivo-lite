@@ -8,6 +8,9 @@ import { CONTENT_PUBLISHING_MESSAGES } from "@modules/domain/content-publishing"
 import { CONTENT_MEDIA_MESSAGES } from "@modules/domain/content-media"
 import { MESSAGES_MESSAGES } from "@modules/domain/messages"
 import { OFFICE_ROOMS_MESSAGES } from "@modules/domain/office-rooms"
+import { GATEWAY_TURNS_MESSAGES } from "@modules/domain/customer-turns"
+import { MCP_GATEWAY_MESSAGES } from "@modules/domain/mcp-gateway"
+import { MCP_MESSAGES } from "@modules/integrations/mcp"
 
 /** App-wide messages catalog, preserving registration order. */
 export const API_MESSAGES_4 = [
@@ -21,4 +24,7 @@ export const API_MESSAGES_4 = [
     CONTENT_MEDIA_MESSAGES,
     MESSAGES_MESSAGES,
     OFFICE_ROOMS_MESSAGES,
+    MCP_MESSAGES,
+    MCP_GATEWAY_MESSAGES,
+    GATEWAY_TURNS_MESSAGES,
 ]

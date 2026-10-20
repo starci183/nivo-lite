@@ -14,6 +14,7 @@ import { parseTelegramUserConfig } from "@modules/integrations/telegram-user"
 import { parseMailConfig } from "@modules/integrations/mail"
 import { parseTelegramConfig } from "@modules/integrations/telegram"
 import { parseZaloConfig } from "@modules/integrations/zalo"
+import { parseMcpGatewayConfig } from "@modules/domain/mcp-gateway"
 import { parsePlatformAdminConfig } from "@modules/domain/platform-admin"
 import { parseWorkspaceInvitesConfig } from "@modules/domain/workspace-invites"
 import { parseWorkspacesConfig } from "@modules/domain/workspaces"
@@ -67,6 +68,8 @@ export interface ApiOptions {
     readonly telegram: ReturnType<typeof parseTelegramConfig>
     /** The Zalo OAuth and Open API hosts. */
     readonly zalo: ReturnType<typeof parseZaloConfig>
+    /** The MCP gateway: the credential NAMES remote connectors may use (each read through <NAME>_FILE) and the call limit. */
+    readonly mcpGateway: ReturnType<typeof parseMcpGatewayConfig>
     /** Outgoing mail: the platform sender and the private-host policy. */
     readonly mail: ReturnType<typeof parseMailConfig>
     /** The private-host policy for the owner's systems the data hub reads. */
@@ -126,6 +129,7 @@ export const readApiEnv = (env: EnvSource): ApiOptions => ({
     channels: parseChannelsConfig(env),
     telegram: parseTelegramConfig(env),
     zalo: parseZaloConfig(env),
+    mcpGateway: parseMcpGatewayConfig(env),
     mail: parseMailConfig(env),
     dataSources: parseDataSourcesConfig(env),
     telegramUser: parseTelegramUserConfig(env),

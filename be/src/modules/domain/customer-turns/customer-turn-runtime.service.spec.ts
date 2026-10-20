@@ -222,6 +222,7 @@ describe("CustomerTurnRuntimeService", () => {
                 application: null,
                 loyalty: null,
                 booking_request: bookingRequest,
+                hotel_request: null,
             },
         })
         expect(gateway.runTurn).toHaveBeenCalledTimes(1)

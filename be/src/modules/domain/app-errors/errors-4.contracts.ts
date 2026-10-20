@@ -8,6 +8,8 @@ import { CONTENT_PUBLISHING_ERROR_KINDS } from "@modules/domain/content-publishi
 import { CONTENT_MEDIA_ERROR_KINDS } from "@modules/domain/content-media"
 import { MESSAGES_ERROR_KINDS } from "@modules/domain/messages"
 import { OFFICE_ROOMS_ERROR_KINDS } from "@modules/domain/office-rooms"
+import { MCP_GATEWAY_ERROR_KINDS } from "@modules/domain/mcp-gateway"
+import { MCP_ERROR_KINDS } from "@modules/integrations/mcp"
 
 /** App-wide errors catalog, preserving registration order. */
 export const API_ERROR_KINDS_4 = [
@@ -21,4 +23,6 @@ export const API_ERROR_KINDS_4 = [
     CONTENT_MEDIA_ERROR_KINDS,
     MESSAGES_ERROR_KINDS,
     OFFICE_ROOMS_ERROR_KINDS,
+    MCP_ERROR_KINDS,
+    MCP_GATEWAY_ERROR_KINDS,
 ]

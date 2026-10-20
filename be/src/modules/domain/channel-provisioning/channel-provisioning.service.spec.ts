@@ -3,7 +3,7 @@ import { mock, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { ChannelConnectionsService } from "@modules/domain/channel-connections"
 import { ConnectionGrantsService } from "@modules/domain/connection-grants"
-import { ConnectionsError, ConnectionsErrorCode } from "@modules/domain/connections"
+import { ConnectionsError, ConnectionsErrorCode, ConnectionsService } from "@modules/domain/connections"
 import type { ConnectionRecord } from "@modules/domain/connections"
 import { Secret } from "@modules/platform/config"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
@@ -62,6 +62,9 @@ const build = async (
     })
     const grants = mock<ConnectionGrantsService>()
     grants.setConnectionAgents.mockResolvedValue(undefined)
+    const connections = mock<ConnectionsService>()
+    connections.create.mockResolvedValue("zalo-1")
+    connections.webhookUrl.mockReturnValue("https://nivo.vn/api/connections/zalo/zalo-1")
     const print = jest.fn()
     const moduleRef = await Test.createTestingModule({
         providers: [
@@ -77,9 +80,10 @@ const build = async (
             },
             { provide: ChannelConnectionsService, useValue: channels },
             { provide: ConnectionGrantsService, useValue: grants },
+            { provide: ConnectionsService, useValue: connections },
         ],
     }).compile()
-    return { service: moduleRef.get(ChannelProvisioningService), entityManager, channels, grants, print }
+    return { service: moduleRef.get(ChannelProvisioningService), entityManager, channels, grants, print, connections }
 }
 
 const invalid = (field: string) =>
@@ -94,6 +98,52 @@ const AGENT_ROWS = [
 ]
 
 describe("ChannelProvisioningService", () => {
+    const ZALO = {
+        zaloAppId: "1234567890",
+        zaloAppSecret: new Secret("app-secret-123"),
+        zaloOaSecret: new Secret("oa-secret-123"),
+    }
+
+    it("connects a Zalo OA with every key sealed at once and binds the agents that chat", async () => {
+        const entityManager = mockEntityManager({
+            query: [
+                [FIND_WORKSPACE_OWNER, [{ user_id: "owner-1" }]],
+                [LIST_WORKSPACE_AGENTS, AGENT_ROWS],
+            ],
+        })
+        const { service, connections, grants, print } = await build(ZALO, entityManager)
+
+        await service.run("zalo", { workspace: WORKSPACE, bind: true })
+
+        expect(connections.create).toHaveBeenCalledWith({
+            workspaceId: WORKSPACE,
+            createdBy: "owner-1",
+            provider: "zalo_oa",
+            name: "Zalo OA",
+            status: "pending",
+            environment: "live",
+            meta: { app_id: "1234567890", oa_secret_saved: "true" },
+            secret: {
+                plain: JSON.stringify({ appId: "1234567890", appSecret: "app-secret-123", oaSecret: "oa-secret-123" }),
+                webhookSecret: expect.any(String),
+            },
+        })
+        expect(print.mock.calls[0]?.[0]).toContain("zalo connection zalo-1")
+        expect(grants.setConnectionAgents).toHaveBeenCalled()
+    })
+
+    it.each<[string, Partial<ChannelProvisioningOptions>]>([
+        ["ZALO_APP_ID", { zaloAppId: undefined }],
+        ["ZALO_APP_ID", { zaloAppId: "abc" }],
+        ["ZALO_APP_SECRET", { zaloAppSecret: undefined }],
+        ["ZALO_APP_SECRET", { zaloAppSecret: new Secret("short") }],
+        ["ZALO_OA_SECRET", { zaloOaSecret: undefined }],
+    ])("refuses Zalo without a valid %s", async (field, overrides) => {
+        const { service, connections } = await build({ ...ZALO, ...overrides })
+        await expect(service.run("zalo", { workspace: WORKSPACE, name: "OA" })).rejects.toEqual(invalid(field))
+        expect(connections.create).not.toHaveBeenCalled()
+    })
+
     it.each<ProvisionFlags>([{}, { workspace: "" }, { workspace: "not-a-uuid" }, { workspace: `${WORKSPACE}extra` }])(
         "refuses workspace flags %j before querying or connecting",
         async (flags) => {
@@ -125,7 +175,7 @@ describe("ChannelProvisioningService", () => {
         expect(print).not.toHaveBeenCalled()
     })
 
-    it.each(["unknown", "zalo"])("refuses the unknown kind %s after finding the owner", async (kind) => {
+    it.each(["unknown"])("refuses the unknown kind %s after finding the owner", async (kind) => {
         const { service, entityManager, channels, print } = await build()
 
         await expect(service.run(kind, { workspace: WORKSPACE })).rejects.toEqual(invalid("kind"))

@@ -281,6 +281,7 @@ describe("readCustomerReply", () => {
             application: null,
             loyaltyRewardKey: null,
             bookingRequest: null,
+            hotelRequest: null,
         })
         expect(subject.readCustomerReply("   ", HOLD).proposedAnswer).toBeNull()
         expect(subject.readCustomerReply('{"reply":"  "}', HOLD).reply).toBe(HOLD)
@@ -351,6 +352,7 @@ describe("detailOf", () => {
         application: null,
         loyaltyRewardKey: null,
         bookingRequest: null,
+        hotelRequest: null,
     }
 
     it("writes nulls when nothing was captured", async () => {
@@ -364,6 +366,7 @@ describe("detailOf", () => {
             application: null,
             loyalty: null,
             booking_request: null,
+            hotel_request: null,
         })
     })
 })
@@ -381,6 +384,7 @@ describe("detailOf", () => {
         application: null,
         loyaltyRewardKey: null,
         bookingRequest: null,
+        hotelRequest: null,
     }
 
     it("writes the reply contract's own member names", async () => {
@@ -445,6 +449,7 @@ describe("detailOf", () => {
                 email: null,
                 note: null,
             },
+            hotel_request: null,
         })
     })
 })

@@ -16,6 +16,12 @@
       "root": "apps/cli",
       "entryFile": "main",
       "sourceRoot": "apps/cli/src"
+    },
+    "mcp": {
+      "type": "application",
+      "root": "apps/mcp",
+      "entryFile": "main",
+      "sourceRoot": "apps/mcp/src"
     }
   }
 }

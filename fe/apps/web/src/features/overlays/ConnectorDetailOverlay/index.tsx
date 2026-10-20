@@ -1,5 +1,6 @@
 "use client"
 
+import { McpGatewayPanel } from "@/features/overlays/McpGatewayPanel"
 import { useTranslations } from "next-intl"
 import { useSearchParams } from "next/navigation"
 import type { ComponentProps, ReactNode } from "react"
@@ -115,6 +116,7 @@ export const ConnectionsOverlayHost = (props: ConnectionsOverlayHostProps) => {
                 renderRow={renderRow}
                 renderViewTabs={renderViewTabs}
             />
+            {mode === "ready" && manager ? <McpGatewayPanel /> : null}
             <OverlayHost active={mode === "ready"} candidate={props.candidate} />
         </>
     )

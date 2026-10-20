@@ -6609,5 +6609,27 @@
     "relay_service_ses_step1_link": "Hướng dẫn của AWS",
     "relay_service_ses_step2": "Máy chủ có dạng email-smtp.<vùng>.amazonaws.com; sửa vùng cho đúng vùng bạn dùng.",
     "relay_service_ses_caution1": "Tài khoản SES mới ở chế độ sandbox: chỉ gửi được tới địa chỉ đã xác minh cho tới khi AWS cho ra khỏi sandbox."
+  },
+  "mcpGateway": {
+    "label": "Cổng MCP",
+    "connectors": "Các kết nối sau một cổng MCP duy nhất",
+    "connectorsEmpty": "Chưa có kết nối",
+    "connectorsEmptyHint": "Kết nối có sẵn (SePay) luôn ở đây; HAKUEN hiện ra khi được đăng ký.",
+    "grants": "Quyền dùng công cụ theo agent",
+    "grantsEmpty": "Chưa agent nào được dùng công cụ kết nối",
+    "grantsEmptyHint": "Mặc định mọi công cụ bị chặn; quyền được cấp theo từng agent.",
+    "log": "Nhật ký gần đây",
+    "logEmpty": "Chưa có lệnh nào",
+    "logEmptyHint": "Mọi lệnh qua cổng được ghi ở đây, bí mật đã che.",
+    "tools": "{count} công cụ · {version}",
+    "native": "có sẵn",
+    "remote": "từ xa",
+    "limitPct": "giảm ≤ {pct}%",
+    "limitVnd": "≤ {amount} ₫",
+    "approvedBy": "duyệt bởi {name}",
+    "duration": "{ms} ms",
+    "failedTitle": "Không đọc được cổng MCP",
+    "failedBody": "Thử lại sau giây lát.",
+    "retry": "Thử lại"
   }
 }

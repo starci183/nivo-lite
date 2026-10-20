@@ -8,6 +8,8 @@ import { BookingReminderTickService } from "./booking-reminder-tick.service"
 import { BookingRemindPerformerService } from "./booking-remind-performer.service"
 import { BookingToolsService } from "./booking-tools.service"
 import { CarePerformerService } from "./care-performer.service"
+import { EarlyCheckinPerformerService } from "./early-checkin-performer.service"
+import { GatewayCallPerformerService } from "./gateway-call-performer.service"
 import { ClassifyLeadPerformerService } from "./classify-lead-performer.service"
 import { ConfirmOrderPerformerService } from "./confirm-order-performer.service"
 import { ConversationLeadsService } from "./conversation-leads.service"
@@ -54,6 +56,8 @@ export class WorkPerformersModule extends ConfigurableModuleClass {
                 FollowUpPerformerService,
                 QuotePerformerService,
                 CarePerformerService,
+                GatewayCallPerformerService,
+                EarlyCheckinPerformerService,
                 ConfirmOrderPerformerService,
                 IssueInvoicePerformerService,
                 ReconcilePaymentPerformerService,

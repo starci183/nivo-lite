@@ -5,10 +5,10 @@ import type { ProvisionFlags } from "@modules/domain/channel-provisioning"
 @Command({
     name: "connect-channel",
     description:
-        "Connect a channel to a workspace as its owner: connect-channel <telegram|sepay> --workspace <id> (secrets come from CHANNEL_BOT_TOKEN)",
+        "Connect a channel to a workspace as its owner: connect-channel <telegram|sepay|zalo> --workspace <id> (secrets come from CHANNEL_BOT_TOKEN, ZALO_APP_ID, ZALO_APP_SECRET_FILE, ZALO_OA_SECRET_FILE)",
     arguments: "<kind>",
 })
-/** `cli connect-channel <kind>`: connects a Telegram bot or a SePay feed through the same capability as the console. */
+/** `cli connect-channel <kind>`: connects a Telegram bot, a SePay feed or a Zalo OA through the same capability as the console. */
 export class ConnectChannelCli extends CommandRunner {
     constructor(private readonly provisioning: ChannelProvisioningService) {
         super()

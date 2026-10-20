@@ -57,6 +57,7 @@ const reply: CustomerReply = {
     application: null,
     loyaltyRewardKey: null,
     bookingRequest: null,
+    hotelRequest: null,
 }
 const invoice: InvoiceRow = {
     id: "inv-1",
