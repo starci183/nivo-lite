@@ -3,7 +3,7 @@ import type { OfficeResultCardView } from "@/modules/types"
 import { MEDIA_GRID_CLASS_NAME } from "./classNames"
 
 /** What the media of a result card draws. */
-export type OfficeCardMediaProps = {
+type OfficeCardMediaProps = {
     readonly card: OfficeResultCardView
 }
 

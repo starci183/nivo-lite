@@ -3,7 +3,7 @@ import type { OfficeResultCardView, OfficeText } from "@/modules/types"
 import { ACTIONS_CLASS_NAME } from "./classNames"
 
 /** What the actions of a result card draw and do. */
-export type OfficeCardActionsProps = {
+type OfficeCardActionsProps = {
     readonly card: OfficeResultCardView
     readonly text: OfficeText
     readonly isBusy: boolean
