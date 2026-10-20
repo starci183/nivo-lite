@@ -2,7 +2,8 @@ import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { ChannelConnectionsService } from "@modules/domain/channel-connections"
 import { ConnectionGrantsService, purposeFor } from "@modules/domain/connection-grants"
-import { ConnectionsError, ConnectionsErrorCode } from "@modules/domain/connections"
+import { randomSecret } from "@modules/domain/connection-secrets"
+import { ConnectionsError, ConnectionsErrorCode, ConnectionsService } from "@modules/domain/connections"
 import type { ConnectionActor, Provider } from "@modules/domain/connections"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { InjectChannelProvisioningOptions } from "./channel-provisioning.decorators"
@@ -12,6 +13,9 @@ import type { AgentRow, OwnerRow } from "./persistence/channel-provisioning.rows
 import { FIND_WORKSPACE_OWNER, LIST_WORKSPACE_AGENTS } from "./persistence/channel-provisioning.sql"
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/iu
+
+const ZALO_APP_ID = /^\d{6,30}$/u
+const ZALO_KEY_MIN = 8
 
 const invalid = (field: string): never => {
     throw new ConnectionsError({ code: ConnectionsErrorCode.CommandInvalid, params: { field } })
@@ -29,6 +33,7 @@ export class ChannelProvisioningService {
         @InjectChannelProvisioningOptions() private readonly options: ChannelProvisioningOptions,
         private readonly channels: ChannelConnectionsService,
         private readonly grants: ConnectionGrantsService,
+        private readonly connections: ConnectionsService,
     ) {}
 
     /** Connects the channel `kind` to the workspace of the flags; a missing flag or secret refuses the run before anything is stored. */
@@ -43,6 +48,7 @@ export class ChannelProvisioningService {
         const actor: ConnectionActor = { principalId: owner.user_id, workspaceId }
         if (kind === "telegram") return this.telegram(actor, flags)
         if (kind === "sepay") return this.sepay(actor, flags)
+        if (kind === "zalo") return this.zalo(actor, flags)
         return invalid("kind")
     }
 
@@ -70,6 +76,33 @@ export class ChannelProvisioningService {
             `sepay connection ${view.id}; paste into SePay: url ${view.webhookUrl}  api key ${view.apiKey}`,
         )
         await this.bind(actor, view.id, "sepay", flags)
+    }
+
+    /**
+     * Zalo OA from ZALO_APP_ID, ZALO_APP_SECRET(_FILE) and ZALO_OA_SECRET(_FILE): the connection is created with every key sealed at
+     * once; the OA owner still grants the OA permissions in the browser (Connections, "Authorise"), which Zalo requires interactively.
+     */
+    private async zalo(actor: ConnectionActor, flags: ProvisionFlags): Promise<void> {
+        const appId = this.options.zaloAppId?.trim() ?? ""
+        if (!ZALO_APP_ID.test(appId)) invalid("ZALO_APP_ID")
+        const appSecret = this.options.zaloAppSecret?.reveal().trim() ?? ""
+        if (appSecret.length < ZALO_KEY_MIN) invalid("ZALO_APP_SECRET")
+        const oaSecret = this.options.zaloOaSecret?.reveal().trim() ?? ""
+        if (oaSecret.length < ZALO_KEY_MIN) invalid("ZALO_OA_SECRET")
+        const id = await this.connections.create({
+            workspaceId: actor.workspaceId,
+            createdBy: actor.principalId,
+            provider: "zalo_oa",
+            name: flags.name ?? "Zalo OA",
+            status: "pending",
+            environment: "live",
+            meta: { app_id: appId, oa_secret_saved: "true" },
+            secret: { plain: JSON.stringify({ appId, appSecret, oaSecret }), webhookSecret: randomSecret() },
+        })
+        this.options.print(
+            `zalo connection ${id}; webhook ${this.connections.webhookUrl("zalo_oa", id)}; open Connections and press Authorise to grant the OA permissions`,
+        )
+        await this.bind(actor, id, "zalo_oa", flags)
     }
 
     /** With --bind, gives every agent of the workspace that can use the provider access to the connection. */

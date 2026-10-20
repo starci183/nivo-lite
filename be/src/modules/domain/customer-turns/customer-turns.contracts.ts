@@ -1,3 +1,4 @@
+import type { HotelRequest } from "./gateway-turns.contracts"
 import type { ChatBookingRequest } from "@modules/domain/work-performers"
 /** A job application the chat captured: a job, a person, a contact and a clear consent; Hiring validates it again. */
 export interface ChatApplicationProposal {
@@ -66,6 +67,8 @@ export interface ReplyFindings {
     readonly loyaltyRewardKey: string | null
     /** The appointment request the reply named (book, change, cancel, ask what is free, wait), or null. */
     readonly bookingRequest: ChatBookingRequest | null
+    /** The hotel request (HAKUEN spa, rooms, holds) the reply named, or null. */
+    readonly hotelRequest: HotelRequest | null
 }
 
 /** One proposed customer reply as the model returned it, read and bounded. */

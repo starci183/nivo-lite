@@ -7,6 +7,8 @@ import { CONTENT_PLANS_ERROR_KINDS } from "@modules/domain/content-plans"
 import { CONTENT_PUBLISHING_ERROR_KINDS } from "@modules/domain/content-publishing"
 import { CONTENT_MEDIA_ERROR_KINDS } from "@modules/domain/content-media"
 
+import { MCP_GATEWAY_ERROR_KINDS } from "@modules/domain/mcp-gateway"
+import { MCP_ERROR_KINDS } from "@modules/integrations/mcp"
 /** App-wide errors catalog, preserving registration order. */
 export const API_ERROR_KINDS_4 = [
     VIDEO_ERROR_KINDS,
@@ -17,4 +19,6 @@ export const API_ERROR_KINDS_4 = [
     CONTENT_PLANS_ERROR_KINDS,
     CONTENT_PUBLISHING_ERROR_KINDS,
     CONTENT_MEDIA_ERROR_KINDS,
+    MCP_ERROR_KINDS,
+    MCP_GATEWAY_ERROR_KINDS,
 ]

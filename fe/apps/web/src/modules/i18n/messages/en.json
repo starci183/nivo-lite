@@ -6579,5 +6579,27 @@
     "relay_service_ses_step1_link": "AWS guide",
     "relay_service_ses_step2": "The host looks like email-smtp.<region>.amazonaws.com; change the region to yours.",
     "relay_service_ses_caution1": "A new SES account is in sandbox: it can only send to verified addresses until AWS lifts it."
+  },
+  "mcpGateway": {
+    "label": "MCP gateway",
+    "connectors": "Connectors behind the one MCP endpoint",
+    "connectorsEmpty": "No connector yet",
+    "connectorsEmptyHint": "Native connectors (SePay) are always here; HAKUEN appears once it is registered.",
+    "grants": "Tool access per agent",
+    "grantsEmpty": "No agent may use a connector tool",
+    "grantsEmptyHint": "Tools are denied by default; grants are set per agent.",
+    "log": "Recent calls",
+    "logEmpty": "No call yet",
+    "logEmptyHint": "Every gateway call is written here with secrets masked.",
+    "tools": "{count} tools · {version}",
+    "native": "native",
+    "remote": "remote",
+    "limitPct": "discount ≤ {pct}%",
+    "limitVnd": "≤ {amount} ₫",
+    "approvedBy": "approved by {name}",
+    "duration": "{ms} ms",
+    "failedTitle": "The MCP gateway could not be read",
+    "failedBody": "Try again in a moment.",
+    "retry": "Retry"
   }
 }

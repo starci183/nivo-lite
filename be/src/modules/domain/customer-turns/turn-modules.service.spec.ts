@@ -14,6 +14,9 @@ import type { ChatBookingRequest } from "@modules/domain/work-performers"
 import { MESSAGE_CATALOG } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
 import type { CustomerReply } from "./customer-turns.contracts"
+import { GatewayContextService } from "./gateway-context.service"
+import { GatewaySalesService } from "./gateway-sales.service"
+import type { HotelRequest } from "./gateway-turns.contracts"
 import { TurnModulesService } from "./turn-modules.service"
 
 type ChatRedeemIntent = Awaited<ReturnType<LoyaltyChatService["redeemIntent"]>>
@@ -81,6 +84,7 @@ const replyOf = (changes: Partial<CustomerReply> = {}): CustomerReply => ({
     application: null,
     loyaltyRewardKey: null,
     bookingRequest: null,
+    hotelRequest: null,
     ...changes,
 })
 const bookingAgent: BoundAgent = {
@@ -120,9 +124,18 @@ const build = async () => {
         brief: jest.fn().mockResolvedValue("LOYALTY FACTS"),
         redeemIntent: jest.fn().mockResolvedValue({ kind: "none" }),
     }
+    const hotelContext = {
+        servesHotel: jest.fn().mockResolvedValue(false),
+        contextOf: jest.fn().mockResolvedValue(null),
+        briefOf: jest.fn().mockReturnValue(["HOTEL CONTRACT"]),
+        route: jest.fn().mockResolvedValue(null),
+    }
+    const hotelSales = { settle: jest.fn().mockResolvedValue({ reply: "Held at 15:00", lines: ["held"] }) }
     const moduleRef = await Test.createTestingModule({
         providers: [
             TurnModulesService,
+            { provide: GatewayContextService, useValue: mock<GatewayContextService>(hotelContext) },
+            { provide: GatewaySalesService, useValue: mock<GatewaySalesService>(hotelSales) },
             { provide: MESSAGE_CATALOG, useValue: mock<MessageCatalog>(catalog) },
             { provide: AgentBindingsService, useValue: mock<AgentBindingsService>(bindings) },
             { provide: WorkEngineService, useValue: mock<WorkEngineService>(engine) },
@@ -131,10 +144,79 @@ const build = async () => {
             { provide: LoyaltyChatService, useValue: mock<LoyaltyChatService>(loyalty) },
         ],
     }).compile()
-    return { modules: moduleRef.get(TurnModulesService), catalog, bindings, engine, evidence, booking, loyalty }
+    return {
+        modules: moduleRef.get(TurnModulesService),
+        catalog,
+        bindings,
+        engine,
+        evidence,
+        booking,
+        loyalty,
+        hotelContext,
+        hotelSales,
+    }
 }
 
 describe("TurnModulesService", () => {
+    describe("hotel", () => {
+        const hotelRequest: HotelRequest = {
+            intent: "spa_hold",
+            service: "massage-60",
+            date: "2026-10-24",
+            time: "15:00",
+            partySize: 2,
+            nights: 1,
+            roomType: "",
+            name: "Lan",
+            phone: null,
+            discountPct: null,
+        }
+        const context = {
+            guestId: "g1",
+            name: "Lan",
+            tier: "vip",
+            stayId: null,
+            room: "",
+            stage: { kind: "none" as const },
+        }
+
+        it("adds the hotel context and routes the conversation for an agent granted HAKUEN tools", async () => {
+            const { modules, hotelContext } = await build()
+            hotelContext.servesHotel.mockResolvedValue(true)
+            hotelContext.contextOf.mockResolvedValue(context)
+            const parts = await modules.briefs(conversationOf())
+            expect(parts).toContain("HOTEL CONTRACT")
+            expect(hotelContext.route).toHaveBeenCalledWith(conversationOf(), context)
+            expect(hotelContext.briefOf).toHaveBeenCalledWith(context)
+        })
+
+        it("keeps the contract alone when HAKUEN cannot give the context", async () => {
+            const { modules, hotelContext } = await build()
+            hotelContext.servesHotel.mockResolvedValue(true)
+            await expect(modules.briefs(conversationOf())).resolves.toContain("HOTEL CONTRACT")
+            expect(hotelContext.route).not.toHaveBeenCalled()
+        })
+
+        it("runs the hotel request and its reply replaces the chat's own", async () => {
+            const { modules, hotelContext, hotelSales } = await build()
+            hotelContext.servesHotel.mockResolvedValue(true)
+            await expect(modules.settle(ctx, turnOf(), replyOf({ hotelRequest }))).resolves.toEqual({
+                reply: "Held at 15:00",
+                lines: ["held"],
+            })
+            expect(hotelSales.settle).toHaveBeenCalledWith(ctx, turnOf().conversation, turnOf().messageId, hotelRequest)
+        })
+
+        it("ignores a hotel request of an agent without HAKUEN grants", async () => {
+            const { modules, hotelSales } = await build()
+            await expect(modules.settle(ctx, turnOf(), replyOf({ hotelRequest }))).resolves.toEqual({
+                reply: null,
+                lines: [],
+            })
+            expect(hotelSales.settle).not.toHaveBeenCalled()
+        })
+    })
+
     it("adds loyalty facts and its contract to a front door without a booking handover", async () => {
         const { modules, loyalty, bindings, booking, catalog } = await build()
         const conversation = conversationOf()

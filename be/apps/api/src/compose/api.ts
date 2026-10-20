@@ -19,6 +19,7 @@ import { AccountGraphqlModule } from "@features/api/account"
 import { ShellGraphqlModule } from "@features/api/shell"
 import { KnowledgeGraphqlModule } from "@features/api/knowledge"
 import { EvidenceGraphqlModule } from "@features/api/evidence"
+import { McpGatewayGraphqlModule } from "@features/api/mcp-gateway"
 import { GoogleConnectionsHttpModule } from "@features/api/google-connections"
 import { MetaConnectionsHttpModule } from "@features/api/meta-connections"
 import { MetaHttpModule } from "@features/webhooks/meta"
@@ -42,6 +43,7 @@ export const apiModules = (): Array<DynamicModule> => [
     AgentChatModule.register({ isGlobal: true }),
     KnowledgeGraphqlModule.register({}),
     EvidenceGraphqlModule.register({}),
+    McpGatewayGraphqlModule.register({}),
     GoogleConnectionsHttpModule.register({}),
     MetaConnectionsHttpModule.register({}),
     MetaHttpModule.register({}),

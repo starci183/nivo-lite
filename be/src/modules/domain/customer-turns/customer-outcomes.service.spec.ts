@@ -283,6 +283,7 @@ describe("CustomerOutcomesService", () => {
                 email: null,
                 note: null,
             },
+            hotelRequest: null,
         })
         expect(verdict).toEqual({ reply: "Thanks!", send: true, lines: [] })
     })
