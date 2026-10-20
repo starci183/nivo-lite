@@ -4242,6 +4242,10 @@ input MarkVideoPublishedInput {
   projectId: ID!
 }
 
+input McpCallLogInput {
+  limit: Int
+}
+
 type McpCallLogType {
   agentName: String!
   approvedBy: String
@@ -4785,7 +4789,7 @@ type Mutation {
   submitTelegramPassword(input: SubmitTelegramPasswordInput!): TelegramLoginStageType!
   suggestLeadOwner(input: SuggestLeadOwnerInput!): LeadActionQueuedType!
   syncLoyaltyMembers: SyncLoyaltyMembersType!
-  syncMcpConnector(key: String!): Int!
+  syncMcpConnector(input: SyncMcpConnectorInput!): Int!
   takeInventoryStock(input: TakeInventoryStockInput!): TakeStockType!
   takeOverAgentChatConversation(input: TakeOverAgentChatConversationInput!): AgentChatHolderType!
   testWebhookConnection(input: TestWebhookConnectionInput!): WebhookTestResultType!
@@ -5405,7 +5409,7 @@ type Query {
   loyaltyCampaign(input: LoyaltyCampaignInput!): LoyaltyCampaignViewType!
   loyaltyMember(input: LoyaltyMemberInput!): LoyaltyMemberDetailType!
   loyaltyProgram: LoyaltyProgramSettingsType!
-  mcpCallLog(limit: Int): [McpCallLogType!]!
+  mcpCallLog(input: McpCallLogInput): [McpCallLogType!]!
   mcpConnectors: [McpConnectorType!]!
   mcpToolGrants: [McpToolGrantType!]!
   metaConnection(input: GetMetaConnectionInput!): MetaWizardConnectionType!
@@ -7246,6 +7250,10 @@ type SuggestionDecisionType {
 type SyncLoyaltyMembersType {
   created: Int!
   linked: Int!
+}
+
+input SyncMcpConnectorInput {
+  key: String!
 }
 
 input TakeInventoryStockInput {
