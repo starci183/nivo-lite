@@ -1,6 +1,7 @@
 import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
 import { VideoBrandKitsModule } from "@modules/domain/video-brand-kits"
+import { VideoDelegationsModule } from "@modules/domain/video-delegations"
 import { VideoRenderModule } from "@modules/queues/video-render"
 import { VideoMediaService } from "./video-media.service"
 import { VideoWorkbenchService } from "./video-workbench.service"
@@ -15,6 +16,9 @@ import { RendererService } from "./renderer.service"
 import { VideoRenderCommandsService } from "./video-render-commands.service"
 import { VideoRenderService } from "./video-render.service"
 import { VideoService } from "./video.service"
+import { EditorDelegationPerformerService } from "./editor-delegation-performer.service"
+import { EditorDeliveryService } from "./editor-delivery.service"
+import { EditorRoomService } from "./editor-room.service"
 import { VIDEO_ASSETS } from "./video.decorators"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./video.module-definition"
 
@@ -30,6 +34,7 @@ export class VideoModule extends ConfigurableModuleClass {
                 ...(base.imports ?? []),
                 VideoRenderModule.register({}),
                 VideoBrandKitsModule.register({ isGlobal: false }),
+                VideoDelegationsModule.register({ isGlobal: false }),
             ],
             providers: [
                 ...(base.providers ?? []),
@@ -47,6 +52,9 @@ export class VideoModule extends ConfigurableModuleClass {
                 VideoScriptingCompletionService,
                 VideoScriptingContextService,
                 VideoRenderCommandsService,
+                EditorRoomService,
+                EditorDeliveryService,
+                EditorDelegationPerformerService,
             ],
             exports: [
                 VIDEO_ASSETS,

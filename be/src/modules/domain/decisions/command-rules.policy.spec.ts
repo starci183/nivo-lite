@@ -101,6 +101,7 @@ describe("command rules policy", () => {
             const { subject } = await buildSubject()
 
             expect(subject.isSubjectType("purchase_order")).toBe(true)
+            expect(subject.isSubjectType("video_project")).toBe(true)
             expect(subject.isSubjectType("planet")).toBe(false)
         })
     })

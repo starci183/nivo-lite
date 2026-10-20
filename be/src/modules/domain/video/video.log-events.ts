@@ -8,4 +8,6 @@ export enum VideoLogEvent {
     ProgressNotRecorded = "video.render.progress-not-recorded",
     /** The work directory could not be listed at start, so no leftovers were swept. */
     WorkDirUnreadable = "video.render.workdir-unreadable",
+    /** AI Editor could not post the cards of a delegated render; the render itself stands. */
+    DelegationNotDelivered = "video.editor.delegation-not-delivered",
 }

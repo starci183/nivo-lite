@@ -102,6 +102,8 @@ export interface Brand {
     readonly secondary: string
     /** Path of a logo (png/jpg/webp with transparency welcome) in the `media` bucket, or null. */
     readonly logo: string | null
+    /** True when every frame carries the brand frame (a primary border with a secondary inner line); absent = no frame. */
+    readonly frame?: boolean
 }
 
 /** The background music of a video. */
@@ -345,6 +347,7 @@ export const validateVideoSpec = (input: unknown, opts: SpecScope = {}): SpecRes
         primary: normaliseColor(rawBrand.primary) ?? DEFAULT_PRIMARY,
         secondary: normaliseColor(rawBrand.secondary) ?? DEFAULT_SECONDARY,
         logo: hasLogo ? assetPath(rawBrand.logo, "brand.logo") || null : null,
+        ...(rawBrand.frame === true ? { frame: true } : {}),
     }
     const music = musicOf(input.music, errors)
     const rawVoice = isObject(input.voice) ? input.voice : {}

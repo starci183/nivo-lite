@@ -4,6 +4,7 @@ import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
 import type {
+    DelegatedVideoProjectDraft,
     NewVideoProjectDraft,
     ChangeVideoProjectDraft,
     WrittenVideoProjectId,
@@ -11,6 +12,7 @@ import type {
 import {
     APPROVE_VIDEO_PROJECT,
     ARCHIVE_WORKBENCH_PROJECT,
+    CREATE_DELEGATED_PROJECT,
     CREATE_WORKBENCH_PROJECT,
     DUPLICATE_WORKBENCH_PROJECT,
     PUBLISH_WORKBENCH_PROJECT,
@@ -48,6 +50,23 @@ export class VideoProjectWorkbenchWriterService {
             JSON.stringify(input.inputs),
             JSON.stringify(typed === "" ? { auto_title: true } : {}),
             principalId,
+        ])
+        return row?.id ?? null
+    }
+
+    /** Creates the project of a delegated script in the caller's transaction; no person is its creator. */
+    async createDelegated(
+        tx: EntityManager,
+        workspaceId: string,
+        input: DelegatedVideoProjectDraft,
+    ): Promise<WrittenVideoProjectId> {
+        const [row] = await tx.query<Array<ProjectIdentity>>(CREATE_DELEGATED_PROJECT, [
+            workspaceId,
+            input.title,
+            input.goal,
+            input.aspect,
+            input.targetSeconds,
+            JSON.stringify(input.script),
         ])
         return row?.id ?? null
     }

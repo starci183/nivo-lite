@@ -1,3 +1,4 @@
+import { frameFilter } from "./brand-frame.policy"
 import { luminance } from "./captions.policy"
 import type { TextCue } from "./captions.policy"
 import { VideoError, VideoErrorCode } from "./errors/video.error"
@@ -381,7 +382,7 @@ export interface FinalPass {
     readonly output: string
 }
 
-/** The final ffmpeg pass: crossfades, brand logo, burned-in captions (libass), x264 and the prepared AAC. */
+/** The final ffmpeg pass: crossfades, brand logo, the brand frame, burned-in captions (libass), x264 and the prepared AAC. */
 export const finalArgs = (pass: FinalPass): Array<string> => {
     const { width, height } = aspectSize(pass.spec.aspect)
     // One decoder thread per intermediate: frame-threaded decoders of 4+ inputs were the memory peak.
@@ -408,6 +409,10 @@ export const finalArgs = (pass: FinalPass): Array<string> => {
             `[${last}][lg]overlay=${margin}:${top}:shortest=1[lo]`,
         )
         last = "lo"
+    }
+    if (pass.spec.brand.frame === true) {
+        graph.push(frameFilter(last, pass.spec.brand.primary, pass.spec.brand.secondary, Math.min(width, height)))
+        last = "fr"
     }
     graph.push(`[${last}]ass=subs.ass:fontsdir=${pass.fontsDir},format=yuv420p[v]`)
     return [

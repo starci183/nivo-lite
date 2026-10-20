@@ -5,6 +5,7 @@ import { InjectMessageCatalog } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { VideoProjectsService } from "@modules/domain/video-projects"
+import type { ProjectForRender } from "@modules/domain/video-projects"
 import { VideoProjectVersionsService } from "@modules/domain/video-project-versions"
 import { VideoRendersService } from "@modules/domain/video-renders"
 import type { RenderDone } from "@modules/domain/video-renders"
@@ -45,46 +46,65 @@ export class VideoService {
                 throw new VideoError({ code: VideoErrorCode.ProjectNotFound, params: { projectId } })
             }
             await this.members.require(principalId, project.workspaceId, ["owner", "manager"])
-            if (project.status === "scripting" || OPEN_RENDER_STATUSES.has(project.renderStatus)) {
-                throw new VideoError({ code: VideoErrorCode.ProjectBusy, params: { projectId } })
-            }
-            const saved = project.brand.shopName
-            const brand = {
-                shopName: saved === null || saved === "" ? project.workspaceName : saved,
-                primary: project.brand.primary ?? "",
-                secondary: project.brand.secondary ?? "",
-                logoPath: project.brand.logoPath,
-                musicTrack: project.brand.musicTrack,
-                voice: project.brand.voice ?? "",
-            }
-            const scenes = readScript(project.script)
-            const raw = specOf(scenes, project.aspect, brand, this.catalog.get("video.brand.fallback", {}, "vi"))
-            const checked = validateVideoSpec(raw, { workspaceId: project.workspaceId })
-            if (!checked.ok) {
-                throw new VideoError({
-                    code: VideoErrorCode.SpecInvalid,
-                    params: { reason: checked.errors.slice(0, 2).join("; ") },
-                })
-            }
-            const spec = JSON.stringify(checked.spec)
-            const renderId = await this.renders.open(manager, {
-                workspaceId: project.workspaceId,
-                spec,
-                createdBy: principalId,
-            })
-            await this.versions.record(manager, {
-                projectId: project.id,
-                workspaceId: project.workspaceId,
-                version: project.version,
-                script: JSON.stringify(project.script),
-                spec,
-                renderId,
-                createdBy: principalId,
-            })
-            await this.projects.startRender(manager, { projectId: project.id, renderId, spec })
-            await this.queue.enqueueRenderVideo({ renderId, workspaceId: project.workspaceId }, manager)
-            return { renderId, projectId: project.id }
+            return this.openRender(manager, project, principalId, false)
         })
+    }
+
+    /**
+     * Queues the render AI Editor makes of a script another agent delegated: no person asks, so the project must belong to the
+     * delegating workspace, the render carries the brand frame and its rows name no creator.
+     */
+    requestDelegatedRender(workspaceId: string, projectId: string): Promise<RenderQueued> {
+        return this.entityManager.transaction(async (manager) => {
+            const project = await this.projects.forRender(manager, projectId)
+            if (project?.workspaceId !== workspaceId) {
+                throw new VideoError({ code: VideoErrorCode.ProjectNotFound, params: { projectId } })
+            }
+            return this.openRender(manager, project, null, true)
+        })
+    }
+
+    private async openRender(
+        manager: EntityManager,
+        project: ProjectForRender,
+        createdBy: string | null,
+        framed: boolean,
+    ): Promise<RenderQueued> {
+        if (project.status === "scripting" || OPEN_RENDER_STATUSES.has(project.renderStatus)) {
+            throw new VideoError({ code: VideoErrorCode.ProjectBusy, params: { projectId: project.id } })
+        }
+        const saved = project.brand.shopName
+        const brand = {
+            shopName: saved === null || saved === "" ? project.workspaceName : saved,
+            primary: project.brand.primary ?? "",
+            secondary: project.brand.secondary ?? "",
+            logoPath: project.brand.logoPath,
+            musicTrack: project.brand.musicTrack,
+            voice: project.brand.voice ?? "",
+        }
+        const scenes = readScript(project.script)
+        const raw = specOf(scenes, project.aspect, brand, this.catalog.get("video.brand.fallback", {}, "vi"), framed)
+        const checked = validateVideoSpec(raw, { workspaceId: project.workspaceId })
+        if (!checked.ok) {
+            throw new VideoError({
+                code: VideoErrorCode.SpecInvalid,
+                params: { reason: checked.errors.slice(0, 2).join("; ") },
+            })
+        }
+        const spec = JSON.stringify(checked.spec)
+        const renderId = await this.renders.open(manager, { workspaceId: project.workspaceId, spec, createdBy })
+        await this.versions.record(manager, {
+            projectId: project.id,
+            workspaceId: project.workspaceId,
+            version: project.version,
+            script: JSON.stringify(project.script),
+            spec,
+            renderId,
+            createdBy,
+        })
+        await this.projects.startRender(manager, { projectId: project.id, renderId, spec })
+        await this.queue.enqueueRenderVideo({ renderId, workspaceId: project.workspaceId }, manager)
+        return { renderId, projectId: project.id }
     }
 
     /** Settles a render as done and makes its project ready to approve, in one transaction. */

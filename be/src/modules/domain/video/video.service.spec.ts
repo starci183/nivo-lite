@@ -269,3 +269,44 @@ describe("VideoService", () => {
         })
     })
 })
+
+describe("VideoService", () => {
+    describe("requestDelegatedRender", () => {
+        it("queues a framed render with no creator for a project of the delegating workspace", async () => {
+            const { video, members, projects, versions, renders, queue } = await build()
+            projects.forRender.mockResolvedValue(projectOf())
+
+            await expect(video.requestDelegatedRender(WORKSPACE, "project-1")).resolves.toEqual({
+                renderId: "render-1",
+                projectId: "project-1",
+            })
+
+            const spec = renders.open.mock.calls[0]?.[1].spec ?? ""
+            expect(spec).toContain('"frame":true')
+            expect(renders.open).toHaveBeenCalledWith(expect.anything(), {
+                workspaceId: WORKSPACE,
+                spec,
+                createdBy: null,
+            })
+            expect(versions.record).toHaveBeenCalledWith(
+                expect.anything(),
+                expect.objectContaining({ createdBy: null }),
+            )
+            expect(queue.enqueueRenderVideo).toHaveBeenCalled()
+            expect(members.require).not.toHaveBeenCalled()
+        })
+
+        it.each([null, projectOf({ workspaceId: "other-workspace" })])(
+            "refuses a project that is missing or belongs to another workspace",
+            async (found) => {
+                const { video, projects, renders } = await build()
+                projects.forRender.mockResolvedValue(found)
+
+                await expect(video.requestDelegatedRender(WORKSPACE, "project-1")).rejects.toMatchObject({
+                    code: VideoErrorCode.ProjectNotFound,
+                })
+                expect(renders.open).not.toHaveBeenCalled()
+            },
+        )
+    })
+})
