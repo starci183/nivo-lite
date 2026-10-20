@@ -3,7 +3,7 @@ import type { OfficeResultCardView, OfficeText } from "@/modules/types"
 import { LINE_CLASS_NAME, SOURCES_CLASS_NAME } from "./classNames"
 
 /** What the details of a result card draw. */
-export type OfficeCardDetailsProps = {
+type OfficeCardDetailsProps = {
     readonly card: OfficeResultCardView
     readonly text: OfficeText
 }

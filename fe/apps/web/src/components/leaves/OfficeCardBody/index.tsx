@@ -3,7 +3,7 @@ import type { OfficeResultCardView, OfficeText } from "@/modules/types"
 import { QUOTE_CLASS_NAME } from "./classNames"
 
 /** What the long text of a result card draws, and its editor while the owner edits the draft. */
-export type OfficeCardBodyProps = {
+type OfficeCardBodyProps = {
     readonly card: OfficeResultCardView
     readonly text: OfficeText
     readonly isEditing: boolean
