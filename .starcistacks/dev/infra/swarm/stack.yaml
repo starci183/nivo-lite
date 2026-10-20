@@ -1,6 +1,7 @@
 # NIVO local development: Supabase stays under the Supabase CLI; this Swarm runs the api, console and landing.
 # Build the three images from the repository root before deploying (Swarm never builds images):
 #   docker build -f be/apps/api/Dockerfile -t <registry>/nivo-lite-api:dev .
+#   docker build -f be/apps/mcp/Dockerfile -t <registry>/nivo-lite-mcp:dev .
 #   docker build -f fe/apps/web/Dockerfile -t <registry>/nivo-lite-web:dev \
 #     --build-arg NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321 --build-arg NEXT_PUBLIC_SUPABASE_ANON_KEY \
 #     --build-arg NEXT_PUBLIC_API_URL=http://api.localhost \
@@ -8,7 +9,7 @@
 #     --build-arg NEXT_PUBLIC_SITE_URL=http://localhost --build-arg NEXT_PUBLIC_LANDING_URL=http://landing.localhost .
 #   docker build -f fe/apps/landing/Dockerfile -t <registry>/nivo-lite-landing:dev \
 #     --build-arg NEXT_PUBLIC_SITE_URL=http://landing.localhost --build-arg NEXT_PUBLIC_APP_URL=http://localhost .
-# Push all three images, then write their digest references into a Compose override (services: api: {image: <ref>@sha256:...}, web: {image: ...}, landing: {image: ...});
+# Push all three images, then write their digest references into a Compose override (services: nivo-api: {image: <ref>@sha256:...}, nivo-mcp: {image: ...}, nivo-web-app: {image: ...}, nivo-landing: {image: ...});
 # the digests in this file are placeholders that the override replaces.
 # With Supabase running, supply the same local api.dev.env as before, then deploy from the root:
 #   docker stack config -c .starcistacks/dev/infra/swarm/stack.yaml -c dev.images.override.yaml | docker stack deploy -c - nivo-dev
@@ -50,6 +51,35 @@ services:
         traefik.http.routers.dev-api.rule: Host(`api.localhost`)
         traefik.http.routers.dev-api.service: dev-api
         traefik.http.services.dev-api.loadbalancer.server.port: "8787"
+      update_config: { order: start-first, failure_action: rollback, monitor: 60s }
+      rollback_config: { order: start-first, monitor: 60s }
+      restart_policy: { condition: any, delay: 5s }
+
+  # The NIVO MCP gateway (be/apps/mcp). Internal only: no Traefik label, so the ingress never routes to it; the api and local agents reach it
+  # as http://nivo-mcp:8790 on the stack network. It reads the same untracked api.dev.env (PRIMARY_DB_URL, MCP_GATEWAY_CREDENTIALS and the credentials it names).
+  nivo-mcp:
+    image: ghcr.io/starci183/nivo-lite-mcp@sha256:0000000000000000000000000000000000000000000000000000000000000000
+    env_file:
+      - ../../api.dev.env
+    environment:
+      PORT: "8790"
+      PRIMARY_DB_SCHEMA: public
+    extra_hosts:
+      - host.docker.internal:host-gateway
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:8790/healthz').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
+    deploy:
+      replicas: 1
       update_config: { order: start-first, failure_action: rollback, monitor: 60s }
       rollback_config: { order: start-first, monitor: 60s }
       restart_policy: { condition: any, delay: 5s }

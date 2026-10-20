@@ -30,6 +30,8 @@ jobs:
             file: be/apps/api/Dockerfile
           - name: cli
             file: be/apps/cli/Dockerfile
+          - name: mcp
+            file: be/apps/mcp/Dockerfile
           - name: web
             file: fe/apps/web/Dockerfile
           - name: landing
@@ -39,20 +41,20 @@ jobs:
       - name: release tag matches package version
         run: node -e "const version=require('./package.json').version;if(process.env.GITHUB_REF_NAME!=='v'+version)process.exit(1)"
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
-        if: ${{ (env.STACK_ENVIRONMENT == 'production' && contains(fromJSON('["api","web","landing"]'), matrix.name)) }}
+        if: ${{ (env.STACK_ENVIRONMENT == 'production' && contains(fromJSON('["api","mcp","web","landing"]'), matrix.name)) }}
         with:
           node-version: 22
           cache: npm
       - run: npm ci --ignore-scripts
-        if: ${{ (env.STACK_ENVIRONMENT == 'production' && contains(fromJSON('["api","web","landing"]'), matrix.name)) }}
+        if: ${{ (env.STACK_ENVIRONMENT == 'production' && contains(fromJSON('["api","mcp","web","landing"]'), matrix.name)) }}
       - name: install SOPS
-        if: ${{ (env.STACK_ENVIRONMENT == 'production' && contains(fromJSON('["api","web","landing"]'), matrix.name)) }}
+        if: ${{ (env.STACK_ENVIRONMENT == 'production' && contains(fromJSON('["api","mcp","web","landing"]'), matrix.name)) }}
         uses: mdgreenwald/mozilla-sops-action@bb2d96a13ef438ad122e5827a57ebd75d6ff118d # v2.1.0
         with:
           version: v3.13.2
       - name: public build values
         id: args
-        if: ${{ (env.STACK_ENVIRONMENT == 'production' && contains(fromJSON('["api","web","landing"]'), matrix.name)) }}
+        if: ${{ (env.STACK_ENVIRONMENT == 'production' && contains(fromJSON('["api","mcp","web","landing"]'), matrix.name)) }}
         env:
           SOPS_AGE_KEY: ${{ secrets.SOPS_AGE_KEY }}
           IMAGE_APP: ${{ matrix.name }}

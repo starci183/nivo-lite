@@ -10,6 +10,7 @@
 #   nivo-landing   the Next.js landing on nivo.vn / www.nivo.vn, reached as nivo-landing:3000 on the edge network
 #   nivo-web-app   the Next.js console on app.nivo.vn, reached as nivo-web-swarm:3000 on the edge network (its own alias: nivo-web still names the old compose container until it is retired)
 #   nivo-api       the Nest api: GraphQL, webhooks, the pgmq workers, the job alert monitor; reached as nivo-api:8787 on the edge network
+#   nivo-mcp       the NIVO MCP gateway (be/apps/mcp), internal only: reached as nivo-mcp:8790 on the private `agents` network, no public route
 #   nivo-openclaw  the agent gateway; the api reaches it by service DNS (nivo-openclaw:18790) on the private `agents` network
 #   nivo-n8n       private automation editor on the `automation` network (no published port); SQLite database on the persisted volume n8n-data
 #
@@ -120,6 +121,39 @@ services:
       update_config:
         { parallelism: 1, order: start-first, failure_action: rollback, monitor: 45s, max_failure_ratio: 0, delay: 5s }
       rollback_config: { parallelism: 1, order: start-first, monitor: 45s }
+      restart_policy: { condition: any, delay: 5s }
+
+  nivo-mcp:
+    image: ghcr.io/starci183/nivo-lite-mcp@sha256:0000000000000000000000000000000000000000000000000000000000000000
+    # The NIVO MCP gateway (be/apps/mcp): POST /mcp/<workspaceId> (Streamable HTTP) in front of every connector, with the grants, approvals,
+    # limits, breakers and audit of the gateway modules the api shares. INTERNAL ONLY: it is on the private `agents` network under the alias
+    # nivo-mcp (the api and the openclaw gateway reach it as http://nivo-mcp:8790), never on `edge`, and no route of infra/swarm/edge/routes.yml
+    # names it. Environment, `<KEY>_FILE` pointers and the versioned secret grants are added by the generated override, exactly like nivo-api.
+    networks:
+      agents:
+        aliases: [nivo-mcp]
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:'+process.env.PORT+'/healthz',{signal:AbortSignal.timeout(4000)}).then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 40s
+    stop_grace_period: 15s # an in-flight tool call is bounded by the 4 s connector timeout
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "5" }
+    deploy:
+      replicas: 1 # the circuit breakers are process-local: one replica keeps one breaker per (workspace, connector)
+      resources: { limits: { memory: 300M } }
+      update_config:
+        { parallelism: 1, order: start-first, failure_action: rollback, monitor: 30s, max_failure_ratio: 0, delay: 5s }
+      rollback_config: { parallelism: 1, order: start-first, monitor: 30s }
       restart_policy: { condition: any, delay: 5s }
 
   nivo-openclaw:

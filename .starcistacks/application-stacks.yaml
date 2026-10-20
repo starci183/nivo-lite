@@ -38,6 +38,12 @@ components:
     compose: infra/swarm/stack.yaml
     purpose: The Nest api (GraphQL, provider webhooks, OAuth callbacks, the pgmq workers and schedulers, the job alert monitor). Liveness /healthz, readiness /readyz.
     required: true
+  nivo-mcp:
+    role: service
+    image: ghcr.io/starci183/nivo-lite-mcp
+    compose: infra/swarm/stack.yaml
+    purpose: The NIVO MCP gateway (be/apps/mcp), one Streamable HTTP endpoint per workspace (POST /mcp/<workspaceId>) in front of every connector, with the grants, approvals, limits and audit the api shares. Internal only (private agents network, alias nivo-mcp); no public route. Liveness /healthz, readiness /readyz.
+    required: true
   nivo-web-app:
     role: service
     image: ghcr.io/starci183/nivo-lite-web
@@ -110,6 +116,9 @@ environments:
       nivo-api:
         replicas: 1
         port: 8787
+      nivo-mcp:
+        replicas: 1
+        port: 8790
       nivo-web-app:
         replicas: 1
         port: 3000
@@ -141,6 +150,7 @@ environments:
       previous: .starcistacks/dev/infra/swarm/release/previous.yaml
       healthAssertions:
         - The api answers /healthz and /readyz on http://api.localhost.
+        - The mcp gateway task is healthy (its container healthcheck probes /healthz; it has no host route).
         - The console answers /health/live on http://localhost.
         - The landing answers /health/live on http://landing.localhost.
     backup:
@@ -161,6 +171,9 @@ environments:
       nivo-api:
         replicas: 1
         port: 8787
+      nivo-mcp:
+        replicas: 1
+        port: 8790
       nivo-web-app:
         replicas: 1
         port: 3000
@@ -206,6 +219,7 @@ environments:
         - https://nivo.vn/health/live and https://www.nivo.vn/health/live (landing) and https://app.nivo.vn/health/live (console) answer 200.
         - https://nivo.vn/healthz reaches the api (legacy webhook path).
         - The jobs watchdog of the running api task prints two non-negative integers.
+        - The nivo-mcp task is healthy (container healthcheck on /healthz); it is internal only, so no public URL is probed.
         - Desired and running replicas agree, no task failed, and every update completed (starci app stack converge).
     # Stateful components and the managed Supabase project. The volumes are the external nivo-engine_* ones; encrypted tarballs are written by
     # `starci app stack backup` (deploy.backup below) and copied off the VPS by the operator. Restore proofs: infra/swarm/recovery/restore-proof.md.
@@ -294,6 +308,7 @@ environments:
         sealed: {ops: ops, sshKey: vps-ssh-key, knownHosts: vps-known-hosts}
       images:
         nivo-api: {app: api}
+        nivo-mcp: {app: mcp}
         nivo-web-app:
           app: web
           buildArgs:
@@ -311,6 +326,15 @@ environments:
               - {member: api}
               - {member: auth}
               - {member: stack, keys: [OPENCLAW_GATEWAY_TOKEN, OPENCLAW_MANAGE_AGENTS], fill: true}
+          # The gateway gets exactly the keys it needs (be/apps/mcp/src/mcp.env.ts), from the same sealed `api` member as the api: the database
+          # connection (required), the list of credential NAMES remote connectors may reference (MCP_GATEWAY_CREDENTIALS, sealed beside the
+          # credential because app check classes every *_CREDENTIALS binding as sensitive) and those credentials. Both MCP_* keys are skipped until
+          # they are sealed (O14), which leaves the remote connectors unavailable and the native ones working. MCP_GATEWAY_AGENT_TOKEN is deliberately NOT granted: the agent endpoint stays closed in production for the demo.
+          - service: nivo-mcp
+            filePointers: true
+            from:
+              - {member: api, keys: [PRIMARY_DB_URL], required: true}
+              - {member: api, keys: [MCP_GATEWAY_CREDENTIALS, MCP_HAKUEN_CLIENT_SECRET]}
           - service: nivo-openclaw
             from:
               - {member: stack, keys: [OPENCLAW_GATEWAY_TOKEN], required: true}
@@ -333,6 +357,10 @@ environments:
             N8N_ALLOWED_HOSTS: {key: N8N_ALLOWED_HOSTS, default: nivo-n8n}
             JOBS_ALERT_FAILED_MAX: {key: JOBS_FAILED_ALERT, default: "20"}
             JOBS_ALERT_STALE_SECONDS: {key: JOBS_STALE_SECONDS, default: "300"}
+        nivo-mcp:
+          values:
+            PORT: "8790"
+            PRIMARY_DB_SCHEMA: public
         nivo-openclaw:
           settings:
             OPENCLAW_MODEL: {key: OPENCLAW_MODEL, default: openrouter/deepseek/deepseek-v4-flash}

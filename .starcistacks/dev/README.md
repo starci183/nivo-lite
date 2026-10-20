@@ -25,10 +25,11 @@ Use component-specific endpoints: host application processes reach local depende
 
 After the selected local configuration and database migration state are verified, the existing package scripts can run the application processes (`npm run dev:be`, `npm run dev:fe:web`, `npm run dev:fe:landing`), or the declared Swarm recipe can run the services. These scripts consume configuration; they are not a local credential bootstrap. Run repository commands from the application root and retain separate liveness, database readiness and browser verification.
 
-Swarm does not build images. Choose a registry reachable from the local Swarm, build and push all three images, and copy each pushed image's digest reference:
+Swarm does not build images. Choose a registry reachable from the local Swarm, build and push all four images, and copy each pushed image's digest reference:
 
 ```sh
 docker build -f be/apps/api/Dockerfile -t <registry>/nivo-lite-api:dev .
+docker build -f be/apps/mcp/Dockerfile -t <registry>/nivo-lite-mcp:dev .
 docker build -f fe/apps/web/Dockerfile -t <registry>/nivo-lite-web:dev \
     --build-arg NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:55321 \
     --build-arg NEXT_PUBLIC_SUPABASE_ANON_KEY \
@@ -40,19 +41,22 @@ docker build -f fe/apps/landing/Dockerfile -t <registry>/nivo-lite-landing:dev \
     --build-arg NEXT_PUBLIC_SITE_URL=http://landing.localhost \
     --build-arg NEXT_PUBLIC_APP_URL=http://localhost .
 docker push <registry>/nivo-lite-api:dev
+docker push <registry>/nivo-lite-mcp:dev
 docker push <registry>/nivo-lite-web:dev
 docker push <registry>/nivo-lite-landing:dev
 ```
 
-Create the untracked file dev.images.override.yaml at the repository root with the pushed image references. Replace `<registry>`, `<api-digest>`, `<web-digest>` and `<landing-digest>` with your registry and the actual 64-character SHA-256 digests. All three images must override the all-zero placeholders in the base stack:
+Create the untracked file dev.images.override.yaml at the repository root with the pushed image references. Replace `<registry>`, `<api-digest>`, `<mcp-digest>`, `<web-digest>` and `<landing-digest>` with your registry and the actual 64-character SHA-256 digests. All four images must override the all-zero placeholders in the base stack:
 
 ```yaml
 services:
-  api:
+  nivo-api:
     image: <registry>/nivo-lite-api@sha256:<api-digest>
-  web:
+  nivo-mcp:
+    image: <registry>/nivo-lite-mcp@sha256:<mcp-digest>
+  nivo-web-app:
     image: <registry>/nivo-lite-web@sha256:<web-digest>
-  landing:
+  nivo-landing:
     image: <registry>/nivo-lite-landing@sha256:<landing-digest>
 ```
 
@@ -62,7 +66,7 @@ Deploy to the local Swarm manager:
 docker stack config -c .starcistacks/dev/infra/swarm/stack.yaml -c dev.images.override.yaml | docker stack deploy -c - nivo-dev
 ```
 
-`docker stack config` includes the local api.dev.env values in its output. Pipe it directly to deploy and keep that output out of shared logs. The one ingress publishes port 80 and routes by host: the api at `http://api.localhost`, the landing at `http://landing.localhost` and the web console at `http://localhost` (the catch-all). The `*.localhost` names resolve to the loopback address without a DNS record, and the stack serves plain HTTP, so no certificate exists. The api and landing Host rules take priority over the web catch-all.
+`docker stack config` includes the local api.dev.env values in its output. Pipe it directly to deploy and keep that output out of shared logs. The one ingress publishes port 80 and routes by host: the api at `http://api.localhost`, the landing at `http://landing.localhost` and the web console at `http://localhost` (the catch-all). The `*.localhost` names resolve to the loopback address without a DNS record, and the stack serves plain HTTP, so no certificate exists. The api and landing Host rules take priority over the web catch-all. The MCP gateway (`nivo-mcp`) carries no Traefik label: it is internal only, reached as `http://nivo-mcp:8790` from the other services of the stack, and its own healthcheck probes `/healthz`.
 
 | Command      | What it does                                                                                                                                                                                                                                                       |
 | ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
