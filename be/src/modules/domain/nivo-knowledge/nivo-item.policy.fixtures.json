@@ -87,6 +87,52 @@
     },
     {
       "file": {
+        "path": "accounting/accounting-hoa-don-dien-tu-tt78.md",
+        "text": "---\ntitle: Hóa đơn điện tử theo Nghị định 123/2020 và Thông tư 78/2021\nkind: playbook\nversion: 1\n---\n# Hóa đơn điện tử (NĐ 123/2020/NĐ-CP, TT 78/2021/TT-BTC)\n\nÁp dụng bắt buộc từ 01/07/2022; NĐ 70/2025/NĐ-CP sửa đổi một số điều của NĐ 123 từ 01/06/2025. Khi văn bản mới khác nội dung dưới đây, theo văn bản mới và hỏi kế toán.\n\n## Ký hiệu\n- Ký hiệu mẫu số: 1 chữ số. 1 = hóa đơn GTGT (doanh nghiệp khai thuế theo phương pháp khấu trừ), 2 = hóa đơn bán hàng (phương pháp trực tiếp).\n- Ký hiệu hóa đơn: 6 ký tự, ví dụ `C26TAA`. Ký tự 1: C = có mã của cơ quan thuế, K = không có mã. Ký tự 2–3: hai số cuối năm lập. Ký tự 4: loại (T = doanh nghiệp đã đăng ký với cơ quan thuế, M = khởi tạo từ máy tính tiền, ...). Ký tự 5–6: do người bán tự đặt.\n\n## Thời điểm lập\n- Cung cấp dịch vụ (lưu trú, spa): lập khi hoàn thành dịch vụ; nếu thu tiền trước hoặc trong khi cung cấp thì lập tại thời điểm thu tiền (trừ tiền đặt cọc bảo đảm hợp đồng).\n- Nhiều lần cung cấp trong ngày cho khách lẻ: có thể lập tổng hợp cuối ngày nếu đúng điều kiện của nghị định; khách yêu cầu thì lập riêng.\n\n## Nội dung bắt buộc\nTên, địa chỉ, mã số thuế người bán; tên, địa chỉ, mã số thuế người mua (nếu người mua là tổ chức hoặc yêu cầu); tên dịch vụ, đơn vị tính, số lượng, đơn giá, thành tiền chưa thuế, thuế suất, tiền thuế, tổng cộng; chữ ký số người bán; mã của cơ quan thuế với hóa đơn có mã.\n\n## Sai sót\n- Sai tên, địa chỉ người mua nhưng đúng mã số thuế: thông báo cho người mua, không phải lập lại hóa đơn.\n- Sai mã số thuế, số tiền, thuế suất, hàng hóa: lập hóa đơn điều chỉnh hoặc thay thế; gửi Mẫu 04/SS-HĐĐT khi cần thông báo với cơ quan thuế.\n- Không tự hủy hóa đơn đã cấp mã.\n\n## Việc của agent\n- Agent chỉ soạn đề nghị xuất hóa đơn và đối chiếu; việc phát hành theo hạn mức quyền hạn của workspace.\n- Luôn ghi rõ nguồn số liệu (folio, giao dịch ngân hàng) trong thẻ duyệt.\n"
+      },
+      "expected": {
+        "outcome": {
+          "kind": "ok",
+          "value": {
+            "module": "accounting",
+            "slug": "accounting-hoa-don-dien-tu-tt78",
+            "title": "Hóa đơn điện tử theo Nghị định 123/2020 và Thông tư 78/2021",
+            "kind": "playbook",
+            "body": "# Hóa đơn điện tử (NĐ 123/2020/NĐ-CP, TT 78/2021/TT-BTC)\n\nÁp dụng bắt buộc từ 01/07/2022; NĐ 70/2025/NĐ-CP sửa đổi một số điều của NĐ 123 từ 01/06/2025. Khi văn bản mới khác nội dung dưới đây, theo văn bản mới và hỏi kế toán.\n\n## Ký hiệu\n- Ký hiệu mẫu số: 1 chữ số. 1 = hóa đơn GTGT (doanh nghiệp khai thuế theo phương pháp khấu trừ), 2 = hóa đơn bán hàng (phương pháp trực tiếp).\n- Ký hiệu hóa đơn: 6 ký tự, ví dụ `C26TAA`. Ký tự 1: C = có mã của cơ quan thuế, K = không có mã. Ký tự 2–3: hai số cuối năm lập. Ký tự 4: loại (T = doanh nghiệp đã đăng ký với cơ quan thuế, M = khởi tạo từ máy tính tiền, ...). Ký tự 5–6: do người bán tự đặt.\n\n## Thời điểm lập\n- Cung cấp dịch vụ (lưu trú, spa): lập khi hoàn thành dịch vụ; nếu thu tiền trước hoặc trong khi cung cấp thì lập tại thời điểm thu tiền (trừ tiền đặt cọc bảo đảm hợp đồng).\n- Nhiều lần cung cấp trong ngày cho khách lẻ: có thể lập tổng hợp cuối ngày nếu đúng điều kiện của nghị định; khách yêu cầu thì lập riêng.\n\n## Nội dung bắt buộc\nTên, địa chỉ, mã số thuế người bán; tên, địa chỉ, mã số thuế người mua (nếu người mua là tổ chức hoặc yêu cầu); tên dịch vụ, đơn vị tính, số lượng, đơn giá, thành tiền chưa thuế, thuế suất, tiền thuế, tổng cộng; chữ ký số người bán; mã của cơ quan thuế với hóa đơn có mã.\n\n## Sai sót\n- Sai tên, địa chỉ người mua nhưng đúng mã số thuế: thông báo cho người mua, không phải lập lại hóa đơn.\n- Sai mã số thuế, số tiền, thuế suất, hàng hóa: lập hóa đơn điều chỉnh hoặc thay thế; gửi Mẫu 04/SS-HĐĐT khi cần thông báo với cơ quan thuế.\n- Không tự hủy hóa đơn đã cấp mã.\n\n## Việc của agent\n- Agent chỉ soạn đề nghị xuất hóa đơn và đối chiếu; việc phát hành theo hạn mức quyền hạn của workspace.\n- Luôn ghi rõ nguồn số liệu (folio, giao dịch ngân hàng) trong thẻ duyệt."
+          }
+        },
+        "meta": [
+          ["title", "Hóa đơn điện tử theo Nghị định 123/2020 và Thông tư 78/2021"],
+          ["kind", "playbook"],
+          ["version", "1"]
+        ]
+      }
+    },
+    {
+      "file": {
+        "path": "accounting/accounting-lich-thue-viet-nam.md",
+        "text": "---\ntitle: Lịch thuế Việt Nam cho doanh nghiệp dịch vụ\nkind: playbook\nversion: 1\n---\n# Lịch thuế Việt Nam (Luật Quản lý thuế 38/2019/QH14, NĐ 126/2020/NĐ-CP)\n\nHạn nộp hồ sơ cũng là hạn nộp tiền thuế. Hạn rơi vào ngày nghỉ thì chuyển sang ngày làm việc kế tiếp. Lịch cụ thể của từng workspace (khai theo tháng hay quý) nằm trong Hồ sơ thuế của workspace; không có thì hỏi chủ, không đoán.\n\n## Thuế GTGT\n- Khai theo tháng: chậm nhất ngày 20 của tháng sau.\n- Khai theo quý (doanh thu năm trước từ 50 tỷ đồng trở xuống, hoặc mới hoạt động): chậm nhất ngày cuối cùng của tháng đầu quý sau (30/4, 31/7, 31/10, 31/1).\n- Dịch vụ lưu trú và spa: thuế suất phổ thông 10%; kiểm tra nghị quyết giảm thuế GTGT đang hiệu lực (mức 8%) và điều kiện áp dụng trước khi lập hóa đơn.\n\n## Thuế thu nhập cá nhân khấu trừ (tiền lương)\n- Kỳ khai theo cùng kỳ với thuế GTGT (tháng hoặc quý), cùng hạn nộp.\n- Quyết toán năm của tổ chức trả thu nhập: chậm nhất ngày cuối cùng của tháng thứ 3 sau năm (31/3).\n- Cá nhân tự quyết toán: chậm nhất ngày cuối cùng của tháng thứ 4 sau năm (30/4).\n\n## Thuế thu nhập doanh nghiệp\n- Tạm nộp theo quý: chậm nhất ngày 30 của tháng đầu quý sau; tổng 4 quý tạm nộp không thấp hơn 80% số quyết toán.\n- Quyết toán năm: chậm nhất ngày cuối cùng của tháng thứ 3 sau năm (31/3).\n\n## Lệ phí môn bài\n- Nghị quyết 198/2025/QH15 bãi bỏ lệ phí môn bài từ 01/01/2026.\n- Các kỳ trước 2026 (nợ cũ, kiểm tra): hạn 30/1; doanh nghiệp vốn điều lệ trên 10 tỷ: 3.000.000 đồng/năm; từ 10 tỷ trở xuống: 2.000.000 đồng/năm; chi nhánh, địa điểm kinh doanh: 1.000.000 đồng/năm.\n\n## Báo cáo tài chính năm\nChậm nhất ngày cuối cùng của tháng thứ 3 sau năm tài chính, nộp cùng hồ sơ quyết toán thuế TNDN.\n\n## Nhắc việc\n- Nhắc chủ 7 ngày và 2 ngày trước mỗi hạn; nêu kỳ, loại tờ khai và số liệu đã có.\n- Chưa có số liệu kỳ thì ghi rõ là chưa đủ, không ước tính.\n"
+      },
+      "expected": {
+        "outcome": {
+          "kind": "ok",
+          "value": {
+            "module": "accounting",
+            "slug": "accounting-lich-thue-viet-nam",
+            "title": "Lịch thuế Việt Nam cho doanh nghiệp dịch vụ",
+            "kind": "playbook",
+            "body": "# Lịch thuế Việt Nam (Luật Quản lý thuế 38/2019/QH14, NĐ 126/2020/NĐ-CP)\n\nHạn nộp hồ sơ cũng là hạn nộp tiền thuế. Hạn rơi vào ngày nghỉ thì chuyển sang ngày làm việc kế tiếp. Lịch cụ thể của từng workspace (khai theo tháng hay quý) nằm trong Hồ sơ thuế của workspace; không có thì hỏi chủ, không đoán.\n\n## Thuế GTGT\n- Khai theo tháng: chậm nhất ngày 20 của tháng sau.\n- Khai theo quý (doanh thu năm trước từ 50 tỷ đồng trở xuống, hoặc mới hoạt động): chậm nhất ngày cuối cùng của tháng đầu quý sau (30/4, 31/7, 31/10, 31/1).\n- Dịch vụ lưu trú và spa: thuế suất phổ thông 10%; kiểm tra nghị quyết giảm thuế GTGT đang hiệu lực (mức 8%) và điều kiện áp dụng trước khi lập hóa đơn.\n\n## Thuế thu nhập cá nhân khấu trừ (tiền lương)\n- Kỳ khai theo cùng kỳ với thuế GTGT (tháng hoặc quý), cùng hạn nộp.\n- Quyết toán năm của tổ chức trả thu nhập: chậm nhất ngày cuối cùng của tháng thứ 3 sau năm (31/3).\n- Cá nhân tự quyết toán: chậm nhất ngày cuối cùng của tháng thứ 4 sau năm (30/4).\n\n## Thuế thu nhập doanh nghiệp\n- Tạm nộp theo quý: chậm nhất ngày 30 của tháng đầu quý sau; tổng 4 quý tạm nộp không thấp hơn 80% số quyết toán.\n- Quyết toán năm: chậm nhất ngày cuối cùng của tháng thứ 3 sau năm (31/3).\n\n## Lệ phí môn bài\n- Nghị quyết 198/2025/QH15 bãi bỏ lệ phí môn bài từ 01/01/2026.\n- Các kỳ trước 2026 (nợ cũ, kiểm tra): hạn 30/1; doanh nghiệp vốn điều lệ trên 10 tỷ: 3.000.000 đồng/năm; từ 10 tỷ trở xuống: 2.000.000 đồng/năm; chi nhánh, địa điểm kinh doanh: 1.000.000 đồng/năm.\n\n## Báo cáo tài chính năm\nChậm nhất ngày cuối cùng của tháng thứ 3 sau năm tài chính, nộp cùng hồ sơ quyết toán thuế TNDN.\n\n## Nhắc việc\n- Nhắc chủ 7 ngày và 2 ngày trước mỗi hạn; nêu kỳ, loại tờ khai và số liệu đã có.\n- Chưa có số liệu kỳ thì ghi rõ là chưa đủ, không ước tính."
+          }
+        },
+        "meta": [
+          ["title", "Lịch thuế Việt Nam cho doanh nghiệp dịch vụ"],
+          ["kind", "playbook"],
+          ["version", "1"]
+        ]
+      }
+    },
+    {
+      "file": {
         "path": "accounting/accounting-quy-tac-chuyen-nguoi.md",
         "text": "---\ntitle: Quy tắc Kế toán chuyển cho người\nkind: escalation\nversion: 1\n---\n# Quy tắc Kế toán chuyển cho người\n\n## Tình huống phải hỏi chủ hoặc người phụ trách kế toán\n\n- Khoản tiền về nhưng không khớp đơn nào, hoặc khớp nhiều đơn cùng số tiền.\n- Số tiền chuyển lệch so với đơn (thiếu hoặc dư).\n- Khách báo đã chuyển nhưng không thấy khoản tương ứng sau thời gian chờ thông thường.\n- Đơn thiếu thông tin xuất hóa đơn mà khách không phản hồi.\n- Đơn bị thay đổi sau khi đã có hóa đơn hoặc thanh toán.\n- Yêu cầu hoàn tiền, hủy hóa đơn, giảm trừ công nợ.\n- Dữ liệu nguồn thiếu, cũ hoặc mâu thuẫn, làm báo cáo không đáng tin.\n- Số tiền hoặc loại việc vượt ngưỡng tự xử lý.\n\n## Một câu hỏi duy nhất\n\nMỗi ngoại lệ chỉ đặt một câu hỏi, kèm: những gì đã xác lập (có nguồn), điều chưa chắc, các lựa chọn, và hậu quả tài chính của từng lựa chọn.\n\nVí dụ: \"Khoản 5.000.000đ lúc 09:12 nội dung 'Minh thanh toan' có thể là của anh Minh (đơn 5.000.000đ) hoặc chị Mai (đơn 5.000.000đ). Chị xác nhận khoản này thuộc về ai? Trong lúc chờ, mình chưa ghi nhận cho bên nào.\"\n\nKhông tạo hiệu ứng tài chính một phần trong lúc chờ. Không đưa hai câu hỏi cùng lúc cho cùng một ngoại lệ.\n\n## Trả lời của chủ trở thành bằng chứng\n\nCâu trả lời của chủ được ghi lại cùng người trả lời và thời điểm, và là căn cứ cho bước xử lý. Nếu chủ nói \"xác nhận khoản này của anh Minh\", ghi căn cứ đó cùng bản ghi.\n\n## Với khách\n\nKế toán không thảo luận tranh chấp. Với khách báo đã chuyển: nói cửa hàng sẽ kiểm tra và phản hồi; không khẳng định đã nhận hay chưa nhận cho đến khi có đối chiếu. Khi khách khiếu nại về tiền, chuyển ngay cho chủ.\n\n## Hạn và nhắc\n\nNếu ngoại lệ chờ quá lâu theo mức phản hồi đã cấu hình, nhắc lại một lần kèm hạn thanh toán sắp tới. Không tự quyết định để việc trôi qua.\n"
       },
@@ -218,6 +264,29 @@
         },
         "meta": [
           ["title", "Sổ tay vận hành của Đặt lịch hẹn"],
+          ["kind", "playbook"],
+          ["version", "1"]
+        ]
+      }
+    },
+    {
+      "file": {
+        "path": "booking/booking-van-hanh-khach-san-spa.md",
+        "text": "---\ntitle: Vận hành khách sạn và spa: đặt chỗ, nhận và trả phòng\nkind: playbook\nversion: 1\n---\n# Vận hành khách sạn và spa\n\nGiá, phòng trống và lịch kỹ thuật viên luôn lấy từ hệ thống của khách sạn tại lúc trả lời (dữ liệu sống), không lấy từ trí nhớ hay tài liệu cũ.\n\n## Đặt chỗ\n1. Hỏi đủ: ngày đến, số đêm, số khách (người lớn, trẻ em), hạng phòng mong muốn, dịch vụ spa kèm theo.\n2. Kiểm tra phòng trống và báo giá theo đêm, tổng tiền, chính sách hủy.\n3. Giữ chỗ có thời hạn (thường 30 phút) và nói rõ giờ hết hạn. Chưa có xác nhận giữ chỗ thì không nói là đã giữ.\n4. Xác nhận khi khách đồng ý: tên, số điện thoại, ngày, hạng phòng, tổng tiền, tiền cọc nếu có.\n\n## Nhận phòng (check-in)\n- Giờ nhận phòng tiêu chuẩn thường là 14:00; trả phòng 12:00 (theo quy định của từng khách sạn).\n- Đối chiếu giấy tờ tùy thân và thông tin đặt chỗ; khai báo lưu trú theo quy định.\n- Mã khóa, mã phòng chỉ gửi cho đúng khách, sau khi đã nhận phòng hoặc được duyệt nhận sớm.\n\n## Nhận phòng sớm\n- Phụ thuộc phòng trống và đã dọn. Báo trước là \"tùy tình trạng phòng\", không hứa chắc.\n- Nếu chưa có phòng: giữ hành lý, mời dùng tiện ích (spa, sảnh) và báo ngay khi phòng sẵn sàng.\n- Phụ phí nhận sớm theo bảng giá của khách sạn; miễn phụ phí là ngoại lệ cần người có thẩm quyền.\n\n## Trả phòng (check-out)\n- Đối chiếu folio: tiền phòng, minibar, spa, dịch vụ khác; thu phần còn lại; đề nghị xuất hóa đơn nếu khách cần.\n- Trả phòng muộn: theo tình trạng phòng và phụ phí niêm yết.\n- Sau trả phòng: cảm ơn, xin đánh giá, ghi lại sở thích khách cho lần sau.\n\n## Khách quay lại\n- Nhận diện qua số điện thoại hoặc kênh chat đã liên kết; chào bằng tên, nhắc sở thích lần trước.\n- Ưu đãi khách quen chỉ trong hạn mức workspace cho phép; vượt hạn mức thì tạo yêu cầu duyệt, nói với khách là đang xin ưu đãi.\n\n## Upsell\n- Gợi ý một món phù hợp, đúng lúc: nâng hạng phòng khi còn trống, gói spa cho khách lưu trú, ăn sáng, đưa đón.\n- Nói rõ giá; khách từ chối thì không nhắc lại trong cùng cuộc trò chuyện.\n\n## Khi nào chuyển cho người\nKhiếu nại, sự cố an toàn, yêu cầu hoàn tiền, đoàn đông, yêu cầu ngoài chính sách, khách không hài lòng sau hai lượt.\n"
+      },
+      "expected": {
+        "outcome": {
+          "kind": "ok",
+          "value": {
+            "module": "booking",
+            "slug": "booking-van-hanh-khach-san-spa",
+            "title": "Vận hành khách sạn và spa: đặt chỗ, nhận và trả phòng",
+            "kind": "playbook",
+            "body": "# Vận hành khách sạn và spa\n\nGiá, phòng trống và lịch kỹ thuật viên luôn lấy từ hệ thống của khách sạn tại lúc trả lời (dữ liệu sống), không lấy từ trí nhớ hay tài liệu cũ.\n\n## Đặt chỗ\n1. Hỏi đủ: ngày đến, số đêm, số khách (người lớn, trẻ em), hạng phòng mong muốn, dịch vụ spa kèm theo.\n2. Kiểm tra phòng trống và báo giá theo đêm, tổng tiền, chính sách hủy.\n3. Giữ chỗ có thời hạn (thường 30 phút) và nói rõ giờ hết hạn. Chưa có xác nhận giữ chỗ thì không nói là đã giữ.\n4. Xác nhận khi khách đồng ý: tên, số điện thoại, ngày, hạng phòng, tổng tiền, tiền cọc nếu có.\n\n## Nhận phòng (check-in)\n- Giờ nhận phòng tiêu chuẩn thường là 14:00; trả phòng 12:00 (theo quy định của từng khách sạn).\n- Đối chiếu giấy tờ tùy thân và thông tin đặt chỗ; khai báo lưu trú theo quy định.\n- Mã khóa, mã phòng chỉ gửi cho đúng khách, sau khi đã nhận phòng hoặc được duyệt nhận sớm.\n\n## Nhận phòng sớm\n- Phụ thuộc phòng trống và đã dọn. Báo trước là \"tùy tình trạng phòng\", không hứa chắc.\n- Nếu chưa có phòng: giữ hành lý, mời dùng tiện ích (spa, sảnh) và báo ngay khi phòng sẵn sàng.\n- Phụ phí nhận sớm theo bảng giá của khách sạn; miễn phụ phí là ngoại lệ cần người có thẩm quyền.\n\n## Trả phòng (check-out)\n- Đối chiếu folio: tiền phòng, minibar, spa, dịch vụ khác; thu phần còn lại; đề nghị xuất hóa đơn nếu khách cần.\n- Trả phòng muộn: theo tình trạng phòng và phụ phí niêm yết.\n- Sau trả phòng: cảm ơn, xin đánh giá, ghi lại sở thích khách cho lần sau.\n\n## Khách quay lại\n- Nhận diện qua số điện thoại hoặc kênh chat đã liên kết; chào bằng tên, nhắc sở thích lần trước.\n- Ưu đãi khách quen chỉ trong hạn mức workspace cho phép; vượt hạn mức thì tạo yêu cầu duyệt, nói với khách là đang xin ưu đãi.\n\n## Upsell\n- Gợi ý một món phù hợp, đúng lúc: nâng hạng phòng khi còn trống, gói spa cho khách lưu trú, ăn sáng, đưa đón.\n- Nói rõ giá; khách từ chối thì không nhắc lại trong cùng cuộc trò chuyện.\n\n## Khi nào chuyển cho người\nKhiếu nại, sự cố an toàn, yêu cầu hoàn tiền, đoàn đông, yêu cầu ngoài chính sách, khách không hài lòng sau hai lượt."
+          }
+        },
+        "meta": [
+          ["title", "Vận hành khách sạn và spa: đặt chỗ, nhận và trả phòng"],
           ["kind", "playbook"],
           ["version", "1"]
         ]
@@ -426,6 +495,29 @@
         "meta": [
           ["title", "Giọng điệu của Nội dung mạng xã hội"],
           ["kind", "tone"],
+          ["version", "1"]
+        ]
+      }
+    },
+    {
+      "file": {
+        "path": "content/content-mau-bai-dang-khach-san-spa.md",
+        "text": "---\ntitle: Mẫu bài đăng cho khách sạn và spa\nkind: playbook\nversion: 1\n---\n# Mẫu bài đăng cho khách sạn và spa\n\nDùng giọng điệu, màu sắc và quy định thương hiệu trong tài liệu của workspace; mẫu dưới đây chỉ là khung.\n\n## 1. Ưu đãi spa\n- Mở: một câu gợi cảm giác (thư thái, ấm áp).\n- Thân: dịch vụ, thời lượng, mức ưu đãi, thời hạn áp dụng.\n- Kêu gọi: đặt lịch qua Zalo OA hoặc hotline.\n- Ảnh: không gian thật, ánh sáng ấm; 1–3 hashtag.\n\n## 2. Gói lưu trú cuối tuần\n- Mở: khoảnh khắc nghỉ ngơi.\n- Thân: hạng phòng, số đêm, dịch vụ kèm (ăn sáng, spa), giá từ, điều kiện.\n- Kêu gọi: số lượng có hạn, giữ chỗ trước.\n\n## 3. Giới thiệu không gian, dịch vụ\n- Một chi tiết cụ thể (chất liệu, mùi hương, tầm nhìn), không phóng đại.\n\n## 4. Cảm nhận khách\n- Trích lời khách đã đồng ý cho đăng; không bịa đánh giá.\n\n## Quy tắc\n- Không hứa điều khách sạn không xác nhận; giá và ưu đãi đúng với chính sách hiện hành.\n- Bài có giá, ưu đãi, hoặc nhắc tên khách: luôn qua duyệt trước khi đăng.\n- Video ngắn 15–30 giây, tỷ lệ 9:16, phụ đề tiếng Việt.\n"
+      },
+      "expected": {
+        "outcome": {
+          "kind": "ok",
+          "value": {
+            "module": "content",
+            "slug": "content-mau-bai-dang-khach-san-spa",
+            "title": "Mẫu bài đăng cho khách sạn và spa",
+            "kind": "playbook",
+            "body": "# Mẫu bài đăng cho khách sạn và spa\n\nDùng giọng điệu, màu sắc và quy định thương hiệu trong tài liệu của workspace; mẫu dưới đây chỉ là khung.\n\n## 1. Ưu đãi spa\n- Mở: một câu gợi cảm giác (thư thái, ấm áp).\n- Thân: dịch vụ, thời lượng, mức ưu đãi, thời hạn áp dụng.\n- Kêu gọi: đặt lịch qua Zalo OA hoặc hotline.\n- Ảnh: không gian thật, ánh sáng ấm; 1–3 hashtag.\n\n## 2. Gói lưu trú cuối tuần\n- Mở: khoảnh khắc nghỉ ngơi.\n- Thân: hạng phòng, số đêm, dịch vụ kèm (ăn sáng, spa), giá từ, điều kiện.\n- Kêu gọi: số lượng có hạn, giữ chỗ trước.\n\n## 3. Giới thiệu không gian, dịch vụ\n- Một chi tiết cụ thể (chất liệu, mùi hương, tầm nhìn), không phóng đại.\n\n## 4. Cảm nhận khách\n- Trích lời khách đã đồng ý cho đăng; không bịa đánh giá.\n\n## Quy tắc\n- Không hứa điều khách sạn không xác nhận; giá và ưu đãi đúng với chính sách hiện hành.\n- Bài có giá, ưu đãi, hoặc nhắc tên khách: luôn qua duyệt trước khi đăng.\n- Video ngắn 15–30 giây, tỷ lệ 9:16, phụ đề tiếng Việt."
+          }
+        },
+        "meta": [
+          ["title", "Mẫu bài đăng cho khách sạn và spa"],
+          ["kind", "playbook"],
           ["version", "1"]
         ]
       }

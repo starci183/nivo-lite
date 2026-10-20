@@ -94,6 +94,7 @@ The gateway reads only these keys (`be/apps/mcp/src/mcp.env.ts`). Its secrets co
 | `READY_OWNER_PASSWORD` | `test-accounts` | Ready-state accounts of the post-deploy smoke tests. |
 | `READY_STAFF_EMAIL` | `test-accounts` | Ready-state accounts of the post-deploy smoke tests. |
 | `READY_STAFF_PASSWORD` | `test-accounts` | Ready-state accounts of the post-deploy smoke tests. |
+| `WORKSPACE_SEED_INPUT` | `test-accounts` | Private ensure input (owner, manager, staff accounts and workspace name) the **seed demo workspace** workflow hands to `cli seed-workspace profile` as `WORKSPACE_SEED_INPUT_FILE`. |
 | `SUPABASE_ACCESS_TOKEN` | `ops` | Supabase management token, database password and project ref the database deploy workflow reads after `starci app secret materialize`. |
 | `SUPABASE_DB_PASSWORD` | `ops` | Supabase management token, database password and project ref the database deploy workflow reads after `starci app secret materialize`. |
 | `SUPABASE_PROJECT_ID` | `ops` | Supabase management token, database password and project ref the database deploy workflow reads after `starci app secret materialize`. |

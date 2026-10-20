@@ -23,6 +23,7 @@ import { I18nModule } from "@modules/platform/i18n"
 import { ChannelSetupModule } from "@modules/integrations/channel-setup"
 import { SUPABASE_ACCOUNTS, SUPABASE_AUTH, SUPABASE_STORAGE, SupabaseModule } from "@modules/integrations/supabase"
 import { AuthorityActionsModule } from "@modules/domain/authority-actions"
+import { AuthorityRulesModule } from "@modules/domain/authority-rules"
 import { MODULE_CATALOG, MODULE_CATEGORIES, MODULE_KNOWLEDGE_FOLDERS, ModulesModule } from "@modules/domain/modules"
 import { ClockModule } from "@modules/platform/clock"
 import { DatabaseModule } from "@modules/platform/database"
@@ -67,6 +68,7 @@ export const cliModules = (options: CliAppOptions): Array<DynamicModule> => [
     StaffModule.register({ isGlobal: true }),
     WorkspaceMembersModule.register({ isGlobal: true, accounts: SUPABASE_AUTH }),
     WorkspacesModule.register({ isGlobal: true, allowFreeWorkspace: true }),
+    AuthorityRulesModule.register({ isGlobal: true }),
     WorkspaceSeedModule.register({
         isGlobal: true,
         auth: SUPABASE_ACCOUNTS,
