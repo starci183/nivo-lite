@@ -310,3 +310,10 @@ export { useQueryTestOpenApiOperationSwr } from "./api/graphql/queries/useQueryT
 export { usePutPresignedSwr } from "./api"
 export { useQueryAuthUserSwr } from "./api/graphql/queries/useQueryAuthUserSwr"
 export { useQueryZaloReturnSwr } from "./api/graphql/queries/useQueryZaloReturnSwr"
+export { useQueryBrandProposalsSwr, useQueryMarketingWeeklyReportSwr } from "./api"
+export {
+    useMutateDecideBrandProposalSwr,
+    useMutatePostMarketingWeeklyReportSwr,
+    useMutateProposeBrandKitSwr,
+} from "./api"
+export type { BrandProposalType } from "@/modules/api"

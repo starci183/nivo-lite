@@ -13,6 +13,8 @@ import type {
     BillingWorkspaceQuery,
     BookingBoardQuery,
     BrainQuery,
+    BrandProposalsQuery,
+    MarketingWeeklyReportQuery,
     CheckConnectionMutation,
     CheckMetaMutation,
     ChooseMetaPageMutation,
@@ -132,6 +134,10 @@ export type ConnectionCheckType = CheckConnectionMutation["checkConnection"]
 export type ConnectionType = ConnectionsQuery["connections"][number]
 /** The `ContentAiRequestedType` object of the back end contract, as the operations of this app select it. */
 export type ContentAiRequestedType = RequestContentDraftMutation["requestContentDraft"]
+/** The `BrandProposalType` object of the back end contract, as the operations of this app select it. */
+export type BrandProposalType = BrandProposalsQuery["brandProposals"][number]
+/** The `WeeklyReportType` object of the back end contract, as the operations of this app select it. */
+export type WeeklyReportType = MarketingWeeklyReportQuery["marketingWeeklyReport"]
 /** The `ContentAiStatusType` object of the back end contract, as the operations of this app select it. */
 export type ContentAiStatusType = ContentAiStatusQuery["contentAiStatus"]
 /** The `ContentAiWarningType` object of the back end contract, as the operations of this app select it. */

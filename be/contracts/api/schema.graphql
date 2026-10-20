@@ -1018,6 +1018,11 @@ input AssignWorkItemInput {
   workItemId: ID!
 }
 
+input AttachedFileInput {
+  contentBase64: String!
+  name: String!
+}
+
 input AuthorityPatchInput {
   brand_voice: String
   goal_first_reply_minutes: Int
@@ -1525,6 +1530,52 @@ type BrainType {
   lessons: [BrainLessonType!]!
 }
 
+input BrandColorInput {
+  hex: String!
+  name: String!
+}
+
+type BrandColorType {
+  hex: String!
+  name: String!
+}
+
+input BrandKitInput {
+  address: String!
+  avoid: [String!]!
+  brandName: String!
+  colors: [BrandColorInput!]!
+  fonts: [String!]!
+  imagery: [String!]!
+  tone: String!
+}
+
+type BrandKitType {
+  address: String!
+  avoid: [String!]!
+  brandName: String!
+  colors: [BrandColorType!]!
+  fonts: [String!]!
+  imagery: [String!]!
+  tone: String!
+}
+
+type BrandProposalType {
+  createdAt: String!
+  decidedBy: String
+  fileName: String!
+  fileSize: Int!
+  id: ID!
+  installationId: ID
+  kit: BrandKitType!
+  setupSessionId: ID
+  status: String!
+}
+
+input BrandProposalsInput {
+  installationId: ID!
+}
+
 input CancelBookingInput {
   id: ID!
 }
@@ -1559,6 +1610,11 @@ input ChangeMemberRoleInput {
 input ChangeSmtpPasswordInput {
   connectionId: ID!
   password: String!
+}
+
+type ChannelValueType {
+  channel: String!
+  value: Int!
 }
 
 input ChatAnswerStatusInput {
@@ -2590,6 +2646,12 @@ input DecideBrainFactInput {
 input DecideBrainLessonInput {
   action: String!
   id: ID!
+}
+
+input DecideBrandProposalInput {
+  decision: String!
+  kit: BrandKitInput
+  proposalId: ID!
 }
 
 input DecideExecutionInput {
@@ -4242,6 +4304,10 @@ input MarkVideoPublishedInput {
   projectId: ID!
 }
 
+input MarketingReportInput {
+  weekStart: String! = ""
+}
+
 type MemberListingType {
   displayName: String!
   email: String!
@@ -4563,6 +4629,7 @@ type Mutation {
   createWorkspace(input: CreateWorkspaceInput!): CreateWorkspaceType!
   decideBrainFact(input: DecideBrainFactInput!): BrainFactType!
   decideBrainLesson(input: DecideBrainLessonInput!): BrainLessonType!
+  decideBrandProposal(input: DecideBrandProposalInput!): BrandProposalType!
   decideExecution(input: DecideExecutionInput!): ApprovalExecutionType!
   decideSalesDraft(input: DecideSalesDraftInput!): SalesActionType!
   decideSalesWorkItem(input: DecideSalesWorkItemInput!): SalesActionType!
@@ -4601,10 +4668,12 @@ type Mutation {
   moveBooking(input: MoveBookingInput!): MoveBookingType!
   moveContentItem(input: MoveContentItemInput!): ContentItemType!
   moveHiringCandidate(input: MoveHiringCandidateInput!): MoveCandidateType!
+  postMarketingWeeklyReport: WeeklyReportType!
   postOfficeMessage(input: PostOfficeMessageInput!): OfficeMessageType!
   postSetupMessage(input: PostSetupMessageInput!): SetupMessageType!
   previewLoyaltySegment(input: PreviewLoyaltySegmentInput!): PreviewLoyaltySegmentType!
   proposeAutomationBody(input: TemplateKeyInput!): BodyProposalType!
+  proposeBrandKit(input: ProposeBrandKitInput!): BrandProposalType!
   proposeOfficeCommand(input: ProposeOfficeCommandInput!): OfficeProposeOutcomeType!
   proposeShiftsWeek(input: ProposeShiftsWeekInput!): ProposeWeekType!
   reassignShiftsShift(input: ReassignShiftsShiftInput!): ReassignShiftsShiftType!
@@ -5072,6 +5141,12 @@ type ProposalType {
   summary: String!
 }
 
+input ProposeBrandKitInput {
+  file: AttachedFileInput!
+  installationId: String! = ""
+  setupSessionId: String! = ""
+}
+
 input ProposeOfficeCommandInput {
   messageId: ID!
 }
@@ -5297,6 +5372,7 @@ type Query {
   billingWorkspaces: [BillingWorkspaceType!]!
   bookingBoard(input: BookingBoardInput): BookingBoardType!
   brain: BrainType!
+  brandProposals(input: BrandProposalsInput!): [BrandProposalType!]!
   chatAnswerStatus(input: ChatAnswerStatusInput!): ChatReplyProgressType!
   chatReplyStatus(input: ChatReplyStatusInput!): ChatReplyProgressType!
   chatbotGaps: ChatbotGapsType!
@@ -5362,6 +5438,7 @@ type Query {
   loyaltyCampaign(input: LoyaltyCampaignInput!): LoyaltyCampaignViewType!
   loyaltyMember(input: LoyaltyMemberInput!): LoyaltyMemberDetailType!
   loyaltyProgram: LoyaltyProgramSettingsType!
+  marketingWeeklyReport(input: MarketingReportInput!): WeeklyReportType!
   metaConnection(input: GetMetaConnectionInput!): MetaWizardConnectionType!
   moduleDefinition(input: ModuleKeyInput!): ModuleDefinitionType!
   moduleInstallation(input: ModuleInstallationIdInput!): ModuleInstallationType!
@@ -5593,6 +5670,17 @@ input RenameInstallationAgentInput {
 input RenameModuleInstallationInput {
   installationId: ID!
   name: String!
+}
+
+type ReportDayType {
+  channels: [ChannelValueType!]!
+  day: String!
+}
+
+type ReportMetricType {
+  changePct: Int
+  previous: Int!
+  value: Int!
 }
 
 input RequestAgentGenerationInput {
@@ -7650,6 +7738,16 @@ type WebsiteLeadStatsType {
   afterHoursCount: Int!
   avgWaitHours: Float
   count: Int!
+}
+
+type WeeklyReportType {
+  channels: [String!]!
+  days: [ReportDayType!]!
+  engagements: ReportMetricType!
+  messages: ReportMetricType!
+  reach: ReportMetricType!
+  weekEnd: String!
+  weekStart: String!
 }
 
 type WizardConnectionType {
