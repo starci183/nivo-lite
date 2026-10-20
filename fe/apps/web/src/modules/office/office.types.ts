@@ -11,6 +11,63 @@ export interface OfficeMessage {
     readonly agentId: string | null
     readonly leadId: string | null
     readonly workItemId: string | null
+    /** The Hub room of the line; null is the general Office room. */
+    readonly room: string | null
+    /** The agent result card of the line, when it is one. */
+    readonly card: OfficeCardPayload | null
+    /** The live state of the card (pending, approved, declined, done, failed, queued, info). */
+    readonly cardState: string | null
+}
+
+/** An agent result card (contract v1, be/docs/guides/hub-rooms-and-cards.md) as the Hub draws it. */
+export interface OfficeCardPayload {
+    readonly type:
+        | "draft_post"
+        | "video_ready"
+        | "approval_request"
+        | "schedule_confirmed"
+        | "weekly_report"
+        | "booking_held"
+        | "daily_summary"
+        | "handoff_note"
+        | "exception"
+    readonly title: string
+    readonly subtitle: string | null
+    readonly badge: string | null
+    readonly body: string | null
+    readonly fields: ReadonlyArray<{ readonly label: string; readonly value: string }>
+    readonly media: ReadonlyArray<{
+        readonly kind: "image" | "video"
+        readonly url: string
+        readonly caption: string | null
+    }>
+    readonly lines: ReadonlyArray<{ readonly at: string; readonly text: string }>
+    readonly link: { readonly label: string; readonly href: string } | null
+    readonly ref: { readonly kind: "execution" | "work_item"; readonly id: string } | null
+    /** The sources the agent used (data layer and label), in the order it gave them. */
+    readonly sources: ReadonlyArray<{ readonly layer: number; readonly label: string }>
+    readonly canApprove: boolean
+    readonly canDecline: boolean
+    readonly canEdit: boolean
+}
+
+/** One Hub room: the general Office room (key null) or a department room. */
+export interface OfficeRoom {
+    readonly key: string | null
+    readonly name: string
+    readonly unread: number
+    readonly lastBody: string | null
+    readonly lastAuthor: string | null
+    readonly lastAt: string | null
+    readonly agentIds: ReadonlyArray<string>
+    readonly homeAgentIds: ReadonlyArray<string>
+    readonly userIds: ReadonlyArray<string>
+    readonly pins: ReadonlyArray<{
+        readonly id: string
+        readonly title: string
+        readonly href: string | null
+        readonly note: string
+    }>
 }
 
 /** One approval request (an execution waiting for, or already given, a decision). */

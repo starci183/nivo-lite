@@ -1,5 +1,11 @@
 import { AGENTS_ROUTE, agentChatHref } from "@/modules/routes"
-import type { OfficeInfoView, OfficeJumpRowView, OfficeMemberRowView } from "@/modules/types"
+import type {
+    OfficeChannelRowView,
+    OfficeInfoView,
+    OfficeJumpRowView,
+    OfficeMemberRowView,
+    OfficePinRowView,
+} from "@/modules/types"
 import type { OfficeAgent, OfficeApproval, OfficePerson, OfficeStaff, OfficeTask, OfficeWork } from "./office.types"
 import { NIVO_AVATAR, agentAvatarOf, avatarOfAgentId, departmentAgentOf, leadNameOf } from "./office.words"
 import type { OfficeContext, OfficeWords } from "./office.words"
@@ -57,6 +63,7 @@ const personRowOf = (
         seen: isMe ? null : seenOf(person, words, context),
         avatar: { kind: "person", name: person.name },
         isMe,
+        presence: null,
         mention: handle === null || isMe ? null : handle,
         chatHref: null,
         note: null,
@@ -70,6 +77,7 @@ const staffRowOf = (member: OfficeStaff, handle: string, words: OfficeWords): Of
     seen: null,
     avatar: { kind: "person", name: member.name },
     isMe: false,
+    presence: null,
     mention: handle,
     chatHref: null,
     note: words.t("noAccountYet"),
@@ -82,10 +90,22 @@ const agentMemberOf = (agent: OfficeAgent, words: OfficeWords): OfficeMemberRowV
     seen: null,
     avatar: agentAvatarOf(agent.module, agent.name),
     isMe: false,
+    presence: agent.isActive ? words.t("onDuty", { name: agent.name }) : null,
     mention: agent.isActive ? agent.handle : null,
     chatHref: agentChatHref(agent.id),
     note: null,
 })
+
+/** What the right column shows about the room on screen. */
+export interface OfficeRoomInfoInput {
+    /** True for the Office room (every member and every staff row). */
+    readonly isOffice: boolean
+    /** The agents seated in the room. */
+    readonly agents: ReadonlyArray<OfficeAgent>
+    readonly cards: ReadonlyArray<OfficeJumpRowView>
+    readonly channels: ReadonlyArray<OfficeChannelRowView>
+    readonly pins: ReadonlyArray<OfficePinRowView>
+}
 
 /** The right column: what waits, who is in the chat and the tasks summary. */
 export const infoViewOf = (
@@ -96,10 +116,14 @@ export const infoViewOf = (
     tasks: ReadonlyArray<OfficeTask>,
     words: OfficeWords,
     context: OfficeContext,
+    room: OfficeRoomInfoInput,
 ): OfficeInfoView => {
     const linked = new Set(people.map((person) => person.staffId))
-    const unlinked = context.staff.filter((member) => !linked.has(member.id))
+    const unlinked = room.isOffice ? context.staff.filter((member) => !linked.has(member.id)) : []
     return {
+        cards: room.cards,
+        channels: room.channels,
+        pins: room.pins,
         approvals: pending.map((approval) => approvalJumpOf(approval, words, context)),
         exceptions: openWork.map((work) => workJumpOf(work, words, context)),
         members: [
@@ -112,7 +136,7 @@ export const infoViewOf = (
                 ),
             ),
             ...unlinked.map((member) => staffRowOf(member, handles.get(member.id) ?? "", words)),
-            ...context.agents.map((agent) => agentMemberOf(agent, words)),
+            ...room.agents.map((agent) => agentMemberOf(agent, words)),
         ],
         addAgentHref: AGENTS_ROUTE,
         tasksSummary: words.t("tasksSummary", {

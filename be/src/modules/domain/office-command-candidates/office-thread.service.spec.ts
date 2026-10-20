@@ -30,6 +30,9 @@ const messageOf = builder<MessageView>({
     work_item_id: null,
     lead_name: null,
     department: null,
+    room: null,
+    card_json: null,
+    card_state: null,
     created_at: "2026-10-12T10:00:00+00:00",
 })
 
@@ -73,10 +76,10 @@ describe("OfficeThreadService", () => {
             const em = mockEntityManager({ query: [LIST_MESSAGES, rows] })
             const { service, members } = await build(em)
 
-            const page = await service.messages("u-1", "ws-1", { before: null, limit: 2 })
+            const page = await service.messages("u-1", "ws-1", { before: null, limit: 2, room: null })
 
             expect(members.require).toHaveBeenCalledWith("u-1", "ws-1")
-            expect(em.query).toHaveBeenCalledWith(LIST_MESSAGES, ["ws-1", null, null, 3])
+            expect(em.query).toHaveBeenCalledWith(LIST_MESSAGES, ["ws-1", null, null, 3, null])
             expect(page.messages.map((line) => line.id)).toEqual(["m-3", "m-2"])
             expect(page.next).toEqual({ createdAt: "2026-10-12T10:00:00+00:00", id: "m-2" })
         })
@@ -89,9 +92,10 @@ describe("OfficeThreadService", () => {
             const page = await service.messages("u-1", "ws-1", {
                 before: { createdAt: "2026-10-12T10:00:00Z", id },
                 limit: 9999,
+                room: "marketing",
             })
 
-            expect(em.query).toHaveBeenCalledWith(LIST_MESSAGES, ["ws-1", "2026-10-12T10:00:00Z", id, 101])
+            expect(em.query).toHaveBeenCalledWith(LIST_MESSAGES, ["ws-1", "2026-10-12T10:00:00Z", id, 101, "marketing"])
             expect(page).toEqual({ messages: [], next: null })
         })
 
@@ -99,8 +103,20 @@ describe("OfficeThreadService", () => {
             const { service } = await build(mockEntityManager())
 
             await expect(
-                service.messages("u-1", "ws-1", { before: { createdAt: "later", id: "x" }, limit: 10 }),
+                service.messages("u-1", "ws-1", { before: { createdAt: "later", id: "x" }, limit: 10, room: null }),
             ).rejects.toMatchObject({ code: OfficeCommandCandidatesErrorCode.PageInvalid })
+        })
+
+        it("refuses a room that is not a Hub room", async () => {
+            const em = mockEntityManager()
+            const { service } = await build(em)
+
+            await expect(
+                service.messages("u-1", "ws-1", { before: null, limit: 10, room: "lobby" }),
+            ).rejects.toMatchObject({
+                code: OfficeCommandCandidatesErrorCode.PageInvalid,
+            })
+            expect(em.query).not.toHaveBeenCalled()
         })
     })
 

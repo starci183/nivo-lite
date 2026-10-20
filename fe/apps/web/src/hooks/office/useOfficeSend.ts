@@ -16,6 +16,8 @@ interface ReadingAgent {
 /** What a send needs to know about the line. */
 interface SendPlan {
     readonly body: string
+    /** The Hub room the line is posted in; null is the Office room. */
+    readonly room: string | null
     /** True when an owner or manager's line should also be read as a command. */
     readonly shouldPropose: boolean
     /** The names of the agents the line calls, drawn as "typing". */
@@ -44,7 +46,9 @@ export const useOfficeSend = () => {
             setOutbox((current) => [...current, { id, body: plan.body, isFailed: false }])
             setTyping(plan.callNames.length > 0 ? plan.callNames.join(", ") : null)
             setReading(plan.reading)
-            const posted = await runGraphQL(() => post.trigger({ body: plan.body }), { showSuccessToast: false })
+            const posted = await runGraphQL(() => post.trigger({ body: plan.body, room: plan.room }), {
+                showSuccessToast: false,
+            })
             if (posted === undefined) {
                 setOutbox((current) => current.map((row) => (row.id === id ? { ...row, isFailed: true } : row)))
                 setTyping(null)

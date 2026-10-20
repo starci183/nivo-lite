@@ -3869,6 +3869,7 @@ input ListDecisionHistoryInput {
 input ListOfficeMessagesInput {
   before: OfficeThreadCursorInput = null
   limit: Int = 50
+  room: String = null
 }
 
 input ListTelegramChatsInput {
@@ -4596,6 +4597,7 @@ type Mutation {
   maintainBrain: Boolean!
   markBookingNoShow(input: MarkBookingNoShowInput!): MarkBookingNoShowType!
   markContentPublished(input: MarkContentPublishedInput!): MarkContentPublishedType!
+  markOfficeRoomRead(input: OfficeRoomKeyInput!): OfficeAckType!
   markOrderShipped(input: MarkOrderShippedInput!): MarkOrderShippedType!
   markVideoPublished(input: MarkVideoPublishedInput!): VideoProjectType!
   moveBooking(input: MoveBookingInput!): MoveBookingType!
@@ -4726,6 +4728,7 @@ type Mutation {
   setSetupGate(input: SetSetupGateInput!): SetupSessionType!
   setSyncSchedule(input: SetSyncScheduleInput!): Boolean!
   settleWonDeal(input: SettleWonDealInput!): LeadActionQueuedType!
+  setupOfficeRooms: [OfficeRoomType!]!
   shareVideoProject(input: ShareVideoProjectInput!): VideoShareType!
   simulateInbound(input: SimulateInboundInput!): SimulateInboundType!
   startAgentChatConversation(input: StartAgentChatConversationInput!): CreatedAgentChatConversationType!
@@ -4851,11 +4854,14 @@ type OfficeMessageType {
   author_kind: String!
   author_name: String!
   body: String!
+  card_json: String
+  card_state: String
   created_at: String!
   department: String
   id: ID!
   lead_id: ID
   lead_name: String
+  room: String
   staff_id: ID
   work_item_id: ID
 }
@@ -4864,6 +4870,31 @@ type OfficeProposeOutcomeType {
   body: String
   candidate: OfficeCandidateType
   kind: String!
+}
+
+input OfficeRoomKeyInput {
+  room: String = null
+}
+
+type OfficeRoomPinType {
+  href: String
+  id: ID!
+  note: String!
+  title: String!
+}
+
+type OfficeRoomType {
+  agent_ids: [String!]!
+  home_agent_ids: [String!]!
+  key: String
+  last_at: String
+  last_author: String
+  last_body: String
+  name: String!
+  pins: [OfficeRoomPinType!]!
+  position: Int!
+  unread: Int!
+  user_ids: [String!]!
 }
 
 type OfficeShownRowType {
@@ -4966,6 +4997,7 @@ type PickedFolderType {
 
 input PostOfficeMessageInput {
   body: String!
+  room: String = null
 }
 
 input PostSetupMessageInput {
@@ -5378,6 +5410,7 @@ type Query {
   officeDecidedApprovals: [OfficeApprovalType!]!
   officeMessages(input: ListOfficeMessagesInput!): OfficeMessagePageType!
   officePendingApprovals: [OfficeApprovalType!]!
+  officeRooms: [OfficeRoomType!]!
   openPlanPaymentOrder: BillingPaymentOrderType
   paymentOrder(input: PaymentOrderInput!): BillingPaymentOrderType
   paymentOrderRequestStatus(input: PaymentOrderRequestStatusInput!): PaymentOrderRequestStatusType

@@ -21,6 +21,7 @@ export class PostOfficeMessageHandler extends ICQRSHandler<PostOfficeMessageComm
             command.params.principal.id,
             command.params.request.workspaceId,
             command.params.request.body,
+            command.params.request.room,
         )
     }
 }

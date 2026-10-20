@@ -8,4 +8,6 @@ export interface ListThreadMessagesRequest {
     readonly before: MessageCursor | null
     /** The page size, clamped to 1..100. */
     readonly limit: number
+    /** Only this Hub room; null reads every room. */
+    readonly room: string | null
 }

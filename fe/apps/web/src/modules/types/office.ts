@@ -128,9 +128,53 @@ export interface OfficeCommandView {
     readonly workHref: string | null
 }
 
+/** An agent result card (draft post, video, report, booking held...) with its live state and its actions. */
+export interface OfficeResultCardView {
+    readonly kind: "card"
+    readonly key: string
+    /** The message id. */
+    readonly id: string
+    readonly anchor: string
+    readonly author: string
+    readonly avatar: OfficeAvatarView
+    readonly isAi: boolean
+    readonly time: string
+    /** The agent's own line above the card, when it differs from the title. */
+    readonly lead: string | null
+    readonly type: string
+    readonly typeLabel: string
+    readonly title: string
+    readonly subtitle: string | null
+    readonly badge: string | null
+    readonly state: "pending" | "approved" | "declined" | "done" | "failed" | "queued" | "info"
+    readonly body: string | null
+    readonly fields: ReadonlyArray<{ readonly label: string; readonly value: string }>
+    readonly media: ReadonlyArray<{
+        readonly kind: "image" | "video"
+        readonly url: string
+        readonly caption: string | null
+    }>
+    readonly lines: ReadonlyArray<{ readonly at: string; readonly text: string }>
+    readonly link: { readonly label: string; readonly href: string } | null
+    /** The sources the agent used, each "layer · label". */
+    readonly sources: ReadonlyArray<{ readonly label: string }>
+    /** What the actions decide: an execution (approval) or a work item (exception). */
+    readonly refKind: "execution" | "work_item" | null
+    readonly refId: string | null
+    readonly canApprove: boolean
+    readonly canDecline: boolean
+    readonly canEdit: boolean
+    readonly isFocused: boolean
+}
+
 /** One entry of the rendered thread. */
 export type OfficeThreadItem =
-    OfficeDayView | OfficeMessageView | OfficeApprovalView | OfficeExceptionView | OfficeCommandView
+    | OfficeDayView
+    | OfficeMessageView
+    | OfficeApprovalView
+    | OfficeExceptionView
+    | OfficeCommandView
+    | OfficeResultCardView
 
 /** An optimistic bubble of a line being sent. */
 export interface OfficeOutboxView {
@@ -158,8 +202,39 @@ export interface OfficeChatRowView {
     readonly avatar: OfficeAvatarView
 }
 
+/** One Hub room of the room list. */
+export interface OfficeRoomRowView {
+    /** The room key, or "office" for the general Office room. */
+    readonly id: string
+    readonly label: string
+    readonly description: string
+    readonly time: string | null
+    readonly unread: number
+}
+
+/** One channel of the room panel. */
+export interface OfficeChannelRowView {
+    readonly id: string
+    readonly name: string
+    readonly detail: string
+    readonly isConnected: boolean
+    readonly statusLabel: string
+}
+
+/** One pinned document of the room panel. */
+export interface OfficePinRowView {
+    readonly id: string
+    readonly title: string
+    readonly note: string
+    readonly href: string | null
+}
+
 /** The left column. */
 export interface OfficeListView {
+    /** The Hub rooms, the Office room first. */
+    readonly rooms: ReadonlyArray<OfficeRoomRowView>
+    /** The id of the room shown. */
+    readonly selectedRoom: string
     readonly groupLabel: string
     readonly groupPreview: string
     readonly groupTime: string | null
@@ -184,6 +259,8 @@ export interface OfficeMemberRowView {
     readonly seen: string | null
     readonly avatar: OfficeAvatarView
     readonly isMe: boolean
+    /** "AI ... on duty" for an active agent; null for a person. */
+    readonly presence: string | null
     readonly mention: string | null
     readonly chatHref: string | null
     readonly note: string | null
@@ -194,6 +271,10 @@ export interface OfficeInfoView {
     readonly approvals: ReadonlyArray<OfficeJumpRowView>
     readonly exceptions: ReadonlyArray<OfficeJumpRowView>
     readonly members: ReadonlyArray<OfficeMemberRowView>
+    /** Pending result cards of the room, jumping to their card. */
+    readonly cards: ReadonlyArray<OfficeJumpRowView>
+    readonly channels: ReadonlyArray<OfficeChannelRowView>
+    readonly pins: ReadonlyArray<OfficePinRowView>
     readonly tasksSummary: string
     readonly addAgentHref: string
 }

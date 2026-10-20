@@ -1,5 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
+import { isOfficeRoomKey } from "@modules/domain/messages"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import {
@@ -29,7 +30,7 @@ export class OfficeThreadService {
     async messages(principalId: string, workspaceId: string, query: MessagePageQuery): Promise<MessagePage> {
         await this.members.require(principalId, workspaceId)
         const before = query.before
-        if (before !== null && !isValidCursor(before))
+        if ((before !== null && !isValidCursor(before)) || (query.room !== null && !isOfficeRoomKey(query.room)))
             throw new OfficeCommandCandidatesError({ code: OfficeCommandCandidatesErrorCode.PageInvalid })
         const size = clampPageSize(query.limit)
         const rows = await this.entityManager.query<Array<MessageView>>(LIST_MESSAGES, [
@@ -37,6 +38,7 @@ export class OfficeThreadService {
             before?.createdAt ?? null,
             before?.id ?? null,
             size + 1,
+            query.room,
         ])
         return splitPage(rows, size)
     }

@@ -2,7 +2,10 @@ import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
+import { MessagesError, MessagesErrorCode } from "./errors/messages.error"
 import type { PostedMessage } from "./messages.contracts"
+import type { OptionalRoom, RoomKeyText } from "./office-cards.contracts"
+import { isOfficeRoomKey } from "./office-card.policy"
 import { INSERT_HUMAN_MESSAGE } from "./persistence/team-chat.sql"
 
 @Injectable()
@@ -13,15 +16,26 @@ export class TeamChatService {
         private readonly members: WorkspaceMembersService,
     ) {}
 
-    /** Posts the line as the caller and answers the stored line; any member of the workspace may speak. */
-    async postHuman(principalId: string, workspaceId: string, body: string): Promise<PostedMessage> {
+    /** Posts the line as the caller in a room (null = the Office room) and answers the stored line; any member may speak. */
+    async postHuman(
+        principalId: string,
+        workspaceId: string,
+        body: string,
+        room: RoomKeyText = null,
+    ): Promise<PostedMessage> {
         const member = await this.members.require(principalId, workspaceId)
+        const target: OptionalRoom = room === null || isOfficeRoomKey(room) ? room : this.unknownRoom(room)
         const [row] = await this.entityManager.query<[PostedMessage]>(INSERT_HUMAN_MESSAGE, [
             workspaceId,
             member.displayName,
             member.staffId,
             body.trim(),
+            target,
         ])
         return row
+    }
+
+    private unknownRoom(room: string): never {
+        throw new MessagesError({ code: MessagesErrorCode.RoomInvalid, params: { room } })
     }
 }

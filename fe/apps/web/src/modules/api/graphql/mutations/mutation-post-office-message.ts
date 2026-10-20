@@ -22,6 +22,7 @@ const mutation1: TypedDocumentNode<
             created_at
             id
             lead_id
+            room
             staff_id
             work_item_id
         }

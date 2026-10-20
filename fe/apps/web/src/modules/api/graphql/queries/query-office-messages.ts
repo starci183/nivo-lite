@@ -17,9 +17,12 @@ const query1: TypedDocumentNode<QueryOfficeMessagesResponse, InputVariables<Quer
                 author_kind
                 author_name
                 body
+                card_json
+                card_state
                 created_at
                 id
                 lead_id
+                room
                 staff_id
                 work_item_id
             }

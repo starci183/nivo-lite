@@ -1,4 +1,4 @@
-// migrations-sha256: 0b84751360cf359d150904cd52b7ea2337e3002f73d285027661b75129daf999
+// migrations-sha256: 2feb7accdded9760df5477743b93f96d0abdefa72dc2e87205462d7b619f2baf
 
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[]
 
@@ -2486,13 +2486,13 @@ isOneToOne: false
                   ]
                 },"messages": {
                   Row: {
-                    "agent_id": string | null,"author_kind": string,"author_name": string,"body": string,"created_at": string,"id": string,"lead_id": string | null,"staff_id": string | null,"work_item_id": string | null,"workspace_id": string
+                    "agent_id": string | null,"author_kind": string,"author_name": string,"body": string,"card": Json | null,"created_at": string,"id": string,"lead_id": string | null,"room": string | null,"staff_id": string | null,"work_item_id": string | null,"workspace_id": string
                   }
                   Insert: {
-                    "agent_id"?: string | null,"author_kind": string,"author_name": string,"body": string,"created_at"?: string,"id"?: string,"lead_id"?: string | null,"staff_id"?: string | null,"work_item_id"?: string | null,"workspace_id": string
+                    "agent_id"?: string | null,"author_kind": string,"author_name": string,"body": string,"card"?: Json | null,"created_at"?: string,"id"?: string,"lead_id"?: string | null,"room"?: string | null,"staff_id"?: string | null,"work_item_id"?: string | null,"workspace_id": string
                   }
                   Update: {
-                    "agent_id"?: string | null,"author_kind"?: string,"author_name"?: string,"body"?: string,"created_at"?: string,"id"?: string,"lead_id"?: string | null,"staff_id"?: string | null,"work_item_id"?: string | null,"workspace_id"?: string
+                    "agent_id"?: string | null,"author_kind"?: string,"author_name"?: string,"body"?: string,"card"?: Json | null,"created_at"?: string,"id"?: string,"lead_id"?: string | null,"room"?: string | null,"staff_id"?: string | null,"work_item_id"?: string | null,"workspace_id"?: string
                   }
                   Relationships: [
                     {
@@ -2848,6 +2848,88 @@ isOneToOne: false
       referencedColumns: ["id"]
     },{
       foreignKeyName: "office_command_candidates_workspace_id_fkey"
+      columns: ["workspace_id"]
+isOneToOne: false
+      referencedRelation: "workspaces"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"office_rooms_members": {
+                  Row: {
+                    "agent_id": string | null,"created_at": string,"id": string,"is_home": boolean,"room_id": string,"user_id": string | null
+                  }
+                  Insert: {
+                    "agent_id"?: string | null,"created_at"?: string,"id"?: string,"is_home"?: boolean,"room_id": string,"user_id"?: string | null
+                  }
+                  Update: {
+                    "agent_id"?: string | null,"created_at"?: string,"id"?: string,"is_home"?: boolean,"room_id"?: string,"user_id"?: string | null
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "office_rooms_members_agent_id_fkey"
+      columns: ["agent_id"]
+isOneToOne: false
+      referencedRelation: "agents"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "office_rooms_members_room_id_fkey"
+      columns: ["room_id"]
+isOneToOne: false
+      referencedRelation: "office_rooms"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"office_rooms_pins": {
+                  Row: {
+                    "created_at": string,"href": string | null,"id": string,"note": string,"room_id": string,"title": string
+                  }
+                  Insert: {
+                    "created_at"?: string,"href"?: string | null,"id"?: string,"note"?: string,"room_id": string,"title": string
+                  }
+                  Update: {
+                    "created_at"?: string,"href"?: string | null,"id"?: string,"note"?: string,"room_id"?: string,"title"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "office_rooms_pins_room_id_fkey"
+      columns: ["room_id"]
+isOneToOne: false
+      referencedRelation: "office_rooms"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"office_rooms_reads": {
+                  Row: {
+                    "last_read_at": string,"room": string,"user_id": string,"workspace_id": string
+                  }
+                  Insert: {
+                    "last_read_at"?: string,"room": string,"user_id": string,"workspace_id": string
+                  }
+                  Update: {
+                    "last_read_at"?: string,"room"?: string,"user_id"?: string,"workspace_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "office_rooms_reads_workspace_id_fkey"
+      columns: ["workspace_id"]
+isOneToOne: false
+      referencedRelation: "workspaces"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"office_rooms": {
+                  Row: {
+                    "created_at": string,"id": string,"key": string,"modules": string[],"name": string,"position": number,"workspace_id": string
+                  }
+                  Insert: {
+                    "created_at"?: string,"id"?: string,"key": string,"modules"?: string[],"name": string,"position"?: number,"workspace_id": string
+                  }
+                  Update: {
+                    "created_at"?: string,"id"?: string,"key"?: string,"modules"?: string[],"name"?: string,"position"?: number,"workspace_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "office_rooms_workspace_id_fkey"
       columns: ["workspace_id"]
 isOneToOne: false
       referencedRelation: "workspaces"
@@ -3996,6 +4078,9 @@ isOneToOne: false
 "display_name_of":
 { Args: { "uid": string }; Returns: string
                            },
+"ensure_office_rooms":
+{ Args: { "p_workspace": string }; Returns: number
+                           },
 "exception_rows":
 { Args: { "ws": string }; Returns: Json
                            },
@@ -4268,6 +4353,9 @@ isOneToOne: false
                            },
 "loyalty_post":
 { Args: { "p_amount_vnd"?: number,"p_by": string,"p_customer": string,"p_evidence"?: string,"p_expires_at"?: string,"p_invoice_id"?: string,"p_kind": string,"p_occurred_at"?: string,"p_order_id"?: string,"p_points": number,"p_ref": string,"p_reward_id"?: string,"p_work_item_id"?: string,"p_workspace": string }; Returns: string
+                           },
+"mark_office_room_read":
+{ Args: { "p_room": string,"p_user": string,"p_workspace": string }; Returns: undefined
                            },
 "match_knowledge":
 { Args: { "p_audience"?: string,"p_installation"?: string,"p_limit"?: number,"p_module": string,"p_query"?: string,"p_query_embedding"?: string,"p_query_model"?: string,"p_workspace": string }; Returns: {

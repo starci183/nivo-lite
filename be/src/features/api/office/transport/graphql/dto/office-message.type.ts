@@ -43,6 +43,18 @@ export class OfficeMessageType {
     @Field(() => String, { nullable: true })
     department?: string | null
 
+    /** The Hub room of the line; null is the general Office room. */
+    @Field(() => String, { nullable: true })
+    room?: string | null
+
+    /** The result card payload as JSON text (contract v1), when the line is a card. */
+    @Field(() => String, { nullable: true })
+    card_json?: string | null
+
+    /** The live card state: pending, approved, declined, done, failed, queued or info. */
+    @Field(() => String, { nullable: true })
+    card_state?: string | null
+
     /** When it was posted, ISO 8601. */
     @Field()
     created_at!: string

@@ -231,6 +231,8 @@ export interface MessagePageQuery {
     readonly before: OptionalMessageCursor
     /** The page size; clamped to 1..100. */
     readonly limit: number
+    /** Only this Hub room; null reads every room (the Office room). */
+    readonly room: string | null
 }
 
 /** One line of the Office thread. */
@@ -255,6 +257,12 @@ export interface MessageView {
     readonly lead_name: string | null
     /** The department of the work item the line mirrors. */
     readonly department: string | null
+    /** The Hub room of the line; null is the general Office room. */
+    readonly room: string | null
+    /** The result card payload as JSON text, when the line is a card. */
+    readonly card_json: string | null
+    /** The live state of the card: pending, approved, declined, done, failed, queued or info; null without a card. */
+    readonly card_state: string | null
     /** When it was written, ISO 8601. */
     readonly created_at: string
 }

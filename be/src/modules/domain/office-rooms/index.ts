@@ -1,0 +1,5 @@
+export { OFFICE_ROOMS_ERROR_KINDS } from "./errors/office-rooms.error"
+export { OFFICE_ROOMS_MESSAGES } from "./messages/office-rooms.messages"
+export { OfficeRoomsModule } from "./office-rooms.module"
+export { OfficeRoomsService } from "./office-rooms.service"
+export type { RoomView } from "./office-rooms.contracts"

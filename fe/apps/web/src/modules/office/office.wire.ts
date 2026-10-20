@@ -1,3 +1,4 @@
+import { cardOf } from "./office.rooms"
 import type { OfficeApproval, OfficeAuthorKind, OfficeCandidate, OfficeMessage, OfficeWork } from "./office.types"
 
 const AUTHOR_KINDS: ReadonlyArray<OfficeAuthorKind> = ["human", "agent", "system"]
@@ -14,6 +15,9 @@ interface MessageWire {
     readonly agent_id?: string | null
     readonly lead_id?: string | null
     readonly work_item_id?: string | null
+    readonly room?: string | null
+    readonly card_json?: string | null
+    readonly card_state?: string | null
 }
 
 /** One back end line as the thread uses it. */
@@ -26,6 +30,9 @@ export const toOfficeMessage = (row: MessageWire): OfficeMessage => ({
     agentId: row.agent_id ?? null,
     leadId: row.lead_id ?? null,
     workItemId: row.work_item_id ?? null,
+    room: row.room ?? null,
+    card: cardOf(row.card_json),
+    cardState: row.card_state ?? null,
 })
 
 /** The wire line of the back end approval queries. */

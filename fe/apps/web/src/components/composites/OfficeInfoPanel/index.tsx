@@ -1,5 +1,6 @@
 import { Badge, Button, IconButton, Region, SurfaceCard, Text } from "@starci/grammar/common"
 import { OfficeAvatar } from "@/components/branches/OfficeAvatar"
+import { OfficeRoomResources } from "@/components/branches/OfficeRoomResources"
 import { nivoIconSource } from "@/components/leaves/Icon"
 import type { OfficeInfoPanelProps, OfficeJumpRowView } from "@/modules/types"
 import {
@@ -72,18 +73,6 @@ const JumpList = (props: JumpListProps) => (
     </Region>
 )
 
-type MentionButtonProps = {
-    readonly handle: string
-    readonly label: string
-    readonly onMention: (handle: string) => void
-}
-
-const MentionButton = (props: MentionButtonProps) => (
-    <Button variant="ghost" size="sm" onPress={() => props.onMention(props.handle)}>
-        {props.label}
-    </Button>
-)
-
 /** The right column: what waits for approval, who is in the chat and the team's tasks. */
 export const OfficeInfoPanel = (props: OfficeInfoPanelProps) => {
     const { info, isDocked, text } = props.props
@@ -117,6 +106,13 @@ export const OfficeInfoPanel = (props: OfficeInfoPanelProps) => {
                     onJump={props.on.jumpException}
                 />
                 {renderOfficeInfoPanelMembers(text, info, props)}
+                <OfficeRoomResources
+                    cards={info.cards}
+                    channels={info.channels}
+                    pins={info.pins}
+                    text={text}
+                    onJump={props.on.jumpCard}
+                />
                 <Region label={text("tasksTitle")} className={SECTION_CLASS_NAME}>
                     <div className={TITLE_CLASS_NAME}>
                         <Text weight="semibold">{text("tasksTitle")}</Text>
@@ -166,11 +162,9 @@ const renderOfficeInfoPanelMembers = (
                     )}
                     <div className={ACTIONS_CLASS_NAME}>
                         {member.mention === null ? null : (
-                            <MentionButton
-                                handle={member.mention}
-                                label={text("mention")}
-                                onMention={props.on.mention}
-                            />
+                            <Button variant="ghost" size="sm" onPress={() => props.on.mention(member.mention ?? "")}>
+                                {text("mention")}
+                            </Button>
                         )}
                         {member.chatHref === null ? null : (
                             <Button variant="ghost" size="sm" href={member.chatHref}>
@@ -180,6 +174,11 @@ const renderOfficeInfoPanelMembers = (
                     </div>
                 </div>
                 {member.isMe ? <Badge tone="accent">{text("youTag")}</Badge> : null}
+                {member.presence === null ? null : (
+                    <Badge tone="success" isDot>
+                        {member.presence}
+                    </Badge>
+                )}
             </div>
         ))}
         <Button variant="outline" size="sm" width="fill" href={info.addAgentHref}>

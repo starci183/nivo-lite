@@ -16,8 +16,6 @@ import {
 
 const contains = (value: string, query: string): boolean => value.toLowerCase().includes(query.toLowerCase())
 
-const SELECTED_GROUP = ["group"]
-
 const rowsOf = (rows: ReadonlyArray<OfficeChatRowView>) =>
     rows.map((row) => ({
         id: row.id,
@@ -37,7 +35,8 @@ export const OfficeConversations = (props: OfficeConversationsProps) => {
     const { list, text, isLoading } = props.props
     const [query, setQuery] = useState("")
     const q = query.trim()
-    const showGroup = q === "" || contains(list.groupLabel, q)
+    const rooms = list.rooms.filter((row) => q === "" || contains(row.label, q))
+    const showGroup = rooms.length > 0
     const agents = list.agents.filter((row) => q === "" || contains(row.label, q))
     const customers = list.customers.filter((row) => q === "" || contains(row.label, q))
     const isEmpty = !showGroup && agents.length === 0 && customers.length === 0
@@ -66,7 +65,7 @@ export const OfficeConversations = (props: OfficeConversationsProps) => {
                         {text("noMatches", { q })}
                     </Text>
                 ) : null}
-                {showGroup ? renderOfficeConversationsGroups(text, props, isLoading, list) : null}
+                {showGroup ? renderOfficeConversationsGroups(text, props, isLoading, list, rooms) : null}
                 {agents.length > 0 ? (
                     <Region label={text("sectionAgents")} className={SECTION_CLASS_NAME}>
                         <div className={CAPTION_CLASS_NAME}>
@@ -105,44 +104,47 @@ export const OfficeConversations = (props: OfficeConversationsProps) => {
     )
 }
 
-/** Renders the OfficeConversations groups section. */
+/** Renders the room list: the Office room and the department rooms, each with its unread count. */
 const renderOfficeConversationsGroups = (
     text: NonNullable<OfficeConversationsProps["props"]["text"]>,
     props: OfficeConversationsProps,
     isLoading: NonNullable<OfficeConversationsProps["props"]["isLoading"]>,
     list: NonNullable<OfficeConversationsProps["props"]["list"]>,
+    rooms: NonNullable<OfficeConversationsProps["props"]["list"]>["rooms"],
 ) => (
     <Region label={text("sectionGroups")} className={SECTION_CLASS_NAME}>
         <div className={CAPTION_CLASS_NAME}>
             <Text size="xs" tone="muted" weight="semibold">
                 {text("sectionGroups")}
             </Text>
+            <Text size="xs" tone="muted">{`${list.rooms.length}`}</Text>
         </div>
         <ListBox
             label={text("sectionGroups")}
             selectionMode="single"
-            selectedIds={SELECTED_GROUP}
-            onSelectionChange={props.on.openGroup}
+            selectedIds={[list.selectedRoom]}
+            onSelectionChange={(ids) => {
+                const id = ids[0]
+                if (id !== undefined) props.on.openGroup(id)
+            }}
             isLoading={isLoading}
             loadingRows={1}
-            items={[
-                {
-                    id: "group",
-                    label: list.groupLabel,
-                    description: list.groupPreview,
-                    leading: <IconTile source={nivoIconSource("community", "leading")} tone="neutral" size="sm" />,
-                    trailing: (
-                        <div className={TRAILING_CLASS_NAME}>
-                            {list.groupTime === null ? null : (
-                                <Text size="xs" tone="muted">
-                                    {list.groupTime}
-                                </Text>
-                            )}
-                            {list.pendingCount > 0 ? <Badge tone="accent">{list.pendingCount}</Badge> : null}
-                        </div>
-                    ),
-                },
-            ]}
+            items={rooms.map((room) => ({
+                id: room.id,
+                label: room.label,
+                description: room.id === "office" && room.description === "" ? list.groupPreview : room.description,
+                leading: <IconTile source={nivoIconSource("community", "leading")} tone="neutral" size="sm" />,
+                trailing: (
+                    <div className={TRAILING_CLASS_NAME}>
+                        {room.time === null ? null : (
+                            <Text size="xs" tone="muted">
+                                {room.time}
+                            </Text>
+                        )}
+                        {room.unread > 0 ? <Badge tone="accent">{room.unread}</Badge> : null}
+                    </div>
+                ),
+            }))}
         />
     </Region>
 )

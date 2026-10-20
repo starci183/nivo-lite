@@ -38,6 +38,8 @@ export interface OfficeMessengerBaseProps {
         readonly isLoading: boolean
         readonly isInfoOpen: boolean
         readonly isInfoDocked: boolean
+        /** The name of the room shown. */
+        readonly title: string
         readonly subtitle: string
         /** The words of the "needs approval" chip, or none when nothing waits. */
         readonly chip: string | null
@@ -54,11 +56,12 @@ export interface OfficeMessengerBaseProps {
             readonly toggleInfo: () => void
             readonly infoOpenChange: (isOpen: boolean) => void
             readonly showChat: () => void
-            readonly openGroup: () => void
+            readonly openGroup: (id: string) => void
             readonly openAgent: (id: string) => void
             readonly openCustomer: (id: string) => void
             readonly jumpApproval: (id: string) => void
             readonly jumpException: (id: string) => void
+            readonly jumpCard: (id: string) => void
             readonly mention: (handle: string) => void
             readonly openTasks: () => void
             readonly closeInfo: () => void
@@ -109,6 +112,7 @@ export const OfficeMessengerBase = (props: OfficeMessengerBaseProps) => {
                                         on={{
                                             decideApproval: on.decideApproval,
                                             decideWork: on.decideWork,
+                                            decideCard: on.decideCard,
                                             sendCommand: on.sendCommand,
                                             cancelCommand: on.cancelCommand,
                                             reply: on.reply,
@@ -156,7 +160,7 @@ const OfficeMessengerHeader = (props: OfficeMessengerBaseProps) => {
                 <IconTile source={nivoIconSource("community", "leading")} tone="neutral" />
             </div>
             <div className={HEAD_TEXT_CLASS_NAME}>
-                <Heading level={1}>{isTasks ? text("tasksTitle") : text("title")}</Heading>
+                <Heading level={1}>{isTasks ? text("tasksTitle") : view.title}</Heading>
                 {isTasks ? null : (
                     <Text size="sm" tone="muted" overflow="truncate" isSkeleton={view.isLoading}>
                         {view.subtitle}
@@ -198,6 +202,7 @@ const MessengerInfoPanel = (props: OfficeMessengerBaseProps) => {
             on={{
                 jumpApproval: on.jumpApproval,
                 jumpException: on.jumpException,
+                jumpCard: on.jumpCard,
                 mention: on.mention,
                 openTasks: on.openTasks,
                 close: on.closeInfo,

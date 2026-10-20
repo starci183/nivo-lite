@@ -30,6 +30,8 @@ export interface PostedMessage {
     readonly lead_id: string | null
     /** The work item it mirrors. */
     readonly work_item_id: string | null
+    /** The Hub room it was posted in; null is the general Office room. */
+    readonly room: string | null
     /** When it was written, ISO 8601. */
     readonly created_at: string
 }
