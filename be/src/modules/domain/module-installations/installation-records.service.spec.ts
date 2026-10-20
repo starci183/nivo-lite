@@ -18,6 +18,7 @@ import {
     LIST_INSTALLATIONS,
     LIST_INSTANCE_NAMES,
     LIST_ON_OPENCLAW,
+    LIST_WORKSPACES_OF_MODULE,
     RENAME_INSTALLATION,
     SAVE_SETTINGS,
     SET_LIVE,
@@ -102,6 +103,13 @@ describe("InstallationRecordsService", () => {
 
         expect(em.query).toHaveBeenNthCalledWith(1, FIND_FIRST_OF_MODULE, ["ws-1", "sales"])
         expect(em.query).toHaveBeenNthCalledWith(2, FIND_FIRST_OF_MODULE, ["ws-1", "booking"])
+    })
+    it("lists the workspaces where a module is installed", async () => {
+        const em = mockEntityManager({ query: [LIST_WORKSPACES_OF_MODULE, [{ id: "ws-1" }]] })
+        const service = await build(em)
+
+        await expect(service.workspacesOf("accounting")).resolves.toEqual(["ws-1"])
+        expect(em.query).toHaveBeenCalledWith(LIST_WORKSPACES_OF_MODULE, ["accounting"])
     })
     it("finds the installation driven by an agent or answers null", async () => {
         const em = mockEntityManager({

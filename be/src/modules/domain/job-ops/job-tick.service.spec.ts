@@ -10,6 +10,7 @@ import { JOB_TICKS } from "./job-tick.policy"
 import { JobTickService } from "./job-tick.service"
 
 const EXPECTED = [
+    ["accounting-desk-morning", "accounting_desk", "accounting_desk.morning", {}, 1440],
     ["agents-sync-all", "agents", "agents.sync", {}, 5],
     ["automation-tick", "automation", "automation.tick", {}, 1],
     ["connection-health-tick", "connection_health", "connection_health", { silentAfterHours: 72 }, 15],

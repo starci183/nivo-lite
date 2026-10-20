@@ -1,3 +1,4 @@
+import { ACCOUNTING_DESK_QUEUE, ACCOUNTING_MORNING_JOB } from "@modules/queues/accounting-desk"
 import { AGENTS_QUEUE, AgentsJob } from "@modules/queues/agents"
 import { AUTOMATION_QUEUE, AUTOMATION_TICK_JOB } from "@modules/queues/automation"
 import { CONNECTION_HEALTH_QUEUE } from "@modules/queues/connection-health"
@@ -19,8 +20,14 @@ export interface JobTick {
     readonly minutes: number
 }
 
-/** The eight operator ticks declared by the job-ticks migration. */
+/** The operator ticks declared by the job-ticks migration and the accounting desk migration. */
 export const JOB_TICKS: Readonly<Record<string, JobTick>> = {
+    "accounting-desk-morning": {
+        queue: ACCOUNTING_DESK_QUEUE,
+        job: ACCOUNTING_MORNING_JOB,
+        payload: {},
+        minutes: 1440,
+    },
     "agents-sync-all": { queue: AGENTS_QUEUE, job: AgentsJob.Sync, payload: {}, minutes: 5 },
     "automation-tick": { queue: AUTOMATION_QUEUE, job: AUTOMATION_TICK_JOB, payload: {}, minutes: 1 },
     "connection-health-tick": {

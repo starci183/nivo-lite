@@ -180,3 +180,7 @@ export const FIND_REQUIREMENT_FACTS = sql`
         (SELECT count(*)::int FROM public.staff s WHERE s.workspace_id = $1 AND s.active) AS staff,
         (SELECT count(*)::int FROM public.workspace_members m WHERE m.workspace_id = $1 AND m.status = 'active') AS members
     LIMIT 1`
+
+/** The workspaces where a module is installed, for a morning run across workspaces ($1 module key). */
+export const LIST_WORKSPACES_OF_MODULE = sql`
+    SELECT DISTINCT workspace_id AS id FROM public.module_installations WHERE module_key = $1 ORDER BY workspace_id LIMIT 1000`
