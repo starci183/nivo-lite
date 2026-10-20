@@ -27,6 +27,13 @@ import {
     blankResult,
     cases,
 } from "@tests/fixtures/builders/score-lead-performer.builder"
+
+/** The separator shape of the String.prototype.split overload the spy replaces. */
+type Splitter = { [Symbol.split](text: string, limit?: number): Array<string> }
+
+/** Whether a split separator is the line break the spy empties (separators are strings, regexes or splitters). */
+const isNewline = (separator: unknown): boolean => separator === "\n"
+
 const build = async (flow: LeadFlow = flowOf()) => {
     const registry = mock<WorkPerformerRegistry>()
     const store = mock<LeadFlowStoreService>()
@@ -295,12 +302,16 @@ describe("ScoreLeadPerformerService", () => {
             meta.windowOf.mockResolvedValue({ status: flow.state === "handed_off" ? "closed" : "open", msLeft: 0 })
             const item = itemOf({ proposal: { summary: "Before", fields } })
             // Native split returns an element; fault injection checks both retained empty-array fallbacks.
+            const nativeSplit = String.prototype.split
             const split = emptySplit ? jest.spyOn(String.prototype, "split") : undefined
-            split?.mockReturnValueOnce([]).mockReturnValueOnce([])
+            split?.mockImplementation(function (this: string, separator: Splitter, limit?: number) {
+                return isNewline(separator) ? [] : nativeSplit.call(this, separator, limit)
+            })
             let prepared: Prepared
             try {
                 prepared = await performer.prepare(ctx, item)
-                if (split !== undefined) expect(split.mock.calls).toEqual([["\n"], ["\n"]])
+                if (split !== undefined)
+                    expect(split.mock.calls.filter(([separator]) => isNewline(separator))).toEqual([["\n"], ["\n"]])
             } finally {
                 split?.mockRestore()
             }

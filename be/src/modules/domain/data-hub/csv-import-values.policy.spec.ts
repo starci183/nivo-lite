@@ -164,4 +164,18 @@ describe("parseDateLoose validation and precision", () => {
             exec.mockRestore()
         }
     })
+
+    it("treats a missing trailing capture of an ISO match as no time", async () => {
+        const subject = await buildSubject()
+
+        const raw = "2026-10-14"
+        const captures: [string, string, string, string] = [raw, "2026", "10", "14"]
+        const malformed: RegExpExecArray = Object.assign(captures, { index: 0, input: raw })
+        const exec = jest.spyOn(RegExp.prototype, "exec").mockReturnValueOnce(malformed)
+        try {
+            expect(subject.parseDateLoose(raw)).toBe("2026-10-13T17:00:00.000Z")
+        } finally {
+            exec.mockRestore()
+        }
+    })
 })

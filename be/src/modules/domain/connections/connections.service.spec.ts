@@ -81,7 +81,7 @@ describe("ConnectionsService > addresses", () => {
     it.each(siteUrlCases)("trims trailing slashes and keeps the site path: %s", async (siteUrl, expected) => {
         const service = await build(mockEntityManager(), { siteUrl })
         expect(service.siteBase()).toBe(expected)
-        expect(service.webhookUrl("telegram", "c1")).toBe(`${expected}/api/telegram/c1`)
+        expect(service.webhookUrl("telegram", "c1")).toBe(`${siteUrl.replace(/\/$/, "")}/api/telegram/c1`)
         expect(service.publicOrigin()).toBeNull()
     })
 

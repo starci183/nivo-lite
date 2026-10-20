@@ -53,11 +53,14 @@ export const normPhone = (raw: unknown): string | null => {
     return digits
 }
 
+/** The part at an index of a split, empty when the index is outside it. */
+const partAt = (parts: ReadonlyArray<string>, index: number): string => parts.slice(index, index + 1).join("")
+
 /** An email in lower case, or null. */
 export const normEmail = (raw: unknown): string | null => {
     const value = textOf(raw).toLowerCase()
     const parts = value.split("@")
-    const local = parts[0] ?? ""
+    const local = partAt(parts, 0)
     const domain = parts[1] ?? ""
     const dot = domain.lastIndexOf(".", domain.length - 2)
     return parts.length === 2 && local !== "" && dot > 0 && !/\s/.test(value) ? value : null
@@ -68,8 +71,8 @@ const emailIn = (text: string): string | null => {
     for (const token of text.split(/[\s,;]+/)) {
         const parts = token.split("@")
         for (let index = 1; index < parts.length; index += 1) {
-            const local = parts[index - 1] ?? ""
-            const domain = parts[index] ?? ""
+            const local = partAt(parts, index - 1)
+            const domain = partAt(parts, index)
             if (local !== "" && domain.lastIndexOf(".", domain.length - 2) > 0) return `${local}@${domain}`
         }
     }

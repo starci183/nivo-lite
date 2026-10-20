@@ -88,6 +88,14 @@ describe("MetaChannelSender", () => {
         ])
     })
 
+    it("stops looking for the archive colon at a line break", async () => {
+        const { service, meta } = await build()
+
+        await expect(service.send(target({ externalId: "a:b\nperson-2:archive" }), "Hi")).resolves.toBe(true)
+
+        expect(meta.deliverMessage.mock.calls[0]?.[2]).toBe("a:b\nperson-2")
+    })
+
     it("sends an Instagram reply with an unarchived person id and no linked Instagram id", async () => {
         const { service, connections, meta } = await build()
         connections.find.mockResolvedValue(record({ meta: {} }))

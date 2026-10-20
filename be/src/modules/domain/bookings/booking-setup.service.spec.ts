@@ -308,7 +308,7 @@ describe("BookingSetupService", () => {
             const { setup, settings } = await build()
 
             await expect(
-                setup.savePublicPage(USER, { workspaceId: WORKSPACE, enabled: true, slug: " Tiem Hoa! ", note: "Hi" }),
+                setup.savePublicPage(USER, { workspaceId: WORKSPACE, enabled: true, slug: " !Tiem Hoa! ", note: "Hi" }),
             ).resolves.toEqual({ workspaceId: WORKSPACE })
             expect(settings.slugOwner.mock.calls[0]?.slice(0, 2)).toEqual([WORKSPACE, "tiem-hoa"])
             expect(settings.savePublicPage.mock.calls[0]?.[0]).toEqual({
@@ -328,6 +328,15 @@ describe("BookingSetupService", () => {
 
             await expect(setup.savePublicPage(USER, page)).rejects.toMatchObject({ code: BookingsErrorCode.SlugTaken })
             await expect(setup.savePublicPage(USER, page)).rejects.toMatchObject({ code: BookingsErrorCode.SlugTaken })
+        })
+
+        it("treats a direct unique-violation code as a taken slug", async () => {
+            const { setup, settings } = await build()
+            settings.savePublicPage.mockRejectedValueOnce({ code: "23505" })
+
+            await expect(
+                setup.savePublicPage(USER, { workspaceId: WORKSPACE, enabled: true, slug: "tiem-hoa", note: "" }),
+            ).rejects.toMatchObject({ code: BookingsErrorCode.SlugTaken })
         })
 
         it("refuses to publish a page without a slug", async () => {

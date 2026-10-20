@@ -45,6 +45,12 @@ const build = async () => {
 }
 
 describe("WorkspaceWriterService", () => {
+    it("lists a path once per file when the bundle repeats it", async () => {
+        const { writer, disk } = await build()
+        writer.write(ROOT, [AGENTS, AGENTS])
+        expect(disk.store.get(MANIFEST)).toBe(JSON.stringify(["AGENTS.md", "AGENTS.md"], null, 2))
+    })
+
     it("keeps manifest paths in locale-independent ordinal order", async () => {
         const { writer, disk } = await build()
         writer.write(

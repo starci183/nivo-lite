@@ -94,3 +94,12 @@ describe("expiry.policy", () => {
         })
     })
 })
+
+describe("expiry.policy ordering", () => {
+    it("tells the earliest date whatever the order of the entries, including equal dates", async () => {
+        const subject = await build()
+
+        expect(subject.expiringSoon([earn(1, 5), earn(1, 5), earn(1, 20)], NOW, 30).firstAt).toBe(at(5))
+        expect(subject.expiringSoon([earn(1, 20), earn(1, 10), earn(1, 5), earn(1, 5)], NOW, 30).firstAt).toBe(at(5))
+    })
+})

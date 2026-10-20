@@ -152,7 +152,10 @@ const sourceUpdate = (payload: Payload, sourceId: string | undefined): BrainComm
           }
 
 /** Reads owner fact and lesson edits using each command's required fields. */
-const readDecision = (kind: BrainCommandKind, payload: Payload): BrainCommand | null => {
+const readDecision = (
+    kind: "fact.decide" | "fact.keep" | "lesson.save" | "lesson.decide",
+    payload: Payload,
+): BrainCommand | null => {
     const id = text(payload, "id")
     switch (kind) {
         case "fact.decide": {
@@ -182,18 +185,6 @@ const readDecision = (kind: BrainCommandKind, payload: Payload): BrainCommand | 
             const action = oneOf(LESSON_ACTIONS, text(payload, "action"))
             return id === undefined || action === undefined ? null : { kind, decision: { id, action } }
         }
-        case "brain.maintain":
-        case "drive.linked":
-        case "drive.picked":
-        case "fact.save":
-        case "gap.dismiss":
-        case "knowledge.ask":
-        case "knowledge.reembed":
-        case "lessons.mine":
-        case "source.delete":
-        case "source.reindex":
-        case "source.update":
-            return null
     }
 }
 

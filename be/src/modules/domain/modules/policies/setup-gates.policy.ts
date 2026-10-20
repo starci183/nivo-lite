@@ -88,7 +88,7 @@ export const stripSetupBlock = (value: string): string => {
         while (from > cursor && value[from - 1] === "\n") from -= 1
         parts.push(value.slice(cursor, from))
         cursor = closing + BLOCK_END.length
-        while (cursor < value.length && /\s/u.test(value[cursor] ?? "")) cursor += 1
+        while (cursor < value.length && /\s/u.test(value.charAt(cursor))) cursor += 1
         start = value.indexOf(BLOCK_START, cursor)
     }
     return (parts.join("") + value.slice(cursor)).trimEnd()

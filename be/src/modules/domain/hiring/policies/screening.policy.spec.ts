@@ -183,7 +183,7 @@ const requirementCases: ReadonlyArray<RequirementCase> = [
     [
         "unstated experience",
         { experienceYears: 2 },
-        evidence("Experienced cashier"),
+        evidence("Experienced cashier in Nam Dinh"),
         consider(rr("experience", { years: 2 }, "unknown", "experienceUnknown")),
     ],
     [

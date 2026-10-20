@@ -58,13 +58,13 @@ const parseYesNo = (answer: string): "yes" | "no" | null => {
 
 const experienceNumberBefore = (text: string, offset: number): number | null => {
     let end = offset
-    while (end > 0 && /\s/u.test(text[end - 1] ?? "")) end -= 1
+    while (end > 0 && /\s/u.test(text.charAt(end - 1))) end -= 1
     let start = end
-    while (start > 0 && /\d/u.test(text[start - 1] ?? "")) start -= 1
+    while (start > 0 && /\d/u.test(text.charAt(start - 1))) start -= 1
     if (start === end) return null
-    if (text[start - 1] === "." && /\d/u.test(text[start - 2] ?? "")) {
+    if (text.charAt(start - 1) === "." && /\d/u.test(text.charAt(start - 2))) {
         start -= 1
-        while (start > 0 && /\d/u.test(text[start - 1] ?? "")) start -= 1
+        while (start > 0 && /\d/u.test(text.charAt(start - 1))) start -= 1
     }
     return Number(text.slice(start, end))
 }

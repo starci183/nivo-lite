@@ -239,6 +239,7 @@ describe("MailClient / sendThroughPlatform encryption modes", () => {
     it.each([
         { url: "smtp://smtp.example.com:587", options: PUBLIC, secure: false, requireTLS: true, strict: true },
         { url: "smtps://smtp.example.com:465", options: PUBLIC, secure: true, requireTLS: true, strict: true },
+        { url: "garbage", options: PUBLIC, secure: false, requireTLS: true, strict: true },
         { url: "smtp://localhost:1025", options: DEV, secure: false, requireTLS: false, strict: false },
     ])("enforces the encryption policy for $url", async ({ url, options, secure, requireTLS, strict }) => {
         const { close } = transportAnswering({ messageId: "<policy>" })

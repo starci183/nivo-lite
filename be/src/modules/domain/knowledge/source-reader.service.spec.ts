@@ -166,6 +166,16 @@ describe("SourceReaderService", () => {
             })
         })
 
+        it("takes the title of the page when the title is the address with trailing slashes", async () => {
+            const { reader, documents } = await build()
+            documents.readLink.mockResolvedValue({ text: "Page text", title: "Menu" })
+
+            await expect(reader.read(link({ title: "https://example.com/page//" }))).resolves.toEqual({
+                kind: "ok",
+                value: { text: "Page text", title: "Menu" },
+            })
+        })
+
         it("takes the title of the page when there was none, reading the address from the content", async () => {
             const { reader, documents, drive } = await build()
             documents.readLink.mockResolvedValue({ text: "Page text", title: "Menu" })

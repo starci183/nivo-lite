@@ -62,7 +62,8 @@ export const isThresholdSaid = (said: string): boolean => {
         const number = THRESHOLD_NUMBER.exec(said.slice(start))
         if (number === null) continue
         const end = start + number[0].length
-        const spaces = /^\s*/.exec(said.slice(end))?.[0].length ?? 0
+        const rest = said.slice(end)
+        const spaces = rest.length - rest.trimStart().length
         candidates.push(end + spaces)
     }
     // Candidate positions are ordered. Once a line break passes one, only later candidates can match.
@@ -73,8 +74,11 @@ export const isThresholdSaid = (said: string): boolean => {
             lineStart = token.index + 1
             continue
         }
-        while (candidate < candidates.length && (candidates[candidate] ?? 0) < lineStart) candidate++
-        const start = candidates[candidate]
+        let start = candidates[candidate]
+        while (start !== undefined && start < lineStart) {
+            candidate++
+            start = candidates[candidate]
+        }
         if (start !== undefined && start <= token.index) return true
     }
     return false

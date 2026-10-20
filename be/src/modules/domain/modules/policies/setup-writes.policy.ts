@@ -94,7 +94,7 @@ export const vndOf = (value: unknown): number | null => {
     if (found === null) return null
     const unit = found[2] ?? ""
     // The successful anchored match guarantees this maximal numeric prefix is nonempty.
-    const prefix = found[1] ?? ""
+    const prefix = found.slice(1, 2).join("")
     const digits = unit === "" ? prefix.replace(/[.,]/g, "") : prefix.replace(",", ".")
     const amount = Number(digits)
     if (!Number.isFinite(amount)) return null

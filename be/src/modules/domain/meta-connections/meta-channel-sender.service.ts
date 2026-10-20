@@ -16,7 +16,7 @@ const personOf = (externalId: string): string => {
     const end = externalId.length
     let colon = -1
     for (let at = end - 1; at >= 0; at -= 1) {
-        const char = externalId[at] ?? ""
+        const char = externalId.charAt(at)
         if (/[\r\n\u2028\u2029]/u.test(char)) break
         if (char === ":") colon = at
     }

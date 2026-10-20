@@ -91,6 +91,7 @@ describe("authority chat policy", () => {
         ["over 20\nask me", true],
         ["over 20m\nask me", false],
         ["over ... ask", true],
+        ["over ask me", false],
         ["over 20m later ask", true],
         ["over 20m\nunder 30 ask", false],
     ])("recognizes asking above a threshold in %s", async (text, expected) => {

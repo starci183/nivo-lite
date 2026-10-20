@@ -23,7 +23,7 @@ const redactAssignments = (input: string): string => {
     for (const found of input.matchAll(heads)) {
         if (found.index < cursor) continue
         const head = found[0]
-        const name = /[\w-]+/iu.exec(head)?.[0] ?? ""
+        const name = head.replace(/^[^\w-]*([\w-]*)[\s\S]*$/iu, "$1")
         if (!ASSIGNMENT_KEYS.some((pattern) => pattern.test(name))) continue
         const end = found.index + head.length
         const value = /^[^\s"'&,;}]{3,}/u.exec(input.slice(end))?.[0]

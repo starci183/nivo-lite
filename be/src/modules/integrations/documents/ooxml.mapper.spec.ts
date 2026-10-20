@@ -136,6 +136,21 @@ const EMPTY_SLIDE = "<p:sld><a:p></a:p></p:sld>"
 
 const NOTES = "<p:notes><a:p><a:r><a:t>Say hello</a:t></a:r></a:p></p:notes>"
 
+describe("xlsxToText cell references", () => {
+    it("places a cell whose reference carries a line break by the letters before it", async () => {
+        const subject = await build()
+
+        const text = subject.xlsxToText(
+            zipOf({
+                "xl/workbook.xml": '<workbook><sheet name="Odd"/></workbook>',
+                "xl/worksheets/sheet1.xml": '<worksheet><row><c r="B\n2"><v>x</v></c></row></worksheet>',
+            }),
+        )
+
+        expect(text).toBe("## Odd\n | x")
+    })
+})
+
 describe("pptxToText", () => {
     it("writes the slides in numeric order with their text and speaker notes", async () => {
         const subject = await build()

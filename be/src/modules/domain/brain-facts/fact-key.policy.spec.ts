@@ -9,6 +9,12 @@ type Subject = {
 
 const SUBJECT = Symbol("fact-key.policy")
 
+/** A successful match with an empty whole match and no number capture. */
+const emptyMatch = (input: string): RegExpExecArray => {
+    const captures: [string] = [""]
+    return Object.assign(captures, { index: 0, input })
+}
+
 const build = async () => {
     const moduleRef = await Test.createTestingModule({
         providers: [{ provide: SUBJECT, useValue: { keyOf, numberOf, sameValue } }],
@@ -60,9 +66,16 @@ describe("fact keys", () => {
     it("handles an absent number capture defensively", async () => {
         const subject = await build()
 
-        jest.spyOn(String.prototype, "match").mockReturnValueOnce([""])
+        const nativeExec = RegExp.prototype.exec
+        const exec = jest.spyOn(RegExp.prototype, "exec").mockImplementation(function (this: RegExp, text: string) {
+            return this.source.startsWith("(-?") ? emptyMatch(text) : nativeExec.call(this, text)
+        })
 
-        expect(subject.numberOf("ignored")).toBe(0)
+        try {
+            expect(subject.numberOf("ignored")).toBe(0)
+        } finally {
+            exec.mockRestore()
+        }
     })
 
     it.each([

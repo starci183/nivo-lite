@@ -94,18 +94,18 @@ interface DayRangeResult {
 }
 
 interface ClockCaptures {
-    readonly hours: string
+    readonly hours: string | undefined
     readonly minutes: string | undefined
 }
 
 interface CoverageCaptures {
     readonly days: string
-    readonly startHours: string
+    readonly startHours: string | undefined
     readonly startMinutes: string | undefined
-    readonly endHours: string
+    readonly endHours: string | undefined
     readonly endMinutes: string | undefined
     readonly position: string
-    readonly minimum: string
+    readonly minimum: string | undefined
     readonly ideal: string | undefined
 }
 
@@ -236,15 +236,14 @@ const parseCoverageLine = (line: string, number: number, known: Known): Array<Pa
     if (time?.groups === undefined) return failed("coverage-format")
     const days = prefix.slice(0, time.index)
     const position = prefix.slice(time.index + time[0].length)
-    if (days === "" || position === "") return failed("coverage-format")
     return read({
         days,
         position,
-        startHours: time.groups.startHours ?? "",
+        startHours: time.groups.startHours,
         startMinutes: time.groups.startMinutes,
-        endHours: time.groups.endHours ?? "",
+        endHours: time.groups.endHours,
         endMinutes: time.groups.endMinutes,
-        minimum: counts.groups.minimum ?? "",
+        minimum: counts.groups.minimum,
         ideal: counts.groups.ideal,
     })
 }
