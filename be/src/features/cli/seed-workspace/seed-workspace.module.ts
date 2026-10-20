@@ -5,6 +5,7 @@ import { RunSeedWorkspaceCli } from "./subs/run.cli"
 import { EnsureSeedWorkspaceCli } from "./subs/ensure.cli"
 import { RoleSeedWorkspaceCli } from "./subs/role.cli"
 import { VerifySeedWorkspaceCli } from "./subs/verify.cli"
+import { ProfileSeedWorkspaceCli } from "./subs/profile.cli"
 
 @Module({
     providers: [
@@ -13,6 +14,7 @@ import { VerifySeedWorkspaceCli } from "./subs/verify.cli"
         EnsureSeedWorkspaceCli,
         RoleSeedWorkspaceCli,
         VerifySeedWorkspaceCli,
+        ProfileSeedWorkspaceCli,
     ],
 })
 /** Registers ensure, authenticated role and recovery without domain writes, plus the equally scoped run alias. */
