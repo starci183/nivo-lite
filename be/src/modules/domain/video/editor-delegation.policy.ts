@@ -122,7 +122,12 @@ export const videoReadyCard = (video: ReadyVideo, labels: EditorLabels, approval
         { label: labels.channels, value: channels === "" ? labels.noChannels : channels },
     ]
     const media: Array<EditorCardMedia> = [
-        { kind: "video", url: video.videoUrl, caption: `${labels.seconds} \u00b7 ${video.aspect}` },
+        {
+            kind: "video",
+            url: video.videoUrl,
+            caption: `${labels.seconds} \u00b7 ${video.aspect}`,
+            captions: video.captionsUrl === null ? null : { url: video.captionsUrl, lang: video.captionsLang },
+        },
     ]
     if (video.posterUrl !== null) media.push({ kind: "image", url: video.posterUrl, caption: labels.poster })
     return {

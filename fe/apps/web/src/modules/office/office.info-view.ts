@@ -127,17 +127,24 @@ export interface OfficeRoomInfoInput {
     readonly pins: ReadonlyArray<OfficePinRowView>
 }
 
+/** The board rows the right column reads: what waits, who is in the chat, their handles and the tasks. */
+export interface OfficeInfoSources {
+    readonly pending: ReadonlyArray<OfficeApproval>
+    readonly openWork: ReadonlyArray<OfficeWork>
+    readonly people: ReadonlyArray<OfficePerson>
+    /** The @handle of each staff row, by staff id. */
+    readonly handles: ReadonlyMap<string, string>
+    readonly tasks: ReadonlyArray<OfficeTask>
+}
+
 /** The right column: what waits, who is in the chat and the tasks summary. */
 export const infoViewOf = (
-    pending: ReadonlyArray<OfficeApproval>,
-    openWork: ReadonlyArray<OfficeWork>,
-    people: ReadonlyArray<OfficePerson>,
-    handles: ReadonlyMap<string, string>,
-    tasks: ReadonlyArray<OfficeTask>,
+    sources: OfficeInfoSources,
     words: OfficeWords,
     context: OfficeContext,
     room: OfficeRoomInfoInput,
 ): OfficeInfoView => {
+    const { pending, openWork, people, handles, tasks } = sources
     const linked = new Set(people.map((person) => person.staffId))
     const unlinked = room.isOffice ? context.staff.filter((member) => !linked.has(member.id)) : []
     return {

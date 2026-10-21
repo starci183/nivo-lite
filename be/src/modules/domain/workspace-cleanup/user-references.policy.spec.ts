@@ -88,6 +88,21 @@ describe("user references refusals", () => {
         )
     })
 
+    it("names the tables of every offender once, in alphabetical order", async () => {
+        const subject = await build()
+        const references = new Map<string, UserReferences>([
+            ["u-5", { cascade: { "zeta.owner_id": 1, "Beta.owner_id": 1 }, block: {} }],
+            ["u-6", { cascade: { "alpha.owner_id": 2, "zeta.owner_id": 3 }, block: {} }],
+        ])
+
+        expect(() => subject.assertUserReferences(references, false)).toThrow(
+            refusedWith(WorkspaceCleanupErrorCode.KeptCascadeRefused, {
+                users: "u-5,u-6",
+                tables: "alpha.owner_id,Beta.owner_id,zeta.owner_id",
+            }),
+        )
+    })
+
     it("passes a kept cascade when it is allowed", async () => {
         const subject = await build()
 

@@ -33,7 +33,10 @@ const textAt = (value: GatewayJson, key: string): string => {
 }
 
 /** The customer's id on the channel without the archive suffix NIVO adds after a colon. */
-const channelUserOf = (externalId: string): string => externalId.replace(/:.*$/su, "")
+const channelUserOf = (externalId: string): string => {
+    const colon = externalId.indexOf(":")
+    return colon < 0 ? externalId : externalId.slice(0, colon)
+}
 
 @Injectable()
 /**
@@ -74,7 +77,7 @@ export class GatewayContextService {
     /** The context lines the AI step may use: the connector clause, and who the customer is when a connector knows them. */
     briefOf(party: OptionalPartyContext): ReadonlyArray<string> {
         const contract = this.catalog.get("gatewayTurns.contract", {}, LOCALE)
-        if (party === null || !party.found) return [contract]
+        if (!party?.found) return [contract]
         return [contract, this.catalog.get("gatewayTurns.partyKnown", { name: party.name || "-" }, LOCALE)]
     }
 

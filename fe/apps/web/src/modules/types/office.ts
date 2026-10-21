@@ -162,6 +162,8 @@ export interface OfficeResultCardView {
         readonly kind: "image" | "video"
         readonly url: string
         readonly caption: string | null
+        /** The real captions track of a video (WebVTT link, menu label, language when known), or null when it has none. */
+        readonly captions: { readonly src: string; readonly label: string; readonly srcLang?: string } | null
     }>
     readonly lines: ReadonlyArray<{ readonly at: string; readonly text: string }>
     readonly link: { readonly label: string; readonly href: string } | null

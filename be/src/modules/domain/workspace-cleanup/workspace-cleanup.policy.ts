@@ -25,8 +25,13 @@ const fail = (code: WorkspaceCleanupErrorCode): never => {
     throw new WorkspaceCleanupError({ code })
 }
 
-const byId = <Row extends { readonly id: string }>(left: Row, right: Row): number =>
-    left.id < right.id ? -1 : Number(left.id > right.id)
+/**
+ * Orders two texts by UTF-16 code unit, the order of a plain `sort()`: the receipt and its digest must read the same on every
+ * host, which a locale-aware compare does not promise.
+ */
+const byCodeUnit = (left: string, right: string): number => (left < right ? -1 : Number(left > right))
+
+const byId = <Row extends { readonly id: string }>(left: Row, right: Row): number => byCodeUnit(left.id, right.id)
 
 /** Reads `--keep a,b`: lower-case workspace ids, unique and sorted; an empty list or a malformed id is refused. */
 export const parseKeepList = (raw: string | undefined): ReadonlyArray<string> => {
@@ -37,7 +42,7 @@ export const parseKeepList = (raw: string | undefined): ReadonlyArray<string> =>
                 .map((id) => id.trim().toLowerCase())
                 .filter((id) => id.length > 0),
         ),
-    ].sort()
+    ].sort(byCodeUnit)
     if (ids.length === 0) fail(WorkspaceCleanupErrorCode.KeepRequired)
     if (ids.length > KEEP_MAX || !ids.every((id) => UUID.test(id))) fail(WorkspaceCleanupErrorCode.KeepInvalid)
     return ids
@@ -59,8 +64,8 @@ export const digestMatches = (digest: string, given: string | undefined): boolea
 export const canonicalJson = (value: unknown): string => {
     if (Array.isArray(value)) return `[${value.map(canonicalJson).join(",")}]`
     if (isRecord(value)) {
-        const keys = Object.keys(value).sort()
-        return `{${keys.map((key) => `${JSON.stringify(key)}:${canonicalJson(value[key])}`).join(",")}}`
+        const entryOf = (key: string): string => `${JSON.stringify(key)}:${canonicalJson(value[key])}`
+        return `{${Object.keys(value).sort(byCodeUnit).map(entryOf).join(",")}}`
     }
     return JSON.stringify(value)
 }

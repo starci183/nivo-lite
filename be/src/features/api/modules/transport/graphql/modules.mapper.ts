@@ -1,12 +1,12 @@
 import type {
     InstallResult,
+    InstallationView,
     ModuleDefinition,
     ModulesCatalog,
     SetupState,
     SetupVersions,
 } from "@modules/domain/modules"
 import type { AgentSyncStatus, RequirementFacts } from "@modules/domain/module-installations"
-import type { InstallationView } from "@modules/domain/modules"
 import type { SetupMessageRecord } from "@modules/domain/module-setup-messages"
 import type { SetupSessionRecord } from "@modules/domain/module-setup-sessions"
 import type { CardRecord } from "@modules/domain/module-setup-writes"

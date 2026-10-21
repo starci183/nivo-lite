@@ -235,6 +235,19 @@ describe("McpGatewayAdminService.setGrant", () => {
         await expect(
             admin.setGrant(ACTOR, grantInputOf({ constraintsJson: '[{"arg":"1x","max":5}]' })),
         ).rejects.toMatchObject({ params: { field: "constraints" } })
+        await expect(
+            admin.setGrant(
+                ACTOR,
+                grantInputOf({ constraintsJson: `[{"arg":"Z${"_9".repeat(30)}","max":5}]`, tool: "x" }),
+            ),
+        ).rejects.toMatchObject({ params: { field: "tool" } })
+        await Promise.all(
+            ["a-b", "a.b", `a${String.fromCodePoint(0xe9)}`, `a${"b".repeat(61)}`, "_a"].map((arg) =>
+                expect(
+                    admin.setGrant(ACTOR, grantInputOf({ constraintsJson: JSON.stringify([{ arg, max: 5 }]) })),
+                ).rejects.toMatchObject({ params: { field: "constraints" } }),
+            ),
+        )
         await expect(admin.setGrant(ACTOR, grantInputOf({ tool: "hakuen" }))).rejects.toMatchObject({
             params: { field: "tool" },
         })

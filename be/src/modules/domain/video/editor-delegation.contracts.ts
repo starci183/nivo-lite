@@ -126,6 +126,8 @@ export interface EditorCardMedia {
     readonly url: string
     /** Its caption. */
     readonly caption: string
+    /** The WebVTT captions of a video and their language, or null when the render has none. Absent on an image. */
+    readonly captions?: { readonly url: string; readonly lang: string | null } | null
 }
 
 /** A timed line of a card. */

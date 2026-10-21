@@ -8,6 +8,12 @@ export const SCRIPT_BEATS: ReadonlyArray<string> = ["00-05s", "05-10s", "10-15s"
 
 const textOf = (value: unknown, max: number): string => (typeof value === "string" ? value.trim().slice(0, max) : "")
 
+/** The text up to its first line break, found by index so no pattern can backtrack. */
+const firstLineOf = (text: string): string => {
+    const end = text.indexOf("\n")
+    return end === -1 ? text : text.slice(0, end)
+}
+
 const hashtagOf = (value: unknown): string => {
     const word = textOf(value, 40).replace(/^#+/u, "").replace(/\s+/gu, "")
     return word === "" ? "" : `#${word}`
@@ -97,7 +103,7 @@ export const readDraft = (raw: string): MarketingDraft | null => {
     if (caption === "" || images.length === 0) return null
     const hashtags = (Array.isArray(parsed.hashtags) ? parsed.hashtags : []).map(hashtagOf).filter((tag) => tag !== "")
     return {
-        title: textOf(parsed.title, 120) || caption.replace(/\n[\s\S]*$/u, "").slice(0, 120),
+        title: textOf(parsed.title, 120) || firstLineOf(caption).slice(0, 120),
         caption,
         hashtags: [...new Set(hashtags)].slice(0, 6),
         images,

@@ -33,12 +33,15 @@ interface Offender {
     readonly tables: ReadonlyArray<string>
 }
 
+/** Orders the `<table>.<column>` keys a refusal names alphabetically, for the operator who reads it. */
+const byName = (left: string, right: string): number => left.localeCompare(right)
+
 const offendersOf = (
     references: ReadonlyMap<string, UserReferences>,
     pick: (refs: UserReferences) => Readonly<Record<string, number>>,
 ): ReadonlyArray<Offender> =>
     [...references]
-        .map(([id, refs]) => ({ id, tables: Object.keys(nonZero(pick(refs))).sort() }))
+        .map(([id, refs]) => ({ id, tables: Object.keys(nonZero(pick(refs))).sort(byName) }))
         .filter((offender) => offender.tables.length > 0)
 
 const refuse = (code: WorkspaceCleanupErrorCode, offenders: ReadonlyArray<Offender>): never => {
@@ -46,7 +49,7 @@ const refuse = (code: WorkspaceCleanupErrorCode, offenders: ReadonlyArray<Offend
         code,
         params: {
             users: offenders.map((offender) => offender.id).join(","),
-            tables: [...new Set(offenders.flatMap((offender) => offender.tables))].sort().join(","),
+            tables: [...new Set(offenders.flatMap((offender) => offender.tables))].sort(byName).join(","),
         },
     })
 }

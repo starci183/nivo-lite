@@ -182,11 +182,14 @@ const reportSourcesOf = (
         label: clip(labelOf(words, source.ref), 160),
     }))
 
+/** A percentage change with its sign: `+12%`, `+0%`, `-3%`. */
+const signedPct = (pct: number): string => (pct >= 0 ? `+${pct}%` : `${pct}%`)
+
 /** The weekly report card: the key figures, the top posts as lines, the suggestion as its text; the chart reads `data`. */
 const reportCard = (locale: Locale, words: Words, card: WeeklyReportCard): HubCard => {
     const numbers = new Intl.NumberFormat(locale === "vi" ? "vi-VN" : "en-US")
     const metric = (label: string, value: ReportMetric): Readonly<Record<string, string>> => {
-        const change = value.changePct === null ? "" : ` (${value.changePct >= 0 ? "+" : ""}${value.changePct}%)`
+        const change = value.changePct === null ? "" : ` (${signedPct(value.changePct)})`
         return { label, value: clip(`${numbers.format(value.value)}${change}`, 400) }
     }
     const { report } = card

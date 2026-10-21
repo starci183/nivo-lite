@@ -4184,7 +4184,8 @@
     "sourceLayer_1": "Dữ liệu trực tiếp",
     "sourceLayer_2": "Second Brain",
     "sourceLayer_3": "Agent tự học",
-    "sourceLayer_4": "Tri thức NIVO"
+    "sourceLayer_4": "Tri thức NIVO",
+    "cardCaptions": "Phụ đề"
   },
   "onboarding": {
     "created": "Đã tạo workspace.",

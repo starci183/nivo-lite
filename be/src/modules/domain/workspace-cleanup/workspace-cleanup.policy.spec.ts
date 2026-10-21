@@ -20,6 +20,8 @@ const HAKUEN = "cd312306-c950-4328-8b88-022553070ae6"
 const SPA = "11111111-1111-4111-8111-111111111111"
 const BUN = "00000000-0000-4000-8000-000000000000"
 const DIGEST = "a".repeat(64)
+/** A letter past ASCII, which a plain sort puts after every ASCII key and a locale compare does not. */
+const ACUTE_E = String.fromCodePoint(0xe9)
 
 const build = async () => {
     const moduleRef = await Test.createTestingModule({
@@ -104,6 +106,16 @@ describe("workspace cleanup mode and digest", () => {
         const subject = await build()
 
         expect(subject.canonicalJson({ b: [{ d: 1, c: null }], a: "x" })).toBe('{"a":"x","b":[{"c":null,"d":1}]}')
+    })
+
+    it("keeps the code unit key order of a plain sort, so a receipt digest never changes with the host locale", async () => {
+        const subject = await build()
+        const keys = ["b", "B", "_a", "a.b", "a_b", ACUTE_E, "Z", "10", "9"]
+        const value = Object.fromEntries(keys.map((key, index) => [key, index]))
+
+        expect(subject.canonicalJson(value)).toBe(
+            `{"10":7,"9":8,"B":1,"Z":6,"_a":2,"a.b":3,"a_b":4,"b":0,"${ACUTE_E}":5}`,
+        )
     })
 
     it("masks an email to its first letter and domain, and answers null for none", async () => {
@@ -199,6 +211,10 @@ describe("workspace cleanup receipt", () => {
         })
         expect(subject.receiptDigestOf(receipt)).toBe(
             createHash("sha256").update(subject.canonicalJson(receipt)).digest("hex"),
+        )
+        // the digest the plain-sort canonical JSON gave before the explicit comparator; an order change would move it
+        expect(subject.receiptDigestOf(receipt)).toBe(
+            "e9dc58f8f6268936bdf0dc4476d51ea2494815d978854b2431bcfe493aeb6d15",
         )
     })
 

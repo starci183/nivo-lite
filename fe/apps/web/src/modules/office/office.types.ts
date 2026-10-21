@@ -21,6 +21,22 @@ export interface OfficeMessage {
     readonly cardState: string | null
 }
 
+/** The WebVTT captions of a card video, as the editor produced them. */
+export interface OfficeCardCaptions {
+    readonly url: string
+    /** The captions language tag, or null when it is not known. */
+    readonly lang: string | null
+}
+
+/** One image or video of a result card; only a video carries captions. */
+export interface OfficeCardMediaPayload {
+    readonly kind: "image" | "video"
+    readonly url: string
+    readonly caption: string | null
+    /** The captions track, or null when the video has none. */
+    readonly captions: OfficeCardCaptions | null
+}
+
 /** An agent result card (contract v1, be/docs/guides/hub-rooms-and-cards.md) as the Hub draws it. */
 export interface OfficeCardPayload {
     readonly type:
@@ -38,11 +54,7 @@ export interface OfficeCardPayload {
     readonly badge: string | null
     readonly body: string | null
     readonly fields: ReadonlyArray<{ readonly label: string; readonly value: string }>
-    readonly media: ReadonlyArray<{
-        readonly kind: "image" | "video"
-        readonly url: string
-        readonly caption: string | null
-    }>
+    readonly media: ReadonlyArray<OfficeCardMediaPayload>
     readonly lines: ReadonlyArray<{ readonly at: string; readonly text: string }>
     readonly link: { readonly label: string; readonly href: string } | null
     readonly ref: { readonly kind: "execution" | "work_item"; readonly id: string } | null

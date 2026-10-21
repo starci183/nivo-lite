@@ -4184,7 +4184,8 @@
     "sourceLayer_1": "Live data",
     "sourceLayer_2": "Second Brain",
     "sourceLayer_3": "Agent learning",
-    "sourceLayer_4": "NIVO knowledge"
+    "sourceLayer_4": "NIVO knowledge",
+    "cardCaptions": "Captions"
   },
   "onboarding": {
     "created": "Workspace created.",

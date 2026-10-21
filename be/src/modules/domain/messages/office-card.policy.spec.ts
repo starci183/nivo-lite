@@ -27,7 +27,7 @@ const full = {
     fields: [{ label: "Channel", value: "Facebook Page" }],
     media: [
         { kind: "image", url: "https://cdn.example.com/a.jpg", caption: "Image 1" },
-        { kind: "video", url: "/videos/b.mp4" },
+        { kind: "video", url: "/videos/b.mp4", captions: { url: "https://cdn.example.com/b.vtt", lang: "vi-VN" } },
     ],
     lines: [{ at: "00-05s", text: "Candles, warm towels." }],
     link: { label: "Open", href: "/content" },
@@ -100,6 +100,49 @@ describe("parseOfficeCard", () => {
         ["a source with an http href", { ...full, sources: [{ layer: 1, kind: "k", ref: "r", label: "x", href: "http://x" }] }, "sources[0].href must be https or app-relative"],
         ["data that is not an object", { ...full, data: [1] }, "data must be an object"],
         ["data that is too big", { ...full, data: { blob: "x".repeat(16_400) } }, "data must be at most 16384 characters"],
+    ])("refuses %s", async (_name, input, reason) => {
+        const subject = await build()
+
+        expect(subject.parseOfficeCard(input)).toEqual({ ok: false, reason })
+    })
+})
+
+describe("parseOfficeCard captions", () => {
+    it("reads a video without captions and captions whose language is not known", async () => {
+        const subject = await build()
+
+        const parsed = subject.parseOfficeCard({
+            v: 1,
+            type: "video_ready",
+            title: "Weekend",
+            media: [
+                { kind: "video", url: "/videos/a.mp4", captions: null },
+                { kind: "video", url: "/videos/b.mp4", captions: { url: "/videos/b.vtt" } },
+                { kind: "video", url: "/videos/c.mp4", captions: { url: "/videos/c.vtt", lang: null } },
+            ],
+        })
+
+        expect(parsed).toEqual({
+            ok: true,
+            card: {
+                v: 1,
+                type: "video_ready",
+                title: "Weekend",
+                media: [
+                    { kind: "video", url: "/videos/a.mp4", captions: null },
+                    { kind: "video", url: "/videos/b.mp4", captions: { url: "/videos/b.vtt", lang: null } },
+                    { kind: "video", url: "/videos/c.mp4", captions: { url: "/videos/c.vtt", lang: null } },
+                ],
+            },
+        })
+    })
+
+    it.each([
+        ["captions on an image", { ...full, media: [{ kind: "image", url: "/a.jpg", captions: { url: "/a.vtt", lang: "vi" } }] }, "media[0].captions are only for a video"],
+        ["captions that are not an object", { ...full, media: [{ kind: "video", url: "/b.mp4", captions: "b.vtt" }] }, "media[0].captions must be an object"],
+        ["an http captions url", { ...full, media: [{ kind: "video", url: "/b.mp4", captions: { url: "http://x/b.vtt", lang: "vi" } }] }, "media[0].captions.url must be https or app-relative"],
+        ["a captions language that is not a tag", { ...full, media: [{ kind: "video", url: "/b.mp4", captions: { url: "/b.vtt", lang: "Vietnamese!" } }] }, "media[0].captions.lang must be a language tag"],
+        ["a captions language that is not text", { ...full, media: [{ kind: "video", url: "/b.mp4", captions: { url: "/b.vtt", lang: 5 } }] }, "media[0].captions.lang must be a language tag"],
     ])("refuses %s", async (_name, input, reason) => {
         const subject = await build()
 

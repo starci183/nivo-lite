@@ -8,6 +8,7 @@ import {
 import type {
     OfficeCard,
     OfficeCardAction,
+    OfficeCardCaptions,
     OfficeCardField,
     OfficeCardLine,
     OfficeCardLink,
@@ -40,6 +41,8 @@ const HREF_PATTERN = /^(https:\/\/|\/(?!\/))/
 const MAX_DATA_CHARS = 16_384
 const REF_KINDS: ReadonlyArray<OfficeCardRef["kind"]> = ["execution", "work_item"]
 const MEDIA_KINDS: ReadonlyArray<OfficeCardMedia["kind"]> = ["image", "video"]
+/** A BCP 47 language tag such as vi or vi-VN: a primary language and up to three subtags. */
+const LANG_PATTERN = /^[a-z]{2,3}(?:-[a-z0-9]{2,8}){0,3}$/i
 
 /** The reasons found so far; the first one is answered. Readers return a placeholder after noting a reason. */
 type Issues = Array<string>
@@ -78,9 +81,13 @@ const hrefOf = (issues: Issues, value: unknown, name: string): string => {
     return href
 }
 
-const isCardType = (value: unknown): value is OfficeCardType => OFFICE_CARD_TYPES.some((type) => type === value)
+/** The card types and actions, widened so an unknown value can be looked up. */
+const CARD_TYPE_VALUES: ReadonlyArray<unknown> = OFFICE_CARD_TYPES
+const CARD_ACTION_VALUES: ReadonlyArray<unknown> = OFFICE_CARD_ACTIONS
 
-const isAction = (value: unknown): value is OfficeCardAction => OFFICE_CARD_ACTIONS.some((action) => action === value)
+const isCardType = (value: unknown): value is OfficeCardType => CARD_TYPE_VALUES.includes(value)
+
+const isAction = (value: unknown): value is OfficeCardAction => CARD_ACTION_VALUES.includes(value)
 
 const fieldOf =
     (issues: Issues) =>
@@ -92,6 +99,21 @@ const fieldOf =
         }
     }
 
+/** The captions of a video: null when it has none, else a WebVTT link and its language (null when not known). */
+const captionsOf = (
+    issues: Issues,
+    value: unknown,
+    at: string,
+    kind: OfficeCardMedia["kind"],
+): OfficeCardCaptions | null => {
+    if (value === null) return null
+    if (kind !== "video") issues.push(`${at} are only for a video`)
+    const row = recordOf(issues, value, at)
+    const lang = typeof row.lang === "string" && LANG_PATTERN.test(row.lang) ? row.lang : null
+    if (lang === null && row.lang !== undefined && row.lang !== null) issues.push(`${at}.lang must be a language tag`)
+    return { url: hrefOf(issues, row.url, `${at}.url`), lang }
+}
+
 const mediaOf =
     (issues: Issues) =>
     (item: unknown, at: string): OfficeCardMedia => {
@@ -100,7 +122,13 @@ const mediaOf =
         if (kind === undefined) issues.push(`${at}.kind must be image or video`)
         const caption = optionalText(issues, row.caption, `${at}.caption`, 160)
         const media: OfficeCardMedia = { kind: kind ?? "image", url: hrefOf(issues, row.url, `${at}.url`) }
-        return caption === undefined ? media : { ...media, caption }
+        const captions =
+            row.captions === undefined ? undefined : captionsOf(issues, row.captions, `${at}.captions`, media.kind)
+        return {
+            ...media,
+            ...(caption === undefined ? {} : { caption }),
+            ...(captions === undefined ? {} : { captions }),
+        }
     }
 
 const lineOf =
@@ -204,5 +232,7 @@ export const parseOfficeCard = (input: unknown): OfficeCardParse => {
     return reason === undefined ? { ok: true, card } : { ok: false, reason }
 }
 
+const ROOM_KEY_VALUES: ReadonlyArray<unknown> = OFFICE_ROOM_KEYS
+
 /** Whether a text is one of the Hub room keys. */
-export const isOfficeRoomKey = (value: unknown): value is OfficeRoomKey => OFFICE_ROOM_KEYS.some((key) => key === value)
+export const isOfficeRoomKey = (value: unknown): value is OfficeRoomKey => ROOM_KEY_VALUES.includes(value)

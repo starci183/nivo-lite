@@ -14,15 +14,18 @@ const measureOf = (
     id: string,
     measure: AccountingMeasure,
     unit: "countInvoices" | "countPayments",
-) => ({
-    id,
-    term: t(`m${id}`),
-    value: moneyOf(format, measure.vnd),
-    hint: t(`m${id}Hint`),
-    lines: [t(unit, { n: measure.count }), `${t("sourceLabel")}: ${t(`m${id}Source`)}`],
-    actionLabel: null,
-    actionHref: null,
-})
+) => {
+    const source = t(`m${id}Source`)
+    return {
+        id,
+        term: t(`m${id}`),
+        value: moneyOf(format, measure.vnd),
+        hint: t(`m${id}Hint`),
+        lines: [t(unit, { n: measure.count }), `${t("sourceLabel")}: ${source}`],
+        actionLabel: null,
+        actionHref: null,
+    }
+}
 
 /** Money in that is not matched comes from the payment connector: without one it says so and links to it, never 0. */
 const unmatchedOf = (

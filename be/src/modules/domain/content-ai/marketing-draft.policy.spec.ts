@@ -88,6 +88,20 @@ describe("readDraft", () => {
         expect(draft).toMatchObject({ title: "Line one", hashtags: [], script: [] })
     })
 
+    // The title fallback once used /\n[\s\S]*$/u; these are the inputs it matched and the ones it did not, with the same titles.
+    it.each([
+        ["a caption with one break", "Line one\nLine two", "Line one"],
+        ["a caption with a run of breaks", "Top\n\n\nBottom", "Top"],
+        ["a caption with a CRLF break", "Top\r\nBottom", "Top\r"],
+        ["a caption with no break", "Only line", "Only line"],
+        ["a caption with only a carriage return", "Left\rRight", "Left\rRight"],
+        ["a long first line", `${"x".repeat(130)}\nrest`, "x".repeat(120)],
+        ["a long caption with no break", "y".repeat(130), "y".repeat(120)],
+        ["a full 2000 character caption of breaks", `Head${"\nz".repeat(998)}`, "Head"],
+    ])("titles %s by its first line", (_case, caption, title) => {
+        expect(readDraft(JSON.stringify({ caption, images: [{ headline: "H" }] }))?.title).toBe(title)
+    })
+
     it("answers null for broken JSON, a non-object, no caption or no image text", () => {
         expect(readDraft("{")).toBeNull()
         expect(readDraft("1")).toBeNull()

@@ -49,7 +49,14 @@ A card is an ordinary `public.messages` row (`author_kind = 'agent'` normally) w
   "media": [
     // optional, <=6; https URLs or app-relative paths the web app can load
     { "kind": "image", "url": "https://.../h1.jpg", "caption": "Image 1 · 1200 x 800" },
-    { "kind": "video", "url": "https://.../v.mp4", "caption": "15 seconds · 9:16" },
+    {
+      "kind": "video",
+      "url": "https://.../v.mp4",
+      "caption": "15 seconds · 9:16",
+      // optional, video only: the real WebVTT captions file (https or app-relative) and its BCP 47 language (null when unknown),
+      // or null when the video has none; the web app renders it as a <track kind="captions">. Never a placeholder file.
+      "captions": { "url": "https://.../v.vtt", "lang": "vi-VN" },
+    },
   ],
   "lines": [
     // optional, <=20 timed/bulleted lines (video script, schedule, report bullets)

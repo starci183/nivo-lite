@@ -49,7 +49,7 @@ export class MarketingTickService {
                 }),
             )
         })
-        const count = posted.filter((done) => done).length
+        const count = posted.filter(Boolean).length
         const last = page.at(-1)
         if (last === undefined || page.length < PAGE) return count
         return count + (await this.reportsFrom(last.workspaceId, only))

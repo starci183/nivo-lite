@@ -40,6 +40,14 @@ export interface OfficeCardField {
     readonly value: string
 }
 
+/** The captions track of a video: a WebVTT file timed to it. */
+export interface OfficeCardCaptions {
+    /** An https URL or an app-relative path to the WebVTT file. */
+    readonly url: string
+    /** The BCP 47 language tag of the captions, or null when it is not known. */
+    readonly lang: string | null
+}
+
 /** One image or video of a card. */
 export interface OfficeCardMedia {
     /** Image or video. */
@@ -48,6 +56,8 @@ export interface OfficeCardMedia {
     readonly url: string
     /** The line under it. */
     readonly caption?: string
+    /** The captions of a video, or null when it has none; never on an image. */
+    readonly captions?: OfficeCardCaptions | null
 }
 
 /** One timed or bulleted line of a card (a script beat, a report bullet). */

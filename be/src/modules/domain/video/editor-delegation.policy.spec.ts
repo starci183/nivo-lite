@@ -214,7 +214,12 @@ describe("videoReadyCard", () => {
                 { label: "Channels", value: "Facebook + Zalo OA" },
             ],
             media: [
-                { kind: "video", url: "https://storage/v.mp4", caption: "15 s \u00b7 9:16" },
+                {
+                    kind: "video",
+                    url: "https://storage/v.mp4",
+                    caption: "15 s \u00b7 9:16",
+                    captions: { url: "https://storage/c.vtt", lang: "vi-VN" },
+                },
                 { kind: "image", url: "https://storage/p.jpg", caption: "Poster" },
             ],
             link: { label: "Open project", href: "/agents/video/workbench?focus=project-1" },
@@ -246,6 +251,7 @@ describe("videoReadyCard", () => {
             ]),
         )
         expect(card.media).toHaveLength(1)
+        expect(card.media?.[0]?.captions).toBeNull()
     })
 })
 

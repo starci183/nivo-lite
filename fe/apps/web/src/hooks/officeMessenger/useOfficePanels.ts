@@ -54,13 +54,18 @@ export const useOfficePanels = (
                 rows: roomRowsOf(rooms, words, (iso) => officeListTimeOf(iso, words, context)),
                 selected: key ?? "office",
             }),
-            info: infoViewOf(board.pending, board.exceptions, people, handles, board.tasks, words, context, {
-                isOffice: current === null,
-                agents,
-                cards: pendingCardRowsOf(messages, context),
-                channels: roomChannelsOf(current, channels, board.agents, words),
-                pins: roomPinsOf(current),
-            }),
+            info: infoViewOf(
+                { pending: board.pending, openWork: board.exceptions, people, handles, tasks: board.tasks },
+                words,
+                context,
+                {
+                    isOffice: current === null,
+                    agents,
+                    cards: pendingCardRowsOf(messages, context),
+                    channels: roomChannelsOf(current, channels, board.agents, words),
+                    pins: roomPinsOf(current),
+                },
+            ),
             tasks: taskViewsOf(board.tasks, words),
             mentions: mentionOptionsOf(board.agents, board.staff, handles, words),
         }

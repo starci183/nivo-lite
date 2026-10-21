@@ -37,7 +37,7 @@ import { addressOf, fullNameOf } from "./tool-name.policy"
 const KEY = /^[a-z][a-z0-9-]{1,30}$/u
 const WILDCARD = /^[a-z][a-z0-9-]{1,30}\.\*$/u
 const CREDENTIAL_REF = /^[A-Z][A-Z0-9_]{2,80}$/u
-const ARG = /^[a-zA-Z][a-zA-Z0-9_]{0,60}$/u
+const ARG = /^[a-zA-Z]\w{0,60}$/u
 const LOG_MAX = 200
 const LOG_DEFAULT = 50
 const MANAGER = ["owner", "manager"] as const

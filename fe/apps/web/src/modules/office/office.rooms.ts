@@ -3,6 +3,8 @@ import type { ThreadEntry } from "./office.thread"
 import type {
     OfficeAgent,
     OfficeApproval,
+    OfficeCardCaptions,
+    OfficeCardMediaPayload,
     OfficeCardPayload,
     OfficeMessage,
     OfficeRoom,
@@ -54,6 +56,19 @@ const parseJson = (text: string): unknown => {
     }
 }
 
+/** The captions of a card video, or null when it has none; an image never has any. */
+const captionsOf = (kind: OfficeCardMediaPayload["kind"], value: unknown): OfficeCardCaptions | null =>
+    kind === "video" && isObject(value) && typeof value.url === "string"
+        ? { url: value.url, lang: textOr(value.lang, null) }
+        : null
+
+/** One image or video of a card; one without a link is dropped. */
+const mediaOf = (row: Record<string, unknown>): OfficeCardMediaPayload | null => {
+    if (typeof row.url !== "string") return null
+    const kind = row.kind === "video" ? "video" : "image"
+    return { kind, url: row.url, caption: textOr(row.caption, null), captions: captionsOf(kind, row.captions) }
+}
+
 /** The result card of a line (contract v1), read defensively; anything unreadable is no card. */
 export const cardOf = (json: string | null | undefined): OfficeCardPayload | null => {
     if (json === null || json === undefined) return null
@@ -75,11 +90,7 @@ export const cardOf = (json: string | null | undefined): OfficeCardPayload | nul
             label: textOr(row.label, "") ?? "",
             value: textOr(row.value, "") ?? "",
         })),
-        media: listOf(raw.media, (row) =>
-            typeof row.url === "string"
-                ? { kind: row.kind === "video" ? "video" : "image", url: row.url, caption: textOr(row.caption, null) }
-                : null,
-        ),
+        media: listOf(raw.media, mediaOf),
         lines: listOf(raw.lines, (row) => ({ at: textOr(row.at, "") ?? "", text: textOr(row.text, "") ?? "" })),
         link:
             link !== null && typeof link.href === "string"
@@ -176,7 +187,7 @@ export const roomRowsOf = (
         const at = room?.lastAt ?? null
         return {
             id: room?.key ?? "office",
-            label: room === null || room.key === null ? words.t("title") : room.name,
+            label: room?.key == null ? words.t("title") : room.name,
             description:
                 room === null ? words.t("groupPreviewEmpty") : previewOf(room.lastBody, room.lastAuthor, words),
             time: at === null ? null : timeOf(at),
@@ -218,12 +229,25 @@ export const resultCardView = (
         state,
         body: card.body,
         fields: card.fields,
-        media: card.media,
+        media: card.media.map((media) => ({
+            kind: media.kind,
+            url: media.url,
+            caption: media.caption,
+            captions:
+                media.captions === null
+                    ? null
+                    : {
+                          src: media.captions.url,
+                          label: words.t("cardCaptions"),
+                          ...(media.captions.lang === null ? {} : { srcLang: media.captions.lang }),
+                      },
+        })),
         lines: card.lines,
         link: card.link,
-        sources: card.sources.map((source) => ({
-            label: `${words.t(`sourceLayer_${source.layer}`)}: ${source.label}`,
-        })),
+        sources: card.sources.map((source) => {
+            const layer = words.t(`sourceLayer_${source.layer}`)
+            return { label: `${layer}: ${source.label}` }
+        }),
         refKind: card.ref?.kind ?? null,
         refId: card.ref?.id ?? null,
         canApprove: canAct && card.canApprove,

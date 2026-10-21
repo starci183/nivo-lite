@@ -154,7 +154,7 @@ export class ContentScheduleService {
         await eachInOrder(due, async (post) => {
             published.push(await this.publishOne(post, now))
         })
-        return published.filter((done) => done).length
+        return published.filter(Boolean).length
     }
 
     private async publishOne(post: DueChannelPost, now: Date): Promise<boolean> {

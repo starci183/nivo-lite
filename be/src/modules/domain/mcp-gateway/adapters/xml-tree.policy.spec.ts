@@ -34,6 +34,26 @@ describe("xml-tree.policy", () => {
         expect(subject.childrenNamed(null, "A")).toEqual([])
     })
 
+    it("ends a tag name at the first whitespace, slash or bracket, as the regex replace did", async () => {
+        const subject = await build()
+        const tree = subject.parseXml('<p:R\tx="1"><A\ny="2">a</A ><B/><C\r/><D z="/">d</D></p:R>')
+
+        expect(tree?.name).toBe("R")
+        expect(tree?.children.map((node) => node.name)).toEqual(["A", "B", "C", "D"])
+        expect(subject.textAt(tree, "D")).toBe("d")
+        expect(subject.parseXml("<a:b:c>x</a:b:c>")?.name).toBe("b:c")
+    })
+
+    it("reads a long tag full of separators", async () => {
+        const subject = await build()
+        const name = "n".repeat(50_000)
+        const attributes = " /".repeat(50_000)
+        const tree = subject.parseXml(`<${name}${attributes}x>t</${name}${attributes}>`)
+
+        expect(tree?.name).toBe(name)
+        expect(tree?.text).toBe("t")
+    })
+
     it("answers null for markup that is not well formed", async () => {
         const subject = await build()
 

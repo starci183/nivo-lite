@@ -132,6 +132,20 @@ describe("GatewayContextService party", () => {
         })
     })
 
+    it.each([
+        ["z1", "z1"],
+        ["z1:old:older", "z1"],
+        ["z1\nline:old\nmore", "z1\nline"],
+        [`z${"1".repeat(50_000)}:${":".repeat(50_000)}`, `z${"1".repeat(50_000)}`],
+    ])("asks by the channel user %#, cut at its first colon", async (externalId, channelUser) => {
+        const { service, gateway } = await build()
+        await service.partyOf({ ...CONVERSATION, externalId })
+        expect(gateway.call).toHaveBeenCalledWith(CALLER, "crm.party.find", {
+            channel: "zalo",
+            externalId: channelUser,
+        })
+    })
+
     it("remembers nothing when the connector does not know the customer or answers no party id", async () => {
         const { service, gateway, conversations } = await build()
         gateway.call
