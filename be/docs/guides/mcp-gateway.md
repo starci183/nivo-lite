@@ -54,8 +54,9 @@ missing (its agent does not run) and back to `live` once it is there; `paused` s
 ## One decision point, two rule stores
 
 Every call is decided by one policy decision point: `judgeGrant` in
-`be/src/modules/domain/mcp-gateway/grant.policy.ts` hands the grant to `evaluateGate` of `be/src/modules/domain/decisions`, the
-same gate NIVO's own work items pass, so `auto`, `ask` and `never` and the approval that follows mean the same everywhere. The
+`be/src/modules/domain/mcp-gateway/grant.policy.ts` hands the grant to `evaluateGate` of `be/src/modules/domain/authority-rules` (the owner of
+the rules is also the owner of their evaluation), the same gate the work engine of `be/src/modules/domain/decisions` passes NIVO's
+own work items through, so `auto`, `ask` and `never` and the approval that follows mean the same everywhere. The
 rules it reads live in two stores on purpose, because they are keyed differently. `authority_rules` holds NIVO's own registry
 actions per workspace, department and action, bound by foreign keys to `authority_actions` and `modules`. `mcp_tool_grants`
 holds connector tools per agent and full tool name, with data constraints `{ arg, max }` and `limit_vnd`. Connector tools are

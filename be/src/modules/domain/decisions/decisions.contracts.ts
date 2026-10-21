@@ -1,4 +1,4 @@
-import type { AuthorityRule, RuleMode } from "@modules/domain/authority-rules"
+import type { RuleMode } from "@modules/domain/authority-rules"
 import type { Locale } from "@modules/platform/i18n"
 import type {
     Proposal,
@@ -27,32 +27,6 @@ export type DecisionOutcome = "auto_done" | "approved" | "edited" | "rejected"
 
 /** Who decides: a policy, the owner or a staff member. */
 export type DeciderKind = "policy" | "owner" | "staff"
-
-/** What the gate answers. */
-export interface GateVerdict {
-    /** Run alone or ask. */
-    readonly verdict: "auto" | "ask"
-    /** The first reason. */
-    readonly reason: ReasonCode
-    /** Every reason. */
-    readonly reasons: ReadonlyArray<ReasonCode>
-    /** Required fields still missing. */
-    readonly missing: ReadonlyArray<string>
-}
-
-/** What the gate reads. */
-export interface GateInput {
-    /** The action key. */
-    readonly action: string
-    /** The rule of the owner for the action, or null when there is none. */
-    readonly rule: AuthorityRule | null
-    /** The cap the registry puts on the action: it can never run alone above it. */
-    readonly maxMode: RuleMode | null
-    /** What the agent proposes. */
-    readonly proposal: Proposal
-    /** True when a person approved this very item. */
-    readonly humanApproved?: boolean
-}
 
 /** What a person may change before approving. */
 export interface WorkEdits {
@@ -361,8 +335,8 @@ export interface ActorRef {
 /** Whoever performs or rejects an item: a person who decided, or any named actor. */
 export type PerformedBy = Decider | ActorRef
 
-export type { AuthorityRule, RuleMode }
+export type { RuleMode }
 export type { Authority } from "@modules/domain/authority"
-export type { OptionalAuthorityRule } from "@modules/domain/authority-rules"
+export type { AuthorityRule, GateVerdict, OptionalAuthorityRule } from "@modules/domain/authority-rules"
 export type { OptionalAgentIdentity } from "@modules/domain/messages"
 export type { ResponsibilityRecord, ResponsibilityStatus } from "@modules/domain/responsibilities"

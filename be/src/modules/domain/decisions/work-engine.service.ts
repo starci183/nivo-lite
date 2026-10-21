@@ -21,7 +21,7 @@ import type {
 } from "./decisions.contracts"
 import type { InboundWorkSource } from "./inbound-work.contracts"
 import { DecisionsError, DecisionsErrorCode } from "./errors/decisions.error"
-import { evaluateGate } from "./gate.policy"
+import { evaluateGate } from "@modules/domain/authority-rules"
 import { ModuleCatalogService } from "./module-catalog.service"
 import { WorkApprovalService } from "./work-approval.service"
 import { WorkChainService } from "./work-chain.service"

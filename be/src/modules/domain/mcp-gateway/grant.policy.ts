@@ -1,4 +1,4 @@
-import { evaluateGate } from "@modules/domain/decisions"
+import { evaluateGate } from "@modules/domain/authority-rules"
 import type { GatewayJson, GrantVerdict, ToolGrant } from "./mcp-gateway.contracts"
 
 const numberOf = (value: unknown): number | null => (typeof value === "number" && Number.isFinite(value) ? value : null)

@@ -4,7 +4,7 @@ import { RegionState } from "@/components/branches/RegionState"
 import type { RegionFailure } from "@/components/branches/RegionState"
 
 /** One badge of a gateway row. */
-export interface McpGatewayBadge {
+interface McpGatewayBadge {
     readonly label: string
     readonly tone: BadgeTone
 }
@@ -29,7 +29,7 @@ interface McpGatewayRow {
 }
 
 /** One card of the gateway region. */
-export interface McpGatewayCard {
+interface McpGatewayCard {
     readonly label: string
     readonly rows: ReadonlyArray<McpGatewayRow>
     readonly emptyMessage: string

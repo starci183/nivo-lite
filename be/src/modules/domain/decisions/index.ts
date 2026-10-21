@@ -52,4 +52,3 @@ export type {
 } from "./work-engine.port"
 export type { AccountingDecisionRow } from "./persistence/decision-log.rows"
 export type { AccountingWaitingWorkRow } from "./persistence/work-item-views.rows"
-export { evaluateGate } from "./gate.policy"

@@ -1,6 +1,6 @@
 "use client"
 
-import { useMutateApproveMcpConnectorSwr, useMutateCheckMcpConnectorSwr, useQueryMcpConnectorsSwr } from "@/hooks/swr"
+import { useMutateApproveMcpConnectorSwr, useMutateCheckMcpConnectorSwr } from "@/hooks/swr"
 import { useGraphQLWithToast } from "@/modules/toast"
 import { useTranslations } from "next-intl"
 import { useCallback, useState } from "react"
@@ -15,15 +15,13 @@ export interface McpConnectorCommands {
     readonly busyKey: string | null
 }
 
-/** Approve / Check for the gateway connectors: each reports its outcome in a toast and refreshes the connector list. */
-export const useMcpConnectorCommands = (): McpConnectorCommands => {
+/** Approve / Check for the gateway connectors: each reports its outcome in a toast and then `reload`s the connector list. */
+export const useMcpConnectorCommands = (reload: () => Promise<unknown>): McpConnectorCommands => {
     const t = useTranslations("mcpGateway")
     const runGraphQL = useGraphQLWithToast()
-    const connectors = useQueryMcpConnectorsSwr()
     const approveSwr = useMutateApproveMcpConnectorSwr()
     const checkSwr = useMutateCheckMcpConnectorSwr()
     const [busyKey, setBusyKey] = useState<string | null>(null)
-    const { mutate } = connectors
     const approveTrigger = approveSwr.trigger
     const checkTrigger = checkSwr.trigger
 
@@ -32,18 +30,18 @@ export const useMcpConnectorCommands = (): McpConnectorCommands => {
             setBusyKey(key)
             const count = await runGraphQL(() => approveTrigger({ key }), { successMessage: t("approveDone") })
             setBusyKey(null)
-            if (count !== undefined) await mutate()
+            if (count !== undefined) await reload()
         },
-        [approveTrigger, mutate, runGraphQL, t],
+        [approveTrigger, reload, runGraphQL, t],
     )
     const check = useCallback(
         async (key: string) => {
             setBusyKey(key)
             const status = await runGraphQL(() => checkTrigger({ key }), { showSuccessToast: false })
             setBusyKey(null)
-            if (status !== undefined) await mutate()
+            if (status !== undefined) await reload()
         },
-        [checkTrigger, mutate, runGraphQL],
+        [checkTrigger, reload, runGraphQL],
     )
     return { approve, check, busyKey }
 }

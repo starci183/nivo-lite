@@ -1,3 +1,4 @@
+import type { Proposal, ReasonCode } from "@modules/domain/work-items"
 /** What a rule of the owner's authority says about an action: run alone, ask a person, or never. */
 export type RuleMode = "auto" | "ask" | "never"
 
@@ -69,3 +70,32 @@ export interface DefaultRule {
     /** Fields that must be present. */
     readonly required_fields: ReadonlyArray<string>
 }
+
+/** What the gate answers. */
+export interface GateVerdict {
+    /** Run alone or ask. */
+    readonly verdict: "auto" | "ask"
+    /** The first reason. */
+    readonly reason: ReasonCode
+    /** Every reason. */
+    readonly reasons: ReadonlyArray<ReasonCode>
+    /** Required fields still missing. */
+    readonly missing: ReadonlyArray<string>
+}
+
+/** What the gate reads. */
+export interface GateInput {
+    /** The action key. */
+    readonly action: string
+    /** The rule of the owner for the action, or null when there is none. */
+    readonly rule: OptionalAuthorityRule
+    /** The cap the registry puts on the action: it can never run alone above it. */
+    readonly maxMode: RuleMode | null
+    /** What the agent proposes. */
+    readonly proposal: Proposal
+    /** True when a person approved this very item. */
+    readonly humanApproved?: boolean
+}
+
+/** An amount in VND, or none. */
+export type OptionalAmountVnd = number | null | undefined

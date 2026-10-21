@@ -21,7 +21,7 @@ import { MarketingDraftService } from "./marketing-draft.service"
 const REQUEST_FIELDS: ReadonlyArray<string> = ["request", "topic", "brief", "text"]
 
 /** The owner's request of a draft_post item: the first filled request field, else the proposal summary. */
-export const requestOf = (proposal: Proposal): string => {
+export const draftRequestOf = (proposal: Proposal): string => {
     for (const key of REQUEST_FIELDS) {
         const value = proposal.fields[key]
         if (typeof value === "string" && value.trim() !== "") return value.trim()
@@ -61,7 +61,7 @@ export class ContentAgentPerformersService implements OnApplicationBootstrap {
             prepare: (_ctx: WorkContext, item: WorkItem): Promise<Prepared> =>
                 Promise.resolve({ proposal: item.proposal }),
             perform: (ctx: WorkContext, item: WorkItem, proposal: Proposal): Promise<Performed> => {
-                const request = requestOf(proposal)
+                const request = draftRequestOf(proposal)
                 void this.drafts
                     .draft(ctx, { request, workItemId: item.id, scheduledAt: textField(proposal, "scheduled_at") })
                     .catch((cause: unknown) => {

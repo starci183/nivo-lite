@@ -1,4 +1,4 @@
-import type { useQueryMcpConnectorsSwr } from "@/hooks/swr"
+import type { useQueryMcpCallLogSwr, useQueryMcpConnectorsSwr, useQueryMcpToolGrantsSwr } from "@/hooks/swr"
 import type { useFormatter, useTranslations } from "next-intl"
 import type { McpConnectorCommands } from "./useMcpConnectorCommands"
 
@@ -129,4 +129,63 @@ export const connectorRowsOf = (
         ],
         actions: actionsOf(t, connector, commands),
         tools: { label: t("toolsOf", { name: connector.name }), rows: toolRowsOf(t, connector) },
+    }))
+
+/** One agent's grant of a gateway tool, as the `mcpToolGrants` read answers it. */
+type McpGrantType = NonNullable<ReturnType<typeof useQueryMcpToolGrantsSwr>["data"]>[number]
+/** One audited gateway call, as the `mcpCallLog` read answers it. */
+type McpCallType = NonNullable<ReturnType<typeof useQueryMcpCallLogSwr>["data"]>[number]
+
+const MODE_TONE: ReadonlyMap<string, McpTone> = new Map([
+    ["auto", "success"],
+    ["ask", "warning"],
+])
+const OUTCOME_TONE: ReadonlyMap<string, McpTone> = new Map([
+    ["ok", "success"],
+    ["approval", "warning"],
+])
+
+/** A neutral badge. */
+const plain = (label: string): McpBadgeView => ({ label, tone: "neutral" })
+
+/** Each agent's grants of gateway tools: the mode, the data constraints and the money limit. */
+export const grantRowsOf = (
+    t: Translator,
+    format: Formatter,
+    grants: ReadonlyArray<McpGrantType>,
+): ReadonlyArray<McpToolRowView> =>
+    grants.map((grant) => ({
+        id: `${grant.agentId}:${grant.tool}`,
+        title: grant.tool,
+        description: grant.agentName,
+        badges: [
+            { label: grant.mode, tone: MODE_TONE.get(grant.mode) ?? "neutral" },
+            ...(grant.constraintsJson === "[]" ? [] : [plain(grant.constraintsJson)]),
+            ...(grant.limitVnd === null ? [] : [plain(t("limitVnd", { amount: format.number(grant.limitVnd) }))]),
+        ],
+    }))
+
+/** The latest audited calls: when, the masked arguments, who approved, the outcome and how long it took. */
+export const logRowsOf = (
+    t: Translator,
+    format: Formatter,
+    lines: ReadonlyArray<McpCallType>,
+): ReadonlyArray<McpToolRowView> =>
+    lines.map((line) => ({
+        id: line.id,
+        title: `${line.tool} · ${line.agentName}`,
+        description: [
+            format.dateTime(new Date(line.at), { dateStyle: "short", timeStyle: "medium" }),
+            line.argsMasked,
+            line.approvedBy === null ? "" : t("approvedBy", { name: line.approvedBy }),
+        ]
+            .filter(Boolean)
+            .join(" · "),
+        badges: [
+            {
+                label: line.errorCode === null ? line.outcome : `${line.outcome}: ${line.errorCode}`,
+                tone: OUTCOME_TONE.get(line.outcome) ?? "danger",
+            },
+            plain(t("duration", { ms: line.durationMs })),
+        ],
     }))

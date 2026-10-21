@@ -1,6 +1,5 @@
 "use client"
 
-import { McpGatewayPanel } from "@/features/overlays/McpGatewayPanel"
 import { useTranslations } from "next-intl"
 import { useSearchParams } from "next/navigation"
 import type { ComponentProps, ReactNode } from "react"
@@ -10,6 +9,7 @@ import { ConnectionLibrary } from "@/components/blocks/ConnectionLibrary"
 import { ConnectionRow } from "@/components/blocks/ConnectionRow"
 import { ConnectionsOverview, OverlayHost } from "@/components/blocks/ConnectionsOverview"
 import { ConnectionViewTabs } from "@/components/blocks/ConnectionViewTabs"
+import { McpGatewayRegion } from "@/components/composites/McpGatewayRegion"
 import { useQueryAuthUserSwr } from "@/hooks/auth"
 import { catalogKey, entryById } from "@/hooks/connection-catalog"
 import { PROVIDER_LOGO } from "@/hooks/connection-providers"
@@ -24,6 +24,7 @@ import {
     useConnectionsData,
     connectionGroups,
 } from "@/hooks/connections"
+import { useMcpGatewayView } from "@/hooks/mcpGateway"
 import { useActiveWorkspace, useWorkspaceCards } from "@/hooks/workspaces"
 import { webSiteOrigin } from "@/modules/config"
 import type { AgentOption, Connection } from "@/modules/types"
@@ -73,6 +74,7 @@ export const ConnectionsOverlayHost = (props: ConnectionsOverlayHostProps) => {
     const groups = connectionGroups(items, agentNames, t)
     const isLoading = workspaces.status === "loading" || (manager && data.isLoading)
     const mode = detailModeOf({ isLoading, manager, failed: data.failed })
+    const gateway = useMcpGatewayView(mode === "ready" && manager)
     return (
         <>
             <ConnectionsOverview
@@ -116,7 +118,16 @@ export const ConnectionsOverlayHost = (props: ConnectionsOverlayHostProps) => {
                 renderRow={renderRow}
                 renderViewTabs={renderViewTabs}
             />
-            {mode === "ready" && manager ? <McpGatewayPanel /> : null}
+            {gateway.isShown && (
+                <McpGatewayRegion
+                    label={gateway.label}
+                    isLoading={gateway.isLoading}
+                    isFailed={gateway.isFailed}
+                    view={gateway.view}
+                    failure={gateway.failure}
+                    onRetry={gateway.onRetry}
+                />
+            )}
             <OverlayHost active={mode === "ready"} candidate={props.candidate} />
         </>
     )

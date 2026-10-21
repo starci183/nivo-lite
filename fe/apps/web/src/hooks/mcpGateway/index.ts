@@ -1,2 +1,1 @@
-export { connectorRowsOf } from "./mcpGateway.shared"
-export { useMcpConnectorCommands } from "./useMcpConnectorCommands"
+export { useMcpGatewayView } from "./useMcpGatewayView"

@@ -1,14 +1,12 @@
+import type { Proposal, ProposalFieldValue, ReasonCode } from "@modules/domain/work-items"
 import type {
     AuthorityRule,
     GateInput,
     GateVerdict,
+    OptionalAmountVnd,
     OptionalAuthorityRule,
-    Proposal,
-    ProposalFieldValue,
-    ReasonCode,
     RuleMode,
-} from "./decisions.contracts"
-import type { OptionalNumber } from "./decisions-views.contracts"
+} from "./authority-rules.contracts"
 
 /** The confidence below which the engine treats its own result as unclear. */
 export const MIN_CONFIDENCE = 0.6
@@ -17,7 +15,7 @@ export const MIN_CONFIDENCE = 0.6
  * Limit semantics: `limit_vnd` is the amount the action runs by itself strictly BELOW. `amount >= limit_vnd` asks a person
  * (over_authority); a missing limit means no amount limit, a missing amount never exceeds a limit.
  */
-export const isOverLimit = (limitVnd: OptionalNumber, amountVnd: OptionalNumber): boolean =>
+export const isOverLimit = (limitVnd: OptionalAmountVnd, amountVnd: OptionalAmountVnd): boolean =>
     typeof limitVnd === "number" && typeof amountVnd === "number" && amountVnd >= limitVnd
 
 const isEmpty = (value: ProposalFieldValue | undefined): boolean =>

@@ -13,7 +13,7 @@ import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { ContentScheduleService } from "./content-schedule.service"
 import { MarketingDraftService } from "./marketing-draft.service"
-import { ContentAgentPerformersService, requestOf } from "./content-agent-performers.service"
+import { ContentAgentPerformersService, draftRequestOf } from "./content-agent-performers.service"
 
 const CTX: WorkContext = { workspaceId: "ws-1", actor: "Mai Linh", locale: "vi" }
 const OWNER: PerformedBy = { name: "Mai Linh", kind: "owner" }
@@ -41,10 +41,10 @@ const build = async (approve: WorkPerformer | null = null) => {
 
 const flush = (): Promise<void> => new Promise((resolve) => setImmediate(resolve))
 
-describe("requestOf", () => {
+describe("draftRequestOf", () => {
     it("takes the first filled request field, else the summary", () => {
-        expect(requestOf(proposalOf({ request: " ", topic: "spa 20%" }))).toBe("spa 20%")
-        expect(requestOf(proposalOf({ request: 5 }, "fallback"))).toBe("fallback")
+        expect(draftRequestOf(proposalOf({ request: " ", topic: "spa 20%" }))).toBe("spa 20%")
+        expect(draftRequestOf(proposalOf({ request: 5 }, "fallback"))).toBe("fallback")
     })
 })
 

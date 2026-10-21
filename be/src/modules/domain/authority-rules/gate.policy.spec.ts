@@ -2,7 +2,8 @@ import { Test } from "@nestjs/testing"
 
 import { builder } from "@starci/jest-preset"
 
-import type { AuthorityRule, GateInput, Proposal } from "./decisions.contracts"
+import type { Proposal } from "@modules/domain/work-items"
+import type { AuthorityRule, GateInput } from "./authority-rules.contracts"
 
 import {
     MIN_CONFIDENCE,
