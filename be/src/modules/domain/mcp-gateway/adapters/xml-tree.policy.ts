@@ -103,7 +103,7 @@ export const parseXml = (xml: string): XmlNode | null => {
         scan.frame.node.text += decodeEntities(xml.slice(scan.cursor, textEnd))
         scan = open < 0 ? { frame: scan.frame, cursor: textEnd } : readMarkup(xml, open, scan.frame)
     }
-    if (scan === null || scan.frame.parent !== null) return null
+    if (scan?.frame.parent !== null) return null
     return root.children.find((_, index, all) => all.length === 1 && index === 0) ?? null
 }
 
