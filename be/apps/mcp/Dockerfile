@@ -26,6 +26,8 @@ RUN npm run build:be
 FROM node:22.14.0-alpine3.21 AS runtime
 WORKDIR /app
 ENV NODE_ENV=production
+ENV PORT=8790
+ENV PORT=8790
 
 COPY --from=manifests /app ./
 RUN npm ci --omit=dev --ignore-scripts && npm cache clean --force
@@ -33,5 +35,6 @@ RUN npm ci --omit=dev --ignore-scripts && npm cache clean --force
 COPY --from=build /app/be/dist be/dist
 
 USER node
-HEALTHCHECK NONE
+EXPOSE 8790
+HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 CMD node -e "fetch('http://127.0.0.1:'+process.env.PORT+'/health/live').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
 ENTRYPOINT ["node", "be/dist/apps/mcp/src/main.js"]

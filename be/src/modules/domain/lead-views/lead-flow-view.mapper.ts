@@ -58,7 +58,6 @@ const toWorkItemView = (item: WorkItem, lead: LeadView, staff: ReadonlyArray<Sta
     evidenceState: item.evidence_state,
     assignedStaffId: item.assigned_staff_id,
     executionId: item.execution_id,
-    origin: item.origin,
     createdAt: item.created_at,
     updatedAt: item.updated_at,
     completedAt: item.completed_at,
@@ -79,7 +78,6 @@ const toOrderView = (order: OrdersWorkbenchRow): LeadFlowOrderView => ({
     items: order.items,
     amountVnd: order.amount_vnd,
     status: order.status,
-    origin: order.origin,
     confirmedBy: order.confirmed_by,
     confirmedAt: order.confirmed_at,
     createdAt: order.created_at,
@@ -97,7 +95,6 @@ const toInvoiceView = (invoice: InvoiceViewRow): LeadFlowInvoiceView => ({
     amountVnd: invoice.amount_vnd,
     dueAt: invoice.due_at,
     status: invoice.status,
-    origin: invoice.origin,
     issuedBy: invoice.issued_by,
     issuedAt: invoice.issued_at,
     paidAt: invoice.paid_at,
@@ -115,7 +112,6 @@ const toTransactionView = (transaction: TransactionViewRow): LeadFlowTransaction
     occurredAt: transaction.occurred_at,
     invoiceId: transaction.invoice_id,
     status: transaction.status,
-    origin: transaction.origin,
     createdAt: transaction.created_at,
 })
 

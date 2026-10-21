@@ -11,6 +11,7 @@ import {
     INSERT_FREE_WORKSPACE,
     LIST_MEMBERSHIPS,
     LOCK_FIRST_WORKSPACE,
+    SET_WORKSPACE_BRAND,
 } from "./persistence/workspaces.sql"
 import type { WorkspacesOptions } from "./workspaces.options"
 import { WORKSPACES_OPTIONS } from "./workspaces.port"
@@ -129,7 +130,9 @@ describe("WorkspacesService", () => {
             expect(em.query).toHaveBeenCalledWith(FIND_WORKSPACE_NAME, ["ws-missing"])
         })
     })
+})
 
+describe("WorkspacesService", () => {
     describe("memberships", () => {
         it("maps each membership with its workspace", async () => {
             const em = mockEntityManager({ query: [LIST_MEMBERSHIPS, [rowOf()]] })
@@ -157,7 +160,9 @@ describe("WorkspacesService", () => {
             expect(em.query).toHaveBeenCalledWith(LIST_MEMBERSHIPS, ["user-1"])
         })
     })
+})
 
+describe("WorkspacesService", () => {
     describe("createFree", () => {
         it("creates an active workspace owned by the person where signup is allowed", async () => {
             const em = mockEntityManager({ query: [INSERT_FREE_WORKSPACE, [{ id: "ws-new" }]] })
@@ -174,6 +179,32 @@ describe("WorkspacesService", () => {
                 code: WorkspacesErrorCode.SignupDisabled,
             })
             expect(em.query).not.toHaveBeenCalled()
+        })
+    })
+})
+
+describe("WorkspacesService", () => {
+    describe("setBrand", () => {
+        const brand = { displayName: "Brand Name", logoUrl: "/brand/logo.jpg" }
+
+        it("writes the brand only where the workspace is owned by the caller", async () => {
+            const em = mockEntityManager({ query: [SET_WORKSPACE_BRAND, [{ id: "ws-1" }]] })
+
+            await expect((await build(em)).setBrand("owner-1", "ws-1", brand)).resolves.toBeUndefined()
+            expect(em.query).toHaveBeenCalledWith(SET_WORKSPACE_BRAND, [
+                "ws-1",
+                "owner-1",
+                "Brand Name",
+                "/brand/logo.jpg",
+            ])
+        })
+
+        it("refuses as not found when no owned workspace matched", async () => {
+            const em = mockEntityManager({ query: [SET_WORKSPACE_BRAND, []] })
+
+            await expect((await build(em)).setBrand("stranger", "ws-1", brand)).rejects.toMatchObject({
+                code: WorkspacesErrorCode.NotFound,
+            })
         })
     })
 })

@@ -2,6 +2,7 @@ import {
     CustomerTurnRuntimeService,
     CustomerOutcomesService,
     CustomerTurnsModule,
+    customerTurnsOptionsOf,
 } from "@modules/domain/customer-turns"
 import type { DynamicModule } from "@nestjs/common"
 import { McpGatewayModule } from "@modules/domain/mcp-gateway"
@@ -36,7 +37,7 @@ export const messagingModules = (options: ApiOptions): Array<DynamicModule> => [
         outcomes: CustomerOutcomesService,
     }),
     McpGatewayModule.register({ isGlobal: true, ...options.mcpGateway, console: true }),
-    CustomerTurnsModule.register({ isGlobal: true }),
+    CustomerTurnsModule.register({ isGlobal: true, ...customerTurnsOptionsOf(options.connections.publicApiUrl) }),
     TelegramInboxModule.register({ isGlobal: true }),
     ZaloInboxModule.register({ isGlobal: true }),
     ZaloWizardDraftsModule.register({ isGlobal: true }),

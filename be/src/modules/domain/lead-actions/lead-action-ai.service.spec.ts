@@ -32,7 +32,6 @@ const lead: LeadRecordRow = {
     context_summary: "buys tea",
     phone: null,
     email: null,
-    origin: "live",
 }
 
 const open: ResponsibilityListing = {

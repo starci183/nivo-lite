@@ -118,7 +118,6 @@ export const exceptionView = (work: OfficeWork, words: OfficeWords, context: Off
         badge: isOpen ? workBadgeOf(work, isReconcile, words) : words.g(`status_${work.status}`),
         department: words.g(`dept_${work.department}`),
         reasonBadge: reason.reasonBadge,
-        isSimulated: work.origin === "simulated",
         isReconcile,
         errorText: isFailed ? work.error : null,
         summary: work.summary,

@@ -21,7 +21,6 @@ const orderOf = builder<SalesOrderListRow>({
     items: "2 cakes",
     amount_vnd: 200000,
     status: "confirmed",
-    origin: "live",
     confirmed_by: null,
     confirmed_at: null,
     created_at: "2026-10-12T10:00:00Z",

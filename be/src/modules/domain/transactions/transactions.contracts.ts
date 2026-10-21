@@ -28,8 +28,23 @@ export interface NewTransaction {
     readonly amountVnd: number
     /** The transfer content, or null. */
     readonly reference: string | null
-    /** The payer's name, or null. */
+    /** The payer's name (the counterparty of a debit), or null. */
     readonly payer: string | null
-    /** Real or simulated. */
-    readonly origin: string
+    /** Money in (`credit`, the default) or out (`debit`) of the workspace's account. */
+    readonly direction?: BankDirection
+}
+
+/** Whether a bank move put money into the workspace's account or took it out. */
+export type BankDirection = "credit" | "debit"
+
+/** Which bank credits to list: the newest live ones of a workspace, at most `limit`. */
+export interface BankCreditQuery {
+    /** The workspace. */
+    readonly workspaceId: string
+    /** Only this status (`unmatched`, `matched`, `needs_review`), or null for every status. */
+    readonly status: string | null
+    /** Only credits from this ISO instant, or null. */
+    readonly since: string | null
+    /** How many, already bounded by the caller (1 to 50). */
+    readonly limit: number
 }

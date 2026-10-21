@@ -101,10 +101,6 @@ export class WorkItemType {
     @Field(() => ID, { nullable: true })
     execution_id?: string | null
 
-    /** Real or simulated. */
-    @Field()
-    origin!: string
-
     /** When it was created, ISO 8601. */
     @Field()
     created_at!: string

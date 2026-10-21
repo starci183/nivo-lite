@@ -40,7 +40,7 @@ type MutateStartAgentChatConversationParams = MutateParams<
     MutateStartAgentChatConversationRequest
 >
 
-/** Opens a test or simulated customer conversation and stores its greeting. */
+/** Opens an owner test or test customer conversation and stores its greeting. */
 export const mutateStartAgentChatConversation = async ({
     mutation = MutationStartAgentChatConversation.Mutation1,
     request,

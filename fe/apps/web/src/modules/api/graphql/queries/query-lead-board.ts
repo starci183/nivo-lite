@@ -21,7 +21,6 @@ const query1: Document = gql`
             installationId
             need
             nextAction
-            origin
             ownerName
             stage
         }

@@ -1,4 +1,4 @@
-import type { BookingToolName, ToolManifestEntry, ToolName } from "./agent-tools.contracts"
+import type { BookingToolName, GatewayToolName, ToolManifestEntry, ToolName } from "./agent-tools.contracts"
 
 /** The supported names used by manifest callers and dispatch policies. */
 export type { ToolName } from "./agent-tools.contracts"
@@ -18,13 +18,43 @@ export const TOOL_MANIFEST: ReadonlyArray<ToolManifestEntry> = [
     },
     {
         name: "approval.request",
-        description: "Ask the owner to approve an answer you must not give on your own (price, discount, commitment).",
+        description:
+            "Ask the owner to approve an answer you must not give on your own (a price, a special offer, a commitment).",
         args: { question: "string", proposed_answer: "string?", reason: "over_authority|unclear_outcome" },
     },
     {
         name: "handoff.to_person",
         description: "Hand the conversation to a person; the AI stays quiet afterwards.",
         args: { reason: "string" },
+    },
+    {
+        name: "conversation.handOff",
+        description:
+            "Hand this conversation to another agent of the business (its id or department) when your knowledge says that agent takes it from here.",
+        args: { to: "string", note: "string" },
+    },
+    {
+        name: "tool.search",
+        description:
+            "Find the connector tools you may use (installed, approved and granted to you) by what they do; answers at most 10.",
+        args: { query: "string", limit: "number?" },
+    },
+    {
+        name: "tool.describe",
+        description: "Read the argument schema, mode and limits of one connector tool by its full name.",
+        args: { name: "string" },
+    },
+    {
+        name: "tool.call",
+        description:
+            "Call one connector tool by its full name in the order your knowledge gives; never claim a result the tool did not answer. A call over your limits waits for a person.",
+        args: { name: "string", arguments_json: "string?" },
+    },
+    {
+        name: "tool.sequence",
+        description:
+            "Ask a person to approve several connector calls at once when your knowledge names a playbook of steps; they run in order once approved, then the customer hears the reply.",
+        args: { steps_json: "string", reply: "string?" },
     },
     {
         name: "booking.find_slots",
@@ -56,3 +86,7 @@ export const isToolName = (value: string): value is ToolName => TOOL_MANIFEST.so
 /** True for the booking tools, which the booking lane serves. */
 export const isBookingTool = (tool: ToolName): tool is BookingToolName =>
     tool === "booking.find_slots" || tool === "booking.request" || tool === "booking.cancel"
+
+/** True for the connector meta-tools, which the gateway serves. */
+export const isGatewayTool = (tool: ToolName): tool is GatewayToolName =>
+    tool === "tool.search" || tool === "tool.describe" || tool === "tool.call" || tool === "tool.sequence"

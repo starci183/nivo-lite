@@ -2,7 +2,6 @@ import { QueryHandler } from "@nestjs/cqrs"
 import { McpGatewayAdminService } from "@modules/domain/mcp-gateway"
 import type { ConnectorView } from "@modules/domain/mcp-gateway"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { actorOf } from "./mcp-gateway.mapper"
 import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { ListMcpConnectorsQuery } from "./list-mcp-connectors.query"
@@ -18,6 +17,9 @@ export class ListMcpConnectorsHandler extends ICQRSHandler<ListMcpConnectorsQuer
     }
 
     protected override process(query: ListMcpConnectorsQuery): Promise<ReadonlyArray<ConnectorView>> {
-        return this.admin.connectors(actorOf(query.params))
+        return this.admin.connectors({
+            principalId: query.params.principal.id,
+            workspaceId: query.params.request.workspaceId,
+        })
     }
 }

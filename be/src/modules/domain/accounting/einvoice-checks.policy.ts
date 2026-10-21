@@ -3,9 +3,12 @@ import type {
     EinvoiceIssue,
     EinvoiceVerdict,
     HubCardPayload,
+    HubCardRef,
+    HubCardSource,
     KnownSupplier,
     OptionalSupplier,
 } from "./accounting-desk.contracts"
+import { toolSources } from "./card-sources.policy"
 import { CARD_COPY, EXCEPTION_COPY, issueText } from "./messages/accounting-desk.messages"
 import { isValidTaxCode, normalizeTaxCode, sameTaxCode } from "./tax-code.policy"
 
@@ -86,11 +89,24 @@ export const exceptionText = (draft: EinvoiceDraft, verdict: EinvoiceVerdict, su
     return [head, ...reasons, proposal, codes].join("\n")
 }
 
-/** The hub-cards v1 `exception` card of an invoice that needs the chief accountant. */
+/** The Second Brain supplier record an invoice was checked against. */
+const SUPPLIER_SOURCE: HubCardSource = {
+    layer: 2,
+    kind: "brain_fact",
+    ref: "supplier",
+    label: CARD_COPY.sourceSupplier,
+}
+
+/**
+ * The hub-cards v1 `exception` card of an invoice that needs the chief accountant: `tool` is the `invoice.list` tool that read it,
+ * `ref` the decision its approve and decline buttons act on.
+ */
 export const exceptionCard = (
     draft: EinvoiceDraft,
     verdict: EinvoiceVerdict,
     supplier: OptionalSupplier,
+    tool: string | null,
+    ref: HubCardRef,
 ): HubCardPayload => {
     const isTaxCode = verdict.status === "invalid_tax_code"
     const fields = [
@@ -106,6 +122,12 @@ export const exceptionCard = (
         body: isTaxCode ? EXCEPTION_COPY.proposeTaxCode : EXCEPTION_COPY.proposeReview,
         fields: supplier === null ? fields : [...fields, { label: CARD_COPY.onFile, value: supplier.taxCode }],
         lines: verdict.issues.map((issue) => ({ text: issueText(issue) })),
-        data: { issues: verdict.issues, issuedOn: draft.issuedOn, sources: ["mcp:einvoice.list", "brain:supplier"] },
+        sources: [
+            ...toolSources([{ tool, label: CARD_COPY.sourceInvoices }]),
+            ...(supplier === null ? [] : [SUPPLIER_SOURCE]),
+        ],
+        data: { issues: verdict.issues, issuedOn: draft.issuedOn },
+        ref,
+        actions: ["approve", "decline"],
     }
 }

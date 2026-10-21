@@ -1,27 +1,47 @@
 import { Test } from "@nestjs/testing"
-import { isBookingTool as realIsBookingTool, isToolName as realIsToolName, TOOL_MANIFEST } from "./tool-manifest.policy"
+import {
+    isBookingTool as realIsBookingTool,
+    isGatewayTool as realIsGatewayTool,
+    isToolName as realIsToolName,
+    TOOL_MANIFEST,
+} from "./tool-manifest.policy"
 
 const SUBJECT = Symbol("tool-manifest.policy")
 type Subject = {
     isBookingTool: typeof realIsBookingTool
+    isGatewayTool: typeof realIsGatewayTool
     isToolName: typeof realIsToolName
 }
 
 const build = async () => {
     const moduleRef = await Test.createTestingModule({
-        providers: [{ provide: SUBJECT, useValue: { isBookingTool: realIsBookingTool, isToolName: realIsToolName } }],
+        providers: [
+            {
+                provide: SUBJECT,
+                useValue: {
+                    isBookingTool: realIsBookingTool,
+                    isGatewayTool: realIsGatewayTool,
+                    isToolName: realIsToolName,
+                },
+            },
+        ],
     }).compile()
     return moduleRef.get<Subject>(SUBJECT)
 }
 
 describe("tool manifest policy", () => {
-    it("lists the four chat tools and the three booking tools", async () => {
+    it("lists the chat tools, the agent hand-off, the connector meta-tools and the booking tools", async () => {
         await build()
         expect(TOOL_MANIFEST.map((tool) => tool.name)).toEqual([
             "knowledge.search",
             "lead.create_or_update",
             "approval.request",
             "handoff.to_person",
+            "conversation.handOff",
+            "tool.search",
+            "tool.describe",
+            "tool.call",
+            "tool.sequence",
             "booking.find_slots",
             "booking.request",
             "booking.cancel",
@@ -40,5 +60,16 @@ describe("tool manifest policy", () => {
         expect(subject.isBookingTool("booking.find_slots")).toBe(true)
         expect(subject.isBookingTool("booking.cancel")).toBe(true)
         expect(subject.isBookingTool("knowledge.search")).toBe(false)
+    })
+})
+
+describe("tool manifest policy gateway tools", () => {
+    it("recognises the connector meta-tools only", async () => {
+        const subject = await build()
+        expect(subject.isGatewayTool("tool.search")).toBe(true)
+        expect(subject.isGatewayTool("tool.describe")).toBe(true)
+        expect(subject.isGatewayTool("tool.call")).toBe(true)
+        expect(subject.isGatewayTool("tool.sequence")).toBe(true)
+        expect(subject.isGatewayTool("conversation.handOff")).toBe(false)
     })
 })

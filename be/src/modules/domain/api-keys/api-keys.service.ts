@@ -5,14 +5,34 @@ import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { EventsService } from "@modules/domain/events"
-import type { ApiKeyAuthAnswer, ApiKeyView, ApiPrincipal, ApiScope, CreatedApiKey } from "./api-keys.contracts"
-import { ACTIVE_KEYS_MAX, admitKey, bearerKey, buildKey, cleanName, hashKey, mayManageKeys } from "./api-keys.policy"
+import type {
+    AgentKeyAnswer,
+    AgentKeyPrincipal,
+    ApiKeyAuthAnswer,
+    ApiKeyView,
+    ApiPrincipal,
+    ApiScope,
+    CreatedApiKey,
+} from "./api-keys.contracts"
+import {
+    ACTIVE_KEYS_MAX,
+    admitAgentKey,
+    admitKey,
+    bearerKey,
+    buildKey,
+    cleanName,
+    hashKey,
+    mayManageKeys,
+    TOOLS_CALL_SCOPE,
+} from "./api-keys.policy"
 import { ApiKeysError, ApiKeysErrorCode } from "./errors/api-keys.error"
 import type { ApiKeysRow, MemberRow } from "./persistence/api-keys.rows"
 import {
+    API_AGENT_KEY,
     API_KEY_AUTH,
     API_KEY_CREDENTIAL,
     COUNT_ACTIVE_KEYS,
+    INSERT_AGENT_KEY,
     INSERT_KEY,
     LIST_KEYS,
     REVOKE_KEY,
@@ -22,7 +42,7 @@ import {
 /** Bytes of entropy in one key. */
 const KEY_ENTROPY_BYTES = 32
 
-type KeyRow = Pick<ApiKeysRow, "id" | "name" | "key_prefix" | "created_at" | "last_used_at" | "revoked_at">
+type KeyRow = Pick<ApiKeysRow, "id" | "name" | "key_prefix" | "created_at" | "last_used_at" | "revoked_at" | "agent_id">
 type MemberFacts = Pick<MemberRow, "role" | "display_name">
 
 const toView = (row: KeyRow): ApiKeyView => ({
@@ -32,6 +52,7 @@ const toView = (row: KeyRow): ApiKeyView => ({
     createdAt: row.created_at,
     lastUsedAt: row.last_used_at,
     revokedAt: row.revoked_at,
+    agentId: row.agent_id,
 })
 
 @Injectable()
@@ -70,6 +91,19 @@ export class ApiKeysService {
         return { keyId: row.id, workspaceId: row.workspace_id, name: row.name ?? "", scopes: row.scopes ?? [] }
     }
 
+    /**
+     * Establishes the agent an MCP endpoint request acts as: the bearer key must work and be bound to an active agent of its
+     * workspace with the `tools:call` scope. A revoked key, a public API key and the key of a deleted or paused agent are refused.
+     */
+    async verifyAgentKey(authorization: string): Promise<AgentKeyPrincipal> {
+        const key = bearerKey(authorization)
+        if (key === undefined) throw new ApiKeysError({ code: ApiKeysErrorCode.Unauthorized })
+        const [row] = await this.entityManager.query<Array<AgentKeyAnswer>>(API_AGENT_KEY, [hashKey(key)])
+        const admitted = admitAgentKey(row)
+        if (admitted.kind === "refused") throw new ApiKeysError({ code: admitted.code, params: admitted.params })
+        return admitted.value
+    }
+
     /** The keys of a workspace, newest first, for an owner or manager of it. */
     async listKeys(principalId: string, workspaceId: string): Promise<Array<ApiKeyView>> {
         await this.requireManager(this.entityManager, principalId, workspaceId)
@@ -77,8 +111,11 @@ export class ApiKeysService {
         return rows.map(toView)
     }
 
-    /** Creates a key for a workspace; the secret is answered here once because only its hash is stored. */
-    createKey(principalId: string, workspaceId: string, rawName: string): Promise<CreatedApiKey> {
+    /**
+     * Creates a key for a workspace; the secret is answered here once because only its hash is stored. With an agent, the key is
+     * that agent's credential on the MCP endpoint: it carries only `tools:call` and the agent must be of the workspace.
+     */
+    createKey(principalId: string, workspaceId: string, rawName: string, agentId?: string): Promise<CreatedApiKey> {
         const named = cleanName(rawName)
         if (named.kind === "refused") throw new ApiKeysError({ code: named.code })
         return this.entityManager.transaction(async (tx) => {
@@ -88,14 +125,15 @@ export class ApiKeysService {
                 throw new ApiKeysError({ code: ApiKeysErrorCode.LimitReached, params: { limit: ACTIVE_KEYS_MAX } })
             }
             const built = buildKey(randomBytes(KEY_ENTROPY_BYTES))
-            const [row] = await tx.query<Array<KeyRow>>(INSERT_KEY, [
-                workspaceId,
-                named.value,
-                built.prefix,
-                built.hash,
-                principalId,
-            ])
-            if (row === undefined) throw new ApiKeysError({ code: ApiKeysErrorCode.NotCreated })
+            const values = [workspaceId, named.value, built.prefix, built.hash, principalId]
+            const [row] =
+                agentId === undefined
+                    ? await tx.query<Array<KeyRow>>(INSERT_KEY, values)
+                    : await tx.query<Array<KeyRow>>(INSERT_AGENT_KEY, [...values, agentId, [TOOLS_CALL_SCOPE]])
+            if (row === undefined) {
+                const code = agentId === undefined ? ApiKeysErrorCode.NotCreated : ApiKeysErrorCode.AgentNotFound
+                throw new ApiKeysError({ code })
+            }
             await this.events.record(
                 {
                     workspaceId,

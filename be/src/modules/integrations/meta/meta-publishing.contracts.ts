@@ -27,3 +27,17 @@ export interface PageInsightsDay {
     /** Post engagements (reactions, comments, shares, clicks). */
     readonly engagements: number
 }
+
+/** One published post of the Page with the engagements Meta counted for it. */
+export interface PagePost {
+    /** The post id (`<page>_<post>`). */
+    readonly id: string
+    /** The post text; empty for a photo without a caption. */
+    readonly message: string
+    /** When Meta published it, ISO 8601. */
+    readonly createdTime: string
+    /** The public https link of the post, or null when Meta gave none. */
+    readonly permalink: string | null
+    /** The `post_engagements` lifetime insight (reactions, comments, shares, clicks); 0 when Meta gave none. */
+    readonly engagements: number
+}

@@ -29,7 +29,6 @@ export class ApprovalRequesterService implements ApprovalRequester {
                 subject_type: "conversation",
                 subject_id: ctx.conversationId,
                 dedupeKey: `reply_customer:engine:${ctx.jobId}`,
-                origin: "live",
                 preset: true,
                 noChain: true,
                 forceAsk: request.reason,

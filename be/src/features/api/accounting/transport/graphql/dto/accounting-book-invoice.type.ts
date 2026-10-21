@@ -33,10 +33,6 @@ export class AccountingBookInvoiceType {
     @Field(() => String)
     status!: string
 
-    /** origin. */
-    @Field(() => String)
-    origin!: string
-
     /** issued By. */
     @Field(() => String, { nullable: true })
     issuedBy!: string | null

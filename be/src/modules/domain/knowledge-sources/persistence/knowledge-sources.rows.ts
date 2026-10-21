@@ -131,3 +131,11 @@ export interface ReadableCountRow {
     /** How many. */
     readonly count: number
 }
+
+/** A kept document found again with its stored text. */
+export interface ProfileSourceRow {
+    /** The source id. */
+    readonly id: string
+    /** Its stored text. */
+    readonly content: string | null
+}

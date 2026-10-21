@@ -19,10 +19,6 @@ export class AccountingOrderType {
     @Field(() => Float, { nullable: true })
     amount!: number | null
 
-    /** origin. */
-    @Field(() => String)
-    origin!: string
-
     /** customer. */
     @Field(() => String, { nullable: true })
     customer!: string | null

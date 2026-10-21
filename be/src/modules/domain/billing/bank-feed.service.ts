@@ -1,6 +1,3 @@
-import { VIETCOMBANK_DELIVERY_QUEUE, isVietcombankDeliveryRecorded } from "@modules/queues/vietcombank-delivery"
-import type { ClaimedJob, JobClaims } from "@modules/platform/jobs"
-import { VietcombankReceiptService } from "@modules/domain/vietcombank-inbox"
 import { BankFeedReceiptService } from "@modules/domain/bank-feed-inbox"
 import type { IncomingCredit } from "@modules/domain/bank-feed-inbox"
 import { InjectQueueOutbox } from "@modules/platform/queue"
@@ -11,7 +8,7 @@ import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { EventsService } from "@modules/domain/events"
 import { InboundEventsService } from "@modules/domain/inbound-events"
-import type { EventOrigin } from "@modules/domain/inbound-events"
+import { TransactionsService } from "@modules/domain/transactions"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import type { WorkspaceRole } from "@modules/domain/workspace-members"
 import { InjectClock } from "@modules/platform/clock"
@@ -22,20 +19,15 @@ import type { MessageCatalog } from "@modules/platform/i18n"
 import { createHash } from "node:crypto"
 import { eachInOrder } from "@modules/platform/primitives"
 import { BankCreditQueue, isBankCreditPayload } from "@modules/queues/bank-credit"
-import { SIMULATED_BANK, simulatedBankEventId, simulatedCreditOf } from "./bank.policy"
-import { InjectBillingOptions } from "./billing.decorators"
-import type { BillingOptions } from "./billing.options"
 import type {
-    VietcombankDeliveryRecorded,
     RawBody,
     HeaderValue,
     BankFeedProvider,
+    FeedCreditAnswer,
     ManualCredit,
     ProvenConnection,
-    SimulatedDelivery,
 } from "./billing.contracts"
 import { cassoCredits, isCassoError } from "./casso.policy"
-import { BillingError, BillingErrorCode } from "./errors/billing.error"
 import { PaymentProofService } from "./payment-proof.service"
 import { payosBodyOf, readPayosDelivery } from "./payos.policy"
 import type { AgentIdRow, ConnectionStateRow, FeedConnectionRow } from "./persistence/bank-feed.rows"
@@ -68,8 +60,6 @@ interface Booking {
     readonly eventId: string
     /** The bank or gateway name shown on the event. */
     readonly bankName: string
-    /** Whether the money is real. */
-    readonly origin: EventOrigin
     /** A note the person added, or undefined. */
     readonly note?: string
 }
@@ -78,29 +68,30 @@ interface Booking {
 /**
  * Books the credits a payment connection reports. The webhook door proves each delivery before its receipt is recorded; a deferred credit
  * becomes one inbound payment event, once per workspace and provider transaction id, so a repeat is counted without a second event
- * or job. A credit on a connection with no accounting agent bound is remembered on the connection only. The event and its
- * reconcile job are written in one transaction.
+ * or job. A credit on a connection with no accounting agent bound, or on a connection in the provider's test environment, is
+ * remembered on the connection only and never reaches a business table. The event and its reconcile job are written in one
+ * transaction.
  */
 export class BankFeedService {
     constructor(
         @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
         @InjectClock() private readonly clock: Clock,
         @InjectMessageCatalog() private readonly catalog: MessageCatalog,
-        @InjectBillingOptions() private readonly options: BillingOptions,
         private readonly proof: PaymentProofService,
         private readonly inbound: InboundEventsService,
         private readonly credits: BankCreditQueue,
         private readonly members: WorkspaceMembersService,
         private readonly events: EventsService,
-        private readonly vietcombankInbox: VietcombankReceiptService,
+        private readonly transactions: TransactionsService,
         private readonly bankFeedInbox: BankFeedReceiptService,
         @InjectQueueOutbox() private readonly outbox: QueueOutbox,
     ) {}
 
     /**
-     * An owner or manager enters money they know arrived. It goes through the same intake as every other credit (one inbound payment
-     * event and its reconcile job, once per day, amount and content), is labelled simulated like every manual input, and leaves a line
-     * in the evidence log. Answers whether the same evidence had already been entered.
+     * An owner or manager enters money they know arrived: real money, booked as live through the same intake as every other credit
+     * (one inbound payment event and its reconcile job, once per day, amount and content). Its source is `manual` (the `manual:`
+     * event id and the manual bank name) and the member who entered it is the actor of its evidence line. Answers whether the
+     * same evidence had already been entered.
      */
     async acceptManualCredit(userId: string, workspaceId: string, credit: ManualCredit): Promise<boolean> {
         const member = await this.members.require(userId, workspaceId, MANAGERS)
@@ -114,7 +105,6 @@ export class BankFeedService {
                 sender: credit.payer === undefined || credit.payer === "" ? null : credit.payer,
                 eventId: `manual:${credit.date}:${amount}:${credit.content}`,
                 bankName: this.catalog.get("billing.manualBank", {}, RECORD_LOCALE),
-                origin: "simulated",
             })
             if (!duplicate) {
                 await this.events.record(
@@ -133,53 +123,6 @@ export class BankFeedService {
                 )
             }
             return duplicate
-        })
-    }
-
-    /** The simulated Vietcombank door: one credit into the one configured workspace, always stored as simulated money. */
-    async acceptSimulatedCredit(delivery: SimulatedDelivery): Promise<void> {
-        this.proof.verifySimulatedBank(delivery.secret)
-        const workspaceId = this.options.simulatedBank.workspaceId
-        if (workspaceId === undefined) throw new BillingError({ code: BillingErrorCode.FeedNotConfigured })
-        const credit = simulatedCreditOf(parseJsonObject(delivery.rawBody))
-        if (credit === null) throw new BillingError({ code: BillingErrorCode.WebhookInvalid })
-        const deliveryId = simulatedBankEventId(credit.eventId)
-        await this.entityManager.transaction(async (manager) => {
-            if (!(await this.vietcombankInbox.claim(manager, deliveryId, { workspaceId, credit }))) return
-            const message: VietcombankDeliveryRecorded = { deliveryId }
-            await this.outbox.write(manager, VIETCOMBANK_DELIVERY_QUEUE, message, {
-                dedupeKey: `${VIETCOMBANK_DELIVERY_QUEUE}:${deliveryId}`,
-            })
-        })
-    }
-
-    /** Rejects malformed jobs before fencing; a valid receipt effect follows its successful fence. */
-    async processRecordedDeliveryJob(job: ClaimedJob, claims: JobClaims): Promise<void> {
-        if (!isVietcombankDeliveryRecorded(job.payload)) return
-        await claims.advance({
-            jobId: job.jobId,
-            expectedFencingToken: job.fencingToken,
-            step: "vietcombank-delivery",
-        })
-        await this.processRecordedDelivery(job.payload)
-    }
-
-    /** Books a committed simulated-bank receipt once, atomically with its completion. */
-    processRecordedDelivery(message: VietcombankDeliveryRecorded): Promise<void> {
-        return this.entityManager.transaction(async (manager) => {
-            const pending = await this.vietcombankInbox.lock(manager, message.deliveryId)
-            if (pending === undefined) return
-            const { workspaceId, credit } = pending.payload
-            await this.book(manager, {
-                workspaceId,
-                amount: credit.amount,
-                content: credit.content,
-                sender: credit.sender,
-                eventId: simulatedBankEventId(credit.eventId),
-                bankName: SIMULATED_BANK.name,
-                origin: "simulated",
-            })
-            await this.vietcombankInbox.complete(manager, pending.id)
         })
     }
 
@@ -218,39 +161,47 @@ export class BankFeedService {
         await this.proof.proveSepayFeed({ authorization, connectionId: connection, rawBody })
     }
 
-    /** Records one verified incoming SePay feed transaction for deferred booking. */
+    /**
+     * Records one verified SePay feed transaction for deferred booking: money in (`in`) as a credit, money out (`out`) as a
+     * debit; any other transfer, or an amount that is not above 0, is acknowledged without a receipt.
+     */
     acceptSepayFeedDelivery(rawBody: RawBody, connection: string): Promise<void> {
         const payload = sepayPayloadOf(parseJsonObject(rawBody))
         const amount = payload.transferAmount
-        if (payload.transferType !== "in" || amount === undefined || amount <= 0) return Promise.resolve()
+        const moves = payload.transferType === "in" || payload.transferType === "out"
+        if (!moves || amount === undefined || amount <= 0) return Promise.resolve()
         return this.recordFeedDelivery("sepay-feed", `${connection}:sepay:${payload.id}`, connection, [
             {
                 amount,
                 content: (payload.content ?? payload.description ?? payload.code ?? "").trim(),
                 eventId: `sepay:${payload.id}`,
                 fallbackBankName: payload.gateway ?? "SePay",
+                ...(payload.transferType === "out" ? { direction: "debit" as const } : {}),
             },
         ])
     }
 
-    /** Resolves one committed provider receipt and books all its credits before marking it complete. */
-    processRecordedFeedDelivery(message: BankFeedDeliveryRecorded): Promise<void> {
+    /**
+     * Resolves one committed provider receipt and answers each of its credits before marking the receipt complete: booked, a repeat,
+     * held on the connection because no accounting agent is bound, or refused because the connection runs in the provider's test
+     * environment. An absent or completed receipt, or one whose connection is gone, answers no credit.
+     */
+    processRecordedFeedDelivery(message: BankFeedDeliveryRecorded): Promise<ReadonlyArray<FeedCreditAnswer>> {
         return this.entityManager.transaction(async (manager) => {
             const pending = await this.bankFeedInbox.lock(manager, message.provider, message.deliveryId)
-            if (pending === undefined) return
+            if (pending === undefined) return []
             const [owner] = await manager.query<Array<FeedConnectionRow>>(SELECT_FEED_CONNECTION, [
                 pending.payload.connection,
             ])
+            const answers: Array<FeedCreditAnswer> = []
             if (owner !== undefined) {
-                await eachInOrder(pending.payload.credits, (credit) =>
-                    this.feedInTransaction(
-                        manager,
-                        { connectionId: pending.payload.connection, workspaceId: owner.workspace_id },
-                        credit,
-                    ),
-                )
+                const connection = { connectionId: pending.payload.connection, workspaceId: owner.workspace_id }
+                await eachInOrder(pending.payload.credits, async (credit) => {
+                    answers.push(await this.feedInTransaction(manager, connection, credit))
+                })
             }
             await this.bankFeedInbox.complete(manager, pending.id)
+            return answers
         })
     }
 
@@ -280,14 +231,14 @@ export class BankFeedService {
 
     /**
      * What every payment connection does with an authenticated credit: remember that the connection works (this is what the wizard
-     * waits for, even before an agent is bound), then book the credit when an accounting agent is bound to it. A credit on a test
-     * connection is stored as simulated so accounting never treats it as real money.
+     * waits for, even before an agent is bound), then book the credit when an accounting agent is bound to it. A connection in the
+     * provider's test environment is refused with `test_environment` before any business record: its money is not real.
      */
     private async feedInTransaction(
         tx: EntityManager,
         connection: ProvenConnection,
         credit: IncomingCredit,
-    ): Promise<void> {
+    ): Promise<FeedCreditAnswer> {
         const at = this.clock.now()
         const [state] = await tx.query<Array<ConnectionStateRow>>(SELECT_CONNECTION_STATE, [connection.connectionId])
         await tx.query(MARK_CONNECTION_FED, [
@@ -295,17 +246,42 @@ export class BankFeedService {
             at,
             JSON.stringify({ amount: Math.round(credit.amount), content: credit.content, at: at.toISOString() }),
         ])
+        if (state?.environment === "test") return { status: "refused", code: "test_environment" }
         const [agent] = await tx.query<Array<AgentIdRow>>(SELECT_BOUND_ACCOUNTING_AGENT, [connection.connectionId])
-        if (agent === undefined) return
-        await this.book(tx, {
+        if (agent === undefined) return { status: "unbound" }
+        if (credit.direction === "debit") return this.debit(tx, connection, credit)
+        const duplicate = await this.book(tx, {
             workspaceId: connection.workspaceId,
             amount: credit.amount,
             content: credit.content,
             sender: null,
             eventId: credit.eventId,
             bankName: state?.name ?? credit.fallbackBankName,
-            origin: state?.environment === "test" ? "simulated" : "live",
         })
+        return { status: duplicate ? "duplicate" : "booked" }
+    }
+
+    /**
+     * Records money that left the account as a debit transaction: never an inbound payment event and never a reconcile job, so a
+     * supplier payment is not matched against the workspace's invoices. The receipt claim already made it once per delivery.
+     */
+    private async debit(
+        tx: EntityManager,
+        connection: ProvenConnection,
+        credit: IncomingCredit,
+    ): Promise<FeedCreditAnswer> {
+        await this.transactions.open(
+            {
+                workspaceId: connection.workspaceId,
+                inboundEventId: null,
+                amountVnd: Math.round(credit.amount),
+                reference: credit.content === "" ? null : credit.content,
+                payer: null,
+                direction: "debit",
+            },
+            tx,
+        )
+        return { status: "debited" }
     }
 
     /** Records the credit and queues its reconcile job; answers whether the same credit had already been recorded. */
@@ -314,7 +290,6 @@ export class BankFeedService {
         const recorded = await this.inbound.recordBankPayment({
             manager: tx,
             workspaceId: booking.workspaceId,
-            origin: booking.origin,
             sender: booking.sender,
             body: this.catalog.get(
                 "billing.bankEventBody",

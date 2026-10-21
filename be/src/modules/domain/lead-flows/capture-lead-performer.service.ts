@@ -99,7 +99,6 @@ export class CaptureLeadPerformerService implements WorkPerformer, OnModuleInit 
                       email: id.email,
                       name: null,
                       channel: null,
-                      origin: item.origin,
                   }))
         if (known !== null) {
             if ((id.phone !== null && known.phone === null) || (id.email !== null && known.email === null))
@@ -127,10 +126,9 @@ export class CaptureLeadPerformerService implements WorkPerformer, OnModuleInit 
             need: field(fields, "need") || clip(text, 300) || sourceLine,
             phone: id.phone,
             email: id.email,
-            origin: item.origin,
         })
         await this.responsibilities.ensureFor(ctx, lead.id)
-        await this.events.leadCreated(ctx.workspaceId, lead, item.origin)
+        await this.events.leadCreated(ctx.workspaceId, lead)
         await this.logLead(
             ctx,
             item,

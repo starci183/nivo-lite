@@ -15,10 +15,6 @@ export class InboundEventType {
     @Field()
     kind!: string
 
-    /** Whether the input is live or simulated. */
-    @Field()
-    origin!: string
-
     /** The sender's display name. */
     @Field(() => String, { nullable: true })
     senderName!: string | null

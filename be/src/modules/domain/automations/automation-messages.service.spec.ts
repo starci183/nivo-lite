@@ -28,7 +28,6 @@ const LEAD: LeadReadRow = {
     stage: "new",
     phone: "0900",
     email: null,
-    origin: null,
 }
 
 const outcome = (overrides: Partial<GateOutcome> = {}): GateOutcome => ({
@@ -154,7 +153,6 @@ describe("AutomationMessagesService composeAndSend", () => {
             subject: { type: "lead", id: "l-1" },
             leadId: "l-1",
             dedupeKey: "automation:p-1:d-1",
-            origin: "live",
             summary: "Cam on",
             draft: "Chao An tu Tiem Hoa",
             fields: { customer: "An", contact: "0900" },
@@ -177,9 +175,9 @@ describe("AutomationMessagesService composeAndSend", () => {
         })
     })
 
-    it("sends a reply on the conversation, from the origin of the lead, with the contact it has", async () => {
+    it("sends a reply on the conversation with the contact it has", async () => {
         const { service, gate } = await build()
-        const lead = { ...LEAD, phone: null, email: "an@x.vn", origin: "simulated" }
+        const lead = { ...LEAD, phone: null, email: "an@x.vn" }
 
         await service.composeAndSend(context(), composition({ action: "reply_customer", lead }))
         await service.composeAndSend(context(), composition({ lead: { ...LEAD, phone: null, email: null } }))
@@ -188,7 +186,6 @@ describe("AutomationMessagesService composeAndSend", () => {
             1,
             expect.objectContaining({
                 subject: { type: "conversation", id: "cv-1" },
-                origin: "simulated",
                 fields: { customer: "An", contact: "an@x.vn", conversation_id: "cv-1", question: "" },
             }),
         )
@@ -308,7 +305,6 @@ describe("AutomationMessagesService replyWithoutLead", () => {
             subject: { type: "conversation", id: "cv-1" },
             leadId: null,
             dedupeKey: "automation:p-1:after:cv-1",
-            origin: "live",
             summary: 'after.summary{"name":"Khach"}',
             draft: "Chao Khach tu Tiem Hoa",
             fields: { conversation_id: "cv-1", question: "" },

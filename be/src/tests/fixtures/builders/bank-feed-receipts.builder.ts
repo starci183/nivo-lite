@@ -7,11 +7,6 @@ export const DEFERRED_AT = "2026-10-12T10:00:00.000Z"
 const deferredCredit = { amount: 125000, content: "NIVO123", eventId: "bank:7", fallbackBankName: "Bank" }
 /** A committed provider receipt with one credit ready for booking. */
 export const receipt = { id: "receipt-1", payload: { connection: "c-1", credits: [deferredCredit] } }
-/** A committed simulated-bank receipt retaining its original provider identity. */
-export const simulated = {
-    id: "receipt-2",
-    payload: { workspaceId: "ws-1", credit: { amount: 125000, content: "NIVO123", eventId: "7", sender: "Lan" } },
-}
 /** The provider kinds whose receipts share the deferred booking workflow. */
 export const providers = ["casso", "payos", "sepay-feed"] as const
 

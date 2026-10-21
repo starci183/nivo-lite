@@ -1,7 +1,7 @@
 import { sql } from "@modules/platform/database"
 
 /** One booking of a workspace with its service and resource names, locked for the rest of the transaction ($1 workspace, $2 booking). */
-export const SELECT_BOOKING_FOR_EFFECTS = sql`SELECT b.id, b.workspace_id, b.status, b.lead_id, b.conversation_id, b.customer_name, b.customer_phone, b.customer_email, b.origin,
+export const SELECT_BOOKING_FOR_EFFECTS = sql`SELECT b.id, b.workspace_id, b.status, b.lead_id, b.conversation_id, b.customer_name, b.customer_phone, b.customer_email,
        b.cancel_reason, b.reschedule_count, b.holds_slot, s.name AS service_name, COALESCE(r.name, '') AS resource_name,
        b.price_vnd::float8 AS price_vnd, b.cancel_fee_vnd::float8 AS cancel_fee_vnd, b.deposit_vnd::float8 AS deposit_vnd,
        (extract(epoch FROM b.start_at) * 1000)::float8 AS start_ms,
@@ -15,7 +15,7 @@ LIMIT 1
 FOR UPDATE OF b`
 
 /** The same booking read without a lock, for the notice and the reminder that follow ($1 workspace, $2 booking). */
-export const SELECT_BOOKING_FOR_NOTICE = sql`SELECT b.id, b.workspace_id, b.status, b.lead_id, b.conversation_id, b.customer_name, b.customer_phone, b.customer_email, b.origin,
+export const SELECT_BOOKING_FOR_NOTICE = sql`SELECT b.id, b.workspace_id, b.status, b.lead_id, b.conversation_id, b.customer_name, b.customer_phone, b.customer_email,
        b.cancel_reason, b.reschedule_count, b.holds_slot, s.name AS service_name, COALESCE(r.name, '') AS resource_name,
        b.price_vnd::float8 AS price_vnd, b.cancel_fee_vnd::float8 AS cancel_fee_vnd, b.deposit_vnd::float8 AS deposit_vnd,
        (extract(epoch FROM b.start_at) * 1000)::float8 AS start_ms,

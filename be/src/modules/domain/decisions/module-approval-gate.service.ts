@@ -43,7 +43,6 @@ export class ModuleApprovalGateService extends ApprovalGate {
             subject_type: subjectTypeOf(request.subjectType),
             subject_id: request.subjectId,
             dedupeKey: request.dedupeKey,
-            origin: "live",
             preset: true,
             seed: proposalOf(request),
         })

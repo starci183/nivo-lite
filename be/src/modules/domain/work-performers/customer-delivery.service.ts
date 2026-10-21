@@ -13,8 +13,8 @@ const WEBSITE_CHANNEL = "website"
 
 @Injectable()
 /**
- * Delivers the company's words to a customer with honest labels: stored in their conversation, pushed to the channel they are on, and
- * recorded as simulated when there is no conversation to answer in.
+ * Delivers the company's words to a customer with honest labels: stored in their conversation and pushed to the channel they are on;
+ * when the customer has no conversation to answer in, nothing is sent and the record says so.
  */
 export class CustomerDeliveryService {
     constructor(
@@ -41,7 +41,7 @@ export class CustomerDeliveryService {
         by: PerformedBy,
         kind: string,
     ): Promise<Performed> {
-        const sent = await this.toCustomer(ctx, customer, text, item.origin)
+        const sent = await this.toCustomer(ctx, customer, text)
         await this.evidence.log(ctx, {
             lead_id: customer.id,
             work_item_id: item.id,
@@ -59,19 +59,11 @@ export class CustomerDeliveryService {
         }
     }
 
-    /** Records simulation honestly; live work delivers in the customer's latest conversation. */
-    async toCustomer(
-        ctx: WorkContext,
-        customer: DeliveryCustomer,
-        text: string,
-        origin: string = "live",
-    ): Promise<CustomerDelivery> {
-        if (origin === "simulated") {
-            return { summary: this.kit.text(ctx, "simulatedDelivery", { channel: customer.channel }), real: false }
-        }
+    /** Delivers in the customer's latest conversation; without one nothing is sent and the summary says so. */
+    async toCustomer(ctx: WorkContext, customer: DeliveryCustomer, text: string): Promise<CustomerDelivery> {
         const conversation = await this.conversations.latestOfLead(ctx.workspaceId, customer.id, null)
         if (conversation === null) {
-            return { summary: this.kit.text(ctx, "simulatedDelivery", { channel: customer.channel }), real: false }
+            return { summary: this.kit.text(ctx, "recordedNoConversation", { channel: customer.channel }), real: false }
         }
         const sent = await this.inConversation(ctx.workspaceId, conversation.id, text)
         if (conversation.channel === WEBSITE_CHANNEL) {

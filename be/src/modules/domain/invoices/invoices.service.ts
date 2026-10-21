@@ -57,9 +57,9 @@ export class InvoicesService {
         return rows[0] ?? null
     }
 
-    /** The newest unpaid invoices of the payment's origin, so simulation cannot settle live sales. */
-    listIssued(workspaceId: string, limit: number, origin: string = "live"): Promise<Array<InvoiceListingRow>> {
-        return this.entityManager.query<Array<InvoiceListingRow>>(LIST_ISSUED_INVOICES, [workspaceId, limit, origin])
+    /** The newest unpaid invoices a payment can settle. */
+    listIssued(workspaceId: string, limit: number): Promise<Array<InvoiceListingRow>> {
+        return this.entityManager.query<Array<InvoiceListingRow>>(LIST_ISSUED_INVOICES, [workspaceId, limit])
     }
 
     /** The newest invoices and their related records for the accounting book. */
@@ -96,13 +96,12 @@ export class InvoicesService {
         return this.insert(input, prefix, last?.invoice_no ?? null, 0)
     }
 
-    /** Marks an invoice paid only within the payment's origin and answers it. */
-    async markPaid(workspaceId: string, invoiceId: string, origin: string = "live"): Promise<InvoiceRow> {
+    /** Marks an invoice paid and answers it. */
+    async markPaid(workspaceId: string, invoiceId: string): Promise<InvoiceRow> {
         const rows = await this.entityManager.query<Array<InvoiceRow>>(MARK_INVOICE_PAID, [
             workspaceId,
             invoiceId,
             this.clock.now().toISOString(),
-            origin,
         ])
         const [paid] = rows
         if (paid === undefined) throw new InvoicesError({ code: InvoicesErrorCode.NotFound })
@@ -119,7 +118,6 @@ export class InvoicesService {
             nextInvoiceNumber(prefix, last, skip),
             input.amountVnd,
             dueAtOf(now).toISOString(),
-            input.origin,
             input.issuedBy,
             now.toISOString(),
         ])

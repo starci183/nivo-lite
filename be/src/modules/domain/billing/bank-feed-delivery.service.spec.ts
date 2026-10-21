@@ -16,7 +16,7 @@ const job: ClaimedJob = {
 
 const build = async () => {
     const inbox = mock<BankFeedService>()
-    inbox.processRecordedFeedDelivery.mockResolvedValue(undefined)
+    inbox.processRecordedFeedDelivery.mockResolvedValue([])
     const claims = mock<JobClaims>()
     claims.advance.mockResolvedValue(undefined)
     const moduleRef = await Test.createTestingModule({

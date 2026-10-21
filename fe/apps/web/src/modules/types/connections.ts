@@ -15,7 +15,7 @@ export type Provider =
     | "telegram_user"
     | "meta"
 
-/** The provider's mode: test money is simulated, live is real. */
+/** The provider's mode: test money is not real and NIVO books none of it, live is real. */
 export type Environment = "test" | "live"
 
 /** What the console does with a provider: which wizard sets it up. */

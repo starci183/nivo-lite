@@ -52,7 +52,6 @@ const expectedQuestions = [
             assignedStaffId: "staff-1",
             assignedStaffName: "Hoa",
             executionId: null,
-            origin: "live",
             createdAt: "2026-10-12T10:00:00.000Z",
             updatedAt: "2026-10-12T10:00:00.000Z",
             completedAt: null,
@@ -86,7 +85,6 @@ const itemOf = builder<AccountingWaitingWorkRow>({
     assigned_staff_id: "staff-1",
     assigned_staff_name: "Hoa",
     execution_id: null,
-    origin: "live",
     created_at: "2026-10-12T10:00:00.000Z",
     updated_at: "2026-10-12T10:00:00.000Z",
     completed_at: null,
@@ -123,6 +121,7 @@ describe("toAccountingWorkbenchView", () => {
             staff: [STAFF],
             ownerName: "Lan",
             role: "owner",
+            creditsSource: null,
         })
 
         const view = subject.toAccountingWorkbenchView(data)

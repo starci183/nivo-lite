@@ -144,7 +144,6 @@ export class OrdersService {
             orderNumberOf(input.orderNo, prefix, taken, attempt),
             input.items,
             input.amountVnd,
-            input.origin,
         ])
         return rows[0] ?? this.insertDraft(input, prefix, taken, attempt + 1)
     }

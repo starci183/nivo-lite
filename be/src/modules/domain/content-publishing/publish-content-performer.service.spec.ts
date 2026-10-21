@@ -35,7 +35,6 @@ const ITEM: WorkItem = {
     evidence_state: "pending",
     assigned_staff_id: null,
     execution_id: null,
-    origin: "live",
     created_at: AT,
     updated_at: AT,
     completed_at: null,

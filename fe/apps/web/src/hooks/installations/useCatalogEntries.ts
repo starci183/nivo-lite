@@ -4,6 +4,7 @@ import { useLocale } from "next-intl"
 import { useModuleCatalog } from "@/hooks/moduleCatalog"
 import { MODULE_KEYS, MODULE_REGISTRY, pickCopy, pickCopyList } from "@/modules/catalog"
 import type { ModuleKey } from "@/modules/catalog"
+import type { InstallationConnectionNeed } from "@/modules/installations"
 import { AGENT_STATUS_TONE, agentHref, agentStatusOf, foldText, instancesOf } from "@/modules/installations"
 import type { DataSlot } from "@/modules/types"
 import { useInstallations } from "./useInstallations"
@@ -22,6 +23,8 @@ interface CatalogEntry {
     readonly mascot: string
     readonly status: ReturnType<typeof agentStatusOf>
     readonly statusTone: (typeof AGENT_STATUS_TONE)[keyof typeof AGENT_STATUS_TONE]
+    /** What an installed agent waits for (`needs_connection`); empty otherwise. */
+    readonly connectionNeeds: ReadonlyArray<InstallationConnectionNeed>
     /** Where an installed agent opens; null when it is not installed. */
     readonly openHref: string | null
 }
@@ -67,6 +70,7 @@ export const useCatalogEntries = (): {
             mascot: def.mascot,
             status,
             statusTone: AGENT_STATUS_TONE[status],
+            connectionNeeds: installation?.connectionNeeds ?? [],
             openHref: installation === undefined ? null : agentHref(key, null),
         }
     })

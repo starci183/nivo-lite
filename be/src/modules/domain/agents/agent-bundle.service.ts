@@ -1,4 +1,4 @@
-import { Injectable } from "@nestjs/common"
+import { Injectable, Optional } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { TOOL_MANIFEST } from "@modules/domain/agent-tools"
 import { agentIdFor } from "@modules/integrations/openclaw"
@@ -40,10 +40,10 @@ export class AgentBundleService {
     constructor(
         @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
         @InjectInstallations() private readonly installations: InstallationDirectory,
-        @InjectKnowledge() private readonly knowledge: KnowledgeLens,
         @InjectModuleProfiles() private readonly modules: ModuleProfiles,
         @InjectMessageCatalog() private readonly catalog: MessageCatalog,
         @InjectLogger() private readonly logger: Logger,
+        @Optional() @InjectKnowledge() private readonly knowledge: KnowledgeLens | null = null,
     ) {}
 
     /** Builds the files of an installation's agent; a module that has no definition is refused. */
@@ -52,6 +52,7 @@ export class AgentBundleService {
         if (folder === null) {
             throw new AgentsError({ code: AgentsErrorCode.InstallationNotFound, params: { id: installation.id } })
         }
+        const lens = this.lens()
         const { workspaceId, module } = installation
         const t: TextOf = (key, params = {}) => this.catalog.get(key, params, BUNDLE_LOCALE)
         const [persona, version, base, sources, memory] = await Promise.all([
@@ -59,12 +60,12 @@ export class AgentBundleService {
             installation.activeContextVersionId === null
                 ? Promise.resolve(null)
                 : this.installations.contextVersionOf(installation.activeContextVersionId),
-            this.knowledge.baseRulesOf([folder, "core"]),
-            this.knowledge.sourcesFor(workspaceId, module, installation.id, SOURCE_LIMIT),
-            this.memoryOf(installation),
+            lens.baseRulesOf([folder, "core"]),
+            lens.sourcesFor(workspaceId, module, installation.id, SOURCE_LIMIT),
+            this.memoryOf(lens, installation),
         ])
         const name = persona?.name ?? t("bundle.defaultAgentName", { module })
-        const audience = this.knowledge.audienceOf(module)
+        const audience = lens.audienceOf(module)
         const baseContract = t("bundle.replyContract", {
             applicationClause: this.modules.applicationClause(),
             applicationShape: this.modules.applicationShape(),
@@ -106,6 +107,12 @@ export class AgentBundleService {
         }
     }
 
+    /** The knowledge lens the full mode binds; the setup mode binds none, so a bundle cannot be built there. */
+    private lens(): KnowledgeLens {
+        if (this.knowledge === null) throw new AgentsError({ code: AgentsErrorCode.KnowledgeUnbound })
+        return this.knowledge
+    }
+
     private async personaOf(workspaceId: string, agentId: string | null): Promise<OptionalAgentPersona> {
         if (agentId === null) return null
         const [row] = await this.entityManager.query<Array<AgentRow>>(FIND_AGENT, [agentId, workspaceId])
@@ -113,8 +120,8 @@ export class AgentBundleService {
     }
 
     /** The shared brain must never stop a sync: when it cannot be read the bundle goes without it. */
-    private memoryOf(installation: Installation): Promise<string> {
-        return this.knowledge
+    private memoryOf(lens: KnowledgeLens, installation: Installation): Promise<string> {
+        return lens
             .memoryFor(installation.workspaceId, installation.module, installation.id)
             .catch((cause: unknown) => {
                 this.logger.error(AgentsLogEvent.MemoryUnavailable, cause, { installationId: installation.id })

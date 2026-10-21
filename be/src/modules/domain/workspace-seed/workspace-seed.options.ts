@@ -1,5 +1,6 @@
-import type { InjectionToken } from "@nestjs/common"
+import type { InjectionToken, Type } from "@nestjs/common"
 import type { Secret } from "@modules/platform/config"
+import type { SeedAgentRecords, SeedConnectors, SeedSources, SeedToolGrants } from "./workspace-seed.port"
 
 /** One user the Auth administrator returns. */
 export interface SeedAuthUser {
@@ -91,12 +92,28 @@ export interface SeedAuth {
     verifyUser(token: string): Promise<string | null>
 }
 
+/** The owner classes the app root binds behind the ports of a profile run; each writes only its own table. */
+export interface WorkspaceSeedPorts {
+    /** Implements the agents port. */
+    readonly agents: Type<SeedAgentRecords>
+    /** Implements the documents port. */
+    readonly sources: Type<SeedSources>
+    /** Implements the tool grants port. */
+    readonly toolGrants: Type<SeedToolGrants>
+    /** The gateway console class, already provided in the app, behind the connectors port. */
+    readonly connectors: Type<SeedConnectors>
+}
+
 /** What the workspace seed takes from the app root. */
 export interface WorkspaceSeedOptions {
     /** The provider token of the Auth administration (a `SeedAuth`) in the app. */
     readonly auth: InjectionToken
+    /** The owner classes behind the ports of a profile run. */
+    readonly ports: WorkspaceSeedPorts
     /** Private command input supplied by the selected target runner. */
     readonly input?: Secret
+    /** Private profile input (`nivo/workspace-profile-input@1`): the connector endpoints of a profile run. */
+    readonly profileInput?: Secret
     /** Writes the closed public receipt, never credentials. */
     readonly print: (line: string) => void
 }

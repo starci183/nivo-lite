@@ -33,7 +33,14 @@ const STATUSES: ReadonlyArray<DocumentStatus> = [
 ]
 const KINDS: ReadonlyArray<DocumentKind> = ["text", "faq", "file", "url"]
 const NIVO_KINDS: ReadonlyArray<NivoItemKind> = ["playbook", "authority", "escalation", "setup_checklist", "tone"]
-const INSTALLATION_STATUSES: ReadonlyArray<InstallationStatus> = ["installing", "setup", "ready", "live", "paused"]
+const INSTALLATION_STATUSES: ReadonlyArray<InstallationStatus> = [
+    "installing",
+    "setup",
+    "ready",
+    "live",
+    "paused",
+    "needs_connection",
+]
 const OPERATING_MODES: ReadonlyArray<OperatingMode> = ["assist", "autopilot"]
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/iu
@@ -142,6 +149,7 @@ export const toWireInstallation = (row: ModuleInstallationType): Installation | 
         agentName: row.agentName,
         agentHandle: row.agentHandle ?? null,
         status: INSTALLATION_STATUSES.find((known) => known === row.status) ?? "setup",
+        connectionNeeds: row.connectionNeeds,
         operatingMode: OPERATING_MODES.find((known) => known === row.operatingMode) ?? "assist",
         liveEnabled: row.liveEnabled,
         activeContextVersionId: row.activeContextVersionId ?? null,

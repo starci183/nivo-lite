@@ -43,7 +43,6 @@ const rowOf = builder<EffectsRow>({
     customer_name: "Mai",
     customer_phone: "84912345678",
     customer_email: "mai@example.com",
-    origin: "live",
     cancel_reason: null,
     reschedule_count: 1,
     service_name: "Cut",

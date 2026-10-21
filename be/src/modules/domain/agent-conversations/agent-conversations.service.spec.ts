@@ -10,6 +10,10 @@ import {
     FIND_CONVERSATION_TARGET,
     FIND_LATEST_LEAD_CONVERSATION,
     FIND_TURN_CONVERSATION,
+    HAND_CONVERSATION_TO_AGENT,
+    FIND_CONVERSATION_KIND,
+    FIND_CONVERSATION_PARTY,
+    SET_CONVERSATION_PARTY,
     HAND_CONVERSATION_TO_PERSON,
     INSERT_CHAT_CONVERSATION,
     INSERT_CONVERSATION,
@@ -397,5 +401,70 @@ describe("AgentConversationsService", () => {
                 code: AgentConversationsErrorCode.NotFound,
             })
         })
+    })
+})
+
+describe("AgentConversationsService hand-over", () => {
+    it("hands the conversation to another agent in the given transaction and says whether it moved", async () => {
+        const { service, em } = await build()
+        const inside = mockEntityManager({
+            query: [
+                [HAND_CONVERSATION_TO_AGENT, [{ id: "conv-1" }]],
+                [HAND_CONVERSATION_TO_AGENT, []],
+            ],
+        })
+        const move = { manager: inside, workspaceId: "ws-1", conversationId: "conv-1", agentId: "agent-2" }
+
+        await expect(service.handToAgent({ ...move, installationId: "inst-2" })).resolves.toBe(true)
+        await expect(service.handToAgent({ ...move, installationId: null })).resolves.toBe(false)
+        expect(inside.query).toHaveBeenNthCalledWith(1, HAND_CONVERSATION_TO_AGENT, [
+            "ws-1",
+            "conv-1",
+            "agent-2",
+            "inst-2",
+        ])
+        expect(inside.query).toHaveBeenNthCalledWith(2, HAND_CONVERSATION_TO_AGENT, ["ws-1", "conv-1", "agent-2", null])
+        expect(em.query).not.toHaveBeenCalled()
+    })
+
+    it("tells an owner's test chat from a customer's conversation and a missing one", async () => {
+        const { service } = await build({ [FIND_CONVERSATION_KIND]: [{ kind: "test" }] })
+        await expect(service.isTestChat("conv-1")).resolves.toBe(true)
+        const customer = await build({ [FIND_CONVERSATION_KIND]: [{ kind: "customer" }] })
+        await expect(customer.service.isTestChat("conv-1")).resolves.toBe(false)
+        const missing = await build({ [FIND_CONVERSATION_KIND]: [] })
+        await expect(missing.service.isTestChat("conv-9")).resolves.toBe(false)
+        expect(missing.em.query).toHaveBeenCalledWith(FIND_CONVERSATION_KIND, ["conv-9"])
+    })
+})
+
+describe("AgentConversationsService connector party", () => {
+    it("answers the party a conversation remembers, with an empty name when the connector gave none", async () => {
+        const { service, em } = await build({
+            [FIND_CONVERSATION_PARTY]: [{ connector_party_id: "p1", connector_party_name: "Lan" }],
+        })
+        await expect(service.partyOf("ws-1", "conv-1")).resolves.toEqual({ partyId: "p1", name: "Lan" })
+        expect(em.query).toHaveBeenCalledWith(FIND_CONVERSATION_PARTY, ["ws-1", "conv-1"])
+        const unnamed = await build({
+            [FIND_CONVERSATION_PARTY]: [{ connector_party_id: "p2", connector_party_name: null }],
+        })
+        await expect(unnamed.service.partyOf("ws-1", "conv-1")).resolves.toEqual({ partyId: "p2", name: "" })
+    })
+
+    it("answers null while the conversation remembers no party", async () => {
+        const { service } = await build({ [FIND_CONVERSATION_PARTY]: [] })
+        await expect(service.partyOf("ws-1", "conv-1")).resolves.toBeNull()
+    })
+
+    it("remembers the party the connector answered", async () => {
+        const { service, em } = await build({ [SET_CONVERSATION_PARTY]: [] })
+        await expect(
+            service.rememberParty({
+                workspaceId: "ws-1",
+                conversationId: "conv-1",
+                party: { partyId: "p1", name: "Lan" },
+            }),
+        ).resolves.toBeUndefined()
+        expect(em.query).toHaveBeenCalledWith(SET_CONVERSATION_PARTY, ["ws-1", "conv-1", "p1", "Lan"])
     })
 })

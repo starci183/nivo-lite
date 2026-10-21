@@ -26,12 +26,12 @@ describe("ProfileSeedWorkspaceCli", () => {
         })
     })
 
-    it("is a dry run with empty selectors when no option is given", async () => {
+    it("hands an empty option set to the service, which treats it as a dry run", async () => {
         const { cli, profiles } = await build()
 
         await cli.run([], {})
 
-        expect(profiles.profileOperator).toHaveBeenCalledWith({ profile: "", owner: "", execute: false })
+        expect(profiles.profileOperator).toHaveBeenCalledWith({})
     })
 
     it("parses its options", async () => {

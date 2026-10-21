@@ -1,8 +1,6 @@
 import { Test } from "@nestjs/testing"
-import * as subject from "./brand-image.policy"
+import { imageArgs, imageStylesOf, luminanceOf, wrapText } from "./brand-image.policy"
 import type { ImageJob } from "./content-agent.contracts"
-
-const { imageArgs, imageStylesOf, luminanceOf, wrapText } = subject
 
 const kitOf = (hexes: ReadonlyArray<string>) => ({
     brandName: "H",
@@ -83,11 +81,10 @@ describe("wrapText", () => {
 })
 
 const SUBJECT = Symbol("brand-image.policy")
-const POLICY = { imageArgs, imageStylesOf, luminanceOf, wrapText }
 
 const buildSubject = async () => {
     const moduleRef = await Test.createTestingModule({
-        providers: [{ provide: SUBJECT, useValue: POLICY }],
+        providers: [{ provide: SUBJECT, useValue: { imageArgs, imageStylesOf, luminanceOf, wrapText } }],
     }).compile()
     return moduleRef.get<typeof import("./brand-image.policy")>(SUBJECT)
 }

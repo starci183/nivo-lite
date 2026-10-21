@@ -77,7 +77,7 @@ export class KnowledgeRecallService {
             ),
             left,
         )
-        if (factLines.length === 0 && passageLines.length === 0) return { brief: "", passages: [] }
+        if (factLines.length === 0 && passageLines.length === 0) return { brief: "", passages: [], facts: [] }
         const brief = [
             "BUSINESS KNOWLEDGE (use only what is here; never invent a price, policy, date or promise that is not written):",
             factLines.length > 0 ? `Confirmed facts:\n${factLines.join("\n")}` : "",
@@ -85,7 +85,7 @@ export class KnowledgeRecallService {
         ]
             .filter((part) => part !== "")
             .join("\n")
-        return { brief, passages: passages.slice(0, passageLines.length) }
+        return { brief, passages: passages.slice(0, passageLines.length), facts: facts.slice(0, factLines.length) }
     }
 
     /** The standing part of an agent's memory for its synced workspace: every fact of its view, grouped by subject, and its approved lessons. */

@@ -153,7 +153,7 @@ const registerDraft = () => {
             await expect(orders.draft(draftOf())).resolves.toEqual(drafted)
             expect(em.query.mock.calls).toEqual([
                 [COUNT_ORDERS_WITH_PREFIX, ["ws-1", "DH-20261013-"]],
-                [INSERT_ORDER_DRAFT, ["ws-1", "lead-1", "event-1", "DH-20261013-0004", "2 x Tea", 90000, "live"]],
+                [INSERT_ORDER_DRAFT, ["ws-1", "lead-1", "event-1", "DH-20261013-0004", "2 x Tea", 90000]],
             ])
         })
 
@@ -175,7 +175,6 @@ const registerDraft = () => {
                 "DH-20261013-0001",
                 "2 x Tea",
                 90000,
-                "live",
             ])
         })
 
@@ -191,8 +190,8 @@ const registerDraft = () => {
 
             await expect(orders.draft(draftOf({ orderNo: "SHOP-77" }))).resolves.toEqual(drafted)
             expect(em.query.mock.calls).toEqual([
-                [INSERT_ORDER_DRAFT, ["ws-1", "lead-1", "event-1", "SHOP-77", "2 x Tea", 90000, "live"]],
-                [INSERT_ORDER_DRAFT, ["ws-1", "lead-1", "event-1", "SHOP-77-11", "2 x Tea", 90000, "live"]],
+                [INSERT_ORDER_DRAFT, ["ws-1", "lead-1", "event-1", "SHOP-77", "2 x Tea", 90000]],
+                [INSERT_ORDER_DRAFT, ["ws-1", "lead-1", "event-1", "SHOP-77-11", "2 x Tea", 90000]],
             ])
         })
 
@@ -298,7 +297,6 @@ const orderOf = builder<SalesOrderRow>({
     items: "2 x Tea",
     amount_vnd: 90000,
     status: "draft",
-    origin: "live",
     confirmed_by: null,
     confirmed_at: null,
     created_at: "2026-10-13T01:00:00.000Z",
@@ -314,7 +312,6 @@ const draftOf = builder<NewOrderDraft>({
     orderNo: null,
     items: "2 x Tea",
     amountVnd: 90000,
-    origin: "live",
 })
 
 const build = async (entityManager: MockEntityManager) => {

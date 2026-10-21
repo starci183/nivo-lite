@@ -26,7 +26,6 @@ export interface InboxFeedRow {
     readonly source: string
     readonly kind: string
     readonly ago: string
-    readonly origin: { readonly label: string; readonly tone: "warning" | "success" }
     readonly status: { readonly label: string; readonly tone: "neutral" | "success" | "warning" | "danger" }
     readonly body: string
     /** Sender, contact, amount, reference and event lines. */
@@ -53,7 +52,7 @@ export interface InboxFeedBaseProps {
     readonly on: { readonly refresh: () => void }
 }
 
-/** Feed of received inputs, newest first. Every row says whether it is live or simulated. */
+/** Feed of received inputs, newest first, each with where it stands. */
 export const InboxFeedBase = (props: InboxFeedBaseProps) => {
     const view = props.props
     return (
@@ -87,7 +86,6 @@ export const InboxFeedBase = (props: InboxFeedBaseProps) => {
                                 </Text>
                             </div>
                             <div className={FEED_BADGES_CLASS}>
-                                <Badge tone={row.origin.tone}>{row.origin.label}</Badge>
                                 <Badge tone={row.status.tone}>{row.status.label}</Badge>
                             </div>
                         </div>

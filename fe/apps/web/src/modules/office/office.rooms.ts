@@ -17,10 +17,10 @@ const CARD_TYPES: ReadonlyArray<OfficeCardPayload["type"]> = [
     "approval_request",
     "schedule_confirmed",
     "weekly_report",
-    "booking_held",
     "daily_summary",
     "handoff_note",
     "exception",
+    "action_done",
 ]
 const CARD_STATES: ReadonlyArray<OfficeResultCardView["state"]> = [
     "pending",

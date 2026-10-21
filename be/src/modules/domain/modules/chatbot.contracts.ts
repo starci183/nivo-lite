@@ -28,6 +28,7 @@ export const CHATBOT_MODULE: ModuleDefinition = {
     requires: {
         capabilities: ["customer_chat"],
         connections: [],
+        roles: { requires: [], uses: ["identity.find", "identity.upsert"] },
     },
     connectionProviders: ["telegram", "zalo_oa", "meta"],
     defaultOperatingMode: "assist",
@@ -204,17 +205,6 @@ export const CHATBOT_MODULE: ModuleDefinition = {
             note: catalogCopy("modulesCatalog.chatbot.authorityActions.gateway_call.note", "en"),
             next: [],
         },
-        {
-            action: "care_early_checkin",
-            label: catalogText("modulesCatalog.chatbot.authorityActions.care_early_checkin.label"),
-            mode: "ask",
-            limitVnd: null,
-            requiredFields: [],
-            amountLimit: false,
-            maxMode: null,
-            note: catalogCopy("modulesCatalog.chatbot.authorityActions.care_early_checkin.note", "en"),
-            next: [],
-        },
     ],
     accepts: [
         {
@@ -237,13 +227,6 @@ export const CHATBOT_MODULE: ModuleDefinition = {
             subjectType: "conversation",
             requiredFields: ["subject_id"],
             description: catalogText("modulesCatalog.chatbot.accepts.gateway_call.description"),
-        },
-        {
-            command: "early_checkin",
-            action: "care_early_checkin",
-            subjectType: "conversation",
-            requiredFields: [],
-            description: catalogText("modulesCatalog.chatbot.accepts.early_checkin.description"),
         },
     ],
 }

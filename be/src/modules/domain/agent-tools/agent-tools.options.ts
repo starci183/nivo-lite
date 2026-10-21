@@ -15,6 +15,10 @@ export interface AgentToolsPorts {
     readonly handoffTool: Type<HandoffTool>
     /** Finds the lead of a conversation (the channels lane). */
     readonly conversationLeads: Type<ConversationLeads>
+    /** Provider that runs the connector meta-tools for a conversation's agent (the customer turns). */
+    readonly gatewayTools: InjectionToken
+    /** Provider that hands a conversation to another agent (the customer turns). */
+    readonly agentHandoff: InjectionToken
     /** Provider that mints and verifies tool tokens (OpenClaw). */
     readonly toolTokens: InjectionToken
 }

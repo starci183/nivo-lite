@@ -113,7 +113,6 @@ interface WorkWire {
     readonly status: string
     readonly reason?: string | null
     readonly error?: string | null
-    readonly origin: string
     readonly created_at: string
     readonly updated_at: string
     readonly completed_at?: string | null
@@ -144,7 +143,6 @@ export const toOfficeWork = (row: WorkWire): OfficeWork => ({
     status: row.status,
     reason: row.reason ?? null,
     error: row.error ?? null,
-    origin: row.origin,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     completedAt: row.completed_at ?? null,

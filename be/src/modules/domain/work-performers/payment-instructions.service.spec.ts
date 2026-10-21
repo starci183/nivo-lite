@@ -38,7 +38,6 @@ const item: WorkItem = {
     evidence_state: "pending",
     assigned_staff_id: null,
     execution_id: null,
-    origin: "live",
     created_at: "2026-10-12T09:00:00.000Z",
     updated_at: "2026-10-12T09:00:00.000Z",
     completed_at: null,
@@ -53,7 +52,6 @@ const invoiceOf = builder<InvoiceRow>({
     invoice_no: "INV-1",
     amount_vnd: 450000,
     status: "issued",
-    origin: "live",
     issued_by: "Lan",
     paid_at: null,
 })
@@ -69,7 +67,6 @@ const lead: LeadRecordRow = {
     context_summary: null,
     phone: null,
     email: null,
-    origin: "live",
 }
 
 const profileOf = (knowledge: string): AgentProfile => ({

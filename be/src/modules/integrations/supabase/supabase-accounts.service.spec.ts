@@ -65,4 +65,13 @@ describe("SupabaseAccountsService", () => {
         await expect(accounts.updateUserById("u-1", { password: "pw2" })).resolves.toBe(answer)
         expect(auth.updateUserById).toHaveBeenCalledWith("u-1", { password: "pw2" })
     })
+
+    it("answers what Auth said about a deleted user", async () => {
+        const { accounts, auth } = await build()
+        const answer = failed("user not found")
+        auth.deleteUser.mockResolvedValue(answer)
+
+        await expect(accounts.deleteUser("u-1")).resolves.toBe(answer)
+        expect(auth.deleteUser).toHaveBeenCalledWith("u-1")
+    })
 })

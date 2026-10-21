@@ -30,7 +30,6 @@ const itemOf = builder<WorkItem>({
     evidence_state: "pending",
     assigned_staff_id: null,
     execution_id: null,
-    origin: "live",
     created_at: "2026-10-12T09:00:00.000Z",
     updated_at: "2026-10-12T09:00:00.000Z",
     completed_at: null,
@@ -63,19 +62,6 @@ describe("ReplyCustomerPerformerService", () => {
         const item = itemOf()
 
         await expect(service.prepare(ctx, item)).resolves.toEqual({ proposal: item.proposal })
-    })
-
-    it("records a simulated reply without delivering it", async () => {
-        const { service, delivery } = await build()
-
-        await expect(service.perform(ctx, itemOf({ origin: "simulated" }), proposalOf())).resolves.toEqual({
-            summary: "simulatedDelivery|website",
-            evidence: "captured",
-            href: "/leads/lead-1",
-            lead_id: "lead-1",
-            detail: "It is 30k a box",
-        })
-        expect(delivery.inConversation).not.toHaveBeenCalled()
     })
 
     it("stores the answer under the deciding member's name and reports the channel push", async () => {
@@ -144,22 +130,6 @@ describe("ReplyCustomerPerformerService", () => {
 
         expect(performed.detail).toBeNull()
         expect(performed.summary).toBe("replyPosted")
-    })
-
-    it("captures a simulated reply without a draft or a lead", async () => {
-        const { service, delivery } = await build()
-
-        await expect(
-            service.perform(ctx, itemOf({ origin: "simulated", lead_id: null }), { summary: "s", fields: {} }),
-        ).resolves.toEqual({
-            summary: "simulatedDelivery|website",
-            evidence: "captured",
-            href: "/chat",
-            lead_id: null,
-            detail: null,
-        })
-        expect(delivery.inConversation).not.toHaveBeenCalled()
-        expect(delivery.approvedInConversation).not.toHaveBeenCalled()
     })
 
     it("stores an owner's approval even when the channel does not push it", async () => {

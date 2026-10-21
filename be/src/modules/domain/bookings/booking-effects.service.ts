@@ -121,7 +121,6 @@ export class BookingEffectsService {
         return this.inbound.handOffOrder(
             {
                 workspaceId: event.workspaceId,
-                origin: row.origin,
                 sender: row.customer_name,
                 contact: row.customer_phone ?? row.customer_email,
                 body: this.messages.get("bookings.handoff.body", { service: row.service_name }, STORED_LOCALE),

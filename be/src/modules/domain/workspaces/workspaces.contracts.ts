@@ -165,3 +165,11 @@ export interface ShellWindow {
     /** End of the window, ISO 8601. */
     readonly to: string
 }
+
+/** The brand a workspace shows in the console header and the Hub. */
+export interface WorkspaceBrand {
+    /** The brand name; the workspace name stays its identity. */
+    readonly displayName: string
+    /** The logo: an app-relative path or an https URL. */
+    readonly logoUrl: string
+}

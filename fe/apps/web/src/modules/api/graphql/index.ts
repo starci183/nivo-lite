@@ -35,7 +35,6 @@ import type {
     DecideSalesDraftMutation,
     HiringCandidateDetailQuery,
     HiringWorkbenchQuery,
-    InboundSimulationStatusQuery,
     InventoryTemplatesQuery,
     InventoryWorkbenchQuery,
     KnowledgeSourceQuery,
@@ -46,12 +45,12 @@ import type {
     LeadJourneyQuery,
     LessonMiningStatusQuery,
     LoyaltyBoardQuery,
+    ModuleInstallationsQuery,
     NivoKnowledgeQuery,
     PublicBookingPageQuery,
     PublicHiringInterviewQuery,
     PublicHiringJobQuery,
     PublicHiringOfferQuery,
-    RenameInstallationAgentMutation,
     RequestContentDraftMutation,
     RequestDataSyncMutation,
     ReturnZaloAuthorizationMutation,
@@ -61,7 +60,6 @@ import type {
     SaveVideoBrandMutation,
     ShiftsMineQuery,
     ShiftsWorkbenchQuery,
-    SimulateInboundMutation,
     StartMoneyConnectionMutation,
     StartWebhookConnectionMutation,
     TestOpenApiOperationQuery,
@@ -205,8 +203,6 @@ export type HiringSettingsType = SaveHiringSettingsMutation["saveHiringSettings"
 export type HiringSlotType = HiringWorkbenchQuery["hiringWorkbench"]["interviews"][number]["proposedSlots"][number]
 /** The `HiringWindowType` object of the back end contract, as the operations of this app select it. */
 export type HiringWindowType = HiringWorkbenchQuery["hiringWorkbench"]["members"][number]["windows"][number]
-/** The `InboundSimulationStatusType` object of the back end contract, as the operations of this app select it. */
-export type InboundSimulationStatusType = InboundSimulationStatusQuery["inboundSimulationStatus"]
 /** The `InventoryItemType` object of the back end contract, as the operations of this app select it. */
 export type InventoryItemType = InventoryWorkbenchQuery["inventoryWorkbench"]["items"][number]
 /** The `InventoryMovementType` object of the back end contract, as the operations of this app select it. */
@@ -272,7 +268,7 @@ export type MetaWizardConnectionType = ChooseMetaPageMutation["chooseMetaPage"]
 /** The `MissingRequirementType` object of the back end contract, as the operations of this app select it. */
 export type MissingRequirementType = UpdateAutomationPipelineMutation["updateAutomationPipeline"]["missing"][number]
 /** The `ModuleInstallationType` object of the back end contract, as the operations of this app select it. */
-export type ModuleInstallationType = RenameInstallationAgentMutation["renameInstallationAgent"]
+export type ModuleInstallationType = ModuleInstallationsQuery["moduleInstallations"][number]
 /** The `NivoEntryType` object of the back end contract, as the operations of this app select it. */
 export type NivoEntryType = NivoKnowledgeQuery["nivoKnowledge"][number]
 /** The `OpenApiTestType` object of the back end contract, as the operations of this app select it. */
@@ -335,8 +331,6 @@ export type ShiftsSwapType = ShiftsMineQuery["shiftsMine"]["swaps"][number]
 export type ShiftsWeekType = ShiftsWorkbenchQuery["shiftsWorkbench"]["week"]
 /** The `ShiftsWorkItemType` object of the back end contract, as the operations of this app select it. */
 export type ShiftsWorkItemType = NonNullable<ShiftsMineQuery["shiftsMine"]["leaves"][number]["item"]>
-/** The `SimulateInboundType` object of the back end contract, as the operations of this app select it. */
-export type SimulateInboundType = SimulateInboundMutation["simulateInbound"]
 /** The `TemplateDefinitionType` object of the back end contract, as the operations of this app select it. */
 export type TemplateDefinitionType = UpdateAutomationPipelineMutation["updateAutomationPipeline"]["def"]
 /** The `TemplateSettingType` object of the back end contract, as the operations of this app select it. */

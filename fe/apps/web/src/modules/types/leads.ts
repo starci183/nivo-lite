@@ -20,8 +20,6 @@ export interface LeadRecord {
     readonly stage: LeadStageId
     /** The AI-prepared brief; null until one is prepared. */
     readonly context_summary: string | null
-    /** `live`, `simulated` or null for a lead recorded before origins existed. */
-    readonly origin: string | null
     readonly created_at: string
 }
 

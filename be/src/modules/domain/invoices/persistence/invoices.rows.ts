@@ -14,8 +14,6 @@ export interface InvoiceRow {
     readonly amount_vnd: number
     /** `draft`, `issued`, `paid` or `void`. */
     readonly status: string
-    /** `live` or `simulated`. */
-    readonly origin: string
     /** Who issued it. */
     readonly issued_by: string | null
     /** When it was paid, ISO text. */

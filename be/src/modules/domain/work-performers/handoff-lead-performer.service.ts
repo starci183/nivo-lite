@@ -47,7 +47,6 @@ export class HandoffLeadPerformerService implements WorkPerformer {
             email,
             name: textOf(fields.contact_name),
             channel,
-            origin: item.origin,
         })
         const lead =
             known ??
@@ -59,11 +58,10 @@ export class HandoffLeadPerformerService implements WorkPerformer {
                 need: textOf(fields.need),
                 phone,
                 email,
-                origin: item.origin,
             }))
         if (known === null) {
             await this.logCapture(ctx, item, lead.id, channel, textOf(fields.transcript))
-            await this.events.leadCreated(ctx.workspaceId, lead, item.origin)
+            await this.events.leadCreated(ctx.workspaceId, lead)
         } else if ((phone !== null && known.phone === null) || (email !== null && known.email === null)) {
             await this.leads.fillContact({ workspaceId: ctx.workspaceId, leadId: lead.id, phone, email })
         }

@@ -67,7 +67,6 @@ export const itemOf = builder<WorkItem>({
     evidence_state: "pending",
     assigned_staff_id: null,
     execution_id: null,
-    origin: "live",
     created_at: NOW,
     updated_at: NOW,
     completed_at: null,

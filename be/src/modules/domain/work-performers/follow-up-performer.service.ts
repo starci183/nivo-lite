@@ -72,7 +72,7 @@ export class FollowUpPerformerService implements WorkPerformer {
     async perform(ctx: WorkContext, item: WorkItem, proposal: Proposal, by: PerformedBy): Promise<Performed> {
         const lead = await this.leads.require(ctx.workspaceId, this.leadIdOf(item))
         const text = proposal.draft ?? proposal.summary
-        const sent = await this.delivery.toCustomer(ctx, lead, text, item.origin)
+        const sent = await this.delivery.toCustomer(ctx, lead, text)
         const responsibilityId =
             textOf(proposal.fields.responsibility_id) === ""
                 ? (await this.responsibilities.ensureFor(ctx, lead.id)).id

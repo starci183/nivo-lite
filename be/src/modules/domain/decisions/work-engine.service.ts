@@ -130,7 +130,7 @@ export class WorkEngineService {
         return this.approve(ctx, item, merged.proposal, merged.changed, by, note)
     }
 
-    /** Starts the department's work for one recorded input: the same path for simulated and live inputs. */
+    /** Starts the department's work for one recorded input, under the policy gate like every other work. */
     startInboundWork(
         ctx: WorkContext,
         event: InboundWorkSource,
@@ -144,7 +144,6 @@ export class WorkEngineService {
             subject_id: event.id,
             inbound_event_id: event.id,
             lead_id: leadId,
-            origin: event.origin,
             dedupeKey: `${action}:inbound:${event.id}`,
             seed,
         })

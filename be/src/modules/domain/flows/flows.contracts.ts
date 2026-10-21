@@ -8,7 +8,6 @@ export type FlowCommandKind =
     | "decide"
     | "hold"
     | "assign"
-    | "simulate_inbound"
     | "take_over"
     | "send_as_human"
     | "authority_from_chat"

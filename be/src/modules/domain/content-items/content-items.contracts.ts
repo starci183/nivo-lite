@@ -100,6 +100,14 @@ export interface ScheduledMark {
     readonly scheduled_at: string
 }
 
+/** A post whose scheduled moment on a channel has come, with the reference that channel gave when it was scheduled. */
+export interface DueChannelPost extends ScheduleView {
+    /** The workspace. */
+    readonly workspaceId: string
+    /** The channel's reference (a Zalo article creation token). */
+    readonly ref: string
+}
+
 /** A post for the scheduler, or null when it is gone. */
 export type OptionalScheduleView = ScheduleView | null
 

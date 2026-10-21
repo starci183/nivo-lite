@@ -46,7 +46,6 @@ export class InboundEventsService {
         const key = bankDedupeKey(event.providerRef)
         const [created] = await event.manager.query<Array<EventIdRow>>(INSERT_BANK_EVENT, [
             event.workspaceId,
-            event.origin,
             event.sender,
             event.body,
             event.amountVnd,
@@ -112,7 +111,6 @@ export class InboundEventsService {
             input.workspaceId,
             input.channel,
             input.kind,
-            input.origin,
             input.senderName,
             input.senderContact,
             input.body,
@@ -134,7 +132,6 @@ export class InboundEventsService {
     async handOffOrder(order: OrderHandoff, manager: EntityManager): Promise<boolean> {
         const rows = await manager.query<Array<{ id: string }>>(INSERT_ORDER_HANDOFF, [
             order.workspaceId,
-            order.origin,
             order.sender,
             order.contact,
             order.body,

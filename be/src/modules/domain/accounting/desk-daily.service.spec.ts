@@ -3,15 +3,18 @@ import { FakeClock, mock } from "@starci/jest-preset"
 import { BrainFactsService } from "@modules/domain/brain-facts"
 import type { FactRecord } from "@modules/domain/brain-facts"
 import { InstallationRecordsService } from "@modules/domain/module-installations"
+import type { InstallationRecord, InstallationStatus } from "@modules/domain/module-installations"
+import { ModuleReadinessService } from "@modules/domain/modules"
 import { CLOCK } from "@modules/platform/clock"
-import type { HubCardPayload } from "./accounting-desk.contracts"
+import type { DeskConnections, HubCardPayload } from "./accounting-desk.contracts"
 import { ACCOUNTING_GATEWAY } from "./accounting-gateway.decorators"
-import type { AccountingGateway, GatewayBankCredit } from "./accounting-gateway.port"
+import type { AccountingGateway, PaymentCredit } from "./accounting-gateway.port"
 import { AccountingRoomService } from "./accounting-room.service"
 import { DeskDailyService, vnDayOf } from "./desk-daily.service"
 import { EinvoiceReviewService } from "./einvoice-review.service"
-import { FolioReconcileService } from "./folio-reconcile.service"
-import { kindText } from "./messages/accounting-desk.messages"
+import { CARD_COPY, kindText } from "./messages/accounting-desk.messages"
+import { ReceivableReconcileService } from "./receivable-reconcile.service"
+import { SupplierPaymentsService } from "./supplier-payments.service"
 
 const WS = "ws-1"
 
@@ -27,24 +30,50 @@ const PROFILE_FACTS = [
     fact("supplier:linh-an", "term_days", "7"),
 ]
 
-const credit = (bankTxnRef: string, matched: boolean): GatewayBankCredit => ({
-    bankTxnRef,
-    content: "CK HAKUEN F7K2Q9",
+const credit = (creditRef: string, matched: boolean): PaymentCredit => ({
+    creditRef,
+    reference: "CK PAY F7K2Q9",
     amountVnd: 12_800_000,
     occurredAt: "2026-10-19T20:00:00Z",
     matched,
 })
 
-const build = async (facts: ReadonlyArray<FactRecord> = PROFILE_FACTS) => {
+interface BuildOptions {
+    /** The Second Brain facts of the workspace. */
+    readonly facts?: ReadonlyArray<FactRecord>
+    /** The installation of the accounting module, or null when it is not installed. */
+    readonly installation?: InstallationRecord | null
+    /** The status the run guard settles the installation in. */
+    readonly status?: InstallationStatus
+    /** The optional features the workspace has tools for. */
+    readonly connected?: DeskConnections
+}
+
+const INSTALLATION = mock<InstallationRecord>({ id: "inst-1", workspaceId: WS, moduleKey: "accounting" })
+
+const build = async ({
+    facts = PROFILE_FACTS,
+    installation = INSTALLATION,
+    status = "live",
+    connected = { invoices: true, receivables: true },
+}: BuildOptions = {}) => {
     const brain = mock<BrainFactsService>({ list: jest.fn(() => Promise.resolve(facts)) })
     const installations = mock<InstallationRecordsService>({
         workspacesOf: jest.fn(() => Promise.resolve([WS, "ws-2"])),
+        firstOfModule: jest.fn(() => Promise.resolve(installation)),
     })
+    const readiness = mock<ModuleReadinessService>({ settle: jest.fn(() => Promise.resolve(status)) })
     const gateway = mock<AccountingGateway>({
-        listBankCredits: jest.fn(() =>
-            Promise.resolve([credit("SP-1", true), credit("SP-2", false), credit("SP-3", false)]),
+        connections: jest.fn(() => Promise.resolve(connected)),
+        listPaymentCredits: jest.fn(() =>
+            Promise.resolve({
+                tool: "bank.transactions.list",
+                value: [credit("SP-1", true), credit("SP-2", false), credit("SP-3", false)],
+            }),
         ),
-        listOpenPayables: jest.fn(() =>
+    })
+    const supplierPayments = mock<SupplierPaymentsService>({
+        openPayables: jest.fn(() =>
             Promise.resolve([
                 {
                     supplier: "Linh An",
@@ -57,13 +86,15 @@ const build = async (facts: ReadonlyArray<FactRecord> = PROFILE_FACTS) => {
         ),
     })
     const review = mock<EinvoiceReviewService>({
-        review: jest.fn(() => Promise.resolve({ valid: 38, needsReview: 3, invalidTaxCode: 1 })),
+        review: jest.fn(() =>
+            Promise.resolve({ valid: 38, needsReview: 3, invalidTaxCode: 1, tool: "inbox.invoices.list" }),
+        ),
     })
-    const folios = mock<FolioReconcileService>({
+    const receivables = mock<ReceivableReconcileService>({
         reconcile: jest
             .fn()
-            .mockResolvedValueOnce({ kind: "recorded" })
-            .mockResolvedValueOnce({ kind: "mismatch", match: "partial" }),
+            .mockResolvedValueOnce({ kind: "no_reference", tool: null })
+            .mockResolvedValueOnce({ kind: "recorded", tool: "billing.receivables.find" }),
     })
     const room = mock<AccountingRoomService>({
         post: jest.fn(() => Promise.resolve()),
@@ -76,14 +107,16 @@ const build = async (facts: ReadonlyArray<FactRecord> = PROFILE_FACTS) => {
             DeskDailyService,
             { provide: BrainFactsService, useValue: brain },
             { provide: InstallationRecordsService, useValue: installations },
+            { provide: ModuleReadinessService, useValue: readiness },
             { provide: ACCOUNTING_GATEWAY, useValue: gateway },
             { provide: EinvoiceReviewService, useValue: review },
-            { provide: FolioReconcileService, useValue: folios },
+            { provide: ReceivableReconcileService, useValue: receivables },
+            { provide: SupplierPaymentsService, useValue: supplierPayments },
             { provide: AccountingRoomService, useValue: room },
             { provide: CLOCK, useValue: clock },
         ],
     }).compile()
-    return { daily: moduleRef.get(DeskDailyService), brain, review, folios, room }
+    return { daily: moduleRef.get(DeskDailyService), brain, readiness, gateway, review, receivables, room }
 }
 
 describe("DeskDailyService", () => {
@@ -92,11 +125,12 @@ describe("DeskDailyService", () => {
         expect(vnDayOf(new Date("2026-10-19T16:59:59Z"))).toBe("2026-10-19")
     })
 
-    it("checks the invoices, matches the open credits, posts the card and the reminders due today", async () => {
-        const { daily, brain, review, folios, room } = await build()
+    it("settles the installation, checks the invoices, matches the open credits, posts the card and the reminders due today", async () => {
+        const { daily, brain, readiness, review, receivables, room } = await build()
 
         const outcome = await daily.run(WS)
 
+        expect(readiness.settle).toHaveBeenCalledWith(WS, "inst-1")
         expect(brain.list).toHaveBeenCalledWith(WS, { statuses: ["active"] })
         expect(review.review).toHaveBeenCalledWith(
             WS,
@@ -104,7 +138,16 @@ describe("DeskDailyService", () => {
             [{ name: "linh-an", taxCode: "0100109106", termDays: 7 }],
             new Date("2026-10-18T23:30:00Z"),
         )
-        expect(folios.reconcile).toHaveBeenCalledTimes(2)
+        expect(receivables.reconcile).toHaveBeenCalledTimes(2)
+        expect(receivables.reconcile).toHaveBeenCalledWith(WS, credit("SP-2", false), "bank.transactions.list")
+        expect(outcome.status).toBe("ran")
+        expect(outcome.card?.hub.sources?.map((source) => source.ref)).toEqual([
+            "inbox.invoices.list",
+            "bank.transactions.list",
+            "billing.receivables.find",
+            "tax_profile",
+            "tax-calendar-vn",
+        ])
         expect(outcome.card).toEqual(
             expect.objectContaining({
                 day: "2026-10-20",
@@ -119,11 +162,54 @@ describe("DeskDailyService", () => {
         expect(outcome.reminders).toBe(1)
         expect(room.post).toHaveBeenCalledWith(WS, expect.stringContaining(kindText("cit_provisional")))
     })
+})
+
+describe("DeskDailyService run guard and optional roles", () => {
+    it("says a feature without its role is not connected and does not run it", async () => {
+        const { daily, review, receivables } = await build({ connected: { invoices: false, receivables: false } })
+
+        const outcome = await daily.run(WS)
+
+        expect(review.review).not.toHaveBeenCalled()
+        expect(receivables.reconcile).not.toHaveBeenCalled()
+        expect(outcome.card?.stats).toEqual({ valid: 0, needsReview: 0, invalidTaxCode: 0 })
+        expect(outcome.card?.hub.lines?.slice(0, 2)).toEqual([
+            { text: CARD_COPY.notConnected(CARD_COPY.sourceInvoices) },
+            { text: CARD_COPY.notConnected(CARD_COPY.sourceReceivables) },
+        ])
+        expect(outcome.card?.hub.sources?.map((source) => source.ref)).toEqual([
+            "bank.transactions.list",
+            "tax_profile",
+            "tax-calendar-vn",
+        ])
+    })
+
+    it.each([
+        { status: "needs_connection" as const, expected: "needs_connection" },
+        { status: "setup" as const, expected: "not_running" },
+        { status: "paused" as const, expected: "not_running" },
+    ])("does not run while the installation is $status", async ({ status, expected }) => {
+        const { daily, brain, gateway, room } = await build({ status })
+
+        await expect(daily.run(WS)).resolves.toEqual({ status: expected, card: null, reminders: 0 })
+        expect(brain.list).not.toHaveBeenCalled()
+        expect(gateway.listPaymentCredits).not.toHaveBeenCalled()
+        expect(room.postCard).not.toHaveBeenCalled()
+    })
+
+    it("runs a ready installation and refuses a workspace without the accounting module", async () => {
+        const ready = await build({ status: "ready" })
+        await expect(ready.daily.run(WS)).resolves.toMatchObject({ status: "ran" })
+
+        const missing = await build({ installation: null })
+        await expect(missing.daily.run(WS)).resolves.toEqual({ status: "not_installed", card: null, reminders: 0 })
+        expect(missing.readiness.settle).not.toHaveBeenCalled()
+    })
 
     it("skips a workspace without a tax profile and runs every workspace with the accounting module", async () => {
-        const quiet = await build([])
+        const quiet = await build({ facts: [] })
 
-        await expect(quiet.daily.run(WS)).resolves.toEqual({ card: null, reminders: 0 })
+        await expect(quiet.daily.run(WS)).resolves.toEqual({ status: "no_tax_profile", card: null, reminders: 0 })
         await expect(quiet.daily.runAll()).resolves.toBe(2)
         expect(quiet.brain.list).toHaveBeenCalledWith("ws-2", { statuses: ["active"] })
         expect(quiet.review.review).not.toHaveBeenCalled()

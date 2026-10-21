@@ -1,62 +1,43 @@
 import { Test } from "@nestjs/testing"
-import { FakeClock, fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
+import {
+    CONNECTOR_URL,
+    OWNED_SEED,
+    REMOTE_CONNECTOR,
+    ROLE_WIRE,
+    SEED_OWNER,
+    SEED_WS,
+    ensureWireOf,
+    profileWireOf,
+    seedInstallationOf as installationOf,
+} from "@tests/fixtures/builders/workspace-seed.builder"
+import { mock, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { AuthorityRulesService } from "@modules/domain/authority-rules"
-import { CLOCK } from "@modules/platform/clock"
+import { WorkspacesService } from "@modules/domain/workspaces"
 import { Secret } from "@modules/platform/config"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
-import { KnowledgeQueue } from "@modules/queues/knowledge"
 import { WorkspaceSeedErrorCode } from "./errors/workspace-seed.error"
 import { PROFILE_RECEIPT_PREFIX } from "./messages/workspace-seed.messages"
-import {
-    ENSURE_AGENT_INSTALLATION,
-    ENSURE_OFFICE_ROOMS,
-    FIND_PROFILE_SOURCE,
-    INSERT_PROFILE_SOURCE,
-    MOVE_AGENT_HOME,
-    REQUEUE_PROFILE_SOURCE,
-    ROOMS_FUNCTION_PRESENT,
-    SET_WORKSPACE_BRAND,
-    TOOL_GRANTS_PRESENT,
-    UPSERT_PROFILE_AGENT,
-    UPSERT_TOOL_GRANT,
-} from "./persistence/workspace-profile.sql"
-import { HAKUEN_PROFILE } from "./profiles/hakuen.profile"
-import type { ProfileAgent, ProfileDocument, WorkspaceProfile } from "./workspace-profile.contracts"
+import { ENSURE_OFFICE_ROOMS, MOVE_AGENT_HOME, ROOMS_FUNCTION_PRESENT } from "./persistence/workspace-profile.sql"
+import { HAKUEN_PROFILE } from "./profiles/hakuen-profile.templates"
+import { WORKSPACE_PROFILES } from "./profiles/workspace-profiles.templates"
+import { ProfileActivationService } from "./profile-activation.service"
+import type { ProfileAgent, ProfileDocument, ProfileReport, WorkspaceProfile } from "./workspace-profile.contracts"
 import { WorkspaceProfileService } from "./workspace-profile.service"
-import { WORKSPACE_SEED_OPTIONS } from "./workspace-seed.decorators"
+import {
+    SEED_AGENTS,
+    SEED_CONNECTORS,
+    SEED_SOURCES,
+    SEED_TOOL_GRANTS,
+    WORKSPACE_SEED_OPTIONS,
+} from "./workspace-seed.decorators"
+import type { SeedAgentRecords, SeedConnectors, SeedSources, SeedToolGrants } from "./workspace-seed.port"
 import { WorkspaceSeedService } from "./workspace-seed.service"
 
-const WS = "11111111-1111-4111-8111-111111111111"
-const OWNER = "22222222-2222-4222-8222-222222222222"
-const AT = "2026-10-20T08:00:00.000Z"
-const account = (email: string) => ({ email, name: email.slice(0, email.indexOf("@")), password: "private" })
-const ensureWire = (workspaceName: string, owner = "hakuen.demo@gmail.com") => ({
-    schema: "starci/app-workspace-input@1",
-    action: "ensure",
-    workspaceName,
-    owner: account(owner),
-    manager: account("manager@example.test"),
-    staff: account("staff@example.test"),
-})
-const roleWire = {
-    schema: "starci/app-workspace-input@1",
-    action: "role",
-    workspaceId: WS,
-    memberId: OWNER,
-    role: "staff",
-    principalToken: "token",
-}
-const seeded = {
-    schema: "starci/app-workspace-access@1" as const,
-    ok: true as const,
-    action: "ensure" as const,
-    workspaceId: WS,
-    publicReadback: true as const,
-    consumerVerified: false as const,
-    authentication: "password-session" as const,
-    sessionCleanup: "acknowledged" as const,
-}
+const WS = SEED_WS
+const OWNER = SEED_OWNER
+const TARGET = { workspaceId: WS, ownerId: OWNER }
+const HAKUEN_OWNER = "hakuen.demo@gmail.com"
 const agentOf = (handle: string, room: string | null): ProfileAgent => ({
     module: "chatbot",
     name: handle,
@@ -64,14 +45,26 @@ const agentOf = (handle: string, room: string | null): ProfileAgent => ({
     role: "role",
     instructions: "instructions",
     room,
-    tools: room === null ? [] : [{ tool: "hakuen.*", mode: "auto", limitVnd: null, limitPct: 0 }],
+    tools:
+        room === null
+            ? []
+            : [
+                  { tool: "hakuen.*", mode: "auto", limitVnd: null, constraints: [] },
+                  {
+                      tool: "hakuen.booking.confirm",
+                      mode: "auto",
+                      limitVnd: 5_000_000,
+                      constraints: [{ arg: "nights", max: 3 }],
+                  },
+              ],
+    setup: [{ gate: "tone", evidence: "warm" }],
 })
-const documentOf = (title: string, content: string): ProfileDocument => ({
+const documentOf = (title: string): ProfileDocument => ({
     title,
     topic: "topic",
     module: null,
     visibility: "internal",
-    content,
+    content: `# ${title}`,
 })
 const PROFILE: WorkspaceProfile = {
     key: "test",
@@ -89,14 +82,28 @@ const PROFILE: WorkspaceProfile = {
             note: "n",
         },
     ],
-    documents: [documentOf("new", "a"), documentOf("same", "b"), documentOf("changed", "c")],
+    connectors: [],
+    documents: [documentOf("new"), documentOf("same"), documentOf("changed")],
 }
+const EMPTY: WorkspaceProfile = { ...PROFILE, agents: [], documents: [], rules: [] }
+const PROFILE_WIRE = profileWireOf("hakuen")
+const CONNECTOR = REMOTE_CONNECTOR
+const ACTOR = { principalId: OWNER, workspaceId: WS }
 
-const build = async (em: MockEntityManager, input?: unknown) => {
+const build = async (em: MockEntityManager, input?: unknown, profileInput: unknown = PROFILE_WIRE) => {
     const print = jest.fn()
+    const connectors = mock<SeedConnectors>()
+    const agents = mock<SeedAgentRecords>()
+    const sources = mock<SeedSources>()
+    const toolGrants = mock<SeedToolGrants>()
     const seeds = mock<WorkspaceSeedService>()
+    const workspaces = mock<WorkspacesService>()
     const rules = mock<AuthorityRulesService>()
-    const queue = mock<KnowledgeQueue>()
+    const activation = mock<ProfileActivationService>()
+    activation.install.mockResolvedValue(installationOf())
+    activation.activate.mockImplementation((_target, kept) =>
+        Promise.resolve(Object.fromEntries(kept.map((entry) => [entry.handle, "ready" as const]))),
+    )
     const moduleRef = await Test.createTestingModule({
         providers: [
             WorkspaceProfileService,
@@ -105,205 +112,385 @@ const build = async (em: MockEntityManager, input?: unknown) => {
                 useValue: {
                     auth: Symbol("auth"),
                     input: input === undefined ? undefined : new Secret(JSON.stringify(input)),
+                    profileInput: profileInput === null ? undefined : new Secret(JSON.stringify(profileInput)),
                     print,
                 },
             },
             { provide: PRIMARY_ENTITY_MANAGER, useValue: em },
-            { provide: CLOCK, useValue: new FakeClock(AT) },
+            { provide: SEED_AGENTS, useValue: agents },
+            { provide: SEED_SOURCES, useValue: sources },
+            { provide: SEED_TOOL_GRANTS, useValue: toolGrants },
+            { provide: SEED_CONNECTORS, useValue: connectors },
             { provide: WorkspaceSeedService, useValue: seeds },
+            { provide: WorkspacesService, useValue: workspaces },
             { provide: AuthorityRulesService, useValue: rules },
-            { provide: KnowledgeQueue, useValue: queue },
+            { provide: ProfileActivationService, useValue: activation },
         ],
     }).compile()
-    return { service: moduleRef.get(WorkspaceProfileService), print, seeds, rules, queue }
+    const service = moduleRef.get(WorkspaceProfileService)
+    const doubles = { agents, sources, toolGrants, connectors, seeds, workspaces, rules, activation }
+    return { service, print, ...doubles }
 }
 
+const ROOMS_READY = {
+    query: [
+        [ROOMS_FUNCTION_PRESENT, [{ present: true }]],
+        [ENSURE_OFFICE_ROOMS, []],
+        [MOVE_AGENT_HOME, [{ moved: true }]],
+    ],
+} as const
+
 const invalid = { code: WorkspaceSeedErrorCode.InputInvalid }
+const HAKUEN = "HAKUEN Hotel & Spa"
+const command = { profile: "hakuen", owner: " Hakuen.Demo@gmail.com ", execute: false }
 
-describe("WorkspaceProfileService.profileOperator", () => {
-    const command = { profile: "hakuen", owner: " Hakuen.Demo@gmail.com ", execute: false }
+describe("WorkspaceProfileService", () => {
+    describe("profileOperator refusals", () => {
+        it("refuses an unknown profile", async () => {
+            const { service } = await build(mockEntityManager(), ensureWireOf(HAKUEN, HAKUEN_OWNER))
+            await expect(service.profileOperator({ ...command, profile: "nope" })).rejects.toMatchObject(invalid)
+        })
 
-    it("refuses an unknown profile", async () => {
-        const { service } = await build(mockEntityManager(), ensureWire("HAKUEN Hotel & Spa"))
-        await expect(service.profileOperator({ ...command, profile: "nope" })).rejects.toMatchObject(invalid)
-    })
+        it("refuses a command without a profile or an owner", async () => {
+            const { service } = await build(mockEntityManager(), ensureWireOf(HAKUEN, HAKUEN_OWNER))
+            await expect(service.profileOperator({})).rejects.toMatchObject(invalid)
+            await expect(service.profileOperator({ profile: "hakuen" })).rejects.toMatchObject(invalid)
+        })
 
-    it("refuses role input", async () => {
-        const { service } = await build(mockEntityManager(), roleWire)
-        await expect(service.profileOperator(command)).rejects.toMatchObject(invalid)
-    })
+        it("refuses role input", async () => {
+            const { service } = await build(mockEntityManager(), ROLE_WIRE)
+            await expect(service.profileOperator(command)).rejects.toMatchObject(invalid)
+        })
 
-    it("refuses input naming another owner", async () => {
-        const { service } = await build(mockEntityManager(), ensureWire("HAKUEN Hotel & Spa", "other@example.test"))
-        await expect(service.profileOperator(command)).rejects.toMatchObject(invalid)
-    })
+        it("refuses input naming another owner", async () => {
+            const { service } = await build(mockEntityManager(), ensureWireOf(HAKUEN, "other@example.test"))
+            await expect(service.profileOperator(command)).rejects.toMatchObject(invalid)
+        })
 
-    it("refuses input naming another workspace", async () => {
-        const { service, seeds } = await build(mockEntityManager(), ensureWire("Other"))
-        await expect(service.profileOperator(command)).rejects.toMatchObject(invalid)
-        expect(seeds.seed).not.toHaveBeenCalled()
-    })
+        it("refuses a run without the private profile input", async () => {
+            const { service } = await build(mockEntityManager(), ensureWireOf(HAKUEN, HAKUEN_OWNER), null)
+            await expect(service.profileOperator(command)).rejects.toMatchObject({
+                code: WorkspaceSeedErrorCode.InputRequired,
+            })
+        })
 
-    it("prints the plan of a dry run and writes nothing", async () => {
-        const { service, print, seeds } = await build(mockEntityManager(), ensureWire("HAKUEN Hotel & Spa"))
-        const plan = {
-            schema: "nivo/workspace-profile@1",
-            profile: "hakuen",
-            executed: false,
-            workspaceId: null,
-            agents: 5,
-            rules: HAKUEN_PROFILE.rules.length,
-            toolGrants: HAKUEN_PROFILE.agents.reduce((count, agent) => count + agent.tools.length, 0),
-            documents: { inserted: HAKUEN_PROFILE.documents.length, requeued: 0, unchanged: 0 },
-            rooms: "planned",
-        }
+        it("refuses a profile input without the endpoint of a profile connector", async () => {
+            const { service } = await build(mockEntityManager(), ensureWireOf(HAKUEN, HAKUEN_OWNER), {
+                schema: "nivo/workspace-profile-input@1",
+                connectors: { other: { url: CONNECTOR_URL } },
+            })
+            await expect(service.profileOperator(command)).rejects.toMatchObject(invalid)
+        })
 
-        await expect(service.profileOperator(command)).resolves.toEqual(plan)
-
-        expect(seeds.seed).not.toHaveBeenCalled()
-        expect(print).toHaveBeenCalledWith(`${PROFILE_RECEIPT_PREFIX}${JSON.stringify(plan)}`)
-    })
-
-    it("ensures the workspace, then applies the profile to it and prints the receipt", async () => {
-        const { service, print, seeds } = await build(mockEntityManager(), ensureWire("HAKUEN Hotel & Spa"))
-        seeds.seed.mockResolvedValue(seeded)
-        const done = {
-            schema: "nivo/workspace-profile@1" as const,
-            profile: "hakuen",
-            executed: true,
-            workspaceId: WS,
-            agents: 5,
-            rules: 1,
-            toolGrants: 0,
-            documents: { inserted: 1, requeued: 0, unchanged: 0 },
-            rooms: "ready" as const,
-        }
-        const apply = jest.spyOn(service, "apply").mockResolvedValue(done)
-
-        await expect(service.profileOperator({ ...command, execute: true })).resolves.toBe(done)
-
-        expect(seeds.seed).toHaveBeenCalledWith(expect.objectContaining({ workspaceName: "HAKUEN Hotel & Spa" }))
-        expect(apply).toHaveBeenCalledWith(WS, HAKUEN_PROFILE)
-        expect(print).toHaveBeenCalledWith(`${PROFILE_RECEIPT_PREFIX}${JSON.stringify(done)}`)
+        it("refuses input naming another workspace", async () => {
+            const { service, seeds } = await build(mockEntityManager(), ensureWireOf("Other", HAKUEN_OWNER))
+            await expect(service.profileOperator(command)).rejects.toMatchObject(invalid)
+            expect(seeds.seedOwned).not.toHaveBeenCalled()
+        })
     })
 })
 
-describe("WorkspaceProfileService.apply", () => {
-    it("brands, ensures agents, loads documents, seats rooms and saves grants", async () => {
-        const tx = fakeTransaction(
-            mockEntityManager({
-                query: [
-                    [SET_WORKSPACE_BRAND, [{ owner_id: OWNER }]],
-                    [TOOL_GRANTS_PRESENT, [{ present: true }]],
-                    [UPSERT_PROFILE_AGENT, [{ id: "a1" }]],
-                    [ENSURE_AGENT_INSTALLATION, []],
-                    [UPSERT_TOOL_GRANT, []],
-                    [UPSERT_PROFILE_AGENT, [{ id: "a2" }]],
-                    [ENSURE_AGENT_INSTALLATION, []],
-                    [FIND_PROFILE_SOURCE, []],
-                    [INSERT_PROFILE_SOURCE, [{ id: "s1" }]],
-                    [FIND_PROFILE_SOURCE, [{ id: "s2", content: "b" }]],
-                    [FIND_PROFILE_SOURCE, [{ id: "s3", content: "old" }]],
-                    [REQUEUE_PROFILE_SOURCE, []],
-                    [ROOMS_FUNCTION_PRESENT, [{ present: true }]],
-                    [ENSURE_OFFICE_ROOMS, []],
-                    [MOVE_AGENT_HOME, []],
-                ],
-            }),
-        )
-        const { service, rules, queue } = await build(tx.em)
+describe("WorkspaceProfileService", () => {
+    describe("profileOperator runs", () => {
+        it("prints the plan of a dry run, absent execute included, and writes nothing", async () => {
+            const { service, print, seeds } = await build(mockEntityManager(), ensureWireOf(HAKUEN, HAKUEN_OWNER))
+            const plan = {
+                schema: "nivo/workspace-profile@1",
+                profile: "hakuen",
+                executed: false,
+                workspaceId: null,
+                agents: 5,
+                rules: HAKUEN_PROFILE.rules.length,
+                toolGrants: HAKUEN_PROFILE.agents.reduce((count, agent) => count + agent.tools.length, 0),
+                connectors: { hakuen: { tools: 0, approved: false } },
+                documents: { inserted: HAKUEN_PROFILE.documents.length, requeued: 0, unchanged: 0 },
+                installations: Object.fromEntries(HAKUEN_PROFILE.agents.map((agent) => [agent.handle, "planned"])),
+                rooms: "planned",
+            }
 
-        await expect(service.apply(WS, PROFILE)).resolves.toEqual({
-            schema: "nivo/workspace-profile@1",
-            profile: "test",
-            executed: true,
-            workspaceId: WS,
-            agents: 2,
-            rules: 1,
-            toolGrants: 1,
-            documents: { inserted: 1, requeued: 1, unchanged: 1 },
-            rooms: "ready",
+            await expect(service.profileOperator(command)).resolves.toEqual(plan)
+            await expect(
+                service.profileOperator({ profile: "hakuen", owner: "hakuen.demo@gmail.com" }),
+            ).resolves.toEqual(plan)
+
+            expect(seeds.seedOwned).not.toHaveBeenCalled()
+            expect(print).toHaveBeenCalledWith(`${PROFILE_RECEIPT_PREFIX}${JSON.stringify(plan)}`)
         })
 
-        expect(tx.em.query).toHaveBeenCalledWith(SET_WORKSPACE_BRAND, [WS, "Test Brand", "/brand/test.jpg"])
-        expect(tx.em.query).toHaveBeenCalledWith(ENSURE_AGENT_INSTALLATION, [WS, "chatbot", "ai-sales", "a1"])
-        expect(tx.em.query).toHaveBeenCalledWith(INSERT_PROFILE_SOURCE, [
-            WS,
-            null,
-            "topic",
-            "internal",
-            "new",
-            "a",
-            "seed:test",
-            OWNER,
-        ])
-        expect(tx.em.query).toHaveBeenCalledWith(REQUEUE_PROFILE_SOURCE, ["s3", WS, "c", null, "topic", "internal"])
-        expect(tx.em.query).toHaveBeenCalledWith(UPSERT_TOOL_GRANT, [WS, "a1", "hakuen.*", "auto", null, 0])
-        expect(tx.em.query).toHaveBeenCalledWith(MOVE_AGENT_HOME, [WS, "sales", "a1"])
-        expect(queue.enqueueIndex).toHaveBeenCalledWith({ sourceId: "s1", workspaceId: WS }, tx.em)
-        expect(queue.enqueueIndex).toHaveBeenCalledWith({ sourceId: "s3", workspaceId: WS }, tx.em, Date.parse(AT))
-        expect(queue.enqueueIndex).toHaveBeenCalledTimes(2)
-        expect(rules.save).toHaveBeenCalledWith(WS, PROFILE.rules[0])
-    })
+        it("ensures the workspace, then applies the profile as its owner and prints the receipt", async () => {
+            const { service, print, seeds } = await build(mockEntityManager(), ensureWireOf(HAKUEN, HAKUEN_OWNER))
+            seeds.seedOwned.mockResolvedValue(OWNED_SEED)
+            const done: ProfileReport = {
+                schema: "nivo/workspace-profile@1",
+                profile: "hakuen",
+                executed: true,
+                workspaceId: WS,
+                agents: 5,
+                rules: 1,
+                toolGrants: 0,
+                connectors: { hakuen: { tools: 16, approved: false } },
+                documents: { inserted: 1, requeued: 0, unchanged: 0 },
+                installations: { "ai-ke-toan": "needs_connection" },
+                rooms: "ready",
+            }
+            const apply = jest.spyOn(service, "apply").mockResolvedValue(done)
 
-    it("reports absent rooms when the Hub rooms function is not installed", async () => {
-        const tx = fakeTransaction(
-            mockEntityManager({
-                query: [
-                    [SET_WORKSPACE_BRAND, [{ owner_id: OWNER }]],
-                    [TOOL_GRANTS_PRESENT, []],
-                    [ROOMS_FUNCTION_PRESENT, []],
-                ],
-            }),
-        )
-        const { service } = await build(tx.em)
+            await expect(service.profileOperator({ ...command, execute: true })).resolves.toBe(done)
 
-        await expect(service.apply(WS, { ...PROFILE, agents: [], documents: [], rules: [] })).resolves.toMatchObject({
-            rooms: "absent",
-            toolGrants: "absent",
-            documents: { inserted: 0, requeued: 0, unchanged: 0 },
+            expect(seeds.seedOwned).toHaveBeenCalledWith(expect.objectContaining({ workspaceName: HAKUEN }))
+            expect(apply).toHaveBeenCalledWith(TARGET, HAKUEN_PROFILE, [
+                {
+                    key: "hakuen",
+                    name: "HAKUEN Back Office",
+                    credentialRef: "MCP_HAKUEN_CLIENT_SECRET",
+                    contractVersion: "hakuen-mcp@1",
+                    url: CONNECTOR_URL,
+                },
+            ])
+            expect(print).toHaveBeenCalledWith(`${PROFILE_RECEIPT_PREFIX}${JSON.stringify(done)}`)
         })
     })
+})
 
-    it("refuses a workspace that does not exist", async () => {
-        const tx = fakeTransaction(mockEntityManager({ query: [SET_WORKSPACE_BRAND, []] }))
-        const { service, rules } = await build(tx.em)
-
-        await expect(service.apply(WS, PROFILE)).rejects.toMatchObject({ code: WorkspaceSeedErrorCode.RowMissing })
-        expect(rules.save).not.toHaveBeenCalled()
-    })
-
-    it("refuses an agent write that answers no row", async () => {
-        const tx = fakeTransaction(
-            mockEntityManager({
-                query: [
-                    [SET_WORKSPACE_BRAND, [{ owner_id: OWNER }]],
-                    [TOOL_GRANTS_PRESENT, [{ present: false }]],
-                    [UPSERT_PROFILE_AGENT, []],
-                ],
-            }),
-        )
-        const { service } = await build(tx.em)
-
-        await expect(service.apply(WS, PROFILE)).rejects.toMatchObject({ code: WorkspaceSeedErrorCode.RowMissing })
-    })
-
-    it("refuses a document insert that answers no row", async () => {
-        const tx = fakeTransaction(
-            mockEntityManager({
-                query: [
-                    [SET_WORKSPACE_BRAND, [{ owner_id: OWNER }]],
-                    [TOOL_GRANTS_PRESENT, [{ present: false }]],
-                    [FIND_PROFILE_SOURCE, []],
-                    [INSERT_PROFILE_SOURCE, []],
-                ],
-            }),
-        )
-        const { service, queue } = await build(tx.em)
-
-        await expect(service.apply(WS, { ...PROFILE, agents: [] })).rejects.toMatchObject({
-            code: WorkspaceSeedErrorCode.RowMissing,
+describe("WorkspaceProfileService", () => {
+    describe("profiles without connectors", () => {
+        it("plans a profile without connectors with no profile input at all", async () => {
+            const get = jest.spyOn(WORKSPACE_PROFILES, "get").mockReturnValue({ ...EMPTY, workspaceName: HAKUEN })
+            try {
+                const { service } = await build(mockEntityManager(), ensureWireOf(HAKUEN, HAKUEN_OWNER), null)
+                await expect(service.profileOperator(command)).resolves.toMatchObject({
+                    connectors: {},
+                    rooms: "planned",
+                })
+            } finally {
+                get.mockRestore()
+            }
         })
-        expect(queue.enqueueIndex).not.toHaveBeenCalled()
+    })
+})
+
+describe("WorkspaceProfileService", () => {
+    describe("apply registers connectors as the owner", () => {
+        const viewOf = (key: string, approvedAt: string | null, approved: ReadonlyArray<boolean>) => ({
+            key,
+            status: "active",
+            approvedAt,
+            tools: approved.map((value) => ({ approved: value })),
+        })
+
+        it("registers each connector as the owner, never approves it and reports each pinned catalog", async () => {
+            const owners = await build(mockEntityManager({ query: [ROOMS_FUNCTION_PRESENT, []] }))
+            owners.toolGrants.upsert.mockResolvedValue(0)
+            owners.connectors.connectors.mockResolvedValue([
+                viewOf("remote-b", "2026-10-20T10:00:00.000Z", [true, true]),
+                viewOf("remote-a", null, [false, false, false]),
+                viewOf("remote-c", "2026-10-20T10:00:00.000Z", [true, false]),
+            ])
+
+            await expect(
+                owners.service.apply(TARGET, EMPTY, [
+                    CONNECTOR,
+                    { ...CONNECTOR, key: "remote-b" },
+                    { ...CONNECTOR, key: "remote-c" },
+                ]),
+            ).resolves.toMatchObject({
+                connectors: {
+                    "remote-a": { tools: 3, approved: false },
+                    "remote-b": { tools: 2, approved: true },
+                    "remote-c": { tools: 2, approved: false },
+                },
+            })
+
+            expect(owners.connectors.registerRemote).toHaveBeenNthCalledWith(1, ACTOR, CONNECTOR)
+            expect(owners.connectors.registerRemote).toHaveBeenCalledTimes(3)
+            expect(owners.connectors.connectors).toHaveBeenCalledWith(ACTOR)
+        })
+
+        it.each([
+            ["the server did not answer", [{ ...viewOf("remote-a", null, []), status: "degraded" }]],
+            ["the connector is not listed", []],
+        ])("fails the run before any grant when %s", async (_case, views) => {
+            const owners = await build(mockEntityManager())
+            owners.connectors.connectors.mockResolvedValue(views)
+
+            await expect(owners.service.apply(TARGET, EMPTY, [CONNECTOR])).rejects.toMatchObject({
+                code: WorkspaceSeedErrorCode.ConnectorUnreachable,
+                params: { key: "remote-a" },
+            })
+            expect(owners.toolGrants.upsert).not.toHaveBeenCalled()
+        })
+
+        it("lists nothing when the profile has no connector", async () => {
+            const owners = await build(mockEntityManager({ query: [ROOMS_FUNCTION_PRESENT, []] }))
+            owners.toolGrants.upsert.mockResolvedValue(0)
+
+            await expect(owners.service.apply(TARGET, EMPTY, [])).resolves.toMatchObject({ connectors: {} })
+            expect(owners.connectors.connectors).not.toHaveBeenCalled()
+        })
+    })
+})
+
+describe("WorkspaceProfileService", () => {
+    describe("apply through the owners", () => {
+        it("brands as the owner, keeps the agents, writes the grants and documents, seats rooms and saves rules", async () => {
+            const em = mockEntityManager(ROOMS_READY)
+            const owners = await build(em)
+            owners.agents.ensureByHandle.mockResolvedValueOnce("a1").mockResolvedValueOnce("a2")
+            owners.toolGrants.upsert.mockResolvedValue(2)
+            owners.sources.keep
+                .mockResolvedValueOnce("inserted")
+                .mockResolvedValueOnce("unchanged")
+                .mockResolvedValueOnce("requeued")
+
+            await expect(owners.service.apply(TARGET, PROFILE, [])).resolves.toEqual({
+                schema: "nivo/workspace-profile@1",
+                profile: "test",
+                executed: true,
+                workspaceId: WS,
+                agents: 2,
+                rules: 1,
+                toolGrants: 2,
+                connectors: {},
+                documents: { inserted: 1, requeued: 1, unchanged: 1 },
+                installations: { "ai-sales": "ready", "ai-cskh": "ready" },
+                rooms: "ready",
+            })
+
+            expect(owners.workspaces.setBrand).toHaveBeenCalledWith(OWNER, WS, {
+                displayName: "Test Brand",
+                logoUrl: "/brand/test.jpg",
+            })
+            expect(owners.agents.ensureByHandle).toHaveBeenNthCalledWith(1, {
+                workspaceId: WS,
+                module: "chatbot",
+                name: "ai-sales",
+                handle: "ai-sales",
+                role: "role",
+                instructions: "instructions",
+            })
+            expect(owners.activation.install.mock.calls).toEqual([
+                [WS, "a1", PROFILE.agents[0]],
+                [WS, "a2", PROFILE.agents[1]],
+            ])
+            expect(owners.rules.save).toHaveBeenCalledWith(WS, PROFILE.rules[0])
+            const answers = PROFILE.agents[0]?.setup
+            expect(owners.activation.activate).toHaveBeenCalledWith(TARGET, [
+                { handle: "ai-sales", installation: installationOf(), answers },
+                { handle: "ai-cskh", installation: installationOf(), answers },
+            ])
+        })
+    })
+})
+
+describe("WorkspaceProfileService", () => {
+    describe("apply profile data", () => {
+        it("passes argument bounds through as profile data and stamps documents with the profile origin", async () => {
+            const owners = await build(mockEntityManager(ROOMS_READY))
+            owners.agents.ensureByHandle.mockResolvedValue("a1")
+            owners.sources.keep.mockResolvedValue("unchanged")
+
+            await owners.service.apply(TARGET, { ...PROFILE, agents: [agentOf("ai-sales", "sales")] }, [])
+
+            expect(owners.toolGrants.upsert).toHaveBeenCalledWith([
+                { workspaceId: WS, agentId: "a1", tool: "hakuen.*", mode: "auto", limitVnd: null, constraints: [] },
+                {
+                    workspaceId: WS,
+                    agentId: "a1",
+                    tool: "hakuen.booking.confirm",
+                    mode: "auto",
+                    limitVnd: 5_000_000,
+                    constraints: [{ arg: "nights", max: 3 }],
+                },
+            ])
+            expect(owners.sources.keep).toHaveBeenCalledWith({
+                workspaceId: WS,
+                ownerId: OWNER,
+                origin: "seed:test",
+                title: "new",
+                topic: "topic",
+                module: null,
+                visibility: "internal",
+                content: "# new",
+            })
+        })
+
+        it("seats only the agents with a home room after ensuring the rooms", async () => {
+            const em = mockEntityManager(ROOMS_READY)
+            const owners = await build(em)
+            owners.agents.ensureByHandle.mockResolvedValueOnce("a1").mockResolvedValueOnce("a2")
+
+            await owners.service.apply(TARGET, { ...PROFILE, documents: [] }, [])
+
+            expect(em.query.mock.calls).toEqual([
+                [ROOMS_FUNCTION_PRESENT],
+                [ENSURE_OFFICE_ROOMS, [WS]],
+                [MOVE_AGENT_HOME, [WS, "sales", "a1"]],
+            ])
+        })
+    })
+})
+
+describe("WorkspaceProfileService", () => {
+    describe("apply without the Hub rooms", () => {
+        it("reports absent rooms and an empty grant set when the rooms function is missing", async () => {
+            const em = mockEntityManager({ query: [ROOMS_FUNCTION_PRESENT, []] })
+            const { service, toolGrants } = await build(em)
+            toolGrants.upsert.mockResolvedValue(0)
+
+            await expect(service.apply(TARGET, EMPTY, [])).resolves.toMatchObject({
+                rooms: "absent",
+                toolGrants: 0,
+                documents: { inserted: 0, requeued: 0, unchanged: 0 },
+            })
+            expect(toolGrants.upsert).toHaveBeenCalledWith([])
+            expect(em.query).toHaveBeenCalledTimes(1)
+        })
+
+        it("stops before any agent when the owner cannot brand the workspace", async () => {
+            const { service, workspaces, agents, rules } = await build(mockEntityManager())
+            const refusal = new Error("not found")
+            workspaces.setBrand.mockRejectedValue(refusal)
+
+            await expect(service.apply(TARGET, PROFILE, [])).rejects.toBe(refusal)
+            expect(agents.ensureByHandle).not.toHaveBeenCalled()
+            expect(rules.save).not.toHaveBeenCalled()
+        })
+    })
+})
+
+describe("WorkspaceProfileService", () => {
+    describe("the HAKUEN playbooks reach the per-turn recall", () => {
+        it("keeps the booking playbook as a public chatbot document of the workspace, with the step order and the hand-off", async () => {
+            const owners = await build(mockEntityManager({ query: [ROOMS_FUNCTION_PRESENT, []] }))
+            owners.agents.ensureByHandle.mockResolvedValue("a1")
+            owners.toolGrants.upsert.mockResolvedValue(0)
+            owners.sources.keep.mockResolvedValue("inserted")
+
+            await expect(
+                owners.service.apply(TARGET, { ...HAKUEN_PROFILE, connectors: [] }, []),
+            ).resolves.toMatchObject({ documents: { inserted: HAKUEN_PROFILE.documents.length } })
+
+            const kept = owners.sources.keep.mock.calls.map(([source]) => source)
+            expect(kept).toHaveLength(HAKUEN_PROFILE.documents.length)
+            const booking = kept.filter(
+                (source) => source.module === "chatbot" && source.content.includes("hakuen.booking.confirm"),
+            )
+            expect(booking).toHaveLength(1)
+            const [playbook] = booking
+            expect(playbook).toMatchObject({
+                workspaceId: WS,
+                ownerId: OWNER,
+                origin: "seed:hakuen",
+                visibility: "public",
+            })
+            const steps = [
+                "hakuen.rooms.searchAvailability",
+                "hakuen.rates.quote",
+                "hakuen.booking.hold",
+                "hakuen.booking.confirm",
+                "conversation.handOff",
+            ].map((step) => playbook?.content.indexOf(step) ?? -1)
+            expect(steps.every((at, index) => at >= 0 && (index === 0 || at > (steps[index - 1] ?? 0)))).toBe(true)
+        })
     })
 })

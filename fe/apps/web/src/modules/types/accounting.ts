@@ -6,26 +6,16 @@ import type { FlowStaff, FlowWorkItemView } from "./flow"
  * Test runs are left out of every figure and counted in `excludedTest`.
  */
 
-/** Where a record came from. Live and simulated money are never added together. */
-export type AccountingOrigin = "live" | "simulated"
-
-/** A number split by where the records came from. */
-export interface AccountingSplit {
-    readonly live: number
-    readonly simulated: number
-}
-
-/** One figure: money and record count, each split by origin. Never merged into one number. */
+/** One figure: money and record count. */
 export interface AccountingMeasure {
-    readonly vnd: AccountingSplit
-    readonly count: AccountingSplit
+    readonly vnd: number
+    readonly count: number
 }
 
-/** One week of paid income, split by origin. */
+/** One week of paid income. */
 export interface AccountingWeekBar {
     readonly startIso: string
-    readonly live: number
-    readonly simulated: number
+    readonly vnd: number
 }
 
 /** The month being looked at: the current one or the one before. */
@@ -55,17 +45,17 @@ export interface AccountingAgeing {
     readonly d60: AccountingMeasure
 }
 
-/** Work items waiting for a person, by origin, with the money already known. */
+/** Work items waiting for a person, with the money already known. */
 export interface AccountingWaiting {
-    readonly count: AccountingSplit
+    readonly count: number
     readonly knownVnd: number
     readonly unknownAmount: number
 }
 
 /** Whether a bank credit is tied to an invoice, needs a person, or has no invoice. */
 export type AccountingMatchState = "matched" | "unclear" | "unmatched"
-/** Where a bank credit was recorded from. */
-export type AccountingSourceKind = "vietcombank" | "inbox" | "manual" | "other"
+/** Where a bank credit was recorded from: the connected payment connector, the inbox, a person, or something else. */
+export type AccountingSourceKind = "connector" | "inbox" | "manual" | "other"
 /** The state of an internal payment record. */
 export type AccountingInvoiceStatus = "draft" | "issued" | "paid" | "void"
 
@@ -76,7 +66,6 @@ export interface AccountingCredit {
     readonly amount: number
     readonly payer: string | null
     readonly reference: string | null
-    readonly origin: AccountingOrigin
     readonly match: AccountingMatchState
     readonly invoiceNo: string | null
     readonly sourceKind: AccountingSourceKind
@@ -88,7 +77,6 @@ export interface AccountingInvoice {
     readonly invoiceNo: string
     readonly amount: number
     readonly status: AccountingInvoiceStatus
-    readonly origin: AccountingOrigin
     readonly customer: string | null
     readonly issuedAt: string | null
     readonly paidAt: string | null
@@ -103,7 +91,6 @@ export interface AccountingOrder {
     readonly orderNo: string
     readonly items: string
     readonly amount: number | null
-    readonly origin: AccountingOrigin
     readonly customer: string | null
     readonly createdAt: string
 }
@@ -140,7 +127,6 @@ export interface AccountingLedgerEntry {
     readonly amount: number
     readonly status: AccountingLedgerStatus
     readonly linked: string | null
-    readonly origin: AccountingOrigin
     readonly lineage: ReadonlyArray<AccountingLineageStep>
     readonly adjustmentCount: number
 }
@@ -161,6 +147,8 @@ export interface AccountingWorkbenchData {
     readonly ageing: AccountingAgeing
     readonly waiting: AccountingWaiting
     readonly credits: ReadonlyArray<AccountingCredit>
+    /** The display name of the connector that feeds payment credits; null when none is connected. */
+    readonly creditsSource: string | null
     readonly invoices: ReadonlyArray<AccountingInvoice>
     readonly ordersWithoutInvoice: ReadonlyArray<AccountingOrder>
     readonly questions: ReadonlyArray<AccountingQuestion>

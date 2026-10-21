@@ -7,7 +7,7 @@ interface PageProps {
     searchParams: Promise<{ tab?: string; c?: string; welcome?: string }>
 }
 
-/** Agent chat: owner test conversation and the simulated customer channel (`?tab=customer`). */
+/** Agent chat: owner test conversation and the test customer channel (`?tab=customer`). */
 const Page = async (props: PageProps) => {
     const { agentId } = await props.params
     const { tab, c, welcome } = await props.searchParams

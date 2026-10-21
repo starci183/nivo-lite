@@ -66,7 +66,7 @@ ORDER BY created_at DESC, id DESC LIMIT 100`
 export const LOCK_CHAT_CONVERSATION = sql`SELECT id, kind, channel, visitor_name, lead_id, handled_by, created_at::text
 FROM public.agent_conversations WHERE workspace_id = $1::uuid AND id = $2::uuid LIMIT 1 FOR UPDATE`
 
-/** Opens a test or simulated website customer conversation ($1 workspace, $2 agent, $3 kind, $4 visitor). */
+/** Opens an owner test or test customer conversation on the website chat ($1 workspace, $2 agent, $3 kind, $4 visitor). */
 export const INSERT_CHAT_CONVERSATION = sql`INSERT INTO public.agent_conversations (workspace_id, agent_id, kind, visitor_name)
 VALUES ($1::uuid, $2::uuid, $3, $4) RETURNING id, kind, channel, visitor_name, lead_id, handled_by, created_at::text`
 
@@ -86,3 +86,27 @@ FOR UPDATE`
 export const SET_HUMAN_HANDLING = sql`UPDATE public.agent_conversations
 SET handled_by = $3::text, handled_at = CASE WHEN $3::text IS NULL THEN NULL ELSE now() END
 WHERE workspace_id = $1::uuid AND id = $2::uuid AND kind = 'customer'`
+
+/**
+ * Hands a conversation to another agent unless a person holds it or that agent already speaks in it, and answers the moved row
+ * ($1 workspace, $2 conversation, $3 agent, $4 installation or null to keep the current one).
+ */
+export const HAND_CONVERSATION_TO_AGENT = sql`WITH changed AS (UPDATE public.agent_conversations
+SET agent_id = $3::uuid, installation_id = coalesce($4::uuid, installation_id)
+WHERE workspace_id = $1::uuid AND id = $2::uuid AND handled_by IS NULL AND agent_id <> $3::uuid
+RETURNING id)
+SELECT id FROM changed`
+
+/** The kind of a conversation: a customer's, or an owner's test chat with the agent ($1 conversation). */
+export const FIND_CONVERSATION_KIND = sql`SELECT kind FROM public.agent_conversations WHERE id = $1 LIMIT 1`
+
+/** The connector party a conversation remembers, or no row when it remembers none ($1 workspace, $2 conversation). */
+export const FIND_CONVERSATION_PARTY = sql`SELECT connector_party_id, connector_party_name
+FROM public.agent_conversations
+WHERE workspace_id = $1::uuid AND id = $2::uuid AND connector_party_id IS NOT NULL
+LIMIT 1`
+
+/** Remembers the connector party of a conversation ($1 workspace, $2 conversation, $3 party id, $4 party name). */
+export const SET_CONVERSATION_PARTY = sql`UPDATE public.agent_conversations
+SET connector_party_id = $3, connector_party_name = $4, connector_party_at = now()
+WHERE workspace_id = $1::uuid AND id = $2::uuid`

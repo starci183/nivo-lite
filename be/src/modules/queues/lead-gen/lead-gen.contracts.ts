@@ -19,8 +19,6 @@ export interface LeadGenFinishedStep {
     readonly leadId: string | null
     /** The chain it belongs to. */
     readonly chainId: string | null
-    /** Real or simulated. */
-    readonly origin: "live" | "simulated"
     /** The fields of its proposal. */
     readonly fields: Readonly<Record<string, LeadGenFieldValue>>
     /** Its draft, for the comment that follows a public reply. */

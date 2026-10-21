@@ -1,3 +1,6 @@
+import type { CapabilityRole } from "@modules/domain/mcp-gateway"
+import type { InstallationRecord } from "@modules/domain/module-installations"
+
 /** A text in both product languages. */
 export interface Bilingual {
     /** The Vietnamese text. */
@@ -124,6 +127,16 @@ export interface ModuleRequirements {
     readonly capabilities: ReadonlyArray<string>
     /** The connection providers the workspace should have connected. */
     readonly connections: ReadonlyArray<string>
+    /** The connector capability roles the module's agent needs, never a named connector; absent means none. */
+    readonly roles?: ModuleRoles
+}
+
+/** The capability roles of a module: without every required one the agent waits for a connection; a used one only feeds a feature. */
+export interface ModuleRoles {
+    /** The roles the agent cannot run without. */
+    readonly requires: ReadonlyArray<CapabilityRole>
+    /** The roles a feature of the agent uses when they are there (it shows "not connected" honestly otherwise). */
+    readonly uses: ReadonlyArray<CapabilityRole>
 }
 
 /** The agent a module installs with. */
@@ -216,4 +229,18 @@ export interface ModulesSyncReport {
     readonly staleModules: ReadonlyArray<string>
     /** The action keys the database holds that the catalogue no longer lists; they are reported, never deleted. */
     readonly staleActions: ReadonlyArray<string>
+}
+
+/** A capability role an installation's module requires and no usable connector plays, with the connectors that could play it. */
+export interface ConnectionNeed {
+    /** The missing role. */
+    readonly role: CapabilityRole
+    /** The display names of the workspace's connectors that declare the role (installed or installable). */
+    readonly providers: ReadonlyArray<string>
+}
+
+/** An installation as the product shows it: the record and what it still needs connected to run (empty when ready). */
+export interface InstallationView extends InstallationRecord {
+    /** The missing required roles, each with its possible providers. */
+    readonly connectionNeeds: ReadonlyArray<ConnectionNeed>
 }

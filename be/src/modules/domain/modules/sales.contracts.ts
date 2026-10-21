@@ -28,6 +28,7 @@ export const SALES_MODULE: ModuleDefinition = {
     requires: {
         capabilities: [],
         connections: [],
+        roles: { requires: [], uses: ["identity.find", "identity.upsert"] },
     },
     connectionProviders: ["telegram", "zalo_oa", "meta"],
     defaultOperatingMode: "assist",

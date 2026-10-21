@@ -1,4 +1,4 @@
-import { IsNumber, IsOptional, IsString, Max, MaxLength, Min } from "class-validator"
+import { IsInt, IsNumber, IsOptional, IsString, Max, MaxLength, Min } from "class-validator"
 
 /**
  * The bounded body of a tool call: the union of the arguments of every tool in the manifest, flat as the agent sends them. Every
@@ -90,9 +90,46 @@ export class RunToolRequest {
     @MaxLength(500)
     contact?: string
 
-    /** booking.request: a note for the business. */
+    /** booking.request: a note for the business; conversation.handOff: why it hands over (clipped to 400 by the tool policy). */
     @IsOptional()
     @IsString()
     @MaxLength(2000)
     note?: string
+
+    /** tool.describe, tool.call: the full name of the connector tool. */
+    @IsOptional()
+    @IsString()
+    @MaxLength(200)
+    name?: string
+
+    /** tool.call: the arguments of the connector tool, as a JSON object in text; the port parses it. */
+    @IsOptional()
+    @IsString()
+    @MaxLength(8000)
+    arguments_json?: string
+
+    /** tool.search: how many tools to answer. */
+    @IsOptional()
+    @IsInt()
+    @Min(1)
+    @Max(10)
+    limit?: number
+
+    /** tool.sequence: the steps, a JSON list of {name, arguments} in text; the port parses it. */
+    @IsOptional()
+    @IsString()
+    @MaxLength(8000)
+    steps_json?: string
+
+    /** tool.sequence: what the customer hears once a person approved the steps. */
+    @IsOptional()
+    @IsString()
+    @MaxLength(2000)
+    reply?: string
+
+    /** conversation.handOff: the agent id or the department to hand the conversation to. */
+    @IsOptional()
+    @IsString()
+    @MaxLength(120)
+    to?: string
 }

@@ -22,13 +22,9 @@ export const OfficeExceptionCard = (props: OfficeExceptionCardProps) => {
     const { item, text } = props
     return (
         <OfficeCardFrame
-            id={item.anchor}
-            author={item.author}
+            identity={item}
+            aiLabel={text("aiBadge")}
             avatar={props.avatar}
-            status={item.isAi ? <Badge tone="neutral">{text("aiBadge")}</Badge> : undefined}
-            meta={item.time}
-            label={item.title}
-            isHighlight={item.isFocused}
             head={
                 <div className={TEXT_CLASS_NAME}>
                     <Text weight="semibold">{item.title}</Text>
@@ -46,7 +42,6 @@ export const OfficeExceptionCard = (props: OfficeExceptionCardProps) => {
                 </Badge>
                 <Badge tone="neutral">{item.department}</Badge>
                 {item.reasonBadge === null ? null : <Badge tone="neutral">{item.reasonBadge}</Badge>}
-                {item.isSimulated ? <Badge tone="neutral">{text("simulatedTag")}</Badge> : null}
             </div>
             {renderOfficeExceptionCardProposal(item, text)}
             {item.creditLine === null ? null : (

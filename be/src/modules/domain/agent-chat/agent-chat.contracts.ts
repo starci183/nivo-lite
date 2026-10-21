@@ -25,7 +25,7 @@ export interface AgentChatConversationRequest extends AgentChatScope {
     readonly conversationId: string
 }
 
-/** Values opening a test or simulated customer chat. */
+/** Values opening an owner test chat or a test customer chat. */
 export interface StartAgentChatRequest extends AgentChatAgentRequest {
     /** Test or customer. */
     readonly kind: "test" | "customer"
@@ -67,7 +67,7 @@ export interface AgentChatPageData {
     readonly role: string
     /** Whether the agent is active. */
     readonly isActive: boolean
-    /** Whether the page offers the customer simulation. */
+    /** Whether the page offers the test customer chat. */
     readonly hasCustomerChannel: boolean
     /** The workspace selected by the caller. */
     readonly workspaceId: string

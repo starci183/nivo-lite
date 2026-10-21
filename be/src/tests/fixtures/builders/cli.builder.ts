@@ -5,7 +5,6 @@ import { HTTP_CLIENT, HttpError, HttpErrorCode } from "@modules/platform/http"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { QueueModule } from "@modules/platform/queue"
 import { SupabaseModule } from "@modules/integrations/supabase"
-import { SimulationPostClient } from "@modules/integrations/webhook-delivery"
 
 const PRIMARY_DATA_SOURCE = "primaryDataSource"
 const wiringIds = fakeIds()
@@ -44,13 +43,16 @@ const options = {
     channelSetup: wiringSettings.channelSetup,
     n8nHost: { host: undefined, user: "wiring", sshKey: undefined, knownHosts: undefined, container: "wiring" },
     channelProvisioning: { telegramToken: undefined, print: refuseWiringOperation },
-    sepaySimulation: {
-        apiKey: undefined,
-        bankCode: "fixture",
-        bankAccount: "fixture",
-        url: "https://api.invalid/webhooks/sepay",
-        print: refuseWiringOperation,
-        poster: SimulationPostClient,
+    workspaceSeed: { input: undefined, profileInput: undefined },
+    mcpGateway: { remote: { credentials: new Map<string, Secret>() }, defaultTimeoutMs: 1000 },
+    openclaw: {
+        gateway: null,
+        turnTimeoutMs: 90_000,
+        settleMs: 3000,
+        configDir: undefined,
+        gatewayStateDir: "/wiring",
+        manageAgents: false,
+        toolSecret: null,
     },
 }
 

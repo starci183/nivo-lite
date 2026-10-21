@@ -12,7 +12,7 @@ import { AGENT_MESSAGES_ERROR_KINDS } from "@modules/domain/agent-messages"
 import { BILLING_ERROR_KINDS } from "@modules/domain/billing"
 import { LEAD_ACTIONS_ERROR_KINDS } from "@modules/domain/lead-actions"
 import { AGENT_CHAT_ERROR_KINDS } from "@modules/domain/agent-chat"
-import { INBOX_SIMULATION_ERROR_KINDS } from "@modules/domain/inbox-simulation"
+import { ACCOUNTING_ERROR_KINDS } from "@modules/domain/accounting"
 import { ACCOUNTING_ADJUSTMENTS_ERROR_KINDS } from "@modules/domain/accounting-adjustments"
 import { PAYMENT_ORDER_REQUESTS_ERROR_KINDS } from "@modules/domain/payment-order-requests"
 import { CREDITS_ERROR_KINDS } from "@modules/domain/credits"
@@ -45,7 +45,7 @@ export const API_ERROR_KINDS_2 = [
     BILLING_ERROR_KINDS,
     LEAD_ACTIONS_ERROR_KINDS,
     AGENT_CHAT_ERROR_KINDS,
-    INBOX_SIMULATION_ERROR_KINDS,
+    ACCOUNTING_ERROR_KINDS,
     ACCOUNTING_ADJUSTMENTS_ERROR_KINDS,
     PAYMENT_ORDER_REQUESTS_ERROR_KINDS,
     CREDITS_ERROR_KINDS,

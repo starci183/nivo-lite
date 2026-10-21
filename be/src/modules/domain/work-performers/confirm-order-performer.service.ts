@@ -203,7 +203,6 @@ export class ConfirmOrderPerformerService implements WorkPerformer {
             orderNo: given === "" ? null : given,
             items,
             amountVnd: amount,
-            origin: item.origin,
         })
     }
 
@@ -223,7 +222,6 @@ export class ConfirmOrderPerformerService implements WorkPerformer {
             email,
             name: event?.sender_name ?? null,
             channel,
-            origin: item.origin,
         })
         if (known !== null) return known
         const contactName = event?.sender_name ?? ""
@@ -235,10 +233,9 @@ export class ConfirmOrderPerformerService implements WorkPerformer {
             need: need === "" ? "—" : need,
             phone,
             email,
-            origin: item.origin,
         })
         await this.responsibilities.ensureFor(ctx, lead.id)
-        await this.leadEvents.leadCreated(ctx.workspaceId, lead, item.origin)
+        await this.leadEvents.leadCreated(ctx.workspaceId, lead)
         await this.evidence.log(ctx, {
             lead_id: lead.id,
             work_item_id: item.id,

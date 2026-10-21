@@ -8,17 +8,10 @@ export const REASON_CODES: ReadonlyArray<ReasonCode> = [
     "not_allowed",
 ]
 
-/** Amounts or counts split by where the records came from. `unlabelled` = rows with no origin (older seed or legacy leads). */
-export interface OriginSplit {
-    live: number
-    simulated: number
-    unlabelled: number
-}
-
-/** One status figure: money and record count, each split by origin. Never summed into one headline. */
+/** One status figure: the money of its records and how many there are. */
 export interface StatusFigure {
-    vnd: OriginSplit
-    count: OriginSplit
+    vnd: number
+    count: number
 }
 
 /** Results reported by status, each with the evidence it rests on, test runs excluded. */
@@ -31,8 +24,8 @@ export interface StatusResults {
     matchedPayments: StatusFigure
     /** Money received but not verified yet: unmatched, needs review, or matched without an invoice link. */
     pendingVerification: StatusFigure
-    newLeads7d: OriginSplit
-    wonLeads: OriginSplit
+    newLeads7d: number
+    wonLeads: number
     /** Records dropped by the test-run rule (leads, orders, invoices, payments, work items). */
     excludedTestRecords: number
 }
@@ -59,8 +52,6 @@ export interface Governance {
         ordersConfirmed: number
         newCustomers7d: number
         wonCustomers: number
-        simulated: number
-        total: number
     }
     status: StatusResults
     efficiency: { autoDone7d: number; askedHuman7d: number; medianDecisionMinutes: number | null }
@@ -76,7 +67,6 @@ export interface WaitingWork {
     readonly action: string
     readonly department: string
     readonly reason: ReasonCode | null
-    readonly isSimulated: boolean
     readonly summary: string | null
     readonly leadName: string | null
 }
@@ -92,38 +82,17 @@ const TEST_RUN_PATTERN = /UAT|DBG/
 export const isTestRunName = (...names: ReadonlyArray<string | null | undefined>): boolean =>
     names.some((name) => typeof name === "string" && TEST_RUN_PATTERN.test(name))
 
-type Nullable<Value> = Value | null | undefined
-
-/** A record that carries an origin and an amount. */
+/** A record that carries an amount. */
 export interface MoneyRow {
-    readonly origin?: string | null
     readonly amountVnd?: number | null
-}
-
-const emptySplit = (): OriginSplit => ({ live: 0, simulated: 0, unlabelled: 0 })
-
-const originKey = (origin: Nullable<string>): keyof OriginSplit => {
-    if (origin === "live") return "live"
-    return origin === "simulated" ? "simulated" : "unlabelled"
-}
-
-/** Counts rows by origin. */
-export const splitCount = (rows: ReadonlyArray<MoneyRow>): OriginSplit => {
-    const split = emptySplit()
-    for (const row of rows) split[originKey(row.origin)] += 1
-    return split
-}
-
-/** Money and count of rows, each split by origin. */
-export const figureOf = (rows: ReadonlyArray<MoneyRow>): StatusFigure => {
-    const vnd = emptySplit()
-    for (const row of rows) vnd[originKey(row.origin)] += row.amountVnd ?? 0
-    return { vnd, count: splitCount(rows) }
 }
 
 /** The total amount of rows. */
 export const sumOf = (rows: ReadonlyArray<MoneyRow>): number =>
     rows.reduce((total, row) => total + (row.amountVnd ?? 0), 0)
+
+/** The money and the count of rows. */
+export const figureOf = (rows: ReadonlyArray<MoneyRow>): StatusFigure => ({ vnd: sumOf(rows), count: rows.length })
 
 /** The median of the numbers, or null when there are none. */
 export const medianOf = (values: ReadonlyArray<number>): number | null => {

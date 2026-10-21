@@ -4,6 +4,7 @@ import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { AgentMessagesService } from "./agent-messages.service"
 import { AgentMessagesErrorCode } from "./errors/agent-messages.error"
 import {
+    COUNT_CUSTOMER_MESSAGES_PER_DAY,
     FIND_AGENT_REPLY,
     FIND_LAST_CUSTOMER_MESSAGE,
     FIND_MESSAGE,
@@ -299,5 +300,18 @@ describe("AgentMessagesService markDelivery", () => {
         expect(em.query).toHaveBeenNthCalledWith(1, MARK_MESSAGE_DELIVERY, ["msg-1", "sent", null])
         expect(em.query).toHaveBeenNthCalledWith(2, MARK_MESSAGE_DELIVERY, ["msg-1", "failed", "zalo_window_expired"])
         expect(em.query).toHaveBeenNthCalledWith(3, MARK_MESSAGE_DELIVERY, ["msg-1", "failed", "delivery_failed"])
+    })
+})
+
+describe("AgentMessagesService customerMessagesPerDay", () => {
+    it("counts the customer messages per Vietnam day and channel", async () => {
+        const rows = [
+            { channel: "facebook", day: "2026-10-12", messages: 4 },
+            { channel: "zalo", day: "2026-10-12", messages: 2 },
+        ]
+        const { service, em } = await build({ [COUNT_CUSTOMER_MESSAGES_PER_DAY]: rows })
+
+        await expect(service.customerMessagesPerDay("ws-1", "2026-10-05", "2026-10-19")).resolves.toEqual(rows)
+        expect(em.query).toHaveBeenCalledWith(COUNT_CUSTOMER_MESSAGES_PER_DAY, ["ws-1", "2026-10-05", "2026-10-19"])
     })
 })

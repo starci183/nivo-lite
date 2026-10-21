@@ -1,4 +1,5 @@
 import { Badge, Button, Heading, Image, List, ListItem, SurfaceCard, Text } from "@starci/grammar/common"
+import { ConnectionNeeds, type ConnectionNeedsProps } from "@/components/leaves/ConnectionNeeds"
 import { BADGES, CARD, CARD_HEAD, FOOT, POINTS } from "./classNames"
 
 /** The tone of a status badge. */
@@ -15,6 +16,8 @@ export type AgentCatalogCardProps = {
     readonly earlyHint: string
     readonly statusLabel: string
     readonly statusTone: CardTone
+    /** What a `needs_connection` agent waits for and where to connect it; no lines otherwise. */
+    readonly needs: ConnectionNeedsProps
     /** The status is not known yet: the badge and the action are skeletons. */
     readonly isLoading: boolean
     /** Where an installed agent opens; null when it is not installed. */
@@ -46,6 +49,7 @@ export const AgentCatalogCard = (props: AgentCatalogCardProps) => (
             <Text size="sm" tone="muted">
                 {props.description}
             </Text>
+            <ConnectionNeeds {...props.needs} />
             <List label={props.name} className={POINTS}>
                 {props.points.map((point) => (
                     <ListItem key={point}>

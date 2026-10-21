@@ -1,7 +1,6 @@
 import type { AuthorityRule, RuleMode } from "@modules/domain/authority-rules"
 import type { Locale } from "@modules/platform/i18n"
 import type {
-    Origin,
     Proposal,
     ProposalFieldValue,
     ReasonCode,
@@ -14,7 +13,6 @@ export type {
     DecidedPath,
     EvidenceState,
     OptionalWorkItem,
-    Origin,
     Proposal,
     ProposalCandidate,
     ProposalFieldValue,
@@ -102,8 +100,6 @@ export interface WorkSpec {
     readonly parent_id?: string | null
     /** The idempotency key, unique per workspace. */
     readonly dedupeKey: string
-    /** Real or simulated. */
-    readonly origin: Origin
     /** Initial proposal data. */
     readonly seed?: Partial<Proposal>
     /** Insert only; `runQueued` performs it later. */
@@ -225,8 +221,6 @@ export interface SendCommandInput {
     readonly installationId?: string | null
     /** The idempotency key. */
     readonly dedupeKey?: string
-    /** Real or simulated. */
-    readonly origin?: Origin
     /** The input that started the chain. */
     readonly inboundEventId?: string | null
     /** Initial proposal data. */
@@ -273,8 +267,6 @@ export interface InboundEventRecord {
     readonly channel: string
     /** What kind of input it is. */
     readonly kind: InboundKind
-    /** Real or simulated. */
-    readonly origin: Origin
     /** The sender's name. */
     readonly sender_name: string | null
     /** The sender's phone or email. */

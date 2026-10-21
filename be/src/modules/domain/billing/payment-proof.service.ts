@@ -37,12 +37,6 @@ export class PaymentProofService {
         if (!isValidApiKey(authorization, this.options.sepayApiKey?.reveal())) throw unauthorized()
     }
 
-    /** The simulated bank: the `x-nivo-bank-secret` header equals the configured secret. */
-    verifySimulatedBank(secret: HeaderValue): void {
-        const wanted = this.options.simulatedBank.secret?.reveal()
-        if (wanted === undefined || secret === undefined || !sameText(secret, wanted)) throw unauthorized()
-    }
-
     /**
      * A workspace's own Casso feed. Webhook V2 signs the sorted body with HMAC-SHA512 under the integration key; webhook V1 sends
      * that key as `secure-token`. The body is parsed from the raw bytes the sender signed.

@@ -60,7 +60,6 @@ const approvalOf = builder<WorkItem>({
     evidence_state: "pending",
     assigned_staff_id: null,
     execution_id: null,
-    origin: "live",
     created_at: "2026-10-20T09:00:00.000Z",
     updated_at: "2026-10-20T09:00:00.000Z",
     completed_at: null,
@@ -116,7 +115,6 @@ describe("EditorDeliveryService", () => {
             subject_type: "video_project",
             subject_id: "project-1",
             parent_id: "item-1",
-            origin: "live",
             preset: true,
             noChain: true,
             forceAsk: "over_authority",
@@ -158,6 +156,16 @@ describe("EditorDeliveryService > partial and failed renders", () => {
         expect(media.shareLink).toHaveBeenCalledTimes(1)
         expect(room.post.mock.calls[0]?.[2]).toMatchObject({
             fields: expect.arrayContaining([{ label: "video.editor.voice", value: "video.editor.voice.none" }]),
+        })
+    })
+
+    it("names a render spoken by the AI voice", async () => {
+        const { delivery, room } = await build(rowOf({ voiceover: "tts" }))
+
+        await delivery.settle("render-1")
+
+        expect(room.post.mock.calls[0]?.[2]).toMatchObject({
+            fields: expect.arrayContaining([{ label: "video.editor.voice", value: "video.editor.voice.tts" }]),
         })
     })
 

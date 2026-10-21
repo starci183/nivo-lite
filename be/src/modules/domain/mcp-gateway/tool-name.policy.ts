@@ -13,8 +13,11 @@ export interface ToolAddress {
     readonly tool: string
 }
 
+/** A full name split, or null when the text is not a full name. */
+export type OptionalToolAddress = ToolAddress | null
+
 /** Splits a full name; null when it is not one. */
-export const addressOf = (name: string): ToolAddress | null => {
+export const addressOf = (name: string): OptionalToolAddress => {
     const match = TOOL_NAME.exec(name)
     const connector = match?.[1]
     const tool = match?.[2]

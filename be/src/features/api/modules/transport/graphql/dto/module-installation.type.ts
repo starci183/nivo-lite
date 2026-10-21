@@ -1,5 +1,6 @@
 import { Field, ID, Int, ObjectType } from "@nestjs/graphql"
 import { GraphqlJsonObject } from "@modules/platform/graphql"
+import { ConnectionNeedType } from "./connection-need.type"
 
 @ObjectType()
 /** One installed agent of a workspace, with its agent and its active context version. */
@@ -36,7 +37,7 @@ export class ModuleInstallationType {
     @Field()
     agentHandle!: string
 
-    /** `installing`, `setup`, `ready`, `live` or `paused`. */
+    /** `installing`, `setup`, `ready`, `live`, `paused` or `needs_connection` (waits for a required connection). */
     @Field()
     status!: string
 
@@ -63,4 +64,8 @@ export class ModuleInstallationType {
     /** When it was installed, ISO 8601. */
     @Field()
     createdAt!: string
+
+    /** The required capability roles it still needs connected to run, each with its possible providers; empty when ready. */
+    @Field(() => [ConnectionNeedType])
+    connectionNeeds!: ReadonlyArray<ConnectionNeedType>
 }

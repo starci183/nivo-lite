@@ -30,18 +30,18 @@ export const LIST_ACCOUNTING_WORK_ITEMS = sql`
 /**
  * Inserts one queued work item and answers it; a second insert with the same dedupe key of the workspace answers nothing
  * ($1 workspace, $2 chain or null for a new chain, $3 depth, $4 department, $5 action, $6 subject type, $7 subject, $8 lead,
- * $9 inbound event, $10 parent, $11 dedupe key, $12 proposal json, $13 origin, $14 installation or null for the database to
+ * $9 inbound event, $10 parent, $11 dedupe key, $12 proposal json, $13 installation or null for the database to
  * resolve). The id comes from the database; a root item is the root of its own chain.
  */
 export const INSERT_WORK_ITEM = sql`
     WITH fresh AS (SELECT gen_random_uuid() AS id)
     INSERT INTO public.work_items (
         id, workspace_id, chain_id, depth, department, action, subject_type, subject_id, lead_id,
-        inbound_event_id, parent_id, dedupe_key, status, proposal, origin, installation_id
+        inbound_event_id, parent_id, dedupe_key, status, proposal, installation_id
     )
     SELECT
         fresh.id, $1::uuid, COALESCE($2::uuid, fresh.id), $3::int, $4, $5, $6, $7::uuid, $8::uuid,
-        $9::uuid, $10::uuid, $11, 'queued', $12::jsonb, $13, $14::uuid
+        $9::uuid, $10::uuid, $11, 'queued', $12::jsonb, $13::uuid
     FROM fresh
     ON CONFLICT (workspace_id, dedupe_key) DO NOTHING
     RETURNING *`

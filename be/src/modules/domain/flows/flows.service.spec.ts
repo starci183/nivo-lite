@@ -46,7 +46,7 @@ describe("FlowsService", () => {
             },
         )
 
-        it.each(["decide", "hold", "simulate_inbound", "take_over", "send_as_human", "owner_chat"] as const)(
+        it.each(["decide", "hold", "take_over", "send_as_human", "owner_chat"] as const)(
             "asks only for a member before %s",
             async (kind) => {
                 const { flows, members } = await build()

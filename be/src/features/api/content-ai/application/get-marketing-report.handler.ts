@@ -21,6 +21,7 @@ export class GetMarketingReportHandler extends ICQRSHandler<GetMarketingReportQu
             command.params.principal.id,
             command.params.request.workspaceId,
             command.params.request.weekStart,
+            command.params.request.locale,
         )
     }
 }

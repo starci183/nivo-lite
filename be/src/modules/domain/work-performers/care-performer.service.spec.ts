@@ -42,7 +42,6 @@ const itemOf = builder<WorkItem>({
     evidence_state: "pending",
     assigned_staff_id: null,
     execution_id: null,
-    origin: "live",
     created_at: "2026-10-12T09:00:00.000Z",
     updated_at: "2026-10-12T09:00:00.000Z",
     completed_at: null,
@@ -60,7 +59,6 @@ const lead: LeadRecordRow = {
     context_summary: null,
     phone: "84901234567",
     email: null,
-    origin: "live",
 }
 
 const invoiceOf = builder<InvoiceRow>({
@@ -71,7 +69,6 @@ const invoiceOf = builder<InvoiceRow>({
     invoice_no: "INV-1",
     amount_vnd: 450000,
     status: "paid",
-    origin: "live",
     issued_by: "Lan",
     paid_at: "2026-10-12T09:00:00.000Z",
 })
@@ -85,7 +82,6 @@ const transactionOf = builder<Transaction>({
     payer: "Lan",
     invoice_id: "inv-1",
     status: "matched",
-    origin: "live",
 })
 
 const performed: Performed = {

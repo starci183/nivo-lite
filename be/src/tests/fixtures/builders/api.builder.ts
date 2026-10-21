@@ -32,6 +32,7 @@ const wiringSettings = {
         channelTokenKey: new Secret("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="),
         siteUrl: "https://site.invalid",
         publicSiteUrl: undefined,
+        publicApiUrl: "https://api.invalid",
     },
     channelSetup: { zaloOauthBase: undefined, siteUrl: "https://site.invalid", timeoutMs: 1000 },
 }
@@ -58,7 +59,6 @@ const options = {
     billing: {
         sepayApiKey: undefined,
         bankAccount: { account: "fixture", bank: "fixture", holder: "Wiring Fixture" },
-        simulatedBank: { secret: undefined, workspaceId: undefined },
         channelTokenKey: wiringSettings.channelConnections.channelTokenKey,
     },
     openclaw: {
@@ -126,6 +126,7 @@ const options = {
         maxSeconds: 60,
         ffmpegThreads: 1,
     },
+    mcpGateway: { remote: { credentials: new Map() }, defaultTimeoutMs: 4000 },
 }
 
 /** Explicit doubles for the private resource tokens of the real registered modules. */

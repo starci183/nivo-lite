@@ -25,9 +25,10 @@ export class MarketingReportResolver {
         @CurrentPrincipal() principal: Principal,
         @WorkspaceId() workspaceId: string,
         @Args("input") input: MarketingReportInput,
+        @AcceptedLocale() locale: Locale,
     ): Promise<WeeklyReportType> {
         return this.queryBus.execute(
-            new GetMarketingReportQuery({ request: { workspaceId, weekStart: input.weekStart }, principal }),
+            new GetMarketingReportQuery({ request: { workspaceId, weekStart: input.weekStart, locale }, principal }),
         )
     }
 

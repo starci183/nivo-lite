@@ -6,7 +6,7 @@ import { useMemo } from "react"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
 
-/** Validates the optional simulated visitor name before opening a conversation. */
+/** Validates the optional test customer name before opening a conversation. */
 export const useAgentChatVisitorForm = () => {
     const t = useTranslations("agentChat")
     const schema = useMemo(() => z.object({ visitorName: z.string().trim().max(80, t("visitorNameTooLong")) }), [t])

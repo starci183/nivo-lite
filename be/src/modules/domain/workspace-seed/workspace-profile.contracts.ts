@@ -1,15 +1,32 @@
 import type { RuleMode } from "@modules/domain/authority-rules"
+import type { InstallationRecord, InstallationStatus } from "@modules/domain/module-installations"
 
-/** One MCP gateway tool granted to an agent (table mcp_tool_grants of the gateway; no row = never). */
+/** One MCP gateway tool granted to an agent (no grant = never). */
 export interface ProfileToolGrant {
-    /** The namespaced tool, or `<connector>.*`, e.g. `hakuen.booking.confirm`. */
+    /** The namespaced tool, `<connector>.<tool>`, or `<connector>.*`. */
     readonly tool: string
     /** auto, ask or never. */
     readonly mode: RuleMode
     /** Amount at or above which the call needs approval, VND; null for none. */
     readonly limitVnd: number | null
-    /** Discount percent above which the call needs approval; null for none. */
-    readonly limitPct: number | null
+    /** Bounds on named arguments of the tool: a call with a larger value needs approval; empty for none. */
+    readonly constraints: ReadonlyArray<ProfileArgBound>
+}
+
+/** A bound on one named argument of a tool, written as profile data. */
+export interface ProfileArgBound {
+    /** The argument name of the tool's input schema. */
+    readonly arg: string
+    /** The largest value the agent may pass alone. */
+    readonly max: number
+}
+
+/** The answer of one gate of a module's setup checklist, confirmed in the setup chat as the owner's own wording. */
+export interface ProfileSetupAnswer {
+    /** The gate key of the module definition. */
+    readonly gate: string
+    /** The business answer; a fact the owner has not given yet stays the documents' placeholder. */
+    readonly evidence: string
 }
 
 /** One agent a profile installs, found again by its handle. */
@@ -28,6 +45,8 @@ export interface ProfileAgent {
     readonly room: string | null
     /** The gateway tools the agent may call. */
     readonly tools: ReadonlyArray<ProfileToolGrant>
+    /** The answers of every gate of its module, applied through the setup chat as the first context version. */
+    readonly setup: ReadonlyArray<ProfileSetupAnswer>
 }
 
 /** One authority grant of a profile: an action of the registry, its mode and its limit. */
@@ -60,6 +79,24 @@ export interface ProfileDocument {
     readonly content: string
 }
 
+/** One remote MCP connector a profile registers; its endpoint comes from the private profile input. */
+export interface ProfileConnector {
+    /** The namespace key of the connector. */
+    readonly key: string
+    /** The display name. */
+    readonly name: string
+    /** The NAME of the credential secret (sealed custody, mounted as `<NAME>_FILE`). */
+    readonly credentialRef: string
+    /** The contract version the connector implements. */
+    readonly contractVersion: string
+}
+
+/** The private input of a profile run: the endpoint of each connector, by key. */
+export interface ProfileInput {
+    /** The endpoint URL of each connector, by key. */
+    readonly urls: ReadonlyMap<string, string>
+}
+
 /** A named configuration of one workspace: brand, agents, grants and documents. Configuration only, never business records. */
 export interface WorkspaceProfile {
     /** The profile key given on the command line. */
@@ -74,18 +111,20 @@ export interface WorkspaceProfile {
     readonly agents: ReadonlyArray<ProfileAgent>
     /** The authority grants. */
     readonly rules: ReadonlyArray<ProfileRule>
+    /** The remote MCP connectors the agents call. */
+    readonly connectors: ReadonlyArray<ProfileConnector>
     /** The documents. */
     readonly documents: ReadonlyArray<ProfileDocument>
 }
 
-/** What `seed-workspace profile` is asked to do. */
+/** What `seed-workspace profile` is asked to do, as the command line parsed it: every option may be absent. */
 export interface ProfileCommand {
-    /** The profile key. */
-    readonly profile: string
-    /** The owner email the private input must hold. */
-    readonly owner: string
-    /** False = dry run: validate and print the plan, write nothing. */
-    readonly execute: boolean
+    /** The profile key; absent names no profile. */
+    readonly profile?: string
+    /** The owner email the private input must hold; absent matches no owner. */
+    readonly owner?: string
+    /** True writes; absent or false = dry run: validate and print the plan, write nothing. */
+    readonly execute?: boolean
 }
 
 /** How many documents a run inserted, re-queued because their text changed, or left as they were. */
@@ -96,6 +135,14 @@ export interface ProfileDocumentCounts {
     readonly requeued: number
     /** Unchanged documents. */
     readonly unchanged: number
+}
+
+/** What a run left one connector in: the tools its pinned catalog holds and whether an owner already approved that catalog. */
+export interface ProfileConnectorState {
+    /** Tools in the pinned catalog (0 in a dry run). */
+    readonly tools: number
+    /** True once a person approved the catalog in the console; a run never approves it. */
+    readonly approved: boolean
 }
 
 /** The public receipt of a profile run; it never holds credentials. */
@@ -112,10 +159,35 @@ export interface ProfileReport {
     readonly agents: number
     /** Grants in the profile (dry run) or saved. */
     readonly rules: number
-    /** Tool grants in the profile (dry run) or written; "absent" when the gateway grants table is not installed. */
-    readonly toolGrants: number | "absent"
+    /** Tool grants in the profile (dry run) or written by the grants owner. */
+    readonly toolGrants: number
+    /** Each connector of the profile by key: planned (dry run) or registered, with its catalog state. */
+    readonly connectors: Readonly<Record<string, ProfileConnectorState>>
     /** Documents in the profile (dry run: all counted as inserted) or their outcome. */
     readonly documents: ProfileDocumentCounts
+    /** The status each installation is in after its setup was applied and its connections checked, by agent handle; planned in a dry run. */
+    readonly installations: Readonly<Record<string, InstallationStatus | "planned">>
     /** ready = department rooms ensured; absent = the Hub rooms function is not installed; planned = dry run. */
     readonly rooms: "ready" | "absent" | "planned"
 }
+
+/** The workspace a profile is applied to and the owner who writes it. */
+export interface ProfileTarget {
+    /** The workspace. */
+    readonly workspaceId: string
+    /** The authenticated owner. */
+    readonly ownerId: string
+}
+
+/** One installation a profile run kept, with the setup answers of its agent. */
+export interface ProfileInstallation {
+    /** The agent handle the receipt reports it by. */
+    readonly handle: string
+    /** The installation that drives the agent. */
+    readonly installation: InstallationRecord
+    /** The answers of its module's gates. */
+    readonly answers: ReadonlyArray<ProfileSetupAnswer>
+}
+
+/** The status each installation of a run settled in, by agent handle. */
+export type ProfileStatuses = Readonly<Record<string, InstallationStatus>>

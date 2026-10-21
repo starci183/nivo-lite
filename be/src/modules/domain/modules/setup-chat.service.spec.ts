@@ -20,6 +20,7 @@ import { AGENTS_QUEUE_PRODUCER } from "@modules/queues/agents"
 import type { AgentsQueue } from "@modules/queues/agents"
 import { ACCOUNTING_MODULE } from "./accounting.contracts"
 import { ModulesErrorCode } from "./errors/modules.error"
+import { ModuleReadinessService } from "./module-readiness.service"
 import { ModulesService } from "./modules.service"
 import { SetupCardsService } from "./setup-cards.service"
 import { SetupChatService } from "./setup-chat.service"
@@ -107,6 +108,9 @@ const build = async () => {
     const events = mock<EventsService>()
     const sync = mock<AgentSyncService>()
     const cards = mock<SetupCardsService>()
+    const readiness = mock<ModuleReadinessService>()
+    readiness.settle.mockResolvedValue("ready")
+    readiness.withNeeds.mockImplementation((record) => Promise.resolve({ ...record, connectionNeeds: [] }))
     const moduleRef = await Test.createTestingModule({
         providers: [
             SetupChatService,
@@ -124,6 +128,7 @@ const build = async () => {
             { provide: EventsService, useValue: events },
             { provide: AgentSyncService, useValue: sync },
             { provide: SetupCardsService, useValue: cards },
+            { provide: ModuleReadinessService, useValue: readiness },
         ],
     }).compile()
     return {
@@ -139,6 +144,7 @@ const build = async () => {
         sync,
         cards,
         catalog,
+        readiness,
     }
 }
 
@@ -150,7 +156,7 @@ describe("SetupChatService > state", () => {
         cards.viewsOf.mockResolvedValue([])
 
         await expect(service.state("u1", "ws-1", "inst-1", "en")).resolves.toEqual({
-            installation: installationOf(),
+            installation: { ...installationOf(), connectionNeeds: [] },
             session: sessionOf(),
             revisions: [{ id: "s-1", revision: 1, status: "draft" }],
             messages: [lineOf({ role: "assistant" }), lineOf({ id: "m-2" })],
@@ -295,7 +301,7 @@ describe("SetupChatService > apply", () => {
     })
 
     it("applies the draft as the next version, readies the installation and opens a new draft", async () => {
-        const { service, sessions, versions, installations, events, sync } = await build()
+        const { service, sessions, versions, installations, events, sync, readiness } = await build()
         sessions.latest
             .mockResolvedValueOnce(sessionOf({ gateEvidence: CONFIRMED, draft: { summary: "New", facts: [] } }))
             .mockResolvedValueOnce(sessionOf({ status: "applied" }))
@@ -312,6 +318,7 @@ describe("SetupChatService > apply", () => {
             appliedBy: "Lan",
         })
         expect(installations.activateVersion).toHaveBeenCalledWith("ws-1", "inst-1", "v-2", "ready")
+        expect(readiness.settle).toHaveBeenCalledWith("ws-1", "inst-1")
         expect(sessions.close).toHaveBeenCalledWith("s-1")
         expect(events.record).toHaveBeenCalledWith({
             workspaceId: "ws-1",

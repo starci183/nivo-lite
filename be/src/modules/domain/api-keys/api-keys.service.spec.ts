@@ -9,9 +9,11 @@ import { ApiKeysService } from "./api-keys.service"
 import { hashKey } from "./api-keys.policy"
 import { ApiKeysErrorCode } from "./errors/api-keys.error"
 import {
+    API_AGENT_KEY,
     API_KEY_AUTH,
     API_KEY_CREDENTIAL,
     COUNT_ACTIVE_KEYS,
+    INSERT_AGENT_KEY,
     INSERT_KEY,
     LIST_KEYS,
     REVOKE_KEY,
@@ -113,6 +115,7 @@ const keyRow = {
     created_at: "2026-10-12T10:00:00.000Z",
     last_used_at: null,
     revoked_at: null,
+    agent_id: null,
 }
 
 const keyView = {
@@ -122,6 +125,7 @@ const keyView = {
     createdAt: "2026-10-12T10:00:00.000Z",
     lastUsedAt: null,
     revokedAt: null,
+    agentId: null,
 }
 
 const buildManagement = async (entityManager: MockEntityManager) => {
@@ -389,5 +393,95 @@ describe("ApiKeysService credential admission", () => {
         await expect(keys.verifyCredential("Bearer nvk_secret")).rejects.toMatchObject({
             code: ApiKeysErrorCode.Revoked,
         })
+    })
+})
+
+describe("ApiKeysService agent keys", () => {
+    it("creates a key bound to an agent of the workspace with only the tools:call scope", async () => {
+        const em = mockEntityManager({
+            query: [
+                [SELECT_MEMBER, [{ role: "owner", display_name: "Owner" }]],
+                [COUNT_ACTIVE_KEYS, [{ active: 0 }]],
+                [INSERT_AGENT_KEY, [{ ...keyRow, agent_id: "agent-1" }]],
+            ],
+        })
+        const { service, events, transaction } = await buildManagement(em)
+
+        const created = await service.createKey("principal-1", "workspace-1", "Desk agent", "agent-1")
+
+        expect(created.item).toEqual({ ...keyView, agentId: "agent-1" })
+        expect(em.query).toHaveBeenNthCalledWith(3, INSERT_AGENT_KEY, [
+            "workspace-1",
+            "Desk agent",
+            created.key.slice(0, 12),
+            hashKey(created.key),
+            "principal-1",
+            "agent-1",
+            ["tools:call"],
+        ])
+        expect(events.record).toHaveBeenCalledTimes(1)
+        expect(transaction.outcomes).toEqual(["commit"])
+    })
+
+    it("refuses an agent that is not of the workspace and records nothing", async () => {
+        const em = mockEntityManager({
+            query: [
+                [SELECT_MEMBER, [{ role: "owner", display_name: "Owner" }]],
+                [COUNT_ACTIVE_KEYS, [{ active: 0 }]],
+                [INSERT_AGENT_KEY, []],
+            ],
+        })
+        const { service, events, transaction } = await buildManagement(em)
+
+        await expect(service.createKey("principal-1", "workspace-1", "Desk agent", "agent-9")).rejects.toMatchObject({
+            code: ApiKeysErrorCode.AgentNotFound,
+        })
+        expect(events.record).not.toHaveBeenCalled()
+        expect(transaction.outcomes).toEqual(["rollback"])
+    })
+})
+
+describe("ApiKeysService agent keys", () => {
+    it("verifies an agent key by its hash and answers the agent and its workspace", async () => {
+        const em = mockEntityManager({
+            query: [
+                API_AGENT_KEY,
+                [
+                    {
+                        id: "key-1",
+                        workspace_id: "ws-1",
+                        agent_id: "agent-1",
+                        scopes: ["tools:call"],
+                        revoked: false,
+                        agent_status: "active",
+                    },
+                ],
+            ],
+        })
+        const keys = await build(em)
+
+        await expect(keys.verifyAgentKey("Bearer nvk_secret")).resolves.toEqual({
+            keyId: "key-1",
+            workspaceId: "ws-1",
+            agentId: "agent-1",
+        })
+        expect(em.query).toHaveBeenCalledWith(API_AGENT_KEY, [hashKey("nvk_secret")])
+    })
+
+    it("refuses a malformed header before the database and a revoked or unknown key after it", async () => {
+        const em = mockEntityManager()
+        const keys = await build(em)
+
+        await expect(keys.verifyAgentKey("Bearer other")).rejects.toMatchObject({ code: ApiKeysErrorCode.Unauthorized })
+        expect(em.query).not.toHaveBeenCalled()
+
+        em.query.mockResolvedValueOnce([])
+        await expect(keys.verifyAgentKey("Bearer nvk_secret")).rejects.toMatchObject({
+            code: ApiKeysErrorCode.Unauthorized,
+        })
+        em.query.mockResolvedValueOnce([
+            { id: "key-1", workspace_id: "ws-1", agent_id: "agent-1", scopes: [], revoked: true, agent_status: null },
+        ])
+        await expect(keys.verifyAgentKey("Bearer nvk_secret")).rejects.toMatchObject({ code: ApiKeysErrorCode.Revoked })
     })
 })

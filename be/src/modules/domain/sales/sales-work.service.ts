@@ -113,7 +113,6 @@ export class SalesWorkService {
                 subject_type: "order",
                 subject_id: order.id,
                 lead_id: order.lead_id,
-                origin: order.origin === "simulated" ? "simulated" : "live",
                 dedupeKey: `issue_invoice:order:${order.id}`,
                 seed: { amount_vnd: order.amount_vnd, fields: {} },
                 queue: true,

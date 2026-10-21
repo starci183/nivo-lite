@@ -64,7 +64,6 @@ const itemOf = builder<WorkItem>({
     evidence_state: "pending",
     assigned_staff_id: null,
     execution_id: null,
-    origin: "live",
     created_at: "2026-10-14T00:00:00.000Z",
     updated_at: "2026-10-14T00:00:00.000Z",
     completed_at: null,
@@ -214,7 +213,6 @@ describe("LoyaltyCampaignWorkbenchService", () => {
                     subject_type: "lead",
                     subject_id: null,
                     dedupeKey: "send_promo:campaign:campaign-1",
-                    origin: "live",
                     preset: true,
                     noChain: true,
                     seed: {

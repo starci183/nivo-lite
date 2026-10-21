@@ -5,14 +5,13 @@ export const REPLACE_LEAD_CONTEXT = sql`UPDATE public.leads SET context_summary 
 WHERE workspace_id = $1::uuid AND id = $2::uuid`
 
 /** One lead of the workspace ($1 workspace, $2 lead). */
-export const FIND_LEAD = sql`SELECT id, workspace_id, contact_name, company, channel, need, stage, context_summary, phone, email, origin
+export const FIND_LEAD = sql`SELECT id, workspace_id, contact_name, company, channel, need, stage, context_summary, phone, email
 FROM public.leads WHERE workspace_id = $1::uuid AND id = $2::uuid LIMIT 1`
 
-/** The customer of the same origin; a phone beats an email beats a name ($1 workspace, $2 phone, $3 email, $4 name, $5 channel, $6 origin). */
-export const MATCH_LEAD = sql`SELECT id, workspace_id, contact_name, company, channel, need, stage, context_summary, phone, email, origin
+/** The customer; a phone beats an email beats a name ($1 workspace, $2 phone, $3 email, $4 name, $5 channel). */
+export const MATCH_LEAD = sql`SELECT id, workspace_id, contact_name, company, channel, need, stage, context_summary, phone, email
 FROM public.leads
 WHERE workspace_id = $1::uuid
-  AND COALESCE(origin, 'live') = $6::text
   AND (
     ($2::text IS NOT NULL AND phone = $2::text)
     OR ($3::text IS NOT NULL AND email = $3::text)
@@ -21,10 +20,10 @@ WHERE workspace_id = $1::uuid
 ORDER BY CASE WHEN phone = $2::text THEN 0 WHEN email = $3::text THEN 1 ELSE 2 END, created_at
 LIMIT 1`
 
-/** Captures a customer ($1 workspace, $2 name, $3 company, $4 channel, $5 need, $6 phone, $7 email, $8 origin). */
-export const INSERT_LEAD = sql`INSERT INTO public.leads (workspace_id, contact_name, company, channel, need, phone, email, origin)
-VALUES ($1::uuid, $2, $3, $4, $5, $6, $7, $8)
-RETURNING id, workspace_id, contact_name, company, channel, need, stage, context_summary, phone, email, origin`
+/** Captures a customer ($1 workspace, $2 name, $3 company, $4 channel, $5 need, $6 phone, $7 email). */
+export const INSERT_LEAD = sql`INSERT INTO public.leads (workspace_id, contact_name, company, channel, need, phone, email)
+VALUES ($1::uuid, $2, $3, $4, $5, $6, $7)
+RETURNING id, workspace_id, contact_name, company, channel, need, stage, context_summary, phone, email`
 
 /** Adds the contact a lead was missing ($1 workspace, $2 lead, $3 phone or null, $4 email or null). */
 export const FILL_LEAD_CONTACT = sql`UPDATE public.leads

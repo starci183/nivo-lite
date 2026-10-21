@@ -1,6 +1,7 @@
 import { mkdir, readFile, rm, writeFile } from "node:fs/promises"
 import { basename, join } from "node:path"
 import { Injectable } from "@nestjs/common"
+import { MEDIA_BUCKET } from "@modules/domain/video"
 import { eachInOrder } from "@modules/platform/primitives"
 import { InjectSupabaseObjects } from "@modules/integrations/supabase"
 import type { SupabaseObjectsPort } from "@modules/integrations/supabase"
@@ -14,8 +15,6 @@ import { InjectContentAiOptions, InjectMarketingAssets } from "./content-agent.d
 import type { ContentAiOptions } from "./content-ai.options"
 import type { MarketingAssets } from "./content-agent.port"
 
-/** The bucket of the workspace media library. */
-export const MEDIA_BUCKET = "media"
 const PHOTO = /\.(jpe?g|png|webp)$/iu
 const COMPOSE_TIMEOUT_MS = 60_000
 const SIGN_SECONDS = 7 * 24 * 3600

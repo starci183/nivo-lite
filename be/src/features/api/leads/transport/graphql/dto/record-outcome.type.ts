@@ -27,10 +27,6 @@ export class RecordOutcomeType {
     @Field()
     need!: string
 
-    /** The lead origin, when recorded. */
-    @Field(() => String, { nullable: true })
-    origin!: string | null
-
     /** Whether a won deal was handed to an active Accounting agent. */
     @Field()
     handedToAccounting!: boolean

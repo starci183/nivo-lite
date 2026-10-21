@@ -25,7 +25,6 @@ const shippedOf = builder<ShippedOrder>({
     items: "2 x Tea",
     amount_vnd: 90000,
     status: "confirmed",
-    origin: "live",
     confirmed_by: "Lan",
     confirmed_at: "2026-10-13T01:30:00.000Z",
     created_at: "2026-10-13T01:00:00.000Z",

@@ -23,6 +23,7 @@ import { InjectAgentsQueue } from "@modules/queues/agents"
 import type { AgentsQueue } from "@modules/queues/agents"
 import { ModulesError, ModulesErrorCode } from "./errors/modules.error"
 import type { SetupState, SetupVersions } from "./module-setup.contracts"
+import { ModuleReadinessService } from "./module-readiness.service"
 import { ModulesService } from "./modules.service"
 import {
     agentTextsOf,
@@ -62,6 +63,7 @@ export class SetupChatService {
         private readonly events: EventsService,
         private readonly sync: AgentSyncService,
         private readonly cards: SetupCardsService,
+        private readonly readiness: ModuleReadinessService,
     ) {}
 
     /** Everything the Setup tab needs: the draft (opened on first visit), the revisions, the whole chat and the confirm cards. */
@@ -78,7 +80,7 @@ export class SetupChatService {
             revisions.map((revision) => revision.id),
         )
         return {
-            installation,
+            installation: await this.readiness.withNeeds(installation),
             session,
             revisions,
             messages,
@@ -184,6 +186,7 @@ export class SetupChatService {
             created.id,
             keepsStatus ? installation.status : "ready",
         )
+        await this.readiness.settle(workspaceId, installation.id)
         if (installation.agentId !== null) {
             await this.writeAgentTexts(
                 principalId,

@@ -20,6 +20,4 @@ export interface LeadRecordRow {
     readonly phone: string | null
     /** The email, or null. */
     readonly email: string | null
-    /** `live`, `simulated` or null. */
-    readonly origin: string | null
 }

@@ -24,7 +24,7 @@ import type { DescriptionListStatItem } from "@starci/grammar/common"
 import type { useFormatter, useTranslations } from "next-intl"
 import type { ValuesInput1 } from "./useAccountingQuestions"
 
-/** Presents the backend-calculated monthly figures in the reader's locale. */
+/** Presents the backend-calculated monthly figures in the reader's locale; a figure fed by a missing connection says so, never 0. */
 export const accountingFiguresOf = (
     data: AccountingWorkbenchData,
     format: AccountingFormat,
@@ -35,33 +35,19 @@ export const accountingFiguresOf = (
         term: string,
         measure: AccountingMeasure,
         unit: "countInvoices" | "countPayments",
-    ) => ({
-        id,
-        term,
-        description: moneyOf(format, measure.vnd.live),
-        meta: [
-            t(unit, { n: measure.count.live }),
-            measure.count.simulated > 0 ? `${t("originSimulated")}: ${moneyOf(format, measure.vnd.simulated)}` : "",
-        ]
-            .filter(Boolean)
-            .join(" · "),
-    })
+    ) => ({ id, term, description: moneyOf(format, measure.vnd), meta: t(unit, { n: measure.count }) })
     const slots = [data.ageing.d0, data.ageing.d30, data.ageing.d60]
-    const simulatedOpen = slots.reduce((sum, slot) => sum + slot.vnd.simulated, 0)
     return [
         moneyItem("income", t("mIncome"), data.periods.this.income, "countInvoices"),
         moneyItem("receivable", t("mReceivable"), data.periods.this.receivable, "countInvoices"),
-        moneyItem("unmatched", t("mUnmatched"), data.periods.this.unmatched, "countPayments"),
+        data.creditsSource === null
+            ? { id: "unmatched", term: t("mUnmatched"), description: t("notConnected"), meta: t("notConnectedHint") }
+            : moneyItem("unmatched", t("mUnmatched"), data.periods.this.unmatched, "countPayments"),
         {
             id: "ageing",
             term: t("mAgeing"),
-            description: slots.map((slot) => slot.count.live).join(" / "),
-            meta: [
-                slots.map((slot) => moneyOf(format, slot.vnd.live)).join(" · "),
-                simulatedOpen > 0 ? `${t("originSimulated")}: ${moneyOf(format, simulatedOpen)}` : "",
-            ]
-                .filter(Boolean)
-                .join(" · "),
+            description: slots.map((slot) => slot.count).join(" / "),
+            meta: slots.map((slot) => moneyOf(format, slot.vnd)).join(" · "),
         },
     ]
 }

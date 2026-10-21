@@ -34,6 +34,25 @@ const mutation1: Document = gql`
                 }
             }
             channels
+            posts {
+                id
+                channel
+                title
+                publishedAt
+                engagements
+                href
+            }
+            postCount
+            suggestion {
+                title
+                body
+                sources {
+                    layer
+                    kind
+                    ref
+                    label
+                }
+            }
         }
     }
 `

@@ -31,10 +31,6 @@ export class LeadRecordType {
     @Field(() => String, { nullable: true })
     contextSummary!: string | null
 
-    /** The live or simulated origin, when recorded. */
-    @Field(() => String, { nullable: true })
-    origin!: string | null
-
     /** The module installation that owns the lead, when assigned. */
     @Field(() => ID, { nullable: true })
     installationId!: string | null

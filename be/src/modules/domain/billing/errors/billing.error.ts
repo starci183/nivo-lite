@@ -17,8 +17,6 @@ export enum BillingErrorCode {
     WebhookUnauthorized = "BILLING_WEBHOOK_UNAUTHORIZED",
     /** A webhook delivery body cannot be used. */
     WebhookInvalid = "BILLING_WEBHOOK_INVALID",
-    /** The door has no workspace configured, so it cannot book anything. */
-    FeedNotConfigured = "BILLING_FEED_NOT_CONFIGURED",
     /** A stored connection credential cannot be decrypted. */
     CredentialUnreadable = "BILLING_CREDENTIAL_UNREADABLE",
     /** The plan is no longer sold: only the workspaces that already have it keep it. */
@@ -48,7 +46,6 @@ export const BILLING_ERROR_KINDS: Record<BillingErrorCode, ErrorKind> = {
     [BillingErrorCode.PlanCustom]: "conflict",
     [BillingErrorCode.WebhookUnauthorized]: "unauthenticated",
     [BillingErrorCode.WebhookInvalid]: "invalid",
-    [BillingErrorCode.FeedNotConfigured]: "unavailable",
     [BillingErrorCode.CredentialUnreadable]: "internal",
     [BillingErrorCode.PlanNotListed]: "conflict",
     [BillingErrorCode.CycleUnavailable]: "invalid",

@@ -30,7 +30,6 @@ const lead: LeadRecordRow = {
     context_summary: null,
     phone: null,
     email: null,
-    origin: "live",
 }
 
 const build = async () => {

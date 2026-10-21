@@ -35,7 +35,6 @@ const build = async (stubs: ReadonlyArray<readonly [string, unknown]>) => {
 const eventOf = (manager: ReturnType<typeof mockEntityManager>) => ({
     manager,
     workspaceId: "ws-1",
-    origin: "live" as const,
     sender: null,
     body: "ACB credit",
     amountVnd: 150000,
@@ -54,7 +53,6 @@ describe("InboundEventsService recordBankPayment", () => {
 
         expect(tx.em.query).toHaveBeenCalledWith(INSERT_BANK_EVENT, [
             "ws-1",
-            "live",
             null,
             "ACB credit",
             150000,
@@ -126,7 +124,6 @@ describe("InboundEventsService recordInput", () => {
         workspaceId: "ws-1",
         channel: "zalo",
         kind: "lead",
-        origin: "live" as const,
         senderName: "Mai",
         senderContact: null,
         body: "Haircut",
@@ -143,7 +140,6 @@ describe("InboundEventsService recordInput", () => {
             "ws-1",
             "zalo",
             "lead",
-            "live",
             "Mai",
             null,
             "Haircut",
@@ -182,7 +178,6 @@ describe("InboundEventsService find", () => {
             workspace_id: "ws-1",
             channel: "zalo",
             kind: "lead",
-            origin: "live",
             sender_name: "Mai",
             sender_contact: null,
             body: "Haircut",
@@ -228,7 +223,6 @@ describe("InboundEventsService handOffOrder", () => {
             events.handOffOrder(
                 {
                     workspaceId: "ws-1",
-                    origin: "live",
                     sender: "Mai",
                     contact: "84912345678",
                     body: "Haircut",
@@ -243,7 +237,6 @@ describe("InboundEventsService handOffOrder", () => {
         expect(manager.query).toHaveBeenCalledTimes(1)
         expect(manager.query).toHaveBeenCalledWith(INSERT_ORDER_HANDOFF, [
             "ws-1",
-            "live",
             "Mai",
             "84912345678",
             "Haircut",

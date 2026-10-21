@@ -1,11 +1,9 @@
-import type { Secret } from "@modules/platform/config"
+import type { McpOptions } from "@modules/integrations/mcp"
 
-/** What the gateway needs: the credentials remote connectors may name, and the default time limit of a call. */
+/** What the gateway needs: the MCP integration's credentials (by NAME), the default time limit of a call, and the console flag. */
 export interface McpGatewayOptions {
-    /** The credential secrets by NAME (`credential_ref`), each read through `<NAME>_FILE`; values never leave the gateway. */
-    readonly credentials: ReadonlyMap<string, Secret>
-    /** The bearer agents present on the gateway's own MCP endpoint (MCP_GATEWAY_AGENT_TOKEN_FILE), or null to keep it closed. */
-    readonly agentToken: Secret | null
+    /** The MCP integration options: the credential secrets remote connectors may name, each read through `<NAME>_FILE`. */
+    readonly remote: McpOptions
     /** True in the app that serves the console (registers the admin service, which needs the connections capability). */
     readonly console?: boolean
     /** The time limit of one call, milliseconds (4 s). */

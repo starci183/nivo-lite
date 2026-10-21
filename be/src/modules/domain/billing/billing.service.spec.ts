@@ -23,7 +23,6 @@ import {
 const OPTIONS: BillingOptions = {
     sepayApiKey: new Secret("key"),
     bankAccount: { account: "0123", bank: "MB", holder: "NIVO" },
-    simulatedBank: { secret: undefined, workspaceId: undefined },
     channelTokenKey: undefined,
 }
 const PLAN_ROW = {

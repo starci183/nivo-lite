@@ -32,7 +32,7 @@ export class BusinessEventsService {
     }
 
     /** A new lead: `lead.created` once per lead (a repeat of the same lead starts nothing). */
-    leadCreated(workspaceId: string, lead: CreatedLead, origin: string): Promise<void> {
+    leadCreated(workspaceId: string, lead: CreatedLead): Promise<void> {
         return this.announce(workspaceId, {
             event: "lead.created",
             dedupe: `lead.created:${lead.id}`,
@@ -44,7 +44,6 @@ export class BusinessEventsService {
                 need: lead.need,
                 phone: lead.phone,
                 email: lead.email,
-                origin,
             },
         })
     }

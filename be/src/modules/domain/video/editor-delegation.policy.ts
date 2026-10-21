@@ -11,6 +11,8 @@ import type {
     EditorCardMedia,
     EditorLabels,
     ReadyVideo,
+    RenderingRefs,
+    RenderingWords,
 } from "./editor-delegation.contracts"
 
 /** The goals a delegated project may take; anything else is an offer. */
@@ -97,7 +99,7 @@ export const sceneLines = (scenes: ReadonlyArray<ScriptScene>, seconds: number):
     const each = scenes.length === 0 ? 0 : seconds / scenes.length
     return scenes.slice(0, 20).map((scene, index) => ({
         at: mark(index * each, (index + 1) * each),
-        text: scene.caption === "" ? scene.voiceover : scene.caption,
+        text: (scene.caption === "" ? scene.voiceover : scene.caption).slice(0, 400),
     }))
 }
 
@@ -136,6 +138,15 @@ export const videoReadyCard = (video: ReadyVideo, labels: EditorLabels, approval
         link: { label: labels.link, href: video.href },
         ref: { kind: "work_item", id: approvalItemId },
         actions: ["approve", "decline"],
+        sources: [
+            { layer: 2, kind: "brain_document", ref: "video_brand_kits", label: "Brand kit" },
+            {
+                layer: 2,
+                kind: "delegated_script",
+                ref: video.source.slice(0, 200),
+                label: "Script from AI Marketing",
+            },
+        ],
         data: {
             delegation_id: video.delegationId,
             project_id: video.projectId,
@@ -146,10 +157,26 @@ export const videoReadyCard = (video: ReadyVideo, labels: EditorLabels, approval
             poster_url: video.posterUrl,
             captions_url: video.captionsUrl,
             captions_lang: video.captionsLang,
-            sources: [
-                { layer: 2, source: "video_brand_kits" },
-                { layer: 2, source: `delegated_script:${video.source}` },
-            ],
         },
     }
 }
+
+/** Where the workbench follows a project's render, with its live progress bar. */
+export const projectHref = (projectId: string): string => `/agents/video/workbench?focus=${projectId}`
+
+/**
+ * The note AI Editor posts in the Marketing room as soon as a delegated render is queued: the script it took, its scenes and
+ * planned length, and the link to the project whose progress bar runs live. The `video_ready` card follows when the render ends.
+ */
+export const renderingCard = (script: DelegatedScript, words: RenderingWords, refs: RenderingRefs): EditorCard => ({
+    v: 1,
+    type: "handoff_note",
+    title: script.title,
+    subtitle: [words.seconds, script.aspect, channelNames(script.channels)].filter((part) => part !== "").join(" · "),
+    badge: words.badge,
+    body: words.body,
+    fields: [{ label: words.target, value: words.seconds }],
+    lines: sceneLines(script.scenes, script.targetSeconds),
+    link: { label: words.link, href: projectHref(refs.projectId) },
+    data: { project_id: refs.projectId, render_id: refs.renderId, source: script.source },
+})

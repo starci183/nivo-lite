@@ -23,10 +23,6 @@ export class AccountingCreditType {
     @Field(() => String, { nullable: true })
     reference!: string | null
 
-    /** origin. */
-    @Field(() => String)
-    origin!: string
-
     /** match. */
     @Field(() => String)
     match!: string

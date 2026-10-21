@@ -14,6 +14,8 @@ import { BrandImagesService } from "./brand-images.service"
 import { BrandKitService } from "./brand-kit.service"
 import { ContentAgentLogEvent } from "./content-agent.log-events"
 import { MarketingCardsService } from "./marketing-cards.service"
+import { MarketingKnowledgeService } from "./marketing-knowledge.service"
+import { MarketingVideoService } from "./marketing-video.service"
 import { draftMessages, postTextOf, readDraft } from "./marketing-draft.policy"
 import type { DraftOutcome, DraftRequest, MarketingDraft } from "./content-agent.contracts"
 import type { DraftImage } from "./marketing-cards.contracts"
@@ -41,12 +43,17 @@ export class MarketingDraftService {
         private readonly engine: WorkEngineService,
         private readonly approvals: ContentApprovalStoreService,
         private readonly items: ContentItemsService,
+        private readonly video: MarketingVideoService,
+        private readonly knowledge: MarketingKnowledgeService,
     ) {}
 
     /** Drafts the request; a failure of the model or the images is posted in the room and answered, never thrown. */
     async draft(ctx: WorkContext, input: DraftRequest): Promise<DraftOutcome> {
         const scope = { workspaceId: ctx.workspaceId, locale: ctx.locale }
-        const brand = await this.brand.brandOf(ctx.workspaceId)
+        const [brand, guidance] = await Promise.all([
+            this.brand.brandOf(ctx.workspaceId),
+            this.knowledge.guidanceOf(ctx.workspaceId, input.request),
+        ])
         const outcome = await this.generations.run({
             workspaceId: ctx.workspaceId,
             purpose: "marketing_draft",
@@ -55,7 +62,7 @@ export class MarketingDraftService {
             kind: "engine",
             module: "content",
             locale: ctx.locale,
-            messages: draftMessages(input.request, brand.kit, ctx.locale),
+            messages: draftMessages(input.request, brand.kit, ctx.locale, guidance),
         })
         const draft = outcome.ok ? readDraft(outcome.output) : null
         if (draft === null) {
@@ -80,6 +87,7 @@ export class MarketingDraftService {
             })
         if (images === null) return { ok: false, reason: "images", contentItemId: null, approvalWorkItemId: null }
         const item = await this.store(ctx, input.request, draft, images, publishAt)
+        const brandRef = brand.kit === null ? "brand_kit:none" : `brand_kit:${brand.kit.brandName}`
         await this.cards.emit(scope, {
             kind: "draft_post",
             workItemId: input.workItemId,
@@ -91,9 +99,10 @@ export class MarketingDraftService {
             script: draft.script,
             channels: item.channels,
             sources: [
-                { layer: 2, label: brand.kit === null ? "brand_kit:none" : `brand_kit:${brand.kit.brandName}` },
-                { layer: 2, label: "media_library" },
-                { layer: 2, label: "owner_request" },
+                { layer: 2, ref: brandRef, label: brandRef },
+                { layer: 2, ref: "media_library", label: "media_library" },
+                { layer: 2, ref: "owner_request", label: "owner_request" },
+                ...guidance.sources,
             ],
         })
         const approval = await this.submit(ctx, item, draft, publishAt)
@@ -104,6 +113,11 @@ export class MarketingDraftService {
             title: draft.title,
             channels: item.channels,
             scheduledAt: publishAt,
+        })
+        await this.video.delegate(ctx, draft, images, {
+            contentItemId: item.id,
+            channels: item.channels,
+            parentId: input.workItemId,
         })
         return { ok: true, reason: "", contentItemId: item.id, approvalWorkItemId: approval }
     }
@@ -145,7 +159,6 @@ export class MarketingDraftService {
             action: "publish_post",
             subject_type: "inbound",
             subject_id: item.id,
-            origin: "live",
             preset: true,
             noChain: true,
             forceAsk: "over_authority",

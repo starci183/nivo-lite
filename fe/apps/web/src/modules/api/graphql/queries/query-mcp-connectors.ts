@@ -18,10 +18,13 @@ const query1: TypedDocumentNode<QueryMcpConnectorsResponse> = gql`
             credentialRef
             contractVersion
             timeoutMs
+            approvedAt
+            checkedAt
             tools {
                 name
                 scope
                 description
+                approved
             }
         }
     }

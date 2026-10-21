@@ -80,7 +80,6 @@ export class LeadGenIntakeService implements MetaEventTaker {
             workspaceId: job.workspaceId,
             channel: job.event.platform,
             kind: "message",
-            origin: "live",
             senderName: name,
             senderContact: null,
             body,
@@ -163,7 +162,6 @@ export class LeadGenIntakeService implements MetaEventTaker {
             to: "lead_gen",
             command: "capture_lead",
             reason: `meta_${kind}`,
-            origin: "live",
             inboundEventId: heard.eventId,
             dedupeKey: `capture_lead:inbound:${heard.eventId}`,
             payload: {
@@ -240,7 +238,6 @@ export class LeadGenIntakeService implements MetaEventTaker {
             to: "lead_gen",
             command: "score_lead",
             reason: "customer_turn",
-            origin: "live",
             inboundEventId: heard.eventId,
             dedupeKey: `score_lead:${flow.lead_id ?? flow.id}:${turn}`,
             payload: {

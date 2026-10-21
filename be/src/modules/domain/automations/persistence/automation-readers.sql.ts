@@ -1,7 +1,7 @@
 import { sql } from "@modules/platform/database"
 
 /** One lead of a workspace ($1 workspace, $2 lead). */
-export const SELECT_LEAD = sql`SELECT id, contact_name, company, channel, need, stage, phone, email, origin
+export const SELECT_LEAD = sql`SELECT id, contact_name, company, channel, need, stage, phone, email
 FROM public.leads WHERE workspace_id = $1 AND id = $2 LIMIT 1`
 
 /** One conversation of a workspace ($1 workspace, $2 conversation). */

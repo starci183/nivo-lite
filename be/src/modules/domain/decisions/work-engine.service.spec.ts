@@ -455,7 +455,7 @@ describe("WorkEngineService", () => {
     })
 
     describe("inputs to work", () => {
-        const event: InboundWorkSource = { id: "event-1", origin: "simulated" }
+        const event: InboundWorkSource = { id: "event-1" }
         it("starts the department's work for an inbound event", async () => {
             const built = await build({ created: false })
             const seed: Partial<Work.Proposal> = { summary: "Hi" }
@@ -466,7 +466,6 @@ describe("WorkEngineService", () => {
                 subject_id: "event-1",
                 inbound_event_id: "event-1",
                 lead_id: "lead-1",
-                origin: "simulated",
                 dedupeKey: "reply_customer:inbound:event-1",
                 seed,
             })

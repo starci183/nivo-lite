@@ -7,8 +7,6 @@ export type ReasonCode = "routine" | "missing_data" | "over_authority" | "unclea
 export type FlowWorkStatus = "queued" | "done" | "waiting_decision" | "rejected" | "failed"
 /** How far the proof of a finished piece of work has come. */
 export type FlowEvidenceState = "pending" | "captured" | "reviewed" | "verified" | "customer_confirmed"
-/** Whether a record came from a real channel or a simulation. */
-export type FlowOrigin = "live" | "simulated"
 /** A staff row of the workspace. */
 export type FlowStaff = {
     id: string
@@ -28,7 +26,6 @@ export type FlowOrder = {
     items: string
     amount_vnd: number | null
     status: "draft" | "confirmed" | "invoiced" | "paid" | "cancelled"
-    origin: FlowOrigin
     confirmed_by: string | null
     confirmed_at: string | null
     created_at: string
@@ -47,7 +44,6 @@ export type FlowInvoice = {
     amount_vnd: number
     due_at: string | null
     status: "draft" | "issued" | "paid" | "void"
-    origin: FlowOrigin
     issued_by: string | null
     issued_at: string | null
     paid_at: string | null
@@ -90,7 +86,6 @@ export type WorkItem = {
     evidence_state: FlowEvidenceState
     assigned_staff_id: string | null
     execution_id: string | null
-    origin: FlowOrigin
     created_at: string
     updated_at: string
     completed_at: string | null

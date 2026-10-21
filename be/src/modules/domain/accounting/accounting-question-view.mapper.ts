@@ -42,7 +42,6 @@ export const toAccountingQuestionWorkView = (item: AccountingWaitingWorkRow): Ac
     assignedStaffId: item.assigned_staff_id,
     assignedStaffName: item.assigned_staff_name,
     executionId: item.execution_id,
-    origin: item.origin,
     createdAt: item.created_at,
     updatedAt: item.updated_at,
     completedAt: item.completed_at,

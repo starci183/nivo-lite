@@ -23,6 +23,7 @@ import {
     SAVE_SETTINGS,
     SET_LIVE,
     SET_OPERATING_MODE,
+    SETTLE_CONNECTION,
 } from "./persistence/module-installations.sql"
 
 const RECORD_ID = "0b6c5d1e-2f3a-4b5c-8d9e-0f1a2b3c4d5e"
@@ -327,5 +328,24 @@ describe("InstallationRecordsService / syncStatus", () => {
         const service = await build(mockEntityManager({ query: [FIND_SYNC_STATUS, []] }))
 
         await expect(service.syncStatus("ws-2", "inst-1")).resolves.toBeNull()
+    })
+})
+
+describe("InstallationRecordsService / settleConnection", () => {
+    it("answers the status the connection check moved the installation to, or null when it did not move", async () => {
+        const em = mockEntityManager({
+            query: [
+                [SETTLE_CONNECTION, [{ status: "needs_connection" }]],
+                [SETTLE_CONNECTION, []],
+            ],
+        })
+        const service = await build(em)
+
+        await expect(service.settleConnection("ws-1", "inst-1", false)).resolves.toBe("needs_connection")
+        await expect(service.settleConnection("ws-1", "inst-1", true)).resolves.toBeNull()
+        expect(em.query.mock.calls).toEqual([
+            [SETTLE_CONNECTION, ["inst-1", "ws-1", false]],
+            [SETTLE_CONNECTION, ["inst-1", "ws-1", true]],
+        ])
     })
 })

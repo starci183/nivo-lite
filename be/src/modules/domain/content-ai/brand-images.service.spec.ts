@@ -7,8 +7,10 @@ import { FFMPEG } from "@modules/integrations/ffmpeg"
 import type { Ffmpeg } from "@modules/integrations/ffmpeg"
 import { SUPABASE_OBJECTS } from "@modules/integrations/supabase"
 import type { SupabaseObjectsPort } from "@modules/integrations/supabase"
-import { BrandImagesService, MEDIA_BUCKET } from "./brand-images.service"
+import { MEDIA_BUCKET } from "@modules/domain/video"
+import { BrandImagesService } from "./brand-images.service"
 import { CONTENT_AI_OPTIONS, MARKETING_ASSETS } from "./content-agent.decorators"
+import { ContentAiErrorCode } from "./errors/content-ai.error"
 import type { MarketingAssets } from "./content-agent.port"
 
 const COPIES = [
@@ -99,7 +101,7 @@ describe("BrandImagesService compose", () => {
 
         await expect(
             service.compose({ workspaceId: "ws-1", key: "k4", copies: COPIES, kit: null, logoPath: null }),
-        ).rejects.toThrow("full")
+        ).rejects.toMatchObject({ code: ContentAiErrorCode.Failed, cause: new Error("full") })
         await expect(readdir(workDir)).resolves.toEqual([])
     })
 })

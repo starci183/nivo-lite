@@ -59,7 +59,6 @@ export class FollowUpLeadPerformerService implements WorkPerformer, OnModuleInit
             reason: "warm_lead_outside_window",
             parentId: item.id,
             chainId: item.chain_id ?? item.id,
-            origin: item.origin,
             inboundEventId: item.inbound_event_id,
             queue: true,
             dedupeKey: `send_follow_up:lead_gen:${flow.id}`,

@@ -1,4 +1,10 @@
-import type { AgentSyncStatus } from "../module-installations.contracts"
+import type { AgentSyncStatus, InstallationStatus } from "../module-installations.contracts"
+
+/** The status an update left an installation in. */
+export interface StatusRow {
+    /** The status. */
+    readonly status: InstallationStatus
+}
 
 /** An id the insert or a one-column read answers. */
 export interface IdRow {

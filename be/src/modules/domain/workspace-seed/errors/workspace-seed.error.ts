@@ -23,6 +23,8 @@ export enum WorkspaceSeedErrorCode {
     BootstrapRequired = "WORKSPACE_SEED_BOOTSTRAP_REQUIRED",
     /** Auth did not acknowledge cleanup of the password session this operation owns. */
     SessionCleanupFailed = "WORKSPACE_SEED_SESSION_CLEANUP_FAILED",
+    /** A profile connector could not be read: its server did not answer `tools/list`. */
+    ConnectorUnreachable = "WORKSPACE_SEED_CONNECTOR_UNREACHABLE",
 }
 
 /** How each workspace-seed code travels. */
@@ -37,6 +39,7 @@ export const WORKSPACE_SEED_ERROR_KINDS: Record<WorkspaceSeedErrorCode, ErrorKin
     [WorkspaceSeedErrorCode.VerificationFailed]: "conflict",
     [WorkspaceSeedErrorCode.BootstrapRequired]: "forbidden",
     [WorkspaceSeedErrorCode.SessionCleanupFailed]: "unavailable",
+    [WorkspaceSeedErrorCode.ConnectorUnreachable]: "unavailable",
 }
 
 /** The one error class of the workspace-seed capability. */

@@ -1,7 +1,6 @@
 import { CommandHandler } from "@nestjs/cqrs"
 import { McpGatewayAdminService } from "@modules/domain/mcp-gateway"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { actorOf } from "./mcp-gateway.mapper"
 import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { RegisterMcpConnectorCommand } from "./register-mcp-connector.command"
@@ -17,6 +16,9 @@ export class RegisterMcpConnectorHandler extends ICQRSHandler<RegisterMcpConnect
     }
 
     protected override process(command: RegisterMcpConnectorCommand): Promise<void> {
-        return this.admin.registerRemote(actorOf(command.params), command.params.request.connector)
+        return this.admin.registerRemote(
+            { principalId: command.params.principal.id, workspaceId: command.params.request.workspaceId },
+            command.params.request.connector,
+        )
     }
 }

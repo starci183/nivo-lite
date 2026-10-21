@@ -1,37 +1,27 @@
-import type { AccountingLedgerEntry, AccountingOrigin } from "@modules/domain/ledger"
+import type { AccountingLedgerEntry } from "@modules/domain/ledger"
 import type { AccountingWaitingWorkRow as WorkItemView } from "@modules/domain/decisions"
 import type { StaffRow as Staff } from "@modules/domain/staff"
 
 /**
  * Plain data of the Accounting workbench (read side). Everything is derived from the records the flow already keeps:
  * invoices (internal payment records), transactions (bank credits), orders, accounting work items and decisions.
- * Test runs are left out of every figure and counted in `excludedTest`.
+ * Only live records are read; test runs are left out of every figure and counted in `excludedTest`.
  */
 
-/** A number split by where the records came from. */
-export interface AccountingSplit {
-    /** The value from live records. */
-    readonly live: number
-    /** The value from simulated records. */
-    readonly simulated: number
-}
-
-/** One figure: money and record count, each split by origin. Never merged into one number. */
+/** One figure: money and record count. */
 export interface AccountingMeasure {
-    /** The VND amount split by record origin. */
-    readonly vnd: AccountingSplit
-    /** The record count split by origin. */
-    readonly count: AccountingSplit
+    /** The VND amount. */
+    readonly vnd: number
+    /** The record count. */
+    readonly count: number
 }
 
-/** One week of paid income, split by origin. */
+/** One week of paid income. */
 export interface AccountingWeekBar {
     /** The beginning of this week, ISO text. */
     readonly startIso: string
-    /** The value from live records. */
-    readonly live: number
-    /** The value from simulated records. */
-    readonly simulated: number
+    /** The paid income of the week, VND. */
+    readonly vnd: number
 }
 
 /** The month being looked at: the current one or the one before. */
@@ -68,10 +58,10 @@ export interface AccountingAgeing {
     readonly d60: AccountingMeasure
 }
 
-/** Work items waiting for a person, by origin, with the money already known. */
+/** Work items waiting for a person, with the money already known. */
 export interface AccountingWaiting {
-    /** The record count split by origin. */
-    readonly count: AccountingSplit
+    /** The number of waiting items. */
+    readonly count: number
     /** The known amount of waiting work, in VND. */
     readonly knownVnd: number
     /** The number of waiting items without a known amount. */
@@ -80,8 +70,8 @@ export interface AccountingWaiting {
 
 /** Whether a bank credit is tied to an invoice, needs a person, or has no invoice. */
 export type AccountingMatchState = "matched" | "unclear" | "unmatched"
-/** Where a bank credit was recorded from. */
-export type AccountingSourceKind = "vietcombank" | "inbox" | "manual" | "other"
+/** Where a bank credit was recorded from: the payment connector's feed, a person's manual entry, another input, or unknown. */
+export type AccountingSourceKind = "connector" | "inbox" | "manual" | "other"
 /** The state of an internal payment record. */
 export type AccountingInvoiceStatus = "draft" | "issued" | "paid" | "void"
 
@@ -97,8 +87,6 @@ export interface AccountingCredit {
     readonly payer: string | null
     /** The bank transfer reference when known. */
     readonly reference: string | null
-    /** Whether the record is live or simulated. */
-    readonly origin: AccountingOrigin
     /** The payment matching state. */
     readonly match: AccountingMatchState
     /** The internal payment record number. */
@@ -117,8 +105,6 @@ export interface AccountingInvoice {
     readonly amount: number
     /** The current record state. */
     readonly status: AccountingInvoiceStatus
-    /** Whether the record is live or simulated. */
-    readonly origin: AccountingOrigin
     /** The customer name when known. */
     readonly customer: string | null
     /** The invoice issue time, ISO text. */
@@ -143,8 +129,6 @@ export interface AccountingOrder {
     readonly items: string
     /** The amount, in VND. */
     readonly amount: number | null
-    /** Whether the record is live or simulated. */
-    readonly origin: AccountingOrigin
     /** The customer name when known. */
     readonly customer: string | null
     /** The record creation time, ISO text. */
@@ -182,6 +166,8 @@ export interface AccountingWorkbenchData {
     readonly waiting: AccountingWaiting
     /** The newest bank payment evidence. */
     readonly credits: ReadonlyArray<AccountingCredit>
+    /** The display name of the connector that feeds payment credits (`payment.credits.list`), or null when none is connected. */
+    readonly creditsSource: string | null
     /** The newest internal invoice evidence. */
     readonly invoices: ReadonlyArray<AccountingInvoice>
     /** Orders that have not been invoiced. */

@@ -8,6 +8,8 @@ import type { WorkspaceMember, WorkspaceRole } from "@modules/domain/workspace-m
 import { CLOCK } from "@modules/platform/clock"
 import type { AccountingBook } from "./accounting-book.contracts"
 import { AccountingBookService } from "./accounting-book.service"
+import { ACCOUNTING_GATEWAY } from "./accounting-gateway.decorators"
+import type { AccountingGateway } from "./accounting-gateway.port"
 import { AccountingService } from "./accounting.service"
 
 const WORKSPACE = "ws-1"
@@ -48,6 +50,7 @@ const build = async (role: WorkspaceRole = "owner") => {
     const members = mock<WorkspaceMembersService>({ require: jest.fn(() => Promise.resolve(memberOf(role))) })
     const decisions = mock<DecisionsService>({ listAccountingWaiting: jest.fn(() => Promise.resolve([])) })
     const staff = mock<StaffService>({ list: jest.fn(() => Promise.resolve([STAFF])) })
+    const gateway = mock<AccountingGateway>({ creditsSource: jest.fn(() => Promise.resolve("SePay")) })
     const moduleRef = await Test.createTestingModule({
         providers: [
             AccountingService,
@@ -55,6 +58,7 @@ const build = async (role: WorkspaceRole = "owner") => {
             { provide: WorkspaceMembersService, useValue: members },
             { provide: DecisionsService, useValue: decisions },
             { provide: StaffService, useValue: staff },
+            { provide: ACCOUNTING_GATEWAY, useValue: gateway },
             { provide: CLOCK, useValue: new FakeClock(NOW) },
         ],
     }).compile()
@@ -93,6 +97,7 @@ describe("AccountingService", () => {
                 ownerName: "Lan",
                 canAdjust: true,
                 adjustmentsReady: true,
+                creditsSource: "SePay",
                 questions: [],
                 ledger: [],
                 excludedTest: 0,

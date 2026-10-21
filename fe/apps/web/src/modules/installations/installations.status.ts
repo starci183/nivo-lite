@@ -16,6 +16,7 @@ export const AGENT_STATUS_TONE: Readonly<Record<ShownStatus, "neutral" | "accent
         ready: "accent",
         live: "success",
         paused: "neutral",
+        needs_connection: "warning",
     }
 
 /** The filters of the catalogue by status. */

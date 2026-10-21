@@ -28,7 +28,6 @@ export class LeadFlowChainService implements LeadGenFlow {
                         action: item.action,
                         leadId: item.lead_id,
                         chainId: item.chain_id,
-                        origin: item.origin,
                         fields: item.proposal.fields,
                         draft: item.proposal.draft ?? "",
                     },

@@ -7,15 +7,17 @@ Migration: `supabase/migrations/20261101000100_hub-rooms.sql`.
 
 Room keys (fixed set, `office_rooms.key`):
 
-| key | Name (vi) | Name (en) | default `modules` (work_items.department routed here) |
-|---|---|---|---|
-| *(null)* | Office | Office | the general room: shows **every** line of the workspace (old workspaces see only this) |
-| `executive` | Ban điều hành | Executive | — |
-| `frontdesk` | Lễ tân | Front desk | — |
-| `sales` | Sales | Sales | `sales`, `booking` |
-| `marketing` | Marketing | Marketing | `content`, `video` |
-| `care` | CSKH | Customer care | `chatbot` |
-| `accounting` | Kế toán | Accounting | `accounting`, `invoices` |
+| key          | Room          | default `modules` (work_items.department routed here)                                  |
+| ------------ | ------------- | -------------------------------------------------------------------------------------- |
+| _(null)_     | Office        | the general room: shows **every** line of the workspace (old workspaces see only this) |
+| `executive`  | Executive     | —                                                                                      |
+| `frontdesk`  | Front desk    | —                                                                                      |
+| `sales`      | Sales         | `sales`, `booking`                                                                     |
+| `marketing`  | Marketing     | `content`, `video`                                                                     |
+| `care`       | Customer care | `chatbot`                                                                              |
+| `accounting` | Accounting    | `accounting`, `invoices`                                                               |
+
+The stored display name of each room (`office_rooms.name`) is the Vietnamese name that `ensure_office_rooms` writes.
 
 - A workspace gets the six department rooms with `select public.ensure_office_rooms('<workspace>')` (idempotent; seed/CLI calls it) or the GraphQL mutation `setupOfficeRooms` (owner/manager).
 - Room membership: `office_rooms_members(room_id, agent_id | user_id, is_home)`. An agent's **home** room (`is_home = true`) receives its lines.
@@ -24,7 +26,7 @@ Room keys (fixed set, `office_rooms.key`):
   2. the home room of the line's `agent_id`;
   3. the room whose `modules` contains the line's work item department;
   4. otherwise null (Office only).
-  Writers may set `room` explicitly (see `OfficeCardsService.post`).
+     Writers may set `room` explicitly (see `OfficeCardsService.post`).
 
 ## 2. Result card message
 
@@ -34,30 +36,40 @@ A card is an ordinary `public.messages` row (`author_kind = 'agent'` normally) w
 
 ```jsonc
 {
-  "v": 1,                              // required, always 1
-  "type": "draft_post",                // required, one of the 9 types below
-  "title": "Một cuối tuần, trọn vẹn thư thái", // required, 1..160 chars
-  "subtitle": "Ưu đãi spa -20% · Facebook Page + Zalo OA", // optional, <=240
-  "badge": "Cần bạn duyệt",            // optional short status word drawn top-right, <=40
-  "body": "Gác lại những bộn bề...",   // optional long text (caption, report text), <=4000
-  "fields": [                          // optional, <=12 label/value rows (amounts already formatted)
-    { "label": "Tổng dịch vụ", "value": "6.400.000 ₫" }
+  "v": 1, // required, always 1
+  "type": "draft_post", // required, one of the 9 types below
+  "title": "A weekend, fully at ease", // required, 1..160 chars
+  "subtitle": "Spa offer -20% · Facebook Page + Zalo OA", // optional, <=240
+  "badge": "Needs your approval", // optional short status word drawn top-right, <=40
+  "body": "Leave the busy days behind...", // optional long text (caption, report text), <=4000
+  "fields": [
+    // optional, <=12 label/value rows (amounts already formatted)
+    { "label": "Services total", "value": "6,400,000 VND" },
   ],
-  "media": [                           // optional, <=6; https URLs or app-relative paths the web app can load
-    { "kind": "image", "url": "https://.../h1.jpg", "caption": "Hình 1 · 1200 × 800" },
-    { "kind": "video", "url": "https://.../v.mp4", "caption": "15 giây · 9:16" }
+  "media": [
+    // optional, <=6; https URLs or app-relative paths the web app can load
+    { "kind": "image", "url": "https://.../h1.jpg", "caption": "Image 1 · 1200 x 800" },
+    { "kind": "video", "url": "https://.../v.mp4", "caption": "15 seconds · 9:16" },
   ],
-  "lines": [                           // optional, <=20 timed/bulleted lines (video script, schedule, report bullets)
-    { "at": "00–05s", "text": "Nến thơm, khăn ấm." }
+  "lines": [
+    // optional, <=20 timed/bulleted lines (video script, schedule, report bullets)
+    { "at": "00-05s", "text": "Scented candles, warm towels." },
   ],
-  "link": { "label": "Mở dự án video", "href": "/modules/<agentId>/chat" }, // optional, app-relative or https
-  "ref": { "kind": "execution", "id": "<uuid>" },  // optional: the decision the actions act on
-  "actions": ["approve", "edit", "decline"],       // optional; only allowed when "ref" is present
-  "sources": [                         // optional, <=10: ONLY the sources this turn actually used (see 2b)
-    { "layer": 1, "kind": "mcp_tool", "ref": "rooms.searchAvailability", "label": "HAKUEN: phong trong 24/10" },
-    { "layer": 2, "kind": "brain_document", "ref": "<knowledge source id>", "label": "HAKUEN_Brand_Guideline.pdf", "href": "/brain" }
+  "link": { "label": "Open the video project", "href": "/modules/<agentId>/chat" }, // optional, app-relative or https
+  "ref": { "kind": "execution", "id": "<uuid>" }, // optional: the decision the actions act on
+  "actions": ["approve", "edit", "decline"], // optional; only allowed when "ref" is present
+  "sources": [
+    // optional, <=10: ONLY the sources this turn actually used (see 2b)
+    { "layer": 1, "kind": "mcp_tool", "ref": "sepay.transactions.list", "label": "sepay.transactions.list" },
+    {
+      "layer": 2,
+      "kind": "brain_document",
+      "ref": "<knowledge source id>",
+      "label": "Brand_Guideline.pdf",
+      "href": "/brain",
+    },
   ],
-  "data": { }                          // optional, opaque type-specific JSON (<=16 KB), not drawn by the Hub
+  "data": {}, // optional, opaque type-specific JSON (<=16 KB), not drawn by the Hub
 }
 ```
 
@@ -67,50 +79,59 @@ Unknown top-level keys are rejected. Validation lives in `be/src/modules/domain/
 
 `sources: Array<{ layer: 1 | 2 | 3 | 4, kind: string, ref: string, label: string, href?: string }>`, at most 10, listing only what the turn actually used (owner ruling data-layers.md):
 
-| layer | meaning | typical `kind` | `ref` |
-|---|---|---|---|
-| 1 | MCP connector live data | `mcp_tool` | tool name, e.g. `rooms.searchAvailability`, `folio.get` |
-| 2 | Second Brain (workspace knowledge) | `brain_document`, `brain_fact` | knowledge source id / fact id |
-| 3 | Agent self-learning | `brain_lesson`, `brain_extraction` | lesson id |
-| 4 | NIVO base knowledge | `base_document` | base document key, e.g. `tax-calendar-vn` |
+| layer | meaning                            | typical `kind`                     | `ref`                                                               |
+| ----- | ---------------------------------- | ---------------------------------- | ------------------------------------------------------------------- |
+| 1     | MCP connector live data            | `mcp_tool`                         | full tool name `<connector>.<tool>`, e.g. `sepay.transactions.list` |
+| 2     | Second Brain (workspace knowledge) | `brain_document`, `brain_fact`     | knowledge source id / fact id                                       |
+| 3     | Agent self-learning                | `brain_lesson`, `brain_extraction` | lesson id                                                           |
+| 4     | NIVO base knowledge                | `base_document`                    | base document key, e.g. `tax-calendar-vn`                           |
 
-`kind` <= 40 chars, `ref` <= 200, `label` <= 160 (what the reader sees), `href` https or app-relative. The Hub draws them under the card as "Nguon: <layer name>: <label> . ..." in the order given (put them in precedence order 1 > 2 > 3 > 4). The same array may be stored on the execution / work item so the approval card can show it.
+`kind` <= 40 chars, `ref` <= 200, `label` <= 160 (what the reader sees), `href` https or app-relative. The Hub draws them under the card as "Source: <layer name>: <label> . ..." in the order given (put them in precedence order 1 > 2 > 3 > 4). The same array may be stored on the execution / work item so the approval card can show it.
 
 ### Types
 
-| type | who emits | usual fields | actions |
-|---|---|---|---|
-| `draft_post` | AI Marketing | title, subtitle, body (caption), media (images), lines (video script), ref | approve / edit / decline |
-| `video_ready` | AI Editor | title, media (video), fields (length, ratio), link | approve / decline (if ref) |
-| `approval_request` | any agent over authority | title, fields (amounts), body (reason), ref | approve / decline |
-| `schedule_confirmed` | AI Marketing | title, fields (channel, time), link | — |
-| `weekly_report` | AI Marketing | title, fields (KPIs), lines (bullets), link | — |
-| `booking_held` | AI Sales & Đặt chỗ | title, fields (guest, service, time, hold expiry) | — |
-| `daily_summary` | AI Kế toán | title, fields, lines | — |
-| `handoff_note` | routing / AI CSKH | title, body | — |
-| `exception` | any | title, body, fields, ref | approve / decline |
+| type                 | who emits                                                       | usual fields                                                                                      | actions                    |
+| -------------------- | --------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- | -------------------------- |
+| `draft_post`         | AI Marketing                                                    | title, subtitle, body (caption), media (images), lines (video script), ref                        | approve / edit / decline   |
+| `video_ready`        | AI Editor                                                       | title, media (video), fields (length, ratio), link                                                | approve / decline (if ref) |
+| `approval_request`   | any agent over authority                                        | title, fields (amounts), body (reason), ref                                                       | approve / decline          |
+| `schedule_confirmed` | AI Marketing                                                    | title, fields (channel, time), link                                                               | —                          |
+| `weekly_report`      | AI Marketing                                                    | title, fields (KPIs), lines (bullets), link                                                       | —                          |
+| `daily_summary`      | AI Accounting                                                   | title, fields, lines                                                                              | —                          |
+| `handoff_note`       | routing / AI CSKH                                               | title, body                                                                                       | —                          |
+| `exception`          | any                                                             | title, body, fields, ref                                                                          | approve / decline          |
+| `action_done`        | any agent, after a write-scope connector call it made in a turn | title (the tool's description), fields (tool, customer), sources (the tool, the turn's knowledge) | —                          |
 
 ### Actions and state (reuse of the existing approval flow; no new decision path)
 
 - `ref.kind = "execution"`: approve/decline call the existing `decideExecution(executionId, decision, editedDraft)`; **edit** opens the draft (`card.body`, else the execution's draft) and approves the edited text.
 - `ref.kind = "work_item"`: approve/decline call the existing `decideWorkItem(workItemId, decision, basis, edits)`; edit sends `edits.draft`.
 - The card's live state is **derived on read**, never stored: `officeMessages` returns `card_state` = `pending` (execution `pending_approval` / work item `waiting_decision`), `approved` (execution `approved`), `done` (work item `done`), `declined` (`rejected`), `failed` (work item `failed`), `queued` (work item `queued`), or `info` (no ref, or the ref names nothing in the workspace). Buttons show only while `pending` and the viewer may decide.
-- Pending cards of a room appear in the room's right panel "Cần bạn duyệt".
+- Pending cards of a room appear in the room's right panel (the "needs your approval" list).
 
 ### How to emit a card (back end)
 
 ```ts
 import { OfficeCardsService } from "@modules/domain/messages"
 
-await officeCards.post({ workspaceId }, {
-    room: null,                 // null = let the trigger route it (home room of the agent / origin room); or "marketing", ...
-    agentId: agent.id,          // the speaking agent (null = NIVO system line)
-    authorName: agent.name,     // shown as author
-    body: "Nội dung đã sẵn sàng", // one-line preview
+await officeCards.post(
+  { workspaceId },
+  {
+    room: null, // null = let the trigger route it (home room of the agent / origin room); or "marketing", ...
+    agentId: agent.id, // the speaking agent (null = NIVO system line)
+    authorName: agent.name, // shown as author
+    body: "The content is ready", // one-line preview
     leadId: null,
-    workItemId: item.id,        // pass the work item: routes the reply to the room of the "@agent" command
-    card: { v: 1, type: "draft_post", title: "...", ref: { kind: "execution", id }, actions: ["approve", "edit", "decline"] },
-})
+    workItemId: item.id, // pass the work item: routes the reply to the room of the "@agent" command
+    card: {
+      v: 1,
+      type: "draft_post",
+      title: "...",
+      ref: { kind: "execution", id },
+      actions: ["approve", "edit", "decline"],
+    },
+  },
+)
 ```
 
 `OfficeCardsService` is exported by `MessagesModule` (registered and re-exported by `DecisionsModule`, so any module that can inject `OfficeLinesService` can inject it). `post` validates the payload (`OfficeCardsError` code `card_invalid` with the reason) and answers the stored message id. SQL-side writers may insert into `public.messages (..., room, card)` directly; the CHECK only enforces `card->>'type'` in the list and `card->>'v' = '1'`.
@@ -125,7 +146,7 @@ await officeCards.post({ workspaceId }, {
 
 ## 4. Seeding (for the seed / CLI worker)
 
-- `select public.ensure_office_rooms('<ws>');` creates the six rooms and seats each active agent in the room whose `modules` contains its module (first match becomes its home room). Two chatbot agents (AI Sales & Dat cho, AI CSKH) both match `care` by module: move AI Sales to `sales` with
+- `select public.ensure_office_rooms('<ws>');` creates the six rooms and seats each active agent in the room whose `modules` contains its module (first match becomes its home room). Two chatbot agents (AI Sales & Booking, AI Customer care) both match `care` by module: move AI Sales to `sales` with
   `update office_rooms_members set room_id = (select id from office_rooms where workspace_id = '<ws>' and key = 'sales') where agent_id = '<sales agent>'`.
 - People: `insert into office_rooms_members (room_id, user_id) ...` (a room without user rows shows the owners and managers).
 - Pins: `insert into office_rooms_pins (room_id, title, href, note) ...` (href app-relative or https, e.g. the knowledge page).

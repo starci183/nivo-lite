@@ -60,7 +60,6 @@ const itemOf = builder<WorkItem>({
     evidence_state: "captured",
     assigned_staff_id: null,
     execution_id: null,
-    origin: "live",
     created_at: "2026-10-12T09:00:00.000Z",
     updated_at: "2026-10-12T09:00:00.000Z",
     completed_at: null,
@@ -98,7 +97,6 @@ describe("LeadWriterService", () => {
             workspaceId: "ws-1",
             channel: "telegram",
             kind: "lead",
-            origin: "live",
             senderName: "Lan",
             senderContact: "0901234567",
             body: "50 tea boxes",
@@ -113,7 +111,6 @@ describe("LeadWriterService", () => {
                 command: "handoff_lead",
                 reason: "the agent captured a lead",
                 inboundEventId: "ev-1",
-                origin: "live",
                 dedupeKey: "handoff_lead:conversation:conv-1",
                 payload: {
                     subject_type: "conversation",

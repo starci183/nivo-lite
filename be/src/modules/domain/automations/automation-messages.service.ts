@@ -105,7 +105,6 @@ export class AutomationMessagesService {
                 : { type: "lead", id: composition.lead.id },
             leadId: composition.lead.id,
             dedupeKey: `automation:${context.pipeline.id}:${composition.dedupe}`,
-            origin: composition.lead.origin ?? "live",
             summary: composition.summary,
             draft: written.text,
             fields: {
@@ -180,7 +179,6 @@ export class AutomationMessagesService {
             subject: { type: "conversation", id: reply.conversationId },
             leadId: null,
             dedupeKey: `automation:${context.pipeline.id}:${reply.dedupe}`,
-            origin: "live",
             summary: this.say("after.summary", { name: reply.name }),
             draft: text,
             fields: { conversation_id: reply.conversationId, question: "" },

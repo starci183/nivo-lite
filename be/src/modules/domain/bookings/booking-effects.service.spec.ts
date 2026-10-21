@@ -420,7 +420,6 @@ describe("BookingEffectsService", () => {
             [
                 {
                     workspaceId: WORKSPACE,
-                    origin: "live",
                     sender: "Mai",
                     contact: test.contact,
                     body: 'vi:bookings.handoff.body:{"service":"Cut"}',

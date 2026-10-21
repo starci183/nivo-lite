@@ -39,7 +39,6 @@ const query1: Document = gql`
                 issuedBy
                 leadId
                 orderId
-                origin
                 paidAt
                 status
                 workspaceId
@@ -55,7 +54,6 @@ const query1: Document = gql`
                 items
                 leadId
                 orderNo
-                origin
                 shippedAt
                 status
                 trackingCode
@@ -69,7 +67,6 @@ const query1: Document = gql`
                 inboundEventId
                 invoiceId
                 occurredAt
-                origin
                 payer
                 reference
                 status
@@ -102,7 +99,6 @@ const query1: Document = gql`
                 }
                 leadId
                 missingFields
-                origin
                 parentId
                 proposal {
                     amountVnd

@@ -3,9 +3,6 @@ import type { SalesOrderRow, OrdersWorkbenchRow } from "./persistence/orders.row
 /** Where an order stands. */
 export type OrderStatus = "draft" | "confirmed" | "invoiced" | "paid" | "cancelled"
 
-/** Whether the order is real or from the simulator. */
-export type OrderOrigin = "live" | "simulated"
-
 /** An order, or null when the workspace has no such order. */
 export type OptionalOrder = SalesOrderRow | null
 
@@ -26,8 +23,6 @@ export interface NewOrderDraft {
     readonly items: string
     /** The money, VND, or null when unknown. */
     readonly amountVnd: number | null
-    /** Real or simulated. */
-    readonly origin: OrderOrigin
 }
 
 /** What confirming a draft order takes. */
@@ -70,8 +65,6 @@ export interface SalesOrderView {
     readonly amountVnd: number | null
     /** The order state. */
     readonly status: string
-    /** Live or simulated origin. */
-    readonly origin: string
     /** The person who confirmed the order. */
     readonly confirmedBy: string | null
     /** The confirmation instant. */

@@ -1,5 +1,4 @@
 import { BankFeedDeliveryQueueModule } from "@features/jobs/bank-feed-delivery"
-import { VietcombankDeliveryQueueModule } from "@features/jobs/vietcombank-delivery"
 import { SepayDeliveryQueueModule } from "@features/jobs/sepay-delivery"
 import { ZaloDeliveryQueueModule } from "@features/jobs/zalo-delivery"
 import { TelegramDeliveryQueueModule } from "@features/jobs/telegram-delivery"
@@ -40,6 +39,7 @@ import { ReplenishStockQueueModule } from "@features/jobs/replenish-stock"
 import { HiringTickQueueModule } from "@features/jobs/hiring-tick"
 import { RunShiftsAlertsQueueModule } from "@features/jobs/run-shifts-alerts"
 import { RunAccountingMorningQueueModule } from "@features/jobs/run-accounting-morning"
+import { RunMarketingTickQueueModule } from "@features/jobs/run-marketing-tick"
 import { RunLeadGenQueueModule } from "@features/jobs/run-lead-gen"
 
 /** The background jobs the api runs: each queue module registers its processor with the job runner. */
@@ -48,7 +48,6 @@ export const API_JOB_QUEUES: Array<DynamicModule> = [
     TelegramDeliveryQueueModule.register({}),
     ZaloDeliveryQueueModule.register({}),
     SepayDeliveryQueueModule.register({}),
-    VietcombankDeliveryQueueModule.register({}),
     BankFeedDeliveryQueueModule.register({}),
     RunDataSyncQueueModule.register({}),
     ExtractKnowledgeFactsQueueModule.register({}),
@@ -86,4 +85,5 @@ export const API_JOB_QUEUES: Array<DynamicModule> = [
     HiringTickQueueModule.register({}),
     RunShiftsAlertsQueueModule.register({}),
     RunAccountingMorningQueueModule.register({}),
+    RunMarketingTickQueueModule.register({}),
 ]

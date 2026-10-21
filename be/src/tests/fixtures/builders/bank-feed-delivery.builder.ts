@@ -7,7 +7,7 @@ import type { JobClaims } from "@modules/platform/jobs"
 /** Arranges the actual domain coordinator and a recorder for the downstream receipt effect. */
 export const bankFeedDomainBuilder = async (claims: JobClaims) => {
     const inbox = mock<BankFeedService>()
-    inbox.processRecordedFeedDelivery.mockResolvedValue(undefined)
+    inbox.processRecordedFeedDelivery.mockResolvedValue([])
     const billing = await Test.createTestingModule({
         providers: [
             BankFeedDeliveryService,

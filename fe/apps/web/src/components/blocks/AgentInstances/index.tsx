@@ -2,7 +2,7 @@
 
 import { useTranslations } from "next-intl"
 import { useState } from "react"
-import { useAddInstance, useInstanceList } from "@/hooks/installations"
+import { useAddInstance, useConnectionNeedsCopy, useInstanceList } from "@/hooks/installations"
 import type { ModuleKey } from "@/hooks/installations"
 import { isManager, useMember } from "@/hooks/member"
 import { useAddInstanceForm } from "@/hooks/rhf"
@@ -23,6 +23,7 @@ export const AgentInstances = (props: AgentInstancesProps) => {
     const member = useMember()
     const list = useInstanceList(props.module, props.query, props.showList ? "list" : "page")
     const { add, isAdding } = useAddInstance()
+    const needs = useConnectionNeedsCopy()
     const [isOpen, setOpen] = useState(false)
     const form = useAddInstanceForm(list.defaultName, list.names)
     const submit = form.handleSubmit(async (values) => {
@@ -58,6 +59,7 @@ export const AgentInstances = (props: AgentInstancesProps) => {
                     ].join(" · "),
                     statusLabel: t(`status_${row.status}`),
                     statusTone: row.statusTone,
+                    needs: { lines: needs.linesOf(row.connectionNeeds), linkLabel: needs.linkLabel, href: needs.href },
                     openHref: row.openHref,
                 })),
                 isLoading: list.slot.isLoading === true,

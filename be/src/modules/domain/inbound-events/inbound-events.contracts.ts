@@ -15,17 +15,12 @@ export interface UnroutedMessage {
     readonly eventId: string
 }
 
-/** Whether the money of an event is real. */
-export type EventOrigin = "live" | "simulated"
-
 /** One bank credit to record as an inbound payment event. */
 export interface BankPaymentEvent {
     /** The transaction that records it: the event joins the caller's transaction. */
     readonly manager: EntityManager
     /** The workspace the credit belongs to. */
     readonly workspaceId: string
-    /** Whether the money is real. */
-    readonly origin: EventOrigin
     /** The payer name when the bank sent one, or null. */
     readonly sender: string | null
     /** The readable line of the event. */
@@ -50,8 +45,6 @@ export interface BankPaymentRecorded {
 export interface OrderHandoff {
     /** The workspace. */
     readonly workspaceId: string
-    /** Whether the sale is live or simulated. */
-    readonly origin: string
     /** The customer name. */
     readonly sender: string
     /** The customer phone or email, or null. */
@@ -86,8 +79,6 @@ export interface InboundInput {
     readonly channel: string
     /** `message`, `lead`, `order` or `payment`. */
     readonly kind: string
-    /** Real or simulated. */
-    readonly origin: EventOrigin
     /** The sender's name, or null. */
     readonly senderName: string | null
     /** The sender's phone or email, or null. */
@@ -98,10 +89,4 @@ export interface InboundInput {
     readonly externalRef: string | null
     /** The channel's own event id: the idempotency key. */
     readonly eventId: string
-}
-
-/** A simulated input: the amount is retained so Sales and Accounting receive the same money the owner entered. */
-export interface SimulatedInboundInput extends InboundInput {
-    /** The amount in whole VND, or null when the input has none. */
-    readonly amountVnd: number | null
 }

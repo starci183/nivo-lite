@@ -13,8 +13,14 @@ import { JobOpsModule } from "@modules/domain/job-ops"
 import { StaffModule } from "@modules/domain/staff"
 import { WorkspaceMembersModule } from "@modules/domain/workspace-members"
 import { WorkspacesModule } from "@modules/domain/workspaces"
-import { SepaySimulationModule } from "@modules/domain/sepay-simulation"
+import { AgentRecordsService } from "@modules/domain/agents"
+import { ProfileSourcesService } from "@modules/domain/knowledge-sources"
+import { ModuleInstallationsModule } from "@modules/domain/module-installations"
+import { McpToolGrantsService } from "@modules/domain/mcp-tool-grants"
+import { McpGatewayAdminService, McpGatewayModule } from "@modules/domain/mcp-gateway"
+import { TransactionsModule } from "@modules/domain/transactions"
 import { WorkspaceSeedModule } from "@modules/domain/workspace-seed"
+import { WorkspaceCleanupModule } from "@modules/domain/workspace-cleanup"
 import { CORE_FOLDER, NIVO_KNOWLEDGE_MESSAGES, NivoKnowledgeModule } from "@modules/domain/nivo-knowledge"
 import { VideoMusicModule } from "@modules/domain/video-music"
 import { LlmModule } from "@modules/integrations/llm"
@@ -24,13 +30,12 @@ import { ChannelSetupModule } from "@modules/integrations/channel-setup"
 import { SUPABASE_ACCOUNTS, SUPABASE_AUTH, SUPABASE_STORAGE, SupabaseModule } from "@modules/integrations/supabase"
 import { AuthorityActionsModule } from "@modules/domain/authority-actions"
 import { AuthorityRulesModule } from "@modules/domain/authority-rules"
-import { MODULE_CATALOG, MODULE_CATEGORIES, MODULE_KNOWLEDGE_FOLDERS, ModulesModule } from "@modules/domain/modules"
+import { MODULE_KNOWLEDGE_FOLDERS, MODULES_MESSAGES } from "@modules/domain/modules"
 import { ClockModule } from "@modules/platform/clock"
 import { DatabaseModule } from "@modules/platform/database"
 import { appPgTypes } from "@modules/integrations/data-sources"
 import { QueueModule } from "@modules/platform/queue"
 import { LoggingModule, printConsoleLine } from "@modules/platform/logging"
-import { SimulationPostClient } from "@modules/integrations/webhook-delivery"
 import type { CliAppOptions } from "../cli.options"
 
 /** Registers the CLI capabilities in their boot order, with queue producers only. */
@@ -42,7 +47,7 @@ export const cliModules = (options: CliAppOptions): Array<DynamicModule> => [
         connections: options.connections,
         typeParsers: appPgTypes,
     }),
-    I18nModule.register({ isGlobal: true, bundles: [NIVO_KNOWLEDGE_MESSAGES] }),
+    I18nModule.register({ isGlobal: true, bundles: [NIVO_KNOWLEDGE_MESSAGES, MODULES_MESSAGES] }),
     HttpModule.register({ isGlobal: true }),
     LlmModule.register({ isGlobal: true, ...options.llm }),
     NivoKnowledgeModule.register({
@@ -69,12 +74,22 @@ export const cliModules = (options: CliAppOptions): Array<DynamicModule> => [
     WorkspaceMembersModule.register({ isGlobal: true, accounts: SUPABASE_AUTH }),
     WorkspacesModule.register({ isGlobal: true, allowFreeWorkspace: true }),
     AuthorityRulesModule.register({ isGlobal: true }),
+    ModuleInstallationsModule.register({ isGlobal: true }),
+    TransactionsModule.register({ isGlobal: true }),
+    McpGatewayModule.register({ isGlobal: true, ...options.mcpGateway, console: true }),
     WorkspaceSeedModule.register({
         isGlobal: true,
         auth: SUPABASE_ACCOUNTS,
+        ports: {
+            agents: AgentRecordsService,
+            sources: ProfileSourcesService,
+            toolGrants: McpToolGrantsService,
+            connectors: McpGatewayAdminService,
+        },
         print: printConsoleLine,
         ...options.workspaceSeed,
     }),
+    WorkspaceCleanupModule.register({ isGlobal: true, accounts: SUPABASE_ACCOUNTS, print: printConsoleLine }),
     AuthorityActionsModule.register({ isGlobal: true }),
     ConnectionSecretsModule.register({
         isGlobal: true,
@@ -86,17 +101,5 @@ export const cliModules = (options: CliAppOptions): Array<DynamicModule> => [
     ChannelSetupModule.register({ isGlobal: true, ...options.channelSetup }),
     ChannelConnectionsModule.register({ isGlobal: true }),
     ChannelProvisioningModule.register({ isGlobal: true, ...options.channelProvisioning }),
-    SepaySimulationModule.register({
-        isGlobal: true,
-        ...options.sepaySimulation,
-        poster: SimulationPostClient,
-        print: printConsoleLine,
-    }),
-    ModulesModule.register({
-        isGlobal: true,
-        categories: MODULE_CATEGORIES,
-        catalog: MODULE_CATALOG,
-        catalogOnly: true,
-    }),
     CliModule.register({}),
 ]

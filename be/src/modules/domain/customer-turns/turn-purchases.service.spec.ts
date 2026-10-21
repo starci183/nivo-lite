@@ -57,7 +57,6 @@ const reply: CustomerReply = {
     application: null,
     loyaltyRewardKey: null,
     bookingRequest: null,
-    hotelRequest: null,
 }
 const invoice: InvoiceRow = {
     id: "inv-1",
@@ -67,7 +66,6 @@ const invoice: InvoiceRow = {
     invoice_no: "HD-01",
     amount_vnd: 50_000,
     status: "issued",
-    origin: "live",
     issued_by: null,
     paid_at: null,
 }

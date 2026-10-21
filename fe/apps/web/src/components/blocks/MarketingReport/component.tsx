@@ -12,6 +12,8 @@ export interface MarketingReportWords {
     readonly chartNote: string
     readonly channelsTitle: string
     readonly insightTitle: string
+    readonly postsTitle: string
+    readonly suggestionTitle: string
     readonly postLabel: string
     readonly postHint: string
 }
@@ -31,6 +33,39 @@ export interface MarketingReportBaseProps {
 
 /** The ready (or skeleton) report with the commands of the tab. */
 type ReportProps = MarketingReportBaseProps & { readonly view: MarketingReportView; readonly isSkeleton: boolean }
+
+/** The parts of the report a section draws. */
+interface SectionProps {
+    readonly words: MarketingReportWords
+    readonly view: MarketingReportView
+}
+
+/** The AI Marketing suggestion for the next week with the sources it read; nothing without one. */
+const Suggestion = ({ words, view }: SectionProps) =>
+    view.suggestion === null ? null : (
+        <SurfaceCard label={words.suggestionTitle}>
+            <div className={BODY}>
+                <Text weight="semibold">{view.suggestion.title}</Text>
+                <Text size="sm">{view.suggestion.body}</Text>
+                <Text size="xs" tone="muted">
+                    {view.suggestion.sources}
+                </Text>
+            </div>
+        </SurfaceCard>
+    )
+
+/** The most engaging posts of the week; nothing without posts. */
+const TopPosts = ({ words, view }: SectionProps) =>
+    view.posts.length === 0 ? null : (
+        <SurfaceCard label={words.postsTitle}>
+            <div className={BODY}>
+                <DescriptionList layout="columns" isDivided items={view.posts} />
+                <Text size="xs" tone="muted">
+                    {view.postsNote}
+                </Text>
+            </div>
+        </SurfaceCard>
+    )
 
 const Report = (props: ReportProps) => {
     const { words } = props.props
@@ -87,6 +122,8 @@ const Report = (props: ReportProps) => {
             {view.insight === "" ? null : (
                 <Alert tone="informative" title={words.insightTitle} description={view.insight} />
             )}
+            <Suggestion words={words} view={view} />
+            <TopPosts words={words} view={view} />
             {props.props.canPost ? (
                 <Text size="xs" tone="muted">
                     {words.postHint}

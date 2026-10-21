@@ -116,7 +116,6 @@ export class BookingToolsService implements BookingTools {
                 action: "cancel_booking",
                 subject_type: booking.leadId === null ? "conversation" : "lead",
                 subject_id: booking.leadId ?? ctx.conversationId,
-                origin: "live",
                 preset: true,
                 noChain: true,
                 forceAsk: "unclear_outcome",

@@ -27,15 +27,6 @@ export class ReplyCustomerPerformerService implements WorkPerformer {
 
     /** Stores the approved answer and pushes it to the channel. */
     async perform(ctx: WorkContext, item: WorkItem, proposal: Proposal, by?: PerformedBy): Promise<Performed> {
-        if (item.origin === "simulated") {
-            return {
-                summary: this.kit.text(ctx, "simulatedDelivery", { channel: "website" }),
-                evidence: "captured",
-                href: leadHref(item.lead_id),
-                lead_id: item.lead_id,
-                detail: proposal.draft ?? null,
-            }
-        }
         const conversationId = textOf(proposal.fields.conversation_id)
         const pushed =
             conversationId !== "" && proposal.draft !== undefined && proposal.draft !== ""

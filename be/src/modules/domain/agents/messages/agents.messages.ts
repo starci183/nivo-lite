@@ -23,6 +23,7 @@ export const AGENTS_MESSAGES: MessageBundle = {
         "errors.AGENTS_AGENT_NOT_FOUND": "Không tìm thấy agent.",
         "errors.AGENTS_HANDLE_TAKEN": "Tên gọi @{{handle}} đã có agent khác dùng.",
         "errors.AGENTS_NOT_CREATED": "Không tạo được agent.",
+        "errors.AGENTS_KNOWLEDGE_UNBOUND": "Ứng dụng này không đọc được tri thức của agent.",
         "bundle.title": "# {{name}} (module {{module}})",
         "bundle.syncNote":
             "Bản này do NIVO OS đồng bộ một chiều từ Supabase. KHÔNG sửa tay: lần đồng bộ sau sẽ ghi đè.",
@@ -72,6 +73,7 @@ export const AGENTS_MESSAGES: MessageBundle = {
         "errors.AGENTS_AGENT_NOT_FOUND": "The agent was not found.",
         "errors.AGENTS_HANDLE_TAKEN": "Another agent already uses the handle @{{handle}}.",
         "errors.AGENTS_NOT_CREATED": "The agent could not be created.",
+        "errors.AGENTS_KNOWLEDGE_UNBOUND": "This app cannot read the knowledge of an agent.",
         "bundle.title": "# {{name}} (module {{module}})",
         "bundle.syncNote":
             "This copy is synced one way from Supabase by NIVO OS. Do NOT edit by hand: the next sync overwrites it.",

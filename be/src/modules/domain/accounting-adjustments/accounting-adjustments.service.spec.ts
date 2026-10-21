@@ -46,7 +46,6 @@ const invoiceOf = builder<InvoiceRow>({
     invoice_no: "INV-1",
     amount_vnd: 100000,
     status: "issued",
-    origin: "live",
     issued_by: null,
     paid_at: null,
 })
@@ -196,7 +195,6 @@ describe("AccountingAdjustmentsService", () => {
                 payer: "Mai",
                 invoice_id: null,
                 status: "unmatched",
-                origin: "live",
             }
             transactions.find.mockResolvedValueOnce(transaction)
 

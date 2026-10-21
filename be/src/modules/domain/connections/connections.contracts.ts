@@ -16,7 +16,7 @@ export type Provider =
     | "telegram_user"
     | "meta"
 
-/** `test` is the provider test mode: its credits are stored as simulated, never real money. */
+/** `test` is the provider test mode: its money is not real, so the bank feed books none of its credits. */
 export type Environment = "test" | "live"
 
 /** `pending`: created by a wizard but no first event seen yet (or the wizard was abandoned). */

@@ -236,14 +236,6 @@ export interface PayosDelivery {
     readonly rawBody: RawBody
 }
 
-/** A delivery to the simulated bank door. */
-export interface SimulatedDelivery {
-    /** The `x-nivo-bank-secret` header. */
-    readonly secret: HeaderValue
-    /** The exact bytes of the body. */
-    readonly rawBody: RawBody
-}
-
 /** A connection whose webhook delivery proved itself. */
 export interface ProvenConnection {
     /** The connection id from the delivery url. */
@@ -318,11 +310,15 @@ export interface ManualCredit {
     readonly payer?: string
 }
 
-/** A committed simulated-bank receipt waiting for its booking job. */
-export interface VietcombankDeliveryRecorded {
-    /** The original provider-prefixed bank event id. */
-    readonly deliveryId: string
-}
+/**
+ * What the bank feed answered for one move of a committed receipt: `booked` recorded a live payment event and queued its
+ * reconcile job, `debited` recorded money that left the account as a debit transaction, `duplicate` counted a repeat, `unbound`
+ * remembered the move on the connection because no accounting agent is bound, and `refused` with `test_environment` kept a
+ * move of a provider test connection out of every business table.
+ */
+export type FeedCreditAnswer =
+    | { readonly status: "booked" | "debited" | "duplicate" | "unbound" }
+    | { readonly status: "refused"; readonly code: "test_environment" }
 
 /** The workspace providers admitted by the bank-feed receipt job. */
 export type BankFeedProvider = BankFeedDeliveryRecorded["provider"]

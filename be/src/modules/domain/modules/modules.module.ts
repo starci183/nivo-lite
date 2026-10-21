@@ -9,6 +9,7 @@ import { ModuleSetupWritesModule } from "@modules/domain/module-setup-writes"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./modules.module-definition"
 import { InstallationDirectoryService } from "./installation-directory.service"
 import { ModuleInstallService } from "./module-install.service"
+import { ModuleReadinessService } from "./module-readiness.service"
 import { ModulesService } from "./modules.service"
 import { SetupCardsService } from "./setup-cards.service"
 import { SetupChatService } from "./setup-chat.service"
@@ -21,21 +22,26 @@ import { WorkspaceSetupService } from "./workspace-setup.service"
  * agents. It brings the tables of the installations and of their setup chat, which only this lifecycle reads and writes.
  */
 export class ModulesModule extends ConfigurableModuleClass {
-    /** Registers the capability once per app with the catalogue the app root names. */
+    /**
+     * Registers the capability once per app with the catalogue the app root names. The catalog-only and setup-only modes register
+     * fewer real providers and nothing in their place.
+     */
     static register(options: typeof OPTIONS_TYPE): DynamicModule {
         const base = super.register(options)
         if (options.catalogOnly === true) {
             return { ...base, providers: [...(base.providers ?? []), ModulesService], exports: [ModulesService] }
         }
-        const providers = [
+        const setup = [
             ModulesService,
-            ModuleInstallService,
+            ModuleReadinessService,
             InstallationDirectoryService,
             SetupChatService,
             SetupCardsService,
-            SetupTurnService,
-            WorkspaceSetupService,
         ]
+        const providers =
+            options.setupOnly === true
+                ? setup
+                : [...setup, ModuleInstallService, SetupTurnService, WorkspaceSetupService]
         const tables = [
             ModuleInstallationsModule.register({}),
             ModuleContextVersionsModule.register({}),

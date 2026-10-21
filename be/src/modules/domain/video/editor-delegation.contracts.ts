@@ -52,6 +52,28 @@ export interface ReadyVideo {
     readonly href: string
 }
 
+/** The words of the rendering card, already in the room's language. */
+export interface RenderingWords {
+    /** The status word. */
+    readonly badge: string
+    /** What is happening and where the live progress is. */
+    readonly body: string
+    /** The label of the link to the project. */
+    readonly link: string
+    /** The label of the planned length row. */
+    readonly target: string
+    /** The planned length, e.g. 15 seconds. */
+    readonly seconds: string
+}
+
+/** The render a rendering card follows. */
+export interface RenderingRefs {
+    /** The video project. */
+    readonly projectId: string
+    /** The queued render. */
+    readonly renderId: string
+}
+
 /** The words of the cards, already in the room's language. */
 export interface EditorLabels {
     /** The length label. */
@@ -130,12 +152,26 @@ export interface EditorCardRef {
     readonly id: string
 }
 
+/** One source a card's turn actually used, in the Hub cards' single source shape. */
+export interface EditorCardSource {
+    /** The data layer: 1 MCP live data, 2 Second Brain, 3 agent self-learning, 4 NIVO base knowledge. */
+    readonly layer: 1 | 2 | 3 | 4
+    /** The kind of record, e.g. brain_document. */
+    readonly kind: string
+    /** The record. */
+    readonly ref: string
+    /** What the reader sees. */
+    readonly label: string
+    /** Where it opens, when it does. */
+    readonly href?: string
+}
+
 /** A Hub result card, version 1 of the Hub cards contract (the fields AI Editor uses). */
 export interface EditorCard {
     /** Always 1. */
     readonly v: 1
-    /** The card type. */
-    readonly type: "video_ready"
+    /** The card type: the progress note while rendering, then the ready video. */
+    readonly type: "handoff_note" | "video_ready"
     /** The title. */
     readonly title: string
     /** The subtitle. */
@@ -156,6 +192,8 @@ export interface EditorCard {
     readonly ref?: EditorCardRef
     /** The buttons. */
     readonly actions?: ReadonlyArray<"approve" | "decline">
+    /** The sources the render used, drawn under the card. */
+    readonly sources?: ReadonlyArray<EditorCardSource>
     /** Opaque type data. */
     readonly data?: Readonly<Record<string, unknown>>
 }

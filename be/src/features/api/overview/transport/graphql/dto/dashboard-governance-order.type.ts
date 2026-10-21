@@ -26,8 +26,4 @@ export class DashboardGovernanceOrderType {
     /** The order status. */
     @Field()
     status!: string
-
-    /** `live`, `simulated` or null. */
-    @Field(() => String, { nullable: true })
-    origin!: string | null
 }

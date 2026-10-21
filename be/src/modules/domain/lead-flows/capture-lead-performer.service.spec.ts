@@ -82,7 +82,6 @@ const itemOf = builder<WorkItem>({
     evidence_state: "pending",
     assigned_staff_id: null,
     execution_id: null,
-    origin: "live",
     created_at: NOW,
     updated_at: NOW,
     completed_at: null,
@@ -100,7 +99,6 @@ const leadOf = builder<LeadRecordRow>({
     context_summary: null,
     phone: "84912345678",
     email: null,
-    origin: "live",
 })
 
 const SOURCE: LeadSource = {
@@ -203,10 +201,9 @@ describe("CaptureLeadPerformerService", () => {
             need: "want tea",
             phone: "84912345678",
             email: null,
-            origin: "live",
         })
         expect(responsibilities.ensureFor).toHaveBeenCalledWith(ctx, "lead-1")
-        expect(events.leadCreated).toHaveBeenCalledWith("ws-1", leadOf(), "live")
+        expect(events.leadCreated).toHaveBeenCalledWith("ws-1", leadOf())
         expect(store.open).toHaveBeenCalledWith({
             workspaceId: "ws-1",
             leadId: "lead-1",
@@ -287,7 +284,6 @@ describe("CaptureLeadPerformerService", () => {
             need: "Facebook form",
             phone: null,
             email: null,
-            origin: "live",
         })
         expect(kit.log).toHaveBeenCalledWith(
             ctx,
@@ -313,7 +309,6 @@ describe("CaptureLeadPerformerService", () => {
             need: "Owner need",
             phone: null,
             email: "minh@example.com",
-            origin: "live",
         })
         expect(leads.match).toHaveBeenCalledWith({
             workspaceId: "ws-1",
@@ -321,7 +316,6 @@ describe("CaptureLeadPerformerService", () => {
             email: "minh@example.com",
             name: null,
             channel: null,
-            origin: "live",
         })
     })
 })
@@ -389,7 +383,6 @@ describe("CaptureLeadPerformerService", () => {
             email: "minh@example.com",
             name: null,
             channel: null,
-            origin: "live",
         })
         expect(leads.fillContact).not.toHaveBeenCalled()
         expect(store.patch).toHaveBeenCalledWith(flow, { touches: [{ ...SOURCE, form_id: null }] })

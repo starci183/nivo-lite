@@ -25,6 +25,8 @@ export const MarketingReport = () => {
                     chartNote: t("chartNote"),
                     channelsTitle: t("channelsTitle"),
                     insightTitle: t("insightTitle"),
+                    postsTitle: t("postsTitle"),
+                    suggestionTitle: t("suggestionTitle"),
                     postLabel: t("postLabel"),
                     postHint: t("postHint"),
                 },

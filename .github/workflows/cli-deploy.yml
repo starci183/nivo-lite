@@ -1,0 +1,193 @@
+# Seeds the configuration of a named workspace profile (brand, agents, authority and gateway grants, Second Brain documents,
+# Hub rooms) into production with "cli seed-workspace profile", and refreshes the NIVO base knowledge with "cli seed-knowledge run".
+# It runs by hand only (Actions > seed demo workspace > Run workflow) from a release tag v* whose version is the package.json version,
+# so the code matches the deployed migrations. It is a dry run unless "execute" is ticked.
+# The protected environment "production" holds the secret SOPS_AGE_KEY (the age identity of .sops.yaml). The sealed custody under
+# .starcistacks/production/secrets is decrypted on the runner into private files only; every materialized key reaches the cli as
+# <KEY>_FILE and is never echoed. The run requires PRIMARY_DB_URL, SUPABASE_URL, CHANNEL_TOKEN_KEY, WORKSPACE_SEED_INPUT (the
+# private ensure input naming the owner, manager and staff accounts), WORKSPACE_PROFILE_INPUT (the connector endpoints) and
+# MCP_GATEWAY_CREDENTIALS with MCP_HAKUEN_CLIENT_SECRET (the connector credential the gateway console reads the catalog with);
+# the Supabase integration of the cli reads its own admin key.
+# With task "cleanup-workspaces" it instead runs "cli cleanup-workspaces run" (be/docs/runbooks/workspace-cleanup.md): mode "dry-run"
+# prints the receipt of every workspace that is not in "keep" and every account none of the kept workspaces holds, with its digest;
+# mode "execute" deletes them only when a fresh dry run has the reviewed "receipt_digest". Same release tag and sealed custody rules.
+# The file is the product-owned delivery workflow of the cli app (slot app.ci-deploy).
+name: seed demo workspace
+
+on:
+  workflow_dispatch:
+    inputs:
+      task:
+        description: What to run; seed-workspace seeds the profile, cleanup-workspaces cleans production down to the kept workspaces
+        required: true
+        type: choice
+        default: seed-workspace
+        options:
+          - seed-workspace
+          - cleanup-workspaces
+      owner_email:
+        description: Owner account the private seed input must name
+        required: true
+        type: string
+        default: hakuen.demo@gmail.com
+      profile:
+        description: Workspace profile to apply
+        required: true
+        type: choice
+        default: hakuen
+        options:
+          - hakuen
+      execute:
+        description: Write to production; unticked = dry run that validates the input and prints the plan
+        required: true
+        type: boolean
+        default: false
+      keep:
+        description: cleanup-workspaces only, required there - the workspace ids to keep, comma-separated
+        required: false
+        type: string
+        default: ""
+      mode:
+        description: cleanup-workspaces only - dry-run prints the receipt and its digest; execute deletes with that digest
+        required: true
+        type: choice
+        default: dry-run
+        options:
+          - dry-run
+          - execute
+      receipt_digest:
+        description: cleanup-workspaces execute only - the digest of the reviewed dry-run receipt
+        required: false
+        type: string
+        default: ""
+      allow_kept_cascade:
+        description: cleanup-workspaces only - let account deletes cascade-delete kept rows (listed in the receipt); same value both runs
+        required: true
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: seed-workspace-production
+  cancel-in-progress: false
+
+jobs:
+  seed:
+    if: inputs.task == 'seed-workspace'
+    timeout-minutes: 20
+    runs-on: ubuntu-latest
+    environment: production
+    env:
+      STACK_ENVIRONMENT: production
+      OWNER_EMAIL: ${{ inputs.owner_email }}
+      SEED_PROFILE: ${{ inputs.profile }}
+      SEED_EXECUTE: ${{ inputs.execute }}
+      SOPS_AGE_KEY: ${{ secrets.SOPS_AGE_KEY }}
+    steps:
+      - name: require release tag
+        shell: bash
+        run: '[[ "$GITHUB_REF" == refs/tags/v* ]] || exit 1'
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - name: release tag matches package version
+        run: node -e "const version=require('./package.json').version;if(process.env.GITHUB_REF_NAME!=='v'+version)process.exit(1)"
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - name: build the cli
+        run: npm run build:be
+      - name: install SOPS
+        uses: mdgreenwald/mozilla-sops-action@bb2d96a13ef438ad122e5827a57ebd75d6ff118d # v2.1.0
+        with:
+          version: v3.13.2
+      - name: materialize sealed custody and seed the workspace profile
+        env:
+          XDG_DATA_HOME: ${{ runner.temp }}/starci-data
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$SEED_PROFILE" =~ ^[a-z][a-z0-9-]{1,30}$ ]]
+          [[ "$OWNER_EMAIL" =~ ^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$ ]]
+          secret_dir="$XDG_DATA_HOME/StarCi/secrets/nivo-lite/$STACK_ENVIRONMENT"
+          trap 'rm -rf -- "$secret_dir"' EXIT
+          npx --no-install starci app secret materialize "$STACK_ENVIRONMENT" > /dev/null
+          for key in PRIMARY_DB_URL SUPABASE_URL CHANNEL_TOKEN_KEY WORKSPACE_SEED_INPUT WORKSPACE_PROFILE_INPUT MCP_GATEWAY_CREDENTIALS MCP_HAKUEN_CLIENT_SECRET; do
+            test -s "$secret_dir/$key" || { echo "sealed key $key is missing"; exit 1; }
+          done
+          for file in "$secret_dir"/*; do
+            key="${file##*/}"
+            [[ "$key" =~ ^[A-Z][A-Z0-9_]{1,63}$ && -s "$file" ]] || continue
+            export "${key}_FILE=$file"
+          done
+          export PRIMARY_DB_SCHEMA=public
+          export SITE_URL=https://app.nivo.vn
+          flags=(--profile "$SEED_PROFILE" --owner "$OWNER_EMAIL")
+          if [[ "$SEED_EXECUTE" == "true" ]]; then flags+=(--execute); fi
+          node be/dist/apps/cli/src/main.js seed-workspace profile "${flags[@]}" | grep -E '^(NIVO_WORKSPACE_PROFILE_RECEIPT|STARCI_WORKSPACE_RECEIPT)=' || { echo "profile run printed no receipt"; exit 1; }
+          if [[ "$SEED_EXECUTE" == "true" ]]; then
+            node be/dist/apps/cli/src/main.js seed-knowledge run
+          fi
+
+  cleanup:
+    if: inputs.task == 'cleanup-workspaces'
+    timeout-minutes: 30
+    runs-on: ubuntu-latest
+    environment: production
+    env:
+      STACK_ENVIRONMENT: production
+      CLEANUP_KEEP: ${{ inputs.keep }}
+      CLEANUP_MODE: ${{ inputs.mode }}
+      CLEANUP_DIGEST: ${{ inputs.receipt_digest }}
+      CLEANUP_ALLOW_KEPT_CASCADE: ${{ inputs.allow_kept_cascade }}
+      SOPS_AGE_KEY: ${{ secrets.SOPS_AGE_KEY }}
+    steps:
+      - name: require release tag
+        shell: bash
+        run: '[[ "$GITHUB_REF" == refs/tags/v* ]] || exit 1'
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - name: release tag matches package version
+        run: node -e "const version=require('./package.json').version;if(process.env.GITHUB_REF_NAME!=='v'+version)process.exit(1)"
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - name: build the cli
+        run: npm run build:be
+      - name: install SOPS
+        uses: mdgreenwald/mozilla-sops-action@bb2d96a13ef438ad122e5827a57ebd75d6ff118d # v2.1.0
+        with:
+          version: v3.13.2
+      - name: materialize sealed custody and clean up the workspaces
+        env:
+          XDG_DATA_HOME: ${{ runner.temp }}/starci-data
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ -n "$CLEANUP_KEEP" ]] || { echo "keep is required: the workspace ids to keep"; exit 1; }
+          [[ "$CLEANUP_KEEP" =~ ^[0-9a-fA-F-]{36}(,[0-9a-fA-F-]{36}){0,19}$ ]] || { echo "keep must be workspace ids, comma-separated"; exit 1; }
+          flags=(--keep "$CLEANUP_KEEP")
+          if [[ "$CLEANUP_MODE" == "execute" ]]; then
+            [[ "$CLEANUP_DIGEST" =~ ^[0-9a-f]{64}$ ]] || { echo "execute needs the receipt digest of a reviewed dry run"; exit 1; }
+            flags+=(--execute --receipt-digest "$CLEANUP_DIGEST")
+          else
+            flags+=(--dry-run)
+          fi
+          if [[ "$CLEANUP_ALLOW_KEPT_CASCADE" == "true" ]]; then flags+=(--allow-kept-cascade); fi
+          secret_dir="$XDG_DATA_HOME/StarCi/secrets/nivo-lite/$STACK_ENVIRONMENT"
+          trap 'rm -rf -- "$secret_dir"' EXIT
+          npx --no-install starci app secret materialize "$STACK_ENVIRONMENT" > /dev/null
+          for key in PRIMARY_DB_URL SUPABASE_URL CHANNEL_TOKEN_KEY; do
+            test -s "$secret_dir/$key" || { echo "sealed key $key is missing"; exit 1; }
+          done
+          for file in "$secret_dir"/*; do
+            key="${file##*/}"
+            [[ "$key" =~ ^[A-Z][A-Z0-9_]{1,63}$ && -s "$file" ]] || continue
+            export "${key}_FILE=$file"
+          done
+          export PRIMARY_DB_SCHEMA=public
+          export SITE_URL=https://app.nivo.vn
+          node be/dist/apps/cli/src/main.js cleanup-workspaces run "${flags[@]}"

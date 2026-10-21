@@ -21,6 +21,8 @@ export enum ApiKeysErrorCode {
     NotFound = "API_KEYS_NOT_FOUND",
     /** The insert answered no row: the key was not written. */
     NotCreated = "API_KEYS_NOT_CREATED",
+    /** The agent an agent key was asked for is not an agent of the workspace. */
+    AgentNotFound = "API_KEYS_AGENT_NOT_FOUND",
 }
 
 /** How each api-keys code travels. */
@@ -34,6 +36,7 @@ export const API_KEYS_ERROR_KINDS: Record<ApiKeysErrorCode, ErrorKind> = {
     [ApiKeysErrorCode.NameTooShort]: "invalid",
     [ApiKeysErrorCode.NotFound]: "not-found",
     [ApiKeysErrorCode.NotCreated]: "internal",
+    [ApiKeysErrorCode.AgentNotFound]: "not-found",
 }
 
 /** The one error class of the api-keys capability. */

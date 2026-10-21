@@ -1,3 +1,5 @@
+import type { InstallationConnectionNeed } from "@/modules/installations"
+
 /** Who wrote a line. */
 export type OfficeAuthorKind = "human" | "agent" | "system"
 
@@ -27,10 +29,10 @@ export interface OfficeCardPayload {
         | "approval_request"
         | "schedule_confirmed"
         | "weekly_report"
-        | "booking_held"
         | "daily_summary"
         | "handoff_note"
         | "exception"
+        | "action_done"
     readonly title: string
     readonly subtitle: string | null
     readonly badge: string | null
@@ -108,7 +110,6 @@ export interface OfficeWork {
     readonly status: string
     readonly reason: string | null
     readonly error: string | null
-    readonly origin: string
     readonly createdAt: string
     readonly updatedAt: string
     readonly completedAt: string | null
@@ -131,7 +132,10 @@ export interface OfficeAgent {
     readonly module: string
     readonly name: string
     readonly handle: string
+    /** The agent is live and on duty. */
     readonly isActive: boolean
+    /** The roles a `needs_connection` agent waits for, each with the connectors that would satisfy it; null otherwise. */
+    readonly waitsFor: ReadonlyArray<InstallationConnectionNeed> | null
 }
 
 /** One account of the workspace. */

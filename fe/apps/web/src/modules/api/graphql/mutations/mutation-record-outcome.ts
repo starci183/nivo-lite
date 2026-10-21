@@ -21,7 +21,6 @@ const mutation1: Document = gql`
             handedToAccounting
             leadId
             need
-            origin
             stage
         }
     }

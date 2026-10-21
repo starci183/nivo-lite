@@ -42,7 +42,6 @@ const itemOf = builder<WorkItem>({
     evidence_state: "pending",
     assigned_staff_id: null,
     execution_id: null,
-    origin: "live",
     created_at: "2026-10-12T09:00:00.000Z",
     updated_at: "2026-10-12T09:00:00.000Z",
     completed_at: null,
@@ -58,7 +57,6 @@ const transactionOf = builder<NonNullable<OptionalTransaction>>({
     payer: "Lan",
     invoice_id: null,
     status: "unmatched",
-    origin: "live",
 })
 
 const invoiceOf = builder<InvoiceRow>({
@@ -69,7 +67,6 @@ const invoiceOf = builder<InvoiceRow>({
     invoice_no: "INV-1",
     amount_vnd: 450000,
     status: "paid",
-    origin: "live",
     issued_by: "Mai",
     paid_at: "2026-10-12T10:00:00.000Z",
 })
@@ -85,13 +82,12 @@ const eventOf = builder<NonNullable<OptionalInboundEvent>>({
     workspace_id: "ws-1",
     channel: "bank",
     kind: "payment",
-    origin: "live",
     sender_name: null,
     sender_contact: null,
     body: "CK chuyen tien",
     amount_vnd: 300000,
     external_ref: null,
-    event_id: "vietcombank:123",
+    event_id: "sepay:123",
     lead_id: null,
     status: "new",
 })
@@ -173,7 +169,7 @@ describe("ReconcilePaymentPerformerService prepare", () => {
             },
             patch: { subject_type: "transaction", subject_id: "tx-1", lead_id: "lead-1" },
         })
-        expect(invoices.listIssued).toHaveBeenCalledWith("ws-1", 50, "live")
+        expect(invoices.listIssued).toHaveBeenCalledWith("ws-1", 50)
         expect(transactions.open).not.toHaveBeenCalled()
     })
 
@@ -184,11 +180,11 @@ describe("ReconcilePaymentPerformerService prepare", () => {
 
         await expect(service.prepare(ctx, item)).resolves.toEqual({
             proposal: {
-                summary: "bankCredit|Vietcombank|300000 VND|reconcileNoRef|reconcileUnknownPayer",
+                summary: "bankCredit|SePay|300000 VND|reconcileNoRef|reconcileUnknownPayer",
                 amount_vnd: 300000,
                 outcome: "unclear",
                 candidates: [{ id: "inv-2", label: "candidateLabel|INV-2|—|300000 VND", amount_vnd: 300000 }],
-                fields: { amount_vnd: 300000, reference: null, payer: null, bank: "Vietcombank" },
+                fields: { amount_vnd: 300000, reference: null, payer: null, bank: "SePay" },
             },
             patch: { subject_type: "transaction", subject_id: "tx-2" },
         })
@@ -198,7 +194,6 @@ describe("ReconcilePaymentPerformerService prepare", () => {
             amountVnd: 300000,
             reference: null,
             payer: null,
-            origin: "live",
         })
     })
 
@@ -258,7 +253,6 @@ describe("ReconcilePaymentPerformerService prepare", () => {
             amountVnd: 450000,
             reference: "CLAIM-9",
             payer: "Mai",
-            origin: "live",
         })
     })
 })
@@ -323,21 +317,21 @@ describe("ReconcilePaymentPerformerService perform", () => {
     it("settles a customer's claim on an invoice and prefixes the bank credit line", async () => {
         const { service, invoices, transactions, orders, inbound, evidence } = await build()
         invoices.markPaid.mockResolvedValue(invoiceOf({ order_id: null, lead_id: null }))
-        const item = itemOf({ subject_type: "invoice", subject_id: "inv-1", origin: "simulated" })
+        const item = itemOf({ subject_type: "invoice", subject_id: "inv-1" })
         const proposal = proposalOf({
-            summary: "Vietcombank credit",
+            summary: "SePay credit",
             amount_vnd: undefined,
-            fields: { bank: "VCB" },
+            fields: { bank: "SePay" },
         })
 
         await expect(service.perform(ctx, item, proposal, { name: "Mai" })).resolves.toEqual({
-            summary: "Vietcombank credit · paymentMatched|no amount|INV-1",
+            summary: "SePay credit · paymentMatched|no amount|INV-1",
             evidence: "verified",
             href: "/chat",
             lead_id: null,
             detail: null,
         })
-        expect(invoices.markPaid).toHaveBeenCalledWith("ws-1", "inv-1", "simulated")
+        expect(invoices.markPaid).toHaveBeenCalledWith("ws-1", "inv-1")
         expect(transactions.match).not.toHaveBeenCalled()
         expect(orders.markPaid).not.toHaveBeenCalled()
         expect(inbound.mark).not.toHaveBeenCalled()
@@ -385,7 +379,6 @@ describe("ReconcilePaymentPerformerService perform", () => {
             context_summary: null,
             phone: null,
             email: null,
-            origin: "live",
         })
         orders.find.mockResolvedValue({
             id: "ord-1",
@@ -396,7 +389,6 @@ describe("ReconcilePaymentPerformerService perform", () => {
             items: "Tea",
             amount_vnd: 450000,
             status: "paid",
-            origin: "live",
             confirmed_by: "Lan",
             confirmed_at: null,
             created_at: "2026-10-12T09:00:00.000Z",

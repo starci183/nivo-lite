@@ -19,6 +19,8 @@ export const API_KEYS_MESSAGES: MessageBundle = {
             "Kh\u00f4ng t\u00ecm th\u1ea5y kho\u00e1 n\u00e0y, ho\u1eb7c kho\u00e1 \u0111\u00e3 \u0111\u01b0\u1ee3c thu h\u1ed3i.",
         "errors.API_KEYS_NOT_CREATED":
             "Ch\u01b0a t\u1ea1o \u0111\u01b0\u1ee3c kho\u00e1 API. Th\u1eed l\u1ea1i sau \u00edt ph\u00fat.",
+        "errors.API_KEYS_AGENT_NOT_FOUND":
+            "Kh\u00f4ng t\u00ecm th\u1ea5y tr\u1ee3 l\u00fd AI n\u00e0y trong workspace.",
     },
     en: {
         "errors.API_KEYS_UNAUTHORIZED": "Missing or invalid API key. Send the header Authorization: Bearer <key>.",
@@ -31,5 +33,6 @@ export const API_KEYS_MESSAGES: MessageBundle = {
         "errors.API_KEYS_NAME_TOO_SHORT": "Name the key (at least 2 characters), for example: n8n sales.",
         "errors.API_KEYS_NOT_FOUND": "This key was not found, or it was already revoked.",
         "errors.API_KEYS_NOT_CREATED": "The API key could not be created. Try again in a few minutes.",
+        "errors.API_KEYS_AGENT_NOT_FOUND": "This AI agent was not found in the workspace.",
     },
 }

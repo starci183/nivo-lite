@@ -20,6 +20,16 @@ export interface MarketingReportView {
     readonly channels: ReadonlyArray<{ readonly id: string; readonly term: string; readonly description: string }>
     /** What the numbers say, read from the week itself: the strongest channel and day; empty for a week without engagement. */
     readonly insight: string
+    /** The most engaging posts of the week: the title, where and when, and the engagements. */
+    readonly posts: ReadonlyArray<{ readonly id: string; readonly term: string; readonly description: string }>
+    /** How many of the week's published posts the list shows; empty without posts. */
+    readonly postsNote: string
+    /** The AI Marketing suggestion for the next week and the sources it read; null when there is none. */
+    readonly suggestion: {
+        readonly title: string
+        readonly body: string
+        readonly sources: string
+    } | null
 }
 
 /** The words and formats the projection needs, resolved by the caller (the marketing catalog and the locale formatter). */
@@ -31,6 +41,11 @@ export interface MarketingReportSay {
     readonly change: (changePct: number | null) => string
     readonly kpi: { readonly reach: string; readonly engagements: string; readonly messages: string }
     readonly insight: (channel: string, share: number, day: string, count: string) => string
+    readonly post: (title: string, channel: string, publishedAt: string) => string
+    readonly engagements: (count: string) => string
+    readonly postsNote: (shown: number, count: number) => string
+    readonly source: (ref: string, label: string) => string
+    readonly sources: (list: string) => string
 }
 
 const sum = (values: ReadonlyArray<number>) => values.reduce((total, value) => total + value, 0)
@@ -45,7 +60,18 @@ const channelTotal = (report: WeeklyReportType, channel: string) =>
         ),
     )
 
-/** Projects the weekly report into the key figures, the engagement chart, the channel totals and the reading of the week. */
+/** The suggestion with its sources worded, or null. */
+const suggestionOf = (say: MarketingReportSay, report: WeeklyReportType): MarketingReportView["suggestion"] => {
+    const suggestion = report.suggestion
+    if (!suggestion) return null
+    const sources = suggestion.sources.map((source) => say.source(source.ref, source.label)).join(" · ")
+    return { title: suggestion.title, body: suggestion.body, sources: say.sources(sources) }
+}
+
+/**
+ * Projects the weekly report into the key figures, the engagement chart, the channel totals, the reading of the week, the top
+ * posts and the AI suggestion.
+ */
 export const marketingReportView = (say: MarketingReportSay, report: WeeklyReportType): MarketingReportView => {
     const days = report.days.map((day) => ({
         id: day.day,
@@ -86,6 +112,13 @@ export const marketingReportView = (say: MarketingReportSay, report: WeeklyRepor
                       bestDay.label,
                       say.number(bestDay.total),
                   ),
+        posts: report.posts.map((post) => ({
+            id: post.id,
+            term: say.post(post.title, say.channel(post.channel), post.publishedAt),
+            description: say.engagements(say.number(post.engagements)),
+        })),
+        postsNote: report.postCount === 0 ? "" : say.postsNote(report.posts.length, report.postCount),
+        suggestion: suggestionOf(say, report),
     }
 }
 
@@ -97,4 +130,7 @@ export const MARKETING_REPORT_PLACEHOLDER: MarketingReportView = {
     dayMax: 1,
     channels: [],
     insight: "",
+    posts: [],
+    postsNote: "",
+    suggestion: null,
 }

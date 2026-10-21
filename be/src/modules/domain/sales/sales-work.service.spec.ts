@@ -42,7 +42,6 @@ const itemOf = builder<WorkItem>({
     evidence_state: "pending",
     assigned_staff_id: null,
     execution_id: null,
-    origin: "live",
     created_at: "2026-10-12T10:00:00.000Z",
     updated_at: UPDATED_AT,
     completed_at: null,
@@ -67,7 +66,6 @@ const orderOf = builder<NonNullable<OptionalOrder>>({
     items: "2 x Tea",
     amount_vnd: 90000,
     status: "confirmed",
-    origin: "live",
     confirmed_by: "Lan",
     confirmed_at: "2026-10-13T01:30:00.000Z",
     created_at: "2026-10-13T01:00:00.000Z",
@@ -270,7 +268,6 @@ describe("SalesWorkService handoff", () => {
                 subject_type: "order",
                 subject_id: "order-1",
                 lead_id: "lead-1",
-                origin: "live",
                 dedupeKey: "issue_invoice:order:order-1",
                 seed: { amount_vnd: 90000, fields: {} },
                 queue: true,
@@ -283,15 +280,6 @@ describe("SalesWorkService handoff", () => {
             kind: "handoff.accounting",
             summary: 'sales.handoff{"who":"Lan","no":"DH-20261013-0001"}',
         })
-    })
-
-    it("keeps a simulated order simulated", async () => {
-        const { service, orders, engine } = await build()
-        orders.find.mockResolvedValue(orderOf({ origin: "simulated" }))
-
-        await service.handoff("user-1", handoff)
-
-        expect(engine.runWork.mock.calls[0]?.[1]).toMatchObject({ origin: "simulated" })
     })
 
     it.each(["failed", "rejected"] as const)("reopens a %s invoice step before queueing it", async (state) => {

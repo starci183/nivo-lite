@@ -46,5 +46,5 @@ and completion timestamps until the recoverable backlog drains. Consumers lock p
 and commit their business effects with completion, so successful replays perform no second effect.
 
 Meta and SePay legacy receipts retain their original payload and are queued by the migration.
-Vietcombank and bank-feed receipts are newly introduced by this rollout. This edit-only change does
+Bank-feed receipts are newly introduced by this rollout. This edit-only change does
 not execute any migrations or recover production data; the deployment operator owns this inventory.

@@ -23,7 +23,7 @@ export class McpToolGrantType {
     @Field(() => Float, { nullable: true })
     limitVnd!: number | null
 
-    /** The argument constraints as JSON: [{ "arg": "discountPct", "max": 5 }]. */
+    /** The argument constraints as JSON: [{ "arg": "quantity", "max": 5 }]. */
     @Field(() => String)
     constraintsJson!: string
 }

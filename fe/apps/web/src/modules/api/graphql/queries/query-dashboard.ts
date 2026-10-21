@@ -95,7 +95,6 @@ const query1: TypedDocumentNode<QueryDashboardResponse> = gql`
                 summary
                 contact
                 customer
-                origin
                 executionId
                 assignedStaffName
                 createdAt
@@ -117,7 +116,6 @@ const query1: TypedDocumentNode<QueryDashboardResponse> = gql`
                     id
                     contactName
                     company
-                    origin
                     stage
                     createdAt
                 }
@@ -128,7 +126,6 @@ const query1: TypedDocumentNode<QueryDashboardResponse> = gql`
                     items
                     amountVnd
                     status
-                    origin
                 }
                 invoices {
                     id
@@ -137,7 +134,6 @@ const query1: TypedDocumentNode<QueryDashboardResponse> = gql`
                     invoiceNo
                     amountVnd
                     status
-                    origin
                 }
                 transactions {
                     id
@@ -146,7 +142,6 @@ const query1: TypedDocumentNode<QueryDashboardResponse> = gql`
                     reference
                     amountVnd
                     status
-                    origin
                 }
                 work {
                     id

@@ -1,11 +1,10 @@
 import { Test } from "@nestjs/testing"
 import type { WorkItem } from "@modules/domain/decisions"
-import { LIVE_BOOKING_STATUSES, settlementOf, reminderOriginOf, contactOf } from "./booking-remind.policy"
+import { LIVE_BOOKING_STATUSES, settlementOf, contactOf } from "./booking-remind.policy"
 
 const SUBJECT = Symbol("booking-remind.policy")
 type Subject = {
     settlementOf: typeof settlementOf
-    reminderOriginOf: typeof reminderOriginOf
     contactOf: typeof contactOf
 }
 
@@ -16,7 +15,6 @@ const buildSubject = async () => {
                 provide: SUBJECT,
                 useValue: {
                     settlementOf,
-                    reminderOriginOf,
                     contactOf,
                 },
             },
@@ -41,18 +39,6 @@ describe("settlementOf", () => {
     ])("settles $status as $settlement", async ({ status, settlement }) => {
         const subject = await buildSubject()
         expect(subject.settlementOf(status)).toBe(settlement)
-    })
-})
-
-describe("reminderOriginOf", () => {
-    it("keeps simulated bookings simulated", async () => {
-        const subject = await buildSubject()
-        expect(subject.reminderOriginOf("simulated")).toBe("simulated")
-    })
-
-    it.each(["live", "", "other"])("treats origin '%s' as live", async (origin) => {
-        const subject = await buildSubject()
-        expect(subject.reminderOriginOf(origin)).toBe("live")
     })
 })
 

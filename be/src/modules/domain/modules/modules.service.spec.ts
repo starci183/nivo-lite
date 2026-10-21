@@ -72,6 +72,34 @@ describe("ModulesService > find", () => {
 })
 
 describe("ModulesService > sync", () => {
+    it("hands the accounting decisions that ask a person to the authority actions", async () => {
+        const tx = syncTransaction()
+        const { service, authorityActions } = await build({}, tx.em)
+        authorityActions.upsertAll.mockResolvedValue({ written: ACTIONS.length, stale: [] })
+
+        await service.sync()
+
+        expect(authorityActions.upsertAll).toHaveBeenCalledWith(
+            expect.anything(),
+            expect.arrayContaining([
+                expect.objectContaining({
+                    action: "record_receivable_payment",
+                    module_key: "accounting",
+                    default_mode: "ask",
+                    default_required_fields: ["amount_vnd"],
+                    amount_limit: false,
+                }),
+                expect.objectContaining({
+                    action: "review_einvoice",
+                    module_key: "accounting",
+                    default_mode: "ask",
+                    default_required_fields: [],
+                    amount_limit: false,
+                }),
+            ]),
+        )
+    })
+
     it("upserts the modules and hands the actions to the authority actions in the same transaction", async () => {
         const tx = syncTransaction()
         const { service, authorityActions } = await build({}, tx.em)
@@ -103,7 +131,9 @@ describe("ModulesService > sync", () => {
             ]),
         )
     })
+})
 
+describe("ModulesService > sync", () => {
     it("writes each module with its columns and its whole definition, stamped with the clock", async () => {
         const tx = syncTransaction()
         const { service, authorityActions } = await build({}, tx.em)

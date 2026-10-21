@@ -1,114 +1,226 @@
+import { Client } from "@modelcontextprotocol/sdk/client/index.js"
+import { Test } from "@nestjs/testing"
+import { mock } from "@starci/jest-preset"
+import { Secret } from "@modules/platform/config"
+import { LOGGER } from "@modules/platform/logging"
+import type { Logger } from "@modules/platform/logging"
 import { McpErrorCode } from "./errors/mcp.error"
-import { McpRemoteClient, valueOfResult } from "./mcp-remote.client"
-import type { McpSession } from "./mcp.contracts"
+import type { McpJson } from "./mcp.contracts"
+import { McpRemoteClient } from "./mcp-remote.client"
+import { MCP_OPTIONS } from "./mcp.decorators"
+import { McpLogEvent } from "./mcp.log-events"
 
-const ENDPOINT = { url: "https://hakuen.test/mcp", bearer: "s3cret" }
+const OPEN = { url: "https://hakuen.test/mcp", credentialRef: null }
+const SIGNED = { url: "https://hakuen.test/mcp", credentialRef: "MCP_HAKUEN_CLIENT_SECRET" }
 
-const sessionOf = (overrides: Partial<McpSession> = {}): McpSession => ({
-    listTools: jest.fn().mockResolvedValue({ tools: [] }),
-    callTool: jest.fn().mockResolvedValue({ structuredContent: { ok: true } }),
-    close: jest.fn().mockResolvedValue(undefined),
-    ...overrides,
+/** What the fake server answers to tools/list and tools/call. */
+interface Answers {
+    readonly tools?: ReadonlyArray<Readonly<Record<string, unknown>>>
+    readonly call?: Readonly<Record<string, unknown>>
+}
+
+/** A JSON-RPC result response. */
+const jsonOf = (id: unknown, result: unknown): Response =>
+    new Response(JSON.stringify({ jsonrpc: "2.0", id, result }), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+    })
+
+/** The result of one JSON-RPC method of the fake server. */
+const resultOf = (method: string, answers: Answers): unknown => {
+    if (method === "initialize") {
+        return {
+            protocolVersion: "2025-06-18",
+            capabilities: { tools: {} },
+            serverInfo: { name: "fake", version: "1" },
+        }
+    }
+    if (method === "tools/list") return { tools: answers.tools ?? [] }
+    return answers.call ?? {}
+}
+
+/** The JSON-RPC message one POST of the client carried, read the way a server reads a request body. */
+const messageOf = async (init: RequestInit | undefined): Promise<McpJson> => {
+    const message: unknown = await new Response(init?.body).json()
+    return typeof message === "object" && message !== null ? { ...message } : {}
+}
+
+/** A stateless Streamable HTTP MCP server answering JSON, as fetch sees it; the SSE GET is not offered. */
+const serverFetch =
+    (answers: Answers) =>
+    async (_url: string | URL | Request, init?: RequestInit): Promise<Response> => {
+        if (init?.method === "GET") return new Response(null, { status: 405 })
+        const message = await messageOf(init)
+        if (message.id === undefined) return new Response(null, { status: 202 })
+        return jsonOf(message.id, resultOf(String(message.method), answers))
+    }
+
+const build = async () => {
+    const logger = mock<Logger>()
+    const moduleRef = await Test.createTestingModule({
+        providers: [
+            McpRemoteClient,
+            {
+                provide: MCP_OPTIONS,
+                useValue: { credentials: new Map([["MCP_HAKUEN_CLIENT_SECRET", new Secret("s3cret")]]) },
+            },
+            { provide: LOGGER, useValue: logger },
+        ],
+    }).compile()
+    return { client: moduleRef.get(McpRemoteClient), logger }
+}
+
+afterEach(() => {
+    jest.restoreAllMocks()
 })
 
-describe("valueOfResult", () => {
-    it("prefers the structured content and keeps the error flag", () => {
-        expect(valueOfResult({ isError: true, structuredContent: { a: 1 } })).toEqual({
-            isError: true,
-            value: { a: 1 },
-        })
-    })
+describe("McpRemoteClient.holds", () => {
+    it("answers whether the integration holds a credential of that name", async () => {
+        const { client } = await build()
 
-    it("reads the first text block as JSON", () => {
-        const raw = { content: [{ type: "image" }, { type: "text", text: '{"holdId":"h1"}' }] }
-        expect(valueOfResult(raw)).toEqual({ isError: false, value: { holdId: "h1" } })
-    })
-
-    it("keeps a text that is not a JSON object under text", () => {
-        expect(valueOfResult({ content: [{ type: "text", text: "[1]" }] }).value).toEqual({ text: "[1]" })
-        expect(valueOfResult({ content: [{ type: "text", text: "nope" }] }).value).toEqual({ text: "nope" })
-    })
-
-    it("answers an empty text when there is no content", () => {
-        expect(valueOfResult({ content: "x" }).value).toEqual({ text: "" })
-        expect(valueOfResult({ content: [{ type: "text", text: 3 }] }).value).toEqual({ text: "" })
+        expect(client.holds("MCP_HAKUEN_CLIENT_SECRET")).toBe(true)
+        expect(client.holds("MCP_OTHER_SECRET")).toBe(false)
     })
 })
 
-describe("McpRemoteClient", () => {
-    it("lists the tools with defaults for a missing description or schema", async () => {
-        const session = sessionOf({
-            listTools: jest.fn().mockResolvedValue({
+describe("McpRemoteClient.listTools", () => {
+    it("lists the tools with defaults for a missing description or schema, without a bearer when none is named", async () => {
+        const fetch = jest.spyOn(globalThis, "fetch").mockImplementation(
+            serverFetch({
                 tools: [
-                    { name: "booking.hold", description: "Hold", inputSchema: { type: "object" } },
-                    { name: "stay.current", inputSchema: null },
+                    {
+                        name: "order.hold",
+                        description: "Hold",
+                        inputSchema: { type: "object" },
+                        annotations: { readOnlyHint: false },
+                        _meta: { "nivo/role": "identity.upsert" },
+                    },
+                    { name: "stock.search", inputSchema: { type: "object" } },
                 ],
             }),
-        })
-        const open = jest.fn().mockResolvedValue(session)
-        const tools = await new McpRemoteClient(open).listTools(ENDPOINT, 4000)
-        expect(tools).toEqual([
-            { name: "booking.hold", description: "Hold", inputSchema: { type: "object" } },
-            { name: "stay.current", description: "", inputSchema: {} },
+        )
+        const { client } = await build()
+
+        await expect(client.listTools(OPEN, 4000)).resolves.toEqual([
+            {
+                name: "order.hold",
+                description: "Hold",
+                inputSchema: { type: "object" },
+                annotations: { readOnlyHint: false },
+                meta: { "nivo/role": "identity.upsert" },
+            },
+            { name: "stock.search", description: "", inputSchema: { type: "object" }, annotations: {}, meta: {} },
         ])
-        expect(open).toHaveBeenCalledWith(ENDPOINT, expect.any(AbortSignal))
-        expect(session.close).toHaveBeenCalled()
+        const posted = fetch.mock.calls.filter(([, init]) => init?.method === "POST")
+        expect(posted.map(([, init]) => new Headers(init?.headers).get("authorization"))).toEqual([null, null, null])
     })
 
-    it("calls a tool and reads its result", async () => {
-        const session = sessionOf()
-        const client = new McpRemoteClient(jest.fn().mockResolvedValue(session))
-        await expect(client.call(ENDPOINT, "booking.hold", { holdId: "x" }, 4000)).resolves.toEqual({
+    it("sends the bearer of the named credential", async () => {
+        const fetch = jest.spyOn(globalThis, "fetch").mockImplementation(serverFetch({}))
+        const { client } = await build()
+
+        await expect(client.listTools(SIGNED, 4000)).resolves.toEqual([])
+        const [, init] = fetch.mock.calls[0] ?? []
+        expect(new Headers(init?.headers).get("authorization")).toBe("Bearer s3cret")
+    })
+
+    it("refuses a credential it does not hold before reaching the server", async () => {
+        const fetch = jest.spyOn(globalThis, "fetch").mockImplementation(serverFetch({}))
+        const { client } = await build()
+
+        await expect(
+            client.listTools({ url: OPEN.url, credentialRef: "MCP_OTHER_SECRET" }, 4000),
+        ).rejects.toMatchObject({ code: McpErrorCode.CredentialMissing, params: { ref: "MCP_OTHER_SECRET" } })
+        expect(fetch).not.toHaveBeenCalled()
+    })
+})
+
+describe("McpRemoteClient.ping", () => {
+    it("answers when the server answers ping, and unavailable when it cannot be reached", async () => {
+        const fetch = jest.spyOn(globalThis, "fetch").mockImplementation(serverFetch({}))
+        const { client } = await build()
+
+        await expect(client.ping(OPEN, 4000)).resolves.toBeUndefined()
+        const posts = fetch.mock.calls.filter(([, init]) => init?.method === "POST")
+        const messages = await Promise.all(posts.map(([, init]) => messageOf(init)))
+        expect(messages.map((message) => message.method)).toEqual(["initialize", "notifications/initialized", "ping"])
+
+        fetch.mockRejectedValue(new TypeError("fetch failed"))
+        await expect(client.ping(OPEN, 4000)).rejects.toMatchObject({ code: McpErrorCode.Unavailable })
+    })
+})
+
+describe("McpRemoteClient.call results", () => {
+    const callWith = async (call: Readonly<Record<string, unknown>>) => {
+        jest.spyOn(globalThis, "fetch").mockImplementation(serverFetch({ call }))
+        const { client } = await build()
+        return client.call({ endpoint: OPEN, name: "booking.hold", args: { roomType: "deluxe" }, timeoutMs: 4000 })
+    }
+
+    it("prefers the structured content and keeps the error flag", async () => {
+        await expect(callWith({ content: [], structuredContent: { holdId: "h1" }, isError: true })).resolves.toEqual({
+            isError: true,
+            value: { holdId: "h1" },
+        })
+    })
+
+    it("reads the first text block as a JSON object", async () => {
+        await expect(callWith({ content: [{ type: "text", text: '{"holdId":"h2"}' }] })).resolves.toEqual({
+            isError: false,
+            value: { holdId: "h2" },
+        })
+    })
+
+    it("keeps a text that is not a JSON object under text, and an empty text when there is none", async () => {
+        await expect(callWith({ content: [{ type: "text", text: "[1]" }] })).resolves.toEqual({
+            isError: false,
+            value: { text: "[1]" },
+        })
+        await expect(callWith({ content: [{ type: "text", text: "nope" }] })).resolves.toEqual({
+            isError: false,
+            value: { text: "nope" },
+        })
+        await expect(callWith({ content: [] })).resolves.toEqual({ isError: false, value: { text: "" } })
+    })
+})
+
+describe("McpRemoteClient.call failures", () => {
+    it("answers unavailable when the server cannot be reached", async () => {
+        jest.spyOn(globalThis, "fetch").mockRejectedValue(new TypeError("fetch failed"))
+        const { client } = await build()
+
+        await expect(client.call({ endpoint: OPEN, name: "a.b", args: {}, timeoutMs: 4000 })).rejects.toMatchObject({
+            code: McpErrorCode.Unavailable,
+            params: { url: OPEN.url },
+        })
+    })
+
+    it("aborts a server slower than the limit and answers timeout", async () => {
+        jest.spyOn(globalThis, "fetch").mockImplementation(
+            (_url, init) =>
+                new Promise<Response>((_resolve, reject) => {
+                    init?.signal?.addEventListener("abort", () => {
+                        reject(new Error("aborted"))
+                    })
+                }),
+        )
+        const { client } = await build()
+
+        await expect(client.call({ endpoint: OPEN, name: "a.b", args: {}, timeoutMs: 20 })).rejects.toMatchObject({
+            code: McpErrorCode.Timeout,
+        })
+    })
+
+    it("logs a session that fails to close and still answers the call", async () => {
+        jest.spyOn(globalThis, "fetch").mockImplementation(serverFetch({ call: { structuredContent: { ok: true } } }))
+        const closing = new Error("gone")
+        jest.spyOn(Client.prototype, "close").mockRejectedValue(closing)
+        const { client, logger } = await build()
+
+        await expect(client.call({ endpoint: OPEN, name: "a.b", args: {}, timeoutMs: 4000 })).resolves.toEqual({
             isError: false,
             value: { ok: true },
         })
-        expect(session.callTool).toHaveBeenCalledWith("booking.hold", { holdId: "x" })
-    })
-
-    it("answers unavailable when the session cannot open, and still succeeds when close fails", async () => {
-        const failing = new McpRemoteClient(jest.fn().mockRejectedValue(new Error("refused")))
-        await expect(failing.call(ENDPOINT, "a.b", {}, 4000)).rejects.toMatchObject({ code: McpErrorCode.Unavailable })
-        const closing = sessionOf({ close: jest.fn().mockRejectedValue(new Error("gone")) })
-        await expect(
-            new McpRemoteClient(jest.fn().mockResolvedValue(closing)).call(ENDPOINT, "a.b", {}, 4000),
-        ).resolves.toEqual({ isError: false, value: { ok: true } })
-    })
-
-    it("answers timeout when the session cannot even open in time", async () => {
-        jest.useFakeTimers()
-        try {
-            const open = jest.fn(
-                () =>
-                    new Promise<McpSession>((_resolve, reject) => {
-                        setTimeout(() => reject(new Error("aborted")), 9000)
-                    }),
-            )
-            const pending = new McpRemoteClient(open).listTools(ENDPOINT, 4000)
-            const settled = expect(pending).rejects.toMatchObject({ code: McpErrorCode.Timeout })
-            await jest.advanceTimersByTimeAsync(9000)
-            await settled
-        } finally {
-            jest.useRealTimers()
-        }
-    })
-
-    it("aborts a call slower than the limit and answers timeout", async () => {
-        jest.useFakeTimers()
-        try {
-            const session = sessionOf({
-                callTool: jest.fn(
-                    () =>
-                        new Promise((_resolve, reject) => {
-                            setTimeout(() => reject(new Error("aborted")), 10_000)
-                        }),
-                ),
-            })
-            const pending = new McpRemoteClient(jest.fn().mockResolvedValue(session)).call(ENDPOINT, "a.b", {}, 4000)
-            const settled = expect(pending).rejects.toMatchObject({ code: McpErrorCode.Timeout })
-            await jest.advanceTimersByTimeAsync(10_000)
-            await settled
-        } finally {
-            jest.useRealTimers()
-        }
+        expect(logger.error).toHaveBeenCalledWith(McpLogEvent.CloseFailed, closing, { url: OPEN.url })
     })
 })

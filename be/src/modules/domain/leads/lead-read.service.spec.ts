@@ -14,7 +14,6 @@ const LEAD: LeadView = {
     need: "price",
     stage: "new",
     context_summary: null,
-    origin: "live",
     installation_id: null,
     created_at: "2026-10-12T03:00:00.000Z",
 }

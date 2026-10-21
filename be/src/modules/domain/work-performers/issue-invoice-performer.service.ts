@@ -83,7 +83,6 @@ export class IssueInvoicePerformerService implements WorkPerformer {
             orderId,
             leadId: item.lead_id,
             amountVnd: amount,
-            origin: item.origin,
             issuedBy: by.name,
         })
         if (!created) {
@@ -103,7 +102,7 @@ export class IssueInvoicePerformerService implements WorkPerformer {
             actor: by.name,
             summary,
         })
-        const sent = item.origin === "live" ? await this.instruct(ctx, item, invoice) : null
+        const sent = await this.instruct(ctx, item, invoice)
         return {
             summary,
             evidence: "captured",

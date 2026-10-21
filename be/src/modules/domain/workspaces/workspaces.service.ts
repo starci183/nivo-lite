@@ -16,8 +16,9 @@ import {
     INSERT_FREE_WORKSPACE,
     LIST_MEMBERSHIPS,
     LOCK_FIRST_WORKSPACE,
+    SET_WORKSPACE_BRAND,
 } from "./persistence/workspaces.sql"
-import type { CreatedWorkspace, FirstWorkspace, WorkspaceMembership } from "./workspaces.contracts"
+import type { CreatedWorkspace, FirstWorkspace, WorkspaceBrand, WorkspaceMembership } from "./workspaces.contracts"
 import type { WorkspacesOptions } from "./workspaces.options"
 import { FIRST_WORKSPACE_NAME } from "./workspaces.templates"
 import { InjectWorkspacesOptions } from "./workspaces.port"
@@ -83,6 +84,17 @@ export class WorkspacesService {
             const [created] = await tx.query<[CreatedRow]>(INSERT_FREE_WORKSPACE, [userId, name])
             return { id: created.id }
         })
+    }
+
+    /** Sets the brand of a workspace; only its owner may, and any other caller or workspace is refused as not found. */
+    async setBrand(ownerId: string, workspaceId: string, brand: WorkspaceBrand): Promise<void> {
+        const changed = await this.entityManager.query<Array<CreatedRow>>(SET_WORKSPACE_BRAND, [
+            workspaceId,
+            ownerId,
+            brand.displayName,
+            brand.logoUrl,
+        ])
+        if (changed.length === 0) throw new WorkspacesError({ code: WorkspacesErrorCode.NotFound })
     }
 
     /**

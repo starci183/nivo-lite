@@ -34,14 +34,6 @@ export class SendEmailPerformerService implements WorkPerformer {
 
     /** Renders the shop layout and sends; an email that did not go out fails the item with the reason. */
     async perform(ctx: WorkContext, item: WorkItem, proposal: Proposal): Promise<Performed> {
-        if (item.origin === "simulated") {
-            return {
-                summary: this.kit.text(ctx, "simulatedDelivery", { channel: "email" }),
-                evidence: "captured",
-                lead_id: item.lead_id,
-                detail: proposal.draft ?? null,
-            }
-        }
         const to = textOf(proposal.fields.contact).trim()
         const subject = textOf(proposal.fields.subject)
         const shop = await this.workspaces.nameOf(ctx.workspaceId)

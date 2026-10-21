@@ -19,10 +19,6 @@ export class AccountingInvoiceType {
     @Field(() => String)
     status!: string
 
-    /** origin. */
-    @Field(() => String)
-    origin!: string
-
     /** customer. */
     @Field(() => String, { nullable: true })
     customer!: string | null

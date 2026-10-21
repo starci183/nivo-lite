@@ -40,10 +40,6 @@ export class AccountingLedgerEntryType {
     @Field(() => String, { nullable: true })
     linked!: string | null
 
-    /** origin. */
-    @Field(() => String)
-    origin!: string
-
     /** lineage. */
     @Field(() => [AccountingLineageType])
     lineage!: ReadonlyArray<AccountingLineageType>

@@ -29,7 +29,6 @@ const LEAD: LeadReadRow = {
     stage: "new",
     phone: "0900",
     email: null,
-    origin: null,
 }
 const SENT: RunResult = { status: "waiting_approval", steps: [{ label: "sent", status: "waiting" }], evidence: "wait" }
 const CONVERSATION = { id: "cv-1", channel: "web", handled_by: null, visitor_name: null, lead_id: "l-1" }

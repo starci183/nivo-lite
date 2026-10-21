@@ -119,9 +119,6 @@ export interface LeadFlowInvoiceView {
     /** The invoice's current commercial status. */
     readonly status: string
 
-    /** Whether the invoice originated from live or simulated input. */
-    readonly origin: string
-
     /** The identity that issued the invoice. */
     readonly issuedBy: string | null
 
@@ -175,9 +172,6 @@ export interface LeadFlowOrderView {
 
     /** The order's current commercial status. */
     readonly status: string
-
-    /** Whether the order originated from live or simulated input. */
-    readonly origin: string
 
     /** The identity that confirmed the order. */
     readonly confirmedBy: string | null
@@ -278,9 +272,6 @@ export interface LeadFlowTransactionView {
     /** The current matching or review status. */
     readonly status: string
 
-    /** Whether the transaction originated from live or simulated input. */
-    readonly origin: string
-
     /** When the transaction was recorded, in ISO 8601 format. */
     readonly createdAt: string
 }
@@ -352,9 +343,6 @@ export interface LeadFlowWorkItemView {
 
     /** The linked execution record, when present. */
     readonly executionId: string | null
-
-    /** Whether the work originated from live or simulated input. */
-    readonly origin: string
 
     /** When the work item was created, in ISO 8601 format. */
     readonly createdAt: string

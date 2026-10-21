@@ -225,7 +225,6 @@ describe("CommandPlannerService", () => {
                 payload: { subject_type: "lead", subject_id: "lead-1", lead_id: "lead-1", note: "vip" },
                 seed: { summary: "S", fields: { a: 1 } },
                 inboundEventId: "in-1",
-                origin: "simulated",
                 queue: true,
                 preset: true,
                 noChain: true,
@@ -245,7 +244,6 @@ describe("CommandPlannerService", () => {
                     inbound_event_id: "in-1",
                     parent_id: null,
                     dedupeKey: "key-1",
-                    origin: "simulated",
                     seed: { summary: "S", fields: { a: 1, note: "vip" } },
                     queue: true,
                     preset: true,
@@ -261,11 +259,10 @@ describe("CommandPlannerService", () => {
         it.each<readonly [string, SendCommandInput, string | null, string]>([
             ["a named subject", inputOf(), "lead-1", "cmd:classify_lead:lead:lead-1"],
             ["an unnamed kind", inputOf({ payload: { lead_id: "lead-1" } }), null, "cmd:classify_lead:lead:none"],
-        ])("defaults the dedupe key, origin and seed for %s", async (_name, input, subjectId, dedupeKey) => {
+        ])("defaults the dedupe key and seed for %s", async (_name, input, subjectId, dedupeKey) => {
             const built = await build(mockEntityManager({}))
             const plan = planned(await built.service.plan(ctx, input))
             expect(plan.spec.dedupeKey).toBe(dedupeKey)
-            expect(plan.spec.origin).toBe("live")
             expect(plan.spec.seed).toEqual({ fields: {} })
             expect(plan.spec.subject_type).toBe("lead")
             expect(plan.spec.subject_id).toBe(subjectId)

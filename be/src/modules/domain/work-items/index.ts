@@ -6,7 +6,6 @@ export type {
     EvidenceState,
     NewWorkItem,
     OptionalWorkItem,
-    Origin,
     Proposal,
     ProposalCandidate,
     ProposalFieldValue,

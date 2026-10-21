@@ -1,6 +1,6 @@
 import { CommandHandler } from "@nestjs/cqrs"
 import { ModuleInstallService } from "@modules/domain/modules"
-import type { InstallationRecord } from "@modules/domain/module-installations"
+import type { InstallationView } from "@modules/domain/modules"
 import { ICQRSHandler } from "@modules/platform/cqrs"
 import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
@@ -8,7 +8,7 @@ import { SaveInstallationSettingCommand } from "./save-installation-setting.comm
 
 @CommandHandler(SaveInstallationSettingCommand)
 /** Saves the setting through the module install service. */
-export class SaveInstallationSettingHandler extends ICQRSHandler<SaveInstallationSettingCommand, InstallationRecord> {
+export class SaveInstallationSettingHandler extends ICQRSHandler<SaveInstallationSettingCommand, InstallationView> {
     constructor(
         @InjectLogger() logger: Logger,
         private readonly installs: ModuleInstallService,
@@ -16,7 +16,7 @@ export class SaveInstallationSettingHandler extends ICQRSHandler<SaveInstallatio
         super(logger)
     }
 
-    protected override process(command: SaveInstallationSettingCommand): Promise<InstallationRecord> {
+    protected override process(command: SaveInstallationSettingCommand): Promise<InstallationView> {
         return this.installs.saveSetting(
             command.params.principal.id,
             command.params.request.workspaceId,

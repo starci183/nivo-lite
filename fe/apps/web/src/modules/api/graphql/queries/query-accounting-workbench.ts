@@ -19,39 +19,20 @@ const query1: TypedDocumentNode<QueryAccountingWorkbenchResponse> = gql`
                     fromIso
                     toIso
                     income {
-                        vnd {
-                            live
-                            simulated
-                        }
-                        count {
-                            live
-                            simulated
-                        }
+                        vnd
+                        count
                     }
                     receivable {
-                        vnd {
-                            live
-                            simulated
-                        }
-                        count {
-                            live
-                            simulated
-                        }
+                        vnd
+                        count
                     }
                     unmatched {
-                        vnd {
-                            live
-                            simulated
-                        }
-                        count {
-                            live
-                            simulated
-                        }
+                        vnd
+                        count
                     }
                     weeks {
                         startIso
-                        live
-                        simulated
+                        vnd
                     }
                 }
                 last {
@@ -59,89 +40,49 @@ const query1: TypedDocumentNode<QueryAccountingWorkbenchResponse> = gql`
                     fromIso
                     toIso
                     income {
-                        vnd {
-                            live
-                            simulated
-                        }
-                        count {
-                            live
-                            simulated
-                        }
+                        vnd
+                        count
                     }
                     receivable {
-                        vnd {
-                            live
-                            simulated
-                        }
-                        count {
-                            live
-                            simulated
-                        }
+                        vnd
+                        count
                     }
                     unmatched {
-                        vnd {
-                            live
-                            simulated
-                        }
-                        count {
-                            live
-                            simulated
-                        }
+                        vnd
+                        count
                     }
                     weeks {
                         startIso
-                        live
-                        simulated
+                        vnd
                     }
                 }
             }
             ageing {
                 d0 {
-                    vnd {
-                        live
-                        simulated
-                    }
-                    count {
-                        live
-                        simulated
-                    }
+                    vnd
+                    count
                 }
                 d30 {
-                    vnd {
-                        live
-                        simulated
-                    }
-                    count {
-                        live
-                        simulated
-                    }
+                    vnd
+                    count
                 }
                 d60 {
-                    vnd {
-                        live
-                        simulated
-                    }
-                    count {
-                        live
-                        simulated
-                    }
+                    vnd
+                    count
                 }
             }
             waiting {
-                count {
-                    live
-                    simulated
-                }
+                count
                 knownVnd
                 unknownAmount
             }
+            creditsSource
             credits {
                 id
                 occurredAt
                 amount
                 payer
                 reference
-                origin
                 match
                 invoiceNo
                 sourceKind
@@ -151,7 +92,6 @@ const query1: TypedDocumentNode<QueryAccountingWorkbenchResponse> = gql`
                 invoiceNo
                 amount
                 status
-                origin
                 customer
                 issuedAt
                 paidAt
@@ -164,7 +104,6 @@ const query1: TypedDocumentNode<QueryAccountingWorkbenchResponse> = gql`
                 orderNo
                 items
                 amount
-                origin
                 customer
                 createdAt
             }
@@ -192,7 +131,6 @@ const query1: TypedDocumentNode<QueryAccountingWorkbenchResponse> = gql`
                     assignedStaffId
                     assignedStaffName
                     executionId
-                    origin
                     createdAt
                     updatedAt
                     completedAt
@@ -245,7 +183,6 @@ const query1: TypedDocumentNode<QueryAccountingWorkbenchResponse> = gql`
                 amount
                 status
                 linked
-                origin
                 adjustmentCount
                 lineage {
                     kind

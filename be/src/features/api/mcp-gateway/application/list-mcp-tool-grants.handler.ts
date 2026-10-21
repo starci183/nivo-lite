@@ -2,7 +2,6 @@ import { QueryHandler } from "@nestjs/cqrs"
 import { McpGatewayAdminService } from "@modules/domain/mcp-gateway"
 import type { GrantView } from "@modules/domain/mcp-gateway"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { actorOf } from "./mcp-gateway.mapper"
 import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { ListMcpToolGrantsQuery } from "./list-mcp-tool-grants.query"
@@ -18,6 +17,9 @@ export class ListMcpToolGrantsHandler extends ICQRSHandler<ListMcpToolGrantsQuer
     }
 
     protected override process(query: ListMcpToolGrantsQuery): Promise<ReadonlyArray<GrantView>> {
-        return this.admin.grants(actorOf(query.params))
+        return this.admin.grants({
+            principalId: query.params.principal.id,
+            workspaceId: query.params.request.workspaceId,
+        })
     }
 }

@@ -55,7 +55,6 @@ export class ContentPublishingService {
                 action: "publish_post",
                 subject_type: "inbound",
                 subject_id: item.id,
-                origin: "live",
                 preset: true,
                 noChain: true,
                 forceAsk: "over_authority",

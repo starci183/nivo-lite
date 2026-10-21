@@ -7,9 +7,6 @@ export type WorkStatus = "queued" | "done" | "waiting_decision" | "rejected" | "
 /** How much evidence backs the result of a work item. */
 export type EvidenceState = "pending" | "captured" | "reviewed" | "verified" | "customer_confirmed"
 
-/** Whether the input was real or simulated. */
-export type Origin = "live" | "simulated"
-
 /** How the item was decided: by policy alone or by a person. */
 export type DecidedPath = "auto" | "human"
 
@@ -113,8 +110,6 @@ export interface WorkItem {
     readonly assigned_staff_id: string | null
     /** The legacy approval execution. */
     readonly execution_id: string | null
-    /** Real or simulated. */
-    readonly origin: Origin
     /** When it was created. */
     readonly created_at: string
     /** When it last changed. */
@@ -161,8 +156,6 @@ export interface NewWorkItem {
     readonly dedupeKey: string
     /** The first proposal. */
     readonly proposal: Proposal
-    /** Real or simulated. */
-    readonly origin: Origin
     /** The agent instance; null lets the database resolve it. */
     readonly installationId: string | null
 }

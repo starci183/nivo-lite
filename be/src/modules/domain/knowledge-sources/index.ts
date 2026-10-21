@@ -14,4 +14,5 @@ export type {
 } from "./knowledge-sources.contracts"
 export { KnowledgeSourcesModule } from "./knowledge-sources.module"
 export { KnowledgeSourcesService } from "./knowledge-sources.service"
+export { ProfileSourcesService } from "./profile-sources.service"
 export { KNOWLEDGE_SOURCES_MESSAGES } from "./messages/knowledge-sources.messages"

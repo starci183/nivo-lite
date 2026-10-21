@@ -28,10 +28,6 @@ export class DashboardExceptionType {
     @Field(() => String, { nullable: true })
     reason!: string | null
 
-    /** `live`, `simulated` or null. */
-    @Field(() => String, { nullable: true })
-    origin!: string | null
-
     /** The failure text, or null. */
     @Field(() => String, { nullable: true })
     error!: string | null

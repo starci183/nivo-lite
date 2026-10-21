@@ -36,7 +36,6 @@ const itemOf = builder<WorkItem>({
     evidence_state: "pending",
     assigned_staff_id: null,
     execution_id: null,
-    origin: "live",
     created_at: "2026-10-12T09:00:00.000Z",
     updated_at: "2026-10-12T09:00:00.000Z",
     completed_at: null,
@@ -75,18 +74,6 @@ describe("SendEmailPerformerService", () => {
         const item = itemOf()
 
         await expect(service.prepare(ctx, item)).resolves.toEqual({ proposal: item.proposal })
-    })
-
-    it("records a simulated email without sending it", async () => {
-        const { service, mail } = await build()
-
-        await expect(service.perform(ctx, itemOf({ origin: "simulated" }), proposalOf())).resolves.toEqual({
-            summary: "simulatedDelivery|email",
-            evidence: "captured",
-            lead_id: "lead-1",
-            detail: "Thanks for paying",
-        })
-        expect(mail.send).not.toHaveBeenCalled()
     })
 
     it("sends the email in the shop layout with the gate's proof and the references", async () => {
@@ -174,21 +161,6 @@ describe("SendEmailPerformerService", () => {
             code: WorkPerformersErrorCode.EmailNotSent,
             params: { reason: "no_smtp" },
         })
-    })
-
-    it("captures a simulated email with no draft without looking up the shop", async () => {
-        const { service, mail, workspaces } = await build()
-
-        await expect(
-            service.perform(ctx, itemOf({ origin: "simulated", lead_id: null }), { summary: "Receipt", fields: {} }),
-        ).resolves.toEqual({
-            summary: "simulatedDelivery|email",
-            evidence: "captured",
-            lead_id: null,
-            detail: null,
-        })
-        expect(workspaces.nameOf).not.toHaveBeenCalled()
-        expect(mail.send).not.toHaveBeenCalled()
     })
 
     it.each(["null", '"invoice-1"', "42", "true"])("sends without references when JSON is %s", async (refs) => {

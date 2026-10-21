@@ -1,7 +1,12 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
-import type { NewVideoDelegation, OptionalDelegationId, OptionalDelegationRender } from "./video-delegations.contracts"
+import type {
+    NewVideoDelegation,
+    OptionalDelegationId,
+    OptionalDelegationRender,
+    OptionalFailureReason,
+} from "./video-delegations.contracts"
 import type { DelegationIdRow, DelegationRenderRow } from "./persistence/video-delegations.rows"
 import {
     FIND_DELEGATION_OF_ITEM,
@@ -56,7 +61,7 @@ export class VideoDelegationsService {
     }
 
     /** Settles a rendering delegation as failed with the reason; true only for the one call that settled it. */
-    markFailed(delegationId: string, error: string | null): Promise<boolean> {
+    markFailed(delegationId: string, error: OptionalFailureReason): Promise<boolean> {
         return this.settle(delegationId, "failed", error)
     }
 
@@ -65,7 +70,7 @@ export class VideoDelegationsService {
         await this.entityManager.query(SAVE_DELEGATION_CARD, [delegationId, approvalWorkItemId, JSON.stringify(card)])
     }
 
-    private async settle(delegationId: string, status: string, error: string | null): Promise<boolean> {
+    private async settle(delegationId: string, status: string, error: OptionalFailureReason): Promise<boolean> {
         const rows = await this.entityManager.query<Array<DelegationIdRow>>(SETTLE_DELEGATION, [
             delegationId,
             status,

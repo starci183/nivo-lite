@@ -54,7 +54,6 @@ const item: WorkItem = {
     evidence_state: "pending",
     assigned_staff_id: null,
     execution_id: null,
-    origin: "simulated",
     created_at: "2026-10-12T09:00:00.000Z",
     updated_at: "2026-10-12T09:00:00.000Z",
     completed_at: null,
@@ -104,22 +103,12 @@ describe("CustomerDeliveryService contactOf", () => {
 })
 
 describe("CustomerDeliveryService toCustomer", () => {
-    it("records simulated work without delivering it", async () => {
-        const { service, conversations } = await build()
-
-        await expect(service.toCustomer(ctx, customer, "Hello", "simulated")).resolves.toEqual({
-            summary: "simulatedDelivery|zalo",
-            real: false,
-        })
-        expect(conversations.latestOfLead).not.toHaveBeenCalled()
-    })
-
-    it("records a simulation when the customer has no conversation", async () => {
+    it("records that nothing was sent when the customer has no conversation", async () => {
         const { service, conversations } = await build()
         conversations.latestOfLead.mockResolvedValue(null)
 
         await expect(service.toCustomer(ctx, customer, "Hello")).resolves.toEqual({
-            summary: "simulatedDelivery|zalo",
+            summary: "recordedNoConversation|zalo",
             real: false,
         })
     })
@@ -129,7 +118,7 @@ describe("CustomerDeliveryService toCustomer", () => {
         conversations.latestOfLead.mockResolvedValue(conversationOf("website"))
         conversations.targetOf.mockResolvedValue({ kind: "ok", value: targetOf("website") })
 
-        await expect(service.toCustomer(ctx, customer, "Hello", "live")).resolves.toEqual({
+        await expect(service.toCustomer(ctx, customer, "Hello")).resolves.toEqual({
             summary: "deliveredWebsite|Lan",
             real: true,
         })
@@ -228,11 +217,12 @@ describe("CustomerDeliveryService approvedInConversation", () => {
 })
 
 describe("CustomerDeliveryService sendAndLog", () => {
-    it("delivers, leaves the evidence line of its kind and reports what was done", async () => {
-        const { service, evidence } = await build()
+    it("leaves the evidence line of its kind and reports that nothing was sent without a conversation", async () => {
+        const { service, evidence, conversations } = await build()
+        conversations.latestOfLead.mockResolvedValue(null)
 
         await expect(service.sendAndLog(ctx, item, customer, "Hello", { name: "Mai" }, "quote.sent")).resolves.toEqual({
-            summary: "simulatedDelivery|zalo",
+            summary: "recordedNoConversation|zalo",
             evidence: "captured",
             href: "/leads/lead-1",
             lead_id: "lead-1",
@@ -243,7 +233,7 @@ describe("CustomerDeliveryService sendAndLog", () => {
             work_item_id: "item-1",
             kind: "quote.sent",
             actor: "Mai",
-            summary: "simulatedDelivery|zalo",
+            summary: "recordedNoConversation|zalo",
             evidence: "Hello",
         })
     })

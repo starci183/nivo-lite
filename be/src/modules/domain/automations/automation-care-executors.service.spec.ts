@@ -23,7 +23,6 @@ const LEAD: LeadReadRow = {
     stage: "new",
     phone: "0900",
     email: null,
-    origin: null,
 }
 const SENT: RunResult = { status: "done", steps: [{ label: "sent", status: "done" }], evidence: "ok" }
 const CONVERSATION = { id: "cv-1", channel: "web", handled_by: null, visitor_name: "Khach", lead_id: null }

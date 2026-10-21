@@ -11,7 +11,6 @@ import { InjectMessageCatalog } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
 import type { CustomerReply, ModuleOutcome } from "./customer-turns.contracts"
 import { GatewayContextService } from "./gateway-context.service"
-import { GatewaySalesService } from "./gateway-sales.service"
 
 const LOCALE = "vi"
 const ENGINE_ACTOR = "OpenClaw"
@@ -33,54 +32,43 @@ export class TurnModulesService {
         private readonly evidence: EvidenceService,
         private readonly booking: BookingChatService,
         private readonly loyalty: LoyaltyChatService,
-        private readonly hotelContext: GatewayContextService,
-        private readonly hotelSales: GatewaySalesService,
+        private readonly connectors: GatewayContextService,
     ) {}
 
     /** The context blocks of a turn: the loyalty facts when the shop runs a programme, the booking contract when the agent books. */
     async briefs(conversation: TurnConversation): Promise<ReadonlyArray<string>> {
         const module = conversation.agent.module
-        const [loyalty, books, hotel] = await Promise.all([
+        const [loyalty, books, connectors] = await Promise.all([
             this.loyalty.brief(this.refOf(conversation)),
             this.booksIn(conversation),
-            this.hotelBrief(conversation),
+            this.connectorBrief(conversation),
         ])
         const loyaltyContract = loyalty !== "" && module !== LOYALTY ? this.text("bundle.loyaltyContract") : ""
         const bookingData = books ? await this.booking.brief(conversation.workspaceId) : ""
         const bookingContract = books && module !== BOOKING ? this.text("bundle.bookingAddendum") : ""
-        return [loyalty, loyaltyContract, bookingData, bookingContract, ...hotel].filter((part) => part !== "")
+        return [loyalty, loyaltyContract, bookingData, bookingContract, ...connectors].filter((part) => part !== "")
     }
 
     /**
-     * The hotel block of an agent granted HAKUEN tools: the guest and stay context read through the gateway and the `hotel_request`
-     * contract. The lifecycle hand-over runs here too, so the next turn answers as the new owner; a context HAKUEN cannot give keeps
-     * the turn and the owner as they are, with the contract alone.
+     * The connector block of an agent holding connector grants: the meta-tool clause and, when a connector knows the customer, who they
+     * are. What to call and in which order comes from the business knowledge, never from NIVO.
      */
-    private async hotelBrief(conversation: TurnConversation): Promise<ReadonlyArray<string>> {
-        if (!(await this.hotelContext.servesHotel(conversation))) return []
-        const context = await this.hotelContext.contextOf(conversation)
-        if (context === null)
-            return this.hotelContext.briefOf({
-                guestId: null,
-                name: "",
-                tier: "",
-                stayId: null,
-                room: "",
-                stage: { kind: "none" },
-            })
-        await this.hotelContext.route(conversation, context)
-        return this.hotelContext.briefOf(context)
+    private async connectorBrief(conversation: TurnConversation): Promise<ReadonlyArray<string>> {
+        if (!(await this.connectors.servesConnectors(conversation))) return []
+        return this.connectors.briefOf(await this.connectors.partyOf(conversation))
     }
 
-    /** Runs the booking request and the redemption the reply named; the booking answer replaces the reply when it has one. */
+    /**
+     * Runs the booking request and the redemption the reply named; the booking answer replaces the reply when it has one. A customer
+     * who gave their name becomes a party of the connector that plays `identity.upsert`.
+     */
     async settle(ctx: WorkContext, turn: CustomerTurn, reply: CustomerReply): Promise<ModuleOutcome> {
         const booking = reply.bookingRequest === null ? NOTHING : await this.settleBooking(ctx, turn, reply)
-        const hotel =
-            reply.hotelRequest === null || !(await this.hotelContext.servesHotel(turn.conversation))
-                ? NOTHING
-                : await this.hotelSales.settle(ctx, turn.conversation, turn.messageId, reply.hotelRequest)
         const redeem = reply.loyaltyRewardKey === null ? [] : await this.redeem(ctx, turn, reply.loyaltyRewardKey)
-        return { reply: hotel.reply ?? booking.reply, lines: [...booking.lines, ...hotel.lines, ...redeem] }
+        if (reply.lead !== null && (await this.connectors.servesConnectors(turn.conversation))) {
+            await this.connectors.remember(turn.conversation, reply.lead, turn.messageId)
+        }
+        return { reply: booking.reply, lines: [...booking.lines, ...redeem] }
     }
 
     private async settleBooking(ctx: WorkContext, turn: CustomerTurn, reply: CustomerReply): Promise<ModuleOutcome> {
@@ -128,7 +116,6 @@ export class TurnModulesService {
             subject_type: "conversation",
             subject_id: conversation.id,
             lead_id: conversation.leadId,
-            origin: "live",
             preset: true,
             noChain: true,
             dedupeKey: `redeem_reward:message:${turn.messageId}`,

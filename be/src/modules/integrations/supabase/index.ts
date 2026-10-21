@@ -9,6 +9,6 @@ export {
 } from "./supabase.decorators"
 export type { SupabaseObjectsPort } from "./supabase.port"
 export { SUPABASE_ERROR_KINDS } from "./errors/supabase.error"
-export { createSupabaseAccessTokenVerifier } from "./supabase.jwks"
+export { createSupabaseAccessTokenVerifier, refuseSupabaseSessions } from "./supabase.jwks"
 export { SupabaseModule } from "./supabase.module"
 export type { VerifySupabaseAccessToken } from "./supabase.options"

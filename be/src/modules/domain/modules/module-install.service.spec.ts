@@ -1,57 +1,24 @@
 import { Test } from "@nestjs/testing"
 import { builder, mock } from "@starci/jest-preset"
 import { AgentsService } from "@modules/domain/agents"
-import type { AgentSummary } from "@modules/domain/agents"
 import { AuthorityRulesService } from "@modules/domain/authority-rules"
 import { EventsService } from "@modules/domain/events"
 import { InstallationRecordsService } from "@modules/domain/module-installations"
-import type { AgentSyncStatus, InstallationRecord } from "@modules/domain/module-installations"
+import type { AgentSyncStatus } from "@modules/domain/module-installations"
 import { AgentSyncService } from "@modules/domain/openclaw-agent-sync"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
-import type { WorkspaceMember } from "@modules/domain/workspace-members"
 import { ACCOUNTING_MODULE } from "./accounting.contracts"
 import { CHATBOT_MODULE } from "./chatbot.contracts"
 import { ModulesErrorCode } from "./errors/modules.error"
 import { ModuleInstallService } from "./module-install.service"
 import type { InstallRequest } from "./module-installs.contracts"
+import { ModuleReadinessService } from "./module-readiness.service"
 import { ModulesService } from "./modules.service"
-
-const MEMBER: WorkspaceMember = {
-    userId: "u1",
-    workspaceId: "ws-1",
-    role: "owner",
-    staffId: null,
-    displayName: "Lan",
-    status: "active",
-}
-
-const recordOf = builder<InstallationRecord>({
-    id: "inst-1",
-    workspaceId: "ws-1",
-    moduleKey: "chatbot",
-    name: "Front desk",
-    isMulti: true,
-    agentId: "agent-1",
-    agentName: "Chatbot",
-    agentHandle: "chatbot",
-    status: "ready",
-    operatingMode: "assist",
-    liveEnabled: false,
-    activeContextVersionId: "version-1",
-    activeVersion: 1,
-    settings: { openclawTimeoutSec: 30 },
-    createdAt: "2026-10-01T00:00:00.000Z",
-})
-
-const agentOf = builder<AgentSummary>({
-    id: "agent-1",
-    module: "chatbot",
-    name: "Chatbot",
-    handle: CHATBOT_MODULE.agent.handle,
-    role: "Care",
-    status: "active",
-    createdAt: "2026-10-01T00:00:00.000Z",
-})
+import {
+    INSTALLING_MEMBER as MEMBER,
+    installAgentOf as agentOf,
+    installationRecordOf as recordOf,
+} from "@tests/fixtures/builders/module-install.builder"
 
 const requestOf = builder<InstallRequest>({
     workspaceId: "ws-1",
@@ -71,6 +38,8 @@ const build = async () => {
     const rules = mock<AuthorityRulesService>()
     const events = mock<EventsService>()
     const sync = mock<AgentSyncService>()
+    const readiness = mock<ModuleReadinessService>()
+    readiness.withNeeds.mockImplementation((record) => Promise.resolve({ ...record, connectionNeeds: [] }))
     const moduleRef = await Test.createTestingModule({
         providers: [
             ModuleInstallService,
@@ -81,10 +50,11 @@ const build = async () => {
             { provide: AuthorityRulesService, useValue: rules },
             { provide: EventsService, useValue: events },
             { provide: AgentSyncService, useValue: sync },
+            { provide: ModuleReadinessService, useValue: readiness },
         ],
     }).compile()
     const service = moduleRef.get(ModuleInstallService)
-    return { service, installations, members, catalog, agents, rules, events, sync }
+    return { service, installations, members, catalog, agents, rules, events, sync, readiness }
 }
 
 describe("ModuleInstallService > install", () => {
@@ -227,7 +197,10 @@ describe("ModuleInstallService > rename", () => {
         installations.instanceNames.mockResolvedValue([])
         installations.rename.mockResolvedValue("done")
 
-        await expect(service.rename("u1", "ws-1", "inst-1", " Lobby ")).resolves.toEqual(recordOf({ name: "Lobby" }))
+        await expect(service.rename("u1", "ws-1", "inst-1", " Lobby ")).resolves.toEqual({
+            ...recordOf({ name: "Lobby" }),
+            connectionNeeds: [],
+        })
         expect(installations.rename).toHaveBeenCalledWith("ws-1", "inst-1", "Lobby")
     })
 
@@ -258,7 +231,10 @@ describe("ModuleInstallService > setLive", () => {
         installations.find.mockResolvedValueOnce(recordOf()).mockResolvedValueOnce(recordOf({ liveEnabled: true }))
         installations.setLive.mockResolvedValue("done")
 
-        await expect(service.setLive("u1", "ws-1", "inst-1", true)).resolves.toEqual(recordOf({ liveEnabled: true }))
+        await expect(service.setLive("u1", "ws-1", "inst-1", true)).resolves.toEqual({
+            ...recordOf({ liveEnabled: true }),
+            connectionNeeds: [],
+        })
         expect(agents.setStatus).toHaveBeenCalledWith("u1", "ws-1", "agent-1", true)
     })
 })
@@ -286,7 +262,10 @@ describe("ModuleInstallService > renameAgent", () => {
         const { service, installations, agents, sync } = await build()
         installations.find.mockResolvedValue(recordOf())
 
-        await expect(service.renameAgent("u1", "ws-1", "inst-1", " Mai ")).resolves.toEqual(recordOf())
+        await expect(service.renameAgent("u1", "ws-1", "inst-1", " Mai ")).resolves.toEqual({
+            ...recordOf(),
+            connectionNeeds: [],
+        })
         expect(agents.rename).toHaveBeenCalledWith("u1", "ws-1", "agent-1", "Mai")
         expect(sync.requestNow).toHaveBeenCalledWith({
             workspaceId: "ws-1",
@@ -349,7 +328,7 @@ describe("ModuleInstallService > reads", () => {
         const { service, installations, members } = await build()
         installations.list.mockResolvedValue([recordOf()])
 
-        await expect(service.list("u1", "ws-1")).resolves.toEqual([recordOf()])
+        await expect(service.list("u1", "ws-1")).resolves.toEqual([{ ...recordOf(), connectionNeeds: [] }])
         expect(members.require).toHaveBeenCalledWith("u1", "ws-1")
     })
 
@@ -455,7 +434,10 @@ describe("ModuleInstallService lifecycle and reads", () => {
         const updated = recordOf({ operatingMode: "autopilot" })
         installations.find.mockResolvedValue(updated)
 
-        await expect(service.setOperatingMode("u1", "ws-1", "inst-1", "autopilot")).resolves.toEqual(updated)
+        await expect(service.setOperatingMode("u1", "ws-1", "inst-1", "autopilot")).resolves.toEqual({
+            ...updated,
+            connectionNeeds: [],
+        })
         expect(members.require).toHaveBeenCalledWith("u1", "ws-1", ["owner", "manager"])
         expect(installations.setOperatingMode).toHaveBeenCalledWith("ws-1", "inst-1", "autopilot")
         expect(installations.find).toHaveBeenCalledWith("ws-1", "inst-1")
@@ -467,7 +449,10 @@ describe("ModuleInstallService lifecycle and reads", () => {
         installations.find.mockResolvedValue(paused)
         installations.setLive.mockResolvedValue("done")
 
-        await expect(service.setLive("u1", "ws-1", "inst-1", false)).resolves.toEqual(paused)
+        await expect(service.setLive("u1", "ws-1", "inst-1", false)).resolves.toEqual({
+            ...paused,
+            connectionNeeds: [],
+        })
         expect(installations.setLive).toHaveBeenCalledWith("ws-1", "inst-1", false)
         expect(agents.setStatus).not.toHaveBeenCalled()
         expect(installations.find).toHaveBeenCalledTimes(2)

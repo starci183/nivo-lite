@@ -26,8 +26,6 @@ export interface RecordOutcomeResult {
     readonly channel: string
     /** What the customer needs. */
     readonly need: string
-    /** `live`, `simulated` or null for a lead recorded before origins existed. */
-    readonly origin: string | null
     /** True when a won deal was handed to an active Accounting agent. */
     readonly handedToAccounting: boolean
 }

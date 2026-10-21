@@ -53,6 +53,7 @@ export const useInstanceList = (module: ModuleKey, query: string, mode: TypeRout
                 activeVersion: instance.activeVersion,
                 status,
                 statusTone: AGENT_STATUS_TONE[status],
+                connectionNeeds: instance.connectionNeeds,
                 openHref: agentHref(module, instance.id),
             }
         }),

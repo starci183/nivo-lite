@@ -1,6 +1,6 @@
 import { Test } from "@nestjs/testing"
 import { builder, mock } from "@starci/jest-preset"
-import { DecisionsErrorCode, WORK_PERFORMER_REGISTRY } from "@modules/domain/decisions"
+import { WORK_PERFORMER_REGISTRY } from "@modules/domain/decisions"
 import type { PerformedBy, WorkContext, WorkItem, WorkPerformerRegistry } from "@modules/domain/decisions"
 import { LeadFlowsError, LeadFlowsErrorCode } from "./errors/lead-flows.error"
 import { LeadFlowConversationService } from "./lead-flow-conversation.service"
@@ -73,7 +73,6 @@ const itemOf = builder<WorkItem>({
     evidence_state: "pending",
     assigned_staff_id: null,
     execution_id: null,
-    origin: "live",
     created_at: NOW,
     updated_at: NOW,
     completed_at: null,
@@ -191,13 +190,10 @@ describe("ReplyCommentPublicPerformerService", () => {
 })
 
 describe("ReplyCommentPublicPerformerService", () => {
-    it("refuses a simulated item, a missing comment and a reply Meta refused", async () => {
+    it("refuses a missing comment and a reply Meta refused", async () => {
         const { performer, meta, transcript } = await build(flowOf({ conversation_id: null }))
         meta.publicReply.mockResolvedValue({ ok: false, failure: "permission", recipientId: null })
 
-        await expect(performer.perform(ctx, itemOf({ origin: "simulated" }), proposal, by)).rejects.toMatchObject({
-            code: DecisionsErrorCode.NotAllowed,
-        })
         await expect(performer.perform(ctx, itemOf(), { ...proposal, fields: {} }, by)).rejects.toEqual(
             new LeadFlowsError({ code: LeadFlowsErrorCode.NoComment }),
         )

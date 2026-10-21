@@ -37,7 +37,6 @@ export class TurnPurchasesService {
             workspaceId: ctx.workspaceId,
             channel: channel.key,
             kind: "order",
-            origin: "live",
             senderName: lead?.contactName ?? turn.conversation.visitorName,
             senderContact: lead === null ? null : (lead.phone ?? lead.email),
             body: turn.body,
@@ -51,7 +50,7 @@ export class TurnPurchasesService {
         }
         const item = await this.engine.startOrderWork(
             ctx,
-            { id: recorded.inboundEventId, origin: "live" },
+            { id: recorded.inboundEventId },
             { items: order.items, amount_vnd: order.amountVnd, lead_id: leadId },
         )
         const ordered = item.lead_id ?? leadId
@@ -87,7 +86,6 @@ export class TurnPurchasesService {
             workspaceId: ctx.workspaceId,
             channel: channel.key,
             kind: "payment",
-            origin: "live",
             senderName: turn.conversation.visitorName,
             senderContact: null,
             body: turn.body,

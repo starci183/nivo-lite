@@ -3,14 +3,17 @@ export { AGENT_TOOLS_MESSAGES } from "./messages/agent-tools.messages"
 export { AgentToolsModule } from "./agent-tools.module"
 export { AgentToolsService } from "./agent-tools.service"
 export type {
+    AgentHandoff,
     ApprovalRequester,
     BookingTools,
     ConversationLeads,
+    GatewayTools,
     HandoffTool,
     KnowledgeSearch,
     LeadWriter,
 } from "./agent-tools.port"
 export type {
+    AgentHandoffRequest,
     ApprovalRequest,
     ApprovalResult,
     BookingCancelArgs,
@@ -19,6 +22,7 @@ export type {
     BookingRequestInvalidCode,
     BookingServiceCandidate,
     BookingToolName,
+    GatewayToolName,
     JsonResult,
     KnowledgePassages,
     LeadDraft,

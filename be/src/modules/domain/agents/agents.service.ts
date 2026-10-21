@@ -1,4 +1,4 @@
-import { Injectable } from "@nestjs/common"
+import { Injectable, Optional } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import type { BoundConnection } from "@modules/domain/agent-connections"
 import { WorkspaceMembersService, isManagerRole } from "@modules/domain/workspace-members"
@@ -70,9 +70,9 @@ export class AgentsService {
         @InjectClock() private readonly clock: Clock,
         @InjectLogger() private readonly logger: Logger,
         @InjectInstallations() private readonly installations: InstallationDirectory,
-        @InjectKnowledge() private readonly knowledge: KnowledgeLens,
         private readonly members: WorkspaceMembersService,
         private readonly bindings: AgentBindingsService,
+        @Optional() @InjectKnowledge() private readonly knowledge: KnowledgeLens | null = null,
     ) {}
 
     /** The agents of the workspace, oldest first, optionally of one module. */
@@ -259,9 +259,16 @@ export class AgentsService {
         manager: boolean,
     ): Promise<KnowledgeData> {
         const installationId = installation?.id ?? null
-        const counts = await this.knowledge.countsFor(query.workspaceId, query.module, installationId)
+        const lens = this.knowledgeLens()
+        const counts = await lens.countsFor(query.workspaceId, query.module, installationId)
         // The gaps are manager-only and may not be kept at all: either way the region simply has no gaps block.
-        const gaps = manager ? await this.knowledge.openGapsOf(query.workspaceId, query.module, GAP_LIMIT) : null
+        const gaps = manager ? await lens.openGapsOf(query.workspaceId, query.module, GAP_LIMIT) : null
         return knowledgeOf(counts, gaps)
+    }
+
+    /** The knowledge lens the full mode binds; the setup mode binds none, so its knowledge region fails on its own. */
+    private knowledgeLens(): KnowledgeLens {
+        if (this.knowledge === null) throw new AgentsError({ code: AgentsErrorCode.KnowledgeUnbound })
+        return this.knowledge
     }
 }

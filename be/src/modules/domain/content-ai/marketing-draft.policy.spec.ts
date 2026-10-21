@@ -1,7 +1,12 @@
 import { Test } from "@nestjs/testing"
-import * as subject from "./marketing-draft.policy"
+import { draftMessages, postTextOf, readDraft } from "./marketing-draft.policy"
 
-const { draftMessages, postTextOf, readDraft } = subject
+const NONE = { lessons: [], templates: [], sources: [] }
+const GUIDANCE = {
+    lessons: ["Shorter captions: keep three lines"],
+    templates: ["Weekend offer: hook, offer, call to book"],
+    sources: [],
+}
 
 const KIT = {
     brandName: "HAKUEN",
@@ -15,7 +20,7 @@ const KIT = {
 
 describe("draftMessages", () => {
     it("carries the brand kit, the language and the bounded request", () => {
-        const [system, user] = draftMessages(` ${"r".repeat(2100)} `, KIT, "vi")
+        const [system, user] = draftMessages(` ${"r".repeat(2100)} `, KIT, "vi", NONE)
 
         expect(system?.content).toContain("Brand: HAKUEN.")
         expect(system?.content).toContain("Address: xung HAKUEN")
@@ -26,12 +31,26 @@ describe("draftMessages", () => {
     })
 
     it("leaves out empty brand lines and works without a kit", () => {
-        const lean = draftMessages("x", { ...KIT, address: "", imagery: [], avoid: [] }, "en")[0]?.content ?? ""
+        const lean = draftMessages("x", { ...KIT, address: "", imagery: [], avoid: [] }, "en", NONE)[0]?.content ?? ""
         expect(lean).not.toContain("Address:")
         expect(lean).not.toContain("Imagery:")
         expect(lean).not.toContain("Never use:")
         expect(lean).toContain("English")
-        expect(draftMessages("x", null, "en")[0]?.content).toContain("No brand kit yet")
+        expect(draftMessages("x", null, "en", NONE)[0]?.content).toContain("No brand kit yet")
+        expect(lean).not.toContain("Learned from")
+        expect(lean).not.toContain("NIVO marketing templates")
+    })
+
+    it("follows the learned lessons and the NIVO templates when the draft has them", () => {
+        const system = draftMessages("x", KIT, "en", GUIDANCE)[0]?.content ?? ""
+
+        expect(system).toContain(
+            "Learned from the owner's earlier edits (follow them):\n- Shorter captions: keep three lines",
+        )
+        expect(system).toContain(
+            "NIVO marketing templates (use their structure, never their facts):\n- Weekend offer: hook, offer, call to book",
+        )
+        expect(draftMessages("x", KIT, "en", { ...GUIDANCE, lessons: [] })[0]?.content).not.toContain("Learned from")
     })
 })
 
@@ -90,11 +109,10 @@ describe("postTextOf", () => {
 })
 
 const SUBJECT = Symbol("marketing-draft.policy")
-const POLICY = { draftMessages, postTextOf, readDraft }
 
 const buildSubject = async () => {
     const moduleRef = await Test.createTestingModule({
-        providers: [{ provide: SUBJECT, useValue: POLICY }],
+        providers: [{ provide: SUBJECT, useValue: { draftMessages, postTextOf, readDraft } }],
     }).compile()
     return moduleRef.get<typeof import("./marketing-draft.policy")>(SUBJECT)
 }

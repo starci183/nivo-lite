@@ -20,7 +20,6 @@ const invoice: InvoiceRow = {
     invoice_no: "HD-01",
     amount_vnd: 500_000,
     status: "issued",
-    origin: "live",
     issued_by: null,
     paid_at: null,
 }

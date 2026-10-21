@@ -31,28 +31,30 @@ ci:
     - {name: SONAR_HOST_URL, scope: repository, value: https://sonar.starci.org, purpose: public Sonar server of the host}
     - {name: VPS_HOST, scope: environment, environment: production, value: 103.142.27.9, purpose: swarm manager address}
     - {name: VPS_USER, scope: environment, environment: production, value: nivo, purpose: swarm manager SSH user}
+# Application image digests are illustrative all-zero placeholders (the canon lite skeleton form <repo>/<app>:<x.y.z>@sha256:0...0),
+# never a completed release: the deploy workflow binds each build's immutable digest per release (release.json).
 components:
   nivo-api:
     role: service
-    image: ghcr.io/starci183/nivo-lite-api
+    image: ghcr.io/starci183/nivo-lite-api:0.3.0@sha256:0000000000000000000000000000000000000000000000000000000000000000
     compose: infra/swarm/stack.yaml
     purpose: The Nest api (GraphQL, provider webhooks, OAuth callbacks, the pgmq workers and schedulers, the job alert monitor). Liveness /healthz, readiness /readyz.
     required: true
   nivo-mcp:
     role: service
-    image: ghcr.io/starci183/nivo-lite-mcp
+    image: ghcr.io/starci183/nivo-lite-mcp:0.3.0@sha256:0000000000000000000000000000000000000000000000000000000000000000
     compose: infra/swarm/stack.yaml
     purpose: The NIVO MCP gateway (be/apps/mcp), one Streamable HTTP endpoint per workspace (POST /mcp/<workspaceId>) in front of every connector, with the grants, approvals, limits and audit the api shares. Internal only (private agents network, alias nivo-mcp); no public route. Liveness /healthz, readiness /readyz.
     required: true
   nivo-web-app:
     role: service
-    image: ghcr.io/starci183/nivo-lite-web
+    image: ghcr.io/starci183/nivo-lite-web:0.3.0@sha256:0000000000000000000000000000000000000000000000000000000000000000
     compose: infra/swarm/stack.yaml
     purpose: The Next.js console on app.nivo.vn (standalone output); no runtime secret, its public values are build arguments. Liveness /health/live.
     required: true
   nivo-landing:
     role: service
-    image: ghcr.io/starci183/nivo-lite-landing
+    image: ghcr.io/starci183/nivo-lite-landing:0.3.0@sha256:0000000000000000000000000000000000000000000000000000000000000000
     compose: infra/swarm/stack.yaml
     purpose: The Next.js landing on nivo.vn and www.nivo.vn (standalone output); no runtime secret or API credentials, its public values are build arguments. Liveness /health/live.
     required: true
@@ -103,6 +105,9 @@ jobs:
   decisions-drain-work:
     schedule: "*/1 * * * *"
     command: node be/dist/apps/cli/src/main.js jobs tick decisions-drain-work
+  marketing-tick:
+    schedule: "*/15 * * * *"
+    command: node be/dist/apps/cli/src/main.js jobs tick marketing-tick
   shifts-tick:
     schedule: "*/1 * * * *"
     command: node be/dist/apps/cli/src/main.js jobs tick shifts-tick
@@ -332,7 +337,7 @@ environments:
           # The gateway gets exactly the keys it needs (be/apps/mcp/src/mcp.env.ts), from the same sealed `api` member as the api: the database
           # connection (required), the list of credential NAMES remote connectors may reference (MCP_GATEWAY_CREDENTIALS, sealed beside the
           # credential because app check classes every *_CREDENTIALS binding as sensitive) and those credentials. Both MCP_* keys are skipped until
-          # they are sealed (O14), which leaves the remote connectors unavailable and the native ones working. MCP_GATEWAY_AGENT_TOKEN is deliberately NOT granted: the agent endpoint stays closed in production for the demo.
+          # they are sealed (O14), which leaves the remote connectors unavailable and the native ones working. The gateway reads no agent token: its agent endpoint fails closed, so it stays shut in production for the demo.
           - service: nivo-mcp
             filePointers: true
             from:
@@ -364,6 +369,8 @@ environments:
           values:
             PORT: "8790"
             PRIMARY_DB_SCHEMA: public
+            # The OriginGuard and CORS allowlist of the gateway; it has no browser caller, so only the console origin is listed.
+            HTTP_SECURITY_ALLOWED_ORIGINS: "https://app.nivo.vn"
         nivo-openclaw:
           settings:
             OPENCLAW_MODEL: {key: OPENCLAW_MODEL, default: openrouter/deepseek/deepseek-v4-flash}

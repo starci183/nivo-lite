@@ -14,8 +14,20 @@ export interface DraftImage {
 export interface CardSource {
     /** The data layer, 1..4. */
     readonly layer: number
-    /** What was used (`brand_kit:<file>`, `media_library`, `owner_request`). */
+    /** The record it names: the lesson or passage id, or the label itself for a brand-kit, media-library or request source. */
+    readonly ref: string
+    /** What was used (`brand_kit:<file>`, `media_library`, `owner_request`, a lesson or template title). */
     readonly label: string
+}
+
+/** What a draft learns before it is written: the lessons and templates as prompt lines, and the sources they become on the card. */
+export interface DraftGuidance {
+    /** The approved lessons of the content agent (layer 3), one line each. */
+    readonly lessons: ReadonlyArray<string>
+    /** The NIVO marketing templates closest to the request (layer 4), one line each. */
+    readonly templates: ReadonlyArray<string>
+    /** The lessons and templates as card sources, lessons first. */
+    readonly sources: ReadonlyArray<CardSource>
 }
 
 /** The post draft AI Marketing wrote for an "@AI Marketing ..." request. */

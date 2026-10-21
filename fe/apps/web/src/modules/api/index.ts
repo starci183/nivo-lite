@@ -104,7 +104,6 @@ export type {
     CreditUsageSummaryType,
     DashboardType,
     DocumentPassageType,
-    InboundSimulationStatusType,
     KnowledgeSourceTextType,
     KnowledgeSourceType,
     KnowledgeSuggestionContextType,
@@ -134,7 +133,6 @@ export type {
     RunStepType,
     SalesActionType,
     SalesWorkbenchType,
-    SimulateInboundType,
     TemplateDefinitionType,
     TemplateSettingType,
 } from "./graphql/index"

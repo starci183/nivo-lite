@@ -34,7 +34,6 @@ describe("AutomationRecordsService", () => {
             need: "Renew",
             phone: null,
             email: null,
-            origin: "live",
         })
         expect(leads.classify).toHaveBeenCalledWith({
             workspaceId: "ws-1",

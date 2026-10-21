@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import type { OnModuleInit } from "@nestjs/common"
-import { DecisionsError, DecisionsErrorCode, InjectWorkPerformerRegistry } from "@modules/domain/decisions"
+import { InjectWorkPerformerRegistry } from "@modules/domain/decisions"
 import type {
     Performed,
     PerformedBy,
@@ -55,7 +55,6 @@ export class ReplyCommentPublicPerformerService implements WorkPerformer, OnModu
 
     /** Posts the reply and answers success only after Meta accepted it. */
     async perform(ctx: WorkContext, item: WorkItem, proposal: Proposal, by: PerformedBy): Promise<Performed> {
-        if (item.origin !== "live") throw new DecisionsError({ code: DecisionsErrorCode.NotAllowed })
         const flow = await this.kit.store.requireByLead(ctx.workspaceId, item.lead_id)
         const fields = proposal.fields
         const commentId = field(fields, "comment_id")

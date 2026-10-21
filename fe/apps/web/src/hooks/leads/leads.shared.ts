@@ -109,7 +109,6 @@ export const leadRecordOf = (lead: LeadRecordType): LeadRecord => {
         need,
         stage: STAGE_ORDER.find((stage) => stage === lead.stage) ?? "new",
         context_summary: lead.contextSummary ?? null,
-        origin: lead.origin ?? null,
         created_at: lead.createdAt,
     }
 }
@@ -130,9 +129,6 @@ export const flowViewMapper = (
         return {
             fact: t("flowFact", { count: items.length }),
             steps: items.map(stepOf),
-            hasSimulated:
-                items.some((item) => item.origin === "simulated") ||
-                flow.orders.some((order) => order.origin === "simulated"),
             sections: [
                 { id: "orders", title: t("flowOrders"), emptyText: none, entries: flow.orders.map(orderOf) },
                 {

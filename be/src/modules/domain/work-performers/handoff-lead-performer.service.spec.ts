@@ -47,7 +47,6 @@ const itemOf = builder<WorkItem>({
     evidence_state: "pending",
     assigned_staff_id: null,
     execution_id: null,
-    origin: "live",
     created_at: "2026-10-12T09:00:00.000Z",
     updated_at: "2026-10-12T09:00:00.000Z",
     completed_at: null,
@@ -65,7 +64,6 @@ const leadOf = builder<LeadRecordRow>({
     context_summary: null,
     phone: "84901234567",
     email: null,
-    origin: "live",
 })
 
 const build = async () => {
@@ -133,7 +131,6 @@ describe("HandoffLeadPerformerService perform", () => {
             email: null,
             name: "Lan",
             channel: "Telegram",
-            origin: "live",
         })
         expect(leads.capture).toHaveBeenCalledWith({
             workspaceId: "ws-1",
@@ -143,7 +140,6 @@ describe("HandoffLeadPerformerService perform", () => {
             need: "50 tea boxes",
             phone: "84901234567",
             email: null,
-            origin: "live",
         })
         expect(evidence.log).toHaveBeenCalledWith(ctx, {
             lead_id: "lead-1",
@@ -156,7 +152,7 @@ describe("HandoffLeadPerformerService perform", () => {
         expect(inbound.mark).toHaveBeenCalledWith("ws-1", "ev-1", null, "lead-1")
         expect(conversations.attachLead).toHaveBeenCalledWith("ws-1", "conv-1", "lead-1")
         expect(responsibilities.ensureFor).toHaveBeenCalledWith(ctx, "lead-1")
-        expect(events.leadCreated).toHaveBeenCalledWith("ws-1", leadOf(), "live")
+        expect(events.leadCreated).toHaveBeenCalledWith("ws-1", leadOf())
     })
 
     it("fills in the blanks of a new customer who shared little", async () => {

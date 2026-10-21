@@ -27,7 +27,7 @@ import { WorkspaceMembersModule } from "@modules/domain/workspace-members"
 import { PaymentOrdersModule } from "@modules/domain/payment-orders"
 import { BillingModule, BILLING_MESSAGES } from "@modules/domain/billing"
 import { SepayTransactionsModule } from "@modules/domain/sepay-transactions"
-import { VietcombankInboxModule } from "@modules/domain/vietcombank-inbox"
+import { TransactionsModule } from "@modules/domain/transactions"
 import { BankFeedInboxModule } from "@modules/domain/bank-feed-inbox"
 import { TelegramInboxModule } from "@modules/domain/telegram-inbox"
 import { MetaInboxModule } from "@modules/domain/meta-inbox"
@@ -119,7 +119,7 @@ const platformModules = (tokenKey: Secret): Array<DynamicModule> => [
     }),
 ]
 
-const domainModules = (tokenKey: Secret, workspaceId: string): Array<DynamicModule> => [
+const domainModules = (tokenKey: Secret): Array<DynamicModule> => [
     ConnectionSecretsModule.register({ isGlobal: true, tokenKey }),
     ConnectionsModule.register({
         isGlobal: true,
@@ -134,13 +134,12 @@ const domainModules = (tokenKey: Secret, workspaceId: string): Array<DynamicModu
     StaffModule.register({ isGlobal: true }),
     WorkspaceMembersModule.register({ isGlobal: true, accounts: SUPABASE_AUTH }),
     PaymentOrdersModule.register({ isGlobal: true }),
-    VietcombankInboxModule.register({ isGlobal: true }),
     BankFeedInboxModule.register({ isGlobal: true }),
+    TransactionsModule.register({ isGlobal: true }),
     BillingModule.register({
         isGlobal: true,
         sepayApiKey: new Secret("delivery-proof-key"),
         bankAccount: { account: "", bank: "", holder: "" },
-        simulatedBank: { secret: new Secret("delivery-proof-bank-fixture"), workspaceId },
         channelTokenKey: tokenKey,
     }),
     SepayTransactionsModule.register({ isGlobal: true }),
@@ -153,5 +152,5 @@ const domainModules = (tokenKey: Secret, workspaceId: string): Array<DynamicModu
 export const deliveryCapabilities = () => {
     const workspaceId = randomUUID()
     const tokenKey = new Secret(Buffer.alloc(32, 7).toString("base64"))
-    return { workspaceId, modules: [...platformModules(tokenKey), ...domainModules(tokenKey, workspaceId)] }
+    return { workspaceId, modules: [...platformModules(tokenKey), ...domainModules(tokenKey)] }
 }

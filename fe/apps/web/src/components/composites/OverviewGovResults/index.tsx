@@ -8,7 +8,6 @@ import {
     STATUS_CELL_CLASS_NAME,
     STATUS_LABEL_CLASS_NAME,
     STATUS_ROW_CLASS_NAME,
-    STATUS_SPLIT_CLASS_NAME,
 } from "./classNames"
 
 /** The figures of the results block. */
@@ -30,7 +29,7 @@ interface StatusRowProps {
     readonly row: GovStatusRow
 }
 
-/** One status: what it is and what it rests on, then live and simulated side by side (never added together). */
+/** One status: what it is and what it rests on, then its figure. */
 const StatusRow = (props: StatusRowProps) => (
     <div className={STATUS_ROW_CLASS_NAME}>
         <div className={STATUS_LABEL_CLASS_NAME}>
@@ -40,33 +39,19 @@ const StatusRow = (props: StatusRowProps) => (
             <Text size="xs" tone="muted">
                 {props.row.context}
             </Text>
-            {props.row.unlabelled === null ? null : (
+        </div>
+        <div className={STATUS_CELL_CLASS_NAME}>
+            <Text weight="semibold">{props.row.value}</Text>
+            {props.row.count === null ? null : (
                 <Text size="xs" tone="muted">
-                    {props.row.unlabelled}
+                    {props.row.count}
                 </Text>
             )}
-        </div>
-        <div className={STATUS_SPLIT_CLASS_NAME}>
-            {props.row.cells.map((cell) => (
-                <div key={cell.origin} className={STATUS_CELL_CLASS_NAME}>
-                    <Text size="xs" tone="muted">
-                        {cell.origin}
-                    </Text>
-                    <Text weight="semibold" tone={cell.isLive ? undefined : "muted"}>
-                        {cell.value}
-                    </Text>
-                    {cell.count === null ? null : (
-                        <Text size="xs" tone="muted">
-                            {cell.count}
-                        </Text>
-                    )}
-                </div>
-            ))}
         </div>
     </div>
 )
 
-/** The results by status, each figure naming what it rests on; live and simulated are never summed. */
+/** The results by status, each figure naming what it rests on. */
 export const OverviewGovResults = (props: OverviewGovResultsProps) => (
     <AccountingBlock label={props.figures.title}>
         <SectionHeader level={2} title={props.figures.title} description={props.figures.intro} />

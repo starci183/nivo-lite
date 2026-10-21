@@ -2,7 +2,7 @@ import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
 import { ContentBrandProposalsModule } from "@modules/domain/content-brand-proposals"
 import { ContentEngagementDailyModule } from "@modules/domain/content-engagement-daily"
-import { VideoBrandKitsModule } from "@modules/domain/video-brand-kits"
+import { ContentWeeklyReportsModule } from "@modules/domain/content-weekly-reports"
 import { BrandImagesService } from "./brand-images.service"
 import { BrandKitService } from "./brand-kit.service"
 import { MARKETING_ASSETS } from "./content-agent.decorators"
@@ -15,7 +15,12 @@ import { ContentGenerationCompletionService } from "./content-generation-complet
 import { ContentScheduleService } from "./content-schedule.service"
 import { MarketingCardsService } from "./marketing-cards.service"
 import { MarketingDraftService } from "./marketing-draft.service"
+import { MarketingVideoService } from "./marketing-video.service"
 import { MarketingInsightsService } from "./marketing-insights.service"
+import { MarketingKnowledgeService } from "./marketing-knowledge.service"
+import { MarketingChannelsService } from "./marketing-channels.service"
+import { MarketingTickService } from "./marketing-tick.service"
+import { MarketingSuggestionService } from "./marketing-suggestion.service"
 
 @Module({})
 /**
@@ -32,7 +37,7 @@ export class ContentAiModule extends ConfigurableModuleClass {
                 ...(base.imports ?? []),
                 ContentBrandProposalsModule.register({ isGlobal: false }),
                 ContentEngagementDailyModule.register({ isGlobal: false }),
-                VideoBrandKitsModule.register({ isGlobal: false }),
+                ContentWeeklyReportsModule.register({ isGlobal: false }),
             ],
             providers: [
                 ...(base.providers ?? []),
@@ -45,11 +50,22 @@ export class ContentAiModule extends ConfigurableModuleClass {
                 BrandImagesService,
                 MarketingCardsService,
                 MarketingDraftService,
+                MarketingVideoService,
                 ContentScheduleService,
                 MarketingInsightsService,
+                MarketingSuggestionService,
+                MarketingKnowledgeService,
+                MarketingChannelsService,
+                MarketingTickService,
                 ContentAgentPerformersService,
             ],
-            exports: [ContentAiService, ContentGenerationCompletionService, BrandKitService, MarketingInsightsService],
+            exports: [
+                ContentAiService,
+                ContentGenerationCompletionService,
+                BrandKitService,
+                MarketingInsightsService,
+                MarketingTickService,
+            ],
         }
     }
 }

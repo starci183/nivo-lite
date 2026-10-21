@@ -65,3 +65,11 @@ export interface SeedReport {
     /** A password session is locally signed out before a successful receipt; an existing session is retained. */
     readonly sessionCleanup: "not-created" | "acknowledged"
 }
+
+/** An ensured workspace with the owner Auth authenticated for it, for the steps that write as that owner. */
+export interface OwnedSeed {
+    /** The public receipt of the ensure. */
+    readonly report: SeedReport
+    /** The authenticated owner. */
+    readonly ownerId: string
+}

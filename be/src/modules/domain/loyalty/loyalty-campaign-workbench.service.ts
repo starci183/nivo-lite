@@ -71,7 +71,6 @@ export class LoyaltyCampaignWorkbenchService {
                 subject_type: "lead",
                 subject_id: null,
                 dedupeKey: `send_promo:campaign:${campaign.id}`,
-                origin: "live",
                 preset: true,
                 noChain: true,
                 seed: {

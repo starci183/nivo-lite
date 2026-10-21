@@ -16,8 +16,6 @@ export interface LeadReadRow {
     readonly phone: string | null
     /** The email address. */
     readonly email: string | null
-    /** `live` or `simulated`. */
-    readonly origin: string | null
 }
 
 /** The columns of a conversation an executor reads. */

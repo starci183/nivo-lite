@@ -130,4 +130,4 @@ Settings (api environment, all optional):
 | `QUEUE_SHUTDOWN_GRACE`         | `30s`           | time running jobs get on shutdown                                 |
 | `JOBS_LEASE`, `JOBS_WORKER_ID` | `60s`, `worker` | the fenced claim's lease and the worker name                      |
 
-Local: `npm run db:start` (the local Supabase image ships pgmq; the migrations are all that is needed), then `npm run dev:be` with the API's environment exported in your shell (README.md).
+Local: `npm run db:start` (the local Supabase image ships pgmq; the migrations are all that is needed), then `npm run dev:be:api` with the API's environment exported in your shell (README.md).

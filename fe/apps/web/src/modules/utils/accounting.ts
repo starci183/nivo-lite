@@ -4,7 +4,6 @@ import type {
     AccountingLedgerStatus,
     AccountingLineageStep,
     AccountingMatchState,
-    AccountingOrigin,
     AccountingSourceKind,
 } from "@/modules/types"
 
@@ -57,19 +56,22 @@ export const digitsToNumber = (raw: string): number | null => {
     return only === "" ? null : Number(only)
 }
 
-/** The word for where a record came from. */
-export const originLabelOf = (t: AccountingTranslator, origin: AccountingOrigin): string =>
-    origin === "simulated" ? t("originSimulated") : t("originLive")
-
 const SOURCE_KEYS: Readonly<Record<AccountingSourceKind, string>> = {
-    vietcombank: "srcVietcombank",
+    connector: "srcConnector",
     manual: "srcManual",
     inbox: "srcInbox",
     other: "srcOther",
 }
 
-/** Catalog key of a credit's source. */
-export const sourceKeyOf = (kind: AccountingSourceKind): string => SOURCE_KEYS[kind]
+/**
+ * The words for where a credit was recorded from: the display name of the connected payment connector for a connector credit
+ * (data, never a fixed name), else the catalog word of its source.
+ */
+export const sourceLabelOf = (
+    t: AccountingTranslator,
+    kind: AccountingSourceKind,
+    creditsSource: string | null,
+): string => (kind === "connector" && creditsSource !== null ? creditsSource : t(SOURCE_KEYS[kind]))
 
 const MATCH_TONES: Readonly<Record<AccountingMatchState, AccountingTone>> = {
     matched: "success",

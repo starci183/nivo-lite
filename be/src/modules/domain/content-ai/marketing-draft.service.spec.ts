@@ -12,7 +12,9 @@ import type { Logger } from "@modules/platform/logging"
 import { BrandImagesService } from "./brand-images.service"
 import { BrandKitService } from "./brand-kit.service"
 import { MarketingCardsService } from "./marketing-cards.service"
+import { MarketingVideoService } from "./marketing-video.service"
 import { MarketingDraftService } from "./marketing-draft.service"
+import { MarketingKnowledgeService } from "./marketing-knowledge.service"
 
 const CTX: WorkContext = { workspaceId: "ws-1", actor: "Mai Linh", locale: "vi" }
 const SCOPE = { workspaceId: "ws-1", locale: "vi" }
@@ -36,6 +38,12 @@ const ITEM = {
     channels: ["facebook", "zalo"],
 }
 
+const GUIDANCE = {
+    lessons: ["Shorter captions: keep three lines"],
+    templates: [],
+    sources: [{ layer: 3, ref: "lesson-1", label: "Shorter captions" }],
+}
+
 const build = async () => {
     const generations = mock<DirectGenerationService>()
     const brand = mock<BrandKitService>()
@@ -45,6 +53,8 @@ const build = async () => {
     const approvals = mock<ContentApprovalStoreService>()
     const items = mock<ContentItemsService>()
     const logger = mock<Logger>()
+    const knowledge = mock<MarketingKnowledgeService>()
+    knowledge.guidanceOf.mockResolvedValue(GUIDANCE)
     const catalog = mock<MessageCatalog>()
     catalog.get.mockImplementation((key: string) => key)
     brand.brandOf.mockResolvedValue({ kit: null, logoPath: "ws-1/logo.png" })
@@ -68,10 +78,15 @@ const build = async () => {
             { provide: WorkEngineService, useValue: engine },
             { provide: ContentApprovalStoreService, useValue: approvals },
             { provide: ContentItemsService, useValue: items },
+            {
+                provide: MarketingVideoService,
+                useValue: mock<MarketingVideoService>({ delegate: jest.fn(() => Promise.resolve(true)) }),
+            },
+            { provide: MarketingKnowledgeService, useValue: knowledge },
         ],
     }).compile()
     const service = moduleRef.get(MarketingDraftService)
-    return { service, generations, images, cards, engine, approvals, items, logger, brand }
+    return { service, generations, images, cards, engine, approvals, items, logger, brand, knowledge }
 }
 
 const ok = (output: string) =>
@@ -85,7 +100,7 @@ const ok = (output: string) =>
 
 describe("MarketingDraftService", () => {
     it("drafts, composes the images, stores the post, posts the draft card and the approval card", async () => {
-        const { service, generations, images, cards, engine, approvals, items } = await build()
+        const { service, generations, images, cards, engine, approvals, items, knowledge } = await build()
         generations.run.mockResolvedValue(ok(JSON.stringify(DRAFT)))
 
         await expect(
@@ -98,6 +113,10 @@ describe("MarketingDraftService", () => {
         })
 
         expect(generations.run).toHaveBeenCalledWith(expect.objectContaining({ purpose: "marketing_draft" }))
+        expect(knowledge.guidanceOf).toHaveBeenCalledWith("ws-1", "spa offer 20%")
+        expect(generations.run.mock.calls[0]?.[0].messages[0]?.content).toContain(
+            "- Shorter captions: keep three lines",
+        )
         expect(images.compose).toHaveBeenCalledWith(
             expect.objectContaining({ workspaceId: "ws-1", logoPath: "ws-1/logo.png", copies: DRAFT.images }),
         )
@@ -117,7 +136,12 @@ describe("MarketingDraftService", () => {
                 workItemId: "w-1",
                 contentItemId: "c-1",
                 images: IMAGES,
-                sources: expect.arrayContaining([{ layer: 2, label: "brand_kit:none" }]),
+                sources: [
+                    { layer: 2, ref: "brand_kit:none", label: "brand_kit:none" },
+                    { layer: 2, ref: "media_library", label: "media_library" },
+                    { layer: 2, ref: "owner_request", label: "owner_request" },
+                    { layer: 3, ref: "lesson-1", label: "Shorter captions" },
+                ],
             }),
         )
         expect(engine.runWork).toHaveBeenCalledWith(
@@ -155,7 +179,9 @@ describe("MarketingDraftService (continued)", () => {
         )
         expect(cards.emit).toHaveBeenCalledWith(
             expect.anything(),
-            expect.objectContaining({ sources: expect.arrayContaining([{ layer: 2, label: "brand_kit:HAKUEN" }]) }),
+            expect.objectContaining({
+                sources: expect.arrayContaining([{ layer: 2, ref: "brand_kit:HAKUEN", label: "brand_kit:HAKUEN" }]),
+            }),
         )
     })
 

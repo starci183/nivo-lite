@@ -2,7 +2,6 @@ import { QueryHandler } from "@nestjs/cqrs"
 import { McpGatewayAdminService } from "@modules/domain/mcp-gateway"
 import type { CallLogView } from "@modules/domain/mcp-gateway"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { actorOf } from "./mcp-gateway.mapper"
 import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { ListMcpCallLogQuery } from "./list-mcp-call-log.query"
@@ -18,6 +17,9 @@ export class ListMcpCallLogHandler extends ICQRSHandler<ListMcpCallLogQuery, Rea
     }
 
     protected override process(query: ListMcpCallLogQuery): Promise<ReadonlyArray<CallLogView>> {
-        return this.admin.callLog(actorOf(query.params), query.params.request.limit)
+        return this.admin.callLog({
+            actor: { principalId: query.params.principal.id, workspaceId: query.params.request.workspaceId },
+            limit: query.params.request.limit,
+        })
     }
 }

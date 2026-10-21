@@ -35,10 +35,6 @@ export class LeadFlowOrderType {
     @Field()
     status!: string
 
-    /** Whether the order originated from live or simulated input. */
-    @Field()
-    origin!: string
-
     /** The identity that confirmed the order. */
     @Field(() => ID, { nullable: true })
     confirmedBy!: string | null

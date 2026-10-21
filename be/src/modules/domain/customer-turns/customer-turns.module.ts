@@ -1,18 +1,23 @@
 import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
 import { AgentKnowledgeModule } from "@modules/domain/agent-knowledge"
+import { ConversationOwnershipEventsModule } from "@modules/domain/conversation-ownership-events"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./customer-turns.module-definition"
 import { PaymentClaimsService } from "./payment-claims.service"
 import { StaffEscalationService } from "./staff-escalation.service"
 import { TurnModulesService } from "./turn-modules.service"
 import { TurnPurchasesService } from "./turn-purchases.service"
 import { GatewayContextService } from "./gateway-context.service"
-import { GatewaySalesService } from "./gateway-sales.service"
 import { HubNotesService } from "./hub-notes.service"
+import { TurnGatewayToolsService } from "./turn-gateway-tools.service"
+import { TurnHandoffService } from "./turn-handoff.service"
+import { TurnSourcesService } from "./turn-sources.service"
+import { TurnToolAccessService } from "./turn-tool-access.service"
 
 @Module({})
 /**
- * What a customer chat turn starts besides the reply: the payment claims, the staff escalation and the purchases. The OpenClaw AI step
+ * What a customer chat turn starts besides the reply: the payment claims, the staff escalation, the purchases, and the connector
+ * meta-tools and the agent hand-off the tool bridge serves to OpenClaw. The OpenClaw AI step
  * (CustomerTurnRuntimeService) and the outcome handler (CustomerOutcomesService) are plugged into the conversations capability by the
  * app root, which runs the queued turn and delivers the reply; they reach these services, and what an agent knows (agent-knowledge,
  * registered here so the agents capability and the knowledge.search tool read it too), through this global module.
@@ -27,13 +32,16 @@ export class CustomerTurnsModule extends ConfigurableModuleClass {
             TurnPurchasesService,
             HubNotesService,
             GatewayContextService,
-            GatewaySalesService,
+            TurnGatewayToolsService,
+            TurnHandoffService,
+            TurnSourcesService,
+            TurnToolAccessService,
             TurnModulesService,
         ]
         const knowledge = AgentKnowledgeModule.register({ isGlobal: false })
         return {
             ...base,
-            imports: [...(base.imports ?? []), knowledge],
+            imports: [...(base.imports ?? []), knowledge, ConversationOwnershipEventsModule.register({})],
             providers: [...(base.providers ?? []), ...services],
             exports: [...services, knowledge],
         }

@@ -41,6 +41,28 @@ export const useMarketingReport = () => {
             change: (pct) => (pct === null ? t("changeNone") : t("changePct", { sign: pct > 0 ? "+" : "", pct })),
             kpi: { reach: t("kpiReach"), engagements: t("kpiEngagements"), messages: t("kpiMessages") },
             insight: (channel, share, day, count) => t("insight", { channel, share, day, count }),
+            post: (title, channel, publishedAt) =>
+                t("postTerm", {
+                    title,
+                    channel,
+                    at: format.dateTime(new Date(publishedAt), {
+                        day: "2-digit",
+                        month: "2-digit",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                        timeZone: ZONE,
+                    }),
+                }),
+            engagements: (count) => t("postEngagements", { count }),
+            postsNote: (shown, count) => t("postsNote", { shown, count }),
+            source: (ref, label) => {
+                if (ref === "meta.page_insights") return t("sourcePageInsights")
+                if (ref === "meta.published_posts") return t("sourcePublishedPosts")
+                if (ref === "channel.messages") return t("sourceCustomerMessages")
+                if (ref === "zalo.articles") return t("sourceZaloArticles")
+                return t("sourceBrandKit", { name: label })
+            },
+            sources: (list) => t("sourcesLine", { list }),
         }),
         [format, t],
     )

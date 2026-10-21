@@ -1,22 +1,73 @@
 import type { DynamicModule } from "@nestjs/common"
 import { McpEndpointHttpModule } from "@features/api/mcp-endpoint"
 import { SystemHealthHttpModule } from "@features/api/system-health"
+import { McpAgentAuthenticatorService } from "@modules/domain/api-credentials"
+import { API_KEYS_ERROR_KINDS, API_KEYS_MESSAGES, ApiKeysModule } from "@modules/domain/api-keys"
+import { EventsModule } from "@modules/domain/events"
+import { IDENTITY_ERROR_KINDS, IDENTITY_MESSAGES, IdentityModule } from "@modules/domain/identity"
 import { LivenessModule } from "@modules/domain/liveness"
-import { McpGatewayModule } from "@modules/domain/mcp-gateway"
-import { CqrsModule } from "@modules/platform/cqrs"
+import { MCP_GATEWAY_ERROR_KINDS, MCP_GATEWAY_MESSAGES, McpGatewayModule } from "@modules/domain/mcp-gateway"
+import { TRANSACTIONS_ERROR_KINDS, TRANSACTIONS_MESSAGES, TransactionsModule } from "@modules/domain/transactions"
 import { appPgTypes } from "@modules/integrations/data-sources"
+import { MCP_ERROR_KINDS, MCP_MESSAGES } from "@modules/integrations/mcp"
+import { refuseSupabaseSessions } from "@modules/integrations/supabase"
 import { ClockModule } from "@modules/platform/clock"
+import { CONFIG_ERROR_KINDS } from "@modules/platform/config"
+import { CqrsModule } from "@modules/platform/cqrs"
 import { DatabaseModule } from "@modules/platform/database"
+import { ERRORS_MESSAGES, ErrorsModule } from "@modules/platform/errors"
+import { HTTP_SECURITY_ERROR_KINDS, HTTP_SECURITY_MESSAGES, HttpSecurityModule } from "@modules/platform/http-security"
+import { I18nModule } from "@modules/platform/i18n"
 import { LoggingModule } from "@modules/platform/logging"
+import { QueueModule } from "@modules/platform/queue"
 import type { McpAppOptions } from "../mcp.options"
 
-/** Registers the mcp app capabilities in their boot order: the platform, the gateway over the primary database, health and the endpoint. */
+/**
+ * Registers the mcp app capabilities in their boot order: the platform (its timer port is the queue capability's, which the
+ * readiness probe and the native connectors' deadlines use) with the error and message tables of what it composes, the
+ * default-deny identity (it serves no user session: every access token is refused; its one door takes an agent key, verified by
+ * the api-keys capability), the gateway over the primary database with the bank moves it reads, health and the endpoint.
+ */
 export const mcpModules = (options: McpAppOptions): Array<DynamicModule> => [
     ClockModule.register({ isGlobal: true }),
     LoggingModule.register({ isGlobal: true }),
-    DatabaseModule.register({ isGlobal: true, connections: [options.database], typeParsers: appPgTypes }),
+    I18nModule.register({
+        isGlobal: true,
+        bundles: [
+            API_KEYS_MESSAGES,
+            ERRORS_MESSAGES,
+            HTTP_SECURITY_MESSAGES,
+            IDENTITY_MESSAGES,
+            MCP_GATEWAY_MESSAGES,
+            MCP_MESSAGES,
+            TRANSACTIONS_MESSAGES,
+        ],
+    }),
+    ErrorsModule.register({
+        isGlobal: true,
+        kinds: [
+            API_KEYS_ERROR_KINDS,
+            CONFIG_ERROR_KINDS,
+            HTTP_SECURITY_ERROR_KINDS,
+            IDENTITY_ERROR_KINDS,
+            MCP_GATEWAY_ERROR_KINDS,
+            MCP_ERROR_KINDS,
+            TRANSACTIONS_ERROR_KINDS,
+        ],
+    }),
     CqrsModule.register({ isGlobal: true }),
+    HttpSecurityModule.register({ isGlobal: true, ...options.httpSecurity }),
+    DatabaseModule.register({ isGlobal: true, connections: [options.database], typeParsers: appPgTypes }),
+    QueueModule.register({ isGlobal: true, schedulers: [], ...options.queue }),
+    EventsModule.register({ isGlobal: true }),
+    ApiKeysModule.register({ isGlobal: true }),
+    IdentityModule.register({
+        isGlobal: true,
+        verifyAccessToken: refuseSupabaseSessions,
+        credentialAuthenticator: McpAgentAuthenticatorService,
+    }),
     LivenessModule.register({ isGlobal: true }),
+    TransactionsModule.register({ isGlobal: true }),
     McpGatewayModule.register({ isGlobal: true, ...options.mcpGateway }),
     SystemHealthHttpModule.register({}),
     McpEndpointHttpModule.register({}),

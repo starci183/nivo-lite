@@ -16,6 +16,7 @@ export type {
     OptionalInstallation,
 } from "./agents.port"
 export { AgentsService } from "./agents.service"
+export { AgentRecordsService } from "./agent-records.service"
 export { EngineStatusService } from "./engine-status.service"
 export { processorFromSettings, replyTimeoutSec } from "./engine-status.policy"
 export { PauseClient } from "./pause.client"

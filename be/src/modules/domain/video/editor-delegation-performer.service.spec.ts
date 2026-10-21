@@ -9,6 +9,7 @@ import { MESSAGE_CATALOG } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
 import { VideoErrorCode } from "./errors/video.error"
 import { EditorDelegationPerformerService, RENDER_SCRIPT_ACTION } from "./editor-delegation-performer.service"
+import { EditorRoomService } from "./editor-room.service"
 import { VideoService } from "./video.service"
 
 const WORKSPACE = "0a1b2c3d-0a1b-4c3d-8a1b-0a1b2c3d4e5f"
@@ -46,7 +47,6 @@ const itemOf = builder<WorkItem>({
     evidence_state: "pending",
     assigned_staff_id: null,
     execution_id: null,
-    origin: "live",
     created_at: "2026-10-20T09:00:00.000Z",
     updated_at: "2026-10-20T09:00:00.000Z",
     completed_at: null,
@@ -67,6 +67,8 @@ const build = async () => {
     delegations.ofWorkItem.mockResolvedValue(null)
     delegations.record.mockResolvedValue({ id: "delegation-1", project_id: "project-1" })
     delegations.linkRender.mockResolvedValue(undefined)
+    const room = mock<EditorRoomService>()
+    room.post.mockResolvedValue("message-1")
     const moduleRef = await Test.createTestingModule({
         providers: [
             EditorDelegationPerformerService,
@@ -76,9 +78,18 @@ const build = async () => {
             { provide: VideoService, useValue: video },
             { provide: VideoProjectWorkbenchWriterService, useValue: projects },
             { provide: VideoDelegationsService, useValue: delegations },
+            { provide: EditorRoomService, useValue: room },
         ],
     }).compile()
-    return { performer: moduleRef.get(EditorDelegationPerformerService), tx, registry, video, projects, delegations }
+    return {
+        performer: moduleRef.get(EditorDelegationPerformerService),
+        tx,
+        registry,
+        video,
+        projects,
+        delegations,
+        room,
+    }
 }
 
 describe("EditorDelegationPerformerService", () => {
@@ -122,41 +133,71 @@ describe("EditorDelegationPerformerService", () => {
         expect(delegations.linkRender).toHaveBeenCalledWith("delegation-1", "render-1")
     })
 
+    it("posts the rendering note in the Marketing room with the live project link, tied to the work item", async () => {
+        const { performer, room } = await build()
+
+        const done = await performer.perform(CTX, itemOf(), PROPOSAL)
+
+        expect(room.post).toHaveBeenCalledWith(
+            CTX,
+            done.summary,
+            {
+                v: 1,
+                type: "handoff_note",
+                title: "Weekend",
+                subtitle: expect.stringContaining('video.editor.seconds:{"seconds":10}'),
+                badge: "video.editor.rendering.badge:{}",
+                body: "video.editor.rendering.body:{}",
+                fields: [{ label: "video.editor.rendering.target:{}", value: 'video.editor.seconds:{"seconds":10}' }],
+                lines: [{ at: "00–10s", text: "A" }],
+                link: { label: "video.editor.rendering.link:{}", href: "/agents/video/workbench?focus=project-1" },
+                data: { project_id: "project-1", render_id: "render-1", source: "content" },
+            },
+            "item-1",
+        )
+    })
+})
+
+describe("EditorDelegationPerformerService repeats and refusals", () => {
     it("answers the project a repeated work item already made and renders nothing", async () => {
-        const { performer, video, delegations } = await build()
+        const { performer, video, delegations, room } = await build()
         delegations.ofWorkItem.mockResolvedValue({ id: "delegation-1", project_id: "project-7" })
 
         await expect(performer.perform(CTX, itemOf(), PROPOSAL)).resolves.toMatchObject({ detail: "project-7" })
 
         expect(video.requestDelegatedRender).not.toHaveBeenCalled()
+        expect(room.post).not.toHaveBeenCalled()
     })
 
     it("refuses a script that cannot be rendered", async () => {
-        const { performer, video } = await build()
+        const { performer, video, room } = await build()
 
         await expect(
             performer.perform(CTX, itemOf(), { summary: "x", fields: { title: "x", script: "[]" } }),
         ).rejects.toMatchObject({ code: VideoErrorCode.InputInvalid })
         expect(video.requestDelegatedRender).not.toHaveBeenCalled()
+        expect(room.post).not.toHaveBeenCalled()
     })
 
     it("refuses when the project could not be written", async () => {
-        const { performer, video, projects } = await build()
+        const { performer, video, projects, room } = await build()
         projects.createDelegated.mockResolvedValue(null)
 
         await expect(performer.perform(CTX, itemOf(), PROPOSAL)).rejects.toMatchObject({
             code: VideoErrorCode.InputInvalid,
         })
         expect(video.requestDelegatedRender).not.toHaveBeenCalled()
+        expect(room.post).not.toHaveBeenCalled()
     })
 
     it("refuses when the delegation could not be written", async () => {
-        const { performer, video, delegations } = await build()
+        const { performer, video, delegations, room } = await build()
         delegations.record.mockResolvedValue(null)
 
         await expect(performer.perform(CTX, itemOf(), PROPOSAL)).rejects.toMatchObject({
             code: VideoErrorCode.InputInvalid,
         })
         expect(video.requestDelegatedRender).not.toHaveBeenCalled()
+        expect(room.post).not.toHaveBeenCalled()
     })
 })

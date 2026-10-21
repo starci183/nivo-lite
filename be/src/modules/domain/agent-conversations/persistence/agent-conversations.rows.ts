@@ -93,3 +93,23 @@ export interface HumanConversationRow extends ConversationTargetRow {
     /** Who holds the conversation. */
     readonly handled_by: string | null
 }
+
+/** A conversation a hand-over moved. */
+export interface MovedConversationRow {
+    /** The conversation id. */
+    readonly id: string
+}
+
+/** The kind of a conversation. */
+export interface ConversationKindRow {
+    /** customer or test. */
+    readonly kind: string
+}
+
+/** The connector party a conversation remembers. */
+export interface ConversationPartyRow {
+    /** The connector's party id. */
+    readonly connector_party_id: string
+    /** The party's name as the connector keeps it, or null. */
+    readonly connector_party_name: string | null
+}

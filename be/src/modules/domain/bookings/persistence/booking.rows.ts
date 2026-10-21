@@ -354,8 +354,6 @@ export interface EffectsRow {
     readonly customer_phone: string | null
     /** The customer email. */
     readonly customer_email: string | null
-    /** Whether the row is live or simulated. */
-    readonly origin: string
     /** Why it was cancelled, or null. */
     readonly cancel_reason: string | null
     /** How many times it was moved. */

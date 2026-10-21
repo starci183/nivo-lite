@@ -38,7 +38,7 @@ With SePay, NIVO generates the API key and you paste it into SePay. No key has t
    - transaction type: **Incoming money**; format: **JSON**; turn on **Automatic retry**;
    - bank account: choose the account entered in step 1;
    - authentication type: **API key**, paste the NIVO API key, then save.
-4. Check: on SePay open Transactions, press **Simulate transaction** and enter 2,000 VND for that account. NIVO must report that it was received.
+4. Check: transfer a small real amount (for example 2,000 VND) to that account. NIVO must report that it was received.
 5. For real use: repeat the steps with the **Production** environment (`my.sepay.vn/webhook`), then transfer a small real amount to check.
 
 The SePay account that collects the NIVO plan fee (the payment page shown when a workspace is created) is a separate configuration shared by the whole platform. It uses the variables

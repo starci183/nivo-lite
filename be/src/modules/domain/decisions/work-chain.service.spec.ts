@@ -37,7 +37,6 @@ const itemOf = builder<WorkItem>({
     evidence_state: "pending",
     assigned_staff_id: null,
     execution_id: null,
-    origin: "live",
     created_at: "2026-10-12T10:00:00.000Z",
     updated_at: "2026-10-12T10:00:00.000Z",
     completed_at: null,
@@ -85,7 +84,6 @@ const build = async (entityManager: MockEntityManager, refuse = false): Promise<
             action: input.command,
             subject_type: "lead",
             dedupeKey: input.dedupeKey ?? "none",
-            origin: "live",
         }
         return Promise.resolve({ ok: true, spec, depth: 1, inserted: () => true })
     })
@@ -129,7 +127,6 @@ describe("WorkChainService", () => {
                 command: "classify_lead",
                 parentId: "item-1",
                 chainId: "chain-1",
-                origin: "live",
                 inboundEventId: "in-1",
                 queue: true,
                 reason: "handoff",

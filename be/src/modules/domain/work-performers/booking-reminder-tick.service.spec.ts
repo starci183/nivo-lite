@@ -39,7 +39,6 @@ const bookingOf = builder<EffectsRow>({
     customer_name: "Lan",
     customer_phone: "0901234567",
     customer_email: "lan@example.com",
-    origin: "live",
     cancel_reason: null,
     reschedule_count: 0,
     service_name: "Haircut",
@@ -108,7 +107,6 @@ const itemOf = builder<WorkItem>({
     evidence_state: "captured",
     assigned_staff_id: null,
     execution_id: null,
-    origin: "live",
     created_at: "2026-10-15T08:00:00.000Z",
     updated_at: "2026-10-15T08:00:00.000Z",
     completed_at: "2026-10-15T08:00:00.000Z",
@@ -228,14 +226,13 @@ describe("BookingReminderTickService", () => {
 
 describe("BookingReminderTickService", () => {
     it.each([
-        { status: "requested", origin: "live", phone: "0901234567", email: "lan@example.com", contact: "0901234567" },
-        { status: "confirmed", origin: "simulated", phone: null, email: "lan@example.com", contact: "lan@example.com" },
-        { status: "rescheduled", origin: "legacy", phone: null, email: null, contact: "performers.reminderChat:{}" },
-    ])("submits a $status booking from $origin with its customer contact", async (row) => {
+        { status: "requested", phone: "0901234567", email: "lan@example.com", contact: "0901234567" },
+        { status: "confirmed", phone: null, email: "lan@example.com", contact: "lan@example.com" },
+        { status: "rescheduled", phone: null, email: null, contact: "performers.reminderChat:{}" },
+    ])("submits a $status booking with its customer contact", async (row) => {
         const { service, catalog, reminders, notices, engine, logger } = await build()
         const booking = bookingOf({
             status: row.status,
-            origin: row.origin,
             customer_phone: row.phone,
             customer_email: row.email,
         })
@@ -258,7 +255,6 @@ describe("BookingReminderTickService", () => {
                     subject_type: "lead",
                     subject_id: "lead-1",
                     lead_id: "lead-1",
-                    origin: row.origin === "simulated" ? "simulated" : "live",
                     dedupeKey: `remind_booking:booking-1:h24:${nowMs - 60_000}`,
                     preset: true,
                     noChain: true,
@@ -365,7 +361,6 @@ describe("BookingReminderTickService", () => {
                 subject_type: "lead",
                 subject_id: "lead-1",
                 lead_id: "lead-1",
-                origin: "live",
                 dedupeKey: `remind_booking:booking-2:h2:${nowMs - 30_000}`,
                 preset: true,
                 noChain: true,

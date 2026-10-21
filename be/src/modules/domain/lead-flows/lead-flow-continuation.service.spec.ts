@@ -12,7 +12,6 @@ const stepOf = builder<LeadGenFinishedStep>({
     action: "capture_lead",
     leadId: "lead-1",
     chainId: "chain-1",
-    origin: "live",
     fields: {},
     draft: "",
 })
@@ -99,7 +98,6 @@ describe("LeadFlowContinuationService", () => {
                     reason: "lead_captured",
                     parentId: "item-1",
                     chainId: "chain-1",
-                    origin: "live",
                     inboundEventId: "event-1",
                     dedupeKey: "score_lead:lead-1:t:1",
                     payload: {
@@ -180,7 +178,6 @@ describe("LeadFlowContinuationService", () => {
             reason: "lead_captured",
             parentId: "item-1",
             chainId: "item-1",
-            origin: "live",
             inboundEventId: null,
             dedupeKey: "score_lead:lead-1:item-1",
             payload: { subject_type: "lead", subject_id: "lead-1", lead_id: "lead-1" },
@@ -227,7 +224,6 @@ describe("LeadFlowContinuationService", () => {
                         reason,
                         parentId: "item-1",
                         chainId: "chain-1",
-                        origin: "live",
                         inboundEventId: null,
                         dedupeKey,
                         payload: {
@@ -265,7 +261,6 @@ describe("LeadFlowContinuationService", () => {
                     reason: "negative_comment",
                     parentId: "item-1",
                     chainId: "chain-1",
-                    origin: "live",
                     inboundEventId: null,
                     dedupeKey: "reply_comment_public:comment:comment-1",
                     payload: {

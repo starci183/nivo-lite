@@ -4,7 +4,7 @@ import { WorkspacesService } from "@modules/domain/workspaces"
 import type { Secret } from "@modules/platform/config"
 import { WorkspaceSeedError, WorkspaceSeedErrorCode } from "./errors/workspace-seed.error"
 import { WORKSPACE_RECEIPT_PREFIX } from "./messages/workspace-seed.messages"
-import type { SeedAccount, SeedReport, SeedRequest, SeedRoleRequest } from "./workspace-seed.contracts"
+import type { OwnedSeed, SeedAccount, SeedReport, SeedRequest, SeedRoleRequest } from "./workspace-seed.contracts"
 import { InjectSeedAuth, InjectWorkspaceSeedOptions } from "./workspace-seed.decorators"
 import type { SeedAuth, SeedAuthUser, WorkspaceSeedOptions } from "./workspace-seed.options"
 import { assertSeedScope, readSeedInput, seedPassword } from "./workspace-seed.policy"
@@ -65,6 +65,11 @@ export class WorkspaceSeedService {
 
     /** Ensures owner, manager and staff for one explicit workspace; existing account and seat state is retained. */
     async seed(request: SeedRequest): Promise<SeedReport> {
+        return (await this.seedOwned(request)).report
+    }
+
+    /** Ensures the workspace like `seed` and also answers the owner Auth authenticated for it. */
+    async seedOwned(request: SeedRequest): Promise<OwnedSeed> {
         const scope = assertSeedScope(request)
         const found = await this.findUsers()
         for (const account of [request.owner, request.manager, request.staff]) {
@@ -90,11 +95,8 @@ export class WorkspaceSeedService {
                 displayName: request.staff.name,
             })
             await this.readSeats(ownerId, managerId, staffId, workspaceId)
-            return report(
-                "ensure",
-                workspaceId,
-                request.principalToken === undefined ? "password-session" : "existing-session",
-            )
+            const authentication = request.principalToken === undefined ? "password-session" : "existing-session"
+            return { report: report("ensure", workspaceId, authentication), ownerId }
         })
     }
 

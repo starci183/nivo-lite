@@ -1,35 +1,40 @@
 import { Injectable } from "@nestjs/common"
-import type { EntityManager } from "typeorm"
-import { McpError, McpErrorCode, McpRemoteClient } from "@modules/integrations/mcp"
-import type { McpEndpoint } from "@modules/integrations/mcp"
+import { McpCallLogService } from "@modules/domain/mcp-call-log"
+import { McpConnectorsService } from "@modules/domain/mcp-connectors"
+import { McpToolGrantsService } from "@modules/domain/mcp-tool-grants"
+import { InjectMcpRemote, McpError, McpErrorCode } from "@modules/integrations/mcp"
+import type { McpRemote } from "@modules/integrations/mcp"
 import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
-import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
+import { InjectQueueTimeout } from "@modules/platform/queue"
+import type { QueueTimeout } from "@modules/platform/queue"
 import { argsHashOf, masked, summaryOf } from "./audit-mask.policy"
-import { breakerAfter, breakerAllows, CLOSED } from "./circuit-breaker.policy"
-import { grantOf, nativeStatusOf, remoteConnectorOf } from "./connector-row.mapper"
+import { breakerAfter, breakerGate, CLOSED } from "./circuit-breaker.policy"
+import { grantOf, nativeConnectorOf, remoteConnectorOf } from "./connector-row.mapper"
 import { McpGatewayError, McpGatewayErrorCode } from "./errors/mcp-gateway.error"
 import { judgeGrant } from "./grant.policy"
+import { withReplayKey } from "./idempotency-key.policy"
 import { InjectMcpGatewayOptions, InjectNativeAdapters } from "./mcp-gateway.decorators"
 import { McpGatewayLogEvent } from "./mcp-gateway.log-events"
 import type {
     BreakerState,
+    CapabilityRole,
     CallOutcome,
-    DescribedTool,
     DiscoveredTool,
     GatewayCaller,
     GatewayCallResult,
+    GatewayJson,
     GatewayToolSpec,
-    JsonObject,
     NativeAdapter,
+    OptionalDescribedTool,
+    RoleReadiness,
+    RoleResolution,
     ToolGrant,
     WorkspaceConnector,
 } from "./mcp-gateway.contracts"
 import type { McpGatewayOptions } from "./mcp-gateway.options"
-import type { AgentIdRow, ConnectorRow, GrantRow } from "./persistence/mcp-gateway.rows"
-import { AGENTS_GRANTED, INSERT_CALL_LOG, LIST_AGENT_GRANTS, LIST_CONNECTORS } from "./persistence/mcp-gateway.sql"
 import { addressOf, fullNameOf, grantFor, searchTools, specOf } from "./tool-name.policy"
 
 /** A resolved call: the connector, the spec and the full name. */
@@ -44,85 +49,180 @@ interface Resolved {
 
 /** What running the adapter came to. */
 type Ran =
-    | { readonly kind: "ok"; readonly value: JsonObject }
-    | { readonly kind: "tool_error"; readonly value: JsonObject }
+    | { readonly kind: "ok"; readonly value: GatewayJson }
+    | { readonly kind: "tool_error"; readonly value: GatewayJson }
     | { readonly kind: "failed"; readonly outcome: "timeout" | "error"; readonly code: string }
 
+/** One audit line of a resolved call, before the caller and the call are added. */
+interface AuditLine {
+    /** The outcome. */
+    readonly outcome: CallOutcome
+    /** The failure code, or null. */
+    readonly code: string | null
+    /** The masked result summary. */
+    readonly summary: string
+    /** When the call started, epoch ms. */
+    readonly started: number
+}
+
+/** The answer of a call that stops before any connector is reached. */
 const failure = (code: "invalid_name" | "unknown_tool" | "connector_disabled", detail: string): GatewayCallResult => ({
     ok: false,
     code,
     detail,
 })
 
+/** True when the connector may run the tool: a native tool, or a remote tool whose live schema is the approved one. */
+const usable = (connector: WorkspaceConnector, tool: string): boolean =>
+    connector.approvedTools === null || connector.approvedTools.has(tool)
+
+/**
+ * The tool of a role among connectors: the first tool declaring it among those not disabled (natives first, then remotes by
+ * key) that may run; none is `no_capability`.
+ */
+const roleIn = (connectors: ReadonlyArray<WorkspaceConnector>, role: CapabilityRole): RoleResolution => {
+    const [tool] = connectors
+        .filter((connector) => connector.status !== "disabled")
+        .flatMap((connector) =>
+            connector.manifest.tools
+                .filter((spec) => spec.role === role && usable(connector, spec.name))
+                .map((spec) => ({
+                    role,
+                    name: fullNameOf(connector.manifest.key, spec.name),
+                    connector: connector.manifest.key,
+                    connectorName: connector.manifest.name,
+                })),
+        )
+    return tool === undefined ? { ok: false, code: "no_capability", role } : { ok: true, tool }
+}
+
+/**
+ * True when a write that timed out may be sent once more to learn what happened: it carries its replay key, so the server answers
+ * the stored result of the first call when that one went through, and runs it only when it did not.
+ */
+const replayable = (spec: GatewayToolSpec, args: GatewayJson, ran: Ran): boolean =>
+    ran.kind === "failed" &&
+    ran.outcome === "timeout" &&
+    spec.scope !== "read" &&
+    spec.idempotencyArg !== undefined &&
+    args[spec.idempotencyArg] !== undefined
+
+/** True for the gateway's own time-limit errors and the remote client's. */
+const isTimeout = (cause: unknown): boolean =>
+    (cause instanceof McpError && cause.code === McpErrorCode.Timeout) ||
+    (cause instanceof McpGatewayError && cause.code === McpGatewayErrorCode.Timeout)
+
+/** The code a failed run is audited with. */
+const failureCodeOf = (cause: unknown): string =>
+    cause instanceof McpError || cause instanceof McpGatewayError ? cause.code : "internal"
+
 @Injectable()
 /**
  * The NIVO MCP gateway: one tool surface per workspace over the native adapters registered in code and the remote MCP servers the
- * workspace registered. Every call goes the same way: the name, the connector, the agent's grant (default deny), the limits and the
- * approval, the connector's circuit breaker, the adapter under the connector's time limit, and one masked audit line. A failure is
- * an answer (`unavailable`), never a throw, so a chat turn can fall back to its holding line; the gateway never claims a result the
- * connector did not give.
+ * workspace registered. Every call goes the same way: the name, the connector, the approved schema of a remote tool, the agent's
+ * grant (default deny), the limits and the approval, the connector's circuit breaker (per workspace and connector, so one slow
+ * connector never stalls another), the adapter under the connector's time limit, and one masked audit line. A failure is an answer
+ * (`unavailable`), never a throw, so a chat turn can fall back to its holding line; the gateway never claims a result the
+ * connector did not give. A side-effect remote call carries a replay key derived from its step, so a retry never acts twice.
  */
 export class McpGatewayService {
     private readonly breakers = new Map<string, BreakerState>()
 
     constructor(
-        @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
         @InjectMcpGatewayOptions() private readonly options: McpGatewayOptions,
         @InjectNativeAdapters() private readonly natives: ReadonlyArray<NativeAdapter>,
         @InjectClock() private readonly clock: Clock,
         @InjectLogger() private readonly logger: Logger,
-        private readonly remote: McpRemoteClient,
+        @InjectMcpRemote() private readonly remote: McpRemote,
+        @InjectQueueTimeout() private readonly timeout: QueueTimeout,
+        private readonly connectors: McpConnectorsService,
+        private readonly grants: McpToolGrantsService,
+        private readonly callLog: McpCallLogService,
     ) {}
 
     /** The connectors of a workspace: every native one, and the remote ones it registered. */
     async connectorsOf(workspaceId: string): Promise<ReadonlyArray<WorkspaceConnector>> {
-        const rows: ReadonlyArray<ConnectorRow> = await this.entityManager.query(LIST_CONNECTORS, [workspaceId])
-        const natives = this.natives.map((adapter): WorkspaceConnector => ({
-            manifest: adapter.manifest,
-            status: nativeStatusOf(rows, adapter.manifest.key),
-            url: null,
-            credentialRef: null,
-            timeoutMs: this.options.defaultTimeoutMs,
-        }))
+        const rows = await this.connectors.list(workspaceId)
+        const natives = this.natives.map((adapter) => nativeConnectorOf(rows, adapter, this.options.defaultTimeoutMs))
         const remotes = rows.filter((row) => row.kind === "remote").map(remoteConnectorOf)
         return [...natives, ...remotes]
     }
 
+    /**
+     * The tool a workspace plays a capability role with: the first tool declaring the role among the connectors that are not
+     * disabled (natives first, then remotes by key) that may run (a remote tool only while its approved schema is live). Grants are
+     * not judged here: the caller then calls the tool, and the grant, the approval and the audit apply as to any call. None is the
+     * typed `no_capability` answer.
+     */
+    async toolForRole(workspaceId: string, role: CapabilityRole): Promise<RoleResolution> {
+        return roleIn(await this.connectorsOf(workspaceId), role)
+    }
+
+    /**
+     * Whether a workspace can play the roles a NIVO agent requires now (each role has a usable tool), the roles it misses, and for
+     * every role the display names of the connectors that declare it (installed or installable), so a card can say what to connect.
+     */
+    async readiness(workspaceId: string, roles: ReadonlyArray<CapabilityRole>): Promise<RoleReadiness> {
+        const connectors = await this.connectorsOf(workspaceId)
+        const missing = roles.filter((role) => !roleIn(connectors, role).ok)
+        const providersOf = (role: CapabilityRole): ReadonlyArray<string> => [
+            ...new Set(
+                connectors
+                    .filter((connector) => connector.manifest.tools.some((spec) => spec.role === role))
+                    .map((connector) => connector.manifest.name),
+            ),
+        ]
+        return {
+            ready: missing.length === 0,
+            missing,
+            providers: {
+                "identity.find": providersOf("identity.find"),
+                "identity.upsert": providersOf("identity.upsert"),
+                "receivable.find": providersOf("receivable.find"),
+                "receivable.recordPayment": providersOf("receivable.recordPayment"),
+                "payment.credits.list": providersOf("payment.credits.list"),
+                "payment.debits.list": providersOf("payment.debits.list"),
+                "invoice.list": providersOf("invoice.list"),
+            },
+        }
+    }
+
     /** The grants of one agent. */
     async grantsOf(workspaceId: string, agentId: string): Promise<ReadonlyArray<ToolGrant>> {
-        const rows: ReadonlyArray<GrantRow> = await this.entityManager.query(LIST_AGENT_GRANTS, [workspaceId, agentId])
-        return rows.map(grantOf)
+        return (await this.grants.listOfAgent(workspaceId, agentId)).map(grantOf)
     }
 
     /** The agents of a workspace holding any of the tools (full names or `connector.*`) in a mode other than never, oldest grant first. */
-    async agentsGranted(workspaceId: string, tools: ReadonlyArray<string>): Promise<ReadonlyArray<string>> {
-        const rows: ReadonlyArray<AgentIdRow> = await this.entityManager.query(AGENTS_GRANTED, [workspaceId, tools])
-        return [...new Set(rows.map((row) => row.agent_id))]
+    agentsGranted(workspaceId: string, tools: ReadonlyArray<string>): Promise<ReadonlyArray<string>> {
+        return this.grants.agentsGranted(workspaceId, tools)
     }
 
-    /** Discovery: the granted tools matching a query, at most ten, so an agent never loads every tool of every connector. */
+    /**
+     * Discovery: the tools matching a query among those the caller may use (installed, approved, granted), at most ten, so an
+     * agent never loads every schema of every connector.
+     */
     async search(caller: GatewayCaller, query: string, limit: number): Promise<ReadonlyArray<DiscoveredTool>> {
         const [connectors, grants] = await Promise.all([
             this.connectorsOf(caller.workspaceId),
             this.grantsOf(caller.workspaceId, caller.agentId),
         ])
         const active = connectors.filter((connector) => connector.status !== "disabled")
-        return searchTools(
-            active.map((connector) => connector.manifest),
-            grants,
-            query,
-            limit,
-        )
+        const manifests = active.map((connector) => ({
+            ...connector.manifest,
+            tools: connector.manifest.tools.filter((spec) => usable(connector, spec.name)),
+        }))
+        return searchTools(manifests, grants, query, limit)
     }
 
-    /** One granted tool in full (schema and limits); null when it does not exist or the caller is not granted it. */
-    async describe(caller: GatewayCaller, name: string): Promise<DescribedTool | null> {
+    /** One usable granted tool in full (schema and limits); null when it does not exist, is not approved or not granted. */
+    async describe(caller: GatewayCaller, name: string): Promise<OptionalDescribedTool> {
         const [resolved, grants] = await Promise.all([
             this.resolve(caller.workspaceId, name),
             this.grantsOf(caller.workspaceId, caller.agentId),
         ])
         const grant = grantFor(grants, name)
-        if ("ok" in resolved || grant === null || grant.mode === "never") return null
+        if ("ok" in resolved || !usable(resolved.connector, resolved.spec.name)) return null
+        if (grant === null || grant.mode === "never") return null
         const { spec } = resolved
         return {
             name,
@@ -135,20 +235,29 @@ export class McpGatewayService {
         }
     }
 
-    /** Calls one tool for an agent through the grant, the approval, the breaker, the time limit and the audit. */
-    async call(caller: GatewayCaller, name: string, args: JsonObject): Promise<GatewayCallResult> {
+    /** Calls one tool for an agent through the approved schema, the grant, the approval, the breaker, the time limit and the audit. */
+    async call(caller: GatewayCaller, name: string, args: GatewayJson): Promise<GatewayCallResult> {
         const started = this.clock.now().getTime()
         const resolved = await this.resolve(caller.workspaceId, name)
         if ("ok" in resolved) return resolved
-        const { connector, spec } = resolved
+        const sent = withReplayKey(resolved.spec, caller, resolved.name, args)
+        if (!usable(resolved.connector, resolved.spec.name)) {
+            await this.audit(caller, resolved, sent, {
+                outcome: "refused",
+                code: "schema_unapproved",
+                summary: "",
+                started,
+            })
+            return { ok: false, code: "schema_unapproved", detail: name }
+        }
         const grant = grantFor(await this.grantsOf(caller.workspaceId, caller.agentId), name)
-        const verdict = judgeGrant(grant, args, caller.approvedBy !== undefined, spec.scope !== "read")
+        const verdict = judgeGrant(grant, sent, caller.approvedBy !== undefined, resolved.spec.scope !== "read")
         if (verdict.kind === "refuse") {
-            await this.audit(caller, resolved, args, { outcome: "refused", code: "not_granted", summary: "", started })
+            await this.audit(caller, resolved, sent, { outcome: "refused", code: "not_granted", summary: "", started })
             return { ok: false, code: "not_granted", detail: name }
         }
         if (verdict.kind === "approval") {
-            await this.audit(caller, resolved, args, {
+            await this.audit(caller, resolved, sent, {
                 outcome: "approval",
                 code: verdict.reason,
                 summary: "",
@@ -156,8 +265,25 @@ export class McpGatewayService {
             })
             return { ok: false, code: "approval_required", reason: verdict.reason }
         }
-        const breakerKey = `${caller.workspaceId}:${connector.manifest.key}`
-        if (!breakerAllows(this.breakers.get(breakerKey) ?? CLOSED, started)) {
+        return this.guarded(caller, resolved, sent, started)
+    }
+
+    /** The breaker of a workspace's connector; one that never failed is closed. */
+    private breakerOf(key: string): BreakerState {
+        return this.breakers.get(key) ?? CLOSED
+    }
+
+    /** Runs an allowed call behind its connector's breaker and records what it came to. */
+    private async guarded(
+        caller: GatewayCaller,
+        resolved: Resolved,
+        args: GatewayJson,
+        started: number,
+    ): Promise<GatewayCallResult> {
+        const breakerKey = `${caller.workspaceId}:${resolved.connector.manifest.key}`
+        const gate = breakerGate(this.breakerOf(breakerKey), started)
+        this.breakers.set(breakerKey, gate.state)
+        if (!gate.allowed) {
             await this.audit(caller, resolved, args, {
                 outcome: "circuit_open",
                 code: "unavailable",
@@ -166,25 +292,27 @@ export class McpGatewayService {
             })
             return { ok: false, code: "unavailable", detail: "circuit_open" }
         }
-        const ran = await this.run(caller.workspaceId, connector, spec.name, args)
+        const first = await this.run(caller.workspaceId, resolved, args)
+        const ran = replayable(resolved.spec, args, first) ? await this.run(caller.workspaceId, resolved, args) : first
         const now = this.clock.now().getTime()
-        this.breakers.set(breakerKey, breakerAfter(this.breakers.get(breakerKey) ?? CLOSED, ran.kind !== "failed", now))
+        this.breakers.set(breakerKey, breakerAfter(this.breakerOf(breakerKey), ran.kind !== "failed", now))
         return this.answer(caller, resolved, args, ran, started)
     }
 
     private async answer(
         caller: GatewayCaller,
         resolved: Resolved,
-        args: JsonObject,
+        args: GatewayJson,
         ran: Ran,
         started: number,
     ): Promise<GatewayCallResult> {
-        const secrets = resolved.spec.secretFields ?? []
         if (ran.kind === "failed") {
-            await this.audit(caller, resolved, args, { outcome: ran.outcome, code: ran.code, summary: "", started })
-            return { ok: false, code: "unavailable", detail: ran.code }
+            const unknown = ran.outcome === "timeout" && resolved.spec.scope !== "read"
+            const code = unknown ? "unknown_outcome" : ran.code
+            await this.audit(caller, resolved, args, { outcome: ran.outcome, code, summary: "", started })
+            return { ok: false, code: unknown ? "unknown_outcome" : "unavailable", detail: ran.code }
         }
-        const summary = summaryOf(ran.value, secrets)
+        const summary = summaryOf(ran.value, resolved.spec.secretFields)
         if (ran.kind === "tool_error") {
             await this.audit(caller, resolved, args, { outcome: "error", code: "tool_error", summary, started })
             return { ok: false, code: "tool_error", detail: summary }
@@ -205,94 +333,77 @@ export class McpGatewayService {
         return { connector, spec, name: fullNameOf(connector.manifest.key, spec.name) }
     }
 
-    /** Runs the adapter under the time limit; every failure is an answer. */
-    private async run(
-        workspaceId: string,
-        connector: WorkspaceConnector,
-        tool: string,
-        args: JsonObject,
-    ): Promise<Ran> {
+    /** Runs the adapter under the connector's time limit; every failure is an answer. */
+    private async run(workspaceId: string, resolved: Resolved, args: GatewayJson): Promise<Ran> {
+        const { connector, spec } = resolved
+        const adapter = this.natives.find(
+            (entry) => connector.manifest.kind === "native" && entry.manifest.key === connector.manifest.key,
+        )
         try {
-            if (connector.manifest.kind === "remote") {
-                const result = await this.remote.call(this.endpointOf(connector), tool, args, connector.timeoutMs)
-                return result.isError
-                    ? { kind: "tool_error", value: result.value }
-                    : { kind: "ok", value: result.value }
+            if (adapter !== undefined) {
+                return {
+                    kind: "ok",
+                    value: await this.native(adapter, workspaceId, spec.name, connector.timeoutMs, args),
+                }
             }
-            return { kind: "ok", value: await this.native(workspaceId, connector, tool, args) }
+            const result = await this.remote.call({
+                endpoint: { url: connector.url ?? "", credentialRef: connector.credentialRef },
+                name: spec.name,
+                args,
+                timeoutMs: connector.timeoutMs,
+            })
+            return { kind: result.isError ? "tool_error" : "ok", value: result.value }
         } catch (cause) {
             this.logger.error(McpGatewayLogEvent.CallFailed, cause, {
                 workspaceId,
                 connector: connector.manifest.key,
-                tool,
+                tool: spec.name,
             })
-            const timedOut =
-                (cause instanceof McpError && cause.code === McpErrorCode.Timeout) ||
-                (cause instanceof McpGatewayError && cause.code === McpGatewayErrorCode.Timeout)
-            const code = cause instanceof McpError || cause instanceof McpGatewayError ? cause.code : "internal"
-            return { kind: "failed", outcome: timedOut ? "timeout" : "error", code }
+            return { kind: "failed", outcome: isTimeout(cause) ? "timeout" : "error", code: failureCodeOf(cause) }
         }
     }
 
+    /**
+     * Runs a native adapter, refused with `MCP_GATEWAY_TIMEOUT` when it outlasts the connector's time limit; the deadline is the
+     * platform timer port (the one the readiness probe uses), released as soon as the adapter answers.
+     */
     private async native(
+        adapter: NativeAdapter,
         workspaceId: string,
-        connector: WorkspaceConnector,
         tool: string,
-        args: JsonObject,
-    ): Promise<JsonObject> {
-        const adapter = this.natives.find((entry) => entry.manifest.key === connector.manifest.key)
-        if (adapter === undefined)
-            throw new McpGatewayError({ code: McpGatewayErrorCode.UnknownTool, params: { tool } })
-        let timer: NodeJS.Timeout | undefined
-        const limit = new Promise<never>((_resolve, reject) => {
-            timer = setTimeout(() => {
-                reject(new McpGatewayError({ code: McpGatewayErrorCode.Timeout, params: { tool } }))
-            }, connector.timeoutMs)
+        timeoutMs: number,
+        args: GatewayJson,
+    ): Promise<GatewayJson> {
+        const cancels: Array<() => void> = []
+        const deadline = new Promise<never>((_resolve, reject) => {
+            cancels.push(
+                this.timeout.schedule(() => {
+                    reject(new McpGatewayError({ code: McpGatewayErrorCode.Timeout, params: { tool } }))
+                }, timeoutMs),
+            )
         })
         try {
-            return await Promise.race([adapter.invoke(workspaceId, tool, args), limit])
+            return await Promise.race([adapter.invoke(workspaceId, tool, args), deadline])
         } finally {
-            clearTimeout(timer)
+            for (const cancel of cancels) cancel()
         }
     }
 
-    /** The endpoint of a remote connector with its credential, read by NAME from the secrets the gateway holds. */
-    private endpointOf(connector: WorkspaceConnector): McpEndpoint {
-        const ref = connector.credentialRef
-        if (ref === null) return { url: connector.url ?? "", bearer: null }
-        const secret = this.options.credentials.get(ref)
-        if (secret === undefined) {
-            throw new McpGatewayError({ code: McpGatewayErrorCode.CredentialMissing, params: { ref } })
-        }
-        return { url: connector.url ?? "", bearer: secret.reveal() }
-    }
-
-    private async audit(
-        caller: GatewayCaller,
-        resolved: Resolved,
-        args: JsonObject,
-        line: {
-            readonly outcome: CallOutcome
-            readonly code: string | null
-            readonly summary: string
-            readonly started: number
-        },
-    ): Promise<void> {
-        const secrets = resolved.spec.secretFields ?? []
-        await this.entityManager.query(INSERT_CALL_LOG, [
-            caller.workspaceId,
-            resolved.connector.manifest.key,
-            resolved.name,
-            caller.agentId,
-            caller.conversationId,
-            caller.workItemId,
-            JSON.stringify(masked(args, secrets)),
-            argsHashOf(args),
-            line.outcome,
-            line.code,
-            line.summary,
-            Math.max(0, this.clock.now().getTime() - line.started),
-            caller.approvedBy ?? null,
-        ])
+    private async audit(caller: GatewayCaller, resolved: Resolved, args: GatewayJson, line: AuditLine): Promise<void> {
+        await this.callLog.append({
+            workspaceId: caller.workspaceId,
+            connector: resolved.connector.manifest.key,
+            tool: resolved.name,
+            agentId: caller.agentId,
+            conversationId: caller.conversationId,
+            workItemId: caller.workItemId,
+            argsMaskedJson: JSON.stringify(masked(args, resolved.spec.secretFields)),
+            argsHash: argsHashOf(args),
+            outcome: line.outcome,
+            errorCode: line.code,
+            resultSummary: line.summary,
+            durationMs: Math.max(0, this.clock.now().getTime() - line.started),
+            approvedBy: caller.approvedBy ?? null,
+        })
     }
 }

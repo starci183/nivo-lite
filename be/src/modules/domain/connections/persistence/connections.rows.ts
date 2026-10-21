@@ -14,7 +14,7 @@ export interface ConnectionSelectRow {
     readonly status: string
     /** The last failure message shown to the user; null when the connection is healthy. */
     readonly last_error: string | null
-    /** `test` or `live`: credits from a test connection are stored as simulated money; null reads as live. */
+    /** `test` or `live`: credits from a test connection are refused before any business record; null reads as live. */
     readonly environment: string | null
     /** Whether this is the workspace default of its provider; null for providers without a default. */
     readonly is_default: boolean | null

@@ -21,3 +21,6 @@ export type OptionalDelegationId = DelegationIdRow | null
 
 /** A settled render's delegation, or null when nobody delegated it. */
 export type OptionalDelegationRender = DelegationRenderRow | null
+
+/** Why a render failed, as the renderer reported it, or null when it gave no reason. */
+export type OptionalFailureReason = string | null

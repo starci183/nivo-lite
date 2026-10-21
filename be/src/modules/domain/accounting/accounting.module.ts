@@ -3,11 +3,15 @@ import type { DynamicModule } from "@nestjs/common"
 import { ACCOUNTING_GATEWAY } from "./accounting-gateway.decorators"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./accounting.module-definition"
 import { AccountingBookService } from "./accounting-book.service"
+import { AccountingDecisionsService } from "./accounting-decisions.service"
+import { AccountingPerformersRegistrarService } from "./accounting-performers-registrar.service"
 import { AccountingRoomService } from "./accounting-room.service"
 import { AccountingService } from "./accounting.service"
 import { DeskDailyService } from "./desk-daily.service"
 import { EinvoiceReviewService } from "./einvoice-review.service"
-import { FolioReconcileService } from "./folio-reconcile.service"
+import { ReceivablePaymentPerformerService } from "./receivable-payment-performer.service"
+import { ReceivableReconcileService } from "./receivable-reconcile.service"
+import { SupplierPaymentsService } from "./supplier-payments.service"
 import { UnwiredAccountingGatewayService } from "./unwired-accounting-gateway.service"
 
 @Module({})
@@ -17,7 +21,18 @@ export class AccountingModule extends ConfigurableModuleClass {
     static register(options: typeof OPTIONS_TYPE): DynamicModule {
         const base = super.register(options)
         const gateway = options.gateway ?? UnwiredAccountingGatewayService
-        const desk = [AccountingRoomService, DeskDailyService, EinvoiceReviewService, FolioReconcileService]
+        const desk = [
+            AccountingRoomService,
+            DeskDailyService,
+            EinvoiceReviewService,
+            ReceivableReconcileService,
+            SupplierPaymentsService,
+        ]
+        const decisions = [
+            AccountingDecisionsService,
+            ReceivablePaymentPerformerService,
+            AccountingPerformersRegistrarService,
+        ]
         return {
             ...base,
             providers: [
@@ -25,6 +40,7 @@ export class AccountingModule extends ConfigurableModuleClass {
                 AccountingBookService,
                 AccountingService,
                 ...desk,
+                ...decisions,
                 gateway,
                 { provide: ACCOUNTING_GATEWAY, useExisting: gateway },
             ],

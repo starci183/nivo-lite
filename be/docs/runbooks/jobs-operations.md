@@ -91,5 +91,5 @@ To stop consuming without losing anything: the worker switch of the api (see the
 
 ```bash
 npm run db:start        # local Supabase (pgmq ships in the image); it prints the URL and the keys
-npm run dev:be          # the api in watch mode (ts-node-dev) against the local stack, env exported in your shell (see README.md)
+npm run dev:be:api          # the api in watch mode (ts-node-dev) against the local stack, env exported in your shell (see README.md)
 ```

@@ -85,7 +85,6 @@ export class WorkspaceMailerService implements N8nMailer {
                 subject_type: email.subjectType,
                 subject_id: email.subjectId,
                 lead_id: email.leadId,
-                origin: "live",
                 dedupeKey: email.dedupeKey,
                 preset: true,
                 noChain: true,

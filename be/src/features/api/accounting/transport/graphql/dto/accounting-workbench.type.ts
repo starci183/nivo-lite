@@ -32,6 +32,10 @@ export class AccountingWorkbenchType {
     @Field(() => [AccountingCreditType])
     credits!: ReadonlyArray<AccountingCreditType>
 
+    /** The display name of the connector that feeds payment credits, or null when none is connected. */
+    @Field(() => String, { nullable: true })
+    creditsSource!: string | null
+
     /** invoices. */
     @Field(() => [AccountingInvoiceType])
     invoices!: ReadonlyArray<AccountingInvoiceType>

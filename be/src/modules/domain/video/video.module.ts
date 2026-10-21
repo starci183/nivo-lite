@@ -58,6 +58,7 @@ export class VideoModule extends ConfigurableModuleClass {
             ],
             exports: [
                 VIDEO_ASSETS,
+                VideoBrandKitsModule,
                 VideoService,
                 VideoRenderService,
                 VideoMediaService,

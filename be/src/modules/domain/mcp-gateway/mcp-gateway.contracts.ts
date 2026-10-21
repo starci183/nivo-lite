@@ -1,11 +1,15 @@
-/** How far an agent may use a tool: alone, after a person approves, or not at all (the default). */
-export type GrantMode = "auto" | "ask" | "never"
+import type { ConnectionActor } from "@modules/domain/connections"
+import type { ArgConstraint, GrantMode } from "@modules/domain/mcp-tool-grants"
+import type { McpRpcResponse } from "@modules/integrations/mcp"
 
 /** What a tool does to the connected system. */
 export type ToolScope = "read" | "write" | "restricted"
 
-/** A JSON object argument or result. */
-export type JsonObject = Readonly<Record<string, unknown>>
+/** A JSON object argument or result of a gateway tool. */
+export interface GatewayJson {
+    /** Any member. */
+    readonly [member: string]: unknown
+}
 
 /** One tool of a connector, without the namespace. */
 export interface GatewayToolSpec {
@@ -16,22 +20,83 @@ export interface GatewayToolSpec {
     /** Read, write or restricted. */
     readonly scope: ToolScope
     /** Its JSON schema. */
-    readonly inputSchema: JsonObject
+    readonly inputSchema: GatewayJson
     /** The mode a new grant starts at. */
     readonly defaultMode: GrantMode
     /** Members masked in the audit besides the standard secret names. */
     readonly secretFields?: ReadonlyArray<string>
+    /**
+     * The argument a side-effect tool takes its replay key in (for example `idempotencyKey`); the gateway fills it on every call that
+     * names none, so a retry or a replayed approval of the same step never acts twice.
+     */
+    readonly idempotencyArg?: string
+    /** The NIVO capability this tool plays, when it declares one (see `CapabilityRole`). */
+    readonly role?: CapabilityRole
 }
+
+/**
+ * The small vocabulary of capabilities a deterministic NIVO flow asks a workspace for, without naming any connector. A tool
+ * declares its role (a remote MCP tool by `_meta["nivo/role"]` in `tools/list`, pinned with its schema hash; a native tool in its
+ * manifest), and `McpGatewayService.toolForRole` finds it. Each role fixes a minimal argument and answer shape; anything else a
+ * connector sends stays opaque `GatewayJson`:
+ * - `identity.find` `{ channel, externalId }` -> `{ found: boolean, partyId?: string, name?: string }`
+ * - `identity.upsert` `{ channel, externalId, name?, phone? }` -> `{ partyId: string }`
+ * - `receivable.find` `{ reference }` (the raw payment memo; the connector parses its own format) ->
+ *   `{ found: boolean, receivableId?: string, balanceVnd?: number }`
+ * - `receivable.recordPayment` `{ receivableId, amountVnd, paymentRef }` -> `{ paymentId: string, duplicate?: boolean }`
+ * - `payment.credits.list` `{ status?, since?, limit? }` -> `{ transactions: [{ id, amountVnd, reference, payer, status, occurredAt }] }`
+ * - `payment.debits.list` (money out, for example supplier payments) takes and answers the same shapes as the credits
+ * - `invoice.list` `{ since?: YYYY-MM-DD, limit? }` -> `{ invoices: [{ id, sellerTaxCode, sellerName, number, series, issuedOn,
+ *   totalVnd, vatVnd, format }] }`
+ */
+export type CapabilityRole =
+    | "identity.find"
+    | "identity.upsert"
+    | "receivable.find"
+    | "receivable.recordPayment"
+    | "payment.credits.list"
+    | "payment.debits.list"
+    | "invoice.list"
+
+/** The tool a workspace plays a role with. */
+export interface RoleTool {
+    /** The role. */
+    readonly role: CapabilityRole
+    /** The full name `<connector>.<tool>` to call. */
+    readonly name: string
+    /** The connector key. */
+    readonly connector: string
+    /** The connector's display name, for the source label of what the tool answered. */
+    readonly connectorName: string
+}
+
+/** Whether a workspace can play some roles now, and which connectors could play each role of the vocabulary. */
+export interface RoleReadiness {
+    /** True when every asked role has a usable tool (no role asked is ready). */
+    readonly ready: boolean
+    /** The asked roles no usable tool plays. */
+    readonly missing: ReadonlyArray<CapabilityRole>
+    /**
+     * For every role of the vocabulary, the display names of the workspace's connectors whose catalog declares it, installed or
+     * installable, approved or not: the data of "connect one of these".
+     */
+    readonly providers: Readonly<Record<CapabilityRole, ReadonlyArray<string>>>
+}
+
+/** The tool of a role, or the typed answer that the workspace has none (no installed, approved tool declares it). */
+export type RoleResolution =
+    | { readonly ok: true; readonly tool: RoleTool }
+    | { readonly ok: false; readonly code: "no_capability"; readonly role: CapabilityRole }
 
 /** The manifest of a connector: its namespace, contract and tools. */
 export interface GatewayConnectorManifest {
-    /** The namespace, for example "hakuen". */
+    /** The namespace, for example "shop". */
     readonly key: string
     /** The display name. */
     readonly name: string
     /** Native (code) or remote (MCP server). */
     readonly kind: "native" | "remote"
-    /** The contract version, for example "hakuen-mcp@1". */
+    /** The contract version, for example "shop-mcp@1". */
     readonly contractVersion: string
     /** The tools. */
     readonly tools: ReadonlyArray<GatewayToolSpec>
@@ -50,16 +115,17 @@ export interface WorkspaceConnector {
     readonly url: string | null
     /** The NAME of the credential secret, never its value. */
     readonly credentialRef: string | null
-    /** The per-call limit in milliseconds. */
+    /** The per-call limit in milliseconds, within the gateway's bounds. */
     readonly timeoutMs: number
-}
-
-/** A generic argument constraint of a grant: the numeric argument `arg` runs alone up to `max` (configured per workspace). */
-export interface ArgConstraint {
-    /** The tool argument, for example "discountPct" of hakuen.booking.confirm. */
-    readonly arg: string
-    /** The largest value allowed without a person. */
-    readonly max: number
+    /**
+     * The tools that may run: null for a native connector (its tools are code), else the remote tools whose live schema hash
+     * equals the hash an owner or manager approved. A new or changed remote tool is not in it until it is approved.
+     */
+    readonly approvedTools: ReadonlySet<string> | null
+    /** When its catalog was approved, ISO text, or null. */
+    readonly approvedAt: string | null
+    /** When it was last checked (a health check or a catalog read), ISO text, or null. */
+    readonly checkedAt: string | null
 }
 
 /** One grant of a tool (or `connector.*`) to an agent. */
@@ -86,10 +152,15 @@ export interface GatewayCaller {
     readonly workItemId: string | null
     /** The person who approved this exact call, when it replays an approval. */
     readonly approvedBy?: string
+    /**
+     * The stable key of the step this call is (for example `<workItemId>:<step>` or the inbound message id): a re-run of the
+     * same step passes the same key. A side-effect remote call derives its replay key from it, else from the work item.
+     */
+    readonly opKey?: string
 }
 
 /** Why a call needs a person. */
-export type ApprovalReason = "ask_mode" | "price_exception" | "over_limit_vnd" | "no_rule"
+export type ApprovalReason = "ask_mode" | "over_constraint" | "over_limit_vnd" | "no_rule"
 
 /** What the grant check decided for one call. */
 export type GrantVerdict =
@@ -99,11 +170,18 @@ export type GrantVerdict =
 
 /** Why a call did not produce a result. */
 export type GatewayFailure =
-    "invalid_name" | "unknown_tool" | "connector_disabled" | "not_granted" | "unavailable" | "tool_error"
+    | "invalid_name"
+    | "unknown_tool"
+    | "connector_disabled"
+    | "schema_unapproved"
+    | "not_granted"
+    | "unavailable"
+    | "tool_error"
+    | "unknown_outcome"
 
 /** The answer of one gateway call. */
 export type GatewayCallResult =
-    | { readonly ok: true; readonly value: JsonObject }
+    | { readonly ok: true; readonly value: GatewayJson }
     | { readonly ok: false; readonly code: "approval_required"; readonly reason: ApprovalReason }
     | { readonly ok: false; readonly code: GatewayFailure; readonly detail: string }
 
@@ -122,45 +200,18 @@ export interface DiscoveredTool {
 /** One tool described in full for a caller. */
 export interface DescribedTool extends DiscoveredTool {
     /** Its schema. */
-    readonly inputSchema: JsonObject
+    readonly inputSchema: GatewayJson
     /** The caller's argument constraints. */
     readonly constraints: ReadonlyArray<ArgConstraint>
     /** The caller's amount limit, or null. */
     readonly limitVnd: number | null
 }
 
+/** A granted tool described in full, or null when it does not exist or the caller is not granted it. */
+export type OptionalDescribedTool = DescribedTool | null
+
 /** Outcome of an audited call. */
 export type CallOutcome = "ok" | "error" | "refused" | "approval" | "timeout" | "circuit_open"
-
-/** One line of the audit log. */
-export interface CallLogEntry {
-    /** The workspace. */
-    readonly workspaceId: string
-    /** The connector key. */
-    readonly connector: string
-    /** The full tool name. */
-    readonly tool: string
-    /** The agent. */
-    readonly agentId: string | null
-    /** The conversation. */
-    readonly conversationId: string | null
-    /** The work item. */
-    readonly workItemId: string | null
-    /** The masked arguments. */
-    readonly argsMasked: JsonObject
-    /** The sha256 of the real arguments. */
-    readonly argsHash: string
-    /** The outcome. */
-    readonly outcome: CallOutcome
-    /** The failure code, or null. */
-    readonly errorCode: string | null
-    /** The masked summary of the result. */
-    readonly resultSummary: string
-    /** How long it took. */
-    readonly durationMs: number
-    /** Who approved it, or null. */
-    readonly approvedBy: string | null
-}
 
 /** One audit line as the console reads it. */
 export interface CallLogView {
@@ -214,16 +265,45 @@ export interface ConnectorView {
     readonly contractVersion: string
     /** The per-call limit. */
     readonly timeoutMs: number
-    /** The full names of its tools with their scope and default mode. */
-    readonly tools: ReadonlyArray<{ readonly name: string; readonly scope: ToolScope; readonly description: string }>
+    /** When its catalog was approved, ISO text, or null. */
+    readonly approvedAt: string | null
+    /** When it was last checked, ISO text, or null. */
+    readonly checkedAt: string | null
+    /** The full names of its tools with their scope, description and approval. */
+    readonly tools: ReadonlyArray<ConnectorToolView>
+}
+
+/** One tool of a connector as the console lists it. */
+export interface ConnectorToolView {
+    /** True when the tool may run: native, or a remote tool whose live schema is the approved one. */
+    readonly approved: boolean
+    /** The full name. */
+    readonly name: string
+    /** Its scope. */
+    readonly scope: ToolScope
+    /** What it does. */
+    readonly description: string
 }
 
 /** The state of a connector's breaker. */
 export interface BreakerState {
+    /** Closed (calls run), open (calls are refused) or half-open (one probe call runs, the others are refused). */
+    readonly phase: BreakerPhase
     /** When the recent failures happened, epoch ms. */
     readonly failures: ReadonlyArray<number>
-    /** Until when it stays open, epoch ms, or null when closed. */
+    /** Until when it stays open, epoch ms, or null when it is not open. */
     readonly openUntil: number | null
+}
+
+/** The phase of a connector's breaker. */
+export type BreakerPhase = "closed" | "open" | "half_open"
+
+/** What the breaker decides for one call now: whether it runs, and the state to keep. */
+export interface BreakerGate {
+    /** True when the call may run. */
+    readonly allowed: boolean
+    /** The state after the decision (an open breaker past its pause turns half-open for the one probe it lets through). */
+    readonly state: BreakerState
 }
 
 /** A native connector: its manifest and how it runs a tool. */
@@ -231,5 +311,67 @@ export interface NativeAdapter {
     /** The manifest. */
     readonly manifest: GatewayConnectorManifest
     /** Runs one tool for a workspace. */
-    invoke(workspaceId: string, tool: string, args: JsonObject): Promise<JsonObject>
+    invoke(workspaceId: string, tool: string, args: GatewayJson): Promise<GatewayJson>
+}
+
+/** The caller a request to the gateway's own endpoint proved: the agent its credential names, in the workspace it names. */
+export interface SurfacePrincipal {
+    /** The agent (the credential's subject). */
+    readonly agentId: string
+    /** The only workspace the credential acts for. */
+    readonly workspaceId: string
+}
+
+/** One JSON-RPC message to the gateway endpoint of a workspace, from an authenticated agent. */
+export interface SurfaceRequest {
+    /** The workspace the endpoint path names. */
+    readonly workspaceId: string
+    /** Who the credential proved. */
+    readonly principal: SurfacePrincipal
+    /** The parsed JSON-RPC body. */
+    readonly message: unknown
+}
+
+/** What the endpoint answers: the JSON-RPC response, or null for a notification. */
+export interface SurfaceReply {
+    /** The JSON-RPC response, or null. */
+    readonly body: McpRpcResponse | null
+}
+
+/** Which audit lines the console reads. */
+export interface CallLogQuery {
+    /** The owner or manager asking, in the workspace. */
+    readonly actor: ConnectionActor
+    /** How many lines (1 to 200); absent or null means fifty. */
+    readonly limit?: number | null
+}
+
+/** A remote connector to register. */
+export interface RemoteConnectorInput {
+    /** The namespace. */
+    readonly key: string
+    /** The display name. */
+    readonly name: string
+    /** The Streamable HTTP endpoint. */
+    readonly url: string
+    /** The NAME of the credential secret, or null / absent. */
+    readonly credentialRef?: string | null
+    /** The contract version. */
+    readonly contractVersion: string
+    /** The per-call limit; null / absent keeps the gateway default. */
+    readonly timeoutMs?: number | null
+}
+
+/** One grant to set. */
+export interface GrantInput {
+    /** The agent. */
+    readonly agentId: string
+    /** The full tool name or `connector.*`. */
+    readonly tool: string
+    /** The mode. */
+    readonly mode: GrantMode
+    /** The amount limit, or null / absent for none. */
+    readonly limitVnd?: number | null
+    /** The argument constraints as JSON ([{ "arg": "quantity", "max": 5 }]), or null / absent for none. */
+    readonly constraintsJson?: string | null
 }

@@ -157,12 +157,38 @@ describe("AgentBundleService", () => {
         expect(bundle.files[0]?.content).not.toContain("## Memory")
         expect(logger.error).toHaveBeenCalledWith(AgentsLogEvent.MemoryUnavailable, failure, { installationId: "i1" })
     })
+})
 
+describe("AgentBundleService", () => {
     it("refuses an installation whose module has no definition", async () => {
         const { service } = await build(mockEntityManager())
 
         await expect(service.build(installationOf({ module: "ghost" }))).rejects.toMatchObject({
             code: AgentsErrorCode.InstallationNotFound,
+        })
+    })
+
+    it("refuses to build in the setup mode, which binds no knowledge lens", async () => {
+        const entityManager = mockEntityManager()
+        const installations = mock<InstallationDirectory>()
+        const modules = mock<ModuleProfiles>({ knowledgeFolderOf: jest.fn(() => "chatbot") })
+        const catalog = mock<MessageCatalog>()
+        const logger = mock<Logger>()
+        const moduleRef = await Test.createTestingModule({
+            providers: [
+                AgentBundleService,
+                { provide: PRIMARY_ENTITY_MANAGER, useValue: entityManager },
+                { provide: AGENTS_INSTALLATIONS, useValue: installations },
+                { provide: AGENTS_KNOWLEDGE, useValue: null },
+                { provide: AGENTS_MODULES, useValue: modules },
+                { provide: MESSAGE_CATALOG, useValue: catalog },
+                { provide: LOGGER, useValue: logger },
+            ],
+        }).compile()
+        const service = moduleRef.get(AgentBundleService)
+
+        await expect(service.build(installationOf())).rejects.toMatchObject({
+            code: AgentsErrorCode.KnowledgeUnbound,
         })
     })
 })

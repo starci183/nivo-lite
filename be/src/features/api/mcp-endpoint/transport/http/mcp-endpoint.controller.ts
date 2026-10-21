@@ -1,42 +1,35 @@
-import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js"
-import { Controller, Headers, Param, Post, Req, Res } from "@nestjs/common"
-import type { Request, Response } from "express"
-import { GatewaySurfaceService } from "@modules/domain/mcp-gateway"
-import { surfaceServerOf } from "./mcp-surface.factory"
-
-const UNAUTHORIZED = 401
+import { Body, Controller, HttpCode, Param, Post } from "@nestjs/common"
+import type { CommandBus } from "@nestjs/cqrs"
+import { Credential, CurrentCredentialPrincipal } from "@modules/domain/identity"
+import type { CredentialPrincipal } from "@modules/domain/identity"
+import { InjectCommandBus } from "@modules/platform/cqrs"
+import { AnswerMcpRequestCommand } from "../../application/answer-mcp-request.command"
+import { McpEndpointPathRequest } from "./dto/mcp-endpoint-path.request"
+import { McpEndpointRequest } from "./dto/mcp-endpoint.request"
+import { McpEndpointResponse } from "./dto/mcp-endpoint.response"
+import { toAnswerMcpRequest, toMcpEndpointResponse } from "./mcp-endpoint.mapper"
 
 @Controller("mcp")
 /**
- * POST /mcp/:workspaceId, the one MCP endpoint (Streamable HTTP, stateless JSON) of a workspace's gateway. An agent presents
- * `Authorization: Bearer <MCP_GATEWAY_AGENT_TOKEN>` and `X-Nivo-Agent: <agentId>`; it then sees three tools (search, describe, call)
- * whatever the number of connectors, and every call goes through the gateway's grants, approvals, time limits and audit.
+ * POST /mcp/:workspaceId, the one MCP endpoint (stateless Streamable HTTP, JSON responses) of a workspace's gateway. The door takes
+ * a per-agent credential (`tool-token`): an API key bound to one agent of the workspace, which names the agent and its workspace;
+ * nothing the caller declares is trusted. A revoked key or the key of a deleted agent is refused before any tool runs.
  */
 export class McpEndpointController {
-    constructor(private readonly surface: GatewaySurfaceService) {}
+    constructor(@InjectCommandBus() private readonly commandBus: CommandBus) {}
 
-    /** Serves one JSON-RPC request of an authenticated agent. */
+    /** Answers one JSON-RPC message of an authenticated agent. */
     @Post(":workspaceId")
-    async handle(
-        @Param("workspaceId") workspaceId: string,
-        @Headers("authorization") authorization: string | undefined,
-        @Headers("x-nivo-agent") agentId: string | undefined,
-        @Req() request: Request,
-        @Res() response: Response,
-    ): Promise<void> {
-        const caller = await this.surface.authenticate(workspaceId, agentId ?? "", authorization)
-        if (caller === null) {
-            response.status(UNAUTHORIZED).json({ error: "unauthorized" })
-            return
-        }
-        const server = surfaceServerOf(this.surface, caller)
-        const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined, enableJsonResponse: true })
-        response.on("close", () => {
-            void transport.close()
-            void server.close()
-        })
-        await server.connect(transport)
-        const body: unknown = request.body
-        await transport.handleRequest(request, response, body)
+    @HttpCode(200)
+    @Credential({ kind: "tool-token", workflow: "mcp-gateway" })
+    async answer(
+        @Param() path: McpEndpointPathRequest,
+        @CurrentCredentialPrincipal() principal: CredentialPrincipal,
+        @Body() body: McpEndpointRequest,
+    ): Promise<McpEndpointResponse | null> {
+        const reply = await this.commandBus.execute(
+            new AnswerMcpRequestCommand({ request: toAnswerMcpRequest(path, principal, body) }),
+        )
+        return toMcpEndpointResponse(reply)
     }
 }

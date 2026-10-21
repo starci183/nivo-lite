@@ -15,6 +15,9 @@ import type {
     ChatConversation,
     OpenChatConversation,
     ChatHolder,
+    HandToAgentParams,
+    OptionalConversationParty,
+    RememberPartyParams,
 } from "./agent-conversations.contracts"
 import { AgentConversationsError, AgentConversationsErrorCode } from "./errors/agent-conversations.error"
 import type { CustomerConversationRow } from "./persistence/customer-conversations.rows"
@@ -26,10 +29,17 @@ import type {
     LeadConversationRow,
     TurnConversationRow,
     ChatConversationRow,
+    MovedConversationRow,
+    ConversationKindRow,
+    ConversationPartyRow,
 } from "./persistence/agent-conversations.rows"
 import {
     ARCHIVE_CONVERSATION,
     ATTACH_CONVERSATION_LEAD,
+    HAND_CONVERSATION_TO_AGENT,
+    FIND_CONVERSATION_KIND,
+    FIND_CONVERSATION_PARTY,
+    SET_CONVERSATION_PARTY,
     HAND_CONVERSATION_TO_PERSON,
     FIND_LATEST_LEAD_CONVERSATION,
     FIND_CONVERSATION,
@@ -92,7 +102,7 @@ export class AgentConversationsService {
         ).map(chatOf)
     }
 
-    /** Opens a test or simulated customer conversation inside the caller's transaction. */
+    /** Opens an owner test or test customer conversation inside the caller's transaction. */
     async openChat(input: OpenChatConversation, manager: EntityManager): Promise<ChatConversation> {
         const [row] = await manager.query<Array<ChatConversationRow>>(INSERT_CHAT_CONVERSATION, [
             input.workspaceId,
@@ -202,6 +212,50 @@ export class AgentConversationsService {
     /** A person holds the conversation from now on: the AI stays quiet until they hand it back. */
     async handToPerson(workspaceId: string, conversationId: string, holder: string): Promise<void> {
         await this.entityManager.query(HAND_CONVERSATION_TO_PERSON, [workspaceId, conversationId, holder])
+    }
+
+    /**
+     * Hands the conversation to another agent in the caller's transaction; true when it moved. It stays where it is while a person
+     * holds it or when that agent already speaks in it.
+     */
+    async handToAgent(params: HandToAgentParams): Promise<boolean> {
+        const moved = await params.manager.query<Array<MovedConversationRow>>(HAND_CONVERSATION_TO_AGENT, [
+            params.workspaceId,
+            params.conversationId,
+            params.agentId,
+            params.installationId,
+        ])
+        return moved.length > 0
+    }
+
+    /**
+     * True for an owner's test chat with an agent: its turns are real, but nothing it says may create a business record (no connector
+     * write, no hand-off). A conversation that does not exist is not a test chat.
+     */
+    async isTestChat(conversationId: string): Promise<boolean> {
+        const [row] = await this.entityManager.query<Array<ConversationKindRow>>(FIND_CONVERSATION_KIND, [
+            conversationId,
+        ])
+        return row?.kind === "test"
+    }
+
+    /** The connector party the conversation remembers, or null while it remembers none. */
+    async partyOf(workspaceId: string, conversationId: string): Promise<OptionalConversationParty> {
+        const [row] = await this.entityManager.query<Array<ConversationPartyRow>>(FIND_CONVERSATION_PARTY, [
+            workspaceId,
+            conversationId,
+        ])
+        return row === undefined ? null : { partyId: row.connector_party_id, name: row.connector_party_name ?? "" }
+    }
+
+    /** Remembers the party a connector answered for the conversation's customer; the latest answer wins. */
+    async rememberParty(params: RememberPartyParams): Promise<void> {
+        await this.entityManager.query(SET_CONVERSATION_PARTY, [
+            params.workspaceId,
+            params.conversationId,
+            params.party.partyId,
+            params.party.name,
+        ])
     }
 
     /** Locks a workspace's customer conversation in the caller's transaction, or returns null when it is absent. */

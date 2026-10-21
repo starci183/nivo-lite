@@ -128,8 +128,6 @@ Identity, URLs and crypto
 Payments and bank feeds
 
 - `SEPAY_WEBHOOK_API_KEY`, `SEPAY_BANK_ACCOUNT`, `SEPAY_BANK_CODE`, `SEPAY_ACCOUNT_NAME` (O as a group, needed for billing)
-- `BANK_WEBHOOK_SECRET` (O; the shared secret of the Vietcombank feed), `TELEGRAM_WORKSPACE_ID` (O; workspace that receives simulated bank credits)
-- `SEPAY_SIMULATE_URL` (O, local simulator only)
 
 Channels and providers
 
@@ -181,7 +179,6 @@ All paths are served by the api on `https://api.nivo.vn`; the same paths on `htt
 | `POST /api/connections/payos/:connectionId`         | `https://api.nivo.vn/api/connections/payos/<connectionId>` | payOS webhook URL in the payOS dashboard                                                                     |
 | `POST /api/connections/sepay/:connectionId`         | `https://api.nivo.vn/api/connections/sepay/<connectionId>` | SePay webhook of a workspace's bank feed (`Authorization: Apikey <key>` generated for the connection)        |
 | `POST /api/sepay/webhook`                           | `https://api.nivo.vn/api/sepay/webhook`                    | SePay webhook of the platform's own account (billing); `Authorization: Apikey <SEPAY_WEBHOOK_API_KEY>`       |
-| `POST /api/bank/vietcombank`                        | `https://api.nivo.vn/api/bank/vietcombank`                 | The Vietcombank forwarder (header `x-nivo-bank-secret` = `BANK_WEBHOOK_SECRET`)                              |
 | `GET/POST /api/connections/meta/webhook`            | `https://api.nivo.vn/api/connections/meta/webhook`         | Meta app > Webhooks. Verify token is `META_WEBHOOK_VERIFY_TOKEN`                                             |
 | `GET /api/connections/meta/callback`                | `https://api.nivo.vn/api/connections/meta/callback`        | Meta app > Facebook Login > Valid OAuth Redirect URIs                                                        |
 | `GET /api/connections/google/callback`              | `https://api.nivo.vn/api/connections/google/callback`      | Google Cloud OAuth client > Authorized redirect URIs                                                         |
@@ -224,7 +221,7 @@ The fe build: `fe/apps/web/next.config.ts` sets `output: "standalone"`; the Dock
 - [ ] **Login**: sign in at `https://app.nivo.vn/login` with email and password, and with Google. The browser calls `https://api.nivo.vn/graphql` with a bearer token (Network tab: 200, no CORS error). Sign out and in again.
 - [ ] **Console**: `/dashboard` and `/agents` render real data (seeds ran), no 401/403 loop.
 - [ ] **Chat turn**: send a Telegram test message to a connected bot; it arrives in `/inbox` and the agent answers through OpenClaw (the reply is not `direct_fallback`). `docker service logs nivo_api --since 10m` shows the turn with no repeating error.
-- [ ] **Payment webhook**: trigger a SePay delivery (a small real transfer, or the SePay simulator against `https://nivo.vn/api/sepay/webhook`); the order in `/billing` becomes paid and the credits appear. A request without the `Authorization: Apikey` header is refused with 401.
+- [ ] **Payment webhook**: trigger a SePay delivery with a small real transfer to the account SePay watches; the order in `/billing` becomes paid and the credits appear. A request without the `Authorization: Apikey` header is refused with 401.
 - [ ] **Booking**: open the public page `https://app.nivo.vn/b/<slug>` (the old `https://nivo.vn/b/<slug>` redirects there), book a slot; it appears in the workspace's booking list.
 - [ ] **Automation tick**: `select public.job_stats();` shows the `automation` and `shifts_alerts` queues moving; `failed24h` stays small; no `job-ops.alert.*` event and no `jobs.alert` row in `app_errors`. `select jobname, command from cron.job` lists the four baseline jobs and the pgmq ticks of the api schedulers, no job calling `net.http_post` or an `engine_*` function.
 - [ ] **Agent sync**: after a change in `/agents` the OpenClaw agent `ws-<first 8 characters of the workspace id>-chatbot` reflects it within one interval.

@@ -16,8 +16,6 @@ export interface SalesOrderRow {
     readonly amount_vnd: number | null
     /** `draft`, `confirmed`, `invoiced`, `paid` or `cancelled`. */
     readonly status: string
-    /** `live` or `simulated`. */
-    readonly origin: string
     /** Who confirmed it. */
     readonly confirmed_by: string | null
     /** When the order was confirmed. */

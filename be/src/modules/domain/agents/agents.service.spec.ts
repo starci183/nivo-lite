@@ -1,4 +1,11 @@
 import { Test } from "@nestjs/testing"
+import {
+    AGENT_BOUND_CONNECTION,
+    AGENT_LENS_COUNTS,
+    AGENT_OPEN_GAPS,
+    agentInstallationOf as installationOf,
+    agentMemberOf as memberOf,
+} from "@tests/fixtures/builders/agents.builder"
 import { FakeClock, builder, mock, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
@@ -10,7 +17,7 @@ import type { Logger } from "@modules/platform/logging"
 import { AgentBindingsService } from "@modules/domain/agent-connections"
 import { AGENTS_INSTALLATIONS, AGENTS_KNOWLEDGE } from "./agents.decorators"
 import { AgentsLogEvent } from "./agents.log-events"
-import type { Installation, InstallationDirectory, KnowledgeLens } from "./agents.port"
+import type { InstallationDirectory, KnowledgeLens } from "./agents.port"
 import { AgentsService } from "./agents.service"
 import { AgentsErrorCode } from "./errors/agents.error"
 import type { AgentRow } from "./persistence/agents.rows"
@@ -41,27 +48,6 @@ const AGENT: AgentRow = {
     created_at: "2026-10-01T00:00:00.000Z",
 }
 
-const installationOf = builder<Installation>({
-    id: "i1",
-    workspaceId: "w1",
-    module: "chatbot",
-    name: "Chatbot Q1",
-    isMulti: true,
-    agentId: "a1",
-    operatingMode: "assist",
-    settings: {},
-    activeContextVersionId: null,
-})
-
-const memberOf = builder<WorkspaceMember>({
-    userId: "u1",
-    workspaceId: "w1",
-    role: "manager",
-    staffId: null,
-    displayName: "Lan",
-    status: "active",
-})
-
 const itemRowOf = builder<DashboardItemRow>({
     id: "wi1",
     action: "reply_customer",
@@ -73,12 +59,6 @@ const itemRowOf = builder<DashboardItemRow>({
     total: "6",
 })
 
-const COUNTS = {
-    audience: "customer" as const,
-    documents: { public: 1, internal: 0 },
-    facts: { public: 2, internal: 0, restricted: 0 },
-}
-
 const build = async (entityManager: MockEntityManager, member: WorkspaceMember = memberOf()) => {
     const members = mock<WorkspaceMembersService>({ require: jest.fn(() => Promise.resolve(member)) })
     const installations = mock<InstallationDirectory>({
@@ -86,29 +66,11 @@ const build = async (entityManager: MockEntityManager, member: WorkspaceMember =
         byId: jest.fn(() => Promise.resolve(installationOf())),
     })
     const knowledge = mock<KnowledgeLens>({
-        countsFor: jest.fn(() => Promise.resolve(COUNTS)),
-        openGapsOf: jest.fn(() =>
-            Promise.resolve({
-                openCount: 2,
-                items: [{ id: "g1", question: "Opening hours?", count: 3, lastSeenAt: "2026-10-11T00:00:00.000Z" }],
-            }),
-        ),
+        countsFor: jest.fn(() => Promise.resolve(AGENT_LENS_COUNTS)),
+        openGapsOf: jest.fn(() => Promise.resolve(AGENT_OPEN_GAPS)),
     })
     const bindings = mock<AgentBindingsService>({
-        connectionsFor: jest.fn(() =>
-            Promise.resolve([
-                {
-                    id: "c1",
-                    provider: "telegram",
-                    name: "Shop bot",
-                    status: "connected",
-                    access: "auto" as const,
-                    purpose: "inbound_chat" as const,
-                    botUsername: null,
-                    accountMasked: null,
-                },
-            ]),
-        ),
+        connectionsFor: jest.fn(() => Promise.resolve([AGENT_BOUND_CONNECTION])),
     })
     const logger = mock<Logger>()
     const moduleRef = await Test.createTestingModule({
@@ -124,6 +86,27 @@ const build = async (entityManager: MockEntityManager, member: WorkspaceMember =
         ],
     }).compile()
     return { service: moduleRef.get(AgentsService), members, installations, knowledge, bindings, logger }
+}
+
+/** The setup mode binds no knowledge lens, which the service holds as null. */
+const buildSetupMode = async (entityManager: MockEntityManager) => {
+    const members = mock<WorkspaceMembersService>({ require: jest.fn(() => Promise.resolve(memberOf())) })
+    const installations = mock<InstallationDirectory>({ byId: jest.fn(() => Promise.resolve(installationOf())) })
+    const bindings = mock<AgentBindingsService>({ connectionsFor: jest.fn(() => Promise.resolve([])) })
+    const logger = mock<Logger>()
+    const moduleRef = await Test.createTestingModule({
+        providers: [
+            AgentsService,
+            { provide: PRIMARY_ENTITY_MANAGER, useValue: entityManager },
+            { provide: CLOCK, useValue: new FakeClock("2026-10-12T10:00:00.000Z") },
+            { provide: LOGGER, useValue: logger },
+            { provide: AGENTS_INSTALLATIONS, useValue: installations },
+            { provide: AGENTS_KNOWLEDGE, useValue: null },
+            { provide: WorkspaceMembersService, useValue: members },
+            { provide: AgentBindingsService, useValue: bindings },
+        ],
+    }).compile()
+    return { service: moduleRef.get(AgentsService), logger }
 }
 
 describe("AgentsService", () => {
@@ -368,6 +351,20 @@ describe("AgentsService", () => {
             expect(logger.error).toHaveBeenCalledWith(AgentsLogEvent.DashboardRegionFailed, failure, {
                 region: "waiting",
             })
+        })
+
+        it("fails the knowledge region alone in the setup mode, which binds no knowledge lens", async () => {
+            const em = mockEntityManager({ query: [LIST_WAITING_ITEMS, []] })
+            const { service, logger } = await buildSetupMode(em)
+
+            const data = await service.dashboard("u1", { workspaceId: "w1", module: "chatbot" })
+
+            expect(data.knowledge).toEqual({ ok: false })
+            expect(logger.error).toHaveBeenCalledWith(
+                AgentsLogEvent.DashboardRegionFailed,
+                expect.objectContaining({ code: AgentsErrorCode.KnowledgeUnbound }),
+                { region: "knowledge" },
+            )
         })
     })
 })

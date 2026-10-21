@@ -65,3 +65,18 @@ export const INSERT_HUMAN_MESSAGE = sql`INSERT INTO public.agent_messages (id, w
 VALUES (COALESCE($1::uuid, gen_random_uuid()), $2::uuid, $3::uuid, 'agent', $4, 'human', $5)
 ON CONFLICT (id) DO NOTHING
 RETURNING id`
+
+/**
+ * The messages customers wrote to a workspace per Vietnam day and channel, between two days ($1 workspace, $2 from inclusive,
+ * $3 to exclusive, both `YYYY-MM-DD` in Vietnam time). Only the customer side of real customer conversations is counted.
+ */
+export const COUNT_CUSTOMER_MESSAGES_PER_DAY = sql`SELECT c.channel,
+to_char((m.created_at AT TIME ZONE 'Asia/Ho_Chi_Minh')::date, 'YYYY-MM-DD') AS day, count(*)::integer AS messages
+FROM public.agent_messages m
+JOIN public.agent_conversations c ON c.id = m.conversation_id AND c.workspace_id = m.workspace_id
+WHERE m.workspace_id = $1 AND m.role = 'user' AND c.kind = 'customer' AND c.channel IN ('facebook', 'zalo')
+AND m.created_at >= ($2::date::timestamp AT TIME ZONE 'Asia/Ho_Chi_Minh')
+AND m.created_at < ($3::date::timestamp AT TIME ZONE 'Asia/Ho_Chi_Minh')
+GROUP BY 1, 2
+ORDER BY 2, 1
+LIMIT 400`

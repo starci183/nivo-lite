@@ -15,7 +15,7 @@ const build = async (workspaceId: string) => {
         }),
     }
     const recall = {
-        recall: jest.fn().mockResolvedValue({ brief: "BRIEF", passages: [{ title: "Menu", topic: null }] }),
+        recall: jest.fn().mockResolvedValue({ brief: "BRIEF", passages: [{ title: "Menu", topic: null }], facts: [] }),
     }
     const moduleRef = await Test.createTestingModule({
         providers: [

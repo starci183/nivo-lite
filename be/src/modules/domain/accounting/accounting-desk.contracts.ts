@@ -1,3 +1,5 @@
+import type { PaymentCredit, ReceivableSnapshot } from "./accounting-gateway.port"
+
 /** How often the workspace files VAT (and withheld PIT): monthly, or quarterly for a prior-year revenue up to 50 billion VND. */
 export type FilingPeriod = "monthly" | "quarterly"
 
@@ -155,6 +157,20 @@ export interface DailySummaryInput {
     readonly unmatched: number
     /** The upcoming deadlines, soonest first. */
     readonly upcoming: ReadonlyArray<UpcomingDue>
+    /** The tools that answered each role this morning, cited as the card's live sources. */
+    readonly tools: SummaryTools
+    /** The optional features that did not run because the workspace has no tool for their role, shown as not connected. */
+    readonly notConnected: ReadonlyArray<DeskFeature>
+}
+
+/** The tool that answered each role of the morning run; null when the workspace has none or nothing answered. */
+export interface SummaryTools {
+    /** The `invoice.list` tool. */
+    readonly invoices: string | null
+    /** The `payment.credits.list` tool. */
+    readonly credits: string | null
+    /** The `receivable.find` tool. */
+    readonly receivables: string | null
 }
 
 /** One label/value row of a hub card. */
@@ -191,8 +207,79 @@ export interface HubCardPayload {
     readonly fields?: ReadonlyArray<HubCardField>
     /** Lines, at most 20. */
     readonly lines?: ReadonlyArray<HubCardLine>
+    /** The decision the actions act on: the work item a person approves or declines. */
+    readonly ref?: HubCardRef
+    /** The actions offered; only with a ref. */
+    readonly actions?: ReadonlyArray<"approve" | "decline">
+    /** The sources the card was built from (hub-cards v1 `sources`, precedence order). */
+    readonly sources?: ReadonlyArray<HubCardSource>
     /** Type-specific data the Hub does not draw. */
     readonly data?: Readonly<Record<string, unknown>>
+}
+
+/** A payment the reconcile could not record alone: the receivable, the credit and the one-line summary. */
+export interface PaymentQuestion {
+    /** The receivable the memo names. */
+    readonly receivable: ReceivableSnapshot
+    /** The credit that does not pay its balance exactly. */
+    readonly credit: PaymentCredit
+    /** The one sentence the person decides on. */
+    readonly summary: string
+}
+
+/** An e-invoice the checks raised: its source reference and the one-line summary. */
+export interface InvoiceQuestion {
+    /** The invoice's source reference, unique per workspace. */
+    readonly ref: string
+    /** The one sentence the person decides on. */
+    readonly summary: string
+}
+
+/** An open supplier invoice and the outgoing payment that only partly matches it (the amount, or the invoice number). */
+export interface UnclearPayment {
+    /** The open supplier invoice. */
+    readonly payable: GatewayPayable
+    /** The outgoing payment, from the workspace's `payment.debits.list` tool. */
+    readonly debit: PaymentCredit
+}
+
+/** How the outgoing payments matched the open supplier invoices. */
+export interface PayableMatches {
+    /** The invoices an outgoing payment of their exact amount, naming their number, paid. */
+    readonly paid: ReadonlyArray<GatewayPayable>
+    /** The invoices still to pay. */
+    readonly open: ReadonlyArray<GatewayPayable>
+    /** The open invoices an outgoing payment only partly matches, each for the chief accountant to confirm. */
+    readonly unclear: ReadonlyArray<UnclearPayment>
+}
+
+/** A supplier payment the matching could not settle alone, with the one sentence the person decides on. */
+export interface SupplierPaymentQuestion extends UnclearPayment {
+    /** The one sentence the person decides on. */
+    readonly summary: string
+}
+
+/** The display name of a connector, or null when the workspace has none for the role. */
+export type OptionalConnectorName = string | null
+
+/** The work item an exception card decides (hub-cards v1 `ref`). */
+export interface HubCardRef {
+    /** Always a work item: the existing decision flow approves or declines it. */
+    readonly kind: "work_item"
+    /** The work item id. */
+    readonly id: string
+}
+
+/** One source a card used (hub-cards v1): its data layer, the kind of record, the record and how it reads. */
+export interface HubCardSource {
+    /** 1 MCP live data, 2 Second Brain, 3 agent self-learning, 4 NIVO base knowledge. */
+    readonly layer: 1 | 2 | 3 | 4
+    /** The kind of record, e.g. `mcp_tool`. */
+    readonly kind: string
+    /** The record, e.g. the tool name. */
+    readonly ref: string
+    /** What the reader sees. */
+    readonly label: string
 }
 
 /** The document tiles of the morning card. */
@@ -246,9 +333,28 @@ export interface DailySummaryCard {
     readonly hub: HubCardPayload
 }
 
+/**
+ * How a morning run ended: it ran; the workspace has no tax profile; the accounting module is not installed; the installation
+ * waits for its required connection (`needs_connection`); or it is not running for another reason (in setup, paused).
+ */
+export type DeskRunStatus = "ran" | "no_tax_profile" | "not_installed" | "needs_connection" | "not_running"
+
+/** An optional feature of the desk that runs only when the workspace has a tool for its role. */
+export type DeskFeature = "invoices" | "receivables"
+
+/** Which optional features the workspace has tools for: e-invoices (`invoice.list`) and the reconcile (`receivable.*`). */
+export interface DeskConnections {
+    /** Whether a tool plays `invoice.list`. */
+    readonly invoices: boolean
+    /** Whether tools play `receivable.find` and `receivable.recordPayment`. */
+    readonly receivables: boolean
+}
+
 /** What one morning run did for a workspace. */
 export interface DailyOutcome {
-    /** The card, or null when the workspace has no tax profile. */
+    /** How the run ended. */
+    readonly status: DeskRunStatus
+    /** The card, or null when the morning did not run. */
     readonly card: DailySummaryCard | null
     /** How many reminders went out. */
     readonly reminders: number
@@ -272,9 +378,11 @@ export interface ReviewTally {
     readonly needsReview: number
     /** Invoices with a wrong tax code. */
     readonly invalidTaxCode: number
+    /** The `invoice.list` tool that answered, or null when the workspace has none. */
+    readonly tool: string | null
 }
 
-/** A supplier invoice still to pay, as the gateway's `einvoice.list` answers it. */
+/** A supplier invoice still to pay, as the workspace's `invoice.list` tool answers it. */
 export interface GatewayPayable {
     /** The seller. */
     readonly supplier: string

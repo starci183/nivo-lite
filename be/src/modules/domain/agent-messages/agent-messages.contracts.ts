@@ -42,3 +42,13 @@ export interface AgentThreadMessage {
 
 /** The stable message id of an approved work item, or null for a newly generated id. */
 export type ApprovedMessageId = string | null
+
+/** The messages customers wrote on one channel on one Vietnam day. */
+export interface CustomerMessagesDay {
+    /** The channel (`facebook`, `zalo`). */
+    readonly channel: string
+    /** The day, `YYYY-MM-DD`. */
+    readonly day: string
+    /** How many messages customers wrote. */
+    readonly messages: number
+}

@@ -18,7 +18,7 @@ turns every granted key into one versioned Swarm secret (see the production READ
 | `HTTP_SECURITY_ALLOWED_ORIGINS` | `api-public.conf` | Comma-separated exact HTTPS origins of the console and the landing. |
 | `SITE_URL` | `api-public.conf` | The public origin of the console (`https://app.nivo.vn`); the browser return pages are served there. |
 | `PUBLIC_SITE_URL` | `api-public.conf` | The public origin of the console, used in links the api sends. |
-| `PUBLIC_API_URL` | `api-public.conf` | The public origin of the api (`https://api.nivo.vn`), used in webhook and callback URLs. |
+| `PUBLIC_API_URL` | `api-public.conf` | The public origin of the api (`https://api.nivo.vn`), used in webhook and callback URLs and as the base of the agents' tool door (`<origin>/agent-tools`); it must be https (http only for a loopback host) or the api refuses to boot. |
 | `PORT` | stack environment | The listener port (`8787`). |
 
 ## api: optional capabilities
@@ -32,7 +32,7 @@ The capability is off while its keys are absent; a group is all-or-none where no
 | `OPENCLAW_GATEWAY_URL` | Gateway URL (`ws://nivo-openclaw:18790`), set by the deploy block; absent or without credentials = the gateway is off. |
 | `OPENCLAW_GATEWAY_TOKEN` | Gateway token, granted to the api and to openclaw from the sealed `stack` member. |
 | `OPENCLAW_GATEWAY_PASSWORD` | Alternative gateway credential when no token exists; not used in production. |
-| `OPENCLAW_TOOL_SECRET` | Signs the tool calls OpenClaw makes back to the api; off while absent. |
+| `OPENCLAW_TOOL_SECRET` | Sealed `api`, read only through `OPENCLAW_TOOL_SECRET_FILE`: signs the per-turn tool token OpenClaw calls the api back with. Without it no token is minted, so a turn of an agent holding connector grants fails closed (`tools_not_configured`); other agents answer without tools. |
 | `OPENCLAW_MANAGE_AGENTS` | `true` or `false`; granted from the sealed `stack` member. |
 | `META_APP_ID` | The Meta app credentials (both or none); the Meta channels are off while absent. |
 | `META_APP_SECRET` | The Meta app credentials (both or none); the Meta channels are off while absent. |
@@ -41,6 +41,8 @@ The capability is off while its keys are absent; a group is all-or-none where no
 | `TELEGRAM_API_ID` | Telegram user-client application credentials (both or none); the user-account bridge is off while absent. |
 | `TELEGRAM_API_HASH` | Telegram user-client application credentials (both or none); the user-account bridge is off while absent. |
 | `CHANNEL_BOT_TOKEN` | Bot token of the channel provisioning helper; optional. |
+| `ZALO_APP_SECRET` | Zalo app secret the channel provisioning cli (`connect-channel zalo`) seals into the new connection; read only through `ZALO_APP_SECRET_FILE` on the operator machine for that run, optional, and granted to no service. |
+| `ZALO_OA_SECRET` | Zalo Official Account secret key the same cli seals beside the app secret; read only through `ZALO_OA_SECRET_FILE`, optional, and granted to no service. |
 | `VPS_SSH_KEY` | SSH key the n8n host helper uses to reach the VPS; optional, the helper is off while absent. |
 | `HTTP_SECURITY_TRUSTED_PROXY_HOPS` | `0`, `1` or `2`: trusted proxy hops before the api; optional. |
 | `OPENROUTER_API_KEY` | Language-model provider keys: read by the api model client (`llm.config.ts`) and, from the sealed `api` member, granted to openclaw. |
@@ -66,9 +68,9 @@ The gateway reads only these keys (`be/apps/mcp/src/mcp.env.ts`). Its secrets co
 | `PORT` | stack environment | The listener port (`8790`); internal only, on the private `agents` network as `nivo-mcp`. |
 | `PRIMARY_DB_URL` | sealed `api` (required) | The same `app_be` connection as the api: connectors, grants and the call audit. |
 | `PRIMARY_DB_SCHEMA` | stack environment | `public`. |
+| `HTTP_SECURITY_ALLOWED_ORIGINS` | stack environment | The OriginGuard and CORS allowlist (`https://app.nivo.vn`); the gateway has no browser caller, so only the console origin is listed. |
 | `MCP_GATEWAY_CREDENTIALS` | sealed `api` (optional until O14) | Comma-separated credential NAMES a remote connector row may reference (value `MCP_HAKUEN_CLIENT_SECRET`). Not itself a secret, but sealed because every `*_CREDENTIALS` binding is classed sensitive; the api receives it through its whole-member grant. |
-| `MCP_HAKUEN_CLIENT_SECRET` | sealed `api` (optional until O14) | Bearer credential the gateway sends to the HAKUEN MCP server; read through `MCP_HAKUEN_CLIENT_SECRET_FILE`. Absent = the `hakuen` connector is unavailable. |
-| `MCP_GATEWAY_AGENT_TOKEN` | not granted in production | The token an agent presents to `POST /mcp/<workspaceId>`. Not declared for the demo: the agent endpoint stays closed (the api's chat turns call the gateway in-process). |
+| `MCP_HAKUEN_CLIENT_SECRET` | sealed `api` (optional until O14) | Bearer credential the gateway sends to the HAKUEN MCP server; read through `MCP_HAKUEN_CLIENT_SECRET_FILE` (the api, and the cli when `seed-workspace profile` registers the connector and reads its catalog). Absent = the `hakuen` connector is unavailable. |
 | `MCP_GATEWAY_TIMEOUT_MS` | not set | Per-call timeout, default 4000. |
 
 ## Stack settings (sealed `stack`, read at render time)
@@ -94,7 +96,8 @@ The gateway reads only these keys (`be/apps/mcp/src/mcp.env.ts`). Its secrets co
 | `READY_OWNER_PASSWORD` | `test-accounts` | Ready-state accounts of the post-deploy smoke tests. |
 | `READY_STAFF_EMAIL` | `test-accounts` | Ready-state accounts of the post-deploy smoke tests. |
 | `READY_STAFF_PASSWORD` | `test-accounts` | Ready-state accounts of the post-deploy smoke tests. |
-| `WORKSPACE_SEED_INPUT` | `test-accounts` | Private ensure input (owner, manager, staff accounts and workspace name) the **seed demo workspace** workflow hands to `cli seed-workspace profile` as `WORKSPACE_SEED_INPUT_FILE`. |
+| `WORKSPACE_SEED_INPUT` | `test-accounts` | Private ensure input (owner, manager, staff accounts and workspace name) the **seed demo workspace** workflow (`.github/workflows/cli-deploy.yml`) hands to `cli seed-workspace profile` as `WORKSPACE_SEED_INPUT_FILE`. |
+| `WORKSPACE_PROFILE_INPUT` | `test-accounts` | Private profile input `{"schema":"nivo/workspace-profile-input@1","connectors":{"hakuen":{"url":"https://..."}}}`: the endpoint of each remote MCP connector the profile registers. The same workflow hands it to `cli seed-workspace profile` as `WORKSPACE_PROFILE_INPUT_FILE`; a dry run refuses when a connector endpoint is missing. |
 | `SUPABASE_ACCESS_TOKEN` | `ops` | Supabase management token, database password and project ref the database deploy workflow reads after `starci app secret materialize`. |
 | `SUPABASE_DB_PASSWORD` | `ops` | Supabase management token, database password and project ref the database deploy workflow reads after `starci app secret materialize`. |
 | `SUPABASE_PROJECT_ID` | `ops` | Supabase management token, database password and project ref the database deploy workflow reads after `starci app secret materialize`. |

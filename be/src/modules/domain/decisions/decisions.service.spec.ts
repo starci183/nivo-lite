@@ -56,7 +56,6 @@ const itemOf = builder<WorkItem>({
     evidence_state: "pending",
     assigned_staff_id: null,
     execution_id: null,
-    origin: "live",
     created_at: CURSOR_AT,
     updated_at: CURSOR_AT,
     completed_at: null,

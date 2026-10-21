@@ -48,7 +48,6 @@ type AccountingBookInvoiceType {
   leadId: String
   order: AccountingBookOrderBriefType
   orderId: String
-  origin: String!
   paidAt: String
   status: String!
   workspaceId: String!
@@ -78,7 +77,6 @@ type AccountingBookOrderType {
   lead: AccountingBookLeadType
   leadId: String
   orderNo: String!
-  origin: String!
   shippedAt: String
   status: String!
   trackingCode: String
@@ -94,7 +92,6 @@ type AccountingBookTransactionType {
   inboundEventId: String
   invoiceId: String
   occurredAt: String!
-  origin: String!
   payer: String
   reference: String
   status: String!
@@ -132,7 +129,6 @@ type AccountingCreditType {
   invoiceNo: String
   match: String!
   occurredAt: String!
-  origin: String!
   payer: String
   reference: String
   sourceKind: String!
@@ -147,7 +143,6 @@ type AccountingInvoiceType {
   invoiceNo: String!
   issuedAt: String
   orderNo: String
-  origin: String!
   paidAt: String
   status: String!
 }
@@ -161,7 +156,6 @@ type AccountingLedgerEntryType {
   kind: String!
   lineage: [AccountingLineageType!]!
   linked: String
-  origin: String!
   status: String!
   targetId: String!
   targetType: String!
@@ -177,8 +171,8 @@ type AccountingLineageType {
 }
 
 type AccountingMeasureType {
-  count: AccountingSplitType!
-  vnd: AccountingSplitType!
+  count: Int!
+  vnd: Float!
 }
 
 type AccountingOrderType {
@@ -188,7 +182,6 @@ type AccountingOrderType {
   id: String!
   items: String!
   orderNo: String!
-  origin: String!
 }
 
 type AccountingPeriodType {
@@ -253,7 +246,6 @@ type AccountingQuestionWorkType {
   lead: AccountingQuestionLeadType
   leadId: String
   missingFields: [String!]!
-  origin: String!
   parentId: String
   proposal: AccountingProposalType!
   reason: String
@@ -264,11 +256,6 @@ type AccountingQuestionWorkType {
   subjectType: String!
   updatedAt: String!
   workspaceId: String!
-}
-
-type AccountingSplitType {
-  live: Float!
-  simulated: Float!
 }
 
 type AccountingStaffType {
@@ -282,15 +269,14 @@ type AccountingStaffType {
 }
 
 type AccountingWaitingType {
-  count: AccountingSplitType!
+  count: Int!
   knownVnd: Float!
   unknownAmount: Int!
 }
 
 type AccountingWeekType {
-  live: Float!
-  simulated: Float!
   startIso: String!
+  vnd: Float!
 }
 
 type AccountingWorkResultType {
@@ -303,6 +289,7 @@ type AccountingWorkbenchType {
   ageing: AccountingAgeingType!
   canAdjust: Boolean!
   credits: [AccountingCreditType!]!
+  creditsSource: String
   excludedTest: Int!
   invoices: [AccountingInvoiceType!]!
   ledger: [AccountingLedgerEntryType!]!
@@ -924,6 +911,7 @@ input AgentTextsInput {
 }
 
 type ApiKeyType {
+  agentId: String
   createdAt: String!
   id: ID!
   lastUsedAt: String
@@ -984,6 +972,10 @@ input ApproveLeadGenCommentInput {
   workItemId: ID!
 }
 
+input ApproveMcpConnectorInput {
+  key: String!
+}
+
 input ApproveVideoProjectInput {
   projectId: ID!
 }
@@ -1016,6 +1008,11 @@ input AssignResponsibilityInput {
 input AssignWorkItemInput {
   staffId: ID
   workItemId: ID!
+}
+
+input AttachedFileInput {
+  contentBase64: String!
+  name: String!
 }
 
 input AuthorityPatchInput {
@@ -1525,6 +1522,52 @@ type BrainType {
   lessons: [BrainLessonType!]!
 }
 
+input BrandColorInput {
+  hex: String!
+  name: String!
+}
+
+type BrandColorType {
+  hex: String!
+  name: String!
+}
+
+input BrandKitInput {
+  address: String!
+  avoid: [String!]!
+  brandName: String!
+  colors: [BrandColorInput!]!
+  fonts: [String!]!
+  imagery: [String!]!
+  tone: String!
+}
+
+type BrandKitType {
+  address: String!
+  avoid: [String!]!
+  brandName: String!
+  colors: [BrandColorType!]!
+  fonts: [String!]!
+  imagery: [String!]!
+  tone: String!
+}
+
+type BrandProposalType {
+  createdAt: String!
+  decidedBy: String
+  fileName: String!
+  fileSize: Int!
+  id: ID!
+  installationId: ID
+  kit: BrandKitType!
+  setupSessionId: ID
+  status: String!
+}
+
+input BrandProposalsInput {
+  installationId: ID!
+}
+
 input CancelBookingInput {
   id: ID!
 }
@@ -1559,6 +1602,11 @@ input ChangeMemberRoleInput {
 input ChangeSmtpPasswordInput {
   connectionId: ID!
   password: String!
+}
+
+type ChannelValueType {
+  channel: String!
+  value: Int!
 }
 
 input ChatAnswerStatusInput {
@@ -1699,6 +1747,10 @@ type CheckInType {
   at: String!
 }
 
+input CheckMcpConnectorInput {
+  key: String!
+}
+
 input CheckMetaInput {
   connectionId: ID!
   repair: Boolean!
@@ -1750,6 +1802,11 @@ type ConnectionCheckType {
 type ConnectionGrantType {
   access: String!
   agentId: ID!
+}
+
+type ConnectionNeed {
+  providers: [String!]!
+  role: String!
 }
 
 type ConnectionType {
@@ -2134,6 +2191,7 @@ input CreateAgentInput {
 }
 
 input CreateApiKeyInput {
+  agentId: String
   name: String!
 }
 
@@ -2378,7 +2436,6 @@ type DashboardExceptionType {
   id: ID!
   lead: DashboardExceptionLeadType
   leadId: ID
-  origin: String
   reason: String
   status: String!
   summary: String
@@ -2403,7 +2460,6 @@ type DashboardGovernanceInvoiceType {
   invoiceNo: String
   leadId: ID
   orderId: ID
-  origin: String
   status: String!
 }
 
@@ -2412,7 +2468,6 @@ type DashboardGovernanceLeadType {
   contactName: String
   createdAt: String!
   id: ID!
-  origin: String
   stage: String!
 }
 
@@ -2422,7 +2477,6 @@ type DashboardGovernanceOrderType {
   items: String
   leadId: ID
   orderNo: String
-  origin: String
   status: String!
 }
 
@@ -2430,7 +2484,6 @@ type DashboardGovernanceTransactionType {
   amountVnd: Float
   id: ID!
   invoiceId: ID
-  origin: String
   payer: String
   reference: String
   status: String!
@@ -2590,6 +2643,12 @@ input DecideBrainFactInput {
 input DecideBrainLessonInput {
   action: String!
   id: ID!
+}
+
+input DecideBrandProposalInput {
+  decision: String!
+  kit: BrandKitInput
+  proposalId: ID!
 }
 
 input DecideExecutionInput {
@@ -3207,7 +3266,6 @@ type InboundEventType {
   id: ID!
   kind: String!
   leadId: ID
-  origin: String!
   senderContact: String
   senderName: String
   status: String!
@@ -3215,18 +3273,6 @@ type InboundEventType {
 
 input InboundEventsInput {
   limit: Int! = 40
-}
-
-input InboundSimulationStatusInput {
-  id: ID!
-}
-
-type InboundSimulationStatusType {
-  errorCode: String
-  event: SimulationEventType!
-  id: ID!
-  status: String!
-  workItem: SimulationWorkItemType
 }
 
 input InstallModuleInput {
@@ -3527,7 +3573,6 @@ type LeadBoardType {
   installationId: ID
   need: String!
   nextAction: String
-  origin: String
   ownerName: String
   stage: String!
 }
@@ -3591,7 +3636,6 @@ type LeadFlowInvoiceType {
   issuedBy: ID
   leadId: ID
   orderId: ID
-  origin: String!
   paidAt: String
   status: String!
   workspaceId: ID!
@@ -3615,7 +3659,6 @@ type LeadFlowOrderType {
   items: String!
   leadId: ID
   orderNo: String!
-  origin: String!
   shippedAt: String
   status: String!
   trackingCode: String
@@ -3652,7 +3695,6 @@ type LeadFlowTransactionType {
   inboundEventId: ID
   invoiceId: ID
   occurredAt: String!
-  origin: String!
   payer: String
   reference: String
   status: String!
@@ -3689,7 +3731,6 @@ type LeadFlowWorkItemType {
   lead: LeadFlowLeadType
   leadId: ID
   missingFields: [String!]!
-  origin: String!
   parentId: ID
   proposal: LeadFlowProposalType!
   reason: String
@@ -3812,7 +3853,6 @@ type LeadRecordType {
   id: ID!
   installationId: ID
   need: String!
-  origin: String
   stage: String!
 }
 
@@ -4243,6 +4283,10 @@ input MarkVideoPublishedInput {
   projectId: ID!
 }
 
+input MarketingReportInput {
+  weekStart: String! = ""
+}
+
 input McpCallLogInput {
   limit: Int
 }
@@ -4261,6 +4305,8 @@ type McpCallLogType {
 }
 
 type McpConnectorType {
+  approvedAt: String
+  checkedAt: String
   contractVersion: String!
   credentialRef: String
   key: String!
@@ -4282,6 +4328,7 @@ type McpToolGrantType {
 }
 
 type McpToolType {
+  approved: Boolean!
   description: String!
   name: String!
   scope: String!
@@ -4488,6 +4535,7 @@ type ModuleInstallationType {
   agentHandle: String!
   agentId: ID
   agentName: String!
+  connectionNeeds: [ConnectionNeed!]!
   createdAt: String!
   id: ID!
   isMulti: Boolean!
@@ -4567,6 +4615,7 @@ type Mutation {
   applyShiftsImport(input: ApplyShiftsImportInput!): ApplyImportType!
   applyToHiringJob(input: ApplyToHiringJobInput!): ApplyResultType!
   approveLeadGenComment(input: ApproveLeadGenCommentInput!): LeadGenCommentStatusType!
+  approveMcpConnector(input: ApproveMcpConnectorInput!): Int!
   approveVideoProject(input: ApproveVideoProjectInput!): VideoProjectType!
   archiveVideoProject(input: ArchiveVideoProjectInput!): VideoProjectType!
   askGuide(input: AskGuideInput!): GuideAskedType!
@@ -4586,6 +4635,7 @@ type Mutation {
   checkConnection(input: CheckConnectionInput!): ConnectionCheckType!
   checkInBooking(input: CheckInBookingInput!): CheckInBookingType!
   checkInShifts(input: ShiftsShiftRefInput!): CheckInType!
+  checkMcpConnector(input: CheckMcpConnectorInput!): String!
   checkMeta(input: CheckMetaInput!): MetaCheckType!
   chooseMetaPage(input: ChooseMetaPageInput!): MetaWizardConnectionType!
   completeBooking(input: CompleteBookingInput!): CompleteBookingType!
@@ -4608,6 +4658,7 @@ type Mutation {
   createWorkspace(input: CreateWorkspaceInput!): CreateWorkspaceType!
   decideBrainFact(input: DecideBrainFactInput!): BrainFactType!
   decideBrainLesson(input: DecideBrainLessonInput!): BrainLessonType!
+  decideBrandProposal(input: DecideBrandProposalInput!): BrandProposalType!
   decideExecution(input: DecideExecutionInput!): ApprovalExecutionType!
   decideSalesDraft(input: DecideSalesDraftInput!): SalesActionType!
   decideSalesWorkItem(input: DecideSalesWorkItemInput!): SalesActionType!
@@ -4647,10 +4698,12 @@ type Mutation {
   moveBooking(input: MoveBookingInput!): MoveBookingType!
   moveContentItem(input: MoveContentItemInput!): ContentItemType!
   moveHiringCandidate(input: MoveHiringCandidateInput!): MoveCandidateType!
+  postMarketingWeeklyReport: WeeklyReportType!
   postOfficeMessage(input: PostOfficeMessageInput!): OfficeMessageType!
   postSetupMessage(input: PostSetupMessageInput!): SetupMessageType!
   previewLoyaltySegment(input: PreviewLoyaltySegmentInput!): PreviewLoyaltySegmentType!
   proposeAutomationBody(input: TemplateKeyInput!): BodyProposalType!
+  proposeBrandKit(input: ProposeBrandKitInput!): BrandProposalType!
   proposeOfficeCommand(input: ProposeOfficeCommandInput!): OfficeProposeOutcomeType!
   proposeShiftsWeek(input: ProposeShiftsWeekInput!): ProposeWeekType!
   reassignShiftsShift(input: ReassignShiftsShiftInput!): ReassignShiftsShiftType!
@@ -4776,7 +4829,6 @@ type Mutation {
   settleWonDeal(input: SettleWonDealInput!): LeadActionQueuedType!
   setupOfficeRooms: [OfficeRoomType!]!
   shareVideoProject(input: ShareVideoProjectInput!): VideoShareType!
-  simulateInbound(input: SimulateInboundInput!): SimulateInboundType!
   startAgentChatConversation(input: StartAgentChatConversationInput!): CreatedAgentChatConversationType!
   startFirstWorkspace: StartFirstWorkspaceType!
   startMoneyConnection(input: StartMoneyConnectionInput!): WizardConnectionType!
@@ -5151,6 +5203,12 @@ type ProposalType {
   summary: String!
 }
 
+input ProposeBrandKitInput {
+  file: AttachedFileInput!
+  installationId: String! = ""
+  setupSessionId: String! = ""
+}
+
 input ProposeOfficeCommandInput {
   messageId: ID!
 }
@@ -5376,6 +5434,7 @@ type Query {
   billingWorkspaces: [BillingWorkspaceType!]!
   bookingBoard(input: BookingBoardInput): BookingBoardType!
   brain: BrainType!
+  brandProposals(input: BrandProposalsInput!): [BrandProposalType!]!
   chatAnswerStatus(input: ChatAnswerStatusInput!): ChatReplyProgressType!
   chatReplyStatus(input: ChatReplyStatusInput!): ChatReplyProgressType!
   chatbotGaps: ChatbotGapsType!
@@ -5414,7 +5473,6 @@ type Query {
   hiringCandidateDetail(input: HiringCandidateRefInput!): HiringCandidateDetailType!
   hiringWorkbench: HiringBenchType!
   inboundEvents(input: InboundEventsInput!): [InboundEventType!]!
-  inboundSimulationStatus(input: InboundSimulationStatusInput!): InboundSimulationStatusType!
   instanceOfRecord(input: InstanceOfRecordInput!): ID
   inventoryTemplates: [InventoryTemplateType!]!
   inventoryWorkbench: InventoryWorkbenchType!
@@ -5441,6 +5499,7 @@ type Query {
   loyaltyCampaign(input: LoyaltyCampaignInput!): LoyaltyCampaignViewType!
   loyaltyMember(input: LoyaltyMemberInput!): LoyaltyMemberDetailType!
   loyaltyProgram: LoyaltyProgramSettingsType!
+  marketingWeeklyReport(input: MarketingReportInput!): WeeklyReportType!
   mcpCallLog(input: McpCallLogInput): [McpCallLogType!]!
   mcpConnectors: [McpConnectorType!]!
   mcpToolGrants: [McpToolGrantType!]!
@@ -5599,7 +5658,6 @@ type RecordOutcomeType {
   handedToAccounting: Boolean!
   leadId: ID!
   need: String!
-  origin: String
   stage: String!
 }
 
@@ -5685,6 +5743,39 @@ input RenameInstallationAgentInput {
 input RenameModuleInstallationInput {
   installationId: ID!
   name: String!
+}
+
+type ReportDayType {
+  channels: [ChannelValueType!]!
+  day: String!
+}
+
+type ReportMetricType {
+  changePct: Int
+  previous: Int!
+  value: Int!
+}
+
+type ReportPostType {
+  channel: String!
+  engagements: Int!
+  href: String
+  id: String!
+  publishedAt: String!
+  title: String!
+}
+
+type ReportSourceType {
+  kind: String!
+  label: String!
+  layer: Int!
+  ref: String!
+}
+
+type ReportSuggestionType {
+  body: String!
+  sources: [ReportSourceType!]!
+  title: String!
 }
 
 input RequestAgentGenerationInput {
@@ -6159,7 +6250,6 @@ type SalesOrderType {
   items: String!
   leadId: ID
   orderNo: String!
-  origin: String!
   shippedAt: String
   status: String!
   trackingCode: String
@@ -7122,39 +7212,6 @@ type ShopContextType {
   tone: String!
 }
 
-input SimulateInboundInput {
-  amountVnd: Float
-  body: String
-  channel: String!
-  eventId: String
-  externalRef: String
-  items: String
-  kind: String!
-  senderContact: String
-  senderName: String!
-}
-
-type SimulateInboundType {
-  duplicate: Boolean!
-  id: ID!
-  status: String!
-}
-
-type SimulationEventType {
-  amountVnd: Float
-  duplicateCount: Int!
-  eventId: String!
-  id: ID!
-  leadId: ID
-  status: String!
-}
-
-type SimulationWorkItemType {
-  department: String!
-  id: ID!
-  status: String!
-}
-
 type SmtpConnectionType {
   fromEmail: String!
   host: String!
@@ -7756,6 +7813,19 @@ type WebsiteLeadStatsType {
   count: Int!
 }
 
+type WeeklyReportType {
+  channels: [String!]!
+  days: [ReportDayType!]!
+  engagements: ReportMetricType!
+  messages: ReportMetricType!
+  postCount: Int!
+  posts: [ReportPostType!]!
+  reach: ReportMetricType!
+  suggestion: ReportSuggestionType
+  weekEnd: String!
+  weekStart: String!
+}
+
 type WizardConnectionType {
   account: String!
   agentIds: [ID!]!
@@ -7818,7 +7888,6 @@ type WorkItemType {
   installation_id: ID
   lead_id: ID
   missing_fields: [String!]!
-  origin: String!
   parent_id: ID
   proposal: ProposalType!
   reason: String

@@ -1,38 +1,25 @@
 import { CommandRunner, Option, SubCommand } from "nest-commander"
 import { WorkspaceProfileService } from "@modules/domain/workspace-seed"
-
-/** The options of the profile command. */
-interface ProfileOptions {
-    /** The profile key. */
-    readonly profile?: string
-    /** The owner email the private input must hold. */
-    readonly owner?: string
-    /** Writes when true; a dry run otherwise. */
-    readonly execute?: boolean
-}
+import type { ProfileCommand } from "@modules/domain/workspace-seed"
 
 @SubCommand({
     name: "profile",
     description:
         "Apply a named workspace profile (brand, agents, grants, documents, Hub rooms) after ensuring the workspace; dry run without --execute",
 })
-/** `cli seed-workspace profile --profile hakuen --owner <email> [--execute]`, with the private ensure input of the target runner. */
+/** `cli seed-workspace profile --profile <key> --owner <email> [--execute]`, with the private ensure input of the target runner. */
 export class ProfileSeedWorkspaceCli extends CommandRunner {
     constructor(private readonly profiles: WorkspaceProfileService) {
         super()
     }
 
-    /** Runs the profile once; the service prints the public receipt. */
-    async run(_params: Array<string>, options: ProfileOptions): Promise<void> {
-        await this.profiles.profileOperator({
-            profile: options.profile ?? "",
-            owner: options.owner ?? "",
-            execute: options.execute === true,
-        })
+    /** Runs the profile once with the parsed options; the service prints the public receipt. */
+    async run(_params: Array<string>, options: ProfileCommand): Promise<void> {
+        await this.profiles.profileOperator(options)
     }
 
     /** The profile key. */
-    @Option({ flags: "-p, --profile <key>", description: "The workspace profile to apply, e.g. hakuen" })
+    @Option({ flags: "-p, --profile <key>", description: "The key of the workspace profile to apply" })
     parseProfile(value: string): string {
         return value
     }

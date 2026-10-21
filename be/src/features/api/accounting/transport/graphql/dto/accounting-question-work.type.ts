@@ -98,10 +98,6 @@ export class AccountingQuestionWorkType {
     @Field(() => String, { nullable: true })
     executionId!: string | null
 
-    /** origin. */
-    @Field(() => String)
-    origin!: string
-
     /** created At. */
     @Field(() => String)
     createdAt!: string

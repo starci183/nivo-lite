@@ -17,10 +17,10 @@ export const OFFICE_CARD_TYPES = [
     "approval_request",
     "schedule_confirmed",
     "weekly_report",
-    "booking_held",
     "daily_summary",
     "handoff_note",
     "exception",
+    "action_done",
 ] as const
 
 /** One result card type. */
@@ -77,7 +77,7 @@ export interface OfficeCardSource {
     readonly kind: string
     /** The record: a tool name, a document or fact id. */
     readonly ref: string
-    /** What the reader sees, e.g. "HAKUEN rooms.searchAvailability" or "HAKUEN_Brand_Guideline.pdf". */
+    /** What the reader sees, e.g. "Bookings: availability.search" or "Brand_Guideline.pdf". */
     readonly label: string
     /** Where it opens, when it does. */
     readonly href?: string
@@ -125,8 +125,10 @@ export interface OfficeCard {
 
 /** What reading a payload produced: the card, or why it is not one. */
 export type OfficeCardParse =
-    | { readonly ok: true; readonly card: OfficeCard }
-    | { readonly ok: false; readonly reason: string }
+    { readonly ok: true; readonly card: OfficeCard } | { readonly ok: false; readonly reason: string }
+
+/** A card spoken by a department's agent: the post without the speaker, which the department decides. */
+export type DepartmentCardPost = Omit<OfficeCardPost, "agentId" | "authorName">
 
 /** One result card line to post. */
 export interface OfficeCardPost {

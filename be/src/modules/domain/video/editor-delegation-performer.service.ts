@@ -18,8 +18,9 @@ import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { InjectMessageCatalog } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
 import { VideoError, VideoErrorCode } from "./errors/video.error"
-import { readDelegation } from "./editor-delegation.policy"
-import type { DelegatedScript } from "./editor-delegation.contracts"
+import { projectHref, readDelegation, renderingCard } from "./editor-delegation.policy"
+import type { DelegatedScript, RenderingWords } from "./editor-delegation.contracts"
+import { EditorRoomService } from "./editor-room.service"
 import { VideoService } from "./video.service"
 
 /** The command another agent sends AI Editor: render this script. */
@@ -39,6 +40,7 @@ export class EditorDelegationPerformerService implements WorkPerformer, OnModule
         private readonly video: VideoService,
         private readonly projects: VideoProjectWorkbenchWriterService,
         private readonly delegations: VideoDelegationsService,
+        private readonly room: EditorRoomService,
     ) {}
 
     /** Registers the effect with the work engine. */
@@ -62,7 +64,17 @@ export class EditorDelegationPerformerService implements WorkPerformer, OnModule
         )
         const queued = await this.video.requestDelegatedRender(ctx.workspaceId, delegation.project_id)
         await this.delegations.linkRender(delegation.id, queued.renderId)
-        return this.performed(ctx, script, delegation.project_id)
+        const performed = this.performed(ctx, script, delegation.project_id)
+        await this.room.post(
+            ctx,
+            performed.summary,
+            renderingCard(script, this.renderingWords(ctx, script), {
+                projectId: delegation.project_id,
+                renderId: queued.renderId,
+            }),
+            item.id,
+        )
+        return performed
     }
 
     private async record(
@@ -91,6 +103,18 @@ export class EditorDelegationPerformerService implements WorkPerformer, OnModule
         return delegation
     }
 
+    private renderingWords(ctx: WorkContext, script: DelegatedScript): RenderingWords {
+        const text = (key: string, params: Readonly<Record<string, string | number>> = {}): string =>
+            this.catalog.get(key, params, ctx.locale)
+        return {
+            badge: text("video.editor.rendering.badge"),
+            body: text("video.editor.rendering.body"),
+            link: text("video.editor.rendering.link"),
+            target: text("video.editor.rendering.target"),
+            seconds: text("video.editor.seconds", { seconds: script.targetSeconds }),
+        }
+    }
+
     private performed(ctx: WorkContext, script: DelegatedScript, projectId: string): Performed {
         return {
             summary: this.catalog.get(
@@ -99,7 +123,7 @@ export class EditorDelegationPerformerService implements WorkPerformer, OnModule
                 ctx.locale,
             ),
             evidence: "captured",
-            href: `/agents/video/workbench?focus=${projectId}`,
+            href: projectHref(projectId),
             detail: projectId,
         }
     }

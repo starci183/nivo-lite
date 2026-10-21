@@ -48,6 +48,34 @@ export interface ApiKeyView {
     readonly lastUsedAt: string | null
     /** When the key was revoked, ISO 8601, or null while it works. */
     readonly revokedAt: string | null
+    /** The agent the key acts as on the MCP endpoint, or null for a public API key. */
+    readonly agentId: string | null
+}
+
+/** What a verified agent key stands for: one agent of exactly one workspace, on the MCP endpoint only. */
+export interface AgentKeyPrincipal {
+    /** The key id. */
+    readonly keyId: string
+    /** The only workspace the key acts for. */
+    readonly workspaceId: string
+    /** The agent the key acts as. */
+    readonly agentId: string
+}
+
+/** What the database answers for the hash of an agent key: the key, its agent and whether both still work. */
+export interface AgentKeyAnswer {
+    /** The key id. */
+    readonly id: string
+    /** The workspace of the key. */
+    readonly workspace_id: string
+    /** The agent the key is bound to, or null for a public API key. */
+    readonly agent_id: string | null
+    /** The scopes of the key. */
+    readonly scopes: ReadonlyArray<string> | null
+    /** True when the key was revoked. */
+    readonly revoked: boolean
+    /** The status of the bound agent in the key's workspace, or null when there is no such agent. */
+    readonly agent_status: string | null
 }
 
 /** A key just created: the secret is shown here once and never again. */

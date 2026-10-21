@@ -37,7 +37,6 @@ export const itemOf = builder<WorkItem>({
     evidence_state: "pending",
     assigned_staff_id: null,
     execution_id: null,
-    origin: "live",
     created_at: "2026-10-12T09:00:00.000Z",
     updated_at: "2026-10-12T09:00:00.000Z",
     completed_at: null,
@@ -67,7 +66,6 @@ export const specOf = builder<Parameters<WorkEngineService["runWork"]>[1]>({
     subject_id: "lead-1",
     lead_id: "lead-1",
     dedupeKey: "send_quote:lead-1",
-    origin: "live",
 })
 /** Builds the captured evidence returned by a successful performer. */
 export const performedOf = builder<Performed>({ summary: "Sent the quote", evidence: "captured" })

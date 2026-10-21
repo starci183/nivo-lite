@@ -43,10 +43,6 @@ export class LeadFlowTransactionType {
     @Field()
     status!: string
 
-    /** Whether the transaction originated from live or simulated input. */
-    @Field()
-    origin!: string
-
     /** When the transaction was recorded, in ISO 8601 format. */
     @Field()
     createdAt!: string

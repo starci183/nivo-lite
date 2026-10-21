@@ -11,6 +11,7 @@ import type { McpToolGrantType } from "./dto/mcp-tool-grant.type"
 import type { RegisterMcpConnectorInput } from "./dto/register-mcp-connector.input"
 import type { SetMcpToolGrantInput } from "./dto/set-mcp-tool-grant.input"
 import type { McpCallLogInput } from "./dto/mcp-call-log.input"
+import type { ListMcpCallLogRequest } from "../../application/list-mcp-call-log.contracts"
 
 /** The connectors as GraphQL types. */
 export const toMcpConnectorTypes = (views: ReadonlyArray<ConnectorView>): Array<McpConnectorType> =>
@@ -66,7 +67,7 @@ export const toRemoteConnectorInput = (input: RegisterMcpConnectorInput): Remote
 })
 
 /** The audit page request. */
-export const toMcpCallLogRequest = (workspaceId: string, input: McpCallLogInput | null) => ({
+export const toMcpCallLogRequest = (workspaceId: string, input: McpCallLogInput | null): ListMcpCallLogRequest => ({
     workspaceId,
     limit: input?.limit,
 })

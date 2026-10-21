@@ -4,8 +4,7 @@ import {
     ledgerToneOf,
     matchToneOf,
     moneyOf,
-    originLabelOf,
-    sourceKeyOf,
+    sourceLabelOf,
     accountingStampOf,
     type AccountingFormat,
     type AccountingTone,
@@ -37,10 +36,10 @@ interface RecordStatus {
     readonly tone: AccountingTone
 }
 
-/** A status mark with a dot and its tone, followed by a plain neutral mark. */
-const marksOf = (status: RecordStatus, second: string): ReadonlyArray<AccountingRecordBadgeView> => [
+/** A status mark with a dot and its tone, followed by a plain neutral mark when there is one. */
+const marksOf = (status: RecordStatus, second: string | null = null): ReadonlyArray<AccountingRecordBadgeView> => [
     { id: "status", label: status.label, tone: status.tone, isDot: true },
-    { id: "second", label: second, tone: "neutral", isDot: false },
+    ...(second === null ? [] : [{ id: "second", label: second, tone: "neutral" as const, isDot: false }]),
 ]
 
 /** The date line of an invoice: when it was paid, else when it is due, else when it was issued. */
@@ -50,11 +49,12 @@ const invoiceDateOf = (t: AccountingTranslator, format: AccountingFormat, invoic
     return t("issuedOn", { date: dayOf(format, invoice.issuedAt ?? invoice.createdAt) })
 }
 
-/** Bank credits as record rows. */
+/** Bank credits as record rows; a connector credit names the connector that fed it (`creditsSource`, data). */
 export const creditRecordsOf = (
     t: AccountingTranslator,
     format: AccountingFormat,
     credits: ReadonlyArray<AccountingCredit>,
+    creditsSource: string | null,
 ): ReadonlyArray<AccountingRecordView> =>
     credits.map((credit) => ({
         id: credit.id,
@@ -62,11 +62,11 @@ export const creditRecordsOf = (
         description: credit.reference ?? t("noReference"),
         badges: marksOf(
             { label: t(`match_${credit.match}`), tone: matchToneOf(credit.match) },
-            originLabelOf(t, credit.origin),
+            sourceLabelOf(t, credit.sourceKind, creditsSource),
         ),
         amount: moneyOf(format, credit.amount),
         footnote: [
-            `${dayOf(format, credit.occurredAt)} · ${t(sourceKeyOf(credit.sourceKind))}`,
+            dayOf(format, credit.occurredAt),
             credit.invoiceNo === null ? "" : t("matchedTo", { no: credit.invoiceNo }),
         ]
             .filter(Boolean)
@@ -86,10 +86,7 @@ export const invoiceRecordsOf = (
             [invoice.customer, invoice.orderNo === null ? null : t("fromOrder", { no: invoice.orderNo })]
                 .filter(Boolean)
                 .join(" · ") || "-",
-        badges: marksOf(
-            { label: t(`invoice_${invoice.status}`), tone: invoiceToneOf(invoice.status) },
-            originLabelOf(t, invoice.origin),
-        ),
+        badges: marksOf({ label: t(`invoice_${invoice.status}`), tone: invoiceToneOf(invoice.status) }),
         amount: moneyOf(format, invoice.amount),
         footnote: invoiceDateOf(t, format, invoice),
     }))
@@ -104,7 +101,7 @@ export const orderRecordsOf = (
         id: order.id,
         title: order.orderNo,
         description: [order.customer, order.items].filter(Boolean).join(" · ") || "-",
-        badges: marksOf({ label: t("noInvoiceYet"), tone: "warning" }, originLabelOf(t, order.origin)),
+        badges: marksOf({ label: t("noInvoiceYet"), tone: "warning" }),
         amount: order.amount === null ? t("noAmount") : moneyOf(format, order.amount),
         footnote: dayOf(format, order.createdAt),
     }))
@@ -129,10 +126,5 @@ export const ledgerRecordsOf = (
             t(`kind_${entry.kind}`),
         ),
         amount: moneyOf(format, entry.amount),
-        footnote: [
-            originLabelOf(t, entry.origin),
-            entry.adjustmentCount > 0 ? t("adjustedN", { n: entry.adjustmentCount }) : "",
-        ]
-            .filter(Boolean)
-            .join(" · "),
+        footnote: entry.adjustmentCount > 0 ? t("adjustedN", { n: entry.adjustmentCount }) : "",
     }))

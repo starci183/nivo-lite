@@ -77,7 +77,7 @@ namespaces:
     - key: "earlyAccess"
       reason: 'Read as the string "earlyAccess" in components/blocks/MoneyWizard/component.tsx, components/blocks/MoneyWizard/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
     - key: "errName"
-      reason: 'Read as the string "errName" in hooks/rhf/useImapAccountForm.ts, hooks/rhf/useInboxSimulatorForm.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
+      reason: 'Read as the string "errName" in hooks/rhf/useImapAccountForm.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
     - key: "eyebrow"
       reason: 'Read as the string "eyebrow" in components/blocks/AgentInstances/index.tsx, components/blocks/AuthorityHead/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
     - key: "fieldAccount"

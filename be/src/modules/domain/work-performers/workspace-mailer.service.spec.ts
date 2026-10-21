@@ -164,7 +164,6 @@ describe("WorkspaceMailerService", () => {
                 subject_type: "invoice",
                 subject_id: "inv-1",
                 lead_id: "l1",
-                origin: "live",
                 dedupeKey: "send_email:receipt:inv-1",
                 preset: true,
                 noChain: true,

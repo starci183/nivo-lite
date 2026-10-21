@@ -13,7 +13,6 @@ import {
     localeOf,
     noteOf,
     ruleChangeOf,
-    simulationOf,
     staffIdOf,
     staffWriteOf,
     takeOf,
@@ -21,8 +20,6 @@ import {
     workItemIdOf,
 } from "./flow-command.mapper"
 import { OwnerChatService } from "./owner-chat.service"
-import type { SimulatedInputs } from "./flow-engine.contracts"
-import { InjectSimulatedInputs } from "./flow-engine.decorators"
 
 /** One command of the flow as the engine runs it. */
 type FlowCommand = Parameters<FlowGate["run"]>[0]
@@ -33,7 +30,7 @@ const answer = (data: object): FlowResult => ({ data: { ...data } })
 @Injectable()
 /**
  * The operating-flow engine behind the flows doors: each command goes to the capability that owns it (the authority sheet and
- * rules, the staff directory, the work decisions, the Inbox simulator, the conversation takeover, the owner's Office chat) as the
+ * rules, the staff directory, the work decisions, the conversation takeover, the owner's Office chat) as the
  * member who asked. The flows facade has proved membership and the manager role; the owners apply their own rules.
  */
 export class FlowEngineService implements FlowGate {
@@ -42,7 +39,6 @@ export class FlowEngineService implements FlowGate {
         private readonly work: WorkDecisionService,
         private readonly placement: WorkPlacementService,
         private readonly staff: StaffService,
-        @InjectSimulatedInputs() private readonly simulator: SimulatedInputs,
         private readonly chats: ChatReplyService,
         private readonly authorityChat: AuthorityChatService,
         private readonly ownerChat: OwnerChatService,
@@ -87,8 +83,6 @@ export class FlowEngineService implements FlowGate {
                         locale,
                     }),
                 )
-            case "simulate_inbound":
-                return answer(await this.simulator.request(userId, workspaceId, simulationOf(payload)))
             case "take_over":
                 return answer(await this.takeOver(userId, workspaceId, payload))
             case "send_as_human":

@@ -3,12 +3,11 @@ import { createHash } from "node:crypto"
 import type { MetaInboxService } from "@modules/domain/meta-inbox"
 import type { TelegramInboxService } from "@modules/domain/telegram-inbox"
 import type { SepayTransactionsService } from "@modules/domain/sepay-transactions"
-import type { BankFeedService } from "@modules/domain/billing"
 import type { JobClaims, FencedProcessor } from "@modules/platform/jobs"
 import type { EntityManager } from "typeorm"
 
 /** The receipt capabilities covered by the delivery processors. */
-export type DeliveryKind = "meta" | "telegram" | "sepay" | "vietcombank"
+export type DeliveryKind = "meta" | "telegram" | "sepay"
 
 /** Explicit identities supplied by the world's isolated scenario. */
 interface DeliveryFixtureIdentity {
@@ -23,7 +22,6 @@ interface DeliveryIntakeOwners {
     readonly meta: MetaInboxService
     readonly telegram: TelegramInboxService
     readonly sepay: SepayTransactionsService
-    readonly vietcombank: BankFeedService
 }
 
 /** The durable reference shared by every delivery job. */
@@ -31,7 +29,7 @@ interface DeliveryMessage {
     readonly deliveryId: string
 }
 
-/** Persists the parent chain required by conversation intake and simulated bank booking. */
+/** Persists the parent chain required by conversation and payment intake. */
 export const persistDeliveryWorkspaceRows = async (
     manager: EntityManager,
     userId: string,
@@ -67,20 +65,13 @@ export const deliveryIntakeBuilder = async (
         meta: createHash("sha256").update(metaBody).digest("hex"),
         telegram: `${connection}:77`,
         sepay: String(numericId),
-        vietcombank: `vietcombank:${proofId}`,
     }[kind]
     const service = owners[kind]
-    const accept = intakeActions(owners, metaBody, connection, numericId, proofId)[kind]
+    const accept = intakeActions(owners, metaBody, connection, numericId)[kind]
     return { service, accept, message: { deliveryId }, queue: `${kind}-delivery` }
 }
 
-const intakeActions = (
-    owners: DeliveryIntakeOwners,
-    metaBody: Buffer,
-    connection: string,
-    numericId: number,
-    eventId: string,
-) => ({
+const intakeActions = (owners: DeliveryIntakeOwners, metaBody: Buffer, connection: string, numericId: number) => ({
     meta: () => owners.meta.accept(metaBody, "receipt-proof"),
     telegram: () =>
         owners.telegram.acceptTelegramDelivery(
@@ -98,11 +89,6 @@ const intakeActions = (
             rawBody: Buffer.from(
                 JSON.stringify({ id: numericId, transferType: "in", transferAmount: 100, content: "proof" }),
             ),
-        }),
-    vietcombank: () =>
-        owners.vietcombank.acceptSimulatedCredit({
-            secret: "delivery-proof-bank-fixture",
-            rawBody: Buffer.from(JSON.stringify({ event_id: eventId, amount_vnd: 100, content: "proof" })),
         }),
 })
 

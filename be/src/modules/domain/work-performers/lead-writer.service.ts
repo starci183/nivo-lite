@@ -33,7 +33,6 @@ export class LeadWriterService implements LeadWriter {
             workspaceId: ctx.workspaceId,
             channel: turn.value.channel,
             kind: "lead",
-            origin: "live",
             senderName: lead.contactName,
             senderContact: lead.contact,
             body: lead.need,
@@ -47,7 +46,6 @@ export class LeadWriterService implements LeadWriter {
             command: "handoff_lead",
             reason: "the agent captured a lead",
             inboundEventId: recorded.inboundEventId,
-            origin: "live",
             dedupeKey: `handoff_lead:conversation:${ctx.conversationId}`,
             payload: {
                 subject_type: "conversation",

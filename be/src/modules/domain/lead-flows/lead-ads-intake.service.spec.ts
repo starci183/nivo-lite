@@ -106,7 +106,6 @@ describe("LeadAdsIntakeService", () => {
             workspaceId: "ws-1",
             channel: "facebook",
             kind: "lead",
-            origin: "live",
             senderName: "Lan",
             senderContact: "+84912345678",
             body: NEED,
@@ -118,7 +117,6 @@ describe("LeadAdsIntakeService", () => {
             to: "lead_gen",
             command: "capture_lead",
             reason: "lead_ad",
-            origin: "live",
             inboundEventId: "event-1",
             dedupeKey: "capture_lead:inbound:event-1",
             payload: {
@@ -192,7 +190,6 @@ describe("LeadAdsIntakeService", () => {
             subject_type: "inbound",
             subject_id: "event-1",
             inbound_event_id: "event-1",
-            origin: "live",
             dedupeKey: "handoff_lead:inbound:event-1",
             seed: {
                 fields: {
@@ -251,7 +248,6 @@ describe("LeadAdsIntakeService", () => {
                 workspaceId: "ws-1",
                 channel: "facebook",
                 kind: "lead",
-                origin: "live",
                 senderName: sender,
                 senderContact: contact === "" ? null : contact,
                 body: "channel.lead-ads",
@@ -326,7 +322,6 @@ describe("LeadAdsIntakeService", () => {
                 workspaceId: "ws-1",
                 channel: "facebook",
                 kind: "lead",
-                origin: "live",
                 senderName: "guest.facebook",
                 senderContact: null,
                 body: "lead-ads.unreadable",
@@ -350,7 +345,6 @@ describe("LeadAdsIntakeService", () => {
                 workspace_id: "ws-1",
                 channel: "facebook",
                 kind: "lead",
-                origin: "live",
                 sender_name: "Lan",
                 sender_contact: "0912",
                 body: NEED,

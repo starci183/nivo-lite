@@ -53,7 +53,6 @@ const query1: Document = gql`
                 id
                 installationId
                 need
-                origin
                 stage
             }
             responsibilities {

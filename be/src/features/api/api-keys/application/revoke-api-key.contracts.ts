@@ -20,4 +20,6 @@ export interface RevokeApiKeyResult {
     readonly lastUsedAt: string | null
     /** When the key was revoked, ISO 8601. */
     readonly revokedAt: string | null
+    /** The agent the key acted as on the MCP endpoint, or null for a public API key. */
+    readonly agentId: string | null
 }

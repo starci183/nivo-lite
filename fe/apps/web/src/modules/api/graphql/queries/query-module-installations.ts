@@ -15,6 +15,10 @@ const query1: TypedDocumentNode<QueryModuleInstallationsResponse> = gql`
             agentHandle
             agentId
             agentName
+            connectionNeeds {
+                role
+                providers
+            }
             createdAt
             id
             isMulti

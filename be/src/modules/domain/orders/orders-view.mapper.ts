@@ -13,7 +13,6 @@ export const toSalesOrderView = (result: SalesOrderRow): SalesOrderView => ({
     items: result.items,
     amountVnd: result.amount_vnd,
     status: result.status,
-    origin: result.origin,
     confirmedBy: result.confirmed_by,
     confirmedAt: optionalInstantOf(result.confirmed_at),
     createdAt: instantOf(result.created_at),

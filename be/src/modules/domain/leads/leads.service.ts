@@ -15,7 +15,7 @@ import { UPDATE_LEAD_STAGE } from "./persistence/leads.sql"
 /** The evidence-log kind of a recorded outcome. */
 const OUTCOME_KIND = "outcome.recorded"
 
-type StagedLead = Pick<LeadsRow, "id" | "contact_name" | "company" | "channel" | "need" | "origin" | "stage">
+type StagedLead = Pick<LeadsRow, "id" | "contact_name" | "company" | "channel" | "need" | "stage">
 
 @Injectable()
 /** The journey of a lead reached only through the shared primary EntityManager. */
@@ -80,7 +80,6 @@ export class LeadsService {
                 company: lead.company,
                 channel: lead.channel,
                 need: lead.need,
-                origin: lead.origin,
                 handedToAccounting,
             }
         })

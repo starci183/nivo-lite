@@ -25,7 +25,6 @@ const LEAD: LeadView = {
     need: "menu",
     stage: "new",
     context_summary: null,
-    origin: "live",
     installation_id: null,
     created_at: "2026-10-12T00:00:00.000Z",
 }

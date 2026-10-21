@@ -16,8 +16,6 @@ export interface TransactionRow {
     readonly invoice_id: string | null
     /** `unmatched`, `matched` or `needs_review`. */
     readonly status: string
-    /** `live` or `simulated`. */
-    readonly origin: string
 }
 
 /** The input that delivered a payment, as the accounting book reads it. */
@@ -42,4 +40,20 @@ export interface TransactionAccountingRow extends TransactionRow {
     readonly created_at: string
     /** The input, when it still exists in this workspace. */
     readonly inbound: TransactionAccountingInboundRow | null
+}
+
+/** A live bank credit as the gateway's SePay connector lists it. */
+export interface BankCreditRow {
+    /** The transaction id. */
+    readonly id: string
+    /** The money, VND. */
+    readonly amount_vnd: number
+    /** The transfer content. */
+    readonly reference: string | null
+    /** The payer's name. */
+    readonly payer: string | null
+    /** `unmatched`, `matched` or `needs_review`. */
+    readonly status: string
+    /** When it happened, ISO text. */
+    readonly occurred_at: string
 }

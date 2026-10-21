@@ -36,10 +36,6 @@ export class AccountingBookOrderType {
     @Field(() => String)
     status!: string
 
-    /** origin. */
-    @Field(() => String)
-    origin!: string
-
     /** confirmed By. */
     @Field(() => String, { nullable: true })
     confirmedBy!: string | null

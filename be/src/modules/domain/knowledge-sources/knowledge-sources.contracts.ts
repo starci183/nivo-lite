@@ -240,3 +240,26 @@ export interface ReadableSource {
     /** The text. */
     readonly content: string
 }
+
+/** One text document a workspace configuration run keeps, found again by its origin and title. */
+export interface ProfileSourceInput {
+    /** The workspace. */
+    readonly workspaceId: string
+    /** The workspace owner, recorded as the creator. */
+    readonly ownerId: string
+    /** The origin that marks the run's own documents, e.g. `seed:<profile>`. */
+    readonly origin: string
+    /** The title; the key together with the origin. */
+    readonly title: string
+    /** The topic label. */
+    readonly topic: string
+    /** The module that reads it; null = every module. */
+    readonly module: string | null
+    /** Who may read it. */
+    readonly visibility: "public" | "internal"
+    /** The markdown text. */
+    readonly content: string
+}
+
+/** What keeping one document did: a new row, a changed text queued again, or nothing. */
+export type ProfileSourceOutcome = "inserted" | "requeued" | "unchanged"

@@ -38,6 +38,10 @@ export const VIDEO_MESSAGES: MessageBundle = {
         "video.editor.link": "M\u1edf d\u1ef1 \u00e1n video",
         "video.editor.approvalBody": "Video ch\u1ec9 \u0111\u01b0\u1ee3c \u0111\u0103ng khi ch\u1ecb duy\u1ec7t. M\u1ecdi quy\u1ebft \u0111\u1ecbnh \u0111\u1ec1u \u0111\u01b0\u1ee3c ghi l\u1ea1i.",
         "video.editor.approvalBadge": "C\u1ea7n b\u1ea1n duy\u1ec7t",
+        "video.editor.rendering.badge": "\u0110ang d\u1ef1ng",
+        "video.editor.rendering.body": "AI Editor \u0111\u00e3 nh\u1eadn k\u1ecbch b\u1ea3n t\u1eeb AI Marketing v\u00e0 \u0111ang d\u1ef1ng video. Ti\u1ebfn \u0111\u1ed9 c\u1eadp nh\u1eadt tr\u1ef1c ti\u1ebfp trong d\u1ef1 \u00e1n video; th\u1ebb video s\u1eb5n s\u00e0ng s\u1ebd g\u1eedi v\u00e0o \u0111\u00e2y khi xong.",
+        "video.editor.rendering.link": "Xem ti\u1ebfn \u0111\u1ed9 d\u1ef1ng",
+        "video.editor.rendering.target": "D\u1ef1 ki\u1ebfn",
     },
     en: {
         "video.script.generated": "Wrote the script for {{title}} with {{scenes}} scenes.",
@@ -74,5 +78,9 @@ export const VIDEO_MESSAGES: MessageBundle = {
         "video.editor.link": "Open the video project",
         "video.editor.approvalBody": "The video is posted only after you approve. Every decision is recorded.",
         "video.editor.approvalBadge": "Needs your approval",
+        "video.editor.rendering.badge": "Rendering",
+        "video.editor.rendering.body": "AI Editor took the script from AI Marketing and is rendering the video. The progress updates live in the video project; the ready card comes here when it is done.",
+        "video.editor.rendering.link": "Follow the render",
+        "video.editor.rendering.target": "Planned",
     },
 }

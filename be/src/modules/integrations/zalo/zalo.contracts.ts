@@ -57,3 +57,19 @@ export interface ZaloArticle {
     /** True to show it right away, false to keep it hidden (draft). */
     readonly publish: boolean
 }
+
+/** One OA article as the article list reports it, with what Zalo counted for it. */
+export interface ZaloArticleStats {
+    /** The article id. */
+    readonly id: string
+    /** The title. */
+    readonly title: string
+    /** `show` (published) or `hide`. */
+    readonly status: string
+    /** When it was created, ISO 8601. */
+    readonly createdAt: string
+    /** How many times it was viewed. */
+    readonly views: number
+    /** How many times it was shared. */
+    readonly shares: number
+}

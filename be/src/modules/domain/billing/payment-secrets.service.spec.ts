@@ -23,7 +23,6 @@ const encrypt = (plain: string): string => {
 const OPTIONS: BillingOptions = {
     sepayApiKey: undefined,
     bankAccount: { account: "", bank: "", holder: "" },
-    simulatedBank: { secret: undefined, workspaceId: undefined },
     channelTokenKey: new Secret(KEY),
 }
 

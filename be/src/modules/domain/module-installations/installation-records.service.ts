@@ -14,9 +14,10 @@ import type {
     OptionalAgentSyncStatus,
     OptionalRowId,
     OptionalInstallationRecord,
+    OptionalInstallationStatus,
     RequirementFacts,
 } from "./module-installations.contracts"
-import type { IdRow, SyncStatusRow } from "./persistence/module-installations.rows"
+import type { IdRow, StatusRow, SyncStatusRow } from "./persistence/module-installations.rows"
 import {
     ACTIVATE_VERSION,
     FIND_FIRST_OF_MODULE,
@@ -28,6 +29,7 @@ import {
     FIND_SYNC_STATUS,
     INSERT_INSTALLATION,
     LIST_BOUND_AGENTS,
+    SETTLE_CONNECTION,
     LIST_INSTALLATIONS,
     LIST_INSTANCE_NAMES,
     LIST_ON_OPENCLAW,
@@ -172,6 +174,24 @@ export class InstallationRecordsService {
         status: InstallationStatus,
     ): Promise<InstallationWrite> {
         return this.write(ACTIVATE_VERSION, [installationId, workspaceId, versionId, status])
+    }
+
+    /**
+     * Moves an installation by whether the connections its module requires are ready: ready or live without them waits for a
+     * connection (`needs_connection`), waiting with them is live again; any other status is left as it is. Answers the new
+     * status, or null when nothing moved.
+     */
+    async settleConnection(
+        workspaceId: string,
+        installationId: string,
+        ready: boolean,
+    ): Promise<OptionalInstallationStatus> {
+        const [row] = await this.entityManager.query<Array<StatusRow>>(SETTLE_CONNECTION, [
+            installationId,
+            workspaceId,
+            ready,
+        ])
+        return row?.status ?? null
     }
 
     /** Where the OpenClaw copy of the agent of an installation stands; null when the installation is not of the workspace. */

@@ -26,4 +26,8 @@ export class ApiKeyType {
     /** When the key was revoked, ISO 8601, or null while it works. */
     @Field(() => String, { nullable: true })
     revokedAt!: string | null
+
+    /** The agent the key acts as on the MCP endpoint, or null for a public API key. */
+    @Field(() => String, { nullable: true })
+    agentId!: string | null
 }

@@ -13,7 +13,7 @@ import { AGENT_MESSAGES_MESSAGES } from "@modules/domain/agent-messages"
 import { BILLING_MESSAGES } from "@modules/domain/billing"
 import { LEAD_ACTIONS_MESSAGES } from "@modules/domain/lead-actions"
 import { AGENT_CHAT_MESSAGES } from "@modules/domain/agent-chat"
-import { INBOX_SIMULATION_MESSAGES } from "@modules/domain/inbox-simulation"
+import { ACCOUNTING_MESSAGES } from "@modules/domain/accounting"
 import { ACCOUNTING_ADJUSTMENTS_MESSAGES } from "@modules/domain/accounting-adjustments"
 import { PAYMENT_ORDER_REQUESTS_MESSAGES } from "@modules/domain/payment-order-requests"
 import { CREDITS_MESSAGES } from "@modules/domain/credits"
@@ -46,7 +46,7 @@ export const API_MESSAGES_2 = [
     BILLING_MESSAGES,
     LEAD_ACTIONS_MESSAGES,
     AGENT_CHAT_MESSAGES,
-    INBOX_SIMULATION_MESSAGES,
+    ACCOUNTING_MESSAGES,
     ACCOUNTING_ADJUSTMENTS_MESSAGES,
     PAYMENT_ORDER_REQUESTS_MESSAGES,
     CREDITS_MESSAGES,

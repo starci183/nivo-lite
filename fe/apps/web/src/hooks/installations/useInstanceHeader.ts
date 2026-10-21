@@ -27,6 +27,7 @@ export const useInstanceHeader = (module: ModuleKey, installationId: string) => 
         listHref: multiName === null ? null : agentListHref(module),
         status,
         statusTone: AGENT_STATUS_TONE[status],
+        connectionNeeds: installation?.connectionNeeds ?? [],
         activeVersion: installation?.activeVersion ?? null,
         isLive: installation?.liveEnabled === true,
     }

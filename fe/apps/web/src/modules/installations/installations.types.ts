@@ -1,7 +1,16 @@
 import type { ModuleKey } from "@/modules/catalog"
 
-/** Where an installed agent stands: being installed, in setup, ready to go live, live, or paused. */
-export type InstallationStatus = "installing" | "setup" | "ready" | "live" | "paused"
+/**
+ * Where an installed agent stands: being installed, in setup, ready to go live, live, paused, or waiting for a connection its module
+ * requires (`needs_connection`: applied but not running until a connector that plays the missing role is connected).
+ */
+export type InstallationStatus = "installing" | "setup" | "ready" | "live" | "paused" | "needs_connection"
+
+/**
+ * One capability role an agent waits for and the connectors in the catalog that play it (display names, data from the back end;
+ * never a fixed connector name).
+ */
+export type InstallationConnectionNeed = { readonly role: string; readonly providers: ReadonlyArray<string> }
 
 /** How an installed agent runs: it proposes everything (assist) or follows the authority rules alone (autopilot). */
 export type OperatingMode = "assist" | "autopilot"
@@ -23,6 +32,8 @@ export type Installation = {
     readonly agentName: string
     readonly agentHandle: string
     readonly status: InstallationStatus
+    /** The roles a `needs_connection` agent waits for, each with the connectors that would satisfy it; empty otherwise. */
+    readonly connectionNeeds: ReadonlyArray<InstallationConnectionNeed>
     readonly operatingMode: OperatingMode
     readonly liveEnabled: boolean
     readonly activeContextVersionId: string | null

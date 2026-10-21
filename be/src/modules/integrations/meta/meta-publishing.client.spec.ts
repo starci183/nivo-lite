@@ -141,3 +141,83 @@ describe("MetaPublishingClient / pageInsights", () => {
         await expect(client.pageInsights(PAGE, "2026-10-12", "2026-10-19")).resolves.toEqual([])
     })
 })
+
+describe("MetaPublishingClient / publishedPosts", () => {
+    it("reads the published posts of the window with their text, time, link and engagements", async () => {
+        const { client, http } = await build()
+        http.request.mockResolvedValueOnce(
+            answer({
+                data: [
+                    {
+                        id: "PAGE_1",
+                        message: "Relax at HAKUEN",
+                        created_time: "2026-10-18T02:00:00+0000",
+                        permalink_url: "https://www.facebook.com/PAGE/posts/1",
+                        insights: { data: [{ name: "post_engagements", values: [{ value: 356 }] }] },
+                    },
+                    {
+                        id: "PAGE_2",
+                        created_time: "2026-10-17T02:00:00+0000",
+                        permalink_url: "http://insecure",
+                        insights: { data: [{ name: "post_impressions", values: [{ value: 9 }] }] },
+                    },
+                    { id: "PAGE_3", created_time: "2026-10-16T02:00:00+0000", insights: "x" },
+                    { id: "", created_time: "2026-10-16T02:00:00+0000" },
+                    { id: "PAGE_4", created_time: "not a time" },
+                    { id: "PAGE_5" },
+                    "noise",
+                ],
+            }),
+        )
+
+        const posts = await client.publishedPosts(PAGE, "2026-10-12", "2026-10-19")
+
+        expect(posts).toEqual([
+            {
+                id: "PAGE_1",
+                message: "Relax at HAKUEN",
+                createdTime: "2026-10-18T02:00:00.000Z",
+                permalink: "https://www.facebook.com/PAGE/posts/1",
+                engagements: 356,
+            },
+            {
+                id: "PAGE_2",
+                message: "",
+                createdTime: "2026-10-17T02:00:00.000Z",
+                permalink: null,
+                engagements: 0,
+            },
+            {
+                id: "PAGE_3",
+                message: "",
+                createdTime: "2026-10-16T02:00:00.000Z",
+                permalink: null,
+                engagements: 0,
+            },
+        ])
+        const url = new URL(String(http.request.mock.calls[0]?.[0].url))
+        expect(url.pathname).toBe("/v21.0/PAGE/published_posts")
+        expect(url.searchParams.get("fields")).toBe(
+            "id,message,created_time,permalink_url,insights.metric(post_engagements)",
+        )
+        expect(url.searchParams.get("since")).toBe("2026-10-12")
+        expect(url.searchParams.get("until")).toBe("2026-10-19")
+        expect(url.searchParams.get("access_token")).toBe("ptok")
+    })
+
+    it("answers no posts when Meta lists none", async () => {
+        const { client, http } = await build()
+        http.request.mockResolvedValueOnce(answer({}))
+
+        await expect(client.publishedPosts(PAGE, "2026-10-12", "2026-10-19")).resolves.toEqual([])
+    })
+
+    it("fails with the Graph refusal when Meta refuses", async () => {
+        const { client, http } = await build()
+        http.request.mockResolvedValueOnce(answer({ error: { message: "no", code: 190 } }, 400))
+
+        await expect(client.publishedPosts(PAGE, "2026-10-12", "2026-10-19")).rejects.toMatchObject({
+            code: MetaErrorCode.Refused,
+        })
+    })
+})

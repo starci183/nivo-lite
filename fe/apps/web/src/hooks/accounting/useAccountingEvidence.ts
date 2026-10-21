@@ -55,9 +55,9 @@ export const useAccountingEvidence = (data: AccountingWorkbenchData | undefined)
         props: {
             creditsTitle: t("creditsTitle"),
             creditsIntro: t("creditsIntro"),
-            creditsEmpty: t("creditsEmpty"),
-            creditsEmptyBody: t("creditsEmptyBody"),
-            credits: creditRecordsOf(t, format, data.credits),
+            creditsEmpty: t(data.creditsSource === null ? "creditsNotConnected" : "creditsEmpty"),
+            creditsEmptyBody: t(data.creditsSource === null ? "notConnectedHint" : "creditsEmptyBody"),
+            credits: creditRecordsOf(t, format, data.credits, data.creditsSource),
             invoicesTitle: t("invoicesTitle"),
             invoicesIntro: t("invoicesIntro"),
             invoicesEmpty: t("invoicesEmpty"),

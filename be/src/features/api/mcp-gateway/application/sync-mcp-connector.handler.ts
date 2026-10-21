@@ -1,7 +1,6 @@
 import { CommandHandler } from "@nestjs/cqrs"
 import { McpGatewayAdminService } from "@modules/domain/mcp-gateway"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { actorOf } from "./mcp-gateway.mapper"
 import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { SyncMcpConnectorCommand } from "./sync-mcp-connector.command"
@@ -17,6 +16,9 @@ export class SyncMcpConnectorHandler extends ICQRSHandler<SyncMcpConnectorComman
     }
 
     protected override process(command: SyncMcpConnectorCommand): Promise<number> {
-        return this.admin.syncCatalog(actorOf(command.params), command.params.request.key)
+        return this.admin.syncCatalog(
+            { principalId: command.params.principal.id, workspaceId: command.params.request.workspaceId },
+            command.params.request.key,
+        )
     }
 }

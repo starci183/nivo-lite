@@ -24,9 +24,6 @@ export class SalesOrderType {
     /** The draft, confirmed, invoiced, paid or cancelled state. */
     @Field()
     status!: string
-    /** Live or simulated origin. */
-    @Field()
-    origin!: string
     /** The person who confirmed the order. */
     @Field(() => String, { nullable: true })
     confirmedBy!: string | null

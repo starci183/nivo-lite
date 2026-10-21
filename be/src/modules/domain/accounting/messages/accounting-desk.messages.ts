@@ -75,28 +75,49 @@ export const CARD_COPY = {
     onInvoice: "MST trên hóa đơn",
     onFile: "MST hồ sơ",
     money: (amount: number): string => `${amount.toLocaleString("vi-VN")} ₫`,
+    sourceInvoices: "Hóa đơn điện tử",
+    sourceCredits: "Giao dịch ngân hàng",
+    sourceReceivables: "Khoản phải thu",
+    sourceDebits: "Khoản chi ngân hàng",
+    toolSource: (label: string, tool: string): string => `${label} · ${tool}`,
+    notConnected: (label: string): string => `${label}: chưa kết nối`,
+    sourceTaxProfile: "Hồ sơ thuế của doanh nghiệp",
+    sourceTaxCalendar: "Lịch thuế Việt Nam",
+    sourceSupplier: "Hồ sơ nhà cung cấp",
 } as const
 
-/** The badge of a folio payment that is not exact. */
-export const FOLIO_MATCH_TEXT: ReadonlyMap<string, string> = new Map([
+/** The badge of a receivable payment that is not exact. */
+export const RECEIVABLE_MATCH_TEXT: ReadonlyMap<string, string> = new Map([
     ["partial", "Thanh toán thiếu"],
     ["over", "Thanh toán thừa"],
-    ["settled", "Folio đã tất toán"],
+    ["settled", "Khoản phải thu đã tất toán"],
 ])
 
-/** The lines of the folio reconciliation (N23). */
-export const FOLIO_COPY = {
-    recorded: (room: string, guest: string, amount: number, ref: string): string =>
-        `Đã khớp tiền vào ${amount.toLocaleString("vi-VN")} ₫ với folio phòng ${room} (${guest}) và ghi nhận ở HAKUEN · ${ref}`,
-    failed: (room: string, ref: string): string =>
-        `Chưa ghi nhận được thanh toán vào folio phòng ${room} ở HAKUEN · ${ref}. Kế toán kiểm tra lại.`,
-    title: (room: string): string => `Đối soát thanh toán · phòng ${room}`,
-    body: "Đề xuất: Kế toán trưởng xác nhận số tiền trước khi ghi nhận vào folio.",
+/** The lines of the receivable reconciliation (N23); the memo is quoted as the payer wrote it. */
+export const RECEIVABLE_COPY = {
+    recorded: (memo: string, amount: number, ref: string): string =>
+        `Đã khớp tiền vào ${amount.toLocaleString("vi-VN")} ₫ ("${memo}") với khoản phải thu và đã ghi nhận · ${ref}`,
+    failed: (memo: string, ref: string): string =>
+        `Chưa ghi nhận được thanh toán "${memo}" vào khoản phải thu · ${ref}. Kế toán kiểm tra lại.`,
+    title: (memo: string): string => `Đối soát thanh toán · ${memo}`,
+    body: "Đề xuất: Kế toán trưởng xác nhận số tiền trước khi ghi nhận vào khoản phải thu.",
     received: "Tiền vào",
-    balance: "Còn nợ trên folio",
+    balance: "Còn phải thu",
     memo: "Nội dung chuyển khoản",
-    text: (room: string, amount: number, balance: number): string =>
-        `Đối soát thanh toán phòng ${room}: tiền vào ${amount.toLocaleString("vi-VN")} ₫, folio còn nợ ${balance.toLocaleString("vi-VN")} ₫. Cần Kế toán trưởng xác nhận.`,
+    text: (memo: string, amount: number, balance: number): string =>
+        `Đối soát thanh toán "${memo}": tiền vào ${amount.toLocaleString("vi-VN")} ₫, còn phải thu ${balance.toLocaleString("vi-VN")} ₫. Cần Kế toán trưởng xác nhận.`,
+} as const
+
+/** The lines of the supplier payment matching: an outgoing payment that only partly matches an open supplier invoice. */
+export const SUPPLIER_COPY = {
+    title: (supplier: string, invoiceNo: string): string => `Đối chiếu thanh toán NCC · ${supplier || "(không rõ)"} · HĐ ${invoiceNo}`,
+    badge: "Cần xác nhận",
+    body: "Đề xuất: Kế toán trưởng xác nhận khoản chi này đã trả hóa đơn; khi xác nhận, hóa đơn không còn được nhắc hạn.",
+    invoiceAmount: "Hóa đơn",
+    paid: "Đã chi",
+    memo: "Nội dung chuyển khoản",
+    text: (supplier: string, invoiceNo: string, invoice: number, paid: number): string =>
+        `Đối chiếu thanh toán ${supplier || "NCC"} · HĐ ${invoiceNo}: hóa đơn ${invoice.toLocaleString("vi-VN")} ₫, đã chi ${paid.toLocaleString("vi-VN")} ₫. Cần Kế toán trưởng xác nhận.`,
 } as const
 
 /** The text of one invoice issue. */
@@ -105,5 +126,5 @@ export const issueText = (issue: EinvoiceIssue): string => ISSUE_TEXT.get(issue)
 /** The label of one obligation. */
 export const kindText = (kind: ObligationKind | "supplier_payment"): string => KIND_LABELS.get(kind) ?? kind
 
-/** The badge of a folio payment that is not exact. */
-export const folioMatchText = (match: string): string => FOLIO_MATCH_TEXT.get(match) ?? match
+/** The badge of a receivable payment that is not exact. */
+export const receivableMatchText = (match: string): string => RECEIVABLE_MATCH_TEXT.get(match) ?? match

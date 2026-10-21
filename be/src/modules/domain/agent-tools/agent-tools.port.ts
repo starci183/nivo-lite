@@ -1,7 +1,9 @@
 import type {
+    AgentHandoffRequest,
     ApprovalRequest,
     ApprovalResult,
     BookingToolName,
+    GatewayToolName,
     JsonResult,
     KnowledgePassages,
     LeadDraft,
@@ -41,6 +43,21 @@ export interface BookingTools {
 export interface ApprovalRequester {
     /** Opens the approval work item. */
     request(ctx: ToolContext, request: ApprovalRequest): Promise<ApprovalResult>
+}
+
+/**
+ * Runs the connector meta-tools for the job's own conversation (owner: the customer turns, over the MCP gateway): the agent of the
+ * conversation is the caller, so its grants, approvals and the audit apply; a call that needs a person opens its approval.
+ */
+export interface GatewayTools {
+    /** Runs one meta-tool. */
+    run(ctx: ToolContext, tool: GatewayToolName, args: ToolArgs): Promise<JsonResult>
+}
+
+/** Hands the job's own conversation to another agent of the workspace (owner: the customer turns). */
+export interface AgentHandoff {
+    /** Moves the conversation and posts the hand-off note; the answer says where it went or why it stayed. */
+    handOff(ctx: ToolContext, request: AgentHandoffRequest): Promise<JsonResult>
 }
 
 /** Hands a conversation to a person (owner: the channels lane). */

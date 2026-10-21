@@ -33,7 +33,6 @@ export const toWorkItem = (row: WorkItemRow): WorkItem => ({
     evidence_state: row.evidence_state,
     assigned_staff_id: row.assigned_staff_id,
     execution_id: row.execution_id,
-    origin: row.origin,
     created_at: row.created_at.toISOString(),
     updated_at: row.updated_at.toISOString(),
     completed_at: row.completed_at === null ? null : row.completed_at.toISOString(),

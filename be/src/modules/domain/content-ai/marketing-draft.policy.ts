@@ -1,6 +1,7 @@
 import { isRecord, parseJsonText } from "@modules/platform/primitives"
 import type { Locale } from "@modules/platform/i18n"
 import type { GuidelineKit, ImageCopy, MarketingDraft, ScriptBeat } from "./content-agent.contracts"
+import type { DraftGuidance } from "./marketing-cards.contracts"
 
 /** The time ranges of the three beats of the 15 second script. */
 export const SCRIPT_BEATS: ReadonlyArray<string> = ["00-05s", "05-10s", "10-15s"]
@@ -43,11 +44,28 @@ const brandLines = (kit: GuidelineKit | null): string =>
               .filter((line) => line !== "")
               .join("\n")
 
-/** The prompt that turns one owner request into a post draft: caption, hashtags, two image texts and a 15 second script. */
+/** The lessons and templates the prompt carries; nothing for a layer that holds none. */
+const guidanceLines = (guidance: DraftGuidance): ReadonlyArray<string> => [
+    ...(guidance.lessons.length === 0
+        ? []
+        : ["Learned from the owner's earlier edits (follow them):", ...guidance.lessons.map((line) => `- ${line}`)]),
+    ...(guidance.templates.length === 0
+        ? []
+        : [
+              "NIVO marketing templates (use their structure, never their facts):",
+              ...guidance.templates.map((line) => `- ${line}`),
+          ]),
+]
+
+/**
+ * The prompt that turns one owner request into a post draft: caption, hashtags, two image texts and a 15 second script, written
+ * in the brand and following the learned lessons and the NIVO templates of `guidance`.
+ */
 export const draftMessages = (
     request: string,
     kit: GuidelineKit | null,
     locale: Locale,
+    guidance: DraftGuidance,
 ): ReadonlyArray<{ readonly role: "system" | "user"; readonly content: string }> => [
     {
         role: "system",
@@ -62,6 +80,7 @@ export const draftMessages = (
             "Only state offers, prices and dates the request gives; never invent them.",
             `Write in ${locale === "vi" ? "Vietnamese" : "English"}.`,
             brandLines(kit),
+            ...guidanceLines(guidance),
         ].join("\n"),
     },
     { role: "user", content: request.trim().slice(0, 2000) },

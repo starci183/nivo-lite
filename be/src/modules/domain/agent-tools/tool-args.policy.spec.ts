@@ -1,5 +1,6 @@
 import { Test } from "@nestjs/testing"
 import {
+    agentHandoffOf as realAgentHandoffOf,
     approvalOf as realApprovalOf,
     clipText as realClipText,
     handoffReasonOf as realHandoffReasonOf,
@@ -11,7 +12,7 @@ import { AgentToolsError, AgentToolsErrorCode } from "./errors/agent-tools.error
 const SUBJECT = Symbol("tool-args.policy")
 type Subject = Pick<
     typeof import("./tool-args.policy"),
-    "approvalOf" | "clipText" | "handoffReasonOf" | "leadOf" | "queryOf"
+    "agentHandoffOf" | "approvalOf" | "clipText" | "handoffReasonOf" | "leadOf" | "queryOf"
 >
 const build = async () => {
     const moduleRef = await Test.createTestingModule({
@@ -19,6 +20,7 @@ const build = async () => {
             {
                 provide: SUBJECT,
                 useValue: {
+                    agentHandoffOf: realAgentHandoffOf,
                     approvalOf: realApprovalOf,
                     clipText: realClipText,
                     handoffReasonOf: realHandoffReasonOf,
@@ -149,5 +151,21 @@ describe("tool args policy > handoffReasonOf", () => {
         const subject = await build()
         expect(subject.handoffReasonOf({ reason: "r".repeat(400) })).toHaveLength(300)
         expect(subject.handoffReasonOf({})).toBe("")
+    })
+})
+
+describe("tool args policy > agentHandoffOf", () => {
+    it("clips the target to 120 and the note to 400", async () => {
+        const subject = await build()
+        const request = subject.agentHandoffOf({ to: ` ${"t".repeat(200)} `, note: "n".repeat(500) })
+
+        expect(request.to).toHaveLength(120)
+        expect(request.note).toHaveLength(400)
+    })
+
+    it("requires the target and the note", async () => {
+        const subject = await build()
+        expect(thrownBy(() => subject.agentHandoffOf({ note: "x" }))?.params).toEqual({ field: "to" })
+        expect(thrownBy(() => subject.agentHandoffOf({ to: "care" }))?.params).toEqual({ field: "note" })
     })
 })

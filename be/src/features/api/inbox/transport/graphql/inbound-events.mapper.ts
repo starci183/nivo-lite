@@ -15,7 +15,6 @@ export const toInboundEventsType = (rows: ReadonlyArray<InboundEventFeedRow>): A
         id: row.id,
         channel: row.channel,
         kind: row.kind,
-        origin: row.origin,
         senderName: row.sender_name,
         senderContact: row.sender_contact,
         body: row.body,

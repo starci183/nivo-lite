@@ -1,7 +1,12 @@
 import { Test } from "@nestjs/testing"
-import * as subject from "./brand-kit.policy"
-
-const { brandKitMessages, brandVoiceOf, cleanBrandKit, GUIDELINE_TEXT_MAX, hexOf, readBrandKit } = subject
+import {
+    brandKitMessages,
+    brandVoiceOf,
+    cleanBrandKit,
+    GUIDELINE_TEXT_MAX,
+    hexOf,
+    readBrandKit,
+} from "./brand-kit.policy"
 
 describe("hexOf", () => {
     it("normalises six and three digit hex values with or without the hash", () => {
@@ -103,11 +108,12 @@ describe("cleanBrandKit and brandVoiceOf", () => {
 })
 
 const SUBJECT = Symbol("brand-kit.policy")
-const POLICY = { brandKitMessages, brandVoiceOf, cleanBrandKit, GUIDELINE_TEXT_MAX, hexOf, readBrandKit }
 
 const buildSubject = async () => {
     const moduleRef = await Test.createTestingModule({
-        providers: [{ provide: SUBJECT, useValue: POLICY }],
+        providers: [
+            { provide: SUBJECT, useValue: { brandKitMessages, brandVoiceOf, cleanBrandKit, hexOf, readBrandKit } },
+        ],
     }).compile()
     return moduleRef.get<typeof import("./brand-kit.policy")>(SUBJECT)
 }

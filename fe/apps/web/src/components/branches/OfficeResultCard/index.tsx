@@ -50,13 +50,9 @@ export const OfficeResultCard = (props: OfficeResultCardProps) => {
     }
     return (
         <OfficeCardFrame
-            id={card.anchor}
-            author={card.author}
+            identity={card}
+            aiLabel={text("aiBadge")}
             avatar={props.avatar}
-            status={card.isAi ? <Badge tone="neutral">{text("aiBadge")}</Badge> : undefined}
-            meta={card.time}
-            label={card.title}
-            isHighlight={card.isFocused}
             head={card.lead === null ? <Text size="sm">{card.typeLabel}</Text> : <Text>{card.lead}</Text>}
         >
             <div className={TEXT_CLASS_NAME}>

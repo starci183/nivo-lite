@@ -36,7 +36,7 @@ const ledgerKindSchema = z.enum(["income", "receivable"])
 const ledgerStatusSchema = z.enum(["issued", "paid", "void", "settled", "matched", "unmatched", "needs_review"])
 const lineageKindSchema = z.enum(["order", "invoice", "payment", "decision", "adjustment"])
 const matchSchema = z.enum(["matched", "unclear", "unmatched"])
-const sourceKindSchema = z.enum(["vietcombank", "inbox", "manual", "other"])
+const sourceKindSchema = z.enum(["connector", "inbox", "manual", "other"])
 const invoiceStatusSchema = z.enum(["draft", "issued", "paid", "void"])
 const questionGroupSchema = z.enum(["unclear_payment", "over_limit", "missing_data", "other"])
 
@@ -93,7 +93,6 @@ const questionItemOf = (item: AccountingQuestionWorkType): FlowWorkItemView => (
     assigned_staff_id: item.assignedStaffId ?? null,
     assignedStaffName: item.assignedStaffName ?? null,
     execution_id: item.executionId ?? null,
-    origin: item.origin === "simulated" ? "simulated" : "live",
     created_at: item.createdAt,
     updated_at: item.updatedAt,
     completed_at: item.completedAt ?? null,
@@ -125,7 +124,6 @@ const ledgerEntryOf = (entry: AccountingLedgerEntryType): AccountingLedgerEntry 
     kind: ledgerKindSchema.parse(entry.kind),
     status: ledgerStatusSchema.parse(entry.status),
     linked: entry.linked ?? null,
-    origin: entry.origin === "simulated" ? "simulated" : "live",
     lineage: entry.lineage.map((step) => ({
         ...step,
         kind: lineageKindSchema.parse(step.kind),
@@ -145,7 +143,6 @@ export const accountingWorkbenchOf = (data: AccountingWorkbenchType): Accounting
     },
     credits: data.credits.map((credit): AccountingCredit => ({
         ...credit,
-        origin: credit.origin === "simulated" ? "simulated" : "live",
         match: matchSchema.parse(credit.match),
         sourceKind: sourceKindSchema.parse(credit.sourceKind),
         payer: credit.payer ?? null,
@@ -154,7 +151,6 @@ export const accountingWorkbenchOf = (data: AccountingWorkbenchType): Accounting
     })),
     invoices: data.invoices.map((invoice): AccountingInvoice => ({
         ...invoice,
-        origin: invoice.origin === "simulated" ? "simulated" : "live",
         status: invoiceStatusSchema.parse(invoice.status),
         customer: invoice.customer ?? null,
         issuedAt: invoice.issuedAt ?? null,
@@ -164,7 +160,6 @@ export const accountingWorkbenchOf = (data: AccountingWorkbenchType): Accounting
     })),
     ordersWithoutInvoice: data.ordersWithoutInvoice.map((order): AccountingOrder => ({
         ...order,
-        origin: order.origin === "simulated" ? "simulated" : "live",
         amount: order.amount ?? null,
         customer: order.customer ?? null,
     })),

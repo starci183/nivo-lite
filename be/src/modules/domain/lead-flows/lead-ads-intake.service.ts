@@ -58,7 +58,6 @@ export class LeadAdsIntakeService {
             workspaceId: job.workspaceId,
             channel: "facebook",
             kind: "lead",
-            origin: "live",
             senderName: name,
             senderContact: lead?.phone ?? lead?.email ?? null,
             body: lead === null ? this.kit.text(LOCALE, "lead-ads.unreadable", { id: event.leadgen_id ?? "" }) : need,
@@ -86,7 +85,6 @@ export class LeadAdsIntakeService {
                 to: "lead_gen",
                 command: "capture_lead",
                 reason: "lead_ad",
-                origin: "live",
                 inboundEventId: stored.inboundEventId,
                 dedupeKey: `capture_lead:inbound:${stored.inboundEventId}`,
                 payload: {
@@ -112,7 +110,6 @@ export class LeadAdsIntakeService {
                 subject_type: "inbound",
                 subject_id: stored.inboundEventId,
                 inbound_event_id: stored.inboundEventId,
-                origin: "live",
                 dedupeKey: `handoff_lead:inbound:${stored.inboundEventId}`,
                 seed: { fields },
             })

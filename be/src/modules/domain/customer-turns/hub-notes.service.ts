@@ -1,8 +1,6 @@
 import { Injectable } from "@nestjs/common"
-import type { EntityManager } from "typeorm"
-import { InjectPrimaryEntityManager } from "@modules/platform/database"
-import type { HubNote } from "./gateway-turns.contracts"
-import { INSERT_HUB_LINE } from "./persistence/gateway-turns.sql"
+import { isOfficeRoomKey, OfficeCardsService } from "@modules/domain/messages"
+import type { HubNote, HubNoteSource } from "./gateway-turns.contracts"
 
 /** What a note line refers to. */
 export interface NoteRefs {
@@ -12,27 +10,79 @@ export interface NoteRefs {
     readonly workItemId: string | null
 }
 
+/** The card contract's limits (be/src/modules/domain/messages/office-card.policy.ts). */
+const MAX_TITLE = 160
+const MAX_LABEL = 80
+const MAX_VALUE = 400
+const MAX_BODY = 4000
+const MAX_FIELDS = 12
+const MAX_SOURCES = 10
+const MAX_KIND = 40
+const MAX_REF = 200
+
+const clip = (text: string, max: number): string => (text.length <= max ? text : `${text.slice(0, max - 1)}…`)
+
 /** The one-line body of a note: the title and its fields. */
 export const noteBodyOf = (note: HubNote): string =>
     [note.title, ...note.fields.map((field) => `${field.label}: ${field.value}`)].join(" · ")
 
+/** The layer-1 sources of the connector tools a turn called, once each, in call order. */
+export const toolSourcesOf = (tools: ReadonlyArray<string>): ReadonlyArray<HubNoteSource> =>
+    [...new Set(tools)].map((tool): HubNoteSource => ({
+        layer: 1,
+        kind: "mcp_tool",
+        ref: tool,
+        label: tool,
+    }))
+
+const sourceOf = (source: HubNoteSource): HubNoteSource => ({
+    layer: source.layer,
+    kind: clip(source.kind, MAX_KIND),
+    ref: clip(source.ref, MAX_REF),
+    label: clip(source.label, MAX_TITLE),
+    ...(source.href === undefined ? {} : { href: source.href }),
+})
+
+/** The v1 card payload of a note, kept inside the contract's limits; empty rows, body and sources are left out. */
+export const noteCardOf = (note: HubNote): Readonly<Record<string, unknown>> => {
+    const fields = note.fields
+        .filter((field) => field.label.trim() !== "" && field.value.trim() !== "")
+        .slice(0, MAX_FIELDS)
+        .map((field) => ({ label: clip(field.label, MAX_LABEL), value: clip(field.value, MAX_VALUE) }))
+    const body = note.body?.trim() ?? ""
+    const sources = (note.sources ?? []).slice(0, MAX_SOURCES).map(sourceOf)
+    return {
+        v: 1,
+        type: note.type,
+        title: clip(note.title, MAX_TITLE),
+        ...(fields.length === 0 ? {} : { fields }),
+        ...(body === "" ? {} : { body: clip(body, MAX_BODY) }),
+        ...(sources.length === 0 ? {} : { sources }),
+    }
+}
+
 @Injectable()
 /**
- * Posts the hotel desk's lines to the Hub as the speaking agent, so the Hub routes each to that agent's home room. This is the small
- * adapter of the Hub card contract v1 (`booking_held`, `handoff_note`, `approval_request`): until the card column lands, the card is
- * written as its one-line body; the approval itself is the work item's own card.
+ * Posts the result cards of a customer turn to the Hub as the speaking agent (Hub card contract v1), in the note's room when it
+ * names one, else routed by the database to the agent's home room. The card's one-line body stays the preview; its sources are only
+ * what the turn actually used.
  */
 export class HubNotesService {
-    constructor(@InjectPrimaryEntityManager() private readonly entityManager: EntityManager) {}
+    constructor(private readonly cards: OfficeCardsService) {}
 
     /** Posts one note as an agent of the workspace. */
     async post(note: HubNote, agentId: string, refs: NoteRefs): Promise<void> {
-        await this.entityManager.query(INSERT_HUB_LINE, [
-            note.workspaceId,
-            agentId,
-            noteBodyOf(note),
-            refs.leadId,
-            refs.workItemId,
-        ])
+        await this.cards.post(
+            { workspaceId: note.workspaceId },
+            {
+                room: isOfficeRoomKey(note.room) ? note.room : null,
+                agentId,
+                authorName: note.authorName,
+                body: noteBodyOf(note),
+                leadId: refs.leadId,
+                workItemId: refs.workItemId,
+                card: noteCardOf(note),
+            },
+        )
     }
 }

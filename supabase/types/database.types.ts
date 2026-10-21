@@ -1,4 +1,4 @@
-// migrations-sha256: 2feb7accdded9760df5477743b93f96d0abdefa72dc2e87205462d7b619f2baf
+// migrations-sha256: 636772fcd9ccaeccf96b0af5191b607cb816be36fdb1d9fef6fa2d7078710bb2
 
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[]
 
@@ -107,13 +107,13 @@ isOneToOne: false
                   ]
                 },"agent_conversations": {
                   Row: {
-                    "agent_id": string,"channel": string,"connection_id": string | null,"created_at": string,"external_id": string | null,"handled_at": string | null,"handled_by": string | null,"id": string,"installation_id": string | null,"kind": string,"lead_id": string | null,"visitor_name": string | null,"workspace_id": string
+                    "agent_id": string,"channel": string,"connection_id": string | null,"connector_party_at": string | null,"connector_party_id": string | null,"connector_party_name": string | null,"created_at": string,"external_id": string | null,"handled_at": string | null,"handled_by": string | null,"id": string,"installation_id": string | null,"kind": string,"lead_id": string | null,"visitor_name": string | null,"workspace_id": string
                   }
                   Insert: {
-                    "agent_id": string,"channel"?: string,"connection_id"?: string | null,"created_at"?: string,"external_id"?: string | null,"handled_at"?: string | null,"handled_by"?: string | null,"id"?: string,"installation_id"?: string | null,"kind": string,"lead_id"?: string | null,"visitor_name"?: string | null,"workspace_id": string
+                    "agent_id": string,"channel"?: string,"connection_id"?: string | null,"connector_party_at"?: string | null,"connector_party_id"?: string | null,"connector_party_name"?: string | null,"created_at"?: string,"external_id"?: string | null,"handled_at"?: string | null,"handled_by"?: string | null,"id"?: string,"installation_id"?: string | null,"kind": string,"lead_id"?: string | null,"visitor_name"?: string | null,"workspace_id": string
                   }
                   Update: {
-                    "agent_id"?: string,"channel"?: string,"connection_id"?: string | null,"created_at"?: string,"external_id"?: string | null,"handled_at"?: string | null,"handled_by"?: string | null,"id"?: string,"installation_id"?: string | null,"kind"?: string,"lead_id"?: string | null,"visitor_name"?: string | null,"workspace_id"?: string
+                    "agent_id"?: string,"channel"?: string,"connection_id"?: string | null,"connector_party_at"?: string | null,"connector_party_id"?: string | null,"connector_party_name"?: string | null,"created_at"?: string,"external_id"?: string | null,"handled_at"?: string | null,"handled_by"?: string | null,"id"?: string,"installation_id"?: string | null,"kind"?: string,"lead_id"?: string | null,"visitor_name"?: string | null,"workspace_id"?: string
                   }
                   Relationships: [
                     {
@@ -276,16 +276,22 @@ isOneToOne: false
                   ]
                 },"api_keys": {
                   Row: {
-                    "created_at": string,"created_by": string | null,"id": string,"key_hash": string,"key_prefix": string,"last_used_at": string | null,"name": string,"revoked_at": string | null,"scopes": (string)[],"workspace_id": string
+                    "agent_id": string | null,"created_at": string,"created_by": string | null,"id": string,"key_hash": string,"key_prefix": string,"last_used_at": string | null,"name": string,"revoked_at": string | null,"scopes": (string)[],"workspace_id": string
                   }
                   Insert: {
-                    "created_at"?: string,"created_by"?: string | null,"id"?: string,"key_hash": string,"key_prefix": string,"last_used_at"?: string | null,"name": string,"revoked_at"?: string | null,"scopes"?: (string)[],"workspace_id": string
+                    "agent_id"?: string | null,"created_at"?: string,"created_by"?: string | null,"id"?: string,"key_hash": string,"key_prefix": string,"last_used_at"?: string | null,"name": string,"revoked_at"?: string | null,"scopes"?: (string)[],"workspace_id": string
                   }
                   Update: {
-                    "created_at"?: string,"created_by"?: string | null,"id"?: string,"key_hash"?: string,"key_prefix"?: string,"last_used_at"?: string | null,"name"?: string,"revoked_at"?: string | null,"scopes"?: (string)[],"workspace_id"?: string
+                    "agent_id"?: string | null,"created_at"?: string,"created_by"?: string | null,"id"?: string,"key_hash"?: string,"key_prefix"?: string,"last_used_at"?: string | null,"name"?: string,"revoked_at"?: string | null,"scopes"?: (string)[],"workspace_id"?: string
                   }
                   Relationships: [
                     {
+      foreignKeyName: "api_keys_agent_id_fkey"
+      columns: ["agent_id"]
+isOneToOne: false
+      referencedRelation: "agents"
+      referencedColumns: ["id"]
+    },{
       foreignKeyName: "workspace_api_keys_workspace_id_fkey"
       columns: ["workspace_id"]
 isOneToOne: false
@@ -748,13 +754,13 @@ isOneToOne: false
                   ]
                 },"bookings": {
                   Row: {
-                    "block_end_at": string,"cancel_fee_vnd": number,"cancel_reason": string | null,"cancelled_at": string | null,"checked_in_at": string | null,"conflict_note": string,"conversation_id": string | null,"created_at": string,"customer_email": string | null,"customer_name": string,"customer_phone": string | null,"deposit_status": string,"deposit_vnd": number,"done_at": string | null,"effects": NonNullable<Json>,"end_at": string,"holds_slot": boolean,"id": string,"idempotency_key": string | null,"installation_id": string | null,"lead_id": string | null,"note": string,"order_id": string | null,"origin": string,"party_size": number,"price_vnd": number | null,"reschedule_count": number,"rescheduled_from": string | null,"resource_id": string,"service_id": string,"source_channel": string,"start_at": string,"status": string,"updated_at": string,"work_item_id": string | null,"workspace_id": string
+                    "block_end_at": string,"cancel_fee_vnd": number,"cancel_reason": string | null,"cancelled_at": string | null,"checked_in_at": string | null,"conflict_note": string,"conversation_id": string | null,"created_at": string,"customer_email": string | null,"customer_name": string,"customer_phone": string | null,"deposit_status": string,"deposit_vnd": number,"done_at": string | null,"effects": NonNullable<Json>,"end_at": string,"holds_slot": boolean,"id": string,"idempotency_key": string | null,"installation_id": string | null,"lead_id": string | null,"note": string,"order_id": string | null,"party_size": number,"price_vnd": number | null,"reschedule_count": number,"rescheduled_from": string | null,"resource_id": string,"service_id": string,"source_channel": string,"start_at": string,"status": string,"updated_at": string,"work_item_id": string | null,"workspace_id": string
                   }
                   Insert: {
-                    "block_end_at": string,"cancel_fee_vnd"?: number,"cancel_reason"?: string | null,"cancelled_at"?: string | null,"checked_in_at"?: string | null,"conflict_note"?: string,"conversation_id"?: string | null,"created_at"?: string,"customer_email"?: string | null,"customer_name"?: string,"customer_phone"?: string | null,"deposit_status"?: string,"deposit_vnd"?: number,"done_at"?: string | null,"effects"?: NonNullable<Json>,"end_at": string,"holds_slot"?: boolean,"id"?: string,"idempotency_key"?: string | null,"installation_id"?: string | null,"lead_id"?: string | null,"note"?: string,"order_id"?: string | null,"origin"?: string,"party_size"?: number,"price_vnd"?: number | null,"reschedule_count"?: number,"rescheduled_from"?: string | null,"resource_id": string,"service_id": string,"source_channel"?: string,"start_at": string,"status"?: string,"updated_at"?: string,"work_item_id"?: string | null,"workspace_id": string
+                    "block_end_at": string,"cancel_fee_vnd"?: number,"cancel_reason"?: string | null,"cancelled_at"?: string | null,"checked_in_at"?: string | null,"conflict_note"?: string,"conversation_id"?: string | null,"created_at"?: string,"customer_email"?: string | null,"customer_name"?: string,"customer_phone"?: string | null,"deposit_status"?: string,"deposit_vnd"?: number,"done_at"?: string | null,"effects"?: NonNullable<Json>,"end_at": string,"holds_slot"?: boolean,"id"?: string,"idempotency_key"?: string | null,"installation_id"?: string | null,"lead_id"?: string | null,"note"?: string,"order_id"?: string | null,"party_size"?: number,"price_vnd"?: number | null,"reschedule_count"?: number,"rescheduled_from"?: string | null,"resource_id": string,"service_id": string,"source_channel"?: string,"start_at": string,"status"?: string,"updated_at"?: string,"work_item_id"?: string | null,"workspace_id": string
                   }
                   Update: {
-                    "block_end_at"?: string,"cancel_fee_vnd"?: number,"cancel_reason"?: string | null,"cancelled_at"?: string | null,"checked_in_at"?: string | null,"conflict_note"?: string,"conversation_id"?: string | null,"created_at"?: string,"customer_email"?: string | null,"customer_name"?: string,"customer_phone"?: string | null,"deposit_status"?: string,"deposit_vnd"?: number,"done_at"?: string | null,"effects"?: NonNullable<Json>,"end_at"?: string,"holds_slot"?: boolean,"id"?: string,"idempotency_key"?: string | null,"installation_id"?: string | null,"lead_id"?: string | null,"note"?: string,"order_id"?: string | null,"origin"?: string,"party_size"?: number,"price_vnd"?: number | null,"reschedule_count"?: number,"rescheduled_from"?: string | null,"resource_id"?: string,"service_id"?: string,"source_channel"?: string,"start_at"?: string,"status"?: string,"updated_at"?: string,"work_item_id"?: string | null,"workspace_id"?: string
+                    "block_end_at"?: string,"cancel_fee_vnd"?: number,"cancel_reason"?: string | null,"cancelled_at"?: string | null,"checked_in_at"?: string | null,"conflict_note"?: string,"conversation_id"?: string | null,"created_at"?: string,"customer_email"?: string | null,"customer_name"?: string,"customer_phone"?: string | null,"deposit_status"?: string,"deposit_vnd"?: number,"done_at"?: string | null,"effects"?: NonNullable<Json>,"end_at"?: string,"holds_slot"?: boolean,"id"?: string,"idempotency_key"?: string | null,"installation_id"?: string | null,"lead_id"?: string | null,"note"?: string,"order_id"?: string | null,"party_size"?: number,"price_vnd"?: number | null,"reschedule_count"?: number,"rescheduled_from"?: string | null,"resource_id"?: string,"service_id"?: string,"source_channel"?: string,"start_at"?: string,"status"?: string,"updated_at"?: string,"work_item_id"?: string | null,"workspace_id"?: string
                   }
                   Relationships: [
                     {
@@ -1197,6 +1203,25 @@ isOneToOne: true
       referencedColumns: ["id"]
     }
                   ]
+                },"content_weekly_reports": {
+                  Row: {
+                    "computed_at": string | null,"post_count": number,"posted_at": string | null,"posts": NonNullable<Json>,"suggestion": Json | null,"week_start": string,"workspace_id": string
+                  }
+                  Insert: {
+                    "computed_at"?: string | null,"post_count"?: number,"posted_at"?: string | null,"posts"?: NonNullable<Json>,"suggestion"?: Json | null,"week_start": string,"workspace_id": string
+                  }
+                  Update: {
+                    "computed_at"?: string | null,"post_count"?: number,"posted_at"?: string | null,"posts"?: NonNullable<Json>,"suggestion"?: Json | null,"week_start"?: string,"workspace_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "content_weekly_reports_workspace_id_fkey"
+      columns: ["workspace_id"]
+isOneToOne: false
+      referencedRelation: "workspaces"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"contracts": {
                   Row: {
                     "amount_vnd": number | null,"created_at": string,"customer_name": string,"ends_on": string,"id": string,"lead_id": string | null,"note": string,"plan": string,"starts_on": string,"status": string,"updated_at": string,"workspace_id": string
@@ -1216,6 +1241,31 @@ isOneToOne: false
       referencedColumns: ["id"]
     },{
       foreignKeyName: "contracts_workspace_id_fkey"
+      columns: ["workspace_id"]
+isOneToOne: false
+      referencedRelation: "workspaces"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"conversation_ownership_events": {
+                  Row: {
+                    "conversation_id": string,"created_at": string,"from_agent_id": string | null,"id": string,"reason": string,"to_agent_id": string,"workspace_id": string
+                  }
+                  Insert: {
+                    "conversation_id": string,"created_at"?: string,"from_agent_id"?: string | null,"id"?: string,"reason": string,"to_agent_id": string,"workspace_id": string
+                  }
+                  Update: {
+                    "conversation_id"?: string,"created_at"?: string,"from_agent_id"?: string | null,"id"?: string,"reason"?: string,"to_agent_id"?: string,"workspace_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "conversation_ownership_events_conversation_id_fkey"
+      columns: ["conversation_id"]
+isOneToOne: false
+      referencedRelation: "agent_conversations"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "conversation_ownership_events_workspace_id_fkey"
       columns: ["workspace_id"]
 isOneToOne: false
       referencedRelation: "workspaces"
@@ -1749,13 +1799,13 @@ isOneToOne: true
                   ]
                 },"inbound_events": {
                   Row: {
-                    "amount_vnd": number | null,"body": string,"channel": string,"created_at": string,"dedupe_key": string,"duplicate_count": number,"event_id": string | null,"external_ref": string | null,"id": string,"kind": string,"last_duplicate_at": string | null,"lead_id": string | null,"origin": string,"sender_contact": string | null,"sender_name": string | null,"status": string,"workspace_id": string
+                    "amount_vnd": number | null,"body": string,"channel": string,"created_at": string,"dedupe_key": string,"duplicate_count": number,"event_id": string | null,"external_ref": string | null,"id": string,"kind": string,"last_duplicate_at": string | null,"lead_id": string | null,"sender_contact": string | null,"sender_name": string | null,"status": string,"workspace_id": string
                   }
                   Insert: {
-                    "amount_vnd"?: number | null,"body"?: string,"channel": string,"created_at"?: string,"dedupe_key": string,"duplicate_count"?: number,"event_id"?: string | null,"external_ref"?: string | null,"id"?: string,"kind": string,"last_duplicate_at"?: string | null,"lead_id"?: string | null,"origin": string,"sender_contact"?: string | null,"sender_name"?: string | null,"status"?: string,"workspace_id": string
+                    "amount_vnd"?: number | null,"body"?: string,"channel": string,"created_at"?: string,"dedupe_key": string,"duplicate_count"?: number,"event_id"?: string | null,"external_ref"?: string | null,"id"?: string,"kind": string,"last_duplicate_at"?: string | null,"lead_id"?: string | null,"sender_contact"?: string | null,"sender_name"?: string | null,"status"?: string,"workspace_id": string
                   }
                   Update: {
-                    "amount_vnd"?: number | null,"body"?: string,"channel"?: string,"created_at"?: string,"dedupe_key"?: string,"duplicate_count"?: number,"event_id"?: string | null,"external_ref"?: string | null,"id"?: string,"kind"?: string,"last_duplicate_at"?: string | null,"lead_id"?: string | null,"origin"?: string,"sender_contact"?: string | null,"sender_name"?: string | null,"status"?: string,"workspace_id"?: string
+                    "amount_vnd"?: number | null,"body"?: string,"channel"?: string,"created_at"?: string,"dedupe_key"?: string,"duplicate_count"?: number,"event_id"?: string | null,"external_ref"?: string | null,"id"?: string,"kind"?: string,"last_duplicate_at"?: string | null,"lead_id"?: string | null,"sender_contact"?: string | null,"sender_name"?: string | null,"status"?: string,"workspace_id"?: string
                   }
                   Relationships: [
                     {
@@ -2043,13 +2093,13 @@ isOneToOne: false
                   ]
                 },"invoices": {
                   Row: {
-                    "amount_vnd": number,"created_at": string,"due_at": string | null,"id": string,"invoice_no": string,"issued_at": string | null,"issued_by": string | null,"lead_id": string | null,"order_id": string | null,"origin": string,"paid_at": string | null,"status": string,"workspace_id": string
+                    "amount_vnd": number,"created_at": string,"due_at": string | null,"id": string,"invoice_no": string,"issued_at": string | null,"issued_by": string | null,"lead_id": string | null,"order_id": string | null,"paid_at": string | null,"status": string,"workspace_id": string
                   }
                   Insert: {
-                    "amount_vnd": number,"created_at"?: string,"due_at"?: string | null,"id"?: string,"invoice_no": string,"issued_at"?: string | null,"issued_by"?: string | null,"lead_id"?: string | null,"order_id"?: string | null,"origin"?: string,"paid_at"?: string | null,"status"?: string,"workspace_id": string
+                    "amount_vnd": number,"created_at"?: string,"due_at"?: string | null,"id"?: string,"invoice_no": string,"issued_at"?: string | null,"issued_by"?: string | null,"lead_id"?: string | null,"order_id"?: string | null,"paid_at"?: string | null,"status"?: string,"workspace_id": string
                   }
                   Update: {
-                    "amount_vnd"?: number,"created_at"?: string,"due_at"?: string | null,"id"?: string,"invoice_no"?: string,"issued_at"?: string | null,"issued_by"?: string | null,"lead_id"?: string | null,"order_id"?: string | null,"origin"?: string,"paid_at"?: string | null,"status"?: string,"workspace_id"?: string
+                    "amount_vnd"?: number,"created_at"?: string,"due_at"?: string | null,"id"?: string,"invoice_no"?: string,"issued_at"?: string | null,"issued_by"?: string | null,"lead_id"?: string | null,"order_id"?: string | null,"paid_at"?: string | null,"status"?: string,"workspace_id"?: string
                   }
                   Relationships: [
                     {
@@ -2287,13 +2337,13 @@ isOneToOne: false
                   ]
                 },"leads": {
                   Row: {
-                    "channel": string,"company": string,"contact_name": string,"context_summary": string | null,"created_at": string,"email": string | null,"id": string,"installation_id": string | null,"need": string,"origin": string | null,"phone": string | null,"stage": string,"workspace_id": string
+                    "channel": string,"company": string,"contact_name": string,"context_summary": string | null,"created_at": string,"email": string | null,"id": string,"installation_id": string | null,"need": string,"phone": string | null,"stage": string,"workspace_id": string
                   }
                   Insert: {
-                    "channel": string,"company": string,"contact_name": string,"context_summary"?: string | null,"created_at"?: string,"email"?: string | null,"id"?: string,"installation_id"?: string | null,"need": string,"origin"?: string | null,"phone"?: string | null,"stage"?: string,"workspace_id": string
+                    "channel": string,"company": string,"contact_name": string,"context_summary"?: string | null,"created_at"?: string,"email"?: string | null,"id"?: string,"installation_id"?: string | null,"need": string,"phone"?: string | null,"stage"?: string,"workspace_id": string
                   }
                   Update: {
-                    "channel"?: string,"company"?: string,"contact_name"?: string,"context_summary"?: string | null,"created_at"?: string,"email"?: string | null,"id"?: string,"installation_id"?: string | null,"need"?: string,"origin"?: string | null,"phone"?: string | null,"stage"?: string,"workspace_id"?: string
+                    "channel"?: string,"company"?: string,"contact_name"?: string,"context_summary"?: string | null,"created_at"?: string,"email"?: string | null,"id"?: string,"installation_id"?: string | null,"need"?: string,"phone"?: string | null,"stage"?: string,"workspace_id"?: string
                   }
                   Relationships: [
                     {
@@ -2516,6 +2566,75 @@ isOneToOne: false
       referencedColumns: ["id"]
     },{
       foreignKeyName: "loyalty_sends_workspace_id_fkey"
+      columns: ["workspace_id"]
+isOneToOne: false
+      referencedRelation: "workspaces"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"mcp_call_log": {
+                  Row: {
+                    "agent_id": string | null,"approved_by": string | null,"args_hash": string,"args_masked": NonNullable<Json>,"connector": string,"conversation_id": string | null,"created_at": string,"duration_ms": number,"error_code": string | null,"id": string,"outcome": string,"result_summary": string,"tool": string,"work_item_id": string | null,"workspace_id": string
+                  }
+                  Insert: {
+                    "agent_id"?: string | null,"approved_by"?: string | null,"args_hash"?: string,"args_masked"?: NonNullable<Json>,"connector": string,"conversation_id"?: string | null,"created_at"?: string,"duration_ms"?: number,"error_code"?: string | null,"id"?: string,"outcome": string,"result_summary"?: string,"tool": string,"work_item_id"?: string | null,"workspace_id": string
+                  }
+                  Update: {
+                    "agent_id"?: string | null,"approved_by"?: string | null,"args_hash"?: string,"args_masked"?: NonNullable<Json>,"connector"?: string,"conversation_id"?: string | null,"created_at"?: string,"duration_ms"?: number,"error_code"?: string | null,"id"?: string,"outcome"?: string,"result_summary"?: string,"tool"?: string,"work_item_id"?: string | null,"workspace_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "mcp_call_log_agent_id_fkey"
+      columns: ["agent_id"]
+isOneToOne: false
+      referencedRelation: "agents"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "mcp_call_log_workspace_id_fkey"
+      columns: ["workspace_id"]
+isOneToOne: false
+      referencedRelation: "workspaces"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"mcp_connectors": {
+                  Row: {
+                    "approved_at": string | null,"approved_by": string | null,"approved_catalog": NonNullable<Json>,"catalog_hash": string,"checked_at": string | null,"contract_version": string,"created_at": string,"credential_ref": string | null,"id": string,"key": string,"kind": string,"name": string,"status": string,"timeout_ms": number,"tool_catalog": NonNullable<Json>,"updated_at": string,"url": string | null,"workspace_id": string
+                  }
+                  Insert: {
+                    "approved_at"?: string | null,"approved_by"?: string | null,"approved_catalog"?: NonNullable<Json>,"catalog_hash"?: string,"checked_at"?: string | null,"contract_version"?: string,"created_at"?: string,"credential_ref"?: string | null,"id"?: string,"key": string,"kind": string,"name": string,"status"?: string,"timeout_ms"?: number,"tool_catalog"?: NonNullable<Json>,"updated_at"?: string,"url"?: string | null,"workspace_id": string
+                  }
+                  Update: {
+                    "approved_at"?: string | null,"approved_by"?: string | null,"approved_catalog"?: NonNullable<Json>,"catalog_hash"?: string,"checked_at"?: string | null,"contract_version"?: string,"created_at"?: string,"credential_ref"?: string | null,"id"?: string,"key"?: string,"kind"?: string,"name"?: string,"status"?: string,"timeout_ms"?: number,"tool_catalog"?: NonNullable<Json>,"updated_at"?: string,"url"?: string | null,"workspace_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "mcp_connectors_workspace_id_fkey"
+      columns: ["workspace_id"]
+isOneToOne: false
+      referencedRelation: "workspaces"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"mcp_tool_grants": {
+                  Row: {
+                    "agent_id": string,"constraints": NonNullable<Json>,"id": string,"limit_vnd": number | null,"mode": string,"tool": string,"updated_at": string,"updated_by": string | null,"workspace_id": string
+                  }
+                  Insert: {
+                    "agent_id": string,"constraints"?: NonNullable<Json>,"id"?: string,"limit_vnd"?: number | null,"mode"?: string,"tool": string,"updated_at"?: string,"updated_by"?: string | null,"workspace_id": string
+                  }
+                  Update: {
+                    "agent_id"?: string,"constraints"?: NonNullable<Json>,"id"?: string,"limit_vnd"?: number | null,"mode"?: string,"tool"?: string,"updated_at"?: string,"updated_by"?: string | null,"workspace_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "mcp_tool_grants_agent_id_fkey"
+      columns: ["agent_id"]
+isOneToOne: false
+      referencedRelation: "agents"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "mcp_tool_grants_workspace_id_fkey"
       columns: ["workspace_id"]
 isOneToOne: false
       referencedRelation: "workspaces"
@@ -2892,6 +3011,25 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"office_rooms": {
+                  Row: {
+                    "created_at": string,"id": string,"key": string,"modules": (string)[],"name": string,"position": number,"workspace_id": string
+                  }
+                  Insert: {
+                    "created_at"?: string,"id"?: string,"key": string,"modules"?: (string)[],"name": string,"position"?: number,"workspace_id": string
+                  }
+                  Update: {
+                    "created_at"?: string,"id"?: string,"key"?: string,"modules"?: (string)[],"name"?: string,"position"?: number,"workspace_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "office_rooms_workspace_id_fkey"
+      columns: ["workspace_id"]
+isOneToOne: false
+      referencedRelation: "workspaces"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"office_rooms_members": {
                   Row: {
                     "agent_id": string | null,"created_at": string,"id": string,"is_home": boolean,"room_id": string,"user_id": string | null
@@ -2955,25 +3093,6 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
-                },"office_rooms": {
-                  Row: {
-                    "created_at": string,"id": string,"key": string,"modules": string[],"name": string,"position": number,"workspace_id": string
-                  }
-                  Insert: {
-                    "created_at"?: string,"id"?: string,"key": string,"modules"?: string[],"name": string,"position"?: number,"workspace_id": string
-                  }
-                  Update: {
-                    "created_at"?: string,"id"?: string,"key"?: string,"modules"?: string[],"name"?: string,"position"?: number,"workspace_id"?: string
-                  }
-                  Relationships: [
-                    {
-      foreignKeyName: "office_rooms_workspace_id_fkey"
-      columns: ["workspace_id"]
-isOneToOne: false
-      referencedRelation: "workspaces"
-      referencedColumns: ["id"]
-    }
-                  ]
                 },"openclaw_agent_sync": {
                   Row: {
                     "agent_id": string,"checked_at": string,"content_hash": string | null,"context_version": number | null,"error": string | null,"files": NonNullable<Json>,"installation_id": string,"status": string,"synced_at": string | null,"workspace_id": string
@@ -3001,13 +3120,13 @@ isOneToOne: false
                   ]
                 },"orders": {
                   Row: {
-                    "amount_vnd": number | null,"carrier": string | null,"confirmed_at": string | null,"confirmed_by": string | null,"created_at": string,"id": string,"inbound_event_id": string | null,"items": string,"lead_id": string | null,"order_no": string,"origin": string,"shipped_at": string | null,"status": string,"tracking_code": string | null,"workspace_id": string
+                    "amount_vnd": number | null,"carrier": string | null,"confirmed_at": string | null,"confirmed_by": string | null,"created_at": string,"id": string,"inbound_event_id": string | null,"items": string,"lead_id": string | null,"order_no": string,"shipped_at": string | null,"status": string,"tracking_code": string | null,"workspace_id": string
                   }
                   Insert: {
-                    "amount_vnd"?: number | null,"carrier"?: string | null,"confirmed_at"?: string | null,"confirmed_by"?: string | null,"created_at"?: string,"id"?: string,"inbound_event_id"?: string | null,"items"?: string,"lead_id"?: string | null,"order_no": string,"origin"?: string,"shipped_at"?: string | null,"status"?: string,"tracking_code"?: string | null,"workspace_id": string
+                    "amount_vnd"?: number | null,"carrier"?: string | null,"confirmed_at"?: string | null,"confirmed_by"?: string | null,"created_at"?: string,"id"?: string,"inbound_event_id"?: string | null,"items"?: string,"lead_id"?: string | null,"order_no": string,"shipped_at"?: string | null,"status"?: string,"tracking_code"?: string | null,"workspace_id": string
                   }
                   Update: {
-                    "amount_vnd"?: number | null,"carrier"?: string | null,"confirmed_at"?: string | null,"confirmed_by"?: string | null,"created_at"?: string,"id"?: string,"inbound_event_id"?: string | null,"items"?: string,"lead_id"?: string | null,"order_no"?: string,"origin"?: string,"shipped_at"?: string | null,"status"?: string,"tracking_code"?: string | null,"workspace_id"?: string
+                    "amount_vnd"?: number | null,"carrier"?: string | null,"confirmed_at"?: string | null,"confirmed_by"?: string | null,"created_at"?: string,"id"?: string,"inbound_event_id"?: string | null,"items"?: string,"lead_id"?: string | null,"order_no"?: string,"shipped_at"?: string | null,"status"?: string,"tracking_code"?: string | null,"workspace_id"?: string
                   }
                   Relationships: [
                     {
@@ -3633,13 +3752,13 @@ isOneToOne: false
                   ]
                 },"transactions": {
                   Row: {
-                    "amount_vnd": number,"channel": string,"created_at": string,"id": string,"inbound_event_id": string | null,"invoice_id": string | null,"occurred_at": string,"origin": string,"payer": string | null,"reference": string | null,"status": string,"workspace_id": string
+                    "amount_vnd": number,"channel": string,"created_at": string,"direction": string,"id": string,"inbound_event_id": string | null,"invoice_id": string | null,"occurred_at": string,"payer": string | null,"reference": string | null,"status": string,"workspace_id": string
                   }
                   Insert: {
-                    "amount_vnd": number,"channel"?: string,"created_at"?: string,"id"?: string,"inbound_event_id"?: string | null,"invoice_id"?: string | null,"occurred_at"?: string,"origin"?: string,"payer"?: string | null,"reference"?: string | null,"status"?: string,"workspace_id": string
+                    "amount_vnd": number,"channel"?: string,"created_at"?: string,"direction"?: string,"id"?: string,"inbound_event_id"?: string | null,"invoice_id"?: string | null,"occurred_at"?: string,"payer"?: string | null,"reference"?: string | null,"status"?: string,"workspace_id": string
                   }
                   Update: {
-                    "amount_vnd"?: number,"channel"?: string,"created_at"?: string,"id"?: string,"inbound_event_id"?: string | null,"invoice_id"?: string | null,"occurred_at"?: string,"origin"?: string,"payer"?: string | null,"reference"?: string | null,"status"?: string,"workspace_id"?: string
+                    "amount_vnd"?: number,"channel"?: string,"created_at"?: string,"direction"?: string,"id"?: string,"inbound_event_id"?: string | null,"invoice_id"?: string | null,"occurred_at"?: string,"payer"?: string | null,"reference"?: string | null,"status"?: string,"workspace_id"?: string
                   }
                   Relationships: [
                     {
@@ -3799,28 +3918,15 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
-                },"vietcombank_inbox": {
-                  Row: {
-                    "delivery_id": string,"id": string,"payload": NonNullable<Json>,"processed_at": string | null,"provider": string,"received_at": string
-                  }
-                  Insert: {
-                    "delivery_id": string,"id"?: string,"payload": NonNullable<Json>,"processed_at"?: string | null,"provider": string,"received_at"?: string
-                  }
-                  Update: {
-                    "delivery_id"?: string,"id"?: string,"payload"?: NonNullable<Json>,"processed_at"?: string | null,"provider"?: string,"received_at"?: string
-                  }
-                  Relationships: [
-
-                  ]
                 },"work_items": {
                   Row: {
-                    "action": string,"assigned_staff_id": string | null,"chain_id": string | null,"completed_at": string | null,"created_at": string,"decided_path": string | null,"dedupe_key": string,"department": string,"depth": number,"error": string | null,"evidence_state": string,"execution_id": string | null,"id": string,"inbound_event_id": string | null,"installation_id": string | null,"lead_id": string | null,"missing_fields": (string)[],"origin": string,"parent_id": string | null,"proposal": NonNullable<Json>,"reason": string | null,"reasons": (string)[],"result": Json | null,"status": string,"subject_id": string | null,"subject_type": string,"updated_at": string,"workspace_id": string
+                    "action": string,"assigned_staff_id": string | null,"chain_id": string | null,"completed_at": string | null,"created_at": string,"decided_path": string | null,"dedupe_key": string,"department": string,"depth": number,"error": string | null,"evidence_state": string,"execution_id": string | null,"id": string,"inbound_event_id": string | null,"installation_id": string | null,"lead_id": string | null,"missing_fields": (string)[],"parent_id": string | null,"proposal": NonNullable<Json>,"reason": string | null,"reasons": (string)[],"result": Json | null,"status": string,"subject_id": string | null,"subject_type": string,"updated_at": string,"workspace_id": string
                   }
                   Insert: {
-                    "action": string,"assigned_staff_id"?: string | null,"chain_id"?: string | null,"completed_at"?: string | null,"created_at"?: string,"decided_path"?: string | null,"dedupe_key": string,"department": string,"depth"?: number,"error"?: string | null,"evidence_state"?: string,"execution_id"?: string | null,"id"?: string,"inbound_event_id"?: string | null,"installation_id"?: string | null,"lead_id"?: string | null,"missing_fields"?: (string)[],"origin"?: string,"parent_id"?: string | null,"proposal"?: NonNullable<Json>,"reason"?: string | null,"reasons"?: (string)[],"result"?: Json | null,"status"?: string,"subject_id"?: string | null,"subject_type": string,"updated_at"?: string,"workspace_id": string
+                    "action": string,"assigned_staff_id"?: string | null,"chain_id"?: string | null,"completed_at"?: string | null,"created_at"?: string,"decided_path"?: string | null,"dedupe_key": string,"department": string,"depth"?: number,"error"?: string | null,"evidence_state"?: string,"execution_id"?: string | null,"id"?: string,"inbound_event_id"?: string | null,"installation_id"?: string | null,"lead_id"?: string | null,"missing_fields"?: (string)[],"parent_id"?: string | null,"proposal"?: NonNullable<Json>,"reason"?: string | null,"reasons"?: (string)[],"result"?: Json | null,"status"?: string,"subject_id"?: string | null,"subject_type": string,"updated_at"?: string,"workspace_id": string
                   }
                   Update: {
-                    "action"?: string,"assigned_staff_id"?: string | null,"chain_id"?: string | null,"completed_at"?: string | null,"created_at"?: string,"decided_path"?: string | null,"dedupe_key"?: string,"department"?: string,"depth"?: number,"error"?: string | null,"evidence_state"?: string,"execution_id"?: string | null,"id"?: string,"inbound_event_id"?: string | null,"installation_id"?: string | null,"lead_id"?: string | null,"missing_fields"?: (string)[],"origin"?: string,"parent_id"?: string | null,"proposal"?: NonNullable<Json>,"reason"?: string | null,"reasons"?: (string)[],"result"?: Json | null,"status"?: string,"subject_id"?: string | null,"subject_type"?: string,"updated_at"?: string,"workspace_id"?: string
+                    "action"?: string,"assigned_staff_id"?: string | null,"chain_id"?: string | null,"completed_at"?: string | null,"created_at"?: string,"decided_path"?: string | null,"dedupe_key"?: string,"department"?: string,"depth"?: number,"error"?: string | null,"evidence_state"?: string,"execution_id"?: string | null,"id"?: string,"inbound_event_id"?: string | null,"installation_id"?: string | null,"lead_id"?: string | null,"missing_fields"?: (string)[],"parent_id"?: string | null,"proposal"?: NonNullable<Json>,"reason"?: string | null,"reasons"?: (string)[],"result"?: Json | null,"status"?: string,"subject_id"?: string | null,"subject_type"?: string,"updated_at"?: string,"workspace_id"?: string
                   }
                   Relationships: [
                     {
@@ -3925,13 +4031,13 @@ isOneToOne: false
                   ]
                 },"workspaces": {
                   Row: {
-                    "billed_monthly_vnd": number | null,"billing_cycle": string | null,"business_type": string | null,"created_at": string,"id": string,"name": string,"owner_id": string,"paid_until": string | null,"plan_code": string | null,"seat_count": number | null,"status": string,"tier_credits": number | null
+                    "billed_monthly_vnd": number | null,"billing_cycle": string | null,"business_type": string | null,"created_at": string,"display_name": string | null,"id": string,"logo_url": string | null,"name": string,"owner_id": string,"paid_until": string | null,"plan_code": string | null,"seat_count": number | null,"status": string,"tier_credits": number | null
                   }
                   Insert: {
-                    "billed_monthly_vnd"?: number | null,"billing_cycle"?: string | null,"business_type"?: string | null,"created_at"?: string,"id"?: string,"name": string,"owner_id": string,"paid_until"?: string | null,"plan_code"?: string | null,"seat_count"?: number | null,"status"?: string,"tier_credits"?: number | null
+                    "billed_monthly_vnd"?: number | null,"billing_cycle"?: string | null,"business_type"?: string | null,"created_at"?: string,"display_name"?: string | null,"id"?: string,"logo_url"?: string | null,"name": string,"owner_id": string,"paid_until"?: string | null,"plan_code"?: string | null,"seat_count"?: number | null,"status"?: string,"tier_credits"?: number | null
                   }
                   Update: {
-                    "billed_monthly_vnd"?: number | null,"billing_cycle"?: string | null,"business_type"?: string | null,"created_at"?: string,"id"?: string,"name"?: string,"owner_id"?: string,"paid_until"?: string | null,"plan_code"?: string | null,"seat_count"?: number | null,"status"?: string,"tier_credits"?: number | null
+                    "billed_monthly_vnd"?: number | null,"billing_cycle"?: string | null,"business_type"?: string | null,"created_at"?: string,"display_name"?: string | null,"id"?: string,"logo_url"?: string | null,"name"?: string,"owner_id"?: string,"paid_until"?: string | null,"plan_code"?: string | null,"seat_count"?: number | null,"status"?: string,"tier_credits"?: number | null
                   }
                   Relationships: [
                     {
@@ -4437,6 +4543,9 @@ isOneToOne: false
 "module_type_name":
 { Args: { "p_key": string }; Returns: string
                            },
+"move_office_agent_home":
+{ Args: { "p_agent": string,"p_room": string,"p_workspace": string }; Returns: boolean
+                           },
 "my_sessions":
 { Args: Record<PropertyKey, never>; Returns: {
               "created_at": string,"id": string,"ip": string,"last_active_at": string,"user_agent": string
@@ -4631,6 +4740,9 @@ isOneToOne: false
 "video_renders_reap":
 { Args: Record<PropertyKey, never>; Returns: number
                            },
+"workspace_footprint":
+{ Args: { "p_workspace": string }; Returns: Json
+                           },
 "workspace_member_contacts":
 { Args: { "p_workspace": string }; Returns: {
               "email": string,"last_sign_in_at": string,"user_id": string
@@ -4643,6 +4755,9 @@ isOneToOne: false
                            },
 "workspace_storage_bytes":
 { Args: { "p_workspace": string }; Returns: number
+                           },
+"workspace_user_references":
+{ Args: { "p_keep": (string)[],"p_user": string }; Returns: Json
                            },
 "zalo_authorization_return":
 { Args: { "p_code": string,"p_oa_id"?: string,"p_state": string }; Returns: string

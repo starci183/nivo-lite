@@ -143,6 +143,19 @@ export const SAVE_SETTINGS = sql`
         RETURNING id)
     SELECT id FROM changed`
 
+/**
+ * Moves an installation by the readiness of its connections ($1 installation, $2 workspace, $3 ready): ready or live without them
+ * waits for a connection; waiting with them is live again. Any other status is left as it is. Answers the new status when it moved.
+ */
+export const SETTLE_CONNECTION = sql`
+    WITH settled AS (
+        UPDATE public.module_installations
+        SET status = CASE WHEN $3::boolean THEN 'live' ELSE 'needs_connection' END
+        WHERE id = $1 AND workspace_id = $2
+          AND ((NOT $3::boolean AND status IN ('ready', 'live')) OR ($3::boolean AND status = 'needs_connection'))
+        RETURNING status)
+    SELECT status FROM settled`
+
 /** Points the installation at a freshly applied version ($1 id, $2 workspace, $3 version, $4 status). */
 export const ACTIVATE_VERSION = sql`
     WITH changed AS (

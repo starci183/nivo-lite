@@ -13,8 +13,6 @@ export const BILLING_MESSAGES: MessageBundle = {
             "G\u00f3i h\u1ee3p \u0111\u1ed3ng kh\u00f4ng mua \u0111\u01b0\u1ee3c trong \u1ee9ng d\u1ee5ng, h\u00e3y li\u00ean h\u1ec7 NIVO.",
         "errors.BILLING_WEBHOOK_UNAUTHORIZED": "Webhook kh\u00f4ng \u0111\u01b0\u1ee3c x\u00e1c th\u1ef1c.",
         "errors.BILLING_WEBHOOK_INVALID": "D\u1eef li\u1ec7u webhook kh\u00f4ng h\u1ee3p l\u1ec7.",
-        "errors.BILLING_FEED_NOT_CONFIGURED":
-            "K\u00eanh nh\u1eadn ti\u1ec1n ch\u01b0a \u0111\u01b0\u1ee3c c\u1ea5u h\u00ecnh.",
         "errors.BILLING_CREDENTIAL_UNREADABLE":
             "Kh\u00f4ng \u0111\u1ecdc \u0111\u01b0\u1ee3c th\u00f4ng tin k\u1ebft n\u1ed1i \u0111\u00e3 l\u01b0u.",
         "errors.BILLING_PLAN_NOT_LISTED": "Gói này không còn bán, hãy chọn một gói khác.",
@@ -37,7 +35,6 @@ export const BILLING_MESSAGES: MessageBundle = {
         "errors.BILLING_PLAN_CUSTOM": "A contract plan cannot be bought in the app, please contact NIVO.",
         "errors.BILLING_WEBHOOK_UNAUTHORIZED": "The webhook is not authenticated.",
         "errors.BILLING_WEBHOOK_INVALID": "The webhook payload is not valid.",
-        "errors.BILLING_FEED_NOT_CONFIGURED": "The payment feed is not configured.",
         "errors.BILLING_CREDENTIAL_UNREADABLE": "The stored connection credential could not be read.",
         "errors.BILLING_PLAN_NOT_LISTED": "This plan is no longer sold, please choose another plan.",
         "errors.BILLING_CYCLE_UNAVAILABLE": "This plan is not sold for the billing cycle you chose.",

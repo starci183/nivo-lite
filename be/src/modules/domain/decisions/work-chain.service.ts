@@ -65,7 +65,6 @@ export class WorkChainService {
             command: next,
             parentId: item.id,
             chainId: item.chain_id ?? item.id,
-            origin: item.origin,
             inboundEventId: item.inbound_event_id,
             queue: true,
         } as const

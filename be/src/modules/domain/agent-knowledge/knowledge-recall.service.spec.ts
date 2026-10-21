@@ -158,6 +158,7 @@ describe("KnowledgeRecallService", () => {
                 "From the business documents:\n- Menu: Menu text",
             ].join("\n"),
             passages: [passage("business", "Menu")],
+            facts: [],
         })
         expect(facts.search).toHaveBeenCalledWith(view.workspaceId, "customer", "chatbot", null, "menu", 2)
         expect(search.passages).toHaveBeenCalledWith(view, "menu", 3)
@@ -176,7 +177,7 @@ describe("KnowledgeRecallService", () => {
         facts.search.mockRejectedValueOnce(factsCause)
         search.passages.mockRejectedValueOnce(passageCause)
 
-        await expect(recall.recall(view, "tea")).resolves.toEqual({ brief: "", passages: [] })
+        await expect(recall.recall(view, "tea")).resolves.toEqual({ brief: "", passages: [], facts: [] })
         expect(logger.error).toHaveBeenCalledWith(AgentKnowledgeLogEvent.RecallPartFailed, factsCause, {
             workspaceId: view.workspaceId,
             part: "facts",
@@ -200,6 +201,7 @@ describe("KnowledgeRecallService", () => {
                 "Confirmed facts:\n- Tea - Price: 50k",
             ].join("\n"),
             passages: [],
+            facts: [fact],
         })
     })
 })
@@ -219,6 +221,7 @@ describe("KnowledgeRecallService", () => {
                 `From the business documents:\n- Menu: Tea ${"x".repeat(395)}…`,
             ].join("\n"),
             passages: [menu],
+            facts: [],
         })
     })
 })
@@ -230,7 +233,7 @@ describe("KnowledgeRecallService", () => {
         facts.forView.mockResolvedValue([])
         search.passages.mockResolvedValue([])
 
-        await expect(recall.recall(view, "tea")).resolves.toEqual({ brief: "", passages: [] })
+        await expect(recall.recall(view, "tea")).resolves.toEqual({ brief: "", passages: [], facts: [] })
         await expect(recall.standingMemory(view, 100)).resolves.toBe("")
         expect(messages.get).not.toHaveBeenCalled()
     })

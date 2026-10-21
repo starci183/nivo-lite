@@ -36,10 +36,6 @@ export class AccountingBookTransactionType {
     @Field(() => String)
     status!: string
 
-    /** origin. */
-    @Field(() => String)
-    origin!: string
-
     /** channel. */
     @Field(() => String)
     channel!: string

@@ -1,7 +1,5 @@
 import { Test } from "@nestjs/testing"
-import * as subject from "./schedule-time.policy"
-
-const { publishMomentOf } = subject
+import { publishMomentOf } from "./schedule-time.policy"
 
 const NOW = new Date("2026-10-20T07:00:00.000Z")
 
@@ -25,11 +23,10 @@ describe("publishMomentOf", () => {
 })
 
 const SUBJECT = Symbol("schedule-time.policy")
-const POLICY = { publishMomentOf }
 
 const buildSubject = async () => {
     const moduleRef = await Test.createTestingModule({
-        providers: [{ provide: SUBJECT, useValue: POLICY }],
+        providers: [{ provide: SUBJECT, useValue: { publishMomentOf } }],
     }).compile()
     return moduleRef.get<typeof import("./schedule-time.policy")>(SUBJECT)
 }

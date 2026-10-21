@@ -37,6 +37,25 @@ const query1: Document = gql`
                 }
             }
             channels
+            posts {
+                id
+                channel
+                title
+                publishedAt
+                engagements
+                href
+            }
+            postCount
+            suggestion {
+                title
+                body
+                sources {
+                    layer
+                    kind
+                    ref
+                    label
+                }
+            }
         }
     }
 `
@@ -54,7 +73,7 @@ type QueryMarketingWeeklyReportParams = QueryParams<QueryMarketingWeeklyReport, 
     request: QueryMarketingWeeklyReportRequest
 }
 
-/** Reads the weekly marketing report (reach, engagements, messages and the engagements per day and channel). */
+/** Reads the weekly marketing report (reach, engagements, messages, the engagements per day and channel, the top posts and the suggestion). */
 export const queryMarketingWeeklyReport = async ({
     query = QueryMarketingWeeklyReport.Query1,
     request,

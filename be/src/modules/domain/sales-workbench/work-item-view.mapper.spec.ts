@@ -37,7 +37,6 @@ const itemOf = builder<WorkItem>({
     evidence_state: "pending",
     assigned_staff_id: "staff-1",
     execution_id: "execution-1",
-    origin: "live",
     created_at: "2026-10-12T10:00:00.000Z",
     updated_at: "2026-10-12T10:01:00.000Z",
     completed_at: null,
@@ -52,7 +51,6 @@ const leadOf = builder<LeadView>({
     need: "Tea for the office",
     stage: "proposal",
     context_summary: null,
-    origin: "live",
     installation_id: "installation-1",
     created_at: "2026-10-11T10:00:00.000Z",
 })

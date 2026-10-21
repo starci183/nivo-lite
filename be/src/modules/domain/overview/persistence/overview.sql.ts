@@ -67,17 +67,17 @@ export const DASHBOARD_GOVERNANCE = sql`SELECT jsonb_build_object(
                                             'goalFirstReplyMinutes', a.goal_first_reply_minutes)
                   FROM public.authority a WHERE a.workspace_id = $1::uuid),
     'leads', coalesce((SELECT jsonb_agg(jsonb_build_object('id', l.id, 'contactName', l.contact_name, 'company', l.company,
-                                                           'origin', l.origin, 'stage', l.stage, 'createdAt', l.created_at))
+                                                           'stage', l.stage, 'createdAt', l.created_at))
                        FROM (SELECT * FROM public.leads WHERE workspace_id = $1::uuid LIMIT 10000) l), '[]'::jsonb),
     'orders', coalesce((SELECT jsonb_agg(jsonb_build_object('id', o.id, 'leadId', o.lead_id, 'orderNo', o.order_no, 'items', o.items,
-                                                            'amountVnd', o.amount_vnd, 'status', o.status, 'origin', o.origin))
+                                                            'amountVnd', o.amount_vnd, 'status', o.status))
                         FROM public.orders o WHERE o.workspace_id = $1::uuid AND o.status IN ('confirmed', 'invoiced', 'paid')), '[]'::jsonb),
     'invoices', coalesce((SELECT jsonb_agg(jsonb_build_object('id', i.id, 'orderId', i.order_id, 'leadId', i.lead_id, 'invoiceNo', i.invoice_no,
-                                                              'amountVnd', i.amount_vnd, 'status', i.status, 'origin', i.origin))
+                                                              'amountVnd', i.amount_vnd, 'status', i.status))
                           FROM public.invoices i WHERE i.workspace_id = $1::uuid AND i.status IN ('issued', 'paid')), '[]'::jsonb),
     'transactions', coalesce((SELECT jsonb_agg(jsonb_build_object('id', t.id, 'invoiceId', t.invoice_id, 'payer', t.payer, 'reference', t.reference,
-                                                                  'amountVnd', t.amount_vnd, 'status', t.status, 'origin', t.origin))
-                              FROM public.transactions t WHERE t.workspace_id = $1::uuid
+                                                                  'amountVnd', t.amount_vnd, 'status', t.status))
+                              FROM public.transactions t WHERE t.workspace_id = $1::uuid AND t.direction = 'credit'
                                 AND t.status IN ('matched', 'unmatched', 'needs_review')), '[]'::jsonb),
     'work', coalesce((SELECT jsonb_agg(jsonb_build_object('id', w.id, 'leadId', w.lead_id, 'department', w.department, 'status', w.status,
                                                           'reason', w.reason, 'decidedPath', w.decided_path, 'createdAt', w.created_at,
@@ -102,7 +102,7 @@ export const DASHBOARD_GOVERNANCE = sql`SELECT jsonb_build_object(
 /** The work items waiting for a decision or failed, with their lead and assigned staff ($1 workspace). */
 export const DASHBOARD_EXCEPTIONS = sql`SELECT coalesce(jsonb_agg(jsonb_build_object(
     'id', w.id, 'leadId', w.lead_id, 'department', w.department, 'action', w.action, 'status', w.status, 'reason', w.reason,
-    'origin', w.origin, 'error', w.error, 'executionId', w.execution_id, 'createdAt', w.created_at,
+    'error', w.error, 'executionId', w.execution_id, 'createdAt', w.created_at,
     'assignedStaffName', (SELECT s.name FROM public.staff s WHERE s.id = w.assigned_staff_id),
     'summary', w.proposal ->> 'summary', 'contact', w.proposal -> 'fields' ->> 'contact_name', 'customer', w.proposal -> 'fields' ->> 'customer',
     'lead', (SELECT jsonb_build_object('id', l.id, 'contactName', l.contact_name, 'company', l.company, 'channel', l.channel)

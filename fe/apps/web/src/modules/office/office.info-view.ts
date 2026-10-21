@@ -1,4 +1,4 @@
-import { AGENTS_ROUTE, agentChatHref } from "@/modules/routes"
+import { AGENTS_ROUTE, CONSOLE_ROUTES, agentChatHref } from "@/modules/routes"
 import type {
     OfficeChannelRowView,
     OfficeInfoView,
@@ -67,6 +67,7 @@ const personRowOf = (
         mention: handle === null || isMe ? null : handle,
         chatHref: null,
         note: null,
+        noteAction: null,
     }
 }
 
@@ -81,19 +82,38 @@ const staffRowOf = (member: OfficeStaff, handle: string, words: OfficeWords): Of
     mention: handle,
     chatHref: null,
     note: words.t("noAccountYet"),
+    noteAction: null,
 })
+
+/** What a waiting agent waits for: one line per missing role, with the connectors the back end names (data, never fixed). */
+const waitsForOf = (agent: OfficeAgent, words: OfficeWords): string | null =>
+    agent.waitsFor === null
+        ? null
+        : agent.waitsFor
+              .map((need) =>
+                  need.providers.length === 0
+                      ? words.t("needsRole", { role: need.role })
+                      : words.t("needsConnection", { providers: need.providers.join(words.t("providersOr")) }),
+              )
+              .join(" · ")
+
+/** The status line of an agent that is not on duty: waiting for a connection, or paused. */
+const offDutyOf = (agent: OfficeAgent, words: OfficeWords): string =>
+    agent.waitsFor === null ? words.t("paused") : words.t("waitingConnection")
 
 const agentMemberOf = (agent: OfficeAgent, words: OfficeWords): OfficeMemberRowView => ({
     id: agent.id,
     name: agent.name,
-    detail: agent.isActive ? `@${agent.handle} · ${words.moduleName(agent.module)}` : words.t("paused"),
+    detail: agent.isActive ? `@${agent.handle} · ${words.moduleName(agent.module)}` : offDutyOf(agent, words),
     seen: null,
     avatar: agentAvatarOf(agent.module, agent.name),
     isMe: false,
     presence: agent.isActive ? words.t("onDuty", { name: agent.name }) : null,
     mention: agent.isActive ? agent.handle : null,
     chatHref: agentChatHref(agent.id),
-    note: null,
+    note: waitsForOf(agent, words),
+    noteAction:
+        agent.waitsFor === null ? null : { label: words.t("openConnections"), href: CONSOLE_ROUTES.connections },
 })
 
 /** What the right column shows about the room on screen. */

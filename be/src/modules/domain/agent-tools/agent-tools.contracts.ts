@@ -36,9 +36,26 @@ export interface ToolManifestEntry {
 /** The booking tools served by the booking lane. */
 export type BookingToolName = "booking.find_slots" | "booking.request" | "booking.cancel"
 
+/** The connector meta-tools of the gateway: find, describe and call the connector tools the agent is granted. */
+export type GatewayToolName = "tool.search" | "tool.describe" | "tool.call" | "tool.sequence"
+
 /** The supported tool names used to validate calls before dispatching them to a capability. */
 export type ToolName =
-    "knowledge.search" | "lead.create_or_update" | "approval.request" | "handoff.to_person" | BookingToolName
+    | "knowledge.search"
+    | "lead.create_or_update"
+    | "approval.request"
+    | "handoff.to_person"
+    | "conversation.handOff"
+    | BookingToolName
+    | GatewayToolName
+
+/** A hand-over of the conversation to another agent of the workspace, already clipped. */
+export interface AgentHandoffRequest {
+    /** The agent to hand to: its id, or the department (module key) whose active agent takes it. */
+    readonly to: string
+    /** Why, in one line; the hand-off note and the ownership history keep it. */
+    readonly note: string
+}
 
 /** Sanitised slot-search arguments used to query a workspace's booking availability. */
 export interface BookingFindSlotsArgs {

@@ -5,7 +5,6 @@ import type { WorkPerformerRegistry } from "@modules/domain/decisions"
 import { BOOKING_ACTIONS, BookingPerformerService } from "./booking-performer.service"
 import { BookingRemindPerformerService } from "./booking-remind-performer.service"
 import { CarePerformerService } from "./care-performer.service"
-import { EarlyCheckinPerformerService } from "./early-checkin-performer.service"
 import { GatewayCallPerformerService } from "./gateway-call-performer.service"
 import { ClassifyLeadPerformerService } from "./classify-lead-performer.service"
 import { ConfirmOrderPerformerService } from "./confirm-order-performer.service"
@@ -37,7 +36,6 @@ export class WorkPerformersRegistrarService implements OnModuleInit {
         private readonly remind: BookingRemindPerformerService,
         private readonly redeem: RedeemRewardPerformerService,
         private readonly gatewayCall: GatewayCallPerformerService,
-        private readonly earlyCheckin: EarlyCheckinPerformerService,
     ) {}
 
     /** Adds the performers to the registry: the sales chain, the booking actions, the reward redemption and the gateway calls. */
@@ -56,6 +54,5 @@ export class WorkPerformersRegistrarService implements OnModuleInit {
         this.registry.add("remind_booking", this.remind)
         this.registry.add("redeem_reward", this.redeem)
         this.registry.add("gateway_call", this.gatewayCall)
-        this.registry.add("care_early_checkin", this.earlyCheckin)
     }
 }

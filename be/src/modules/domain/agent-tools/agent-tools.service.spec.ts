@@ -2,9 +2,11 @@ import { Test } from "@nestjs/testing"
 import { mock } from "@starci/jest-preset"
 import { EventsService } from "@modules/domain/events"
 import {
+    AGENT_HANDOFF,
     APPROVAL_REQUESTER,
     BOOKING_TOOLS,
     CONVERSATION_LEADS,
+    GATEWAY_TOOLS,
     HANDOFF_TOOL,
     KNOWLEDGE_SEARCH,
     LEAD_WRITER,
@@ -12,9 +14,11 @@ import {
 } from "./agent-tools.decorators"
 import { AgentToolsService } from "./agent-tools.service"
 import type {
+    AgentHandoff,
     ApprovalRequester,
     BookingTools,
     ConversationLeads,
+    GatewayTools,
     HandoffTool,
     KnowledgeSearch,
     LeadWriter,
@@ -48,6 +52,10 @@ const build = async (verified: typeof claims | null = claims) => {
     })
     const handoffs = mock<HandoffTool>({ handoff: jest.fn(() => Promise.resolve()) })
     const conversations = mock<ConversationLeads>({ leadIdOf: jest.fn(() => Promise.resolve("lead-9")) })
+    const gatewayTools = mock<GatewayTools>({ run: jest.fn(() => Promise.resolve({ result: { orderId: "o1" } })) })
+    const agentHandoff = mock<AgentHandoff>({
+        handOff: jest.fn(() => Promise.resolve({ status: "handed_off", to: "AI Care" })),
+    })
     const moduleRef = await Test.createTestingModule({
         providers: [
             AgentToolsService,
@@ -59,6 +67,8 @@ const build = async (verified: typeof claims | null = claims) => {
             { provide: APPROVAL_REQUESTER, useValue: approvals },
             { provide: HANDOFF_TOOL, useValue: handoffs },
             { provide: CONVERSATION_LEADS, useValue: conversations },
+            { provide: GATEWAY_TOOLS, useValue: gatewayTools },
+            { provide: AGENT_HANDOFF, useValue: agentHandoff },
         ],
     }).compile()
     return {
@@ -70,6 +80,8 @@ const build = async (verified: typeof claims | null = claims) => {
         booking,
         approvals,
         handoffs,
+        gatewayTools,
+        agentHandoff,
     }
 }
 
@@ -302,5 +314,76 @@ describe("AgentToolsService credential admission", () => {
         const { service } = await build(null)
 
         expect(() => service.authenticateBearer(undefined)).toThrow(AgentToolsError)
+    })
+})
+
+describe("AgentToolsService > connector meta-tools and agent hand-off", () => {
+    it("runs a connector meta-tool through its port and traces the tool it named", async () => {
+        const { service, gatewayTools, events } = await build()
+
+        const result = await service.runTool("t", "tool.call", {
+            name: "crm.order.place",
+            arguments_json: '{"sku":"a"}',
+        })
+
+        expect(result).toEqual({ result: { orderId: "o1" } })
+        expect(gatewayTools.run).toHaveBeenCalledWith(ctx, "tool.call", {
+            name: "crm.order.place",
+            arguments_json: '{"sku":"a"}',
+        })
+        expect(events.record).toHaveBeenCalledWith({
+            workspaceId: "ws-1",
+            kind: "engine.tool.tool.call",
+            actor: "NIVO engine",
+            summary: "Connector tool.call: crm.order.place",
+            leadId: "lead-9",
+            evidence: "job-1",
+        })
+    })
+
+    it("traces the query of a search and the name of a description", async () => {
+        const { service, gatewayTools, events } = await build()
+
+        await service.runTool("t", "tool.search", { query: "orders" })
+        await service.runTool("t", "tool.describe", { name: "crm.order.place" })
+
+        await service.runTool("t", "tool.sequence", { steps_json: "[]" })
+
+        expect(gatewayTools.run.mock.calls.map((call) => call[1])).toEqual([
+            "tool.search",
+            "tool.describe",
+            "tool.sequence",
+        ])
+        expect(events.record.mock.calls.map((call) => call[0].summary)).toEqual([
+            "Connector tool.search: orders",
+            "Connector tool.describe: crm.order.place",
+            "Connector tool.sequence: steps",
+        ])
+    })
+
+    it("hands the conversation to another agent and traces the note", async () => {
+        const { service, agentHandoff, events } = await build()
+
+        const result = await service.runTool("t", "conversation.handOff", { to: " care ", note: "booking confirmed" })
+
+        expect(result).toEqual({ status: "handed_off", to: "AI Care" })
+        expect(agentHandoff.handOff).toHaveBeenCalledWith(ctx, { to: "care", note: "booking confirmed" })
+        expect(events.record).toHaveBeenCalledWith({
+            workspaceId: "ws-1",
+            kind: "engine.tool.conversation.handOff",
+            actor: "NIVO engine",
+            summary: "Conversation handed to care",
+            leadId: "lead-9",
+            evidence: "booking confirmed",
+        })
+    })
+
+    it("refuses a hand-off without a target or a note before moving anything", async () => {
+        const { service, agentHandoff } = await build()
+
+        await expect(service.runTool("t", "conversation.handOff", { to: "care" })).rejects.toMatchObject({
+            code: AgentToolsErrorCode.ArgumentMissing,
+        })
+        expect(agentHandoff.handOff).not.toHaveBeenCalled()
     })
 })

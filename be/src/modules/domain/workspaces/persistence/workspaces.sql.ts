@@ -38,3 +38,12 @@ export const HAS_ANY_WORKSPACE = sql`
 
 /** The name of one workspace ($1 workspace). */
 export const FIND_WORKSPACE_NAME = sql`SELECT name FROM public.workspaces WHERE id = $1::uuid LIMIT 1`
+
+/** Sets the brand of a workspace its owner holds and answers its id ($1 workspace, $2 owner, $3 display name, $4 logo URL). */
+export const SET_WORKSPACE_BRAND = sql`
+    WITH changed AS (
+        UPDATE public.workspaces SET display_name = $3, logo_url = $4
+        WHERE id = $1 AND owner_id = $2
+        RETURNING id
+    )
+    SELECT id FROM changed`

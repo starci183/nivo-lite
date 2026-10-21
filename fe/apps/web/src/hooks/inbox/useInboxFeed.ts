@@ -2,7 +2,6 @@
 
 import { useFormatter, useNow, useTranslations } from "next-intl"
 import { useActiveWorkspace } from "@/hooks/workspaces"
-import { bankConnectionOf } from "@/hooks/banks"
 import { CONSOLE_ROUTES, leadHref } from "@/modules/routes"
 import { errorMessage } from "./inbox.shared"
 import { useQueryInboundEventsSwr } from "@/hooks/swr"
@@ -61,18 +60,11 @@ export const useInboxFeed = (isWaiting: boolean) => {
                 ? []
                 : [{ key: "event", text: t("eventLine", { id: event.eventId }), strong: false }]),
         ]
-        const isSimulated = event.origin === "simulated"
         return {
             id: event.id,
-            source:
-                bankConnectionOf({ channel: event.channel, event_id: event.eventId })?.name ??
-                g(`channel_${event.channel}`),
+            source: g(`channel_${event.channel}`),
             kind: g(`kind_${event.kind}`),
             ago: ago(event.createdAt),
-            origin: {
-                label: g(isSimulated ? "origin_simulated" : "origin_live"),
-                tone: isSimulated ? ("warning" as const) : ("success" as const),
-            },
             status: { label: g(`inbound_${event.status}`), tone: toneOf(event.status) },
             body: event.body,
             meta,

@@ -35,7 +35,6 @@ const INVOICE: InvoiceRow = {
     invoice_no: "HD-01",
     amount_vnd: 50_000,
     status: "issued",
-    origin: "live",
     issued_by: null,
     paid_at: null,
 }
@@ -46,7 +45,6 @@ const INPUT: NewInvoice = {
     orderId: "o1",
     leadId: "l1",
     amountVnd: 50_000,
-    origin: "simulated",
     issuedBy: "Lan",
 }
 const VIEW: InvoiceViewRow = { ...INVOICE, due_at: DUE_AT, issued_at: NOW, created_at: NOW }
@@ -103,7 +101,7 @@ describe("InvoicesService", () => {
         ])
     })
 
-    it("lists issued invoices within the live or requested origin", async () => {
+    it("lists the newest issued invoices up to the requested limit", async () => {
         const row: InvoiceListingRow = { ...INVOICE, order_no: "ORDER-1", contact_name: "Minh" }
         const em = mockEntityManager({
             query: [
@@ -114,10 +112,10 @@ describe("InvoicesService", () => {
         const service = await build(em)
 
         await expect(service.listIssued(WS, 20)).resolves.toEqual([row])
-        await expect(service.listIssued(WS, 10, "simulated")).resolves.toEqual([])
+        await expect(service.listIssued(WS, 10)).resolves.toEqual([])
         expect(em.query.mock.calls).toEqual([
-            [LIST_ISSUED_INVOICES, [WS, 20, "live"]],
-            [LIST_ISSUED_INVOICES, [WS, 10, "simulated"]],
+            [LIST_ISSUED_INVOICES, [WS, 20]],
+            [LIST_ISSUED_INVOICES, [WS, 10]],
         ])
     })
 })
@@ -192,7 +190,7 @@ describe("InvoicesService", () => {
 
 describe("InvoicesService", () => {
     it("issues the next monthly number with the clock's dates and issuer", async () => {
-        const created = { ...INVOICE, invoice_no: "INV-202610-0043", origin: "simulated", issued_by: "Lan" }
+        const created = { ...INVOICE, invoice_no: "INV-202610-0043", issued_by: "Lan" }
         const em = mockEntityManager({
             query: [
                 [LAST_INVOICE_NUMBER, [{ invoice_no: "INV-202610-0042" }]],
@@ -204,7 +202,7 @@ describe("InvoicesService", () => {
         await expect(service.issue(INPUT)).resolves.toEqual({ invoice: created, created: true })
         expect(em.query.mock.calls).toEqual([
             [LAST_INVOICE_NUMBER, [WS, "INV-202610-"]],
-            [INSERT_INVOICE, [WS, "o1", "l1", "INV-202610-0043", 50_000, DUE_AT, "simulated", "Lan", NOW]],
+            [INSERT_INVOICE, [WS, "o1", "l1", "INV-202610-0043", 50_000, DUE_AT, "Lan", NOW]],
         ])
     })
 
@@ -226,7 +224,7 @@ describe("InvoicesService", () => {
             })
             expect(em.query.mock.calls).toEqual([
                 [LAST_INVOICE_NUMBER, [WS, "INV-202610-"]],
-                [INSERT_INVOICE, [WS, null, null, "INV-202610-0001", 50_000, DUE_AT, "simulated", "Lan", NOW]],
+                [INSERT_INVOICE, [WS, null, null, "INV-202610-0001", 50_000, DUE_AT, "Lan", NOW]],
             ])
         },
     )
@@ -244,7 +242,7 @@ describe("InvoicesService", () => {
         await expect(service.issue(INPUT)).resolves.toEqual({ invoice: INVOICE, created: false })
         expect(em.query.mock.calls).toEqual([
             [LAST_INVOICE_NUMBER, [WS, "INV-202610-"]],
-            [INSERT_INVOICE, [WS, "o1", "l1", "INV-202610-0001", 50_000, DUE_AT, "simulated", "Lan", NOW]],
+            [INSERT_INVOICE, [WS, "o1", "l1", "INV-202610-0001", 50_000, DUE_AT, "Lan", NOW]],
             [FIND_INVOICE_OF_ORDER, [WS, "o1"]],
         ])
     })
@@ -266,9 +264,9 @@ describe("InvoicesService", () => {
         await expect(service.issue(INPUT)).resolves.toEqual({ invoice: created, created: true })
         expect(em.query.mock.calls).toEqual([
             [LAST_INVOICE_NUMBER, [WS, "INV-202610-"]],
-            [INSERT_INVOICE, [WS, "o1", "l1", "INV-202610-0001", 50_000, DUE_AT, "simulated", "Lan", NOW]],
+            [INSERT_INVOICE, [WS, "o1", "l1", "INV-202610-0001", 50_000, DUE_AT, "Lan", NOW]],
             [FIND_INVOICE_OF_ORDER, [WS, "o1"]],
-            [INSERT_INVOICE, [WS, "o1", "l1", "INV-202610-0002", 50_000, DUE_AT, "simulated", "Lan", NOW]],
+            [INSERT_INVOICE, [WS, "o1", "l1", "INV-202610-0002", 50_000, DUE_AT, "Lan", NOW]],
         ])
     })
 
@@ -286,39 +284,29 @@ describe("InvoicesService", () => {
         })
         expect(em.query.mock.calls).toEqual([
             [LAST_INVOICE_NUMBER, [WS, "INV-202610-"]],
-            [INSERT_INVOICE, [WS, null, "l1", "INV-202610-0009", 50_000, DUE_AT, "simulated", "Lan", NOW]],
-            [INSERT_INVOICE, [WS, null, "l1", "INV-202610-0010", 50_000, DUE_AT, "simulated", "Lan", NOW]],
-            [INSERT_INVOICE, [WS, null, "l1", "INV-202610-0011", 50_000, DUE_AT, "simulated", "Lan", NOW]],
-            [INSERT_INVOICE, [WS, null, "l1", "INV-202610-0012", 50_000, DUE_AT, "simulated", "Lan", NOW]],
+            [INSERT_INVOICE, [WS, null, "l1", "INV-202610-0009", 50_000, DUE_AT, "Lan", NOW]],
+            [INSERT_INVOICE, [WS, null, "l1", "INV-202610-0010", 50_000, DUE_AT, "Lan", NOW]],
+            [INSERT_INVOICE, [WS, null, "l1", "INV-202610-0011", 50_000, DUE_AT, "Lan", NOW]],
+            [INSERT_INVOICE, [WS, null, "l1", "INV-202610-0012", 50_000, DUE_AT, "Lan", NOW]],
         ])
     })
 
-    it("marks invoices paid at the clock instant within the live or requested origin", async () => {
+    it("marks an invoice paid at the clock instant", async () => {
         const paid = { ...INVOICE, status: "paid", paid_at: NOW }
-        const simulated = { ...paid, origin: "simulated" }
-        const em = mockEntityManager({
-            query: [
-                [MARK_INVOICE_PAID, [paid]],
-                [MARK_INVOICE_PAID, [simulated]],
-            ],
-        })
+        const em = mockEntityManager({ query: [MARK_INVOICE_PAID, [paid]] })
         const service = await build(em)
 
         await expect(service.markPaid(WS, "inv-1")).resolves.toEqual(paid)
-        await expect(service.markPaid(WS, "inv-1", "simulated")).resolves.toEqual(simulated)
-        expect(em.query.mock.calls).toEqual([
-            [MARK_INVOICE_PAID, [WS, "inv-1", NOW, "live"]],
-            [MARK_INVOICE_PAID, [WS, "inv-1", NOW, "simulated"]],
-        ])
+        expect(em.query.mock.calls).toEqual([[MARK_INVOICE_PAID, [WS, "inv-1", NOW]]])
     })
 
-    it("rejects payment when the invoice is absent from the workspace and origin", async () => {
+    it("rejects payment when the invoice is absent from the workspace", async () => {
         const em = mockEntityManager({ query: [MARK_INVOICE_PAID, []] })
         const service = await build(em)
 
-        await expect(service.markPaid(WS, "missing", "simulated")).rejects.toMatchObject({
+        await expect(service.markPaid(WS, "missing")).rejects.toMatchObject({
             code: InvoicesErrorCode.NotFound,
         })
-        expect(em.query).toHaveBeenCalledWith(MARK_INVOICE_PAID, [WS, "missing", NOW, "simulated"])
+        expect(em.query).toHaveBeenCalledWith(MARK_INVOICE_PAID, [WS, "missing", NOW])
     })
 })

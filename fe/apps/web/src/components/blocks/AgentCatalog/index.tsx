@@ -1,7 +1,7 @@
 "use client"
 
 import { useTranslations } from "next-intl"
-import { useCatalogEntries, useInstallAgent } from "@/hooks/installations"
+import { useCatalogEntries, useConnectionNeedsCopy, useInstallAgent } from "@/hooks/installations"
 import { isManager, useMember } from "@/hooks/member"
 import { ALL_CATEGORIES, useCatalogView } from "@/hooks/modules"
 import { useSlotLabels } from "@/hooks/slot"
@@ -14,6 +14,7 @@ export const AgentCatalog = () => {
     const { entries, categories, slot, reload } = useCatalogEntries()
     const slotLabels = useSlotLabels()
     const installing = useInstallAgent()
+    const needs = useConnectionNeedsCopy()
     const isLoading = slot.isLoading === true
     const items = entries.map((entry) => ({
         key: entry.key,
@@ -31,6 +32,7 @@ export const AgentCatalog = () => {
             earlyHint: t("earlyHint"),
             statusLabel: t(`status_${entry.status}`),
             statusTone: entry.statusTone,
+            needs: { lines: needs.linesOf(entry.connectionNeeds), linkLabel: needs.linkLabel, href: needs.href },
             isLoading,
             openHref: entry.openHref,
             openLabel: t("openModule"),

@@ -6,6 +6,7 @@ import type { Outcome } from "@modules/platform/primitives"
 import type {
     AgentThreadMessage,
     ApprovedMessageId,
+    CustomerMessagesDay,
     StoredMessage,
     StoredReply,
     TranscriptLine,
@@ -16,12 +17,14 @@ import { LIST_CONVERSATION_MESSAGES } from "./persistence/conversation-messages.
 import type { ConversationMessagesQuery } from "./conversation-messages.contracts"
 import type {
     ChatMessageRow,
+    CustomerMessagesDayRow,
     LastMessageRow,
     MessageIdRow,
     StoredMessageRow,
     TranscriptRow,
 } from "./persistence/agent-messages.rows"
 import {
+    COUNT_CUSTOMER_MESSAGES_PER_DAY,
     FIND_AGENT_REPLY,
     FIND_LAST_CUSTOMER_MESSAGE,
     FIND_MESSAGE,
@@ -39,6 +42,20 @@ import {
 /** The messages of a conversation between a customer and an agent; the only writer of agent_messages. */
 export class AgentMessagesService {
     constructor(@InjectPrimaryEntityManager() private readonly entityManager: EntityManager) {}
+
+    /** The messages customers wrote per Vietnam day and channel from `from` (inclusive) to `to` (exclusive), oldest first. */
+    async customerMessagesPerDay(
+        workspaceId: string,
+        from: string,
+        to: string,
+    ): Promise<ReadonlyArray<CustomerMessagesDay>> {
+        const rows = await this.entityManager.query<Array<CustomerMessagesDayRow>>(COUNT_CUSTOMER_MESSAGES_PER_DAY, [
+            workspaceId,
+            from,
+            to,
+        ])
+        return rows.map((row) => ({ channel: row.channel, day: row.day, messages: row.messages }))
+    }
 
     /** Reads messages of the workspace's selected conversations after its caller's membership was proved. */
     listForConversations(

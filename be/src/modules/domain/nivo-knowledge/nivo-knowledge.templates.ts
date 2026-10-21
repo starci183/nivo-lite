@@ -10,7 +10,6 @@ import { LOYALTY_KNOWLEDGE } from "./loyalty-knowledge.templates"
 import { SALES_KNOWLEDGE } from "./sales-knowledge.templates"
 import { SHIFTS_KNOWLEDGE } from "./shifts-knowledge.templates"
 import { VIDEO_KNOWLEDGE } from "./video-knowledge.templates"
-import { HOSPITALITY_KNOWLEDGE } from "./hospitality-knowledge.templates"
 import type { NivoFile } from "./nivo-item.policy"
 
 /** Every base knowledge file NIVO ships, by folder (`core` and the knowledge folder of each module), sorted by path. */
@@ -21,7 +20,6 @@ export const NIVO_KNOWLEDGE_FILES: ReadonlyArray<NivoFile> = [
     ...CONTENT_KNOWLEDGE,
     ...CORE_KNOWLEDGE,
     ...HIRING_KNOWLEDGE,
-    ...HOSPITALITY_KNOWLEDGE,
     ...INVENTORY_KNOWLEDGE,
     ...LEAD_GEN_KNOWLEDGE,
     ...LOYALTY_KNOWLEDGE,

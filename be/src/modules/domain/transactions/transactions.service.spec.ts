@@ -10,6 +10,7 @@ import {
     FIND_TRANSACTION_MOMENT,
     INSERT_TRANSACTION,
     LIST_ACCOUNTING_TRANSACTIONS,
+    LIST_BANK_MOVES,
     MATCH_TRANSACTION,
     REVIEW_TRANSACTION,
 } from "./persistence/transactions.sql"
@@ -25,7 +26,6 @@ const transactionOf = builder<TransactionRow>({
     payer: "Minh",
     invoice_id: null,
     status: "unmatched",
-    origin: "live",
 })
 
 const payment: NewTransaction = {
@@ -34,7 +34,6 @@ const payment: NewTransaction = {
     amountVnd: 500000,
     reference: "DH-20261013-0001",
     payer: "Minh",
-    origin: "live",
 }
 
 const build = async (entityManager: MockEntityManager) => {
@@ -139,7 +138,7 @@ describe("TransactionsService", () => {
 
 describe("TransactionsService", () => {
     describe("open", () => {
-        it("records an unmatched payment and answers it", async () => {
+        it("records an unmatched live payment and answers it", async () => {
             const em = mockEntityManager({ query: [INSERT_TRANSACTION, [transactionOf()]] })
             const transactions = await build(em)
 
@@ -150,8 +149,40 @@ describe("TransactionsService", () => {
                 500000,
                 "DH-20261013-0001",
                 "Minh",
-                "live",
+                "credit",
             ])
+        })
+
+        it("records a debit when the bank move took money out", async () => {
+            const em = mockEntityManager({ query: [INSERT_TRANSACTION, [transactionOf()]] })
+            const transactions = await build(em)
+
+            await transactions.open({ ...payment, payer: "Supplier", direction: "debit" })
+            expect(em.query).toHaveBeenCalledWith(INSERT_TRANSACTION, [
+                "ws-1",
+                "in-1",
+                500000,
+                "DH-20261013-0001",
+                "Supplier",
+                "debit",
+            ])
+        })
+
+        it("records inside the caller's transaction when it hands its manager", async () => {
+            const em = mockEntityManager()
+            const tx = mockEntityManager({ query: [INSERT_TRANSACTION, [transactionOf()]] })
+            const transactions = await build(em)
+
+            await expect(transactions.open({ ...payment, direction: "debit" }, tx)).resolves.toEqual(transactionOf())
+            expect(tx.query).toHaveBeenCalledWith(INSERT_TRANSACTION, [
+                "ws-1",
+                "in-1",
+                500000,
+                "DH-20261013-0001",
+                "Minh",
+                "debit",
+            ])
+            expect(em.query).not.toHaveBeenCalled()
         })
 
         it("refuses when no row was created", async () => {
@@ -182,6 +213,53 @@ describe("TransactionsService", () => {
                 [MATCH_TRANSACTION, ["ws-1", "tx-1", "invoice-1"]],
                 [REVIEW_TRANSACTION, ["ws-1", "tx-1"]],
             ])
+        })
+    })
+})
+
+describe("TransactionsService", () => {
+    describe("listBankCredits", () => {
+        it("lists the live bank credits of the workspace with the status, instant and bound given", async () => {
+            const credit = {
+                id: "tx-1",
+                amount_vnd: 500000,
+                reference: "HAKUEN F7K2Q9",
+                payer: "Minh",
+                status: "unmatched",
+                occurred_at: "2026-10-20T02:00:00.000Z",
+            }
+            const em = mockEntityManager({ query: [LIST_BANK_MOVES, [credit]] })
+            const transactions = await build(em)
+
+            await expect(
+                transactions.listBankCredits({
+                    workspaceId: "ws-1",
+                    status: "unmatched",
+                    since: "2026-10-01T00:00:00.000Z",
+                    limit: 20,
+                }),
+            ).resolves.toEqual([credit])
+            expect(em.query).toHaveBeenCalledWith(LIST_BANK_MOVES, [
+                "ws-1",
+                "unmatched",
+                "2026-10-01T00:00:00.000Z",
+                20,
+                "credit",
+            ])
+        })
+    })
+})
+
+describe("TransactionsService", () => {
+    describe("listBankDebits", () => {
+        it("lists the live bank debits of the workspace with the same filters", async () => {
+            const em = mockEntityManager({ query: [LIST_BANK_MOVES, []] })
+            const transactions = await build(em)
+
+            await expect(
+                transactions.listBankDebits({ workspaceId: "ws-1", status: null, since: null, limit: 5 }),
+            ).resolves.toEqual([])
+            expect(em.query).toHaveBeenCalledWith(LIST_BANK_MOVES, ["ws-1", null, null, 5, "debit"])
         })
     })
 })

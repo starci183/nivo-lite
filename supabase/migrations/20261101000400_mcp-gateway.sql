@@ -63,18 +63,6 @@ CREATE TABLE public.mcp_call_log (
 );
 CREATE INDEX mcp_call_log_ws_time ON public.mcp_call_log USING btree (workspace_id, created_at DESC);
 
-CREATE TABLE public.mcp_identity_links (
-    id uuid DEFAULT gen_random_uuid() NOT NULL PRIMARY KEY,
-    workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
-    connector text NOT NULL,
-    channel text NOT NULL,
-    channel_user_id text NOT NULL,
-    lead_id uuid,
-    remote_guest_id text NOT NULL,
-    linked_at timestamp with time zone DEFAULT now() NOT NULL,
-    CONSTRAINT mcp_identity_links_unique UNIQUE (workspace_id, connector, channel, channel_user_id)
-);
-
 CREATE TABLE public.conversation_ownership_events (
     id uuid DEFAULT gen_random_uuid() NOT NULL PRIMARY KEY,
     workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
@@ -82,40 +70,34 @@ CREATE TABLE public.conversation_ownership_events (
     from_agent_id uuid,
     to_agent_id uuid NOT NULL,
     reason text NOT NULL,
-    remote_stay_id text,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
-    CONSTRAINT conversation_ownership_events_reason_check CHECK ((reason = ANY (ARRAY['pre_arrival'::text, 'arrival_day'::text, 'checked_in'::text, 'checked_out_24h'::text])))
+    CONSTRAINT conversation_ownership_events_reason_length CHECK ((char_length(reason) >= 1 AND char_length(reason) <= 400))
 );
 CREATE INDEX conversation_ownership_events_conversation ON public.conversation_ownership_events USING btree (conversation_id, created_at DESC);
 
 ALTER TABLE public.mcp_connectors ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.mcp_tool_grants ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.mcp_call_log ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.mcp_identity_links ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.conversation_ownership_events ENABLE ROW LEVEL SECURITY;
 
 REVOKE ALL ON TABLE public.mcp_connectors FROM anon, authenticated;
 REVOKE ALL ON TABLE public.mcp_tool_grants FROM anon, authenticated;
 REVOKE ALL ON TABLE public.mcp_call_log FROM anon, authenticated;
-REVOKE ALL ON TABLE public.mcp_identity_links FROM anon, authenticated;
 REVOKE ALL ON TABLE public.conversation_ownership_events FROM anon, authenticated;
 
 GRANT SELECT, INSERT, UPDATE ON TABLE public.mcp_connectors TO app_be;
 GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.mcp_tool_grants TO app_be;
 GRANT SELECT, INSERT ON TABLE public.mcp_call_log TO app_be;
-GRANT SELECT, INSERT, UPDATE ON TABLE public.mcp_identity_links TO app_be;
 GRANT SELECT, INSERT ON TABLE public.conversation_ownership_events TO app_be;
 
-CREATE POLICY mcp_connectors_app_be ON public.mcp_connectors TO app_be USING ((workspace_id IS NOT NULL)) WITH CHECK ((workspace_id IS NOT NULL));
-CREATE POLICY mcp_tool_grants_app_be ON public.mcp_tool_grants TO app_be USING ((workspace_id IS NOT NULL)) WITH CHECK ((workspace_id IS NOT NULL));
+CREATE POLICY mcp_connectors_app_be_all ON public.mcp_connectors TO app_be USING ((workspace_id IS NOT NULL)) WITH CHECK ((workspace_id IS NOT NULL));
+CREATE POLICY mcp_tool_grants_app_be_all ON public.mcp_tool_grants TO app_be USING ((workspace_id IS NOT NULL)) WITH CHECK ((workspace_id IS NOT NULL));
 CREATE POLICY mcp_call_log_app_be_select ON public.mcp_call_log FOR SELECT TO app_be USING ((workspace_id IS NOT NULL));
 CREATE POLICY mcp_call_log_app_be_insert ON public.mcp_call_log FOR INSERT TO app_be WITH CHECK ((workspace_id IS NOT NULL));
-CREATE POLICY mcp_identity_links_app_be ON public.mcp_identity_links TO app_be USING ((workspace_id IS NOT NULL)) WITH CHECK ((workspace_id IS NOT NULL));
 CREATE POLICY conversation_ownership_events_app_be_select ON public.conversation_ownership_events FOR SELECT TO app_be USING ((workspace_id IS NOT NULL));
 CREATE POLICY conversation_ownership_events_app_be_insert ON public.conversation_ownership_events FOR INSERT TO app_be WITH CHECK ((workspace_id IS NOT NULL));
 
--- The approval of a gated gateway call (a price exception, an argument over its constraint, a tool in "ask" mode) and the front desk's early check-in.
+-- The approval of a gated gateway call (an argument over its constraint, an amount over the limit, a tool in "ask" mode).
 INSERT INTO public.authority_actions (action, module_key, sort_order, default_mode, default_limit_vnd, default_required_fields, amount_limit, max_mode, label) VALUES
-    ('gateway_call', 'chatbot', 40, 'ask', NULL, '{}', false, NULL, '{"en": "Connector call needing approval", "vi": "Lệnh kết nối cần duyệt"}'),
-    ('care_early_checkin', 'chatbot', 41, 'ask', NULL, '{}', false, NULL, '{"en": "Early check-in and key code", "vi": "Nhận phòng sớm và mã khóa"}')
+    ('gateway_call', 'chatbot', 40, 'ask', NULL, '{}', false, NULL, '{"en": "Connector call needing approval", "vi": "Lệnh kết nối cần duyệt"}')
 ON CONFLICT DO NOTHING;

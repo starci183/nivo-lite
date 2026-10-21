@@ -1,5 +1,7 @@
 /** One row of public.api_keys. */
 export interface ApiKeysRow {
+    /** The agent the key acts as on the MCP endpoint, or null for a public API key. */
+    agent_id: string | null
     /** When the key was created. */
     created_at: string
     /** The user who created the key, or null. */

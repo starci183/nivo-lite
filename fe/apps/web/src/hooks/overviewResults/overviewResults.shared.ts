@@ -1,21 +1,13 @@
 import type { GovFormat, GovTranslator } from "@/hooks/overviewGov"
-import type { Governance, OriginSplit } from "@/hooks/overviewFigures"
+import type { Governance } from "@/hooks/overviewFigures"
 
-/** One origin cell of a status row. */
-export interface GovCell {
-    readonly origin: string
-    readonly value: string
-    readonly count: string | null
-    readonly isLive: boolean
-}
-
-/** One status: what it is and what it rests on, then live and simulated side by side. */
+/** One status: what it is and what it rests on, then its figure and, for money, the record count. */
 export interface GovStatusRow {
     readonly id: string
     readonly label: string
     readonly context: string
-    readonly unlabelled: string | null
-    readonly cells: ReadonlyArray<GovCell>
+    readonly value: string
+    readonly count: string | null
 }
 
 /** The money text of an amount of dong. */
@@ -26,29 +18,20 @@ interface StatusRowInput {
     id: string
     label: string
     context: string
-    split: OriginSplit
-    count: OriginSplit
+    value: number
+    count: number
     unit: string
     money: boolean
 }
 
-/** One status row; money rows show the record counts under the amounts. */
-const statusRowOf = (t: GovTranslator, format: GovFormat, row: StatusRowInput): GovStatusRow => {
-    const value = (n: number): string => (row.money ? moneyOf(format, n) : format.number(n))
-    const cell = (key: "live" | "simulated"): GovCell => ({
-        origin: key === "live" ? t("resultsLive") : t("resultsSim"),
-        value: value(row.split[key]),
-        count: row.money ? t(row.unit, { n: format.number(row.count[key]) }) : null,
-        isLive: key === "live",
-    })
-    return {
-        id: row.id,
-        label: row.label,
-        context: row.context,
-        unlabelled: row.split.unlabelled > 0 ? `${t("resultsUnlabelled")}: ${value(row.split.unlabelled)}` : null,
-        cells: [cell("live"), cell("simulated")],
-    }
-}
+/** One status row; money rows show the record count under the amount. */
+const statusRowOf = (t: GovTranslator, format: GovFormat, row: StatusRowInput): GovStatusRow => ({
+    id: row.id,
+    label: row.label,
+    context: row.context,
+    value: row.money ? moneyOf(format, row.value) : format.number(row.value),
+    count: row.money ? t(row.unit, { n: format.number(row.count) }) : null,
+})
 
 /** The six status rows of the results block. */
 export const statusRowsOf = (
@@ -57,8 +40,8 @@ export const statusRowsOf = (
     governance: Governance,
 ): ReadonlyArray<GovStatusRow> => {
     const s = governance.status
-    const make = (id: string, key: string, split: OriginSplit, count: OriginSplit, unit: string, money: boolean) =>
-        statusRowOf(t, format, { id, label: t(key), context: t(`${key}Ctx`), split, count, unit, money })
+    const make = (id: string, key: string, value: number, count: number, unit: string, money: boolean) =>
+        statusRowOf(t, format, { id, label: t(key), context: t(`${key}Ctx`), value, count, unit, money })
     return [
         make("confirmed", "resultsConfirmed", s.confirmedOrders.vnd, s.confirmedOrders.count, "countOrders", true),
         make("invoiced", "resultsInvoiced", s.internalInvoices.vnd, s.internalInvoices.count, "countRecords", true),
@@ -91,7 +74,7 @@ export const goalLinesOf = (
                 goals.revenueVnd === null
                     ? t("goalRevenueNone")
                     : t("goalRevenue", {
-                          value: moneyOf(format, status.matchedPayments.vnd.live),
+                          value: moneyOf(format, status.matchedPayments.vnd),
                           goal: moneyOf(format, goals.revenueVnd),
                       }),
         },
@@ -102,7 +85,7 @@ export const goalLinesOf = (
                 goals.newCustomers === null
                     ? t("goalCustomersNone")
                     : t("goalCustomers", {
-                          value: format.number(status.newLeads7d.live),
+                          value: format.number(status.newLeads7d),
                           goal: format.number(goals.newCustomers),
                       }),
         },

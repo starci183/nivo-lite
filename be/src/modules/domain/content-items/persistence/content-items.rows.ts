@@ -75,3 +75,11 @@ export interface ScheduleItemRow {
     /** When it should be published. */
     readonly scheduled_at: string | null
 }
+
+/** A post that is due on a channel, as the scheduler tick reads it. */
+export interface DueChannelPostRow extends ScheduleItemRow {
+    /** The workspace. */
+    readonly workspace_id: string
+    /** The channel's reference of the scheduled post. */
+    readonly ref: string
+}

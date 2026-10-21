@@ -18,7 +18,7 @@ import type {
     AccountingWorkbenchData,
 } from "./accounting.contracts"
 import type { AccountingBook, BookOrder } from "./accounting-book.contracts"
-import { buildLedger, customerOf, originOf, toMs } from "@modules/domain/ledger"
+import { buildLedger, customerOf, toMs } from "@modules/domain/ledger"
 import { isTestRunName, isTestRunWorkItem } from "./test-run.policy"
 
 /** The verified caller and records used to build the accounting workbench. */
@@ -35,16 +35,13 @@ export interface AccountingWorkbenchInput {
     readonly ownerName: string
     /** The verified caller workspace role. */
     readonly role: string
-}
-/** A money or count accumulator split by origin. */
-interface MutableSplit {
-    live: number
-    simulated: number
+    /** The display name of the connector that feeds payment credits, or null when none is connected. */
+    readonly creditsSource: string | null
 }
 /** A money and count accumulator. */
 interface MutableMeasure {
-    vnd: MutableSplit
-    count: MutableSplit
+    vnd: number
+    count: number
 }
 /** Invoice measures accumulated within a reporting period. */
 interface InvoiceMeasures {
@@ -59,8 +56,7 @@ interface KeptRows<Row> {
 /** A mutable weekly paid-income bar. */
 interface MutableWeek {
     startIso: string
-    live: number
-    simulated: number
+    vnd: number
 }
 
 /* ------------------------------------------------------------------ time (Vietnam, UTC+7, no DST) */
@@ -97,23 +93,18 @@ const invoiceStatusOf = (value: string): AccountingInvoiceStatus =>
 
 /* ------------------------------------------------------------------ small helpers */
 
-const emptySplit = (): MutableSplit => ({ live: 0, simulated: 0 })
-const emptyMeasure = (): MutableMeasure => ({
-    vnd: emptySplit(),
-    count: emptySplit(),
-})
+const emptyMeasure = (): MutableMeasure => ({ vnd: 0, count: 0 })
 
-const addTo = (measure: MutableMeasure, origin: string | null, vnd: number): void => {
-    const key = originOf(origin)
-    measure.vnd[key] += vnd
-    measure.count[key] += 1
+const addTo = (measure: MutableMeasure, vnd: number): void => {
+    measure.vnd += vnd
+    measure.count += 1
 }
 
 const sourceOf = (tx: BookTransaction): AccountingSourceKind => {
     const inbound = tx.inbound
     if (inbound === null) return "other"
-    if (inbound.event_id?.startsWith("vietcombank:") === true) return "vietcombank"
-    return inbound.channel === "manual" ? "manual" : "inbox"
+    if (inbound.event_id?.startsWith("manual:") === true) return "manual"
+    return inbound.channel === "bank" ? "connector" : "inbox"
 }
 
 /** What the question is about, in the owner's words. */
@@ -154,11 +145,11 @@ const invoiceMeasuresOf = (
         if (invoice.status === "paid") {
             const at = invoice.paid_at ?? invoice.issued_at ?? invoice.created_at
             if (!inRange(at, from, to)) continue
-            addTo(income, invoice.origin, invoice.amount_vnd)
+            addTo(income, invoice.amount_vnd)
             const bar = bars.get(weekStart(toMs(at)))
-            if (bar !== undefined) bar[originOf(invoice.origin)] += invoice.amount_vnd
+            if (bar !== undefined) bar.vnd += invoice.amount_vnd
         } else if (invoice.status === "issued" && inRange(invoice.issued_at ?? invoice.created_at, from, to)) {
-            addTo(receivable, invoice.origin, invoice.amount_vnd)
+            addTo(receivable, invoice.amount_vnd)
         }
     }
     return { income, receivable }
@@ -175,13 +166,13 @@ const buildPeriod = (
     const unmatched = emptyMeasure()
     const bars = new Map<number, MutableWeek>()
     for (let week = weekStart(from); week < to; week += 7 * DAY) {
-        bars.set(week, { startIso: new Date(week).toISOString(), live: 0, simulated: 0 })
+        bars.set(week, { startIso: new Date(week).toISOString(), vnd: 0 })
     }
     const { income, receivable } = invoiceMeasuresOf(invoices, from, to, bars)
     for (const tx of transactions) {
         if (!inRange(tx.occurred_at, from, to)) continue
         if (tx.status === "matched" && tx.invoice_id !== null) continue
-        addTo(unmatched, tx.origin, tx.amount_vnd)
+        addTo(unmatched, tx.amount_vnd)
     }
     return {
         key,
@@ -207,23 +198,21 @@ const buildAgeing = (now: Date, invoices: ReadonlyArray<BookInvoice>): Accountin
         if (invoice.status !== "issued") continue
         const since = toMs(invoice.due_at ?? invoice.issued_at ?? invoice.created_at)
         const days = Number.isFinite(since) ? Math.floor((now.getTime() - since) / DAY) : 0
-        addTo(ageing[slotOf(days)], invoice.origin, invoice.amount_vnd)
+        addTo(ageing[slotOf(days)], invoice.amount_vnd)
     }
     return ageing
 }
 
-/** The waiting accounting items by origin, with the money they already carry. */
+/** The waiting accounting items, with the money they already carry. */
 const buildWaiting = (items: ReadonlyArray<WorkItemView>): AccountingWaiting => {
-    const count = emptySplit()
     let knownVnd = 0
     let unknownAmount = 0
     for (const item of items) {
-        count[originOf(item.origin)] += 1
         const amount = item.proposal.amount_vnd
         if (typeof amount === "number") knownVnd += amount
         else unknownAmount += 1
     }
-    return { count, knownVnd, unknownAmount }
+    return { count: items.length, knownVnd, unknownAmount }
 }
 
 /* ------------------------------------------------------------------ the workbench */
@@ -238,7 +227,6 @@ const toCredit = (
     amount: Number(tx.amount_vnd),
     payer: tx.payer,
     reference: tx.reference,
-    origin: originOf(tx.origin),
     match: matchOf(tx, waitingTxIds),
     invoiceNo: tx.invoice_id === null ? null : invoiceNoOf(tx.invoice_id),
     sourceKind: sourceOf(tx),
@@ -249,7 +237,6 @@ const toInvoice = (invoice: BookInvoice): AccountingInvoice => ({
     invoiceNo: invoice.invoice_no,
     amount: Number(invoice.amount_vnd),
     status: invoiceStatusOf(invoice.status),
-    origin: originOf(invoice.origin),
     customer: customerOf(invoice.lead),
     issuedAt: invoice.issued_at,
     paidAt: invoice.paid_at,
@@ -263,7 +250,6 @@ const toOrder = (order: BookOrder): AccountingOrder => ({
     orderNo: order.order_no,
     items: order.items,
     amount: order.amount_vnd === null ? null : Number(order.amount_vnd),
-    origin: originOf(order.origin),
     customer: customerOf(order.lead),
     createdAt: order.created_at,
 })
@@ -309,6 +295,7 @@ export const buildAccountingWorkbench = (input: AccountingWorkbenchInput): Accou
         credits: transactions
             .slice(0, 200)
             .map((tx) => toCredit(tx, (invoiceId) => invoiceNos.get(invoiceId) ?? null, waitingTxIds)),
+        creditsSource: input.creditsSource,
         invoices: invoices.slice(0, 200).map(toInvoice),
         ordersWithoutInvoice: ordersKept.rows
             .filter((order) => order.status !== "cancelled" && !invoicedOrders.has(order.id))

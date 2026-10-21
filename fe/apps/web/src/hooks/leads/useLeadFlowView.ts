@@ -34,7 +34,6 @@ export interface FlowSectionView {
 export interface FlowView {
     readonly fact: string
     readonly steps: ReadonlyArray<FlowEntryView>
-    readonly hasSimulated: boolean
     readonly sections: ReadonlyArray<FlowSectionView>
 }
 
@@ -149,13 +148,7 @@ const stepOfOf = (
             badge: { label: g(`status_${item.status}`), tone: toneOf(STEP_TONES, item.status, "neutral") },
             reason: item.reason ? g(`reason_${item.reason}`) : null,
             lines: [
-                ...line(
-                    "evidence",
-                    joined([
-                        g(`evidence_${item.evidenceState}`),
-                        item.origin === "simulated" ? g("origin_simulated") : null,
-                    ]),
-                ),
+                ...line("evidence", g(`evidence_${item.evidenceState}`)),
                 ...line("summary", summary, true),
                 ...line("error", item.error ? `${t("flowError")}: ${item.error}` : null),
                 ...line("staff", item.assignedStaffName ? t("flowAssignedTo", { name: item.assignedStaffName }) : null),

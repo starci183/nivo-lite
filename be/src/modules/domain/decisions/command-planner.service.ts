@@ -139,7 +139,6 @@ export class CommandPlannerService {
             inbound_event_id: input.inboundEventId ?? null,
             parent_id: input.parentId ?? null,
             dedupeKey: parts.dedupeKey,
-            origin: input.origin ?? "live",
             seed: { ...input.seed, fields: { ...input.seed?.fields, ...address.fields } },
             queue: input.queue,
             preset: input.preset,

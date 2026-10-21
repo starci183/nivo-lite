@@ -13,7 +13,6 @@ export interface AccountingQuestionCardData {
     readonly title: string
     readonly status: string
     readonly statusTone: "danger" | "success" | "warning"
-    readonly origin: string | null
     readonly explanation: string | null
     readonly proposalLabel: string
     readonly summary: string

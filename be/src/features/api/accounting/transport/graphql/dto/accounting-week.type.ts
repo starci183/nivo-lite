@@ -7,11 +7,7 @@ export class AccountingWeekType {
     @Field(() => String)
     startIso!: string
 
-    /** live. */
+    /** The paid income of the week, VND. */
     @Field(() => Float)
-    live!: number
-
-    /** simulated. */
-    @Field(() => Float)
-    simulated!: number
+    vnd!: number
 }

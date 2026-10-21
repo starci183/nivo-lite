@@ -31,3 +31,10 @@ export const createSupabaseAccessTokenVerifier = (options: SupabaseOptions): Ver
         }
     }
 }
+
+/**
+ * The verifier of an app that serves no user session (the mcp gateway app): every access token is refused, so the default-deny
+ * guard admits only its public and credential doors, and the app needs no Supabase setting or secret.
+ */
+export const refuseSupabaseSessions: VerifySupabaseAccessToken = () =>
+    Promise.resolve(refused(SupabaseErrorCode.AccessTokenInvalid))

@@ -30,7 +30,6 @@ export interface GovWaitingItem {
     readonly title: string
     readonly department: string
     readonly reason: string | null
-    readonly isSimulated: boolean
     readonly summary: string | null
 }
 
@@ -102,7 +101,6 @@ export const waitingItemsOf = (g: GovTranslator, waiting: ReadonlyArray<WaitingW
             title: `${action}${leadName}`,
             department: g(`dept_${item.department}`),
             reason: item.reason ? g(`reason_${item.reason}`) : null,
-            isSimulated: item.isSimulated,
             summary: item.summary || null,
         }
     })

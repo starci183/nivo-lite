@@ -15,10 +15,14 @@ const JSON_BODY_LIMIT = "1mb"
 const bootstrap = async (): Promise<void> => {
     const options = readMcpEnv(EnvSource.fromProcess())
     const app = await NestFactory.create<NestExpressApplication>(AppModule.register(options))
-    app.set("trust proxy", 1)
+    // The environment parser accepts exactly these proxy topologies; every Express value is a fixed hop count.
+    if (options.httpSecurity.trustedProxyHops === 0) app.set("trust proxy", 0)
+    else if (options.httpSecurity.trustedProxyHops === 2) app.set("trust proxy", 2)
+    else app.set("trust proxy", 1)
     app.disable("x-powered-by")
     app.use(securityHeaders)
     app.useBodyParser("json", { limit: JSON_BODY_LIMIT })
+    app.enableCors({ origin: [...options.httpSecurity.allowedOrigins] })
     app.enableShutdownHooks()
     await app.listen(options.server.port)
     createJsonLogger(new SystemClockService()).info(LoggingLogEvent.ServerStarted, {

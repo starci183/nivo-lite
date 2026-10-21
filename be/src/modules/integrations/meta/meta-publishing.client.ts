@@ -3,7 +3,7 @@ import { eachInOrder } from "@modules/platform/primitives"
 import { MetaError, MetaErrorCode } from "./errors/meta.error"
 import { MetaMessagingClient } from "./meta-messaging.client"
 import type { MetaPageCredentials } from "./meta.contracts"
-import type { PageInsightsDay, ScheduledPagePost, ScheduledPagePostResult } from "./meta-publishing.contracts"
+import type { PageInsightsDay, PagePost, ScheduledPagePost, ScheduledPagePostResult } from "./meta-publishing.contracts"
 
 type Json = Readonly<Record<string, unknown>>
 
@@ -23,6 +23,15 @@ export const INSIGHT_METRICS = {
     engagements: "page_post_engagements",
 } as const
 
+/** The lifetime engagement insight of one post. */
+const POST_ENGAGEMENTS = "post_engagements"
+
+/** The fields one published post is read with: its text, time, link and engagement insight. */
+const POST_FIELDS = `id,message,created_time,permalink_url,insights.metric(${POST_ENGAGEMENTS})`
+
+/** The most posts one report reads (one Graph page). */
+const POSTS_LIMIT = 100
+
 /** The earliest Meta accepts a scheduled post: ten minutes ahead (with one minute of margin). */
 const MIN_LEAD_SECONDS = 11 * 60
 
@@ -34,6 +43,27 @@ const dayOf = (endTime: string): string => {
 }
 
 const numberOf = (value: unknown): number => (typeof value === "number" && Number.isFinite(value) ? value : 0)
+
+/** The engagements of a post from its `insights` edge; 0 when Meta gave none. */
+const engagementsOf = (insights: unknown): number => {
+    const metric = rowsOf(isJson(insights) ? insights.data : undefined).find((row) => row.name === POST_ENGAGEMENTS)
+    const [value] = rowsOf(metric?.values)
+    return numberOf(value?.value)
+}
+
+/** One Graph post row as a PagePost, or null when it has no id or no readable time. */
+const pagePostOf = (row: Json): PagePost | null => {
+    const at = Date.parse(typeof row.created_time === "string" ? row.created_time : "")
+    if (typeof row.id !== "string" || row.id === "" || !Number.isFinite(at)) return null
+    const link = row.permalink_url
+    return {
+        id: row.id,
+        message: typeof row.message === "string" ? row.message : "",
+        createdTime: new Date(at).toISOString(),
+        permalink: typeof link === "string" && link.startsWith("https://") ? link : null,
+        engagements: engagementsOf(row.insights),
+    }
+}
 
 @Injectable()
 /** Schedules Page posts (published=false with scheduled_publish_time) and reads the daily Page insights. */
@@ -96,5 +126,17 @@ export class MetaPublishingClient extends MetaMessagingClient {
         return [...days.entries()]
             .sort(([a], [b]) => a.localeCompare(b))
             .map(([day, counts]) => ({ day, reach: counts.reach, engagements: counts.engagements }))
+    }
+
+    /** The posts the Page published between two days (inclusive `since`, exclusive `until`), newest first, with their engagements. */
+    async publishedPosts(page: MetaPageCredentials, since: string, until: string): Promise<ReadonlyArray<PagePost>> {
+        const body = await this.graph(`${page.pageId}/published_posts`, {
+            token: page.pageToken,
+            params: { fields: POST_FIELDS, since, until, limit: POSTS_LIMIT },
+        })
+        return rowsOf(body.data).flatMap((row) => {
+            const post = pagePostOf(row)
+            return post === null ? [] : [post]
+        })
     }
 }

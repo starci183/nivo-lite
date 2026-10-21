@@ -10,6 +10,7 @@ export type {
     GateEvidence,
     GateStatus,
     Installation,
+    InstallationConnectionNeed,
     InstallationStatus,
     OperatingMode,
     SetupFact,

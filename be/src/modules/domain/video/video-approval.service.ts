@@ -24,7 +24,6 @@ export class VideoApprovalService {
             action: "publish_video",
             subject_type: "video_project",
             subject_id: projectId,
-            origin: "live",
             preset: true,
             noChain: true,
             forceAsk: "over_authority",

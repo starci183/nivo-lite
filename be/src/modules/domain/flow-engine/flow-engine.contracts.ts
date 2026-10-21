@@ -1,4 +1,3 @@
-import type { InboxSimulationInput, InboxSimulationReceipt } from "@modules/domain/inbox-simulation"
 import type { AuthorityProfile } from "@modules/domain/authority"
 import type { AuthorityRuleRecord } from "@modules/domain/authority-rules"
 import type { WorkItem } from "@modules/domain/decisions"
@@ -49,10 +48,4 @@ export interface ChatMatch {
     readonly amount: number | null
     /** True when the message gives any clue (a name, a reference, an amount or a kind of work). */
     readonly clues: boolean
-}
-
-/** Where a simulated customer input is recorded and queued for the department work, as the person who asked. */
-export interface SimulatedInputs {
-    /** Records the input and queues its work; answers the receipt the Inbox simulator gives. */
-    request(userId: string, workspaceId: string, input: InboxSimulationInput): Promise<InboxSimulationReceipt>
 }

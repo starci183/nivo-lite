@@ -19,12 +19,12 @@ const buildSubject = async () => {
 describe("nivoItemOf", () => {
     // Generated once by running the policy at 5da5cdf4^1, including its private metadata map.
     // The lint canon forbids source reads in unit specs, so the fixture embeds the shipped virtual Markdown files.
-    it("preserves all 59 shipped inputs and the folders passed by the seed service", () => {
+    it("preserves all 55 shipped inputs and the folders passed by the seed service", () => {
         expect([CORE_FOLDER, ...MODULE_CATALOG.map((module) => module.knowledgeFolder)]).toEqual(fixtures.folders)
         expect([...NIVO_KNOWLEDGE_FILES].sort((a, b) => a.path.localeCompare(b.path))).toEqual(
             fixtures.templates.map(({ file }) => file),
         )
-        expect(fixtures.templates).toHaveLength(59)
+        expect(fixtures.templates).toHaveLength(55)
     })
 
     it.each(fixtures.templates)("equals the old parser for shipped template $file.path", async ({ file, expected }) => {

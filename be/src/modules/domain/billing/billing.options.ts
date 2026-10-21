@@ -10,22 +10,12 @@ export interface BankAccountOptions {
     readonly holder: string
 }
 
-/** The simulated Vietcombank feed: one shared secret and the one workspace its credits land in. */
-export interface SimulatedBankOptions {
-    /** The shared secret of the `x-nivo-bank-secret` header; undefined switches the door off. */
-    readonly secret: Secret | undefined
-    /** The workspace the simulated credits belong to; undefined switches the door off. */
-    readonly workspaceId: string | undefined
-}
-
 /** Billing configuration parsed once at API boot. */
 export interface BillingOptions {
     /** The API key SePay sends as `Authorization: Apikey <key>` to NIVO's own billing webhook; undefined refuses every delivery. */
     readonly sepayApiKey: Secret | undefined
     /** The bank account of the billing QR code. */
     readonly bankAccount: BankAccountOptions
-    /** The simulated bank feed. */
-    readonly simulatedBank: SimulatedBankOptions
     /** The 32-byte key (base64) that encrypts connection credentials; undefined makes every connection credential unreadable. */
     readonly channelTokenKey: Secret | undefined
 }

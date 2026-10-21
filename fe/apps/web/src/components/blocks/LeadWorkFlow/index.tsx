@@ -14,7 +14,6 @@ interface LeadWorkFlowProps {
 /** The work flow card: words and formats the page's flow into the view the pure half draws. */
 export const LeadWorkFlow = (props: LeadWorkFlowProps) => {
     const t = useTranslations("lead")
-    const g = useTranslations("governance")
     const slotLabels = useSlotLabels()
     const query = useLeadFlow(props.leadId)
     const viewOf = useLeadFlowView()
@@ -35,8 +34,6 @@ export const LeadWorkFlow = (props: LeadWorkFlowProps) => {
                     stepsTitle: t("flowSteps"),
                     stepsEmptyTitle: t("flowNoSteps"),
                     stepsEmptyHint: t("flowNoStepsHint"),
-                    simulatedBadge: g("origin_simulated"),
-                    simulatedNote: t("flowSimulatedNote"),
                     slot: slotLabels(t("flowUnavailable")),
                 },
             }}

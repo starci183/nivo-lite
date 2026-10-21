@@ -42,7 +42,6 @@ const itemOf = builder<WorkItem>({
     evidence_state: "pending",
     assigned_staff_id: null,
     execution_id: null,
-    origin: "live",
     created_at: "2026-10-12T09:00:00.000Z",
     updated_at: "2026-10-12T09:00:00.000Z",
     completed_at: null,
@@ -60,7 +59,6 @@ const leadOf = builder<LeadRecordRow>({
     context_summary: null,
     phone: "84901234567",
     email: null,
-    origin: "live",
 })
 
 const orderOf = builder<NonNullable<OptionalOrder>>({
@@ -72,7 +70,6 @@ const orderOf = builder<NonNullable<OptionalOrder>>({
     items: "2 tea boxes",
     amount_vnd: 300000,
     status: "draft",
-    origin: "live",
     confirmed_by: null,
     confirmed_at: null,
     created_at: "2026-10-12T09:00:00.000Z",
@@ -86,7 +83,6 @@ const eventOf = builder<NonNullable<OptionalInboundEvent>>({
     workspace_id: "ws-1",
     channel: "telegram",
     kind: "order",
-    origin: "live",
     sender_name: "Lan",
     sender_contact: "0901234567",
     body: " 2 boxes of tea please ",
@@ -202,7 +198,6 @@ describe("ConfirmOrderPerformerService prepare", () => {
             email: null,
             name: "Lan",
             channel: "channel.telegram",
-            origin: "live",
         })
         expect(orders.draft).toHaveBeenCalledWith({
             workspaceId: "ws-1",
@@ -211,7 +206,6 @@ describe("ConfirmOrderPerformerService prepare", () => {
             orderNo: "REF-1",
             items: "2 tea boxes",
             amountVnd: 280000,
-            origin: "live",
         })
         expect(inbound.mark).toHaveBeenCalledWith("ws-1", "ev-1", null, "lead-1")
     })
@@ -241,10 +235,9 @@ describe("ConfirmOrderPerformerService prepare", () => {
             need: "2 boxes of tea please",
             phone: null,
             email: null,
-            origin: "live",
         })
         expect(responsibilities.ensureFor).toHaveBeenCalledWith(ctx, "lead-2")
-        expect(events.leadCreated).toHaveBeenCalledWith("ws-1", expect.objectContaining({ id: "lead-2" }), "live")
+        expect(events.leadCreated).toHaveBeenCalledWith("ws-1", expect.objectContaining({ id: "lead-2" }))
         expect(evidence.log).toHaveBeenCalledWith(ctx, {
             lead_id: "lead-2",
             work_item_id: "item-1",
@@ -299,7 +292,6 @@ describe("ConfirmOrderPerformerService prepare", () => {
             orderNo: null,
             items: "2 tea boxes",
             amountVnd: 300000,
-            origin: "live",
         })
     })
 

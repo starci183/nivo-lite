@@ -41,7 +41,7 @@ The key roster with semantics is `.starcistacks/production/runtime/env/KEYS.md`.
 
 | Slug | Consumer | Keys |
 | --- | --- | --- |
-| `api` | api task (`<KEY>_FILE`); mcp task (`PRIMARY_DB_URL`, `MCP_GATEWAY_CREDENTIALS`, `MCP_HAKUEN_CLIENT_SECRET` only) | `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `CHANNEL_TOKEN_KEY`, `N8N_SIGNING_SECRET`, `WEBHOOK_SIGNING_SECRET`, `NIVO_PLATFORM_ADMINS`, `OPENCLAW_TURN_TIMEOUT`, `SMTP_URL`, `SMTP_FROM`, `SEPAY_WEBHOOK_API_KEY`, `SEPAY_BANK_ACCOUNT`, `SEPAY_BANK_CODE`, `SEPAY_ACCOUNT_NAME`, `BANK_WEBHOOK_SECRET`, `OPENROUTER_API_KEY`, `DEEPSEEK_API_KEY`, `PRIMARY_DB_URL`; to seal at O14: `MCP_GATEWAY_CREDENTIALS` (value `MCP_HAKUEN_CLIENT_SECRET`), `MCP_HAKUEN_CLIENT_SECRET` |
+| `api` | api task (`<KEY>_FILE`); mcp task (`PRIMARY_DB_URL`, `MCP_GATEWAY_CREDENTIALS`, `MCP_HAKUEN_CLIENT_SECRET` only) | `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `CHANNEL_TOKEN_KEY`, `N8N_SIGNING_SECRET`, `WEBHOOK_SIGNING_SECRET`, `NIVO_PLATFORM_ADMINS`, `OPENCLAW_TURN_TIMEOUT`, `SMTP_URL`, `SMTP_FROM`, `SEPAY_WEBHOOK_API_KEY`, `SEPAY_BANK_ACCOUNT`, `SEPAY_BANK_CODE`, `SEPAY_ACCOUNT_NAME`, `OPENROUTER_API_KEY`, `DEEPSEEK_API_KEY`, `PRIMARY_DB_URL`; to seal at O14: `MCP_GATEWAY_CREDENTIALS` (value `MCP_HAKUEN_CLIENT_SECRET`), `MCP_HAKUEN_CLIENT_SECRET` |
 | `auth` | api task | `SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_ID`, `SUPABASE_AUTH_EXTERNAL_GOOGLE_SECRET` (the api falls back to them for Google OAuth) |
 | `stack` | openclaw, n8n, api | secrets: `OPENCLAW_GATEWAY_TOKEN` (also granted to the api), `N8N_ENCRYPTION_KEY`; `OPENCLAW_MANAGE_AGENTS` (`true` or `false`, granted to the api); configuration read at render time (not a Swarm secret): `OPENCLAW_MODEL`, `N8N_ALLOWED_HOSTS`, `JOBS_FAILED_ALERT` (api `JOBS_ALERT_FAILED_MAX`), `JOBS_STALE_SECONDS` (api `JOBS_ALERT_STALE_SECONDS`). Every other key is ignored by the deploy |
 | `web` | web image build | the public Supabase build values of the console (`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`) read by `starci app stack build-args` |
@@ -69,7 +69,7 @@ The OpenClaw gateway honours the scopes a client declares only for a loopback pe
 
 `nivo-mcp` (`be/apps/mcp`, image `ghcr.io/starci183/nivo-lite-mcp`) has no host, no route in `infra/swarm/edge/routes.yml` and no DNS record, and it is
 not on the `edge` network: it joins only the private `agents` overlay under the alias `nivo-mcp`, where the api and the OpenClaw gateway could reach it as
-`http://nivo-mcp:8790/mcp/<workspaceId>`. For the demo its agent endpoint stays closed (no `MCP_GATEWAY_AGENT_TOKEN` is granted); the api's chat
+`http://nivo-mcp:8790/mcp/<workspaceId>`. For the demo its agent endpoint stays closed (it reads no agent token and fails closed); the api's chat
 turns use the same gateway modules in-process. Reasons: (1) its callers are NIVO's own agents, all inside the stack, so a public route would only add attack
 surface; (2) every call it accepts can reach a workspace's connectors (bookings, folios, key codes) with sealed service credentials, so exposure is
 limited to the network that already holds the api and the agent gateway; (3) it keeps the shared ingress, its certificates and the tenant routes

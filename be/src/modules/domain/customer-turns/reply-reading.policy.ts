@@ -8,7 +8,6 @@ import type {
     NamedGap,
     ReplyFindings,
 } from "./customer-turns.contracts"
-import { hotelDetailOf, readHotelRequest } from "./gateway-request.policy"
 
 /** A JSON object whose members are not known yet. */
 type Loose = Readonly<Record<string, unknown>>
@@ -186,7 +185,6 @@ export const findingsOf = (value: Loose): ReplyFindings => ({
     application: readChatApplication(value.application),
     loyaltyRewardKey: rewardOf(value.loyalty),
     bookingRequest: readChatBookingRequest(value.booking_request),
-    hotelRequest: readHotelRequest(value.hotel_request),
 })
 
 /**
@@ -209,7 +207,6 @@ export const readCustomerReply = (raw: string, holdingLine: string): CustomerRep
             application: null,
             loyaltyRewardKey: null,
             bookingRequest: null,
-            hotelRequest: null,
         }
     }
     const needsHuman = parsed.needs_human === true
@@ -264,7 +261,6 @@ export const detailOf = (reply: CustomerReply): Readonly<Record<string, unknown>
                   email: reply.bookingRequest.email,
                   note: reply.bookingRequest.note,
               },
-    hotel_request: hotelDetailOf(reply.hotelRequest),
 })
 
 /** The reason a proposal names, read back. */

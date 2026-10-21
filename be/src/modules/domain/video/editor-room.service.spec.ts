@@ -1,6 +1,6 @@
 import { Test } from "@nestjs/testing"
 import { mock } from "@starci/jest-preset"
-import { OfficeLinesService } from "@modules/domain/messages"
+import { OfficeCardsService, OfficeLinesService } from "@modules/domain/messages"
 import type { WorkContext } from "@modules/domain/decisions"
 import { EditorRoomService } from "./editor-room.service"
 import type { EditorCard } from "./editor-delegation.contracts"
@@ -10,23 +10,31 @@ const CARD: EditorCard = { v: 1, type: "video_ready", title: "Video" }
 
 const build = async () => {
     const lines = mock<OfficeLinesService>()
+    const cards = mock<OfficeCardsService>()
     const moduleRef = await Test.createTestingModule({
-        providers: [EditorRoomService, { provide: OfficeLinesService, useValue: lines }],
+        providers: [
+            EditorRoomService,
+            { provide: OfficeLinesService, useValue: lines },
+            { provide: OfficeCardsService, useValue: cards },
+        ],
     }).compile()
-    return { room: moduleRef.get(EditorRoomService), lines }
+    return { room: moduleRef.get(EditorRoomService), lines, cards }
 }
 
 describe("EditorRoomService", () => {
-    it("posts a card as its preview line spoken by the video agent, with its link when it has one", async () => {
-        const { room, lines } = await build()
+    it("posts a card in the Marketing room spoken by the video agent, linked to its work item", async () => {
+        const { room, cards } = await build()
+        cards.postAsDepartment.mockResolvedValue({ id: "message-1", room: "marketing" })
 
-        await room.post(CTX, "Video ready", CARD, "item-1")
-        await room.post(CTX, "Video ready", { ...CARD, link: { label: "Open", href: "/agents/video" } }, "item-2")
+        await expect(room.post(CTX, "Video ready", CARD, "item-1")).resolves.toBe("message-1")
 
-        expect(lines.post.mock.calls).toEqual([
-            [CTX, { body: "Video ready", lead_id: null, work_item_id: "item-1", dept: "video" }],
-            [CTX, { body: "Video ready (/agents/video)", lead_id: null, work_item_id: "item-2", dept: "video" }],
-        ])
+        expect(cards.postAsDepartment).toHaveBeenCalledWith({ workspaceId: "workspace-1" }, "video", {
+            room: "marketing",
+            body: "Video ready",
+            leadId: null,
+            workItemId: "item-1",
+            card: CARD,
+        })
     })
 
     it("says a plain line", async () => {

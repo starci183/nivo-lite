@@ -91,7 +91,6 @@ describe("mentionsCode", () => {
 
 describe("bankNameOf", () => {
     it.each([
-        ["vietcombank:evt-1", "Vietcombank"],
         ["sepay:evt-1", "SePay"],
         ["casso:evt-1", "Casso"],
         ["payos:evt-1", "payOS"],
@@ -104,7 +103,7 @@ describe("bankNameOf", () => {
     it("names a bank event whose id has no colon", async () => {
         const { subject } = await buildSubject()
 
-        expect(subject.bankNameOf("bank", "vietcombank")).toBe("Vietcombank")
+        expect(subject.bankNameOf("bank", "sepay")).toBe("SePay")
     })
 
     it("answers nothing for a provider that is not a known bank", async () => {
@@ -123,7 +122,7 @@ describe("bankNameOf", () => {
     it("answers nothing when the channel is not a bank feed", async () => {
         const { subject } = await buildSubject()
 
-        expect(subject.bankNameOf("zalo", "vietcombank:evt-1")).toBeNull()
+        expect(subject.bankNameOf("zalo", "sepay:evt-1")).toBeNull()
     })
 
     it("answers nothing when a bank event has no id", async () => {

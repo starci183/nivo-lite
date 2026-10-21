@@ -61,7 +61,6 @@ const rowOf = builder<WorkItemRow>({
     evidence_state: "pending",
     assigned_staff_id: null,
     execution_id: null,
-    origin: "live",
     created_at: new Date("2026-10-12T09:00:00.000Z"),
     updated_at: new Date("2026-10-12T09:00:00.000Z"),
     completed_at: null,
@@ -81,7 +80,6 @@ const newItem: NewWorkItem = {
     parentId: null,
     dedupeKey: "send_quote:lead-1",
     proposal,
-    origin: "live",
     installationId: null,
 }
 
@@ -116,7 +114,6 @@ describe("WorkItemsService persistence", () => {
             null,
             "send_quote:lead-1",
             JSON.stringify(proposal),
-            "live",
             null,
         ])
     })

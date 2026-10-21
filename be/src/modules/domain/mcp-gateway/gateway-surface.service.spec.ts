@@ -1,98 +1,143 @@
-import { mock, mockEntityManager } from "@starci/jest-preset"
-import { Secret } from "@modules/platform/config"
-import { GatewaySurfaceService, SURFACE_TOOLS } from "./gateway-surface.service"
+import assert from "node:assert/strict"
+import { Test } from "@nestjs/testing"
+import { mock } from "@starci/jest-preset"
+import { MCP_SERVER } from "@modules/integrations/mcp"
+import type { McpServing, McpSurface } from "@modules/integrations/mcp"
+import { McpGatewayErrorCode } from "./errors/mcp-gateway.error"
+import { GatewaySurfaceService } from "./gateway-surface.service"
 import type { GatewayCaller } from "./mcp-gateway.contracts"
 import { McpGatewayService } from "./mcp-gateway.service"
 
-const CALLER: GatewayCaller = { workspaceId: "ws", agentId: "a1", conversationId: null, workItemId: null }
+const CALLER: GatewayCaller = { workspaceId: "ws-1", agentId: "agent-1", conversationId: null, workItemId: null }
+const MESSAGE = { jsonrpc: "2.0", id: 1, method: "tools/list" }
+const REPLY = { body: { jsonrpc: "2.0" as const, id: 1, result: { tools: [] } } }
 
-const WS = "12345678-1234-5678-9abc-123456789abc"
-const AGENT = "22345678-1234-5678-9abc-123456789abc"
-
-const build = (token: Secret | null = new Secret("agent-token"), rows: ReadonlyArray<unknown> = [{ id: AGENT }]) => {
+const build = async () => {
+    const server = mock<McpServing>()
+    server.answer.mockResolvedValue(REPLY)
     const gateway = mock<McpGatewayService>()
-    const entityManager = mockEntityManager()
-    entityManager.query.mockResolvedValue(rows)
-    const options = { credentials: new Map<string, Secret>(), agentToken: token, defaultTimeoutMs: 4000 }
-    return { surface: new GatewaySurfaceService(entityManager, options, gateway), gateway, entityManager }
+    const moduleRef = await Test.createTestingModule({
+        providers: [
+            GatewaySurfaceService,
+            { provide: MCP_SERVER, useValue: server },
+            { provide: McpGatewayService, useValue: gateway },
+        ],
+    }).compile()
+    return { surface: moduleRef.get(GatewaySurfaceService), server, gateway }
 }
 
-describe("GatewaySurfaceService", () => {
-    it("authenticates an agent of the workspace with the gateway token", async () => {
-        await expect(build().surface.authenticate(WS, AGENT, "Bearer agent-token")).resolves.toEqual({
-            workspaceId: WS,
-            agentId: AGENT,
-            conversationId: null,
-            workItemId: null,
-        })
-        await expect(build().surface.authenticate(WS, AGENT, "Bearer wrong")).resolves.toBeNull()
-        await expect(build().surface.authenticate(WS, AGENT, undefined)).resolves.toBeNull()
-        await expect(build().surface.authenticate("x", AGENT, "Bearer agent-token")).resolves.toBeNull()
-        await expect(build().surface.authenticate(WS, "x", "Bearer agent-token")).resolves.toBeNull()
-        await expect(build(null).surface.authenticate(WS, AGENT, "Bearer agent-token")).resolves.toBeNull()
+/** The surface the service handed to the MCP server for the one message it answered. */
+const surfaceOf = async (): Promise<{
+    readonly handed: McpSurface
+    readonly gateway: ReturnType<typeof mock<McpGatewayService>>
+}> => {
+    const { surface, server, gateway } = await build()
+    await surface.answer({
+        workspaceId: "ws-1",
+        principal: { agentId: "agent-1", workspaceId: "ws-1" },
+        message: MESSAGE,
+    })
+    const handed = server.answer.mock.calls[0]?.[0].surface
+    assert(handed !== undefined, "the surface was not handed to the server")
+    return { handed, gateway }
+}
+
+describe("GatewaySurfaceService.answer", () => {
+    it("answers the message over the three surface tools for the agent the credential names", async () => {
+        const { surface, server } = await build()
+
         await expect(
-            build(new Secret("agent-token"), []).surface.authenticate(WS, AGENT, "Bearer agent-token"),
-        ).resolves.toBeNull()
+            surface.answer({
+                workspaceId: "ws-1",
+                principal: { agentId: "agent-1", workspaceId: "ws-1" },
+                message: MESSAGE,
+            }),
+        ).resolves.toBe(REPLY)
+        const handed = server.answer.mock.calls[0]?.[0]
+        expect(handed?.message).toBe(MESSAGE)
+        expect(handed?.surface.tools.map((tool) => tool.name)).toEqual(["tool.search", "tool.describe", "tool.call"])
     })
 
-    it("exposes exactly three tools", () => {
-        expect(SURFACE_TOOLS.map((tool) => tool.name)).toEqual(["gateway.search", "gateway.describe", "gateway.call"])
-    })
+    it("refuses a credential of another workspace before the server answers", async () => {
+        const { surface, server } = await build()
 
-    it("searches with the given or the default limit", async () => {
-        const { surface, gateway } = build()
+        await expect(
+            surface.answer({
+                workspaceId: "ws-1",
+                principal: { agentId: "agent-1", workspaceId: "ws-2" },
+                message: MESSAGE,
+            }),
+        ).rejects.toMatchObject({ code: McpGatewayErrorCode.WorkspaceMismatch })
+        expect(server.answer).not.toHaveBeenCalled()
+    })
+})
+
+describe("GatewaySurfaceService tools", () => {
+    it("searches the granted tools with the caller's query and limit, five by default", async () => {
+        const { handed, gateway } = await surfaceOf()
         gateway.search.mockResolvedValue([])
-        await expect(surface.run(CALLER, "gateway.search", { query: "spa", limit: 3 })).resolves.toEqual({
+
+        await expect(handed.call("tool.search", { query: "spa", limit: 3 })).resolves.toEqual({
             value: { tools: [] },
             isError: false,
         })
-        await surface.run(CALLER, "gateway.search", { query: 1 })
+        await handed.call("tool.search", { query: 7 })
         expect(gateway.search.mock.calls).toEqual([
             [CALLER, "spa", 3],
             [CALLER, "", 5],
         ])
     })
 
-    it("describes a granted tool, or answers an error", async () => {
-        const { surface, gateway } = build()
-        gateway.describe.mockResolvedValueOnce({
-            name: "hakuen.rates.quote",
-            description: "",
-            scope: "read",
-            mode: "auto",
+    it("describes a granted tool, and answers an error for an unknown or ungranted one", async () => {
+        const { handed, gateway } = await surfaceOf()
+        const described = {
+            name: "hakuen.stay.current",
+            description: "Stay",
+            scope: "read" as const,
+            mode: "auto" as const,
             inputSchema: {},
             constraints: [],
             limitVnd: null,
-        })
-        await expect(surface.run(CALLER, "gateway.describe", { name: "hakuen.rates.quote" })).resolves.toMatchObject({
+        }
+        gateway.describe.mockResolvedValueOnce(described).mockResolvedValueOnce(null)
+
+        await expect(handed.call("tool.describe", { name: "hakuen.stay.current" })).resolves.toEqual({
+            value: described,
             isError: false,
-            value: { name: "hakuen.rates.quote" },
         })
-        gateway.describe.mockResolvedValueOnce(null)
-        await expect(surface.run(CALLER, "gateway.describe", {})).resolves.toEqual({
+        await expect(handed.call("tool.describe", {})).resolves.toEqual({
             value: { error: "not_granted_or_unknown" },
             isError: true,
         })
+        expect(gateway.describe.mock.calls).toEqual([
+            [CALLER, "hakuen.stay.current"],
+            [CALLER, ""],
+        ])
     })
 
-    it("calls through the gateway and answers its refusals as errors", async () => {
-        const { surface, gateway } = build()
-        gateway.call.mockResolvedValueOnce({ ok: true, value: { holdId: "h1" } })
+    it("calls a tool through the gateway and answers its result or its refusal", async () => {
+        const { handed, gateway } = await surfaceOf()
+        gateway.call
+            .mockResolvedValueOnce({ ok: true, value: { stay: null } })
+            .mockResolvedValueOnce({ ok: false, code: "approval_required", reason: "ask_mode" })
+
         await expect(
-            surface.run(CALLER, "gateway.call", { name: "hakuen.booking.hold", arguments: { roomType: "deluxe" } }),
-        ).resolves.toEqual({ value: { holdId: "h1" }, isError: false })
-        gateway.call.mockResolvedValueOnce({ ok: false, code: "approval_required", reason: "price_exception" })
-        await expect(
-            surface.run(CALLER, "gateway.call", { name: "hakuen.booking.confirm", arguments: [] }),
-        ).resolves.toEqual({
-            value: { ok: false, code: "approval_required", reason: "price_exception" },
+            handed.call("tool.call", { name: "hakuen.stay.current", arguments: { room: "302" } }),
+        ).resolves.toEqual({ value: { stay: null }, isError: false })
+        await expect(handed.call("tool.call", { name: "hakuen.booking.cancel", arguments: [1] })).resolves.toEqual({
+            value: { ok: false, code: "approval_required", reason: "ask_mode" },
             isError: true,
         })
-        expect(gateway.call.mock.calls[1]).toEqual([CALLER, "hakuen.booking.confirm", {}])
+        expect(gateway.call.mock.calls).toEqual([
+            [CALLER, "hakuen.stay.current", { room: "302" }],
+            [CALLER, "hakuen.booking.cancel", {}],
+        ])
     })
 
-    it("refuses an unknown surface tool", async () => {
-        await expect(build().surface.run(CALLER, "gateway.drop", {})).resolves.toEqual({
+    it("answers an error for a tool the surface does not have", async () => {
+        const { handed } = await surfaceOf()
+
+        await expect(handed.call("gateway.delete", {})).resolves.toEqual({
             value: { error: "unknown_tool" },
             isError: true,
         })

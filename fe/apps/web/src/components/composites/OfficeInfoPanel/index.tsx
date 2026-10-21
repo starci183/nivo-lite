@@ -1,4 +1,4 @@
-import { Badge, Button, IconButton, Region, SurfaceCard, Text } from "@starci/grammar/common"
+import { Badge, Button, IconButton, Region, SurfaceCard, Text, TextAction } from "@starci/grammar/common"
 import { OfficeAvatar } from "@/components/branches/OfficeAvatar"
 import { OfficeRoomResources } from "@/components/branches/OfficeRoomResources"
 import { nivoIconSource } from "@/components/leaves/Icon"
@@ -159,6 +159,11 @@ const renderOfficeInfoPanelMembers = (
                         <Text size="xs" tone="muted">
                             {member.note}
                         </Text>
+                    )}
+                    {member.noteAction === null ? null : (
+                        <TextAction size="xs" href={member.noteAction.href}>
+                            {member.noteAction.label}
+                        </TextAction>
                     )}
                     <div className={ACTIONS_CLASS_NAME}>
                         {member.mention === null ? null : (

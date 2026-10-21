@@ -3,7 +3,11 @@ import { Field, Int, ObjectType } from "@nestjs/graphql"
 @ObjectType()
 /** One tool of a gateway connector. */
 export class McpToolType {
-    /** The full namespaced name, for example hakuen.booking.hold. */
+    /** True when the tool may run: native, or a remote tool whose live schema is the approved one. */
+    @Field(() => Boolean)
+    approved!: boolean
+
+    /** The full namespaced name, for example shop.order.place. */
     @Field(() => String)
     name!: string
 
@@ -50,6 +54,14 @@ export class McpConnectorType {
     /** The per-call time limit. */
     @Field(() => Int)
     timeoutMs!: number
+
+    /** When its tool catalog was approved, ISO text, or null. */
+    @Field(() => String, { nullable: true })
+    approvedAt!: string | null
+
+    /** When it was last checked (a health check or a catalog read), ISO text, or null. */
+    @Field(() => String, { nullable: true })
+    checkedAt!: string | null
 
     /** The tools. */
     @Field(() => [McpToolType])

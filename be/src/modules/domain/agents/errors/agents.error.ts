@@ -11,6 +11,8 @@ export enum AgentsErrorCode {
     HandleTaken = "AGENTS_HANDLE_TAKEN",
     /** The insert answered no row: the agent was not written. */
     NotCreated = "AGENTS_NOT_CREATED",
+    /** The app registered the setup mode without the knowledge lens, so the dashboard and the bundle cannot read knowledge here. */
+    KnowledgeUnbound = "AGENTS_KNOWLEDGE_UNBOUND",
 }
 
 /** How each agents code travels. */
@@ -19,6 +21,7 @@ export const AGENTS_ERROR_KINDS: Record<AgentsErrorCode, ErrorKind> = {
     [AgentsErrorCode.AgentNotFound]: "not-found",
     [AgentsErrorCode.HandleTaken]: "conflict",
     [AgentsErrorCode.NotCreated]: "internal",
+    [AgentsErrorCode.KnowledgeUnbound]: "internal",
 }
 
 /** The one error class of the agents capability. */

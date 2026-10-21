@@ -6,8 +6,6 @@ import { StaffService } from "@modules/domain/staff"
 import type { WorkspaceMember } from "@modules/domain/workspace-members"
 import { AuthorityChatService } from "./authority-chat.service"
 import { FlowEngineErrorCode } from "./errors/flow-engine.error"
-import type { SimulatedInputs } from "./flow-engine.contracts"
-import { FLOW_SIMULATED_INPUTS } from "./flow-engine.decorators"
 import { FlowEngineService } from "./flow-engine.service"
 import { OwnerChatService } from "./owner-chat.service"
 
@@ -70,24 +68,7 @@ const registerDecisionCommands = () => {
     })
 }
 
-const registerSimulationCommands = () => {
-    it("records a simulated input from the old snake_case fields", async () => {
-        const { service, request } = await build()
-
-        await service.run({
-            kind: "simulate_inbound",
-            workspaceId: "ws-1",
-            member,
-            payload: { channel: "zalo", kind: "message", sender_name: "Lan", body: "Hi" },
-        })
-
-        expect(request).toHaveBeenCalledWith(
-            "user-1",
-            "ws-1",
-            expect.objectContaining({ senderName: "Lan", body: "Hi" }),
-        )
-    })
-
+const registerOfficeCommands = () => {
     it("hands an Office message to the owner chat", async () => {
         const { service, reply } = await build()
 
@@ -224,14 +205,12 @@ const build = async () => {
     const hold = jest.fn().mockResolvedValue({ id: "item-1", status: "waiting_decision" })
     const saveRule = jest.fn().mockResolvedValue({ action: "send_quote", mode: "ask" })
     const setHandling = jest.fn().mockResolvedValue({ conversationId: "conv-1", handledBy: "An" })
-    const request = jest.fn().mockResolvedValue({ id: "event-1", status: "queued", duplicate: false })
     const reply = jest.fn().mockResolvedValue({ handled: true, reply: "ok", posted: false })
     const updateAuthority = jest.fn().mockResolvedValue({ policies: "check limits" })
     const save = jest.fn().mockResolvedValue({ id: "staff-1", name: "An" })
     const assign = jest.fn().mockResolvedValue({ id: "item-1", assigned_staff_id: "staff-1" })
     const requestReply = jest.fn().mockResolvedValue({ id: "reply-1", status: "queued" })
     const apply = jest.fn().mockResolvedValue({ summary: "saved", authority: null, rules: [] })
-    const simulator = mock<SimulatedInputs>({ request })
     const decisions = mock<DecisionsService>({ saveRule, updateAuthority })
     const work = mock<WorkDecisionService>({ decide })
     const placement = mock<WorkPlacementService>({ hold, assign })
@@ -246,7 +225,6 @@ const build = async () => {
             { provide: WorkDecisionService, useValue: work },
             { provide: WorkPlacementService, useValue: placement },
             { provide: StaffService, useValue: staff },
-            { provide: FLOW_SIMULATED_INPUTS, useValue: simulator },
             { provide: ChatReplyService, useValue: chats },
             { provide: AuthorityChatService, useValue: authorityChat },
             { provide: OwnerChatService, useValue: ownerChat },
@@ -258,7 +236,6 @@ const build = async () => {
         hold,
         saveRule,
         setHandling,
-        request,
         reply,
         updateAuthority,
         save,
@@ -270,6 +247,6 @@ const build = async () => {
 
 describe("FlowEngineService", () => {
     registerDecisionCommands()
-    registerSimulationCommands()
+    registerOfficeCommands()
     registerPlacementCommands()
 })

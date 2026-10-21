@@ -172,7 +172,6 @@ describe("LeadGenIntakeService", () => {
             workspaceId: "ws-1",
             channel: "facebook",
             kind: "message",
-            origin: "live",
             senderName: "Lan",
             senderContact: null,
             body: "Hello",
@@ -184,7 +183,6 @@ describe("LeadGenIntakeService", () => {
             to: "lead_gen",
             command: "capture_lead",
             reason: "meta_dm",
-            origin: "live",
             inboundEventId: "event-1",
             dedupeKey: "capture_lead:inbound:event-1",
             payload: {
@@ -262,7 +260,6 @@ describe("LeadGenIntakeService", () => {
             to: "lead_gen",
             command: "score_lead",
             reason: "customer_turn",
-            origin: "live",
             inboundEventId: "event-1",
             dedupeKey,
             payload: {

@@ -115,7 +115,6 @@ export const accountingQuestionDisplay = (params: AccountingQuestionDisplayParam
         title: item.lead ? [action, item.lead.contact_name].join(" · ") : action,
         status: accountingQuestionStatus(item, t, g),
         statusTone: accountingQuestionTone(item),
-        origin: item.origin === "simulated" ? t("simulatedTag") : null,
         explanation,
         proposalLabel: isFailed ? t("exceptionErrorLabel") : t("exceptionProposes"),
         summary: isFailed ? (item.error ?? item.proposal.summary) : item.proposal.summary,

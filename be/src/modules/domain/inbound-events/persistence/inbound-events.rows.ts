@@ -14,8 +14,6 @@ export interface InboundEventRow {
     readonly channel: string
     /** The kind of input. */
     readonly kind: string
-    /** `live` or `simulated`. */
-    readonly origin: string
     /** The sender's name. */
     readonly sender_name: string | null
     /** The sender's phone or email. */

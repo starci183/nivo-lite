@@ -35,7 +35,6 @@ const itemOf = builder<WorkItem>({
     evidence_state: "pending",
     assigned_staff_id: null,
     execution_id: null,
-    origin: "live",
     created_at: "2026-10-12T10:00:00.000Z",
     updated_at: "2026-10-12T10:00:00.000Z",
     completed_at: null,
@@ -56,7 +55,6 @@ const specOf = builder<WorkSpec>({
     subject_id: "lead-1",
     lead_id: "lead-1",
     dedupeKey: "send_quote:lead-1",
-    origin: "live",
 })
 
 interface Rows {
@@ -119,7 +117,6 @@ describe("WorkIntakeService", () => {
             parentId: "p-1",
             dedupeKey: "send_quote:lead-1",
             proposal: { summary: "Quote", fields: {} },
-            origin: "live",
             installationId: "inst-1",
         } satisfies NewWorkItem)
     })

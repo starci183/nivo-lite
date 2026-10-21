@@ -1,5 +1,6 @@
 import { Badge, Breadcrumbs, Heading, IconTile, Image, Text } from "@starci/grammar/common"
 import type { BadgeTone, BreadcrumbItem } from "@starci/grammar/common"
+import { ConnectionNeeds, type ConnectionNeedsProps } from "@/components/leaves/ConnectionNeeds"
 import { nivoIconSource } from "@/components/leaves/Icon"
 import { HEAD, HEADER, HEADER_COPY, HEADER_META, HEADER_TITLE } from "./classNames"
 
@@ -14,6 +15,8 @@ export interface AgentInstanceHeaderBaseProps {
         readonly earlyLabel: string
         readonly statusLabel: string
         readonly statusTone: BadgeTone
+        /** What a `needs_connection` agent waits for and where to connect it; no lines otherwise. */
+        readonly needs: ConnectionNeedsProps
         /** The type name under an instance heading; null for a single instance agent. */
         readonly typeLine: string | null
         readonly versionLabel: string
@@ -60,6 +63,7 @@ export const AgentInstanceHeaderBase = (props: AgentInstanceHeaderBaseProps) => 
                             {view.liveLabel}
                         </Text>
                     </div>
+                    <ConnectionNeeds {...view.needs} />
                 </div>
             </div>
         </>

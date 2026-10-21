@@ -1,4 +1,4 @@
-import { REASON_CODES, figureOf, isTestRunName, medianOf, splitCount, sumOf } from "@/hooks/overviewFigures"
+import { REASON_CODES, figureOf, isTestRunName, medianOf, sumOf } from "@/hooks/overviewFigures"
 import type { Governance, WaitingWork } from "@/hooks/overviewFigures"
 import type { DashboardType } from "@/hooks/swr"
 import { MODULE_KEYS, MODULE_REGISTRY } from "@/modules/catalog"
@@ -110,7 +110,6 @@ export const governanceFrom = (rows: GovernanceRows, since7: string): Governance
     const waits = decisionWaitsOf(decisions, createdByItem)
     const median = medianOf(waits)
     const won = leads.filter((x) => x.stage === "won")
-    const everything = [...orders, ...invoices, ...matched, ...newLeads]
     const authority = rows.authority
     return {
         goals: {
@@ -125,16 +124,14 @@ export const governanceFrom = (rows: GovernanceRows, since7: string): Governance
             ordersConfirmed: orders.length,
             newCustomers7d: newLeads.length,
             wonCustomers: won.length,
-            simulated: everything.filter((x) => x.origin === "simulated").length,
-            total: everything.length,
         },
         status: {
             confirmedOrders: figureOf(orders),
             internalInvoices: figureOf(invoices),
             matchedPayments: figureOf(matched),
             pendingVerification: figureOf(payments.filter((x) => !isEvidenced(x))),
-            newLeads7d: splitCount(newLeads),
-            wonLeads: splitCount(won),
+            newLeads7d: newLeads.length,
+            wonLeads: won.length,
             excludedTestRecords:
                 test.leads.size +
                 test.orders.size +
@@ -184,7 +181,6 @@ export const waitingWorkFrom = (exceptions: Dashboard["exceptions"]): Array<Wait
             action: x.action,
             department: x.department,
             reason: reasonOf(x.reason),
-            isSimulated: x.origin === "simulated",
             summary: x.summary ?? null,
             leadName: x.lead?.contactName ?? null,
         }))

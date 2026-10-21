@@ -51,7 +51,7 @@ interface MeasureMetaProps {
     readonly actionHref: string | null
 }
 
-/** The lines under one figure: what it counts, the live and simulated parts (never added) and where it comes from. */
+/** The lines under one figure: what it counts and where it comes from. */
 const MeasureMeta = (props: MeasureMetaProps) => (
     <div className={MEASURE_META_CLASS_NAME}>
         <Text size="xs" tone="muted">

@@ -1,5 +1,11 @@
-/** Where an installation stands. */
-export type InstallationStatus = "installing" | "setup" | "ready" | "live" | "paused"
+/**
+ * Where an installation stands. `needs_connection`: applied, but a capability role its module requires has no usable connector,
+ * so the agent does not run until one is connected (then it is live again); `paused` is the owner's own stop.
+ */
+export type InstallationStatus = "installing" | "setup" | "ready" | "live" | "paused" | "needs_connection"
+
+/** The status a connection check left an installation in, or null when it did not change it. */
+export type OptionalInstallationStatus = InstallationStatus | null
 
 /** How an agent runs: it asks for everything (assist) or follows the authority rules alone (autopilot). */
 export type InstallationMode = "assist" | "autopilot"

@@ -13,7 +13,6 @@ export const AccountingQuestionCard = (props: AccountingQuestionCardProps) => (
                     <Badge tone={props.props.statusTone} isDot>
                         {props.props.status}
                     </Badge>
-                    {props.props.origin ? <Badge tone="neutral">{props.props.origin}</Badge> : null}
                 </div>
                 {props.props.explanation ? (
                     <Text size="sm" tone="muted">

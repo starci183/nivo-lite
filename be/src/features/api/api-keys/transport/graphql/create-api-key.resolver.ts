@@ -14,7 +14,7 @@ import { CreatedApiKeyType } from "./dto/created-api-key.type"
 export class CreateApiKeyResolver {
     constructor(@InjectCommandBus() private readonly commandBus: CommandBus) {}
 
-    /** Creates a key for the active workspace; the secret is answered once. */
+    /** Creates a key for the active workspace, or an agent's MCP credential; the secret is answered once. */
     @Mutation(() => CreatedApiKeyType, { name: "createApiKey" })
     async createApiKey(
         @CurrentPrincipal() principal: Principal,
@@ -22,7 +22,7 @@ export class CreateApiKeyResolver {
         @Args("input") input: CreateApiKeyInput,
     ): Promise<CreatedApiKeyType> {
         const result = await this.commandBus.execute(
-            new CreateApiKeyCommand({ request: { workspaceId, name: input.name }, principal }),
+            new CreateApiKeyCommand({ request: { workspaceId, name: input.name, agentId: input.agentId }, principal }),
         )
         return toCreatedApiKeyType(result)
     }

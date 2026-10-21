@@ -16,7 +16,7 @@ const buildSubject = async () => {
 }
 
 const registerPeriodTotals = () => {
-    it("uses Vietnam month boundaries, fallback invoice dates and separate weekly income by origin", async () => {
+    it("uses Vietnam month boundaries and fallback invoice dates, and reads live records only", async () => {
         const subject = await buildSubject()
         const invoices = [
             invoiceOf({ id: "paid", status: "paid", paid_at: "2026-10-02T00:00:00.000Z" }),
@@ -25,7 +25,6 @@ const registerPeriodTotals = () => {
                 status: "paid",
                 issued_at: "2026-10-07T00:00:00.000Z",
                 amount_vnd: 200,
-                origin: "simulated",
             }),
             invoiceOf({
                 id: "paid-created",
@@ -39,7 +38,7 @@ const registerPeriodTotals = () => {
             invoiceOf({ id: "paid-next", status: "paid", paid_at: "2026-10-31T17:00:00.000Z", amount_vnd: 600 }),
             invoiceOf({ id: "paid-invalid", status: "paid", paid_at: "invalid", amount_vnd: 700 }),
             invoiceOf({ id: "issued", amount_vnd: 800 }),
-            invoiceOf({ id: "issued-created", issued_at: null, amount_vnd: 900, origin: "simulated" }),
+            invoiceOf({ id: "issued-created", issued_at: null, amount_vnd: 900 }),
             invoiceOf({ id: "issued-last", issued_at: "2026-09-30T16:59:59.999Z", amount_vnd: 1000 }),
             invoiceOf({ id: "issued-invalid", issued_at: "invalid", amount_vnd: 1100 }),
             invoiceOf({ id: "draft", status: "draft", amount_vnd: 1200 }),
@@ -47,14 +46,13 @@ const registerPeriodTotals = () => {
         ]
         const transactions = [
             txOf({ id: "this-boundary", occurred_at: "2026-09-30T17:00:00.000Z" }),
-            txOf({ id: "matched-orphan", status: "matched", amount_vnd: 20, origin: "simulated" }),
+            txOf({ id: "matched-orphan", status: "matched", amount_vnd: 20 }),
             txOf({ id: "matched", status: "matched", invoice_id: "issued", amount_vnd: 30 }),
             txOf({
                 id: "last-boundary",
                 occurred_at: "2026-08-31T17:00:00.000Z",
                 status: "needs_review",
                 amount_vnd: 40,
-                origin: "simulated",
             }),
             txOf({ id: "next", occurred_at: "2026-10-31T17:00:00.000Z", amount_vnd: 60 }),
             txOf({ id: "invalid", occurred_at: "invalid", amount_vnd: 70 }),
@@ -66,30 +64,30 @@ const registerPeriodTotals = () => {
                 key: "this",
                 fromIso: "2026-09-30T17:00:00.000Z",
                 toIso: "2026-10-31T17:00:00.000Z",
-                income: measure(400, 200, 2, 1),
-                receivable: measure(800, 900, 1, 1),
-                unmatched: measure(10, 20, 1, 1),
+                income: measure(600, 3),
+                receivable: measure(1700, 2),
+                unmatched: measure(30, 2),
                 weeks: [
-                    { startIso: "2026-09-27T17:00:00.000Z", live: 100, simulated: 0 },
-                    { startIso: "2026-10-04T17:00:00.000Z", live: 0, simulated: 200 },
-                    { startIso: "2026-10-11T17:00:00.000Z", live: 300, simulated: 0 },
-                    { startIso: "2026-10-18T17:00:00.000Z", live: 0, simulated: 0 },
-                    { startIso: "2026-10-25T17:00:00.000Z", live: 0, simulated: 0 },
+                    { startIso: "2026-09-27T17:00:00.000Z", vnd: 100 },
+                    { startIso: "2026-10-04T17:00:00.000Z", vnd: 200 },
+                    { startIso: "2026-10-11T17:00:00.000Z", vnd: 300 },
+                    { startIso: "2026-10-18T17:00:00.000Z", vnd: 0 },
+                    { startIso: "2026-10-25T17:00:00.000Z", vnd: 0 },
                 ],
             },
             last: {
                 key: "last",
                 fromIso: "2026-08-31T17:00:00.000Z",
                 toIso: "2026-09-30T17:00:00.000Z",
-                income: measure(400, 0, 1, 0),
-                receivable: measure(1000, 0, 1, 0),
-                unmatched: measure(0, 40, 0, 1),
+                income: measure(400, 1),
+                receivable: measure(1000, 1),
+                unmatched: measure(40, 1),
                 weeks: [
-                    { startIso: "2026-08-30T17:00:00.000Z", live: 400, simulated: 0 },
-                    { startIso: "2026-09-06T17:00:00.000Z", live: 0, simulated: 0 },
-                    { startIso: "2026-09-13T17:00:00.000Z", live: 0, simulated: 0 },
-                    { startIso: "2026-09-20T17:00:00.000Z", live: 0, simulated: 0 },
-                    { startIso: "2026-09-27T17:00:00.000Z", live: 0, simulated: 0 },
+                    { startIso: "2026-08-30T17:00:00.000Z", vnd: 400 },
+                    { startIso: "2026-09-06T17:00:00.000Z", vnd: 0 },
+                    { startIso: "2026-09-13T17:00:00.000Z", vnd: 0 },
+                    { startIso: "2026-09-20T17:00:00.000Z", vnd: 0 },
+                    { startIso: "2026-09-27T17:00:00.000Z", vnd: 0 },
                 ],
             },
         })
@@ -106,14 +104,13 @@ const registerInvoiceAgeing = () => {
             bookOf({
                 invoices: [
                     invoiceOf({ id: "30", due_at: daysAgo(30), amount_vnd: 30 }),
-                    invoiceOf({ id: "31", due_at: daysAgo(31), amount_vnd: 31, origin: "simulated" }),
+                    invoiceOf({ id: "31", due_at: daysAgo(31), amount_vnd: 31 }),
                     invoiceOf({ id: "60", issued_at: daysAgo(60), amount_vnd: 60 }),
                     invoiceOf({
                         id: "61",
                         issued_at: null,
                         created_at: daysAgo(61),
                         amount_vnd: 61,
-                        origin: "simulated",
                     }),
                     invoiceOf({ id: "invalid", due_at: "invalid", amount_vnd: 2 }),
                     invoiceOf({ id: "paid", status: "paid", due_at: daysAgo(90), amount_vnd: 90 }),
@@ -122,9 +119,9 @@ const registerInvoiceAgeing = () => {
         )
 
         expect(result.ageing).toEqual({
-            d0: measure(32, 0, 2, 0),
-            d30: measure(60, 31, 1, 1),
-            d60: measure(0, 61, 0, 1),
+            d0: measure(32, 2),
+            d30: measure(91, 2),
+            d60: measure(61, 1),
         })
     })
 }
@@ -147,7 +144,7 @@ const registerWaitingWork = () => {
                 reason: "over_authority",
                 proposal: { summary: "Issue", amount_vnd: 0, fields: {} },
             }),
-            itemOf({ id: "missing-reason", reason: "missing_data", origin: "simulated" }),
+            itemOf({ id: "missing-reason", reason: "missing_data" }),
             itemOf({
                 id: "missing-field",
                 missing_fields: ["customer"],
@@ -167,14 +164,13 @@ const registerWaitingWork = () => {
             { item: items[3], group: "missing_data" },
             { item: items[4], group: "other" },
         ])
-        expect(result.waiting).toEqual({ count: { live: 4, simulated: 1 }, knownVnd: 100, unknownAmount: 3 })
+        expect(result.waiting).toEqual({ count: 5, knownVnd: 100, unknownAmount: 3 })
         expect(result.credits[0]).toEqual({
             id: "waiting-tx",
             occurredAt: "2026-10-01T00:00:00.000Z",
             amount: 10,
             payer: "Mai",
             reference: "Payment",
-            origin: "live",
             match: "unclear",
             invoiceNo: null,
             sourceKind: "other",
@@ -183,10 +179,10 @@ const registerWaitingWork = () => {
 }
 
 const registerPaymentEvidence = () => {
-    it("maps invoice links and every bank-credit source and match state", async () => {
+    it("maps invoice links and every bank-credit source and match state, and names the credits connector", async () => {
         const subject = await buildSubject()
 
-        const inbound = { channel: "bank", event_id: "vietcombank:credit-1", body: "Payment", sender_name: "Mai" }
+        const inbound = { channel: "bank", event_id: "sepay:credit-1", body: "Payment", sender_name: "Mai" }
         const result = workbenchOf(
             subject,
             bookOf({
@@ -196,19 +192,23 @@ const registerPaymentEvidence = () => {
                     txOf({
                         id: "manual",
                         status: "needs_review",
-                        inbound: { ...inbound, channel: "manual", event_id: "entry-1" },
+                        inbound: { ...inbound, event_id: "manual:2026-10-01:10:Payment" },
                     }),
-                    txOf({ id: "inbox", status: "matched", inbound: { ...inbound, event_id: null } }),
+                    txOf({ id: "inbox", status: "matched", inbound: { ...inbound, channel: "zalo", event_id: null } }),
                     txOf({ id: "orphan", status: "matched", invoice_id: "missing-invoice" }),
                     txOf({ id: "unmatched" }),
                 ],
             }),
+            [],
+            "owner",
+            "SePay",
         )
 
+        expect(result.creditsSource).toBe("SePay")
         expect(
             result.credits.map(({ id, match, invoiceNo, sourceKind }) => ({ id, match, invoiceNo, sourceKind })),
         ).toEqual([
-            { id: "bank", match: "matched", invoiceNo: "INV-1", sourceKind: "vietcombank" },
+            { id: "bank", match: "matched", invoiceNo: "INV-1", sourceKind: "connector" },
             { id: "manual", match: "unclear", invoiceNo: null, sourceKind: "manual" },
             { id: "inbox", match: "unclear", invoiceNo: null, sourceKind: "inbox" },
             { id: "orphan", match: "matched", invoiceNo: null, sourceKind: "other" },
@@ -244,7 +244,7 @@ const registerLiveRecords = () => {
                     orderOf({ id: "linked" }),
                     orderOf({ id: "cancelled", status: "cancelled" }),
                     orderOf({ id: "live", lead: { contact_name: "", company: "Bakery" } }),
-                    orderOf({ id: "unknown-amount", order_no: "SO-2", amount_vnd: null, origin: "simulated" }),
+                    orderOf({ id: "unknown-amount", order_no: "SO-2", amount_vnd: null }),
                     orderOf({ id: "test-order", items: "DBG cake" }),
                 ],
             }),
@@ -258,7 +258,6 @@ const registerLiveRecords = () => {
                 orderNo: "SO-1",
                 items: "2 cakes",
                 amount: 200,
-                origin: "live",
                 customer: "Bakery",
                 createdAt: "2026-10-01T00:00:00.000Z",
             },
@@ -267,13 +266,13 @@ const registerLiveRecords = () => {
                 orderNo: "SO-2",
                 items: "2 cakes",
                 amount: null,
-                origin: "simulated",
                 customer: null,
                 createdAt: "2026-10-01T00:00:00.000Z",
             },
         ])
+        expect(result.creditsSource).toBeNull()
         expect(result.credits).toEqual([])
-        expect(result.periods.this.receivable).toEqual(measure(100, 0, 1, 0))
+        expect(result.periods.this.receivable).toEqual(measure(100, 1))
         expect(result.ledger.map((entry) => entry.targetId)).toEqual(["invoice-1", "unknown"])
     })
 
@@ -288,8 +287,8 @@ const registerLiveRecords = () => {
             invoices.slice(0, 200).map((invoice) => invoice.id),
         )
         expect(result.credits.map((tx) => tx.id)).toEqual(transactions.slice(0, 200).map((tx) => tx.id))
-        expect(result.periods.this.receivable).toEqual(measure(20100, 0, 201, 0))
-        expect(result.periods.this.unmatched).toEqual(measure(2010, 0, 201, 0))
+        expect(result.periods.this.receivable).toEqual(measure(20100, 201))
+        expect(result.periods.this.unmatched).toEqual(measure(2010, 201))
         expect(result.ledger).toHaveLength(400)
     })
 }
@@ -321,7 +320,6 @@ const expectedInvoices = [
         invoiceNo: "INV-1",
         amount: 100,
         status: "issued",
-        origin: "live",
         customer: "Mai",
         issuedAt: "2026-10-01T00:00:00.000Z",
         paidAt: null,
@@ -334,7 +332,6 @@ const expectedInvoices = [
         invoiceNo: "INV-unknown",
         amount: 100,
         status: "draft",
-        origin: "live",
         customer: null,
         issuedAt: "2026-10-01T00:00:00.000Z",
         paidAt: null,
@@ -353,7 +350,6 @@ const invoiceOf = builder<InvoiceAccountingRow>({
     invoice_no: "INV-1",
     amount_vnd: 100,
     status: "issued",
-    origin: "live",
     issued_by: "Lan",
     paid_at: null,
     issued_at: "2026-10-01T00:00:00.000Z",
@@ -371,7 +367,6 @@ const txOf = builder<TransactionAccountingRow>({
     payer: "Mai",
     invoice_id: null,
     status: "unmatched",
-    origin: "live",
     channel: "bank",
     occurred_at: "2026-10-01T00:00:00.000Z",
     created_at: "2026-10-01T00:00:00.000Z",
@@ -386,7 +381,6 @@ const orderOf = builder<BookOrder>({
     items: "2 cakes",
     amount_vnd: 200,
     status: "confirmed",
-    origin: "live",
     confirmed_by: null,
     confirmed_at: null,
     created_at: "2026-10-01T00:00:00.000Z",
@@ -421,7 +415,6 @@ const itemOf = builder<AccountingWaitingWorkRow>({
     assigned_staff_id: null,
     assigned_staff_name: null,
     execution_id: null,
-    origin: "live",
     created_at: "2026-10-01T00:00:00.000Z",
     updated_at: "2026-10-01T00:00:00.000Z",
     completed_at: null,
@@ -442,11 +435,9 @@ const workbenchOf = (
     book: AccountingBook,
     exceptions: ReadonlyArray<AccountingWaitingWorkRow> = [],
     role = "owner",
-) => subject.buildAccountingWorkbench({ book, now: NOW, exceptions, staff: [], ownerName: "Lan", role })
-const measure = (live: number, simulated: number, liveCount: number, simulatedCount: number) => ({
-    vnd: { live, simulated },
-    count: { live: liveCount, simulated: simulatedCount },
-})
+    creditsSource: string | null = null,
+) => subject.buildAccountingWorkbench({ book, now: NOW, exceptions, staff: [], ownerName: "Lan", role, creditsSource })
+const measure = (vnd: number, count: number) => ({ vnd, count })
 
 describe("buildAccountingWorkbench", () => {
     registerPeriodTotals()

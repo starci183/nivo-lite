@@ -42,7 +42,6 @@ const itemOf = builder<WorkItem>({
     evidence_state: "pending",
     assigned_staff_id: null,
     execution_id: "exec-1",
-    origin: "live",
     created_at: "2026-10-12T09:00:00.000Z",
     updated_at: "2026-10-12T09:00:00.000Z",
     completed_at: null,
@@ -60,7 +59,6 @@ const leadOf = builder<LeadRecordRow>({
     context_summary: "Wants 50 boxes",
     phone: "84901234567",
     email: null,
-    origin: "live",
 })
 
 const responsibilityOf = builder<ResponsibilityRecord>({
@@ -203,7 +201,7 @@ describe("FollowUpPerformerService perform", () => {
             lead_id: "lead-1",
             detail: "Hi Lan",
         })
-        expect(delivery.toCustomer).toHaveBeenCalledWith(ctx, leadOf(), "Hi Lan", "live")
+        expect(delivery.toCustomer).toHaveBeenCalledWith(ctx, leadOf(), "Hi Lan")
         expect(executions.settle).toHaveBeenCalledWith({
             workspaceId: "ws-1",
             executionId: "exec-1",

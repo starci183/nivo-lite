@@ -41,3 +41,13 @@ export interface ChatMessageRow {
     /** Creation instant as text. */
     readonly created_at: string
 }
+
+/** The customer messages of one channel on one Vietnam day. */
+export interface CustomerMessagesDayRow {
+    /** The channel. */
+    readonly channel: string
+    /** The day, `YYYY-MM-DD`. */
+    readonly day: string
+    /** How many messages customers wrote. */
+    readonly messages: number
+}

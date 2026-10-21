@@ -7,6 +7,7 @@ export type {
     MetaLead,
     MetaPageAccess,
     MetaPageChoice,
+    MetaPageCredentials,
     MetaSubscriptionStatus,
     PageSubscription,
     SendResult,

@@ -111,7 +111,6 @@ export class WorkItemsService {
                 item.parentId,
                 item.dedupeKey,
                 JSON.stringify(item.proposal),
-                item.origin,
                 item.installationId,
             ]),
         )

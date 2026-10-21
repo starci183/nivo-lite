@@ -1,7 +1,6 @@
 import { MetaInboxService } from "@modules/domain/meta-inbox"
 import { TelegramInboxService } from "@modules/domain/telegram-inbox"
 import { SepayTransactionsService } from "@modules/domain/sepay-transactions"
-import { BankFeedService } from "@modules/domain/billing"
 import { JOB_CLAIMS } from "@modules/platform/jobs"
 import type { JobClaims, FencedProcessor } from "@modules/platform/jobs"
 import type { LiteWorld } from "./lite-world.service"
@@ -33,7 +32,6 @@ export const deliveryIntakeFixture = async (world: LiteWorld, kind: DeliveryKind
             meta: world.resolve(MetaInboxService),
             telegram: world.resolve(TelegramInboxService),
             sepay: world.resolve(SepayTransactionsService),
-            vietcombank: world.resolve(BankFeedService),
         },
         kind,
         { id, connection: world.id(), proofId: world.key(id), workspaceId },

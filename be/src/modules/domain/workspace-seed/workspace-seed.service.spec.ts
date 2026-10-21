@@ -1,3 +1,7 @@
+import { AgentRecordsService } from "@modules/domain/agents"
+import { ProfileSourcesService } from "@modules/domain/knowledge-sources"
+import { McpToolGrantsService } from "@modules/domain/mcp-tool-grants"
+import { McpGatewayAdminService } from "@modules/domain/mcp-gateway"
 import { Test } from "@nestjs/testing"
 import { builder, mock } from "@starci/jest-preset"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
@@ -80,7 +84,13 @@ const build = async (input?: Secret) => {
         members = mock<WorkspaceMembersService>()
     workspaces.ensureNamed.mockResolvedValue({ id: WS })
     workspaces.memberships.mockResolvedValue([named()])
-    const options: WorkspaceSeedOptions = { auth: "auth", input, print }
+    const ports = {
+        agents: AgentRecordsService,
+        sources: ProfileSourcesService,
+        toolGrants: McpToolGrantsService,
+        connectors: McpGatewayAdminService,
+    }
+    const options: WorkspaceSeedOptions = { auth: "auth", ports, input, print }
     const moduleRef = await Test.createTestingModule({
         providers: [
             WorkspaceSeedService,
@@ -110,6 +120,11 @@ describe("WorkspaceSeedService / ensure", () => {
             displayName: "Manager",
         })
         expect(members.require).toHaveBeenCalledWith(STAFF, WS, ["staff"])
+    })
+
+    it("answers the authenticated owner together with the receipt for the profile steps", async () => {
+        const { seed } = await build()
+        await expect(seed.seedOwned(REQUEST)).resolves.toEqual({ report: receipt("ensure"), ownerId: OWNER })
     })
 
     it("creates only missing accounts and uses the explicit workspace name", async () => {

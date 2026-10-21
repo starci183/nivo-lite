@@ -15,8 +15,6 @@ import { MESSAGE_CATALOG } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
 import type { CustomerReply } from "./customer-turns.contracts"
 import { GatewayContextService } from "./gateway-context.service"
-import { GatewaySalesService } from "./gateway-sales.service"
-import type { HotelRequest } from "./gateway-turns.contracts"
 import { TurnModulesService } from "./turn-modules.service"
 
 type ChatRedeemIntent = Awaited<ReturnType<LoyaltyChatService["redeemIntent"]>>
@@ -84,7 +82,6 @@ const replyOf = (changes: Partial<CustomerReply> = {}): CustomerReply => ({
     application: null,
     loyaltyRewardKey: null,
     bookingRequest: null,
-    hotelRequest: null,
     ...changes,
 })
 const bookingAgent: BoundAgent = {
@@ -124,24 +121,22 @@ const build = async () => {
         brief: jest.fn().mockResolvedValue("LOYALTY FACTS"),
         redeemIntent: jest.fn().mockResolvedValue({ kind: "none" }),
     }
-    const hotelContext = {
-        servesHotel: jest.fn().mockResolvedValue(false),
-        contextOf: jest.fn().mockResolvedValue(null),
-        briefOf: jest.fn().mockReturnValue(["HOTEL CONTRACT"]),
-        route: jest.fn().mockResolvedValue(null),
+    const connectors = {
+        servesConnectors: jest.fn().mockResolvedValue(false),
+        partyOf: jest.fn().mockResolvedValue(null),
+        briefOf: jest.fn().mockReturnValue(["CONNECTOR CLAUSE"]),
+        remember: jest.fn().mockResolvedValue(undefined),
     }
-    const hotelSales = { settle: jest.fn().mockResolvedValue({ reply: "Held at 15:00", lines: ["held"] }) }
     const moduleRef = await Test.createTestingModule({
         providers: [
             TurnModulesService,
-            { provide: GatewayContextService, useValue: mock<GatewayContextService>(hotelContext) },
-            { provide: GatewaySalesService, useValue: mock<GatewaySalesService>(hotelSales) },
             { provide: MESSAGE_CATALOG, useValue: mock<MessageCatalog>(catalog) },
             { provide: AgentBindingsService, useValue: mock<AgentBindingsService>(bindings) },
             { provide: WorkEngineService, useValue: mock<WorkEngineService>(engine) },
             { provide: EvidenceService, useValue: mock<EvidenceService>(evidence) },
             { provide: BookingChatService, useValue: mock<BookingChatService>(booking) },
             { provide: LoyaltyChatService, useValue: mock<LoyaltyChatService>(loyalty) },
+            { provide: GatewayContextService, useValue: mock<GatewayContextService>(connectors) },
         ],
     }).compile()
     return {
@@ -152,71 +147,11 @@ const build = async () => {
         evidence,
         booking,
         loyalty,
-        hotelContext,
-        hotelSales,
+        connectors,
     }
 }
 
 describe("TurnModulesService", () => {
-    describe("hotel", () => {
-        const hotelRequest: HotelRequest = {
-            intent: "spa_hold",
-            service: "massage-60",
-            date: "2026-10-24",
-            time: "15:00",
-            partySize: 2,
-            nights: 1,
-            roomType: "",
-            name: "Lan",
-            phone: null,
-            discountPct: null,
-        }
-        const context = {
-            guestId: "g1",
-            name: "Lan",
-            tier: "vip",
-            stayId: null,
-            room: "",
-            stage: { kind: "none" as const },
-        }
-
-        it("adds the hotel context and routes the conversation for an agent granted HAKUEN tools", async () => {
-            const { modules, hotelContext } = await build()
-            hotelContext.servesHotel.mockResolvedValue(true)
-            hotelContext.contextOf.mockResolvedValue(context)
-            const parts = await modules.briefs(conversationOf())
-            expect(parts).toContain("HOTEL CONTRACT")
-            expect(hotelContext.route).toHaveBeenCalledWith(conversationOf(), context)
-            expect(hotelContext.briefOf).toHaveBeenCalledWith(context)
-        })
-
-        it("keeps the contract alone when HAKUEN cannot give the context", async () => {
-            const { modules, hotelContext } = await build()
-            hotelContext.servesHotel.mockResolvedValue(true)
-            await expect(modules.briefs(conversationOf())).resolves.toContain("HOTEL CONTRACT")
-            expect(hotelContext.route).not.toHaveBeenCalled()
-        })
-
-        it("runs the hotel request and its reply replaces the chat's own", async () => {
-            const { modules, hotelContext, hotelSales } = await build()
-            hotelContext.servesHotel.mockResolvedValue(true)
-            await expect(modules.settle(ctx, turnOf(), replyOf({ hotelRequest }))).resolves.toEqual({
-                reply: "Held at 15:00",
-                lines: ["held"],
-            })
-            expect(hotelSales.settle).toHaveBeenCalledWith(ctx, turnOf().conversation, turnOf().messageId, hotelRequest)
-        })
-
-        it("ignores a hotel request of an agent without HAKUEN grants", async () => {
-            const { modules, hotelSales } = await build()
-            await expect(modules.settle(ctx, turnOf(), replyOf({ hotelRequest }))).resolves.toEqual({
-                reply: null,
-                lines: [],
-            })
-            expect(hotelSales.settle).not.toHaveBeenCalled()
-        })
-    })
-
     it("adds loyalty facts and its contract to a front door without a booking handover", async () => {
         const { modules, loyalty, bindings, booking, catalog } = await build()
         const conversation = conversationOf()
@@ -400,7 +335,6 @@ describe("TurnModulesService", () => {
             subject_type: "conversation",
             subject_id: "c1",
             lead_id: "lead1",
-            origin: "live",
             preset: true,
             noChain: true,
             dedupeKey: "redeem_reward:message:m1",
@@ -445,5 +379,42 @@ describe("TurnModulesService", () => {
         expect(loyalty.redeemIntent).toHaveBeenCalledWith(customerRef, reward.key)
         expect(engine.runWork).toHaveBeenCalledTimes(1)
         expect(evidence.log).toHaveBeenCalledTimes(1)
+    })
+})
+
+describe("TurnModulesService connectors", () => {
+    const party = { found: true, partyId: "p1", name: "Lan" }
+    const lead = { contactName: "Lan", company: "", need: "two nights", phone: "0900", email: null }
+
+    it("adds the connector clause and the party for an agent holding connector grants", async () => {
+        const { modules, connectors, loyalty } = await build()
+        loyalty.brief.mockResolvedValueOnce("")
+        connectors.servesConnectors.mockResolvedValue(true)
+        connectors.partyOf.mockResolvedValue(party)
+        await expect(modules.briefs(conversationOf())).resolves.toEqual(["CONNECTOR CLAUSE"])
+        expect(connectors.partyOf).toHaveBeenCalledWith(conversationOf())
+        expect(connectors.briefOf).toHaveBeenCalledWith(party)
+    })
+
+    it("adds no connector block for an agent without connector grants", async () => {
+        const { modules, connectors, loyalty } = await build()
+        loyalty.brief.mockResolvedValueOnce("")
+        await expect(modules.briefs(conversationOf())).resolves.toEqual([])
+        expect(connectors.partyOf).not.toHaveBeenCalled()
+    })
+
+    it("makes the customer who gave their name a party of the connectors, keyed by the message", async () => {
+        const { modules, connectors } = await build()
+        connectors.servesConnectors.mockResolvedValue(true)
+        await expect(modules.settle(ctx, turnOf(), replyOf({ lead }))).resolves.toEqual({ reply: null, lines: [] })
+        expect(connectors.remember).toHaveBeenCalledWith(turnOf().conversation, lead, turnOf().messageId)
+    })
+
+    it("remembers nobody without a captured lead or without connector grants", async () => {
+        const { modules, connectors } = await build()
+        await modules.settle(ctx, turnOf(), replyOf({ lead }))
+        connectors.servesConnectors.mockResolvedValue(true)
+        await modules.settle(ctx, turnOf(), replyOf())
+        expect(connectors.remember).not.toHaveBeenCalled()
     })
 })

@@ -18,7 +18,6 @@ const query1: Document = gql`
             id
             channel
             kind
-            origin
             senderName
             senderContact
             body

@@ -26,7 +26,6 @@ const lead: LeadRecordRow = {
     context_summary: null,
     phone: null,
     email: null,
-    origin: "live",
 }
 
 const run: LeadActionRunRow = {
@@ -64,7 +63,6 @@ const work: WorkItem = {
     evidence_state: "captured",
     assigned_staff_id: null,
     execution_id: "execution-1",
-    origin: "live",
     created_at: "2026-10-14T00:00:00.000Z",
     updated_at: "2026-10-14T00:00:00.000Z",
     completed_at: "2026-10-14T00:00:00.000Z",
@@ -158,7 +156,6 @@ describe("LeadActionFlowService", () => {
             workspaceId: "ws-1",
             channel: "manual",
             kind: "lead",
-            origin: "live",
             senderName: "Lan",
             senderContact: "0912 000 701",
             body: "tea",
@@ -171,7 +168,6 @@ describe("LeadActionFlowService", () => {
             command: "handoff_lead",
             reason: "manual lead",
             inboundEventId: "inbound-1",
-            origin: "live",
             dedupeKey: "handoff_lead:inbound:inbound-1",
             payload: {
                 subject_type: "inbound",
@@ -213,7 +209,6 @@ describe("LeadActionFlowService", () => {
             workspaceId: "ws-1",
             channel: "manual",
             kind: "lead",
-            origin: "live",
             senderName: "",
             senderContact: null,
             body: "",
@@ -251,7 +246,6 @@ describe("LeadActionFlowService", () => {
             workspace_id: "ws-1",
             channel: "manual",
             kind: "lead",
-            origin: "live",
             sender_name: null,
             sender_contact: null,
             body: "",
@@ -308,9 +302,9 @@ describe("LeadActionFlowService", () => {
         expect(engine.runQueuedItem).not.toHaveBeenCalled()
     })
 
-    it("drafts a simulated lead and returns the latest approval execution", async () => {
+    it("drafts the next step and returns the latest approval execution", async () => {
         const service = await build()
-        leads.require.mockResolvedValue({ ...lead, origin: "simulated" })
+        leads.require.mockResolvedValue(lead)
         items.findByDedupe.mockResolvedValue({ ...work, execution_id: "latest-execution" })
 
         await expect(service.draft(ctx, { ...run, input: { responsibilityId: "resp-1" } })).resolves.toEqual({
@@ -326,7 +320,6 @@ describe("LeadActionFlowService", () => {
             subject_type: "lead",
             subject_id: "lead-1",
             lead_id: "lead-1",
-            origin: "simulated",
             dedupeKey: "send_follow_up:resp:resp-1:run-1",
             noChain: true,
             seed: { fields: { responsibility_id: "resp-1" } },
@@ -349,7 +342,6 @@ describe("LeadActionFlowService", () => {
                 executionId: "execution-1",
             })
             expect(responsibilities.find).toHaveBeenCalledWith("ws-1", "")
-            expect(engine.runWork).toHaveBeenCalledWith(ctx, expect.objectContaining({ origin: "live" }))
         },
     )
 
@@ -415,11 +407,11 @@ describe("LeadActionFlowService", () => {
 
 describe("LeadActionFlowService", () => {
     it.each([
-        { origin: "simulated" as const, evidence: "Signed agreement", expected: "Signed agreement" },
-        { origin: "live" as const, evidence: "", expected: null },
-    ])("prepares an invoice and emits the won event for $origin lead", async ({ origin, evidence, expected }) => {
+        { evidence: "Signed agreement", expected: "Signed agreement" },
+        { evidence: "", expected: null },
+    ])("prepares an invoice and emits the won event with evidence $expected", async ({ evidence, expected }) => {
         const service = await build()
-        leads.require.mockResolvedValue({ ...lead, stage: "won", origin })
+        leads.require.mockResolvedValue({ ...lead, stage: "won" })
 
         await expect(service.settleWon(ctx, { ...run, input: { evidence } })).resolves.toEqual({
             leadId: "lead-1",
@@ -431,7 +423,6 @@ describe("LeadActionFlowService", () => {
             subject_type: "lead",
             subject_id: "lead-1",
             lead_id: "lead-1",
-            origin,
             dedupeKey: "issue_invoice:lead:lead-1",
             seed: { amount_vnd: null, fields: {} },
         })

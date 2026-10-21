@@ -1,7 +1,7 @@
 "use client"
 
 import { useTranslations } from "next-intl"
-import { useInstanceHeader } from "@/hooks/installations"
+import { useConnectionNeedsCopy, useInstanceHeader } from "@/hooks/installations"
 import type { ModuleKey } from "@/hooks/installations"
 import { AGENTS_ROUTE, APP_ROUTES } from "@/modules/routes"
 import { AgentInstanceHeaderBase } from "./component"
@@ -17,6 +17,7 @@ export const AgentInstanceHeader = (props: AgentInstanceHeaderProps) => {
     const t = useTranslations("modulesCore")
     const ts = useTranslations("shell")
     const header = useInstanceHeader(props.module, props.installationId)
+    const needs = useConnectionNeedsCopy()
     return (
         <AgentInstanceHeaderBase
             props={{
@@ -34,6 +35,7 @@ export const AgentInstanceHeader = (props: AgentInstanceHeaderProps) => {
                 earlyLabel: t("earlyBadge"),
                 statusLabel: t(`status_${header.status}`),
                 statusTone: header.statusTone,
+                needs: { lines: needs.linesOf(header.connectionNeeds), linkLabel: needs.linkLabel, href: needs.href },
                 typeLine: header.multiName === null ? null : header.typeName,
                 versionLabel:
                     header.activeVersion === null

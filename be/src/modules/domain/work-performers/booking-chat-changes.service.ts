@@ -50,7 +50,6 @@ export class BookingChatChangesService {
             await this.engine.runWork(ctx, {
                 action: "cancel_booking",
                 ...subject,
-                origin: "live",
                 preset: true,
                 noChain: true,
                 forceAsk: "unclear_outcome",
@@ -72,7 +71,6 @@ export class BookingChatChangesService {
         await this.engine.runWork(ctx, {
             action: "reschedule",
             ...subject,
-            origin: "live",
             preset: true,
             noChain: true,
             dedupeKey: `reschedule:booking:${next.id}:${newStart}`,

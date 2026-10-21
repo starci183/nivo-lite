@@ -1,9 +1,11 @@
 import { injector } from "@modules/platform/composition"
 import type { TypedParameterDecorator } from "@modules/platform/composition"
 import type {
+    AgentHandoff,
     ApprovalRequester,
     BookingTools,
     ConversationLeads,
+    GatewayTools,
     HandoffTool,
     KnowledgeSearch,
     LeadWriter,
@@ -27,6 +29,12 @@ export const HANDOFF_TOOL: unique symbol = Symbol("domain.agent-tools.handoff-to
 
 /** Token of the conversation leads port. */
 export const CONVERSATION_LEADS: unique symbol = Symbol("domain.agent-tools.conversation-leads")
+
+/** Token of the connector meta-tools port. */
+export const GATEWAY_TOOLS: unique symbol = Symbol("domain.agent-tools.gateway-tools")
+
+/** Token of the agent hand-off port. */
+export const AGENT_HANDOFF: unique symbol = Symbol("domain.agent-tools.agent-handoff")
 
 /** Token of the tool tokens port. */
 export const TOOL_TOKENS: unique symbol = Symbol("domain.agent-tools.tool-tokens")
@@ -54,3 +62,9 @@ export const InjectHandoffTool = (): TypedParameterDecorator<HandoffTool> => inj
 /** Injects the conversation leads port. Parameter type: ConversationLeads. */
 export const InjectConversationLeads = (): TypedParameterDecorator<ConversationLeads> =>
     injector<ConversationLeads>(CONVERSATION_LEADS)
+
+/** Injects the connector meta-tools port. Parameter type: GatewayTools. */
+export const InjectGatewayTools = (): TypedParameterDecorator<GatewayTools> => injector<GatewayTools>(GATEWAY_TOOLS)
+
+/** Injects the agent hand-off port. Parameter type: AgentHandoff. */
+export const InjectAgentHandoff = (): TypedParameterDecorator<AgentHandoff> => injector<AgentHandoff>(AGENT_HANDOFF)

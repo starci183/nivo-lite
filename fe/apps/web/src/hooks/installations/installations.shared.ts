@@ -16,6 +16,7 @@ interface InstallationWire {
     readonly agentName: string
     readonly agentHandle: string
     readonly status: string
+    readonly connectionNeeds: ReadonlyArray<{ readonly role: string; readonly providers: ReadonlyArray<string> }>
     readonly operatingMode: string
     readonly liveEnabled: boolean
     readonly activeContextVersionId?: string | null
@@ -24,7 +25,14 @@ interface InstallationWire {
     readonly createdAt: string
 }
 
-const STATUSES: ReadonlyArray<InstallationStatus> = ["installing", "setup", "ready", "live", "paused"]
+const STATUSES: ReadonlyArray<InstallationStatus> = [
+    "installing",
+    "setup",
+    "ready",
+    "live",
+    "paused",
+    "needs_connection",
+]
 const MODES: ReadonlyArray<OperatingMode> = ["assist", "autopilot"]
 
 /** The closed status a wire text names; an unknown text reads as being set up. */
@@ -52,6 +60,7 @@ const toInstallation = (row: InstallationWire): Installation | null =>
               agentName: row.agentName,
               agentHandle: row.agentHandle,
               status: statusOf(row.status),
+              connectionNeeds: row.connectionNeeds,
               operatingMode: operatingModeOf(row.operatingMode),
               liveEnabled: row.liveEnabled,
               activeContextVersionId: row.activeContextVersionId ?? null,

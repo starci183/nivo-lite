@@ -18,8 +18,6 @@ export interface FlowLabels {
     readonly stepsTitle: string
     readonly stepsEmptyTitle: string
     readonly stepsEmptyHint: string
-    readonly simulatedBadge: string
-    readonly simulatedNote: string
     readonly slot: SlotLabels
 }
 
@@ -43,7 +41,6 @@ const PLACEHOLDER: FlowView = {
         { ...PLACEHOLDER_ENTRY, id: "step-2" },
         { ...PLACEHOLDER_ENTRY, id: "step-3" },
     ],
-    hasSimulated: false,
     sections: [],
 }
 
@@ -88,14 +85,6 @@ export const LeadWorkFlowBase = (props: LeadWorkFlowBaseProps) => {
             <SlotView slot={p.slot} placeholder={PLACEHOLDER} labels={p.labels.slot} onRetry={on.retry}>
                 {(view, isSkeleton) => (
                     <div className={STACK_CLASS_NAME}>
-                        {view.hasSimulated ? (
-                            <div className={ITEM_META_CLASS_NAME}>
-                                <Badge tone="neutral">{p.labels.simulatedBadge}</Badge>
-                                <Text as="span" size="xs" tone="muted">
-                                    {p.labels.simulatedNote}
-                                </Text>
-                            </div>
-                        ) : null}
                         <div className={SECTION_CLASS_NAME}>
                             <Heading level={3}>{p.labels.stepsTitle}</Heading>
                             {view.steps.length === 0 ? (

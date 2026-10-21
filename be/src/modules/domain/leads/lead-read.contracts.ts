@@ -14,8 +14,6 @@ export interface LeadView {
     readonly stage: string
     /** The context brief, or null. */
     readonly context_summary: string | null
-    /** Live, simulated or unlabelled. */
-    readonly origin: string | null
     /** The agent installation that captured it, when known. */
     readonly installation_id: string | null
     /** The creation time, ISO text. */

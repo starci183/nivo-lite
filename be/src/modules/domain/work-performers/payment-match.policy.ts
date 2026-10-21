@@ -2,7 +2,6 @@ import type { ProposalCandidate } from "@modules/domain/work-items"
 
 /** The providers whose bank credits the engine names by bank, keyed by the prefix of the stored event id. */
 const BANKS: Readonly<Record<string, string>> = {
-    vietcombank: "Vietcombank",
     sepay: "SePay",
     casso: "Casso",
     payos: "payOS",

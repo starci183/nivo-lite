@@ -1,6 +1,3 @@
-/** Where a record came from. Live and simulated money are never added together. */
-export type AccountingOrigin = "live" | "simulated"
-
 /** What kind of record a lineage step is. */
 export type AccountingLineageKind = "order" | "invoice" | "payment" | "decision" | "adjustment"
 
@@ -47,8 +44,6 @@ export interface AccountingLedgerEntry {
     readonly status: AccountingLedgerStatus
     /** The related invoice or order number. */
     readonly linked: string | null
-    /** Whether the record is live or simulated. */
-    readonly origin: AccountingOrigin
     /** The ordered source and decision history. */
     readonly lineage: ReadonlyArray<AccountingLineageStep>
     /** How many append-only corrections target this record. */

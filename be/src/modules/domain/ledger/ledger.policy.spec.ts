@@ -9,25 +9,21 @@ import {
     settlementExpected,
 } from "../../../tests/fixtures/builders/ledger.builder"
 import { Test } from "@nestjs/testing"
-import { buildLedger, customerOf, originOf, toMs } from "./ledger.policy"
+import { buildLedger, customerOf, toMs } from "./ledger.policy"
 
 const SUBJECT = Symbol("ledger.policy")
 
 const build = async () => {
     const moduleRef = await Test.createTestingModule({
-        providers: [{ provide: SUBJECT, useValue: { buildLedger, customerOf, originOf, toMs } }],
+        providers: [{ provide: SUBJECT, useValue: { buildLedger, customerOf, toMs } }],
     }).compile()
     return moduleRef.get<typeof import("./ledger.policy")>(SUBJECT)
 }
 
 describe("ledger.policy", () => {
-    it("normalizes origins, timestamps and customer labels", async () => {
+    it("normalizes timestamps and customer labels", async () => {
         const subject = await build()
 
-        expect(subject.originOf("simulated")).toBe("simulated")
-        expect(subject.originOf("live")).toBe("live")
-        expect(subject.originOf(null)).toBe("live")
-        expect(subject.originOf("legacy")).toBe("live")
         expect(subject.toMs(CREATED)).toBe(Date.parse(CREATED))
         expect(subject.toMs(null)).toBeNaN()
         expect(subject.toMs("invalid date")).toBeNaN()
@@ -77,7 +73,6 @@ describe("ledger.policy", () => {
                     amount: 120000,
                     status: expectedStatus,
                     linked: null,
-                    origin: "live",
                     lineage: [
                         {
                             kind: "invoice",
@@ -127,7 +122,6 @@ describe("ledger.policy", () => {
                 amount: 120000,
                 status: "issued",
                 linked: "ORDER-2",
-                origin: "live",
                 adjustmentCount: 0,
                 lineage: [
                     { kind: "order", title: "ORDER-2", detail: null, at: null, status: "new", amount: null },
@@ -156,7 +150,7 @@ describe("ledger.policy", () => {
             expect(
                 subject.buildLedger(
                     input({
-                        transactions: [transaction({ status, payer, reference, invoice_id, origin: "simulated" })],
+                        transactions: [transaction({ status, payer, reference, invoice_id })],
                     }),
                 ),
             ).toEqual([
@@ -170,7 +164,6 @@ describe("ledger.policy", () => {
                     amount: 120000,
                     status: expectedStatus,
                     linked: null,
-                    origin: "simulated",
                     adjustmentCount: 0,
                     lineage: [{ kind: "payment", title, detail: reference, at: PAID, status, amount: 120000 }],
                 },
@@ -204,7 +197,6 @@ describe("ledger.policy", () => {
             amount: 120000,
             status: "matched",
             linked: null,
-            origin: "live",
             adjustmentCount: 0,
             lineage: [
                 {

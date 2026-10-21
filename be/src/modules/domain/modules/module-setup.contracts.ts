@@ -1,10 +1,10 @@
 import type { RuleMode } from "@modules/domain/authority-rules"
 import type { Scope } from "@modules/domain/brain-facts"
 import type { ContextVersionRecord } from "@modules/domain/module-context-versions"
-import type { InstallationRecord } from "@modules/domain/module-installations"
 import type { SetupMessageRecord } from "@modules/domain/module-setup-messages"
 import type { CardRecord } from "@modules/domain/module-setup-writes"
 import type { SetupRevisionRecord, SetupSessionRecord } from "@modules/domain/module-setup-sessions"
+import type { InstallationView } from "./modules.contracts"
 
 /** The fact in force for the subject and attribute of a waiting fact card. */
 export interface CurrentFact {
@@ -38,8 +38,8 @@ export interface SetupCardView {
 
 /** Everything the Setup tab of one instance needs. */
 export interface SetupState {
-    /** The instance. */
-    readonly installation: InstallationRecord
+    /** The instance, with what it still needs connected. */
+    readonly installation: InstallationView
     /** The open draft: new messages go here. */
     readonly session: SetupSessionRecord
     /** Every revision of the installation, oldest first. */

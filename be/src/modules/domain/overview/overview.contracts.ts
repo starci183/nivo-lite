@@ -178,8 +178,6 @@ export interface OverviewGovernanceLead {
     readonly contactName: string | null
     /** The customer company, or null. */
     readonly company: string | null
-    /** `live`, `simulated` or null. */
-    readonly origin: string | null
     /** The pipeline stage. */
     readonly stage: string
     /** When it was created, ISO 8601. */
@@ -200,8 +198,6 @@ export interface OverviewGovernanceOrder {
     readonly amountVnd: number | null
     /** The order status. */
     readonly status: string
-    /** `live`, `simulated` or null. */
-    readonly origin: string | null
 }
 
 /** An invoice row behind the governance figures. */
@@ -218,8 +214,6 @@ export interface OverviewGovernanceInvoice {
     readonly amountVnd: number | null
     /** The invoice status. */
     readonly status: string
-    /** `live`, `simulated` or null. */
-    readonly origin: string | null
 }
 
 /** A payment row behind the governance figures. */
@@ -236,8 +230,6 @@ export interface OverviewGovernanceTransaction {
     readonly amountVnd: number | null
     /** The transaction status. */
     readonly status: string
-    /** `live`, `simulated` or null. */
-    readonly origin: string | null
 }
 
 /** A work item row behind the governance figures. */
@@ -358,8 +350,6 @@ export interface OverviewException {
     readonly status: string
     /** The reason code, or null. */
     readonly reason: string | null
-    /** `live`, `simulated` or null. */
-    readonly origin: string | null
     /** The failure text, or null. */
     readonly error: string | null
     /** The approval card behind it, or null. */

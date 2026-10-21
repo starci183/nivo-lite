@@ -29,7 +29,6 @@ const LEAD = {
     company: "Minh Co",
     channel: "website",
     need: "Website redesign",
-    origin: "live",
     stage: "proposal",
 }
 
@@ -81,7 +80,6 @@ describe("LeadsService", () => {
                 company: "Minh Co",
                 channel: "website",
                 need: "Website redesign",
-                origin: "live",
                 handedToAccounting: false,
             })
 

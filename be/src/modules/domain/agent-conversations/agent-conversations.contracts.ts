@@ -1,3 +1,5 @@
+import type { EntityManager } from "typeorm"
+
 /** A conversation as the intake reads it. */
 export interface ConversationRef {
     /** The conversation id. */
@@ -120,7 +122,7 @@ export interface OpenChatConversation {
     readonly workspaceId: string
     /** The agent in that workspace. */
     readonly agentId: string
-    /** Test or simulated customer. */
+    /** An owner test chat or a test customer. */
     readonly kind: "test" | "customer"
     /** The visitor name, or null for the default. */
     readonly visitorName: string | null
@@ -142,3 +144,38 @@ export type OptionalHumanConversation = HumanConversation | null
 
 /** The human holder, or null when the AI handles the conversation. */
 export type HumanHolder = string | null
+
+/** Hands a customer conversation to another agent in the caller's transaction. */
+export interface HandToAgentParams {
+    /** The transaction the move joins, so the move and its record commit together. */
+    readonly manager: EntityManager
+    /** The workspace of the conversation. */
+    readonly workspaceId: string
+    /** The conversation to move. */
+    readonly conversationId: string
+    /** The agent that speaks in it from now on. */
+    readonly agentId: string
+    /** The installation of that agent; null keeps the conversation's current installation. */
+    readonly installationId: string | null
+}
+
+/** The party a connector keeps for the customer of a conversation, remembered on the conversation. */
+export interface ConversationParty {
+    /** The connector's party id. */
+    readonly partyId: string
+    /** The party's name as the connector keeps it, or empty. */
+    readonly name: string
+}
+
+/** The remembered party of a conversation, or null while none is remembered. */
+export type OptionalConversationParty = ConversationParty | null
+
+/** Remembers the connector party of a workspace's conversation. */
+export interface RememberPartyParams {
+    /** The workspace of the conversation. */
+    readonly workspaceId: string
+    /** The conversation. */
+    readonly conversationId: string
+    /** The party the connector answered. */
+    readonly party: ConversationParty
+}

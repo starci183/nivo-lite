@@ -23,7 +23,7 @@ const draft = (overrides: Partial<EinvoiceDraft> = {}): EinvoiceDraft => ({
     issuedOn: "2026-10-19",
     sellerName: "Cong ty TNHH Linh Dan",
     sellerTaxCode: "0100109106",
-    buyerName: "HAKUEN",
+    buyerName: "Guesthouse",
     buyerTaxCode: OWN,
     lines: [
         { name: "Towel", quantity: 20, amountVnd: 2_000_000, vatRate: 10 },
@@ -122,6 +122,8 @@ describe("einvoice-checks.policy room copy", () => {
             draft(),
             { status: "invalid_tax_code", issues: ["seller_tax_code_mismatch"] },
             { name: "Linh", taxCode: "0100109106-001" },
+            "inbox.invoices.list",
+            { kind: "work_item", id: "wi-1" },
         )
 
         expect(card).toEqual(
@@ -134,7 +136,17 @@ describe("einvoice-checks.policy room copy", () => {
         )
         expect(card.fields).toHaveLength(4)
         expect(card.fields?.[0]).toEqual({ label: CARD_COPY.invoiceNo, value: "C26TLA 17" })
-        const review = subject.exceptionCard(draft(), { status: "needs_review", issues: ["vat_mismatch"] }, null)
+        expect(card.sources?.map((source) => source.ref)).toEqual(["inbox.invoices.list", "supplier"])
+        expect(card.ref).toEqual({ kind: "work_item", id: "wi-1" })
+        expect(card.actions).toEqual(["approve", "decline"])
+        const review = subject.exceptionCard(
+            draft(),
+            { status: "needs_review", issues: ["vat_mismatch"] },
+            null,
+            null,
+            { kind: "work_item", id: "wi-2" },
+        )
+        expect(review.sources).toEqual([])
         expect(review.badge).toBe(CARD_COPY.badgeReview)
         expect(review.fields).toHaveLength(3)
         expect(review.lines).toEqual([{ text: issueText("vat_mismatch") }])

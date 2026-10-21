@@ -1,9 +1,9 @@
 /** The provider identity admitted by a bank-feed receipt. */
 export type BankFeedProvider = "casso" | "payos" | "sepay-feed"
 
-/** What a payment connection reports before the connection decides how to book it. */
+/** What a payment connection reports before the connection decides how to book it: money in, or money out of the account. */
 export interface IncomingCredit {
-    /** The credited amount in VND. */
+    /** The moved amount in VND, always positive. */
     readonly amount: number
     /** The transfer content. */
     readonly content: string
@@ -11,6 +11,8 @@ export interface IncomingCredit {
     readonly eventId: string
     /** The bank name to show when the connection has no name. */
     readonly fallbackBankName: string
+    /** `debit` for money that left the account (a supplier payment); absent for money that came in. */
+    readonly direction?: "debit"
 }
 
 /** The payload stored for one workspace-feed receipt. */

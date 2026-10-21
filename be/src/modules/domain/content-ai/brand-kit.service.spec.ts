@@ -132,9 +132,12 @@ describe("BrandKitService propose", () => {
         generations.run.mockResolvedValue(ok(JSON.stringify(KIT)))
         store.insert.mockResolvedValue(RECORD)
 
-        await service.propose("person-1", request(""))
+        await service.propose("person-1", { ...request(""), installationId: "" })
 
         expect(setupMessages.post).not.toHaveBeenCalled()
+        expect(store.insert).toHaveBeenCalledWith(
+            expect.objectContaining({ installationId: null, setupSessionId: null, fileName: PDF.name }),
+        )
     })
 })
 

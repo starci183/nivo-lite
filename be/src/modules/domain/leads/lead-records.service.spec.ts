@@ -27,7 +27,6 @@ const ROW: LeadRecordRow = {
     context_summary: null,
     phone: "84912000701",
     email: null,
-    origin: "live",
 }
 
 const build = async (rows: ReadonlyArray<LeadRecordRow> = [ROW]) => {
@@ -80,7 +79,7 @@ describe("LeadRecordsService", () => {
             }),
         ).resolves.toEqual(ROW)
 
-        expect(em.query).toHaveBeenCalledWith(MATCH_LEAD, ["ws-1", "84912000701", null, null, "Zalo", "live"])
+        expect(em.query).toHaveBeenCalledWith(MATCH_LEAD, ["ws-1", "84912000701", null, null, "Zalo"])
     })
 
     it("captures a customer and answers the inserted row", async () => {
@@ -95,20 +94,10 @@ describe("LeadRecordsService", () => {
                 need: "price",
                 phone: "84912000701",
                 email: null,
-                origin: "live",
             }),
         ).resolves.toEqual(ROW)
 
-        expect(em.query).toHaveBeenCalledWith(INSERT_LEAD, [
-            "ws-1",
-            "An",
-            "ACME",
-            "Zalo",
-            "price",
-            "84912000701",
-            null,
-            "live",
-        ])
+        expect(em.query).toHaveBeenCalledWith(INSERT_LEAD, ["ws-1", "An", "ACME", "Zalo", "price", "84912000701", null])
     })
 
     it("hands over the package as the lead's need", async () => {
@@ -138,7 +127,7 @@ describe("LeadRecordsService", () => {
         expect(em.query).toHaveBeenCalledWith(FIND_LEAD, ["ws-1", "lead-1"])
     })
 
-    it("matches a trimmed customer name within the supplied origin", async () => {
+    it("matches a trimmed customer name", async () => {
         const { records, em } = await build()
 
         await expect(
@@ -148,11 +137,10 @@ describe("LeadRecordsService", () => {
                 email: null,
                 name: "  An  ",
                 channel: "Zalo",
-                origin: "simulated",
             }),
         ).resolves.toEqual(ROW)
 
-        expect(em.query).toHaveBeenCalledWith(MATCH_LEAD, ["ws-1", null, null, "An", "Zalo", "simulated"])
+        expect(em.query).toHaveBeenCalledWith(MATCH_LEAD, ["ws-1", null, null, "An", "Zalo"])
     })
 
     it("answers null for an unmatched input without a customer name", async () => {
@@ -162,7 +150,7 @@ describe("LeadRecordsService", () => {
             records.match({ workspaceId: "ws-1", phone: null, email: null, name: null, channel: null }),
         ).resolves.toBeNull()
 
-        expect(em.query).toHaveBeenCalledWith(MATCH_LEAD, ["ws-1", null, null, null, null, "live"])
+        expect(em.query).toHaveBeenCalledWith(MATCH_LEAD, ["ws-1", null, null, null, null])
     })
 
     it("refuses a capture that did not insert a row", async () => {
@@ -177,7 +165,6 @@ describe("LeadRecordsService", () => {
                 need: "price",
                 phone: null,
                 email: "an@example.test",
-                origin: "simulated",
             }),
         ).rejects.toMatchObject({ code: LeadsErrorCode.NotFound, params: { id: "new" } })
 
@@ -189,7 +176,6 @@ describe("LeadRecordsService", () => {
             "price",
             null,
             "an@example.test",
-            "simulated",
         ])
     })
 })

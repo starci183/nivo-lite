@@ -13,7 +13,7 @@ export interface AccountsPage {
 }
 
 @Injectable()
-/** Account administration through Supabase Auth for the operator commands: list, create and update users. */
+/** Account administration through Supabase Auth for the operator commands: list, create, update and delete users. */
 export class SupabaseAccountsService {
     constructor(
         @InjectSupabaseAdminClient() private readonly admin: SupabaseAdminClient,
@@ -46,5 +46,10 @@ export class SupabaseAccountsService {
         attributes: Parameters<Admin["updateUserById"]>[1],
     ): ReturnType<Admin["updateUserById"]> {
         return this.admin.auth.updateUserById(id, attributes)
+    }
+
+    /** Deletes a user for good (the operator workspace cleanup removes the accounts no kept workspace holds). */
+    deleteUser(id: string): ReturnType<Admin["deleteUser"]> {
+        return this.admin.auth.deleteUser(id)
     }
 }

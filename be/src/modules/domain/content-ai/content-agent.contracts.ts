@@ -1,3 +1,4 @@
+import type { WeeklyPost, WeeklySuggestion } from "@modules/domain/content-weekly-reports"
 import type { Locale } from "@modules/platform/i18n"
 
 /** One named brand color, `#rrggbb` lower case. */
@@ -185,6 +186,36 @@ export interface MarketingWeeklyReport {
     readonly days: ReadonlyArray<ReportDay>
     /** The channels that reported. */
     readonly channels: ReadonlyArray<string>
+    /** The most engaging posts published in the week, most engagements first (at most four). */
+    readonly posts: ReadonlyArray<WeeklyPost>
+    /** How many posts the channels published in the week. */
+    readonly postCount: number
+    /** What the model reads from the week and advises next; null for a week without engagement or when the model failed. */
+    readonly suggestion: WeeklySuggestion | null
+}
+
+/** The words of the advice the model answered, before its sources are attached. */
+export interface SuggestionText {
+    /** The headline, at most 120 characters. */
+    readonly title: string
+    /** The reasoning and the next step, at most 600 characters. */
+    readonly body: string
+}
+
+/** One post of the Page as the report reads it, before it is ranked. */
+export interface PublishedPost {
+    /** The provider post id. */
+    readonly id: string
+    /** The channel. */
+    readonly channel: string
+    /** The post text. */
+    readonly message: string
+    /** When it was published, ISO 8601. */
+    readonly publishedAt: string
+    /** The engagements the channel counted. */
+    readonly engagements: number
+    /** The public link, or null. */
+    readonly href: string | null
 }
 
 /** One day of the report chart. */
@@ -257,4 +288,18 @@ export interface ScheduleRequest {
     readonly contentItemId: string
     /** The publish_post work item a person approved. */
     readonly workItemId: string
+}
+
+/** One AI Marketing tick: every workspace, or the one an operator names. */
+export interface MarketingTickRequest {
+    /** Run the weekly report of this workspace only. */
+    readonly workspaceId?: string
+}
+
+/** What one AI Marketing tick posted. */
+export interface MarketingTickDone {
+    /** The Zalo OA articles published at their moment. */
+    readonly published: number
+    /** The weekly report cards posted. */
+    readonly reports: number
 }

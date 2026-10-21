@@ -141,9 +141,6 @@ export interface AccountingQuestionWorkView {
     /** execution Id. */
     readonly executionId: string | null
 
-    /** origin. */
-    readonly origin: string
-
     /** created At. */
     readonly createdAt: string
 

@@ -1,11 +1,15 @@
-import { mock, mockEntityManager } from "@starci/jest-preset"
+import { Test } from "@nestjs/testing"
+import { mock } from "@starci/jest-preset"
+import { AgentConversationsService } from "@modules/domain/agent-conversations"
 import type { TurnConversation } from "@modules/domain/agent-conversations"
+import { AGENTS_INSTALLATIONS } from "@modules/domain/agents"
+import type { Installation, InstallationDirectory } from "@modules/domain/agents"
 import { McpGatewayService } from "@modules/domain/mcp-gateway"
+import type { GatewayCallResult, RoleResolution } from "@modules/domain/mcp-gateway"
+import { MESSAGE_CATALOG } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
-import type { GuestContext } from "./gateway-turns.contracts"
+import type { CapturedLead } from "./customer-turns.contracts"
 import { GatewayContextService } from "./gateway-context.service"
-import { HubNotesService } from "./hub-notes.service"
-import { AGENT_NAME, INSERT_OWNERSHIP_EVENT, MOVE_CONVERSATION } from "./persistence/gateway-turns.sql"
 
 const CONVERSATION: TurnConversation = {
     id: "c1",
@@ -29,146 +33,207 @@ const CONVERSATION: TurnConversation = {
         greeting: "",
     },
 }
-
-const CHECKED_IN: GuestContext = {
-    guestId: "g1",
-    name: "Lan",
-    tier: "vip",
-    stayId: "s1",
-    room: "302",
-    stage: { kind: "checked_in" },
+const INSTALLATION: Installation = {
+    id: "i1",
+    workspaceId: "ws",
+    module: "chatbot",
+    name: "Sales",
+    isMulti: true,
+    agentId: "sales",
+    operatingMode: "assist",
+    settings: {},
+    activeContextVersionId: null,
 }
+const BY_PHONE: Installation = { ...INSTALLATION, settings: { identity_match: "phone" } }
+const LEAD: CapturedLead = { contactName: "Lan", company: "", need: "two nights", phone: "0900", email: null }
+const CALLER = { workspaceId: "ws", agentId: "sales", conversationId: "c1", workItemId: null }
+const FIND: RoleResolution = {
+    ok: true,
+    tool: { role: "identity.find", name: "crm.party.find", connector: "crm", connectorName: "CRM" },
+}
+const UPSERT: RoleResolution = {
+    ok: true,
+    tool: { role: "identity.upsert", name: "crm.party.upsert", connector: "crm", connectorName: "CRM" },
+}
+const FOUND: GatewayCallResult = { ok: true, value: { found: true, partyId: "p1", name: "Lan" } }
+const NOT_FOUND: GatewayCallResult = { ok: true, value: { found: false } }
+const DOWN: GatewayCallResult = { ok: false, code: "unavailable", detail: "timeout" }
 
-const build = (moved: ReadonlyArray<unknown> = [{ id: "c1" }]) => {
-    const entityManager = mockEntityManager()
-    const answers = new Map<string, unknown>([
-        [MOVE_CONVERSATION, moved],
-        [INSERT_OWNERSHIP_EVENT, []],
-        [AGENT_NAME, [{ name: "AI CSKH" }]],
-    ])
-    entityManager.query.mockImplementation((query: string) => Promise.resolve(answers.get(query)))
-    const catalog = mock<MessageCatalog>()
-    catalog.get.mockImplementation((key: string, params?: Readonly<Record<string, string | number>>) =>
+const catalog = mock<MessageCatalog>({
+    get: (key: string, params?: Readonly<Record<string, string | number>>) =>
         params === undefined || Object.keys(params).length === 0 ? key : `${key} ${JSON.stringify(params)}`,
-    )
-    let now = Date.parse("2026-10-24T05:00:00Z")
-    const clock = { now: () => new Date(now) }
-    const gateway = mock<McpGatewayService>()
-    gateway.agentsGranted.mockImplementation((_ws: string, tools: ReadonlyArray<string>) =>
-        Promise.resolve(tools.includes("hakuen.keycode.reveal") ? ["care"] : ["sales"]),
-    )
-    const notes = mock<HubNotesService>()
-    const service = new GatewayContextService(entityManager, catalog, clock, gateway, notes)
-    const advance = (ms: number): void => {
-        now += ms
-    }
-    return { service, entityManager, gateway, notes, advance }
+})
+
+const build = async () => {
+    const installations = mock<InstallationDirectory>({ ofAgent: jest.fn().mockResolvedValue(INSTALLATION) })
+    const gateway = mock<McpGatewayService>({
+        grantsOf: jest.fn().mockResolvedValue([]),
+        toolForRole: jest.fn((_ws: string, role: string) => Promise.resolve(role === "identity.find" ? FIND : UPSERT)),
+        call: jest.fn().mockResolvedValue(FOUND),
+    })
+    const conversations = mock<AgentConversationsService>({
+        isTestChat: jest.fn().mockResolvedValue(false),
+        partyOf: jest.fn().mockResolvedValue(null),
+        rememberParty: jest.fn().mockResolvedValue(undefined),
+    })
+    const moduleRef = await Test.createTestingModule({
+        providers: [
+            GatewayContextService,
+            { provide: MESSAGE_CATALOG, useValue: catalog },
+            { provide: AGENTS_INSTALLATIONS, useValue: installations },
+            { provide: McpGatewayService, useValue: gateway },
+            { provide: AgentConversationsService, useValue: conversations },
+        ],
+    }).compile()
+    return { service: moduleRef.get(GatewayContextService), gateway, conversations, installations }
 }
 
-describe("GatewayContextService", () => {
-    it("serves the hotel when the agent holds a HAKUEN grant other than never", async () => {
-        const { service, gateway } = build()
-        gateway.grantsOf.mockResolvedValueOnce([
-            { tool: "hakuen.keycode.reveal", mode: "never", constraints: [], limitVnd: null },
-        ])
-        await expect(service.servesHotel(CONVERSATION)).resolves.toBe(false)
-        gateway.grantsOf.mockResolvedValueOnce([{ tool: "hakuen.*", mode: "auto", constraints: [], limitVnd: null }])
-        await expect(service.servesHotel(CONVERSATION)).resolves.toBe(true)
+describe("GatewayContextService grants and brief", () => {
+    it("serves connectors when the agent holds a grant other than never", async () => {
+        const { service, gateway } = await build()
+        await expect(service.servesConnectors(CONVERSATION)).resolves.toBe(false)
+        gateway.grantsOf.mockResolvedValueOnce([{ tool: "crm.*", mode: "never", constraints: [], limitVnd: null }])
+        await expect(service.servesConnectors(CONVERSATION)).resolves.toBe(false)
+        gateway.grantsOf.mockResolvedValueOnce([{ tool: "crm.*", mode: "ask", constraints: [], limitVnd: null }])
+        await expect(service.servesConnectors(CONVERSATION)).resolves.toBe(true)
+        expect(gateway.grantsOf).toHaveBeenCalledWith("ws", "sales")
     })
 
-    it("names the desk agents, or null without grants", async () => {
-        const { service, gateway } = build()
-        await expect(service.deskAgents("ws")).resolves.toEqual({ sales: "sales", care: "care" })
-        gateway.agentsGranted.mockResolvedValue([])
-        await expect(service.deskAgents("ws")).resolves.toEqual({ sales: null, care: null })
-    })
-
-    it("reads the guest and the stay once, caches them for a minute and forgets on demand", async () => {
-        const { service, gateway, advance } = build()
-        gateway.call
-            .mockResolvedValueOnce({
-                ok: true,
-                value: { found: true, guest: { guestId: "g1", name: "Lan", tier: "vip" } },
-            })
-            .mockResolvedValueOnce({
-                ok: true,
-                value: { found: true, stay: { stayId: "s1", roomNumber: "302", status: "checked_in" } },
-            })
-        await expect(service.contextOf(CONVERSATION)).resolves.toEqual(CHECKED_IN)
-        expect(gateway.call.mock.calls.map((call) => [call[1], call[2]])).toEqual([
-            ["hakuen.guest.findByChannelIdentity", { channel: "zalo", externalId: "z1" }],
-            ["hakuen.stay.current", { guestId: "g1" }],
-        ])
-        await service.contextOf(CONVERSATION)
-        expect(gateway.call).toHaveBeenCalledTimes(2)
-        advance(61_000)
-        gateway.call.mockResolvedValueOnce({ ok: true, value: { guest: null } })
-        await expect(service.contextOf(CONVERSATION)).resolves.toMatchObject({ guestId: null, stayId: null })
-        service.forget(CONVERSATION)
-        gateway.call.mockResolvedValueOnce({ ok: false, code: "unavailable", detail: "x" })
-        await expect(service.contextOf(CONVERSATION)).resolves.toBeNull()
-        gateway.call
-            .mockResolvedValueOnce({ ok: true, value: { guest: { guestId: "g1" } } })
-            .mockResolvedValueOnce({ ok: false, code: "unavailable", detail: "x" })
-        await expect(service.contextOf(CONVERSATION)).resolves.toBeNull()
-        await expect(service.contextOf({ ...CONVERSATION, externalId: null })).resolves.toBeNull()
-    })
-
-    it("writes the brief of what is known", () => {
-        const { service } = build()
-        expect(service.briefOf(CHECKED_IN)).toEqual([
+    it("writes the connector clause, with the party when a connector knows the customer", async () => {
+        const { service } = await build()
+        expect(service.briefOf(null)).toEqual(["gatewayTurns.contract"])
+        expect(service.briefOf({ found: false, partyId: null, name: "" })).toEqual(["gatewayTurns.contract"])
+        expect(service.briefOf({ found: true, partyId: "p1", name: "Lan" })).toEqual([
             "gatewayTurns.contract",
-            'gatewayTurns.guestKnown {"name":"Lan","tier":"vip"}',
-            'gatewayTurns.stayKnown {"room":"302","stage":"checked_in"}',
+            'gatewayTurns.partyKnown {"name":"Lan"}',
         ])
-        expect(service.briefOf({ ...CHECKED_IN, tier: "", room: "" })[1]).toContain('"tier":"-"')
-        expect(service.briefOf({ ...CHECKED_IN, room: "" })[2]).toContain('"room":"-"')
-        expect(service.briefOf({ ...CHECKED_IN, guestId: null, stayId: null })).toEqual(["gatewayTurns.contract"])
+        expect(service.briefOf({ found: true, partyId: "p1", name: "" })[1]).toContain('"name":"-"')
+    })
+})
+
+describe("GatewayContextService party", () => {
+    it("answers the party the conversation remembers without asking a connector", async () => {
+        const { service, gateway, conversations } = await build()
+        conversations.partyOf.mockResolvedValueOnce({ partyId: "p1", name: "Lan" })
+        await expect(service.partyOf(CONVERSATION)).resolves.toEqual({ found: true, partyId: "p1", name: "Lan" })
+        expect(conversations.partyOf).toHaveBeenCalledWith("ws", "c1")
+        expect(gateway.call).not.toHaveBeenCalled()
     })
 
-    it("moves a checked-in guest to care, records it and notes both rooms", async () => {
-        const { service, entityManager, notes } = build()
-        await expect(service.route(CONVERSATION, CHECKED_IN)).resolves.toEqual({ role: "care", reason: "checked_in" })
-        expect(entityManager.query).toHaveBeenCalledWith(MOVE_CONVERSATION, ["ws", "c1", "care"])
-        expect(entityManager.query).toHaveBeenCalledWith(INSERT_OWNERSHIP_EVENT, [
-            "ws",
-            "c1",
-            "sales",
-            "care",
-            "checked_in",
-            "s1",
-        ])
-        expect(notes.post.mock.calls.map((call) => call[1])).toEqual(["sales", "care"])
-        expect(notes.post.mock.calls[0]?.[0].title).toContain("Lan (P.302)")
-    })
-
-    it("keeps the owner when a person holds it, it is already the owner, nobody is granted or the move did not apply", async () => {
-        const { service, entityManager, gateway } = build([])
-        await expect(service.route({ ...CONVERSATION, handledBy: "staff" }, CHECKED_IN)).resolves.toBeNull()
-        await expect(service.route(CONVERSATION, { ...CHECKED_IN, stage: { kind: "none" } })).resolves.toBeNull()
-        await expect(service.route(CONVERSATION, CHECKED_IN)).resolves.toBeNull()
-        expect(entityManager.query.mock.calls.map((call) => call[0])).toEqual([MOVE_CONVERSATION])
-        gateway.agentsGranted.mockResolvedValue([])
-        await expect(service.route(CONVERSATION, CHECKED_IN)).resolves.toBeNull()
-    })
-
-    it("names the guest from the conversation when HAKUEN has no name or room, and copes with a missing agent name", async () => {
-        const { service, notes, entityManager } = build()
-        entityManager.query.mockImplementation((query: string) =>
-            Promise.resolve(query === MOVE_CONVERSATION ? [{ id: "c1" }] : []),
-        )
-        await service.route({ ...CONVERSATION, visitorName: null }, { ...CHECKED_IN, name: "", room: "" })
-        expect(notes.post.mock.calls[0]?.[0].title).toContain('"name":""')
-        await service.route(CONVERSATION, { ...CHECKED_IN, name: "", room: "" })
-        expect(notes.post.mock.calls[2]?.[0].title).toContain('"name":"Lan Zalo"')
-    })
-
-    it("names the gateway caller of the conversation", () => {
-        expect(build().service.callerOf(CONVERSATION)).toEqual({
+    it("finds the party by the channel identity and remembers it on the conversation", async () => {
+        const { service, gateway, conversations } = await build()
+        await expect(service.partyOf(CONVERSATION)).resolves.toEqual({ found: true, partyId: "p1", name: "Lan" })
+        expect(gateway.toolForRole).toHaveBeenCalledWith("ws", "identity.find")
+        expect(gateway.call).toHaveBeenCalledWith(CALLER, "crm.party.find", { channel: "zalo", externalId: "z1" })
+        expect(conversations.rememberParty).toHaveBeenCalledWith({
             workspaceId: "ws",
-            agentId: "sales",
             conversationId: "c1",
-            workItemId: null,
+            party: { partyId: "p1", name: "Lan" },
+        })
+    })
+
+    it("remembers nothing when the connector does not know the customer or answers no party id", async () => {
+        const { service, gateway, conversations } = await build()
+        gateway.call
+            .mockResolvedValueOnce(NOT_FOUND)
+            .mockResolvedValueOnce({ ok: true, value: { found: true, name: 7 } })
+        await expect(service.partyOf(CONVERSATION)).resolves.toEqual({ found: false, partyId: null, name: "" })
+        await expect(service.partyOf(CONVERSATION)).resolves.toEqual({ found: false, partyId: null, name: "" })
+        expect(conversations.rememberParty).not.toHaveBeenCalled()
+    })
+
+    it("answers null without a channel identity, when the workspace matches by phone, without the role or on failure", async () => {
+        const { service, gateway, installations } = await build()
+        await expect(service.partyOf({ ...CONVERSATION, externalId: null })).resolves.toBeNull()
+        installations.ofAgent.mockResolvedValueOnce(BY_PHONE)
+        await expect(service.partyOf(CONVERSATION)).resolves.toBeNull()
+        gateway.toolForRole.mockResolvedValueOnce({ ok: false, code: "no_capability", role: "identity.find" })
+        await expect(service.partyOf(CONVERSATION)).resolves.toBeNull()
+        installations.ofAgent.mockResolvedValueOnce(null)
+        gateway.call.mockResolvedValueOnce(DOWN)
+        await expect(service.partyOf(CONVERSATION)).resolves.toBeNull()
+        expect(gateway.call).toHaveBeenCalledTimes(1)
+    })
+})
+
+describe("GatewayContextService remember by channel", () => {
+    it("creates an unknown customer through identity.upsert under the message's step key and remembers the party", async () => {
+        const { service, gateway, conversations } = await build()
+        gateway.call.mockResolvedValueOnce(NOT_FOUND).mockResolvedValueOnce({ ok: true, value: { partyId: "p9" } })
+        await service.remember(CONVERSATION, LEAD, "m1")
+        expect(gateway.toolForRole).toHaveBeenLastCalledWith("ws", "identity.upsert")
+        expect(gateway.call).toHaveBeenLastCalledWith({ ...CALLER, opKey: "m1:identity.upsert" }, "crm.party.upsert", {
+            channel: "zalo",
+            externalId: "z1",
+            name: "Lan",
+            phone: "0900",
+        })
+        expect(conversations.rememberParty).toHaveBeenCalledWith({
+            workspaceId: "ws",
+            conversationId: "c1",
+            party: { partyId: "p9", name: "Lan" },
+        })
+    })
+
+    it("sends no phone the customer did not give, and remembers nothing when the connector refuses", async () => {
+        const { service, gateway, conversations } = await build()
+        gateway.call.mockResolvedValueOnce(NOT_FOUND).mockResolvedValueOnce(DOWN)
+        await service.remember(CONVERSATION, { ...LEAD, phone: null }, "m1")
+        expect(gateway.call.mock.calls[1]?.[2]).toEqual({ channel: "zalo", externalId: "z1", name: "Lan" })
+        expect(conversations.rememberParty).not.toHaveBeenCalled()
+    })
+
+    it("creates nobody when the connector already knows the customer or answers no party id", async () => {
+        const { service, gateway, conversations } = await build()
+        await service.remember(CONVERSATION, LEAD, "m1")
+        expect(gateway.toolForRole).not.toHaveBeenCalledWith("ws", "identity.upsert")
+        gateway.call.mockResolvedValueOnce(NOT_FOUND).mockResolvedValueOnce({ ok: true, value: {} })
+        await service.remember(CONVERSATION, LEAD, "m2")
+        expect(conversations.rememberParty).toHaveBeenCalledTimes(1)
+    })
+
+    it("creates nobody for a remembered party, a test chat, without a channel identity or without the role", async () => {
+        const { service, gateway, conversations } = await build()
+        conversations.partyOf.mockResolvedValueOnce({ partyId: "p1", name: "Lan" })
+        await service.remember(CONVERSATION, LEAD, "m1")
+        conversations.isTestChat.mockResolvedValueOnce(true)
+        await service.remember(CONVERSATION, LEAD, "m1")
+        await service.remember({ ...CONVERSATION, externalId: null }, LEAD, "m1")
+        expect(gateway.call).not.toHaveBeenCalled()
+        gateway.call.mockResolvedValueOnce(NOT_FOUND)
+        gateway.toolForRole
+            .mockResolvedValueOnce(FIND)
+            .mockResolvedValueOnce({ ok: false, code: "no_capability", role: "identity.upsert" })
+        await service.remember(CONVERSATION, LEAD, "m2")
+        expect(gateway.call).toHaveBeenCalledTimes(1)
+    })
+})
+
+describe("GatewayContextService remember by phone", () => {
+    it("finds the customer by the phone they gave across channels and remembers the party", async () => {
+        const { service, gateway, conversations, installations } = await build()
+        installations.ofAgent.mockResolvedValue(BY_PHONE)
+        await service.remember(CONVERSATION, LEAD, "m1")
+        expect(gateway.call).toHaveBeenCalledWith(CALLER, "crm.party.find", { channel: "phone", externalId: "0900" })
+        expect(conversations.rememberParty).toHaveBeenCalledWith({
+            workspaceId: "ws",
+            conversationId: "c1",
+            party: { partyId: "p1", name: "Lan" },
+        })
+    })
+
+    it("creates the customer under their phone when no connector knows it, and waits while no phone is given", async () => {
+        const { service, gateway, installations } = await build()
+        installations.ofAgent.mockResolvedValue(BY_PHONE)
+        await service.remember(CONVERSATION, { ...LEAD, phone: null }, "m1")
+        expect(gateway.call).not.toHaveBeenCalled()
+        gateway.call.mockResolvedValueOnce(NOT_FOUND).mockResolvedValueOnce({ ok: true, value: { partyId: "p9" } })
+        await service.remember(CONVERSATION, LEAD, "m2")
+        expect(gateway.call).toHaveBeenLastCalledWith({ ...CALLER, opKey: "m2:identity.upsert" }, "crm.party.upsert", {
+            channel: "phone",
+            externalId: "0900",
+            name: "Lan",
+            phone: "0900",
         })
     })
 })

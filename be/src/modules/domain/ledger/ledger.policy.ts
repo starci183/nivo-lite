@@ -3,7 +3,6 @@ import type {
     AccountingLedgerKind,
     AccountingLedgerStatus,
     AccountingLineageStep,
-    AccountingOrigin,
 } from "./ledger.contracts"
 import type { InvoiceAccountingRow as LedgerInvoice } from "@modules/domain/invoices"
 import type { TransactionAccountingRow as LedgerTransaction } from "@modules/domain/transactions"
@@ -41,8 +40,6 @@ export interface LedgerInput {
 
 const LEDGER_LIMIT = 400
 
-/** Where a record came from; anything that is not marked simulated counts as live. */
-export const originOf = (value: OptionalText): AccountingOrigin => (value === "simulated" ? "simulated" : "live")
 /** An ISO instant as milliseconds, or NaN when there is none. */
 export const toMs = (iso: OptionalText): number => (iso === null ? Number.NaN : new Date(iso).getTime())
 /** The name the customer goes by, or null when the lead has none. */
@@ -208,7 +205,6 @@ export const buildLedger = (input: LedgerInput): ReadonlyArray<AccountingLedgerE
             amount: Number(tx.amount_vnd),
             status: ledgerStatusOf(tx.status),
             linked: invoice?.invoice_no ?? null,
-            origin: originOf(tx.origin),
             lineage: sortSteps([
                 invoice === undefined ? null : orderStep(invoice),
                 invoice === undefined ? null : invoiceStep(invoice),
@@ -250,7 +246,6 @@ const invoiceEntryOf = (
         amount: Number(invoice.amount_vnd),
         status: invoiceLedgerStatus(invoice, settledByPayment),
         linked: invoice.order?.order_no ?? null,
-        origin: originOf(invoice.origin),
         lineage: sortSteps([
             orderStep(invoice),
             invoiceStep(invoice),

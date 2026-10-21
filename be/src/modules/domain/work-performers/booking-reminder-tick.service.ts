@@ -12,7 +12,7 @@ import type { MessageCatalog } from "@modules/platform/i18n"
 import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { eachInOrder } from "@modules/platform/primitives"
-import { LIVE_BOOKING_STATUSES, contactOf, reminderOriginOf, settlementOf } from "./booking-remind.policy"
+import { LIVE_BOOKING_STATUSES, contactOf, settlementOf } from "./booking-remind.policy"
 import { WorkPerformersLogEvent } from "./work-performers.log-events"
 
 const LOCALE = "vi"
@@ -103,7 +103,6 @@ export class BookingReminderTickService implements OnModuleInit {
             subject_type: "lead",
             subject_id: booking.lead_id,
             lead_id: booking.lead_id,
-            origin: reminderOriginOf(booking.origin),
             dedupeKey: `remind_booking:${booking.id}:${reminder.kind}:${reminder.dueMs}`,
             preset: true,
             noChain: true,

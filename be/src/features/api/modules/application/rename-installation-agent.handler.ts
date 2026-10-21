@@ -1,6 +1,6 @@
 import { CommandHandler } from "@nestjs/cqrs"
 import { ModuleInstallService } from "@modules/domain/modules"
-import type { InstallationRecord } from "@modules/domain/module-installations"
+import type { InstallationView } from "@modules/domain/modules"
 import { ICQRSHandler } from "@modules/platform/cqrs"
 import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
@@ -8,7 +8,7 @@ import { RenameInstallationAgentCommand } from "./rename-installation-agent.comm
 
 @CommandHandler(RenameInstallationAgentCommand)
 /** Renames the agent through the module install service. */
-export class RenameInstallationAgentHandler extends ICQRSHandler<RenameInstallationAgentCommand, InstallationRecord> {
+export class RenameInstallationAgentHandler extends ICQRSHandler<RenameInstallationAgentCommand, InstallationView> {
     constructor(
         @InjectLogger() logger: Logger,
         private readonly installs: ModuleInstallService,
@@ -16,7 +16,7 @@ export class RenameInstallationAgentHandler extends ICQRSHandler<RenameInstallat
         super(logger)
     }
 
-    protected override process(command: RenameInstallationAgentCommand): Promise<InstallationRecord> {
+    protected override process(command: RenameInstallationAgentCommand): Promise<InstallationView> {
         return this.installs.renameAgent(
             command.params.principal.id,
             command.params.request.workspaceId,

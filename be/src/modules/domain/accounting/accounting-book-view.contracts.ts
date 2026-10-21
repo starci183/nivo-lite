@@ -45,9 +45,6 @@ export interface AccountingBookInvoiceView {
     /** status. */
     readonly status: string
 
-    /** origin. */
-    readonly origin: string
-
     /** issued By. */
     readonly issuedBy: string | null
 
@@ -111,9 +108,6 @@ export interface AccountingBookTransactionView {
     /** status. */
     readonly status: string
 
-    /** origin. */
-    readonly origin: string
-
     /** channel. */
     readonly channel: string
 
@@ -152,9 +146,6 @@ export interface AccountingBookOrderView {
 
     /** status. */
     readonly status: string
-
-    /** origin. */
-    readonly origin: string
 
     /** confirmed By. */
     readonly confirmedBy: string | null

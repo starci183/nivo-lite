@@ -5,7 +5,8 @@ import type {
     SetupState,
     SetupVersions,
 } from "@modules/domain/modules"
-import type { AgentSyncStatus, InstallationRecord, RequirementFacts } from "@modules/domain/module-installations"
+import type { AgentSyncStatus, RequirementFacts } from "@modules/domain/module-installations"
+import type { InstallationView } from "@modules/domain/modules"
 import type { SetupMessageRecord } from "@modules/domain/module-setup-messages"
 import type { SetupSessionRecord } from "@modules/domain/module-setup-sessions"
 import type { CardRecord } from "@modules/domain/module-setup-writes"
@@ -69,7 +70,7 @@ export const toModulesCatalogType = (catalog: ModulesCatalog): ModulesCatalogTyp
 export const toListInstallationsRequest = (workspaceId: string): ListInstallationsRequest => ({ workspaceId })
 
 /** Maps one installed agent to the GraphQL type. */
-export const toModuleInstallationType = (record: InstallationRecord): ModuleInstallationType => ({ ...record })
+export const toModuleInstallationType = (record: InstallationView): ModuleInstallationType => ({ ...record })
 
 /** Maps the installation of the GraphQL input, with the workspace it names, to the query request. */
 export const toGetInstallationRequest = (
@@ -78,8 +79,8 @@ export const toGetInstallationRequest = (
 ): GetInstallationRequest => ({ workspaceId, ...input })
 
 /** Maps the installed agents to the GraphQL type. */
-export const toModuleInstallationsType = (records: ReadonlyArray<InstallationRecord>): Array<ModuleInstallationType> =>
-    records.map((record) => ({ ...record }))
+export const toModuleInstallationsType = (records: ReadonlyArray<InstallationView>): Array<ModuleInstallationType> =>
+    records.map(toModuleInstallationType)
 
 /** Maps the installation of the GraphQL input, with the workspace it names, to the sync status request. */
 export const toGetAgentSyncStatusRequest = (

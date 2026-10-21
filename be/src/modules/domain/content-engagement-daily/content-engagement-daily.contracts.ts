@@ -21,3 +21,13 @@ export interface ReportedDay {
     /** Engagements. */
     readonly engagements: number
 }
+
+/** The new customer messages of one channel on one day. */
+export interface MessagesDay {
+    /** The channel. */
+    readonly channel: string
+    /** The day, `YYYY-MM-DD`. */
+    readonly day: string
+    /** How many messages customers wrote. */
+    readonly messages: number
+}

@@ -1,14 +1,13 @@
-import { Field, ObjectType } from "@nestjs/graphql"
-import { AccountingSplitType } from "./accounting-split.type"
+import { Field, Float, Int, ObjectType } from "@nestjs/graphql"
 
 @ObjectType()
 /** Accounting Measure returned by GraphQL. */
 export class AccountingMeasureType {
-    /** vnd. */
-    @Field(() => AccountingSplitType)
-    vnd!: AccountingSplitType
+    /** The VND amount. */
+    @Field(() => Float)
+    vnd!: number
 
-    /** count. */
-    @Field(() => AccountingSplitType)
-    count!: AccountingSplitType
+    /** The record count. */
+    @Field(() => Int)
+    count!: number
 }

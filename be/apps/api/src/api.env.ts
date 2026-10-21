@@ -15,6 +15,7 @@ import { parseMailConfig } from "@modules/integrations/mail"
 import { parseTelegramConfig } from "@modules/integrations/telegram"
 import { parseZaloConfig } from "@modules/integrations/zalo"
 import { parseMcpGatewayConfig } from "@modules/domain/mcp-gateway"
+import { parseMcpConfig } from "@modules/integrations/mcp"
 import { parsePlatformAdminConfig } from "@modules/domain/platform-admin"
 import { parseWorkspaceInvitesConfig } from "@modules/domain/workspace-invites"
 import { parseWorkspacesConfig } from "@modules/domain/workspaces"
@@ -129,7 +130,7 @@ export const readApiEnv = (env: EnvSource): ApiOptions => ({
     channels: parseChannelsConfig(env),
     telegram: parseTelegramConfig(env),
     zalo: parseZaloConfig(env),
-    mcpGateway: parseMcpGatewayConfig(env),
+    mcpGateway: parseMcpGatewayConfig(env, parseMcpConfig(env)),
     mail: parseMailConfig(env),
     dataSources: parseDataSourcesConfig(env),
     telegramUser: parseTelegramUserConfig(env),

@@ -31,7 +31,6 @@ export class LeadActionFlowService {
             workspaceId: ctx.workspaceId,
             channel: "manual",
             kind: "lead",
-            origin: "live",
             senderName: input.contactName ?? "",
             senderContact: contact,
             body: input.need ?? "",
@@ -45,7 +44,6 @@ export class LeadActionFlowService {
             command: "handoff_lead",
             reason: "manual lead",
             inboundEventId: event.inboundEventId,
-            origin: "live",
             dedupeKey: key,
             payload: {
                 subject_type: "inbound",
@@ -85,7 +83,6 @@ export class LeadActionFlowService {
             subject_type: "lead",
             subject_id: lead.id,
             lead_id: lead.id,
-            origin: lead.origin === "simulated" ? "simulated" : "live",
             dedupeKey: key,
             noChain: true,
             seed: { fields: { responsibility_id: responsibility.id } },
@@ -110,7 +107,6 @@ export class LeadActionFlowService {
             subject_type: "lead",
             subject_id: lead.id,
             lead_id: lead.id,
-            origin: lead.origin === "simulated" ? "simulated" : "live",
             dedupeKey: key,
             seed: { amount_vnd: null, fields: {} },
         })

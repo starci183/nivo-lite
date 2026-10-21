@@ -41,7 +41,6 @@ export class WorkIntakeService {
             parentId: spec.parent_id ?? null,
             dedupeKey: spec.dedupeKey,
             proposal: toProposal(spec.seed ?? {}),
-            origin: spec.origin,
             installationId: spec.installationId ?? null,
         })
         if (item === null) return { item: await this.existing(ctx, spec), created: false }

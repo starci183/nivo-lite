@@ -7,6 +7,7 @@ export type { ContentAiRequested, ContentAiStatus } from "./content-ai.contracts
 export type { BrandMaterial } from "./content-ai-prompt.policy"
 export { BrandKitService } from "./brand-kit.service"
 export { MarketingInsightsService } from "./marketing-insights.service"
+export { MarketingTickService } from "./marketing-tick.service"
 export { CONTENT_AGENT_MESSAGES } from "./messages/content-agent.messages"
 export type {
     BrandDecision,

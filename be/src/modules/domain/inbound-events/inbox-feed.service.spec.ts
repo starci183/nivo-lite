@@ -21,7 +21,6 @@ const row = builder<InboundEventFeedRow>({
     workspace_id: "ws-1",
     channel: "telegram",
     kind: "message",
-    origin: "live",
     sender_name: "Minh",
     sender_contact: null,
     body: "Hello",

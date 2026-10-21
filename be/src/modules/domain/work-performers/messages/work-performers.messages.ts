@@ -25,7 +25,7 @@ export const WORK_PERFORMERS_MESSAGES: MessageBundle = {
         "performers.deliveredWebsite": "Đã gửi cho {{name}} trong website chat",
         "performers.deliveredTelegram": "Đã gửi qua Telegram cho {{name}}",
         "performers.telegramFailed": "Chưa gửi được qua Telegram cho {{name}} (chỉ lưu trong NIVO)",
-        "performers.simulatedDelivery": "Đã ghi nhận — kênh {{channel}} đang mô phỏng, chưa gửi thật",
+        "performers.recordedNoConversation": "Đã ghi nhận — khách chưa có cuộc trò chuyện trên {{channel}}, chưa gửi",
         "performers.orderSummary": "Xác nhận đơn {{no}} của {{name}}: {{items}} · {{amount}}",
         "performers.orderNoAmount": "chưa có số tiền",
         "performers.orderConfirmed": "Đã xác nhận đơn {{no}} · {{amount}}",
@@ -79,32 +79,40 @@ export const WORK_PERFORMERS_MESSAGES: MessageBundle = {
         "performers.reminderSent": "đã nhắn khách ({{via}})",
         "performers.reminderNoChannel": "chưa có kênh nhắn khách",
         "performers.reminderDone": "Nhắc lịch {{name}} lúc {{when}}: {{told}}.",
-        "performers.rewardRedeemed": "Đã đổi \"{{reward}}\" cho {{name}} (mã {{code}}, trừ {{cost}} điểm).",
+        "performers.rewardRedeemed": 'Đã đổi "{{reward}}" cho {{name}} (mã {{code}}, trừ {{cost}} điểm).',
         "performers.rewardRedeemedBefore": "Lượt đổi này đã được ghi trước đó cho {{name}} (mã {{code}}).",
-        "performers.rewardCustomer": "Em đã đổi quà \"{{reward}}\" cho {{name}} rồi ạ. Mã nhận quà: {{code}}. Điểm còn lại: {{points}} điểm.",
-        "performers.redeemSummary": "{{name}} xin đổi \"{{reward}}\" ({{cost}} điểm)",
+        "performers.rewardCustomer":
+            'Em đã đổi quà "{{reward}}" cho {{name}} rồi ạ. Mã nhận quà: {{code}}. Điểm còn lại: {{points}} điểm.',
+        "performers.redeemSummary": '{{name}} xin đổi "{{reward}}" ({{cost}} điểm)',
         "errors.WORK_PERFORMERS_BOOKING_NOT_MOVED": "Chưa đổi được lịch sang giờ khách muốn ({{reason}}).",
         "errors.WORK_PERFORMERS_REMINDER_EMPTY": "Không có nội dung nhắc.",
         "errors.WORK_PERFORMERS_APPROVAL_INVALID": "Yêu cầu duyệt không có lệnh kết nối để thực hiện.",
-        "errors.WORK_PERFORMERS_CONNECTOR_REFUSED": "Kết nối chưa thực hiện {tool} ({code}).",
-        "errors.WORK_PERFORMERS_STAY_NOT_FOUND": "Không tìm thấy lưu trú của phòng {room} trong HAKUEN.",
-        "errors.WORK_PERFORMERS_GUEST_UNREACHABLE": "Khách phòng {room} chưa có hội thoại với khách sạn.",
+        "errors.WORK_PERFORMERS_CONNECTOR_REFUSED": "Kết nối chưa thực hiện {{tool}} ({{code}}).",
         "performers.chatBooking.askService": "Bạn muốn đặt dịch vụ nào ạ? Bên mình có: {{services}}.",
         "performers.chatBooking.askDate": "Bạn muốn đặt {{service}} vào ngày nào ạ?",
-        "performers.chatBooking.noTimes": "Ngày {{date}} bên mình đã kín lịch {{service}} rồi ạ. Bạn chọn giúp mình ngày khác, hoặc mình ghi bạn vào danh sách chờ nhé.",
+        "performers.chatBooking.noTimes":
+            "Ngày {{date}} bên mình đã kín lịch {{service}} rồi ạ. Bạn chọn giúp mình ngày khác, hoặc mình ghi bạn vào danh sách chờ nhé.",
         "performers.chatBooking.offerTimes": "Ngày {{date}} {{service}} còn trống lúc: {{times}}. Bạn chọn giờ nào ạ?",
         "performers.chatBooking.askContact": "Bạn cho mình xin tên và số điện thoại để giữ lịch {{service}} nhé.",
         "performers.chatBooking.requestHeld": "Mình đã giữ chỗ {{service}} cho bạn, cửa hàng sẽ xác nhận lại sớm nhé.",
-        "performers.chatBooking.requestTaken": "Giờ đó {{service}} vừa có người đặt rồi ạ. Mình đã chuyển yêu cầu cho cửa hàng xem và báo lại bạn.",
-        "performers.chatBooking.requestTakenOffer": "Giờ đó {{service}} vừa có người đặt rồi ạ. Bên mình còn trống lúc: {{times}}. Bạn chọn giờ khác giúp mình nhé.",
-        "performers.chatBooking.requestInvalid": "Mình chưa đặt được lịch {{service}} với thông tin này. Bạn kiểm tra lại giúp mình ngày, giờ và số điện thoại nhé.",
-        "performers.chatBooking.notFound": "Mình chưa thấy lịch hẹn sắp tới nào của bạn. Bạn cho mình xin số điện thoại đã đặt lịch để mình kiểm tra nhé.",
-        "performers.chatBooking.cancelWaiting": "Mình đã chuyển yêu cầu hủy lịch {{service}} cho cửa hàng (hủy sát giờ có thể có phí theo chính sách) và sẽ báo lại bạn sớm nhé.",
+        "performers.chatBooking.requestTaken":
+            "Giờ đó {{service}} vừa có người đặt rồi ạ. Mình đã chuyển yêu cầu cho cửa hàng xem và báo lại bạn.",
+        "performers.chatBooking.requestTakenOffer":
+            "Giờ đó {{service}} vừa có người đặt rồi ạ. Bên mình còn trống lúc: {{times}}. Bạn chọn giờ khác giúp mình nhé.",
+        "performers.chatBooking.requestInvalid":
+            "Mình chưa đặt được lịch {{service}} với thông tin này. Bạn kiểm tra lại giúp mình ngày, giờ và số điện thoại nhé.",
+        "performers.chatBooking.notFound":
+            "Mình chưa thấy lịch hẹn sắp tới nào của bạn. Bạn cho mình xin số điện thoại đã đặt lịch để mình kiểm tra nhé.",
+        "performers.chatBooking.cancelWaiting":
+            "Mình đã chuyển yêu cầu hủy lịch {{service}} cho cửa hàng (hủy sát giờ có thể có phí theo chính sách) và sẽ báo lại bạn sớm nhé.",
         "performers.chatBooking.askNewTime": "Bạn muốn đổi lịch {{service}} sang ngày và giờ nào ạ?",
-        "performers.chatBooking.waitlisted": "Mình đã ghi bạn vào danh sách chờ {{service}} ngày {{date}}. Có chỗ trống là mình báo bạn ngay nhé.",
+        "performers.chatBooking.waitlisted":
+            "Mình đã ghi bạn vào danh sách chờ {{service}} ngày {{date}}. Có chỗ trống là mình báo bạn ngay nhé.",
         "performers.chatBooking.cancelSummary": "Khách xin hủy lịch {{service}} của {{name}} lúc {{start}}",
-        "performers.chatBooking.rescheduleSummary": "Khách xin đổi lịch {{service}} của {{name}} từ {{start}} sang {{to}}",
-        "performers.chatBooking.briefHeader": "[BOOKING DATA: authoritative] Today is {{today}} ({{zone}}). Services you may book (use the exact name):",
+        "performers.chatBooking.rescheduleSummary":
+            "Khách xin đổi lịch {{service}} của {{name}} từ {{start}} sang {{to}}",
+        "performers.chatBooking.briefHeader":
+            "[BOOKING DATA: authoritative] Today is {{today}} ({{zone}}). Services you may book (use the exact name):",
         "performers.chatBooking.briefService": "- {{name}}: {{minutes}} phút, giá {{price}} đ",
     },
     en: {
@@ -131,7 +139,8 @@ export const WORK_PERFORMERS_MESSAGES: MessageBundle = {
         "performers.deliveredWebsite": "Sent to {{name}} in the website chat",
         "performers.deliveredTelegram": "Sent to {{name}} via Telegram",
         "performers.telegramFailed": "Could not deliver to {{name}} via Telegram (kept in NIVO only)",
-        "performers.simulatedDelivery": "Recorded — the {{channel}} channel is simulated, nothing was really sent",
+        "performers.recordedNoConversation":
+            "Recorded — the customer has no conversation on {{channel}}, nothing was sent",
         "performers.orderSummary": "Confirm order {{no}} from {{name}}: {{items}} · {{amount}}",
         "performers.orderNoAmount": "no amount yet",
         "performers.orderConfirmed": "Confirmed order {{no}} · {{amount}}",
@@ -187,32 +196,41 @@ export const WORK_PERFORMERS_MESSAGES: MessageBundle = {
         "performers.reminderSent": "the customer was messaged ({{via}})",
         "performers.reminderNoChannel": "no channel to message the customer",
         "performers.reminderDone": "Reminded {{name}} for {{when}}: {{told}}.",
-        "performers.rewardRedeemed": "Redeemed \"{{reward}}\" for {{name}} (code {{code}}, {{cost}} points).",
+        "performers.rewardRedeemed": 'Redeemed "{{reward}}" for {{name}} (code {{code}}, {{cost}} points).',
         "performers.rewardRedeemedBefore": "This redemption was already recorded for {{name}} (code {{code}}).",
-        "performers.rewardCustomer": "Your reward \"{{reward}}\" is ready, {{name}}. Code: {{code}}. Points left: {{points}}.",
-        "performers.redeemSummary": "{{name}} asks to redeem \"{{reward}}\" ({{cost}} points)",
+        "performers.rewardCustomer":
+            'Your reward "{{reward}}" is ready, {{name}}. Code: {{code}}. Points left: {{points}}.',
+        "performers.redeemSummary": '{{name}} asks to redeem "{{reward}}" ({{cost}} points)',
         "errors.WORK_PERFORMERS_BOOKING_NOT_MOVED": "The booking could not be moved to the time asked ({{reason}}).",
         "errors.WORK_PERFORMERS_REMINDER_EMPTY": "The reminder has no text.",
         "errors.WORK_PERFORMERS_APPROVAL_INVALID": "The approval carries no connector call to perform.",
-        "errors.WORK_PERFORMERS_CONNECTOR_REFUSED": "The connector did not perform {tool} ({code}).",
-        "errors.WORK_PERFORMERS_STAY_NOT_FOUND": "No HAKUEN stay found for room {room}.",
-        "errors.WORK_PERFORMERS_GUEST_UNREACHABLE": "The guest of room {room} has no conversation with the hotel.",
+        "errors.WORK_PERFORMERS_CONNECTOR_REFUSED": "The connector did not perform {{tool}} ({{code}}).",
         "performers.chatBooking.askService": "Which service would you like to book? We offer: {{services}}.",
         "performers.chatBooking.askDate": "Which day would you like {{service}}?",
-        "performers.chatBooking.noTimes": "{{service}} is fully booked on {{date}}. Please pick another day, or I can put you on the waiting list.",
+        "performers.chatBooking.noTimes":
+            "{{service}} is fully booked on {{date}}. Please pick another day, or I can put you on the waiting list.",
         "performers.chatBooking.offerTimes": "{{service}} on {{date}} is free at: {{times}}. Which time suits you?",
-        "performers.chatBooking.askContact": "Could you share your name and phone number so I can hold {{service}} for you?",
+        "performers.chatBooking.askContact":
+            "Could you share your name and phone number so I can hold {{service}} for you?",
         "performers.chatBooking.requestHeld": "I have held {{service}} for you; the shop will confirm shortly.",
-        "performers.chatBooking.requestTaken": "That time for {{service}} was just taken. I passed your request to the shop and will get back to you.",
-        "performers.chatBooking.requestTakenOffer": "That time for {{service}} was just taken. We are free at: {{times}}. Please pick another time.",
-        "performers.chatBooking.requestInvalid": "I could not book {{service}} with these details. Please check the date, the time and the phone number.",
-        "performers.chatBooking.notFound": "I cannot find an upcoming appointment of yours. Could you share the phone number you booked with?",
-        "performers.chatBooking.cancelWaiting": "I passed your request to cancel {{service}} to the shop (a late cancellation may carry a fee under the policy) and will get back to you soon.",
+        "performers.chatBooking.requestTaken":
+            "That time for {{service}} was just taken. I passed your request to the shop and will get back to you.",
+        "performers.chatBooking.requestTakenOffer":
+            "That time for {{service}} was just taken. We are free at: {{times}}. Please pick another time.",
+        "performers.chatBooking.requestInvalid":
+            "I could not book {{service}} with these details. Please check the date, the time and the phone number.",
+        "performers.chatBooking.notFound":
+            "I cannot find an upcoming appointment of yours. Could you share the phone number you booked with?",
+        "performers.chatBooking.cancelWaiting":
+            "I passed your request to cancel {{service}} to the shop (a late cancellation may carry a fee under the policy) and will get back to you soon.",
         "performers.chatBooking.askNewTime": "Which day and time would you like to move {{service}} to?",
-        "performers.chatBooking.waitlisted": "You are on the waiting list for {{service}} on {{date}}. I will tell you as soon as a slot opens.",
+        "performers.chatBooking.waitlisted":
+            "You are on the waiting list for {{service}} on {{date}}. I will tell you as soon as a slot opens.",
         "performers.chatBooking.cancelSummary": "Customer asks to cancel {{service}} for {{name}} at {{start}}",
-        "performers.chatBooking.rescheduleSummary": "Customer asks to move {{service}} for {{name}} from {{start}} to {{to}}",
-        "performers.chatBooking.briefHeader": "[BOOKING DATA: authoritative] Today is {{today}} ({{zone}}). Services you may book (use the exact name):",
+        "performers.chatBooking.rescheduleSummary":
+            "Customer asks to move {{service}} for {{name}} from {{start}} to {{to}}",
+        "performers.chatBooking.briefHeader":
+            "[BOOKING DATA: authoritative] Today is {{today}} ({{zone}}). Services you may book (use the exact name):",
         "performers.chatBooking.briefService": "- {{name}}: {{minutes}} minutes, price {{price}} VND",
     },
 }

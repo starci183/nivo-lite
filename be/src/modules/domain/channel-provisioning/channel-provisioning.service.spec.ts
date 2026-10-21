@@ -97,13 +97,13 @@ const AGENT_ROWS = [
     { id: "chat-2", module: "chatbot" },
 ]
 
-describe("ChannelProvisioningService", () => {
-    const ZALO = {
-        zaloAppId: "1234567890",
-        zaloAppSecret: new Secret("app-secret-123"),
-        zaloOaSecret: new Secret("oa-secret-123"),
-    }
+const ZALO = {
+    zaloAppId: "1234567890",
+    zaloAppSecret: new Secret("app-secret-123"),
+    zaloOaSecret: new Secret("oa-secret-123"),
+}
 
+describe("ChannelProvisioningService zalo", () => {
     it("connects a Zalo OA with every key sealed at once and binds the agents that chat", async () => {
         const entityManager = mockEntityManager({
             query: [
@@ -125,9 +125,10 @@ describe("ChannelProvisioningService", () => {
             meta: { app_id: "1234567890", oa_secret_saved: "true" },
             secret: {
                 plain: JSON.stringify({ appId: "1234567890", appSecret: "app-secret-123", oaSecret: "oa-secret-123" }),
-                webhookSecret: expect.any(String),
+                webhookSecret: connections.create.mock.calls[0]?.[0].secret.webhookSecret,
             },
         })
+        expect(connections.create.mock.calls[0]?.[0].secret.webhookSecret).toMatch(/^[0-9a-f]{64}$/u)
         expect(print.mock.calls[0]?.[0]).toContain("zalo connection zalo-1")
         expect(grants.setConnectionAgents).toHaveBeenCalled()
     })
@@ -143,7 +144,9 @@ describe("ChannelProvisioningService", () => {
         await expect(service.run("zalo", { workspace: WORKSPACE, name: "OA" })).rejects.toEqual(invalid(field))
         expect(connections.create).not.toHaveBeenCalled()
     })
+})
 
+describe("ChannelProvisioningService refusals and telegram", () => {
     it.each<ProvisionFlags>([{}, { workspace: "" }, { workspace: "not-a-uuid" }, { workspace: `${WORKSPACE}extra` }])(
         "refuses workspace flags %j before querying or connecting",
         async (flags) => {

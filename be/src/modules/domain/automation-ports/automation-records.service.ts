@@ -24,7 +24,6 @@ export class AutomationRecordsService implements AutomationRecords {
             need: lead.need,
             phone: null,
             email: null,
-            origin: "live",
         })
         await this.leads.classify({ workspaceId, leadId: created.id, stage: lead.stage, contextSummary: null })
         return created.id

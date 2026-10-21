@@ -1,3 +1,4 @@
+import type { FactRecord } from "@modules/domain/brain-facts"
 import type { Passage } from "@modules/domain/knowledge"
 
 /** Who an agent's view of the knowledge is for: the public view of a customer, or the team's view. */
@@ -75,4 +76,6 @@ export interface Recalled {
     readonly brief: string
     /** The business passages the brief quotes. */
     readonly passages: ReadonlyArray<Passage>
+    /** The confirmed facts the brief quotes, so the cards of the turn can name them as its sources. */
+    readonly facts: ReadonlyArray<FactRecord>
 }

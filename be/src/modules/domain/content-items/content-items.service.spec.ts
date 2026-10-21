@@ -7,7 +7,9 @@ import { ContentItemsErrorCode } from "./errors/content-items.error"
 import {
     INSERT_AGENT_DRAFT,
     INSERT_OFFER_IDEA,
+    MARK_CHANNEL_FAILED,
     MARK_ITEM_SCHEDULED,
+    SELECT_DUE_CHANNEL_POSTS,
     SELECT_ITEMS_BETWEEN,
     SELECT_OFFER_ITEM,
     SELECT_SCHEDULE_ITEM,
@@ -189,6 +191,60 @@ describe("ContentItemsService (continued) (continued)", () => {
                 "workspace-1",
                 "item-1",
                 '{"facebook":{"ref":"p_1","scheduled_at":"x"}}',
+            ])
+        })
+    })
+})
+
+describe("ContentItemsService due channel posts", () => {
+    describe("the scheduler tick", () => {
+        it("reads the posts due on a channel with the channel's reference", async () => {
+            const em = mockEntityManager({
+                query: [
+                    SELECT_DUE_CHANNEL_POSTS,
+                    [
+                        {
+                            workspace_id: "workspace-1",
+                            id: "item-1",
+                            title: "T",
+                            channels: ["facebook", "zalo"],
+                            variants: { zalo: { text: "zl" } },
+                            media: [{ path: "p1" }],
+                            scheduled_at: "2026-10-21T02:00:00.000Z",
+                            ref: "tok-1",
+                        },
+                    ],
+                ],
+            })
+            const items = await build(em)
+
+            await expect(items.dueOnChannel("zalo", "2026-10-21T02:05:00.000Z", 50)).resolves.toEqual([
+                {
+                    workspaceId: "workspace-1",
+                    id: "item-1",
+                    title: "T",
+                    channels: ["facebook", "zalo"],
+                    texts: { facebook: "", zalo: "zl" },
+                    mediaPaths: ["p1"],
+                    scheduledAt: "2026-10-21T02:00:00.000Z",
+                    ref: "tok-1",
+                },
+            ])
+            expect(em.query).toHaveBeenCalledWith(SELECT_DUE_CHANNEL_POSTS, ["zalo", "2026-10-21T02:05:00.000Z", 50])
+        })
+
+        it("records a channel's refusal with a bounded reason", async () => {
+            const em = mockEntityManager({ query: [MARK_CHANNEL_FAILED, []] })
+            const items = await build(em)
+
+            await items.markChannelFailed("workspace-1", "item-1", "zalo", "r".repeat(400), "2026-10-21T02:05:00.000Z")
+
+            expect(em.query).toHaveBeenCalledWith(MARK_CHANNEL_FAILED, [
+                "workspace-1",
+                "item-1",
+                "zalo",
+                "r".repeat(300),
+                "2026-10-21T02:05:00.000Z",
             ])
         })
     })

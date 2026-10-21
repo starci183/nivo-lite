@@ -1,5 +1,4 @@
 import { Test } from "@nestjs/testing"
-import type { FlowPayload } from "@modules/domain/flows"
 import { FlowEngineError, FlowEngineErrorCode } from "./errors/flow-engine.error"
 import {
     authorityPatchOf,
@@ -9,7 +8,6 @@ import {
     localeOf,
     noteOf,
     ruleChangeOf,
-    simulationOf,
     staffIdOf,
     staffWriteOf,
     takeOf,
@@ -35,7 +33,6 @@ const buildSubject = async () => {
                     editsOf,
                     noteOf,
                     staffIdOf,
-                    simulationOf,
                     conversationIdOf,
                     takeOf,
                 },
@@ -310,40 +307,6 @@ const registerEditCommands = () => {
     )
 }
 
-const registerSimulatorCommands = () => {
-    it("maps current simulator names and absent optional fields", async () => {
-        const subject = await buildSubject()
-
-        expect(subject.simulationOf({ channel: "manual", kind: "order" })).toEqual({
-            channel: "manual",
-            kind: "order",
-            senderName: "",
-            senderContact: null,
-            body: null,
-            amountVnd: null,
-            externalRef: null,
-            items: null,
-            eventId: null,
-            locale: "vi",
-        })
-        const payload: FlowPayload = {
-            channel: "bank",
-            kind: "payment",
-            senderName: "An",
-            senderContact: "phone",
-            body: "paid",
-            amountVnd: 100,
-            externalRef: "ref",
-            items: "items",
-            eventId: "event",
-            locale: "en",
-        }
-        expect(subject.simulationOf(payload)).toEqual(payload)
-        expectInvalid(() => subject.simulationOf({ channel: "other", kind: "message" }), "channel")
-        expectInvalid(() => subject.simulationOf({ channel: "email", kind: "other" }), "kind")
-    })
-}
-
 const expectInvalid = (action: () => unknown, field: string): void => {
     expect(action).toThrow(FlowEngineError)
     expect(action).toThrow(expect.objectContaining({ code: FlowEngineErrorCode.InvalidPayload, params: { field } }))
@@ -354,5 +317,4 @@ describe("flow command payloads", () => {
     registerRuleCommands()
     registerStaffCommands()
     registerEditCommands()
-    registerSimulatorCommands()
 })

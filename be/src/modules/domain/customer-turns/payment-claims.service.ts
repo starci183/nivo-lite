@@ -54,7 +54,6 @@ export class PaymentClaimsService {
             subject_id: invoice.id,
             lead_id: invoice.lead_id,
             inbound_event_id: claim.inboundEventId,
-            origin: "live",
             dedupeKey: open === null ? base : `${base}:${claim.inboundEventId}`,
             preset: true,
             forceAsk: "unclear_outcome",

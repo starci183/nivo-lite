@@ -46,7 +46,7 @@ describe("BusinessEventsService", () => {
     it("announces a new lead once per lead", async () => {
         const { events, engine } = await build()
 
-        await events.leadCreated("ws-1", lead, "live")
+        await events.leadCreated("ws-1", lead)
 
         expect(engine.onBusinessEvent).toHaveBeenCalledWith({
             workspaceId: "ws-1",
@@ -60,7 +60,6 @@ describe("BusinessEventsService", () => {
                 need: "50 tea boxes",
                 phone: "84901234567",
                 email: null,
-                origin: "live",
             },
         })
     })
@@ -70,7 +69,7 @@ describe("BusinessEventsService", () => {
         const cause = new Error("pipelines unreadable")
         engine.onBusinessEvent.mockRejectedValue(cause)
 
-        await expect(events.leadCreated("ws-1", lead, "live")).resolves.toBeUndefined()
+        await expect(events.leadCreated("ws-1", lead)).resolves.toBeUndefined()
 
         expect(logger.error).toHaveBeenCalledWith(AutomationsLogEvent.AnnounceFailed, cause, {
             workspaceId: "ws-1",

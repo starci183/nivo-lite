@@ -32,9 +32,10 @@ interface InstallationWire {
     readonly agentHandle: string
     readonly moduleKey: string
     readonly status: string
+    readonly connectionNeeds: ReadonlyArray<{ readonly role: string; readonly providers: ReadonlyArray<string> }>
 }
 
-/** The installations that have an agent, as the Office members. */
+/** The installations that have an agent, as the Office members: live ones are on duty, `needs_connection` ones wait for a connector. */
 export const toOfficeAgents = (rows: ReadonlyArray<InstallationWire>): ReadonlyArray<OfficeAgent> =>
     rows.flatMap((row) =>
         row.agentId === undefined || row.agentId === null
@@ -45,7 +46,8 @@ export const toOfficeAgents = (rows: ReadonlyArray<InstallationWire>): ReadonlyA
                       module: row.moduleKey,
                       name: row.agentName,
                       handle: row.agentHandle,
-                      isActive: row.status === "active",
+                      isActive: row.status === "live",
+                      waitsFor: row.status === "needs_connection" ? row.connectionNeeds : null,
                   },
               ],
     )

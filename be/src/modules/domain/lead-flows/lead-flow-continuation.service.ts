@@ -63,7 +63,6 @@ export class LeadFlowContinuationService {
             reason: next.reason,
             parentId: step.id,
             chainId: step.chainId ?? step.id,
-            origin: step.origin,
             inboundEventId: payload.inboundEventId,
             dedupeKey: next.dedupeKey,
             payload: { subject_type: "lead", subject_id: step.leadId, lead_id: step.leadId, ...next.extra },

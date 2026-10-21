@@ -325,6 +325,8 @@ jobs:
           key: ${{ runner.os }}-node22-build-${{ hashFiles('package-lock.json') }}-${{ github.run_id }}
       - name: database migration checks
         run: npm run db:lint
+        env:
+          NODE_OPTIONS: --max-old-space-size=6144
 
   sonar:
     needs: [lint, coverage]

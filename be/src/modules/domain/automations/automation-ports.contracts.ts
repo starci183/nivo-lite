@@ -92,8 +92,6 @@ export interface GateSubmission {
     readonly leadId: string | null
     /** Unique per occurrence: the same key never sends twice. */
     readonly dedupeKey: string
-    /** `live` or `simulated`. */
-    readonly origin: string
     /** What the work does, in a line. */
     readonly summary: string
     /** The finished text; no model call happens at the gate. */

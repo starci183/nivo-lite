@@ -305,7 +305,6 @@ export class CustomerOutcomesService implements CustomerOutcomes {
             workspaceId: ctx.workspaceId,
             channel: channel.key,
             kind: "lead",
-            origin: "live",
             senderName: lead.contactName,
             senderContact: contact,
             body: lead.need,
@@ -320,7 +319,6 @@ export class CustomerOutcomesService implements CustomerOutcomes {
             command: "handoff_lead",
             reason: "the chatbot captured a lead",
             inboundEventId: recorded.inboundEventId,
-            origin: "live",
             dedupeKey: `handoff_lead:conversation:${conversation.id}`,
             payload: {
                 subject_type: "conversation",
@@ -389,7 +387,6 @@ export class CustomerOutcomesService implements CustomerOutcomes {
             subject_type: "conversation",
             subject_id: conversation.id,
             lead_id: spec.leadId,
-            origin: "live",
             dedupeKey: spec.dedupeKey,
             preset: true,
             noChain: true,

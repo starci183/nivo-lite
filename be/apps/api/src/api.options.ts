@@ -1,5 +1,6 @@
 import { AgentsService } from "@modules/domain/agents"
 import { KnowledgeSearchToolService } from "@modules/domain/agent-knowledge"
+import { TurnGatewayToolsService, TurnHandoffService } from "@modules/domain/customer-turns"
 import { ApprovalRequesterService, ModuleApprovalGateService, ModulePerformersService } from "@modules/domain/decisions"
 import { AutomationBusinessEventsService, AutomationPaymentReceiptsService } from "@modules/domain/automations"
 import {
@@ -48,6 +49,8 @@ export const AGENT_TOOLS_PORTS = {
     approvalRequester: ApprovalRequesterService,
     handoffTool: HandoffToolService,
     conversationLeads: ConversationLeadsService,
+    gatewayTools: TurnGatewayToolsService,
+    agentHandoff: TurnHandoffService,
     toolTokens: ToolTokenService,
 }
 

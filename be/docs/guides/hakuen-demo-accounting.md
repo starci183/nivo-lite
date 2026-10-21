@@ -26,7 +26,7 @@ declared in `.starcistacks/application-stacks.yaml` and `be/src/modules/domain/j
    check digit, seller tax code against the supplier on file, buyer tax code, lines against subtotal, VAT against the line rates,
    total. Anything not valid becomes an `exception` card in the accounting room.
 3. Read the last day's bank credits; each unmatched credit whose memo carries `HAKUEN XXXXXX` is matched against the folio
-   (`be/src/modules/domain/accounting/folio-reconcile.service.ts`): an exact payment is recorded with `folio.recordPayment`, any other amount becomes an
+   (`be/src/modules/domain/accounting/receivable-reconcile.service.ts`): an exact payment is recorded with `folio.recordPayment`, any other amount becomes an
    `exception` card.
 4. Compute the upcoming dues (tax deadlines and supplier payments within 30 days), post the `daily_summary` card, and post a
    reminder line for each due at the lead day, the day before and the day itself.

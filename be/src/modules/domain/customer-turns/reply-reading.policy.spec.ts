@@ -281,7 +281,6 @@ describe("readCustomerReply", () => {
             application: null,
             loyaltyRewardKey: null,
             bookingRequest: null,
-            hotelRequest: null,
         })
         expect(subject.readCustomerReply("   ", HOLD).proposedAnswer).toBeNull()
         expect(subject.readCustomerReply('{"reply":"  "}', HOLD).reply).toBe(HOLD)
@@ -339,26 +338,25 @@ describe("humanReasonOf", () => {
     })
 })
 
-describe("detailOf", () => {
-    const empty: CustomerReply = {
-        reply: "Thanks",
-        needsHuman: false,
-        reason: null,
-        proposedAnswer: null,
-        lead: null,
-        order: null,
-        paymentClaim: false,
-        knowledgeGap: null,
-        application: null,
-        loyaltyRewardKey: null,
-        bookingRequest: null,
-        hotelRequest: null,
-    }
+const emptyReply: CustomerReply = {
+    reply: "Thanks",
+    needsHuman: false,
+    reason: null,
+    proposedAnswer: null,
+    lead: null,
+    order: null,
+    paymentClaim: false,
+    knowledgeGap: null,
+    application: null,
+    loyaltyRewardKey: null,
+    bookingRequest: null,
+}
 
+describe("detailOf", () => {
     it("writes nulls when nothing was captured", async () => {
         const subject = await build()
 
-        expect(subject.detailOf(empty)).toEqual({
+        expect(subject.detailOf(emptyReply)).toEqual({
             lead: null,
             order: null,
             payment_claim: false,
@@ -366,33 +364,17 @@ describe("detailOf", () => {
             application: null,
             loyalty: null,
             booking_request: null,
-            hotel_request: null,
         })
     })
 })
 
 describe("detailOf", () => {
-    const empty: CustomerReply = {
-        reply: "Thanks",
-        needsHuman: false,
-        reason: null,
-        proposedAnswer: null,
-        lead: null,
-        order: null,
-        paymentClaim: false,
-        knowledgeGap: null,
-        application: null,
-        loyaltyRewardKey: null,
-        bookingRequest: null,
-        hotelRequest: null,
-    }
-
     it("writes the reply contract's own member names", async () => {
         const subject = await build()
 
         expect(
             subject.detailOf({
-                ...empty,
+                ...emptyReply,
                 lead: { contactName: "Lan", company: "", need: "Tea", phone: null, email: null },
                 order: { items: "Tea", amountVnd: 50_000 },
                 paymentClaim: true,
@@ -449,7 +431,6 @@ describe("detailOf", () => {
                 email: null,
                 note: null,
             },
-            hotel_request: null,
         })
     })
 })

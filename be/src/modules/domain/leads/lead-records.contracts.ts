@@ -15,8 +15,6 @@ export interface LeadMatch {
     readonly name: string | null
     /** The channel label, used with the name. */
     readonly channel: string | null
-    /** Matches the same origin; omitted inputs belong to the live workflow. */
-    readonly origin?: "live" | "simulated"
 }
 
 /** What capturing a new customer takes. */
@@ -35,8 +33,6 @@ export interface NewLead {
     readonly phone: string | null
     /** The normalised email, or null. */
     readonly email: string | null
-    /** Real or simulated. */
-    readonly origin: string
 }
 
 /** What the sales AI learned about a lead. */

@@ -2,7 +2,7 @@ import type { DynamicModule } from "@nestjs/common"
 import { OrdersGraphqlModule } from "@features/api/orders"
 import { AccountingGraphqlModule } from "@features/api/accounting"
 import { AdjustmentsGraphqlModule } from "@features/api/adjustments"
-import { AccountingModule } from "@modules/domain/accounting"
+import { AccountingModule, McpAccountingGatewayService } from "@modules/domain/accounting"
 import { StaffModule } from "@modules/domain/staff"
 import { AccountingAdjustmentsModule } from "@modules/domain/accounting-adjustments"
 import { EmailMessagesModule } from "@modules/domain/email-messages"
@@ -19,7 +19,7 @@ export const accountingModules = (): Array<DynamicModule> => [
     OrdersGraphqlModule.register({}),
     StaffModule.register({ isGlobal: true }),
     AccountingAdjustmentsModule.register({ isGlobal: true }),
-    AccountingModule.register({ isGlobal: true }),
+    AccountingModule.register({ isGlobal: true, gateway: McpAccountingGatewayService }),
     AccountingGraphqlModule.register({}),
     AdjustmentsGraphqlModule.register({}),
     InvoicesModule.register({ isGlobal: true }),

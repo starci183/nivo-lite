@@ -6,12 +6,15 @@ import { IsIn, IsNumber, IsOptional, IsString, IsUUID, Matches, MaxLength, Min }
 export class SetMcpToolGrantInput {
     /** The agent. */
     @Field(() => String)
+    @IsString()
+    @MaxLength(36)
     @IsUUID()
     agentId!: string
 
     /** The full tool name or connector.*. */
     @Field(() => String)
     @IsString()
+    @MaxLength(112)
     @Matches(/^[a-z][a-z0-9-]{1,30}\.([a-zA-Z][a-zA-Z0-9_.]{1,80}|\*)$/u)
     tool!: string
 
@@ -27,7 +30,7 @@ export class SetMcpToolGrantInput {
     @Min(0)
     limitVnd?: number | null
 
-    /** The argument constraints as JSON: [{ "arg": "discountPct", "max": 5 }], or null for none. */
+    /** The argument constraints as JSON: [{ "arg": "quantity", "max": 5 }], or null for none. */
     @Field(() => String, { nullable: true })
     @IsOptional()
     @IsString()

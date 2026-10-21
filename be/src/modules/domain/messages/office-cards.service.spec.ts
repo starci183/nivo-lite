@@ -1,13 +1,19 @@
 import { Test } from "@nestjs/testing"
-import { mockEntityManager } from "@starci/jest-preset"
+import { mock, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
+import { LOGGER } from "@modules/platform/logging"
+import type { Logger } from "@modules/platform/logging"
 import { MessagesErrorCode } from "./errors/messages.error"
-import type { OfficeCardPost } from "./office-cards.contracts"
+import { MessagesLogEvent } from "./messages.log-events"
+import type { DepartmentCardPost, OfficeCardPost } from "./office-cards.contracts"
 import { OfficeCardsService } from "./office-cards.service"
+import { AGENT_DIRECTORY } from "./office-lines.decorators"
+import type { OptionalAgentIdentity } from "./office-lines.contracts"
+import type { AgentDirectory } from "./office-lines.port"
 import { INSERT_CARD_MESSAGE } from "./persistence/office-lines.sql"
 
-const card = { v: 1, type: "booking_held", title: "Held a massage for 2 at 15:00" }
+const card = { v: 1, type: "action_done", title: "Order placed: done" }
 
 const line = (patch: Partial<OfficeCardPost> = {}): OfficeCardPost => ({
     room: null,
@@ -20,17 +26,33 @@ const line = (patch: Partial<OfficeCardPost> = {}): OfficeCardPost => ({
     ...patch,
 })
 
-const build = async (entityManager: MockEntityManager) => {
+const departmentLine = (patch: Partial<DepartmentCardPost> = {}): DepartmentCardPost => ({
+    room: "sales",
+    body: "  Held  ",
+    leadId: null,
+    workItemId: "wi-1",
+    card,
+    ...patch,
+})
+
+const build = async (entityManager: MockEntityManager, departmentAgent: OptionalAgentIdentity = null) => {
+    const logger = mock<Logger>()
+    const agents = mock<AgentDirectory>({ agentOfDepartment: jest.fn().mockResolvedValue(departmentAgent) })
     const moduleRef = await Test.createTestingModule({
-        providers: [OfficeCardsService, { provide: PRIMARY_ENTITY_MANAGER, useValue: entityManager }],
+        providers: [
+            OfficeCardsService,
+            { provide: PRIMARY_ENTITY_MANAGER, useValue: entityManager },
+            { provide: AGENT_DIRECTORY, useValue: agents },
+            { provide: LOGGER, useValue: logger },
+        ],
     }).compile()
-    return moduleRef.get(OfficeCardsService)
+    return { service: moduleRef.get(OfficeCardsService), logger, agents }
 }
 
 describe("OfficeCardsService", () => {
     it("stores a valid card as the agent's line and answers where it landed", async () => {
         const em = mockEntityManager({ query: [INSERT_CARD_MESSAGE, [{ id: "m-1", room: "sales" }]] })
-        const service = await build(em)
+        const { service } = await build(em)
 
         await expect(service.post({ workspaceId: "ws-1" }, line())).resolves.toEqual({ id: "m-1", room: "sales" })
 
@@ -49,7 +71,7 @@ describe("OfficeCardsService", () => {
 
     it("posts a NIVO line in the named room and falls back to the title for an empty preview", async () => {
         const em = mockEntityManager({ query: [INSERT_CARD_MESSAGE, []] })
-        const service = await build(em)
+        const { service } = await build(em)
 
         const posted = await service.post(
             { workspaceId: "ws-1" },
@@ -72,12 +94,92 @@ describe("OfficeCardsService", () => {
 
     it("refuses a card that breaks the contract and writes nothing", async () => {
         const em = mockEntityManager()
-        const service = await build(em)
+        const { service } = await build(em)
 
         await expect(service.post({ workspaceId: "ws-1" }, line({ card: { v: 1 } }))).rejects.toMatchObject({
             code: MessagesErrorCode.CardInvalid,
             params: { reason: "type is not a card type" },
         })
         expect(em.query).not.toHaveBeenCalled()
+    })
+})
+
+describe("OfficeCardsService.postAsDepartment", () => {
+    it("posts a valid card as the department's agent", async () => {
+        const em = mockEntityManager({ query: [INSERT_CARD_MESSAGE, [{ id: "m-2", room: "sales" }]] })
+        const { service, logger, agents } = await build(em, { id: "agent-9", name: "AI Sales" })
+
+        await expect(service.postAsDepartment({ workspaceId: "ws-1" }, "sales", departmentLine())).resolves.toEqual({
+            id: "m-2",
+            room: "sales",
+        })
+
+        expect(agents.agentOfDepartment).toHaveBeenCalledWith("ws-1", "sales", null)
+        expect(em.query).toHaveBeenCalledWith(INSERT_CARD_MESSAGE, [
+            "ws-1",
+            "agent",
+            "AI Sales",
+            "agent-9",
+            "Held",
+            null,
+            "wi-1",
+            "sales",
+            JSON.stringify(card),
+        ])
+        expect(logger.warn).not.toHaveBeenCalled()
+    })
+
+    it("logs a refused card and still posts its preview line spoken by the department's agent", async () => {
+        const em = mockEntityManager({ query: [INSERT_CARD_MESSAGE, [{ id: "m-3", room: "sales" }]] })
+        const { service, logger } = await build(em, { id: "agent-9", name: "AI Sales" })
+
+        const posted = await service.postAsDepartment(
+            { workspaceId: "ws-1" },
+            "sales",
+            departmentLine({ card: { v: 1 } }),
+        )
+
+        expect(posted).toEqual({ id: "m-3", room: "sales" })
+        expect(logger.warn).toHaveBeenCalledWith(MessagesLogEvent.CardRefused, {
+            workspaceId: "ws-1",
+            department: "sales",
+            reason: "type is not a card type",
+        })
+        expect(em.query).toHaveBeenCalledWith(INSERT_CARD_MESSAGE, [
+            "ws-1",
+            "agent",
+            "AI Sales",
+            "agent-9",
+            "Held",
+            null,
+            "wi-1",
+            "sales",
+            null,
+        ])
+    })
+
+    it("speaks a refused card as NIVO, previews the department name and answers the room when nothing comes back", async () => {
+        const em = mockEntityManager({ query: [INSERT_CARD_MESSAGE, []] })
+        const { service, logger } = await build(em)
+
+        const posted = await service.postAsDepartment(
+            { workspaceId: "ws-1" },
+            "accounting",
+            departmentLine({ body: " ", room: null, card: null }),
+        )
+
+        expect(posted).toEqual({ id: "", room: null })
+        expect(logger.warn).toHaveBeenCalledTimes(1)
+        expect(em.query).toHaveBeenCalledWith(INSERT_CARD_MESSAGE, [
+            "ws-1",
+            "system",
+            "NIVO",
+            null,
+            "accounting",
+            null,
+            "wi-1",
+            null,
+            null,
+        ])
     })
 })

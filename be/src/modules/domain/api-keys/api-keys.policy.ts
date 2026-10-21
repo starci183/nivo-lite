@@ -1,7 +1,15 @@
 import { createHash } from "node:crypto"
 import { ok, refused } from "@modules/platform/primitives"
 import type { Outcome } from "@modules/platform/primitives"
-import type { ApiKeyAuthAnswer, ApiPrincipal, ApiScope, BearerHeader, BuiltKey } from "./api-keys.contracts"
+import type {
+    AgentKeyAnswer,
+    AgentKeyPrincipal,
+    ApiKeyAuthAnswer,
+    ApiPrincipal,
+    ApiScope,
+    BearerHeader,
+    BuiltKey,
+} from "./api-keys.contracts"
 import { ApiKeysErrorCode } from "./errors/api-keys.error"
 
 /** Requests per minute per key. */
@@ -9,6 +17,9 @@ export const RATE_LIMIT_PER_MINUTE = 60
 
 /** The most active keys one workspace may hold. */
 export const ACTIVE_KEYS_MAX = 20
+
+/** The one scope of an agent key: calling the tools granted to its agent through the MCP endpoint. */
+export const TOOLS_CALL_SCOPE = "tools:call"
 
 /** Every key starts with this, so a leaked one is recognisable. */
 export const KEY_PREFIX = "nvk_"
@@ -67,3 +78,17 @@ export const admitKey = (
 
 /** True when a workspace role may manage API keys. */
 export const mayManageKeys = (role: string | undefined): boolean => role === "owner" || role === "manager"
+
+/**
+ * Decides what the database answered for an agent key: the agent when the key works, is bound to an active agent of its workspace
+ * and carries `tools:call`; a revoked key, a public API key and a key whose agent was deleted or paused are refused.
+ */
+export const admitAgentKey = (answer: AgentKeyAnswer | undefined): Outcome<AgentKeyPrincipal, ApiKeysErrorCode> => {
+    if (answer === undefined) return refused(ApiKeysErrorCode.Unauthorized)
+    if (answer.revoked) return refused(ApiKeysErrorCode.Revoked)
+    if (answer.agent_id === null || answer.agent_status !== "active") return refused(ApiKeysErrorCode.Unauthorized)
+    if (!(answer.scopes ?? []).includes(TOOLS_CALL_SCOPE)) {
+        return refused(ApiKeysErrorCode.ScopeMissing, { scope: TOOLS_CALL_SCOPE })
+    }
+    return ok({ keyId: answer.id, workspaceId: answer.workspace_id, agentId: answer.agent_id })
+}

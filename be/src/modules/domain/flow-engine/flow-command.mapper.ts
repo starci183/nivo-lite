@@ -2,21 +2,11 @@ import type { AuthorityPatch } from "@modules/domain/authority"
 import type { RuleChange } from "@modules/domain/authority-rules"
 import type { DecisionVerdict, FieldValue, WireEdits } from "@modules/domain/decisions"
 import type { FlowPayload } from "@modules/domain/flows"
-import type { InboxSimulationInput } from "@modules/domain/inbox-simulation"
 import type { StaffWrite } from "@modules/domain/staff"
 import type { Locale } from "@modules/platform/i18n"
 import { RULE_MODES } from "./authority-chat.policy"
 import { FlowEngineError, FlowEngineErrorCode } from "./errors/flow-engine.error"
 
-const CHANNELS: ReadonlyArray<InboxSimulationInput["channel"]> = [
-    "zalo",
-    "facebook",
-    "email",
-    "phone",
-    "bank",
-    "manual",
-]
-const SIMULATED_KINDS: ReadonlyArray<InboxSimulationInput["kind"]> = ["message", "order", "payment"]
 const VERDICTS: ReadonlyArray<DecisionVerdict> = ["approved", "rejected"]
 const TEXT_FIELDS = ["policies", "reply_style", "brand_voice", "limits_note", "goal_note"] as const
 const GOAL_FIELDS = ["goal_revenue_vnd", "goal_new_customers", "goal_first_reply_minutes"] as const
@@ -163,20 +153,6 @@ export const noteOf = (payload: FlowPayload, name: string): string | undefined =
 
 /** The staff member to give the item to, or null to take it back. */
 export const staffIdOf = (payload: FlowPayload): string | null => optionalText(payload, "staffId", "staff_id")
-
-/** The simulated input the payload describes. */
-export const simulationOf = (payload: FlowPayload): InboxSimulationInput => ({
-    channel: oneOf(payload, CHANNELS, "channel"),
-    kind: oneOf(payload, SIMULATED_KINDS, "kind"),
-    senderName: optionalText(payload, "senderName", "sender_name") ?? "",
-    senderContact: optionalText(payload, "senderContact", "sender_contact"),
-    body: optionalText(payload, "body"),
-    amountVnd: optionalNumber(payload, "amountVnd", "amount_vnd"),
-    externalRef: optionalText(payload, "externalRef", "external_ref"),
-    items: optionalText(payload, "items"),
-    eventId: optionalText(payload, "eventId", "event_id"),
-    locale: localeOf(payload),
-})
 
 /** The customer conversation the payload names. */
 export const conversationIdOf = (payload: FlowPayload): string => text(payload, "conversationId", "conversation_id")

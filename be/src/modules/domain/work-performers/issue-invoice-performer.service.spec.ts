@@ -41,7 +41,6 @@ const itemOf = builder<WorkItem>({
     evidence_state: "pending",
     assigned_staff_id: null,
     execution_id: null,
-    origin: "live",
     created_at: "2026-10-12T09:00:00.000Z",
     updated_at: "2026-10-12T09:00:00.000Z",
     completed_at: null,
@@ -57,7 +56,6 @@ const orderOf = builder<NonNullable<OptionalOrder>>({
     items: "2 tea boxes",
     amount_vnd: 450000,
     status: "confirmed",
-    origin: "live",
     confirmed_by: "Lan",
     confirmed_at: "2026-10-12T09:00:00.000Z",
     created_at: "2026-10-12T09:00:00.000Z",
@@ -77,7 +75,6 @@ const lead: LeadRecordRow = {
     context_summary: null,
     phone: null,
     email: null,
-    origin: "live",
 }
 
 const invoiceOf = builder<InvoiceRow>({
@@ -88,7 +85,6 @@ const invoiceOf = builder<InvoiceRow>({
     invoice_no: "INV-1",
     amount_vnd: 450000,
     status: "issued",
-    origin: "live",
     issued_by: "Mai",
     paid_at: null,
 })
@@ -241,7 +237,6 @@ describe("IssueInvoicePerformerService perform", () => {
             orderId: "ord-1",
             leadId: "lead-1",
             amountVnd: 450000,
-            origin: "live",
             issuedBy: "Mai",
         })
         expect(orders.markInvoiced).toHaveBeenCalledWith("ws-1", "ord-1")
@@ -269,18 +264,18 @@ describe("IssueInvoicePerformerService perform", () => {
         expect(evidence.log).not.toHaveBeenCalled()
     })
 
-    it("sends no instructions for simulated work and reads the amount from the fields", async () => {
+    it("issues a lead's invoice from the amount of the fields and still sends the instructions", async () => {
         const { service, invoices, orders, instructions } = await build()
-        const item = itemOf({ subject_type: "lead", subject_id: "lead-1", origin: "simulated" })
+        const item = itemOf({ subject_type: "lead", subject_id: "lead-1" })
 
         const performed = await service.perform(ctx, item, proposalOf(undefined, { amount_vnd: "200000" }), {
             name: "Mai",
         })
 
-        expect(performed.detail).toBeNull()
+        expect(performed.detail).toBe("payInstructionsSent")
         expect(invoices.issue.mock.calls[0]?.[0]).toMatchObject({ orderId: null, amountVnd: 200000 })
         expect(orders.markInvoiced).not.toHaveBeenCalled()
-        expect(instructions.send).not.toHaveBeenCalled()
+        expect(instructions.send).toHaveBeenCalledTimes(1)
     })
 
     it("issues for nothing when the amount cannot be read", async () => {

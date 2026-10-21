@@ -35,10 +35,6 @@ export class LeadFlowInvoiceType {
     @Field()
     status!: string
 
-    /** Whether the invoice originated from live or simulated input. */
-    @Field()
-    origin!: string
-
     /** The identity that issued the invoice. */
     @Field(() => ID, { nullable: true })
     issuedBy!: string | null

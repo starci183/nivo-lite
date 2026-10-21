@@ -4,7 +4,7 @@ export { QUERY_AGENT_CHAT_MESSAGES_SWR_KEY, QUERY_AGENT_DASHBOARD_SWR_KEY, QUERY
 export { QUERY_AUTOMATIONS_SWR_KEY, QUERY_BOOKING_BOARD_SWR_KEY, QUERY_BRAIN_SWR_KEY } from "./api"
 export { QUERY_CHATBOT_GAPS_SWR_KEY, QUERY_CHAT_ANSWER_STATUS_SWR_KEY, QUERY_CHAT_REPLY_STATUS_SWR_KEY } from "./api"
 export { QUERY_CONNECTIONS_SWR_KEY, QUERY_DASHBOARD_SWR_KEY, QUERY_HIRING_CANDIDATE_DETAIL_SWR_KEY } from "./api"
-export { QUERY_HIRING_WORKBENCH_SWR_KEY, QUERY_INBOUND_EVENTS_SWR_KEY } from "./api"
+export { QUERY_HIRING_WORKBENCH_SWR_KEY } from "./api"
 export { QUERY_INVENTORY_WORKBENCH_SWR_KEY, QUERY_KNOWLEDGE_SOURCES_SWR_KEY } from "./api"
 export { QUERY_KNOWLEDGE_SOURCE_SWR_KEY, QUERY_KNOWLEDGE_SUGGESTIONS_SWR_KEY, QUERY_LEAD_BOARD_SWR_KEY } from "./api"
 export { QUERY_LEAD_FLOW_SWR_KEY, QUERY_LEAD_GEN_COMMENT_STATUS_SWR_KEY } from "./api"
@@ -28,14 +28,19 @@ export { useMutateAdminResendWorkspaceInviteSwr, useMutateAdminSetWorkspacePlanS
 export { useMutateAdminSetWorkspaceStatusSwr, useMutateApplyContentCadencePresetsSwr } from "./api"
 export { useMutateApplyContentPillarPresetsSwr, useMutateApplyInventoryStarterSwr } from "./api"
 export { useMutateApplySetupSwr, useMutateApplyShiftsImportSwr, useMutateApplyToHiringJobSwr } from "./api"
-export { useMutateApproveLeadGenCommentSwr, useMutateApproveVideoProjectSwr } from "./api"
+export {
+    useMutateApproveLeadGenCommentSwr,
+    useMutateApproveMcpConnectorSwr,
+    useMutateApproveVideoProjectSwr,
+} from "./api"
 export { useMutateArchiveVideoProjectSwr, useMutateAskGuideSwr, useMutateAssignResponsibilitySwr } from "./api"
 export { useMutateAuthorizeDriveSwr, useMutateAuthorizeGoogleSwr, useMutateAuthorizeMetaSwr } from "./api"
 export { useMutateAuthorizeZaloSwr, useMutateCancelBookingSwr, useMutateCancelHiringOfferSwr } from "./api"
 export { useMutateCancelInventoryPoSwr, useMutateCancelOfficeCommandSwr } from "./api"
 export { useMutateCancelTelegramLoginSwr, useMutateChangeMemberRoleSwr, useMutateChangeSmtpPasswordSwr } from "./api"
 export { useMutateChatbotDismissKnowledgeGapSwr, useMutateCheckConnectionSwr } from "./api"
-export { useMutateCheckInBookingSwr, useMutateCheckInShiftsSwr, useMutateCheckMetaSwr } from "./api"
+export { useMutateCheckInBookingSwr, useMutateCheckInShiftsSwr, useMutateCheckMcpConnectorSwr } from "./api"
+export { useMutateCheckMetaSwr } from "./api"
 export { useMutateChooseMetaPageSwr, useMutateCompleteBookingSwr, useMutateConfirmBookingSwr } from "./api"
 export { useMutateConfirmOfficeCommandSwr, useMutateConnectTelegramSwr, useMutateCopyInviteLinkSwr } from "./api"
 export { useMutateCreateAccountingAdjustmentSwr, useMutateCreateApiKeySwr } from "./api"
@@ -103,7 +108,7 @@ export { useMutateSetHiringInterviewStatusSwr, useMutateSetHiringJobStatusSwr } 
 export { useMutateSetInventoryItemActiveSwr, useMutateSetKnowledgeSuggestionStateSwr } from "./api"
 export { useMutateSetMemberStatusSwr, useMutateSetModuleLiveSwr, useMutateSetOperatingModeSwr } from "./api"
 export { useMutateSetSetupGateSwr, useMutateSettleWonDealSwr, useMutateShareVideoProjectSwr } from "./api"
-export { useMutateSimulateInboundSwr, useMutateStartAgentChatConversationSwr } from "./api"
+export { useMutateStartAgentChatConversationSwr } from "./api"
 export { useMutateStartFirstWorkspaceSwr, useMutateStartMoneyConnectionSwr } from "./api"
 export { useMutateStartSmtpConnectionSwr, useMutateStartTelegramLoginSwr } from "./api"
 export { useMutateStartWebhookConnectionSwr, useMutateStartZaloConnectionSwr } from "./api"
@@ -135,7 +140,7 @@ export { useQueryCreditPacksSwr, useQueryCreditQuotaStatusSwr, useQueryCreditRec
 export { useQueryCreditTopupLotsSwr, useQueryCreditUsageSummarySwr, useQueryDashboardSwr } from "./api"
 export { useQueryDataSyncRunSwr, useQueryDecisionHistorySwr, useQueryDriveGrantSwr } from "./api"
 export { useQueryHiringCandidateDetailSwr, useQueryHiringWorkbenchSwr, useQueryInboundEventsSwr } from "./api"
-export { useQueryInboundSimulationStatusSwr, useQueryInventoryTemplatesSwr } from "./api"
+export { useQueryInventoryTemplatesSwr } from "./api"
 export { useQueryInventoryWorkbenchSwr, useQueryInvitePreviewSwr, useQueryKnowledgeSourceSwr } from "./api"
 export { useQueryKnowledgeSourcesSwr, useQueryKnowledgeSuggestionsSwr, useQueryLeadActionStatusSwr } from "./api"
 export { useQueryLeadBoardSwr, useQueryLeadFlowSwr, useQueryLeadGenCommentStatusSwr } from "./api"
@@ -144,7 +149,8 @@ export { useQueryLessonMiningStatusSwr, useQueryListTelegramChatsSwr, useQueryLo
 export { useQueryLoadDatabaseConnectionSwr, useQueryLoadImapConnectionSwr } from "./api"
 export { useQueryLoadOpenApiConnectionSwr, useQueryLoadOpenApiSpecSwr, useQueryLoadTelegramUserSetupSwr } from "./api"
 export { useQueryLoyaltyBoardSwr, useQueryLoyaltyCampaignSwr, useQueryLoyaltyMemberSwr } from "./api"
-export { useQueryLoyaltyProgramSwr, useQueryLoyaltySegmentPreviewSwr, useQueryMetaConnectionSwr } from "./api"
+export { useQueryLoyaltyProgramSwr, useQueryLoyaltySegmentPreviewSwr, useQueryMcpCallLogSwr } from "./api"
+export { useQueryMcpConnectorsSwr, useQueryMcpToolGrantsSwr, useQueryMetaConnectionSwr } from "./api"
 export { useQueryModuleInstallationsSwr, useQueryModuleRequirementFactsSwr, useQueryModulesCatalogSwr } from "./api"
 export { useQueryMoneyConnectionSwr, useQueryMyAccountSwr, useQueryMyWorkspacesSwr } from "./api"
 export { useQueryNivoKnowledgeSwr, useQueryOfficeCommandCandidatesSwr } from "./api"
@@ -211,7 +217,6 @@ export type {
     HiringSettingsType,
     HiringSlotType,
     HiringWindowType,
-    InboundSimulationStatusType,
     InventoryItemType,
     InventoryMovementType,
     InventoryPendingType,
@@ -270,7 +275,6 @@ export type {
     ShiftsSwapType,
     ShiftsWeekType,
     ShiftsWorkItemType,
-    SimulateInboundType,
     StopFailedStepRequest,
     VideoBrandType,
     VideoMediaType,
@@ -292,7 +296,6 @@ export type { MutateSaveContentItemRequest } from "@/modules/api/graphql/mutatio
 export type { MutateCreateContentItemRequest } from "@/modules/api/graphql/mutations/mutation-create-content-item"
 export type { MutateSaveImapConnectionRequest } from "@/modules/api/graphql/mutations/mutation-save-imap-connection"
 export type { QueryTestImapConnectionRequest } from "@/modules/api/graphql/queries/query-test-imap-connection"
-export type { MutateSimulateInboundRequest } from "@/modules/api/graphql/mutations/mutation-simulate-inbound"
 export type { MutateApproveLeadGenCommentRequest } from "@/modules/api/graphql/mutations/mutation-approve-lead-gen-comment"
 export type { MutateSaveProviderKeysRequest } from "@/modules/api/graphql/mutations/mutation-save-provider-keys"
 export type { MutateSaveOpenApiConnectionRequest } from "@/modules/api/graphql/mutations/mutation-save-open-api-connection"

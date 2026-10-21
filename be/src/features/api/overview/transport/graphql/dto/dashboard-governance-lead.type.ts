@@ -15,10 +15,6 @@ export class DashboardGovernanceLeadType {
     @Field(() => String, { nullable: true })
     company!: string | null
 
-    /** `live`, `simulated` or null. */
-    @Field(() => String, { nullable: true })
-    origin!: string | null
-
     /** The pipeline stage. */
     @Field()
     stage!: string

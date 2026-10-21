@@ -1,2 +1,2 @@
-export { buildLedger, customerOf, originOf, toMs } from "./ledger.policy"
-export type { AccountingLedgerEntry, AccountingOrigin } from "./ledger.contracts"
+export { buildLedger, customerOf, toMs } from "./ledger.policy"
+export type { AccountingLedgerEntry } from "./ledger.contracts"

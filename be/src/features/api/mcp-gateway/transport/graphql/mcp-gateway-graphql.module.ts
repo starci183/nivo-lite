@@ -7,6 +7,8 @@ import { ListMcpCallLogResolver } from "./list-mcp-call-log.resolver"
 import { SetMcpToolGrantResolver } from "./set-mcp-tool-grant.resolver"
 import { RegisterMcpConnectorResolver } from "./register-mcp-connector.resolver"
 import { SyncMcpConnectorResolver } from "./sync-mcp-connector.resolver"
+import { ApproveMcpConnectorResolver } from "./approve-mcp-connector.resolver"
+import { CheckMcpConnectorResolver } from "./check-mcp-connector.resolver"
 
 @Module({
     imports: [McpGatewayApiModule.register({})],
@@ -17,6 +19,8 @@ import { SyncMcpConnectorResolver } from "./sync-mcp-connector.resolver"
         SetMcpToolGrantResolver,
         RegisterMcpConnectorResolver,
         SyncMcpConnectorResolver,
+        ApproveMcpConnectorResolver,
+        CheckMcpConnectorResolver,
     ],
 })
 /** The GraphQL transport of the MCP gateway console. */

@@ -16,8 +16,6 @@ export interface NewInvoice {
     readonly leadId: string | null
     /** The amount, VND. */
     readonly amountVnd: number
-    /** Real or simulated. */
-    readonly origin: string
     /** The display name of the issuer. */
     readonly issuedBy: string
 }

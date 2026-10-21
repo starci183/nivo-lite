@@ -13,6 +13,10 @@ export enum McpGatewayErrorCode {
     CredentialMissing = "MCP_GATEWAY_CREDENTIAL_MISSING",
     /** The native adapter did not answer within the time limit. */
     Timeout = "MCP_GATEWAY_TIMEOUT",
+    /** The agent's credential acts for another workspace than the endpoint it called. */
+    WorkspaceMismatch = "MCP_GATEWAY_WORKSPACE_MISMATCH",
+    /** The connector's catalog was not read, or changed since it was shown, so it cannot be approved as it is. */
+    CatalogChanged = "MCP_GATEWAY_CATALOG_CHANGED",
 }
 
 /** How each code travels. */
@@ -22,6 +26,8 @@ export const MCP_GATEWAY_ERROR_KINDS: Record<McpGatewayErrorCode, ErrorKind> = {
     [McpGatewayErrorCode.AgentNotFound]: "not-found",
     [McpGatewayErrorCode.CredentialMissing]: "unavailable",
     [McpGatewayErrorCode.Timeout]: "unavailable",
+    [McpGatewayErrorCode.WorkspaceMismatch]: "forbidden",
+    [McpGatewayErrorCode.CatalogChanged]: "conflict",
 }
 
 /** The one error class of the gateway. */

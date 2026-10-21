@@ -1,70 +1,44 @@
 import { Test } from "@nestjs/testing"
 import { FakeClock, mock } from "@starci/jest-preset"
+import type { InstallationDirectory } from "@modules/domain/agents"
 import type { AgentRegistryService, GatewayClient } from "@modules/integrations/openclaw"
-import type { Installation, InstallationDirectory } from "@modules/domain/agents"
 import type { Logger } from "@modules/platform/logging"
 import { KnowledgeRecallService, ModuleProfilesService } from "@modules/domain/agent-knowledge"
 import { AGENTS_INSTALLATIONS } from "@modules/domain/agents"
 import { UsageGateService } from "@modules/domain/ai-usage-events"
 import { AuthorityService } from "@modules/domain/authority"
-import type { CustomerTurn } from "@modules/domain/conversations"
 import { HiringPublicService } from "@modules/domain/hiring"
+import { ModuleReadinessService } from "@modules/domain/modules"
 import { AgentSyncService } from "@modules/domain/openclaw-agent-sync"
 import { OPENCLAW_AGENT_REGISTRY, OPENCLAW_GATEWAY } from "@modules/integrations/openclaw"
 import { CLOCK } from "@modules/platform/clock"
 import { MESSAGE_CATALOG } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
 import { LOGGER } from "@modules/platform/logging"
+import {
+    RUNTIME_TOKEN,
+    RUNTIME_WS,
+    runtimeInstallationOf,
+    runtimePassageOf,
+    runtimeTurn,
+} from "@tests/fixtures/builders/customer-turn-runtime.builder"
+import type { RuntimeBuildOptions } from "@tests/fixtures/builders/customer-turn-runtime.builder"
 import { CustomerTurnRuntimeService } from "./customer-turn-runtime.service"
 import { CustomerTurnsLogEvent } from "./customer-turns.log-events"
+import { GatewayContextService } from "./gateway-context.service"
 import { TurnModulesService } from "./turn-modules.service"
+import { TurnToolAccessService } from "./turn-tool-access.service"
 
-const WS = "11111111-1111-4111-8111-111111111111"
-const catalog = mock<MessageCatalog>({ get: (key: string) => key })
-const installationOf = (settings: Installation["settings"] = {}): Installation => ({
-    id: "inst-1",
-    workspaceId: WS,
-    module: "chatbot",
-    name: "Bot",
-    isMulti: false,
-    agentId: "a1",
-    operatingMode: "assist",
-    settings,
-    activeContextVersionId: null,
+const WS = RUNTIME_WS
+const TOKEN = RUNTIME_TOKEN
+const catalog = mock<MessageCatalog>({
+    get: (key: string, params?: Readonly<Record<string, string | number>>) =>
+        params === undefined || Object.keys(params).length === 0 ? key : `${key}${JSON.stringify(params)}`,
 })
+const installationOf = runtimeInstallationOf
+const turn = runtimeTurn
 
-const turn: CustomerTurn = {
-    conversation: {
-        id: "c1",
-        workspaceId: WS,
-        channel: "telegram",
-        externalId: "42",
-        connectionId: null,
-        leadId: null,
-        handledBy: null,
-        visitorName: "Lan",
-        installationId: "i1",
-        agent: {
-            id: "a1",
-            name: "Bot",
-            handle: "bot",
-            role: "Chatbot",
-            module: "chatbot",
-            instructions: "",
-            knowledge: "",
-            approvalRule: "",
-            greeting: "",
-        },
-    },
-    messageId: "m1",
-    body: "How much is the tea?",
-    channelEventId: "tg:42:1",
-    transcript: [{ role: "user", body: "How much is the tea?" }],
-}
-
-const build = async (
-    options: { readonly enabled?: boolean; readonly blocked?: boolean; readonly text?: string } = {},
-) => {
+const build = async (options: RuntimeBuildOptions = {}) => {
     const gateway = mock<GatewayClient>({
         enabled: options.enabled ?? true,
         runTurn: jest.fn().mockResolvedValue({
@@ -93,9 +67,18 @@ const build = async (
         replyContractOf: jest.fn().mockImplementation((_module: string, base: string) => base),
     })
     const recall = mock<KnowledgeRecallService>({
-        recall: jest.fn().mockResolvedValue({ brief: "KNOW", passages: [] }),
+        recall: jest.fn().mockResolvedValue({ brief: "KNOW", passages: [], facts: [] }),
     })
-    const clock = new FakeClock("2026-10-13T10:00:00.000Z")
+    const readiness = mock<ModuleReadinessService>({ settle: jest.fn().mockResolvedValue("live") })
+    const connectors = mock<GatewayContextService>({
+        servesConnectors: jest.fn().mockResolvedValue(options.serves ?? true),
+    })
+    const access = mock<TurnToolAccessService>({
+        open: jest.fn().mockReturnValue(options.token ?? TOKEN),
+        keep: jest.fn(),
+        blockOf: jest.fn((token: string) => (token === "" ? "" : `[OPTIONAL TOOLS] ${token}`)),
+        close: jest.fn(),
+    })
     const moduleRef = await Test.createTestingModule({
         providers: [
             CustomerTurnRuntimeService,
@@ -103,7 +86,7 @@ const build = async (
             { provide: OPENCLAW_AGENT_REGISTRY, useValue: registry },
             { provide: AGENTS_INSTALLATIONS, useValue: installations },
             { provide: MESSAGE_CATALOG, useValue: catalog },
-            { provide: CLOCK, useValue: clock },
+            { provide: CLOCK, useValue: new FakeClock("2026-10-13T10:00:00.000Z") },
             { provide: LOGGER, useValue: logger },
             { provide: AgentSyncService, useValue: sync },
             { provide: UsageGateService, useValue: usage },
@@ -112,6 +95,9 @@ const build = async (
             { provide: HiringPublicService, useValue: hiring },
             { provide: ModuleProfilesService, useValue: profiles },
             { provide: TurnModulesService, useValue: modules },
+            { provide: ModuleReadinessService, useValue: readiness },
+            { provide: GatewayContextService, useValue: connectors },
+            { provide: TurnToolAccessService, useValue: access },
         ],
     }).compile()
     return {
@@ -127,6 +113,9 @@ const build = async (
         hiring,
         profiles,
         recall,
+        readiness,
+        connectors,
+        access,
     }
 }
 
@@ -222,7 +211,6 @@ describe("CustomerTurnRuntimeService", () => {
                 application: null,
                 loyalty: null,
                 booking_request: bookingRequest,
-                hotel_request: null,
             },
         })
         expect(gateway.runTurn).toHaveBeenCalledTimes(1)
@@ -418,5 +406,71 @@ describe("CustomerTurnRuntimeService", () => {
             part: "authority",
         })
         expect(gateway.runTurn.mock.calls[0]?.[0]?.message).toContain("bundle.replyContract")
+    })
+})
+
+describe("CustomerTurnRuntimeService readiness", () => {
+    it.each([
+        ["ready" as const, { reply: "50k" }, 1],
+        ["needs_connection" as const, "needs_connection", 0],
+        ["setup" as const, "installation_not_running", 0],
+    ])("answers an installation the readiness settles as %s", async (status, answer, runs) => {
+        const { runtime, installations, readiness, gateway } = await build()
+        installations.ofAgent.mockResolvedValue(installationOf())
+        readiness.settle.mockResolvedValueOnce(status)
+        await expect(runtime.propose(turn)).resolves.toEqual(
+            typeof answer === "string" ? answer : expect.objectContaining(answer),
+        )
+        expect(readiness.settle).toHaveBeenCalledWith(WS, "inst-1")
+        expect(gateway.runTurn).toHaveBeenCalledTimes(runs)
+    })
+
+    it("asks no readiness for an agent without an installation", async () => {
+        const { runtime, readiness } = await build()
+        await runtime.propose(turn)
+        expect(readiness.settle).not.toHaveBeenCalled()
+    })
+})
+
+describe("CustomerTurnRuntimeService tools", () => {
+    it("opens the turn's tools, hands the agent the tool block, keeps the turn's knowledge, then closes them", async () => {
+        const { runtime, access, gateway, recall } = await build()
+        recall.recall.mockResolvedValueOnce({ brief: "KNOW", passages: [runtimePassageOf("Price list")], facts: [] })
+        await expect(runtime.propose(turn)).resolves.toMatchObject({ reply: "50k" })
+        expect(access.open).toHaveBeenCalledWith(turn, 25_000)
+        expect(String(gateway.runTurn.mock.calls[0]?.[0].message)).toContain(`[OPTIONAL TOOLS] ${TOKEN}`)
+        expect(access.keep).toHaveBeenCalledWith(turn, [
+            { layer: 2, kind: "brain_document", ref: "src-1", label: "Price list" },
+        ])
+        expect(access.close).toHaveBeenCalledWith(turn)
+    })
+
+    it("never logs or meters the token, and still closes the tools when the turn fails", async () => {
+        const { runtime, access, gateway, logger, usage } = await build()
+        await runtime.propose(turn)
+        gateway.runTurn.mockRejectedValueOnce(new Error("gateway down"))
+        await expect(runtime.propose(turn)).resolves.toBe("openclaw_unavailable")
+        const written = JSON.stringify([
+            logger.error.mock.calls,
+            logger.warn.mock.calls,
+            logger.info.mock.calls,
+            usage.record.mock.calls,
+        ])
+        expect(written).not.toContain(TOKEN)
+        expect(access.close).toHaveBeenCalledTimes(2)
+    })
+
+    it("does not run an agent holding connector grants without a tool token", async () => {
+        const { runtime, access, gateway, connectors } = await build({ token: "" })
+        await expect(runtime.propose(turn)).resolves.toBe("tools_not_configured")
+        expect(connectors.servesConnectors).toHaveBeenCalledWith(turn.conversation)
+        expect(gateway.runTurn).not.toHaveBeenCalled()
+        expect(access.close).toHaveBeenCalledWith(turn)
+    })
+
+    it("runs an agent without connector grants without the tool block when no token can be minted", async () => {
+        const { runtime, gateway } = await build({ token: "", serves: false })
+        await expect(runtime.propose(turn)).resolves.toMatchObject({ reply: "50k" })
+        expect(String(gateway.runTurn.mock.calls[0]?.[0].message)).not.toContain("[OPTIONAL TOOLS]")
     })
 })

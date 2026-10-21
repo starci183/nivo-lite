@@ -16,7 +16,8 @@ import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import type { WorkspaceMember, WorkspaceRole } from "@modules/domain/workspace-members"
 import { ModulesError, ModulesErrorCode } from "./errors/modules.error"
 import type { InstallRequest, InstallResult } from "./module-installs.contracts"
-import type { ModuleDefinition } from "./modules.contracts"
+import { ModuleReadinessService } from "./module-readiness.service"
+import type { InstallationView, ModuleDefinition } from "./modules.contracts"
 import { ModulesService } from "./modules.service"
 import {
     AGENT_NAME_LIMITS,
@@ -53,18 +54,20 @@ export class ModuleInstallService {
         private readonly rules: AuthorityRulesService,
         private readonly events: EventsService,
         private readonly sync: AgentSyncService,
+        private readonly readiness: ModuleReadinessService,
     ) {}
 
     /** Every installation of the workspace, oldest first; any member may read. */
-    async list(principalId: string, workspaceId: string): Promise<ReadonlyArray<InstallationRecord>> {
+    async list(principalId: string, workspaceId: string): Promise<ReadonlyArray<InstallationView>> {
         await this.members.require(principalId, workspaceId)
-        return this.installations.list(workspaceId)
+        const records = await this.installations.list(workspaceId)
+        return Promise.all(records.map((record) => this.readiness.withNeeds(record)))
     }
 
     /** One installation of the workspace; any member may read. */
-    async get(principalId: string, workspaceId: string, installationId: string): Promise<InstallationRecord> {
+    async get(principalId: string, workspaceId: string, installationId: string): Promise<InstallationView> {
         await this.members.require(principalId, workspaceId)
-        return this.require(workspaceId, installationId)
+        return this.viewOf(workspaceId, installationId)
     }
 
     /** The installation that owns a record of the workspace; any member may read. Null when none says. */
@@ -114,7 +117,7 @@ export class ModuleInstallService {
         workspaceId: string,
         installationId: string,
         name: string,
-    ): Promise<InstallationRecord> {
+    ): Promise<InstallationView> {
         await this.members.require(principalId, workspaceId, GOVERNORS)
         const clean = cleanInstanceName(name)
         if (clean === null) throw new ModulesError({ code: ModulesErrorCode.InstanceNameInvalid })
@@ -124,7 +127,7 @@ export class ModuleInstallService {
             throw new ModulesError({ code: ModulesErrorCode.InstanceNameTaken })
         }
         expectWritten(await this.installations.rename(workspaceId, installationId, clean))
-        return this.require(workspaceId, installationId)
+        return this.viewOf(workspaceId, installationId)
     }
 
     /** Sets how an agent runs: autopilot applies the authority rules as configured, assist downgrades every automatic action to a question. */
@@ -133,10 +136,10 @@ export class ModuleInstallService {
         workspaceId: string,
         installationId: string,
         mode: InstallationMode,
-    ): Promise<InstallationRecord> {
+    ): Promise<InstallationView> {
         await this.members.require(principalId, workspaceId, GOVERNORS)
         expectWritten(await this.installations.setOperatingMode(workspaceId, installationId, mode))
-        return this.require(workspaceId, installationId)
+        return this.viewOf(workspaceId, installationId)
     }
 
     /** Switches an agent live (it acts on channels) or paused (it stays silent); going live needs an applied context version. */
@@ -145,7 +148,7 @@ export class ModuleInstallService {
         workspaceId: string,
         installationId: string,
         live: boolean,
-    ): Promise<InstallationRecord> {
+    ): Promise<InstallationView> {
         await this.members.require(principalId, workspaceId, GOVERNORS)
         const current = await this.require(workspaceId, installationId)
         if (live && current.activeContextVersionId === null) {
@@ -153,7 +156,7 @@ export class ModuleInstallService {
         }
         expectWritten(await this.installations.setLive(workspaceId, installationId, live))
         if (current.agentId !== null) await this.agents.setStatus(principalId, workspaceId, current.agentId, live)
-        return this.require(workspaceId, installationId)
+        return this.viewOf(workspaceId, installationId)
     }
 
     /** Renames the agent of an installation: the display name its team sees in Office and on cards. */
@@ -162,7 +165,7 @@ export class ModuleInstallService {
         workspaceId: string,
         installationId: string,
         name: string,
-    ): Promise<InstallationRecord> {
+    ): Promise<InstallationView> {
         await this.members.require(principalId, workspaceId, GOVERNORS)
         const clean = agentNameOf(name)
         if (clean.length < AGENT_NAME_LIMITS.min) {
@@ -172,7 +175,7 @@ export class ModuleInstallService {
         if (current.agentId === null) throw new ModulesError({ code: ModulesErrorCode.AgentMissing })
         await this.agents.rename(principalId, workspaceId, current.agentId, clean)
         await this.sync.requestNow({ workspaceId, installationId, force: false })
-        return this.require(workspaceId, installationId)
+        return this.viewOf(workspaceId, installationId)
     }
 
     /**
@@ -185,7 +188,7 @@ export class ModuleInstallService {
         installationId: string,
         name: string,
         value: SettingValue,
-    ): Promise<InstallationRecord> {
+    ): Promise<InstallationView> {
         await this.members.require(principalId, workspaceId, GOVERNORS)
         const change = settingOf(name, value)
         if (change === null) throw new ModulesError({ code: ModulesErrorCode.SettingInvalid })
@@ -193,7 +196,7 @@ export class ModuleInstallService {
         expectWritten(
             await this.installations.saveSettings(workspaceId, installationId, withSetting(current.settings, change)),
         )
-        return this.require(workspaceId, installationId)
+        return this.viewOf(workspaceId, installationId)
     }
 
     /** What the workspace has for the requirements of a module (connected providers, head counts); any member may look. */
@@ -208,6 +211,11 @@ export class ModuleInstallService {
         const status = await this.installations.syncStatus(workspaceId, installationId)
         if (status === null) throw new ModulesError({ code: ModulesErrorCode.InstallationNotFound })
         return status
+    }
+
+    /** The installation of the workspace with what it still needs connected. */
+    private async viewOf(workspaceId: string, installationId: string): Promise<InstallationView> {
+        return this.readiness.withNeeds(await this.require(workspaceId, installationId))
     }
 
     private async require(workspaceId: string, installationId: string): Promise<InstallationRecord> {

@@ -1,6 +1,7 @@
 import { Alert, Badge, Button, ListRow, PageContainer, SurfaceListCard } from "@starci/grammar/common"
 import type { BadgeTone, BreadcrumbItem } from "@starci/grammar/common"
 import { PageHeading } from "@/components/composites/PageHeading"
+import { ConnectionNeeds, type ConnectionNeedsProps } from "@/components/leaves/ConnectionNeeds"
 import { AddInstanceDialog } from "@/components/composites/AddInstanceDialog"
 import type { AddInstanceDialogProps } from "@/components/composites/AddInstanceDialog"
 import { PAGE_CLASS_NAME } from "./classNames"
@@ -12,6 +13,8 @@ export interface InstanceRowView {
     readonly description: string
     readonly statusLabel: string
     readonly statusTone: BadgeTone
+    /** What a `needs_connection` instance waits for and where to connect it; no lines otherwise. */
+    readonly needs: ConnectionNeedsProps
     readonly openHref: string
 }
 
@@ -78,7 +81,9 @@ export const AgentInstancesBase = (props: AgentInstancesBaseProps) => {
                                     {view.openLabel}
                                 </Button>
                             }
-                        />
+                        >
+                            <ConnectionNeeds {...row.needs} />
+                        </ListRow>
                     ))}
                 </SurfaceListCard>
                 {view.dialog === null ? null : <AddInstanceDialog props={view.dialog.props} on={view.dialog.on} />}

@@ -2,7 +2,9 @@ import { Test } from "@nestjs/testing"
 import {
     channelNames,
     channelsOf,
+    projectHref,
     readDelegation,
+    renderingCard,
     sceneLines,
     secondsOf,
     videoReadyCard,
@@ -16,7 +18,9 @@ const SUBJECT = Symbol("editor-delegation.policy")
 type Subject = {
     channelNames: typeof channelNames
     channelsOf: typeof channelsOf
+    projectHref: typeof projectHref
     readDelegation: typeof readDelegation
+    renderingCard: typeof renderingCard
     sceneLines: typeof sceneLines
     secondsOf: typeof secondsOf
     videoReadyCard: typeof videoReadyCard
@@ -30,7 +34,9 @@ const build = async (): Promise<Subject> => {
                 useValue: {
                     channelNames,
                     channelsOf,
+                    projectHref,
                     readDelegation,
+                    renderingCard,
                     sceneLines,
                     secondsOf,
                     videoReadyCard,
@@ -214,6 +220,10 @@ describe("videoReadyCard", () => {
             link: { label: "Open project", href: "/agents/video/workbench?focus=project-1" },
             ref: { kind: "work_item", id: "item-9" },
             actions: ["approve", "decline"],
+            sources: [
+                { layer: 2, kind: "brain_document", ref: "video_brand_kits" },
+                { layer: 2, kind: "delegated_script" },
+            ],
             data: { project_id: "project-1", render_id: "render-1", captions_url: "https://storage/c.vtt" },
         })
         expect(card.lines).toHaveLength(3)
@@ -236,5 +246,56 @@ describe("videoReadyCard", () => {
             ]),
         )
         expect(card.media).toHaveLength(1)
+    })
+})
+
+describe("renderingCard", () => {
+    const WORDS = {
+        badge: "Rendering",
+        body: "Live in the project",
+        link: "Follow",
+        target: "Planned",
+        seconds: "10 s",
+    }
+    const SCRIPT = {
+        title: "Weekend",
+        scenes: [
+            { caption: "A", voiceover: "a", media: null },
+            { caption: "", voiceover: "b", media: null },
+        ],
+        channels: ["facebook"],
+        source: "content",
+        contentItemId: null,
+        goal: "offer",
+        aspect: "9:16",
+        targetSeconds: 10,
+    }
+
+    it("notes the render in progress with its scenes, planned length and the live project link", async () => {
+        const subject = await build()
+
+        const card = subject.renderingCard(SCRIPT, WORDS, { projectId: "project-1", renderId: "render-1" })
+
+        expect(card).toMatchObject({
+            v: 1,
+            type: "handoff_note",
+            title: "Weekend",
+            badge: "Rendering",
+            body: "Live in the project",
+            fields: [{ label: "Planned", value: "10 s" }],
+            link: { label: "Follow", href: subject.projectHref("project-1") },
+            data: { project_id: "project-1", render_id: "render-1", source: "content" },
+        })
+        expect(card.lines?.map((line) => line.text)).toEqual(["A", "b"])
+        expect(card.subtitle).toContain("9:16")
+        expect(subject.projectHref("project-1")).toBe("/agents/video/workbench?focus=project-1")
+    })
+
+    it("leaves the channels out of the subtitle when none was chosen", async () => {
+        const subject = await build()
+
+        const card = subject.renderingCard({ ...SCRIPT, channels: [] }, WORDS, { projectId: "p", renderId: "r" })
+
+        expect(card.subtitle).toBe("10 s · 9:16")
     })
 })

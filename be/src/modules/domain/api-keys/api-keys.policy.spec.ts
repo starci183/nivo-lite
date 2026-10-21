@@ -8,6 +8,7 @@ import {
     cleanName,
     secondsToRenewal,
     admitKey,
+    admitAgentKey,
     mayManageKeys,
 } from "./api-keys.policy"
 
@@ -19,6 +20,7 @@ type Subject = {
     cleanName: typeof cleanName
     secondsToRenewal: typeof secondsToRenewal
     admitKey: typeof admitKey
+    admitAgentKey: typeof admitAgentKey
     mayManageKeys: typeof mayManageKeys
 }
 
@@ -34,6 +36,7 @@ const buildSubject = async () => {
                     cleanName,
                     secondsToRenewal,
                     admitKey,
+                    admitAgentKey,
                     mayManageKeys,
                 },
             },
@@ -170,5 +173,49 @@ describe("api-keys policy admitKey", () => {
         expect(
             subject.admitKey({ id: "key-1", workspace_id: "workspace-1", scopes: ["leads:read"] }, "leads:read", NOW),
         ).toMatchObject({ kind: "ok", value: { name: "" } })
+    })
+})
+
+const agentAnswer = {
+    id: "key-1",
+    workspace_id: "workspace-1",
+    agent_id: "agent-1",
+    scopes: ["tools:call"],
+    revoked: false,
+    agent_status: "active",
+}
+
+describe("api-keys policy admitAgentKey", () => {
+    it("admits a working key of an active agent that carries tools:call", async () => {
+        const subject = await buildSubject()
+        expect(subject.admitAgentKey(agentAnswer)).toEqual({
+            kind: "ok",
+            value: { keyId: "key-1", workspaceId: "workspace-1", agentId: "agent-1" },
+        })
+    })
+
+    it("refuses an unknown key, a revoked key, a public key and the key of a missing or paused agent", async () => {
+        const subject = await buildSubject()
+        expect(subject.admitAgentKey(undefined)).toMatchObject({ code: ApiKeysErrorCode.Unauthorized })
+        expect(subject.admitAgentKey({ ...agentAnswer, revoked: true })).toMatchObject({
+            code: ApiKeysErrorCode.Revoked,
+        })
+        expect(subject.admitAgentKey({ ...agentAnswer, agent_id: null })).toMatchObject({
+            code: ApiKeysErrorCode.Unauthorized,
+        })
+        expect(subject.admitAgentKey({ ...agentAnswer, agent_status: null })).toMatchObject({
+            code: ApiKeysErrorCode.Unauthorized,
+        })
+        expect(subject.admitAgentKey({ ...agentAnswer, agent_status: "paused" })).toMatchObject({
+            code: ApiKeysErrorCode.Unauthorized,
+        })
+    })
+
+    it("refuses a key without the tools:call scope", async () => {
+        const subject = await buildSubject()
+        expect(subject.admitAgentKey({ ...agentAnswer, scopes: null })).toMatchObject({
+            code: ApiKeysErrorCode.ScopeMissing,
+            params: { scope: "tools:call" },
+        })
     })
 })

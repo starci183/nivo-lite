@@ -50,7 +50,6 @@ export class EditorDeliveryService {
             subject_type: "video_project",
             subject_id: row.project_id,
             parent_id: row.work_item_id,
-            origin: "live",
             preset: true,
             noChain: true,
             forceAsk: "over_authority",

@@ -1,7 +1,6 @@
 import type {
     DecidedPath,
     EvidenceState,
-    Origin,
     StoredProposal,
     ReasonCode,
     SubjectType,
@@ -55,8 +54,6 @@ export interface WorkItemRow {
     assigned_staff_id: string | null
     /** The approval execution. */
     execution_id: string | null
-    /** Constrained by a CHECK in the table. */
-    origin: Origin
     /** When the row was written. */
     created_at: Date
     /** When the row last changed; also the lease of a claimed item. */

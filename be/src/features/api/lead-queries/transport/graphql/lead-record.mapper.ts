@@ -10,7 +10,6 @@ export const toLeadRecordType = (lead: LeadView): LeadRecordType => ({
     need: lead.need,
     stage: lead.stage,
     contextSummary: lead.context_summary,
-    origin: lead.origin,
     installationId: lead.installation_id,
     createdAt: lead.created_at,
 })

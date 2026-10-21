@@ -37,3 +37,21 @@ LIMIT 1`
 /** Records where networks scheduled the post ($1 workspace, $2 item, $3 published json). */
 export const MARK_ITEM_SCHEDULED = sql`UPDATE public.content_items SET published = published || $3::jsonb, updated_at = now()
 WHERE workspace_id = $1 AND id = $2`
+
+/**
+ * The approved posts whose scheduled moment on one channel has come and that the channel has neither published nor refused, oldest
+ * first ($1 channel, $2 now, $3 limit). Every workspace: the scheduler tick reads them; a published channel no longer has its `ref`.
+ */
+export const SELECT_DUE_CHANNEL_POSTS = sql`SELECT workspace_id, id, title, channels, variants, media,
+to_json(scheduled_at) #>> '{}' AS scheduled_at, published -> $1::text ->> 'ref' AS ref
+FROM public.content_items
+WHERE status = 'approved' AND (published -> $1::text) ? 'ref' AND NOT ((published -> $1::text) ? 'failed_at')
+AND (published -> $1::text ->> 'scheduled_at')::timestamptz <= $2::timestamptz
+ORDER BY (published -> $1::text ->> 'scheduled_at')::timestamptz
+LIMIT $3`
+
+/** Records that one channel refused a due post, so the scheduler stops retrying it ($1 workspace, $2 item, $3 channel, $4 reason, $5 at). */
+export const MARK_CHANNEL_FAILED = sql`UPDATE public.content_items
+SET published = jsonb_set(published, ARRAY[$3::text], COALESCE(published -> $3::text, '{}'::jsonb)
+|| jsonb_build_object('failed_at', $5::text, 'reason', $4::text)), updated_at = now()
+WHERE workspace_id = $1 AND id = $2`

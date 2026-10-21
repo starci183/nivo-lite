@@ -1,28 +1,22 @@
 import { evaluateGate } from "@modules/domain/decisions"
-import type { GrantVerdict, JsonObject, ToolGrant } from "./mcp-gateway.contracts"
-
-/** Arguments that change a price the connector quoted (a discount, a price or total override): a price exception. */
-const PRICE_ARG = /discount|price|override/iu
+import type { GatewayJson, GrantVerdict, ToolGrant } from "./mcp-gateway.contracts"
 
 const numberOf = (value: unknown): number | null => (typeof value === "number" && Number.isFinite(value) ? value : null)
 
-/** True when an argument breaks the grant's constraint on it, or is an unconstrained price exception. */
-const exceeds = (grant: ToolGrant, name: string, value: number): boolean => {
-    const constraint = grant.constraints.find((entry) => entry.arg === name)
-    if (constraint !== undefined) return value > constraint.max
-    return PRICE_ARG.test(name) && value > 0
-}
+/** True when a numeric argument is above the grant's constraint on it; an argument without a constraint is not judged. */
+const exceeds = (grant: ToolGrant, name: string, value: number): boolean =>
+    grant.constraints.some((entry) => entry.arg === name && value > entry.max)
 
 /**
  * The grant check of one call, through NIVO's own authority gate (`evaluateGate`) so there is one authority system: the grant is the
- * rule of the action "<tool>" (mode, `limit_vnd` against `amountVnd`), default deny. Generic argument constraints (configured per
- * workspace, for example `discountPct <= N` on hakuen.booking.confirm) and the price exception (a price/discount argument with no
- * constraint) ask a person. A side-effect tool with no rule asks a person; a read with no rule is denied. A replay of an approval
- * passes the limits, never a grant withdrawn (`never`) meanwhile. No business value lives in code.
+ * rule of the action "<tool>" (mode, `limit_vnd` against `amountVnd`), default deny. A numeric argument above one of the grant's
+ * constraints (data per workspace: `{ arg, max }`, for example `{ arg: "quantity", max: 5 }` on shop.order.place) asks a person.
+ * A side-effect tool with no rule asks a person; a read with no rule is denied. A replay of an approval passes the limits, never a
+ * grant withdrawn (`never`) meanwhile. No business value and no argument name lives in code.
  */
 export const judgeGrant = (
     grant: ToolGrant | null,
-    args: JsonObject,
+    args: GatewayJson,
     approved: boolean,
     sideEffect = false,
 ): GrantVerdict => {
@@ -51,5 +45,5 @@ export const judgeGrant = (
         const number = numberOf(value)
         return number !== null && exceeds(grant, name, number)
     })
-    return !approved && broken ? { kind: "approval", reason: "price_exception" } : { kind: "allow" }
+    return !approved && broken ? { kind: "approval", reason: "over_constraint" } : { kind: "allow" }
 }

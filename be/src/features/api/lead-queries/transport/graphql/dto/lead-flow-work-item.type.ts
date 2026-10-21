@@ -94,10 +94,6 @@ export class LeadFlowWorkItemType {
     @Field(() => ID, { nullable: true })
     executionId!: string | null
 
-    /** Whether the work originated from live or simulated input. */
-    @Field()
-    origin!: string
-
     /** When the work item was created, in ISO 8601 format. */
     @Field()
     createdAt!: string

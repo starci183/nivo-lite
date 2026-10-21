@@ -27,7 +27,6 @@ const query1: TypedDocumentNode<WorkItemsQuery, InputVariables<QueryWorkItemsReq
                 installation_id
                 lead_id
                 missing_fields
-                origin
                 parent_id
                 proposal {
                     amount_vnd

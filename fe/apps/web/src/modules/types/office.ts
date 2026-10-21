@@ -77,6 +77,16 @@ export interface OfficeChoice {
     readonly description: string | null
 }
 
+/** Who posted a Hub card and how it shows: the anchor a jump scrolls to, the author, the AI mark, the time, the title, the focus. */
+export interface OfficeCardIdentity {
+    readonly anchor: string
+    readonly author: string
+    readonly isAi: boolean
+    readonly time: string
+    readonly title: string
+    readonly isFocused: boolean
+}
+
 /** A work item the flow could not finish alone, as a card under a department line. */
 export interface OfficeExceptionView {
     readonly kind: "exception"
@@ -93,7 +103,6 @@ export interface OfficeExceptionView {
     readonly badge: string
     readonly department: string
     readonly reasonBadge: string | null
-    readonly isSimulated: boolean
     readonly isReconcile: boolean
     readonly errorText: string | null
     readonly summary: string
@@ -264,6 +273,8 @@ export interface OfficeMemberRowView {
     readonly mention: string | null
     readonly chatHref: string | null
     readonly note: string | null
+    /** A link under the note (a waiting agent: where to connect what it waits for); null when there is none. */
+    readonly noteAction: { readonly label: string; readonly href: string } | null
 }
 
 /** The right column. */

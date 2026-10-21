@@ -1,0 +1,128 @@
+import { Test } from "@nestjs/testing"
+import { builder, mock } from "@starci/jest-preset"
+import { McpGatewayService } from "@modules/domain/mcp-gateway"
+import type { RoleReadiness } from "@modules/domain/mcp-gateway"
+import { InstallationRecordsService } from "@modules/domain/module-installations"
+import type { InstallationRecord } from "@modules/domain/module-installations"
+import { ACCOUNTING_MODULE } from "./accounting.contracts"
+import { CHATBOT_MODULE } from "./chatbot.contracts"
+import { ModulesErrorCode } from "./errors/modules.error"
+import { ModuleReadinessService } from "./module-readiness.service"
+import { ModulesService } from "./modules.service"
+
+const recordOf = builder<InstallationRecord>({
+    id: "inst-1",
+    workspaceId: "ws-1",
+    moduleKey: "accounting",
+    name: "Accounting",
+    isMulti: false,
+    agentId: "agent-1",
+    agentName: "AI Accounting",
+    agentHandle: "accounting",
+    status: "live",
+    operatingMode: "assist",
+    liveEnabled: true,
+    activeContextVersionId: "version-1",
+    activeVersion: 1,
+    settings: {},
+    createdAt: "2026-10-20T00:00:00.000Z",
+})
+
+const readinessOf = builder<RoleReadiness>({
+    ready: false,
+    missing: ["payment.credits.list"],
+    providers: {
+        "identity.find": [],
+        "identity.upsert": [],
+        "receivable.find": [],
+        "receivable.recordPayment": [],
+        "payment.credits.list": ["SePay"],
+        "payment.debits.list": [],
+        "invoice.list": [],
+    },
+})
+
+const build = async () => {
+    const installations = mock<InstallationRecordsService>()
+    installations.find.mockResolvedValue(recordOf())
+    installations.settleConnection.mockResolvedValue(null)
+    const catalog = mock<ModulesService>()
+    catalog.find.mockImplementation((key) => Promise.resolve(key === "accounting" ? ACCOUNTING_MODULE : CHATBOT_MODULE))
+    const gateway = mock<McpGatewayService>()
+    gateway.readiness.mockResolvedValue(readinessOf())
+    const moduleRef = await Test.createTestingModule({
+        providers: [
+            ModuleReadinessService,
+            { provide: InstallationRecordsService, useValue: installations },
+            { provide: ModulesService, useValue: catalog },
+            { provide: McpGatewayService, useValue: gateway },
+        ],
+    }).compile()
+    return { readiness: moduleRef.get(ModuleReadinessService), installations, catalog, gateway }
+}
+
+describe("ModuleReadinessService.needsOf", () => {
+    it("answers the missing required roles of a module with their providers", async () => {
+        const { readiness, gateway } = await build()
+
+        await expect(readiness.needsOf("ws-1", "accounting")).resolves.toEqual([
+            { role: "payment.credits.list", providers: ["SePay"] },
+        ])
+        expect(gateway.readiness).toHaveBeenCalledWith("ws-1", ["payment.credits.list"])
+    })
+
+    it("needs nothing when the required roles are ready or the module requires none", async () => {
+        const { readiness, gateway } = await build()
+        gateway.readiness.mockResolvedValue(readinessOf({ ready: true, missing: [] }))
+
+        await expect(readiness.needsOf("ws-1", "accounting")).resolves.toEqual([])
+        await expect(readiness.needsOf("ws-1", "chatbot")).resolves.toEqual([])
+        expect(gateway.readiness).toHaveBeenCalledTimes(1)
+    })
+
+    it("needs nothing for a module that declares no roles", async () => {
+        const { readiness, catalog, gateway } = await build()
+        catalog.find.mockResolvedValue({ ...CHATBOT_MODULE, requires: { capabilities: [], connections: [] } })
+
+        await expect(readiness.needsOf("ws-1", "chatbot")).resolves.toEqual([])
+        expect(gateway.readiness).not.toHaveBeenCalled()
+    })
+
+    it("shows an installation with what it still needs connected", async () => {
+        const { readiness } = await build()
+
+        await expect(readiness.withNeeds(recordOf())).resolves.toEqual({
+            ...recordOf(),
+            connectionNeeds: [{ role: "payment.credits.list", providers: ["SePay"] }],
+        })
+    })
+})
+
+describe("ModuleReadinessService.settle", () => {
+    it("moves a live installation without its connections to needs_connection", async () => {
+        const { readiness, installations } = await build()
+        installations.settleConnection.mockResolvedValue("needs_connection")
+
+        await expect(readiness.settle("ws-1", "inst-1")).resolves.toBe("needs_connection")
+        expect(installations.settleConnection).toHaveBeenCalledWith("ws-1", "inst-1", false)
+    })
+
+    it("asks to resume a waiting installation once its connections are ready, and keeps a status nothing moved", async () => {
+        const { readiness, installations, gateway } = await build()
+        gateway.readiness.mockResolvedValue(readinessOf({ ready: true, missing: [] }))
+        installations.find.mockResolvedValue(recordOf({ status: "paused" }))
+
+        await expect(readiness.settle("ws-1", "inst-1")).resolves.toBe("paused")
+        expect(installations.settleConnection).toHaveBeenCalledWith("ws-1", "inst-1", true)
+    })
+
+    it("refuses an installation that is not of the workspace", async () => {
+        const { readiness, installations } = await build()
+        installations.find.mockResolvedValue(null)
+
+        await expect(readiness.settle("ws-1", "inst-9")).rejects.toMatchObject({
+            code: ModulesErrorCode.InstallationNotFound,
+        })
+        expect(installations.settleConnection).not.toHaveBeenCalled()
+    })
+})

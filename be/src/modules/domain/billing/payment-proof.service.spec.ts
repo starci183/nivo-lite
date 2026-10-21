@@ -17,7 +17,6 @@ const INVALID = expect.objectContaining({ code: BillingErrorCode.WebhookInvalid 
 const OPTIONS: BillingOptions = {
     sepayApiKey: new Secret("billing-key"),
     bankAccount: { account: "", bank: "", holder: "" },
-    simulatedBank: { secret: new Secret("bank-secret"), workspaceId: "ws-1" },
     channelTokenKey: undefined,
 }
 
@@ -50,21 +49,6 @@ describe("PaymentProofService > verifyBillingKey", () => {
         expect(() => proof.verifyBillingKey("Apikey other")).toThrow(REFUSED)
         expect(() => proof.verifyBillingKey(undefined)).toThrow(REFUSED)
         expect(() => unconfigured.verifyBillingKey("Apikey billing-key")).toThrow(REFUSED)
-    })
-})
-
-describe("PaymentProofService > verifySimulatedBank", () => {
-    it("lets the configured secret through and refuses anything else", async () => {
-        const { proof } = await build()
-        const { proof: unconfigured } = await build({
-            ...OPTIONS,
-            simulatedBank: { secret: undefined, workspaceId: "ws-1" },
-        })
-
-        expect(() => proof.verifySimulatedBank("bank-secret")).not.toThrow()
-        expect(() => proof.verifySimulatedBank("nope")).toThrow(REFUSED)
-        expect(() => proof.verifySimulatedBank(undefined)).toThrow(REFUSED)
-        expect(() => unconfigured.verifySimulatedBank("bank-secret")).toThrow(REFUSED)
     })
 })
 

@@ -2,7 +2,7 @@ import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { TransactionsError, TransactionsErrorCode } from "./errors/transactions.error"
-import type { TransactionAccountingRow, TransactionRow } from "./persistence/transactions.rows"
+import type { BankCreditRow, TransactionAccountingRow, TransactionRow } from "./persistence/transactions.rows"
 import type { TransactionViewRow } from "./persistence/transaction-views.rows"
 import { LIST_INVOICE_TRANSACTIONS } from "./persistence/transaction-views.sql"
 import {
@@ -10,10 +10,13 @@ import {
     FIND_TRANSACTION_MOMENT,
     INSERT_TRANSACTION,
     LIST_ACCOUNTING_TRANSACTIONS,
+    LIST_BANK_MOVES,
     MATCH_TRANSACTION,
     REVIEW_TRANSACTION,
 } from "./persistence/transactions.sql"
 import type {
+    BankCreditQuery,
+    BankDirection,
     NewTransaction,
     OptionalTransaction,
     OptionalTransactionMoment,
@@ -57,19 +60,42 @@ export class TransactionsService {
         ])
     }
 
-    /** Records a payment nobody matched yet. */
-    async open(input: NewTransaction): Promise<TransactionRow> {
-        const rows = await this.entityManager.query<Array<TransactionRow>>(INSERT_TRANSACTION, [
+    /** The newest live bank credits of a workspace, optionally of one status and from an instant. */
+    listBankCredits(query: BankCreditQuery): Promise<Array<BankCreditRow>> {
+        return this.listBankMoves(query, "credit")
+    }
+
+    /** The newest live bank debits (money out, for example supplier payments) of a workspace, filtered like the credits. */
+    listBankDebits(query: BankCreditQuery): Promise<Array<BankCreditRow>> {
+        return this.listBankMoves(query, "debit")
+    }
+
+    /**
+     * Records a live payment nobody matched yet; NIVO records no other kind. Inside the caller's transaction when it hands one
+     * (the bank feed books a move atomically with its receipt).
+     */
+    async open(input: NewTransaction, manager: EntityManager = this.entityManager): Promise<TransactionRow> {
+        const rows = await manager.query<Array<TransactionRow>>(INSERT_TRANSACTION, [
             input.workspaceId,
             input.inboundEventId,
             input.amountVnd,
             input.reference,
             input.payer,
-            input.origin,
+            input.direction ?? "credit",
         ])
         const [created] = rows
         if (created === undefined) throw new TransactionsError({ code: TransactionsErrorCode.NotCreated })
         return created
+    }
+
+    private listBankMoves(query: BankCreditQuery, direction: BankDirection): Promise<Array<BankCreditRow>> {
+        return this.entityManager.query<Array<BankCreditRow>>(LIST_BANK_MOVES, [
+            query.workspaceId,
+            query.status,
+            query.since,
+            query.limit,
+            direction,
+        ])
     }
 
     /** The payment settled an invoice. */

@@ -6,6 +6,8 @@ import { IsInt, IsOptional, IsString, IsUrl, Matches, Max, MaxLength, Min, MinLe
 export class RegisterMcpConnectorInput {
     /** The namespace key. */
     @Field(() => String)
+    @IsString()
+    @MaxLength(31)
     @Matches(/^[a-z][a-z0-9-]{1,30}$/u)
     key!: string
 
@@ -18,12 +20,16 @@ export class RegisterMcpConnectorInput {
 
     /** The Streamable HTTP endpoint. */
     @Field(() => String)
+    @IsString()
+    @MaxLength(2000)
     @IsUrl({ require_tld: false, require_protocol: true })
     url!: string
 
     /** The credential NAME, or null. */
     @Field(() => String, { nullable: true })
     @IsOptional()
+    @IsString()
+    @MaxLength(81)
     @Matches(/^[A-Z][A-Z0-9_]{2,80}$/u)
     credentialRef?: string | null
 
