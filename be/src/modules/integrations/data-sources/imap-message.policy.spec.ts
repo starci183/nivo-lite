@@ -4,6 +4,7 @@ import type { AddressObject, Attachment, ParsedMail } from "mailparser"
 import {
     IMAP_MAX_TEXT,
     formatImapCursor as realFormatImapCursor,
+    isInvoiceXml as realIsInvoiceXml,
     messageToRow as realMessageToRow,
     parseImapCursor as realParseImapCursor,
     unreadableRow as realUnreadableRow,
@@ -19,6 +20,7 @@ const buildSubject = async () => {
                 useValue: {
                     parseImapCursor: realParseImapCursor,
                     formatImapCursor: realFormatImapCursor,
+                    isInvoiceXml: realIsInvoiceXml,
                     messageToRow: realMessageToRow,
                     unreadableRow: realUnreadableRow,
                 },
@@ -28,6 +30,7 @@ const buildSubject = async () => {
     return moduleRef.get<{
         parseImapCursor: typeof realParseImapCursor
         formatImapCursor: typeof realFormatImapCursor
+        isInvoiceXml: typeof realIsInvoiceXml
         messageToRow: typeof realMessageToRow
         unreadableRow: typeof realUnreadableRow
     }>(SUBJECT)
@@ -176,6 +179,45 @@ const mail = (partial: Partial<ParsedMail>): ParsedMail =>
         ...partial,
     })
 
+const registerInvoiceXml = () => {
+    it("keeps the text of a small XML e-invoice attachment and only the name, type and size of the rest", async () => {
+        const subject = await buildSubject()
+
+        const xml = "<HDon><TTChung>1</TTChung></HDon>"
+        const row = subject.messageToRow(
+            "INBOX",
+            "1",
+            5,
+            mail({
+                attachments: [
+                    mock<Attachment>({
+                        filename: "HD001.XML",
+                        contentType: "application/octet-stream",
+                        size: 40,
+                        content: Buffer.from(xml),
+                    }),
+                    mock<Attachment>({
+                        filename: undefined,
+                        contentType: "text/xml",
+                        size: 40,
+                        content: Buffer.from(xml),
+                    }),
+                    mock<Attachment>({ filename: "big.xml", contentType: "application/xml", size: 200_001 }),
+                ],
+            }),
+            new Date("2026-02-03T00:00:00.000Z"),
+        )
+
+        expect(row.data.attachments).toEqual([
+            { name: "HD001.XML", type: "application/octet-stream", size: 40, xml },
+            { name: null, type: "text/xml", size: 40, xml },
+            { name: "big.xml", type: "application/xml", size: 200_001 },
+        ])
+        expect(subject.isInvoiceXml("a.pdf", "application/pdf", 10)).toBe(false)
+        expect(subject.isInvoiceXml("a.xml", "application/pdf", 200_000)).toBe(true)
+    })
+}
+
 describe("imap message policy", () => {
     describe("cursors", () => {
         it("parses a saved cursor and writes one back", async () => {
@@ -193,6 +235,7 @@ describe("imap message policy", () => {
         registerHtmlEdgeCases()
         registerMessageFields()
         registerMessageFallbacks()
+        registerInvoiceXml()
     })
 
     describe("unreadableRow", () => {

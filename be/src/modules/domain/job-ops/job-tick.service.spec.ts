@@ -17,6 +17,7 @@ const EXPECTED = [
     ["content-tick", "content_tick", "content_tick", {}, 15],
     ["data-sync-tick", "data_sync", "data_sync", { tick: true }, 1],
     ["decisions-drain-work", "decisions", "decisions.drain-work", {}, 1],
+    ["marketing-tick", "marketing_tick", "marketing_tick", {}, 15],
     ["shifts-tick", "shifts_alerts", "shifts.tick", { kind: "tick" }, 1],
     ["zalo-refresh-tick", "zalo_refresh", "zalo_refresh", { withinMs: 25_200_000 }, 360],
 ] as const
@@ -41,7 +42,7 @@ const build = async (em: MockEntityManager) => {
 describe("JobTickService", () => {
     afterEach(() => jest.restoreAllMocks())
 
-    it("exposes exactly the eight migration job ids", () => {
+    it("exposes exactly the migration job ids", () => {
         expect(Object.keys(JOB_TICKS).sort()).toEqual(EXPECTED.map(([id]) => id).sort())
     })
 
