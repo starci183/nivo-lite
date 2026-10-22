@@ -1,4 +1,4 @@
-// migrations-sha256: 636772fcd9ccaeccf96b0af5191b607cb816be36fdb1d9fef6fa2d7078710bb2
+// migrations-sha256: 691e8da2eaa9b5f2c96a834b97fdc178a6165308f24891160c85591c7ef99279
 
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[]
 
@@ -356,6 +356,43 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"approval_requests": {
+                  Row: {
+                    "action": string,"amount": number | null,"approvers": NonNullable<Json>,"chain_step_id": string,"created_at": string,"department": string,"escalated_to": string | null,"excluded": NonNullable<Json>,"expires_at": string,"id": string,"policy": string,"reminded_at": string | null,"requested_by_agent_id": string | null,"resolved_at": string | null,"resolved_by": string | null,"status": string,"timeout_minutes": number,"unit": string,"verdicts": NonNullable<Json>,"workspace_id": string
+                  }
+                  Insert: {
+                    "action": string,"amount"?: number | null,"approvers"?: NonNullable<Json>,"chain_step_id": string,"created_at"?: string,"department": string,"escalated_to"?: string | null,"excluded"?: NonNullable<Json>,"expires_at": string,"id"?: string,"policy": string,"reminded_at"?: string | null,"requested_by_agent_id"?: string | null,"resolved_at"?: string | null,"resolved_by"?: string | null,"status"?: string,"timeout_minutes": number,"unit"?: string,"verdicts"?: NonNullable<Json>,"workspace_id": string
+                  }
+                  Update: {
+                    "action"?: string,"amount"?: number | null,"approvers"?: NonNullable<Json>,"chain_step_id"?: string,"created_at"?: string,"department"?: string,"escalated_to"?: string | null,"excluded"?: NonNullable<Json>,"expires_at"?: string,"id"?: string,"policy"?: string,"reminded_at"?: string | null,"requested_by_agent_id"?: string | null,"resolved_at"?: string | null,"resolved_by"?: string | null,"status"?: string,"timeout_minutes"?: number,"unit"?: string,"verdicts"?: NonNullable<Json>,"workspace_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "approval_requests_agent_fkey"
+      columns: ["requested_by_agent_id"]
+isOneToOne: false
+      referencedRelation: "agents"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "approval_requests_escalated_to_fkey"
+      columns: ["escalated_to"]
+isOneToOne: false
+      referencedRelation: "workspace_members"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "approval_requests_resolved_by_fkey"
+      columns: ["resolved_by"]
+isOneToOne: false
+      referencedRelation: "workspace_members"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "approval_requests_workspace_id_fkey"
+      columns: ["workspace_id"]
+isOneToOne: false
+      referencedRelation: "workspaces"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"authority": {
                   Row: {
                     "brand_voice": string,"demo_seeded_at": string | null,"goal_first_reply_minutes": number | null,"goal_new_customers": number | null,"goal_note": string,"goal_revenue_vnd": number | null,"limits_note": string,"policies": string,"reply_style": string,"updated_at": string,"updated_by": string | null,"workspace_id": string
@@ -396,13 +433,13 @@ isOneToOne: false
                   ]
                 },"authority_rules": {
                   Row: {
-                    "action": string,"department": string,"id": string,"limit_vnd": number | null,"mode": string,"note": string,"required_fields": (string)[],"updated_at": string,"workspace_id": string
+                    "action": string,"agents": (string)[],"approval_policy": string,"approver_members": (string)[],"approver_roles": (string)[],"approver_rooms": (string)[],"ask_max": number | null,"auto_max": number | null,"department": string,"id": string,"limit_vnd": number | null,"mode": string,"note": string,"required_fields": (string)[],"timeout_minutes": number,"unit": string,"updated_at": string,"workspace_id": string
                   }
                   Insert: {
-                    "action": string,"department": string,"id"?: string,"limit_vnd"?: number | null,"mode"?: string,"note"?: string,"required_fields"?: (string)[],"updated_at"?: string,"workspace_id": string
+                    "action": string,"agents"?: (string)[],"approval_policy"?: string,"approver_members"?: (string)[],"approver_roles"?: (string)[],"approver_rooms"?: (string)[],"ask_max"?: number | null,"auto_max"?: number | null,"department": string,"id"?: string,"limit_vnd"?: number | null,"mode"?: string,"note"?: string,"required_fields"?: (string)[],"timeout_minutes"?: number,"unit"?: string,"updated_at"?: string,"workspace_id": string
                   }
                   Update: {
-                    "action"?: string,"department"?: string,"id"?: string,"limit_vnd"?: number | null,"mode"?: string,"note"?: string,"required_fields"?: (string)[],"updated_at"?: string,"workspace_id"?: string
+                    "action"?: string,"agents"?: (string)[],"approval_policy"?: string,"approver_members"?: (string)[],"approver_roles"?: (string)[],"approver_rooms"?: (string)[],"ask_max"?: number | null,"auto_max"?: number | null,"department"?: string,"id"?: string,"limit_vnd"?: number | null,"mode"?: string,"note"?: string,"required_fields"?: (string)[],"timeout_minutes"?: number,"unit"?: string,"updated_at"?: string,"workspace_id"?: string
                   }
                   Relationships: [
                     {
@@ -1406,16 +1443,22 @@ isOneToOne: false
                   ]
                 },"decisions": {
                   Row: {
-                    "action": string,"after": Json | null,"before": Json | null,"created_at": string,"decided_by": string,"decider_kind": string,"department": string,"id": string,"lead_id": string | null,"note": string | null,"outcome": string,"reason": string | null,"work_item_id": string | null,"workspace_id": string
+                    "action": string,"after": Json | null,"before": Json | null,"created_at": string,"decided_by": string,"decided_by_member_id": string | null,"decider_kind": string,"department": string,"id": string,"lead_id": string | null,"note": string | null,"outcome": string,"reason": string | null,"work_item_id": string | null,"workspace_id": string
                   }
                   Insert: {
-                    "action": string,"after"?: Json | null,"before"?: Json | null,"created_at"?: string,"decided_by": string,"decider_kind": string,"department": string,"id"?: string,"lead_id"?: string | null,"note"?: string | null,"outcome": string,"reason"?: string | null,"work_item_id"?: string | null,"workspace_id": string
+                    "action": string,"after"?: Json | null,"before"?: Json | null,"created_at"?: string,"decided_by": string,"decided_by_member_id"?: string | null,"decider_kind": string,"department": string,"id"?: string,"lead_id"?: string | null,"note"?: string | null,"outcome": string,"reason"?: string | null,"work_item_id"?: string | null,"workspace_id": string
                   }
                   Update: {
-                    "action"?: string,"after"?: Json | null,"before"?: Json | null,"created_at"?: string,"decided_by"?: string,"decider_kind"?: string,"department"?: string,"id"?: string,"lead_id"?: string | null,"note"?: string | null,"outcome"?: string,"reason"?: string | null,"work_item_id"?: string | null,"workspace_id"?: string
+                    "action"?: string,"after"?: Json | null,"before"?: Json | null,"created_at"?: string,"decided_by"?: string,"decided_by_member_id"?: string | null,"decider_kind"?: string,"department"?: string,"id"?: string,"lead_id"?: string | null,"note"?: string | null,"outcome"?: string,"reason"?: string | null,"work_item_id"?: string | null,"workspace_id"?: string
                   }
                   Relationships: [
                     {
+      foreignKeyName: "decisions_decided_by_member_id_fkey"
+      columns: ["decided_by_member_id"]
+isOneToOne: false
+      referencedRelation: "workspace_members"
+      referencedColumns: ["id"]
+    },{
       foreignKeyName: "decisions_lead_id_fkey"
       columns: ["lead_id"]
 isOneToOne: false
@@ -2641,6 +2684,37 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"member_grants": {
+                  Row: {
+                    "action": string,"id": string,"max_amount": number | null,"member_id": string,"unit": string,"updated_at": string,"workspace_id": string
+                  }
+                  Insert: {
+                    "action": string,"id"?: string,"max_amount"?: number | null,"member_id": string,"unit"?: string,"updated_at"?: string,"workspace_id": string
+                  }
+                  Update: {
+                    "action"?: string,"id"?: string,"max_amount"?: number | null,"member_id"?: string,"unit"?: string,"updated_at"?: string,"workspace_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "member_grants_action_fkey"
+      columns: ["action"]
+isOneToOne: false
+      referencedRelation: "authority_actions"
+      referencedColumns: ["action"]
+    },{
+      foreignKeyName: "member_grants_member_id_fkey"
+      columns: ["member_id"]
+isOneToOne: false
+      referencedRelation: "workspace_members"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "member_grants_workspace_id_fkey"
+      columns: ["workspace_id"]
+isOneToOne: false
+      referencedRelation: "workspaces"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"messages": {
                   Row: {
                     "agent_id": string | null,"author_kind": string,"author_name": string,"body": string,"card": Json | null,"created_at": string,"id": string,"lead_id": string | null,"room": string | null,"staff_id": string | null,"work_item_id": string | null,"workspace_id": string
@@ -3328,13 +3402,13 @@ isOneToOne: false
                   ]
                 },"responsibilities": {
                   Row: {
-                    "created_at": string,"due_at": string | null,"id": string,"lead_id": string,"next_action": string,"owner_agent_id": string | null,"owner_kind": string,"owner_name": string,"status": string,"title": string,"workspace_id": string,"lead_step_json": Json | null
+                    "created_at": string,"due_at": string | null,"id": string,"lead_id": string,"next_action": string,"owner_agent_id": string | null,"owner_kind": string,"owner_member_id": string | null,"owner_name": string,"status": string,"title": string,"workspace_id": string,"lead_step_json": Json | null
                   }
                   Insert: {
-                    "created_at"?: string,"due_at"?: string | null,"id"?: string,"lead_id": string,"next_action": string,"owner_agent_id"?: string | null,"owner_kind": string,"owner_name": string,"status"?: string,"title": string,"workspace_id": string
+                    "created_at"?: string,"due_at"?: string | null,"id"?: string,"lead_id": string,"next_action": string,"owner_agent_id"?: string | null,"owner_kind": string,"owner_member_id"?: string | null,"owner_name": string,"status"?: string,"title": string,"workspace_id": string
                   }
                   Update: {
-                    "created_at"?: string,"due_at"?: string | null,"id"?: string,"lead_id"?: string,"next_action"?: string,"owner_agent_id"?: string | null,"owner_kind"?: string,"owner_name"?: string,"status"?: string,"title"?: string,"workspace_id"?: string
+                    "created_at"?: string,"due_at"?: string | null,"id"?: string,"lead_id"?: string,"next_action"?: string,"owner_agent_id"?: string | null,"owner_kind"?: string,"owner_member_id"?: string | null,"owner_name"?: string,"status"?: string,"title"?: string,"workspace_id"?: string
                   }
                   Relationships: [
                     {
@@ -3348,6 +3422,12 @@ isOneToOne: false
       columns: ["owner_agent_id"]
 isOneToOne: false
       referencedRelation: "agents"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "responsibilities_owner_member_id_fkey"
+      columns: ["owner_member_id"]
+isOneToOne: false
+      referencedRelation: "workspace_members"
       referencedColumns: ["id"]
     },{
       foreignKeyName: "responsibilities_workspace_id_fkey"
@@ -4752,6 +4832,9 @@ isOneToOne: false
 { Args: { "ws": string }; Returns: {
               "created_at": string,"display_name": string,"email": string,"last_sign_in_at": string,"role": string,"staff_id": string,"status": string,"user_id": string
             }[]
+                           },
+"workspace_owner_member":
+{ Args: { "p_workspace": string }; Returns: string
                            },
 "workspace_storage_bytes":
 { Args: { "p_workspace": string }; Returns: number
