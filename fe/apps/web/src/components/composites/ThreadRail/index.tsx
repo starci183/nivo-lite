@@ -1,4 +1,5 @@
-import { Button, Form, Input, ListBox, Text } from "@starci/grammar/common"
+import { Button, Form, Input, Text } from "@starci/grammar/common"
+import { SinglePickList } from "@/components/leaves/SinglePickList"
 import type { ThreadRailForm, ThreadRowView } from "@/modules/types"
 import { FORM_ACTIONS_CLASS_NAME, FORM_CLASS_NAME, HEAD_CLASS_NAME, RAIL_CLASS_NAME } from "./classNames"
 
@@ -80,20 +81,15 @@ export const ThreadRail = (props: ThreadRailProps) => (
                 onCancelForm={props.onCancelForm}
             />
         ) : null}
-        <ListBox
+        <SinglePickList
             label={props.listLabel}
-            selectionMode="single"
-            isLoading={props.isSkeleton}
-            loadingRows={3}
-            selectedIds={props.rows.filter((row) => row.isSelected).map((row) => row.id)}
-            onSelectionChange={(ids) => {
-                const picked = props.rows.find((row) => row.id === ids[0])
-                if (picked) props.onPick(picked.id)
-            }}
-            items={props.rows.map((row) => ({
+            isSkeleton={props.isSkeleton}
+            onPick={props.onPick}
+            rows={props.rows.map((row) => ({
                 id: row.id,
                 label: row.title,
                 description: [row.statusLabel, row.countLabel].join(" · "),
+                isSelected: row.isSelected,
             }))}
         />
     </div>

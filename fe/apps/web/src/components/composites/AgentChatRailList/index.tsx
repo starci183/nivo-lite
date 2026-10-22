@@ -1,6 +1,6 @@
 import { nivoIconSource } from "@/components/leaves/Icon"
 import type { ModuleIconName } from "@/modules/types"
-import { ListBox } from "@starci/grammar/common"
+import { SinglePickList } from "@/components/leaves/SinglePickList"
 import { AgentMark } from "@/components/leaves/AgentMark"
 
 /** One conversation of the rail, with every word resolved. */
@@ -24,22 +24,20 @@ interface AgentChatRailListProps {
     readonly onPick: (id: string, kind: "test" | "customer") => void
 }
 
-/** The conversations of the agent; the grammar list owns the rows, the selected face and the keyboard model. */
+/** The conversations of the agent, each wearing the agent's mark. */
 export const AgentChatRailList = (props: AgentChatRailListProps) => (
-    <ListBox
+    <SinglePickList
         label={props.label}
-        selectionMode="single"
-        isLoading={props.isSkeleton}
-        loadingRows={3}
-        selectedIds={props.rows.filter((row) => row.isSelected).map((row) => row.id)}
-        onSelectionChange={(ids) => {
-            const picked = props.rows.find((row) => row.id === ids[0])
+        isSkeleton={props.isSkeleton}
+        onPick={(id) => {
+            const picked = props.rows.find((row) => row.id === id)
             if (picked) props.onPick(picked.id, picked.kind)
         }}
-        items={props.rows.map((row) => ({
+        rows={props.rows.map((row) => ({
             id: row.id,
             label: row.title,
             description: row.description,
+            isSelected: row.isSelected,
             leading: (
                 <AgentMark
                     glyph={nivoIconSource(props.glyph, "leading")}

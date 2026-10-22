@@ -1,7 +1,7 @@
 import type { ThreadMessageType, WorkChainType } from "@/modules/api"
 import type { ThreadApprovalCardView, ChainPanelView } from "@/modules/types"
 import { chainStatusTone, stepKindKey } from "./chain"
-import { countdownOf, hasPassed } from "./countdown"
+import { clockOf, countdownOf, hasPassed } from "./countdown"
 
 /** The words of the work threads catalog the view builders use. */
 export type ThreadWords = (key: string, values?: Record<string, string | number>) => string
@@ -35,18 +35,23 @@ const excludedKey = (reason: string): string => {
     return "excludedOverLimit"
 }
 
-/** How a settled card reads: who decided it and how; an empty text while it waits. */
+/** How a settled card reads: who decided it, how and at what time; an empty text while it waits. */
 const decidedLineOf = (card: NonNullable<ThreadMessageType["approval"]>, t: ThreadWords): string => {
     if (card.outcome === "pending") return ""
     if (card.outcome === "expired") return t("decidedExpired")
-    return t(card.outcome === "approved" ? "decidedApproved" : "decidedRejected", { name: card.decidedByName ?? "" })
+    return t(card.outcome === "approved" ? "decidedApproved" : "decidedRejected", {
+        name: card.decidedByName ?? "",
+        time: card.decidedAt === null ? "" : clockOf(card.decidedAt),
+    })
 }
 
-/** The line under a card's policy: how long it has left, or that it ran out. */
-const expiryLineOf = (card: NonNullable<ThreadMessageType["approval"]>, now: number, t: ThreadWords): string =>
-    card.outcome !== "pending" || hasPassed(card.expiresAt, now)
+/** The line under a card's policy: how long it has left, that it ran out, or nothing once a person decided it. */
+const expiryLineOf = (card: NonNullable<ThreadMessageType["approval"]>, now: number, t: ThreadWords): string => {
+    if (card.outcome === "approved" || card.outcome === "rejected") return ""
+    return card.outcome === "expired" || hasPassed(card.expiresAt, now)
         ? t("expiredLine")
         : t("expiresIn", { time: countdownOf(card.expiresAt, now) })
+}
 
 /** The approval card of a message as the card draws it. */
 export const approvalViewOf = (

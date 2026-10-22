@@ -8,5 +8,11 @@ export const countdownOf = (expiresAt: string, now: number): string => {
     return `${Math.floor(seconds / 60)}:${twoDigits(seconds % 60)}`
 }
 
+/** The local wall-clock time of an instant, as hours and minutes ("09:42"). */
+export const clockOf = (at: string): string => {
+    const date = new Date(at)
+    return `${twoDigits(date.getHours())}:${twoDigits(date.getMinutes())}`
+}
+
 /** Whether the instant has passed. */
 export const hasPassed = (expiresAt: string, now: number): boolean => Date.parse(expiresAt) <= now
