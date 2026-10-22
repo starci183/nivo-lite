@@ -16,6 +16,7 @@ export type ConsoleDestination = {
     readonly label:
         | "navOverview"
         | "navOffice"
+        | "navThreads"
         | "navAuthority"
         | "navInbox"
         | "navLeads"
@@ -41,6 +42,7 @@ export type ConsoleDestination = {
 export const DESTINATIONS: ReadonlyArray<ConsoleDestination> = [
     { key: "chat", label: "navOffice", route: OFFICE_ROUTE, icon: "community", group: "work" },
     { key: "overview", label: "navOverview", route: "/dashboard", icon: "overview", group: "work" },
+    { key: "threads", label: "navThreads", route: "/threads", icon: "review", group: "work" },
     { key: "leads", label: "navLeads", route: LEADS_ROUTE, icon: "account", group: "work" },
     {
         key: "responsibilities",

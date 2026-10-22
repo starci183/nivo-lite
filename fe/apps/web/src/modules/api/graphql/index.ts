@@ -80,6 +80,9 @@ import type {
     SalesWorkEditsInput,
     SaveContractInput,
     StopFailedStepInput,
+    MentionDirectoryQuery,
+    WorkChainQuery,
+    WorkThreadQuery,
 } from "./__generated__/graphql"
 import type { WireInput } from "./types"
 
@@ -378,3 +381,9 @@ export type SalesWorkEditsRequest = WireInput<SalesWorkEditsInput>
 export type SaveContractRequest = WireInput<SaveContractInput>
 /** The `StopFailedStepInput` of the back end contract as callers build it, optional keys optional. */
 export type StopFailedStepRequest = WireInput<StopFailedStepInput>
+/** The `MentionDirectoryType` object of the back end contract, as the operations of this app select it. */
+export type MentionDirectoryType = MentionDirectoryQuery["mentionDirectory"]
+/** The `WorkChainType` object of the back end contract, as the operations of this app select it. */
+export type WorkChainType = WorkChainQuery["workChain"]
+/** The `ThreadMessageType` object of the back end contract, as the operations of this app select it. */
+export type ThreadMessageType = WorkThreadQuery["workThread"]["messages"][number]
