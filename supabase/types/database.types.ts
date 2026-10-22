@@ -175,13 +175,13 @@ isOneToOne: false
                   ]
                 },"agents": {
                   Row: {
-                    "approval_rule": string,"created_at": string,"greeting": string,"handle": string,"id": string,"instructions": string,"knowledge": string,"module": string,"name": string,"role": string,"status": string,"workspace_id": string
+                    "approval_rule": string,"assignable_roles": (string)[],"assignable_rooms": (string)[],"can_tag_agent_ids": (string)[],"created_at": string,"fallback_member_id": string | null,"greeting": string,"handle": string,"id": string,"instructions": string,"knowledge": string,"module": string,"name": string,"owner_member_id": string | null,"role": string,"status": string,"workspace_id": string
                   }
                   Insert: {
-                    "approval_rule"?: string,"created_at"?: string,"greeting"?: string,"handle": string,"id"?: string,"instructions": string,"knowledge"?: string,"module"?: string,"name": string,"role": string,"status"?: string,"workspace_id": string
+                    "approval_rule"?: string,"assignable_roles"?: (string)[],"assignable_rooms"?: (string)[],"can_tag_agent_ids"?: (string)[],"created_at"?: string,"fallback_member_id"?: string | null,"greeting"?: string,"handle": string,"id"?: string,"instructions": string,"knowledge"?: string,"module"?: string,"name": string,"owner_member_id"?: string | null,"role": string,"status"?: string,"workspace_id": string
                   }
                   Update: {
-                    "approval_rule"?: string,"created_at"?: string,"greeting"?: string,"handle"?: string,"id"?: string,"instructions"?: string,"knowledge"?: string,"module"?: string,"name"?: string,"role"?: string,"status"?: string,"workspace_id"?: string
+                    "approval_rule"?: string,"assignable_roles"?: (string)[],"assignable_rooms"?: (string)[],"can_tag_agent_ids"?: (string)[],"created_at"?: string,"fallback_member_id"?: string | null,"greeting"?: string,"handle"?: string,"id"?: string,"instructions"?: string,"knowledge"?: string,"module"?: string,"name"?: string,"owner_member_id"?: string | null,"role"?: string,"status"?: string,"workspace_id"?: string
                   }
                   Relationships: [
                     {
@@ -4703,6 +4703,9 @@ isOneToOne: false
 { Args: { "p_dedupe_key"?: string,"p_outbox"?: string,"p_workspace": string }; Returns: {
               "id": string,"state": string,"target_found": boolean,"work_item_id": string,"work_status": string
             }[]
+                           },
+"seat_office_member":
+{ Args: { "p_room": string,"p_user": string,"p_workspace": string }; Returns: boolean
                            },
 "session_bootstrap":
 { Args: Record<PropertyKey, never>; Returns: Json

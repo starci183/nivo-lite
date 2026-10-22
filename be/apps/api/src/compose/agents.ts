@@ -4,6 +4,7 @@ import type { DynamicModule } from "@nestjs/common"
 import { UsageGateService } from "@modules/domain/ai-usage-events"
 import { AgentConnectionsModule } from "@modules/domain/agent-connections"
 import { AgentToolsModule } from "@modules/domain/agent-tools"
+import { AgentProfileModule } from "@modules/domain/agent-profile"
 import { AGENTS_SYNC_FRESH_MS, AgentsModule } from "@modules/domain/agents"
 import { AI_GENERATIONS_POLL_MS, AiGenerationsModule, TextGeneratorService } from "@modules/domain/ai-generations"
 import { ApprovalRequestsModule } from "@modules/domain/approval-requests"
@@ -27,6 +28,8 @@ export const agentsModules = (options: ApiOptions): Array<DynamicModule> => [
         },
         syncFreshMs: AGENTS_SYNC_FRESH_MS,
     }),
+    // The work threads port stays unbound until the threads capability joins the app: an assignment is then refused, never faked.
+    AgentProfileModule.register({ isGlobal: true }),
     AgentConnectionsModule.register({ isGlobal: true }),
     AiGenerationsModule.register({
         isGlobal: true,

@@ -1,5 +1,7 @@
 export { WorkspaceSeedModule } from "./workspace-seed.module"
 export { WorkspaceSeedService } from "./workspace-seed.service"
 export { WorkspaceProfileService } from "./workspace-profile.service"
+export { OfficeSeedService } from "./office-seed.service"
+export type { OfficeCommand } from "./office-seed.contracts"
 export type { ProfileCommand } from "./workspace-profile.contracts"
 export { parseWorkspaceSeedConfig } from "./workspace-seed.config"

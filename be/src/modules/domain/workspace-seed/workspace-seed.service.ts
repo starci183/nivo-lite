@@ -1,5 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
+import type { WorkspaceRole } from "@modules/domain/workspace-members"
 import { WorkspacesService } from "@modules/domain/workspaces"
 import type { Secret } from "@modules/platform/config"
 import { WorkspaceSeedError, WorkspaceSeedErrorCode } from "./errors/workspace-seed.error"
@@ -98,6 +99,22 @@ export class WorkspaceSeedService {
             const authentication = request.principalToken === undefined ? "password-session" : "existing-session"
             return { report: report("ensure", workspaceId, authentication), ownerId }
         })
+    }
+
+    /**
+     * Ensures one more account and its seat in a workspace the authenticated owner holds, and answers the account's Auth user. An
+     * existing account keeps its credential and an existing seat keeps its state; a conflicting role is refused.
+     */
+    async ensureSeat(ownerId: string, workspaceId: string, account: SeedAccount, role: WorkspaceRole): Promise<string> {
+        const userId = await this.ensureUser(account, await this.findUsers())
+        await this.members.ensure(ownerId, {
+            workspaceId,
+            userId,
+            role,
+            staffId: null,
+            displayName: account.name,
+        })
+        return userId
     }
 
     /** Delegates role authorization to WorkspaceMembersService after authenticating the actual session. */

@@ -42,6 +42,8 @@ export const AgentInstanceHeader = (props: AgentInstanceHeaderProps) => {
                         ? t("noVersion")
                         : t("versionInUse", { version: header.activeVersion }),
                 liveLabel: header.isLive ? t("liveOn") : t("liveOff"),
+                profileHref: header.profileHref,
+                profileLabel: t("agentProfileLink"),
                 isLoading: header.isLoading,
             }}
         />

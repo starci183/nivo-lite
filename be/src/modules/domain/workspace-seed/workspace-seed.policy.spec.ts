@@ -1,7 +1,7 @@
 import { Test } from "@nestjs/testing"
 import { Secret } from "@modules/platform/config"
 import { WorkspaceSeedError, WorkspaceSeedErrorCode } from "./errors/workspace-seed.error"
-import { assertSeedScope, readProfileInput, readSeedInput } from "./workspace-seed.policy"
+import { assertSeedScope, readEnsureFor, readProfileInput, readSeedInput } from "./workspace-seed.policy"
 
 const SUBJECT = Symbol("workspace-seed.policy")
 const WS = "11111111-1111-4111-8111-111111111111"
@@ -17,12 +17,15 @@ const WIRE = {
 }
 const build = async () => {
     const moduleRef = await Test.createTestingModule({
-        providers: [{ provide: SUBJECT, useValue: { readSeedInput, assertSeedScope, readProfileInput } }],
+        providers: [
+            { provide: SUBJECT, useValue: { readSeedInput, assertSeedScope, readProfileInput, readEnsureFor } },
+        ],
     }).compile()
     return moduleRef.get<{
         readSeedInput: typeof readSeedInput
         assertSeedScope: typeof assertSeedScope
         readProfileInput: typeof readProfileInput
+        readEnsureFor: typeof readEnsureFor
     }>(SUBJECT)
 }
 
@@ -243,6 +246,46 @@ describe("workspace profile private input", () => {
         expect(() => subject.readProfileInput(new Secret(wire))).toThrow(WorkspaceSeedError)
         expect(() => subject.readProfileInput(new Secret(wire))).toThrow(
             expect.objectContaining({ code: WorkspaceSeedErrorCode.InputInvalid }),
+        )
+    })
+})
+
+describe("workspace seed ensure input bound to a workspace and an owner", () => {
+    const NAMED = { ...WIRE, workspaceId: undefined, workspaceName: "Named Workspace" }
+    const secretOf = (value: unknown): Secret => new Secret(JSON.stringify(value))
+
+    it("answers the request when the owner and the workspace name match, ignoring case and spaces of the owner", async () => {
+        const subject = await build()
+
+        expect(subject.readEnsureFor(secretOf(NAMED), " OWNER@example.test ", "Named Workspace")).toMatchObject({
+            workspaceName: "Named Workspace",
+            owner: { email: "owner@example.test" },
+        })
+    })
+
+    it.each([
+        { name: "another owner", owner: "other@example.test", workspace: "Named Workspace" },
+        { name: "no owner", owner: undefined, workspace: "Named Workspace" },
+        { name: "another workspace", owner: "owner@example.test", workspace: "Production" },
+    ])("refuses $name", async ({ owner, workspace }) => {
+        const subject = await build()
+
+        expect(() => subject.readEnsureFor(secretOf(NAMED), owner, workspace)).toThrow(WorkspaceSeedError)
+    })
+
+    it("refuses a role-change input", async () => {
+        const subject = await build()
+        const role = {
+            schema: "starci/app-workspace-input@1",
+            action: "role",
+            workspaceId: WS,
+            memberId: USER,
+            role: "staff",
+            principalToken: "token",
+        }
+
+        expect(() => subject.readEnsureFor(secretOf(role), "owner@example.test", "Named Workspace")).toThrow(
+            WorkspaceSeedError,
         )
     })
 })

@@ -2,6 +2,7 @@ import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
 import { AgentsQueueModule } from "@modules/queues/agents"
 import { AgentBundleService } from "./agent-bundle.service"
+import { AgentOwnershipService } from "./agent-ownership.service"
 import { AGENTS_INSTALLATIONS, AGENTS_KNOWLEDGE, AGENTS_MODULES, AGENTS_OPTIONS } from "./agents.decorators"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./agents.module-definition"
 import { AgentsService } from "./agents.service"
@@ -25,8 +26,16 @@ export class AgentsModule extends ConfigurableModuleClass {
             PauseClient,
             AgentsService,
             AgentBundleService,
+            AgentOwnershipService,
         ]
-        const exported = [AgentsQueueModule, AGENTS_INSTALLATIONS, PauseClient, AgentsService, AgentBundleService]
+        const exported = [
+            AgentsQueueModule,
+            AGENTS_INSTALLATIONS,
+            PauseClient,
+            AgentsService,
+            AgentBundleService,
+            AgentOwnershipService,
+        ]
         const full =
             options.setupOnly === true
                 ? { providers: [], exports: [] }

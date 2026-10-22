@@ -33,7 +33,8 @@ export {
     useMutateApproveMcpConnectorSwr,
     useMutateApproveVideoProjectSwr,
 } from "./api"
-export { useMutateArchiveVideoProjectSwr, useMutateAskGuideSwr, useMutateAssignResponsibilitySwr } from "./api"
+export { useMutateArchiveVideoProjectSwr, useMutateAskGuideSwr, useMutateAssignAgentWorkSwr } from "./api"
+export { useMutateAssignResponsibilitySwr } from "./api"
 export { useMutateAuthorizeDriveSwr, useMutateAuthorizeGoogleSwr, useMutateAuthorizeMetaSwr } from "./api"
 export { useMutateAuthorizeZaloSwr, useMutateCancelBookingSwr, useMutateCancelHiringOfferSwr } from "./api"
 export { useMutateCancelInventoryPoSwr, useMutateCancelOfficeCommandSwr } from "./api"
@@ -127,7 +128,7 @@ export { useQueryAdminHealthSwr, useQueryAdminSessionSwr, useQueryAdminWorkspace
 export { useQueryAdminWorkspacesSwr, useQueryAgentChatConversationsSwr, useQueryAgentChatMessagesSwr } from "./api"
 export { useQueryAgentChatPageSwr, useQueryAgentChatTurnStatusSwr, useQueryAgentConnectionsSwr } from "./api"
 export { useQueryAgentDashboardSwr, useQueryAgentGenerationStatusSwr, useQueryAgentSyncStatusSwr } from "./api"
-export { useQueryAgentsSwr, useQueryApiKeysSwr, useQueryAuthoritySwr } from "./api"
+export { useQueryAgentPageSwr, useQueryAgentsSwr, useQueryApiKeysSwr, useQueryAuthoritySwr } from "./api"
 export { useQueryAutomationGoogleAccountsSwr, useQueryAutomationsSwr, useQueryBillingPlanQuotesSwr } from "./api"
 export { useQueryBillingPlanSwr, useQueryBillingPlansSwr, useQueryBillingReviewTransactionsSwr } from "./api"
 export { useQueryBillingStorageSwr, useQueryBillingWorkspaceSwr, useQueryBillingWorkspacesSwr } from "./api"

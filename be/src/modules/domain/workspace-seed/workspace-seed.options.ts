@@ -1,5 +1,6 @@
 import type { InjectionToken, Type } from "@nestjs/common"
 import type { Secret } from "@modules/platform/config"
+import type { OfficeAuthorityPort } from "./office-seed.port"
 import type { SeedAgentRecords, SeedConnectors, SeedSources, SeedToolGrants } from "./workspace-seed.port"
 
 /** One user the Auth administrator returns. */
@@ -102,6 +103,8 @@ export interface WorkspaceSeedPorts {
     readonly toolGrants: Type<SeedToolGrants>
     /** The gateway console class, already provided in the app, behind the connectors port. */
     readonly connectors: Type<SeedConnectors>
+    /** The authority capability behind the rules and grants of an office run; absent while the app has none. */
+    readonly officeAuthority?: Type<OfficeAuthorityPort>
 }
 
 /** What the workspace seed takes from the app root. */
@@ -114,6 +117,8 @@ export interface WorkspaceSeedOptions {
     readonly input?: Secret
     /** Private profile input (`nivo/workspace-profile-input@1`): the connector endpoints of a profile run. */
     readonly profileInput?: Secret
+    /** Private office input (`nivo/workspace-office-input@1`): the accounts of the two people the ensure input does not carry. */
+    readonly officeInput?: Secret
     /** Writes the closed public receipt, never credentials. */
     readonly print: (line: string) => void
 }

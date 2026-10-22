@@ -395,3 +395,56 @@ describe("WorkspaceSeedService / recovery refusal", () => {
         expect(print).not.toHaveBeenCalled()
     })
 })
+
+describe("WorkspaceSeedService / ensureSeat", () => {
+    it("seats an existing account as the owner without creating or changing anything", async () => {
+        const { seed, auth, members } = await build()
+
+        await expect(seed.ensureSeat(OWNER, WS, { email: "staff@example.test", name: "Staff" }, "staff")).resolves.toBe(
+            STAFF,
+        )
+
+        expect(auth.createUser).not.toHaveBeenCalled()
+        expect(members.ensure).toHaveBeenCalledWith(OWNER, {
+            workspaceId: WS,
+            userId: STAFF,
+            role: "staff",
+            staffId: null,
+            displayName: "Staff",
+        })
+    })
+
+    it("creates a missing account from its private password and seats it", async () => {
+        const { seed, auth, members } = await build()
+        auth.createUser.mockResolvedValue({
+            data: { user: { id: "55555555-5555-4555-8555-555555555555" } },
+            error: null,
+        })
+
+        await expect(
+            seed.ensureSeat(
+                OWNER,
+                WS,
+                { email: "ha@example.test", name: "Chi Ha", password: new Secret("ha-private") },
+                "manager",
+            ),
+        ).resolves.toBe("55555555-5555-4555-8555-555555555555")
+
+        expect(auth.createUser).toHaveBeenCalledWith({
+            email: "ha@example.test",
+            password: "ha-private",
+            email_confirm: true,
+            user_metadata: { full_name: "Chi Ha" },
+        })
+        expect(members.ensure).toHaveBeenCalledWith(OWNER, expect.objectContaining({ role: "manager" }))
+    })
+
+    it("refuses a missing account that has no initial password before any seat", async () => {
+        const { seed, members } = await build()
+
+        await expect(
+            seed.ensureSeat(OWNER, WS, { email: "nobody@example.test", name: "Nobody" }, "staff"),
+        ).rejects.toMatchObject({ code: WorkspaceSeedErrorCode.PasswordRequired })
+        expect(members.ensure).not.toHaveBeenCalled()
+    })
+})

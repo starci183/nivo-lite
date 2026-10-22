@@ -34,6 +34,7 @@ export {
     CONSOLE_ROUTES,
     agentChatConversationHref,
     agentChatHref,
+    agentProfileHref,
     agentSetupHref,
     leadFlowHref,
     leadHref,

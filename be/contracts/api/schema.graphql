@@ -646,6 +646,18 @@ type AgentAckType {
   ok: Boolean!
 }
 
+type AgentAppliedRuleType {
+  action: String!
+  department: String!
+  limitVnd: Float
+  mode: String!
+  note: String!
+}
+
+type AgentAssignmentType {
+  threadId: ID!
+}
+
 type AgentChatConversationType {
   channel: String!
   createdAt: String!
@@ -887,6 +899,72 @@ input AgentIdInput {
   agentId: ID!
 }
 
+type AgentOwnerCardType {
+  active: Boolean!
+  memberId: ID!
+  name: String!
+  role: String!
+  roomId: String
+}
+
+type AgentOwnersType {
+  fallbackMemberId: ID
+  ownerMemberId: ID!
+}
+
+type AgentOwnershipType {
+  agentId: ID!
+  assignableRoles: [String!]!
+  assignableRooms: [AgentRoomLabelType!]!
+  canTag: [AgentTagTargetType!]!
+  fallback: AgentOwnerCardType
+  owner: AgentOwnerCardType
+  responder: AgentOwnersType!
+}
+
+type AgentPageHeadType {
+  handle: String!
+  id: ID!
+  module: String!
+  name: String!
+  operatingMode: String
+  role: String!
+  roomName: String
+  status: String!
+}
+
+type AgentPageType {
+  agent: AgentPageHeadType!
+  ownership: AgentOwnershipType!
+  recent: AgentRecentRegionType!
+  rules: AgentRulesRegionType!
+}
+
+type AgentRecentRegionType {
+  data: [AgentRecentWorkType!]
+  ok: Boolean!
+}
+
+type AgentRecentWorkType {
+  action: String!
+  at: String!
+  customer: String!
+  id: ID!
+  leadId: ID
+  status: String!
+  title: String!
+}
+
+type AgentRoomLabelType {
+  key: String!
+  name: String!
+}
+
+type AgentRulesRegionType {
+  data: [AgentAppliedRuleType!]
+  ok: Boolean!
+}
+
 type AgentSummaryType {
   createdAt: String!
   handle: String!
@@ -903,6 +981,13 @@ type AgentSyncStatusType {
   error: String
   state: String!
   syncedVersion: Int
+}
+
+type AgentTagTargetType {
+  id: ID!
+  module: String!
+  name: String!
+  status: String!
 }
 
 input AgentTextsInput {
@@ -1003,6 +1088,11 @@ input AskKnowledgeInput {
   audience: String!
   module: String!
   question: String!
+}
+
+input AssignAgentWorkInput {
+  agentId: ID!
+  text: String!
 }
 
 input AssignResponsibilityInput {
@@ -4662,6 +4752,7 @@ type Mutation {
   approveVideoProject(input: ApproveVideoProjectInput!): VideoProjectType!
   archiveVideoProject(input: ArchiveVideoProjectInput!): VideoProjectType!
   askGuide(input: AskGuideInput!): GuideAskedType!
+  assignAgentWork(input: AssignAgentWorkInput!): AgentAssignmentType!
   assignResponsibility(input: AssignResponsibilityInput!): LeadResponsibilityType!
   assignWorkItem(input: AssignWorkItemInput!): WorkItemType!
   authorizeDrive(input: AuthorizeDriveInput!): DriveAuthorizeUrlType!
@@ -4853,6 +4944,7 @@ type Mutation {
   sendAgentCommand(input: SendAgentCommandInput!): AgentCommandResultType!
   sendSmtpTest(input: SendSmtpTestInput!): SmtpTestResultType!
   setAgentConnections(input: SetAgentConnectionsInput!): Boolean!
+  setAgentOwnership(input: SetAgentOwnershipInput!): AgentAckType!
   setAgentStatus(input: SetAgentStatusInput!): AgentAckType!
   setAgentTexts(input: SetAgentTextsInput!): AgentAckType!
   setChatHandling(input: SetChatHandlingInput!): ChatHandlingType!
@@ -5459,6 +5551,7 @@ type Query {
   agentDashboard(input: AgentDashboardInput!): AgentDashboardType!
   agentEngineStatus: AgentEngineStatusType!
   agentGenerationStatus(input: AgentGenerationIdInput!): AgentGenerationStatusType!
+  agentPage(input: AgentIdInput!): AgentPageType!
   agentSyncStatus(input: ModuleInstallationIdInput!): AgentSyncStatusType!
   agents(input: ListAgentsInput!): [AgentSummaryType!]!
   apiKeys: [ApiKeyType!]!
@@ -6792,6 +6885,15 @@ type SepayKeyType {
 input SetAgentConnectionsInput {
   agentId: ID!
   connections: [ConnectionWishInput!]!
+}
+
+input SetAgentOwnershipInput {
+  agentId: ID!
+  assignableRoles: [String!]!
+  assignableRooms: [String!]!
+  canTagAgentIds: [ID!]!
+  fallbackMemberId: ID!
+  ownerMemberId: ID!
 }
 
 input SetAgentStatusInput {

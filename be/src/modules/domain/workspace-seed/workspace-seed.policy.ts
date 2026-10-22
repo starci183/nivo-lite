@@ -28,6 +28,23 @@ export const assertSeedScope = (request: SeedRequest): Readonly<{ id: string } |
     return { name: request.workspaceName }
 }
 
+/**
+ * The private ensure input of a run that is bound to one named workspace and one owner. A role-change input, another owner or
+ * another workspace name is refused, so a run can never write into a workspace its command did not name.
+ */
+export const readEnsureFor = (
+    input: Secret | undefined,
+    owner: string | undefined,
+    workspaceName: string,
+): SeedRequest => {
+    const parsed = readSeedInput(input)
+    if (parsed.action !== "ensure") return invalid()
+    const { request } = parsed
+    if (request.owner.email !== (owner ?? "").trim().toLowerCase() || request.workspaceName !== workspaceName)
+        return invalid()
+    return request
+}
+
 /** Requires the initial password only at a missing-account boundary; existing users retain their credential. */
 export const seedPassword = (account: SeedAccount): Secret => {
     if (account.password === undefined) throw new WorkspaceSeedError({ code: WorkspaceSeedErrorCode.PasswordRequired })
