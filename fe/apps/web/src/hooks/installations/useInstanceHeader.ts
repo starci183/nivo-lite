@@ -5,6 +5,7 @@ import { useModuleCatalog } from "@/hooks/moduleCatalog"
 import { MODULE_REGISTRY, pickCopy } from "@/modules/catalog"
 import type { ModuleKey } from "@/modules/catalog"
 import { AGENT_STATUS_TONE, agentListHref, agentStatusOf } from "@/modules/installations"
+import { agentProfileHref } from "@/modules/routes"
 import { useInstanceGuard } from "./useInstanceGuard"
 
 /** The header of one agent instance: type, instance name, status, version and live state; skeleton data until the instance is known. */
@@ -30,5 +31,6 @@ export const useInstanceHeader = (module: ModuleKey, installationId: string) => 
         connectionNeeds: installation?.connectionNeeds ?? [],
         activeVersion: installation?.activeVersion ?? null,
         isLive: installation?.liveEnabled === true,
+        profileHref: installation?.agentId == null ? null : agentProfileHref(installation.agentId),
     }
 }

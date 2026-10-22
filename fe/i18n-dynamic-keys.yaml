@@ -12,6 +12,17 @@ namespaces:
   agentChat:
     - key: "testIntro"
       reason: 'Read as the string "testIntro" in components/blocks/MetaWizard/component.tsx, components/blocks/MetaWizard/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
+  agentProfile:
+    - prefix: "chip_"
+      reason: "Key family built at run time as `chip_${chip.id}` in components/blocks/AgentProfileHead/index.tsx; the value comes from data (status, kind, id), so the detector cannot enumerate the keys."
+    - prefix: "mode_"
+      reason: "Key family built at run time as `mode_${rule.mode}` in components/blocks/AgentProfileRules/index.tsx; the value comes from data (status, kind, id), so the detector cannot enumerate the keys."
+    - prefix: "role_"
+      reason: "Key family built at run time as `role_${role}` in components/blocks/AgentProfileOwner/index.tsx, components/blocks/AgentProfileAssignable/index.tsx; the value comes from data (status, kind, id), so the detector cannot enumerate the keys."
+    - prefix: "ruleHint_"
+      reason: "Key family built at run time as `ruleHint_${rule.mode}` in components/blocks/AgentProfileRules/index.tsx; the value comes from data (status, kind, id), so the detector cannot enumerate the keys."
+    - prefix: "workStatus_"
+      reason: "Key family built at run time as `workStatus_${work.status}` in components/blocks/AgentProfileRecent/index.tsx; the value comes from data (status, kind, id), so the detector cannot enumerate the keys."
   approval:
     - key: "approveSend"
       reason: 'Read as the string "approveSend" in components/blocks/LeadExecution/index.tsx, components/branches/OfficeApprovalCard/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'

@@ -12,4 +12,4 @@ export {
     toField,
     visibleGroups,
 } from "./rules"
-export type { AuthorityProfile, AuthoritySheet, RuleChange, RuleDraft, StoredRule } from "./rules"
+export type { AuthorityMode, AuthorityProfile, AuthoritySheet, RuleChange, RuleDraft, StoredRule } from "./rules"

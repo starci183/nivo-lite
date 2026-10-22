@@ -48,3 +48,6 @@ export const agentChatConversationHref = (agentId: string, tab: string, conversa
     if (conversationId !== null) query.set("c", conversationId)
     return `${agentChatHref(agentId)}?${query.toString()}`
 }
+
+/** The profile page of one agent: who answers for it, who may give it work, whom it may tag. */
+export const agentProfileHref = (agentId: string): string => `/agents/profile/${agentId}`

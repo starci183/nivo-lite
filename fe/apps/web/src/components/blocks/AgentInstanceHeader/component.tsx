@@ -1,4 +1,4 @@
-import { Badge, Breadcrumbs, Heading, IconTile, Image, Text } from "@starci/grammar/common"
+import { Badge, Breadcrumbs, Button, Heading, IconTile, Image, Text } from "@starci/grammar/common"
 import type { BadgeTone, BreadcrumbItem } from "@starci/grammar/common"
 import { ConnectionNeeds, type ConnectionNeedsProps } from "@/components/leaves/ConnectionNeeds"
 import { nivoIconSource } from "@/components/leaves/Icon"
@@ -21,6 +21,9 @@ export interface AgentInstanceHeaderBaseProps {
         readonly typeLine: string | null
         readonly versionLabel: string
         readonly liveLabel: string
+        /** Where the profile of the agent that drives this instance lives; null while the instance has no agent. */
+        readonly profileHref: string | null
+        readonly profileLabel: string
         /** The facts of the agent are not known yet: statuses, version and live state are skeletons. */
         readonly isLoading: boolean
     }
@@ -64,6 +67,11 @@ export const AgentInstanceHeaderBase = (props: AgentInstanceHeaderBaseProps) => 
                         </Text>
                     </div>
                     <ConnectionNeeds {...view.needs} />
+                    {view.profileHref === null ? null : (
+                        <Button size="sm" variant="secondary" href={view.profileHref}>
+                            {view.profileLabel}
+                        </Button>
+                    )}
                 </div>
             </div>
         </>
