@@ -1,5 +1,6 @@
 import type { Access, Purpose } from "@modules/domain/agent-connections"
 import type { SyncFile } from "@modules/integrations/openclaw"
+import type { WorkspaceRole } from "@modules/domain/workspace-members"
 
 /** Whether the agent engine can run a generation right now. */
 export type EngineAvailability = "ready" | "not_configured" | "offline"
@@ -366,3 +367,81 @@ export interface AgentProfile {
 
 /** An agent profile, or null when none matches. */
 export type OptionalAgentProfile = AgentProfile | null
+
+/** A person of the workspace as the Office names them; `roomId` is the key of the department room they sit in, or null. */
+export interface MemberRef {
+    /** The workspace member (workspace_members.id), never the sign-in account. */
+    readonly memberId: string
+    /** The name the Office shows. */
+    readonly name: string
+    /** The workspace role. */
+    readonly role: WorkspaceRole
+    /** The department room key the person sits in, or null when they sit in none. */
+    readonly roomId: string | null
+}
+
+/** Who answers for an agent right now: the person its stuck, rejected or expired work goes to, and who comes after them. */
+export interface AgentOwners {
+    /** The member that answers now: the stored owner, else the stored fallback, else the workspace owner. */
+    readonly ownerMemberId: string
+    /** The member after them (the stored fallback or the workspace owner), or null when nobody else is active. */
+    readonly fallbackMemberId: string | null
+}
+
+/** What a manager sets about the ownership of one agent: a full replacement of the five settings. */
+export interface OwnershipChange {
+    /** The member in charge of the agent. */
+    readonly ownerMemberId: string
+    /** The member who takes over when the owner left or is disabled. */
+    readonly fallbackMemberId: string
+    /** The workspace roles that may hand the agent work. */
+    readonly assignableRoles: ReadonlyArray<string>
+    /** The department rooms (keys) whose members may hand the agent work. */
+    readonly assignableRooms: ReadonlyArray<string>
+    /** The other agents it may pass work to. */
+    readonly canTagAgentIds: ReadonlyArray<string>
+}
+
+/** A department room as the ownership page names it. */
+export interface RoomLabel {
+    /** The room key. */
+    readonly key: string
+    /** The display name. */
+    readonly name: string
+}
+
+/** An agent another agent may pass work to. */
+export interface TagTarget {
+    /** The agent. */
+    readonly id: string
+    /** The display name. */
+    readonly name: string
+    /** The module it belongs to. */
+    readonly module: string
+    /** active or paused. */
+    readonly status: string
+}
+
+/** A person in charge of an agent, with whether they can answer today. */
+export interface OwnerCard extends MemberRef {
+    /** False when the member was removed or disabled. */
+    readonly active: boolean
+}
+
+/** Everything the profile page says about who answers for an agent, who may give it work and who it may pass work to. */
+export interface AgentOwnership {
+    /** The agent. */
+    readonly agentId: string
+    /** The stored owner, or null when the member is gone. */
+    readonly owner: OwnerCard | null
+    /** The stored fallback, or null when the member is gone. */
+    readonly fallback: OwnerCard | null
+    /** Who answers right now (the owner, else the fallback, else the workspace owner). */
+    readonly responder: AgentOwners
+    /** The roles that may hand the agent work. */
+    readonly assignableRoles: ReadonlyArray<WorkspaceRole>
+    /** The rooms whose members may hand the agent work. */
+    readonly assignableRooms: ReadonlyArray<RoomLabel>
+    /** The agents it may pass work to. */
+    readonly canTag: ReadonlyArray<TagTarget>
+}

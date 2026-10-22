@@ -15,6 +15,7 @@ import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { AgentBindingsService } from "@modules/domain/agent-connections"
+import { AgentOwnershipService } from "./agent-ownership.service"
 import { AGENTS_INSTALLATIONS, AGENTS_KNOWLEDGE } from "./agents.decorators"
 import { AgentsLogEvent } from "./agents.log-events"
 import type { InstallationDirectory, KnowledgeLens } from "./agents.port"
@@ -73,6 +74,7 @@ const build = async (entityManager: MockEntityManager, member: WorkspaceMember =
         connectionsFor: jest.fn(() => Promise.resolve([AGENT_BOUND_CONNECTION])),
     })
     const logger = mock<Logger>()
+    const ownership = mock<AgentOwnershipService>()
     const moduleRef = await Test.createTestingModule({
         providers: [
             AgentsService,
@@ -83,9 +85,10 @@ const build = async (entityManager: MockEntityManager, member: WorkspaceMember =
             { provide: AGENTS_KNOWLEDGE, useValue: knowledge },
             { provide: WorkspaceMembersService, useValue: members },
             { provide: AgentBindingsService, useValue: bindings },
+            { provide: AgentOwnershipService, useValue: ownership },
         ],
     }).compile()
-    return { service: moduleRef.get(AgentsService), members, installations, knowledge, bindings, logger }
+    return { service: moduleRef.get(AgentsService), members, installations, knowledge, bindings, logger, ownership }
 }
 
 /** The setup mode binds no knowledge lens, which the service holds as null. */
@@ -104,6 +107,7 @@ const buildSetupMode = async (entityManager: MockEntityManager) => {
             { provide: AGENTS_KNOWLEDGE, useValue: null },
             { provide: WorkspaceMembersService, useValue: members },
             { provide: AgentBindingsService, useValue: bindings },
+            { provide: AgentOwnershipService, useValue: mock<AgentOwnershipService>() },
         ],
     }).compile()
     return { service: moduleRef.get(AgentsService), logger }
@@ -475,5 +479,20 @@ describe("AgentsService", () => {
                 params: { id: "ghost" },
             })
         })
+    })
+})
+
+describe("AgentsService ownership questions", () => {
+    it("answers who owns, who may be tagged and who may assign through the ownership service", async () => {
+        const { service, ownership } = await build(mockEntityManager({}))
+        ownership.ownerOf.mockResolvedValue({ ownerMemberId: "m1", fallbackMemberId: null })
+        ownership.canTag.mockResolvedValue(true)
+        ownership.canAssign.mockResolvedValue(false)
+
+        await expect(service.ownerOf("a1")).resolves.toEqual({ ownerMemberId: "m1", fallbackMemberId: null })
+        await expect(service.canTag("a1", "a2")).resolves.toBe(true)
+        await expect(service.canAssign("m1", "a1")).resolves.toBe(false)
+        expect(ownership.canTag).toHaveBeenCalledWith("a1", "a2")
+        expect(ownership.canAssign).toHaveBeenCalledWith("m1", "a1")
     })
 })

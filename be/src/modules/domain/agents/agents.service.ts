@@ -10,6 +10,7 @@ import type { Logger } from "@modules/platform/logging"
 import { AgentBindingsService } from "@modules/domain/agent-connections"
 import type {
     AgentDashboardData,
+    AgentOwners,
     AgentSummary,
     AgentTexts,
     DashboardQuery,
@@ -22,6 +23,7 @@ import type {
     Region,
     WaitingData,
 } from "./agents.contracts"
+import { AgentOwnershipService } from "./agent-ownership.service"
 import { InjectInstallations, InjectKnowledge } from "./agents.decorators"
 import { AgentsLogEvent } from "./agents.log-events"
 import { firstProfileOf, refOf, summaryOf } from "./agents.mapper"
@@ -72,6 +74,7 @@ export class AgentsService {
         @InjectInstallations() private readonly installations: InstallationDirectory,
         private readonly members: WorkspaceMembersService,
         private readonly bindings: AgentBindingsService,
+        private readonly ownership: AgentOwnershipService,
         @Optional() @InjectKnowledge() private readonly knowledge: KnowledgeLens | null = null,
     ) {}
 
@@ -190,6 +193,21 @@ export class AgentsService {
             ]),
             agentId,
         )
+    }
+
+    /** Who answers for an agent now: its owner, else its fallback, else the workspace owner (see AgentOwnershipService). */
+    ownerOf(agentId: string): Promise<AgentOwners> {
+        return this.ownership.ownerOf(agentId)
+    }
+
+    /** Whether an agent may pass work to another agent (see AgentOwnershipService). */
+    canTag(agentId: string, targetAgentId: string): Promise<boolean> {
+        return this.ownership.canTag(agentId, targetAgentId)
+    }
+
+    /** Whether a member may hand an agent work (see AgentOwnershipService). */
+    canAssign(memberId: string, agentId: string): Promise<boolean> {
+        return this.ownership.canAssign(memberId, agentId)
     }
 
     private expectChanged(rows: ReadonlyArray<IdRow>, agentId: string): void {

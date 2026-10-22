@@ -13,6 +13,10 @@ export enum AgentsErrorCode {
     NotCreated = "AGENTS_NOT_CREATED",
     /** The app registered the setup mode without the knowledge lens, so the dashboard and the bundle cannot read knowledge here. */
     KnowledgeUnbound = "AGENTS_KNOWLEDGE_UNBOUND",
+    /** Nobody in the chain (owner, fallback, workspace owner) is an active member, so the agent's work has nowhere to go. */
+    OwnerUnavailable = "AGENTS_OWNER_UNAVAILABLE",
+    /** An ownership change names a member, room, role or agent that does not belong to the workspace. */
+    OwnershipInvalid = "AGENTS_OWNERSHIP_INVALID",
 }
 
 /** How each agents code travels. */
@@ -22,6 +26,8 @@ export const AGENTS_ERROR_KINDS: Record<AgentsErrorCode, ErrorKind> = {
     [AgentsErrorCode.HandleTaken]: "conflict",
     [AgentsErrorCode.NotCreated]: "internal",
     [AgentsErrorCode.KnowledgeUnbound]: "internal",
+    [AgentsErrorCode.OwnerUnavailable]: "unavailable",
+    [AgentsErrorCode.OwnershipInvalid]: "invalid",
 }
 
 /** The one error class of the agents capability. */

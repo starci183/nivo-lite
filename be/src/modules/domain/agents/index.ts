@@ -16,6 +16,7 @@ export type {
     OptionalInstallation,
 } from "./agents.port"
 export { AgentsService } from "./agents.service"
+export { AgentOwnershipService } from "./agent-ownership.service"
 export { AgentRecordsService } from "./agent-records.service"
 export { EngineStatusService } from "./engine-status.service"
 export { processorFromSettings, replyTimeoutSec } from "./engine-status.policy"
@@ -32,4 +33,6 @@ export type {
     AgentTexts,
     EngineStatus,
     AgentProfile,
+    AgentOwnership,
+    Region,
 } from "./agents.contracts"

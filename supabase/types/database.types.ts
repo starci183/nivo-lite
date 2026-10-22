@@ -1,4 +1,4 @@
-// migrations-sha256: 636772fcd9ccaeccf96b0af5191b607cb816be36fdb1d9fef6fa2d7078710bb2
+// migrations-sha256: 55956f2173bc905afe1019b49b34698b2b90466bd869d19b9581778c34b2115d
 
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[]
 
@@ -175,13 +175,13 @@ isOneToOne: false
                   ]
                 },"agents": {
                   Row: {
-                    "approval_rule": string,"created_at": string,"greeting": string,"handle": string,"id": string,"instructions": string,"knowledge": string,"module": string,"name": string,"role": string,"status": string,"workspace_id": string
+                    "approval_rule": string,"assignable_roles": (string)[],"assignable_rooms": (string)[],"can_tag_agent_ids": (string)[],"created_at": string,"fallback_member_id": string | null,"greeting": string,"handle": string,"id": string,"instructions": string,"knowledge": string,"module": string,"name": string,"owner_member_id": string | null,"role": string,"status": string,"workspace_id": string
                   }
                   Insert: {
-                    "approval_rule"?: string,"created_at"?: string,"greeting"?: string,"handle": string,"id"?: string,"instructions": string,"knowledge"?: string,"module"?: string,"name": string,"role": string,"status"?: string,"workspace_id": string
+                    "approval_rule"?: string,"assignable_roles"?: (string)[],"assignable_rooms"?: (string)[],"can_tag_agent_ids"?: (string)[],"created_at"?: string,"fallback_member_id"?: string | null,"greeting"?: string,"handle": string,"id"?: string,"instructions": string,"knowledge"?: string,"module"?: string,"name": string,"owner_member_id"?: string | null,"role": string,"status"?: string,"workspace_id": string
                   }
                   Update: {
-                    "approval_rule"?: string,"created_at"?: string,"greeting"?: string,"handle"?: string,"id"?: string,"instructions"?: string,"knowledge"?: string,"module"?: string,"name"?: string,"role"?: string,"status"?: string,"workspace_id"?: string
+                    "approval_rule"?: string,"assignable_roles"?: (string)[],"assignable_rooms"?: (string)[],"can_tag_agent_ids"?: (string)[],"created_at"?: string,"fallback_member_id"?: string | null,"greeting"?: string,"handle"?: string,"id"?: string,"instructions"?: string,"knowledge"?: string,"module"?: string,"name"?: string,"owner_member_id"?: string | null,"role"?: string,"status"?: string,"workspace_id"?: string
                   }
                   Relationships: [
                     {
@@ -4624,6 +4624,9 @@ isOneToOne: false
               "id": string,"state": string,"target_found": boolean,"work_item_id": string,"work_status": string
             }[]
                            },
+"seat_office_member":
+{ Args: { "p_room": string,"p_user": string,"p_workspace": string }; Returns: boolean
+                           },
 "session_bootstrap":
 { Args: Record<PropertyKey, never>; Returns: Json
                            },
@@ -4752,6 +4755,9 @@ isOneToOne: false
 { Args: { "ws": string }; Returns: {
               "created_at": string,"display_name": string,"email": string,"last_sign_in_at": string,"role": string,"staff_id": string,"status": string,"user_id": string
             }[]
+                           },
+"workspace_owner_member":
+{ Args: { "p_workspace": string }; Returns: string
                            },
 "workspace_storage_bytes":
 { Args: { "p_workspace": string }; Returns: number
