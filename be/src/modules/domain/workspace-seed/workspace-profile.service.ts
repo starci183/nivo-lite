@@ -26,7 +26,7 @@ import {
     InjectWorkspaceSeedOptions,
 } from "./workspace-seed.decorators"
 import type { WorkspaceSeedOptions } from "./workspace-seed.options"
-import { readProfileInput, readSeedInput } from "./workspace-seed.policy"
+import { readEnsureFor, readProfileInput } from "./workspace-seed.policy"
 import type {
     SeedAgentRecords,
     SeedConnectorInput,
@@ -96,14 +96,7 @@ export class WorkspaceProfileService {
     /** Runs `seed-workspace profile`: the private ensure input must name the profile's workspace and the given owner. */
     async profileOperator(command: ProfileCommand): Promise<ProfileReport> {
         const profile = WORKSPACE_PROFILES.get(command.profile ?? "") ?? invalid()
-        const input = readSeedInput(this.options.input)
-        if (input.action !== "ensure") return invalid()
-        const { request } = input
-        if (
-            request.owner.email !== (command.owner ?? "").trim().toLowerCase() ||
-            request.workspaceName !== profile.workspaceName
-        )
-            return invalid()
+        const request = readEnsureFor(this.options.input, command.owner, profile.workspaceName)
         const connectors = this.connectorInputs(profile)
         if (command.execute !== true) {
             const planned = connectors.map((connector): [string, ProfileConnectorState] => [

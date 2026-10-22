@@ -4,6 +4,7 @@ import { EnsureSeedWorkspaceCli } from "./subs/ensure.cli"
 import { RoleSeedWorkspaceCli } from "./subs/role.cli"
 import { VerifySeedWorkspaceCli } from "./subs/verify.cli"
 import { ProfileSeedWorkspaceCli } from "./subs/profile.cli"
+import { OfficeSeedWorkspaceCli } from "./subs/office.cli"
 
 @Command({
     name: "seed-workspace",
@@ -14,6 +15,7 @@ import { ProfileSeedWorkspaceCli } from "./subs/profile.cli"
         RoleSeedWorkspaceCli,
         VerifySeedWorkspaceCli,
         ProfileSeedWorkspaceCli,
+        OfficeSeedWorkspaceCli,
     ],
 })
 /** Groups explicit workspace access operations; private credentials are supplied by the selected target runner. */
