@@ -25,7 +25,7 @@ export const AgentProfileOwner = (props: AgentProfileOwnerProps) => {
                 slot: mapSlot(slot, (agent): OwnerView => {
                     const people = [agent.owner, agent.fallback]
                     const responder = people.find((person) => person?.memberId === agent.responderId && person.isActive)
-                    const storedIsGone = agent.owner === null || !agent.owner.isActive
+                    const storedIsGone = !agent.owner?.isActive
                     const fallback = agent.fallback
                     return {
                         name: responder?.name ?? t("ownerNone"),

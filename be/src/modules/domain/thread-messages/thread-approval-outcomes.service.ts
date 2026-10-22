@@ -25,6 +25,10 @@ interface CardOutcome {
     readonly decidedBy: string | null
 }
 
+/** The verdict that ended a request a member decided: an approval, or a refusal. */
+const verdictOf = (event: ApprovalResolved): "approve" | "reject" =>
+    event.outcome === "approved" ? "approve" : "reject"
+
 @Injectable()
 /**
  * What happens to an approval card when its request ends: the card, the chain step and the thread are settled together and a refused
@@ -56,9 +60,7 @@ export class ThreadApprovalOutcomesService {
             const pending = pendingOf(locked)
             if (pending === null) return
             const card =
-                event.decidedBy === null
-                    ? pending.card
-                    : withVote(pending.card, event.decidedBy, event.outcome === "approved" ? "approve" : "reject")
+                event.decidedBy === null ? pending.card : withVote(pending.card, event.decidedBy, verdictOf(event))
             await this.settle(tx, locked, card, event, RESOLVED_LINE_LOCALE)
         })
     }

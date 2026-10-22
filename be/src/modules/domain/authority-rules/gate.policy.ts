@@ -22,13 +22,18 @@ export const MIN_CONFIDENCE = 0.6
 export const isOverLimit = (limitVnd: OptionalAmountVnd, amountVnd: OptionalAmountVnd): boolean =>
     typeof limitVnd === "number" && typeof amountVnd === "number" && amountVnd >= limitVnd
 
+/** The proposal field that carries an amount counted in a unit other than VND. */
+const AMOUNT_FIELD: Readonly<Record<Exclude<RuleUnit, "vnd">, string>> = {
+    percent: "amount_percent",
+    count: "amount_count",
+}
+
 /**
  * The amount of a proposal in the unit of its rule: VND is the proposal's own `amount_vnd`, a percentage is the number field
  * `amount_percent`, a count is the number field `amount_count`; null when the proposal carries none.
  */
 export const ruleAmountOf = (proposal: Proposal, unit: RuleUnit): OptionalAmount => {
-    const value =
-        unit === "vnd" ? proposal.amount_vnd : proposal.fields[unit === "percent" ? "amount_percent" : "amount_count"]
+    const value = unit === "vnd" ? proposal.amount_vnd : proposal.fields[AMOUNT_FIELD[unit]]
     return typeof value === "number" ? value : null
 }
 
