@@ -78,7 +78,7 @@ export class ThreadAgentPostsService {
             threadId: post.threadId,
             actor: { kind: "agent", id: agent.id },
             kind: "ask_approval",
-            action: stepTitleOf(post.stepTitle, post.approval.action),
+            action: stepTitleOf(post.stepTitle, post.approval.title),
             detail: "",
             rule: post.approval.rule,
             target: this.askedGroupOf(views),
@@ -102,7 +102,7 @@ export class ThreadAgentPostsService {
             opened = await this.gate.open({
                 workspaceId: post.workspaceId,
                 chainStepId: asked.step.id,
-                action: ask.action,
+                action: ask.actionKey,
                 amount: ask.amount,
                 unit: ask.unit,
                 requestedByAgentId: post.agentId,

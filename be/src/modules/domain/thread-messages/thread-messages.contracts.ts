@@ -154,14 +154,19 @@ export interface UserPost extends Omit<MemberPost, "memberId"> {
     readonly userId: string
 }
 
+/** What an amount is counted in: money, a percentage or a count. */
+export type ApprovalUnit = "vnd" | "percent" | "count"
+
 /** What an agent asks people to approve with its message. */
 export interface ApprovalAsk {
-    /** What is asked. */
-    readonly action: string
-    /** The amount, or null. */
+    /** The action key whose authority rule decides who approves. */
+    readonly actionKey: string
+    /** What is asked, in words, for example "Discount 12%". */
+    readonly title: string
+    /** The amount, or null when the action carries none. */
     readonly amount: number | null
-    /** The unit of the amount, or null. */
-    readonly unit: string | null
+    /** The unit of the amount, which must be the unit of the rule. */
+    readonly unit: ApprovalUnit
     /** The authority rule that governs the ask. */
     readonly rule: string
 }
@@ -242,12 +247,10 @@ export interface ApprovalDecision {
     readonly verdict: "approve" | "reject"
 }
 
-/** The gate answered an approval: it was resolved, or it waits for more people. */
+/** The gate answered a verdict: the request is settled, or it waits for more people. */
 export interface ApprovalDecisionResult {
-    /** pending while more people must decide. */
-    readonly outcome: ApprovalOutcome
-    /** The member id of who decided it, or null. */
-    readonly decidedBy: string | null
+    /** pending while more people must decide, else how the request ended. */
+    readonly status: ApprovalOutcome
 }
 
 /** The event the approval capability raises when a request ends. */
@@ -266,12 +269,12 @@ export interface OpenApproval {
     readonly workspaceId: string
     /** The chain step that waits on it. */
     readonly chainStepId: string
-    /** What is asked. */
+    /** The action key whose authority rule decides who approves. */
     readonly action: string
-    /** The amount, or null. */
+    /** The amount, or null when the action carries none. */
     readonly amount: number | null
-    /** The unit of the amount, or null. */
-    readonly unit: string | null
+    /** The unit of the amount. */
+    readonly unit: ApprovalUnit
     /** The agent that asks. */
     readonly requestedByAgentId: string
 }

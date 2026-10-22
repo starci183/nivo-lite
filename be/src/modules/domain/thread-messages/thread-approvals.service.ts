@@ -79,14 +79,8 @@ export class ThreadApprovalsService {
             const pending = pendingOf(locked)
             if (pending === null) return toMessage(locked)
             const voted = withVote(pending.card, memberId, input.verdict)
-            if (result.outcome === "pending") return this.keep(tx, locked, voted)
-            return this.settle(
-                tx,
-                locked,
-                voted,
-                { outcome: result.outcome, decidedBy: result.decidedBy ?? memberId },
-                input.locale,
-            )
+            if (result.status === "pending") return this.keep(tx, locked, voted)
+            return this.settle(tx, locked, voted, { outcome: result.status, decidedBy: memberId }, input.locale)
         })
     }
 

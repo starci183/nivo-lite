@@ -84,7 +84,13 @@ const agentPost = (overrides: Partial<AgentPost> = {}): AgentPost => ({
     ...overrides,
 })
 
-const ASK = { action: "Discount 12%", amount: 12, unit: "percent", rule: "Customer discount" } as const
+const ASK = {
+    actionKey: "give_discount",
+    title: "Discount 12%",
+    amount: 12,
+    unit: "percent",
+    rule: "Customer discount",
+} as const
 
 interface Doubles {
     readonly canTag?: boolean
@@ -290,7 +296,7 @@ const registerApprovalAsks = () => {
             expect(gate.open).toHaveBeenCalledWith({
                 workspaceId: "ws-1",
                 chainStepId: "step-ask",
-                action: "Discount 12%",
+                action: "give_discount",
                 amount: 12,
                 unit: "percent",
                 requestedByAgentId: "agent-1",
@@ -319,7 +325,7 @@ const registerApprovalAsks = () => {
                 recorded: [continued("step-ask")],
             })
 
-            await service.postAsAgent(agentPost({ approval: { ...ASK, amount: null, unit: null } }))
+            await service.postAsAgent(agentPost({ approval: { ...ASK, amount: null } }))
 
             expect(chains.record).toHaveBeenCalledTimes(1)
             expect(chains.record).toHaveBeenCalledWith(expect.objectContaining({ kind: "ask_approval", target: null }))

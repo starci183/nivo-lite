@@ -13,7 +13,7 @@ const buildSubject = async () => {
 }
 
 const source: CardSource = {
-    ask: { action: "Discount 12%", amount: 12, unit: "percent", rule: "Customer discount" },
+    ask: { actionKey: "give_discount", title: "Discount 12%", amount: 12, unit: "percent", rule: "Customer discount" },
     opened: {
         requestId: "req-1",
         approvers: [

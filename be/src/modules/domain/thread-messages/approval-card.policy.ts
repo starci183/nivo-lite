@@ -16,7 +16,7 @@ export interface CardSource {
 /** A fresh card: everyone tagged is waiting, nothing is decided. */
 export const openCard = (source: CardSource): ApprovalCard => ({
     requestId: source.opened.requestId,
-    action: source.ask.action,
+    action: source.ask.title,
     amount: source.ask.amount,
     unit: source.ask.unit,
     rule: source.ask.rule,

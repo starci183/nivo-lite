@@ -95,10 +95,7 @@ const stubsOf = (answers: Answers = {}): DatabaseStubs => ({
     ],
 })
 
-const build = async (
-    em: MockEntityManager,
-    decision: ApprovalDecisionResult = { outcome: "approved", decidedBy: "minh" },
-) => {
+const build = async (em: MockEntityManager, decision: ApprovalDecisionResult = { status: "approved" }) => {
     fakeTransaction(em)
     const members = mock<WorkspaceMembersService>({ require: jest.fn().mockResolvedValue(MEMBER) })
     const gate = mock<ApprovalGate>({ open: jest.fn(), decide: jest.fn().mockResolvedValue(decision) })
@@ -254,15 +251,6 @@ const registerApprove = () => {
             expect(messages.append).not.toHaveBeenCalled()
             expect(message.approval).toMatchObject({ outcome: "approved", decidedByName: "Mr Minh" })
         })
-
-        it("credits the member who clicked when the gate names no decider", async () => {
-            const em = mockEntityManager(stubsOf())
-            const { service } = await build(em, { outcome: "approved", decidedBy: null })
-
-            const message = await service.decide(decision())
-
-            expect(message.approval).toMatchObject({ decidedBy: "minh" })
-        })
     })
 }
 
@@ -270,7 +258,7 @@ const registerRejectAndWait = () => {
     describe("decide rejects or waits", () => {
         it("sends a rejected card back to the owner of the agent: the agent says so, tags them and the chain records it", async () => {
             const em = mockEntityManager(stubsOf())
-            const { service, chains, messages, threads } = await build(em, { outcome: "rejected", decidedBy: "minh" })
+            const { service, chains, messages, threads } = await build(em, { status: "rejected" })
 
             await service.decide(decision("reject"))
 
@@ -299,7 +287,7 @@ const registerRejectAndWait = () => {
 
         it("only records the vote while the policy still waits for more people", async () => {
             const em = mockEntityManager(stubsOf())
-            const { service, chains, threads } = await build(em, { outcome: "pending", decidedBy: null })
+            const { service, chains, threads } = await build(em, { status: "pending" })
 
             const message = await service.decide(decision("approve", "nam"))
 
