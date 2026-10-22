@@ -13,9 +13,13 @@ const roleKey = (role: string): string => {
     return "roleStaff"
 }
 
-/** The message key that names the status of a person's vote or of a chain step. */
-const statusKey = (status: string, prefix: "vote" | "step"): string =>
-    `${prefix}${status.charAt(0).toUpperCase()}${status.slice(1)}`
+const capital = (word: string): string => `${word.charAt(0).toUpperCase()}${word.slice(1)}`
+
+/** The message key that names the status of a person's vote. */
+const voteKey = (status: string): string => `vote${capital(status)}`
+
+/** The message key that names the status of a chain step. */
+const stepKey = (status: string): string => `step${capital(status)}`
 
 /** The message key that names the rule of an approval. */
 const policyKey = (policy: string): string => {
@@ -62,7 +66,7 @@ export const approvalViewOf = (
             id: approver.memberId,
             name: approver.name,
             roleLabel: t(roleKey(approver.role)),
-            statusLabel: t(statusKey(approver.status, "vote")),
+            statusLabel: t(voteKey(approver.status)),
             tone: chainStatusTone(approver.status),
         })),
         excluded: card.excluded.map((left) => ({
@@ -103,7 +107,7 @@ export const chainViewOf = (chain: WorkChainType, t: ThreadWords): ChainPanelVie
             description: [step.actorName, t(stepKindKey(step.kind)), step.detail]
                 .filter((part) => part !== "")
                 .join(" · "),
-            statusLabel: t(statusKey(step.status, "step")),
+            statusLabel: t(stepKey(step.status)),
             tone: chainStatusTone(step.status),
         })),
         isComplete: summary.state === "complete",
