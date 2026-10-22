@@ -45,6 +45,7 @@ component_management:
         - "be/src/modules/domain/agent-conversations/**"
         - "be/src/modules/domain/agent-knowledge/**"
         - "be/src/modules/domain/agent-messages/**"
+        - "be/src/modules/domain/agent-profile/**"
         - "be/src/modules/domain/agent-tools/**"
         - "be/src/modules/domain/agents/**"
         - "be/src/modules/domain/ai-generations/**"

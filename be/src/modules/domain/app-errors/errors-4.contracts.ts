@@ -11,6 +11,7 @@ import { OFFICE_ROOMS_ERROR_KINDS } from "@modules/domain/office-rooms"
 import { MCP_GATEWAY_ERROR_KINDS } from "@modules/domain/mcp-gateway"
 import { MCP_ERROR_KINDS } from "@modules/integrations/mcp"
 import { CUSTOMER_TURNS_ERROR_KINDS } from "@modules/domain/customer-turns"
+import { AGENT_PROFILE_ERROR_KINDS } from "@modules/domain/agent-profile"
 
 /** App-wide errors catalog, preserving registration order. */
 export const API_ERROR_KINDS_4 = [
@@ -27,4 +28,5 @@ export const API_ERROR_KINDS_4 = [
     MCP_ERROR_KINDS,
     MCP_GATEWAY_ERROR_KINDS,
     CUSTOMER_TURNS_ERROR_KINDS,
+    AGENT_PROFILE_ERROR_KINDS,
 ]
