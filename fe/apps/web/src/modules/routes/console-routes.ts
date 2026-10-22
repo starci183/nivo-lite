@@ -10,6 +10,7 @@ export const CONSOLE_ROUTES = {
     decisions: "/decisions",
     connections: "/connections",
     team: "/team",
+    permissions: "/permissions",
     modules: "/modules",
     newChatbot: "/modules/new?module=chatbot",
 } as const

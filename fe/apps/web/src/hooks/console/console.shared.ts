@@ -25,6 +25,7 @@ export type ConsoleDestination = {
         | "navBrain"
         | "navModules"
         | "navTeam"
+        | "navPermissions"
         | "navConnections"
         | "navCredits"
     readonly route: string
@@ -63,6 +64,14 @@ export const DESTINATIONS: ReadonlyArray<ConsoleDestination> = [
     },
     { key: "modules", label: "navModules", route: "/agents", icon: "apps", group: "setup" },
     { key: "team", label: "navTeam", route: "/team", icon: "talents", group: "setup", managerOnly: true },
+    {
+        key: "permissions",
+        label: "navPermissions",
+        route: "/permissions",
+        icon: "review",
+        group: "setup",
+        managerOnly: true,
+    },
     {
         key: "connections",
         label: "navConnections",

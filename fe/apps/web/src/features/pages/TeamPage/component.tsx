@@ -4,6 +4,7 @@ import { TeamIndividualNotice } from "@/components/blocks/TeamIndividualNotice"
 import { TeamInvite } from "@/components/blocks/TeamInvite"
 import { TeamInvites } from "@/components/blocks/TeamInvites"
 import { TeamMembers } from "@/components/blocks/TeamMembers"
+import { TeamTabs } from "@/components/blocks/TeamTabs"
 import { HomePageHeading } from "@/components/composites/HomePageHeading"
 import { PAGE_CLASS_NAME } from "./classNames"
 
@@ -26,6 +27,7 @@ export const TeamPageBase = (props: TeamPageBaseProps) => (
     <PageContainer measure="product">
         <div className={PAGE_CLASS_NAME}>
             <HomePageHeading {...props.props} />
+            <TeamTabs selected="members" />
             <TeamForbidden />
             <TeamMembers />
             <TeamIndividualNotice />

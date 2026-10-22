@@ -1,7 +1,10 @@
 export { toAuthoritySheet } from "./sheet"
 export {
+    APPROVER_ROLES,
     EMPTY_PROFILE,
     FIELD_KEYS,
+    approvalPolicyOf,
+    approverRoleOf,
     authorityModeOf,
     draftsFrom,
     fromField,
@@ -9,7 +12,20 @@ export {
     modesFor,
     ruleChanges,
     ruleKey,
+    ruleUnitOf,
     toField,
+    UNITS,
+    POLICIES,
     visibleGroups,
 } from "./rules"
-export type { AuthorityProfile, AuthoritySheet, RuleChange, RuleDraft, StoredRule } from "./rules"
+export type {
+    ApprovalPolicy,
+    ApproverRole,
+    AuthorityMode,
+    AuthorityProfile,
+    AuthoritySheet,
+    RuleChange,
+    RuleDraft,
+    RuleUnit,
+    StoredRule,
+} from "./rules"

@@ -23,12 +23,21 @@ const query1: TypedDocumentNode<QueryAuthorityResponse, Record<string, never>> =
             }
             rules {
                 action
+                agents
+                approval_policy
+                approver_members
+                approver_roles
+                approver_rooms
+                ask_max
+                auto_max
                 department
                 id
                 limit_vnd
                 mode
                 note
                 required_fields
+                timeout_minutes
+                unit
                 updated_at
                 workspace_id
             }
