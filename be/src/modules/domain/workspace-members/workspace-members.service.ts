@@ -4,13 +4,14 @@ import { EventsService } from "@modules/domain/events"
 import { StaffService } from "@modules/domain/staff"
 import type { StaffWrite } from "@modules/domain/staff"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
-import { refused, unwrapOutcome } from "@modules/platform/primitives"
+import { ok, refused, unwrapOutcome } from "@modules/platform/primitives"
 import { WorkspaceMembersError, WorkspaceMembersErrorCode } from "./errors/workspace-members.error"
-import type { MemberRow } from "./persistence/workspace-members.rows"
+import type { MemberIdRow, MemberRow } from "./persistence/workspace-members.rows"
 import {
     DELETE_MEMBER,
     ENSURE_MEMBER,
     FIND_MEMBER,
+    FIND_MEMBER_ID,
     LIST_MEMBERS,
     LOCK_MEMBER,
     RENAME_MEMBER_EVERYWHERE,
@@ -70,6 +71,18 @@ export class WorkspaceMembersService {
         const outcome =
             row === undefined ? refused(WorkspaceMembersErrorCode.NotMember) : admitMember(toMember(row), roles)
         return unwrapOutcome(outcome, WorkspaceMembersError)
+    }
+
+    /**
+     * The member id (the seat) of the caller's active membership, or a typed refusal. Responsibilities, grants and the decision log
+     * name this id, never the Auth user id and never a free-text name.
+     */
+    async idOf(userId: string, workspaceId: string): Promise<string> {
+        const row = (await this.entityManager.query<Array<MemberIdRow>>(FIND_MEMBER_ID, [workspaceId, userId]))[0]
+        return unwrapOutcome(
+            row === undefined ? refused(WorkspaceMembersErrorCode.NotMember) : ok(row.id),
+            WorkspaceMembersError,
+        )
     }
 
     /** Adds or replaces a staff row. Owner and manager only. */

@@ -123,6 +123,7 @@ const RECORDS: LeadFlowRecords = {
             department: "sales",
             action: "issue_invoice",
             decided_by: "An",
+            decidedByMemberId: "member-1",
             decider_kind: "staff",
             outcome: "approved",
             reason: "routine",

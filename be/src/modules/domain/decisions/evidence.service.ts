@@ -66,6 +66,7 @@ export class EvidenceService {
             entry.note ?? null,
             jsonOrNull(entry.before),
             jsonOrNull(entry.after),
+            entry.decided_by_member_id ?? null,
         ])
     }
 }

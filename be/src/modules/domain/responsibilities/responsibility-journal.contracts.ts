@@ -19,6 +19,8 @@ export interface ResponsibilityRecord {
     readonly owner_kind: ResponsibilityOwnerKind
     /** The owning agent, when an agent owns it. */
     readonly owner_agent_id: string | null
+    /** The owning member, when a person owns it. */
+    readonly owner_member_id: string | null
     /** The display name of the owner. */
     readonly owner_name: string
     /** The next step. */
@@ -37,7 +39,7 @@ export interface NewResponsibility {
     readonly lead_id: string
     /** What it is. */
     readonly title: string
-    /** `human`, or the id of the owning agent. */
+    /** The id of the owning member (a concrete person of the workspace) or of the owning agent. */
     readonly owner: string
     /** The next step. */
     readonly next_action: string
@@ -51,7 +53,7 @@ export interface NamedFollowUp {
     readonly leadId: string
     /** What it is; an open responsibility of the customer with the same title means it is already open. */
     readonly title: string
-    /** The display name of the person who owns it. */
+    /** The display name of the member who owns it; a name no active member carries falls to the workspace owner. */
     readonly ownerName: string
     /** The next step. */
     readonly nextAction: string

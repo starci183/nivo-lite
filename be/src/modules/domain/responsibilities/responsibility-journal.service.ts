@@ -10,6 +10,8 @@ import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { InjectMessageCatalog } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
 import { ResponsibilitiesError, ResponsibilitiesErrorCode } from "./errors/responsibilities.error"
+import type { ResolvedOwner } from "./responsibility-owner.policy"
+import { ResponsibilityOwnersService } from "./responsibility-owners.service"
 import type {
     NamedFollowUp,
     NewResponsibility,
@@ -19,9 +21,8 @@ import type {
     ResponsibilityScope,
     ResponsibilityStatus,
 } from "./responsibility-journal.contracts"
-import type { AgentNameRow, LeadNameRow, ResponsibilityIdRow } from "./persistence/responsibility-journal.rows"
+import type { LeadNameRow, ResponsibilityIdRow } from "./persistence/responsibility-journal.rows"
 import {
-    FIND_AGENT_NAME,
     FIND_LEAD_NAME,
     FIND_OPEN_RESPONSIBILITY,
     FIND_OPEN_TITLED_RESPONSIBILITY,
@@ -47,11 +48,12 @@ export class ResponsibilityJournalService {
         @InjectAgentDirectory() private readonly agents: AgentDirectory,
         private readonly members: WorkspaceMembersService,
         private readonly events: EventsService,
+        private readonly owners: ResponsibilityOwnersService,
     ) {}
 
     /**
-     * The customer's open responsibility, created when there is none: owned by the workspace's Sales agent, or by the actor
-     * when there is no agent, due in a day.
+     * The customer's open responsibility, created when there is none: owned by the workspace's Sales agent, or by the workspace
+     * owner (a concrete member) when there is no agent, due in a day.
      */
     async ensureFor(ctx: ResponsibilityScope, leadId: string): Promise<ResponsibilityRecord> {
         const open = (
@@ -64,22 +66,26 @@ export class ResponsibilityJournalService {
         const lead = (await this.entityManager.query<Array<LeadNameRow>>(FIND_LEAD_NAME, [ctx.workspaceId, leadId]))[0]
         if (lead === undefined) throw new ResponsibilitiesError({ code: ResponsibilitiesErrorCode.NotFound })
         const sales = await this.agents.agentOfDepartment(ctx.workspaceId, "sales", null)
+        const owner: ResolvedOwner =
+            sales === null
+                ? await this.owners.workspaceOwner(ctx.workspaceId)
+                : { kind: "agent", agentId: sales.id, memberId: null, name: sales.name }
         return this.insert(
             ctx.workspaceId,
             {
                 lead_id: leadId,
                 title: this.catalog.get("responsibility.title", { name: lead.contact_name }, ctx.locale),
-                owner: sales?.id ?? "human",
                 next_action: this.catalog.get("responsibility.next", {}, ctx.locale),
                 due_at: new Date(this.clock.now().getTime() + DAY_MS).toISOString(),
             },
-            sales?.name ?? ctx.actor,
+            owner,
         )
     }
 
     /**
-     * Opens a follow-up owned by a person on the system's behalf (an automation), unless the customer already has an open one with
-     * the same title; answers true when it opened one.
+     * Opens a follow-up owned by a member on the system's behalf (an automation), unless the customer already has an open one with
+     * the same title; answers true when it opened one. The owner is the active member with the name the automation gave, else the
+     * workspace owner.
      */
     async openNamed(workspaceId: string, task: NamedFollowUp): Promise<boolean> {
         const open = await this.entityManager.query<Array<ResponsibilityIdRow>>(FIND_OPEN_TITLED_RESPONSIBILITY, [
@@ -88,16 +94,13 @@ export class ResponsibilityJournalService {
             task.title,
         ])
         if (open.length > 0) return false
+        const owner =
+            (await this.owners.memberNamed(workspaceId, task.ownerName)) ??
+            (await this.owners.workspaceOwner(workspaceId))
         await this.insert(
             workspaceId,
-            {
-                lead_id: task.leadId,
-                title: task.title,
-                owner: "human",
-                next_action: task.nextAction,
-                due_at: task.dueAt,
-            },
-            task.ownerName,
+            { lead_id: task.leadId, title: task.title, next_action: task.nextAction, due_at: task.dueAt },
+            owner,
         )
         return true
     }
@@ -131,8 +134,8 @@ export class ResponsibilityJournalService {
         manager: EntityManager = this.entityManager,
     ): Promise<ResponsibilityRecord> {
         const member = await this.members.require(principalId, workspaceId)
-        const agent = input.owner === "human" ? null : await this.agentOf(workspaceId, input.owner, manager)
-        const created = await this.insert(workspaceId, input, agent?.name ?? member.displayName, manager)
+        const owner = await this.owners.resolve(manager, workspaceId, input.owner)
+        const created = await this.insert(workspaceId, input, owner, manager)
         await this.events.record(
             {
                 workspaceId,
@@ -206,33 +209,23 @@ export class ResponsibilityJournalService {
         ])
     }
 
-    private async agentOf(
-        workspaceId: string,
-        agentId: string,
-        manager: EntityManager = this.entityManager,
-    ): Promise<AgentNameRow> {
-        const agent = (await manager.query<Array<AgentNameRow>>(FIND_AGENT_NAME, [workspaceId, agentId]))[0]
-        if (agent === undefined) throw new ResponsibilitiesError({ code: ResponsibilitiesErrorCode.NotFound })
-        return agent
-    }
-
     private async insert(
         workspaceId: string,
-        input: NewResponsibility,
-        ownerName: string,
+        input: Omit<NewResponsibility, "owner">,
+        owner: ResolvedOwner,
         manager: EntityManager = this.entityManager,
     ): Promise<ResponsibilityRecord> {
-        const ownerAgentId = input.owner === "human" ? null : input.owner
         const row = (
             await manager.query<Array<ResponsibilityRecord>>(INSERT_RESPONSIBILITY, [
                 workspaceId,
                 input.lead_id,
                 input.title,
-                ownerAgentId === null ? "human" : "agent",
-                ownerAgentId,
-                ownerName,
+                owner.kind,
+                owner.agentId,
+                owner.name,
                 input.next_action,
                 input.due_at,
+                owner.memberId,
             ])
         )[0]
         if (row === undefined) throw new ResponsibilitiesError({ code: ResponsibilitiesErrorCode.NotFound })

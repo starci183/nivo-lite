@@ -8,8 +8,8 @@ export const LIST_ACCOUNTING_DECISIONS = sql`
     WHERE workspace_id = $1::uuid AND department = 'accounting'
     ORDER BY created_at DESC, id DESC LIMIT $2::int`
 
-/** Appends a line to the decision log of the workspace. */
+/** Appends a line to the decision log of the workspace ($13 the member who decided, null for a policy decision). */
 export const INSERT_DECISION = sql`
     INSERT INTO public.decisions (workspace_id, work_item_id, lead_id, department, action, decided_by, decider_kind, outcome,
-                                  reason, note, before, after)
-    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11::jsonb, $12::jsonb)`
+                                  reason, note, before, after, decided_by_member_id)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11::jsonb, $12::jsonb, $13::uuid)`

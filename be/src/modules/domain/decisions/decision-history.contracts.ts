@@ -14,8 +14,10 @@ export interface LeadDecisionRecord {
     readonly department: string
     /** The action key. */
     readonly action: string
-    /** Who made the decision. */
+    /** Who made the decision: the member's current display name, else the name the line was written with. */
     readonly decided_by: string
+    /** The member who made it; null for a policy decision and for lines written before members were named. */
+    readonly decidedByMemberId: string | null
     /** Policy, owner or staff. */
     readonly decider_kind: string
     /** The decision outcome. */

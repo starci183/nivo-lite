@@ -70,6 +70,7 @@ const responsibilityOf = builder<ResponsibilityRecord>({
     title: "Follow up",
     owner_kind: "agent",
     owner_agent_id: null,
+    owner_member_id: null,
     owner_name: "Sales",
     next_action: "",
     due_at: null,
@@ -105,7 +106,7 @@ const build = async (setup: Setup = {}) => {
     const office = mock<MessagesService>()
     office.postSystem.mockResolvedValue(undefined)
     const catalog = mock<MessageCatalog>({ get: jest.fn((key: string) => `${key}()`) })
-    const members = mock<WorkspaceMembersService>({ require })
+    const members = mock<WorkspaceMembersService>({ require, idOf: jest.fn().mockResolvedValue("member-1") })
     const bus = mock<CommandBusService>({ sendCommand })
     const decisions = mock<DecisionsService>({ getWorkItem })
     const engine = mock<WorkEngineService>({ resumeWork })
@@ -146,7 +147,7 @@ const build = async (setup: Setup = {}) => {
         engine,
     }
 }
-const owner: Decider = { name: "An", kind: "owner" }
+const owner: Decider = { name: "An", kind: "owner", memberId: "member-1" }
 const ctxOf = (actor: string) => ({ workspaceId: "ws-1", actor, locale: "en" })
 const ctx = ctxOf("An")
 const queuedOf = (overrides: Partial<WorkItem> = {}) => itemOf({ status: "queued", ...overrides })
@@ -177,7 +178,7 @@ describe("WorkDecisionService", () => {
                 "item-1",
                 "rejected",
                 {},
-                { name: "Binh", kind: "staff" },
+                { name: "Binh", kind: "staff", memberId: "member-1" },
                 null,
             )
         })

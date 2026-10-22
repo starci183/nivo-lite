@@ -120,8 +120,10 @@ export interface DecisionRecord {
     readonly department: string
     /** The action key. */
     readonly action: string
-    /** Who decided, by display name. */
+    /** Who decided, by the member's current display name. */
     readonly decided_by: string
+    /** The member who decided; null for a policy decision and for lines written before members were named. */
+    readonly decidedByMemberId: string | null
     /** `policy`, `owner` or `staff`. */
     readonly decider_kind: string
     /** `auto_done`, `approved`, `edited` or `rejected`. */

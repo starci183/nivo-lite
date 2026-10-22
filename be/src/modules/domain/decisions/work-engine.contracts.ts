@@ -56,6 +56,8 @@ export interface Finisher {
     readonly name: string
     /** Policy, owner or staff. */
     readonly kind: DeciderKind
+    /** The member who decided; absent for the policy. */
+    readonly memberId?: string
 }
 
 /** Who finished an item and how it was decided. */

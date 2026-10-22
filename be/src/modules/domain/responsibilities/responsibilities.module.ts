@@ -4,6 +4,7 @@ import { AGENT_DIRECTORY } from "@modules/domain/messages"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./responsibilities.module-definition"
 import { ResponsibilitiesService } from "./responsibilities.service"
 import { ResponsibilityJournalService } from "./responsibility-journal.service"
+import { ResponsibilityOwnersService } from "./responsibility-owners.service"
 
 @Module({})
 /** What somebody owes a customer: the steps of a lead journey and the journal the work engine keeps. The agent directory is bound by the app root. */
@@ -18,6 +19,7 @@ export class ResponsibilitiesModule extends ConfigurableModuleClass {
                 { provide: AGENT_DIRECTORY, useExisting: options.agentDirectory },
                 ResponsibilitiesService,
                 ResponsibilityJournalService,
+                ResponsibilityOwnersService,
             ],
             exports: [ResponsibilitiesService, ResponsibilityJournalService],
         }

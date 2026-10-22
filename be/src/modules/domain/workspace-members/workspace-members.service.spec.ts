@@ -11,6 +11,7 @@ import {
     DELETE_MEMBER,
     ENSURE_MEMBER,
     FIND_MEMBER,
+    FIND_MEMBER_ID,
     LIST_MEMBERS,
     LOCK_MEMBER,
     RENAME_MEMBER_EVERYWHERE,
@@ -142,6 +143,24 @@ describe("WorkspaceMembersService / require", () => {
 
         await expect(service.require("user-1", "ws-1", ["owner", "manager"])).rejects.toMatchObject({
             code: WorkspaceMembersErrorCode.RoleForbidden,
+        })
+    })
+})
+
+describe("WorkspaceMembersService / idOf", () => {
+    it("answers the member id of the caller's active seat", async () => {
+        const em = mockEntityManager({ query: [FIND_MEMBER_ID, [{ id: "member-1" }]] })
+        const { service } = await build(em)
+
+        await expect(service.idOf("user-1", "ws-1")).resolves.toBe("member-1")
+        expect(em.query).toHaveBeenCalledWith(FIND_MEMBER_ID, ["ws-1", "user-1"])
+    })
+
+    it("refuses a person with no active seat in the workspace", async () => {
+        const { service } = await build(mockEntityManager({ query: [FIND_MEMBER_ID, []] }))
+
+        await expect(service.idOf("user-1", "ws-9")).rejects.toMatchObject({
+            code: WorkspaceMembersErrorCode.NotMember,
         })
     })
 })

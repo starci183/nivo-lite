@@ -68,6 +68,7 @@ const responsibilityOf = builder<ResponsibilityRecord>({
     title: "Follow Lan",
     owner_kind: "agent",
     owner_agent_id: "agent-1",
+    owner_member_id: null,
     owner_name: "Mai",
     next_action: "Send the quote",
     due_at: null,

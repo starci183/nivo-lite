@@ -8,10 +8,14 @@ export const BASIS_MIN_CHARS = 10
 /** Actions whose approval must carry a written basis: a matching amount alone is not evidence. */
 const NEEDS_BASIS = new Set(["reconcile_payment"])
 
-/** Who a decision is recorded as: the member's own name; staff accounts are `staff`, owner and manager are `owner`. */
-export const deciderOf = (member: WorkspaceMember): Decider => ({
+/**
+ * Who a decision is recorded as: the member's own name and seat id; staff accounts are `staff`, owner and manager are
+ * `owner`.
+ */
+export const deciderOf = (member: WorkspaceMember, memberId: string): Decider => ({
     name: member.displayName,
     kind: member.role === "staff" ? "staff" : "owner",
+    memberId,
 })
 
 /** The part of an item that says who may decide it: staff only when a staff member is assigned. */

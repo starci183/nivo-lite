@@ -10,6 +10,8 @@ export interface ResponsibilitiesRow {
     readonly owner_kind: string
     /** The owning agent when an agent owns it; null for a human owner. */
     readonly owner_agent_id: string | null
+    /** The member who owns the follow-up when a person does; null for an agent owner. */
+    readonly owner_member_id: string | null
     /** The owner's display name, kept so the card renders without a join. */
     readonly owner_name: string
     /** The next step the owner has to take. */
@@ -26,4 +28,12 @@ export interface AgentsRow {
     readonly id: string
     /** The agent's display name, copied into owner_name. */
     readonly name: string
+}
+
+/** public.workspace_members as the owner lookups select it. */
+export interface MemberOwnerRow {
+    /** The member id an owner_member_id points at. */
+    readonly id: string
+    /** The member's display name, copied into owner_name. */
+    readonly display_name: string
 }

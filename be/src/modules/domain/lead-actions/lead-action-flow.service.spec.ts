@@ -76,6 +76,7 @@ const responsibility = {
     title: "Call back",
     owner_kind: "human" as const,
     owner_agent_id: null,
+    owner_member_id: "member-1",
     owner_name: "Lan",
     next_action: "Call",
     due_at: null,

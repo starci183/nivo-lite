@@ -10,20 +10,15 @@ import { InjectMessageCatalog, InjectRequestLocale } from "@modules/platform/i18
 import type { Locale, MessageCatalog, RequestLocale } from "@modules/platform/i18n"
 import { ResponsibilitiesError, ResponsibilitiesErrorCode } from "./errors/responsibilities.error"
 import type { AgentsRow, ResponsibilitiesRow } from "./persistence/responsibilities.rows"
-import {
-    FIND_ACCOUNTING_AGENT,
-    FIND_AGENT,
-    INSERT_RESPONSIBILITY,
-    UPDATE_RESPONSIBILITY,
-} from "./persistence/responsibilities.sql"
+import { FIND_ACCOUNTING_AGENT, INSERT_RESPONSIBILITY, UPDATE_RESPONSIBILITY } from "./persistence/responsibilities.sql"
 import type {
     AddResponsibilityParams,
     AssignResponsibilityParams,
     HandToAccountingParams,
     ResponsibilityResult,
 } from "./responsibilities.contracts"
-import { agentToLookUp, resolveOwner } from "./responsibility-owner.policy"
 import type { ResolvedOwner } from "./responsibility-owner.policy"
+import { ResponsibilityOwnersService } from "./responsibility-owners.service"
 
 /** The evidence-log kind of a new owner. */
 const ASSIGNED_KIND = "responsibility.assigned"
@@ -34,15 +29,23 @@ const DAY_MS = 86_400_000
 
 type StepRow = Pick<
     ResponsibilitiesRow,
-    "id" | "lead_id" | "title" | "owner_kind" | "owner_agent_id" | "owner_name" | "next_action" | "due_at" | "status"
+    | "id"
+    | "lead_id"
+    | "title"
+    | "owner_kind"
+    | "owner_agent_id"
+    | "owner_member_id"
+    | "owner_name"
+    | "next_action"
+    | "due_at"
+    | "status"
 >
 interface StepColumns {
     readonly nextAction: string
     readonly dueAt: string | null
 }
-type OwnerAgentRow = Pick<AgentsRow, "id" | "name">
 
-/** The owner, next action and due date columns a write binds, in the order both statements take them. */
+/** The owner, next action and due date columns a write binds, in the order both statements take them (the member comes last). */
 const ownerColumns = (owner: ResolvedOwner, step: StepColumns): ReadonlyArray<string | null> => [
     owner.kind,
     owner.agentId,
@@ -57,6 +60,7 @@ const toResult = (row: StepRow): ResponsibilityResult => ({
     title: row.title,
     ownerKind: row.owner_kind,
     ownerAgentId: row.owner_agent_id,
+    ownerMemberId: row.owner_member_id,
     ownerName: row.owner_name,
     nextAction: row.next_action,
     dueAt: row.due_at,
@@ -73,18 +77,20 @@ export class ResponsibilitiesService {
         @InjectClock() private readonly clock: Clock,
         private readonly members: WorkspaceMembersService,
         private readonly events: EventsService,
+        private readonly owners: ResponsibilityOwnersService,
     ) {}
 
     /** Adds the next responsibility of a lead (keeps the loop going after an outcome) and logs who owns it. */
     async addResponsibility(params: AddResponsibilityParams): Promise<ResponsibilityResult> {
         const member = await this.members.require(params.userId, params.workspaceId)
         return this.entityManager.transaction(async (tx) => {
-            const owner = await this.ownerOf(tx, params.workspaceId, params.owner, member)
+            const owner = await this.owners.resolve(tx, params.workspaceId, params.owner)
             const [row] = await tx.query<Array<StepRow>>(INSERT_RESPONSIBILITY, [
                 params.workspaceId,
                 params.leadId,
                 params.title,
                 ...ownerColumns(owner, params),
+                owner.memberId,
             ])
             if (row === undefined) {
                 throw new ResponsibilitiesError({
@@ -101,12 +107,13 @@ export class ResponsibilitiesService {
     async assignResponsibility(params: AssignResponsibilityParams): Promise<ResponsibilityResult> {
         const member = await this.members.require(params.userId, params.workspaceId)
         return this.entityManager.transaction(async (tx) => {
-            const owner = await this.ownerOf(tx, params.workspaceId, params.owner, member)
+            const owner = await this.owners.resolve(tx, params.workspaceId, params.owner)
             const [row] = await tx.query<Array<StepRow>>(UPDATE_RESPONSIBILITY, [
                 params.workspaceId,
                 params.responsibilityId,
                 ...ownerColumns(owner, params),
                 params.title,
+                owner.memberId,
             ])
             if (row === undefined) {
                 throw new ResponsibilitiesError({
@@ -125,7 +132,7 @@ export class ResponsibilitiesService {
      */
     async handToAccounting(params: HandToAccountingParams): Promise<boolean> {
         const { manager, locale } = params
-        const [agent] = await manager.query<Array<OwnerAgentRow>>(FIND_ACCOUNTING_AGENT, [params.workspaceId])
+        const [agent] = await manager.query<Array<AgentsRow>>(FIND_ACCOUNTING_AGENT, [params.workspaceId])
         if (agent === undefined) return false
         await manager.query(INSERT_RESPONSIBILITY, [
             params.workspaceId,
@@ -136,6 +143,7 @@ export class ResponsibilitiesService {
             agent.name,
             this.messages.get("responsibilities.invoice-next", {}, locale),
             new Date(this.clock.now().getTime() + DAY_MS).toISOString(),
+            null,
         ])
         await this.events.record(
             {
@@ -148,21 +156,6 @@ export class ResponsibilitiesService {
             manager,
         )
         return true
-    }
-
-    private async ownerOf(
-        tx: EntityManager,
-        workspaceId: string,
-        owner: string,
-        actor: WorkspaceMember,
-    ): Promise<ResolvedOwner> {
-        const agentId = agentToLookUp(owner)
-        const [agent] = agentId === null ? [] : await tx.query<Array<OwnerAgentRow>>(FIND_AGENT, [workspaceId, agentId])
-        const verdict = resolveOwner(owner, agent, actor.displayName)
-        if (verdict.kind === "refused") {
-            throw new ResponsibilitiesError({ code: verdict.code, params: verdict.params })
-        }
-        return verdict.value
     }
 
     private logOwner(
