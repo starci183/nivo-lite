@@ -1594,6 +1594,32 @@ input CardDecisionInput {
   value: String
 }
 
+type ChainStepType {
+  action: String!
+  actorId: String!
+  actorKind: String!
+  actorName: String!
+  actorRole: String!
+  approvalRequestId: String
+  decidedBy: String
+  detail: String!
+  finishedAt: String
+  id: ID!
+  kind: String!
+  rule: String
+  seq: Int!
+  startedAt: String!
+  status: String!
+  target: ThreadMentionRefType
+}
+
+type ChainSummaryType {
+  humanDecisions: Int!
+  minutes: Int!
+  state: String!
+  steps: Int!
+}
+
 input ChangeMemberRoleInput {
   role: String!
   userId: ID!
@@ -2262,6 +2288,12 @@ input CreateVideoProjectInput {
   title: String
 }
 
+input CreateWorkThreadInput {
+  leadId: ID = null
+  orderId: ID = null
+  title: String!
+}
+
 input CreateWorkspaceInput {
   name: String!
 }
@@ -2679,6 +2711,11 @@ input DecideSetupCardInput {
 input DecideShiftsAvailabilityInput {
   approve: Boolean!
   id: ID!
+}
+
+input DecideThreadApprovalInput {
+  messageId: ID!
+  verdict: String!
 }
 
 input DecideWorkItemInput {
@@ -3927,6 +3964,10 @@ input ListWorkItemsInput {
   statuses: [String!] = []
 }
 
+input ListWorkThreadsInput {
+  leadId: ID = null
+}
+
 input LoadCsvImportInput {
   connectionId: ID!
 }
@@ -4363,6 +4404,19 @@ type MembershipType {
   workspace: WorkspaceType!
 }
 
+type MentionDirectoryType {
+  agents: [MentionOptionType!]!
+  groups: [MentionOptionType!]!
+  members: [MentionOptionType!]!
+}
+
+type MentionOptionType {
+  id: String!
+  kind: String!
+  name: String!
+  role: String!
+}
+
 type MetaAppObjectType {
   callbackUrl: String!
   fields: [String!]!
@@ -4655,6 +4709,7 @@ type Mutation {
   createResponsibility(input: CreateResponsibilityInput!): ResponsibilityType!
   createVideoMediaUpload(input: CreateVideoMediaUploadInput!): VideoMediaUploadType!
   createVideoProject(input: CreateVideoProjectInput!): VideoProjectType!
+  createWorkThread(input: CreateWorkThreadInput!): WorkThreadType!
   createWorkspace(input: CreateWorkspaceInput!): CreateWorkspaceType!
   decideBrainFact(input: DecideBrainFactInput!): BrainFactType!
   decideBrainLesson(input: DecideBrainLessonInput!): BrainLessonType!
@@ -4664,6 +4719,7 @@ type Mutation {
   decideSalesWorkItem(input: DecideSalesWorkItemInput!): SalesActionType!
   decideSetupCard(input: DecideSetupCardInput!): SetupCardType!
   decideShiftsAvailability(input: DecideShiftsAvailabilityInput!): Boolean!
+  decideThreadApproval(input: DecideThreadApprovalInput!): ThreadMessageType!
   decideWorkItem(input: DecideWorkItemInput!): WorkItemType!
   deleteConnection(input: DeleteConnectionInput!): Boolean!
   deleteHiringCandidate(input: HiringCandidateRefInput!): DeleteCandidateType!
@@ -4701,6 +4757,7 @@ type Mutation {
   postMarketingWeeklyReport: WeeklyReportType!
   postOfficeMessage(input: PostOfficeMessageInput!): OfficeMessageType!
   postSetupMessage(input: PostSetupMessageInput!): SetupMessageType!
+  postThreadMessage(input: PostThreadMessageInput!): ThreadMessageType!
   previewLoyaltySegment(input: PreviewLoyaltySegmentInput!): PreviewLoyaltySegmentType!
   proposeAutomationBody(input: TemplateKeyInput!): BodyProposalType!
   proposeBrandKit(input: ProposeBrandKitInput!): BrandProposalType!
@@ -5104,6 +5161,13 @@ input PostSetupMessageInput {
   text: String!
 }
 
+input PostThreadMessageInput {
+  body: String!
+  mentions: [ThreadMentionRefInput!]! = []
+  quoted: [String!]! = []
+  threadId: ID!
+}
+
 input PreviewCsvSourceInput {
   connectionId: ID
   entity: String
@@ -5503,6 +5567,7 @@ type Query {
   mcpCallLog(input: McpCallLogInput): [McpCallLogType!]!
   mcpConnectors: [McpConnectorType!]!
   mcpToolGrants: [McpToolGrantType!]!
+  mentionDirectory: MentionDirectoryType!
   metaConnection(input: GetMetaConnectionInput!): MetaWizardConnectionType!
   moduleDefinition(input: ModuleKeyInput!): ModuleDefinitionType!
   moduleInstallation(input: ModuleInstallationIdInput!): ModuleInstallationType!
@@ -5558,8 +5623,11 @@ type Query {
   videoScope: VideoScopeType!
   videoScriptStatus(input: VideoScriptStatusInput!): VideoScriptStatusType!
   videoSources: [VideoSourceType!]!
+  workChain(input: WorkThreadIdInput!): WorkChainType!
   workItem(input: WorkItemIdInput!): WorkItemType!
   workItems(input: ListWorkItemsInput!): WorkItemPageType!
+  workThread(input: WorkThreadIdInput!): WorkThreadViewType!
+  workThreads(input: ListWorkThreadsInput = {}): [WorkThreadListingType!]!
   workspaceInvites: [PendingInviteType!]!
   workspaceMembers: [MemberListingType!]!
   workspaceShell(input: ShellWindowInput!): WorkspaceShellType!
@@ -7507,6 +7575,67 @@ input TestWebhookConnectionInput {
   connectionId: ID!
 }
 
+type ThreadApprovalCardType {
+  action: String!
+  amount: Float
+  approvers: [ThreadCardApproverType!]!
+  decidedAt: String
+  decidedBy: String
+  decidedByName: String
+  excluded: [ThreadCardExcludedType!]!
+  expiresAt: String!
+  outcome: String!
+  owner: ThreadMentionType
+  policy: String!
+  requestId: ID!
+  rule: String!
+  unit: String
+}
+
+type ThreadCardApproverType {
+  memberId: String!
+  name: String!
+  role: String!
+  roomId: String
+  status: String!
+}
+
+type ThreadCardExcludedType {
+  memberId: String!
+  name: String!
+  reason: String!
+}
+
+input ThreadMentionRefInput {
+  id: String!
+  kind: String!
+}
+
+type ThreadMentionRefType {
+  id: String!
+  kind: String!
+}
+
+type ThreadMentionType {
+  id: String!
+  kind: String!
+  name: String!
+}
+
+type ThreadMessageType {
+  approval: ThreadApprovalCardType
+  authorId: String!
+  authorKind: String!
+  authorName: String!
+  authorRole: String!
+  body: String!
+  createdAt: String!
+  id: ID!
+  mentions: [ThreadMentionType!]!
+  quoted: [String!]!
+  threadId: ID!
+}
+
 input ToggleHiringOnboardingInput {
   done: Boolean!
   id: ID!
@@ -7843,6 +7972,11 @@ type WizardConnectionType {
   webhookUrl: String!
 }
 
+type WorkChainType {
+  steps: [ChainStepType!]!
+  summary: ChainSummaryType!
+}
+
 input WorkEditsInput {
   amount_vnd: Int
   candidateId: ID
@@ -7903,6 +8037,40 @@ type WorkItemType {
 type WorkResultType {
   href: String
   summary: String!
+}
+
+input WorkThreadIdInput {
+  threadId: ID!
+}
+
+type WorkThreadListingType {
+  createdAt: String!
+  id: ID!
+  lastAt: String
+  lastBody: String
+  leadId: String
+  messageCount: Int!
+  orderId: String
+  status: String!
+  title: String!
+  updatedAt: String!
+  waitingApproval: Boolean!
+}
+
+type WorkThreadType {
+  createdAt: String!
+  createdBy: String!
+  id: ID!
+  leadId: String
+  orderId: String
+  status: String!
+  title: String!
+  updatedAt: String!
+}
+
+type WorkThreadViewType {
+  messages: [ThreadMessageType!]!
+  thread: WorkThreadType!
 }
 
 enum WorkspaceRole {

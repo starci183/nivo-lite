@@ -1,4 +1,4 @@
-// migrations-sha256: 636772fcd9ccaeccf96b0af5191b607cb816be36fdb1d9fef6fa2d7078710bb2
+// migrations-sha256: 1a80d7858e0823e3a697299949ce50b715a85502553d05681aaab8bff7598852
 
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[]
 
@@ -3750,6 +3750,31 @@ isOneToOne: false
                   Relationships: [
 
                   ]
+                },"thread_messages": {
+                  Row: {
+                    "approval": Json | null,"approval_request_id": string | null,"author_id": string,"author_kind": string,"body": string,"created_at": string,"id": string,"mentions": NonNullable<Json>,"quoted": NonNullable<Json>,"thread_id": string,"workspace_id": string
+                  }
+                  Insert: {
+                    "approval"?: Json | null,"approval_request_id"?: string | null,"author_id": string,"author_kind": string,"body": string,"created_at"?: string,"id"?: string,"mentions"?: NonNullable<Json>,"quoted"?: NonNullable<Json>,"thread_id": string,"workspace_id": string
+                  }
+                  Update: {
+                    "approval"?: Json | null,"approval_request_id"?: string | null,"author_id"?: string,"author_kind"?: string,"body"?: string,"created_at"?: string,"id"?: string,"mentions"?: NonNullable<Json>,"quoted"?: NonNullable<Json>,"thread_id"?: string,"workspace_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "thread_messages_thread_id_fkey"
+      columns: ["thread_id"]
+isOneToOne: false
+      referencedRelation: "work_threads"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "thread_messages_workspace_id_fkey"
+      columns: ["workspace_id"]
+isOneToOne: false
+      referencedRelation: "workspaces"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"transactions": {
                   Row: {
                     "amount_vnd": number,"channel": string,"created_at": string,"direction": string,"id": string,"inbound_event_id": string | null,"invoice_id": string | null,"occurred_at": string,"payer": string | null,"reference": string | null,"status": string,"workspace_id": string
@@ -3918,6 +3943,31 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"work_chains": {
+                  Row: {
+                    "action": string,"actor_id": string,"actor_kind": string,"approval_request_id": string | null,"decided_by": string | null,"detail": string,"finished_at": string | null,"id": string,"kind": string,"rule": string | null,"seq": number,"started_at": string,"status": string,"target": Json | null,"thread_id": string,"workspace_id": string
+                  }
+                  Insert: {
+                    "action": string,"actor_id": string,"actor_kind": string,"approval_request_id"?: string | null,"decided_by"?: string | null,"detail"?: string,"finished_at"?: string | null,"id"?: string,"kind": string,"rule"?: string | null,"seq": number,"started_at"?: string,"status"?: string,"target"?: Json | null,"thread_id": string,"workspace_id": string
+                  }
+                  Update: {
+                    "action"?: string,"actor_id"?: string,"actor_kind"?: string,"approval_request_id"?: string | null,"decided_by"?: string | null,"detail"?: string,"finished_at"?: string | null,"id"?: string,"kind"?: string,"rule"?: string | null,"seq"?: number,"started_at"?: string,"status"?: string,"target"?: Json | null,"thread_id"?: string,"workspace_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "work_chains_thread_id_fkey"
+      columns: ["thread_id"]
+isOneToOne: false
+      referencedRelation: "work_threads"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "work_chains_workspace_id_fkey"
+      columns: ["workspace_id"]
+isOneToOne: false
+      referencedRelation: "workspaces"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"work_items": {
                   Row: {
                     "action": string,"assigned_staff_id": string | null,"chain_id": string | null,"completed_at": string | null,"created_at": string,"decided_path": string | null,"dedupe_key": string,"department": string,"depth": number,"error": string | null,"evidence_state": string,"execution_id": string | null,"id": string,"inbound_event_id": string | null,"installation_id": string | null,"lead_id": string | null,"missing_fields": (string)[],"parent_id": string | null,"proposal": NonNullable<Json>,"reason": string | null,"reasons": (string)[],"result": Json | null,"status": string,"subject_id": string | null,"subject_type": string,"updated_at": string,"workspace_id": string
@@ -3973,6 +4023,37 @@ isOneToOne: false
       referencedColumns: ["id"]
     },{
       foreignKeyName: "work_items_workspace_id_fkey"
+      columns: ["workspace_id"]
+isOneToOne: false
+      referencedRelation: "workspaces"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"work_threads": {
+                  Row: {
+                    "created_at": string,"created_by": string,"id": string,"lead_id": string | null,"order_id": string | null,"status": string,"title": string,"updated_at": string,"workspace_id": string
+                  }
+                  Insert: {
+                    "created_at"?: string,"created_by": string,"id"?: string,"lead_id"?: string | null,"order_id"?: string | null,"status"?: string,"title": string,"updated_at"?: string,"workspace_id": string
+                  }
+                  Update: {
+                    "created_at"?: string,"created_by"?: string,"id"?: string,"lead_id"?: string | null,"order_id"?: string | null,"status"?: string,"title"?: string,"updated_at"?: string,"workspace_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "work_threads_lead_id_fkey"
+      columns: ["lead_id"]
+isOneToOne: false
+      referencedRelation: "leads"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "work_threads_order_id_fkey"
+      columns: ["order_id"]
+isOneToOne: false
+      referencedRelation: "orders"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "work_threads_workspace_id_fkey"
       columns: ["workspace_id"]
 isOneToOne: false
       referencedRelation: "workspaces"

@@ -11,6 +11,9 @@ import { OFFICE_ROOMS_MESSAGES } from "@modules/domain/office-rooms"
 import { GATEWAY_TURNS_MESSAGES } from "@modules/domain/customer-turns"
 import { MCP_GATEWAY_MESSAGES } from "@modules/domain/mcp-gateway"
 import { MCP_MESSAGES } from "@modules/integrations/mcp"
+import { WORK_CHAINS_MESSAGES } from "@modules/domain/work-chains"
+import { THREAD_MESSAGES_MESSAGES } from "@modules/domain/thread-messages"
+import { WORK_THREADS_MESSAGES } from "@modules/domain/work-threads"
 
 /** App-wide messages catalog, preserving registration order. */
 export const API_MESSAGES_4 = [
@@ -28,4 +31,7 @@ export const API_MESSAGES_4 = [
     MCP_GATEWAY_MESSAGES,
     GATEWAY_TURNS_MESSAGES,
     CONTENT_AGENT_MESSAGES,
+    WORK_CHAINS_MESSAGES,
+    WORK_THREADS_MESSAGES,
+    THREAD_MESSAGES_MESSAGES,
 ]
