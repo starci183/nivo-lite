@@ -1,5 +1,7 @@
 import { AUTHORITY_MESSAGES } from "@modules/domain/authority"
+import { APPROVAL_REQUESTS_MESSAGES } from "@modules/domain/approval-requests"
 import { AUTHORITY_RULES_MESSAGES } from "@modules/domain/authority-rules"
+import { MEMBER_GRANTS_MESSAGES } from "@modules/domain/member-grants"
 import { DEEPSEEK_MESSAGES } from "@modules/integrations/deepseek"
 import { EXECUTIONS_MESSAGES } from "@modules/domain/executions"
 import { OFFICE_COMMAND_CANDIDATES_MESSAGES } from "@modules/domain/office-command-candidates"
@@ -33,6 +35,8 @@ import { HTTP_SECURITY_MESSAGES } from "@modules/platform/http-security"
 export const API_MESSAGES_2 = [
     AUTHORITY_MESSAGES,
     AUTHORITY_RULES_MESSAGES,
+    MEMBER_GRANTS_MESSAGES,
+    APPROVAL_REQUESTS_MESSAGES,
     DEEPSEEK_MESSAGES,
     EXECUTIONS_MESSAGES,
     OFFICE_COMMAND_CANDIDATES_MESSAGES,

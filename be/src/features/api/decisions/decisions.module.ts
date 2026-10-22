@@ -5,11 +5,14 @@ import { AssignWorkItemHandler } from "./application/assign-work-item.handler"
 import { DecideWorkItemHandler } from "./application/decide-work-item.handler"
 import { HoldWorkItemHandler } from "./application/hold-work-item.handler"
 import { GetWorkItemHandler } from "./application/get-work-item.handler"
+import { ListApproversHandler } from "./application/list-approvers.handler"
 import { ListDecisionHistoryHandler } from "./application/list-decision-history.handler"
+import { ListMemberGrantsHandler } from "./application/list-member-grants.handler"
 import { ListResponsibilitiesHandler } from "./application/list-responsibilities.handler"
 import { ListWorkItemPageHandler } from "./application/list-work-item-page.handler"
 import { ReconcileDetailsHandler } from "./application/reconcile-details.handler"
 import { ReadAuthorityHandler } from "./application/read-authority.handler"
+import { SaveMemberGrantsHandler } from "./application/save-member-grants.handler"
 import { SaveRuleHandler } from "./application/save-rule.handler"
 import { SendCommandHandler } from "./application/send-command.handler"
 import { UpdateAuthorityHandler } from "./application/update-authority.handler"
@@ -24,11 +27,14 @@ import { ConfigurableModuleClass } from "./decisions.module-definition"
         DecideWorkItemHandler,
         HoldWorkItemHandler,
         GetWorkItemHandler,
+        ListApproversHandler,
         ListDecisionHistoryHandler,
+        ListMemberGrantsHandler,
         ListResponsibilitiesHandler,
         ListWorkItemPageHandler,
         ReadAuthorityHandler,
         ReconcileDetailsHandler,
+        SaveMemberGrantsHandler,
         SaveRuleHandler,
         SendCommandHandler,
         UpdateAuthorityHandler,

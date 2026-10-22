@@ -87,6 +87,15 @@ const ruleOf = builder<AuthorityRuleRecord>({
     required_fields: ["customer"],
     note: "",
     updated_at: "2026-10-12T10:00:00.000Z",
+    unit: "vnd",
+    auto_max: null,
+    ask_max: null,
+    agents: [],
+    approver_roles: ["owner", "manager"],
+    approver_rooms: [],
+    approver_members: [],
+    approval_policy: "any",
+    timeout_minutes: 30,
 })
 
 const changeOf = builder<RuleChange>({
@@ -371,6 +380,32 @@ describe("DecisionsService", () => {
             })
             await expect(service.saveRule("user-1", "ws-1", capped)).resolves.toEqual(ruleOf())
             expect(rules.save).toHaveBeenCalledTimes(1)
+        })
+    })
+})
+
+describe("DecisionsService", () => {
+    describe("saveRule with bands", () => {
+        it("refuses an auto band for an action that can never run by itself, whatever mode comes with it", async () => {
+            const { service, rules } = await build(mockEntityManager())
+            const capped = changeOf({ action: "send_care", department: "chatbot", auto_max: 3, ask_max: 15 })
+
+            await expect(service.saveRule("user-1", "ws-1", capped)).rejects.toMatchObject({
+                code: DecisionsErrorCode.ModeCapped,
+                params: { action: "send_care" },
+            })
+            expect(rules.save).not.toHaveBeenCalled()
+        })
+
+        it("allows an ask band without an auto band for a capped action, and a never rule that carries bands", async () => {
+            const { service, rules } = await build(mockEntityManager())
+            rules.save.mockResolvedValue(ruleOf())
+            const capped = changeOf({ action: "send_care", department: "chatbot" })
+
+            await service.saveRule("user-1", "ws-1", { ...capped, auto_max: null, ask_max: 15 })
+            await service.saveRule("user-1", "ws-1", { ...capped, mode: "never", auto_max: 3, ask_max: 15 })
+
+            expect(rules.save).toHaveBeenCalledTimes(2)
         })
     })
 })

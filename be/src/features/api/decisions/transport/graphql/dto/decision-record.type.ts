@@ -27,9 +27,13 @@ export class DecisionRecordType {
     @Field()
     action!: string
 
-    /** Who decided, by display name. */
+    /** Who decided, by the member's current display name. */
     @Field()
     decided_by!: string
+
+    /** The member who decided; null for a policy decision and for lines written before members were named. */
+    @Field(() => ID, { nullable: true })
+    decidedByMemberId?: string | null
 
     /** `policy`, `owner` or `staff`. */
     @Field()

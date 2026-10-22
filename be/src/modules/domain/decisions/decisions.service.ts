@@ -28,6 +28,7 @@ import { EvidenceService } from "./evidence.service"
 import { clampPageSize, splitPage } from "./paging.policy"
 import { LIST_DECISION_HISTORY } from "./persistence/decision-history.sql"
 import type { AccountingWaitingWorkRow, WorkItemViewRow } from "./persistence/work-item-views.rows"
+import { ruleSummary, runsAlone } from "./rule-save.policy"
 import { FIND_WORK_ITEM_VIEW, LIST_ACCOUNTING_WAITING_WORK, LIST_WORK_ITEMS } from "./persistence/work-item-views.sql"
 
 /** A proposal field when it is text. */
@@ -147,12 +148,10 @@ export class DecisionsService {
         const record = (await this.actions.list(this.entityManager)).find((entry) => entry.action === change.action)
         if (record?.module_key !== change.department)
             throw new DecisionsError({ code: DecisionsErrorCode.UnknownAction, params: { action: change.action } })
-        if (change.mode === "auto" && record.max_mode !== null)
+        if (runsAlone(change) && record.max_mode !== null)
             throw new DecisionsError({ code: DecisionsErrorCode.ModeCapped, params: { action: change.action } })
         const saved = await this.rules.save(workspaceId, change)
-        const limit = change.limit_vnd === null ? "" : ` < ${change.limit_vnd}`
-        const summary = `${saved.department}.${saved.action} -> ${change.mode}${limit}`
-        await this.log(workspaceId, member, "authority.rule_updated", summary)
+        await this.log(workspaceId, member, "authority.rule_updated", ruleSummary(saved, change))
         return saved
     }
 
