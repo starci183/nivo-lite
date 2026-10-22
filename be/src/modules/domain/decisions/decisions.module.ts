@@ -4,9 +4,11 @@ import { AGENT_DIRECTORY, MessagesModule } from "@modules/domain/messages"
 import { ExecutionsModule } from "@modules/domain/executions"
 import { AuthorityModule } from "@modules/domain/authority"
 import { AuthorityRulesModule } from "@modules/domain/authority-rules"
+import { MemberGrantsModule } from "@modules/domain/member-grants"
 import { ResponsibilitiesModule } from "@modules/domain/responsibilities"
 import { WorkItemsModule } from "@modules/domain/work-items"
 import { DecisionsQueueModule } from "@modules/queues/decisions"
+import { AuthorityGrantsService } from "./authority-grants.service"
 import { DecisionJobsService } from "./decision-jobs.service"
 import { ApprovalRequesterService } from "./approval-requester.service"
 import { CommandBusService } from "./command-bus.service"
@@ -48,6 +50,7 @@ export class DecisionsModule extends ConfigurableModuleClass {
         const owners = [
             AuthorityModule.register({ isGlobal: false }),
             AuthorityRulesModule.register({ isGlobal: false }),
+            MemberGrantsModule.register({ isGlobal: false }),
             ExecutionsModule.register({ isGlobal: false }),
             MessagesModule.register({ isGlobal: false, agentDirectory: options.ports.agentDirectory }),
             ResponsibilitiesModule.register({ isGlobal: false, agentDirectory: options.ports.agentDirectory }),
@@ -67,6 +70,7 @@ export class DecisionsModule extends ConfigurableModuleClass {
                 { provide: LEAD_GEN_FLOW, useExisting: options.ports.leadGenFlow },
                 { provide: OUTBOUND_ACCESS_GATE, useClass: options.ports.outboundAccessGate },
                 ApprovalRequesterService,
+                AuthorityGrantsService,
                 CommandBusService,
                 DecisionJobsService,
                 CommandPlannerService,
@@ -88,6 +92,7 @@ export class DecisionsModule extends ConfigurableModuleClass {
                 DecisionsQueueModule,
                 WORK_PERFORMER_REGISTRY,
                 ApprovalRequesterService,
+                AuthorityGrantsService,
                 CommandBusService,
                 DecisionJobsService,
                 DecisionsService,

@@ -64,6 +64,15 @@ const ruleOf = builder<AuthorityRuleRecord>({
     required_fields: ["customer"],
     note: "",
     updated_at: "2026-10-01T00:00:00.000Z",
+    unit: "vnd",
+    auto_max: null,
+    ask_max: null,
+    agents: [],
+    approver_roles: ["owner", "manager"],
+    approver_rooms: [],
+    approver_members: [],
+    approval_policy: "any",
+    timeout_minutes: 30,
 })
 const SESSION: SetupSessionRecord = {
     id: "s-1",

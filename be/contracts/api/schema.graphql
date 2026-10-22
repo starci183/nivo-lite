@@ -980,6 +980,14 @@ input ApproveVideoProjectInput {
   projectId: ID!
 }
 
+type ApproverMemberType {
+  memberId: ID!
+  name: String!
+  role: String!
+  rooms: [String!]!
+  status: String!
+}
+
 input ArchiveVideoProjectInput {
   archived: Boolean!
   projectId: ID!
@@ -1041,21 +1049,39 @@ type AuthorityProfileType {
 
 input AuthorityRuleChangeInput {
   action: String!
+  agents: [ID!]
+  approval_policy: String
+  approver_members: [ID!]
+  approver_roles: [String!]
+  approver_rooms: [String!]
+  ask_max: Float
+  auto_max: Float
   department: String!
   limit_vnd: Int = null
   mode: String!
   note: String = null
   required_fields: [String!] = []
+  timeout_minutes: Int
+  unit: String
 }
 
 type AuthorityRuleType {
   action: String!
+  agents: [ID!]!
+  approval_policy: String!
+  approver_members: [ID!]!
+  approver_roles: [String!]!
+  approver_rooms: [String!]!
+  ask_max: Float
+  auto_max: Float
   department: String!
   id: ID!
   limit_vnd: Float
   mode: String!
   note: String!
   required_fields: [String!]!
+  timeout_minutes: Int!
+  unit: String!
   updated_at: String!
   workspace_id: ID!
 }
@@ -2692,6 +2718,7 @@ input DecideWorkItemInput {
 type DecisionRecordType {
   action: String!
   created_at: String!
+  decidedByMemberId: ID
   decided_by: String!
   decider_kind: String!
   department: String!
@@ -4334,6 +4361,22 @@ type McpToolType {
   scope: String!
 }
 
+input MemberGrantChangeInput {
+  maxAmount: Float = null
+  memberId: ID!
+}
+
+type MemberGrantType {
+  action: String!
+  maxAmount: Float
+  memberId: ID!
+  unit: String!
+}
+
+input MemberGrantsInput {
+  action: String!
+}
+
 type MemberListingType {
   displayName: String!
   email: String!
@@ -4794,6 +4837,7 @@ type Mutation {
   saveInventorySupplier(input: SaveInventorySupplierInput!): InventoryRefType!
   saveLoyaltyProgram(input: SaveLoyaltyProgramInput!): LoyaltyProgramType!
   saveLoyaltyReward(input: SaveLoyaltyRewardInput!): LoyaltyRewardType!
+  saveMemberGrants(input: SaveMemberGrantsInput!): [MemberGrantType!]!
   saveOpenApiConnection(input: SaveOpenApiConnectionInput!): ID!
   saveProviderKeys(input: SaveProviderKeysInput!): ProviderKeysResultType!
   saveReplyTimeout(input: SaveReplyTimeoutInput!): ModuleInstallationType!
@@ -5418,6 +5462,7 @@ type Query {
   agentSyncStatus(input: ModuleInstallationIdInput!): AgentSyncStatusType!
   agents(input: ListAgentsInput!): [AgentSummaryType!]!
   apiKeys: [ApiKeyType!]!
+  approverDirectory: [ApproverMemberType!]!
   askKnowledge(input: AskKnowledgeInput!): [RetrievedPassageType!]!
   authority: AuthoritySheetType!
   automationGoogleAccounts: [AutomationGoogleAccountType!]!
@@ -5503,6 +5548,7 @@ type Query {
   mcpCallLog(input: McpCallLogInput): [McpCallLogType!]!
   mcpConnectors: [McpConnectorType!]!
   mcpToolGrants: [McpToolGrantType!]!
+  memberGrants(input: MemberGrantsInput!): [MemberGrantType!]!
   metaConnection(input: GetMetaConnectionInput!): MetaWizardConnectionType!
   moduleDefinition(input: ModuleKeyInput!): ModuleDefinitionType!
   moduleInstallation(input: ModuleInstallationIdInput!): ModuleInstallationType!
@@ -6585,6 +6631,11 @@ input SaveLoyaltyRewardInput {
   pointsCost: Int!
   stock: Int
   valueVnd: Float!
+}
+
+input SaveMemberGrantsInput {
+  action: String!
+  grants: [MemberGrantChangeInput!]!
 }
 
 input SaveOpenApiConnectionInput {

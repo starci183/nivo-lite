@@ -388,6 +388,15 @@ const ruleOf = builder<AuthorityRuleRecord>({
     required_fields: [],
     note: "",
     updated_at: "2026-10-12T10:00:00.000Z",
+    unit: "vnd",
+    auto_max: null,
+    ask_max: null,
+    agents: [],
+    approver_roles: ["owner", "manager"],
+    approver_rooms: [],
+    approver_members: [],
+    approval_policy: "any",
+    timeout_minutes: 30,
 })
 
 type Change = Awaited<ReturnType<DeepseekClient["parseAuthorityChat"]>>

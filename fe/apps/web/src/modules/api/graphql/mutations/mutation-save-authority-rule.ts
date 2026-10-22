@@ -16,12 +16,21 @@ const mutation1: TypedDocumentNode<
     mutation SaveAuthorityRule($input: SaveAuthorityRuleInput!) {
         saveAuthorityRule(input: $input) {
             action
+            agents
+            approval_policy
+            approver_members
+            approver_roles
+            approver_rooms
+            ask_max
+            auto_max
             department
             id
             limit_vnd
             mode
             note
             required_fields
+            timeout_minutes
+            unit
             updated_at
             workspace_id
         }

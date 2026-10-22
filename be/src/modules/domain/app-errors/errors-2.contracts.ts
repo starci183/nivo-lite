@@ -1,4 +1,6 @@
+import { APPROVAL_REQUESTS_ERROR_KINDS } from "@modules/domain/approval-requests"
 import { AUTHORITY_RULES_ERROR_KINDS } from "@modules/domain/authority-rules"
+import { MEMBER_GRANTS_ERROR_KINDS } from "@modules/domain/member-grants"
 import { DEEPSEEK_ERROR_KINDS } from "@modules/integrations/deepseek"
 import { EXECUTIONS_ERROR_KINDS } from "@modules/domain/executions"
 import { OFFICE_COMMAND_CANDIDATES_ERROR_KINDS } from "@modules/domain/office-command-candidates"
@@ -32,6 +34,8 @@ import { HTTP_SECURITY_ERROR_KINDS } from "@modules/platform/http-security"
 /** App-wide errors catalog, preserving registration order. */
 export const API_ERROR_KINDS_2 = [
     AUTHORITY_RULES_ERROR_KINDS,
+    MEMBER_GRANTS_ERROR_KINDS,
+    APPROVAL_REQUESTS_ERROR_KINDS,
     DEEPSEEK_ERROR_KINDS,
     EXECUTIONS_ERROR_KINDS,
     OFFICE_COMMAND_CANDIDATES_ERROR_KINDS,

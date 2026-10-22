@@ -56,9 +56,17 @@ describe("work decision policy", () => {
     it("records owner and manager as owner and staff as staff", async () => {
         const { subject } = await buildSubject()
 
-        expect(subject.deciderOf(memberOf())).toEqual({ name: "An", kind: "owner" })
-        expect(subject.deciderOf(memberOf({ role: "manager" }))).toEqual({ name: "An", kind: "owner" })
-        expect(subject.deciderOf(memberOf({ role: "staff" }))).toEqual({ name: "An", kind: "staff" })
+        expect(subject.deciderOf(memberOf(), "member-1")).toEqual({ name: "An", kind: "owner", memberId: "member-1" })
+        expect(subject.deciderOf(memberOf({ role: "manager" }), "member-2")).toEqual({
+            name: "An",
+            kind: "owner",
+            memberId: "member-2",
+        })
+        expect(subject.deciderOf(memberOf({ role: "staff" }), "member-3")).toEqual({
+            name: "An",
+            kind: "staff",
+            memberId: "member-3",
+        })
     })
 
     it("reads the assignee of an item", async () => {

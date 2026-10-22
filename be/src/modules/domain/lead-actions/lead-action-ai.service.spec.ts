@@ -8,6 +8,7 @@ import { LeadRecordsService } from "@modules/domain/leads"
 import type { LeadRecordRow } from "@modules/domain/leads"
 import { MessagesService } from "@modules/domain/messages"
 import { ResponsibilityJournalService } from "@modules/domain/responsibilities"
+import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import type { ResponsibilityListing } from "@modules/domain/responsibilities"
 import { DEEPSEEK_CLIENT } from "@modules/integrations/deepseek"
 import type { DeepseekClient, ProposedResponsibility } from "@modules/integrations/deepseek"
@@ -41,6 +42,7 @@ const open: ResponsibilityListing = {
     title: "Call back",
     owner_kind: "human",
     owner_agent_id: null,
+    owner_member_id: "member-1",
     owner_name: "Lan",
     next_action: "Call",
     due_at: null,
@@ -97,6 +99,8 @@ const build = async () => {
     agents.profileOf.mockResolvedValue(profile)
     const messages = mock<MessagesService>()
     messages.postSystem.mockResolvedValue(undefined)
+    const members = mock<WorkspaceMembersService>()
+    members.idOf.mockResolvedValue("member-1")
     ai.proposeResponsibility.mockResolvedValue(proposal)
     const catalog = mock<MessageCatalog>()
     catalog.get.mockReturnValue("context refreshed")
@@ -111,6 +115,7 @@ const build = async () => {
             { provide: AgentsService, useValue: agents },
             { provide: ResponsibilityJournalService, useValue: responsibilities },
             { provide: MessagesService, useValue: messages },
+            { provide: WorkspaceMembersService, useValue: members },
             { provide: DEEPSEEK_CLIENT, useValue: ai },
         ],
     }).compile()
@@ -122,6 +127,7 @@ const build = async () => {
         responsibilities,
         agents,
         messages,
+        members,
         catalog,
         tx,
     }
@@ -279,7 +285,7 @@ describe("LeadActionAiService", () => {
     })
 
     it("uses other active agents without sales agents and respects human proposals", async () => {
-        const { ai, leads, model, responsibilities, agents, catalog } = await build()
+        const { ai, leads, model, responsibilities, agents, catalog, members } = await build()
         const unbriefedLead = { ...lead, context_summary: null }
         leads.require.mockResolvedValue(unbriefedLead)
         responsibilities.list.mockResolvedValue([])
@@ -296,6 +302,7 @@ describe("LeadActionAiService", () => {
             responsibilityId: "resp-1",
         })
 
+        expect(members.idOf).toHaveBeenCalledWith("user-1", "ws-1")
         expect(agents.profileOf).toHaveBeenCalledWith("ws-1", sales.id)
         expect(model.proposeResponsibility).toHaveBeenCalledWith(ctx, unbriefedLead, "", [profile], "Lan")
         expect(responsibilities.create).toHaveBeenCalledWith(
@@ -304,7 +311,7 @@ describe("LeadActionAiService", () => {
             {
                 lead_id: LEAD,
                 title: proposal.title,
-                owner: "human",
+                owner: "member-1",
                 next_action: proposal.next_action,
                 due_at: "2026-10-14T00:00:00.000Z",
             },
@@ -337,7 +344,7 @@ describe("LeadActionAiService", () => {
             {
                 lead_id: LEAD,
                 title: proposal.title,
-                owner: "human",
+                owner: "member-1",
                 next_action: proposal.next_action,
                 due_at: "2026-10-16T00:00:00.000Z",
             },

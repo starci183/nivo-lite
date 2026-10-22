@@ -10,6 +10,34 @@ export const MODES: ReadonlyArray<AuthorityMode> = ["auto", "ask", "never"]
 /** The mode a text names, or none. */
 export const authorityModeOf = (value: string): AuthorityMode | null => MODES.find((mode) => mode === value) ?? null
 
+/** What the amount of an action is counted in: money, a percentage (a discount) or a count (nights, items). */
+export type RuleUnit = "vnd" | "percent" | "count"
+
+/** The units, in display order. */
+export const UNITS: ReadonlyArray<RuleUnit> = ["vnd", "percent", "count"]
+
+/** The unit a text names; VND when the text names none, as every rule was before units. */
+export const ruleUnitOf = (value: string): RuleUnit => UNITS.find((unit) => unit === value) ?? "vnd"
+
+/** How a group of approvers decides: the first one, all of them, or one after another. */
+export type ApprovalPolicy = "any" | "all" | "sequential"
+
+/** The approval policies, in display order. */
+export const POLICIES: ReadonlyArray<ApprovalPolicy> = ["any", "all", "sequential"]
+
+/** The policy a text names; "any one" when the text names none, the default of every rule. */
+export const approvalPolicyOf = (value: string): ApprovalPolicy => POLICIES.find((policy) => policy === value) ?? "any"
+
+/** A workspace role that may be named in an approver group. */
+export type ApproverRole = "owner" | "manager" | "staff"
+
+/** The roles an approver group can name, in display order. */
+export const APPROVER_ROLES: ReadonlyArray<ApproverRole> = ["owner", "manager", "staff"]
+
+/** The role a text names, or none. */
+export const approverRoleOf = (value: string): ApproverRole | null =>
+    APPROVER_ROLES.find((role) => role === value) ?? null
+
 /** Details an action can require before NIVO acts alone. */
 export const FIELD_KEYS = ["contact_name", "need", "contact", "customer", "items", "amount_vnd"] as const
 
@@ -46,6 +74,24 @@ export interface StoredRule {
     readonly mode: AuthorityMode
     readonly limit: number | null
     readonly required: ReadonlyArray<string>
+    /** What the amount is counted in. */
+    readonly unit: RuleUnit
+    /** The action runs alone up to this amount; null means no auto band. */
+    readonly autoMax: number | null
+    /** A person is asked up to this amount, above it the action never runs; null means no upper bound. */
+    readonly askMax: number | null
+    /** The agents the rule applies to; empty means every agent. */
+    readonly agents: ReadonlyArray<string>
+    /** Roles whose members may approve. */
+    readonly roles: ReadonlyArray<ApproverRole>
+    /** Keys of the department rooms whose people may approve. */
+    readonly rooms: ReadonlyArray<string>
+    /** Members named as approvers, in the order they are asked. */
+    readonly members: ReadonlyArray<string>
+    /** How the approvers decide. */
+    readonly policy: ApprovalPolicy
+    /** Minutes a request waits before it goes to the owner of the agent. */
+    readonly timeoutMinutes: number
 }
 
 /** The stored goals, policies and limits note; empty text and no numbers before anything is saved. */

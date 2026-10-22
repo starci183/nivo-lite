@@ -29,6 +29,7 @@ const recordOf = builder<LeadDecisionRecord>({
     department: "sales",
     action: "send_follow_up",
     decided_by: "An",
+    decidedByMemberId: "member-1",
     decider_kind: "owner",
     outcome: "approved",
     reason: null,
@@ -76,6 +77,16 @@ describe("EvidenceService", () => {
                 },
                 em,
             )
+        })
+
+        it("names the member who decided", async () => {
+            const em = mockEntityManager({ query: [INSERT_DECISION, []] })
+            const { service } = await build(em)
+
+            await service.decide(ctx, decisionOf({ before: null, decided_by_member_id: "member-1" }))
+
+            const params = em.query.mock.calls[0]?.[1]
+            expect(params?.[12]).toBe("member-1")
         })
 
         it("writes null for what the caller left out", async () => {
@@ -134,6 +145,7 @@ describe("EvidenceService", () => {
                 "ok",
                 JSON.stringify(proposal),
                 JSON.stringify({ ...proposal, draft: "Hi" }),
+                null,
             ])
         })
 
@@ -152,6 +164,7 @@ describe("EvidenceService", () => {
                 "An",
                 "owner",
                 "approved",
+                null,
                 null,
                 null,
                 null,

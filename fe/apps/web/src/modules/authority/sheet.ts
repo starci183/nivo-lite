@@ -1,4 +1,4 @@
-import { EMPTY_PROFILE, authorityModeOf } from "./rules"
+import { EMPTY_PROFILE, approvalPolicyOf, approverRoleOf, authorityModeOf, ruleUnitOf } from "./rules"
 import type { AuthorityProfile, AuthoritySheet } from "./rules"
 
 /** The back end profile line. */
@@ -20,6 +20,15 @@ interface RuleWire {
     readonly mode: string
     readonly limit_vnd?: number | null
     readonly required_fields: ReadonlyArray<string>
+    readonly unit: string
+    readonly auto_max?: number | null
+    readonly ask_max?: number | null
+    readonly agents: ReadonlyArray<string>
+    readonly approver_roles: ReadonlyArray<string>
+    readonly approver_rooms: ReadonlyArray<string>
+    readonly approver_members: ReadonlyArray<string>
+    readonly approval_policy: string
+    readonly timeout_minutes: number
 }
 
 /** The back end `authority` answer. */
@@ -52,5 +61,14 @@ export const toAuthoritySheet = (wire: SheetWire): AuthoritySheet => ({
         mode: authorityModeOf(rule.mode) ?? "ask",
         limit: rule.limit_vnd ?? null,
         required: rule.required_fields,
+        unit: ruleUnitOf(rule.unit),
+        autoMax: rule.auto_max ?? null,
+        askMax: rule.ask_max ?? null,
+        agents: rule.agents,
+        roles: rule.approver_roles.flatMap((role) => approverRoleOf(role) ?? []),
+        rooms: rule.approver_rooms,
+        members: rule.approver_members,
+        policy: approvalPolicyOf(rule.approval_policy),
+        timeoutMinutes: rule.timeout_minutes,
     })),
 })

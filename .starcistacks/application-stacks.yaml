@@ -105,6 +105,9 @@ jobs:
   decisions-drain-work:
     schedule: "*/1 * * * *"
     command: node be/dist/apps/cli/src/main.js jobs tick decisions-drain-work
+  decisions-expire-approvals:
+    schedule: "*/1 * * * *"
+    command: node be/dist/apps/cli/src/main.js jobs tick decisions-expire-approvals
   marketing-tick:
     schedule: "*/15 * * * *"
     command: node be/dist/apps/cli/src/main.js jobs tick marketing-tick

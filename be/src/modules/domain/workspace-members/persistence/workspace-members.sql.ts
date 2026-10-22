@@ -7,6 +7,13 @@ export const FIND_MEMBER = sql`
     WHERE m.workspace_id = $1 AND m.user_id = $2
     LIMIT 1`
 
+/** The id of the active seat of one user in one workspace: the member id steps, grants and decisions name ($1 workspace, $2 user). */
+export const FIND_MEMBER_ID = sql`
+    SELECT m.id
+    FROM public.workspace_members m
+    WHERE m.workspace_id = $1 AND m.user_id = $2 AND m.status = 'active'
+    LIMIT 1`
+
 /** Holds the actor's membership while an operator ensures a new seat, preventing a concurrent authority change. */
 export const LOCK_MEMBER = sql`
     SELECT workspace_id, user_id, role, staff_id, display_name, status

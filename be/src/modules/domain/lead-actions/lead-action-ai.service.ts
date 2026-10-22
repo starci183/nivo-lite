@@ -6,6 +6,7 @@ import { EventsService } from "@modules/domain/events"
 import { LeadRecordsService } from "@modules/domain/leads"
 import { MessagesService } from "@modules/domain/messages"
 import { ResponsibilityJournalService } from "@modules/domain/responsibilities"
+import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { InjectDeepseekClient } from "@modules/integrations/deepseek"
 import type { DeepseekClient } from "@modules/integrations/deepseek"
 import { InjectClock } from "@modules/platform/clock"
@@ -34,6 +35,7 @@ export class LeadActionAiService {
         private readonly agents: AgentsService,
         private readonly responsibilities: ResponsibilityJournalService,
         private readonly messages: MessagesService,
+        private readonly members: WorkspaceMembersService,
         @InjectDeepseekClient() private readonly ai: DeepseekClient,
     ) {}
 
@@ -88,7 +90,7 @@ export class LeadActionAiService {
                 {
                     lead_id: lead.id,
                     title: proposal.title,
-                    owner: owner?.id ?? "human",
+                    owner: owner?.id ?? (await this.members.idOf(userId, ctx.workspaceId)),
                     next_action: proposal.next_action,
                     due_at: new Date(this.clock.now().getTime() + proposal.due_in_days * DAY_MS).toISOString(),
                 },

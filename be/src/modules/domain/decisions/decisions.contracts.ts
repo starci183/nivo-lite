@@ -56,6 +56,8 @@ export interface Decider {
     readonly name: string
     /** Owner or staff. */
     readonly kind: "owner" | "staff"
+    /** The member (the seat) that decided; the decision log names it next to the display name. */
+    readonly memberId?: string
 }
 
 /** Everything `runWork` takes. */
@@ -297,6 +299,8 @@ export interface DecisionEntry {
     readonly decided_by: string
     /** Policy, owner or staff. */
     readonly decider_kind: DeciderKind
+    /** The member who decided; absent for a policy decision. */
+    readonly decided_by_member_id?: string | null
     /** What was decided. */
     readonly outcome: DecisionOutcome
     /** Why the gate asked. */

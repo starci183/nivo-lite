@@ -104,7 +104,7 @@ const build = async (found: ActionEntry | null = action): Promise<Built> => {
 const auto: FinishPlan = { path: "auto", by: { name: "NIVO", kind: "policy" }, outcome: "auto_done" }
 const human: FinishPlan = {
     path: "human",
-    by: { name: "Lan", kind: "owner" },
+    by: { name: "Lan", kind: "owner", memberId: "member-1" },
     outcome: "edited",
     note: "ok",
     before: { summary: "Before", fields: {} },
@@ -166,6 +166,7 @@ describe("WorkRecorderService", () => {
                 action: "send_quote",
                 decided_by: "Lan",
                 decider_kind: "owner",
+                decided_by_member_id: "member-1",
                 outcome: "edited",
                 reason: "missing_data",
                 note: "ok",
@@ -204,7 +205,13 @@ describe("WorkRecorderService", () => {
 
             expect(built.decide).toHaveBeenCalledWith(
                 ctx,
-                expect.objectContaining({ note: "Sent", before: null, decider_kind: "staff", outcome: "approved" }),
+                expect.objectContaining({
+                    note: "Sent",
+                    before: null,
+                    decider_kind: "staff",
+                    decided_by_member_id: null,
+                    outcome: "approved",
+                }),
             )
         })
 
@@ -232,7 +239,7 @@ describe("WorkRecorderService", () => {
     describe("rejected", () => {
         it("logs the rejection, tells the Office and publishes the decision", async () => {
             const built = await build()
-            const by = { name: "Lan", kind: "owner" } as const
+            const by = { name: "Lan", kind: "owner", memberId: "member-1" } as const
             const merged: Proposal = { summary: "Merged", fields: {} }
 
             await built.service.rejected(ctx, itemOf(), merged, by, "too much")
@@ -244,6 +251,7 @@ describe("WorkRecorderService", () => {
                 action: "send_quote",
                 decided_by: "Lan",
                 decider_kind: "owner",
+                decided_by_member_id: "member-1",
                 outcome: "rejected",
                 reason: "over_authority",
                 note: "too much",

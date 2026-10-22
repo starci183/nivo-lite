@@ -39,6 +39,7 @@ const STEP: ResponsibilityRecord = {
     title: "Follow up",
     owner_kind: "human",
     owner_agent_id: null,
+    owner_member_id: "member-1",
     owner_name: "An",
     next_action: "Call",
     due_at: null,

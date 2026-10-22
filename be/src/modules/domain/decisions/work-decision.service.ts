@@ -87,7 +87,7 @@ export class WorkDecisionService {
     async decide(principalId: string, workspaceId: string, request: WorkDecisionRequest): Promise<WorkItem> {
         const item = await this.decisions.getWorkItem(principalId, workspaceId, request.workItemId)
         const member = await this.members.require(principalId, workspaceId)
-        return this.resume(member, item, request)
+        return this.resume(member, await this.members.idOf(principalId, workspaceId), item, request)
     }
 
     /**
@@ -106,7 +106,7 @@ export class WorkDecisionService {
         if (card.work_item_id === null) return this.decideLegacyExecution(member, workspaceId, request)
         const item = await this.decisions.getWorkItem(principalId, workspaceId, card.work_item_id)
         const editedDraft = request.editedDraft ?? null
-        await this.resume(member, item, {
+        await this.resume(member, await this.members.idOf(principalId, workspaceId), item, {
             workItemId: item.id,
             decision: request.decision,
             edits: editedDraft === null ? {} : { draft: editedDraft },
@@ -193,7 +193,12 @@ export class WorkDecisionService {
         })
     }
 
-    private async resume(member: WorkspaceMember, item: WorkItem, request: WorkDecisionRequest): Promise<WorkItem> {
+    private async resume(
+        member: WorkspaceMember,
+        memberId: string,
+        item: WorkItem,
+        request: WorkDecisionRequest,
+    ): Promise<WorkItem> {
         if (!canDecide(member, assigneeOf(item))) throw new DecisionsError({ code: DecisionsErrorCode.NotAllowed })
         const basis = request.decision === "approved" ? cleanBasis(request.basis) : ""
         if (request.decision === "approved" && basisMissing(item.action, basis)) {
@@ -204,7 +209,7 @@ export class WorkDecisionService {
         }
         const ctx: WorkContext = { workspaceId: item.workspace_id, actor: member.displayName, locale: request.locale }
         const basisLine = basis === "" ? "" : this.catalog.get("decision.basisNote", { basis }, request.locale)
-        const by = deciderOf(member)
+        const by = deciderOf(member, memberId)
         const done = await this.engine.resumeWork(
             ctx,
             item.id,

@@ -27,6 +27,7 @@ export type { DecisionVerdict, FieldValue, WireEdits } from "./work-decision.con
 export { DecisionsModule } from "./decisions.module"
 export { ApprovalRequesterService } from "./approval-requester.service"
 export { CommandBusService } from "./command-bus.service"
+export { AuthorityGrantsService } from "./authority-grants.service"
 export { DecisionsService } from "./decisions.service"
 export { DecisionCorrectionsService } from "./decision-corrections.service"
 export { EvidenceService } from "./evidence.service"

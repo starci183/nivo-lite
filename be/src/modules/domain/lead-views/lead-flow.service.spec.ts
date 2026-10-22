@@ -192,6 +192,7 @@ describe("LeadFlowService", () => {
                     department: "sales",
                     action: "issue_invoice",
                     decided_by: "An",
+                    decidedByMemberId: "member-1",
                     decider_kind: "owner",
                     outcome: "approved",
                     reason: "routine",

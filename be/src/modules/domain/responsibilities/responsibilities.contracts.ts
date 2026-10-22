@@ -1,9 +1,6 @@
 import type { EntityManager } from "typeorm"
 import type { Locale } from "@modules/platform/i18n"
 
-/** The owner value that means the signed-in person; any other value is the id of an agent of the workspace. */
-export const HUMAN_OWNER = "human"
-
 /** One step of a lead journey as a person or an agent owns it. */
 export interface ResponsibilityResult {
     /** The responsibility id. */
@@ -16,6 +13,8 @@ export interface ResponsibilityResult {
     readonly ownerKind: string
     /** The agent that owns it, when it is an agent. */
     readonly ownerAgentId: string | null
+    /** The member that owns it, when it is a person. */
+    readonly ownerMemberId: string | null
     /** The name shown as owner. */
     readonly ownerName: string
     /** What happens next. */
@@ -34,7 +33,7 @@ export interface AddResponsibilityParams {
     readonly leadId: string
     /** The title of the step. */
     readonly title: string
-    /** `human` for the signed-in person, else the id of an agent of the workspace. */
+    /** The id of the member (a concrete person of the workspace) or of the agent that owns the step. */
     readonly owner: string
     /** What happens next. */
     readonly nextAction: string
@@ -52,7 +51,7 @@ export interface AssignResponsibilityParams {
     readonly workspaceId: string
     /** The responsibility to change. */
     readonly responsibilityId: string
-    /** `human` for the signed-in person, else the id of an agent of the workspace. */
+    /** The id of the member (a concrete person of the workspace) or of the agent that owns the step. */
     readonly owner: string
     /** What happens next. */
     readonly nextAction: string

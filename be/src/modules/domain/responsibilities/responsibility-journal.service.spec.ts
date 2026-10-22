@@ -10,7 +10,9 @@ import { CLOCK } from "@modules/platform/clock"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { MESSAGE_CATALOG } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
-import { ResponsibilitiesErrorCode } from "./errors/responsibilities.error"
+import { ResponsibilitiesError, ResponsibilitiesErrorCode } from "./errors/responsibilities.error"
+import type { ResolvedOwner } from "./responsibility-owner.policy"
+import { ResponsibilityOwnersService } from "./responsibility-owners.service"
 import type {
     NewResponsibility,
     ResponsibilityListing,
@@ -18,7 +20,6 @@ import type {
     ResponsibilityScope,
 } from "./responsibility-journal.contracts"
 import {
-    FIND_AGENT_NAME,
     FIND_LEAD_NAME,
     FIND_OPEN_RESPONSIBILITY,
     FIND_OPEN_TITLED_RESPONSIBILITY,
@@ -59,14 +60,16 @@ const registerEnsureFor = () => {
 
 const registerCreate = () => {
     describe("create", () => {
-        it("adds a responsibility owned by the caller and logs it", async () => {
+        it("adds a responsibility owned by the member the caller names and logs it", async () => {
             const created = rowOf({ owner_kind: "human", owner_agent_id: null, owner_name: "An", next_action: "Call" })
             const em = mockEntityManager({ query: [INSERT_RESPONSIBILITY, [created]] })
-            const { service, events } = await build(em)
+            const { service, events, owners } = await build(em)
+            owners.resolve.mockResolvedValue(personOf())
 
             await expect(service.create("user-1", "ws-1", inputOf())).resolves.toEqual(created)
 
-            expect(em.query).toHaveBeenCalledWith(INSERT_RESPONSIBILITY, [
+            expect(owners.resolve.mock.calls).toEqual([[em, "ws-1", "member-1"]])
+            expect(em.query.mock.calls[0]?.[1]).toEqual([
                 "ws-1",
                 "lead-1",
                 "Call Binh",
@@ -75,6 +78,7 @@ const registerCreate = () => {
                 "An",
                 "Call",
                 null,
+                "member-1",
             ])
             expect(events.record).toHaveBeenCalledWith(
                 {
@@ -88,19 +92,14 @@ const registerCreate = () => {
             )
         })
 
-        it("adds a responsibility owned by one of the workspace's agents", async () => {
-            const em = mockEntityManager({
-                query: [
-                    [FIND_AGENT_NAME, [{ id: "agent-1", name: "Sales Agent" }]],
-                    [INSERT_RESPONSIBILITY, [rowOf()]],
-                ],
-            })
-            const { service } = await build(em)
+        it("adds a responsibility owned by one of the workspace's agents, with no member", async () => {
+            const em = mockEntityManager({ query: [INSERT_RESPONSIBILITY, [rowOf()]] })
+            const { service, owners } = await build(em)
+            owners.resolve.mockResolvedValue(agentOwner())
 
             await service.create("user-1", "ws-1", inputOf({ owner: "agent-1" }))
 
-            expect(em.query).toHaveBeenCalledWith(FIND_AGENT_NAME, ["ws-1", "agent-1"])
-            expect(em.query).toHaveBeenCalledWith(INSERT_RESPONSIBILITY, [
+            expect(em.query.mock.calls[0]?.[1]).toEqual([
                 "ws-1",
                 "lead-1",
                 "Call Binh",
@@ -109,15 +108,19 @@ const registerCreate = () => {
                 "Sales Agent",
                 "Call",
                 null,
+                null,
             ])
         })
 
-        it("refuses an agent that is not in the workspace", async () => {
-            const { service } = await build(mockEntityManager({ query: [FIND_AGENT_NAME, []] }))
+        it("writes nothing when the owner is refused", async () => {
+            const em = mockEntityManager()
+            const { service, owners } = await build(em)
+            const refusal = new ResponsibilitiesError({ code: ResponsibilitiesErrorCode.OwnerNotFound })
+            owners.resolve.mockRejectedValue(refusal)
 
-            await expect(service.create("user-1", "ws-1", inputOf({ owner: "agent-9" }))).rejects.toMatchObject({
-                code: ResponsibilitiesErrorCode.NotFound,
-            })
+            await expect(service.create("user-1", "ws-1", inputOf({ owner: "agent-9" }))).rejects.toBe(refusal)
+
+            expect(em.query).not.toHaveBeenCalled()
         })
     })
 }
@@ -156,28 +159,50 @@ const registerUpdateStatus = () => {
             expect(em.query).toHaveBeenCalledWith(UPDATE_RESPONSIBILITY_STATUS, ["ws-1", "resp-1", "waiting_approval"])
         })
     })
+}
 
+const registerOpenNamed = () => {
     describe("openNamed", () => {
-        it("opens a human follow-up owned by the named person", async () => {
+        it("opens a follow-up owned by the active member with the named name", async () => {
             const em = mockEntityManager({
                 query: [
                     [FIND_OPEN_TITLED_RESPONSIBILITY, []],
                     [INSERT_RESPONSIBILITY, [rowOf({ owner_kind: "human", owner_agent_id: null, owner_name: "Linh" })]],
                 ],
             })
-            const { service } = await build(em)
+            const { service, owners } = await build(em)
+            owners.memberNamed.mockResolvedValue({ ...personOf(), memberId: "member-2", name: "Linh" })
 
             await expect(service.openNamed("ws-1", task)).resolves.toBe(true)
+            expect(owners.memberNamed.mock.calls).toEqual([["ws-1", "Linh"]])
             expect(em.query).toHaveBeenCalledWith(FIND_OPEN_TITLED_RESPONSIBILITY, ["ws-1", "lead-1", "Nurture Binh"])
-            expect(em.query).toHaveBeenCalledWith(INSERT_RESPONSIBILITY, [
-                "ws-1",
-                "lead-1",
-                "Nurture Binh",
+            expect(em.query.mock.calls[1]?.[1]?.slice(3)).toEqual([
                 "human",
                 null,
                 "Linh",
                 "Call back",
                 "2026-10-14T10:00:00.000Z",
+                "member-2",
+            ])
+        })
+
+        it("falls to the workspace owner when no active member carries the name", async () => {
+            const em = mockEntityManager({
+                query: [
+                    [FIND_OPEN_TITLED_RESPONSIBILITY, []],
+                    [INSERT_RESPONSIBILITY, [rowOf()]],
+                ],
+            })
+            const { service, owners } = await build(em)
+            owners.memberNamed.mockResolvedValue(null)
+            owners.workspaceOwner.mockResolvedValue({ ...personOf(), memberId: "member-9", name: "Chu Van" })
+
+            await expect(service.openNamed("ws-1", task)).resolves.toBe(true)
+            expect(em.query.mock.calls[1]?.[1]?.slice(5)).toEqual([
+                "Chu Van",
+                "Call back",
+                "2026-10-14T10:00:00.000Z",
+                "member-9",
             ])
         })
 
@@ -275,29 +300,15 @@ const registerEngineUpdates = () => {
 const registerAgentAssignment = () => {
     it("creates and records an agent assignment in the caller's transaction", async () => {
         const em = mockEntityManager()
-        const transaction = mockEntityManager({
-            query: [
-                [FIND_AGENT_NAME, [{ id: "agent-1", name: "Sales Agent" }]],
-                [INSERT_RESPONSIBILITY, [rowOf()]],
-            ],
-        })
-        const { service, members, events } = await build(em)
+        const transaction = mockEntityManager({ query: [INSERT_RESPONSIBILITY, [rowOf()]] })
+        const { service, members, events, owners } = await build(em)
+        owners.resolve.mockResolvedValue(agentOwner())
 
         await expect(service.create("user-1", "ws-1", inputOf({ owner: "agent-1" }), transaction)).resolves.toEqual(
             rowOf(),
         )
         expect(members.require).toHaveBeenCalledWith("user-1", "ws-1")
-        expect(transaction.query).toHaveBeenCalledWith(FIND_AGENT_NAME, ["ws-1", "agent-1"])
-        expect(transaction.query).toHaveBeenCalledWith(INSERT_RESPONSIBILITY, [
-            "ws-1",
-            "lead-1",
-            "Call Binh",
-            "agent",
-            "agent-1",
-            "Sales Agent",
-            "Call",
-            null,
-        ])
+        expect(owners.resolve.mock.calls).toEqual([[transaction, "ws-1", "agent-1"]])
         expect(events.record).toHaveBeenCalledWith(
             {
                 workspaceId: "ws-1",
@@ -343,30 +354,33 @@ const registerResponsibilityOwnership = () => {
             "Sales Agent",
             "responsibility.next:",
             "2026-10-13T10:00:00.000Z",
+            null,
         ])
     })
 
-    it("is owned by the actor when the workspace has no Sales agent", async () => {
+    it("is owned by the workspace owner member when the workspace has no Sales agent", async () => {
         const em = mockEntityManager({
             query: [
                 [FIND_OPEN_RESPONSIBILITY, []],
                 [FIND_LEAD_NAME, [{ contact_name: "Binh" }]],
-                [INSERT_RESPONSIBILITY, [rowOf({ owner_kind: "human", owner_agent_id: null, owner_name: "An" })]],
+                [INSERT_RESPONSIBILITY, [rowOf({ owner_kind: "human", owner_agent_id: null, owner_name: "Chu Van" })]],
             ],
         })
-        const { service } = await build(em)
+        const { service, owners } = await build(em)
+        owners.workspaceOwner.mockResolvedValue({ ...personOf(), memberId: "member-9", name: "Chu Van" })
 
         await service.ensureFor(ctx, "lead-1")
 
-        expect(em.query).toHaveBeenCalledWith(INSERT_RESPONSIBILITY, [
+        expect(em.query.mock.calls[2]?.[1]).toEqual([
             "ws-1",
             "lead-1",
             "responsibility.title:Binh",
             "human",
             null,
-            "An",
+            "Chu Van",
             "responsibility.next:",
             "2026-10-13T10:00:00.000Z",
+            "member-9",
         ])
     })
 
@@ -419,6 +433,7 @@ const rowOf = builder<ResponsibilityRecord>({
     title: "Follow up with Binh",
     owner_kind: "agent",
     owner_agent_id: "agent-1",
+    owner_member_id: null,
     owner_name: "Sales Agent",
     next_action: "Classify",
     due_at: "2026-10-13T10:00:00.000Z",
@@ -435,10 +450,14 @@ const memberOf = builder<WorkspaceMember>({
     status: "active",
 })
 
+const personOf = builder<ResolvedOwner>({ kind: "human", agentId: null, memberId: "member-1", name: "An" })
+
+const agentOwner = builder<ResolvedOwner>({ kind: "agent", agentId: "agent-1", memberId: null, name: "Sales Agent" })
+
 const inputOf = builder<NewResponsibility>({
     lead_id: "lead-1",
     title: "Call Binh",
-    owner: "human",
+    owner: "member-1",
     next_action: "Call",
     due_at: null,
 })
@@ -447,6 +466,9 @@ const build = async (entityManager: MockEntityManager, sales: OptionalAgentIdent
     const members = mock<WorkspaceMembersService>({ require: jest.fn().mockResolvedValue(memberOf()) })
     const events = mock<EventsService>({ record: jest.fn().mockResolvedValue(undefined) })
     const directory = mock<AgentDirectory>({ agentOfDepartment: jest.fn().mockResolvedValue(sales) })
+    const owners = mock<ResponsibilityOwnersService>()
+    owners.workspaceOwner.mockResolvedValue(personOf())
+    owners.memberNamed.mockResolvedValue(null)
     const catalog = mock<MessageCatalog>({
         get: jest.fn((key: string, params: Readonly<Record<string, string | number>>) => `${key}:${params.name ?? ""}`),
     })
@@ -459,15 +481,17 @@ const build = async (entityManager: MockEntityManager, sales: OptionalAgentIdent
             { provide: AGENT_DIRECTORY, useValue: directory },
             { provide: WorkspaceMembersService, useValue: members },
             { provide: EventsService, useValue: events },
+            { provide: ResponsibilityOwnersService, useValue: owners },
         ],
     }).compile()
-    return { service: moduleRef.get(ResponsibilityJournalService), members, events, directory }
+    return { service: moduleRef.get(ResponsibilityJournalService), members, events, directory, owners }
 }
 
 describe("ResponsibilityJournalService", () => {
     registerEnsureFor()
     registerCreate()
     registerUpdateStatus()
+    registerOpenNamed()
     registerJourneyAndBoardReaders()
     registerEngineUpdates()
     registerAgentAssignment()

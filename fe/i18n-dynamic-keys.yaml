@@ -355,6 +355,8 @@ namespaces:
       reason: 'Read as the string "navOffice" in hooks/console/console.shared.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
     - key: "navOverview"
       reason: 'Read as the string "navOverview" in hooks/console/console.shared.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
+    - key: "navPermissions"
+      reason: 'Read as the string "navPermissions" in hooks/console/console.shared.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
     - key: "navResponsibilities"
       reason: 'Read as the string "navResponsibilities" in hooks/console/console.shared.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
     - key: "navTeam"

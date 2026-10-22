@@ -18,6 +18,7 @@ import { RunSetupTurnQueueModule } from "@features/jobs/run-setup-turn"
 import { GenerateWithAgentQueueModule } from "@features/jobs/generate-with-agent"
 import { SyncAgentsQueueModule } from "@features/jobs/sync-agents"
 import { DrainWorkQueueModule } from "@features/jobs/drain-work"
+import { ExpireApprovalsQueueModule } from "@features/jobs/expire-approvals"
 import { DraftLoyaltyCampaignQueueModule } from "@features/jobs/draft-loyalty-campaign"
 import { CheckConnectionHealthQueueModule } from "@features/jobs/check-connection-health"
 import { CompleteZaloAuthorizationQueueModule } from "@features/jobs/complete-zalo-authorization"
@@ -63,6 +64,7 @@ export const API_JOB_QUEUES: Array<DynamicModule> = [
     GenerateWithAgentQueueModule.register({}),
     SyncAgentsQueueModule.register({}),
     DrainWorkQueueModule.register({}),
+    ExpireApprovalsQueueModule.register({}),
     DraftLoyaltyCampaignQueueModule.register({}),
     CheckConnectionHealthQueueModule.register({}),
     CompleteZaloAuthorizationQueueModule.register({}),

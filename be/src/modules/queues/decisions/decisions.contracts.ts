@@ -17,6 +17,8 @@ export enum DecisionsJob {
     ConfirmCommand = "office.confirm-command",
     /** The scheduler tick that drains the queued chain steps of every workspace through the policy gate. */
     DrainWork = "decisions.drain-work",
+    /** The scheduler tick that expires the requests for approval whose time ran out and reminds the half-way ones. */
+    ExpireApprovals = "decisions.expire-approvals",
 }
 
 /** A queued Sales step to process, plus the identity of this retry. */

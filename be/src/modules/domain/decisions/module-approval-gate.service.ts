@@ -63,7 +63,8 @@ export class ModuleApprovalGateService extends ApprovalGate {
 
     /** The member behind the decision, looked up by user id for the name and role. */
     private async deciderOf(decision: ApprovalDecision): Promise<Decider> {
-        return deciderOf(await this.members.require(decision.decidedBy, decision.workspaceId))
+        const member = await this.members.require(decision.decidedBy, decision.workspaceId)
+        return deciderOf(member, await this.members.idOf(decision.decidedBy, decision.workspaceId))
     }
 
     private async current(decision: ApprovalDecision): Promise<ModuleApprovalResult> {

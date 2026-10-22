@@ -1,5 +1,11 @@
 import type { WorkspaceRole } from "../workspace-members.contracts"
 
+/** The id of one seat of public.workspace_members. */
+export interface MemberIdRow {
+    /** The member id (the seat, not the Auth account). */
+    id: string
+}
+
 /** public.workspace_members as the membership reads select it. */
 export interface MemberRow {
     /** The workspace the membership belongs to. */

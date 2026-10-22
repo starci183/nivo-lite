@@ -2,6 +2,7 @@ import type { AuthorityProfile } from "@modules/domain/authority"
 import type { AuthorityRuleRecord } from "@modules/domain/authority-rules"
 import type { AuthoritySheet, CommandResult, DecisionRecord, WorkItem, WorkItemPage } from "@modules/domain/decisions"
 import type { ExecutionRow } from "@modules/domain/executions"
+import type { DirectoryMember, MemberGrant } from "@modules/domain/member-grants"
 import type { ResponsibilityListing, ResponsibilityRecord } from "@modules/domain/responsibilities"
 import type { Locale } from "@modules/platform/i18n"
 import type { CreateResponsibilityRequest } from "../../application/create-responsibility.contracts"
@@ -9,17 +10,21 @@ import type { DecideExecutionRequest } from "../../application/decide-execution.
 import type { AssignWorkItemRequest } from "../../application/assign-work-item.contracts"
 import type { DecideWorkItemRequest } from "../../application/decide-work-item.contracts"
 import type { HoldWorkItemRequest } from "../../application/hold-work-item.contracts"
+import type { ListApproversRequest } from "../../application/list-approvers.contracts"
 import type { ListDecisionHistoryRequest } from "../../application/list-decision-history.contracts"
+import type { ListMemberGrantsRequest } from "../../application/list-member-grants.contracts"
 import type { GetWorkItemRequest } from "../../application/get-work-item.contracts"
 import type { ListResponsibilitiesRequest } from "../../application/list-responsibilities.contracts"
 import type { ListWorkItemPageRequest } from "../../application/list-work-item-page.contracts"
 import type { ReadAuthorityRequest } from "../../application/read-authority.contracts"
+import type { SaveMemberGrantsRequest } from "../../application/save-member-grants.contracts"
 import type { SaveRuleRequest } from "../../application/save-rule.contracts"
 import type { SendCommandRequest } from "../../application/send-command.contracts"
 import type { UpdateAuthorityRequest } from "../../application/update-authority.contracts"
 import type { UpdateResponsibilityStatusRequest } from "../../application/update-responsibility-status.contracts"
 import type { AgentCommandResultType } from "./dto/agent-command-result.type"
 import type { ApprovalExecutionType } from "./dto/approval-execution.type"
+import type { ApproverMemberType } from "./dto/approver-member.type"
 import type { AuthorityProfileType } from "./dto/authority-profile.type"
 import type { AuthorityRuleType } from "./dto/authority-rule.type"
 import type { AuthoritySheetType } from "./dto/authority-sheet.type"
@@ -27,6 +32,8 @@ import type { CreateResponsibilityInput } from "./dto/create-responsibility.inpu
 import type { DecideExecutionInput } from "./dto/decide-execution.input"
 import type { DecisionRecordType } from "./dto/decision-record.type"
 import type { ListDecisionHistoryInput } from "./dto/list-decision-history.input"
+import type { MemberGrantType } from "./dto/member-grant.type"
+import type { MemberGrantsInput } from "./dto/member-grants.input"
 import type { AssignWorkItemInput } from "./dto/assign-work-item.input"
 import type { DecideWorkItemInput } from "./dto/decide-work-item.input"
 import type { HoldWorkItemInput } from "./dto/hold-work-item.input"
@@ -34,6 +41,7 @@ import type { ListWorkItemsInput } from "./dto/list-work-items.input"
 import type { ResponsibilityListingType } from "./dto/responsibility-listing.type"
 import type { ResponsibilityType } from "./dto/responsibility.type"
 import type { SaveAuthorityRuleInput } from "./dto/save-authority-rule.input"
+import type { SaveMemberGrantsInput } from "./dto/save-member-grants.input"
 import type { SendAgentCommandInput } from "./dto/send-agent-command.input"
 import type { UpdateAuthorityInput } from "./dto/update-authority.input"
 import type { UpdateResponsibilityStatusInput } from "./dto/update-responsibility-status.input"
@@ -105,6 +113,44 @@ export const toSaveRuleRequest = (workspaceId: string, input: SaveAuthorityRuleI
     workspaceId,
     ...input,
 })
+
+/** Maps the workspace of the request to the approver directory query request. */
+export const toListApproversRequest = (workspaceId: string): ListApproversRequest => ({ workspaceId })
+
+/** Maps the action of the GraphQL input, with the workspace, to the member grants query request. */
+export const toListMemberGrantsRequest = (workspaceId: string, input: MemberGrantsInput): ListMemberGrantsRequest => ({
+    workspaceId,
+    ...input,
+})
+
+/** Maps the limits of the GraphQL input, with the workspace, to the command request. */
+export const toSaveMemberGrantsRequest = (
+    workspaceId: string,
+    input: SaveMemberGrantsInput,
+): SaveMemberGrantsRequest => ({
+    workspaceId,
+    action: input.action,
+    grants: input.grants.map((grant) => ({ memberId: grant.memberId, maxAmount: grant.maxAmount })),
+})
+
+/** Maps the people an approver group can name to the GraphQL type. */
+export const toApproverMembersType = (members: ReadonlyArray<DirectoryMember>): Array<ApproverMemberType> =>
+    members.map((member) => ({
+        memberId: member.memberId,
+        name: member.name,
+        role: member.role,
+        status: member.status,
+        rooms: member.rooms,
+    }))
+
+/** Maps the approval limits of one action to the GraphQL type. */
+export const toMemberGrantsType = (grants: ReadonlyArray<MemberGrant>): Array<MemberGrantType> =>
+    grants.map((grant) => ({
+        memberId: grant.member_id,
+        action: grant.action,
+        unit: grant.unit,
+        maxAmount: grant.max_amount,
+    }))
 
 /** Maps the workspace of the request to the responsibilities query request. */
 export const toListResponsibilitiesRequest = (workspaceId: string): ListResponsibilitiesRequest => ({ workspaceId })
