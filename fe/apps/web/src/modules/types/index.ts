@@ -315,3 +315,21 @@ export type { GraphQLResponse } from "./outcome"
 export type { SetupWriteDraft } from "./setup-write-draft"
 
 export type { ModuleIconName } from "./module-icon"
+
+export type {
+    ThreadApprovalCardView,
+    ApprovalLineView,
+    BodySegment,
+    ChainPanelView,
+    ChainStepView,
+    ComposerOption,
+    StatusTone,
+    ThreadApprovalLabels,
+    ThreadChainLabels,
+    ThreadFeedView,
+    ThreadMessageView,
+    ThreadRailForm,
+    ThreadRowView,
+    WorkThreadBoardHandlers,
+    WorkThreadBoardView,
+} from "./work-threads"

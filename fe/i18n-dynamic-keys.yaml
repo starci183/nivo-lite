@@ -372,6 +372,8 @@ namespaces:
       reason: 'Read as the string "navResponsibilities" in hooks/console/console.shared.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
     - key: "navTeam"
       reason: 'Read as the string "navTeam" in hooks/console/console.shared.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
+    - key: "navThreads"
+      reason: 'Read as the string "navThreads" in hooks/console/console.shared.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
     - key: "notFoundTitle"
       reason: 'Read as the string "notFoundTitle" in features/pages/AppNotFoundPage/index.tsx, features/pages/LeadNotFoundPage/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
   shifts:
@@ -569,6 +571,21 @@ namespaces:
       reason: 'Read as the string "eyebrow" in components/blocks/AgentInstances/index.tsx, components/blocks/AuthorityHead/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
     - prefix: "role_"
       reason: "Key family built at run time as `role_${scene.role}` in components/blocks/VideoScriptStep/component.tsx; the value comes from data (status, kind, id), so the detector cannot enumerate the keys."
+  workThreads:
+    - prefix: "excluded"
+      reason: "Key family built at run time as `excluded${Reason}` through excludedKey in hooks/workThreads/workThreads.shared.ts; the value comes from data (status, kind, id), so the detector cannot enumerate the keys."
+    - prefix: "kind"
+      reason: "Key family built at run time as `kind${Kind}` through stepKindKey in modules/work-threads/chain.ts; the value comes from data (status, kind, id), so the detector cannot enumerate the keys."
+    - prefix: "policy"
+      reason: "Key family built at run time as `policy${Policy}` through policyKey in hooks/workThreads/workThreads.shared.ts; the value comes from data (status, kind, id), so the detector cannot enumerate the keys."
+    - prefix: "role"
+      reason: "Key family built at run time as `role${Role}` through roleKey in hooks/workThreads/workThreads.shared.ts; the value comes from data (status, kind, id), so the detector cannot enumerate the keys."
+    - prefix: "status"
+      reason: "Key family built at run time as `status${Status}` through STATUS_WORDS in hooks/workThreads/useWorkThreadBoard.ts; the value comes from data (status, kind, id), so the detector cannot enumerate the keys."
+    - prefix: "step"
+      reason: "Key family built at run time as `step${Status}` through stepKey in modules/work-threads/views.ts; the value comes from data (status, kind, id), so the detector cannot enumerate the keys."
+    - prefix: "vote"
+      reason: "Key family built at run time as `vote${Status}` through voteKey in modules/work-threads/views.ts; the value comes from data (status, kind, id), so the detector cannot enumerate the keys."
   workbenchBooking:
     - key: "addNoServices"
       reason: 'Read as the string "addNoServices" in components/blocks/BookingDesk/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'

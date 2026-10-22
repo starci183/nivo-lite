@@ -168,3 +168,4 @@ export type {
     WizardConnectionType,
     ZaloWizardConnectionType,
 } from "./graphql/index"
+export type { MentionDirectoryType, ThreadMessageType, WorkChainType } from "./graphql/index"

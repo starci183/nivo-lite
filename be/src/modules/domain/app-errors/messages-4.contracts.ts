@@ -12,6 +12,9 @@ import { GATEWAY_TURNS_MESSAGES } from "@modules/domain/customer-turns"
 import { MCP_GATEWAY_MESSAGES } from "@modules/domain/mcp-gateway"
 import { MCP_MESSAGES } from "@modules/integrations/mcp"
 import { AGENT_PROFILE_MESSAGES } from "@modules/domain/agent-profile"
+import { WORK_CHAINS_MESSAGES } from "@modules/domain/work-chains"
+import { THREAD_MESSAGES_MESSAGES } from "@modules/domain/thread-messages"
+import { WORK_THREADS_MESSAGES } from "@modules/domain/work-threads"
 
 /** App-wide messages catalog, preserving registration order. */
 export const API_MESSAGES_4 = [
@@ -30,4 +33,7 @@ export const API_MESSAGES_4 = [
     GATEWAY_TURNS_MESSAGES,
     CONTENT_AGENT_MESSAGES,
     AGENT_PROFILE_MESSAGES,
+    WORK_CHAINS_MESSAGES,
+    WORK_THREADS_MESSAGES,
+    THREAD_MESSAGES_MESSAGES,
 ]
