@@ -4,7 +4,6 @@ import { allAgentIds } from "@/hooks/connection-wizard"
 import { useCsvImportForm } from "@/hooks/rhf"
 import { useState } from "react"
 import { DOC_STEPS, NO_COLUMN, TABLE_STEPS, type CsvSavedImport } from "./csv-import-wizard.shared"
-import { useCsvImportGrid } from "./useCsvImportGrid"
 import type { CsvImportFields, CsvImportWizardInput } from "./useCsvImportWizard"
 
 const START: CsvImportFields = { file: null, docs: [], preview: null, mapping: null, result: null, note: null }
@@ -14,7 +13,6 @@ export const useCsvImportFields = (
     input: CsvImportWizardInput,
     saved: CsvSavedImport | null,
     form: ReturnType<typeof useCsvImportForm>,
-    gridState: ReturnType<typeof useCsvImportGrid>,
 ) => {
     const [fields, setFields] = useState<CsvImportFields>(START)
 

@@ -35,16 +35,19 @@ export class OfficeCardsService {
      * refuses still reaches the room as its preview line, so an agent's flow never fails on its card; the refusal and its reason are
      * logged so a broken card producer is visible.
      */
-    async postAsDepartment(
-        ctx: MessagesScope,
-        department: string,
-        line: DepartmentCardPost,
-    ): Promise<PostedCard> {
+    async postAsDepartment(ctx: MessagesScope, department: string, line: DepartmentCardPost): Promise<PostedCard> {
         const agent = await this.agents.agentOfDepartment(ctx.workspaceId, department, null)
-        const speaker = { agentId: agent === null ? null : agent.id, authorName: agent === null ? CORE_LINE_AUTHOR : agent.name }
+        const speaker = {
+            agentId: agent === null ? null : agent.id,
+            authorName: agent === null ? CORE_LINE_AUTHOR : agent.name,
+        }
         const parsed = parseOfficeCard(line.card)
         if (parsed.ok) return this.post(ctx, { ...line, ...speaker })
-        this.logger.warn(MessagesLogEvent.CardRefused, { workspaceId: ctx.workspaceId, department, reason: parsed.reason })
+        this.logger.warn(MessagesLogEvent.CardRefused, {
+            workspaceId: ctx.workspaceId,
+            department,
+            reason: parsed.reason,
+        })
         const [row] = await this.entityManager.query<Array<PostedCard>>(INSERT_CARD_MESSAGE, [
             ctx.workspaceId,
             agent === null ? "system" : "agent",

@@ -12,6 +12,5 @@ export const QUERY_VIDEO_BRAND_SWR_KEY = "QUERY_VIDEO_BRAND_SWR"
 export const useQueryVideoBrandSwr = () =>
     useSWR(
         useWorkspaceParamsKey(QUERY_VIDEO_BRAND_SWR_KEY, [] as const),
-        async ([, , ...input]: readonly [string, string]) =>
-            answeredData(await queryVideoBrand(), QUERY_VIDEO_BRAND_SWR_KEY).videoBrand,
+        async () => answeredData(await queryVideoBrand(), QUERY_VIDEO_BRAND_SWR_KEY).videoBrand,
     )

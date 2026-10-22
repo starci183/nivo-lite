@@ -47,17 +47,22 @@ export const BOOKINGS_MESSAGES: MessageBundle = {
         "bookings.notice.when": "{{time}} {{weekday}}, {{day}}/{{month}}/{{year}}",
         "bookings.notice.nameFallback": "bạn",
         "bookings.notice.resource": " ({{resource}})",
-        "bookings.notice.confirmed": "Chào {{customer}}, {{shop}} đã xác nhận lịch hẹn: {{service}}, lúc {{when}}{{resource}}.",
+        "bookings.notice.confirmed":
+            "Chào {{customer}}, {{shop}} đã xác nhận lịch hẹn: {{service}}, lúc {{when}}{{resource}}.",
         "bookings.notice.address": "Địa chỉ: {{address}}.",
         "bookings.notice.deposit": "Tiền đặt cọc {{deposit}}, {{shop}} sẽ nhắn cách chuyển khoản.",
         "bookings.notice.window": "Bạn đổi hoặc hủy trước {{hours}} giờ thì không mất phí nhé.",
-        "bookings.notice.moved": "Chào {{customer}}, {{shop}} đã đổi lịch {{service}} của bạn từ {{from}} sang {{when}}{{resource}}.",
-        "bookings.notice.cancelled": "Chào {{customer}}, {{shop}} đã hủy lịch {{service}} lúc {{when}} theo yêu cầu của bạn.{{fee}} Hẹn bạn dịp khác nhé.",
+        "bookings.notice.moved":
+            "Chào {{customer}}, {{shop}} đã đổi lịch {{service}} của bạn từ {{from}} sang {{when}}{{resource}}.",
+        "bookings.notice.cancelled":
+            "Chào {{customer}}, {{shop}} đã hủy lịch {{service}} lúc {{when}} theo yêu cầu của bạn.{{fee}} Hẹn bạn dịp khác nhé.",
         "bookings.notice.cancelFee": " Theo chính sách, phí hủy sát giờ là {{fee}}.",
-        "bookings.notice.noShow": "Chào {{customer}}, {{shop}} ghi nhận bạn không đến lịch {{service}} lúc {{when}}. Theo chính sách, phí là {{fee}}. Bạn nhắn lại nếu có nhầm lẫn nhé.",
-        "bookings.notice.reminder": "Chào {{customer}}, {{shop}} nhắc bạn có lịch {{service}} lúc {{when}}{{resource}}{{left}}.{{address}} Bạn nhắn lại nếu cần đổi giờ nhé.",
+        "bookings.notice.noShow":
+            "Chào {{customer}}, {{shop}} ghi nhận bạn không đến lịch {{service}} lúc {{when}}. Theo chính sách, phí là {{fee}}. Bạn nhắn lại nếu có nhầm lẫn nhé.",
+        "bookings.notice.reminder":
+            "Chào {{customer}}, {{shop}} nhắc bạn có lịch {{service}} lúc {{when}}{{resource}}{{left}}.{{address}} Bạn nhắn lại nếu cần đổi giờ nhé.",
         "bookings.notice.reminderLeft": ", còn khoảng {{hours}} giờ nữa",
-        "bookings.notice.reminderAddress": " Địa chỉ: {{address}}."
+        "bookings.notice.reminderAddress": " Địa chỉ: {{address}}.",
     },
     en: {
         "errors.BOOKINGS_PHONE_INVALID": "The phone number is invalid.",
@@ -104,16 +109,21 @@ export const BOOKINGS_MESSAGES: MessageBundle = {
         "bookings.notice.when": "{{time}} {{weekday}}, {{day}}/{{month}}/{{year}}",
         "bookings.notice.nameFallback": "there",
         "bookings.notice.resource": " ({{resource}})",
-        "bookings.notice.confirmed": "Hello {{customer}}, {{shop}} confirmed your appointment: {{service}}, at {{when}}{{resource}}.",
+        "bookings.notice.confirmed":
+            "Hello {{customer}}, {{shop}} confirmed your appointment: {{service}}, at {{when}}{{resource}}.",
         "bookings.notice.address": "Address: {{address}}.",
         "bookings.notice.deposit": "The deposit is {{deposit}}; {{shop}} will message you how to transfer it.",
         "bookings.notice.window": "Changing or cancelling more than {{hours}} hours ahead is free.",
-        "bookings.notice.moved": "Hello {{customer}}, {{shop}} moved your {{service}} appointment from {{from}} to {{when}}{{resource}}.",
-        "bookings.notice.cancelled": "Hello {{customer}}, {{shop}} cancelled your {{service}} appointment at {{when}} as you asked.{{fee}} See you another time.",
+        "bookings.notice.moved":
+            "Hello {{customer}}, {{shop}} moved your {{service}} appointment from {{from}} to {{when}}{{resource}}.",
+        "bookings.notice.cancelled":
+            "Hello {{customer}}, {{shop}} cancelled your {{service}} appointment at {{when}} as you asked.{{fee}} See you another time.",
         "bookings.notice.cancelFee": " By policy, the late-cancellation fee is {{fee}}.",
-        "bookings.notice.noShow": "Hello {{customer}}, {{shop}} noted that you did not come to your {{service}} appointment at {{when}}. By policy, the fee is {{fee}}. Message us if this is a mistake.",
-        "bookings.notice.reminder": "Hello {{customer}}, {{shop}} reminds you of your {{service}} appointment at {{when}}{{resource}}{{left}}.{{address}} Message us if you need to change the time.",
+        "bookings.notice.noShow":
+            "Hello {{customer}}, {{shop}} noted that you did not come to your {{service}} appointment at {{when}}. By policy, the fee is {{fee}}. Message us if this is a mistake.",
+        "bookings.notice.reminder":
+            "Hello {{customer}}, {{shop}} reminds you of your {{service}} appointment at {{when}}{{resource}}{{left}}.{{address}} Message us if you need to change the time.",
         "bookings.notice.reminderLeft": ", about {{hours}} hours from now",
-        "bookings.notice.reminderAddress": " Address: {{address}}."
+        "bookings.notice.reminderAddress": " Address: {{address}}.",
     },
 }

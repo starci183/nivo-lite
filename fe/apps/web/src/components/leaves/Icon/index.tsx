@@ -13,9 +13,19 @@ import { GOOGLE_MARK } from "./classNames"
 /** Every source in this registry is callable (Heroicons are forward-ref callables; custom marks are functions). */
 type GlyphComponent = (props: SVGProps<SVGSVGElement>) => unknown
 
-/** Google's mark: a static asset, because the provider's own colours may not be redrawn as source colours. */
+/**
+ * Google's mark: a static asset, because the provider's own colours may not be redrawn as source colours. It still keeps
+ * Grammar's A11Y-2 contract: named by the caller's label when the mark carries meaning, hidden when it is decorative.
+ */
 const GoogleMark = (props: SVGProps<SVGSVGElement>) => (
-    <Image src="/brand/google-mark.svg" alt="" width={24} height={24} className={GOOGLE_MARK} aria-hidden="true" />
+    <Image
+        src="/brand/google-mark.svg"
+        alt={props["aria-label"] ?? ""}
+        width={24}
+        height={24}
+        className={GOOGLE_MARK}
+        aria-hidden={props["aria-hidden"]}
+    />
 )
 
 /** Native Heroicon drawings for the two product roles. */

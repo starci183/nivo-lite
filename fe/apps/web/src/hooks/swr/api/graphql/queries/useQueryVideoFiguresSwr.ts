@@ -12,6 +12,5 @@ export const QUERY_VIDEO_FIGURES_SWR_KEY = "QUERY_VIDEO_FIGURES_SWR"
 export const useQueryVideoFiguresSwr = () =>
     useSWR(
         useWorkspaceParamsKey(QUERY_VIDEO_FIGURES_SWR_KEY, [] as const),
-        async ([, , ...input]: readonly [string, string]) =>
-            answeredData(await queryVideoFigures(), QUERY_VIDEO_FIGURES_SWR_KEY).videoFigures,
+        async () => answeredData(await queryVideoFigures(), QUERY_VIDEO_FIGURES_SWR_KEY).videoFigures,
     )

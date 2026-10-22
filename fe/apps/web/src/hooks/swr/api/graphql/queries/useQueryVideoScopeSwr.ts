@@ -12,6 +12,5 @@ export const QUERY_VIDEO_SCOPE_SWR_KEY = "QUERY_VIDEO_SCOPE_SWR"
 export const useQueryVideoScopeSwr = () =>
     useSWR(
         useWorkspaceParamsKey(QUERY_VIDEO_SCOPE_SWR_KEY, [] as const),
-        async ([, , ...input]: readonly [string, string]) =>
-            answeredData(await queryVideoScope(), QUERY_VIDEO_SCOPE_SWR_KEY).videoScope,
+        async () => answeredData(await queryVideoScope(), QUERY_VIDEO_SCOPE_SWR_KEY).videoScope,
     )

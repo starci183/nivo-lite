@@ -110,7 +110,8 @@ export const RECEIVABLE_COPY = {
 
 /** The lines of the supplier payment matching: an outgoing payment that only partly matches an open supplier invoice. */
 export const SUPPLIER_COPY = {
-    title: (supplier: string, invoiceNo: string): string => `Đối chiếu thanh toán NCC · ${supplier || "(không rõ)"} · HĐ ${invoiceNo}`,
+    title: (supplier: string, invoiceNo: string): string =>
+        `Đối chiếu thanh toán NCC · ${supplier || "(không rõ)"} · HĐ ${invoiceNo}`,
     badge: "Cần xác nhận",
     body: "Đề xuất: Kế toán trưởng xác nhận khoản chi này đã trả hóa đơn; khi xác nhận, hóa đơn không còn được nhắc hạn.",
     invoiceAmount: "Hóa đơn",

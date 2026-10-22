@@ -39,10 +39,12 @@ export const LOYALTY_MESSAGES: MessageBundle = {
         "loyalty.chat.earn": "Earning: {{points}} điểm cho mỗi 1.000 đ.",
         "loyalty.chat.tiers": "Tiers (by lifetime spend in VND): {{tiers}}.",
         "loyalty.chat.rewards": "Reward catalogue:",
-        "loyalty.chat.reward": "- key \"{{key}}\": {{name}}, {{cost}} điểm, trị giá {{value}} đ, tối đa {{limit}} lần mỗi khách, còn {{stock}}, từ hạng {{tier}} ({{note}})",
+        "loyalty.chat.reward":
+            '- key "{{key}}": {{name}}, {{cost}} điểm, trị giá {{value}} đ, tối đa {{limit}} lần mỗi khách, còn {{stock}}, từ hạng {{tier}} ({{note}})',
         "loyalty.chat.noRewards": "Reward catalogue: (chưa có quà nào)",
         "loyalty.chat.unknown": "THIS CUSTOMER: not recognised as a member yet.",
-        "loyalty.chat.member": "THIS CUSTOMER (recognised): {{name}}; tier {{tier}}; {{points}} điểm; total spend {{spend}} đ; {{visits}} lượt mua.",
+        "loyalty.chat.member":
+            "THIS CUSTOMER (recognised): {{name}}; tier {{tier}}; {{points}} điểm; total spend {{spend}} đ; {{visits}} lượt mua.",
         "loyalty.chat.expiring": "Points expiring soon: {{points}} điểm từ {{at}}.",
         "loyalty.chat.noExpiring": "No points expiring soon.",
         "loyalty.chat.canRedeem": "Can redeem right now: {{rewards}}.",
@@ -85,10 +87,12 @@ export const LOYALTY_MESSAGES: MessageBundle = {
         "loyalty.chat.earn": "Earning: {{points}} points per 1,000 VND.",
         "loyalty.chat.tiers": "Tiers (by lifetime spend in VND): {{tiers}}.",
         "loyalty.chat.rewards": "Reward catalogue:",
-        "loyalty.chat.reward": "- key \"{{key}}\": {{name}}, {{cost}} points, worth {{value}} VND, at most {{limit}} per customer, {{stock}} left, from tier {{tier}} ({{note}})",
+        "loyalty.chat.reward":
+            '- key "{{key}}": {{name}}, {{cost}} points, worth {{value}} VND, at most {{limit}} per customer, {{stock}} left, from tier {{tier}} ({{note}})',
         "loyalty.chat.noRewards": "Reward catalogue: (none yet)",
         "loyalty.chat.unknown": "THIS CUSTOMER: not recognised as a member yet.",
-        "loyalty.chat.member": "THIS CUSTOMER (recognised): {{name}}; tier {{tier}}; {{points}} points; total spend {{spend}} VND; {{visits}} visits.",
+        "loyalty.chat.member":
+            "THIS CUSTOMER (recognised): {{name}}; tier {{tier}}; {{points}} points; total spend {{spend}} VND; {{visits}} visits.",
         "loyalty.chat.expiring": "Points expiring soon: {{points}} points from {{at}}.",
         "loyalty.chat.noExpiring": "No points expiring soon.",
         "loyalty.chat.canRedeem": "Can redeem right now: {{rewards}}.",

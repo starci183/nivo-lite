@@ -14,12 +14,14 @@ export const SHIFTS_MESSAGES: MessageBundle = {
         "errors.SHIFTS_STAFF_NOT_FOUND": "Không tìm thấy nhân viên.",
         "errors.SHIFTS_TIME_INVALID": "Giờ bắt đầu và kết thúc chưa đúng, giờ kết thúc phải sau giờ bắt đầu.",
         "errors.SHIFTS_PROFILE_MISSING": "Tài khoản của bạn chưa được gắn với nhân viên nào trong lịch ca.",
-        "errors.SHIFTS_LEAVE_RANGE_INVALID": "Chọn ngày bắt đầu và ngày kết thúc nghỉ, ngày kết thúc không trước ngày bắt đầu.",
+        "errors.SHIFTS_LEAVE_RANGE_INVALID":
+            "Chọn ngày bắt đầu và ngày kết thúc nghỉ, ngày kết thúc không trước ngày bắt đầu.",
         "errors.SHIFTS_SWAP_REFUSED": "Ca này chưa đổi được: {{reasons}}",
         "errors.SHIFTS_IMPORT_EMPTY": "Chưa có gì để nhập. Điền vị trí, nhân viên hoặc số người cần.",
         "errors.SHIFTS_IMPORT_LINES": "Có {{count}} dòng chưa đọc được, chưa nhập gì. Dòng {{line}}: {{reason}}",
         "errors.SHIFTS_SETUP_FIELD_INVALID": "Có một ô chưa đúng trong phần thiết lập (tên, giờ hoặc con số).",
-        "errors.SHIFTS_AVAILABILITY_INVALID": "Chọn thứ trong tuần hoặc một ngày cụ thể, giờ kết thúc phải sau giờ bắt đầu.",
+        "errors.SHIFTS_AVAILABILITY_INVALID":
+            "Chọn thứ trong tuần hoặc một ngày cụ thể, giờ kết thúc phải sau giờ bắt đầu.",
         "errors.SHIFTS_CHECKIN_NOT_YOURS": "Đây không phải ca của bạn.",
         "errors.SHIFTS_CHECKIN_EARLY": "Chưa đến giờ vào ca (bấm được từ 30 phút trước giờ bắt đầu).",
         "errors.SHIFTS_CHECKIN_CLOSED": "Ca này đã kết thúc.",
@@ -55,18 +57,24 @@ export const SHIFTS_MESSAGES: MessageBundle = {
         "shifts.import.coverage-position": "{{subject}} là vị trí chưa khai báo",
         "shifts.import.coverage-ideal": "số người tối thiểu và lý tưởng chưa đúng, dùng dạng 1-2",
         "shifts.import.line": "Dòng {{line}}: {{reason}}",
-        "shifts.explain.system": "Bạn viết cho chủ quán một đoạn ngắn, dễ đọc bằng tiếng Việt, giải thích vì sao bản lịch tuần này được xếp như vậy. Chỉ dùng các con số được cho, không bịa thêm. Không dùng tiêu đề hay gạch đầu dòng, tối đa 120 từ.",
-        "shifts.explain.user": "Tuần {{week}}, bản {{version}}. {{shifts}} ca, {{open}} ca trống, ước tính chi phí lương {{cost}}. Thiếu người: {{short}}.",
-        "shifts.explain.fallback": "Bản lịch tuần {{week}} có {{shifts}} ca, {{open}} ca còn trống, chi phí lương ước tính {{cost}}. {{short}}",
+        "shifts.explain.system":
+            "Bạn viết cho chủ quán một đoạn ngắn, dễ đọc bằng tiếng Việt, giải thích vì sao bản lịch tuần này được xếp như vậy. Chỉ dùng các con số được cho, không bịa thêm. Không dùng tiêu đề hay gạch đầu dòng, tối đa 120 từ.",
+        "shifts.explain.user":
+            "Tuần {{week}}, bản {{version}}. {{shifts}} ca, {{open}} ca trống, ước tính chi phí lương {{cost}}. Thiếu người: {{short}}.",
+        "shifts.explain.fallback":
+            "Bản lịch tuần {{week}} có {{shifts}} ca, {{open}} ca còn trống, chi phí lương ước tính {{cost}}. {{short}}",
         "shifts.explain.shortNone": "Mọi khung giờ đều đủ người tối thiểu.",
         "shifts.explain.shortSome": "Còn {{count}} khung giờ thiếu người, cần xem lại.",
-        "shifts.publishAskSummary": "Đăng lịch tuần {{week}} (bản {{version}}): {{shifts}} ca, {{open}} ca trống, chi phí lương ước tính {{cost}}",
+        "shifts.publishAskSummary":
+            "Đăng lịch tuần {{week}} (bản {{version}}): {{shifts}} ca, {{open}} ca trống, chi phí lương ước tính {{cost}}",
         "shifts.publishDeclined": "Chủ chưa đồng ý đăng lịch tuần {{week}}; bản nháp vẫn còn để sửa.",
         "shifts.publishDone": "Đã đăng lịch tuần {{week}}: {{people}} nhân viên đã nhận lịch.",
         "shifts.publishAlready": "Lịch tuần {{week}} đã được đăng trước đó.",
         "shifts.publishEvidence": "Đã đăng lịch tuần {{week}}: {{people}} người nhận",
-        "shifts.personalSchedule": "Lịch làm tuần {{week}} của bạn ({{count}} ca, {{hours}} giờ):\n{{lines}}\nBạn xin đổi ca hoặc xin nghỉ trong mục Lịch của tôi.",
-        "shifts.gapOffice": "Còn {{count}} ca trống tuần {{week}}: {{lines}}. Nhân viên có thể đăng ký ở mục Lịch của tôi.",
+        "shifts.personalSchedule":
+            "Lịch làm tuần {{week}} của bạn ({{count}} ca, {{hours}} giờ):\n{{lines}}\nBạn xin đổi ca hoặc xin nghỉ trong mục Lịch của tôi.",
+        "shifts.gapOffice":
+            "Còn {{count}} ca trống tuần {{week}}: {{lines}}. Nhân viên có thể đăng ký ở mục Lịch của tôi.",
         "shifts.swapAskSummary": "{{kind}}: {{line}}, {{from}} sang {{to}}. {{findings}}",
         "shifts.swapKind.swap": "Đổi ca",
         "shifts.swapKind.claim": "Nhận ca trống",
@@ -93,7 +101,8 @@ export const SHIFTS_MESSAGES: MessageBundle = {
         "shifts.rangeDash": "{{from}} đến {{to}}",
         "shifts.tagged": "{{name}}: {{body}}",
         "shifts.channelNotBound": "Chưa gắn kênh cho agent Ca làm",
-        "shifts.remindBody": "Nhắc ca: {{position}} hôm nay {{start}}–{{end}} tại {{shop}}.{{mates}} Nhớ bấm \"Vào ca\" khi đến.",
+        "shifts.remindBody":
+            'Nhắc ca: {{position}} hôm nay {{start}}–{{end}} tại {{shop}}.{{mates}} Nhớ bấm "Vào ca" khi đến.',
         "shifts.remindMates": " Cùng ngày: {{names}}.",
         "shifts.remindPosition": "ca làm",
         "shifts.remindShop": "cửa hàng",
@@ -103,9 +112,11 @@ export const SHIFTS_MESSAGES: MessageBundle = {
         "shifts.remindDoneZalo": "Đã nhắc {{name}} ca {{start}}–{{end}} (Office và Zalo).",
         "shifts.remindInactive": "Ca này không còn hiệu lực nên không nhắc.",
         "shifts.remindNoPerson": "Người làm ca này không còn trong danh sách.",
-        "shifts.noShowOffice": "{{name}} chưa vào ca sau {{minutes}} phút: {{line}}. Bạn có thể gọi hỏi hoặc tìm người thay.",
+        "shifts.noShowOffice":
+            "{{name}} chưa vào ca sau {{minutes}} phút: {{line}}. Bạn có thể gọi hỏi hoặc tìm người thay.",
         "shifts.noShowEvidence": "{{name}} chưa vào ca {{start}}–{{end}} ngày {{date}}",
-        "shifts.payrollOffice": "{{marker}} Chốt công tháng {{month}}: {{people}} người, {{hours}} giờ, tổng lương ước tính {{total}}.\n{{lines}}\nSố giờ tính theo lịch đã đăng (vào ca là tùy chọn). Kế toán nhận bản này làm căn cứ chi lương.",
+        "shifts.payrollOffice":
+            "{{marker}} Chốt công tháng {{month}}: {{people}} người, {{hours}} giờ, tổng lương ước tính {{total}}.\n{{lines}}\nSố giờ tính theo lịch đã đăng (vào ca là tùy chọn). Kế toán nhận bản này làm căn cứ chi lương.",
         "shifts.payrollLine": "{{name}}: {{shifts}} ca, {{hours}} giờ × {{wage}} = {{cost}}",
         "shifts.payrollEmailed": "Đã gửi file CSV tới email của chủ.",
         "shifts.payrollSubject": "Chốt công tháng {{month}}",
@@ -125,10 +136,12 @@ export const SHIFTS_MESSAGES: MessageBundle = {
         "errors.SHIFTS_STAFF_NOT_FOUND": "Person not found.",
         "errors.SHIFTS_TIME_INVALID": "The start and end are not valid, the end must be after the start.",
         "errors.SHIFTS_PROFILE_MISSING": "Your account is not linked to a person in the shifts.",
-        "errors.SHIFTS_LEAVE_RANGE_INVALID": "Pick the first and last day off, the last day cannot be before the first.",
+        "errors.SHIFTS_LEAVE_RANGE_INVALID":
+            "Pick the first and last day off, the last day cannot be before the first.",
         "errors.SHIFTS_SWAP_REFUSED": "This shift cannot change hands: {{reasons}}",
         "errors.SHIFTS_IMPORT_EMPTY": "Nothing to import. Fill in positions, people or coverage.",
-        "errors.SHIFTS_IMPORT_LINES": "{{count}} lines could not be read, nothing was imported. Line {{line}}: {{reason}}",
+        "errors.SHIFTS_IMPORT_LINES":
+            "{{count}} lines could not be read, nothing was imported. Line {{line}}: {{reason}}",
         "errors.SHIFTS_SETUP_FIELD_INVALID": "A field of the setup is out of bounds (name, time or number).",
         "errors.SHIFTS_AVAILABILITY_INVALID": "Pick a weekday or one date; the end must be after the start.",
         "errors.SHIFTS_CHECKIN_NOT_YOURS": "This is not your shift.",
@@ -166,18 +179,24 @@ export const SHIFTS_MESSAGES: MessageBundle = {
         "shifts.import.coverage-position": "{{subject}} is a position that is not set up",
         "shifts.import.coverage-ideal": "the minimum and ideal counts are not valid, use the form 1-2",
         "shifts.import.line": "Line {{line}}: {{reason}}",
-        "shifts.explain.system": "You write the owner a short, plain paragraph explaining why this week's schedule was built the way it was. Use only the figures given, invent nothing. No headings or bullets, at most 120 words.",
-        "shifts.explain.user": "Week {{week}}, version {{version}}. {{shifts}} shifts, {{open}} open, estimated wage cost {{cost}}. Understaffed: {{short}}.",
-        "shifts.explain.fallback": "The schedule of week {{week}} has {{shifts}} shifts, {{open}} still open, estimated wage cost {{cost}}. {{short}}",
+        "shifts.explain.system":
+            "You write the owner a short, plain paragraph explaining why this week's schedule was built the way it was. Use only the figures given, invent nothing. No headings or bullets, at most 120 words.",
+        "shifts.explain.user":
+            "Week {{week}}, version {{version}}. {{shifts}} shifts, {{open}} open, estimated wage cost {{cost}}. Understaffed: {{short}}.",
+        "shifts.explain.fallback":
+            "The schedule of week {{week}} has {{shifts}} shifts, {{open}} still open, estimated wage cost {{cost}}. {{short}}",
         "shifts.explain.shortNone": "Every window has at least the minimum number of people.",
         "shifts.explain.shortSome": "{{count}} windows are understaffed and need a look.",
-        "shifts.publishAskSummary": "Publish the schedule of week {{week}} (version {{version}}): {{shifts}} shifts, {{open}} open, estimated wage cost {{cost}}",
+        "shifts.publishAskSummary":
+            "Publish the schedule of week {{week}} (version {{version}}): {{shifts}} shifts, {{open}} open, estimated wage cost {{cost}}",
         "shifts.publishDeclined": "The owner did not agree to publish week {{week}}; the draft is still there to edit.",
         "shifts.publishDone": "Published the schedule of week {{week}}: {{people}} people received it.",
         "shifts.publishAlready": "The schedule of week {{week}} was already published.",
         "shifts.publishEvidence": "Published the schedule of week {{week}}: {{people}} recipients",
-        "shifts.personalSchedule": "Your schedule for week {{week}} ({{count}} shifts, {{hours}} hours):\n{{lines}}\nAsk to swap or take leave under My schedule.",
-        "shifts.gapOffice": "{{count}} shifts are open in week {{week}}: {{lines}}. People can sign up under My schedule.",
+        "shifts.personalSchedule":
+            "Your schedule for week {{week}} ({{count}} shifts, {{hours}} hours):\n{{lines}}\nAsk to swap or take leave under My schedule.",
+        "shifts.gapOffice":
+            "{{count}} shifts are open in week {{week}}: {{lines}}. People can sign up under My schedule.",
         "shifts.swapAskSummary": "{{kind}}: {{line}}, {{from}} to {{to}}. {{findings}}",
         "shifts.swapKind.swap": "Swap",
         "shifts.swapKind.claim": "Take open shift",
@@ -189,7 +208,8 @@ export const SHIFTS_MESSAGES: MessageBundle = {
         "shifts.swapAlready": "This swap was already approved.",
         "shifts.swapHandled": "This request was already handled.",
         "shifts.swapEvidence": "Approved {{kind}}: {{line}} for {{to}}",
-        "shifts.leaveAskSummary": "{{name}} asks for leave {{range}}{{reason}}. {{count}} scheduled shifts fall in this range.",
+        "shifts.leaveAskSummary":
+            "{{name}} asks for leave {{range}}{{reason}}. {{count}} scheduled shifts fall in this range.",
         "shifts.leaveReason": " ({{reason}})",
         "shifts.leaveDoneStaff": "Your leave {{range}} was approved.",
         "shifts.leaveDeclined": "Your leave {{range}} was not approved, your schedule stays.",
@@ -204,7 +224,8 @@ export const SHIFTS_MESSAGES: MessageBundle = {
         "shifts.rangeDash": "{{from}} to {{to}}",
         "shifts.tagged": "{{name}}: {{body}}",
         "shifts.channelNotBound": "No channel is bound to the Shifts agent",
-        "shifts.remindBody": "Shift reminder: {{position}} today {{start}}–{{end}} at {{shop}}.{{mates}} Remember to tap \"Check in\" when you arrive.",
+        "shifts.remindBody":
+            'Shift reminder: {{position}} today {{start}}–{{end}} at {{shop}}.{{mates}} Remember to tap "Check in" when you arrive.',
         "shifts.remindMates": " Also on today: {{names}}.",
         "shifts.remindPosition": "your shift",
         "shifts.remindShop": "the shop",
@@ -214,9 +235,11 @@ export const SHIFTS_MESSAGES: MessageBundle = {
         "shifts.remindDoneZalo": "Reminded {{name}} of shift {{start}}–{{end}} (Office and Zalo).",
         "shifts.remindInactive": "This shift is no longer active, so no reminder was sent.",
         "shifts.remindNoPerson": "The person on this shift is no longer on the list.",
-        "shifts.noShowOffice": "{{name}} has not checked in {{minutes}} minutes after the start: {{line}}. You can call or find a replacement.",
+        "shifts.noShowOffice":
+            "{{name}} has not checked in {{minutes}} minutes after the start: {{line}}. You can call or find a replacement.",
         "shifts.noShowEvidence": "{{name}} did not check in to {{start}}–{{end}} on {{date}}",
-        "shifts.payrollOffice": "{{marker}} Hours close for {{month}}: {{people}} people, {{hours}} hours, estimated wages {{total}}.\n{{lines}}\nHours follow the published schedule (check-in is optional). Accounting uses this as the basis for pay.",
+        "shifts.payrollOffice":
+            "{{marker}} Hours close for {{month}}: {{people}} people, {{hours}} hours, estimated wages {{total}}.\n{{lines}}\nHours follow the published schedule (check-in is optional). Accounting uses this as the basis for pay.",
         "shifts.payrollLine": "{{name}}: {{shifts}} shifts, {{hours}} hours × {{wage}} = {{cost}}",
         "shifts.payrollEmailed": "The CSV file was sent to the owner's email.",
         "shifts.payrollSubject": "Hours close for {{month}}",

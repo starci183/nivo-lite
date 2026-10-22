@@ -4,20 +4,25 @@ import type { MessageBundle } from "@modules/platform/i18n"
 export const INVENTORY_TEMPLATE_MESSAGES: MessageBundle = {
     vi: {
         "automationTemplates.inventory_low_stock.name": "Cảnh báo sắp hết hàng",
-        "automationTemplates.inventory_low_stock.description": "Mỗi ngày kiểm kho một lần: món nào chạm mức tối thiểu thì soạn sẵn đơn nhập theo nhà cung cấp và chờ bạn duyệt.",
+        "automationTemplates.inventory_low_stock.description":
+            "Mỗi ngày kiểm kho một lần: món nào chạm mức tối thiểu thì soạn sẵn đơn nhập theo nhà cung cấp và chờ bạn duyệt.",
         "automationTemplates.inventory_low_stock.line": "Mỗi ngày vào giờ bạn chọn (giờ Việt Nam)",
         "automationTemplates.inventory_low_stock.settings.time.label": "Kiểm kho lúc",
-        "automationTemplates.inventory_low_stock.guardrails.0": "Chỉ soạn đơn nháp; gửi cho nhà cung cấp luôn chờ bạn duyệt.",
+        "automationTemplates.inventory_low_stock.guardrails.0":
+            "Chỉ soạn đơn nháp; gửi cho nhà cung cấp luôn chờ bạn duyệt.",
         "automationTemplates.inventory_low_stock.guardrails.1": "Không đặt món đã có đơn nhập đang chờ giao.",
         "automationTemplates.inventory_supplier_overdue.name": "Nhắc nhà cung cấp giao trễ",
-        "automationTemplates.inventory_supplier_overdue.description": "Đơn đã gửi mà quá hạn giao: soạn sẵn tin nhắc nhẹ nhà cung cấp, bạn duyệt mới gửi (nhắc tối đa 2 lần).",
+        "automationTemplates.inventory_supplier_overdue.description":
+            "Đơn đã gửi mà quá hạn giao: soạn sẵn tin nhắc nhẹ nhà cung cấp, bạn duyệt mới gửi (nhắc tối đa 2 lần).",
         "automationTemplates.inventory_supplier_overdue.line": "Mỗi ngày vào giờ bạn chọn (giờ Việt Nam)",
         "automationTemplates.inventory_supplier_overdue.settings.time.label": "Kiểm lúc",
         "automationTemplates.inventory_supplier_overdue.settings.graceDays.suffix": "ngày",
         "automationTemplates.inventory_supplier_overdue.settings.graceDays.label": "Nhắc khi trễ hơn",
-        "automationTemplates.inventory_supplier_overdue.guardrails.0": "Tin nhắc lịch sự, không trách móc; luôn chờ bạn duyệt trước khi gửi.",
+        "automationTemplates.inventory_supplier_overdue.guardrails.0":
+            "Tin nhắc lịch sự, không trách móc; luôn chờ bạn duyệt trước khi gửi.",
         "automationTemplates.inventory_weekly_report.name": "Báo cáo tồn kho cuối tuần",
-        "automationTemplates.inventory_weekly_report.description": "Chiều Chủ nhật: giá trị tồn kho, món sắp hết, hàng nhập xuất trong tuần và đơn nhập đang mở.",
+        "automationTemplates.inventory_weekly_report.description":
+            "Chiều Chủ nhật: giá trị tồn kho, món sắp hết, hàng nhập xuất trong tuần và đơn nhập đang mở.",
         "automationTemplates.inventory_weekly_report.line": "Chủ nhật hằng tuần vào giờ bạn chọn (giờ Việt Nam)",
         "automationTemplates.inventory_weekly_report.settings.time.label": "Gửi lúc",
         "automationTemplates.inventory_weekly_report.settings.email.label": "Gửi thêm tới email",
@@ -26,20 +31,26 @@ export const INVENTORY_TEMPLATE_MESSAGES: MessageBundle = {
     },
     en: {
         "automationTemplates.inventory_low_stock.name": "Low-stock alert",
-        "automationTemplates.inventory_low_stock.description": "Checks stock once a day: items at their minimum get a purchase order drafted per supplier and wait for your approval.",
+        "automationTemplates.inventory_low_stock.description":
+            "Checks stock once a day: items at their minimum get a purchase order drafted per supplier and wait for your approval.",
         "automationTemplates.inventory_low_stock.line": "Every day at the time you pick (Vietnam time)",
         "automationTemplates.inventory_low_stock.settings.time.label": "Check at",
-        "automationTemplates.inventory_low_stock.guardrails.0": "Only drafts orders; sending to a supplier always waits for you.",
-        "automationTemplates.inventory_low_stock.guardrails.1": "Never orders an item that already has an open purchase order.",
+        "automationTemplates.inventory_low_stock.guardrails.0":
+            "Only drafts orders; sending to a supplier always waits for you.",
+        "automationTemplates.inventory_low_stock.guardrails.1":
+            "Never orders an item that already has an open purchase order.",
         "automationTemplates.inventory_supplier_overdue.name": "Overdue supplier reminder",
-        "automationTemplates.inventory_supplier_overdue.description": "A sent order past its delivery date: a polite reminder to the supplier is drafted and goes out only after you approve (at most 2 reminders).",
+        "automationTemplates.inventory_supplier_overdue.description":
+            "A sent order past its delivery date: a polite reminder to the supplier is drafted and goes out only after you approve (at most 2 reminders).",
         "automationTemplates.inventory_supplier_overdue.line": "Every day at the time you pick (Vietnam time)",
         "automationTemplates.inventory_supplier_overdue.settings.time.label": "Check at",
         "automationTemplates.inventory_supplier_overdue.settings.graceDays.suffix": "days",
         "automationTemplates.inventory_supplier_overdue.settings.graceDays.label": "Remind when later than",
-        "automationTemplates.inventory_supplier_overdue.guardrails.0": "Polite, never blaming; always waits for your approval before sending.",
+        "automationTemplates.inventory_supplier_overdue.guardrails.0":
+            "Polite, never blaming; always waits for your approval before sending.",
         "automationTemplates.inventory_weekly_report.name": "Weekend stock report",
-        "automationTemplates.inventory_weekly_report.description": "Sunday afternoon: stock value, items running low, the week's stock in and out and open purchase orders.",
+        "automationTemplates.inventory_weekly_report.description":
+            "Sunday afternoon: stock value, items running low, the week's stock in and out and open purchase orders.",
         "automationTemplates.inventory_weekly_report.line": "Every Sunday at the time you pick (Vietnam time)",
         "automationTemplates.inventory_weekly_report.settings.time.label": "Send at",
         "automationTemplates.inventory_weekly_report.settings.email.label": "Also email to",

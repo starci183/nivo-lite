@@ -13,7 +13,8 @@ export const DATA_SOURCES_MESSAGES: MessageBundle = {
     en: {
         "errors.DATA_SOURCES_HOST_INVALID": "The server address is not valid.",
         "errors.DATA_SOURCES_HOST_UNKNOWN": "The server {{host}} was not found.",
-        "errors.DATA_SOURCES_HOST_PRIVATE": "{{host}} points into a private network; NIVO only connects to public addresses.",
+        "errors.DATA_SOURCES_HOST_PRIVATE":
+            "{{host}} points into a private network; NIVO only connects to public addresses.",
         "errors.DATA_SOURCES_TOO_LARGE": "The data is too large (over {{limit}}).",
         "errors.DATA_SOURCES_REJECTED": "{{detail}}",
         "errors.DATA_SOURCES_UNAVAILABLE": "{{detail}}",

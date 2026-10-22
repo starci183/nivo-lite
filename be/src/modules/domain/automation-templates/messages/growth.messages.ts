@@ -4,7 +4,8 @@ import type { MessageBundle } from "@modules/platform/i18n"
 export const GROWTH_TEMPLATE_MESSAGES: MessageBundle = {
     vi: {
         "automationTemplates.marketplace_order_sync.name": "Đồng bộ đơn từ sàn",
-        "automationTemplates.marketplace_order_sync.description": "Đơn từ Shopee, Lazada, TikTok Shop được ghi vào NIVO như đơn của shop.",
+        "automationTemplates.marketplace_order_sync.description":
+            "Đơn từ Shopee, Lazada, TikTok Shop được ghi vào NIVO như đơn của shop.",
         "automationTemplates.marketplace_order_sync.line": "Khi có đơn mới trên sàn",
         "automationTemplates.nurture_leads.name": "Chăm khách chưa chốt",
         "automationTemplates.nurture_leads.description": "Khách hỏi rồi im lặng được nhắn hỏi lại, không bỏ sót ai.",
@@ -13,71 +14,97 @@ export const GROWTH_TEMPLATE_MESSAGES: MessageBundle = {
         "automationTemplates.nurture_leads.settings.afterHours.label": "Nhắn lại sau",
         "automationTemplates.nurture_leads.settings.maxFollowUps.suffix": "lần",
         "automationTemplates.nurture_leads.settings.maxFollowUps.label": "Nhắn tối đa",
-        "automationTemplates.nurture_leads.guardrails.0": "Không hứa kết quả, không tự cho giảm giá hay ưu đãi ngoài những gì chủ shop đã ghi.",
-        "automationTemplates.nurture_leads.guardrails.1": "Không bịa giá, giờ, địa chỉ hay chính sách chưa có trong thông tin cửa hàng.",
+        "automationTemplates.nurture_leads.guardrails.0":
+            "Không hứa kết quả, không tự cho giảm giá hay ưu đãi ngoài những gì chủ shop đã ghi.",
+        "automationTemplates.nurture_leads.guardrails.1":
+            "Không bịa giá, giờ, địa chỉ hay chính sách chưa có trong thông tin cửa hàng.",
         "automationTemplates.nurture_leads.guardrails.2": "Mỗi tin ngắn, nhẹ nhàng, không thúc ép.",
-        "automationTemplates.nurture_leads.defaultBody": "Chào {ten_khach}, bên {ten_shop} muốn hỏi bạn đã cân nhắc xong chưa ạ? Nếu cần thêm thông tin về {nhu_cau}, bạn nhắn lại giúp mình nhé.",
+        "automationTemplates.nurture_leads.defaultBody":
+            "Chào {ten_khach}, bên {ten_shop} muốn hỏi bạn đã cân nhắc xong chưa ạ? Nếu cần thêm thông tin về {nhu_cau}, bạn nhắn lại giúp mình nhé.",
         "automationTemplates.sheet_orders.name": "Ghi đơn vào Google Sheet",
-        "automationTemplates.sheet_orders.description": "Mỗi đơn chốt tự thêm một dòng vào bảng tính của bạn; khi khách trả tiền, dòng đó được cập nhật.",
+        "automationTemplates.sheet_orders.description":
+            "Mỗi đơn chốt tự thêm một dòng vào bảng tính của bạn; khi khách trả tiền, dòng đó được cập nhật.",
         "automationTemplates.sheet_orders.line": "Khi có đơn chốt, khi nhận tiền, hoặc khi có khách mới",
         "automationTemplates.sheet_orders.settings.recordOrders.label": "Ghi đơn đã chốt",
         "automationTemplates.sheet_orders.settings.markPaid.label": "Cập nhật khi khách trả tiền",
-        "automationTemplates.sheet_orders.settings.recordLeads.label": "Ghi cả khách mới (trang \"Khách mới\")",
+        "automationTemplates.sheet_orders.settings.recordLeads.label": 'Ghi cả khách mới (trang "Khách mới")',
         "automationTemplates.sheet_orders.guardrails.0": "Chỉ ghi vào bảng tính của chủ shop, không gửi gì cho khách.",
         "automationTemplates.video_new_offer.name": "Soạn video khi có ưu đãi mới",
-        "automationTemplates.video_new_offer.description": "Khi bạn thêm một tri thức công khai thuộc chủ đề Ưu đãi, NIVO soạn sẵn kịch bản video và báo bạn. Chỉ soạn nháp: không dựng, không đăng.",
-        "automationTemplates.video_new_offer.line": "Khi bạn thêm tri thức công khai thuộc chủ đề Ưu đãi (hoặc Khuyến mãi)",
-        "automationTemplates.video_new_offer.guardrails.0": "Chỉ dùng đúng nội dung ưu đãi bạn đã ghi; không tự thêm giá, thời hạn hay điều kiện.",
+        "automationTemplates.video_new_offer.description":
+            "Khi bạn thêm một tri thức công khai thuộc chủ đề Ưu đãi, NIVO soạn sẵn kịch bản video và báo bạn. Chỉ soạn nháp: không dựng, không đăng.",
+        "automationTemplates.video_new_offer.line":
+            "Khi bạn thêm tri thức công khai thuộc chủ đề Ưu đãi (hoặc Khuyến mãi)",
+        "automationTemplates.video_new_offer.guardrails.0":
+            "Chỉ dùng đúng nội dung ưu đãi bạn đã ghi; không tự thêm giá, thời hạn hay điều kiện.",
         "automationTemplates.video_new_offer.guardrails.1": "Chỉ soạn bản nháp. Dựng video và đăng luôn do bạn bấm.",
         "automationTemplates.win_back.name": "Gọi khách cũ quay lại",
-        "automationTemplates.win_back.description": "Khách lâu không ghé được soạn sẵn một lời mời kèm ưu đãi. Luôn chờ bạn duyệt trước khi gửi.",
+        "automationTemplates.win_back.description":
+            "Khách lâu không ghé được soạn sẵn một lời mời kèm ưu đãi. Luôn chờ bạn duyệt trước khi gửi.",
         "automationTemplates.win_back.line": "Khi một khách lâu không có hoạt động",
         "automationTemplates.win_back.settings.afterDays.suffix": "ngày",
         "automationTemplates.win_back.settings.afterDays.label": "Khách im lặng quá",
         "automationTemplates.win_back.settings.offer.label": "Ưu đãi",
         "automationTemplates.win_back.settings.offer.hint": "Ví dụ: giảm 10% cho lần quay lại.",
-        "automationTemplates.win_back.guardrails.0": "Không hứa kết quả, không tự cho giảm giá hay ưu đãi ngoài những gì chủ shop đã ghi.",
+        "automationTemplates.win_back.guardrails.0":
+            "Không hứa kết quả, không tự cho giảm giá hay ưu đãi ngoài những gì chủ shop đã ghi.",
         "automationTemplates.win_back.guardrails.1": "Chỉ nêu đúng ưu đãi chủ shop đã ghi ở trên.",
-        "automationTemplates.win_back.guardrails.2": "Không bịa giá, giờ, địa chỉ hay chính sách chưa có trong thông tin cửa hàng.",
-        "automationTemplates.win_back.defaultBody": "Chào {ten_khach}, lâu rồi {ten_shop} chưa gặp bạn! Tặng bạn {uu_dai}. Bạn muốn ghé lúc nào ạ?",
+        "automationTemplates.win_back.guardrails.2":
+            "Không bịa giá, giờ, địa chỉ hay chính sách chưa có trong thông tin cửa hàng.",
+        "automationTemplates.win_back.defaultBody":
+            "Chào {ten_khach}, lâu rồi {ten_shop} chưa gặp bạn! Tặng bạn {uu_dai}. Bạn muốn ghé lúc nào ạ?",
     },
     en: {
         "automationTemplates.marketplace_order_sync.name": "Marketplace order sync",
-        "automationTemplates.marketplace_order_sync.description": "Orders from Shopee, Lazada or TikTok Shop are recorded in NIVO like your own.",
+        "automationTemplates.marketplace_order_sync.description":
+            "Orders from Shopee, Lazada or TikTok Shop are recorded in NIVO like your own.",
         "automationTemplates.marketplace_order_sync.line": "When a new marketplace order arrives",
         "automationTemplates.nurture_leads.name": "Follow up undecided customers",
-        "automationTemplates.nurture_leads.description": "Customers who asked and went quiet get a gentle nudge, so nobody is forgotten.",
+        "automationTemplates.nurture_leads.description":
+            "Customers who asked and went quiet get a gentle nudge, so nobody is forgotten.",
         "automationTemplates.nurture_leads.line": "When a customer has neither bought nor declined after a while",
         "automationTemplates.nurture_leads.settings.afterHours.suffix": "hours",
         "automationTemplates.nurture_leads.settings.afterHours.label": "Follow up after",
         "automationTemplates.nurture_leads.settings.maxFollowUps.suffix": "times",
         "automationTemplates.nurture_leads.settings.maxFollowUps.label": "At most",
-        "automationTemplates.nurture_leads.guardrails.0": "No outcome promises and no discounts beyond what the owner wrote.",
-        "automationTemplates.nurture_leads.guardrails.1": "Never invent prices, hours, addresses or policies that are not in the shop information.",
+        "automationTemplates.nurture_leads.guardrails.0":
+            "No outcome promises and no discounts beyond what the owner wrote.",
+        "automationTemplates.nurture_leads.guardrails.1":
+            "Never invent prices, hours, addresses or policies that are not in the shop information.",
         "automationTemplates.nurture_leads.guardrails.2": "Short, gentle, never pushy.",
-        "automationTemplates.nurture_leads.defaultBody": "Hi {ten_khach}, {ten_shop} wanted to check whether you have decided. If you need more information about {nhu_cau}, just reply.",
+        "automationTemplates.nurture_leads.defaultBody":
+            "Hi {ten_khach}, {ten_shop} wanted to check whether you have decided. If you need more information about {nhu_cau}, just reply.",
         "automationTemplates.sheet_orders.name": "Record orders in Google Sheets",
-        "automationTemplates.sheet_orders.description": "Every confirmed order adds a row to your spreadsheet; when the customer pays, the row is updated.",
+        "automationTemplates.sheet_orders.description":
+            "Every confirmed order adds a row to your spreadsheet; when the customer pays, the row is updated.",
         "automationTemplates.sheet_orders.line": "On a confirmed order, a payment, or a new customer",
         "automationTemplates.sheet_orders.settings.recordOrders.label": "Record confirmed orders",
         "automationTemplates.sheet_orders.settings.markPaid.label": "Update the row when paid",
-        "automationTemplates.sheet_orders.settings.recordLeads.label": "Also record new customers (tab \"Khách mới\")",
-        "automationTemplates.sheet_orders.guardrails.0": "Writes only to the owner's spreadsheet, sends nothing to customers.",
+        "automationTemplates.sheet_orders.settings.recordLeads.label": 'Also record new customers (tab "Khách mới")',
+        "automationTemplates.sheet_orders.guardrails.0":
+            "Writes only to the owner's spreadsheet, sends nothing to customers.",
         "automationTemplates.video_new_offer.name": "Draft a video when a new offer is added",
-        "automationTemplates.video_new_offer.description": "When you add public knowledge under the topic Ưu đãi, NIVO drafts a video script and tells you. A draft only: nothing is rendered or published.",
-        "automationTemplates.video_new_offer.line": "When you add public knowledge under the topic Ưu đãi (or Khuyến mãi)",
-        "automationTemplates.video_new_offer.guardrails.0": "Uses only the offer you wrote; never adds prices, deadlines or conditions.",
-        "automationTemplates.video_new_offer.guardrails.1": "Drafts only. Rendering and publishing are always your click.",
+        "automationTemplates.video_new_offer.description":
+            "When you add public knowledge under the topic Ưu đãi, NIVO drafts a video script and tells you. A draft only: nothing is rendered or published.",
+        "automationTemplates.video_new_offer.line":
+            "When you add public knowledge under the topic Ưu đãi (or Khuyến mãi)",
+        "automationTemplates.video_new_offer.guardrails.0":
+            "Uses only the offer you wrote; never adds prices, deadlines or conditions.",
+        "automationTemplates.video_new_offer.guardrails.1":
+            "Drafts only. Rendering and publishing are always your click.",
         "automationTemplates.win_back.name": "Win back past customers",
-        "automationTemplates.win_back.description": "Customers who have not visited in a while get a drafted invitation with an offer. It always waits for your approval.",
+        "automationTemplates.win_back.description":
+            "Customers who have not visited in a while get a drafted invitation with an offer. It always waits for your approval.",
         "automationTemplates.win_back.line": "When a customer has been inactive for a while",
         "automationTemplates.win_back.settings.afterDays.suffix": "days",
         "automationTemplates.win_back.settings.afterDays.label": "Inactive for more than",
         "automationTemplates.win_back.settings.offer.label": "Offer",
         "automationTemplates.win_back.settings.offer.hint": "For example: 10% off your next visit.",
-        "automationTemplates.win_back.guardrails.0": "No outcome promises and no discounts beyond what the owner wrote.",
+        "automationTemplates.win_back.guardrails.0":
+            "No outcome promises and no discounts beyond what the owner wrote.",
         "automationTemplates.win_back.guardrails.1": "Mention only the offer the owner wrote above.",
-        "automationTemplates.win_back.guardrails.2": "Never invent prices, hours, addresses or policies that are not in the shop information.",
-        "automationTemplates.win_back.defaultBody": "Hi {ten_khach}, we have missed you at {ten_shop}! Here is {uu_dai}. When would you like to visit?",
+        "automationTemplates.win_back.guardrails.2":
+            "Never invent prices, hours, addresses or policies that are not in the shop information.",
+        "automationTemplates.win_back.defaultBody":
+            "Hi {ten_khach}, we have missed you at {ten_shop}! Here is {uu_dai}. When would you like to visit?",
     },
 }

@@ -17,9 +17,12 @@ export const VIDEO_MESSAGES: MessageBundle = {
         "video.brand.fallback": "C\u1eeda h\u00e0ng",
         "video.render.failed": "D\u1ef1ng video kh\u00f4ng th\u00e0nh c\u00f4ng: {{reason}}",
         "video.editor.delegated": "AI Editor \u0111ang d\u1ef1ng video \u00ab{{title}}\u00bb ({{scenes}} c\u1ea3nh).",
-        "video.editor.ready": "AI Editor: video \u00ab{{title}}\u00bb \u0111\u00e3 d\u1ef1ng xong ({{seconds}} gi\u00e2y).",
-        "video.editor.approval": "AI Editor: duy\u1ec7t video \u00ab{{title}}\u00bb tr\u01b0\u1edbc khi \u0111\u0103ng.",
-        "video.editor.failed": "AI Editor ch\u01b0a d\u1ef1ng \u0111\u01b0\u1ee3c video \u00ab{{title}}\u00bb: {{reason}}",
+        "video.editor.ready":
+            "AI Editor: video \u00ab{{title}}\u00bb \u0111\u00e3 d\u1ef1ng xong ({{seconds}} gi\u00e2y).",
+        "video.editor.approval":
+            "AI Editor: duy\u1ec7t video \u00ab{{title}}\u00bb tr\u01b0\u1edbc khi \u0111\u0103ng.",
+        "video.editor.failed":
+            "AI Editor ch\u01b0a d\u1ef1ng \u0111\u01b0\u1ee3c video \u00ab{{title}}\u00bb: {{reason}}",
         "video.editor.length": "Th\u1eddi l\u01b0\u1ee3ng",
         "video.editor.seconds": "{{seconds}} gi\u00e2y",
         "video.editor.aspect": "T\u1ec9 l\u1ec7",
@@ -36,10 +39,12 @@ export const VIDEO_MESSAGES: MessageBundle = {
         "video.editor.frame": "Khung th\u01b0\u01a1ng hi\u1ec7u",
         "video.editor.frameOn": "\u0110\u00e3 \u00e1p d\u1ee5ng",
         "video.editor.link": "M\u1edf d\u1ef1 \u00e1n video",
-        "video.editor.approvalBody": "Video ch\u1ec9 \u0111\u01b0\u1ee3c \u0111\u0103ng khi ch\u1ecb duy\u1ec7t. M\u1ecdi quy\u1ebft \u0111\u1ecbnh \u0111\u1ec1u \u0111\u01b0\u1ee3c ghi l\u1ea1i.",
+        "video.editor.approvalBody":
+            "Video ch\u1ec9 \u0111\u01b0\u1ee3c \u0111\u0103ng khi ch\u1ecb duy\u1ec7t. M\u1ecdi quy\u1ebft \u0111\u1ecbnh \u0111\u1ec1u \u0111\u01b0\u1ee3c ghi l\u1ea1i.",
         "video.editor.approvalBadge": "C\u1ea7n b\u1ea1n duy\u1ec7t",
         "video.editor.rendering.badge": "\u0110ang d\u1ef1ng",
-        "video.editor.rendering.body": "AI Editor \u0111\u00e3 nh\u1eadn k\u1ecbch b\u1ea3n t\u1eeb AI Marketing v\u00e0 \u0111ang d\u1ef1ng video. Ti\u1ebfn \u0111\u1ed9 c\u1eadp nh\u1eadt tr\u1ef1c ti\u1ebfp trong d\u1ef1 \u00e1n video; th\u1ebb video s\u1eb5n s\u00e0ng s\u1ebd g\u1eedi v\u00e0o \u0111\u00e2y khi xong.",
+        "video.editor.rendering.body":
+            "AI Editor \u0111\u00e3 nh\u1eadn k\u1ecbch b\u1ea3n t\u1eeb AI Marketing v\u00e0 \u0111ang d\u1ef1ng video. Ti\u1ebfn \u0111\u1ed9 c\u1eadp nh\u1eadt tr\u1ef1c ti\u1ebfp trong d\u1ef1 \u00e1n video; th\u1ebb video s\u1eb5n s\u00e0ng s\u1ebd g\u1eedi v\u00e0o \u0111\u00e2y khi xong.",
         "video.editor.rendering.link": "Xem ti\u1ebfn \u0111\u1ed9 d\u1ef1ng",
         "video.editor.rendering.target": "D\u1ef1 ki\u1ebfn",
     },
@@ -79,7 +84,8 @@ export const VIDEO_MESSAGES: MessageBundle = {
         "video.editor.approvalBody": "The video is posted only after you approve. Every decision is recorded.",
         "video.editor.approvalBadge": "Needs your approval",
         "video.editor.rendering.badge": "Rendering",
-        "video.editor.rendering.body": "AI Editor took the script from AI Marketing and is rendering the video. The progress updates live in the video project; the ready card comes here when it is done.",
+        "video.editor.rendering.body":
+            "AI Editor took the script from AI Marketing and is rendering the video. The progress updates live in the video project; the ready card comes here when it is done.",
         "video.editor.rendering.link": "Follow the render",
         "video.editor.rendering.target": "Planned",
     },

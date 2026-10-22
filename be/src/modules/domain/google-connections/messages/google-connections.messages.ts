@@ -7,7 +7,8 @@ export const GOOGLE_CONNECTIONS_MESSAGES: MessageBundle = {
         "errors.GOOGLE_CONNECTIONS_START_FAILED": "Chưa bắt đầu được kết nối Google. Bạn thử lại nhé.",
         "errors.GOOGLE_CONNECTIONS_MISSING": "Chưa có tài khoản Google nào được kết nối.",
         "errors.GOOGLE_CONNECTIONS_LOST": "Kết nối Google đã bị thu hồi. Hãy kết nối lại.",
-        "errors.GOOGLE_CONNECTIONS_SCOPE_MISSING": "Bạn chưa tick quyền đọc Google Drive trên màn hình đồng ý của Google.",
+        "errors.GOOGLE_CONNECTIONS_SCOPE_MISSING":
+            "Bạn chưa tick quyền đọc Google Drive trên màn hình đồng ý của Google.",
         "googleConnections.sheetTitle": "NIVO · Đơn hàng · {{name}}",
         "googleConnections.sheetOrders.written": "Đã ghi vào Google Sheet",
         "googleConnections.sheetOrders.skipped": "Bỏ qua",
@@ -18,7 +19,8 @@ export const GOOGLE_CONNECTIONS_MESSAGES: MessageBundle = {
         "errors.GOOGLE_CONNECTIONS_START_FAILED": "Could not start the Google connection. Please try again.",
         "errors.GOOGLE_CONNECTIONS_MISSING": "No Google account is connected.",
         "errors.GOOGLE_CONNECTIONS_LOST": "The Google connection was revoked. Connect it again.",
-        "errors.GOOGLE_CONNECTIONS_SCOPE_MISSING": "The Google Drive read access was not ticked on the Google consent screen.",
+        "errors.GOOGLE_CONNECTIONS_SCOPE_MISSING":
+            "The Google Drive read access was not ticked on the Google consent screen.",
         "googleConnections.sheetTitle": "NIVO · Orders · {{name}}",
         "googleConnections.sheetOrders.written": "Written to Google Sheets",
         "googleConnections.sheetOrders.skipped": "Skipped",

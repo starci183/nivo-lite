@@ -4,60 +4,85 @@ import type { MessageBundle } from "@modules/platform/i18n"
 export const BOOKING_TEMPLATE_MESSAGES: MessageBundle = {
     vi: {
         "automationTemplates.appointment_reminder.name": "Nhắc lịch hẹn",
-        "automationTemplates.appointment_reminder.description": "NIVO đã tự nhắc khách 24 giờ và 2 giờ trước giờ hẹn. Bật thẻ này để đổi mốc giờ và lời nhắn theo cách của bạn.",
+        "automationTemplates.appointment_reminder.description":
+            "NIVO đã tự nhắc khách 24 giờ và 2 giờ trước giờ hẹn. Bật thẻ này để đổi mốc giờ và lời nhắn theo cách của bạn.",
         "automationTemplates.appointment_reminder.line": "Một khoảng thời gian trước giờ hẹn",
         "automationTemplates.appointment_reminder.settings.firstHours.suffix": "giờ",
         "automationTemplates.appointment_reminder.settings.firstHours.label": "Nhắc lần 1 trước",
         "automationTemplates.appointment_reminder.settings.secondHours.suffix": "giờ (0 = tắt)",
         "automationTemplates.appointment_reminder.settings.secondHours.label": "Nhắc lần 2 trước",
-        "automationTemplates.appointment_reminder.guardrails.0": "Không bịa giá, giờ, địa chỉ hay chính sách chưa có trong thông tin cửa hàng.",
-        "automationTemplates.appointment_reminder.defaultBody": "Chào {ten_khach}, {ten_shop} nhắc bạn có lịch {dich_vu} lúc {gio_hen}. Bạn nhắn lại nếu cần đổi giờ nhé.",
+        "automationTemplates.appointment_reminder.guardrails.0":
+            "Không bịa giá, giờ, địa chỉ hay chính sách chưa có trong thông tin cửa hàng.",
+        "automationTemplates.appointment_reminder.defaultBody":
+            "Chào {ten_khach}, {ten_shop} nhắc bạn có lịch {dich_vu} lúc {gio_hen}. Bạn nhắn lại nếu cần đổi giờ nhé.",
         "automationTemplates.booking_comeback.name": "Mời khách quay lại theo dịch vụ",
-        "automationTemplates.booking_comeback.description": "Sau số ngày bạn đặt cho từng dịch vụ (ví dụ cắt tóc 30 ngày, nhổ răng 180 ngày), NIVO mời khách đặt lịch lần tiếp theo. Khách đã có lịch sắp tới thì không nhắn.",
+        "automationTemplates.booking_comeback.description":
+            "Sau số ngày bạn đặt cho từng dịch vụ (ví dụ cắt tóc 30 ngày, nhổ răng 180 ngày), NIVO mời khách đặt lịch lần tiếp theo. Khách đã có lịch sắp tới thì không nhắn.",
         "automationTemplates.booking_comeback.line": "Số ngày sau buổi hẹn, tính theo từng dịch vụ",
-        "automationTemplates.booking_comeback.guardrails.0": "Không bịa giá, giờ, địa chỉ hay chính sách chưa có trong thông tin cửa hàng.",
-        "automationTemplates.booking_comeback.defaultBody": "Chào {ten_khach}, đã khoảng {so_ngay} ngày kể từ lần {dich_vu} tại {ten_shop}. Bạn muốn đặt lịch lần tiếp theo không ạ? Bạn nhắn ngày giờ mong muốn, bên mình giữ chỗ cho bạn.",
+        "automationTemplates.booking_comeback.guardrails.0":
+            "Không bịa giá, giờ, địa chỉ hay chính sách chưa có trong thông tin cửa hàng.",
+        "automationTemplates.booking_comeback.defaultBody":
+            "Chào {ten_khach}, đã khoảng {so_ngay} ngày kể từ lần {dich_vu} tại {ten_shop}. Bạn muốn đặt lịch lần tiếp theo không ạ? Bạn nhắn ngày giờ mong muốn, bên mình giữ chỗ cho bạn.",
         "automationTemplates.booking_review.name": "Xin đánh giá sau buổi hẹn",
-        "automationTemplates.booking_review.description": "Vài giờ sau khi buổi hẹn xong, NIVO xin khách một lời nhận xét. Khách chê thì bạn được báo trong Văn phòng.",
+        "automationTemplates.booking_review.description":
+            "Vài giờ sau khi buổi hẹn xong, NIVO xin khách một lời nhận xét. Khách chê thì bạn được báo trong Văn phòng.",
         "automationTemplates.booking_review.line": "Một khoảng thời gian sau khi buổi hẹn xong",
         "automationTemplates.booking_review.settings.afterHours.suffix": "giờ",
         "automationTemplates.booking_review.settings.afterHours.label": "Hỏi sau",
-        "automationTemplates.booking_review.guardrails.0": "Chỉ xin nhận xét, không xin đánh giá 5 sao và không tặng quà.",
-        "automationTemplates.booking_review.guardrails.1": "Không bịa giá, giờ, địa chỉ hay chính sách chưa có trong thông tin cửa hàng.",
-        "automationTemplates.booking_review.defaultBody": "Chào {ten_khach}, cảm ơn bạn đã dùng {dich_vu} tại {ten_shop}. Bạn thấy buổi hẹn thế nào ạ? Một lời nhận xét ngắn của bạn giúp bên mình rất nhiều.",
+        "automationTemplates.booking_review.guardrails.0":
+            "Chỉ xin nhận xét, không xin đánh giá 5 sao và không tặng quà.",
+        "automationTemplates.booking_review.guardrails.1":
+            "Không bịa giá, giờ, địa chỉ hay chính sách chưa có trong thông tin cửa hàng.",
+        "automationTemplates.booking_review.defaultBody":
+            "Chào {ten_khach}, cảm ơn bạn đã dùng {dich_vu} tại {ten_shop}. Bạn thấy buổi hẹn thế nào ạ? Một lời nhận xét ngắn của bạn giúp bên mình rất nhiều.",
         "automationTemplates.booking_waitlist_notice.name": "Báo chỗ trống cho khách đang chờ",
-        "automationTemplates.booking_waitlist_notice.description": "Khi lịch có chỗ trống đúng khung giờ khách đang chờ (có người hủy hoặc đổi lịch), NIVO báo khách ngay.",
+        "automationTemplates.booking_waitlist_notice.description":
+            "Khi lịch có chỗ trống đúng khung giờ khách đang chờ (có người hủy hoặc đổi lịch), NIVO báo khách ngay.",
         "automationTemplates.booking_waitlist_notice.line": "Khi có chỗ trống trong khung giờ khách chờ",
-        "automationTemplates.booking_waitlist_notice.guardrails.0": "Không bịa giá, giờ, địa chỉ hay chính sách chưa có trong thông tin cửa hàng.",
-        "automationTemplates.booking_waitlist_notice.defaultBody": "Chào {ten_khach}, {ten_shop} vừa có chỗ trống cho {dich_vu} lúc {gio_hen}. Bạn muốn giữ lịch này thì nhắn lại cho bên mình nhé.",
+        "automationTemplates.booking_waitlist_notice.guardrails.0":
+            "Không bịa giá, giờ, địa chỉ hay chính sách chưa có trong thông tin cửa hàng.",
+        "automationTemplates.booking_waitlist_notice.defaultBody":
+            "Chào {ten_khach}, {ten_shop} vừa có chỗ trống cho {dich_vu} lúc {gio_hen}. Bạn muốn giữ lịch này thì nhắn lại cho bên mình nhé.",
     },
     en: {
         "automationTemplates.appointment_reminder.name": "Appointment reminders",
-        "automationTemplates.appointment_reminder.description": "NIVO already reminds customers 24 hours and 2 hours before. Turn this card on to change the timing and the wording.",
+        "automationTemplates.appointment_reminder.description":
+            "NIVO already reminds customers 24 hours and 2 hours before. Turn this card on to change the timing and the wording.",
         "automationTemplates.appointment_reminder.line": "A while before the appointment",
         "automationTemplates.appointment_reminder.settings.firstHours.suffix": "hours",
         "automationTemplates.appointment_reminder.settings.firstHours.label": "First reminder before",
         "automationTemplates.appointment_reminder.settings.secondHours.suffix": "hours (0 = off)",
         "automationTemplates.appointment_reminder.settings.secondHours.label": "Second reminder before",
-        "automationTemplates.appointment_reminder.guardrails.0": "Never invent prices, hours, addresses or policies that are not in the shop information.",
-        "automationTemplates.appointment_reminder.defaultBody": "Hi {ten_khach}, a reminder from {ten_shop}: {dich_vu} at {gio_hen}.",
+        "automationTemplates.appointment_reminder.guardrails.0":
+            "Never invent prices, hours, addresses or policies that are not in the shop information.",
+        "automationTemplates.appointment_reminder.defaultBody":
+            "Hi {ten_khach}, a reminder from {ten_shop}: {dich_vu} at {gio_hen}.",
         "automationTemplates.booking_comeback.name": "Invite customers back by service",
-        "automationTemplates.booking_comeback.description": "After the number of days you set per service, NIVO invites the customer to book again.",
+        "automationTemplates.booking_comeback.description":
+            "After the number of days you set per service, NIVO invites the customer to book again.",
         "automationTemplates.booking_comeback.line": "N days after the visit, per service",
-        "automationTemplates.booking_comeback.guardrails.0": "Never invent prices, hours, addresses or policies that are not in the shop information.",
-        "automationTemplates.booking_comeback.defaultBody": "Hi {ten_khach}, it has been about {so_ngay} days since your {dich_vu}. Would you like to book again?",
+        "automationTemplates.booking_comeback.guardrails.0":
+            "Never invent prices, hours, addresses or policies that are not in the shop information.",
+        "automationTemplates.booking_comeback.defaultBody":
+            "Hi {ten_khach}, it has been about {so_ngay} days since your {dich_vu}. Would you like to book again?",
         "automationTemplates.booking_review.name": "Ask for a review after the visit",
-        "automationTemplates.booking_review.description": "A few hours after a visit, NIVO asks the customer for feedback.",
+        "automationTemplates.booking_review.description":
+            "A few hours after a visit, NIVO asks the customer for feedback.",
         "automationTemplates.booking_review.line": "A while after the appointment is done",
         "automationTemplates.booking_review.settings.afterHours.suffix": "hours",
         "automationTemplates.booking_review.settings.afterHours.label": "Ask after",
         "automationTemplates.booking_review.guardrails.0": "Ask for feedback only, no star-begging and no gifts.",
-        "automationTemplates.booking_review.guardrails.1": "Never invent prices, hours, addresses or policies that are not in the shop information.",
-        "automationTemplates.booking_review.defaultBody": "Hi {ten_khach}, thank you for choosing {ten_shop}. How was your visit?",
+        "automationTemplates.booking_review.guardrails.1":
+            "Never invent prices, hours, addresses or policies that are not in the shop information.",
+        "automationTemplates.booking_review.defaultBody":
+            "Hi {ten_khach}, thank you for choosing {ten_shop}. How was your visit?",
         "automationTemplates.booking_waitlist_notice.name": "Tell waiting customers about a free slot",
-        "automationTemplates.booking_waitlist_notice.description": "When a slot opens in the window a waiting customer asked for, NIVO tells them.",
+        "automationTemplates.booking_waitlist_notice.description":
+            "When a slot opens in the window a waiting customer asked for, NIVO tells them.",
         "automationTemplates.booking_waitlist_notice.line": "When a slot opens in the waiting window",
-        "automationTemplates.booking_waitlist_notice.guardrails.0": "Never invent prices, hours, addresses or policies that are not in the shop information.",
-        "automationTemplates.booking_waitlist_notice.defaultBody": "Hi {ten_khach}, {ten_shop} has a free slot for {dich_vu} at {gio_hen}.",
+        "automationTemplates.booking_waitlist_notice.guardrails.0":
+            "Never invent prices, hours, addresses or policies that are not in the shop information.",
+        "automationTemplates.booking_waitlist_notice.defaultBody":
+            "Hi {ten_khach}, {ten_shop} has a free slot for {dich_vu} at {gio_hen}.",
     },
 }

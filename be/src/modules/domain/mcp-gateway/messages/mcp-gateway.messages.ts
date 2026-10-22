@@ -9,7 +9,8 @@ export const MCP_GATEWAY_MESSAGES: MessageBundle = {
         "errors.MCP_GATEWAY_CREDENTIAL_MISSING": "Chưa có thông tin xác thực cho kết nối.",
         "errors.MCP_GATEWAY_TIMEOUT": "Kết nối trả lời quá chậm.",
         "errors.MCP_GATEWAY_WORKSPACE_MISMATCH": "Thông tin xác thực của agent không thuộc workspace này.",
-        "errors.MCP_GATEWAY_CATALOG_CHANGED": "Danh sách công cụ chưa được đọc hoặc vừa thay đổi; hãy đọc lại rồi duyệt.",
+        "errors.MCP_GATEWAY_CATALOG_CHANGED":
+            "Danh sách công cụ chưa được đọc hoặc vừa thay đổi; hãy đọc lại rồi duyệt.",
     },
     en: {
         "errors.MCP_GATEWAY_UNKNOWN_TOOL": "The connector has no such tool.",
@@ -18,6 +19,7 @@ export const MCP_GATEWAY_MESSAGES: MessageBundle = {
         "errors.MCP_GATEWAY_CREDENTIAL_MISSING": "The connector has no credential yet.",
         "errors.MCP_GATEWAY_TIMEOUT": "The connector answered too slowly.",
         "errors.MCP_GATEWAY_WORKSPACE_MISMATCH": "The agent's credential does not act for this workspace.",
-        "errors.MCP_GATEWAY_CATALOG_CHANGED": "The tool catalog was not read or just changed; read it again, then approve.",
+        "errors.MCP_GATEWAY_CATALOG_CHANGED":
+            "The tool catalog was not read or just changed; read it again, then approve.",
     },
 }

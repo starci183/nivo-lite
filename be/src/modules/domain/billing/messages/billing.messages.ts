@@ -20,9 +20,11 @@ export const BILLING_MESSAGES: MessageBundle = {
         "errors.BILLING_TIER_UNKNOWN": "Mức credit đã chọn không có trong gói này.",
         "errors.BILLING_TIER_REQUIRED": "Hãy chọn mức credit AI cho mỗi ghế.",
         "errors.BILLING_SEATS_INVALID": "Số ghế phải từ 1 đến {{max}}.",
-        "errors.BILLING_PLAN_INDIVIDUAL_ONLY": "Gói cá nhân chỉ dành cho một người. Hãy nâng lên gói Team để mời thành viên.",
+        "errors.BILLING_PLAN_INDIVIDUAL_ONLY":
+            "Gói cá nhân chỉ dành cho một người. Hãy nâng lên gói Team để mời thành viên.",
         "errors.BILLING_SEAT_LIMIT_REACHED": "Đã dùng hết các ghế đã mua. Hãy thêm ghế trước khi mời thêm người.",
-        "errors.BILLING_STORAGE_QUOTA_EXCEEDED": "Đã đầy dung lượng lưu trữ của gói ({{quotaGb}} GB). Hãy xóa bớt tệp hoặc nâng cấp gói.",
+        "errors.BILLING_STORAGE_QUOTA_EXCEEDED":
+            "Đã đầy dung lượng lưu trữ của gói ({{quotaGb}} GB). Hãy xóa bớt tệp hoặc nâng cấp gói.",
         "billing.bankEventBody": "{{bank}} b\u00e1o c\u00f3: {{content}}",
         "billing.manualBank": "Thủ công",
         "billing.manualEvidenceLog": "Ghi nhận thủ công {{amount}} đ ngày {{date}}",
@@ -41,9 +43,11 @@ export const BILLING_MESSAGES: MessageBundle = {
         "errors.BILLING_TIER_UNKNOWN": "The credit level you chose is not available on this plan.",
         "errors.BILLING_TIER_REQUIRED": "Choose the AI credit level of each seat.",
         "errors.BILLING_SEATS_INVALID": "Seats must be between 1 and {{max}}.",
-        "errors.BILLING_PLAN_INDIVIDUAL_ONLY": "An individual plan is for one person. Upgrade to Team to invite members.",
+        "errors.BILLING_PLAN_INDIVIDUAL_ONLY":
+            "An individual plan is for one person. Upgrade to Team to invite members.",
         "errors.BILLING_SEAT_LIMIT_REACHED": "Every paid seat is taken. Add seats before inviting more people.",
-        "errors.BILLING_STORAGE_QUOTA_EXCEEDED": "The storage of your plan ({{quotaGb}} GB) is full. Delete some files or upgrade your plan.",
+        "errors.BILLING_STORAGE_QUOTA_EXCEEDED":
+            "The storage of your plan ({{quotaGb}} GB) is full. Delete some files or upgrade your plan.",
         "billing.bankEventBody": "{{bank}} credit: {{content}}",
         "billing.manualBank": "Manual",
         "billing.manualEvidenceLog": "Manual evidence of {{amount}} VND dated {{date}}",

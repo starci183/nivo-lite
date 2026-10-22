@@ -12,6 +12,6 @@ export const QUERY_CONTENT_CONFIGURATION_SWR_KEY = "QUERY_CONTENT_CONFIGURATION_
 export const useQueryContentConfigurationSwr = () =>
     useSWR(
         useWorkspaceParamsKey(QUERY_CONTENT_CONFIGURATION_SWR_KEY, [] as const),
-        async ([, , ...input]: readonly [string, string]) =>
+        async () =>
             answeredData(await queryContentConfiguration(), QUERY_CONTENT_CONFIGURATION_SWR_KEY).contentConfiguration,
     )

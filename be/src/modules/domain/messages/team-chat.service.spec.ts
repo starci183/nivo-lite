@@ -65,7 +65,9 @@ describe("TeamChatService", () => {
 
             await expect(service.postHuman("user-1", "ws-1", "Noted")).resolves.toEqual(line)
 
-            expect(entityManager.query.mock.calls).toEqual([[INSERT_HUMAN_MESSAGE, ["ws-1", "Lan", null, "Noted", null]]])
+            expect(entityManager.query.mock.calls).toEqual([
+                [INSERT_HUMAN_MESSAGE, ["ws-1", "Lan", null, "Noted", null]],
+            ])
         })
 
         it("posts in a Hub room", async () => {

@@ -9,7 +9,7 @@ export const EMAIL_MESSAGES_MESSAGES: MessageBundle = {
         "email.err_rate": "Đã gửi quá nhiều email trong một giờ qua. Thử lại sau.",
         "email.err_bad_recipient": "Địa chỉ email người nhận không hợp lệ.",
         "email.err_attachment": "Tệp đính kèm quá lớn (tối đa 2 MB cho tất cả các tệp).",
-            "errors.EMAIL_MESSAGES_SMTP_INVALID": "Có lỗi xảy ra. Vui lòng thử lại.",
+        "errors.EMAIL_MESSAGES_SMTP_INVALID": "Có lỗi xảy ra. Vui lòng thử lại.",
         "errors.EMAIL_MESSAGES_SMTP_HOST": "Nhập tên máy chủ SMTP, ví dụ smtp.nhacungcap.com.",
         "errors.EMAIL_MESSAGES_SMTP_PORT": "Cổng phải là một con số, ví dụ 587 hoặc 465.",
         "errors.EMAIL_MESSAGES_SMTP_FIELDS": "Điền tên người gửi, email gửi, tên đăng nhập và mật khẩu.",

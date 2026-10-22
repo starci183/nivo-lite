@@ -12,10 +12,12 @@ export const WEBHOOK_CONNECTIONS_MESSAGES: MessageBundle = {
     },
     en: {
         "errors.WEBHOOK_CONNECTIONS_EVENTS_EMPTY": "Pick at least one event to send.",
-        "errors.WEBHOOK_CONNECTIONS_NAME_INVALID": "Name the connection (at least 2 characters), for example: the n8n of the shop.",
+        "errors.WEBHOOK_CONNECTIONS_NAME_INVALID":
+            "Name the connection (at least 2 characters), for example: the n8n of the shop.",
         "errors.WEBHOOK_CONNECTIONS_URL_REFUSED": "This webhook address cannot be used.",
         "errors.WEBHOOK_CONNECTIONS_SIGNING_UNAVAILABLE": "Webhook signing is not switched on on this server.",
         "errors.WEBHOOK_CONNECTIONS_NO_URL": "This connection has no webhook address yet.",
-        "errors.WEBHOOK_CONNECTIONS_DELIVERY_FAILED": "The webhook did not take the event yet (status {{status}}); NIVO will send it again.",
+        "errors.WEBHOOK_CONNECTIONS_DELIVERY_FAILED":
+            "The webhook did not take the event yet (status {{status}}); NIVO will send it again.",
     },
 }

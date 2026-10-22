@@ -12,6 +12,5 @@ export const QUERY_CONTENT_WORKBENCH_SWR_KEY = "QUERY_CONTENT_WORKBENCH_SWR"
 export const useQueryContentWorkbenchSwr = () =>
     useSWR(
         useWorkspaceParamsKey(QUERY_CONTENT_WORKBENCH_SWR_KEY, [] as const),
-        async ([, , ...input]: readonly [string, string]) =>
-            answeredData(await queryContentWorkbench(), QUERY_CONTENT_WORKBENCH_SWR_KEY).contentWorkbench,
+        async () => answeredData(await queryContentWorkbench(), QUERY_CONTENT_WORKBENCH_SWR_KEY).contentWorkbench,
     )

@@ -8,7 +8,7 @@ import { queryCreditUsageSummary } from "@/modules/api/graphql/queries/query-cre
 export const QUERY_CREDIT_USAGE_SUMMARY_SWR_KEY = "QUERY_CREDIT_USAGE_SUMMARY_SWR"
 
 /** Reads creditUsageSummary for the selected workspace. */
-export const useQueryCreditUsageSummarySwr = (workspaceId: string | undefined, enabled = true) =>
+export const useQueryCreditUsageSummarySwr = (workspaceId: string | undefined) =>
     useSWR(argumentKey(QUERY_CREDIT_USAGE_SUMMARY_SWR_KEY, workspaceId), async () => {
         const result = await queryCreditUsageSummary({})
         if (!result.data) throw new Error("creditUsageSummary answered no data")

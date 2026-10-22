@@ -60,7 +60,7 @@ export const useCsvImportWizard = (input: CsvImportWizardInput) => {
     const form = useCsvImportForm()
     const gridState = useCsvImportGrid({ savedColumns: saved === null ? null : saved.config.columns })
     const { fields, patch, name, entity, source, schedule, link, index, steps, connectionId, agentIds, column } =
-        useCsvImportFields(input, saved, form, gridState)
+        useCsvImportFields(input, saved, form)
 
     const { go, read, runImport, finish, isPending } = useCsvImportWorkflow({
         patch,
