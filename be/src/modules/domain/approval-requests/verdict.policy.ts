@@ -27,12 +27,9 @@ export type VerdictResult =
 const outcomeOf = (verdict: ApprovalVerdict): "approved" | "rejected" =>
     verdict === "approve" ? "approved" : "rejected"
 
-/** True when the member has approved: before, or with the verdict now given. */
+/** The members who have approved: before, and the member whose approval is being given now (only an approval reaches here). */
 const approvedIds = (input: VerdictInput): ReadonlySet<string> =>
-    new Set([
-        ...input.given.filter((one) => one.verdict === "approve").map((one) => one.memberId),
-        ...(input.verdict === "approve" ? [input.memberId] : []),
-    ])
+    new Set([...input.given.filter((one) => one.verdict === "approve").map((one) => one.memberId), input.memberId])
 
 /** The approvers who have not answered, counting the answer now given. */
 const unanswered = (input: VerdictInput): ReadonlyArray<ApproverRef> => {

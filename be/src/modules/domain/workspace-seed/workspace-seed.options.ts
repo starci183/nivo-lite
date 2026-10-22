@@ -103,8 +103,8 @@ export interface WorkspaceSeedPorts {
     readonly toolGrants: Type<SeedToolGrants>
     /** The gateway console class, already provided in the app, behind the connectors port. */
     readonly connectors: Type<SeedConnectors>
-    /** The authority capability behind the rules and grants of an office run; absent while the app has none. */
-    readonly officeAuthority?: Type<OfficeAuthorityPort>
+    /** The authority capability behind the rules and grants of an office run. */
+    readonly officeAuthority: Type<OfficeAuthorityPort>
 }
 
 /** What the workspace seed takes from the app root. */

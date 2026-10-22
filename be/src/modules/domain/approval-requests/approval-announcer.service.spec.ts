@@ -8,6 +8,7 @@ import type { ApprovalReminder, ApprovalResolved } from "./approval-requests.con
 import { APPROVAL_EVENTS } from "./approval-requests.decorators"
 import { ApprovalLogEvent } from "./approval-requests.log-events"
 import type { ApprovalEvents } from "./approval-requests.port"
+import { ApprovalEvidenceService } from "./approval-evidence.service"
 
 const RESOLVED: ApprovalResolved = {
     requestId: "request-1",
@@ -32,33 +33,41 @@ const REMINDER: ApprovalReminder = {
 const build = async () => {
     const events = mock<ApprovalEvents>()
     events.resolved.mockResolvedValue(undefined)
-    events.reminder.mockResolvedValue(undefined)
+    const evidence = mock<ApprovalEvidenceService>()
+    evidence.resolved.mockResolvedValue(undefined)
+    evidence.reminder.mockResolvedValue(undefined)
     const logger = mock<Logger>()
     const moduleRef = await Test.createTestingModule({
         providers: [
             ApprovalAnnouncerService,
             { provide: LOGGER, useValue: logger },
             { provide: APPROVAL_EVENTS, useValue: events },
+            { provide: ApprovalEvidenceService, useValue: evidence },
         ],
     }).compile()
-    return { service: moduleRef.get(ApprovalAnnouncerService), events, logger }
+    return { service: moduleRef.get(ApprovalAnnouncerService), events, evidence, logger }
 }
 
 describe("ApprovalAnnouncerService", () => {
-    it("hands a settled request to the owner of the events port", async () => {
-        const { service, events } = await build()
+    it("writes a settled request into the evidence log, then hands it to the owner of the events port", async () => {
+        const { service, events, evidence } = await build()
 
         await expect(service.resolved(RESOLVED)).resolves.toBeUndefined()
 
+        expect(evidence.resolved).toHaveBeenCalledWith(RESOLVED)
         expect(events.resolved).toHaveBeenCalledWith(RESOLVED)
+        expect(evidence.resolved.mock.invocationCallOrder).toEqual([
+            Math.min(...evidence.resolved.mock.invocationCallOrder, ...events.resolved.mock.invocationCallOrder),
+        ])
     })
 
-    it("hands the reminder of a request to the owner of the events port", async () => {
-        const { service, events } = await build()
+    it("writes the reminder of a request into the evidence log only", async () => {
+        const { service, events, evidence } = await build()
 
         await expect(service.reminder(REMINDER)).resolves.toBeUndefined()
 
-        expect(events.reminder).toHaveBeenCalledWith(REMINDER)
+        expect(evidence.reminder).toHaveBeenCalledWith(REMINDER)
+        expect(events.resolved).not.toHaveBeenCalled()
     })
 
     it("logs and swallows a failure to announce a settled request: the request stands settled", async () => {
@@ -73,10 +82,23 @@ describe("ApprovalAnnouncerService", () => {
         })
     })
 
-    it("logs and swallows a failure to announce a reminder", async () => {
-        const { service, events, logger } = await build()
-        const cause = new Error("chain down")
-        events.reminder.mockRejectedValue(cause)
+    it("still tells the work chain when the evidence log fails", async () => {
+        const { service, events, evidence, logger } = await build()
+        const cause = new Error("log down")
+        evidence.resolved.mockRejectedValue(cause)
+
+        await expect(service.resolved(RESOLVED)).resolves.toBeUndefined()
+
+        expect(events.resolved).toHaveBeenCalledWith(RESOLVED)
+        expect(logger.error).toHaveBeenCalledWith(ApprovalLogEvent.ResolvedEventFailed, cause, {
+            requestId: "request-1",
+        })
+    })
+
+    it("logs and swallows a failure to write a reminder", async () => {
+        const { service, evidence, logger } = await build()
+        const cause = new Error("log down")
+        evidence.reminder.mockRejectedValue(cause)
 
         await expect(service.reminder(REMINDER)).resolves.toBeUndefined()
 

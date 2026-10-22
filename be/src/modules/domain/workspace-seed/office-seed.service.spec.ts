@@ -69,42 +69,9 @@ interface BuildOptions {
     readonly office?: unknown
 }
 
-/** An app without the authority capability: the port is bound to nothing. */
+/** The office seed with the authority capability behind its port. */
 const build = async (em: MockEntityManager, options: BuildOptions = {}) => {
     const print = jest.fn()
-    const seeds = mock<WorkspaceSeedService>()
-    seeds.seedOwned.mockResolvedValue(OWNED_SEED)
-    seeds.ensureSeat.mockImplementation((...[, , account]) =>
-        Promise.resolve(USER_OF_EMAIL[account.email] ?? "unknown"),
-    )
-    const agents = mock<AgentOwnershipService>()
-    agents.memberIdOf.mockImplementation((userId) => Promise.resolve(MEMBER_OF_USER[userId] ?? "unknown"))
-    const records = mock<SeedAgentRecords>()
-    records.ensureByHandle.mockImplementation((agent) => Promise.resolve(AGENT_OF_HANDLE[agent.handle] ?? "unknown"))
-    const moduleRef = await Test.createTestingModule({
-        providers: [
-            OfficeSeedService,
-            {
-                provide: WORKSPACE_SEED_OPTIONS,
-                useValue: {
-                    auth: Symbol("auth"),
-                    input: secretOf(options.input ?? INPUT),
-                    officeInput: secretOf(options.office ?? OFFICE_WIRE),
-                    print,
-                },
-            },
-            { provide: PRIMARY_ENTITY_MANAGER, useValue: em },
-            { provide: SEED_AGENTS, useValue: records },
-            { provide: SEED_OFFICE_AUTHORITY, useValue: null },
-            { provide: WorkspaceSeedService, useValue: seeds },
-            { provide: AgentOwnershipService, useValue: agents },
-        ],
-    }).compile()
-    return { service: moduleRef.get(OfficeSeedService), print, seeds, agents, records }
-}
-
-/** An app with the authority capability bound. */
-const buildBound = async (em: MockEntityManager) => {
     const seeds = mock<WorkspaceSeedService>()
     seeds.seedOwned.mockResolvedValue(OWNED_SEED)
     seeds.ensureSeat.mockImplementation((...[, , account]) =>
@@ -122,9 +89,9 @@ const buildBound = async (em: MockEntityManager) => {
                 provide: WORKSPACE_SEED_OPTIONS,
                 useValue: {
                     auth: Symbol("auth"),
-                    input: secretOf(INPUT),
-                    officeInput: secretOf(OFFICE_WIRE),
-                    print: jest.fn(),
+                    input: secretOf(options.input ?? INPUT),
+                    officeInput: secretOf(options.office ?? OFFICE_WIRE),
+                    print,
                 },
             },
             { provide: PRIMARY_ENTITY_MANAGER, useValue: em },
@@ -134,7 +101,7 @@ const buildBound = async (em: MockEntityManager) => {
             { provide: AgentOwnershipService, useValue: agents },
         ],
     }).compile()
-    return { service: moduleRef.get(OfficeSeedService), authority }
+    return { service: moduleRef.get(OfficeSeedService), print, seeds, agents, records, authority }
 }
 
 describe("OfficeSeedService dry run", () => {
@@ -213,7 +180,7 @@ describe("OfficeSeedService execute", () => {
             agents: 4,
             ownership: 4,
             rooms: "ready",
-            authority: "pending",
+            authority: "applied",
         })
         expect(print).toHaveBeenCalledWith(`${OFFICE_RECEIPT_PREFIX}${JSON.stringify(report)}`)
         expect(seeds.seedOwned).toHaveBeenCalledTimes(1)
@@ -296,8 +263,8 @@ describe("OfficeSeedService ownership and rooms", () => {
 })
 
 describe("OfficeSeedService authority", () => {
-    it("hands the rules and grants, resolved to ids, to the authority capability once it is bound", async () => {
-        const { service, authority } = await buildBound(mockEntityManager({ query: ROOMS_READY }))
+    it("hands the rules and grants, resolved to ids, to the authority capability", async () => {
+        const { service, authority } = await build(mockEntityManager({ query: ROOMS_READY }))
 
         await expect(service.officeOperator({ owner: NAM, execute: true })).resolves.toMatchObject({
             authority: "applied",
@@ -306,7 +273,6 @@ describe("OfficeSeedService authority", () => {
         expect(authority.apply).toHaveBeenCalledTimes(1)
         expect(authority.apply).toHaveBeenCalledWith(
             WS,
-            OWNER,
             expect.objectContaining({
                 rules: [
                     expect.objectContaining({
@@ -331,13 +297,5 @@ describe("OfficeSeedService authority", () => {
                 ]),
             }),
         )
-    })
-
-    it("leaves the rules and grants pending while no authority capability is bound", async () => {
-        const { service } = await build(mockEntityManager({ query: ROOMS_READY }))
-
-        await expect(service.officeOperator({ owner: NAM, execute: true })).resolves.toMatchObject({
-            authority: "pending",
-        })
     })
 })

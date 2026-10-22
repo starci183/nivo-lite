@@ -8,14 +8,13 @@ import { APPROVAL_AGENT_OWNERS, APPROVAL_EVENTS } from "./approval-requests.deco
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./approval-requests.module-definition"
 import { ApprovalRequestsService } from "./approval-requests.service"
 import { ApprovalSweepService } from "./approval-sweep.service"
-import { EvidenceApprovalEvents } from "./evidence-approval-events.service"
-import { UnassignedApprovalAgentOwners } from "./unassigned-agent-owners.service"
+import { ApprovalEvidenceService } from "./approval-evidence.service"
 
 @Module({})
 /**
- * Requests for approval of the steps an agent cannot finish alone. The agent owners port defaults to nobody (so the workspace owner)
- * until the app root binds the agents capability; the events port defaults to the evidence log. The authority rules, the member
- * grants, the events and the platform capabilities come from the app root.
+ * Requests for approval of the steps an agent cannot finish alone. The app root binds the agent owners port to the agents
+ * capability and the events port to the work threads that follow the requests; every settled request and every reminder is written
+ * to the evidence log first. The authority rules, the member grants, the events and the platform capabilities come from the app root.
  */
 export class ApprovalRequestsModule extends ConfigurableModuleClass {
     /** Registers the capability once per app. */
@@ -25,11 +24,9 @@ export class ApprovalRequestsModule extends ConfigurableModuleClass {
             ...base,
             providers: [
                 ...(base.providers ?? []),
-                {
-                    provide: APPROVAL_AGENT_OWNERS,
-                    useClass: options.ports.agentOwners ?? UnassignedApprovalAgentOwners,
-                },
-                { provide: APPROVAL_EVENTS, useClass: options.ports.events ?? EvidenceApprovalEvents },
+                { provide: APPROVAL_AGENT_OWNERS, useExisting: options.ports.agentOwners },
+                { provide: APPROVAL_EVENTS, useExisting: options.ports.events },
+                ApprovalEvidenceService,
                 ApprovalAnnouncerService,
                 ApprovalEscalationService,
                 ApprovalOpeningService,

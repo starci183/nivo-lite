@@ -4,8 +4,7 @@ import type { OfficeAuthoritySeed } from "../office-seed.contracts"
  * The rules and grants of the story, written against the v0.3.2 authority contract (plan 5.1 and 9): a discount in percent with
  * bands (alone up to 3, ask 3 to 15, never above), asked of the managers of Sales (any one), 30 minutes before it goes to the
  * agent's owner; anh Minh may approve up to 15 percent, chi Ha up to 10, Nam anything the rule allows; Van approves invoices.
- * This file only holds data. It is applied through the office authority port, so it takes effect when the authority
- * capability (lane A: authority-rules, member-grants) is part of the app; until then the run reports `authority: pending`.
+ * This file only holds data. It is applied through the office authority port (authority-rules and member-grants).
  */
 export const HAKUEN_OFFICE_AUTHORITY: OfficeAuthoritySeed = {
     rules: [

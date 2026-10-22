@@ -11,3 +11,4 @@ export type {
 export { grantCoverageOf } from "./grant-coverage.policy"
 export { MemberGrantsModule } from "./member-grants.module"
 export { MemberGrantsService } from "./member-grants.service"
+export { OfficeAuthorityService } from "./office-authority.service"

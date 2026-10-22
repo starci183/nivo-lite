@@ -30,6 +30,7 @@ import { ChannelSetupModule } from "@modules/integrations/channel-setup"
 import { SUPABASE_ACCOUNTS, SUPABASE_AUTH, SUPABASE_STORAGE, SupabaseModule } from "@modules/integrations/supabase"
 import { AuthorityActionsModule } from "@modules/domain/authority-actions"
 import { AuthorityRulesModule } from "@modules/domain/authority-rules"
+import { MemberGrantsModule, OfficeAuthorityService } from "@modules/domain/member-grants"
 import { MODULE_KNOWLEDGE_FOLDERS, MODULES_MESSAGES } from "@modules/domain/modules"
 import { ClockModule } from "@modules/platform/clock"
 import { DatabaseModule } from "@modules/platform/database"
@@ -74,6 +75,7 @@ export const cliModules = (options: CliAppOptions): Array<DynamicModule> => [
     WorkspaceMembersModule.register({ isGlobal: true, accounts: SUPABASE_AUTH }),
     WorkspacesModule.register({ isGlobal: true, allowFreeWorkspace: true }),
     AuthorityRulesModule.register({ isGlobal: true }),
+    MemberGrantsModule.register({ isGlobal: true }),
     ModuleInstallationsModule.register({ isGlobal: true }),
     TransactionsModule.register({ isGlobal: true }),
     McpGatewayModule.register({ isGlobal: true, ...options.mcpGateway, console: true }),
@@ -85,6 +87,7 @@ export const cliModules = (options: CliAppOptions): Array<DynamicModule> => [
             sources: ProfileSourcesService,
             toolGrants: McpToolGrantsService,
             connectors: McpGatewayAdminService,
+            officeAuthority: OfficeAuthorityService,
         },
         print: printConsoleLine,
         ...options.workspaceSeed,

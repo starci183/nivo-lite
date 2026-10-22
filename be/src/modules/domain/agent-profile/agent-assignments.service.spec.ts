@@ -22,21 +22,6 @@ const buildBound = async (allowed = true) => {
     return { service: moduleRef.get(AgentAssignmentsService), agents, threads }
 }
 
-const buildUnbound = async () => {
-    const agents = mock<AgentOwnershipService>({
-        memberIdOf: jest.fn(() => Promise.resolve("m-lan")),
-        canAssign: jest.fn(() => Promise.resolve(true)),
-    })
-    const moduleRef = await Test.createTestingModule({
-        providers: [
-            AgentAssignmentsService,
-            { provide: AgentOwnershipService, useValue: agents },
-            { provide: AGENT_PROFILE_THREADS, useValue: null },
-        ],
-    }).compile()
-    return { service: moduleRef.get(AgentAssignmentsService) }
-}
-
 describe("AgentAssignmentsService", () => {
     it("opens a thread whose only mention is the agent, built from the id and not from the text", async () => {
         const { service, agents, threads } = await buildBound()
@@ -77,13 +62,5 @@ describe("AgentAssignmentsService", () => {
         })
         expect(agents.memberIdOf).not.toHaveBeenCalled()
         expect(threads.open).not.toHaveBeenCalled()
-    })
-
-    it("refuses honestly when the app has no work threads", async () => {
-        const { service } = await buildUnbound()
-
-        await expect(service.assign("u1", "w1", { agentId: "a1", text: "do it" })).rejects.toMatchObject({
-            code: AgentProfileErrorCode.ThreadsUnbound,
-        })
     })
 })

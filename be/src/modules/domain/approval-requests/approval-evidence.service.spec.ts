@@ -5,7 +5,7 @@ import { MESSAGE_CATALOG } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
 import { HA_REF, MINH_REF } from "@tests/fixtures/builders/approval-requests.builder"
 import type { ApprovalReminder, ApprovalResolved } from "./approval-requests.contracts"
-import { EvidenceApprovalEvents } from "./evidence-approval-events.service"
+import { ApprovalEvidenceService } from "./approval-evidence.service"
 
 const resolvedOf = builder<ApprovalResolved>({
     requestId: "request-1",
@@ -34,15 +34,15 @@ const build = async () => {
     events.record.mockResolvedValue(undefined)
     const moduleRef = await Test.createTestingModule({
         providers: [
-            EvidenceApprovalEvents,
+            ApprovalEvidenceService,
             { provide: MESSAGE_CATALOG, useValue: catalog },
             { provide: EventsService, useValue: events },
         ],
     }).compile()
-    return { subject: moduleRef.get(EvidenceApprovalEvents), events }
+    return { subject: moduleRef.get(ApprovalEvidenceService), events }
 }
 
-describe("EvidenceApprovalEvents > resolved", () => {
+describe("ApprovalEvidenceService > resolved", () => {
     it("writes a settled request into the evidence log under the name of the member who settled it", async () => {
         const { subject, events } = await build()
 
@@ -101,7 +101,7 @@ describe("EvidenceApprovalEvents > resolved", () => {
     })
 })
 
-describe("EvidenceApprovalEvents > reminder", () => {
+describe("ApprovalEvidenceService > reminder", () => {
     it("writes the one reminder with the names of the approvers still awaited", async () => {
         const { subject, events } = await build()
 

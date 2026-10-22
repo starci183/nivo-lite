@@ -7,8 +7,6 @@ export enum AgentProfileErrorCode {
     AssignForbidden = "AGENT_PROFILE_ASSIGN_FORBIDDEN",
     /** The request is empty or longer than allowed. */
     RequestInvalid = "AGENT_PROFILE_REQUEST_INVALID",
-    /** The app has no work threads capability, so an assignment cannot be recorded. */
-    ThreadsUnbound = "AGENT_PROFILE_THREADS_UNBOUND",
     /** The agent is not in this workspace. */
     AgentNotFound = "AGENT_PROFILE_AGENT_NOT_FOUND",
 }
@@ -17,7 +15,6 @@ export enum AgentProfileErrorCode {
 export const AGENT_PROFILE_ERROR_KINDS: Record<AgentProfileErrorCode, ErrorKind> = {
     [AgentProfileErrorCode.AssignForbidden]: "forbidden",
     [AgentProfileErrorCode.RequestInvalid]: "invalid",
-    [AgentProfileErrorCode.ThreadsUnbound]: "unavailable",
     [AgentProfileErrorCode.AgentNotFound]: "not-found",
 }
 

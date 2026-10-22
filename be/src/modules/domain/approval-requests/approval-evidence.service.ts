@@ -3,7 +3,6 @@ import { EventsService } from "@modules/domain/events"
 import { InjectMessageCatalog } from "@modules/platform/i18n"
 import type { Locale, MessageCatalog } from "@modules/platform/i18n"
 import type { ApprovalReminder, ApprovalResolved } from "./approval-requests.contracts"
-import type { ApprovalEvents } from "./approval-requests.port"
 
 /** Who the lines of the tick are written as, and the language they are written in: no person is reading when they are written. */
 const NIVO_ACTOR = "NIVO"
@@ -18,11 +17,10 @@ const RESOLVED_KEY = {
 
 @Injectable()
 /**
- * The default owner of the approval events: every settled request and every reminder becomes a line of the evidence log, which is
- * the one source the decision history and the execution chain panel read. The work chain may bind another owner that also tells
- * its threads.
+ * The evidence log of the requests: every settled request and every reminder becomes a line of it, which is the one source the
+ * decision history and the execution chain panel read. It is written before the work chain hears of a settled request.
  */
-export class EvidenceApprovalEvents implements ApprovalEvents {
+export class ApprovalEvidenceService {
     constructor(
         @InjectMessageCatalog() private readonly catalog: MessageCatalog,
         private readonly events: EventsService,

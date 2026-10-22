@@ -1,11 +1,9 @@
-import type { ApprovalReminder, ApprovalResolved } from "./approval-requests.contracts"
+import type { ApprovalResolved } from "./approval-requests.contracts"
 
-/** The one door out of the capability: it tells the work chain a request was settled, and when its approvers should be reminded. */
+/** The one door out of the capability: it tells the work chain a request was settled. The evidence log is written before it. */
 export interface ApprovalEvents {
     /** Publishes `approval.resolved`. */
     resolved(event: ApprovalResolved): Promise<void>
-    /** Publishes the one reminder of a request that is half-way through its time. */
-    reminder(event: ApprovalReminder): Promise<void>
 }
 
 /** Who answers for an agent: the member it was assigned to and the member who stands in for them. */

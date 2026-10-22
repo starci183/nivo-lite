@@ -25,7 +25,7 @@ const build = async (owners: AgentOwnerRef | Error, seat: string | null = "membe
     const tx = fakeTransaction(
         mockEntityManager({
             query: [
-                [FIND_OWNER_SEAT, [{ id: seat }]],
+                [FIND_OWNER_SEAT, seat === null ? [] : [{ id: seat }]],
                 [RESOLVE_REQUEST, [{ id: "request-1" }]],
             ],
         }),
@@ -108,6 +108,13 @@ describe("ApprovalEscalationService > expire", () => {
             { ownerMemberId: null, fallbackMemberId: null },
             { directory, seat: "member-owner" },
         )
+
+        expect(event.escalatedTo).toBeNull()
+        expect(resolved?.[4]).toBeNull()
+    })
+
+    it("leaves the request with nobody when the workspace has no owner seat at all", async () => {
+        const { event, resolved } = await expireWith({ ownerMemberId: null, fallbackMemberId: null }, { seat: null })
 
         expect(event.escalatedTo).toBeNull()
         expect(resolved?.[4]).toBeNull()

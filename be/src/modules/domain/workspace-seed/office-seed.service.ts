@@ -63,8 +63,8 @@ const accountOfInput = (account: OfficeAccountInput): SeedAccount => ({
 @Injectable()
 /**
  * Seeds the story of v0.3.2 into a local or UAT workspace: the five people with their seats and rooms, the four agents with a
- * person in charge, a fallback, who may give them work and whom they may tag, and (when the authority capability is bound) the
- * rules and grants. Every step is idempotent. A dry run validates the private input and prints the plan without writing. It
+ * person in charge, a fallback, who may give them work and whom they may tag, and the rules and grants (through the authority
+ * capability). Every step is idempotent. A dry run validates the private input and prints the plan without writing. It
  * never touches the production HAKUEN profile: the workspace name must be the story's own.
  */
 export class OfficeSeedService {
@@ -72,7 +72,7 @@ export class OfficeSeedService {
         @InjectWorkspaceSeedOptions() private readonly options: WorkspaceSeedOptions,
         @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
         @InjectSeedAgents() private readonly records: SeedAgentRecords,
-        @InjectSeedOfficeAuthority() private readonly authority: OfficeAuthorityPort | null,
+        @InjectSeedOfficeAuthority() private readonly authority: OfficeAuthorityPort,
         private readonly seeds: WorkspaceSeedService,
         private readonly agents: AgentOwnershipService,
     ) {}
@@ -205,13 +205,12 @@ export class OfficeSeedService {
         })
     }
 
-    /** Hands the rules and grants to the authority capability when one is bound; otherwise they stay pending. */
+    /** Hands the rules and grants, resolved to the ids of the workspace, to the authority capability. */
     private async applyAuthority(
         target: OfficeTarget,
         members: PerPerson<string>,
         agentIds: PerAgent<string>,
     ): Promise<OfficeReport["authority"]> {
-        if (this.authority === null) return "pending"
         const resolved: ResolvedOfficeAuthority = {
             rules: HAKUEN_OFFICE_AUTHORITY.rules.map((rule) => ({
                 ...rule,
@@ -226,7 +225,7 @@ export class OfficeSeedService {
                 member_id: members[member],
             })),
         }
-        await this.authority.apply(target.workspaceId, target.ownerId, resolved)
+        await this.authority.apply(target.workspaceId, resolved)
         return "applied"
     }
 

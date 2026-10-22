@@ -29,9 +29,7 @@ export class WorkspaceSeedModule extends ConfigurableModuleClass {
                 { provide: SEED_SOURCES, useClass: sources },
                 { provide: SEED_TOOL_GRANTS, useClass: toolGrants },
                 { provide: SEED_CONNECTORS, useExisting: connectors },
-                officeAuthority === undefined
-                    ? { provide: SEED_OFFICE_AUTHORITY, useValue: null }
-                    : { provide: SEED_OFFICE_AUTHORITY, useClass: officeAuthority },
+                { provide: SEED_OFFICE_AUTHORITY, useClass: officeAuthority },
                 KnowledgeQueue,
                 WorkspaceSeedService,
                 WorkspaceProfileService,

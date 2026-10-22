@@ -2,6 +2,7 @@ import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./member-grants.module-definition"
 import { MemberGrantsService } from "./member-grants.service"
+import { OfficeAuthorityService } from "./office-authority.service"
 
 @Module({})
 /** What each member may approve, per action and up to which amount, over the primary Supabase PostgreSQL connection. */
@@ -11,8 +12,8 @@ export class MemberGrantsModule extends ConfigurableModuleClass {
         const base = super.register(options)
         return {
             ...base,
-            providers: [...(base.providers ?? []), MemberGrantsService],
-            exports: [MemberGrantsService],
+            providers: [...(base.providers ?? []), MemberGrantsService, OfficeAuthorityService],
+            exports: [MemberGrantsService, OfficeAuthorityService],
         }
     }
 }

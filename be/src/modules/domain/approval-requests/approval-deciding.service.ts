@@ -19,7 +19,7 @@ import { resolveApprovers } from "./approver-set.policy"
 import { ApprovalRequestsError, ApprovalRequestsErrorCode } from "./errors/approval-requests.error"
 import type { ApprovalRequestRow, ApprovalVerdictRow } from "./persistence/approval-requests.rows"
 import { INSERT_VERDICT, LIST_VERDICTS, LOCK_REQUEST, RESOLVE_REQUEST } from "./persistence/approval-requests.sql"
-import { mayAnswer, namedGroup, notAnApprover, settledBefore } from "./refusal.policy"
+import { answererOf, namedGroup, notAnApprover, settledBefore } from "./refusal.policy"
 import { judgeVerdict } from "./verdict.policy"
 
 /** What settling a verdict in the transaction answers: the progress and the event to publish, or that the request ran out of time. */
@@ -64,7 +64,8 @@ export class ApprovalDecidingService {
             return { kind: "expired", resolved: await this.escalation.expire(tx, row, directory, now) }
         }
         const eligible = await this.eligibleFor(row, directory)
-        if (!mayAnswer(params.memberId, eligible)) throw refused(notAnApprover(params.memberId, eligible))
+        const decider = answererOf(params.memberId, eligible)
+        if (decider === null) throw refused(notAnApprover(params.memberId, eligible))
         const given = await tx.query<Array<ApprovalVerdictRow>>(LIST_VERDICTS, [row.id])
         const judged = judgeVerdict({
             policy: row.policy,
@@ -85,7 +86,6 @@ export class ApprovalDecidingService {
         }
         const outcome = judged.value.outcome
         await tx.query(RESOLVE_REQUEST, [row.id, outcome, params.memberId, now.toISOString(), null])
-        const decider = eligible.approvers.find((member) => member.memberId === params.memberId)
         return {
             kind: "progress",
             progress: { requestId: row.id, status: outcome, approvedBy, remaining: [] },
@@ -93,7 +93,7 @@ export class ApprovalDecidingService {
                 requestId: row.id,
                 outcome,
                 decidedBy: params.memberId,
-                decidedByName: decider?.name ?? null,
+                decidedByName: decider.name,
                 action: row.action,
                 workspaceId: row.workspace_id,
                 chainStepId: row.chain_step_id,

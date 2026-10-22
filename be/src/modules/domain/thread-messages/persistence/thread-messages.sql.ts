@@ -5,7 +5,7 @@ export const LIST_THREAD_DIGESTS = sql`SELECT m.thread_id,
        (array_agg(m.body ORDER BY m.created_at DESC, m.id DESC))[1] AS last_body,
        to_json(max(m.created_at)) #>> '{}' AS last_at,
        count(*)::int AS message_count,
-       bool_or(m.approval ->> 'outcome' = 'pending') AS waiting_approval
+       COALESCE(bool_or(m.approval ->> 'outcome' = 'pending'), false) AS waiting_approval
 FROM public.thread_messages m
 WHERE m.workspace_id = $1::uuid AND m.thread_id = ANY($2::uuid[])
 GROUP BY m.thread_id

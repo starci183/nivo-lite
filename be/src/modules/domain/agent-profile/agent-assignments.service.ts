@@ -17,7 +17,7 @@ import { AgentProfileError, AgentProfileErrorCode } from "./errors/agent-profile
 export class AgentAssignmentsService {
     constructor(
         private readonly agents: AgentOwnershipService,
-        @InjectAssignmentThreads() private readonly threads: AssignmentThreads | null,
+        @InjectAssignmentThreads() private readonly threads: AssignmentThreads,
     ) {}
 
     /** Opens the thread that carries the assignment and answers it. */
@@ -31,7 +31,6 @@ export class AgentAssignmentsService {
         const memberId = await this.agents.memberIdOf(userId, workspaceId)
         if (!(await this.agents.canAssign(memberId, request.agentId)))
             throw new AgentProfileError({ code: AgentProfileErrorCode.AssignForbidden })
-        if (this.threads === null) throw new AgentProfileError({ code: AgentProfileErrorCode.ThreadsUnbound })
         return this.threads.open({
             workspaceId,
             authorMemberId: memberId,

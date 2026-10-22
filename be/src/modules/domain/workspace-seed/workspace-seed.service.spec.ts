@@ -2,6 +2,7 @@ import { AgentRecordsService } from "@modules/domain/agents"
 import { ProfileSourcesService } from "@modules/domain/knowledge-sources"
 import { McpToolGrantsService } from "@modules/domain/mcp-tool-grants"
 import { McpGatewayAdminService } from "@modules/domain/mcp-gateway"
+import { OfficeAuthorityService } from "@modules/domain/member-grants"
 import { Test } from "@nestjs/testing"
 import { builder, mock } from "@starci/jest-preset"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
@@ -89,6 +90,7 @@ const build = async (input?: Secret) => {
         sources: ProfileSourcesService,
         toolGrants: McpToolGrantsService,
         connectors: McpGatewayAdminService,
+        officeAuthority: OfficeAuthorityService,
     }
     const options: WorkspaceSeedOptions = { auth: "auth", ports, input, print }
     const moduleRef = await Test.createTestingModule({

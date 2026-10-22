@@ -5,6 +5,7 @@ import { DecisionsGraphqlModule } from "@features/api/decisions"
 import { OfficeGraphqlModule } from "@features/api/office"
 import { WorkThreadsGraphqlModule } from "@features/api/work-threads"
 import { AgentsService } from "@modules/domain/agents"
+import { ApprovalRequestsService } from "@modules/domain/approval-requests"
 import { ThreadMessagesModule } from "@modules/domain/thread-messages"
 import { WorkChainsModule } from "@modules/domain/work-chains"
 import { WorkThreadsModule } from "@modules/domain/work-threads"
@@ -16,6 +17,6 @@ export const agentApiModules = (): Array<DynamicModule> => [
     OfficeGraphqlModule.register({}),
     WorkChainsModule.register({ isGlobal: true, ownerDirectory: AgentsService }),
     WorkThreadsModule.register({ isGlobal: true }),
-    ThreadMessagesModule.register({ isGlobal: true, agentRules: AgentsService }),
+    ThreadMessagesModule.register({ isGlobal: true, agentRules: AgentsService, approvalGate: ApprovalRequestsService }),
     WorkThreadsGraphqlModule.register({}),
 ]

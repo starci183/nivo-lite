@@ -29,8 +29,6 @@ export enum ThreadMessagesErrorCode {
     AlreadyDecided = "THREAD_MESSAGES_ALREADY_DECIDED",
     /** The card expired before anyone decided it. */
     ApprovalClosed = "THREAD_MESSAGES_APPROVAL_CLOSED",
-    /** The approval capability is not bound in this app, so no approval can be asked or decided. */
-    ApprovalUnbound = "THREAD_MESSAGES_APPROVAL_UNBOUND",
     /** The insert answered no row: the row was not written. */
     NotStored = "THREAD_MESSAGES_NOT_STORED",
 }
@@ -50,7 +48,6 @@ export const THREAD_MESSAGES_ERROR_KINDS: Record<ThreadMessagesErrorCode, ErrorK
     [ThreadMessagesErrorCode.NotApprover]: "forbidden",
     [ThreadMessagesErrorCode.AlreadyDecided]: "conflict",
     [ThreadMessagesErrorCode.ApprovalClosed]: "conflict",
-    [ThreadMessagesErrorCode.ApprovalUnbound]: "unavailable",
     [ThreadMessagesErrorCode.NotStored]: "internal",
 }
 

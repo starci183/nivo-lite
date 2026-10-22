@@ -237,6 +237,23 @@ describe("WorkRecorderService", () => {
     })
 
     describe("rejected", () => {
+        it("names no member when the person who rejected has no seat id", async () => {
+            const built = await build()
+
+            await built.service.rejected(
+                ctx,
+                itemOf(),
+                { summary: "Merged", fields: {} },
+                { name: "NIVO", kind: "owner" },
+                null,
+            )
+
+            expect(built.decide).toHaveBeenCalledWith(
+                ctx,
+                expect.objectContaining({ decided_by: "NIVO", decided_by_member_id: null, outcome: "rejected" }),
+            )
+        })
+
         it("logs the rejection, tells the Office and publishes the decision", async () => {
             const built = await build()
             const by = { name: "Lan", kind: "owner", memberId: "member-1" } as const

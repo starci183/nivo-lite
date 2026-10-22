@@ -98,5 +98,8 @@ describe("rule save policy > ruleSummary", () => {
         expect(subject.ruleSummary(savedOf({ unit: "percent" }), changeOf({ auto_max: null, ask_max: 15 }))).toBe(
             "sales.give_discount -> ask (percent: auto <= -, ask <= 15)",
         )
+        expect(subject.ruleSummary(savedOf({ unit: "percent" }), changeOf({ auto_max: 3, ask_max: null }))).toBe(
+            "sales.give_discount -> ask (percent: auto <= 3, ask <= -)",
+        )
     })
 })

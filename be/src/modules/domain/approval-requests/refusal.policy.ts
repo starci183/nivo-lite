@@ -1,5 +1,5 @@
 import type { ApproverGroup } from "@modules/domain/authority-rules"
-import type { DirectoryMember, ExclusionReason } from "@modules/domain/member-grants"
+import type { ApproverRef, DirectoryMember, ExclusionReason } from "@modules/domain/member-grants"
 import type { ApproverSet, Refusal } from "./approval-requests.contracts"
 import { ApprovalRequestsErrorCode } from "./errors/approval-requests.error"
 import type { ApprovalRequestRow } from "./persistence/approval-requests.rows"
@@ -12,9 +12,9 @@ const EXCLUSION_REFUSAL: Readonly<Record<ExclusionReason, ApprovalRequestsErrorC
     over_limit: ApprovalRequestsErrorCode.OverLimit,
 }
 
-/** True when the member is among the people who may answer. */
-export const mayAnswer = (memberId: string, set: ApproverSet): boolean =>
-    set.approvers.some((approver) => approver.memberId === memberId)
+/** The member among the people who may answer, or null when they are not. */
+export const answererOf = (memberId: string, set: ApproverSet): ApproverRef | null =>
+    set.approvers.find((approver) => approver.memberId === memberId) ?? null
 
 /** Why a member who may not answer may not: the reason the grants leave them out, or that they are not in the group at all. */
 export const notAnApprover = (memberId: string, set: ApproverSet): Refusal => {

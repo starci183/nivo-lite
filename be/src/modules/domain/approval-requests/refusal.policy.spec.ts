@@ -2,7 +2,7 @@ import { Test } from "@nestjs/testing"
 import { DIRECTORY, MINH_REF, requestOf } from "@tests/fixtures/builders/approval-requests.builder"
 import type { ApproverSet } from "./approval-requests.contracts"
 import { ApprovalRequestsErrorCode } from "./errors/approval-requests.error"
-import { mayAnswer, namedGroup, notAnApprover, settledBefore } from "./refusal.policy"
+import { answererOf, namedGroup, notAnApprover, settledBefore } from "./refusal.policy"
 
 const SUBJECT = Symbol("refusal.policy")
 
@@ -17,7 +17,7 @@ const SET: ApproverSet = {
 
 const buildSubject = async () => {
     const moduleRef = await Test.createTestingModule({
-        providers: [{ provide: SUBJECT, useValue: { mayAnswer, namedGroup, notAnApprover, settledBefore } }],
+        providers: [{ provide: SUBJECT, useValue: { answererOf, namedGroup, notAnApprover, settledBefore } }],
     }).compile()
     return moduleRef.get<typeof import("./refusal.policy")>(SUBJECT)
 }
@@ -26,9 +26,9 @@ describe("refusal policy > who may answer", () => {
     it("lets only the people the grants cover answer", async () => {
         const subject = await buildSubject()
 
-        expect(subject.mayAnswer("member-minh", SET)).toBe(true)
-        expect(subject.mayAnswer("member-ha", SET)).toBe(false)
-        expect(subject.mayAnswer("stranger", SET)).toBe(false)
+        expect(subject.answererOf("member-minh", SET)).toEqual(MINH_REF)
+        expect(subject.answererOf("member-ha", SET)).toBeNull()
+        expect(subject.answererOf("stranger", SET)).toBeNull()
     })
 
     it.each([

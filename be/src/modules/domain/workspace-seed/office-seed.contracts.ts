@@ -189,6 +189,6 @@ export interface OfficeReport {
     readonly ownership: number
     /** ready = department rooms ensured; absent = the Hub rooms function is not installed; planned = dry run. */
     readonly rooms: "ready" | "absent" | "planned"
-    /** applied = rules and grants written by the authority capability; pending = none is bound yet (it activates when it lands); planned = dry run. */
-    readonly authority: "applied" | "pending" | "planned"
+    /** applied = rules and grants written by the authority capability; planned = dry run. */
+    readonly authority: "applied" | "planned"
 }

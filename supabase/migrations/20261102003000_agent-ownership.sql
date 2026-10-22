@@ -18,18 +18,7 @@ ALTER TABLE public.agents
         CHECK (assignable_rooms <@ ARRAY['executive', 'frontdesk', 'sales', 'marketing', 'care', 'accounting']::text[]),
     ADD CONSTRAINT agents_cannot_tag_itself_check CHECK (NOT (id = ANY (can_tag_agent_ids)));
 
--- The first active owner of a workspace: the default person in charge of its agents.
-CREATE FUNCTION public.workspace_owner_member(p_workspace uuid) RETURNS uuid
-    LANGUAGE sql STABLE SECURITY INVOKER
-    SET search_path TO 'public'
-    AS $$
-    select m.id from public.workspace_members m
-    where m.workspace_id = p_workspace and m.role = 'owner' and m.status = 'active'
-    order by m.created_at, m.id
-    limit 1
-$$;
-REVOKE ALL ON FUNCTION public.workspace_owner_member(uuid) FROM PUBLIC, anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.workspace_owner_member(uuid) TO app_be;
+-- The default person in charge of an agent is public.workspace_owner_member (20261102000100): the first active owner seat.
 
 -- Fills an absent owner or fallback with the workspace owner, on insert and on update.
 CREATE FUNCTION public.agents_default_ownership() RETURNS trigger

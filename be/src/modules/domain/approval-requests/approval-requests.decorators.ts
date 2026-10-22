@@ -2,7 +2,7 @@ import { injector } from "@modules/platform/composition"
 import type { TypedParameterDecorator } from "@modules/platform/composition"
 import type { ApprovalAgentOwners, ApprovalEvents } from "./approval-requests.port"
 
-/** Token of the approval events port; the capability binds the evidence log unless the app root names another owner. */
+/** Token of the approval events port; the app root binds it to the work threads that follow the requests. */
 export const APPROVAL_EVENTS: unique symbol = Symbol("domain.approval-requests.events")
 
 /** Token of the agent owners port; the app root binds it to the agents capability. */
