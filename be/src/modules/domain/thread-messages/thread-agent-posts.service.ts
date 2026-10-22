@@ -22,7 +22,7 @@ import type {
     PostedAgentMessage,
 } from "./thread-messages.contracts"
 import { InjectAgentRules, InjectApprovalGate } from "./thread-messages.decorators"
-import type { AgentRules, ApprovalGate } from "./thread-messages.port"
+import type { AgentRules, ThreadApprovalGate } from "./thread-messages.port"
 import { ThreadMessagesService } from "./thread-messages.service"
 
 /** What writing an agent's message needs once its tags and its approval were settled. */
@@ -50,7 +50,7 @@ export class ThreadAgentPostsService {
     constructor(
         @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
         @InjectAgentRules() private readonly rules: AgentRules,
-        @InjectApprovalGate() private readonly gate: ApprovalGate,
+        @InjectApprovalGate() private readonly gate: ThreadApprovalGate,
         private readonly directory: MentionDirectoryService,
         private readonly threads: WorkThreadsService,
         private readonly chains: WorkChainsService,

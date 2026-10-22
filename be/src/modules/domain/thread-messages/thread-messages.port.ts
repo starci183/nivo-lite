@@ -1,16 +1,16 @@
 import type {
-    ApprovalDecision,
-    ApprovalDecisionResult,
+    ThreadApprovalDecision,
+    ThreadApprovalDecisionResult,
     OpenApproval,
     OpenedApproval,
 } from "./thread-messages.contracts"
 
 /** The one door to the approval capability: open a request and decide it. The app root binds it to ApprovalRequestsService. */
-export interface ApprovalGate {
+export interface ThreadApprovalGate {
     /** Opens a request for the action and answers the people to tag, the ones left out, the policy and the deadline. */
     open(request: OpenApproval): Promise<OpenedApproval>
     /** Records a member's verdict; the gate proves the member may decide it and applies the policy. */
-    decide(decision: ApprovalDecision): Promise<ApprovalDecisionResult>
+    decide(decision: ThreadApprovalDecision): Promise<ThreadApprovalDecisionResult>
 }
 
 /** The one door to the agents capability for who may tag and assign whom. The app root binds it to AgentsService. */

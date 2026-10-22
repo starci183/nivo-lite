@@ -11,9 +11,9 @@ import { FIND_MESSAGE } from "./persistence/thread-messages.sql"
 import { toMessage } from "./thread.mapper"
 import { ThreadApprovalOutcomesService } from "./thread-approval-outcomes.service"
 import { ThreadApprovalsService } from "./thread-approvals.service"
-import type { ApprovalCard, ApprovalDecisionResult, CardApprover } from "./thread-messages.contracts"
+import type { ApprovalCard, ThreadApprovalDecisionResult, CardApprover } from "./thread-messages.contracts"
 import { APPROVAL_GATE } from "./thread-messages.decorators"
-import type { ApprovalGate } from "./thread-messages.port"
+import type { ThreadApprovalGate } from "./thread-messages.port"
 
 const MEMBER: WorkspaceMember = {
     userId: "minh",
@@ -79,13 +79,13 @@ interface Answers {
     /** The message as the lock finds it, after the gate answered. */
     readonly locked?: ThreadMessageRow
     /** What the gate answers. */
-    readonly decision?: ApprovalDecisionResult
+    readonly decision?: ThreadApprovalDecisionResult
 }
 
 const build = async (em: MockEntityManager, answers: Answers = {}) => {
     fakeTransaction(em)
     const members = mock<WorkspaceMembersService>({ require: jest.fn().mockResolvedValue(MEMBER) })
-    const gate = mock<ApprovalGate>({
+    const gate = mock<ThreadApprovalGate>({
         open: jest.fn(),
         decide: jest.fn().mockResolvedValue(answers.decision ?? { status: "approved" }),
     })

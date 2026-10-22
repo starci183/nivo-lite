@@ -9,7 +9,7 @@ import {
     IN_30_MINUTES,
     MINH_REF,
     NOW,
-    requestOf,
+    approvalRequestOf,
     verdictOf,
 } from "@tests/fixtures/builders/approval-requests.builder"
 import { ApprovalAnnouncerService } from "./approval-announcer.service"
@@ -72,7 +72,7 @@ const build = async (due: ReadonlyArray<ApprovalRequestRow>, remindable: Readonl
 
 describe("ApprovalSweepService > requests that ran out of time", () => {
     it("settles each one as expired through the escalation and announces it after the commit", async () => {
-        const first = requestOf({ expires_at: "2026-10-22T09:29:00.000Z" })
+        const first = approvalRequestOf({ expires_at: "2026-10-22T09:29:00.000Z" })
         const { service, tx, announcer } = await build([first])
 
         await expect(service.sweep()).resolves.toEqual({ expired: 1, reminded: 0 })
@@ -83,7 +83,7 @@ describe("ApprovalSweepService > requests that ran out of time", () => {
     })
 
     it("reads each workspace directory once for the requests of that workspace", async () => {
-        const rows = [requestOf(), requestOf({ id: "request-2", chain_step_id: "step-2" })]
+        const rows = [approvalRequestOf(), approvalRequestOf({ id: "request-2", chain_step_id: "step-2" })]
         const { service, grants, escalation } = await build(rows)
 
         await expect(service.sweep()).resolves.toEqual({ expired: 2, reminded: 0 })
@@ -102,7 +102,7 @@ describe("ApprovalSweepService > requests that ran out of time", () => {
 
 describe("ApprovalSweepService > requests half-way through their time", () => {
     it("reminds once the approvers who have not answered and marks the request reminded", async () => {
-        const row = requestOf({ policy: "all", approvers: [MINH_REF, HA_REF] })
+        const row = approvalRequestOf({ policy: "all", approvers: [MINH_REF, HA_REF] })
         const { service, tx, announcer } = await build([], [row])
 
         await expect(service.sweep()).resolves.toEqual({ expired: 0, reminded: 1 })

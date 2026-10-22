@@ -9,9 +9,9 @@ import type { ThreadMessageRow } from "./persistence/thread-messages.rows"
 import { FIND_MESSAGE } from "./persistence/thread-messages.sql"
 import { toMessage } from "./thread.mapper"
 import { ThreadApprovalOutcomesService } from "./thread-approval-outcomes.service"
-import type { CardDecision, ThreadMessage } from "./thread-messages.contracts"
+import type { ThreadCardDecision, ThreadMessage } from "./thread-messages.contracts"
 import { InjectApprovalGate } from "./thread-messages.decorators"
-import type { ApprovalGate } from "./thread-messages.port"
+import type { ThreadApprovalGate } from "./thread-messages.port"
 
 @Injectable()
 /**
@@ -21,7 +21,7 @@ import type { ApprovalGate } from "./thread-messages.port"
 export class ThreadApprovalsService {
     constructor(
         @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
-        @InjectApprovalGate() private readonly gate: ApprovalGate,
+        @InjectApprovalGate() private readonly gate: ThreadApprovalGate,
         private readonly members: WorkspaceMembersService,
         private readonly directory: MentionDirectoryService,
         private readonly outcomes: ThreadApprovalOutcomesService,
@@ -31,7 +31,7 @@ export class ThreadApprovalsService {
      * A member approves or rejects the card of a message. The server checks the member is among the people tagged and leaves the
      * authority check, the policy and the one-winner lock to the approval capability; the card then shows what it answered.
      */
-    async decide(input: CardDecision): Promise<ThreadMessage> {
+    async decide(input: ThreadCardDecision): Promise<ThreadMessage> {
         await this.members.require(input.userId, input.workspaceId)
         const memberId = await this.directory.memberIdOf(this.entityManager, input.workspaceId, input.userId)
         const [row] = await this.entityManager.query<Array<ThreadMessageRow>>(FIND_MESSAGE, [

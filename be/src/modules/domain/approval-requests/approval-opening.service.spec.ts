@@ -16,7 +16,7 @@ import {
     OWNER,
     OWNER_REF,
     openOf,
-    requestOf,
+    approvalRequestOf,
     setupFor,
     setupOf,
 } from "@tests/fixtures/builders/approval-requests.builder"
@@ -66,7 +66,7 @@ const build = async (em: MockEntityManager, arrangement: Arrangement = {}) => {
 
 describe("ApprovalOpeningService > open", () => {
     it("tags the group the grants cover, lists who was left out and starts the clock", async () => {
-        const em = mockEntityManager({ query: [INSERT_REQUEST, [requestOf({ approvers: [MINH_REF] })]] })
+        const em = mockEntityManager({ query: [INSERT_REQUEST, [approvalRequestOf({ approvers: [MINH_REF] })]] })
         const { service, transaction } = await build(em)
 
         const opened = await service.open(openOf())
@@ -91,7 +91,7 @@ describe("ApprovalOpeningService > open", () => {
     })
 
     it("gives the approvers the order the rule lists them and the policy and time the rule names", async () => {
-        const em = mockEntityManager({ query: [INSERT_REQUEST, [requestOf({ policy: "sequential" })]] })
+        const em = mockEntityManager({ query: [INSERT_REQUEST, [approvalRequestOf({ policy: "sequential" })]] })
         const setup = setupOf({
             policy: "sequential",
             timeout_minutes: 45,
@@ -109,7 +109,7 @@ describe("ApprovalOpeningService > open", () => {
     })
 
     it("opens a request for an action that carries no amount, covered by any grant", async () => {
-        const em = mockEntityManager({ query: [INSERT_REQUEST, [requestOf({ amount: null })]] })
+        const em = mockEntityManager({ query: [INSERT_REQUEST, [approvalRequestOf({ amount: null })]] })
         const { service } = await build(em)
 
         await service.open(openOf({ amount: null }))
@@ -122,7 +122,7 @@ describe("ApprovalOpeningService > open", () => {
 
 describe("ApprovalOpeningService > open, a step that has a request", () => {
     it("answers the pending request of the step again instead of opening a second one", async () => {
-        const pending = requestOf({
+        const pending = approvalRequestOf({
             approvers: [MINH_REF, HA_REF],
             excluded: [{ memberId: "member-lan", reason: "no_grant" }],
         })
@@ -159,7 +159,9 @@ describe("ApprovalOpeningService > open, a step that has a request", () => {
 
 describe("ApprovalOpeningService > open, nobody can approve", () => {
     it("expires the request at once, hands it over and announces it", async () => {
-        const em = mockEntityManager({ query: [INSERT_REQUEST, [requestOf({ approvers: [], expires_at: NOW })]] })
+        const em = mockEntityManager({
+            query: [INSERT_REQUEST, [approvalRequestOf({ approvers: [], expires_at: NOW })]],
+        })
         const { service, escalation, announcer } = await build(em, { directory: [OWNER, MINH], grants: [] })
 
         const opened = await service.open(openOf())

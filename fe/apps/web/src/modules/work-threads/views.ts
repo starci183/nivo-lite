@@ -1,7 +1,7 @@
 import type { ThreadMessageType, WorkChainType } from "@/modules/api"
 import type { ThreadApprovalCardView, ChainPanelView } from "@/modules/types"
 import { chainStatusTone, stepKindKey } from "./chain"
-import { clockOf, countdownOf, hasPassed } from "./countdown"
+import { wallClockOf, countdownOf, hasPassed } from "./countdown"
 
 /** The words of the work threads catalog the view builders use. */
 export type ThreadWords = (key: string, values?: Record<string, string | number>) => string
@@ -41,7 +41,7 @@ const decidedLineOf = (card: NonNullable<ThreadMessageType["approval"]>, t: Thre
     if (card.outcome === "expired") return t("decidedExpired")
     return t(card.outcome === "approved" ? "decidedApproved" : "decidedRejected", {
         name: card.decidedByName ?? "",
-        time: card.decidedAt === null ? "" : clockOf(card.decidedAt),
+        time: card.decidedAt === null ? "" : wallClockOf(card.decidedAt),
     })
 }
 

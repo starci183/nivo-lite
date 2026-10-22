@@ -16,7 +16,7 @@ import {
     NOW,
     OWNER,
     grantOf,
-    requestOf,
+    approvalRequestOf,
     setupFor,
     setupOf,
     verdictOf,
@@ -75,7 +75,7 @@ describe("ApprovalDecidingService > any one", () => {
     it("takes the lock first, then settles the request with the first approval and announces it", async () => {
         const em = mockEntityManager({
             query: [
-                [LOCK_REQUEST, [requestOf()]],
+                [LOCK_REQUEST, [approvalRequestOf()]],
                 [LIST_VERDICTS, []],
                 [INSERT_VERDICT, []],
                 [RESOLVE_REQUEST, [{ id: "request-1" }]],
@@ -117,7 +117,7 @@ describe("ApprovalDecidingService > any one", () => {
         const { service, announcer } = await build(
             mockEntityManager({
                 query: [
-                    [LOCK_REQUEST, [requestOf()]],
+                    [LOCK_REQUEST, [approvalRequestOf()]],
                     [LIST_VERDICTS, []],
                     [INSERT_VERDICT, []],
                     [RESOLVE_REQUEST, [{ id: "request-1" }]],
@@ -138,7 +138,11 @@ describe("ApprovalDecidingService > any one, a request settled before", () => {
         { status: "approved" as const, code: ApprovalRequestsErrorCode.AlreadyApproved },
         { status: "rejected" as const, code: ApprovalRequestsErrorCode.AlreadyRejected },
     ])("tells the one who came second who $status it and when, and writes nothing", async ({ status, code }) => {
-        const settled = requestOf({ status, resolved_by: "member-minh", resolved_at: "2026-10-22T02:42:00.000Z" })
+        const settled = approvalRequestOf({
+            status,
+            resolved_by: "member-minh",
+            resolved_at: "2026-10-22T02:42:00.000Z",
+        })
         const em = mockEntityManager({ query: [LOCK_REQUEST, [settled]] })
         const { service, announcer, transaction } = await build(em)
 
@@ -153,7 +157,9 @@ describe("ApprovalDecidingService > any one, a request settled before", () => {
     })
 
     it("tells a late answer that the request already ran out of time", async () => {
-        const em = mockEntityManager({ query: [LOCK_REQUEST, [requestOf({ status: "expired", resolved_at: NOW })]] })
+        const em = mockEntityManager({
+            query: [LOCK_REQUEST, [approvalRequestOf({ status: "expired", resolved_at: NOW })]],
+        })
         const { service } = await build(em)
 
         await expect(service.decide(answer("member-minh"))).rejects.toMatchObject({
@@ -170,7 +176,7 @@ describe("ApprovalDecidingService > any one, a request settled before", () => {
     })
 
     it("settles a request past its time as expired, commits that, announces it and refuses the answer", async () => {
-        const late = requestOf({ expires_at: "2026-10-22T09:00:00.000Z" })
+        const late = approvalRequestOf({ expires_at: "2026-10-22T09:00:00.000Z" })
         const em = mockEntityManager({ query: [LOCK_REQUEST, [late]] })
         const { service, escalation, announcer, transaction } = await build(em)
 
@@ -199,7 +205,7 @@ describe("ApprovalDecidingService > who may answer", () => {
         },
         { name: "a stranger", memberId: "member-9", code: ApprovalRequestsErrorCode.NotInGroup },
     ])("refuses $name before anything is written", async ({ memberId, code }) => {
-        const em = mockEntityManager({ query: [LOCK_REQUEST, [requestOf({ approvers: [MINH_REF, HA_REF] })]] })
+        const em = mockEntityManager({ query: [LOCK_REQUEST, [approvalRequestOf({ approvers: [MINH_REF, HA_REF] })]] })
         const { service, announcer, transaction } = await build(em)
 
         await expect(service.decide(answer(memberId))).rejects.toMatchObject({ code })
@@ -211,7 +217,7 @@ describe("ApprovalDecidingService > who may answer", () => {
 
     it("refuses a member who was disabled after the request opened", async () => {
         const { service } = await build(
-            mockEntityManager({ query: [LOCK_REQUEST, [requestOf({ approvers: [MINH_REF, HA_REF] })]] }),
+            mockEntityManager({ query: [LOCK_REQUEST, [approvalRequestOf({ approvers: [MINH_REF, HA_REF] })]] }),
             { directory: [OWNER, { ...MINH, status: "disabled" }, HA, LAN] },
         )
 
@@ -222,7 +228,7 @@ describe("ApprovalDecidingService > who may answer", () => {
 
     it("refuses a member whose grant was revoked after the request opened, though the snapshot named them", async () => {
         const { service } = await build(
-            mockEntityManager({ query: [LOCK_REQUEST, [requestOf({ approvers: [MINH_REF, HA_REF] })]] }),
+            mockEntityManager({ query: [LOCK_REQUEST, [approvalRequestOf({ approvers: [MINH_REF, HA_REF] })]] }),
             { grants: [] },
         )
 
@@ -238,7 +244,7 @@ describe("ApprovalDecidingService > what changed since the request opened", () =
         const { service } = await build(
             mockEntityManager({
                 query: [
-                    [LOCK_REQUEST, [requestOf()]],
+                    [LOCK_REQUEST, [approvalRequestOf()]],
                     [LIST_VERDICTS, []],
                     [INSERT_VERDICT, []],
                     [RESOLVE_REQUEST, [{ id: "request-1" }]],
@@ -254,7 +260,7 @@ describe("ApprovalDecidingService > what changed since the request opened", () =
         const { service } = await build(
             mockEntityManager({
                 query: [
-                    [LOCK_REQUEST, [requestOf()]],
+                    [LOCK_REQUEST, [approvalRequestOf()]],
                     [LIST_VERDICTS, []],
                     [INSERT_VERDICT, []],
                     [RESOLVE_REQUEST, [{ id: "request-1" }]],
@@ -268,7 +274,7 @@ describe("ApprovalDecidingService > what changed since the request opened", () =
 
     it("refuses everyone but the people the request named when the rule is gone", async () => {
         const { service } = await build(
-            mockEntityManager({ query: [LOCK_REQUEST, [requestOf({ approvers: [MINH_REF, HA_REF] })]] }),
+            mockEntityManager({ query: [LOCK_REQUEST, [approvalRequestOf({ approvers: [MINH_REF, HA_REF] })]] }),
             { setup: null },
         )
 
@@ -285,7 +291,7 @@ describe("ApprovalDecidingService > all", () => {
     it("keeps a request open until every approver approved, and tells who is still awaited", async () => {
         const em = mockEntityManager({
             query: [
-                [LOCK_REQUEST, [requestOf(both)]],
+                [LOCK_REQUEST, [approvalRequestOf(both)]],
                 [LIST_VERDICTS, []],
                 [INSERT_VERDICT, []],
             ],
@@ -307,7 +313,7 @@ describe("ApprovalDecidingService > all", () => {
     it("approves with the last approval and counts the earlier ones", async () => {
         const em = mockEntityManager({
             query: [
-                [LOCK_REQUEST, [requestOf(both)]],
+                [LOCK_REQUEST, [approvalRequestOf(both)]],
                 [LIST_VERDICTS, [verdictOf()]],
                 [INSERT_VERDICT, []],
                 [RESOLVE_REQUEST, [{ id: "request-1" }]],
@@ -326,7 +332,7 @@ describe("ApprovalDecidingService > all", () => {
     it("refuses a member who already answered", async () => {
         const em = mockEntityManager({
             query: [
-                [LOCK_REQUEST, [requestOf(both)]],
+                [LOCK_REQUEST, [approvalRequestOf(both)]],
                 [LIST_VERDICTS, [verdictOf()]],
             ],
         })
@@ -346,7 +352,7 @@ describe("ApprovalDecidingService > in order", () => {
     it("refuses the second approver before the first has answered, naming who is next", async () => {
         const em = mockEntityManager({
             query: [
-                [LOCK_REQUEST, [requestOf({ policy: "sequential", approvers: [MINH_REF, HA_REF] })]],
+                [LOCK_REQUEST, [approvalRequestOf({ policy: "sequential", approvers: [MINH_REF, HA_REF] })]],
                 [LIST_VERDICTS, []],
             ],
         })
@@ -362,7 +368,7 @@ describe("ApprovalDecidingService > in order", () => {
     it("passes the turn to the next approver after an approval", async () => {
         const em = mockEntityManager({
             query: [
-                [LOCK_REQUEST, [requestOf({ policy: "sequential", approvers: [MINH_REF, HA_REF] })]],
+                [LOCK_REQUEST, [approvalRequestOf({ policy: "sequential", approvers: [MINH_REF, HA_REF] })]],
                 [LIST_VERDICTS, []],
                 [INSERT_VERDICT, []],
             ],

@@ -13,7 +13,7 @@ import {
     NOW,
     OWNER,
     OWNER_REF,
-    requestOf,
+    approvalRequestOf,
 } from "@tests/fixtures/builders/approval-requests.builder"
 import { ApprovalEscalationService } from "./approval-escalation.service"
 import { ApprovalLogEvent } from "./approval-requests.log-events"
@@ -49,7 +49,7 @@ const expireWith = async (
     options: { readonly directory?: ReadonlyArray<DirectoryMember>; readonly seat?: string | null } = {},
 ) => {
     const built = await build(owners, options.seat)
-    const row = requestOf()
+    const row = approvalRequestOf()
     const event = await built.service.expire(built.tx.em, row, options.directory ?? DIRECTORY, new Date(NOW))
     return { ...built, event, resolved: built.tx.em.query.mock.calls.at(-1)?.[1] }
 }
@@ -122,7 +122,7 @@ describe("ApprovalEscalationService > expire", () => {
 
     it("does not ask the agents when the agent that asked was deleted", async () => {
         const built = await build({ ownerMemberId: "member-minh", fallbackMemberId: null })
-        const row = requestOf({ requested_by_agent_id: null })
+        const row = approvalRequestOf({ requested_by_agent_id: null })
 
         const event = await built.service.expire(built.tx.em, row, DIRECTORY, new Date(NOW))
 

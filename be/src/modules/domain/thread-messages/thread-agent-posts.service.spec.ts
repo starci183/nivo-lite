@@ -12,7 +12,7 @@ import { ThreadAgentPostsService } from "./thread-agent-posts.service"
 import { ThreadMessagesService } from "./thread-messages.service"
 import type { AgentPost, MentionView, OpenedApproval, ThreadMessage } from "./thread-messages.contracts"
 import { AGENT_RULES, APPROVAL_GATE } from "./thread-messages.decorators"
-import type { AgentRules, ApprovalGate } from "./thread-messages.port"
+import type { AgentRules, ThreadApprovalGate } from "./thread-messages.port"
 
 const MINH = "11111111-1111-4111-8111-111111111111"
 const ACCOUNTING_AI = "33333333-3333-4333-8333-333333333333"
@@ -126,7 +126,7 @@ const build = async (em: MockEntityManager, doubles: Doubles = {}) => {
         canAssign: jest.fn(),
         canTag: jest.fn().mockResolvedValue(doubles.canTag ?? true),
     })
-    const gate = mock<ApprovalGate>({
+    const gate = mock<ThreadApprovalGate>({
         open: jest.fn(doubles.open ?? (() => Promise.resolve(OPENED))),
         decide: jest.fn(),
     })

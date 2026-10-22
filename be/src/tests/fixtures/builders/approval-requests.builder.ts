@@ -88,7 +88,7 @@ export const openOf = builder<OpenApprovalParams>({
 })
 
 /** A pending request opened {@link NOW}, with Anh Minh tagged. */
-export const requestOf = builder<ApprovalRequestRow>({
+export const approvalRequestOf = builder<ApprovalRequestRow>({
     id: "request-1",
     workspace_id: "ws-1",
     chain_step_id: "step-1",

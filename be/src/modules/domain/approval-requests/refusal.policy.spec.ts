@@ -1,5 +1,5 @@
 import { Test } from "@nestjs/testing"
-import { DIRECTORY, MINH_REF, requestOf } from "@tests/fixtures/builders/approval-requests.builder"
+import { DIRECTORY, MINH_REF, approvalRequestOf } from "@tests/fixtures/builders/approval-requests.builder"
 import type { ApproverSet } from "./approval-requests.contracts"
 import { ApprovalRequestsErrorCode } from "./errors/approval-requests.error"
 import { answererOf, namedGroup, notAnApprover, settledBefore } from "./refusal.policy"
@@ -45,7 +45,7 @@ describe("refusal policy > who may answer", () => {
     it("falls back to the people the request named when its rule is gone", async () => {
         const subject = await buildSubject()
 
-        expect(subject.namedGroup(requestOf({ approvers: [MINH_REF] }))).toEqual({
+        expect(subject.namedGroup(approvalRequestOf({ approvers: [MINH_REF] }))).toEqual({
             roles: [],
             rooms: [],
             members: ["member-minh"],
@@ -59,7 +59,7 @@ describe("refusal policy > a request somebody settled first", () => {
     it("names who approved it and when, in Vietnam time", async () => {
         const subject = await buildSubject()
 
-        expect(subject.settledBefore(requestOf({ ...settled, status: "approved" }), DIRECTORY)).toEqual({
+        expect(subject.settledBefore(approvalRequestOf({ ...settled, status: "approved" }), DIRECTORY)).toEqual({
             code: ApprovalRequestsErrorCode.AlreadyApproved,
             params: { name: "Anh Minh", time: "09:42" },
         })
@@ -68,7 +68,7 @@ describe("refusal policy > a request somebody settled first", () => {
     it("names who rejected it and when", async () => {
         const subject = await buildSubject()
 
-        expect(subject.settledBefore(requestOf({ ...settled, status: "rejected" }), DIRECTORY)).toEqual({
+        expect(subject.settledBefore(approvalRequestOf({ ...settled, status: "rejected" }), DIRECTORY)).toEqual({
             code: ApprovalRequestsErrorCode.AlreadyRejected,
             params: { name: "Anh Minh", time: "09:42" },
         })
@@ -76,7 +76,7 @@ describe("refusal policy > a request somebody settled first", () => {
 
     it("names an unknown settler with a question mark rather than failing, and reads the open time when there is no settle time", async () => {
         const subject = await buildSubject()
-        const row = requestOf({
+        const row = approvalRequestOf({
             status: "approved",
             resolved_by: null,
             resolved_at: null,
@@ -92,7 +92,7 @@ describe("refusal policy > a request somebody settled first", () => {
     it("tells a request that ran out of time that it went to the owner of the agent", async () => {
         const subject = await buildSubject()
 
-        expect(subject.settledBefore(requestOf({ status: "expired" }), DIRECTORY)).toEqual({
+        expect(subject.settledBefore(approvalRequestOf({ status: "expired" }), DIRECTORY)).toEqual({
             code: ApprovalRequestsErrorCode.Expired,
         })
     })

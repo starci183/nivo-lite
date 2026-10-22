@@ -1,6 +1,7 @@
 import type { ChainActor, ChainStopReason, MentionRef } from "@modules/domain/work-chains"
 import type { WorkThread } from "@modules/domain/work-threads"
 import type { Locale } from "@modules/platform/i18n"
+import type { ApprovalPolicy } from "@modules/domain/authority-rules"
 
 /** A member as the authority and approval capabilities name them. */
 export interface MemberRef {
@@ -13,9 +14,6 @@ export interface MemberRef {
     /** The key of the room the member sits in, or null. */
     readonly roomId: string | null
 }
-
-/** How the people tagged by an approval decide: any one of them, all of them, or one after another. */
-export type ApprovalPolicy = "any" | "all" | "sequential"
 
 /** Where an approval card stands. */
 export type ApprovalOutcome = "pending" | "approved" | "rejected" | "expired"
@@ -224,7 +222,7 @@ export interface ThreadView {
 }
 
 /** A signed-in account decides an approval card as the member it is in the workspace. */
-export interface CardDecision {
+export interface ThreadCardDecision {
     /** The workspace the caller acts in. */
     readonly workspaceId: string
     /** The message that carries the card. */
@@ -238,7 +236,7 @@ export interface CardDecision {
 }
 
 /** A member's verdict on an approval request, as the gate takes it. */
-export interface ApprovalDecision {
+export interface ThreadApprovalDecision {
     /** The approval request. */
     readonly requestId: string
     /** The member id of whoever decides (`workspace_members.id`). */
@@ -248,7 +246,7 @@ export interface ApprovalDecision {
 }
 
 /** The gate answered a verdict: the request is settled, or it waits for more people. */
-export interface ApprovalDecisionResult {
+export interface ThreadApprovalDecisionResult {
     /** pending while more people must decide, else how the request ended. */
     readonly status: ApprovalOutcome
 }
