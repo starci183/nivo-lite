@@ -6,7 +6,7 @@ export type AdminLoad = {
     /** True while the read is still on its way. */
     readonly isLoading: boolean
     /** The failure of the read; none draws the content. */
-    readonly error?: string
+    readonly error?: string | undefined
     readonly failedTitle: string
 }
 

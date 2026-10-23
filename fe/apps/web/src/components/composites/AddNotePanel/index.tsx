@@ -13,18 +13,18 @@ type AddNotePanelProps = {
     readonly titleLabel: string
     readonly titleHint: string
     readonly title: string
-    readonly titleError?: string
+    readonly titleError?: string | undefined
     /** The text of a written note; ignored when the panel writes questions. */
     readonly contentLabel: string
     readonly contentHint: string
     readonly content: string
     /** The questions and answers; when set the panel writes them instead of a text. */
-    readonly pairs?: ReadonlyArray<PairView>
+    readonly pairs?: ReadonlyArray<PairView> | undefined
     readonly questionLabel: string
     readonly answerLabel: string
     readonly addLabel: string
     readonly removeLabel: string
-    readonly contentError?: string
+    readonly contentError?: string | undefined
     readonly isBusy: boolean
     readonly onTitle: (value: string) => void
     readonly onContent: (value: string) => void

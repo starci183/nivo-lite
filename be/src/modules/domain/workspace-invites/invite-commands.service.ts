@@ -2,7 +2,7 @@ import { Injectable } from "@nestjs/common"
 import { AppCommandsService } from "@modules/domain/app-commands"
 import type { AppCommand, AppCommandResult } from "@modules/domain/app-commands"
 import { PlatformAuditService } from "@modules/domain/platform-audit"
-import { DomainError } from "@modules/platform/errors"
+import { isDomainError } from "@modules/platform/errors"
 import { QueueErrorCode } from "@modules/platform/queue"
 import { inviteCommandPayloadOf } from "@modules/queues/invite-command"
 import { InviteSupportService } from "./invite-support.service"
@@ -39,7 +39,7 @@ export class InviteCommandsService {
             if (result === null) await this.commands.fail(command.id, QueueErrorCode.Unrecoverable)
             else await this.commands.succeed(command.id, result)
         } catch (cause) {
-            if (!(cause instanceof DomainError)) throw cause
+            if (!isDomainError(cause)) throw cause
             await this.commands.fail(command.id, cause.code)
         }
     }

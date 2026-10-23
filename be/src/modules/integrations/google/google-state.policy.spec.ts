@@ -4,6 +4,19 @@ import { GoogleErrorCode } from "./errors/google.error"
 import { STATE_TTL_MS } from "./google.contracts"
 import { safeReturnTo, signState, stateKey, verifyState, withResult } from "./google-state.policy"
 
+/** A partial-object matcher, typed `unknown` so it flows into any slot. */
+const objectLike = (shape: Record<string, unknown>): unknown => expect.objectContaining(shape)
+
+/** What `run` throws, read as `unknown`; the matcher then judges its fields. */
+const thrownBy = (run: () => unknown): unknown => {
+    try {
+        run()
+    } catch (error) {
+        return error
+    }
+    return undefined
+}
+
 const SUBJECT = Symbol("google-state.policy")
 
 const build = async () => {
@@ -54,8 +67,8 @@ describe("stateKey", () => {
         const subject = await build()
 
         expect(KEY).toHaveLength(32)
-        expect(() => subject.stateKey("c2hvcnQ=")).toThrow(
-            expect.objectContaining({ code: GoogleErrorCode.NotConfigured }),
+        expect(thrownBy(() => subject.stateKey("c2hvcnQ="))).toEqual(
+            objectLike({ code: GoogleErrorCode.NotConfigured }),
         )
     })
 })

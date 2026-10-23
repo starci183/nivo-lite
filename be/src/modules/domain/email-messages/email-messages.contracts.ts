@@ -19,9 +19,9 @@ export interface EmailAttachment {
     /** The content, as text or base64. */
     readonly content: string
     /** The media type, when known. */
-    readonly contentType?: string
+    readonly contentType?: string | undefined
     /** How the content is encoded; utf8 by default. */
-    readonly encoding?: "base64" | "utf8"
+    readonly encoding?: "base64" | "utf8" | undefined
 }
 
 /** A sender to narrow a count to, or null for any. */
@@ -46,7 +46,7 @@ export interface SendEmailInput {
     /** Records the email points at (invoice id, order id ...). */
     readonly refs?: Readonly<Record<string, unknown>>
     /** The audience; a customer by default. */
-    readonly audience?: EmailAudience
+    readonly audience?: EmailAudience | undefined
     /** Customer-facing mail: the work item whose gate approved this send. */
     readonly workItemId?: string
     /** Files to attach: at most three, 2 MB together. */
@@ -60,13 +60,13 @@ export interface SendEmailResult {
     /** The id of the recorded attempt. */
     readonly emailMessageId: string | null
     /** The mail server's id of the message, when it was sent. */
-    readonly messageId?: SentMail["messageId"]
+    readonly messageId?: SentMail["messageId"] | undefined
     /** The sender used. */
     readonly via: EmailVia
     /** A sentence the owner can read, when it did not go out. */
-    readonly error?: string
+    readonly error?: string | undefined
     /** Why it did not go out. */
-    readonly failure?: SendEmailFailure
+    readonly failure?: SendEmailFailure | undefined
 }
 
 /** One send attempt to write down. */

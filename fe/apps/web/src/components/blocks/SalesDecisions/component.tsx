@@ -95,6 +95,9 @@ export const SalesDecisionsBase = (props: SalesDecisionsBaseProps) => {
     )
 }
 
+/** The words of a message that has any, else null. */
+const textOrNull = (text: string | undefined): string | null => (text === undefined || text === "" ? null : text)
+
 /** The focused decision requested by the connected owner. */
 type SalesDecisionsProps = { readonly focusId: string | null }
 type Decision = "approved" | "rejected"
@@ -186,7 +189,7 @@ export const pendingSalesRow = (
         isRejectBusy: mine === "rejected",
         isApproveDisabled: actions.isMutating || isIncomplete,
         editLabel: isEditing ? t("editDone") : t("edit"),
-        error: errors[item.id] ? errors[item.id] : null,
+        error: textOrNull(errors[item.id]),
     }
 }
 

@@ -25,6 +25,9 @@ import {
     checks,
 } from "@tests/fixtures/builders/meta-connections.builder"
 
+/** A pattern matcher, typed `unknown` so it flows into any slot. */
+const stringMatch = (pattern: RegExp | string): unknown => expect.stringMatching(pattern)
+
 const build = async () => {
     const connections = mock<ConnectionsService>()
     connections.authorize.mockResolvedValue({ role: "owner", displayName: "Lan" })
@@ -79,7 +82,7 @@ describe("MetaConnectionsService / authorize and resume", () => {
             status: "pending",
             environment: "live",
             meta: {},
-            secret: { plain: "{}", webhookSecret: expect.stringMatching(/^[0-9a-f]{64}$/u) },
+            secret: { plain: "{}", webhookSecret: stringMatch(/^[0-9a-f]{64}$/u) },
         })
         expect(meta.sign).toHaveBeenCalledWith({
             workspaceId: "ws-1",
@@ -297,10 +300,7 @@ describe("MetaConnectionsService / choosePage", () => {
         const error = new MetaError({ code, params: failure === undefined ? {} : { failure } })
         meta.subscribePage.mockRejectedValue(error)
 
-        await expect(service.choosePage(actor, ID, "page-1")).rejects.toMatchObject({
-            code: expected,
-            cause: error,
-        })
+        await expect(service.choosePage(actor, ID, "page-1")).rejects.toMatchObject({ code: expected, cause: error })
 
         expect(connections.writeSecret).not.toHaveBeenCalled()
     })

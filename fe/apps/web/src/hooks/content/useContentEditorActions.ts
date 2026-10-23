@@ -27,9 +27,11 @@ const saveRequest = (id: string, patch: Partial<EditorSave>): MutateSaveContentI
     ...(patch.variants === undefined
         ? {}
         : {
-              variants: Object.entries(patch.variants).flatMap(([channel, variant]) =>
-                  variant === undefined ? [] : [{ channel, ...variant, hashtags: [...variant.hashtags] }],
-              ),
+              variants: Object.entries(patch.variants).map(([channel, variant]) => ({
+                  channel,
+                  ...variant,
+                  hashtags: [...variant.hashtags],
+              })),
           }),
 })
 

@@ -3,6 +3,22 @@ import { createHash } from "node:crypto"
 import { ZaloErrorCode } from "./errors/zalo.error"
 import { isValidZaloMac } from "./zalo-signature.policy"
 
+/** A partial-object matcher, typed `unknown` so it flows into any slot. */
+const objectLike = (shape: Record<string, unknown>): unknown => expect.objectContaining(shape)
+
+/** A by-constructor matcher, typed `unknown` so it flows into any slot. */
+const anyOf = (type: unknown): unknown => expect.any(type)
+
+/** What `run` throws, read as `unknown`; the matcher then judges its fields. */
+const thrownBy = (run: () => unknown): unknown => {
+    try {
+        run()
+    } catch (error) {
+        return error
+    }
+    return undefined
+}
+
 const SUBJECT = Symbol("zalo-signature.policy")
 
 const buildSubject = async () => {
@@ -68,8 +84,8 @@ describe("isValidZaloMac", () => {
     it("refuses with a ZaloError, carrying the cause, when the body is not JSON", async () => {
         const subject = await buildSubject()
 
-        expect(() => subject.isValidZaloMac(APP_ID, "not json", SECRET, "abc")).toThrow(
-            expect.objectContaining({ code: ZaloErrorCode.BodyUnreadable, cause: expect.any(SyntaxError) }),
+        expect(thrownBy(() => subject.isValidZaloMac(APP_ID, "not json", SECRET, "abc"))).toEqual(
+            objectLike({ code: ZaloErrorCode.BodyUnreadable, cause: anyOf(SyntaxError) }),
         )
     })
 })

@@ -10,7 +10,7 @@ import type * as Work from "./decisions.contracts"
 import { ModuleCatalogService } from "./module-catalog.service"
 import { WorkApprovalService } from "./work-approval.service"
 import { WorkChainService } from "./work-chain.service"
-import type { OutboundAccess } from "./work-engine.contracts"
+import type { OutboundAccess, ProposalSeed } from "./work-engine.contracts"
 import { OUTBOUND_ACCESS_GATE } from "./work-engine.decorators"
 import type { OutboundAccessGate } from "./work-engine.port"
 import { WorkEngineService } from "./work-engine.service"
@@ -30,19 +30,23 @@ import {
     specOf,
     performedOf,
 } from "@tests/fixtures/builders/work-engine.builder"
+
+const anything = (): unknown => expect.anything()
+
+const objectLike = (shape: Record<string, unknown>): unknown => expect.objectContaining(shape)
 const quoteResult = { summary: "Sent the quote" }
 const autoResult = { path: "auto", result: quoteResult, evidence: "captured", leadId: null }
 const blankPatch = { proposal: quote, subjectType: null, subjectId: null, leadId: null }
-const existingItem = expect.objectContaining({ id: "item-1" })
-const doneItem = expect.objectContaining({ status: "done" })
-const waitingItem = expect.objectContaining({ id: "item-1", reason: "over_authority" })
-const humanDone = expect.objectContaining({ path: "human" })
+const existingItem = objectLike({ id: "item-1" })
+const doneItem = objectLike({ status: "done" })
+const waitingItem = objectLike({ id: "item-1", reason: "over_authority" })
+const humanDone = objectLike({ path: "human" })
 const autoPlan = { path: "auto", by: { name: "NIVO", kind: "policy" }, outcome: "auto_done" }
-const authorityAsk = expect.objectContaining({
-    verdict: expect.objectContaining({ verdict: "ask", reason: "over_authority" }),
+const authorityAsk = objectLike({
+    verdict: objectLike({ verdict: "ask", reason: "over_authority" }),
 })
-const anyValue = expect.anything()
-const editedDraft = expect.objectContaining({ draft: "x" })
+const anyValue = anything()
+const editedDraft = objectLike({ draft: "x" })
 
 interface Options {
     readonly performer?: Work.WorkPerformer | null
@@ -218,7 +222,7 @@ describe("WorkEngineService", () => {
             const { built, item } = await run({ rule: null })
             expect(item.status).toBe("waiting_decision")
             expect(built.ask).toHaveBeenCalledWith(ctx, existingItem, quote, {
-                verdict: expect.objectContaining({ verdict: "ask", reason: "not_allowed" }),
+                verdict: objectLike({ verdict: "ask", reason: "not_allowed" }),
                 rule: null,
             })
             expect(built.finished).not.toHaveBeenCalled()
@@ -449,7 +453,7 @@ describe("WorkEngineService", () => {
                 items: { reopen: resolved(itemOf({ proposal })) },
             })
             await built.service.resumeWork(ctx, "item-1", "approved", { candidateId: "inv-2" }, owner)
-            const chosen = expect.objectContaining({ candidates: [candidates[1]] })
+            const chosen = objectLike({ candidates: [candidates[1]] })
             expect(built.finished).toHaveBeenCalledWith(ctx, anyValue, anyValue, chosen, anyValue, anyValue)
         })
     })
@@ -458,7 +462,7 @@ describe("WorkEngineService", () => {
         const event: InboundWorkSource = { id: "event-1" }
         it("starts the department's work for an inbound event", async () => {
             const built = await build({ created: false })
-            const seed: Partial<Work.Proposal> = { summary: "Hi" }
+            const seed: ProposalSeed = { summary: "Hi" }
             await built.service.startInboundWork(ctx, event, "reply_customer", seed, "lead-1")
             expect(built.insert).toHaveBeenCalledWith(ctx, {
                 action: "reply_customer",

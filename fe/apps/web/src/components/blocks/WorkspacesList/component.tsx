@@ -22,7 +22,7 @@ export interface WorkspaceRowView {
     readonly isPrimary: boolean
     readonly isOpening: boolean
     /** Where the billing link leads; none when the person manages no billing here. */
-    readonly billingHref?: string
+    readonly billingHref?: string | undefined
 }
 
 /** Copy and rows the connected workspace list supplies. */

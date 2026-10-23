@@ -16,6 +16,8 @@ import { MarketingVideoService } from "./marketing-video.service"
 import { MarketingDraftService } from "./marketing-draft.service"
 import { MarketingKnowledgeService } from "./marketing-knowledge.service"
 
+const itemsLike = (items: ReadonlyArray<unknown>): unknown => expect.arrayContaining(items)
+
 const CTX: WorkContext = { workspaceId: "ws-1", actor: "Mai Linh", locale: "vi" }
 const SCOPE = { workspaceId: "ws-1", locale: "vi" }
 const DRAFT = {
@@ -180,7 +182,7 @@ describe("MarketingDraftService (continued)", () => {
         expect(cards.emit).toHaveBeenCalledWith(
             expect.anything(),
             expect.objectContaining({
-                sources: expect.arrayContaining([{ layer: 2, ref: "brand_kit:HAKUEN", label: "brand_kit:HAKUEN" }]),
+                sources: itemsLike([{ layer: 2, ref: "brand_kit:HAKUEN", label: "brand_kit:HAKUEN" }]),
             }),
         )
     })

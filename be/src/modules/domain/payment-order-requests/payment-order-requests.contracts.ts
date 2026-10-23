@@ -10,13 +10,13 @@ export interface PaymentOrderRequestParams {
     /** The order operation to enqueue. */
     readonly kind: PaymentOrderRequestKind
     /** The active plan or pack code; absent for a renewal. */
-    readonly target?: string | null
+    readonly target?: string | null | undefined
     /** Pay month by month or a year at once; a plan order only, monthly when absent. */
-    readonly cycle?: "monthly" | "annual" | null
+    readonly cycle?: "monthly" | "annual" | null | undefined
     /** The monthly allowance picked from the plan's usage tiers (per seat on Team); a plan order only. */
-    readonly tierCredits?: number | null
+    readonly tierCredits?: number | null | undefined
     /** The seats of a per-seat plan; a plan order only. */
-    readonly seats?: number | null
+    readonly seats?: number | null | undefined
 }
 
 /** The cycle, usage tier and seats a plan request carries, bounded. */

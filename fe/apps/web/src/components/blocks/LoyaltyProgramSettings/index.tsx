@@ -26,7 +26,9 @@ const statusOf = (loaded: boolean, failed: boolean): "loading" | "failed" | "rea
 /** The connected programme form: the whole programme in one form with one save (outcome toasted). */
 export const LoyaltyProgramSettings = () => {
     const t = useTranslations("loyalty")
-    const { data, error } = useQueryLoyaltyProgramSwr()
+    const program = useQueryLoyaltyProgramSwr()
+    const { data } = program
+    const error: unknown = program.error
     const board = useQueryLoyaltyBoardSwr()
     const origin = useSiteOrigin()
     const saver = useLoyaltyProgramSave()

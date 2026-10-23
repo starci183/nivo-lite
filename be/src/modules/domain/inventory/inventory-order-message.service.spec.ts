@@ -9,6 +9,8 @@ import type { LoadedPo } from "./inventory.contracts"
 import { InventoryOrderMessageService } from "./inventory-order-message.service"
 import { SELECT_BRAND_VOICE } from "./persistence/inventory.sql"
 
+const textLike = (text: string): unknown => expect.stringContaining(text)
+
 const text = (key: string, params: Record<string, string | number> = {}): string => `${key}${JSON.stringify(params)}`
 
 const poOf = (overrides: Partial<LoadedPo> = {}): LoadedPo => ({
@@ -77,7 +79,7 @@ describe("InventoryOrderMessageService.compose", () => {
             purpose: "inventory_po_message",
             module: "inventory",
             system: text("inventory.ai.system"),
-            user: expect.stringContaining(text("inventory.ai.factVoice", { voice: "warm short" })),
+            user: textLike(text("inventory.ai.factVoice", { voice: "warm short" })),
             timeoutMs: 40000,
         })
         const user = generator.generate.mock.calls[0]?.[0].user ?? ""

@@ -123,11 +123,13 @@ export const BookingDesk = (props: BookingDeskProps) => {
     const t = useTranslations("workbenchBooking")
     const format = useFormatter()
     const range = useBookingRange()
-    const desk = useBookingActions(range.reload)
+    const desk = useBookingActions(() => {
+        void range.reload()
+    })
     const [openId, setOpenId] = useState<string | null>(null)
     const place = useBookingPlacement(range.board?.timezone ?? "", () => {
         setOpenId(null)
-        range.reload()
+        void range.reload()
     })
     const [cancelId, setCancelId] = useState<string | null>(null)
     const [showCancelled, setShowCancelled] = useState(false)

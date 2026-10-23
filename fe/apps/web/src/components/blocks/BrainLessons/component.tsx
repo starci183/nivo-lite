@@ -25,7 +25,7 @@ export interface BrainLessonsBaseProps {
     readonly props: {
         readonly list: KnowledgeRowsProps
         /** Owners and managers only; nothing is drawn for it while undefined. */
-        readonly write?: WriteView
+        readonly write?: WriteView | undefined
     }
     readonly on: {
         readonly setAgent: (value: string | null) => void

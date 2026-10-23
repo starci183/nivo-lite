@@ -24,9 +24,8 @@ export const formatGraphqlError = (
     const site: FailureSite = { scope: "graphql", context: operation === undefined ? {} : { operation } }
     const description = describeGraphqlFailure(errors, error, site)
     return {
+        ...formatted,
         message: description.code,
-        locations: formatted.locations,
-        path: formatted.path,
         extensions: { code: description.code, kind: description.kind, params: description.params },
     }
 }

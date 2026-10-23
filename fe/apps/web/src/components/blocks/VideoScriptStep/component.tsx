@@ -198,7 +198,10 @@ export const VideoScriptStepBase = (props: VideoScriptStepBaseProps) => (
             dismissLabel={props.props.dismissLabel}
             onDismiss={props.on.dismissError}
         />
-        <SurfaceCard label={props.props.heading} fact={props.props.tookLabel}>
+        <SurfaceCard
+            label={props.props.heading}
+            {...(props.props.tookLabel === undefined ? {} : { fact: props.props.tookLabel })}
+        >
             <div className={SCRIPT_STACK}>
                 {props.props.writing ? <Alert tone="informative" title={props.props.writingLabel} /> : null}
                 {!props.props.hasScenes && !props.props.writing ? (

@@ -7,7 +7,7 @@ export interface NewAccountingAdjustment {
     /** The human basis, five to one thousand characters after normalization. */
     readonly note: string
     /** The corrected VND amount, or null for a note only. */
-    readonly correctedAmount?: number | null
+    readonly correctedAmount?: number | null | undefined
 }
 
 /** A validated correction with a normalized note and explicitly nullable amount. */

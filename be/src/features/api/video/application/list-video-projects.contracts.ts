@@ -5,7 +5,7 @@ export interface ListVideoProjectsRequest {
     /** Active workspace selector. */
     readonly workspaceId: string
     /** Include archived projects. */
-    readonly includeArchived?: boolean
+    readonly includeArchived?: boolean | undefined
 }
 
 /** Successful videoProjects result. */

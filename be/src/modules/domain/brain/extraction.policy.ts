@@ -122,11 +122,14 @@ const dateOf = (value: unknown): string | null => {
 export const fieldsOf = (value: unknown): ReadonlyMap<string, unknown> | null =>
     typeof value === "object" && value !== null && !Array.isArray(value) ? new Map(Object.entries(value)) : null
 
+/** Whether a parsed value is a list (`Array.isArray` alone narrows to `any[]`). */
+const isList = (value: unknown): value is ReadonlyArray<unknown> => Array.isArray(value)
+
 /** The facts array of a parsed model answer, or null when it holds no facts list. */
 const itemsOf = (parsed: unknown): ReadonlyArray<unknown> | null => {
-    if (Array.isArray(parsed)) return parsed
+    if (isList(parsed)) return parsed
     const facts = fieldsOf(parsed)?.get("facts")
-    return Array.isArray(facts) ? facts : null
+    return isList(facts) ? facts : null
 }
 
 /** Validates labels and checks whether a fact is supported by the current window. */

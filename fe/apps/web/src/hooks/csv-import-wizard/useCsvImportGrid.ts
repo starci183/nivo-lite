@@ -41,7 +41,7 @@ const gridFromText = (text: string): Grid | null => {
     const all = parsed.data.filter((row) => row.some((cell) => cell.trim()))
     if (all.length === 0) return null
     const width = Math.max(...all.map((row) => row.length))
-    const headers = Array.from({ length: width }, (_, at) => (all[0][at] ?? "").trim())
+    const headers = Array.from({ length: width }, (_, at) => (all[0]?.[at] ?? "").trim())
     return {
         columns: headers.map((name) => ({ id: nextId("c"), name })),
         rows: all.slice(1, MAX_GRID_ROWS + 1).map((row) => ({

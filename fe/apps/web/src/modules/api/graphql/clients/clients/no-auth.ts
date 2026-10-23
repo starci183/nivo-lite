@@ -20,9 +20,9 @@ export interface CreateNoAuthApolloClientOptions {
     /** `false` keeps the Apollo defaults instead of {@link defaultOptions}. */
     cache?: boolean
     /** Additional static headers for the HttpLink. */
-    headers?: GraphQLHeaders
+    headers?: GraphQLHeaders | undefined
     /** Optional abort signal for every operation on this client. */
-    signal?: AbortSignal
+    signal?: AbortSignal | undefined
 }
 
 /** Builds the anonymous Apollo client for the public doors (locale header only). */
@@ -41,5 +41,5 @@ export const createNoAuthApolloClient = ({
             createHttpLink({ uri, headers, signal }),
         ]),
         cache: new InMemoryCache(),
-        defaultOptions: cache ? defaultOptions : undefined,
+        ...(cache ? { defaultOptions } : {}),
     })

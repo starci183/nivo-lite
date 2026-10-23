@@ -2,9 +2,9 @@ import { ZaloReturn } from "@/components/blocks/ZaloReturn"
 
 /** What Zalo sends the browser back with after the owner granted the OA permissions. */
 interface ZaloCallbackPageProps {
-    readonly code?: string
-    readonly oaId?: string
-    readonly state?: string
+    readonly code?: string | undefined
+    readonly oaId?: string | undefined
+    readonly state?: string | undefined
 }
 
 /**

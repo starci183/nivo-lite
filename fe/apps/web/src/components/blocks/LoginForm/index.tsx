@@ -12,14 +12,18 @@ import { LoginFormBase } from "./component"
 /** What the sign-in page tells the card. */
 type LoginFormProps = {
     /** Where to go after signing in (an invite page, a deep link); already sanitised. */
-    readonly next?: string
+    readonly next?: string | undefined
     /** Machine code from the /auth routes (`link_expired`, `missing_code`, ...). */
-    readonly errorCode?: string
+    readonly errorCode?: string | undefined
     /** `reset` or `confirmed`: a success note from a finished flow. */
-    readonly notice?: string
+    readonly notice?: string | undefined
 }
 
-type Feedback = { readonly error?: string; readonly info?: string; readonly canResend: boolean }
+type Feedback = {
+    readonly error?: string | undefined
+    readonly info?: string | undefined
+    readonly canResend: boolean
+}
 
 /** The sentences for a failure a finished /auth route left in the URL. */
 type InitialErrors = { readonly expired: string; readonly missing: string; readonly generic: string }

@@ -11,6 +11,15 @@ import { CLEANUP_ACCOUNTS, WORKSPACE_CLEANUP_OPTIONS } from "./workspace-cleanup
 import type { CleanupAccounts, CleanupAuthUser, CleanupUserDeleted } from "./workspace-cleanup.options"
 import { WorkspaceCleanupService } from "./workspace-cleanup.service"
 
+/** A partial-object matcher, typed `unknown` so it flows into any slot. */
+const objectLike = (shape: Record<string, unknown>): unknown => expect.objectContaining(shape)
+
+/** A substring matcher, typed `unknown` so it flows into any slot. */
+const stringLike = (text: string): unknown => expect.stringContaining(text)
+
+/** The match-anything matcher, typed `unknown` so it flows into any slot. */
+const anything = (): unknown => expect.anything()
+
 const HAKUEN = "cd312306-c950-4328-8b88-022553070ae6"
 const SPA = "11111111-1111-4111-8111-111111111111"
 const OWNER = { id: "u-owner", email: "hakuen.demo@gmail.com" }
@@ -60,7 +69,7 @@ const build = async (fixture: Fixture = {}) => {
 }
 
 const refusedWith = (code: WorkspaceCleanupErrorCode, params?: Record<string, string | number>) =>
-    expect.objectContaining(params === undefined ? { code } : { code, params })
+    objectLike(params === undefined ? { code } : { code, params })
 
 const receiptLineOf = (report: CleanupReport): string => `${CLEANUP_RECEIPT_PREFIX}${JSON.stringify(report)}`
 
@@ -73,7 +82,7 @@ describe("WorkspaceCleanupService dry run", () => {
     it("refuses an empty keep list before reading anything", async () => {
         const { cleanup, em, prune } = await build()
 
-        await expect(cleanup.run({ keep: " ", dryRun: true })).rejects.toThrow(
+        await expect(cleanup.run({ keep: " ", dryRun: true })).rejects.toEqual(
             refusedWith(WorkspaceCleanupErrorCode.KeepRequired),
         )
 
@@ -84,7 +93,7 @@ describe("WorkspaceCleanupService dry run", () => {
     it("refuses a keep id that does not exist before reading the accounts, and deletes nothing", async () => {
         const { cleanup, prune, accounts } = await build({ workspaces: [SPA_ROW] })
 
-        await expect(cleanup.run({ keep: HAKUEN, dryRun: true })).rejects.toThrow(
+        await expect(cleanup.run({ keep: HAKUEN, dryRun: true })).rejects.toEqual(
             refusedWith(WorkspaceCleanupErrorCode.KeepNotFound),
         )
 
@@ -122,7 +131,7 @@ describe("WorkspaceCleanupService dry run", () => {
         const report = await cleanup.run({ keep: HAKUEN, dryRun: true })
 
         expect(report.receipt.orphanUsers).toEqual([])
-        expect(em.query).not.toHaveBeenCalledWith(LIST_USER_REFERENCES, expect.anything())
+        expect(em.query).not.toHaveBeenCalledWith(LIST_USER_REFERENCES, anything())
     })
 })
 
@@ -131,7 +140,7 @@ describe("WorkspaceCleanupService references to kept data", () => {
         const blocked = { cascade: {}, block: { "lead_actions.requested_by": 2 } }
         const { cleanup, print } = await build({ refs: { [ORPHAN.id]: blocked } })
 
-        await expect(cleanup.run({ keep: HAKUEN, dryRun: true, allowKeptCascade: true })).rejects.toThrow(
+        await expect(cleanup.run({ keep: HAKUEN, dryRun: true, allowKeptCascade: true })).rejects.toEqual(
             refusedWith(WorkspaceCleanupErrorCode.UserReferenceBlocked, {
                 users: ORPHAN.id,
                 tables: "lead_actions.requested_by",
@@ -144,7 +153,7 @@ describe("WorkspaceCleanupService references to kept data", () => {
         const cascading = { cascade: { "app_commands.requested_by": 3 }, block: {} }
         const { cleanup } = await build({ refs: { [ORPHAN.id]: cascading } })
 
-        await expect(cleanup.run({ keep: HAKUEN, dryRun: true })).rejects.toThrow(
+        await expect(cleanup.run({ keep: HAKUEN, dryRun: true })).rejects.toEqual(
             refusedWith(WorkspaceCleanupErrorCode.KeptCascadeRefused, {
                 users: ORPHAN.id,
                 tables: "app_commands.requested_by",
@@ -183,7 +192,7 @@ describe("WorkspaceCleanupService execute refusals", () => {
     it("refuses an execute whose digest is not the fresh dry run's, and deletes nothing", async () => {
         const { cleanup, prune, accounts } = await build()
 
-        await expect(cleanup.run({ keep: HAKUEN, execute: true, receiptDigest: "b".repeat(64) })).rejects.toThrow(
+        await expect(cleanup.run({ keep: HAKUEN, execute: true, receiptDigest: "b".repeat(64) })).rejects.toEqual(
             refusedWith(WorkspaceCleanupErrorCode.DigestMismatch),
         )
 
@@ -195,7 +204,7 @@ describe("WorkspaceCleanupService execute refusals", () => {
         const digest = await digestOf()
         const { cleanup, prune, accounts } = await build({ workspaces: [SPA_ROW] })
 
-        await expect(cleanup.run({ keep: HAKUEN, execute: true, receiptDigest: digest })).rejects.toThrow(
+        await expect(cleanup.run({ keep: HAKUEN, execute: true, receiptDigest: digest })).rejects.toEqual(
             refusedWith(WorkspaceCleanupErrorCode.KeepNotFound),
         )
 
@@ -208,7 +217,7 @@ describe("WorkspaceCleanupService execute refusals", () => {
         const blocked = { cascade: {}, block: { "lead_actions.requested_by": 1 } }
         const { cleanup, prune, accounts } = await build({ refs: { [ORPHAN.id]: blocked } })
 
-        await expect(cleanup.run({ keep: HAKUEN, execute: true, receiptDigest: digest })).rejects.toThrow(
+        await expect(cleanup.run({ keep: HAKUEN, execute: true, receiptDigest: digest })).rejects.toEqual(
             refusedWith(WorkspaceCleanupErrorCode.UserReferenceBlocked),
         )
 
@@ -225,7 +234,7 @@ describe("WorkspaceCleanupService execute", () => {
         const report = await cleanup.run({ keep: HAKUEN, execute: true, receiptDigest: digest.toUpperCase() })
 
         expect(report).toMatchObject({ mode: "execute", digest, deletedUsers: [ORPHAN.id], remainingUsers: [] })
-        expect(prune.prune).toHaveBeenCalledWith({ keep: [HAKUEN], default: false, yes: true }, expect.anything())
+        expect(prune.prune).toHaveBeenCalledWith({ keep: [HAKUEN], default: false, yes: true }, anything())
         expect(prune.prune.mock.invocationCallOrder[0]).toBeLessThan(
             accounts.deleteUser.mock.invocationCallOrder[0] ?? 0,
         )
@@ -261,16 +270,14 @@ describe("WorkspaceCleanupService execute stops at a failed account", () => {
         const { cleanup, accounts, print } = await build({ users })
         accounts.deleteUser.mockResolvedValueOnce({ error: null }).mockImplementationOnce(failure)
 
-        await expect(cleanup.run({ keep: HAKUEN, execute: true, receiptDigest: digest })).rejects.toThrow(
+        await expect(cleanup.run({ keep: HAKUEN, execute: true, receiptDigest: digest })).rejects.toEqual(
             refusedWith(WorkspaceCleanupErrorCode.UserDeleteFailed, { deleted: 1, remaining: "u-b,u-c" }),
         )
 
         expect(accounts.deleteUser).toHaveBeenCalledTimes(2)
         expect(accounts.deleteUser).not.toHaveBeenCalledWith("u-c")
         expect(print).toHaveBeenCalledWith("  FAILED account u-b: user has rows")
-        expect(print).toHaveBeenCalledWith(
-            expect.stringContaining('"deletedUsers":["u-a"],"remainingUsers":["u-b","u-c"]'),
-        )
+        expect(print).toHaveBeenCalledWith(stringLike('"deletedUsers":["u-a"],"remainingUsers":["u-b","u-c"]'))
     })
 
     it("is safe to re-run: the fresh survey finds only what is left, and the run finishes it", async () => {
@@ -305,7 +312,7 @@ describe("WorkspaceCleanupService scans", () => {
         const { cleanup, accounts } = await build()
         accounts.listUsers.mockResolvedValue({ data: { users: [] }, error: { message: "down" } })
 
-        await expect(cleanup.run({ keep: HAKUEN, dryRun: true })).rejects.toThrow(
+        await expect(cleanup.run({ keep: HAKUEN, dryRun: true })).rejects.toEqual(
             refusedWith(WorkspaceCleanupErrorCode.AuthFailed),
         )
     })
@@ -315,7 +322,7 @@ describe("WorkspaceCleanupService scans", () => {
         const { cleanup, accounts } = await build()
         accounts.listUsers.mockResolvedValue({ data: { users: page }, error: null })
 
-        await expect(cleanup.run({ keep: HAKUEN, dryRun: true })).rejects.toThrow(
+        await expect(cleanup.run({ keep: HAKUEN, dryRun: true })).rejects.toEqual(
             refusedWith(WorkspaceCleanupErrorCode.ScanIncomplete),
         )
         expect(accounts.listUsers).toHaveBeenCalledTimes(50)
@@ -327,7 +334,7 @@ describe("WorkspaceCleanupService scans", () => {
     ])("refuses a %s read that reaches its bound", async (_label, fixture) => {
         const { cleanup, accounts } = await build(fixture)
 
-        await expect(cleanup.run({ keep: HAKUEN, dryRun: true })).rejects.toThrow(
+        await expect(cleanup.run({ keep: HAKUEN, dryRun: true })).rejects.toEqual(
             refusedWith(WorkspaceCleanupErrorCode.ScanIncomplete),
         )
         expect(accounts.listUsers).not.toHaveBeenCalled()

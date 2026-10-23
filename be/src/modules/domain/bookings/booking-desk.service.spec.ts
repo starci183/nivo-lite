@@ -20,6 +20,10 @@ import {
 } from "./persistence/booking-write.sql"
 import { DEFAULT_SETTINGS } from "./persistence/booking.rows"
 
+const anything = (): unknown => expect.anything()
+
+const objectLike = (shape: Record<string, unknown>): unknown => expect.objectContaining(shape)
+
 const WORKSPACE = "ws-1"
 const USER = "user-1"
 const REF = { workspaceId: WORKSPACE, id: "b1" }
@@ -86,7 +90,7 @@ type Untyped = readonly [unknown, unknown]
 type QueryStub = readonly [string, unknown]
 
 const scheduleOf = (startMs: number) => ({
-    manager: expect.anything(),
+    manager: anything(),
     workspaceId: WORKSPACE,
     bookingId: "b1",
     startMs,
@@ -150,7 +154,7 @@ describe("BookingDeskService", () => {
 
             expect(access.require).toHaveBeenCalledWith(USER, WORKSPACE, ["owner", "manager"])
             expect(reservation.reserve).toHaveBeenCalledWith({
-                manager: expect.anything(),
+                manager: anything(),
                 force: false,
                 booking: {
                     workspaceId: WORKSPACE,
@@ -192,7 +196,7 @@ describe("BookingDeskService", () => {
 
             expect(reservation.reserve).toHaveBeenCalledWith(
                 expect.objectContaining({
-                    booking: expect.objectContaining({ depositVnd: 50000, depositStatus: "due" }),
+                    booking: objectLike({ depositVnd: 50000, depositStatus: "due" }),
                 }),
             )
         })
@@ -202,9 +206,7 @@ describe("BookingDeskService", () => {
 
             await expect(service.add(USER, addOf({ resourceId: "r1" }))).resolves.toMatchObject({ ok: true })
 
-            expect(reservation.reserve).toHaveBeenCalledWith(
-                expect.objectContaining({ booking: expect.objectContaining({ resourceId: "r1" }) }),
-            )
+            expect(reservation.reserve).toHaveBeenCalledWith(objectLike({ booking: objectLike({ resourceId: "r1" }) }))
         })
     })
 })
@@ -236,7 +238,7 @@ describe("BookingDeskService", () => {
             await expect(service.add(USER, addOf({ force: true }))).resolves.toMatchObject({ ok: true })
 
             expect(reservation.reserve).toHaveBeenCalledWith(
-                expect.objectContaining({ force: true, booking: expect.objectContaining({ resourceId: "r1" }) }),
+                objectLike({ force: true, booking: objectLike({ resourceId: "r1" }) }),
             )
         })
 
@@ -309,7 +311,7 @@ describe("BookingDeskService", () => {
             expect(models.settings).toHaveBeenCalledWith(WORKSPACE)
             expect(tx.em.query).toHaveBeenCalledWith(SELECT_BOOKING_FOR_UPDATE, [WORKSPACE, "b1"])
             expect(reservation.relocate).toHaveBeenCalledWith({
-                manager: expect.anything(),
+                manager: anything(),
                 workspaceId: WORKSPACE,
                 bookingId: "b1",
                 resourceId: params.chosen,
@@ -402,7 +404,7 @@ describe("BookingDeskService", () => {
         it("finishes the booking and stops its reminders", async () => {
             const { service, reminders } = await buildLocked("confirmed", FINISH_BOOKING)
             await expect(service.done(USER, REF)).resolves.toEqual({ status: "done", feeDue: false })
-            expect(reminders.cancel).toHaveBeenCalledWith(expect.anything(), "b1", "booking_done")
+            expect(reminders.cancel).toHaveBeenCalledWith(anything(), "b1", "booking_done")
         })
     })
 
@@ -414,7 +416,7 @@ describe("BookingDeskService", () => {
             const model = modelOf({ settings: { ...DEFAULT_SETTINGS, noShowFeeVnd: fee } })
             const { service, reminders } = await buildLocked("confirmed", MARK_NO_SHOW, model)
             await expect(service.noShow(USER, REF)).resolves.toEqual({ status: "no_show", feeDue })
-            expect(reminders.cancel).toHaveBeenCalledWith(expect.anything(), "b1", "no_show")
+            expect(reminders.cancel).toHaveBeenCalledWith(anything(), "b1", "no_show")
         })
     })
 })
@@ -430,7 +432,7 @@ describe("BookingDeskService", () => {
                 new Date(NOW).toISOString(),
                 "owner_cancelled",
             ])
-            expect(reminders.cancel).toHaveBeenCalledWith(expect.anything(), "b1", "owner_cancelled")
+            expect(reminders.cancel).toHaveBeenCalledWith(anything(), "b1", "owner_cancelled")
         })
 
         it("refuses a booking that is already closed", async () => {
@@ -462,7 +464,7 @@ describe("BookingDeskService", () => {
                     new Date(NOW).toISOString(),
                     "late_customer_cancel",
                 ])
-                expect(reminders.cancel).toHaveBeenCalledWith(expect.anything(), "b1", "customer_cancelled")
+                expect(reminders.cancel).toHaveBeenCalledWith(anything(), "b1", "customer_cancelled")
                 expect(tx.commits).toBe(1)
             },
         )

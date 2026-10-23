@@ -23,6 +23,8 @@ import { LeadFlowMetaService } from "./lead-flow-meta.service"
 import { LeadFlowStoreService } from "./lead-flow-store.service"
 import type { FlowState, LeadFlow, LeadFlowPatch, MentionRead } from "./lead-flows.contracts"
 
+const objectLike = (shape: Record<string, unknown>): unknown => expect.objectContaining(shape)
+
 type InboundEvent = NonNullable<Awaited<ReturnType<InboundEventsService["find"]>>>
 
 const build = async () => {
@@ -377,7 +379,7 @@ describe("LeadGenIntakeService", () => {
                 ctx,
                 expect.objectContaining({
                     reason: `meta_${kind}`,
-                    payload: expect.objectContaining({
+                    payload: objectLike({
                         ...fields,
                         need: `${"x".repeat(299)}\u2026`,
                         source_kind: kind,

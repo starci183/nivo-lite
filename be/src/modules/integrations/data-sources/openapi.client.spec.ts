@@ -7,6 +7,19 @@ import { OpenApiClient } from "./openapi.client"
 import type { OpenApiCall } from "./openapi.contracts"
 import type { PublicHostClient, PublicResponse } from "./public-host.client"
 
+/** A partial-object matcher, typed `unknown` so it flows into any slot. */
+const objectLike = (shape: Record<string, unknown>): unknown => expect.objectContaining(shape)
+
+/** What `run` throws, read as `unknown`; the matcher then judges its fields. */
+const thrownBy = (run: () => unknown): unknown => {
+    try {
+        run()
+    } catch (error) {
+        return error
+    }
+    return undefined
+}
+
 const registerFetchSpec = () => {
     describe("fetchSpec", () => {
         it("refuses a link that is not https, unless a development site allows http", async () => {
@@ -63,14 +76,14 @@ const registerFetchSpec = () => {
                     "https://api.example/openapi.yaml",
                 ).ops[0]?.id,
             ).toBe("ping")
-            expect(() => client.parseSpec("   ", "https://api.example/openapi.json")).toThrow(
-                expect.objectContaining({ params: { detail: OPENAPI_TEXT.emptySpec } }),
+            expect(thrownBy(() => client.parseSpec("   ", "https://api.example/openapi.json"))).toEqual(
+                objectLike({ params: { detail: OPENAPI_TEXT.emptySpec } }),
             )
-            expect(() => client.parseSpec("openapi: nope\n", "https://api.example/openapi.yaml")).toThrow(
-                expect.objectContaining({ params: { detail: OPENAPI_TEXT.notSpec } }),
+            expect(thrownBy(() => client.parseSpec("openapi: nope\n", "https://api.example/openapi.yaml"))).toEqual(
+                objectLike({ params: { detail: OPENAPI_TEXT.notSpec } }),
             )
-            expect(() => client.parseSpec("[", "https://api.example/openapi.yaml")).toThrow(
-                expect.objectContaining({ params: { detail: OPENAPI_TEXT.unreadableSpec } }),
+            expect(thrownBy(() => client.parseSpec("[", "https://api.example/openapi.yaml"))).toEqual(
+                objectLike({ params: { detail: OPENAPI_TEXT.unreadableSpec } }),
             )
         })
     })

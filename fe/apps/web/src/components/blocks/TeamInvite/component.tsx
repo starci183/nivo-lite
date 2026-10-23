@@ -43,8 +43,8 @@ export interface TeamInviteBaseProps {
         readonly isPending: boolean
         /** The choices are loading: the labels stay, the inputs and the action are skeletons. */
         readonly isSkeleton: boolean
-        readonly error?: string
-        readonly sent?: SentView
+        readonly error?: string | undefined
+        readonly sent?: SentView | undefined
     }
     readonly on: {
         readonly setEmail: (value: string) => void

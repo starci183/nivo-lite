@@ -74,5 +74,5 @@ export interface BookingResourceDraft extends Omit<SaveBookingResourceParams, "w
 /** Opening exception draft before the whole-business resource default is applied. */
 export interface BookingExceptionDraft extends Omit<SaveBookingExceptionParams, "workspaceId" | "resourceId"> {
     /** Resource whose calendar changes, absent for the whole business. */
-    readonly resourceId?: string | null
+    readonly resourceId?: string | null | undefined
 }

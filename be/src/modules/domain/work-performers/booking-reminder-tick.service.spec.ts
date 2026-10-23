@@ -380,9 +380,9 @@ describe("BookingReminderTickService", () => {
 
         await expect(service.tick(now)).resolves.toBe(1)
 
-        const when = notices.whenOf.mock.results[0]?.value
+        const when: unknown = notices.whenOf.mock.results[0]?.value
         expect(engine.runWork.mock.calls[0]?.[1].seed?.summary).toBe(
-            `performers.reminderSummary:{"name":"performers.reminderCustomer:{}","hours":24,"when":"${when}"}`,
+            `performers.reminderSummary:{"name":"performers.reminderCustomer:{}","hours":24,"when":"${String(when)}"}`,
         )
         expect(catalog.get.mock.calls).toContainEqual(["performers.reminderCustomer", {}, "vi"])
     })

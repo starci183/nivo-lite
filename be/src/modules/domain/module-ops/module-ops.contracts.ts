@@ -112,7 +112,7 @@ export interface MailNotice {
     /** Whether the mail goes to the owner or to someone outside the business. */
     readonly audience: "owner" | "customer"
     /** Ids the sent mail is traced by. */
-    readonly refs?: Readonly<Record<string, string>>
+    readonly refs?: Readonly<Record<string, string>> | undefined
     /** The gate decision that allowed the mail, when there is one. */
     readonly workItemId?: string
     /** Files sent with the notice (a CSV summary), when there are any. */

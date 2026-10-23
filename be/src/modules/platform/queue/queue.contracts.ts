@@ -46,7 +46,7 @@ export interface QueueWriteOptions {
     /** The job name; the queue name when absent. */
     readonly job?: string
     /** The identity of the job (`<job>:<subject>`): the same key written twice is one job. A fresh key per write when absent. */
-    readonly dedupeKey?: string
+    readonly dedupeKey?: string | undefined
 }
 
 /** One job to send, resolved: what the transport writes to the outbox and pgmq in the caller's transaction. */
@@ -71,9 +71,9 @@ export interface QueueHandler {
     /** The queue this handler consumes. */
     readonly queue: string
     /** The only job name of the queue it handles; every job of the queue without a handler of its own when absent. */
-    readonly job?: string
+    readonly job?: string | undefined
     /** At most this many deliveries of the queue run at once; the app default when absent. */
-    readonly concurrency?: number
+    readonly concurrency?: number | undefined
     /** Handles one delivery. */
     handle(delivery: QueueDelivery): Promise<void>
     /** Runs once when the job ends as failed (attempts used up or an unrecoverable error): write the failure the owner sees. */

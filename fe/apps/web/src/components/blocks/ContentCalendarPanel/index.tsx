@@ -121,7 +121,6 @@ export const ContentCalendarPanel = () => {
         focus,
         setExpandedKey,
     })
-    if (connected === null) return null
     const { y, m, cells, byDay, monthItems, pillarNames, hasSetup, drop } = connected
     return (
         <ContentCalendarPanelBase

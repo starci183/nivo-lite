@@ -89,6 +89,9 @@ export const HiringJobFields = (props: HiringJobFieldsProps) => {
     )
 }
 
+/** The controlled value prop of a number field, absent while the amount is empty. */
+const numberValueOf = (amount: number | null): { readonly value?: number } => (amount === null ? {} : { value: amount })
+
 /** Draws the pay interval and its unit. */
 const renderPayFields = ({ say, values, options, onText, onNumber }: PayFieldsProps) => (
     <>
@@ -98,7 +101,7 @@ const renderPayFields = ({ say, values, options, onText, onNumber }: PayFieldsPr
             minValue={0}
             step={500000}
             formatOptions={{ maximumFractionDigits: 0 }}
-            value={values.payMin ?? undefined}
+            {...numberValueOf(values.payMin)}
             onValueChange={(value) => onNumber("payMin", Number.isFinite(value) ? value : null)}
         />
         <NumberField
@@ -107,7 +110,7 @@ const renderPayFields = ({ say, values, options, onText, onNumber }: PayFieldsPr
             minValue={0}
             step={500000}
             formatOptions={{ maximumFractionDigits: 0 }}
-            value={values.payMax ?? undefined}
+            {...numberValueOf(values.payMax)}
             onValueChange={(value) => onNumber("payMax", Number.isFinite(value) ? value : null)}
         />
         <Select

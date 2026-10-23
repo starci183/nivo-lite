@@ -20,11 +20,11 @@ export interface SalesDecisionRequest extends SalesItemRequest {
     /** Approve or reject. */
     readonly decision: DecisionVerdict
     /** Changes made before approving. */
-    readonly edits?: WireEdits
+    readonly edits?: WireEdits | undefined
     /** A written note. */
-    readonly note?: string
+    readonly note?: string | undefined
     /** The written basis for a financial decision. */
-    readonly basis?: string
+    readonly basis?: string | undefined
 }
 
 /** A person's decision on a legacy draft card. */
@@ -32,7 +32,7 @@ export interface SalesDraftRequest extends SalesItemRequest {
     /** Approve or reject. */
     readonly decision: DecisionVerdict
     /** The edited draft, when changed. */
-    readonly editedDraft?: string
+    readonly editedDraft?: string | undefined
 }
 
 /** A shipment to record once. */

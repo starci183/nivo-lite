@@ -5,13 +5,13 @@ export interface SendMessageRequest {
     /** The text to send. */
     readonly text: string
     /** The customer conversation to message. */
-    readonly conversationId?: string
+    readonly conversationId?: string | undefined
     /** The customer whose latest conversation to use when no conversation is named. */
-    readonly leadId?: string
+    readonly leadId?: string | undefined
     /** True forces a waiting decision whatever the owner's rule says. */
-    readonly requireApproval?: boolean
+    readonly requireApproval?: boolean | undefined
     /** The caller's Idempotency-Key header. */
-    readonly idempotencyKey?: string
+    readonly idempotencyKey?: string | undefined
 }
 
 /** What asking the chatbot to message a customer answers: the message is queued. */

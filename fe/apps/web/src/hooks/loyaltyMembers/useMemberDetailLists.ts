@@ -44,7 +44,7 @@ export const useMemberDetailLists = (
                 option.reward.valueVnd > 0
                     ? `${points(option.reward.pointsCost)} · ${money(option.reward.valueVnd)}`
                     : points(option.reward.pointsCost),
-            ...(option.block === null || option.block === undefined ? {} : { blocked: blockText(option.block) }),
+            ...(option.block === null ? {} : { blocked: blockText(option.block) }),
             ...(actions.redeemNote !== null && actions.redeemNote.id === option.reward.id
                 ? { note: actions.redeemNote.text }
                 : {}),
@@ -60,9 +60,7 @@ export const useMemberDetailLists = (
             kind: isLedgerKind(row.kind) ? t(`kind_${row.kind}`) : row.kind,
             tone: ledgerTone(row.kind),
             points: t("points", { n: format.number(row.points, { signDisplay: "exceptZero" }) }),
-            ...(row.amountVnd === null || row.amountVnd === undefined || row.amountVnd === 0
-                ? {}
-                : { amount: money(row.amountVnd) }),
+            ...(row.amountVnd === null || row.amountVnd === 0 ? {} : { amount: money(row.amountVnd) }),
             dateTime: row.occurredAt,
             timeLabel: `${format.dateTime(new Date(row.occurredAt), {
                 day: "2-digit",
@@ -73,7 +71,7 @@ export const useMemberDetailLists = (
                 timeZone: "Asia/Ho_Chi_Minh",
             })} · ${t("ledgerBy", { who: row.by === "" ? "-" : row.by })}`,
             ...(row.ref === "" ? {} : { ref: row.ref }),
-            ...(row.evidence === null || row.evidence === undefined || row.evidence === ""
+            ...(row.evidence === null || row.evidence === ""
                 ? {}
                 : { evidence: t("ledgerEvidence", { text: row.evidence }) }),
         })),

@@ -38,7 +38,7 @@ export interface GenerateParams {
     /** Text or one JSON object. */
     readonly responseFormat: ResponseFormat
     /** How long the caller waits, ms (default 45 s, between 5 s and 120 s). Past it the generation is cancelled. */
-    readonly timeoutMs?: number
+    readonly timeoutMs?: number | undefined
     /** The usage kind the metering records the text under. */
     readonly kind: string
     /** The usage module the metering records the text under. */

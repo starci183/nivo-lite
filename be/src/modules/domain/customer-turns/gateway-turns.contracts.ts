@@ -56,5 +56,5 @@ export interface HubNote {
     /** The long text of the card, when it has one. */
     readonly body?: string
     /** The sources the turn actually used; none when it used none. */
-    readonly sources?: ReadonlyArray<HubNoteSource>
+    readonly sources?: ReadonlyArray<HubNoteSource> | undefined
 }

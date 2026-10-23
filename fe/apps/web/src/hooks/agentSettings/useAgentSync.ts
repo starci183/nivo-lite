@@ -12,7 +12,10 @@ export const useAgentSync = (installationId: string) => {
     const runGraphQL = useGraphQLWithToast()
     const read = useQueryAgentSyncStatusSwr(
         { installationId },
-        { refreshInterval: (latest) => (latest?.state === "syncing" ? SYNC_POLL_BUSY_MS : SYNC_POLL_IDLE_MS) },
+        {
+            refreshInterval: (latest: { readonly state: string } | undefined) =>
+                latest?.state === "syncing" ? SYNC_POLL_BUSY_MS : SYNC_POLL_IDLE_MS,
+        },
     )
     const { trigger, isMutating } = useMutateRequestAgentSyncSwr()
     const status = useMemo(() => (read.data === undefined ? UNKNOWN_SYNC : toAgentSync(read.data)), [read.data])

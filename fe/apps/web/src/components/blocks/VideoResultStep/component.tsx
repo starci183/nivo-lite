@@ -64,7 +64,7 @@ const playerOf = (props: VideoResultStepBaseProps["props"]) => {
             <MediaFrame aspect={props.shape} fit="contain">
                 <Video
                     title={props.title}
-                    poster={props.posterUrl ?? undefined}
+                    {...(props.posterUrl === null ? {} : { poster: props.posterUrl })}
                     src={props.videoUrl}
                     captions={
                         props.captionsUrl === null
@@ -75,7 +75,7 @@ const playerOf = (props: VideoResultStepBaseProps["props"]) => {
                                   ...(props.captionsLang === null ? {} : { srcLang: props.captionsLang }),
                               }
                     }
-                    crossOrigin={props.captionsUrl === null ? undefined : "anonymous"}
+                    {...(props.captionsUrl === null ? {} : { crossOrigin: "anonymous" as const })}
                 />
             </MediaFrame>
         )

@@ -244,11 +244,11 @@ export class ShiftsSetupService {
     ): Promise<SaveShiftsAvailabilityOutput> {
         const day = request.date ?? null
         const weekday = request.weekday
-        if ((day === null) === (weekday === null || weekday === undefined)) {
+        if ((day === null) === (weekday === null)) {
             throw new ShiftsError({ code: ShiftsErrorCode.AvailabilityInvalid })
         }
         if (day !== null && !isDay(day)) throw new ShiftsError({ code: ShiftsErrorCode.AvailabilityInvalid })
-        if (weekday !== null && weekday !== undefined && (!Number.isInteger(weekday) || weekday < 0 || weekday > 6)) {
+        if (weekday !== null && (!Number.isInteger(weekday) || weekday < 0 || weekday > 6)) {
             throw new ShiftsError({ code: ShiftsErrorCode.AvailabilityInvalid })
         }
         windowOf(request.start, request.end)

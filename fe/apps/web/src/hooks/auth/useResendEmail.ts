@@ -6,7 +6,7 @@ import type { AuthErrorKey } from "./auth.shared"
 import { useCooldown } from "./useCooldown"
 
 /** The outcome of a resend, as the caller's action reports it. */
-type ResendOutcome = { readonly success: boolean; readonly error?: string }
+type ResendOutcome = { readonly success: boolean; readonly error?: string | undefined }
 
 /** The result of the last resend, before it is put into words. */
 type ResendResult = { readonly sent: true } | { readonly sent: false; readonly key: AuthErrorKey }
@@ -23,7 +23,8 @@ type ResendTexts = {
 
 /** What the `CheckEmail` body needs from the resend flow. */
 type ResendView = {
-    readonly notice?: { readonly tone: "affirmative" | "negative"; readonly title: string; readonly text: string }
+    readonly notice?:
+        { readonly tone: "affirmative" | "negative"; readonly title: string; readonly text: string } | undefined
     readonly resendLabel: string
     readonly isPending: boolean
     readonly isWaiting: boolean

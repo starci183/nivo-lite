@@ -99,7 +99,7 @@ export interface McpRpcResponse {
     /** Always "2.0". */
     readonly jsonrpc: "2.0"
     /** The id of the request answered; null when the message was not one. */
-    readonly id: string | number | null
+    readonly id: string | number | null | undefined
     /** The result of a successful request. */
     readonly result?: unknown
     /** The error of a refused request. */

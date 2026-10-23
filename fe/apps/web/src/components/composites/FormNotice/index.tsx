@@ -5,9 +5,9 @@ type FormNoticeProps = {
     /** Title of the negative alert. */
     readonly failTitle: string
     /** The failure text; nothing is drawn for it while undefined. */
-    readonly error?: string
+    readonly error?: string | undefined
     /** The success text; nothing is drawn for it while undefined. */
-    readonly done?: string
+    readonly done?: string | undefined
 }
 
 /** The one failure or success alert under a form. */

@@ -7,7 +7,7 @@ export interface DecideBrainFactRequest {
     /** `apply`, `reject`, `choose`, `split` or `retire`. */
     readonly action: "apply" | "reject" | "choose" | "split" | "retire"
     /** The reason given with the decision. */
-    readonly note?: string
+    readonly note?: string | undefined
     /** The situation a split value is for. */
-    readonly situation?: string
+    readonly situation?: string | undefined
 }

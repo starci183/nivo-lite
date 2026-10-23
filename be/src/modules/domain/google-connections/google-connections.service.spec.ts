@@ -28,6 +28,8 @@ import {
     location,
 } from "@tests/fixtures/builders/google-connections.builder"
 
+const matching = (pattern: RegExp): unknown => expect.stringMatching(pattern)
+
 const build = async () => {
     const connections = mock<ConnectionsService>()
     connections.authorize.mockResolvedValue({ role: "owner", displayName: "Lan" })
@@ -237,10 +239,7 @@ describe("GoogleConnectionsService / complete", () => {
             status: "connected",
             environment: "live",
             meta: { email: email ?? "" },
-            secret: {
-                plain: JSON.stringify(issued),
-                webhookSecret: expect.stringMatching(/^[0-9a-f]{64}$/u),
-            },
+            secret: { plain: JSON.stringify(issued), webhookSecret: matching(/^[0-9a-f]{64}$/u) },
         })
         expect(connections.patch).not.toHaveBeenCalled()
     })
@@ -371,7 +370,7 @@ describe("GoogleConnectionsService / consent failure recording", () => {
                 status: "pending",
                 environment: "live",
                 meta: {},
-                secret: { plain: "{}", webhookSecret: expect.stringMatching(/^[0-9a-f]{64}$/u) },
+                secret: { plain: "{}", webhookSecret: matching(/^[0-9a-f]{64}$/u) },
             })
             expect(connections.create).toHaveBeenCalledTimes(1)
             expect(connections.patch.mock.calls).toEqual(

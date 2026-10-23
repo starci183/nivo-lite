@@ -18,8 +18,7 @@ export const useMutateSubmitTelegramPasswordSwr = () =>
         MUTATE_SUBMIT_TELEGRAM_PASSWORD_SWR_KEY,
         async (_key: string, { arg }: SubmitTelegramPasswordArg) => {
             const result = await mutateSubmitTelegramPassword({ request: arg })
-            if (result.data === undefined || result.data === null)
-                throw new Error("submitTelegramPassword answered no data")
+            if (result.data === undefined) throw new Error("submitTelegramPassword answered no data")
             return result.data.submitTelegramPassword
         },
     )

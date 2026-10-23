@@ -20,7 +20,7 @@ export interface ListWorkItemsQuery {
     /** Only this action; null means every action. */
     readonly action: string | null | undefined
     /** Where the page starts; null for the first page. */
-    readonly after?: OptionalWorkItemCursor
+    readonly after?: OptionalWorkItemCursor | undefined
     /** The page size; clamped to 1..100. */
     readonly limit: number
 }

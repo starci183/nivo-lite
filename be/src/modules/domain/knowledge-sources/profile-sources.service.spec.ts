@@ -10,10 +10,13 @@ import { INSERT_SOURCE, REQUEUE_SOURCE, UPDATE_SOURCE_META } from "./persistence
 import { FIND_PROFILE_SOURCE } from "./persistence/profile-sources.sql"
 import { ProfileSourcesService } from "./profile-sources.service"
 
+const objectLike = (shape: Record<string, unknown>): unknown => expect.objectContaining(shape)
+const anyOf = (type: unknown): unknown => expect.any(type)
+
 const WS = "11111111-1111-4111-8111-111111111111"
 const AT = "2026-10-12T10:00:00.000Z"
 /** The scoped manager a transaction body receives: the queue job is written through it, not the injected manager. */
-const TX_MANAGER = expect.objectContaining({ transaction: expect.any(Function) })
+const TX_MANAGER = objectLike({ transaction: anyOf(Function) })
 const sourceOf = builder<ProfileSourceInput>({
     workspaceId: WS,
     ownerId: "owner-1",

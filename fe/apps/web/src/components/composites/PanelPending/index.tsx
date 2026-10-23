@@ -18,9 +18,9 @@ export const PanelPending = (props: PanelPendingProps) => {
             tone="negative"
             title={props.failure.title}
             description={props.failure.description}
-            action={
-                props.onRetry === undefined ? undefined : { label: props.failure.retryLabel, onAction: props.onRetry }
-            }
+            {...(props.onRetry === undefined
+                ? {}
+                : { action: { label: props.failure.retryLabel, onAction: props.onRetry } })}
         />
     )
 }

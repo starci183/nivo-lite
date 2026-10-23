@@ -23,6 +23,22 @@ import {
 } from "./persistence/n8n-runs.sql"
 import { hashToken } from "./policies/n8n-run.policy"
 
+/** A partial-object matcher, typed `unknown` so it flows into any slot. */
+const objectLike = (shape: Record<string, unknown>): unknown => expect.objectContaining(shape)
+
+/** The match-anything matcher, typed `unknown` so it flows into any slot. */
+const anything = (): unknown => expect.anything()
+
+/** What `run` throws, read as `unknown`; the matcher then judges its fields. */
+const thrownBy = (run: () => unknown): unknown => {
+    try {
+        run()
+    } catch (error) {
+        return error
+    }
+    return undefined
+}
+
 const NOW = "2026-10-12T10:00:00.000Z"
 const RUN_ID = "11111111-2222-4333-8444-555555555555"
 const TOKEN = `${RUN_ID}.secret`
@@ -102,7 +118,7 @@ describe("N8nRunsService", () => {
                         data: { date: "2026-10-12" },
                     },
                 },
-                expect.anything(),
+                anything(),
             )
         })
 
@@ -331,11 +347,11 @@ describe("N8nRunsService", () => {
             const { runs } = await build(mockEntityManager())
 
             expect(runs.requireWorkflow(run, "email-daily-report")).toBe(run)
-            expect(() => runs.requireWorkflow(run, "email-debt-reminder")).toThrow(
-                expect.objectContaining({ code: N8nRunsErrorCode.WorkflowMismatch }),
+            expect(thrownBy(() => runs.requireWorkflow(run, "email-debt-reminder"))).toEqual(
+                objectLike({ code: N8nRunsErrorCode.WorkflowMismatch }),
             )
-            expect(() => runs.requireWorkflow(null, "email-daily-report")).toThrow(
-                expect.objectContaining({ code: N8nRunsErrorCode.WorkflowMismatch }),
+            expect(thrownBy(() => runs.requireWorkflow(null, "email-daily-report"))).toEqual(
+                objectLike({ code: N8nRunsErrorCode.WorkflowMismatch }),
             )
         })
 
@@ -343,8 +359,8 @@ describe("N8nRunsService", () => {
             const { runs } = await build(mockEntityManager())
 
             expect(runs.requireRun(run)).toBe(run)
-            expect(() => runs.requireRun(null)).toThrow(
-                expect.objectContaining({ code: N8nRunsErrorCode.RunUnauthorized }),
+            expect(thrownBy(() => runs.requireRun(null))).toEqual(
+                objectLike({ code: N8nRunsErrorCode.RunUnauthorized }),
             )
         })
     })

@@ -13,7 +13,7 @@ import { useMemo } from "react"
 
 /** What saving a database connection takes. */
 export interface DatabaseSaveForm {
-    readonly connectionId?: string
+    readonly connectionId?: string | undefined
     readonly name: string
     readonly target: DbTarget
     readonly tables: ReadonlyArray<DbTableMapping>

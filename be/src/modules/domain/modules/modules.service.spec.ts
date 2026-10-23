@@ -13,6 +13,18 @@ import type { ModulesOptions } from "./modules.options"
 import { ModulesService } from "./modules.service"
 import { LIST_MODULE_KEYS, UPSERT_MODULES } from "./persistence/modules.sql"
 
+/** A partial-object matcher, typed `unknown` so it flows into any slot. */
+const objectLike = (shape: Record<string, unknown>): unknown => expect.objectContaining(shape)
+
+/** A substring matcher, typed `unknown` so it flows into any slot. */
+const stringLike = (text: string): unknown => expect.stringContaining(text)
+
+/** A sub-array matcher, typed `unknown` so it flows into any slot. */
+const arrayLike = (items: ReadonlyArray<unknown>): unknown => expect.arrayContaining(items)
+
+/** The match-anything matcher, typed `unknown` so it flows into any slot. */
+const anything = (): unknown => expect.anything()
+
 const AT = "2026-03-04T05:06:07.000Z"
 const OPTIONS: ModulesOptions = { categories: MODULE_CATEGORIES, catalog: MODULE_CATALOG }
 const KEYS = MODULE_CATALOG.map((module) => ({ key: module.key }))
@@ -80,16 +92,16 @@ describe("ModulesService > sync", () => {
         await service.sync()
 
         expect(authorityActions.upsertAll).toHaveBeenCalledWith(
-            expect.anything(),
-            expect.arrayContaining([
-                expect.objectContaining({
+            anything(),
+            arrayLike([
+                objectLike({
                     action: "record_receivable_payment",
                     module_key: "accounting",
                     default_mode: "ask",
                     default_required_fields: ["amount_vnd"],
                     amount_limit: false,
                 }),
-                expect.objectContaining({
+                objectLike({
                     action: "review_einvoice",
                     module_key: "accounting",
                     default_mode: "ask",
@@ -115,8 +127,8 @@ describe("ModulesService > sync", () => {
         })
         expect(tx.commits).toBe(1)
         expect(authorityActions.upsertAll).toHaveBeenCalledWith(
-            expect.anything(),
-            expect.arrayContaining([
+            anything(),
+            arrayLike([
                 {
                     action: "issue_invoice",
                     module_key: "accounting",
@@ -174,7 +186,7 @@ describe("ModulesService > sync", () => {
 
         await expect(service.sync()).rejects.toMatchObject({
             code: ModulesErrorCode.CatalogInvalid,
-            params: { problems: expect.stringContaining("unknown category") },
+            params: { problems: stringLike("unknown category") },
         })
         expect(entityManager.transaction).not.toHaveBeenCalled()
     })

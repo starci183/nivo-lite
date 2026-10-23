@@ -8,7 +8,7 @@ export const useContentRefresh = () => {
     const { mutate } = useSWRConfig()
     const refresh = useCallback(async () => {
         await mutate((key) => {
-            const head = Array.isArray(key) ? key[0] : key
+            const head: unknown = Array.isArray(key) ? key[0] : key
             return (
                 typeof head === "string" && (head.startsWith("QUERY_CONTENT_") || head === "QUERY_AGENT_DASHBOARD_SWR")
             )

@@ -1,7 +1,7 @@
 import { Injectable } from "@nestjs/common"
 import { DATABASE_MAX_ROWS, InjectDatabase } from "@modules/integrations/data-sources"
 import type { DatabaseClient, DatabaseReader } from "@modules/integrations/data-sources"
-import { DomainError } from "@modules/platform/errors"
+import { isDomainError } from "@modules/platform/errors"
 import { InjectMessageCatalog } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
 import { eachInOrder } from "@modules/platform/primitives"
@@ -74,7 +74,7 @@ export class DatabaseSyncService implements DataConnector {
             .then(
                 (outcome) => outcome,
                 (cause: unknown): Promise<TableOutcome> =>
-                    cause instanceof DomainError
+                    isDomainError(cause)
                         ? Promise.resolve({
                               ok: false,
                               reason: this.catalog.get(`errors.${cause.code}`, cause.params, "vi"),

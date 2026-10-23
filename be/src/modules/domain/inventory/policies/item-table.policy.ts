@@ -76,6 +76,12 @@ const splitCells = (line: string): Array<string> => {
 const fieldOfHeader = (header: string): FieldKey | null =>
     FIELD_HEADERS.find((entry) => entry.headers.includes(header))?.field ?? null
 
+/** Reads a field of one row by the column order; an absent cell is empty. */
+const cellReader =
+    (cells: ReadonlyArray<string>, order: ReadonlyArray<FieldKey | null>) =>
+    (field: FieldKey): string =>
+        cells[order.indexOf(field)] ?? ""
+
 /**
  * Reads pasted rows from a sheet or CSV. A first row that names columns maps them; otherwise the order is sku, name,
  * unit, category, cost, price, minimum, order quantity, stock, supplier. A row without a name is skipped.
@@ -93,8 +99,7 @@ export const parseItemTable = (text: string, defaultUnit: string): ParsedItemTab
     const rows: Array<ImportRow> = []
     const skipped: Array<string> = []
     for (const line of hasHeader ? lines.slice(1) : lines) {
-        const cells = splitCells(line)
-        const cell = (field: FieldKey): string => cells[order.indexOf(field)] ?? ""
+        const cell = cellReader(splitCells(line), order)
         const name = cell("name")
         if (name === "") {
             skipped.push(line)

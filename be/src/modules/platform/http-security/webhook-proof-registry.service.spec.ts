@@ -3,6 +3,19 @@ import { HttpSecurityError, HttpSecurityErrorCode } from "./errors/http-security
 import { WebhookProofRegistryService } from "./webhook-proof-registry.service"
 import type { WebhookProof } from "./webhook-proof.port"
 
+/** A partial-object matcher, typed `unknown` so it flows into any slot. */
+const objectLike = (shape: Record<string, unknown>): unknown => expect.objectContaining(shape)
+
+/** What `run` throws, read as `unknown`; the matcher then judges its fields. */
+const thrownBy = (run: () => unknown): unknown => {
+    try {
+        run()
+    } catch (error) {
+        return error
+    }
+    return undefined
+}
+
 const build = async (): Promise<WebhookProofRegistryService> => {
     const moduleRef = await Test.createTestingModule({ providers: [WebhookProofRegistryService] }).compile()
     return moduleRef.get(WebhookProofRegistryService)
@@ -50,8 +63,8 @@ describe("WebhookProofRegistryService", () => {
         registry.add(proofOf("zalo"))
 
         expect(() => registry.add(proofOf("zalo"))).toThrow(HttpSecurityError)
-        expect(() => registry.add(proofOf("zalo"))).toThrow(
-            expect.objectContaining({ code: HttpSecurityErrorCode.WebhookProviderUnknown }),
+        expect(thrownBy(() => registry.add(proofOf("zalo")))).toEqual(
+            objectLike({ code: HttpSecurityErrorCode.WebhookProviderUnknown }),
         )
     })
 })

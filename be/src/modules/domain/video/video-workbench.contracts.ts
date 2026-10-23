@@ -110,7 +110,7 @@ export interface ManagedVideoProject {
 /** Fields of a new draft. */
 export interface NewWorkbenchProject {
     /** Working title. */
-    readonly title?: string
+    readonly title?: string | undefined
     /** Business goal. */
     readonly goal: string
     /** Output shape. */
@@ -118,23 +118,23 @@ export interface NewWorkbenchProject {
     /** Target seconds. */
     readonly targetSeconds: number
     /** Sources and instructions. */
-    readonly inputs?: VideoInputs
+    readonly inputs?: VideoInputs | undefined
 }
 
 /** Editable fields of an idle project. */
 export interface WorkbenchProjectPatch {
     /** Working title. */
-    readonly title?: string
+    readonly title?: string | undefined
     /** Business goal. */
-    readonly goal?: string
+    readonly goal?: string | undefined
     /** Output shape. */
-    readonly aspect?: string
+    readonly aspect?: string | undefined
     /** Target seconds. */
-    readonly targetSeconds?: number
+    readonly targetSeconds?: number | undefined
     /** Sources and instructions. */
-    readonly inputs?: VideoInputs
+    readonly inputs?: VideoInputs | undefined
     /** Editable scenes. */
-    readonly script?: ReadonlyArray<EditorScene>
+    readonly script?: ReadonlyArray<EditorScene> | undefined
 }
 
 /** A public source offered in the video picker. */

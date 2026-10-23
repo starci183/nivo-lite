@@ -41,7 +41,7 @@ export interface ReassignShiftParams {
     /** The shift. */
     readonly shiftId: string
     /** The person, or null to open the shift. Absent means the same as null. */
-    readonly staffId?: string | null
+    readonly staffId?: string | null | undefined
 }
 
 /** What reassigning a draft shift ended in. Rule breaks are warnings; the change is kept. */

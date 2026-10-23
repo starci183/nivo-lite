@@ -15,6 +15,7 @@ import { useGraphQLWithToast } from "@/modules/toast"
 import type { DataSlot } from "@/modules/types"
 import { toAgentConnection } from "./agentSettings.shared"
 import type { AgentConnectionView } from "./agentSettings.shared"
+import { readError } from "@/hooks/workspaceread"
 
 const NO_ACCESS = "none"
 
@@ -72,7 +73,7 @@ export const useAgentConnectionAccess = (agentId: string | null, moduleKey: stri
     )
     const slot: DataSlot<ReadonlyArray<AgentConnectionView>> = slotOfSwr({
         data: rows,
-        error: all.error ?? granted.error,
+        error: readError(all) ?? readError(granted),
         isLoading: all.isLoading || granted.isLoading,
     })
     return { slot, pick, isSaving: grant.isMutating || revoke.isMutating }

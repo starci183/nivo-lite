@@ -18,8 +18,7 @@ export const useMutateStartWebhookConnectionSwr = () =>
         MUTATE_START_WEBHOOK_CONNECTION_SWR_KEY,
         async (_key: string, { arg }: StartWebhookConnectionArg) => {
             const result = await mutateStartWebhookConnection({ request: arg })
-            if (result.data === undefined || result.data === null)
-                throw new Error("startWebhookConnection answered no data")
+            if (result.data === undefined) throw new Error("startWebhookConnection answered no data")
             return result.data.startWebhookConnection
         },
     )

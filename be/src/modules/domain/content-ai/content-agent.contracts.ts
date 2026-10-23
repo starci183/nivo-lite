@@ -81,7 +81,7 @@ export interface BrandDecision {
     /** Confirm or reject. */
     readonly decision: "confirm" | "reject"
     /** The kit as edited; absent or null keeps the proposal. */
-    readonly kit?: GuidelineKit | null
+    readonly kit?: GuidelineKit | null | undefined
 }
 
 /** One beat of the short video script. */

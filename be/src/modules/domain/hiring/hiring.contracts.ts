@@ -41,7 +41,7 @@ export interface JobQuestion {
     /** The offered choices of a choice question. */
     readonly choices?: ReadonlyArray<string>
     /** What the question scores against; absent means it is only collected. */
-    readonly expect?: QuestionExpect
+    readonly expect?: QuestionExpect | undefined
 }
 
 /** The written requirements a candidate is compared with. */

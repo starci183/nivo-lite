@@ -186,7 +186,11 @@ const renderPipelineLanes = ({ p, on }: RenderPipelineLanesInput) => (
                                     </Text>
                                     {deal.source === null ? null : <Badge tone="neutral">{deal.source}</Badge>}
                                 </div>
-                                <Text size="sm" tone={deal.isClosed ? "muted" : undefined} overflow="clamp-2">
+                                <Text
+                                    size="sm"
+                                    {...(deal.isClosed ? { tone: "muted" as const } : {})}
+                                    overflow="clamp-2"
+                                >
                                     {deal.nextLine}
                                 </Text>
                                 <Text size="xs" tone="muted">

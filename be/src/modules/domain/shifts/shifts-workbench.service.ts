@@ -266,7 +266,7 @@ export class ShiftsWorkbenchService {
             checkins: attendance.map((row) => ({ shiftId: row.shift_id, checkedInAt: iso(row.checked_in_at) ?? "" })),
             approvedAvail: env.avail,
             approvedLeaves: env.leaves,
-            prior: [...(env.prior ?? new Map()).entries()].map(([staffId, segs]) => ({ staffId, segs })),
+            prior: [...(env.prior?.entries() ?? [])].map(([staffId, segs]) => ({ staffId, segs })),
         }
     }
 

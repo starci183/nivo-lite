@@ -77,7 +77,7 @@ const RuleFields = (props: SetupWriteViewProps) => (
                 step={1_000_000}
                 formatOptions={{ maximumFractionDigits: 0 }}
                 isDisabled={props.props.proposal.isLimitDisabled}
-                value={props.props.proposal.limit}
+                {...(props.props.proposal.limit === undefined ? {} : { value: props.props.proposal.limit })}
                 onValueChange={props.on.limit}
             />
         ) : null}

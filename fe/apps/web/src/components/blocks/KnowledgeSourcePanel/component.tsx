@@ -8,9 +8,9 @@ interface HeadView {
     readonly statusLabel: string
     readonly statusTone: "neutral" | "warning" | "success" | "danger"
     readonly visibilityLabel: string
-    readonly note?: string
+    readonly note?: string | undefined
     /** 0-100 while a worker is on it; nothing is drawn for it while undefined. */
-    readonly progress?: number
+    readonly progress?: number | undefined
     readonly canWrite: boolean
     readonly reindexLabel: string
     readonly visibilityActionLabel: string

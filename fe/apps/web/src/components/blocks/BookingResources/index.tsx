@@ -46,7 +46,6 @@ export const BookingResources = () => {
         removeResource,
         parseWeek,
     })
-    if (connected === null) return null
 
     return <BookingResourcesBase props={bookingResourcesProps(connected)} on={bookingResourcesOn(connected)} />
 }

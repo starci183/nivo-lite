@@ -3,6 +3,18 @@ import { AutomationTemplatesErrorCode } from "../errors/automation-templates.err
 import { AUTOMATION_TEMPLATES_MESSAGES } from "../messages/automation-templates.messages"
 import { translate as translateImplementation } from "./catalog-text.policy"
 
+const objectLike = (shape: Record<string, unknown>): unknown => expect.objectContaining(shape)
+
+/** What `run` throws, read as `unknown`; the matcher then judges its fields. */
+const thrownBy = (run: () => unknown): unknown => {
+    try {
+        run()
+    } catch (error) {
+        return error
+    }
+    return undefined
+}
+
 const SUBJECT = Symbol("subject")
 type Subject = { translate: typeof translateImplementation }
 
@@ -30,8 +42,8 @@ describe("translate", () => {
     it("identifies an unknown catalog key as invalid template text", async () => {
         const subject = await buildSubject()
 
-        expect(() => subject.translate("automationTemplates.missing.name")).toThrow(
-            expect.objectContaining({
+        expect(thrownBy(() => subject.translate("automationTemplates.missing.name"))).toEqual(
+            objectLike({
                 code: AutomationTemplatesErrorCode.DefinitionInvalid,
                 params: { key: "automationTemplates.missing.name", field: "text" },
             }),
@@ -43,8 +55,8 @@ describe("translate", () => {
 
         jest.replaceProperty(AUTOMATION_TEMPLATES_MESSAGES, locale, {})
 
-        expect(() => subject.translate("errors.AUTOMATION_TEMPLATES_TEMPLATE_UNKNOWN")).toThrow(
-            expect.objectContaining({
+        expect(thrownBy(() => subject.translate("errors.AUTOMATION_TEMPLATES_TEMPLATE_UNKNOWN"))).toEqual(
+            objectLike({
                 code: AutomationTemplatesErrorCode.DefinitionInvalid,
                 params: { key: "errors.AUTOMATION_TEMPLATES_TEMPLATE_UNKNOWN", field: "text" },
             }),

@@ -39,5 +39,9 @@ export const IconGlyph = (props: IconGlyphProps) =>
     props.isTile ? (
         <IconTile source={iconGlyphOf(props.name)} tone="neutral" size="sm" />
     ) : (
-        <GrammarIcon source={iconGlyphOf(props.name)} usage={props.usage} ariaLabel={props.ariaLabel} />
+        <GrammarIcon
+            source={iconGlyphOf(props.name)}
+            {...(props.usage === undefined ? {} : { usage: props.usage })}
+            {...(props.ariaLabel === undefined ? {} : { ariaLabel: props.ariaLabel })}
+        />
     )

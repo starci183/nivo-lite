@@ -4,7 +4,11 @@ import { openApiToolsStepClassNames as classNames } from "./classNames"
 /** What the agent-tools step of the OpenAPI wizard draws and reports. */
 type OpenApiToolsStepProps = {
     /** The operations the search shows, each with its label and what it does. */
-    readonly options: ReadonlyArray<{ readonly value: string; readonly label: string; readonly description?: string }>
+    readonly options: ReadonlyArray<{
+        readonly value: string
+        readonly label: string
+        readonly description?: string | undefined
+    }>
     /** The ticked operations among those shown. */
     readonly value: ReadonlyArray<string>
     readonly query: string

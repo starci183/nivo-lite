@@ -31,10 +31,10 @@ export interface LoyaltyProgramSettingsBaseProps {
         readonly copy: ProgramCopy
         readonly values: ProgramValues
         readonly errors: {
-            readonly name?: string
-            readonly tiers?: string
-            readonly hourFrom?: string
-            readonly hourTo?: string
+            readonly name?: string | undefined
+            readonly tiers?: string | undefined
+            readonly hourFrom?: string | undefined
+            readonly hourTo?: string | undefined
         }
         readonly tierErrors: ReadonlyArray<TierErrorView>
         readonly canAddCategory: boolean

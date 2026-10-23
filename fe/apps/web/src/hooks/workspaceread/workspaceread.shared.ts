@@ -28,7 +28,7 @@ export interface StatusPollOptions {
 
 /** The part of an Apollo answer {@link answeredData} reads. */
 interface GraphQLAnswer<T> {
-    readonly data?: T | null
+    readonly data?: T | null | undefined
 }
 
 /** The data of a GraphQL answer; a missing one is a failure named after the operation. */
@@ -103,3 +103,11 @@ export const readRequiredField = async <Request, Data, Field extends keyof Data 
 
 /** The success/error callbacks accepted while a queued job is observed. */
 export type JobStatusCallbacks<Status> = Pick<SWRConfiguration<Status, Error>, "onSuccess" | "onError">
+
+/** The part of an SWR read that carries its failure. */
+interface SwrFailing {
+    readonly error?: unknown
+}
+
+/** The failure of an SWR read, as `unknown`: SWR types a read's error as `any`, which may not flow on untyped. */
+export const readError = (read: SwrFailing): unknown => read.error

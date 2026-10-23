@@ -3,6 +3,19 @@ import { WorkspaceCleanupErrorCode } from "./errors/workspace-cleanup.error"
 import { assertUserReferences, userReferencesOf } from "./user-references.policy"
 import type { UserReferences } from "./workspace-cleanup.contracts"
 
+/** A partial-object matcher, typed `unknown` so it flows into any slot. */
+const objectLike = (shape: Record<string, unknown>): unknown => expect.objectContaining(shape)
+
+/** What `run` throws, read as `unknown`; the matcher then judges its fields. */
+const thrownBy = (run: () => unknown): unknown => {
+    try {
+        run()
+    } catch (error) {
+        return error
+    }
+    return undefined
+}
+
 const SUBJECT = Symbol("user-references.policy")
 
 const build = async () => {
@@ -13,7 +26,7 @@ const build = async () => {
 }
 
 const refusedWith = (code: WorkspaceCleanupErrorCode, params?: Record<string, string>) =>
-    expect.objectContaining(params === undefined ? { code } : { code, params })
+    objectLike(params === undefined ? { code } : { code, params })
 
 const CLEAN: UserReferences = { cascade: { "app_commands.requested_by": 0 }, block: { "lead_actions.requested_by": 0 } }
 const CASCADING: UserReferences = {
@@ -39,7 +52,7 @@ describe("user references reading", () => {
         async (refs) => {
             const subject = await build()
 
-            expect(() => subject.userReferencesOf(["u-1"], [{ user_id: "u-1", refs }])).toThrow(
+            expect(thrownBy(() => subject.userReferencesOf(["u-1"], [{ user_id: "u-1", refs }]))).toEqual(
                 refusedWith(WorkspaceCleanupErrorCode.ReferencesInvalid),
             )
         },
@@ -48,7 +61,7 @@ describe("user references reading", () => {
     it("refuses when an account has no references row", async () => {
         const subject = await build()
 
-        expect(() => subject.userReferencesOf(["u-1", "u-2"], [{ user_id: "u-1", refs: CLEAN }])).toThrow(
+        expect(thrownBy(() => subject.userReferencesOf(["u-1", "u-2"], [{ user_id: "u-1", refs: CLEAN }]))).toEqual(
             refusedWith(WorkspaceCleanupErrorCode.ReferencesInvalid),
         )
     })
@@ -69,7 +82,7 @@ describe("user references refusals", () => {
             ["u-3", BLOCKED],
         ])
 
-        expect(() => subject.assertUserReferences(references, true)).toThrow(
+        expect(thrownBy(() => subject.assertUserReferences(references, true))).toEqual(
             refusedWith(WorkspaceCleanupErrorCode.UserReferenceBlocked, {
                 users: "u-2,u-3",
                 tables: "lead_actions.requested_by",
@@ -80,7 +93,7 @@ describe("user references refusals", () => {
     it("refuses a kept cascade by default, naming the users and the tables", async () => {
         const subject = await build()
 
-        expect(() => subject.assertUserReferences(new Map([["u-4", CASCADING]]), false)).toThrow(
+        expect(thrownBy(() => subject.assertUserReferences(new Map([["u-4", CASCADING]]), false))).toEqual(
             refusedWith(WorkspaceCleanupErrorCode.KeptCascadeRefused, {
                 users: "u-4",
                 tables: "app_commands.requested_by,hiring_availability.member_user_id",
@@ -95,7 +108,7 @@ describe("user references refusals", () => {
             ["u-6", { cascade: { "alpha.owner_id": 2, "zeta.owner_id": 3 }, block: {} }],
         ])
 
-        expect(() => subject.assertUserReferences(references, false)).toThrow(
+        expect(thrownBy(() => subject.assertUserReferences(references, false))).toEqual(
             refusedWith(WorkspaceCleanupErrorCode.KeptCascadeRefused, {
                 users: "u-5,u-6",
                 tables: "alpha.owner_id,Beta.owner_id,zeta.owner_id",

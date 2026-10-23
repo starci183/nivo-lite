@@ -99,12 +99,12 @@ describe("pagingOf and pageInput", () => {
         const op = opOf([
             { in: "query", name: "page", required: false },
             { in: "query", name: "offset", required: false },
-            { in: "query", name: "skip", required: false },
+            { in: "query", name: "start", required: false },
         ])
         const paging = subject.pagingOf(op, pullOf({ fixedQuery: "page=5&offset=40" }))
 
-        expect(paging).toEqual({ pageParam: undefined, limitParam: undefined, offsetParam: "skip", pageStart: 1 })
-        expect(subject.pageInput(paging, 2)).toEqual({ skip: 200 })
+        expect(paging).toEqual({ pageParam: undefined, limitParam: undefined, offsetParam: "start", pageStart: 1 })
+        expect(subject.pageInput(paging, 2)).toEqual({ start: 200 })
         const noPaging = subject.pagingOf(opOf([]), pullOf())
 
         expect(noPaging).toEqual({ pageParam: undefined, limitParam: undefined, offsetParam: undefined, pageStart: 1 })

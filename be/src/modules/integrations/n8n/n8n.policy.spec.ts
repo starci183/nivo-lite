@@ -8,6 +8,19 @@ import {
     workspaceKey as workspaceKeyImplementation,
 } from "./n8n.policy"
 
+/** A partial-object matcher, typed `unknown` so it flows into any slot. */
+const objectLike = (shape: Record<string, unknown>): unknown => expect.objectContaining(shape)
+
+/** What `run` throws, read as `unknown`; the matcher then judges its fields. */
+const thrownBy = (run: () => unknown): unknown => {
+    try {
+        run()
+    } catch (error) {
+        return error
+    }
+    return undefined
+}
+
 const SUBJECT = Symbol("subject")
 type Subject = {
     assertAllowedTarget: typeof assertAllowedTargetImplementation
@@ -110,9 +123,7 @@ describe("assertEventName", () => {
     it.each(["", "1lead", "lead created", `a${"b".repeat(80)}`])("refuses %p", async (event) => {
         const subject = await buildSubject()
 
-        expect(() => subject.assertEventName(event)).toThrow(
-            expect.objectContaining({ code: N8nErrorCode.EventInvalid }),
-        )
+        expect(thrownBy(() => subject.assertEventName(event))).toEqual(objectLike({ code: N8nErrorCode.EventInvalid }))
     })
 })
 

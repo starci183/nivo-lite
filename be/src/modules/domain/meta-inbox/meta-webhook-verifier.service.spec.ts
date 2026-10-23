@@ -5,6 +5,19 @@ import type { MetaClient } from "@modules/integrations/meta"
 import { MetaInboxError, MetaInboxErrorCode } from "./errors/meta-inbox.error"
 import { MetaWebhookVerifierService } from "./meta-webhook-verifier.service"
 
+/** A partial-object matcher, typed `unknown` so it flows into any slot. */
+const objectLike = (shape: Record<string, unknown>): unknown => expect.objectContaining(shape)
+
+/** What `run` throws, read as `unknown`; the matcher then judges its fields. */
+const thrownBy = (run: () => unknown): unknown => {
+    try {
+        run()
+    } catch (error) {
+        return error
+    }
+    return undefined
+}
+
 const RAW = Buffer.from('{ "object": "page", "entry": [] }\n')
 const SIGNATURE = "sha256=signature"
 
@@ -29,8 +42,8 @@ describe("MetaWebhookVerifierService", () => {
 
     it("refuses a missing body without asking the client to verify it", async () => {
         const { verifier, meta } = await build()
-        expect(() => verifier.verify(undefined, SIGNATURE)).toThrow(
-            expect.objectContaining({ code: MetaInboxErrorCode.SignatureInvalid }),
+        expect(thrownBy(() => verifier.verify(undefined, SIGNATURE))).toEqual(
+            objectLike({ code: MetaInboxErrorCode.SignatureInvalid }),
         )
         expect(meta.verifyDelivery).not.toHaveBeenCalled()
     })
@@ -38,8 +51,8 @@ describe("MetaWebhookVerifierService", () => {
     it.each([SIGNATURE, undefined])("refuses a client-rejected signature %p", async (signature) => {
         const { verifier, meta } = await build()
         meta.verifyDelivery.mockReturnValue(false)
-        expect(() => verifier.verify(RAW, signature)).toThrow(
-            expect.objectContaining({ code: MetaInboxErrorCode.SignatureInvalid }),
+        expect(thrownBy(() => verifier.verify(RAW, signature))).toEqual(
+            objectLike({ code: MetaInboxErrorCode.SignatureInvalid }),
         )
         expect(meta.verifyDelivery).toHaveBeenCalledWith(signature, RAW)
     })

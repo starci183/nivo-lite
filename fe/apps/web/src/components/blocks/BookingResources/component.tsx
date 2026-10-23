@@ -100,7 +100,9 @@ export const BookingResourcesBase = (props: BookingResourcesBaseProps) => {
                                         name={`hours${day.day}`}
                                         label={day.label}
                                         variant="secondary"
-                                        placeholder={p.form?.hoursPlaceholder}
+                                        {...(p.form?.hoursPlaceholder === undefined
+                                            ? {}
+                                            : { placeholder: p.form.hoursPlaceholder })}
                                         value={day.value}
                                         onValueChange={(value) => on.changeHours(day.day, value)}
                                     />

@@ -10,6 +10,17 @@ import {
 
 import { BillingErrorCode } from "./errors/billing.error"
 
+const objectLike = (shape: Record<string, unknown>): unknown => expect.objectContaining(shape)
+
+/** What `run` throws, read as `unknown`; the matcher then judges its fields. */
+const thrownBy = (run: () => unknown): unknown => {
+    try {
+        run()
+    } catch (error) {
+        return error
+    }
+    return undefined
+}
 const SUBJECT = Symbol("channel-secret.policy")
 
 const KEY = randomBytes(32).toString("base64")
@@ -54,9 +65,9 @@ describe("channel secret policy", () => {
             const { decryptSecret } = await buildSubject()
 
             const stored = encrypt("x", KEY)
-            const unreadable = expect.objectContaining({ code: BillingErrorCode.CredentialUnreadable })
-            expect(() => decryptSecret(stored, undefined)).toThrow(unreadable)
-            expect(() => decryptSecret(stored, Buffer.alloc(16).toString("base64"))).toThrow(unreadable)
+            const unreadable = objectLike({ code: BillingErrorCode.CredentialUnreadable })
+            expect(thrownBy(() => decryptSecret(stored, undefined))).toEqual(unreadable)
+            expect(thrownBy(() => decryptSecret(stored, Buffer.alloc(16).toString("base64")))).toEqual(unreadable)
         })
 
         it("fails for another key, a tampered value and a truncated one, keeping the cause", async () => {
@@ -65,9 +76,9 @@ describe("channel secret policy", () => {
             const stored = encrypt("x", KEY)
             const tampered = Buffer.from(stored, "base64")
             tampered[tampered.length - 1] = (tampered[tampered.length - 1] ?? 0) ^ 1
-            const unreadable = expect.objectContaining({ code: BillingErrorCode.CredentialUnreadable })
-            expect(() => decryptSecret(stored, randomBytes(32).toString("base64"))).toThrow(unreadable)
-            expect(() => decryptSecret(tampered.toString("base64"), KEY)).toThrow(unreadable)
+            const unreadable = objectLike({ code: BillingErrorCode.CredentialUnreadable })
+            expect(thrownBy(() => decryptSecret(stored, randomBytes(32).toString("base64")))).toEqual(unreadable)
+            expect(thrownBy(() => decryptSecret(tampered.toString("base64"), KEY))).toEqual(unreadable)
             const failure = (() => {
                 try {
                     return decryptSecret("AAAA", KEY)

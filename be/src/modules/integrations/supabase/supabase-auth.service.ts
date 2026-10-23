@@ -23,7 +23,7 @@ export class SupabaseAuthService {
         const found = await this.admin.auth.getUserById(userId)
         if (found.error !== null) return refused(SupabaseErrorCode.AccountNotFound)
         const user = found.data.user
-        const metadata = user.user_metadata
+        const metadata: Record<string, unknown> = user.user_metadata
         const named = [metadata.full_name, metadata.name].find((value) => typeof value === "string" && value !== "")
         const email = user.email ?? ""
         return ok({

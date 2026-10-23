@@ -12,7 +12,7 @@ export const useVideoRender = (initialRenderId?: string) => {
             successKey: "status_ready",
             failureFallback: "render-unavailable",
             queuedKey: "stage_queued",
-            initialId: initialRenderId,
+            ...(initialRenderId === undefined ? {} : { initialId: initialRenderId }),
         }),
         isMutating,
     }

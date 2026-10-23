@@ -105,7 +105,6 @@ export const ContentPostEditor = (props: ContentPostEditorProps) => {
         },
         { channels: CONTENT_CHANNELS, channelLimits, mediaTile, postView, claimWarnings },
     )
-    if (connected === null) return null
 
     return (
         <ContentPostEditorBase
@@ -180,7 +179,7 @@ const contentPostEditorProps = (
         warnings: warningLines(t, [...warnings, ...live]),
         isDeleteOpen,
         missingText: form.channels.some((c) => (form.variants[c]?.text ?? "").trim() === ""),
-        hasDraftText: Object.values(item.variants).some((v) => v !== undefined && v.text !== ""),
+        hasDraftText: Object.values(item.variants).some((v) => v.text !== ""),
     }
 }
 

@@ -39,7 +39,7 @@ export interface Evidence {
     /** A short label for people. */
     readonly label: string
     /** A verbatim excerpt. */
-    readonly quote?: string
+    readonly quote?: string | undefined
     /** When it happened. */
     readonly at?: string
     /** The connection it came from. */
@@ -125,15 +125,15 @@ export interface FactInput {
     /** The unit. */
     readonly unit?: string | null
     /** Who may read it; a known fact keeps its scope. */
-    readonly scope?: Scope
+    readonly scope?: Scope | undefined
     /** The modules that may read a restricted fact. */
     readonly modules?: ReadonlyArray<string>
     /** Who it came from. */
     readonly sourceKind: FactSource
     /** From when it holds. */
-    readonly validFrom?: string | null
+    readonly validFrom?: string | null | undefined
     /** Until when it holds. */
-    readonly validTo?: string | null
+    readonly validTo?: string | null | undefined
     /** What supports it. */
     readonly evidence?: ReadonlyArray<Evidence>
     /** Who proposed it. */

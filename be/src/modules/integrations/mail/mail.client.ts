@@ -109,7 +109,7 @@ export class MailClient {
                 attachments: attachmentsOf(message),
             })
             .then(
-                (info): SentMail => ({ messageId: info.messageId }),
+                (info: SMTPTransport.SentMessageInfo): SentMail => ({ messageId: info.messageId }),
                 (cause: unknown) => {
                     throw classifySmtpFailure(cause)
                 },

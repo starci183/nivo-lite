@@ -17,7 +17,7 @@ export interface ConsoleHeaderBaseProps {
         /** The workspace logo (brand kit), shown before the workspace name; null without one. */
         readonly workspaceLogoUrl: string | null
         readonly userName: string
-        readonly avatarUrl?: string
+        readonly avatarUrl?: string | undefined
         readonly roleLabel: string
         readonly isStaff: boolean
         readonly isFoundingMember: boolean

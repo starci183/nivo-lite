@@ -9,8 +9,11 @@ import type {
 import type { WorkEdits } from "./decisions.contracts"
 
 /** Keeps the entries whose value is present, so an absent request property never overrides a stored value. */
-const present = <T extends object>(entries: T): Partial<T> =>
-    Object.entries(entries).reduce((kept, [key, value]) => (value === undefined ? kept : { ...kept, [key]: value }), {})
+const present = <T extends Readonly<Record<string, unknown>>>(entries: T): Partial<T> =>
+    Object.entries(entries).reduce<Partial<T>>(
+        (kept, [key, value]) => (value === undefined ? kept : { ...kept, [key]: value }),
+        {},
+    )
 
 /** The record of named fields; a field with neither text nor number is empty. Nothing when no list is given. */
 export const fieldRecordOf = (fields: OptionalFieldList): FieldRecord | undefined =>

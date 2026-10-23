@@ -12,7 +12,7 @@ export interface MemberRowView extends DataTableRow {
     readonly name: string
     readonly email: string
     readonly isYou: boolean
-    readonly staffNote?: string
+    readonly staffNote?: string | undefined
     readonly roleLabel: string
     readonly isActive: boolean
     readonly lastSignIn: string
@@ -32,7 +32,7 @@ interface ConfirmView {
 export interface TeamMembersBaseProps {
     readonly props: {
         readonly title: string
-        readonly description?: string
+        readonly description?: string | undefined
         readonly failTitle: string
         readonly youLabel: string
         readonly activeLabel: string
@@ -45,7 +45,7 @@ export interface TeamMembersBaseProps {
         readonly isSkeleton: boolean
         readonly isPending: boolean
         readonly error?: string
-        readonly confirm?: ConfirmView
+        readonly confirm?: ConfirmView | undefined
     }
     readonly on: {
         readonly cancelConfirm: () => void

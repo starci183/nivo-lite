@@ -8,6 +8,19 @@ import { OPENCLAW_FILES, OPENCLAW_OPTIONS } from "./openclaw.decorators"
 import type { OpenclawOptions } from "./openclaw.options"
 import type { OpenclawFiles } from "./openclaw-files.port"
 
+/** A partial-object matcher, typed `unknown` so it flows into any slot. */
+const objectLike = (shape: Record<string, unknown>): unknown => expect.objectContaining(shape)
+
+/** What `run` throws, read as `unknown`; the matcher then judges its fields. */
+const thrownBy = (run: () => unknown): unknown => {
+    try {
+        run()
+    } catch (error) {
+        return error
+    }
+    return undefined
+}
+
 const AGENT = "ws-0123abcd-chatbot"
 const CONFIG = "/state/openclaw.json"
 
@@ -187,11 +200,11 @@ describe("AgentRegistryService", () => {
             const off = await build({ manageAgents: false })
             const none = await build({ configDir: undefined })
 
-            expect(() => off.registry.register(AGENT, "Bot")).toThrow(
-                expect.objectContaining({ code: OpenclawErrorCode.RegistrationOff }),
+            expect(thrownBy(() => off.registry.register(AGENT, "Bot"))).toEqual(
+                objectLike({ code: OpenclawErrorCode.RegistrationOff }),
             )
-            expect(() => none.registry.register(AGENT, "Bot")).toThrow(
-                expect.objectContaining({ code: OpenclawErrorCode.RegistrationOff }),
+            expect(thrownBy(() => none.registry.register(AGENT, "Bot"))).toEqual(
+                objectLike({ code: OpenclawErrorCode.RegistrationOff }),
             )
         })
     })
@@ -203,8 +216,8 @@ describe("AgentRegistryService", () => {
             const disk = memoryFiles({ [CONFIG]: "{ broken" })
             const { registry, logger } = await build({}, disk)
 
-            expect(() => registry.register(AGENT, "Bot")).toThrow(
-                expect.objectContaining({ code: OpenclawErrorCode.ConfigInvalid }),
+            expect(thrownBy(() => registry.register(AGENT, "Bot"))).toEqual(
+                objectLike({ code: OpenclawErrorCode.ConfigInvalid }),
             )
             expect(logger.error).toHaveBeenCalledTimes(1)
             expect(disk.store.get(CONFIG)).toBe("{ broken")

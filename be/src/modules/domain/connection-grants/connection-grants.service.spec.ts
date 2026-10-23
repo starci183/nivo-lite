@@ -81,7 +81,7 @@ const lookups = (
 ]
 
 /** A grant write receives the transaction view, which is not the outer manager. */
-const expectInTransaction = (spy: jest.Mock, payload: object): void => {
+const expectInTransaction = <Args extends Array<unknown>>(spy: jest.Mock<unknown, Args>, payload: object): void => {
     expect(spy).toHaveBeenCalledWith(payload, expect.anything())
     expect(isTransactionManager(spy.mock.calls[0]?.[1])).toBe(true)
 }

@@ -34,6 +34,13 @@ const build = async () => {
     return { door: moduleRef.get(PayosWebhook), signature, feed }
 }
 
+/** A request whose `rawBody` is present and undefined, which a typed partial cannot spell under exact optional property types. */
+const requestWithRaw = (rawBody: Buffer | undefined): RawBodyRequest<Request> => {
+    const request = mock<RawBodyRequest<Request>>()
+    Reflect.set(request, "rawBody", rawBody)
+    return request
+}
+
 describe("PayosWebhook", () => {
     it("verifies the scoped raw body first, waits for proof, then accepts exactly one delivery", async () => {
         const { door, signature, feed } = await build()
@@ -94,9 +101,7 @@ describe("PayosWebhook", () => {
     it("hands missing raw bytes to verification and intake unchanged", async () => {
         const { door, signature, feed } = await build()
 
-        await expect(
-            door.receive(mock<RawBodyRequest<Request>>({ rawBody: undefined }), CONNECTION),
-        ).resolves.toBeUndefined()
+        await expect(door.receive(requestWithRaw(undefined), CONNECTION)).resolves.toBeUndefined()
 
         expect(signature.verify).toHaveBeenCalledTimes(1)
         expect(signature.verify).toHaveBeenCalledWith({

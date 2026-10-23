@@ -6,6 +6,18 @@ import type { CsvMapping } from "./csv-import.contracts"
 import { DataHubErrorCode } from "./errors/data-hub.error"
 import { CSV_COPY } from "./messages/csv-import.messages"
 
+const objectLike = (shape: Record<string, unknown>): unknown => expect.objectContaining(shape)
+
+/** What `run` throws, read as `unknown`; the matcher then judges its fields. */
+const thrownBy = (run: () => unknown): unknown => {
+    try {
+        run()
+    } catch (error) {
+        return error
+    }
+    return undefined
+}
+
 const SUBJECT = Symbol("csv-import-records.policy")
 type Subject = Pick<typeof SubjectModule, "buildRecords" | "recordFromDocument" | "recordFromGoogleDoc">
 
@@ -254,8 +266,8 @@ describe("recordFromDocument", () => {
         const actualText = subject.recordFromDocument("long.txt", { text }).data.text
         expect(typeof actualText).toBe("string")
         if (typeof actualText === "string") expect(actualText).toHaveLength(DOCUMENT_MAX_TEXT)
-        expect(() => subject.recordFromDocument("empty.txt", { text: " \n " })).toThrow(
-            expect.objectContaining({
+        expect(thrownBy(() => subject.recordFromDocument("empty.txt", { text: " \n " }))).toEqual(
+            objectLike({
                 code: DataHubErrorCode.Invalid,
                 params: { detail: CSV_COPY.documentNoText("empty.txt") },
             }),
@@ -278,8 +290,8 @@ describe("recordFromGoogleDoc", () => {
         const subject = await buildSubject()
 
         expect(subject.recordFromGoogleDoc("document-1234", "###").title).toBe(CSV_COPY.googleDocTitle("document"))
-        expect(() => subject.recordFromGoogleDoc("document-1", " ")).toThrow(
-            expect.objectContaining({
+        expect(thrownBy(() => subject.recordFromGoogleDoc("document-1", " "))).toEqual(
+            objectLike({
                 code: DataHubErrorCode.Invalid,
                 params: { detail: CSV_COPY.googleDocEmpty },
             }),

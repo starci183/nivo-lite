@@ -13,5 +13,5 @@ export class RunStepType {
 
     /** The detail line under the label. */
     @Field(() => String, { nullable: true })
-    detail?: string
+    detail?: string | undefined
 }

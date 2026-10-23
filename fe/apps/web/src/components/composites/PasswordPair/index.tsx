@@ -10,8 +10,8 @@ interface PasswordPairProps {
     readonly hideLabel: string
     readonly password: string
     readonly confirm: string
-    readonly passwordError?: string
-    readonly confirmError?: string
+    readonly passwordError?: string | undefined
+    readonly confirmError?: string | undefined
     readonly isDisabled: boolean
     readonly onPassword: (value: string) => void
     readonly onConfirm: (value: string) => void

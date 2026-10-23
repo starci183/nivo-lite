@@ -103,7 +103,8 @@ export const typeTargetOf = (
 ): string | null => {
     const instances = instancesOf(installations, module)
     if (instances.length === 0) return AGENTS_ROUTE
-    if (instances.length === 1) return agentHref(module, instances[0].id, tab, query)
+    const [only] = instances
+    if (instances.length === 1 && only !== undefined) return agentHref(module, only.id, tab, query)
     return tab === "setup" ? null : agentListHref(module)
 }
 

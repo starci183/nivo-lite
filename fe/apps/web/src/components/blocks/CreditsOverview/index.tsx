@@ -9,7 +9,9 @@ interface CreditsOverviewProps {
 
 /** Connects the credits overview and hands all render states to its pure sibling. */
 export const CreditsOverview = (props: CreditsOverviewProps) => {
-    const { data, error, refresh } = useCreditsData(props.contactHref)
+    const credits = useCreditsData(props.contactHref)
+    const { data, refresh } = credits
+    const error: unknown = credits.error
     const checkout = useCreditsOrder(data?.workspaceId)
     const copy = useCreditsView(data, checkout.busy)
     return (
@@ -18,7 +20,12 @@ export const CreditsOverview = (props: CreditsOverviewProps) => {
                 ...copy,
                 slot: { isLoading: !data && !error, isError: Boolean(error), items: data ? copy.view : undefined },
             }}
-            on={{ buy: checkout.begin, retry: () => void refresh() }}
+            on={{
+                buy: (target) => {
+                    void checkout.begin(target)
+                },
+                retry: () => void refresh(),
+            }}
         />
     )
 }

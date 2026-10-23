@@ -7,7 +7,8 @@ import { QUERY_LOYALTY_BOARD_SWR_KEY, useMutateSyncLoyaltyMembersSwr } from "@/h
 import { matchesSwrKey } from "@/modules/utils"
 import { useGraphQLWithToast } from "@/modules/toast"
 
-const noSubscription = () => () => undefined
+const unsubscribe = (): void => undefined
+const noSubscription = () => unsubscribe
 const browserOrigin = () => window.location.origin
 const serverOrigin = () => ""
 

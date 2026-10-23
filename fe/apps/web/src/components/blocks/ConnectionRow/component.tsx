@@ -50,19 +50,17 @@ const entriesOf = (view: RowView, onMenu: (id: string) => void): ReadonlyArray<D
         })),
     }))
 
-const factsOf = (view: RowView) => {
+const plainFactsOf = (view: RowView): string | undefined => {
     const text = [view.facts, view.usedBy].filter(Boolean).join(" · ")
-    if (view.telegramHandle === null) return text === "" ? undefined : text
-    return (
-        <>
-            <TextAction
-                href={`https://t.me/${view.telegramHandle}`}
-                target="_blank"
-            >{`@${view.telegramHandle}`}</TextAction>
-            {view.usedBy === "" ? "" : ` · ${view.usedBy}`}
-        </>
-    )
+    return text === "" ? undefined : text
 }
+
+const telegramFactsOf = (view: RowView, handle: string) => (
+    <>
+        <TextAction href={`https://t.me/${handle}`} target="_blank">{`@${handle}`}</TextAction>
+        {view.usedBy === "" ? "" : ` · ${view.usedBy}`}
+    </>
+)
 
 const dialogOf = (kind: "disconnect" | "remove", dialog: RowDialog, on: RowHandlers) => (
     <AlertDialog
@@ -146,7 +144,7 @@ export const ConnectionRowBase = (props: ConnectionRowBaseProps) => {
                     {view.envLabel === null ? null : <Badge tone="neutral">{view.envLabel}</Badge>}
                 </>
             }
-            description={factsOf(view)}
+            description={view.telegramHandle === null ? plainFactsOf(view) : telegramFactsOf(view, view.telegramHandle)}
             state={view.state}
             actions={
                 <>

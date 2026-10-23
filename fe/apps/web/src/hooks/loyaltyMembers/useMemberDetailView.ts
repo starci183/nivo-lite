@@ -8,6 +8,7 @@ import { groupPhone } from "./loyaltyMembers.shared"
 import { useMemberActions } from "./useMemberActions"
 import { useMemberDetailForms } from "./useMemberDetailForms"
 import { useMemberDetailLists } from "./useMemberDetailLists"
+import { readError } from "@/hooks/workspaceread"
 
 const TIME_ZONE = "Asia/Ho_Chi_Minh"
 
@@ -15,7 +16,9 @@ const TIME_ZONE = "Asia/Ho_Chi_Minh"
 export const useMemberDetailView = (board: LoyaltyBoardType, customerId: string | null) => {
     const t = useTranslations("loyalty")
     const format = useFormatter()
-    const { data, error } = useQueryLoyaltyMemberSwr(customerId === null ? null : { customerId })
+    const swrRead = useQueryLoyaltyMemberSwr(customerId === null ? null : { customerId })
+    const { data } = swrRead
+    const error = readError(swrRead)
     const actions = useMemberActions(customerId ?? "")
     const forms = useMemberDetailForms({
         memberId: customerId ?? "",
@@ -46,7 +49,6 @@ export const useMemberDetailView = (board: LoyaltyBoardType, customerId: string 
         return { ...state, clear }
     }
     const { member, expiring, nextTier } = data
-    const firstExpiry = expiring.firstAt
     const view = {
         name: member.name,
         closeLabel: t("close"),
@@ -59,14 +61,14 @@ export const useMemberDetailView = (board: LoyaltyBoardType, customerId: string 
         spentLine: `${t("spentTotal", { value: money(member.lifetimeSpendVnd) })} · ${t("visitsCount", { n: member.visits })}`,
         joinedLine: t("joinedAt", { date: date(member.joinedAt) }),
         nextTierLine:
-            nextTier === null || nextTier === undefined
+            nextTier === null
                 ? t("topTier")
                 : t("nextTier", { name: nextTier.tier.name, value: money(nextTier.missingVnd) }),
         ...(expiring.points > 0
             ? {
                   expiringLine: t("expiringSoon", {
                       points: points(expiring.points),
-                      date: firstExpiry === null || firstExpiry === undefined ? "" : date(firstExpiry),
+                      date: expiring.firstAt === null ? "" : date(expiring.firstAt),
                   }),
               }
             : {}),

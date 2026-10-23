@@ -1,13 +1,15 @@
 import { Test } from "@nestjs/testing"
 import { mock } from "@starci/jest-preset"
 import { EvidenceService, WorkEngineService } from "@modules/domain/decisions"
-import type { WorkContext } from "@modules/domain/decisions"
+import type { WorkContext, WorkItem } from "@modules/domain/decisions"
 import type { InvoiceRow } from "@modules/domain/invoices"
 import { LeadRecordsService } from "@modules/domain/leads"
 import { WorkItemsService } from "@modules/domain/work-items"
 import { MESSAGE_CATALOG } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
 import { PaymentClaimsService } from "./payment-claims.service"
+
+const objectLike = (shape: Record<string, unknown>): unknown => expect.objectContaining(shape)
 
 const WS = "11111111-1111-4111-8111-111111111111"
 const ctx: WorkContext = { workspaceId: WS, actor: "OpenClaw", locale: "vi" }
@@ -26,7 +28,11 @@ const invoice: InvoiceRow = {
 const claim = { inboundEventId: "e2", claim: "da chuyen khoan", channelLabel: "Telegram", conversationId: "c1" }
 
 const build = async (open: { readonly id: string; readonly status: string } | null) => {
-    const engine = { runWork: jest.fn().mockResolvedValue({ id: "w9" }) }
+    const engine = {
+        runWork: jest
+            .fn<Promise<WorkItem>, Parameters<WorkEngineService["runWork"]>>()
+            .mockResolvedValue(mock<WorkItem>({ id: "w9" })),
+    }
     const items = { latestOfKey: jest.fn().mockResolvedValue(open) }
     const evidence = { log: jest.fn().mockResolvedValue(undefined) }
     const leads = { find: jest.fn().mockResolvedValue({ contact_name: "Lan" }) }
@@ -76,7 +82,7 @@ describe("PaymentClaimsService", () => {
                 action: "reconcile_payment",
                 dedupeKey: "reconcile_payment:invoice:inv-1",
                 forceAsk: "unclear_outcome",
-                seed: expect.objectContaining({ candidates: [expect.objectContaining({ id: "inv-1" })] }),
+                seed: objectLike({ candidates: [objectLike({ id: "inv-1" })] }),
             }),
         )
     })
@@ -104,9 +110,9 @@ describe("PaymentClaimsService", () => {
             ctx,
             expect.objectContaining({
                 lead_id: null,
-                seed: expect.objectContaining({
+                seed: objectLike({
                     summary: "customerTurns.claimSummary",
-                    fields: expect.objectContaining({ payer: "—" }),
+                    fields: objectLike({ payer: "—" }),
                 }),
             }),
         )
@@ -115,7 +121,11 @@ describe("PaymentClaimsService", () => {
 
 describe("PaymentClaimsService", () => {
     it("uses a dash when the lead has no contact name", async () => {
-        const engine = { runWork: jest.fn().mockResolvedValue({ id: "w9" }) }
+        const engine = {
+            runWork: jest
+                .fn<Promise<WorkItem>, Parameters<WorkEngineService["runWork"]>>()
+                .mockResolvedValue(mock<WorkItem>({ id: "w9" })),
+        }
         const items = { latestOfKey: jest.fn().mockResolvedValue(null) }
         const evidence = { log: jest.fn() }
         const leads = { find: jest.fn().mockResolvedValue(null) }
@@ -141,8 +151,8 @@ describe("PaymentClaimsService", () => {
         })
         expect(leads.find).toHaveBeenCalledWith(WS, "l1")
         const seed = engine.runWork.mock.calls[0]?.[1]?.seed
-        expect(seed.fields.payer).toBe("—")
-        expect(seed.fields.claim).toHaveLength(500)
+        expect(seed?.fields?.payer).toBe("—")
+        expect(seed?.fields?.claim).toHaveLength(500)
     })
 
     it("lets the customer claim again after a failed check and keeps the evidence short", async () => {

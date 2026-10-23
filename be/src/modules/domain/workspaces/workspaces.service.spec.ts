@@ -18,6 +18,22 @@ import { WORKSPACES_OPTIONS } from "./workspaces.port"
 import { WorkspacesService } from "./workspaces.service"
 import { FIRST_WORKSPACE_NAME } from "./workspaces.templates"
 
+/** A partial-object matcher, typed `unknown` so it flows into any slot. */
+const objectLike = (shape: Record<string, unknown>): unknown => expect.objectContaining(shape)
+
+/** The match-anything matcher, typed `unknown` so it flows into any slot. */
+const anything = (): unknown => expect.anything()
+
+/** What `run` throws, read as `unknown`; the matcher then judges its fields. */
+const thrownBy = (run: () => unknown): unknown => {
+    try {
+        run()
+    } catch (error) {
+        return error
+    }
+    return undefined
+}
+
 const rowOf = builder<MembershipRow>({
     workspace_id: "ws-1",
     user_id: "user-1",
@@ -100,14 +116,14 @@ describe("WorkspacesService", () => {
             const transaction = fakeTransaction(em)
             await expect((await build(em)).ensureNamed("owner-1", "Explicit")).rejects.toMatchObject({ code })
             expect(transaction.rollbacks).toBe(1)
-            expect(em.query).not.toHaveBeenCalledWith(INSERT_FREE_WORKSPACE, expect.anything())
+            expect(em.query).not.toHaveBeenCalledWith(INSERT_FREE_WORKSPACE, anything())
         })
 
         it.each([" ", "x".repeat(121)])("refuses an invalid exact name before opening a transaction", async (name) => {
             const em = mockEntityManager(),
                 service = await build(em)
-            expect(() => service.ensureNamed("owner-1", name)).toThrow(
-                expect.objectContaining({ code: WorkspacesErrorCode.NameInvalid }),
+            expect(thrownBy(() => service.ensureNamed("owner-1", name))).toEqual(
+                objectLike({ code: WorkspacesErrorCode.NameInvalid }),
             )
             expect(em.transaction).not.toHaveBeenCalled()
         })

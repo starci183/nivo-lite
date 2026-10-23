@@ -31,7 +31,7 @@ interface LoyaltyEarningRulesProps {
         >
         readonly values: Pick<ProgramValues, "name" | "trigger" | "perThousand" | "perVisit" | "minOrder">
         readonly errors: {
-            readonly name?: string
+            readonly name?: string | undefined
         }
         readonly canAddCategory: boolean
         readonly triggerOptions: ReadonlyArray<{ readonly id: string; readonly label: string }>

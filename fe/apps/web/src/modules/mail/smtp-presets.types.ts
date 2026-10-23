@@ -32,5 +32,5 @@ export interface SmtpPreset {
     readonly id: "google_workspace" | "gmail" | "microsoft365" | "zoho" | "vn_hosting" | "relay_service"
     readonly title: string
     readonly blurb: string
-    readonly modes: ReadonlyArray<SmtpMode>
+    readonly modes: readonly [SmtpMode, ...SmtpMode[]]
 }

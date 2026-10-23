@@ -176,7 +176,9 @@ const createSalesPipelineView = (
             move: (leadId) => setMovingId(leadId),
             target: (value) => form.setValue("target", isStage(value) ? value : ""),
             reason: (value) => form.setValue("reason", value),
-            confirm,
+            confirm: () => {
+                void confirm()
+            },
             close,
         },
     }

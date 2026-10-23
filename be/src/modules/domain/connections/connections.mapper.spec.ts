@@ -3,6 +3,18 @@ import { toConnectionRecord as realToConnectionRecord } from "./connections.mapp
 import { ConnectionsErrorCode } from "./errors/connections.error"
 import type { ConnectionSelectRow } from "./persistence/connections.rows"
 
+const objectLike = (shape: Record<string, unknown>): unknown => expect.objectContaining(shape)
+
+/** What `run` throws, read as `unknown`; the matcher then judges its fields. */
+const thrownBy = (run: () => unknown): unknown => {
+    try {
+        run()
+    } catch (error) {
+        return error
+    }
+    return undefined
+}
+
 const SUBJECT = Symbol("connections.mapper")
 
 const buildSubject = async () => {
@@ -65,8 +77,8 @@ describe("toConnectionRecord", () => {
     ])("refuses stored provider $provider and status $status that cannot be mapped", async ({ provider, status }) => {
         const { subject } = await buildSubject()
 
-        expect(() => subject.toConnectionRecord({ ...row, provider, status })).toThrow(
-            expect.objectContaining({ code: ConnectionsErrorCode.NotFound, params: { id: "c1" } }),
+        expect(thrownBy(() => subject.toConnectionRecord({ ...row, provider, status }))).toEqual(
+            objectLike({ code: ConnectionsErrorCode.NotFound, params: { id: "c1" } }),
         )
     })
 })

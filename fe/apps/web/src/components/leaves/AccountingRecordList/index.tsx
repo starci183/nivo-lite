@@ -25,7 +25,7 @@ interface AccountingRecordListProps {
     readonly empty: string
     readonly emptyBody: string
     readonly records: ReadonlyArray<AccountingRecord>
-    readonly onOpen?: (id: string) => void
+    readonly onOpen?: ((id: string) => void) | undefined
 }
 
 /** A collection of money records as rows: name, supporting line, status marks, amount and footnote. */

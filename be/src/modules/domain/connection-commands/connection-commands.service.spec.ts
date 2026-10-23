@@ -16,6 +16,9 @@ import { ConnectionCommandsService } from "./connection-commands.service"
 import type { ConnectionCommandRow } from "./persistence/connection-commands.rows"
 import { FIND_COMMAND, FINISH_COMMAND } from "./persistence/connection-commands.sql"
 
+const objectLike = (shape: Record<string, unknown>): unknown => expect.objectContaining(shape)
+const itemsLike = (items: ReadonlyArray<unknown>): unknown => expect.arrayContaining(items)
+
 const CONNECTION_ID = "00000000-0000-0000-0000-000000000001"
 const row: ConnectionCommandRow = {
     id: "command-1",
@@ -55,12 +58,8 @@ const build = async (entityManager: MockEntityManager) => {
 
 describe("ConnectionCommandsService", () => {
     it("declares the platform errors service injection token", () => {
-        const tokens: ReadonlyArray<{ readonly index: number; readonly param: symbol }> = Reflect.getMetadata(
-            SELF_DECLARED_DEPS_METADATA,
-            ConnectionCommandsService,
-        )
-        const injection = tokens.find(({ index }) => index === 1)
-        expect(injection?.param).toBe(ERRORS_SERVICE)
+        const tokens: unknown = Reflect.getMetadata(SELF_DECLARED_DEPS_METADATA, ConnectionCommandsService)
+        expect(tokens).toEqual(itemsLike([objectLike({ index: 1, param: ERRORS_SERVICE })]))
     })
 
     it("leaves an unknown command untouched", async () => {

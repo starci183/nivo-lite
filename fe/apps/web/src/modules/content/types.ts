@@ -88,10 +88,10 @@ export type Variants = Partial<Record<ContentChannel, Variant>>
 /** A picture or video attached to a post. */
 export interface MediaRef {
     readonly kind: "media" | "video_render"
-    readonly path?: string
-    readonly id?: string
+    readonly path?: string | undefined
+    readonly id?: string | undefined
     readonly name: string
-    readonly suggested?: boolean
+    readonly suggested?: boolean | undefined
 }
 
 /** A link attached to a post. */

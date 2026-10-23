@@ -70,7 +70,12 @@ const EntryRow = (props: EntryRowProps) => (
             </div>
         )}
         {props.entry.lines.map((line) => (
-            <Text key={line.id} as="p" size={line.strong ? "sm" : "xs"} tone={line.strong ? undefined : "muted"}>
+            <Text
+                key={line.id}
+                as="p"
+                size={line.strong ? "sm" : "xs"}
+                {...(line.strong ? {} : { tone: "muted" as const })}
+            >
                 {line.text}
             </Text>
         ))}

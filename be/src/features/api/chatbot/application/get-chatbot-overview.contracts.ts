@@ -3,5 +3,5 @@ export interface GetChatbotOverviewRequest {
     /** The workspace selector proved by the workbench service. */
     readonly workspaceId: string
     /** Omitted or null combines the workspace's Chatbot agents. */
-    readonly installationId?: string | null
+    readonly installationId?: string | null | undefined
 }

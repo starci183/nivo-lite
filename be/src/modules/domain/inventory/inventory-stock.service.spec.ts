@@ -13,6 +13,9 @@ import { InventoryMovementsService } from "./inventory-movements.service"
 import { InventoryStockService } from "./inventory-stock.service"
 import { SELECT_ITEM, SELECT_ITEM_LABEL, SELECT_LOCATION_NAMES } from "./persistence/inventory.sql"
 
+const objectLike = (shape: Record<string, unknown>): unknown => expect.objectContaining(shape)
+const textLike = (text: string): unknown => expect.stringContaining(text)
+
 const UUID = "0b8c1f0e-3a49-4b7e-9d3f-2c1f6a5d7e90"
 
 const text = (key: string, params: Record<string, string | number> = {}): string => `${key}${JSON.stringify(params)}`
@@ -169,7 +172,7 @@ describe("InventoryStockService / adjustStock", () => {
                 subjectId: "item-1",
                 dedupeKey: `adjust_stock:item-1:${new Date("2026-10-12T08:00:00.000Z").getTime()}`,
                 amountVnd: 400000,
-                fields: expect.objectContaining({
+                fields: objectLike({
                     item_id: "item-1",
                     location_id: "loc-1",
                     delta: -20,
@@ -192,9 +195,7 @@ describe("InventoryStockService / adjustStock", () => {
             service.adjustStock("user-1", "ws-1", { itemId: "item-1", delta: 20, reason: "restock" }),
         ).resolves.toEqual({ state: "applied", before: 10, after: 30 })
 
-        expect(gate.request).toHaveBeenCalledWith(
-            expect.objectContaining({ summary: expect.stringContaining('"value":""') }),
-        )
+        expect(gate.request).toHaveBeenCalledWith(objectLike({ summary: textLike('"value":""') }))
     })
 
     it("refuses a call with neither a change nor a count", async () => {

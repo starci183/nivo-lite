@@ -7,11 +7,11 @@ type TeamSectionProps = {
     /** Names the heading, which names the region. */
     readonly id: string
     readonly title: string
-    readonly description?: string
+    readonly description?: string | undefined
     /** Title of the negative alert. */
     readonly failTitle: string
     /** The failure text; nothing is drawn for it while undefined. */
-    readonly error?: string
+    readonly error?: string | undefined
     readonly children: ReactNode
 }
 

@@ -14,11 +14,12 @@ import { dayjs } from "@/modules/dayjs"
 import { navigation } from "@/modules/i18n"
 import { APP_ROUTES, workspaceBillingPath } from "@/modules/routes"
 import { useRequestPaymentOrder } from "./useRequestPaymentOrder"
+import { readError } from "@/hooks/workspaceread"
 
 /** Selectors retained by the payment route. */
 export interface WorkspacePaymentSelectors {
-    readonly workspaceId?: string
-    readonly orderId?: string
+    readonly workspaceId?: string | undefined
+    readonly orderId?: string | undefined
     readonly renewing: boolean
 }
 
@@ -81,7 +82,13 @@ export const useWorkspacePayment = (selectors: WorkspacePaymentSelectors) => {
         })
     }
     const left = expiresAt ? Math.max(0, dayjs(expiresAt).diff(now)) : undefined
-    const error = workspaces.error ?? order.error ?? openOrder.error ?? history.error ?? plan.error ?? requesting.error
+    const error =
+        readError(workspaces) ??
+        readError(order) ??
+        readError(openOrder) ??
+        readError(history) ??
+        readError(plan) ??
+        readError(requesting)
     const loading =
         workspaces.isLoading || order.isLoading || openOrder.isLoading || history.isLoading || plan.isLoading
     return {

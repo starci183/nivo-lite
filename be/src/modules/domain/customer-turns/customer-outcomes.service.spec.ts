@@ -7,6 +7,7 @@ import { AgentBindingsService } from "@modules/domain/agent-connections"
 import { AgentConversationsService } from "@modules/domain/agent-conversations"
 import { KnowledgeGapNotesService } from "@modules/domain/agent-knowledge"
 import { CommandBusService, EvidenceService, WorkEngineService } from "@modules/domain/decisions"
+import type { WorkItem, WorkStatus } from "@modules/domain/decisions"
 import { HiringPublicService } from "@modules/domain/hiring"
 import { InboundEventsService } from "@modules/domain/inbound-events"
 import { InvoicesService } from "@modules/domain/invoices"
@@ -22,8 +23,12 @@ import { StaffEscalationService } from "./staff-escalation.service"
 import { TurnModulesService } from "./turn-modules.service"
 import { TurnPurchasesService } from "./turn-purchases.service"
 
+const objectLike = (shape: Record<string, unknown>): unknown => expect.objectContaining(shape)
+
 const engineOf = () => ({
-    runWork: jest.fn().mockResolvedValue({ id: "w1", status: "waiting_decision", lead_id: null }),
+    runWork: jest
+        .fn<Promise<WorkItem>, Parameters<WorkEngineService["runWork"]>>()
+        .mockResolvedValue(mock<WorkItem>({ id: "w1", status: "waiting_decision", lead_id: null })),
     startOrderWork: jest.fn().mockResolvedValue({ id: "w2", status: "done", lead_id: "l9" }),
     runQueued: jest.fn().mockResolvedValue(0),
 })
@@ -50,7 +55,9 @@ const build = async () => {
     const items = { findByDedupe: jest.fn().mockResolvedValue(null) }
     const bindings = { agentsFor: jest.fn().mockResolvedValue([]) }
     const hiring = { registerChatApplication: jest.fn() }
-    const staff = { escalate: jest.fn().mockResolvedValue(true) }
+    const staff = {
+        escalate: jest.fn<Promise<boolean>, Parameters<StaffEscalationService["escalate"]>>().mockResolvedValue(true),
+    }
     const catalogDouble = mock<MessageCatalog>(catalog)
     const logger = mock<Logger>({ info: jest.fn(), warn: jest.fn(), error: jest.fn() })
     const engineDouble = mock<WorkEngineService>(engine)
@@ -118,13 +125,13 @@ describe("CustomerOutcomesService", () => {
         expect(engine.runWork.mock.calls[0]?.[1]?.forceAsk).toBe("unclear_outcome")
     })
 
-    it.each([
+    it.each<[WorkStatus, boolean, string | undefined]>([
         ["done", false, undefined],
         ["waiting_decision", true, "Lan"],
         ["waiting_decision", false, ""],
     ])("handles a %s reply decision with captured customer %s", async (status, captured, name) => {
         const { outcomes, engine, staff } = await build()
-        engine.runWork.mockResolvedValue({ id: "w1", status, lead_id: null })
+        engine.runWork.mockResolvedValue(mock<WorkItem>({ id: "w1", status, lead_id: null }))
         const turn = turnOf("l1")
         const unnamed = { ...turn, conversation: { ...turn.conversation, visitorName: null } }
         const lead = captured ? { contact_name: "Lan", need: "tea" } : null
@@ -234,7 +241,7 @@ describe("CustomerOutcomesService", () => {
         )
         expect(gaps.note).toHaveBeenCalledWith(
             expect.objectContaining({
-                signals: expect.objectContaining({
+                signals: objectLike({
                     knowledgeGap: { question: "Open Sunday?", topic: "Hours | Sunday" },
                 }),
             }),
@@ -307,9 +314,7 @@ describe("CustomerOutcomesService", () => {
         )
         expect(verdict).toEqual({ reply: "Thanks!", send: true, lines: ["customerTurns.redeemAsked"] })
         expect(engine.runQueued).toHaveBeenCalledWith({ workspaceId: WS, actor: "OpenClaw", locale: "vi" }, 2)
-        expect(gaps.note).toHaveBeenCalledWith(
-            expect.objectContaining({ signals: expect.objectContaining({ isTransaction: true }) }),
-        )
+        expect(gaps.note).toHaveBeenCalledWith(objectLike({ signals: objectLike({ isTransaction: true }) }))
     })
 
     it("leaves booking and redemption for a person when the proposal needs a human answer", async () => {
@@ -328,7 +333,7 @@ describe("CustomerOutcomesService", () => {
                 action: "reply_customer",
                 forceAsk: "over_authority",
                 dedupeKey: "reply_customer:message:m1",
-                seed: expect.objectContaining({ draft: "Please check the request" }),
+                seed: objectLike({ draft: "Please check the request" }),
             }),
         )
         expect(verdict).toEqual({ reply: "Thanks!", send: true, lines: ["conversations.chatNeedsHuman"] })
@@ -359,7 +364,7 @@ describe("CustomerOutcomesService", () => {
         expect(verdict.send).toBe(false)
         expect(verdict.lines).toEqual(["customerTurns.replyAwaitsApproval"])
         expect(staff.escalate).toHaveBeenCalled()
-        engine.runWork.mockResolvedValue({ id: "w1", status: "done", lead_id: null })
+        engine.runWork.mockResolvedValue(mock<WorkItem>({ id: "w1", status: "done", lead_id: null }))
         bindings.agentsFor.mockResolvedValue([{ id: "other", access: "read" }])
         await expect(outcomes.settle(asking, proposalOf({}))).resolves.toMatchObject({ send: true })
         bindings.agentsFor.mockResolvedValue([{ id: "a1", access: "auto" }])
@@ -432,7 +437,7 @@ describe("CustomerOutcomesService", () => {
         expect(existed.staff.escalate).not.toHaveBeenCalled()
 
         const closed = await build()
-        closed.engine.runWork.mockResolvedValue({ id: "w1", status: "done", lead_id: null })
+        closed.engine.runWork.mockResolvedValue(mock<WorkItem>({ id: "w1", status: "done", lead_id: null }))
         await closed.outcomes.holdOver(turnOf(), "openclaw_unavailable")
         expect(closed.staff.escalate).not.toHaveBeenCalled()
         expect(closed.evidence.log).toHaveBeenCalledWith(

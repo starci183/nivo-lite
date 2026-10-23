@@ -14,11 +14,11 @@ const definedHeaders = (headers: GraphQLHeaders): Record<string, string> => {
 /** Parameters of the terminal HTTP link. */
 export interface CreateHttpLinkParams {
     /** Extra static headers merged into each request. */
-    headers?: GraphQLHeaders
+    headers?: GraphQLHeaders | undefined
     /** The URI of the GraphQL endpoint; defaults to the back end api. */
-    uri?: string
+    uri?: string | undefined
     /** Optional abort signal for every operation of the client, merged into `fetchOptions`. */
-    signal?: AbortSignal
+    signal?: AbortSignal | undefined
 }
 
 /**
@@ -32,5 +32,5 @@ export const createHttpLink = ({ headers = {}, uri, signal }: CreateHttpLinkPara
         uri: uri ?? graphqlUrl(),
         credentials: "omit",
         headers: definedHeaders(headers),
-        fetchOptions: { signal },
+        fetchOptions: { signal: signal ?? null },
     })

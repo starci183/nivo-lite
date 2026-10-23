@@ -3,6 +3,9 @@ import { HttpError, HttpErrorCode } from "./errors/http.error"
 import type { HttpClient, HttpRequest, HttpResponse } from "./http.port"
 import { sendPinned } from "./pinned-request.client"
 
+/** The request body as a spreadable part: absent when the request carries none. */
+type BodyPart = Partial<Record<"body", string | Buffer>>
+
 @Injectable()
 /** The HttpClient adapter over the global `fetch`; the only place outside a spec that calls it. */
 export class FetchHttpClient implements HttpClient {
@@ -33,7 +36,7 @@ export class FetchHttpClient implements HttpClient {
         const answer = await sendPinned(new URL(request.url), pin, {
             method: request.method,
             headers: { ...this.contentTypeOf(request), ...request.headers },
-            body: this.bodyOf(request),
+            body: this.bodyOf(request).body,
             timeoutMs: request.timeoutMs,
             signal,
         })
@@ -69,7 +72,7 @@ export class FetchHttpClient implements HttpClient {
             return await fetch(request.url, {
                 method: request.method,
                 headers: { ...this.contentTypeOf(request), ...request.headers },
-                body: this.bodyOf(request),
+                ...this.bodyOf(request),
                 redirect: request.redirect ?? "follow",
                 signal,
             })
@@ -84,10 +87,10 @@ export class FetchHttpClient implements HttpClient {
         return request.body === undefined ? {} : { "content-type": "application/json" }
     }
 
-    private bodyOf(request: HttpRequest): string | Buffer | undefined {
-        if (request.form !== undefined) return new URLSearchParams(request.form).toString()
-        if (request.bytes !== undefined) return request.bytes
-        return request.body === undefined ? undefined : JSON.stringify(request.body)
+    private bodyOf(request: HttpRequest): BodyPart {
+        if (request.form !== undefined) return { body: new URLSearchParams(request.form).toString() }
+        if (request.bytes !== undefined) return { body: request.bytes }
+        return request.body === undefined ? {} : { body: JSON.stringify(request.body) }
     }
 
     private parse(text: string): unknown {

@@ -7,5 +7,5 @@ export interface KeepCurrentBrainFactRequest {
     /** The normalised attribute. */
     readonly attribute: string
     /** The agent instance the key is scoped to; omitted = every instance. */
-    readonly installationId?: string
+    readonly installationId?: string | undefined
 }

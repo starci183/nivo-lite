@@ -10,10 +10,10 @@ export abstract class FencedProcessor {
     abstract readonly queue: string
 
     /** The only job of the queue this processor runs (its `<JOB>` constant); every job of the queue when absent. It is the kind of the job row when set. */
-    readonly job?: string
+    readonly job?: string | undefined
 
     /** The most deliveries of this processor's queue that run at once; the app default when absent. */
-    readonly concurrency?: number
+    readonly concurrency?: number | undefined
 
     /** Runs the job; a throw fails this delivery and the queue retries it, unless it is a `QueueError` that ends or delays the job. */
     abstract process(job: ClaimedJob): Promise<void>

@@ -1,6 +1,7 @@
 import { SetContextLink } from "@apollo/client/link/context"
 import { LocalStorage, StorageId } from "@/modules/storage"
 import { GraphQLHeadersKey } from "../../types"
+import { headersOf } from "./headers-of"
 
 /** Attaches the workspace the person works in (the persisted active workspace) as `X-Workspace-Id`; none when no workspace is selected. */
 export const createAttachWorkspaceIdLink = () =>
@@ -9,7 +10,7 @@ export const createAttachWorkspaceIdLink = () =>
         return {
             headers: {
                 ...(workspaceId === undefined ? {} : { [GraphQLHeadersKey.XWorkspaceId]: workspaceId }),
-                ...previous.headers,
+                ...headersOf(previous.headers),
             },
         }
     })

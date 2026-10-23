@@ -22,6 +22,15 @@ import {
     SELECT_SHOP_NAME,
 } from "./persistence/n8n-data.sql"
 
+/** A pattern matcher, typed `unknown` so it flows into any slot. */
+const stringMatch = (pattern: RegExp | string): unknown => expect.stringMatching(pattern)
+
+/** The match-anything matcher, typed `unknown` so it flows into any slot. */
+const anything = (): unknown => expect.anything()
+
+/** A by-constructor matcher, typed `unknown` so it flows into any slot. */
+const anyOf = (type: unknown): unknown => expect.any(type)
+
 const NOW = "2026-10-12T10:00:00.000Z"
 
 const build = async (em: MockEntityManager) => {
@@ -112,9 +121,9 @@ describe("N8nDataService", () => {
             expect(String(summary.variables.tom_tat).split("\n")).toEqual([
                 'newLeads{"count":2}',
                 'ordersConfirmed{"count":1}',
-                expect.stringMatching(/^moneyIn/),
-                expect.stringMatching(/^invoices/),
-                expect.stringMatching(/^overdueAmount/),
+                stringMatch(/^moneyIn/),
+                stringMatch(/^invoices/),
+                stringMatch(/^overdueAmount/),
             ])
             expect(em.query).toHaveBeenCalledWith(SELECT_DAY_NUMBERS, [
                 "ws-1",
@@ -205,7 +214,7 @@ describe("N8nDataService", () => {
 
             expect(result).toEqual({ shop_name: "NIVO", items: [], skipped: { no_email: 1, reminded_recently: 0 } })
             expect(em.query).toHaveBeenCalledWith(SELECT_OVERDUE_INVOICES, ["ws-1", "2026-10-09T10:00:00.000Z"])
-            expect(em.query).not.toHaveBeenCalledWith(SELECT_LEAD_CONTACTS, expect.anything())
+            expect(em.query).not.toHaveBeenCalledWith(SELECT_LEAD_CONTACTS, anything())
         })
     })
 })
@@ -260,7 +269,7 @@ describe("N8nDataService", () => {
                 }),
             )
 
-            await expect(service.overdueInvoices("ws-1", {})).resolves.toMatchObject({ items: expect.any(Array) })
+            await expect(service.overdueInvoices("ws-1", {})).resolves.toMatchObject({ items: anyOf(Array) })
             expect((await service.overdueInvoices("ws-1", {})).items).toHaveLength(50)
         })
     })

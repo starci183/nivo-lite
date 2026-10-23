@@ -49,6 +49,9 @@ import type { MetaInboundJob } from "./meta-inbox.contracts"
 import { MetaInboxService } from "./meta-inbox.service"
 import { COMPLETE_META_INBOX, FIND_PENDING_META_INBOX, INSERT_META_INBOX } from "./persistence/meta-inbox.sql"
 
+/** A partial-object matcher, typed `unknown` so it flows into any slot. */
+const objectLike = (shape: Record<string, unknown>): unknown => expect.objectContaining(shape)
+
 const attachReceiptClaim = (inbox: ReturnType<typeof fakeInbox>): void => {
     const claim = inbox.claim.bind(inbox)
     const claimReceipt: Inbox["claim"] = async (
@@ -340,9 +343,9 @@ describe("MetaInboxService consumer transaction", () => {
         expect(tx.em.query).not.toHaveBeenCalledWith(COMPLETE_META_INBOX, ["inbox-1"])
         await service.processRecordedDelivery({ deliveryId: DELIVERY_ID })
         expect(outbox.jobsOf(META_INBOUND_QUEUE)).toEqual([
-            expect.objectContaining({
-                payload: expect.objectContaining({
-                    event: expect.objectContaining({ text: "Hello", timestamp: Date.parse(AT) }),
+            objectLike({
+                payload: objectLike({
+                    event: objectLike({ text: "Hello", timestamp: Date.parse(AT) }),
                 }),
             }),
         ])

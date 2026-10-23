@@ -6,7 +6,7 @@ interface EmailFieldProps {
     readonly label: string
     readonly placeholder: string
     readonly value: string
-    readonly error?: string
+    readonly error?: string | undefined
     readonly isDisabled: boolean
     readonly onChange: (value: string) => void
 }

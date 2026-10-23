@@ -153,12 +153,10 @@ const apiKeysSectionProps = (
             name: item.name,
             prefixText: t("prefix", { prefix: `${item.prefix}…` }),
             datesText: `${t("created", { date: date(item.createdAt) })} · ${
-                item.lastUsedAt === null || item.lastUsedAt === undefined
-                    ? t("neverUsed")
-                    : t("lastUsed", { date: date(item.lastUsedAt) })
+                item.lastUsedAt === null ? t("neverUsed") : t("lastUsed", { date: date(item.lastUsedAt) })
             }`,
-            statusLabel: item.revokedAt === null || item.revokedAt === undefined ? t("active") : t("revoked"),
-            isRevoked: item.revokedAt !== null && item.revokedAt !== undefined,
+            statusLabel: item.revokedAt === null ? t("active") : t("revoked"),
+            isRevoked: item.revokedAt !== null,
         })),
         revoking:
             revoking === undefined

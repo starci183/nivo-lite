@@ -18,7 +18,7 @@ export interface AccountEmailBaseProps {
         readonly isEditing: boolean
         readonly isPending: boolean
         readonly isLoading: boolean
-        readonly error?: string
+        readonly error?: string | undefined
         readonly done?: string
     }
     readonly on: {

@@ -39,7 +39,7 @@ export interface ContentGeneratedDraft {
     /** Audit lines describing the generated work. */
     readonly evidence?: ReadonlyArray<ContentEvidence>
     /** The editor revision that the queued draft may replace. */
-    readonly expectedUpdatedAt?: string
+    readonly expectedUpdatedAt?: string | undefined
 }
 
 /** One deterministically scheduled idea in a generated plan. */

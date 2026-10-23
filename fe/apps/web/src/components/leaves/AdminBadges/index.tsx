@@ -10,7 +10,7 @@ type AdminBadgesProps = {
 export const AdminBadges = (props: AdminBadgesProps) => (
     <>
         {props.badges.map((entry) => (
-            <Badge key={entry.id} tone={entry.tone} isDot={entry.isDot}>
+            <Badge key={entry.id} tone={entry.tone} {...(entry.isDot === undefined ? {} : { isDot: entry.isDot })}>
                 {entry.label}
             </Badge>
         ))}

@@ -12,14 +12,14 @@ export interface ForgotFormBaseProps {
     readonly props: {
         readonly title: string
         readonly text: string
-        readonly failure?: { readonly title: string; readonly text: string }
+        readonly failure?: { readonly title: string; readonly text: string } | undefined
         readonly emailLabel: string
         readonly emailPlaceholder: string
         readonly submitLabel: string
         readonly backLabel: string
         readonly loginHref: string
         readonly email: string
-        readonly emailError?: string
+        readonly emailError?: string | undefined
         readonly isPending: boolean
         readonly sentTitle: string
         readonly check: CheckEmailProps

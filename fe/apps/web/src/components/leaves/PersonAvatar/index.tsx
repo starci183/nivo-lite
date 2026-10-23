@@ -5,9 +5,9 @@ import { withoutParentheses } from "@/modules/i18n"
 /** What the avatar draws for one person. */
 type PersonAvatarProps = {
     readonly name: string
-    readonly src?: string | null
+    readonly src?: string | null | undefined
     /** `xs` renders the grammar's smallest plate (`sm`, 32px): the grammar publishes no 24px avatar. */
-    readonly size?: "xs" | "sm" | "md" | "lg"
+    readonly size?: "xs" | "sm" | "md" | "lg" | undefined
 }
 
 const AVATAR_SIZE: Record<NonNullable<PersonAvatarProps["size"]>, AvatarSize> = {
@@ -34,7 +34,7 @@ const initialsOf = (name: string): string => {
 export const PersonAvatar = (props: PersonAvatarProps) => (
     <Avatar
         name={props.name}
-        src={props.src ?? undefined}
+        {...(props.src === null || props.src === undefined ? {} : { src: props.src })}
         fallback={initialsOf(props.name)}
         size={AVATAR_SIZE[props.size ?? "md"]}
     />

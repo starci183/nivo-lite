@@ -9,6 +9,7 @@ import { navigation } from "@/modules/i18n"
 import { useFormatter, useTranslations } from "next-intl"
 import { useMemo, useState } from "react"
 import { useAgentChatActions } from "./useAgentChatActions"
+import { readError } from "@/hooks/workspaceread"
 
 /** Which channel the owner is looking at. */
 export type ChatTab = "test" | "customer"
@@ -100,7 +101,7 @@ export const useAgentChat = (route: AgentChatRoute) => {
         messages,
     })
 
-    const queryError = history.error ?? messages.error
+    const queryError = readError(history) ?? readError(messages)
     return viewOf({
         loaded,
         page,

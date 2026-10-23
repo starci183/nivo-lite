@@ -13,7 +13,7 @@ export const acceptsCommands = (module: string): boolean =>
 
 /** The @handles a text mentions. */
 export const mentionsOf = (text: string): ReadonlyArray<string> =>
-    [...text.matchAll(/@([a-z0-9-]+)/g)].map((match) => match[1])
+    [...text.matchAll(/@([a-z0-9-]+)/g)].flatMap((match) => (match[1] === undefined ? [] : [match[1]]))
 
 const MENTION_PATTERN = /(@[a-z0-9-]+)/g
 const MENTION_WHOLE = /^@[a-z0-9-]+$/

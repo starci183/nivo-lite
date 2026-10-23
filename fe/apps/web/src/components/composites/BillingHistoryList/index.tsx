@@ -6,7 +6,7 @@ export interface BillingHistoryRow {
     readonly id: string
     readonly title: string
     readonly detail: string
-    readonly content?: string
+    readonly content?: string | undefined
     readonly status?: { readonly label: string; readonly tone: "success" | "warning" | "danger" | "neutral" }
 }
 

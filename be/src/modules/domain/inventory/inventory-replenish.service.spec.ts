@@ -24,6 +24,8 @@ import {
     SELECT_RULE_MODE,
 } from "./persistence/inventory.sql"
 
+const textLike = (text: string): unknown => expect.stringContaining(text)
+
 const text = (key: string, params: Record<string, string | number> = {}): string => `${key}${JSON.stringify(params)}`
 
 const itemRow = (overrides: Record<string, unknown> = {}) => ({
@@ -245,7 +247,7 @@ describe("InventoryReplenishService / draftLow", () => {
             kind: "inventory.po_drafted",
             actor: text("inventory.draftActor"),
             summary: text("inventory.poDraftedSummary", { poNo: "PO-1", names: "Tea" }),
-            evidence: expect.stringContaining("120.000"),
+            evidence: textLike("120.000"),
         })
         expect(office.logDecision).toHaveBeenCalledWith(
             "ws-1",

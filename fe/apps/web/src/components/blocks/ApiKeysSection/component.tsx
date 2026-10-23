@@ -30,26 +30,30 @@ export interface ApiKeysSectionBaseProps {
         readonly createLabel: string
         readonly isCreating: boolean
         readonly isCreateDisabled: boolean
-        readonly createError?: string
-        readonly fresh?: {
-            readonly title: string
-            readonly warning: string
-            readonly value: string
-            readonly copyLabel: string
-            readonly copiedLabel: string
-            readonly doneLabel: string
-        }
-        readonly loadError?: { readonly title: string }
-        readonly emptyLabel?: string
+        readonly createError?: string | undefined
+        readonly fresh?:
+            | {
+                  readonly title: string
+                  readonly warning: string
+                  readonly value: string
+                  readonly copyLabel: string
+                  readonly copiedLabel: string
+                  readonly doneLabel: string
+              }
+            | undefined
+        readonly loadError?: { readonly title: string } | undefined
+        readonly emptyLabel?: string | undefined
         readonly revokeLabel: string
-        readonly revokeError?: string
+        readonly revokeError?: string | undefined
         readonly items: ReadonlyArray<ApiKeyRowView>
-        readonly revoking?: {
-            readonly title: string
-            readonly confirmLabel: string
-            readonly cancelLabel: string
-            readonly isPending: boolean
-        }
+        readonly revoking?:
+            | {
+                  readonly title: string
+                  readonly confirmLabel: string
+                  readonly cancelLabel: string
+                  readonly isPending: boolean
+              }
+            | undefined
     }
     readonly on: {
         readonly changeName: (value: string) => void

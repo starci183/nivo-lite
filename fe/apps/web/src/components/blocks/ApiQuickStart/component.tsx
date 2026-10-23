@@ -5,7 +5,7 @@ import { EXAMPLE_CLASS, STACK_CLASS } from "./classNames"
 export interface QuickStartExample {
     readonly id: string
     readonly title: string
-    readonly note?: string
+    readonly note?: string | undefined
     readonly code: string
     readonly copyLabel: string
 }

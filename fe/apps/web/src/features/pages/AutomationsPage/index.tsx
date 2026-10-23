@@ -14,7 +14,7 @@ export const automationsMetadata = async (): Promise<Metadata> => {
 /** Props for the automations page. */
 interface AutomationsPageProps {
     /** `?focus=<key>` opens that card. */
-    readonly focus?: string
+    readonly focus?: string | undefined
 }
 
 /**

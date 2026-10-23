@@ -70,11 +70,11 @@ export interface DecideWorkPayload extends DecisionsJobScope {
     /** Approved or rejected. */
     readonly decision: "approved" | "rejected"
     /** What the person changed before approving. */
-    readonly edits?: QueuedEdits | null
+    readonly edits?: QueuedEdits | null | undefined
     /** A note of the person. */
-    readonly note?: string | null
+    readonly note?: string | null | undefined
     /** The written basis of a verified payment. */
-    readonly basis?: string | null
+    readonly basis?: string | null | undefined
 }
 
 /** The payload of the decide-execution job. */
@@ -84,7 +84,7 @@ export interface DecideExecutionPayload extends DecisionsJobScope {
     /** Approved or rejected. */
     readonly decision: "approved" | "rejected"
     /** The draft as the person edited it. */
-    readonly editedDraft?: string | null
+    readonly editedDraft?: string | null | undefined
 }
 
 /** The payload of the propose-command job. */

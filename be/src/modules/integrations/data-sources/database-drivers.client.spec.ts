@@ -135,7 +135,7 @@ const registerOpenMysql = () => {
             await subject.openMysql(target({ engine: "mysql", ssl: false }), "203.0.113.8")
             await subject.openMysql(target({ engine: "mysql", host: "203.0.113.8" }), "203.0.113.8")
 
-            expect(mockMysqlClients[0]?.config).toHaveProperty("ssl", undefined)
+            expect(mockMysqlClients[0]?.config).not.toHaveProperty("ssl")
             expect(mockMysqlClients[1]?.config).toHaveProperty("ssl", { rejectUnauthorized: false })
         })
 
@@ -300,7 +300,8 @@ const mysqlConnectionOf = (config: unknown): Promise<Connection> => {
     })
     connection.query.mockImplementation((sqlOrOptions: unknown) => {
         const sql = typeof sqlOrOptions === "string" ? sqlOrOptions : String(Reflect.get(Object(sqlOrOptions), "sql"))
-        const params = typeof sqlOrOptions === "string" ? undefined : Reflect.get(Object(sqlOrOptions), "values")
+        const params: unknown =
+            typeof sqlOrOptions === "string" ? undefined : Reflect.get(Object(sqlOrOptions), "values")
         opened.queries.push({ sql, params })
         if (sql.startsWith("SET SESSION TRANSACTION") && control.setError !== undefined) {
             return Promise.reject(control.setError)

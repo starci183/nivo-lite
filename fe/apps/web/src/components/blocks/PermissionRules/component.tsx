@@ -73,7 +73,7 @@ export const PermissionRulesBase = (props: PermissionRulesBaseProps) => {
         }
         if (columnId === "policy") {
             return (
-                <Text size="sm" tone={row.policy === "" ? "muted" : undefined}>
+                <Text size="sm" {...(row.policy === "" ? { tone: "muted" as const } : {})}>
                     {row.policy === "" ? view.noneLabel : row.policy}
                 </Text>
             )
@@ -98,7 +98,7 @@ export const PermissionRulesBase = (props: PermissionRulesBaseProps) => {
                         renderCell={renderCell}
                         isLoading={isSkeleton}
                         emptyContent={null}
-                        onRowAction={view.isLocked ? undefined : props.on.open}
+                        {...(view.isLocked ? {} : { onRowAction: props.on.open })}
                     />
                     <Text size="xs" tone="muted">
                         {view.footnote}

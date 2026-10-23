@@ -57,6 +57,13 @@ export const connectionFactsOf = (c: Connection, t: RowTranslate, bankName: (cod
                 c.meta.oa_id === undefined ? "" : t("factsOa", { id: c.meta.oa_id }),
                 c.meta.app_id === undefined ? "" : t("factsApp", { id: c.meta.app_id }),
             ])
+        case "csv_import":
+        case "database":
+        case "imap":
+        case "openapi":
+        case "payos":
+        case "telegram_user":
+        case "telegram":
         default:
             return ""
     }

@@ -13,6 +13,8 @@ import { buildPipelineRow, buildShop, buildTemplate } from "@tests/fixtures/buil
 import { SELECT_BUILT_IN_CARE, SELECT_CONVERSATION } from "./persistence/automation-readers.sql"
 import type { LeadReadRow } from "./persistence/automations.rows"
 
+const objectLike = (shape: Record<string, unknown>): unknown => expect.objectContaining(shape)
+
 const NOW = "2026-10-12T10:00:00.000Z"
 const LEAD: LeadReadRow = {
     id: "l-1",
@@ -139,7 +141,7 @@ describe("AutomationCareExecutorsService thank_payment", () => {
                 conversationId: "cv-1",
                 dedupe: "thank:i-1",
                 forceAsk: false,
-                vars: expect.objectContaining({ ten_khach: "An", ma_phieu: "HD1" }),
+                vars: objectLike({ ten_khach: "An", ma_phieu: "HD1" }),
             }),
         )
         expect(em.query).toHaveBeenCalledWith(SELECT_BUILT_IN_CARE, ["ws-1", "l-1", "2026-10-12T09:50:00.000Z"])

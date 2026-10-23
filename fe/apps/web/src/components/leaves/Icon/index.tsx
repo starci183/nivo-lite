@@ -124,7 +124,7 @@ type IconProps = {
 export const Icon = (props: IconProps) => (
     <GrammarIcon
         source={nivoIconSource(props.props.name, props.props.usage)}
-        usage={props.props.usage}
-        ariaLabel={props.props.ariaLabel}
+        {...(props.props.usage === undefined ? {} : { usage: props.props.usage })}
+        {...(props.props.ariaLabel === undefined ? {} : { ariaLabel: props.props.ariaLabel })}
     />
 )

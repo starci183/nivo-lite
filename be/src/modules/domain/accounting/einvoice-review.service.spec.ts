@@ -8,6 +8,9 @@ import { AccountingRoomService } from "./accounting-room.service"
 import { EinvoiceReviewService } from "./einvoice-review.service"
 import { EXCEPTION_COPY } from "./messages/accounting-desk.messages"
 
+const objectLike = (shape: Record<string, unknown>): unknown => expect.objectContaining(shape)
+const itemsLike = (items: ReadonlyArray<unknown>): unknown => expect.arrayContaining(items)
+
 const WS = "ws-1"
 
 const PROFILE: TaxProfile = {
@@ -85,7 +88,7 @@ describe("EinvoiceReviewService", () => {
                 type: "exception",
                 ref: { kind: "work_item", id: "wi-b" },
                 actions: ["approve", "decline"],
-                sources: expect.arrayContaining([expect.objectContaining({ ref: "inbox.invoices.list" })]),
+                sources: itemsLike([objectLike({ ref: "inbox.invoices.list" })]),
             }),
             expect.stringContaining(EXCEPTION_COPY.onFile("0100109106", "0100109106-001")),
         )

@@ -3,6 +3,18 @@ import { Test } from "@nestjs/testing"
 import { LoyaltyOtpsError, LoyaltyOtpsErrorCode } from "../errors/loyalty-otps.error"
 import { assertOtpPepper } from "./otp-pepper.policy"
 
+const objectLike = (shape: Record<string, unknown>): unknown => expect.objectContaining(shape)
+
+/** What `run` throws, read as `unknown`; the matcher then judges its fields. */
+const thrownBy = (run: () => unknown): unknown => {
+    try {
+        run()
+    } catch (error) {
+        return error
+    }
+    return undefined
+}
+
 const SUBJECT = Symbol("otp-pepper.policy")
 type Subject = Pick<typeof SubjectModule, "assertOtpPepper">
 
@@ -20,8 +32,8 @@ describe("assertOtpPepper", () => {
         const validate = () => subject.assertOtpPepper("p".repeat(length))
 
         expect(validate).toThrow(LoyaltyOtpsError)
-        expect(validate).toThrow(
-            expect.objectContaining({ code: LoyaltyOtpsErrorCode.PepperTooShort, params: { key: "OTP_PEPPER" } }),
+        expect(thrownBy(validate)).toEqual(
+            objectLike({ code: LoyaltyOtpsErrorCode.PepperTooShort, params: { key: "OTP_PEPPER" } }),
         )
     })
 

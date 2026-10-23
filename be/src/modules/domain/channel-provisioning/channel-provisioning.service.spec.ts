@@ -65,7 +65,7 @@ const build = async (
     const connections = mock<ConnectionsService>()
     connections.create.mockResolvedValue("zalo-1")
     connections.webhookUrl.mockReturnValue("https://nivo.vn/api/connections/zalo/zalo-1")
-    const print = jest.fn()
+    const print = jest.fn<void, [string]>()
     const moduleRef = await Test.createTestingModule({
         providers: [
             ChannelProvisioningService,

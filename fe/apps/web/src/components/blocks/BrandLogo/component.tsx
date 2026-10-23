@@ -3,8 +3,8 @@ import { NivoLogo } from "../../leaves/NivoLogo"
 /** Copy and size supplied by the connected brand logo block. */
 export interface BrandLogoBaseProps {
     readonly props: {
-        readonly variant?: "full" | "os" | "mark"
-        readonly height?: number
+        readonly variant?: "full" | "os" | "mark" | undefined
+        readonly height?: number | undefined
         readonly label: string
     }
 }

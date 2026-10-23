@@ -7,21 +7,21 @@ export interface SubmitLeadRequest {
     /** The customer's name. */
     readonly name: string
     /** The phone number. */
-    readonly phone?: string
+    readonly phone?: string | undefined
     /** The email address. */
-    readonly email?: string
+    readonly email?: string | undefined
     /** The company. */
-    readonly company?: string
+    readonly company?: string | undefined
     /** What the customer needs. */
-    readonly need?: string
+    readonly need?: string | undefined
     /** The channel the customer came through. */
-    readonly channel?: string
+    readonly channel?: string | undefined
     /** The caller's own id of the customer: a repeat with the same id is one customer. */
-    readonly externalId?: string
+    readonly externalId?: string | undefined
     /** A note for the customer's history. */
-    readonly note?: string
+    readonly note?: string | undefined
     /** The stage the caller asks for; an empty string means none. */
-    readonly stage?: LeadStage | ""
+    readonly stage?: LeadStage | "" | undefined
 }
 
 /** What handing over a customer answers: queued, or unchanged for a repeated external id. */

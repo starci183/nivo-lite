@@ -71,6 +71,6 @@ export const quoteSelection = (plan: Plan, selection: PlanSelection, history: Pr
         return { ...common, cycle: "annual", months: 12, amountVnd, promo: false }
     }
     const promo = tier === null && plan.promoPriceVnd !== null && promoAvailable(plan, history)
-    const amountVnd = promo && plan.promoPriceVnd !== null ? plan.promoPriceVnd : listMonthlyVnd
+    const amountVnd = promo ? plan.promoPriceVnd : listMonthlyVnd
     return { ...common, cycle: "monthly", months: plan.period === "year" ? 12 : 1, amountVnd, promo }
 }

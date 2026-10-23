@@ -13,7 +13,7 @@ import { MoneyWizardBase } from "./component"
 interface MoneyWizardProps {
     readonly provider: MoneyProvider
     /** Continue this unfinished connection instead of creating a new one. */
-    readonly resumeId?: string
+    readonly resumeId?: string | undefined
     /** The workspace agents that can read bank feeds. */
     readonly agents: ReadonlyArray<AgentOption>
     /** `changed` is true when something was saved, so the list should refresh. */
@@ -100,7 +100,7 @@ const moneyWizardText = (tw: ReturnType<typeof useTranslations<"connectionWizard
         next: tw("next"),
         close: tw("close"),
         done: tw("done"),
-        skip: tw("skip"),
+        checkLater: tw("checkLater"),
         earlyAccess: tw("earlyAccess"),
         earlyAccessNote: tw("earlyAccessNote"),
         envHint: tw("envHint"),

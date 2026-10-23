@@ -15,6 +15,12 @@ import { PgmqQueueTransportClient } from "./pgmq-queue-transport.client"
 import { JOB_ACK, JOB_ARCHIVE, JOB_ENQUEUE, JOB_FAIL, JOB_READ, JOB_TOUCH } from "./persistence/queue.sql"
 import type { QueueReadRow } from "./persistence/queue.rows"
 
+/** A partial-object matcher, typed `unknown` so it flows into any slot. */
+const objectLike = (shape: Record<string, unknown>): unknown => expect.objectContaining(shape)
+
+/** A by-constructor matcher, typed `unknown` so it flows into any slot. */
+const anyOf = (type: unknown): unknown => expect.any(type)
+
 const WORKSPACE = "3f0c7a52-8d1e-4b6a-9c2d-5e7f10a4b8c6"
 
 const DEFAULT_OPTIONS: QueueOptions = {
@@ -180,7 +186,7 @@ it("reads the free slots with the visibility timeout and the workspace limit, ru
         job: "knowledge.index",
         payload: { sourceId: "s-1" },
         attempt: 1,
-        signal: expect.any(AbortSignal),
+        signal: anyOf(AbortSignal),
     })
     expect(manager.query).toHaveBeenCalledWith(JOB_ACK, ["knowledge", "1"])
     expect(manager.query).toHaveBeenCalledWith(JOB_ACK, ["knowledge", "2"])
@@ -199,7 +205,7 @@ it("retries a failed job after the backoff of its attempt with the reason, and a
 
     expect(manager.query).toHaveBeenCalledWith(JOB_FAIL, ["knowledge", "2", 10, "provider down"])
     expect(manager.query).toHaveBeenCalledWith(JOB_FAIL, ["knowledge", "3", 30, "rate limited"])
-    expect(logger.error).toHaveBeenCalledWith(QueueLogEvent.DeliveryFailed, expect.any(Error), {
+    expect(logger.error).toHaveBeenCalledWith(QueueLogEvent.DeliveryFailed, anyOf(Error), {
         queue: "knowledge",
         messageId: "2",
         job: "knowledge.index",
@@ -215,7 +221,7 @@ it("archives a job on its last attempt, even one that asked to retry, after its 
 
     await runUntilFirstPause(client, handler)
 
-    expect(failed).toHaveBeenCalledWith(expect.objectContaining({ id: "row-4", attempt: 4 }), asked)
+    expect(failed).toHaveBeenCalledWith(objectLike({ id: "row-4", attempt: 4 }), asked)
     expect(manager.query).toHaveBeenCalledWith(JOB_ARCHIVE, ["knowledge", "4", "QUEUE_RETRY_AFTER"])
     expect(logger.error).toHaveBeenCalledWith(QueueLogEvent.DeadLettered, asked, {
         queue: "knowledge",
@@ -269,7 +275,7 @@ it("logs a message it could not settle, leaving it to reappear after its visibil
 
     await runUntilFirstPause(client, handlerOf().handler)
 
-    expect(logger.error).toHaveBeenCalledWith(QueueLogEvent.SettleFailed, expect.any(Error), {
+    expect(logger.error).toHaveBeenCalledWith(QueueLogEvent.SettleFailed, anyOf(Error), {
         queue: "knowledge",
         messageId: "1",
     })

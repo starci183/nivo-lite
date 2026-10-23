@@ -136,10 +136,10 @@ export type PrepareCase = readonly [
     flow: Partial<LeadFlow>,
     fields: FlowFields,
     expected: FlowFields,
-    reading?: Analysis | null,
-    stored?: Analysis,
-    resume?: LeadFlow,
-    emptySplit?: boolean,
+    reading?: Analysis | null | undefined,
+    stored?: Analysis | undefined,
+    resume?: LeadFlow | undefined,
+    emptySplit?: boolean | undefined,
 ]
 
 /** Shared, complete test data for the capability cases. */

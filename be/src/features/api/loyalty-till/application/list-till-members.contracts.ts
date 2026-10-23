@@ -1,7 +1,7 @@
 /** What list-till-members takes. */
 export interface ListTillMembersRequest {
     /** The phone. */
-    readonly phone?: string
+    readonly phone?: string | undefined
     /** The limit. */
     readonly limit: number
     /** The authorization. */

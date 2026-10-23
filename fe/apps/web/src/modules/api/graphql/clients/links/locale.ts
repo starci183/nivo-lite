@@ -1,6 +1,7 @@
 import { SetContextLink } from "@apollo/client/link/context"
 import { LOCALE_COOKIE } from "@/modules/i18n"
 import { GraphQLHeadersKey } from "../../types"
+import { headersOf } from "./headers-of"
 
 const localeOfCookie = (): string | undefined => {
     if (typeof document === "undefined") return undefined
@@ -15,7 +16,7 @@ export const createAttachLocaleLink = () =>
         return {
             headers: {
                 ...(locale === undefined ? {} : { [GraphQLHeadersKey.AcceptLanguage]: locale }),
-                ...previous.headers,
+                ...headersOf(previous.headers),
             },
         }
     })

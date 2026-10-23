@@ -96,7 +96,7 @@ export const InviteOverviewBase = (props: InviteOverviewBaseProps) => {
         <SurfaceCard ariaLabel={view.title}>
             <div className={INVITE_STACK_CLASS_NAME}>
                 <Heading level={1}>{view.title}</Heading>
-                <Text tone={isUsable ? undefined : "muted"}>{view.body}</Text>
+                <Text {...(isUsable ? {} : { tone: "muted" as const })}>{view.body}</Text>
                 {isUsable ? (
                     <Details {...props} />
                 ) : (

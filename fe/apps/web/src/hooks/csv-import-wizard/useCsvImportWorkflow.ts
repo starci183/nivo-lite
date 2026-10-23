@@ -74,15 +74,15 @@ const createCsvImportWizardActions = ({
 }: CsvImportActionsInput) => {
     const fail = (text: string) => patch({ note: { tone: "negative", text } })
     const go = (to: number) => patch({ note: null, index: to })
+    const missing = (key: "needFile" | "tooBig" | "needLink" | "needSheetEmpty") => {
+        fail(t(key))
+        return null
+    }
 
     /* The chosen source as the back end reads it (it parses everything). */
     const sourceArg = (sheet?: string): CsvSourceArg | null => {
         const base = { entity, ...(connectionId ? { connectionId } : {}) }
         const chosenSheet = sheet ?? fields.preview?.sheet
-        const missing = (key: "needFile" | "tooBig" | "needLink" | "needSheetEmpty") => {
-            fail(t(key))
-            return null
-        }
         if (source === "file") {
             if (!fields.file) return missing("needFile")
             if (fields.file.size > MAX_FILE_BYTES) return missing("tooBig")

@@ -47,12 +47,8 @@ export const LoyaltyRewards = () => {
     const factsLine = (reward: (typeof board.rewards)[number]) => {
         const tier = reward.minTierKey ? findTier(board.config, reward.minTierKey) : null
         return [
-            reward.stock === null || reward.stock === undefined
-                ? t("stockUnlimited")
-                : t("stockLeft", { n: reward.stock }),
-            reward.perCustomerLimit === null || reward.perCustomerLimit === undefined
-                ? t("limitNone")
-                : t("limitPer", { n: reward.perCustomerLimit }),
+            reward.stock === null ? t("stockUnlimited") : t("stockLeft", { n: reward.stock }),
+            reward.perCustomerLimit === null ? t("limitNone") : t("limitPer", { n: reward.perCustomerLimit }),
             tier === null ? t("anyTier") : t("fromTier", { name: tier.name }),
         ].join(" · ")
     }

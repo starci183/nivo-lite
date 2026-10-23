@@ -1,6 +1,19 @@
 import { Test } from "@nestjs/testing"
 import { DomainError } from "@modules/platform/errors"
 import { ok, refused, unwrapOutcome } from "./outcome.mapper"
+
+/** A partial-object matcher, typed `unknown` so it flows into any slot. */
+const objectLike = (shape: Record<string, unknown>): unknown => expect.objectContaining(shape)
+
+/** What `run` throws, read as `unknown`; the matcher then judges its fields. */
+const thrownBy = (run: () => unknown): unknown => {
+    try {
+        run()
+    } catch (error) {
+        return error
+    }
+    return undefined
+}
 const SUBJECT = Symbol("outcome.mapper")
 
 const build = async () => {
@@ -59,8 +72,8 @@ describe("outcome mappers", () => {
 
             const outcome = subject.refused<CapabilityErrorCode>("CAPABILITY_REFUSED", { resource: "value-1" })
 
-            expect(() => subject.unwrapOutcome(outcome, CapabilityError)).toThrow(
-                expect.objectContaining({
+            expect(thrownBy(() => subject.unwrapOutcome(outcome, CapabilityError))).toEqual(
+                objectLike({
                     name: "CapabilityError",
                     code: "CAPABILITY_REFUSED",
                     params: { resource: "value-1" },

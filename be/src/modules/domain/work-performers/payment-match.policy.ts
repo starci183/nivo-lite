@@ -75,7 +75,7 @@ export const matchPayment = (
         (invoice) => mentionsCode(content, invoice.invoiceNo) || mentionsCode(content, invoice.orderNo),
     )
     const byAmount = issued.filter((invoice) => invoice.amountVnd === amount)
-    const clear = byRef.length === 1 && byRef[0]?.amountVnd === amount
+    const clear = byRef.length === 1 && byRef.every((invoice) => invoice.amountVnd === amount)
     if (byRef.length > 0) return { pool: byRef, clear }
     return { pool: byAmount.length > 0 ? byAmount : issued.slice(0, 5), clear }
 }

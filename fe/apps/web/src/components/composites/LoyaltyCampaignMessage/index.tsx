@@ -15,7 +15,7 @@ interface LoyaltyCampaignMessageProps {
             readonly name: string
             readonly brief: string
         }
-        readonly briefError?: string
+        readonly briefError?: string | undefined
         readonly briefMax: number
         readonly isBusy: boolean
         readonly isDrafting: boolean

@@ -32,13 +32,13 @@ export const cleanRequirements = (input: JobRequirementsInput | undefined): JobR
 }
 
 const expectOf = (type: QuestionType, question: JobQuestionInput): QuestionExpect | undefined => {
-    if (type === "yesno") return question.expectYesNo
-    if (type === "number")
-        return typeof question.expectNumber === "number" && Number.isFinite(question.expectNumber)
-            ? question.expectNumber
-            : undefined
-    if (type === "choice" && question.expectChoices !== undefined) return cleanTextList(question.expectChoices, 12, 80)
-    return undefined
+    let expect: QuestionExpect | undefined
+    if (type === "yesno") expect = question.expectYesNo
+    else if (type === "number" && typeof question.expectNumber === "number" && Number.isFinite(question.expectNumber))
+        expect = question.expectNumber
+    else if (type === "choice" && question.expectChoices !== undefined)
+        expect = cleanTextList(question.expectChoices, 12, 80)
+    return expect
 }
 
 /** The questions as typed, cleaned: empty ones dropped, ids kept when well formed, at most twelve. */

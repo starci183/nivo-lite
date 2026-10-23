@@ -24,7 +24,7 @@ export interface HttpRequest {
     /** Raw bytes sent as they are (the caller names their `content-type`); use instead of `body` and `form`. */
     readonly bytes?: Buffer
     /** How the answer body is read: parsed as JSON (default), kept as text (a string, empty when the answer had none) or kept as raw bytes (a Buffer). */
-    readonly read?: "json" | "text" | "bytes"
+    readonly read?: "json" | "text" | "bytes" | undefined
     /** Connects to this address instead of resolving the host name (the Host header and the TLS server name stay the URL's); a pinned call never follows redirects. */
     readonly pin?: HttpPin
     /** `manual` answers a redirect as it is (status and `location` header) instead of following it; the default follows. */
@@ -40,7 +40,7 @@ export interface HttpResponse {
     /** The HTTP status code. */
     readonly status: number
     /** The response headers, names in lower case (absent from a double that answers only a status and a body). */
-    readonly headers?: Readonly<Record<string, string>>
+    readonly headers?: Readonly<Record<string, string>> | undefined
     /** The address the answer came from after redirects (absent from a double that answers only a status and a body). */
     readonly url?: string
     /** The parsed JSON body (undefined when the answer had none), a string for `read: "text"`, or a Buffer for `read: "bytes"`. */

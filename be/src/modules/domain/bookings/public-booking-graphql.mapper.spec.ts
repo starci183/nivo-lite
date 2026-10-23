@@ -2,6 +2,18 @@ import { Test } from "@nestjs/testing"
 import type { PublicBookResult } from "./bookings.contracts"
 import { BookingsErrorCode } from "./errors/bookings.error"
 import { toRequestPublicBookingRequest, toRequestPublicBookingType } from "./public-booking-graphql.mapper"
+
+const objectLike = (shape: Record<string, unknown>): unknown => expect.objectContaining(shape)
+
+/** What `run` throws, read as `unknown`; the matcher then judges its fields. */
+const thrownBy = (run: () => unknown): unknown => {
+    try {
+        run()
+    } catch (error) {
+        return error
+    }
+    return undefined
+}
 const SUBJECT = Symbol("public-booking-graphql.mapper")
 
 const build = async () => {
@@ -90,8 +102,8 @@ describe("public booking GraphQL mapper", () => {
     ] as const)("promotes %s to the domain error", async (code, expectedCode) => {
         const subject = await build()
 
-        expect(() => subject.toRequestPublicBookingType({ ...RESULT, ok: false, state: "invalid", code })).toThrow(
-            expect.objectContaining({ code: expectedCode }),
-        )
+        expect(
+            thrownBy(() => subject.toRequestPublicBookingType({ ...RESULT, ok: false, state: "invalid", code })),
+        ).toEqual(objectLike({ code: expectedCode }))
     })
 })

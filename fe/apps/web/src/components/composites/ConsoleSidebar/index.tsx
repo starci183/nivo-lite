@@ -33,13 +33,19 @@ const toGroups = (
         items: items.filter((item) => item.group === group).map(toSidebarItem),
     })).filter((group) => group.items.length > 0)
 
+/** The selection prop of the active item, absent while none is active. */
+const selectedKeyOf = (items: ReadonlyArray<ConsoleNavItem>): { readonly selectedKey?: string } => {
+    const active = items.find((item) => item.isActive)
+    return active === undefined ? {} : { selectedKey: active.id }
+}
+
 /** The grammar `Sidebar`: the wide rail owns item selection and its edge, the drawer variant lists the overflow. */
 export const ConsoleSidebar = (props: ConsoleSidebarProps) => (
     <Sidebar
         label={props.label}
         presentation={props.presentation}
         groups={toGroups(props.items, props.groupLabels)}
-        selectedKey={props.items.find((item) => item.isActive)?.id}
+        {...selectedKeyOf(props.items)}
         onAction={(id) => {
             const target = props.items.find((item) => item.id === id)
             if (target) props.onGo(target.href)

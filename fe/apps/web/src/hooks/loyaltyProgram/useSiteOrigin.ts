@@ -2,7 +2,8 @@
 
 import { useSyncExternalStore } from "react"
 
-const subscribe = () => () => undefined
+const unsubscribe = (): void => undefined
+const subscribe = () => unsubscribe
 const browserOrigin = () => window.location.origin
 const serverOrigin = () => ""
 

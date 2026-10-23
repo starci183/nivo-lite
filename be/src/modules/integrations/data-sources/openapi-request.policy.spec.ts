@@ -4,6 +4,19 @@ import { DataSourcesErrorCode } from "./errors/data-sources.error"
 import { OPENAPI_TEXT, missingPathParam } from "./messages/openapi.messages"
 import { buildRequest } from "./openapi-request.policy"
 
+/** A partial-object matcher, typed `unknown` so it flows into any slot. */
+const objectLike = (shape: Record<string, unknown>): unknown => expect.objectContaining(shape)
+
+/** What `run` throws, read as `unknown`; the matcher then judges its fields. */
+const thrownBy = (run: () => unknown): unknown => {
+    try {
+        run()
+    } catch (error) {
+        return error
+    }
+    return undefined
+}
+
 const SUBJECT = Symbol("openapi-request.policy")
 
 const buildSubject = async () => {
@@ -41,14 +54,14 @@ const registerRequestParameters = () => {
         const skipped = subject.buildRequest(call({ input: { id: 7, q: "", "X-Trace": "" } }))
         expect(skipped.url.toString()).toBe("https://api.example/v1/orders/7")
         expect(skipped.headers).toEqual({ accept: "application/json" })
-        expect(() => subject.buildRequest(call({ input: { id: "" } }))).toThrow(
-            expect.objectContaining({
+        expect(thrownBy(() => subject.buildRequest(call({ input: { id: "" } })))).toEqual(
+            objectLike({
                 code: DataSourcesErrorCode.Rejected,
                 params: { detail: missingPathParam("id") },
             }),
         )
-        expect(() => subject.buildRequest(call({ baseUrl: "ftp://files.example" }))).toThrow(
-            expect.objectContaining({
+        expect(thrownBy(() => subject.buildRequest(call({ baseUrl: "ftp://files.example" })))).toEqual(
+            objectLike({
                 code: DataSourcesErrorCode.Rejected,
                 params: { detail: OPENAPI_TEXT.baseUrlScheme },
             }),

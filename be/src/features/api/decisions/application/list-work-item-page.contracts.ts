@@ -9,7 +9,7 @@ export interface ListWorkItemPageRequest {
     /** Only this action; null means every action. */
     readonly action: string | null | undefined
     /** Where the page starts; absent for the first page. */
-    readonly after?: WorkItemCursor
+    readonly after?: WorkItemCursor | undefined
     /** The page size, clamped to 1..100. */
     readonly limit: number
 }

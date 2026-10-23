@@ -87,7 +87,7 @@ const buildLoyaltyAccountView = ({ t, points, format, money, firstAt }: BuildLoy
         tierName: points.tierName === "" ? t("noTier") : points.tierName,
         pointsLabel: t("points"),
         points: format.number(points.points),
-        ...(points.nextTier === null || points.nextTier === undefined
+        ...(points.nextTier === null
             ? {}
             : {
                   nextTier: t("nextTier", {
@@ -95,7 +95,7 @@ const buildLoyaltyAccountView = ({ t, points, format, money, firstAt }: BuildLoy
                       tier: points.nextTier.tier.name,
                   }),
               }),
-        ...(points.expiring.points > 0 && firstAt !== null && firstAt !== undefined
+        ...(points.expiring.points > 0 && firstAt !== null
             ? {
                   expiring: t("expiring", {
                       points: format.number(points.expiring.points),

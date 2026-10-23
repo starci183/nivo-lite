@@ -17,6 +17,11 @@ interface Drafting {
     readonly responsibilityId: string
 }
 
+/** The status a polled action reports. */
+interface PolledStatus {
+    readonly status: string
+}
+
 const ENDED: ReadonlySet<string> = new Set(["succeeded", "failed"])
 
 /**
@@ -31,8 +36,8 @@ export const useDraftExecution = () => {
     const [starting, setStarting] = useState<string | null>(null)
     const [drafting, setDrafting] = useState<Drafting | null>(null)
     useQueryLeadActionStatusSwr(activeWorkspaceId, drafting?.actionId, {
-        refreshInterval: (data) => (data !== undefined && ENDED.has(data.status) ? 0 : 2000),
-        onSuccess: (data) => {
+        refreshInterval: (data: PolledStatus | undefined) => (data !== undefined && ENDED.has(data.status) ? 0 : 2000),
+        onSuccess: (data: PolledStatus) => {
             if (!ENDED.has(data.status)) return
             const failure = data.status === "failed" ? new Error(t("draftFailed")) : null
             void runGraphQL(

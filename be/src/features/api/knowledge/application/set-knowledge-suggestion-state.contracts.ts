@@ -5,5 +5,5 @@ export interface SetKnowledgeSuggestionStateRequest {
     /** The key of the suggestion. */
     readonly key: string
     /** `dismissed` or `not_applicable`; absent brings the suggestion back. */
-    readonly state?: "dismissed" | "not_applicable"
+    readonly state?: "dismissed" | "not_applicable" | undefined
 }

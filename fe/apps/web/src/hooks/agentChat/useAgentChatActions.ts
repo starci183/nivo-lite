@@ -88,7 +88,7 @@ export const useAgentChatActions = (target: AgentChatActionTarget) => {
         send,
         toggleTakeover,
         isSending: sendMutation.isMutating || message.formState.isSubmitting || pending !== undefined,
-        isAwaitingReply: pending?.conversationId === target.selectedId,
+        isAwaitingReply: target.selectedId !== null && pending?.conversationId === target.selectedId,
         isStarting: isOpening || startMutation.isMutating,
         isTakingOver: takeoverMutation.isMutating,
         error:

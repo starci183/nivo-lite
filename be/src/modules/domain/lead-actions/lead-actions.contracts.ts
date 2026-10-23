@@ -12,15 +12,15 @@ export interface LeadActionInput {
     /** What the customer needs. */
     readonly need?: string
     /** The optional phone. */
-    readonly phone?: string | null
+    readonly phone?: string | null | undefined
     /** The optional email. */
-    readonly email?: string | null
+    readonly email?: string | null | undefined
     /** The lead an action addresses. */
     readonly leadId?: string
     /** The responsibility to draft. */
     readonly responsibilityId?: string
     /** Why the deal was won. */
-    readonly evidence?: string | null
+    readonly evidence?: string | null | undefined
 }
 
 /** The immediate answer of an enqueued action. */

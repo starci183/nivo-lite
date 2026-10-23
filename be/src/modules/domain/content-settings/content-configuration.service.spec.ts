@@ -305,7 +305,7 @@ describe("ContentConfigurationService", () => {
             " ",
         )
         await settings.saveBrand("user-1", "ws-1", { brandVoice: "v", avoid: "a", cta: "c", hashtags: tags })
-        const saved = em.query.mock.calls.find((call) => call[0] === SAVE_CONFIGURATION_BRAND)?.[1]?.[4]
+        const saved: unknown = em.query.mock.calls.find((call) => call[0] === SAVE_CONFIGURATION_BRAND)?.[1]?.[4]
         expect(saved).toEqual(["#tag0", ...Array.from({ length: 12 }, (_, index) => `#tag${index + 1}`)])
     })
 })

@@ -5,7 +5,7 @@ export interface TestOpenApiOperationRequest {
     /** The workspace the request is made in. */
     readonly workspaceId: string
     /** The connection being edited, when there is one. */
-    readonly connectionId?: string | null
+    readonly connectionId?: string | null | undefined
     /** The API's base URL. */
     readonly baseUrl: string
     /** The credential typed. */

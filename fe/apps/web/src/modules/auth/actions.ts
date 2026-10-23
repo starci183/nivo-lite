@@ -22,7 +22,7 @@ export interface SignInResult {
 interface SignInInput {
     readonly email: string
     readonly password: string
-    readonly next?: string
+    readonly next?: string | undefined
 }
 
 /** Signs in with e-mail and password; the browser client writes the session cookie. */

@@ -26,7 +26,7 @@ export const PageHeading = (props: PageHeadingProps) => (
             description={props.description}
             action={
                 props.actionLabel ? (
-                    <Button variant="secondary" href={props.actionHref}>
+                    <Button variant="secondary" {...(props.actionHref === undefined ? {} : { href: props.actionHref })}>
                         {props.actionLabel}
                     </Button>
                 ) : undefined

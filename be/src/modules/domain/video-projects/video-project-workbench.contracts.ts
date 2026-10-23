@@ -1,7 +1,7 @@
 /** Fields a checked manager supplies for a new project. */
 export interface NewVideoProjectDraft {
     /** Working title. */
-    readonly title?: string
+    readonly title?: string | undefined
     /** Business goal. */
     readonly goal: string
     /** Output shape. */
@@ -29,13 +29,13 @@ export interface DelegatedVideoProjectDraft {
 /** Optional changes a checked manager applies to an idle project. */
 export interface ChangeVideoProjectDraft {
     /** New title. */
-    readonly title?: string
+    readonly title?: string | undefined
     /** New goal. */
-    readonly goal?: string
+    readonly goal?: string | undefined
     /** New shape. */
-    readonly aspect?: string
+    readonly aspect?: string | undefined
     /** New duration. */
-    readonly targetSeconds?: number
+    readonly targetSeconds?: number | undefined
     /** Workspace checked inputs. */
     readonly inputs?: unknown
     /** Workspace checked scenes. */

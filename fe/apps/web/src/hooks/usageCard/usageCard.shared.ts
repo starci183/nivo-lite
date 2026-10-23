@@ -92,7 +92,7 @@ export const metersOf = (
             tone: toneOf(status.creditsUsed, limit),
         },
     ]
-    if (status.messagesLimit !== null && status.messagesLimit !== undefined) {
+    if (status.messagesLimit !== null) {
         meters.push({
             id: "messages",
             label: t("usageMessages"),

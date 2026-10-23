@@ -147,7 +147,6 @@ export const ConnectionLibrary = (props: ConnectionLibraryProps) => {
         setAudience,
         overlays,
     })
-    if (connected === null) return null
 
     return (
         <ConnectionLibraryBase

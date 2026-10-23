@@ -5,9 +5,9 @@ export interface ListLeadsRequest {
     /** The Authorization header as sent. */
     readonly authorization: string | undefined
     /** Only customers of this stage. */
-    readonly stage?: LeadStage
+    readonly stage?: LeadStage | undefined
     /** The most customers to answer; the domain clamps it to 1..200. */
-    readonly limit?: string
+    readonly limit?: string | undefined
 }
 
 /** What listing customers answers: the customers, newest first. */

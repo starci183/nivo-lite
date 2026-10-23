@@ -31,7 +31,7 @@ export interface OpenApiSpecLoaded extends OpenApiSpec {
 /** What testing one operation takes. */
 export interface OpenApiOperationTest {
     /** The connection being edited, so blank secrets fall back to the stored ones. */
-    readonly connectionId?: string | null
+    readonly connectionId?: string | null | undefined
     /** The API's base URL. */
     readonly baseUrl: string
     /** The credential typed (blank secrets fall back to the stored ones). */
@@ -79,7 +79,7 @@ export interface OpenApiConnectionView {
 /** What saving an API connection takes. */
 export interface OpenApiConnectionDraft {
     /** The connection being edited; absent or null creates one. */
-    readonly connectionId?: string | null
+    readonly connectionId?: string | null | undefined
     /** The name. */
     readonly name: string
     /** The configuration, an untrusted JSON value cleaned by the domain. */
@@ -87,5 +87,5 @@ export interface OpenApiConnectionDraft {
     /** The credential typed (blank secrets fall back to the stored ones). */
     readonly auth: OpenApiAuthDraft
     /** Minutes between syncs: null, 15, 60, 360 or 1440. */
-    readonly syncEveryMinutes?: number | null
+    readonly syncEveryMinutes?: number | null | undefined
 }

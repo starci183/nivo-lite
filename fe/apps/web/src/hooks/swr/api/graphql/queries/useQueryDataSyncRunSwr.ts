@@ -27,6 +27,6 @@ export const useQueryDataSyncRunSwr = (runId: string | undefined, options?: Data
         },
         {
             refreshInterval: (latest) => (latest === undefined || latest.state === "running" ? POLL_MS : 0),
-            onSuccess: options?.onSuccess,
+            ...(options?.onSuccess ? { onSuccess: options.onSuccess } : {}),
         },
     )

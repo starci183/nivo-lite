@@ -16,7 +16,7 @@ export interface QueueItem {
     readonly origin?: string
     readonly status: ItemStatus
     /** The catalog key of why it failed. */
-    readonly error?: string
+    readonly error?: string | undefined
 }
 
 /** What a send of one item needs: where it goes and the options chosen once for the batch. */

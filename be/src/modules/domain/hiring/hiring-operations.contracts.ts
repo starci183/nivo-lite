@@ -83,9 +83,9 @@ export interface SaveJobParams {
     /** The work schedule. */
     readonly schedule?: string
     /** The lowest pay. */
-    readonly payMinVnd?: number | null
+    readonly payMinVnd?: number | null | undefined
     /** The highest pay. */
-    readonly payMaxVnd?: number | null
+    readonly payMaxVnd?: number | null | undefined
     /** The unit of the pay. */
     readonly payUnit?: "month" | "hour" | "shift"
     /** The place of work. */

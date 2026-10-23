@@ -58,7 +58,7 @@ export interface CustomerPatch {
     /** The name, when changed. A blank name leaves the existing name. */
     readonly name?: string
     /** The birthday, when changed; null clears it. */
-    readonly birthday?: CustomerBirthday
+    readonly birthday?: CustomerBirthday | undefined
     /** The owner's note, when changed. */
     readonly note?: string
 }

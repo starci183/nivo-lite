@@ -16,11 +16,11 @@ export interface SaveBrainFactRequest {
     /** The modules that may read a restricted fact. */
     readonly modules: Array<string>
     /** From when it holds, ISO 8601. */
-    readonly validFrom?: string
+    readonly validFrom?: string | undefined
     /** Until when it holds, ISO 8601. */
-    readonly validTo?: string
+    readonly validTo?: string | undefined
     /** A note kept as evidence. */
-    readonly note?: string
+    readonly note?: string | undefined
     /** The customer question this fact answers. */
-    readonly gapId?: string
+    readonly gapId?: string | undefined
 }

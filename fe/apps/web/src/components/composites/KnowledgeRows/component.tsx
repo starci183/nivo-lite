@@ -35,7 +35,7 @@ export interface KnowledgeRowView {
     readonly actions?: ReadonlyArray<RowActionView>
     readonly parts?: ReadonlyArray<RowPartView>
     /** The reading of a worker, 0-100; nothing is drawn for it while undefined. */
-    readonly progress?: { readonly label: string; readonly value: number }
+    readonly progress?: { readonly label: string; readonly value: number } | undefined
     /** A link on the title. */
     readonly href?: string
 }
@@ -72,7 +72,7 @@ export const ActionList = (props: ActionListProps) =>
                         key={item.id}
                         variant={item.variant ?? "outline"}
                         isPending={props.isPending}
-                        onPress={item.onPress}
+                        {...(item.onPress === undefined ? {} : { onPress: item.onPress })}
                     >
                         {item.label}
                     </Button>
@@ -136,7 +136,12 @@ export const Rows = (props: RowsProps) => (
     <SurfaceListCard
         ariaLabel={props.label}
         isLoading={props.isLoading}
-        empty={<EmptyNotice message={props.emptyTitle} description={props.emptyBody} />}
+        empty={
+            <EmptyNotice
+                message={props.emptyTitle}
+                {...(props.emptyBody === undefined ? {} : { description: props.emptyBody })}
+            />
+        }
     >
         {props.rows.map((row) => (
             <Row key={row.id} row={row} isPending={props.isPending} />

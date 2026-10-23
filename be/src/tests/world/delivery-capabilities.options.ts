@@ -1,4 +1,3 @@
-import { randomUUID } from "node:crypto"
 import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
 import { Secret } from "@modules/platform/config"
@@ -32,6 +31,7 @@ import { BankFeedInboxModule } from "@modules/domain/bank-feed-inbox"
 import { TelegramInboxModule } from "@modules/domain/telegram-inbox"
 import { MetaInboxModule } from "@modules/domain/meta-inbox"
 import { ChatTurnModule } from "@modules/queues/chat-turn"
+import { worldIds } from "./lite-world.service"
 import { QUEUE_MODULES } from "./test-capabilities.options"
 import { TestWorldError, TestWorldErrorCode } from "./test-world.error"
 
@@ -150,7 +150,7 @@ const domainModules = (tokenKey: Secret): Array<DynamicModule> => [
 
 /** Real receipt owners, database claims and outbox; consumers remain idle until a proof invokes them. */
 export const deliveryCapabilities = () => {
-    const workspaceId = randomUUID()
+    const workspaceId = worldIds.next()
     const tokenKey = new Secret(Buffer.alloc(32, 7).toString("base64"))
     return { workspaceId, modules: [...platformModules(tokenKey), ...domainModules(tokenKey)] }
 }

@@ -19,8 +19,8 @@ export interface WorkspacePaymentDetailsProps {
     readonly fields: ReadonlyArray<{ readonly id: string; readonly label: string; readonly value: string }>
     readonly copyLabel: string
     readonly copiedLabel: string
-    readonly countdownLabel?: string
-    readonly countdownProgress?: number
+    readonly countdownLabel?: string | undefined
+    readonly countdownProgress?: number | undefined
     readonly amountLabel: string
     readonly amount: string
     readonly contentWarning: string

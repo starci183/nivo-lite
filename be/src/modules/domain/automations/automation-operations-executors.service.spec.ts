@@ -19,6 +19,8 @@ import { buildPipelineRow, buildShop, buildTemplate } from "@tests/fixtures/buil
 import { SELECT_CONTRACT, SELECT_DAY_FIGURES, SELECT_ORDER } from "./persistence/automation-readers.sql"
 import type { LeadReadRow } from "./persistence/automations.rows"
 
+const textLike = (text: string): unknown => expect.stringContaining(text)
+
 const NOW = "2026-10-12T10:00:00.000Z"
 const LEAD: LeadReadRow = {
     id: "l-1",
@@ -119,7 +121,7 @@ describe("AutomationOperationsExecutorsService daily_report", () => {
         expect(result).toMatchObject({
             status: "done",
             steps: [{ label: "report.posted{}", status: "done", message: text }],
-            evidence: expect.stringContaining('"deals":4'),
+            evidence: textLike('"deals":4'),
         })
     })
 
@@ -202,7 +204,7 @@ describe("AutomationOperationsExecutorsService delivery_notice", () => {
             expect.anything(),
             expect.objectContaining({
                 dedupe: "ship:o-1",
-                caseNote: expect.stringContaining("delivery.caseTracking"),
+                caseNote: textLike("delivery.caseTracking"),
                 vars: { ten_khach: "An", ma_phieu: "DH1", hang_van_chuyen: "GHN", ma_van_don: "ABC" },
             }),
         )
@@ -217,8 +219,8 @@ describe("AutomationOperationsExecutorsService delivery_notice", () => {
         expect(messages.composeAndSend).toHaveBeenCalledWith(
             expect.anything(),
             expect.objectContaining({
-                summary: expect.stringContaining("delivery.carrierFallback"),
-                caseNote: expect.stringContaining("delivery.case{"),
+                summary: textLike("delivery.carrierFallback"),
+                caseNote: textLike("delivery.case{"),
             }),
         )
     })
@@ -318,7 +320,7 @@ describe("AutomationOperationsExecutorsService contract_renewal", () => {
             "ws-1",
             expect.objectContaining({
                 ownerName: "after.staffFallback{}",
-                nextAction: expect.stringContaining("renewal.taskAction{"),
+                nextAction: textLike("renewal.taskAction{"),
             }),
         )
         expect(result.steps).toHaveLength(1)

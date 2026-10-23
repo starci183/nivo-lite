@@ -5,9 +5,9 @@ declare module "express-serve-static-core" {
     /** The request carries the principal established by the default-deny auth guard. */
     interface Request {
         /** The authenticated Supabase caller, when the door is not public. */
-        principal?: Principal
+        principal?: Principal | undefined
         /** The alternate credential, never a session principal. */
-        credentialPrincipal?: CredentialPrincipal
+        credentialPrincipal?: CredentialPrincipal | undefined
     }
 }
 

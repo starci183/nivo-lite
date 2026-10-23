@@ -30,6 +30,9 @@ import { AutomationsLogEvent } from "./automations.log-events"
 import { AutomationsService } from "./automations.service"
 import { AutomationsErrorCode } from "./errors/automations.error"
 
+const textLike = (text: string): unknown => expect.stringContaining(text)
+const objectLike = (shape: Record<string, unknown>): unknown => expect.objectContaining(shape)
+
 const NOW = "2026-10-12T10:00:00.000Z"
 const MEMBER: WorkspaceMember = {
     userId: "u-1",
@@ -176,7 +179,7 @@ describe("AutomationsService update", () => {
         expect(office.logEvidence).toHaveBeenCalledWith("ws-1", {
             kind: "automation.body_saved",
             actor: "Lan",
-            summary: expect.stringContaining("audit.bodySaved"),
+            summary: textLike("audit.bodySaved"),
             evidence: "Dear {ten_khach}, welcome",
         })
         expect(card.key).toBe("thank_payment")
@@ -208,7 +211,7 @@ describe("AutomationsService update", () => {
             "ws-1",
             "u-1",
             expect.anything(),
-            expect.objectContaining({ config: expect.objectContaining({ googleConnectionId: "g-1" }) }),
+            objectLike({ config: objectLike({ googleConnectionId: "g-1" }) }),
         )
     })
 })

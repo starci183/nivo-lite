@@ -191,12 +191,11 @@ describe("sceneArgs", () => {
 
     it("refuses an asset the caller did not download", async () => {
         const { sceneArgs } = await buildSubject()
-        expect(() => sceneArgs(clipOf(sceneOf({ background: { type: "image", src: IMAGE, motion: "none" } })))).toThrow(
-            expect.objectContaining({
-                code: VideoErrorCode.RenderRejected,
-                params: { reason: `asset_missing: ${IMAGE}` },
-            }),
+        const refused = Promise.resolve().then(() =>
+            sceneArgs(clipOf(sceneOf({ background: { type: "image", src: IMAGE, motion: "none" } }))),
         )
+        await expect(refused).rejects.toHaveProperty("code", VideoErrorCode.RenderRejected)
+        await expect(refused).rejects.toHaveProperty("params", { reason: `asset_missing: ${IMAGE}` })
     })
 })
 

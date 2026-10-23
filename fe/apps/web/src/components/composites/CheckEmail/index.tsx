@@ -6,7 +6,8 @@ export interface CheckEmailProps {
     readonly text: string
     readonly hint?: string
     /** A result note under the text: tone, title and description. */
-    readonly notice?: { readonly tone: "affirmative" | "negative"; readonly title: string; readonly text: string }
+    readonly notice?:
+        { readonly tone: "affirmative" | "negative"; readonly title: string; readonly text: string } | undefined
     readonly resendLabel: string
     readonly isPending: boolean
     readonly isWaiting: boolean

@@ -7,7 +7,7 @@ export interface CreateApiKeyRequest {
     /** The name of the key. */
     readonly name: string
     /** The agent of the workspace the key acts as on the MCP endpoint; absent for a public API key. */
-    readonly agentId?: string
+    readonly agentId?: string | undefined
 }
 
 /** What creating an API key answers: the secret, shown once, and the stored view. */

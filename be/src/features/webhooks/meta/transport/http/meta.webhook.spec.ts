@@ -30,6 +30,13 @@ const build = async () => {
     return { door: moduleRef.get(MetaWebhook), inbox, verifier, signature }
 }
 
+/** A request whose `rawBody` is present and undefined, which a typed partial cannot spell under exact optional property types. */
+const requestWithRaw = (rawBody: Buffer | undefined): RawBodyRequest<Request> => {
+    const request = mock<RawBodyRequest<Request>>()
+    Reflect.set(request, "rawBody", rawBody)
+    return request
+}
+
 describe("MetaWebhook", () => {
     it.each([
         { rawBody: RAW, signature: SIGNATURE },
@@ -37,7 +44,7 @@ describe("MetaWebhook", () => {
     ])("passes the exact raw body and signature to verification and intake: %j", async ({ rawBody, signature }) => {
         const { door, inbox, signature: proof } = await build()
 
-        const result = await door.receive(mock<RawBodyRequest<Request>>({ rawBody }), signature)
+        const result = await door.receive(requestWithRaw(rawBody), signature)
 
         expect(result).toBeUndefined()
         expect(proof.verify).toHaveBeenCalledWith(rawBody, signature)

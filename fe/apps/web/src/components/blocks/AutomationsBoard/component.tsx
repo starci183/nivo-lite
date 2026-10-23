@@ -42,7 +42,7 @@ export interface AutomationsBoardBaseProps {
         readonly slot: DataSlot<AutomationsBoardView>
         /** "page": filters and a grid with the detail beside it. "module": one module's cards as a compact list, detail below. */
         readonly layout: "page" | "module"
-        readonly notice?: AutomationsBoardNotice
+        readonly notice?: AutomationsBoardNotice | undefined
         readonly labels: AutomationsBoardLabels
     }
     readonly on: {

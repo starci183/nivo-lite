@@ -10,6 +10,12 @@ import { EditorDeliveryService } from "./editor-delivery.service"
 import { EditorRoomService } from "./editor-room.service"
 import { VideoMediaService } from "./video-media.service"
 
+/** A substring matcher, typed `unknown` so it flows into any slot. */
+const stringLike = (text: string): unknown => expect.stringContaining(text)
+
+/** A sub-array matcher, typed `unknown` so it flows into any slot. */
+const arrayLike = (items: ReadonlyArray<unknown>): unknown => expect.arrayContaining(items)
+
 const WORKSPACE = "0a1b2c3d-0a1b-4c3d-8a1b-0a1b2c3d4e5f"
 const CTX = { workspaceId: WORKSPACE, actor: "AI Editor", locale: "vi" }
 
@@ -133,9 +139,7 @@ describe("EditorDeliveryService", () => {
                 { kind: "video", url: `https://signed/${WORKSPACE}/render-1/video.mp4` },
                 { kind: "image", url: `https://signed/${WORKSPACE}/render-1/poster.jpg` },
             ],
-            fields: expect.arrayContaining([
-                { label: "video.editor.voice", value: "video.editor.voice.captions_only" },
-            ]),
+            fields: arrayLike([{ label: "video.editor.voice", value: "video.editor.voice.captions_only" }]),
             ref: { kind: "work_item", id: "approval-1" },
             data: { captions_url: `https://signed/${WORKSPACE}/render-1/captions.vtt`, source: "content" },
         })
@@ -155,7 +159,7 @@ describe("EditorDeliveryService > partial and failed renders", () => {
 
         expect(media.shareLink).toHaveBeenCalledTimes(1)
         expect(room.post.mock.calls[0]?.[2]).toMatchObject({
-            fields: expect.arrayContaining([{ label: "video.editor.voice", value: "video.editor.voice.none" }]),
+            fields: arrayLike([{ label: "video.editor.voice", value: "video.editor.voice.none" }]),
         })
     })
 
@@ -165,7 +169,7 @@ describe("EditorDeliveryService > partial and failed renders", () => {
         await delivery.settle("render-1")
 
         expect(room.post.mock.calls[0]?.[2]).toMatchObject({
-            fields: expect.arrayContaining([{ label: "video.editor.voice", value: "video.editor.voice.tts" }]),
+            fields: arrayLike([{ label: "video.editor.voice", value: "video.editor.voice.tts" }]),
         })
     })
 
@@ -197,7 +201,7 @@ describe("EditorDeliveryService > partial and failed renders", () => {
     it("fails a done render without a file with a generic reason, once", async () => {
         const first = await build(rowOf({ output_path: null }))
         await first.delivery.settle("render-1")
-        expect(first.room.say).toHaveBeenCalledWith(CTX, expect.stringContaining("render failed"), "item-1")
+        expect(first.room.say).toHaveBeenCalledWith(CTX, stringLike("render failed"), "item-1")
 
         const again = await build(rowOf({ render_status: "failed" }), false)
         await again.delivery.settle("render-1")

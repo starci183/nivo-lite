@@ -13,7 +13,7 @@ interface ContentAiJobOptions<TRequest> {
     readonly queue: (request: TRequest) => Promise<ContentAiRequestedType | undefined>
     readonly isMutating: boolean
     readonly successMessage: (status: ContentAiStatusType) => string
-    readonly onSucceeded?: (status: ContentAiStatusType) => void
+    readonly onSucceeded?: ((status: ContentAiStatusType) => void) | undefined
 }
 
 /** The job being followed and the workspace it was queued in. */

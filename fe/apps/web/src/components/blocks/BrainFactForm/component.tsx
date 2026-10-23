@@ -19,7 +19,7 @@ export interface BrainFactFormBaseProps {
         readonly isOpen: boolean
         readonly isPending: boolean
         /** The customer question the fact answers, kept in view while it is written. */
-        readonly question?: string
+        readonly question?: string | undefined
         readonly typeLabel: string
         readonly typeOptions: ReadonlyArray<ChoiceView>
         readonly subjectLabel: string

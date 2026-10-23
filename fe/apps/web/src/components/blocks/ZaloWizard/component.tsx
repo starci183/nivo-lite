@@ -42,7 +42,7 @@ export interface ZaloWizardBaseProps {
                 | "next"
                 | "close"
                 | "done"
-                | "skip"
+                | "checkLater"
                 | "openProvider"
                 | "fieldName"
                 | "fieldNameHint"
@@ -100,8 +100,13 @@ const actionsOf = ({ props, on }: ZaloWizardBaseProps): ReadonlyArray<WizardActi
         return props.isAuthorized ? [go, proceed, back] : [go, back]
     }
     if (props.step === "verify") {
-        const skip: WizardAction = { id: "skip", label: text.skip, variant: "outline", onPress: () => on.go(4) }
-        return [props.received === null ? skip : nextAction(text.next, () => on.go(4)), back]
+        const checkLater: WizardAction = {
+            id: "checkLater",
+            label: text.checkLater,
+            variant: "outline",
+            onPress: () => on.go(4),
+        }
+        return [props.received === null ? checkLater : nextAction(text.next, () => on.go(4)), back]
     }
     return [nextAction(text.done, on.finish, { isPending: props.isPending }), back]
 }

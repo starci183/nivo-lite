@@ -60,6 +60,6 @@ export interface ProgramCopy {
 
 /** The error of one tier row, when its fields do not hold. */
 export interface TierErrorView {
-    readonly name?: string
-    readonly minSpend?: string
+    readonly name?: string | undefined
+    readonly minSpend?: string | undefined
 }

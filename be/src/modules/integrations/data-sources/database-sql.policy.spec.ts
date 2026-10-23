@@ -5,6 +5,19 @@ import { DataSourcesErrorCode } from "./errors/data-sources.error"
 import { DATABASE_COPY } from "./messages/database.messages"
 import { buildSelect, isUsableIdentifier, listTables, quoteId, wantedColumns } from "./database-sql.policy"
 
+/** A partial-object matcher, typed `unknown` so it flows into any slot. */
+const objectLike = (shape: Record<string, unknown>): unknown => expect.objectContaining(shape)
+
+/** What `run` throws, read as `unknown`; the matcher then judges its fields. */
+const thrownBy = (run: () => unknown): unknown => {
+    try {
+        run()
+    } catch (error) {
+        return error
+    }
+    return undefined
+}
+
 const SUBJECT = Symbol("database-sql.policy")
 
 const buildSubject = async () => {
@@ -63,8 +76,8 @@ const registerBuildSelect = () => {
             ]
 
             for (const picked of attempts) {
-                expect(() => subject.buildSelect("postgres", picked, { limit: 1 })).toThrow(
-                    expect.objectContaining({
+                expect(thrownBy(() => subject.buildSelect("postgres", picked, { limit: 1 }))).toEqual(
+                    objectLike({
                         code: DataSourcesErrorCode.Rejected,
                         params: { detail: DATABASE_COPY.badName },
                     }),

@@ -13,7 +13,7 @@ export interface AccountProfileBaseProps {
         readonly name: string
         readonly isPending: boolean
         readonly isLoading: boolean
-        readonly error?: string
+        readonly error?: string | undefined
         readonly done?: string
     }
     readonly on: { readonly setName: (value: string) => void; readonly submit: () => void }

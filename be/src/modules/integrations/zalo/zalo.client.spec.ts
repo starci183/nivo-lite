@@ -8,6 +8,9 @@ import { ZALO_OPTIONS } from "./zalo.decorators"
 import type { ZaloOptions } from "./zalo.options"
 import { challengeOf } from "./zalo-oauth.policy"
 
+/** A partial-object matcher, typed `unknown` so it flows into any slot. */
+const objectLike = (shape: Record<string, unknown>): unknown => expect.objectContaining(shape)
+
 const options: ZaloOptions = { oauthBase: "https://oauth.test", apiBase: "https://api.test", timeoutMs: 5000 }
 
 const build = async () => {
@@ -68,7 +71,7 @@ describe("ZaloClient / exchangeCode and refreshTokens", () => {
         })
 
         expect(http.request).toHaveBeenCalledWith(
-            expect.objectContaining({
+            objectLike({
                 form: { refresh_token: "r1", app_id: "app-1", grant_type: "refresh_token" },
             }),
         )
@@ -163,7 +166,7 @@ describe("ZaloClient / userDisplayName", () => {
         await expect(client.userDisplayName("access", "user-1")).resolves.toBe("Minh")
 
         expect(http.request).toHaveBeenCalledWith(
-            expect.objectContaining({
+            objectLike({
                 method: "GET",
                 url: `https://api.test/v3.0/oa/user/detail?data=${encodeURIComponent('{"user_id":"user-1"}')}`,
             }),
@@ -209,11 +212,11 @@ describe("ZaloClient / createArticle", () => {
 
         await expect(client.createArticle("access", article)).resolves.toBe("tok-1")
         expect(http.request).toHaveBeenCalledWith(
-            expect.objectContaining({
+            objectLike({
                 method: "POST",
                 url: "https://api.test/v2.0/article/create",
                 headers: { access_token: "access" },
-                body: expect.objectContaining({
+                body: objectLike({
                     type: "normal",
                     status: "hide",
                     cover: { cover_type: "photo", photo_url: "https://x/cover.png", status: "show" },
@@ -232,9 +235,7 @@ describe("ZaloClient / createArticle", () => {
 
         await client.createArticle("access", { ...article, publish: true })
 
-        expect(http.request).toHaveBeenCalledWith(
-            expect.objectContaining({ body: expect.objectContaining({ status: "show" }) }),
-        )
+        expect(http.request).toHaveBeenCalledWith(objectLike({ body: objectLike({ status: "show" }) }))
     })
 
     it("is a rejection when Zalo answers without a token", async () => {
@@ -265,13 +266,13 @@ describe("ZaloClient / publishArticle", () => {
 
         await expect(client.publishArticle("access", "tok-1", article)).resolves.toBe("art-1")
         expect(http.request.mock.calls[0]?.[0]).toEqual(
-            expect.objectContaining({ url: "https://api.test/v2.0/article/verify", body: { token: "tok-1" } }),
+            objectLike({ url: "https://api.test/v2.0/article/verify", body: { token: "tok-1" } }),
         )
         expect(http.request.mock.calls[1]?.[0]).toEqual(
-            expect.objectContaining({
+            objectLike({
                 method: "POST",
                 url: "https://api.test/v2.0/article/update",
-                body: expect.objectContaining({ id: "art-1", status: "show", title: "A weekend", type: "normal" }),
+                body: objectLike({ id: "art-1", status: "show", title: "A weekend", type: "normal" }),
             }),
         )
     })
@@ -326,7 +327,7 @@ describe("ZaloClient / articles", () => {
             { id: "art-2", title: "", status: "", createdAt: "2026-10-16T02:00:00.000Z", views: 0, shares: 0 },
         ])
         expect(http.request).toHaveBeenCalledWith(
-            expect.objectContaining({
+            objectLike({
                 method: "GET",
                 url: "https://api.test/v2.0/article/getslice?offset=0&limit=50&type=normal",
             }),

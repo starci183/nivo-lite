@@ -101,8 +101,7 @@ export const toRowModels = (
         const agent = isAgent ? agents.find((a) => a.id === r.ownerAgentId) : undefined
         const status = statusOf(r.status)
         const isDone = status === "done"
-        const offset =
-            r.dueAt === null || r.dueAt === undefined || isDone ? null : dayNumber(new Date(r.dueAt)) - dayNumber(now)
+        const offset = r.dueAt === null || isDone ? null : dayNumber(new Date(r.dueAt)) - dayNumber(now)
         const noDue = isDone ? null : t("noDue")
         return {
             id: r.id,

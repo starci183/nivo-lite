@@ -85,9 +85,10 @@ export const initialForm = (item: ContentItem): EditorForm => ({
     hint: "",
     proof: {},
     variants: Object.fromEntries(
-        Object.entries(item.variants).flatMap(([channel, variant]) =>
-            variant === undefined ? [] : [[channel, { ...variant, hashtags: [...variant.hashtags] }]],
-        ),
+        Object.entries(item.variants).map(([channel, variant]) => [
+            channel,
+            { ...variant, hashtags: [...variant.hashtags] },
+        ]),
     ),
     tags: Object.fromEntries(
         CONTENT_CHANNELS.map((channel) => [channel, (item.variants[channel]?.hashtags ?? []).join(" ")]),

@@ -32,6 +32,19 @@ import {
     SELECT_BOUND_ACCOUNTING_AGENT,
     SELECT_CONNECTION_STATE,
 } from "./persistence/bank-feed.sql"
+
+/** What `run` throws, read as `unknown`; the matcher then judges its fields. */
+const thrownBy = (run: () => unknown): unknown => {
+    try {
+        run()
+    } catch (error) {
+        return error
+    }
+    return undefined
+}
+
+const textLike = (text: string): unknown => expect.stringContaining(text)
+const objectLike = (shape: Record<string, unknown>): unknown => expect.objectContaining(shape)
 type Stub = readonly [string, unknown]
 const STATE: Stub = [SELECT_CONNECTION_STATE, [{ name: "Bank", environment: "live" }]]
 const FED: Stub = [MARK_CONNECTION_FED, []]
@@ -213,8 +226,8 @@ describe("BankFeedService provider receipt intake", () => {
     })
     it("rejects an absent Casso body before intake", async () => {
         const { feed, tx } = await build()
-        expect(() => feed.acceptCassoDelivery(undefined, "conn-1")).toThrow(
-            expect.objectContaining({ code: BillingErrorCode.WebhookInvalid }),
+        expect(thrownBy(() => feed.acceptCassoDelivery(undefined, "conn-1"))).toEqual(
+            objectLike({ code: BillingErrorCode.WebhookInvalid }),
         )
         expect(tx.outcomes).toEqual([])
     })
@@ -331,7 +344,7 @@ describe("BankFeedService booked credit details", () => {
             expect(harness.inbound.recordBankPayment).toHaveBeenCalledWith(
                 expect.objectContaining({
                     providerRef: credits[0]?.eventId,
-                    body: expect.stringContaining(`"bank":"${credits[0]?.fallbackBankName}"`),
+                    body: textLike(`"bank":"${credits[0]?.fallbackBankName}"`),
                 }),
             )
         },
@@ -344,7 +357,7 @@ describe("BankFeedService booked credit details", () => {
         const harness = await build([[SELECT_CONNECTION_STATE, []]])
         await consumeFeed(harness, "sepay-feed", { id: 7, transferType: "in", transferAmount: 10, ...fields })
         expect(harness.inbound.recordBankPayment).toHaveBeenCalledWith(
-            expect.objectContaining({ externalRef: expected, body: expect.stringContaining('"bank":"SePay"') }),
+            objectLike({ externalRef: expected, body: textLike('"bank":"SePay"') }),
         )
     })
     it("rounds and displays empty content, then completes duplicate credits without another job", async () => {

@@ -82,9 +82,9 @@ export interface ListLeadsParams {
     /** The Authorization header as sent. */
     readonly authorization: string | undefined
     /** Only customers of this stage. */
-    readonly stage?: LeadStage
+    readonly stage?: LeadStage | undefined
     /** The most customers to answer, as the caller wrote it; clamped to 1..200, 50 when absent or not a number. */
-    readonly limit?: string
+    readonly limit?: string | undefined
 }
 
 /** What listing events takes. */
@@ -92,9 +92,9 @@ export interface ListEventsParams {
     /** The Authorization header as sent. */
     readonly authorization: string | undefined
     /** Only events after this time, ISO 8601; one day back when absent. */
-    readonly since?: string
+    readonly since?: string | undefined
     /** The most events to answer, as the caller wrote it; clamped to 1..500, 100 when absent or not a number. */
-    readonly limit?: string
+    readonly limit?: string | undefined
 }
 
 /** What handing over a customer takes, as the caller sent it: an absent optional text means none. */
@@ -104,21 +104,21 @@ export interface AcceptLeadParams {
     /** The customer's name. */
     readonly name: string
     /** The phone number. */
-    readonly phone?: string
+    readonly phone?: string | undefined
     /** The email address. */
-    readonly email?: string
+    readonly email?: string | undefined
     /** The company. */
-    readonly company?: string
+    readonly company?: string | undefined
     /** What the customer needs. */
-    readonly need?: string
+    readonly need?: string | undefined
     /** The channel the customer came through; absent means the API. */
-    readonly channel?: string
+    readonly channel?: string | undefined
     /** The caller's own id of the customer: a repeat with the same id is one customer. */
-    readonly externalId?: string
+    readonly externalId?: string | undefined
     /** A note for the customer's history. */
-    readonly note?: string
+    readonly note?: string | undefined
     /** The stage the caller asks for; an empty string means none. */
-    readonly stage?: LeadStage | ""
+    readonly stage?: LeadStage | "" | undefined
 }
 
 /** A hand-over with every absent text made empty and the stage decided. */
@@ -158,13 +158,13 @@ export interface AcceptMessageParams {
     /** The text to send. */
     readonly text: string
     /** The customer conversation; absent when the lead names it. */
-    readonly conversationId?: string
+    readonly conversationId?: string | undefined
     /** The customer whose latest conversation to use. */
-    readonly leadId?: string
+    readonly leadId?: string | undefined
     /** True forces a waiting decision whatever the owner's rule says. */
-    readonly requireApproval?: boolean
+    readonly requireApproval?: boolean | undefined
     /** The caller's `Idempotency-Key`. */
-    readonly idempotencyKey?: string
+    readonly idempotencyKey?: string | undefined
 }
 
 /** What asking the chatbot to message a customer answers: the message waits in the queue. */
@@ -184,11 +184,11 @@ export interface AcceptKnowledgeParams {
     /** The text of the source. */
     readonly content: string
     /** The topic. */
-    readonly topic?: string
+    readonly topic?: string | undefined
     /** `public` lets customers be answered from it; anything else keeps it internal. */
-    readonly visibility?: string
+    readonly visibility?: string | undefined
     /** The tags. */
-    readonly tags?: ReadonlyArray<string>
+    readonly tags?: ReadonlyArray<string> | undefined
 }
 
 /** What adding a knowledge source answers: the source waits to be indexed. */

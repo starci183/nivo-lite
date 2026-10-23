@@ -2,7 +2,7 @@ import type * as SubjectModule from "./database-config.policy"
 import { Test } from "@nestjs/testing"
 import type { DatabaseTarget } from "@modules/integrations/data-sources"
 import type { TableMapping } from "./database-config.contracts"
-import { DataHubError, DataHubErrorCode } from "./errors/data-hub.error"
+import { DataHubErrorCode } from "./errors/data-hub.error"
 import { DATABASE_WIZARD_COPY as COPY } from "./messages/database.messages"
 import {
     checkTarget,
@@ -85,16 +85,7 @@ const targetOf = (overrides: Partial<DatabaseTarget> = {}): DatabaseTarget => ({
     ...overrides,
 })
 
-const badEngine = (): DatabaseTarget => {
-    try {
-        return JSON.parse(
-            '{"engine":"oracle","host":"db.example","port":5432,"database":"app",' +
-                '"user":"owner","password":"secret","ssl":true}',
-        )
-    } catch (cause) {
-        throw new DataHubError({ code: DataHubErrorCode.Invalid, cause })
-    }
-}
+const badEngine = (): DatabaseTarget => Object.assign(targetOf(), { engine: "oracle" })
 
 const columnNames = ["note", ...Array.from({ length: 29 }, (_unused, index) => `c${index}`)]
 

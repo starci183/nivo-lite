@@ -76,7 +76,7 @@ export const useDatabaseTargetForm = (
             password: "",
             ssl: true,
         },
-        values: loaded,
+        ...(loaded === undefined ? {} : { values: loaded }),
         mode: "onChange",
     })
 }

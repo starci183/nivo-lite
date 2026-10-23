@@ -103,13 +103,19 @@ export const credentialOf = (target: DatabaseTarget): string =>
 /** Cleaned tables, or the sentence that says what is wrong. */
 type TablesOutcome = { readonly tables: ReadonlyArray<TableMapping> } | { readonly problem: string }
 
-const cleanTable = (raw: unknown): TableMapping | string => {
+/** One cleaned table, or the sentence that says what is wrong with it. */
+type TableOutcome =
+    { readonly ok: true; readonly mapping: TableMapping } | { readonly ok: false; readonly problem: string }
+
+const cleanTable = (raw: unknown): TableOutcome => {
     const source = isObject(raw) ? raw : {}
     const table = ident(source.table)
     const idColumn = ident(source.idColumn)
-    if (table === "" || idColumn === "") return COPY.needIdColumn(table === "" ? COPY.unnamedTable : table)
+    if (table === "" || idColumn === "") {
+        return { ok: false, problem: COPY.needIdColumn(table === "" ? COPY.unnamedTable : table) }
+    }
     const columns = Array.isArray(source.columns) ? source.columns.map(ident).filter((column) => column !== "") : []
-    return {
+    const mapping: TableMapping = {
         schema: ident(source.schema),
         table,
         entity: isEntity(source.entity) ? source.entity : "other",
@@ -118,6 +124,7 @@ const cleanTable = (raw: unknown): TableMapping | string => {
         updatedColumn: ident(source.updatedColumn),
         columns: [...new Set(columns)].slice(0, DATABASE_MAX_COLUMNS),
     }
+    return { ok: true, mapping }
 }
 
 const tablesOutcome = (raw: unknown): TablesOutcome => {
@@ -127,11 +134,11 @@ const tablesOutcome = (raw: unknown): TablesOutcome => {
     const tables: Array<TableMapping> = []
     for (const entry of raw) {
         const cleaned = cleanTable(entry)
-        if (typeof cleaned === "string") return { problem: cleaned }
-        const key = tableKey(cleaned)
+        if (!cleaned.ok) return { problem: cleaned.problem }
+        const key = tableKey(cleaned.mapping)
         if (seen.has(key)) return { problem: COPY.pickedTwice(key) }
         seen.add(key)
-        tables.push(cleaned)
+        tables.push(cleaned.mapping)
     }
     return { tables }
 }

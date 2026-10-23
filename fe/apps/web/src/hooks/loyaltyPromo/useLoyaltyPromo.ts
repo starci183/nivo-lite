@@ -39,6 +39,11 @@ export type PreviewState =
     | { readonly kind: "ready"; readonly preview: PromoPreview }
     | { readonly kind: "failed" }
 
+/** The status a polled campaign reports. */
+interface PolledStatus {
+    readonly status: string
+}
+
 const LIMITS = { nameMax: CAMPAIGN_NAME_MAX, briefMax: CAMPAIGN_BRIEF_MAX }
 
 /** The promotion builder: the form, the debounced live count of the segment, and the slow message draft that is polled until it leaves `waiting`. */
@@ -77,8 +82,9 @@ export const useLoyaltyPromo = (board: LoyaltyBoardType) => {
     else if (count.error !== undefined) preview = { kind: "failed" }
 
     const campaign = useQueryLoyaltyCampaignSwr(campaignId === null ? null : { id: campaignId }, {
-        refreshInterval: (latest) => (latest !== undefined && !isDrafting(latest.status) ? 0 : DRAFT_POLL_MS),
-        onSuccess: (data) => {
+        refreshInterval: (latest: PolledStatus | undefined) =>
+            latest !== undefined && !isDrafting(latest.status) ? 0 : DRAFT_POLL_MS,
+        onSuccess: (data: PolledStatus) => {
             if (!isDrafting(data.status)) void mutate(matchesSwrKey(QUERY_LOYALTY_BOARD_SWR_KEY))
         },
     })

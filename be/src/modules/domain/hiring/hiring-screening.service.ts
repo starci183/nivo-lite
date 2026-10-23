@@ -32,7 +32,8 @@ const reasonsOf = (json: string): Array<ScoreReason> => {
     const parsed = parseJson(json)
     if (!parsed.ok || !Array.isArray(parsed.value)) return []
     return parsed.value.flatMap((entry: unknown): Array<ScoreReason> => {
-        const item = typeof entry === "object" && entry !== null ? Object.fromEntries(Object.entries(entry)) : {}
+        const item: Record<string, unknown> =
+            typeof entry === "object" && entry !== null ? Object.fromEntries(Object.entries(entry)) : {}
         const status = item.status
         return typeof item.criterion === "string" &&
             typeof item.note === "string" &&

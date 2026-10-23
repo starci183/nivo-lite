@@ -18,7 +18,7 @@ export interface SignupFormBaseProps {
     readonly props: {
         readonly title: string
         readonly text: string
-        readonly failure?: { readonly title: string; readonly text: string }
+        readonly failure?: { readonly title: string; readonly text: string } | undefined
         readonly nameLabel: string
         readonly emailLabel: string
         readonly emailPlaceholder: string
@@ -35,10 +35,10 @@ export interface SignupFormBaseProps {
         readonly email: string
         readonly password: string
         readonly confirm: string
-        readonly nameError?: string
-        readonly emailError?: string
-        readonly passwordError?: string
-        readonly confirmError?: string
+        readonly nameError?: string | undefined
+        readonly emailError?: string | undefined
+        readonly passwordError?: string | undefined
+        readonly confirmError?: string | undefined
         readonly isPending: boolean
         readonly sentTitle: string
         readonly check: CheckEmailProps
@@ -123,9 +123,9 @@ export const SignupFormBase = (props: SignupFormBaseProps) => {
 /** State values and commands consumed by the connected surface. */
 export type SignupFormProps = {
     /** The destination after the account exists (an invite page); already sanitised. */
-    readonly next?: string
+    readonly next?: string | undefined
     readonly invited: boolean
-    readonly initialEmail?: string
+    readonly initialEmail?: string | undefined
 }
 
 /** State values and commands consumed by the connected surface. */

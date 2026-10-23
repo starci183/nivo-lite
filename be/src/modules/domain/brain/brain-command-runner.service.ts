@@ -3,7 +3,7 @@ import { BrainCommandsService } from "@modules/domain/brain-commands"
 import type { BrainCommandResult } from "@modules/domain/brain-commands"
 import { KnowledgeDriveService, KnowledgeReembedService, KnowledgeSearchService } from "@modules/domain/knowledge"
 import { KnowledgeSourcesService } from "@modules/domain/knowledge-sources"
-import { DomainError } from "@modules/platform/errors"
+import { isDomainError } from "@modules/platform/errors"
 import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { BrainLearningService } from "./brain-learning.service"
@@ -55,7 +55,7 @@ export class BrainCommandRunnerService {
             await this.commands.finish(ref.workspaceId, ref.commandId, result)
             return "done"
         } catch (cause) {
-            if (!(cause instanceof DomainError)) throw cause
+            if (!isDomainError(cause)) throw cause
             this.logger.warn(BrainLogEvent.CommandRefused, { code: cause.code, commandId: ref.commandId })
             await this.commands.fail(ref.workspaceId, ref.commandId, cause.code)
             return "failed"

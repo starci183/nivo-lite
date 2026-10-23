@@ -29,7 +29,7 @@ export interface ReindexCommand {
     /** The document. */
     readonly sourceId: string
     /** The new text; omitted keeps the text. */
-    readonly content?: string
+    readonly content?: string | undefined
 }
 
 /** What changes about a document without reading it again. */
@@ -37,15 +37,15 @@ export interface UpdateCommand {
     /** The document. */
     readonly sourceId: string
     /** A new title. */
-    readonly title?: string
+    readonly title?: string | undefined
     /** A new topic; an empty text clears it. */
-    readonly topic?: string
+    readonly topic?: string | undefined
     /** New tags. */
-    readonly tags?: ReadonlyArray<string>
+    readonly tags?: ReadonlyArray<string> | undefined
     /** A new module; an empty text means every module. */
-    readonly module?: string
+    readonly module?: string | undefined
     /** public or internal. */
-    readonly visibility?: string
+    readonly visibility?: string | undefined
 }
 
 /** A question to try against what the agents would retrieve. */

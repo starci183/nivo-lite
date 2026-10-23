@@ -125,11 +125,7 @@ const renderExceptionFields = (p: BookingExceptionsBaseProps["props"], on: Booki
                     />
                 </div>
             )}
-            <BookingSaveLine
-                label={p.addLabel}
-                isPending={p.isPending}
-                {...(p.notice === undefined ? {} : { notice: p.notice })}
-            />
+            <BookingSaveLine label={p.addLabel} isPending={p.isPending} notice={p.notice} />
         </div>
     )
 }

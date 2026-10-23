@@ -173,11 +173,14 @@ const inflate = (data: Uint8Array, entry: Planned): ArchiveRow => {
 }
 
 /** Plans an archive, or the reason it cannot be read. */
-const planOrFault = (data: Uint8Array, maxEntries: number): Plan | ArchiveError => {
+const planOrFault = (
+    data: Uint8Array,
+    maxEntries: number,
+): { readonly plan: Plan } | { readonly fault: ArchiveError } => {
     try {
-        return planZip(data, maxEntries)
+        return { plan: planZip(data, maxEntries) }
     } catch {
-        return "errZipBad"
+        return { fault: "errZipBad" }
     }
 }
 
@@ -188,8 +191,9 @@ const planOrFault = (data: Uint8Array, maxEntries: number): Plan | ArchiveError 
 export const readArchive = async (zip: Blob, maxEntries: number): Promise<ArchiveResult> => {
     if (zip.size > MAX_ZIP_BYTES) return { ...NOTHING, abort: "errZipTooBig" }
     const data = new Uint8Array(await zip.arrayBuffer())
-    const plan = planOrFault(data, maxEntries)
-    if (typeof plan === "string") return { ...NOTHING, abort: plan }
+    const outcome = planOrFault(data, maxEntries)
+    if ("fault" in outcome) return { ...NOTHING, abort: outcome.fault }
+    const { plan } = outcome
     if (plan.abort !== undefined) return { ...NOTHING, abort: plan.abort }
     return {
         rows: plan.planned.map((entry) => inflate(data, entry)),

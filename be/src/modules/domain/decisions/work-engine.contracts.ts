@@ -43,11 +43,11 @@ export interface SplitPayload {
 /** Options of one pass of the gate over an item. */
 export interface ProcessOptions {
     /** Use the stored proposal as it is: no prepare step. */
-    readonly preset?: boolean
+    readonly preset?: boolean | undefined
     /** Do not continue the chain. */
-    readonly noChain?: boolean
+    readonly noChain?: boolean | undefined
     /** Always ask a person, with this reason. */
-    readonly forceAsk?: ReasonCode
+    readonly forceAsk?: ReasonCode | undefined
 }
 
 /** Who decided an item: a policy, the owner or a staff member. */

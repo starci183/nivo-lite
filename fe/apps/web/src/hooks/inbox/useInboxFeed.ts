@@ -5,6 +5,7 @@ import { useActiveWorkspace } from "@/hooks/workspaces"
 import { CONSOLE_ROUTES, leadHref } from "@/modules/routes"
 import { errorMessage } from "./inbox.shared"
 import { useQueryInboundEventsSwr } from "@/hooks/swr"
+import { readError } from "@/hooks/workspaceread"
 
 /** The tone each input status wears; a status that is not listed is neutral. */
 const STATUS_TONES = {
@@ -26,7 +27,9 @@ export const useInboxFeed = (isWaiting: boolean) => {
     const format = useFormatter()
     const now = useNow({ updateInterval: 60_000 })
     const { activeWorkspaceId } = useActiveWorkspace()
-    const { data, error, isLoading, mutate } = useQueryInboundEventsSwr(isWaiting ? undefined : activeWorkspaceId)
+    const swrRead = useQueryInboundEventsSwr(isWaiting ? undefined : activeWorkspaceId)
+    const { data, isLoading, mutate } = swrRead
+    const error = readError(swrRead)
     const ago = (iso: string): string => {
         const minutes = Math.max(0, Math.round((now.getTime() - new Date(iso).getTime()) / 60_000))
         if (minutes < 1) return t("justNow")

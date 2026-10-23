@@ -3,6 +3,19 @@ import { DataSourcesErrorCode } from "./errors/data-sources.error"
 import { TABLE_COPY } from "./messages/table.messages"
 import { docExportUrl, isNotPublicAnswer, sheetExportUrl } from "./table-google.policy"
 
+/** A partial-object matcher, typed `unknown` so it flows into any slot. */
+const objectLike = (shape: Record<string, unknown>): unknown => expect.objectContaining(shape)
+
+/** What `run` throws, read as `unknown`; the matcher then judges its fields. */
+const thrownBy = (run: () => unknown): unknown => {
+    try {
+        run()
+    } catch (error) {
+        return error
+    }
+    return undefined
+}
+
 const SUBJECT = Symbol("table-google.policy")
 
 const buildSubject = async () => {
@@ -43,14 +56,14 @@ describe("sheetExportUrl and docExportUrl", () => {
     it("refuses a link that is not a URL", async () => {
         const subject = await buildSubject()
 
-        expect(() => subject.sheetExportUrl("not a url")).toThrow(
-            expect.objectContaining({
+        expect(thrownBy(() => subject.sheetExportUrl("not a url"))).toEqual(
+            objectLike({
                 code: DataSourcesErrorCode.Rejected,
                 params: { detail: TABLE_COPY.sheetsLinkInvalid },
             }),
         )
-        expect(() => subject.docExportUrl("not a url")).toThrow(
-            expect.objectContaining({ params: { detail: TABLE_COPY.docsLinkInvalid } }),
+        expect(thrownBy(() => subject.docExportUrl("not a url"))).toEqual(
+            objectLike({ params: { detail: TABLE_COPY.docsLinkInvalid } }),
         )
     })
 
@@ -62,14 +75,14 @@ describe("sheetExportUrl and docExportUrl", () => {
     ])("refuses a sheet link %s", async (link, detail) => {
         const subject = await buildSubject()
 
-        expect(() => subject.sheetExportUrl(link)).toThrow(expect.objectContaining({ params: { detail } }))
+        expect(thrownBy(() => subject.sheetExportUrl(link))).toEqual(objectLike({ params: { detail } }))
     })
 
     it("refuses a document link with the wrong shape", async () => {
         const subject = await buildSubject()
 
-        expect(() => subject.docExportUrl("https://docs.google.com/spreadsheets/d/doc-id-0001/edit")).toThrow(
-            expect.objectContaining({ params: { detail: TABLE_COPY.docsLinkShape } }),
+        expect(thrownBy(() => subject.docExportUrl("https://docs.google.com/spreadsheets/d/doc-id-0001/edit"))).toEqual(
+            objectLike({ params: { detail: TABLE_COPY.docsLinkShape } }),
         )
     })
 })

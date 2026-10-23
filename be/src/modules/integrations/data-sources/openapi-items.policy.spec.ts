@@ -13,6 +13,19 @@ import {
     suggestFromItems,
 } from "./openapi-items.policy"
 
+/** A partial-object matcher, typed `unknown` so it flows into any slot. */
+const objectLike = (shape: Record<string, unknown>): unknown => expect.objectContaining(shape)
+
+/** What `run` throws, read as `unknown`; the matcher then judges its fields. */
+const thrownBy = (run: () => unknown): unknown => {
+    try {
+        run()
+    } catch (error) {
+        return error
+    }
+    return undefined
+}
+
 const SUBJECT = Symbol("openapi-items.policy")
 
 const buildSubject = async () => {
@@ -111,8 +124,8 @@ describe("openapi item values", () => {
             const subject = await buildSubject()
 
             expect(subject.parseJsonBody("1")).toBe(1)
-            expect(() => subject.parseJsonBody("no")).toThrow(
-                expect.objectContaining({
+            expect(thrownBy(() => subject.parseJsonBody("no"))).toEqual(
+                objectLike({
                     code: DataSourcesErrorCode.Rejected,
                     params: { detail: OPENAPI_TEXT.notJson },
                 }),

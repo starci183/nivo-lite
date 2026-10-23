@@ -24,7 +24,7 @@ export const onboardingStepsOf = (promo: Promo, t: PromoTranslator): Array<Onboa
     const chatHref = chatbot ? `/modules/${chatbot.id}/chat` : NEW_CHATBOT
     const knowledgeHref = chatbot ? `/modules/${chatbot.id}` : NEW_CHATBOT
     return [
-        stepOf(t, "Buy", chatbot !== null && chatbot !== undefined, NEW_CHATBOT),
+        stepOf(t, "Buy", chatbot !== null, NEW_CHATBOT),
         stepOf(t, "Knowledge", (chatbot?.knowledge ?? "").trim().length > 0, knowledgeHref),
         stepOf(t, "Test", promo.hasCustomerConversation, chatHref),
         stepOf(t, "Lead", promo.hasLeadConversation, chatHref),

@@ -21,6 +21,8 @@ import {
 } from "./persistence/connection-secrets.sql"
 import { openSecret, sealSecret } from "./secret-cipher.policy"
 
+const textLike = (text: string): unknown => expect.stringContaining(text)
+
 const KEY = randomBytes(32)
 const options = { tokenKey: new Secret(KEY.toString("base64")) }
 
@@ -182,7 +184,7 @@ describe("ConnectionSecretsService", () => {
             await expect(service.secretOf("c-1", "telegram")).resolves.toMatchObject({
                 kind: "refused",
                 code: ConnectionSecretsErrorCode.Unreadable,
-                params: { reason: expect.stringContaining("Error") },
+                params: { reason: textLike("Error") },
             })
         })
     })

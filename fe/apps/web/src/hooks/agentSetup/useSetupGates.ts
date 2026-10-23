@@ -12,7 +12,7 @@ import {
 import { useGraphQLWithToast } from "@/modules/toast"
 
 /** What a gate change asks. */
-type GateChange = { readonly action: "confirm" | "reopen" | "edit"; readonly evidence?: string }
+type GateChange = { readonly action: "confirm" | "reopen" | "edit"; readonly evidence?: string | undefined }
 
 /** What the last apply said: nothing yet, or applied with the new version. */
 type ApplyNote = { readonly tone: "idle" | "applied"; readonly version: number }

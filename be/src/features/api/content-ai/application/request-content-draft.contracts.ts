@@ -5,5 +5,5 @@ export interface RequestContentDraftRequest {
     /** The workspace-scoped row identifier. */
     readonly id: string
     /** Optional guidance for the generated rewrite. */
-    readonly hint?: string
+    readonly hint?: string | undefined
 }

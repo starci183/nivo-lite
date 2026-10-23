@@ -6,6 +6,19 @@ import { MetaErrorCode } from "./errors/meta.error"
 
 import { metaReturnTo, metaStateKey, signMetaState, verifyMetaState } from "./meta-state.policy"
 
+/** A partial-object matcher, typed `unknown` so it flows into any slot. */
+const objectLike = (shape: Record<string, unknown>): unknown => expect.objectContaining(shape)
+
+/** What `run` throws, read as `unknown`; the matcher then judges its fields. */
+const thrownBy = (run: () => unknown): unknown => {
+    try {
+        run()
+    } catch (error) {
+        return error
+    }
+    return undefined
+}
+
 const POLICY = Symbol("./meta-state.policy")
 
 type PolicySubject = {
@@ -50,8 +63,8 @@ describe("metaStateKey", () => {
         const { subject, KEY } = await buildSubject()
 
         expect(KEY).toHaveLength(32)
-        expect(() => subject.metaStateKey("c2hvcnQ=")).toThrow(
-            expect.objectContaining({ code: MetaErrorCode.NotConfigured }),
+        expect(thrownBy(() => subject.metaStateKey("c2hvcnQ="))).toEqual(
+            objectLike({ code: MetaErrorCode.NotConfigured }),
         )
     })
 })

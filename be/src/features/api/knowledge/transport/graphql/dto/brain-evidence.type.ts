@@ -17,9 +17,9 @@ export class BrainEvidenceType {
 
     /** A verbatim excerpt. */
     @Field(() => String, { nullable: true })
-    quote?: string | null
+    quote?: string | null | undefined
 
     /** When it happened, ISO 8601. */
     @Field(() => String, { nullable: true })
-    at?: string | null
+    at?: string | null | undefined
 }

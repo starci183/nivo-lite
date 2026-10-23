@@ -15,7 +15,7 @@ export interface OutcomeRefused<C extends string> {
     /** The capability code of the refusal, a member of its code enum. */
     readonly code: C
     /** Values for the placeholders of the display text. */
-    readonly params?: ErrorParams
+    readonly params?: ErrorParams | undefined
 }
 
 /** The result of an operation that can be refused for an expected business reason: returned, never thrown. */

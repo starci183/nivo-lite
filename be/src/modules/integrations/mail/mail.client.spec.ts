@@ -12,6 +12,12 @@ import type { EmailLayoutInput, MailMessage, SmtpConfig } from "./mail.contracts
 import { MAIL_OPTIONS } from "./mail.decorators"
 import type { MailOptions } from "./mail.options"
 
+/** A partial-object matcher, typed `unknown` so it flows into any slot. */
+const objectLike = (shape: Record<string, unknown>): unknown => expect.objectContaining(shape)
+
+/** The match-anything matcher, typed `unknown` so it flows into any slot. */
+const anything = (): unknown => expect.anything()
+
 interface LookupOwner {
     lookup: (hostname: string, options: LookupAllOptions) => Promise<Array<LookupAddress>>
 }
@@ -158,7 +164,7 @@ describe("MailClient / sendThroughSmtp", () => {
         await expect(client.sendThroughSmtp(config, message)).resolves.toEqual({ messageId: "<id-1>" })
 
         expect(createTransport).toHaveBeenCalledWith(
-            expect.objectContaining({
+            objectLike({
                 host: "smtp.example.com",
                 port: 587,
                 secure: false,
@@ -169,7 +175,7 @@ describe("MailClient / sendThroughSmtp", () => {
             }),
         )
         expect(sendMail).toHaveBeenCalledWith(
-            expect.objectContaining({
+            objectLike({
                 from: { name: "Shop", address: "owner@example.com" },
                 replyTo: "help@example.com",
                 to: "a@b.vn",
@@ -187,7 +193,7 @@ describe("MailClient / sendThroughSmtp", () => {
         )
 
         expect(createTransport).toHaveBeenCalledWith(
-            expect.objectContaining({
+            objectLike({
                 secure: true,
                 requireTLS: false,
                 tls: { rejectUnauthorized: false, minVersion: "TLSv1.2" },
@@ -201,7 +207,7 @@ describe("MailClient / sendThroughSmtp", () => {
 
         await client.sendThroughSmtp({ ...config, replyTo: undefined }, message)
 
-        expect(sendMail).toHaveBeenCalledWith(expect.objectContaining({ replyTo: undefined }))
+        expect(sendMail).toHaveBeenCalledWith(objectLike({ replyTo: undefined }))
     })
     it("refuses a rejected recipient and still closes the transport", async () => {
         const { close } = transportAnswering({ messageId: "<id-4>", rejected: ["a@b.vn"] })
@@ -248,7 +254,7 @@ describe("MailClient / sendThroughPlatform encryption modes", () => {
         await client.sendThroughPlatform(message)
 
         expect(createTransport).toHaveBeenCalledWith(
-            expect.objectContaining({
+            objectLike({
                 secure,
                 requireTLS,
                 ignoreTLS: false,
@@ -277,7 +283,7 @@ describe("MailClient / sendThroughPlatform service and pooling options", () => {
         await client.sendThroughPlatform(message)
 
         expect(createTransport).toHaveBeenCalledWith(
-            expect.objectContaining({
+            objectLike({
                 host: "smtp.gmail.com",
                 port: 465,
                 secure: true,
@@ -289,8 +295,8 @@ describe("MailClient / sendThroughPlatform service and pooling options", () => {
                 socketTimeout: 3456,
             }),
         )
-        expect(createTransport).not.toHaveBeenCalledWith(expect.objectContaining({ service: expect.anything() }))
-        expect(createTransport).not.toHaveBeenCalledWith(expect.objectContaining({ url: expect.anything() }))
+        expect(createTransport).not.toHaveBeenCalledWith(objectLike({ service: anything() }))
+        expect(createTransport).not.toHaveBeenCalledWith(objectLike({ url: anything() }))
     })
 })
 
@@ -310,7 +316,7 @@ describe("MailClient / sendThroughPlatform encryption overrides", () => {
         await client.sendThroughPlatform(message)
 
         expect(createTransport).toHaveBeenCalledWith(
-            expect.objectContaining({
+            objectLike({
                 host: "smtp.example.com",
                 secure: false,
                 requireTLS: true,
@@ -323,7 +329,7 @@ describe("MailClient / sendThroughPlatform encryption overrides", () => {
                 tls: { rejectUnauthorized: true, minVersion: "TLSv1.2" },
             }),
         )
-        expect(createTransport).not.toHaveBeenCalledWith(expect.objectContaining({ url: expect.anything() }))
+        expect(createTransport).not.toHaveBeenCalledWith(objectLike({ url: anything() }))
     })
     it("retains a stronger TLS minimum and an explicit server name", async () => {
         transportAnswering({ messageId: "<tls13>" })
@@ -338,7 +344,7 @@ describe("MailClient / sendThroughPlatform encryption overrides", () => {
         await client.sendThroughPlatform(message)
 
         expect(createTransport).toHaveBeenCalledWith(
-            expect.objectContaining({
+            objectLike({
                 tls: { rejectUnauthorized: true, minVersion: "TLSv1.3", servername: "mail.example.com" },
             }),
         )
@@ -357,10 +363,8 @@ describe("MailClient / sendThroughPlatform delivery", () => {
             }),
         ).resolves.toEqual({ messageId: "<id-5>" })
 
-        expect(createTransport).toHaveBeenCalledWith(
-            expect.objectContaining({ host: "platform", secure: false, requireTLS: true }),
-        )
-        expect(sendMail).toHaveBeenCalledWith(expect.objectContaining({ from: "NIVO <no-reply@nivo.test>" }))
+        expect(createTransport).toHaveBeenCalledWith(objectLike({ host: "platform", secure: false, requireTLS: true }))
+        expect(sendMail).toHaveBeenCalledWith(objectLike({ from: "NIVO <no-reply@nivo.test>" }))
         expect(close).toHaveBeenCalledTimes(1)
     })
     it("classifies a platform failure and refuses when no platform sender is configured", async () => {
@@ -384,9 +388,7 @@ describe("MailClient / sendNoticeThroughPlatform", () => {
             messageId: "<notice-1>",
         })
 
-        expect(createTransport).toHaveBeenCalledWith(
-            expect.objectContaining({ host: "platform", secure: false, requireTLS: true }),
-        )
+        expect(createTransport).toHaveBeenCalledWith(objectLike({ host: "platform", secure: false, requireTLS: true }))
         expect(sendMail.mock.calls).toEqual([
             [
                 {

@@ -8,6 +8,18 @@ import { BillingErrorCode } from "./errors/billing.error"
 
 import { promoAvailable as realPromoAvailable, quoteSelection as realQuoteSelection } from "./pricing.policy"
 
+const objectLike = (shape: Record<string, unknown>): unknown => expect.objectContaining(shape)
+
+/** What `run` throws, read as `unknown`; the matcher then judges its fields. */
+const thrownBy = (run: () => unknown): unknown => {
+    try {
+        run()
+    } catch (error) {
+        return error
+    }
+    return undefined
+}
+
 const SUBJECT = Symbol("pricing.policy")
 
 type Subject = {
@@ -201,16 +213,16 @@ describe("pricing policy > quoteSelection", () => {
     it("refuses to quote a contract plan", async () => {
         const { subject } = await buildSubject()
 
-        expect(() => subject.quoteSelection(planOf({ isCustom: true }), selectionOf(), NEW_CUSTOMER)).toThrow(
-            expect.objectContaining({ code: BillingErrorCode.PlanCustom }),
+        expect(thrownBy(() => subject.quoteSelection(planOf({ isCustom: true }), selectionOf(), NEW_CUSTOMER))).toEqual(
+            objectLike({ code: BillingErrorCode.PlanCustom }),
         )
     })
     it("refuses a changed allowance on an individual plan", async () => {
         const { subject } = await buildSubject()
 
-        expect(() => subject.quoteSelection(planOf(), selectionOf({ tierCredits: 100 }), NEW_CUSTOMER)).toThrow(
-            expect.objectContaining({ code: BillingErrorCode.TierUnknown }),
-        )
+        expect(
+            thrownBy(() => subject.quoteSelection(planOf(), selectionOf({ tierCredits: 100 }), NEW_CUSTOMER)),
+        ).toEqual(objectLike({ code: BillingErrorCode.TierUnknown }))
     })
 })
 
@@ -218,23 +230,31 @@ describe("pricing policy > quoteSelection", () => {
     it("requires a credit tier for a per-seat plan", async () => {
         const { subject } = await buildSubject()
 
-        expect(() => subject.quoteSelection(planOf({ perSeat: true }), selectionOf(), NEW_CUSTOMER)).toThrow(
-            expect.objectContaining({ code: BillingErrorCode.TierRequired }),
+        expect(thrownBy(() => subject.quoteSelection(planOf({ perSeat: true }), selectionOf(), NEW_CUSTOMER))).toEqual(
+            objectLike({ code: BillingErrorCode.TierRequired }),
         )
     })
     it("refuses a tier absent from the per-seat catalogue", async () => {
         const { subject } = await buildSubject()
 
-        expect(() =>
-            subject.quoteSelection(planOf({ perSeat: true }), selectionOf({ tierCredits: 999 }), NEW_CUSTOMER),
-        ).toThrow(expect.objectContaining({ code: BillingErrorCode.TierUnknown }))
+        expect(
+            thrownBy(() =>
+                subject.quoteSelection(planOf({ perSeat: true }), selectionOf({ tierCredits: 999 }), NEW_CUSTOMER),
+            ),
+        ).toEqual(objectLike({ code: BillingErrorCode.TierUnknown }))
     })
     it.each([0.5, 0, -1, 4])("refuses invalid paid seats %p and reports the plan maximum", async (seats) => {
         const { subject } = await buildSubject()
 
-        expect(() =>
-            subject.quoteSelection(planOf({ perSeat: true }), selectionOf({ tierCredits: 500, seats }), NEW_CUSTOMER),
-        ).toThrow(expect.objectContaining({ code: BillingErrorCode.SeatsInvalid, params: { max: 3 } }))
+        expect(
+            thrownBy(() =>
+                subject.quoteSelection(
+                    planOf({ perSeat: true }),
+                    selectionOf({ tierCredits: 500, seats }),
+                    NEW_CUSTOMER,
+                ),
+            ),
+        ).toEqual(objectLike({ code: BillingErrorCode.SeatsInvalid, params: { max: 3 } }))
     })
 })
 
@@ -244,9 +264,9 @@ describe("pricing policy > quoteSelection", () => {
         async (changes) => {
             const { subject } = await buildSubject()
 
-            expect(() =>
-                subject.quoteSelection(planOf(changes), selectionOf({ cycle: "annual" }), NEW_CUSTOMER),
-            ).toThrow(expect.objectContaining({ code: BillingErrorCode.CycleUnavailable }))
+            expect(
+                thrownBy(() => subject.quoteSelection(planOf(changes), selectionOf({ cycle: "annual" }), NEW_CUSTOMER)),
+            ).toEqual(objectLike({ code: BillingErrorCode.CycleUnavailable }))
         },
     )
 })

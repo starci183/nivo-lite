@@ -5,8 +5,8 @@ import { ACTIONS_CLASS_NAME } from "./classNames"
 type FormActionsProps = {
     /** Title of the negative alert. */
     readonly failTitle: string
-    readonly error?: string
-    readonly done?: string
+    readonly error?: string | undefined
+    readonly done?: string | undefined
     readonly submitLabel: string
     readonly isPending: boolean
     /** True while the form's data loads: the button keeps its place as a skeleton. */

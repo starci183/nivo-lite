@@ -42,7 +42,7 @@ export interface RunGraphQLWithToastOptions {
     /** Whether to toast a failure. Defaults to `true`. */
     showErrorToast?: boolean
     /** Success description (localized by the caller). When omitted the generic success copy is used. */
-    successMessage?: string
+    successMessage?: string | undefined
     /** Localized labels. Injected by `useGraphQLWithToast`. */
     messages: ToastMessages
 }
@@ -73,7 +73,7 @@ export const runGraphQLWithToast = async <T>(
 
 /** Options for {@link runRestWithToast}. */
 export interface RunRestWithToastOptions {
-    successMessage?: string
+    successMessage?: string | undefined
     showSuccessToast?: boolean
     showErrorToast?: boolean
     messages: ToastMessages

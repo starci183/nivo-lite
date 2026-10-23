@@ -20,6 +20,18 @@ import {
     SELECT_MEMBER,
 } from "./persistence/api-keys.sql"
 
+const objectLike = (shape: Record<string, unknown>): unknown => expect.objectContaining(shape)
+
+/** What `run` throws, read as `unknown`; the matcher then judges its fields. */
+const thrownBy = (run: () => unknown): unknown => {
+    try {
+        run()
+    } catch (error) {
+        return error
+    }
+    return undefined
+}
+
 const build = async (entityManager: MockEntityManager) => {
     const moduleRef = await Test.createTestingModule({
         providers: [
@@ -191,8 +203,8 @@ describe("ApiKeysService management", () => {
         const em = mockEntityManager()
         const { service, events } = await buildManagement(em)
 
-        expect(() => service.createKey("principal-1", "workspace-1", " x ")).toThrow(
-            expect.objectContaining({ code: ApiKeysErrorCode.NameTooShort }),
+        expect(thrownBy(() => service.createKey("principal-1", "workspace-1", " x "))).toEqual(
+            objectLike({ code: ApiKeysErrorCode.NameTooShort }),
         )
         expect(em.transaction).not.toHaveBeenCalled()
         expect(em.query).not.toHaveBeenCalled()

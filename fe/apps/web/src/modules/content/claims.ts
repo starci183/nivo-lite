@@ -29,8 +29,9 @@ export const claimWarnings = (text: string, knowledge?: string): Array<ClaimWarn
     if (knowledge === undefined) return promises
     const facts = knowledge.replace(/\s+/g, "").toLowerCase()
     const figures = [...text.matchAll(CLAIM_FIGURE)].flatMap((match) => {
-        const figure = match[1].replace(/\s+/g, "").toLowerCase()
-        return facts.includes(figure) ? [] : [{ kind: "figure" as const, figure: match[1].trim() }]
+        const raw = match[1] ?? ""
+        const figure = raw.replace(/\s+/g, "").toLowerCase()
+        return facts.includes(figure) ? [] : [{ kind: "figure" as const, figure: raw.trim() }]
     })
     return [...promises, ...figures]
 }

@@ -298,10 +298,12 @@ export const offerLines = (brand: BrandContext): string => {
     return hits.length > 0 ? hits.join("\n") : "No actual offers are recorded. Do not invent any."
 }
 
+/** A number as two digits. */
+const pad = (n: number): string => String(n).padStart(2, "0")
+
 /** A Vietnam-time label used in prompts. */
 export const localLabel = (iso: string): string => {
     const p = vietnamClock(new Date(iso))
-    const pad = (n: number): string => String(n).padStart(2, "0")
     return `${WEEKDAYS[p.dow]} ${pad(p.day)}/${pad(p.m)}/${p.y} ${pad(p.h)}:${pad(p.min)}`
 }
 

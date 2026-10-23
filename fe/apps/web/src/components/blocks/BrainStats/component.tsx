@@ -28,9 +28,9 @@ export interface BrainStatsBaseProps {
         readonly figures: ReadonlyArray<FigureView>
         /** The figures are loading: the labels stay, the values are skeletons. */
         readonly isSkeleton: boolean
-        readonly processing?: ProcessingView
+        readonly processing?: ProcessingView | undefined
         /** Something is due: a scheduled value waits to take over or a value in force has ended. Nothing is drawn for it while undefined. */
-        readonly maintain?: MaintainView
+        readonly maintain?: MaintainView | undefined
     }
     readonly on: { readonly maintain: () => void }
 }

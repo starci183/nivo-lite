@@ -11,6 +11,11 @@ import { EmailMessagesLogEvent } from "./email-messages.log-events"
 import { ModuleOutboundMailService } from "./module-outbound-mail.service"
 import { WorkspaceMailService } from "./workspace-mail.service"
 
+const anything = (): unknown => expect.anything()
+const without = (shape: Record<string, unknown>): unknown => expect.not.objectContaining(shape)
+
+const textLike = (text: string): unknown => expect.stringContaining(text)
+
 const notice: MailNotice = {
     workspaceId: "w1",
     to: "owner@shop.vn",
@@ -59,7 +64,7 @@ describe("ModuleOutboundMailService", () => {
                 purpose: "shifts_schedule",
                 audience: "owner",
                 refs: { schedule_id: "s1" },
-                html: expect.stringContaining("Shop A"),
+                html: textLike("Shop A"),
             }),
         )
     })
@@ -93,7 +98,7 @@ describe("ModuleOutboundMailService", () => {
 
         await subject.send(notice)
 
-        expect(send).toHaveBeenCalledWith(expect.not.objectContaining({ attachments: expect.anything() }))
+        expect(send).toHaveBeenCalledWith(without({ attachments: anything() }))
     })
 })
 

@@ -1,6 +1,9 @@
 import { Test } from "@nestjs/testing"
 import { DomainError } from "@modules/platform/errors"
 import { eachInOrder } from "./sequence.policy"
+
+/** A partial-object matcher, typed `unknown` so it flows into any slot. */
+const objectLike = (shape: Record<string, unknown>): unknown => expect.objectContaining(shape)
 const SUBJECT = Symbol("sequence.policy")
 
 const build = async () => {
@@ -48,7 +51,7 @@ describe("eachInOrder", () => {
             if (item === 2) throw new SequenceError({ code: "STEP_FAILED" })
         })
 
-        await expect(run).rejects.toThrow(expect.objectContaining({ code: "STEP_FAILED" }))
+        await expect(run).rejects.toEqual(objectLike({ code: "STEP_FAILED" }))
         expect(started).toEqual([1, 2])
     })
 
@@ -59,6 +62,6 @@ describe("eachInOrder", () => {
             throw new SequenceError({ code: "STEP_FAILED" })
         })
 
-        await expect(run).rejects.toThrow(expect.objectContaining({ code: "STEP_FAILED" }))
+        await expect(run).rejects.toEqual(objectLike({ code: "STEP_FAILED" }))
     })
 })

@@ -47,7 +47,7 @@ export interface SelectOptions {
     /** The most rows. */
     readonly limit: number
     /** Only rows updated at or after this value. */
-    readonly cursor?: string | null
+    readonly cursor?: string | null | undefined
     /** False to skip ORDER BY (the preview). */
     readonly ordered?: boolean
 }

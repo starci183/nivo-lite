@@ -20,13 +20,15 @@ const KINDS: ReadonlyArray<PickedMention["kind"]> = ["member", "agent", "group"]
 /** The id of a suggestion: kind and id, so two kinds never collide. */
 const optionId = (kind: string, id: string): string => `${kind}:${id}`
 
+/** The second line of a suggestion: its section, then its role when it has one. */
+const line = (section: string, role: string): string => (role === "" ? section : `${section} · ${role}`)
+
 /** The suggestions of the `@` list: people first, then agents, then groups, each with its section and role as the second line. */
 export const composerOptionsOf = (
     directory: MentionDirectoryType | undefined,
     words: SectionWords,
 ): ReadonlyArray<ComposerOption> => {
     if (directory === undefined) return []
-    const line = (section: string, role: string): string => (role === "" ? section : `${section} · ${role}`)
     return [
         ...directory.members.map((option) => ({
             id: optionId(option.kind, option.id),

@@ -65,7 +65,7 @@ export const openMysql = async (target: DatabaseTarget, address: string): Promis
         password: target.password,
         database: target.database,
         connectTimeout: DATABASE_CONNECT_MS,
-        ssl: target.ssl ? tlsOf(target) : undefined,
+        ...(target.ssl ? { ssl: tlsOf(target) } : {}),
         supportBigNumbers: true,
         bigNumberStrings: true,
         multipleStatements: false,

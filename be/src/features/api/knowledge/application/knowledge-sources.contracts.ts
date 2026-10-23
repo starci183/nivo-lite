@@ -3,5 +3,5 @@ export interface KnowledgeSourcesRequest {
     /** The workspace the caller names in X-Workspace-Id; the service proves their membership. */
     readonly workspaceId: string
     /** Only the documents of this module. */
-    readonly module?: string
+    readonly module?: string | undefined
 }

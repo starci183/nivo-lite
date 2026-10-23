@@ -92,7 +92,6 @@ export const BrainReview = () => {
     const board = useBrainBoard()
 
     const connected = buildBrainReviewState(board, t, command)
-    if (connected === null) return null
     const { plan, groupRow, singleRow, retireRow } = connected
     return (
         <BrainReviewBase
@@ -120,6 +119,9 @@ export const BrainReview = () => {
     )
 }
 
+/** The title of a fact row: its subject and the attribute it states. */
+const titleOf = (fact: BrainFact): string => `${fact.subjectLabel} · ${fact.attributeLabel}`
+
 /** Builds the commands and labels shared by all review rows. */
 const reviewRowActions = (
     t: ReturnType<typeof useTranslations<"brain">>,
@@ -128,7 +130,6 @@ const reviewRowActions = (
 ) => {
     const byLine = (fact: BrainFact): string =>
         t("by", { who: fact.proposedBy, source: t(FACT_SOURCE_KEY[fact.sourceKind]), trust: fact.trust })
-    const titleOf = (fact: BrainFact): string => `${fact.subjectLabel} · ${fact.attributeLabel}`
     const decide = (id: string, label: string, action: "apply" | "choose", isPrimary: boolean): RowActionView => ({
         id: `decide-${id}`,
         label,

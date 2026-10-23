@@ -23,6 +23,12 @@ import { SEED_AGENTS, WORKSPACE_SEED_OPTIONS } from "./workspace-seed.decorators
 import type { SeedAgentRecords } from "./workspace-seed.port"
 import { WorkspaceSeedService } from "./workspace-seed.service"
 
+/** A partial-object matcher, typed `unknown` so it flows into any slot. */
+const objectLike = (shape: Record<string, unknown>): unknown => expect.objectContaining(shape)
+
+/** A sub-array matcher, typed `unknown` so it flows into any slot. */
+const arrayLike = (items: ReadonlyArray<unknown>): unknown => expect.arrayContaining(items)
+
 const WS = SEED_WS
 const OWNER = SEED_OWNER
 const NAM = "nam@example.test"
@@ -193,12 +199,12 @@ describe("OfficeSeedService execute", () => {
         expect(seeds.ensureSeat).toHaveBeenCalledWith(
             OWNER,
             WS,
-            expect.objectContaining({ email: "ha@example.test", name: "Chi Ha" }),
+            objectLike({ email: "ha@example.test", name: "Chi Ha" }),
             "manager",
         )
         expect(records.ensureByHandle).toHaveBeenCalledTimes(4)
         expect(records.ensureByHandle).toHaveBeenCalledWith(
-            expect.objectContaining({ workspaceId: WS, module: "sales", name: "AI Sales", handle: "office-ai-sales" }),
+            objectLike({ workspaceId: WS, module: "sales", name: "AI Sales", handle: "office-ai-sales" }),
         )
         expect(em.query).toHaveBeenCalledWith(ENSURE_OFFICE_ROOMS, [WS])
         expect(em.query).toHaveBeenCalledWith(MOVE_AGENT_HOME, [WS, "accounting", "agent-accounting"])
@@ -233,13 +239,13 @@ describe("OfficeSeedService ownership and rooms", () => {
             OWNER,
             WS,
             "agent-care",
-            expect.objectContaining({ ownerMemberId: "m-ha", canTagAgentIds: [] }),
+            objectLike({ ownerMemberId: "m-ha", canTagAgentIds: [] }),
         )
         expect(agents.setOwnership).toHaveBeenCalledWith(
             OWNER,
             WS,
             "agent-marketing",
-            expect.objectContaining({ canTagAgentIds: ["agent-sales"] }),
+            objectLike({ canTagAgentIds: ["agent-sales"] }),
         )
     })
 
@@ -273,9 +279,9 @@ describe("OfficeSeedService authority", () => {
         expect(authority.apply).toHaveBeenCalledTimes(1)
         expect(authority.apply).toHaveBeenCalledWith(
             WS,
-            expect.objectContaining({
+            objectLike({
                 rules: [
-                    expect.objectContaining({
+                    objectLike({
                         action: "give_discount",
                         unit: "percent",
                         auto_max: 3,
@@ -285,19 +291,19 @@ describe("OfficeSeedService authority", () => {
                         agents: ["agent-sales"],
                         approver_group: { roles: ["manager"], rooms: ["sales"], members: [] },
                     }),
-                    expect.objectContaining({
+                    objectLike({
                         action: "issue_invoice",
                         agents: ["agent-accounting"],
                         approver_group: { roles: [], rooms: ["accounting"], members: ["m-van"] },
                         required_fields: ["customer", "amount_vnd", "tax_code"],
                     }),
-                    expect.objectContaining({
+                    objectLike({
                         action: "reply_customer",
                         department: "chatbot",
                         agents: ["agent-care"],
                     }),
                 ],
-                grants: expect.arrayContaining([
+                grants: arrayLike([
                     { member_id: "m-minh", action: "give_discount", unit: "percent", limit: 15 },
                     { member_id: "m-ha", action: "give_discount", unit: "percent", limit: 10 },
                 ]),

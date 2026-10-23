@@ -1,4 +1,5 @@
 import { useQueryMyWorkspacesSwr } from "@/hooks/swr"
+import { readError } from "@/hooks/workspaceread"
 import { workspaceRoleOf, workspaceStateOf } from "./workspaces.shared"
 import type { WorkspaceCardView } from "./workspaces.shared"
 
@@ -15,7 +16,9 @@ interface WorkspaceCards {
 
 /** The signed-in person's usable workspaces as the screens draw them, read from the back end GraphQL API through SWR. */
 export const useWorkspaceCards = (): WorkspaceCards => {
-    const { data, error, isLoading } = useQueryMyWorkspacesSwr()
+    const read = useQueryMyWorkspacesSwr()
+    const { data, isLoading } = read
+    const error = readError(read)
     const cards = (data ?? [])
         .filter((membership) => membership.member.status === "active")
         .map((membership): WorkspaceCardView => ({

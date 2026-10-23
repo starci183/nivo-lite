@@ -17,6 +17,9 @@ import type { AttentionRow } from "@/modules/types"
 import { SalesAttentionBase } from "./component"
 import type { AttentionItemView } from "./component"
 
+/** The words of a message that has any, else null. */
+const textOrNull = (text: string | undefined): string | null => (text === undefined || text === "" ? null : text)
+
 /** What is in flight: which row, and whether it is a retry or a stop. */
 interface Busy {
     readonly key: string
@@ -83,7 +86,7 @@ export const SalesAttention = () => {
         owner: row.owner ? t("owner", { name: row.owner }) : t("ownerNone"),
         decisionHref: hrefOf(row),
         workItemId: row.workItemId,
-        error: errors[row.key] ? errors[row.key] : null,
+        error: textOrNull(errors[row.key]),
         isRetryBusy: active?.key === row.key && active.kind === "retry",
         isStopBusy: active?.key === row.key && active.kind === "stop",
     })
@@ -105,8 +108,8 @@ export const SalesAttention = () => {
                 isBusy: actions.isMutating,
             }}
             on={{
-                retry: (key, workItemId) => run("retry", key, workItemId),
-                stop: (key, workItemId) => run("stop", key, workItemId),
+                retry: (key, workItemId) => void run("retry", key, workItemId),
+                stop: (key, workItemId) => void run("stop", key, workItemId),
             }}
         />
     )

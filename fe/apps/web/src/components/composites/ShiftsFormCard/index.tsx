@@ -84,7 +84,7 @@ export const ShiftsFormCard = (props: ShiftsFormCardProps) => (
                         label={props.switchLabel}
                         name="shifts-switch"
                         isSelected={props.switchOn}
-                        onSelectedChange={props.onSwitch}
+                        {...(props.onSwitch === undefined ? {} : { onSelectedChange: props.onSwitch })}
                     />
                 )}
                 <Button

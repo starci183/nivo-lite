@@ -15,6 +15,9 @@ import { WebhookConnectionsError, WebhookConnectionsErrorCode } from "./errors/w
 import { WebhookConnectionsService } from "./webhook-connections.service"
 import { WEBHOOK_CONNECTIONS_OPTIONS } from "./webhook-connections.decorators"
 
+/** A pattern matcher, typed `unknown` so it flows into any slot. */
+const stringMatch = (pattern: RegExp | string): unknown => expect.stringMatching(pattern)
+
 const ACTOR: ConnectionActor = { principalId: "owner-1", workspaceId: "ws-1" }
 const NOW = new Date("2026-10-13T03:00:00.000Z")
 const TARGET = "https://receiver.test:8443/events?source=nivo"
@@ -93,7 +96,7 @@ describe("WebhookConnectionsService start", () => {
             meta: { host: "receiver.test:8443", events: "lead.created,deal.won" },
             secret: {
                 plain: '{"url":"https://receiver.test:8443/events?source=nivo"}',
-                webhookSecret: expect.stringMatching(GENERATED_SECRET),
+                webhookSecret: stringMatch(GENERATED_SECRET),
             },
         })
     })
@@ -120,7 +123,7 @@ describe("WebhookConnectionsService start", () => {
             meta: { host: "localhost:5678", events: "lead.created,deal.won" },
             secret: {
                 plain: '{"url":"http://localhost:5678/webhook"}',
-                webhookSecret: expect.stringMatching(GENERATED_SECRET),
+                webhookSecret: stringMatch(GENERATED_SECRET),
             },
         })
     })

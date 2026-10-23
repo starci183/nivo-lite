@@ -27,11 +27,11 @@ export interface InviteRowView {
     readonly id: string
     readonly email: string
     readonly expiry: string
-    readonly staffNote?: string
+    readonly staffNote?: string | undefined
     readonly roleLabel: string
     readonly isExpired: boolean
     readonly isBusy: boolean
-    readonly link?: LinkView
+    readonly link?: LinkView | undefined
 }
 
 /** Copy, rows and state the connected invitations list supplies. */

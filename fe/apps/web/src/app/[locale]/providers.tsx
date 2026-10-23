@@ -21,7 +21,9 @@ type ProvidersProps = {
 /** What a provider layer wraps. */
 type LayerProps = { readonly children: ReactNode }
 
-const subscribeNever = () => () => undefined
+const unsubscribe = () => undefined
+
+const subscribeNever = () => unsubscribe
 
 /**
  * Keeps the grammar root on the resolved theme: light until after hydration so server and client agree. The mode class sits on the

@@ -7,11 +7,11 @@ export interface AddKnowledgeRequest {
     /** The text of the source. */
     readonly content: string
     /** The topic. */
-    readonly topic?: string
+    readonly topic?: string | undefined
     /** `public` lets customers be answered from it; anything else keeps it internal. */
-    readonly visibility?: string
+    readonly visibility?: string | undefined
     /** The tags. */
-    readonly tags?: ReadonlyArray<string>
+    readonly tags?: ReadonlyArray<string> | undefined
 }
 
 /** What adding a knowledge source answers: the source is queued for indexing. */

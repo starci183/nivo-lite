@@ -59,9 +59,9 @@ export type RedeemBlockMatch = RedeemBlock | null
 /** A reward the owner saves, with an id when changing an existing reward. */
 export interface RewardEdit {
     /** The existing reward, absent for a new reward. */
-    readonly id?: string
+    readonly id?: string | undefined
     /** A requested stable key, absent to derive one from the name. */
-    readonly key?: string
+    readonly key?: string | undefined
     /** The name shown to customers. */
     readonly name: string
     /** What the reward gives. */

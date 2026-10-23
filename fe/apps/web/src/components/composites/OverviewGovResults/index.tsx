@@ -67,7 +67,7 @@ export const OverviewGovResults = (props: OverviewGovResultsProps) => (
                 </Text>
                 {props.figures.goals.map((goal) => (
                     <div key={goal.id} className={GOAL_LINE_CLASS_NAME}>
-                        <Text size="sm" tone={goal.isSet ? undefined : "muted"}>
+                        <Text size="sm" {...(goal.isSet ? {} : { tone: "muted" as const })}>
                             {goal.text}
                         </Text>
                         {goal.isSet ? null : (

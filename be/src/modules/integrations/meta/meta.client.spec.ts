@@ -14,6 +14,12 @@ import type { MetaPageAccess } from "./meta.contracts"
 import { META_OPTIONS } from "./meta.decorators"
 import type { MetaOptions } from "./meta.options"
 
+/** A partial-object matcher, typed `unknown` so it flows into any slot. */
+const objectLike = (shape: Record<string, unknown>): unknown => expect.objectContaining(shape)
+
+/** A substring matcher, typed `unknown` so it flows into any slot. */
+const stringLike = (text: string): unknown => expect.stringContaining(text)
+
 const OPTIONS: MetaOptions = {
     app: { appId: "app-1", appSecret: new Secret("secret-1") },
     webhookVerifyToken: new Secret("verify-1"),
@@ -112,11 +118,9 @@ describe("MetaClient exchangeCode", () => {
         await expect(client.exchangeCode("code-1")).resolves.toBe("long")
         expect(http.request).toHaveBeenNthCalledWith(
             1,
-            expect.objectContaining({
+            objectLike({
                 method: "GET",
-                url: expect.stringContaining(
-                    "redirect_uri=https%3A%2F%2Fnivo.vn%2Fapi%2Fconnections%2Fmeta%2Fcallback",
-                ),
+                url: stringLike("redirect_uri=https%3A%2F%2Fnivo.vn%2Fapi%2Fconnections%2Fmeta%2Fcallback"),
                 timeoutMs: 4000,
             }),
         )
@@ -179,10 +183,7 @@ describe("MetaClient listPages", () => {
             { id: "P2", name: "P2", category: null, token: "t2", ig: null },
             { id: "P4", name: "P4", category: null, token: "t4", ig: { id: "I4", username: null, name: null } },
         ])
-        expect(http.request).toHaveBeenNthCalledWith(
-            2,
-            expect.objectContaining({ url: expect.stringContaining("after=cur") }),
-        )
+        expect(http.request).toHaveBeenNthCalledWith(2, objectLike({ url: stringLike("after=cur") }))
     })
 
     it("stops after four pages and tolerates an answer with no data", async () => {
@@ -207,12 +208,12 @@ describe("MetaClient subscriptions", () => {
 
         expect(http.request).toHaveBeenNthCalledWith(
             1,
-            expect.objectContaining({
+            objectLike({
                 method: "POST",
-                url: expect.stringContaining("subscribed_fields=messages%2Cmessaging_postbacks%2Cfeed%2Cleadgen"),
+                url: stringLike("subscribed_fields=messages%2Cmessaging_postbacks%2Cfeed%2Cleadgen"),
             }),
         )
-        expect(http.request).toHaveBeenNthCalledWith(2, expect.objectContaining({ method: "DELETE" }))
+        expect(http.request).toHaveBeenNthCalledWith(2, objectLike({ method: "DELETE" }))
     })
 
     it("points both app objects at the webhook when it can", async () => {
@@ -223,7 +224,7 @@ describe("MetaClient subscriptions", () => {
         expect(http.request).toHaveBeenCalledTimes(2)
         expect(http.request).toHaveBeenNthCalledWith(
             1,
-            expect.objectContaining({ url: expect.stringContaining("access_token=app-1%7Csecret-1") }),
+            objectLike({ url: stringLike("access_token=app-1%7Csecret-1") }),
         )
     })
 
@@ -325,7 +326,7 @@ describe("MetaClient exchangeCode", () => {
         expect(logger.error).toHaveBeenCalledTimes(1)
         expect(logger.error).toHaveBeenCalledWith(
             MetaLogEvent.LongLivedUnavailable,
-            expect.objectContaining({ code: MetaErrorCode.Unreachable, cause }),
+            objectLike({ code: MetaErrorCode.Unreachable, cause }),
         )
     })
 })
@@ -343,7 +344,7 @@ describe("MetaClient graph errors", () => {
         await expect(client.listPages("t")).rejects.toMatchObject({
             code: MetaErrorCode.Refused,
             params: { failure: "token", status: 400 },
-            cause: expect.objectContaining({ message: "Invalid OAuth access token" }),
+            cause: objectLike({ message: "Invalid OAuth access token" }),
         })
         await expect(client.listPages("t")).rejects.toMatchObject({ params: { failure: "error", status: 500 } })
         await expect(client.listPages("t")).rejects.toMatchObject({ params: { failure: "error", status: 502 } })
@@ -353,7 +354,7 @@ describe("MetaClient graph errors", () => {
         await expect(client.listPages("t")).rejects.toMatchObject({
             code: MetaErrorCode.Refused,
             params: { failure: "error", status: 199 },
-            cause: expect.objectContaining({ message: "Graph 199" }),
+            cause: objectLike({ message: "Graph 199" }),
         })
     })
 })
@@ -403,7 +404,7 @@ describe("MetaClient subscriptions", () => {
         expect(logger.error).toHaveBeenCalledTimes(1)
         expect(logger.error).toHaveBeenCalledWith(
             MetaLogEvent.AppSubscriptionsUnavailable,
-            expect.objectContaining({ code: MetaErrorCode.Unreachable, cause }),
+            objectLike({ code: MetaErrorCode.Unreachable, cause }),
         )
     })
 
@@ -439,15 +440,15 @@ describe("MetaClient reads", () => {
         await expect(client.fetchProfileName(PAGE, "instagram", "U")).resolves.toBeNull()
         expect(http.request).toHaveBeenNthCalledWith(
             1,
-            expect.objectContaining({
-                url: expect.stringContaining("fields=name%2Cfirst_name%2Clast_name"),
+            objectLike({
+                url: stringLike("fields=name%2Cfirst_name%2Clast_name"),
                 timeoutMs: 5000,
             }),
         )
         expect(logger.error).toHaveBeenCalledTimes(1)
         expect(logger.error).toHaveBeenCalledWith(
             MetaLogEvent.ProfileUnavailable,
-            expect.objectContaining({ code: MetaErrorCode.Unreachable, cause }),
+            objectLike({ code: MetaErrorCode.Unreachable, cause }),
         )
     })
 
@@ -465,7 +466,7 @@ describe("MetaClient reads", () => {
         expect(logger.error).toHaveBeenCalledTimes(1)
         expect(logger.error).toHaveBeenCalledWith(
             MetaLogEvent.MentionUnavailable,
-            expect.objectContaining({ code: MetaErrorCode.Unreachable, cause }),
+            objectLike({ code: MetaErrorCode.Unreachable, cause }),
         )
     })
 })

@@ -132,7 +132,7 @@ const renderSalesContractDrawerEndDate = (p: SalesContractDrawerProps["props"], 
         description={p.endHint}
         variant="secondary"
         value={p.end}
-        minValue={p.start ?? undefined}
+        {...(p.start === null ? {} : { minValue: p.start })}
         onValueChange={on.end}
         isRequired
     />

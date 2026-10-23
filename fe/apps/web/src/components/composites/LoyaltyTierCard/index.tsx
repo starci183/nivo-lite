@@ -11,8 +11,8 @@ type LoyaltyTierCardProps = {
     readonly canRemove: boolean
     readonly isDisabled: boolean
     readonly isPending: boolean
-    readonly nameError?: string
-    readonly spendError?: string
+    readonly nameError?: string | undefined
+    readonly spendError?: string | undefined
     readonly nameLabel: string
     readonly spendLabel: string
     readonly firstHint: string

@@ -27,7 +27,7 @@ const fieldOf = (field: GuideField, props: WizardGuideViewProps) => {
                 kind={field.isSecret ? "password" : "text"}
                 value={field.value}
                 isReadOnly={!field.isEditable}
-                isDisabled={props.isDisabled}
+                {...(props.isDisabled === undefined ? {} : { isDisabled: props.isDisabled })}
                 isCopyable
                 copyLabel={props.copy.copy}
                 copiedLabel={props.copy.copied}
@@ -51,7 +51,7 @@ const fieldOf = (field: GuideField, props: WizardGuideViewProps) => {
                 variant="secondary"
                 kind={field.isSecret ? "password" : "text"}
                 hint={field.hint}
-                isDisabled={props.isDisabled}
+                {...(props.isDisabled === undefined ? {} : { isDisabled: props.isDisabled })}
                 value={field.value}
                 onValueChange={(value) => props.onPaste(field.field, value)}
             />

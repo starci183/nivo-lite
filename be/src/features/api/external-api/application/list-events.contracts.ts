@@ -5,9 +5,9 @@ export interface ListEventsRequest {
     /** The Authorization header as sent. */
     readonly authorization: string | undefined
     /** Only events after this time, ISO 8601. */
-    readonly since?: string
+    readonly since?: string | undefined
     /** The most events to answer; the domain clamps it to 1..500. */
-    readonly limit?: string
+    readonly limit?: string | undefined
 }
 
 /** What listing events answers: the events oldest first and the cursor for the next call. */

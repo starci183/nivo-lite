@@ -23,9 +23,9 @@ export interface WorkspacePaymentBaseProps {
         readonly returnTo: string
         readonly errorTitle: string
         readonly missingTitle: string
-        readonly error?: string
+        readonly error?: string | undefined
         readonly canRegenerate: boolean
-        readonly details?: WorkspacePaymentDetailsProps
+        readonly details?: WorkspacePaymentDetailsProps | undefined
     }
     readonly on: {
         readonly regenerate: () => void

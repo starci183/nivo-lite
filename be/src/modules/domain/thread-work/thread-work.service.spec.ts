@@ -31,6 +31,9 @@ import { ThreadWorkService } from "./thread-work.service"
 import { ThreadWorkTurnsService } from "./thread-work-turns.service"
 import type { ThreadWorkStart } from "./thread-work.contracts"
 
+/** A partial-object matcher, typed `unknown` so it flows into any slot. */
+const objectLike = (shape: Record<string, unknown>): unknown => expect.objectContaining(shape)
+
 const SALES_ROW: WorkAgentRow = {
     id: "agent-sales",
     name: "AI Sales",
@@ -203,10 +206,10 @@ const registerStart = () => {
             await service.start(START)
 
             expect(turns.run).toHaveBeenCalledWith(
-                expect.objectContaining({
-                    seed: expect.objectContaining({
+                objectLike({
+                    seed: objectLike({
                         amount_vnd: 8,
-                        fields: expect.objectContaining({ amount_vnd: 8 }),
+                        fields: objectLike({ amount_vnd: 8 }),
                     }),
                 }),
             )

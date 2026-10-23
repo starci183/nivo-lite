@@ -262,7 +262,9 @@ describe("ContentAiService", () => {
 describe("ContentAiService", () => {
     it("rolls back a plan when the first generation response omits its id", async () => {
         const { service, generations, tx } = await build()
-        generations.request.mockResolvedValueOnce(mock<GenerationEnqueued>({ id: undefined, status: "queued" }))
+        generations.request.mockResolvedValueOnce(
+            Object.assign(mock<GenerationEnqueued>({ status: "queued" }), { id: undefined }),
+        )
         await expect(service.requestMonthPlan("user-1", "ws-1", "2026-11")).rejects.toMatchObject({
             code: "CONTENT_AI_NO_SLOTS",
             message: "CONTENT_AI_NO_SLOTS",

@@ -9,8 +9,8 @@ import { AUTH_ROUTES } from "@/modules/routes"
 export interface WorkspacePaymentPageBaseProps {
     readonly props: {
         readonly title: string
-        readonly workspaceId?: string
-        readonly orderId?: string
+        readonly workspaceId?: string | undefined
+        readonly orderId?: string | undefined
         readonly renewing: boolean
     }
 }

@@ -282,7 +282,7 @@ export interface ApiMember {
 /** A till lists customers. */
 export interface ApiMembersParams extends ApiCall {
     /** One customer's phone; absent or empty for the newest customers. */
-    readonly phone?: string
+    readonly phone?: string | undefined
     /** How many customers to list; fifty when absent. */
     readonly limit?: number
 }

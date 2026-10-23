@@ -3,9 +3,9 @@ import { LoginForm } from "@/components/blocks/LoginForm"
 /** Props for {@link LoginPageBase}. */
 export interface LoginPageBaseProps {
     readonly props: {
-        readonly next?: string
-        readonly errorCode?: string
-        readonly notice?: string
+        readonly next?: string | undefined
+        readonly errorCode?: string | undefined
+        readonly notice?: string | undefined
     }
 }
 

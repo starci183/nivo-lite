@@ -15,6 +15,19 @@ import {
     receiptDigestOf,
 } from "./workspace-cleanup.policy"
 
+/** A partial-object matcher, typed `unknown` so it flows into any slot. */
+const objectLike = (shape: Record<string, unknown>): unknown => expect.objectContaining(shape)
+
+/** What `run` throws, read as `unknown`; the matcher then judges its fields. */
+const thrownBy = (run: () => unknown): unknown => {
+    try {
+        run()
+    } catch (error) {
+        return error
+    }
+    return undefined
+}
+
 const SUBJECT = Symbol("workspace-cleanup.policy")
 const HAKUEN = "cd312306-c950-4328-8b88-022553070ae6"
 const SPA = "11111111-1111-4111-8111-111111111111"
@@ -47,7 +60,7 @@ const build = async () => {
     return moduleRef.get<typeof import("./workspace-cleanup.policy")>(SUBJECT)
 }
 
-const refusedWith = (code: WorkspaceCleanupErrorCode) => expect.objectContaining({ code })
+const refusedWith = (code: WorkspaceCleanupErrorCode) => objectLike({ code })
 
 describe("workspace cleanup keep list", () => {
     it("reads the keep list as unique lower-case ids, sorted", async () => {
@@ -59,15 +72,19 @@ describe("workspace cleanup keep list", () => {
     it.each([undefined, "", " , "])("refuses an empty keep list (%p)", async (raw) => {
         const subject = await build()
 
-        expect(() => subject.parseKeepList(raw)).toThrow(refusedWith(WorkspaceCleanupErrorCode.KeepRequired))
+        expect(thrownBy(() => subject.parseKeepList(raw))).toEqual(refusedWith(WorkspaceCleanupErrorCode.KeepRequired))
     })
 
     it("refuses a keep id that is not a workspace id, and a list over the bound", async () => {
         const subject = await build()
         const many = Array.from({ length: 21 }, (_, index) => `${String(index).padStart(8, "0")}${SPA.slice(8)}`)
 
-        expect(() => subject.parseKeepList("hakuen")).toThrow(refusedWith(WorkspaceCleanupErrorCode.KeepInvalid))
-        expect(() => subject.parseKeepList(many.join(","))).toThrow(refusedWith(WorkspaceCleanupErrorCode.KeepInvalid))
+        expect(thrownBy(() => subject.parseKeepList("hakuen"))).toEqual(
+            refusedWith(WorkspaceCleanupErrorCode.KeepInvalid),
+        )
+        expect(thrownBy(() => subject.parseKeepList(many.join(",")))).toEqual(
+            refusedWith(WorkspaceCleanupErrorCode.KeepInvalid),
+        )
     })
 })
 
@@ -82,14 +99,14 @@ describe("workspace cleanup mode and digest", () => {
     it("refuses no mode, both modes, and an execute without a well-formed digest", async () => {
         const subject = await build()
 
-        expect(() => subject.cleanupModeOf({})).toThrow(refusedWith(WorkspaceCleanupErrorCode.ModeRequired))
-        expect(() => subject.cleanupModeOf({ dryRun: true, execute: true })).toThrow(
+        expect(thrownBy(() => subject.cleanupModeOf({}))).toEqual(refusedWith(WorkspaceCleanupErrorCode.ModeRequired))
+        expect(thrownBy(() => subject.cleanupModeOf({ dryRun: true, execute: true }))).toEqual(
             refusedWith(WorkspaceCleanupErrorCode.ModeRequired),
         )
-        expect(() => subject.cleanupModeOf({ execute: true })).toThrow(
+        expect(thrownBy(() => subject.cleanupModeOf({ execute: true }))).toEqual(
             refusedWith(WorkspaceCleanupErrorCode.DigestRequired),
         )
-        expect(() => subject.cleanupModeOf({ execute: true, receiptDigest: "abc" })).toThrow(
+        expect(thrownBy(() => subject.cleanupModeOf({ execute: true, receiptDigest: "abc" }))).toEqual(
             refusedWith(WorkspaceCleanupErrorCode.DigestRequired),
         )
     })
@@ -144,7 +161,7 @@ describe("workspace cleanup counts and accounts", () => {
         async (raw) => {
             const subject = await build()
 
-            expect(() => subject.countsOf(raw, WorkspaceCleanupErrorCode.ReferencesInvalid)).toThrow(
+            expect(thrownBy(() => subject.countsOf(raw, WorkspaceCleanupErrorCode.ReferencesInvalid))).toEqual(
                 refusedWith(WorkspaceCleanupErrorCode.ReferencesInvalid),
             )
         },
@@ -159,7 +176,7 @@ describe("workspace cleanup counts and accounts", () => {
             { id: BUN, name: "Bun" },
             { id: HAKUEN, name: "HAKUEN" },
         ])
-        expect(() => subject.keptWorkspacesOf([HAKUEN], [spa])).toThrow(
+        expect(thrownBy(() => subject.keptWorkspacesOf([HAKUEN], [spa]))).toEqual(
             refusedWith(WorkspaceCleanupErrorCode.KeepNotFound),
         )
     })
@@ -237,31 +254,35 @@ describe("workspace cleanup receipt refusals", () => {
     it("refuses an orphan account whose references were not read", async () => {
         const subject = await build()
 
-        expect(() =>
-            subject.buildReceipt({
-                keep: [HAKUEN],
-                workspaces: [{ id: HAKUEN, name: "HAKUEN", footprint: null }],
-                orphans: [{ id: "u-0" }],
-                references: new Map(),
-                allowKeptCascade: false,
-            }),
-        ).toThrow(refusedWith(WorkspaceCleanupErrorCode.ReferencesInvalid))
+        expect(
+            thrownBy(() =>
+                subject.buildReceipt({
+                    keep: [HAKUEN],
+                    workspaces: [{ id: HAKUEN, name: "HAKUEN", footprint: null }],
+                    orphans: [{ id: "u-0" }],
+                    references: new Map(),
+                    allowKeptCascade: false,
+                }),
+            ),
+        ).toEqual(refusedWith(WorkspaceCleanupErrorCode.ReferencesInvalid))
     })
 
     it("refuses a footprint that is not row counts", async () => {
         const subject = await build()
 
-        expect(() =>
-            subject.buildReceipt({
-                keep: [HAKUEN],
-                workspaces: [
-                    { id: HAKUEN, name: "HAKUEN", footprint: null },
-                    { id: SPA, name: "Spa", footprint: null },
-                ],
-                orphans: [],
-                references: new Map(),
-                allowKeptCascade: false,
-            }),
-        ).toThrow(refusedWith(WorkspaceCleanupErrorCode.FootprintInvalid))
+        expect(
+            thrownBy(() =>
+                subject.buildReceipt({
+                    keep: [HAKUEN],
+                    workspaces: [
+                        { id: HAKUEN, name: "HAKUEN", footprint: null },
+                        { id: SPA, name: "Spa", footprint: null },
+                    ],
+                    orphans: [],
+                    references: new Map(),
+                    allowKeptCascade: false,
+                }),
+            ),
+        ).toEqual(refusedWith(WorkspaceCleanupErrorCode.FootprintInvalid))
     })
 })

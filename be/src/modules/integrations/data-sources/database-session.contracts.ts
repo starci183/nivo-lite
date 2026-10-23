@@ -95,7 +95,7 @@ export interface DatabaseReadOptions {
     /** The most rows. */
     readonly limit: number
     /** Only rows updated at or after this value (needs an updated column). */
-    readonly cursor?: string | null
+    readonly cursor?: string | null | undefined
 }
 
 /** A read only reader for one sync; the session behind it is closed when the sync callback ends. */

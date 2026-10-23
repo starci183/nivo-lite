@@ -2,6 +2,19 @@ import { Test } from "@nestjs/testing"
 import { N8nHostErrorCode } from "./errors/n8n-host.error"
 import type { N8nHostOptions } from "./n8n-host.options"
 import { idsByName, importDocument, isWorkflowFile, sshArguments, workflowsOf } from "./n8n-host.policy"
+
+/** A partial-object matcher, typed `unknown` so it flows into any slot. */
+const objectLike = (shape: Record<string, unknown>): unknown => expect.objectContaining(shape)
+
+/** What `run` throws, read as `unknown`; the matcher then judges its fields. */
+const thrownBy = (run: () => unknown): unknown => {
+    try {
+        run()
+    } catch (error) {
+        return error
+    }
+    return undefined
+}
 const POLICY = Symbol("./n8n-host.policy")
 type PolicySubject = {
     isWorkflowFile: typeof isWorkflowFile
@@ -60,14 +73,14 @@ describe("workflowsOf", () => {
     it("refuses an empty list", async () => {
         const { subject } = await buildSubject()
 
-        expect(() => subject.workflowsOf([])).toThrow(expect.objectContaining({ code: N8nHostErrorCode.NoWorkflows }))
+        expect(thrownBy(() => subject.workflowsOf([]))).toEqual(objectLike({ code: N8nHostErrorCode.NoWorkflows }))
     })
 
     it("refuses a file that is not a workflow", async () => {
         const { subject } = await buildSubject()
 
-        expect(() => subject.workflowsOf([{ name: "Daily", nodes: [] }, { nodes: [] }])).toThrow(
-            expect.objectContaining({ code: N8nHostErrorCode.WorkflowInvalid }),
+        expect(thrownBy(() => subject.workflowsOf([{ name: "Daily", nodes: [] }, { nodes: [] }]))).toEqual(
+            objectLike({ code: N8nHostErrorCode.WorkflowInvalid }),
         )
     })
 })

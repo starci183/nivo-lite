@@ -92,9 +92,13 @@ export const requirementsJson = (requirements: JobRequirements): RequirementsRow
     nice_to_have: [...requirements.niceToHave],
 })
 
+/** Whether a stored expectation is a list of accepted choices (`Array.isArray` alone narrows to `any[]`). */
+const isChoices = (value: unknown): value is Array<string> => Array.isArray(value)
+
 const expectOfJson = (value: QuestionRow["expect"]): QuestionExpect | undefined => {
-    if (value === "yes" || value === "no" || typeof value === "number") return value
-    return Array.isArray(value) ? value : undefined
+    let expect: QuestionExpect | undefined
+    if (value === "yes" || value === "no" || typeof value === "number" || isChoices(value)) expect = value
+    return expect
 }
 
 const toQuestion = (json: QuestionRow): JobQuestion => {

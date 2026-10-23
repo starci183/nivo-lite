@@ -908,7 +908,7 @@
     "verifyReceived": "Đã nhận giao dịch · +{amount} · {content}",
     "verifyReceivedNoContent": "Đã nhận giao dịch · +{amount}",
     "verifyError": "Chưa kiểm tra được lúc này. Hệ thống sẽ thử lại.",
-    "skip": "Bỏ qua, kiểm tra sau",
+    "checkLater": "Bỏ qua, kiểm tra sau",
     "skipNote": "Kết nối vẫn ở trạng thái chưa hoàn tất cho đến khi nhận được giao dịch đầu tiên. Bạn tiếp tục từ danh sách.",
     "zaloSkipNote": "Kết nối vẫn ở trạng thái chưa hoàn tất cho đến khi nhận được tin nhắn đầu tiên. Bạn tiếp tục từ danh sách.",
     "agentTitleAccounting": "Gắn vào agent Kế toán",

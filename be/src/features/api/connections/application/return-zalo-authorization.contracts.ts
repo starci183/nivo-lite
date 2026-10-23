@@ -7,5 +7,5 @@ export interface ReturnZaloAuthorizationRequest {
     /** The authorization code. */
     readonly code: string
     /** The OA id Zalo reports. */
-    readonly oaId?: string
+    readonly oaId?: string | undefined
 }

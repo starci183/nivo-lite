@@ -18,8 +18,7 @@ export const useMutateReturnZaloAuthorizationSwr = () =>
         MUTATE_RETURN_ZALO_AUTHORIZATION_SWR_KEY,
         async (_key: string, { arg }: ReturnZaloAuthorizationArg) => {
             const result = await mutateReturnZaloAuthorization({ request: arg })
-            if (result.data === undefined || result.data === null)
-                throw new Error("returnZaloAuthorization answered no data")
+            if (result.data === undefined) throw new Error("returnZaloAuthorization answered no data")
             return result.data.returnZaloAuthorization
         },
     )

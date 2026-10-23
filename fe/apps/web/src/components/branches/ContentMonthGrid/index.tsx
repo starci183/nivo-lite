@@ -69,7 +69,7 @@ const monthCellInteraction = (
     const key = cell.dateKey
     return {
         isHighlighted: props.overKey === key || props.todayKey === key,
-        onAction: props.pickedId !== null && props.canManage ? () => props.onDrop(day) : undefined,
+        ...(props.pickedId !== null && props.canManage ? { onAction: () => props.onDrop(day) } : {}),
         onDragOver: (event) => {
             if (props.pickedId === null) return
             event.preventDefault()

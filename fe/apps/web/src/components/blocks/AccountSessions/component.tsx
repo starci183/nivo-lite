@@ -28,7 +28,7 @@ export interface AccountSessionsBaseProps {
         /** True when another device is signed in (also while the rows load, so the action keeps its place). */
         readonly hasOthers: boolean
         /** The row being signed out, `this` for the current device, or `others` while every other device is. */
-        readonly busy?: string
+        readonly busy?: string | undefined
         readonly error?: string
         readonly done?: string
     }

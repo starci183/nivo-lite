@@ -5,6 +5,7 @@ import { POLL_MS } from "@/hooks/connection-wizard"
 import { useQueryConnectionFirstEventSwr } from "@/hooks/swr"
 import type { FirstEvent } from "@/modules/types"
 import { firstEventStateOf } from "@/hooks/connection-wire"
+import { readError } from "@/hooks/workspaceread"
 
 /** What waiting for the first event needs. */
 interface FirstEventWatch {
@@ -21,12 +22,13 @@ interface FirstEventWatch {
 export const useFirstEvent = (watch: FirstEventWatch) => {
     const [event, setEvent] = useState<FirstEvent | null>(null)
     const listening = watch.isActive && watch.connectionId !== null && event === null
-    const { error } = useQueryConnectionFirstEventSwr(listening ? (watch.connectionId ?? undefined) : undefined, {
+    const read = useQueryConnectionFirstEventSwr(listening ? (watch.connectionId ?? undefined) : undefined, {
         refreshInterval: POLL_MS,
-        onSuccess: (data) => {
+        onSuccess: (data: Parameters<typeof firstEventStateOf>[0]) => {
             const arrived = firstEventStateOf(data).firstEvent
             if (arrived !== null) setEvent(arrived)
         },
     })
+    const error = readError(read)
     return { event, failed: error !== undefined && event === null }
 }

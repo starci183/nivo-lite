@@ -40,17 +40,19 @@ export class DatabaseModule extends ConfigurableModuleClass {
             ...base,
             imports: [
                 ...(base.imports ?? []),
-                ...options.connections.map((connection) =>
-                    TypeOrmModule.forRoot({
+                ...options.connections.map((connection) => {
+                    const schema: Partial<Record<"schema", string>> =
+                        connection.schema === undefined ? {} : { schema: connection.schema }
+                    return TypeOrmModule.forRoot({
                         name: connection.name,
                         type: "postgres",
                         url: connection.url.reveal(),
-                        schema: connection.schema,
+                        ...schema,
                         synchronize: false,
                         retryAttempts: 2,
                         extra: { types: options.typeParsers() },
-                    }),
-                ),
+                    })
+                }),
             ],
             providers: [...(base.providers ?? []), ...managers, MigrationRunnerService, SeedRunnerService],
             exports: [

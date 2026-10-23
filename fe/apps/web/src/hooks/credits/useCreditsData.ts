@@ -16,6 +16,7 @@ import { creditsDataOf } from "./credits.shared"
 import { useCreditsLedger } from "./useCreditsLedger"
 import type { CreditsData } from "@/modules/types"
 import { workspaceBillingPath } from "@/modules/routes"
+import { readError } from "@/hooks/workspaceread"
 
 const LAST_DAYS = 6
 
@@ -50,7 +51,13 @@ export const useCreditsData = (contactHref: string) => {
         ])
     }, [workspace, catalog, packs, quota, recent, ledger])
 
-    const error = workspace.error || catalog.error || packs.error || quota.error || recent.error || ledger.error
+    const error =
+        readError(workspace) ||
+        readError(catalog) ||
+        readError(packs) ||
+        readError(quota) ||
+        readError(recent) ||
+        readError(ledger)
     const workspaceData = workspace.data
     const planData = catalog.plans
     const packData = packs.data

@@ -300,15 +300,17 @@ describe("leadgen-workbench.mapper", () => {
     })
 })
 
+/** A proposal stored by an older writer: its members are present and empty. */
+const legacyProposal = Object.assign(mock<Proposal>(), { fields: undefined, summary: undefined, draft: undefined })
+const missingProposal = Object.assign(
+    mock<LeadGenWorkItemRow>(item("missing", "reply_comment_public", null, { status: "waiting_decision" })),
+    { proposal: undefined },
+)
+
 describe("leadgen-workbench.mapper", () => {
     it("reads pending comments defensively and orders them oldest first", async () => {
         const subject = await buildSubject()
 
-        const legacyProposal = mock<Proposal>({ fields: undefined, summary: undefined, draft: undefined })
-        const missingProposal = mock<LeadGenWorkItemRow>({
-            ...item("missing", "reply_comment_public", null, { status: "waiting_decision" }),
-            proposal: undefined,
-        })
         const result = subject.buildLeadGenWorkbench(
             rows({
                 items: [

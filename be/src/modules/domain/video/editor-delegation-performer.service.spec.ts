@@ -12,6 +12,12 @@ import { EditorDelegationPerformerService, RENDER_SCRIPT_ACTION } from "./editor
 import { EditorRoomService } from "./editor-room.service"
 import { VideoService } from "./video.service"
 
+/** A substring matcher, typed `unknown` so it flows into any slot. */
+const stringLike = (text: string): unknown => expect.stringContaining(text)
+
+/** The match-anything matcher, typed `unknown` so it flows into any slot. */
+const anything = (): unknown => expect.anything()
+
 const WORKSPACE = "0a1b2c3d-0a1b-4c3d-8a1b-0a1b2c3d4e5f"
 const CTX: WorkContext = { workspaceId: WORKSPACE, actor: "AI Marketing", locale: "vi" }
 
@@ -113,14 +119,14 @@ describe("EditorDelegationPerformerService", () => {
             href: "/agents/video/workbench?focus=project-1",
             detail: "project-1",
         })
-        expect(projects.createDelegated).toHaveBeenCalledWith(expect.anything(), WORKSPACE, {
+        expect(projects.createDelegated).toHaveBeenCalledWith(anything(), WORKSPACE, {
             title: "Weekend",
             goal: "offer",
             aspect: "9:16",
             targetSeconds: 10,
             script: [{ caption: "A", voiceover: "a", media: null }],
         })
-        expect(delegations.record).toHaveBeenCalledWith(expect.anything(), {
+        expect(delegations.record).toHaveBeenCalledWith(anything(), {
             workspaceId: WORKSPACE,
             workItemId: "item-1",
             projectId: "project-1",
@@ -145,7 +151,7 @@ describe("EditorDelegationPerformerService", () => {
                 v: 1,
                 type: "handoff_note",
                 title: "Weekend",
-                subtitle: expect.stringContaining('video.editor.seconds:{"seconds":10}'),
+                subtitle: stringLike('video.editor.seconds:{"seconds":10}'),
                 badge: "video.editor.rendering.badge:{}",
                 body: "video.editor.rendering.body:{}",
                 fields: [{ label: "video.editor.rendering.target:{}", value: 'video.editor.seconds:{"seconds":10}' }],

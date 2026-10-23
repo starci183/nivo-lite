@@ -29,6 +29,10 @@ import { SELECT_PAGE_BY_SLUG } from "./persistence/booking-model.sql"
 import { SELECT_BOOKING_BY_KEY, SELECT_NEXT_CANCELLABLE_BOOKING } from "./persistence/booking-write.sql"
 import type { CancellableBookingRow, KeyedBookingRow } from "./persistence/booking.rows"
 
+const anything = (): unknown => expect.anything()
+
+const objectLike = (shape: Record<string, unknown>): unknown => expect.objectContaining(shape)
+
 const serviceOf = builder<BookableService>({
     id: "s1",
     name: "Cut",
@@ -95,9 +99,9 @@ const modelOf = builder<BookingModel>({
     hours: [{ resourceId: "r1", weekday: 1, start: "09:00", end: "18:00" }],
     exceptions: [],
 })
-const reserveOf = (booking: NewBooking) => ({ manager: expect.anything(), force: false, booking })
+const reserveOf = (booking: NewBooking) => ({ manager: anything(), force: false, booking })
 const SCHEDULE = {
-    manager: expect.anything(),
+    manager: anything(),
     workspaceId: WORKSPACE,
     bookingId: "b1",
     startMs: Date.parse(MONDAY_NINE),
@@ -388,7 +392,7 @@ describe("BookingPublicService", () => {
             await service.book(bookingRequestOf({ start: "2026-10-12T14:00:00.000Z" }))
             expect(reservation.reserve).toHaveBeenCalledWith(
                 expect.objectContaining({
-                    booking: expect.objectContaining({ holdsSlot: false, conflictNote: "closed" }),
+                    booking: objectLike({ holdsSlot: false, conflictNote: "closed" }),
                 }),
             )
         })

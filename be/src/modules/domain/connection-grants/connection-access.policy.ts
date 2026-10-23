@@ -78,7 +78,7 @@ export const normaliseAccess = (value: unknown): Access | null => {
  */
 export const planExactly = (
     current: ReadonlyMap<string, Access>,
-    wanted: ReadonlyArray<{ readonly id: string; readonly access?: Access }>,
+    wanted: ReadonlyArray<{ readonly id: string; readonly access?: Access | undefined }>,
 ): ReadonlyArray<{ readonly id: string; readonly access: Access | null }> => {
     const next = new Map<string, Access>(wanted.map((w) => [w.id, w.access ?? current.get(w.id) ?? DEFAULT_ACCESS]))
     return [

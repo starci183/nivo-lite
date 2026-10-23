@@ -108,14 +108,19 @@ export class InvoicesService {
         return paid
     }
 
-    private async insert(input: NewInvoice, prefix: string, last: string | null, skip: number): Promise<IssuedInvoice> {
-        if (skip >= INVOICE_NUMBER_ATTEMPTS) throw new InvoicesError({ code: InvoicesErrorCode.NotNumbered })
+    private async insert(
+        input: NewInvoice,
+        prefix: string,
+        last: string | null,
+        clashes: number,
+    ): Promise<IssuedInvoice> {
+        if (clashes >= INVOICE_NUMBER_ATTEMPTS) throw new InvoicesError({ code: InvoicesErrorCode.NotNumbered })
         const now = this.clock.now()
         const rows = await this.entityManager.query<Array<InvoiceRow>>(INSERT_INVOICE, [
             input.workspaceId,
             input.orderId,
             input.leadId,
-            nextInvoiceNumber(prefix, last, skip),
+            nextInvoiceNumber(prefix, last, clashes),
             input.amountVnd,
             dueAtOf(now).toISOString(),
             input.issuedBy,
@@ -125,6 +130,6 @@ export class InvoicesService {
         if (created !== undefined) return { invoice: created, created: true }
         const existing = input.orderId === null ? null : await this.ofOrder(input.workspaceId, input.orderId)
         if (existing !== null) return { invoice: existing, created: false }
-        return this.insert(input, prefix, last, skip + 1)
+        return this.insert(input, prefix, last, clashes + 1)
     }
 }

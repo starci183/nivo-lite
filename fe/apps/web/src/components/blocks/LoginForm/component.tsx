@@ -27,11 +27,11 @@ export interface LoginFormBaseProps {
         readonly signUpHref: string
         readonly email: string
         readonly password: string
-        readonly emailError?: string
-        readonly passwordError?: string
+        readonly emailError?: string | undefined
+        readonly passwordError?: string | undefined
         /** Friendly, already translated failure. */
-        readonly error?: string
-        readonly notice?: string
+        readonly error?: string | undefined
+        readonly notice?: string | undefined
         /** True when the failure is "email not confirmed": offer to resend. */
         readonly canResend: boolean
         readonly isPasswordPending: boolean
@@ -58,7 +58,7 @@ export const LoginFormBase = (props: LoginFormBaseProps) => {
                     title={view.failedTitle}
                     description={view.error}
                     tone="negative"
-                    action={view.canResend ? { label: view.resendLabel, onAction: props.on.resend } : undefined}
+                    {...(view.canResend ? { action: { label: view.resendLabel, onAction: props.on.resend } } : {})}
                 />
             )}
             <div className={LOGIN_ACTIONS_CLASS_NAME}>

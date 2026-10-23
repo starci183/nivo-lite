@@ -128,6 +128,9 @@ const tryAdd = (env: Env, state: State, person: ShiftStaff, seg: Seg): Candidate
     return { staff: person, next, cost: extra, minutes: minutesOf(cur) }
 }
 
+/** A cost nudged by the random source, so the starts after the first explore other orders. */
+const jitter = (cost: number, rand: () => number, noise: number): number => cost * (1 + (rand() - 0.5) * noise)
+
 /** Adds the cheapest feasible people until a slot reaches its target. */
 const fill = (
     env: Env,
@@ -141,7 +144,6 @@ const fill = (
     let have = haveFor(state, slot)
     for (let guard = 0; have < target && guard < FILL_GUARD; guard++) {
         const seg = segOfSlot(slot)
-        const jitter = (cost: number): number => cost * (1 + (rand() - 0.5) * noise)
         const candidates = staff
             .filter((p) => p.positionIds.includes(seg.pos))
             .flatMap((p) => {
@@ -150,7 +152,7 @@ const fill = (
             })
             .sort(
                 (a, b) =>
-                    jitter(a.cost) - jitter(b.cost) ||
+                    jitter(a.cost, rand, noise) - jitter(b.cost, rand, noise) ||
                     a.minutes - b.minutes ||
                     a.staff.positionIds.length - b.staff.positionIds.length ||
                     a.staff.name.localeCompare(b.staff.name),
@@ -216,6 +218,10 @@ const score = (env: Env, staff: ReadonlyArray<ShiftStaff>, slots: ReadonlyArray<
     return { state, short, idealGap, cost, spread }
 }
 
+/** Orders two results: negative when `a` is the better one. */
+const better = (a: Result, b: Result): number =>
+    a.short - b.short || a.idealGap - b.idealGap || a.cost - b.cost || a.spread - b.spread
+
 /**
  * The schedule solver: deterministic, no I/O, no AI. The schedule itself always comes from here; the model only
  * explains it afterwards. Greedy fill with repair over a few seeded starts: each head goes to the qualified, available
@@ -261,8 +267,6 @@ export const solveWeek = (input: SolveInput): SolveOutput => {
         return score(env, staff, slots, state)
     }
 
-    const better = (a: Result, b: Result): number =>
-        a.short - b.short || a.idealGap - b.idealGap || a.cost - b.cost || a.spread - b.spread
     const baseOrder = [...slotsWithHardness]
         .sort(
             ({ slot: a, hardness: aHard }, { slot: b, hardness: bHard }) =>

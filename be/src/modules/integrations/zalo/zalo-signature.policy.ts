@@ -11,7 +11,8 @@ const sameDigest = (given: string, expected: string): boolean => {
 const timestampOf = (rawBody: string): string | undefined => {
     try {
         const parsed: unknown = JSON.parse(rawBody)
-        const timestamp = typeof parsed === "object" && parsed !== null ? Reflect.get(parsed, "timestamp") : undefined
+        const timestamp: unknown =
+            typeof parsed === "object" && parsed !== null ? Reflect.get(parsed, "timestamp") : undefined
         return typeof timestamp === "string" || typeof timestamp === "number" ? String(timestamp) : undefined
     } catch (cause) {
         throw new ZaloError({ code: ZaloErrorCode.BodyUnreadable, cause })

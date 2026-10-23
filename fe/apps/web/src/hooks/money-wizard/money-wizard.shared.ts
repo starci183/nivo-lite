@@ -167,7 +167,7 @@ export const viewOf = ({
             create,
             followDone,
             finish,
-            skip: () => {
+            checkLater: () => {
                 setNote(null)
                 setNav((current) => ({ ...current, index: 4, skipped: true }))
             },

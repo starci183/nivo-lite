@@ -47,10 +47,13 @@ const indexOf = (value: unknown): number => {
 
 const sortByIndex = (a: unknown, b: unknown): number => indexOf(a) - indexOf(b)
 
+/** Whether a parsed value is a list (`Array.isArray` alone narrows to `any[]`). */
+const isList = (value: unknown): value is ReadonlyArray<unknown> => Array.isArray(value)
+
 /** The vectors of an embeddings answer, or null when the answer does not hold exactly `expected` valid vectors. */
 const embeddingOf = (body: unknown, expected: number): LlmEmbeddingResult => {
     const data = fieldOf(body, "data")
-    const vectors = (Array.isArray(data) ? [...data].sort(sortByIndex) : []).map(vectorOf)
+    const vectors = (isList(data) ? [...data].sort(sortByIndex) : []).map(vectorOf)
     const valid = vectors.flatMap((vector): Array<ReadonlyArray<number>> => (vector === null ? [] : [vector]))
     return valid.length === expected && vectors.length === expected
         ? { vectors: valid, usage: usageOf(fieldOf(body, "usage")) }

@@ -42,7 +42,7 @@ export const useHiringInterviewReply = (token: string) => {
         setOutcome({
             isOk: PICKED_OUTCOMES.has(result.outcome),
             text:
-                result.outcome === "confirmed" && result.slotStart !== undefined && result.slotStart !== null
+                result.outcome === "confirmed" && result.slotStart !== null
                     ? t("replyConfirmedAt", { when: format.dateTime(result.slotStart) })
                     : t(`replyInterview_${result.outcome}`),
         })

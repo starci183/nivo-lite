@@ -6,7 +6,7 @@ import { AUTH_FIELDS_CLASS_NAME } from "./classNames"
 interface AuthFormProps {
     readonly label: string
     readonly isPending: boolean
-    readonly failure?: { readonly title: string; readonly text: string }
+    readonly failure?: { readonly title: string; readonly text: string } | undefined
     /** The primary submit button; omit when the children draw their own. */
     readonly submitLabel?: string
     /** Content below the submit button (links to other steps). */

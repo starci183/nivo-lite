@@ -134,7 +134,7 @@ export interface ChatbotOverviewRequest {
     /** The authorized workspace selector. */
     readonly workspaceId: string
     /** Null combines every Chatbot agent, including legacy installations. */
-    readonly installationId?: string | null
+    readonly installationId?: string | null | undefined
 }
 
 /** An active catalog agent through which the brain may be viewed. */

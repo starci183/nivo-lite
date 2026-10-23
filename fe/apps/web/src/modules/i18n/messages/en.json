@@ -908,7 +908,7 @@
     "verifyReceived": "Transaction received · +{amount} · {content}",
     "verifyReceivedNoContent": "Transaction received · +{amount}",
     "verifyError": "Could not check right now. We will try again.",
-    "skip": "Skip, check later",
+    "checkLater": "Skip, check later",
     "skipNote": "The connection stays unfinished until the first transaction arrives. Continue it from the list.",
     "zaloSkipNote": "The connection stays unfinished until the first message arrives. Continue it from the list.",
     "agentTitleAccounting": "Attach to the Accounting agent",

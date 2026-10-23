@@ -39,7 +39,7 @@ export const BillingOverview = (props: BillingOverviewProps) => {
         orders.data?.map((order) => order.id),
     )
 
-    const error = workspace.error || orders.error || plan.error || review.error
+    const error: unknown = workspace.error || orders.error || plan.error || review.error
     let phase: BillingOverviewBaseProps["state"]["phase"] = "ready"
     if (!workspace.data || !orders.data || !review.data || plan.isLoading) phase = "loading"
     if (error || (workspace.data && !allowed)) phase = "error"
@@ -57,7 +57,6 @@ export const BillingOverview = (props: BillingOverviewProps) => {
         usage,
         timeZone: PRODUCT_TIME_ZONE,
     })
-    if (connected === null) return null
     return (
         <BillingOverviewBase
             state={{

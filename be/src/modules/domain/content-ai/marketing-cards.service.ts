@@ -78,12 +78,14 @@ const clip = (text: string, max: number, fallback = "-"): string => {
     return (trimmed === "" ? fallback : trimmed).slice(0, max)
 }
 
+/** A number as two digits. */
+const two = (value: number): string => String(value).padStart(2, "0")
+
 /** An ISO moment as Vietnam wall time, `HH:mm dd/MM/yyyy`; the text itself when it is not a moment. */
 const vnTime = (iso: string): string => {
     const at = Date.parse(iso)
     if (!Number.isFinite(at)) return iso
     const local = new Date(at + VN_OFFSET_MS)
-    const two = (value: number): string => String(value).padStart(2, "0")
     const day = `${two(local.getUTCDate())}/${two(local.getUTCMonth() + 1)}/${local.getUTCFullYear()}`
     return `${two(local.getUTCHours())}:${two(local.getUTCMinutes())} ${day}`
 }

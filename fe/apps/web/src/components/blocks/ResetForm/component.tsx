@@ -10,7 +10,7 @@ export interface ResetFormBaseProps {
     readonly props: {
         readonly title: string
         readonly text: string
-        readonly failure?: { readonly title: string; readonly text: string }
+        readonly failure?: { readonly title: string; readonly text: string } | undefined
         readonly newPasswordLabel: string
         readonly confirmLabel: string
         readonly passwordHint: string
@@ -19,8 +19,8 @@ export interface ResetFormBaseProps {
         readonly submitLabel: string
         readonly password: string
         readonly confirm: string
-        readonly passwordError?: string
-        readonly confirmError?: string
+        readonly passwordError?: string | undefined
+        readonly confirmError?: string | undefined
         readonly isPending: boolean
         readonly expiredTitle: string
         readonly expiredText: string

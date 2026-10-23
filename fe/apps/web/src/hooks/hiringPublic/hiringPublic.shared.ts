@@ -150,9 +150,7 @@ export const toPublicOffer = (wire: PublicOfferType): PublicOfferView => ({
     letter: wire.letter,
     expiresAt: wire.expiresAt ?? null,
     status: wire.status,
-    isOpen:
-        wire.status === "sent" &&
-        (wire.expiresAt === null || wire.expiresAt === undefined || Date.parse(wire.expiresAt) >= Date.now()),
+    isOpen: wire.status === "sent" && (wire.expiresAt === null || Date.parse(wire.expiresAt) >= Date.now()),
 })
 
 /** The address a CV is PUT to: the presigned URL the back end hands out, or the signed-upload address built from its token. */

@@ -3,7 +3,6 @@ import { Test } from "@nestjs/testing"
 import { Reflector } from "@nestjs/core"
 import { mock } from "@starci/jest-preset"
 import type { Request } from "express"
-import type { Principal } from "@modules/platform/cqrs"
 import type { VerifySupabaseAccessToken } from "@modules/integrations/supabase"
 import { ok } from "@modules/platform/primitives"
 import { AuthGuard } from "./auth.guard"
@@ -15,7 +14,7 @@ class Door {}
 
 const handler = (): void => undefined
 
-const principal: Principal = { id: "person-1", role: "authenticated" }
+const principal = { id: "person-1", role: "authenticated" } as const
 
 const build = async (authorization?: string) => {
     const reflector = mock<Reflector>()

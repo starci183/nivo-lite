@@ -12,6 +12,12 @@ import type { MetaPageAccess } from "./meta.contracts"
 import { META_OPTIONS } from "./meta.decorators"
 import type { MetaOptions } from "./meta.options"
 
+/** A partial-object matcher, typed `unknown` so it flows into any slot. */
+const objectLike = (shape: Record<string, unknown>): unknown => expect.objectContaining(shape)
+
+/** A substring matcher, typed `unknown` so it flows into any slot. */
+const stringLike = (text: string): unknown => expect.stringContaining(text)
+
 const OPTIONS: MetaOptions = {
     app: { appId: "app-1", appSecret: new Secret("secret-1") },
     webhookVerifyToken: new Secret("verify-1"),
@@ -54,7 +60,7 @@ describe("MetaMessagingClient deliverMessage", () => {
             ids: ["mid-1"],
         })
         expect(http.request).toHaveBeenCalledWith(
-            expect.objectContaining({
+            objectLike({
                 method: "POST",
                 body: { recipient: { id: "PSID" }, messaging_type: "RESPONSE", message: { text: "hello" } },
             }),
@@ -70,8 +76,8 @@ describe("MetaMessagingClient deliverMessage", () => {
             ids: [],
         })
         expect(http.request).toHaveBeenCalledWith(
-            expect.objectContaining({
-                body: expect.objectContaining({ messaging_type: "MESSAGE_TAG", tag: "HUMAN_AGENT" }),
+            objectLike({
+                body: objectLike({ messaging_type: "MESSAGE_TAG", tag: "HUMAN_AGENT" }),
             }),
         )
     })
@@ -99,7 +105,7 @@ describe("MetaMessagingClient deliverMessage", () => {
         await expect(client.deliverMessage(PAGE, "facebook", "P", long, "standard")).resolves.toMatchObject({
             ok: false,
             reason: "rate_limited",
-            detail: expect.stringContaining("sent 1 of"),
+            detail: stringLike("sent 1 of"),
         })
         await expect(client.deliverMessage(PAGE, "facebook", "P", "again", "standard")).resolves.toEqual({
             ok: false,
@@ -142,14 +148,8 @@ describe("MetaMessagingClient publicReply", () => {
             ids: ["r1"],
         })
         await expect(client.publicReply(PAGE, "instagram", "C2", "thanks")).resolves.toEqual({ ok: true, ids: [] })
-        expect(http.request).toHaveBeenNthCalledWith(
-            1,
-            expect.objectContaining({ url: expect.stringContaining("/C1/comments?") }),
-        )
-        expect(http.request).toHaveBeenNthCalledWith(
-            2,
-            expect.objectContaining({ url: expect.stringContaining("/C2/replies?") }),
-        )
+        expect(http.request).toHaveBeenNthCalledWith(1, objectLike({ url: stringLike("/C1/comments?") }))
+        expect(http.request).toHaveBeenNthCalledWith(2, objectLike({ url: stringLike("/C2/replies?") }))
     })
 
     it("refuses empty text, rate limits and reports a failure", async () => {
@@ -198,7 +198,7 @@ describe("MetaMessagingClient private replies", () => {
         })
         expect(http.request).toHaveBeenNthCalledWith(
             1,
-            expect.objectContaining({ body: { recipient: { comment_id: "C" }, message: { text: "hello" } } }),
+            objectLike({ body: { recipient: { comment_id: "C" }, message: { text: "hello" } } }),
         )
     })
 })

@@ -47,7 +47,7 @@ const BASIS_PATTERN = /^(?:Căn cứ|Basis):([\s\S]+)$/ // vn-ok: matches the st
 export const splitBasis = (note: string | null): NoteParts => {
     if (note === null || note === "") return { basis: null, rest: null }
     const match = BASIS_PATTERN.exec(note.trim())
-    return match === null ? { basis: null, rest: note } : { basis: match[1].trim(), rest: null }
+    return match === null ? { basis: null, rest: note } : { basis: match[1]?.trim() ?? null, rest: null }
 }
 
 const DECIDERS: ReadonlyArray<DeciderKind> = ["policy", "owner", "staff"]

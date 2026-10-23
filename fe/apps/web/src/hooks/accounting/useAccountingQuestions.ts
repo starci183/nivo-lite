@@ -11,6 +11,7 @@ import { useFormatter, useTranslations } from "next-intl"
 import { useEffect, useMemo, useState } from "react"
 import { useWatch } from "react-hook-form"
 import { useDecideAccountingQuestion } from "./useDecideAccountingQuestion"
+import { readError } from "@/hooks/workspaceread"
 
 /** Prepares every question with independent validated form paths and one backend mutation lifecycle. */
 export const useAccountingQuestions = (
@@ -29,7 +30,9 @@ export const useAccountingQuestions = (
     const lock = useAccountingDecisionLock()
     const { decide, isDeciding } = useDecideAccountingQuestion()
     const { activeWorkspaceId } = useActiveWorkspace()
-    const { data: workspaces, error: membershipError } = useQueryMyWorkspacesSwr()
+    const swrRead = useQueryMyWorkspacesSwr()
+    const { data: workspaces } = swrRead
+    const membershipError = readError(swrRead)
     const membership = workspaces?.find(
         (workspace) => workspace.member.workspaceId === activeWorkspaceId && workspace.member.status === "active",
     )?.member

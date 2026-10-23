@@ -12,7 +12,7 @@ export interface LinkRowView {
     readonly id: string
     readonly label: string
     readonly value: string
-    readonly error?: string
+    readonly error?: string | undefined
 }
 
 /** One file or link waiting to be added, already worded. */
@@ -22,7 +22,7 @@ export interface QueueRowView {
     readonly detail: string
     readonly statusLabel: string
     readonly statusTone: "neutral" | "warning" | "success" | "danger"
-    readonly error?: string
+    readonly error?: string | undefined
     readonly canRemove: boolean
 }
 
@@ -39,7 +39,7 @@ type AddFilesPanelProps = {
     readonly removeLabel: string
     readonly links: ReadonlyArray<LinkRowView>
     readonly queue: ReadonlyArray<QueueRowView>
-    readonly note?: string
+    readonly note?: string | undefined
     readonly isBusy: boolean
     readonly onFiles: (files: Array<File>) => void
     readonly onLink: (id: string, value: string) => void

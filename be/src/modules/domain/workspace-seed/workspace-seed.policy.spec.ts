@@ -3,6 +3,19 @@ import { Secret } from "@modules/platform/config"
 import { WorkspaceSeedError, WorkspaceSeedErrorCode } from "./errors/workspace-seed.error"
 import { assertSeedScope, readEnsureFor, readProfileInput, readSeedInput } from "./workspace-seed.policy"
 
+/** A partial-object matcher, typed `unknown` so it flows into any slot. */
+const objectLike = (shape: Record<string, unknown>): unknown => expect.objectContaining(shape)
+
+/** What `run` throws, read as `unknown`; the matcher then judges its fields. */
+const thrownBy = (run: () => unknown): unknown => {
+    try {
+        run()
+    } catch (error) {
+        return error
+    }
+    return undefined
+}
+
 const SUBJECT = Symbol("workspace-seed.policy")
 const WS = "11111111-1111-4111-8111-111111111111"
 const USER = "22222222-2222-4222-8222-222222222222"
@@ -88,11 +101,11 @@ describe("workspace seed session scope", () => {
 
     it("requires private input without echoing malformed content", async () => {
         const subject = await build()
-        expect(() => subject.readSeedInput(undefined)).toThrow(
-            expect.objectContaining({ code: WorkspaceSeedErrorCode.InputRequired }),
+        expect(thrownBy(() => subject.readSeedInput(undefined))).toEqual(
+            objectLike({ code: WorkspaceSeedErrorCode.InputRequired }),
         )
-        expect(() => subject.readSeedInput(new Secret("{private-password"))).toThrow(
-            expect.objectContaining({ code: WorkspaceSeedErrorCode.InputInvalid }),
+        expect(thrownBy(() => subject.readSeedInput(new Secret("{private-password")))).toEqual(
+            objectLike({ code: WorkspaceSeedErrorCode.InputInvalid }),
         )
     })
 })
@@ -155,8 +168,8 @@ describe("workspace seed input refusal", () => {
         { schema: WIRE.schema, action: "role", workspaceId: WS, memberId: USER, role: "owner" },
     ])("refuses invalid or authority-bearing input %#", async (wire) => {
         const subject = await build()
-        expect(() => subject.readSeedInput(new Secret(JSON.stringify(wire)))).toThrow(
-            expect.objectContaining({ code: WorkspaceSeedErrorCode.InputInvalid }),
+        expect(thrownBy(() => subject.readSeedInput(new Secret(JSON.stringify(wire))))).toEqual(
+            objectLike({ code: WorkspaceSeedErrorCode.InputInvalid }),
         )
     })
 })
@@ -211,8 +224,8 @@ describe("workspace profile private input", () => {
 
     it("requires the input", async () => {
         const subject = await build()
-        expect(() => subject.readProfileInput(undefined)).toThrow(
-            expect.objectContaining({ code: WorkspaceSeedErrorCode.InputRequired }),
+        expect(thrownBy(() => subject.readProfileInput(undefined))).toEqual(
+            objectLike({ code: WorkspaceSeedErrorCode.InputRequired }),
         )
     })
 
@@ -244,8 +257,8 @@ describe("workspace profile private input", () => {
     ])("refuses %s without echoing it", async (_name, wire) => {
         const subject = await build()
         expect(() => subject.readProfileInput(new Secret(wire))).toThrow(WorkspaceSeedError)
-        expect(() => subject.readProfileInput(new Secret(wire))).toThrow(
-            expect.objectContaining({ code: WorkspaceSeedErrorCode.InputInvalid }),
+        expect(thrownBy(() => subject.readProfileInput(new Secret(wire)))).toEqual(
+            objectLike({ code: WorkspaceSeedErrorCode.InputInvalid }),
         )
     })
 })

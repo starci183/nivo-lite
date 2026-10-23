@@ -5,6 +5,7 @@ import { isNotFoundFailure } from "@/modules/failure"
 import { useQueryKnowledgeSourceSwr } from "@/hooks/swr"
 import { toDocumentPassage, toKnowledgeDocumentDetail } from "@/modules/documents"
 import type { DocumentPassage, KnowledgeDocumentDetail } from "@/modules/types"
+import { readError } from "@/hooks/workspaceread"
 
 /** One document with its text and passages, in the shape the blocks know. */
 interface KnowledgeSourceDetail {
@@ -14,7 +15,9 @@ interface KnowledgeSourceDetail {
 
 /** One document of the active workspace by id (the back end `knowledgeSource` query). Polls while a worker is on it. */
 export const useKnowledgeSource = (id: string | undefined) => {
-    const { data, error, isLoading } = useQueryKnowledgeSourceSwr(id)
+    const swrRead = useQueryKnowledgeSourceSwr(id)
+    const { data, isLoading } = swrRead
+    const error = readError(swrRead)
     const detail = useMemo<KnowledgeSourceDetail | undefined>(
         () =>
             data === undefined

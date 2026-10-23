@@ -16,6 +16,18 @@ import {
 import type { PlanCadence, PlanEvent, PlanPillar, PlanSlot } from "./content-ai-planning.policy"
 import { ContentAiError, ContentAiErrorCode } from "./errors/content-ai.error"
 
+const objectLike = (shape: Record<string, unknown>): unknown => expect.objectContaining(shape)
+
+/** What `run` throws, read as `unknown`; the matcher then judges its fields. */
+const thrownBy = (run: () => unknown): unknown => {
+    try {
+        run()
+    } catch (error) {
+        return error
+    }
+    return undefined
+}
+
 const SUBJECT = Symbol("content-ai-planning.policy")
 
 type Subject = Pick<
@@ -350,7 +362,7 @@ describe("content AI planning policy", () => {
         const plan = () => subject.planSlots("2019-12", [CADENCE], [FIRST], new Date(0))
 
         expect(plan).toThrow(ContentAiError)
-        expect(plan).toThrow(expect.objectContaining({ code: ContentAiErrorCode.InvalidInput }))
+        expect(thrownBy(plan)).toEqual(objectLike({ code: ContentAiErrorCode.InvalidInput }))
     })
 })
 

@@ -60,7 +60,7 @@ export interface UpdateMoneyInput {
     /** The account holder (bank feeds). */
     readonly holder: string
     /** SePay: the API key NIVO generated or the one typed into SePay. */
-    readonly apiKey?: string
+    readonly apiKey?: string | undefined
 }
 
 /** The wizard view of a bank or payment feed. */

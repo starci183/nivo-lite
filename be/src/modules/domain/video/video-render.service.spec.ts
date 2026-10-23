@@ -18,6 +18,18 @@ import { VideoService } from "./video.service"
 import { VideoRenderService } from "./video-render.service"
 import { EditorDeliveryService } from "./editor-delivery.service"
 
+/** A partial-object matcher, typed `unknown` so it flows into any slot. */
+const objectLike = (shape: Record<string, unknown>): unknown => expect.objectContaining(shape)
+
+/** A substring matcher, typed `unknown` so it flows into any slot. */
+const stringLike = (text: string): unknown => expect.stringContaining(text)
+
+/** The match-anything matcher, typed `unknown` so it flows into any slot. */
+const anything = (): unknown => expect.anything()
+
+/** A by-constructor matcher, typed `unknown` so it flows into any slot. */
+const anyOf = (type: unknown): unknown => expect.any(type)
+
 const WORKSPACE = "0a1b2c3d-0a1b-4c3d-8a1b-0a1b2c3d4e5f"
 const IMAGE = `${WORKSPACE}/photo.jpg`
 const LOGO = `${WORKSPACE}/logo.png`
@@ -113,13 +125,13 @@ describe("VideoRenderService", () => {
             expect(assets.upload).toHaveBeenCalledWith(
                 "videos",
                 `${WORKSPACE}/render-1/captions.vtt`,
-                expect.any(Buffer),
+                anyOf(Buffer),
                 "text/vtt; charset=utf-8",
             )
             expect(video.completeRender).toHaveBeenCalledWith(
                 "render-1",
-                expect.objectContaining({
-                    meta: expect.objectContaining({
+                objectLike({
+                    meta: objectLike({
                         captions_path: `${WORKSPACE}/render-1/captions.vtt`,
                         captions_lang: "vi-VN",
                     }),
@@ -143,8 +155,8 @@ describe("VideoRenderService", () => {
             expect(assets.upload).toHaveBeenCalledTimes(2)
             expect(video.completeRender).toHaveBeenCalledWith(
                 "render-1",
-                expect.objectContaining({
-                    meta: expect.objectContaining({ captions_path: null, captions_lang: null }),
+                objectLike({
+                    meta: objectLike({ captions_path: null, captions_lang: null }),
                 }),
             )
         })
@@ -174,12 +186,9 @@ describe("VideoRenderService", () => {
                 posterPath: `${WORKSPACE}/render-1/poster.jpg`,
                 durationMs: 9000,
                 sizeBytes: 5,
-                meta: expect.objectContaining({ timings: { tts_ms: 1, upload_ms: 0 } }),
+                meta: objectLike({ timings: { tts_ms: 1, upload_ms: 0 } }),
             })
-            expect(logger.info).toHaveBeenCalledWith(
-                VideoLogEvent.RenderDone,
-                expect.objectContaining({ renderId: "render-1" }),
-            )
+            expect(logger.info).toHaveBeenCalledWith(VideoLogEvent.RenderDone, objectLike({ renderId: "render-1" }))
             expect(await has(options.workDir, "render-1")).toBe(false)
         })
 
@@ -207,7 +216,7 @@ describe("VideoRenderService", () => {
             await expect(service.render({ renderId: "render-1" })).resolves.toBeUndefined()
 
             expect(renderer.render).not.toHaveBeenCalled()
-            expect(video.failRender).toHaveBeenCalledWith("render-1", expect.stringContaining("VIDEO_RENDER_REJECTED"))
+            expect(video.failRender).toHaveBeenCalledWith("render-1", stringLike("VIDEO_RENDER_REJECTED"))
         })
     })
 })
@@ -379,7 +388,7 @@ describe("VideoRenderService", () => {
 
             await service.onApplicationBootstrap()
 
-            expect(logger.error).toHaveBeenCalledWith(VideoLogEvent.WorkDirUnreadable, expect.anything())
+            expect(logger.error).toHaveBeenCalledWith(VideoLogEvent.WorkDirUnreadable, anything())
         })
     })
 })

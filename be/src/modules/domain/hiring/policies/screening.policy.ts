@@ -130,7 +130,7 @@ const questionEntry = (question: JobQuestion, given: string, t: TextOf): Entry =
             },
         )
     }
-    const accepted = Array.isArray(question.expect) ? question.expect : []
+    const accepted = typeof question.expect === "object" ? question.expect : []
     const ok = accepted.some((choice) => fold(choice) === fold(given) || has(fold(given), choice))
     return make(ok ? "met" : "unmet", ok ? "hiring.screen.choiceOk" : "hiring.screen.choiceBad", {
         answer: quote,

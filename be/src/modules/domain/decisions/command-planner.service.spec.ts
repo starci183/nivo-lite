@@ -91,8 +91,8 @@ const rowOf = (): WorkItem => mock<WorkItem>({ id: "item-1", lead_id: "lead-1" }
 
 const build = async (em: MockEntityManager) => {
     const log = jest.fn().mockResolvedValue(undefined)
-    const post = jest.fn().mockResolvedValue(undefined)
-    const error = jest.fn()
+    const post = jest.fn<Promise<void>, Parameters<OfficeLinesService["post"]>>().mockResolvedValue(undefined)
+    const error = jest.fn<void, Parameters<Logger["error"]>>()
     const moduleRef = await Test.createTestingModule({
         providers: [
             CommandPlannerService,

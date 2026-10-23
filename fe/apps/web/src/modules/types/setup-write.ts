@@ -182,8 +182,8 @@ export type SetupWriteDecision =
               readonly attributeLabel?: string
           }
           readonly rule?: { readonly mode: FlowRuleMode; readonly limitVnd: number | null }
-          readonly resolution?: SetupResolution
-          readonly situation?: string
+          readonly resolution?: SetupResolution | undefined
+          readonly situation?: string | undefined
           /** Multi-instance agent (one Chatbot per branch): the fact is for this instance only instead of every instance of the type. */
           readonly onlyThisAgent?: boolean
       }

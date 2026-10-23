@@ -9,6 +9,9 @@ import type { CardScope } from "./marketing-cards.service"
 import type { MarketingWeeklyReport } from "./content-agent.contracts"
 import type { DraftPostCard, WeeklyReportCard } from "./marketing-cards.contracts"
 
+const anything = (): unknown => expect.anything()
+const without = (shape: Record<string, unknown>): unknown => expect.not.objectContaining(shape)
+
 const build = async () => {
     const lines = mock<OfficeLinesService>()
     const cards = mock<OfficeCardsService>()
@@ -190,7 +193,7 @@ describe("MarketingCardsService / approval and schedule", () => {
             data: { content_item_id: "c-1" },
         })
         const unbound = await service.hubCardOf("vi", { ...approval, workItemId: null, scheduledAt: "soon" })
-        expect(unbound).toEqual(expect.not.objectContaining({ ref: expect.anything() }))
+        expect(unbound).toEqual(without({ ref: anything() }))
         expect(unbound.fields).toEqual([
             { label: "vi:marketing.word.channels", value: "facebook + zalo" },
             { label: "vi:marketing.word.publishAt", value: "soon" },
@@ -295,7 +298,7 @@ describe("MarketingCardsService / weekly_report", () => {
         ])
         expect(Object.keys(card)).toEqual(["v", "type", "title", "subtitle", "fields", "data"])
         expect(sourceless.body).toBe("t\n\nb")
-        expect(sourceless).toEqual(expect.not.objectContaining({ sources: expect.anything() }))
+        expect(sourceless).toEqual(without({ sources: anything() }))
         expect(service.textOf("vi", reportCard(REPORT))).toBe(
             'vi:marketing.reportCard {"from":"2026-10-12","to":"2026-10-18","reach":"12480","engagements":"1286","messages":"48"}',
         )

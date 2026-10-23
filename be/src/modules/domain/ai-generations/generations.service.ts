@@ -64,6 +64,9 @@ const failure = (reason: GenerationFailureReason, message: string): GenerationFa
     message,
 })
 
+/** A stored JSON value as an object; anything else is empty. */
+const record = (value: unknown): Record<string, unknown> => (isPlainObject(value) ? value : {})
+
 @Injectable()
 /**
  * OpenClaw is the only text-generating AI in NIVO. This is the one door for every text the app writes outside customer chat (setup
@@ -165,7 +168,6 @@ export class GenerationsService {
             [id, workspaceId],
         )
         if (row === undefined) return null
-        const record = (value: unknown): Record<string, unknown> => (isPlainObject(value) ? value : {})
         const progress = progressOf(row)
         return {
             id: row.id,

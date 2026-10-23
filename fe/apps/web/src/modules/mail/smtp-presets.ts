@@ -4,7 +4,7 @@ import type { SmtpPreset } from "./smtp-presets.types"
  * The SMTP providers the outgoing-email wizard offers. Each choice prefills host, port and security and carries a short guide for a
  * non-technical owner (checked against each provider's own documentation). Every word is a key of the `smtpPresets` catalog.
  */
-export const SMTP_PRESETS: ReadonlyArray<SmtpPreset> = [
+export const SMTP_PRESETS: readonly [SmtpPreset, ...SmtpPreset[]] = [
     {
         id: "google_workspace",
         title: "google_workspace_title",

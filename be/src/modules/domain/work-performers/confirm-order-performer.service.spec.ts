@@ -214,7 +214,9 @@ describe("ConfirmOrderPerformerService prepare", () => {
 describe("ConfirmOrderPerformerService prepare", () => {
     it.each([null, "", undefined])("captures unnamed sender %p and logs it", async (senderName) => {
         const { service, orders, leads, inbound, agents, responsibilities, evidence, events } = await build()
-        inbound.find.mockResolvedValue(eventOf({ sender_name: senderName, sender_contact: null, amount_vnd: 150000 }))
+        const event = eventOf({ sender_name: null, sender_contact: null, amount_vnd: 150000 })
+        Reflect.set(event, "sender_name", senderName)
+        inbound.find.mockResolvedValue(event)
         agents.agentOfDepartment.mockResolvedValue({ id: "agent-1", name: "Mai" })
         const item = itemOf({
             subject_type: "inbound",

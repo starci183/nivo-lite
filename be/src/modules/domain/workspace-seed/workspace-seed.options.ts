@@ -114,11 +114,11 @@ export interface WorkspaceSeedOptions {
     /** The owner classes behind the ports of a profile run. */
     readonly ports: WorkspaceSeedPorts
     /** Private command input supplied by the selected target runner. */
-    readonly input?: Secret
+    readonly input?: Secret | undefined
     /** Private profile input (`nivo/workspace-profile-input@1`): the connector endpoints of a profile run. */
-    readonly profileInput?: Secret
+    readonly profileInput?: Secret | undefined
     /** Private office input (`nivo/workspace-office-input@1`): the accounts of the two people the ensure input does not carry. */
-    readonly officeInput?: Secret
+    readonly officeInput?: Secret | undefined
     /** Writes the closed public receipt, never credentials. */
     readonly print: (line: string) => void
 }

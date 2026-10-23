@@ -10,9 +10,20 @@ import type { PaymentSecret } from "./payment-secrets.service"
 import { BillingErrorCode } from "./errors/billing.error"
 import { PaymentProofService } from "./payment-proof.service"
 
+const objectLike = (shape: Record<string, unknown>): unknown => expect.objectContaining(shape)
+
+/** What `run` throws, read as `unknown`; the matcher then judges its fields. */
+const thrownBy = (run: () => unknown): unknown => {
+    try {
+        run()
+    } catch (error) {
+        return error
+    }
+    return undefined
+}
 const CONNECTION_ID = "0b5d3f4e-1c2a-4b6d-8e7f-9a0b1c2d3e4f"
-const REFUSED = expect.objectContaining({ code: BillingErrorCode.WebhookUnauthorized })
-const INVALID = expect.objectContaining({ code: BillingErrorCode.WebhookInvalid })
+const REFUSED = objectLike({ code: BillingErrorCode.WebhookUnauthorized })
+const INVALID = objectLike({ code: BillingErrorCode.WebhookInvalid })
 
 const OPTIONS: BillingOptions = {
     sepayApiKey: new Secret("billing-key"),
@@ -46,9 +57,9 @@ describe("PaymentProofService > verifyBillingKey", () => {
         const { proof: unconfigured } = await build({ ...OPTIONS, sepayApiKey: undefined })
 
         expect(() => proof.verifyBillingKey("Apikey billing-key")).not.toThrow()
-        expect(() => proof.verifyBillingKey("Apikey other")).toThrow(REFUSED)
-        expect(() => proof.verifyBillingKey(undefined)).toThrow(REFUSED)
-        expect(() => unconfigured.verifyBillingKey("Apikey billing-key")).toThrow(REFUSED)
+        expect(thrownBy(() => proof.verifyBillingKey("Apikey other"))).toEqual(REFUSED)
+        expect(thrownBy(() => proof.verifyBillingKey(undefined))).toEqual(REFUSED)
+        expect(thrownBy(() => unconfigured.verifyBillingKey("Apikey billing-key"))).toEqual(REFUSED)
     })
 })
 

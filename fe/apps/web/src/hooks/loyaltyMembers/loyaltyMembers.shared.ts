@@ -25,7 +25,7 @@ export const groupPhone = (phone: string | null | undefined): string => {
 export const sortValue = (member: LoyaltyMemberType, key: MemberSortKey): number => {
     if (key === "points") return member.points
     if (key === "spend") return member.lifetimeSpendVnd
-    return member.lastVisitAt === null || member.lastVisitAt === undefined ? 0 : Date.parse(member.lastVisitAt)
+    return member.lastVisitAt === null ? 0 : Date.parse(member.lastVisitAt)
 }
 
 /** True when the member matches the typed text by name, or by at least three phone digits. */

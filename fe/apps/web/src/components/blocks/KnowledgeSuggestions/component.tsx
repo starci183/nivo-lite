@@ -6,7 +6,7 @@ export interface KnowledgeSuggestionsBaseProps {
     readonly props: {
         readonly list: KnowledgeRowsProps
         /** The ideas that were set aside; nothing is drawn for them while undefined. */
-        readonly skipped?: KnowledgeRowsProps
+        readonly skipped?: KnowledgeRowsProps | undefined
     }
 }
 

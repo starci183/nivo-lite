@@ -14,6 +14,8 @@ import type { RecordOutcomeParams } from "./leads.contracts"
 import { LeadsService } from "./leads.service"
 import { UPDATE_LEAD_STAGE } from "./persistence/leads.sql"
 
+const anything = (): unknown => expect.anything()
+
 const paramsOf = builder<RecordOutcomeParams>({
     workspaceId: "ws-1",
     leadId: "lead-1",
@@ -94,14 +96,14 @@ describe("LeadsService", () => {
                     summary: 'leads.stage-event:{"stage":"leads.stage.proposal:{}"}',
                     evidence: "Sent the quote",
                 },
-                expect.anything(),
+                anything(),
             )
             expect(isTransactionManager(events.record.mock.calls[0]?.[1])).toBe(true)
             expect(teamChat.postSystem).toHaveBeenCalledWith({
                 workspaceId: "ws-1",
                 leadId: "lead-1",
                 body: 'leads.stage-message:{"name":"Anh Minh","stage":"leads.stage.proposal:{}"}',
-                manager: expect.anything(),
+                manager: anything(),
             })
             expect(isTransactionManager(teamChat.postSystem.mock.calls[0]?.[0].manager)).toBe(true)
             expect(tx.commits).toBe(1)
@@ -113,7 +115,7 @@ describe("LeadsService", () => {
 
             await leads.recordOutcome(paramsOf({ evidence: "" }))
 
-            expect(events.record).toHaveBeenCalledWith(expect.objectContaining({ evidence: null }), expect.anything())
+            expect(events.record).toHaveBeenCalledWith(expect.objectContaining({ evidence: null }), anything())
         })
 
         it("refuses a lead the workspace does not have and writes nothing else", async () => {
@@ -148,7 +150,7 @@ describe("LeadsService", () => {
                 leadId: "lead-1",
                 contactName: "Anh Minh",
                 locale: "en",
-                manager: expect.anything(),
+                manager: anything(),
             })
             expect(isTransactionManager(responsibilities.handToAccounting.mock.calls[0]?.[0].manager)).toBe(true)
         })

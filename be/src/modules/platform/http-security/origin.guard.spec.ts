@@ -7,6 +7,19 @@ import { HTTP_SECURITY_OPTIONS } from "./http-security.decorators"
 import type { HttpSecurityOptions } from "./http-security.options"
 import { OriginGuard } from "./origin.guard"
 
+/** A partial-object matcher, typed `unknown` so it flows into any slot. */
+const objectLike = (shape: Record<string, unknown>): unknown => expect.objectContaining(shape)
+
+/** What `run` throws, read as `unknown`; the matcher then judges its fields. */
+const thrownBy = (run: () => unknown): unknown => {
+    try {
+        run()
+    } catch (error) {
+        return error
+    }
+    return undefined
+}
+
 const OPTIONS: HttpSecurityOptions = {
     trustedProxyHops: 1,
     allowedOrigins: ["https://app.test"],
@@ -57,16 +70,16 @@ describe("OriginGuard", () => {
     it("refuses a state-changing request from an origin outside the allowlist", async () => {
         const { guard, context } = await build("DELETE", { origin: "https://foreign.test" })
 
-        expect(() => guard.canActivate(context)).toThrow(
-            expect.objectContaining({ code: HttpSecurityErrorCode.OriginRejected }),
+        expect(thrownBy(() => guard.canActivate(context))).toEqual(
+            objectLike({ code: HttpSecurityErrorCode.OriginRejected }),
         )
     })
 
     it("refuses a state-changing request whose Referer names an origin outside the allowlist", async () => {
         const { guard, context } = await build("PUT", { referer: "https://foreign.test/page" })
 
-        expect(() => guard.canActivate(context)).toThrow(
-            expect.objectContaining({ code: HttpSecurityErrorCode.OriginRejected }),
+        expect(thrownBy(() => guard.canActivate(context))).toEqual(
+            objectLike({ code: HttpSecurityErrorCode.OriginRejected }),
         )
     })
 })

@@ -26,6 +26,15 @@ import { ShiftsNotifyService } from "./shifts-notify.service"
 import { ShiftsTextService } from "./shifts-text.service"
 import { ShiftsLogEvent } from "./shifts.log-events"
 
+/** A partial-object matcher, typed `unknown` so it flows into any slot. */
+const objectLike = (shape: Record<string, unknown>): unknown => expect.objectContaining(shape)
+
+/** A substring matcher, typed `unknown` so it flows into any slot. */
+const stringLike = (text: string): unknown => expect.stringContaining(text)
+
+/** The match-anything matcher, typed `unknown` so it flows into any slot. */
+const anything = (): unknown => expect.anything()
+
 /** 07:00 in Vietnam on 2026-10-14: one hour before the 08:00 shift. */
 const NOW = "2026-10-14T00:00:00.000Z"
 
@@ -198,13 +207,13 @@ describe("ShiftsAlertsService scan", () => {
         ])
         expect(outbox.allInTransaction).toBe(true)
         expect(write).toHaveBeenCalledWith(
-            expect.anything(),
+            anything(),
             "shifts_alerts",
             { kind: "remind", workspaceId: "ws-1", shiftId: "reminder" },
             { job: "shifts.remind", dedupeKey: "shifts.remind:reminder:" },
         )
         expect(write).toHaveBeenCalledWith(
-            expect.anything(),
+            anything(),
             "shifts_alerts",
             { kind: "noshow", workspaceId: "ws-1", shiftId: "noshow" },
             { job: "shifts.noshow", dedupeKey: "shifts.noshow:noshow:p-1" },
@@ -218,7 +227,7 @@ describe("ShiftsAlertsService", () => {
 
         service.onModuleInit()
 
-        expect(registry.add).toHaveBeenCalledWith(expect.objectContaining({ action: "remind_shift" }))
+        expect(registry.add).toHaveBeenCalledWith(objectLike({ action: "remind_shift" }))
     })
 })
 
@@ -267,7 +276,7 @@ describe("ShiftsAlertsService runJob", () => {
         await service.runJob({ kind: "remind", workspaceId: "ws-1", shiftId: "s-1" })
 
         expect(gate.request).toHaveBeenCalledWith(
-            expect.objectContaining({
+            objectLike({
                 action: "remind_shift",
                 dedupeKey: "remind_shift:s-1:p-1",
                 fields: { shift_id: "s-1", staff_id: "p-1" },
@@ -282,15 +291,10 @@ describe("ShiftsAlertsService runJob", () => {
 
         await service.runJob({ kind: "noshow", workspaceId: "ws-1", shiftId: "s-1" })
 
-        expect(notify.toManagers).toHaveBeenCalledWith(
-            "ws-1",
-            expect.stringContaining("shifts.noShowOffice"),
-            "no_show",
-            {
-                shiftId: "s-1",
-            },
-        )
-        expect(office.logEvidence).toHaveBeenCalledWith("ws-1", expect.objectContaining({ kind: "shifts.no_show" }))
+        expect(notify.toManagers).toHaveBeenCalledWith("ws-1", stringLike("shifts.noShowOffice"), "no_show", {
+            shiftId: "s-1",
+        })
+        expect(office.logEvidence).toHaveBeenCalledWith("ws-1", objectLike({ kind: "shifts.no_show" }))
     })
 })
 
@@ -464,10 +468,10 @@ describe("ShiftsAlertsService performRemind", () => {
 
         expect(notify.toStaff).toHaveBeenCalledWith(
             "ws-1",
-            expect.objectContaining({ staffId: "p-1", kind: "reminder", shiftId: "s-1", workItemId: "wi-1" }),
+            objectLike({ staffId: "p-1", kind: "reminder", shiftId: "s-1", workItemId: "wi-1" }),
         )
         expect(result).toEqual({
-            summary: expect.stringContaining("shifts.remindDoneTelegram"),
+            summary: stringLike("shifts.remindDoneTelegram"),
             evidence: "captured",
         })
     })

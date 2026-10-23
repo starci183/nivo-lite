@@ -14,6 +14,8 @@ import { ContentPublishingService } from "./content-publishing.service"
 import type { MarkContentPublishedRequest, SubmitContentRequest } from "./content-publishing.contracts"
 import { ContentPublishingErrorCode } from "./errors/content-publishing.error"
 
+const objectLike = (shape: Record<string, unknown>): unknown => expect.objectContaining(shape)
+
 const AT = "2026-10-13T03:00:00.000Z"
 const REQUEST: SubmitContentRequest = { workspaceId: "ws-1", id: "item-1", locale: "en" }
 
@@ -124,7 +126,7 @@ describe("ContentPublishingService", () => {
             { workspaceId: "ws-1", actor: "Lan", locale: "en" },
             expect.objectContaining({
                 dedupeKey: `publish_post:item-1:work-0:2:${AT}`,
-                seed: expect.objectContaining({
+                seed: objectLike({
                     draft: "Hello",
                     fields: {
                         content_item_id: "item-1",
@@ -158,9 +160,9 @@ describe("ContentPublishingService", () => {
             expect.any(Object),
             expect.objectContaining({
                 dedupeKey: `publish_post:item-1:first:1:${AT}`,
-                seed: expect.objectContaining({
+                seed: objectLike({
                     draft: "Xin chao",
-                    fields: expect.objectContaining({ channels: "zalo,facebook", scheduled_at: "" }),
+                    fields: objectLike({ channels: "zalo,facebook", scheduled_at: "" }),
                 }),
             }),
         )

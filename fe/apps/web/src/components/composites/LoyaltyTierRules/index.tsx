@@ -9,7 +9,7 @@ interface LoyaltyTierRulesProps {
         readonly canEdit: boolean
         readonly isPending: boolean
         readonly copy: Pick<ProgramCopy, "tiersTitle" | "tiersHint" | "addTier">
-        readonly errors: { readonly tiers?: string }
+        readonly errors: { readonly tiers?: string | undefined }
         readonly canAddTier: boolean
     }
     readonly on: { readonly addTier: () => void }

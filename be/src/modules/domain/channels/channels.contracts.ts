@@ -20,9 +20,9 @@ export interface ZaloSecret {
     /** The "OA Secret Key" of the app's webhook settings; it signs every webhook and is not the app secret. */
     readonly oaSecret: string
     /** The current access token, after authorization. */
-    readonly accessToken?: string
+    readonly accessToken?: string | undefined
     /** The single-use refresh token. */
-    readonly refreshToken?: string
+    readonly refreshToken?: string | undefined
     /** When the refresh token stops working, ISO 8601. */
     readonly refreshExpiresAt?: string
     /** A started authorization: the PKCE verifier and the one-time state nonce. */
@@ -54,7 +54,7 @@ export interface ZaloReturn {
     /** The authorization code to exchange for tokens. */
     readonly code: string
     /** The OA id Zalo reports, when it does. */
-    readonly oaId?: string
+    readonly oaId?: string | undefined
 }
 
 /** How a caller asks for an access token. */

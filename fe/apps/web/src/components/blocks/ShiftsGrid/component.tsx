@@ -162,7 +162,7 @@ const gridCellInteraction = (
     return {
         isHighlighted: cell.isTarget,
         tone: cell.isOff ? "muted" : "neutral",
-        onAction: cell.canDrop ? () => props.on.place(row.id) : undefined,
+        ...(cell.canDrop ? { onAction: () => props.on.place(row.id) } : {}),
         onDragOver: (event) => {
             if (!cell.canDrop) return
             event.preventDefault()
@@ -203,7 +203,7 @@ const renderGridCell = ({ cell, props }: RenderGridCellInput) => (
                 isSelected={chip.isPicked}
                 isInvalid={chip.why !== ""}
                 isDashed={chip.isOpen}
-                leadingColor={chip.color || undefined}
+                {...(chip.color ? { leadingColor: chip.color } : {})}
                 onDragStart={(event) => {
                     event.dataTransfer.setData("text/plain", chip.id)
                     props.on.dragStart(chip.id)

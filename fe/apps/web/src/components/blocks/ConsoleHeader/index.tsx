@@ -122,7 +122,6 @@ export const ConsoleHeader = () => {
         query,
         isNotificationsOpen,
     })
-    if (connected === null) return null
 
     return (
         <ConsoleHeaderBase

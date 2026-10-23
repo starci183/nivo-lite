@@ -7,6 +7,9 @@ import { ChannelSetupClient } from "./channel-setup.client"
 import { CHANNEL_SETUP_OPTIONS } from "./channel-setup.decorators"
 import type { ChannelSetupOptions } from "./channel-setup.options"
 
+/** A partial-object matcher, typed `unknown` so it flows into any slot. */
+const objectLike = (shape: Record<string, unknown>): unknown => expect.objectContaining(shape)
+
 const OPTIONS: ChannelSetupOptions = { zaloOauthBase: undefined, siteUrl: "https://nivo.vn", timeoutMs: 3000 }
 
 const build = async () => {
@@ -53,7 +56,7 @@ describe("ChannelSetupClient telegram", () => {
         await client.telegramSetWebhook("tok", "https://nivo.vn/api/telegram/c-1", "sec")
 
         expect(http.request).toHaveBeenCalledWith(
-            expect.objectContaining({
+            objectLike({
                 url: "https://api.telegram.org/bottok/setWebhook",
                 body: {
                     url: "https://nivo.vn/api/telegram/c-1",
@@ -103,7 +106,7 @@ describe("ChannelSetupClient telegram", () => {
         })
         await expect(client.telegramSetWebhook("t", "u", "s")).rejects.toMatchObject({
             code: ChannelSetupErrorCode.Refused,
-            cause: expect.objectContaining({ message: "telegram setWebhook: Bad Request: bad webhook" }),
+            cause: objectLike({ message: "telegram setWebhook: Bad Request: bad webhook" }),
         })
         await expect(client.telegramGetMe("t")).rejects.toMatchObject({ code: ChannelSetupErrorCode.Refused })
     })
@@ -162,7 +165,7 @@ describe("ChannelSetupClient payosConfirmWebhook", () => {
 
         await expect(client.payosConfirmWebhook(credential, "u")).rejects.toMatchObject({
             code: ChannelSetupErrorCode.Refused,
-            cause: expect.objectContaining({ message: "payos 400 20 bad" }),
+            cause: objectLike({ message: "payos 400 20 bad" }),
         })
         await expect(client.payosConfirmWebhook(credential, "u")).rejects.toMatchObject({
             code: ChannelSetupErrorCode.Refused,

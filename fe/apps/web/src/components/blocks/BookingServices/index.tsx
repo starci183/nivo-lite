@@ -111,7 +111,6 @@ export const BookingServices = () => {
         format,
         isPending,
     })
-    if (connected === null) return null
 
     return <BookingServicesBase props={bookingServicesProps(connected)} on={bookingServicesOn(connected)} />
 }

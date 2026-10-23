@@ -6,6 +6,22 @@ import { officeIssuesOf, readOfficeInput } from "./office-seed.policy"
 import { HAKUEN_OFFICE_AUTHORITY } from "./profiles/hakuen-office.authority.templates"
 import { HAKUEN_OFFICE } from "./profiles/hakuen-office.templates"
 
+/** A partial-object matcher, typed `unknown` so it flows into any slot. */
+const objectLike = (shape: Record<string, unknown>): unknown => expect.objectContaining(shape)
+
+/** A sub-array matcher, typed `unknown` so it flows into any slot. */
+const arrayLike = (items: ReadonlyArray<unknown>): unknown => expect.arrayContaining(items)
+
+/** What `run` throws, read as `unknown`; the matcher then judges its fields. */
+const thrownBy = (run: () => unknown): unknown => {
+    try {
+        run()
+    } catch (error) {
+        return error
+    }
+    return undefined
+}
+
 type Subject = {
     officeIssuesOf: typeof officeIssuesOf
     readOfficeInput: typeof readOfficeInput
@@ -43,8 +59,8 @@ describe("readOfficeInput", () => {
     it("requires the private input", async () => {
         const subject = await buildSubject()
 
-        expect(() => subject.readOfficeInput(undefined)).toThrow(
-            expect.objectContaining({ code: WorkspaceSeedErrorCode.InputRequired }),
+        expect(thrownBy(() => subject.readOfficeInput(undefined))).toEqual(
+            objectLike({ code: WorkspaceSeedErrorCode.InputRequired }),
         )
     })
 
@@ -63,8 +79,8 @@ describe("readOfficeInput", () => {
     ])("refuses $name", async ({ value }) => {
         const subject = await buildSubject()
 
-        expect(() => subject.readOfficeInput(value)).toThrow(
-            expect.objectContaining({ code: WorkspaceSeedErrorCode.InputInvalid }),
+        expect(thrownBy(() => subject.readOfficeInput(value))).toEqual(
+            objectLike({ code: WorkspaceSeedErrorCode.InputInvalid }),
         )
     })
 })
@@ -95,7 +111,7 @@ describe("the story of the video", () => {
             "office-ai-marketing",
         ])
         expect(HAKUEN_OFFICE_AUTHORITY.grants.filter((grant) => grant.action === "give_discount")).toEqual(
-            expect.arrayContaining([
+            arrayLike([
                 { member: "minh", action: "give_discount", unit: "percent", limit: 15 },
                 { member: "ha", action: "give_discount", unit: "percent", limit: 10 },
             ]),
@@ -124,7 +140,7 @@ describe("officeIssuesOf", () => {
                 withRule({ approver_group: { roles: [], rooms: ["garage"], members: [] } }),
             ),
         ).toEqual(
-            expect.arrayContaining([
+            arrayLike([
                 "nam sits in an unknown room",
                 "sales lives in an unknown room",
                 "sales is open to an unknown room",

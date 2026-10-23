@@ -10,7 +10,7 @@ import { EventsService } from "@modules/domain/events"
 import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
-import { DomainError } from "@modules/platform/errors"
+import { isDomainError } from "@modules/platform/errors"
 import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { idsOf, isBrandContext, isContentMediaRef, isPlannedSlot, numeric, objectOf } from "./content-ai-context.policy"
@@ -88,7 +88,7 @@ export class ContentAiCompletionService {
             })
         } catch (cause) {
             this.logger.error(ContentAiLogEvent.CompletionFailed, cause, { workspaceId, generationId })
-            const code = cause instanceof DomainError ? cause.code : ContentAiErrorCode.Failed
+            const code = isDomainError(cause) ? cause.code : ContentAiErrorCode.Failed
             await this.entityManager.transaction((tx) => this.generations.recordFailure(workspaceId, rootId, code, tx))
         }
     }

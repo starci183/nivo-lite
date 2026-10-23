@@ -71,16 +71,18 @@ interface DialogShape {
 }
 
 /** A dialog with every field the client reads written out, so none falls back to a generated mock. */
-const dialogOf = (shape: DialogShape): Dialog =>
-    mock<Dialog>({
-        id: shape.id === undefined ? undefined : returnBigInt(shape.id),
-        title: shape.title,
-        name: shape.name,
+const dialogOf = (shape: DialogShape): Dialog => {
+    const dialog = mock<Dialog>({
         isUser: shape.isUser ?? false,
         isGroup: shape.isGroup ?? false,
         unreadCount: shape.unreadCount ?? 0,
-        entity: shape.entityKind === undefined ? undefined : senderOf(shape.entityKind),
     })
+    Reflect.set(dialog, "id", shape.id === undefined ? undefined : returnBigInt(shape.id))
+    Reflect.set(dialog, "title", shape.title)
+    Reflect.set(dialog, "name", shape.name)
+    Reflect.set(dialog, "entity", shape.entityKind === undefined ? undefined : senderOf(shape.entityKind))
+    return dialog
+}
 
 interface MessageShape {
     readonly id: number
@@ -100,10 +102,10 @@ const messageOf = (shape: MessageShape): Api.Message => {
         message: shape.message,
         date: shape.date,
         out: shape.out ?? false,
-        media: shape.media,
-        sender: shape.senderKind === undefined ? undefined : senderOf(shape.senderKind),
-        replyToMsgId: shape.replyToMsgId,
     })
+    Reflect.set(message, "media", shape.media)
+    Reflect.set(message, "sender", shape.senderKind === undefined ? undefined : senderOf(shape.senderKind))
+    Reflect.set(message, "replyToMsgId", shape.replyToMsgId)
     Reflect.set(message, "className", shape.className)
     return message
 }

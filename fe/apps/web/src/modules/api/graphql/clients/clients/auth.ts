@@ -32,9 +32,9 @@ export interface CreateAuthApolloClientOptions {
     /** `false` keeps the Apollo defaults instead of {@link defaultOptions}. */
     cache?: boolean
     /** Additional static headers for the HttpLink. */
-    headers?: GraphQLHeaders
+    headers?: GraphQLHeaders | undefined
     /** Optional abort signal for every operation on this client. */
-    signal?: AbortSignal
+    signal?: AbortSignal | undefined
     /** The URI of the GraphQL endpoint; defaults to the back end api. */
     uri?: string
 }
@@ -58,5 +58,5 @@ export const createAuthApolloClient = ({
             createHttpLink({ uri, headers, signal }),
         ]),
         cache: new InMemoryCache(),
-        defaultOptions: cache ? defaultOptions : undefined,
+        ...(cache ? { defaultOptions } : {}),
     })

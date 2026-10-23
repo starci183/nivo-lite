@@ -10,6 +10,8 @@ import {
 } from "./lead-flow-fields.policy"
 import type { LeadSource, Platform, SourceKind } from "./lead-flows.contracts"
 
+const anyOf = (type: unknown): unknown => expect.any(type)
+
 const SUBJECT = Symbol("lead-flow-fields.policy")
 
 type Subject = Pick<
@@ -64,7 +66,7 @@ describe("lead flow fields policy", () => {
 
         expect(subject.jsonOf('{"name":"An"}')).toEqual({ value: { name: "An" }, error: null })
         expect(subject.jsonOf("null")).toEqual({ value: null, error: null })
-        expect(subject.jsonOf("broken")).toEqual({ value: undefined, error: expect.any(SyntaxError) })
+        expect(subject.jsonOf("broken")).toEqual({ value: undefined, error: anyOf(SyntaxError) })
     })
     it("converts positive epoch milliseconds and falls back for unusable timestamps", async () => {
         const subject = await build()

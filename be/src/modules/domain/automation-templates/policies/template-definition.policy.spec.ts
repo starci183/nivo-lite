@@ -2,6 +2,18 @@ import { Test } from "@nestjs/testing"
 import { AutomationTemplatesErrorCode } from "../errors/automation-templates.error"
 import { parseTemplateDefinition as parseTemplateDefinitionImplementation } from "./template-definition.policy"
 
+const objectLike = (shape: Record<string, unknown>): unknown => expect.objectContaining(shape)
+
+/** What `run` throws, read as `unknown`; the matcher then judges its fields. */
+const thrownBy = (run: () => unknown): unknown => {
+    try {
+        run()
+    } catch (error) {
+        return error
+    }
+    return undefined
+}
+
 const SUBJECT = Symbol("subject")
 type Subject = { parseTemplateDefinition: typeof parseTemplateDefinitionImplementation }
 
@@ -82,8 +94,8 @@ describe("parseTemplateDefinition", () => {
     ])("names the field %s when it is wrong (%j)", async (field, patch) => {
         const subject = await buildSubject()
 
-        expect(() => subject.parseTemplateDefinition({ ...valid(), ...patch })).toThrow(
-            expect.objectContaining({
+        expect(thrownBy(() => subject.parseTemplateDefinition({ ...valid(), ...patch }))).toEqual(
+            objectLike({
                 code: AutomationTemplatesErrorCode.DefinitionInvalid,
                 params: { key: "thank_payment", field },
             }),
@@ -95,8 +107,8 @@ describe("parseTemplateDefinition", () => {
         async (raw) => {
             const subject = await buildSubject()
 
-            expect(() => subject.parseTemplateDefinition(raw)).toThrow(
-                expect.objectContaining({ code: AutomationTemplatesErrorCode.DefinitionInvalid }),
+            expect(thrownBy(() => subject.parseTemplateDefinition(raw))).toEqual(
+                objectLike({ code: AutomationTemplatesErrorCode.DefinitionInvalid }),
             )
         },
     )
@@ -104,8 +116,8 @@ describe("parseTemplateDefinition", () => {
     it("names an unreadable key with a question mark", async () => {
         const subject = await buildSubject()
 
-        expect(() => subject.parseTemplateDefinition(null)).toThrow(
-            expect.objectContaining({ params: { key: "?", field: "key" } }),
+        expect(thrownBy(() => subject.parseTemplateDefinition(null))).toEqual(
+            objectLike({ params: { key: "?", field: "key" } }),
         )
     })
 })

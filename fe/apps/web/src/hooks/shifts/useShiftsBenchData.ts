@@ -4,6 +4,7 @@ import { useMemo } from "react"
 import { useQueryShiftsWorkbenchSwr } from "@/hooks/swr"
 import type { ShiftsBenchView, ShiftsFiguresView } from "@/modules/types"
 import { toBenchView, toFiguresView } from "./shifts.shared"
+import { readError } from "@/hooks/workspaceread"
 
 /** What {@link useShiftsBenchData} hands to the workbench. */
 interface ShiftsBenchData {
@@ -17,7 +18,9 @@ interface ShiftsBenchData {
 
 /** The `shiftsWorkbench` query for one week (`null` = the week of today) as the view the panels render. */
 export const useShiftsBenchData = (week: string | null): ShiftsBenchData => {
-    const { data, error, isLoading } = useQueryShiftsWorkbenchSwr(week === null ? {} : { week })
+    const swrRead = useQueryShiftsWorkbenchSwr(week === null ? {} : { week })
+    const { data, isLoading } = swrRead
+    const error = readError(swrRead)
     const bench = useMemo(() => (data === undefined ? undefined : toBenchView(data)), [data])
     return {
         data: bench,

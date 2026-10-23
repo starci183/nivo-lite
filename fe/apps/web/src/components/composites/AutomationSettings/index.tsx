@@ -94,7 +94,9 @@ const FieldView = (props: FieldViewProps) => {
             variant="secondary"
             value={field.value}
             isDisabled={isBusy}
-            onValueChange={(value) => onChange(field.key, value.slice(0, field.maxLength))}
+            onValueChange={(value) =>
+                onChange(field.key, field.maxLength === undefined ? value : value.slice(0, field.maxLength))
+            }
         />
     )
 }

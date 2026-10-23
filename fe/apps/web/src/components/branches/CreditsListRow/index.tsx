@@ -7,7 +7,8 @@ interface CreditsListRowProps {
         readonly badge: string
         readonly badgeTone: "success" | "neutral"
         readonly isSkeleton: boolean
-        readonly purchase?: { readonly label: string; readonly pending: boolean; readonly disabled: boolean }
+        readonly purchase?:
+            { readonly label: string; readonly pending: boolean; readonly disabled: boolean } | undefined
     }
     readonly on?: { readonly purchase: () => void }
 }
@@ -32,7 +33,7 @@ export const CreditsListRow = (props: CreditsListRowProps) => {
                         isPending={row.purchase.pending}
                         isDisabled={row.purchase.disabled}
                         isSkeleton={row.isSkeleton}
-                        onPress={props.on?.purchase}
+                        {...(props.on?.purchase === undefined ? {} : { onPress: props.on.purchase })}
                     >
                         {row.purchase.label}
                     </Button>

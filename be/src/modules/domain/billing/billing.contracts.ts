@@ -93,11 +93,11 @@ export interface PlanSelection {
 /** What a caller may leave out of a selection: the plan's monthly base stands for it. */
 export interface PlanSelectionInput {
     /** Pay month by month or a year at once. */
-    readonly cycle?: BillingCycle | null
+    readonly cycle?: BillingCycle | null | undefined
     /** The monthly allowance picked from the usage tiers. */
-    readonly tierCredits?: number | null
+    readonly tierCredits?: number | null | undefined
     /** The seats, for a per-seat plan. */
-    readonly seats?: number | null
+    readonly seats?: number | null | undefined
 }
 
 /** The price of a plan selection, worked out on the server. */
@@ -305,9 +305,9 @@ export interface ManualCredit {
     /** What the transfer said. */
     readonly content: string
     /** A note, when the person added one. */
-    readonly note?: string
+    readonly note?: string | undefined
     /** The payer, when the person named one. */
-    readonly payer?: string
+    readonly payer?: string | undefined
 }
 
 /**

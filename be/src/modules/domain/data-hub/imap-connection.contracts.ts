@@ -42,11 +42,11 @@ export interface ImapInput {
     /** The app password; blank on an existing connection keeps the saved one. */
     readonly password: string
     /** The folders to read. */
-    readonly folders?: ReadonlyArray<string> | null
+    readonly folders?: ReadonlyArray<string> | null | undefined
     /** How many days back a first read goes. */
-    readonly sinceDays?: number | null
+    readonly sinceDays?: number | null | undefined
     /** Minutes between scheduled syncs; null is manual only. */
-    readonly syncEveryMinutes?: number | null
+    readonly syncEveryMinutes?: number | null | undefined
 }
 
 /** What the wizard may know about a saved mailbox: never the password. */

@@ -62,7 +62,7 @@ interface Built {
     readonly post: jest.Mock
     readonly mark: jest.Mock
     readonly decisionMade: jest.Mock
-    readonly error: jest.Mock
+    readonly error: jest.Mock<void, Parameters<Logger["error"]>>
 }
 
 const build = async (found: ActionEntry | null = action): Promise<Built> => {
@@ -71,7 +71,7 @@ const build = async (found: ActionEntry | null = action): Promise<Built> => {
     const post = jest.fn().mockResolvedValue(undefined)
     const mark = jest.fn().mockResolvedValue(undefined)
     const decisionMade = jest.fn().mockResolvedValue(undefined)
-    const error = jest.fn()
+    const error = jest.fn<void, Parameters<Logger["error"]>>()
     const moduleRef = await Test.createTestingModule({
         providers: [
             WorkRecorderService,

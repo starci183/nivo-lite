@@ -5,13 +5,13 @@ export interface UpdateKnowledgeSourceRequest {
     /** The document. */
     readonly sourceId: string
     /** A new title. */
-    readonly title?: string
+    readonly title?: string | undefined
     /** A new topic; an empty text clears it. */
-    readonly topic?: string
+    readonly topic?: string | undefined
     /** New tags. */
-    readonly tags?: Array<string>
+    readonly tags?: Array<string> | undefined
     /** A new module; an empty text means every module. */
-    readonly module?: string
+    readonly module?: string | undefined
     /** `public` or `internal`. */
-    readonly visibility?: string
+    readonly visibility?: string | undefined
 }

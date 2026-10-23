@@ -61,13 +61,13 @@ export interface FactForm {
     /** The modules that may read a restricted fact. */
     readonly modules: ReadonlyArray<string>
     /** From when it holds. */
-    readonly validFrom?: string
+    readonly validFrom?: string | undefined
     /** Until when it holds. */
-    readonly validTo?: string
+    readonly validTo?: string | undefined
     /** A note kept as evidence. */
-    readonly note?: string
+    readonly note?: string | undefined
     /** The gap this fact answers. */
-    readonly gapId?: string
+    readonly gapId?: string | undefined
 }
 
 /** What an owner or manager decides about a fact. */
@@ -79,9 +79,9 @@ export interface FactDecision {
     /** apply or reject a proposal, choose it among competing values, split it into its own fact, or retire an active fact. */
     readonly action: "apply" | "reject" | "choose" | "split" | "retire"
     /** The reason given with the decision. */
-    readonly note?: string
+    readonly note?: string | undefined
     /** The situation a split value is for. */
-    readonly situation?: string
+    readonly situation?: string | undefined
 }
 
 /** Keeping the value in force against every waiting value of its key. */
@@ -93,7 +93,7 @@ export interface KeepCurrentInput {
     /** The normalised attribute. */
     readonly attribute: string
     /** The agent instance the key is scoped to; omitted = every instance. */
-    readonly installationId?: string
+    readonly installationId?: string | undefined
 }
 
 /** A lesson an owner or manager writes by hand. */
@@ -101,13 +101,13 @@ export interface LessonForm {
     /** The workspace. */
     readonly workspaceId: string
     /** The agent it is for; omitted = every agent. */
-    readonly module?: string
+    readonly module?: string | undefined
     /** The title. */
     readonly title: string
     /** What to do. */
     readonly body: string
     /** When it applies. */
-    readonly appliesWhen?: string
+    readonly appliesWhen?: string | undefined
 }
 
 /** What an owner or manager decides about a lesson. */

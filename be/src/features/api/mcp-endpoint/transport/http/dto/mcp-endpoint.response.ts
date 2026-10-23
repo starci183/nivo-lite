@@ -4,7 +4,7 @@ export class McpEndpointResponse {
     jsonrpc!: string
 
     /** The id of the request answered (null for a message that was not one). */
-    id!: string | number | null
+    id!: string | number | null | undefined
 
     /** The result of a successful request. */
     result?: unknown

@@ -85,9 +85,7 @@ describe("LeadGenWorkbenchService", () => {
         })
         const testContact = mock<LeadGenLeadRow>({ ...normal, id: "test-contact", contact_name: "UAT person" })
         const testCompany = mock<LeadGenLeadRow>({ ...normal, id: "test-company", company: "DBG company" })
-        const absentNames = mock<LeadGenLeadRow>({
-            ...normal,
-            id: "legacy",
+        const absentNames = Object.assign(mock<LeadGenLeadRow>({ ...normal, id: "legacy" }), {
             contact_name: undefined,
             company: undefined,
         })

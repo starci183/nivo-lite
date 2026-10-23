@@ -6,7 +6,7 @@ import { QUERY_SHIFTS_MINE_SWR_KEY, QUERY_SHIFTS_WORKBENCH_SWR_KEY } from "@/hoo
 const SHIFTS_KEYS: ReadonlySet<string> = new Set([QUERY_SHIFTS_WORKBENCH_SWR_KEY, QUERY_SHIFTS_MINE_SWR_KEY])
 
 const isShiftsKey = (key: unknown): boolean => {
-    const name = Array.isArray(key) ? key[0] : key
+    const name: unknown = Array.isArray(key) ? key[0] : key
     return typeof name === "string" && SHIFTS_KEYS.has(name)
 }
 

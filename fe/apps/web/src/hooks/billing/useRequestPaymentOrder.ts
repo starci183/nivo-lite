@@ -12,6 +12,7 @@ import { useTranslations } from "next-intl"
 import { useCallback, useRef, useState } from "react"
 import { mutate } from "swr"
 import { usePaymentOrderInvocation } from "./usePaymentOrderInvocation"
+import { readError } from "@/hooks/workspaceread"
 
 const failureKey = (code: string | null | undefined): "errForbidden" | "errCustomPlan" | "paymentFailed" => {
     if (code === "BILLING_FORBIDDEN" || code === "BILLING_NOT_MEMBER") return "errForbidden"
@@ -73,7 +74,8 @@ export const useRequestPaymentOrder = (workspaceId: string | undefined) => {
         },
         [invocation, pendingRequest?.sequence, requestId, t, workspaceId],
     )
-    const { data: status, error } = useQueryPaymentOrderRequestStatusSwr(workspaceId, requestId, { onSuccess, onError })
+    const statusRead = useQueryPaymentOrderRequestStatusSwr(workspaceId, requestId, { onSuccess, onError })
+    const { data: status } = statusRead
     const terminal = status?.status === "succeeded" || status?.status === "failed"
 
     const request = useCallback(
@@ -93,9 +95,9 @@ export const useRequestPaymentOrder = (workspaceId: string | undefined) => {
 
     return {
         request,
-        isRequesting: isMutating || (requestId !== undefined && !terminal && !error),
+        isRequesting: isMutating || (requestId !== undefined && !terminal && !readError(statusRead)),
         status,
         orderId: status?.status === "succeeded" ? (status.resultId ?? undefined) : undefined,
-        error,
+        error: readError(statusRead),
     }
 }

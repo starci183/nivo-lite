@@ -8,15 +8,15 @@ export interface SeedAccount {
     /** The display name. */
     readonly name: string
     /** A privately supplied initial password, required only for a missing account. */
-    readonly password?: Secret
+    readonly password?: Secret | undefined
 }
 
 /** What a seed run takes. */
 export interface SeedRequest {
     /** An existing workspace selector, mutually exclusive with workspaceName. */
-    readonly workspaceId?: string
+    readonly workspaceId?: string | undefined
     /** An exact workspace name owned by the authenticated owner. */
-    readonly workspaceName?: string
+    readonly workspaceName?: string | undefined
     /** The owner account. */
     readonly owner: SeedAccount
     /** The manager account. */
@@ -24,9 +24,9 @@ export interface SeedRequest {
     /** The staff account. */
     readonly staff: SeedAccount
     /** An owner session when password authentication is not used. */
-    readonly principalToken?: Secret
+    readonly principalToken?: Secret | undefined
     /** Explicit authority to create a missing first owner using its supplied initial password. */
-    readonly bootstrapOwner?: boolean
+    readonly bootstrapOwner?: boolean | undefined
 }
 
 /** An explicit role change authenticated by a user session rather than an actor identifier. */

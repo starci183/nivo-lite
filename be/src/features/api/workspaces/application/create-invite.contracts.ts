@@ -7,5 +7,5 @@ export interface CreateInviteRequest {
     /** The role the invitation grants. */
     readonly role: "manager" | "staff"
     /** The staff row the account will be, when any. */
-    readonly staffId?: string
+    readonly staffId?: string | undefined
 }

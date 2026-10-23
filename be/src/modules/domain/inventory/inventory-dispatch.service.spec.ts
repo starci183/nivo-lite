@@ -20,6 +20,8 @@ import {
     SET_PO_MESSAGE,
 } from "./persistence/inventory.sql"
 
+const textLike = (text: string): unknown => expect.stringContaining(text)
+
 const text = (key: string, params: Record<string, string | number> = {}): string => `${key}${JSON.stringify(params)}`
 
 const poOf = (overrides: Partial<LoadedPo> = {}): LoadedPo => ({
@@ -158,7 +160,7 @@ describe("InventoryDispatchService / requestSend", () => {
         expect(gate.request).toHaveBeenCalledWith(
             expect.objectContaining({
                 dedupeKey: "send_po:reminder:po-1:1",
-                summary: expect.stringContaining("inventory.remindAskSummary"),
+                summary: textLike("inventory.remindAskSummary"),
             }),
         )
         expect(em.query).toHaveBeenCalledTimes(1)

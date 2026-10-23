@@ -61,11 +61,12 @@ export const guardPatch = (raw: unknown, workspaceId: string): ProjectPatch | nu
     }
 }
 
+const text = (value: unknown): string => (typeof value === "string" ? value : "")
+const orNull = (value: unknown): string | null => (typeof value === "string" && value !== "" ? value : null)
+
 /** Checks a brand kit; null when it is not an object. Colours stay as typed and are cleaned where they are stored. */
 export const guardBrand = (raw: unknown): Brand | null => {
     if (!isRecord(raw)) return null
-    const text = (value: unknown): string => (typeof value === "string" ? value : "")
-    const orNull = (value: unknown): string | null => (typeof value === "string" && value !== "" ? value : null)
     return {
         shopName: text(raw.shopName),
         primary: text(raw.primary),

@@ -13,7 +13,7 @@ export interface WorkspacesPageBaseProps {
     readonly props: {
         readonly title: string
         /** The reason the person landed here (`disabled`), from the URL. */
-        readonly reason?: string
+        readonly reason?: string | undefined
     }
 }
 

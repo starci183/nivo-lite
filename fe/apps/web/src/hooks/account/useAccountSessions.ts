@@ -5,6 +5,7 @@ import { useMemo } from "react"
 import { useQueryMyAccountSwr } from "@/hooks/swr"
 import { parseUserAgent } from "./account.shared"
 import type { SessionRowView } from "./account.shared"
+import { readError } from "@/hooks/workspaceread"
 
 const JUST_NOW_MS = 60_000
 
@@ -16,7 +17,9 @@ export const useAccountSessions = (): {
 } => {
     const t = useTranslations("account")
     const format = useFormatter()
-    const { data, error, isLoading } = useQueryMyAccountSwr()
+    const swrRead = useQueryMyAccountSwr()
+    const { data, isLoading } = swrRead
+    const error = readError(swrRead)
     const rows = useMemo((): ReadonlyArray<SessionRowView> => {
         const now = new Date()
         const when = (iso: string | null | undefined): string => {
@@ -35,7 +38,7 @@ export const useAccountSessions = (): {
                             ? t("deviceOn", { browser: device.browser, os: device.os })
                             : (device.browser ?? device.os ?? t("deviceUnknown")),
                     facts: [
-                        session.ip === null || session.ip === undefined ? null : `${t("ipLabel")} ${session.ip}`,
+                        session.ip === null ? null : `${t("ipLabel")} ${session.ip}`,
                         t("created", { when: when(session.createdAt) }),
                         t("lastActive", { when: when(session.lastActiveAt) }),
                     ]

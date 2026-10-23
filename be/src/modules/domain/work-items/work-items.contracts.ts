@@ -28,9 +28,9 @@ export interface Proposal {
     /** One sentence for the owner. */
     readonly summary: string
     /** The text to send, when the action sends one. */
-    readonly draft?: string
+    readonly draft?: string | undefined
     /** The money involved, VND. */
-    readonly amount_vnd?: number | null
+    readonly amount_vnd?: number | null | undefined
     /** The structured fields of the proposal. */
     readonly fields: Readonly<Record<string, ProposalFieldValue>>
     /** How sure the agent is, 0..1. */
@@ -38,7 +38,7 @@ export interface Proposal {
     /** Whether the outcome is clear. */
     readonly outcome?: "clear" | "unclear"
     /** The invoices a payment may settle. */
-    readonly candidates?: ReadonlyArray<ProposalCandidate>
+    readonly candidates?: ReadonlyArray<ProposalCandidate> | undefined
 }
 
 /** A staff id, null when the assignment is cleared, or absent when the caller omitted it. */
@@ -217,9 +217,9 @@ export interface StoredProposal {
     /** One sentence for the owner. */
     readonly summary?: string
     /** The text to send. */
-    readonly draft?: string
+    readonly draft?: string | undefined
     /** The money involved, VND. */
-    readonly amount_vnd?: number | null
+    readonly amount_vnd?: number | null | undefined
     /** The structured fields. */
     readonly fields?: Readonly<Record<string, ProposalFieldValue>>
     /** How sure the agent is, 0..1. */
@@ -227,5 +227,5 @@ export interface StoredProposal {
     /** Whether the outcome is clear. */
     readonly outcome?: "clear" | "unclear"
     /** The invoices a payment may settle. */
-    readonly candidates?: ReadonlyArray<ProposalCandidate>
+    readonly candidates?: ReadonlyArray<ProposalCandidate> | undefined
 }

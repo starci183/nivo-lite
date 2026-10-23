@@ -1,6 +1,8 @@
 import { Test } from "@nestjs/testing"
 import { numberField, readJsonObject, textField } from "./inbound-body.policy"
 
+const textLike = (text: string): unknown => expect.stringContaining(text)
+
 const SUBJECT = Symbol("inbound-body.policy")
 
 const buildSubject = async () => {
@@ -24,7 +26,7 @@ describe("inbound-body policy", () => {
             expect(subject.readJsonObject()).toMatchObject({ kind: "refused" })
             expect(subject.readJsonObject(Buffer.from("not json"))).toMatchObject({
                 kind: "refused",
-                params: { reason: expect.stringContaining("SyntaxError") },
+                params: { reason: textLike("SyntaxError") },
             })
             expect(subject.readJsonObject(Buffer.from("[1]"))).toMatchObject({ kind: "refused" })
             expect(subject.readJsonObject(Buffer.from("null"))).toMatchObject({ kind: "refused" })

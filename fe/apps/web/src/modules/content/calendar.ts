@@ -32,7 +32,8 @@ const DEFAULT_DAYS: ReadonlyArray<ReadonlyArray<number>> = [
     [1, 2, 3, 4, 5, 6, 7],
 ]
 
-const defaultDays = (perWeek: number): ReadonlyArray<number> => DEFAULT_DAYS[Math.min(7, Math.max(1, perWeek)) - 1]
+const defaultDays = (perWeek: number): ReadonlyArray<number> =>
+    DEFAULT_DAYS[Math.min(7, Math.max(1, perWeek)) - 1] ?? []
 
 /** The part of a cadence the slot calculation needs. */
 export type CadenceLike = Pick<Cadence, "channel" | "posts_per_week" | "days" | "post_time">

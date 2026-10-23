@@ -13,6 +13,9 @@ import { TtsLogEvent } from "./tts.log-events"
 import type { TtsOptions } from "./tts.options"
 import { TtsService } from "./tts.service"
 
+/** A substring matcher, typed `unknown` so it flows into any slot. */
+const stringLike = (text: string): unknown => expect.stringContaining(text)
+
 const AUDIO = Buffer.alloc(900, 7)
 
 const signal = new AbortController().signal
@@ -73,7 +76,7 @@ describe("TtsService / clip", () => {
 
         expect(tts.enabled).toBe(true)
         expect(tts.providerId).toBe("edge")
-        expect(first).toEqual({ file: expect.stringContaining(dirs.cacheDir), cached: false, provider: "edge" })
+        expect(first).toEqual({ file: stringLike(dirs.cacheDir), cached: false, provider: "edge" })
         expect(second).toEqual({ file: first.file, cached: true, provider: "edge" })
         expect(client.synthesize).toHaveBeenCalledTimes(1)
         expect(client.synthesize).toHaveBeenCalledWith(

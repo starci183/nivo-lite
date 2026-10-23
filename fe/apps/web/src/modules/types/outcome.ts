@@ -6,6 +6,6 @@
 export interface GraphQLResponse<TData = undefined> {
     readonly success: boolean
     readonly message: string
-    readonly error?: string
+    readonly error?: string | undefined
     readonly data?: TData
 }

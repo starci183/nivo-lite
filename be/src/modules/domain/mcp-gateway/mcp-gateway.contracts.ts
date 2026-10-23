@@ -31,7 +31,7 @@ export interface GatewayToolSpec {
      * The argument a side-effect tool takes its replay key in (for example `idempotencyKey`); the gateway fills it on every call that
      * names none, so a retry or a replayed approval of the same step never acts twice.
      */
-    readonly idempotencyArg?: string
+    readonly idempotencyArg?: string | undefined
     /** The NIVO capability this tool plays, when it declares one (see `CapabilityRole`). */
     readonly role?: CapabilityRole
 }
@@ -160,7 +160,7 @@ export interface GatewayCaller {
      * The stable key of the step this call is (for example `<workItemId>:<step>` or the inbound message id): a re-run of the
      * same step passes the same key. A side-effect remote call derives its replay key from it, else from the work item.
      */
-    readonly opKey?: string
+    readonly opKey?: string | undefined
 }
 
 /** Why a call needs a person. */
@@ -349,7 +349,7 @@ export interface CallLogQuery {
     /** The owner or manager asking, in the workspace. */
     readonly actor: ConnectionActor
     /** How many lines (1 to 200); absent or null means fifty. */
-    readonly limit?: number | null
+    readonly limit?: number | null | undefined
 }
 
 /** A remote connector to register. */
@@ -361,13 +361,13 @@ export interface RemoteConnectorInput {
     /** The Streamable HTTP endpoint. */
     readonly url: string
     /** The bearer credential, entered once and sealed in the row at once; null / absent keeps the stored one (or none). */
-    readonly credential?: string | null
+    readonly credential?: string | null | undefined
     /** True when the server takes a credential even though none is entered now (it is then `needed`); absent = false. */
     readonly needsCredential?: boolean
     /** The contract version. */
     readonly contractVersion: string
     /** The per-call limit; null / absent keeps the gateway default. */
-    readonly timeoutMs?: number | null
+    readonly timeoutMs?: number | null | undefined
 }
 
 /** One grant to set. */
@@ -379,9 +379,9 @@ export interface GrantInput {
     /** The mode. */
     readonly mode: GrantMode
     /** The amount limit, or null / absent for none. */
-    readonly limitVnd?: number | null
+    readonly limitVnd?: number | null | undefined
     /** The argument constraints as JSON ([{ "arg": "quantity", "max": 5 }]), or null / absent for none. */
-    readonly constraintsJson?: string | null
+    readonly constraintsJson?: string | null | undefined
 }
 
 /** A new bearer credential of a remote connector: its first one, or a rotation. */

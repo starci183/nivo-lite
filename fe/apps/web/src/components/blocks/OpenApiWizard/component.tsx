@@ -26,7 +26,7 @@ type PullRow = {
     readonly fixedQueryHint: string | null
 }
 /** One operation agents may call. */
-type ToolOption = { readonly value: string; readonly label: string; readonly description?: string }
+type ToolOption = { readonly value: string; readonly label: string; readonly description?: string | undefined }
 
 /** Copy, state and commands of the OpenAPI wizard. */
 export interface OpenApiWizardBaseProps {

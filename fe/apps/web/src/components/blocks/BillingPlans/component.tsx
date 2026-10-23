@@ -10,8 +10,8 @@ export interface BillingPlansBaseProps {
         readonly cycleLabel: string
         readonly cycle: string
         readonly cycleOptions: ReadonlyArray<{ readonly value: string; readonly label: string }>
-        readonly notice?: string
-        readonly storage?: string
+        readonly notice?: string | undefined
+        readonly storage?: string | undefined
         readonly groups: ReadonlyArray<PlanGroupView>
     }
     readonly on: {

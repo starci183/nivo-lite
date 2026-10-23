@@ -15,7 +15,8 @@ export interface PromoOffer {
     readonly ctaHref: string
 }
 
-const subscribe = (): (() => void) => () => undefined
+const unsubscribe = (): void => undefined
+const subscribe = (): (() => void) => unsubscribe
 
 /** The Founding 50 offer, with its window checked against the browser clock (the server render never claims it is live). */
 export const usePromoOffer = (): PromoOffer => {

@@ -25,7 +25,7 @@ export interface ContentDraftRequest {
     /** The editable item. */
     readonly id: string
     /** Optional rewriting guidance. */
-    readonly hint?: string
+    readonly hint?: string | undefined
 }
 
 /** A topic to turn into a new channel draft. */

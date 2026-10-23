@@ -15,8 +15,8 @@ export const authFailure = <T = never>(kind: AuthFailureKind, code: string): Gra
 
 /** The structural part of a Supabase Auth error this module interprets. */
 interface SupabaseAuthFailure {
-    readonly code?: string
-    readonly status?: number
+    readonly code?: string | undefined
+    readonly status?: number | undefined
     readonly message: string
 }
 

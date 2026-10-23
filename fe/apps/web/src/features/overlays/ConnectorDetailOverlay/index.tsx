@@ -54,7 +54,7 @@ const renderViewTabs = (props: ComponentProps<typeof ConnectionViewTabs>) => <Co
 /** The server page registers the URL-selected drawers as rendered nodes. */
 interface ConnectionsOverlayHostProps {
     readonly candidate: ReactNode
-    readonly tab?: string
+    readonly tab?: string | undefined
 }
 
 /** Mount the connection drawers only when the overview has a readable, loaded workspace. */

@@ -11,7 +11,7 @@ export const newModuleRedirectMetadata = async (): Promise<Metadata> => {
 
 /** What the old url carried: the module to add. */
 type NewModuleRedirectPageProps = {
-    readonly module?: string
+    readonly module?: string | undefined
 }
 
 /** Moved: adding a module is the Install button of its agent type under /agents, so the old url forwards there. */

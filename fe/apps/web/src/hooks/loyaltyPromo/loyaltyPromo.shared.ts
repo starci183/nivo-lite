@@ -119,7 +119,7 @@ export const promotionResultOf = (
     if (created !== null && !isWriting) {
         if (created.status === "failed") failure = t(reasonKey(created.errorCode))
         else {
-            const seconds = created.draftMs === null || created.draftMs === undefined ? null : created.draftMs / 1000
+            const seconds = created.draftMs === null ? null : created.draftMs / 1000
             result = {
                 title:
                     seconds === null

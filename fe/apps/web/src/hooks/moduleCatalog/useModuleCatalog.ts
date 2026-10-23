@@ -5,6 +5,7 @@ import { slotOfSwr } from "@/hooks/slot"
 import { useQueryModulesCatalogSwr } from "@/hooks/swr"
 import { isModuleKey } from "@/modules/catalog"
 import type { ModuleCopy, ModuleKey } from "@/modules/catalog"
+import { readError } from "@/hooks/workspaceread"
 
 /** Backend-owned copy keyed by known frontend module identifiers, with its read state. */
 export const useModuleCatalog = () => {
@@ -24,7 +25,7 @@ export const useModuleCatalog = () => {
     return {
         modules,
         categories: read.data?.categories ?? [],
-        error: read.error,
+        error: readError(read),
         slot: slotOfSwr({ data: copies, error: read.error, isLoading: read.isLoading }),
         reload: () => void read.mutate(),
     }

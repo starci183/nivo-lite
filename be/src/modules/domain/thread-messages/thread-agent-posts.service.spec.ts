@@ -14,6 +14,15 @@ import type { AgentPost, MentionView, OpenedApproval, ThreadMessage } from "./th
 import { AGENT_RULES, APPROVAL_GATE } from "./thread-messages.decorators"
 import type { AgentRules, ThreadApprovalGate } from "./thread-messages.port"
 
+/** A partial-object matcher, typed `unknown` so it flows into any slot. */
+const objectLike = (shape: Record<string, unknown>): unknown => expect.objectContaining(shape)
+
+/** The match-anything matcher, typed `unknown` so it flows into any slot. */
+const anything = (): unknown => expect.anything()
+
+/** A by-constructor matcher, typed `unknown` so it flows into any slot. */
+const anyOf = (type: unknown): unknown => expect.any(type)
+
 const MINH = "11111111-1111-4111-8111-111111111111"
 const ACCOUNTING_AI = "33333333-3333-4333-8333-333333333333"
 
@@ -174,23 +183,23 @@ const registerPlainPosts = () => {
                 "ws-1",
                 "thread-1",
                 { kind: "agent", id: "agent-1" },
-                expect.anything(),
+                anything(),
             )
             expect(chains.record).toHaveBeenCalledTimes(1)
             expect(chains.record).toHaveBeenCalledWith(
-                expect.objectContaining({
+                objectLike({
                     kind: "self",
                     actor: { kind: "agent", id: "agent-1" },
                     target: null,
                     action: "Ms Thao booked 2 villa nights.",
                 }),
-                expect.anything(),
+                anything(),
             )
             expect(messages.append).toHaveBeenCalledWith(
-                expect.anything(),
-                expect.objectContaining({ body: "Ms Thao booked 2 villa nights.", card: null }),
+                anything(),
+                objectLike({ body: "Ms Thao booked 2 villa nights.", card: null }),
             )
-            expect(threads.setStatus).toHaveBeenCalledWith(expect.anything(), "ws-1", "thread-1", "open")
+            expect(threads.setStatus).toHaveBeenCalledWith(anything(), "ws-1", "thread-1", "open")
         })
 
         it("sends a plain agent line the chain limits stopped back to the owner", async () => {
@@ -202,10 +211,10 @@ const registerPlainPosts = () => {
 
             expect(posted.stopped).toBe("limit")
             expect(messages.append).toHaveBeenCalledWith(
-                expect.anything(),
-                expect.objectContaining({ mentions: [expect.objectContaining({ kind: "member", id: MINH })] }),
+                anything(),
+                objectLike({ mentions: [objectLike({ kind: "member", id: MINH })] }),
             )
-            expect(threads.setStatus).toHaveBeenCalledWith(expect.anything(), "ws-1", "thread-1", "stopped")
+            expect(threads.setStatus).toHaveBeenCalledWith(anything(), "ws-1", "thread-1", "stopped")
         })
 
         it("asks the agents capability before the agent tags another agent", async () => {
@@ -217,7 +226,7 @@ const registerPlainPosts = () => {
             expect(rules.canTag).toHaveBeenCalledWith("agent-1", ACCOUNTING_AI)
             expect(messages.proveAgents).toHaveBeenCalledWith(
                 [],
-                expect.any(Function),
+                anyOf(Function),
                 ThreadMessagesErrorCode.TagNotAllowed,
             )
         })
@@ -248,13 +257,13 @@ const registerTags = () => {
             expect(chains.record).toHaveBeenCalledTimes(3)
             expect(chains.record).toHaveBeenNthCalledWith(
                 1,
-                expect.objectContaining({
+                objectLike({
                     kind: "hand_off",
                     action: "Hand off",
                     actor: { kind: "agent", id: "agent-1" },
                     target: { kind: "agent", id: ACCOUNTING_AI },
                 }),
-                expect.anything(),
+                anything(),
             )
         })
 
@@ -274,13 +283,13 @@ const registerTags = () => {
             expect(posted.stopped).toBe("loop")
             expect(chains.record).toHaveBeenCalledTimes(2)
             expect(messages.append).toHaveBeenCalledWith(
-                expect.anything(),
-                expect.objectContaining({
+                anything(),
+                objectLike({
                     body: "Ms Thao booked 2 villa nights.\nlimit text",
                     mentions: [{ kind: "member", id: MINH, name: "Mr Minh" }],
                 }),
             )
-            expect(threads.setStatus).toHaveBeenCalledWith(expect.anything(), "ws-1", "thread-1", "stopped")
+            expect(threads.setStatus).toHaveBeenCalledWith(anything(), "ws-1", "thread-1", "stopped")
         })
     })
 }
@@ -310,7 +319,7 @@ const registerApprovalAsks = () => {
 
             expect(chains.record).toHaveBeenNthCalledWith(
                 1,
-                expect.objectContaining({
+                objectLike({
                     kind: "ask_approval",
                     action: "Discount 12%",
                     rule: "Customer discount",
@@ -326,22 +335,22 @@ const registerApprovalAsks = () => {
                 requestedByAgentId: "agent-1",
             })
             expect(directory.namesOf).toHaveBeenCalledWith(em, "ws-1", ["ha"])
-            expect(chains.linkApproval).toHaveBeenCalledWith("ws-1", "step-ask", "req-1", expect.anything())
+            expect(chains.linkApproval).toHaveBeenCalledWith("ws-1", "step-ask", "req-1", anything())
             expect(chains.record).toHaveBeenCalledTimes(2)
             expect(messages.append).toHaveBeenCalledWith(
-                expect.anything(),
-                expect.objectContaining({
-                    card: expect.objectContaining({
+                anything(),
+                objectLike({
+                    card: objectLike({
                         requestId: "req-1",
                         policy: "any",
                         outcome: "pending",
-                        approvers: [expect.objectContaining({ memberId: MINH, status: "waiting" })],
+                        approvers: [objectLike({ memberId: MINH, status: "waiting" })],
                         excluded: [{ memberId: "ha", name: "Ms Ha", reason: "limit" }],
                         owner: { kind: "member", id: MINH, name: "Mr Minh" },
                     }),
                 }),
             )
-            expect(threads.setStatus).toHaveBeenCalledWith(expect.anything(), "ws-1", "thread-1", "waiting")
+            expect(threads.setStatus).toHaveBeenCalledWith(anything(), "ws-1", "thread-1", "waiting")
         })
 
         it("asks with no group tagged and no hand-off steps for the ask itself", async () => {
@@ -352,7 +361,7 @@ const registerApprovalAsks = () => {
             await service.postAsAgent(agentPost({ approval: { ...ASK, amount: null } }))
 
             expect(chains.record).toHaveBeenCalledTimes(1)
-            expect(chains.record).toHaveBeenCalledWith(expect.objectContaining({ kind: "ask_approval", target: null }))
+            expect(chains.record).toHaveBeenCalledWith(objectLike({ kind: "ask_approval", target: null }))
         })
     })
 }
@@ -383,14 +392,14 @@ const registerApprovalFailures = () => {
             expect(posted.stopped).toBe("limit")
             expect(gate.open).not.toHaveBeenCalled()
             expect(messages.append).toHaveBeenCalledWith(
-                expect.anything(),
-                expect.objectContaining({
+                anything(),
+                objectLike({
                     body: "Ms Thao booked 2 villa nights.\nlimit text",
                     mentions: [{ kind: "member", id: MINH, name: "Mr Minh" }],
                     card: null,
                 }),
             )
-            expect(threads.setStatus).toHaveBeenCalledWith(expect.anything(), "ws-1", "thread-1", "stopped")
+            expect(threads.setStatus).toHaveBeenCalledWith(anything(), "ws-1", "thread-1", "stopped")
         })
     })
 }

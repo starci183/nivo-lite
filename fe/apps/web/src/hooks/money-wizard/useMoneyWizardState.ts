@@ -15,7 +15,7 @@ import type { MoneyWizardInput } from "./useMoneyWizard"
 export const useMoneyWizardState = (input: MoneyWizardInput, def: ProviderDef) => {
     const [nav, setNav] = useState({ index: 0, skipped: false })
     const [form, setForm] = useState<AccountForm>({
-        environment: def.environments[0],
+        environment: def.environments[0] ?? "live",
         name: "",
         bank: "",
         account: "",

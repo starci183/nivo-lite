@@ -19,6 +19,9 @@ import { AutomationsErrorCode } from "./errors/automations.error"
 import { SELECT_FIRST_STAFF, SELECT_LATEST_CONVERSATION, SELECT_LEAD } from "./persistence/automation-readers.sql"
 import type { LeadReadRow } from "./persistence/automations.rows"
 
+const objectLike = (shape: Record<string, unknown>): unknown => expect.objectContaining(shape)
+const textLike = (text: string): unknown => expect.stringContaining(text)
+
 const LEAD: LeadReadRow = {
     id: "l-1",
     contact_name: "An",
@@ -249,10 +252,10 @@ describe("AutomationMessagesService composeAndSend", () => {
 
         await expect(service.composeAndSend(context(), composition())).rejects.toMatchObject({
             code: AutomationsErrorCode.MessageNotSent,
-            cause: expect.objectContaining({ message: "smtp down" }),
+            cause: objectLike({ message: "smtp down" }),
         })
         await expect(service.composeAndSend(context(), composition())).rejects.toMatchObject({
-            cause: expect.objectContaining({ message: "error.notSent{}" }),
+            cause: objectLike({ message: "error.notSent{}" }),
         })
     })
 })
@@ -349,10 +352,10 @@ describe("AutomationMessagesService replyWithoutLead", () => {
 
         await expect(service.replyWithoutLead(context(), reply)).rejects.toMatchObject({
             code: AutomationsErrorCode.MessageNotSent,
-            cause: expect.objectContaining({ message: "down" }),
+            cause: objectLike({ message: "down" }),
         })
         await expect(service.replyWithoutLead(context(), reply)).rejects.toMatchObject({
-            cause: expect.objectContaining({ message: "error.notSent{}" }),
+            cause: objectLike({ message: "error.notSent{}" }),
         })
     })
 })
@@ -370,7 +373,7 @@ describe("AutomationMessagesService isNegative", () => {
         expect(text.generate).toHaveBeenCalledWith({
             workspaceId: "ws-1",
             purpose: "classify",
-            system: expect.stringContaining("POSITIVE, NEUTRAL or NEGATIVE"),
+            system: textLike("POSITIVE, NEUTRAL or NEGATIVE"),
             prompt: "hmm not sure",
         })
     })

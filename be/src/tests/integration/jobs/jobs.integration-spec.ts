@@ -7,6 +7,29 @@ import { jobSnapshot, cleanupJobs } from "../../world/proof-database.service"
 import { useTestWorld } from "../../world/use-test-world"
 import { JOBS_MODULES } from "../../world/test-capabilities.options"
 
+/** The do-nothing function a latch holds until its promise has been created. */
+const idle = (): void => undefined
+
+/** A promise and the call that settles it. */
+interface Latch {
+    readonly done: Promise<void>
+    readonly open: () => void
+}
+
+/** Makes a latch, so a proof can hold a job until it says go. */
+const latch = (): Latch => {
+    const state = { open: idle }
+    const done = new Promise<void>((resolve) => {
+        state.open = resolve
+    })
+    return {
+        done,
+        open: () => {
+            state.open()
+        },
+    }
+}
+
 /** Collaboration proofs use the real claim and runner services and the migrated local Supabase job table. */
 const registerClaimProof = (database: LiteWorld) => {
     it("fenced-job/claim-bumps-token: expiration lets a successor advance the same row's token", async () => {
@@ -16,7 +39,7 @@ const registerClaimProof = (database: LiteWorld) => {
         )
         const results = await Promise.all([claim(claims, "worker-1"), claim(successorClaims, "worker-2")])
         const first = results.find((job) => job !== null)
-        assert(first !== undefined && first !== null)
+        assert(first !== undefined)
         expect(first.fencingToken).toBe(1)
         expect(results.filter((job) => job === null)).toHaveLength(1)
 
@@ -45,25 +68,19 @@ const registerZombieProof = (database: LiteWorld) => {
             database.key("zombie"),
         )
         const attempts: Array<ClaimedJob> = []
-        let release = () => {}
-        const gate = new Promise<void>((resolve) => {
-            release = resolve
-        })
-        let started = () => {}
-        const processing = new Promise<void>((resolve) => {
-            started = resolve
-        })
+        const gate = latch()
+        const started = latch()
         const processor: FencedProcessor = {
             queue: delivery.queue,
             onFailed: () => Promise.resolve(),
             process: async (job) => {
                 attempts.push(job)
-                started()
-                await gate
+                started.open()
+                await gate.done
             },
         }
         const pending = runner.run(processor, delivery)
-        await processing
+        await started.done
         clock.advance(100 + 1)
         const owner = await claim(successorClaims, "worker-2")
         const [zombie] = attempts
@@ -84,7 +101,7 @@ const registerZombieProof = (database: LiteWorld) => {
         const externalEffect = jest.fn(() => Promise.resolve())
         await expect(claims.withFence(zombie, externalEffect)).rejects.toMatchObject({ code: "JOBS_FENCED_OUT" })
         expect(externalEffect).not.toHaveBeenCalled()
-        release()
+        gate.open()
         await expect(pending).resolves.toBeUndefined()
 
         expect(await jobSnapshot(database.db.primary, delivery.id)).toEqual(before)

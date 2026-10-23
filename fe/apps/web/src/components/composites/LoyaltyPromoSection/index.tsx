@@ -11,8 +11,8 @@ type LoyaltyPromoSectionProps = {
     readonly batch: string
     readonly hourFrom: string
     readonly hourTo: string
-    readonly hourFromError?: string
-    readonly hourToError?: string
+    readonly hourFromError?: string | undefined
+    readonly hourToError?: string | undefined
     readonly isDisabled: boolean
     readonly maxPerMonthLabel: string
     readonly batchLabel: string

@@ -7,7 +7,7 @@ import { WorkspacesOverviewBase } from "./component"
 /** What the workspaces page tells the overview. */
 interface WorkspacesOverviewProps {
     /** The notice about why the person landed here (`disabled`); none draws nothing. */
-    readonly reason?: string
+    readonly reason?: string | undefined
 }
 
 /** The connected workspaces overview: the header, the first-run welcome or the list, by what the back end GraphQL API answers. */

@@ -12,11 +12,11 @@ interface SectionView {
     readonly title: string
     readonly description?: string
     readonly failTitle: string
-    readonly error?: string
+    readonly error?: string | undefined
     /** How the last command went, read out politely. */
-    readonly notice?: string
+    readonly notice?: string | undefined
     /** A control beside the heading. */
-    readonly action?: RowActionView
+    readonly action?: RowActionView | undefined
 }
 
 /** What a list of the knowledge and brain pages draws. */

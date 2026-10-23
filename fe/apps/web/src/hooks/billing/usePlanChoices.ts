@@ -11,6 +11,7 @@ import { navigation } from "@/modules/i18n"
 import { workspaceRenewalPaymentPath } from "@/modules/routes"
 import { useEffect, useState } from "react"
 import { useRequestPaymentOrder } from "./useRequestPaymentOrder"
+import { readError } from "@/hooks/workspaceread"
 
 /** How a plan is paid. */
 export type PlanCycle = "monthly" | "annual"
@@ -69,7 +70,7 @@ export const usePlanChoices = (workspaceId: string) => {
         plans: plans.data,
         workspace: workspace.data,
         storage: storage.data,
-        error: plans.error ?? workspace.error,
+        error: readError(plans) ?? readError(workspace),
         selections,
         quotes: quotes.data,
         isQuoting: quotes.isLoading,

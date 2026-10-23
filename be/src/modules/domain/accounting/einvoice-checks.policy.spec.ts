@@ -3,6 +3,8 @@ import type { EinvoiceDraft } from "./accounting-desk.contracts"
 import { VAT_RATES, checkEinvoice, exceptionCard, exceptionText, supplierOf } from "./einvoice-checks.policy"
 import { CARD_COPY, EXCEPTION_COPY, issueText } from "./messages/accounting-desk.messages"
 
+const objectLike = (shape: Record<string, unknown>): unknown => expect.objectContaining(shape)
+
 const SUBJECT = Symbol("einvoice-checks.policy")
 
 const build = async () => {
@@ -131,7 +133,7 @@ describe("einvoice-checks.policy room copy", () => {
                 v: 1,
                 type: "exception",
                 badge: CARD_COPY.badgeTaxCode,
-                data: expect.objectContaining({ issues: ["seller_tax_code_mismatch"], issuedOn: "2026-10-19" }),
+                data: objectLike({ issues: ["seller_tax_code_mismatch"], issuedOn: "2026-10-19" }),
             }),
         )
         expect(card.fields).toHaveLength(4)

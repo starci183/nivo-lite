@@ -15,6 +15,12 @@ import { videoInputsOf, videoRecord } from "./video-workbench.policy"
 import type { VideoScriptingRow } from "./persistence/video-scripting.rows"
 import { LOCK_SCRIPT_PROJECT } from "./persistence/video-scripting.sql"
 
+/** Whether a stored entry is a chat message the model can be sent again. */
+const isMessage = (entry: unknown): entry is GenMessage => {
+    const message = videoRecord(entry)
+    return ["system", "user", "assistant"].includes(String(message.role)) && typeof message.content === "string"
+}
+
 @Injectable()
 /** Applies an agent answer once, or queues one JSON correction attempt, while holding the project lock. */
 export class VideoScriptingCompletionService {
@@ -95,10 +101,6 @@ export class VideoScriptingCompletionService {
         state: GenerationState,
         meta: Record<string, unknown>,
     ): Promise<boolean> {
-        const isMessage = (entry: unknown): entry is GenMessage => {
-            const message = videoRecord(entry)
-            return ["system", "user", "assistant"].includes(String(message.role)) && typeof message.content === "string"
-        }
         const messages = Array.isArray(state.input.messages) ? state.input.messages.filter(isMessage) : []
         try {
             const queued = await this.generations.request(

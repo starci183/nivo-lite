@@ -48,9 +48,10 @@ export const OwnerGroupList = (props: OwnerGroupListProps) => {
                 <EmptyNotice
                     message={props.emptyMessage}
                     description={props.emptyDescription}
-                    actionLabel={props.emptyAction?.label}
                     actionVariant="secondary"
-                    onAction={props.emptyAction?.onAction}
+                    {...(props.emptyAction === undefined
+                        ? {}
+                        : { actionLabel: props.emptyAction.label, onAction: props.emptyAction.onAction })}
                 />
             </SurfaceCard>
         )

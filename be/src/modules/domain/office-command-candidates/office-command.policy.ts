@@ -1,6 +1,6 @@
 import type { ModuleCommand } from "@modules/domain/decisions"
 import type { ProposedCommand } from "@modules/integrations/deepseek"
-import { DomainError } from "@modules/platform/errors"
+import { isDomainError } from "@modules/platform/errors"
 import type { Locale } from "@modules/platform/i18n"
 import type {
     CardLabels,
@@ -195,7 +195,7 @@ export const subjectRowOf = (rows: ReadonlyArray<ShownRow>): ShownRow | undefine
 
 /** The reason a failed send is stored with: the refusal detail of a domain error, else the text of the failure. */
 export const failureDetail = (cause: unknown): string => {
-    if (cause instanceof DomainError) {
+    if (isDomainError(cause)) {
         const detail = cause.params["detail"]
         return typeof detail === "string" ? detail : cause.code
     }

@@ -11,9 +11,9 @@ import { ZaloWizardBase } from "./component"
 /** What the board hands the Zalo wizard. */
 interface ZaloWizardProps {
     /** Continue this unfinished connection instead of creating a new one. */
-    readonly resumeId?: string
+    readonly resumeId?: string | undefined
     /** How the Zalo sign-in ended when the browser came back: ok, denied, failed or expired. */
-    readonly returned?: string
+    readonly returned?: string | undefined
     /** The workspace agents that can work through Zalo. */
     readonly agents: ReadonlyArray<AgentOption>
     /** `changed` is true when something was saved, so the list should refresh. */
@@ -30,7 +30,7 @@ const textOf = (
     next: tw("next"),
     close: tw("close"),
     done: tw("done"),
-    skip: tw("skip"),
+    checkLater: tw("checkLater"),
     openProvider: tw("openProvider", { brand: PROVIDERS.zalo_oa.brand }),
     fieldName: tc("fieldName"),
     fieldNameHint: tc("fieldNameHint"),
@@ -96,10 +96,10 @@ export const ZaloWizard = (props: ZaloWizardProps) => {
                 fields: conn === null ? fields : { name: conn.name, appId: SECRET_MASK, appSecret: SECRET_MASK },
                 isLocked: conn !== null,
                 canCreate: conn !== null || typed,
-                oaSecretSaved: conn !== null && conn.oaSecretSaved,
+                oaSecretSaved: conn?.oaSecretSaved === true,
                 canSaveSecret: wizard.canSaveSecret,
                 hasOaSecretInput: fields.oaSecret.trim() !== "",
-                isAuthorized: conn !== null && conn.authorized,
+                isAuthorized: conn?.authorized === true,
                 authorizedNote,
                 received:
                     firstEvent === null

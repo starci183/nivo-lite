@@ -10,7 +10,7 @@ export const toListing = (thread: WorkThread, digest: ThreadDigestRow | undefine
     lastBody: digest === undefined ? null : digest.last_body,
     lastAt: digest === undefined ? null : instantOf(digest.last_at),
     messageCount: digest === undefined ? 0 : digest.message_count,
-    waitingApproval: digest !== undefined && digest.waiting_approval,
+    waitingApproval: digest?.waiting_approval === true,
 })
 
 /** One message row as the API reads it. */

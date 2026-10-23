@@ -32,7 +32,7 @@ export interface PublicGetInit {
     /** Request headers. */
     readonly headers?: Readonly<Record<string, string>>
     /** How long to wait. */
-    readonly timeoutMs?: number
+    readonly timeoutMs?: number | undefined
     /** The largest accepted answer in bytes. */
     readonly maxBytes?: number
 }

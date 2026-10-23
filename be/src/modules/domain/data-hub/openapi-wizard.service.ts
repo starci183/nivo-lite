@@ -50,6 +50,9 @@ const empty = (status: number, error: string): OpenApiOperationTestResult => ({
     error,
 })
 
+/** Whether a parsed value is a list (`Array.isArray` alone narrows to `any[]`). */
+const isList = (value: unknown): value is ReadonlyArray<unknown> => Array.isArray(value)
+
 @Injectable()
 /** The wizard operations of the owner APIs: read a spec, try an endpoint, load and save the connection. */
 export class OpenApiWizardService {
@@ -97,7 +100,7 @@ export class OpenApiWizardService {
         }
         const typedPath = test.itemsPath.trim()
         const at = typedPath ? getPath(body, typedPath) : undefined
-        const found = Array.isArray(at) ? { found: true, path: typedPath, items: at } : detectItems(body)
+        const found = isList(at) ? { found: true, path: typedPath, items: at } : detectItems(body)
         const items = found.found ? found.items : itemsOf(body, "")
         const first = items.find(isApiJsonObject)
         return {

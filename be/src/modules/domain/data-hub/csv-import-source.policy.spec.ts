@@ -5,6 +5,18 @@ import { DataHubErrorCode } from "./errors/data-hub.error"
 import { CSV_COPY } from "./messages/csv-import.messages"
 import { decodeUpload, gridOf, pastedText } from "./csv-import-source.policy"
 
+const objectLike = (shape: Record<string, unknown>): unknown => expect.objectContaining(shape)
+
+/** What `run` throws, read as `unknown`; the matcher then judges its fields. */
+const thrownBy = (run: () => unknown): unknown => {
+    try {
+        run()
+    } catch (error) {
+        return error
+    }
+    return undefined
+}
+
 const SUBJECT = Symbol("csv-import-source.policy")
 type Subject = Pick<typeof SubjectModule, "decodeUpload" | "pastedText" | "gridOf">
 
@@ -39,8 +51,8 @@ describe("decodeUpload", () => {
         const subject = await buildSubject()
 
         const contentBase64 = Buffer.alloc(TABLE_MAX_BYTES + 1).toString("base64")
-        expect(() => subject.decodeUpload({ name: "huge.csv", contentBase64 })).toThrow(
-            expect.objectContaining(refused(CSV_COPY.textTooLarge)),
+        expect(thrownBy(() => subject.decodeUpload({ name: "huge.csv", contentBase64 }))).toEqual(
+            objectLike(refused(CSV_COPY.textTooLarge)),
         )
     })
 })
@@ -59,14 +71,14 @@ describe("pastedText", () => {
     ])("refuses %s", async (_label, raw) => {
         const subject = await buildSubject()
 
-        expect(() => subject.pastedText(raw)).toThrow(expect.objectContaining(refused(CSV_COPY.pasteTable)))
+        expect(thrownBy(() => subject.pastedText(raw))).toEqual(objectLike(refused(CSV_COPY.pasteTable)))
     })
 
     it("refuses text over ten megabytes", async () => {
         const subject = await buildSubject()
 
-        expect(() => subject.pastedText("a".repeat(TABLE_MAX_BYTES + 1))).toThrow(
-            expect.objectContaining(refused(CSV_COPY.textTooLarge)),
+        expect(thrownBy(() => subject.pastedText("a".repeat(TABLE_MAX_BYTES + 1)))).toEqual(
+            objectLike(refused(CSV_COPY.textTooLarge)),
         )
     })
 })
@@ -86,11 +98,11 @@ describe("gridOf", () => {
     it("refuses a grid with no named column", async () => {
         const subject = await buildSubject()
 
-        expect(() => subject.gridOf({ headers: ["  ", ""], rows: [] })).toThrow(
-            expect.objectContaining(refused(CSV_COPY.nameAColumn)),
+        expect(thrownBy(() => subject.gridOf({ headers: ["  ", ""], rows: [] }))).toEqual(
+            objectLike(refused(CSV_COPY.nameAColumn)),
         )
-        expect(() => subject.gridOf(null)).toThrow(expect.objectContaining(refused(CSV_COPY.nameAColumn)))
-        expect(() => subject.gridOf({ rows: [["a"]] })).toThrow(expect.objectContaining(refused(CSV_COPY.nameAColumn)))
+        expect(thrownBy(() => subject.gridOf(null))).toEqual(objectLike(refused(CSV_COPY.nameAColumn)))
+        expect(thrownBy(() => subject.gridOf({ rows: [["a"]] }))).toEqual(objectLike(refused(CSV_COPY.nameAColumn)))
     })
 
     it("drops rows past the table limit and ignores a row that is not a list", async () => {

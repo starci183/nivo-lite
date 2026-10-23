@@ -21,6 +21,9 @@ import { agentPostsOf, OFFICE_CHAIN_MODULES } from "../../world/office-chain-cap
 import { TestWorldError, TestWorldErrorCode } from "../../world/test-world.error"
 import { useTestWorld } from "../../world/use-test-world"
 
+/** A Jest type matcher as an untyped value, so it can stand in a typed expectation. */
+const anyOf = (type: unknown): unknown => expect.any(type)
+
 const world = useTestWorld({ modules: OFFICE_CHAIN_MODULES })
 
 const identity: OfficeIdentity = {
@@ -202,7 +205,7 @@ describe("v0.3.2 office chain: any one of the group decides, once", () => {
 
         const won = results.flatMap((result) => (result.status === "fulfilled" ? [result.value] : []))
         expect(won).toHaveLength(1)
-        expect(won[0]?.approval).toMatchObject({ outcome: "approved", decidedBy: expect.any(String) })
+        expect(won[0]?.approval).toMatchObject({ outcome: "approved", decidedBy: anyOf(String) })
         expect(results.filter((result) => result.status === "rejected")).toHaveLength(1)
         const state = await requestState(card.requestId)
         expect(state).toMatchObject({ status: "approved", verdicts: 1 })

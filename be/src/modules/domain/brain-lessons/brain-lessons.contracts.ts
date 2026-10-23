@@ -13,7 +13,7 @@ export interface LessonEvidence {
     /** A short label for people. */
     readonly label: string
     /** When it happened. */
-    readonly at?: string
+    readonly at?: string | undefined
 }
 
 /** How an agent should work (procedural memory). */
@@ -55,7 +55,7 @@ export interface LessonInput {
     /** What to do. */
     readonly body: string
     /** When it applies. */
-    readonly appliesWhen?: string
+    readonly appliesWhen?: string | undefined
     /** What it was learnt from. */
     readonly origin: LessonOrigin
     /** What supports it. */

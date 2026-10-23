@@ -14,7 +14,7 @@ export interface InviteRequest {
     /** The role it grants. */
     readonly role: "manager" | "staff"
     /** The staff row the account will be; absent or null when it is not a staff account. */
-    readonly staffId?: string | null
+    readonly staffId?: string | null | undefined
 }
 
 /** A pending invitation as the team page lists it. */
@@ -68,7 +68,7 @@ export interface InviteAcceptor {
     /** The Auth user. */
     readonly id: string
     /** The email of the session; an invitation names the address it is for. */
-    readonly email?: string
+    readonly email?: string | undefined
 }
 
 /** An invitation row as the acceptance policy judges it. */

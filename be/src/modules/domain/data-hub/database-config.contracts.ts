@@ -47,7 +47,7 @@ export interface SavedDatabase {
 /** What testing a database connection takes. */
 export interface DatabaseTestDraft {
     /** The saved connection whose stored password may be reused. */
-    readonly connectionId?: string | null
+    readonly connectionId?: string | null | undefined
     /** How to reach the database; the password is empty to keep the stored one. */
     readonly target: DatabaseTarget
 }
@@ -65,7 +65,7 @@ export interface DatabaseSaveDraft extends DatabaseTestDraft {
     /** The mapped tables, as typed (cleaned by the capability). */
     readonly tables: unknown
     /** Minutes between scheduled syncs; null or absent is manual only. */
-    readonly everyMinutes?: number | null
+    readonly everyMinutes?: number | null | undefined
 }
 
 /** The outcome of reading JSON text: the value, or the failure that stopped it. */

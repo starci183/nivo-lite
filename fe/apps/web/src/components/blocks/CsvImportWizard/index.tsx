@@ -72,7 +72,6 @@ export const CsvImportWizard = (props: CsvImportWizardProps) => {
     const wizard = useCsvImportWizard(props)
 
     const connected = buildCsvImportWizardState(wizard, copy, t, tw, props, format)
-    if (connected === null) return null
 
     return <CsvImportWizardBase props={csvImportWizardProps(connected)} on={wizard.on} />
 }

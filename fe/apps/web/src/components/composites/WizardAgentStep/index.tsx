@@ -25,7 +25,7 @@ export const WizardAgentStep = (props: WizardAgentStepProps) => (
                     variant="secondary"
                     label={props.hint}
                     isLabelHidden
-                    isDisabled={props.isDisabled}
+                    {...(props.isDisabled === undefined ? {} : { isDisabled: props.isDisabled })}
                     options={props.agents.map((agent) => ({
                         value: agent.id,
                         label: agent.name,

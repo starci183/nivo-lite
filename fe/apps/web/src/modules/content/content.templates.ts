@@ -1,7 +1,7 @@
 import type { ChannelRule, ContentChannel } from "./types"
 
 /** The channels a post can be written for, in display order, with their length and hashtag limits; a channel's name is the `content.channel_<key>` catalog entry. */
-export const CHANNEL_RULES: ReadonlyArray<ChannelRule> = [
+export const CHANNEL_RULES: readonly [ChannelRule, ...ChannelRule[]] = [
     { key: "facebook", short: "FB", max_chars: 1500, hashtags: { min: 0, max: 3 } },
     { key: "zalo", short: "Zalo", max_chars: 500, hashtags: { min: 0, max: 0 } },
     { key: "tiktok", short: "TikTok", max_chars: 300, hashtags: { min: 3, max: 6 } },

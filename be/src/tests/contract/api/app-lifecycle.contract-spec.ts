@@ -6,6 +6,9 @@ import { HttpSecurityModule, OriginGuard, RateLimitGuard } from "@modules/platfo
 import { buildWiringProof } from "../../fixtures/builders/api.builder"
 import { AppModule } from "../../../../apps/api/src/app.module"
 
+/** A Jest type matcher as an untyped value, so it can stand in a typed expectation. */
+const anyOf = (type: unknown): unknown => expect.any(type)
+
 const bindings = (definition: DynamicModule, providerKey: string): Array<Provider> =>
     (definition.providers ?? []).filter(
         (provider) => typeof provider !== "function" && provider.provide === providerKey,
@@ -40,7 +43,7 @@ describe("AppModule request lifecycle", () => {
         ])
         expect(graphBindings(definition, APP_GUARD)).toEqual(bindings(definition, APP_GUARD))
         expect(graphBindings(definition, APP_FILTER)).toEqual([{ provide: APP_FILTER, useClass: ErrorsFilter }])
-        expect(securityPipes).toEqual([{ provide: APP_PIPE, useClass: expect.any(Function) }])
+        expect(securityPipes).toEqual([{ provide: APP_PIPE, useClass: anyOf(Function) }])
         expect(graphBindings(definition, APP_PIPE)).toEqual(securityPipes)
         const security = definition.imports?.find(
             (imported): imported is DynamicModule =>

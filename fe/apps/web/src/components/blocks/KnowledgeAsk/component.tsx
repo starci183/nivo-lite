@@ -24,8 +24,8 @@ export interface KnowledgeAskBaseProps {
         /** The panel is loading: the labels stay, the inputs and the action are skeletons. */
         readonly isSkeleton: boolean
         /** The passages found; nothing is drawn for them until a question was asked. */
-        readonly results?: KnowledgeRowsProps
-        readonly error?: string
+        readonly results?: KnowledgeRowsProps | undefined
+        readonly error?: string | undefined
     }
     readonly on: {
         readonly setQuestion: (value: string) => void

@@ -52,7 +52,7 @@ export const HiringRequirementFields = (props: HiringRequirementFieldsProps) => 
                 minValue={0}
                 maxValue={50}
                 step={1}
-                value={values.years ?? undefined}
+                {...(values.years === null ? {} : { value: values.years })}
                 onValueChange={(value) => onNumber("years", Number.isFinite(value) ? value : null)}
             />
             <Input

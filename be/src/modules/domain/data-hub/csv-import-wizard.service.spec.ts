@@ -15,6 +15,8 @@ import { DataHubService } from "./data-hub.service"
 import { DataHubErrorCode } from "./errors/data-hub.error"
 import { CSV_COPY } from "./messages/csv-import.messages"
 
+const objectLike = (shape: Record<string, unknown>): unknown => expect.objectContaining(shape)
+const textLike = (text: string): unknown => expect.stringContaining(text)
 const actor: ConnectionActor = { principalId: "owner-1", workspaceId: "workspace-1" }
 
 const config: CsvConfig = {
@@ -451,9 +453,7 @@ describe("CsvImportWizardService", () => {
             actor,
             expect.objectContaining({
                 everyMinutes: null,
-                meta: expect.objectContaining({
-                    config: expect.stringContaining('"sheet":"Customers"'),
-                }),
+                meta: objectLike({ config: textLike('"sheet":"Customers"') }),
             }),
         )
         await service.preview(actor, { kind: "sheet", entity: "customer" })

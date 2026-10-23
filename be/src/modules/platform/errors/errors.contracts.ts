@@ -12,7 +12,7 @@ export interface DomainErrorInit<C extends string> {
     /** The capability code, `<CAPABILITY>_<WHAT>`. */
     readonly code: C
     /** Values for the placeholders of the display text. */
-    readonly params?: ErrorParams
+    readonly params?: ErrorParams | undefined
     /** The failure that caused this one, kept for the log. */
     readonly cause?: unknown
 }

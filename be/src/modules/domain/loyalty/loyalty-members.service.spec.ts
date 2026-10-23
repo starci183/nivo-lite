@@ -15,6 +15,9 @@ import { LoyaltyErrorCode } from "./errors/loyalty.error"
 import { LoyaltyMembersService } from "./loyalty-members.service"
 import { LoyaltyRedemptionService } from "./loyalty-redemption.service"
 
+/** The match-anything matcher, typed `unknown` so it flows into any slot. */
+const anything = (): unknown => expect.anything()
+
 const NOW = Date.UTC(2026, 9, 12)
 const DAY = 86_400_000
 const CONFIG: LoyaltyConfig = {
@@ -153,7 +156,7 @@ describe("LoyaltyMembersService", () => {
 
             expect(access.require).toHaveBeenCalledWith("user-1", "ws-1", ["owner", "manager"])
             expect(ledger.post).toHaveBeenCalledWith({
-                manager: expect.anything(),
+                manager: anything(),
                 workspaceId: "ws-1",
                 customerId: "c1",
                 kind: "adjust",
@@ -219,10 +222,10 @@ describe("LoyaltyMembersService", () => {
             await expect(service.sync("user-1", { workspaceId: "ws-1" })).resolves.toEqual({ created: 1, linked: 1 })
 
             expect(access.require).toHaveBeenCalledWith("user-1", "ws-1", ["owner", "manager"])
-            expect(customers.createFromLeads).toHaveBeenCalledWith(expect.anything(), "ws-1", [
+            expect(customers.createFromLeads).toHaveBeenCalledWith(anything(), "ws-1", [
                 { id: "l1", name: "A", phone: "84912345678", email: null },
             ])
-            expect(links.linkLeads).toHaveBeenCalledWith(expect.anything(), "ws-1", [
+            expect(links.linkLeads).toHaveBeenCalledWith(anything(), "ws-1", [
                 { id: "l1", name: "A", phone: "84912345678", email: null },
             ])
         })

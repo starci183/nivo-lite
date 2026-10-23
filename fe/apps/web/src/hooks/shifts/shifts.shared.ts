@@ -51,7 +51,7 @@ const toPrior = (rows: ReadonlyArray<ShiftsPriorType>): Record<string, ReadonlyA
 
 const toWeek = (row: ShiftsWeekType): ShiftsWeekView => ({
     monday: row.monday,
-    current: row.current === null || row.current === undefined ? null : toSchedule(row.current),
+    current: row.current === null ? null : toSchedule(row.current),
     shifts: listOf(row.shifts).map(toShiftView),
     publishItem: toWorkItemView(row.publishItem),
     approvedAvail: listOf(row.approvedAvail).map(toAvailView),

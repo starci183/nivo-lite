@@ -31,7 +31,7 @@ export interface AutomationEvidenceEntry {
     /** What happened. */
     readonly summary: string
     /** The proof. */
-    readonly evidence?: string
+    readonly evidence?: string | undefined
 }
 
 /** The Office of a workspace, which owns its line, its tasks and its evidence log: the automations write to them only through it. */

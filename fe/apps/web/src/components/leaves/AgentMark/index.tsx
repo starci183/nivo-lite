@@ -11,7 +11,7 @@ type AgentMarkProps = {
     readonly glyph: IconSource
     /** The spoken name of the mark. */
     readonly label: string
-    readonly size?: "xs" | "sm" | "md" | "lg"
+    readonly size?: "xs" | "sm" | "md" | "lg" | undefined
 }
 
 /** IconTile publishes `sm` (32px) and `md` (40px) only; `lg` takes `md`, `xs` takes `sm`. */

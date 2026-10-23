@@ -15,6 +15,12 @@ import { useTestWorld } from "../../world/use-test-world"
 import type { LiteWorld } from "../../world/lite-world.service"
 import { WEBHOOK_MODULES, signingFixture, queueOptions } from "../../world/test-capabilities.options"
 type WebhookFixture = Awaited<ReturnType<ReturnType<typeof webhooksBuilder>["build"]>>
+
+/** A Jest type matcher as an untyped value, so it can stand in a typed expectation. */
+const anyOf = (type: unknown): unknown => expect.any(type)
+
+/** A Jest object matcher as an untyped value, so it can stand in a typed expectation. */
+const objectLike = (shape: Record<string, unknown>): unknown => expect.objectContaining(shape)
 const registerSignatureProof = (world: LiteWorld, fixture: () => WebhookFixture) => {
     it("webhooks/bad-signature-is-refused: a signature for different bytes cannot claim or enqueue", async () => {
         const { door, connections, close } = await fixture().build()
@@ -71,18 +77,18 @@ const assertDownstreamDelivery = async (
     expect(queued).toHaveLength(1)
     const [job] = queued
     expect(job).toEqual({
-        id: expect.any(String),
+        id: anyOf(String),
         payload: {
             connectionId: fixture.connectionId,
             workspaceId: fixture.workspaceId,
-            event: expect.objectContaining({
+            event: objectLike({
                 event_key: `dm:${sent.mid}`,
                 mid: sent.mid,
                 text: "Integration delivery",
             }),
         },
         dedupe_key: `${META_INBOUND_QUEUE}:${fixture.connectionId}:dm:${sent.mid}`,
-        sent_at: expect.any(Date),
+        sent_at: anyOf(Date),
     })
     expect(await webhookMessages(world.db.primary, sent.mid)).toEqual([
         {
@@ -106,7 +112,7 @@ const registerHandoffProof = (world: LiteWorld, fixture: () => WebhookFixture) =
         const recorded = await receipts(world.db.primary, sent.deliveryId)
         expect(recorded).toEqual([
             {
-                id: expect.any(String),
+                id: anyOf(String),
                 payload: sent.payload,
                 processed_at: null,
             },
@@ -114,10 +120,10 @@ const registerHandoffProof = (world: LiteWorld, fixture: () => WebhookFixture) =
         const receiptJobs = await webhookJobs(world.db.primary, sent.deliveryId)
         expect(receiptJobs).toEqual([
             {
-                id: expect.any(String),
+                id: anyOf(String),
                 payload: { deliveryId: sent.deliveryId },
                 dedupe_key: `${META_DELIVERY_QUEUE}:${sent.deliveryId}`,
-                sent_at: expect.any(Date),
+                sent_at: anyOf(Date),
             },
         ])
         expect(await webhookMessages(world.db.primary, sent.deliveryId)).toEqual([
@@ -135,7 +141,7 @@ const registerHandoffProof = (world: LiteWorld, fixture: () => WebhookFixture) =
         expect(await webhookMessages(world.db.primary, sent.mid)).toEqual([])
         await Promise.all([process(sent.deliveryId), process(sent.deliveryId)])
         expect(await receipts(world.db.primary, sent.deliveryId)).toEqual([
-            { ...recorded[0], processed_at: expect.any(Date) },
+            { ...recorded[0], processed_at: anyOf(Date) },
         ])
         await assertDownstreamDelivery(world, fixture(), sent)
         expect(connections.recordEvent).toHaveBeenCalledTimes(1)

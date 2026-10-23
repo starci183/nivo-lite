@@ -5,7 +5,7 @@ import { LeadRecordsService } from "@modules/domain/leads"
 import { ResponsibilityJournalService } from "@modules/domain/responsibilities"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
-import { DomainError, InjectErrorsService } from "@modules/platform/errors"
+import { InjectErrorsService, isDomainError } from "@modules/platform/errors"
 import type { ErrorsService } from "@modules/platform/errors"
 import { InjectRequestLocale } from "@modules/platform/i18n"
 import type { RequestLocale } from "@modules/platform/i18n"
@@ -109,7 +109,7 @@ export class LeadActionsService {
                 ]),
             )
         } catch (cause) {
-            if (!(cause instanceof DomainError)) throw cause
+            if (!isDomainError(cause)) throw cause
             const kind = this.errors.describe(cause).kind
             const workFailed = cause instanceof LeadActionsError && cause.code === LeadActionsErrorCode.WorkFailed
             if (!workFailed && (kind === "unavailable" || kind === "internal" || kind === "rate-limited")) throw cause
@@ -123,7 +123,7 @@ export class LeadActionsService {
     async failDelivery(delivery: QueueDelivery, cause: unknown): Promise<void> {
         if (!isLeadActionPayload(delivery.payload)) return
         const payload = delivery.payload
-        const code = cause instanceof DomainError ? cause.code : LeadActionsErrorCode.WorkFailed
+        const code = isDomainError(cause) ? cause.code : LeadActionsErrorCode.WorkFailed
         await this.claims.withFailedFence(delivery.id, async (fence) => {
             await this.entityManager.query(FAIL_LEAD_ACTION, [
                 payload.workspaceId,

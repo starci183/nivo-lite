@@ -35,7 +35,7 @@ export interface WorkEdits {
     /** A new amount, VND. */
     readonly amount_vnd?: number | null
     /** Changed fields. */
-    readonly fields?: Readonly<Record<string, ProposalFieldValue>>
+    readonly fields?: Readonly<Record<string, ProposalFieldValue>> | undefined
     /** The invoice the owner chose among the candidates. */
     readonly candidateId?: string
 }
@@ -67,9 +67,9 @@ export interface WorkSpec {
     /** The kind of record. */
     readonly subject_type: SubjectType
     /** The id of the record. */
-    readonly subject_id?: string | null
+    readonly subject_id?: string | null | undefined
     /** The customer. */
-    readonly lead_id?: string | null
+    readonly lead_id?: string | null | undefined
     /** The input that started it. */
     readonly inbound_event_id?: string | null
     /** The item that asked for it. */
@@ -79,13 +79,13 @@ export interface WorkSpec {
     /** Initial proposal data. */
     readonly seed?: Partial<Proposal>
     /** Insert only; `runQueued` performs it later. */
-    readonly queue?: boolean
+    readonly queue?: boolean | undefined
     /** Use `seed` as the proposal as-is: no prepare step, no model call. */
-    readonly preset?: boolean
+    readonly preset?: boolean | undefined
     /** Do not continue the chain after this item. */
-    readonly noChain?: boolean
+    readonly noChain?: boolean | undefined
     /** Always ask a person, with this reason. */
-    readonly forceAsk?: ReasonCode
+    readonly forceAsk?: ReasonCode | undefined
     /** The command chain this item joins. */
     readonly chainId?: string | null
     /** Its depth in the chain. */

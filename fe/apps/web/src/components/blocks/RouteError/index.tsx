@@ -29,7 +29,7 @@ export const RouteError = (props: RouteErrorProps) => {
                 message: props.message ?? t("errorText"),
                 retryLabel: t("retry"),
             }}
-            on={{ retry: props.onRetry }}
+            on={{ ...(props.onRetry === undefined ? {} : { retry: props.onRetry }) }}
         />
     )
 }

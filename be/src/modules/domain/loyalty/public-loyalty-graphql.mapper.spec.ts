@@ -3,6 +3,19 @@ import { LoyaltyError, LoyaltyErrorCode } from "./errors/loyalty.error"
 import type { PublicCheckCode, PublicPoints } from "./loyalty.contracts"
 import { toRequestLoyaltyCodeType, toVerifyLoyaltyCodeType } from "./public-loyalty-graphql.mapper"
 
+/** A partial-object matcher, typed `unknown` so it flows into any slot. */
+const objectLike = (shape: Record<string, unknown>): unknown => expect.objectContaining(shape)
+
+/** What `run` throws, read as `unknown`; the matcher then judges its fields. */
+const thrownBy = (run: () => unknown): unknown => {
+    try {
+        run()
+    } catch (error) {
+        return error
+    }
+    return undefined
+}
+
 const REFUSALS: ReadonlyArray<readonly [PublicCheckCode, LoyaltyErrorCode]> = [
     ["bad_phone", LoyaltyErrorCode.PhoneInvalid],
     ["closed", LoyaltyErrorCode.PageNotFound],
@@ -48,8 +61,8 @@ describe("public loyalty GraphQL mapping", () => {
             expect(() => subject.toRequestLoyaltyCodeType({ ok: false, code })).toThrow(
                 new LoyaltyError({ code: expected }),
             )
-            expect(() => subject.toRequestLoyaltyCodeType({ ok: false, code })).toThrow(
-                expect.objectContaining({ code: expected, params: {} }),
+            expect(thrownBy(() => subject.toRequestLoyaltyCodeType({ ok: false, code }))).toEqual(
+                objectLike({ code: expected, params: {} }),
             )
         })
     })
@@ -70,16 +83,16 @@ describe("public loyalty GraphQL mapping", () => {
             expect(() => subject.toVerifyLoyaltyCodeType({ ok: false, code, points: null })).toThrow(
                 new LoyaltyError({ code: expected }),
             )
-            expect(() => subject.toVerifyLoyaltyCodeType({ ok: false, code, points: null })).toThrow(
-                expect.objectContaining({ code: expected, params: {} }),
+            expect(thrownBy(() => subject.toVerifyLoyaltyCodeType({ ok: false, code, points: null }))).toEqual(
+                objectLike({ code: expected, params: {} }),
             )
         })
 
         it("refuses an accepted answer that did not unlock points", async () => {
             const subject = await buildSubject()
 
-            expect(() => subject.toVerifyLoyaltyCodeType({ ok: true, code: "none", points: null })).toThrow(
-                expect.objectContaining({ code: LoyaltyErrorCode.CodeWrong, params: {} }),
+            expect(thrownBy(() => subject.toVerifyLoyaltyCodeType({ ok: true, code: "none", points: null }))).toEqual(
+                objectLike({ code: LoyaltyErrorCode.CodeWrong, params: {} }),
             )
         })
     })

@@ -32,9 +32,9 @@ export interface WorkspacesOverviewBaseProps {
         readonly welcomeStepsLabel: string
         readonly welcomeSteps: ReadonlyArray<string>
         /** The notice about why the person landed here; none draws nothing. */
-        readonly reason?: string
+        readonly reason?: string | undefined
         /** The failure of loading the list (already localized by the back end); none draws nothing. */
-        readonly error?: string
+        readonly error?: string | undefined
         /** Where the list stands: loading, failed, empty or ready. */
         readonly status: WorkspacesStatus
         readonly loadFailedTitle: string

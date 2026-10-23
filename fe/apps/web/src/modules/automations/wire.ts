@@ -144,7 +144,7 @@ const settingOf = (setting: TemplateSettingType): FieldDef => {
     const base = {
         key: setting.key,
         label: text(setting.label),
-        ...(setting.hint === null || setting.hint === undefined ? {} : { hint: text(setting.hint) }),
+        ...(setting.hint === null ? {} : { hint: text(setting.hint) }),
     }
     if (setting.kind === "number") {
         return {
@@ -152,7 +152,7 @@ const settingOf = (setting: TemplateSettingType): FieldDef => {
             kind: "number",
             min: setting.min ?? 0,
             max: setting.max ?? 100,
-            ...(setting.suffix === null || setting.suffix === undefined ? {} : { suffix: text(setting.suffix) }),
+            ...(setting.suffix === null ? {} : { suffix: text(setting.suffix) }),
         }
     }
     if (setting.kind === "time") return { ...base, kind: "time" }
@@ -160,7 +160,7 @@ const settingOf = (setting: TemplateSettingType): FieldDef => {
     return {
         ...base,
         kind: setting.kind === "email" ? "email" : "text",
-        ...(setting.maxLength === null || setting.maxLength === undefined ? {} : { maxLength: setting.maxLength }),
+        ...(setting.maxLength === null ? {} : { maxLength: setting.maxLength }),
     }
 }
 
@@ -170,17 +170,16 @@ const defOf = (def: TemplateDefinitionType): TemplateDef => ({
     position: def.position,
     pack: pick<TemplatePack>(PACKS, def.pack, "core"),
     executor: pick<TemplateExecutor>(EXECUTORS, def.executor, "definition"),
-    ...(def.n8n === null || def.n8n === undefined
+    ...(def.n8n === null
         ? {}
         : {
               n8n: {
                   webhook: def.n8n.webhook,
                   audience: def.n8n.audience === "customer" ? "customer" : "owner",
-                  ...(def.n8n.data === null || def.n8n.data === undefined ? {} : { data: def.n8n.data }),
+                  ...(def.n8n.data === null ? {} : { data: def.n8n.data }),
               },
           }),
-    moduleKey:
-        def.moduleKey !== null && def.moduleKey !== undefined && isModuleKey(def.moduleKey) ? def.moduleKey : null,
+    moduleKey: def.moduleKey !== null && isModuleKey(def.moduleKey) ? def.moduleKey : null,
     icon: pick<AutomationIconWord>(ICONS, def.icon, "report"),
     name: text(def.name),
     description: text(def.description),
@@ -194,12 +193,10 @@ const defOf = (def: TemplateDefinitionType): TemplateDef => ({
     contentMode: pick<ContentMode>(CONTENT_MODES, def.contentMode, "none"),
     guardrails: def.guardrails.map(text),
     variables: def.variables,
-    defaultBody: def.defaultBody === null || def.defaultBody === undefined ? null : text(def.defaultBody),
+    defaultBody: def.defaultBody === null ? null : text(def.defaultBody),
     authority: {
         action: pickOrNull<NonNullable<GateAction>>(GATE_ACTIONS, def.authority.action),
-        ...(def.authority.alwaysAsk === null || def.authority.alwaysAsk === undefined
-            ? {}
-            : { alwaysAsk: def.authority.alwaysAsk }),
+        ...(def.authority.alwaysAsk === null ? {} : { alwaysAsk: def.authority.alwaysAsk }),
     },
     defaults: configOf(def.defaults),
 })
@@ -239,16 +236,16 @@ export const automationCardViewOf = (card: AutomationCardType): AutomationCardVi
     lastRunAt: card.lastRunAt ?? null,
     runCount: card.runCount,
     trust: { streak: card.trust.streak, offered: card.trust.offered, autoSend: card.trust.autoSend },
-    ...(card.google === null || card.google === undefined
+    ...(card.google === null
         ? {}
         : { google: pick<NonNullable<AutomationCardView["google"]>>(GOOGLE_STATES, card.google, "missing") }),
-    ...(card.sheetUrl === null || card.sheetUrl === undefined ? {} : { sheetUrl: card.sheetUrl }),
+    ...(card.sheetUrl === null ? {} : { sheetUrl: card.sheetUrl }),
 })
 
 const stepOf = (step: RunStepType): RunStep => ({
     label: step.label,
     status: pick<RunStep["status"]>(STEP_STATUSES, step.status, "failed"),
-    ...(step.detail === null || step.detail === undefined ? {} : { detail: step.detail }),
+    ...(step.detail === null ? {} : { detail: step.detail }),
 })
 
 /** One run of the history as the board shows it, from the wire type. */
@@ -268,13 +265,14 @@ const automationRunViewOf = (run: AutomationRunType): AutomationRunView => ({
     message: run.message ?? null,
 })
 
+const words = (value: unknown): Readonly<Record<string, string>> => {
+    if (typeof value !== "object" || value === null || Array.isArray(value)) return {}
+    const out: Record<string, string> = {}
+    for (const [key, entry] of Object.entries(value)) if (typeof entry === "string") out[key] = entry
+    return out
+}
+
 const sampleOf = (sample: PreviewSampleType): PreviewSample => {
-    const words = (value: unknown): Readonly<Record<string, string>> => {
-        if (typeof value !== "object" || value === null || Array.isArray(value)) return {}
-        const out: Record<string, string> = {}
-        for (const [key, entry] of Object.entries(value)) if (typeof entry === "string") out[key] = entry
-        return out
-    }
     return { variables: words(sample.variables), neutral: words(sample.neutral) }
 }
 

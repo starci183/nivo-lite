@@ -42,7 +42,7 @@ export const usePublicBooking = (page: PublicBookingPageData | null | undefined)
     }
     const request = useMutateRequestPublicBookingSwr()
     const timesQuery = useQueryPublicBookingTimesSwr(
-        session.slug !== page?.slug || fields.serviceId === ""
+        page?.slug === undefined || session.slug !== page.slug || fields.serviceId === ""
             ? null
             : { slug: page.slug, serviceId: fields.serviceId, date: fields.date, party: fields.party },
     )

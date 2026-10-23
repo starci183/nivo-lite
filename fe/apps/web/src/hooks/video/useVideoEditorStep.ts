@@ -23,7 +23,7 @@ export const useVideoEditorStep = (address: VideoEditorAddress) => {
     const step: EditorStep = project
         ? (STEPS.find((entry) => entry === address.tab) ?? stepFor(project.status, project.script.length))
         : "goal"
-    const failed = Boolean(projectQuery.error) || (projectId !== undefined && projectQuery.data === null)
+    const failed = Boolean(projectQuery.error)
     const isLoaded = projectId === undefined || projectQuery.data !== undefined
     return { project, step, failed, isLoaded }
 }

@@ -5,6 +5,19 @@ import { AdminAccessService } from "./admin-access.service"
 import { PlatformAdminErrorCode } from "./errors/platform-admin.error"
 import { PLATFORM_ADMIN_OPTIONS } from "./platform-admin.decorators"
 
+/** A partial-object matcher, typed `unknown` so it flows into any slot. */
+const objectLike = (shape: Record<string, unknown>): unknown => expect.objectContaining(shape)
+
+/** What `run` throws, read as `unknown`; the matcher then judges its fields. */
+const thrownBy = (run: () => unknown): unknown => {
+    try {
+        run()
+    } catch (error) {
+        return error
+    }
+    return undefined
+}
+
 const build = async () => {
     const audits = mock<PlatformAuditService>()
     audits.record.mockResolvedValue(undefined)
@@ -34,8 +47,8 @@ describe("AdminAccessService", () => {
         ])("answers not found for %s", async (_name, email) => {
             const { access } = await build()
 
-            expect(() => access.requireAdmin({ id: "u-2", email, role: "authenticated" })).toThrow(
-                expect.objectContaining({ code: PlatformAdminErrorCode.NotFound }),
+            expect(thrownBy(() => access.requireAdmin({ id: "u-2", email, role: "authenticated" }))).toEqual(
+                objectLike({ code: PlatformAdminErrorCode.NotFound }),
             )
         })
     })
@@ -60,7 +73,7 @@ describe("AdminAccessService", () => {
 
             await access.audit(admin, "view.health", null)
 
-            expect(audits.record).toHaveBeenCalledWith(expect.objectContaining({ workspaceId: null, data: {} }))
+            expect(audits.record).toHaveBeenCalledWith(objectLike({ workspaceId: null, data: {} }))
         })
     })
 })

@@ -28,7 +28,7 @@ interface FilesView {
     readonly removeLabel: string
     readonly links: ReadonlyArray<LinkRowView>
     readonly queue: ReadonlyArray<QueueRowView>
-    readonly note?: string
+    readonly note?: string | undefined
 }
 
 /** The words and values of the panel that writes a note, or a list of questions when pairs are set. */
@@ -43,9 +43,9 @@ interface NoteView {
     readonly removeLabel: string
     readonly title: string
     readonly content: string
-    readonly pairs?: ReadonlyArray<PairView>
-    readonly titleError?: string
-    readonly contentError?: string
+    readonly pairs?: ReadonlyArray<PairView> | undefined
+    readonly titleError?: string | undefined
+    readonly contentError?: string | undefined
 }
 
 /** The words and values of the options of the batch. */
@@ -69,7 +69,7 @@ interface OptionsView {
 export interface KnowledgeAddBaseProps {
     readonly props: {
         /** Set when the member may only read: the words replace the button and the drawer. */
-        readonly readOnlyNote?: string
+        readonly readOnlyNote?: string | undefined
         readonly buttonLabel: string
         readonly title: string
         readonly description: string
@@ -85,8 +85,8 @@ export interface KnowledgeAddBaseProps {
         readonly files: FilesView
         readonly note: NoteView
         readonly options: OptionsView
-        readonly notice?: string
-        readonly error?: string
+        readonly notice?: string | undefined
+        readonly error?: string | undefined
     }
     readonly on: {
         readonly open: () => void

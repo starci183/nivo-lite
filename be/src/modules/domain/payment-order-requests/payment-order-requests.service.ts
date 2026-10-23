@@ -3,7 +3,7 @@ import type { EntityManager } from "typeorm"
 import { BillingService } from "@modules/domain/billing"
 import { CreditsError, CreditsErrorCode, CreditsService } from "@modules/domain/credits"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
-import { DomainError } from "@modules/platform/errors"
+import { isDomainError } from "@modules/platform/errors"
 import { isPaymentOrderRequestPayload, PAYMENT_ORDER_REQUEST_QUEUE } from "./payment-order-requests.contracts"
 import type {
     PaymentOrderRequestParams,
@@ -87,7 +87,7 @@ export class PaymentOrderRequestsService {
             await this.entityManager.query(MARK_REQUEST_DONE, [request.id, orderId])
             return "ordered"
         } catch (cause) {
-            if (!(cause instanceof DomainError)) throw cause
+            if (!isDomainError(cause)) throw cause
             await this.entityManager.query(MARK_REQUEST_FAILED, [request.id, cause.code])
             return "failed"
         }
@@ -96,7 +96,7 @@ export class PaymentOrderRequestsService {
     /** Records the terminal failure after the queue has exhausted retries, preserving a stable code instead of exception prose. */
     async fail(payload: unknown, cause: unknown): Promise<void> {
         if (!isPaymentOrderRequestPayload(payload)) return
-        const code = cause instanceof DomainError ? cause.code : PaymentOrderRequestsErrorCode.JobFailed
+        const code = isDomainError(cause) ? cause.code : PaymentOrderRequestsErrorCode.JobFailed
         await this.entityManager.query(MARK_EXHAUSTED_REQUEST_FAILED, [payload.requestId, payload.workspaceId, code])
     }
 

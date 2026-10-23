@@ -56,8 +56,8 @@ export const salesWorkbenchViewOf = (data: SalesWorkbenchType): SalesWorkbenchDa
         assignedStaffId: row.assignedStaffId ?? null,
         assignedStaffName: row.assignedStaffName ?? null,
     })),
-    decided: data.decided.map(decidedRowMapper()),
-    handoffs: data.handoffs.map(handoffRowMapper()),
+    decided: data.decided.map(decidedRowOf),
+    handoffs: data.handoffs.map(handoffRowOf),
     activity: data.activity.map((row) => ({
         ...row,
         action: actionOf(row.action),
@@ -85,73 +85,65 @@ export const salesWorkbenchViewOf = (data: SalesWorkbenchType): SalesWorkbenchDa
     })),
 })
 
-const decidedRowMapper = (): ((
-    row: SalesWorkbenchType["decided"][number],
-) => SalesWorkbenchData["decided"][number]) => {
-    return (row) => ({
-        id: row.id,
-        work_item_id: row.workItemId ?? null,
-        lead_id: row.leadId ?? null,
-        leadName: row.leadName ?? null,
-        department: isModuleKey(row.department) ? row.department : "sales",
-        action: actionOf(row.action),
-        decided_by: row.decidedBy,
-        decider_kind: row.deciderKind === "policy" || row.deciderKind === "staff" ? row.deciderKind : "owner",
-        outcome:
-            row.outcome === "auto_done" || row.outcome === "edited" || row.outcome === "rejected"
-                ? row.outcome
-                : "approved",
-        reason: reasonOf(row.reason),
-        note: row.note ?? null,
-        created_at: row.createdAt,
-    })
-}
+const decidedRowOf = (row: SalesWorkbenchType["decided"][number]): SalesWorkbenchData["decided"][number] => ({
+    id: row.id,
+    work_item_id: row.workItemId ?? null,
+    lead_id: row.leadId ?? null,
+    leadName: row.leadName ?? null,
+    department: isModuleKey(row.department) ? row.department : "sales",
+    action: actionOf(row.action),
+    decided_by: row.decidedBy,
+    decider_kind: row.deciderKind === "policy" || row.deciderKind === "staff" ? row.deciderKind : "owner",
+    outcome:
+        row.outcome === "auto_done" || row.outcome === "edited" || row.outcome === "rejected"
+            ? row.outcome
+            : "approved",
+    reason: reasonOf(row.reason),
+    note: row.note ?? null,
+    created_at: row.createdAt,
+})
 
-const handoffRowMapper = (): ((
-    row: SalesWorkbenchType["handoffs"][number],
-) => SalesWorkbenchData["handoffs"][number]) => {
-    return (row) => ({
-        ...row,
-        orderId: row.orderId ?? null,
-        leadId: row.leadId ?? null,
-        orderNo: row.orderNo ?? null,
-        amountVnd: row.amountVnd ?? null,
-        orderStatus:
-            row.orderStatus === "draft" ||
-            row.orderStatus === "invoiced" ||
-            row.orderStatus === "paid" ||
-            row.orderStatus === "cancelled" ||
-            row.orderStatus === "won_without_order"
-                ? row.orderStatus
-                : "confirmed",
-        confirmedAt: row.confirmedAt ?? null,
-        invoice: row.invoice
-            ? {
-                  ...row.invoice,
-                  status:
-                      row.invoice.status === "issued" || row.invoice.status === "paid" || row.invoice.status === "void"
-                          ? row.invoice.status
-                          : "draft",
-                  issuedAt: row.invoice.issuedAt ?? null,
-                  paidAt: row.invoice.paidAt ?? null,
-              }
-            : null,
-        work: row.work
-            ? {
-                  ...row.work,
-                  status:
-                      row.work.status === "done" ||
-                      row.work.status === "waiting_decision" ||
-                      row.work.status === "rejected" ||
-                      row.work.status === "failed"
-                          ? row.work.status
-                          : "queued",
-                  reason: reasonOf(row.work.reason),
-                  error: row.work.error ?? null,
-              }
-            : null,
-        shippedAt: row.shippedAt ?? null,
-        carrier: row.carrier ?? null,
-        trackingCode: row.trackingCode ?? null,
-    })
-}
+const handoffRowOf = (row: SalesWorkbenchType["handoffs"][number]): SalesWorkbenchData["handoffs"][number] => ({
+    ...row,
+    orderId: row.orderId ?? null,
+    leadId: row.leadId ?? null,
+    orderNo: row.orderNo ?? null,
+    amountVnd: row.amountVnd ?? null,
+    orderStatus:
+        row.orderStatus === "draft" ||
+        row.orderStatus === "invoiced" ||
+        row.orderStatus === "paid" ||
+        row.orderStatus === "cancelled" ||
+        row.orderStatus === "won_without_order"
+            ? row.orderStatus
+            : "confirmed",
+    confirmedAt: row.confirmedAt ?? null,
+    invoice: row.invoice
+        ? {
+              ...row.invoice,
+              status:
+                  row.invoice.status === "issued" || row.invoice.status === "paid" || row.invoice.status === "void"
+                      ? row.invoice.status
+                      : "draft",
+              issuedAt: row.invoice.issuedAt ?? null,
+              paidAt: row.invoice.paidAt ?? null,
+          }
+        : null,
+    work: row.work
+        ? {
+              ...row.work,
+              status:
+                  row.work.status === "done" ||
+                  row.work.status === "waiting_decision" ||
+                  row.work.status === "rejected" ||
+                  row.work.status === "failed"
+                      ? row.work.status
+                      : "queued",
+              reason: reasonOf(row.work.reason),
+              error: row.work.error ?? null,
+          }
+        : null,
+    shippedAt: row.shippedAt ?? null,
+    carrier: row.carrier ?? null,
+    trackingCode: row.trackingCode ?? null,
+})

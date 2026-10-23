@@ -13,8 +13,8 @@ export interface PanelGateProps {
 
 /** Draws the blocks behind a gate once ready, the skeleton of their panel while pending, else nothing. */
 export const PanelGate = (props: PanelGateProps) => {
-    if (props.state === "ready") return props.content
+    if (props.state === "ready") return <>{props.content}</>
     if (props.state === "pending" && props.placeholder !== null)
         return <SurfaceListCard ariaLabel={props.placeholder} isLoading />
-    return null
+    return <></>
 }

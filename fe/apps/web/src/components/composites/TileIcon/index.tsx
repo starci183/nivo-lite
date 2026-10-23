@@ -19,6 +19,6 @@ export const TileIcon = (props: TileIconProps) => (
         source={nivoIconSource(props.props.icon, "leading")}
         tone={TONES[props.props.signal ?? "none"]}
         size="md"
-        isSkeleton={props.isLoading}
+        {...(props.isLoading === undefined ? {} : { isSkeleton: props.isLoading })}
     />
 )

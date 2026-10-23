@@ -17,6 +17,19 @@ import {
     withoutBom,
 } from "./table-rows.policy"
 
+/** A partial-object matcher, typed `unknown` so it flows into any slot. */
+const objectLike = (shape: Record<string, unknown>): unknown => expect.objectContaining(shape)
+
+/** What `run` throws, read as `unknown`; the matcher then judges its fields. */
+const thrownBy = (run: () => unknown): unknown => {
+    try {
+        run()
+    } catch (error) {
+        return error
+    }
+    return undefined
+}
+
 const SUBJECT = Symbol("table-rows.policy")
 
 const buildSubject = async () => {
@@ -123,19 +136,21 @@ describe("tableFromRows and tableFromGrid", () => {
     it("refuses a sheet with no data, an empty header, or too many columns or rows", async () => {
         const subject = await buildSubject()
 
-        expect(() => subject.tableFromRows([["", ""]], { delimiter: "", sheets: [], sheet: "" })).toThrow(
-            expect.objectContaining({ params: { detail: TABLE_COPY.noData } }),
+        expect(thrownBy(() => subject.tableFromRows([["", ""]], { delimiter: "", sheets: [], sheet: "" }))).toEqual(
+            objectLike({ params: { detail: TABLE_COPY.noData } }),
         )
-        expect(() => subject.tableFromRows([[]], { delimiter: "", sheets: [], sheet: "" })).toThrow(
-            expect.objectContaining({ params: { detail: TABLE_COPY.noData } }),
+        expect(thrownBy(() => subject.tableFromRows([[]], { delimiter: "", sheets: [], sheet: "" }))).toEqual(
+            objectLike({ params: { detail: TABLE_COPY.noData } }),
         )
         const wide = [Array.from({ length: TABLE_MAX_COLUMNS + 1 }, (_item, index) => `c${index}`)]
-        expect(() => subject.tableFromRows(wide, { delimiter: "", sheets: [], sheet: "" })).toThrow(
-            expect.objectContaining({ params: { detail: TABLE_COPY.tooManyColumns(TABLE_MAX_COLUMNS) } }),
+        expect(thrownBy(() => subject.tableFromRows(wide, { delimiter: "", sheets: [], sheet: "" }))).toEqual(
+            objectLike({ params: { detail: TABLE_COPY.tooManyColumns(TABLE_MAX_COLUMNS) } }),
         )
         const rows = Array.from({ length: TABLE_MAX_ROWS + 1 }, () => ["a"])
-        expect(() => subject.tableFromRows([["Name"], ...rows], { delimiter: "", sheets: [], sheet: "" })).toThrow(
-            expect.objectContaining({
+        expect(
+            thrownBy(() => subject.tableFromRows([["Name"], ...rows], { delimiter: "", sheets: [], sheet: "" })),
+        ).toEqual(
+            objectLike({
                 code: DataSourcesErrorCode.Rejected,
                 params: { detail: TABLE_COPY.tooManyRows("20.000") },
             }),
@@ -204,11 +219,11 @@ describe("text, zip and file kind", () => {
             params: { detail: "nope" },
             cause,
         })
-        expect(() => subject.assertFileSize(new Uint8Array())).toThrow(
-            expect.objectContaining({ params: { detail: TABLE_COPY.fileEmpty } }),
+        expect(thrownBy(() => subject.assertFileSize(new Uint8Array()))).toEqual(
+            objectLike({ params: { detail: TABLE_COPY.fileEmpty } }),
         )
-        expect(() => subject.assertFileSize(new Uint8Array(TABLE_MAX_BYTES + 1))).toThrow(
-            expect.objectContaining({ params: { detail: TABLE_COPY.fileTooLarge } }),
+        expect(thrownBy(() => subject.assertFileSize(new Uint8Array(TABLE_MAX_BYTES + 1)))).toEqual(
+            objectLike({ params: { detail: TABLE_COPY.fileTooLarge } }),
         )
         expect(() => subject.assertFileSize(new Uint8Array([1]))).not.toThrow()
     })

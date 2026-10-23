@@ -17,7 +17,7 @@ export interface RunStep {
     /** How the step ended. */
     readonly status: "done" | "skipped" | "waiting" | "failed"
     /** The detail line under the label. */
-    readonly detail?: string
+    readonly detail?: string | undefined
     /** The decision this step waits for or sent through. */
     readonly workItemId?: string
     /** The message that was, or will be, sent. */
@@ -31,7 +31,7 @@ export interface RunResult {
     /** The steps, in order. */
     readonly steps: ReadonlyArray<RunStep>
     /** Why it did this, in one line. */
-    readonly evidence?: string | null
+    readonly evidence?: string | null | undefined
 }
 
 /** The raw run row. */

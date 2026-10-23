@@ -55,7 +55,8 @@ export const useChatbotInbox = (input: ChatbotInboxInput) => {
     const name = conversation?.name || t("unknownCustomer")
     const replyDraft = selectedId === null ? "" : (replyDrafts[selectedId] ?? "")
     const answerDraft = escalation === null ? "" : (answerDrafts[escalation.workItemId] ?? escalation.draft)
-    const feedback = actions.feedback?.conversationId === selectedId ? actions.feedback : null
+    const feedback =
+        actions.feedback !== null && actions.feedback.conversationId === selectedId ? actions.feedback : null
     const replyForm = useChatbotTextForm(
         replyFormOf(replyDraft, selectedId, setReplyDrafts, conversation, userName, actions),
     )

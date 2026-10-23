@@ -18,8 +18,7 @@ export const useMutateSaveDatabaseConnectionSwr = () =>
         MUTATE_SAVE_DATABASE_CONNECTION_SWR_KEY,
         async (_key: string, { arg }: SaveDatabaseConnectionArg) => {
             const result = await mutateSaveDatabaseConnection({ request: arg })
-            if (result.data === undefined || result.data === null)
-                throw new Error("saveDatabaseConnection answered no data")
+            if (result.data === undefined) throw new Error("saveDatabaseConnection answered no data")
             return result.data.saveDatabaseConnection
         },
     )

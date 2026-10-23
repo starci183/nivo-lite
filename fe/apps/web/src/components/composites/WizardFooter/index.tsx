@@ -22,8 +22,8 @@ export const WizardFooter = (props: WizardFooterProps) => (
             <Button
                 key={action.id}
                 variant={action.variant}
-                isPending={action.isPending}
-                isDisabled={action.isDisabled}
+                {...(action.isPending === undefined ? {} : { isPending: action.isPending })}
+                {...(action.isDisabled === undefined ? {} : { isDisabled: action.isDisabled })}
                 onPress={action.onPress}
             >
                 {action.label}

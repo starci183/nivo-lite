@@ -3,8 +3,8 @@ import { LOGO } from "./classNames"
 
 /** What the logo draws: "full" is the primary colour lockup, "os" the product lockup, "mark" the O mark. */
 type NivoLogoProps = {
-    readonly variant?: "full" | "os" | "mark"
-    readonly height?: number
+    readonly variant?: "full" | "os" | "mark" | undefined
+    readonly height?: number | undefined
     /** The spoken name of the logo. */
     readonly label: string
 }

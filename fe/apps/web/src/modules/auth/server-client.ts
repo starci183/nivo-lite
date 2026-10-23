@@ -6,6 +6,15 @@ import type { NextRequest, NextResponse } from "next/server"
 import { sessionCookieOptions, supabaseAnonKey, supabaseUrl } from "@/modules/config"
 import { authFailure, authOk, failureOf } from "./outcome"
 
+/** The database shape of the Auth clients: Auth only, no tables, so the client carries no `any` schema generics. */
+interface AuthOnlyDatabase {
+    readonly public: {
+        readonly Tables: Record<string, never>
+        readonly Views: Record<string, never>
+        readonly Functions: Record<string, never>
+    }
+}
+
 /** A request cookie exposed by the framework cookie store. */
 interface SessionCookie {
     readonly name: string
@@ -24,7 +33,7 @@ const isReadOnlyCookieStore = (cause: unknown): boolean =>
 
 /** The cookie-backed server Auth client over the cookies of the current request. */
 export const cookieAuthClient = (jar: SessionCookieJar): SupabaseClient =>
-    createServerClient(supabaseUrl(), supabaseAnonKey(), {
+    createServerClient<AuthOnlyDatabase, "public">(supabaseUrl(), supabaseAnonKey(), {
         cookies: {
             getAll: () => [...jar.getAll()],
             setAll: (changes) => {
@@ -41,7 +50,7 @@ export const cookieAuthClient = (jar: SessionCookieJar): SupabaseClient =>
 
 /** The proxy Auth client: every refreshed cookie is written onto the request and onto the response that will be returned. */
 const requestAuthClient = (request: NextRequest, response: NextResponse): SupabaseClient =>
-    createServerClient(supabaseUrl(), supabaseAnonKey(), {
+    createServerClient<AuthOnlyDatabase, "public">(supabaseUrl(), supabaseAnonKey(), {
         cookies: {
             getAll: () => request.cookies.getAll(),
             setAll: (changes) => {

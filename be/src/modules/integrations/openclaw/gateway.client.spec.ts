@@ -198,13 +198,9 @@ describe("GatewayClient turn outcomes", () => {
             timeoutMs: 30_000,
         })
         expect(result.text).toBe('{"reply":"Hi!"}')
-        expect(result.usage).toEqual({
-            prompt_tokens: 13,
-            completion_tokens: 3,
-            cached_tokens: 4,
-            cost: expect.closeTo(0.3, 5),
-            model: "p/m",
-        })
+        const { cost, ...usage } = { ...result.usage }
+        expect(usage).toEqual({ prompt_tokens: 13, completion_tokens: 3, cached_tokens: 4, model: "p/m" })
+        expect(cost).toBeCloseTo(0.3, 5)
         expect(Object.keys(result.timings)).toEqual(["connect", "create", "subscribe", "send_ack", "reply", "total"])
         expect(gateway.socket.close).toHaveBeenCalledTimes(1)
 

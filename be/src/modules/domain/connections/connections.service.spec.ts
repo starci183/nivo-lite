@@ -85,9 +85,9 @@ describe("ConnectionsService > addresses", () => {
         expect(service.publicOrigin()).toBeNull()
     })
 
-    it.each([undefined, "https://api.nivo.vn/app"])("uses public URL precedence: %s", async (publicApiUrl) => {
-        const service = await build(mockEntityManager(), { publicSiteUrl: "https://nivo.vn/app", publicApiUrl })
-        const provider = publicApiUrl ?? "https://nivo.vn/app"
+    it.each<Urls>([{}, { publicApiUrl: "https://api.nivo.vn/app" }])("uses public URL precedence: %p", async (api) => {
+        const service = await build(mockEntityManager(), { publicSiteUrl: "https://nivo.vn/app", ...api })
+        const provider = api.publicApiUrl ?? "https://nivo.vn/app"
         expect(service.siteBase()).toBe("https://nivo.vn/app")
         expect(service.webhookUrl("telegram", "c1")).toBe(`${provider}/api/telegram/c1`)
         expect(service.webhookUrl("sepay", "c1", "https://other.test")).toBe(
@@ -233,9 +233,7 @@ describe("ConnectionsService > create", () => {
     it("refuses a name that is too short and writes nothing", async () => {
         const em = mockEntityManager()
         const service = await build(em)
-        expect(() => service.create({ ...input, name: " a " })).toThrow(
-            expect.objectContaining({ code: ConnectionsErrorCode.NameInvalid }),
-        )
+        expect(() => service.create({ ...input, name: " a " })).toThrow(ConnectionsErrorCode.NameInvalid)
     })
 
     it("fails when the insert answers no row", async () => {

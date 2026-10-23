@@ -6,9 +6,9 @@ type LoyaltyFieldProps = {
     readonly name?: string
     readonly label: string
     readonly value: string
-    readonly hint?: string
+    readonly hint?: string | undefined
     readonly placeholder?: string
-    readonly error?: string
+    readonly error?: string | undefined
     readonly isRequired?: boolean
     readonly isDisabled: boolean
     readonly onChange: (value: string) => void

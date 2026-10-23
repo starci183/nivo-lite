@@ -40,7 +40,11 @@ export const LeadGenRowList = (props: LeadGenRowListProps) => (
                     title={row.href === null ? row.title : <TextAction href={row.href}>{row.title}</TextAction>}
                     description={row.description}
                     badges={row.badges.map((badge) => (
-                        <Badge key={badge.label} tone={badge.tone} isDot={badge.isDot}>
+                        <Badge
+                            key={badge.label}
+                            tone={badge.tone}
+                            {...(badge.isDot === undefined ? {} : { isDot: badge.isDot })}
+                        >
                             {badge.label}
                         </Badge>
                     ))}

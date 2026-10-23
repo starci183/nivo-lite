@@ -54,7 +54,7 @@ export interface ConsoleSession {
     readonly userName: string
     readonly email: string
     /** The picture of the sign-in provider profile, when the account has one. */
-    readonly avatarUrl?: string
+    readonly avatarUrl?: string | undefined
     readonly workspaces: ReadonlyArray<ConsoleWorkspace>
     readonly currentWorkspaceId: string
 }

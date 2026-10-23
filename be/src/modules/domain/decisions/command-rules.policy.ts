@@ -34,11 +34,10 @@ const SUBJECT_TYPES = new Set([
 export const isSubjectType = (value: string): value is SubjectType => SUBJECT_TYPES.has(value)
 
 /** A payload value as a proposal field: text, numbers and null stay, a missing value is dropped, anything else is kept as JSON text. */
-const fieldValue = (value: unknown): ProposalFieldValue | undefined => {
-    if (value === undefined) return undefined
-    if (value === null || typeof value === "string" || typeof value === "number") return value
-    return JSON.stringify(value)
-}
+const fieldValue = (value: unknown): ProposalFieldValue | undefined =>
+    value === undefined || value === null || typeof value === "string" || typeof value === "number"
+        ? value
+        : JSON.stringify(value)
 
 /** Splits a payload into the work item's address and the proposal fields. */
 export const splitPayload = (payload: Readonly<Record<string, unknown>>, defaultSubjectType: string): SplitPayload => ({

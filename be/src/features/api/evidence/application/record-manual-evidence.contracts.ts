@@ -9,7 +9,7 @@ export interface RecordManualEvidenceRequest {
     /** What the transfer said. */
     readonly content: string
     /** A note. */
-    readonly note?: string
+    readonly note?: string | undefined
     /** The payer. */
-    readonly payer?: string
+    readonly payer?: string | undefined
 }

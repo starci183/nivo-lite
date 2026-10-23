@@ -13,6 +13,12 @@ import { LoyaltyErrorCode } from "./errors/loyalty.error"
 import { LoyaltyEarningService } from "./loyalty-earning.service"
 import type { EarningParams } from "./loyalty-earning.service"
 
+/** A partial-object matcher, typed `unknown` so it flows into any slot. */
+const objectLike = (shape: Record<string, unknown>): unknown => expect.objectContaining(shape)
+
+/** The match-anything matcher, typed `unknown` so it flows into any slot. */
+const anything = (): unknown => expect.anything()
+
 const NOW = Date.UTC(2026, 9, 12)
 const CONFIG: LoyaltyConfig = {
     earn: { perThousandVnd: 1, perVisit: 0, categories: [], trigger: "payment", minOrderVnd: 10000 },
@@ -88,7 +94,7 @@ describe("LoyaltyEarningService", () => {
 
         await expect(service.earn(paramsOf())).resolves.toEqual({ customerId: "c1", status: "done" })
 
-        expect(customers.ensureByPhone).toHaveBeenCalledWith(expect.anything(), {
+        expect(customers.ensureByPhone).toHaveBeenCalledWith(anything(), {
             workspaceId: "ws-1",
             name: "Mai",
             phone: "84912345678",
@@ -96,7 +102,7 @@ describe("LoyaltyEarningService", () => {
             birthday: null,
         })
         expect(ledger.post).toHaveBeenCalledWith({
-            manager: expect.anything(),
+            manager: anything(),
             workspaceId: "ws-1",
             customerId: "c1",
             kind: "earn",
@@ -119,8 +125,8 @@ describe("LoyaltyEarningService", () => {
         await service.earn(paramsOf({ name: "  " }))
 
         expect(customers.ensureByPhone).toHaveBeenCalledWith(
-            expect.anything(),
-            expect.objectContaining({ name: "loyalty.customer.defaultName|5678" }),
+            anything(),
+            objectLike({ name: "loyalty.customer.defaultName|5678" }),
         )
     })
 
@@ -131,7 +137,7 @@ describe("LoyaltyEarningService", () => {
         await service.earn(paramsOf({ occurredAt: "2026-09-01T00:00:00.000Z" }))
 
         expect(ledger.post).toHaveBeenCalledWith(
-            expect.objectContaining({
+            objectLike({
                 points: 120,
                 occurredAt: "2026-09-01T00:00:00.000Z",
                 expiresAt: "2027-09-01T00:00:00.000Z",
@@ -172,7 +178,7 @@ describe("LoyaltyEarningService", () => {
             await service.earn(paramsOf())
 
             expect(customers.moveTier).toHaveBeenCalledWith({
-                manager: expect.anything(),
+                manager: anything(),
                 workspaceId: "ws-1",
                 customerId: "c1",
                 toKey: "bac",
@@ -188,7 +194,7 @@ describe("LoyaltyEarningService", () => {
 
             await service.earn(paramsOf())
 
-            expect(customers.moveTier).toHaveBeenCalledWith(expect.objectContaining({ toKey: "dong", fromKey: null }))
+            expect(customers.moveTier).toHaveBeenCalledWith(objectLike({ toKey: "dong", fromKey: null }))
         })
 
         it("leaves a customer who already holds the tier their spend earns", async () => {

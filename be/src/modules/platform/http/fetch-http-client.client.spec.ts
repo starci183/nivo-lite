@@ -5,6 +5,12 @@ import { FetchHttpClient } from "./fetch-http-client.client"
 import type { HttpRequest } from "./http.port"
 import * as pinnedRequest from "./pinned-request.client"
 
+/** A partial-object matcher, typed `unknown` so it flows into any slot. */
+const objectLike = (shape: Record<string, unknown>): unknown => expect.objectContaining(shape)
+
+/** A by-constructor matcher, typed `unknown` so it flows into any slot. */
+const anyOf = (type: unknown): unknown => expect.any(type)
+
 const build = async (): Promise<FetchHttpClient> => {
     const moduleRef = await Test.createTestingModule({ providers: [FetchHttpClient] }).compile()
     return moduleRef.get(FetchHttpClient)
@@ -46,7 +52,7 @@ describe("FetchHttpClient", () => {
             headers: { "content-type": "application/json", authorization: "Bearer token" },
             body: JSON.stringify({ orderId: "order-1" }),
             redirect: "follow",
-            signal: expect.any(AbortSignal),
+            signal: anyOf(AbortSignal),
         })
     })
 
@@ -60,10 +66,7 @@ describe("FetchHttpClient", () => {
             client.request({ method: "GET", url: "https://service.test/health", timeoutMs: 2500 }),
         ).resolves.toEqual({ status: 204, headers: HEADERS, url: FINAL, body: undefined })
 
-        expect(fetch).toHaveBeenCalledWith(
-            "https://service.test/health",
-            expect.objectContaining({ headers: {}, body: undefined }),
-        )
+        expect(fetch).toHaveBeenCalledWith("https://service.test/health", objectLike({ headers: {} }))
     })
 
     it("preserves a redirect response when the caller requests manual redirects", async () => {
@@ -86,7 +89,7 @@ describe("FetchHttpClient", () => {
             headers: {},
             body: undefined,
             redirect: "manual",
-            signal: expect.any(AbortSignal),
+            signal: anyOf(AbortSignal),
         })
     })
 })
@@ -120,10 +123,10 @@ describe("FetchHttpClient", () => {
 
         expect(send).toHaveBeenCalledWith(
             "https://service.test/token",
-            expect.objectContaining({
+            objectLike({
                 headers: { "content-type": "application/x-www-form-urlencoded" },
                 body: "grant_type=client_credentials&scope=orders+read",
-                signal: expect.any(AbortSignal),
+                signal: anyOf(AbortSignal),
             }),
         )
         expect(send.mock.calls[0]?.[1]?.signal).not.toBe(caller.signal)
@@ -148,7 +151,7 @@ describe("FetchHttpClient", () => {
 
         expect(send).toHaveBeenCalledWith(
             "https://service.test/object",
-            expect.objectContaining({ headers: { "content-type": "application/octet-stream" }, body: bytes }),
+            objectLike({ headers: { "content-type": "application/octet-stream" }, body: bytes }),
         )
     })
 
@@ -160,7 +163,7 @@ describe("FetchHttpClient", () => {
 
         await expect(
             client.request({ method: "GET", url: "https://service.test/orders", timeoutMs: 2500 }),
-        ).rejects.toMatchObject({ code: HttpErrorCode.BodyUnreadable, cause: expect.any(SyntaxError) })
+        ).rejects.toMatchObject({ code: HttpErrorCode.BodyUnreadable, cause: anyOf(SyntaxError) })
     })
 })
 
@@ -261,7 +264,7 @@ describe("FetchHttpClient", () => {
             headers: { "content-type": "application/vnd.orders+json" },
             body: JSON.stringify({ orderId: "order-1" }),
             timeoutMs: 2500,
-            signal: expect.any(AbortSignal),
+            signal: anyOf(AbortSignal),
         })
         expect(fetch).not.toHaveBeenCalled()
     })

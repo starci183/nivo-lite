@@ -119,7 +119,11 @@ export class McpRemoteClient implements McpRemote {
         work: (client: Client, signal: AbortSignal) => Promise<T>,
     ): Promise<Attempt<T>> {
         try {
-            const transport = new StreamableHTTPClientTransport(new URL(endpoint.url), { requestInit: request })
+            // The SDK class types sessionId as `string | undefined`, which an exact-optional `Transport` refuses; the session id is not read here.
+            const transport: Omit<StreamableHTTPClientTransport, "sessionId"> = new StreamableHTTPClientTransport(
+                new URL(endpoint.url),
+                { requestInit: request },
+            )
             await client.connect(transport, { signal: request.signal })
             return { ok: true, value: await work(client, request.signal) }
         } catch (cause) {

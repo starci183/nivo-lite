@@ -13,6 +13,9 @@ import { TestWorldError, TestWorldErrorCode } from "../../world/test-world.error
 import { useTestWorld } from "../../world/use-test-world"
 import type { LiteWorld } from "../../world/lite-world.service"
 
+/** A Jest object matcher as an untyped value, so it can stand in a typed expectation. */
+const objectLike = (shape: Record<string, unknown>): unknown => expect.objectContaining(shape)
+
 const registerParsing = (): void => {
     it.each([
         undefined,
@@ -59,7 +62,7 @@ const registerPublication = (world: LiteWorld, workspaceId: string): void => {
             dedupe_key: `sepay-delivery:${fixture.message.deliveryId}`,
         })
         expect(state.messages).toEqual([
-            { message: expect.objectContaining({ payload: fixture.message, outbox_id: state.jobs[0]?.id }) },
+            { message: objectLike({ payload: fixture.message, outbox_id: state.jobs[0]?.id }) },
         ])
     })
 

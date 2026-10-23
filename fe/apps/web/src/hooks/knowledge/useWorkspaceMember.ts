@@ -1,6 +1,7 @@
 import { useActiveWorkspace } from "@/hooks/workspaces"
 import type { ConsoleWorkspace } from "@/modules/types"
 import { useQueryMyWorkspacesSwr } from "@/hooks/swr"
+import { readError } from "@/hooks/workspaceread"
 
 const roleOf = (value: string): ConsoleWorkspace["role"] => (value === "owner" || value === "manager" ? value : "staff")
 
@@ -19,7 +20,9 @@ interface WorkspaceMember {
 /** The membership of the active workspace, from `myWorkspaces`: role, name and whether the member may write. */
 export const useWorkspaceMember = (): WorkspaceMember => {
     const { activeWorkspaceId } = useActiveWorkspace()
-    const { data, error, isLoading } = useQueryMyWorkspacesSwr()
+    const swrRead = useQueryMyWorkspacesSwr()
+    const { data, isLoading } = swrRead
+    const error = readError(swrRead)
     const membership = (data ?? []).find(
         (one) => one.workspace.id === activeWorkspaceId && one.member.status === "active",
     )

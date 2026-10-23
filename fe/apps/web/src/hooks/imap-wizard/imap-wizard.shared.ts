@@ -38,7 +38,7 @@ export const IMAP_EVERY: ReadonlyArray<{
 ]
 
 /** The provider presets. */
-export const IMAP_PRESETS: ReadonlyArray<ImapPreset> = [
+export const IMAP_PRESETS: readonly [ImapPreset, ...ImapPreset[]] = [
     { id: "gmail", host: "imap.gmail.com", port: 993 },
     { id: "outlook", host: "outlook.office365.com", port: 993 },
     { id: "zoho", host: "imap.zoho.com", port: 993 },

@@ -16,6 +16,12 @@ import { INSERT_THREAD_WORK, LIST_WORK_AGENTS, UPDATE_THREAD_WORK } from "./pers
 import { ThreadWorkTurnsService } from "./thread-work-turns.service"
 import type { AgentStep, WorkAgent, WorkPlace } from "./thread-work.contracts"
 
+/** A partial-object matcher, typed `unknown` so it flows into any slot. */
+const objectLike = (shape: Record<string, unknown>): unknown => expect.objectContaining(shape)
+
+/** The match-anything matcher, typed `unknown` so it flows into any slot. */
+const anything = (): unknown => expect.anything()
+
 const SALES_AI: WorkAgent = { id: "agent-sales", name: "AI Sales", module: "sales", canTag: ["agent-accounting"] }
 const ACCOUNTING_ROW: WorkAgentRow = {
     id: "agent-accounting",
@@ -222,7 +228,7 @@ const registerAsk = () => {
             ).resolves.toBe("asked")
 
             expect(posts.postAsAgent).toHaveBeenCalledWith(
-                expect.objectContaining({ approval: expect.objectContaining({ title: "Giam gia", amount: null }) }),
+                objectLike({ approval: objectLike({ title: "Giam gia", amount: null }) }),
             )
         })
 
@@ -251,7 +257,7 @@ const registerAsk = () => {
             await expect(service.react(PLACE, DISCOUNT)).resolves.toBe("stopped")
 
             expect(posts.postAsAgent).toHaveBeenCalledWith(
-                expect.objectContaining({ mentions: [{ kind: "member", id: "m-minh" }], approval: null }),
+                objectLike({ mentions: [{ kind: "member", id: "m-minh" }], approval: null }),
             )
             expect(em.query).toHaveBeenCalledWith(UPDATE_THREAD_WORK, moved("stopped"))
         })
@@ -272,7 +278,7 @@ const registerMemberAsk = () => {
             await expect(service.react(PLACE, invoice)).resolves.toBe("waiting_member")
 
             expect(posts.postAsAgent).toHaveBeenCalledWith(
-                expect.objectContaining({
+                objectLike({
                     body: 'threadWork.missing|{"action":"Xuat hoa don","fields":"MST, po"}',
                     mentions: [{ kind: "member", id: "m-van" }],
                     stepTitle: 'threadWork.missingStep|{"fields":"MST, po"}',
@@ -294,9 +300,7 @@ const registerMemberAsk = () => {
                 ),
             ).resolves.toBe("stopped")
 
-            expect(posts.postAsAgent).toHaveBeenCalledWith(
-                expect.objectContaining({ mentions: [{ kind: "member", id: "m-minh" }] }),
-            )
+            expect(posts.postAsAgent).toHaveBeenCalledWith(objectLike({ mentions: [{ kind: "member", id: "m-minh" }] }))
             expect(em.query).toHaveBeenCalledWith(UPDATE_THREAD_WORK, moved("stopped"))
         })
     })
@@ -317,7 +321,7 @@ const registerDone = () => {
             await expect(service.react(PLACE, done)).resolves.toBe("done")
 
             expect(posts.postAsAgent).toHaveBeenCalledWith(
-                expect.objectContaining({
+                objectLike({
                     body: 'threadWork.handoff|{"done":"Da giam 8%.","next":"Xuat hoa don"}',
                     mentions: [{ kind: "agent", id: "agent-accounting" }],
                     stepTitle: 'threadWork.handoffStep|{"next":"Xuat hoa don"}',
@@ -326,7 +330,7 @@ const registerDone = () => {
             expect(em.query).toHaveBeenCalledWith(UPDATE_THREAD_WORK, moved("done"))
             expect(engine.runWork).toHaveBeenCalledWith(
                 { workspaceId: "ws-1", actor: "AI Sales", locale: "vi" },
-                expect.objectContaining({
+                objectLike({
                     action: "issue_invoice",
                     lead_id: "lead-1",
                     parent_id: "item-1",
@@ -351,9 +355,9 @@ const registerDone = () => {
             ).resolves.toBe("done")
 
             expect(engine.runWork).toHaveBeenCalledWith(
-                expect.anything(),
-                expect.objectContaining({
-                    seed: expect.objectContaining({
+                anything(),
+                objectLike({
+                    seed: objectLike({
                         summary: 'threadWork.nextSummary|{"next":"Xuat hoa don","customer":""}',
                         amount_vnd: null,
                     }),
@@ -411,7 +415,7 @@ const registerHandOffEnds = () => {
 
             expect(posts.postAsAgent).toHaveBeenNthCalledWith(
                 1,
-                expect.objectContaining({
+                objectLike({
                     body: "Xac nhan",
                     mentions: [],
                     stepTitle: 'threadWork.doneStep|{"action":"Xuat hoa don"}',
@@ -419,7 +423,7 @@ const registerHandOffEnds = () => {
             )
             expect(posts.postAsAgent).toHaveBeenNthCalledWith(
                 2,
-                expect.objectContaining({
+                objectLike({
                     body: "Tom tat",
                     stepTitle: 'threadWork.doneStep|{"action":"unknown_action"}',
                 }),
@@ -449,18 +453,18 @@ const registerStop = () => {
 
             expect(posts.postAsAgent).toHaveBeenNthCalledWith(
                 1,
-                expect.objectContaining({
+                objectLike({
                     body: 'threadWork.stopped|{"action":"Giam gia","reason":"boom"}',
                     mentions: [{ kind: "member", id: "m-minh" }],
                 }),
             )
             expect(posts.postAsAgent).toHaveBeenNthCalledWith(
                 2,
-                expect.objectContaining({ body: 'threadWork.stopped|{"action":"Giam gia","reason":"Tu choi"}' }),
+                objectLike({ body: 'threadWork.stopped|{"action":"Giam gia","reason":"Tu choi"}' }),
             )
             expect(posts.postAsAgent).toHaveBeenNthCalledWith(
                 3,
-                expect.objectContaining({ body: 'threadWork.stopped|{"action":"Giam gia","reason":""}' }),
+                objectLike({ body: 'threadWork.stopped|{"action":"Giam gia","reason":""}' }),
             )
             expect(em.query).toHaveBeenCalledWith(UPDATE_THREAD_WORK, moved("stopped"))
         })

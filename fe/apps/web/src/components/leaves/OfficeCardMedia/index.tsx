@@ -20,7 +20,7 @@ export const OfficeCardMedia = (props: OfficeCardMediaProps) =>
                             src={media.url}
                             title={props.card.title}
                             captions={media.captions}
-                            crossOrigin={media.captions === null ? undefined : "anonymous"}
+                            {...(media.captions === null ? {} : { crossOrigin: "anonymous" as const })}
                         />
                     </MediaFrame>
                 ),

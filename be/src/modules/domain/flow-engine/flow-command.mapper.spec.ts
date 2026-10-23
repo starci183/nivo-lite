@@ -15,6 +15,18 @@ import {
     workItemIdOf,
 } from "./flow-command.mapper"
 
+const objectLike = (shape: Record<string, unknown>): unknown => expect.objectContaining(shape)
+
+/** What `run` throws, read as `unknown`; the matcher then judges its fields. */
+const thrownBy = (run: () => unknown): unknown => {
+    try {
+        run()
+    } catch (error) {
+        return error
+    }
+    return undefined
+}
+
 const SUBJECT = Symbol("flow-command.mapper")
 
 const buildSubject = async () => {
@@ -309,7 +321,7 @@ const registerEditCommands = () => {
 
 const expectInvalid = (action: () => unknown, field: string): void => {
     expect(action).toThrow(FlowEngineError)
-    expect(action).toThrow(expect.objectContaining({ code: FlowEngineErrorCode.InvalidPayload, params: { field } }))
+    expect(thrownBy(action)).toEqual(objectLike({ code: FlowEngineErrorCode.InvalidPayload, params: { field } }))
 }
 
 describe("flow command payloads", () => {

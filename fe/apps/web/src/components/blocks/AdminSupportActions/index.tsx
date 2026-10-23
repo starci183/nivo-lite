@@ -113,7 +113,6 @@ export const AdminSupportActions = (props: AdminSupportActionsProps) => {
         setPlan: setTypedPlan,
         setCredits: setTypedCredits,
     })
-    if (connected === null) return null
     const { parsedDays, plan, parsedCredits, invitations, confirm } = connected
     return (
         <AdminSupportActionsBase

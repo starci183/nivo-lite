@@ -10,6 +10,13 @@ import { useSalesWorkbench } from "@/hooks/salesworkbench"
 import { leadPath } from "@/modules/routes"
 import type { HandoffRow } from "@/modules/types"
 
+/** The words of a message that has any, else null. */
+const textOrNull = (text: string | undefined): string | null => (text === undefined || text === "" ? null : text)
+
+/** Whether the order can be handed to Accounting now: confirmed, not yet invoiced, and allowed or retrying. */
+const canRunOf = (row: HandoffRow, isFailed: boolean): boolean =>
+    row.orderId !== null && row.orderStatus === "confirmed" && !row.invoice && (row.canHandoff || isFailed)
+
 /** The tone of the invoice chip: the invoice status, else a failed or waiting hand-off. */
 const invoiceToneOf = (row: HandoffRow): BadgeTone => {
     if (row.invoice) return INVOICE_TONES[row.invoice.status] ?? "neutral"
@@ -65,8 +72,6 @@ const createSalesHandoffsActions = (input: SalesHandoffsControllerInput) => {
     const context = createSalesHandoffsState(input)
     const { t, notes, activeKey, money, day } = context
 
-    const canRunOf = (row: HandoffRow, isFailed: boolean): boolean =>
-        row.orderId !== null && row.orderStatus === "confirmed" && !row.invoice && (row.canHandoff || isFailed)
     const itemOf = (row: HandoffRow): HandoffItemView => {
         const isFailed = row.work?.status === "failed" && !row.invoice
         const canRun = canRunOf(row, isFailed)
@@ -93,7 +98,7 @@ const createSalesHandoffsActions = (input: SalesHandoffsControllerInput) => {
             workText: row.work && !row.invoice ? t(`work_${row.work.status}`) : null,
             errorText: isFailed && row.work?.error ? row.work.error : null,
             hint: row.orderStatus === "won_without_order" && !row.work ? t("wonNoOrderHint") : null,
-            note: notes[row.key] ? notes[row.key] : null,
+            note: textOrNull(notes[row.key]),
             error: null,
             canRun,
             runLabel: isFailed ? t("handoffRetry") : t("handoff"),

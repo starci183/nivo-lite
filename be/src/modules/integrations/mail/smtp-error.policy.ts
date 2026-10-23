@@ -1,10 +1,10 @@
 import { MailError, MailErrorCode } from "./errors/mail.error"
 
 interface SmtpFailureShape {
-    readonly code?: string
-    readonly responseCode?: number
-    readonly response?: string
-    readonly message?: string
+    readonly code?: string | undefined
+    readonly responseCode?: number | undefined
+    readonly response?: string | undefined
+    readonly message?: string | undefined
 }
 
 const shapeOf = (error: unknown): SmtpFailureShape => {

@@ -152,17 +152,17 @@ export interface AutomationsOverview {
 /** What a request may change on one pipeline; every field is optional. */
 export interface PipelinePatch {
     /** Switch on or off. */
-    readonly enabled?: boolean
+    readonly enabled?: boolean | undefined
     /** Hide or restore ("not for me"). */
-    readonly dismissed?: boolean
+    readonly dismissed?: boolean | undefined
     /** New setting values; keys that are not settings are ignored. */
-    readonly values?: object
+    readonly values?: object | undefined
     /** The approved message template. */
-    readonly body?: string
+    readonly body?: string | undefined
     /** The answer to "send by itself": true accepts, false declines. */
-    readonly autoSend?: boolean
+    readonly autoSend?: boolean | undefined
     /** The Google account a spreadsheet automation writes with. */
-    readonly googleConnectionId?: string
+    readonly googleConnectionId?: string | undefined
 }
 
 /** A proposal for the wording of a message. */

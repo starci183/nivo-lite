@@ -27,6 +27,13 @@ const build = async () => {
     return { webhook: moduleRef.get(TelegramWebhook), signature, deliveries }
 }
 
+/** A request whose `rawBody` is present and undefined, which a typed partial cannot spell under exact optional property types. */
+const requestWithRaw = (rawBody: Buffer | undefined): RawBodyRequest<Request> => {
+    const request = mock<RawBodyRequest<Request>>()
+    Reflect.set(request, "rawBody", rawBody)
+    return request
+}
+
 describe("TelegramWebhook", () => {
     it("verifies the scoped secret token first, waits for proof, then accepts exactly one delivery", async () => {
         const { webhook, signature, deliveries } = await build()
@@ -112,9 +119,7 @@ describe("Telegram delivery intake", () => {
     it("hands missing raw bytes and a missing token to the signature verifier unchanged", async () => {
         const { webhook, signature, deliveries } = await build()
 
-        await expect(
-            webhook.receive(mock<RawBodyRequest<Request>>({ rawBody: undefined }), ROUTE),
-        ).resolves.toBeUndefined()
+        await expect(webhook.receive(requestWithRaw(undefined), ROUTE)).resolves.toBeUndefined()
 
         expect(signature.verify).toHaveBeenCalledTimes(1)
         expect(signature.verify).toHaveBeenCalledWith({

@@ -51,11 +51,8 @@ export const rewardValuesOf = (reward: LoyaltyRewardType | null): RewardFormValu
               cost: String(reward.pointsCost),
               value: String(reward.valueVnd),
               percent: reward.percent ? String(reward.percent) : "",
-              stock: reward.stock === null || reward.stock === undefined ? "" : String(reward.stock),
-              limit:
-                  reward.perCustomerLimit === null || reward.perCustomerLimit === undefined
-                      ? ""
-                      : String(reward.perCustomerLimit),
+              stock: reward.stock === null ? "" : String(reward.stock),
+              limit: reward.perCustomerLimit === null ? "" : String(reward.perCustomerLimit),
               minTier: reward.minTierKey ?? ANY_TIER,
               note: reward.note,
               active: reward.active,

@@ -24,6 +24,18 @@ import {
     SELECT_SUPPLIER_NAMES,
 } from "./persistence/inventory.sql"
 
+const objectLike = (shape: Record<string, unknown>): unknown => expect.objectContaining(shape)
+
+/** What `run` throws, read as `unknown`; the matcher then judges its fields. */
+const thrownBy = (run: () => unknown): unknown => {
+    try {
+        run()
+    } catch (error) {
+        return error
+    }
+    return undefined
+}
+
 const text = (key: string, params: Record<string, string | number> = {}): string => `${key}${JSON.stringify(params)}`
 
 const build = async (entityManager: MockEntityManager) => {
@@ -248,8 +260,8 @@ describe("InventoryImportService", () => {
             actor: "Lan",
             summary: text("inventory.starterSummary", { name: starter.name, items: 0, suppliers: 0, recipes: 0 }),
         })
-        expect(() => service.applyStarterKey("user-1", "ws-1", "missing")).toThrow(
-            expect.objectContaining({ code: InventoryErrorCode.StarterUnknown }),
+        expect(thrownBy(() => service.applyStarterKey("user-1", "ws-1", "missing"))).toEqual(
+            objectLike({ code: InventoryErrorCode.StarterUnknown }),
         )
     })
 })

@@ -5,5 +5,5 @@ export interface ReindexKnowledgeSourceRequest {
     /** The document. */
     readonly sourceId: string
     /** The new text; omitted keeps the text. */
-    readonly content?: string
+    readonly content?: string | undefined
 }

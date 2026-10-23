@@ -67,7 +67,7 @@ export interface LoyaltyPromoBaseProps {
             readonly name: string
             readonly brief: string
         }
-        readonly briefError?: string
+        readonly briefError?: string | undefined
         readonly previewLines: ReadonlyArray<LoyaltyPromoPreviewLine>
         readonly briefMax: number
         readonly isBusy: boolean

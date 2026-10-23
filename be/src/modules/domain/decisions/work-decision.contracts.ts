@@ -17,11 +17,11 @@ export interface WorkDecisionRequest {
     /** Approve or reject. */
     readonly decision: DecisionVerdict
     /** What the person changed before approving; nothing when absent. */
-    readonly edits?: WireEdits
+    readonly edits?: WireEdits | undefined
     /** A note from the decider. */
-    readonly note?: string | null
+    readonly note?: string | null | undefined
     /** The written reason the outcome is true; required to approve a payment reconciliation. */
-    readonly basis?: string | null
+    readonly basis?: string | null | undefined
     /** The language of the generated text. */
     readonly locale: Locale
 }
@@ -41,7 +41,7 @@ export interface AssignWorkRequest {
     /** The work item. */
     readonly workItemId: string
     /** The staff member, or null to take the assignment back. Absent means the same as null. */
-    readonly staffId?: string | null
+    readonly staffId?: string | null | undefined
     /** The language of the evidence line. */
     readonly locale: Locale
 }
@@ -53,7 +53,7 @@ export interface ExecutionDecisionRequest {
     /** Approve or reject. */
     readonly decision: DecisionVerdict
     /** The draft the person edited, when they did. */
-    readonly editedDraft?: string | null
+    readonly editedDraft?: string | null | undefined
     /** The language of the generated text. */
     readonly locale: Locale
 }

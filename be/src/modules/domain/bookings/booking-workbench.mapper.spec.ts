@@ -13,6 +13,18 @@ import {
 } from "./booking-workbench.mapper"
 import { BookingsErrorCode } from "./errors/bookings.error"
 import { DEFAULT_SETTINGS } from "./persistence/booking.rows"
+
+const objectLike = (shape: Record<string, unknown>): unknown => expect.objectContaining(shape)
+
+/** What `run` throws, read as `unknown`; the matcher then judges its fields. */
+const thrownBy = (run: () => unknown): unknown => {
+    try {
+        run()
+    } catch (error) {
+        return error
+    }
+    return undefined
+}
 const SUBJECT = Symbol("booking-workbench.mapper")
 
 const build = async () => {
@@ -249,15 +261,15 @@ describe("booking workbench mapper", () => {
             const subject = await build()
             const project = subject[method]
 
-            expect(() => project({ ok: false, id: null, reason })).toThrow(expect.objectContaining({ code }))
+            expect(thrownBy(() => project({ ok: false, id: null, reason }))).toEqual(objectLike({ code }))
         })
 
         it.each([false, true])("rejects an absent identity when ok is %p", async (ok) => {
             const subject = await build()
             const project = subject[method]
 
-            expect(() => project({ ok, id: null, reason: null })).toThrow(
-                expect.objectContaining({ code: BookingsErrorCode.NotCreated }),
+            expect(thrownBy(() => project({ ok, id: null, reason: null }))).toEqual(
+                objectLike({ code: BookingsErrorCode.NotCreated }),
             )
         })
     })

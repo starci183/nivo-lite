@@ -83,7 +83,9 @@ const build = async (em: MockEntityManager) => {
 }
 
 const recorded = (em: MockEntityManager): Array<ReadonlyArray<unknown>> =>
-    em.query.mock.calls.filter(([sql]) => sql === INSERT_NOTIFICATION).map(([, params]) => params ?? [])
+    em.query.mock.calls
+        .filter(([sql]) => sql === INSERT_NOTIFICATION)
+        .map(([, params]): ReadonlyArray<unknown> => params ?? [])
 
 describe("ShiftsNotifyService toStaff", () => {
     it("tags the person in Office and records the line", async () => {

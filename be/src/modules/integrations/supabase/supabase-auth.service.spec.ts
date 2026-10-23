@@ -19,6 +19,12 @@ const userOf = builder<User>({
     email: "an@example.test",
 })
 
+/** The user with an `email` member that is present but undefined, as a provider answers for a phone-only account. */
+const withoutEmail = (user: User): User => {
+    Reflect.set(user, "email", undefined)
+    return user
+}
+
 const found = (user: User) => ({ data: { user }, error: null })
 const failed = (status: number) => ({
     data: { user: null },
@@ -68,7 +74,7 @@ describe("SupabaseAuthService > accountOf", () => {
         auth.getUserById
             .mockResolvedValueOnce(found(userOf({ user_metadata: { name: "Binh" } })))
             .mockResolvedValueOnce(found(userOf({ email: "chi@x.test" })))
-            .mockResolvedValueOnce(found(userOf({ email: undefined })))
+            .mockResolvedValueOnce(found(withoutEmail(userOf())))
 
         expect(await service.accountOf("u1")).toSucceedWith({
             id: "user-1",

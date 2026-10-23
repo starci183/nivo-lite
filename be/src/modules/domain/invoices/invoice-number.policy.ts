@@ -13,10 +13,10 @@ export const invoicePrefixOf = (now: Date): string => {
     return `INV-${month.format(now).replace("-", "")}-`
 }
 
-/** The number after the last one of the month (the first when the month has none), moved on by `skip` after a clash. */
-export const nextInvoiceNumber = (prefix: string, last: string | null, skip: number): string => {
+/** The number after the last one of the month (the first when the month has none), moved on by `clashes` after each clash. */
+export const nextInvoiceNumber = (prefix: string, last: string | null, clashes: number): string => {
     const count = last === null ? 0 : Number(last.slice(prefix.length)) || 0
-    return `${prefix}${String(count + 1 + skip).padStart(4, "0")}`
+    return `${prefix}${String(count + 1 + clashes).padStart(4, "0")}`
 }
 
 /** When an invoice issued now falls due. */

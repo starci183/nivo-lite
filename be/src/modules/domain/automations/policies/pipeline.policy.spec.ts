@@ -13,6 +13,18 @@ import {
     writeOf,
 } from "./pipeline.policy"
 
+/** What `run` throws, read as `unknown`; the matcher then judges its fields. */
+const thrownBy = (run: () => unknown): unknown => {
+    try {
+        run()
+    } catch (error) {
+        return error
+    }
+    return undefined
+}
+
+const objectLike = (shape: Record<string, unknown>): unknown => expect.objectContaining(shape)
+
 const BODY = "Hello {ten_khach}, thank you"
 
 const SUBJECT = Symbol("pipeline.policy")
@@ -126,8 +138,8 @@ describe("planToggle", () => {
         const subject = await buildSubject()
 
         const def = buildTemplate({ executor: "definition" })
-        expect(() => subject.planToggle(def, subject.blankPipeline(), true, [], null)).toThrow(
-            expect.objectContaining({ code: AutomationsErrorCode.ComingSoon }),
+        expect(thrownBy(() => subject.planToggle(def, subject.blankPipeline(), true, [], null))).toEqual(
+            objectLike({ code: AutomationsErrorCode.ComingSoon }),
         )
     })
 
@@ -139,8 +151,8 @@ describe("planToggle", () => {
             { kind: "channel" as const, key: "customer_chat", label: { vi: "Chat", en: "Chat" } },
         ]
 
-        expect(() => subject.planToggle(def, subject.blankPipeline(), true, missing, null)).toThrow(
-            expect.objectContaining({
+        expect(thrownBy(() => subject.planToggle(def, subject.blankPipeline(), true, missing, null))).toEqual(
+            objectLike({
                 code: AutomationsErrorCode.RequirementMissing,
                 params: { items: "Ban hang, Chat" },
             }),
@@ -210,7 +222,7 @@ describe("planSave", () => {
         const subject = await buildSubject()
 
         expect(() => subject.planSave(buildTemplate(), current, { values: undefined, body: BODY }, 1)).toThrow(
-            expect.objectContaining({ code: AutomationsErrorCode.NoMessage }),
+            AutomationsErrorCode.NoMessage,
         )
     })
 
@@ -218,13 +230,11 @@ describe("planSave", () => {
         const subject = await buildSubject()
 
         expect(() => subject.planSave(def, current, { values: undefined, body: "short" }, 1)).toThrow(
-            expect.objectContaining({ code: AutomationsErrorCode.BodyTooShort }),
+            AutomationsErrorCode.BodyTooShort,
         )
-        expect(() => subject.planSave(def, current, { values: undefined, body: "A long {ghost} wording" }, 1)).toThrow(
-            expect.objectContaining({
-                code: AutomationsErrorCode.BodyUnknownVariable,
-                params: { variable: "ghost" },
-            }),
+        const ghost = { values: undefined, body: "A long {ghost} wording" }
+        expect(thrownBy(() => subject.planSave(def, current, ghost, 1))).toEqual(
+            objectLike({ code: AutomationsErrorCode.BodyUnknownVariable, params: { variable: "ghost" } }),
         )
     })
 })
@@ -260,8 +270,8 @@ describe("planAutoSend", () => {
     it("refuses an answer to an offer that was not made", async () => {
         const subject = await buildSubject()
 
-        expect(() => subject.planAutoSend(subject.blankPipeline(), true)).toThrow(
-            expect.objectContaining({ code: AutomationsErrorCode.TrustNotOffered }),
+        expect(thrownBy(() => subject.planAutoSend(subject.blankPipeline(), true))).toEqual(
+            objectLike({ code: AutomationsErrorCode.TrustNotOffered }),
         )
     })
 })
@@ -297,11 +307,11 @@ describe("planGoogleAccount", () => {
     it("refuses a template that does not write to Google and an account the workspace does not have", async () => {
         const subject = await buildSubject()
 
-        expect(() => subject.planGoogleAccount(buildTemplate(), subject.blankPipeline(), "g-1", ["g-1"])).toThrow(
-            expect.objectContaining({ code: AutomationsErrorCode.GoogleNotUsed }),
-        )
-        expect(() => subject.planGoogleAccount(def, subject.blankPipeline(), "g-9", ["g-1"])).toThrow(
-            expect.objectContaining({ code: AutomationsErrorCode.GoogleAccountUnknown }),
+        expect(
+            thrownBy(() => subject.planGoogleAccount(buildTemplate(), subject.blankPipeline(), "g-1", ["g-1"])),
+        ).toEqual(objectLike({ code: AutomationsErrorCode.GoogleNotUsed }))
+        expect(thrownBy(() => subject.planGoogleAccount(def, subject.blankPipeline(), "g-9", ["g-1"]))).toEqual(
+            objectLike({ code: AutomationsErrorCode.GoogleAccountUnknown }),
         )
     })
 })
@@ -315,7 +325,7 @@ describe("planDecision", () => {
         const plan = subject.planDecision({ ...subject.blankPipeline(), approvalStreak: 3 }, "approved", now)
 
         expect(plan).toEqual({
-            write: expect.objectContaining({ approvalStreak: 4, trustOfferedAt: null }),
+            write: objectLike({ approvalStreak: 4, trustOfferedAt: null }),
             offered: false,
         })
     })

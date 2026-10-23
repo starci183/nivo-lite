@@ -42,7 +42,7 @@ const toHiringJobQuestionFields = (question: JobQuestion): HiringJobQuestionFiel
     choices: question.choices === undefined ? [] : [...question.choices],
     expectYesNo: question.expect === "yes" || question.expect === "no" ? question.expect : null,
     expectNumber: typeof question.expect === "number" ? question.expect : null,
-    expectChoices: Array.isArray(question.expect) ? [...question.expect] : null,
+    expectChoices: typeof question.expect === "object" ? [...question.expect] : null,
 })
 
 /** Maps one job post with its questions split into typed fields. */

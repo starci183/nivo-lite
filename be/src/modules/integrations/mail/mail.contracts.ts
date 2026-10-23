@@ -18,7 +18,7 @@ export interface SmtpConfig {
     /** The sender mailbox. */
     readonly fromEmail: string
     /** The Reply-To mailbox, when different. */
-    readonly replyTo?: string
+    readonly replyTo?: string | undefined
 }
 
 /** One attachment of a message. */
@@ -28,7 +28,7 @@ export interface MailAttachment {
     /** The bytes. */
     readonly content: Buffer
     /** The media type, when known. */
-    readonly contentType?: string
+    readonly contentType?: string | undefined
 }
 
 /** One message to send. */
@@ -42,7 +42,7 @@ export interface MailMessage {
     /** The plain-text body. */
     readonly text: string
     /** Attachments, at most three. */
-    readonly attachments?: ReadonlyArray<MailAttachment>
+    readonly attachments?: ReadonlyArray<MailAttachment> | undefined
 }
 
 /** What the mail server answered for an accepted message. */

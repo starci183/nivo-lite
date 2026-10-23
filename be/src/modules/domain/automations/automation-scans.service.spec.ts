@@ -14,6 +14,8 @@ import {
     SELECT_SCAN_LEADS,
 } from "./persistence/automation-readers.sql"
 
+const objectLike = (shape: Record<string, unknown>): unknown => expect.objectContaining(shape)
+
 const NOW = new Date("2026-10-12T10:00:00.000Z")
 const HOUR = 3_600_000
 
@@ -146,7 +148,7 @@ describe("AutomationScansService debt scan", () => {
         expect(plan.runs).toEqual([
             expect.objectContaining({
                 dedupe: "debt:i-1:1",
-                payload: expect.objectContaining({ amount_vnd: 250000, invoice_no: "HD-i-1" }),
+                payload: objectLike({ amount_vnd: 250000, invoice_no: "HD-i-1" }),
             }),
         ])
         expect(runs.priorRuns).toHaveBeenCalledWith("p-1", ["i-1", "i-2", "i-3"])

@@ -5,6 +5,19 @@ import { PaymentOrderRequestsError, PaymentOrderRequestsErrorCode } from "./erro
 import type { PaymentOrderRequestParams } from "./payment-order-requests.contracts"
 import { selectionOf, targetOf, toRequestStatus } from "./payment-order-requests.policy"
 
+/** A partial-object matcher, typed `unknown` so it flows into any slot. */
+const objectLike = (shape: Record<string, unknown>): unknown => expect.objectContaining(shape)
+
+/** What `run` throws, read as `unknown`; the matcher then judges its fields. */
+const thrownBy = (run: () => unknown): unknown => {
+    try {
+        run()
+    } catch (error) {
+        return error
+    }
+    return undefined
+}
+
 const SUBJECT = Symbol("payment-order-requests.policy")
 type Subject = Pick<typeof SubjectModule, "targetOf" | "selectionOf" | "toRequestStatus">
 
@@ -19,7 +32,7 @@ const paramsOf = builder<PaymentOrderRequestParams>({ workspaceId: "workspace-1"
 
 const expectInvalid = (operation: () => unknown) => {
     expect(operation).toThrow(PaymentOrderRequestsError)
-    expect(operation).toThrow(expect.objectContaining({ code: PaymentOrderRequestsErrorCode.Invalid }))
+    expect(thrownBy(operation)).toEqual(objectLike({ code: PaymentOrderRequestsErrorCode.Invalid }))
 }
 
 describe("targetOf", () => {

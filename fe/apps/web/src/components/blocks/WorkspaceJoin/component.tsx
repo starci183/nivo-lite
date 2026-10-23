@@ -12,7 +12,7 @@ export interface WorkspaceJoinBaseProps {
         readonly openLabel: string
         readonly failTitle: string
         readonly value: string
-        readonly error?: string
+        readonly error?: string | undefined
     }
     readonly on: {
         readonly setValue: (value: string) => void

@@ -2,6 +2,19 @@ import { Test } from "@nestjs/testing"
 import { DataSourcesErrorCode } from "./errors/data-sources.error"
 import { OPENAPI_TEXT } from "./messages/openapi.messages"
 import { describeSpec } from "./openapi-spec.policy"
+
+/** A partial-object matcher, typed `unknown` so it flows into any slot. */
+const objectLike = (shape: Record<string, unknown>): unknown => expect.objectContaining(shape)
+
+/** What `run` throws, read as `unknown`; the matcher then judges its fields. */
+const thrownBy = (run: () => unknown): unknown => {
+    try {
+        run()
+    } catch (error) {
+        return error
+    }
+    return undefined
+}
 const SUBJECT = Symbol("openapi-spec.policy")
 const buildSubject = async () => {
     const moduleRef = await Test.createTestingModule({
@@ -36,11 +49,13 @@ const registerSpecEdgeCases = () => {
 const registerSpecValidation = () => {
     it("refuses a document that is not OpenAPI 3 or Swagger 2", async () => {
         const subject = await buildSubject()
-        expect(() => subject.describeSpec(null, "")).toThrow(refusal(OPENAPI_TEXT.notSpec))
-        expect(() => subject.describeSpec([], "")).toThrow(refusal(OPENAPI_TEXT.notSpec))
-        expect(() => subject.describeSpec({ openapi: "2.0" }, "")).toThrow(refusal(OPENAPI_TEXT.notSpec))
-        expect(() => subject.describeSpec({ swagger: "1.0" }, "")).toThrow(refusal(OPENAPI_TEXT.notSpec))
-        expect(() => subject.describeSpec({ openapi: "3.0.0" }, "")).toThrow(refusal(OPENAPI_TEXT.noOperations))
+        expect(thrownBy(() => subject.describeSpec(null, ""))).toEqual(refusal(OPENAPI_TEXT.notSpec))
+        expect(thrownBy(() => subject.describeSpec([], ""))).toEqual(refusal(OPENAPI_TEXT.notSpec))
+        expect(thrownBy(() => subject.describeSpec({ openapi: "2.0" }, ""))).toEqual(refusal(OPENAPI_TEXT.notSpec))
+        expect(thrownBy(() => subject.describeSpec({ swagger: "1.0" }, ""))).toEqual(refusal(OPENAPI_TEXT.notSpec))
+        expect(thrownBy(() => subject.describeSpec({ openapi: "3.0.0" }, ""))).toEqual(
+            refusal(OPENAPI_TEXT.noOperations),
+        )
     })
     it("lists a GET and ignores a path that is not an operation item", async () => {
         const subject = await buildSubject()
@@ -60,14 +75,7 @@ const registerSpecValidation = () => {
         expect(spec.baseUrl).toBe("https://shop.example")
         expect(spec.authHint).toEqual({ type: "none", name: "" })
         expect(spec.ops).toEqual([
-            {
-                id: "listOrders",
-                method: "GET",
-                path: "/orders",
-                summary: " List orders ",
-                params: [],
-                hasBody: false,
-            },
+            { id: "listOrders", method: "GET", path: "/orders", summary: " List orders ", params: [], hasBody: false },
         ])
     })
 
@@ -471,7 +479,7 @@ const nestedSchemas = {
     },
 }
 
-const refusal = (detail: string) => expect.objectContaining({ code: DataSourcesErrorCode.Rejected, params: { detail } })
+const refusal = (detail: string) => objectLike({ code: DataSourcesErrorCode.Rejected, params: { detail } })
 
 const get = (operationId: string, extra: Record<string, unknown> = {}) => ({
     get: { operationId, responses: { "200": { description: "ok" } }, ...extra },

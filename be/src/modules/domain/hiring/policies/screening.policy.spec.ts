@@ -56,7 +56,7 @@ const screeningOf = builder<Screening>({ score: 0, label: "consider", reasons: [
 const evidence = (answer: string): ScreenedPerson => personOf({ answers: [answerOf({ answer })] })
 const score = (value: number, label: ScoreLabel, ...reasons: Array<ScoreReason>): Screening =>
     screeningOf({ score: value, label, reasons })
-const fit = (...reasons: Array<ScoreReason>): Screening => score(100, "fit", ...reasons)
+const fitting = (...reasons: Array<ScoreReason>): Screening => score(100, "fit", ...reasons)
 const notFit = (...reasons: Array<ScoreReason>): Screening => score(0, "not_fit", ...reasons)
 const consider = (...reasons: Array<ScoreReason>): Screening => score(0, "consider", ...reasons)
 const qr = (status: ReasonStatus, key: string, params: Params = {}, criterion = "Ready?"): ScoreReason =>
@@ -95,12 +95,12 @@ const build = async () => {
 }
 
 const questionCases: ReadonlyArray<QuestionCase> = [
-    ["matching yes", {}, "  YES please  ", fit(qr("met", "yesnoYes"))],
-    ["matching no", { expect: "no" }, "no thanks", fit(qr("met", "yesnoNoOk"))],
+    ["matching yes", {}, "  YES please  ", fitting(qr("met", "yesnoYes"))],
+    ["matching no", { expect: "no" }, "no thanks", fitting(qr("met", "yesnoNoOk"))],
     ["unexpected yes", { expect: "no" }, "ok", notFit(qr("unmet", "yesnoNeedNo"))],
     ["unexpected no", {}, "ko", notFit(qr("unmet", "yesnoNeedYes"))],
     ["unclear yes or no", {}, "maybe", consider(qr("unknown", "yesnoUnclear", { answer: "maybe" }))],
-    ["numeric minimum", { type: "number", expect: 2 }, "2 years", fit(qr("met", "numberOk", { n: 2, need: 2 }))],
+    ["numeric minimum", { type: "number", expect: 2 }, "2 years", fitting(qr("met", "numberOk", { n: 2, need: 2 }))],
     [
         "low numeric answer",
         { type: "number", expect: 2 },
@@ -117,13 +117,13 @@ const questionCases: ReadonlyArray<QuestionCase> = [
         "folded exact text",
         { type: "text", expect: ["cafe"] },
         cafe,
-        fit(qr("met", "choiceOk", { answer: cafe, need: "cafe" })),
+        fitting(qr("met", "choiceOk", { answer: cafe, need: "cafe" })),
     ],
     [
         "escaped choice",
         { type: "choice", expect: ["C++", "Cash"] },
         "I know C++ well",
-        fit(qr("met", "choiceOk", { answer: "I know C++ well", need: "C++, Cash" })),
+        fitting(qr("met", "choiceOk", { answer: "I know C++ well", need: "C++, Cash" })),
     ],
     [
         "blank and embedded choices",
@@ -135,7 +135,7 @@ const questionCases: ReadonlyArray<QuestionCase> = [
         "nonnumeric number expectation",
         { type: "number", expect: ["five"] },
         "five",
-        fit(qr("met", "choiceOk", { answer: "five", need: "five" })),
+        fitting(qr("met", "choiceOk", { answer: "five", need: "five" })),
     ],
     [
         "non-list text expectation",
@@ -150,7 +150,7 @@ const requirementCases: ReadonlyArray<RequirementCase> = [
         "folded skills, regex escaping and blank skills",
         { skills: ["", "  ", "C++", "Cash", "cafe"] },
         evidence(`C++ Cash ${cafe}`),
-        fit(
+        fitting(
             rr("skill", { skill: "C++" }, "met", "skillMet"),
             rr("skill", { skill: "Cash" }, "met", "skillMet"),
             rr("skill", { skill: "cafe" }, "met", "skillMet"),
@@ -172,7 +172,7 @@ const requirementCases: ReadonlyArray<RequirementCase> = [
         "largest years or months value",
         { experienceYears: 3 },
         evidence("Worked 2 nam, 36 thang, 1 year and 30 month"),
-        fit(rr("experience", { years: 3 }, "met", "experienceGot", { years: 3 })),
+        fitting(rr("experience", { years: 3 }, "met", "experienceGot", { years: 3 })),
     ],
     [
         "unrounded comparison and rounded note",
@@ -196,13 +196,13 @@ const requirementCases: ReadonlyArray<RequirementCase> = [
         "availability only in answers",
         { availability: ["morning", "evening"] },
         evidence("I can work EVENING shifts"),
-        fit(rr("availability", { list: "morning, evening" }, "met", "availMet", { hits: "evening" })),
+        fitting(rr("availability", { list: "morning, evening" }, "met", "availMet", { hits: "evening" })),
     ],
     [
         "availability hits in requirement order",
         { availability: ["morning", "evening"] },
         personOf({ availability: "Evening and morning" }),
-        fit(rr("availability", { list: "morning, evening" }, "met", "availMet", { hits: "morning, evening" })),
+        fitting(rr("availability", { list: "morning, evening" }, "met", "availMet", { hits: "morning, evening" })),
     ],
     [
         "unmatched availability and clipped quotation",
@@ -277,7 +277,7 @@ describe("screening policy", () => {
             async (answer) => {
                 const { check } = await build()
                 expect(check(jobOf({ questions: [questionOf()] }), evidence(answer))).toEqual(
-                    fit(qr("met", "yesnoYes")),
+                    fitting(qr("met", "yesnoYes")),
                 )
             },
         )
@@ -285,7 +285,7 @@ describe("screening policy", () => {
         it.each(["khong", "k", "n", "chua", "khong co", "khong duoc"])("reads negative %s", async (answer) => {
             const { check } = await build()
             expect(check(jobOf({ questions: [questionOf({ expect: "no" })] }), evidence(answer))).toEqual(
-                fit(qr("met", "yesnoNoOk")),
+                fitting(qr("met", "yesnoNoOk")),
             )
         })
 
@@ -296,7 +296,7 @@ describe("screening policy", () => {
                 check(jobOf({ questions: [questionOf({ text: "Q".repeat(81) })] }), evidence("z".repeat(81))),
             ).toEqual(consider(qr("unknown", "yesnoUnclear", { answer: "z".repeat(80) }, `${"Q".repeat(77)}...`)))
             expect(check(jobOf({ questions: [questionOf({ text: "Q".repeat(80) })] }), evidence("yes"))).toEqual(
-                fit(qr("met", "yesnoYes", {}, "Q".repeat(80))),
+                fitting(qr("met", "yesnoYes", {}, "Q".repeat(80))),
             )
         })
 
@@ -327,7 +327,7 @@ describe("screening policy", () => {
                     }),
                     evidence("3 years"),
                 ),
-            ).toEqual(fit(qr("met", "numberOk", { n: 3, need: 2 }, "Kinh nghiem")))
+            ).toEqual(fitting(qr("met", "numberOk", { n: 3, need: 2 }, "Kinh nghiem")))
         })
 
         it("reads experience beside collection-only and unrelated numeric questions", async () => {
@@ -340,7 +340,7 @@ describe("screening policy", () => {
             expect(
                 check(jobOf({ questions, requirements: requirementsOf({ experienceYears: 3 }) }), evidence("3 years")),
             ).toEqual(
-                fit(
+                fitting(
                     qr("met", "numberOk", { n: 3, need: 2 }, "Hours"),
                     rr("experience", { years: 3 }, "met", "experienceGot", { years: 3 }),
                 ),
@@ -484,7 +484,7 @@ describe("experience number boundaries", () => {
     it.each(["1,5 years", "18 months", "1.2.1,5 years"])("reads a decimal or month suffix from %s", async (answer) => {
         const { check } = await build()
         expect(check(jobOf({ requirements: requirementsOf({ experienceYears: 1.5 }) }), evidence(answer))).toEqual(
-            fit(rr("experience", { years: 1.5 }, "met", "experienceGot", { years: 1.5 })),
+            fitting(rr("experience", { years: 1.5 }, "met", "experienceGot", { years: 1.5 })),
         )
     })
     it("ignores a long numeric near miss with no experience unit", async () => {

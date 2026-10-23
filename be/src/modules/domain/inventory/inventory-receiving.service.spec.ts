@@ -22,6 +22,8 @@ import {
     SET_PO_STATUS,
 } from "./persistence/inventory.sql"
 
+const textLike = (text: string): unknown => expect.stringContaining(text)
+
 const UUID = "0b8c1f0e-3a49-4b7e-9d3f-2c1f6a5d7e90"
 const UUID_2 = "1c9d2a1f-4b5a-4c8f-8e4a-3d2a7b6e8fa1"
 
@@ -138,7 +140,7 @@ describe("InventoryReceivingService / receivePo", () => {
             "ws-1",
             expect.objectContaining({
                 kind: "inventory.received",
-                summary: expect.stringContaining("inventory.receivedFullSummary"),
+                summary: textLike("inventory.receivedFullSummary"),
             }),
         )
         expect(office.postOffice).toHaveBeenCalledWith("ws-1", expect.stringContaining("inventory.priceChangeNote"))
@@ -198,7 +200,7 @@ describe("InventoryReceivingService / receivePo", () => {
             "ws-1",
             expect.objectContaining({
                 evidence: null,
-                summary: expect.stringContaining("inventory.receivedPartSummary"),
+                summary: textLike("inventory.receivedPartSummary"),
             }),
         )
     })

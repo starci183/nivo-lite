@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import { AppCommandsService } from "@modules/domain/app-commands"
-import { DomainError } from "@modules/platform/errors"
+import { isDomainError } from "@modules/platform/errors"
 import { renderRequestPayloadOf } from "@modules/queues/render-request"
 import { VideoService } from "./video.service"
 
@@ -30,7 +30,7 @@ export class VideoRenderCommandsService {
             const queued = await this.video.requestRender(command.requestedBy, projectId)
             await this.commands.succeed(command.id, { renderId: queued.renderId, projectId: queued.projectId })
         } catch (cause) {
-            if (!(cause instanceof DomainError)) throw cause
+            if (!isDomainError(cause)) throw cause
             await this.commands.fail(command.id, cause.code)
         }
     }

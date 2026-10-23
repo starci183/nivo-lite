@@ -11,6 +11,8 @@ import { ChannelConnectionsService } from "./channel-connections.service"
 import { ChannelConnectionsErrorCode } from "./errors/channel-connections.error"
 import * as moneyPolicy from "./money-provider.policy"
 import { ChannelConnectionsLogEvent } from "./channel-connections.log-events"
+const matching = (pattern: RegExp): unknown => expect.stringMatching(pattern)
+const objectLike = (shape: Record<string, unknown>): unknown => expect.objectContaining(shape)
 const actor: ConnectionActor = { principalId: "owner-1", workspaceId: "ws-1" }
 const TOKEN = ["123456789", "AAEabcdefghijklmnopqrstuvwxyz012345"].join(":")
 const NOW = new Date("2026-10-12T03:00:00.000Z")
@@ -68,7 +70,7 @@ describe("ChannelConnectionsService connectTelegram", () => {
                 name: "Shop bot",
                 status: "connected",
                 meta: { bot_id: "42", bot_username: "shop_bot" },
-                secret: { plain: TOKEN, webhookSecret: expect.stringMatching(/^[0-9a-f]{64}$/u) },
+                secret: { plain: TOKEN, webhookSecret: matching(/^[0-9a-f]{64}$/u) },
             }),
         )
         expect(setup.telegramSetWebhook).toHaveBeenCalledWith(
@@ -162,7 +164,7 @@ describe("ChannelConnectionsService startMoneyConnection", () => {
                 provider: "payos",
                 environment: "live",
                 meta: {},
-                secret: { plain: "{}", webhookSecret: expect.stringMatching(/^[0-9a-f]{64}$/u) },
+                secret: { plain: "{}", webhookSecret: matching(/^[0-9a-f]{64}$/u) },
             }),
         )
         expect(view).toMatchObject({ apiKey: "", bankCode: "", account: "", holder: "" })
@@ -208,9 +210,7 @@ describe("ChannelConnectionsService updateMoneyConnection", () => {
         expect(connections.patch).toHaveBeenCalledWith(
             "ws-1",
             "c1",
-            expect.objectContaining({
-                meta: expect.objectContaining({ account_masked: "\u2022\u2022\u2022\u2022 8888" }),
-            }),
+            objectLike({ meta: objectLike({ account_masked: "\u2022\u2022\u2022\u2022 8888" }) }),
         )
     })
     it("treats a missing secret as an empty key and refuses a malformed one", async () => {

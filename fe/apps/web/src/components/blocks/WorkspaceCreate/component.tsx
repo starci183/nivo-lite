@@ -14,7 +14,7 @@ export interface WorkspaceCreateBaseProps {
         readonly failTitle: string
         readonly name: string
         readonly isPending: boolean
-        readonly error?: string
+        readonly error?: string | undefined
     }
     readonly on: {
         readonly setName: (value: string) => void

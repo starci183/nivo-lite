@@ -18,7 +18,7 @@ export const useQueryLoadOpenApiSpecificationSwr = () =>
         QUERY_LOAD_OPEN_API_SPECIFICATION_SWR_KEY,
         async (_key: string, { arg }: LoadOpenApiSpecificationArg) => {
             const result = await queryLoadOpenApiSpec({ request: arg })
-            if (result.data === undefined || result.data === null) throw new Error("loadOpenApiSpec answered no data")
+            if (result.data === undefined) throw new Error("loadOpenApiSpec answered no data")
             return result.data.loadOpenApiSpec
         },
     )

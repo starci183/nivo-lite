@@ -5,7 +5,7 @@ export interface SavePositionParams {
     /** The position name. */
     readonly name: string
     /** The colour the grid draws it in; absent picks the default. */
-    readonly color?: string
+    readonly color?: string | undefined
 }
 
 /** What the request to save a position answers. */
@@ -109,7 +109,7 @@ export interface SaveShiftsSettingsParams {
 /** What the request to add an availability statement takes. */
 export interface SaveShiftsAvailabilityParams {
     /** The person; the manager's statements approve at once, a member's own wait for approval. */
-    readonly staffId?: string
+    readonly staffId?: string | undefined
     /** The weekday of a recurring statement; null with `date`. */
     readonly weekday: number | null
     /** The date of a one-day statement; null with `weekday`. */
@@ -121,7 +121,7 @@ export interface SaveShiftsAvailabilityParams {
     /** True when the person can work in the window. */
     readonly available: boolean
     /** A free note. */
-    readonly note?: string
+    readonly note?: string | undefined
 }
 
 /** What saving an availability statement answers. */

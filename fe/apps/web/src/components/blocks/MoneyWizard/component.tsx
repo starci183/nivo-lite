@@ -62,7 +62,7 @@ export interface MoneyWizardBaseProps {
                 | "next"
                 | "close"
                 | "done"
-                | "skip"
+                | "checkLater"
                 | "earlyAccess"
                 | "earlyAccessNote"
                 | "envHint"
@@ -85,7 +85,7 @@ export interface MoneyWizardBaseProps {
         readonly go: (to: number) => void
         readonly create: () => void
         readonly followDone: () => void
-        readonly skip: () => void
+        readonly checkLater: () => void
         readonly finish: () => void
         readonly close: () => void
         readonly environment: (value: "test" | "live") => void
@@ -114,8 +114,13 @@ const actionsOf = ({ props, on }: MoneyWizardBaseProps): ReadonlyArray<WizardAct
         ]
     }
     if (props.step === "verify") {
-        const skip: WizardAction = { id: "skip", label: text.skip, variant: "outline", onPress: on.skip }
-        return [props.received === null ? skip : nextAction(text.next, () => on.go(4)), back]
+        const checkLater: WizardAction = {
+            id: "checkLater",
+            label: text.checkLater,
+            variant: "outline",
+            onPress: on.checkLater,
+        }
+        return [props.received === null ? checkLater : nextAction(text.next, () => on.go(4)), back]
     }
     return [nextAction(text.done, on.finish, { isPending: props.isPending }), back]
 }

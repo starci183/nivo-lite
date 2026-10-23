@@ -4,7 +4,7 @@ import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { InjectMessageCatalog } from "@modules/platform/i18n"
 import type { Locale, MessageCatalog } from "@modules/platform/i18n"
-import { DomainError } from "./domain.error"
+import { isDomainError } from "./domain.error"
 import { InjectErrorReporter, InjectErrorsOptions } from "./errors.decorators"
 import type { ErrorDescription, ErrorKind, ErrorParams, FailureSite } from "./errors.contracts"
 import type { ErrorReporter } from "./errors.port"
@@ -40,7 +40,7 @@ export class ErrorsService {
     describe(error: unknown, site?: FailureSite): ErrorDescription {
         const failureSite: FailureSite = site ?? { scope: "api" }
         if (error instanceof NotFoundException) return this.build(ErrorsErrorCode.RouteNotFound, "not-found", {})
-        if (error instanceof DomainError) {
+        if (isDomainError(error)) {
             const kind = this.kinds.get(error.code)
             if (kind !== undefined) return this.build(error.code, kind, error.params)
         }

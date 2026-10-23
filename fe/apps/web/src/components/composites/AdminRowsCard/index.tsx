@@ -54,7 +54,7 @@ const Row = (props: RowProps) => (
 export const AdminRowsCard = (props: AdminRowsCardProps) => (
     <SurfaceListCard
         label={props.card.label}
-        ariaLabel={props.card.ariaLabel}
+        {...(props.card.ariaLabel === undefined ? {} : { ariaLabel: props.card.ariaLabel })}
         headingLevel={2}
         labelEnd={
             props.card.labelBadges.length === 0 ? undefined : (

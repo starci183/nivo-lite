@@ -7,6 +7,19 @@ import { OPENCLAW_FILES } from "./openclaw.decorators"
 import type { OpenclawFiles } from "./openclaw-files.port"
 import { WorkspaceWriterService } from "./workspace-writer.service"
 
+/** A partial-object matcher, typed `unknown` so it flows into any slot. */
+const objectLike = (shape: Record<string, unknown>): unknown => expect.objectContaining(shape)
+
+/** What `run` throws, read as `unknown`; the matcher then judges its fields. */
+const thrownBy = (run: () => unknown): unknown => {
+    try {
+        run()
+    } catch (error) {
+        return error
+    }
+    return undefined
+}
+
 const ROOT = "/state/workspace-ws-1-chatbot"
 const MANIFEST = `${ROOT}/.nivo-managed.json`
 const AGENTS = { path: "AGENTS.md", content: "# Agent\n" }
@@ -128,8 +141,8 @@ describe("WorkspaceWriterService", () => {
                 "a/../../b.md",
                 "a\\b.md",
             ]) {
-                expect(() => writer.write(ROOT, [{ path, content: "x" }])).toThrow(
-                    expect.objectContaining({ code: OpenclawErrorCode.WorkspacePathUnsafe }),
+                expect(thrownBy(() => writer.write(ROOT, [{ path, content: "x" }]))).toEqual(
+                    objectLike({ code: OpenclawErrorCode.WorkspacePathUnsafe }),
                 )
             }
         })

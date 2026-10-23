@@ -61,7 +61,7 @@ interface Booking {
     /** The bank or gateway name shown on the event. */
     readonly bankName: string
     /** A note the person added, or undefined. */
-    readonly note?: string
+    readonly note?: string | undefined
 }
 
 @Injectable()

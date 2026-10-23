@@ -15,9 +15,9 @@ export interface ContentMediaRef {
     /** The human-readable display name. */
     readonly name: string
     /** The workspace-owned storage path, when present. */
-    readonly path?: string
+    readonly path?: string | undefined
     /** The stored row identifier. */
-    readonly id?: string
+    readonly id?: string | undefined
     /** Whether the attachment was suggested automatically. */
     readonly suggested?: boolean
 }
@@ -121,9 +121,9 @@ export interface ContentActor {
 /** A calendar window; the upper bound is exclusive. */
 export interface ContentRange {
     /** The inclusive lower calendar bound. */
-    readonly from?: string
+    readonly from?: string | undefined
     /** The exclusive upper calendar bound. */
-    readonly to?: string
+    readonly to?: string | undefined
 }
 
 /** Fields accepted when creating an idea. */
@@ -133,23 +133,27 @@ export interface CreateContentItem {
     /** The channels selected for publication. */
     readonly channels: ReadonlyArray<string>
     /** The scheduled publication instant, when set. */
-    readonly scheduledAt?: string | null
+    readonly scheduledAt?: string | null | undefined
     /** The content theme, when assigned. */
-    readonly pillarId?: string | null
+    readonly pillarId?: string | null | undefined
 }
 
 /** Editable fields; undefined leaves a field untouched, null clears nullable fields. */
-export interface SaveContentItem extends Partial<CreateContentItem> {
+export interface SaveContentItem extends Partial<Pick<CreateContentItem, "scheduledAt" | "pillarId">> {
+    /** The post title. */
+    readonly title?: string | undefined
+    /** The channels selected for publication. */
+    readonly channels?: ReadonlyArray<string> | undefined
     /** The writing brief. */
-    readonly brief?: string
+    readonly brief?: string | undefined
     /** The channel-specific draft texts. */
-    readonly variants?: Readonly<Record<string, ContentVariant>>
+    readonly variants?: Readonly<Record<string, ContentVariant>> | undefined
     /** The selected hashtags. */
-    readonly hashtags?: ReadonlyArray<string>
+    readonly hashtags?: ReadonlyArray<string> | undefined
     /** The supporting links. */
-    readonly links?: ReadonlyArray<ContentLink>
+    readonly links?: ReadonlyArray<ContentLink> | undefined
     /** The selected image and video attachments. */
-    readonly media?: ReadonlyArray<ContentMediaRef>
+    readonly media?: ReadonlyArray<ContentMediaRef> | undefined
 }
 
 /** The four workbench figures. */

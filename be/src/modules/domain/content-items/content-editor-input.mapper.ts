@@ -3,34 +3,37 @@ import type { ContentLink, ContentVariant, SaveContentItem } from "./content-edi
 /** Nullable transport values before they become an editor patch. */
 interface ContentPatchInput {
     /** The replacement title, when selected. */
-    readonly title?: string | null
+    readonly title?: string | null | undefined
     /** The replacement channel selection. */
-    readonly channels?: ReadonlyArray<string> | null
+    readonly channels?: ReadonlyArray<string> | null | undefined
     /** The replacement schedule; null clears it. */
-    readonly scheduledAt?: string | null
+    readonly scheduledAt?: string | null | undefined
     /** The replacement content theme; null clears it. */
-    readonly pillarId?: string | null
+    readonly pillarId?: string | null | undefined
     /** The replacement brief. */
-    readonly brief?: string | null
+    readonly brief?: string | null | undefined
     /** The replacement texts selected by channel. */
-    readonly variants?: ReadonlyArray<ContentVariant & { readonly channel: string }> | null
+    readonly variants?: ReadonlyArray<ContentVariant & { readonly channel: string }> | null | undefined
     /** The replacement shared hashtags. */
-    readonly hashtags?: ReadonlyArray<string> | null
+    readonly hashtags?: ReadonlyArray<string> | null | undefined
     /** The replacement supporting links. */
-    readonly links?: ReadonlyArray<ContentLink> | null
+    readonly links?: ReadonlyArray<ContentLink> | null | undefined
     /** The replacement media attachments. */
-    readonly media?: ReadonlyArray<{
-        /** The attachment kind. */
-        readonly kind: string
-        /** The display name of the attachment. */
-        readonly name: string
-        /** The workspace file path of a media attachment. */
-        readonly path?: string | null
-        /** The completed render id of a video attachment. */
-        readonly id?: string | null
-        /** Whether the attachment was suggested by AI. */
-        readonly suggested?: boolean | null
-    }> | null
+    readonly media?:
+        | ReadonlyArray<{
+              /** The attachment kind. */
+              readonly kind: string
+              /** The display name of the attachment. */
+              readonly name: string
+              /** The workspace file path of a media attachment. */
+              readonly path?: string | null
+              /** The completed render id of a video attachment. */
+              readonly id?: string | null
+              /** Whether the attachment was suggested by AI. */
+              readonly suggested?: boolean | null
+          }>
+        | null
+        | undefined
 }
 
 /** Treats nullable optional editor fields as omitted; null still clears a schedule or pillar. */

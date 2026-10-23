@@ -13,6 +13,22 @@ import { GoogleLogEvent } from "./google.log-events"
 import type { GoogleOptions } from "./google.options"
 import { ordersTab } from "./google-sheet.policy"
 
+/** A partial-object matcher, typed `unknown` so it flows into any slot. */
+const objectLike = (shape: Record<string, unknown>): unknown => expect.objectContaining(shape)
+
+/** A substring matcher, typed `unknown` so it flows into any slot. */
+const stringLike = (text: string): unknown => expect.stringContaining(text)
+
+/** What `run` throws, read as `unknown`; the matcher then judges its fields. */
+const thrownBy = (run: () => unknown): unknown => {
+    try {
+        run()
+    } catch (error) {
+        return error
+    }
+    return undefined
+}
+
 const OPTIONS: GoogleOptions = {
     client: { clientId: "client-1", clientSecret: new Secret("secret-1") },
     oauthBase: undefined,
@@ -105,8 +121,8 @@ describe("GoogleClient tokens", () => {
             expiresAt: new Date("2026-10-12T03:00:00.000Z").getTime() + 3_600_000,
         })
         expect(http.request).toHaveBeenCalledWith(
-            expect.objectContaining({
-                form: expect.objectContaining({ grant_type: "refresh_token", refresh_token: "rt" }),
+            objectLike({
+                form: objectLike({ grant_type: "refresh_token", refresh_token: "rt" }),
             }),
         )
     })
@@ -115,10 +131,10 @@ describe("GoogleClient tokens", () => {
         const { client } = await build({ ...OPTIONS, client: null })
         const { client: noSite } = await build({ ...OPTIONS, siteUrl: undefined })
 
-        expect(() => client.exchangeCode("c")).toThrow(expect.objectContaining({ code: GoogleErrorCode.NotConfigured }))
-        expect(() => noSite.exchangeCode("c")).toThrow(expect.objectContaining({ code: GoogleErrorCode.NotConfigured }))
-        expect(() => client.refreshAccessToken("r")).toThrow(
-            expect.objectContaining({ code: GoogleErrorCode.NotConfigured }),
+        expect(thrownBy(() => client.exchangeCode("c"))).toEqual(objectLike({ code: GoogleErrorCode.NotConfigured }))
+        expect(thrownBy(() => noSite.exchangeCode("c"))).toEqual(objectLike({ code: GoogleErrorCode.NotConfigured }))
+        expect(thrownBy(() => client.refreshAccessToken("r"))).toEqual(
+            objectLike({ code: GoogleErrorCode.NotConfigured }),
         )
     })
 
@@ -186,7 +202,7 @@ describe("GoogleClient accountEmail", () => {
         await expect(client.accountEmail({ idToken: "garbage", accessToken: "at" })).resolves.toBe("u@b.vn")
         expect(http.request).toHaveBeenCalledTimes(6)
         expect(http.request).toHaveBeenCalledWith(
-            expect.objectContaining({
+            objectLike({
                 url: "https://openidconnect.googleapis.com/v1/userinfo",
                 headers: { authorization: "Bearer at" },
             }),
@@ -205,7 +221,7 @@ describe("GoogleClient accountEmail", () => {
         expect(logger.error).toHaveBeenCalledTimes(1)
         expect(logger.error).toHaveBeenCalledWith(
             GoogleLogEvent.EmailUnavailable,
-            expect.objectContaining({ code: GoogleErrorCode.Unreachable, cause }),
+            objectLike({ code: GoogleErrorCode.Unreachable, cause }),
         )
     })
 })
@@ -222,7 +238,7 @@ describe("GoogleClient spreadsheets", () => {
         })
         expect(http.request).toHaveBeenNthCalledWith(
             2,
-            expect.objectContaining({ url: "https://sheets.googleapis.com/v4/spreadsheets/id%201:batchUpdate" }),
+            objectLike({ url: "https://sheets.googleapis.com/v4/spreadsheets/id%201:batchUpdate" }),
         )
     })
 
@@ -253,7 +269,7 @@ describe("GoogleClient sheet operations", () => {
         await expect(api.findRow("s", [" ", ""])).resolves.toBeNull()
         expect(http.request).toHaveBeenCalledTimes(2)
         expect(http.request).toHaveBeenCalledWith(
-            expect.objectContaining({
+            objectLike({
                 method: "GET",
                 url:
                     "https://sheets.googleapis.com/v4/spreadsheets/s/values/" +
@@ -283,9 +299,9 @@ describe("GoogleClient sheet writes", () => {
         await expect(client.sheets("tok").appendRow("s", "Tab", 9, [])).resolves.toBe(0)
         expect(http.request).toHaveBeenNthCalledWith(
             1,
-            expect.objectContaining({
+            objectLike({
                 method: "POST",
-                url: expect.stringContaining(":append?valueInputOption=RAW&insertDataOption=INSERT_ROWS"),
+                url: stringLike(":append?valueInputOption=RAW&insertDataOption=INSERT_ROWS"),
                 body: { majorDimension: "ROWS", values: [["=x", 1]] },
                 headers: { authorization: "Bearer tok" },
             }),
@@ -313,7 +329,7 @@ describe("GoogleClient sheet writes", () => {
         await client.sheets("tok").updateCells("s", 4, { F: "x", G: 2 })
 
         expect(http.request).toHaveBeenCalledWith(
-            expect.objectContaining({
+            objectLike({
                 body: {
                     valueInputOption: "RAW",
                     data: [

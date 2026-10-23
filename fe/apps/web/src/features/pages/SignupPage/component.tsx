@@ -3,9 +3,9 @@ import { SignupForm } from "@/components/blocks/SignupForm"
 /** Props for {@link SignupPageBase}. */
 export interface SignupPageBaseProps {
     readonly props: {
-        readonly next?: string
+        readonly next?: string | undefined
         readonly invited: boolean
-        readonly initialEmail?: string
+        readonly initialEmail?: string | undefined
     }
 }
 

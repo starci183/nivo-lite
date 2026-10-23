@@ -26,7 +26,7 @@ export const useQueryLessonMiningStatusSwr = (
             return result.data.lessonMiningStatus
         },
         {
-            onSuccess: onStatus,
+            ...(onStatus ? { onSuccess: onStatus } : {}),
             refreshInterval: (data) =>
                 data === undefined || data.status === "done" || data.status === "failed" ? 0 : 2_000,
         },

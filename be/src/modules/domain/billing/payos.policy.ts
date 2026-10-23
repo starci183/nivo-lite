@@ -6,13 +6,13 @@ import type { JsonObject } from "./webhook-body.policy"
 /** The body payOS posts: a code, a success flag, the payment `data` and the `signature` over it. */
 export interface PayosBody {
     /** The result code; "00" is a paid order. */
-    readonly code?: string
+    readonly code?: string | undefined
     /** The success flag; false is never booked. */
-    readonly success?: boolean
+    readonly success?: boolean | undefined
     /** The payment data that the signature covers. */
     readonly data?: Readonly<Record<string, unknown>> | null
     /** The signature of the data under the checksum key. */
-    readonly signature?: string
+    readonly signature?: string | undefined
 }
 
 /** The result of reading a payOS delivery after it was proven. */

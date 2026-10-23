@@ -16,6 +16,18 @@ import {
 import { DataHubErrorCode } from "./errors/data-hub.error"
 import { CSV_COPY } from "./messages/csv-import.messages"
 
+const objectLike = (shape: Record<string, unknown>): unknown => expect.objectContaining(shape)
+
+/** What `run` throws, read as `unknown`; the matcher then judges its fields. */
+const thrownBy = (run: () => unknown): unknown => {
+    try {
+        run()
+    } catch (error) {
+        return error
+    }
+    return undefined
+}
+
 const SUBJECT = Symbol("csv-import-config.policy")
 type Subject = Pick<
     typeof SubjectModule,
@@ -115,7 +127,7 @@ describe("readConfig", () => {
                     ...config,
                     sheet: 1,
                     link: null,
-                    kinds: { id: "text", extra: "nope", skip: 1 },
+                    kinds: { id: "text", extra: "nope", blank: 1 },
                     columns: ["id", 2, null],
                     idColumn: "",
                     titleColumn: null,
@@ -209,7 +221,7 @@ describe("tableEntityOf", () => {
     it.each([null, undefined, "document", "lead"])("refuses %s", async (raw) => {
         const subject = await buildSubject()
 
-        expect(() => subject.tableEntityOf(raw)).toThrow(expect.objectContaining(refused(CSV_COPY.chooseEntity)))
+        expect(thrownBy(() => subject.tableEntityOf(raw))).toEqual(objectLike(refused(CSV_COPY.chooseEntity)))
     })
 })
 
@@ -224,7 +236,7 @@ describe("cleanImportName", () => {
     it.each([null, undefined, " a "])("refuses %s", async (raw) => {
         const subject = await buildSubject()
 
-        expect(() => subject.cleanImportName(raw)).toThrow(expect.objectContaining(refused(CSV_COPY.nameTooShort)))
+        expect(thrownBy(() => subject.cleanImportName(raw))).toEqual(objectLike(refused(CSV_COPY.nameTooShort)))
     })
 })
 
@@ -261,11 +273,11 @@ describe("cleanMapping", () => {
     it("refuses a column the data does not have", async () => {
         const subject = await buildSubject()
 
-        expect(() => subject.cleanMapping({ idColumn: "missing-column" }, headers)).toThrow(
-            expect.objectContaining(refused(CSV_COPY.columnMissing("missing-column"))),
+        expect(thrownBy(() => subject.cleanMapping({ idColumn: "missing-column" }, headers))).toEqual(
+            objectLike(refused(CSV_COPY.columnMissing("missing-column"))),
         )
-        expect(() => subject.cleanMapping({ idColumn: 4 }, headers)).toThrow(
-            expect.objectContaining(refused(CSV_COPY.columnMissing(""))),
+        expect(thrownBy(() => subject.cleanMapping({ idColumn: 4 }, headers))).toEqual(
+            objectLike(refused(CSV_COPY.columnMissing(""))),
         )
     })
 

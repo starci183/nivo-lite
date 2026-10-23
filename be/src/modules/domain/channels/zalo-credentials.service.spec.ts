@@ -24,6 +24,8 @@ import {
     tokens,
 } from "@tests/fixtures/builders/zalo-credentials.builder"
 
+const matching = (pattern: RegExp): unknown => expect.stringMatching(pattern)
+
 const build = async (siteUrl: string = "https://nivo.test") => {
     const secrets = mock<ConnectionSecretsService>()
     const connections = mock<ConnectionsService>()
@@ -108,8 +110,8 @@ describe("ZaloCredentialsService", () => {
             const sealed = String(secrets.save.mock.calls[0]?.[1])
             const pkce: unknown = Reflect.get(sealedJson(sealed), "pkce")
             expect(pkce).toEqual({
-                verifier: expect.stringMatching(/^[\w-]{64}$/u),
-                nonce: expect.stringMatching(/^[0-9a-f]{64}$/u),
+                verifier: matching(/^[\w-]{64}$/u),
+                nonce: matching(/^[0-9a-f]{64}$/u),
                 exp: NOW + 900_000,
             })
             expect(zalo.authorizeUrl).toHaveBeenCalledWith(

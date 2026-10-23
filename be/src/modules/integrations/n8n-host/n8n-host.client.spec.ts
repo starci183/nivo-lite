@@ -12,6 +12,22 @@ import type { HostCommand } from "./n8n-host.contracts"
 import type { N8nHostOptions } from "./n8n-host.options"
 import { N8N_WORKFLOWS } from "./n8n-host.templates"
 
+/** A partial-object matcher, typed `unknown` so it flows into any slot. */
+const objectLike = (shape: Record<string, unknown>): unknown => expect.objectContaining(shape)
+
+/** A sub-array matcher, typed `unknown` so it flows into any slot. */
+const arrayLike = (items: ReadonlyArray<unknown>): unknown => expect.arrayContaining(items)
+
+/** What `run` throws, read as `unknown`; the matcher then judges its fields. */
+const thrownBy = (run: () => unknown): unknown => {
+    try {
+        run()
+    } catch (error) {
+        return error
+    }
+    return undefined
+}
+
 const OPTIONS: N8nHostOptions = {
     host: undefined,
     user: "nivo",
@@ -119,7 +135,7 @@ describe("N8nHostClient run", () => {
     ])("refuses an unconfigured remote command without creating files", async (options) => {
         const { client, spawn, mkdtemp } = await build(options)
 
-        expect(() => client.run(remote)).toThrow(expect.objectContaining({ code: N8nHostErrorCode.HostMissing }))
+        expect(thrownBy(() => client.run(remote))).toEqual(objectLike({ code: N8nHostErrorCode.HostMissing }))
         expect(spawn).not.toHaveBeenCalled()
         expect(mkdtemp).not.toHaveBeenCalled()
     })
@@ -182,7 +198,7 @@ describe("N8nHostClient run", () => {
         ])
         expect(spawn).toHaveBeenCalledWith(
             "ssh",
-            expect.arrayContaining(["-o", `UserKnownHostsFile=${join(DIRECTORY, "known_hosts")}`]),
+            arrayLike(["-o", `UserKnownHostsFile=${join(DIRECTORY, "known_hosts")}`]),
         )
         expect(rm).toHaveBeenCalledWith(DIRECTORY, { recursive: true, force: true })
     })

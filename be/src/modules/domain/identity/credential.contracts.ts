@@ -3,7 +3,7 @@ export interface CredentialMetadata {
     /** The credential family this door accepts. */
     readonly kind: "api-key" | "run-token" | "tool-token" | "link-token" | "posting"
     /** The workflow or operation this credential must admit. */
-    readonly workflow?: string
+    readonly workflow?: string | undefined
 }
 
 /** A credential identity is deliberately separate from a signed-in user's principal. */

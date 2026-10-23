@@ -57,7 +57,7 @@ export const ShiftsQuickImport = () => {
                 ],
                 form,
                 isBusy,
-                canCreate: Object.values(form).some((text) => text.trim() !== ""),
+                canCreate: [form.positions, form.staff, form.coverage].some((text) => text.trim() !== ""),
             }}
             on={{
                 change: (field: ImportField, value) => setForm((current) => ({ ...current, [field]: value })),

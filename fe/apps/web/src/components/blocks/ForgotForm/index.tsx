@@ -9,7 +9,7 @@ import { AUTH_ROUTES } from "@/modules/routes"
 import { ForgotFormBase } from "./component"
 
 /** What the forgot-password page tells the card. */
-type ForgotFormProps = { readonly initialEmail?: string }
+type ForgotFormProps = { readonly initialEmail?: string | undefined }
 
 /** Forgot password: e-mail in, a generic "if the account exists" message out (no account enumeration). */
 export const ForgotForm = (props: ForgotFormProps) => {

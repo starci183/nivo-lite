@@ -14,6 +14,9 @@ import { LoyaltyErrorCode } from "./errors/loyalty.error"
 import { LoyaltyRedemptionService } from "./loyalty-redemption.service"
 import type { RedemptionParams } from "./loyalty-redemption.service"
 
+/** The match-anything matcher, typed `unknown` so it flows into any slot. */
+const anything = (): unknown => expect.anything()
+
 const NOW = Date.UTC(2026, 9, 12)
 const CONFIG: LoyaltyConfig = {
     earn: { perThousandVnd: 1, perVisit: 0, categories: [], trigger: "payment", minOrderVnd: 0 },
@@ -104,7 +107,7 @@ describe("LoyaltyRedemptionService", () => {
         })
 
         expect(ledger.post).toHaveBeenCalledWith({
-            manager: expect.anything(),
+            manager: anything(),
             workspaceId: "ws-1",
             customerId: "c1",
             kind: "redeem",
@@ -119,7 +122,7 @@ describe("LoyaltyRedemptionService", () => {
             expiresAt: null,
             occurredAt: new Date(NOW).toISOString(),
         })
-        expect(rewards.takeOne).toHaveBeenCalledWith(expect.anything(), "ws-1", "r1")
+        expect(rewards.takeOne).toHaveBeenCalledWith(anything(), "ws-1", "r1")
         expect(tx.commits).toBe(1)
     })
 

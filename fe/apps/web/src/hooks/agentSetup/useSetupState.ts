@@ -26,7 +26,10 @@ export const useSetupState = (
 ): { readonly slot: DataSlot<SetupStateView>; readonly reload: () => void } => {
     const read = useQuerySetupStateSwr(
         { installationId },
-        { refreshInterval: (latest) => (latest?.turnPending === true ? SETUP_POLL_MS : 0) },
+        {
+            refreshInterval: (latest: { readonly turnPending: boolean } | undefined) =>
+                latest?.turnPending === true ? SETUP_POLL_MS : 0,
+        },
     )
     const { data, mutate } = read
     const view = useMemo(

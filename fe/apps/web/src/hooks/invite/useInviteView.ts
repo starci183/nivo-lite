@@ -4,6 +4,7 @@ import { useTranslations } from "next-intl"
 import { useQueryAuthUserSwr } from "@/hooks/auth"
 import { useQueryInvitePreviewSwr } from "@/hooks/swr"
 import { AUTH_ROUTES, invitePath, loginPath, signupPath } from "@/modules/routes"
+import { readError } from "@/hooks/workspaceread"
 
 /** What the visitor can do with the invitation: wait, nothing (unusable link), sign in, switch account, or accept. */
 export type InviteVisitor = "loading" | "unavailable" | "signedOut" | "mismatch" | "ready"
@@ -16,7 +17,7 @@ export interface InviteView {
     readonly title: string
     readonly body: string
     readonly forEmail: string
-    readonly asStaff?: string
+    readonly asStaff?: string | undefined
     readonly signedOutHint: string
     readonly signInLabel: string
     readonly signUpLabel: string
@@ -52,7 +53,9 @@ const visitorOf = (signedInEmail: string | undefined, invitedEmail: string): Inv
 export const useInviteView = (token: string): InviteView => {
     const t = useTranslations("invite")
     const { data: user } = useQueryAuthUserSwr()
-    const { data: preview, error } = useQueryInvitePreviewSwr({ token })
+    const swrRead = useQueryInvitePreviewSwr({ token })
+    const { data: preview } = swrRead
+    const error = readError(swrRead)
     const next = invitePath(token)
     const email = user === undefined || user === null ? undefined : user.email
     const base = {
@@ -84,10 +87,7 @@ export const useInviteView = (token: string): InviteView => {
             role: t(preview.role === "manager" ? "roleManager" : "roleStaff"),
         }),
         forEmail: t("forEmail", { email: preview.email }),
-        asStaff:
-            preview.staffName === null || preview.staffName === undefined
-                ? undefined
-                : t("asStaff", { name: preview.staffName }),
+        asStaff: preview.staffName === null ? undefined : t("asStaff", { name: preview.staffName }),
         signedOutHint: t("signedOutHint", { email: preview.email }),
         mismatchBody: t("mismatchBody", { current: email ?? "", email: preview.email }),
     }

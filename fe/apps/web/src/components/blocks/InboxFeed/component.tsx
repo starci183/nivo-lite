@@ -45,7 +45,7 @@ export interface InboxFeedBaseProps {
         readonly emptyTitle: string
         readonly emptyBody: string
         readonly isLoading: boolean
-        readonly error?: string
+        readonly error?: string | undefined
         readonly errorTitle: string
         readonly rows: ReadonlyArray<InboxFeedRow>
     }
@@ -95,8 +95,8 @@ export const InboxFeedBase = (props: InboxFeedBaseProps) => {
                                 <Text
                                     key={line.key}
                                     size="sm"
-                                    tone={line.strong ? undefined : "muted"}
-                                    weight={line.strong ? "medium" : undefined}
+                                    {...(line.strong ? {} : { tone: "muted" as const })}
+                                    {...(line.strong ? { weight: "medium" as const } : {})}
                                 >
                                     {line.text}
                                 </Text>

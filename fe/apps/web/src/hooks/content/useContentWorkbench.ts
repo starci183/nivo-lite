@@ -3,6 +3,7 @@
 import { useMemo } from "react"
 import { useQueryContentConfigurationSwr, useQueryContentMediaSwr, useQueryContentWorkbenchSwr } from "@/hooks/swr"
 import { contentWorkbenchView } from "@/modules/content"
+import { readError } from "@/hooks/workspaceread"
 
 /** Loads the content workbench in the browser, including the media needed by the editor. */
 export const useContentWorkbench = () => {
@@ -32,7 +33,7 @@ export const useContentWorkbench = () => {
     )
     return {
         data,
-        error: workbench.error ?? configuration.error,
+        error: readError(workbench) ?? readError(configuration),
         isLoading: workbench.isLoading || configuration.isLoading,
     }
 }

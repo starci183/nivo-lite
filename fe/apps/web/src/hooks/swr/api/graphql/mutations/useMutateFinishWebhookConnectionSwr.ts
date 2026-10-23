@@ -18,8 +18,7 @@ export const useMutateFinishWebhookConnectionSwr = () =>
         MUTATE_FINISH_WEBHOOK_CONNECTION_SWR_KEY,
         async (_key: string, { arg }: FinishWebhookConnectionArg) => {
             const result = await mutateFinishWebhookConnection({ request: arg })
-            if (result.data === undefined || result.data === null)
-                throw new Error("finishWebhookConnection answered no data")
+            if (!result.data) throw new Error("finishWebhookConnection answered no data")
             return result.data.finishWebhookConnection
         },
     )

@@ -7,8 +7,8 @@ export type LoyaltyRewardFormProps = {
     readonly heading: string
     readonly values: RewardFormValues
     readonly isPending: boolean
-    readonly nameError?: string
-    readonly costError?: string
+    readonly nameError?: string | undefined
+    readonly costError?: string | undefined
     readonly kindOptions: ReadonlyArray<{ readonly id: string; readonly label: string }>
     readonly tierOptions: ReadonlyArray<{ readonly id: string; readonly label: string }>
     readonly nameLabel: string

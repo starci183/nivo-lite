@@ -8,7 +8,7 @@ export interface PillarRow {
     /** A stable key of the row. */
     readonly key: string
     /** The saved id, absent for a row that is not saved yet. */
-    readonly id?: string
+    readonly id?: string | undefined
     readonly name: string
     readonly description: string
     readonly weight: number

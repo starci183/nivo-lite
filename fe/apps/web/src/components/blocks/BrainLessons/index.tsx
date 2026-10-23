@@ -74,7 +74,6 @@ export const BrainLessons = () => {
     const desk = useLessonDesk(board.lenses[0]?.module ?? "")
 
     const connected = buildBrainLessonsState(t, board, desk)
-    if (connected === null) return null
 
     return (
         <BrainLessonsBase

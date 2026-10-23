@@ -9,10 +9,14 @@ interface DriverFacts {
     readonly message: string
 }
 
+/** A driver field as text; anything else is empty. */
+const text = (value: unknown): string => (typeof value === "string" ? value : "")
+
+/** A driver field as a number; anything else is zero. */
+const numeric = (value: unknown): number => (typeof value === "number" ? value : 0)
+
 const factsOf = (error: unknown): DriverFacts => {
     const source = isPlainObject(error) ? error : {}
-    const text = (value: unknown): string => (typeof value === "string" ? value : "")
-    const numeric = (value: unknown): number => (typeof value === "number" ? value : 0)
     return {
         code: text(source.code),
         errno: numeric(source.errno),

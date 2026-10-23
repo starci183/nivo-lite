@@ -69,10 +69,13 @@ const resultOf = (message: RpcMessage, seen: RemoteServerSeen): unknown => {
     return { content: [], structuredContent: { totalVnd: nights * 1_200_000 } }
 }
 
+/** A body chunk as bytes (a stream without an encoding yields buffers). */
+const bytesOf = (chunk: unknown): Buffer => (Buffer.isBuffer(chunk) ? chunk : Buffer.from(String(chunk)))
+
 /** The request body read as one JSON-RPC message; anything else reads as an empty message. */
 const messageOf = async (request: IncomingMessage): Promise<RpcMessage> => {
     const chunks: Array<Buffer> = []
-    for await (const chunk of request) chunks.push(Buffer.from(chunk))
+    for await (const chunk of request) chunks.push(bytesOf(chunk))
     const read = parseJsonText(Buffer.concat(chunks).toString("utf8"))
     return read.ok && typeof read.value === "object" && read.value !== null ? { ...read.value } : {}
 }

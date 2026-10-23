@@ -15,5 +15,5 @@ export interface UpdateMoneyConnectionRequest {
     /** The account holder. */
     readonly holder: string
     /** SePay: the API key. */
-    readonly apiKey?: string
+    readonly apiKey?: string | undefined
 }

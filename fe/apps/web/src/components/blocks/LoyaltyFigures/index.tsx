@@ -8,7 +8,9 @@ import { LoyaltyFiguresBase } from "./component"
 export const LoyaltyFigures = () => {
     const t = useTranslations("loyalty")
     const format = useFormatter()
-    const { data, error } = useQueryLoyaltyBoardSwr()
+    const board = useQueryLoyaltyBoardSwr()
+    const { data } = board
+    const error: unknown = board.error
     const f = data?.figures
     return (
         <LoyaltyFiguresBase

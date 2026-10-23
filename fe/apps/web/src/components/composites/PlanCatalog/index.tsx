@@ -29,12 +29,14 @@ export interface PlanCardView {
     readonly badges: ReadonlyArray<{ readonly label: string; readonly tone: "success" | "accent" | "neutral" }>
     readonly notes: ReadonlyArray<string>
     readonly facts: ReadonlyArray<string>
-    readonly tier?: {
-        readonly label: string
-        readonly value: string
-        readonly options: ReadonlyArray<{ readonly id: string; readonly label: string }>
-    }
-    readonly seats?: { readonly label: string; readonly value: number; readonly max: number }
+    readonly tier?:
+        | {
+              readonly label: string
+              readonly value: string
+              readonly options: ReadonlyArray<{ readonly id: string; readonly label: string }>
+          }
+        | undefined
+    readonly seats?: { readonly label: string; readonly value: number; readonly max: number } | undefined
     readonly action: {
         readonly kind: "checkout" | "contact"
         readonly label: string
@@ -59,8 +61,8 @@ interface PlanCatalogProps {
         readonly cycleLabel: string
         readonly cycle: string
         readonly cycleOptions: ReadonlyArray<{ readonly value: string; readonly label: string }>
-        readonly notice?: string
-        readonly storage?: string
+        readonly notice?: string | undefined
+        readonly storage?: string | undefined
         readonly groups: ReadonlyArray<PlanGroupView>
     }
     readonly on: {

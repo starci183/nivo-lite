@@ -1,6 +1,6 @@
 "use client"
 
-import { answeredData } from "@/hooks/workspaceread"
+import { answeredData, readError } from "@/hooks/workspaceread"
 import type { WorkspaceReadKey } from "@/hooks/workspaceread"
 import useSWR from "swr"
 import type { SWRConfiguration } from "swr"
@@ -13,15 +13,24 @@ import type { QueryOfficeMessagesRequest } from "@/modules/api/graphql/queries/q
 /** The SWR key of {@link useQueryOfficeMessagesSwr}. */
 export const QUERY_OFFICE_MESSAGES_SWR_KEY = "QUERY_OFFICE_MESSAGES_SWR"
 
+/** One read of the `officeMessages` query. */
+const readOfficeMessages = async ([, , input]: WorkspaceReadKey<QueryOfficeMessagesRequest>) =>
+    answeredData(await queryOfficeMessages({ request: input }), QUERY_OFFICE_MESSAGES_SWR_KEY).officeMessages
+
+/** What one read of the `officeMessages` query answers. */
+type OfficeMessagesPage = Awaited<ReturnType<typeof readOfficeMessages>>
+
 /** The back end `officeMessages` query. Pass `null` to wait for the arguments. */
-export const useQueryOfficeMessagesSwr = (request: QueryOfficeMessagesRequest | null, config?: SWRConfiguration) => {
+export const useQueryOfficeMessagesSwr = (
+    request: QueryOfficeMessagesRequest | null,
+    config?: SWRConfiguration<OfficeMessagesPage>,
+) => {
     const workspaceId = useAppSelector((state) => state.workspace.activeWorkspaceId)
     const latest = useSWR(
         request === null || workspaceId === undefined
             ? null
             : ([QUERY_OFFICE_MESSAGES_SWR_KEY, workspaceId, request] as const),
-        async ([, , input]: WorkspaceReadKey<QueryOfficeMessagesRequest>) =>
-            answeredData(await queryOfficeMessages({ request: input }), QUERY_OFFICE_MESSAGES_SWR_KEY).officeMessages,
+        readOfficeMessages,
         config,
     )
     const earlier = useSWRMutation("OFFICE_EARLIER_PAGE", async (_key: string, { arg }: TriggerArg) => {
@@ -38,7 +47,7 @@ export const useQueryOfficeMessagesSwr = (request: QueryOfficeMessagesRequest | 
             return latest.data
         },
         get error() {
-            return latest.error
+            return readError(latest)
         },
         get isValidating() {
             return latest.isValidating

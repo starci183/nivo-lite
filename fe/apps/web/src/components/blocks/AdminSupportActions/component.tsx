@@ -37,7 +37,7 @@ export interface AdminSupportActionsBaseProps {
         readonly invites: ReadonlyArray<AdminInviteRef & { readonly label: string }>
         readonly isPending: boolean
         /** The confirmation question, or undefined while no action waits for a yes. */
-        readonly question?: string
+        readonly question?: string | undefined
         readonly isQuestionDangerous: boolean
     }
     readonly on: {

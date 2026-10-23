@@ -12,7 +12,7 @@ export type GraphQLHeaders = Partial<Record<GraphQLHeadersKey, string>> & Record
 /** Per-operation options: the optional `signal` aborts the underlying `fetch` (an SWR cleanup, a route change). */
 export interface GraphQLOperationContext {
     /** Optional abort signal. */
-    signal?: AbortSignal
+    signal?: AbortSignal | undefined
 }
 
 /** Parameters every query file takes. */
@@ -22,7 +22,7 @@ export interface QueryParams<TQuery, TRequest = undefined> extends GraphQLOperat
     /** The variables of the query. */
     request?: TRequest
     /** Extra headers. */
-    headers?: GraphQLHeaders
+    headers?: GraphQLHeaders | undefined
 }
 
 /** Parameters every mutation file takes. */
@@ -32,7 +32,7 @@ export interface MutateParams<TMutation, TRequest> extends GraphQLOperationConte
     /** The input of the mutation. */
     request: TRequest
     /** Extra headers. */
-    headers?: GraphQLHeaders
+    headers?: GraphQLHeaders | undefined
 }
 
 /** The variables bag of an operation whose single argument is `input`. */

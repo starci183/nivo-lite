@@ -22,6 +22,8 @@ import { WorkDecisionService } from "./work-decision.service"
 import { LEAD_DIRECTORY } from "./work-engine.decorators"
 import type { LeadDirectory } from "./work-engine.port"
 import { WorkEngineService } from "./work-engine.service"
+
+const anything = (): unknown => expect.anything()
 const memberOf = builder<WorkspaceMember>({
     userId: "user-1",
     workspaceId: "ws-1",
@@ -317,7 +319,7 @@ describe("WorkDecisionService", () => {
                     decidedBy: "An",
                     editedDraft: "Edited legacy",
                 },
-                expect.anything(),
+                anything(),
             )
             expect(tx.commits).toBe(1)
         })
@@ -331,7 +333,7 @@ describe("WorkDecisionService", () => {
             await expect(service.decideExecution("user-1", "ws-1", cardRequestOf())).resolves.toBe(settled)
             expect(tx.commits).toBe(1)
             expect(resumeWork).not.toHaveBeenCalled()
-            expect(responsibilities.setStatus).toHaveBeenCalledWith(ctx, "resp-1", "done", expect.anything())
+            expect(responsibilities.setStatus).toHaveBeenCalledWith(ctx, "resp-1", "done", anything())
             expect(log).toHaveBeenCalledWith(
                 ctx,
                 {
@@ -341,12 +343,12 @@ describe("WorkDecisionService", () => {
                     summary: "legacy.approvedEvent()",
                     evidence: "Hi Minh",
                 },
-                expect.anything(),
+                anything(),
             )
             expect(office.postSystem).toHaveBeenCalledWith({
                 workspaceId: "ws-1",
                 leadId: "lead-1",
-                manager: expect.anything(),
+                manager: anything(),
                 body: "legacy.approvedMessage()",
             })
         })
@@ -357,11 +359,11 @@ describe("WorkDecisionService", () => {
             await expect(
                 service.decideExecution("user-1", "ws-1", cardRequestOf({ decision: "rejected" })),
             ).resolves.toBe(settled)
-            expect(responsibilities.setStatus).toHaveBeenCalledWith(ctx, "resp-1", "open", expect.anything())
+            expect(responsibilities.setStatus).toHaveBeenCalledWith(ctx, "resp-1", "open", anything())
             expect(log).toHaveBeenCalledWith(
                 ctx,
                 expect.objectContaining({ kind: "execution.rejected", evidence: null }),
-                expect.anything(),
+                anything(),
             )
         })
 

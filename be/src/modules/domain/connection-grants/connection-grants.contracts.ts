@@ -6,7 +6,7 @@ export interface AgentGrantWish {
     /** The agent. */
     readonly agentId: string
     /** The level, when the caller picks one. */
-    readonly access?: Access
+    readonly access?: Access | undefined
 }
 
 /** One connection wanted for an agent; without a level it keeps its current one (or starts at ask). */
@@ -14,7 +14,7 @@ export interface ConnectionGrantWish {
     /** The connection. */
     readonly connectionId: string
     /** The level, when the caller picks one. */
-    readonly access?: Access
+    readonly access?: Access | undefined
 }
 
 /** One agent access to a connection, as the console lists it. */

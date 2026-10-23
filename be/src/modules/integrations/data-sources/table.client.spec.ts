@@ -10,6 +10,22 @@ import { TableClient } from "./table.client"
 import type { PublicHostClient, PublicResponse } from "./public-host.client"
 import type { WorkbookReader } from "./workbook-reader.contracts"
 
+/** A partial-object matcher, typed `unknown` so it flows into any slot. */
+const objectLike = (shape: Record<string, unknown>): unknown => expect.objectContaining(shape)
+
+/** A by-constructor matcher, typed `unknown` so it flows into any slot. */
+const anyOf = (type: unknown): unknown => expect.any(type)
+
+/** What `run` throws, read as `unknown`; the matcher then judges its fields. */
+const thrownBy = (run: () => unknown): unknown => {
+    try {
+        run()
+    } catch (error) {
+        return error
+    }
+    return undefined
+}
+
 const registerTableClient = () => {
     beforeEach(() => {
         mockWord.text = "word"
@@ -49,16 +65,14 @@ const registerReadTextAndReadGrid = () => {
         it("refuses text with no rows", async () => {
             const { client } = await build()
 
-            expect(() => client.readText("")).toThrow(
-                expect.objectContaining({ params: { detail: TABLE_COPY.noData } }),
-            )
+            expect(thrownBy(() => client.readText(""))).toEqual(objectLike({ params: { detail: TABLE_COPY.noData } }))
         })
 
         it("refuses unterminated quotes when the parser has no usable rows", async () => {
             const { client } = await build()
 
-            expect(() => client.readText('"')).toThrow(
-                expect.objectContaining({
+            expect(thrownBy(() => client.readText('"'))).toEqual(
+                objectLike({
                     code: DataSourcesErrorCode.Rejected,
                     params: { detail: TABLE_COPY.brokenQuotes },
                 }),
@@ -143,12 +157,12 @@ const registerReadFile = () => {
             await expect(answer).rejects.toMatchObject({
                 code: DataSourcesErrorCode.Rejected,
                 params: { detail: TABLE_COPY.unreadableExcel },
-                cause: expect.objectContaining({
+                cause: objectLike({
                     name: "TypeError",
                     message: "readFiles(...).then is not a function",
                 }),
             })
-            await expect(answer).rejects.toHaveProperty("cause", expect.any(TypeError))
+            await expect(answer).rejects.toHaveProperty("cause", anyOf(TypeError))
         })
 
         it("refuses a workbook when the reader returns no sheets", async () => {

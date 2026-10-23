@@ -143,7 +143,9 @@ export const SalesDecisions = (props: SalesDecisionsProps) => {
                 draft: decisionForm.draft,
                 amount: decisionForm.amount,
                 toggleEdit: decisionForm.toggleEdit,
-                decide: context.decide,
+                decide: (id, decision) => {
+                    void context.decide(id, decision)
+                },
             }}
         />
     )

@@ -3,6 +3,19 @@ import { strToU8, zipSync } from "fflate"
 import { DocumentsErrorCode } from "./errors/documents.error"
 import { XLSX_MAX_ROWS, captured, pptxToText, xlsxToText } from "./ooxml.mapper"
 
+/** A partial-object matcher, typed `unknown` so it flows into any slot. */
+const objectLike = (shape: Record<string, unknown>): unknown => expect.objectContaining(shape)
+
+/** What `run` throws, read as `unknown`; the matcher then judges its fields. */
+const thrownBy = (run: () => unknown): unknown => {
+    try {
+        run()
+    } catch (error) {
+        return error
+    }
+    return undefined
+}
+
 const SUBJECT = Symbol("ooxml.mapper")
 
 const build = async () => {
@@ -117,8 +130,8 @@ describe("xlsxToText", () => {
     it("refuses an archive that is not a workbook", async () => {
         const subject = await build()
 
-        expect(() => subject.xlsxToText(zipOf({ "other.xml": "<a/>" }))).toThrow(
-            expect.objectContaining({ code: DocumentsErrorCode.FileInvalid }),
+        expect(thrownBy(() => subject.xlsxToText(zipOf({ "other.xml": "<a/>" })))).toEqual(
+            objectLike({ code: DocumentsErrorCode.FileInvalid }),
         )
     })
 })
@@ -183,8 +196,8 @@ describe("pptxToText", () => {
     it("refuses an archive with no slides", async () => {
         const subject = await build()
 
-        expect(() => subject.pptxToText(zipOf({ "other.xml": "<a/>" }))).toThrow(
-            expect.objectContaining({ code: DocumentsErrorCode.FileInvalid }),
+        expect(thrownBy(() => subject.pptxToText(zipOf({ "other.xml": "<a/>" })))).toEqual(
+            objectLike({ code: DocumentsErrorCode.FileInvalid }),
         )
     })
 })

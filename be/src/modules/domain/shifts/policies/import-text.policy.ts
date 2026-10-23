@@ -208,12 +208,17 @@ const parseStaffLine = (line: string, number: number, known: Known): ParsedStaff
     return { name, positions, wage, maxWeek }
 }
 
-const parseCoverageLine = (line: string, number: number, known: Known): Array<ParsedBlock> | ImportError => {
+/** The blocks one coverage line expands to (one per day). */
+interface ParsedBlocks {
+    readonly blocks: Array<ParsedBlock>
+}
+
+const parseCoverageLine = (line: string, number: number, known: Known): ParsedBlocks | ImportError => {
     const folded = fold(line)
     const peak = /(cao diem|peak)\s*$/u.test(folded)
     const body = folded.replace(/(cao diem|peak)\s*$/u, "").trim()
     const failed = (code: ImportErrorCode, subject = ""): ImportError => ({ code, line: number, subject })
-    const read = (captures: CoverageCaptures): Array<ParsedBlock> | ImportError => {
+    const read = (captures: CoverageCaptures): ParsedBlocks | ImportError => {
         const days = parseDays(captures.days)
         const start = parseClock({ hours: captures.startHours, minutes: captures.startMinutes })
         const end = parseClock({ hours: captures.endHours, minutes: captures.endMinutes })
@@ -224,7 +229,7 @@ const parseCoverageLine = (line: string, number: number, known: Known): Array<Pa
         const position = known(captures.position)
         if (position === undefined) return failed("coverage-position", captures.position)
         if (ideal < min) return failed("coverage-ideal")
-        return days.map((weekday) => ({ weekday, start, end, position, min, ideal, peak }))
+        return { blocks: days.map((weekday) => ({ weekday, start, end, position, min, ideal, peak })) }
     }
     const counts = / (?<minimum>\d{1,2})(?: ?[-–] ?(?<ideal>\d{1,2}))?$/u.exec(body)
     if (counts?.groups === undefined) return failed("coverage-format")
@@ -248,7 +253,13 @@ const parseCoverageLine = (line: string, number: number, known: Known): Array<Pa
     })
 }
 
-const isError = (value: ParsedStaff | ImportError | Array<ParsedBlock>): value is ImportError => "code" in value
+const isError = (value: ParsedStaff | ImportError | ParsedBlocks): value is ImportError => "code" in value
+
+/** The non-blank lines of a text with their one-based line numbers. */
+const numberedLines = (text: string): Array<readonly [string, number]> =>
+    text
+        .split("\n")
+        .flatMap((raw, index): Array<readonly [string, number]> => (raw.trim() === "" ? [] : [[raw.trim(), index + 1]]))
 
 /**
  * Reads the quick import text into positions, people and coverage blocks. Pure: the screen previews it and the back end applies it.
@@ -261,18 +272,12 @@ export const parseImport = (input: ImportText, knownPositions: ReadonlyArray<str
         .map((x) => x.trim())
         .filter((name, index, all) => name !== "" && all.findIndex((x) => fold(x) === fold(name)) === index)
     const known = knownOf([...knownPositions, ...positions])
-    const lines = (text: string): Array<readonly [string, number]> =>
-        text
-            .split("\n")
-            .flatMap((raw, index): Array<readonly [string, number]> =>
-                raw.trim() === "" ? [] : [[raw.trim(), index + 1]],
-            )
-    const staffResults = lines(input.staff).map(([line, number]) => parseStaffLine(line, number, known))
-    const blockResults = lines(input.coverage).map(([line, number]) => parseCoverageLine(line, number, known))
+    const staffResults = numberedLines(input.staff).map(([line, number]) => parseStaffLine(line, number, known))
+    const blockResults = numberedLines(input.coverage).map(([line, number]) => parseCoverageLine(line, number, known))
     return {
         positions,
         staff: staffResults.flatMap((r) => (isError(r) ? [] : [r])),
-        blocks: blockResults.flatMap((r) => (isError(r) ? [] : r)),
+        blocks: blockResults.flatMap((r) => (isError(r) ? [] : r.blocks)),
         errors: [...staffResults, ...blockResults].flatMap((r) => (isError(r) ? [r] : [])),
     }
 }
