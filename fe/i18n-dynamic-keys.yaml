@@ -5,37 +5,12 @@ namespaces:
   admin:
     - key: "failTitle"
       reason: 'Read as the string "failTitle" in components/blocks/AccountEmail/index.tsx, components/blocks/AccountPassword/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - prefix: "filter"
-      reason: "Key family built at run time as `filter${id.charAt(0).toUpperCase()}${id.slice(1)}` in components/blocks/AdminWorkspaces/index.tsx; the value comes from data (status, kind, id), so the detector cannot enumerate the keys."
-    - prefix: "plan"
-      reason: "Key family built at run time as `plan${code.charAt(0).toUpperCase()}${code.slice(1)}` in components/blocks/AdminSupportActions/index.tsx; the value comes from data (status, kind, id), so the detector cannot enumerate the keys."
   agentChat:
     - key: "testIntro"
       reason: 'Read as the string "testIntro" in components/blocks/MetaWizard/component.tsx, components/blocks/MetaWizard/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-  agentProfile:
-    - prefix: "chip_"
-      reason: "Key family built at run time as `chip_${chip.id}` in components/blocks/AgentProfileHead/index.tsx; the value comes from data (status, kind, id), so the detector cannot enumerate the keys."
-    - prefix: "mode_"
-      reason: "Key family built at run time as `mode_${rule.mode}` in components/blocks/AgentProfileRules/index.tsx; the value comes from data (status, kind, id), so the detector cannot enumerate the keys."
-    - prefix: "role_"
-      reason: "Key family built at run time as `role_${role}` in components/blocks/AgentProfileOwner/index.tsx, components/blocks/AgentProfileAssignable/index.tsx; the value comes from data (status, kind, id), so the detector cannot enumerate the keys."
-    - prefix: "ruleHint_"
-      reason: "Key family built at run time as `ruleHint_${rule.mode}` in components/blocks/AgentProfileRules/index.tsx; the value comes from data (status, kind, id), so the detector cannot enumerate the keys."
-    - prefix: "workStatus_"
-      reason: "Key family built at run time as `workStatus_${work.status}` in components/blocks/AgentProfileRecent/index.tsx; the value comes from data (status, kind, id), so the detector cannot enumerate the keys."
   approval:
-    - key: "approveSend"
-      reason: 'Read as the string "approveSend" in components/blocks/LeadExecution/index.tsx, components/branches/OfficeApprovalCard/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "characters"
-      reason: 'Read as the string "characters" in components/blocks/LeadExecution/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "discardEdits"
-      reason: 'Read as the string "discardEdits" in components/blocks/LeadExecution/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "needsApproval"
-      reason: 'Read as the string "needsApproval" in components/blocks/LeadExecution/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
     - prefix: "step"
       reason: "Key family built at run time as `step${key}` in hooks/overviewPromo/overviewPromo.shared.ts; the value comes from data (status, kind, id), so the detector cannot enumerate the keys."
-    - key: "willSend"
-      reason: 'Read as the string "willSend" in components/blocks/LeadExecution/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
   authority:
     - suffix: "Title"
       reason: "Key family built at run time as `${kind}Title` in hooks/connection-rows/connection-rows.shared.ts; the stem comes from data, so the detector cannot enumerate the keys."
@@ -46,35 +21,11 @@ namespaces:
       reason: "Key family built at run time as `${kind}Title` in hooks/connection-rows/connection-rows.shared.ts; the stem comes from data, so the detector cannot enumerate the keys."
     - key: "proposed"
       reason: 'Read as the string "proposed" in components/blocks/BrainLessons/index.tsx, components/blocks/HiringInterviewReply/component.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "reasonAsk"
-      reason: 'Read as the string "reasonAsk" in modules/brain/advice.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "reasonFirstTrusted"
-      reason: 'Read as the string "reasonFirstTrusted" in modules/brain/advice.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "reasonFirstUntrusted"
-      reason: 'Read as the string "reasonFirstUntrusted" in modules/brain/advice.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "reasonNewer"
-      reason: 'Read as the string "reasonNewer" in modules/brain/advice.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "reasonRejectAi"
-      reason: 'Read as the string "reasonRejectAi" in modules/brain/advice.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "reasonRejectCustomer"
-      reason: 'Read as the string "reasonRejectCustomer" in modules/brain/advice.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "reasonSchedule"
-      reason: 'Read as the string "reasonSchedule" in modules/brain/advice.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "reasonScheduleNew"
-      reason: 'Read as the string "reasonScheduleNew" in modules/brain/advice.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "reasonSplit"
-      reason: 'Read as the string "reasonSplit" in modules/brain/advice.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "reasonStale"
-      reason: 'Read as the string "reasonStale" in modules/brain/advice.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "reasonSystem"
-      reason: 'Read as the string "reasonSystem" in modules/brain/advice.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
     - key: "situation"
       reason: 'Read as the string "situation" in components/leaves/SetupWriteView/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
     - key: "split"
       reason: 'Read as the string "split" in modules/brain/advice.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
   common:
-    - key: "aiChip"
-      reason: 'Read as the string "aiChip" in components/blocks/LeadContext/index.tsx, components/blocks/LeadExecution/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
     - key: "more"
       reason: 'Read as the string "more" in components/blocks/ConnectionRow/component.tsx, components/blocks/LeadHeader/component.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
     - key: "open"
@@ -113,13 +64,6 @@ namespaces:
   connectorDatabase:
     - key: "stepOf"
       reason: 'Read as the string "stepOf" in components/blocks/CsvImportWizard/index.tsx, components/blocks/DatabaseWizard/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-  content:
-    - key: "claimFigure"
-      reason: 'Read as the string "claimFigure" in modules/content/claims.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "claimLength"
-      reason: 'Read as the string "claimLength" in modules/content/claims.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "claimPromise"
-      reason: 'Read as the string "claimPromise" in modules/content/claims.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
   decisions:
     - key: "loadFailedTitle"
       reason: 'Read as the string "loadFailedTitle" in components/blocks/AccountingFigures/index.tsx, components/blocks/BookingFigures/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
@@ -136,65 +80,14 @@ namespaces:
       reason: 'Read as the string "reconnect" in components/blocks/MetaWizard/component.tsx, components/blocks/MetaWizard/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
     - key: "unavailable"
       reason: 'Read as the string "unavailable" in components/blocks/GoogleWizard/index.tsx, components/blocks/InviteOverview/component.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-  hiring:
-    - key: "jobEditorSave"
-      reason: 'Read as the string "jobEditorSave" in components/composites/HiringJobEditorDialog/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "offerFailed"
-      reason: 'Read as the string "offerFailed" in components/composites/HiringOfferDialog/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "offerHandled"
-      reason: 'Read as the string "offerHandled" in components/composites/HiringOfferDialog/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "offerNote"
-      reason: 'Read as the string "offerNote" in components/composites/HiringOfferDialog/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "offerOpenDecisions"
-      reason: 'Read as the string "offerOpenDecisions" in components/composites/HiringOfferDialog/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "offerPay"
-      reason: 'Read as the string "offerPay" in components/composites/HiringOfferDialog/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "offerPayExample"
-      reason: 'Read as the string "offerPayExample" in components/composites/HiringOfferDialog/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "offerProbation"
-      reason: 'Read as the string "offerProbation" in components/composites/HiringOfferDialog/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "offerRole"
-      reason: 'Read as the string "offerRole" in components/composites/HiringOfferDialog/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "offerStart"
-      reason: 'Read as the string "offerStart" in components/composites/HiringOfferDialog/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "offerWaiting"
-      reason: 'Read as the string "offerWaiting" in components/composites/HiringOfferDialog/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
   invite:
     - key: "failed"
       reason: 'Read as the string "failed" in components/blocks/AutomationsBoard/component.tsx, components/blocks/AutomationsBoard/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
   knowledge:
-    - key: "driveErrDenied"
-      reason: 'Read as the string "driveErrDenied" in components/blocks/KnowledgeDriveGrant/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "driveErrGeneric"
-      reason: 'Read as the string "driveErrGeneric" in components/blocks/KnowledgeDriveGrant/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "driveErrScope"
-      reason: 'Read as the string "driveErrScope" in components/blocks/KnowledgeDriveGrant/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "driveErrUnavailable"
-      reason: 'Read as the string "driveErrUnavailable" in components/blocks/KnowledgeDriveGrant/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "errBadLink"
-      reason: 'Read as the string "errBadLink" in modules/documents/link-rows.ts, modules/documents/queue.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "errBadType"
-      reason: 'Read as the string "errBadType" in modules/documents/queue-items.ts, modules/documents/queue.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
     - key: "errEnqueue"
       reason: 'Read as the string "errEnqueue" in hooks/knowledge/useAddDocuments.ts, hooks/knowledge/useAddQueue.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "errNeedGrant"
-      reason: 'Read as the string "errNeedGrant" in modules/documents/link-rows.ts, modules/documents/queue.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "errNestedZip"
-      reason: 'Read as the string "errNestedZip" in modules/documents/queue.ts, modules/documents/zip.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "errTooBig"
-      reason: 'Read as the string "errTooBig" in modules/documents/queue-items.ts, modules/documents/queue.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
     - key: "errUpload"
       reason: 'Read as the string "errUpload" in hooks/knowledge/useAddQueue.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "errZipBad"
-      reason: 'Read as the string "errZipBad" in modules/documents/queue.ts, modules/documents/zip.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "errZipBomb"
-      reason: 'Read as the string "errZipBomb" in modules/documents/queue.ts, modules/documents/zip.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "errZipEmpty"
-      reason: 'Read as the string "errZipEmpty" in modules/documents/queue-items.ts, modules/documents/queue.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "errZipTooBig"
-      reason: 'Read as the string "errZipTooBig" in modules/documents/queue.ts, modules/documents/zip.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "errZipTotal"
-      reason: 'Read as the string "errZipTotal" in modules/documents/queue.ts, modules/documents/zip.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
     - key: "loadFailTitle"
       reason: 'Read as the string "loadFailTitle" in components/blocks/AuthorityGoals/index.tsx, components/blocks/AuthorityLimits/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
     - key: "notFoundTitle"
@@ -203,21 +96,6 @@ namespaces:
       reason: 'Read as the string "open" in components/blocks/AgentChat/component.tsx, components/blocks/BookingDesk/component.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
     - key: "urlHint"
       reason: 'Read as the string "urlHint" in components/blocks/WebhookWizard/component.tsx, components/blocks/WebhookWizard/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-  lead:
-    - key: "kindAgentInstalled"
-      reason: 'Read as the string "kindAgentInstalled" in hooks/leadJourney/leadJourney.shared.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "kindAgentUpdated"
-      reason: 'Read as the string "kindAgentUpdated" in hooks/leadJourney/leadJourney.shared.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "kindAssigned"
-      reason: 'Read as the string "kindAssigned" in hooks/leadJourney/leadJourney.shared.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "kindContext"
-      reason: 'Read as the string "kindContext" in hooks/leadJourney/leadJourney.shared.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "kindDrafted"
-      reason: 'Read as the string "kindDrafted" in hooks/leadJourney/leadJourney.shared.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "kindLeadCaptured"
-      reason: 'Read as the string "kindLeadCaptured" in hooks/leadJourney/leadJourney.shared.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "kindRejected"
-      reason: 'Read as the string "kindRejected" in hooks/decisions/decisions.shared.ts, hooks/leadJourney/leadJourney.shared.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
   leads:
     - key: "description"
       reason: 'Read as the string "description" in components/blocks/AuthorityHead/index.tsx, components/blocks/BookingServices/component.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
@@ -230,13 +108,6 @@ namespaces:
   loyalty:
     - key: "actionFailed"
       reason: 'Read as the string "actionFailed" in hooks/chatbotView/useChatbotInbox.ts, hooks/content/useContentCommand.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - prefix: "campaignStatus_"
-      reason: "Key family built at run time as `campaignStatus_${status}` in hooks/loyaltyPromo/loyaltyPromo.shared.ts; the value comes from data (status, kind, id), so the detector cannot enumerate the keys."
-    - prefix: "sort_"
-      reason: "Key family built at run time as `sort_${key}` in components/blocks/LoyaltyMembers/index.tsx; the value comes from data (status, kind, id), so the detector cannot enumerate the keys."
-  moduleSetup:
-    - prefix: "req_"
-      reason: "Key family built at run time as `req_${key}` in hooks/setupRequirements/setupRequirements.shared.ts; the value comes from data (status, kind, id), so the detector cannot enumerate the keys."
   modules:
     - key: "addAgent"
       reason: 'Read as the string "addAgent" in components/composites/OfficeInfoPanel/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
@@ -251,7 +122,7 @@ namespaces:
     - prefix: "hint"
       reason: "Key family built at run time as `hint${key}` in hooks/overviewPromo/overviewPromo.shared.ts; the value comes from data (status, kind, id), so the detector cannot enumerate the keys."
     - key: "kindCustomer"
-      reason: 'Read as the string "kindCustomer" in hooks/agentChat/useAgentChat.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
+      reason: 'Read as the string "kindCustomer" in hooks/agentChat/agentChat.shared.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
     - key: "open"
       reason: 'Read as the string "open" in components/blocks/AgentChat/component.tsx, components/blocks/BookingDesk/component.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
     - key: "statusPaused"
@@ -262,81 +133,20 @@ namespaces:
     - key: "installing"
       reason: 'Read as the string "installing" in hooks/installations/installations.shared.ts, modules/documents/knowledge.mapper.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
   office:
-    - key: "addAgent"
-      reason: 'Read as the string "addAgent" in components/composites/OfficeInfoPanel/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "approveEdited"
-      reason: 'Read as the string "approveEdited" in components/branches/OfficeApprovalCard/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "approveSend"
-      reason: 'Read as the string "approveSend" in components/blocks/LeadExecution/index.tsx, components/branches/OfficeApprovalCard/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "basisCount"
-      reason: 'Read as the string "basisCount" in components/leaves/OfficeExceptionFields/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "cancelEdit"
-      reason: 'Read as the string "cancelEdit" in components/branches/OfficeApprovalCard/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "chat11"
-      reason: 'Read as the string "chat11" in components/composites/OfficeInfoPanel/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "cmdAskReading"
-      reason: 'Read as the string "cmdAskReading" in hooks/officeMessenger/useOfficeMessenger.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
     - key: "crumbHome"
       reason: 'Read as the string "crumbHome" in components/blocks/AgentInstanceHeader/index.tsx, components/blocks/AgentInstances/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
     - key: "crumbLabel"
       reason: 'Read as the string "crumbLabel" in components/blocks/AgentInstanceHeader/index.tsx, components/blocks/AgentInstances/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "memberCount"
-      reason: 'Read as the string "memberCount" in components/blocks/OfficeMessenger/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "memberCountAgents"
-      reason: 'Read as the string "memberCountAgents" in components/blocks/OfficeMessenger/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "memberCountOne"
-      reason: 'Read as the string "memberCountOne" in components/blocks/OfficeMessenger/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "mention"
-      reason: 'Read as the string "mention" in components/composites/OfficeInfoPanel/index.tsx, modules/types/leadgen.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "noTasks"
-      reason: 'Read as the string "noTasks" in components/composites/OfficeTasks/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "noTasksHint"
-      reason: 'Read as the string "noTasksHint" in components/composites/OfficeTasks/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "noTasksMatch"
-      reason: 'Read as the string "noTasksMatch" in components/composites/OfficeTasks/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "noTasksMatchHint"
-      reason: 'Read as the string "noTasksMatchHint" in components/composites/OfficeTasks/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "openArrow"
-      reason: 'Read as the string "openArrow" in components/composites/OfficeTasks/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "openLeads"
-      reason: 'Read as the string "openLeads" in components/composites/OfficeTasks/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "sectionGroups"
-      reason: 'Read as the string "sectionGroups" in components/composites/OfficeConversations/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "tasksFact"
-      reason: 'Read as the string "tasksFact" in components/composites/OfficeTasks/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "tasksLabel"
-      reason: 'Read as the string "tasksLabel" in components/composites/OfficeTasks/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "typing"
-      reason: 'Read as the string "typing" in components/blocks/OfficeMessenger/index.tsx, hooks/agentChat/useAgentChatCopy.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "youTag"
-      reason: 'Read as the string "youTag" in components/composites/OfficeInfoPanel/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
   onboarding:
     - suffix: "Title"
       reason: "Key family built at run time as `${kind}Title` in hooks/connection-rows/connection-rows.shared.ts; the stem comes from data, so the detector cannot enumerate the keys."
   overview:
-    - key: "countLeads"
-      reason: 'Read as the string "countLeads" in hooks/overviewResults/overviewResults.shared.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "countOrders"
-      reason: 'Read as the string "countOrders" in hooks/overviewResults/overviewResults.shared.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "countPayments"
-      reason: 'Read as the string "countPayments" in hooks/accounting/accounting.shared.ts, hooks/accounting/useAccountingOverview.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "countRecords"
-      reason: 'Read as the string "countRecords" in hooks/overviewResults/overviewResults.shared.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
     - key: "openLeads"
       reason: 'Read as the string "openLeads" in components/composites/OfficeTasks/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
     - key: "pipeline"
       reason: 'Read as the string "pipeline" in components/blocks/HiringFigures/index.tsx, features/pages/SalesWorkbenchPage/component.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
     - key: "source"
       reason: 'Read as the string "source" in app/[locale]/(console)/knowledge/[id]/error.tsx, components/blocks/CsvImportWizard/component.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-  promo:
-    - prefix: "cta"
-      reason: "Key family built at run time as `cta${key}` in hooks/overviewPromo/overviewPromo.shared.ts; the value comes from data (status, kind, id), so the detector cannot enumerate the keys."
-    - key: "foundingMember"
-      reason: 'Read as the string "foundingMember" in components/blocks/ConsoleHeader/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - prefix: "hint"
-      reason: "Key family built at run time as `hint${key}` in hooks/overviewPromo/overviewPromo.shared.ts; the value comes from data (status, kind, id), so the detector cannot enumerate the keys."
-    - prefix: "step"
-      reason: "Key family built at run time as `step${key}` in hooks/overviewPromo/overviewPromo.shared.ts; the value comes from data (status, kind, id), so the detector cannot enumerate the keys."
   promoAds:
     - suffix: "Title"
       reason: "Key family built at run time as `${kind}Title` in hooks/connection-rows/connection-rows.shared.ts; the stem comes from data, so the detector cannot enumerate the keys."
@@ -344,36 +154,6 @@ namespaces:
     - prefix: "filter"
       reason: "Key family built at run time as `filter${id.charAt(0).toUpperCase()}${id.slice(1)}` in components/blocks/AdminWorkspaces/index.tsx; the value comes from data (status, kind, id), so the detector cannot enumerate the keys."
   shell:
-    - key: "navAuthority"
-      reason: 'Read as the string "navAuthority" in hooks/console/console.shared.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "navAutomations"
-      reason: 'Read as the string "navAutomations" in hooks/console/console.shared.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "navBrain"
-      reason: 'Read as the string "navBrain" in hooks/console/console.shared.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "navConnections"
-      reason: 'Read as the string "navConnections" in hooks/console/console.shared.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "navCredits"
-      reason: 'Read as the string "navCredits" in hooks/console/console.shared.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "navDecisions"
-      reason: 'Read as the string "navDecisions" in hooks/console/console.shared.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "navInbox"
-      reason: 'Read as the string "navInbox" in hooks/console/console.shared.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "navLeads"
-      reason: 'Read as the string "navLeads" in hooks/console/console.shared.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "navModules"
-      reason: 'Read as the string "navModules" in hooks/console/console.shared.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "navOffice"
-      reason: 'Read as the string "navOffice" in hooks/console/console.shared.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "navOverview"
-      reason: 'Read as the string "navOverview" in hooks/console/console.shared.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "navPermissions"
-      reason: 'Read as the string "navPermissions" in hooks/console/console.shared.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "navResponsibilities"
-      reason: 'Read as the string "navResponsibilities" in hooks/console/console.shared.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "navTeam"
-      reason: 'Read as the string "navTeam" in hooks/console/console.shared.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "navThreads"
-      reason: 'Read as the string "navThreads" in hooks/console/console.shared.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
     - key: "notFoundTitle"
       reason: 'Read as the string "notFoundTitle" in features/pages/AppNotFoundPage/index.tsx, features/pages/LeadNotFoundPage/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
   shifts:
@@ -381,175 +161,6 @@ namespaces:
       reason: 'Read as the string "loadFailBody" in features/pages/AuthorityErrorPage/index.tsx, features/pages/InboxErrorPage/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
     - key: "loadFailTitle"
       reason: 'Read as the string "loadFailTitle" in components/blocks/AuthorityGoals/index.tsx, components/blocks/AuthorityLimits/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-  smtpPresets:
-    - key: "gmail_app_password_caution1"
-      reason: 'Read as the string "gmail_app_password_caution1" in modules/mail/smtp-presets.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "gmail_app_password_label"
-      reason: 'Read as the string "gmail_app_password_label" in modules/mail/smtp-presets.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "gmail_app_password_passwordHint"
-      reason: 'Read as the string "gmail_app_password_passwordHint" in modules/mail/smtp-presets.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "gmail_app_password_passwordLabel"
-      reason: 'Read as the string "gmail_app_password_passwordLabel" in modules/mail/smtp-presets.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "gmail_app_password_step1"
-      reason: 'Read as the string "gmail_app_password_step1" in modules/mail/smtp-presets.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "gmail_app_password_step1_link"
-      reason: 'Read as the string "gmail_app_password_step1_link" in modules/mail/smtp-presets.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "gmail_app_password_step2"
-      reason: 'Read as the string "gmail_app_password_step2" in modules/mail/smtp-presets.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "gmail_app_password_step2_link"
-      reason: 'Read as the string "gmail_app_password_step2_link" in modules/mail/smtp-presets.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "gmail_app_password_step3"
-      reason: 'Read as the string "gmail_app_password_step3" in modules/mail/smtp-presets.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "gmail_app_password_when"
-      reason: 'Read as the string "gmail_app_password_when" in modules/mail/smtp-presets.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "google_workspace_app_password_caution1"
-      reason: 'Read as the string "google_workspace_app_password_caution1" in modules/mail/smtp-presets.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "google_workspace_app_password_label"
-      reason: 'Read as the string "google_workspace_app_password_label" in modules/mail/smtp-presets.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "google_workspace_app_password_passwordHint"
-      reason: 'Read as the string "google_workspace_app_password_passwordHint" in modules/mail/smtp-presets.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "google_workspace_app_password_passwordLabel"
-      reason: 'Read as the string "google_workspace_app_password_passwordLabel" in modules/mail/smtp-presets.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "google_workspace_app_password_step1"
-      reason: 'Read as the string "google_workspace_app_password_step1" in modules/mail/smtp-presets.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "google_workspace_app_password_step1_link"
-      reason: 'Read as the string "google_workspace_app_password_step1_link" in modules/mail/smtp-presets.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "google_workspace_app_password_step2"
-      reason: 'Read as the string "google_workspace_app_password_step2" in modules/mail/smtp-presets.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "google_workspace_app_password_step2_link"
-      reason: 'Read as the string "google_workspace_app_password_step2_link" in modules/mail/smtp-presets.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "google_workspace_app_password_step3"
-      reason: 'Read as the string "google_workspace_app_password_step3" in modules/mail/smtp-presets.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "google_workspace_app_password_step4"
-      reason: 'Read as the string "google_workspace_app_password_step4" in modules/mail/smtp-presets.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "google_workspace_app_password_when"
-      reason: 'Read as the string "google_workspace_app_password_when" in modules/mail/smtp-presets.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "google_workspace_relay_caution1"
-      reason: 'Read as the string "google_workspace_relay_caution1" in modules/mail/smtp-presets.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "google_workspace_relay_label"
-      reason: 'Read as the string "google_workspace_relay_label" in modules/mail/smtp-presets.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "google_workspace_relay_passwordHint"
-      reason: 'Read as the string "google_workspace_relay_passwordHint" in modules/mail/smtp-presets.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "google_workspace_relay_passwordLabel"
-      reason: 'Read as the string "google_workspace_relay_passwordLabel" in modules/mail/smtp-presets.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "google_workspace_relay_step1"
-      reason: 'Read as the string "google_workspace_relay_step1" in modules/mail/smtp-presets.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "google_workspace_relay_step1_link"
-      reason: 'Read as the string "google_workspace_relay_step1_link" in modules/mail/smtp-presets.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "google_workspace_relay_step2"
-      reason: 'Read as the string "google_workspace_relay_step2" in modules/mail/smtp-presets.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "google_workspace_relay_step2_link"
-      reason: 'Read as the string "google_workspace_relay_step2_link" in modules/mail/smtp-presets.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "google_workspace_relay_when"
-      reason: 'Read as the string "google_workspace_relay_when" in modules/mail/smtp-presets.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "microsoft365_smtp_auth_caution1"
-      reason: 'Read as the string "microsoft365_smtp_auth_caution1" in modules/mail/smtp-presets.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "microsoft365_smtp_auth_caution2"
-      reason: 'Read as the string "microsoft365_smtp_auth_caution2" in modules/mail/smtp-presets.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "microsoft365_smtp_auth_label"
-      reason: 'Read as the string "microsoft365_smtp_auth_label" in modules/mail/smtp-presets.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "microsoft365_smtp_auth_passwordHint"
-      reason: 'Read as the string "microsoft365_smtp_auth_passwordHint" in modules/mail/smtp-presets.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "microsoft365_smtp_auth_passwordLabel"
-      reason: 'Read as the string "microsoft365_smtp_auth_passwordLabel" in modules/mail/smtp-presets.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "microsoft365_smtp_auth_step1"
-      reason: 'Read as the string "microsoft365_smtp_auth_step1" in modules/mail/smtp-presets.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "microsoft365_smtp_auth_step1_link"
-      reason: 'Read as the string "microsoft365_smtp_auth_step1_link" in modules/mail/smtp-presets.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "microsoft365_smtp_auth_step2"
-      reason: 'Read as the string "microsoft365_smtp_auth_step2" in modules/mail/smtp-presets.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "microsoft365_smtp_auth_when"
-      reason: 'Read as the string "microsoft365_smtp_auth_when" in modules/mail/smtp-presets.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "relay_service_resend_caution1"
-      reason: 'Read as the string "relay_service_resend_caution1" in modules/mail/smtp-presets.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "relay_service_resend_label"
-      reason: 'Read as the string "relay_service_resend_label" in modules/mail/smtp-presets.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "relay_service_resend_passwordHint"
-      reason: 'Read as the string "relay_service_resend_passwordHint" in modules/mail/smtp-presets.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "relay_service_resend_passwordLabel"
-      reason: 'Read as the string "relay_service_resend_passwordLabel" in modules/mail/smtp-presets.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "relay_service_resend_step1"
-      reason: 'Read as the string "relay_service_resend_step1" in modules/mail/smtp-presets.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "relay_service_resend_step1_link"
-      reason: 'Read as the string "relay_service_resend_step1_link" in modules/mail/smtp-presets.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "relay_service_resend_step2"
-      reason: 'Read as the string "relay_service_resend_step2" in modules/mail/smtp-presets.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "relay_service_resend_step2_link"
-      reason: 'Read as the string "relay_service_resend_step2_link" in modules/mail/smtp-presets.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "relay_service_resend_when"
-      reason: 'Read as the string "relay_service_resend_when" in modules/mail/smtp-presets.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "relay_service_sendgrid_label"
-      reason: 'Read as the string "relay_service_sendgrid_label" in modules/mail/smtp-presets.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "relay_service_sendgrid_passwordHint"
-      reason: 'Read as the string "relay_service_sendgrid_passwordHint" in modules/mail/smtp-presets.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "relay_service_sendgrid_passwordLabel"
-      reason: 'Read as the string "relay_service_sendgrid_passwordLabel" in modules/mail/smtp-presets.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "relay_service_sendgrid_step1"
-      reason: 'Read as the string "relay_service_sendgrid_step1" in modules/mail/smtp-presets.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "relay_service_sendgrid_step1_link"
-      reason: 'Read as the string "relay_service_sendgrid_step1_link" in modules/mail/smtp-presets.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "relay_service_sendgrid_step2"
-      reason: 'Read as the string "relay_service_sendgrid_step2" in modules/mail/smtp-presets.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "relay_service_sendgrid_step2_link"
-      reason: 'Read as the string "relay_service_sendgrid_step2_link" in modules/mail/smtp-presets.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "relay_service_sendgrid_when"
-      reason: 'Read as the string "relay_service_sendgrid_when" in modules/mail/smtp-presets.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "relay_service_ses_caution1"
-      reason: 'Read as the string "relay_service_ses_caution1" in modules/mail/smtp-presets.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "relay_service_ses_label"
-      reason: 'Read as the string "relay_service_ses_label" in modules/mail/smtp-presets.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "relay_service_ses_passwordHint"
-      reason: 'Read as the string "relay_service_ses_passwordHint" in modules/mail/smtp-presets.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "relay_service_ses_passwordLabel"
-      reason: 'Read as the string "relay_service_ses_passwordLabel" in modules/mail/smtp-presets.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "relay_service_ses_step1"
-      reason: 'Read as the string "relay_service_ses_step1" in modules/mail/smtp-presets.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "relay_service_ses_step1_link"
-      reason: 'Read as the string "relay_service_ses_step1_link" in modules/mail/smtp-presets.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "relay_service_ses_step2"
-      reason: 'Read as the string "relay_service_ses_step2" in modules/mail/smtp-presets.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "relay_service_ses_when"
-      reason: 'Read as the string "relay_service_ses_when" in modules/mail/smtp-presets.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "vn_hosting_hosting_caution1"
-      reason: 'Read as the string "vn_hosting_hosting_caution1" in modules/mail/smtp-presets.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "vn_hosting_hosting_label"
-      reason: 'Read as the string "vn_hosting_hosting_label" in modules/mail/smtp-presets.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "vn_hosting_hosting_passwordHint"
-      reason: 'Read as the string "vn_hosting_hosting_passwordHint" in modules/mail/smtp-presets.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "vn_hosting_hosting_passwordLabel"
-      reason: 'Read as the string "vn_hosting_hosting_passwordLabel" in modules/mail/smtp-presets.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "vn_hosting_hosting_step1"
-      reason: 'Read as the string "vn_hosting_hosting_step1" in modules/mail/smtp-presets.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "vn_hosting_hosting_step2"
-      reason: 'Read as the string "vn_hosting_hosting_step2" in modules/mail/smtp-presets.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "vn_hosting_hosting_when"
-      reason: 'Read as the string "vn_hosting_hosting_when" in modules/mail/smtp-presets.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "zoho_custom_domain_caution1"
-      reason: 'Read as the string "zoho_custom_domain_caution1" in modules/mail/smtp-presets.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "zoho_custom_domain_label"
-      reason: 'Read as the string "zoho_custom_domain_label" in modules/mail/smtp-presets.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "zoho_custom_domain_passwordHint"
-      reason: 'Read as the string "zoho_custom_domain_passwordHint" in modules/mail/smtp-presets.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "zoho_custom_domain_passwordLabel"
-      reason: 'Read as the string "zoho_custom_domain_passwordLabel" in modules/mail/smtp-presets.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "zoho_custom_domain_step1"
-      reason: 'Read as the string "zoho_custom_domain_step1" in modules/mail/smtp-presets.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "zoho_custom_domain_step1_link"
-      reason: 'Read as the string "zoho_custom_domain_step1_link" in modules/mail/smtp-presets.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "zoho_custom_domain_step2"
-      reason: 'Read as the string "zoho_custom_domain_step2" in modules/mail/smtp-presets.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "zoho_custom_domain_when"
-      reason: 'Read as the string "zoho_custom_domain_when" in modules/mail/smtp-presets.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "zoho_personal_label"
-      reason: 'Read as the string "zoho_personal_label" in modules/mail/smtp-presets.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "zoho_personal_passwordHint"
-      reason: 'Read as the string "zoho_personal_passwordHint" in modules/mail/smtp-presets.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "zoho_personal_passwordLabel"
-      reason: 'Read as the string "zoho_personal_passwordLabel" in modules/mail/smtp-presets.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "zoho_personal_step1"
-      reason: 'Read as the string "zoho_personal_step1" in modules/mail/smtp-presets.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "zoho_personal_when"
-      reason: 'Read as the string "zoho_personal_when" in modules/mail/smtp-presets.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
   system:
     - suffix: "Body"
       reason: "Key family built at run time as `${kind}Body` in hooks/connection-rows/connection-rows.shared.ts; the stem comes from data, so the detector cannot enumerate the keys."
@@ -569,242 +180,21 @@ namespaces:
       reason: 'Read as the string "description" in components/blocks/AuthorityHead/index.tsx, components/blocks/BookingServices/component.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
     - key: "eyebrow"
       reason: 'Read as the string "eyebrow" in components/blocks/AgentInstances/index.tsx, components/blocks/AuthorityHead/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - prefix: "role_"
-      reason: "Key family built at run time as `role_${scene.role}` in components/blocks/VideoScriptStep/component.tsx; the value comes from data (status, kind, id), so the detector cannot enumerate the keys."
-  workThreads:
-    - prefix: "excluded"
-      reason: "Key family built at run time as `excluded${Reason}` through excludedKey in hooks/workThreads/workThreads.shared.ts; the value comes from data (status, kind, id), so the detector cannot enumerate the keys."
-    - prefix: "kind"
-      reason: "Key family built at run time as `kind${Kind}` through stepKindKey in modules/work-threads/chain.ts; the value comes from data (status, kind, id), so the detector cannot enumerate the keys."
-    - prefix: "policy"
-      reason: "Key family built at run time as `policy${Policy}` through policyKey in hooks/workThreads/workThreads.shared.ts; the value comes from data (status, kind, id), so the detector cannot enumerate the keys."
-    - prefix: "role"
-      reason: "Key family built at run time as `role${Role}` through roleKey in hooks/workThreads/workThreads.shared.ts; the value comes from data (status, kind, id), so the detector cannot enumerate the keys."
-    - prefix: "status"
-      reason: "Key family built at run time as `status${Status}` through STATUS_WORDS in hooks/workThreads/useWorkThreadBoard.ts; the value comes from data (status, kind, id), so the detector cannot enumerate the keys."
-    - prefix: "step"
-      reason: "Key family built at run time as `step${Status}` through stepKey in modules/work-threads/views.ts; the value comes from data (status, kind, id), so the detector cannot enumerate the keys."
-    - prefix: "vote"
-      reason: "Key family built at run time as `vote${Status}` through voteKey in modules/work-threads/views.ts; the value comes from data (status, kind, id), so the detector cannot enumerate the keys."
   workbenchBooking:
     - key: "addNoServices"
       reason: 'Read as the string "addNoServices" in components/blocks/BookingDesk/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
     - key: "failed"
       reason: 'Read as the string "failed" in components/blocks/AutomationsBoard/component.tsx, components/blocks/AutomationsBoard/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - prefix: "reason_"
-      reason: "Key family built at run time as `reason_${connected.place.reason}` in components/blocks/BookingDesk/index.tsx; the value comes from data (status, kind, id), so the detector cannot enumerate the keys."
     - suffix: "Title"
       reason: "Key family built at run time as `${kind}Title` in hooks/connection-rows/connection-rows.shared.ts; the stem comes from data, so the detector cannot enumerate the keys."
-    - prefix: "status_"
-      reason: "Key family built at run time as `status_${entry.status}` in components/blocks/AgentCatalog/index.tsx; the value comes from data (status, kind, id), so the detector cannot enumerate the keys."
   workbenchInventory:
-    - key: "adjustApply"
-      reason: 'Read as the string "adjustApply" in hooks/inventory/useAdjustDrawer.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "adjustAsk"
-      reason: 'Read as the string "adjustAsk" in hooks/inventory/useAdjustDrawer.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "adjustAt"
-      reason: 'Read as the string "adjustAt" in components/composites/InventoryAdjustDrawer/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "adjustFrom"
-      reason: 'Read as the string "adjustFrom" in components/composites/InventoryAdjustDrawer/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "adjustMode"
-      reason: 'Read as the string "adjustMode" in components/composites/InventoryAdjustDrawer/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "adjustMove"
-      reason: 'Read as the string "adjustMove" in hooks/inventory/useAdjustDrawer.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "adjustNote"
-      reason: 'Read as the string "adjustNote" in components/composites/InventoryAdjustDrawer/index.tsx, hooks/accounting/useAccountingLedger.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "adjustReason"
-      reason: 'Read as the string "adjustReason" in components/composites/InventoryAdjustDrawer/index.tsx, hooks/loyaltyMembers/useMemberDetailForms.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "adjustReasonHint"
-      reason: 'Read as the string "adjustReasonHint" in components/composites/InventoryAdjustDrawer/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "adjustTitle"
-      reason: 'Read as the string "adjustTitle" in components/composites/InventoryAdjustDrawer/index.tsx, hooks/accounting/useAccountingLedger.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "adjustTo"
-      reason: 'Read as the string "adjustTo" in components/composites/InventoryAdjustDrawer/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "adjustToHint"
-      reason: 'Read as the string "adjustToHint" in components/composites/InventoryAdjustDrawer/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - prefix: "adjustValue_"
-      reason: "Key family built at run time as `adjustValue_${p.mode}` in components/composites/InventoryAdjustDrawer/index.tsx; the value comes from data (status, kind, id), so the detector cannot enumerate the keys."
     - key: "failed"
       reason: 'Read as the string "failed" in components/blocks/AutomationsBoard/component.tsx, components/blocks/AutomationsBoard/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - prefix: "filter"
-      reason: "Key family built at run time as `filter${id.charAt(0).toUpperCase()}${id.slice(1)}` in components/blocks/AdminWorkspaces/index.tsx; the value comes from data (status, kind, id), so the detector cannot enumerate the keys."
-    - key: "itemAddTitle"
-      reason: 'Read as the string "itemAddTitle" in components/composites/InventoryItemDrawer/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "itemAliases"
-      reason: 'Read as the string "itemAliases" in components/composites/InventoryItemDrawer/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "itemAliasesHint"
-      reason: 'Read as the string "itemAliasesHint" in components/composites/InventoryItemDrawer/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "itemCategory"
-      reason: 'Read as the string "itemCategory" in components/composites/InventoryItemDrawer/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "itemCost"
-      reason: 'Read as the string "itemCost" in components/composites/InventoryItemDrawer/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "itemDrawerHint"
-      reason: 'Read as the string "itemDrawerHint" in components/composites/InventoryItemDrawer/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "itemEditTitle"
-      reason: 'Read as the string "itemEditTitle" in components/composites/InventoryItemDrawer/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "itemName"
-      reason: 'Read as the string "itemName" in components/composites/InventoryItemDrawer/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "itemOpening"
-      reason: 'Read as the string "itemOpening" in components/composites/InventoryItemDrawer/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "itemReorderPoint"
-      reason: 'Read as the string "itemReorderPoint" in components/composites/InventoryItemDrawer/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "itemReorderPointHint"
-      reason: 'Read as the string "itemReorderPointHint" in components/composites/InventoryItemDrawer/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "itemReorderQty"
-      reason: 'Read as the string "itemReorderQty" in components/composites/InventoryItemDrawer/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "itemResume"
-      reason: 'Read as the string "itemResume" in components/composites/InventoryItemDrawer/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "itemSell"
-      reason: 'Read as the string "itemSell" in components/composites/InventoryItemDrawer/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "itemSku"
-      reason: 'Read as the string "itemSku" in components/composites/InventoryItemDrawer/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "itemSkuHint"
-      reason: 'Read as the string "itemSkuHint" in components/composites/InventoryItemDrawer/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "itemStop"
-      reason: 'Read as the string "itemStop" in components/composites/InventoryItemDrawer/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "itemSupplier"
-      reason: 'Read as the string "itemSupplier" in components/composites/InventoryItemDrawer/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "itemSupplierNone"
-      reason: 'Read as the string "itemSupplierNone" in components/composites/InventoryItemDrawer/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "itemUnit"
-      reason: 'Read as the string "itemUnit" in components/composites/InventoryItemDrawer/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "itemUnitHint"
-      reason: 'Read as the string "itemUnitHint" in components/composites/InventoryItemDrawer/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "itemUnits"
-      reason: 'Read as the string "itemUnits" in components/composites/InventoryItemDrawer/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "itemUnitsHint"
-      reason: 'Read as the string "itemUnitsHint" in components/composites/InventoryItemDrawer/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
     - key: "loadFailedTitle"
       reason: 'Read as the string "loadFailedTitle" in components/blocks/AccountingFigures/index.tsx, components/blocks/BookingFigures/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "newPoAddLine"
-      reason: 'Read as the string "newPoAddLine" in components/composites/InventoryNewPoDrawer/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "newPoCreate"
-      reason: 'Read as the string "newPoCreate" in components/composites/InventoryNewPoDrawer/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "newPoHint"
-      reason: 'Read as the string "newPoHint" in components/composites/InventoryNewPoDrawer/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "newPoItem"
-      reason: 'Read as the string "newPoItem" in components/composites/InventoryNewPoDrawer/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "newPoItemHint"
-      reason: 'Read as the string "newPoItemHint" in components/composites/InventoryNewPoDrawer/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "newPoTitle"
-      reason: 'Read as the string "newPoTitle" in components/composites/InventoryNewPoDrawer/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "poCancel"
-      reason: 'Read as the string "poCancel" in components/leaves/InventoryPoActions/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "poCopied"
-      reason: 'Read as the string "poCopied" in components/leaves/InventoryPoActions/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "poCopy"
-      reason: 'Read as the string "poCopy" in components/leaves/InventoryPoActions/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "poExpected"
-      reason: 'Read as the string "poExpected" in components/branches/InventoryPoSupplierFields/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "poExpectedHint"
-      reason: 'Read as the string "poExpectedHint" in components/branches/InventoryPoSupplierFields/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "poInvoice"
-      reason: 'Read as the string "poInvoice" in components/composites/InventoryPoDrawer/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "poInvoiceHint"
-      reason: 'Read as the string "poInvoiceHint" in components/composites/InventoryPoDrawer/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "poItems"
-      reason: 'Read as the string "poItems" in components/composites/InventoryPoDrawer/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "poMessageDrafted"
-      reason: 'Read as the string "poMessageDrafted" in components/composites/InventoryPoDrawer/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "poMessageHint"
-      reason: 'Read as the string "poMessageHint" in components/composites/InventoryPoDrawer/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "poQty"
-      reason: 'Read as the string "poQty" in components/composites/InventoryNewPoDrawer/index.tsx, components/composites/InventoryPoDrawer/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "poReceive"
-      reason: 'Read as the string "poReceive" in components/leaves/InventoryPoActions/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "poReceiveCost"
-      reason: 'Read as the string "poReceiveCost" in components/composites/InventoryPoDrawer/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "poReceiveHint"
-      reason: 'Read as the string "poReceiveHint" in components/composites/InventoryPoDrawer/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "poReceiveQty"
-      reason: 'Read as the string "poReceiveQty" in components/composites/InventoryPoDrawer/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "poRemind"
-      reason: 'Read as the string "poRemind" in components/leaves/InventoryPoActions/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "poSaveDraft"
-      reason: 'Read as the string "poSaveDraft" in components/leaves/InventoryPoActions/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "poSendForApproval"
-      reason: 'Read as the string "poSendForApproval" in components/leaves/InventoryPoActions/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "poSentEmail"
-      reason: 'Read as the string "poSentEmail" in components/composites/InventoryPoDrawer/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "poSupplier"
-      reason: 'Read as the string "poSupplier" in components/branches/InventoryPoSupplierFields/index.tsx, components/composites/InventoryNewPoDrawer/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "poSupplierHint"
-      reason: 'Read as the string "poSupplierHint" in components/branches/InventoryPoSupplierFields/index.tsx, components/composites/InventoryNewPoDrawer/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "poUnitCost"
-      reason: 'Read as the string "poUnitCost" in components/composites/InventoryNewPoDrawer/index.tsx, components/composites/InventoryPoDrawer/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "recipeAddLine"
-      reason: 'Read as the string "recipeAddLine" in components/composites/InventoryRecipeDrawer/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "recipeAddTitle"
-      reason: 'Read as the string "recipeAddTitle" in components/composites/InventoryRecipeDrawer/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "recipeAliases"
-      reason: 'Read as the string "recipeAliases" in components/composites/InventoryRecipeDrawer/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "recipeAliasesHint"
-      reason: 'Read as the string "recipeAliasesHint" in components/composites/InventoryRecipeDrawer/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "recipeDelete"
-      reason: 'Read as the string "recipeDelete" in components/composites/InventoryRecipeDrawer/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "recipeDrawerHint"
-      reason: 'Read as the string "recipeDrawerHint" in components/composites/InventoryRecipeDrawer/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "recipeEditTitle"
-      reason: 'Read as the string "recipeEditTitle" in components/composites/InventoryRecipeDrawer/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "recipeIngredient"
-      reason: 'Read as the string "recipeIngredient" in components/composites/InventoryRecipeDrawer/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "recipeIngredientHint"
-      reason: 'Read as the string "recipeIngredientHint" in components/composites/InventoryRecipeDrawer/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "recipeIngredients"
-      reason: 'Read as the string "recipeIngredients" in components/composites/InventoryRecipeDrawer/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "recipeName"
-      reason: 'Read as the string "recipeName" in components/composites/InventoryRecipeDrawer/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "recipeNameHint"
-      reason: 'Read as the string "recipeNameHint" in components/composites/InventoryRecipeDrawer/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "recipeQty"
-      reason: 'Read as the string "recipeQty" in components/composites/InventoryRecipeDrawer/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "recipeRemoveLine"
-      reason: 'Read as the string "recipeRemoveLine" in components/composites/InventoryRecipeDrawer/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - prefix: "stock_"
-      reason: "Key family built at run time as `stock_${item.status}` in components/blocks/InventoryStock/index.tsx; the value comes from data (status, kind, id), so the detector cannot enumerate the keys."
-    - key: "supplierAddTitle"
-      reason: 'Read as the string "supplierAddTitle" in components/composites/InventorySupplierDrawer/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "supplierChannel"
-      reason: 'Read as the string "supplierChannel" in components/composites/InventorySupplierDrawer/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "supplierContact"
-      reason: 'Read as the string "supplierContact" in components/composites/InventorySupplierDrawer/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "supplierDrawerHint"
-      reason: 'Read as the string "supplierDrawerHint" in components/composites/InventorySupplierDrawer/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "supplierEditTitle"
-      reason: 'Read as the string "supplierEditTitle" in components/composites/InventorySupplierDrawer/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "supplierEmail"
-      reason: 'Read as the string "supplierEmail" in components/composites/InventorySupplierDrawer/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "supplierLead"
-      reason: 'Read as the string "supplierLead" in components/composites/InventorySupplierDrawer/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "supplierName"
-      reason: 'Read as the string "supplierName" in components/composites/InventorySupplierDrawer/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "supplierNote"
-      reason: 'Read as the string "supplierNote" in components/composites/InventorySupplierDrawer/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "supplierPhone"
-      reason: 'Read as the string "supplierPhone" in components/composites/InventorySupplierDrawer/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "supplierTerms"
-      reason: 'Read as the string "supplierTerms" in components/composites/InventorySupplierDrawer/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "supplierZalo"
-      reason: 'Read as the string "supplierZalo" in components/composites/InventorySupplierDrawer/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
   workbenchLeadGen:
     - key: "actionFailed"
       reason: 'Read as the string "actionFailed" in hooks/chatbotView/useChatbotInbox.ts, hooks/content/useContentCommand.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "refAd"
-      reason: 'Read as the string "refAd" in hooks/leadgenView/leadgenView.shared.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "refForm"
-      reason: 'Read as the string "refForm" in hooks/leadgenView/leadgenView.shared.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "refPost"
-      reason: 'Read as the string "refPost" in hooks/leadgenView/leadgenView.shared.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
   workbenchSales:
     - key: "actionFailed"
       reason: 'Read as the string "actionFailed" in hooks/chatbotView/useChatbotInbox.ts, hooks/content/useContentCommand.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - prefix: "contractStatus_"
-      reason: "Key family built at run time as `contractStatus_${status}` in components/blocks/SalesContracts/component.tsx; the value comes from data (status, kind, id), so the detector cannot enumerate the keys."
-    - prefix: "invoice_"
-      reason: "Key family built at run time as `invoice_${row.invoice.status}` in components/blocks/SalesHandoffs/index.tsx; the value comes from data (status, kind, id), so the detector cannot enumerate the keys."
-    - prefix: "order_"
-      reason: "Key family built at run time as `order_${row.orderStatus}` in components/blocks/SalesHandoffs/index.tsx; the value comes from data (status, kind, id), so the detector cannot enumerate the keys."
-    - prefix: "source_"
-      reason: 'Key family built at run time as `source_${SOURCE_KEYS.some((key) => key === source) ? source : "other"}` in hooks/salesfigures/salesfigures.shared.ts; the value comes from data (status, kind, id), so the detector cannot enumerate the keys.'
-    - prefix: "work_"
-      reason: "Key family built at run time as `work_${row.work.status}` in components/blocks/SalesHandoffs/index.tsx; the value comes from data (status, kind, id), so the detector cannot enumerate the keys."

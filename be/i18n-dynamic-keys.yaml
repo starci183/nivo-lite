@@ -1,21 +1,6 @@
 schema: starci/i18n-dynamic-keys@1
 # Catalog keys of the back end the R280 detector cannot see being read.
 namespaces:
-  bookings.weekday:
-    - key: "1"
-      reason: "Read as t(`bookings.weekday.${parts.weekday}`) in be/src/modules/domain/bookings/policies/booking-notice-text.policy.ts (ISO weekday 1 to 7 passed to the notice text); the template is behind an injected Say function the detector does not follow."
-    - key: "2"
-      reason: "Read as t(`bookings.weekday.${parts.weekday}`) in be/src/modules/domain/bookings/policies/booking-notice-text.policy.ts (ISO weekday 1 to 7 passed to the notice text); the template is behind an injected Say function the detector does not follow."
-    - key: "3"
-      reason: "Read as t(`bookings.weekday.${parts.weekday}`) in be/src/modules/domain/bookings/policies/booking-notice-text.policy.ts (ISO weekday 1 to 7 passed to the notice text); the template is behind an injected Say function the detector does not follow."
-    - key: "4"
-      reason: "Read as t(`bookings.weekday.${parts.weekday}`) in be/src/modules/domain/bookings/policies/booking-notice-text.policy.ts (ISO weekday 1 to 7 passed to the notice text); the template is behind an injected Say function the detector does not follow."
-    - key: "5"
-      reason: "Read as t(`bookings.weekday.${parts.weekday}`) in be/src/modules/domain/bookings/policies/booking-notice-text.policy.ts (ISO weekday 1 to 7 passed to the notice text); the template is behind an injected Say function the detector does not follow."
-    - key: "6"
-      reason: "Read as t(`bookings.weekday.${parts.weekday}`) in be/src/modules/domain/bookings/policies/booking-notice-text.policy.ts (ISO weekday 1 to 7 passed to the notice text); the template is behind an injected Say function the detector does not follow."
-    - key: "7"
-      reason: "Read as t(`bookings.weekday.${parts.weekday}`) in be/src/modules/domain/bookings/policies/booking-notice-text.policy.ts (ISO weekday 1 to 7 passed to the notice text); the template is behind an injected Say function the detector does not follow."
   "":
     - key: "en"
       reason: "Not a message key: the English half of the HIRING_MESSAGES bundle ({ vi: HIRING_VI, en: HIRING_EN } in hiring.messages.ts) whose halves are separate consts; the whole bundle is consumed by the app composition."
