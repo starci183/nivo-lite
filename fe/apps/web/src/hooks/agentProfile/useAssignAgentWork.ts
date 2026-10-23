@@ -5,17 +5,27 @@ import { useCallback } from "react"
 import { useMutateAssignAgentWorkSwr } from "@/hooks/swr"
 import { useGraphQLWithToast } from "@/modules/toast"
 
+/** The structured work handed with a request: an action of the agent's department, its amount, the deal value and the customer. */
+interface AssignTaskDraft {
+    readonly action: string
+    readonly amount: number | null
+    readonly amountVnd: number | null
+    readonly leadId: string
+}
+
 /**
- * Hands an agent work. The server decides who may and records the request in a work thread; a refusal was already toasted with
- * the server message. Answers whether it worked.
+ * Hands an agent work. The server decides who may and records the request in a work thread; with a task the agent starts on it
+ * there. A refusal was already toasted with the server message. Answers whether it worked.
  */
 export const useAssignAgentWork = (agentId: string) => {
     const t = useTranslations("agentProfile")
     const runGraphQL = useGraphQLWithToast()
     const assign = useMutateAssignAgentWorkSwr()
     const send = useCallback(
-        async (text: string): Promise<boolean> => {
-            const done = await runGraphQL(() => assign.trigger({ agentId, text }), { successMessage: t("assignSent") })
+        async (text: string, task: AssignTaskDraft | null): Promise<boolean> => {
+            const done = await runGraphQL(() => assign.trigger({ agentId, text, ...task }), {
+                successMessage: t("assignSent"),
+            })
             return done !== undefined
         },
         [agentId, assign, runGraphQL, t],

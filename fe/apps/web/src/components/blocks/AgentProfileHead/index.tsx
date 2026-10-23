@@ -1,8 +1,7 @@
 "use client"
 
 import { useTranslations } from "next-intl"
-import { useState } from "react"
-import { ASSIGN_TEXT_MAX, profileChipsOf, useAgentProfile, useAssignAgentWork } from "@/hooks/agentProfile"
+import { ASSIGN_TEXT_MAX, profileChipsOf, useAgentProfile, useAssignComposer } from "@/hooks/agentProfile"
 import { moduleGlyphOf } from "@/hooks/installations"
 import { AGENTS_ROUTE, CONSOLE_ROUTES } from "@/modules/routes"
 import { AgentProfileHeadBase } from "./component"
@@ -16,17 +15,9 @@ type AgentProfileHeadProps = {
 export const AgentProfileHead = (props: AgentProfileHeadProps) => {
     const t = useTranslations("agentProfile")
     const { slot } = useAgentProfile(props.agentId)
-    const { send, isSending } = useAssignAgentWork(props.agentId)
-    const [isOpen, setIsOpen] = useState(false)
-    const [text, setText] = useState("")
     const agent = slot.items
+    const composer = useAssignComposer(props.agentId, agent?.rules.items ?? [])
     const name = agent?.name ?? ""
-    const submit = async () => {
-        if (await send(text.trim())) {
-            setText("")
-            setIsOpen(false)
-        }
-    }
     return (
         <AgentProfileHeadBase
             props={{
@@ -50,20 +41,39 @@ export const AgentProfileHead = (props: AgentProfileHeadProps) => {
                 assignLabel: t("assignAction"),
                 canAssign: agent?.isActive === true,
                 composer: {
-                    isOpen,
+                    isOpen: composer.isOpen,
                     title: t("assignTitle", { name }),
                     mention: `@${name}`,
                     label: t("assignLabel"),
                     placeholder: t("assignPlaceholder"),
                     hint: t("assignHint"),
                     sendLabel: t("assignSend"),
-                    text,
+                    text: composer.text,
                     maxLength: ASSIGN_TEXT_MAX,
-                    canSend: text.trim().length > 0 && !isSending,
-                    isPending: isSending,
+                    canSend: composer.canSend,
+                    isPending: composer.isSending,
+                    taskLabel: t("assignTaskLabel"),
+                    tasks: composer.actions,
+                    task: composer.action,
+                    hasTask: composer.hasTask,
+                    amountLabel: t("assignAmountLabel"),
+                    amount: composer.amount,
+                    valueLabel: t("assignValueLabel"),
+                    value: composer.amountVnd,
+                    leadLabel: t("assignLeadLabel"),
+                    leads: composer.customers,
+                    lead: composer.leadId,
                 },
             }}
-            on={{ toggle: () => setIsOpen((open) => !open), change: setText, send: () => void submit() }}
+            on={{
+                toggle: composer.toggle,
+                change: composer.setText,
+                send: composer.submit,
+                task: composer.setAction,
+                amount: composer.setAmount,
+                value: composer.setAmountVnd,
+                lead: composer.setLeadId,
+            }}
         />
     )
 }

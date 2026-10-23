@@ -1,4 +1,14 @@
-import { Badge, Breadcrumbs, Button, SectionHeader, SurfaceCard, Text, Textarea } from "@starci/grammar/common"
+import {
+    Badge,
+    Breadcrumbs,
+    Button,
+    NumberField,
+    SectionHeader,
+    Select,
+    SurfaceCard,
+    Text,
+    Textarea,
+} from "@starci/grammar/common"
 import type { BadgeTone, BreadcrumbItem } from "@starci/grammar/common"
 import { nivoIconSource } from "@/components/leaves/Icon"
 import { AgentMark } from "@/components/leaves/AgentMark"
@@ -10,6 +20,7 @@ import {
     COMPOSER_FOOT_CLASS,
     HEAD_CLASS,
     IDENTITY_CLASS,
+    TASK_CLASS,
 } from "./classNames"
 
 /** Copy and state of the heading of an agent profile. */
@@ -39,13 +50,74 @@ export interface AgentProfileHeadBaseProps {
             readonly maxLength: number
             readonly canSend: boolean
             readonly isPending: boolean
+            readonly taskLabel: string
+            /** The actions the agent's rules cover, after the choice that hands no structured work. */
+            readonly tasks: ReadonlyArray<{ readonly id: string; readonly label: string }>
+            readonly task: string
+            /** True once an action is chosen: the amount, the deal value and the customer then show. */
+            readonly hasTask: boolean
+            readonly amountLabel: string
+            readonly amount: number
+            readonly valueLabel: string
+            readonly value: number
+            readonly leadLabel: string
+            readonly leads: ReadonlyArray<{ readonly id: string; readonly label: string }>
+            readonly lead: string
         }
     }
     readonly on: {
         readonly toggle: () => void
         readonly change: (text: string) => void
         readonly send: () => void
+        readonly task: (action: string | null) => void
+        readonly amount: (amount: number) => void
+        readonly value: (amountVnd: number) => void
+        readonly lead: (leadId: string | null) => void
     }
+}
+
+/** The structured work of the request: the action, its amount, the deal value and the customer. */
+const TaskFields = (props: AgentProfileHeadBaseProps) => {
+    const view = props.props.composer
+    return (
+        <div className={TASK_CLASS}>
+            <Select
+                label={view.taskLabel}
+                options={view.tasks}
+                value={view.task}
+                isDisabled={view.isPending}
+                onValueChange={props.on.task}
+            />
+            {view.hasTask ? (
+                <>
+                    <NumberField
+                        variant="secondary"
+                        label={view.amountLabel}
+                        minValue={0}
+                        value={view.amount}
+                        isDisabled={view.isPending}
+                        onValueChange={props.on.amount}
+                    />
+                    <NumberField
+                        variant="secondary"
+                        label={view.valueLabel}
+                        minValue={0}
+                        step={1_000}
+                        value={view.value}
+                        isDisabled={view.isPending}
+                        onValueChange={props.on.value}
+                    />
+                    <Select
+                        label={view.leadLabel}
+                        options={view.leads}
+                        value={view.lead}
+                        isDisabled={view.isPending}
+                        onValueChange={props.on.lead}
+                    />
+                </>
+            ) : null}
+        </div>
+    )
 }
 
 /** Draws the agent profile heading: trail, name and role, the identity chips, the "Giao viec" action and its mini composer. */
@@ -95,6 +167,7 @@ export const AgentProfileHeadBase = (props: AgentProfileHeadBaseProps) => {
                             onValueChange={props.on.change}
                             onSubmitShortcut={props.on.send}
                         />
+                        <TaskFields {...props} />
                         <div className={COMPOSER_FOOT_CLASS}>
                             <Badge tone="accent">{view.composer.mention}</Badge>
                             <Text size="sm" tone="muted">
