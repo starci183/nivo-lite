@@ -105,3 +105,20 @@ export const persistOfficeRows = (manager: EntityManager, identity: OfficeIdenti
         })
         return members
     })
+
+/** Persists the customer of the story (chi Thao, who books the Deluxe room) and answers her lead id. */
+export const persistStoryLead = async (
+    manager: EntityManager,
+    workspaceId: string,
+    leadId: string,
+): Promise<string> => {
+    await manager.insert("public.leads", {
+        id: leadId,
+        workspace_id: workspaceId,
+        contact_name: "Chi Thao",
+        company: "",
+        channel: "zalo",
+        need: "Deluxe room 24-26/10",
+    })
+    return leadId
+}

@@ -13,3 +13,10 @@ export const EVENTS_OF_KIND = sql`SELECT summary, evidence FROM public.events WH
 
 /** Deletes the five accounts of the story ($1 user ids). */
 export const CLEAN_USERS = sql`DELETE FROM auth.users WHERE id = ANY($1::uuid[])`
+
+/** The work items of a customer in a workspace, oldest first, with the tax code their proposal carries ($1 workspace, $2 lead). */
+export const WORK_ITEMS_OF_THREAD = sql`
+    SELECT action, status, decided_path, proposal -> 'fields' ->> 'tax_code' AS tax_code
+    FROM public.work_items
+    WHERE workspace_id = $1 AND lead_id = $2
+    ORDER BY created_at, id`

@@ -60,6 +60,7 @@ const openThread = async (title: string): Promise<string> => {
         title,
         text: `${title}: chot phong Deluxe cho chi Thao`,
         mentions: [{ kind: "agent", id: identity.agents.sales }],
+        leadId: null,
     })
     return opened.threadId
 }

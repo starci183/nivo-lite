@@ -29,7 +29,8 @@ const admit = async (authorization: string | undefined) => {
     context.getClass.mockReturnValue(McpEndpointDoor)
     context.switchToHttp.mockReturnValue(http)
     const passed =
-        (await world.resolve(CredentialGuard).canActivate(context)) && world.resolve(AuthGuard).canActivate(context)
+        (await world.resolve(CredentialGuard).canActivate(context)) &&
+        (await world.resolve(AuthGuard).canActivate(context))
     return { passed, principal: request.credentialPrincipal }
 }
 
