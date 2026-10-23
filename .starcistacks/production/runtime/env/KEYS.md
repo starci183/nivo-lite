@@ -4,6 +4,15 @@ Names only, never a value. The api reads its environment only through the typed 
 `<KEY>_FILE` pointer to a mounted Swarm secret supplies the same value. Sealed members live in `.starcistacks/production/secrets/<slug>.enc`; the deploy
 turns every granted key into one versioned Swarm secret (see the production README). A required key without a value stops boot with its name.
 
+## Two secret zones
+
+- **App and platform secrets** stay sealed in this custody and are loaded at deploy: everything the api, the mcp app (the MCP
+  gateway itself) or the platform needs whatever the tenants, with zero workspaces: the database connection, service-to-service
+  keys, the gateway's own auth and the connection key `CHANNEL_TOKEN_KEY`. They are never moved to the database.
+- **Workspace (tenant) secrets** are sealed in the database per workspace with the connection key and entered in the console: a
+  channel connection's tokens and a remote MCP connector's credential (for example the HAKUEN connector's client secret). They are
+  never deployment keys and never listed here.
+
 ## api: required
 
 | Key | Where | Semantics |

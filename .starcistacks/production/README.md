@@ -36,6 +36,15 @@ Secrets are kept ONLY as sops-encrypted dotenv files in `.starcistacks/productio
 - The stack file declares one external stub per sealed member (`nivo-custody-<slug>-v1`) as the custody record the stack checks read; no service is granted a stub and no such Swarm secret exists.
 - Local development uses the local Supabase stack and exported shell values, not these files.
 
+## Two secret zones
+
+- **App and platform secrets** stay sealed in this custody and are loaded at deploy: everything the api, the mcp app (the MCP
+  gateway itself) or the platform needs whatever the tenants, with zero workspaces: the database connection, service-to-service
+  keys, the gateway's own auth and the connection key `CHANNEL_TOKEN_KEY`. They are never moved to the database.
+- **Workspace (tenant) secrets** are sealed in the database per workspace with the connection key and entered in the console: a
+  channel connection's tokens and a remote MCP connector's credential (for example the HAKUEN connector's client secret). They are
+  never deployment keys and never listed here.
+
 ## Sealed members (names only, values are never written down)
 
 The key roster with semantics is `.starcistacks/production/runtime/env/KEYS.md`.
