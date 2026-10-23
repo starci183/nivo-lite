@@ -9,6 +9,7 @@ import { ConnectionLibrary } from "@/components/blocks/ConnectionLibrary"
 import { ConnectionRow } from "@/components/blocks/ConnectionRow"
 import { ConnectionsOverview, OverlayHost } from "@/components/blocks/ConnectionsOverview"
 import { ConnectionViewTabs } from "@/components/blocks/ConnectionViewTabs"
+import { McpConnectorForms } from "@/components/composites/McpConnectorForms"
 import { McpGatewayRegion } from "@/components/composites/McpGatewayRegion"
 import { useQueryAuthUserSwr } from "@/hooks/auth"
 import { catalogKey, entryById } from "@/hooks/connection-catalog"
@@ -127,6 +128,9 @@ export const ConnectionsOverlayHost = (props: ConnectionsOverlayHostProps) => {
                     failure={gateway.failure}
                     onRetry={gateway.onRetry}
                 />
+            )}
+            {gateway.isShown && !gateway.isLoading && !gateway.isFailed && (
+                <McpConnectorForms props={gateway.forms} on={gateway.on} />
             )}
             <OverlayHost active={mode === "ready"} candidate={props.candidate} />
         </>

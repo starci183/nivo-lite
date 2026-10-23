@@ -3,11 +3,11 @@ import { Injectable } from "@nestjs/common"
 import { ConnectionsService } from "@modules/domain/connections"
 import type { ConnectionActor } from "@modules/domain/connections"
 import { McpCallLogService } from "@modules/domain/mcp-call-log"
-import { McpConnectorsService } from "@modules/domain/mcp-connectors"
+import { McpConnectorsService, credentialStateOf } from "@modules/domain/mcp-connectors"
 import type { CheckStatus, McpConnectorRow } from "@modules/domain/mcp-connectors"
 import { McpToolGrantsService } from "@modules/domain/mcp-tool-grants"
 import { InjectMcpRemote } from "@modules/integrations/mcp"
-import type { McpRemote } from "@modules/integrations/mcp"
+import type { McpEndpoint, McpRemote } from "@modules/integrations/mcp"
 import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import {
@@ -18,13 +18,16 @@ import {
     grantViewOf,
     remoteConnectorOf,
 } from "./connector-row.mapper"
+import { isBearerCredential } from "./bearer-credential.policy"
 import { McpGatewayError, McpGatewayErrorCode } from "./errors/mcp-gateway.error"
+import { McpConnectorCredentialService } from "./mcp-connector-credential.service"
 import { InjectMcpGatewayOptions } from "./mcp-gateway.decorators"
 import { McpGatewayLogEvent } from "./mcp-gateway.log-events"
 import type {
     CallLogQuery,
     CallLogView,
     ConnectorView,
+    McpCredentialInput,
     GrantInput,
     GrantView,
     RemoteConnectorInput,
@@ -36,7 +39,6 @@ import { addressOf, fullNameOf } from "./tool-name.policy"
 
 const KEY = /^[a-z][a-z0-9-]{1,30}$/u
 const WILDCARD = /^[a-z][a-z0-9-]{1,30}\.\*$/u
-const CREDENTIAL_REF = /^[A-Z][A-Z0-9_]{2,80}$/u
 const ARG = /^[a-zA-Z]\w{0,60}$/u
 const LOG_MAX = 200
 const LOG_DEFAULT = 50
@@ -52,7 +54,8 @@ const viewOf = (connector: WorkspaceConnector): ConnectorView => ({
     kind: connector.manifest.kind,
     status: connector.status,
     url: connector.url,
-    credentialRef: connector.credentialRef,
+    credentialState: connector.credentialState,
+    credentialSetAt: connector.credentialSetAt,
     contractVersion: connector.manifest.contractVersion,
     timeoutMs: connector.timeoutMs,
     approvedAt: connector.approvedAt,
@@ -70,10 +73,11 @@ const isUrl = (value: string): boolean => URL.canParse(value) && /^https?:$/u.te
 
 @Injectable()
 /**
- * The console side of the gateway: registering a remote connector (its URL and the NAME of its credential, never the value),
+ * The console side of the gateway: registering a remote connector (its URL and its bearer credential, entered once, sealed per
+ * workspace with the connection key and never read back: the console only learns whether it is set), rotating that credential,
  * reading its tool catalog from `tools/list` (each tool pinned by the hash of its name, description and schema), approving that
- * catalog, checking its health, the per-agent grants, and the audit log. Every operation needs the owner or manager role: the
- * approval of a catalog is the same authority as a grant.
+ * catalog, checking its health, the per-agent grants, and the audit log. Every operation needs the owner or manager role, the roles
+ * that manage connections: the approval of a catalog is the same authority as a grant.
  */
 export class McpGatewayAdminService {
     constructor(
@@ -85,6 +89,7 @@ export class McpGatewayAdminService {
         private readonly grantRows: McpToolGrantsService,
         private readonly callLines: McpCallLogService,
         private readonly connections: ConnectionsService,
+        private readonly credentials: McpConnectorCredentialService,
     ) {}
 
     /** The connectors of the workspace with their tools and which of them may run. */
@@ -127,29 +132,42 @@ export class McpGatewayAdminService {
     }
 
     /**
-     * Registers (or updates) a remote MCP connector and reads its catalog; the credential is a NAME the MCP integration holds
-     * through `<NAME>_FILE`. Its tools run only after an owner or manager approves that catalog.
+     * Registers (or updates) a remote MCP connector. A credential entered with it is sealed into the connector's row (the stored one
+     * is kept when none is entered); a server that takes a credential and has none yet stays `needed` and is not read. Otherwise its
+     * live catalog is read and pinned. Its tools run only after an owner or manager approves that catalog.
      */
     async registerRemote(actor: ConnectionActor, input: RemoteConnectorInput): Promise<void> {
         await this.connections.authorize(actor, MANAGER)
-        const credentialRef = input.credentialRef ?? null
+        const credential = input.credential ?? null
         if (!KEY.test(input.key)) throw invalid("key")
         if (input.name.trim() === "") throw invalid("name")
         if (!isUrl(input.url)) throw invalid("url")
-        if (credentialRef !== null && !CREDENTIAL_REF.test(credentialRef)) throw invalid("credentialRef")
-        if (credentialRef !== null && !this.remote.holds(credentialRef)) {
-            throw new McpGatewayError({ code: McpGatewayErrorCode.CredentialMissing, params: { ref: credentialRef } })
-        }
+        if (credential !== null && !isBearerCredential(credential)) throw invalid("credential")
         await this.connectorRows.upsertRemote({
             workspaceId: actor.workspaceId,
             key: input.key,
             name: input.name.trim(),
             url: input.url,
-            credentialRef,
+            needsCredential: credential !== null || input.needsCredential === true,
             contractVersion: input.contractVersion,
             timeoutMs: input.timeoutMs ?? this.options.defaultTimeoutMs,
         })
-        await this.refresh(actor.workspaceId, await this.remoteRow(actor.workspaceId, input.key))
+        if (credential !== null) await this.credentials.store(actor, input.key, credential)
+        const row = await this.remoteRow(actor.workspaceId, input.key)
+        if (row.credential_state !== "needed") await this.refresh(actor.workspaceId, row)
+    }
+
+    /**
+     * Sets or rotates the bearer credential of a remote connector: sealed with the connection key into its row, never read back,
+     * then the live catalog is read with it (answers the tool count, 0 when unreachable). The approval stays only while the catalog
+     * read with the new credential is the one approved.
+     */
+    async setCredential(actor: ConnectionActor, input: McpCredentialInput): Promise<number> {
+        await this.connections.authorize(actor, MANAGER)
+        const plain = input.credential.reveal()
+        if (!isBearerCredential(plain)) throw invalid("credential")
+        await this.credentials.store(actor, input.key, plain)
+        return this.refresh(actor.workspaceId, await this.remoteRow(actor.workspaceId, input.key))
     }
 
     /** Reads `tools/list` of a remote connector again and stores the live snapshot; answers the count (0 when unreachable). */
@@ -191,8 +209,8 @@ export class McpGatewayAdminService {
         await this.connections.authorize(actor, MANAGER)
         const workspaceId = actor.workspaceId
         const row = await this.remoteRow(workspaceId, key)
-        const status = await this.remote
-            .ping({ url: row.url ?? "", credentialRef: row.credential_ref }, remoteConnectorOf(row).timeoutMs)
+        const status = await this.endpointOf(workspaceId, row)
+            .then((endpoint) => this.remote.ping(endpoint, remoteConnectorOf(row).timeoutMs))
             .then(
                 (): CheckStatus => "active",
                 (cause: unknown): CheckStatus => {
@@ -202,6 +220,15 @@ export class McpGatewayAdminService {
             )
         await this.connectorRows.recordHealth({ workspaceId, key, status })
         return status
+    }
+
+    /** The endpoint of a remote connector row with its opened bearer, through the gateway. */
+    private endpointOf(workspaceId: string, row: McpConnectorRow): Promise<McpEndpoint> {
+        return this.credentials.endpointOf(workspaceId, {
+            key: row.key,
+            url: row.url ?? "",
+            credentialState: credentialStateOf(row.credential_state),
+        })
     }
 
     /** The remote connector row of a key, or the refusal that it is none. */
@@ -219,7 +246,7 @@ export class McpGatewayAdminService {
         const key = row.key
         try {
             const tools = await this.remote.listTools(
-                { url: row.url ?? "", credentialRef: row.credential_ref },
+                await this.endpointOf(workspaceId, row),
                 remoteConnectorOf(row).timeoutMs,
             )
             const catalogJson = JSON.stringify(tools.map(catalogEntryOf))

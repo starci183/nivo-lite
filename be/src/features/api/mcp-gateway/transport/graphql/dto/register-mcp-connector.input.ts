@@ -2,7 +2,7 @@ import { Field, InputType, Int } from "@nestjs/graphql"
 import { IsInt, IsOptional, IsString, IsUrl, Matches, Max, MaxLength, Min, MinLength } from "class-validator"
 
 @InputType()
-/** A remote MCP server to put behind the gateway; the credential is a NAME the api reads through <NAME>_FILE. */
+/** A remote MCP server to put behind the gateway, with its bearer credential (entered once, sealed in the database, never read back). */
 export class RegisterMcpConnectorInput {
     /** The namespace key. */
     @Field(() => String)
@@ -25,13 +25,13 @@ export class RegisterMcpConnectorInput {
     @IsUrl({ require_tld: false, require_protocol: true })
     url!: string
 
-    /** The credential NAME, or null. */
+    /** The bearer credential, or null when the server takes none (an update without one keeps the stored credential). */
     @Field(() => String, { nullable: true })
     @IsOptional()
     @IsString()
-    @MaxLength(81)
-    @Matches(/^[A-Z][A-Z0-9_]{2,80}$/u)
-    credentialRef?: string | null
+    @MinLength(1)
+    @MaxLength(4096)
+    credential?: string | null
 
     /** The contract version. */
     @Field(() => String)

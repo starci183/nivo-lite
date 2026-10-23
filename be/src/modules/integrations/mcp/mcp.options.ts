@@ -1,7 +1,5 @@
-import type { Secret } from "@modules/platform/config"
-
-/** What the MCP integration holds: the credentials remote servers accept, by NAME; values never leave this integration. */
+/** What the MCP integration needs: the client name it announces to remote servers. A remote server's bearer travels with its endpoint. */
 export interface McpOptions {
-    /** The bearer secrets by NAME (a connector's `credential_ref`), each read through `<NAME>_FILE`. */
-    readonly credentials: ReadonlyMap<string, Secret>
+    /** The client name announced in the MCP handshake (`MCP_CLIENT_NAME`, default `nivo-mcp-gateway`). */
+    readonly clientName: string
 }

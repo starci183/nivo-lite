@@ -242,7 +242,7 @@ describe("WorkspaceProfileService", () => {
                 {
                     key: "hakuen",
                     name: "HAKUEN Back Office",
-                    credentialRef: "MCP_HAKUEN_CLIENT_SECRET",
+                    needsCredential: true,
                     contractVersion: "hakuen-mcp@1",
                     url: CONNECTOR_URL,
                 },
@@ -274,17 +274,19 @@ describe("WorkspaceProfileService", () => {
         const viewOf = (key: string, approvedAt: string | null, approved: ReadonlyArray<boolean>) => ({
             key,
             status: "active",
+            credentialState: "set",
             approvedAt,
             tools: approved.map((value) => ({ approved: value })),
         })
 
-        it("registers each connector as the owner, never approves it and reports each pinned catalog", async () => {
+        it("registers each connector as the owner, never approves it and reports each pinned catalog, or none before its bearer", async () => {
             const owners = await build(mockEntityManager({ query: [ROOMS_FUNCTION_PRESENT, []] }))
             owners.toolGrants.upsert.mockResolvedValue(0)
             owners.connectors.connectors.mockResolvedValue([
                 viewOf("remote-b", "2026-10-20T10:00:00.000Z", [true, true]),
                 viewOf("remote-a", null, [false, false, false]),
                 viewOf("remote-c", "2026-10-20T10:00:00.000Z", [true, false]),
+                { ...viewOf("remote-d", null, []), status: "degraded", credentialState: "needed" },
             ])
 
             await expect(
@@ -292,17 +294,19 @@ describe("WorkspaceProfileService", () => {
                     CONNECTOR,
                     { ...CONNECTOR, key: "remote-b" },
                     { ...CONNECTOR, key: "remote-c" },
+                    { ...CONNECTOR, key: "remote-d" },
                 ]),
             ).resolves.toMatchObject({
                 connectors: {
                     "remote-a": { tools: 3, approved: false },
                     "remote-b": { tools: 2, approved: true },
                     "remote-c": { tools: 2, approved: false },
+                    "remote-d": { tools: 0, approved: false },
                 },
             })
 
             expect(owners.connectors.registerRemote).toHaveBeenNthCalledWith(1, ACTOR, CONNECTOR)
-            expect(owners.connectors.registerRemote).toHaveBeenCalledTimes(3)
+            expect(owners.connectors.registerRemote).toHaveBeenCalledTimes(4)
             expect(owners.connectors.connectors).toHaveBeenCalledWith(ACTOR)
         })
 

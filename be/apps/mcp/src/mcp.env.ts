@@ -1,3 +1,4 @@
+import { parseConnectionSecretsConfig } from "@modules/domain/connection-secrets"
 import { parseMcpGatewayConfig } from "@modules/domain/mcp-gateway"
 import { parseMcpConfig } from "@modules/integrations/mcp"
 import { parseServerConfig } from "@modules/platform/config"
@@ -16,7 +17,9 @@ export interface McpAppOptions {
     readonly database: ReturnType<typeof parsePrimaryDatabaseConfig>
     /** The queue capability's tunables; the gateway app runs no worker, it uses the platform timer port only. */
     readonly queue: ReturnType<typeof parseQueueConfig>
-    /** The gateway settings; every credential is read through <NAME>_FILE. */
+    /** The connection key that opens the credential each remote connector has sealed in its row (CHANNEL_TOKEN_KEY). */
+    readonly connectionSecrets: ReturnType<typeof parseConnectionSecretsConfig>
+    /** The gateway settings (the per-call time limit). */
     readonly mcpGateway: ReturnType<typeof parseMcpGatewayConfig>
 }
 
@@ -26,5 +29,6 @@ export const readMcpEnv = (env: EnvSource): McpAppOptions => ({
     httpSecurity: parseHttpSecurityConfig(env),
     database: parsePrimaryDatabaseConfig(env),
     queue: parseQueueConfig(env),
+    connectionSecrets: parseConnectionSecretsConfig(env),
     mcpGateway: parseMcpGatewayConfig(env, parseMcpConfig(env)),
 })

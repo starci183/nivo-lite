@@ -2,6 +2,11 @@ import type { DynamicModule } from "@nestjs/common"
 import { McpEndpointHttpModule } from "@features/api/mcp-endpoint"
 import { SystemHealthHttpModule } from "@features/api/system-health"
 import { McpAgentAuthenticatorService } from "@modules/domain/api-credentials"
+import {
+    CONNECTION_SECRETS_MESSAGES,
+    CONNECTION_SECRETS_ERROR_KINDS,
+    ConnectionSecretsModule,
+} from "@modules/domain/connection-secrets"
 import { API_KEYS_ERROR_KINDS, API_KEYS_MESSAGES, ApiKeysModule } from "@modules/domain/api-keys"
 import { EventsModule } from "@modules/domain/events"
 import { IDENTITY_ERROR_KINDS, IDENTITY_MESSAGES, IdentityModule } from "@modules/domain/identity"
@@ -26,7 +31,8 @@ import type { McpAppOptions } from "../mcp.options"
  * Registers the mcp app capabilities in their boot order: the platform (its timer port is the queue capability's, which the
  * readiness probe and the native connectors' deadlines use) with the error and message tables of what it composes, the
  * default-deny identity (it serves no user session: every access token is refused; its one door takes an agent key, verified by
- * the api-keys capability), the gateway over the primary database with the bank moves it reads, health and the endpoint.
+ * the api-keys capability), the gateway over the primary database with the bank moves it reads and the connection key that opens
+ * each remote connector's sealed credential, health and the endpoint.
  */
 export const mcpModules = (options: McpAppOptions): Array<DynamicModule> => [
     ClockModule.register({ isGlobal: true }),
@@ -35,6 +41,7 @@ export const mcpModules = (options: McpAppOptions): Array<DynamicModule> => [
         isGlobal: true,
         bundles: [
             API_KEYS_MESSAGES,
+            CONNECTION_SECRETS_MESSAGES,
             ERRORS_MESSAGES,
             HTTP_SECURITY_MESSAGES,
             IDENTITY_MESSAGES,
@@ -48,6 +55,7 @@ export const mcpModules = (options: McpAppOptions): Array<DynamicModule> => [
         kinds: [
             API_KEYS_ERROR_KINDS,
             CONFIG_ERROR_KINDS,
+            CONNECTION_SECRETS_ERROR_KINDS,
             HTTP_SECURITY_ERROR_KINDS,
             IDENTITY_ERROR_KINDS,
             MCP_GATEWAY_ERROR_KINDS,
@@ -68,7 +76,8 @@ export const mcpModules = (options: McpAppOptions): Array<DynamicModule> => [
     }),
     LivenessModule.register({ isGlobal: true }),
     TransactionsModule.register({ isGlobal: true }),
-    McpGatewayModule.register({ isGlobal: true, ...options.mcpGateway }),
+    ConnectionSecretsModule.register({ isGlobal: true, ...options.connectionSecrets }),
+    McpGatewayModule.register({ isGlobal: true, ...options.mcpGateway, keyCheck: true }),
     SystemHealthHttpModule.register({}),
     McpEndpointHttpModule.register({}),
 ]

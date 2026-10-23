@@ -1,15 +1,17 @@
+import type { Secret } from "@modules/platform/config"
+
 /** A JSON object as MCP carries it: tool arguments, results and JSON-RPC messages. */
 export interface McpJson {
     /** Any member. */
     readonly [member: string]: unknown
 }
 
-/** Where a remote MCP server answers and the NAME of the bearer credential it accepts (never the value). */
+/** Where a remote MCP server answers and the bearer credential it accepts, opened by the caller from its sealed row. */
 export interface McpEndpoint {
     /** The Streamable HTTP endpoint, for example https://shop.example.com/mcp. */
     readonly url: string
-    /** The NAME of the credential this integration holds for the server, or null when the server needs none. */
-    readonly credentialRef: string | null
+    /** The bearer credential, or null when the server takes none; revealed only into the request header. */
+    readonly bearer: Secret | null
 }
 
 /** One tool as a remote server lists it. */

@@ -43,9 +43,13 @@ export class McpConnectorType {
     @Field(() => String, { nullable: true })
     url!: string | null
 
-    /** The NAME of the credential secret (never its value), or null. */
+    /** none (the server takes no credential), needed (not entered yet) or set; the value is never read back. */
+    @Field(() => String)
+    credentialState!: string
+
+    /** When the credential was last set or rotated, ISO text, or null. */
     @Field(() => String, { nullable: true })
-    credentialRef!: string | null
+    credentialSetAt!: string | null
 
     /** The contract version. */
     @Field(() => String)

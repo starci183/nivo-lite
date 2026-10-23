@@ -15,6 +15,7 @@ import { SEPAY_MANIFEST } from "./adapters/sepay-native.service"
 import { McpGatewayError, McpGatewayErrorCode } from "./errors/mcp-gateway.error"
 import type { GatewayCaller, NativeAdapter } from "./mcp-gateway.contracts"
 import { MCP_GATEWAY_OPTIONS, NATIVE_ADAPTERS } from "./mcp-gateway.decorators"
+import { McpConnectorCredentialService } from "./mcp-connector-credential.service"
 import { McpGatewayLogEvent } from "./mcp-gateway.log-events"
 import { McpGatewayService } from "./mcp-gateway.service"
 import {
@@ -23,6 +24,8 @@ import {
     GATEWAY_CATALOG as CATALOG,
     roleProvidersOf,
     answerOf,
+    openedEndpointOf,
+    GATEWAY_BEARER,
     refusalOf,
     refusedReadLineOf,
     remoteConnectorRowOf as connectorOf,
@@ -46,13 +49,11 @@ const build = async (setup: GatewaySpecSetup = {}) => {
     grants.listOfAgent.mockResolvedValue(setup.grants ?? [grantOf()])
     grants.agentsGranted.mockResolvedValue(["a1", "a2"])
     const callLog = mock<McpCallLogService>()
+    const credentials = mock<McpConnectorCredentialService>({ endpointOf: openedEndpointOf })
     const moduleRef = await Test.createTestingModule({
         providers: [
             McpGatewayService,
-            {
-                provide: MCP_GATEWAY_OPTIONS,
-                useValue: { remote: { credentials: new Map() }, defaultTimeoutMs: setup.timeoutMs ?? 4000 },
-            },
+            { provide: MCP_GATEWAY_OPTIONS, useValue: { defaultTimeoutMs: setup.timeoutMs ?? 4000 } },
             { provide: NATIVE_ADAPTERS, useValue: [native] },
             { provide: CLOCK, useValue: clock },
             { provide: LOGGER, useValue: logger },
@@ -61,6 +62,7 @@ const build = async (setup: GatewaySpecSetup = {}) => {
             { provide: McpConnectorsService, useValue: connectors },
             { provide: McpToolGrantsService, useValue: grants },
             { provide: McpCallLogService, useValue: callLog },
+            { provide: McpConnectorCredentialService, useValue: credentials },
         ],
     }).compile()
     const gateway = moduleRef.get(McpGatewayService)
@@ -283,14 +285,14 @@ describe("McpGatewayService.call refusals", () => {
 })
 
 describe("McpGatewayService.call remote connectors", () => {
-    it("calls the remote tool with its credential name, masks the audit and answers the result", async () => {
+    it("calls the remote tool with the bearer opened from its sealed row, masks the audit and answers the result", async () => {
         const { gateway, remote, callLog } = await build()
 
         await expect(gateway.call(CALLER, "hakuen.keycode.reveal", { stayId: "s1" })).resolves.toEqual(
             answerOf({ holdId: "h1", code: "777" }),
         )
         expect(remote.call).toHaveBeenCalledWith({
-            endpoint: { url: "https://hakuen.test/mcp", credentialRef: "MCP_HAKUEN_CLIENT_SECRET" },
+            endpoint: { url: "https://hakuen.test/mcp", bearer: GATEWAY_BEARER },
             name: "keycode.reveal",
             args: { stayId: "s1" },
             timeoutMs: 4000,

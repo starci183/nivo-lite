@@ -7,15 +7,12 @@ export enum McpErrorCode {
     Timeout = "MCP_TIMEOUT",
     /** The remote server could not be reached or answered outside the protocol. */
     Unavailable = "MCP_UNAVAILABLE",
-    /** The credential a connector names is not one this integration holds. */
-    CredentialMissing = "MCP_CREDENTIAL_MISSING",
 }
 
 /** How each code travels. */
 export const MCP_ERROR_KINDS: Record<McpErrorCode, ErrorKind> = {
     [McpErrorCode.Timeout]: "unavailable",
     [McpErrorCode.Unavailable]: "unavailable",
-    [McpErrorCode.CredentialMissing]: "unavailable",
 }
 
 /** The one error class of the MCP integration. */

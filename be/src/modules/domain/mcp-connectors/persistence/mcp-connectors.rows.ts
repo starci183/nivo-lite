@@ -1,4 +1,4 @@
-/** One public.mcp_connectors row as the statements select it. */
+/** One public.mcp_connectors row as the statements select it; the sealed credential is never part of it. */
 export interface McpConnectorRow {
     /** The namespace key. */
     readonly key: string
@@ -8,8 +8,10 @@ export interface McpConnectorRow {
     readonly kind: string
     /** The remote endpoint, or null for a native row. */
     readonly url: string | null
-    /** The NAME of the credential secret, or null. */
-    readonly credential_ref: string | null
+    /** `none` (the server takes no credential), `needed` (it takes one, none stored yet) or `set` (sealed in the row). */
+    readonly credential_state: string
+    /** When the credential was last set, ISO text, or null. */
+    readonly credential_set_at: string | null
     /** `active`, `disabled` or `degraded`. */
     readonly status: string
     /** The contract version. */
@@ -32,4 +34,12 @@ export interface McpConnectorRow {
 export interface McpConnectorKeyRow {
     /** The namespace key. */
     readonly key: string
+}
+
+/** The sealed credential of a remote connector, as FIND_SEALED_CREDENTIAL selects it. */
+export interface McpSealedCredentialRow {
+    /** `none`, `needed` or `set`. */
+    readonly credential_state: string
+    /** The sealed credential (the connection-secrets cipher), or null. */
+    readonly credential_sealed: string | null
 }

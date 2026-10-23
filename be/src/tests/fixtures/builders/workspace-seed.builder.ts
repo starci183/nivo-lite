@@ -58,7 +58,7 @@ export const profileWireOf = (key: string, url = CONNECTOR_URL) => ({
 export const REMOTE_CONNECTOR = {
     key: "remote-a",
     name: "Remote A",
-    credentialRef: "MCP_REMOTE_A_SECRET",
+    needsCredential: true,
     contractVersion: "remote-a@1",
     url: "https://a.example.test/mcp",
 }

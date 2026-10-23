@@ -41,9 +41,10 @@ every table is written by its owning capability:
 3. Five agents by handle through `AgentRecordsService.ensureByHandle` (`ai-marketing` content, `ai-editor` video, `ai-sales`
    chatbot, `ai-cskh` chatbot, `ai-ke-toan` accounting) and one installation each through `InstallationRecordsService.insert`
    (status `setup`, mode `assist`) when none drives the agent.
-4. Connector: as the owner, `McpGatewayAdminService.registerRemote` registers `hakuen` (endpoint from the profile input, credential
-   NAME `MCP_HAKUEN_CLIENT_SECRET`, contract `hakuen-mcp@1`) and reads its live `tools/list` into the pinned snapshot; an unreachable
-   server fails the run. The run never approves the catalog: the receipt reports `connectors: { hakuen: { tools, approved } }`, and
+4. Connector: as the owner, `McpGatewayAdminService.registerRemote` registers `hakuen` (endpoint from the profile input, contract
+   `hakuen-mcp@1`) as a server that takes a credential. Its credential is not a deployment key: until the owner enters it in
+   Settings > Connections (sealed in the database), the connector is `needed`, its catalog is not read and the receipt reports no
+   tools. Once it is set, the registration reads its live `tools/list` into the pinned snapshot; an unreachable server fails the run. The run never approves the catalog: the receipt reports `connectors: { hakuen: { tools, approved } }`, and
    until the owner approves the tool list in the console the gateway answers the agents' calls as unapproved.
 5. Gateway grants through `McpToolGrantsService` (the owner of `mcp_tool_grants`). AI Sales: `hakuen.rooms.searchAvailability`,
    `hakuen.rates.quote`, `hakuen.booking.hold`, `hakuen.folio.get` auto and `hakuen.booking.confirm` auto with the argument bound
@@ -64,10 +65,9 @@ first (dry run), then ticked. The workflow decrypts the custody on the runner in
 
 - `starci app secret set production test-accounts WORKSPACE_SEED_INPUT`
 - `starci app secret set production test-accounts WORKSPACE_PROFILE_INPUT`
-- `starci app secret set production api MCP_HAKUEN_CLIENT_SECRET`
-- `starci app secret set production api MCP_GATEWAY_CREDENTIALS` (value `MCP_HAKUEN_CLIENT_SECRET`)
 
-After the executed run, the owner reviews the HAKUEN tool list and approves it in Settings > Connections (`approveMcpConnector`).
+After the executed run, the owner enters the HAKUEN credential once in Settings > Connections (sealed in the database, never shown
+again), tests the connection, then reviews the HAKUEN tool list and approves it (`approveMcpConnector`).
 
 The seed creates configuration and knowledge only: no bank transactions, e-invoices, receivables or report rows. The owner connects
 SePay (its API token through sealed custody); until then the accounting room shows that it is waiting for the connection.

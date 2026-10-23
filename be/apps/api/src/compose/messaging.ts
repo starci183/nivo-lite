@@ -36,7 +36,7 @@ export const messagingModules = (options: ApiOptions): Array<DynamicModule> => [
         runtime: CustomerTurnRuntimeService,
         outcomes: CustomerOutcomesService,
     }),
-    McpGatewayModule.register({ isGlobal: true, ...options.mcpGateway, console: true }),
+    McpGatewayModule.register({ isGlobal: true, ...options.mcpGateway, console: true, keyCheck: true }),
     CustomerTurnsModule.register({ isGlobal: true, ...customerTurnsOptionsOf(options.connections.publicApiUrl) }),
     TelegramInboxModule.register({ isGlobal: true }),
     ZaloInboxModule.register({ isGlobal: true }),

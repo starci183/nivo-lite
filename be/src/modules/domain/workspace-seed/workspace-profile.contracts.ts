@@ -85,8 +85,8 @@ export interface ProfileConnector {
     readonly key: string
     /** The display name. */
     readonly name: string
-    /** The NAME of the credential secret (sealed custody, mounted as `<NAME>_FILE`). */
-    readonly credentialRef: string
+    /** True when the server takes a bearer credential; an owner or manager enters it in the console, where it is sealed. */
+    readonly needsCredential: boolean
     /** The contract version the connector implements. */
     readonly contractVersion: string
 }

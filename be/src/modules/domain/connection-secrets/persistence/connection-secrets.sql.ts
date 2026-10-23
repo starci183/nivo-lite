@@ -50,3 +50,8 @@ export const UPSERT_STORED_SECRET = sql`INSERT INTO public.connection_secrets (c
 
 /** Wipes the sealed credential of a connection ($1 connection id). */
 export const DELETE_STORED_SECRET = sql`DELETE FROM public.connection_secrets WHERE connection_id = $1`
+
+/** One stored sealed credential, any, to prove at boot that the connection key still opens what it sealed (no parameter). */
+export const SAMPLE_SEALED_SECRET = sql`SELECT ciphertext
+FROM public.connection_secrets
+LIMIT 1`

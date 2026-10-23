@@ -89,7 +89,7 @@ export interface SeedActor {
     readonly workspaceId: string
 }
 
-/** A remote MCP connector to register: its endpoint and the NAME of its credential, never the value. */
+/** A remote MCP connector to register: its endpoint and whether it takes a credential, never the value (set in the console). */
 export interface SeedConnectorInput {
     /** The namespace key. */
     readonly key: string
@@ -97,8 +97,8 @@ export interface SeedConnectorInput {
     readonly name: string
     /** The Streamable HTTP endpoint. */
     readonly url: string
-    /** The NAME of the credential secret, mounted as `<NAME>_FILE`. */
-    readonly credentialRef: string
+    /** True when the server takes a bearer credential; until one is entered in the console the connector is `needed`. */
+    readonly needsCredential: boolean
     /** The contract version. */
     readonly contractVersion: string
 }
@@ -115,6 +115,8 @@ export interface SeedConnectorView {
     readonly key: string
     /** `active` after a good catalog read; any other status means the server was not read. */
     readonly status: string
+    /** `needed` while the server takes a credential no one entered yet (its catalog is then not read); else `none` or `set`. */
+    readonly credentialState: string
     /** When an owner or manager approved its catalog, or null. */
     readonly approvedAt: string | null
     /** Its tools from the pinned catalog. */

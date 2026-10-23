@@ -17,6 +17,7 @@ import { McpGatewayError, McpGatewayErrorCode } from "./errors/mcp-gateway.error
 import { judgeGrant } from "./grant.policy"
 import { withReplayKey } from "./idempotency-key.policy"
 import { InjectMcpGatewayOptions, InjectNativeAdapters } from "./mcp-gateway.decorators"
+import { McpConnectorCredentialService } from "./mcp-connector-credential.service"
 import { McpGatewayLogEvent } from "./mcp-gateway.log-events"
 import type {
     BreakerState,
@@ -138,6 +139,7 @@ export class McpGatewayService {
         private readonly connectors: McpConnectorsService,
         private readonly grants: McpToolGrantsService,
         private readonly callLog: McpCallLogService,
+        private readonly credentials: McpConnectorCredentialService,
     ) {}
 
     /** The connectors of a workspace: every native one, and the remote ones it registered. */
@@ -346,8 +348,13 @@ export class McpGatewayService {
                     value: await this.native(adapter, workspaceId, spec.name, connector.timeoutMs, args),
                 }
             }
+            const endpoint = await this.credentials.endpointOf(workspaceId, {
+                key: connector.manifest.key,
+                url: connector.url ?? "",
+                credentialState: connector.credentialState,
+            })
             const result = await this.remote.call({
-                endpoint: { url: connector.url ?? "", credentialRef: connector.credentialRef },
+                endpoint,
                 name: spec.name,
                 args,
                 timeoutMs: connector.timeoutMs,

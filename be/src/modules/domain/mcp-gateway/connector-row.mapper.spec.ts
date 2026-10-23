@@ -63,7 +63,8 @@ const rowOf = builder<McpConnectorRow>({
     name: "HAKUEN",
     kind: "remote",
     url: "https://hakuen.test/mcp",
-    credential_ref: null,
+    credential_state: "none",
+    credential_set_at: null,
     status: "active",
     contract_version: "hakuen-mcp@1",
     timeout_ms: 4000,
@@ -95,10 +96,14 @@ describe("connector-row.mapper remote connectors", () => {
             manifest: { key: "hakuen", name: "HAKUEN", kind: "remote", contractVersion: "hakuen-mcp@1", tools: [] },
             status: "active",
             url: "https://hakuen.test/mcp",
-            credentialRef: null,
+            credentialState: "none",
+            credentialSetAt: null,
             timeoutMs: 4000,
         })
         expect(remoteConnectorOf(rowOf({ tool_catalog: null, status: "weird" })).status).toBe("disabled")
+        expect(
+            remoteConnectorOf(rowOf({ credential_state: "set", credential_set_at: "2026-10-22T01:00:00.000Z" })),
+        ).toMatchObject({ credentialState: "set", credentialSetAt: "2026-10-22T01:00:00.000Z" })
     })
 })
 
@@ -184,7 +189,8 @@ describe("connector-row.mapper remote connectors", () => {
             manifest: SEPAY_MANIFEST,
             status: "active",
             url: null,
-            credentialRef: null,
+            credentialState: "none",
+            credentialSetAt: null,
             timeoutMs: 4000,
             approvedTools: null,
             approvedAt: null,

@@ -5,9 +5,9 @@
 # The protected environment "production" holds the secret SOPS_AGE_KEY (the age identity of .sops.yaml). The sealed custody under
 # .starcistacks/production/secrets is decrypted on the runner into private files only; every materialized key reaches the cli as
 # <KEY>_FILE and is never echoed. The run requires PRIMARY_DB_URL, SUPABASE_URL, CHANNEL_TOKEN_KEY, WORKSPACE_SEED_INPUT (the
-# private ensure input naming the owner, manager and staff accounts), WORKSPACE_PROFILE_INPUT (the connector endpoints) and
-# MCP_GATEWAY_CREDENTIALS with MCP_HAKUEN_CLIENT_SECRET (the connector credential the gateway console reads the catalog with);
-# the Supabase integration of the cli reads its own admin key.
+# private ensure input naming the owner, manager and staff accounts) and WORKSPACE_PROFILE_INPUT (the connector endpoints); a
+# connector credential is not a custody key (the owner enters it in the console, sealed in the database); the Supabase integration
+# of the cli reads its own admin key.
 # With task "cleanup-workspaces" it instead runs "cli cleanup-workspaces run" (be/docs/runbooks/workspace-cleanup.md): mode "dry-run"
 # prints the receipt of every workspace that is not in "keep" and every account none of the kept workspaces holds, with its digest;
 # mode "execute" deletes them only when a fresh dry run has the reviewed "receipt_digest". Same release tag and sealed custody rules.
@@ -114,7 +114,7 @@ jobs:
           secret_dir="$XDG_DATA_HOME/StarCi/secrets/nivo-lite/$STACK_ENVIRONMENT"
           trap 'rm -rf -- "$secret_dir"' EXIT
           npx --no-install starci app secret materialize "$STACK_ENVIRONMENT" > /dev/null
-          for key in PRIMARY_DB_URL SUPABASE_URL CHANNEL_TOKEN_KEY WORKSPACE_SEED_INPUT WORKSPACE_PROFILE_INPUT MCP_GATEWAY_CREDENTIALS MCP_HAKUEN_CLIENT_SECRET; do
+          for key in PRIMARY_DB_URL SUPABASE_URL CHANNEL_TOKEN_KEY WORKSPACE_SEED_INPUT WORKSPACE_PROFILE_INPUT; do
             test -s "$secret_dir/$key" || { echo "sealed key $key is missing"; exit 1; }
           done
           for file in "$secret_dir"/*; do

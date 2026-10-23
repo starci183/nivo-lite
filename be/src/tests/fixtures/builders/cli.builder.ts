@@ -44,7 +44,7 @@ const options = {
     n8nHost: { host: undefined, user: "wiring", sshKey: undefined, knownHosts: undefined, container: "wiring" },
     channelProvisioning: { telegramToken: undefined, print: refuseWiringOperation },
     workspaceSeed: { input: undefined, profileInput: undefined },
-    mcpGateway: { remote: { credentials: new Map<string, Secret>() }, defaultTimeoutMs: 1000 },
+    mcpGateway: { remote: { clientName: "nivo-mcp-gateway" }, defaultTimeoutMs: 1000 },
     openclaw: {
         gateway: null,
         turnTimeoutMs: 90_000,

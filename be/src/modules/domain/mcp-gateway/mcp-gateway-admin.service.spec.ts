@@ -8,16 +8,19 @@ import type { McpConnectorRow } from "@modules/domain/mcp-connectors"
 import { McpToolGrantsService } from "@modules/domain/mcp-tool-grants"
 import { MCP_REMOTE } from "@modules/integrations/mcp"
 import type { McpRemote } from "@modules/integrations/mcp"
+import { Secret } from "@modules/platform/config"
 import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { SEPAY_MANIFEST } from "./adapters/sepay-native.service"
 import { argsHashOf } from "./audit-mask.policy"
 import { McpGatewayErrorCode } from "./errors/mcp-gateway.error"
+import { McpConnectorCredentialService } from "./mcp-connector-credential.service"
 import type { GrantInput, RemoteConnectorInput } from "./mcp-gateway.contracts"
 import { MCP_GATEWAY_OPTIONS } from "./mcp-gateway.decorators"
 import { McpGatewayAdminService } from "./mcp-gateway-admin.service"
 import { McpGatewayLogEvent } from "./mcp-gateway.log-events"
 import { McpGatewayService } from "./mcp-gateway.service"
+import { GATEWAY_BEARER as BEARER, openedEndpointOf } from "@tests/fixtures/builders/mcp-gateway.builder"
 
 const ACTOR = { principalId: "person-1", workspaceId: "ws-1" }
 const MANAGER = ["owner", "manager"]
@@ -28,7 +31,8 @@ const rowOf = builder<McpConnectorRow>({
     name: "HAKUEN",
     kind: "remote",
     url: "https://hakuen.test/mcp",
-    credential_ref: "MCP_HAKUEN_CLIENT_SECRET",
+    credential_state: "set",
+    credential_set_at: "2026-10-22T01:00:00.000Z",
     status: "active",
     contract_version: "hakuen-mcp@1",
     timeout_ms: 3000,
@@ -50,11 +54,12 @@ const connectorInputOf = builder<RemoteConnectorInput>({
 
 const build = async () => {
     const remote = mock<McpRemote>()
-    remote.holds.mockImplementation((ref) => ref === "MCP_HAKUEN_CLIENT_SECRET")
     remote.listTools.mockResolvedValue([HOLD])
     remote.ping.mockResolvedValue(undefined)
     const logger = mock<Logger>()
     const gateway = mock<McpGatewayService>()
+    const credentials = mock<McpConnectorCredentialService>()
+    credentials.endpointOf.mockImplementation(openedEndpointOf)
     const connectorRows = mock<McpConnectorsService>()
     connectorRows.list.mockResolvedValue([rowOf(), rowOf({ key: "sepay", kind: "native" })])
     connectorRows.approveCatalog.mockResolvedValue(true)
@@ -65,7 +70,7 @@ const build = async () => {
     const moduleRef = await Test.createTestingModule({
         providers: [
             McpGatewayAdminService,
-            { provide: MCP_GATEWAY_OPTIONS, useValue: { remote: { credentials: new Map() }, defaultTimeoutMs: 4000 } },
+            { provide: MCP_GATEWAY_OPTIONS, useValue: { defaultTimeoutMs: 4000 } },
             { provide: MCP_REMOTE, useValue: remote },
             { provide: LOGGER, useValue: logger },
             { provide: McpGatewayService, useValue: gateway },
@@ -73,10 +78,11 @@ const build = async () => {
             { provide: McpToolGrantsService, useValue: grantRows },
             { provide: McpCallLogService, useValue: callLines },
             { provide: ConnectionsService, useValue: connections },
+            { provide: McpConnectorCredentialService, useValue: credentials },
         ],
     }).compile()
     const admin = moduleRef.get(McpGatewayAdminService)
-    return { admin, remote, logger, gateway, connectorRows, grantRows, callLines, connections }
+    return { admin, remote, logger, gateway, credentials, connectorRows, grantRows, callLines, connections }
 }
 
 describe("McpGatewayAdminService reads", () => {
@@ -87,7 +93,8 @@ describe("McpGatewayAdminService reads", () => {
                 manifest: SEPAY_MANIFEST,
                 status: "active",
                 url: null,
-                credentialRef: null,
+                credentialState: "none",
+                credentialSetAt: null,
                 timeoutMs: 4000,
                 approvedTools: null,
                 approvedAt: null,
@@ -97,7 +104,8 @@ describe("McpGatewayAdminService reads", () => {
                 manifest: { ...SEPAY_MANIFEST, key: "shop", kind: "remote" },
                 status: "degraded",
                 url: "https://shop.test/mcp",
-                credentialRef: null,
+                credentialState: "set",
+                credentialSetAt: "t0",
                 timeoutMs: 3000,
                 approvedTools: new Set<string>(),
                 approvedAt: "t1",
@@ -113,7 +121,8 @@ describe("McpGatewayAdminService reads", () => {
             kind: "native",
             status: "active",
             url: null,
-            credentialRef: null,
+            credentialState: "none",
+            credentialSetAt: null,
             contractVersion: "sepay-native@1",
             timeoutMs: 4000,
             approvedAt: null,
@@ -134,6 +143,8 @@ describe("McpGatewayAdminService reads", () => {
             ],
         })
         expect(views[1]).toMatchObject({
+            credentialState: "set",
+            credentialSetAt: "t0",
             approvedAt: "t1",
             checkedAt: "t2",
             tools: [
@@ -267,60 +278,75 @@ describe("McpGatewayAdminService.setGrant", () => {
     })
 })
 
-describe("McpGatewayAdminService.registerRemote", () => {
-    it("registers a remote connector with a held credential name and the default time limit, then reads its catalog", async () => {
-        const { admin, connectorRows, remote } = await build()
+describe("McpGatewayAdminService.registerRemote and setCredential", () => {
+    it("registers a remote connector, seals the bearer entered with it, then reads its catalog with it", async () => {
+        const { admin, connectorRows, remote, credentials } = await build()
 
-        await admin.registerRemote(ACTOR, connectorInputOf({ credentialRef: "MCP_HAKUEN_CLIENT_SECRET" }))
-        await admin.registerRemote(ACTOR, connectorInputOf({ url: "http://127.0.0.1:3001/mcp", timeoutMs: 2000 }))
+        await admin.registerRemote(ACTOR, connectorInputOf({ credential: "bearer-1" }))
 
-        expect(connectorRows.upsertRemote.mock.calls).toEqual([
-            [
-                {
-                    workspaceId: "ws-1",
-                    key: "hakuen",
-                    name: "HAKUEN Back-office",
-                    url: "https://hakuen.test/mcp",
-                    credentialRef: "MCP_HAKUEN_CLIENT_SECRET",
-                    contractVersion: "hakuen-mcp@1",
-                    timeoutMs: 4000,
-                },
-            ],
-            [
-                {
-                    workspaceId: "ws-1",
-                    key: "hakuen",
-                    name: "HAKUEN Back-office",
-                    url: "http://127.0.0.1:3001/mcp",
-                    credentialRef: null,
-                    contractVersion: "hakuen-mcp@1",
-                    timeoutMs: 2000,
-                },
-            ],
-        ])
-        expect(remote.listTools).toHaveBeenCalledTimes(2)
-        expect(connectorRows.storeCatalog).toHaveBeenCalledTimes(2)
+        expect(connectorRows.upsertRemote).toHaveBeenCalledWith(
+            expect.objectContaining({ needsCredential: true, timeoutMs: 4000 }),
+        )
+        expect(credentials.store).toHaveBeenCalledWith(ACTOR, "hakuen", "bearer-1")
+        expect(remote.listTools).toHaveBeenCalledWith({ url: "https://hakuen.test/mcp", bearer: BEARER }, 3000)
+        expect(connectorRows.storeCatalog).toHaveBeenCalledTimes(1)
     })
 
-    it("refuses a bad key, name, URL or credential name, and a credential the integration does not hold", async () => {
-        const { admin, connectorRows } = await build()
+    it("registers a server that takes no bearer without storing one, or leaves one not entered yet unread", async () => {
+        const { admin, connectorRows, remote, credentials } = await build()
+        const url = "http://127.0.0.1:3001/mcp"
+        connectorRows.list.mockResolvedValueOnce([rowOf({ credential_state: "none", url })])
+
+        await admin.registerRemote(ACTOR, connectorInputOf({ url, timeoutMs: 2000 }))
+        connectorRows.list.mockResolvedValueOnce([rowOf({ credential_state: "needed" })])
+        await admin.registerRemote(ACTOR, connectorInputOf({ needsCredential: true }))
+
+        const written = connectorRows.upsertRemote.mock.calls.map(
+            ([record]) => `${record.needsCredential}/${record.timeoutMs}`,
+        )
+        expect(written).toEqual(["false/2000", "true/4000"])
+        expect(credentials.store).not.toHaveBeenCalled()
+        expect(remote.listTools.mock.calls).toEqual([[{ url, bearer: null }, 3000]])
+    })
+
+    it("refuses a bad key, name, URL or bearer before writing anything", async () => {
+        const { admin, connectorRows, credentials } = await build()
         const register = (input: RemoteConnectorInput) => admin.registerRemote(ACTOR, input)
 
         await expect(register(connectorInputOf({ key: "Hakuen" }))).rejects.toMatchObject({ params: { field: "key" } })
         await expect(register(connectorInputOf({ name: "  " }))).rejects.toMatchObject({ params: { field: "name" } })
-        await expect(register(connectorInputOf({ url: "not a url" }))).rejects.toMatchObject({
+        await expect(register(connectorInputOf({ url: "ftp://x.test" }))).rejects.toMatchObject({
             params: { field: "url" },
         })
-        await expect(register(connectorInputOf({ url: "ftp://hakuen.test" }))).rejects.toMatchObject({
-            params: { field: "url" },
+        await expect(register(connectorInputOf({ credential: "line\nbreak" }))).rejects.toMatchObject({
+            code: McpGatewayErrorCode.Invalid,
+            params: { field: "credential" },
         })
-        await expect(register(connectorInputOf({ credentialRef: "lower" }))).rejects.toMatchObject({
-            params: { field: "credentialRef" },
+        expect(connectorRows.upsertRemote).not.toHaveBeenCalled()
+        expect(credentials.store).not.toHaveBeenCalled()
+    })
+
+    it("seals a new bearer (a rotation), then reads the catalog with it", async () => {
+        const { admin, remote, credentials } = await build()
+
+        await expect(admin.setCredential(ACTOR, { key: "hakuen", credential: new Secret("rotated") })).resolves.toBe(1)
+
+        expect(credentials.store).toHaveBeenCalledWith(ACTOR, "hakuen", "rotated")
+        expect(remote.listTools).toHaveBeenCalledWith({ url: "https://hakuen.test/mcp", bearer: BEARER }, 3000)
+    })
+
+    it("refuses a blank bearer, and a person without a role that manages connections, before sealing anything", async () => {
+        const { admin, connections, credentials, connectorRows } = await build()
+
+        await expect(admin.setCredential(ACTOR, { key: "hakuen", credential: new Secret(" ") })).rejects.toMatchObject({
+            code: McpGatewayErrorCode.Invalid,
+            params: { field: "credential" },
         })
-        await expect(register(connectorInputOf({ credentialRef: "MCP_OTHER_SECRET" }))).rejects.toMatchObject({
-            code: McpGatewayErrorCode.CredentialMissing,
-            params: { ref: "MCP_OTHER_SECRET" },
-        })
+        const denied = new Error("forbidden")
+        connections.authorize.mockRejectedValue(denied)
+        await expect(admin.setCredential(ACTOR, { key: "hakuen", credential: new Secret("x") })).rejects.toBe(denied)
+        await expect(admin.registerRemote(ACTOR, connectorInputOf({ credential: "x" }))).rejects.toBe(denied)
+        expect(credentials.store).not.toHaveBeenCalled()
         expect(connectorRows.upsertRemote).not.toHaveBeenCalled()
     })
 })
@@ -331,10 +357,7 @@ describe("McpGatewayAdminService.syncCatalog", () => {
         const catalogJson = JSON.stringify([{ ...HOLD, hash: argsHashOf(HOLD) }])
 
         await expect(admin.syncCatalog(ACTOR, "hakuen")).resolves.toBe(1)
-        expect(remote.listTools).toHaveBeenCalledWith(
-            { url: "https://hakuen.test/mcp", credentialRef: "MCP_HAKUEN_CLIENT_SECRET" },
-            3000,
-        )
+        expect(remote.listTools).toHaveBeenCalledWith({ url: "https://hakuen.test/mcp", bearer: BEARER }, 3000)
         expect(connectorRows.storeCatalog).toHaveBeenCalledWith({
             workspaceId: "ws-1",
             key: "hakuen",
@@ -351,7 +374,7 @@ describe("McpGatewayAdminService.syncCatalog", () => {
         remote.listTools.mockRejectedValue(down)
 
         await expect(admin.syncCatalog(ACTOR, "hakuen")).resolves.toBe(0)
-        expect(remote.listTools).toHaveBeenCalledWith({ url: "", credentialRef: "MCP_HAKUEN_CLIENT_SECRET" }, 3000)
+        expect(remote.listTools).toHaveBeenCalledWith({ url: "", bearer: BEARER }, 3000)
         expect(connectorRows.storeCatalog).toHaveBeenCalledWith({
             workspaceId: "ws-1",
             key: "hakuen",
@@ -428,10 +451,7 @@ describe("McpGatewayAdminService.checkConnector", () => {
         const { admin, remote, connectorRows } = await build()
 
         await expect(admin.checkConnector(ACTOR, "hakuen")).resolves.toBe("active")
-        expect(remote.ping).toHaveBeenCalledWith(
-            { url: "https://hakuen.test/mcp", credentialRef: "MCP_HAKUEN_CLIENT_SECRET" },
-            3000,
-        )
+        expect(remote.ping).toHaveBeenCalledWith({ url: "https://hakuen.test/mcp", bearer: BEARER }, 3000)
         expect(connectorRows.recordHealth).toHaveBeenCalledWith({
             workspaceId: "ws-1",
             key: "hakuen",
@@ -446,7 +466,7 @@ describe("McpGatewayAdminService.checkConnector", () => {
         remote.ping.mockRejectedValue(down)
 
         await expect(admin.checkConnector(ACTOR, "hakuen")).resolves.toBe("degraded")
-        expect(remote.ping).toHaveBeenCalledWith({ url: "", credentialRef: "MCP_HAKUEN_CLIENT_SECRET" }, 3000)
+        expect(remote.ping).toHaveBeenCalledWith({ url: "", bearer: BEARER }, 3000)
         expect(connectorRows.recordHealth).toHaveBeenCalledWith({
             workspaceId: "ws-1",
             key: "hakuen",
@@ -456,5 +476,25 @@ describe("McpGatewayAdminService.checkConnector", () => {
             workspaceId: "ws-1",
             connector: "hakuen",
         })
+    })
+    it("records a connector whose credential cannot be opened as degraded without reaching the server", async () => {
+        const { admin, credentials, remote, connectorRows, logger } = await build()
+        const missing = new Error("credential missing")
+        credentials.endpointOf.mockRejectedValue(missing)
+
+        await expect(admin.checkConnector(ACTOR, "hakuen")).resolves.toBe("degraded")
+        await expect(admin.syncCatalog(ACTOR, "hakuen")).resolves.toBe(0)
+        expect(remote.ping).not.toHaveBeenCalled()
+        expect(remote.listTools).not.toHaveBeenCalled()
+        expect(connectorRows.recordHealth).toHaveBeenCalledWith({
+            workspaceId: "ws-1",
+            key: "hakuen",
+            status: "degraded",
+        })
+        expect(logger.error).toHaveBeenCalledWith(McpGatewayLogEvent.HealthFailed, missing, {
+            workspaceId: "ws-1",
+            connector: "hakuen",
+        })
+        expect(credentials.endpointOf).toHaveBeenCalledWith("ws-1", expect.objectContaining({ credentialState: "set" }))
     })
 })

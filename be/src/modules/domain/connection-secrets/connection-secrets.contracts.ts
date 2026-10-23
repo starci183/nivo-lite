@@ -20,3 +20,6 @@ export interface StoredSecret {
 
 /** The stored secret of a connection, or null when it has none. */
 export type OptionalStoredSecret = StoredSecret | null
+
+/** A sealed text, or null when there is none to prove the connection key against. */
+export type OptionalSealedText = string | null

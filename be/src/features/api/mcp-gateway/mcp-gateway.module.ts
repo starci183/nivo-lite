@@ -7,6 +7,7 @@ import { RegisterMcpConnectorHandler } from "./application/register-mcp-connecto
 import { SyncMcpConnectorHandler } from "./application/sync-mcp-connector.handler"
 import { ApproveMcpConnectorHandler } from "./application/approve-mcp-connector.handler"
 import { CheckMcpConnectorHandler } from "./application/check-mcp-connector.handler"
+import { SetMcpConnectorCredentialHandler } from "./application/set-mcp-connector-credential.handler"
 import { ConfigurableModuleClass } from "./mcp-gateway.module-definition"
 
 @Module({
@@ -19,6 +20,7 @@ import { ConfigurableModuleClass } from "./mcp-gateway.module-definition"
         SyncMcpConnectorHandler,
         ApproveMcpConnectorHandler,
         CheckMcpConnectorHandler,
+        SetMcpConnectorCredentialHandler,
     ],
 })
 /** The MCP gateway console feature: connectors, grants and the audit log. */

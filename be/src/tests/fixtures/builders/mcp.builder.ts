@@ -36,7 +36,8 @@ const options = {
         visibilityTimeoutMs: 60000,
         shutdownGraceMs: 1000,
     },
-    mcpGateway: { remote: { credentials: new Map<string, Secret>() }, defaultTimeoutMs: 4000 },
+    connectionSecrets: { tokenKey: new Secret(Buffer.alloc(32, 9).toString("base64")) },
+    mcpGateway: { remote: { clientName: "nivo-mcp-gateway" }, defaultTimeoutMs: 4000 },
 }
 
 /** The existing database and queue tokens of the real registered modules, each answered by a double that refuses to run. */

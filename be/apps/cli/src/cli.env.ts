@@ -15,7 +15,7 @@ import type { EnvSource } from "@modules/platform/config"
 export interface CliAppOptions {
     /** Private target-runner input for explicit account and membership operations. */
     readonly workspaceSeed: ReturnType<typeof parseWorkspaceSeedConfig>
-    /** The gateway console a workspace profile registers its remote connectors through (credential NAMES and time limit). */
+    /** The gateway console a workspace profile registers its remote connectors through (its time limit). */
     readonly mcpGateway: ReturnType<typeof parseMcpGatewayConfig>
     /** The connections the built-in migrate and seed groups operate on. */
     readonly connections: ReadonlyArray<ReturnType<typeof parsePrimaryDatabaseConfig>>

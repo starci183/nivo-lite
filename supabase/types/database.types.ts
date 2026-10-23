@@ -1,4 +1,4 @@
-// migrations-sha256: 45035eb365ed40ec03a4301ae6cc50b0337f3f02d51895c1dbb58474c70f3b9b
+// migrations-sha256: 0f6cc6862db126feb65cef7389668a0d711135dd2ad7330ae8936df168f16ed8
 
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[]
 
@@ -2642,13 +2642,13 @@ isOneToOne: false
                   ]
                 },"mcp_connectors": {
                   Row: {
-                    "approved_at": string | null,"approved_by": string | null,"approved_catalog": NonNullable<Json>,"catalog_hash": string,"checked_at": string | null,"contract_version": string,"created_at": string,"credential_ref": string | null,"id": string,"key": string,"kind": string,"name": string,"status": string,"timeout_ms": number,"tool_catalog": NonNullable<Json>,"updated_at": string,"url": string | null,"workspace_id": string
+                    "approved_at": string | null,"approved_by": string | null,"approved_catalog": NonNullable<Json>,"catalog_hash": string,"checked_at": string | null,"contract_version": string,"created_at": string,"credential_sealed": string | null,"credential_set_at": string | null,"credential_set_by": string | null,"credential_state": string,"id": string,"key": string,"kind": string,"name": string,"status": string,"timeout_ms": number,"tool_catalog": NonNullable<Json>,"updated_at": string,"url": string | null,"workspace_id": string
                   }
                   Insert: {
-                    "approved_at"?: string | null,"approved_by"?: string | null,"approved_catalog"?: NonNullable<Json>,"catalog_hash"?: string,"checked_at"?: string | null,"contract_version"?: string,"created_at"?: string,"credential_ref"?: string | null,"id"?: string,"key": string,"kind": string,"name": string,"status"?: string,"timeout_ms"?: number,"tool_catalog"?: NonNullable<Json>,"updated_at"?: string,"url"?: string | null,"workspace_id": string
+                    "approved_at"?: string | null,"approved_by"?: string | null,"approved_catalog"?: NonNullable<Json>,"catalog_hash"?: string,"checked_at"?: string | null,"contract_version"?: string,"created_at"?: string,"credential_sealed"?: string | null,"credential_set_at"?: string | null,"credential_set_by"?: string | null,"credential_state"?: string,"id"?: string,"key": string,"kind": string,"name": string,"status"?: string,"timeout_ms"?: number,"tool_catalog"?: NonNullable<Json>,"updated_at"?: string,"url"?: string | null,"workspace_id": string
                   }
                   Update: {
-                    "approved_at"?: string | null,"approved_by"?: string | null,"approved_catalog"?: NonNullable<Json>,"catalog_hash"?: string,"checked_at"?: string | null,"contract_version"?: string,"created_at"?: string,"credential_ref"?: string | null,"id"?: string,"key"?: string,"kind"?: string,"name"?: string,"status"?: string,"timeout_ms"?: number,"tool_catalog"?: NonNullable<Json>,"updated_at"?: string,"url"?: string | null,"workspace_id"?: string
+                    "approved_at"?: string | null,"approved_by"?: string | null,"approved_catalog"?: NonNullable<Json>,"catalog_hash"?: string,"checked_at"?: string | null,"contract_version"?: string,"created_at"?: string,"credential_sealed"?: string | null,"credential_set_at"?: string | null,"credential_set_by"?: string | null,"credential_state"?: string,"id"?: string,"key"?: string,"kind"?: string,"name"?: string,"status"?: string,"timeout_ms"?: number,"tool_catalog"?: NonNullable<Json>,"updated_at"?: string,"url"?: string | null,"workspace_id"?: string
                   }
                   Relationships: [
                     {

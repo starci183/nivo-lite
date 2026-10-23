@@ -4,10 +4,15 @@ import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { ok, refused } from "@modules/platform/primitives"
 import type { Outcome } from "@modules/platform/primitives"
 import { InjectConnectionSecretsOptions } from "./connection-secrets.decorators"
-import type { ConnectionSecret, OptionalStoredSecret } from "./connection-secrets.contracts"
+import type { ConnectionSecret, OptionalSealedText, OptionalStoredSecret } from "./connection-secrets.contracts"
 import type { ConnectionSecretsOptions } from "./connection-secrets.options"
 import { ConnectionSecretsError, ConnectionSecretsErrorCode } from "./errors/connection-secrets.error"
-import type { ConnectionIdRow, ConnectionSecretRow, StoredSecretRow } from "./persistence/connection-secrets.rows"
+import type {
+    ConnectionIdRow,
+    ConnectionSecretRow,
+    SealedSampleRow,
+    StoredSecretRow,
+} from "./persistence/connection-secrets.rows"
 import {
     DELETE_STORED_SECRET,
     FIND_CONNECTION_SECRET,
@@ -16,6 +21,7 @@ import {
     UPSERT_STORED_SECRET,
     LIST_ZALO_CONNECTIONS_DUE,
     RELEASE_REFRESH_LEASE,
+    SAMPLE_SEALED_SECRET,
     SAVE_SECRET,
     SAVE_SECRET_WITH_EXPIRY,
     TRY_REFRESH_LEASE,
@@ -36,9 +42,37 @@ export class ConnectionSecretsService {
         this.key = key
     }
 
-    /** Seals a credential for storage in connection_secrets.ciphertext. */
+    /**
+     * Seals a credential with the connection key: for connection_secrets.ciphertext, and for every other per-workspace credential
+     * a capability keeps sealed in its own row (a remote MCP connector's bearer), so there is one key and one cipher.
+     */
     seal(plain: string): string {
         return sealSecret(this.key, plain)
+    }
+
+    /**
+     * Refuses a connection key that does not open a credential already sealed in the database (a sample of it, or none):
+     * CHANNEL_TOKEN_KEY is one key, set once and never overwritten, so a key that changed under stored credentials is a broken
+     * custody, not a rotation. The apps call this before they serve; it fails with `CONNECTION_SECRETS_KEY_MISMATCH`.
+     */
+    assertOpens(sealed: OptionalSealedText): void {
+        if (sealed === null || this.open(sealed).kind === "ok") return
+        throw new ConnectionSecretsError({ code: ConnectionSecretsErrorCode.KeyMismatch })
+    }
+
+    /** Proves at boot that the connection key opens the credentials of connection_secrets (see `assertOpens`). */
+    async assertKeyOpensStored(): Promise<void> {
+        const [row] = await this.entityManager.query<Array<SealedSampleRow>>(SAMPLE_SEALED_SECRET)
+        this.assertOpens(row?.ciphertext ?? null)
+    }
+
+    /** Opens a text `seal` sealed, or a refusal when it cannot be opened with the current key. */
+    open(sealed: string): Outcome<string, ConnectionSecretsErrorCode> {
+        try {
+            return ok(openSecret(this.key, sealed))
+        } catch (cause) {
+            return refused(ConnectionSecretsErrorCode.Unreadable, { reason: String(cause) })
+        }
     }
 
     /** The opened credential and webhook secret of a connection of the provider, or a refusal when it is missing, disconnected, of another provider or unreadable. */

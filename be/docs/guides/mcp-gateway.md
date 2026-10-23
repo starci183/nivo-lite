@@ -112,13 +112,24 @@ key, answers `unknown_outcome` (audited as a timeout), never `unavailable`, so t
 
 ## Configuration (api and mcp apps)
 
-- `MCP_GATEWAY_CREDENTIALS`: the comma-separated credential NAMES a remote connector may reference; each value is read through
-  `<NAME>_FILE`.
-- `MCP_GATEWAY_TIMEOUT_MS` (default 4000), `PORT`, `HTTP_SECURITY_ALLOWED_ORIGINS` and the primary database. The mcp app needs no
-  Supabase setting and no shared token: each agent brings its own key.
-- Register a remote connector: `registerMcpConnector(input: { key, name, url, credentialRef, contractVersion })`, which reads its
-  catalog; then an owner or manager reviews the pinned tools (`mcpConnectors`) and approves them with
-  `approveMcpConnector(input: { key })`.
+- `MCP_GATEWAY_TIMEOUT_MS` (default 4000), `MCP_CLIENT_NAME` (the client name announced to remote servers, default
+  `nivo-mcp-gateway`), `PORT`, `HTTP_SECURITY_ALLOWED_ORIGINS`, the primary database and `CHANNEL_TOKEN_KEY`
+  (the connection key). The mcp app needs no Supabase setting and no shared token: each agent brings its own key.
+- No connector credential is an environment key. A remote connector's bearer credential is sealed per workspace in its own
+  `mcp_connectors` row (`credential_sealed`, AES-256-GCM under `CHANNEL_TOKEN_KEY`, through the same connection-secrets cipher as
+  a channel connection's credential). `credential_state` is `none` (the server takes no credential), `needed` (it takes one and none
+  was entered) or `set`. The gateway opens the sealed value for the one request it sends and never returns it: the console reads
+  only the state and when it was set. A value the key cannot open is logged as an error and refused as unreadable, a missing one
+  as missing; both reach the agent as `unavailable` and are audited. At boot the api and the mcp app refuse to start when the
+  connection key does not open a credential already sealed in the database (an overwritten key).
+- Register a remote connector (Settings > Connections > Add a remote connector, owner or manager):
+  `registerMcpConnector(input: { key, name, url, credential, contractVersion })`. The credential is entered once and sealed; it is
+  read back never, only as set. Then the catalog is read (`syncMcpConnector`, the console's "Test connection", reads the live
+  `tools/list`). Rotate it with `setMcpConnectorCredential(input: { key, credential })`, which seals the new value and reads the
+  catalog with it. The tools stay unapproved until an owner or manager reviews the pinned tools (`mcpConnectors`) and approves them
+  with `approveMcpConnector(input: { key })`.
+- Migration `supabase/migrations/20261103000100_mcp-sealed-credential_contract_drop.sql` drops `credential_ref`: a row that named a gateway variable
+  becomes `needed`, and its credential is entered once in the console.
 
 ## Known limits
 

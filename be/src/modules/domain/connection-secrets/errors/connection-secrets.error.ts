@@ -9,6 +9,8 @@ export enum ConnectionSecretsErrorCode {
     NotFound = "CONNECTION_SECRETS_NOT_FOUND",
     /** The stored credential could not be opened with this key. */
     Unreadable = "CONNECTION_SECRETS_UNREADABLE",
+    /** A credential already sealed in the database does not open with CHANNEL_TOKEN_KEY: the key was overwritten; the app refuses to start. */
+    KeyMismatch = "CONNECTION_SECRETS_KEY_MISMATCH",
 }
 
 /** How each connection-secrets code travels. */
@@ -16,6 +18,7 @@ export const CONNECTION_SECRETS_ERROR_KINDS: Record<ConnectionSecretsErrorCode, 
     [ConnectionSecretsErrorCode.KeyInvalid]: "internal",
     [ConnectionSecretsErrorCode.NotFound]: "not-found",
     [ConnectionSecretsErrorCode.Unreadable]: "internal",
+    [ConnectionSecretsErrorCode.KeyMismatch]: "internal",
 }
 
 /** The one error class of the connection-secrets capability. */

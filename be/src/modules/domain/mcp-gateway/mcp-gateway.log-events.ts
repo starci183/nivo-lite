@@ -6,6 +6,10 @@ export enum McpGatewayLogEvent {
     SyncFailed = "mcp-gateway.catalog.sync-failed",
     /** An owner or manager approved the live tool catalog of a remote connector. */
     CatalogApproved = "mcp-gateway.catalog.approved",
+    /** An owner or manager set or rotated the sealed bearer of a remote connector (never its value). */
+    BearerSealed = "mcp-gateway.bearer.sealed",
+    /** A sealed bearer could not be opened with the connection key (a different CHANNEL_TOKEN_KEY); the call is refused. */
+    BearerUnreadable = "mcp-gateway.bearer.unreadable",
     /** A health check of a connector got no answer; the connector is marked degraded. */
     HealthFailed = "mcp-gateway.health.failed",
 }

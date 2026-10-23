@@ -9,6 +9,7 @@ import { RegisterMcpConnectorResolver } from "./register-mcp-connector.resolver"
 import { SyncMcpConnectorResolver } from "./sync-mcp-connector.resolver"
 import { ApproveMcpConnectorResolver } from "./approve-mcp-connector.resolver"
 import { CheckMcpConnectorResolver } from "./check-mcp-connector.resolver"
+import { SetMcpConnectorCredentialResolver } from "./set-mcp-connector-credential.resolver"
 
 @Module({
     imports: [McpGatewayApiModule.register({})],
@@ -21,6 +22,7 @@ import { CheckMcpConnectorResolver } from "./check-mcp-connector.resolver"
         SyncMcpConnectorResolver,
         ApproveMcpConnectorResolver,
         CheckMcpConnectorResolver,
+        SetMcpConnectorCredentialResolver,
     ],
 })
 /** The GraphQL transport of the MCP gateway console. */

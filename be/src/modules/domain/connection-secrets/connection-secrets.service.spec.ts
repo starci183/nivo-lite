@@ -13,6 +13,7 @@ import {
     INSERT_STORED_SECRET,
     LIST_ZALO_CONNECTIONS_DUE,
     RELEASE_REFRESH_LEASE,
+    SAMPLE_SEALED_SECRET,
     SAVE_SECRET,
     SAVE_SECRET_WITH_EXPIRY,
     TRY_REFRESH_LEASE,
@@ -46,6 +47,7 @@ const build = async (answers: Record<string, unknown> = {}) => {
             [FIND_STORED_SECRET]: [],
             [UPSERT_STORED_SECRET]: [],
             [DELETE_STORED_SECRET]: [],
+            [SAMPLE_SEALED_SECRET]: [],
             ...answers,
         }).map(([text, rows]): [string, unknown] => [text, rows]),
     })
@@ -81,6 +83,49 @@ describe("ConnectionSecretsService", () => {
             ).service.secretOf("c-1", "telegram")
 
             expect(opened).toMatchObject({ kind: "ok", value: { credential: "hello" } })
+        })
+    })
+
+    describe("assertKeyOpensStored", () => {
+        it("passes when no credential is sealed yet, or when the key opens the stored one", async () => {
+            await expect((await build()).service.assertKeyOpensStored()).resolves.toBeUndefined()
+            const sealed = sealSecret(KEY, "123:token")
+
+            await expect(
+                (await build({ [SAMPLE_SEALED_SECRET]: [{ ciphertext: sealed }] })).service.assertKeyOpensStored(),
+            ).resolves.toBeUndefined()
+        })
+
+        it("fails loudly with CONNECTION_SECRETS_KEY_MISMATCH when the key was overwritten under a stored credential", async () => {
+            const { service } = await build({
+                [SAMPLE_SEALED_SECRET]: [{ ciphertext: sealSecret(randomBytes(32), "x") }],
+            })
+
+            await expect(service.assertKeyOpensStored()).rejects.toMatchObject({
+                code: ConnectionSecretsErrorCode.KeyMismatch,
+            })
+            expect(() => service.assertOpens(sealSecret(randomBytes(32), "y"))).toThrow(
+                ConnectionSecretsErrorCode.KeyMismatch,
+            )
+            expect(() => service.assertOpens(null)).not.toThrow()
+        })
+    })
+
+    describe("open", () => {
+        it("opens a text seal sealed, and never stores it", async () => {
+            const { service, em } = await build()
+
+            expect(service.open(service.seal("bearer-1"))).toEqual({ kind: "ok", value: "bearer-1" })
+            expect(em.query).not.toHaveBeenCalled()
+        })
+
+        it("refuses a text sealed with another key as unreadable", async () => {
+            const { service } = await build()
+
+            expect(service.open(sealSecret(randomBytes(32), "x"))).toMatchObject({
+                kind: "refused",
+                code: ConnectionSecretsErrorCode.Unreadable,
+            })
         })
     })
 })

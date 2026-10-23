@@ -56,7 +56,7 @@ services:
       restart_policy: { condition: any, delay: 5s }
 
   # The NIVO MCP gateway (be/apps/mcp). Internal only: no Traefik label, so the ingress never routes to it; the api and local agents reach it
-  # as http://nivo-mcp:8790 on the stack network. It reads the same untracked api.dev.env (PRIMARY_DB_URL, MCP_GATEWAY_CREDENTIALS and the credentials it names).
+  # as http://nivo-mcp:8790 on the stack network. It reads the same untracked api.dev.env (PRIMARY_DB_URL and CHANNEL_TOKEN_KEY, the dev connection key that opens the sealed connector credentials).
   nivo-mcp:
     image: ghcr.io/starci183/nivo-lite-mcp@sha256:0000000000000000000000000000000000000000000000000000000000000000
     env_file:

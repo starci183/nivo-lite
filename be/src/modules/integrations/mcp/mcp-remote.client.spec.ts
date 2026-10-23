@@ -6,12 +6,12 @@ import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { McpErrorCode } from "./errors/mcp.error"
 import type { McpJson } from "./mcp.contracts"
-import { McpRemoteClient } from "./mcp-remote.client"
 import { MCP_OPTIONS } from "./mcp.decorators"
+import { McpRemoteClient } from "./mcp-remote.client"
 import { McpLogEvent } from "./mcp.log-events"
 
-const OPEN = { url: "https://hakuen.test/mcp", credentialRef: null }
-const SIGNED = { url: "https://hakuen.test/mcp", credentialRef: "MCP_HAKUEN_CLIENT_SECRET" }
+const OPEN = { url: "https://hakuen.test/mcp", bearer: null }
+const SIGNED = { url: "https://hakuen.test/mcp", bearer: new Secret("s3cret") }
 
 /** What the fake server answers to tools/list and tools/call. */
 interface Answers {
@@ -60,11 +60,8 @@ const build = async () => {
     const moduleRef = await Test.createTestingModule({
         providers: [
             McpRemoteClient,
-            {
-                provide: MCP_OPTIONS,
-                useValue: { credentials: new Map([["MCP_HAKUEN_CLIENT_SECRET", new Secret("s3cret")]]) },
-            },
             { provide: LOGGER, useValue: logger },
+            { provide: MCP_OPTIONS, useValue: { clientName: "nivo-spec-client" } },
         ],
     }).compile()
     return { client: moduleRef.get(McpRemoteClient), logger }
@@ -74,17 +71,8 @@ afterEach(() => {
     jest.restoreAllMocks()
 })
 
-describe("McpRemoteClient.holds", () => {
-    it("answers whether the integration holds a credential of that name", async () => {
-        const { client } = await build()
-
-        expect(client.holds("MCP_HAKUEN_CLIENT_SECRET")).toBe(true)
-        expect(client.holds("MCP_OTHER_SECRET")).toBe(false)
-    })
-})
-
 describe("McpRemoteClient.listTools", () => {
-    it("lists the tools with defaults for a missing description or schema, without a bearer when none is named", async () => {
+    it("lists the tools with defaults for a missing description or schema, without a bearer when the endpoint has none", async () => {
         const fetch = jest.spyOn(globalThis, "fetch").mockImplementation(
             serverFetch({
                 tools: [
@@ -115,23 +103,17 @@ describe("McpRemoteClient.listTools", () => {
         expect(posted.map(([, init]) => new Headers(init?.headers).get("authorization"))).toEqual([null, null, null])
     })
 
-    it("sends the bearer of the named credential", async () => {
+    it("sends the bearer the endpoint carries and announces the configured client name", async () => {
         const fetch = jest.spyOn(globalThis, "fetch").mockImplementation(serverFetch({}))
         const { client } = await build()
 
         await expect(client.listTools(SIGNED, 4000)).resolves.toEqual([])
         const [, init] = fetch.mock.calls[0] ?? []
         expect(new Headers(init?.headers).get("authorization")).toBe("Bearer s3cret")
-    })
-
-    it("refuses a credential it does not hold before reaching the server", async () => {
-        const fetch = jest.spyOn(globalThis, "fetch").mockImplementation(serverFetch({}))
-        const { client } = await build()
-
-        await expect(
-            client.listTools({ url: OPEN.url, credentialRef: "MCP_OTHER_SECRET" }, 4000),
-        ).rejects.toMatchObject({ code: McpErrorCode.CredentialMissing, params: { ref: "MCP_OTHER_SECRET" } })
-        expect(fetch).not.toHaveBeenCalled()
+        await expect(messageOf(init)).resolves.toMatchObject({
+            method: "initialize",
+            params: { clientInfo: { name: "nivo-spec-client", version: "1.0.0" } },
+        })
     })
 })
 

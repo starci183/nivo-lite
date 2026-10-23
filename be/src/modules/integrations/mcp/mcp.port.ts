@@ -9,8 +9,6 @@ import type {
 
 /** The client side of MCP: the remote servers a gateway's connectors call. */
 export interface McpRemote {
-    /** True when the integration holds the credential of that NAME. */
-    holds(credentialRef: string): boolean
     /** The tools the server lists. */
     listTools(endpoint: McpEndpoint, timeoutMs: number): Promise<ReadonlyArray<McpRemoteTool>>
     /** Checks that the server answers MCP at all (`ping`). */

@@ -1,4 +1,4 @@
-import type { useQueryMcpCallLogSwr, useQueryMcpConnectorsSwr, useQueryMcpToolGrantsSwr } from "@/hooks/swr"
+import type { useQueryMcpConnectorsSwr } from "@/hooks/swr"
 import type { useFormatter, useTranslations } from "next-intl"
 import type { McpConnectorCommands } from "./useMcpConnectorCommands"
 
@@ -6,10 +6,10 @@ import type { McpConnectorCommands } from "./useMcpConnectorCommands"
 type McpConnectorType = NonNullable<ReturnType<typeof useQueryMcpConnectorsSwr>["data"]>[number]
 
 /** The tones a gateway badge may take. */
-type McpTone = "success" | "warning" | "accent" | "neutral" | "danger"
+export type McpTone = "success" | "warning" | "accent" | "neutral" | "danger"
 
 /** One badge of a gateway row. */
-interface McpBadgeView {
+export interface McpBadgeView {
     readonly label: string
     readonly tone: McpTone
 }
@@ -24,14 +24,14 @@ interface McpActionView {
 }
 
 /** One pinned tool of a connector: its name, scope, description and whether it is approved. */
-interface McpToolRowView {
+export interface McpToolRowView {
     readonly id: string
     readonly title: string
     readonly description: string
     readonly badges: ReadonlyArray<McpBadgeView>
 }
 
-/** One connector row: its state, its pinned tools and, for a remote connector, Approve and Check. */
+/** One connector row: its state, its pinned tools and, for a remote connector, its credential, Test, Approve and Check. */
 interface McpConnectorRowView {
     readonly id: string
     readonly title: string
@@ -41,8 +41,10 @@ interface McpConnectorRowView {
     readonly tools: { readonly label: string; readonly rows: ReadonlyArray<McpToolRowView> }
 }
 
-type Translator = ReturnType<typeof useTranslations<"mcpGateway">>
-type Formatter = ReturnType<typeof useFormatter>
+/** The words of the gateway region (the `mcpGateway` catalog). */
+export type McpTranslator = ReturnType<typeof useTranslations<"mcpGateway">>
+/** The reader-locale formatter of dates and numbers. */
+export type McpFormatter = ReturnType<typeof useFormatter>
 
 const STATUS_TONE: ReadonlyMap<string, McpTone> = new Map([
     ["active", "success"],
@@ -51,14 +53,14 @@ const STATUS_TONE: ReadonlyMap<string, McpTone> = new Map([
 const SCOPES: ReadonlySet<string> = new Set(["read", "write"])
 
 /** A time the gateway recorded, short date and time in the reader locale. */
-const stampOf = (format: Formatter, iso: string): string =>
+const stampOf = (format: McpFormatter, iso: string): string =>
     format.dateTime(new Date(iso), { dateStyle: "short", timeStyle: "short" })
 
 /** The scope words of a tool: the catalog word for read or write, else the scope as the connector named it. */
-const scopeOf = (t: Translator, scope: string): string => (SCOPES.has(scope) ? t(`scope_${scope}`) : scope)
+const scopeOf = (t: McpTranslator, scope: string): string => (SCOPES.has(scope) ? t(`scope_${scope}`) : scope)
 
 /** The pinned tools of a connector, each with an approved or not-approved badge. */
-const toolRowsOf = (t: Translator, connector: McpConnectorType): ReadonlyArray<McpToolRowView> =>
+const toolRowsOf = (t: McpTranslator, connector: McpConnectorType): ReadonlyArray<McpToolRowView> =>
     connector.tools.map((tool) => ({
         id: tool.name,
         title: tool.name,
@@ -70,9 +72,12 @@ const toolRowsOf = (t: Translator, connector: McpConnectorType): ReadonlyArray<M
         ],
     }))
 
-/** When the connector was approved and last checked, in words. */
-const timesOf = (t: Translator, format: Formatter, connector: McpConnectorType): string =>
+/** When the connector was approved, last checked and, for a remote one with a credential, when that was set, in words. */
+const timesOf = (t: McpTranslator, format: McpFormatter, connector: McpConnectorType): string =>
     [
+        ...(connector.credentialSetAt === null
+            ? []
+            : [t("credentialSetAt", { time: stampOf(format, connector.credentialSetAt) })]),
         connector.approvedAt === null
             ? t("neverApproved")
             : t("approvedAt", { time: stampOf(format, connector.approvedAt) }),
@@ -81,16 +86,43 @@ const timesOf = (t: Translator, format: Formatter, connector: McpConnectorType):
             : t("checkedAt", { time: stampOf(format, connector.checkedAt) }),
     ].join(" · ")
 
-/** Approve and Check of a remote connector; a native connector is part of NIVO and has neither. */
+/** The credential badge of a remote connector: set, still needed, or nothing when the server takes none. */
+const credentialBadgesOf = (t: McpTranslator, connector: McpConnectorType): ReadonlyArray<McpBadgeView> => {
+    if (connector.credentialState === "set") return [{ label: t("credentialSet"), tone: "success" }]
+    if (connector.credentialState === "needed") return [{ label: t("credentialNeeded"), tone: "warning" }]
+    return []
+}
+
+/**
+ * Set or rotate the credential, Test the connection (reads the live tool list), Approve and Check of a remote connector; a native
+ * connector is part of NIVO and has none. The credential is never shown: the button only says whether one is set.
+ */
 const actionsOf = (
-    t: Translator,
+    t: McpTranslator,
     connector: McpConnectorType,
     commands: McpConnectorCommands,
+    openCredential: (key: string) => void,
 ): ReadonlyArray<McpActionView> => {
     if (connector.kind !== "remote") return []
     const isBusy = commands.busyKey === connector.key
     const isLocked = commands.busyKey !== null
     return [
+        {
+            id: "credential",
+            label: connector.credentialState === "set" ? t("rotateCredential") : t("setCredential"),
+            isPending: false,
+            isDisabled: isLocked,
+            onPress: () => {
+                openCredential(connector.key)
+            },
+        },
+        {
+            id: "test",
+            label: t("test"),
+            isPending: isBusy,
+            isDisabled: isLocked || connector.credentialState === "needed",
+            onPress: () => void commands.test(connector.key),
+        },
         {
             id: "approve",
             label: t("approve"),
@@ -110,10 +142,11 @@ const actionsOf = (
 
 /** The connector rows of the gateway region: status, kind, pinned tools with their approval, times and commands. */
 export const connectorRowsOf = (
-    t: Translator,
-    format: Formatter,
+    t: McpTranslator,
+    format: McpFormatter,
     connectors: ReadonlyArray<McpConnectorType>,
     commands: McpConnectorCommands,
+    openCredential: (key: string) => void,
 ): ReadonlyArray<McpConnectorRowView> =>
     connectors.map((connector) => ({
         id: connector.key,
@@ -126,66 +159,8 @@ export const connectorRowsOf = (
                 label: t("tools", { count: connector.tools.length, version: connector.contractVersion }),
                 tone: "neutral",
             },
+            ...credentialBadgesOf(t, connector),
         ],
-        actions: actionsOf(t, connector, commands),
+        actions: actionsOf(t, connector, commands, openCredential),
         tools: { label: t("toolsOf", { name: connector.name }), rows: toolRowsOf(t, connector) },
-    }))
-
-/** One agent's grant of a gateway tool, as the `mcpToolGrants` read answers it. */
-type McpGrantType = NonNullable<ReturnType<typeof useQueryMcpToolGrantsSwr>["data"]>[number]
-/** One audited gateway call, as the `mcpCallLog` read answers it. */
-type McpCallType = NonNullable<ReturnType<typeof useQueryMcpCallLogSwr>["data"]>[number]
-
-const MODE_TONE: ReadonlyMap<string, McpTone> = new Map([
-    ["auto", "success"],
-    ["ask", "warning"],
-])
-const OUTCOME_TONE: ReadonlyMap<string, McpTone> = new Map([
-    ["ok", "success"],
-    ["approval", "warning"],
-])
-
-/** A neutral badge. */
-const plain = (label: string): McpBadgeView => ({ label, tone: "neutral" })
-
-/** Each agent's grants of gateway tools: the mode, the data constraints and the money limit. */
-export const grantRowsOf = (
-    t: Translator,
-    format: Formatter,
-    grants: ReadonlyArray<McpGrantType>,
-): ReadonlyArray<McpToolRowView> =>
-    grants.map((grant) => ({
-        id: `${grant.agentId}:${grant.tool}`,
-        title: grant.tool,
-        description: grant.agentName,
-        badges: [
-            { label: grant.mode, tone: MODE_TONE.get(grant.mode) ?? "neutral" },
-            ...(grant.constraintsJson === "[]" ? [] : [plain(grant.constraintsJson)]),
-            ...(grant.limitVnd === null ? [] : [plain(t("limitVnd", { amount: format.number(grant.limitVnd) }))]),
-        ],
-    }))
-
-/** The latest audited calls: when, the masked arguments, who approved, the outcome and how long it took. */
-export const logRowsOf = (
-    t: Translator,
-    format: Formatter,
-    lines: ReadonlyArray<McpCallType>,
-): ReadonlyArray<McpToolRowView> =>
-    lines.map((line) => ({
-        id: line.id,
-        title: `${line.tool} · ${line.agentName}`,
-        description: [
-            format.dateTime(new Date(line.at), { dateStyle: "short", timeStyle: "medium" }),
-            line.argsMasked,
-            line.approvedBy === null ? "" : t("approvedBy", { name: line.approvedBy }),
-        ]
-            .filter(Boolean)
-            .join(" · "),
-        badges: [
-            {
-                label: line.errorCode === null ? line.outcome : `${line.outcome}: ${line.errorCode}`,
-                tone: OUTCOME_TONE.get(line.outcome) ?? "danger",
-            },
-            plain(t("duration", { ms: line.durationMs })),
-        ],
     }))

@@ -8,8 +8,8 @@ export interface RemoteConnectorRecord {
     readonly name: string
     /** The Streamable HTTP endpoint. */
     readonly url: string
-    /** The NAME of the credential secret, or null. */
-    readonly credentialRef: string | null
+    /** True when the server takes a bearer credential (set separately, sealed); a stored one is kept. */
+    readonly needsCredential: boolean
     /** The contract version. */
     readonly contractVersion: string
     /** The per-call limit, milliseconds. */
@@ -56,3 +56,32 @@ export interface HealthRecord {
     /** `active` when the server answered, `degraded` when it did not. */
     readonly status: CheckStatus
 }
+
+/** A remote connector's credential, sealed by the connection-secrets cipher, to store in its row. */
+export interface SealedCredentialRecord {
+    /** The workspace. */
+    readonly workspaceId: string
+    /** The connector key. */
+    readonly key: string
+    /** The sealed text; the plain value never reaches this capability. */
+    readonly sealed: string
+    /** The person who set it. */
+    readonly setBy: string
+}
+
+/** Whether a remote connector takes a credential (`none` = no) and whether one is stored (`needed` = not yet, `set` = sealed). */
+export type CredentialState = "none" | "needed" | "set"
+
+/** The stored credential of a remote connector: its state and the sealed text when it is set. */
+export interface StoredConnectorCredential {
+    /** `none`, `needed` or `set`. */
+    readonly state: CredentialState
+    /** The sealed text, or null unless the state is `set`. */
+    readonly sealed: string | null
+}
+
+/** The stored credential of a remote connector, or null when there is no such remote connector. */
+export type OptionalStoredConnectorCredential = StoredConnectorCredential | null
+
+/** One sealed connector credential, or null when none is sealed in any workspace. */
+export type OptionalSealedCredential = string | null

@@ -27,3 +27,9 @@ export interface StoredSecretRow {
     /** The random secret of the connection's own webhook. */
     readonly webhook_secret: string
 }
+
+/** One sealed credential as SAMPLE_SEALED_SECRET selects it. */
+export interface SealedSampleRow {
+    /** The sealed text. */
+    readonly ciphertext: string
+}

@@ -13,7 +13,7 @@ turns every granted key into one versioned Swarm secret (see the production READ
 | `SUPABASE_URL` | sealed `api` | The Supabase project origin. |
 | `SUPABASE_SERVICE_ROLE_KEY` | sealed `api` | Service-role key for Auth and Storage administration; the back end never forwards it. |
 | `OTP_PEPPER` | sealed `api` | At least 32 characters; hashes loyalty one-time codes. |
-| `CHANNEL_TOKEN_KEY` | sealed `api` | Encrypts stored channel tokens. |
+| `CHANNEL_TOKEN_KEY` | sealed `api` | Encrypts stored channel tokens and the per-workspace credentials of remote MCP connectors. One random 32-byte key, set once and never overwritten or rotated: a different key leaves every sealed credential unreadable. |
 | `N8N_SIGNING_SECRET` | sealed `api` | Must equal what the n8n workflows sign with. |
 | `HTTP_SECURITY_ALLOWED_ORIGINS` | `api-public.conf` | Comma-separated exact HTTPS origins of the console and the landing. |
 | `SITE_URL` | `api-public.conf` | The public origin of the console (`https://app.nivo.vn`); the browser return pages are served there. |
@@ -67,11 +67,11 @@ The gateway reads only these keys (`be/apps/mcp/src/mcp.env.ts`). Its secrets co
 | --- | --- | --- |
 | `PORT` | stack environment | The listener port (`8790`); internal only, on the private `agents` network as `nivo-mcp`. |
 | `PRIMARY_DB_URL` | sealed `api` (required) | The same `app_be` connection as the api: connectors, grants and the call audit. |
+| `CHANNEL_TOKEN_KEY` | sealed `api` (required) | The same connection key as the api: it opens the bearer credential each remote connector has sealed in its own `mcp_connectors` row. Connector credentials are set per workspace in the console (Settings > Connections), never as deployment keys. |
 | `PRIMARY_DB_SCHEMA` | stack environment | `public`. |
 | `HTTP_SECURITY_ALLOWED_ORIGINS` | stack environment | The OriginGuard and CORS allowlist (`https://app.nivo.vn`); the gateway has no browser caller, so only the console origin is listed. |
-| `MCP_GATEWAY_CREDENTIALS` | sealed `api` (optional until O14) | Comma-separated credential NAMES a remote connector row may reference (value `MCP_HAKUEN_CLIENT_SECRET`). Not itself a secret, but sealed because every `*_CREDENTIALS` binding is classed sensitive; the api receives it through its whole-member grant. |
-| `MCP_HAKUEN_CLIENT_SECRET` | sealed `api` (optional until O14) | Bearer credential the gateway sends to the HAKUEN MCP server; read through `MCP_HAKUEN_CLIENT_SECRET_FILE` (the api, and the cli when `seed-workspace profile` registers the connector and reads its catalog). Absent = the `hakuen` connector is unavailable. |
 | `MCP_GATEWAY_TIMEOUT_MS` | not set | Per-call timeout, default 4000. |
+| `MCP_CLIENT_NAME` | not set | Client name announced to remote MCP servers, default `nivo-mcp-gateway`. |
 
 ## Stack settings (sealed `stack`, read at render time)
 

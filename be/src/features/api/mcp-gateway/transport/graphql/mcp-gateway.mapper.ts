@@ -1,6 +1,8 @@
+import { Secret } from "@modules/platform/config"
 import type {
     CallLogView,
     ConnectorView,
+    McpCredentialInput,
     GrantInput,
     GrantView,
     RemoteConnectorInput,
@@ -9,6 +11,7 @@ import type { McpCallLogType } from "./dto/mcp-call-log.type"
 import type { McpConnectorType } from "./dto/mcp-connector.type"
 import type { McpToolGrantType } from "./dto/mcp-tool-grant.type"
 import type { RegisterMcpConnectorInput } from "./dto/register-mcp-connector.input"
+import type { SetMcpConnectorCredentialInput } from "./dto/set-mcp-connector-credential.input"
 import type { SetMcpToolGrantInput } from "./dto/set-mcp-tool-grant.input"
 import type { McpCallLogInput } from "./dto/mcp-call-log.input"
 import type { ListMcpCallLogRequest } from "../../application/list-mcp-call-log.contracts"
@@ -61,9 +64,15 @@ export const toRemoteConnectorInput = (input: RegisterMcpConnectorInput): Remote
     key: input.key,
     name: input.name,
     url: input.url,
-    credentialRef: input.credentialRef,
+    credential: input.credential,
     contractVersion: input.contractVersion,
     timeoutMs: input.timeoutMs,
+})
+
+/** The credential input as the domain input; the value is wrapped at once so it is never serialized. */
+export const toCredentialInput = (input: SetMcpConnectorCredentialInput): McpCredentialInput => ({
+    key: input.key,
+    credential: new Secret(input.credential),
 })
 
 /** The audit page request. */

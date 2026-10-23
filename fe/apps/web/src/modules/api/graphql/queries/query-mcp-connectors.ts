@@ -15,7 +15,8 @@ const query1: TypedDocumentNode<QueryMcpConnectorsResponse> = gql`
             kind
             status
             url
-            credentialRef
+            credentialState
+            credentialSetAt
             contractVersion
             timeoutMs
             approvedAt

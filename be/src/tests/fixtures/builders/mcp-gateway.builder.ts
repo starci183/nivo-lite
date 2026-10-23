@@ -3,7 +3,9 @@ import { builder } from "@starci/jest-preset"
 import type { CallLogLine } from "@modules/domain/mcp-call-log"
 import type { McpConnectorRow } from "@modules/domain/mcp-connectors"
 import type { McpToolGrantRow } from "@modules/domain/mcp-tool-grants"
-import type { GatewayCaller, GatewayJson, RoleReadiness } from "@modules/domain/mcp-gateway"
+import type { GatewayCaller, GatewayJson, RemoteTarget, RoleReadiness } from "@modules/domain/mcp-gateway"
+import type { McpEndpoint } from "@modules/integrations/mcp"
+import { Secret } from "@modules/platform/config"
 
 /** The caller of the gateway specs: an agent in a conversation, with no work item. */
 export const GATEWAY_CALLER: GatewayCaller = {
@@ -42,13 +44,30 @@ export const GATEWAY_CATALOG = [
     }),
 ]
 
+/** When the remote connector of the gateway specs had its bearer set. */
+const SET_AT = "2026-10-20T01:00:00.000Z"
+
+/** The bearer the credential capability opens for a remote connector in the gateway specs. */
+export const GATEWAY_BEARER = new Secret("bearer-1")
+
+/** The endpoint the credential capability answers for a remote target: no bearer when the server takes none. */
+export const endpointFor = (target: RemoteTarget): McpEndpoint => ({
+    url: target.url,
+    bearer: target.credentialState === "none" ? null : GATEWAY_BEARER,
+})
+
+/** What the credential capability answers in the gateway specs: GATEWAY_BEARER for every remote target that takes a bearer. */
+export const openedEndpointOf = (_workspaceId: string, target: RemoteTarget): Promise<McpEndpoint> =>
+    Promise.resolve(endpointFor(target))
+
 /** A remote connector row whose whole live catalog is approved. */
 export const remoteConnectorRowOf = builder<McpConnectorRow>({
     key: "hakuen",
     name: "HAKUEN",
     kind: "remote",
     url: "https://hakuen.test/mcp",
-    credential_ref: "MCP_HAKUEN_CLIENT_SECRET",
+    credential_state: "set",
+    credential_set_at: SET_AT,
     status: "active",
     contract_version: "hakuen-mcp@1",
     timeout_ms: 4000,

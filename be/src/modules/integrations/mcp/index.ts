@@ -4,6 +4,7 @@ export { parseMcpConfig } from "./mcp.config"
 export { InjectMcpRemote, InjectMcpServer, MCP_REMOTE, MCP_SERVER } from "./mcp.decorators"
 export { McpModule } from "./mcp.module"
 export type {
+    McpEndpoint,
     McpRemoteResult,
     McpRemoteTool,
     McpRpcResponse,

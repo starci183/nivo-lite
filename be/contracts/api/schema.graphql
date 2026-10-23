@@ -4470,7 +4470,8 @@ type McpConnectorType {
   approvedAt: String
   checkedAt: String
   contractVersion: String!
-  credentialRef: String
+  credentialSetAt: String
+  credentialState: String!
   key: String!
   kind: String!
   name: String!
@@ -5017,6 +5018,7 @@ type Mutation {
   setHiringJobStatus(input: SetHiringJobStatusInput!): HiringStatusType!
   setInventoryItemActive(input: SetInventoryItemActiveInput!): Boolean!
   setKnowledgeSuggestionState(input: SetKnowledgeSuggestionStateInput!): Boolean!
+  setMcpConnectorCredential(input: SetMcpConnectorCredentialInput!): Int!
   setMcpToolGrant(input: SetMcpToolGrantInput!): Boolean!
   setMemberStatus(input: SetMemberStatusInput!): Boolean!
   setModuleLive(input: SetModuleLiveInput!): ModuleInstallationType!
@@ -5889,7 +5891,7 @@ input RefreshLeadContextInput {
 
 input RegisterMcpConnectorInput {
   contractVersion: String!
-  credentialRef: String
+  credential: String
   key: String!
   name: String!
   timeoutMs: Int
@@ -7022,6 +7024,11 @@ input SetInventoryItemActiveInput {
 input SetKnowledgeSuggestionStateInput {
   key: String!
   state: String
+}
+
+input SetMcpConnectorCredentialInput {
+  credential: String!
+  key: String!
 }
 
 input SetMcpToolGrantInput {

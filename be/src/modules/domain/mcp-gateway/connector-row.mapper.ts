@@ -1,4 +1,5 @@
 import type { McpCallLogRow } from "@modules/domain/mcp-call-log"
+import { credentialStateOf } from "@modules/domain/mcp-connectors"
 import type { McpConnectorRow } from "@modules/domain/mcp-connectors"
 import type { ArgConstraint, GrantMode, McpToolGrantRow, McpWorkspaceGrantRow } from "@modules/domain/mcp-tool-grants"
 import type { McpRemoteTool } from "@modules/integrations/mcp"
@@ -141,7 +142,8 @@ export const remoteConnectorOf = (row: McpConnectorRow): WorkspaceConnector => {
         },
         status: pick(STATUSES, row.status, "disabled"),
         url: row.url,
-        credentialRef: row.credential_ref,
+        credentialState: credentialStateOf(row.credential_state),
+        credentialSetAt: row.credential_set_at,
         timeoutMs: boundedTimeoutOf(row.timeout_ms),
         approvedTools: approvedToolsOf(row),
         approvedAt: row.approved_at,
@@ -163,7 +165,8 @@ export const nativeConnectorOf = (
         manifest: adapter.manifest,
         status: row === undefined ? "active" : pick(STATUSES, row.status, "disabled"),
         url: null,
-        credentialRef: null,
+        credentialState: "none",
+        credentialSetAt: null,
         timeoutMs: boundedTimeoutOf(row?.timeout_ms ?? defaultTimeoutMs),
         approvedTools: null,
         approvedAt: null,

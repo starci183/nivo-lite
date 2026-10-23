@@ -154,8 +154,9 @@ export class WorkspaceProfileService {
     }
 
     /**
-     * Registers each connector as the owner: the gateway reads and pins its live catalog. An unreachable server fails the run. The
-     * run never approves a catalog: a person approves it in the console after reviewing the tool list, and until then the agents
+     * Registers each connector as the owner: the gateway reads and pins its live catalog. An unreachable server fails the run; a
+     * server whose credential no one entered yet is reported with no tools (the owner enters it in the console). The run never
+     * approves a catalog: a person approves it in the console after reviewing the tool list, and until then the agents
      * get the gateway's unapproved answer.
      */
     private async registerConnectors(
@@ -170,7 +171,7 @@ export class WorkspaceProfileService {
         const views = await this.connectors.connectors(actor)
         const states = connectors.map((connector): [string, ProfileConnectorState] => {
             const view = views.find((candidate) => candidate.key === connector.key)
-            if (view?.status !== "active") {
+            if (view === undefined || (view.status !== "active" && view.credentialState !== "needed")) {
                 throw new WorkspaceSeedError({
                     code: WorkspaceSeedErrorCode.ConnectorUnreachable,
                     params: { key: connector.key },

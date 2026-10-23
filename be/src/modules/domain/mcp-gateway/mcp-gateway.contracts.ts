@@ -1,5 +1,7 @@
 import type { ConnectionActor } from "@modules/domain/connections"
+import type { CredentialState } from "@modules/domain/mcp-connectors"
 import type { ArgConstraint, GrantMode } from "@modules/domain/mcp-tool-grants"
+import type { Secret } from "@modules/platform/config"
 import type { McpRpcResponse } from "@modules/integrations/mcp"
 
 /** What a tool does to the connected system. */
@@ -113,8 +115,10 @@ export interface WorkspaceConnector {
     readonly status: ConnectorStatus
     /** The remote endpoint, or null for a native connector. */
     readonly url: string | null
-    /** The NAME of the credential secret, never its value. */
-    readonly credentialRef: string | null
+    /** Whether the server takes a credential and whether one is sealed in the row; never the value. Native: `none`. */
+    readonly credentialState: CredentialState
+    /** When the credential was last set, ISO text, or null. */
+    readonly credentialSetAt: string | null
     /** The per-call limit in milliseconds, within the gateway's bounds. */
     readonly timeoutMs: number
     /**
@@ -259,8 +263,10 @@ export interface ConnectorView {
     readonly status: ConnectorStatus
     /** The remote URL, or null. */
     readonly url: string | null
-    /** The credential NAME, or null. */
-    readonly credentialRef: string | null
+    /** `none` (the server takes no credential), `needed` (not entered yet) or `set`; the value is never read back. */
+    readonly credentialState: CredentialState
+    /** When the credential was last set or rotated, ISO text, or null. */
+    readonly credentialSetAt: string | null
     /** The contract version. */
     readonly contractVersion: string
     /** The per-call limit. */
@@ -354,8 +360,10 @@ export interface RemoteConnectorInput {
     readonly name: string
     /** The Streamable HTTP endpoint. */
     readonly url: string
-    /** The NAME of the credential secret, or null / absent. */
-    readonly credentialRef?: string | null
+    /** The bearer credential, entered once and sealed in the row at once; null / absent keeps the stored one (or none). */
+    readonly credential?: string | null
+    /** True when the server takes a credential even though none is entered now (it is then `needed`); absent = false. */
+    readonly needsCredential?: boolean
     /** The contract version. */
     readonly contractVersion: string
     /** The per-call limit; null / absent keeps the gateway default. */
@@ -374,4 +382,22 @@ export interface GrantInput {
     readonly limitVnd?: number | null
     /** The argument constraints as JSON ([{ "arg": "quantity", "max": 5 }]), or null / absent for none. */
     readonly constraintsJson?: string | null
+}
+
+/** A new bearer credential of a remote connector: its first one, or a rotation. */
+export interface McpCredentialInput {
+    /** The connector key. */
+    readonly key: string
+    /** The credential, sealed before it is stored and never read back. */
+    readonly credential: Secret
+}
+
+/** The remote connector the gateway opens an endpoint to: its key, its URL and its credential state. */
+export interface RemoteTarget {
+    /** The connector key. */
+    readonly key: string
+    /** The Streamable HTTP endpoint. */
+    readonly url: string
+    /** The credential state of its row. */
+    readonly credentialState: CredentialState
 }

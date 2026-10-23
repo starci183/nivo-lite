@@ -6,8 +6,11 @@ import { McpConnectorsService } from "./mcp-connectors.service"
 import type { McpConnectorRow } from "./persistence/mcp-connectors.rows"
 import {
     APPROVE_CATALOG,
+    FIND_SEALED_CREDENTIAL,
     LIST_CONNECTORS,
     RECORD_HEALTH,
+    SAMPLE_SEALED_CREDENTIAL,
+    SET_CREDENTIAL,
     UPDATE_CATALOG,
     UPSERT_REMOTE_CONNECTOR,
 } from "./persistence/mcp-connectors.sql"
@@ -17,7 +20,8 @@ const rowOf = builder<McpConnectorRow>({
     name: "HAKUEN Back-office",
     kind: "remote",
     url: "https://hakuen.test/mcp",
-    credential_ref: "MCP_HAKUEN_CLIENT_SECRET",
+    credential_state: "set",
+    credential_set_at: "2026-10-20T01:00:00.000Z",
     status: "active",
     contract_version: "hakuen-mcp@1",
     timeout_ms: 4000,
@@ -54,7 +58,7 @@ describe("McpConnectorsService rows", () => {
                 key: "hakuen",
                 name: "HAKUEN",
                 url: "https://hakuen.test/mcp",
-                credentialRef: null,
+                needsCredential: true,
                 contractVersion: "hakuen-mcp@1",
                 timeoutMs: 4000,
             }),
@@ -64,7 +68,7 @@ describe("McpConnectorsService rows", () => {
             "hakuen",
             "HAKUEN",
             "https://hakuen.test/mcp",
-            null,
+            true,
             "hakuen-mcp@1",
             4000,
         ])
@@ -84,6 +88,53 @@ describe("McpConnectorsService rows", () => {
             }),
         ).resolves.toBeUndefined()
         expect(em.query).toHaveBeenCalledWith(UPDATE_CATALOG, ["ws-1", "hakuen", "[]", "abc", "active"])
+    })
+})
+
+describe("McpConnectorsService credential", () => {
+    it("stores a sealed credential and answers whether a remote connector of that key was written", async () => {
+        const em = mockEntityManager({
+            query: [
+                [SET_CREDENTIAL, [{ key: "hakuen" }]],
+                [SET_CREDENTIAL, []],
+            ],
+        })
+        const connectors = await build(em)
+        const record = { workspaceId: "ws-1", key: "hakuen", sealed: "sealed-text", setBy: "person-1" }
+
+        await expect(connectors.setCredential(record)).resolves.toBe(true)
+        await expect(connectors.setCredential(record)).resolves.toBe(false)
+        expect(em.query).toHaveBeenCalledWith(SET_CREDENTIAL, ["ws-1", "hakuen", "sealed-text", "person-1"])
+    })
+
+    it("reads the stored credential of a remote connector, and null when there is none", async () => {
+        const em = mockEntityManager({
+            query: [
+                [FIND_SEALED_CREDENTIAL, [{ credential_state: "set", credential_sealed: "sealed-text" }]],
+                [FIND_SEALED_CREDENTIAL, []],
+            ],
+        })
+        const connectors = await build(em)
+
+        await expect(connectors.storedCredential("ws-1", "hakuen")).resolves.toEqual({
+            state: "set",
+            sealed: "sealed-text",
+        })
+        await expect(connectors.storedCredential("ws-1", "other")).resolves.toBeNull()
+        expect(em.query).toHaveBeenCalledWith(FIND_SEALED_CREDENTIAL, ["ws-1", "hakuen"])
+    })
+
+    it("samples one sealed credential of any workspace for the boot key proof, and null when none is sealed", async () => {
+        const em = mockEntityManager({
+            query: [
+                [SAMPLE_SEALED_CREDENTIAL, [{ credential_state: "set", credential_sealed: "sealed-text" }]],
+                [SAMPLE_SEALED_CREDENTIAL, []],
+            ],
+        })
+        const connectors = await build(em)
+
+        await expect(connectors.sealedSample()).resolves.toBe("sealed-text")
+        await expect(connectors.sealedSample()).resolves.toBeNull()
     })
 })
 

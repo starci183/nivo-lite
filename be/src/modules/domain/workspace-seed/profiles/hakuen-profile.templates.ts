@@ -190,7 +190,7 @@ export const HAKUEN_PROFILE: WorkspaceProfile = {
         {
             key: "hakuen",
             name: "HAKUEN Back Office",
-            credentialRef: "MCP_HAKUEN_CLIENT_SECRET",
+            needsCredential: true,
             contractVersion: "hakuen-mcp@1",
         },
     ],

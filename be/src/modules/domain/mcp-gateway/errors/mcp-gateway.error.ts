@@ -9,8 +9,10 @@ export enum McpGatewayErrorCode {
     Invalid = "MCP_GATEWAY_INVALID",
     /** The agent is not one of the workspace. */
     AgentNotFound = "MCP_GATEWAY_AGENT_NOT_FOUND",
-    /** The credential the connector names is not one the gateway holds. */
+    /** The remote connector takes a credential and none is sealed in its row yet. */
     CredentialMissing = "MCP_GATEWAY_CREDENTIAL_MISSING",
+    /** The sealed credential of the connector cannot be opened with the current key. */
+    CredentialUnreadable = "MCP_GATEWAY_CREDENTIAL_UNREADABLE",
     /** The native adapter did not answer within the time limit. */
     Timeout = "MCP_GATEWAY_TIMEOUT",
     /** The agent's credential acts for another workspace than the endpoint it called. */
@@ -25,6 +27,7 @@ export const MCP_GATEWAY_ERROR_KINDS: Record<McpGatewayErrorCode, ErrorKind> = {
     [McpGatewayErrorCode.Invalid]: "invalid",
     [McpGatewayErrorCode.AgentNotFound]: "not-found",
     [McpGatewayErrorCode.CredentialMissing]: "unavailable",
+    [McpGatewayErrorCode.CredentialUnreadable]: "internal",
     [McpGatewayErrorCode.Timeout]: "unavailable",
     [McpGatewayErrorCode.WorkspaceMismatch]: "forbidden",
     [McpGatewayErrorCode.CatalogChanged]: "conflict",

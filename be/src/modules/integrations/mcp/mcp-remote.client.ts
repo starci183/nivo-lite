@@ -29,8 +29,8 @@ interface SessionRequest {
     readonly signal: AbortSignal
 }
 
-/** The client name NIVO announces to remote servers. */
-const CLIENT_INFO = { name: "nivo-mcp-gateway", version: "1.0.0" }
+/** The client version NIVO announces to remote servers. */
+const CLIENT_VERSION = "1.0.0"
 
 const isJson = (value: unknown): value is McpJson =>
     typeof value === "object" && value !== null && !Array.isArray(value)
@@ -55,19 +55,14 @@ const valueOfResult = (raw: McpRawResult): McpRemoteResult => {
 /**
  * The client of remote MCP servers, over the official TypeScript SDK and Streamable HTTP. Every call opens a short session bounded
  * by the caller's time limit: a server slower than the limit is aborted and answers `MCP_TIMEOUT`; anything else outside the protocol
- * answers `MCP_UNAVAILABLE`. A tool's own refusal is a result (`isError`), not an error. The bearer is read here by the NAME the
- * connector gives, so a secret value never leaves this integration.
+ * answers `MCP_UNAVAILABLE`. A tool's own refusal is a result (`isError`), not an error. The bearer comes with the endpoint, opened
+ * by the gateway from the connector's sealed row, and is revealed only into the request header.
  */
 export class McpRemoteClient implements McpRemote {
     constructor(
-        @InjectMcpOptions() private readonly options: McpOptions,
         @InjectLogger() private readonly logger: Logger,
+        @InjectMcpOptions() private readonly options: McpOptions,
     ) {}
-
-    /** True when this integration holds the credential of that NAME. */
-    holds(credentialRef: string): boolean {
-        return this.options.credentials.has(credentialRef)
-    }
 
     /** The tools the server lists. */
     async listTools(endpoint: McpEndpoint, timeoutMs: number): Promise<ReadonlyArray<McpRemoteTool>> {
@@ -96,24 +91,15 @@ export class McpRemoteClient implements McpRemote {
         return valueOfResult(raw)
     }
 
-    /** The headers of a server: its bearer when it names a credential, which must be one this integration holds. */
-    private headersOf(endpoint: McpEndpoint): Record<string, string> {
-        if (endpoint.credentialRef === null) return {}
-        const secret = this.options.credentials.get(endpoint.credentialRef)
-        if (secret === undefined) {
-            throw new McpError({ code: McpErrorCode.CredentialMissing, params: { ref: endpoint.credentialRef } })
-        }
-        return { Authorization: `Bearer ${secret.reveal()}` }
-    }
-
     private async within<T>(
         endpoint: McpEndpoint,
         timeoutMs: number,
         work: (client: Client, signal: AbortSignal) => Promise<T>,
     ): Promise<T> {
-        const headers = this.headersOf(endpoint)
+        const headers: Record<string, string> =
+            endpoint.bearer === null ? {} : { Authorization: `Bearer ${endpoint.bearer.reveal()}` }
         const signal = AbortSignal.timeout(timeoutMs)
-        const client = new Client(CLIENT_INFO)
+        const client = new Client({ name: this.options.clientName, version: CLIENT_VERSION })
         const attempt = await this.attempt(client, endpoint, { headers, signal }, work)
         await client.close().catch((cause: unknown) => {
             this.logger.error(McpLogEvent.CloseFailed, cause, { url: endpoint.url })

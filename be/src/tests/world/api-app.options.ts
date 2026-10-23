@@ -111,7 +111,7 @@ const localApiOptions = (): ApiOptions => ({
     ffmpeg: { nice: false },
     tts: { provider: "none", cacheDir: "world-proof/cache", workDir: "world-proof/work", minGapMs: 0 },
     video: { fontsDir: "world-proof/fonts", workDir: "world-proof/work", maxSeconds: 60, ffmpegThreads: 1 },
-    mcpGateway: { remote: { credentials: new Map() }, defaultTimeoutMs: 4000 },
+    mcpGateway: { remote: { clientName: "nivo-mcp-gateway" }, defaultTimeoutMs: 4000 },
 })
 
 /** The api's own composition as one module of the world. */

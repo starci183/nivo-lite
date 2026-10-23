@@ -338,14 +338,13 @@ environments:
               - {member: auth}
               - {member: stack, keys: [OPENCLAW_GATEWAY_TOKEN, OPENCLAW_MANAGE_AGENTS], fill: true}
           # The gateway gets exactly the keys it needs (be/apps/mcp/src/mcp.env.ts), from the same sealed `api` member as the api: the database
-          # connection (required), the list of credential NAMES remote connectors may reference (MCP_GATEWAY_CREDENTIALS, sealed beside the
-          # credential because app check classes every *_CREDENTIALS binding as sensitive) and those credentials. Both MCP_* keys are skipped until
-          # they are sealed (O14), which leaves the remote connectors unavailable and the native ones working. The gateway reads no agent token: its agent endpoint fails closed, so it stays shut in production for the demo.
+          # connection and the connection key (CHANNEL_TOKEN_KEY) that opens the credential each remote connector has sealed in its own row, per
+          # workspace, set from the console. No connector credential is a deployment key. The gateway reads no agent token: its agent endpoint
+          # fails closed, so it stays shut in production for the demo.
           - service: nivo-mcp
             filePointers: true
             from:
-              - {member: api, keys: [PRIMARY_DB_URL], required: true}
-              - {member: api, keys: [MCP_GATEWAY_CREDENTIALS, MCP_HAKUEN_CLIENT_SECRET]}
+              - {member: api, keys: [PRIMARY_DB_URL, CHANNEL_TOKEN_KEY], required: true}
           - service: nivo-openclaw
             from:
               - {member: stack, keys: [OPENCLAW_GATEWAY_TOKEN], required: true}
