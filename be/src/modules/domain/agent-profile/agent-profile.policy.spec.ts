@@ -1,17 +1,18 @@
 import { Test } from "@nestjs/testing"
-import { isAssignableText, requestTextOf, threadTitleOf } from "./agent-profile.policy"
+import { isAssignableText, requestTextOf, taskOf, threadTitleOf } from "./agent-profile.policy"
 
 type Subject = {
     isAssignableText: typeof isAssignableText
     requestTextOf: typeof requestTextOf
     threadTitleOf: typeof threadTitleOf
+    taskOf: typeof taskOf
 }
 
 const SUBJECT = Symbol("agent-profile.policy")
 
 const buildSubject = async () => {
     const moduleRef = await Test.createTestingModule({
-        providers: [{ provide: SUBJECT, useValue: { isAssignableText, requestTextOf, threadTitleOf } }],
+        providers: [{ provide: SUBJECT, useValue: { isAssignableText, requestTextOf, threadTitleOf, taskOf } }],
     }).compile()
     return moduleRef.get<Subject>(SUBJECT)
 }
@@ -69,5 +70,35 @@ describe("threadTitleOf", () => {
         const subject = await buildSubject()
 
         expect(subject.threadTitleOf("")).toBe("")
+    })
+})
+
+describe("taskOf", () => {
+    it("names the work of a request with an action and a customer, empty values as null", async () => {
+        const subject = await buildSubject()
+
+        expect(
+            subject.taskOf({
+                agentId: "a1",
+                text: "t",
+                action: "give_discount",
+                amount: 8,
+                amountVnd: 7,
+                leadId: "l1",
+            }),
+        ).toEqual({ action: "give_discount", amount: 8, amountVnd: 7, leadId: "l1" })
+        expect(subject.taskOf({ agentId: "a1", text: "t", action: "give_discount", leadId: "l1" })).toEqual({
+            action: "give_discount",
+            amount: null,
+            amountVnd: null,
+            leadId: "l1",
+        })
+    })
+
+    it("names no work when the request has no action or no customer", async () => {
+        const subject = await buildSubject()
+
+        expect(subject.taskOf({ agentId: "a1", text: "t" })).toBeNull()
+        expect(subject.taskOf({ agentId: "a1", text: "t", action: "give_discount", leadId: null })).toBeNull()
     })
 })

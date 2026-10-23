@@ -315,6 +315,8 @@ export interface AssignmentOpen {
     readonly text: string
     /** The tags: the agent that gets the work. */
     readonly mentions: ReadonlyArray<MentionRef>
+    /** The customer the work is about, or null. */
+    readonly leadId: string | null
     /** The language of the texts the capability writes; Vietnamese when absent. */
     readonly locale?: Locale
 }

@@ -289,6 +289,12 @@ describe("OfficeSeedService authority", () => {
                         action: "issue_invoice",
                         agents: ["agent-accounting"],
                         approver_group: { roles: [], rooms: ["accounting"], members: ["m-van"] },
+                        required_fields: ["customer", "amount_vnd", "tax_code"],
+                    }),
+                    expect.objectContaining({
+                        action: "reply_customer",
+                        department: "chatbot",
+                        agents: ["agent-care"],
                     }),
                 ],
                 grants: expect.arrayContaining([

@@ -43,7 +43,7 @@ RETURNING id`
 
 /** The person or agent a hand-off or assignment waited on answered: those steps are done ($1 workspace, $2 thread, $3 kind, $4 id). */
 export const SETTLE_TARGETED_STEPS = sql`UPDATE public.work_chains
-SET status = 'done', finished_at = now()
+SET status = 'done', finished_at = now(), decided_by = CASE WHEN $3 = 'member' THEN $4::uuid ELSE decided_by END
 WHERE workspace_id = $1::uuid AND thread_id = $2::uuid AND status = 'waiting' AND kind IN ('hand_off', 'assign')
   AND target ->> 'kind' = $3 AND target ->> 'id' = $4`
 

@@ -64,6 +64,7 @@ const input = {
     title: "Give work to AI Sales",
     text: "Continue the order of Ms Thao",
     mentions: [{ kind: "agent" as const, id: AGENT }],
+    leadId: null,
 }
 
 describe("ThreadAssignmentsService", () => {
@@ -93,6 +94,17 @@ describe("ThreadAssignmentsService", () => {
                 quoted: [],
                 locale: "vi",
             },
+            expect.anything(),
+        )
+    })
+
+    it("opens the thread about the customer the work is for", async () => {
+        const { service, threads } = await build()
+
+        await service.open({ ...input, leadId: "lead-thao" })
+
+        expect(threads.createFor).toHaveBeenCalledWith(
+            expect.objectContaining({ leadId: "lead-thao" }),
             expect.anything(),
         )
     })

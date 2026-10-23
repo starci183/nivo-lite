@@ -1,4 +1,4 @@
-// migrations-sha256: 3d2eeea3126a16ca04ea3645cbc585cabe5753ab8a2ed4ae15dbc92f593529da
+// migrations-sha256: 45035eb365ed40ec03a4301ae6cc50b0337f3f02d51895c1dbb58474c70f3b9b
 
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[]
 
@@ -3849,6 +3849,49 @@ isOneToOne: false
       referencedColumns: ["id"]
     },{
       foreignKeyName: "thread_messages_workspace_id_fkey"
+      columns: ["workspace_id"]
+isOneToOne: false
+      referencedRelation: "workspaces"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"thread_work": {
+                  Row: {
+                    "agent_id": string,"approval_request_id": string | null,"created_at": string,"id": string,"missing_fields": (string)[],"state": string,"thread_id": string,"updated_at": string,"waiting_member_id": string | null,"work_item_id": string,"workspace_id": string
+                  }
+                  Insert: {
+                    "agent_id": string,"approval_request_id"?: string | null,"created_at"?: string,"id"?: string,"missing_fields"?: (string)[],"state"?: string,"thread_id": string,"updated_at"?: string,"waiting_member_id"?: string | null,"work_item_id": string,"workspace_id": string
+                  }
+                  Update: {
+                    "agent_id"?: string,"approval_request_id"?: string | null,"created_at"?: string,"id"?: string,"missing_fields"?: (string)[],"state"?: string,"thread_id"?: string,"updated_at"?: string,"waiting_member_id"?: string | null,"work_item_id"?: string,"workspace_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "thread_work_agent_id_fkey"
+      columns: ["agent_id"]
+isOneToOne: false
+      referencedRelation: "agents"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "thread_work_thread_id_fkey"
+      columns: ["thread_id"]
+isOneToOne: false
+      referencedRelation: "work_threads"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "thread_work_waiting_member_id_fkey"
+      columns: ["waiting_member_id"]
+isOneToOne: false
+      referencedRelation: "workspace_members"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "thread_work_work_item_id_fkey"
+      columns: ["work_item_id"]
+isOneToOne: true
+      referencedRelation: "work_items"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "thread_work_workspace_id_fkey"
       columns: ["workspace_id"]
 isOneToOne: false
       referencedRelation: "workspaces"

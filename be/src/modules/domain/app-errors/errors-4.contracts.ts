@@ -14,6 +14,7 @@ import { CUSTOMER_TURNS_ERROR_KINDS } from "@modules/domain/customer-turns"
 import { AGENT_PROFILE_ERROR_KINDS } from "@modules/domain/agent-profile"
 import { WORK_CHAINS_ERROR_KINDS } from "@modules/domain/work-chains"
 import { THREAD_MESSAGES_ERROR_KINDS } from "@modules/domain/thread-messages"
+import { THREAD_WORK_ERROR_KINDS } from "@modules/domain/thread-work"
 import { WORK_THREADS_ERROR_KINDS } from "@modules/domain/work-threads"
 
 /** App-wide errors catalog, preserving registration order. */
@@ -35,4 +36,5 @@ export const API_ERROR_KINDS_4 = [
     WORK_CHAINS_ERROR_KINDS,
     WORK_THREADS_ERROR_KINDS,
     THREAD_MESSAGES_ERROR_KINDS,
+    THREAD_WORK_ERROR_KINDS,
 ]

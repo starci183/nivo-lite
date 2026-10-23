@@ -17,9 +17,10 @@ export class AssignAgentWorkHandler extends ICQRSHandler<AssignAgentWorkCommand,
     }
 
     protected override process(command: AssignAgentWorkCommand): Promise<AssignmentThread> {
-        return this.assignments.assign(command.params.principal.id, command.params.request.workspaceId, {
-            agentId: command.params.request.agentId,
-            text: command.params.request.text,
-        })
+        return this.assignments.assign(
+            command.params.principal.id,
+            command.params.request.workspaceId,
+            command.params.request,
+        )
     }
 }

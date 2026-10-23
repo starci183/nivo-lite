@@ -1,4 +1,5 @@
 import { ASSIGNMENT_TEXT_MAX, ASSIGNMENT_TITLE_MAX } from "./agent-profile.contracts"
+import type { AssignRequest, AssignmentTask } from "./agent-profile.contracts"
 
 const ELLIPSIS = String.fromCodePoint(0x2026)
 
@@ -16,3 +17,14 @@ export const threadTitleOf = (text: string): string => {
         ? line
         : `${line.slice(0, ASSIGNMENT_TITLE_MAX - 1).trimEnd()}${ELLIPSIS}`
 }
+
+/** The structured work of a request: an action with the customer it is about; null when the request names no action or no customer. */
+export const taskOf = (request: AssignRequest): AssignmentTask | null =>
+    typeof request.action === "string" && typeof request.leadId === "string"
+        ? {
+              action: request.action,
+              amount: request.amount ?? null,
+              amountVnd: request.amountVnd ?? null,
+              leadId: request.leadId,
+          }
+        : null

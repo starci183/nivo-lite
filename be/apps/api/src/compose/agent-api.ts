@@ -7,6 +7,7 @@ import { WorkThreadsGraphqlModule } from "@features/api/work-threads"
 import { AgentsService } from "@modules/domain/agents"
 import { ApprovalRequestsService } from "@modules/domain/approval-requests"
 import { ThreadMessagesModule } from "@modules/domain/thread-messages"
+import { ThreadWorkModule } from "@modules/domain/thread-work"
 import { WorkChainsModule } from "@modules/domain/work-chains"
 import { WorkThreadsModule } from "@modules/domain/work-threads"
 /** The agent api area of the API, in registration order. */
@@ -18,5 +19,6 @@ export const agentApiModules = (): Array<DynamicModule> => [
     WorkChainsModule.register({ isGlobal: true, ownerDirectory: AgentsService }),
     WorkThreadsModule.register({ isGlobal: true }),
     ThreadMessagesModule.register({ isGlobal: true, agentRules: AgentsService, approvalGate: ApprovalRequestsService }),
+    ThreadWorkModule.register({ isGlobal: true }),
     WorkThreadsGraphqlModule.register({}),
 ]

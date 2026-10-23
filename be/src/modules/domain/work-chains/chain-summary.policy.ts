@@ -21,7 +21,7 @@ export const summarize = (steps: ReadonlyArray<SummarizedStep>, now: Date): Chai
         : Math.max(...steps.map((step) => Date.parse(step.finishedAt ?? step.startedAt)))
     return {
         steps: steps.length,
-        humanDecisions: steps.filter((step) => step.kind === "ask_approval" && step.decidedBy !== null).length,
+        humanDecisions: steps.filter((step) => step.decidedBy !== null).length,
         minutes: Math.max(0, Math.round((ended - begun) / MINUTE_MS)),
         state: stateOf(steps, waiting),
     }

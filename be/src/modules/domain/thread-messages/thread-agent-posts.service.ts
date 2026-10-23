@@ -11,7 +11,7 @@ import { vetMentions, vetQuotes } from "./mention.policy"
 import { MentionDirectoryService } from "./mention-directory.service"
 import type { AgentRow } from "./persistence/thread-messages.rows"
 import { FIND_AGENT } from "./persistence/thread-messages.sql"
-import { refOf, tagStepOf } from "./thread-step.policy"
+import { refOf, selfStepOf, tagStepOf } from "./thread-step.policy"
 import { stepTitleOf } from "./thread-text.policy"
 import type {
     AgentPost,
@@ -160,9 +160,20 @@ export class ThreadAgentPostsService {
         })
     }
 
-    /** Records a hand-off step for every tag but the group the approval ask already stands for; the first stopped step ends the run. */
+    /**
+     * Records a hand-off step for every tag but the group the approval ask already stands for; the first stopped step ends the run.
+     * A message that tags nobody and asks nothing is the agent acting on its own (it confirms, it closes): one step of its own.
+     */
     private async handOffTags(tx: EntityManager, write: AgentWrite): Promise<StoppedStep | null> {
         if (stoppedOf(write.asked) !== null) return null
+        if (write.asked === null && write.views.length === 0) {
+            const own = selfStepOf(
+                write.post,
+                { kind: "agent", id: write.post.agentId },
+                stepTitleOf(write.post.stepTitle, write.post.body),
+            )
+            return stoppedOf(await this.chains.record(own, tx))
+        }
         const askedGroup = write.asked === null ? null : write.views.find((view) => view.kind === "group")
         let stopped: StoppedStep | null = null
         await eachInOrder(

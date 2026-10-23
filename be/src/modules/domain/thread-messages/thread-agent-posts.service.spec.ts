@@ -164,7 +164,7 @@ const registerPlainPosts = () => {
             })
         })
 
-        it("writes a plain agent line and leaves the thread open", async () => {
+        it("writes a plain agent line as a step of its own and leaves the thread open", async () => {
             const { service, chains, threads, messages } = await build(mockEntityManager(agentStubs()))
 
             const posted = await service.postAsAgent(agentPost())
@@ -176,12 +176,36 @@ const registerPlainPosts = () => {
                 { kind: "agent", id: "agent-1" },
                 expect.anything(),
             )
-            expect(chains.record).not.toHaveBeenCalled()
+            expect(chains.record).toHaveBeenCalledTimes(1)
+            expect(chains.record).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    kind: "self",
+                    actor: { kind: "agent", id: "agent-1" },
+                    target: null,
+                    action: "Ms Thao booked 2 villa nights.",
+                }),
+                expect.anything(),
+            )
             expect(messages.append).toHaveBeenCalledWith(
                 expect.anything(),
                 expect.objectContaining({ body: "Ms Thao booked 2 villa nights.", card: null }),
             )
             expect(threads.setStatus).toHaveBeenCalledWith(expect.anything(), "ws-1", "thread-1", "open")
+        })
+
+        it("sends a plain agent line the chain limits stopped back to the owner", async () => {
+            const { service, messages, threads } = await build(mockEntityManager(agentStubs()), {
+                recorded: [stopped("limit")],
+            })
+
+            const posted = await service.postAsAgent(agentPost())
+
+            expect(posted.stopped).toBe("limit")
+            expect(messages.append).toHaveBeenCalledWith(
+                expect.anything(),
+                expect.objectContaining({ mentions: [expect.objectContaining({ kind: "member", id: MINH })] }),
+            )
+            expect(threads.setStatus).toHaveBeenCalledWith(expect.anything(), "ws-1", "thread-1", "stopped")
         })
 
         it("asks the agents capability before the agent tags another agent", async () => {

@@ -14,6 +14,7 @@ import { MCP_MESSAGES } from "@modules/integrations/mcp"
 import { AGENT_PROFILE_MESSAGES } from "@modules/domain/agent-profile"
 import { WORK_CHAINS_MESSAGES } from "@modules/domain/work-chains"
 import { THREAD_MESSAGES_MESSAGES } from "@modules/domain/thread-messages"
+import { THREAD_WORK_MESSAGES } from "@modules/domain/thread-work"
 import { WORK_THREADS_MESSAGES } from "@modules/domain/work-threads"
 
 /** App-wide messages catalog, preserving registration order. */
@@ -36,4 +37,5 @@ export const API_MESSAGES_4 = [
     WORK_CHAINS_MESSAGES,
     WORK_THREADS_MESSAGES,
     THREAD_MESSAGES_MESSAGES,
+    THREAD_WORK_MESSAGES,
 ]

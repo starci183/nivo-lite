@@ -16,5 +16,5 @@ export type {
 export { APPROVAL_POLICIES, RULE_UNITS } from "./authority-rules.contracts"
 export { AuthorityRulesModule } from "./authority-rules.module"
 export { AuthorityRulesService } from "./authority-rules.service"
-export { bandOf, evaluateGate, isOverLimit } from "./gate.policy"
+export { bandOf, evaluateGate, isOverLimit, ruleAmountOf } from "./gate.policy"
 export { appliesToAgent } from "./rule-settings.policy"

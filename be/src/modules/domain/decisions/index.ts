@@ -1,6 +1,7 @@
 export { DECISIONS_ERROR_KINDS, DecisionsError, DecisionsErrorCode } from "./errors/decisions.error"
 export { DECISIONS_MESSAGES } from "./messages/decisions.messages"
 export type {
+    ActionEntry,
     ModuleCommand,
     CommandResult,
     InboundStatus,
@@ -11,6 +12,7 @@ export type {
     Proposal,
     SendCommandInput,
     WorkContext,
+    WorkEdits,
     WorkItem,
     WorkPerformer,
     WorkStatus,
@@ -43,7 +45,7 @@ export { formatVnd } from "./work-engine.policy"
 export { InjectWorkPerformerRegistry, WORK_PERFORMER_REGISTRY } from "./work-performer.port"
 export type { WorkPerformerRegistry } from "./work-performer.port"
 export { DecisionJobsService } from "./decision-jobs.service"
-export type { DecisionPayload, OutboundAccess, PaymentReceiptRequest } from "./work-engine.contracts"
+export type { DecisionPayload, OutboundAccess, PaymentReceiptRequest, ResumeDecision } from "./work-engine.contracts"
 export type {
     DecisionEvents,
     InboundEventStatus,

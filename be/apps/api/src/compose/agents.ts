@@ -9,6 +9,7 @@ import { AGENTS_SYNC_FRESH_MS, AgentsModule, AgentsService } from "@modules/doma
 import { AI_GENERATIONS_POLL_MS, AiGenerationsModule, TextGeneratorService } from "@modules/domain/ai-generations"
 import { ApprovalRequestsModule } from "@modules/domain/approval-requests"
 import { ThreadApprovalOutcomesService, ThreadAssignmentsService } from "@modules/domain/thread-messages"
+import { ThreadWorkService } from "@modules/domain/thread-work"
 import { DecisionsModule } from "@modules/domain/decisions"
 import { OPENCLAW_RELOAD_SETTLE_MS, OpenclawAgentSyncModule } from "@modules/domain/openclaw-agent-sync"
 import { DeepseekModule } from "@modules/integrations/deepseek"
@@ -29,7 +30,7 @@ export const agentsModules = (options: ApiOptions): Array<DynamicModule> => [
         },
         syncFreshMs: AGENTS_SYNC_FRESH_MS,
     }),
-    AgentProfileModule.register({ isGlobal: true, threads: ThreadAssignmentsService }),
+    AgentProfileModule.register({ isGlobal: true, threads: ThreadAssignmentsService, work: ThreadWorkService }),
     AgentConnectionsModule.register({ isGlobal: true }),
     AiGenerationsModule.register({
         isGlobal: true,

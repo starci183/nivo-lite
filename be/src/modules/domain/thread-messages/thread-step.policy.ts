@@ -15,6 +15,20 @@ export interface StepScope {
 /** The tag a chip stands for, without the name it carries. */
 export const refOf = (view: MentionView): MentionRef => ({ kind: view.kind, id: view.id })
 
+/** The chain step of an agent that acts without tagging anyone (it confirms, closes, reports): done when it is written. */
+export const selfStepOf = (scope: StepScope, actor: ChainActor, action: string): NewChainStep => ({
+    workspaceId: scope.workspaceId,
+    threadId: scope.threadId,
+    actor,
+    kind: "self",
+    action,
+    detail: "",
+    rule: null,
+    target: null,
+    approvalRequestId: null,
+    locale: scope.locale,
+})
+
 /** The chain step a tag makes: the actor handing work to, or assigning work to, whoever the chip names. */
 export const tagStepOf = (
     scope: StepScope,

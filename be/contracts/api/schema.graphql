@@ -1091,7 +1091,11 @@ input AskKnowledgeInput {
 }
 
 input AssignAgentWorkInput {
+  action: String
   agentId: ID!
+  amount: Float
+  amountVnd: Float
+  leadId: ID
   text: String!
 }
 

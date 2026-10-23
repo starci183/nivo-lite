@@ -215,6 +215,17 @@ export const SALES_MODULE: ModuleDefinition = {
             note: catalogCopy("modulesCatalog.sales.authorityActions.send_care.note", "en"),
             next: [],
         },
+        {
+            action: "give_discount",
+            label: catalogText("modulesCatalog.sales.authorityActions.give_discount.label"),
+            mode: "ask",
+            limitVnd: null,
+            requiredFields: ["customer"],
+            amountLimit: true,
+            maxMode: null,
+            note: catalogCopy("modulesCatalog.sales.authorityActions.give_discount.note", "en"),
+            next: ["issue_invoice"],
+        },
     ],
     accepts: [
         {
@@ -251,6 +262,13 @@ export const SALES_MODULE: ModuleDefinition = {
             subjectType: "invoice",
             requiredFields: ["subject_id", "lead_id"],
             description: catalogText("modulesCatalog.sales.accepts.send_care.description"),
+        },
+        {
+            command: "give_discount",
+            action: "give_discount",
+            subjectType: "lead",
+            requiredFields: ["lead_id"],
+            description: catalogText("modulesCatalog.sales.accepts.give_discount.description"),
         },
     ],
 }

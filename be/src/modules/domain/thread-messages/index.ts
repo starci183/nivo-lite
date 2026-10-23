@@ -1,6 +1,13 @@
 export { THREAD_MESSAGES_ERROR_KINDS } from "./errors/thread-messages.error"
 export { THREAD_MESSAGES_MESSAGES } from "./messages/thread-messages.messages"
-export type { MentionDirectory, ThreadListing, ThreadMessage, ThreadView } from "./thread-messages.contracts"
+export type {
+    MentionDirectory,
+    ThreadCardDecision,
+    ThreadListing,
+    ThreadMessage,
+    ThreadView,
+    UserPost,
+} from "./thread-messages.contracts"
 export { MentionDirectoryService } from "./mention-directory.service"
 export { ThreadApprovalOutcomesService } from "./thread-approval-outcomes.service"
 export { ThreadApprovalsService } from "./thread-approvals.service"

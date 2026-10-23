@@ -160,7 +160,7 @@ export const ACCOUNTING_MODULE: ModuleDefinition = {
             amountLimit: true,
             maxMode: null,
             note: catalogCopy("modulesCatalog.accounting.authorityActions.issue_invoice.note", "en"),
-            next: [],
+            next: ["reply_customer"],
         },
         {
             action: "reconcile_payment",

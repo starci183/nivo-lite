@@ -29,26 +29,28 @@ describe("chain summary policy", () => {
         expect(subject.summarize([], NOW)).toEqual({ steps: 0, humanDecisions: 0, minutes: 0, state: "empty" })
     })
 
-    it("counts the steps, the decisions people made and the minutes of the video chain", async () => {
+    it("counts the steps, the decisions people made and the minutes of the video chain: 6 steps, 2 decisions", async () => {
         const subject = await buildSubject()
         const steps = [
-            step({}),
+            step({ kind: "assign" }),
             step({
                 kind: "ask_approval",
                 decidedBy: "minh",
                 startedAt: "2026-10-22T09:41:00.000Z",
                 finishedAt: "2026-10-22T09:42:00.000Z",
             }),
-            step({ kind: "hand_off", startedAt: "2026-10-22T09:43:00.000Z", finishedAt: "2026-10-22T09:44:00.000Z" }),
+            step({ kind: "hand_off", startedAt: "2026-10-22T09:42:00.000Z", finishedAt: "2026-10-22T09:43:00.000Z" }),
             step({
-                kind: "ask_approval",
+                kind: "hand_off",
                 decidedBy: "van",
-                startedAt: "2026-10-22T09:44:00.000Z",
-                finishedAt: "2026-10-22T09:45:00.000Z",
+                startedAt: "2026-10-22T09:43:00.000Z",
+                finishedAt: "2026-10-22T09:44:00.000Z",
             }),
+            step({ kind: "hand_off", startedAt: "2026-10-22T09:44:00.000Z", finishedAt: "2026-10-22T09:44:30.000Z" }),
+            step({ kind: "self", startedAt: "2026-10-22T09:44:30.000Z", finishedAt: "2026-10-22T09:45:00.000Z" }),
         ]
 
-        expect(subject.summarize(steps, NOW)).toEqual({ steps: 4, humanDecisions: 2, minutes: 4, state: "complete" })
+        expect(subject.summarize(steps, NOW)).toEqual({ steps: 6, humanDecisions: 2, minutes: 4, state: "complete" })
     })
 
     it("ends a finished step with no end instant at its start", async () => {

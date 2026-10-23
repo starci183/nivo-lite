@@ -91,6 +91,8 @@ export interface AssignmentThreadInput {
     readonly text: string
     /** The only mentions of the first message: the agent the work is for. */
     readonly mentions: ReadonlyArray<AssignmentMention>
+    /** The customer the work is about, or null. */
+    readonly leadId: string | null
 }
 
 /** The thread an assignment opened. */
@@ -99,12 +101,48 @@ export interface AssignmentThread {
     readonly threadId: string
 }
 
+/** The structured work a member hands an agent: an action of its department, the amount in the rule's unit, the customer. */
+export interface AssignmentTask {
+    /** The action key. */
+    readonly action: string
+    /** The amount in the unit of the action's rule, or null. */
+    readonly amount: number | null
+    /** The value of the deal in VND, or null. */
+    readonly amountVnd: number | null
+    /** The customer (`leads.id`). */
+    readonly leadId: string
+}
+
 /** What handing an agent work takes. */
 export interface AssignRequest {
     /** The agent. */
     readonly agentId: string
     /** What to do, as the person wrote it. */
     readonly text: string
+    /** The action the agent starts on (an action of its department); absent or null for a request it only reads. */
+    readonly action?: string | null
+    /** The amount in the unit of the action's rule. */
+    readonly amount?: number | null
+    /** The value of the deal, VND. */
+    readonly amountVnd?: number | null
+    /** The customer the work is about; the work needs one. */
+    readonly leadId?: string | null
+}
+
+/** The work the agents' runtime starts in the thread an assignment opened. */
+export interface AssignmentWorkStart {
+    /** The workspace. */
+    readonly workspaceId: string
+    /** The thread. */
+    readonly threadId: string
+    /** The agent. */
+    readonly agentId: string
+    /** The display name of the member who handed the work over. */
+    readonly actorName: string
+    /** The request in their words. */
+    readonly summary: string
+    /** The structured work. */
+    readonly task: AssignmentTask
 }
 
 /** The longest request a person may hand an agent. */

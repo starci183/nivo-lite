@@ -28,7 +28,7 @@ export class ThreadAssignmentsService {
                     workspaceId: input.workspaceId,
                     memberId: input.authorMemberId,
                     title: input.title,
-                    leadId: null,
+                    leadId: input.leadId,
                     orderId: null,
                 },
                 tx,

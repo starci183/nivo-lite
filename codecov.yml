@@ -149,6 +149,7 @@ component_management:
         - "be/src/modules/domain/staff/**"
         - "be/src/modules/domain/telegram-inbox/**"
         - "be/src/modules/domain/thread-messages/**"
+        - "be/src/modules/domain/thread-work/**"
         - "be/src/modules/domain/video-project-versions/**"
         - "be/src/modules/domain/video-projects/**"
         - "be/src/modules/domain/video-renders/**"
