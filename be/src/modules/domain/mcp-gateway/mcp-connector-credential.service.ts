@@ -60,10 +60,11 @@ export class McpConnectorCredentialService {
         if (target.credentialState === "none") return { url: target.url, bearer: null }
         const stored = await this.connectors.storedCredential(workspaceId, target.key)
         if (stored?.state === "none") return { url: target.url, bearer: null }
-        if (stored === null || stored.sealed === null) {
+        const sealed = stored?.sealed ?? null
+        if (sealed === null) {
             throw new McpGatewayError({ code: McpGatewayErrorCode.CredentialMissing, params: { key: target.key } })
         }
-        const opened = this.secrets.open(stored.sealed)
+        const opened = this.secrets.open(sealed)
         if (opened.kind !== "ok") {
             const unreadable = new McpGatewayError({
                 code: McpGatewayErrorCode.CredentialUnreadable,
