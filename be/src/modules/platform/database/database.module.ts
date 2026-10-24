@@ -6,7 +6,8 @@ import { DATABASE_OPTIONS } from "./database.port"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./database.module-definition"
 import { MigrationRunnerService } from "./migration-runner.service"
 import { PRIMARY_CONNECTION } from "./primary.connection"
-import { PRIMARY_ENTITY_MANAGER } from "./primary.decorators"
+import { PRIMARY_ENTITY_MANAGER, RATE_LIMIT_STORE } from "./primary.decorators"
+import { PostgresRateLimitStoreClient } from "./postgres-rate-limit-store.client"
 import { SeedRunnerService } from "./seed-runner.service"
 
 /** The token each declared connection provides its shared EntityManager under. */
@@ -54,9 +55,16 @@ export class DatabaseModule extends ConfigurableModuleClass {
                     })
                 }),
             ],
-            providers: [...(base.providers ?? []), ...managers, MigrationRunnerService, SeedRunnerService],
+            providers: [
+                ...(base.providers ?? []),
+                ...managers,
+                { provide: RATE_LIMIT_STORE, useClass: PostgresRateLimitStoreClient },
+                MigrationRunnerService,
+                SeedRunnerService,
+            ],
             exports: [
                 DATABASE_OPTIONS,
+                RATE_LIMIT_STORE,
                 ...managers.map((manager) => manager.provide),
                 MigrationRunnerService,
                 SeedRunnerService,

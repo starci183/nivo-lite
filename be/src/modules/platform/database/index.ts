@@ -4,4 +4,10 @@ export { SeedRunnerService } from "./seed-runner.service"
 export { sql } from "./database.sql"
 export { DATABASE_ERROR_KINDS } from "./errors/database.error"
 export { parsePrimaryDatabaseConfig } from "./primary.config"
-export { InjectPrimaryEntityManager, PRIMARY_ENTITY_MANAGER } from "./primary.decorators"
+export {
+    InjectPrimaryEntityManager,
+    InjectRateLimitStore,
+    PRIMARY_ENTITY_MANAGER,
+    RATE_LIMIT_STORE,
+} from "./primary.decorators"
+export type { RateLimitStore } from "./rate-limit-store.port"

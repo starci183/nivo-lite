@@ -1,4 +1,4 @@
-// migrations-sha256: 0f6cc6862db126feb65cef7389668a0d711135dd2ad7330ae8936df168f16ed8
+// migrations-sha256: 9551ffc685fe359d96a7e3a37b897b124dbb22d943050594c505838e472175da
 
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[]
 
@@ -1839,6 +1839,19 @@ isOneToOne: true
       referencedRelation: "workspaces"
       referencedColumns: ["id"]
     }
+                  ]
+                },"http_security": {
+                  Row: {
+                    "bucket_key": string,"hits": number,"reset_at": string
+                  }
+                  Insert: {
+                    "bucket_key": string,"hits": number,"reset_at": string
+                  }
+                  Update: {
+                    "bucket_key"?: string,"hits"?: number,"reset_at"?: string
+                  }
+                  Relationships: [
+
                   ]
                 },"inbound_events": {
                   Row: {
@@ -4569,6 +4582,12 @@ isOneToOne: false
                            },
 "hiring_tick":
 { Args: Record<PropertyKey, never>; Returns: boolean
+                           },
+"http_rate_limit_cleanup":
+{ Args: Record<PropertyKey, never>; Returns: number
+                           },
+"http_rate_limit_consume":
+{ Args: { "p_bucket_key": string,"p_limit": number,"p_window_ms": number }; Returns: boolean
                            },
 "inventory_add_po_lines":
 { Args: { "p_costs": (number)[],"p_item_ids": (string)[],"p_po": string,"p_qtys": (number)[],"p_ws": string }; Returns: undefined
