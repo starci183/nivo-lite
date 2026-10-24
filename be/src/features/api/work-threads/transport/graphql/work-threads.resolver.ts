@@ -14,7 +14,7 @@ import { ListWorkThreadsInput } from "./dto/list-work-threads.input"
 import { MentionDirectoryType } from "./dto/mention-directory.type"
 import { WorkChainType } from "./dto/work-chain.type"
 import { WorkThreadIdInput } from "./dto/work-thread-id.input"
-import { WorkThreadListingType } from "./dto/work-thread-listing.type"
+import { WorkThreadConnectionType } from "./dto/work-thread-connection.type"
 import { WorkThreadViewType } from "./dto/work-thread-view.type"
 import {
     toListWorkThreadsRequest,
@@ -33,12 +33,12 @@ export class WorkThreadsResolver {
     constructor(@InjectQueryBus() private readonly queryBus: QueryBus) {}
 
     /** Lists the newest threads of the workspace, optionally only those about one lead. */
-    @Query(() => [WorkThreadListingType], { name: "workThreads" })
+    @Query(() => WorkThreadConnectionType, { name: "workThreads" })
     async workThreads(
         @CurrentPrincipal() principal: Principal,
         @WorkspaceId() workspaceId: string,
-        @Args("input", { nullable: true, defaultValue: {} }) input: ListWorkThreadsInput,
-    ): Promise<Array<WorkThreadListingType>> {
+        @Args("input", { defaultValue: {} }) input: ListWorkThreadsInput,
+    ): Promise<WorkThreadConnectionType> {
         const result = await this.queryBus.execute(
             new ListWorkThreadsQuery({ request: toListWorkThreadsRequest(workspaceId, input), principal }),
         )

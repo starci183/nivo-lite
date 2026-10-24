@@ -1,6 +1,7 @@
 import type { useTranslations, useFormatter } from "next-intl"
 import {
     Badge,
+    Button,
     EmptyNotice,
     ListRow,
     SearchField,
@@ -70,6 +71,14 @@ export interface LeadsBoardBaseProps {
         readonly query: string
         readonly selectedTab: string
         readonly isRowBusy: boolean
+        readonly pagination: {
+            readonly hasNextPage: boolean
+            readonly isLoading: boolean
+            readonly failure: string | null
+            readonly loadedHint: string | null
+            readonly loadMoreLabel: string
+            readonly retryLabel: string
+        }
     }
     readonly on: {
         readonly query: (value: string) => void
@@ -77,6 +86,8 @@ export interface LeadsBoardBaseProps {
         readonly select: (tab: string) => void
         readonly openForm: () => void
         readonly propose: (leadId: string) => void
+        readonly loadMore: () => void
+        readonly retry: () => void
     }
 }
 
@@ -88,7 +99,12 @@ export const LeadsBoardBase = (props: LeadsBoardBaseProps) => {
     const l = p.labels
     return (
         <div className={BOARD_CLASS_NAME}>
-            <SlotView slot={p.slot} placeholder={{ ...PLACEHOLDER, tabs: l.loadingTabs }} labels={l.slot}>
+            <SlotView
+                slot={p.slot}
+                placeholder={{ ...PLACEHOLDER, tabs: l.loadingTabs }}
+                labels={l.slot}
+                onRetry={on.retry}
+            >
                 {(view, isSkeleton) => (
                     <>
                         <div className={FILTERS_CLASS_NAME}>
@@ -116,6 +132,27 @@ export const LeadsBoardBase = (props: LeadsBoardBaseProps) => {
                     </>
                 )}
             </SlotView>
+            {p.pagination.loadedHint === null ? null : (
+                <Text size="sm" tone="muted">
+                    {p.pagination.loadedHint}
+                </Text>
+            )}
+            {p.pagination.failure === null ? null : (
+                <Text size="sm" live="polite">
+                    {p.pagination.failure}
+                </Text>
+            )}
+            {p.pagination.hasNextPage || p.pagination.failure !== null ? (
+                <Button
+                    variant="secondary"
+                    size="sm"
+                    isPending={p.pagination.isLoading}
+                    isDisabled={p.pagination.isLoading}
+                    onPress={p.pagination.failure === null ? on.loadMore : on.retry}
+                >
+                    {p.pagination.failure === null ? p.pagination.loadMoreLabel : p.pagination.retryLabel}
+                </Button>
+            ) : null}
         </div>
     )
 }

@@ -5,7 +5,11 @@ export type {
     AdminWorkspacesQuery,
     LoadOpenApiConnectionQuery,
     LeadGenWorkbenchQuery,
+    LeadBoardQuery,
+    WorkThreadsQuery,
+    SalesOrdersQuery,
 } from "./graphql/__generated__/graphql"
+export { GraphQLHeadersKey } from "./graphql/types"
 export type {
     InventoryItemType,
     InventoryMovementType,

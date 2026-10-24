@@ -3,6 +3,8 @@ import type { EntityManager } from "typeorm"
 import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
+import { readConnection } from "@modules/platform/pagination"
+import type { Connection, PageRequest } from "@modules/platform/pagination"
 import { OrdersError, OrdersErrorCode } from "./errors/orders.error"
 import type {
     NewOrderDraft,
@@ -22,6 +24,7 @@ import {
     INSERT_ORDER_DRAFT,
     LIST_LEAD_ORDERS,
     LIST_ORDERS,
+    LIST_ORDER_PAGE,
     LIST_WORKBENCH_ORDERS,
     SET_ORDER_STATUS,
     SHIP_ORDER,
@@ -47,6 +50,13 @@ export class OrdersService {
             workspaceId,
             Math.min(500, Math.max(1, limit)),
         ])
+    }
+
+    /** A bounded page of orders in immutable creation and id order. */
+    listPage(workspaceId: string, request: PageRequest = {}): Promise<Connection<SalesOrderRow>> {
+        return readConnection(request, `salesOrders:${workspaceId}`, (parameters) =>
+            this.entityManager.query<Array<SalesOrderRow>>(LIST_ORDER_PAGE, [workspaceId, ...parameters]),
+        )
     }
 
     /** The latest non-draft orders for the Sales workbench. */

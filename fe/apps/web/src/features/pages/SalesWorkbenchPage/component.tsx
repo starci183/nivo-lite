@@ -6,6 +6,7 @@ import { SalesContracts } from "@/components/blocks/SalesContracts"
 import { SalesDecisions } from "@/components/blocks/SalesDecisions"
 import { SalesFigures } from "@/components/blocks/SalesFigures"
 import { SalesHandoffs } from "@/components/blocks/SalesHandoffs"
+import { SalesOrders } from "@/components/blocks/SalesOrders"
 import { SalesPipeline } from "@/components/blocks/SalesPipeline"
 import { SalesWorkbenchGate } from "@/components/blocks/SalesWorkbenchGate"
 import type { SalesTab } from "@/hooks/sales"
@@ -28,7 +29,15 @@ const AREAS: ReadonlyArray<{ readonly id: SalesTab; readonly draw: (focus: strin
     { id: "attention", draw: () => <SalesAttention /> },
     { id: "pipeline", draw: () => <SalesPipeline /> },
     { id: "decisions", draw: (focus) => <SalesDecisions focusId={focus} /> },
-    { id: "handoff", draw: () => <SalesHandoffs /> },
+    {
+        id: "handoff",
+        draw: () => (
+            <>
+                <SalesHandoffs />
+                <SalesOrders />
+            </>
+        ),
+    },
     { id: "contracts", draw: () => <SalesContracts /> },
     { id: "activity", draw: () => <SalesActivity /> },
 ]

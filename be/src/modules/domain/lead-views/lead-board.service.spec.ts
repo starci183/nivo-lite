@@ -50,7 +50,10 @@ const build = async () => {
     const members = mock<WorkspaceMembersService>()
     members.require.mockResolvedValue(MEMBER)
     const leads = mock<LeadReadService>()
-    leads.list.mockResolvedValue([LEAD, OTHER])
+    leads.listPage.mockResolvedValue({
+        nodes: [LEAD, OTHER],
+        pageInfo: { endCursor: "opaque-cursor", hasNextPage: true },
+    })
     const responsibilities = mock<ResponsibilityJournalService>()
     responsibilities.listForBoard.mockResolvedValue([STEP])
     const moduleRef = await Test.createTestingModule({
@@ -61,16 +64,70 @@ const build = async () => {
             { provide: ResponsibilityJournalService, useValue: responsibilities },
         ],
     }).compile()
-    return moduleRef.get(LeadBoardService)
+    return { service: moduleRef.get(LeadBoardService), members, leads, responsibilities }
 }
 
 describe("LeadBoardService", () => {
     it("attaches the oldest open step's owner and next action, or null when a lead has none", async () => {
-        const service = await build()
+        const { service, members, leads, responsibilities } = await build()
 
-        await expect(service.read("user-1", "ws-1")).resolves.toEqual([
-            { ...LEAD, ownerName: "An", nextAction: "Call" },
-            { ...OTHER, ownerName: null, nextAction: null },
-        ])
+        await expect(service.read("user-1", "ws-1", { first: 2 })).resolves.toEqual({
+            nodes: [
+                { ...LEAD, ownerName: "An", nextAction: "Call" },
+                { ...OTHER, ownerName: null, nextAction: null },
+            ],
+            pageInfo: { endCursor: "opaque-cursor", hasNextPage: true },
+        })
+        expect(members.require).toHaveBeenCalledWith("user-1", "ws-1")
+        expect(leads.listPage).toHaveBeenCalledWith("ws-1", { first: 2 })
+        expect(responsibilities.listForBoard).toHaveBeenCalledWith("ws-1", [LEAD.id, OTHER.id])
+    })
+
+    it("reads responsibilities only for the current page, including older leads outside the original board window", async () => {
+        const { service, leads, responsibilities } = await build()
+        const olderLead = { ...LEAD, id: "old-lead", created_at: "2025-01-01T00:00:00.000Z" }
+        leads.listPage.mockResolvedValue({
+            nodes: [olderLead],
+            pageInfo: { endCursor: "older-cursor", hasNextPage: false },
+        })
+        responsibilities.listForBoard.mockResolvedValue([{ ...STEP, lead_id: olderLead.id }])
+
+        await expect(service.read("user-1", "ws-1", { after: "previous-cursor" })).resolves.toEqual({
+            nodes: [{ ...olderLead, ownerName: "An", nextAction: "Call" }],
+            pageInfo: { endCursor: "older-cursor", hasNextPage: false },
+        })
+        expect(responsibilities.listForBoard).toHaveBeenCalledWith("ws-1", [olderLead.id])
+    })
+
+    it("passes an empty lead page to the bounded responsibility reader", async () => {
+        const { service, leads, responsibilities } = await build()
+        leads.listPage.mockResolvedValue({ nodes: [], pageInfo: { endCursor: null, hasNextPage: false } })
+
+        await expect(service.read("user-1", "ws-1", {})).resolves.toEqual({
+            nodes: [],
+            pageInfo: { endCursor: null, hasNextPage: false },
+        })
+        expect(responsibilities.listForBoard).toHaveBeenCalledWith("ws-1", [])
+    })
+
+    it("does not read responsibilities when the page cursor is refused", async () => {
+        const { service, leads, responsibilities } = await build()
+        const refusal = new Error("invalid page cursor")
+        leads.listPage.mockRejectedValue(refusal)
+
+        await expect(service.read("user-1", "ws-1", { after: "invalid-cursor" })).rejects.toThrow(refusal)
+
+        expect(responsibilities.listForBoard).not.toHaveBeenCalled()
+    })
+
+    it("proves membership before reading either leads or their responsibilities", async () => {
+        const { service, members, leads, responsibilities } = await build()
+        const refusal = new Error("membership required")
+        members.require.mockRejectedValue(refusal)
+
+        await expect(service.read("user-1", "ws-1", {})).rejects.toThrow(refusal)
+
+        expect(leads.listPage).not.toHaveBeenCalled()
+        expect(responsibilities.listForBoard).not.toHaveBeenCalled()
     })
 })

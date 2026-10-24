@@ -56,7 +56,7 @@ const build = async (em: ReturnType<typeof mockEntityManager>) => {
     const threads = mock<WorkThreadsService>({
         createFor: jest.fn().mockResolvedValue(THREAD),
         find: jest.fn().mockResolvedValue(THREAD),
-        list: jest.fn().mockResolvedValue([THREAD]),
+        list: jest.fn().mockResolvedValue({ nodes: [THREAD], pageInfo: { endCursor: "cursor", hasNextPage: false } }),
     })
     const chains = mock<WorkChainsService>({ view: jest.fn().mockResolvedValue(CHAIN) })
     const moduleRef = await Test.createTestingModule({
@@ -112,14 +112,40 @@ const registerList = () => {
             }
             const em = mockEntityManager({ query: [LIST_THREAD_DIGESTS, [digest]] })
             const { service, threads } = await build(em)
-            threads.list.mockResolvedValue([THREAD, { ...THREAD, id: "thread-2" }])
+            threads.list.mockResolvedValue({
+                nodes: [THREAD, { ...THREAD, id: "thread-2" }],
+                pageInfo: { endCursor: "cursor", hasNextPage: true },
+            })
 
             const listing = await service.list("van", "ws-1", "lead-1")
 
-            expect(threads.list).toHaveBeenCalledWith("ws-1", "lead-1")
+            expect(threads.list).toHaveBeenCalledWith("ws-1", "lead-1", {})
             expect(em.query).toHaveBeenCalledWith(LIST_THREAD_DIGESTS, ["ws-1", ["thread-1", "thread-2"]])
-            expect(listing[0]).toMatchObject({ id: "thread-1", lastBody: "Confirmation sent.", messageCount: 7 })
-            expect(listing[1]).toMatchObject({ id: "thread-2", lastBody: null, messageCount: 0 })
+            expect(listing.nodes[0]).toMatchObject({ id: "thread-1", lastBody: "Confirmation sent.", messageCount: 7 })
+            expect(listing.nodes[1]).toMatchObject({ id: "thread-2", lastBody: null, messageCount: 0 })
+            expect(listing.pageInfo).toEqual({ endCursor: "cursor", hasNextPage: true })
+        })
+
+        it("passes the page request after proving workspace membership", async () => {
+            const em = mockEntityManager({ query: [LIST_THREAD_DIGESTS, []] })
+            const { service, members, threads } = await build(em)
+            const request = { first: 20, after: "cursor" }
+
+            await service.list("van", "ws-1", null, request)
+
+            expect(members.require).toHaveBeenCalledWith("van", "ws-1")
+            expect(threads.list).toHaveBeenCalledWith("ws-1", null, request)
+        })
+
+        it("refuses a nonmember before listing threads or digests", async () => {
+            const em = mockEntityManager()
+            const { service, members, threads } = await build(em)
+            members.require.mockRejectedValue(new Error("not a member"))
+
+            await expect(service.list("van", "ws-1", null)).rejects.toThrow("not a member")
+
+            expect(threads.list).not.toHaveBeenCalled()
+            expect(em.query).not.toHaveBeenCalled()
         })
     })
 }

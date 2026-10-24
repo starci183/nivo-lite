@@ -121,9 +121,13 @@ export class ResponsibilityJournalService {
         return this.entityManager.query<Array<ResponsibilityRecord>>(LIST_OPEN_RESPONSIBILITIES, [workspaceId])
     }
 
-    /** The oldest open steps used to choose the next action displayed on each lead of the board. */
-    listForBoard(workspaceId: string): Promise<Array<ResponsibilityRecord>> {
-        return this.entityManager.query<Array<ResponsibilityRecord>>(LIST_BOARD_RESPONSIBILITIES, [workspaceId])
+    /** The oldest open step of each lead in the current board page, without a workspace-wide history cutoff. */
+    listForBoard(workspaceId: string, leadIds: ReadonlyArray<string>): Promise<Array<ResponsibilityRecord>> {
+        if (leadIds.length === 0) return Promise.resolve([])
+        return this.entityManager.query<Array<ResponsibilityRecord>>(LIST_BOARD_RESPONSIBILITIES, [
+            workspaceId,
+            leadIds,
+        ])
     }
 
     /** Adds a responsibility and its evidence, inside the caller's transaction when one is supplied. */

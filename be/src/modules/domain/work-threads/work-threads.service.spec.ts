@@ -1,6 +1,7 @@
 import { mockEntityManager } from "@starci/jest-preset"
 import { Test } from "@nestjs/testing"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
+import { normalizePage } from "@modules/platform/pagination"
 import { WorkThreadsErrorCode } from "./errors/work-threads.error"
 import type { ThreadRow } from "./persistence/work-threads.rows"
 import {
@@ -107,7 +108,7 @@ const registerCreateFor = () => {
 }
 
 const registerReads = () => {
-    describe("find, list and lock", () => {
+    describe("find and lock", () => {
         it("finds a thread of the workspace", async () => {
             const em = mockEntityManager({ query: [FIND_THREAD, [threadRow]] })
             const service = await build(em)
@@ -122,16 +123,6 @@ const registerReads = () => {
             await expect(service.find("ws-1", "thread-9")).rejects.toMatchObject({
                 code: WorkThreadsErrorCode.ThreadNotFound,
             })
-        })
-
-        it("lists the newest threads, optionally only those about one lead", async () => {
-            const em = mockEntityManager({ query: [LIST_THREADS, [threadRow]] })
-            const service = await build(em)
-
-            const threads = await service.list("ws-1", "lead-1")
-
-            expect(threads.map((thread) => thread.id)).toEqual(["thread-1"])
-            expect(em.query).toHaveBeenCalledWith(LIST_THREADS, ["ws-1", "lead-1"])
         })
 
         it("locks a thread for the transaction of the caller", async () => {
@@ -153,6 +144,77 @@ const registerReads = () => {
     })
 }
 
+const registerPagination = () => {
+    describe("list", () => {
+        it("lists the newest threads, optionally only those about one lead", async () => {
+            const em = mockEntityManager({ query: [LIST_THREADS, [threadRow]] })
+            const service = await build(em)
+
+            const threads = await service.list("ws-1", "lead-1")
+
+            expect(threads.nodes.map((thread) => thread.id)).toEqual(["thread-1"])
+            const endCursor = Buffer.from(
+                JSON.stringify({
+                    v: 1,
+                    scope: "ws-1:workThreads:lead-1",
+                    createdAt: threadRow.created_at,
+                    id: threadRow.id,
+                }),
+            ).toString("base64url")
+            expect(threads.pageInfo).toEqual({ hasNextPage: false, endCursor })
+            expect(em.query).toHaveBeenCalledWith(LIST_THREADS, ["ws-1", "lead-1", null, null, 51])
+        })
+
+        it("continues after the full database instant and id without exposing the lookahead row", async () => {
+            const row = {
+                ...threadRow,
+                id: "00000000-0000-4000-8000-000000000002",
+                created_at: "2026-10-22T02:41:00.123456+00:00",
+            }
+            const older = { ...row, id: "00000000-0000-4000-8000-000000000001" }
+            const em = mockEntityManager({ query: [LIST_THREADS, [row, older]] })
+            const service = await build(em)
+
+            const first = await service.list("ws-1", null, { first: 1 })
+
+            expect(first.nodes.map((thread) => thread.id)).toEqual([row.id])
+            expect(first.pageInfo.hasNextPage).toBe(true)
+            expect(normalizePage({ after: first.pageInfo.endCursor }, "ws-1:workThreads:all").after).toEqual({
+                createdAt: row.created_at,
+                id: row.id,
+            })
+
+            await service.list("ws-1", null, { first: 1, after: first.pageInfo.endCursor })
+
+            expect(em.query).toHaveBeenLastCalledWith(LIST_THREADS, ["ws-1", null, row.created_at, row.id, 2])
+        })
+
+        it("refuses a cursor from another lead filter before reading rows", async () => {
+            const row = { ...threadRow, id: "00000000-0000-4000-8000-000000000001" }
+            const em = mockEntityManager({ query: [LIST_THREADS, [row]] })
+            const service = await build(em)
+            const page = await service.list("ws-1", "lead-1", { first: 1 })
+            em.query.mockClear()
+
+            await expect(service.list("ws-1", null, { after: page.pageInfo.endCursor })).rejects.toThrow()
+
+            expect(em.query).not.toHaveBeenCalled()
+        })
+
+        it.each([null, undefined])("normalizes an absent lead filter %p to an unfiltered query", async (leadId) => {
+            const em = mockEntityManager({ query: [LIST_THREADS, []] })
+            const service = await build(em)
+
+            await expect(service.list("ws-1", leadId)).resolves.toEqual({
+                nodes: [],
+                pageInfo: { endCursor: null, hasNextPage: false },
+            })
+
+            expect(em.query).toHaveBeenCalledWith(LIST_THREADS, ["ws-1", null, null, null, 51])
+        })
+    })
+}
+
 const registerStatus = () => {
     describe("setStatus", () => {
         it("sets where a thread stands inside the transaction of the caller", async () => {
@@ -169,5 +231,6 @@ const registerStatus = () => {
 describe("WorkThreadsService", () => {
     registerCreateFor()
     registerReads()
+    registerPagination()
     registerStatus()
 })

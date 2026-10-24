@@ -1,5 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
+import type { Connection, PageRequest } from "@modules/platform/pagination"
 import type { SalesOrderView, SalesOrderViewLookup } from "./orders.contracts"
 import { OrdersService } from "./orders.service"
 import { toSalesOrderView } from "./orders-view.mapper"
@@ -20,9 +21,9 @@ export class OrdersReadService {
     }
 
     /** Proves membership before listing the newest workspace orders. */
-    async list(userId: string, workspaceId: string): Promise<Array<SalesOrderView>> {
+    async list(userId: string, workspaceId: string, request: PageRequest = {}): Promise<Connection<SalesOrderView>> {
         await this.members.require(userId, workspaceId)
-        const orders = await this.orders.list(workspaceId)
-        return orders.map(toSalesOrderView)
+        const orders = await this.orders.listPage(workspaceId, request)
+        return { nodes: orders.nodes.map(toSalesOrderView), pageInfo: orders.pageInfo }
     }
 }

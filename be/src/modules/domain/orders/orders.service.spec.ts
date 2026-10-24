@@ -3,6 +3,7 @@ import { builder, FakeClock, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { CLOCK } from "@modules/platform/clock"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
+import { normalizePage } from "@modules/platform/pagination"
 import { OrdersErrorCode } from "./errors/orders.error"
 import type { NewOrderDraft } from "./orders.contracts"
 import { OrdersService } from "./orders.service"
@@ -16,10 +17,80 @@ import {
     INSERT_ORDER_DRAFT,
     LIST_LEAD_ORDERS,
     LIST_ORDERS,
+    LIST_ORDER_PAGE,
     LIST_WORKBENCH_ORDERS,
     SET_ORDER_STATUS,
     SHIP_ORDER,
 } from "./persistence/orders.sql"
+
+const registerListPage = () => {
+    const workspaceId = "11111111-1111-4111-8111-111111111111"
+    const newestId = "33333333-3333-4333-8333-333333333333"
+    const olderId = "22222222-2222-4222-8222-222222222222"
+    const createdAt = "2026-10-13T01:00:00.000123+00:00"
+    const scope = `salesOrders:${workspaceId}`
+
+    describe("listPage", () => {
+        it("reads one extra row and resumes after the complete creation/id position", async () => {
+            const newest = orderOf({ id: newestId, workspace_id: workspaceId, created_at: createdAt })
+            const older = orderOf({ id: olderId, workspace_id: workspaceId, created_at: createdAt })
+            const em = mockEntityManager({
+                query: [
+                    [LIST_ORDER_PAGE, [newest, older]],
+                    [LIST_ORDER_PAGE, [older]],
+                ],
+            })
+            const orders = await build(em)
+
+            const first = await orders.listPage(workspaceId, { first: 1 })
+
+            expect(first.nodes).toEqual([newest])
+            expect(first.pageInfo.hasNextPage).toBe(true)
+            expect(normalizePage({ after: first.pageInfo.endCursor }, scope).after).toEqual({
+                createdAt,
+                id: newestId,
+            })
+
+            const second = await orders.listPage(workspaceId, { first: 1, after: first.pageInfo.endCursor })
+
+            expect(second.nodes).toEqual([older])
+            expect(second.pageInfo.hasNextPage).toBe(false)
+            expect(em.query.mock.calls).toEqual([
+                [LIST_ORDER_PAGE, [workspaceId, null, null, 2]],
+                [LIST_ORDER_PAGE, [workspaceId, createdAt, newestId, 2]],
+            ])
+        })
+
+        it("uses a bounded default page and answers no cursor for an empty workspace", async () => {
+            const em = mockEntityManager({ query: [LIST_ORDER_PAGE, []] })
+            const orders = await build(em)
+
+            await expect(orders.listPage(workspaceId)).resolves.toEqual({
+                nodes: [],
+                pageInfo: { endCursor: null, hasNextPage: false },
+            })
+            expect(em.query).toHaveBeenCalledWith(LIST_ORDER_PAGE, [workspaceId, null, null, 51])
+        })
+
+        it("rejects a malformed cursor before reading any orders", async () => {
+            const em = mockEntityManager()
+            const orders = await build(em)
+
+            await expect(orders.listPage(workspaceId, { after: "not-a-cursor" })).rejects.toThrow()
+            expect(em.query).not.toHaveBeenCalled()
+        })
+
+        it("rejects a cursor from a different workspace before querying it", async () => {
+            const row = orderOf({ id: newestId, workspace_id: workspaceId, created_at: createdAt })
+            const em = mockEntityManager({ query: [LIST_ORDER_PAGE, [row]] })
+            const orders = await build(em)
+            const first = await orders.listPage(workspaceId, { first: 1 })
+
+            await expect(orders.listPage(olderId, { after: first.pageInfo.endCursor })).rejects.toThrow()
+            expect(em.query).toHaveBeenCalledTimes(1)
+        })
+    })
+}
 
 const registerFind = () => {
     describe("find", () => {
@@ -327,6 +398,7 @@ const build = async (entityManager: MockEntityManager) => {
 
 describe("OrdersService", () => {
     registerFind()
+    registerListPage()
     registerListForLead()
     registerDraft()
     registerConfirm()

@@ -84,17 +84,49 @@ describe("OrdersReadService", () => {
     describe("list", () => {
         it("maps the newest orders to views, keeping open dates null", async () => {
             const { reads, members, orders } = await build()
-            orders.list.mockResolvedValue([
-                orderOf(),
-                orderOf({ id: "order-2", confirmed_at: null, shipped_at: null, carrier: null, tracking_code: null }),
-            ])
+            const pageInfo = { endCursor: "opaque-order-cursor", hasNextPage: true }
+            const request = { first: 2, after: "preceding-order-cursor" }
+            orders.listPage.mockResolvedValue({
+                nodes: [
+                    orderOf(),
+                    orderOf({
+                        id: "order-2",
+                        confirmed_at: null,
+                        shipped_at: null,
+                        carrier: null,
+                        tracking_code: null,
+                    }),
+                ],
+                pageInfo,
+            })
 
-            await expect(reads.list("user-1", "ws-1")).resolves.toEqual([
-                VIEW,
-                { ...VIEW, id: "order-2", confirmedAt: null, shippedAt: null, carrier: null, trackingCode: null },
-            ])
+            await expect(reads.list("user-1", "ws-1", request)).resolves.toEqual({
+                nodes: [
+                    VIEW,
+                    { ...VIEW, id: "order-2", confirmedAt: null, shippedAt: null, carrier: null, trackingCode: null },
+                ],
+                pageInfo,
+            })
             expect(members.require).toHaveBeenCalledWith("user-1", "ws-1")
-            expect(orders.list).toHaveBeenCalledWith("ws-1")
+            expect(orders.listPage).toHaveBeenCalledWith("ws-1", request)
+        })
+
+        it("answers an empty default page with the persistence page information", async () => {
+            const { reads, orders } = await build()
+            const page = { nodes: [], pageInfo: { endCursor: null, hasNextPage: false } }
+            orders.listPage.mockResolvedValue(page)
+
+            await expect(reads.list("user-1", "ws-1")).resolves.toEqual(page)
+            expect(orders.listPage).toHaveBeenCalledWith("ws-1", {})
+        })
+
+        it("reads no page when workspace membership is refused", async () => {
+            const { reads, members, orders } = await build()
+            const refusal = "not a member"
+            members.require.mockRejectedValue(refusal)
+
+            await expect(reads.list("user-1", "ws-1")).rejects.toBe(refusal)
+            expect(orders.listPage).not.toHaveBeenCalled()
         })
     })
 })

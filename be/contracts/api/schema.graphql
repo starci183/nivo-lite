@@ -3721,6 +3721,21 @@ type LeadAgentType {
   status: String!
 }
 
+type LeadBoardConnectionType {
+  nodes: [LeadBoardType!]!
+  pageInfo: LeadBoardPageInfo!
+}
+
+input LeadBoardInput {
+  after: String = null
+  first: Int = 50
+}
+
+type LeadBoardPageInfo {
+  endCursor: String
+  hasNextPage: Boolean!
+}
+
 type LeadBoardType {
   channel: String!
   company: String!
@@ -4070,6 +4085,11 @@ input ListOfficeMessagesInput {
   room: String = null
 }
 
+input ListSalesOrdersInput {
+  after: String = null
+  first: Int = 50
+}
+
 input ListTelegramChatsInput {
   connectionId: ID!
 }
@@ -4086,6 +4106,8 @@ input ListWorkItemsInput {
 }
 
 input ListWorkThreadsInput {
+  after: String = null
+  first: Int = 50
   leadId: ID = null
 }
 
@@ -5689,7 +5711,7 @@ type Query {
   knowledgeSources(input: KnowledgeSourcesInput!): [KnowledgeSourceType!]!
   knowledgeSuggestions: KnowledgeSuggestionContextType!
   leadActionStatus(input: LeadActionStatusInput!): LeadActionStatusType!
-  leadBoard: [LeadBoardType!]!
+  leadBoard(input: LeadBoardInput! = {}): LeadBoardConnectionType!
   leadFlow(input: LeadFlowInput!): LeadFlowType!
   leadGenCommentStatus(input: ReadLeadGenCommentStatusInput!): LeadGenCommentStatusType!
   leadGenWorkbench(input: ReadLeadGenWorkbenchInput!): LeadGenWorkbenchType!
@@ -5749,7 +5771,7 @@ type Query {
   responsibilities: [ResponsibilityListingType!]!
   salesActionStatus(input: SalesActionStatusInput!): SalesActionType!
   salesOrder(input: SalesOrderInput!): SalesOrderType
-  salesOrders: [SalesOrderType!]!
+  salesOrders(input: ListSalesOrdersInput! = {}): SalesOrderConnectionType!
   salesWorkbench: SalesWorkbenchType!
   setupState(input: ModuleInstallationIdInput!): SetupStateType!
   setupVersions(input: ModuleInstallationIdInput!): SetupVersionsType!
@@ -5772,7 +5794,7 @@ type Query {
   workItem(input: WorkItemIdInput!): WorkItemType!
   workItems(input: ListWorkItemsInput!): WorkItemPageType!
   workThread(input: WorkThreadIdInput!): WorkThreadViewType!
-  workThreads(input: ListWorkThreadsInput = {}): [WorkThreadListingType!]!
+  workThreads(input: ListWorkThreadsInput! = {}): WorkThreadConnectionType!
   workspaceInvites: [PendingInviteType!]!
   workspaceMembers: [MemberListingType!]!
   workspaceShell(input: ShellWindowInput!): WorkspaceShellType!
@@ -6449,8 +6471,18 @@ type SalesMetricsType {
   wonValueVnd: Float!
 }
 
+type SalesOrderConnectionType {
+  nodes: [SalesOrderType!]!
+  pageInfo: SalesOrderPageInfo!
+}
+
 input SalesOrderInput {
   id: ID!
+}
+
+type SalesOrderPageInfo {
+  endCursor: String
+  hasNextPage: Boolean!
 }
 
 type SalesOrderType {
@@ -8203,6 +8235,11 @@ type WorkResultType {
   summary: String!
 }
 
+type WorkThreadConnectionType {
+  nodes: [WorkThreadListingType!]!
+  pageInfo: WorkThreadPageInfo!
+}
+
 input WorkThreadIdInput {
   threadId: ID!
 }
@@ -8219,6 +8256,11 @@ type WorkThreadListingType {
   title: String!
   updatedAt: String!
   waitingApproval: Boolean!
+}
+
+type WorkThreadPageInfo {
+  endCursor: String
+  hasNextPage: Boolean!
 }
 
 type WorkThreadType {
