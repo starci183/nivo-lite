@@ -1,10 +1,9 @@
-import { createHash } from "node:crypto"
 import { Injectable } from "@nestjs/common"
 import { AgentConversationsService } from "@modules/domain/agent-conversations"
 import type { TurnConversation } from "@modules/domain/agent-conversations"
 import type { GatewayTools, GatewayToolName, JsonResult, ToolArgs, ToolContext } from "@modules/domain/agent-tools"
 import { WorkEngineService } from "@modules/domain/decisions"
-import { McpGatewayService } from "@modules/domain/mcp-gateway"
+import { argsHashOf, McpGatewayService } from "@modules/domain/mcp-gateway"
 import type { GatewayCaller, GatewayJson } from "@modules/domain/mcp-gateway"
 import { InjectMessageCatalog } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
@@ -70,9 +69,8 @@ const argumentsOf = (value: unknown): GatewayJson | null => {
     return isObject(parsed) ? parsed : null
 }
 
-/** A short digest of the arguments, so one job calling one tool twice with other arguments keeps two step keys. */
-const digestOf = (value: unknown): string =>
-    createHash("sha256").update(JSON.stringify(value)).digest("hex").slice(0, 16)
+/** A canonical argument digest: retries ignore object key order, while changed values and array order keep distinct steps. */
+const digestOf = (value: GatewayJson): string => argsHashOf(value).slice(0, 16)
 
 @Injectable()
 /**
@@ -134,7 +132,8 @@ export class TurnGatewayToolsService implements GatewayTools {
         const stepKey = `${ctx.jobId}:${name}:${digestOf(callArgs)}`
         const result = await this.gateway.call({ ...caller, opKey: stepKey }, name, callArgs)
         if (result.ok) {
-            if (described !== null && writes) await this.postDone(ctx, conversation, name, described.description)
+            if (described !== null && writes)
+                await this.postDone(ctx, conversation, name, described.description, stepKey)
             return { result: result.value }
         }
         if (result.code !== "approval_required") return { error: result.code, detail: result.detail }
@@ -170,7 +169,7 @@ export class TurnGatewayToolsService implements GatewayTools {
         const names = steps.map((step) => step.name)
         const reply = textOf(args.reply, REPLY_MAX)
         return this.ask(ctx, conversation, {
-            stepKey: `${ctx.jobId}:sequence:${digestOf(steps)}`,
+            stepKey: `${ctx.jobId}:sequence:${digestOf({ steps })}`,
             tool: names.join(" > "),
             reason: "playbook",
             draft: reply === "" ? this.catalog.get("gatewayTurns.approvedDone", {}, LOCALE) : reply,
@@ -219,8 +218,9 @@ export class TurnGatewayToolsService implements GatewayTools {
         conversation: TurnConversation,
         name: string,
         description: string,
+        stepKey: string,
     ): Promise<void> {
-        await this.notes.post(
+        await this.notes.postOnce(
             {
                 workspaceId: conversation.workspaceId,
                 room: "",
@@ -238,6 +238,7 @@ export class TurnGatewayToolsService implements GatewayTools {
             },
             conversation.agent.id,
             { leadId: conversation.leadId, workItemId: null },
+            stepKey,
         )
     }
 

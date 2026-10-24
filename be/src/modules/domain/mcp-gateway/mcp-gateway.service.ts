@@ -1,6 +1,9 @@
+import { createHash } from "node:crypto"
 import { Injectable } from "@nestjs/common"
 import { McpCallLogService } from "@modules/domain/mcp-call-log"
 import { McpConnectorsService } from "@modules/domain/mcp-connectors"
+import { GatewayReceiptsService } from "@modules/domain/mcp-gateway-receipts"
+import type { GatewayReceiptOperation } from "@modules/domain/mcp-gateway-receipts"
 import { McpToolGrantsService } from "@modules/domain/mcp-tool-grants"
 import { InjectMcpRemote, McpError, McpErrorCode } from "@modules/integrations/mcp"
 import type { McpRemote } from "@modules/integrations/mcp"
@@ -46,6 +49,14 @@ interface Resolved {
     readonly spec: GatewayToolSpec
     /** The full name. */
     readonly name: string
+}
+
+/** The stable client intent and the schema-dependent payload of one connector call. */
+interface GatewayArguments {
+    /** The caller's arguments before the gateway adds any remote replay field. */
+    readonly original: GatewayJson
+    /** The arguments authorized, audited and sent under the current approved schema. */
+    readonly forwarded: GatewayJson
 }
 
 /** What running the adapter came to. */
@@ -98,15 +109,19 @@ const roleIn = (connectors: ReadonlyArray<WorkspaceConnector>, role: CapabilityR
 }
 
 /**
- * True when a write that timed out may be sent once more to learn what happened: it carries its replay key, so the server answers
- * the stored result of the first call when that one went through, and runs it only when it did not.
+ * True when a timed-out write carries a nonblank string replay key, so the server can return its stored result instead of acting twice.
  */
-const replayable = (spec: GatewayToolSpec, args: GatewayJson, ran: Ran): boolean =>
-    ran.kind === "failed" &&
-    ran.outcome === "timeout" &&
-    spec.scope !== "read" &&
-    spec.idempotencyArg !== undefined &&
-    args[spec.idempotencyArg] !== undefined
+const replayable = (spec: GatewayToolSpec, args: GatewayJson, ran: Ran): boolean => {
+    if (
+        ran.kind !== "failed" ||
+        ran.outcome !== "timeout" ||
+        spec.scope === "read" ||
+        spec.idempotencyArg === undefined
+    )
+        return false
+    const key = args[spec.idempotencyArg]
+    return typeof key === "string" && key.trim() !== ""
+}
 
 /** True for the gateway's own time-limit errors and the remote client's. */
 const isTimeout = (cause: unknown): boolean =>
@@ -140,6 +155,7 @@ export class McpGatewayService {
         private readonly grants: McpToolGrantsService,
         private readonly callLog: McpCallLogService,
         private readonly credentials: McpConnectorCredentialService,
+        private readonly receipts: GatewayReceiptsService,
     ) {}
 
     /** The connectors of a workspace: every native one, and the remote ones it registered. */
@@ -237,7 +253,7 @@ export class McpGatewayService {
         }
     }
 
-    /** Calls one tool for an agent through the approved schema, the grant, the approval, the breaker, the time limit and the audit. */
+    /** Calls one tool through its schema, grant, approval and breaker; non-read tools require a nonblank operation key or work item. */
     async call(caller: GatewayCaller, name: string, args: GatewayJson): Promise<GatewayCallResult> {
         const started = this.clock.now().getTime()
         const resolved = await this.resolve(caller.workspaceId, name)
@@ -267,7 +283,7 @@ export class McpGatewayService {
             })
             return { ok: false, code: "approval_required", reason: verdict.reason }
         }
-        return this.guarded(caller, resolved, sent, started)
+        return this.guarded(caller, resolved, { original: args, forwarded: sent }, started)
     }
 
     /** The breaker of a workspace's connector; one that never failed is closed. */
@@ -277,6 +293,35 @@ export class McpGatewayService {
 
     /** Runs an allowed call behind its connector's breaker and records what it came to. */
     private async guarded(
+        caller: GatewayCaller,
+        resolved: Resolved,
+        args: GatewayArguments,
+        started: number,
+    ): Promise<GatewayCallResult> {
+        const step = caller.opKey ?? caller.workItemId
+        if (resolved.spec.scope !== "read" && (step === null || step.trim() === "")) {
+            await this.audit(caller, resolved, args.forwarded, {
+                outcome: "refused",
+                code: "idempotency_key_required",
+                summary: "",
+                started,
+            })
+            return { ok: false, code: "idempotency_key_required", detail: resolved.name }
+        }
+        const breakerKey = `${caller.workspaceId}:${resolved.connector.manifest.key}`
+        const gate = breakerGate(this.breakerOf(breakerKey), started)
+        if (resolved.spec.scope === "read" || !gate.allowed) {
+            return this.execute(caller, resolved, args.forwarded, started)
+        }
+        const key = createHash("sha256")
+            .update(JSON.stringify([caller.workspaceId, step, resolved.name, argsHashOf(args.original)]))
+            .digest("hex")
+        const operation: GatewayReceiptOperation = () => this.execute(caller, resolved, args.forwarded, started)
+        return this.receipts.run(caller.workspaceId, key, operation)
+    }
+
+    /** Invokes the connector only for a live read or the winner of a durable write claim. */
+    private async execute(
         caller: GatewayCaller,
         resolved: Resolved,
         args: GatewayJson,

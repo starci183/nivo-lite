@@ -12,15 +12,14 @@ export class InboxService implements Inbox {
     /** Only the winning insert may publish a receipt; a repeat returns false. */
     async claim(source: string, eventId: string, manager?: EntityManager, receipt?: InboxReceipt): Promise<boolean> {
         if (source === "" || eventId.trim() === "") return false
-        if (manager === undefined) {
-            if (receipt !== undefined) return false
-            const rows = await this.entityManager.query<Array<{ readonly delivery_id: string }>>(INSERT_INBOX_CLAIM, [
-                source,
-                eventId,
-            ])
+        if (receipt === undefined) {
+            const rows = await (manager ?? this.entityManager).query<Array<{ readonly delivery_id: string }>>(
+                INSERT_INBOX_CLAIM,
+                [source, eventId],
+            )
             return rows.length > 0
         }
-        if (receipt === undefined) return false
+        if (manager === undefined) return false
         const rows = await manager.query<Array<{ readonly id: string }>>(receipt.insert, [
             source,
             eventId,

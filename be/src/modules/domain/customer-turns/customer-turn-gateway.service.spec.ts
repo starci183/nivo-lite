@@ -1,11 +1,10 @@
 import { Test } from "@nestjs/testing"
-import { FakeClock, mock } from "@starci/jest-preset"
+import { mock } from "@starci/jest-preset"
 import type { Installation } from "@modules/domain/agents"
 import type { CustomerTurn } from "@modules/domain/conversations"
 import { AgentSyncService } from "@modules/domain/openclaw-agent-sync"
 import { OPENCLAW_AGENT_REGISTRY, OPENCLAW_GATEWAY, agentIdFor, threadKeyFor } from "@modules/integrations/openclaw"
 import type { AgentRegistryService, GatewayClient, TurnResult } from "@modules/integrations/openclaw"
-import { CLOCK } from "@modules/platform/clock"
 import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { CustomerTurnGatewayService } from "./customer-turn-gateway.service"
@@ -29,7 +28,6 @@ const build = async () => {
         syncInstallation: jest.fn(() => Promise.resolve(null)),
         ensureInternalAgent: jest.fn(() => Promise.resolve("internal-agent")),
     })
-    const clock = new FakeClock("2026-10-13T10:00:00.000Z")
     const logger = mock<Logger>({ error: jest.fn() })
     const moduleRef = await Test.createTestingModule({
         providers: [
@@ -37,7 +35,6 @@ const build = async () => {
             { provide: OPENCLAW_GATEWAY, useValue: gateway },
             { provide: OPENCLAW_AGENT_REGISTRY, useValue: registry },
             { provide: AgentSyncService, useValue: sync },
-            { provide: CLOCK, useValue: clock },
             { provide: LOGGER, useValue: logger },
         ],
     }).compile()
@@ -47,7 +44,6 @@ const build = async () => {
         gateway,
         registry,
         sync,
-        clock,
         logger,
     }
 }
@@ -148,8 +144,8 @@ describe("CustomerTurnGatewayService", () => {
         expect(logger.error).not.toHaveBeenCalled()
     })
 
-    it("sends the prepared message with the same thread, current instant, timeout and abort grace", async () => {
-        const { service, gateway, clock } = await build()
+    it("sends the prepared message with the same thread, message replay key, timeout and abort grace", async () => {
+        const { service, gateway } = await build()
         const signal = new AbortController().signal
         const timeout = jest.spyOn(AbortSignal, "timeout").mockReturnValue(signal)
 
@@ -161,7 +157,7 @@ describe("CustomerTurnGatewayService", () => {
                 agentId: "module-agent",
                 threadKey: threadKeyFor("module-agent", "c1"),
                 message: "Prepared context and message",
-                idempotencyKey: `chat-m1-${clock.now().getTime()}`,
+                idempotencyKey: "chat-m1",
                 timeoutMs: 25_000,
             },
             signal,
@@ -200,5 +196,35 @@ describe("CustomerTurnGatewayService", () => {
             expect.any(AbortSignal),
         )
         expect(conversation).not.toHaveBeenCalled()
+    })
+
+    it("replays the same gateway action after a later retry while keeping another message distinct", async () => {
+        jest.useFakeTimers({ now: new Date("2026-10-13T10:00:00.000Z") })
+        try {
+            const { service, gateway } = await build()
+            const executed = jest.fn()
+            const receipts = new Set<string>()
+            gateway.runTurn.mockImplementation((request) => {
+                if (!receipts.has(request.idempotencyKey)) {
+                    receipts.add(request.idempotencyKey)
+                    executed(request.message)
+                }
+                return Promise.resolve(result)
+            })
+
+            await service.run(turn, turn.conversation, "module-agent", "First request", 25_000)
+            jest.advanceTimersByTime(60_000)
+            await service.run(turn, turn.conversation, "module-agent", "Retried request", 25_000)
+
+            expect(executed).toHaveBeenCalledTimes(1)
+            expect(gateway.runTurn).toHaveBeenCalledTimes(2)
+
+            await service.run({ ...turn, messageId: "m2" }, turn.conversation, "module-agent", "Next request", 25_000)
+
+            expect(executed).toHaveBeenCalledTimes(2)
+            expect(executed).toHaveBeenLastCalledWith("Next request")
+        } finally {
+            jest.useRealTimers()
+        }
     })
 })

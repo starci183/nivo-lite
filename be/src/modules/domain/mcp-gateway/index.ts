@@ -5,6 +5,7 @@ export { McpGatewayService } from "./mcp-gateway.service"
 export { McpGatewayAdminService } from "./mcp-gateway-admin.service"
 export { parseMcpGatewayConfig } from "./mcp-gateway.config"
 export { GatewaySurfaceService } from "./gateway-surface.service"
+export { argsHashOf } from "./audit-mask.policy"
 export type {
     CapabilityRole,
     CallLogView,

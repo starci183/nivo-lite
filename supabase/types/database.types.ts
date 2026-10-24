@@ -1,4 +1,4 @@
-// migrations-sha256: 0f6cc6862db126feb65cef7389668a0d711135dd2ad7330ae8936df168f16ed8
+// migrations-sha256: e2745a268c0b131a0b94590afe409cf80725f6110c05ee9bf4ba286742530a35
 
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[]
 
@@ -2653,6 +2653,25 @@ isOneToOne: false
                   Relationships: [
                     {
       foreignKeyName: "mcp_connectors_workspace_id_fkey"
+      columns: ["workspace_id"]
+isOneToOne: false
+      referencedRelation: "workspaces"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"mcp_gateway_receipts": {
+                  Row: {
+                    "operation_key": string,"result_sealed": string,"workspace_id": string
+                  }
+                  Insert: {
+                    "operation_key": string,"result_sealed": string,"workspace_id": string
+                  }
+                  Update: {
+                    "operation_key"?: string,"result_sealed"?: string,"workspace_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "mcp_gateway_receipts_workspace_id_fkey"
       columns: ["workspace_id"]
 isOneToOne: false
       referencedRelation: "workspaces"

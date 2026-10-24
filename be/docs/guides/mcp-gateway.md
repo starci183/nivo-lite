@@ -79,6 +79,9 @@ Tool names are always `<connector>.<tool>`. `tool.search {query, limit}` answers
 among the tools the agent may use: installed (a native connector, or a remote one the workspace registered and did not disable),
 approved and granted. `tool.describe` gives one tool's schema and limits, and `tool.call` runs it through the same path as NIVO's
 own calls: approved schema, grant, approval, breaker, time limit and audit.
+The agent endpoint's `tool.call` takes `opKey` for every write: choose it once for the intended operation and reuse it on
+client retries. Client keys are scoped to the authenticated agent. A write without one answers `idempotency_key_required`;
+reads may omit it. JSON-RPC request ids are not operation identities.
 
 ## The agent endpoint and its per-agent credential
 
@@ -100,15 +103,36 @@ own calls: approved schema, grant, approval, breaker, time limit and audit.
 
 ## Replay keys
 
+Every write requires a nonblank stable step (`GatewayCaller.opKey`, else the work item); an explicitly blank `opKey` is
+refused with `idempotency_key_required` even when a work item is present. The gateway enforces this after its schema, grant
+and approval checks, before any receipt claim or connector call. Capability roles do not exempt a tool from its declared
+write scope. Direct MCP clients supply `tool.call.opKey` and reuse it on retries; the surface scopes that key to the
+authenticated agent. Reads remain live and may omit an operation key.
+
+Writes first claim the existing inbox and save a sealed pending outcome in one domain transaction. The
+connector runs only after that transaction commits; its sealed final result replaces the pending outcome. A retry returns the
+stored outcome without another connector call, including when the remote tool has no replay argument. If the process stops
+before saving the final result, retries answer `unknown_outcome` / `operation_pending`: check the connector's state before
+starting another operation. Grants and approved schemas are still checked on every retry. Reads remain live.
+
+Customer-turn step keys use canonical arguments, including nested objects, so reordered JSON properties preserve the key;
+array order and changed argument values still identify different operations. The write's Hub card has its own transactional
+inbox claim and is posted once.
+
+Local receipt identities hash the original client arguments before replay fields are injected. Adding or removing a remote
+replay field in a newly approved schema preserves the operation's receipt; a caller-supplied replay field stays part of its intent.
+
 A remote write tool that declares `idempotencyKey` in its input schema gets one on every call that names none and belongs to a
 step: `nivo:` plus the sha256 of the workspace, the step (`GatewayCaller.opKey`, else the work item), the full tool name and the
 hash of the arguments. A re-run of the same step with the same arguments, or the replay of its approval, sends the same key, so
-the server answers its stored result instead of acting twice. Another step or other arguments make another key. A call with no
-step is sent without a key, and a key the caller chose is kept.
+the server answers its stored result instead of acting twice. Another step or other arguments make another key, and a replay
+key the caller chose is kept.
 
-A write that times out may have run. When it carries its replay key, the gateway sends it once more: the server answers the
-stored result if the first call went through and runs it only if it did not. A write that still has no answer, or has no replay
-key, answers `unknown_outcome` (audited as a timeout), never `unavailable`, so the caller does not assume nothing happened.
+A write that times out may have run. Only a nonblank string in the tool's declared replay field allows the gateway to send it
+once more: the server answers the stored result if the first call went through and runs it only if it did not. Generated keys
+qualify. Caller-supplied values stay unchanged; an absent, null, blank or nonstring forwarded key prevents automatic replay.
+A write that still has no answer returns `unknown_outcome` (audited as a timeout), never `unavailable`, so the caller does not
+assume nothing happened.
 
 ## Configuration (api and mcp apps)
 

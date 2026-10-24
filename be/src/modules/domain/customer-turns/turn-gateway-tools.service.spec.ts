@@ -68,7 +68,7 @@ const build = async () => {
     const item = mock<WorkItem>()
     Object.assign(item, { id: "w1" })
     const engine = mock<WorkEngineService>({ runWork: jest.fn().mockResolvedValue(item) })
-    const notes = mock<HubNotesService>({ post: jest.fn().mockResolvedValue(undefined) })
+    const notes = mock<HubNotesService>({ postOnce: jest.fn().mockResolvedValue(undefined) })
     const sources = mock<TurnSourcesService>({ of: jest.fn().mockReturnValue(PRICE_LIST) })
     const moduleRef = await Test.createTestingModule({
         providers: [
@@ -124,7 +124,49 @@ describe("TurnGatewayToolsService discovery", () => {
     })
 })
 
-describe("TurnGatewayToolsService calls", () => {
+describe("TurnGatewayToolsService write retries", () => {
+    it("replays a HAKUEN write with reordered nested arguments without acting twice", async () => {
+        const { service, gateway } = await build()
+        const executed = new Set<string | undefined>()
+        gateway.call.mockImplementation((caller) => {
+            executed.add(caller.opKey)
+            return Promise.resolve({ ok: true, value: { holdId: "h1" } })
+        })
+        const name = "hakuen.booking.hold"
+        const first = JSON.stringify({ room: "deluxe", guest: { name: "Lan", party: 2 }, extras: ["spa", "onsen"] })
+        const reordered = JSON.stringify({ extras: ["spa", "onsen"], guest: { party: 2, name: "Lan" }, room: "deluxe" })
+
+        await expect(service.run(CTX, "tool.call", { name, arguments_json: first })).resolves.toEqual({
+            result: { holdId: "h1" },
+        })
+        await expect(service.run(CTX, "tool.call", { name, arguments_json: reordered })).resolves.toEqual({
+            result: { holdId: "h1" },
+        })
+
+        expect(executed.size).toBe(1)
+
+        await service.run({ ...CTX, jobId: "m2" }, "tool.call", { name, arguments_json: first })
+        await service.run(CTX, "tool.call", {
+            name,
+            arguments_json: JSON.stringify({
+                room: "suite",
+                guest: { name: "Lan", party: 2 },
+                extras: ["spa", "onsen"],
+            }),
+        })
+        await service.run(CTX, "tool.call", {
+            name,
+            arguments_json: JSON.stringify({
+                room: "deluxe",
+                guest: { name: "Lan", party: 2 },
+                extras: ["onsen", "spa"],
+            }),
+        })
+        expect(executed.size).toBe(4)
+    })
+})
+
+describe("TurnGatewayToolsService call cards", () => {
     it("calls the tool as the agent under a step key of the inbound message and posts the done card of a write", async () => {
         const { service, gateway, notes, sources } = await build()
         await expect(
@@ -139,7 +181,7 @@ describe("TurnGatewayToolsService calls", () => {
         expect(gateway.call.mock.calls[0]?.[0]).toMatchObject(CALLER)
         expect(gateway.call.mock.calls[0]?.[2]).toEqual({ sku: "a", qty: 2 })
         expect(sources.of).toHaveBeenCalledWith("m1")
-        expect(notes.post.mock.calls[0]).toEqual([
+        expect(notes.postOnce.mock.calls[0]).toEqual([
             {
                 workspaceId: "ws",
                 room: "",
@@ -154,6 +196,7 @@ describe("TurnGatewayToolsService calls", () => {
             },
             "sales",
             { leadId: "l1", workItemId: null },
+            gateway.call.mock.calls[0]?.[0].opKey,
         ])
     })
 
@@ -163,8 +206,8 @@ describe("TurnGatewayToolsService calls", () => {
         conversations.turnOf.mockResolvedValueOnce({ kind: "ok", value: { ...CONVERSATION, visitorName: null } })
         await service.run(CTX, "tool.call", { name: "crm.order.place" })
         expect(gateway.call.mock.calls[0]?.[2]).toEqual({})
-        expect(notes.post.mock.calls[0]?.[0].title).toContain('"what":"crm.order.place"')
-        expect(notes.post.mock.calls[0]?.[0].fields[1]?.value).toBe("")
+        expect(notes.postOnce.mock.calls[0]?.[0].title).toContain('"what":"crm.order.place"')
+        expect(notes.postOnce.mock.calls[0]?.[0].fields[1]?.value).toBe("")
     })
 
     it("posts no card for a read, nor for a tool the agent may not describe", async () => {
@@ -173,9 +216,11 @@ describe("TurnGatewayToolsService calls", () => {
         await service.run(CTX, "tool.call", { name: "crm.stock.read" })
         await service.run(CTX, "tool.call", { name: "crm.hidden" })
         expect(gateway.call).toHaveBeenCalledTimes(2)
-        expect(notes.post).not.toHaveBeenCalled()
+        expect(notes.postOnce).not.toHaveBeenCalled()
     })
+})
 
+describe("TurnGatewayToolsService call failures", () => {
     it("refuses arguments that are no JSON object before calling anything", async () => {
         const { service, gateway } = await build()
         for (const text of ["nope", "[1]"]) {
@@ -197,7 +242,7 @@ describe("TurnGatewayToolsService calls", () => {
             detail: "out of stock",
         })
         expect(engine.runWork).not.toHaveBeenCalled()
-        expect(notes.post).not.toHaveBeenCalled()
+        expect(notes.postOnce).not.toHaveBeenCalled()
     })
 })
 
@@ -249,6 +294,26 @@ describe("TurnGatewayToolsService sequence", () => {
         { name: "crm.stock.read", arguments: { sku: "a" } },
         { name: "crm.order.place", arguments: { sku: "a" } },
     ])
+
+    it("keeps the same approval identity for reordered argument keys and a distinct identity for reordered steps", async () => {
+        const { service, engine } = await build()
+        const first = [
+            { name: "crm.stock.read", arguments: { sku: "a", filter: { qty: 2, active: true } } },
+            { name: "crm.order.place", arguments: { sku: "a", qty: 2 } },
+        ]
+        const reordered = [
+            { name: "crm.stock.read", arguments: { filter: { active: true, qty: 2 }, sku: "a" } },
+            { name: "crm.order.place", arguments: { qty: 2, sku: "a" } },
+        ]
+
+        await service.run(CTX, "tool.sequence", { steps_json: JSON.stringify(first) })
+        await service.run(CTX, "tool.sequence", { steps_json: JSON.stringify(reordered) })
+        await service.run(CTX, "tool.sequence", { steps_json: JSON.stringify(reordered.toReversed()) })
+
+        const keys = engine.runWork.mock.calls.map((call) => call[1].dedupeKey)
+        expect(keys[0]).toBe(keys[1])
+        expect(keys[0]).not.toBe(keys[2])
+    })
 
     it("holds a playbook's steps for one approval with the reply, the steps and the turn's sources, and calls nothing", async () => {
         const { service, gateway, engine } = await build()
@@ -324,7 +389,7 @@ describe("TurnGatewayToolsService test chat", () => {
         expect(conversations.isTestChat).toHaveBeenCalledWith("c1")
         expect(gateway.call).not.toHaveBeenCalled()
         expect(engine.runWork).not.toHaveBeenCalled()
-        expect(notes.post).not.toHaveBeenCalled()
+        expect(notes.postOnce).not.toHaveBeenCalled()
     })
 
     it("holds a read-only sequence of a test chat like any other, since nothing runs before approval", async () => {

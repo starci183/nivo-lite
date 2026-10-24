@@ -1,4 +1,6 @@
+import { createHash } from "node:crypto"
 import { Injectable } from "@nestjs/common"
+import type { EntityManager } from "typeorm"
 import { StaffDirectoryService } from "@modules/domain/staff"
 import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
@@ -6,6 +8,9 @@ import { WorkspaceMembersService, canDecide } from "@modules/domain/workspace-me
 import type { WorkspaceRole } from "@modules/domain/workspace-members"
 import { InjectMessageCatalog } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
+import { InjectPrimaryEntityManager } from "@modules/platform/database"
+import { InjectInbox } from "@modules/platform/inbox"
+import type { Inbox } from "@modules/platform/inbox"
 import { WorkItemsService } from "@modules/domain/work-items"
 import type { WorkContext, WorkItem } from "./decisions.contracts"
 import { DecisionsService } from "./decisions.service"
@@ -28,11 +33,14 @@ export class WorkPlacementService {
         private readonly items: WorkItemsService,
         private readonly staff: StaffDirectoryService,
         @InjectClock() private readonly clock: Clock,
+        @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
+        @InjectInbox() private readonly inbox: Inbox,
     ) {}
 
     /**
      * Keeps a waiting item waiting and records why there is not enough basis yet. The item stays `waiting_decision`.
      * Owner and manager may hold anything; staff only what is assigned to them.
+     * The same person's normalised note on one item is claimed with its hold and evidence, so a retry records nothing twice.
      */
     async hold(principalId: string, workspaceId: string, request: HoldWorkRequest): Promise<WorkItem> {
         const item = await this.decisions.getWorkItem(principalId, workspaceId, request.workItemId)
@@ -41,25 +49,35 @@ export class WorkPlacementService {
         const note = request.note.trim().replace(/\s+/g, " ")
         if (note === "") throw new DecisionsError({ code: DecisionsErrorCode.HoldNoteRequired })
         if (item.status !== "waiting_decision") throw new DecisionsError({ code: DecisionsErrorCode.NotWaiting })
-        const proposal = {
-            ...item.proposal,
-            fields: {
-                ...item.proposal.fields,
-                hold_note: note,
-                hold_by: member.displayName,
-                hold_at: this.clock.now().toISOString(),
-            },
-        }
-        const kept = await this.items.hold(workspaceId, item.id, proposal)
-        if (!kept) throw new DecisionsError({ code: DecisionsErrorCode.NotWaiting })
-        const ctx: WorkContext = { workspaceId, actor: member.displayName, locale: request.locale }
-        await this.evidence.log(ctx, {
-            lead_id: item.lead_id,
-            work_item_id: item.id,
-            kind: "work.held",
-            actor: member.displayName,
-            summary: this.catalog.get("decision.holdEvidence", { note }, request.locale),
-            evidence: note,
+        const key = createHash("sha256")
+            .update(JSON.stringify([workspaceId, item.id, principalId, note]))
+            .digest("hex")
+        await this.entityManager.transaction(async (manager) => {
+            if (!(await this.inbox.claim("work.hold", key, manager))) return
+            const proposal = {
+                ...item.proposal,
+                fields: {
+                    ...item.proposal.fields,
+                    hold_note: note,
+                    hold_by: member.displayName,
+                    hold_at: this.clock.now().toISOString(),
+                },
+            }
+            const kept = await this.items.hold(workspaceId, item.id, proposal, manager)
+            if (!kept) throw new DecisionsError({ code: DecisionsErrorCode.NotWaiting })
+            const ctx: WorkContext = { workspaceId, actor: member.displayName, locale: request.locale }
+            await this.evidence.log(
+                ctx,
+                {
+                    lead_id: item.lead_id,
+                    work_item_id: item.id,
+                    kind: "work.held",
+                    actor: member.displayName,
+                    summary: this.catalog.get("decision.holdEvidence", { note }, request.locale),
+                    evidence: note,
+                },
+                manager,
+            )
         })
         return this.decisions.getWorkItem(principalId, workspaceId, item.id)
     }

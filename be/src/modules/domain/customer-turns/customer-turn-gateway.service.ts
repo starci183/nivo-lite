@@ -8,8 +8,6 @@ import {
     threadKeyFor,
 } from "@modules/integrations/openclaw"
 import type { AgentRegistryService, GatewayClient, TurnResult } from "@modules/integrations/openclaw"
-import { InjectClock } from "@modules/platform/clock"
-import type { Clock } from "@modules/platform/clock"
 import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { CustomerTurnsLogEvent } from "./customer-turns.log-events"
@@ -19,12 +17,11 @@ const ABORT_GRACE_MS = 5000
 
 /** Selects the customer's agent and sends the prepared turn through its OpenClaw thread. */
 export class CustomerTurnGatewayService {
-    /** Captures the existing gateway, agent sync, clock and logging ports without running a turn. */
+    /** Captures the existing gateway, agent sync and logging ports without running a turn. */
     constructor(
         @InjectOpenclawGateway() private readonly gateway: GatewayClient,
         @InjectOpenclawAgentRegistry() private readonly registry: AgentRegistryService,
         private readonly sync: AgentSyncService,
-        @InjectClock() private readonly clock: Clock,
         @InjectLogger() private readonly logger: Logger,
     ) {}
 
@@ -51,7 +48,7 @@ export class CustomerTurnGatewayService {
         return this.sync.ensureInternalAgent(workspaceId)
     }
 
-    /** Runs the prepared message with the conversation thread, current idempotency instant and unchanged abort grace. */
+    /** Runs the prepared message with one stable replay key per customer message and unchanged abort grace. */
     run(
         turn: CustomerTurn,
         conversation: CustomerTurn["conversation"],
@@ -64,7 +61,7 @@ export class CustomerTurnGatewayService {
                 agentId,
                 threadKey: threadKeyFor(agentId, conversation.id),
                 message,
-                idempotencyKey: `chat-${turn.messageId}-${this.clock.now().getTime()}`,
+                idempotencyKey: `chat-${turn.messageId}`,
                 timeoutMs,
             },
             AbortSignal.timeout(timeoutMs + ABORT_GRACE_MS),

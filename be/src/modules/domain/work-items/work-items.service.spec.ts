@@ -257,7 +257,9 @@ describe("WorkItemsService persistence", () => {
         expect(waiting.query).toHaveBeenCalledWith(REOPEN_WAITING_WORK_ITEM, ["item-1", "ws-1", NOW])
         expect(await (await build(other)).reopen("ws-1", "item-1")).toBeNull()
     })
+})
 
+describe("WorkItemsService holds and assignments", () => {
     it.each([
         { rows: [{ id: "item-1" }], expected: true },
         { rows: [], expected: false },
@@ -266,6 +268,16 @@ describe("WorkItemsService persistence", () => {
 
         expect(await (await build(em)).hold("ws-1", "item-1", proposal)).toBe(expected)
         expect(em.query).toHaveBeenCalledWith(HOLD_WORK_ITEM, ["ws-1", "item-1", JSON.stringify(proposal), NOW])
+    })
+
+    it("writes a hold through the caller's transaction manager", async () => {
+        const primary = mockEntityManager()
+        const manager = mockEntityManager({ query: [HOLD_WORK_ITEM, [{ id: "item-1" }]] })
+
+        expect(await (await build(primary)).hold("ws-1", "item-1", proposal, manager)).toBe(true)
+
+        expect(primary.query).not.toHaveBeenCalled()
+        expect(manager.query).toHaveBeenCalledWith(HOLD_WORK_ITEM, ["ws-1", "item-1", JSON.stringify(proposal), NOW])
     })
 
     it.each([

@@ -231,9 +231,14 @@ export class WorkItemsService {
         )
     }
 
-    /** Stores a hold note on an item that is still waiting. False when it is no longer waiting. */
-    async hold(workspaceId: string, id: string, proposal: Proposal): Promise<boolean> {
-        const rows = await this.entityManager.query<Array<{ id: string }>>(HOLD_WORK_ITEM, [
+    /** Stores a hold note on an item that is still waiting, joining the caller's transaction when supplied. False when it is no longer waiting. */
+    async hold(
+        workspaceId: string,
+        id: string,
+        proposal: Proposal,
+        manager: EntityManager = this.entityManager,
+    ): Promise<boolean> {
+        const rows = await manager.query<Array<{ id: string }>>(HOLD_WORK_ITEM, [
             workspaceId,
             id,
             JSON.stringify(proposal),

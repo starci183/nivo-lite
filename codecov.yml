@@ -181,6 +181,7 @@ component_management:
     - component_id: mcp
       name: mcp
       paths:
+        - "be/src/modules/domain/mcp-gateway-receipts/**"
         - "be/src/modules/integrations/mcp/**"
     - component_id: platform
       name: platform

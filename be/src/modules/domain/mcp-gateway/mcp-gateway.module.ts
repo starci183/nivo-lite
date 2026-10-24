@@ -2,6 +2,7 @@ import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
 import { McpCallLogModule } from "@modules/domain/mcp-call-log"
 import { McpConnectorsModule } from "@modules/domain/mcp-connectors"
+import { McpGatewayReceiptsModule } from "@modules/domain/mcp-gateway-receipts"
 import { McpToolGrantsModule } from "@modules/domain/mcp-tool-grants"
 import { McpModule } from "@modules/integrations/mcp"
 import { EinvoiceNativeService } from "./adapters/einvoice-native.service"
@@ -19,7 +20,7 @@ import { McpGatewayService } from "./mcp-gateway.service"
  * The NIVO MCP gateway: the connector registry (native adapters in code, remote MCP servers per workspace), the grants, the
  * approval gate, the audit, the time limits and the breakers. The mcp app serves it as one MCP endpoint per workspace; the api's
  * chat turns and performers call the same service in process, so enforcement lives in one place. The rows live in the table
- * capabilities it composes (mcp-connectors, mcp-tool-grants, mcp-call-log); the SePay connector reads through transactions. A
+ * capabilities it composes (mcp-connectors, mcp-tool-grants, mcp-call-log, mcp-gateway-receipts); the SePay connector reads through transactions. A
  * remote connector's credential is sealed in its row with the connection key: the app registers connection-secrets globally.
  */
 export class McpGatewayModule extends ConfigurableModuleClass {
@@ -36,6 +37,7 @@ export class McpGatewayModule extends ConfigurableModuleClass {
                 McpConnectorsModule.register({}),
                 McpToolGrantsModule.register({}),
                 McpCallLogModule.register({}),
+                McpGatewayReceiptsModule.register({}),
             ],
             providers: [
                 ...(base.providers ?? []),

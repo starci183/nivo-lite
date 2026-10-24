@@ -9,6 +9,7 @@ import { CONTENT_MEDIA_ERROR_KINDS } from "@modules/domain/content-media"
 import { MESSAGES_ERROR_KINDS } from "@modules/domain/messages"
 import { OFFICE_ROOMS_ERROR_KINDS } from "@modules/domain/office-rooms"
 import { MCP_GATEWAY_ERROR_KINDS } from "@modules/domain/mcp-gateway"
+import { MCP_GATEWAY_RECEIPTS_ERROR_KINDS } from "@modules/domain/mcp-gateway-receipts"
 import { MCP_ERROR_KINDS } from "@modules/integrations/mcp"
 import { CUSTOMER_TURNS_ERROR_KINDS } from "@modules/domain/customer-turns"
 import { AGENT_PROFILE_ERROR_KINDS } from "@modules/domain/agent-profile"
@@ -31,6 +32,7 @@ export const API_ERROR_KINDS_4 = [
     OFFICE_ROOMS_ERROR_KINDS,
     MCP_ERROR_KINDS,
     MCP_GATEWAY_ERROR_KINDS,
+    MCP_GATEWAY_RECEIPTS_ERROR_KINDS,
     CUSTOMER_TURNS_ERROR_KINDS,
     AGENT_PROFILE_ERROR_KINDS,
     WORK_CHAINS_ERROR_KINDS,

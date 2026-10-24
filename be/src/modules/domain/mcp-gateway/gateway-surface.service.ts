@@ -31,10 +31,17 @@ const SURFACE_TOOLS: ReadonlyArray<McpServedTool> = [
     {
         name: "tool.call",
         description:
-            "Call one tool by its full name with its arguments. A call over your limits waits for a person's approval.",
+            "Call one tool by its full name with its arguments. Writes require an opKey, reused on retries of the same intended operation. A call over your limits waits for a person's approval.",
         inputSchema: {
             type: "object",
-            properties: { name: { type: "string" }, arguments: { type: "object" } },
+            properties: {
+                name: { type: "string" },
+                arguments: { type: "object" },
+                opKey: {
+                    type: "string",
+                    description: "A stable key for one intended operation. Reuse it when retrying that operation.",
+                },
+            },
             required: ["name"],
         },
     },
@@ -87,13 +94,25 @@ export class GatewaySurfaceService {
                 : { value: { ...described }, isError: false }
         }
         if (tool === "tool.call") {
-            const result = await this.gateway.call(
-                caller,
-                textOf(args.name),
-                isObject(args.arguments) ? args.arguments : {},
-            )
-            return result.ok ? { value: result.value, isError: false } : { value: { ...result }, isError: true }
+            return this.call(caller, args)
         }
         return { value: { error: "unknown_tool" }, isError: true }
+    }
+
+    /** Requires the client's stable operation identity before a write can reach a connector. */
+    private async call(caller: GatewayCaller, args: GatewayJson): Promise<McpServedResult> {
+        const name = textOf(args.name)
+        const opKey = textOf(args.opKey).trim()
+        if (opKey === "") {
+            const described = await this.gateway.describe(caller, name)
+            if (described === null) return { value: { error: "not_granted_or_unknown" }, isError: true }
+            if (described.scope !== "read") return { value: { error: "idempotency_key_required" }, isError: true }
+        }
+        const result = await this.gateway.call(
+            opKey === "" ? caller : { ...caller, opKey: `mcp:${caller.agentId}:${opKey}` },
+            name,
+            isObject(args.arguments) ? args.arguments : {},
+        )
+        return result.ok ? { value: result.value, isError: false } : { value: { ...result }, isError: true }
     }
 }
