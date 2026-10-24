@@ -25,6 +25,11 @@ const wait = (ms: number): Promise<void> =>
         AbortSignal.timeout(ms).addEventListener("abort", () => resolve(), { once: true })
     })
 
+/** Waits, in 10 ms steps and at most 4 s, for the fire-and-forget cache prune to reach the state the check reads. */
+const eventually = async (check: () => boolean | Promise<boolean>): Promise<void> => {
+    for (let attempt = 0; attempt < 400 && !(await check()); attempt++) await wait(10)
+}
+
 const sandbox = async (): Promise<{ cacheDir: string; workDir: string }> => {
     const root = await mkdtemp(join(tmpdir(), "nivo-tts-spec-"))
     return { cacheDir: join(root, "cache"), workDir: join(root, "work") }
@@ -150,15 +155,19 @@ describe("TtsService / clip", () => {
     it("drops the oldest clips beyond 400", async () => {
         const dirs = await sandbox()
         await mkdir(dirs.cacheDir, { recursive: true })
-        for (let index = 0; index < 401; index++) {
-            const file = join(dirs.cacheDir, `old-${index}.mp3`)
-            await writeFile(file, "x")
-            await utimes(file, 1_000 + index, 1_000 + index)
-        }
+        await Promise.all(
+            Array.from({ length: 401 }, async (_, index) => {
+                const file = join(dirs.cacheDir, `old-${index}.mp3`)
+                await writeFile(file, "x")
+                await utimes(file, 1_000 + index, 1_000 + index)
+            }),
+        )
         const { tts } = await build(dirs)
+        const mp3s = async (): Promise<Array<string>> =>
+            (await readdir(dirs.cacheDir)).filter((name) => name.endsWith(".mp3"))
 
         await tts.clip("Fresh", "v", 0, signal)
-        await wait(300)
+        await eventually(async () => (await mp3s()).length === 400)
 
         const names = await readdir(dirs.cacheDir)
         expect(names.filter((name) => name.endsWith(".mp3"))).toHaveLength(400)
@@ -172,7 +181,7 @@ describe("TtsService / clip", () => {
         jest.spyOn(fsPromises, "readdir").mockRejectedValueOnce(refusal)
 
         await expect(tts.clip("Hello", "v", 0, signal)).resolves.toMatchObject({ cached: false })
-        await wait(50)
+        await eventually(() => logger.error.mock.calls.some(([event]) => event === TtsLogEvent.CachePruneFailed))
 
         expect(logger.error).toHaveBeenCalledWith(TtsLogEvent.CachePruneFailed, refusal)
     })
