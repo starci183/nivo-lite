@@ -80,16 +80,7 @@ const registerCreate = () => {
                 null,
                 "member-1",
             ])
-            expect(events.record).toHaveBeenCalledWith(
-                {
-                    workspaceId: "ws-1",
-                    kind: "responsibility.assigned",
-                    actor: "An",
-                    summary: "An: Call",
-                    leadId: "lead-1",
-                },
-                em,
-            )
+            expect(events.record).toHaveBeenCalledWith(assignedEvent("An: Call"), em)
         })
 
         it("adds a responsibility owned by one of the workspace's agents, with no member", async () => {
@@ -235,12 +226,23 @@ const registerJourneyAndBoardReaders = () => {
             expect(em.query).toHaveBeenCalledWith(LIST_OPEN_RESPONSIBILITIES, ["ws-1"])
         })
 
-        it("returns the oldest open steps for the board", async () => {
-            const em = mockEntityManager({ query: [LIST_BOARD_RESPONSIBILITIES, [rowOf()]] })
+        it("scopes the oldest open board steps to the workspace and current page's lead ids", async () => {
+            const rows = [rowOf(), rowOf({ id: "older-step", lead_id: "older-lead" })]
+            const em = mockEntityManager({ query: [LIST_BOARD_RESPONSIBILITIES, rows] })
+            const { service } = await build(em)
+            const leadIds = ["lead-1", "older-lead"]
+
+            await expect(service.listForBoard("ws-1", leadIds)).resolves.toEqual(rows)
+            expect(em.query).toHaveBeenCalledWith(LIST_BOARD_RESPONSIBILITIES, ["ws-1", leadIds])
+        })
+
+        it("answers no board steps without querying when the page has no leads", async () => {
+            const em = mockEntityManager()
             const { service } = await build(em)
 
-            await expect(service.listForBoard("ws-1")).resolves.toEqual([rowOf()])
-            expect(em.query).toHaveBeenCalledWith(LIST_BOARD_RESPONSIBILITIES, ["ws-1"])
+            await expect(service.listForBoard("ws-1", [])).resolves.toEqual([])
+
+            expect(em.query).not.toHaveBeenCalled()
         })
     })
 }
@@ -309,16 +311,7 @@ const registerAgentAssignment = () => {
         )
         expect(members.require).toHaveBeenCalledWith("user-1", "ws-1")
         expect(owners.resolve.mock.calls).toEqual([[transaction, "ws-1", "agent-1"]])
-        expect(events.record).toHaveBeenCalledWith(
-            {
-                workspaceId: "ws-1",
-                kind: "responsibility.assigned",
-                actor: "An",
-                summary: "Sales Agent: Classify",
-                leadId: "lead-1",
-            },
-            transaction,
-        )
+        expect(events.record).toHaveBeenCalledWith(assignedEvent("Sales Agent: Classify"), transaction)
         expect(em.query).not.toHaveBeenCalled()
     })
 }
@@ -415,6 +408,14 @@ const registerMissingCustomer = () => {
         })
     })
 }
+
+const assignedEvent = (summary: string) => ({
+    workspaceId: "ws-1",
+    kind: "responsibility.assigned",
+    actor: "An",
+    summary,
+    leadId: "lead-1",
+})
 
 const task = {
     leadId: "lead-1",

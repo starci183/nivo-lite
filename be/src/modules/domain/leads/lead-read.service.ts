@@ -1,9 +1,16 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
+import { readConnection } from "@modules/platform/pagination"
+import type { Connection, PageRequest } from "@modules/platform/pagination"
 import { LeadsError, LeadsErrorCode } from "./errors/leads.error"
 import type { LeadView } from "./lead-read.contracts"
-import { FIND_LEAD_VIEW, LIST_LEAD_VIEWS, LIST_LEAD_VIEWS_BY_IDS } from "./persistence/lead-read.sql"
+import {
+    FIND_LEAD_VIEW,
+    LIST_LEAD_VIEW_PAGE,
+    LIST_LEAD_VIEWS,
+    LIST_LEAD_VIEWS_BY_IDS,
+} from "./persistence/lead-read.sql"
 
 @Injectable()
 /** Workspace-scoped lead reads used after the caller's membership has been proved. */
@@ -13,6 +20,13 @@ export class LeadReadService {
     /** The recent leads of the workspace, newest first. */
     list(workspaceId: string): Promise<Array<LeadView>> {
         return this.entityManager.query<Array<LeadView>>(LIST_LEAD_VIEWS, [workspaceId])
+    }
+
+    /** The lead board's next bounded page, preserving the database's exact creation timestamps. */
+    listPage(workspaceId: string, request: PageRequest): Promise<Connection<LeadView>> {
+        return readConnection(request, `leadBoard:${workspaceId}`, (parameters) =>
+            this.entityManager.query<Array<LeadView>>(LIST_LEAD_VIEW_PAGE, [workspaceId, ...parameters]),
+        )
     }
 
     /** Reads the customer references of a bounded work-item listing, including older leads outside the board's window. */

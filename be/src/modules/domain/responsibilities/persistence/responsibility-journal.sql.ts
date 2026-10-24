@@ -1,13 +1,14 @@
 import { sql } from "@modules/platform/database"
 
-/** The oldest open steps of the workspace, in the lead board's selection order. */
+/** The oldest open step of each lead in the current board page ($1 workspace, $2 page lead ids). */
 export const LIST_BOARD_RESPONSIBILITIES = sql`
-    SELECT id, workspace_id, lead_id, title, owner_kind, owner_agent_id, owner_member_id, owner_name, next_action,
-           to_json(due_at) #>> '{}' AS due_at, status, to_json(created_at) #>> '{}' AS created_at
-    FROM public.responsibilities
-    WHERE workspace_id = $1 AND status <> 'done'
-    ORDER BY created_at ASC, id ASC
-    LIMIT 1000`
+    SELECT DISTINCT ON (r.lead_id)
+           r.id, r.workspace_id, r.lead_id, r.title, r.owner_kind, r.owner_agent_id, r.owner_member_id, r.owner_name, r.next_action,
+           to_json(r.due_at) #>> '{}' AS due_at, r.status, to_json(r.created_at) #>> '{}' AS created_at
+    FROM public.responsibilities r
+    WHERE r.workspace_id = $1 AND r.lead_id = ANY($2::uuid[]) AND r.status <> 'done'
+    ORDER BY r.lead_id, r.created_at ASC, r.id ASC
+    LIMIT 100`
 
 /** The customer's steps, oldest first, strictly within the workspace. */
 export const LIST_LEAD_RESPONSIBILITIES = sql`

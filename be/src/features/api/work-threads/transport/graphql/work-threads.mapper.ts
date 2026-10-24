@@ -2,6 +2,7 @@ import type { MentionDirectory, ThreadListing, ThreadMessage, ThreadView } from 
 import type { WorkThread } from "@modules/domain/work-threads"
 import type { ChainStep, ChainView } from "@modules/domain/work-chains"
 import type { Locale } from "@modules/platform/i18n"
+import type { Connection } from "@modules/platform/pagination"
 import type { CreateWorkThreadRequest } from "../../application/create-work-thread.contracts"
 import type { DecideThreadApprovalRequest } from "../../application/decide-thread-approval.contracts"
 import type { ListWorkThreadsRequest } from "../../application/list-work-threads.contracts"
@@ -18,7 +19,7 @@ import type { PostThreadMessageInput } from "./dto/post-thread-message.input"
 import type { ThreadMessageType } from "./dto/thread-message.type"
 import type { WorkChainType } from "./dto/work-chain.type"
 import type { WorkThreadIdInput } from "./dto/work-thread-id.input"
-import type { WorkThreadListingType } from "./dto/work-thread-listing.type"
+import type { WorkThreadConnectionType } from "./dto/work-thread-connection.type"
 import type { WorkThreadType } from "./dto/work-thread.type"
 import type { WorkThreadViewType } from "./dto/work-thread-view.type"
 
@@ -26,6 +27,8 @@ import type { WorkThreadViewType } from "./dto/work-thread-view.type"
 export const toListWorkThreadsRequest = (workspaceId: string, input: ListWorkThreadsInput): ListWorkThreadsRequest => ({
     workspaceId,
     leadId: input.leadId,
+    first: input.first,
+    after: input.after,
 })
 
 /** Maps the thread an input names to the read request. */
@@ -82,8 +85,10 @@ export const toDecideThreadApprovalRequest = (
 export const toWorkThreadType = (thread: WorkThread): WorkThreadType => ({ ...thread })
 
 /** Maps the thread list to the GraphQL type. */
-export const toWorkThreadListingsType = (listing: ReadonlyArray<ThreadListing>): Array<WorkThreadListingType> =>
-    listing.map((thread) => ({ ...thread }))
+export const toWorkThreadListingsType = (listing: Connection<ThreadListing>): WorkThreadConnectionType => ({
+    nodes: listing.nodes.map((thread) => ({ ...thread })),
+    pageInfo: { ...listing.pageInfo },
+})
 
 /** Maps a message to the GraphQL type. */
 export const toThreadMessageType = (message: ThreadMessage): ThreadMessageType => ({ ...message })

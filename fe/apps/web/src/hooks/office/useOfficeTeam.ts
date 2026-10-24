@@ -1,6 +1,6 @@
 import { useActiveWorkspace } from "@/hooks/workspaces"
 import {
-    useQueryLeadBoardSwr,
+    useQueryLeadDirectorySwr,
     useQueryModuleInstallationsSwr,
     useQueryResponsibilitiesSwr,
     useQueryWorkspaceMembersSwr,
@@ -14,7 +14,7 @@ export const useOfficeTeam = () => {
     const installations = useQueryModuleInstallationsSwr()
     const members = useQueryWorkspaceMembersSwr(activeWorkspaceId)
     const staff = useQueryWorkspaceStaffSwr(activeWorkspaceId)
-    const leads = useQueryLeadBoardSwr(activeWorkspaceId)
+    const leads = useQueryLeadDirectorySwr(activeWorkspaceId)
     const tasks = useQueryResponsibilitiesSwr()
     return {
         agents: toOfficeAgents(installations.data ?? []),

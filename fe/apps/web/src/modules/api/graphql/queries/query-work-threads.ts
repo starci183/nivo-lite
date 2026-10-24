@@ -12,17 +12,23 @@ type QueryWorkThreadsResponse = WorkThreadsQuery
 const query1: TypedDocumentNode<QueryWorkThreadsResponse, InputVariables<QueryWorkThreadsRequest>> = gql`
     query WorkThreads($input: ListWorkThreadsInput!) {
         workThreads(input: $input) {
-            id
-            title
-            leadId
-            orderId
-            status
-            createdAt
-            updatedAt
-            lastBody
-            lastAt
-            messageCount
-            waitingApproval
+            pageInfo {
+                endCursor
+                hasNextPage
+            }
+            nodes {
+                id
+                title
+                leadId
+                orderId
+                status
+                createdAt
+                updatedAt
+                lastBody
+                lastAt
+                messageCount
+                waitingApproval
+            }
         }
     }
 `
@@ -47,7 +53,8 @@ export const queryWorkThreads = async ({
     query = QueryWorkThreads.Query1,
     request,
     signal,
+    headers,
 }: QueryWorkThreadsParams) => {
-    const apollo = createAuthApolloClient({ signal })
-    return apollo.query({ query: queryMap[query], variables: { input: request } })
+    const apollo = createAuthApolloClient({ signal, headers })
+    return apollo.query({ query: queryMap[query], variables: { input: request }, context: { headers } })
 }

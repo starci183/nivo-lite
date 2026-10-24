@@ -6,6 +6,7 @@ import { WorkThreadsService } from "@modules/domain/work-threads"
 import type { WorkThreadLeadFilter, WorkThread } from "@modules/domain/work-threads"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
+import type { Connection, PageRequest } from "@modules/platform/pagination"
 import { MentionDirectoryService } from "./mention-directory.service"
 import type { ThreadDigestRow, ThreadMessageRow } from "./persistence/thread-messages.rows"
 import { LIST_MESSAGES, LIST_THREAD_DIGESTS } from "./persistence/thread-messages.sql"
@@ -44,15 +45,19 @@ export class ThreadFeedService {
         userId: string,
         workspaceId: string,
         leadId: WorkThreadLeadFilter,
-    ): Promise<ReadonlyArray<ThreadListing>> {
+        request: PageRequest = {},
+    ): Promise<Connection<ThreadListing>> {
         await this.members.require(userId, workspaceId)
-        const threads = await this.threads.list(workspaceId, leadId)
+        const threads = await this.threads.list(workspaceId, leadId, request)
         const digests = await this.entityManager.query<Array<ThreadDigestRow>>(LIST_THREAD_DIGESTS, [
             workspaceId,
-            threads.map((thread) => thread.id),
+            threads.nodes.map((thread) => thread.id),
         ])
         const byThread = new Map(digests.map((digest) => [digest.thread_id, digest]))
-        return threads.map((thread) => toListing(thread, byThread.get(thread.id)))
+        return {
+            nodes: threads.nodes.map((thread) => toListing(thread, byThread.get(thread.id))),
+            pageInfo: threads.pageInfo,
+        }
     }
 
     /** One thread with its newest messages, oldest first. */

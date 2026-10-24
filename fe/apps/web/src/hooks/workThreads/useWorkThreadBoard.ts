@@ -21,6 +21,11 @@ interface WorkThreadBoardData {
     readonly feed: DataSlot<ThreadFeedView>
     readonly chain: DataSlot<ChainPanelView>
     readonly options: ReadonlyArray<ComposerOption>
+    readonly hasNextPage: boolean
+    readonly isLoadingMore: boolean
+    readonly hasPaginationError: boolean
+    readonly loadMore: () => void
+    readonly retryPage: () => void
     readonly reload: () => void
 }
 
@@ -85,6 +90,11 @@ export const useWorkThreadBoard = (selectedId: string | null): WorkThreadBoardDa
             agent: t("sectionAgents"),
             group: t("sectionGroups"),
         }),
+        hasNextPage: list.hasNextPage,
+        isLoadingMore: list.isLoadingMore,
+        hasPaginationError: list.paginationError !== undefined,
+        loadMore: list.loadMore,
+        retryPage: list.retry,
         reload: () => {
             void list.mutate()
             void thread.mutate()

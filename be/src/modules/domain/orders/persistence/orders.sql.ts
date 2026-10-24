@@ -75,3 +75,12 @@ export const LIST_ORDERS = sql`SELECT o.id, o.workspace_id, o.lead_id, o.inbound
 FROM public.orders o
 LEFT JOIN public.leads l ON l.id = o.lead_id AND l.workspace_id = o.workspace_id
 WHERE o.workspace_id = $1::uuid ORDER BY o.created_at DESC LIMIT $2`
+
+/** A creation/id keyset page ($1 workspace, $2 cursor instant, $3 cursor id, $4 page size plus one). */
+export const LIST_ORDER_PAGE = sql`SELECT id, workspace_id, lead_id, inbound_event_id, order_no, items,
+amount_vnd::float8 AS amount_vnd, status, confirmed_by, to_json(created_at)#>>'{}' AS created_at,
+to_json(confirmed_at)#>>'{}' AS confirmed_at, to_json(shipped_at)#>>'{}' AS shipped_at, carrier, tracking_code
+FROM public.orders o
+WHERE o.workspace_id = $1::uuid
+AND ($2::timestamptz IS NULL OR (o.created_at, o.id) < ($2::timestamptz, $3::uuid))
+ORDER BY o.created_at DESC, o.id DESC LIMIT $4::int`

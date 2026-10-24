@@ -1,11 +1,12 @@
 import type { QueryBus } from "@nestjs/cqrs"
-import { Query, Resolver } from "@nestjs/graphql"
+import { Args, Query, Resolver } from "@nestjs/graphql"
 import { CurrentPrincipal } from "@modules/domain/identity"
 import { WorkspaceId } from "@modules/domain/workspace-members"
 import { InjectQueryBus } from "@modules/platform/cqrs"
 import type { Principal } from "@modules/platform/cqrs"
 import { ListSalesOrdersQuery } from "../../application/list-sales-orders.query"
-import { SalesOrderType } from "./dto/sales-order.type"
+import { ListSalesOrdersInput } from "./dto/list-sales-orders.input"
+import { SalesOrderConnectionType } from "./dto/sales-order-connection.type"
 import { toListSalesOrdersRequest, toSalesOrdersType } from "./list-sales-orders.mapper"
 
 @Resolver()
@@ -14,13 +15,14 @@ export class ListSalesOrdersResolver {
     constructor(@InjectQueryBus() private readonly queryBus: QueryBus) {}
 
     /** Reads the newest orders of the selected workspace. */
-    @Query(() => [SalesOrderType], { name: "salesOrders" })
+    @Query(() => SalesOrderConnectionType, { name: "salesOrders" })
     async salesOrders(
         @CurrentPrincipal() principal: Principal,
         @WorkspaceId() workspaceId: string,
-    ): Promise<Array<SalesOrderType>> {
+        @Args("input", { defaultValue: {} }) input: ListSalesOrdersInput,
+    ): Promise<SalesOrderConnectionType> {
         const result = await this.queryBus.execute(
-            new ListSalesOrdersQuery({ request: toListSalesOrdersRequest(workspaceId), principal }),
+            new ListSalesOrdersQuery({ request: toListSalesOrdersRequest(workspaceId, input), principal }),
         )
         return toSalesOrdersType(result)
     }

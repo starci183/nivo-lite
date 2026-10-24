@@ -131,6 +131,11 @@ export interface WorkThreadBoardView {
         readonly isFormOpen: boolean
         readonly titleDraft: string
         readonly isCreating: boolean
+        readonly hasNextPage: boolean
+        readonly isLoadingMore: boolean
+        readonly paginationFailure: string | null
+        readonly loadMoreLabel: string
+        readonly retryPageLabel: string
     }
     readonly thread: {
         readonly hasThread: boolean
@@ -173,4 +178,6 @@ export interface WorkThreadBoardHandlers {
     readonly approve: (messageId: string) => void
     readonly reject: (messageId: string) => void
     readonly retry: () => void
+    readonly loadMore: () => void
+    readonly retryPage: () => void
 }

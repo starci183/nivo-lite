@@ -1,4 +1,12 @@
-import { Breadcrumbs, EmptyNotice, PageContainer, SectionHeader, SurfaceCard, Text } from "@starci/grammar/common"
+import {
+    Breadcrumbs,
+    Button,
+    EmptyNotice,
+    PageContainer,
+    SectionHeader,
+    SurfaceCard,
+    Text,
+} from "@starci/grammar/common"
 import { SlotView } from "@/components/composites/SlotView"
 import { ThreadChainPanel } from "@/components/composites/ThreadChainPanel"
 import { ThreadComposer } from "@/components/composites/ThreadComposer"
@@ -15,6 +23,7 @@ import {
     HEAD_CLASS_NAME,
     PAGE_CLASS_NAME,
     PANELS_CLASS_NAME,
+    PAGINATION_CLASS_NAME,
     THREAD_CLASS_NAME,
     THREAD_HEAD_CLASS_NAME,
 } from "./classNames"
@@ -60,6 +69,24 @@ const Rail = (props: WorkThreadBoardBaseProps) => {
                     />
                 )}
             </SlotView>
+            {rail.hasNextPage || rail.paginationFailure !== null ? (
+                <div className={PAGINATION_CLASS_NAME}>
+                    {rail.paginationFailure === null ? null : (
+                        <Text size="sm" live="polite">
+                            {rail.paginationFailure}
+                        </Text>
+                    )}
+                    <Button
+                        variant="secondary"
+                        size="sm"
+                        isPending={rail.isLoadingMore}
+                        isDisabled={rail.isLoadingMore}
+                        onPress={rail.paginationFailure === null ? props.on.loadMore : props.on.retryPage}
+                    >
+                        {rail.paginationFailure === null ? rail.loadMoreLabel : rail.retryPageLabel}
+                    </Button>
+                </div>
+            ) : null}
         </SurfaceCard>
     )
 }

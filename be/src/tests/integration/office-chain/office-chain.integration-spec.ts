@@ -303,7 +303,13 @@ describe("v0.3.2 office chain: the thread list says which threads wait for a dec
 
         const listed = await world.resolve(ThreadFeedService).list(identity.users.nam, WS, null)
 
-        expect(listed.find((thread) => thread.id === quiet)).toMatchObject({ waitingApproval: false, messageCount: 1 })
-        expect(listed.find((thread) => thread.id === asking)).toMatchObject({ waitingApproval: true, messageCount: 2 })
+        expect(listed.nodes.find((thread) => thread.id === quiet)).toMatchObject({
+            waitingApproval: false,
+            messageCount: 1,
+        })
+        expect(listed.nodes.find((thread) => thread.id === asking)).toMatchObject({
+            waitingApproval: true,
+            messageCount: 2,
+        })
     })
 })

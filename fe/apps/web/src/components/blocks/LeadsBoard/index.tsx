@@ -52,28 +52,9 @@ export const LeadsBoard = (props: LeadsBoardProps) => {
         canPropose: lead.owner_name === null,
         failure: failureOf(lead.id),
     })
-    const viewOf = (leads: ReadonlyArray<LeadListItem>): BoardView => {
-        const needle = query.trim().toLowerCase()
-        const matches = leads.filter(
-            (lead) =>
-                needle === "" || `${lead.contact_name} ${lead.company} ${lead.need}`.toLowerCase().includes(needle),
-        )
-        const countOf = (key: string): number =>
-            key === ALL ? matches.length : matches.filter((lead) => lead.stage === key).length
-        return {
-            tabs: [
-                { id: ALL, label: t("tabAll", { n: countOf(ALL) }) },
-                ...STAGE_ORDER.map((id) => ({
-                    id,
-                    label: t("tabStage", { stage: t(STAGE_KEYS[id]), n: countOf(id) }),
-                })),
-            ],
-            rows: matches.filter((lead) => stage === ALL || lead.stage === stage).map(rowOf),
-            hasLeads: leads.length > 0,
-            isFiltered: needle !== "" || stage !== ALL,
-        }
-    }
-    const slot = mapSlot(props.isLoading ? { isLoading: true } : data.slot, viewOf)
+    const slot = mapSlot(props.isLoading ? { isLoading: true } : data.slot, (leads) =>
+        leadBoardViewOf(leads, { query, stage, rowOf, t }),
+    )
 
     const propose = (leadId: string) => {
         setFailure(null)
@@ -85,7 +66,17 @@ export const LeadsBoard = (props: LeadsBoardProps) => {
 
     return (
         <LeadsBoardBase
-            props={buildLeadsBoardView({ slot, query, stage, isPending, busyId, t, slotLabels })}
+            props={{
+                ...buildLeadsBoardView({ slot, query, stage, isPending, busyId, t, slotLabels }),
+                pagination: {
+                    hasNextPage: data.hasNextPage,
+                    isLoading: data.isLoadingMore,
+                    failure: data.paginationError === undefined ? null : t("loadMoreFailed"),
+                    loadedHint: data.hasNextPage ? t("loadedLeads", { count: data.data?.length ?? 0 }) : null,
+                    loadMoreLabel: t("loadMore"),
+                    retryLabel: t("retryLoad"),
+                },
+            }}
             on={{
                 query: setQuery,
                 clear: () => {
@@ -95,9 +86,38 @@ export const LeadsBoard = (props: LeadsBoardProps) => {
                 select: (key) => setStage(key === ALL || isStage(key) ? key : ALL),
                 openForm: () => router.push(newLeadPath()),
                 propose,
+                loadMore: data.loadMore,
+                retry: data.retry,
             }}
         />
     )
+}
+
+/** The search and display mapping of the loaded lead rows. */
+interface LeadBoardRowsContext {
+    readonly query: string
+    readonly stage: string
+    readonly rowOf: (lead: LeadListItem) => LeadRowView
+    readonly t: ReturnType<typeof useTranslations<"leads">>
+}
+
+const leadBoardViewOf = (leads: ReadonlyArray<LeadListItem>, context: LeadBoardRowsContext): BoardView => {
+    const { query, stage, rowOf, t } = context
+    const needle = query.trim().toLowerCase()
+    const matches = leads.filter(
+        (lead) => needle === "" || `${lead.contact_name} ${lead.company} ${lead.need}`.toLowerCase().includes(needle),
+    )
+    const countOf = (key: string): number =>
+        key === ALL ? matches.length : matches.filter((lead) => lead.stage === key).length
+    return {
+        tabs: [
+            { id: ALL, label: t("tabAll", { n: countOf(ALL) }) },
+            ...STAGE_ORDER.map((id) => ({ id, label: t("tabStage", { stage: t(STAGE_KEYS[id]), n: countOf(id) }) })),
+        ],
+        rows: matches.filter((lead) => stage === ALL || lead.stage === stage).map(rowOf),
+        hasLeads: leads.length > 0,
+        isFiltered: needle !== "" || stage !== ALL,
+    }
 }
 
 /** Inputs needed to build the LeadsBoardContent section. */

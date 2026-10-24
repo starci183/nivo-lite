@@ -1,6 +1,8 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
+import { readConnection } from "@modules/platform/pagination"
+import type { Connection, PageRequest } from "@modules/platform/pagination"
 import { WorkThreadsError, WorkThreadsErrorCode } from "./errors/work-threads.error"
 import type { OwnedIdRow, ThreadRow } from "./persistence/work-threads.rows"
 import {
@@ -49,9 +51,17 @@ export class WorkThreadsService {
     }
 
     /** The newest threads of the workspace, optionally only those about one lead. */
-    async list(workspaceId: string, leadId: WorkThreadLeadFilter): Promise<ReadonlyArray<WorkThread>> {
-        const rows = await this.entityManager.query<Array<ThreadRow>>(LIST_THREADS, [workspaceId, leadId])
-        return rows.map(toThread)
+    async list(
+        workspaceId: string,
+        leadId: WorkThreadLeadFilter,
+        request: PageRequest = {},
+    ): Promise<Connection<WorkThread>> {
+        const filter = leadId ?? null
+        const scope = `${workspaceId}:workThreads:${filter ?? "all"}`
+        const connection = await readConnection(request, scope, (parameters) =>
+            this.entityManager.query<Array<ThreadRow>>(LIST_THREADS, [workspaceId, filter, ...parameters]),
+        )
+        return { nodes: connection.nodes.map(toThread), pageInfo: connection.pageInfo }
     }
 
     /** Locks the thread of the workspace for the rest of the caller's transaction, or refuses when it has no such thread. */

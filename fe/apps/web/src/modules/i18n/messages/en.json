@@ -3279,6 +3279,10 @@
   },
   "leads": {
     "crumbHome": "Overview",
+    "loadMore": "Load more leads",
+    "loadMoreFailed": "Older leads could not be loaded. Your current leads are still here.",
+    "retryLoad": "Try again",
+    "loadedLeads": "Showing {count} loaded leads. Load more to search older leads.",
     "loadFailedLeads": "The leads could not be loaded. Try again.",
     "loadFailedLead": "This lead could not be loaded. Try again.",
     "eyebrow": "PIPELINE",
@@ -6114,6 +6118,12 @@
     "statusReadFailed": "We could not read the reply status. Retry the check."
   },
   "workbenchSales": {
+    "orderHistoryTitle": "Order history",
+    "orderHistoryEmpty": "No orders yet.",
+    "orderHistoryMore": "Load more orders",
+    "orderHistoryFailed": "More orders could not be loaded.",
+    "orderHistoryRetry": "Try again",
+    "orderAmountUnknown": "Amount not set",
     "metricOpen": "Open opportunities",
     "metricOpenBasis": "New, qualified and proposal",
     "metricProposal": "Value in proposal",
@@ -6838,6 +6848,9 @@
     "cancel": "Cancel"
   },
   "workThreads": {
+    "loadMore": "Load more threads",
+    "loadMoreFailed": "More threads could not be loaded.",
+    "retryPage": "Try again",
     "pageTitle": "Work threads",
     "crumbLabel": "Breadcrumb",
     "crumbHome": "Overview",

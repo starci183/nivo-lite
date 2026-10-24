@@ -4,11 +4,12 @@ import type { SalesOrderView } from "@modules/domain/orders"
 import { ICQRSHandler } from "@modules/platform/cqrs"
 import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
+import type { Connection } from "@modules/platform/pagination"
 import { ListSalesOrdersQuery } from "./list-sales-orders.query"
 
 @QueryHandler(ListSalesOrdersQuery)
 /** Proves membership before listing the selected workspace's orders. */
-export class ListSalesOrdersHandler extends ICQRSHandler<ListSalesOrdersQuery, Array<SalesOrderView>> {
+export class ListSalesOrdersHandler extends ICQRSHandler<ListSalesOrdersQuery, Connection<SalesOrderView>> {
     constructor(
         @InjectLogger() logger: Logger,
         private readonly orders: OrdersReadService,
@@ -16,7 +17,7 @@ export class ListSalesOrdersHandler extends ICQRSHandler<ListSalesOrdersQuery, A
         super(logger)
     }
 
-    protected override process(query: ListSalesOrdersQuery): Promise<Array<SalesOrderView>> {
-        return this.orders.list(query.params.principal.id, query.params.request.workspaceId)
+    protected override process(query: ListSalesOrdersQuery): Promise<Connection<SalesOrderView>> {
+        return this.orders.list(query.params.principal.id, query.params.request.workspaceId, query.params.request)
     }
 }

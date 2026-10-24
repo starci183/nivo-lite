@@ -1,8 +1,8 @@
 /** Where a thread stands: open, waiting for an approval, done, or stopped and sent back to an owner. */
 export type ThreadStatus = "open" | "waiting" | "done" | "stopped"
 
-/** A lead id to narrow a thread read to, or null for no narrowing. */
-export type WorkThreadLeadFilter = string | null
+/** A lead id to narrow a thread read to, or absent/null for no narrowing. */
+export type WorkThreadLeadFilter = string | null | undefined
 
 /** One work thread. */
 export interface WorkThread {

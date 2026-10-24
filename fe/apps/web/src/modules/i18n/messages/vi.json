@@ -3278,6 +3278,10 @@
     "errDraft": "Nhập nội dung tin nhắn."
   },
   "leads": {
+    "loadMore": "Tải thêm khách hàng",
+    "loadMoreFailed": "Không tải được khách hàng cũ hơn. Danh sách hiện tại vẫn được giữ lại.",
+    "retryLoad": "Thử lại",
+    "loadedLeads": "Đang hiển thị {count} khách hàng đã tải. Tải thêm để tìm khách hàng cũ hơn.",
     "crumbHome": "Tổng quan",
     "loadFailedLeads": "Chưa tải được danh sách khách hàng. Hãy thử lại.",
     "loadFailedLead": "Chưa tải được khách hàng này. Hãy thử lại.",
@@ -6114,6 +6118,12 @@
     "statusReadFailed": "Không thể đọc trạng thái câu trả lời. Thử kiểm tra lại."
   },
   "workbenchSales": {
+    "orderHistoryTitle": "Lịch sử đơn hàng",
+    "orderHistoryEmpty": "Chưa có đơn hàng nào.",
+    "orderHistoryMore": "Tải thêm đơn hàng",
+    "orderHistoryFailed": "Không tải được các đơn hàng tiếp theo.",
+    "orderHistoryRetry": "Thử lại",
+    "orderAmountUnknown": "Chưa có số tiền",
     "metricOpen": "Cơ hội đang mở",
     "metricOpenBasis": "Mới, đủ điều kiện và đề xuất",
     "metricProposal": "Giá trị đang đề xuất",
@@ -6838,6 +6848,9 @@
     "cancel": "Hủy"
   },
   "workThreads": {
+    "loadMore": "Tải thêm luồng việc",
+    "loadMoreFailed": "Không tải được các luồng việc tiếp theo.",
+    "retryPage": "Thử lại",
     "pageTitle": "Luồng việc",
     "crumbLabel": "Đường dẫn",
     "crumbHome": "Tổng quan",
