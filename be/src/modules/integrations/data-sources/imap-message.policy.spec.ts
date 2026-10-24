@@ -1,5 +1,4 @@
 import { Test } from "@nestjs/testing"
-import { mock } from "@starci/jest-preset"
 import type { AddressObject, Attachment, ParsedMail } from "mailparser"
 import {
     IMAP_MAX_TEXT,
@@ -53,9 +52,8 @@ const registerMessageFields = () => {
                     { name: "Ada", address: "ada@example.com" },
                     { name: "", address: "" },
                 ]),
-                to: [address([{ name: "Bo", address: undefined }])],
-                cc: undefined,
-                attachments: [mock<Attachment>({ filename: undefined, contentType: "image/png", size: 8 })],
+                to: [address([{ name: "Bo" }])],
+                attachments: [attachment({ contentType: "image/png", size: 8 })],
                 messageId: "<m@example.com>",
                 inReplyTo: "<previous@example.com>",
             }),
@@ -112,11 +110,9 @@ const registerMessageFallbacks = () => {
             "1",
             2,
             mail({
-                text: undefined,
                 html: "<style>x</style><script>y</script>Hi&nbsp;&amp;&lt;b&gt; <b>there</b>",
-                subject: undefined,
                 date: new Date(Number.NaN),
-                attachments: [mock<Attachment>({ filename: "a.txt", contentType: "text/plain", size: 1 })],
+                attachments: [attachment({ filename: "a.txt", contentType: "text/plain", size: 1 })],
             }),
             received,
         )
@@ -132,7 +128,7 @@ const registerMessageFallbacks = () => {
         expect(row.data.inReplyTo).toBeNull()
         expect(row.data.attachments).toEqual([{ name: "a.txt", type: "text/plain", size: 1 }])
 
-        const long = subject.messageToRow("Sent", "1", 3, mail({ text: body, date: undefined }), "not-a-date")
+        const long = subject.messageToRow("Sent", "1", 3, mail({ text: body }), "not-a-date")
         expect(long.data.text).toBe("a".repeat(IMAP_MAX_TEXT))
         expect(long.data.truncated).toBe(true)
         expect(long.occurredAt).toBeNull()
@@ -164,20 +160,23 @@ const registerMessageFallbacks = () => {
 
 const address = (value: AddressObject["value"]): AddressObject => ({ value, html: "", text: "" })
 
-const mail = (partial: Partial<ParsedMail>): ParsedMail =>
-    mock<ParsedMail>({
-        html: false,
-        attachments: [],
-        text: undefined,
-        subject: undefined,
-        date: undefined,
-        from: undefined,
-        to: undefined,
-        cc: undefined,
-        messageId: undefined,
-        inReplyTo: undefined,
-        ...partial,
-    })
+const mail = (partial: Partial<ParsedMail>): ParsedMail => ({
+    attachments: [],
+    headers: new Map(),
+    headerLines: [],
+    html: false,
+    ...partial,
+})
+
+const attachment = (fields: Pick<Attachment, "contentType" | "size"> & Partial<Attachment>): Attachment => ({
+    type: "attachment",
+    partId: null,
+    headers: new Map(),
+    content: Buffer.alloc(0),
+    release: null,
+    checksum: "",
+    ...fields,
+})
 
 const registerInvoiceXml = () => {
     it("keeps the text of a small XML e-invoice attachment and only the name, type and size of the rest", async () => {
@@ -190,19 +189,18 @@ const registerInvoiceXml = () => {
             5,
             mail({
                 attachments: [
-                    mock<Attachment>({
+                    attachment({
                         filename: "HD001.XML",
                         contentType: "application/octet-stream",
                         size: 40,
                         content: Buffer.from(xml),
                     }),
-                    mock<Attachment>({
-                        filename: undefined,
+                    attachment({
                         contentType: "text/xml",
                         size: 40,
                         content: Buffer.from(xml),
                     }),
-                    mock<Attachment>({ filename: "big.xml", contentType: "application/xml", size: 200_001 }),
+                    attachment({ filename: "big.xml", contentType: "application/xml", size: 200_001 }),
                 ],
             }),
             new Date("2026-02-03T00:00:00.000Z"),
