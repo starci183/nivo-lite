@@ -59,7 +59,9 @@ export const deliveryIntakeBuilder = async (
             environment: "test",
         })
     }
-    const numericId = Number.parseInt(id.replaceAll("-", "").slice(0, 12), 16)
+    // Include the whole scenario UUID: fakeIds increments its tail, while its leading group stays fixed per run.
+    // Thirteen hex digits keep the provider id inside JavaScript's safe integer range.
+    const numericId = Number.parseInt(createHash("sha256").update(id).digest("hex").slice(0, 13), 16)
     const metaBody = Buffer.from(JSON.stringify({ object: "page", entry: [], proofId }))
     const deliveryId = {
         meta: createHash("sha256").update(metaBody).digest("hex"),

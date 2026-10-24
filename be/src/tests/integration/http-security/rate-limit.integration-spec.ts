@@ -14,12 +14,12 @@ import {
     EXPIRE_RATE_LIMIT_BUCKET,
     INSERT_RATE_LIMIT_PROOF_BUCKET,
     RATE_LIMIT_ACCESS,
-    RATE_LIMIT_APP_ROLE,
     RATE_LIMIT_BUCKET,
     RUN_RATE_LIMIT_CLEANUP,
     UPDATE_RATE_LIMIT_PROOF_BUCKET,
 } from "../../fixtures/persistence/rate-limit.sql"
 import { RATE_LIMIT_PROOF_MODULES, sharedRateLimitStore } from "../../world/rate-limit-proof.module"
+import { withBackendRole } from "../../world/backend-role-proof.service"
 import { useTestWorld } from "../../world/use-test-world"
 
 class Door {
@@ -145,8 +145,7 @@ describe("Shared rate-limit database access", () => {
             await first.db.primary.query(CLEAN_RATE_LIMIT_BUCKET, [key])
         })
 
-        await first.db.primary.transaction(async (tx) => {
-            await tx.query(RATE_LIMIT_APP_ROLE)
+        await withBackendRole(first, async (tx) => {
             await tx.query(INSERT_RATE_LIMIT_PROOF_BUCKET, [key])
             await expect(
                 tx.query<Array<RateLimitProofHitsRow>>(UPDATE_RATE_LIMIT_PROOF_BUCKET, [key]),

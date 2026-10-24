@@ -38,6 +38,37 @@ const registerParsing = (): void => {
 }
 
 const registerPublication = (world: LiteWorld, workspaceId: string): void => {
+    it("keeps independent deliveries in distinct receipts and publications", async () => {
+        const first = await deliveryIntakeFixture(world, "sepay", workspaceId)
+        const second = await deliveryIntakeFixture(world, "sepay", workspaceId)
+        expect(first.message.deliveryId).not.toBe(second.message.deliveryId)
+        await first.accept()
+        await second.accept()
+
+        const firstState = await first.state()
+        const secondState = await second.state()
+        expect(firstState.receipts).toHaveLength(1)
+        expect(secondState.receipts).toHaveLength(1)
+        expect(firstState.receipts[0]).toMatchObject({
+            payload: { id: Number(first.message.deliveryId) },
+            processed_at: null,
+        })
+        expect(secondState.receipts[0]).toMatchObject({
+            payload: { id: Number(second.message.deliveryId) },
+            processed_at: null,
+        })
+        expect(firstState.receipts[0]?.id).not.toBe(secondState.receipts[0]?.id)
+        expect(firstState.jobs).toHaveLength(1)
+        expect(secondState.jobs).toHaveLength(1)
+        expect(firstState.jobs[0]).toMatchObject({ payload: first.message })
+        expect(secondState.jobs[0]).toMatchObject({ payload: second.message })
+        expect(firstState.jobs[0]?.id).not.toBe(secondState.jobs[0]?.id)
+
+        await first.service.processRecordedDelivery(first.message)
+        expect((await first.state()).receipts[0]?.processed_at).toBeInstanceOf(Date)
+        expect((await second.state()).receipts[0]?.processed_at).toBeNull()
+    })
+
     it("publishes in the caller transaction with the intake dedupe key", async () => {
         const fixture = await deliveryIntakeFixture(world, "sepay", workspaceId)
         const outbox = world.resolve<QueueOutbox>(QUEUE_OUTBOX)

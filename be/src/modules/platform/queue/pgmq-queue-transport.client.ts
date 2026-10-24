@@ -69,7 +69,17 @@ export class PgmqQueueTransportClient implements QueueTransport {
     /** Stops reading, gives the running deliveries the shutdown grace, aborts and hands back the ones still running, then waits for the loops. */
     async close(): Promise<void> {
         this.running = false
-        await Promise.race([this.settled(), this.wait(this.options.shutdownGraceMs)])
+        let graceTimer: ReturnType<typeof setTimeout> | undefined
+        try {
+            await Promise.race([
+                this.settled(),
+                new Promise<void>((resolve) => {
+                    graceTimer = setTimeout(resolve, this.options.shutdownGraceMs)
+                }),
+            ])
+        } finally {
+            clearTimeout(graceTimer)
+        }
         Array.from(this.runs).forEach((run) => run.abort.abort(new Error("worker shutting down")))
         await this.settled()
         await Promise.all(this.loops)

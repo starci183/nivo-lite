@@ -388,9 +388,40 @@ describe("wait", () => {
 })
 
 describe("close", () => {
-    it("resolves at once when no worker runs", async () => {
+    beforeEach(() => jest.useFakeTimers())
+    afterEach(() => jest.useRealTimers())
+
+    it("resolves at once without leaving a shutdown timer when no worker runs", async () => {
         const { client } = await build()
 
         await expect(client.close()).resolves.toBeUndefined()
+        expect(jest.getTimerCount()).toBe(0)
+    })
+
+    it("clears the shutdown deadline when a delivery finishes during its grace", async () => {
+        const { client, manager } = await buildScripted([[messageOf()]])
+        let finish: () => void = () => undefined
+        let signal: AbortSignal | undefined
+        const handler: QueueHandler = {
+            queue: "knowledge",
+            handle: (delivery) => {
+                signal = delivery.signal
+                return new Promise<void>((resolve) => {
+                    finish = resolve
+                })
+            },
+        }
+
+        await client.work(handler, 1)
+        await jest.advanceTimersByTimeAsync(0)
+        const closing = client.close()
+        await jest.advanceTimersByTimeAsync(100)
+        finish()
+        await jest.advanceTimersByTimeAsync(0)
+        await closing
+
+        expect(signal?.aborted).toBe(false)
+        expect(manager.query).toHaveBeenCalledWith(JOB_ACK, ["knowledge", "1"])
+        expect(jest.getTimerCount()).toBe(0)
     })
 })
