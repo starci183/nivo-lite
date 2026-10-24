@@ -18,7 +18,7 @@ const CHANNEL_KEYS = [
     "channelReferral",
 ] as const
 
-/** Captures a lead and polls its queued preparation before opening the journey. */
+/** Creates a customer and polls the queued capture before opening the journey. */
 export const LeadCreateForm = () => {
     const t = useTranslations("leads")
     const router = navigation.useRouter()

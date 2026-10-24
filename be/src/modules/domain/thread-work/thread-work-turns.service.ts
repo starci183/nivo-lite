@@ -9,11 +9,11 @@ import { ThreadAgentPostsService } from "@modules/domain/thread-messages"
 import type { MentionRef } from "@modules/domain/work-chains"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { InjectMessageCatalog } from "@modules/platform/i18n"
-import type { MessageCatalog } from "@modules/platform/i18n"
+import type { Locale, MessageCatalog } from "@modules/platform/i18n"
 import type { ThreadWorkRow, WorkAgentRow } from "./persistence/thread-work.rows"
 import { INSERT_THREAD_WORK, LIST_WORK_AGENTS, UPDATE_THREAD_WORK } from "./persistence/thread-work.sql"
 import { amountText, groupMentionOf, nextStepOf, workAgentOf } from "./thread-work.policy"
-import type { AgentStep, ThreadWorkState, WorkAgent, WorkPlace } from "./thread-work.contracts"
+import type { AgentStep, NextStep, ThreadWorkState, WorkAgent, WorkPlace } from "./thread-work.contracts"
 
 /** One line an agent writes in its thread: the text, who it tags, the title of the chain step it makes. */
 interface AgentLine {
@@ -165,11 +165,15 @@ export class ThreadWorkTurnsService {
             })
             return this.move(place, { ...SETTLED, state: "done" })
         }
-        const nextLabel = await this.labelOf(next.action)
+        const nextLabel = await this.labelOf(next.action, place.locale)
         const stopped = await this.say(place, {
-            body: this.text("threadWork.handoff", { done, next: nextLabel }),
+            body: this.catalog.get(
+                "threadWork.handoff",
+                { receiver: next.agent.name, next: await this.handoffReason(next, nextLabel, place.locale) },
+                place.locale,
+            ),
             mentions: [{ kind: "agent", id: next.agent.id }],
-            stepTitle: this.text("threadWork.handoffStep", { next: nextLabel }),
+            stepTitle: this.catalog.get("threadWork.handoffStep", { next: nextLabel }, place.locale),
         })
         const state = await this.move(place, { ...SETTLED, state: stopped === null ? "done" : "stopped" })
         if (stopped !== null || item.lead_id === null) return state
@@ -242,8 +246,17 @@ export class ThreadWorkTurnsService {
         return rows.map(workAgentOf)
     }
 
-    private async labelOf(action: string): Promise<string> {
-        return (await this.modules.actionOf(action))?.label.vi ?? action
+    /** Why the receiving agent takes over, in the words of its catalog command. */
+    private async handoffReason(next: NextStep, label: string, locale: Locale): Promise<string> {
+        const commands = await this.modules.acceptsOf(next.agent.module)
+        const description = commands.find((command) => command.action === next.action)?.description[locale].trim() ?? ""
+        return description === ""
+            ? this.catalog.get("threadWork.handoffFallback", { action: label }, locale)
+            : description
+    }
+
+    private async labelOf(action: string, locale: Locale = "vi"): Promise<string> {
+        return (await this.modules.actionOf(action))?.label[locale] ?? action
     }
 
     private fieldLabel(field: string): string {

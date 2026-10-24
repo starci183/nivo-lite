@@ -1,13 +1,16 @@
 import { mock } from "@starci/jest-preset"
 import { Test } from "@nestjs/testing"
-import { AutomationsService } from "@modules/domain/automations"
-import { CommandBusService, WorkEngineService } from "@modules/domain/decisions"
+import { AutomationsService, BusinessEventsService } from "@modules/domain/automations"
+import { WorkEngineService } from "@modules/domain/decisions"
 import type { WorkContext, WorkItem } from "@modules/domain/decisions"
+import { EventsService } from "@modules/domain/events"
 import { InboundEventsService } from "@modules/domain/inbound-events"
 import { LeadRecordsService } from "@modules/domain/leads"
 import type { LeadRecordRow } from "@modules/domain/leads"
 import { ResponsibilityJournalService } from "@modules/domain/responsibilities"
 import { WorkItemsService } from "@modules/domain/work-items"
+import { MESSAGE_CATALOG } from "@modules/platform/i18n"
+import type { MessageCatalog } from "@modules/platform/i18n"
 import { LeadActionsErrorCode } from "./errors/lead-actions.error"
 import { LeadActionFlowService } from "./lead-action-flow.service"
 import type { LeadActionInput } from "./lead-actions.contracts"
@@ -43,10 +46,10 @@ const run: LeadActionRunRow = {
 const work: WorkItem = {
     id: "work-1",
     workspace_id: "ws-1",
-    department: "chatbot",
-    action: "capture_lead",
-    subject_type: "inbound",
-    subject_id: "inbound-1",
+    department: "sales",
+    action: "send_follow_up",
+    subject_type: "lead",
+    subject_id: "lead-1",
     lead_id: "lead-1",
     inbound_event_id: "inbound-1",
     parent_id: null,
@@ -57,7 +60,7 @@ const work: WorkItem = {
     reason: null,
     reasons: [],
     missing_fields: [],
-    proposal: { summary: "Captured", fields: {} },
+    proposal: { summary: "Follow up", fields: {} },
     result: null,
     error: null,
     evidence_state: "captured",
@@ -88,7 +91,11 @@ const leads = mock<LeadRecordsService>()
 
 const inbound = mock<InboundEventsService>()
 
-const commands = mock<CommandBusService>()
+const events = mock<EventsService>()
+
+const businessEvents = mock<BusinessEventsService>()
+
+const catalog = mock<MessageCatalog>()
 
 const engine = mock<WorkEngineService>()
 
@@ -104,7 +111,9 @@ const build = async () => {
             LeadActionFlowService,
             { provide: LeadRecordsService, useValue: leads },
             { provide: InboundEventsService, useValue: inbound },
-            { provide: CommandBusService, useValue: commands },
+            { provide: EventsService, useValue: events },
+            { provide: BusinessEventsService, useValue: businessEvents },
+            { provide: MESSAGE_CATALOG, useValue: catalog },
             { provide: WorkEngineService, useValue: engine },
             { provide: WorkItemsService, useValue: items },
             { provide: ResponsibilityJournalService, useValue: responsibilities },
@@ -119,7 +128,10 @@ beforeEach(() => {
     leads.require.mockResolvedValue(lead)
     inbound.recordInput.mockResolvedValue({ duplicate: false, inboundEventId: "inbound-1" })
     inbound.find.mockResolvedValue(null)
-    commands.sendCommandItem.mockResolvedValue(work)
+    leads.match.mockResolvedValue(null)
+    leads.capture.mockResolvedValue(lead)
+    catalog.get.mockImplementation((key, params) => `${key}:${JSON.stringify(params)}`)
+    responsibilities.ensureFor.mockResolvedValue(responsibility)
     engine.runWork.mockResolvedValue(work)
     items.findByDedupe.mockResolvedValue(null)
     responsibilities.find.mockResolvedValue(responsibility)
@@ -134,8 +146,9 @@ describe("LeadActionFlowService", () => {
 })
 
 describe("LeadActionFlowService", () => {
-    it("records manual capture details, normalises both contacts and continues the owner chain", async () => {
+    it("creates a core customer without installed agent modules and assigns the workspace owner's follow-up", async () => {
         const service = await build()
+        engine.runWork.mockRejectedValue(new Error("No agent module is installed"))
         const input: LeadActionInput = {
             contactName: "Lan",
             company: "Hue Tea",
@@ -144,14 +157,10 @@ describe("LeadActionFlowService", () => {
             phone: " 0912 000 701 ",
             email: " LAN@EXAMPLE.COM ",
         }
-        items.findByDedupe
-            .mockResolvedValueOnce({ ...work, id: "classified-1" })
-            .mockResolvedValueOnce({ ...work, id: "follow-1", status: "queued" })
-        engine.runQueuedItem.mockResolvedValue({ ...work, id: "follow-1" })
 
         await expect(service.create(ctx, { ...run, action: "create", input })).resolves.toEqual({
             leadId: "lead-1",
-            workItemId: "work-1",
+            responsibilityId: "resp-1",
         })
         expect(inbound.recordInput).toHaveBeenCalledWith({
             workspaceId: "ws-1",
@@ -163,144 +172,121 @@ describe("LeadActionFlowService", () => {
             externalRef: "zalo:Hue Tea",
             eventId: "run-1",
         })
-        expect(commands.sendCommandItem).toHaveBeenCalledWith(ctx, {
-            from: "owner",
-            to: "chatbot",
-            command: "handoff_lead",
-            reason: "manual lead",
-            inboundEventId: "inbound-1",
-            dedupeKey: "handoff_lead:inbound:inbound-1",
-            payload: {
-                subject_type: "inbound",
-                subject_id: "inbound-1",
-                contact_name: "Lan",
-                company: "Hue Tea",
-                need: "tea",
-                contact: "0912 000 701",
-                phone: " 0912 000 701 ",
-                email: " LAN@EXAMPLE.COM ",
-                channel_label: "zalo",
-            },
-        })
-        expect(leads.fillContact).toHaveBeenCalledWith({
+        expect(leads.match).toHaveBeenCalledWith({
             workspaceId: "ws-1",
-            leadId: "lead-1",
+            phone: "84912000701",
+            email: "lan@example.com",
+            name: "Lan",
+            channel: "zalo",
+        })
+        expect(leads.capture).toHaveBeenCalledWith({
+            workspaceId: "ws-1",
+            contactName: "Lan",
+            company: "Hue Tea",
+            channel: "zalo",
+            need: "tea",
             phone: "84912000701",
             email: "lan@example.com",
         })
-        expect(inbound.find).not.toHaveBeenCalled()
-        expect(items.findByDedupe.mock.calls).toEqual([
-            ["ws-1", "classify_lead:after:work-1"],
-            ["ws-1", "send_follow_up:after:classified-1"],
-        ])
-        expect(engine.runQueuedItem).toHaveBeenCalledWith(ctx, "follow-1")
-    })
-})
-
-describe("LeadActionFlowService", () => {
-    it("defaults omitted capture fields and returns no lead when the event is absent", async () => {
-        const service = await build()
-        commands.sendCommandItem.mockResolvedValue({ ...work, lead_id: null, status: "waiting_decision" })
-
-        await expect(service.create(ctx, { ...run, input: {} })).resolves.toEqual({
-            leadId: null,
-            workItemId: "work-1",
-        })
-        expect(inbound.recordInput).toHaveBeenCalledWith({
+        expect(events.record).toHaveBeenCalledWith({
             workspaceId: "ws-1",
-            channel: "manual",
-            kind: "lead",
-            senderName: "",
-            senderContact: null,
-            body: "",
-            externalRef: ":",
-            eventId: "run-1",
+            leadId: "lead-1",
+            kind: "lead.captured",
+            actor: "Lan",
+            summary: 'lead-actions.captured:{"channel":"zalo"}',
         })
-        expect(commands.sendCommandItem).toHaveBeenCalledWith(
-            ctx,
-            expect.objectContaining({
-                payload: {
-                    subject_type: "inbound",
-                    subject_id: "inbound-1",
-                    contact_name: "",
-                    company: "",
-                    need: "",
-                    contact: null,
-                    phone: null,
-                    email: null,
-                    channel_label: "",
-                },
-            }),
-        )
-        expect(inbound.find).toHaveBeenCalledWith("ws-1", "inbound-1")
+        expect(catalog.get).toHaveBeenCalledWith("lead-actions.captured", { channel: "zalo" }, "vi")
+        expect(businessEvents.leadCreated).toHaveBeenCalledWith("ws-1", lead)
+        expect(inbound.mark).toHaveBeenCalledWith("ws-1", "inbound-1", "processed", "lead-1")
+        expect(responsibilities.ensureFor).toHaveBeenCalledWith(ctx, "lead-1")
         expect(leads.fillContact).not.toHaveBeenCalled()
-        expect(items.findByDedupe).not.toHaveBeenCalled()
+        expect(engine.runWork).not.toHaveBeenCalled()
     })
 })
 
 describe("LeadActionFlowService", () => {
-    it("uses the email when the phone is blank and recovers the lead linked to the inbound event", async () => {
+    it("reuses the inbound event's linked customer on a retry after the customer's contact details changed", async () => {
         const service = await build()
-        commands.sendCommandItem.mockResolvedValue({ ...work, lead_id: null })
+        inbound.recordInput.mockResolvedValue({ duplicate: true, inboundEventId: "inbound-1" })
         inbound.find.mockResolvedValue({
             id: "inbound-1",
             workspace_id: "ws-1",
             channel: "manual",
             kind: "lead",
-            sender_name: null,
+            sender_name: "Lan",
             sender_contact: null,
-            body: "",
+            body: "tea",
             amount_vnd: null,
-            external_ref: null,
+            external_ref: "zalo:Hue Tea",
             event_id: "run-1",
-            lead_id: "linked-lead",
+            lead_id: "lead-1",
             status: "processed",
         })
+        leads.require.mockResolvedValue({ ...lead, contact_name: "Lan Nguyen", channel: "phone" })
 
-        await expect(
-            service.create(ctx, { ...run, input: { phone: " ", email: " LAN@EXAMPLE.COM " } }),
-        ).resolves.toEqual({
-            leadId: "linked-lead",
-            workItemId: "work-1",
-        })
-        expect(inbound.recordInput).toHaveBeenCalledWith(expect.objectContaining({ senderContact: "LAN@EXAMPLE.COM" }))
-        expect(leads.fillContact).toHaveBeenCalledWith({
-            workspaceId: "ws-1",
-            leadId: "linked-lead",
-            phone: null,
-            email: "lan@example.com",
-        })
-        expect(items.findByDedupe).toHaveBeenCalledWith("ws-1", "classify_lead:after:work-1")
-    })
-
-    it("stops the owner chain when classification is awaiting approval", async () => {
-        const service = await build()
-        items.findByDedupe.mockResolvedValue({ ...work, status: "waiting_decision" })
-
-        await expect(service.create(ctx, { ...run, input: { email: " " } })).resolves.toEqual({
+        await expect(service.create(ctx, { ...run, input: { contactName: "Lan", channel: "zalo" } })).resolves.toEqual({
             leadId: "lead-1",
-            workItemId: "work-1",
+            responsibilityId: "resp-1",
         })
-        expect(inbound.recordInput).toHaveBeenCalledWith(expect.objectContaining({ senderContact: null }))
-        expect(items.findByDedupe.mock.calls).toEqual([["ws-1", "classify_lead:after:work-1"]])
-        expect(engine.runQueuedItem).not.toHaveBeenCalled()
+        expect(inbound.find).toHaveBeenCalledWith("ws-1", "inbound-1")
+        expect(leads.require).toHaveBeenCalledWith("ws-1", "lead-1")
+        expect(leads.match).not.toHaveBeenCalled()
+        expect(leads.capture).not.toHaveBeenCalled()
+        expect(events.record).not.toHaveBeenCalled()
+        expect(businessEvents.leadCreated).not.toHaveBeenCalled()
     })
 })
 
 describe("LeadActionFlowService", () => {
-    it("finishes after classification when no follow-up was queued", async () => {
+    it.each([
+        { input: {}, senderContact: null },
+        { input: { phone: " ", email: " LAN@EXAMPLE.COM " }, senderContact: "LAN@EXAMPLE.COM" },
+        { input: { email: " " }, senderContact: null },
+    ])("records an email or no contact when phone is absent: $senderContact", async ({ input, senderContact }) => {
         const service = await build()
-        items.findByDedupe.mockResolvedValueOnce({ ...work, id: "classified-1" }).mockResolvedValueOnce(null)
 
-        await expect(service.create(ctx, { ...run, input: {} })).resolves.toEqual({
+        await expect(service.create(ctx, { ...run, action: "create", input })).resolves.toEqual({
             leadId: "lead-1",
-            workItemId: "work-1",
+            responsibilityId: "resp-1",
         })
-        expect(items.findByDedupe.mock.calls).toEqual([
-            ["ws-1", "classify_lead:after:work-1"],
-            ["ws-1", "send_follow_up:after:classified-1"],
-        ])
-        expect(engine.runQueuedItem).not.toHaveBeenCalled()
+        expect(inbound.recordInput).toHaveBeenCalledWith(
+            expect.objectContaining({
+                senderName: "",
+                senderContact,
+                body: "",
+                externalRef: ":",
+            }),
+        )
+        expect(leads.capture).toHaveBeenCalledWith(
+            expect.objectContaining({
+                contactName: "",
+                company: "",
+                channel: "",
+                need: "",
+                phone: null,
+            }),
+        )
+    })
+
+    it("reuses a known customer and fills their missing contacts instead of recording a second capture", async () => {
+        const service = await build()
+        leads.match.mockResolvedValue(lead)
+
+        await expect(service.create(ctx, { ...run, input: { phone: "0912 000 701" } })).resolves.toEqual({
+            leadId: "lead-1",
+            responsibilityId: "resp-1",
+        })
+        expect(leads.fillContact).toHaveBeenCalledWith({
+            workspaceId: "ws-1",
+            leadId: "lead-1",
+            phone: "84912000701",
+            email: null,
+        })
+        expect(leads.capture).not.toHaveBeenCalled()
+        expect(events.record).not.toHaveBeenCalled()
+        expect(businessEvents.leadCreated).not.toHaveBeenCalled()
+        expect(inbound.mark).toHaveBeenCalledWith("ws-1", "inbound-1", "processed", "lead-1")
+        expect(responsibilities.ensureFor).toHaveBeenCalledWith(ctx, "lead-1")
     })
 
     it("drafts the next step and returns the latest approval execution", async () => {
@@ -355,54 +341,53 @@ describe("LeadActionFlowService", () => {
         expect(engine.runWork).not.toHaveBeenCalled()
     })
 
-    it("processes queued capture and falls back to its stored work when another worker claimed it", async () => {
+    it("processes queued work and falls back to stored work when another worker claimed it", async () => {
         const service = await build()
-        commands.sendCommandItem.mockResolvedValue({ ...work, status: "queued" })
+        engine.runWork.mockResolvedValue({ ...work, status: "queued" })
         engine.runQueuedItem.mockResolvedValue(null)
-        items.findByDedupe.mockResolvedValueOnce({ ...work, id: "stored-work", status: "waiting_decision" })
+        items.findByDedupe.mockResolvedValue({ ...work, id: "stored-work", status: "waiting_decision" })
 
-        await expect(service.create(ctx, { ...run, input: {} })).resolves.toEqual({
+        await expect(service.draft(ctx, { ...run, input: {} })).resolves.toEqual({
             leadId: "lead-1",
+            responsibilityId: "resp-1",
             workItemId: "stored-work",
+            executionId: "execution-1",
         })
         expect(engine.runQueuedItem).toHaveBeenCalledWith(ctx, "work-1")
-        expect(items.findByDedupe).toHaveBeenCalledWith("ws-1", "handoff_lead:inbound:inbound-1")
+        expect(items.findByDedupe).toHaveBeenCalledWith("ws-1", "send_follow_up:resp:resp-1:run-1")
     })
 
-    it("reports busy when queued capture remains queued", async () => {
+    it("reports busy when queued work remains queued", async () => {
         const service = await build()
-        commands.sendCommandItem.mockResolvedValue({ ...work, status: "queued" })
+        engine.runWork.mockResolvedValue({ ...work, status: "queued" })
         engine.runQueuedItem.mockResolvedValue({ ...work, status: "queued" })
 
-        await expect(service.create(ctx, run)).rejects.toMatchObject({ code: LeadActionsErrorCode.Busy })
-        expect(leads.fillContact).not.toHaveBeenCalled()
+        await expect(service.draft(ctx, run)).rejects.toMatchObject({ code: LeadActionsErrorCode.Busy })
     })
 })
 
 describe("LeadActionFlowService", () => {
-    it("reports the original work id when queued capture disappears", async () => {
+    it("reports the original work id when queued work disappears", async () => {
         const service = await build()
-        commands.sendCommandItem.mockResolvedValue({ ...work, status: "queued" })
+        engine.runWork.mockResolvedValue({ ...work, status: "queued" })
         engine.runQueuedItem.mockResolvedValue(null)
 
-        await expect(service.create(ctx, run)).rejects.toMatchObject({
+        await expect(service.draft(ctx, run)).rejects.toMatchObject({
             code: LeadActionsErrorCode.WorkFailed,
             params: { workItemId: "work-1" },
         })
-        expect(items.findByDedupe).toHaveBeenCalledWith("ws-1", "handoff_lead:inbound:inbound-1")
-        expect(leads.fillContact).not.toHaveBeenCalled()
+        expect(items.findByDedupe).toHaveBeenCalledWith("ws-1", "send_follow_up:resp:resp-1:run-1")
     })
 
-    it.each(["failed", "rejected"] as const)("refuses %s capture work", async (status) => {
+    it.each(["failed", "rejected"] as const)("refuses %s work", async (status) => {
         const service = await build()
-        commands.sendCommandItem.mockResolvedValue({ ...work, status })
+        engine.runWork.mockResolvedValue({ ...work, status })
 
-        await expect(service.create(ctx, run)).rejects.toMatchObject({
+        await expect(service.draft(ctx, run)).rejects.toMatchObject({
             code: LeadActionsErrorCode.WorkFailed,
             params: { workItemId: "work-1" },
         })
         expect(engine.runQueuedItem).not.toHaveBeenCalled()
-        expect(leads.fillContact).not.toHaveBeenCalled()
     })
 })
 

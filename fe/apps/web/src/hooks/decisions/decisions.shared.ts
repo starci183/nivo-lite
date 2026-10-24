@@ -1,7 +1,7 @@
 import type { DeciderKind, DecisionKind, DecisionOutcome, DecisionRecord, GateReason } from "@/modules/types"
 import { CONSOLE_ROUTES } from "@/modules/routes"
 
-/** The filters of the history by who decided, in the order the tabs show them. */
+/** The decision history filters, in the order the tabs show them. */
 export const DECISION_KINDS: ReadonlyArray<DecisionKind> = ["policy", "human", "rejected"]
 
 /** How many decisions the history reads at most. */
@@ -20,7 +20,7 @@ export const decisionKindOf = (value: string): DecisionKind | null =>
 
 /** The badge tone of a decision outcome. */
 export const outcomeTone = (outcome: DecisionOutcome): "success" | "accent" | "warning" | "danger" => {
-    if (outcome === "auto_done") return "success"
+    if (outcome === "auto_done" || outcome === "completed") return "success"
     if (outcome === "approved") return "accent"
     if (outcome === "edited") return "warning"
     return "danger"
@@ -51,7 +51,7 @@ export const splitBasis = (note: string | null): NoteParts => {
 }
 
 const DECIDERS: ReadonlyArray<DeciderKind> = ["policy", "owner", "staff"]
-const OUTCOMES: ReadonlyArray<DecisionOutcome> = ["auto_done", "approved", "edited", "rejected"]
+const OUTCOMES: ReadonlyArray<DecisionOutcome> = ["auto_done", "approved", "edited", "rejected", "expired", "completed"]
 const REASONS: ReadonlyArray<GateReason> = [
     "routine",
     "missing_data",

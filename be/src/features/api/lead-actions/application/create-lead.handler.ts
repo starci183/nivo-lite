@@ -7,7 +7,7 @@ import type { Logger } from "@modules/platform/logging"
 import { CreateLeadCommand } from "./create-lead.command"
 
 @CommandHandler(CreateLeadCommand)
-/** Creates a lead through the existing queued lead flow. */
+/** Creates a customer through the core queued capture flow. */
 export class CreateLeadHandler extends ICQRSHandler<CreateLeadCommand, LeadActionQueued> {
     constructor(
         @InjectLogger() logger: Logger,

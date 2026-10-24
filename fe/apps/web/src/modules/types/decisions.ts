@@ -2,9 +2,9 @@
 export type DeciderKind = "policy" | "owner" | "staff"
 
 /** What a decision came out as. */
-export type DecisionOutcome = "auto_done" | "approved" | "edited" | "rejected"
+export type DecisionOutcome = "auto_done" | "approved" | "edited" | "rejected" | "expired" | "completed"
 
-/** The filter of the decision history by who decided. */
+/** The decision history filter by decider or rejected outcome. */
 export type DecisionKind = "policy" | "human" | "rejected"
 
 /** Why the gate asked a person; absent for routine work. */

@@ -1,11 +1,9 @@
 import { Test } from "@nestjs/testing"
 import { fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
 import type { WorkContext } from "@modules/domain/decisions"
-import type { LeadRecordRow } from "@modules/domain/leads"
 import { LeadRecordsService } from "@modules/domain/leads"
 import { ResponsibilityJournalService } from "@modules/domain/responsibilities"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
-import type { WorkspaceMember } from "@modules/domain/workspace-members"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { DomainError, ERRORS_SERVICE } from "@modules/platform/errors"
 import type { ErrorsService } from "@modules/platform/errors"
@@ -17,6 +15,7 @@ import { LeadActionsQueue } from "@modules/queues/lead-actions"
 import type { ErrorKind } from "@modules/platform/errors"
 import type { QueueDelivery } from "@modules/platform/queue"
 import type { ResponsibilityRecord } from "@modules/domain/responsibilities"
+import { memberOf, leadOf } from "@tests/fixtures/builders/lead-actions.builder"
 import { LeadActionsError, LeadActionsErrorCode } from "./errors/lead-actions.error"
 import { LeadActionAiService } from "./lead-action-ai.service"
 import { LeadActionFlowService } from "./lead-action-flow.service"
@@ -57,34 +56,12 @@ const running: LeadActionRunRow = {
     error_code: null,
 }
 
-const member: WorkspaceMember = {
-    userId: "user-1",
-    workspaceId: "ws-1",
-    role: "owner",
-    staffId: null,
-    displayName: "Lan",
-    status: "active",
-}
-
-const lead: LeadRecordRow = {
-    id: LEAD,
-    workspace_id: "ws-1",
-    contact_name: "Lan",
-    company: "Hue Tea",
-    channel: "zalo",
-    need: "tea",
-    stage: "new",
-    context_summary: null,
-    phone: null,
-    email: null,
-}
-
 const build = async (stubs: ReadonlyArray<readonly [string, unknown]> = []) => {
     const tx = fakeTransaction(mockEntityManager({ query: stubs }))
     const members = mock<WorkspaceMembersService>()
-    members.require.mockResolvedValue(member)
+    members.require.mockResolvedValue(memberOf())
     const leads = mock<LeadRecordsService>()
-    leads.require.mockResolvedValue(lead)
+    leads.require.mockResolvedValue(leadOf())
     const locale = mock<RequestLocale>()
     locale.of.mockReturnValue("vi")
     const queue = mock<LeadActionsQueue>()
@@ -147,6 +124,18 @@ const delivery: QueueDelivery = {
 }
 
 describe("LeadActionsService", () => {
+    it("refuses core customer creation by a nonmember before recording or queueing it", async () => {
+        const { actions, members, tx, queue, flow } = await build()
+        const cause = new MembershipError({ code: "MEMBERSHIP_FORBIDDEN" })
+        members.require.mockRejectedValue(cause)
+
+        await expect(actions.request("outsider", "ws-1", "create", createInput, "vi")).rejects.toBe(cause)
+        expect(members.require).toHaveBeenCalledWith("outsider", "ws-1")
+        expect(tx.em.transaction).not.toHaveBeenCalled()
+        expect(queue.enqueue).not.toHaveBeenCalled()
+        expect(flow.create).not.toHaveBeenCalled()
+    })
+
     it("enqueues a validated capture and answers the queued run", async () => {
         const { actions, queue } = await build([[INSERT_LEAD_ACTION, [{ id: "run-1" }]]])
 
@@ -268,7 +257,7 @@ describe("LeadActionsService", () => {
         "proves the lead before enqueueing %s",
         async (action) => {
             const { actions, leads, queue } = await build([[INSERT_LEAD_ACTION, [{ id: "run-1" }]]])
-            leads.require.mockResolvedValue({ ...lead, stage: "won" })
+            leads.require.mockResolvedValue(leadOf({ stage: "won" }))
 
             await expect(actions.request("user-1", "ws-1", action, { leadId: LEAD }, "vi")).resolves.toEqual({
                 id: "run-1",
