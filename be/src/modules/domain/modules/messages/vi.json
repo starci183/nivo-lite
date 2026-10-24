@@ -498,6 +498,7 @@
   "modulesCatalog.video.accepts.render_script.description": "dựng video từ kịch bản được giao, theo bộ nhận diện",
   "errors.MODULES_NOT_FOUND": "Không tìm thấy agent {{key}}.",
   "errors.MODULES_CATALOG_INVALID": "Danh mục agent không hợp lệ: {{problems}}",
+  "errors.MODULES_CATALOG_UNRESOLVED": "Quy tắc mặc định cấp các hành động mà cơ sở dữ liệu không có: {{actions}}",
   "errors.MODULES_INSTANCE_NAME_INVALID": "Tên agent cần từ 1 đến 80 ký tự.",
   "errors.MODULES_INSTANCE_NAME_TAKEN": "Đã có agent cùng loại với tên này.",
   "errors.MODULES_SINGLE_INSTANCE_ONLY": "Loại agent này chỉ có một agent cho mỗi workspace.",

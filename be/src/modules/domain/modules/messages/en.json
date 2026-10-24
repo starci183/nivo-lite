@@ -498,6 +498,7 @@
   "modulesCatalog.video.accepts.render_script.description": "render a delegated video script with the brand kit",
   "errors.MODULES_NOT_FOUND": "The agent {{key}} was not found.",
   "errors.MODULES_CATALOG_INVALID": "The agent catalogue is invalid: {{problems}}",
+  "errors.MODULES_CATALOG_UNRESOLVED": "Default rules grant actions the database does not hold: {{actions}}",
   "errors.MODULES_INSTANCE_NAME_INVALID": "The agent name needs 1 to 80 characters.",
   "errors.MODULES_INSTANCE_NAME_TAKEN": "Another agent of this type already has this name.",
   "errors.MODULES_SINGLE_INSTANCE_ONLY": "This agent type allows one agent per workspace.",

@@ -8,6 +8,8 @@ export enum ModulesErrorCode {
     NotFound = "MODULES_NOT_FOUND",
     /** The catalogue breaks one of its own rules and must not be written to the database. */
     CatalogInvalid = "MODULES_CATALOG_INVALID",
+    /** A default rule grants an action public.authority_actions does not hold: the catalogue was not synced. */
+    CatalogUnresolved = "MODULES_CATALOG_UNRESOLVED",
     /** The name of an instance needs 1 to 80 characters. */
     InstanceNameInvalid = "MODULES_INSTANCE_NAME_INVALID",
     /** Another instance of the type already has this name. */
@@ -53,6 +55,7 @@ export const MODULES_ERROR_KINDS: Record<ModulesErrorCode, ErrorKind> = {
     ...MODULE_CONTEXT_NOTES_ERROR_KINDS,
     [ModulesErrorCode.NotFound]: "not-found",
     [ModulesErrorCode.CatalogInvalid]: "internal",
+    [ModulesErrorCode.CatalogUnresolved]: "internal",
     [ModulesErrorCode.InstanceNameInvalid]: "invalid",
     [ModulesErrorCode.InstanceNameTaken]: "conflict",
     [ModulesErrorCode.SingleInstanceOnly]: "invalid",

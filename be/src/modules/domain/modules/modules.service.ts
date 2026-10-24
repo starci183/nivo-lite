@@ -7,11 +7,12 @@ import type { Clock } from "@modules/platform/clock"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { ModulesError, ModulesErrorCode } from "./errors/modules.error"
 import { InjectModulesOptions } from "./modules.decorators"
-import type { ModuleDefinition, ModulesCatalog, ModulesSyncReport } from "./modules.contracts"
+import type { ModuleDefinition, ModulesCatalog, ModulesOutput, ModulesSyncReport } from "./modules.contracts"
 import type { ModulesOptions } from "./modules.options"
 import type { ModulesRow } from "./persistence/modules.rows"
 import { LIST_MODULE_KEYS, UPSERT_MODULES } from "./persistence/modules.sql"
 import { checkCatalog } from "./policies/catalog.policy"
+import { defaultRulesOf } from "./policies/instance.policy"
 
 const toModuleRecord = (module: ModuleDefinition) => ({
     key: module.key,
@@ -89,5 +90,24 @@ export class ModulesService {
                 staleActions: synced.stale,
             }
         })
+    }
+
+    /**
+     * Syncs the catalogue, then proves every action a module's default rules grant exists in public.authority_actions and
+     * prints `catalogue ok <modules> <actions>`: the deploy runs this so a catalogue that fell behind the code cannot
+     * reach a workspace sheet. An unresolved action is a typed failure, never a printed success.
+     */
+    async ensure(output: ModulesOutput): Promise<void> {
+        const report = await this.sync()
+        const held = new Set((await this.authorityActions.list(this.entityManager)).map((row) => row.action))
+        const wanted = this.options.catalog.flatMap((module) => defaultRulesOf(module).map((rule) => rule.action))
+        const unresolved = [...new Set(wanted.filter((action) => !held.has(action)))]
+        if (unresolved.length > 0) {
+            throw new ModulesError({
+                code: ModulesErrorCode.CatalogUnresolved,
+                params: { actions: unresolved.join(",") },
+            })
+        }
+        output.write(`catalogue ok ${report.modules} ${report.actions}\n`)
     }
 }

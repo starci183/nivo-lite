@@ -2,6 +2,7 @@ import { FakeClock, fakeTransaction, mock, mockEntityManager } from "@starci/jes
 import type { MockEntityManager } from "@starci/jest-preset"
 import { Test } from "@nestjs/testing"
 import { AuthorityActionsService } from "@modules/domain/authority-actions"
+import type { AuthorityActionRecord } from "@modules/domain/authority-actions"
 import { CLOCK } from "@modules/platform/clock"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { ACCOUNTING_MODULE } from "./accounting.contracts"
@@ -189,5 +190,54 @@ describe("ModulesService > sync", () => {
             params: { problems: stringLike("unknown category") },
         })
         expect(entityManager.transaction).not.toHaveBeenCalled()
+    })
+})
+
+describe("ModulesService > ensure", () => {
+    const record = (action: string): AuthorityActionRecord => ({
+        action,
+        module_key: "m",
+        sort_order: 0,
+        default_mode: "ask",
+        default_limit_vnd: null,
+        default_required_fields: [],
+        amount_limit: false,
+        max_mode: null,
+        label: { vi: action, en: action },
+    })
+    const names = ACTIONS.map((action) => action.action)
+
+    it("prints the counts when the database holds every default-rule action", async () => {
+        const { service, authorityActions } = await build({}, syncTransaction().em)
+        authorityActions.upsertAll.mockResolvedValue({ written: ACTIONS.length, stale: [] })
+        authorityActions.list.mockResolvedValue(names.map(record))
+        const output = { write: jest.fn() }
+
+        await service.ensure(output)
+
+        expect(output.write).toHaveBeenCalledWith(`catalogue ok ${KEYS.length} ${ACTIONS.length}\n`)
+    })
+
+    it("fails naming each action a default rule grants that the database lacks, and prints no success", async () => {
+        const { service, authorityActions } = await build({}, syncTransaction().em)
+        authorityActions.upsertAll.mockResolvedValue({ written: ACTIONS.length, stale: [] })
+        const missing = names[0] ?? ""
+        authorityActions.list.mockResolvedValue(names.filter((action) => action !== missing).map(record))
+        const output = { write: jest.fn() }
+
+        await expect(service.ensure(output)).rejects.toMatchObject({
+            code: ModulesErrorCode.CatalogUnresolved,
+            params: { actions: missing },
+        })
+        expect(output.write).not.toHaveBeenCalled()
+    })
+
+    it("rejects with the catalogue error and reads nothing when the catalogue is invalid", async () => {
+        const { service, authorityActions } = await build({ categories: [] })
+
+        await expect(service.ensure({ write: jest.fn() })).rejects.toMatchObject({
+            code: ModulesErrorCode.CatalogInvalid,
+        })
+        expect(authorityActions.list).not.toHaveBeenCalled()
     })
 })

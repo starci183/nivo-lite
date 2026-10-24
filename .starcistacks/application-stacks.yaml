@@ -394,6 +394,12 @@ environments:
             service: nivo-api
             command: [node, be/dist/apps/cli/src/main.js, jobs, watchdog]
             stdout: '^\d+ \d+\r?\n?$'
+          # The stack has no post-deploy task hook, so the deploy syncs the module/action catalogue here: `ensure` upserts it, then fails the
+          # deploy when a default rule names an action public.authority_actions lacks (that broke workspace creation on 2026-10-24).
+          - name: catalogue synced and every default rule resolves
+            service: nivo-api
+            command: [node, be/dist/apps/cli/src/main.js, seed-modules, ensure]
+            stdout: '^catalogue ok \d+ \d+\r?\n?$'
       jobs: {service: nivo-api, command: [node, be/dist/apps/cli/src/main.js, jobs]}
       tasks:
         # The music tracks live in the media bucket (already uploaded); their source files are outside the repository and the image. To seed again,

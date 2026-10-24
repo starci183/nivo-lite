@@ -219,6 +219,12 @@ export interface ModulesCatalog {
     readonly modules: ReadonlyArray<ModuleDefinition>
 }
 
+/** The terminal output supplied by an operator command. */
+export interface ModulesOutput {
+    /** Writes the supplied text without changing its line endings. */
+    write(text: string): unknown
+}
+
 /** What a catalogue sync did. */
 export interface ModulesSyncReport {
     /** How many module rows were upserted. */
