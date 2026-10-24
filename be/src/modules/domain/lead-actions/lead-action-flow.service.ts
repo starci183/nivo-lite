@@ -1,75 +1,84 @@
 import { Injectable } from "@nestjs/common"
-import { AutomationsService } from "@modules/domain/automations"
-import { CommandBusService, WorkEngineService } from "@modules/domain/decisions"
+import { AutomationsService, BusinessEventsService } from "@modules/domain/automations"
+import { WorkEngineService } from "@modules/domain/decisions"
 import type { WorkContext, WorkItem } from "@modules/domain/decisions"
+import { EventsService } from "@modules/domain/events"
 import { InboundEventsService } from "@modules/domain/inbound-events"
 import { LeadRecordsService, contactParts } from "@modules/domain/leads"
 import { ResponsibilityJournalService } from "@modules/domain/responsibilities"
 import { WorkItemsService } from "@modules/domain/work-items"
+import { InjectMessageCatalog } from "@modules/platform/i18n"
+import type { MessageCatalog } from "@modules/platform/i18n"
 import { LeadActionsError, LeadActionsErrorCode } from "./errors/lead-actions.error"
 import type { LeadActionResult } from "./lead-actions.contracts"
 import type { LeadActionRunRow } from "./persistence/lead-actions.rows"
 
 @Injectable()
-/** The existing authority engine's capture, draft and invoice paths, executed by the fenced lead-actions job. */
+/** Core customer creation and the authority engine's draft and invoice paths, executed by the fenced lead-actions job. */
 export class LeadActionFlowService {
     constructor(
         private readonly leads: LeadRecordsService,
         private readonly inbound: InboundEventsService,
-        private readonly commands: CommandBusService,
+        private readonly events: EventsService,
+        private readonly businessEvents: BusinessEventsService,
+        @InjectMessageCatalog() private readonly catalog: MessageCatalog,
         private readonly engine: WorkEngineService,
         private readonly items: WorkItemsService,
         private readonly responsibilities: ResponsibilityJournalService,
         private readonly automations: AutomationsService,
     ) {}
 
-    /** Records manual input, captures through the chatbot gate, then processes this lead's Sales context and owner chain. */
+    /** Creates a customer from the core surface and assigns a follow-up, independently of installed agent modules. */
     async create(ctx: WorkContext, run: LeadActionRunRow): Promise<LeadActionResult> {
         const input = run.input
-        const contact = input.phone?.trim() || input.email?.trim() || null
+        const phone = contactParts(input.phone).phone
+        const email = contactParts(input.email).email
         const event = await this.inbound.recordInput({
             workspaceId: ctx.workspaceId,
             channel: "manual",
             kind: "lead",
             senderName: input.contactName ?? "",
-            senderContact: contact,
+            senderContact: input.phone?.trim() || input.email?.trim() || null,
             body: input.need ?? "",
             externalRef: `${input.channel ?? ""}:${input.company ?? ""}`,
             eventId: run.id,
         })
-        const key = `handoff_lead:inbound:${event.inboundEventId}`
-        const item = await this.commands.sendCommandItem(ctx, {
-            from: "owner",
-            to: "chatbot",
-            command: "handoff_lead",
-            reason: "manual lead",
-            inboundEventId: event.inboundEventId,
-            dedupeKey: key,
-            payload: {
-                subject_type: "inbound",
-                subject_id: event.inboundEventId,
-                contact_name: input.contactName ?? "",
-                company: input.company ?? "",
-                need: input.need ?? "",
-                contact,
-                phone: input.phone ?? null,
-                email: input.email ?? null,
-                channel_label: input.channel ?? "",
-            },
-        })
-        const captured = await this.requireWork(ctx, item, key)
-        const leadId =
-            captured.lead_id ?? (await this.inbound.find(ctx.workspaceId, event.inboundEventId))?.lead_id ?? null
-        if (leadId !== null) {
-            await this.leads.fillContact({
+        const linked = await this.inbound.find(ctx.workspaceId, event.inboundEventId)
+        const known = linked?.lead_id
+            ? await this.leads.require(ctx.workspaceId, linked.lead_id)
+            : await this.leads.match({
+                  workspaceId: ctx.workspaceId,
+                  phone,
+                  email,
+                  name: input.contactName ?? "",
+                  channel: input.channel ?? "",
+              })
+        const lead =
+            known ??
+            (await this.leads.capture({
                 workspaceId: ctx.workspaceId,
-                leadId,
-                phone: contactParts(input.phone).phone,
-                email: contactParts(input.email).email,
+                contactName: input.contactName ?? "",
+                company: input.company ?? "",
+                channel: input.channel ?? "",
+                need: input.need ?? "",
+                phone,
+                email,
+            }))
+        if (known === null) {
+            await this.events.record({
+                workspaceId: ctx.workspaceId,
+                leadId: lead.id,
+                kind: "lead.captured",
+                actor: ctx.actor,
+                summary: this.catalog.get("lead-actions.captured", { channel: lead.channel }, ctx.locale),
             })
+            await this.businessEvents.leadCreated(ctx.workspaceId, lead)
+        } else {
+            await this.leads.fillContact({ workspaceId: ctx.workspaceId, leadId: lead.id, phone, email })
         }
-        if (captured.status === "done") await this.continueCapture(ctx, captured)
-        return { leadId, workItemId: captured.id }
+        await this.inbound.mark(ctx.workspaceId, event.inboundEventId, "processed", lead.id)
+        const responsibility = await this.responsibilities.ensureFor(ctx, lead.id)
+        return { leadId: lead.id, responsibilityId: responsibility.id }
     }
 
     /** Drafts the owning agent's next step through the gate: automatic delivery or the existing approval card. */
@@ -124,17 +133,6 @@ export class LeadActionFlowService {
             },
         })
         return { leadId: lead.id, workItemId: invoice.id }
-    }
-
-    private async continueCapture(ctx: WorkContext, captured: WorkItem): Promise<void> {
-        const classificationKey = `classify_lead:after:${captured.id}`
-        const candidate = await this.items.findByDedupe(ctx.workspaceId, classificationKey)
-        if (candidate === null) return
-        const classified = await this.requireWork(ctx, candidate, classificationKey)
-        if (classified.status !== "done") return
-        const followKey = `send_follow_up:after:${classified.id}`
-        const follow = await this.items.findByDedupe(ctx.workspaceId, followKey)
-        if (follow !== null) await this.requireWork(ctx, follow, followKey)
     }
 
     private async requireWork(ctx: WorkContext, item: WorkItem, key: string): Promise<WorkItem> {

@@ -3,18 +3,28 @@ import type { MockEntityManager } from "@starci/jest-preset"
 import { Test } from "@nestjs/testing"
 import { AgentOwnershipService } from "@modules/domain/agents"
 import { AuthorityRulesService } from "@modules/domain/authority-rules"
-import type { ApprovalSetup } from "@modules/domain/authority-rules"
 import { ModuleCatalogService, WorkEngineService } from "@modules/domain/decisions"
-import type { ActionEntry, WorkItem } from "@modules/domain/decisions"
 import { ThreadAgentPostsService } from "@modules/domain/thread-messages"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { MESSAGE_CATALOG } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
 import { itemOf } from "@tests/fixtures/builders/work-decision.builder"
-import type { ThreadWorkRow, WorkAgentRow } from "./persistence/thread-work.rows"
-import { INSERT_THREAD_WORK, LIST_WORK_AGENTS, UPDATE_THREAD_WORK } from "./persistence/thread-work.sql"
+import {
+    ACCOUNTING_ROW,
+    COMMANDS,
+    DISCOUNT,
+    ENTRIES,
+    PLACE,
+    SETUP,
+    STEP,
+    moved,
+    rowOf,
+    stubsOf,
+    unrelated,
+} from "@tests/fixtures/builders/thread-work-turns.builder"
+import type { Doubles } from "@tests/fixtures/builders/thread-work-turns.builder"
+import { INSERT_THREAD_WORK, UPDATE_THREAD_WORK } from "./persistence/thread-work.sql"
 import { ThreadWorkTurnsService } from "./thread-work-turns.service"
-import type { AgentStep, WorkAgent, WorkPlace } from "./thread-work.contracts"
 
 /** A partial-object matcher, typed `unknown` so it flows into any slot. */
 const objectLike = (shape: Record<string, unknown>): unknown => expect.objectContaining(shape)
@@ -22,85 +32,7 @@ const objectLike = (shape: Record<string, unknown>): unknown => expect.objectCon
 /** The match-anything matcher, typed `unknown` so it flows into any slot. */
 const anything = (): unknown => expect.anything()
 
-const SALES_AI: WorkAgent = { id: "agent-sales", name: "AI Sales", module: "sales", canTag: ["agent-accounting"] }
-const ACCOUNTING_ROW: WorkAgentRow = {
-    id: "agent-accounting",
-    name: "Ke toan AI",
-    module: "accounting",
-    can_tag_agent_ids: [],
-}
-
-const PLACE: WorkPlace = { workspaceId: "ws-1", threadId: "thread-1", workId: "work-1", agent: SALES_AI, locale: "vi" }
-
-const ENTRIES: Readonly<Record<string, ActionEntry>> = {
-    give_discount: {
-        action: "give_discount",
-        moduleKey: "sales",
-        maxMode: null,
-        next: ["issue_invoice", "gone_action"],
-        label: { vi: "Giam gia", en: "Give discount" },
-    },
-    issue_invoice: {
-        action: "issue_invoice",
-        moduleKey: "accounting",
-        maxMode: null,
-        next: [],
-        label: { vi: "Xuat hoa don", en: "Issue invoice" },
-    },
-}
-
-const SETUP: ApprovalSetup = {
-    department: "sales",
-    action: "give_discount",
-    mode: "auto",
-    unit: "percent",
-    auto_max: 3,
-    ask_max: 15,
-    group: { roles: ["manager"], rooms: ["sales"], members: [] },
-    policy: "any",
-    timeout_minutes: 30,
-    agents: [],
-}
-
-const rowOf = (state: ThreadWorkRow["state"]): ThreadWorkRow => ({
-    id: "work-1",
-    workspace_id: "ws-1",
-    thread_id: "thread-1",
-    work_item_id: "item-1",
-    agent_id: "agent-sales",
-    state,
-    approval_request_id: null,
-    waiting_member_id: null,
-    missing_fields: [],
-})
-
-const DISCOUNT: WorkItem = itemOf({
-    action: "give_discount",
-    status: "waiting_decision",
-    reason: "over_authority",
-    proposal: {
-        summary: "Giam 8% cho chi Thao",
-        amount_vnd: 6_440_000,
-        fields: { customer: "Chi Thao", amount_percent: 8 },
-    },
-})
-
-interface Doubles {
-    readonly inserted?: ReadonlyArray<ThreadWorkRow>
-    readonly setup?: ApprovalSetup | null
-    readonly stopped?: "limit" | "loop" | null
-    readonly requestId?: string | null
-}
-
-/** The rows the database double answers for each statement. */
-const stubsOf = (inserted: ReadonlyArray<ThreadWorkRow>) => ({
-    query: [
-        [INSERT_THREAD_WORK, inserted],
-        [LIST_WORK_AGENTS, [ACCOUNTING_ROW]],
-        [UPDATE_THREAD_WORK, []],
-    ] as const,
-})
-
+/** Builds thread turns with explicit kit doubles for every constructor dependency. */
 const build = async (doubles: Doubles = {}) => {
     const em: MockEntityManager = mockEntityManager(stubsOf(doubles.inserted ?? [rowOf("running")]))
     const catalog = mock<MessageCatalog>({
@@ -119,6 +51,7 @@ const build = async (doubles: Doubles = {}) => {
     })
     const modules = mock<ModuleCatalogService>({
         actionOf: jest.fn((action: string) => Promise.resolve(ENTRIES[action] ?? null)),
+        acceptsOf: jest.fn().mockResolvedValue(doubles.commands ?? COMMANDS),
     })
     const rules = mock<AuthorityRulesService>({
         approvalSetup: jest.fn().mockResolvedValue(doubles.setup === undefined ? SETUP : doubles.setup),
@@ -138,26 +71,8 @@ const build = async (doubles: Doubles = {}) => {
             { provide: AgentOwnershipService, useValue: ownership },
         ],
     }).compile()
-    return { service: moduleRef.get(ThreadWorkTurnsService), em, engine, posts }
+    return { service: moduleRef.get(ThreadWorkTurnsService), em, engine, posts, catalog, modules }
 }
-
-const STEP: AgentStep = {
-    workspaceId: "ws-1",
-    threadId: "thread-1",
-    agent: SALES_AI,
-    action: "give_discount",
-    leadId: "lead-thao",
-    seed: { summary: "Giam 8%", amount_vnd: 6_440_000, fields: { customer: "Chi Thao", amount_percent: 8 } },
-    parentId: null,
-    actorName: "Lan",
-}
-
-const moved = (
-    state: string,
-    requestId: string | null = null,
-    memberId: string | null = null,
-    missing: Array<string> = [],
-) => ["ws-1", "work-1", state, requestId, memberId, missing]
 
 const registerRun = () => {
     describe("run", () => {
@@ -322,7 +237,7 @@ const registerDone = () => {
 
             expect(posts.postAsAgent).toHaveBeenCalledWith(
                 objectLike({
-                    body: 'threadWork.handoff|{"done":"Da giam 8%.","next":"Xuat hoa don"}',
+                    body: `threadWork.handoff|${JSON.stringify({ receiver: ACCOUNTING_ROW.name, next: COMMANDS[0]?.description.vi })}`,
                     mentions: [{ kind: "agent", id: "agent-accounting" }],
                     stepTitle: 'threadWork.handoffStep|{"next":"Xuat hoa don"}',
                 }),
@@ -362,6 +277,58 @@ const registerDone = () => {
                         amount_vnd: null,
                     }),
                 }),
+            )
+        })
+    })
+}
+
+const registerHandoffCopy = () => {
+    describe("ThreadWorkTurnsService hand-off copy", () => {
+        it.each(["vi", "en"] as const)("names the receiver and uses the catalog reason in %s", async (locale) => {
+            const { service, posts, catalog, modules } = await build({ commands: [unrelated, ...COMMANDS] })
+            const description = COMMANDS.find((command) => command.action === "issue_invoice")?.description[locale]
+            expect(description).toBeDefined()
+
+            await service.react(
+                { ...PLACE, locale },
+                itemOf({ action: "give_discount", status: "done", result: { summary: "engine.recordOnly" } }),
+            )
+
+            const params = { receiver: ACCOUNTING_ROW.name, next: description }
+            expect(modules.acceptsOf).toHaveBeenCalledWith("accounting")
+            expect(catalog.get).toHaveBeenCalledWith("threadWork.handoff", params, locale)
+            expect(catalog.get).toHaveBeenCalledWith(
+                "threadWork.handoffStep",
+                { next: locale === "en" ? "Issue invoice" : "Xuat hoa don" },
+                locale,
+            )
+            expect(posts.postAsAgent).toHaveBeenCalledWith(
+                objectLike({
+                    body: `threadWork.handoff|${JSON.stringify(params)}`,
+                    mentions: [{ kind: "agent", id: ACCOUNTING_ROW.id }],
+                    locale,
+                }),
+            )
+        })
+
+        it.each([
+            { label: "absent", commands: [] },
+            {
+                label: "blank",
+                commands: [{ ...unrelated, action: "issue_invoice", description: { vi: " ", en: " " } }],
+            },
+        ])("uses a localized action when the catalog reason is $label", async ({ commands }) => {
+            const { service, posts, catalog } = await build({ commands })
+
+            await service.react({ ...PLACE, locale: "en" }, itemOf({ action: "give_discount", status: "done" }))
+
+            expect(catalog.get).toHaveBeenCalledWith("threadWork.handoffFallback", { action: "Issue invoice" }, "en")
+            const params = {
+                receiver: ACCOUNTING_ROW.name,
+                next: 'threadWork.handoffFallback|{"action":"Issue invoice"}',
+            }
+            expect(posts.postAsAgent).toHaveBeenCalledWith(
+                objectLike({ body: `threadWork.handoff|${JSON.stringify(params)}` }),
             )
         })
     })
@@ -484,6 +451,7 @@ describe("ThreadWorkTurnsService", () => {
     registerAsk()
     registerMemberAsk()
     registerDone()
+    registerHandoffCopy()
     registerHandOffEnds()
     registerStop()
 })

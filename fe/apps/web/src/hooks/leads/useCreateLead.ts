@@ -9,7 +9,7 @@ interface NewLeadInput {
     readonly need: string
 }
 
-/** Captures a lead: queues the creation and observes its job; `result.leadId` appears once the lead exists. */
+/** Creates a customer and their follow-up through the core queued flow; `result.leadId` appears once they exist. */
 export const useCreateLead = () => {
     const action = useLeadAction()
     const mutation = useMutateCreateLeadSwr()
