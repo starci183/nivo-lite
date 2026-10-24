@@ -22,7 +22,9 @@ import {
 import { RATE_LIMIT_PROOF_MODULES, sharedRateLimitStore } from "../../world/rate-limit-proof.module"
 import { useTestWorld } from "../../world/use-test-world"
 
-class Door {}
+class Door {
+    readonly purpose = "a controller class the rate-limit guard reads its tier from"
+}
 
 const defaultHandler = (): void => undefined
 const strictHandler = (): void => undefined

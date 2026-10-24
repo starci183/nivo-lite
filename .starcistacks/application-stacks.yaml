@@ -459,6 +459,8 @@ environments:
 # Release gates for `starci app release gate`. The landing reads its public origins at build time (next.config redirects), so
 # build-fe gets the production public URLs; they are the same values as the image build arguments, none of them is a secret.
 release:
+  # 0.3.4 was never released on its own (0.3.5 carries it), so the tag follows the package version instead of the first free patch.
+  tagMatchesVersion: true
   gates:
     - {name: app-check, command: [npx, starci, app, check]}
     - {name: typecheck, command: [npm, run, typecheck]}

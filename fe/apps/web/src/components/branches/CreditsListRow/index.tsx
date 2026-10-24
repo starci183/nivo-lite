@@ -33,7 +33,7 @@ export const CreditsListRow = (props: CreditsListRowProps) => {
                         isPending={row.purchase.pending}
                         isDisabled={row.purchase.disabled}
                         isSkeleton={row.isSkeleton}
-                        {...(props.on?.purchase === undefined ? {} : { onPress: props.on.purchase })}
+                        {...(props.on?.purchase !== undefined && { onPress: props.on.purchase })}
                     >
                         {row.purchase.label}
                     </Button>

@@ -58,7 +58,7 @@ export const LoginFormBase = (props: LoginFormBaseProps) => {
                     title={view.failedTitle}
                     description={view.error}
                     tone="negative"
-                    {...(view.canResend ? { action: { label: view.resendLabel, onAction: props.on.resend } } : {})}
+                    {...(view.canResend && { action: { label: view.resendLabel, onAction: props.on.resend } })}
                 />
             )}
             <div className={LOGIN_ACTIONS_CLASS_NAME}>

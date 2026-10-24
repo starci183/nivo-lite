@@ -41,7 +41,7 @@ export const IconGlyph = (props: IconGlyphProps) =>
     ) : (
         <GrammarIcon
             source={iconGlyphOf(props.name)}
-            {...(props.usage === undefined ? {} : { usage: props.usage })}
-            {...(props.ariaLabel === undefined ? {} : { ariaLabel: props.ariaLabel })}
+            {...(props.usage !== undefined && { usage: props.usage })}
+            {...(props.ariaLabel !== undefined && { ariaLabel: props.ariaLabel })}
         />
     )

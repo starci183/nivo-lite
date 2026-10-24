@@ -72,7 +72,7 @@ export const ActionList = (props: ActionListProps) =>
                         key={item.id}
                         variant={item.variant ?? "outline"}
                         isPending={props.isPending}
-                        {...(item.onPress === undefined ? {} : { onPress: item.onPress })}
+                        {...(item.onPress !== undefined && { onPress: item.onPress })}
                     >
                         {item.label}
                     </Button>
