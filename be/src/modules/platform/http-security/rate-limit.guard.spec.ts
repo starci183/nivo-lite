@@ -1,9 +1,10 @@
 import type { ExecutionContext } from "@nestjs/common"
 import { Reflector } from "@nestjs/core"
 import { Test } from "@nestjs/testing"
-import { builder, FakeClock, mock } from "@starci/jest-preset"
+import { builder, mock } from "@starci/jest-preset"
 import type { Request } from "express"
-import { CLOCK } from "@modules/platform/clock"
+import { RATE_LIMIT_STORE } from "@modules/platform/database"
+import type { RateLimitStore } from "@modules/platform/database"
 import { HttpSecurityErrorCode } from "./errors/http-security.error"
 import { HTTP_SECURITY_OPTIONS } from "./http-security.decorators"
 import type { HttpSecurityOptions } from "./http-security.options"
@@ -23,7 +24,6 @@ const strictHandler = (): void => undefined
 RateLimit(RateTier.Strict)(strictHandler)
 
 const build = async (handler = defaultHandler) => {
-    const clock = new FakeClock("2026-10-01T00:00:00.000Z")
     let ip: string | undefined = "127.0.0.1"
     const callFrom = (address: string | undefined): void => {
         ip = address
@@ -34,89 +34,66 @@ const build = async (handler = defaultHandler) => {
     context.getHandler.mockReturnValue(handler)
     context.getClass.mockReturnValue(Door)
     context.switchToHttp.mockReturnValue(http)
+    const store = mock<RateLimitStore>()
+    store.consume.mockResolvedValue(true)
     const moduleRef = await Test.createTestingModule({
         providers: [
             RateLimitGuard,
             Reflector,
-            { provide: CLOCK, useValue: clock },
+            { provide: RATE_LIMIT_STORE, useValue: store },
             { provide: HTTP_SECURITY_OPTIONS, useValue: builder<HttpSecurityOptions>(OPTIONS)() },
         ],
     }).compile()
-    return { guard: moduleRef.get(RateLimitGuard), context, clock, callFrom }
-}
-
-const refusalOf = (action: () => boolean): unknown => {
-    try {
-        return action()
-    } catch (error) {
-        return error
-    }
+    return { guard: moduleRef.get(RateLimitGuard), context, store, callFrom }
 }
 
 describe("RateLimitGuard", () => {
-    it("lets a caller through up to the default limit of the window and refuses the next request", async () => {
-        const { guard, context } = await build()
+    it("counts the caller in the shared store with the existing default tier and window", async () => {
+        const { guard, context, store } = await build()
 
-        expect([guard.canActivate(context), guard.canActivate(context), guard.canActivate(context)]).toEqual([
-            true,
-            true,
-            true,
-        ])
-        expect(refusalOf(() => guard.canActivate(context))).toMatchObject({
-            code: HttpSecurityErrorCode.RateLimited,
-        })
+        await expect(guard.canActivate(context)).resolves.toBe(true)
+
+        expect(store.consume.mock.calls).toEqual([["default:127.0.0.1", 60_000, 3]])
     })
 
     it("applies the strict limit to a door marked strict", async () => {
-        const { guard, context } = await build(strictHandler)
+        const { guard, context, store } = await build(strictHandler)
 
-        expect(guard.canActivate(context)).toBe(true)
-        expect(refusalOf(() => guard.canActivate(context))).toMatchObject({
-            code: HttpSecurityErrorCode.RateLimited,
-        })
+        await expect(guard.canActivate(context)).resolves.toBe(true)
+
+        expect(store.consume.mock.calls).toEqual([["strict:127.0.0.1", 60_000, 1]])
     })
 
-    it("counts each caller address on its own, an absent address as one unknown caller", async () => {
-        const { guard, context, callFrom } = await build()
-        for (let request = 0; request < 3; request += 1) guard.canActivate(context)
+    it("uses each caller address on its own and one unknown bucket for absent addresses", async () => {
+        const { guard, context, store, callFrom } = await build()
 
+        await guard.canActivate(context)
         callFrom("10.0.0.2")
-        expect(guard.canActivate(context)).toBe(true)
+        await guard.canActivate(context)
         callFrom(undefined)
-        expect([guard.canActivate(context), guard.canActivate(context), guard.canActivate(context)]).toEqual([
-            true,
-            true,
-            true,
+        await guard.canActivate(context)
+
+        expect(store.consume.mock.calls).toEqual([
+            ["default:127.0.0.1", 60_000, 3],
+            ["default:10.0.0.2", 60_000, 3],
+            ["default:unknown", 60_000, 3],
         ])
-        expect(refusalOf(() => guard.canActivate(context))).toMatchObject({
+    })
+
+    it("refuses an exhausted shared bucket with the existing error code", async () => {
+        const { guard, context, store } = await build()
+        store.consume.mockResolvedValue(false)
+
+        await expect(guard.canActivate(context)).rejects.toMatchObject({
             code: HttpSecurityErrorCode.RateLimited,
         })
     })
 
-    it("starts a new window once the previous one has ended", async () => {
-        const { guard, context, clock } = await build()
-        for (let request = 0; request < 3; request += 1) guard.canActivate(context)
+    it("propagates a store failure without admitting the request", async () => {
+        const { guard, context, store } = await build()
+        const failure = new Error("database unavailable")
+        store.consume.mockRejectedValue(failure)
 
-        clock.advance(60_000)
-
-        expect(guard.canActivate(context)).toBe(true)
-    })
-
-    it("prunes ended windows when the table is full and keeps counting live ones", async () => {
-        const { guard, context, clock, callFrom } = await build()
-        for (let request = 0; request < 3; request += 1) guard.canActivate(context)
-        clock.advance(60_000)
-        for (let address = 0; address < 10_000; address += 1) {
-            callFrom(`10.1.${Math.floor(address / 256)}.${address % 256}`)
-            guard.canActivate(context)
-        }
-
-        callFrom("10.1.0.0")
-        expect([guard.canActivate(context), guard.canActivate(context)]).toEqual([true, true])
-        expect(refusalOf(() => guard.canActivate(context))).toMatchObject({
-            code: HttpSecurityErrorCode.RateLimited,
-        })
-        callFrom("127.0.0.1")
-        expect(guard.canActivate(context)).toBe(true)
+        await expect(guard.canActivate(context)).rejects.toBe(failure)
     })
 })
