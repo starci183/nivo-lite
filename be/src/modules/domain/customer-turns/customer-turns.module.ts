@@ -2,6 +2,7 @@ import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
 import { AgentKnowledgeModule } from "@modules/domain/agent-knowledge"
 import { ConversationOwnershipEventsModule } from "@modules/domain/conversation-ownership-events"
+import { INBOX, InboxService } from "@modules/platform/inbox"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./customer-turns.module-definition"
 import { PaymentClaimsService } from "./payment-claims.service"
 import { StaffEscalationService } from "./staff-escalation.service"
@@ -42,7 +43,7 @@ export class CustomerTurnsModule extends ConfigurableModuleClass {
         return {
             ...base,
             imports: [...(base.imports ?? []), knowledge, ConversationOwnershipEventsModule.register({})],
-            providers: [...(base.providers ?? []), ...services],
+            providers: [...(base.providers ?? []), { provide: INBOX, useClass: InboxService }, ...services],
             exports: [...services, knowledge],
         }
     }

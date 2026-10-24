@@ -10,6 +10,7 @@ import { MESSAGES_MESSAGES } from "@modules/domain/messages"
 import { OFFICE_ROOMS_MESSAGES } from "@modules/domain/office-rooms"
 import { GATEWAY_TURNS_MESSAGES } from "@modules/domain/customer-turns"
 import { MCP_GATEWAY_MESSAGES } from "@modules/domain/mcp-gateway"
+import { MCP_GATEWAY_RECEIPTS_MESSAGES } from "@modules/domain/mcp-gateway-receipts"
 import { MCP_MESSAGES } from "@modules/integrations/mcp"
 import { AGENT_PROFILE_MESSAGES } from "@modules/domain/agent-profile"
 import { WORK_CHAINS_MESSAGES } from "@modules/domain/work-chains"
@@ -31,6 +32,7 @@ export const API_MESSAGES_4 = [
     OFFICE_ROOMS_MESSAGES,
     MCP_MESSAGES,
     MCP_GATEWAY_MESSAGES,
+    MCP_GATEWAY_RECEIPTS_MESSAGES,
     GATEWAY_TURNS_MESSAGES,
     CONTENT_AGENT_MESSAGES,
     AGENT_PROFILE_MESSAGES,

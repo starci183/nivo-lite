@@ -8,6 +8,7 @@ import { MemberGrantsModule } from "@modules/domain/member-grants"
 import { ResponsibilitiesModule } from "@modules/domain/responsibilities"
 import { WorkItemsModule } from "@modules/domain/work-items"
 import { DecisionsQueueModule } from "@modules/queues/decisions"
+import { INBOX, InboxService } from "@modules/platform/inbox"
 import { AuthorityGrantsService } from "./authority-grants.service"
 import { DecisionJobsService } from "./decision-jobs.service"
 import { ApprovalRequesterService } from "./approval-requester.service"
@@ -61,6 +62,7 @@ export class DecisionsModule extends ConfigurableModuleClass {
             imports: [...(base.imports ?? []), ...owners, DecisionsQueueModule.register({})],
             providers: [
                 ...(base.providers ?? []),
+                { provide: INBOX, useClass: InboxService },
                 { provide: WORK_PERFORMER_REGISTRY, useExisting: WorkPerformersService },
                 { provide: AGENT_DIRECTORY, useExisting: options.ports.agentDirectory },
                 { provide: INBOUND_EVENT_STATUS, useClass: options.ports.inboundEventStatus },

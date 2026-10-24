@@ -14,8 +14,9 @@ export interface Inbox {
     /**
      * Claims one delivery. True when this pair is new; false when it was already claimed.
      * `source` names the door, `eventId` is the sender's id of the delivery.
+     * A supplied manager keeps the claim in the same transaction as the domain action.
      */
-    claim(source: string, eventId: string): Promise<boolean>
+    claim(source: string, eventId: string, manager?: EntityManager): Promise<boolean>
     /** Persists a provider receipt in the same transaction as its outbox publication. */
     claim(source: string, eventId: string, manager: EntityManager, receipt: InboxReceipt): Promise<boolean>
 }

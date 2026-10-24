@@ -50,6 +50,20 @@ const build = async (entityManager: MockEntityManager, departmentAgent: Optional
 }
 
 describe("OfficeCardsService", () => {
+    it("stores a card through its caller's transaction without using the primary manager", async () => {
+        const primary = mockEntityManager()
+        const manager = mockEntityManager({ query: [INSERT_CARD_MESSAGE, [{ id: "m-1", room: "sales" }]] })
+        const { service } = await build(primary)
+
+        await expect(service.post({ workspaceId: "ws-1" }, line(), manager)).resolves.toEqual({
+            id: "m-1",
+            room: "sales",
+        })
+
+        expect(manager.query).toHaveBeenCalledWith(INSERT_CARD_MESSAGE, expect.any(Array))
+        expect(primary.query).not.toHaveBeenCalled()
+    })
+
     it("stores a valid card as the agent's line and answers where it landed", async () => {
         const em = mockEntityManager({ query: [INSERT_CARD_MESSAGE, [{ id: "m-1", room: "sales" }]] })
         const { service } = await build(em)

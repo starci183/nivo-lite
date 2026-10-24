@@ -11,8 +11,6 @@ import { AgentSyncService } from "@modules/domain/openclaw-agent-sync"
 import { authorityBrief } from "@modules/integrations/deepseek"
 import { InjectOpenclawAgentRegistry, InjectOpenclawGateway } from "@modules/integrations/openclaw"
 import type { AgentRegistryService, GatewayClient } from "@modules/integrations/openclaw"
-import { InjectClock } from "@modules/platform/clock"
-import type { Clock } from "@modules/platform/clock"
 import { InjectMessageCatalog } from "@modules/platform/i18n"
 import type { Locale, MessageCatalog } from "@modules/platform/i18n"
 import { InjectLogger } from "@modules/platform/logging"
@@ -75,7 +73,6 @@ export class CustomerTurnRuntimeService implements ChatTurnRuntime {
         @InjectOpenclawAgentRegistry() registry: AgentRegistryService,
         @InjectInstallations() private readonly installations: InstallationDirectory,
         @InjectMessageCatalog() private readonly catalog: MessageCatalog,
-        @InjectClock() clock: Clock,
         @InjectLogger() private readonly logger: Logger,
         sync: AgentSyncService,
         private readonly usage: UsageGateService,
@@ -88,7 +85,7 @@ export class CustomerTurnRuntimeService implements ChatTurnRuntime {
         private readonly connectors: GatewayContextService,
         private readonly access: TurnToolAccessService,
     ) {
-        this.turnGateway = new CustomerTurnGatewayService(gateway, registry, sync, clock, this.logger)
+        this.turnGateway = new CustomerTurnGatewayService(gateway, registry, sync, this.logger)
     }
 
     /** Proposes the reply of one turn, or answers why it could not. */

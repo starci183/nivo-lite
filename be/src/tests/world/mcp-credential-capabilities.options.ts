@@ -8,6 +8,7 @@ import {
 import { EventsModule } from "@modules/domain/events"
 import { IDENTITY_ERROR_KINDS, IDENTITY_MESSAGES, IdentityModule } from "@modules/domain/identity"
 import { MCP_GATEWAY_ERROR_KINDS, MCP_GATEWAY_MESSAGES, McpGatewayModule } from "@modules/domain/mcp-gateway"
+import { MCP_GATEWAY_RECEIPTS_ERROR_KINDS, MCP_GATEWAY_RECEIPTS_MESSAGES } from "@modules/domain/mcp-gateway-receipts"
 import { TRANSACTIONS_ERROR_KINDS, TRANSACTIONS_MESSAGES, TransactionsModule } from "@modules/domain/transactions"
 import { MCP_ERROR_KINDS, MCP_MESSAGES } from "@modules/integrations/mcp"
 import { refuseSupabaseSessions } from "@modules/integrations/supabase"
@@ -29,6 +30,7 @@ export const MCP_CREDENTIAL_MODULES = [
             ERRORS_MESSAGES,
             IDENTITY_MESSAGES,
             MCP_GATEWAY_MESSAGES,
+            MCP_GATEWAY_RECEIPTS_MESSAGES,
             MCP_MESSAGES,
             TRANSACTIONS_MESSAGES,
         ],
@@ -40,6 +42,7 @@ export const MCP_CREDENTIAL_MODULES = [
             CONNECTION_SECRETS_ERROR_KINDS,
             IDENTITY_ERROR_KINDS,
             MCP_GATEWAY_ERROR_KINDS,
+            MCP_GATEWAY_RECEIPTS_ERROR_KINDS,
             MCP_ERROR_KINDS,
             TRANSACTIONS_ERROR_KINDS,
         ],

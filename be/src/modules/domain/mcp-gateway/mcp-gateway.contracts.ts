@@ -1,17 +1,14 @@
 import type { ConnectionActor } from "@modules/domain/connections"
 import type { CredentialState } from "@modules/domain/mcp-connectors"
+import type { GatewayApprovalReason, GatewayJson } from "@modules/domain/mcp-gateway-receipts"
 import type { ArgConstraint, GrantMode } from "@modules/domain/mcp-tool-grants"
 import type { Secret } from "@modules/platform/config"
 import type { McpRpcResponse } from "@modules/integrations/mcp"
 
+export type { GatewayCallResult, GatewayJson } from "@modules/domain/mcp-gateway-receipts"
+
 /** What a tool does to the connected system. */
 export type ToolScope = "read" | "write" | "restricted"
-
-/** A JSON object argument or result of a gateway tool. */
-export interface GatewayJson {
-    /** Any member. */
-    readonly [member: string]: unknown
-}
 
 /** One tool of a connector, without the namespace. */
 export interface GatewayToolSpec {
@@ -163,31 +160,11 @@ export interface GatewayCaller {
     readonly opKey?: string | undefined
 }
 
-/** Why a call needs a person. */
-export type ApprovalReason = "ask_mode" | "over_constraint" | "over_limit_vnd" | "no_rule"
-
 /** What the grant check decided for one call. */
 export type GrantVerdict =
     | { readonly kind: "allow" }
     | { readonly kind: "refuse" }
-    | { readonly kind: "approval"; readonly reason: ApprovalReason }
-
-/** Why a call did not produce a result. */
-export type GatewayFailure =
-    | "invalid_name"
-    | "unknown_tool"
-    | "connector_disabled"
-    | "schema_unapproved"
-    | "not_granted"
-    | "unavailable"
-    | "tool_error"
-    | "unknown_outcome"
-
-/** The answer of one gateway call. */
-export type GatewayCallResult =
-    | { readonly ok: true; readonly value: GatewayJson }
-    | { readonly ok: false; readonly code: "approval_required"; readonly reason: ApprovalReason }
-    | { readonly ok: false; readonly code: GatewayFailure; readonly detail: string }
+    | { readonly kind: "approval"; readonly reason: GatewayApprovalReason }
 
 /** One tool the discovery answers. */
 export interface DiscoveredTool {

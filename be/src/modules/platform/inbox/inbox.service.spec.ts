@@ -26,6 +26,21 @@ describe("InboxService", () => {
         await expect(inbox.claim("zalo", "evt-1")).resolves.toBe(false)
     })
 
+    it("claims a domain action through its transaction instead of the primary manager", async () => {
+        const { inbox, manager } = await build()
+        const transaction = mockEntityManager({ query: [INSERT_INBOX_CLAIM, [{ delivery_id: "hold-1" }]] })
+        await expect(inbox.claim("work.held", "hold-1", transaction)).resolves.toBe(true)
+        expect(transaction.query).toHaveBeenCalledWith(INSERT_INBOX_CLAIM, ["work.held", "hold-1"])
+        expect(manager.query).not.toHaveBeenCalled()
+    })
+
+    it("refuses a domain action already claimed in the caller transaction", async () => {
+        const { inbox, manager } = await build()
+        const transaction = mockEntityManager({ query: [INSERT_INBOX_CLAIM, []] })
+        await expect(inbox.claim("work.held", "hold-1", transaction)).resolves.toBe(false)
+        expect(manager.query).not.toHaveBeenCalled()
+    })
+
     it.each([
         ["", "evt-1"],
         ["zalo", ""],
@@ -53,9 +68,8 @@ describe("InboxService", () => {
         ).resolves.toBe(false)
     })
 
-    it("requires both a transaction and a receipt for provider intake", async () => {
+    it("requires a transaction for a provider receipt", async () => {
         const { inbox, manager } = await build()
-        await expect(inbox.claim("zalo", "evt-1", manager)).resolves.toBe(false)
         await expect(
             inbox.claim("zalo", "evt-1", undefined, { insert: INSERT_INBOX_CLAIM, payload: {} }),
         ).resolves.toBe(false)

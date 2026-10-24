@@ -1,6 +1,9 @@
 import { Test } from "@nestjs/testing"
-import { mock } from "@starci/jest-preset"
+import { fakeInbox, fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
+import { isTransactionManager } from "@starci/jest-preset/entity-manager"
 import { OfficeCardsService } from "@modules/domain/messages"
+import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
+import { INBOX } from "@modules/platform/inbox"
 import type { HubNote } from "./gateway-turns.contracts"
 import { HubNotesService, noteBodyOf, noteCardOf, toolSourcesOf } from "./hub-notes.service"
 
@@ -19,13 +22,70 @@ const NOTE: HubNote = {
 
 const build = async () => {
     const cards = mock<OfficeCardsService>({ post: jest.fn().mockResolvedValue({ id: "m1", room: "sales" }) })
+    const tx = fakeTransaction(mockEntityManager())
+    const inbox = fakeInbox()
+    const claim = jest.spyOn(inbox, "claim")
     const moduleRef = await Test.createTestingModule({
-        providers: [HubNotesService, { provide: OfficeCardsService, useValue: cards }],
+        providers: [
+            HubNotesService,
+            { provide: OfficeCardsService, useValue: cards },
+            { provide: PRIMARY_ENTITY_MANAGER, useValue: tx.em },
+            { provide: INBOX, useValue: inbox },
+        ],
     }).compile()
-    return { service: moduleRef.get(HubNotesService), cards }
+    return { service: moduleRef.get(HubNotesService), cards, tx, claim }
 }
 
-describe("HubNotesService", () => {
+describe("HubNotesService.postOnce", () => {
+    it("posts a retried connector result only once with its claim and card in the same transaction", async () => {
+        const { service, cards, tx, claim } = await build()
+        const refs = { leadId: "l1", workItemId: null }
+
+        await service.postOnce(NOTE, "agent-1", refs, "message-1:hakuen.booking.hold:args")
+        await service.postOnce(NOTE, "agent-1", refs, "message-1:hakuen.booking.hold:args")
+
+        expect(cards.post).toHaveBeenCalledTimes(1)
+        const manager = cards.post.mock.calls[0]?.[2]
+        expect(isTransactionManager(manager)).toBe(true)
+        expect(claim).toHaveBeenNthCalledWith(
+            1,
+            "hub.note",
+            JSON.stringify(["ws", "message-1:hakuen.booking.hold:args"]),
+            manager,
+        )
+        expect(tx.commits).toBe(2)
+    })
+
+    it("keeps separate operation and workspace notes separate", async () => {
+        const { service, cards } = await build()
+        const refs = { leadId: null, workItemId: null }
+
+        await service.postOnce(NOTE, "agent-1", refs, "operation-1")
+        await service.postOnce(NOTE, "agent-1", refs, "operation-2")
+        await service.postOnce({ ...NOTE, workspaceId: "other" }, "agent-1", refs, "operation-1")
+
+        expect(cards.post).toHaveBeenCalledTimes(3)
+    })
+
+    it("rolls the claim back when the card cannot be posted and permits the delivery to retry", async () => {
+        const { service, cards, tx, claim } = await build()
+        const failure = new Error("card insert failed")
+        cards.post.mockRejectedValueOnce(failure)
+
+        await expect(service.postOnce(NOTE, "agent-1", { leadId: null, workItemId: null }, "operation-1")).rejects.toBe(
+            failure,
+        )
+        expect(tx.rollbacks).toBe(1)
+        claim.mockResolvedValueOnce(true)
+
+        await service.postOnce(NOTE, "agent-1", { leadId: null, workItemId: null }, "operation-1")
+
+        expect(cards.post).toHaveBeenCalledTimes(2)
+        expect(tx.commits).toBe(1)
+    })
+})
+
+describe("HubNotesService.post", () => {
     it("posts the note as a v1 card spoken by the agent in its room, each tool source once", async () => {
         const { service, cards } = await build()
 
@@ -75,7 +135,9 @@ describe("HubNotesService", () => {
         expect(noteBodyOf(bare)).toBe("Held")
         expect(noteCardOf({ ...bare, body: "  details  " })).toMatchObject({ body: "details" })
     })
+})
 
+describe("HubNotesService card limits", () => {
     it("clips every text to the card contract's limits and keeps a source link", () => {
         const long = "x".repeat(5000)
         const card = noteCardOf({

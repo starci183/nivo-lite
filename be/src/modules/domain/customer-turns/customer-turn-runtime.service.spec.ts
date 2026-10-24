@@ -1,5 +1,5 @@
 import { Test } from "@nestjs/testing"
-import { FakeClock, mock } from "@starci/jest-preset"
+import { mock } from "@starci/jest-preset"
 import type { InstallationDirectory } from "@modules/domain/agents"
 import type { AgentRegistryService, GatewayClient } from "@modules/integrations/openclaw"
 import type { Logger } from "@modules/platform/logging"
@@ -11,7 +11,6 @@ import { HiringPublicService } from "@modules/domain/hiring"
 import { ModuleReadinessService } from "@modules/domain/modules"
 import { AgentSyncService } from "@modules/domain/openclaw-agent-sync"
 import { OPENCLAW_AGENT_REGISTRY, OPENCLAW_GATEWAY } from "@modules/integrations/openclaw"
-import { CLOCK } from "@modules/platform/clock"
 import { MESSAGE_CATALOG } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
 import { LOGGER } from "@modules/platform/logging"
@@ -86,7 +85,6 @@ const build = async (options: RuntimeBuildOptions = {}) => {
             { provide: OPENCLAW_AGENT_REGISTRY, useValue: registry },
             { provide: AGENTS_INSTALLATIONS, useValue: installations },
             { provide: MESSAGE_CATALOG, useValue: catalog },
-            { provide: CLOCK, useValue: new FakeClock("2026-10-13T10:00:00.000Z") },
             { provide: LOGGER, useValue: logger },
             { provide: AgentSyncService, useValue: sync },
             { provide: UsageGateService, useValue: usage },

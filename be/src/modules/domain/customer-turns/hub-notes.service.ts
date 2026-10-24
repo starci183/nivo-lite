@@ -1,5 +1,10 @@
 import { Injectable } from "@nestjs/common"
+import type { EntityManager } from "typeorm"
 import { isOfficeRoomKey, OfficeCardsService } from "@modules/domain/messages"
+import type { OfficeCardPost } from "@modules/domain/messages"
+import { InjectPrimaryEntityManager } from "@modules/platform/database"
+import { InjectInbox } from "@modules/platform/inbox"
+import type { Inbox } from "@modules/platform/inbox"
 import type { HubNote, HubNoteSource } from "./gateway-turns.contracts"
 
 /** What a note line refers to. */
@@ -68,21 +73,34 @@ export const noteCardOf = (note: HubNote): Readonly<Record<string, unknown>> => 
  * what the turn actually used.
  */
 export class HubNotesService {
-    constructor(private readonly cards: OfficeCardsService) {}
+    constructor(
+        private readonly cards: OfficeCardsService,
+        @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
+        @InjectInbox() private readonly inbox: Inbox,
+    ) {}
 
     /** Posts one note as an agent of the workspace. */
     async post(note: HubNote, agentId: string, refs: NoteRefs): Promise<void> {
-        await this.cards.post(
-            { workspaceId: note.workspaceId },
-            {
-                room: isOfficeRoomKey(note.room) ? note.room : null,
-                agentId,
-                authorName: note.authorName,
-                body: noteBodyOf(note),
-                leadId: refs.leadId,
-                workItemId: refs.workItemId,
-                card: noteCardOf(note),
-            },
-        )
+        await this.cards.post({ workspaceId: note.workspaceId }, this.lineOf(note, agentId, refs))
+    }
+
+    /** Posts a retried operation's note once, with the inbox claim and card in the same transaction. */
+    async postOnce(note: HubNote, agentId: string, refs: NoteRefs, key: string): Promise<void> {
+        await this.entityManager.transaction(async (manager) => {
+            if (!(await this.inbox.claim("hub.note", JSON.stringify([note.workspaceId, key]), manager))) return
+            await this.cards.post({ workspaceId: note.workspaceId }, this.lineOf(note, agentId, refs), manager)
+        })
+    }
+
+    private lineOf(note: HubNote, agentId: string, refs: NoteRefs): OfficeCardPost {
+        return {
+            room: isOfficeRoomKey(note.room) ? note.room : null,
+            agentId,
+            authorName: note.authorName,
+            body: noteBodyOf(note),
+            leadId: refs.leadId,
+            workItemId: refs.workItemId,
+            card: noteCardOf(note),
+        }
     }
 }

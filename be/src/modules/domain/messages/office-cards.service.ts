@@ -63,12 +63,16 @@ export class OfficeCardsService {
     }
 
     /** Validates the payload against the card contract and stores the line; a broken payload is refused with its reason. */
-    async post(ctx: MessagesScope, line: OfficeCardPost): Promise<PostedCard> {
+    async post(
+        ctx: MessagesScope,
+        line: OfficeCardPost,
+        manager: EntityManager = this.entityManager,
+    ): Promise<PostedCard> {
         const parsed = parseOfficeCard(line.card)
         if (!parsed.ok)
             throw new MessagesError({ code: MessagesErrorCode.CardInvalid, params: { reason: parsed.reason } })
         const body = line.body.trim() === "" ? parsed.card.title : line.body.trim()
-        const [row] = await this.entityManager.query<Array<PostedCard>>(INSERT_CARD_MESSAGE, [
+        const [row] = await manager.query<Array<PostedCard>>(INSERT_CARD_MESSAGE, [
             ctx.workspaceId,
             line.agentId === null ? "system" : "agent",
             line.authorName,

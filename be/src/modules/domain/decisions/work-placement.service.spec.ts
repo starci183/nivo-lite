@@ -1,16 +1,22 @@
-import { FakeClock, builder, mock } from "@starci/jest-preset"
+import { FakeClock, builder, fakeInbox, fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
 import { Test } from "@nestjs/testing"
+import { isTransactionManager } from "@starci/jest-preset/entity-manager"
+import type { EntityManager } from "typeorm"
 import { StaffDirectoryService } from "@modules/domain/staff"
 import { WorkItemsService } from "@modules/domain/work-items"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import type { WorkspaceMember } from "@modules/domain/workspace-members"
 import { CLOCK } from "@modules/platform/clock"
+import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
+import { INBOX } from "@modules/platform/inbox"
+import type { Inbox } from "@modules/platform/inbox"
 import { MESSAGE_CATALOG } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
 import type { WorkItem } from "./decisions.contracts"
 import { DecisionsService } from "./decisions.service"
 import { DecisionsErrorCode } from "./errors/decisions.error"
 import { EvidenceService } from "./evidence.service"
+import type { HoldWorkRequest } from "./work-decision.contracts"
 import { WorkPlacementService } from "./work-placement.service"
 
 const memberOf = builder<WorkspaceMember>({
@@ -52,10 +58,48 @@ const itemOf = builder<WorkItem>({
 })
 
 const build = async (member: WorkspaceMember = memberOf()) => {
+    const tx = fakeTransaction(mockEntityManager())
+    const inbox = fakeInbox()
+    const claimKey = inbox.claim.bind(inbox)
+    const claimedBy = new WeakMap<EntityManager, Array<{ source: string; eventId: string }>>()
+    const execute = tx.em.transaction.getMockImplementation()
+    expect(execute).toEqual(expect.any(Function))
+    tx.em.transaction.mockImplementation(
+        (
+            first: Parameters<EntityManager["transaction"]>[0] | Parameters<EntityManager["transaction"]>[1],
+            second?: Parameters<EntityManager["transaction"]>[1],
+        ) =>
+            Promise.resolve(
+                execute?.("READ COMMITTED", async (manager) => {
+                    const claims: Array<{ source: string; eventId: string }> = []
+                    claimedBy.set(manager, claims)
+                    const work = typeof first === "function" ? first : second
+                    expect(work).toEqual(expect.any(Function))
+                    try {
+                        return await work?.(manager)
+                    } catch (cause) {
+                        await Promise.all(claims.map(({ source, eventId }) => inbox.release(source, eventId)))
+                        throw cause
+                    }
+                }),
+            ),
+    )
+    inbox.claim = async (source: string, eventId: string, manager?: EntityManager): Promise<boolean> => {
+        const claimed = await claimKey(source, eventId)
+        if (claimed && manager !== undefined) claimedBy.get(manager)?.push({ source, eventId })
+        return claimed
+    }
+    const transactionalInbox: Inbox = inbox
+    const claim = jest.spyOn(transactionalInbox, "claim")
+    const clock = new FakeClock("2026-10-12T10:00:00.000Z")
     const require = jest.fn().mockResolvedValue(member)
     const getWorkItem = jest.fn().mockResolvedValue(itemOf())
-    const log = jest.fn().mockResolvedValue(undefined)
-    const holdItem = jest.fn().mockResolvedValue(true)
+    const log = jest
+        .fn<ReturnType<EvidenceService["log"]>, Parameters<EvidenceService["log"]>>()
+        .mockResolvedValue(undefined)
+    const holdItem = jest
+        .fn<ReturnType<WorkItemsService["hold"]>, Parameters<WorkItemsService["hold"]>>()
+        .mockResolvedValue(true)
     const assignItem = jest.fn().mockResolvedValue(true)
     const namesOf = jest.fn().mockResolvedValue([{ id: "staff-1", name: "Binh" }])
     const catalog = mock<MessageCatalog>({ get: jest.fn((key: string) => `${key}()`) })
@@ -73,7 +117,9 @@ const build = async (member: WorkspaceMember = memberOf()) => {
             { provide: EvidenceService, useValue: evidence },
             { provide: WorkItemsService, useValue: items },
             { provide: StaffDirectoryService, useValue: staff },
-            { provide: CLOCK, useValue: new FakeClock("2026-10-12T10:00:00.000Z") },
+            { provide: CLOCK, useValue: clock },
+            { provide: PRIMARY_ENTITY_MANAGER, useValue: tx.em },
+            { provide: INBOX, useValue: inbox },
         ],
     }).compile()
     return {
@@ -85,79 +131,174 @@ const build = async (member: WorkspaceMember = memberOf()) => {
         getWorkItem,
         require,
         catalog,
+        tx,
+        inbox,
+        claim,
+        clock,
     }
 }
 
-describe("WorkPlacementService", () => {
-    describe("hold", () => {
-        it("keeps a waiting item and records the note", async () => {
-            const { service, holdItem, log } = await build()
+describe("WorkPlacementService hold retries", () => {
+    it("records a retried hold once even after the clock and input spacing change", async () => {
+        const { service, holdItem, log, clock } = await build()
+        await service.hold("user-1", "ws-1", { workItemId: "item-1", note: "Need a receipt", locale: "en" })
+        clock.advance(60_000)
+        await service.hold("user-1", "ws-1", { workItemId: "item-1", note: "  Need\n a receipt ", locale: "vi" })
 
-            const result = await service.hold("user-1", "ws-1", {
-                workItemId: "item-1",
-                note: "  need  a receipt ",
-                locale: "en",
-            })
+        expect(holdItem).toHaveBeenCalledTimes(1)
+        expect(log).toHaveBeenCalledTimes(1)
+    })
 
-            expect(result.id).toBe("item-1")
-            expect(holdItem).toHaveBeenCalledWith(
-                "ws-1",
-                "item-1",
-                expect.objectContaining({
-                    fields: { hold_note: "need a receipt", hold_by: "An", hold_at: "2026-10-12T10:00:00.000Z" },
-                }),
-            )
-            expect(log).toHaveBeenCalled()
+    it("records concurrent deliveries of the same hold once", async () => {
+        const { service, holdItem, log } = await build()
+        const request: HoldWorkRequest = { workItemId: "item-1", note: "Need a receipt", locale: "en" }
+
+        await Promise.all([service.hold("user-1", "ws-1", request), service.hold("user-1", "ws-1", request)])
+
+        expect(holdItem).toHaveBeenCalledTimes(1)
+        expect(log).toHaveBeenCalledTimes(1)
+    })
+
+    it("keeps different notes, people, items and workspaces as separate holds", async () => {
+        const { service, holdItem, log, getWorkItem } = await build()
+        const request: HoldWorkRequest = { workItemId: "item-1", note: "Need a receipt", locale: "en" }
+
+        await service.hold("user-1", "ws-1", request)
+        await service.hold("user-1", "ws-1", { ...request, note: "Need a signature" })
+        await service.hold("user-2", "ws-1", request)
+        getWorkItem.mockResolvedValue(itemOf({ id: "item-2" }))
+        await service.hold("user-1", "ws-1", { ...request, workItemId: "item-2" })
+        await service.hold("user-1", "ws-2", { ...request, workItemId: "item-2" })
+
+        expect(holdItem).toHaveBeenCalledTimes(5)
+        expect(log).toHaveBeenCalledTimes(5)
+    })
+})
+
+describe("WorkPlacementService hold transactions", () => {
+    it("claims the retry key in the same transaction as the hold and evidence", async () => {
+        const { service, claim, holdItem, log, tx } = await build()
+
+        await service.hold("user-1", "ws-1", { workItemId: "item-1", note: "Need a receipt", locale: "en" })
+
+        const manager = claim.mock.calls[0]?.[2]
+        expect(isTransactionManager(manager)).toBe(true)
+        expect(claim).toHaveBeenCalledWith("work.hold", expect.stringMatching(/^[0-9a-f]{64}$/u), manager)
+        expect(holdItem.mock.calls[0]?.[3]).toBe(manager)
+        expect(log.mock.calls[0]?.[2]).toBe(manager)
+        expect(tx.commits).toBe(1)
+    })
+
+    it("rolls back the claim and hold when evidence cannot be written", async () => {
+        const { service, log, holdItem, tx } = await build()
+        const failure = new Error("evidence unavailable")
+        log.mockRejectedValueOnce(failure)
+
+        await expect(
+            service.hold("user-1", "ws-1", { workItemId: "item-1", note: "Need a receipt", locale: "en" }),
+        ).rejects.toBe(failure)
+
+        expect(tx.rollbacks).toBe(1)
+        expect(tx.commits).toBe(0)
+
+        await service.hold("user-1", "ws-1", { workItemId: "item-1", note: "Need a receipt", locale: "en" })
+
+        expect(holdItem).toHaveBeenCalledTimes(2)
+        expect(log).toHaveBeenCalledTimes(2)
+        expect(tx.commits).toBe(1)
+    })
+
+    it("does not hold or log when claiming the retry key fails", async () => {
+        const { service, claim, holdItem, log, tx } = await build()
+        const failure = new Error("inbox unavailable")
+        claim.mockRejectedValue(failure)
+
+        await expect(
+            service.hold("user-1", "ws-1", { workItemId: "item-1", note: "Need a receipt", locale: "en" }),
+        ).rejects.toBe(failure)
+
+        expect(holdItem).not.toHaveBeenCalled()
+        expect(log).not.toHaveBeenCalled()
+        expect(tx.rollbacks).toBe(1)
+    })
+})
+
+describe("WorkPlacementService hold notes", () => {
+    it("keeps a waiting item and records the note", async () => {
+        const { service, holdItem, log } = await build()
+
+        const result = await service.hold("user-1", "ws-1", {
+            workItemId: "item-1",
+            note: "  need  a receipt ",
+            locale: "en",
         })
 
-        it("refuses an empty note", async () => {
-            const { service, holdItem } = await build()
+        expect(result.id).toBe("item-1")
+        expect(holdItem).toHaveBeenCalledWith(
+            "ws-1",
+            "item-1",
+            expect.objectContaining({
+                fields: { hold_note: "need a receipt", hold_by: "An", hold_at: "2026-10-12T10:00:00.000Z" },
+            }),
+            expect.any(Object),
+        )
+        expect(log).toHaveBeenCalled()
+    })
 
-            await expect(
-                service.hold("user-1", "ws-1", { workItemId: "item-1", note: "   ", locale: "en" }),
-            ).rejects.toThrow(DecisionsErrorCode.HoldNoteRequired)
-            expect(holdItem).not.toHaveBeenCalled()
-        })
+    it("refuses an empty note", async () => {
+        const { service, holdItem } = await build()
 
-        it("refuses staff holding an item assigned to someone else", async () => {
-            const { service, getWorkItem, holdItem, log } = await build(memberOf({ role: "staff", staffId: "staff-1" }))
-            getWorkItem.mockResolvedValue(itemOf({ assigned_staff_id: "staff-2" }))
+        await expect(
+            service.hold("user-1", "ws-1", { workItemId: "item-1", note: "   ", locale: "en" }),
+        ).rejects.toThrow(DecisionsErrorCode.HoldNoteRequired)
+        expect(holdItem).not.toHaveBeenCalled()
+    })
+})
 
-            await expect(
-                service.hold("user-1", "ws-1", { workItemId: "item-1", note: "Need receipt", locale: "en" }),
-            ).rejects.toMatchObject({ code: DecisionsErrorCode.NotAllowed })
+describe("WorkPlacementService hold permissions", () => {
+    it("refuses staff holding an item assigned to someone else", async () => {
+        const { service, getWorkItem, holdItem, log } = await build(memberOf({ role: "staff", staffId: "staff-1" }))
+        getWorkItem.mockResolvedValue(itemOf({ assigned_staff_id: "staff-2" }))
 
-            expect(holdItem).not.toHaveBeenCalled()
-            expect(log).not.toHaveBeenCalled()
-        })
+        await expect(
+            service.hold("user-1", "ws-1", { workItemId: "item-1", note: "Need receipt", locale: "en" }),
+        ).rejects.toMatchObject({ code: DecisionsErrorCode.NotAllowed })
 
-        it("refuses to hold work that has already finished", async () => {
-            const { service, getWorkItem, holdItem, log } = await build()
-            getWorkItem.mockResolvedValue(itemOf({ status: "done" }))
+        expect(holdItem).not.toHaveBeenCalled()
+        expect(log).not.toHaveBeenCalled()
+    })
 
-            await expect(
-                service.hold("user-1", "ws-1", { workItemId: "item-1", note: "Need receipt", locale: "en" }),
-            ).rejects.toMatchObject({ code: DecisionsErrorCode.NotWaiting })
+    it("refuses to hold work that has already finished", async () => {
+        const { service, getWorkItem, holdItem, log } = await build()
+        getWorkItem.mockResolvedValue(itemOf({ status: "done" }))
 
-            expect(holdItem).not.toHaveBeenCalled()
-            expect(log).not.toHaveBeenCalled()
-        })
+        await expect(
+            service.hold("user-1", "ws-1", { workItemId: "item-1", note: "Need receipt", locale: "en" }),
+        ).rejects.toMatchObject({ code: DecisionsErrorCode.NotWaiting })
 
-        it("refuses a hold when the item stops waiting before it is saved", async () => {
-            const { service, holdItem, log, getWorkItem } = await build()
-            holdItem.mockResolvedValue(false)
+        expect(holdItem).not.toHaveBeenCalled()
+        expect(log).not.toHaveBeenCalled()
+    })
 
-            await expect(
-                service.hold("user-1", "ws-1", { workItemId: "item-1", note: "Need receipt", locale: "en" }),
-            ).rejects.toMatchObject({ code: DecisionsErrorCode.NotWaiting })
+    it("refuses a hold when the item stops waiting before it is saved", async () => {
+        const { service, holdItem, log, getWorkItem } = await build()
+        holdItem.mockResolvedValue(false)
 
-            expect(holdItem).toHaveBeenCalledWith("ws-1", "item-1", {
+        await expect(
+            service.hold("user-1", "ws-1", { workItemId: "item-1", note: "Need receipt", locale: "en" }),
+        ).rejects.toMatchObject({ code: DecisionsErrorCode.NotWaiting })
+
+        expect(holdItem).toHaveBeenCalledWith(
+            "ws-1",
+            "item-1",
+            {
                 summary: "Send",
                 fields: { hold_note: "Need receipt", hold_by: "An", hold_at: "2026-10-12T10:00:00.000Z" },
-            })
-            expect(log).not.toHaveBeenCalled()
-            expect(getWorkItem).toHaveBeenCalledTimes(1)
-        })
+            },
+            expect.any(Object),
+        )
+        expect(log).not.toHaveBeenCalled()
+        expect(getWorkItem).toHaveBeenCalledTimes(1)
     })
 })
 
@@ -189,7 +330,7 @@ describe("WorkPlacementService", () => {
                 service.hold("user-1", "ws-1", { workItemId: "item-1", note: " Need\n a\t receipt ", locale: "vi" }),
             ).resolves.toEqual(refreshed)
 
-            expect(holdItem).toHaveBeenCalledWith("ws-1", "item-1", refreshed.proposal)
+            expect(holdItem).toHaveBeenCalledWith("ws-1", "item-1", refreshed.proposal, expect.any(Object))
             expect(catalog.get).toHaveBeenCalledWith("decision.holdEvidence", { note: "Need a receipt" }, "vi")
             expect(log).toHaveBeenCalledWith(
                 { workspaceId: "ws-1", actor: "Binh", locale: "vi" },
@@ -201,6 +342,7 @@ describe("WorkPlacementService", () => {
                     summary: "decision.holdEvidence()",
                     evidence: "Need a receipt",
                 },
+                expect.any(Object),
             )
             expect(getWorkItem.mock.calls).toEqual([
                 ["user-1", "ws-1", "item-1"],

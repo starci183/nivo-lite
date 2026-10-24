@@ -2672,6 +2672,25 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"mcp_gateway_receipts": {
+                  Row: {
+                    "operation_key": string,"result_sealed": string,"workspace_id": string
+                  }
+                  Insert: {
+                    "operation_key": string,"result_sealed": string,"workspace_id": string
+                  }
+                  Update: {
+                    "operation_key"?: string,"result_sealed"?: string,"workspace_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "mcp_gateway_receipts_workspace_id_fkey"
+      columns: ["workspace_id"]
+isOneToOne: false
+      referencedRelation: "workspaces"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"mcp_tool_grants": {
                   Row: {
                     "agent_id": string,"constraints": NonNullable<Json>,"id": string,"limit_vnd": number | null,"mode": string,"tool": string,"updated_at": string,"updated_by": string | null,"workspace_id": string
