@@ -1,8 +1,5 @@
 import { sql } from "@modules/platform/database"
 
-/** Exercises the private Auth projection as the application's actual database role for this transaction only. */
-export const USE_ROOM_MEMBERS_APP_ROLE = sql`SET LOCAL ROLE app_be`
-
 /** Only active people of this workspace may contribute their existing provider photo ($1 workspace, $2 requested users). */
 export const READ_ROOM_MEMBER_AVATARS = sql`
     SELECT id, avatar_url FROM be_access.workspace_member_avatars($1, $2::uuid[]) ORDER BY id`

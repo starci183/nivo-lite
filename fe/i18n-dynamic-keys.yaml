@@ -119,8 +119,6 @@ namespaces:
       reason: 'Read as the string "chat" in components/blocks/ConsoleCompactNavigation/index.tsx, components/blocks/HiringOffers/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
     - key: "eyebrow"
       reason: 'Read as the string "eyebrow" in components/blocks/AgentInstances/index.tsx, components/blocks/AuthorityHead/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - prefix: "hint"
-      reason: "Key family built at run time as `hint${key}` in hooks/overviewPromo/overviewPromo.shared.ts; the value comes from data (status, kind, id), so the detector cannot enumerate the keys."
     - key: "kindCustomer"
       reason: 'Read as the string "kindCustomer" in hooks/agentChat/agentChat.shared.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
     - key: "open"

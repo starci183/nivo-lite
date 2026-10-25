@@ -9,9 +9,9 @@ import { CLEAN_USERS } from "../../fixtures/persistence/office-chain.sql"
 import {
     READ_ROOM_MEMBER_AVATARS,
     ROOM_MEMBER_AVATAR_PRIVILEGES,
-    USE_ROOM_MEMBERS_APP_ROLE,
 } from "../../fixtures/persistence/office-room-members.sql"
 import { CLEAN_WORKSPACE } from "../../fixtures/persistence/proof.sql"
+import { withBackendRole } from "../../world/backend-role-proof.service"
 import { OfficeRoomMembersProofModule } from "../../world/office-room-members-proof.module"
 import { useTestWorld } from "../../world/use-test-world"
 
@@ -87,20 +87,19 @@ describe("office group member previews over PostgreSQL", () => {
     })
 
     it("exposes only requested active workspace provider photos through the server-only projection", async () => {
-        const rows = await world.db.primary.transaction(async (tx) => {
-            await tx.query(USE_ROOM_MEMBERS_APP_ROLE)
-            return tx.query<Array<MemberAvatarRow>>(READ_ROOM_MEMBER_AVATARS, [
+        await withBackendRole(world, async (tx) => {
+            const rows = await tx.query<Array<MemberAvatarRow>>(READ_ROOM_MEMBER_AVATARS, [
                 identity.workspaceId,
                 [...identity.userIds, identity.foreignUserId],
             ])
-        })
 
-        expect(rows).toEqual([
-            { id: identity.userIds[0], avatar_url: OFFICE_MEMBER_AVATAR },
-            { id: identity.userIds[1], avatar_url: null },
-            { id: identity.userIds[2], avatar_url: null },
-            { id: identity.userIds[3], avatar_url: null },
-        ])
+            expect(rows).toEqual([
+                { id: identity.userIds[0], avatar_url: OFFICE_MEMBER_AVATAR },
+                { id: identity.userIds[1], avatar_url: null },
+                { id: identity.userIds[2], avatar_url: null },
+                { id: identity.userIds[3], avatar_url: null },
+            ])
+        })
         await expect(world.db.primary.query(ROOM_MEMBER_AVATAR_PRIVILEGES)).resolves.toEqual([
             { backend: true, anonymous: false, browser: false, auth_table: false },
         ])
