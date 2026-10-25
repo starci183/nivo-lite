@@ -1,20 +1,19 @@
-import type { DropdownMenuEntry } from "@starci/grammar/common"
-import { NavigationFeatureNav } from "@starci/grammar/common"
+import type { DropdownMenuEntry, DropdownMenuItem } from "@starci/grammar/common"
+import { AvatarButton, DropdownMenu, IconButton, NavigationFeatureNav, Popover, Switch } from "@starci/grammar/common"
 import type { ConsolePending } from "@/modules/types"
-import { ConsoleAccountMenu } from "../../composites/ConsoleAccountMenu"
-import { ConsoleNotifications } from "../../composites/ConsoleNotifications"
+import { ACCOUNT_ITEM, SIGN_OUT_ITEM } from "@/modules/types"
+import { ConsoleNotificationsPanel } from "../../composites/ConsoleNotificationsPanel"
 import { ConsoleSearch } from "../../composites/ConsoleSearch"
-import { LanguageMenu } from "../../composites/LanguageMenu"
 import { ConsoleWorkspaceMenu } from "../../composites/ConsoleWorkspaceMenu"
 import { FoundingBadge } from "../../composites/FoundingBadge"
-import { ThemeSwitch } from "../../composites/ThemeSwitch"
+import { languageMenuEntries } from "../../composites/LanguageMenu"
+import { nivoIconSource } from "../../leaves/Icon"
 import { ACTIONS, BADGE, BRAND, SWITCHES } from "./classNames"
 
 /** Everything the console top bar draws, resolved by the connected block. */
 export interface ConsoleHeaderBaseProps {
     readonly props: {
         readonly workspaceName: string
-        readonly menuLabel: string
         readonly actionsLabel: string
         /** The workspace logo (brand kit), shown in the lockup; null shows the monogram. */
         readonly workspaceLogoUrl: string | null
@@ -88,45 +87,108 @@ const searchProps = (props: ConsoleHeaderBaseProps["props"], on: ConsoleHeaderBa
     onSubmit: on.search,
 })
 
+/** The glyph and tone of the account menu's two commands, keyed by the ids `modules/types` shares with the entries builder. */
+const COMMAND_LOOKS: Record<
+    string,
+    { readonly iconSource: ReturnType<typeof nivoIconSource>; readonly tone?: "danger" }
+> = {
+    [ACCOUNT_ITEM]: { iconSource: nivoIconSource("account", "leading") },
+    [SIGN_OUT_ITEM]: { iconSource: nivoIconSource("signOut", "leading"), tone: "danger" },
+}
+
+/** Gives a known command its glyph without keeping an identity mark in the same slot. */
+const withCommandLook = (item: DropdownMenuItem): DropdownMenuItem => {
+    const look = COMMAND_LOOKS[item.id]
+    if (look === undefined) return item
+    const { mark: _mark, ...command } = item
+    return { ...command, ...look }
+}
+
+/** Gives the account page and sign-out items their leading glyph (sign out marked destructive). */
+const withLooks = (entries: ReadonlyArray<DropdownMenuEntry>): ReadonlyArray<DropdownMenuEntry> =>
+    entries.map((entry) =>
+        entry.kind === "section" ? { ...entry, items: entry.items.map(withCommandLook) } : withCommandLook(entry),
+    )
+
 const Actions = ({ props, on }: ConsoleHeaderBaseProps) => (
     <div className={ACTIONS}>
-        <ConsoleSearch part="icon" {...searchProps(props, on)} />
         <div className={SWITCHES}>
-            <LanguageMenu
-                label={props.languageLabel}
-                value={props.locale}
-                options={props.localeOptions}
-                isDisabled={props.isLocalePending}
-                onChange={on.chooseLocale}
+            <DropdownMenu
+                placement="bottom end"
+                entries={languageMenuEntries({
+                    label: props.languageLabel,
+                    value: props.locale,
+                    options: props.localeOptions,
+                    isDisabled: props.isLocalePending,
+                    onChange: on.chooseLocale,
+                })}
+                trigger={
+                    <IconButton
+                        source={nivoIconSource("locale", "leading")}
+                        label={props.languageLabel}
+                        variant="tertiary"
+                        size="control"
+                        isDisabled={props.isLocalePending}
+                    />
+                }
             />
-            <ThemeSwitch isDark={props.isDark} label={props.themeLabel} onChange={on.chooseDark} />
+            <Switch
+                label={props.themeLabel}
+                isLabelHidden
+                size="control"
+                isSelected={props.isDark}
+                onSelectedChange={on.chooseDark}
+                thumbIcon={nivoIconSource("light", "leading")}
+                selectedThumbIcon={nivoIconSource("dark", "leading")}
+            />
         </div>
-        <ConsoleNotifications
-            count={Math.max(props.pendingCount, 0)}
-            pending={props.pending}
-            copy={props.notificationsCopy}
+        <Popover
             isOpen={props.isNotificationsOpen}
             onOpenChange={on.setNotificationsOpen}
-            onOpenOffice={on.openOffice}
-        />
-        <ConsoleAccountMenu
-            userName={props.userName}
-            userSeed={props.userId}
-            avatarUrl={props.avatarUrl}
-            entries={props.accountEntries}
+            placement="bottom"
+            title={props.notificationsCopy.title}
+            trigger={
+                <IconButton
+                    source={nivoIconSource("notification", "leading")}
+                    label={props.notificationsCopy.bell}
+                    badge={Math.max(props.pendingCount, 0)}
+                    badgeLabel={props.notificationsCopy.title}
+                    size="control"
+                />
+            }
+        >
+            <ConsoleNotificationsPanel
+                count={Math.max(props.pendingCount, 0)}
+                pending={props.pending}
+                copy={props.notificationsCopy}
+                onClose={() => on.setNotificationsOpen(false)}
+                onOpenOffice={on.openOffice}
+            />
+        </Popover>
+        <DropdownMenu
+            placement="bottom end"
+            entries={withLooks(props.accountEntries)}
+            trigger={
+                <AvatarButton
+                    size="control"
+                    name={props.userName}
+                    seed={props.userId}
+                    {...(props.avatarUrl ? { src: props.avatarUrl } : {})}
+                />
+            }
         />
     </div>
 )
 
-/** Draws the console top bar: the menu and workspace lockup on the left; search, language, appearance, bell and account on the right; the compact tab row under it. */
+/** Draws the console top bar: the workspace lockup on the left; the search field in the middle (an icon on a phone); language, appearance, bell and account on the right; the compact tab row under it. */
 export const ConsoleHeaderBase = (props: ConsoleHeaderBaseProps) => (
     <NavigationFeatureNav
         position="sticky"
         identity={<Brand {...props} />}
         navigation={<ConsoleSearch part="field" {...searchProps(props.props, props.on)} />}
         navigationLabel={props.props.searchLabel}
-        compactNavigationTrigger={null}
-        compactNavigationTriggerLabel={props.props.menuLabel}
+        compactNavigationTrigger={<ConsoleSearch part="icon" {...searchProps(props.props, props.on)} />}
+        compactNavigationTriggerLabel={props.props.searchLabel}
         actions={<Actions {...props} />}
         actionsLabel={props.props.actionsLabel}
     />

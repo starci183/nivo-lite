@@ -56,7 +56,6 @@ export const useConsoleHeader = () => {
     return {
         props: {
             workspaceName: session.workspaceName,
-            menuLabel: t("mainNavigation"),
             actionsLabel: t("headerActions"),
             workspaceLogoUrl,
             userName: session.userName,
