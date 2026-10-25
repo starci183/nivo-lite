@@ -10,6 +10,13 @@ type ConsoleSidebarProps = {
     readonly presentation: "rail" | "drawer"
     readonly groupLabels: { readonly operate: string; readonly setup: string }
     readonly onGo: (href: string) => void
+    /** Collapse command and words; the drawer never collapses, so it passes none. */
+    readonly collapse?: {
+        readonly isCollapsed: boolean
+        readonly collapseLabel: string
+        readonly expandLabel: string
+        readonly onChange: (collapsed: boolean) => void
+    }
 }
 
 const GROUP_ORDER = ["work", "operate", "setup"] as const
@@ -46,6 +53,15 @@ export const ConsoleSidebar = (props: ConsoleSidebarProps) => (
         presentation={props.presentation}
         groups={toGroups(props.items, props.groupLabels)}
         {...selectedKeyOf(props.items)}
+        {...(props.collapse === undefined
+            ? {}
+            : {
+                  isCollapsed: props.collapse.isCollapsed,
+                  collapseLabel: props.collapse.collapseLabel,
+                  expandLabel: props.collapse.expandLabel,
+                  toggleSource: nivoIconSource("collapseRail", "leading"),
+                  onCollapsedChange: props.collapse.onChange,
+              })}
         onAction={(id) => {
             const target = props.items.find((item) => item.id === id)
             if (target) props.onGo(target.href)

@@ -102,6 +102,9 @@ const ICON_SOURCES = {
     sidebar: cuts(Outline.ViewColumnsIcon, Solid.ViewColumnsIcon),
     copy: cuts(Outline.DocumentDuplicateIcon, Outline.DocumentDuplicateIcon),
     copied: cuts(Outline.CheckIcon, Outline.CheckIcon),
+    menu: cuts(Outline.Bars3Icon, Solid.Bars3Icon),
+    expand: cuts(Outline.ChevronDownIcon, Solid.ChevronDownIcon),
+    collapseRail: cuts(Outline.ChevronDoubleLeftIcon, Solid.ChevronDoubleLeftIcon),
     google: cuts(GoogleMark, GoogleMark),
 } satisfies Record<string, GlyphCuts>
 

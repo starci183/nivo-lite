@@ -1,4 +1,4 @@
-import type { DropdownMenuItem } from "@starci/grammar/common"
+import type { DropdownMenuEntry, DropdownMenuSection } from "@starci/grammar/common"
 import type { ConsoleIconName, ConsoleSession, ConsoleWorkspace } from "@/modules/types"
 
 /** The console route of the Office, the page people come to first. */
@@ -92,17 +92,26 @@ export const activeDestinationKey = (pathname: string): string => {
     return found?.key ?? "overview"
 }
 
-/** The menu entries that switch workspace: the person's workspaces (the current one ticked). */
-export const workspaceEntries = (
+/** The menu section that switches workspace: the person's workspaces as a single choice, the current one selected (the grammar draws the marker). */
+export const workspaceSection = (
     workspaces: ReadonlyArray<ConsoleWorkspace>,
     currentId: string,
+    label: string,
     onSwitch: (workspaceId: string) => void,
-): ReadonlyArray<DropdownMenuItem> =>
-    workspaces.map((workspace) => ({
-        id: `ws-${workspace.id}`,
-        label: workspace.id === currentId ? `${workspace.name} ✓` : workspace.name,
-        onAction: () => onSwitch(workspace.id),
-    }))
+): DropdownMenuSection => ({
+    kind: "section",
+    id: "workspaces",
+    label,
+    items: workspaces.map((workspace) => ({ id: workspace.id, label: workspace.name })),
+    selection: {
+        mode: "single",
+        selectedIds: [currentId],
+        onChange: (ids) => {
+            const next = ids[0]
+            if (next !== undefined) onSwitch(next)
+        },
+    },
+})
 
 /** The session the console frame draws before it is read (the frame waits for the real one). */
 export const NO_CONSOLE_SESSION: ConsoleSession = {
@@ -120,3 +129,42 @@ export const UNPAID_WORKSPACE_STATES: ReadonlySet<string> = new Set(["pending_pa
 /** A membership role as the console reads it. */
 export const sessionRoleOf = (role: string): ConsoleWorkspace["role"] =>
     role === "owner" || role === "manager" ? role : "staff"
+
+/** The words of the account menu, resolved by the caller. */
+interface AccountEntriesInput {
+    readonly workspaces: DropdownMenuSection
+    readonly accountLabel: string
+    readonly accountDescription: string
+    readonly signOutLabel: string
+    readonly onSignOut: () => void
+}
+
+/** The account menu: the workspaces to switch to, then the account page and sign out. */
+export const accountEntriesOf = (input: AccountEntriesInput): ReadonlyArray<DropdownMenuEntry> => [
+    input.workspaces,
+    {
+        kind: "section",
+        id: "account",
+        items: [
+            { id: ACCOUNT_ITEM, label: input.accountLabel, description: input.accountDescription, href: "/account" },
+            { id: SIGN_OUT_ITEM, label: input.signOutLabel, onAction: input.onSignOut },
+        ],
+    },
+]
+
+/** The id of the account page item; the account menu composite recognises it to draw its glyph. */
+export const ACCOUNT_ITEM = "account-page"
+
+/** The id of the sign-out item; the account menu composite recognises it to draw its glyph and mark it destructive. */
+export const SIGN_OUT_ITEM = "signout"
+
+/** Translates one key of the shell catalog. */
+type ShellWords = (key: string, values?: Record<string, string | number>) => string
+
+/** The words of the notifications bell and its panel for a number of waiting approvals. */
+export const notificationsCopyOf = (t: ShellWords, pendingCount: number) => ({
+    bell: t("notifications"),
+    title: pendingCount === 0 ? t("notifications") : t("pendingTitle", { count: pendingCount }),
+    nothingWaiting: t("nothingWaiting"),
+    openOffice: t("openOffice"),
+})

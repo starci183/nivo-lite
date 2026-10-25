@@ -1,23 +1,41 @@
-import { Button, DropdownMenu } from "@starci/grammar/common"
+import { AvatarButton, DropdownMenu } from "@starci/grammar/common"
 import type { DropdownMenuEntry } from "@starci/grammar/common"
-import { PersonAvatar } from "../../leaves/PersonAvatar"
+import { nivoIconSource } from "../../leaves/Icon"
+import { avatarPictureOf } from "../../leaves/PersonAvatar"
+
+/** The glyph and tone of the account menu's two commands, by their ids. */
+const COMMAND_LOOKS: Record<
+    string,
+    { readonly iconSource: ReturnType<typeof nivoIconSource>; readonly tone?: "negative" }
+> = {
+    "account-page": { iconSource: nivoIconSource("account", "leading") },
+    signout: { iconSource: nivoIconSource("signIn", "leading"), tone: "negative" },
+}
+
+/** Gives the account page and sign-out items their leading glyph (sign out marked destructive). */
+const withLooks = (entries: ReadonlyArray<DropdownMenuEntry>): ReadonlyArray<DropdownMenuEntry> =>
+    entries.map((entry) =>
+        entry.kind === "section"
+            ? { ...entry, items: entry.items.map((item) => ({ ...item, ...COMMAND_LOOKS[item.id] })) }
+            : { ...entry, ...COMMAND_LOOKS[entry.id] },
+    )
 
 /** What the account button draws and opens. */
 type ConsoleAccountMenuProps = {
     readonly userName: string
     readonly avatarUrl?: string | undefined
+    /** The person's id: seeds the generated avatar when there is no uploaded one. */
+    readonly userSeed: string
     readonly entries: ReadonlyArray<DropdownMenuEntry>
 }
 
-/** The person menu in the top bar: the avatar opens the workspaces, the account and sign out. */
+/** The person menu in the top bar: the round avatar opens the workspaces, the account and sign out. */
 export const ConsoleAccountMenu = (props: ConsoleAccountMenuProps) => (
     <DropdownMenu
         placement="bottom end"
-        entries={props.entries}
+        entries={withLooks(props.entries)}
         trigger={
-            <Button variant="ghost" size="sm">
-                <PersonAvatar name={props.userName} src={props.avatarUrl} size="sm" />
-            </Button>
+            <AvatarButton size="control" name={props.userName} {...avatarPictureOf(props.avatarUrl, props.userSeed)} />
         }
     />
 )
