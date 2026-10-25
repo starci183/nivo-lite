@@ -145,7 +145,7 @@ services:
   # only — no port is published; the api reaches it as nivo-redis:6379 on the stack network.
   nivo-redis:
     image: redis:7.4-alpine@sha256:57e4255cc971b1c8d6f8a6ca283ac01bc3ecdd914273ef6bfaede87aaecd6541
-    command: ["redis-server", "--appendonly", "yes", "--appendfsync", "everysec"]
+    command: ["redis-server", "--appendonly", "yes", "--appendfsync", "everysec", "--maxmemory", "128mb", "--maxmemory-policy", "noeviction"]
     volumes:
       - redis-data:/data
     healthcheck:
@@ -156,6 +156,7 @@ services:
       start_period: 10s
     deploy:
       replicas: 1
+      placement: { constraints: [node.role == manager] }
       update_config: { parallelism: 1, order: stop-first, failure_action: rollback, monitor: 30s }
       rollback_config: { parallelism: 1, order: stop-first, monitor: 30s }
       restart_policy: { condition: any, delay: 5s }

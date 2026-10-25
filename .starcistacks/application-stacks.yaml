@@ -87,7 +87,7 @@ backing:
     provider: supabase
     managed: true
 # Recurring work, every entry bound to its app-owned CLI command (R268). The keys are the pg_cron job names of the migrations
-# (supabase/migrations/20261105000000_queue-bullmq.sql: each job is one job_enqueue to the outbox the relay publishes) and the schedule is the exact
+# (supabase/migrations/20261105000000_queue-bullmq_contract_pgmq-drop.sql: each job is one job_enqueue to the outbox the relay publishes) and the schedule is the exact
 # cron expression of the job. `cli jobs tick <id>` enqueues one tick by hand (replay of a missed tick).
 jobs:
   accounting-desk-morning:
@@ -177,6 +177,11 @@ environments:
       - component: supabase
         target: Local Supabase development data is disposable; `supabase db reset` rebuilds it from supabase/migrations and the seed.
         retention: None; the repository migrations are the source, the local volume is recreated on demand.
+        owner: Development operator
+        restoreProof: .starcistacks/dev/infra/swarm/recovery/restore-proof.md
+      - component: nivo-redis
+        target: The local Redis volume only mirrors the broker copy of queued jobs; the PostgreSQL job_outbox of the local Supabase is the record and the relay republishes any row the broker lost, so the volume is disposable.
+        retention: None; the volume is recreated on demand and the relay refills it from the outbox.
         owner: Development operator
         restoreProof: .starcistacks/dev/infra/swarm/recovery/restore-proof.md
     # Local development holds no sealed secret: the Supabase CLI owns the local backing stack and the operator supplies its
@@ -353,9 +358,12 @@ environments:
             from:
               - {member: api}
               - {member: auth}
-              # Optional: when the owner seals QUEUE_REDIS_PASSWORD in the api member, the api uses it for the queue broker and Redis needs `--requirepass` in infra/swarm/stack.yaml; internal-network-only is the default.
-              - {member: api, keys: [QUEUE_REDIS_PASSWORD]}
               - {member: stack, keys: [OPENCLAW_GATEWAY_TOKEN, OPENCLAW_MANAGE_AGENTS], fill: true}
+          # The queue broker reads the same sealed QUEUE_REDIS_PASSWORD the api gets through its whole `api` member (QUEUE_REDIS_PASSWORD_FILE):
+          # Redis starts with --requirepass from /run/secrets/QUEUE_REDIS_PASSWORD, so a boot without it fails instead of serving an open broker.
+          - service: nivo-redis
+            from:
+              - {member: api, keys: [QUEUE_REDIS_PASSWORD], required: true}
           # The gateway gets exactly the keys it needs (be/apps/mcp/src/mcp.env.ts), from the same sealed `api` member as the api: the database
           # connection and the connection key (CHANNEL_TOKEN_KEY) that opens the credential each remote connector has sealed in its own row, per
           # workspace, set from the console. No connector credential is a deployment key. The gateway reads no agent token: its agent endpoint

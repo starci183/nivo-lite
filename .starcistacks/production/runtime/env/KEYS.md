@@ -29,6 +29,10 @@ turns every granted key into one versioned Swarm secret (see the production READ
 | `PUBLIC_SITE_URL` | `api-public.conf` | The public origin of the console, used in links the api sends. |
 | `PUBLIC_API_URL` | `api-public.conf` | The public origin of the api (`https://api.nivo.vn`), used in webhook and callback URLs and as the base of the agents' tool door (`<origin>/agent-tools`); it must be https (http only for a loopback host) or the api refuses to boot. |
 | `PORT` | stack environment | The listener port (`8787`). |
+| `QUEUE_REDIS_PASSWORD` | sealed `api` | The password of the declared Redis (the BullMQ broker): the api reads it as `QUEUE_REDIS_PASSWORD_FILE`, the `nivo-redis` service starts with `--requirepass` from the same Swarm secret, and holds no trailing newline. Never printed, never read from a file by hand: `starci app secret set production api QUEUE_REDIS_PASSWORD --generate 32`. |
+| `QUEUE_REDIS_HOST` | stack environment | `nivo-redis`, the one Redis service on the private `agents` network. |
+| `QUEUE_REDIS_PORT` | stack environment | `6379`. |
+| `QUEUE_REDIS_PREFIX` | stack environment | `nivo`, the key prefix of every queue in the broker. |
 
 ## api: optional capabilities
 
