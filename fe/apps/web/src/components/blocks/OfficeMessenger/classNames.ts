@@ -1,5 +1,5 @@
-/** The columns inside the messenger card; the body paints the surface itself. */
-export const BODY_CLASS_NAME = "flex h-full min-h-0 min-w-0 bg-surface"
+/** The columns inside the messenger card; the card's Grammar surface paints the face. */
+export const BODY_CLASS_NAME = "flex h-full min-h-0 min-w-0"
 
 /** The left column: full width on phones, a fixed width beside the thread from md; it owns the panel content edge. */
 export const LIST_COLUMN_CLASS_NAME =
