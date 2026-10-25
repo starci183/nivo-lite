@@ -14,6 +14,7 @@ module.exports = require("@starci/jest-preset").starciJestConfig({
             "guard",
             "mapper",
             "client",
+            "adapter",
             "filter",
             "interceptor",
             "processor",

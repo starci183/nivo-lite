@@ -3,7 +3,8 @@
 # backs work up under refs/backup/*. Git hands this hook one line per ref: <local ref> <local sha> <remote ref> <remote sha>.
 #   refs/backup/*                  allowed: the coordinator backup namespace
 #   refs/heads/main, refs/tags/v*  allowed only when HEAD carries an annotated tag v[0-9]* and the release cut recorded the
-#                                  full suite of HEAD: <git common dir>/starci-release/<HEAD sha>.l4.json names that head and tag
+#                                  full suite of HEAD: <git common dir>/starci-release/<HEAD sha>.l4.json names that head and tag;
+#                                  a pushed tag must be that tag and must point at HEAD
 #   refs/heads/release/candidate-* the release candidate (starci app release push sends the release sha there first and moves main
 #                                  and the tag only when its ci.yml run is green): allowed under the same release gate, never deleted
 #   any other ref, a delete        refused
@@ -13,6 +14,7 @@ head=$(git rev-parse HEAD)
 record="$common/starci-release/$head.l4.json"
 status=0
 gate=""
+gate_tag=""
 refuse() {
   echo "RIGHTS_PUSH_NOT_RELEASE: $1 - the allowed path is the release cut (main, v* tags and the release/candidate-* ref) or refs/backup/* (backups)" >&2
   status=1
@@ -28,7 +30,7 @@ release_gate() {
     if [ ! -f "$record" ]; then gate="no L4 record $record"; continue; fi
     flat=$(tr -d ' \t\r\n' < "$record")
     case "$flat" in
-      *'"head":"'"$head"'"'*'"tag":"'"$tag"'"'* | *'"tag":"'"$tag"'"'*'"head":"'"$head"'"'*) gate="ok"; return 0 ;;
+      *'"head":"'"$head"'"'*'"tag":"'"$tag"'"'* | *'"tag":"'"$tag"'"'*'"head":"'"$head"'"'*) gate="ok"; gate_tag="$tag"; return 0 ;;
     esac
     gate="the L4 record $record does not name head $head and tag $tag"
   done
@@ -43,7 +45,12 @@ while read -r local_ref local_sha remote_ref remote_sha; do
         *) refuse "refusing to delete $remote_ref"; continue ;;
       esac
       release_gate
-      if [ "$gate" != "ok" ]; then refuse "$remote_ref is closed: $gate"; fi ;;
+      if [ "$gate" != "ok" ]; then refuse "$remote_ref is closed: $gate"; continue; fi
+      case "$remote_ref" in
+        refs/tags/*)
+          if [ "$remote_ref" != "refs/tags/$gate_tag" ]; then refuse "$remote_ref is not the release tag $gate_tag of HEAD $head"
+          elif [ "$(git rev-parse "$local_sha^{commit}" 2>/dev/null)" != "$head" ]; then refuse "$remote_ref does not point at HEAD $head"; fi ;;
+      esac ;;
     *) refuse "refusing to push $remote_ref" ;;
   esac
 done

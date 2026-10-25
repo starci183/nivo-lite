@@ -3,7 +3,7 @@
 # rollback and disconnect of "starci app stack". It runs by hand only (Actions > deploy stack > Run workflow) from a release tag v*
 # whose version is the package.json version; it has no push or schedule trigger.
 # operation deploy    builds and pushes one image per environments.<env>.deploy.images entry of .starcistacks/application-stacks.yaml,
-#                     then deploys their immutable digests (render, provision, converge, verify, accept; a failure redeploys the previous release)
+#                     then deploys their immutable digests (render, provision, converge, post-deploy tasks, verify, accept; a failure redeploys the previous release)
 # operation rollback  redeploys a stored release; "release" is 16 lowercase hex characters, empty means the previous accepted release
 # The environment input names a protected GitHub environment (required reviewers) that holds:
 #   vars    VPS_HOST, VPS_USER (the swarm manager); a variable named in deploy.passEnv, when the stack interpolates one
