@@ -78,6 +78,9 @@ interface AuditLine {
     readonly started: number
 }
 
+/** What the receipt of arguments refused by the generic bound records: the refused tree is unbounded, so it is never serialized. */
+const UNRECORDED_ARGUMENTS: GatewayJson = {}
+
 /** The answer of a call that stops before any connector is reached. */
 const failure = (code: "invalid_name" | "unknown_tool" | "connector_disabled", detail: string): GatewayCallResult => ({
     ok: false,
@@ -256,20 +259,13 @@ export class McpGatewayService {
 
     /** Calls one tool through its schema, grant, approval and breaker; non-read tools require a nonblank operation key or work item. */
     async call(caller: GatewayCaller, name: string, args: GatewayJson): Promise<GatewayCallResult> {
-        const parsed = gatewayArgumentsSchema.safeParse(args)
-        if (!parsed.success) return { ok: false, code: "invalid_arguments", detail: "Invalid tool arguments" }
         const started = this.clock.now().getTime()
+        const parsed = gatewayArgumentsSchema.safeParse(args)
         const resolved = await this.resolve(caller.workspaceId, name)
+        if (!parsed.success) return this.refuseArguments(caller, resolved, UNRECORDED_ARGUMENTS, started)
         if ("ok" in resolved) return resolved
-        if (resolved.spec.argumentSchema?.safeParse(parsed.data).success === false) {
-            await this.audit(caller, resolved, parsed.data, {
-                outcome: "refused",
-                code: "invalid_arguments",
-                summary: "",
-                started,
-            })
-            return { ok: false, code: "invalid_arguments", detail: "Invalid tool arguments" }
-        }
+        if (resolved.spec.argumentSchema?.safeParse(parsed.data).success === false)
+            return this.refuseArguments(caller, resolved, parsed.data, started)
         const sent = withReplayKey(resolved.spec, caller, resolved.name, parsed.data)
         if (!usable(resolved.connector, resolved.spec.name)) {
             await this.audit(caller, resolved, sent, {
@@ -296,6 +292,23 @@ export class McpGatewayService {
             return { ok: false, code: "approval_required", reason: verdict.reason }
         }
         return this.guarded(caller, resolved, { original: args, forwarded: sent }, started)
+    }
+
+    /** Refuses invalid arguments, with a receipt when the tool resolves (an unknown tool has no connector to file it under). */
+    private async refuseArguments(
+        caller: GatewayCaller,
+        resolved: Resolved | GatewayCallResult,
+        args: GatewayJson,
+        started: number,
+    ): Promise<GatewayCallResult> {
+        if (!("ok" in resolved))
+            await this.audit(caller, resolved, args, {
+                outcome: "refused",
+                code: "invalid_arguments",
+                summary: "",
+                started,
+            })
+        return { ok: false, code: "invalid_arguments", detail: "Invalid tool arguments" }
     }
 
     /** The breaker of a workspace's connector; one that never failed is closed. */

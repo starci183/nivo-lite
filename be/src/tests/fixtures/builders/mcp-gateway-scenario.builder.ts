@@ -446,19 +446,51 @@ export const INVALID_GATEWAY_TOOLS = [
 ]
 
 /** Global budget failures stop before resolution; native shape failures stop before ask-mode grants. */
+/** A record carrying an own `__proto__` key, as a JSON body read from the wire can. */
+const prototypeKeyed = (): GatewayJson => {
+    const record: GatewayJson = {}
+    return Object.defineProperty(record, "__proto__", { value: { polluted: true }, enumerable: true })
+}
+
+/** Refused arguments; each receipt is [outcome, code, recorded arguments], and the generic bound records none of the refused tree. */
 export const INVALID_GATEWAY_ARGUMENTS: ReadonlyArray<{
     readonly label: string
     readonly setup: GatewaySpecSetup
+    readonly tool: string
     readonly args: GatewayJson
     readonly connectorReads: number
     readonly audit: ReadonlyArray<ReadonlyArray<string>>
 }> = [
-    { label: "unbounded payloads", setup: {}, args: { text: "x".repeat(8193) }, connectorReads: 0, audit: [] },
+    {
+        label: "unbounded payloads",
+        setup: {},
+        tool: "sepay.transactions.list",
+        args: { text: "x".repeat(8193) },
+        connectorReads: 1,
+        audit: [["refused", "invalid_arguments", "{}"]],
+    },
+    {
+        label: "a prototype key",
+        setup: {},
+        tool: "sepay.transactions.list",
+        args: { filter: prototypeKeyed() },
+        connectorReads: 1,
+        audit: [["refused", "invalid_arguments", "{}"]],
+    },
+    {
+        label: "unbounded payloads to an unknown tool",
+        setup: {},
+        tool: "sepay.nothing",
+        args: { text: "x".repeat(8193) },
+        connectorReads: 1,
+        audit: [],
+    },
     {
         label: "invalid native limits",
         setup: { grants: [toolGrantRowOf({ tool: "sepay.*", mode: "ask" })] },
+        tool: "sepay.transactions.list",
         args: { limit: 51 },
         connectorReads: 1,
-        audit: [["refused", "invalid_arguments"]],
+        audit: [["refused", "invalid_arguments", '{"limit":51}']],
     },
 ]

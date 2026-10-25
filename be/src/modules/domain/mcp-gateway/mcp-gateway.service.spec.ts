@@ -417,15 +417,15 @@ describe("McpGatewayService breaker", () => {
 describe("McpGatewayService.call native connectors", () => {
     it.each(INVALID_GATEWAY_ARGUMENTS)("rejects $label before grants or execution", async (scenario) => {
         const { gateway, connectors, native, remote, grants, timeout, callLog } = await build(scenario.setup)
-        await expect(gateway.call(CALLER, "sepay.transactions.list", scenario.args)).resolves.toEqual(
-            EXPECTED.invalidArguments,
-        )
+        await expect(gateway.call(CALLER, scenario.tool, scenario.args)).resolves.toEqual(EXPECTED.invalidArguments)
         expect(connectors.list).toHaveBeenCalledTimes(scenario.connectorReads)
         expect(grants.listOfAgent).not.toHaveBeenCalled()
         expect(native.invoke).not.toHaveBeenCalled()
         expect(remote.call).not.toHaveBeenCalled()
         expect(timeout.schedule).not.toHaveBeenCalled()
-        expect(linesOf(callLog).map((line) => [line.outcome, line.errorCode])).toEqual(scenario.audit)
+        expect(linesOf(callLog).map((line) => [line.outcome, line.errorCode, line.argsMaskedJson])).toEqual(
+            scenario.audit,
+        )
     })
 
     it("returns and audits invalid arguments without opening the connector's breaker or logging a server failure", async () => {
