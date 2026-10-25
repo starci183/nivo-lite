@@ -35,16 +35,19 @@ beforeAll(async () => {
 })
 
 describe("direct conversation unread over PostgreSQL", () => {
-    it("counts foreign-authored lines per agent and lead and skips the caller's own", async () => {
+    it("counts foreign-authored lines per agent and lead, recognising the caller by account id and not by display name", async () => {
         const rooms = world.resolve(OfficeRoomsService)
         const unread = await rooms.unread(identity.ownerId, identity.workspaceId)
 
         expect(unread).toEqual({
-            agents: [{ id: identity.agentIds[0], unread: 3 }],
+            agents: [
+                { id: identity.agentIds[0], unread: 3 },
+                // The chatbot line and the homonym account count; the renamed own line (account id) and the legacy own line (name) do not.
+                { id: identity.agentIds[1], unread: 2 },
+            ],
             leads: [{ id: identity.leadIds[0], unread: 2 }],
         })
-        // The second agent, the second lead and every foreign row stay silent.
-        expect(unread.agents.map((entry) => entry.id)).not.toContain(identity.agentIds[1])
+        // The second lead and every foreign row stay silent.
         expect(unread.agents.map((entry) => entry.id)).not.toContain(identity.agentIds[2])
         expect(unread.leads.map((entry) => entry.id)).not.toContain(identity.leadIds[1])
         expect(unread.leads.map((entry) => entry.id)).not.toContain(identity.leadIds[2])
@@ -55,7 +58,10 @@ describe("direct conversation unread over PostgreSQL", () => {
         await rooms.markConversationRead(identity.ownerId, identity.workspaceId, "agent", identity.agentIds[0])
 
         const unread = await rooms.unread(identity.ownerId, identity.workspaceId)
-        expect(unread).toEqual({ agents: [], leads: [{ id: identity.leadIds[0], unread: 2 }] })
+        expect(unread).toEqual({
+            agents: [{ id: identity.agentIds[1], unread: 2 }],
+            leads: [{ id: identity.leadIds[0], unread: 2 }],
+        })
         expect(
             await world.db.primary.query(MARKERS_OF, [identity.workspaceId, `agent:${identity.agentIds[0]}`]),
         ).toEqual([{ n: 1 }])
@@ -65,7 +71,10 @@ describe("direct conversation unread over PostgreSQL", () => {
         const rooms = world.resolve(OfficeRoomsService)
         await rooms.markConversationRead(identity.ownerId, identity.workspaceId, "lead", identity.leadIds[0])
 
-        expect(await rooms.unread(identity.ownerId, identity.workspaceId)).toEqual({ agents: [], leads: [] })
+        expect(await rooms.unread(identity.ownerId, identity.workspaceId)).toEqual({
+            agents: [{ id: identity.agentIds[1], unread: 2 }],
+            leads: [],
+        })
         expect(await world.db.primary.query(MARKERS_OF, [identity.workspaceId, `lead:${identity.leadIds[0]}`])).toEqual(
             [{ n: 1 }],
         )

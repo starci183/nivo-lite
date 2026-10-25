@@ -2,8 +2,8 @@ import { sql } from "@modules/platform/database"
 
 /**
  * The department rooms of a workspace with what the room list shows: the caller's unread count (lines after their last read that
- * they did not write themselves, capped at 99), the newest line, the members and the pinned documents.
- * $1 workspace, $2 the caller's user id, $3 the caller's display name.
+ * they did not write themselves, capped at 99; their own lines are recognised by author_user_id, and by display name only on legacy lines that carry no account id), the newest line, the members and the pinned documents.
+ * $1 workspace, $2 the caller's user id, $3 the caller's display name (legacy lines only).
  */
 export const LIST_ROOMS = sql`
     SELECT r.key, r.name, r.position,
@@ -11,7 +11,8 @@ export const LIST_ROOMS = sql`
                SELECT count(*) FROM public.messages m
                WHERE m.workspace_id = r.workspace_id AND m.room = r.key
                  AND m.created_at > COALESCE(rd.last_read_at, '-infinity'::timestamptz)
-                 AND NOT (m.author_kind = 'human' AND m.author_name = $3)))::int AS unread,
+                 AND m.author_user_id IS DISTINCT FROM $2
+                 AND NOT (m.author_user_id IS NULL AND m.author_kind = 'human' AND m.author_name = $3)))::int AS unread,
            last.body AS last_body, last.author_name AS last_author, to_json(last.created_at) #>> '{}' AS last_at,
            COALESCE((SELECT array_agg(rm.agent_id::text ORDER BY rm.created_at) FROM public.office_rooms_members rm
                      WHERE rm.room_id = r.id AND rm.agent_id IS NOT NULL), '{}'::text[]) AS agent_ids,
@@ -46,7 +47,8 @@ export const OFFICE_ROOM_SUMMARY = sql`
                SELECT count(*) FROM public.messages m
                WHERE m.workspace_id = $1
                  AND m.created_at > COALESCE((SELECT last_read_at FROM read_marker LIMIT 1), '-infinity'::timestamptz)
-                 AND NOT (m.author_kind = 'human' AND m.author_name = $3)))::int AS unread,
+                 AND m.author_user_id IS DISTINCT FROM $2
+                 AND NOT (m.author_user_id IS NULL AND m.author_kind = 'human' AND m.author_name = $3)))::int AS unread,
            (SELECT body FROM newest LIMIT 1) AS last_body,
            (SELECT author_name FROM newest LIMIT 1) AS last_author,
            (SELECT to_json(created_at) #>> '{}' FROM newest LIMIT 1) AS last_at
@@ -65,7 +67,8 @@ export const LIST_AGENT_UNREAD = sql`
                SELECT count(*) FROM public.messages m
                WHERE m.workspace_id = a.workspace_id AND m.agent_id = a.id
                  AND m.created_at > COALESCE(rd.last_read_at, '-infinity'::timestamptz)
-                 AND NOT (m.author_kind = 'human' AND m.author_name = $3)))::int AS unread
+                 AND m.author_user_id IS DISTINCT FROM $2
+                 AND NOT (m.author_user_id IS NULL AND m.author_kind = 'human' AND m.author_name = $3)))::int AS unread
     FROM public.agents a
     LEFT JOIN public.office_rooms_reads rd
            ON rd.workspace_id = a.workspace_id AND rd.user_id = $2 AND rd.room = 'agent:' || a.id::text
@@ -82,7 +85,8 @@ export const LIST_LEAD_UNREAD = sql`
                SELECT count(*) FROM public.messages m
                WHERE m.workspace_id = l.workspace_id AND m.lead_id = l.id
                  AND m.created_at > COALESCE(rd.last_read_at, '-infinity'::timestamptz)
-                 AND NOT (m.author_kind = 'human' AND m.author_name = $3)))::int AS unread
+                 AND m.author_user_id IS DISTINCT FROM $2
+                 AND NOT (m.author_user_id IS NULL AND m.author_kind = 'human' AND m.author_name = $3)))::int AS unread
     FROM public.leads l
     LEFT JOIN public.office_rooms_reads rd
            ON rd.workspace_id = l.workspace_id AND rd.user_id = $2 AND rd.room = 'lead:' || l.id::text

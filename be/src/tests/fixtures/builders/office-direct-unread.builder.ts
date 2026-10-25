@@ -25,7 +25,7 @@ export const officeDirectUnreadIdentity = (next: () => string): OfficeDirectUnre
     foreignUserId: next(),
 })
 
-/** The caller's display name; human lines under it never count against the caller's unread. */
+/** The caller's current display name; legacy human lines (no account id) under it never count against the caller's unread. */
 export const OFFICE_DIRECT_OWNER = "Owner Person"
 
 const T0 = "2026-01-01T00:00:00+00:00"
@@ -59,6 +59,7 @@ const lineOf = (
     authorKind: string,
     authorName: string,
     createdAt: string,
+    authorUserId: string | null = null,
 ) => ({
     workspace_id: workspaceId,
     author_kind: authorKind,
@@ -67,7 +68,36 @@ const lineOf = (
     agent_id: agentId,
     lead_id: leadId,
     created_at: createdAt,
+    author_user_id: authorUserId,
 })
+
+/**
+ * The second home agent's thread, which proves who counts as the caller: a chatbot line (counts), a line the caller wrote under an
+ * older display name (excluded by account id), a legacy line with no account id under the caller's current name (excluded by the
+ * name fallback) and a line by another account who shares the caller's display name (counts).
+ */
+const identityLinesOf = (identity: OfficeDirectUnreadIdentity) => [
+    lineOf(identity.workspaceId, identity.agentIds[1], null, "agent", "Chatbot", "2026-02-02T00:00:00+00:00"),
+    lineOf(
+        identity.workspaceId,
+        identity.agentIds[1],
+        null,
+        "human",
+        "Owner Before The Rename",
+        "2026-02-02T00:01:00+00:00",
+        identity.ownerId,
+    ),
+    lineOf(identity.workspaceId, identity.agentIds[1], null, "human", OFFICE_DIRECT_OWNER, "2026-02-02T00:02:00+00:00"),
+    lineOf(
+        identity.workspaceId,
+        identity.agentIds[1],
+        null,
+        "human",
+        OFFICE_DIRECT_OWNER,
+        "2026-02-02T00:03:00+00:00",
+        identity.foreignUserId,
+    ),
+]
 
 const linesOf = (
     workspaceId: string,
@@ -100,7 +130,8 @@ const linesOf = (
 
 /**
  * Persists the caller's seat, the agents and leads of two workspaces and their lines. The first agent holds three
- * foreign-authored lines plus one written by the caller; the first lead two plus one; the foreign workspace four each.
+ * foreign-authored lines plus one written by the caller; the second agent the identity story above (two counted lines); the
+ * first lead two plus one; the foreign workspace four each.
  */
 export const persistOfficeDirectUnread = (
     manager: EntityManager,
@@ -145,6 +176,7 @@ export const persistOfficeDirectUnread = (
         await eachInOrder(
             [
                 ...linesOf(identity.workspaceId, identity.agentIds[0], null, 3, 1),
+                ...identityLinesOf(identity),
                 ...linesOf(identity.workspaceId, null, identity.leadIds[0], 2, 1),
                 ...linesOf(identity.foreignWorkspaceId, identity.agentIds[2], null, 4, 0),
                 ...linesOf(identity.foreignWorkspaceId, null, identity.leadIds[2], 4, 0),
