@@ -75,8 +75,15 @@ export const useOfficeMessenger = (focusedId: string | null, roomKey: string | n
     const waitingCount = board.pending.length + board.exceptions.length + pendingCards
     const items = useOfficeThreadView(messages, board, words, focusedId, decisions.alreadyIds)
     const panelRoom = useMemo(
-        () => ({ current, key: roomKey, rooms: hub.rooms, channels: hub.channels, agents: roomAgents }),
-        [current, roomKey, hub.rooms, hub.channels, roomAgents],
+        () => ({
+            current,
+            key: roomKey,
+            rooms: hub.rooms,
+            channels: hub.channels,
+            agents: roomAgents,
+            unread: hub.unread,
+        }),
+        [current, roomKey, hub.rooms, hub.channels, roomAgents, hub.unread],
     )
     const panels = useOfficePanels(messages ?? [], board, words, waitingCount, panelRoom)
 
@@ -127,5 +134,6 @@ export const useOfficeMessenger = (focusedId: string | null, roomKey: string | n
         text: words.t,
         send,
         markRead: hub.markRead,
+        markConversationRead: hub.markConversationRead,
     }
 }
