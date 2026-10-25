@@ -8,7 +8,7 @@ Handler contracts and settings are in [../guides/jobs.md](../guides/jobs.md).
 
 The migration chain expands and moves data before contracting the old job API:
 
-1. `20261104235900_queue-cutover.sql` locks the outbox and the known job queues and archives. It converts queued and in-flight pgmq
+1. `supabase/migrations/20261104235900_queue-cutover.sql` locks the outbox and the known job queues and archives. It converts queued and in-flight pgmq
    messages into canonical outbox rows, keeping an existing outbox UUID or deriving a stable UUID for a raw message that had none.
    Existing outbox work without a broker copy is made eligible for publication. Archived dead messages retain failed outbox evidence.
 2. The migration asserts that pending messages have durable outbox representation before deleting their pending pgmq copies. Archives
@@ -16,7 +16,7 @@ The migration chain expands and moves data before contracting the old job API:
 3. During the transition between migration files, redirect triggers and compatibility functions turn old pgmq job sends into outbox
    writes. Old job settlement cannot mark migrated work completed. Existing fenced claims protect effects if a delivery overlaps the
    cutover.
-4. `20261105000000_queue-bullmq.sql` installs the BullMQ admission, relay, repair and settlement functions, moves recurring job
+4. `supabase/migrations/20261105000000_queue-bullmq_contract_pgmq-drop.sql` installs the BullMQ admission, relay, repair and settlement functions, moves recurring job
    schedules to `job_enqueue`, then drops the old pgmq job read and settlement functions after the move.
 
 For a controlled deploy, stop admission to old consumers and let their in-flight deliveries settle before applying the migration

@@ -339,3 +339,8 @@ REVOKE EXECUTE ON FUNCTION public.job_requeue(uuid) FROM PUBLIC, anon, authentic
 GRANT EXECUTE ON FUNCTION public.job_requeue(uuid) TO app_be;
 REVOKE EXECUTE ON FUNCTION public.job_requeue_failed(integer) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.job_requeue_failed(integer) TO app_be;
+
+REVOKE EXECUTE ON FUNCTION public.job_enqueue(uuid, text, text, jsonb, text) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.job_enqueue(uuid, text, text, jsonb, text) TO app_be;
+REVOKE EXECUTE ON FUNCTION public.job_stats() FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.job_stats() TO app_be;

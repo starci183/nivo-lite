@@ -125,7 +125,7 @@ DO $$
 declare
   q record;
   m record;
-  v_unmigrated bigint;
+  v_id uuid;
 begin
   for q in
     select queue_name from pgmq.list_queues() p
@@ -141,20 +141,30 @@ begin
   loop
     execute format('lock table pgmq.%I, pgmq.%I in access exclusive mode', 'q_' || q.queue_name, 'a_' || q.queue_name);
     for m in execute format('select * from pgmq.%I order by msg_id', 'q_' || q.queue_name) loop
-      perform public.job_cutover_adopt(q.queue_name, m.msg_id, m.enqueued_at, m.message, m.read_ct, m.vt, false);
+      v_id := public.job_cutover_adopt(q.queue_name, m.msg_id, m.enqueued_at, m.message, m.read_ct, m.vt, false);
+      if not exists (select 1 from public.job_outbox o where o.id = v_id) then raise exception 'Unmigrated pgmq job % in %', m.msg_id, q.queue_name; end if;
     end loop;
     for m in execute format('select * from pgmq.%I order by msg_id', 'a_' || q.queue_name) loop
-      perform public.job_cutover_adopt(q.queue_name, m.msg_id, m.enqueued_at, m.message, m.read_ct, m.vt, true);
+      v_id := public.job_cutover_adopt(q.queue_name, m.msg_id, m.enqueued_at, m.message, m.read_ct, m.vt, true);
+      if not exists (select 1 from public.job_outbox o where o.id = v_id) then raise exception 'Unmigrated pgmq job % in %', m.msg_id, q.queue_name; end if;
     end loop;
-    execute format(
-      'select count(*) from pgmq.%I m where not exists (select 1 from public.job_outbox o where o.queue = $1 and '
-      || '(o.id = coalesce((m.message->>''outbox_id'')::uuid, md5(''nivo.pgmq-cutover:'' || $1 || '':'' || m.msg_id)::uuid) '
-      || 'or o.msg_id = m.msg_id or o.dedupe_key = m.message->>''dedupe''))', 'q_' || q.queue_name)
-    into v_unmigrated using q.queue_name;
-    if v_unmigrated <> 0 then raise exception 'Unmigrated pgmq jobs remain in %', q.queue_name; end if;
     execute format('delete from pgmq.%I', 'q_' || q.queue_name);
     execute format('create trigger job_cutover_redirect after insert on pgmq.%I for each row execute function public.job_cutover_redirect(%L)',
       'q_' || q.queue_name, q.queue_name);
   end loop;
   update public.job_outbox set sent_at = null where state in ('queued', 'running');
 end $$;
+
+-- The redefined entry points stay backend-only.
+REVOKE EXECUTE ON FUNCTION public.job_enqueue(uuid, text, text, jsonb, text) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.job_enqueue(uuid, text, text, jsonb, text) TO app_be;
+REVOKE EXECUTE ON FUNCTION public.job_read(text, integer, integer, integer) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.job_read(text, integer, integer, integer) TO app_be;
+REVOKE EXECUTE ON FUNCTION public.job_ack(text, bigint) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.job_ack(text, bigint) TO app_be;
+REVOKE EXECUTE ON FUNCTION public.job_touch(text, bigint, integer) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.job_touch(text, bigint, integer) TO app_be;
+REVOKE EXECUTE ON FUNCTION public.job_fail(text, bigint, integer, text) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.job_fail(text, bigint, integer, text) TO app_be;
+REVOKE EXECUTE ON FUNCTION public.job_archive(text, bigint, text) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.job_archive(text, bigint, text) TO app_be;

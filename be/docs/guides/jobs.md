@@ -6,15 +6,15 @@ decision A for v0.3.6 selects BullMQ for job queues; the event bus stays on pgmq
 
 ## Where things live
 
-| Piece                                                       | Path                                                   |
-| ----------------------------------------------------------- | ------------------------------------------------------ |
-| Outbox, relay, BullMQ transport, worker registry and status | `be/src/modules/platform/queue`                        |
-| Fenced claims and processor base                            | `be/src/modules/platform/jobs`                         |
-| Typed queue producers, names, payloads and dedupe keys      | `be/src/modules/queues/<queue>`                        |
-| Job processors and steps                                    | `be/src/features/jobs/<job>/{steps,transport/queue}`   |
-| API processor registration                                  | `be/apps/api/src/compose/jobs.ts`                      |
-| Durable queue functions and recurring job schedules         | `supabase/migrations/20261105000000_queue-bullmq.sql`  |
-| Operator commands                                           | `be/src/features/cli/jobs` and `starci app stack jobs` |
+| Piece                                                       | Path                                                                     |
+| ----------------------------------------------------------- | ------------------------------------------------------------------------ |
+| Outbox, relay, BullMQ transport, worker registry and status | `be/src/modules/platform/queue`                                          |
+| Fenced claims and processor base                            | `be/src/modules/platform/jobs`                                           |
+| Typed queue producers, names, payloads and dedupe keys      | `be/src/modules/queues/<queue>`                                          |
+| Job processors and steps                                    | `be/src/features/jobs/<job>/{steps,transport/queue}`                     |
+| API processor registration                                  | `be/apps/api/src/compose/jobs.ts`                                        |
+| Durable queue functions and recurring job schedules         | `supabase/migrations/20261105000000_queue-bullmq_contract_pgmq-drop.sql` |
+| Operator commands                                           | `be/src/features/cli/jobs` and `starci app stack jobs`                   |
 
 ## Delivery and recovery
 

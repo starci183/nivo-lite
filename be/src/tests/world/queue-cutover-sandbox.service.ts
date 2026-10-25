@@ -16,7 +16,7 @@ const SANDBOX_SCRIPT = resolve(APP_ROOT, "scripts", "queue-cutover-sandbox.mjs")
 
 /** The migration that moves every pgmq job into the outbox (expand), and the one that drops the pgmq functions (contract). */
 export const EXPAND_MIGRATION = "20261104235900_queue-cutover.sql"
-export const CONTRACT_MIGRATION = "20261105000000_queue-bullmq.sql"
+export const CONTRACT_MIGRATION = "20261105000000_queue-bullmq_contract_pgmq-drop.sql"
 
 /** A sandbox the proof can also migrate step by step. */
 export interface CutoverSandbox extends WorldSandbox {
