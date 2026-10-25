@@ -2,7 +2,7 @@
 export interface QueueJobStatus {
     /** The stable queue outbox id. */
     readonly id: string
-    /** Retried work is queued; only archived work is failed. */
+    /** Retried work is queued; only dead-lettered work is failed. */
     readonly state: "queued" | "running" | "done" | "failed"
     /** How many deliveries have started. */
     readonly attempts: number
@@ -25,9 +25,19 @@ export interface QueueSchedulerDefinition {
     readonly payload?: object
 }
 
+/** The broker job fields a delivery is built from: its id, its name and the payload the producer wrote. */
+export interface QueueDeliverySource {
+    /** The job id: the outbox row id the relay published it under. */
+    readonly id?: string | undefined
+    /** The job name inside the queue. */
+    readonly name: string
+    /** The payload the producer wrote. */
+    readonly data: object
+}
+
 /** One job as a handler receives it. */
 export interface QueueDelivery {
-    /** The job id: the outbox row id of an enqueued job (stable across its retries), `<queue>:<message id>` of a scheduled tick. */
+    /** The job id: the outbox row id of the job (stable across its retries). */
     readonly id: string
     /** The queue. */
     readonly queue: string
@@ -49,7 +59,7 @@ export interface QueueWriteOptions {
     readonly dedupeKey?: string | undefined
 }
 
-/** One job to send, resolved: what the transport writes to the outbox and pgmq in the caller's transaction. */
+/** One job to send, resolved: what the writer inserts into the outbox in the caller's transaction. */
 export interface QueueJob {
     /** The queue. */
     readonly queue: string

@@ -61,6 +61,8 @@ const resourceDoubles = (): ReadonlyMap<string, unknown> => {
     const manager = { query: refuseWiringOperation, transaction: refuseWiringOperation }
     const transport = {
         add: refuseWiringOperation,
+        stateOf: refuseWiringOperation,
+        republish: refuseWiringOperation,
         work: refuseWiringOperation,
         wait: refuseWiringOperation,
         close: refuseWiringOperation,
@@ -88,7 +90,7 @@ const resourceDoubles = (): ReadonlyMap<string, unknown> => {
         ],
         ["integrations.supabase.public-client", { sendSignInLink: refuseWiringOperation }],
         ["platform.queue.transport", transport],
-        ["PgmqQueueTransportClient", transport],
+        ["BullmqQueueTransportClient", transport],
     ])
 }
 
@@ -107,9 +109,15 @@ const resourceOverrides = (): Array<{ token: InjectionToken; value: unknown }> =
         SupabaseModule.register(wiringSettings.supabase),
         QueueModule.register({
             enabled: false,
+            redisHost: "redis.invalid",
+            redisPort: 6379,
+            redisDb: 0,
+            prefix: "wiring",
             concurrency: 1,
             workspaceConcurrency: 1,
-            pollIntervalMs: 500,
+            relayIntervalMs: 500,
+            relayBatch: 50,
+            reconcileAfterMs: 15000,
             visibilityTimeoutMs: 60000,
             shutdownGraceMs: 1000,
             schedulers: [],

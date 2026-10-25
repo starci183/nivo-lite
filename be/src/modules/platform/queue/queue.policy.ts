@@ -1,21 +1,33 @@
 import { QueueError, QueueErrorCode } from "./errors/queue.error"
 import { DomainError } from "@modules/platform/errors"
-import type { QueueDelivery, QueueHandler, QueueJob, QueueWriteOptions } from "./queue.contracts"
-import type { QueueReadRow } from "./persistence/queue.rows"
+import type { QueueDelivery, QueueDeliverySource, QueueHandler, QueueJob, QueueWriteOptions } from "./queue.contracts"
 
-/** How many starts a job gets before it is archived as failed. */
+/** How many starts a job gets before it is dead-lettered as failed. */
 export const ATTEMPTS = 4
 
 /** The pause after the first failed start; it doubles with every further failure (5 s, 10 s, 20 s). */
 export const BACKOFF_MS = 5000
 
-/** The visibility timeout is renewed this many times while a handler runs (every third of it). */
+/** How long a completed job stays in the broker. */
+export const KEEP_COMPLETED_SECONDS = 3600
+
+/** The workspace slot is renewed this many times while a handler runs (every third of it). */
 export const TOUCHES_PER_TIMEOUT = 3
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/iu
 
-/** Whole seconds, rounded up: pgmq counts visibility timeouts in seconds. */
+/** Whole seconds, rounded up: the database counts slot leases and retry pauses in seconds. */
 export const secondsOf = (ms: number): number => Math.ceil(ms / 1000)
+
+/** A few seconds of spread derived from the job id, so deferred jobs of one workspace do not retry in lockstep. */
+const spreadOf = (id: string): number => {
+    let spread = 0
+    for (const char of id) spread = (spread * 31 + (char.codePointAt(0) ?? 0)) % 2000
+    return spread
+}
+
+/** The pause of a job deferred because its workspace is already at the slot limit (a few seconds, spread by the job id). */
+export const deferMsOf = (id: string): number => 3000 + spreadOf(id)
 
 /** The pause before the next start of a job that failed on its `attempt`-th start: BACKOFF_MS doubled per failure, in seconds. */
 export const backoffSecondsOf = (attempt: number): number => secondsOf(BACKOFF_MS * 2 ** Math.max(0, attempt - 1))
@@ -62,16 +74,27 @@ export const jobOf = (queue: string, payload: object, options: QueueWriteOptions
     payload,
 })
 
+/** The pause between two tries of one delivery, in milliseconds: a retry hint of the failing error, else the backoff. */
+export const backoffMsOf = (attemptsMade: number, cause?: unknown): number => {
+    const hinted = retryAfterSecondsOf(cause)
+    return hinted !== undefined ? hinted * 1000 : BACKOFF_MS * 2 ** Math.max(0, attemptsMade - 1)
+}
+
 /**
- * The delivery a handler receives for one read message; a scheduler tick carries no outbox id and is known by its queue and message
- * id (pgmq numbers the messages of each queue from 1, so the bare message id of two queues' ticks would be the same job key).
+ * The delivery a handler receives for one broker job: the id is the outbox row id the relay published it under, the
+ * job name routes it to its handler and the attempt is the durable start count the database kept.
  */
-export const deliveryOf = (queue: string, row: QueueReadRow, signal: AbortSignal): QueueDelivery => ({
-    id: row.message.outbox_id ?? `${queue}:${row.msg_id}`,
+export const deliveryOf = (
+    queue: string,
+    job: QueueDeliverySource,
+    attempt: number,
+    signal: AbortSignal,
+): QueueDelivery => ({
+    id: job.id ?? `${queue}:unknown`,
     queue,
-    job: row.message.name ?? queue,
-    payload: row.message.payload ?? {},
-    attempt: row.attempt,
+    job: job.name || queue,
+    payload: job.data ?? {},
+    attempt,
     signal,
 })
 

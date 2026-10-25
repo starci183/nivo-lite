@@ -5,7 +5,10 @@ import type { QueueHandler } from "./queue.contracts"
 import {
     ATTEMPTS,
     BACKOFF_MS,
+    KEEP_COMPLETED_SECONDS,
+    backoffMsOf,
     backoffSecondsOf,
+    deferMsOf,
     deliveryOf,
     isExhausted,
     isUnrecoverable,
@@ -16,6 +19,7 @@ import {
     secondsOf,
     workspaceOf,
 } from "./queue.policy"
+import type { BullmqJob } from "./queue-transport.port"
 
 const WORKSPACE = "3f0c7a52-8d1e-4b6a-9c2d-5e7f10a4b8c6"
 class CapabilityError extends DomainError<"CAPABILITY_FAILED"> {}
@@ -24,12 +28,25 @@ const signal = new AbortController().signal
 const queueError = (code: QueueErrorCode, params: Record<string, string | number> = {}): QueueError =>
     new QueueError({ code, params })
 const handlerOf = (job?: string): QueueHandler => ({ queue: "knowledge", job, handle: () => Promise.resolve() })
+const brokerJob = (job: Partial<BullmqJob>): BullmqJob => ({
+    id: "row-1",
+    name: "knowledge.index",
+    data: {},
+    attemptsMade: 1,
+    moveToDelayed: () => Promise.resolve(),
+    getState: () => Promise.resolve("wait"),
+    remove: () => Promise.resolve(),
+    ...job,
+})
 
 /** Exposes the pure policy functions as one real provider in the Nest test graph. */
 class QueuePolicySubject {
     readonly ATTEMPTS = ATTEMPTS
     readonly BACKOFF_MS = BACKOFF_MS
+    readonly KEEP_COMPLETED_SECONDS = KEEP_COMPLETED_SECONDS
+    readonly backoffMsOf = backoffMsOf
     readonly backoffSecondsOf = backoffSecondsOf
+    readonly deferMsOf = deferMsOf
     readonly deliveryOf = deliveryOf
     readonly isExhausted = isExhausted
     readonly isUnrecoverable = isUnrecoverable
@@ -61,6 +78,22 @@ it("rounds milliseconds up to whole seconds", async () => {
 it("doubles the backoff with every start of the job: 5 s, 5 s, 10 s, 20 s", async () => {
     const subject = await build()
     expect([0, 1, 2, 3].map(subject.backoffSecondsOf)).toEqual([5, 5, 10, 20])
+})
+
+it("keeps the broker retry pause in milliseconds and honors the retry hint of the failing error", async () => {
+    const subject = await build()
+    expect([subject.backoffMsOf(1), subject.backoffMsOf(2), subject.backoffMsOf(3)]).toEqual([5000, 10000, 20000])
+    expect(subject.backoffMsOf(2, queueError(QueueErrorCode.RetryAfter, { seconds: 7.2 }))).toBe(8000)
+    expect(subject.backoffMsOf(2, new Error("down"))).toBe(10000)
+})
+
+it("defers a job refused by the workspace limit a few seconds, spread by its id, never under three", async () => {
+    const subject = await build()
+    const pauses = Array.from({ length: 50 }, (_, index) => subject.deferMsOf(`row-${index}`))
+    expect(Math.min(...pauses)).toBeGreaterThanOrEqual(3000)
+    expect(Math.max(...pauses)).toBeLessThan(5000)
+    expect(subject.deferMsOf("row-1")).toBe(subject.deferMsOf("row-1"))
+    expect(new Set(pauses).size).toBeGreaterThan(1)
 })
 
 it("exhausts a job on its last attempt", async () => {
@@ -185,21 +218,13 @@ describe("queue policy jobOf", () => {
 })
 
 describe("queue policy deliveryOf", () => {
-    it("delivers an enqueued job under its outbox row id, its job name and the attempt the database counted", async () => {
+    it("delivers a broker job under its outbox row id, its job name and the attempt the database counted", async () => {
         const subject = await build()
         expect(
             subject.deliveryOf(
                 "knowledge",
-                {
-                    msg_id: "7",
-                    attempt: 2,
-                    message: {
-                        name: "knowledge.index",
-                        payload: { sourceId: "s-1" },
-                        dedupe: "k:1",
-                        outbox_id: "row-1",
-                    },
-                },
+                brokerJob({ name: "knowledge.index", data: { sourceId: "s-1" } }),
+                2,
                 signal,
             ),
         ).toEqual({
@@ -212,10 +237,10 @@ describe("queue policy deliveryOf", () => {
         })
     })
 
-    it("delivers a scheduler tick under its queue and message id, in the job of its queue, with an empty payload when it has none", async () => {
+    it("delivers a job without a name or payload in the job of its queue with an empty payload", async () => {
         const subject = await build()
-        expect(subject.deliveryOf("sweep", { msg_id: "42", attempt: 1, message: {} }, signal)).toEqual({
-            id: "sweep:42",
+        expect(subject.deliveryOf("sweep", brokerJob({ name: "", data: {} }), 1, signal)).toEqual({
+            id: "row-1",
             queue: "sweep",
             job: "sweep",
             payload: {},
@@ -226,7 +251,7 @@ describe("queue policy deliveryOf", () => {
 })
 
 describe("queue policy routeOf", () => {
-    const delivery = deliveryOf("knowledge", { msg_id: "1", attempt: 1, message: { name: "knowledge.facts" } }, signal)
+    const delivery = deliveryOf("knowledge", brokerJob({ name: "knowledge.facts" }), 1, signal)
 
     it("prefers the handler of the job to the handler of the whole queue", async () => {
         const subject = await build()

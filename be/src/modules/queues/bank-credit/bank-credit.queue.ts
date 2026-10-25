@@ -3,7 +3,7 @@ import type { EntityManager } from "typeorm"
 import { InjectQueueOutbox } from "@modules/platform/queue"
 import type { QueueOutbox } from "@modules/platform/queue"
 
-/** The queue name: the contract between this producer and the processor of the reconcile-bank-credit job (a pgmq queue name). */
+/** The queue name: the contract between this producer and the processor of the reconcile-bank-credit job (the durable queue name). */
 export const BANK_CREDIT_QUEUE = "bank_credit_received"
 
 /** The payload of one reconcile-bank-credit job: ids and the amount only. */

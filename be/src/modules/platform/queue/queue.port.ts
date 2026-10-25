@@ -4,8 +4,9 @@ import type { QueueHandler, QueueWriteOptions } from "./queue.contracts"
 /** The queue outbox: a typed producer writes a job in the transaction of the caller, so it exists exactly when the change that needs it commits. */
 export interface QueueOutbox {
     /**
-     * Writes the job row and sends its pgmq message, both in the transaction `tx`. `payload.workspaceId` (a uuid) puts the job under the
-     * workspace limit; `options` names the job inside the queue and its identity (the same dedupe key written twice is one job).
+     * Writes the durable job row in the transaction `tx`; the relay publishes it to the broker after the commit.
+     * `payload.workspaceId` (a uuid) puts the job under the workspace limit; `options` names the job inside the queue
+     * and its identity (the same dedupe key written twice is one job).
      */
     write(tx: EntityManager, queue: string, payload: object, options?: QueueWriteOptions): Promise<void>
 }

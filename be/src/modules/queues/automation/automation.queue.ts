@@ -1,4 +1,4 @@
-/** The pgmq queue of the automations engine: its minute ticks. */
+/** The durable queue of the automations engine: its minute ticks. */
 export const AUTOMATION_QUEUE = "automation"
 
 /** The job of a minute tick: run the due runs, the scans and the extension ticks of every workspace. */

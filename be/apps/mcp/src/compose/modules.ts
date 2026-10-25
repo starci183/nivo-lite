@@ -69,7 +69,7 @@ export const mcpModules = (options: McpAppOptions): Array<DynamicModule> => [
     CqrsModule.register({ isGlobal: true }),
     HttpSecurityModule.register({ isGlobal: true, ...options.httpSecurity }),
     DatabaseModule.register({ isGlobal: true, connections: [options.database], typeParsers: appPgTypes }),
-    QueueModule.register({ isGlobal: true, schedulers: [], ...options.queue }),
+    QueueModule.register({ isGlobal: true, schedulers: [], ...options.queue, enabled: false }),
     EventsModule.register({ isGlobal: true }),
     ApiKeysModule.register({ isGlobal: true }),
     IdentityModule.register({

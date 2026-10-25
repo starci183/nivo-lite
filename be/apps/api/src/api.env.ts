@@ -79,7 +79,7 @@ export interface ApiOptions {
     readonly telegramUser: ReturnType<typeof parseTelegramUserConfig>
     /** The platform team that may use the console. */
     readonly platformAdmin: ReturnType<typeof parsePlatformAdminConfig>
-    /** How the pgmq workers run. */
+    /** How the BullMQ workers and the outbox relay run. */
     readonly queue: ReturnType<typeof parseQueueConfig>
     /** Who this worker is and how long a job claim lasts. */
     readonly jobs: ReturnType<typeof parseJobsConfig>

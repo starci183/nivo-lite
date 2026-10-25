@@ -8,9 +8,15 @@ import { Secret } from "@modules/platform/config"
 /** The producer stays idle until a proof explicitly starts its worker. */
 export const queueOptions: QueueOptions = {
     enabled: false,
+    redisHost: "redis.invalid",
+    redisPort: 6379,
+    redisDb: 0,
+    prefix: "world-proof",
     concurrency: 1,
     workspaceConcurrency: 1,
-    pollIntervalMs: 5,
+    relayIntervalMs: 5,
+    relayBatch: 50,
+    reconcileAfterMs: 15000,
     visibilityTimeoutMs: 30000,
     shutdownGraceMs: 1000,
     schedulers: [],

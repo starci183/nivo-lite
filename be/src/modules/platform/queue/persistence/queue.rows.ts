@@ -1,23 +1,30 @@
-/** The message body job_enqueue sends to pgmq (and a pg_cron tick mirrors): the job to run and what it needs. */
-export interface QueueMessageRow {
+/** One committed outbox row the relay hands to the broker (or checks against it). */
+export interface QueueRelayRow {
+    /** The outbox row id: the BullMQ job id of the delivery. */
+    readonly id: string
+    /** The queue. */
+    readonly queue: string
     /** The job name inside the queue. */
-    readonly name?: string
+    readonly name: string
     /** The payload the producer wrote. */
-    readonly payload?: object
-    /** The identity of the job (its unique outbox key); absent on the tick of a scheduler. */
-    readonly dedupe?: string
-    /** The outbox row id of an enqueued job; absent on the tick of a scheduler. */
-    readonly outbox_id?: string
+    readonly payload: object
 }
 
-/** One message `job_read` answers. */
-export interface QueueReadRow {
-    /** The pgmq message id (a bigint, which the driver returns as text). */
-    readonly msg_id: string
+/** A nonterminal outbox row the relay reconciles against the broker. */
+export interface QueueReconcileRow extends QueueRelayRow {
+    /** The durable outbox state. */
+    readonly state: string
+}
+
+/** The answer of `job_start`: what the worker may do with the delivery. */
+export interface QueueStartRow {
+    /**
+     * 'started' counts a real start and holds the workspace slot; 'busy' defers the job without spending a start;
+     * 'terminal' and 'missing' drop it (the row already ended or does not exist).
+     */
+    readonly outcome: "started" | "busy" | "terminal" | "missing"
     /** How many times the job really started, this start included. */
     readonly attempt: number
-    /** The message body. */
-    readonly message: QueueMessageRow
 }
 
 /** The answer of `job_enqueue`: the outbox row id, existing or new. */

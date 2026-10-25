@@ -13,7 +13,7 @@ import {
 } from "../../world/proof-database.service"
 import { useTestWorld } from "../../world/use-test-world"
 import type { LiteWorld } from "../../world/lite-world.service"
-import { WEBHOOK_MODULES, signingFixture, queueOptions } from "../../world/test-capabilities.options"
+import { WEBHOOK_MODULES, signingFixture } from "../../world/test-capabilities.options"
 type WebhookFixture = Awaited<ReturnType<ReturnType<typeof webhooksBuilder>["build"]>>
 
 /** A Jest type matcher as an untyped value, so it can stand in a typed expectation. */
@@ -88,7 +88,7 @@ const assertDownstreamDelivery = async (
             }),
         },
         dedupe_key: `${META_INBOUND_QUEUE}:${fixture.connectionId}:dm:${sent.mid}`,
-        sent_at: anyOf(Date),
+        sent_at: null,
     })
     expect(await webhookMessages(world.db.primary, sent.mid)).toEqual([
         {
@@ -123,7 +123,7 @@ const registerHandoffProof = (world: LiteWorld, fixture: () => WebhookFixture) =
                 id: anyOf(String),
                 payload: { deliveryId: sent.deliveryId },
                 dedupe_key: `${META_DELIVERY_QUEUE}:${sent.deliveryId}`,
-                sent_at: anyOf(Date),
+                sent_at: null,
             },
         ])
         expect(await webhookMessages(world.db.primary, sent.deliveryId)).toEqual([
@@ -161,7 +161,6 @@ describe("NIVO Meta webhook (local Supabase integration)", () => {
             workspaceId,
             connectionId: world.id(),
             signingFixture,
-            queueOptions,
             nextId: () => world.id(),
         }).build()
         cleanupWorkspace(world, userId, workspaceId)

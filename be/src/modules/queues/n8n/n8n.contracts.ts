@@ -1,4 +1,4 @@
-/** The pgmq queue that carries the signed deliveries to the n8n workflows. */
+/** The durable queue that carries the signed deliveries to the n8n workflows. */
 export const N8N_QUEUE = "n8n"
 
 /** The job of one delivery: post a run to its workflow. */

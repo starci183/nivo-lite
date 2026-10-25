@@ -1,4 +1,4 @@
-/** The queue name: the contract between the database function the front end calls and the processor of the complete-zalo-authorization job (a pgmq queue name). */
+/** The queue name: the contract between the database function the front end calls and the processor of the complete-zalo-authorization job (the durable queue name). */
 export const ZALO_AUTHORIZATION_QUEUE = "zalo_authorization"
 
 /** The payload of one complete-zalo-authorization job, written by the `zalo_authorization_return` database function. */

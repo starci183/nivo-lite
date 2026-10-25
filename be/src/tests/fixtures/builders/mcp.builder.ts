@@ -30,9 +30,15 @@ const options = {
     },
     queue: {
         enabled: false,
+        redisHost: "redis.invalid",
+        redisPort: 6379,
+        redisDb: 0,
+        prefix: "wiring",
         concurrency: 1,
         workspaceConcurrency: 1,
-        pollIntervalMs: 500,
+        relayIntervalMs: 500,
+        relayBatch: 50,
+        reconcileAfterMs: 15000,
         visibilityTimeoutMs: 60000,
         shutdownGraceMs: 1000,
     },
@@ -45,6 +51,8 @@ const resourceOverrides = (): Array<{ token: InjectionToken; value: unknown }> =
     const manager = { query: refuseWiringOperation, transaction: refuseWiringOperation }
     const transport = {
         add: refuseWiringOperation,
+        stateOf: refuseWiringOperation,
+        republish: refuseWiringOperation,
         work: refuseWiringOperation,
         wait: refuseWiringOperation,
         close: refuseWiringOperation,
@@ -55,7 +63,7 @@ const resourceOverrides = (): Array<{ token: InjectionToken; value: unknown }> =
             let name: string | undefined
             if (typeof token === "symbol") name = token.description
             if (typeof token === "function") name = token.name
-            return name === "platform.queue.transport" || name === "PgmqQueueTransportClient"
+            return name === "platform.queue.transport" || name === "BullmqQueueTransportClient"
                 ? [{ token, value: transport }]
                 : []
         },

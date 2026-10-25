@@ -1,4 +1,4 @@
-/** The pgmq queue of the shift alerts: the minute tick, the shift reminders and the no-show checks (one processor takes every job). */
+/** The durable queue of the shift alerts: the minute tick, the shift reminders and the no-show checks (one processor takes every job). */
 export const SHIFTS_QUEUE = "shifts_alerts"
 
 /** The job of a minute tick: find the reminders and no-show checks that are due, queue them, and close the month where it is time. */

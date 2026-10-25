@@ -1,4 +1,4 @@
-/** The queue name: the contract between the migration tick and the processor of the refresh-zalo-tokens job (a pgmq queue name). */
+/** The queue name: the contract between the migration tick and the processor of the refresh-zalo-tokens job (the durable queue name). */
 export const ZALO_REFRESH_QUEUE = "zalo_refresh"
 
 /** The payload of one tick: how far ahead of its end an access token is renewed. */

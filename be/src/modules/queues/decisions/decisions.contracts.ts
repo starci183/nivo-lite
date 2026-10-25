@@ -1,6 +1,6 @@
 import type { Locale } from "@modules/platform/i18n"
 
-/** The pgmq queue of the decisions: a person's decision, and the owner's Office commands. The name is the contract with the SQL that enqueues. */
+/** The durable queue of the decisions: a person's decision, and the owner's Office commands. The name is the contract with the SQL that enqueues. */
 export const DECISIONS_QUEUE = "decisions"
 
 /** The jobs of the decisions queue; the value is the job name inside the queue and the prefix of the dedupe key. */

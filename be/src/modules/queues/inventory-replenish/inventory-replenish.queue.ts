@@ -3,7 +3,7 @@ import type { EntityManager } from "typeorm"
 import { InjectQueueOutbox } from "@modules/platform/queue"
 import type { QueueOutbox } from "@modules/platform/queue"
 
-/** The queue name: the contract between this producer and the processor of the replenish-stock job (a pgmq queue name). */
+/** The queue name: the contract between this producer and the processor of the replenish-stock job (the durable queue name). */
 export const INVENTORY_REPLENISH_QUEUE = "inventory_replenish"
 
 /** The payload of one replenish-stock job: the items whose stock just moved, ids only. */

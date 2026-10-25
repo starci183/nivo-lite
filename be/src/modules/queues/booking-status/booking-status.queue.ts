@@ -1,4 +1,4 @@
-/** The queue name: the contract between the AFTER trigger of `bookings` (which sends through job_enqueue) and the processor of the apply-booking-status job (a pgmq queue name). */
+/** The queue name: the contract between the AFTER trigger of `bookings` (which sends through job_enqueue) and the processor of the apply-booking-status job (the durable queue name). */
 export const BOOKING_STATUS_QUEUE = "booking_status"
 
 /** The kinds of change the trigger reports. */

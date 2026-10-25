@@ -1,4 +1,4 @@
-/** The queue name: the contract between `public.request_video_render` and the processor of the request-render job (a pgmq queue name). */
+/** The queue name: the contract between `public.request_video_render` and the processor of the request-render job (the durable queue name). */
 export const RENDER_REQUEST_QUEUE = "render_request"
 
 /** The payload of one render request: the row of `public.app_commands` that holds what was asked. */

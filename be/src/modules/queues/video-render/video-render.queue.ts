@@ -3,7 +3,7 @@ import type { EntityManager } from "typeorm"
 import { InjectQueueOutbox } from "@modules/platform/queue"
 import type { QueueOutbox } from "@modules/platform/queue"
 
-/** The queue name: the contract between this producer and the processor of the render-video job (a pgmq queue name). */
+/** The queue name: the contract between this producer and the processor of the render-video job (the durable queue name). */
 export const VIDEO_RENDER_QUEUE = "video_render"
 
 /** The payload of one render-video job: the render row to produce, ids only. */

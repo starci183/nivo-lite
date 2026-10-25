@@ -1,6 +1,6 @@
 import type { Locale } from "@modules/platform/i18n"
 
-/** The pgmq queue of the lead generation flow: what follows a finished lead_gen step runs here, one step per job. */
+/** The durable queue of the lead generation flow: what follows a finished lead_gen step runs here, one step per job. */
 export const LEAD_GEN_QUEUE = "lead_gen"
 
 /** The job that continues a prospect's chain after a finished step and runs the steps it queued. */

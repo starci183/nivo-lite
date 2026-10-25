@@ -12,9 +12,15 @@ import { QueueWorkerService } from "./queue-worker.service"
 
 const options: QueueOptions = {
     enabled: true,
+    redisHost: "redis.invalid",
+    redisPort: 6379,
+    redisDb: 0,
+    prefix: "proof",
     concurrency: 3,
     workspaceConcurrency: 2,
-    pollIntervalMs: 100,
+    relayIntervalMs: 100,
+    relayBatch: 50,
+    reconcileAfterMs: 15_000,
     visibilityTimeoutMs: 30_000,
     shutdownGraceMs: 1000,
     schedulers: [],

@@ -1,4 +1,4 @@
-/** The queue name: the contract between the database function that sends one job per workspace every five minutes and the processor of the hiring-tick job (a pgmq queue name). */
+/** The queue name: the contract between the database function that sends one job per workspace every five minutes and the processor of the hiring-tick job (the durable queue name). */
 export const HIRING_TICK_QUEUE = "hiring_tick"
 
 /** The payload of one hiring-tick job: the workspace whose hiring is ticked. */
