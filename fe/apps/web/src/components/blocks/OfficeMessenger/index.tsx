@@ -163,14 +163,12 @@ const composerCommands = (
     return { onMention, onSend }
 }
 
-/** Resolves the member and agent count beneath the thread title. */
+/** Resolves the member and agent count beneath the thread title: counts only, so it stays one short line. */
 const officeSubtitle = (office: ReturnType<typeof useOfficeMessenger>): string => {
     const { text } = office
     if (office.roomTitle !== null) {
         const members = text("memberCount", { n: office.memberCount })
-        return office.roomOnDuty.length === 0
-            ? members
-            : `${members} · ${text("roomOnDuty", { names: office.roomOnDuty.join(", ") })}`
+        return office.onDutyCount === 0 ? members : `${members} · ${text("roomOnDuty", { n: office.onDutyCount })}`
     }
     if (office.memberCount === 1) return text("memberCountOne")
     if (office.agentCount > 0) return text("memberCountAgents", { n: office.memberCount, agents: office.agentCount })

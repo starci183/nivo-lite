@@ -108,7 +108,7 @@ const agentMemberOf = (agent: OfficeAgent, words: OfficeWords): OfficeMemberRowV
     seen: null,
     avatar: agentAvatarOf(agent),
     isMe: false,
-    presence: agent.isActive ? words.t("onDuty", { name: agent.name }) : null,
+    presence: agent.isActive ? words.t("onDuty") : null,
     mention: agent.isActive ? agent.handle : null,
     chatHref: agentChatHref(agent.id),
     note: waitsForOf(agent, words),

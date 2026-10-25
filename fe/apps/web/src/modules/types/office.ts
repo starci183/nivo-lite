@@ -309,7 +309,7 @@ export interface OfficeMemberRowView {
     readonly seen: string | null
     readonly avatar: OfficeAvatarView
     readonly isMe: boolean
-    /** "AI ... on duty" for an active agent; null for a person. */
+    /** The "on duty" chip of an active agent (the name is already beside it); null for a person. */
     readonly presence: string | null
     readonly mention: string | null
     readonly chatHref: string | null
