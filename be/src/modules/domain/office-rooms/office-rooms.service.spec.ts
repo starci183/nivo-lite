@@ -10,6 +10,7 @@ import type { MessageCatalog } from "@modules/platform/i18n"
 import { OfficeRoomsErrorCode } from "./errors/office-rooms.error"
 import { OfficeRoomsService } from "./office-rooms.service"
 import type { RoomRow } from "./persistence/office-rooms.rows"
+import { LIST_ROOM_MEMBERS } from "./persistence/office-room-members.sql"
 import { ENSURE_ROOMS, LIST_ROOMS, MARK_ROOM_READ, OFFICE_ROOM_SUMMARY } from "./persistence/office-rooms.sql"
 
 const member = builder<WorkspaceMember>({
@@ -61,6 +62,7 @@ const officeOf = (summary: Record<string, unknown>) => ({
     home_agent_ids: [],
     user_ids: [],
     pins: [],
+    members: { count: 0, preview: [] },
     ...summary,
 })
 
@@ -71,6 +73,17 @@ describe("OfficeRoomsService.rooms", () => {
             query: [
                 [OFFICE_ROOM_SUMMARY, [summary]],
                 [LIST_ROOMS, [roomOf()]],
+                [
+                    LIST_ROOM_MEMBERS,
+                    [
+                        {
+                            key: null,
+                            count: 6,
+                            preview: [{ name: "Mai Linh", avatarUrl: "https://example.com/mai.png" }],
+                        },
+                        { key: "marketing", count: 1, preview: [{ name: "AI Marketing", avatarUrl: null }] },
+                    ],
+                ],
             ],
         })
         const { service, members } = await build(em)
@@ -80,7 +93,15 @@ describe("OfficeRoomsService.rooms", () => {
         expect(members.require).toHaveBeenCalledWith("u-1", "ws-1")
         expect(em.query).toHaveBeenCalledWith(LIST_ROOMS, ["ws-1", "u-1", "Mai Linh"])
         expect(em.query).toHaveBeenCalledWith(OFFICE_ROOM_SUMMARY, ["ws-1", "u-1", "Mai Linh"])
-        expect(rooms).toEqual([officeOf(summary), roomOf()])
+        expect(em.query).toHaveBeenCalledWith(LIST_ROOM_MEMBERS, ["ws-1", ["marketing"]])
+        expect(em.query).toHaveBeenCalledTimes(3)
+        expect(rooms).toEqual([
+            officeOf({
+                ...summary,
+                members: { count: 6, preview: [{ name: "Mai Linh", avatarUrl: "https://example.com/mai.png" }] },
+            }),
+            { ...roomOf(), members: { count: 1, preview: [{ name: "AI Marketing", avatarUrl: null }] } },
+        ])
     })
 
     it("answers an empty Office room when the summary reads nothing", async () => {
@@ -88,6 +109,7 @@ describe("OfficeRoomsService.rooms", () => {
             query: [
                 [OFFICE_ROOM_SUMMARY, []],
                 [LIST_ROOMS, []],
+                [LIST_ROOM_MEMBERS, []],
             ],
         })
         const { service } = await build(em)
@@ -95,6 +117,37 @@ describe("OfficeRoomsService.rooms", () => {
         await expect(service.rooms("u-1", "ws-1")).resolves.toEqual([
             officeOf({ unread: 0, last_body: null, last_author: null, last_at: null }),
         ])
+    })
+})
+
+describe("OfficeRoomsService.rooms member previews", () => {
+    it("batches every department key and supplies empty member summaries when no seats are returned", async () => {
+        const rows = [roomOf(), roomOf({ key: "sales", name: "Sales" })]
+        const em = mockEntityManager({
+            query: [
+                [OFFICE_ROOM_SUMMARY, []],
+                [LIST_ROOMS, rows],
+                [LIST_ROOM_MEMBERS, []],
+            ],
+        })
+        const { service } = await build(em)
+
+        const rooms = await service.rooms("u-1", "ws-1")
+
+        expect(em.query).toHaveBeenCalledWith(LIST_ROOM_MEMBERS, ["ws-1", ["marketing", "sales"]])
+        expect(em.query).toHaveBeenCalledTimes(3)
+        expect(rooms.slice(1)).toEqual(rows.map((row) => ({ ...row, members: { count: 0, preview: [] } })))
+    })
+
+    it("does not read rooms or member photos when workspace membership is refused", async () => {
+        const em = mockEntityManager()
+        const { service, members } = await build(em)
+        const refusal = new Error("Membership refused")
+        members.require.mockRejectedValue(refusal)
+
+        await expect(service.rooms("outsider", "ws-1")).rejects.toBe(refusal)
+
+        expect(em.query).not.toHaveBeenCalled()
     })
 })
 
@@ -136,6 +189,7 @@ describe("OfficeRoomsService.setup", () => {
                 [ENSURE_ROOMS, [{ opened: 6 }]],
                 [OFFICE_ROOM_SUMMARY, []],
                 [LIST_ROOMS, [roomOf(), roomOf({ key: "sales", name: "Sales" })]],
+                [LIST_ROOM_MEMBERS, []],
             ],
         })
         const { service, members, cards } = await build(em)
@@ -170,6 +224,7 @@ describe("OfficeRoomsService.setup", () => {
                 [ENSURE_ROOMS, opened],
                 [OFFICE_ROOM_SUMMARY, []],
                 [LIST_ROOMS, []],
+                [LIST_ROOM_MEMBERS, []],
             ],
         })
         const { service, cards } = await build(em)

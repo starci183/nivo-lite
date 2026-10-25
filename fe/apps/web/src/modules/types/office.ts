@@ -213,6 +213,19 @@ export interface OfficeChatRowView {
     readonly avatar: OfficeAvatarView
 }
 
+/** One member shown in the composite avatar of a Hub room. */
+export interface OfficeRoomMemberPreviewView {
+    readonly name: string
+    /** The existing profile picture URL, or null for the name-based avatar. */
+    readonly avatarUrl: string | null
+}
+
+/** The total membership and at most four avatar previews of a Hub room. */
+export interface OfficeRoomMembersView {
+    readonly count: number
+    readonly preview: ReadonlyArray<OfficeRoomMemberPreviewView>
+}
+
 /** One Hub room of the room list. */
 export interface OfficeRoomRowView {
     /** The room key, or "office" for the general Office room. */
@@ -221,6 +234,7 @@ export interface OfficeRoomRowView {
     readonly description: string
     readonly time: string | null
     readonly unread: number
+    readonly members?: OfficeRoomMembersView | null
 }
 
 /** One channel of the room panel. */

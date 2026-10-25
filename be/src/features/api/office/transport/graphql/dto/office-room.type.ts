@@ -1,4 +1,5 @@
 import { Field, Int, ObjectType } from "@nestjs/graphql"
+import { OfficeRoomMembersType } from "./office-room-members.type"
 import { OfficeRoomPinType } from "./office-room-pin.type"
 
 @ObjectType()
@@ -43,6 +44,10 @@ export class OfficeRoomType {
     /** The people seated in the room. */
     @Field(() => [String])
     user_ids!: Array<string>
+
+    /** The member count and at most four avatar previews, when available. */
+    @Field(() => OfficeRoomMembersType, { nullable: true })
+    members?: OfficeRoomMembersType | null
 
     /** The pinned documents. */
     @Field(() => [OfficeRoomPinType])

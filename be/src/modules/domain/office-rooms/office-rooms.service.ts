@@ -8,7 +8,8 @@ import { InjectMessageCatalog } from "@modules/platform/i18n"
 import type { Locale, MessageCatalog } from "@modules/platform/i18n"
 import { OfficeRoomsError, OfficeRoomsErrorCode } from "./errors/office-rooms.error"
 import type { RoomChoice, RoomView } from "./office-rooms.contracts"
-import type { OpenedRow, RoomRow, RoomSummaryRow } from "./persistence/office-rooms.rows"
+import type { OpenedRow, RoomMembersRow, RoomRow, RoomSummaryRow } from "./persistence/office-rooms.rows"
+import { LIST_ROOM_MEMBERS } from "./persistence/office-room-members.sql"
 import { ENSURE_ROOMS, LIST_ROOMS, MARK_ROOM_READ, OFFICE_ROOM_SUMMARY } from "./persistence/office-rooms.sql"
 
 /** Only owners and managers open the department rooms of a workspace. */
@@ -36,6 +37,12 @@ export class OfficeRoomsService {
             this.entityManager.query<Array<RoomSummaryRow>>(OFFICE_ROOM_SUMMARY, params),
             this.entityManager.query<Array<RoomRow>>(LIST_ROOMS, params),
         ])
+        const memberRows = await this.entityManager.query<Array<RoomMembersRow>>(LIST_ROOM_MEMBERS, [
+            workspaceId,
+            rows.map((row) => row.key),
+        ])
+        const roomMembers = new Map(memberRows.map((row) => [row.key, { count: row.count, preview: row.preview }]))
+        const emptyMembers = { count: 0, preview: [] }
         const office: RoomView = {
             ...(summary[0] ?? EMPTY_SUMMARY),
             key: null,
@@ -45,8 +52,9 @@ export class OfficeRoomsService {
             home_agent_ids: [],
             user_ids: [],
             pins: [],
+            members: roomMembers.get(null) ?? emptyMembers,
         }
-        return [office, ...rows.map((row): RoomView => ({ ...row }))]
+        return [office, ...rows.map((row): RoomView => ({ ...row, members: roomMembers.get(row.key) ?? emptyMembers }))]
     }
 
     /** Marks a room (null = the Office room) read by the caller up to now. */

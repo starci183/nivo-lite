@@ -5196,6 +5196,16 @@ input OfficeRoomKeyInput {
   room: String = null
 }
 
+type OfficeRoomMemberPreviewType {
+  avatarUrl: String
+  name: String!
+}
+
+type OfficeRoomMembersType {
+  count: Int!
+  preview: [OfficeRoomMemberPreviewType!]!
+}
+
 type OfficeRoomPinType {
   href: String
   id: ID!
@@ -5210,6 +5220,7 @@ type OfficeRoomType {
   last_at: String
   last_author: String
   last_body: String
+  members: OfficeRoomMembersType
   name: String!
   pins: [OfficeRoomPinType!]!
   position: Int!

@@ -19,6 +19,13 @@ const query1: TypedDocumentNode<QueryOfficeRoomsResponse, Record<string, never>>
             agent_ids
             home_agent_ids
             user_ids
+            members {
+                count
+                preview {
+                    name
+                    avatarUrl
+                }
+            }
             pins {
                 id
                 title
