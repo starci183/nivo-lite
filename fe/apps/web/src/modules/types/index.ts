@@ -264,6 +264,8 @@ export type {
     OfficePinRowView,
     OfficeResultCardView,
     OfficeCardIdentity,
+    OfficeRoomMemberPreviewView,
+    OfficeRoomMembersView,
     OfficeRoomRowView,
     OfficeMessageView,
     OfficeMissingField,

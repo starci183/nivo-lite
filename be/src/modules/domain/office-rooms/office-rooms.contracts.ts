@@ -10,6 +10,22 @@ export interface RoomPinView {
     readonly note: string
 }
 
+/** One of the first four active people or seated agents of a group room. */
+export interface RoomMemberPreviewView {
+    /** The member's display name in this workspace. */
+    readonly name: string
+    /** The existing provider profile URL; null for members without a photo, including agents. */
+    readonly avatarUrl: string | null
+}
+
+/** A group room's full member count and bounded avatar preview. */
+export interface RoomMembersView {
+    /** The number of active people and seated agents, including paused agents. */
+    readonly count: number
+    /** At most four members, ordered by when they joined, then their seat id. */
+    readonly preview: ReadonlyArray<RoomMemberPreviewView>
+}
+
 /** One Hub room as the room list and the room panel read it. */
 export interface RoomView {
     /** The room key; null is the general Office room. */
@@ -34,6 +50,8 @@ export interface RoomView {
     readonly user_ids: ReadonlyArray<string>
     /** The pinned documents. */
     readonly pins: ReadonlyArray<RoomPinView>
+    /** The group members available to the room list. */
+    readonly members?: RoomMembersView | null
 }
 
 /** A room key as a caller names it; null is the general Office room. Checked against the Hub rooms before use. */

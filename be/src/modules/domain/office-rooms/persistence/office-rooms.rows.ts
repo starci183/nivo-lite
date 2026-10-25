@@ -45,3 +45,21 @@ export interface RoomRow extends RoomSummaryRow {
     /** The pinned documents. */
     pins: Array<PinRow>
 }
+
+/** One bounded member preview read from the database. */
+export interface RoomMemberPreviewRow {
+    /** The member's display name. */
+    name: string
+    /** The existing provider photo, or null when none exists. */
+    avatarUrl: string | null
+}
+
+/** One room's grouped member count and first four members. */
+export interface RoomMembersRow {
+    /** The room key; null is the general Office room. */
+    key: string | null
+    /** The full member count, including paused agents. */
+    count: number
+    /** At most four members in deterministic join order. */
+    preview: Array<RoomMemberPreviewRow>
+}
