@@ -50,6 +50,7 @@ const messageBody = {
     requireApproval: true,
     source,
 }
+const ADMITTED_AT = new Date("2026-10-24T08:00:00Z")
 const rowOf = builder<PublicApiProcessingRow>({
     id: REQUEST,
     kind: "knowledge",
@@ -57,6 +58,7 @@ const rowOf = builder<PublicApiProcessingRow>({
     need_supplied: null,
     lead_id: null,
     processed_at: null,
+    created_at: ADMITTED_AT,
 })
 const deliveryOf = builder<QueueDelivery>({
     id: "outbox-1",
@@ -208,7 +210,7 @@ describe("PublicApiProcessingService / ledger admissions", () => {
         expect(tx.query).toHaveBeenLastCalledWith(COMPLETE_PUBLIC_API_REQUEST, [WORKSPACE, REQUEST, LEAD])
     })
 
-    it("hands off an admitted message without performing a customer send", async () => {
+    it("hands off an admitted message with its admission time without performing a customer send", async () => {
         const built = await build()
         const body = { ...messageBody, leadId: null }
         const tx = mockEntityManager({
@@ -220,7 +222,7 @@ describe("PublicApiProcessingService / ledger admissions", () => {
 
         await built.service.process(ledgerJob, tx)
 
-        expect(built.messages.fulfill).toHaveBeenCalledWith(WORKSPACE, REQUEST, body, tx)
+        expect(built.messages.fulfill).toHaveBeenCalledWith(WORKSPACE, REQUEST, body, ADMITTED_AT, tx)
         expect(tx.query).toHaveBeenLastCalledWith(COMPLETE_PUBLIC_API_REQUEST, [WORKSPACE, REQUEST, LEAD])
     })
 })
@@ -313,7 +315,7 @@ describe("PublicApiProcessingService / pre-ledger deliveries", () => {
         expect(tx.query).not.toHaveBeenCalled()
     })
 
-    it("retains the original message work dedupe and approval requirement", async () => {
+    it("retains the original message work dedupe and approval requirement, with no admission time", async () => {
         const built = await build()
         const tx = mockEntityManager()
 
@@ -326,6 +328,7 @@ describe("PublicApiProcessingService / pre-ledger deliveries", () => {
             WORKSPACE,
             "old-message-1",
             messageBody,
+            null,
             tx,
             "old-message-1",
             false,

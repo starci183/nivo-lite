@@ -12,4 +12,6 @@ export interface PublicApiProcessingRow {
     readonly lead_id: string | null
     /** Durable fulfillment has committed when this is nonnull. */
     readonly processed_at: Date | null
+    /** When the request was admitted; a message past its auto-send window waits for approval. */
+    readonly created_at: Date
 }

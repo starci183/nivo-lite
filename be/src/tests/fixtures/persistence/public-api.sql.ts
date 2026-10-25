@@ -13,6 +13,10 @@ export const API_MESSAGE_REQUEST = sql`SELECT id, kind, payload, need_supplied, 
 FROM public.public_api WHERE workspace_id = $1::uuid AND payload->>'conversationId' = $2
 ORDER BY created_at DESC, id DESC LIMIT 1`
 
+/** Moves one isolated admission back by whole hours ($1 workspace, $2 request, $3 hours), as a backlog replayed after an outage. */
+export const BACKDATE_API_REQUEST = sql`UPDATE public.public_api SET created_at = created_at - make_interval(hours => $3::int)
+WHERE workspace_id = $1::uuid AND id = $2::uuid`
+
 /** The retained facts of an existing customer. */
 export const API_LEAD = sql`SELECT id, need, company, channel, stage FROM public.leads
 WHERE workspace_id = $1::uuid AND id = $2::uuid`

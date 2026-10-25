@@ -16,6 +16,12 @@ export const DEFAULT_API_NEED = "Created through the API"
 /** The window of events read when the caller names none: one day. */
 const EVENTS_DEFAULT_WINDOW_MS = 86_400_000
 
+/**
+ * How long after its admission an API message may still go out under the workspace's own authority: 24 hours (owner decision for
+ * the v0.3.6 backlog). An older message is never sent automatically: its work is forced to approval with the caller's draft kept.
+ */
+export const MESSAGE_AUTO_SEND_WINDOW_MS = 86_400_000
+
 export { contactParts, normaliseContact } from "@modules/domain/leads"
 
 /** The first part of the dedupe key of a request: its kind and the key that sent it. */
@@ -32,6 +38,13 @@ export const eventsSince = (since: string | undefined, now: Date): Outcome<strin
     const from = since === undefined ? now.getTime() - EVENTS_DEFAULT_WINDOW_MS : Date.parse(since)
     return Number.isFinite(from) ? ok(new Date(from).toISOString()) : refused(PublicApiErrorCode.SinceInvalid)
 }
+
+/**
+ * Whether an admitted message is past its auto-send window at `now`. An unknown admission time is past it: only pre-ledger
+ * deliveries lack one, and the ledger has carried every admission since 2026-10-12.
+ */
+export const isStaleMessageAdmission = (admittedAt: Date | null, now: Date): boolean =>
+    admittedAt === null || now.getTime() - admittedAt.getTime() > MESSAGE_AUTO_SEND_WINDOW_MS
 
 /** Keeps at most twelve tags, each at most forty characters, with no blanks. */
 export const cleanTags = (tags: ReadonlyArray<string>): Array<string> =>

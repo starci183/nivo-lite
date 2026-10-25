@@ -2,8 +2,14 @@ import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { DurableWorkService, EvidenceService } from "@modules/domain/decisions"
 import type { WorkContext } from "@modules/domain/decisions"
+import { InjectClock } from "@modules/platform/clock"
+import type { Clock } from "@modules/platform/clock"
+import { InjectLogger } from "@modules/platform/logging"
+import type { Logger } from "@modules/platform/logging"
 import { PublicApiError, PublicApiErrorCode } from "./errors/public-api.error"
 import type { MessageRequestBody } from "./public-api.contracts"
+import { PublicApiLogEvent } from "./public-api.log-events"
+import { isStaleMessageAdmission } from "./public-api.policy"
 import type { ConversationsRow } from "./persistence/public-api.rows"
 import { SELECT_CONVERSATION } from "./persistence/public-api.sql"
 
@@ -13,13 +19,19 @@ export class PublicMessageFulfillmentService {
     constructor(
         private readonly work: DurableWorkService,
         private readonly evidence: EvidenceService,
+        @InjectClock() private readonly clock: Clock,
+        @InjectLogger() private readonly logger: Logger,
     ) {}
 
-    /** Keeps the exact draft and approval requirement behind the existing authority and outbound-access gate. */
+    /**
+     * Keeps the exact draft and approval requirement behind the existing authority and outbound-access gate. A message admitted
+     * longer ago than its auto-send window (`admittedAt` null: a pre-ledger delivery) always waits for approval.
+     */
     async fulfill(
         workspaceId: string,
         requestId: string,
         body: MessageRequestBody,
+        admittedAt: Date | null,
         manager: EntityManager,
         dedupeKey: string = `api.message:${requestId}`,
         recordEvidence: boolean = true,
@@ -30,6 +42,7 @@ export class PublicMessageFulfillmentService {
         )
         if (conversation === undefined) throw new PublicApiError({ code: PublicApiErrorCode.ConversationNotFound })
         const ctx: WorkContext = { workspaceId, actor: body.source, locale: "en" }
+        const isStale = isStaleMessageAdmission(admittedAt, this.clock.now())
         const item = await this.work.enqueueWork(
             ctx,
             {
@@ -47,10 +60,17 @@ export class PublicMessageFulfillmentService {
                 },
                 preset: true,
                 noChain: true,
-                forceAsk: body.requireApproval ? "over_authority" : undefined,
+                forceAsk: body.requireApproval || isStale ? "over_authority" : undefined,
             },
             manager,
         )
+        if (isStale)
+            this.logger.info(PublicApiLogEvent.StaleMessageHeld, {
+                workspaceId,
+                requestId,
+                workItemId: item.id,
+                admittedAt: admittedAt?.toISOString() ?? null,
+            })
         if (recordEvidence)
             await this.evidence.log(
                 ctx,

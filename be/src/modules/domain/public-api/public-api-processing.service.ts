@@ -123,7 +123,7 @@ export class PublicApiProcessingService {
                 leadId = await this.leads.fulfill(workspaceId, requestId, request.body, tx)
                 break
             case "message":
-                leadId = await this.messages.fulfill(workspaceId, requestId, request.body, tx)
+                leadId = await this.messages.fulfill(workspaceId, requestId, request.body, row.created_at, tx)
                 break
         }
         await tx.query(COMPLETE_PUBLIC_API_REQUEST, [workspaceId, requestId, leadId])
@@ -138,7 +138,7 @@ export class PublicApiProcessingService {
                 await this.leads.fulfillExistingInbound(job.workspaceId, job.identity, job.body, tx)
                 return
             case "message":
-                await this.messages.fulfill(job.workspaceId, job.identity, job.body, tx, job.dedupeKey, false)
+                await this.messages.fulfill(job.workspaceId, job.identity, job.body, null, tx, job.dedupeKey, false)
         }
     }
 }

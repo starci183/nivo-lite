@@ -49,6 +49,7 @@ const row: PublicApiProcessingRow = {
     need_supplied: false,
     lead_id: null,
     processed_at: new Date("2026-10-25T00:00:00Z"),
+    created_at: new Date("2026-10-24T23:00:00Z"),
 }
 const item = (ledgerRequestId: string | null = requestId) =>
     mock<WorkItem>({

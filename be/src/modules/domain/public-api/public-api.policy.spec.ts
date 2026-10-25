@@ -1,12 +1,14 @@
 import { Test } from "@nestjs/testing"
 import { PublicApiErrorCode } from "./errors/public-api.error"
 import {
+    MESSAGE_AUTO_SEND_WINDOW_MS,
     SOURCE_CHARS_MAX,
     contactParts as realContactParts,
     normaliseContact as realNormaliseContact,
     dedupePrefix as realDedupePrefix,
     messageDedupeSuffix as realMessageDedupeSuffix,
     eventsSince as realEventsSince,
+    isStaleMessageAdmission as realIsStaleMessageAdmission,
     cleanTags as realCleanTags,
     checkContent as realCheckContent,
     clampLimit as realClampLimit,
@@ -22,6 +24,7 @@ type Subject = Pick<
     | "dedupePrefix"
     | "messageDedupeSuffix"
     | "eventsSince"
+    | "isStaleMessageAdmission"
     | "cleanTags"
     | "checkContent"
     | "clampLimit"
@@ -39,6 +42,7 @@ const build = async () => {
                     dedupePrefix: realDedupePrefix,
                     messageDedupeSuffix: realMessageDedupeSuffix,
                     eventsSince: realEventsSince,
+                    isStaleMessageAdmission: realIsStaleMessageAdmission,
                     cleanTags: realCleanTags,
                     checkContent: realCheckContent,
                     clampLimit: realClampLimit,
@@ -128,6 +132,22 @@ describe("public-api policy / eventsSince", () => {
             kind: "refused",
             code: PublicApiErrorCode.SinceInvalid,
         })
+    })
+})
+
+describe("public-api policy / isStaleMessageAdmission", () => {
+    it("keeps a message inside its 24-hour auto-send window up to the window's last millisecond", async () => {
+        const subject = await build()
+
+        expect(MESSAGE_AUTO_SEND_WINDOW_MS).toBe(24 * 60 * 60 * 1000)
+        expect(subject.isStaleMessageAdmission(NOW, NOW)).toBe(false)
+        expect(subject.isStaleMessageAdmission(new Date("2026-10-11T10:00:00.000Z"), NOW)).toBe(false)
+    })
+    it("marks a message admitted longer ago, or at an unknown time, as stale", async () => {
+        const subject = await build()
+
+        expect(subject.isStaleMessageAdmission(new Date("2026-10-11T09:59:59.999Z"), NOW)).toBe(true)
+        expect(subject.isStaleMessageAdmission(null, NOW)).toBe(true)
     })
 })
 
