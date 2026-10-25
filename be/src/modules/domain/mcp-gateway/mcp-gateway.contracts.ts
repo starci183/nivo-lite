@@ -4,11 +4,23 @@ import type { GatewayApprovalReason, GatewayJson } from "@modules/domain/mcp-gat
 import type { ArgConstraint, GrantMode } from "@modules/domain/mcp-tool-grants"
 import type { Secret } from "@modules/platform/config"
 import type { McpRpcResponse } from "@modules/integrations/mcp"
+import type { GatewayArgumentSchema } from "./gateway-tools.schema"
 
 export type { GatewayCallResult, GatewayJson } from "@modules/domain/mcp-gateway-receipts"
 
 /** What a tool does to the connected system. */
 export type ToolScope = "read" | "write" | "restricted"
+
+/** A JSON value accepted at the connector argument boundary. */
+export type GatewayArgument =
+    | string
+    | number
+    | boolean
+    | null
+    | ReadonlyArray<GatewayArgument>
+    | {
+          readonly [member: string]: GatewayArgument
+      }
 
 /** One tool of a connector, without the namespace. */
 export interface GatewayToolSpec {
@@ -20,6 +32,8 @@ export interface GatewayToolSpec {
     readonly scope: ToolScope
     /** Its JSON schema. */
     readonly inputSchema: GatewayJson
+    /** The owning native tool's validator; remote tools validate their specific shape on their server. */
+    readonly argumentSchema?: GatewayArgumentSchema
     /** The mode a new grant starts at. */
     readonly defaultMode: GrantMode
     /** Members masked in the audit besides the standard secret names. */
@@ -289,10 +303,24 @@ export interface BreakerGate {
     readonly state: BreakerState
 }
 
+/** Every native tool declares its owning domain's validator beside the advertised schema. */
+export interface NativeToolSpec extends GatewayToolSpec {
+    /** The required validator, also used before grants and approvals are considered. */
+    readonly argumentSchema: GatewayArgumentSchema
+}
+
+/** A native connector cannot register a tool without a validator. */
+export interface NativeConnectorManifest extends GatewayConnectorManifest {
+    /** Native manifests are registered in code. */
+    readonly kind: "native"
+    /** Every tool has a bounded schema. */
+    readonly tools: ReadonlyArray<NativeToolSpec>
+}
+
 /** A native connector: its manifest and how it runs a tool. */
 export interface NativeAdapter {
     /** The manifest. */
-    readonly manifest: GatewayConnectorManifest
+    readonly manifest: NativeConnectorManifest
     /** Runs one tool for a workspace. */
     invoke(workspaceId: string, tool: string, args: GatewayJson): Promise<GatewayJson>
 }

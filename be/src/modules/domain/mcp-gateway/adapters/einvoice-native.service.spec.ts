@@ -44,9 +44,16 @@ describe("EinvoiceNativeService.list", () => {
         })
         expect(em.query).toHaveBeenCalledWith(LIST_INVOICE_MAILS, ["ws-1", "2026-10-01"])
         expect(einvoice.manifest).toBe(EINVOICE_MANIFEST)
+        expect(EINVOICE_MANIFEST.tools[0]?.inputSchema).toMatchObject({
+            properties: {
+                since: { type: "string", minLength: 10, maxLength: 10, format: "date" },
+                limit: { type: "integer", minimum: 1, maximum: 50, default: 20 },
+            },
+            additionalProperties: false,
+        })
     })
 
-    it("drops a date it cannot read and bounds the count", async () => {
+    it("defaults an omitted date and limit, and honors the supplied count", async () => {
         const many = { id: "rec-3", attachments: [{ xml: tt78Xml() }, { xml: tt78Xml({ SHDon: "18" }) }] }
         const em = mockEntityManager({
             query: [
@@ -56,17 +63,31 @@ describe("EinvoiceNativeService.list", () => {
         })
         const einvoice = await build(em)
 
-        await expect(einvoice.invoke("ws-1", "list", { since: "19/10/2026", limit: 0 })).resolves.toMatchObject({
-            invoices: [{ id: "rec-3:0" }],
-        })
-        await expect(einvoice.invoke("ws-1", "list", { limit: 1.5 })).resolves.toMatchObject({
+        await expect(einvoice.invoke("ws-1", "list", {})).resolves.toMatchObject({
             invoices: [{ id: "rec-3:0" }, { id: "rec-3:1" }],
+        })
+        await expect(einvoice.invoke("ws-1", "list", { limit: 1 })).resolves.toMatchObject({
+            invoices: [{ id: "rec-3:0" }],
         })
         expect(em.query.mock.calls).toEqual([
             [LIST_INVOICE_MAILS, ["ws-1", null]],
             [LIST_INVOICE_MAILS, ["ws-1", null]],
         ])
     })
+
+    it.each([{ since: "19/10/2026" }, { limit: 0 }, { limit: 51 }, { limit: 1.5 }, { limit: "5" }])(
+        "refuses invalid arguments before reading the mailbox: %p",
+        async (args) => {
+            const em = mockEntityManager()
+            const einvoice = await build(em)
+
+            await expect(einvoice.invoke("ws-1", "list", args)).rejects.toMatchObject({
+                code: McpGatewayErrorCode.InvalidArguments,
+                params: { tool: "list" },
+            })
+            expect(em.query).not.toHaveBeenCalled()
+        },
+    )
 })
 
 describe("EinvoiceNativeService.get", () => {
@@ -91,6 +112,11 @@ describe("EinvoiceNativeService.get", () => {
             vatVnd: 200000,
         })
         expect(em.query).toHaveBeenCalledWith(FIND_INVOICE_MAIL, ["ws-1", "rec-1"])
+        expect(EINVOICE_MANIFEST.tools[1]?.inputSchema).toMatchObject({
+            properties: { id: { type: "string", minLength: 1, maxLength: 200 } },
+            required: ["id"],
+            additionalProperties: false,
+        })
     })
 
     it("answers a zero unit price for a line without quantity", async () => {
@@ -103,7 +129,7 @@ describe("EinvoiceNativeService.get", () => {
         })
     })
 
-    it("answers not found for an id no mail holds, or no id", async () => {
+    it("answers not found for an id no mail holds", async () => {
         const em = mockEntityManager({
             query: [
                 [FIND_INVOICE_MAIL, [MAIL]],
@@ -113,9 +139,23 @@ describe("EinvoiceNativeService.get", () => {
         const einvoice = await build(em)
 
         await expect(einvoice.invoke("ws-1", "get", { id: "rec-1:7" })).resolves.toEqual({ found: false })
-        await expect(einvoice.invoke("ws-1", "get", { id: 7 })).resolves.toEqual({ found: false })
-        expect(em.query.mock.calls[1]).toEqual([FIND_INVOICE_MAIL, ["ws-1", ""]])
+        await expect(einvoice.invoke("ws-1", "get", { id: "rec-2:0" })).resolves.toEqual({ found: false })
+        expect(em.query.mock.calls[1]).toEqual([FIND_INVOICE_MAIL, ["ws-1", "rec-2"]])
     })
+
+    it.each([{}, { id: 7 }, { id: "" }, { id: "a".repeat(201) }])(
+        "refuses an invalid identifier before reading the mailbox: %p",
+        async (args) => {
+            const em = mockEntityManager()
+            const einvoice = await build(em)
+
+            await expect(einvoice.invoke("ws-1", "get", args)).rejects.toMatchObject({
+                code: McpGatewayErrorCode.InvalidArguments,
+                params: { tool: "get" },
+            })
+            expect(em.query).not.toHaveBeenCalled()
+        },
+    )
 
     it("refuses a tool the connector does not have", async () => {
         const einvoice = await build(mockEntityManager())

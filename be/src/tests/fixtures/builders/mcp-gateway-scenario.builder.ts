@@ -1,11 +1,21 @@
 import type { MockOf } from "@starci/jest-preset"
 import type { CallLogLine, McpCallLogService } from "@modules/domain/mcp-call-log"
 import type { McpConnectorRow, McpConnectorsService } from "@modules/domain/mcp-connectors"
-import type { GatewayCaller, GatewayCallResult, GatewayJson } from "@modules/domain/mcp-gateway"
+import type {
+    CapabilityRole,
+    GatewayCaller,
+    GatewayCallResult,
+    GatewayJson,
+    McpGatewayService,
+    NativeConnectorManifest,
+    RoleReadiness,
+} from "@modules/domain/mcp-gateway"
+import { McpGatewayError, McpGatewayErrorCode, SEPAY_MANIFEST } from "@modules/domain/mcp-gateway"
 import type { GatewayReceiptsService } from "@modules/domain/mcp-gateway-receipts"
 import type { McpToolGrantsService } from "@modules/domain/mcp-tool-grants"
 import { McpErrorCode } from "@modules/integrations/mcp"
-import type { McpRemote } from "@modules/integrations/mcp"
+import type { McpRemote, McpRemoteResult } from "@modules/integrations/mcp"
+import { eachInOrder } from "@modules/platform/primitives"
 import type { QueueTimeout } from "@modules/platform/queue"
 import {
     catalogToolOf,
@@ -195,6 +205,7 @@ export const TIMED_OUT_WRITES: ReadonlyArray<{
 
 type GatewayScenario =
     | "registry"
+    | "invalid-tools"
     | "discovery"
     | "description"
     | "roles"
@@ -207,6 +218,13 @@ type GatewayScenario =
 /** Fresh connector and grant data for the gateway's registry, role and admission scenarios. */
 export const gatewayScenarioOf = (scenario: GatewayScenario): GatewaySpecSetup => {
     switch (scenario) {
+        case "invalid-tools":
+            return {
+                rows: [
+                    remoteConnectorRowOf(),
+                    remoteConnectorRowOf({ key: "sepay", kind: "native", status: "disabled" }),
+                ],
+            }
         case "registry":
             return {
                 rows: [
@@ -272,6 +290,11 @@ export const reroutedCallerOf = (caller: GatewayCaller): GatewayCaller => ({
 
 /** Fixed public values expected by the gateway scenarios, independent of the subject's implementation. */
 export const GATEWAY_SCENARIO_EXPECTED = {
+    nativeUnknownTool: new McpGatewayError({
+        code: McpGatewayErrorCode.UnknownTool,
+        params: { tool: "transactions.list" },
+    }),
+    invalidArguments: { ok: false, code: "invalid_arguments", detail: "Invalid tool arguments" },
     connectorStates: [
         ["sepay", "disabled", 15_000],
         ["hakuen", "active", 500],
@@ -293,7 +316,6 @@ export const GATEWAY_SCENARIO_EXPECTED = {
             "payment.debits.list": ["SePay"],
         }),
     },
-    missingReceivableReadiness: { ready: false, missing: ["receivable.find"] },
     askModeRefusal: { ok: false, code: "approval_required", reason: "ask_mode" },
     approvalOutcomes: [
         ["approval", "ask_mode"],
@@ -351,3 +373,92 @@ export const GATEWAY_SCENARIO_EXPECTED = {
         ["shop.stay.current", "refused", "schema_unapproved"],
     ],
 }
+
+/** A native read connector treated as a write to exercise the operation identity guard. */
+export const WRITE_NATIVE_MANIFEST: NativeConnectorManifest = {
+    ...SEPAY_MANIFEST,
+    tools: SEPAY_MANIFEST.tools.map((tool) => ({ ...tool, scope: "write" as const })),
+}
+
+/** Five failed reads open the shared remote connector breaker. */
+export const openRemoteGatewayBreaker = async (gateway: McpGatewayService, remote: MockOf<McpRemote>) => {
+    remote.call.mockRejectedValue(new Error("down"))
+    await eachInOrder([1, 2, 3, 4, 5], () => gateway.call(GATEWAY_CALLER, "hakuen.stay.current", {}))
+}
+
+/** Keeps one remote reply pending until the spec resolves its half-open probe. */
+export const pendingRemoteReplyOf = (remote: MockOf<McpRemote>) => {
+    const answers: Array<(result: McpRemoteResult) => void> = []
+    remote.call.mockReturnValueOnce(
+        new Promise((resolve) => {
+            answers.push(resolve)
+        }),
+    )
+    return (result: McpRemoteResult) => {
+        for (const answer of answers) answer(result)
+    }
+}
+
+/** Tool descriptions that differ by current catalog approval and caller grant. */
+export const GATEWAY_DESCRIPTIONS = [
+    { name: "hakuen.booking.confirm", answer: GATEWAY_SCENARIO_EXPECTED.confirmation },
+    ...["hakuen.stay.current", "hakuen.keycode.reveal", "sepay.transactions.list", "nope"].map((name) => ({
+        name,
+        answer: null,
+    })),
+]
+
+/** Native priority, remote capability discovery, and the missing capability result. */
+export const GATEWAY_ROLE_RESOLUTIONS: ReadonlyArray<{ readonly role: CapabilityRole; readonly answer: unknown }> = [
+    { role: "payment.credits.list", answer: GATEWAY_SCENARIO_EXPECTED.creditsRole },
+    { role: "identity.find", answer: GATEWAY_SCENARIO_EXPECTED.identityRole },
+    { role: "receivable.find", answer: GATEWAY_SCENARIO_EXPECTED.missingReceivableRole },
+]
+
+/** Readiness includes the installed providers for complete, missing and empty role requests. */
+export const GATEWAY_READINESS: ReadonlyArray<{
+    readonly label: string
+    readonly roles: ReadonlyArray<CapabilityRole>
+    readonly answer: RoleReadiness
+}> = [
+    {
+        label: "available roles",
+        roles: ["payment.credits.list", "identity.find"],
+        answer: GATEWAY_SCENARIO_EXPECTED.readyRoles,
+    },
+    {
+        label: "a missing receivable provider",
+        roles: ["payment.credits.list", "receivable.find"],
+        answer: { ...GATEWAY_SCENARIO_EXPECTED.readyRoles, ready: false, missing: ["receivable.find"] },
+    },
+    { label: "no required roles", roles: [], answer: GATEWAY_SCENARIO_EXPECTED.readyRoles },
+]
+
+/** Disabled native tools and unapproved remote tools cannot fulfill a role. */
+export const UNAVAILABLE_GATEWAY_ROLES: ReadonlyArray<CapabilityRole> = ["identity.find", "payment.credits.list"]
+
+/** Names refused before grants or an audit entry are consulted. */
+export const INVALID_GATEWAY_TOOLS = [
+    { name: "nope", answer: { ok: false, code: "invalid_name", detail: "nope" } },
+    { name: "zalo.send", answer: { ok: false, code: "unknown_tool", detail: "zalo.send" } },
+    { name: "hakuen.nope", answer: { ok: false, code: "unknown_tool", detail: "hakuen.nope" } },
+    { name: "sepay.transactions.list", answer: { ok: false, code: "connector_disabled", detail: "sepay" } },
+]
+
+/** Global budget failures stop before resolution; native shape failures stop before ask-mode grants. */
+export const INVALID_GATEWAY_ARGUMENTS: ReadonlyArray<{
+    readonly label: string
+    readonly setup: GatewaySpecSetup
+    readonly args: GatewayJson
+    readonly connectorReads: number
+    readonly audit: ReadonlyArray<ReadonlyArray<string>>
+}> = [
+    { label: "unbounded payloads", setup: {}, args: { text: "x".repeat(8193) }, connectorReads: 0, audit: [] },
+    {
+        label: "invalid native limits",
+        setup: { grants: [toolGrantRowOf({ tool: "sepay.*", mode: "ask" })] },
+        args: { limit: 51 },
+        connectorReads: 1,
+        audit: [["refused", "invalid_arguments"]],
+    },
+]

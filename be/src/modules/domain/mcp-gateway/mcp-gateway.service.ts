@@ -18,6 +18,7 @@ import { breakerAfter, breakerGate, CLOSED } from "./circuit-breaker.policy"
 import { grantOf, nativeConnectorOf, remoteConnectorOf } from "./connector-row.mapper"
 import { McpGatewayError, McpGatewayErrorCode } from "./errors/mcp-gateway.error"
 import { judgeGrant } from "./grant.policy"
+import { gatewayArgumentsSchema } from "./gateway-tools.schema"
 import { withReplayKey } from "./idempotency-key.policy"
 import { InjectMcpGatewayOptions, InjectNativeAdapters } from "./mcp-gateway.decorators"
 import { McpConnectorCredentialService } from "./mcp-connector-credential.service"
@@ -255,10 +256,21 @@ export class McpGatewayService {
 
     /** Calls one tool through its schema, grant, approval and breaker; non-read tools require a nonblank operation key or work item. */
     async call(caller: GatewayCaller, name: string, args: GatewayJson): Promise<GatewayCallResult> {
+        const parsed = gatewayArgumentsSchema.safeParse(args)
+        if (!parsed.success) return { ok: false, code: "invalid_arguments", detail: "Invalid tool arguments" }
         const started = this.clock.now().getTime()
         const resolved = await this.resolve(caller.workspaceId, name)
         if ("ok" in resolved) return resolved
-        const sent = withReplayKey(resolved.spec, caller, resolved.name, args)
+        if (resolved.spec.argumentSchema?.safeParse(parsed.data).success === false) {
+            await this.audit(caller, resolved, parsed.data, {
+                outcome: "refused",
+                code: "invalid_arguments",
+                summary: "",
+                started,
+            })
+            return { ok: false, code: "invalid_arguments", detail: "Invalid tool arguments" }
+        }
+        const sent = withReplayKey(resolved.spec, caller, resolved.name, parsed.data)
         if (!usable(resolved.connector, resolved.spec.name)) {
             await this.audit(caller, resolved, sent, {
                 outcome: "refused",

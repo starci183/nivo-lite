@@ -1,24 +1,11 @@
 import { Injectable } from "@nestjs/common"
 import { TransactionsService } from "@modules/domain/transactions"
 import { McpGatewayError, McpGatewayErrorCode } from "../errors/mcp-gateway.error"
-import type { GatewayConnectorManifest, GatewayJson, NativeAdapter } from "../mcp-gateway.contracts"
-
-const LIMIT_MAX = 50
-const LIMIT_DEFAULT = 20
-const STATUSES: ReadonlySet<string> = new Set(["unmatched", "matched", "needs_review"])
-
-/** The filters both SePay tools take. */
-const BANK_MOVE_SCHEMA = {
-    type: "object",
-    properties: {
-        status: { type: "string", enum: ["unmatched", "matched", "needs_review"] },
-        since: { type: "string", format: "date-time" },
-        limit: { type: "integer", minimum: 1, maximum: LIMIT_MAX },
-    },
-}
+import type { GatewayJson, NativeAdapter, NativeConnectorManifest } from "../mcp-gateway.contracts"
+import { SEPAY_BANK_MOVE_INPUT_SCHEMA, SEPAY_BANK_MOVE_SCHEMA } from "./sepay-native.schema"
 
 /** The SePay native connector: the bank credits and debits SePay delivered to the workspace, read from NIVO's own ledger. */
-export const SEPAY_MANIFEST: GatewayConnectorManifest = {
+export const SEPAY_MANIFEST: NativeConnectorManifest = {
     key: "sepay",
     name: "SePay",
     kind: "native",
@@ -31,7 +18,8 @@ export const SEPAY_MANIFEST: GatewayConnectorManifest = {
             scope: "read",
             defaultMode: "auto",
             role: "payment.credits.list",
-            inputSchema: BANK_MOVE_SCHEMA,
+            inputSchema: SEPAY_BANK_MOVE_INPUT_SCHEMA,
+            argumentSchema: SEPAY_BANK_MOVE_SCHEMA,
         },
         {
             name: "transactions.debits",
@@ -40,18 +28,11 @@ export const SEPAY_MANIFEST: GatewayConnectorManifest = {
             scope: "read",
             defaultMode: "auto",
             role: "payment.debits.list",
-            inputSchema: BANK_MOVE_SCHEMA,
+            inputSchema: SEPAY_BANK_MOVE_INPUT_SCHEMA,
+            argumentSchema: SEPAY_BANK_MOVE_SCHEMA,
         },
     ],
 }
-
-const limitOf = (value: unknown): number =>
-    typeof value === "number" && Number.isInteger(value) ? Math.min(LIMIT_MAX, Math.max(1, value)) : LIMIT_DEFAULT
-
-const statusOf = (value: unknown): string | null => (typeof value === "string" && STATUSES.has(value) ? value : null)
-
-const sinceOf = (value: unknown): string | null =>
-    typeof value === "string" && !Number.isNaN(Date.parse(value)) ? new Date(value).toISOString() : null
 
 @Injectable()
 /**
@@ -68,11 +49,15 @@ export class SepayNativeService implements NativeAdapter {
         if (tool !== "transactions.list" && tool !== "transactions.debits") {
             throw new McpGatewayError({ code: McpGatewayErrorCode.UnknownTool, params: { tool } })
         }
+        const parsed = SEPAY_BANK_MOVE_SCHEMA.safeParse(args)
+        if (!parsed.success) {
+            throw new McpGatewayError({ code: McpGatewayErrorCode.InvalidArguments, params: { tool } })
+        }
         const query = {
             workspaceId,
-            status: statusOf(args.status),
-            since: sinceOf(args.since),
-            limit: limitOf(args.limit),
+            status: parsed.data.status ?? null,
+            since: parsed.data.since === undefined ? null : new Date(parsed.data.since).toISOString(),
+            limit: parsed.data.limit,
         }
         const credits = await (tool === "transactions.list"
             ? this.transactions.listBankCredits(query)

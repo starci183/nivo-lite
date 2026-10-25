@@ -83,6 +83,20 @@ The agent endpoint's `tool.call` takes `opKey` for every write: choose it once f
 client retries. Client keys are scoped to the authenticated agent. A write without one answers `idempotency_key_required`;
 reads may omit it. JSON-RPC request ids are not operation identities.
 
+The gateway tools and native connector tools validate arguments with their owning domain's bounded Zod schemas before running.
+The schemas announced to agents are generated from those validators. Invalid arguments answer an MCP tool result with
+`isError: true`; a surface validation failure carries `{ error: "invalid_arguments" }`, and a native validation failure carries
+the gateway refusal `{ ok: false, code: "invalid_arguments", detail: "Invalid tool arguments" }`. Invalid input never counts as
+a connector failure for the circuit breaker. Search limits must be integers from 1 to 10; native list limits must be integers
+from 1 to 50. An omitted limit keeps its default, while an invalid value is rejected.
+
+Connector argument JSON is bounded for both remote and native calls: strings up to 8,192 characters, keys up to 100 characters,
+100 items per array, 100 properties per object, eight nested containers below the root object, and 65,536 characters of encoded
+JSON in total. Full tool names have at most 113 characters; search queries and endpoint operation keys have at most 200. The chat bridge applies the same
+bounds to decoded call arguments and to each of its one to ten sequence steps; encoded JSON and reply text have explicit bounds
+in its own schema. Object keys named `__proto__` are rejected before parsing. Remote servers remain responsible for their
+connector-specific argument shapes.
+
 ## The agent endpoint and its per-agent credential
 
 - `be/apps/mcp` serves `POST /mcp/<workspaceId>` (Streamable HTTP, stateless, JSON responses) with the three tools above. The app

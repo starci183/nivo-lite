@@ -6,15 +6,15 @@ import { McpConnectorsService } from "@modules/domain/mcp-connectors"
 import { GatewayReceiptsService } from "@modules/domain/mcp-gateway-receipts"
 import { McpToolGrantsService } from "@modules/domain/mcp-tool-grants"
 import { MCP_REMOTE, McpError, McpErrorCode } from "@modules/integrations/mcp"
-import type { McpRemote, McpRemoteResult } from "@modules/integrations/mcp"
+import type { McpRemote } from "@modules/integrations/mcp"
 import { CLOCK } from "@modules/platform/clock"
 import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { QUEUE_TIMEOUT } from "@modules/platform/queue"
 import type { QueueTimeout } from "@modules/platform/queue"
 import { SEPAY_MANIFEST } from "./adapters/sepay-native.service"
-import { McpGatewayError, McpGatewayErrorCode } from "./errors/mcp-gateway.error"
-import type { GatewayCaller, GatewayConnectorManifest, NativeAdapter } from "./mcp-gateway.contracts"
+import { McpGatewayErrorCode } from "./errors/mcp-gateway.error"
+import type { GatewayCaller, NativeAdapter } from "./mcp-gateway.contracts"
 import { MCP_GATEWAY_OPTIONS, NATIVE_ADAPTERS } from "./mcp-gateway.decorators"
 import { McpConnectorCredentialService } from "./mcp-connector-credential.service"
 import { McpGatewayLogEvent } from "./mcp-gateway.log-events"
@@ -32,6 +32,15 @@ import {
 import type { GatewaySpecSetup } from "@tests/fixtures/builders/mcp-gateway.builder"
 import {
     arrangeGatewayScenario,
+    GATEWAY_DESCRIPTIONS,
+    GATEWAY_ROLE_RESOLUTIONS,
+    GATEWAY_READINESS,
+    UNAVAILABLE_GATEWAY_ROLES,
+    INVALID_GATEWAY_TOOLS,
+    INVALID_GATEWAY_ARGUMENTS,
+    openRemoteGatewayBreaker,
+    pendingRemoteReplyOf,
+    WRITE_NATIVE_MANIFEST,
     gatewayScenarioOf,
     gatewayLinesOf as linesOf,
     GATEWAY_SCENARIO_EXPECTED as EXPECTED,
@@ -41,11 +50,6 @@ import {
     TIMED_OUT_WRITES,
     VALID_WRITE_IDENTITIES,
 } from "@tests/fixtures/builders/mcp-gateway-scenario.builder"
-
-const WRITE_NATIVE_MANIFEST: GatewayConnectorManifest = {
-    ...SEPAY_MANIFEST,
-    tools: SEPAY_MANIFEST.tools.map((tool) => ({ ...tool, scope: "write" as const })),
-}
 
 const build = async (setup: GatewaySpecSetup = {}, manifest = SEPAY_MANIFEST) => {
     const clock = new FakeClock("2026-10-20T02:00:00.000Z")
@@ -113,61 +117,35 @@ describe("McpGatewayService registry and discovery", () => {
         expect(found[0]?.name).toBe("hakuen.spa.hold")
     })
 
-    it("describes an approved granted tool with the caller's limits, and nothing else", async () => {
+    it.each(GATEWAY_DESCRIPTIONS)("describes $name under its schema and grant", async ({ name, answer }) => {
         const { gateway } = await build(gatewayScenarioOf("description"))
-
-        await expect(gateway.describe(CALLER, "hakuen.booking.confirm")).resolves.toEqual(EXPECTED.confirmation)
-        await expect(gateway.describe(CALLER, "hakuen.stay.current")).resolves.toBeNull()
-        await expect(gateway.describe(CALLER, "hakuen.keycode.reveal")).resolves.toBeNull()
-        await expect(gateway.describe(CALLER, "sepay.transactions.list")).resolves.toBeNull()
-        await expect(gateway.describe(CALLER, "nope")).resolves.toBeNull()
+        await expect(gateway.describe(CALLER, name)).resolves.toEqual(answer)
     })
 })
 
 describe("McpGatewayService.toolForRole", () => {
-    it("finds the approved tool that declares a role, natives first, and answers no_capability otherwise", async () => {
+    it.each(GATEWAY_ROLE_RESOLUTIONS)("resolves $role with native priority", async ({ role, answer }) => {
         const { gateway } = await build(gatewayScenarioOf("roles"))
-
-        await expect(gateway.toolForRole("ws-1", "payment.credits.list")).resolves.toEqual(EXPECTED.creditsRole)
-        await expect(gateway.toolForRole("ws-1", "identity.find")).resolves.toEqual(EXPECTED.identityRole)
-        await expect(gateway.toolForRole("ws-1", "receivable.find")).resolves.toEqual(EXPECTED.missingReceivableRole)
+        await expect(gateway.toolForRole("ws-1", role)).resolves.toEqual(answer)
     })
 
-    it("skips a disabled connector and a tool whose schema is not approved", async () => {
+    it.each(UNAVAILABLE_GATEWAY_ROLES)("refuses an unavailable %s provider", async (role) => {
         const { gateway } = await build(gatewayScenarioOf("unavailable-roles"))
-
-        await expect(gateway.toolForRole("ws-1", "identity.find")).resolves.toMatchObject({ code: "no_capability" })
-        await expect(gateway.toolForRole("ws-1", "payment.credits.list")).resolves.toMatchObject({
-            code: "no_capability",
-        })
+        await expect(gateway.toolForRole("ws-1", role)).resolves.toMatchObject({ code: "no_capability" })
     })
 })
 
 describe("McpGatewayService.readiness", () => {
-    it("is ready when every asked role has a usable tool, and lists the providers of every role", async () => {
+    it.each(GATEWAY_READINESS)("reports readiness and providers with $label", async ({ roles, answer }) => {
         const { gateway } = await build(gatewayScenarioOf("readiness"))
-
-        await expect(gateway.readiness("ws-1", ["payment.credits.list", "identity.find"])).resolves.toEqual(
-            EXPECTED.readyRoles,
-        )
-        await expect(gateway.readiness("ws-1", ["payment.credits.list", "receivable.find"])).resolves.toMatchObject(
-            EXPECTED.missingReceivableReadiness,
-        )
-        await expect(gateway.readiness("ws-1", [])).resolves.toMatchObject({ ready: true, missing: [] })
+        await expect(gateway.readiness("ws-1", roles)).resolves.toEqual(answer)
     })
 })
 
 describe("McpGatewayService.call refusals", () => {
-    it("stops a bad name, an unknown tool or a disabled connector before any grant, without an audit line", async () => {
-        const disabled = connectorOf({ key: "sepay", kind: "native", status: "disabled" })
-        const { gateway, grants, callLog } = await build({ rows: [connectorOf(), disabled] })
-
-        await expect(gateway.call(CALLER, "nope", {})).resolves.toEqual(refusalOf("invalid_name", "nope"))
-        await expect(gateway.call(CALLER, "zalo.send", {})).resolves.toEqual(refusalOf("unknown_tool", "zalo.send"))
-        await expect(gateway.call(CALLER, "hakuen.nope", {})).resolves.toMatchObject({ code: "unknown_tool" })
-        await expect(gateway.call(CALLER, "sepay.transactions.list", {})).resolves.toEqual(
-            refusalOf("connector_disabled", "sepay"),
-        )
+    it.each(INVALID_GATEWAY_TOOLS)("refuses $name before grants or audit", async ({ name, answer }) => {
+        const { gateway, grants, callLog } = await build(gatewayScenarioOf("invalid-tools"))
+        await expect(gateway.call(CALLER, name, {})).resolves.toEqual(answer)
         expect(grants.listOfAgent).not.toHaveBeenCalled()
         expect(callLog.append).not.toHaveBeenCalled()
     })
@@ -212,41 +190,33 @@ describe("McpGatewayService.call refusals", () => {
 })
 
 describe("McpGatewayService write identities", () => {
-    it.each(MISSING_WRITE_IDENTITIES)(
-        "refuses $label before claiming or acting",
-        async ({ caller, native: isNative }) => {
-            const { gateway, remote, native, receipts, callLog } = await build(
-                gatewayScenarioOf("missing-identity"),
-                WRITE_NATIVE_MANIFEST,
-            )
-            const role = await gateway.toolForRole(caller.workspaceId, "receivable.find")
-            assert(role.ok)
-            const tool = isNative ? "sepay.transactions.list" : role.tool.name
+    it.each(MISSING_WRITE_IDENTITIES)("refuses $label before acting", async ({ caller, native: isNative }) => {
+        const { gateway, remote, native, receipts, callLog } = await build(
+            gatewayScenarioOf("missing-identity"),
+            WRITE_NATIVE_MANIFEST,
+        )
+        const role = await gateway.toolForRole(caller.workspaceId, "receivable.find")
+        assert(role.ok)
+        const tool = isNative ? "sepay.transactions.list" : role.tool.name
 
-            const first = await gateway.call(caller, tool, {})
-            const retried = await gateway.call(caller, tool, {})
-            expect([first, retried]).toEqual([
-                refusalOf("idempotency_key_required", tool),
-                refusalOf("idempotency_key_required", tool),
-            ])
-            expect(remote.call).not.toHaveBeenCalled()
-            expect(native.invoke).not.toHaveBeenCalled()
-            expect(receipts.run).not.toHaveBeenCalled()
-            expect(callLog.append).toHaveBeenCalledTimes(2)
-            expect(linesOf(callLog)[0]).toMatchObject({ outcome: "refused", errorCode: "idempotency_key_required" })
-        },
-    )
+        const first = await gateway.call(caller, tool, {})
+        const retried = await gateway.call(caller, tool, {})
+        const refused = refusalOf("idempotency_key_required", tool)
+        expect([first, retried]).toEqual([refused, refused])
+        expect(remote.call).not.toHaveBeenCalled()
+        expect(native.invoke).not.toHaveBeenCalled()
+        expect(receipts.run).not.toHaveBeenCalled()
+        expect(callLog.append).toHaveBeenCalledTimes(2)
+        expect(linesOf(callLog)[0]).toMatchObject({ outcome: "refused", errorCode: "idempotency_key_required" })
+    })
 
-    it.each(VALID_WRITE_IDENTITIES)(
-        "claims a write with an operation key or its work-item fallback %j",
-        async (caller) => {
-            const { gateway, remote, receipts } = await build()
+    it.each(VALID_WRITE_IDENTITIES)("claims a write with identity %j", async (caller) => {
+        const { gateway, remote, receipts } = await build()
 
-            await expect(gateway.call(caller, "hakuen.booking.confirm", {})).resolves.toEqual(EXPECTED.reply)
-            expect(receipts.run).toHaveBeenCalledTimes(1)
-            expect(remote.call).toHaveBeenCalledTimes(1)
-        },
-    )
+        await expect(gateway.call(caller, "hakuen.booking.confirm", {})).resolves.toEqual(EXPECTED.reply)
+        expect(receipts.run).toHaveBeenCalledTimes(1)
+        expect(remote.call).toHaveBeenCalledTimes(1)
+    })
 })
 
 describe("McpGatewayService.call remote connectors", () => {
@@ -338,12 +308,11 @@ describe("McpGatewayService.call remote connectors", () => {
 
     it("runs an approved replay of a side-effect with no rule and records who approved it", async () => {
         const { gateway, callLog } = await build({ grants: [] })
+        const caller = { ...CALLER, workItemId: "approved-item", approvedBy: "manager-1" }
 
-        await expect(
-            gateway.call({ ...CALLER, workItemId: "approved-item", approvedBy: "manager-1" }, "hakuen.booking.cancel", {
-                bookingId: "b1",
-            }),
-        ).resolves.toMatchObject({ ok: true })
+        await expect(gateway.call(caller, "hakuen.booking.cancel", { bookingId: "b1" })).resolves.toMatchObject({
+            ok: true,
+        })
         expect(linesOf(callLog)[0]).toMatchObject({ outcome: "ok", approvedBy: "manager-1" })
     })
 })
@@ -390,8 +359,7 @@ describe("McpGatewayService.call writes that time out", () => {
 describe("McpGatewayService breaker", () => {
     it("does not consume a write's operation key while its connector's breaker is open", async () => {
         const { gateway, remote, receipts, clock } = await build()
-        remote.call.mockRejectedValue(new Error("down"))
-        for (let attempt = 0; attempt < 5; attempt += 1) await gateway.call(CALLER, "hakuen.stay.current", {})
+        await openRemoteGatewayBreaker(gateway, remote)
         const caller = { ...CALLER, opKey: "confirm-after-recovery" }
 
         await expect(gateway.call(caller, "hakuen.booking.confirm", {})).resolves.toEqual(EXPECTED.circuitOpen)
@@ -407,8 +375,7 @@ describe("McpGatewayService breaker", () => {
         const { gateway, remote, clock } = await build()
         const caller = { ...CALLER, opKey: "already-confirmed" }
         await gateway.call(caller, "hakuen.booking.confirm", {})
-        remote.call.mockRejectedValue(new Error("down"))
-        for (let attempt = 0; attempt < 5; attempt += 1) await gateway.call(CALLER, "hakuen.stay.current", {})
+        await openRemoteGatewayBreaker(gateway, remote)
         clock.advance(120_000)
 
         await expect(gateway.call(caller, "hakuen.booking.confirm", {})).resolves.toEqual(EXPECTED.reply)
@@ -419,8 +386,7 @@ describe("McpGatewayService breaker", () => {
 
     it("opens after five failures of a connector, refuses it meanwhile and audits it, while another connector runs", async () => {
         const { gateway, remote, native, callLog } = await build({ grants: [grantOf(), grantOf({ tool: "sepay.*" })] })
-        remote.call.mockRejectedValue(new Error("down"))
-        for (let attempt = 0; attempt < 5; attempt += 1) await gateway.call(CALLER, "hakuen.stay.current", {})
+        await openRemoteGatewayBreaker(gateway, remote)
 
         await expect(gateway.call(CALLER, "hakuen.stay.current", {})).resolves.toEqual(EXPECTED.circuitOpen)
         await expect(gateway.call(CALLER, "sepay.transactions.list", {})).resolves.toMatchObject({ ok: true })
@@ -434,21 +400,13 @@ describe("McpGatewayService breaker", () => {
 
     it("lets one probe through after the pause, refuses the others while it runs, and closes when it succeeds", async () => {
         const { gateway, remote, clock } = await build()
-        remote.call.mockRejectedValue(new Error("down"))
-        for (let attempt = 0; attempt < 5; attempt += 1) await gateway.call(CALLER, "hakuen.stay.current", {})
+        await openRemoteGatewayBreaker(gateway, remote)
         clock.advance(120_000)
-        const answers: Array<(result: McpRemoteResult) => void> = []
-        remote.call.mockReturnValueOnce(
-            new Promise((resolve) => {
-                answers.push(resolve)
-            }),
-        )
+        const answer = pendingRemoteReplyOf(remote)
 
         const probe = gateway.call(CALLER, "hakuen.stay.current", {})
-        await expect(gateway.call(CALLER, "hakuen.stay.current", {})).resolves.toMatchObject({
-            detail: "circuit_open",
-        })
-        for (const answer of answers) answer({ isError: false, value: { stay: null } })
+        await expect(gateway.call(CALLER, "hakuen.stay.current", {})).resolves.toMatchObject({ detail: "circuit_open" })
+        answer({ isError: false, value: { stay: null } })
         await expect(probe).resolves.toEqual({ ok: true, value: { stay: null } })
 
         remote.call.mockResolvedValue({ isError: false, value: { stay: null } })
@@ -457,6 +415,49 @@ describe("McpGatewayService breaker", () => {
 })
 
 describe("McpGatewayService.call native connectors", () => {
+    it.each(INVALID_GATEWAY_ARGUMENTS)("rejects $label before grants or execution", async (scenario) => {
+        const { gateway, connectors, native, remote, grants, timeout, callLog } = await build(scenario.setup)
+        await expect(gateway.call(CALLER, "sepay.transactions.list", scenario.args)).resolves.toEqual(
+            EXPECTED.invalidArguments,
+        )
+        expect(connectors.list).toHaveBeenCalledTimes(scenario.connectorReads)
+        expect(grants.listOfAgent).not.toHaveBeenCalled()
+        expect(native.invoke).not.toHaveBeenCalled()
+        expect(remote.call).not.toHaveBeenCalled()
+        expect(timeout.schedule).not.toHaveBeenCalled()
+        expect(linesOf(callLog).map((line) => [line.outcome, line.errorCode])).toEqual(scenario.audit)
+    })
+
+    it("returns and audits invalid arguments without opening the connector's breaker or logging a server failure", async () => {
+        const { gateway, native, callLog, logger } = await build({ grants: [grantOf({ tool: "sepay.*" })] })
+
+        for (let attempt = 0; attempt < 6; attempt += 1) {
+            await expect(gateway.call(CALLER, "sepay.transactions.list", { limit: 51 })).resolves.toEqual(
+                refusalOf("invalid_arguments", "Invalid tool arguments"),
+            )
+        }
+        await expect(gateway.call(CALLER, "sepay.transactions.list", { limit: 1 })).resolves.toMatchObject({ ok: true })
+        expect(native.invoke).toHaveBeenCalledTimes(1)
+        expect(linesOf(callLog)[0]).toMatchObject({ outcome: "refused", errorCode: "invalid_arguments" })
+        expect(logger.error).not.toHaveBeenCalled()
+    })
+
+    it("lets a valid probe run after an invalid native call during breaker recovery", async () => {
+        const { gateway, native, clock } = await build({ grants: [grantOf({ tool: "sepay.*" })] })
+        native.invoke.mockRejectedValue(new Error("down"))
+        for (let attempt = 0; attempt < 5; attempt += 1) await gateway.call(CALLER, "sepay.transactions.list", {})
+        clock.advance(120_000)
+        await expect(gateway.call(CALLER, "sepay.transactions.list", { limit: 51 })).resolves.toMatchObject({
+            code: "invalid_arguments",
+        })
+        native.invoke.mockResolvedValue({ transactions: [] })
+
+        await expect(gateway.call(CALLER, "sepay.transactions.list", { limit: 1 })).resolves.toMatchObject({ ok: true })
+        expect(native.invoke).toHaveBeenCalledTimes(6)
+    })
+})
+
+describe("McpGatewayService.call native connector execution", () => {
     it("runs the native adapter under the connector's time limit and releases the deadline", async () => {
         const { gateway, native, remote, timeout, cancel } = await build({ grants: [grantOf({ tool: "sepay.*" })] })
 
@@ -469,9 +470,7 @@ describe("McpGatewayService.call native connectors", () => {
 
     it("answers unavailable with the adapter's code when it refuses", async () => {
         const { gateway, native } = await build({ grants: [grantOf({ tool: "sepay.*" })] })
-        native.invoke.mockRejectedValue(
-            new McpGatewayError({ code: McpGatewayErrorCode.UnknownTool, params: { tool: "transactions.list" } }),
-        )
+        native.invoke.mockRejectedValue(EXPECTED.nativeUnknownTool)
 
         await expect(gateway.call(CALLER, "sepay.transactions.list", {})).resolves.toEqual(
             refusalOf("unavailable", McpGatewayErrorCode.UnknownTool),

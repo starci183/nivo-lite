@@ -3,14 +3,24 @@ import { AgentConversationsService } from "@modules/domain/agent-conversations"
 import type { TurnConversation } from "@modules/domain/agent-conversations"
 import type { GatewayTools, GatewayToolName, JsonResult, ToolArgs, ToolContext } from "@modules/domain/agent-tools"
 import { WorkEngineService } from "@modules/domain/decisions"
-import { argsHashOf, McpGatewayService } from "@modules/domain/mcp-gateway"
+import {
+    argsHashOf,
+    gatewayArgumentsSchema,
+    gatewayDescribeSchema,
+    gatewaySearchSchema,
+    McpGatewayService,
+} from "@modules/domain/mcp-gateway"
 import type { GatewayCaller, GatewayJson } from "@modules/domain/mcp-gateway"
 import { InjectMessageCatalog } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
 import { parseJsonText } from "@modules/platform/primitives"
-import { GATEWAY_STEPS_MAX, gatewayStepsOf } from "@modules/domain/work-performers"
 import type { HubNoteSource } from "./gateway-turns.contracts"
 import { HubNotesService, toolSourcesOf } from "./hub-notes.service"
+import {
+    gatewaySequenceStepsSchema,
+    turnGatewayCallSchema,
+    turnGatewaySequenceSchema,
+} from "./turn-gateway-tools.schema"
 import { TurnSourcesService } from "./turn-sources.service"
 
 const LOCALE = "vi"
@@ -18,12 +28,8 @@ const LOCALE = "vi"
 const ENGINE_ACTOR = "OpenClaw"
 /** The action of a gated call's approval; the gateway-call performer replays it once a person approves. */
 const GATEWAY_CALL_ACTION = "gateway_call"
-/** How many tools a search answers when the agent names no limit, and at most. */
+/** How many tools a search answers when the agent names no limit. */
 const SEARCH_LIMIT_DEFAULT = 5
-const SEARCH_LIMIT_MAX = 10
-/** The longest search query and tool name the bridge passes on, and the longest reply a sequence keeps. */
-const TEXT_MAX = 200
-const REPLY_MAX = 2000
 /** The answer of a test chat's write: nothing reaches the connector. */
 const SIMULATION: JsonResult = { error: "simulation", detail: "a test chat runs connector tools read-only" }
 
@@ -43,30 +49,13 @@ interface ApprovalSeed {
     readonly tools: ReadonlyArray<string>
 }
 
-const isObject = (value: unknown): value is GatewayJson =>
-    typeof value === "object" && value !== null && !Array.isArray(value)
-
-const textOf = (value: unknown, max: number = TEXT_MAX): string =>
-    typeof value === "string" ? value.trim().slice(0, max) : ""
-
-const limitOf = (value: unknown): number =>
-    typeof value === "number" && Number.isInteger(value) && value >= 1
-        ? Math.min(value, SEARCH_LIMIT_MAX)
-        : SEARCH_LIMIT_DEFAULT
-
-/** The JSON a text argument carries, or undefined when it is no JSON; an absent or blank text is null. */
-const jsonOf = (value: unknown): unknown => {
-    const text = typeof value === "string" ? value.trim() : ""
-    if (text === "") return null
-    const read = parseJsonText(text)
-    return read.ok ? read.value : undefined
-}
-
 /** The arguments of a call: none when the agent sent none, null when what it sent is no JSON object. */
-const argumentsOf = (value: unknown): GatewayJson | null => {
-    const parsed = jsonOf(value)
-    if (parsed === null) return {}
-    return isObject(parsed) ? parsed : null
+const argumentsOf = (value: string | undefined): GatewayJson | null => {
+    if (value === undefined || value.trim() === "") return {}
+    const read = parseJsonText(value)
+    if (!read.ok) return null
+    const parsed = gatewayArgumentsSchema.safeParse(read.value)
+    return parsed.success ? parsed.data : null
 }
 
 /** A canonical argument digest: retries ignore object key order, while changed values and array order keep distinct steps. */
@@ -106,10 +95,20 @@ export class TurnGatewayToolsService implements GatewayTools {
             workItemId: null,
         }
         if (tool === "tool.search") {
-            return { tools: await this.gateway.search(caller, textOf(args.query), limitOf(args.limit)) }
+            const parsed = gatewaySearchSchema.safeParse(args)
+            if (!parsed.success) return { error: "invalid_arguments" }
+            return {
+                tools: await this.gateway.search(
+                    caller,
+                    parsed.data.query.trim(),
+                    parsed.data.limit ?? SEARCH_LIMIT_DEFAULT,
+                ),
+            }
         }
         if (tool === "tool.describe") {
-            const described = await this.gateway.describe(caller, textOf(args.name))
+            const parsed = gatewayDescribeSchema.safeParse(args)
+            if (!parsed.success) return { error: "invalid_arguments" }
+            const described = await this.gateway.describe(caller, parsed.data.name.trim())
             return described === null ? { error: "not_granted_or_unknown" } : { ...described }
         }
         if (tool === "tool.sequence") return this.sequence(ctx, conversation, caller, args)
@@ -123,8 +122,10 @@ export class TurnGatewayToolsService implements GatewayTools {
         caller: GatewayCaller,
         args: ToolArgs,
     ): Promise<JsonResult> {
-        const name = textOf(args.name)
-        const callArgs = argumentsOf(args.arguments_json)
+        const parsed = turnGatewayCallSchema.safeParse(args)
+        if (!parsed.success) return { error: "invalid_arguments" }
+        const name = parsed.data.name.trim()
+        const callArgs = argumentsOf(parsed.data.arguments_json)
         if (callArgs === null) return { error: "invalid_arguments", detail: "arguments_json is not a JSON object" }
         const described = await this.gateway.describe(caller, name)
         const writes = described?.scope !== "read"
@@ -157,17 +158,19 @@ export class TurnGatewayToolsService implements GatewayTools {
         caller: GatewayCaller,
         args: ToolArgs,
     ): Promise<JsonResult> {
-        const steps = gatewayStepsOf(args.steps_json)
-        if (steps === null) {
-            return { error: "invalid_steps", detail: `steps_json is a list of 1 to ${String(GATEWAY_STEPS_MAX)} calls` }
-        }
+        const parsed = turnGatewaySequenceSchema.safeParse(args)
+        if (!parsed.success) return { error: "invalid_arguments" }
+        const read = parseJsonText(parsed.data.steps_json)
+        const decoded = gatewaySequenceStepsSchema.safeParse(read.ok ? read.value : null)
+        if (!decoded.success) return { error: "invalid_steps", detail: "steps_json is a list of 1 to 10 bounded calls" }
+        const steps = decoded.data.map((step) => ({ name: step.name.trim(), arguments: step.arguments ?? {} }))
         const described = await Promise.all(steps.map((step) => this.gateway.describe(caller, step.name)))
         const unknown = steps.find((_step, index) => described[index] === null)
         if (unknown !== undefined) return { error: "not_granted_or_unknown", detail: unknown.name }
         const writes = described.some((tool) => tool?.scope !== "read")
         if (writes && (await this.conversations.isTestChat(conversation.id))) return SIMULATION
         const names = steps.map((step) => step.name)
-        const reply = textOf(args.reply, REPLY_MAX)
+        const reply = parsed.data.reply?.trim() ?? ""
         return this.ask(ctx, conversation, {
             stepKey: `${ctx.jobId}:sequence:${digestOf({ steps })}`,
             tool: names.join(" > "),

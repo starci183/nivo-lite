@@ -24,7 +24,7 @@ const build = async () => {
     return { sepay: moduleRef.get(SepayNativeService), transactions }
 }
 
-describe("SepayNativeService", () => {
+describe("SepayNativeService manifest", () => {
     it("declares the sepay manifest", async () => {
         const { sepay } = await build()
 
@@ -33,8 +33,20 @@ describe("SepayNativeService", () => {
             ["transactions.list", "payment.credits.list"],
             ["transactions.debits", "payment.debits.list"],
         ])
+        for (const tool of SEPAY_MANIFEST.tools) {
+            expect(tool.inputSchema).toMatchObject({
+                properties: {
+                    status: { type: "string", enum: ["unmatched", "matched", "needs_review"] },
+                    since: { type: "string", minLength: 20, maxLength: 40, format: "date-time" },
+                    limit: { type: "integer", minimum: 1, maximum: 50, default: 20 },
+                },
+                additionalProperties: false,
+            })
+        }
     })
+})
 
+describe("SepayNativeService credits", () => {
     it("lists the bank credits through the transactions owner with the given filters", async () => {
         const { sepay, transactions } = await build()
 
@@ -64,20 +76,37 @@ describe("SepayNativeService", () => {
         })
     })
 
-    it("drops a filter it cannot read and bounds the limit", async () => {
+    it("uses the default limit when filters are absent", async () => {
         const { sepay, transactions } = await build()
 
-        await sepay.invoke("ws-1", "transactions.list", { status: "lost", since: "yesterday", limit: 500 })
-        await sepay.invoke("ws-1", "transactions.list", { status: 3, since: 7, limit: 0 })
-        await sepay.invoke("ws-1", "transactions.list", { limit: 2.5 })
+        await sepay.invoke("ws-1", "transactions.list", {})
 
         expect(transactions.listBankCredits.mock.calls).toEqual([
-            [{ workspaceId: "ws-1", status: null, since: null, limit: 50 }],
-            [{ workspaceId: "ws-1", status: null, since: null, limit: 1 }],
             [{ workspaceId: "ws-1", status: null, since: null, limit: 20 }],
         ])
     })
+})
 
+describe("SepayNativeService invalid arguments", () => {
+    it.each(["transactions.list", "transactions.debits"])(
+        "refuses invalid filters for %s before reading transactions",
+        async (tool) => {
+            const { sepay, transactions } = await build()
+
+            await expect(sepay.invoke("ws-1", tool, { limit: 51 })).rejects.toMatchObject({
+                code: McpGatewayErrorCode.InvalidArguments,
+                params: { tool },
+            })
+            await expect(sepay.invoke("ws-1", tool, { status: 3 })).rejects.toMatchObject({
+                code: McpGatewayErrorCode.InvalidArguments,
+            })
+            expect(transactions.listBankCredits).not.toHaveBeenCalled()
+            expect(transactions.listBankDebits).not.toHaveBeenCalled()
+        },
+    )
+})
+
+describe("SepayNativeService debits", () => {
     it("lists the bank debits through the transactions owner with the same filters", async () => {
         const { sepay, transactions } = await build()
 
@@ -92,7 +121,9 @@ describe("SepayNativeService", () => {
         })
         expect(transactions.listBankCredits).not.toHaveBeenCalled()
     })
+})
 
+describe("SepayNativeService unknown tools", () => {
     it("refuses a tool the connector does not have", async () => {
         const { sepay, transactions } = await build()
 

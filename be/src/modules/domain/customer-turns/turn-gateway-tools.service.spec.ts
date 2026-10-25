@@ -2,7 +2,7 @@ import { Test } from "@nestjs/testing"
 import { mock } from "@starci/jest-preset"
 import { AgentConversationsService, AgentConversationsErrorCode } from "@modules/domain/agent-conversations"
 import type { TurnConversation } from "@modules/domain/agent-conversations"
-import type { ToolContext } from "@modules/domain/agent-tools"
+import type { GatewayToolName, ToolContext } from "@modules/domain/agent-tools"
 import { WorkEngineService } from "@modules/domain/decisions"
 import type { WorkItem } from "@modules/domain/decisions"
 import { McpGatewayService } from "@modules/domain/mcp-gateway"
@@ -49,6 +49,11 @@ const READ = { ...DESCRIBED, name: "crm.stock.read", description: "Read stock", 
 const PRICE_LIST = [{ layer: 2 as const, kind: "brain_document", ref: "src-1", label: "Price list" }]
 const ORDER_SOURCE = { layer: 1, kind: "mcp_tool", ref: "crm.order.place", label: "crm.order.place" }
 
+const SEQUENCE_STEPS = JSON.stringify([
+    { name: "crm.stock.read", arguments: { sku: "a" } },
+    { name: "crm.order.place", arguments: { sku: "a" } },
+])
+
 const catalog = mock<MessageCatalog>({
     get: (key: string, params?: Readonly<Record<string, string | number>>) => `${key} ${JSON.stringify(params ?? {})}`,
 })
@@ -91,12 +96,8 @@ describe("TurnGatewayToolsService discovery", () => {
             tools: [{ name: "crm.order.place", description: "", scope: "write", mode: "auto" }],
         })
         expect(gateway.search).toHaveBeenCalledWith(CALLER, "order", 3)
-        await service.run(CTX, "tool.search", { query: "x", limit: 50 })
-        await service.run(CTX, "tool.search", { query: 4, limit: 0.5 })
-        expect(gateway.search.mock.calls.slice(1).map((call) => [call[1], call[2]])).toEqual([
-            ["x", 10],
-            ["", 5],
-        ])
+        await service.run(CTX, "tool.search", { query: "x" })
+        expect(gateway.search.mock.calls.slice(1).map((call) => [call[1], call[2]])).toEqual([["x", 5]])
     })
 
     it("describes one granted tool, or says it is unknown or not granted", async () => {
@@ -122,6 +123,39 @@ describe("TurnGatewayToolsService discovery", () => {
         expect(gateway.search).not.toHaveBeenCalled()
         expect(gateway.call).not.toHaveBeenCalled()
     })
+})
+
+describe("TurnGatewayToolsService argument validation", () => {
+    const INVALID: ReadonlyArray<{ readonly tool: GatewayToolName; readonly args: Readonly<Record<string, unknown>> }> =
+        [
+            { tool: "tool.search", args: { query: "q".repeat(201) } },
+            { tool: "tool.search", args: { query: 4, limit: 0.5 } },
+            { tool: "tool.search", args: { query: "x", limit: 11 } },
+            { tool: "tool.search", args: { query: "x", limit: 0 } },
+            { tool: "tool.search", args: { query: "x", limit: "2" } },
+            { tool: "tool.describe", args: { name: "n".repeat(114) } },
+            { tool: "tool.describe", args: { name: 4 } },
+            { tool: "tool.describe", args: {} },
+            { tool: "tool.call", args: { name: "n".repeat(114) } },
+            { tool: "tool.call", args: { name: "crm.stock.read", arguments_json: " ".repeat(65537) } },
+            { tool: "tool.call", args: { name: "crm.stock.read", arguments_json: {} } },
+            { tool: "tool.sequence", args: { steps_json: [] } },
+            { tool: "tool.sequence", args: { steps_json: " ".repeat(655361) } },
+            { tool: "tool.sequence", args: { steps_json: "[]", reply: "r".repeat(2001) } },
+            { tool: "tool.sequence", args: { steps_json: "[]", reply: 7 } },
+        ]
+
+    it.each(INVALID)(
+        "refuses invalid $tool arguments before reaching the gateway or opening an approval",
+        async ({ tool, args }) => {
+            const { service, gateway, engine } = await build()
+            await expect(service.run(CTX, tool, args)).resolves.toEqual({ error: "invalid_arguments" })
+            expect(gateway.search).not.toHaveBeenCalled()
+            expect(gateway.describe).not.toHaveBeenCalled()
+            expect(gateway.call).not.toHaveBeenCalled()
+            expect(engine.runWork).not.toHaveBeenCalled()
+        },
+    )
 })
 
 describe("TurnGatewayToolsService write retries", () => {
@@ -220,10 +254,10 @@ describe("TurnGatewayToolsService call cards", () => {
     })
 })
 
-describe("TurnGatewayToolsService call failures", () => {
+describe("TurnGatewayToolsService call arguments and refusals", () => {
     it("refuses arguments that are no JSON object before calling anything", async () => {
         const { service, gateway } = await build()
-        for (const text of ["nope", "[1]"]) {
+        for (const text of ["nope", "[1]", "null", JSON.stringify({ text: "x".repeat(8193) })]) {
             await expect(
                 service.run(CTX, "tool.call", { name: "crm.order.place", arguments_json: text }),
             ).resolves.toEqual({
@@ -232,6 +266,12 @@ describe("TurnGatewayToolsService call failures", () => {
             })
         }
         expect(gateway.call).not.toHaveBeenCalled()
+    })
+
+    it("keeps a blank encoded arguments field as the absent object", async () => {
+        const { service, gateway } = await build()
+        await service.run(CTX, "tool.call", { name: "crm.stock.read", arguments_json: " " })
+        expect(gateway.call.mock.calls[0]?.[2]).toEqual({})
     })
 
     it("answers a failed call as it is and opens no approval", async () => {
@@ -290,11 +330,6 @@ describe("TurnGatewayToolsService approvals", () => {
 })
 
 describe("TurnGatewayToolsService sequence", () => {
-    const STEPS = JSON.stringify([
-        { name: "crm.stock.read", arguments: { sku: "a" } },
-        { name: "crm.order.place", arguments: { sku: "a" } },
-    ])
-
     it("keeps the same approval identity for reordered argument keys and a distinct identity for reordered steps", async () => {
         const { service, engine } = await build()
         const first = [
@@ -319,7 +354,7 @@ describe("TurnGatewayToolsService sequence", () => {
         const { service, gateway, engine } = await build()
         gateway.describe.mockResolvedValueOnce(READ).mockResolvedValueOnce(DESCRIBED)
         await expect(
-            service.run(CTX, "tool.sequence", { steps_json: STEPS, reply: " Done for you " }),
+            service.run(CTX, "tool.sequence", { steps_json: SEQUENCE_STEPS, reply: " Done for you " }),
         ).resolves.toEqual({
             status: "approval_requested",
             reason: "playbook",
@@ -333,7 +368,7 @@ describe("TurnGatewayToolsService sequence", () => {
                 'gatewayTurns.approvalSummary {"tool":"crm.stock.read > crm.order.place","name":"Lan","reason":"playbook"}',
             draft: "Done for you",
             fields: {
-                steps_json: STEPS,
+                steps_json: SEQUENCE_STEPS,
                 reason: "playbook",
                 sources: JSON.stringify([
                     { layer: 1, kind: "mcp_tool", ref: "crm.stock.read", label: "crm.stock.read" },
@@ -346,21 +381,42 @@ describe("TurnGatewayToolsService sequence", () => {
 
     it("tells the customer the approved line when the agent gave no reply", async () => {
         const { service, engine } = await build()
-        await service.run(CTX, "tool.sequence", { steps_json: STEPS })
+        await service.run(CTX, "tool.sequence", { steps_json: SEQUENCE_STEPS })
         expect(engine.runWork.mock.calls[0]?.[1].seed?.draft).toBe("gatewayTurns.approvedDone {}")
     })
+})
 
+describe("TurnGatewayToolsService sequence validation", () => {
     it("refuses steps that are no valid list, or name a tool the agent may not use", async () => {
         const { service, gateway, engine } = await build()
         await expect(service.run(CTX, "tool.sequence", { steps_json: "[]" })).resolves.toEqual({
             error: "invalid_steps",
-            detail: "steps_json is a list of 1 to 10 calls",
+            detail: "steps_json is a list of 1 to 10 bounded calls",
         })
         gateway.describe.mockResolvedValueOnce(READ).mockResolvedValueOnce(null)
-        await expect(service.run(CTX, "tool.sequence", { steps_json: STEPS })).resolves.toEqual({
+        await expect(service.run(CTX, "tool.sequence", { steps_json: SEQUENCE_STEPS })).resolves.toEqual({
             error: "not_granted_or_unknown",
             detail: "crm.order.place",
         })
+        expect(engine.runWork).not.toHaveBeenCalled()
+    })
+
+    it("refuses malformed JSON, too many steps, and invalid step fields before describing or approving", async () => {
+        const { service, gateway, engine } = await build()
+        const invalid = [
+            "not json",
+            JSON.stringify(Array.from({ length: 11 }, () => ({ name: "crm.stock.read" }))),
+            JSON.stringify([{ name: "n".repeat(114) }]),
+            JSON.stringify([{ name: "crm.stock.read", arguments: [1] }]),
+            JSON.stringify([{ name: "crm.stock.read", arguments: { text: "x".repeat(8193) } }]),
+        ]
+        for (const steps of invalid) {
+            await expect(service.run(CTX, "tool.sequence", { steps_json: steps })).resolves.toEqual({
+                error: "invalid_steps",
+                detail: "steps_json is a list of 1 to 10 bounded calls",
+            })
+        }
+        expect(gateway.describe).not.toHaveBeenCalled()
         expect(engine.runWork).not.toHaveBeenCalled()
     })
 })

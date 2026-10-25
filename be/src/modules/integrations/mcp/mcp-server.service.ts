@@ -30,7 +30,7 @@ const settled = (message: unknown): unknown =>
     isJson(message) ? Object.fromEntries(Object.entries(message).filter(([, value]) => value !== undefined)) : message
 
 /** One MCP server (official SDK) over the surface of one caller: `tools/list` lists its tools, `tools/call` runs one. */
-const serverOf = (surface: McpSurface): McpServer => {
+const serverOf = (surface: McpSurface, argumentsValue: unknown): McpServer => {
     const mcp = new McpServer(SERVER_INFO, { capabilities: { tools: {} } })
     mcp.server.setRequestHandler(ListToolsRequestSchema, () => ({
         tools: surface.tools.map((tool) => ({
@@ -40,7 +40,8 @@ const serverOf = (surface: McpSurface): McpServer => {
         })),
     }))
     mcp.server.setRequestHandler(CallToolRequestSchema, async (call) => {
-        const args = isJson(call.params.arguments) ? call.params.arguments : {}
+        // The SDK checks the protocol shape, but its record parser drops __proto__; the domain must validate the original JSON.
+        const args = isJson(argumentsValue) ? argumentsValue : {}
         const answer = await surface.call(call.params.name, args)
         return {
             content: [{ type: "text" as const, text: JSON.stringify(answer.value) }],
@@ -61,12 +62,23 @@ export class McpServerService implements McpServing {
     /** Answers one JSON-RPC message for the caller whose tools the surface holds. */
     async answer(request: McpServeRequest): Promise<McpReply> {
         const message = settled(request.message)
-        if (isJSONRPCRequest(message)) return { body: await this.reply(message, request.surface) }
+        if (isJSONRPCRequest(message)) {
+            if (message.method === "tools/call" && !CallToolRequestSchema.safeParse(message).success) {
+                return {
+                    body: {
+                        jsonrpc: "2.0",
+                        id: message.id,
+                        error: { code: ErrorCode.InvalidParams, message: "Invalid tool arguments" },
+                    },
+                }
+            }
+            return { body: await this.reply(message, request.surface) }
+        }
         return { body: JSONRPCMessageSchema.safeParse(message).success ? null : INVALID_REQUEST }
     }
 
     private async reply(message: JSONRPCRequest, surface: McpSurface): Promise<McpRpcResponse> {
-        const mcp = serverOf(surface)
+        const mcp = serverOf(surface, message.params?.arguments)
         const body = await new Promise<McpRpcResponse>((resolve, reject) => {
             const transport: Transport = {
                 start: () => Promise.resolve(),

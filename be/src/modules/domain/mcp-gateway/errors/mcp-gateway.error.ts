@@ -7,6 +7,8 @@ export enum McpGatewayErrorCode {
     UnknownTool = "MCP_GATEWAY_UNKNOWN_TOOL",
     /** The input of a console command is not valid. */
     Invalid = "MCP_GATEWAY_INVALID",
+    /** A tool call does not match its bounded argument schema. */
+    InvalidArguments = "MCP_GATEWAY_INVALID_ARGUMENTS",
     /** The agent is not one of the workspace. */
     AgentNotFound = "MCP_GATEWAY_AGENT_NOT_FOUND",
     /** The remote connector takes a credential and none is sealed in its row yet. */
@@ -25,6 +27,7 @@ export enum McpGatewayErrorCode {
 export const MCP_GATEWAY_ERROR_KINDS: Record<McpGatewayErrorCode, ErrorKind> = {
     [McpGatewayErrorCode.UnknownTool]: "not-found",
     [McpGatewayErrorCode.Invalid]: "invalid",
+    [McpGatewayErrorCode.InvalidArguments]: "invalid",
     [McpGatewayErrorCode.AgentNotFound]: "not-found",
     [McpGatewayErrorCode.CredentialMissing]: "unavailable",
     [McpGatewayErrorCode.CredentialUnreadable]: "internal",

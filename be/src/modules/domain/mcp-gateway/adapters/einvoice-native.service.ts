@@ -2,18 +2,20 @@ import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { McpGatewayError, McpGatewayErrorCode } from "../errors/mcp-gateway.error"
-import type { GatewayConnectorManifest, GatewayJson, NativeAdapter } from "../mcp-gateway.contracts"
+import type { GatewayJson, NativeAdapter, NativeConnectorManifest } from "../mcp-gateway.contracts"
 import { FIND_INVOICE_MAIL, LIST_INVOICE_MAILS } from "../persistence/einvoice-native.sql"
 import type { InvoiceMailRow } from "../persistence/einvoice-native.rows"
+import {
+    EINVOICE_GET_INPUT_SCHEMA,
+    EINVOICE_LIST_INPUT_SCHEMA,
+    EinvoiceGetSchema,
+    EinvoiceListSchema,
+} from "./einvoice-native.schema"
 import { parseEinvoiceXml } from "./einvoice-xml.policy"
 import type { EinvoiceDraft } from "./einvoice-xml.policy"
 
-const LIMIT_MAX = 50
-const LIMIT_DEFAULT = 20
-const YMD = /^\d{4}-\d{2}-\d{2}$/u
-
 /** The e-invoice native connector: the TT78 XML invoices that arrived in the workspace's invoice mailbox (data-hub IMAP sync). */
-export const EINVOICE_MANIFEST: GatewayConnectorManifest = {
+export const EINVOICE_MANIFEST: NativeConnectorManifest = {
     key: "einvoice",
     name: "E-invoices (TT78)",
     kind: "native",
@@ -25,20 +27,16 @@ export const EINVOICE_MANIFEST: GatewayConnectorManifest = {
             scope: "read",
             defaultMode: "auto",
             role: "invoice.list",
-            inputSchema: {
-                type: "object",
-                properties: {
-                    since: { type: "string", format: "date" },
-                    limit: { type: "integer", minimum: 1, maximum: LIMIT_MAX },
-                },
-            },
+            inputSchema: EINVOICE_LIST_INPUT_SCHEMA,
+            argumentSchema: EinvoiceListSchema,
         },
         {
             name: "get",
             description: "One e-invoice with its lines, by the id einvoice.list answered.",
             scope: "read",
             defaultMode: "auto",
-            inputSchema: { type: "object", properties: { id: { type: "string" } }, required: ["id"] },
+            inputSchema: EINVOICE_GET_INPUT_SCHEMA,
+            argumentSchema: EinvoiceGetSchema,
         },
     ],
 }
@@ -125,17 +123,24 @@ export class EinvoiceNativeService implements NativeAdapter {
     }
 
     private async list(workspaceId: string, args: GatewayJson): Promise<GatewayJson> {
-        const since = typeof args.since === "string" && YMD.test(args.since) ? args.since : null
-        const limit =
-            typeof args.limit === "number" && Number.isInteger(args.limit)
-                ? Math.min(LIMIT_MAX, Math.max(1, args.limit))
-                : LIMIT_DEFAULT
-        const rows = await this.entityManager.query<Array<InvoiceMailRow>>(LIST_INVOICE_MAILS, [workspaceId, since])
+        const parsed = EinvoiceListSchema.safeParse(args)
+        if (!parsed.success) {
+            throw new McpGatewayError({ code: McpGatewayErrorCode.InvalidArguments, params: { tool: "list" } })
+        }
+        const { since, limit } = parsed.data
+        const rows = await this.entityManager.query<Array<InvoiceMailRow>>(LIST_INVOICE_MAILS, [
+            workspaceId,
+            since ?? null,
+        ])
         return { invoices: rows.flatMap(invoicesOf).slice(0, limit).map(summaryOf) }
     }
 
     private async get(workspaceId: string, args: GatewayJson): Promise<GatewayJson> {
-        const id = typeof args.id === "string" ? args.id : ""
+        const parsed = EinvoiceGetSchema.safeParse(args)
+        if (!parsed.success) {
+            throw new McpGatewayError({ code: McpGatewayErrorCode.InvalidArguments, params: { tool: "get" } })
+        }
+        const { id } = parsed.data
         const recordId = id.split(":", 1).join("")
         const rows = await this.entityManager.query<Array<InvoiceMailRow>>(FIND_INVOICE_MAIL, [workspaceId, recordId])
         const found = rows.flatMap(invoicesOf).find((entry) => entry.id === id)

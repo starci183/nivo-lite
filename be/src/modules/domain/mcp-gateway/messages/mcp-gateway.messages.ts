@@ -3,6 +3,7 @@ import type { MessageBundle } from "@modules/platform/i18n"
 /** Display text of the gateway codes, Vietnamese and English. */
 export const MCP_GATEWAY_MESSAGES: MessageBundle = {
     vi: {
+        "errors.MCP_GATEWAY_INVALID_ARGUMENTS": "Tham số công cụ không hợp lệ.",
         "errors.MCP_GATEWAY_UNKNOWN_TOOL": "Kết nối không có công cụ này.",
         "errors.MCP_GATEWAY_INVALID": "Dữ liệu kết nối không hợp lệ: {field}.",
         "errors.MCP_GATEWAY_AGENT_NOT_FOUND": "Không tìm thấy agent trong workspace.",
@@ -15,6 +16,7 @@ export const MCP_GATEWAY_MESSAGES: MessageBundle = {
             "Danh sách công cụ chưa được đọc hoặc vừa thay đổi; hãy đọc lại rồi duyệt.",
     },
     en: {
+        "errors.MCP_GATEWAY_INVALID_ARGUMENTS": "The tool arguments are not valid.",
         "errors.MCP_GATEWAY_UNKNOWN_TOOL": "The connector has no such tool.",
         "errors.MCP_GATEWAY_INVALID": "The connector input is not valid: {field}.",
         "errors.MCP_GATEWAY_AGENT_NOT_FOUND": "The agent is not in this workspace.",

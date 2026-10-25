@@ -5,6 +5,11 @@ import { MCP_SERVER } from "@modules/integrations/mcp"
 import type { McpServing, McpSurface } from "@modules/integrations/mcp"
 import { McpGatewayErrorCode } from "./errors/mcp-gateway.error"
 import { GatewaySurfaceService } from "./gateway-surface.service"
+import {
+    GATEWAY_CALL_INPUT_SCHEMA,
+    GATEWAY_DESCRIBE_INPUT_SCHEMA,
+    GATEWAY_SEARCH_INPUT_SCHEMA,
+} from "./gateway-tools.schema"
 import type { GatewayCaller } from "./mcp-gateway.contracts"
 import { McpGatewayService } from "./mcp-gateway.service"
 
@@ -67,6 +72,23 @@ describe("GatewaySurfaceService.answer", () => {
         const handed = server.answer.mock.calls[0]?.[0]
         expect(handed?.message).toBe(MESSAGE)
         expect(handed?.surface.tools.map((tool) => tool.name)).toEqual(["tool.search", "tool.describe", "tool.call"])
+        expect(handed?.surface.tools.map((tool) => tool.inputSchema)).toEqual([
+            GATEWAY_SEARCH_INPUT_SCHEMA,
+            GATEWAY_DESCRIBE_INPUT_SCHEMA,
+            GATEWAY_CALL_INPUT_SCHEMA,
+        ])
+        expect(handed?.surface.tools[0]?.inputSchema).toMatchObject({
+            properties: {
+                query: { type: "string", maxLength: 200 },
+                limit: { type: "integer", minimum: 1, maximum: 10 },
+            },
+        })
+        expect(handed?.surface.tools[1]?.inputSchema).toMatchObject({
+            properties: { name: { type: "string", minLength: 1, maxLength: 113 } },
+        })
+        expect(handed?.surface.tools[2]?.inputSchema).toMatchObject({
+            properties: { name: { type: "string", minLength: 1, maxLength: 113 } },
+        })
     })
 
     it("refuses a credential of another workspace before the server answers", async () => {
@@ -92,7 +114,7 @@ describe("GatewaySurfaceService discovery", () => {
             value: { tools: [] },
             isError: false,
         })
-        await handed.call("tool.search", { query: 7 })
+        await handed.call("tool.search", { query: "" })
         expect(gateway.search.mock.calls).toEqual([
             [CALLER, "spa", 3],
             [CALLER, "", 5],
@@ -108,13 +130,13 @@ describe("GatewaySurfaceService discovery", () => {
             value: described,
             isError: false,
         })
-        await expect(handed.call("tool.describe", {})).resolves.toEqual({
+        await expect(handed.call("tool.describe", { name: "hakuen.unknown" })).resolves.toEqual({
             value: { error: "not_granted_or_unknown" },
             isError: true,
         })
         expect(gateway.describe.mock.calls).toEqual([
             [CALLER, "hakuen.stay.current"],
-            [CALLER, ""],
+            [CALLER, "hakuen.unknown"],
         ])
     })
 })
@@ -130,9 +152,7 @@ describe("GatewaySurfaceService calls", () => {
         await expect(
             handed.call("tool.call", { name: "hakuen.stay.current", arguments: { room: "302" } }),
         ).resolves.toEqual({ value: { stay: null }, isError: false })
-        await expect(
-            handed.call("tool.call", { name: "hakuen.booking.cancel", arguments: [1], opKey: "cancel-1" }),
-        ).resolves.toEqual({
+        await expect(handed.call("tool.call", { name: "hakuen.booking.cancel", opKey: "cancel-1" })).resolves.toEqual({
             value: { ok: false, code: "approval_required", reason: "ask_mode" },
             isError: true,
         })
@@ -183,16 +203,16 @@ describe("GatewaySurfaceService calls", () => {
 })
 
 describe("GatewaySurfaceService call validation", () => {
-    it.each([undefined, null, [1], 5])("passes no tool arguments when the client sent no object (%s)", async (args) => {
+    it("passes an empty object when the client omitted tool arguments", async () => {
         const { handed, gateway } = await surfaceOf()
         gateway.call.mockResolvedValue({ ok: true, value: {} })
 
-        await handed.call("tool.call", { name: "hakuen.stay.current", arguments: args, opKey: "read-1" })
+        await handed.call("tool.call", { name: "hakuen.stay.current", opKey: "read-1" })
 
         expect(gateway.call).toHaveBeenCalledWith({ ...CALLER, opKey: "mcp:agent-1:read-1" }, "hakuen.stay.current", {})
     })
 
-    it.each([undefined, "   ", 42])("refuses a write without a usable operation key (%s)", async (opKey) => {
+    it.each([undefined, "   "])("refuses a write without a usable operation key (%s)", async (opKey) => {
         const { handed, gateway } = await surfaceOf()
         gateway.describe.mockResolvedValue({ ...READ, name: "hakuen.booking.hold", scope: "write" })
         gateway.call.mockResolvedValue({ ok: true, value: { holdId: "h1" } })
@@ -209,7 +229,7 @@ describe("GatewaySurfaceService call validation", () => {
         const { handed, gateway } = await surfaceOf()
         gateway.describe.mockResolvedValue(null)
 
-        await expect(handed.call("tool.call", {})).resolves.toEqual({
+        await expect(handed.call("tool.call", { name: "hakuen.unknown" })).resolves.toEqual({
             value: { error: "not_granted_or_unknown" },
             isError: true,
         })
@@ -223,5 +243,40 @@ describe("GatewaySurfaceService call validation", () => {
             value: { error: "unknown_tool" },
             isError: true,
         })
+    })
+})
+
+describe("GatewaySurfaceService invalid tools", () => {
+    it.each([
+        { tool: "tool.search", args: {} },
+        { tool: "tool.search", args: { query: 7 } },
+        { tool: "tool.search", args: { query: "a".repeat(201) } },
+        { tool: "tool.search", args: { query: "spa", limit: 0 } },
+        { tool: "tool.search", args: { query: "spa", limit: 11 } },
+        { tool: "tool.search", args: { query: "spa", limit: 1.5 } },
+        { tool: "tool.search", args: { query: "spa", limit: "5" } },
+        { tool: "tool.describe", args: {} },
+        { tool: "tool.describe", args: { name: 7 } },
+        { tool: "tool.describe", args: { name: "" } },
+        { tool: "tool.describe", args: { name: "a".repeat(114) } },
+        { tool: "tool.call", args: { name: "hakuen.stay.current", opKey: 42 } },
+        { tool: "tool.call", args: { name: "hakuen.stay.current", opKey: "k".repeat(201) } },
+        { tool: "tool.call", args: { name: "hakuen.stay.current", arguments: { text: "x".repeat(8193) } } },
+        { tool: "tool.call", args: {} },
+        { tool: "tool.call", args: { name: 7 } },
+        { tool: "tool.call", args: { name: "" } },
+        { tool: "tool.call", args: { name: "a".repeat(114) } },
+        { tool: "tool.call", args: { name: "hakuen.stay.current", arguments: [1] } },
+        { tool: "tool.call", args: { name: "hakuen.stay.current", arguments: null } },
+    ])("answers an MCP tool error before using the gateway for invalid arguments: %p", async ({ tool, args }) => {
+        const { handed, gateway } = await surfaceOf()
+
+        await expect(handed.call(tool, args)).resolves.toEqual({
+            value: { error: "invalid_arguments" },
+            isError: true,
+        })
+        expect(gateway.search).not.toHaveBeenCalled()
+        expect(gateway.describe).not.toHaveBeenCalled()
+        expect(gateway.call).not.toHaveBeenCalled()
     })
 })

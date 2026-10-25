@@ -9,6 +9,7 @@ export type GatewayApprovalReason = "ask_mode" | "over_constraint" | "over_limit
 
 /** Why a gateway operation did not produce a result. */
 export type GatewayFailure =
+    | "invalid_arguments"
     | "invalid_name"
     | "unknown_tool"
     | "connector_disabled"

@@ -91,6 +91,61 @@ describe("McpServerService protocol", () => {
     })
 })
 
+describe("McpServerService tool argument validation", () => {
+    it("hands the original arguments to domain validation without dropping prototype-named JSON members", async () => {
+        const server = await build()
+        const call = jest.fn<ReturnType<McpSurface["call"]>, Parameters<McpSurface["call"]>>()
+        call.mockResolvedValue({ value: { error: "invalid_arguments" }, isError: true })
+        const nested = Object.fromEntries([["__proto__", { hidden: true }]])
+        const args: McpJson = { name: "tool", arguments: nested }
+
+        await server.answer({
+            message: request(9, "tools/call", { name: "tool.call", arguments: args }),
+            surface: surfaceOf(call),
+        })
+
+        expect(call.mock.calls[0]?.[1]).toBe(args)
+        expect(call).toHaveBeenCalledWith("tool.call", args)
+        expect(call.mock.calls[0]?.[1].arguments).toBe(nested)
+    })
+
+    it("returns the MCP tool error shape for invalid arguments", async () => {
+        const server = await build()
+        const call = jest.fn<ReturnType<McpSurface["call"]>, Parameters<McpSurface["call"]>>()
+        call.mockResolvedValue({ value: { error: "invalid_arguments" }, isError: true })
+
+        await expect(
+            server.answer({
+                message: request(7, "tools/call", { name: "tool.search", arguments: { query: "spa", limit: 11 } }),
+                surface: surfaceOf(call),
+            }),
+        ).resolves.toEqual({
+            body: {
+                jsonrpc: "2.0",
+                id: 7,
+                result: {
+                    content: [{ type: "text", text: '{"error":"invalid_arguments"}' }],
+                    structuredContent: { error: "invalid_arguments" },
+                    isError: true,
+                },
+            },
+        })
+    })
+
+    it("rejects a non-object argument envelope as invalid JSON-RPC parameters before dispatch", async () => {
+        const server = await build()
+        const call = jest.fn<ReturnType<McpSurface["call"]>, Parameters<McpSurface["call"]>>()
+
+        const reply = await server.answer({
+            message: request(8, "tools/call", { name: "tool.search", arguments: ["spa"] }),
+            surface: surfaceOf(call),
+        })
+
+        expect(reply.body).toMatchObject({ jsonrpc: "2.0", id: 8, error: { code: -32602 } })
+        expect(call).not.toHaveBeenCalled()
+    })
+})
+
 describe("McpServerService tools/call", () => {
     it("runs the tool with its arguments and answers its JSON as structured and text content", async () => {
         const server = await build()
