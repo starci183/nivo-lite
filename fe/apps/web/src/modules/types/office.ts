@@ -4,7 +4,16 @@ export type OfficeText = (key: string, values?: Readonly<Record<string, string |
 
 /** Who is drawn beside a bubble. */
 export type OfficeAvatarView =
-    | { readonly kind: "agent"; readonly glyph: ModuleIconName; readonly module: string; readonly label: string }
+    | {
+          readonly kind: "agent"
+          readonly glyph: ModuleIconName
+          readonly module: string
+          readonly label: string
+          /** The agent id: the generated avatar of an agent without a picture. */
+          readonly seed: string
+          /** The picture the owner gave the agent, or null. */
+          readonly src: string | null
+      }
     | { readonly kind: "person"; readonly name: string }
 
 /** One piece of a message body: plain text or an @mention. */

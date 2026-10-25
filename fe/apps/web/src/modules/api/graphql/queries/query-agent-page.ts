@@ -13,6 +13,7 @@ const query1: TypedDocumentNode<QueryAgentPageResponse, InputVariables<QueryAgen
     query AgentPage($input: AgentIdInput!) {
         agentPage(input: $input) {
             agent {
+                avatarUrl
                 handle
                 id
                 module

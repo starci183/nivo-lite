@@ -1,28 +1,35 @@
 "use client"
 
-import { IconTile } from "@starci/grammar/common"
-import type { IconSource, IconTileSize } from "@starci/grammar/common"
+import { Avatar } from "@starci/grammar/common"
+import type { AvatarSize } from "@starci/grammar/common"
 
-/** What the square agent mark draws. */
+/** What the agent mark draws. */
 type AgentMarkProps = {
-    /** Accept legacy caller metadata while the mark renders only its visual props. */
+    /** Accept legacy caller metadata (the module glyph) while the mark renders only its visual props. */
     readonly [metadata: string]: unknown
-    /** Module icon source resolved by the caller through the Icon leaf registry. */
-    readonly glyph: IconSource
-    /** The spoken name of the mark. */
+    /** The agent's display name: the spoken name of the mark and its initials while the picture loads. */
     readonly label: string
+    /** The agent id when the caller knows it: the generated avatar of an agent without a picture. Defaults to the name. */
+    readonly seed?: string | undefined
+    /** The picture the owner gave the agent. */
+    readonly src?: string | null | undefined
     readonly size?: "xs" | "sm" | "md" | "lg" | undefined
 }
 
-/** IconTile publishes `sm` (32px) and `md` (40px) only; `lg` takes `md`, `xs` takes `sm`. */
-const TILE_SIZE: Record<NonNullable<AgentMarkProps["size"]>, IconTileSize> = {
+/** The grammar publishes no 24px avatar: `xs` takes its smallest plate. */
+const AVATAR_SIZE: Record<NonNullable<AgentMarkProps["size"]>, AvatarSize> = {
     xs: "sm",
     sm: "sm",
     md: "md",
-    lg: "md",
+    lg: "lg",
 }
 
-/** An AI agent: the grammar's neutral `IconTile` with the module glyph, so an agent and a person are never confused. */
+/** An AI agent as a person-like Grammar avatar: its picture, else the generated avatar of its seed. The bot badge is Grammar's. */
 export const AgentMark = (props: AgentMarkProps) => (
-    <IconTile source={props.glyph} tone="neutral" size={TILE_SIZE[props.size ?? "md"]} ariaLabel={props.label} />
+    <Avatar
+        name={props.label}
+        seed={props.seed ?? props.label}
+        {...(props.src ? { src: props.src } : {})}
+        size={AVATAR_SIZE[props.size ?? "md"]}
+    />
 )

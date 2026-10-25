@@ -4,6 +4,9 @@ import type { AuthorityMode } from "@/modules/authority"
 /** The longest request the composer sends; the server refuses more. */
 export const ASSIGN_TEXT_MAX = 2000
 
+/** The length of an agent's display name after trimming; the server refuses others. */
+export const AGENT_NAME_LIMITS = { min: 2, max: 40 } as const
+
 /** A role an agent may be assigned by, in display order. */
 export type AssignRole = "owner" | "manager" | "staff"
 
@@ -43,7 +46,12 @@ export interface RegionView<T> {
 
 /** Everything the profile page of an agent draws. */
 export interface AgentProfileView {
+    readonly id: string
     readonly name: string
+    /** The @handle the team mentions; it never changes when the name does. */
+    readonly handle: string
+    /** The picture the owner gave the agent; null draws the generated avatar of its id. */
+    readonly avatarUrl: string | null
     readonly role: string
     readonly module: string
     readonly isActive: boolean
@@ -83,7 +91,10 @@ interface RegionWire<W> {
 /** The wire answer of the back end `agentPage` query, as far as the page reads it. */
 export interface AgentPageWire {
     readonly agent: {
+        readonly id: string
         readonly name: string
+        readonly handle: string
+        readonly avatarUrl?: string | null
         readonly role: string
         readonly module: string
         readonly status: string
@@ -131,7 +142,10 @@ const regionOf = <W, V>(wire: RegionWire<W>, map: (line: W) => V | null): Region
 
 /** The page of an agent from the wire answer. */
 export const toAgentProfile = (wire: AgentPageWire): AgentProfileView => ({
+    id: wire.agent.id,
     name: wire.agent.name,
+    handle: wire.agent.handle,
+    avatarUrl: wire.agent.avatarUrl ?? null,
     role: wire.agent.role,
     module: wire.agent.module,
     isActive: wire.agent.status === "active",

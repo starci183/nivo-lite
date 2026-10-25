@@ -84,6 +84,7 @@ export { useMutateRemoveLoyaltyRewardSwr, useMutateRemoveMemberSwr } from "./api
 export { useMutateRemoveShiftsAvailabilitySwr, useMutateRemoveShiftsCoverageSwr } from "./api"
 export { useMutateRemoveShiftsPositionSwr, useMutateRenameInstallationAgentSwr } from "./api"
 export { useMutateRenameModuleInstallationSwr, useMutateRequestAgentSyncSwr } from "./api"
+export { useMutateRenameAgentSwr, useMutateRequestAgentAvatarUploadSwr, useMutateSetAgentAvatarSwr } from "./api"
 export { useMutateRequestChatAnswerSwr, useMutateRequestChatReplySwr, useMutateRequestContentDraftSwr } from "./api"
 export { useMutateRequestContentMediaUploadSwr, useMutateRequestContentMonthPlanSwr } from "./api"
 export { useMutateRequestContentQuickDraftSwr, useMutateRequestDataSyncSwr } from "./api"

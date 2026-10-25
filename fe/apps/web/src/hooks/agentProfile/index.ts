@@ -1,5 +1,6 @@
-export { ASSIGN_TEXT_MAX, profileChipsOf } from "./agentProfile.shared"
+export { AGENT_NAME_LIMITS, ASSIGN_TEXT_MAX, profileChipsOf } from "./agentProfile.shared"
 export type { AuthorityMode } from "@/modules/authority"
+export { useAgentIdentity } from "./useAgentIdentity"
 export { useAgentProfile } from "./useAgentProfile"
 export { useAssignComposer } from "./useAssignComposer"
 export { useProfileRegion } from "./useProfileRegion"

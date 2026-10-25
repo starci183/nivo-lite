@@ -146,6 +146,8 @@ export interface OfficeAgent {
     readonly module: string
     readonly name: string
     readonly handle: string
+    /** The picture the owner gave the agent; null draws the generated avatar of its id. */
+    readonly avatarUrl: string | null
     /** The agent is live and on duty. */
     readonly isActive: boolean
     /** The roles a `needs_connection` agent waits for, each with the connectors that would satisfy it; null otherwise. */

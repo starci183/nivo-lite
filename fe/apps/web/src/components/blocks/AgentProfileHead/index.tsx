@@ -2,7 +2,7 @@
 
 import { useTranslations } from "next-intl"
 import { ASSIGN_TEXT_MAX, profileChipsOf, useAgentProfile, useAssignComposer } from "@/hooks/agentProfile"
-import { moduleGlyphOf } from "@/hooks/installations"
+import { useOfficeWords } from "@/hooks/office"
 import { AGENTS_ROUTE, CONSOLE_ROUTES } from "@/modules/routes"
 import { AgentProfileHeadBase } from "./component"
 
@@ -14,10 +14,12 @@ type AgentProfileHeadProps = {
 /** The connected heading of an agent profile: the identity, and the mini composer that hands the agent work. */
 export const AgentProfileHead = (props: AgentProfileHeadProps) => {
     const t = useTranslations("agentProfile")
+    const words = useOfficeWords()
     const { slot } = useAgentProfile(props.agentId)
     const agent = slot.items
     const composer = useAssignComposer(props.agentId, agent?.rules.items ?? [])
     const name = agent?.name ?? ""
+    const handle = agent?.handle ?? ""
     return (
         <AgentProfileHeadBase
             props={{
@@ -29,9 +31,9 @@ export const AgentProfileHead = (props: AgentProfileHeadProps) => {
                 ],
                 eyebrow: t("eyebrow"),
                 title: name === "" ? t("title") : name,
-                description: agent?.role ?? "",
-                glyph: moduleGlyphOf(agent?.module ?? ""),
-                module: agent?.module ?? "",
+                description: agent === undefined ? "" : `@${handle} · ${words.moduleName(agent.module)}`,
+                seed: props.agentId,
+                picture: agent?.avatarUrl ?? null,
                 chips: (agent === undefined ? [] : profileChipsOf(agent)).map((chip) => ({
                     id: chip.id,
                     label: chip.room === null ? t(`chip_${chip.id}`) : t("chip_room", { room: chip.room }),
@@ -43,7 +45,7 @@ export const AgentProfileHead = (props: AgentProfileHeadProps) => {
                 composer: {
                     isOpen: composer.isOpen,
                     title: t("assignTitle", { name }),
-                    mention: `@${name}`,
+                    mention: `@${handle}`,
                     label: t("assignLabel"),
                     placeholder: t("assignPlaceholder"),
                     hint: t("assignHint"),

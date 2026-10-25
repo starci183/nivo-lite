@@ -32,7 +32,7 @@ const workJumpOf = (work: OfficeWork, words: OfficeWords, context: OfficeContext
         id: work.id,
         title: lead === null ? action : [action, lead].join(" · "),
         subtitle: work.reason === null ? words.g("status_failed") : words.g(`reason_${work.reason}`),
-        avatar: agent === null ? NIVO_AVATAR : agentAvatarOf(agent.module, agent.name),
+        avatar: agent === null ? NIVO_AVATAR : agentAvatarOf(agent),
     }
 }
 
@@ -106,7 +106,7 @@ const agentMemberOf = (agent: OfficeAgent, words: OfficeWords): OfficeMemberRowV
     name: agent.name,
     detail: agent.isActive ? `@${agent.handle} · ${words.moduleName(agent.module)}` : offDutyOf(agent, words),
     seen: null,
-    avatar: agentAvatarOf(agent.module, agent.name),
+    avatar: agentAvatarOf(agent),
     isMe: false,
     presence: agent.isActive ? words.t("onDuty", { name: agent.name }) : null,
     mention: agent.isActive ? agent.handle : null,
