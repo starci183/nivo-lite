@@ -15,9 +15,12 @@ export const mapSlot = <T, U>(slot: DataSlot<T>, map: (items: T) => U): DataSlot
 /** The part of an SWR read a slot folds: the error stays `unknown`, as SWR types it `any`. */
 type SlotRead<T> = Pick<SWRResponse<T>, "data" | "isLoading"> & { readonly error: unknown }
 
-/** Folds the state of one SWR read into a slot: loading until the first answer, an error when the read failed, else the items. */
+/**
+ * Folds the state of one SWR read into a slot: the items once they arrived, an error when the read failed, loading only while a read is
+ * really in flight (SWR `isLoading`), else empty. A read that does not fetch (a null key) is therefore empty, never an endless skeleton.
+ */
 export const slotOfSwr = <T>(read: SlotRead<T>): DataSlot<T> => {
     if (read.data !== undefined) return { items: read.data }
     if (read.error !== undefined) return { isError: true }
-    return { isLoading: true }
+    return read.isLoading ? { isLoading: true } : {}
 }

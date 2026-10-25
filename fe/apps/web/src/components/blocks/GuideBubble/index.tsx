@@ -2,7 +2,7 @@
 
 import { useTranslations } from "next-intl"
 import { useState } from "react"
-import { useGuideConversation, useGuideSpotlight, pageAt } from "@/hooks/guide"
+import { guideKeyOf, pageAt, useGuideConversation, useGuideSpotlight } from "@/hooks/guide"
 
 import { isManager, useMember } from "@/hooks/member"
 
@@ -52,7 +52,7 @@ export const GuideBubble = () => {
                 openLabel: t("open"),
                 closeLabel: t("close"),
                 title: t("title"),
-                subtitle: here === undefined ? t("subtitle") : t("here", { page: map(`${here.id}.title`) }),
+                subtitle: here === undefined ? t("subtitle") : t("here", { page: map(`${guideKeyOf(here.id)}.title`) }),
                 greeting: t("greeting"),
                 stepsLabel: t("steps"),
                 thinking: t("thinking"),

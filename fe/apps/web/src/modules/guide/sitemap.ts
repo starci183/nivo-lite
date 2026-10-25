@@ -39,6 +39,9 @@ export const GUIDE_PAGES: ReadonlyArray<GuidePage> = [
     { id: "account", path: "/account" },
 ]
 
+/** The catalog key of a page: a namespace key never carries a dot (it would read as nesting), so a dotted id uses a dash. */
+export const guideKeyOf = (pageId: string): string => pageId.replaceAll(".", "-")
+
 /** The pages a member with this role may be sent to. */
 export const pagesFor = (isManager: boolean): ReadonlyArray<GuidePage> =>
     GUIDE_PAGES.filter((page) => isManager || page.managerOnly !== true)

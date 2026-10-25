@@ -1,0 +1,48 @@
+import { DropdownMenu, IconButton } from "@starci/grammar/common"
+import { nivoIconSource } from "../../leaves/Icon"
+
+/** One language the menu offers: its code and spoken name. */
+type LanguageMenuOption = {
+    readonly value: string
+    readonly name: string
+}
+
+/** What the language menu draws and reports. */
+type LanguageMenuProps = {
+    readonly label: string
+    readonly value: string
+    readonly options: ReadonlyArray<LanguageMenuOption>
+    readonly isDisabled: boolean
+    readonly onChange: (value: string) => void
+}
+
+/** The language menu: an icon-only button that opens a single-select list with the chosen language checked. */
+export const LanguageMenu = (props: LanguageMenuProps) => (
+    <DropdownMenu
+        placement="bottom end"
+        entries={[
+            {
+                kind: "section",
+                id: "language",
+                label: props.label,
+                items: props.options.map((option) => ({ id: option.value, label: option.name })),
+                selection: {
+                    mode: "single",
+                    selectedIds: [props.value],
+                    onChange: (ids) => {
+                        const next = ids[0]
+                        if (next !== undefined && !props.isDisabled) props.onChange(next)
+                    },
+                },
+            },
+        ]}
+        trigger={
+            <IconButton
+                source={nivoIconSource("locale", "leading")}
+                label={props.label}
+                variant="tertiary"
+                isDisabled={props.isDisabled}
+            />
+        }
+    />
+)

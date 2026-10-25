@@ -1,17 +1,11 @@
-/** TopBar brand slot: logo, workspace menu, role chip and founding badge on one line. */
-export const BRAND = "flex min-w-0 items-center gap-3"
+/** TopBar brand slot: the workspace lockup and the founding badge on one line. */
+export const BRAND = "flex min-w-0 items-center gap-2"
 
-/** The workspace menu shows from sm; phones keep the logo and role only. */
-export const WORKSPACE_NAME = "hidden min-w-0 sm:block"
+/** Founding badge shows from lg. */
+export const BADGE = "hidden lg:block"
 
-/** Founding badge shows from sm. */
-export const BADGE = "hidden sm:block"
+/** The actions sit on the right of the bar, on one row. */
+export const ACTIONS = "flex min-w-0 items-center justify-end gap-1 sm:gap-2"
 
-/** TopBar actions: search, new, language, bell and account. */
-export const ACTIONS = "flex min-w-0 items-center gap-2"
-
-/** Search sits in the bar from lg; below that it leaves the row. */
-export const SEARCH = "hidden w-full max-w-md lg:block"
-
-/** The workspace logo: a fixed square before the workspace name. */
-export const WORKSPACE_LOGO = "size-8 shrink-0"
+/** The language and appearance controls show with the wide rail (70rem); below that the navigation drawer carries them. */
+export const SWITCHES = "hidden items-center gap-2 min-[70rem]:flex"

@@ -2,7 +2,7 @@
 
 import { useTranslations } from "next-intl"
 import { useMemo } from "react"
-import { GUIDE_PAGES } from "@/modules/guide"
+import { GUIDE_PAGES, guideKeyOf } from "@/modules/guide"
 import type { GuideText } from "@/modules/guide"
 
 const stringsOf = (value: unknown): ReadonlyArray<string> =>
@@ -14,10 +14,11 @@ export const useGuideText = (): GuideText => {
     const copy = useTranslations("guide")
     return useMemo<GuideText>(() => {
         const known = new Set(GUIDE_PAGES.map((page) => page.id))
-        const rawOf = (pageId: string, key: string): unknown => (known.has(pageId) ? map.raw(`${pageId}.${key}`) : [])
+        const rawOf = (pageId: string, key: string): unknown =>
+            known.has(pageId) ? map.raw(`${guideKeyOf(pageId)}.${key}`) : []
         return {
-            title: (pageId) => map(`${pageId}.title`),
-            what: (pageId) => map(`${pageId}.what`),
+            title: (pageId) => map(`${guideKeyOf(pageId)}.title`),
+            what: (pageId) => map(`${guideKeyOf(pageId)}.what`),
             steps: (pageId) => stringsOf(rawOf(pageId, "steps")),
             keywords: (pageId) => stringsOf(rawOf(pageId, "keywords")),
             empty: copy("coreEmpty"),
