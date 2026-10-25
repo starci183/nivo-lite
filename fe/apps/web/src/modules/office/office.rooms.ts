@@ -199,6 +199,7 @@ export const roomRowsOf = (
             description:
                 room === null ? words.t("groupPreviewEmpty") : previewOf(room.lastBody, room.lastAuthor, words),
             time: at === null ? null : timeOf(at),
+            sortAt: at,
             unread: room?.unread ?? 0,
             members: room?.members ?? null,
         }
