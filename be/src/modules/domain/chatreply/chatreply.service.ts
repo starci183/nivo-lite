@@ -93,6 +93,8 @@ export class ChatReplyService {
                 body,
                 member.displayName,
                 manager,
+                null,
+                member.userId,
             )
             await this.chatTurns.enqueueChatTurn(
                 {

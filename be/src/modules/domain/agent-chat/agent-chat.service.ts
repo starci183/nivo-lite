@@ -114,8 +114,15 @@ export class AgentChatService {
                           body,
                           member.displayName,
                           manager,
+                          member.userId,
                       )
-                    : await this.messages.storeCustomer(request.workspaceId, conversation.id, body, manager)
+                    : await this.messages.storeCustomer(
+                          request.workspaceId,
+                          conversation.id,
+                          body,
+                          manager,
+                          member.userId,
+                      )
             await this.turns.enqueueChatTurn(
                 {
                     kind,

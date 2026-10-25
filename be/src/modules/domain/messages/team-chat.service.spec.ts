@@ -54,19 +54,21 @@ describe("TeamChatService", () => {
 
             expect(members.require.mock.calls).toEqual([["user-1", "ws-1"]])
             expect(entityManager.query.mock.calls).toEqual([
-                [INSERT_HUMAN_MESSAGE, ["ws-1", "Minh", "staff-1", "Hello team", null]],
+                [INSERT_HUMAN_MESSAGE, ["ws-1", "Minh", "staff-1", "Hello team", null, "user-1"]],
             ])
         })
 
         it("posts as the owner when the member has no staff row", async () => {
             const line = posted({ author_name: "Lan", staff_id: null, body: "Noted" })
             const { service, entityManager, members } = await build(line)
-            members.require.mockResolvedValue(member({ role: "owner", staffId: null, displayName: "Lan" }))
+            members.require.mockResolvedValue(
+                member({ userId: "owner-account", role: "owner", staffId: null, displayName: "Lan" }),
+            )
 
             await expect(service.postHuman("user-1", "ws-1", "Noted")).resolves.toEqual(line)
 
             expect(entityManager.query.mock.calls).toEqual([
-                [INSERT_HUMAN_MESSAGE, ["ws-1", "Lan", null, "Noted", null]],
+                [INSERT_HUMAN_MESSAGE, ["ws-1", "Lan", null, "Noted", null, "owner-account"]],
             ])
         })
 
@@ -77,7 +79,7 @@ describe("TeamChatService", () => {
             await expect(service.postHuman("user-1", "ws-1", "Hello team", "marketing")).resolves.toEqual(line)
 
             expect(entityManager.query.mock.calls).toEqual([
-                [INSERT_HUMAN_MESSAGE, ["ws-1", "Minh", "staff-1", "Hello team", "marketing"]],
+                [INSERT_HUMAN_MESSAGE, ["ws-1", "Minh", "staff-1", "Hello team", "marketing", "user-1"]],
             ])
         })
 

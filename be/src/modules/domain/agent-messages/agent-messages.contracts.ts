@@ -43,6 +43,9 @@ export interface AgentThreadMessage {
 /** The stable message id of an approved work item, or null for a newly generated id. */
 export type ApprovedMessageId = string | null
 
+/** The proven workspace account that typed a message, or null for channel and automated messages. */
+export type AuthorUserId = string | null
+
 /** The messages customers wrote on one channel on one Vietnam day. */
 export interface CustomerMessagesDay {
     /** The channel (`facebook`, `zalo`). */

@@ -277,7 +277,7 @@ describe("AgentChatService", () => {
                 conversationId: "c1",
                 status: "queued",
             })
-            expect(messages.storeCustomer).toHaveBeenCalledWith("w1", "c1", "Hello", expect.anything())
+            expect(messages.storeCustomer).toHaveBeenCalledWith("w1", "c1", "Hello", expect.anything(), "u1")
             expect(turns.enqueueChatTurn).toHaveBeenCalledWith(
                 {
                     kind: "turn",
@@ -302,7 +302,7 @@ describe("AgentChatService", () => {
                 conversationId: "c1",
                 status: "queued",
             })
-            expect(messages.storeHuman).toHaveBeenCalledWith("w1", "c1", "On my way", "Lan", expect.anything())
+            expect(messages.storeHuman).toHaveBeenCalledWith("w1", "c1", "On my way", "Lan", expect.anything(), "u1")
             expect(turns.enqueueChatTurn).toHaveBeenCalledWith(
                 expect.objectContaining({ kind: "deliver", messageId: "m2", channelEventId: "agentchat:m2" }),
                 expect.anything(),

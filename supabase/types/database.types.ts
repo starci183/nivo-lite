@@ -1,4 +1,4 @@
-// migrations-sha256: d515360ccdac2a7f88ed0829f8a4406a994e37d47083b4ac9c993ca02be4dcd9
+// migrations-sha256: 84cac5e9469ff584f5002cde745f570f1aa2045f1a77c926bac308762e54adc3
 
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[]
 
@@ -144,13 +144,13 @@ isOneToOne: false
                   ]
                 },"agent_messages": {
                   Row: {
-                    "author_kind": string | null,"author_name": string | null,"body": string,"conversation_id": string,"created_at": string,"delivery_error": string | null,"delivery_status": string | null,"id": string,"in_reply_to": string | null,"role": string,"workspace_id": string
+                    "author_kind": string | null,"author_name": string | null,"author_user_id": string | null,"body": string,"conversation_id": string,"created_at": string,"delivery_error": string | null,"delivery_status": string | null,"id": string,"in_reply_to": string | null,"role": string,"workspace_id": string
                   }
                   Insert: {
-                    "author_kind"?: string | null,"author_name"?: string | null,"body": string,"conversation_id": string,"created_at"?: string,"delivery_error"?: string | null,"delivery_status"?: string | null,"id"?: string,"in_reply_to"?: string | null,"role": string,"workspace_id": string
+                    "author_kind"?: string | null,"author_name"?: string | null,"author_user_id"?: string | null,"body": string,"conversation_id": string,"created_at"?: string,"delivery_error"?: string | null,"delivery_status"?: string | null,"id"?: string,"in_reply_to"?: string | null,"role": string,"workspace_id": string
                   }
                   Update: {
-                    "author_kind"?: string | null,"author_name"?: string | null,"body"?: string,"conversation_id"?: string,"created_at"?: string,"delivery_error"?: string | null,"delivery_status"?: string | null,"id"?: string,"in_reply_to"?: string | null,"role"?: string,"workspace_id"?: string
+                    "author_kind"?: string | null,"author_name"?: string | null,"author_user_id"?: string | null,"body"?: string,"conversation_id"?: string,"created_at"?: string,"delivery_error"?: string | null,"delivery_status"?: string | null,"id"?: string,"in_reply_to"?: string | null,"role"?: string,"workspace_id"?: string
                   }
                   Relationships: [
                     {
@@ -1017,6 +1017,37 @@ isOneToOne: false
 isOneToOne: false
       referencedRelation: "workspaces"
       referencedColumns: ["id"]
+    }
+                  ]
+                },"chat_markers": {
+                  Row: {
+                    "conversation_id": string | null,"delivered_at": string | null,"delivered_message_id": string | null,"muted": boolean,"read_at": string | null,"read_message_id": string | null,"room": string,"target_key": string,"user_id": string,"workspace_id": string
+                  }
+                  Insert: {
+                    "conversation_id"?: string | null,"delivered_at"?: string | null,"delivered_message_id"?: string | null,"muted"?: boolean,"read_at"?: string | null,"read_message_id"?: string | null,"room"?: string,"target_key"?: never,"user_id": string,"workspace_id": string
+                  }
+                  Update: {
+                    "conversation_id"?: string | null,"delivered_at"?: string | null,"delivered_message_id"?: string | null,"muted"?: boolean,"read_at"?: string | null,"read_message_id"?: string | null,"room"?: string,"target_key"?: never,"user_id"?: string,"workspace_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "chat_markers_conversation_id_fkey"
+      columns: ["conversation_id"]
+isOneToOne: false
+      referencedRelation: "agent_conversations"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "chat_markers_workspace_id_fkey"
+      columns: ["workspace_id"]
+isOneToOne: false
+      referencedRelation: "workspaces"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "chat_markers_workspace_id_user_id_fkey"
+      columns: ["workspace_id","user_id"]
+isOneToOne: false
+      referencedRelation: "workspace_members"
+      referencedColumns: ["workspace_id","user_id"]
     }
                   ]
                 },"connection_commands": {
@@ -2749,13 +2780,13 @@ isOneToOne: false
                   ]
                 },"messages": {
                   Row: {
-                    "agent_id": string | null,"author_kind": string,"author_name": string,"body": string,"card": Json | null,"created_at": string,"id": string,"lead_id": string | null,"room": string | null,"staff_id": string | null,"work_item_id": string | null,"workspace_id": string
+                    "agent_id": string | null,"author_kind": string,"author_name": string,"author_user_id": string | null,"body": string,"card": Json | null,"created_at": string,"id": string,"lead_id": string | null,"room": string | null,"staff_id": string | null,"work_item_id": string | null,"workspace_id": string
                   }
                   Insert: {
-                    "agent_id"?: string | null,"author_kind": string,"author_name": string,"body": string,"card"?: Json | null,"created_at"?: string,"id"?: string,"lead_id"?: string | null,"room"?: string | null,"staff_id"?: string | null,"work_item_id"?: string | null,"workspace_id": string
+                    "agent_id"?: string | null,"author_kind": string,"author_name": string,"author_user_id"?: string | null,"body": string,"card"?: Json | null,"created_at"?: string,"id"?: string,"lead_id"?: string | null,"room"?: string | null,"staff_id"?: string | null,"work_item_id"?: string | null,"workspace_id": string
                   }
                   Update: {
-                    "agent_id"?: string | null,"author_kind"?: string,"author_name"?: string,"body"?: string,"card"?: Json | null,"created_at"?: string,"id"?: string,"lead_id"?: string | null,"room"?: string | null,"staff_id"?: string | null,"work_item_id"?: string | null,"workspace_id"?: string
+                    "agent_id"?: string | null,"author_kind"?: string,"author_name"?: string,"author_user_id"?: string | null,"body"?: string,"card"?: Json | null,"created_at"?: string,"id"?: string,"lead_id"?: string | null,"room"?: string | null,"staff_id"?: string | null,"work_item_id"?: string | null,"workspace_id"?: string
                   }
                   Relationships: [
                     {

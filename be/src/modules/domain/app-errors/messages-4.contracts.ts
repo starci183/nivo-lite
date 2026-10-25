@@ -8,6 +8,7 @@ import { CONTENT_PUBLISHING_MESSAGES } from "@modules/domain/content-publishing"
 import { CONTENT_MEDIA_MESSAGES } from "@modules/domain/content-media"
 import { MESSAGES_MESSAGES } from "@modules/domain/messages"
 import { OFFICE_ROOMS_MESSAGES } from "@modules/domain/office-rooms"
+import { CHAT_MARKERS_MESSAGES } from "@modules/domain/chat-markers"
 import { GATEWAY_TURNS_MESSAGES } from "@modules/domain/customer-turns"
 import { MCP_GATEWAY_MESSAGES } from "@modules/domain/mcp-gateway"
 import { MCP_GATEWAY_RECEIPTS_MESSAGES } from "@modules/domain/mcp-gateway-receipts"
@@ -30,6 +31,7 @@ export const API_MESSAGES_4 = [
     CONTENT_MEDIA_MESSAGES,
     MESSAGES_MESSAGES,
     OFFICE_ROOMS_MESSAGES,
+    CHAT_MARKERS_MESSAGES,
     MCP_MESSAGES,
     MCP_GATEWAY_MESSAGES,
     MCP_GATEWAY_RECEIPTS_MESSAGES,
