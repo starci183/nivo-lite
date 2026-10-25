@@ -1,14 +1,17 @@
 import { OfficeRoomsService } from "@modules/domain/office-rooms"
 import { eachInOrder } from "@modules/platform/primitives"
 import {
+    OFFICE_AGENT_AVATAR,
     OFFICE_MEMBER_AVATAR,
     officeRoomMembersIdentity,
     persistOfficeRoomMembers,
 } from "../../fixtures/builders/office-room-members.builder"
 import { CLEAN_USERS } from "../../fixtures/persistence/office-chain.sql"
 import {
+    AGENT_AVATAR_PRIVILEGES,
     READ_ROOM_MEMBER_AVATARS,
     ROOM_MEMBER_AVATAR_PRIVILEGES,
+    WRITE_AGENT_AVATAR,
 } from "../../fixtures/persistence/office-room-members.sql"
 import { CLEAN_WORKSPACE } from "../../fixtures/persistence/proof.sql"
 import { withBackendRole } from "../../world/backend-role-proof.service"
@@ -34,7 +37,13 @@ const human = (id: string, name: string, avatarUrl: string | null = null) => ({
     avatarUrl,
 })
 
-const agent = (id: string, name: string) => ({ id, kind: "agent", module: "sales", name, avatarUrl: null })
+const agent = (id: string, name: string, avatarUrl: string | null = null) => ({
+    id,
+    kind: "agent",
+    module: "sales",
+    name,
+    avatarUrl,
+})
 
 beforeAll(async () => {
     world.cleanup(async () => {
@@ -56,7 +65,7 @@ describe("office group member previews over PostgreSQL", () => {
         expect(rooms[0]?.members).toEqual({
             count: 10,
             preview: [
-                agent(identity.agentIds[0], "Agent 1"),
+                agent(identity.agentIds[0], "Agent 1", OFFICE_AGENT_AVATAR),
                 human(identity.userIds[0], "Person 1", OFFICE_MEMBER_AVATAR),
                 human(identity.userIds[1], "Person 2"),
                 human(identity.userIds[2], "Person 3"),
@@ -66,7 +75,7 @@ describe("office group member previews over PostgreSQL", () => {
             count: 7,
             preview: [
                 human(identity.userIds[0], "Person 1", OFFICE_MEMBER_AVATAR),
-                agent(identity.agentIds[0], "Agent 1"),
+                agent(identity.agentIds[0], "Agent 1", OFFICE_AGENT_AVATAR),
                 human(identity.userIds[1], "Person 2"),
                 human(identity.userIds[2], "Person 3"),
             ],
@@ -126,6 +135,24 @@ describe("office group membership boundaries over PostgreSQL", () => {
         })
         await expect(world.db.primary.query(ROOM_MEMBER_AVATAR_PRIVILEGES)).resolves.toEqual([
             { backend: true, anonymous: false, browser: false, auth_table: false },
+        ])
+    })
+})
+
+describe("agent pictures over PostgreSQL", () => {
+    it("keeps only HTTPS agent pictures and lets only the backend write them", async () => {
+        await withBackendRole(world, async (tx) => {
+            await expect(
+                tx.query(WRITE_AGENT_AVATAR, [identity.agentIds[1], "http://images.example.test/agent.png"]),
+            ).rejects.toMatchObject({ code: "23514" })
+        })
+        await withBackendRole(world, async (tx) => {
+            await expect(
+                tx.query(WRITE_AGENT_AVATAR, [identity.agentIds[1], "javascript:alert(1)"]),
+            ).rejects.toMatchObject({ code: "23514" })
+        })
+        await expect(world.db.primary.query(AGENT_AVATAR_PRIVILEGES)).resolves.toEqual([
+            { backend: true, anonymous_read: false, browser_read: false, browser_write: false },
         ])
     })
 })

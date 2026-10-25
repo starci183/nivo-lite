@@ -27,6 +27,10 @@ export class AgentSummaryType {
     @Field()
     status!: string
 
+    /** The HTTPS address of the agent's picture; null for the generated avatar. */
+    @Field(() => String, { nullable: true })
+    avatarUrl?: string | null
+
     /** When the agent was created, ISO 8601. */
     @Field()
     createdAt!: string

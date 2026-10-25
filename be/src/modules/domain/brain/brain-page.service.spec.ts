@@ -22,6 +22,7 @@ const agentOf = builder<AgentSummary>({
     handle: "mai",
     role: "Bookings",
     status: "active",
+    avatarUrl: null,
     createdAt: "2026-10-01T00:00:00Z",
 })
 

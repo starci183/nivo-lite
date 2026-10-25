@@ -15,6 +15,8 @@ export interface AgentHead {
     readonly module: string
     /** active or paused. */
     readonly status: string
+    /** The HTTPS address of the agent's picture, or null for the generated avatar. */
+    readonly avatarUrl: string | null
     /** The name of the department room the agent is at home in, or null. */
     readonly roomName: string | null
     /** assist (asks first) or autopilot, from the instance that drives the agent; null when it has none. */

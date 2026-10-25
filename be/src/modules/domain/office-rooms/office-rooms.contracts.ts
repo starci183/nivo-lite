@@ -20,7 +20,7 @@ export interface RoomMemberPreviewView {
     readonly module: string | null
     /** The member's display name in this workspace. */
     readonly name: string
-    /** The existing provider profile URL; null for members without a photo, including agents. */
+    /** The person's HTTPS profile photo or the agent's own picture; null for the generated avatar. */
     readonly avatarUrl: string | null
 }
 

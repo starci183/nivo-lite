@@ -45,6 +45,7 @@ const installationOf = builder<InstallationRecord>({
     agentId: "agent-1",
     agentName: "Chatbot",
     agentHandle: "chatbot",
+    agentAvatarUrl: null,
     status: "setup",
     operatingMode: "assist",
     liveEnabled: false,

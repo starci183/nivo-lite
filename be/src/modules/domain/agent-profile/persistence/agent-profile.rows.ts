@@ -12,6 +12,8 @@ export interface AgentHeadRow {
     module: string
     /** active or paused. */
     status: string
+    /** The HTTPS address of the agent's picture, or null for the generated avatar. */
+    avatar_url: string | null
     /** The home room's name, or null. */
     room_name: string | null
     /** assist or autopilot, or null when no instance drives the agent. */

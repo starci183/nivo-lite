@@ -9,6 +9,7 @@ export const summaryOf = (row: AgentRow): AgentSummary => ({
     handle: row.handle,
     role: row.role,
     status: row.status,
+    avatarUrl: row.avatar_url,
     createdAt: row.created_at,
 })
 

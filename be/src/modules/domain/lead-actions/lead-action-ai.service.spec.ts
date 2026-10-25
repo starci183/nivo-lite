@@ -60,6 +60,7 @@ const sales: AgentSummary = {
     handle: "tea-sales",
     role: "Sell tea",
     status: "active",
+    avatarUrl: null,
     createdAt: "2026-10-14T00:00:00.000Z",
 }
 

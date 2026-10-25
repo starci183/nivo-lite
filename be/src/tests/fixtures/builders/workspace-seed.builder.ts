@@ -73,6 +73,7 @@ export const seedInstallationOf = builder<InstallationRecord>({
     agentId: "a1",
     agentName: "ai-sales",
     agentHandle: "ai-sales",
+    agentAvatarUrl: null,
     status: "setup",
     operatingMode: "assist",
     liveEnabled: false,

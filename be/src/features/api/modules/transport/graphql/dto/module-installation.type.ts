@@ -37,6 +37,10 @@ export class ModuleInstallationType {
     @Field()
     agentHandle!: string
 
+    /** The HTTPS address of the agent's picture; null for the generated avatar. */
+    @Field(() => String, { nullable: true })
+    agentAvatarUrl?: string | null
+
     /** `installing`, `setup`, `ready`, `live`, `paused` or `needs_connection` (waits for a required connection). */
     @Field()
     status!: string

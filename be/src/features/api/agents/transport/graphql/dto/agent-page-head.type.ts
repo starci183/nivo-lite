@@ -27,6 +27,10 @@ export class AgentPageHeadType {
     @Field()
     status!: string
 
+    /** The HTTPS address of the agent's picture; null for the generated avatar. */
+    @Field(() => String, { nullable: true })
+    avatarUrl?: string | null
+
     /** The department room the agent is at home in, or null. */
     @Field(() => String, { nullable: true })
     roomName?: string | null

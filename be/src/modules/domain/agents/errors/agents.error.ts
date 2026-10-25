@@ -17,6 +17,10 @@ export enum AgentsErrorCode {
     OwnerUnavailable = "AGENTS_OWNER_UNAVAILABLE",
     /** An ownership change names a member, room, role or agent that does not belong to the workspace. */
     OwnershipInvalid = "AGENTS_OWNERSHIP_INVALID",
+    /** The display name is empty or longer than its limit after trimming. */
+    NameInvalid = "AGENTS_NAME_INVALID",
+    /** The picture address is not an HTTPS address. */
+    AvatarInvalid = "AGENTS_AVATAR_INVALID",
 }
 
 /** How each agents code travels. */
@@ -28,6 +32,8 @@ export const AGENTS_ERROR_KINDS: Record<AgentsErrorCode, ErrorKind> = {
     [AgentsErrorCode.KnowledgeUnbound]: "internal",
     [AgentsErrorCode.OwnerUnavailable]: "unavailable",
     [AgentsErrorCode.OwnershipInvalid]: "invalid",
+    [AgentsErrorCode.NameInvalid]: "invalid",
+    [AgentsErrorCode.AvatarInvalid]: "invalid",
 }
 
 /** The one error class of the agents capability. */

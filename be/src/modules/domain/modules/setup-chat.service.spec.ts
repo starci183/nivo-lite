@@ -44,6 +44,7 @@ const installationOf = builder<InstallationRecord>({
     agentId: null,
     agentName: "",
     agentHandle: "",
+    agentAvatarUrl: null,
     status: "setup",
     operatingMode: "assist",
     liveEnabled: false,

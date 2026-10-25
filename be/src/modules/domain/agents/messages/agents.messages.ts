@@ -27,6 +27,8 @@ export const AGENTS_MESSAGES: MessageBundle = {
         "errors.AGENTS_OWNER_UNAVAILABLE":
             "Agent này chưa có người phụ trách đang hoạt động. Hãy chọn người phụ trách mới.",
         "errors.AGENTS_OWNERSHIP_INVALID": "Thiết lập người phụ trách không hợp lệ: {{field}}.",
+        "errors.AGENTS_NAME_INVALID": "Tên agent cần từ {{min}} đến {{max}} ký tự.",
+        "errors.AGENTS_AVATAR_INVALID": "Ảnh đại diện phải là địa chỉ HTTPS.",
         "bundle.title": "# {{name}} (module {{module}})",
         "bundle.syncNote":
             "Bản này do NIVO OS đồng bộ một chiều từ Supabase. KHÔNG sửa tay: lần đồng bộ sau sẽ ghi đè.",
@@ -82,6 +84,8 @@ export const AGENTS_MESSAGES: MessageBundle = {
         "errors.AGENTS_KNOWLEDGE_UNBOUND": "This app cannot read the knowledge of an agent.",
         "errors.AGENTS_OWNER_UNAVAILABLE": "This agent has no active person in charge. Choose a new owner.",
         "errors.AGENTS_OWNERSHIP_INVALID": "The ownership settings are not valid: {{field}}.",
+        "errors.AGENTS_NAME_INVALID": "An agent name needs {{min}} to {{max}} characters.",
+        "errors.AGENTS_AVATAR_INVALID": "The picture must be an HTTPS address.",
         "bundle.title": "# {{name}} (module {{module}})",
         "bundle.syncNote":
             "This copy is synced one way from Supabase by NIVO OS. Do NOT edit by hand: the next sync overwrites it.",
