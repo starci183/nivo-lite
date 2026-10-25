@@ -101,4 +101,9 @@ export class SupabaseObjectsService implements SupabaseObjectsPort {
         }
         return ok(removed.data.length)
     }
+
+    /** The address anyone reads the object at `path` of a public bucket at; no request is made. */
+    publicUrl(bucket: string, path: string): string {
+        return this.admin.storage.from(bucket).getPublicUrl(path).data.publicUrl
+    }
 }

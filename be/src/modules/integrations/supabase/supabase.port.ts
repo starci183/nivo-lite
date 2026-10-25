@@ -34,4 +34,6 @@ export interface SupabaseObjectsPort {
     signedUrls(bucket: string, paths: ReadonlyArray<string>, expiresIn: number): Promise<SignedObjectUrlsOutcome>
     /** Removes the objects at the paths; answers how many were removed (missing ones are not counted). */
     remove(bucket: string, paths: ReadonlyArray<string>): Promise<RemovedObjectsOutcome>
+    /** The address anyone reads the object at `path` of a public bucket at; no request is made. */
+    publicUrl(bucket: string, path: string): string
 }

@@ -61,6 +61,7 @@ component_management:
         - "be/src/modules/domain/automation-runs/**"
         - "be/src/modules/domain/automation-templates/**"
         - "be/src/modules/domain/automations/**"
+        - "be/src/modules/domain/avatars/**"
         - "be/src/modules/domain/bank-feed-inbox/**"
         - "be/src/modules/domain/billing/**"
         - "be/src/modules/domain/booking-ports/**"

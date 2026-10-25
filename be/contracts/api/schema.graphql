@@ -660,6 +660,13 @@ type AgentAssignmentType {
   threadId: ID!
 }
 
+type AgentAvatarUploadType {
+  path: String!
+  publicUrl: String!
+  signedUrl: String!
+  token: String!
+}
+
 type AgentChatConversationType {
   channel: String!
   createdAt: String!
@@ -4951,6 +4958,7 @@ type Mutation {
   renameAgent(input: RenameAgentInput!): AgentAckType!
   renameInstallationAgent(input: RenameInstallationAgentInput!): ModuleInstallationType!
   renameModuleInstallation(input: RenameModuleInstallationInput!): ModuleInstallationType!
+  requestAgentAvatarUpload(input: RequestAgentAvatarUploadInput!): AgentAvatarUploadType!
   requestAgentGeneration(input: RequestAgentGenerationInput!): AgentGenerationRequestedType!
   requestAgentSync(input: RequestAgentSyncInput!): AgentAckType!
   requestChatAnswer(input: RequestChatAnswerInput!): ChatReplyProgressType!
@@ -4965,6 +4973,7 @@ type Mutation {
   requestInventorySend(input: RequestInventorySendInput!): RequestSendType!
   requestLessonMining(input: RequestLessonMiningInput!): BrainCommandRefType!
   requestLoyaltyCode(input: RequestLoyaltyCodeInput!): RequestLoyaltyCodeType!
+  requestMyAvatarUpload(input: RequestMyAvatarUploadInput!): MyAvatarUploadType!
   requestPaymentOrder(input: RequestPaymentOrderInput!): RequestPaymentOrderType!
   requestPublicBooking(input: RequestPublicBookingInput!): RequestPublicBookingType!
   requestShiftsLeave(input: RequestShiftsLeaveInput!): RequestStatusType!
@@ -5032,6 +5041,7 @@ type Mutation {
   sendAgentChatMessage(input: SendAgentChatMessageInput!): QueuedAgentChatTurnType!
   sendAgentCommand(input: SendAgentCommandInput!): AgentCommandResultType!
   sendSmtpTest(input: SendSmtpTestInput!): SmtpTestResultType!
+  setAgentAvatar(input: SetAgentAvatarInput!): AgentAckType!
   setAgentConnections(input: SetAgentConnectionsInput!): Boolean!
   setAgentOwnership(input: SetAgentOwnershipInput!): AgentAckType!
   setAgentStatus(input: SetAgentStatusInput!): AgentAckType!
@@ -5049,6 +5059,7 @@ type Mutation {
   setMcpToolGrant(input: SetMcpToolGrantInput!): Boolean!
   setMemberStatus(input: SetMemberStatusInput!): Boolean!
   setModuleLive(input: SetModuleLiveInput!): ModuleInstallationType!
+  setMyAvatar(input: SetMyAvatarInput!): Boolean!
   setOperatingMode(input: SetOperatingModeInput!): ModuleInstallationType!
   setSetupGate(input: SetSetupGateInput!): SetupSessionType!
   setSyncSchedule(input: SetSyncScheduleInput!): Boolean!
@@ -5097,6 +5108,14 @@ type MyAccountType {
   name: String!
   providers: [String!]!
   sessions: [DeviceSessionType!]!
+  uploadedAvatarUrl: String
+}
+
+type MyAvatarUploadType {
+  path: String!
+  publicUrl: String!
+  signedUrl: String!
+  token: String!
 }
 
 input NewResponsibilityInput {
@@ -6037,6 +6056,11 @@ type ReportSuggestionType {
   title: String!
 }
 
+input RequestAgentAvatarUploadInput {
+  contentType: String! @inputBounds(maxLength: 100)
+  sizeBytes: Int! @inputBounds(min: 1, max: 2097152)
+}
+
 input RequestAgentGenerationInput {
   kind: String! @inputBounds(maxLength: 40)
   messages: [AgentGenMessageInput!]! @inputBounds(maxItems: 60)
@@ -6121,6 +6145,11 @@ input RequestLoyaltyCodeInput {
 
 type RequestLoyaltyCodeType {
   code: String!
+}
+
+input RequestMyAvatarUploadInput {
+  contentType: String! @inputBounds(maxLength: 100)
+  sizeBytes: Int! @inputBounds(min: 1, max: 2097152)
 }
 
 input RequestPaymentOrderInput {
@@ -7012,6 +7041,11 @@ type SepayKeyType {
   webhookUrl: String!
 }
 
+input SetAgentAvatarInput {
+  agentId: ID! @inputBounds(maxLength: 36)
+  path: String @inputBounds(maxLength: 80)
+}
+
 input SetAgentConnectionsInput {
   agentId: ID! @inputBounds(maxLength: 64)
   connections: [ConnectionWishInput!]! @inputBounds(maxItems: 200)
@@ -7103,6 +7137,10 @@ input SetMemberStatusInput {
 input SetModuleLiveInput {
   installationId: ID! @inputBounds(maxLength: 36)
   live: Boolean!
+}
+
+input SetMyAvatarInput {
+  path: String @inputBounds(maxLength: 80)
 }
 
 input SetOperatingModeInput {

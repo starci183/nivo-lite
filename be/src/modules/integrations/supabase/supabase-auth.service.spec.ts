@@ -64,9 +64,31 @@ describe("SupabaseAuthService > accountOf", () => {
             email: "an@example.test",
             lastSignInAt: "2026-10-01T00:00:00.000Z",
             avatarUrl: "https://img.test/a.png",
+            uploadedAvatarUrl: null,
             displayName: "An Nguyen",
         })
         expect(auth.getUserById).toHaveBeenCalledWith("user-1")
+    })
+})
+
+describe("SupabaseAuthService > accountOf choices and fallbacks", () => {
+    it("prefers the uploaded HTTPS picture over the provider's and ignores any other upload value", async () => {
+        const { service, auth } = await build()
+        const provider = "https://img.test/google.png"
+        auth.getUserById
+            .mockResolvedValueOnce(
+                found(userOf({ user_metadata: { avatar_url: provider, nivo_avatar_url: "https://s.test/me.png" } })),
+            )
+            .mockResolvedValueOnce(
+                found(userOf({ user_metadata: { avatar_url: provider, nivo_avatar_url: "http://s.test/me.png" } })),
+            )
+
+        expect(await service.accountOf("u1")).toSucceedWith(
+            expect.objectContaining({ avatarUrl: "https://s.test/me.png", uploadedAvatarUrl: "https://s.test/me.png" }),
+        )
+        expect(await service.accountOf("u2")).toSucceedWith(
+            expect.objectContaining({ avatarUrl: provider, uploadedAvatarUrl: null }),
+        )
     })
 
     it("falls back to the name claim, then the email local part, then Owner", async () => {
@@ -81,6 +103,7 @@ describe("SupabaseAuthService > accountOf", () => {
             email: "an@example.test",
             lastSignInAt: null,
             avatarUrl: null,
+            uploadedAvatarUrl: null,
             displayName: "Binh",
         })
         expect(await service.accountOf("u2")).toSucceedWith({
@@ -88,6 +111,7 @@ describe("SupabaseAuthService > accountOf", () => {
             email: "chi@x.test",
             lastSignInAt: null,
             avatarUrl: null,
+            uploadedAvatarUrl: null,
             displayName: "chi",
         })
         expect(await service.accountOf("u3")).toSucceedWith({
@@ -95,6 +119,7 @@ describe("SupabaseAuthService > accountOf", () => {
             email: "",
             lastSignInAt: null,
             avatarUrl: null,
+            uploadedAvatarUrl: null,
             displayName: "Owner",
         })
     })
@@ -104,6 +129,27 @@ describe("SupabaseAuthService > accountOf", () => {
         auth.getUserById.mockResolvedValue(failed(404))
 
         expect(await service.accountOf("user-1")).toBeRefused(SupabaseErrorCode.AccountNotFound)
+    })
+})
+
+describe("SupabaseAuthService > setUploadedAvatar", () => {
+    it("keeps the upload under its own metadata key and clears it with null", async () => {
+        const { service, auth } = await build()
+        auth.updateUserById.mockResolvedValue(found(userOf()))
+
+        expect(await service.setUploadedAvatar("user-1", "https://s.test/me.png")).toSucceedWith(true)
+        expect(await service.setUploadedAvatar("user-1", null)).toSucceedWith(true)
+        expect(auth.updateUserById).toHaveBeenNthCalledWith(1, "user-1", {
+            user_metadata: { nivo_avatar_url: "https://s.test/me.png" },
+        })
+        expect(auth.updateUserById).toHaveBeenNthCalledWith(2, "user-1", { user_metadata: { nivo_avatar_url: null } })
+    })
+
+    it("refuses with not found when Auth cannot update the user", async () => {
+        const { service, auth } = await build()
+        auth.updateUserById.mockResolvedValue(failed(404))
+
+        expect(await service.setUploadedAvatar("user-1", null)).toBeRefused(SupabaseErrorCode.AccountNotFound)
     })
 })
 

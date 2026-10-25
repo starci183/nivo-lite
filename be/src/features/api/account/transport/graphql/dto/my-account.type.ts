@@ -12,9 +12,13 @@ export class MyAccountType {
     @Field()
     email!: string
 
-    /** The picture of the sign-in provider profile (a public provider URL, so no signed URL is needed), or null. */
+    /** The picture the team sees: the uploaded one, else the sign-in provider's (public URLs, no signing needed); null for the generated one. */
     @Field(() => String, { nullable: true })
     avatarUrl!: string | null
+
+    /** The picture the caller uploaded, or null when there is none to remove. */
+    @Field(() => String, { nullable: true })
+    uploadedAvatarUrl!: string | null
 
     /** The identity providers linked to the account (`google`, `email`). */
     @Field(() => [String])

@@ -17,6 +17,7 @@ import { WORK_CHAINS_ERROR_KINDS } from "@modules/domain/work-chains"
 import { THREAD_MESSAGES_ERROR_KINDS } from "@modules/domain/thread-messages"
 import { THREAD_WORK_ERROR_KINDS } from "@modules/domain/thread-work"
 import { WORK_THREADS_ERROR_KINDS } from "@modules/domain/work-threads"
+import { AVATARS_ERROR_KINDS } from "@modules/domain/avatars"
 
 /** App-wide errors catalog, preserving registration order. */
 export const API_ERROR_KINDS_4 = [
@@ -39,4 +40,5 @@ export const API_ERROR_KINDS_4 = [
     WORK_THREADS_ERROR_KINDS,
     THREAD_MESSAGES_ERROR_KINDS,
     THREAD_WORK_ERROR_KINDS,
+    AVATARS_ERROR_KINDS,
 ]

@@ -57,6 +57,7 @@ describe("AccountSessionsService / overview", () => {
             name: "An",
             email: "an@example.test",
             avatarUrl: null,
+            uploadedAvatarUrl: null,
             providers: ["google", "email"],
             sessions: [
                 {
@@ -109,6 +110,7 @@ describe("AccountSessionsService / overview", () => {
             name: "",
             email: "",
             avatarUrl: null,
+            uploadedAvatarUrl: null,
             providers: [],
             sessions: [
                 {

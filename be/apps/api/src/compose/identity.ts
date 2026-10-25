@@ -1,6 +1,7 @@
 import type { DynamicModule } from "@nestjs/common"
 import { AgentsService } from "@modules/domain/agents"
-import { SUPABASE_AUTH } from "@modules/integrations/supabase"
+import { AvatarsModule } from "@modules/domain/avatars"
+import { SUPABASE_AUTH, SUPABASE_OBJECTS } from "@modules/integrations/supabase"
 import { MessagesModule } from "@modules/domain/messages"
 import { ResponsibilitiesModule } from "@modules/domain/responsibilities"
 import { EventsModule } from "@modules/domain/events"
@@ -18,6 +19,7 @@ export const identityModules = (options: ApiOptions): Array<DynamicModule> => [
     ResponsibilitiesModule.register({ isGlobal: true, agentDirectory: AgentsService }),
     EventsModule.register({ isGlobal: true }),
     WorkspaceMembersModule.register({ isGlobal: true, accounts: SUPABASE_AUTH }),
+    AvatarsModule.register({ isGlobal: true, storage: SUPABASE_OBJECTS, accounts: SUPABASE_AUTH }),
     WorkspacesModule.register({ isGlobal: true, ...options.workspaces }),
     WorkspaceInvitesModule.register({
         isGlobal: true,

@@ -255,3 +255,18 @@ describe("SupabaseObjectsService > remove", () => {
         })
     })
 })
+
+describe("SupabaseObjectsService > publicUrl", () => {
+    it("answers the public address Storage derives for the object", async () => {
+        const { service, bucket, storage } = await build()
+        bucket.getPublicUrl.mockReturnValue({
+            data: { publicUrl: "https://s.test/storage/v1/object/public/avatars_public/people/a.png" },
+        })
+
+        expect(service.publicUrl("avatars_public", "people/a.png")).toBe(
+            "https://s.test/storage/v1/object/public/avatars_public/people/a.png",
+        )
+        expect(storage.from).toHaveBeenCalledWith("avatars_public")
+        expect(bucket.getPublicUrl).toHaveBeenCalledWith("people/a.png")
+    })
+})
