@@ -264,7 +264,7 @@ describe("PublicApiProcessingService / ledger replay and rollback", () => {
         })
         built.inbox.seen(PUBLIC_API_QUEUE, `${WORKSPACE}:${REQUEST}`)
 
-        await expect(built.service.process(ledgerJob, tx)).rejects.toThrow(PublicApiErrorCode.RequestInvalid)
+        await expect(built.service.process(ledgerJob, tx)).rejects.toThrow(PublicApiErrorCode.InboxInconsistent)
 
         expect(tx.query).toHaveBeenCalledTimes(1)
         expect(built.knowledge.addText).not.toHaveBeenCalled()

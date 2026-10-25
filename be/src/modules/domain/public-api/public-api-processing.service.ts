@@ -94,7 +94,7 @@ export class PublicApiProcessingService {
         if (row.processed_at !== null) return
         const request = parsePublicApiBody(row.kind, row.payload, row.need_supplied)
         if (!(await this.inbox.claim(PUBLIC_API_QUEUE, `${workspaceId}:${requestId}`, tx))) {
-            throw new PublicApiError({ code: PublicApiErrorCode.RequestInvalid, params: { field: "inbox" } })
+            throw new PublicApiError({ code: PublicApiErrorCode.InboxInconsistent })
         }
         let leadId = row.lead_id
         switch (request.kind) {
