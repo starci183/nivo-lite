@@ -17,9 +17,6 @@ export const CLEAN_RATE_LIMIT_BUCKET = sql`DELETE FROM public.http_security WHER
 /** Exercises the bounded expiry function under the caller's database role. */
 export const RUN_RATE_LIMIT_CLEANUP = sql`SELECT public.http_rate_limit_cleanup() AS removed`
 
-/** Exercises the backend's actual RLS policies and privileges within a proof transaction. */
-export const RATE_LIMIT_APP_ROLE = sql`SET LOCAL ROLE app_be`
-
 /** Creates one isolated live window through the backend role's INSERT policy. */
 export const INSERT_RATE_LIMIT_PROOF_BUCKET = sql`
     INSERT INTO public.http_security (bucket_key, hits, reset_at)
