@@ -25,7 +25,7 @@
     "fflate": "0.8.3",
     "graphql": "16.14.2",
     "imapflow": "2.4.0",
-    "ioredis": "5.4.1",
+    "ioredis": "5.11.1",
     "jose": "6.2.12",
     "mailparser": "3.12.4",
     "mammoth": "1.13.0",
@@ -120,6 +120,9 @@
     "db:push": "supabase db push",
     "db:types": "npm run contract:emit",
     "db:lint": "starci app check --fast",
+    "redis:create": "docker create --name nivo-lite-dev-redis -p 127.0.0.1:6379:6379 -v nivo-lite-dev-redis-data:/data redis:7@sha256:c6eabf748fc7a61dbb5a705c78bcf3d6377b1127a97d0ce965c11c44ba46896f redis-server --appendonly yes",
+    "redis:start": "docker start nivo-lite-dev-redis",
+    "redis:stop": "docker stop nivo-lite-dev-redis",
     "contract:emit": "starci app emit"
   },
   "overrides": {

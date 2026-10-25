@@ -37,6 +37,7 @@
       ],
       "reads": ["supabase/types/"],
       "patterns": ["webhooks", "queue", "fenced-job"],
+      "backing": ["redis"],
       "optionalSlots": ["repo.docs", "be.contract.graphql", "repo.i18n-dynamic-keys"]
     },
     "fe": {
