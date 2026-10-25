@@ -29,6 +29,7 @@ import { I18nModule } from "@modules/platform/i18n"
 import { INBOX, InboxService } from "@modules/platform/inbox"
 import { JobsModule } from "@modules/platform/jobs"
 import { QueueModule } from "@modules/platform/queue"
+import type { QueueOptions } from "@modules/platform/queue"
 import { KnowledgeQueueModule } from "@modules/queues/knowledge"
 import { CommandPlannerService } from "../../modules/domain/decisions/command-planner.service"
 import { ModuleCatalogService } from "../../modules/domain/decisions/module-catalog.service"
@@ -154,9 +155,9 @@ class PublicApiProofPeersModule {
 }
 
 /** Real queue, ledger, inbox and work owners; only external ports are supplied by the proof. */
-export const PUBLIC_API_PROOF_MODULES = [
+export const publicApiProofModules = (options: QueueOptions) => [
     // The proof captures the router without starting a poller, so teardown has no in-flight transport delivery to await.
-    QueueModule.register({ ...queueOptions, enabled: true, shutdownGraceMs: 0, isGlobal: true }),
+    QueueModule.register({ ...options, enabled: true, isGlobal: true }),
     JobsModule.register({
         isGlobal: true,
         connection: PRIMARY_ENTITY_MANAGER,
@@ -179,3 +180,6 @@ export const PUBLIC_API_PROOF_MODULES = [
     PublicApiProofPeersModule.register(),
     PublicApiModule.register({ isGlobal: true }),
 ]
+
+/** Existing persisted routing proofs capture their worker without opening a broker connection. */
+export const PUBLIC_API_PROOF_MODULES = publicApiProofModules({ ...queueOptions, shutdownGraceMs: 0 })
