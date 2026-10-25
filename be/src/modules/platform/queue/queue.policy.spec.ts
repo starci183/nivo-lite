@@ -6,12 +6,15 @@ import {
     ATTEMPTS,
     BACKOFF_MS,
     KEEP_COMPLETED_SECONDS,
+    KEEP_FAILED_SECONDS,
+    REDIS_DEADLINE_MS,
     backoffMsOf,
     backoffSecondsOf,
     deferMsOf,
     deliveryOf,
     isExhausted,
     isUnrecoverable,
+    isQueueMemoryBounded,
     jobOf,
     reasonOf,
     retryAfterSecondsOf,
@@ -44,6 +47,9 @@ class QueuePolicySubject {
     readonly ATTEMPTS = ATTEMPTS
     readonly BACKOFF_MS = BACKOFF_MS
     readonly KEEP_COMPLETED_SECONDS = KEEP_COMPLETED_SECONDS
+    readonly KEEP_FAILED_SECONDS = KEEP_FAILED_SECONDS
+    readonly REDIS_DEADLINE_MS = REDIS_DEADLINE_MS
+    readonly isQueueMemoryBounded = isQueueMemoryBounded
     readonly backoffMsOf = backoffMsOf
     readonly backoffSecondsOf = backoffSecondsOf
     readonly deferMsOf = deferMsOf
@@ -66,6 +72,20 @@ const build = async () => {
 it("declares the retry budget of every job", async () => {
     const subject = await build()
     expect({ attempts: subject.ATTEMPTS, backoffMs: subject.BACKOFF_MS }).toEqual({ attempts: 4, backoffMs: 5000 })
+    expect([subject.KEEP_COMPLETED_SECONDS, subject.KEEP_FAILED_SECONDS, subject.REDIS_DEADLINE_MS]).toEqual([
+        3600, 604800, 5000,
+    ])
+})
+
+it("requires bounded Redis memory and noeviction before admitting queue work", async () => {
+    const subject = await build()
+    expect([
+        subject.isQueueMemoryBounded("maxmemory:268435456\r\nmaxmemory_policy:noeviction\r\n"),
+        subject.isQueueMemoryBounded("maxmemory:1\nmaxmemory_policy:noeviction\n"),
+        subject.isQueueMemoryBounded("maxmemory:0\r\nmaxmemory_policy:noeviction\r\n"),
+        subject.isQueueMemoryBounded("maxmemory:268435456\r\nmaxmemory_policy:allkeys-lru\r\n"),
+        subject.isQueueMemoryBounded("maxmemory_policy:noeviction\r\n"),
+    ]).toEqual([true, true, false, false, false])
 })
 
 it("rounds milliseconds up to whole seconds", async () => {
@@ -247,6 +267,11 @@ describe("queue policy deliveryOf", () => {
             attempt: 1,
             signal,
         })
+    })
+
+    it("uses a stable diagnostic identity when a broker source has no id", async () => {
+        const subject = await build()
+        expect(subject.deliveryOf("sweep", brokerJob({ id: undefined }), 1, signal).id).toBe("sweep:unknown")
     })
 })
 

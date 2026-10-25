@@ -4,22 +4,23 @@ import type { EntityManager } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
-import { eachInOrder } from "@modules/platform/primitives"
-import { InjectQueueOptions, InjectQueueTransport } from "./queue.decorators"
+import { QueueError, QueueErrorCode } from "./errors/queue.error"
+import { InjectQueueOptions, InjectQueueTimeout, InjectQueueTransport } from "./queue.decorators"
 import { QueueLogEvent } from "./queue.log-events"
 import type { QueueOptions } from "./queue.options"
 import { secondsOf } from "./queue.policy"
+import type { CancelQueueTimeout, QueueTimeout } from "./queue-timeout.port"
 import type { QueueTransport } from "./queue-transport.port"
-import { JOB_DONE, JOB_RECONCILE, JOB_RELAY_CLAIM, JOB_RELAY_SENT, JOB_RESET } from "./persistence/queue.sql"
+import { JOB_RECONCILE, JOB_RELAY_CLAIM, JOB_RELAY_RELEASE, JOB_RELAY_SENT, JOB_RESET } from "./persistence/queue.sql"
 import type { QueueReconcileRow, QueueRelayRow } from "./persistence/queue.rows"
 
+/** A claim covers the bounded Redis lookup, removal and publication, without holding a database transaction. */
+const CLAIM_SECONDS = 60
+/** One relay pass has at most three bounded producer commands per row; shutdown also bounds a database failure. */
+const SHUTDOWN_DEADLINE_MS = 20_000
+
 @Injectable()
-/**
- * The relay of the queue outbox: it adds each committed row that waits for Redis to BullMQ under the row id and marks
- * the rows sent in the same transaction, then reconciles nonterminal rows against the broker — a queued row the broker
- * lost or still holds as failed is republished under the same id, so no admitted job is lost. The loop runs only where
- * the consumers are enabled (a writer-only app never opens a Redis connection).
- */
+/** Publishes leased, committed outbox rows and repairs due rows fairly; no Redis operation holds PostgreSQL locks. */
 export class QueueRelayService implements OnApplicationBootstrap, OnApplicationShutdown {
     private running = false
     private loop: Promise<void> = Promise.resolve()
@@ -29,34 +30,50 @@ export class QueueRelayService implements OnApplicationBootstrap, OnApplicationS
         @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
         @InjectQueueTransport() private readonly transport: QueueTransport,
         @InjectLogger() private readonly logger: Logger,
+        @InjectQueueTimeout() private readonly timeout: QueueTimeout,
     ) {}
 
-    /** Starts the relay loop when this app consumes queues. */
+    /** Starts the relay loop only on an app that consumes queues. */
     onApplicationBootstrap(): void {
         if (!this.options.enabled) return
         this.running = true
         this.loop = this.run()
     }
 
-    /** Stops the loop and waits for its last pass. */
+    /** Stops admitting relay work and bounds the final pass; expired claims are recoverable by another replica. */
     async onApplicationShutdown(): Promise<void> {
         this.running = false
-        await this.loop
+        let cancel: CancelQueueTimeout | undefined
+        try {
+            await Promise.race([
+                this.loop,
+                new Promise<never>((_resolve, reject) => {
+                    cancel = this.timeout.schedule(
+                        () => reject(new QueueError({ code: QueueErrorCode.ShutdownDeadline })),
+                        SHUTDOWN_DEADLINE_MS,
+                    )
+                }),
+            ])
+        } finally {
+            cancel?.()
+        }
     }
 
-    /** One pass: relay the waiting batch, then reconcile the stale nonterminal rows against the broker. */
+    /** Each phase logs its own failure so one unavailable dependency does not discard the other phase. */
     private async pass(): Promise<void> {
         const relayed = await this.relay().catch((cause: unknown) => {
             this.logger.error(QueueLogEvent.RelayFailed, cause, { outbox: "queue" })
             return 0
         })
-        await this.reconcile().catch((cause: unknown) => {
-            this.logger.error(QueueLogEvent.ReconcileFailed, cause)
-        })
+        if (this.running) {
+            await this.reconcile().catch((cause: unknown) => {
+                this.logger.error(QueueLogEvent.ReconcileFailed, cause)
+            })
+        }
         if (relayed === 0 && this.running) await this.transport.wait(this.options.relayIntervalMs)
     }
 
-    /** One pass, then the next, until the app stops: each pass starts from the settled promise of the last. */
+    /** Serial passes, with publication within each leased batch performed concurrently. */
     private run(): Promise<void> {
         return new Promise<void>((resolve, reject) => {
             const next = (): void => {
@@ -70,53 +87,64 @@ export class QueueRelayService implements OnApplicationBootstrap, OnApplicationS
         })
     }
 
-    /** Reads and locks the oldest unsent rows, adds them to the broker and marks them sent in the same transaction. */
-    private relay(): Promise<number> {
-        return this.entityManager.transaction(async (tx) => {
-            const rows = await tx.query<Array<QueueRelayRow>>(JOB_RELAY_CLAIM, [this.options.relayBatch])
-            if (rows.length === 0) return 0
-            await eachInOrder(rows, (row) => this.transport.add(row.queue, row.name, row.id, row.payload))
-            await tx.query(JOB_RELAY_SENT, [rows.map((row) => row.id)])
-            return rows.length
-        })
+    /** Claims and commits before calling Redis; each row is marked with its own lease token afterwards. */
+    private async relay(): Promise<number> {
+        const rows = await this.entityManager.query<Array<QueueRelayRow>>(JOB_RELAY_CLAIM, [
+            this.options.relayBatch,
+            CLAIM_SECONDS,
+        ])
+        await Promise.all(
+            rows.map((row) =>
+                this.publish(row).catch((cause: unknown) => {
+                    this.logger.error(QueueLogEvent.RelayFailed, cause, { queue: row.queue, jobId: row.id })
+                }),
+            ),
+        )
+        return rows.length
     }
 
-    /** Checks the stale nonterminal rows against the broker and repairs what the durable record and the broker disagree on. */
+    /** An explicit operator retry replaces a retained failed broker job under the same durable identity. */
+    private async publish(row: QueueRelayRow): Promise<void> {
+        if (!this.running) return
+        if (row.retry_requested) await this.transport.republish(row.queue, row.name, row.id, row.payload)
+        else await this.transport.add(row.queue, row.name, row.id, row.payload)
+        await this.entityManager.query(JOB_RELAY_SENT, [
+            row.id,
+            row.lease_token,
+            secondsOf(this.options.reconcileAfterMs),
+        ])
+    }
+
+    /** Claims a fair due batch with SKIP LOCKED and isolates each row, including broker or settlement failures. */
     private async reconcile(): Promise<void> {
         const rows = await this.entityManager.query<Array<QueueReconcileRow>>(JOB_RECONCILE, [
             secondsOf(this.options.reconcileAfterMs),
             secondsOf(2 * this.options.visibilityTimeoutMs),
             this.options.relayBatch,
+            CLAIM_SECONDS,
         ])
-        await eachInOrder(rows, (row) => this.repair(row))
+        await Promise.all(
+            rows.map((row) =>
+                this.repair(row).catch((cause: unknown) => {
+                    this.logger.error(QueueLogEvent.ReconcileFailed, cause, { queue: row.queue, jobId: row.id })
+                }),
+            ),
+        )
     }
 
-    /**
-     * One row against the broker: a missing or still-failed job is republished under the same outbox id, a completed
-     * broker job closes a row the worker could not, and a running row whose job waits again is reset to queued.
-     */
+    /** A broker completion alone cannot prove handler completion; any nonterminal orphan must run the fenced handler. */
     private async repair(row: QueueReconcileRow): Promise<void> {
+        if (!this.running) return
         const state = await this.transport.stateOf(row.queue, row.id)
-        switch (state) {
-            case "missing":
-                if (row.state === "running") await this.entityManager.query(JOB_RESET, [row.id])
-                await this.transport.republish(row.queue, row.name, row.id, row.payload)
-                await this.entityManager.query(JOB_RELAY_SENT, [[row.id]])
-                break
-            case "failed":
-                if (row.state === "running") await this.entityManager.query(JOB_RESET, [row.id])
-                await this.transport.republish(row.queue, row.name, row.id, row.payload)
-                break
-            case "completed":
-                await this.entityManager.query(JOB_DONE, [row.id])
-                break
-            case "waiting":
-            case "delayed":
-                if (row.state === "running") await this.entityManager.query(JOB_RESET, [row.id])
-                break
-            case "active":
-            case "unknown":
-                break
+        if (!this.running) return
+        if (state === "missing" || state === "failed" || state === "completed") {
+            const [reset] = await this.entityManager.query<Array<{ reset: boolean }>>(JOB_RESET, [
+                row.id,
+                row.lease_token,
+                row.run_token,
+            ])
+            if (reset?.reset === true) await this.transport.republish(row.queue, row.name, row.id, row.payload)
         }
+        await this.entityManager.query(JOB_RELAY_RELEASE, [row.id, row.lease_token])
     }
 }

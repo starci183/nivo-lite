@@ -11,6 +11,18 @@ export const BACKOFF_MS = 5000
 /** How long a completed job stays in the broker. */
 export const KEEP_COMPLETED_SECONDS = 3600
 
+/** Failed broker copies are bounded independently of the durable failure history. */
+export const KEEP_FAILED_SECONDS = 7 * 24 * 3600
+
+/** Every producer command and the final shutdown settlement have a finite deadline. */
+export const REDIS_DEADLINE_MS = 5000
+
+/** Redis must have a memory ceiling and reject writes rather than evicting admitted jobs. */
+export const isQueueMemoryBounded = (info: string): boolean => {
+    const memory = /^maxmemory:(\d+)\r?$/mu.exec(info)
+    return Number(memory?.[1]) > 0 && /^maxmemory_policy:noeviction\r?$/mu.test(info)
+}
+
 /** The workspace slot is renewed this many times while a handler runs (every third of it). */
 export const TOUCHES_PER_TIMEOUT = 3
 
@@ -22,7 +34,7 @@ export const secondsOf = (ms: number): number => Math.ceil(ms / 1000)
 /** A few seconds of spread derived from the job id, so deferred jobs of one workspace do not retry in lockstep. */
 const spreadOf = (id: string): number => {
     let spread = 0
-    for (const char of id) spread = (spread * 31 + (char.codePointAt(0) ?? 0)) % 2000
+    for (const char of id) spread = (spread * 31 + Number(char.codePointAt(0))) % 2000
     return spread
 }
 
@@ -93,7 +105,7 @@ export const deliveryOf = (
     id: job.id ?? `${queue}:unknown`,
     queue,
     job: job.name || queue,
-    payload: job.data ?? {},
+    payload: job.data,
     attempt,
     signal,
 })

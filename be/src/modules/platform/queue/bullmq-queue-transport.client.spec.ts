@@ -1,21 +1,17 @@
 import { Test } from "@nestjs/testing"
-import { FakeClock, mock, mockEntityManager } from "@starci/jest-preset"
-import type { MockEntityManager, MockOf } from "@starci/jest-preset"
-import { DelayedError, UnrecoverableError } from "bullmq"
-import { CLOCK } from "@modules/platform/clock"
-import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
-import { ERROR_REPORTER } from "@modules/platform/errors"
-import type { ErrorReporter } from "@modules/platform/errors"
+import { mock } from "@starci/jest-preset"
+import type { MockOf } from "@starci/jest-preset"
+import type { Secret } from "@modules/platform/config"
 import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
+import { BullmqQueueDeliveryClient } from "./bullmq-queue-delivery.client"
 import { BullmqQueueTransportClient } from "./bullmq-queue-transport.client"
-import type { QueueDelivery, QueueHandler } from "./queue.contracts"
-import { QUEUE_FACTORY, QUEUE_OPTIONS } from "./queue.decorators"
 import { QueueError, QueueErrorCode } from "./errors/queue.error"
+import type { QueueHandler } from "./queue.contracts"
+import { QUEUE_FACTORY, QUEUE_OPTIONS } from "./queue.decorators"
+import { QueueLogEvent } from "./queue.log-events"
 import type { QueueOptions } from "./queue.options"
-import { deferMsOf } from "./queue.policy"
 import type { BullmqJob, BullmqJobOptions, BullmqQueue, BullmqWorker, QueueFactory } from "./queue-transport.port"
-import type { QueueStartRow } from "./persistence/queue.rows"
 
 const options: QueueOptions = {
     enabled: true,
@@ -33,9 +29,9 @@ const options: QueueOptions = {
     schedulers: [],
 }
 
-/** The durable answers the client's statements get. */
-interface DurableAnswers {
-    start?: Array<QueueStartRow>
+/** The Redis diagnostics the memory-policy probe reads. */
+interface Diagnostics {
+    info(section: string): Promise<string>
 }
 
 /** What the queue double recorded of one `add`. */
@@ -46,40 +42,39 @@ interface RecordedAdd {
     options: BullmqJobOptions
 }
 
-interface TransportWorld {
-    client: BullmqQueueTransportClient
-    factory: MockOf<QueueFactory>
-    worker: MockOf<BullmqWorker>
-    queues: Map<string, MockOf<BullmqQueue>>
-    adds: Array<RecordedAdd>
-    held: Map<string, MockOf<BullmqJob>>
-    em: MockEntityManager
-    logger: MockOf<Logger>
-    reporter: MockOf<ErrorReporter>
-    clock: FakeClock
-}
-
 const brokerJob = (job: Partial<BullmqJob> = {}): MockOf<BullmqJob> =>
     mock<BullmqJob>({ id: "row-1", name: "knowledge.index", data: {}, attemptsMade: 0, ...job })
 
-const handlerOf = (job?: string, extra: Partial<QueueHandler> = {}): MockOf<QueueHandler> => {
-    const handler = mock<QueueHandler>({ queue: "knowledge", job, ...extra })
-    if (extra.handle === undefined) handler.handle.mockResolvedValue(undefined)
-    return handler
+const handlerOf = (): MockOf<QueueHandler> => mock<QueueHandler>({ queue: "knowledge", job: "knowledge.index" })
+
+interface GateControls {
+    resolve: () => void
 }
 
-const statementsOf = (em: MockEntityManager): Array<string> => em.query.mock.calls.map(([sql]) => String(sql))
+const gate = () => {
+    const state: GateControls = { resolve: () => undefined }
+    const promise = new Promise<void>((yes) => {
+        state.resolve = yes
+    })
+    return { promise, resolve: () => state.resolve() }
+}
 
-const build = async (answers: DurableAnswers = {}): Promise<TransportWorld> => {
+const build = async (answers: { options?: Partial<QueueOptions>; clientReady?: Promise<Diagnostics> } = {}) => {
     const adds: Array<RecordedAdd> = []
     const held = new Map<string, MockOf<BullmqJob>>()
     const queues = new Map<string, MockOf<BullmqQueue>>()
     const factory = mock<QueueFactory>()
     const worker = mock<BullmqWorker>()
+    worker.pause.mockResolvedValue(undefined)
+    worker.close.mockResolvedValue(undefined)
+    const diagnostics = mock<Diagnostics>()
+    diagnostics.info.mockResolvedValue("maxmemory:268435456\r\nmaxmemory_policy:noeviction\r\n")
     factory.queue.mockImplementation((name: string) => {
         const known = queues.get(name)
         if (known !== undefined) return known
-        const queue = mock<BullmqQueue>()
+        const queue = mock<BullmqQueue>({
+            getBackend: jest.fn(() => ({ client: answers.clientReady ?? Promise.resolve(diagnostics) })),
+        })
         queue.add.mockImplementation((job, payload, addOptions) => {
             adds.push({ queue: name, name: job, payload, options: addOptions })
             const key = `${name}:${addOptions.jobId}`
@@ -92,24 +87,16 @@ const build = async (answers: DurableAnswers = {}): Promise<TransportWorld> => {
         return queue
     })
     factory.worker.mockReturnValue(worker)
-    const em = mockEntityManager()
-    em.query.mockImplementation((sql: unknown) => {
-        const text = String(sql)
-        if (text.includes("job_start")) return Promise.resolve(answers.start ?? [{ outcome: "started", attempt: 1 }])
-        return Promise.resolve([])
-    })
-    const clock = new FakeClock(1_000_000)
     const logger = mock<Logger>()
-    const reporter = mock<ErrorReporter>()
+    const delivery = mock<BullmqQueueDeliveryClient>()
+    delivery.settled.mockResolvedValue(undefined)
     const moduleRef = await Test.createTestingModule({
         providers: [
             BullmqQueueTransportClient,
-            { provide: QUEUE_OPTIONS, useValue: options },
-            { provide: PRIMARY_ENTITY_MANAGER, useValue: em },
+            { provide: QUEUE_OPTIONS, useValue: { ...options, ...answers.options } },
             { provide: QUEUE_FACTORY, useValue: factory },
             { provide: LOGGER, useValue: logger },
-            { provide: CLOCK, useValue: clock },
-            { provide: ERROR_REPORTER, useValue: reporter },
+            { provide: BullmqQueueDeliveryClient, useValue: delivery },
         ],
     }).compile()
     return {
@@ -119,12 +106,16 @@ const build = async (answers: DurableAnswers = {}): Promise<TransportWorld> => {
         queues,
         adds,
         held,
-        em,
         logger,
-        reporter,
-        clock,
+        delivery,
+        diagnostics,
     }
 }
+
+afterEach(() => {
+    jest.useRealTimers()
+    jest.restoreAllMocks()
+})
 
 describe("add", () => {
     it("adds the job under the outbox row id, with the retry budget and the retention the policy declares", async () => {
@@ -141,8 +132,9 @@ describe("add", () => {
             options: {
                 jobId: "row-1",
                 attempts: 4,
-                backoff: { type: "exponential", delay: 5000 },
+                backoff: { type: "nivo", delay: 5000 },
                 removeOnComplete: { age: 3600 },
+                removeOnFail: { age: 604800 },
             },
         })
     })
@@ -159,13 +151,71 @@ describe("add", () => {
                 port: 6380,
                 db: 3,
                 password: undefined,
-                maxRetriesPerRequest: null,
+                maxRetriesPerRequest: 1,
+                enableOfflineQueue: false,
+                commandTimeout: 5000,
+                connectTimeout: 5000,
             },
         })
     })
+
+    it("validates the memory policy once before accepting work and retries a refused probe", async () => {
+        const { client, diagnostics, adds, logger } = await build()
+        diagnostics.info.mockResolvedValueOnce("maxmemory:0\r\nmaxmemory_policy:noeviction\r\n")
+
+        await expect(client.add("knowledge", "index", "row-1", {})).rejects.toMatchObject({
+            code: QueueErrorCode.RedisConfigurationInvalid,
+        })
+        expect(adds).toHaveLength(0)
+        expect(logger.error).toHaveBeenCalledWith(QueueLogEvent.RedisFailed, expect.any(QueueError), {
+            queue: "knowledge",
+        })
+        await client.add("knowledge", "index", "row-1", {})
+        await client.add("knowledge", "index", "row-2", {})
+
+        expect(diagnostics.info).toHaveBeenCalledTimes(2)
+    })
+
+    it("checks the Redis memory policy again after the broker reconnects", async () => {
+        const { client, queues, diagnostics } = await build()
+        await client.add("knowledge", "index", "row-1", {})
+        queues.get("knowledge")?.on.mock.calls[1]?.[1]()
+        diagnostics.info.mockResolvedValueOnce("maxmemory:268435456\r\nmaxmemory_policy:allkeys-lru\r\n")
+
+        await expect(client.add("knowledge", "index", "row-2", {})).rejects.toMatchObject({
+            code: QueueErrorCode.RedisConfigurationInvalid,
+        })
+
+        expect(diagnostics.info).toHaveBeenCalledTimes(2)
+    })
 })
 
-describe("stateOf", () => {
+describe("add connection", () => {
+    it("passes a configured credential only to the driver", async () => {
+        const credential = mock<Secret>({ reveal: jest.fn(() => "unit-fixture") })
+        const { client, factory } = await build({ options: { redisPassword: credential } })
+
+        await client.add("knowledge", "index", "row-1", {})
+
+        expect(factory.queue.mock.calls[0]?.[1].connection.password).toBe("unit-fixture")
+    })
+
+    it("bounds waiting for the first Redis connection before publishing", async () => {
+        jest.useFakeTimers()
+        const { client, adds } = await build({ clientReady: new Promise<Diagnostics>(() => undefined) })
+        const refused = expect(client.add("knowledge", "index", "row-1", {})).rejects.toMatchObject({
+            code: QueueErrorCode.RedisDeadline,
+        })
+
+        await jest.advanceTimersByTimeAsync(5000)
+        await refused
+
+        expect(adds).toHaveLength(0)
+        expect(jest.getTimerCount()).toBe(0)
+    })
+})
+
+describe("stateOf and republish", () => {
     it("answers missing when the broker holds nothing under the id, else the mapped state", async () => {
         const { client, held } = await build()
         held.set("knowledge:row-1", brokerJob({ getState: jest.fn(() => Promise.resolve("delayed")) }))
@@ -173,12 +223,17 @@ describe("stateOf", () => {
         expect(await client.stateOf("knowledge", "row-1")).toBe("delayed")
         expect(await client.stateOf("knowledge", "gone")).toBe("missing")
     })
-})
 
-describe("republish", () => {
-    it("drops the job the broker holds and adds it again under the same id", async () => {
+    it("preserves an unknown broker state without assuming completion", async () => {
+        const { client, held } = await build()
+        held.set("knowledge:row-1", brokerJob({ getState: jest.fn(() => Promise.resolve("future-state")) }))
+
+        expect(await client.stateOf("knowledge", "row-1")).toBe("unknown")
+    })
+
+    it("drops the failed job the broker holds and adds it again under the same id", async () => {
         const { client, held, adds } = await build()
-        const job = brokerJob({ id: "row-1" })
+        const job = brokerJob({ id: "row-1", getState: jest.fn(() => Promise.resolve("failed")) })
         held.set("knowledge:row-1", job)
 
         await client.republish("knowledge", "knowledge.index", "row-1", { sourceId: "s-1" })
@@ -187,13 +242,29 @@ describe("republish", () => {
         expect(adds).toHaveLength(1)
         expect(adds[0]?.options.jobId).toBe("row-1")
     })
+
+    it("recreates a completed or absent copy and leaves live broker deliveries untouched", async () => {
+        const { client, held, adds } = await build()
+        const completed = brokerJob({ getState: jest.fn(() => Promise.resolve("completed")) })
+        const active = brokerJob({ getState: jest.fn(() => Promise.resolve("active")) })
+        held.set("knowledge:done", completed)
+        held.set("knowledge:active", active)
+
+        await client.republish("knowledge", "index", "done", {})
+        await client.republish("knowledge", "index", "missing", {})
+        await client.republish("knowledge", "index", "active", {})
+
+        expect(completed.remove).toHaveBeenCalledTimes(1)
+        expect(active.remove).not.toHaveBeenCalled()
+        expect(adds.map((added) => added.options.jobId)).toEqual(["done", "missing"])
+    })
 })
 
 describe("work", () => {
     it("starts the worker of the queue on the shared connection, its concurrency and the lock the lease mirrors", async () => {
         const { client, factory } = await build()
 
-        await client.work(handlerOf("knowledge.index"), 5)
+        await client.work(handlerOf(), 5)
 
         const workerOptions = factory.worker.mock.calls[0]?.[2]
         expect(workerOptions?.prefix).toBe("proof")
@@ -203,133 +274,123 @@ describe("work", () => {
             db: 3,
             password: undefined,
             maxRetriesPerRequest: null,
+            connectTimeout: 5000,
         })
         expect(workerOptions?.concurrency).toBe(5)
         expect(workerOptions?.lockDuration).toBe(30_000)
         expect(workerOptions?.backoffStrategy(2)).toBe(10_000)
     })
-})
 
-describe("deliveries", () => {
-    it("admits a delivery, runs its handler and closes the row done", async () => {
-        const { client, factory, em } = await build({ start: [{ outcome: "started", attempt: 2 }] })
-        const handler = handlerOf("knowledge.index")
-        await client.work(handler, 1)
-        const processor = factory.worker.mock.calls[0]?.[1]
-
-        await processor?.(brokerJob({ id: "row-1", name: "knowledge.index", data: { sourceId: "s-1" } }), "token")
-
-        const delivery = handler.handle.mock.calls[0]?.[0]
-        expect(delivery?.signal).toBeInstanceOf(AbortSignal)
-        expect({
-            id: delivery?.id,
-            queue: delivery?.queue,
-            job: delivery?.job,
-            payload: delivery?.payload,
-            attempt: delivery?.attempt,
-        }).toEqual({
-            id: "row-1",
-            queue: "knowledge",
-            job: "knowledge.index",
-            payload: { sourceId: "s-1" },
-            attempt: 2,
-        })
-        const statements = statementsOf(em)
-        expect(statements.some((sql) => sql.includes("job_start"))).toBe(true)
-        expect(statements.some((sql) => sql.includes("job_done"))).toBe(true)
-    })
-
-    it("moves a job the workspace limit refuses back to delayed and never runs it", async () => {
-        const { client, factory } = await build({ start: [{ outcome: "busy", attempt: 0 }] })
-        const handler = handlerOf("knowledge.index")
-        await client.work(handler, 1)
-        const processor = factory.worker.mock.calls[0]?.[1]
+    it("hands every job of the worker to the delivery client with the bounded Redis guard", async () => {
+        const { client, factory, delivery, diagnostics } = await build()
+        const handler = handlerOf()
         const job = brokerJob()
-
-        await expect(processor?.(job, "token")).rejects.toBeInstanceOf(DelayedError)
-        expect(handler.handle).not.toHaveBeenCalled()
-        expect(job.moveToDelayed).toHaveBeenCalledWith(1_000_000 + deferMsOf("row-1"), "token")
-    })
-
-    it("ends a delivery of a row the record says is done or gone, without running it", async () => {
-        const { client, factory } = await build({ start: [{ outcome: "terminal", attempt: 0 }] })
-        const handler = handlerOf("knowledge.index")
+        delivery.deliver.mockResolvedValue(undefined)
         await client.work(handler, 1)
-        const processor = factory.worker.mock.calls[0]?.[1]
 
-        await expect(processor?.(brokerJob(), "token")).resolves.toBeUndefined()
-        expect(handler.handle).not.toHaveBeenCalled()
-    })
-})
+        await factory.worker.mock.calls[0]?.[1](job, "token")
 
-describe("delivery failures", () => {
-    it("retries a failed delivery on the durable row and lets the broker keep the pause", async () => {
-        const { client, factory, em } = await build({ start: [{ outcome: "started", attempt: 1 }] })
-        const failure = new Error("provider down")
-        const handler = handlerOf("knowledge.index", { handle: jest.fn(() => Promise.reject(failure)) })
-        await client.work(handler, 1)
-        const processor = factory.worker.mock.calls[0]?.[1]
-
-        await expect(processor?.(brokerJob(), "token")).rejects.toBe(failure)
-        const statements = statementsOf(em)
-        expect(statements.some((sql) => sql.includes("job_retry"))).toBe(true)
-        expect(statements.some((sql) => sql.includes("job_dead"))).toBe(false)
+        const guard = delivery.deliver.mock.calls[0]?.[3]
+        expect(delivery.deliver).toHaveBeenCalledWith(handler, job, "token", guard)
+        await expect(guard?.ready("knowledge")).resolves.toBeUndefined()
+        await expect(guard?.command(Promise.resolve(7))).resolves.toBe(7)
+        expect(diagnostics.info).toHaveBeenCalledTimes(1)
     })
 
-    it("dead-letters a delivery that may not run again: failure hook once, the row failed, no broker retry", async () => {
-        const { client, factory, em, reporter } = await build({ start: [{ outcome: "started", attempt: 1 }] })
-        const cause = new QueueError({ code: QueueErrorCode.Unrecoverable, params: { reason: "blocked" } })
-        const failed = jest.fn((_delivery: QueueDelivery, _cause: unknown) => Promise.resolve())
-        const handler = handlerOf("knowledge.index", {
-            handle: jest.fn(() => Promise.reject(cause)),
-            failed,
+    it("routes asynchronous queue and worker failures through the logger", async () => {
+        const { client, worker, queues, logger } = await build()
+        await client.work(handlerOf(), 1)
+        const cause = new Error("local Redis unavailable")
+
+        queues.get("knowledge")?.on.mock.calls[0]?.[1](cause)
+        worker.on.mock.calls[0]?.[1](cause)
+
+        expect(logger.error).toHaveBeenCalledTimes(2)
+        expect(logger.error).toHaveBeenCalledWith(QueueLogEvent.RedisFailed, cause, { queue: "knowledge" })
+    })
+
+    it("waits for the requested polling duration", async () => {
+        jest.useFakeTimers()
+        const { client } = await build()
+        let finished = false
+        const waited = client.wait(45).then(() => {
+            finished = true
         })
-        await client.work(handler, 1)
-        const processor = factory.worker.mock.calls[0]?.[1]
 
-        await expect(processor?.(brokerJob(), "token")).rejects.toBeInstanceOf(UnrecoverableError)
-        expect(failed).toHaveBeenCalledTimes(1)
-        expect(reporter.report).toHaveBeenCalledWith("job.knowledge", cause, {
-            workspaceId: null,
-            job: "knowledge.index",
-            attempt: 1,
-        })
-        const statements = statementsOf(em)
-        expect(statements.some((sql) => sql.includes("job_dead"))).toBe(true)
+        await jest.advanceTimersByTimeAsync(44)
+        expect(finished).toBe(false)
+        await jest.advanceTimersByTimeAsync(1)
+        await waited
+
+        expect(finished).toBe(true)
     })
 })
 
 describe("close", () => {
-    it("hands a running delivery back after the grace and closes the workers and queues", async () => {
-        const { client, factory, em, worker, queues } = await build()
-        let aborted: QueueDelivery | undefined
-        const handler = handlerOf("knowledge.index", {
-            handle: (delivery) =>
-                new Promise<void>((_resolve, reject) => {
-                    delivery.signal.addEventListener("abort", () => {
-                        aborted = delivery
-                        reject(new Error("aborted"))
-                    })
-                }),
-        })
-        await client.work(handler, 1)
-        const processor = factory.worker.mock.calls[0]?.[1]
-        const running = (processor?.(brokerJob(), "token") ?? Promise.resolve()).catch((cause: unknown) => cause)
+    it("stops fetching first, settles the deliveries and then closes the workers and the queues", async () => {
+        const { client, delivery, worker, queues } = await build()
+        await client.work(handlerOf(), 1)
+        await client.add("knowledge", "index", "row-1", {})
 
         await client.close()
 
-        expect(await running).toBeInstanceOf(DelayedError)
-        expect(aborted).toBeDefined()
-        const statements = statementsOf(em)
-        expect(statements.some((sql) => sql.includes("job_retry"))).toBe(true)
-        expect(worker.close).toHaveBeenCalledWith(true)
-        expect([...queues.values()].every((queue) => queue.close.mock.calls.length > 0)).toBe(true)
+        expect(delivery.stop).toHaveBeenCalledTimes(1)
+        expect(worker.pause).toHaveBeenCalledWith(true)
+        expect(delivery.abortAll).not.toHaveBeenCalled()
+        expect(worker.close).toHaveBeenCalledWith()
+        expect(queues.get("knowledge")?.close).toHaveBeenCalledTimes(1)
     })
 
-    it("closes at once when nothing runs", async () => {
-        const { client, worker } = await build()
+    it("closes at once when nothing was started", async () => {
+        const { client, delivery, worker } = await build()
 
         await client.close()
+
+        expect(delivery.stop).toHaveBeenCalledTimes(1)
+        expect(worker.close).not.toHaveBeenCalled()
+    })
+
+    it("aborts the deliveries still running after the grace and waits for them to settle before closing", async () => {
+        jest.useFakeTimers()
+        const { client, delivery, worker } = await build()
+        const finish = gate()
+        delivery.settled.mockReturnValue(finish.promise)
+        delivery.abortAll.mockImplementation(() => finish.resolve())
+        await client.work(handlerOf(), 1)
+
+        const closing = client.close()
+        await jest.advanceTimersByTimeAsync(11)
+        await closing
+
+        expect(delivery.abortAll).toHaveBeenCalledTimes(1)
+        expect(worker.close).toHaveBeenCalledWith()
+    })
+
+    it("rejects at the hard deadline while leaving unsettled deliveries and their connections open", async () => {
+        jest.useFakeTimers()
+        const { client, delivery, worker, queues, logger } = await build()
+        delivery.settled.mockReturnValue(new Promise<void>(() => undefined))
+        await client.work(handlerOf(), 1)
+
+        const rejected = expect(client.close()).rejects.toMatchObject({ code: QueueErrorCode.ShutdownDeadline })
+        await jest.advanceTimersByTimeAsync(5010)
+        await rejected
+
+        expect(delivery.abortAll).toHaveBeenCalled()
+        expect(worker.close).not.toHaveBeenCalled()
+        expect(queues.get("knowledge")?.close).not.toHaveBeenCalled()
+        expect(logger.error).toHaveBeenCalledWith(QueueLogEvent.ShutdownDeadline, expect.any(QueueError))
+    })
+
+    it("caps a stalled pause without forcing worker closure", async () => {
+        jest.useFakeTimers()
+        const { client, worker } = await build()
+        await client.work(handlerOf(), 1)
+        worker.pause.mockReturnValue(new Promise<void>(() => undefined))
+
+        const rejected = expect(client.close()).rejects.toMatchObject({ code: QueueErrorCode.ShutdownDeadline })
+        await jest.advanceTimersByTimeAsync(5010)
+        await rejected
 
         expect(worker.close).not.toHaveBeenCalled()
     })

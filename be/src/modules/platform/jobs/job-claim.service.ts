@@ -10,6 +10,7 @@ import type {
     ClaimedJob,
     ClaimParams,
     ClaimResult,
+    ClaimRetryDelay,
     FailWrite,
     FailedJobEffect,
     JobEffect,
@@ -25,8 +26,9 @@ import {
     FAIL_JOB,
     LOCK_JOB_FENCE,
     LOCK_FAILED_JOB_FENCE,
+    JOB_CLAIM_STATE,
 } from "./persistence/jobs.sql"
-import type { ClaimedRow } from "./persistence/jobs.rows"
+import type { ClaimedRow, JobClaimStateRow } from "./persistence/jobs.rows"
 
 @Injectable()
 /**
@@ -60,6 +62,14 @@ export class JobClaimService implements JobClaims {
             currentStep: row.current_step,
             payload: row.payload,
         }
+    }
+
+    /** A refused claim completes only after confirmed success; races and live leases defer without spending an attempt. */
+    async retryAfterSeconds(jobKey: string): Promise<ClaimRetryDelay> {
+        const [row] = await this.writer().query<Array<JobClaimStateRow>>(JOB_CLAIM_STATE, [jobKey])
+        if (row?.status === "done") return null
+        const lease = row?.lease_expires_at?.getTime() ?? this.clock.now().getTime()
+        return Math.min(3600, Math.max(1, Math.ceil((lease - this.clock.now().getTime()) / 1000)))
     }
 
     /** Records a finished step under the token the caller holds. */

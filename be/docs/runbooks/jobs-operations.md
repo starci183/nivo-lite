@@ -1,98 +1,113 @@
-# Operating the job system
+﻿# Operating the job system
 
-Design and handler contracts are in `be/docs/guides/jobs.md`. This page is the operator's side: deploy, look at failures, retry, recover.
+Job queues use BullMQ on the deployment's declared Redis. PostgreSQL retains the transactional outbox, attempts, workspace leases,
+fenced claims and failure history. The relay publishes committed rows under their outbox UUID; the event bus continues to use pgmq.
+Handler contracts and settings are in [../guides/jobs.md](../guides/jobs.md).
 
-Shape in one paragraph: the web app (or an RPC) writes the business row, a `job_outbox` row and a **pgmq** message in ONE Postgres
-transaction, in the app's own Supabase. The api's workers poll the queue, run the handlers (knowledge: read, extract, embed) and ack,
-retry or archive each message. There is no queue service to run: Supabase holds the queues and backs them up with the database.
+## Redis cutover
 
-## Deploy
+The migration chain expands and moves data before contracting the old job API:
 
-The api (and the OpenClaw and n8n stack around it) ships through `.github/workflows/stack-deploy.yml` (environment `production`), by hand only:
-Actions > Deploy stack > Run workflow. The cutover order and the one-time steps are in `be/docs/runbooks/cutover.md`; the stack itself is described
-in `be/docs/runbooks/vps-stack.md`.
+1. `20261104235900_queue-cutover.sql` locks the outbox and the known job queues and archives. It converts queued and in-flight pgmq
+   messages into canonical outbox rows, keeping an existing outbox UUID or deriving a stable UUID for a raw message that had none.
+   Existing outbox work without a broker copy is made eligible for publication. Archived dead messages retain failed outbox evidence.
+2. The migration asserts that pending messages have durable outbox representation before deleting their pending pgmq copies. Archives
+   remain available as historical evidence. Event bus pgmq queues and messages are outside the job queue move.
+3. During the transition between migration files, redirect triggers and compatibility functions turn old pgmq job sends into outbox
+   writes. Old job settlement cannot mark migrated work completed. Existing fenced claims protect effects if a delivery overlaps the
+   cutover.
+4. `20261105000000_queue-bullmq.sql` installs the BullMQ admission, relay, repair and settlement functions, moves recurring job
+   schedules to `job_enqueue`, then drops the old pgmq job read and settlement functions after the move.
 
-Order matters: **apply the migrations to Supabase before the api deploy** (`supabase db push`, or the database deploy workflow). An api without
-the queue objects of the platform migration is not ready and the deploy rolls back.
+For a controlled deploy, stop admission to old consumers and let their in-flight deliveries settle before applying the migration
+chain. Keep the declared Redis ready with a sized positive `maxmemory` and explicit `maxmemory-policy noeviction`. Apply the complete
+migration chain before starting the BullMQ API. The database move also preserves work if an old sender overlaps the transition; a
+rolling update is not a substitute for checking completion of the migration chain.
 
-What the **Deploy stack** workflow does, in order (the api is one service of the Swarm stack `nivo`; `be/docs/runbooks/vps-stack.md`):
+The release lane owns deployment stack changes, Redis sizing and alert configuration. Monitor Redis memory pressure and rejected
+writes alongside outbox queued age and failure counts. Do not allow Redis to evict job keys to make room: failed publication must
+leave the PostgreSQL row pending for retry.
 
-1. Builds the api and web images on the runner (the api build runs the type gate) and pushes them to GHCR; the deploy uses their digests.
-2. Renders the stack, decrypts the sealed files in memory with the age identity and creates one versioned Swarm secret per key; the api reads `/run/secrets/<KEY>` through `<KEY>_FILE`.
-3. `docker stack deploy --prune`: the api updates start-first, so the old task serves until the new one is healthy (`/healthz`, liveness).
-4. Observes convergence (desired versus running replicas, no failed task) and verifies `/readyz` (the database answers), a GraphQL probe, OpenClaw by service DNS and `jobs watchdog`.
-5. Unhealthy: the update rolls itself back and the workflow deploys the previous accepted release again. Healthy: the release is accepted and superseded secrets are removed.
-
-### Secrets and variables to set before the first api deploy
-
-GitHub environment `production`:
-
-| Kind   | Name                             | Notes                                                                                                                                                                       |
-| ------ | -------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| var    | `VPS_HOST`, `VPS_USER`           | same as the web deploy                                                                                                                                                      |
-| secret | `VPS_SSH_KEY`, `VPS_KNOWN_HOSTS` | same as the web deploy (CI deploy key, pinned host keys)                                                                                                                    |
-| secret | the age identity                 | the age identity of `.sops.yaml` (its secret name is in `.github/workflows/stack-deploy.yml`); the only way the application secrets reach the job (protect the environment) |
-
-The application secrets are in `.starcistacks/production/secrets/{api,auth,stack}.enc`; names and meaning are in `.starcistacks/production/infra/swarm/api.env.example` and `.starcistacks/production/README.md`. The `api` sealed file must hold `PRIMARY_DB_URL`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `CHANNEL_TOKEN_KEY` (it decrypts stored Drive tokens) and `N8N_SIGNING_SECRET`; the knowledge keys are the model provider key and the embedding model (with an optional embedding endpoint and key; `be/src/modules/integrations/llm/llm.config.ts` lists the names), `GOOGLE_OAUTH_CLIENT_ID`, `GOOGLE_OAUTH_CLIENT_SECRET`. Optional tunables: `QUEUE_CONCURRENCY`, `QUEUE_POLL_INTERVAL`, `QUEUE_VISIBILITY_TIMEOUT`, `JOBS_LEASE`. Watchdog thresholds live in the sealed `stack` file: the failed-jobs limit (20) and the stale age in seconds (300).
-
-Set a value with `starci app secret set production api --key <KEY>`, except the connection key.
-`CHANNEL_TOKEN_KEY` is set once per environment and never overwritten: it seals every stored credential, and a different key leaves every one of them unreadable: the api and the mcp app then refuse to start rather than serve with it.
+After startup, verify that `public_api` has its named and legacy consumers, relay publication advances, and the oldest queued age
+falls. The cutover integration proof seeds queued, in-flight and archived-dead pgmq jobs before migration and checks their durable
+identity and publication after the move.
 
 ## Watch
 
-The api watches its own jobs; there is no host crontab and no watchdog script. An in-process monitor of the api (not a queue job, so it still fires when the queue consumer is stuck) reads `job_stats()` every `JOBS_ALERT_INTERVAL` (default 5 minutes) and, per kind at most once every 30 minutes:
+The API's in-process job monitor reads `job_stats()` independently of queue consumers. It logs and records alerts for excessive
+failed jobs and stale queued work. Defaults are `JOBS_ALERT_FAILED_MAX=20` and `JOBS_ALERT_STALE_SECONDS=300`; alert scans run at
+`JOBS_ALERT_INTERVAL` and suppress repeats per kind for 30 minutes.
 
-- `job-ops.alert.failed-jobs`: more than `JOBS_ALERT_FAILED_MAX` jobs (default 20) failed in the last 24 h;
-- `job-ops.alert.jobs-stale`: a job has been queued longer than `JOBS_ALERT_STALE_SECONDS` (default 300; the api is not consuming, or a workspace is saturated).
+Redis errors use the application Logger. The transport validates Redis memory policy before publishing or starting workers.
+Producer connections disable offline buffering and use 5 s connection and command deadlines. Relay and repair calls run outside
+PostgreSQL transactions, so Redis downtime cannot leave those transactions holding outbox locks.
 
-Each alert is one structured error log event and one `app_errors` row (scope `jobs.alert`, shown in the team console `/admin/health`). The limits come from the sealed `stack` member (the same two thresholds) at deploy time. Read them with `docker service logs nivo_nivo-api --since 1h` on the manager and filter for `job-ops.alert`. If the api itself is down, Swarm reschedules the task and the convergence check of the deploy reports it.
+## Inspect jobs
 
-## Read failed jobs
-
-On the VPS manager, or anywhere the manager is reachable over ssh (`--ssh-cmd`; each command resolves the running api task and runs `cli jobs ...` inside it, on the `app_be` connection):
+The existing operator commands resolve the API task and execute the CLI through its application database role:
 
 ```bash
-starci app stack jobs stats --env production   # job_stats(): depth and oldest age per queue, running, failed in 24 h, oldest queued
-starci app stack jobs failed --env production  # last 20 failed jobs: outbox id | name | attempts | finished_at | last_error (no payload)
+starci app stack jobs stats --env production
+starci app stack jobs failed --env production
 starci app stack jobs failed 100 --env production
-starci app stack jobs open --env production    # the oldest queued / running jobs
+starci app stack jobs open --env production
 ```
 
-The same from the Supabase SQL editor:
+The durable record is authoritative for operator inspection:
 
 ```sql
 select public.job_stats();
-select id, name, attempts, finished_at, last_error from job_outbox where state = 'failed' order by finished_at desc limit 20;
-select msg_id, read_ct, archived_at, message->>'name', message->>'dedupe' from pgmq.a_knowledge order by archived_at desc limit 20;
+select id, name, state, attempts, last_error, created_at
+from public.job_outbox
+where state in ('queued', 'running')
+order by created_at;
+select id, name, attempts, finished_at, last_error
+from public.job_outbox
+where state = 'failed'
+order by finished_at desc
+limit 20;
 ```
 
-The api log has the handler error with the dedupe key: `docker service logs nivo_nivo-api --since 1h | grep '<dedupe key>'`.
-
-There is no `GET /admin/jobs/failed` endpoint: the SQL above needs no endpoint and no admin guard.
+Completed broker copies expire after one hour and failed copies after seven days. Failure history remains in PostgreSQL after the
+Redis copy expires. A retained pgmq archive is historical cutover evidence, not the live job transport.
 
 ## Retry
 
 ```bash
-starci app stack jobs retry <outbox-id> --execute   # send one failed job again (job_requeue: new message, attempts reset)
-starci app stack jobs retry-failed [hours] --execute   # every job that failed in the last <hours> (default 24)
+starci app stack jobs retry <outbox-id> --execute
+starci app stack jobs retry-failed [hours] --execute
 ```
 
-Safe: handlers are idempotent, so a retried job whose subject is already done is a no-op. Fix the cause first (a bad key, a revoked Drive
-grant, a provider outage), then retry; retrying into the same error only fails again. A document the owner sees as failed is better retried
-the owner's way (`select knowledge_retry_source('<sourceId>')` or the Retry button), which also resets its status.
+`job_requeue` resets attempts on the failed outbox row and requests explicit republishing under the same UUID. The relay removes or
+retries the retained failed BullMQ job before publishing with a fresh broker budget; a plain add of an existing failed ID would do
+nothing. No new outbox identity is minted.
 
-To stop consuming without losing anything: the worker switch of the api (see the queue settings in `be/docs/guides/jobs.md`) (`QUEUE_ENABLED=false` in the sealed `api` file), then redeploy; messages wait in the queue.
+Fix the cause before retrying. Handlers and fenced claims make repeated delivery safe, but a revoked credential or provider outage
+will fail again until corrected. For a document, prefer its owner's Retry action or `knowledge_retry_source`, which also resets the
+visible source status.
 
-## A stuck job
+Set `QUEUE_ENABLED=false` to stop workers and relay while producers continue committing outbox rows. Work remains durable until a
+consumer is enabled again.
 
-- A message whose worker died stays invisible for at most the visibility timeout (`QUEUE_VISIBILITY_TIMEOUT`), then comes back with one more attempt.
-- A workspace slot of a dead worker frees itself with its lease (`JOBS_LEASE`).
-- An outbox row in `running` for long, with no message in `pgmq.q_knowledge`: the ack was lost after the message was deleted. Harmless;
-  mark it `done` by hand if it bothers the stale alert.
+## Recovery and shutdown
 
-## Local development
+A crashed delivery is recovered after its broker lock and durable lease expire. `job_start` re-admits an expired running row instead
+of completing it without invoking its handler. A live foreign fenced claim delays delivery; a completed fenced claim remains an
+idempotent success. Late lease and settle writes require the unique admission token and cannot affect a newer delivery, including after
+an operator resets the attempt count.
 
-```bash
-npm run db:start        # local Supabase (pgmq ships in the image); it prints the URL and the keys
-npm run dev:be:api          # the api in watch mode (ts-node-dev) against the local stack, env exported in your shell (see README.md)
-```
+Reconciliation uses bounded claims with `SKIP LOCKED`, schedules future checks for rows still waiting or running, and shares work
+across queues. It republishes missing or failed broker copies under the same UUID. Each row's error is logged independently. Do not
+mark a running row done merely because a broker copy is completed or absent: neither proves successful domain processing.
+
+Shutdown pauses fetching at drain start and lets in-flight work finish for `QUEUE_SHUTDOWN_GRACE` (default 30 s). It then aborts
+remaining handlers and gives settlement another 5 s. Aborted starts are handed back without spending an attempt; genuine failures
+during drain keep their accounting. Workers close only after settlement, without force. If a handler ignores abort and remains
+unsettled, close rejects and logs the deadline failure while leaving its resources open.
+
+## Local proof
+
+Run integration checks against a private local Supabase database and a private Redis instance on free loopback ports. Set Redis
+`maxmemory` and `maxmemory-policy noeviction` explicitly, use an isolated queue prefix, and remove only the containers created for
+the proof. The scoped integration suites cover queue recovery, retry delay, relay repair, webhooks, public API processing, cron and
+the pre-migration cutover data move.

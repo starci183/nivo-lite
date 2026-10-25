@@ -35,8 +35,14 @@ export interface BullmqRedis {
     readonly db: number
     /** The password of the queue credential, when the deployment sets one. */
     readonly password?: string | undefined
-    /** BullMQ answers to commands only through a client that does not retry on its own. */
+    /** Producers fail after a finite retry budget; blocking workers require null. */
     readonly maxRetriesPerRequest: number | null
+    /** Producer requests fail while disconnected instead of accumulating an offline backlog. */
+    readonly enableOfflineQueue?: boolean
+    /** The upper bound of an established connection's request. */
+    readonly commandTimeout?: number
+    /** The upper bound of opening the connection. */
+    readonly connectTimeout: number
 }
 
 /** The Redis options every queue and worker of the app shares. */
@@ -71,6 +77,8 @@ export interface BullmqJobOptions {
     readonly backoff: BullmqBackoff
     /** How long a finished job is kept. */
     readonly removeOnComplete: BullmqRetention
+    /** Failed broker copies expire; PostgreSQL retains the durable failure. */
+    readonly removeOnFail: BullmqRetention
 }
 
 /** The options a worker is built with: the shared connection, its concurrency and its failure policy. */
@@ -109,6 +117,10 @@ export type BullmqProcessor = (job: BullmqJob, token?: string) => Promise<void>
 
 /** A queue as the transport uses it. */
 export interface BullmqQueue {
+    /** Redis diagnostics used to verify the required bounded, non-evicting queue store. */
+    getBackend(): { readonly client: Promise<{ info(section: string): Promise<string> }> }
+    /** Error events reach the logger; reconnects invalidate the memory-policy probe. */
+    on(event: "error" | "ioredis:close", listener: (cause?: Error) => void): unknown
     /** Adds the job; an id BullMQ already holds makes the add a no-op. */
     add(name: string, payload: object, options: BullmqJobOptions): Promise<unknown>
     /** The job held under `id`, or nothing. */
@@ -119,8 +131,20 @@ export interface BullmqQueue {
 
 /** A worker as the transport uses it. */
 export interface BullmqWorker {
-    /** Stops the worker; `force` drops the jobs it is still running. */
-    close(force: boolean): Promise<void>
+    /** Stops fetching immediately without waiting for active deliveries. */
+    pause(doNotWaitActive: boolean): Promise<void>
+    /** Routes asynchronous driver failures through the platform logger. */
+    on(event: "error", listener: (cause: Error) => void): unknown
+    /** Closes only after all active deliveries have settled. */
+    close(): Promise<void>
+}
+
+/** What a delivery needs of the Redis side of the transport: the readiness of its queue and deadline-bounded broker commands. */
+export interface QueueRedisGuard {
+    /** Resolves once the queue's Redis passed the memory-policy probe. */
+    ready(queue: string): Promise<void>
+    /** Bounds one broker command by the Redis deadline and logs its failure. */
+    command<T>(promise: Promise<T>): Promise<T>
 }
 
 /** Builds the BullMQ objects; the module provides it so a spec can double it through the injection token. */

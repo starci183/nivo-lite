@@ -1,4 +1,4 @@
-export { QUEUE_ERROR_KINDS, QueueErrorCode } from "./errors/queue.error"
+export { QUEUE_ERROR_KINDS, QueueError, QueueErrorCode } from "./errors/queue.error"
 export { QUEUE_MESSAGES } from "./messages/queue.messages"
 export { parseQueueConfig } from "./queue.config"
 export type { QueueDelivery, QueueSchedulerDefinition } from "./queue.contracts"

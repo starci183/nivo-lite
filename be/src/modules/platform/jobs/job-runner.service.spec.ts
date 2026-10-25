@@ -2,7 +2,7 @@ import { Test } from "@nestjs/testing"
 import { mock } from "@starci/jest-preset"
 import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
-import { QUEUE_WORKER_REGISTRY } from "@modules/platform/queue"
+import { QUEUE_WORKER_REGISTRY, QueueErrorCode } from "@modules/platform/queue"
 import type { QueueDelivery, QueueWorkerRegistry } from "@modules/platform/queue"
 import { JobsError, JobsErrorCode } from "./errors/jobs.error"
 import type { FencedProcessor } from "./fenced.processor"
@@ -28,6 +28,7 @@ const fenced = (): JobsError => new JobsError({ code: JobsErrorCode.FencedOut, p
 const build = async () => {
     const claims = mock<JobClaims>()
     claims.fail.mockResolvedValue(undefined)
+    claims.retryAfterSeconds.mockResolvedValue(null)
     const queues = mock<QueueWorkerRegistry>()
     const logger = mock<Logger>()
     const moduleRef = await Test.createTestingModule({
@@ -107,8 +108,12 @@ describe("JobRunnerService", () => {
 
             expect(claims.claim).toHaveBeenCalledWith(expect.objectContaining({ kind: "mail.send" }))
         })
+    })
+})
 
-        it("does nothing when the job is done or another worker holds a live claim", async () => {
+describe("JobRunnerService", () => {
+    describe("refused claims", () => {
+        it("acknowledges a refused claim only when the job is confirmed done", async () => {
             const { runner, claims, processor } = await build()
             claims.claim.mockResolvedValue(null)
 
@@ -116,8 +121,41 @@ describe("JobRunnerService", () => {
 
             expect(processor.process).not.toHaveBeenCalled()
             expect(claims.complete).not.toHaveBeenCalled()
+            expect(claims.retryAfterSeconds).toHaveBeenCalledWith(delivery.id)
         })
 
+        it("defers a refused live claim without processing, completing or recording a failure", async () => {
+            const { runner, claims, processor } = await build()
+            claims.claim.mockResolvedValue(null)
+            claims.retryAfterSeconds.mockResolvedValue(42)
+
+            await expect(runner.run(processor, delivery)).rejects.toMatchObject({
+                code: QueueErrorCode.DeferredUntil,
+                params: { job: delivery.job, seconds: 42 },
+            })
+
+            expect(processor.process).not.toHaveBeenCalled()
+            expect(claims.complete).not.toHaveBeenCalled()
+            expect(claims.fail).not.toHaveBeenCalled()
+        })
+
+        it("keeps a failed disposition check retryable instead of acknowledging the delivery", async () => {
+            const { runner, claims, processor } = await build()
+            const failure = new Error("claim state unavailable")
+            claims.claim.mockResolvedValue(null)
+            claims.retryAfterSeconds.mockRejectedValue(failure)
+
+            await expect(runner.run(processor, delivery)).rejects.toBe(failure)
+
+            expect(processor.process).not.toHaveBeenCalled()
+            expect(claims.complete).not.toHaveBeenCalled()
+            expect(claims.fail).not.toHaveBeenCalled()
+        })
+    })
+})
+
+describe("JobRunnerService", () => {
+    describe("run failures", () => {
         it("stops further effects when a newer worker fences out a write", async () => {
             const { runner, claims, logger, processor } = await build()
             claims.claim.mockResolvedValue(job)

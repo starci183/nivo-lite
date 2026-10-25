@@ -1,7 +1,7 @@
 import { QueueTimeoutService } from "./queue-timeout.service"
 import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
-import { Queue, Worker } from "bullmq"
+import { createRedisBackend, withBackend } from "bullmq"
 import {
     QUEUE_FACTORY,
     QUEUE_OUTBOX,
@@ -11,12 +11,16 @@ import {
     QUEUE_WORKER_REGISTRY,
 } from "./queue.decorators"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./queue.module-definition"
+import { BullmqQueueDeliveryClient } from "./bullmq-queue-delivery.client"
 import { BullmqQueueTransportClient } from "./bullmq-queue-transport.client"
 import { QueueOutboxService } from "./queue-outbox.service"
 import { QueueRelayService } from "./queue-relay.service"
 import { QueueWorkerService } from "./queue-worker.service"
 import { QueueStatusService } from "./queue-status.service"
 import type { QueueFactory } from "./queue-transport.port"
+
+/** Bind the queue capability to Redis without changing process-wide driver defaults. */
+const { Queue, Worker } = withBackend(createRedisBackend)
 
 /** The BullMQ objects the transport asks for, over the connection the app names. */
 const bullmqFactory: QueueFactory = {
@@ -43,6 +47,7 @@ export class QueueModule extends ConfigurableModuleClass {
                 ...(base.providers ?? []),
                 { provide: QUEUE_TIMEOUT, useClass: QueueTimeoutService },
                 { provide: QUEUE_FACTORY, useValue: bullmqFactory },
+                BullmqQueueDeliveryClient,
                 BullmqQueueTransportClient,
                 { provide: QUEUE_TRANSPORT, useExisting: BullmqQueueTransportClient },
                 QueueOutboxService,
