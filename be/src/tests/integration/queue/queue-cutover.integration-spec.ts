@@ -42,7 +42,7 @@ const expectExpanded = async (world: LiteWorld, original: ReadonlyArray<CutoverR
     expect(expanded.filter((row) => row.state === "running").every((row) => row.run_lease_until instanceof Date)).toBe(
         true,
     )
-    expect(await world.db.primary.query(statements.LEGACY_CUTOVER_ACK)).toEqual([{ acknowledged: false }])
+    expect(await world.db.primary.query(statements.LEGACY_ACK_FENCE)).toEqual([{ body: "select false" }])
     expect(await queuesOf(world)).toEqual([{ pending: 0, archived: 2, event_bus: 1 }])
     expect(expanded.filter((row) => original.some((before) => before.id === row.id)).map((row) => row.id)).toEqual(
         original.map((row) => row.id),

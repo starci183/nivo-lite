@@ -197,9 +197,8 @@ begin
   return true;
 end $$;
 
-DROP FUNCTION public.job_requeue_failed(integer);
 DROP FUNCTION public.job_requeue(uuid);
-CREATE FUNCTION public.job_requeue(p_outbox uuid) RETURNS uuid
+CREATE FUNCTION public.job_reopen(p_outbox uuid) RETURNS uuid
     LANGUAGE plpgsql SECURITY DEFINER SET search_path TO 'public' AS $$
 declare o public.job_outbox;
 begin
@@ -212,7 +211,7 @@ begin
   return o.id;
 end $$;
 
-CREATE FUNCTION public.job_requeue_failed(p_hours integer DEFAULT 24) RETURNS jsonb
+CREATE OR REPLACE FUNCTION public.job_requeue_failed(p_hours integer DEFAULT 24) RETURNS jsonb
     LANGUAGE plpgsql SECURITY DEFINER SET search_path TO 'public' AS $$
 declare r record; v_failed integer := 0; v_requeued integer := 0;
 begin
@@ -220,7 +219,7 @@ begin
     and o.finished_at >= now() - make_interval(hours => least(greatest(coalesce(p_hours, 24), 1), 720)) order by o.finished_at
   loop
     v_failed := v_failed + 1;
-    if public.job_requeue(r.id) is not null then v_requeued := v_requeued + 1; end if;
+    if public.job_reopen(r.id) is not null then v_requeued := v_requeued + 1; end if;
   end loop;
   return jsonb_build_object('requeued', v_requeued, 'failed', v_failed);
 end $$;
@@ -335,8 +334,8 @@ REVOKE EXECUTE ON FUNCTION public.job_handback(uuid, uuid) FROM PUBLIC, anon, au
 GRANT EXECUTE ON FUNCTION public.job_handback(uuid, uuid) TO app_be;
 REVOKE EXECUTE ON FUNCTION public.job_reset(uuid, uuid, uuid) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.job_reset(uuid, uuid, uuid) TO app_be;
-REVOKE EXECUTE ON FUNCTION public.job_requeue(uuid) FROM PUBLIC, anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.job_requeue(uuid) TO app_be;
+REVOKE EXECUTE ON FUNCTION public.job_reopen(uuid) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.job_reopen(uuid) TO app_be;
 REVOKE EXECUTE ON FUNCTION public.job_requeue_failed(integer) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.job_requeue_failed(integer) TO app_be;
 

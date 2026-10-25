@@ -2,7 +2,7 @@
 
 Job queues use BullMQ on the deployment's declared Redis. PostgreSQL retains the transactional outbox, attempts, workspace leases,
 fenced claims and failure history. The relay publishes committed rows under their outbox UUID; the event bus continues to use pgmq.
-Handler contracts and settings are in [../guides/jobs.md](../guides/jobs.md).
+Handler contracts and settings are in [the jobs guide](../guides/jobs.md).
 
 ## Redis cutover
 
@@ -78,7 +78,7 @@ starci app stack jobs retry <outbox-id> --execute
 starci app stack jobs retry-failed [hours] --execute
 ```
 
-`job_requeue` resets attempts on the failed outbox row and requests explicit republishing under the same UUID. The relay removes or
+`job_reopen` resets attempts on the failed outbox row and requests explicit republishing under the same UUID. The relay removes or
 retries the retained failed BullMQ job before publishing with a fresh broker budget; a plain add of an existing failed ID would do
 nothing. No new outbox identity is minted.
 

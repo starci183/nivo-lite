@@ -18,7 +18,7 @@ attempt count and failure history. The event bus continues to use pgmq; job queu
 | Retry          | `job_retry` + BullMQ | Records the error and retries after a hint or the default backoff.                                                         |
 | Dead           | `job_dead`           | Records terminal failure durably; the processor's failure hook records the owner-facing failure.                           |
 | Recover        | reconcile            | Claims due rows with `SKIP LOCKED`, checks Redis outside the transaction, and repairs missing or failed broker copies.     |
-| Operator retry | `job_requeue`        | Resets the failed row's budget and requests explicit republishing under the same UUID.                                     |
+| Operator retry | `job_reopen`         | Resets the failed row's budget and requests explicit republishing under the same UUID.                                     |
 
 Publication and reconciliation use leases so a slow or crashed replica does not permanently own rows. Checked rows get a next-check
 time and reconciliation shares work across queues. One row's error is logged without preventing later rows from being checked.
@@ -67,4 +67,4 @@ Completed broker copies are retained for one hour and failed copies for seven da
 operator retry explicitly republishes the retained identity; retry does not depend on retaining a failed Redis copy.
 
 Cutover and operational checks are in [jobs-operations.md](jobs-operations.md); handler contracts and settings are in
-[../guides/jobs.md](../guides/jobs.md).
+[the jobs guide](../guides/jobs.md).

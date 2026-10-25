@@ -95,5 +95,5 @@ before publication or worker startup. Producer connections disable offline buffe
 Connection errors go through the application Logger.
 
 Read `job_stats()`, `job_open()` and `job_failed()` through the existing operator commands. PostgreSQL queued age and failure alerts
-remain the durable operational signal. Read [../runbooks/jobs-operations.md](../runbooks/jobs-operations.md) before the pgmq-to-BullMQ
+remain the durable operational signal. Read [the jobs operations runbook](../runbooks/jobs-operations.md) before the pgmq-to-BullMQ
 cutover or an operator retry.

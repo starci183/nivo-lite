@@ -10,8 +10,6 @@ export enum QueueLogEvent {
     RelayFailed = "queue.relay.failed",
     /** The reconciliation of nonterminal rows against the broker failed; the next pass retries it. */
     ReconcileFailed = "queue.reconcile.failed",
-    /** A worker could not admit a delivery against the durable record; the broker retries it. */
-    ReadFailed = "queue.read.failed",
     /** A delivery failed and the broker retries it after a backoff. */
     DeliveryFailed = "queue.delivery.failed",
     /** A delivery failed for good (attempts used up or an unrecoverable error); the row ends failed and the job is not retried. */

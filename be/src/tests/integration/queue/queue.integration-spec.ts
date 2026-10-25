@@ -36,7 +36,7 @@ describe("NIVO queue (local Supabase integration)", () => {
         expect((await observeQueue(world, kept)).messages).toHaveLength(1)
         expect(await observeQueue(world, lost)).toEqual({ outbox: [], messages: [] })
     })
-    it("queue/broker-job-id-is-outbox-id: duplicate writes retain one outbox identity the relay publishes", async () => {
+    it("queue/relay-job-id-is-outbox-id: duplicate writes retain one outbox identity the relay publishes", async () => {
         const proofId = world.key("identity")
         const dedupeKey = `${CONTENT_TICK_QUEUE}:${proofId}`
         cleanupQueue(world, proofId)

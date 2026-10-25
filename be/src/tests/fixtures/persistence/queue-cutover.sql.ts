@@ -8,11 +8,14 @@ export const SEED_CUTOVER_OUTBOX = sql`
     WHERE message->'payload'->>'proof' = 'inflight';
     UPDATE public.job_outbox SET state = 'running', attempts = 1, started_at = now()
     WHERE payload->>'proof' = 'inflight';
-    SELECT public.job_archive(queue, msg_id, 'Synthetic dead letter') FROM public.job_outbox WHERE payload->>'proof' = 'dead';
-    SELECT public.job_ack(queue, msg_id) FROM public.job_outbox WHERE payload->>'proof' = 'done';
+    SELECT pgmq.archive(queue, msg_id) FROM public.job_outbox WHERE payload->>'proof' = 'dead';
+    UPDATE public.job_outbox SET state = 'failed', finished_at = now(), last_error = 'Synthetic dead letter'
+    WHERE payload->>'proof' = 'dead';
+    SELECT pgmq.delete(queue, msg_id) FROM public.job_outbox WHERE payload->>'proof' = 'done';
+    UPDATE public.job_outbox SET state = 'done', finished_at = now(), last_error = NULL WHERE payload->>'proof' = 'done';
     INSERT INTO public.job_outbox(queue, name, payload, dedupe_key, sent_at)
     VALUES ('content_tick', 'content_tick', '{"proof":"outbox-only"}', 'cutover:outbox-only', now());
-    SELECT pgmq.send(queue, public.job_message(name, payload, dedupe_key, id))
+    SELECT pgmq.send(queue, jsonb_build_object('name', name, 'payload', coalesce(payload, '{}'::jsonb), 'dedupe', dedupe_key, 'outbox_id', id))
     FROM public.job_outbox WHERE payload->>'proof' = 'queued'
 `
 
@@ -66,8 +69,9 @@ export const CONFLICT_CUTOVER_IDENTITY = sql`
         to_jsonb((SELECT id::text FROM public.job_outbox WHERE payload->>'proof' = 'queued')))
     WHERE message->'payload'->>'proof' = 'raw-done'
 `
-export const LEGACY_CUTOVER_ACK = sql`
-    SELECT public.job_ack('content_tick', msg_id) AS acknowledged FROM public.job_outbox WHERE payload->>'proof' = 'inflight'
+/** The expand migration replaces the legacy acknowledgement with a constant refusal, so an old consumer cannot settle a migrated row. */
+export const LEGACY_ACK_FENCE = sql`
+    SELECT btrim(prosrc) AS body FROM pg_proc WHERE oid = to_regprocedure('public.job_ack(text,bigint)')
 `
 export const CUTOVER_FUNCTIONS = sql`
     SELECT to_regprocedure('public.job_read(text,integer,integer,integer)')::text AS legacy_read,

@@ -15,7 +15,7 @@ export const LOCK_RECONCILE_JOB = sql`SELECT id FROM public.job_outbox WHERE id 
 /** Expires one current run lease, modeling a lost process without waiting for wall-clock time. */
 export const EXPIRE_QUEUE_RUN = sql`UPDATE public.job_outbox SET run_lease_until = now() - interval '1 second' WHERE id = $1::uuid`
 /** Requests an operator retry of a failed durable job. */
-export const REQUEUE_PROOF_JOB = sql`SELECT public.job_requeue($1::uuid) AS id LIMIT 1`
+export const REQUEUE_PROOF_JOB = sql`SELECT public.job_reopen($1::uuid) AS id LIMIT 1`
 
 /** Claims due checks using the public backend function. */
 export const CLAIM_DUE_JOBS = sql`SELECT id, lease_token FROM public.job_reconcile($1::int, $2::int, $3::int, $4::int) LIMIT $3::int`

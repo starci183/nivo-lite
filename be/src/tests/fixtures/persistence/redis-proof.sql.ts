@@ -15,4 +15,4 @@ export const CLEAN_REDIS_JOB = sql`DELETE FROM public.job_outbox WHERE dedupe_ke
 export const LAPSE_REDIS_JOB = sql`UPDATE public.job_outbox SET run_lease_until = now() - interval '1 second' WHERE id = $1::uuid`
 
 /** An operator's actual retry door, under the same outbox id. */
-export const REQUEUE_REDIS_JOB = sql`SELECT public.job_requeue($1::uuid)`
+export const REQUEUE_REDIS_JOB = sql`SELECT public.job_reopen($1::uuid)`
