@@ -34,7 +34,7 @@ export const BrainGaps = (props: BrainGapsProps) => {
                 {
                     id: "dismiss",
                     label: t("gapDismiss"),
-                    variant: "ghost",
+                    intent: "neutral",
                     onPress: () => command.send("gap.dismiss", { id: gap.id }, { done: t("gapDismissed") }),
                 },
             ],

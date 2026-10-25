@@ -1,4 +1,5 @@
 import {
+    AlertDialog,
     Badge,
     Button,
     EmptyNotice,
@@ -23,7 +24,6 @@ export interface RewardRowView {
     readonly cost: string
     readonly facts: string
     readonly note: string
-    readonly isConfirming: boolean
 }
 
 /** Props for {@link LoyaltyRewardsBase}. */
@@ -51,9 +51,7 @@ export interface LoyaltyRewardsBaseProps {
         readonly preset: () => void
         readonly edit: (id: string) => void
         readonly toggle: (id: string, active: boolean) => void
-        readonly ask: (id: string) => void
         readonly confirmRemove: (id: string) => void
-        readonly cancelAsk: () => void
         readonly change: (field: RewardTextField, value: string) => void
         readonly setActive: (active: boolean) => void
         readonly submit: () => void
@@ -72,7 +70,7 @@ export const LoyaltyRewardsBase = (props: LoyaltyRewardsBaseProps) => {
                     headingLevel={2}
                     labelEnd={
                         p.canManage && p.form === undefined ? (
-                            <Button variant="primary" size="sm" onPress={on.add}>
+                            <Button intent="commit" size="sm" onPress={on.add}>
                                 {p.addLabel}
                             </Button>
                         ) : undefined
@@ -152,31 +150,22 @@ const renderRewardRow = ({ row, p, on }: RenderRewardRowContext) => (
                     isDisabled={p.isPending}
                     onSelectedChange={(active) => on.toggle(row.id, active)}
                 />
-                <Button variant="outline" size="sm" isDisabled={p.isPending} onPress={() => on.edit(row.id)}>
+                <Button intent="neutral" size="sm" isDisabled={p.isPending} onPress={() => on.edit(row.id)}>
                     {p.editLabel}
                 </Button>
-                {row.isConfirming ? (
-                    <>
-                        <Text as="span" size="sm" weight="medium" live="polite">
-                            {p.askLabel}
-                        </Text>
-                        <Button
-                            variant="danger"
-                            size="sm"
-                            isPending={p.isPending}
-                            onPress={() => on.confirmRemove(row.id)}
-                        >
-                            {p.confirmLabel}
+                <AlertDialog
+                    title={p.deleteLabel}
+                    description={p.askLabel}
+                    confirmLabel={p.confirmLabel}
+                    cancelLabel={p.cancelLabel}
+                    onConfirm={() => on.confirmRemove(row.id)}
+                    isConfirmPending={p.isPending}
+                    trigger={
+                        <Button intent="destructive" step="entry" size="sm" isDisabled={p.isPending}>
+                            {p.deleteLabel}
                         </Button>
-                        <Button variant="ghost" size="sm" isDisabled={p.isPending} onPress={on.cancelAsk}>
-                            {p.cancelLabel}
-                        </Button>
-                    </>
-                ) : (
-                    <Button variant="danger-soft" size="sm" isDisabled={p.isPending} onPress={() => on.ask(row.id)}>
-                        {p.deleteLabel}
-                    </Button>
-                )}
+                    }
+                />
             </div>
         ) : null}
     </ListItem>

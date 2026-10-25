@@ -87,7 +87,7 @@ const renderHandoffActions = ({ row, p, on }: RenderHandoffActionsInput) => (
     <>
         {row.canRun && row.orderId !== null ? (
             <Button
-                variant="primary"
+                intent="commit"
                 size="sm"
                 isPending={row.isRunBusy}
                 isDisabled={p.isBusy}
@@ -97,7 +97,7 @@ const renderHandoffActions = ({ row, p, on }: RenderHandoffActionsInput) => (
             </Button>
         ) : null}
         {row.canShip ? (
-            <Button variant="outline" size="sm" onPress={() => on.ship(row.key)}>
+            <Button intent="neutral" size="sm" onPress={() => on.ship(row.key)}>
                 {p.shipLabel}
             </Button>
         ) : null}

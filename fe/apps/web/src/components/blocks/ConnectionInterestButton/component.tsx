@@ -23,7 +23,7 @@ export const ConnectionInterestButtonBase = (props: ConnectionInterestButtonBase
         <div className={classNames.stack}>
             <div>
                 <Button
-                    variant="primary"
+                    intent="commit"
                     isDisabled={command.isDisabled}
                     isPending={command.isPending}
                     onPress={on.press}

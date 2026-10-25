@@ -95,10 +95,10 @@ export const LeadCreateFormBase = (props: LeadCreateFormBaseProps) => {
                         </Text>
                     </div>
                     <div className={ACTIONS_CLASS_NAME}>
-                        <Button variant="outline" isDisabled={p.isPending} onPress={on.cancel}>
+                        <Button intent="neutral" isDisabled={p.isPending} onPress={on.cancel}>
                             {p.cancelLabel}
                         </Button>
-                        <Button variant="primary" type="submit" isPending={p.isPending}>
+                        <Button intent="commit" type="submit" isPending={p.isPending}>
                             {p.submitLabel}
                         </Button>
                     </div>
@@ -118,7 +118,6 @@ const LeadContactFields = (props: LeadCreateFormBaseProps) => {
                 name="contact_name"
                 label={p.contactLabel}
                 hint={p.contactHint}
-                variant="secondary"
                 isRequired
                 isDisabled={p.isPending}
                 value={p.values.contact_name}
@@ -131,7 +130,6 @@ const LeadContactFields = (props: LeadCreateFormBaseProps) => {
                 name="company"
                 label={p.companyLabel}
                 hint={p.companyHint}
-                variant="secondary"
                 isRequired
                 isDisabled={p.isPending}
                 value={p.values.company}

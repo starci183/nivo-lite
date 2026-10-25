@@ -100,7 +100,6 @@ const renderPublicProgramPage = ({ copy, values, off, on, p }: RenderPublicProgr
                 id="lp-public-link"
                 name="publicLink"
                 label={copy.publicLink}
-                variant="secondary"
                 value={p.link}
                 isReadOnly
                 isCopyable
@@ -205,7 +204,7 @@ const renderSettingsForm = ({ copy, p, on, props, values, off }: RenderSettingsF
 
             {p.canEdit ? (
                 <div className={ACTIONS_CLASS_NAME}>
-                    <Button type="submit" variant="primary" isPending={p.isPending}>
+                    <Button type="submit" intent="commit" isPending={p.isPending}>
                         {copy.save}
                     </Button>
                 </div>

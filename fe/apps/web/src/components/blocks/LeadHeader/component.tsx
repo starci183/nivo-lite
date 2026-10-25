@@ -104,21 +104,21 @@ const renderHeaderActions = (props: LeadHeaderBaseProps, primary: HeaderView["pr
     return (
         <div className={ACTIONS_CLASS_NAME}>
             {primary.kind === "review" ? (
-                <Button variant="secondary" href="#execution">
+                <Button intent="neutral" href="#execution">
                     {l.reviewLabel}
                 </Button>
             ) : null}
             {primary.kind === "draft" ? (
-                <Button variant="primary" isPending={p.isPending} onPress={() => on.draft(primary.responsibilityId)}>
+                <Button intent="commit" isPending={p.isPending} onPress={() => on.draft(primary.responsibilityId)}>
                     {l.draftLabel}
                 </Button>
             ) : null}
             {primary.kind === "propose" ? (
-                <Button variant="primary" isPending={p.isPending} onPress={on.propose}>
+                <Button intent="commit" isPending={p.isPending} onPress={on.propose}>
                     {l.proposeLabel}
                 </Button>
             ) : null}
-            <Button variant="outline" href={l.officeHref}>
+            <Button intent="neutral" href={l.officeHref}>
                 {l.officeLabel}
             </Button>
             <DropdownMenu
@@ -128,7 +128,7 @@ const renderHeaderActions = (props: LeadHeaderBaseProps, primary: HeaderView["pr
                     { id: "outcome", label: l.menuOutcome, href: "#outcome" },
                     { id: "copy", label: l.menuCopy, onAction: on.copy },
                 ]}
-                trigger={<IconButton source={nivoIconSource("more", "leading")} label={l.menuMore} />}
+                trigger={<IconButton intent="neutral" source={nivoIconSource("more", "leading")} label={l.menuMore} />}
             />
         </div>
     )

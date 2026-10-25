@@ -97,7 +97,7 @@ const connectActions = ({ props, on }: DatabaseWizardBaseProps): ReadonlyArray<W
     const { text } = props
     const flags = { isPending: props.isPending, isDisabled: !props.canTest }
     if (props.tables === null) return [nextAction(text.test, on.test, flags), closeAction(text.close, on.close)]
-    const retest: WizardAction = { id: "test", label: text.test, variant: "outline", ...flags, onPress: on.test }
+    const retest: WizardAction = { id: "test", label: text.test, intent: "alternative", ...flags, onPress: on.test }
     return [nextAction(text.next, () => on.go(1), flags), retest, closeAction(text.close, on.close)]
 }
 
@@ -109,7 +109,7 @@ const actionsOf = (base: DatabaseWizardBaseProps): ReadonlyArray<WizardAction> =
     if (props.step === "tables")
         return [nextAction(text.next, () => on.go(2), { isDisabled: !props.tablesReady }), back]
     if (props.step === "schedule") return [nextAction(text.save, on.save, { isPending: props.isPending }), back]
-    const leave: WizardAction = { ...back, variant: "ghost", onPress: () => on.go(2) }
+    const leave: WizardAction = { ...back, intent: "dismiss", onPress: () => on.go(2) }
     return [nextAction(text.done, on.finish, { isPending: props.isPending }), leave]
 }
 
@@ -162,7 +162,6 @@ const DatabaseTablesStep = (props: DatabaseTablesStepProps) => (
             {props.view.hint}
         </Text>
         <CheckboxGroup
-            variant="secondary"
             label={props.view.label}
             isDisabled={props.isPending}
             options={props.view.options}
@@ -210,7 +209,6 @@ export const DatabaseWizardBase = (props: DatabaseWizardBaseProps) => {
                         {view.schedule.hint}
                     </Text>
                     <RadioGroup
-                        variant="secondary"
                         label={view.schedule.label}
                         isLabelHidden
                         isDisabled={view.isPending}

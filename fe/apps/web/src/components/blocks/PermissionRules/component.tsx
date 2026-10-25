@@ -79,7 +79,7 @@ export const PermissionRulesBase = (props: PermissionRulesBaseProps) => {
             )
         }
         return view.isLocked ? null : (
-            <Button variant="outline" size="sm" onPress={() => props.on.open(row.id)}>
+            <Button intent="neutral" size="sm" onPress={() => props.on.open(row.id)}>
                 {view.editLabel}
             </Button>
         )

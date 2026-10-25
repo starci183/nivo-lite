@@ -72,7 +72,7 @@ export const HiringJobsBase = (props: HiringJobsBaseProps) => {
         <>
             <div className={HEAD_CLASS_NAME}>
                 <Heading level={2}>{say("jobsTitle")}</Heading>
-                <Button variant="primary" onPress={on.create}>
+                <Button intent="commit" onPress={on.create}>
                     {say("jobsCreate")}
                 </Button>
             </div>
@@ -135,20 +135,20 @@ const HiringJobRow = (props: HiringJobRowProps) => {
             actions={
                 <div className={ACTIONS_CLASS_NAME}>
                     {row.copyLabel === null ? null : (
-                        <Button variant="tertiary" size="sm" onPress={() => on.copy(row.id)}>
+                        <Button intent="dismiss" size="sm" onPress={() => on.copy(row.id)}>
                             {row.copyLabel}
                         </Button>
                     )}
-                    <Button variant="secondary" size="sm" onPress={() => on.openAd(row.id)}>
+                    <Button intent="neutral" size="sm" onPress={() => on.openAd(row.id)}>
                         {say("jobsWriteAd")}
                     </Button>
-                    <Button variant="secondary" size="sm" onPress={() => on.edit(row.id)}>
+                    <Button intent="neutral" size="sm" onPress={() => on.edit(row.id)}>
                         {say("jobsEdit")}
                     </Button>
                     {row.transitions.map((transition) => (
                         <Button
                             key={transition.to}
-                            variant={transition.isPrimary ? "primary" : "ghost"}
+                            intent={transition.isPrimary ? "alternative" : "neutral"}
                             size="sm"
                             isDisabled={isBusy}
                             onPress={() => on.transition(row.id, transition.to)}

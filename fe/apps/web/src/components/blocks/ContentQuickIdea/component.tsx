@@ -35,7 +35,7 @@ export const ContentQuickIdeaBase = (props: ContentQuickIdeaBaseProps) => {
     const { t, isPending } = props.props
     return (
         <>
-            <Button variant="secondary" onPress={props.on.open}>
+            <Button intent="neutral" onPress={props.on.open}>
                 {t("quickIdea")}
             </Button>
             <Dialog
@@ -48,11 +48,11 @@ export const ContentQuickIdeaBase = (props: ContentQuickIdeaBaseProps) => {
                 isDismissable={!isPending}
                 footer={
                     <>
-                        <Button variant="outline" isDisabled={isPending} onPress={props.on.close}>
+                        <Button intent="neutral" isDisabled={isPending} onPress={props.on.close}>
                             {t("cancel")}
                         </Button>
                         <Button
-                            variant="primary"
+                            intent="commit"
                             isPending={isPending}
                             isDisabled={props.props.topic.trim().length < 3 || props.props.channels.length === 0}
                             onPress={props.on.run}
@@ -64,7 +64,6 @@ export const ContentQuickIdeaBase = (props: ContentQuickIdeaBaseProps) => {
             >
                 <div className={FORM_CLASS_NAME}>
                     <Textarea
-                        variant="secondary"
                         label={t("quickTopic")}
                         rows={4}
                         value={props.props.topic}
@@ -75,7 +74,6 @@ export const ContentQuickIdeaBase = (props: ContentQuickIdeaBaseProps) => {
                     <CheckboxGroup
                         label={t("quickChannels")}
                         orientation="horizontal"
-                        variant="secondary"
                         options={props.props.channelOptions}
                         value={props.props.channels}
                         isDisabled={isPending}

@@ -36,13 +36,11 @@ export const HiringSettingsBase = (props: HiringSettingsBaseProps) => {
                         id="st-slug"
                         name="slug"
                         label={say("setSlug")}
-                        variant="secondary"
                         value={values.publicSlug}
                         onValueChange={(slug) => on.text("publicSlug", slug)}
                         hint={slugHint}
                     />
                     <NumberField
-                        variant="secondary"
                         label={say("setRetention")}
                         description={say("setRetentionHint")}
                         minValue={retentionMin}
@@ -52,7 +50,6 @@ export const HiringSettingsBase = (props: HiringSettingsBaseProps) => {
                         onValueChange={(days) => on.number("retentionDays", Number.isFinite(days) ? days : 90)}
                     />
                     <Textarea
-                        variant="secondary"
                         label={say("setConsent")}
                         rows={3}
                         maxLength={800}
@@ -63,7 +60,6 @@ export const HiringSettingsBase = (props: HiringSettingsBaseProps) => {
                         id="st-tone"
                         name="tone"
                         label={say("setTone")}
-                        variant="secondary"
                         value={values.adTone}
                         onValueChange={(tone) => on.text("adTone", tone)}
                     />
@@ -88,7 +84,7 @@ export const HiringSettingsBase = (props: HiringSettingsBaseProps) => {
                     {error === null ? null : <Alert tone="negative" title={say("errorNotSaved")} description={error} />}
                     {notice === null ? null : <Alert tone="affirmative" title={notice} />}
                     <div className={ACTIONS_CLASS_NAME}>
-                        <Button variant="primary" isPending={isBusy} isDisabled={isBusy} onPress={on.save}>
+                        <Button intent="commit" isPending={isBusy} isDisabled={isBusy} onPress={on.save}>
                             {say("setSave")}
                         </Button>
                     </div>

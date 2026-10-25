@@ -43,15 +43,15 @@ export const GoogleWizardBase = (props: GoogleWizardBaseProps) => {
     const footer =
         view.index === 0 ? (
             <>
-                <Button variant="primary" isPending={view.isPending} onPress={props.on.connect}>
+                <Button intent="commit" isPending={view.isPending} onPress={props.on.connect}>
                     {text.connect}
                 </Button>
-                <Button variant="ghost" isDisabled={view.isPending} onPress={() => props.on.close(false)}>
+                <Button intent="neutral" isDisabled={view.isPending} onPress={() => props.on.close(false)}>
                     {text.close}
                 </Button>
             </>
         ) : (
-            <Button variant="primary" onPress={() => props.on.close(true)}>
+            <Button intent="commit" onPress={() => props.on.close(true)}>
                 {text.done}
             </Button>
         )

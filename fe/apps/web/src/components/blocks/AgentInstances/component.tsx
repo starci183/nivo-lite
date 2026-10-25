@@ -60,7 +60,7 @@ export const AgentInstancesBase = (props: AgentInstancesBaseProps) => {
                     isLoading={view.isLoading}
                     labelEnd={
                         view.addLabel === null ? undefined : (
-                            <Button variant="primary" size="sm" isDisabled={view.isLoading} onPress={props.on.add}>
+                            <Button intent="commit" size="sm" isDisabled={view.isLoading} onPress={props.on.add}>
                                 {view.addLabel}
                             </Button>
                         )
@@ -77,7 +77,7 @@ export const AgentInstancesBase = (props: AgentInstancesBaseProps) => {
                                 </Badge>
                             }
                             actions={
-                                <Button size="sm" variant="secondary" href={row.openHref}>
+                                <Button size="sm" intent="neutral" href={row.openHref}>
                                     {view.openLabel}
                                 </Button>
                             }

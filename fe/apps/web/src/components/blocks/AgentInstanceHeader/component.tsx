@@ -68,7 +68,7 @@ export const AgentInstanceHeaderBase = (props: AgentInstanceHeaderBaseProps) => 
                     </div>
                     <ConnectionNeeds {...view.needs} />
                     {view.profileHref === null ? null : (
-                        <Button size="sm" variant="secondary" href={view.profileHref}>
+                        <Button size="sm" intent="neutral" href={view.profileHref}>
                             {view.profileLabel}
                         </Button>
                     )}

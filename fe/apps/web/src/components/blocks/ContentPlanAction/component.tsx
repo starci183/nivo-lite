@@ -4,6 +4,7 @@ import {
     getContentCommandProgressProps,
     renderContentCommandProgress,
 } from "@/components/composites/ContentSettingsCard"
+import { ActionPair } from "@/components/composites/ActionPair"
 import { SlotView } from "@/components/composites/SlotView"
 import type { ContentNote, ContentT } from "@/hooks/content"
 import { FORM_CLASS_NAME } from "./classNames"
@@ -29,12 +30,30 @@ export interface ContentPlanActionBaseProps {
     }
 }
 
+/** The footer of the plan dialog: close it, or run the plan. */
+const PlanFooter = (props: ContentPlanActionBaseProps) => (
+    <ActionPair
+        first={{
+            label: props.props.t("close"),
+            intent: "dismiss",
+            isDisabled: props.props.isPending,
+            onPress: props.on.close,
+        }}
+        second={{
+            label: props.props.t("planRun"),
+            intent: "commit",
+            isPending: props.props.isPending,
+            onPress: props.on.run,
+        }}
+    />
+)
+
 /** Draws the primary command of the workbench, "Plan the month", and its dialog: pick the month, wait for OpenClaw, read how long it took. */
 export const ContentPlanActionBase = (props: ContentPlanActionBaseProps) => {
     const { t, isPending } = props.props
     return (
         <>
-            <Button variant="primary" onPress={props.on.open}>
+            <Button intent="commit" onPress={props.on.open}>
                 {t("planMonth")}
             </Button>
             <Dialog
@@ -45,20 +64,10 @@ export const ContentPlanActionBase = (props: ContentPlanActionBaseProps) => {
                 description={t("planBody")}
                 closeLabel={t("close")}
                 isDismissable={!isPending}
-                footer={
-                    <>
-                        <Button variant="outline" isDisabled={isPending} onPress={props.on.close}>
-                            {t("close")}
-                        </Button>
-                        <Button variant="primary" isPending={isPending} onPress={props.on.run}>
-                            {t("planRun")}
-                        </Button>
-                    </>
-                }
+                footer={<PlanFooter {...props} />}
             >
                 <div className={FORM_CLASS_NAME}>
                     <Select
-                        variant="secondary"
                         label={t("planMonthLabel")}
                         options={props.props.months}
                         value={props.props.month}

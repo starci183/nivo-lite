@@ -34,7 +34,6 @@ export const ContentBrandCardBase = (props: ContentBrandCardBaseProps) => {
             <div className={FORM_CLASS_NAME}>
                 <SectionHeader level={2} title={t("settingsBrand")} description={t("settingsBrandBody")} />
                 <Textarea
-                    variant="secondary"
                     label={t("brandVoice")}
                     rows={3}
                     value={props.props.voice}
@@ -42,7 +41,6 @@ export const ContentBrandCardBase = (props: ContentBrandCardBaseProps) => {
                     onValueChange={props.on.voice}
                 />
                 <Textarea
-                    variant="secondary"
                     label={t("brandAvoid")}
                     rows={3}
                     value={props.props.avoid}
@@ -53,7 +51,6 @@ export const ContentBrandCardBase = (props: ContentBrandCardBaseProps) => {
                     id="brand-cta"
                     name="brand-cta"
                     label={t("brandCta")}
-                    variant="secondary"
                     value={props.props.cta}
                     isDisabled={locked}
                     onValueChange={props.on.cta}
@@ -62,7 +59,6 @@ export const ContentBrandCardBase = (props: ContentBrandCardBaseProps) => {
                     id="brand-tags"
                     name="brand-tags"
                     label={t("brandHashtags")}
-                    variant="secondary"
                     value={props.props.tags}
                     hint={t("fieldHashtagsHint")}
                     isDisabled={locked}
@@ -71,7 +67,7 @@ export const ContentBrandCardBase = (props: ContentBrandCardBaseProps) => {
                 <ContentCommandNote note={props.props.note} closeLabel={t("close")} onDismiss={props.on.dismissNote} />
                 <div className={ACTIONS_CLASS_NAME}>
                     <Button
-                        variant="primary"
+                        intent="commit"
                         size="sm"
                         isPending={isPending}
                         isDisabled={!canManage}

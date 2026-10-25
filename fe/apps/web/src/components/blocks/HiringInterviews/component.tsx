@@ -63,17 +63,17 @@ export const HiringInterviewsBase = (props: HiringInterviewsBaseProps) => {
             <div className={HEAD_CLASS_NAME}>
                 <Heading level={2}>{say("ivTabTitle")}</Heading>
                 <div className={ACTIONS_CLASS_NAME}>
-                    <Button variant="tertiary" size="sm" onPress={on.previousWeek}>
+                    <Button intent="dismiss" size="sm" onPress={on.previousWeek}>
                         {say("ivPrevWeek")}
                     </Button>
                     <Text as="span" size="sm" weight="medium">
                         {weekLabel}
                     </Text>
-                    <Button variant="tertiary" size="sm" onPress={on.nextWeek}>
+                    <Button intent="dismiss" size="sm" onPress={on.nextWeek}>
                         {say("ivNextWeek")}
                     </Button>
                     {isThisWeek ? null : (
-                        <Button variant="ghost" size="sm" onPress={on.thisWeek}>
+                        <Button intent="neutral" size="sm" onPress={on.thisWeek}>
                             {say("ivBackToThisWeek")}
                         </Button>
                     )}
@@ -116,7 +116,7 @@ export const HiringInterviewsBase = (props: HiringInterviewsBaseProps) => {
                         badges={<Badge tone="warning">{row.badge}</Badge>}
                         description={row.meta}
                         actions={
-                            <Button variant="tertiary" size="sm" onPress={() => on.copy(row.id)}>
+                            <Button intent="dismiss" size="sm" onPress={() => on.copy(row.id)}>
                                 {row.copyLabel}
                             </Button>
                         }
@@ -141,20 +141,20 @@ const InterviewActions = (props: InterviewActionsProps) => {
     const { on, row } = props
     return (
         <div className={ACTIONS_CLASS_NAME}>
-            <Button variant="tertiary" size="sm" onPress={() => on.open(row.candidateId)}>
+            <Button intent="dismiss" size="sm" onPress={() => on.open(row.candidateId)}>
                 {say("pipeOpen")}
             </Button>
             {row.isConfirmed ? (
-                <Button variant="secondary" size="sm" isDisabled={isBusy} onPress={() => on.status(row.id, "done")}>
+                <Button intent="neutral" size="sm" isDisabled={isBusy} onPress={() => on.status(row.id, "done")}>
                     {say("ivMarkDone")}
                 </Button>
             ) : null}
             {row.isConfirmed ? (
-                <Button variant="ghost" size="sm" isDisabled={isBusy} onPress={() => on.status(row.id, "no_show")}>
+                <Button intent="neutral" size="sm" isDisabled={isBusy} onPress={() => on.status(row.id, "no_show")}>
                     {say("ivMarkNoShow")}
                 </Button>
             ) : null}
-            <Button variant="ghost" size="sm" isDisabled={isBusy} onPress={() => on.status(row.id, "cancelled")}>
+            <Button intent="neutral" size="sm" isDisabled={isBusy} onPress={() => on.status(row.id, "cancelled")}>
                 {say("ivCancel")}
             </Button>
         </div>

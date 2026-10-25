@@ -35,17 +35,17 @@ export interface WorkspacePaymentBaseProps {
 const PaymentActions = (props: WorkspacePaymentBaseProps) => {
     if (props.props.phase === "paid") {
         return (
-            <Button variant="primary" size="lg" href={props.props.returnTo}>
+            <Button intent="commit" size="lg" href={props.props.returnTo}>
                 {props.props.openLabel}
             </Button>
         )
     }
     return (
         <>
-            <Button variant="primary" size="lg" isDisabled={!props.props.canRegenerate} onPress={props.on.regenerate}>
+            <Button intent="commit" size="lg" isDisabled={!props.props.canRegenerate} onPress={props.on.regenerate}>
                 {props.props.regenerateLabel}
             </Button>
-            <Button variant="ghost" href={props.props.allWorkspacesHref}>
+            <Button intent="neutral" href={props.props.allWorkspacesHref}>
                 {props.props.allWorkspacesLabel}
             </Button>
         </>
@@ -65,7 +65,7 @@ const PaymentSituation = (props: WorkspacePaymentBaseProps) => {
                     title={view.phase === "missing" ? view.missingTitle : view.errorTitle}
                     description={view.error}
                 />
-                <Button variant="ghost" href={view.allWorkspacesHref}>
+                <Button intent="neutral" href={view.allWorkspacesHref}>
                     {view.allWorkspacesLabel}
                 </Button>
             </>

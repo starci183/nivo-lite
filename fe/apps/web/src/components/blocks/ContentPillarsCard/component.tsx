@@ -49,7 +49,6 @@ const PillarTextField = (props: PillarTextFieldProps) => {
             id={id}
             name={id}
             label={props.label}
-            variant="secondary"
             value={props.row[props.field]}
             isDisabled={props.locked}
             onValueChange={(value) => props.onChange(props.row.key, { [props.field]: value })}
@@ -80,7 +79,6 @@ export const ContentPillarsCardBase = (props: ContentPillarsCardBaseProps) => {
                         onChange={props.on.change}
                     />
                     <NumberField
-                        variant="secondary"
                         label={t("pillarWeight")}
                         value={row.weight}
                         minValue={0}
@@ -96,7 +94,8 @@ export const ContentPillarsCardBase = (props: ContentPillarsCardBaseProps) => {
                             onSelectedChange={(v) => props.on.change(row.key, { active: v })}
                         />
                         <Button
-                            variant="danger-soft"
+                            intent="destructive"
+                            step="entry"
                             size="sm"
                             isDisabled={locked}
                             onPress={() => props.on.remove(row.key)}
@@ -108,21 +107,15 @@ export const ContentPillarsCardBase = (props: ContentPillarsCardBaseProps) => {
             ))}
             <ContentCommandNote note={props.props.note} closeLabel={t("close")} onDismiss={props.on.dismissNote} />
             <div className={ACTIONS_CLASS_NAME}>
-                <Button variant="outline" size="sm" isDisabled={locked} onPress={props.on.add}>
+                <Button intent="neutral" size="sm" isDisabled={locked} onPress={props.on.add}>
                     {t("pillarAdd")}
                 </Button>
                 {props.props.rows.length === 0 ? (
-                    <Button variant="secondary" size="sm" isDisabled={locked} onPress={props.on.preset}>
+                    <Button intent="alternative" size="sm" isDisabled={locked} onPress={props.on.preset}>
                         {t("pillarPreset")}
                     </Button>
                 ) : null}
-                <Button
-                    variant="primary"
-                    size="sm"
-                    onPress={props.on.save}
-                    isDisabled={!canManage}
-                    isPending={isPending}
-                >
+                <Button intent="commit" size="sm" onPress={props.on.save} isDisabled={!canManage} isPending={isPending}>
                     {t("pillarSave")}
                 </Button>
             </div>

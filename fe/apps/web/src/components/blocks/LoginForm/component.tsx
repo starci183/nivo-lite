@@ -63,7 +63,7 @@ export const LoginFormBase = (props: LoginFormBaseProps) => {
             )}
             <div className={LOGIN_ACTIONS_CLASS_NAME}>
                 <Button
-                    variant="secondary"
+                    intent="neutral"
                     width="fill"
                     isPending={view.isGooglePending}
                     isDisabled={busy && !view.isGooglePending}
@@ -91,7 +91,6 @@ export const LoginFormBase = (props: LoginFormBaseProps) => {
                     label={view.passwordLabel}
                     revealLabel={view.showLabel}
                     hideLabel={view.hideLabel}
-                    variant="secondary"
                     isRequired
                     isDisabled={busy}
                     value={view.password}
@@ -102,7 +101,7 @@ export const LoginFormBase = (props: LoginFormBaseProps) => {
                 <div className={LOGIN_ROW_CLASS_NAME}>
                     <TextAction href={view.forgotHref}>{view.forgotLabel}</TextAction>
                 </div>
-                <Button variant="primary" width="fill" type="submit" isPending={view.isPasswordPending}>
+                <Button intent="commit" width="fill" type="submit" isPending={view.isPasswordPending}>
                     {view.submitLabel}
                 </Button>
             </AuthForm>

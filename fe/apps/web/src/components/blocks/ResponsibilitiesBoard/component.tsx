@@ -103,7 +103,7 @@ export const ResponsibilitiesBoardBase = (props: ResponsibilitiesBoardBaseProps)
                         title={view.title}
                         description={view.description}
                         action={
-                            <Button variant="primary" href={view.newLeadHref}>
+                            <Button intent="commit" href={view.newLeadHref}>
                                 {view.newLeadLabel}
                             </Button>
                         }
@@ -189,7 +189,7 @@ const ResponsibilityToolbar = (props: ResponsibilitiesBoardBaseProps) => {
                         onClear={() => props.on.query("")}
                     />
                 </div>
-                <Button variant="ghost" onPress={props.on.toggleFilters}>
+                <Button intent="neutral" onPress={props.on.toggleFilters}>
                     {view.filtersLabel}
                 </Button>
                 <div className={SORT_CLASS}>

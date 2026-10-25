@@ -113,12 +113,12 @@ export const InventoryStockBase = (props: InventoryStockBaseProps) => {
                 </div>
                 <div className={ACTIONS_CLASS_NAME}>
                     {p.addLabel === null ? null : (
-                        <Button variant="primary" size="sm" onPress={on.add}>
+                        <Button intent="commit" size="sm" onPress={on.add}>
                             {p.addLabel}
                         </Button>
                     )}
                     {p.draftLabel === null ? null : (
-                        <Button variant="secondary" size="sm" isPending={p.isPending} onPress={on.draft}>
+                        <Button intent="alternative" size="sm" isPending={p.isPending} onPress={on.draft}>
                             {p.draftLabel}
                         </Button>
                     )}
@@ -135,7 +135,7 @@ export const InventoryStockBase = (props: InventoryStockBaseProps) => {
             {renderListLabel(props)}
             {p.toggleInactiveLabel === null ? null : (
                 <div>
-                    <Button variant="ghost" size="sm" onPress={on.toggleInactive}>
+                    <Button intent="neutral" size="sm" onPress={on.toggleInactive}>
                         {p.toggleInactiveLabel}
                     </Button>
                 </div>
@@ -191,7 +191,7 @@ const renderListLabel = (props: InventoryStockBaseProps) => {
                                 {row.total}
                             </Text>
                             <Button
-                                variant="outline"
+                                intent="neutral"
                                 size="sm"
                                 aria-label={row.lessLabel}
                                 isDisabled={p.isPending}
@@ -200,7 +200,7 @@ const renderListLabel = (props: InventoryStockBaseProps) => {
                                 {`-${row.stepLabel}`}
                             </Button>
                             <Button
-                                variant="outline"
+                                intent="neutral"
                                 size="sm"
                                 aria-label={row.moreLabel}
                                 isDisabled={p.isPending}
@@ -208,11 +208,11 @@ const renderListLabel = (props: InventoryStockBaseProps) => {
                             >
                                 {`+${row.stepLabel}`}
                             </Button>
-                            <Button variant="ghost" size="sm" onPress={() => on.adjust(row.id)}>
+                            <Button intent="neutral" size="sm" onPress={() => on.adjust(row.id)}>
                                 {p.adjustLabel}
                             </Button>
                             {p.editLabel === null ? null : (
-                                <Button variant="ghost" size="sm" onPress={() => on.edit(row.id)}>
+                                <Button intent="neutral" size="sm" onPress={() => on.edit(row.id)}>
                                     {p.editLabel}
                                 </Button>
                             )}

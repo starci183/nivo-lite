@@ -7,7 +7,7 @@ export interface VideoNewLinkBaseProps {
 
 /** Draws the page command that opens the wizard on a new video. */
 export const VideoNewLinkBase = (props: VideoNewLinkBaseProps) => (
-    <Button variant="primary" href={props.props.href}>
+    <Button intent="commit" href={props.props.href}>
         {props.props.label}
     </Button>
 )

@@ -96,14 +96,14 @@ export const SalesAttentionBase = (props: SalesAttentionBaseProps) => {
 const renderAttentionActions = ({ row, p, on }: RenderAttentionActionsInput) => (
     <>
         {row.decisionHref === null ? null : (
-            <Button variant="primary" size="sm" href={row.decisionHref}>
+            <Button intent="alternative" size="sm" href={row.decisionHref}>
                 {row.kind === "clarify" ? p.answerLabel : p.decideLabel}
             </Button>
         )}
         {row.kind === "failed" && row.workItemId !== null ? (
             <>
                 <Button
-                    variant="primary"
+                    intent="alternative"
                     size="sm"
                     isPending={row.isRetryBusy}
                     isDisabled={p.isBusy}
@@ -112,7 +112,7 @@ const renderAttentionActions = ({ row, p, on }: RenderAttentionActionsInput) => 
                     {p.retryLabel}
                 </Button>
                 <Button
-                    variant="outline"
+                    intent="neutral"
                     size="sm"
                     isPending={row.isStopBusy}
                     isDisabled={p.isBusy}
@@ -123,12 +123,12 @@ const renderAttentionActions = ({ row, p, on }: RenderAttentionActionsInput) => 
             </>
         ) : null}
         {row.kind === "overdue" && row.leadHref !== null ? (
-            <Button variant="primary" size="sm" href={row.leadHref}>
+            <Button intent="alternative" size="sm" href={row.leadHref}>
                 {p.followUpLabel}
             </Button>
         ) : null}
         {row.kind === "awaiting_reply" && row.leadHref !== null ? (
-            <Button variant="primary" size="sm" href={row.leadHref}>
+            <Button intent="alternative" size="sm" href={row.leadHref}>
                 {p.replyLabel}
             </Button>
         ) : null}

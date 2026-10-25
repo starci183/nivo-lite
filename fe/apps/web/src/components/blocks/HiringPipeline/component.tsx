@@ -23,7 +23,6 @@ import {
     CARD_DRAG_CLASS_NAME,
     HEAD_CLASS_NAME,
     LANE_CLASS_NAME,
-    LANE_OVER_CLASS_NAME,
     LIST_CLASS_NAME,
 } from "./classNames"
 
@@ -79,7 +78,7 @@ export interface HiringPipelineBaseProps {
 
 /** Draws the candidates tab: one lane per stage on wide screens (drag a card, or use "Move to"), a stacked list on phones. */
 export const HiringPipelineBase = (props: HiringPipelineBaseProps) => {
-    const { say, jobId, jobOptions, lanes, hasNoCandidates, withdrawnNote, overStage, error } = props.props
+    const { say, jobId, jobOptions, lanes, hasNoCandidates, withdrawnNote, error } = props.props
     const { on } = props
     return (
         <>
@@ -112,7 +111,7 @@ export const HiringPipelineBase = (props: HiringPipelineBaseProps) => {
                                 {lanes.map((lane) => (
                                     <div
                                         key={lane.stage}
-                                        className={overStage === lane.stage ? LANE_OVER_CLASS_NAME : LANE_CLASS_NAME}
+                                        className={LANE_CLASS_NAME}
                                         onDragOver={(event) => on.dragOver(lane.stage, event)}
                                         onDragLeave={() => on.dragLeave(lane.stage)}
                                         onDrop={(event) => on.drop(lane.stage, event)}
@@ -178,7 +177,7 @@ const PipelineCard = (props: PipelineCardProps) => {
             >
                 {view.suggestion === null ? null : <Text size="xs">{view.suggestion}</Text>}
                 <div className={ACTIONS_CLASS_NAME}>
-                    <Button variant="tertiary" size="sm" onPress={() => on.open(view.id)}>
+                    <Button intent="dismiss" size="sm" onPress={() => on.open(view.id)}>
                         {say("pipeOpen")}
                     </Button>
                 </div>

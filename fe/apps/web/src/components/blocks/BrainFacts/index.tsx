@@ -41,7 +41,7 @@ export const BrainFacts = () => {
                   {
                       id: "retire",
                       label: t("retire"),
-                      variant: "ghost",
+                      intent: "destructive",
                       onPress: () =>
                           command.send("fact.decide", { id: fact.id, action: "retire" }, { done: t("retiredDone") }),
                   },

@@ -138,7 +138,7 @@ const renderConnectionCards = (props: ConnectionLibraryBaseProps) => (
                                 </Badge>
                             )}
                             <Button
-                                variant="outline"
+                                intent="neutral"
                                 size="sm"
                                 isSkeleton={props.props.isLoading}
                                 onPress={() => props.on.open(card.id)}

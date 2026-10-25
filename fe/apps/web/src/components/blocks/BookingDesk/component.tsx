@@ -96,7 +96,7 @@ export const BookingDeskBase = (props: BookingDeskBaseProps) => {
             </List>
             {p.add === undefined ? null : (
                 <div className={TOOLBAR_CLASS}>
-                    <Button size="sm" variant="primary" isDisabled={p.add.isDisabled} onPress={on.add}>
+                    <Button size="sm" intent="commit" isDisabled={p.add.isDisabled} onPress={on.add}>
                         {p.add.label}
                     </Button>
                 </div>

@@ -133,13 +133,13 @@ const reviewRowActions = (
     const decide = (id: string, label: string, action: "apply" | "choose", isPrimary: boolean): RowActionView => ({
         id: `decide-${id}`,
         label,
-        variant: isPrimary ? "primary" : "outline",
+        intent: isPrimary ? "alternative" : "neutral",
         onPress: () => command.send("fact.decide", { id, action }, { done: t("applied") }),
     })
     const reject = (id: string, label: string): RowActionView => ({
         id: `reject-${id}`,
         label,
-        variant: "ghost",
+        intent: "alternative",
         onPress: () => command.send("fact.decide", { id, action: "reject" }, { done: t("rejected") }),
     })
     const gated = (actions: ReadonlyArray<RowActionView>): ReadonlyArray<RowActionView> =>

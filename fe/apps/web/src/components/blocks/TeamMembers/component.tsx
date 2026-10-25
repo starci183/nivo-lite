@@ -100,7 +100,7 @@ export const TeamMembersBase = (props: TeamMembersBaseProps) => {
                 placement="bottom end"
                 entries={row.entries}
                 trigger={
-                    <Button variant="outline" isPending={props.props.isPending} aria-label={row.menuLabel}>
+                    <Button intent="neutral" isPending={props.props.isPending} aria-label={row.menuLabel}>
                         {props.props.actionsLabel}
                     </Button>
                 }

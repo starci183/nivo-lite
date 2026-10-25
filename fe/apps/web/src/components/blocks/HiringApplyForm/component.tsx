@@ -57,7 +57,6 @@ const questionField = (question: PublicQuestionView, props: HiringApplyFormBaseP
             <RadioGroup
                 key={question.id}
                 {...common}
-                variant="secondary"
                 name={`q_${question.id}`}
                 orientation="horizontal"
                 options={[
@@ -74,7 +73,6 @@ const questionField = (question: PublicQuestionView, props: HiringApplyFormBaseP
             <RadioGroup
                 key={question.id}
                 {...common}
-                variant="secondary"
                 name={`q_${question.id}`}
                 options={question.choices.map((choice) => ({ value: choice, label: choice }))}
                 value={answer === "" ? null : answer}
@@ -89,7 +87,6 @@ const questionField = (question: PublicQuestionView, props: HiringApplyFormBaseP
                 id={`apply-q-${question.id}`}
                 name={`q_${question.id}`}
                 {...common}
-                variant="secondary"
                 value={answer}
                 onValueChange={set}
             />
@@ -99,7 +96,6 @@ const questionField = (question: PublicQuestionView, props: HiringApplyFormBaseP
         <Textarea
             key={question.id}
             {...common}
-            variant="secondary"
             name={`q_${question.id}`}
             rows={3}
             maxLength={1000}
@@ -165,7 +161,6 @@ const ApplicantDetails = (props: HiringApplyFormBaseProps) => {
                 id="apply-name"
                 name="name"
                 label={say("applyName")}
-                variant="secondary"
                 isRequired
                 isDisabled={isBusy}
                 value={values.name}
@@ -176,7 +171,6 @@ const ApplicantDetails = (props: HiringApplyFormBaseProps) => {
                 name="phone"
                 label={say("applyPhone")}
                 hint={say("applyPhoneHint")}
-                variant="secondary"
                 isRequired
                 isDisabled={isBusy}
                 value={values.phone}
@@ -187,14 +181,12 @@ const ApplicantDetails = (props: HiringApplyFormBaseProps) => {
                 name="email"
                 kind="email"
                 label={say("applyEmail")}
-                variant="secondary"
                 isDisabled={isBusy}
                 value={values.email}
                 onValueChange={(email) => on.text("email", email)}
             />
             {p.availabilityChoices.length > 0 ? (
                 <CheckboxGroup
-                    variant="secondary"
                     label={say("applyAvailability")}
                     name="availability"
                     options={p.availabilityChoices.map((choice) => ({
@@ -210,7 +202,6 @@ const ApplicantDetails = (props: HiringApplyFormBaseProps) => {
                     id="apply-availability"
                     name="availability"
                     label={say("applyAvailabilityText")}
-                    variant="secondary"
                     isDisabled={isBusy}
                     value={values.availabilityText}
                     onValueChange={(text) => on.text("availabilityText", text)}
@@ -249,7 +240,6 @@ const ApplicationSubmission = (props: HiringApplyFormBaseProps) => {
             </div>
             <Checkbox
                 name="consent"
-                variant="secondary"
                 label={say("applyConsent")}
                 description={p.consentText}
                 isRequired
@@ -258,7 +248,7 @@ const ApplicationSubmission = (props: HiringApplyFormBaseProps) => {
                 onSelectedChange={(consent) => on.flag("consent", consent)}
             />
             {p.isFailed ? <Alert tone="negative" title={say("applyFailed")} /> : null}
-            <Button type="submit" variant="primary" isPending={isBusy} isDisabled={isBusy || !p.canSubmit}>
+            <Button type="submit" intent="commit" isPending={isBusy} isDisabled={isBusy || !p.canSubmit}>
                 {say("applySubmit")}
             </Button>
             <Text size="xs" tone="muted">

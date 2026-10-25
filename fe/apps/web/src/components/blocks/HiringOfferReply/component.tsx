@@ -55,7 +55,7 @@ export const HiringOfferReplyBase = (props: HiringOfferReplyBaseProps) => {
             {state === "open" && outcome === null ? (
                 <div className={ANSWERS_CLASS_NAME}>
                     <Button
-                        variant="primary"
+                        intent="commit"
                         width="fill"
                         isDisabled={isBusy}
                         isPending={isBusy}
@@ -63,7 +63,7 @@ export const HiringOfferReplyBase = (props: HiringOfferReplyBaseProps) => {
                     >
                         {say("replyAccept")}
                     </Button>
-                    <Button variant="ghost" width="fill" isDisabled={isBusy} onPress={() => on.answer(false)}>
+                    <Button intent="alternative" width="fill" isDisabled={isBusy} onPress={() => on.answer(false)}>
                         {say("replyDecline")}
                     </Button>
                 </div>

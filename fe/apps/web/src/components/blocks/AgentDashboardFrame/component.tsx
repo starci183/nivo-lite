@@ -97,7 +97,7 @@ export const AgentDashboardFrameBase = (props: AgentDashboardFrameBaseProps) => 
                     }
                     action={
                         view.chat === null ? undefined : (
-                            <Button variant="primary" href={view.chat.href}>
+                            <Button intent="commit" href={view.chat.href}>
                                 {view.chat.label}
                             </Button>
                         )

@@ -101,7 +101,6 @@ const renderMemberList = ({ props }: RenderMemberListContext) => (
                 <SearchField
                     label={props.props.search.label}
                     placeholder={props.props.search.placeholder}
-                    variant="secondary"
                     value={props.props.search.value}
                     onValueChange={props.on.search}
                     onClear={() => props.on.search("")}
@@ -109,14 +108,12 @@ const renderMemberList = ({ props }: RenderMemberListContext) => (
                 <Select
                     label={props.props.tier.label}
                     options={[...props.props.tier.options]}
-                    variant="secondary"
                     value={props.props.tier.value}
                     onValueChange={props.on.setTier}
                 />
                 <Select
                     label={props.props.sort.label}
                     options={[...props.props.sort.options]}
-                    variant="secondary"
                     value={props.props.sort.value}
                     onValueChange={props.on.setSort}
                 />
@@ -141,7 +138,7 @@ const renderMemberList = ({ props }: RenderMemberListContext) => (
             )}
             {props.props.showMoreLabel === undefined ? null : (
                 <div>
-                    <Button variant="outline" onPress={props.on.showMore}>
+                    <Button intent="neutral" onPress={props.on.showMore}>
                         {props.props.showMoreLabel}
                     </Button>
                 </div>

@@ -80,7 +80,7 @@ const actionsOf = ({ props, on }: WebhookWizardBaseProps): ReadonlyArray<WizardA
         const test: WizardAction = {
             id: "test",
             label: sent ? text.sendAgain : text.sendTest,
-            variant: sent ? "outline" : "secondary",
+            intent: "alternative",
             isPending: props.isPending,
             onPress: on.sendTest,
         }
@@ -103,7 +103,6 @@ const addressOf = (props: WebhookWizardBaseProps) => {
                             id="webhook-name"
                             name="name"
                             label={view.text.fieldName}
-                            variant="secondary"
                             isDisabled={view.isPending}
                             value={view.form.name}
                             onValueChange={on.name}
@@ -112,7 +111,6 @@ const addressOf = (props: WebhookWizardBaseProps) => {
                             id="webhook-url"
                             name="url"
                             label={view.text.fieldUrl}
-                            variant="secondary"
                             placeholder={view.text.urlPlaceholder}
                             hint={view.text.urlHint}
                             isDisabled={view.isPending}
@@ -121,7 +119,6 @@ const addressOf = (props: WebhookWizardBaseProps) => {
                         />
                     </div>
                     <CheckboxGroup
-                        variant="secondary"
                         label={view.text.eventsLabel}
                         isDisabled={view.isPending}
                         options={[...view.eventOptions]}

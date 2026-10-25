@@ -54,7 +54,7 @@ export const OverviewRailBase = (props: OverviewRailBaseProps) => {
                 label={props.props.agentsTitle}
                 footer={
                     props.props.buyChatbotLabel === null ? undefined : (
-                        <Button variant="secondary" size="sm" href={props.props.buyChatbotHref}>
+                        <Button intent="neutral" size="sm" href={props.props.buyChatbotHref}>
                             {props.props.buyChatbotLabel}
                         </Button>
                     )
@@ -78,7 +78,7 @@ export const OverviewRailBase = (props: OverviewRailBaseProps) => {
                             </Badge>
                         }
                         actions={
-                            <Button variant="ghost" size="sm" href={agent.chatHref}>
+                            <Button intent="neutral" size="sm" href={agent.chatHref}>
                                 {props.props.chatLabel}
                             </Button>
                         }

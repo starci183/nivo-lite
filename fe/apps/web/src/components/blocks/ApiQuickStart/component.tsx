@@ -36,7 +36,7 @@ const example = (item: QuickStartExample, copy: (id: string, code: string) => vo
         <FencedCodeBlock
             code={item.code}
             action={
-                <Button variant="outline" size="sm" onPress={() => copy(item.id, item.code)}>
+                <Button intent="neutral" size="sm" onPress={() => copy(item.id, item.code)}>
                     {item.copyLabel}
                 </Button>
             }

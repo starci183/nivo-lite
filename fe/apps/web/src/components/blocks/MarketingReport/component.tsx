@@ -80,7 +80,7 @@ const Report = (props: ReportProps) => {
                 action={
                     props.props.canPost ? (
                         <Button
-                            variant="primary"
+                            intent="commit"
                             isPending={props.props.isPosting}
                             isDisabled={isSkeleton}
                             onPress={props.on.post}

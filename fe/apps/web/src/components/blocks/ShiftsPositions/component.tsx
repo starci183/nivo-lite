@@ -1,5 +1,5 @@
 import { Button, Input, SurfaceCard, TagGroup, Text } from "@starci/grammar/common"
-import { BLOCK_CLASS_NAME, FIELD_ACTION_CLASS_NAME, ROW_CLASS_NAME, SWATCH_CLASS_NAME } from "./classNames"
+import { BLOCK_CLASS_NAME, FIELD_ACTION_CLASS_NAME, ROW_CLASS_NAME } from "./classNames"
 
 /** One position with its colour. */
 interface PositionView {
@@ -41,7 +41,6 @@ export const ShiftsPositionsBase = (props: ShiftsPositionsBaseProps) => (
                 items={props.props.positions.map((position) => ({
                     id: position.id,
                     label: position.label,
-                    leading: <i className={SWATCH_CLASS_NAME} style={{ background: position.color }} aria-hidden />,
                 }))}
                 onRemove={(ids) => ids.forEach((id) => props.on.remove(id))}
                 removeLabel={(label) => `${props.props.removeLabel} ${label}`}
@@ -56,13 +55,12 @@ export const ShiftsPositionsBase = (props: ShiftsPositionsBaseProps) => (
                     id="shifts-position-new"
                     name="position"
                     label={props.props.nameLabel}
-                    variant="secondary"
                     value={props.props.name}
                     onValueChange={props.on.name}
                 />
                 <div className={FIELD_ACTION_CLASS_NAME}>
                     <Button
-                        variant="outline"
+                        intent="neutral"
                         isPending={props.props.isBusy}
                         isDisabled={!props.props.canAdd}
                         onPress={props.on.add}

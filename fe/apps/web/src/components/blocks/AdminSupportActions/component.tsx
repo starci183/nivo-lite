@@ -70,7 +70,6 @@ const Field = (props: FieldProps) => (
         id={props.id}
         name={props.name}
         label={props.label}
-        variant="secondary"
         value={props.value}
         onValueChange={props.onChange}
         isError={props.error !== undefined}
@@ -81,13 +80,13 @@ const Field = (props: FieldProps) => (
 /** What one action button of the card draws. */
 type ActionProps = {
     readonly label: string
-    readonly variant: "secondary" | "danger-soft" | "outline"
+    readonly intent: "alternative" | "neutral"
     readonly isDisabled: boolean
     readonly onPress: () => void
 }
 
 const Action = (props: ActionProps) => (
-    <Button variant={props.variant} isDisabled={props.isDisabled} onPress={props.onPress}>
+    <Button intent={props.intent} isDisabled={props.isDisabled} onPress={props.onPress}>
         {props.label}
     </Button>
 )
@@ -109,7 +108,7 @@ export const AdminSupportActionsBase = (props: AdminSupportActionsBaseProps) =>
                         />
                         <Action
                             label={props.props.extendButton}
-                            variant="secondary"
+                            intent="alternative"
                             isDisabled={!props.props.isDaysValid || props.props.isPending}
                             onPress={props.on.askExtend}
                         />
@@ -117,16 +116,18 @@ export const AdminSupportActionsBase = (props: AdminSupportActionsBaseProps) =>
                     <div className={ACTION_ROW_CLASS_NAME}>
                         <Action
                             label={props.props.markActiveLabel}
-                            variant="secondary"
+                            intent="alternative"
                             isDisabled={props.props.isActive || props.props.isPending}
                             onPress={props.on.askActive}
                         />
-                        <Action
-                            label={props.props.markPastDueLabel}
-                            variant="danger-soft"
+                        <Button
+                            intent="destructive"
+                            step="entry"
                             isDisabled={props.props.isPastDue || props.props.isPending}
                             onPress={props.on.askPastDue}
-                        />
+                        >
+                            {props.props.markPastDueLabel}
+                        </Button>
                     </div>
                     {renderSupportPlanFields(props)}
                     {props.props.invites.length > 0 ? (
@@ -135,7 +136,7 @@ export const AdminSupportActionsBase = (props: AdminSupportActionsBaseProps) =>
                                 <Action
                                     key={invite.id}
                                     label={invite.label}
-                                    variant="outline"
+                                    intent="neutral"
                                     isDisabled={props.props.isPending}
                                     onPress={() => props.on.askInvite(invite.id)}
                                 />
@@ -182,7 +183,7 @@ const renderSupportPlanFields = (props: AdminSupportActionsBaseProps) => (
         />
         <Action
             label={props.props.setPlanLabel}
-            variant="secondary"
+            intent="alternative"
             isDisabled={props.props.plan === null || !props.props.isCreditsValid || props.props.isPending}
             onPress={props.on.askPlan}
         />

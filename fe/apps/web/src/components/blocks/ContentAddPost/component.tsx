@@ -37,7 +37,7 @@ export const ContentAddPostBase = (props: ContentAddPostBaseProps) => {
     const { t, isPending } = props.props
     return (
         <>
-            <Button variant="outline" onPress={props.on.open}>
+            <Button intent="neutral" onPress={props.on.open}>
                 {t("addPost")}
             </Button>
             <Dialog
@@ -48,11 +48,11 @@ export const ContentAddPostBase = (props: ContentAddPostBaseProps) => {
                 closeLabel={t("close")}
                 footer={
                     <>
-                        <Button variant="outline" isDisabled={isPending} onPress={props.on.close}>
+                        <Button intent="neutral" isDisabled={isPending} onPress={props.on.close}>
                             {t("cancel")}
                         </Button>
                         <Button
-                            variant="primary"
+                            intent="commit"
                             isPending={isPending}
                             isDisabled={props.props.title.trim() === "" || props.props.channels.length === 0}
                             onPress={props.on.run}
@@ -80,7 +80,6 @@ const renderNewPostFields = (
                 id="add-title"
                 name="title"
                 label={t("addFieldTitle")}
-                variant="secondary"
                 value={props.props.title}
                 isDisabled={isPending}
                 onValueChange={props.on.title}
@@ -89,7 +88,6 @@ const renderNewPostFields = (
                 id="add-date"
                 name="date"
                 label={t("addDate")}
-                variant="secondary"
                 value={props.props.date}
                 hint={t("addDateHint")}
                 isDisabled={isPending}
@@ -99,7 +97,6 @@ const renderNewPostFields = (
                 id="add-time"
                 name="time"
                 label={t("addTime")}
-                variant="secondary"
                 value={props.props.time}
                 hint={t("addTimeHint")}
                 isDisabled={isPending}
@@ -107,7 +104,6 @@ const renderNewPostFields = (
             />
             {props.props.pillarOptions.length > 1 ? (
                 <Select
-                    variant="secondary"
                     label={t("fieldPillar")}
                     options={props.props.pillarOptions}
                     value={props.props.pillarId ?? ""}
@@ -118,7 +114,6 @@ const renderNewPostFields = (
             <CheckboxGroup
                 label={t("fieldChannels")}
                 orientation="horizontal"
-                variant="secondary"
                 options={props.props.channelOptions}
                 value={props.props.channels}
                 isDisabled={isPending}

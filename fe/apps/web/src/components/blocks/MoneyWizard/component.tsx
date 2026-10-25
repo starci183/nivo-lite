@@ -117,7 +117,7 @@ const actionsOf = ({ props, on }: MoneyWizardBaseProps): ReadonlyArray<WizardAct
         const checkLater: WizardAction = {
             id: "checkLater",
             label: text.checkLater,
-            variant: "outline",
+            intent: "dismiss",
             onPress: on.checkLater,
         }
         return [props.received === null ? checkLater : nextAction(text.next, () => on.go(4)), back]
@@ -132,7 +132,6 @@ const accountOf = ({ props, on }: MoneyWizardBaseProps) => (
                 id="w-name"
                 name="name"
                 label={props.text.fieldName}
-                variant="secondary"
                 hint={props.text.fieldNameHint}
                 isDisabled={props.isPending}
                 value={props.form.name}
@@ -142,7 +141,6 @@ const accountOf = ({ props, on }: MoneyWizardBaseProps) => (
                 <>
                     <Select
                         label={props.text.fieldBank}
-                        variant="secondary"
                         placeholder={props.text.fieldBankPlaceholder}
                         isDisabled={props.isPending}
                         value={props.form.bank === "" ? null : props.form.bank}
@@ -153,7 +151,6 @@ const accountOf = ({ props, on }: MoneyWizardBaseProps) => (
                         id="w-account"
                         name="account"
                         label={props.text.fieldAccount}
-                        variant="secondary"
                         isDisabled={props.isPending}
                         value={props.form.account}
                         hint={props.accountHint}
@@ -163,7 +160,6 @@ const accountOf = ({ props, on }: MoneyWizardBaseProps) => (
                         id="w-holder"
                         name="holder"
                         label={props.text.fieldHolder}
-                        variant="secondary"
                         isDisabled={props.isPending}
                         value={props.form.holder}
                         onValueChange={on.holder}
@@ -230,7 +226,6 @@ const MoneyEnvironmentStep = (props: MoneyWizardBaseProps) => {
                 </Text>
             ) : null}
             <RadioGroup
-                variant="secondary"
                 label={view.steps[0] ?? ""}
                 isLabelHidden
                 isDisabled={view.isPending}
@@ -253,7 +248,7 @@ const moneyFollowStepOf = ({ props: view, on }: MoneyWizardBaseProps) => (
     <>
         <div className={classNames.buttons}>
             {view.providerHref === null ? null : (
-                <Button variant="outline" href={view.providerHref} target="_blank" rel="noreferrer">
+                <Button intent="neutral" href={view.providerHref} target="_blank" rel="noreferrer">
                     {view.text.openProvider}
                 </Button>
             )}

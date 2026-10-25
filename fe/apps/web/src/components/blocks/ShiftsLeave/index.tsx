@@ -58,7 +58,7 @@ export const ShiftsLeave = () => {
                 switchLabel: null,
                 switchOn: false,
                 submitLabel: t("sendLeave"),
-                submitVariant: "primary",
+                submitIntent: "commit",
                 isBusy,
                 canSubmit: true,
                 rows: mine.leaves.slice(0, LIST_LIMIT).map((leave) => ({

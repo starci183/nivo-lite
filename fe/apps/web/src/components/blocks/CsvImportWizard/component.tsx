@@ -146,7 +146,6 @@ const SourceStep = ({ props, on }: CsvImportWizardBaseProps) => (
                 id="csv-name"
                 name="name"
                 label={props.text.fieldName}
-                variant="secondary"
                 hint={props.text.fieldNameHint}
                 isDisabled={props.isPending}
                 value={props.form.name}
@@ -155,7 +154,6 @@ const SourceStep = ({ props, on }: CsvImportWizardBaseProps) => (
             {props.source === "document" ? null : (
                 <Select
                     label={props.text.fieldEntity}
-                    variant="secondary"
                     isDisabled={props.isPending}
                     value={props.form.entity}
                     options={[...props.entityOptions]}
@@ -164,7 +162,6 @@ const SourceStep = ({ props, on }: CsvImportWizardBaseProps) => (
             )}
         </div>
         <RadioGroup
-            variant="secondary"
             label={props.text.fieldSource}
             isDisabled={props.isPending}
             value={props.source}
@@ -193,7 +190,6 @@ const SheetStep = ({ props, on }: CsvImportWizardBaseProps) => (
         id="csv-link"
         name="link"
         label={props.text.linkSheetLabel}
-        variant="secondary"
         hint={props.text.linkSheetHint}
         placeholder={props.text.linkSheetPlaceholder}
         isDisabled={props.isPending}
@@ -207,14 +203,13 @@ const ManualStep = ({ props, on }: CsvImportWizardBaseProps) => (
         <Textarea
             label={props.text.pasteLabel}
             description={props.text.pasteHint}
-            variant="secondary"
             rows={4}
             isDisabled={props.isPending}
             value={props.paste}
             onValueChange={on.paste}
         />
         <div>
-            <Button variant="outline" isDisabled={props.isPending || !props.paste.trim()} onPress={on.applyPaste}>
+            <Button intent="neutral" isDisabled={props.isPending || !props.paste.trim()} onPress={on.applyPaste}>
                 {props.text.pasteUse}
             </Button>
         </div>

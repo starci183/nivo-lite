@@ -150,7 +150,7 @@ export const ConnectionRowBase = (props: ConnectionRowBaseProps) => {
                 <>
                     {primary === null ? null : (
                         <Button
-                            variant={primary.variant}
+                            intent={primary.intent}
                             isPending={primary.isPending}
                             onPress={() => on.primary(primary.id)}
                         >
@@ -165,7 +165,7 @@ export const ConnectionRowBase = (props: ConnectionRowBaseProps) => {
                                 <IconButton
                                     source={nivoIconSource("more", "leading")}
                                     label={view.menuLabel}
-                                    variant="ghost"
+                                    intent="neutral"
                                     isDisabled={view.menuIsDisabled}
                                 />
                             }

@@ -114,7 +114,6 @@ export const ShiftsDemandBase = (props: ShiftsDemandBaseProps) => (
             )}
             <SectionHeader level={3} title={props.props.addTitle} />
             <CheckboxGroup
-                variant="secondary"
                 label={props.props.labels.days}
                 orientation="horizontal"
                 options={props.props.dayOptions}
@@ -130,7 +129,7 @@ export const ShiftsDemandBase = (props: ShiftsDemandBaseProps) => (
                     onSelectedChange={props.on.peak}
                 />
                 <Button
-                    variant="primary"
+                    intent="commit"
                     isPending={props.props.isBusy}
                     isDisabled={!props.props.canAdd}
                     onPress={props.on.add}
@@ -145,7 +144,6 @@ export const ShiftsDemandBase = (props: ShiftsDemandBaseProps) => (
 const renderDemandFields = ({ props }: RenderDemandFieldsInput) => (
     <div className={FORM_GRID_CLASS_NAME}>
         <Select
-            variant="secondary"
             label={props.props.labels.from}
             name="cstart"
             value={props.props.form.start}
@@ -155,7 +153,6 @@ const renderDemandFields = ({ props }: RenderDemandFieldsInput) => (
             }}
         />
         <Select
-            variant="secondary"
             label={props.props.labels.to}
             name="cend"
             value={props.props.form.end}
@@ -165,7 +162,6 @@ const renderDemandFields = ({ props }: RenderDemandFieldsInput) => (
             }}
         />
         <Select
-            variant="secondary"
             label={props.props.labels.position}
             name="cpos"
             value={props.props.form.positionId}
@@ -175,7 +171,6 @@ const renderDemandFields = ({ props }: RenderDemandFieldsInput) => (
             }}
         />
         <NumberField
-            variant="secondary"
             label={props.props.labels.min}
             name="cmin"
             value={props.props.form.min}
@@ -184,7 +179,6 @@ const renderDemandFields = ({ props }: RenderDemandFieldsInput) => (
             onValueChange={props.on.min}
         />
         <NumberField
-            variant="secondary"
             label={props.props.labels.ideal}
             name="cideal"
             value={props.props.form.ideal}

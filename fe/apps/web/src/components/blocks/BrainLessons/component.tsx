@@ -55,7 +55,7 @@ const WritePart = (props: WritePartProps) => (
                 isDisabled={props.view.isPending}
                 onValueChange={props.on.setAgent}
             />
-            <Button variant="outline" isPending={props.view.isPending} onPress={props.on.mine}>
+            <Button intent="neutral" isPending={props.view.isPending} onPress={props.on.mine}>
                 {props.view.mineLabel}
             </Button>
         </div>
@@ -66,7 +66,6 @@ const WritePart = (props: WritePartProps) => (
                         id="brain-lesson-title"
                         name="title"
                         label={props.view.titleLabel}
-                        variant="secondary"
                         isRequired
                         value={props.view.lessonTitle}
                         isDisabled={props.view.isPending}
@@ -76,7 +75,6 @@ const WritePart = (props: WritePartProps) => (
                         id="brain-lesson-body"
                         name="body"
                         label={props.view.bodyLabel}
-                        variant="secondary"
                         rows={3}
                         isRequired
                         value={props.view.lessonBody}
@@ -87,12 +85,11 @@ const WritePart = (props: WritePartProps) => (
                         id="brain-lesson-when"
                         name="appliesWhen"
                         label={props.view.whenLabel}
-                        variant="secondary"
                         value={props.view.lessonWhen}
                         isDisabled={props.view.isPending}
                         onValueChange={props.on.setLessonWhen}
                     />
-                    <Button variant="primary" type="submit" isPending={props.view.isPending}>
+                    <Button intent="commit" type="submit" isPending={props.view.isPending}>
                         {props.view.saveLabel}
                     </Button>
                 </div>

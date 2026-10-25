@@ -2,18 +2,11 @@ import type { useTranslations, useFormatter } from "next-intl"
 import type { useMember } from "@/hooks/member"
 import type { useIndividualPlan } from "@/hooks/billing"
 import type { useTeam, useInviteCommands, useCopyInviteLink } from "@/hooks/team"
-import { Badge, Button, EmptyNotice, ListItem, SurfaceListCard, Text } from "@starci/grammar/common"
+import { Badge, Button, EmptyNotice, ListRow, SurfaceListCard, Text } from "@starci/grammar/common"
 import { InviteLink } from "@/components/composites/InviteLink"
 import { TeamSection } from "@/components/composites/TeamSection"
 import { PersonAvatar } from "@/components/leaves/PersonAvatar"
-import {
-    ACTIONS_CLASS_NAME,
-    FACTS_CLASS_NAME,
-    IDENTITY_CLASS_NAME,
-    IDENTITY_TEXT_CLASS_NAME,
-    LINK_ROW_CLASS_NAME,
-    ROW_CLASS_NAME,
-} from "./classNames"
+import { ACTIONS_CLASS_NAME, DETAIL_CLASS_NAME } from "./classNames"
 
 /** The link just issued for a row. */
 interface LinkView {
@@ -80,52 +73,53 @@ export const TeamInvitesBase = (props: TeamInvitesBaseProps) => (
             empty={<EmptyNotice message={props.props.emptyLabel} />}
         >
             {props.props.rows.map((row) => (
-                <ListItem key={row.id} className={ROW_CLASS_NAME}>
-                    <div className={IDENTITY_CLASS_NAME}>
-                        <PersonAvatar name={row.email} size="md" />
-                        <div className={IDENTITY_TEXT_CLASS_NAME}>
-                            <Text weight="semibold" overflow="truncate">
-                                {row.email}
-                            </Text>
-                            <Text size="sm" tone="muted">
-                                {row.expiry}
-                            </Text>
+                <ListRow
+                    key={row.id}
+                    leading={<PersonAvatar name={row.email} size="md" />}
+                    title={row.email}
+                    description={row.expiry}
+                    badges={<Badge tone={row.isExpired ? "warning" : "accent"}>{row.roleLabel}</Badge>}
+                    actions={
+                        <div className={ACTIONS_CLASS_NAME}>
+                            <Button intent="neutral" isPending={row.isBusy} onPress={() => props.on.resend(row.id)}>
+                                {props.props.resendLabel}
+                            </Button>
+                            <Button intent="neutral" isPending={row.isBusy} onPress={() => props.on.copyLink(row.id)}>
+                                {props.props.copyLabel}
+                            </Button>
+                            <Button
+                                intent="destructive"
+                                step="entry"
+                                isPending={row.isBusy}
+                                onPress={() => props.on.revoke(row.id)}
+                            >
+                                {props.props.revokeLabel}
+                            </Button>
+                        </div>
+                    }
+                >
+                    {row.staffNote === undefined && row.link === undefined ? null : (
+                        <div className={DETAIL_CLASS_NAME}>
                             {row.staffNote === undefined ? null : (
                                 <Text size="xs" tone="muted" overflow="truncate">
                                     {row.staffNote}
                                 </Text>
                             )}
-                        </div>
-                    </div>
-                    <div className={FACTS_CLASS_NAME}>
-                        <Badge tone={row.isExpired ? "warning" : "accent"}>{row.roleLabel}</Badge>
-                    </div>
-                    <div className={ACTIONS_CLASS_NAME}>
-                        <Button variant="outline" isPending={row.isBusy} onPress={() => props.on.resend(row.id)}>
-                            {props.props.resendLabel}
-                        </Button>
-                        <Button variant="outline" isPending={row.isBusy} onPress={() => props.on.copyLink(row.id)}>
-                            {props.props.copyLabel}
-                        </Button>
-                        <Button variant="ghost" isPending={row.isBusy} onPress={() => props.on.revoke(row.id)}>
-                            {props.props.revokeLabel}
-                        </Button>
-                    </div>
-                    {row.link === undefined ? null : (
-                        <div className={LINK_ROW_CLASS_NAME}>
-                            <InviteLink
-                                id={`invite-link-${row.id}`}
-                                label={row.link.label}
-                                link={row.link.value}
-                                copyLabel={props.props.copyLabel}
-                                copiedLabel={props.props.copiedLabel}
-                                note={props.props.rotateNote}
-                                isCopied={row.link.isCopied}
-                                onCopy={props.on.linkCopied}
-                            />
+                            {row.link === undefined ? null : (
+                                <InviteLink
+                                    id={`invite-link-${row.id}`}
+                                    label={row.link.label}
+                                    link={row.link.value}
+                                    copyLabel={props.props.copyLabel}
+                                    copiedLabel={props.props.copiedLabel}
+                                    note={props.props.rotateNote}
+                                    isCopied={row.link.isCopied}
+                                    onCopy={props.on.linkCopied}
+                                />
+                            )}
                         </div>
                     )}
-                </ListItem>
+                </ListRow>
             ))}
         </SurfaceListCard>
     </TeamSection>

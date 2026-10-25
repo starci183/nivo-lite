@@ -33,7 +33,6 @@ export const AgentReplyCardBase = (props: AgentReplyCardBaseProps) => (
                 id="reply-timeout"
                 name="reply-timeout"
                 label={props.props.timeoutLabel}
-                variant="secondary"
                 hint={props.props.timeoutHint}
                 value={props.props.timeout}
                 isDisabled={props.props.isPending}
@@ -41,7 +40,7 @@ export const AgentReplyCardBase = (props: AgentReplyCardBaseProps) => (
             />
             <div className={ACTIONS}>
                 <Button
-                    variant="secondary"
+                    intent="neutral"
                     isPending={props.props.isPending}
                     isDisabled={!props.props.canSaveTimeout}
                     onPress={props.on.saveTimeout}
@@ -53,7 +52,6 @@ export const AgentReplyCardBase = (props: AgentReplyCardBaseProps) => (
                 id="holding-message"
                 name="holding-message"
                 label={props.props.holdingLabel}
-                variant="secondary"
                 hint={props.props.holdingHint}
                 placeholder={props.props.holdingPlaceholder}
                 value={props.props.holding}
@@ -62,7 +60,7 @@ export const AgentReplyCardBase = (props: AgentReplyCardBaseProps) => (
             />
             <div className={ACTIONS}>
                 <Button
-                    variant="secondary"
+                    intent="neutral"
                     isPending={props.props.isPending}
                     isDisabled={!props.props.canSaveHolding}
                     onPress={props.on.saveHolding}

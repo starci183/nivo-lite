@@ -39,20 +39,20 @@ const buildBrainLessonsState = (
         return t("mineDone", { n: mined.proposed, c: mined.corrections, k: mined.newCases })
     }
     const rowOf = (lesson: BrainLesson): KnowledgeRowView => {
-        const decide = (id: string, label: string, action: LessonAction, variant: "primary" | "ghost") => ({
+        const decide = (id: string, label: string, action: LessonAction, intent: "alternative" | "destructive") => ({
             id,
             label,
-            variant,
+            intent,
             onPress: () => desk.decide(lesson.id, action),
         })
         const approve =
             lesson.status === "proposed"
                 ? [
-                      decide("approve", t("apply"), "active", "primary"),
-                      decide("reject", t("reject"), "rejected", "ghost"),
+                      decide("approve", t("apply"), "active", "alternative"),
+                      decide("reject", t("reject"), "rejected", "alternative"),
                   ]
                 : []
-        const retire = lesson.status === "active" ? [decide("retire", t("retireLesson"), "retired", "ghost")] : []
+        const retire = lesson.status === "active" ? [decide("retire", t("retireLesson"), "retired", "destructive")] : []
         return {
             id: lesson.id,
             title: lesson.title,

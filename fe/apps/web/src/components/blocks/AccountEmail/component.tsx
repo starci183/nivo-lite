@@ -55,17 +55,16 @@ export const AccountEmailBase = (props: AccountEmailBaseProps) => (
                             name="email"
                             kind="email"
                             label={props.props.newEmailLabel}
-                            variant="secondary"
                             isRequired
                             isDisabled={props.props.isPending}
                             value={props.props.value}
                             onValueChange={props.on.setValue}
                         />
                         <div className={ACTIONS_CLASS_NAME}>
-                            <Button type="submit" variant="primary" isPending={props.props.isPending}>
+                            <Button type="submit" intent="commit" isPending={props.props.isPending}>
                                 {props.props.sendLabel}
                             </Button>
-                            <Button variant="outline" isDisabled={props.props.isPending} onPress={props.on.cancel}>
+                            <Button intent="neutral" isDisabled={props.props.isPending} onPress={props.on.cancel}>
                                 {props.props.cancelLabel}
                             </Button>
                         </div>
@@ -73,7 +72,7 @@ export const AccountEmailBase = (props: AccountEmailBaseProps) => (
                 </Form>
             ) : (
                 <div className={ACTIONS_CLASS_NAME}>
-                    <Button variant="secondary" isSkeleton={props.props.isLoading} onPress={props.on.startEdit}>
+                    <Button intent="neutral" isSkeleton={props.props.isLoading} onPress={props.on.startEdit}>
                         {props.props.changeLabel}
                     </Button>
                 </div>

@@ -166,7 +166,7 @@ const OverviewOwnerRow = ({ row, ...props }: OverviewOwnerRowProps) => (
             <>
                 {row.canDraft ? (
                     <Button
-                        variant="ghost"
+                        intent="neutral"
                         size="sm"
                         isPending={props.props.isDrafting}
                         onPress={() => props.on.draft(row.id)}
@@ -174,7 +174,7 @@ const OverviewOwnerRow = ({ row, ...props }: OverviewOwnerRowProps) => (
                         {props.props.draftLabel}
                     </Button>
                 ) : null}
-                <Button variant="outline" href={row.openHref}>
+                <Button intent="neutral" href={row.openHref}>
                     {row.openLabel}
                 </Button>
             </>

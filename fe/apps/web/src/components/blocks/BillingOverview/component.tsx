@@ -89,7 +89,7 @@ export const BillingOverviewBase = (props: BillingOverviewBaseProps) => {
         <PageContainer measure="product">
             <div className={PAGE_CLASS_NAME}>
                 <div>
-                    <Button variant="outline" size="sm" href={props.props.backHref}>
+                    <Button intent="neutral" size="sm" href={props.props.backHref}>
                         {props.props.backLabel}
                     </Button>
                 </div>

@@ -76,7 +76,13 @@ const logoOf = (props: VideoBrandCardBaseProps) => {
                     />
                 ) : null}
                 {props.props.canEdit && props.props.hasLogo ? (
-                    <Button size="sm" variant="ghost" isDisabled={props.props.pending} onPress={props.on.logoRemove}>
+                    <Button
+                        size="sm"
+                        intent="destructive"
+                        step="entry"
+                        isDisabled={props.props.pending}
+                        onPress={props.on.logoRemove}
+                    >
                         {props.props.logoRemove}
                     </Button>
                 ) : null}
@@ -95,7 +101,6 @@ export const VideoBrandCardBase = (props: VideoBrandCardBaseProps) => {
                     id="video-shop-name"
                     name="shopName"
                     label={props.props.shopNameLabel}
-                    variant="secondary"
                     value={props.props.shopName}
                     isDisabled={off}
                     onValueChange={props.on.shopName}
@@ -106,7 +111,6 @@ export const VideoBrandCardBase = (props: VideoBrandCardBaseProps) => {
                         name="primary"
                         label={props.props.primaryLabel}
                         hint={props.props.colorHint}
-                        variant="secondary"
                         value={props.props.primary}
                         isDisabled={off}
                         onValueChange={props.on.primary}
@@ -116,7 +120,6 @@ export const VideoBrandCardBase = (props: VideoBrandCardBaseProps) => {
                         name="secondary"
                         label={props.props.secondaryLabel}
                         hint={props.props.colorHint}
-                        variant="secondary"
                         value={props.props.secondary}
                         isDisabled={off}
                         onValueChange={props.on.secondary}
@@ -126,7 +129,6 @@ export const VideoBrandCardBase = (props: VideoBrandCardBaseProps) => {
                 <div className={BRAND_ROW}>
                     <Select
                         label={props.props.musicLabel}
-                        variant="secondary"
                         value={props.props.music}
                         isDisabled={off}
                         options={props.props.musics}
@@ -134,7 +136,6 @@ export const VideoBrandCardBase = (props: VideoBrandCardBaseProps) => {
                     />
                     <Select
                         label={props.props.voiceLabel}
-                        variant="secondary"
                         value={props.props.voice}
                         isDisabled={off}
                         options={props.props.voices}
@@ -146,7 +147,7 @@ export const VideoBrandCardBase = (props: VideoBrandCardBaseProps) => {
                 )}
                 {props.props.canEdit ? (
                     <div className={BRAND_ACTIONS}>
-                        <Button variant="primary" isPending={props.props.pending} onPress={props.on.save}>
+                        <Button intent="commit" isPending={props.props.pending} onPress={props.on.save}>
                             {props.props.saveLabel}
                         </Button>
                     </div>

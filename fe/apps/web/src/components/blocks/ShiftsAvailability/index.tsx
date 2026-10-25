@@ -81,7 +81,7 @@ export const ShiftsAvailability = () => {
                 switchLabel: t(form.available ? "canWork" : "cannotWork"),
                 switchOn: form.available,
                 submitLabel: t("availAddBtn"),
-                submitVariant: "outline",
+                submitIntent: "neutral",
                 isBusy,
                 canSubmit: staffId !== "",
                 rows: approved.map((row) => ({

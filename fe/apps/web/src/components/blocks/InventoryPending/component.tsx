@@ -1,5 +1,5 @@
 import { InventoryNotices } from "@/components/leaves/InventoryNotices"
-import { Button, ListRow, SectionHeader, SurfaceListCard, Text } from "@starci/grammar/common"
+import { Button, ListRow, SectionHeader, SurfaceCard, SurfaceListCard, Text } from "@starci/grammar/common"
 import { QUOTE_CLASS_NAME, ACTIONS_CLASS_NAME, STACK_CLASS_NAME } from "./classNames"
 
 /** One decision that waits for the owner, every word already resolved. */
@@ -43,7 +43,7 @@ export const InventoryPendingBase = (props: InventoryPendingBaseProps) => {
                         actions={
                             <div className={ACTIONS_CLASS_NAME}>
                                 <Button
-                                    variant="primary"
+                                    intent="alternative"
                                     size="sm"
                                     isDisabled={p.isPending}
                                     onPress={() => on.approve(row.id)}
@@ -51,7 +51,7 @@ export const InventoryPendingBase = (props: InventoryPendingBaseProps) => {
                                     {row.approveLabel}
                                 </Button>
                                 <Button
-                                    variant="outline"
+                                    intent="alternative"
                                     size="sm"
                                     isDisabled={p.isPending}
                                     onPress={() => on.reject(row.id)}
@@ -62,9 +62,11 @@ export const InventoryPendingBase = (props: InventoryPendingBaseProps) => {
                         }
                     >
                         {row.draft === null ? null : (
-                            <div className={QUOTE_CLASS_NAME}>
-                                <Text size="sm">{row.draft}</Text>
-                            </div>
+                            <SurfaceCard ariaLabel={row.summary}>
+                                <div className={QUOTE_CLASS_NAME}>
+                                    <Text size="sm">{row.draft}</Text>
+                                </div>
+                            </SurfaceCard>
                         )}
                     </ListRow>
                 ))}

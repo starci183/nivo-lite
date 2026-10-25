@@ -12,9 +12,6 @@ export const BOARD_FRAME_CLASS_NAME = cn("hidden", "md:block")
 /** One lane column: a fixed 15rem track on narrow screens, an equal share on wide ones. */
 export const LANE_CLASS_NAME = cn("flex", "w-60", "shrink-0", "flex-col", "xl:w-auto", "xl:min-w-0", "xl:flex-1")
 
-/** The lane a card is dragged over: the focus outline marks the drop target (no Grammar drop-target state). */
-export const LANE_OVER_CLASS_NAME = cn(LANE_CLASS_NAME, "outline-2", "outline-accent")
-
 /** The phone pipeline: stages stacked as a list. */
 export const LIST_CLASS_NAME = cn("flex", "flex-col", "gap-4", "md:hidden")
 

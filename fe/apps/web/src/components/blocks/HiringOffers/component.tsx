@@ -45,7 +45,7 @@ export const HiringOffersBase = (props: HiringOffersBaseProps) => {
             <div className={HEAD_CLASS_NAME}>
                 <Heading level={2}>{say("offersTitle")}</Heading>
                 {approveLabel === null ? null : (
-                    <Button variant="primary" href={decisionsHref}>
+                    <Button intent="commit" href={decisionsHref}>
                         {approveLabel}
                     </Button>
                 )}
@@ -76,22 +76,23 @@ export const HiringOffersBase = (props: HiringOffersBaseProps) => {
                         description={row.meta}
                         actions={
                             <div className={ACTIONS_CLASS_NAME}>
-                                <Button variant="tertiary" size="sm" onPress={() => on.open(row.candidateId)}>
+                                <Button intent="dismiss" size="sm" onPress={() => on.open(row.candidateId)}>
                                     {say("pipeOpen")}
                                 </Button>
                                 {row.isWaiting ? (
-                                    <Button variant="primary" size="sm" href={decisionsHref}>
+                                    <Button intent="alternative" size="sm" href={decisionsHref}>
                                         {say("offersApprove")}
                                     </Button>
                                 ) : null}
                                 {row.copyLabel === null ? null : (
-                                    <Button variant="secondary" size="sm" onPress={() => on.copy(row.id)}>
+                                    <Button intent="alternative" size="sm" onPress={() => on.copy(row.id)}>
                                         {row.copyLabel}
                                     </Button>
                                 )}
                                 {row.canCancel ? (
                                     <Button
-                                        variant="ghost"
+                                        intent="destructive"
+                                        step="entry"
                                         size="sm"
                                         isDisabled={isBusy}
                                         onPress={() => on.cancel(row.id)}

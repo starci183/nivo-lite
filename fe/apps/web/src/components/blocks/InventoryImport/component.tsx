@@ -55,7 +55,6 @@ export const InventoryImportBase = (props: InventoryImportBaseProps) => {
                         {p.pasteHelp}
                     </Text>
                     <Textarea
-                        variant="secondary"
                         label={p.pasteLabel}
                         isLabelHidden
                         rows={8}
@@ -66,7 +65,7 @@ export const InventoryImportBase = (props: InventoryImportBaseProps) => {
                     <InventoryNotices error={p.error} notice={p.notice} />
                     <div>
                         <Button
-                            variant="primary"
+                            intent="commit"
                             isPending={p.isPending}
                             isDisabled={p.text.trim() === ""}
                             onPress={on.paste}
@@ -92,7 +91,7 @@ export const InventoryImportBase = (props: InventoryImportBaseProps) => {
                         description={template.description}
                         actions={
                             <Button
-                                variant="outline"
+                                intent="neutral"
                                 size="sm"
                                 isDisabled={p.isPending}
                                 onPress={() => on.load(template.key)}

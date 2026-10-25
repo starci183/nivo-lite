@@ -30,7 +30,7 @@ export const LeadsHeadingBase = (props: LeadsHeadingBaseProps) => {
                 description={p.description}
                 action={
                     p.isFormOpen ? undefined : (
-                        <Button variant="primary" href={p.newLeadHref}>
+                        <Button intent="commit" href={p.newLeadHref}>
                             {p.newLeadLabel}
                         </Button>
                     )

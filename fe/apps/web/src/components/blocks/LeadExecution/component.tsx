@@ -78,7 +78,7 @@ export const LeadExecutionBase = (props: LeadExecutionBaseProps) => {
                                         {p.draftingText}
                                     </Text>
                                     <Button
-                                        variant="primary"
+                                        intent="commit"
                                         isSkeleton={isSkeleton}
                                         isPending={p.isPending}
                                         isDisabled={!view.canDraft}

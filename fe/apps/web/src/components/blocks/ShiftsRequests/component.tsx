@@ -5,13 +5,12 @@ import {
     Badge,
     Button,
     EmptyNotice,
-    ListItem,
+    ListRow,
     SectionHeader,
     SurfaceCard,
     SurfaceListCard,
 } from "@starci/grammar/common"
-import { ShiftsLine } from "@/components/composites/ShiftsLine"
-import { ACTIONS_CLASS_NAME, PANEL_CLASS_NAME, ROW_CLASS_NAME, SECTION_CLASS_NAME } from "./classNames"
+import { ACTIONS_CLASS_NAME, PANEL_CLASS_NAME, SECTION_CLASS_NAME } from "./classNames"
 
 /** Which decision a row takes: the agent work item behind it, or an availability change. */
 type DecisionKind = "item" | "availability"
@@ -68,15 +67,17 @@ export const ShiftsRequestsBase = (props: ShiftsRequestsBaseProps) => (
                     <SectionHeader level={2} title={section.title} description={section.hint || undefined} />
                     <SurfaceListCard ariaLabel={section.title}>
                         {section.rows.map((row) => (
-                            <ListItem key={row.id} className={ROW_CLASS_NAME}>
-                                <ShiftsLine title={row.title} notes={row.notes} />
-                                <div className={ACTIONS_CLASS_NAME}>
-                                    <Badge tone={row.tone}>{row.badge}</Badge>
-                                    {row.decision === null ? null : (
-                                        <>
+                            <ListRow
+                                key={row.id}
+                                title={row.title}
+                                description={row.notes.filter((note) => note !== "").join(" · ")}
+                                badges={<Badge tone={row.tone}>{row.badge}</Badge>}
+                                actions={
+                                    row.decision === null ? null : (
+                                        <div className={ACTIONS_CLASS_NAME}>
                                             <Button
                                                 size="sm"
-                                                variant="primary"
+                                                intent="alternative"
                                                 isDisabled={props.props.isBusy}
                                                 onPress={() => {
                                                     if (row.decision !== null)
@@ -87,7 +88,7 @@ export const ShiftsRequestsBase = (props: ShiftsRequestsBaseProps) => (
                                             </Button>
                                             <Button
                                                 size="sm"
-                                                variant="outline"
+                                                intent="alternative"
                                                 isDisabled={props.props.isBusy}
                                                 onPress={() => {
                                                     if (row.decision !== null)
@@ -96,10 +97,10 @@ export const ShiftsRequestsBase = (props: ShiftsRequestsBaseProps) => (
                                             >
                                                 {props.props.declineLabel}
                                             </Button>
-                                        </>
-                                    )}
-                                </div>
-                            </ListItem>
+                                        </div>
+                                    )
+                                }
+                            />
                         ))}
                     </SurfaceListCard>
                 </div>

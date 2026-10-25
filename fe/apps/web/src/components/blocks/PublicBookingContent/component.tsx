@@ -34,7 +34,7 @@ export const PublicBookingContentBase = (props: PublicBookingContentBaseProps) =
                 <SurfaceCard ariaLabel={props.props.notFoundTitle}>
                     <Heading level={1}>{props.props.notFoundTitle}</Heading>
                     <Text tone="muted">{props.props.notFoundText}</Text>
-                    <Button variant="secondary" href={APP_ROUTES.dashboard}>
+                    <Button intent="neutral" href={APP_ROUTES.dashboard}>
                         {props.props.homeLabel}
                     </Button>
                 </SurfaceCard>

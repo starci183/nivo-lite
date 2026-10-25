@@ -40,7 +40,7 @@ export const ContentQueuePanelBase = (props: ContentQueuePanelBaseProps) => {
             title={item.title}
             badges={<ContentChannelBadges labels={item.channels} />}
             actions={
-                <Button variant="primary" size="sm" onPress={() => props.on.open(item.id)}>
+                <Button intent="alternative" size="sm" onPress={() => props.on.open(item.id)}>
                     {t("postedTitle")}
                 </Button>
             }

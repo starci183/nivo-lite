@@ -24,10 +24,10 @@ export const OverviewHeaderBase = (props: OverviewHeaderBaseProps) => (
         description={props.props.description}
         action={
             <div className={ACTIONS_CLASS_NAME}>
-                <Button variant="outline" href={props.props.openOfficeHref}>
+                <Button intent="neutral" href={props.props.openOfficeHref}>
                     {props.props.openOfficeLabel}
                 </Button>
-                <Button variant={props.props.newLeadIsPrimary ? "primary" : "outline"} href={props.props.newLeadHref}>
+                <Button intent={props.props.newLeadIsPrimary ? "commit" : "neutral"} href={props.props.newLeadHref}>
                     {props.props.newLeadLabel}
                 </Button>
             </div>
