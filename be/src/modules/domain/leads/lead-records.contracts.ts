@@ -3,6 +3,18 @@ import type { LeadRecordRow } from "./persistence/lead-records.rows"
 /** A lead, or null when the workspace has no such lead. */
 export type OptionalLeadRecord = LeadRecordRow | null
 
+/** Nonempty public API facts to patch on an existing customer inside its request transaction. */
+export interface PublicLeadFactsPatch {
+    /** The workspace that owns the customer. */
+    readonly workspaceId: string
+    /** The existing customer. */
+    readonly leadId: string
+    /** A nonempty company replaces the recorded company. */
+    readonly company: string
+    /** A nonempty supplied need replaces the recorded need; null preserves it. */
+    readonly need: string | null
+}
+
 /** What identifies the customer an input belongs to. */
 export interface LeadMatch {
     /** The workspace. */

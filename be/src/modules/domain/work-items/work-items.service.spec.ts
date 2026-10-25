@@ -124,6 +124,40 @@ describe("WorkItemsService persistence", () => {
         expect(await service.insert(newItem)).toBeNull()
     })
 
+    it("inserts and reads the durable item through the caller's transaction", async () => {
+        const primary = mockEntityManager()
+        const tx = mockEntityManager({
+            query: [
+                [INSERT_WORK_ITEM, [rowOf()]],
+                [FIND_WORK_ITEM_BY_DEDUPE, [rowOf()]],
+            ],
+        })
+        const service = await build(primary)
+
+        expect((await service.insert(newItem, tx))?.id).toBe("item-1")
+        expect((await service.findByDedupe("ws-1", "send_quote:lead-1", tx))?.id).toBe("item-1")
+
+        expect(primary.query).not.toHaveBeenCalled()
+        expect(tx.query).toHaveBeenCalledWith(INSERT_WORK_ITEM, [
+            "ws-1",
+            null,
+            0,
+            "sales",
+            "send_quote",
+            "lead",
+            "lead-1",
+            "lead-1",
+            null,
+            null,
+            "send_quote:lead-1",
+            JSON.stringify(proposal),
+            null,
+        ])
+        expect(tx.query).toHaveBeenCalledWith(FIND_WORK_ITEM_BY_DEDUPE, ["ws-1", "send_quote:lead-1"])
+    })
+})
+
+describe("WorkItemsService listing", () => {
     it.each([
         { limit: undefined, expected: 400 },
         { limit: 0, expected: 1 },

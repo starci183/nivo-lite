@@ -13,8 +13,8 @@ export class ModuleCatalogService {
     constructor(@InjectPrimaryEntityManager() private readonly entityManager: EntityManager) {}
 
     /** The module with that key, or null when the registry has none. */
-    async entryOf(moduleKey: string): Promise<OptionalModuleEntry> {
-        const row = (await this.entityManager.query<Array<ModuleRow>>(FIND_MODULE, [moduleKey]))[0]
+    async entryOf(moduleKey: string, manager: EntityManager = this.entityManager): Promise<OptionalModuleEntry> {
+        const row = (await manager.query<Array<ModuleRow>>(FIND_MODULE, [moduleKey]))[0]
         return row === undefined ? null : toModuleEntry(row)
     }
 
@@ -24,14 +24,14 @@ export class ModuleCatalogService {
     }
 
     /** The module's full name in the language; the key itself when the module or its name is unknown. */
-    async nameOf(moduleKey: string, locale: Locale): Promise<string> {
-        const name = (await this.entryOf(moduleKey))?.name[locale] ?? ""
+    async nameOf(moduleKey: string, locale: Locale, manager: EntityManager = this.entityManager): Promise<string> {
+        const name = (await this.entryOf(moduleKey, manager))?.name[locale] ?? ""
         return name === "" ? moduleKey : name
     }
 
     /** The authority action with that key, or null when the registry has none. */
-    async actionOf(action: string): Promise<OptionalActionEntry> {
-        const row = (await this.entityManager.query<Array<ActionRow>>(FIND_ACTION, [action]))[0]
+    async actionOf(action: string, manager: EntityManager = this.entityManager): Promise<OptionalActionEntry> {
+        const row = (await manager.query<Array<ActionRow>>(FIND_ACTION, [action]))[0]
         return row === undefined ? null : toActionEntry(row)
     }
 }

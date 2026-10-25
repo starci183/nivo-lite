@@ -36,6 +36,7 @@ import {
 } from "./work-engine.decorators"
 import { WorkPerformersService } from "./work-performers.service"
 import { WorkRecorderService } from "./work-recorder.service"
+import { DurableWorkService } from "./durable-work.service"
 
 @Module({})
 /**
@@ -78,6 +79,7 @@ export class DecisionsModule extends ConfigurableModuleClass {
                 CommandPlannerService,
                 DecisionsService,
                 EvidenceService,
+                DurableWorkService,
                 ModuleCatalogService,
                 WorkApprovalService,
                 WorkChainService,
@@ -99,6 +101,7 @@ export class DecisionsModule extends ConfigurableModuleClass {
                 DecisionJobsService,
                 DecisionsService,
                 EvidenceService,
+                DurableWorkService,
                 ModuleCatalogService,
                 WorkDecisionService,
                 WorkDrainService,

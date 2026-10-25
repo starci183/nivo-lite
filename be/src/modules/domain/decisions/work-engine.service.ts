@@ -50,6 +50,7 @@ import { WorkIntakeService } from "./work-intake.service"
 import { InjectWorkPerformerRegistry } from "./work-performer.port"
 import type { WorkPerformerRegistry } from "./work-performer.port"
 import { WorkRecorderService } from "./work-recorder.service"
+import { processOptionsOf, proposalWithOptions } from "./work-options.policy"
 
 /** The decider of every automatic path. */
 const NIVO_BY: Finisher = { name: "NIVO", kind: "policy" }
@@ -178,14 +179,15 @@ export class WorkEngineService {
     }
 
     /** One pass of the gate over a claimed item: prepare, judge, then perform or ask. Any failure fails the item. */
-    private async process(ctx: WorkContext, claimed: WorkItem, opts: ProcessOptions): Promise<WorkItem> {
+    private async process(ctx: WorkContext, claimed: WorkItem, options: ProcessOptions): Promise<WorkItem> {
+        const opts = processOptionsOf(claimed.proposal, options)
         let current = claimed
         try {
             const performer = this.registry.performerOf(current.action)
             let proposal = current.proposal
             if (opts.preset !== true) {
                 const prepared = await this.prepare(ctx, performer, current)
-                proposal = prepared.proposal
+                proposal = proposalWithOptions(prepared.proposal, opts)
                 current = await this.items.savePrepared(current.id, {
                     proposal,
                     subjectType: prepared.patch?.subject_type ?? null,
@@ -337,7 +339,14 @@ export class WorkEngineService {
             before: item.proposal,
         }
         try {
-            return await this.finish(ctx, this.registry.performerOf(item.action), item, reviewed, plan, false)
+            return await this.finish(
+                ctx,
+                this.registry.performerOf(item.action),
+                item,
+                reviewed,
+                plan,
+                processOptionsOf(item.proposal).noChain === true,
+            )
         } catch (cause) {
             await this.fail(ctx, item, cause)
             throw cause

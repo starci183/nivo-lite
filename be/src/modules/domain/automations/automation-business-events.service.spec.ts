@@ -61,7 +61,9 @@ describe("AutomationBusinessEventsService", () => {
 
         expect(tx.rollbacks).toBe(1)
     })
+})
 
+describe("AutomationBusinessEventsService publication", () => {
     it("publishes any business event under its own name", async () => {
         const { outbox, webhooks, events } = await build()
         const data = { order_id: "o-1", order_no: "DH-1" }
@@ -83,6 +85,33 @@ describe("AutomationBusinessEventsService", () => {
         expect(webhooks.publish).toHaveBeenCalledWith(
             { workspaceId: "ws-1", event: "order.confirmed", data, dedupe: "order.confirmed:o-1" },
             expect.anything(),
+        )
+    })
+
+    it("keeps a caller's domain transaction for both publications without opening another", async () => {
+        const { tx, outbox, webhooks, events } = await build()
+        const data = { lead_id: "lead-1" }
+        const manager = mockEntityManager()
+
+        await events.publish("ws-1", "deal.won", data, "deal.won:lead-1", manager)
+
+        expect(tx.em.transaction).not.toHaveBeenCalled()
+        expect(tx.commits).toBe(0)
+        expect(outbox.jobsOf(AUTOMATION_QUEUE)).toEqual([
+            {
+                queue: AUTOMATION_QUEUE,
+                payload: {
+                    kind: "business_event",
+                    event: "deal.won",
+                    workspaceId: "ws-1",
+                    dedupe: "deal.won:lead-1",
+                    data,
+                },
+            },
+        ])
+        expect(webhooks.publish).toHaveBeenCalledWith(
+            { workspaceId: "ws-1", event: "deal.won", data, dedupe: "deal.won:lead-1" },
+            manager,
         )
     })
 })

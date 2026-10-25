@@ -1,4 +1,5 @@
 import { Injectable } from "@nestjs/common"
+import type { EntityManager } from "typeorm"
 import { WorkItemsService, toProposal } from "@modules/domain/work-items"
 import { InjectMessageCatalog } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
@@ -7,6 +8,7 @@ import { DecisionsError, DecisionsErrorCode } from "./errors/decisions.error"
 import { EvidenceService } from "./evidence.service"
 import { ModuleCatalogService } from "./module-catalog.service"
 import type { IntakeResult } from "./work-engine.contracts"
+import { proposalWithOptions } from "./work-options.policy"
 
 @Injectable()
 /**
@@ -23,42 +25,49 @@ export class WorkIntakeService {
     ) {}
 
     /** Inserts the item; `onInserted` runs once, only when this call really inserted the row. */
-    async insert(ctx: WorkContext, spec: WorkSpec): Promise<IntakeResult> {
-        const entry = await this.modules.actionOf(spec.action)
+    async insert(ctx: WorkContext, spec: WorkSpec, manager?: EntityManager): Promise<IntakeResult> {
+        const entry = await this.modules.actionOf(spec.action, manager)
         if (entry === null) {
             throw new DecisionsError({ code: DecisionsErrorCode.UnknownAction, params: { action: spec.action } })
         }
-        const item = await this.items.insert({
-            workspaceId: ctx.workspaceId,
-            chainId: spec.chainId ?? null,
-            depth: spec.depth ?? 0,
-            department: entry.moduleKey,
-            action: spec.action,
-            subjectType: spec.subject_type,
-            subjectId: spec.subject_id ?? null,
-            leadId: spec.lead_id ?? null,
-            inboundEventId: spec.inbound_event_id ?? null,
-            parentId: spec.parent_id ?? null,
-            dedupeKey: spec.dedupeKey,
-            proposal: toProposal(spec.seed ?? {}),
-            installationId: spec.installationId ?? null,
-        })
-        if (item === null) return { item: await this.existing(ctx, spec), created: false }
+        const item = await this.items.insert(
+            {
+                workspaceId: ctx.workspaceId,
+                chainId: spec.chainId ?? null,
+                depth: spec.depth ?? 0,
+                department: entry.moduleKey,
+                action: spec.action,
+                subjectType: spec.subject_type,
+                subjectId: spec.subject_id ?? null,
+                leadId: spec.lead_id ?? null,
+                inboundEventId: spec.inbound_event_id ?? null,
+                parentId: spec.parent_id ?? null,
+                dedupeKey: spec.dedupeKey,
+                proposal: toProposal(proposalWithOptions(spec.seed ?? {}, spec)),
+                installationId: spec.installationId ?? null,
+            },
+            manager,
+        )
+        if (item === null) return { item: await this.existing(ctx, spec, manager), created: false }
         if (spec.onInserted !== undefined) await spec.onInserted(item)
         return { item, created: true }
     }
 
-    private async existing(ctx: WorkContext, spec: WorkSpec): Promise<WorkItem> {
-        const item = await this.items.findByDedupe(ctx.workspaceId, spec.dedupeKey)
+    private async existing(ctx: WorkContext, spec: WorkSpec, manager?: EntityManager): Promise<WorkItem> {
+        const item = await this.items.findByDedupe(ctx.workspaceId, spec.dedupeKey, manager)
         if (item === null) throw new DecisionsError({ code: DecisionsErrorCode.NotFound })
-        await this.evidence.log(ctx, {
-            lead_id: item.lead_id,
-            work_item_id: item.id,
-            kind: "core.duplicate_blocked",
-            actor: "NIVO",
-            summary: this.catalog.get("engine.duplicate", {}, ctx.locale),
-            evidence: spec.dedupeKey,
-        })
+        await this.evidence.log(
+            ctx,
+            {
+                lead_id: item.lead_id,
+                work_item_id: item.id,
+                kind: "core.duplicate_blocked",
+                actor: "NIVO",
+                summary: this.catalog.get("engine.duplicate", {}, ctx.locale),
+                evidence: spec.dedupeKey,
+            },
+            manager,
+        )
         return item
     }
 }

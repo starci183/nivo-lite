@@ -6,6 +6,7 @@ import type { Performed, Prepared, Proposal, WorkContext, WorkItem, WorkPerforme
 import { AgentsService } from "@modules/domain/agents"
 import { InboundEventsService } from "@modules/domain/inbound-events"
 import { LeadRecordsService, contactParts } from "@modules/domain/leads"
+import { PublicLeadCompletionService } from "@modules/domain/public-api"
 import { ResponsibilityJournalService } from "@modules/domain/responsibilities"
 import { PerformerKitService } from "./performer-kit.service"
 import { leadHref, textOf } from "./performer.policy"
@@ -22,6 +23,7 @@ export class HandoffLeadPerformerService implements WorkPerformer {
         private readonly responsibilities: ResponsibilityJournalService,
         private readonly evidence: EvidenceService,
         private readonly events: BusinessEventsService,
+        private readonly apiCompletion: PublicLeadCompletionService,
     ) {}
 
     /** The summary the owner reads for the handoff. */
@@ -41,13 +43,16 @@ export class HandoffLeadPerformerService implements WorkPerformer {
         const phone = contactParts(textOf(fields.phone)).phone ?? contact.phone
         const email = contactParts(textOf(fields.email)).email ?? contact.email
         const channel = textOf(fields.channel_label) === "" ? "—" : textOf(fields.channel_label)
-        const known = await this.leads.match({
-            workspaceId: ctx.workspaceId,
-            phone,
-            email,
-            name: textOf(fields.contact_name),
-            channel,
-        })
+        const known =
+            item.lead_id === null
+                ? await this.leads.match({
+                      workspaceId: ctx.workspaceId,
+                      phone,
+                      email,
+                      name: textOf(fields.contact_name),
+                      channel,
+                  })
+                : await this.leads.require(ctx.workspaceId, item.lead_id)
         const lead =
             known ??
             (await this.leads.capture({
@@ -71,6 +76,7 @@ export class HandoffLeadPerformerService implements WorkPerformer {
             await this.conversations.attachLead(ctx.workspaceId, textOf(fields.conversation_id), lead.id)
         }
         await this.responsibilities.ensureFor(ctx, lead.id)
+        await this.apiCompletion.complete(ctx, item, lead.id, proposal, known !== null)
         const key = known === null ? "handoffDone" : "leadMatched"
         return {
             summary: this.kit.text(ctx, key, { name: lead.contact_name }),

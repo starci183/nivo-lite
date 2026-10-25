@@ -23,6 +23,16 @@ export interface ProposalCandidate {
     readonly amount_vnd: number
 }
 
+/** Durable execution choices supplied by a work producer, outside the editable proposal fields. */
+export interface WorkExecutionOptions {
+    /** Use the supplied proposal without preparing another one. */
+    readonly preset?: boolean | undefined
+    /** Finish this item without starting the next action. */
+    readonly noChain?: boolean | undefined
+    /** Ask for approval even when the authority rule permits automatic work. */
+    readonly forceAsk?: ReasonCode | undefined
+}
+
 /** What an agent proposes to do: the summary, an optional draft and the structured fields the gate and the performer read. */
 export interface Proposal {
     /** One sentence for the owner. */
@@ -39,6 +49,8 @@ export interface Proposal {
     readonly outcome?: "clear" | "unclear"
     /** The invoices a payment may settle. */
     readonly candidates?: ReadonlyArray<ProposalCandidate> | undefined
+    /** The producer's execution choices, retained across a durable handoff and approval. */
+    readonly execution?: WorkExecutionOptions | undefined
 }
 
 /** A staff id, null when the assignment is cleared, or absent when the caller omitted it. */
@@ -228,4 +240,6 @@ export interface StoredProposal {
     readonly outcome?: "clear" | "unclear"
     /** The invoices a payment may settle. */
     readonly candidates?: ReadonlyArray<ProposalCandidate> | undefined
+    /** The producer's execution choices, absent on older proposals. */
+    readonly execution?: WorkExecutionOptions | undefined
 }

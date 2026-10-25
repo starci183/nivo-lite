@@ -23,8 +23,9 @@ LIMIT 1`
  * suffix, or the prefix and a fresh id when the suffix is empty. Answers the request, the customer a processed hand-over created
  * and whether this call wrote the row ($1 workspace, $2 key, $3 kind, $4 dedupe prefix, $5 dedupe suffix or empty, $6 body json).
  */
-export const INSERT_REQUEST = sql`INSERT INTO public.public_api (workspace_id, key_id, kind, dedupe_key, payload)
-VALUES ($1, $2, $3, $4::text || COALESCE(NULLIF($5::text, ''), gen_random_uuid()::text), $6::jsonb)
+export const INSERT_REQUEST = sql`INSERT INTO public.public_api (workspace_id, key_id, kind, dedupe_key, payload, need_supplied)
+VALUES ($1, $2, $3, $4::text || COALESCE(NULLIF($5::text, ''), gen_random_uuid()::text), $6::jsonb,
+    ($6::jsonb ->> 'needSupplied')::boolean)
 ON CONFLICT (workspace_id, dedupe_key) DO UPDATE SET duplicates = public.public_api.duplicates + 1
 RETURNING id, lead_id, (xmax = 0) AS inserted`
 

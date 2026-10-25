@@ -1,4 +1,4 @@
-import { builder, mock, mockEntityManager } from "@starci/jest-preset"
+import { mock, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { Test } from "@nestjs/testing"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
@@ -7,7 +7,7 @@ import type { MessageCatalog } from "@modules/platform/i18n"
 import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { CommandPlannerService } from "./command-planner.service"
-import type { CommandRefusal, ModuleEntry, SendCommandInput, WorkContext, WorkItem } from "./decisions.contracts"
+import type { CommandRefusal, SendCommandInput, WorkItem } from "./decisions.contracts"
 import { DecisionsError, DecisionsErrorCode } from "./errors/decisions.error"
 import { EvidenceService } from "./evidence.service"
 import { ModuleCatalogService } from "./module-catalog.service"
@@ -23,76 +23,27 @@ import {
 } from "./persistence/command-bus.sql"
 import type { CommandPlan, PlannedCommand } from "./work-engine.contracts"
 import { WorkEngineLogEvent } from "./work-engine.log-events"
+import {
+    ctx,
+    AGENT_ID,
+    CONVERSATION_ID,
+    MODULES,
+    plannerText,
+    inputOf,
+    replyOf,
+    rowOf,
+} from "@tests/fixtures/builders/command-planner.builder"
 
-const ctx: WorkContext = { workspaceId: "ws-1", actor: "An", locale: "en" }
-const AGENT_ID = "2f5f2c0e-1a2b-4c3d-8e9f-0a1b2c3d4e5f"
-const CONVERSATION_ID = "3f5f2c0e-1a2b-4c3d-8e9f-0a1b2c3d4e5f"
 type Queries = ReadonlyArray<readonly [string, unknown]>
-
-const commandOf = builder<ModuleEntry["accepts"][number]>({
-    command: "classify_lead",
-    action: "classify_lead",
-    subjectType: "lead",
-    requiredFields: ["lead_id"],
-    description: { vi: "phan loai", en: "classify" },
-})
-
-const moduleOf = builder<ModuleEntry>({
-    key: "sales",
-    audience: "internal",
-    multiInstance: false,
-    name: { vi: "Ban hang", en: "Sales" },
-    accepts: [commandOf()],
-})
-
-const chatbot = moduleOf({
-    key: "chatbot",
-    multiInstance: true,
-    name: { vi: "Chatbot", en: "Chatbot" },
-    accepts: [
-        commandOf({
-            command: "reply_customer",
-            action: "reply_customer",
-            subjectType: "conversation",
-            requiredFields: [],
-            description: { vi: "tra loi", en: "reply" },
-        }),
-    ],
-})
-
-const MODULES: Readonly<Record<string, ModuleEntry>> = { sales: moduleOf(), chatbot }
-
-const TEXTS: Readonly<Record<string, string>> = {
-    "command.sender.owner": "Owner",
-    "command.sender.inbound": "Customer",
-    "command.mirror": "@{{to}} <- {{from}}: {{what}}",
-    "command.mirror.subject": "@{{to}} <- {{from}}: {{what}} for {{subject}}",
-    "command.subject.order": "order",
-    "command.subject.lead": "customer",
-}
-
-const inputOf = builder<SendCommandInput>({
-    from: "owner",
-    to: "sales",
-    command: "classify_lead",
-    payload: { subject_type: "lead", subject_id: "lead-1", lead_id: "lead-1" },
-    reason: "handoff",
-})
-
-const replyOf = builder<SendCommandInput>({
-    from: "owner",
-    to: "chatbot",
-    command: "reply_customer",
-    payload: { subject_type: "conversation", subject_id: CONVERSATION_ID },
-    reason: "handoff",
-})
-
-const rowOf = (): WorkItem => mock<WorkItem>({ id: "item-1", lead_id: "lead-1" })
 
 const build = async (em: MockEntityManager) => {
     const log = jest.fn().mockResolvedValue(undefined)
     const post = jest.fn<Promise<void>, Parameters<OfficeLinesService["post"]>>().mockResolvedValue(undefined)
     const error = jest.fn<void, Parameters<Logger["error"]>>()
+    const modules = mock<ModuleCatalogService>({
+        entryOf: jest.fn((key: string) => Promise.resolve(MODULES[key] ?? null)),
+        nameOf: jest.fn((key: string) => Promise.resolve(MODULES[key]?.name.en ?? key)),
+    })
     const moduleRef = await Test.createTestingModule({
         providers: [
             CommandPlannerService,
@@ -101,26 +52,18 @@ const build = async (em: MockEntityManager) => {
             {
                 provide: MESSAGE_CATALOG,
                 useValue: mock<MessageCatalog>({
-                    get: jest.fn((key: string, params: Readonly<Record<string, string | number>>) =>
-                        Object.entries(params).reduce(
-                            (text, [name, value]) => text.replaceAll(`{{${name}}}`, String(value)),
-                            TEXTS[key] ?? key,
-                        ),
-                    ),
+                    get: jest.fn(plannerText),
                 }),
             },
             {
                 provide: ModuleCatalogService,
-                useValue: mock<ModuleCatalogService>({
-                    entryOf: jest.fn((key: string) => Promise.resolve(MODULES[key] ?? null)),
-                    nameOf: jest.fn((key: string) => Promise.resolve(MODULES[key]?.name.en ?? key)),
-                }),
+                useValue: modules,
             },
             { provide: EvidenceService, useValue: mock<EvidenceService>({ log }) },
             { provide: OfficeLinesService, useValue: mock<OfficeLinesService>({ post }) },
         ],
     }).compile()
-    return { service: moduleRef.get(CommandPlannerService), em, log, post, error }
+    return { service: moduleRef.get(CommandPlannerService), em, log, post, error, modules }
 }
 
 const planned = (plan: CommandPlan): PlannedCommand => {
@@ -179,19 +122,67 @@ const refusalCases = [
 ]
 
 describe("CommandPlannerService", () => {
+    describe("a producer's domain transaction", () => {
+        it("keeps command lookups, mirror and evidence in the supplied transaction", async () => {
+            const em = mockEntityManager()
+            const manager = mockEntityManager({
+                query: [
+                    [FIND_SENDER_AGENT, [{ name: "Bot", module: "chatbot", installation_name: "Main" }]],
+                    [FIND_PARENT_POSITION, [{ id: "parent-1", chain_id: "chain-1", depth: 0 }]],
+                    [CHAIN_REPEATS_COMMAND, [{ repeats: false }]],
+                    [FIND_GIVEN_INSTALLATION, [{ id: "inst-1", name: "Main" }]],
+                    [FIND_SUBJECT_LABEL, [{ label: "Lan" }]],
+                ],
+            })
+            const built = await build(em)
+            const plan = planned(
+                await built.service.plan(
+                    ctx,
+                    replyOf({
+                        from: AGENT_ID,
+                        parentId: "parent-1",
+                        installationId: "inst-1",
+                    }),
+                    manager,
+                ),
+            )
+
+            await plan.spec.onInserted?.(rowOf())
+
+            expect(em.query).not.toHaveBeenCalled()
+            expect(manager.query).toHaveBeenCalledTimes(5)
+            expect(built.modules.entryOf).toHaveBeenCalledWith("chatbot", manager)
+            expect(built.modules.nameOf).toHaveBeenCalledWith("chatbot", "en", manager)
+            expect(built.post).toHaveBeenCalledWith(ctx, expect.objectContaining({ command: true }), manager)
+            expect(built.log).toHaveBeenCalledWith(ctx, expect.objectContaining({ kind: "command.sent" }), manager)
+        })
+
+        it("records a refused command in the supplied transaction", async () => {
+            const built = await build(mockEntityManager())
+            const manager = mockEntityManager()
+
+            expect((await built.service.plan(ctx, inputOf({ to: "missing" }), manager)).ok).toBe(false)
+
+            expect(built.log).toHaveBeenCalledWith(ctx, expect.objectContaining({ kind: "command.refused" }), manager)
+        })
+    })
+})
+
+describe("CommandPlannerService", () => {
     describe("refusals", () => {
         it.each(refusalCases)("refuses %s", async (_name, input, expected, queries) => {
             const built = await build(mockEntityManager({ query: queries }))
             expect(await built.service.plan(ctx, input)).toEqual(expected)
             expect(built.log).toHaveBeenCalledTimes(1)
             const evidence = { kind: "command.refused", actor: "NIVO", evidence: expected.detail }
-            expect(built.log).toHaveBeenCalledWith(ctx, expect.objectContaining(evidence))
+            expect(built.log).toHaveBeenCalledWith(ctx, expect.objectContaining(evidence), built.em)
             if (input.to === "mystery")
                 expect(built.log).toHaveBeenCalledWith(
                     ctx,
                     expect.objectContaining({
                         summary: "owner -> mystery.classify_lead: unknown_module",
                     }),
+                    built.em,
                 )
             if (expected.refused === "cycle")
                 expect(built.em.query).toHaveBeenCalledWith(CHAIN_REPEATS_COMMAND, [
@@ -396,20 +387,28 @@ describe("CommandPlannerService", () => {
             )
 
             expect(built.plan.inserted()).toBe(true)
-            expect(built.post).toHaveBeenCalledWith(ctx, {
-                command: true,
-                body: "@Sales <- Owner: classify for customer Lan",
-                lead_id: "lead-1",
-                work_item_id: "item-1",
-            })
-            expect(built.log).toHaveBeenCalledWith(ctx, {
-                lead_id: "lead-1",
-                work_item_id: "item-1",
-                kind: "command.sent",
-                actor: "Owner",
-                summary: "sales.classify_lead",
-                evidence: "handoff",
-            })
+            expect(built.post).toHaveBeenCalledWith(
+                ctx,
+                {
+                    command: true,
+                    body: "@Sales <- Owner: classify for customer Lan",
+                    lead_id: "lead-1",
+                    work_item_id: "item-1",
+                },
+                built.em,
+            )
+            expect(built.log).toHaveBeenCalledWith(
+                ctx,
+                {
+                    lead_id: "lead-1",
+                    work_item_id: "item-1",
+                    kind: "command.sent",
+                    actor: "Owner",
+                    summary: "sales.classify_lead",
+                    evidence: "handoff",
+                },
+                built.em,
+            )
             expect(built.em.query).toHaveBeenCalledWith(FIND_SUBJECT_LABEL, ["ws-1", "lead", "lead-1"])
         })
 
@@ -467,6 +466,7 @@ describe("CommandPlannerService", () => {
                     summary: "chatbot[Branch 1].reply_customer",
                     evidence: "handoff \u00b7 instance inst-1 (given)",
                 }),
+                named.em,
             )
             expect(unnamed.log).toHaveBeenCalledWith(
                 ctx,
@@ -474,6 +474,7 @@ describe("CommandPlannerService", () => {
                     summary: "chatbot[inst-2].reply_customer",
                     evidence: "handoff \u00b7 instance inst-2 (first)",
                 }),
+                unnamed.em,
             )
         })
 

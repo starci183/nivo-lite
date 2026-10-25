@@ -49,3 +49,17 @@ LIMIT 200`
 export const HAND_OVER_LEAD_NEED = sql`
     UPDATE public.leads SET need = $3, context_summary = coalesce(context_summary, $3)
     WHERE workspace_id = $1 AND id = $2`
+
+/** Nonempty API company and supplied need ($1 workspace, $2 lead, $3 company, $4 need or null). */
+export const PATCH_PUBLIC_LEAD = sql`UPDATE public.leads
+SET company = COALESCE(NULLIF($3::text, ''), company), need = COALESCE(NULLIF($4::text, ''), need)
+WHERE workspace_id = $1::uuid AND id = $2::uuid`
+
+/** A changed API stage, preserving a closed deal against an open stage ($1 workspace, $2 lead, $3 stage). */
+export const APPLY_PUBLIC_LEAD_STAGE = sql`WITH changed AS (
+UPDATE public.leads SET stage = $3::text
+WHERE workspace_id = $1::uuid AND id = $2::uuid AND stage <> $3::text
+  AND (stage NOT IN ('won', 'lost') OR $3::text IN ('won', 'lost'))
+RETURNING id, workspace_id, contact_name, company, channel, need, stage, context_summary, phone, email
+)
+SELECT id, workspace_id, contact_name, company, channel, need, stage, context_summary, phone, email FROM changed`

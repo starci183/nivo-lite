@@ -29,12 +29,21 @@ export class AutomationBusinessEventsService implements DecisionEvents {
         return this.publish(ctx.workspaceId, "decision.made", payload, dedupeKey)
     }
 
-    /** Queues one business event for the automation engine and for the subscribed webhooks. */
-    async publish(workspaceId: string, event: WebhookEvent, data: EventData, dedupe: string): Promise<void> {
+    /** Queues one business event and its subscribed webhooks in the supplied transaction, or in one transaction of its own. */
+    async publish(
+        workspaceId: string,
+        event: WebhookEvent,
+        data: EventData,
+        dedupe: string,
+        manager?: EntityManager,
+    ): Promise<void> {
         const job: BusinessEventPayload = { kind: "business_event", event, workspaceId, dedupe, data }
-        await this.entityManager.transaction(async (tx) => {
-            await this.outbox.write(tx, AUTOMATION_QUEUE, job, { job: AUTOMATION_TICK_JOB, dedupeKey: dedupe })
-            await this.webhooks.publish({ workspaceId, event, data, dedupe }, tx)
-        })
+        if (manager !== undefined) return this.write(job, event, manager)
+        await this.entityManager.transaction((tx) => this.write(job, event, tx))
+    }
+
+    private async write(job: BusinessEventPayload, event: WebhookEvent, tx: EntityManager): Promise<void> {
+        await this.outbox.write(tx, AUTOMATION_QUEUE, job, { job: AUTOMATION_TICK_JOB, dedupeKey: job.dedupe })
+        await this.webhooks.publish({ workspaceId: job.workspaceId, event, data: job.data, dedupe: job.dedupe }, tx)
     }
 }

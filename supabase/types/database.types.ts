@@ -3390,13 +3390,13 @@ isOneToOne: false
                   ]
                 },"public_api": {
                   Row: {
-                    "created_at": string,"dedupe_key": string,"duplicates": number,"id": string,"key_id": string,"kind": string,"lead_id": string | null,"payload": NonNullable<Json>,"processed_at": string | null,"workspace_id": string
+                    "created_at": string,"dedupe_key": string,"duplicates": number,"id": string,"key_id": string,"kind": string,"lead_id": string | null,"need_supplied": boolean | null,"payload": NonNullable<Json>,"processed_at": string | null,"workspace_id": string
                   }
                   Insert: {
-                    "created_at"?: string,"dedupe_key": string,"duplicates"?: number,"id"?: string,"key_id": string,"kind": string,"lead_id"?: string | null,"payload": NonNullable<Json>,"processed_at"?: string | null,"workspace_id": string
+                    "created_at"?: string,"dedupe_key": string,"duplicates"?: number,"id"?: string,"key_id": string,"kind": string,"lead_id"?: string | null,"need_supplied"?: boolean | null,"payload": NonNullable<Json>,"processed_at"?: string | null,"workspace_id": string
                   }
                   Update: {
-                    "created_at"?: string,"dedupe_key"?: string,"duplicates"?: number,"id"?: string,"key_id"?: string,"kind"?: string,"lead_id"?: string | null,"payload"?: NonNullable<Json>,"processed_at"?: string | null,"workspace_id"?: string
+                    "created_at"?: string,"dedupe_key"?: string,"duplicates"?: number,"id"?: string,"key_id"?: string,"kind"?: string,"lead_id"?: string | null,"need_supplied"?: boolean | null,"payload"?: NonNullable<Json>,"processed_at"?: string | null,"workspace_id"?: string
                   }
                   Relationships: [
                     {

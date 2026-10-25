@@ -35,7 +35,7 @@ export interface BankPaymentEvent {
 
 /** What recording a bank payment event answered. */
 export interface BankPaymentRecorded {
-    /** True when the same credit had already been recorded: it was counted as a repeat, not recorded twice. */
+    /** True when the same event had already been recorded, so no second event was created. */
     readonly duplicate: boolean
     /** The id of the event the credit is, or an empty text when a repeat's event can no longer be read. */
     readonly inboundEventId: string

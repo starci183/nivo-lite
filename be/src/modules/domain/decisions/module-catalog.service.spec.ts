@@ -34,6 +34,24 @@ const build = async (entityManager: MockEntityManager) => {
 }
 
 describe("ModuleCatalogService", () => {
+    it("reads the registry in the producer's transaction when supplied", async () => {
+        const em = mockEntityManager()
+        const manager = mockEntityManager({
+            query: [
+                [FIND_MODULE, [moduleRowOf()]],
+                [FIND_ACTION, [actionRowOf()]],
+            ],
+        })
+        const service = await build(em)
+
+        expect((await service.entryOf("sales", manager))?.key).toBe("sales")
+        expect(await service.nameOf("sales", "en", manager)).toBe("Sales")
+        expect((await service.actionOf("classify_lead", manager))?.moduleKey).toBe("sales")
+
+        expect(em.query).not.toHaveBeenCalled()
+        expect(manager.query).toHaveBeenCalledTimes(3)
+    })
+
     describe("entryOf", () => {
         it("answers the module", async () => {
             const em = mockEntityManager({ query: [FIND_MODULE, [moduleRowOf()]] })

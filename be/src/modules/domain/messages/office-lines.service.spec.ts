@@ -25,6 +25,26 @@ const build = async (entityManager: MockEntityManager, agent: OptionalAgentIdent
 }
 
 describe("OfficeLinesService", () => {
+    it("keeps the command mirror in the caller's transaction", async () => {
+        const primary = mockEntityManager()
+        const tx = mockEntityManager({ query: [INSERT_MESSAGE, []] })
+        const { service, directory } = await build(primary, null)
+
+        await service.post(ctx, lineOf({ command: true }), tx)
+
+        expect(primary.query).not.toHaveBeenCalled()
+        expect(directory.agentOfDepartment).not.toHaveBeenCalled()
+        expect(tx.query).toHaveBeenCalledWith(INSERT_MESSAGE, [
+            "ws-1",
+            "system",
+            "NIVO Bus",
+            null,
+            "Followed up",
+            "lead-1",
+            "item-1",
+        ])
+    })
+
     it("speaks as the department's agent when it is installed", async () => {
         const em = mockEntityManager({ query: [INSERT_MESSAGE, []] })
         const { service, directory } = await build(em, { id: "agent-1", name: "Sales Agent" })

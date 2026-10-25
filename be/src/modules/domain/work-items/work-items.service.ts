@@ -96,9 +96,9 @@ export class WorkItemsService {
     }
 
     /** Inserts a queued item; null when the dedupe key of the workspace is already used. The id comes from the database. */
-    async insert(item: NewWorkItem): Promise<OptionalWorkItem> {
+    async insert(item: NewWorkItem, manager: EntityManager = this.entityManager): Promise<OptionalWorkItem> {
         return this.first(
-            await this.entityManager.query<Array<WorkItemRow>>(INSERT_WORK_ITEM, [
+            await manager.query<Array<WorkItemRow>>(INSERT_WORK_ITEM, [
                 item.workspaceId,
                 item.chainId,
                 item.depth,
@@ -117,10 +117,12 @@ export class WorkItemsService {
     }
 
     /** The item a dedupe key stands for. */
-    async findByDedupe(workspaceId: string, dedupeKey: string): Promise<OptionalWorkItem> {
-        return this.first(
-            await this.entityManager.query<Array<WorkItemRow>>(FIND_WORK_ITEM_BY_DEDUPE, [workspaceId, dedupeKey]),
-        )
+    async findByDedupe(
+        workspaceId: string,
+        dedupeKey: string,
+        manager: EntityManager = this.entityManager,
+    ): Promise<OptionalWorkItem> {
+        return this.first(await manager.query<Array<WorkItemRow>>(FIND_WORK_ITEM_BY_DEDUPE, [workspaceId, dedupeKey]))
     }
 
     /** The newest item of an action whose dedupe key is `baseKey` or one of its `baseKey:<suffix>` repeats. */

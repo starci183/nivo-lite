@@ -8,6 +8,7 @@ import { InboundEventsService } from "./inbound-events.service"
 import {
     BUMP_DUPLICATE_EVENT,
     FIND_INBOUND_EVENT,
+    FIND_INPUT_ID,
     HOLD_EVENT_FOR_OWNER,
     INSERT_BANK_EVENT,
     INSERT_INPUT_EVENT,
@@ -150,14 +151,6 @@ describe("InboundEventsService recordInput", () => {
         ])
     })
 
-    it("still records on the domain row when the inbox already holds the event", async () => {
-        const { events, inbox } = await build([[INSERT_INPUT_EVENT, [{ id: "event-1" }]]])
-        inbox.seen("zalo", "evt-1")
-
-        await expect(events.recordInput(input)).resolves.toEqual({ duplicate: false, inboundEventId: "event-1" })
-        expect(inbox.claims).toEqual([{ source: "zalo", eventId: "evt-1" }])
-    })
-
     it.each([
         [[{ id: "event-previous" }], "event-previous"],
         [[], ""],
@@ -169,6 +162,32 @@ describe("InboundEventsService recordInput", () => {
 
         await expect(events.recordInput(input)).resolves.toEqual({ duplicate: true, inboundEventId })
         expect(tx.em.query).toHaveBeenCalledWith(BUMP_DUPLICATE_EVENT, ["ws-1", "zalo:lead:evt-1", new Date(NOW)])
+    })
+})
+describe("InboundEventsService repeated inbox input", () => {
+    it.each([
+        [[{ id: "event-1" }], "event-1"],
+        [[], ""],
+    ] as const)("reads a claimed repeat without writing its domain row: %j", async (rows, inboundEventId) => {
+        const { events, tx, inbox } = await build([[FIND_INPUT_ID, rows]])
+        inbox.seen("zalo", "evt-1")
+
+        await expect(
+            events.recordInput({
+                workspaceId: "ws-1",
+                channel: "zalo",
+                kind: "lead",
+                senderName: "Mai",
+                senderContact: null,
+                body: "Haircut",
+                externalRef: null,
+                eventId: "evt-1",
+            }),
+        ).resolves.toEqual({ duplicate: true, inboundEventId })
+
+        expect(inbox.claims).toEqual([{ source: "zalo", eventId: "evt-1" }])
+        expect(tx.em.query).toHaveBeenCalledTimes(1)
+        expect(tx.em.query).toHaveBeenCalledWith(FIND_INPUT_ID, ["ws-1", "zalo:lead:evt-1"])
     })
 })
 describe("InboundEventsService find", () => {
@@ -198,6 +217,16 @@ describe("InboundEventsService find", () => {
 
         await expect(events.find("ws-1", "missing")).resolves.toBeNull()
         expect(tx.em.query).toHaveBeenCalledWith(FIND_INBOUND_EVENT, ["ws-1", "missing"])
+    })
+
+    it("finds a workspace-scoped input through the supplied transaction", async () => {
+        const { events, tx } = await build([])
+        const manager = mockEntityManager({ query: [FIND_INBOUND_EVENT, []] })
+
+        await expect(events.find("ws-1", "missing", manager)).resolves.toBeNull()
+
+        expect(manager.query).toHaveBeenCalledWith(FIND_INBOUND_EVENT, ["ws-1", "missing"])
+        expect(tx.em.query).not.toHaveBeenCalled()
     })
 })
 describe("InboundEventsService mark", () => {
@@ -244,6 +273,78 @@ describe("InboundEventsService handOffOrder", () => {
             "booking:b-1",
             "lead-1",
         ])
+        expect(tx.em.query).not.toHaveBeenCalled()
+    })
+})
+
+describe("InboundEventsService consumer transaction", () => {
+    const input = {
+        workspaceId: "ws-1",
+        channel: "manual",
+        kind: "lead",
+        senderName: "Mai",
+        senderContact: null,
+        body: "Haircut",
+        externalRef: "api:CRM",
+        eventId: "request-1",
+    }
+
+    it("keeps the input and its inbox receipt in the supplied transaction", async () => {
+        const { events, tx, inbox } = await build([])
+        const manager = mockEntityManager({ query: [INSERT_INPUT_EVENT, [{ id: "event-1" }]] })
+        const claim = jest.spyOn(inbox, "claim")
+
+        await expect(events.recordInputInTransaction(input, manager)).resolves.toEqual({
+            duplicate: false,
+            inboundEventId: "event-1",
+        })
+
+        expect(claim).toHaveBeenCalledWith("manual", "request-1", manager)
+        expect(manager.query).toHaveBeenCalledWith(INSERT_INPUT_EVENT, [
+            "ws-1",
+            "manual",
+            "lead",
+            "Mai",
+            null,
+            "Haircut",
+            null,
+            "api:CRM",
+            "request-1",
+            "manual:lead:request-1",
+        ])
+        expect(tx.em.query).not.toHaveBeenCalled()
+    })
+})
+
+describe("InboundEventsService repeated transaction input", () => {
+    it.each([
+        [[{ id: "original-event" }], "original-event"],
+        [[], ""],
+    ] as const)("resolves a repeated transactional input without writes: %j", async (rows, inboundEventId) => {
+        const { events, tx, inbox } = await build([])
+        inbox.seen("manual", "request-1")
+        const manager = mockEntityManager({ query: [FIND_INPUT_ID, rows] })
+        const claim = jest.spyOn(inbox, "claim")
+
+        await expect(
+            events.recordInputInTransaction(
+                {
+                    workspaceId: "ws-1",
+                    channel: "manual",
+                    kind: "lead",
+                    senderName: "Mai",
+                    senderContact: null,
+                    body: "Haircut",
+                    externalRef: "api:CRM",
+                    eventId: "request-1",
+                },
+                manager,
+            ),
+        ).resolves.toEqual({ duplicate: true, inboundEventId })
+
+        expect(claim).toHaveBeenCalledWith("manual", "request-1", manager)
+        expect(manager.query).toHaveBeenCalledTimes(1)
+        expect(manager.query).toHaveBeenCalledWith(FIND_INPUT_ID, ["ws-1", "manual:lead:request-1"])
         expect(tx.em.query).not.toHaveBeenCalled()
     })
 })

@@ -6,6 +6,7 @@ import { LeadRecordsService } from "./lead-records.service"
 import type { LeadRecordRow } from "./persistence/lead-records.rows"
 import {
     APPLY_CLASSIFICATION,
+    APPLY_PUBLIC_LEAD_STAGE,
     FILL_LEAD_CONTACT,
     FIND_LEAD,
     FIND_LEAD_NAMES,
@@ -13,6 +14,7 @@ import {
     INSERT_LEAD,
     MATCH_LEAD,
     MARK_LEAD_WON,
+    PATCH_PUBLIC_LEAD,
     REPLACE_LEAD_CONTEXT,
 } from "./persistence/lead-records.sql"
 
@@ -226,5 +228,56 @@ describe("LeadRecordsService", () => {
 
         expect(em.query).toHaveBeenCalledWith(MARK_LEAD_WON, ["ws-1", "lead-1"])
         expect(em.query).toHaveBeenCalledWith(FIND_LEAD_NAMES, ["ws-1", ["lead-1"]])
+    })
+})
+
+describe("LeadRecordsService public API transaction", () => {
+    it("uses the supplied manager when finding and matching a customer", async () => {
+        const { records, em } = await build([])
+        const manager = mockEntityManager({
+            query: [
+                [FIND_LEAD, [ROW]],
+                [MATCH_LEAD, [ROW]],
+            ],
+        })
+        const match = { workspaceId: "ws-1", phone: "84912000701", email: null, name: "An", channel: "Zalo" }
+
+        await expect(records.find("ws-1", "lead-1", manager)).resolves.toEqual(ROW)
+        await expect(records.match(match, manager)).resolves.toEqual(ROW)
+
+        expect(manager.query).toHaveBeenCalledWith(FIND_LEAD, ["ws-1", "lead-1"])
+        expect(manager.query).toHaveBeenCalledWith(MATCH_LEAD, ["ws-1", "84912000701", null, "An", "Zalo"])
+        expect(em.query).not.toHaveBeenCalled()
+    })
+
+    it.each([null, "Updated need"])(
+        "passes a supplied need or preservation marker through the transaction: %s",
+        async (need) => {
+            const { records, em } = await build()
+            const manager = mockEntityManager({ query: [PATCH_PUBLIC_LEAD, []] })
+
+            await expect(
+                records.patchPublicFacts(
+                    { workspaceId: "ws-1", leadId: "lead-1", company: "New company", need },
+                    manager,
+                ),
+            ).resolves.toBeUndefined()
+
+            expect(manager.query).toHaveBeenCalledWith(PATCH_PUBLIC_LEAD, ["ws-1", "lead-1", "New company", need])
+            expect(em.query).not.toHaveBeenCalled()
+        },
+    )
+
+    it.each([
+        [[ROW], ROW],
+        [[], null],
+    ] as const)("returns the changed stage row or no change from the transaction: %j", async (rows, expected) => {
+        const { records, em } = await build()
+        const manager = mockEntityManager({ query: [APPLY_PUBLIC_LEAD_STAGE, rows] })
+
+        await expect(records.applyPublicStage("ws-1", "lead-1", "won", manager)).resolves.toEqual(expected)
+
+        expect(manager.query).toHaveBeenCalledWith(APPLY_PUBLIC_LEAD_STAGE, ["ws-1", "lead-1", "won"])
+        expect(em.query).not.toHaveBeenCalled()
     })
 })

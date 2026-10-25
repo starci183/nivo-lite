@@ -47,6 +47,11 @@ FROM public.inbound_events
 WHERE workspace_id = $1::uuid AND id = $2::uuid
 LIMIT 1`
 
+/** Reads the original identity after an inbox repeat without changing the event ($1 workspace, $2 dedupe key). */
+export const FIND_INPUT_ID = sql`SELECT id FROM public.inbound_events
+WHERE workspace_id = $1::uuid AND dedupe_key = $2
+LIMIT 1`
+
 /** Sets where an inbound event stands and links the customer the engine found ($1 workspace, $2 event, $3 status or null to keep it, $4 lead or null to keep it). */
 export const MARK_INBOUND_EVENT = sql`UPDATE public.inbound_events
 SET status = COALESCE($3::text, status), lead_id = COALESCE($4::uuid, lead_id)
