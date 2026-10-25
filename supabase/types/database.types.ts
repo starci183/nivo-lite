@@ -1,4 +1,4 @@
-// migrations-sha256: d515360ccdac2a7f88ed0829f8a4406a994e37d47083b4ac9c993ca02be4dcd9
+// migrations-sha256: 0e9a1e76cb4cee391aa29c776ba3dad40f64ed7d1cfd04621e6860ff745dfe7f
 
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[]
 
@@ -2180,13 +2180,13 @@ isOneToOne: false
                   ]
                 },"job_outbox": {
                   Row: {
-                    "attempts": number,"created_at": string,"dedupe_key": string,"finished_at": string | null,"id": string,"last_error": string | null,"msg_id": number | null,"name": string,"payload": NonNullable<Json>,"queue": string,"sent_at": string | null,"started_at": string | null,"state": string,"workspace_id": string | null
+                    "attempts": number,"created_at": string,"dedupe_key": string,"finished_at": string | null,"id": string,"last_error": string | null,"lease_token": string | null,"msg_id": number | null,"name": string,"payload": NonNullable<Json>,"queue": string,"reconcile_at": string,"reconcile_checks": number,"relay_lease_until": string | null,"retry_requested_at": string | null,"run_lease_until": string | null,"run_token": string | null,"sent_at": string | null,"started_at": string | null,"state": string,"workspace_id": string | null
                   }
                   Insert: {
-                    "attempts"?: number,"created_at"?: string,"dedupe_key": string,"finished_at"?: string | null,"id"?: string,"last_error"?: string | null,"msg_id"?: number | null,"name": string,"payload"?: NonNullable<Json>,"queue": string,"sent_at"?: string | null,"started_at"?: string | null,"state"?: string,"workspace_id"?: string | null
+                    "attempts"?: number,"created_at"?: string,"dedupe_key": string,"finished_at"?: string | null,"id"?: string,"last_error"?: string | null,"lease_token"?: string | null,"msg_id"?: number | null,"name": string,"payload"?: NonNullable<Json>,"queue": string,"reconcile_at"?: string,"reconcile_checks"?: number,"relay_lease_until"?: string | null,"retry_requested_at"?: string | null,"run_lease_until"?: string | null,"run_token"?: string | null,"sent_at"?: string | null,"started_at"?: string | null,"state"?: string,"workspace_id"?: string | null
                   }
                   Update: {
-                    "attempts"?: number,"created_at"?: string,"dedupe_key"?: string,"finished_at"?: string | null,"id"?: string,"last_error"?: string | null,"msg_id"?: number | null,"name"?: string,"payload"?: NonNullable<Json>,"queue"?: string,"sent_at"?: string | null,"started_at"?: string | null,"state"?: string,"workspace_id"?: string | null
+                    "attempts"?: number,"created_at"?: string,"dedupe_key"?: string,"finished_at"?: string | null,"id"?: string,"last_error"?: string | null,"lease_token"?: string | null,"msg_id"?: number | null,"name"?: string,"payload"?: NonNullable<Json>,"queue"?: string,"reconcile_at"?: string,"reconcile_checks"?: number,"relay_lease_until"?: string | null,"retry_requested_at"?: string | null,"run_lease_until"?: string | null,"run_token"?: string | null,"sent_at"?: string | null,"started_at"?: string | null,"state"?: string,"workspace_id"?: string | null
                   }
                   Relationships: [
                     {
@@ -2199,13 +2199,13 @@ isOneToOne: false
                   ]
                 },"job_slots": {
                   Row: {
-                    "lease_until": string,"msg_id": number,"queue": string,"workspace_id": string
+                    "job_id": string,"lease_until": string,"queue": string,"workspace_id": string
                   }
                   Insert: {
-                    "lease_until": string,"msg_id": number,"queue": string,"workspace_id": string
+                    "job_id": string,"lease_until": string,"queue": string,"workspace_id": string
                   }
                   Update: {
-                    "lease_until"?: string,"msg_id"?: number,"queue"?: string,"workspace_id"?: string
+                    "job_id"?: string,"lease_until"?: string,"queue"?: string,"workspace_id"?: string
                   }
                   Relationships: [
 
@@ -4699,41 +4699,66 @@ isOneToOne: false
 "is_platform_admin":
 { Args: Record<PropertyKey, never>; Returns: boolean
                            },
-"job_ack":
-{ Args: { "p_msg_id": number,"p_queue": string }; Returns: boolean
+"job_cutover_adopt":
+{ Args: { "p_archived": boolean,"p_attempt": number,"p_enqueued_at": string,"p_message": Json,"p_msg_id": number,"p_queue": string,"p_visible_at": string }; Returns: string
                            },
-"job_archive":
-{ Args: { "p_error"?: string,"p_msg_id": number,"p_queue": string }; Returns: boolean
+"job_dead":
+{ Args: { "p_error": string,"p_id": string,"p_token": string }; Returns: boolean
+                           },
+"job_done":
+{ Args: { "p_id": string,"p_token": string }; Returns: boolean
                            },
 "job_enqueue":
 { Args: { "p_dedupe": string,"p_name": string,"p_payload": Json,"p_queue": string,"p_workspace": string }; Returns: string
-                           },
-"job_fail":
-{ Args: { "p_delay_s": number,"p_error"?: string,"p_msg_id": number,"p_queue": string }; Returns: boolean
                            },
 "job_failed":
 { Args: { "p_limit"?: number }; Returns: {
               "attempts": number,"finished_at": string,"id": string,"last_error": string,"name": string
             }[]
                            },
-"job_message":
-{ Args: { "p_dedupe": string,"p_name": string,"p_outbox": string,"p_payload": Json }; Returns: Json
+"job_handback":
+{ Args: { "p_id": string,"p_token": string }; Returns: boolean
+                           },
+"job_lease":
+{ Args: { "p_id": string,"p_lease_s": number,"p_token": string }; Returns: boolean
                            },
 "job_open":
 { Args: { "p_limit"?: number }; Returns: {
               "attempts": number,"created_at": string,"id": string,"last_error": string,"name": string,"state": string
             }[]
                            },
-"job_read":
-{ Args: { "p_qty": number,"p_queue": string,"p_vt": number,"p_ws_limit"?: number }; Returns: {
-              "attempt": number,"enqueued_at": string,"message": Json,"msg_id": number
+"job_reconcile":
+{ Args: { "p_lease_s"?: number,"p_limit": number,"p_running_stale_s": number,"p_stale_s": number }; Returns: {
+              "attempts": number,"id": string,"lease_token": string,"name": string,"payload": Json,"queue": string,"retry_requested": boolean,"run_token": string,"state": string
             }[]
                            },
-"job_requeue":
-{ Args: { "p_outbox": string }; Returns: number
+"job_relay_claim":
+{ Args: { "p_lease_s"?: number,"p_limit": number }; Returns: {
+              "id": string,"lease_token": string,"name": string,"payload": Json,"queue": string,"retry_requested": boolean
+            }[]
+                           },
+"job_relay_release":
+{ Args: { "p_id": string,"p_token": string }; Returns: boolean
+                           },
+"job_relay_sent":
+{ Args: { "p_id": string,"p_stale_s"?: number,"p_token": string }; Returns: boolean
+                           },
+"job_reopen":
+{ Args: { "p_outbox": string }; Returns: string
                            },
 "job_requeue_failed":
 { Args: { "p_hours"?: number }; Returns: Json
+                           },
+"job_reset":
+{ Args: { "p_id": string,"p_run_token": string,"p_token": string }; Returns: boolean
+                           },
+"job_retry":
+{ Args: { "p_error": string,"p_id": string,"p_token": string }; Returns: boolean
+                           },
+"job_start":
+{ Args: { "p_id": string,"p_lease_s": number,"p_queue": string,"p_ws_limit": number }; Returns: {
+              "attempt": number,"outcome": string,"run_token": string,"state": string
+            }[]
                            },
 "job_stats":
 { Args: Record<PropertyKey, never>; Returns: Json
@@ -4746,9 +4771,6 @@ isOneToOne: false
 { Args: { "p_dedupe_key": string,"p_name": string,"p_queue": string,"p_workspace_id": string }; Returns: {
               "id": string,"state": string
             }[]
-                           },
-"job_touch":
-{ Args: { "p_msg_id": number,"p_queue": string,"p_vt": number }; Returns: boolean
                            },
 "knowledge_enqueue_source":
 { Args: { "p_kind": string,"p_meta": Json,"p_storage_path": string,"p_title": string,"p_url": string,"p_workspace": string }; Returns: string
