@@ -1,9 +1,9 @@
 import { DomainError } from "@modules/platform/errors"
 import type { ErrorKind } from "@modules/platform/errors"
 
-/** Codes of the inbound-events capability: it refuses nothing in its own right, so the table stays empty. */
+/** Persistence failures of the inbound-events capability. */
 export enum InboundEventsErrorCode {
-    /** A repeat of a credit whose first record cannot be read back. */
+    /** A repeated input or credit whose first record cannot be read back. */
     Unreadable = "INBOUND_EVENTS_UNREADABLE",
 }
 

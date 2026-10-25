@@ -9,7 +9,7 @@ import { MESSAGE_CATALOG } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
 import { OfficeRoomsErrorCode } from "./errors/office-rooms.error"
 import { OfficeRoomsService } from "./office-rooms.service"
-import type { RoomRow } from "./persistence/office-rooms.rows"
+import type { RoomMemberPreviewRow, RoomRow } from "./persistence/office-rooms.rows"
 import { LIST_ROOM_MEMBERS } from "./persistence/office-room-members.sql"
 import { ENSURE_ROOMS, LIST_ROOMS, MARK_ROOM_READ, OFFICE_ROOM_SUMMARY } from "./persistence/office-rooms.sql"
 
@@ -34,6 +34,22 @@ const roomOf = builder<RoomRow>({
     home_agent_ids: ["a-1"],
     user_ids: ["u-1"],
     pins: [{ id: "p-1", title: "HAKUEN_Brand_Guideline.pdf", href: null, note: "Shared knowledge" }],
+})
+
+const personPreviewOf = builder<RoomMemberPreviewRow>({
+    id: "u-1",
+    kind: "human",
+    module: null,
+    name: "Mai Linh",
+    avatarUrl: "https://example.com/mai.png",
+})
+
+const agentPreviewOf = builder<RoomMemberPreviewRow>({
+    id: "a-1",
+    kind: "agent",
+    module: "content",
+    name: "AI Marketing",
+    avatarUrl: null,
 })
 
 const build = async (entityManager: MockEntityManager) => {
@@ -76,12 +92,8 @@ describe("OfficeRoomsService.rooms", () => {
                 [
                     LIST_ROOM_MEMBERS,
                     [
-                        {
-                            key: null,
-                            count: 6,
-                            preview: [{ name: "Mai Linh", avatarUrl: "https://example.com/mai.png" }],
-                        },
-                        { key: "marketing", count: 1, preview: [{ name: "AI Marketing", avatarUrl: null }] },
+                        { key: null, count: 6, preview: [personPreviewOf()] },
+                        { key: "marketing", count: 1, preview: [agentPreviewOf()] },
                     ],
                 ],
             ],
@@ -98,9 +110,12 @@ describe("OfficeRoomsService.rooms", () => {
         expect(rooms).toEqual([
             officeOf({
                 ...summary,
-                members: { count: 6, preview: [{ name: "Mai Linh", avatarUrl: "https://example.com/mai.png" }] },
+                members: { count: 6, preview: [personPreviewOf()] },
             }),
-            { ...roomOf(), members: { count: 1, preview: [{ name: "AI Marketing", avatarUrl: null }] } },
+            {
+                ...roomOf(),
+                members: { count: 1, preview: [agentPreviewOf()] },
+            },
         ])
     })
 

@@ -133,10 +133,16 @@ describe("InboundEventsService recordInput", () => {
     }
     it("records a new channel input after claiming the event", async () => {
         const { events, tx, inbox } = await build([[INSERT_INPUT_EVENT, [{ id: "event-1" }]]])
+        const claim = jest.spyOn(inbox, "claim")
+        const record = jest.spyOn(events, "recordInputInTransaction")
 
         await expect(events.recordInput(input)).resolves.toEqual({ duplicate: false, inboundEventId: "event-1" })
 
-        expect(inbox.claims).toEqual([{ source: "zalo", eventId: "evt-1" }])
+        expect(inbox.claims).toEqual([{ source: "zalo", eventId: "ws-1:zalo:lead:evt-1" }])
+        expect(claim).toHaveBeenCalledWith("zalo", "ws-1:zalo:lead:evt-1", record.mock.calls[0]?.[1])
+        expect(record).toHaveBeenCalledWith(input, expect.anything())
+        expect(tx.em.transaction).toHaveBeenCalledTimes(1)
+        expect(tx.outcomes).toEqual(["commit"])
         expect(tx.em.query).toHaveBeenCalledWith(INSERT_INPUT_EVENT, [
             "ws-1",
             "zalo",
@@ -151,26 +157,31 @@ describe("InboundEventsService recordInput", () => {
         ])
     })
 
-    it.each([
-        [[{ id: "event-previous" }], "event-previous"],
-        [[], ""],
-    ] as const)("counts a repeated input and returns its readable id: %j", async (rows, inboundEventId) => {
+    it("counts a pre-existing domain input and returns its durable id", async () => {
         const { events, tx } = await build([
             [INSERT_INPUT_EVENT, []],
-            [BUMP_DUPLICATE_EVENT, rows],
+            [BUMP_DUPLICATE_EVENT, [{ id: "event-previous" }]],
         ])
 
-        await expect(events.recordInput(input)).resolves.toEqual({ duplicate: true, inboundEventId })
+        await expect(events.recordInput(input)).resolves.toEqual({ duplicate: true, inboundEventId: "event-previous" })
         expect(tx.em.query).toHaveBeenCalledWith(BUMP_DUPLICATE_EVENT, ["ws-1", "zalo:lead:evt-1", new Date(NOW)])
+    })
+
+    it("rolls the claim back when an existing domain input cannot be read", async () => {
+        const { events, tx } = await build([
+            [INSERT_INPUT_EVENT, []],
+            [BUMP_DUPLICATE_EVENT, []],
+        ])
+
+        await expect(events.recordInput(input)).rejects.toMatchObject({ code: InboundEventsErrorCode.Unreadable })
+
+        expect(tx.outcomes).toEqual(["rollback"])
     })
 })
 describe("InboundEventsService repeated inbox input", () => {
-    it.each([
-        [[{ id: "event-1" }], "event-1"],
-        [[], ""],
-    ] as const)("reads a claimed repeat without writing its domain row: %j", async (rows, inboundEventId) => {
-        const { events, tx, inbox } = await build([[FIND_INPUT_ID, rows]])
-        inbox.seen("zalo", "evt-1")
+    it("reads the row committed together with the previous claim without writing again", async () => {
+        const { events, tx, inbox } = await build([[FIND_INPUT_ID, [{ id: "event-1" }]]])
+        inbox.seen("zalo", "ws-1:zalo:lead:evt-1")
 
         await expect(
             events.recordInput({
@@ -183,9 +194,9 @@ describe("InboundEventsService repeated inbox input", () => {
                 externalRef: null,
                 eventId: "evt-1",
             }),
-        ).resolves.toEqual({ duplicate: true, inboundEventId })
+        ).resolves.toEqual({ duplicate: true, inboundEventId: "event-1" })
 
-        expect(inbox.claims).toEqual([{ source: "zalo", eventId: "evt-1" }])
+        expect(inbox.claims).toEqual([{ source: "zalo", eventId: "ws-1:zalo:lead:evt-1" }])
         expect(tx.em.query).toHaveBeenCalledTimes(1)
         expect(tx.em.query).toHaveBeenCalledWith(FIND_INPUT_ID, ["ws-1", "zalo:lead:evt-1"])
     })
@@ -299,7 +310,7 @@ describe("InboundEventsService consumer transaction", () => {
             inboundEventId: "event-1",
         })
 
-        expect(claim).toHaveBeenCalledWith("manual", "request-1", manager)
+        expect(claim).toHaveBeenCalledWith("manual", "ws-1:manual:lead:request-1", manager)
         expect(manager.query).toHaveBeenCalledWith(INSERT_INPUT_EVENT, [
             "ws-1",
             "manual",
@@ -317,13 +328,10 @@ describe("InboundEventsService consumer transaction", () => {
 })
 
 describe("InboundEventsService repeated transaction input", () => {
-    it.each([
-        [[{ id: "original-event" }], "original-event"],
-        [[], ""],
-    ] as const)("resolves a repeated transactional input without writes: %j", async (rows, inboundEventId) => {
+    it("resolves a row committed with the original claim through the supplied transaction", async () => {
         const { events, tx, inbox } = await build([])
-        inbox.seen("manual", "request-1")
-        const manager = mockEntityManager({ query: [FIND_INPUT_ID, rows] })
+        inbox.seen("manual", "ws-1:manual:lead:request-1")
+        const manager = mockEntityManager({ query: [FIND_INPUT_ID, [{ id: "original-event" }]] })
         const claim = jest.spyOn(inbox, "claim")
 
         await expect(
@@ -340,11 +348,32 @@ describe("InboundEventsService repeated transaction input", () => {
                 },
                 manager,
             ),
-        ).resolves.toEqual({ duplicate: true, inboundEventId })
+        ).resolves.toEqual({ duplicate: true, inboundEventId: "original-event" })
 
-        expect(claim).toHaveBeenCalledWith("manual", "request-1", manager)
+        expect(claim).toHaveBeenCalledWith("manual", "ws-1:manual:lead:request-1", manager)
         expect(manager.query).toHaveBeenCalledTimes(1)
         expect(manager.query).toHaveBeenCalledWith(FIND_INPUT_ID, ["ws-1", "manual:lead:request-1"])
         expect(tx.em.query).not.toHaveBeenCalled()
+    })
+
+    it("refuses an unreadable repeat instead of returning an empty id to intake callers", async () => {
+        const { events, tx, inbox } = await build([[FIND_INPUT_ID, []]])
+        inbox.seen("facebook", "ws-1:facebook:message:evt-1")
+
+        await expect(
+            events.recordInput({
+                workspaceId: "ws-1",
+                channel: "facebook",
+                kind: "message",
+                senderName: "Mai",
+                senderContact: null,
+                body: "Haircut",
+                externalRef: null,
+                eventId: "evt-1",
+            }),
+        ).rejects.toMatchObject({ code: InboundEventsErrorCode.Unreadable })
+
+        expect(tx.outcomes).toEqual(["rollback"])
+        expect(tx.em.query).toHaveBeenCalledWith(FIND_INPUT_ID, ["ws-1", "facebook:message:evt-1"])
     })
 })

@@ -143,6 +143,21 @@ const turnCases = [
 ]
 
 describe("LeadGenIntakeService", () => {
+    it("propagates an unreadable recorded input without looking up an empty event id", async () => {
+        const { intake, inbound, commands } = await build()
+        const failure = Object.assign(new Error("Inbound event cannot be read"), { code: "INBOUND_EVENTS_UNREADABLE" })
+        inbound.recordInput.mockRejectedValue(failure)
+
+        await expect(intake.take(jobOf())).rejects.toBe(failure)
+
+        expect(inbound.find).not.toHaveBeenCalled()
+        expect(commands.sendCommandItem).not.toHaveBeenCalled()
+        expect(commands.sendCommand).not.toHaveBeenCalled()
+        expect(inbound.mark).not.toHaveBeenCalled()
+    })
+})
+
+describe("LeadGenIntakeService", () => {
     it("gives a lead form to Lead Ads and rejects it from direct-message routing", async () => {
         const { intake, leadAds, inbound, bindings } = await build()
         const form = jobOf(eventOf({ kind: "leadgen", event_key: "leadgen:1" }))

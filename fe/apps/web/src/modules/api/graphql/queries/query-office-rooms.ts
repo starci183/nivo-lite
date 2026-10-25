@@ -22,6 +22,9 @@ const query1: TypedDocumentNode<QueryOfficeRoomsResponse, Record<string, never>>
             members {
                 count
                 preview {
+                    id
+                    kind
+                    module
                     name
                     avatarUrl
                 }

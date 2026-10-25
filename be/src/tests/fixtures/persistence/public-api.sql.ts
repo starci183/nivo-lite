@@ -36,7 +36,7 @@ WHERE payload->>'workspaceId' = $1 ORDER BY created_at, id`
 /** Inbox receipts of public API and manual inbound inputs in this workspace. */
 export const API_INBOX = sql`SELECT source, delivery_id FROM public.inbox
 WHERE starts_with(delivery_id, $1 || ':')
-   OR delivery_id IN (SELECT event_id FROM public.inbound_events WHERE workspace_id = $1::uuid)
+   OR delivery_id IN (SELECT workspace_id::text || ':' || dedupe_key FROM public.inbound_events WHERE workspace_id = $1::uuid)
 ORDER BY source, delivery_id`
 
 /** Evidence remains exactly once across queue delivery identities. */
@@ -56,7 +56,7 @@ DELETE FROM public.job_outbox WHERE payload->>'workspaceId' = $1`
 /** Removes only receipts owned by this workspace's API or manual inputs before their domain rows disappear. */
 export const CLEAN_API_INBOX = sql`DELETE FROM public.inbox
 WHERE starts_with(delivery_id, $1 || ':')
-   OR delivery_id IN (SELECT event_id FROM public.inbound_events WHERE workspace_id = $1::uuid)`
+   OR delivery_id IN (SELECT workspace_id::text || ':' || dedupe_key FROM public.inbound_events WHERE workspace_id = $1::uuid)`
 
 /** Removes only the terminal receipt of this proof's original delivery identity. */
 export const CLEAN_API_FAILED_RECEIPT = sql`DELETE FROM public.inbox

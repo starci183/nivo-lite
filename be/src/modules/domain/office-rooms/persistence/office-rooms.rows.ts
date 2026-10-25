@@ -48,6 +48,12 @@ export interface RoomRow extends RoomSummaryRow {
 
 /** One bounded member preview read from the database. */
 export interface RoomMemberPreviewRow {
+    /** The account id for a person or the agent id. */
+    id: string
+    /** Whether the preview identifies a workspace account or an agent. */
+    kind: "human" | "agent"
+    /** The agent's module; null for a person. */
+    module: string | null
     /** The member's display name. */
     name: string
     /** The existing provider photo, or null when none exists. */

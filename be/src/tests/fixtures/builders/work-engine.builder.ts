@@ -97,6 +97,19 @@ export interface WorkEngineFixtureOptions {
     readonly created?: boolean
     readonly items?: Partial<WorkItemsService>
 }
+
+/** An order awaiting approval whose catalog successor would run without its durable noChain choice. */
+export const noChainOrderOptions = (proposal: Proposal): WorkEngineFixtureOptions => ({
+    action: actionEntry({ action: "confirm_order", next: ["issue_invoice"] }),
+    rule: ruleOf({ action: "confirm_order", mode: "ask" }),
+    items: {
+        reopen: () =>
+            Promise.resolve(
+                itemOf({ action: "confirm_order", subject_type: "order", subject_id: "order-1", proposal }),
+            ),
+    },
+})
+
 /** The owner deciding queued work in approval scenarios. */
 export const owner = { name: "Lan", kind: "owner" } as const
 /** The alternatives returned by an ambiguous payment performer. */

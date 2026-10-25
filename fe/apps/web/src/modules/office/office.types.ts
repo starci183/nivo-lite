@@ -77,7 +77,7 @@ export interface OfficeRoom {
     readonly agentIds: ReadonlyArray<string>
     readonly homeAgentIds: ReadonlyArray<string>
     readonly userIds: ReadonlyArray<string>
-    readonly members?: OfficeRoomMembersView | null
+    readonly members: OfficeRoomMembersView
     readonly pins: ReadonlyArray<{
         readonly id: string
         readonly title: string

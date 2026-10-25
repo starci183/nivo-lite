@@ -206,19 +206,11 @@ export interface OfficeWorkDecision {
 
 /** One member shown in the composite avatar of a Hub room. */
 export interface OfficeRoomMemberPreviewView {
-    readonly name: string
-    /** The existing profile picture URL, or null for the name-based avatar. */
-    readonly avatarUrl: string | null
-}
-
-/** The total membership and at most four avatar previews of a Hub room. */
-export interface OfficeRoomMembersView {
-    readonly count: number
-    readonly preview: ReadonlyArray<OfficeRoomMemberPreviewView>
-}
-
-/** One member shown in the composite avatar of a Hub room. */
-export interface OfficeRoomMemberPreviewView {
+    /** The workspace account id or agent id. */
+    readonly id: string
+    readonly kind: "human" | "agent"
+    /** The agent's module; null for a person. */
+    readonly module: string | null
     readonly name: string
     /** The existing profile picture URL, or null for the name-based avatar. */
     readonly avatarUrl: string | null

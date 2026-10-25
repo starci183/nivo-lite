@@ -128,7 +128,7 @@ interface RoomWire {
     readonly agent_ids: ReadonlyArray<string>
     readonly home_agent_ids: ReadonlyArray<string>
     readonly user_ids: ReadonlyArray<string>
-    readonly members?: OfficeRoomMembersView | null
+    readonly members: OfficeRoomMembersView
     readonly pins: ReadonlyArray<{
         readonly id: string
         readonly title: string
@@ -148,7 +148,7 @@ export const toOfficeRoom = (row: RoomWire): OfficeRoom => ({
     agentIds: row.agent_ids,
     homeAgentIds: row.home_agent_ids,
     userIds: row.user_ids,
-    members: row.members ?? null,
+    members: row.members,
     pins: row.pins.map((pin) => ({ id: pin.id, title: pin.title, href: pin.href ?? null, note: pin.note })),
 })
 

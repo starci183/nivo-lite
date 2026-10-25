@@ -30,6 +30,7 @@ import {
     performedOf,
     messageProposalOf,
     approvalMessageOf,
+    noChainOrderOptions,
     queuedRuns,
     performerFailures,
     decisionFailures,
@@ -184,15 +185,16 @@ describe("WorkEngineService / durable execution choices", () => {
         expect(built.continueChain).not.toHaveBeenCalled()
     })
 
-    it("retains the producer's no-chain choice after a person's approval and edits", async () => {
+    it("retains noChain after approving and editing an order that has an invoice successor", async () => {
         const proposal = approvalMessageOf({ draft: "Original" })
-        const built = await build({ items: { reopen: resolved(itemOf({ proposal })) } })
+        const built = await build(noChainOrderOptions(proposal))
 
-        await built.service.resumeWork(ctx, "item-1", "approved", { draft: "Edited" }, owner)
+        const completed = await built.service.resumeWork(ctx, "item-1", "approved", { draft: "Edited" }, owner)
 
+        expect(completed.status).toBe("done")
         expect(built.performer?.perform).toHaveBeenCalledWith(
             ctx,
-            expect.anything(),
+            expect.objectContaining({ action: "confirm_order" }),
             expect.objectContaining({ draft: "Edited", execution: proposal.execution }),
             { name: "Lan", kind: "owner" },
         )

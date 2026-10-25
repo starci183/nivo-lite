@@ -7,6 +7,7 @@ SET search_path TO ''
 AS $$
     SELECT u.id,
            CASE WHEN jsonb_typeof(u.raw_user_meta_data -> 'avatar_url') = 'string'
+                     AND u.raw_user_meta_data ->> 'avatar_url' ~ '^https://'
                 THEN u.raw_user_meta_data ->> 'avatar_url' ELSE NULL END
     FROM auth.users u
     JOIN public.workspace_members m ON m.user_id = u.id

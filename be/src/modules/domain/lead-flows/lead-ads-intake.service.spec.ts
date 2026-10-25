@@ -95,6 +95,22 @@ const build = async () => {
 const NEED = "channel.lead-ads (lead-ads.form)\nbudget range: 10m"
 
 describe("LeadAdsIntakeService", () => {
+    it("propagates an unreadable recorded input without looking up an empty event id", async () => {
+        const { intake, inbound, commands, engine, bindings } = await build()
+        const failure = Object.assign(new Error("Inbound event cannot be read"), { code: "INBOUND_EVENTS_UNREADABLE" })
+        inbound.recordInput.mockRejectedValue(failure)
+
+        await expect(intake.accept(job)).rejects.toBe(failure)
+
+        expect(inbound.find).not.toHaveBeenCalled()
+        expect(bindings.agentsFor).not.toHaveBeenCalled()
+        expect(commands.sendCommandItem).not.toHaveBeenCalled()
+        expect(engine.runWork).not.toHaveBeenCalled()
+        expect(inbound.mark).not.toHaveBeenCalled()
+    })
+})
+
+describe("LeadAdsIntakeService", () => {
     it("stores the submission and has the lead_gen agent capture it", async () => {
         const { intake, meta, bindings, inbound, commands, engine } = await build()
         bindings.agentsFor.mockResolvedValue([agentOf()])

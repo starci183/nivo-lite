@@ -105,32 +105,27 @@ export class InboundEventsService {
      * Records an input a channel delivered (a customer lead, say); the same event id twice is one input.
      * A claimed repeat reads the existing domain identity without repeating any writes.
      */
-    async recordInput(input: InboundInput): Promise<BankPaymentRecorded> {
-        if (!(await this.inbox.claim(input.channel, input.eventId))) return this.findRepeatedInput(input)
-        return this.writeInput(input)
+    recordInput(input: InboundInput): Promise<BankPaymentRecorded> {
+        return this.entityManager.transaction((tx) => this.recordInputInTransaction(input, tx))
     }
 
     /** Records a durable input and its inbox receipt in the transaction already held by its consumer. */
     async recordInputInTransaction(input: InboundInput, manager: EntityManager): Promise<BankPaymentRecorded> {
-        if (!(await this.inbox.claim(input.channel, input.eventId, manager))) {
+        const key = `${input.workspaceId}:${eventDedupeKey(input.channel, input.kind, input.eventId)}`
+        if (!(await this.inbox.claim(input.channel, key, manager))) {
             return this.findRepeatedInput(input, manager)
         }
         return this.writeInput(input, manager)
     }
 
-    private async findRepeatedInput(
-        input: InboundInput,
-        manager: EntityManager = this.entityManager,
-    ): Promise<BankPaymentRecorded> {
+    private async findRepeatedInput(input: InboundInput, manager: EntityManager): Promise<BankPaymentRecorded> {
         const key = eventDedupeKey(input.channel, input.kind, input.eventId)
         const [recorded] = await manager.query<Array<EventIdRow>>(FIND_INPUT_ID, [input.workspaceId, key])
-        return { duplicate: true, inboundEventId: recorded?.id ?? "" }
+        if (recorded === undefined) throw new InboundEventsError({ code: InboundEventsErrorCode.Unreadable })
+        return { duplicate: true, inboundEventId: recorded.id }
     }
 
-    private async writeInput(
-        input: InboundInput,
-        manager: EntityManager = this.entityManager,
-    ): Promise<BankPaymentRecorded> {
+    private async writeInput(input: InboundInput, manager: EntityManager): Promise<BankPaymentRecorded> {
         const key = eventDedupeKey(input.channel, input.kind, input.eventId)
         const [created] = await manager.query<Array<EventIdRow>>(INSERT_INPUT_EVENT, [
             input.workspaceId,
@@ -150,7 +145,8 @@ export class InboundEventsService {
             key,
             this.clock.now(),
         ])
-        return { duplicate: true, inboundEventId: repeated?.id ?? "" }
+        if (repeated === undefined) throw new InboundEventsError({ code: InboundEventsErrorCode.Unreadable })
+        return { duplicate: true, inboundEventId: repeated.id }
     }
 
     /** Hands a finished sale to the order chain, inside the caller's transaction; the same sale twice is one order. Answers whether it was new. */

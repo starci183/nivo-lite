@@ -45,9 +45,9 @@ export class OfficeRoomType {
     @Field(() => [String])
     user_ids!: Array<string>
 
-    /** The member count and at most four avatar previews, when available. */
-    @Field(() => OfficeRoomMembersType, { nullable: true })
-    members?: OfficeRoomMembersType | null
+    /** The authoritative member count and at most four avatar previews. */
+    @Field(() => OfficeRoomMembersType)
+    members!: OfficeRoomMembersType
 
     /** The pinned documents. */
     @Field(() => [OfficeRoomPinType])

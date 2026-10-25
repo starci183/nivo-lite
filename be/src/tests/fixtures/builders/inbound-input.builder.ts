@@ -1,0 +1,20 @@
+import type { EntityManager } from "typeorm"
+
+/** A fresh workspace and account owned by one inbound-input proof. */
+export interface InboundInputIdentity {
+    /** The workspace where inputs are recorded. */
+    readonly workspaceId: string
+    /** The account that owns the workspace. */
+    readonly ownerId: string
+}
+
+/** Persists the parent rows that permit a real inbound event insert. */
+export const persistInboundInputWorkspace = (manager: EntityManager, identity: InboundInputIdentity): Promise<void> =>
+    manager.transaction(async (tx) => {
+        await tx.insert("auth.users", { id: identity.ownerId })
+        await tx.insert("public.workspaces", {
+            id: identity.workspaceId,
+            owner_id: identity.ownerId,
+            name: "Inbound input proof",
+        })
+    })
