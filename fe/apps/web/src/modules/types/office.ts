@@ -51,6 +51,25 @@ export interface OfficeMessageView {
     readonly workHref: string | null
     /** The agent handle the Reply action mentions, when an agent wrote the line. */
     readonly replyHandle: string | null
+    /** The delivery state under my LAST line only; null on every other line. */
+    readonly status: OfficeMessageStatusView | null
+}
+
+/** How far my last line got: persisted, fetched by another member's client, or read by another member. */
+export type OfficeMessageStatusKind = "sent" | "delivered" | "seen"
+
+/** One member who has read my last line. */
+export interface OfficeSeenReaderView {
+    readonly id: string
+    readonly name: string
+}
+
+/** The status under my last line: its words and, once seen, who read it. */
+export interface OfficeMessageStatusView {
+    readonly kind: OfficeMessageStatusKind
+    readonly label: string
+    /** Every reader, oldest read first; the view draws the first few and a "+N". */
+    readonly readers: ReadonlyArray<OfficeSeenReaderView>
 }
 
 /** An approval request as a card under an agent line. */
@@ -231,6 +250,25 @@ export interface OfficeRoomMembersView {
     readonly preview: ReadonlyArray<OfficeRoomMemberPreviewView>
 }
 
+/** What a last line is, for the one-line preview of a row. */
+export type OfficePreviewKind = "text" | "image" | "video" | "file" | "call" | "reminder"
+
+/** The per-member flags of a conversation row. A source that does not report one leaves it false. */
+export interface OfficeConversationState {
+    /** Someone mentioned me in the unread lines. */
+    readonly hasMention: boolean
+    /** I muted the conversation: a dot replaces the count. */
+    readonly isMuted: boolean
+    /** My last line was read by another member. */
+    readonly isLastSeen: boolean
+    /** Someone is typing in the conversation now. */
+    readonly isTyping: boolean
+}
+
+/** The unread indicator of a row: a count capped for display, or a dot when the conversation is muted. */
+export type OfficeUnreadBadgeView =
+    { readonly kind: "count"; readonly label: string; readonly hasMention: boolean } | { readonly kind: "dot" }
+
 /** One Hub room of the room list. */
 export interface OfficeRoomRowView {
     /** The room key, or "office" for the general Office room. */
@@ -241,16 +279,23 @@ export interface OfficeRoomRowView {
     /** The last-activity instant the conversation list sorts by; null sinks the row. */
     readonly sortAt: string | null
     readonly unread: number
+    readonly state: OfficeConversationState
     readonly members?: OfficeRoomMembersView | null
 }
 
-/** What every conversation row shows: the name, the last message, its time and the unread count. */
+/** What every conversation row shows: the name, the one-line preview, its time and the unread state. */
 interface OfficeConversationBaseView {
     readonly id: string
     readonly label: string
+    /** The one-line preview, sender prefix and media label included. */
     readonly description: string
     readonly time: string | null
     readonly unread: number
+    /** Unread lines: name and preview are drawn strong. */
+    readonly isUnread: boolean
+    readonly badge: OfficeUnreadBadgeView | null
+    readonly isLastSeen: boolean
+    readonly isTyping: boolean
     readonly members?: OfficeRoomMembersView | null
 }
 

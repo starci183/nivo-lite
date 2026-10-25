@@ -66,7 +66,7 @@ export const useOfficeMessenger = (focusedId: string | null, roomKey: string | n
     const messages = thread.slot.items
     const pendingCards = (messages ?? []).filter((line) => line.card !== null && line.cardState === "pending").length
     const waitingCount = board.pending.length + board.exceptions.length + pendingCards
-    const items = useOfficeThreadView(messages, board, words, focusedId, decisions.alreadyIds)
+    const items = useOfficeThreadView(messages, board, words, focusedId, decisions.alreadyIds, sender.outbox.length > 0)
     const panelRoom = useMemo(
         () => ({
             current,

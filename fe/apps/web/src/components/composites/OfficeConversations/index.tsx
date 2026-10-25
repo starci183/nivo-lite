@@ -1,15 +1,20 @@
 import { useState } from "react"
 import type { ReactNode } from "react"
-import { AvatarGroup, Badge, Icon, ListBox, NavLandmark, SearchField, Tabs, Text } from "@starci/grammar/common"
+import { AvatarGroup, Badge, Divider, ListBox, NavLandmark, SearchField, Tabs, Text } from "@starci/grammar/common"
 import type { AvatarGroupItem, ListBoxItem } from "@starci/grammar/common"
 import { OfficeAvatar } from "@/components/branches/OfficeAvatar"
-import { nivoIconSource } from "@/components/leaves/Icon"
-import type { OfficeConversationRowView, OfficeConversationsProps, OfficeText } from "@/modules/types"
+import { Icon } from "@/components/leaves/Icon"
+import type {
+    OfficeConversationRowView,
+    OfficeConversationsProps,
+    OfficeText,
+    OfficeUnreadBadgeView,
+} from "@/modules/types"
 import {
     BODY_CLASS_NAME,
-    GROUP_LEADING_CLASS_NAME,
     HEAD_CLASS_NAME,
     HEAD_TEXT_CLASS_NAME,
+    INDICATOR_CLASS_NAME,
     SEARCH_CLASS_NAME,
     TABS_CLASS_NAME,
     TRAILING_CLASS_NAME,
@@ -45,23 +50,54 @@ const memberItemsOf = (row: Extract<OfficeConversationRowView, { kind: "group" }
         ...(member.avatarUrl === null ? {} : { src: member.avatarUrl }),
     }))
 
-/** A group row leads with the member composite and the group glyph before the name; a direct row with its mark. */
+/** A group row leads with its member composite and nothing else; a direct row with its mark. */
 const leadingOf = (row: OfficeConversationRowView, text: OfficeText): ListBoxItem["leading"] => {
     if (row.kind !== "group") return <OfficeAvatar avatar={row.avatar} />
     return (
-        <div className={GROUP_LEADING_CLASS_NAME}>
-            <AvatarGroup
-                label={row.label}
-                layout="grid"
-                items={memberItemsOf(row)}
-                overflowLabel={(n) => text("membersOverflow", { n })}
-            />
-            <Icon source={nivoIconSource("community", "chip")} />
-        </div>
+        <AvatarGroup
+            label={row.label}
+            layout="grid"
+            items={memberItemsOf(row)}
+            overflowLabel={(n) => text("membersOverflow", { n })}
+        />
     )
 }
 
-/** The trailing cell of a row: the time over the unread badge. */
+/** The tone of the preview: accent while someone types, strong while unread, muted otherwise. */
+const previewToneOf = (row: OfficeConversationRowView): "accent" | "default" | "muted" => {
+    if (row.isTyping) return "accent"
+    return row.isUnread ? "default" : "muted"
+}
+
+/** The one-line preview, drawn strong while unread. */
+const descriptionOf = (row: OfficeConversationRowView): ListBoxItem["description"] => (
+    <Text
+        as="span"
+        size="sm"
+        tone={previewToneOf(row)}
+        weight={row.isUnread ? "semibold" : "normal"}
+        overflow="truncate"
+    >
+        {row.description}
+    </Text>
+)
+
+/** The unread indicator: the capped count in red with an accent "@" before it for a mention, or a red dot when muted. */
+const badgeOf = (badge: OfficeUnreadBadgeView): ReactNode => {
+    if (badge.kind === "dot") return <Badge tone="danger" isDot />
+    return (
+        <>
+            {badge.hasMention ? (
+                <Text as="span" size="xs" tone="accent" weight="semibold">
+                    @
+                </Text>
+            ) : null}
+            <Badge tone="danger">{badge.label}</Badge>
+        </>
+    )
+}
+
+/** The trailing cell of a row: the time, over the double check of my read last line and the unread indicator. */
 const trailingOf = (row: OfficeConversationRowView): ListBoxItem["trailing"] => (
     <div className={TRAILING_CLASS_NAME}>
         {row.time === null ? null : (
@@ -69,7 +105,10 @@ const trailingOf = (row: OfficeConversationRowView): ListBoxItem["trailing"] => 
                 {row.time}
             </Text>
         )}
-        {row.unread > 0 ? <Badge tone="accent">{row.unread}</Badge> : null}
+        <div className={INDICATOR_CLASS_NAME}>
+            {row.isLastSeen ? <Icon props={{ name: "messageSeen", usage: "chip" }} /> : null}
+            {row.badge === null ? null : badgeOf(row.badge)}
+        </div>
     </div>
 )
 
@@ -85,7 +124,7 @@ const itemsOf = (rows: ReadonlyArray<OfficeConversationRowView>, text: OfficeTex
     rows.map((row) => ({
         id: row.id,
         label: row.label,
-        description: row.description,
+        description: descriptionOf(row),
         leading: leadingOf(row, text),
         trailing: trailingOf(row),
     }))
@@ -113,6 +152,7 @@ export const OfficeConversations = (props: OfficeConversationsProps) => {
                     <Text weight="semibold">{text("listTitle")}</Text>
                 </div>
             </div>
+            <Divider semantics="presentation" />
             <div className={SEARCH_CLASS_NAME}>
                 <SearchField
                     label={text("searchLabel")}

@@ -15,6 +15,7 @@ export const useOfficeThreadView = (
     words: OfficeWords,
     focusedId: string | null,
     alreadyIds: ReadonlyArray<string>,
+    hasOutbox: boolean,
 ): ReadonlyArray<OfficeThreadItem> => {
     const me = useMember()
     return useMemo(() => {
@@ -25,6 +26,6 @@ export const useOfficeThreadView = (
             [...board.exceptions, ...board.decidedCards],
             board.candidates,
         )
-        return threadViewsOf(entries, words, contextOf(me, board, focusedId, alreadyIds))
-    }, [messages, board, words, me, focusedId, alreadyIds])
+        return threadViewsOf(entries, words, contextOf(me, board, focusedId, alreadyIds), hasOutbox)
+    }, [messages, board, words, me, focusedId, alreadyIds, hasOutbox])
 }

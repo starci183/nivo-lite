@@ -1,20 +1,36 @@
 import { leadHref } from "@/modules/routes"
 import type {
     OfficeConversationRowView,
+    OfficeConversationState,
     OfficeListView,
     OfficeMentionView,
     OfficeRoomRowView,
     OfficeTaskView,
 } from "@/modules/types"
 import { RECENT_CUSTOMERS } from "./office.consts"
-import { threadDayKey } from "./office.thread"
+import { NO_CONVERSATION_STATE, unreadBadgeOf } from "./office.conversation-state"
+import { zaloTimeOf } from "./office.list-time"
+import { officePreviewOf, previewKindOf } from "./office.preview"
 import type { OfficeAgent, OfficeConversationUnread, OfficeMessage, OfficeStaff, OfficeTask } from "./office.types"
 import { agentAvatarOf } from "./office.words"
 import type { OfficeContext, OfficeWords } from "./office.words"
 
-/** List time: the clock today, otherwise "Yesterday" or a short date. */
+/** List time as Zalo draws it: "Just now", "N min", "N h", "Yesterday", "N days", then dd/MM. */
 export const officeListTimeOf = (iso: string, words: OfficeWords, context: OfficeContext): string =>
-    threadDayKey(iso) === threadDayKey(context.nowIso) ? words.time(iso) : words.day(iso)
+    zaloTimeOf(iso, context.nowIso, words)
+
+/** The unread and state fields every row carries, from the unread count and the flags of the source. */
+const rowStateOf = (unread: number, state: OfficeConversationState) => ({
+    unread,
+    isUnread: unread > 0,
+    badge: unreadBadgeOf(unread, state),
+    isLastSeen: state.isLastSeen,
+    isTyping: state.isTyping,
+})
+
+/** The preview of a row: "typing" while someone types, otherwise the given one-line preview. */
+const previewWhileTyping = (isTyping: boolean, preview: string, words: OfficeWords): string =>
+    isTyping ? words.t("previewTyping") : preview
 
 const lastBy = (messages: ReadonlyArray<OfficeMessage>, agentId: string): OfficeMessage | null =>
     messages.findLast((message) => message.agentId === agentId) ?? null
@@ -23,6 +39,13 @@ const lastBy = (messages: ReadonlyArray<OfficeMessage>, agentId: string): Office
 interface SortableRow {
     readonly row: OfficeConversationRowView
     readonly sortAt: string | null
+}
+
+/** The preview of an agent row: its last line (a label for media), else its role; a paused agent says so. */
+const agentPreviewOf = (agent: OfficeAgent, said: OfficeMessage | null, role: string, words: OfficeWords): string => {
+    if (!agent.isActive) return words.t("agentPreviewPaused")
+    if (said === null) return role
+    return officePreviewOf({ kind: previewKindOf(said), body: said.body, author: null }, null, words)
 }
 
 const agentRowOf = (
@@ -40,9 +63,9 @@ const agentRowOf = (
             id: agent.id,
             kind: "agent",
             label: agent.name,
-            description: agent.isActive ? (said?.body ?? role) : words.t("agentPreviewPaused"),
+            description: agentPreviewOf(agent, said, role, words),
             time: said === null ? null : officeListTimeOf(said.createdAt, words, context),
-            unread,
+            ...rowStateOf(unread, NO_CONVERSATION_STATE),
             avatar: agentAvatarOf(agent),
         },
     }
@@ -73,8 +96,18 @@ export const officeListViewOf = (
     rooms: OfficeRoomListInput,
 ): OfficeListView => {
     const last = messages.at(-1) ?? null
-    const prefix = last === null || last.authorKind === "system" ? "" : `${last.authorName}: `
-    const groupPreview = last === null ? words.t("groupPreviewEmpty") : `${prefix}${last.body}`
+    const groupPreview =
+        last === null
+            ? words.t("groupPreviewEmpty")
+            : officePreviewOf(
+                  {
+                      kind: previewKindOf(last),
+                      body: last.body,
+                      author: last.authorKind === "system" ? null : last.authorName,
+                  },
+                  context.meName,
+                  words,
+              )
     const sortable: ReadonlyArray<SortableRow> = [
         ...rooms.rows.map((room) => ({
             sortAt: room.sortAt,
@@ -82,9 +115,13 @@ export const officeListViewOf = (
                 id: room.id,
                 kind: "group" as const,
                 label: room.label,
-                description: room.id === "office" && room.description === "" ? groupPreview : room.description,
+                description: previewWhileTyping(
+                    room.state.isTyping,
+                    room.id === "office" && room.description === "" ? groupPreview : room.description,
+                    words,
+                ),
                 time: room.time,
-                unread: room.unread,
+                ...rowStateOf(room.unread, room.state),
                 members: room.members ?? null,
             },
         })),
@@ -99,7 +136,7 @@ export const officeListViewOf = (
                 label: lead.name,
                 description: lead.preview ?? words.t("customerPreviewNone"),
                 time: officeListTimeOf(lead.createdAt, words, context),
-                unread: rooms.unread.leads.get(lead.id) ?? 0,
+                ...rowStateOf(rooms.unread.leads.get(lead.id) ?? 0, NO_CONVERSATION_STATE),
                 avatar: { kind: "person" as const, name: lead.name },
             },
         })),

@@ -57,6 +57,7 @@ export const messageView = (
             : words.t("openLead"),
         workHref: workHrefOf(message, context),
         replyHandle: isAgent && agent !== undefined ? agent.handle : null,
+        status: null,
     }
 }
 

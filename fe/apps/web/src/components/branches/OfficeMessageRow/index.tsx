@@ -10,6 +10,8 @@ type OfficeMessageRowProps = {
     /** The avatar, drawn once per group by the thread. */
     readonly avatar: ReactNode
     readonly text: OfficeText
+    /** The status line under this bubble: the view carries one only for my last line, and only while nothing waits to send. */
+    readonly status: ReactNode
     readonly onReply: (handle: string) => void
 }
 
@@ -57,12 +59,12 @@ export const OfficeMessageRow = (props: OfficeMessageRowProps) => {
                     {message.copyText}
                 </Text>
                 {message.workHref === null ? null : (
-                    <Button variant="ghost" size="sm" href={message.workHref}>
+                    <Button intent="neutral" size="sm" href={message.workHref}>
                         {props.text("cmdOpenWork")}
                     </Button>
                 )}
                 {message.leadHref === null ? null : (
-                    <Button variant="ghost" size="sm" href={message.leadHref}>
+                    <Button intent="neutral" size="sm" href={message.leadHref}>
                         {message.leadLabel}
                     </Button>
                 )}
@@ -79,18 +81,19 @@ export const OfficeMessageRow = (props: OfficeMessageRowProps) => {
                 message.side === "outgoing" ? undefined : <div className={AVATAR_SLOT_CLASS_NAME}>{props.avatar}</div>
             }
             status={message.isAi ? <Badge tone="neutral">{props.text("aiBadge")}</Badge> : undefined}
+            footer={props.status}
             actions={
                 <ButtonGroup label={`${message.author ?? ""} ${message.time}`}>
-                    <Button variant="secondary" size="sm" onPress={onCopy}>
+                    <Button intent="alternative" size="sm" onPress={onCopy}>
                         {isCopied ? props.text("copied") : props.text("copyText")}
                     </Button>
                     {message.leadHref === null ? null : (
-                        <Button variant="secondary" size="sm" href={message.leadHref}>
+                        <Button intent="alternative" size="sm" href={message.leadHref}>
                             {message.leadLabel}
                         </Button>
                     )}
                     {replyHandle === null ? null : (
-                        <Button variant="secondary" size="sm" onPress={() => props.onReply(replyHandle)}>
+                        <Button intent="alternative" size="sm" onPress={() => props.onReply(replyHandle)}>
                             {props.text("reply")}
                         </Button>
                     )}

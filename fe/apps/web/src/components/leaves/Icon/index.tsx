@@ -108,6 +108,10 @@ const ICON_SOURCES = {
     expand: cuts(Outline.ChevronDownIcon, Solid.ChevronDownIcon),
     collapseRail: cuts(Outline.ChevronDoubleLeftIcon, Solid.ChevronDoubleLeftIcon),
     google: cuts(GoogleMark, GoogleMark),
+    messageSending: cuts(Outline.ClockIcon, Solid.ClockIcon),
+    messageSent: cuts(Outline.CheckIcon, Solid.CheckIcon),
+    messageDelivered: cuts(Outline.CheckCircleIcon, Outline.CheckCircleIcon),
+    messageSeen: cuts(Solid.CheckCircleIcon, Solid.CheckCircleIcon),
 } satisfies Record<string, GlyphCuts>
 
 /** What an icon MEANS on these screens. The glyph that draws it is this file business. */
