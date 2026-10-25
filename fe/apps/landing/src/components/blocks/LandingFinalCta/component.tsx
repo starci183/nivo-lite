@@ -27,7 +27,7 @@ export const LandingFinalCtaBase = (props: LandingFinalCtaBaseProps) => (
                 <div className={CTA_COPY}>
                     <Heading level={2}>{props.props.title}</Heading>
                     <Text>{props.props.text}</Text>
-                    <Button variant="secondary" size="lg" href={props.props.buttonHref}>
+                    <Button intent="neutral" size="lg" href={props.props.buttonHref}>
                         {props.props.buttonLabel}
                     </Button>
                     <Text size="xs">{props.props.note}</Text>

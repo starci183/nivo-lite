@@ -144,7 +144,7 @@ const renderLandingOfferPrice = (
                         <Text size="xs">{campaign.endsText}</Text>
                     </>
                 )}
-                <Button variant="primary" size="lg" width="fill" href={props.props.ctaHref}>
+                <Button intent="commit" size="lg" width="fill" href={props.props.ctaHref}>
                     {props.props.ctaLabel}
                 </Button>
                 <Text size="xs">{props.props.fine}</Text>
