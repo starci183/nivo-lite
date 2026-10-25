@@ -1,4 +1,4 @@
-/** The queue name: the contract between the pg_cron scheduler of the content automations and the processor of the publish-content job (a pgmq queue name). */
+/** The queue name: the contract between the pg_cron scheduler of the content automations and the processor of the publish-content job (the durable queue name). */
 export const CONTENT_TICK_QUEUE = "content_tick"
 
 /** The payload of one content tick: the scheduler sends an empty one, an operator may name one workspace and force the run. */

@@ -5,7 +5,7 @@ import type { QueueOutbox } from "@modules/platform/queue"
 import { KnowledgeJob, knowledgeDedupeKey } from "./knowledge.contracts"
 import type { KnowledgeReembedPayload, KnowledgeSourcePayload } from "./knowledge.contracts"
 
-/** The queue name: the contract between these producers, the SQL functions that enqueue knowledge sources, and the processors (a pgmq queue name). */
+/** The queue name: the contract between these producers, the SQL functions that enqueue knowledge sources, and the processors (the durable queue name). */
 export const KNOWLEDGE_QUEUE = "knowledge"
 
 @Injectable()

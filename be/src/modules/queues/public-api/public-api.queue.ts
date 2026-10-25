@@ -5,7 +5,7 @@ import type { QueueOutbox } from "@modules/platform/queue"
 import { PublicApiQueueJob, publicApiDedupeKey } from "./public-api.contracts"
 import type { PublicApiRequestPayload } from "./public-api.contracts"
 
-/** The queue name: the contract between this producer and the processor of the public API request job (a pgmq queue name). */
+/** The queue name: the contract between this producer and the processor of the public API request job (the durable queue name). */
 export const PUBLIC_API_QUEUE = "public_api"
 
 @Injectable()

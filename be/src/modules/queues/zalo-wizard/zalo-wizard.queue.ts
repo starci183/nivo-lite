@@ -1,6 +1,6 @@
 import { isRecord } from "@modules/platform/primitives"
 
-/** The queue name: the contract between the database functions the wizard calls and the processor of the run-zalo-wizard job (a pgmq queue name). */
+/** The queue name: the contract between the database functions the wizard calls and the processor of the run-zalo-wizard job (the durable queue name). */
 export const ZALO_WIZARD_QUEUE = "zalo_wizard"
 
 /** What a wizard job does: seal the app keys of a new connection, seal the OA Secret Key, or build the Zalo permission URL. */

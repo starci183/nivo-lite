@@ -3,7 +3,7 @@ import type { EntityManager } from "typeorm"
 import { InjectQueueOutbox } from "@modules/platform/queue"
 import type { QueueOutbox } from "@modules/platform/queue"
 
-/** The queue name: the contract between this producer, the migration tick and the processor of the run-data-sync job (a pgmq queue name). */
+/** The queue name: the contract between this producer, the migration tick and the processor of the run-data-sync job (the durable queue name). */
 export const DATA_SYNC_QUEUE = "data_sync"
 
 /** The payload of one sync: the connection to read and the run row that records it. */

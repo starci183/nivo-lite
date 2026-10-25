@@ -9,10 +9,13 @@
 # into the shared dynamic directory by `starci app stack ingress publish` (infra/swarm/edge/routes.yml). TLS covers nivo.vn, www.nivo.vn, app.nivo.vn, api.nivo.vn.
 #   nivo-landing   the Next.js landing on nivo.vn / www.nivo.vn, reached as nivo-landing:3000 on the edge network
 #   nivo-web-app   the Next.js console on app.nivo.vn, reached as nivo-web-swarm:3000 on the edge network (its own alias: nivo-web still names the old compose container until it is retired)
-#   nivo-api       the Nest api: GraphQL, webhooks, the pgmq workers, the job alert monitor; reached as nivo-api:8787 on the edge network
+#   nivo-api       the Nest api: GraphQL, webhooks, the BullMQ workers and outbox relay, the job alert monitor; reached as nivo-api:8787 on the edge network
 #   nivo-mcp       the NIVO MCP gateway (be/apps/mcp), internal only: reached as nivo-mcp:8790 on the private `agents` network, no public route
 #   nivo-openclaw  the agent gateway; the api reaches it by service DNS (nivo-openclaw:18790) on the private `agents` network
 #   nivo-n8n       private automation editor on the `automation` network (no published port); SQLite database on the persisted volume n8n-data
+#   nivo-redis     the BullMQ broker of the queue outbox relay and workers, on the private `agents` network (nivo-redis:6379, no published port);
+#                  AOF with appendfsync everysec on the persisted volume redis-data. PostgreSQL stays the durable record: the relay republishes any
+#                  committed outbox row Redis loses, so a broker restart can cost at most the last second of broker state, never an admitted job.
 #
 # Health signals: the container healthcheck is LIVENESS only (process-local /healthz; a Supabase outage never restarts the api). READINESS
 # (/readyz: the database answers) gates traffic at the shared ingress (Traefik health check in routes.yml) and the deploy acceptance, never a restart.
@@ -234,6 +237,31 @@ services:
       rollback_config: { parallelism: 1, order: stop-first, monitor: 45s }
       restart_policy: { condition: any, delay: 5s }
 
+  # The queue broker: BullMQ on Redis, reached by the api only, on the private `agents` network (no published port, no edge alias). AOF
+  # `appendfsync everysec` on the single-host volume redis-data bounds broker-state loss at a restart to ~1 s, and the outbox relay republishes
+  # whatever it loses anyway. Stateful: stop-first, one replica pinned to the manager like the other volumes.
+  nivo-redis:
+    image: redis:7.4-alpine@sha256:57e4255cc971b1c8d6f8a6ca283ac01bc3ecdd914273ef6bfaede87aaecd6541
+    command: ["redis-server", "--appendonly", "yes", "--appendfsync", "everysec"]
+    volumes:
+      - redis-data:/data
+    networks: [agents]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "5" }
+    deploy:
+      replicas: 1
+      placement: { constraints: [node.role == manager] }
+      update_config: { parallelism: 1, order: stop-first, failure_action: rollback, monitor: 30s, max_failure_ratio: 0 }
+      rollback_config: { parallelism: 1, order: stop-first, monitor: 30s }
+      restart_policy: { condition: any, delay: 5s }
+
 networks:
   # nivo-edge-swarm is the shared ingress overlay: created by `starci app stack ingress attach` (attachable), owned by the VPS and not by this stack,
   # so standalone containers of other products (namnivo-web, the Tayson and Academy services) and nivo's public services meet the ingress on it.
@@ -248,6 +276,7 @@ volumes:
   openclaw-data: { external: true, name: nivo-engine_openclaw-data }
   video-cache: { external: true, name: nivo-engine_video-cache }
   n8n-data: { external: true, name: nivo-engine_n8n-data }
+  redis-data: { external: true, name: nivo-engine_redis-data }
 
 # Config objects are immutable and versioned by content: the provision step of `starci app stack deploy` creates `nivo-<name>-c<digest>` and the render passes the names in.
 configs:

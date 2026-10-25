@@ -1,7 +1,7 @@
 import { Injectable } from "@nestjs/common"
 import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
-import { InjectQueueWorkerRegistry } from "@modules/platform/queue"
+import { InjectQueueWorkerRegistry, QueueError, QueueErrorCode } from "@modules/platform/queue"
 import type { QueueDelivery, QueueWorkerRegistry } from "@modules/platform/queue"
 import { JobsError, JobsErrorCode } from "./errors/jobs.error"
 import type { ClaimedJob } from "./jobs.contracts"
@@ -17,8 +17,9 @@ const isFencedOut = (cause: unknown): boolean => cause instanceof JobsError && c
 /**
  * The runner of fenced jobs: it subscribes each registered processor to its queue and, for every delivery, claims the job (bumping the
  * fencing token), calls the processor and settles the job through the guarded writes. A `JobFencedOut` means a newer worker owns the
- * job: this worker stops with no further effect and the delivery is acknowledged. Any other failure marks the job failed and is
- * rethrown, so the queue retries the delivery and the next claim bumps the token again.
+ * job: this worker stops with no further effect and the delivery is acknowledged. A refused claim acknowledges only a confirmed
+ * done row; a live claim defers the delivery until its lease expires. Any other failure marks the job failed and is rethrown, so the
+ * queue retries the delivery and the next claim bumps the token again.
  */
 export class JobRunnerService implements JobProcessorRegistry {
     constructor(
@@ -48,7 +49,16 @@ export class JobRunnerService implements JobProcessorRegistry {
             workerId: this.options.workerId,
             leaseMs: this.options.leaseMs,
         })
-        if (job === null) return
+        if (job === null) {
+            const seconds = await this.claims.retryAfterSeconds(delivery.id)
+            if (seconds !== null) {
+                throw new QueueError({
+                    code: QueueErrorCode.DeferredUntil,
+                    params: { job: delivery.job, seconds },
+                })
+            }
+            return
+        }
         try {
             await processor.process(job)
             await this.claims.complete({ jobId: job.jobId, expectedFencingToken: job.fencingToken })

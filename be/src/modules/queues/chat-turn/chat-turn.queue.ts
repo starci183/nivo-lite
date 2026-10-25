@@ -3,7 +3,7 @@ import type { EntityManager } from "typeorm"
 import { InjectQueueOutbox } from "@modules/platform/queue"
 import type { QueueOutbox } from "@modules/platform/queue"
 
-/** The queue name: the contract between this producer and the processor of the run-chat-turn job (a pgmq queue name). */
+/** The queue name: the contract between this producer and the processor of the run-chat-turn job (the durable queue name). */
 export const CHAT_TURN_QUEUE = "chat_turn"
 
 /** The payload of one run-chat-turn job: ids and flags only, never the text of a message. */

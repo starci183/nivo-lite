@@ -4,9 +4,9 @@ import type {
     ReceiptRow,
     WebhookJobRow,
     WebhookMessageRow,
+    ObservedMessageRow,
 } from "../fixtures/persistence/proof.rows"
 import type { EntityManager } from "typeorm"
-import type { QueueReadRow } from "@modules/platform/queue"
 import type { LiteWorld } from "./lite-world.service"
 import * as statements from "../fixtures/persistence/proof.sql"
 
@@ -18,9 +18,9 @@ export const observeQueue = async (world: LiteWorld, proof: string) => ({
 /** Finds producer rows for one isolated queue proof. */
 export const outboxRows = (manager: EntityManager, proof: string) =>
     manager.query<Array<OutboxRow>>(statements.OUTBOX, [proof])
-/** Finds the pgmq messages paired with one proof payload. */
+/** Finds the broker-bound envelopes paired with one proof payload, reconstructed from the outbox. */
 export const messages = (manager: EntityManager, proof: string) =>
-    manager.query<Array<QueueReadRow>>(statements.MESSAGES, [proof])
+    manager.query<Array<ObservedMessageRow>>(statements.MESSAGES, [proof])
 /** Reads the persisted lease, token and progress of one delivery. */
 export const jobSnapshot = async (manager: EntityManager, key: string) => {
     const rows = await manager.query<Array<JobSnapshot>>(statements.JOB, [key])

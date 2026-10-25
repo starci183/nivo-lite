@@ -11,7 +11,7 @@ import { ZALO_REFRESH_QUEUE } from "@modules/queues/zalo-refresh"
 
 /** A manually triggered migration-owned tick and its idempotency window. */
 export interface JobTick {
-    /** The destination pgmq queue. */
+    /** The destination queue. */
     readonly queue: string
     /** The message name, identical to the migration. */
     readonly job: string

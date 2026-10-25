@@ -1,22 +1,20 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
-import { InjectQueueTransport } from "./queue.decorators"
 import type { QueueWriteOptions } from "./queue.contracts"
 import { jobOf } from "./queue.policy"
 import type { QueueOutbox } from "./queue.port"
-import type { QueueTransport } from "./queue-transport.port"
+import { JOB_ENQUEUE } from "./persistence/queue.sql"
 
 @Injectable()
 /**
- * The writing side of the queues. pgmq lives in the same Supabase PostgreSQL as the business rows, so the outbox row of a job and its
- * pgmq message are both written in the caller's transaction: the job exists, and is already on its queue, exactly when the change that
- * needs it commits. There is no relay to wait for.
+ * The writing side of the queues. A job is a durable outbox row of the caller's transaction, so it exists exactly when
+ * the change that needs it commits; nothing reaches Redis inside that transaction. The relay publishes the committed
+ * rows to BullMQ and re-enqueues what the broker lost, so a committed job is never lost.
  */
 export class QueueOutboxService implements QueueOutbox {
-    constructor(@InjectQueueTransport() private readonly transport: QueueTransport) {}
-
-    /** Resolves the job (its name, identity and workspace) and writes it inside the transaction `tx`. */
+    /** Resolves the job (its name, identity and workspace) and writes its outbox row inside the transaction `tx`. */
     async write(tx: EntityManager, queue: string, payload: object, options: QueueWriteOptions = {}): Promise<void> {
-        await this.transport.add(tx, jobOf(queue, payload, options))
+        const job = jobOf(queue, payload, options)
+        await tx.query(JOB_ENQUEUE, [job.workspaceId, job.queue, job.job, JSON.stringify(job.payload), job.dedupeKey])
     }
 }

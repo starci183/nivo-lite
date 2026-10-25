@@ -1,4 +1,4 @@
-/** The pgmq queue of the asynchronous lead actions. */
+/** The durable queue of the asynchronous lead actions. */
 export const LEAD_ACTIONS_QUEUE = "lead_actions"
 
 /** The job run by the lead-actions consumer. */

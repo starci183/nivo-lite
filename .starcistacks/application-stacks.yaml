@@ -38,7 +38,7 @@ components:
     role: service
     image: ghcr.io/starci183/nivo-lite-api:0.3.0@sha256:0000000000000000000000000000000000000000000000000000000000000000
     compose: infra/swarm/stack.yaml
-    purpose: The Nest api (GraphQL, provider webhooks, OAuth callbacks, the pgmq workers and schedulers, the job alert monitor). Liveness /healthz, readiness /readyz.
+    purpose: The Nest api (GraphQL, provider webhooks, OAuth callbacks, the BullMQ workers and the outbox relay, the job alert monitor). Liveness /healthz, readiness /readyz.
     required: true
   nivo-mcp:
     role: service
@@ -76,12 +76,18 @@ components:
     compose: infra/swarm/stack.yaml
     purpose: n8n automation editor and webhook runner; private (operator tunnel only), reached by the api as nivo-n8n:5678. Its database is SQLite (DB_TYPE=sqlite) on the persisted named volume nivo-engine_n8n-data; no self-hosted Postgres (owner ruling 2026-10-14).
     required: true
+  nivo-redis:
+    role: stateful
+    image: redis:7.4-alpine@sha256:57e4255cc971b1c8d6f8a6ca283ac01bc3ecdd914273ef6bfaede87aaecd6541
+    compose: infra/swarm/stack.yaml
+    purpose: The BullMQ broker of the job queue (owner ruling 2026-11-05, the queue is BullMQ on Redis in both editions). Internal only on the private agents network as nivo-redis:6379, no published port. AOF with appendfsync everysec on the persisted named volume nivo-engine_redis-data; the PostgreSQL outbox relay republishes any committed row the broker loses, so no admitted job is lost on a Redis restart.
+    required: true
 backing:
   supabase:
     provider: supabase
     managed: true
 # Recurring work, every entry bound to its app-owned CLI command (R268). The keys are the pg_cron job names of the migrations
-# (supabase/migrations/20261026000300_job-ticks.sql: each job is one pgmq.send to the queue its worker consumes) and the schedule is the exact
+# (supabase/migrations/20261105000000_queue-bullmq.sql: each job is one job_enqueue to the outbox the relay publishes) and the schedule is the exact
 # cron expression of the job. `cli jobs tick <id>` enqueues one tick by hand (replay of a missed tick).
 jobs:
   accounting-desk-morning:
@@ -139,6 +145,9 @@ environments:
       ingress:
         replicas: 1
         port: 80
+      nivo-redis:
+        replicas: 1
+        port: 6379
     runbook: README.md
     # The one local ingress publishes port 80 in ingress mode; the hosts below resolve to the loopback address by themselves (RFC 6761),
     # so no DNS record or certificate exists. The console answers on every other host (http://localhost).
@@ -197,6 +206,9 @@ environments:
       nivo-n8n:
         replicas: 1
         port: 5678
+      nivo-redis:
+        replicas: 1
+        port: 6379
     runbook: README.md
     # The ingress is the shared Traefik of the VPS, its own docker stack (deploy.ingress.name); this stack renders no ingress and publishes no port.
     ingress:
@@ -252,6 +264,11 @@ environments:
         restoreProof: .starcistacks/production/infra/swarm/recovery/restore-proof.md
       - component: nivo-n8n
         target: age-encrypted tarball of nivo-engine_n8n-data (the SQLite database and workflows; starci app stack backup) in /srv/nivo/backups, copied off the VPS by the operator.
+        retention: 14 days on the VPS (deploy.backup.keepDays); off-host retention is the operator's.
+        owner: Production operator
+        restoreProof: .starcistacks/production/infra/swarm/recovery/restore-proof.md
+      - component: nivo-redis
+        target: age-encrypted tarball of nivo-engine_redis-data (the AOF of the BullMQ broker; starci app stack backup) in /srv/nivo/backups. The PostgreSQL job_outbox is the durable record and republishes anything the broker loses, so this backup is convenience, not correctness.
         retention: 14 days on the VPS (deploy.backup.keepDays); off-host retention is the operator's.
         owner: Production operator
         restoreProof: .starcistacks/production/infra/swarm/recovery/restore-proof.md
@@ -328,7 +345,7 @@ environments:
           app: landing
           buildArgs:
             values: {NEXT_PUBLIC_SITE_URL: "https://nivo.vn", NEXT_PUBLIC_APP_URL: "https://app.nivo.vn"}
-      volumes: [nivo-engine_openclaw-data, nivo-engine_video-cache, nivo-engine_n8n-data, nivo-edge_acme]
+      volumes: [nivo-engine_openclaw-data, nivo-engine_video-cache, nivo-engine_n8n-data, nivo-engine_redis-data, nivo-edge_acme]
       secrets:
         grants:
           - service: nivo-api
@@ -336,6 +353,8 @@ environments:
             from:
               - {member: api}
               - {member: auth}
+              # Optional: when the owner seals QUEUE_REDIS_PASSWORD in the api member, the api uses it for the queue broker and Redis needs `--requirepass` in infra/swarm/stack.yaml; internal-network-only is the default.
+              - {member: api, keys: [QUEUE_REDIS_PASSWORD]}
               - {member: stack, keys: [OPENCLAW_GATEWAY_TOKEN, OPENCLAW_MANAGE_AGENTS], fill: true}
           # The gateway gets exactly the keys it needs (be/apps/mcp/src/mcp.env.ts), from the same sealed `api` member as the api: the database
           # connection and the connection key (CHANNEL_TOKEN_KEY) that opens the credential each remote connector has sealed in its own row, per
@@ -360,6 +379,10 @@ environments:
           files: [infra/swarm/api-public.conf]
           values:
             PORT: "8787"
+            QUEUE_ENABLED: "true"
+            QUEUE_REDIS_HOST: nivo-redis
+            QUEUE_REDIS_PORT: "6379"
+            QUEUE_REDIS_PREFIX: nivo
             OPENCLAW_GATEWAY_URL: "ws://nivo-openclaw:18790"
             OPENCLAW_CONFIG_DIR: /openclaw-state
             OPENCLAW_GATEWAY_STATE_DIR: /home/node/.openclaw
@@ -413,6 +436,7 @@ environments:
         volumes:
           - {name: n8n-data, volume: nivo-engine_n8n-data}
           - {name: openclaw-data, volume: nivo-engine_openclaw-data}
+          - {name: redis-data, volume: nivo-engine_redis-data}
       # The swarm Traefik is the SHARED ingress of VPS 103.142.27.9 (INGRESS-INVENTORY.md): nivo plus the compose tenants, which are
       # reached over the attachable overlay. Tenant route files (academy.yml, tayson.yml) stay in the legacy dynamic directory.
       ingress:

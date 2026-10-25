@@ -1,4 +1,4 @@
-/** The queue name: the contract between the producers and the processors of the sync-agents and generate-with-agent jobs (a pgmq queue name). */
+/** The queue name: the contract between the producers and the processors of the sync-agents and generate-with-agent jobs (the durable queue name). */
 export const AGENTS_QUEUE = "agents"
 
 /** The jobs of the agents queue; the value is the job name inside the queue and the prefix of the dedupe key. */

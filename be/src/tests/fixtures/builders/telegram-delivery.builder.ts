@@ -6,14 +6,7 @@ import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { INBOX, InboxService } from "@modules/platform/inbox"
 import { MESSAGE_CATALOG } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
-import type { Logger } from "@modules/platform/logging"
-import {
-    PgmqQueueTransportClient,
-    QUEUE_OUTBOX,
-    QueueOutboxService,
-    type QueueOptions,
-    type QueueOutbox,
-} from "@modules/platform/queue"
+import { QUEUE_OUTBOX, QueueOutboxService, type QueueOutbox } from "@modules/platform/queue"
 import type { EntityManager } from "typeorm"
 import {
     TelegramDeliveryQueue,
@@ -34,10 +27,9 @@ export const telegramDeliveryInput = (connection: string) => {
 }
 
 /** Exercises the queue producer as the domain intake's publication adapter over real inbox/outbox transactions. */
-export const buildTelegramDelivery = async (manager: EntityManager, queueOptions: QueueOptions, connection: string) => {
+export const buildTelegramDelivery = async (manager: EntityManager, connection: string) => {
     const { body, message } = telegramDeliveryInput(connection)
-    const transport = new PgmqQueueTransportClient(queueOptions, manager, mock<Logger>())
-    const actual = new QueueOutboxService(transport)
+    const actual = new QueueOutboxService()
     const queue = new TelegramDeliveryQueue(actual)
     const publication = mock<QueueOutbox>()
     publication.write.mockImplementation((tx, _name, payload) => {

@@ -11,7 +11,7 @@ import { cronProof } from "../../world/cron-proof.service"
 
 describe("NIVO queue (local Supabase integration)", () => {
     const world = useTestWorld({ modules: [...QUEUE_MODULES] })
-    it("queue/enqueue-atomic-with-transaction: outbox and pgmq writes commit or roll back together", async () => {
+    it("queue/enqueue-atomic-with-transaction: the outbox row commits or rolls back with its change", async () => {
         const kept = world.key("kept")
         const lost = world.key("lost")
         cleanupQueue(world, kept)
@@ -36,7 +36,7 @@ describe("NIVO queue (local Supabase integration)", () => {
         expect((await observeQueue(world, kept)).messages).toHaveLength(1)
         expect(await observeQueue(world, lost)).toEqual({ outbox: [], messages: [] })
     })
-    it("queue/relay-job-id-is-outbox-id: duplicate writes and deliveries retain one outbox identity", async () => {
+    it("queue/broker-job-id-is-outbox-id: duplicate writes retain one outbox identity the relay publishes", async () => {
         const proofId = world.key("identity")
         const dedupeKey = `${CONTENT_TICK_QUEUE}:${proofId}`
         cleanupQueue(world, proofId)
@@ -50,7 +50,7 @@ describe("NIVO queue (local Supabase integration)", () => {
         const [row] = observed.outbox
         const [message] = observed.messages
         assert(row !== undefined && message !== undefined)
-        expect(row.sent_at).toEqual(expect.any(Date))
+        expect(row.sent_at).toBeNull()
         expect(message.message).toEqual({
             name: CONTENT_TICK_QUEUE,
             payload: { proofId },
@@ -61,19 +61,12 @@ describe("NIVO queue (local Supabase integration)", () => {
         expect(builder.delivery(message, signal).id).toBe(row.id)
         expect(builder.delivery({ ...message, attempt: 2 }, signal).id).toBe(row.id)
     })
-    it("queue/scheduler-fires-once: the migrated cron tick is enqueued and consumed once", async () => {
+    it("queue/scheduler-fires-once: the migrated cron tick commits exactly one outbox row", async () => {
         const proof = await cronProof(world)
         expect(proof.jobs).toHaveLength(1)
         expect(proof.jobs[0]?.schedule).toBe("*/15 * * * *")
-        expect(proof.jobs[0]?.command).toContain("pgmq.send")
+        expect(proof.jobs[0]?.command).toContain("job_enqueue")
         expect(proof.added).toHaveLength(1)
-        expect(proof.deliveries).toHaveLength(1)
-        expect(proof.deliveries[0]).toMatchObject({
-            id: `content_tick:${proof.added[0]?.id}`,
-            job: CONTENT_TICK_QUEUE,
-            payload: {},
-            attempt: 1,
-        })
-        expect(proof.remaining.map((row) => row.id)).not.toContain(proof.added[0]?.id)
+        expect(proof.added[0]).toMatchObject({ queue: CONTENT_TICK_QUEUE, name: CONTENT_TICK_QUEUE, payload: {} })
     })
 })

@@ -35,7 +35,7 @@ export class PaymentOrderRequestsService {
         private readonly credits: CreditsService,
     ) {}
 
-    /** Commits an authorized manager's request and its existing pgmq job together, then answers immediately. */
+    /** Commits an authorized manager's request and its durable queue job together, then answers immediately. */
     async request(userId: string, params: PaymentOrderRequestParams): Promise<QueuedPaymentOrderRequest> {
         await this.billing.requireManager(userId, params.workspaceId)
         const target = targetOf(params)

@@ -29,6 +29,9 @@ services:
       SITE_URL: http://localhost
       HTTP_SECURITY_ALLOWED_ORIGINS: http://localhost,http://127.0.0.1
       QUEUE_ENABLED: "true"
+      QUEUE_REDIS_HOST: nivo-redis
+      QUEUE_REDIS_PORT: "6379"
+      QUEUE_REDIS_PREFIX: nivo
     extra_hosts:
       - host.docker.internal:host-gateway
     healthcheck:
@@ -138,6 +141,25 @@ services:
       rollback_config: { order: start-first, monitor: 60s }
       restart_policy: { condition: any, delay: 5s }
 
+  # The BullMQ broker of the queue outbox relay and the workers: Redis with AOF everysec on a named volume. Internal
+  # only — no port is published; the api reaches it as nivo-redis:6379 on the stack network.
+  nivo-redis:
+    image: redis:7.4-alpine@sha256:57e4255cc971b1c8d6f8a6ca283ac01bc3ecdd914273ef6bfaede87aaecd6541
+    command: ["redis-server", "--appendonly", "yes", "--appendfsync", "everysec"]
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+    deploy:
+      replicas: 1
+      update_config: { parallelism: 1, order: stop-first, failure_action: rollback, monitor: 30s }
+      rollback_config: { parallelism: 1, order: stop-first, monitor: 30s }
+      restart_policy: { condition: any, delay: 5s }
+
   ingress:
     image: traefik:v3.6@sha256:31267173a15b4944e797a76ffd9c419707c8d8b32fe5b610f80cd0cfa05f372d
     command:
@@ -173,3 +195,6 @@ services:
       update_config: { order: stop-first, failure_action: rollback, monitor: 30s }
       rollback_config: { order: stop-first, monitor: 30s }
       restart_policy: { condition: any, delay: 5s }
+
+volumes:
+  redis-data: {}

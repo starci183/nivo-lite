@@ -7,7 +7,7 @@ import {
 import type { MetaDeliveryRecorded } from "@modules/queues/meta-delivery"
 import { buildMetaDelivery } from "@tests/fixtures/builders/meta-delivery.builder"
 import { useTestWorld } from "../../world/use-test-world"
-import { QUEUE_MODULES, queueOptions } from "../../world/test-capabilities.options"
+import { QUEUE_MODULES } from "../../world/test-capabilities.options"
 
 const message: MetaDeliveryRecorded = { deliveryId: "delivery-1" }
 
@@ -33,7 +33,7 @@ describe("MetaDeliveryQueue", () => {
     })
 
     it("publishes in the caller transaction with the intake dedupe key", async () => {
-        const { queue, outbox } = buildMetaDelivery(world.db.primary, queueOptions)
+        const { queue, outbox } = buildMetaDelivery()
         const write = jest.spyOn(outbox, "write")
         const rollback = new TestWorldError({ code: TestWorldErrorCode.TransactionRefused })
         await expect(
@@ -48,7 +48,7 @@ describe("MetaDeliveryQueue", () => {
     })
 
     it("propagates publication failure so the caller can roll back", async () => {
-        const { queue, outbox } = buildMetaDelivery(world.db.primary, queueOptions)
+        const { queue, outbox } = buildMetaDelivery()
         const write = jest.spyOn(outbox, "write")
         const failure = new TestWorldError({ code: TestWorldErrorCode.ProviderDown })
         write.mockRejectedValueOnce(failure)

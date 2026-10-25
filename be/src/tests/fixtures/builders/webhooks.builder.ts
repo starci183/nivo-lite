@@ -15,13 +15,11 @@ import {
 import type { MetaEventTaker } from "@modules/domain/meta-inbox"
 import { MetaThreadsService } from "@modules/domain/meta-threads"
 import type { MetaClient } from "@modules/integrations/meta"
-import type { Logger } from "@modules/platform/logging"
-import { PgmqQueueTransportClient, QUEUE_OUTBOX, QueueOutboxService } from "@modules/platform/queue"
+import { QUEUE_OUTBOX, QueueOutboxService } from "@modules/platform/queue"
 import { META_CLIENT } from "@modules/integrations/meta"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { INBOX, InboxService } from "@modules/platform/inbox"
 import type { EntityManager } from "typeorm"
-import type { QueueOptions } from "@modules/platform/queue"
 
 /** Explicit identities and signing/queue options supplied by the test composition root. */
 export interface WebhookBuilderOptions {
@@ -29,7 +27,6 @@ export interface WebhookBuilderOptions {
     readonly workspaceId: string
     readonly connectionId: string
     readonly signingFixture: string
-    readonly queueOptions: QueueOptions
     readonly nextId: () => string
 }
 
@@ -67,7 +64,7 @@ const signedDelivery = (options: WebhookBuilderOptions) => {
 /** Persists the real workspace needed by the transactional inbox/outbox handoff. */
 export const webhooksBuilder = (manager: EntityManager, meta: MetaClient, options: WebhookBuilderOptions) => ({
     async build() {
-        const { userId, workspaceId, connectionId, queueOptions } = options
+        const { userId, workspaceId, connectionId } = options
         await manager.transaction(async (tx) => {
             await tx.insert("auth.users", { id: userId })
             await tx.insert("public.workspaces", { id: workspaceId, owner_id: userId, name: "Meta integration proof" })
@@ -82,8 +79,7 @@ export const webhooksBuilder = (manager: EntityManager, meta: MetaClient, option
             threads.touch.mockResolvedValue(undefined)
             const comments = mock<MetaCommentsService>()
             const taker = mock<MetaEventTaker>()
-            const transport = new PgmqQueueTransportClient(queueOptions, manager, mock<Logger>())
-            const outbox = new QueueOutboxService(transport)
+            const outbox = new QueueOutboxService()
             const moduleRef = await Test.createTestingModule({
                 providers: [
                     MetaInboxService,

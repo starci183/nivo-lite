@@ -24,7 +24,7 @@ const actionOf = (row: SalesActionRow): SalesAction => {
 }
 
 @Injectable()
-/** Reads the persisted pgmq lifecycle, with workspace membership enforced. */
+/** Reads the persisted job lifecycle, with workspace membership enforced. */
 export class SalesStatusService {
     constructor(
         @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,

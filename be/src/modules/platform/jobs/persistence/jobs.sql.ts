@@ -12,6 +12,9 @@ export const CLAIM_JOB = sql`INSERT INTO public.jobs (kind, job_key, status, fen
      WHERE jobs.status = 'failed' OR (jobs.status = 'running' AND jobs.lease_expires_at < $6)
     RETURNING id, kind, fencing_token, current_step, payload`
 
+/** Distinguishes idempotent completion from a refused live claim without retaining a transaction while the broker waits. */
+export const JOB_CLAIM_STATE = sql`SELECT status, lease_expires_at FROM public.jobs WHERE job_key = $1 LIMIT 1`
+
 /** The guarded writes wrap their UPDATE in a CTE: TypeORM returns a bare `UPDATE ... RETURNING` as `[rows, count]`, a SELECT as rows. */
 
 /** Records a step ($1 job id, $2 expected token, $3 step, $4 instant); no row comes back when the token is stale. */

@@ -3,7 +3,7 @@ import { injector } from "@modules/platform/composition"
 import type { TypedParameterDecorator } from "@modules/platform/composition"
 import type { QueueOptions } from "./queue.options"
 import type { QueueOutbox, QueueWorkerRegistry } from "./queue.port"
-import type { QueueTransport } from "./queue-transport.port"
+import type { QueueFactory, QueueTransport } from "./queue-transport.port"
 import type { QueueStatusService } from "./queue-status.service"
 
 /** Token of the options of the queues, exported so a spec can provide it. */
@@ -18,8 +18,11 @@ export const QUEUE_WORKER_REGISTRY: unique symbol = Symbol("platform.queue.worke
 /** Token of the authoritative queue status reader. */
 export const QUEUE_STATUS: unique symbol = Symbol("platform.queue.status")
 
-/** Token of the pgmq port. */
+/** Token of the BullMQ transport port. */
 export const QUEUE_TRANSPORT: unique symbol = Symbol("platform.queue.transport")
+
+/** Token of the BullMQ object factory, exported so a spec can double the Redis boundary. */
+export const QUEUE_FACTORY: unique symbol = Symbol("platform.queue.factory")
 
 /** Injects the options of the queues. Parameter type: QueueOptions. */
 export const InjectQueueOptions = (): TypedParameterDecorator<QueueOptions> => injector<QueueOptions>(QUEUE_OPTIONS)
@@ -31,9 +34,12 @@ export const InjectQueueOutbox = (): TypedParameterDecorator<QueueOutbox> => inj
 export const InjectQueueWorkerRegistry = (): TypedParameterDecorator<QueueWorkerRegistry> =>
     injector<QueueWorkerRegistry>(QUEUE_WORKER_REGISTRY)
 
-/** Injects the pgmq port. Parameter type: QueueTransport. */
+/** Injects the BullMQ transport port. Parameter type: QueueTransport. */
 export const InjectQueueTransport = (): TypedParameterDecorator<QueueTransport> =>
     injector<QueueTransport>(QUEUE_TRANSPORT)
+
+/** Injects the BullMQ object factory. Parameter type: QueueFactory. */
+export const InjectQueueFactory = (): TypedParameterDecorator<QueueFactory> => injector<QueueFactory>(QUEUE_FACTORY)
 
 /** Injects the authoritative queue status reader. Parameter type: QueueStatusService. */
 export const InjectQueueStatusService = (): TypedParameterDecorator<QueueStatusService> =>

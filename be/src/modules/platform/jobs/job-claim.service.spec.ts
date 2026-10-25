@@ -13,6 +13,7 @@ import {
     FAIL_JOB,
     LOCK_FAILED_JOB_FENCE,
     LOCK_JOB_FENCE,
+    JOB_CLAIM_STATE,
 } from "./persistence/jobs.sql"
 
 const AT = "2026-02-03T04:05:06.000Z"
@@ -40,6 +41,58 @@ const buildWithoutConnection = async () => {
 }
 
 const claimed: ClaimedJob = { jobId: "j-1", kind: "mail", fencingToken: 3, currentStep: null, payload: { id: "m-1" } }
+
+describe("JobClaimService", () => {
+    describe("retryAfterSeconds", () => {
+        it("permits idempotent completion only for a confirmed done claim", async () => {
+            const manager = mockEntityManager({
+                query: [JOB_CLAIM_STATE, [{ status: "done", lease_expires_at: null }]],
+            })
+            const { claims } = await build(manager)
+
+            await expect(claims.retryAfterSeconds("k-1")).resolves.toBeNull()
+
+            expect(manager.query).toHaveBeenCalledWith(JOB_CLAIM_STATE, ["k-1"])
+        })
+
+        it("rounds a live foreign lease up so the broker cannot complete its unfinished work", async () => {
+            const manager = mockEntityManager({
+                query: [
+                    JOB_CLAIM_STATE,
+                    [{ status: "running", lease_expires_at: new Date("2026-02-03T04:06:06.001Z") }],
+                ],
+            })
+            const { claims } = await build(manager)
+
+            await expect(claims.retryAfterSeconds("k-1")).resolves.toBe(61)
+        })
+
+        it("bounds a long live lease and retries a lapsed lease on the next second", async () => {
+            const manager = mockEntityManager({
+                query: [
+                    JOB_CLAIM_STATE,
+                    [{ status: "running", lease_expires_at: new Date("2026-02-03T06:05:06.000Z") }],
+                ],
+            })
+            const { claims } = await build(manager)
+
+            await expect(claims.retryAfterSeconds("k-1")).resolves.toBe(3600)
+            manager.query.mockResolvedValue([
+                { status: "running", lease_expires_at: new Date("2026-02-03T04:05:05.000Z") },
+            ])
+            await expect(claims.retryAfterSeconds("k-1")).resolves.toBe(1)
+        })
+
+        it("conservatively defers missing rows and failed claims that raced the refused upsert", async () => {
+            const manager = mockEntityManager({ query: [JOB_CLAIM_STATE, []] })
+            const { claims } = await build(manager)
+
+            await expect(claims.retryAfterSeconds("k-1")).resolves.toBe(1)
+            manager.query.mockResolvedValue([{ status: "failed", lease_expires_at: null }])
+            await expect(claims.retryAfterSeconds("k-1")).resolves.toBe(1)
+        })
+    })
+})
 
 describe("JobClaimService", () => {
     describe("claim", () => {

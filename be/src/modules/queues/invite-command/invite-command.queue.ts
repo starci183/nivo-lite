@@ -1,4 +1,4 @@
-/** The queue name: the contract between `public.request_invite_command` / `public.request_admin_invite_resend` and the processor of the issue-invite job (a pgmq queue name). */
+/** The queue name: the contract between `public.request_invite_command` / `public.request_admin_invite_resend` and the processor of the issue-invite job (the durable queue name). */
 export const INVITE_COMMAND_QUEUE = "invite_command"
 
 /** The payload of one invitation command: the row of `public.app_commands` that holds what was asked. */

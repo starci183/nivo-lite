@@ -10,19 +10,22 @@ export const RECEIPTS = sql`
 `
 /** Observes the durable publication from outside its intake transaction. */
 export const PUBLICATIONS = sql`SELECT id, payload, dedupe_key, sent_at FROM public.job_outbox WHERE queue = $1 AND payload->>'deliveryId' = $2`
-/** Observes the real pgmq handoff of each delivery capability. */
+/** The broker-bound envelope of each delivery capability, reconstructed from the outbox the relay publishes. */
 export const MESSAGES = sql`
-    SELECT message FROM pgmq."q_meta-delivery" WHERE $1 = 'meta' AND message->'payload'->>'deliveryId' = $2
-    UNION ALL
-    SELECT message FROM pgmq."q_telegram-delivery" WHERE $1 = 'telegram' AND message->'payload'->>'deliveryId' = $2
-    UNION ALL
-    SELECT message FROM pgmq."q_sepay-delivery" WHERE $1 = 'sepay' AND message->'payload'->>'deliveryId' = $2
+    SELECT jsonb_build_object('name', o.name, 'payload', o.payload, 'dedupe', o.dedupe_key, 'outbox_id', o.id) AS message
+    FROM public.job_outbox o
+    WHERE (($1 = 'meta' AND o.queue = 'meta-delivery')
+        OR ($1 = 'telegram' AND o.queue = 'telegram-delivery')
+        OR ($1 = 'sepay' AND o.queue = 'sepay-delivery'))
+      AND o.payload->>'deliveryId' = $2
 `
-/** Removes only this delivery's queue messages, before removing its outbox. */
+/** Removes only this delivery's broker-bound rows, before removing its outbox. */
 export const CLEAN_MESSAGES = sql`
-    WITH meta AS (DELETE FROM pgmq."q_meta-delivery" WHERE $1 = 'meta' AND message->'payload'->>'deliveryId' = $2),
-    telegram AS (DELETE FROM pgmq."q_telegram-delivery" WHERE $1 = 'telegram' AND message->'payload'->>'deliveryId' = $2)
-    DELETE FROM pgmq."q_sepay-delivery" WHERE $1 = 'sepay' AND message->'payload'->>'deliveryId' = $2
+    DELETE FROM public.job_outbox
+    WHERE (($1 = 'meta' AND queue = 'meta-delivery')
+        OR ($1 = 'telegram' AND queue = 'telegram-delivery')
+        OR ($1 = 'sepay' AND queue = 'sepay-delivery'))
+      AND payload->>'deliveryId' = $2
 `
 /** Removes only the publication paired with this fixture receipt. */
 export const CLEAN_PUBLICATIONS = sql`DELETE FROM public.job_outbox WHERE queue = $1 AND payload->>'deliveryId' = $2`
@@ -32,8 +35,7 @@ export const CLEAN_RECEIPTS = sql`
     telegram AS (DELETE FROM public.telegram_inbox WHERE $1 = 'telegram' AND provider = 'telegram' AND delivery_id = $2)
     DELETE FROM public.sepay_transactions WHERE $1 = 'sepay' AND sepay_id::text = $2
 `
-/** Removes reconcile messages before their workspace's booked credit is deleted. */
+/** Removes reconcile rows before their workspace's booked credit is deleted. */
 export const CLEAN_CREDITS = sql`
-    WITH messages AS (DELETE FROM pgmq.q_bank_credit_received WHERE message->'payload'->>'workspaceId' = $1)
     DELETE FROM public.job_outbox WHERE queue = 'bank_credit_received' AND payload->>'workspaceId' = $1
 `

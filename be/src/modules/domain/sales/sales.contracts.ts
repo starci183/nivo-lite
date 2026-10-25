@@ -47,7 +47,7 @@ export interface SalesShipmentRequest extends SalesScope {
 
 /** A queued action, with the id the status query polls. */
 export interface SalesAction {
-    /** The pgmq outbox identity. */
+    /** The queue outbox identity. */
     readonly id: string
     /** The normalized lifecycle. */
     readonly status: string

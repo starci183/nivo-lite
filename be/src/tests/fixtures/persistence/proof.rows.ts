@@ -24,7 +24,7 @@ export interface WebhookJobRow {
     dedupe_key: string
     sent_at: Date | null
 }
-/** A stored pgmq message body. */
+/** The broker-bound envelope an outbox row carries, reconstructed for observation. */
 export interface WebhookMessageRow {
     message: object
 }
@@ -33,7 +33,23 @@ export interface CronRow {
     schedule: string
     command: string
 }
-/** A pgmq message identity for proving enqueue and acknowledgement. */
-export interface MessageIdRow {
+/** A committed tick observed through the outbox the relay publishes from. */
+export interface TickRow {
     id: string
+    queue: string
+    name: string
+    payload: object
+}
+/** The broker-bound envelope reconstructed from an outbox row for observation. */
+export interface ObservedMessage {
+    name?: string
+    payload?: object
+    dedupe?: string
+    outbox_id?: string
+}
+/** An outbox row seen as the job the relay hands to the broker (id, attempt and envelope). */
+export interface ObservedMessageRow {
+    id: string
+    attempt: number
+    message: ObservedMessage
 }

@@ -12,7 +12,7 @@ import { ClockModule } from "@modules/platform/clock"
 import { HttpModule } from "@modules/platform/http"
 import { LoggingModule } from "@modules/platform/logging"
 import { eachInOrder } from "@modules/platform/primitives"
-import type { WorldDatabase } from "./test-world.contracts"
+import type { WorldDatabase, WorldSandbox } from "./test-world.contracts"
 
 /** One hex group per run (process and monotonic clock), so the ids of two runs never meet in the database a proof writes to. */
 const RUN_GROUP = ((process.pid % 0x10000) * 0x10000 + Number(process.hrtime.bigint() % 0x10000n)).toString(16)
@@ -33,7 +33,7 @@ class LocalDatabaseModule {
 }
 
 /** Attaches only to migrated local Supabase; the closure owns resources rather than injecting a DataSource into services. */
-export const createLiteWorld = (modules: ReadonlyArray<DynamicModule>) => {
+export const createLiteWorld = (modules: ReadonlyArray<DynamicModule>, sandbox?: WorldSandbox) => {
     let source: DataSource | undefined
     let container: TestingModule | undefined
     const cleanups: Array<() => Promise<void>> = []
@@ -49,7 +49,7 @@ export const createLiteWorld = (modules: ReadonlyArray<DynamicModule>) => {
         },
         async open(): Promise<void> {
             const config = parsePrimaryDatabaseConfig(EnvSource.fromProcess())
-            const url = config.url.reveal()
+            const url = sandbox === undefined ? config.url.reveal() : await sandbox.create()
             assert(["localhost", "127.0.0.1", "[::1]"].includes(new URL(url).hostname), "Proofs require local Supabase")
             const schema: Partial<Record<"schema", string>> =
                 config.schema === undefined ? {} : { schema: config.schema }
@@ -95,7 +95,11 @@ export const createLiteWorld = (modules: ReadonlyArray<DynamicModule>) => {
                 try {
                     await container?.close()
                 } finally {
-                    if (source?.isInitialized) await source.destroy()
+                    try {
+                        if (source?.isInitialized) await source.destroy()
+                    } finally {
+                        await sandbox?.drop()
+                    }
                 }
             }
         },

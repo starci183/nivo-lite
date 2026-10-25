@@ -3,7 +3,7 @@ import type { EntityManager } from "typeorm"
 import { InjectQueueOutbox } from "@modules/platform/queue"
 import type { QueueOutbox } from "@modules/platform/queue"
 
-/** The queue name: the contract between this producer and the processor of the deduct-order job (a pgmq queue name). */
+/** The queue name: the contract between this producer and the processor of the deduct-order job (the durable queue name). */
 export const INVENTORY_ORDER_QUEUE = "inventory_order"
 
 /** The payload of one deduct-order job: a confirmed order whose goods leave stock. */

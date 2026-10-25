@@ -22,7 +22,7 @@ export const RECEIPT_DELIVERY_MODULES = [
     ...RECEIPT_DOMAIN_MODULES,
 ]
 
-/** Observes the committed receipt and its actual outbox and pgmq handoff. */
+/** Observes the committed receipt and its durable outbox handoff. */
 export const zaloDeliveryState = async (world: LiteWorld, deliveryId: string) => ({
     receipts: await world.db.primary.query<Array<ReceiptRow>>(statements.RECEIPTS, [deliveryId]),
     jobs: await world.db.primary.query<Array<WebhookJobRow>>(statements.JOBS, [deliveryId]),
