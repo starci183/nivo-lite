@@ -116,7 +116,7 @@ namespaces:
     - key: "catalogTitle"
       reason: 'Read as the string "catalogTitle" in components/blocks/AgentInstanceHeader/index.tsx, components/blocks/AgentInstances/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
     - key: "chat"
-      reason: 'Read as the string "chat" in components/blocks/ConsoleCompactNavigation/index.tsx, components/blocks/HiringOffers/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
+      reason: 'Read as the string "chat" in components/blocks/HiringOffers/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
     - key: "eyebrow"
       reason: 'Read as the string "eyebrow" in components/blocks/AgentInstances/index.tsx, components/blocks/AuthorityHead/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
     - key: "kindCustomer"
