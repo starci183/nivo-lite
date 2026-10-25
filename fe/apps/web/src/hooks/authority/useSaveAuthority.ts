@@ -3,6 +3,7 @@
 import { QUERY_AUTHORITY_SWR_KEY, useMutateUpdateAuthoritySwr } from "@/hooks/swr"
 import type { MutateUpdateAuthorityRequest } from "@/hooks/swr"
 import { useGraphQLWithToast } from "@/modules/toast"
+import { matchesSwrKey } from "@/modules/utils"
 import { useTranslations } from "next-intl"
 import { useCallback } from "react"
 import { mutate } from "swr"
@@ -19,7 +20,7 @@ export const useSaveAuthority = () => {
         async (patch: AuthorityPatch): Promise<boolean> => {
             const saved = await runGraphQL(() => trigger({ patch }), { successMessage: t("saved") })
             if (saved === undefined) return false
-            await mutate(QUERY_AUTHORITY_SWR_KEY)
+            await mutate(matchesSwrKey(QUERY_AUTHORITY_SWR_KEY))
             return true
         },
         [runGraphQL, trigger, t],

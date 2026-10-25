@@ -8,6 +8,7 @@ import type { ModuleKey } from "@/modules/catalog"
 import { navigation } from "@/modules/i18n"
 import { agentHref, cleanInstanceName } from "@/modules/installations"
 import { useGraphQLWithToast } from "@/modules/toast"
+import { matchesSwrKey } from "@/modules/utils"
 
 /** Adds another instance of a multi-instance agent type through the back end and opens it on its Setup tab. */
 export const useAddInstance = () => {
@@ -23,7 +24,7 @@ export const useAddInstance = () => {
                 successMessage: t("instanceCreated"),
             })
             if (added === undefined) return false
-            await mutate(QUERY_MODULE_INSTALLATIONS_SWR_KEY)
+            await mutate(matchesSwrKey(QUERY_MODULE_INSTALLATIONS_SWR_KEY))
             router.push(agentHref(moduleKey, added.installationId))
             return true
         },

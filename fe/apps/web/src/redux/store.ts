@@ -1,8 +1,9 @@
 import { configureStore } from "@reduxjs/toolkit"
+import { viewerReducer } from "./slices/viewer"
 import { workspaceReducer } from "./slices/workspace"
 
 /** Builds the app store: app-wide state only (selected ids, server-pushed entities); feature-local UI state is zustand. */
-export const makeStore = () => configureStore({ reducer: { workspace: workspaceReducer } })
+export const makeStore = () => configureStore({ reducer: { viewer: viewerReducer, workspace: workspaceReducer } })
 
 /** The app store. */
 export type AppStore = ReturnType<typeof makeStore>

@@ -1,10 +1,11 @@
 "use client"
 
 import useSWR from "swr"
+import { useWorkspaceKey } from "@/hooks/workspaceKey"
 import { queryAutomations } from "@/modules/api/graphql/queries/query-automations"
 import { automationsOverviewOf } from "@/modules/automations"
 
-/** The SWR key of the automations overview; pipeline mutations call `mutate(QUERY_AUTOMATIONS_SWR_KEY)`. */
+/** The SWR key of the automations overview; pipeline mutations revalidate with `matchesSwrKey(QUERY_AUTOMATIONS_SWR_KEY)`. */
 export const QUERY_AUTOMATIONS_SWR_KEY = "QUERY_AUTOMATIONS_SWR"
 
 const REFRESH_MS = 3_000
@@ -17,7 +18,7 @@ const ACTIVE_RUNS: ReadonlySet<string> = new Set(["queued", "running"])
  */
 export const useQueryAutomationsSwr = () =>
     useSWR(
-        QUERY_AUTOMATIONS_SWR_KEY,
+        useWorkspaceKey(QUERY_AUTOMATIONS_SWR_KEY, []),
         async ({ signal }: { signal?: AbortSignal } = {}) => {
             const result = await queryAutomations({ signal })
             if (!result.data) throw new Error("automations answered no data")

@@ -5,6 +5,7 @@ import { useCallback, useState } from "react"
 import { mutate } from "swr"
 import { QUERY_HIRING_CANDIDATE_DETAIL_SWR_KEY, QUERY_HIRING_WORKBENCH_SWR_KEY } from "@/hooks/swr"
 import { toast, useGraphQLWithToast } from "@/modules/toast"
+import { matchesSwrKey } from "@/modules/utils"
 
 /** What one command run leaves on the screen. */
 export interface HiringRun {
@@ -47,7 +48,7 @@ export const useHiringRun = (): HiringRun => {
             const text = describe?.(value) ?? null
             setNotice(text)
             toast.success(t("successTitle"), { description: text ?? t("defaultSuccess") })
-            await Promise.all([mutate(QUERY_HIRING_WORKBENCH_SWR_KEY), mutate(isDetailKey)])
+            await Promise.all([mutate(matchesSwrKey(QUERY_HIRING_WORKBENCH_SWR_KEY)), mutate(isDetailKey)])
             return value
         },
         [clear, runGraphQL, t],

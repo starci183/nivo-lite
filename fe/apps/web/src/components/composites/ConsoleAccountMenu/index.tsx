@@ -1,15 +1,16 @@
 import { AvatarButton, DropdownMenu } from "@starci/grammar/common"
 import type { DropdownMenuEntry } from "@starci/grammar/common"
+import { ACCOUNT_ITEM, SIGN_OUT_ITEM } from "@/modules/types"
 import { nivoIconSource } from "../../leaves/Icon"
 import { avatarPictureOf } from "../../leaves/PersonAvatar"
 
-/** The glyph and tone of the account menu's two commands, by their ids. */
+/** The glyph and tone of the account menu's two commands, keyed by the ids `modules/types` shares with the entries builder. */
 const COMMAND_LOOKS: Record<
     string,
     { readonly iconSource: ReturnType<typeof nivoIconSource>; readonly tone?: "negative" }
 > = {
-    "account-page": { iconSource: nivoIconSource("account", "leading") },
-    signout: { iconSource: nivoIconSource("signIn", "leading"), tone: "negative" },
+    [ACCOUNT_ITEM]: { iconSource: nivoIconSource("account", "leading") },
+    [SIGN_OUT_ITEM]: { iconSource: nivoIconSource("signOut", "leading"), tone: "negative" },
 }
 
 /** Gives the account page and sign-out items their leading glyph (sign out marked destructive). */

@@ -10,6 +10,7 @@ import {
     useMutateUpdateProfileSwr,
 } from "@/hooks/swr"
 import { useGraphQLWithToast } from "@/modules/toast"
+import { matchesSwrKey } from "@/modules/utils"
 
 /**
  * The account writes that go through the back end, each toasted (the failure with the server-localized message):
@@ -25,7 +26,10 @@ export const useAccountCommands = () => {
         async (name: string): Promise<boolean> => {
             const saved = await runGraphQL(() => profile.trigger({ name }), { successMessage: t("profileSaved") })
             if (saved === undefined) return false
-            await Promise.all([mutate(QUERY_MY_ACCOUNT_SWR_KEY), mutate(QUERY_MY_WORKSPACES_SWR_KEY)])
+            await Promise.all([
+                mutate(matchesSwrKey(QUERY_MY_ACCOUNT_SWR_KEY)),
+                mutate(matchesSwrKey(QUERY_MY_WORKSPACES_SWR_KEY)),
+            ])
             return true
         },
         [runGraphQL, profile, t],
@@ -36,7 +40,7 @@ export const useAccountCommands = () => {
                 successMessage: t("sessionRevoked"),
             })
             if (revoked === undefined) return false
-            await mutate(QUERY_MY_ACCOUNT_SWR_KEY)
+            await mutate(matchesSwrKey(QUERY_MY_ACCOUNT_SWR_KEY))
             return true
         },
         [runGraphQL, session, t],

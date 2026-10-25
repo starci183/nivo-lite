@@ -8,6 +8,7 @@ import type { ModuleKey } from "@/modules/catalog"
 import { navigation } from "@/modules/i18n"
 import { agentHref } from "@/modules/installations"
 import { useGraphQLWithToast } from "@/modules/toast"
+import { matchesSwrKey } from "@/modules/utils"
 
 /** What the install hook hands the block. */
 interface InstallAgent {
@@ -32,7 +33,7 @@ export const useInstallAgent = (): InstallAgent => {
                 setBusyKey(null)
                 return
             }
-            await mutate(QUERY_MODULE_INSTALLATIONS_SWR_KEY)
+            await mutate(matchesSwrKey(QUERY_MODULE_INSTALLATIONS_SWR_KEY))
             router.push(agentHref(key, installed.installationId))
         },
         [runGraphQL, trigger, t, router],
