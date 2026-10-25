@@ -53,11 +53,14 @@ export interface ConsoleSession {
     readonly workspaceName: string
     readonly userName: string
     readonly email: string
-    /** The picture of the sign-in provider profile, when the account has one. */
+    /** The picture the person uploaded, else their sign-in provider's, when the account has one. */
     readonly avatarUrl?: string | undefined
     readonly workspaces: ReadonlyArray<ConsoleWorkspace>
     readonly currentWorkspaceId: string
 }
+
+/** The id of the profile page item; the account menu composite recognises it to draw its glyph. */
+export const PROFILE_ITEM = "profile-page"
 
 /** The id of the account page item; the account menu composite recognises it to draw its glyph. */
 export const ACCOUNT_ITEM = "account-page"

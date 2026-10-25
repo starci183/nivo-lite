@@ -30,6 +30,7 @@ interface InstallationWire {
     readonly agentId?: string | null
     readonly agentName: string
     readonly agentHandle: string
+    readonly agentAvatarUrl?: string | null
     readonly moduleKey: string
     readonly status: string
     readonly connectionNeeds: ReadonlyArray<{ readonly role: string; readonly providers: ReadonlyArray<string> }>
@@ -46,6 +47,7 @@ export const toOfficeAgents = (rows: ReadonlyArray<InstallationWire>): ReadonlyA
                       module: row.moduleKey,
                       name: row.agentName,
                       handle: row.agentHandle,
+                      avatarUrl: row.agentAvatarUrl ?? null,
                       isActive: row.status === "live",
                       waitsFor: row.status === "needs_connection" ? row.connectionNeeds : null,
                   },

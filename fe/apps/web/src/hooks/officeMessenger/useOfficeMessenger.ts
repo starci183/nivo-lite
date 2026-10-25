@@ -51,13 +51,6 @@ const scopedBoard = (full: OfficeBoard, current: OfficeRoom | null): OfficeBoard
     decidedCards: roomWorksOf(current, full.decidedCards, full.agents),
 })
 
-/** The people of a room: its seated people, else the accounts (and, in the Office room, the staff without one). */
-const roomPeopleOf = (board: OfficeBoard, current: OfficeRoom | null): number => {
-    if (current !== null && current.userIds.length > 0) return current.userIds.length
-    const linked = board.people.filter((person) => person.staffId !== null).length
-    return board.people.length + (current === null ? board.staff.length - linked : 0)
-}
-
 /** The whole Office messenger for one Hub room (null = the Office room): its data, its words and its commands. */
 export const useOfficeMessenger = (focusedId: string | null, roomKey: string | null) => {
     const words = useOfficeWords()
@@ -118,10 +111,10 @@ export const useOfficeMessenger = (focusedId: string | null, roomKey: string | n
         waitingCount,
         firstJump: firstJumpOf(oldestPending, board.exceptions[0]),
         taskCount: board.tasks.length,
-        memberCount: roomAgents.length + roomPeopleOf(board, current),
+        memberCount: panels.info.members.length,
         agentCount: roomAgents.length,
         roomTitle: current === null ? null : current.name,
-        roomOnDuty: roomAgents.filter((agent) => agent.isActive).map((agent) => agent.name),
+        onDutyCount: roomAgents.filter((agent) => agent.isActive).length,
         reading:
             sender.reading === null
                 ? null

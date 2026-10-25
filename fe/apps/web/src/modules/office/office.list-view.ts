@@ -43,7 +43,7 @@ const agentRowOf = (
             description: agent.isActive ? (said?.body ?? role) : words.t("agentPreviewPaused"),
             time: said === null ? null : officeListTimeOf(said.createdAt, words, context),
             unread,
-            avatar: agentAvatarOf(agent.module, agent.name),
+            avatar: agentAvatarOf(agent),
         },
     }
 }

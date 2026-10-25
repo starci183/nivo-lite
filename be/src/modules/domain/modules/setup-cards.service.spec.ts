@@ -93,6 +93,7 @@ const installationOf = builder<InstallationRecord>({
     agentId: "agent-1",
     agentName: "Accounting",
     agentHandle: "accounting",
+    agentAvatarUrl: null,
     status: "setup",
     operatingMode: "assist",
     liveEnabled: false,

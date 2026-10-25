@@ -10,9 +10,7 @@ import {
     Textarea,
 } from "@starci/grammar/common"
 import type { BadgeTone, BreadcrumbItem } from "@starci/grammar/common"
-import { nivoIconSource } from "@/components/leaves/Icon"
 import { AgentMark } from "@/components/leaves/AgentMark"
-import type { ModuleIconName } from "@/modules/types"
 import {
     ACTION_CLASS,
     CHIPS_CLASS,
@@ -30,9 +28,12 @@ export interface AgentProfileHeadBaseProps {
         readonly crumbs: ReadonlyArray<BreadcrumbItem>
         readonly eyebrow: string
         readonly title: string
+        /** The @handle and the module the agent works for. */
         readonly description: string
-        readonly glyph: ModuleIconName
-        readonly module: string
+        /** The agent id: the generated avatar of an agent without a picture. */
+        readonly seed: string
+        /** The picture the owner gave the agent, or null. */
+        readonly picture: string | null
         readonly chips: ReadonlyArray<{ readonly id: string; readonly label: string; readonly tone: BadgeTone }>
         readonly isLoading: boolean
         readonly assignLabel: string
@@ -91,7 +92,6 @@ const TaskFields = (props: AgentProfileHeadBaseProps) => {
             {view.hasTask ? (
                 <>
                     <NumberField
-                        variant="secondary"
                         label={view.amountLabel}
                         minValue={0}
                         value={view.amount}
@@ -99,7 +99,6 @@ const TaskFields = (props: AgentProfileHeadBaseProps) => {
                         onValueChange={props.on.amount}
                     />
                     <NumberField
-                        variant="secondary"
                         label={view.valueLabel}
                         minValue={0}
                         step={1_000}
@@ -128,12 +127,7 @@ export const AgentProfileHeadBase = (props: AgentProfileHeadBaseProps) => {
             <Breadcrumbs label={view.crumbLabel} items={view.crumbs} />
             <SectionHeader level={1} eyebrow={view.eyebrow} title={view.title} description={view.description} />
             <div className={IDENTITY_CLASS}>
-                <AgentMark
-                    glyph={nivoIconSource(view.glyph, "leading")}
-                    module={view.module}
-                    label={view.title}
-                    size="lg"
-                />
+                <AgentMark label={view.title} seed={view.seed} src={view.picture} size="lg" />
                 <div className={CHIPS_CLASS}>
                     {view.chips.map((chip) => (
                         <Badge key={chip.id} tone={chip.tone}>
@@ -143,7 +137,7 @@ export const AgentProfileHeadBase = (props: AgentProfileHeadBaseProps) => {
                 </div>
                 <div className={ACTION_CLASS}>
                     <Button
-                        variant="primary"
+                        intent="alternative"
                         isSkeleton={view.isLoading}
                         isDisabled={!view.canAssign}
                         onPress={props.on.toggle}
@@ -174,7 +168,7 @@ export const AgentProfileHeadBase = (props: AgentProfileHeadBaseProps) => {
                                 {view.composer.hint}
                             </Text>
                             <Button
-                                variant="primary"
+                                intent="commit"
                                 isPending={view.composer.isPending}
                                 isDisabled={!view.composer.canSend}
                                 onPress={props.on.send}

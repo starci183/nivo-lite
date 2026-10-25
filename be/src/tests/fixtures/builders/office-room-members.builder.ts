@@ -127,7 +127,10 @@ const persistFallbackPeople = async (tx: EntityManager, identity: OfficeRoomMemb
     })
 }
 
-/** Persists active and paused agents in both workspaces; agents have no stored avatar field. */
+/** The picture an owner gave the first agent, stored on the agent itself. */
+export const OFFICE_AGENT_AVATAR = "https://images.example.test/agent-one.png"
+
+/** Persists active and paused agents in both workspaces; only the first agent has a picture of its own. */
 const persistAgents = async (tx: EntityManager, identity: OfficeRoomMembersIdentity): Promise<void> => {
     await eachInOrder([...identity.agentIds, identity.foreignAgentId], async (id, index) => {
         await tx.insert("public.agents", {
@@ -139,6 +142,7 @@ const persistAgents = async (tx: EntityManager, identity: OfficeRoomMembersIdent
             role: "Room preview proof",
             instructions: "Persisted room preview proof.",
             status: index === 3 ? "paused" : "active",
+            avatar_url: index === 0 ? OFFICE_AGENT_AVATAR : null,
             created_at: index === 0 ? FIRST_JOIN : LATER_JOIN,
         })
     })

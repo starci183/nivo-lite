@@ -6,6 +6,7 @@ export const toMyAccountType = (result: AccountOverview): MyAccountType => ({
     name: result.name,
     email: result.email,
     avatarUrl: result.avatarUrl,
+    uploadedAvatarUrl: result.uploadedAvatarUrl,
     providers: [...result.providers],
     sessions: result.sessions.map((session) => ({ ...session })),
 })

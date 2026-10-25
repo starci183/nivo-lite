@@ -109,7 +109,7 @@ export const exceptionView = (work: OfficeWork, words: OfficeWords, context: Off
         id: work.id,
         anchor: exceptionCardAnchor(work.id),
         author: agent === null ? words.t("nivoCore") : agent.name,
-        avatar: agent === null ? NIVO_AVATAR : agentAvatarOf(agent.module, agent.name),
+        avatar: agent === null ? NIVO_AVATAR : agentAvatarOf(agent),
         isAi: agent !== null,
         time: words.time(work.createdAt),
         title,

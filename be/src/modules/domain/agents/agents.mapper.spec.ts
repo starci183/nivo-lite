@@ -14,6 +14,7 @@ const rowOf = builder<AgentRow>({
     knowledge: "Open 9-5",
     approval_rule: "Ask first",
     status: "active",
+    avatar_url: null,
     created_at: "2026-10-01T00:00:00.000Z",
 })
 
@@ -55,13 +56,14 @@ describe("agents mapper", () => {
     it("maps a row to the instance list entry", async () => {
         const subject = await buildSubject()
 
-        expect(subject.summaryOf(rowOf())).toEqual({
+        expect(subject.summaryOf(rowOf({ avatar_url: "https://cdn.example/a1.png" }))).toEqual({
             id: "a1",
             module: "chatbot",
             name: "Bot",
             handle: "bot",
             role: "Front desk",
             status: "active",
+            avatarUrl: "https://cdn.example/a1.png",
             createdAt: "2026-10-01T00:00:00.000Z",
         })
     })

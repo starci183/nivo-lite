@@ -1,16 +1,15 @@
-import { Badge, Button, IconButton, Region, SurfaceCard, Text, TextAction } from "@starci/grammar/common"
+import { Button, Divider, IconButton, Region, SurfaceCard, Text } from "@starci/grammar/common"
 import { OfficeAvatar } from "@/components/branches/OfficeAvatar"
+import { OfficeMemberRow } from "@/components/branches/OfficeMemberRow"
 import { OfficeRoomResources } from "@/components/branches/OfficeRoomResources"
 import { nivoIconSource } from "@/components/leaves/Icon"
 import type { OfficeInfoPanelProps, OfficeJumpRowView } from "@/modules/types"
 import {
-    ACTIONS_CLASS_NAME,
     BODY_CLASS_NAME,
     DRAWER_BODY_CLASS_NAME,
     HEAD_CLASS_NAME,
     HEAD_TEXT_CLASS_NAME,
     JUMP_ROW_CLASS_NAME,
-    MEMBER_ROW_CLASS_NAME,
     SECTION_CLASS_NAME,
     TEXT_CLASS_NAME,
     TITLE_CLASS_NAME,
@@ -84,12 +83,14 @@ export const OfficeInfoPanel = (props: OfficeInfoPanelProps) => {
                         <Text weight="semibold">{text("infoTitle")}</Text>
                     </div>
                     <IconButton
+                        intent="dismiss"
                         source={nivoIconSource("close", "leading")}
                         label={text("infoClose")}
                         onPress={props.on.close}
                     />
                 </div>
             ) : null}
+            {isDocked ? <Divider semantics="presentation" /> : null}
             <div className={isDocked ? BODY_CLASS_NAME : DRAWER_BODY_CLASS_NAME}>
                 <JumpList
                     title={text("pendingTitle")}
@@ -120,7 +121,7 @@ export const OfficeInfoPanel = (props: OfficeInfoPanelProps) => {
                     <Text size="sm" tone="muted">
                         {info.tasksSummary}
                     </Text>
-                    <Button variant="secondary" size="sm" width="fill" onPress={props.on.openTasks}>
+                    <Button intent="alternative" size="sm" width="fill" onPress={props.on.openTasks}>
                         {text("tasksOpen")}
                     </Button>
                 </Region>
@@ -141,52 +142,17 @@ const renderOfficeInfoPanelMembers = (
             <Text size="sm" tone="muted">{`${info.members.length}`}</Text>
         </div>
         {info.members.map((member) => (
-            <div key={member.id} className={MEMBER_ROW_CLASS_NAME}>
-                <OfficeAvatar avatar={member.avatar} />
-                <div className={TEXT_CLASS_NAME}>
-                    <Text weight="medium" overflow="truncate">
-                        {member.name}
-                    </Text>
-                    <Text size="sm" tone="muted" overflow="truncate">
-                        {member.detail}
-                    </Text>
-                    {member.seen === null ? null : (
-                        <Text size="xs" tone="muted" overflow="truncate">
-                            {member.seen}
-                        </Text>
-                    )}
-                    {member.note === null ? null : (
-                        <Text size="xs" tone="muted">
-                            {member.note}
-                        </Text>
-                    )}
-                    {member.noteAction === null ? null : (
-                        <TextAction size="xs" href={member.noteAction.href}>
-                            {member.noteAction.label}
-                        </TextAction>
-                    )}
-                    <div className={ACTIONS_CLASS_NAME}>
-                        {member.mention === null ? null : (
-                            <Button variant="ghost" size="sm" onPress={() => props.on.mention(member.mention ?? "")}>
-                                {text("mention")}
-                            </Button>
-                        )}
-                        {member.chatHref === null ? null : (
-                            <Button variant="ghost" size="sm" href={member.chatHref}>
-                                {text("chat11")}
-                            </Button>
-                        )}
-                    </div>
-                </div>
-                {member.isMe ? <Badge tone="accent">{text("youTag")}</Badge> : null}
-                {member.presence === null ? null : (
-                    <Badge tone="success" isDot>
-                        {member.presence}
-                    </Badge>
-                )}
-            </div>
+            <OfficeMemberRow
+                key={member.id}
+                avatar={<OfficeAvatar avatar={member.avatar} />}
+                member={member}
+                youLabel={text("youTag")}
+                mentionLabel={text("mention")}
+                chatLabel={text("chat11")}
+                onMention={props.on.mention}
+            />
         ))}
-        <Button variant="outline" size="sm" width="fill" href={info.addAgentHref}>
+        <Button intent="alternative" size="sm" width="fill" href={info.addAgentHref}>
             {text("addAgent")}
         </Button>
     </Region>

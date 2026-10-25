@@ -1,5 +1,5 @@
 import { Injectable } from "@nestjs/common"
-import { AgentsService } from "@modules/domain/agents"
+import { AgentIdentityService, AgentsService } from "@modules/domain/agents"
 import { AuthorityRulesService } from "@modules/domain/authority-rules"
 import { EventsService } from "@modules/domain/events"
 import { InstallationRecordsService } from "@modules/domain/module-installations"
@@ -51,6 +51,7 @@ export class ModuleInstallService {
         private readonly members: WorkspaceMembersService,
         private readonly catalog: ModulesService,
         private readonly agents: AgentsService,
+        private readonly identity: AgentIdentityService,
         private readonly rules: AuthorityRulesService,
         private readonly events: EventsService,
         private readonly sync: AgentSyncService,
@@ -173,7 +174,7 @@ export class ModuleInstallService {
         }
         const current = await this.require(workspaceId, installationId)
         if (current.agentId === null) throw new ModulesError({ code: ModulesErrorCode.AgentMissing })
-        await this.agents.rename(principalId, workspaceId, current.agentId, clean)
+        await this.identity.rename(principalId, workspaceId, current.agentId, clean)
         await this.sync.requestNow({ workspaceId, installationId, force: false })
         return this.viewOf(workspaceId, installationId)
     }

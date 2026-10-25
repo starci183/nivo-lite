@@ -48,7 +48,6 @@ import {
     FIND_FIRST_ACTIVE_AGENT,
     INSERT_AGENT,
     LIST_AGENTS,
-    RENAME_AGENT,
     SET_AGENT_STATUS,
     SET_AGENT_TEXTS,
 } from "./persistence/agents.sql"
@@ -157,15 +156,6 @@ export class AgentsService {
             })
         if (row === undefined) throw new AgentsError({ code: AgentsErrorCode.NotCreated })
         return summaryOf(row)
-    }
-
-    /** Renames an agent; a manager only. */
-    async rename(userId: string, workspaceId: string, agentId: string, name: string): Promise<void> {
-        await this.members.require(userId, workspaceId, GOVERNORS)
-        this.expectChanged(
-            await this.entityManager.query<Array<IdRow>>(RENAME_AGENT, [agentId, workspaceId, name]),
-            agentId,
-        )
     }
 
     /** Pauses or resumes an agent; a manager only. */

@@ -4,7 +4,16 @@ export type OfficeText = (key: string, values?: Readonly<Record<string, string |
 
 /** Who is drawn beside a bubble. */
 export type OfficeAvatarView =
-    | { readonly kind: "agent"; readonly glyph: ModuleIconName; readonly module: string; readonly label: string }
+    | {
+          readonly kind: "agent"
+          readonly glyph: ModuleIconName
+          readonly module: string
+          readonly label: string
+          /** The agent id: the generated avatar of an agent without a picture. */
+          readonly seed: string
+          /** The picture the owner gave the agent, or null. */
+          readonly src: string | null
+      }
     | { readonly kind: "person"; readonly name: string }
 
 /** One piece of a message body: plain text or an @mention. */
@@ -300,7 +309,7 @@ export interface OfficeMemberRowView {
     readonly seen: string | null
     readonly avatar: OfficeAvatarView
     readonly isMe: boolean
-    /** "AI ... on duty" for an active agent; null for a person. */
+    /** The "on duty" chip of an active agent (the name is already beside it); null for a person. */
     readonly presence: string | null
     readonly mention: string | null
     readonly chatHref: string | null

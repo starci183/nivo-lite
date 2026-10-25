@@ -48,6 +48,7 @@ export const useConsoleHeader = () => {
     )
     const accountEntries = accountEntriesOf({
         workspaces,
+        profile: { label: t("profile"), description: t("profileDescription") },
         accountLabel: session.userName,
         accountDescription: `${session.email || t("signedIn")} · ${roleLabel}`,
         signOutLabel: t("signOut"),

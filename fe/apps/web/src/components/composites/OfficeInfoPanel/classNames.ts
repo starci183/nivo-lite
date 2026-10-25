@@ -1,5 +1,5 @@
 /** The header band of the docked column. */
-export const HEAD_CLASS_NAME = "flex h-18 shrink-0 items-center gap-3 border-b border-separator px-4"
+export const HEAD_CLASS_NAME = "flex h-18 shrink-0 items-center gap-3 px-4"
 
 /** The title block of the header. */
 export const HEAD_TEXT_CLASS_NAME = "flex min-w-0 flex-1 flex-col"
@@ -19,11 +19,5 @@ export const TITLE_CLASS_NAME = "flex items-center justify-between gap-2"
 /** The content of a compact waiting card. */
 export const JUMP_ROW_CLASS_NAME = "flex w-full items-start gap-3"
 
-/** A member row. */
-export const MEMBER_ROW_CLASS_NAME = "flex items-start gap-3 py-1"
-
 /** The text column of a row. */
 export const TEXT_CLASS_NAME = "flex min-w-0 flex-1 flex-col"
-
-/** A member's quick actions. */
-export const ACTIONS_CLASS_NAME = "flex flex-wrap items-center gap-1"

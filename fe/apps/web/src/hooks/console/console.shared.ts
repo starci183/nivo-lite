@@ -1,5 +1,5 @@
 import type { DropdownMenuEntry, DropdownMenuSection } from "@starci/grammar/common"
-import { ACCOUNT_ITEM, SIGN_OUT_ITEM } from "@/modules/types"
+import { ACCOUNT_ITEM, PROFILE_ITEM, SIGN_OUT_ITEM } from "@/modules/types"
 import type { ConsoleIconName, ConsoleSession, ConsoleWorkspace } from "@/modules/types"
 
 /** The console route of the Office, the page people come to first. */
@@ -134,19 +134,22 @@ export const sessionRoleOf = (role: string): ConsoleWorkspace["role"] =>
 /** The words of the account menu, resolved by the caller. */
 interface AccountEntriesInput {
     readonly workspaces: DropdownMenuSection
+    /** The profile page item: its label and the line under it. */
+    readonly profile: { readonly label: string; readonly description: string }
     readonly accountLabel: string
     readonly accountDescription: string
     readonly signOutLabel: string
     readonly onSignOut: () => void
 }
 
-/** The account menu: the workspaces to switch to, then the account page and sign out. */
+/** The account menu: the workspaces to switch to, then the profile page, the account page and sign out. */
 export const accountEntriesOf = (input: AccountEntriesInput): ReadonlyArray<DropdownMenuEntry> => [
     input.workspaces,
     {
         kind: "section",
         id: "account",
         items: [
+            { id: PROFILE_ITEM, label: input.profile.label, description: input.profile.description, href: "/profile" },
             { id: ACCOUNT_ITEM, label: input.accountLabel, description: input.accountDescription, href: "/account" },
             { id: SIGN_OUT_ITEM, label: input.signOutLabel, onAction: input.onSignOut },
         ],

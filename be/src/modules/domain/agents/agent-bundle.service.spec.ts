@@ -37,6 +37,7 @@ const AGENT: AgentRow = {
     knowledge: "",
     approval_rule: "",
     status: "active",
+    avatar_url: null,
     created_at: "2026-10-01T00:00:00.000Z",
 }
 

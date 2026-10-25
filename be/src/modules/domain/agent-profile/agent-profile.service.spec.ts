@@ -29,6 +29,7 @@ const HEAD: AgentHeadRow = {
     role: "Sales assistant",
     module: "sales",
     status: "active",
+    avatar_url: null,
     room_name: "Sales",
     operating_mode: "assist",
 }

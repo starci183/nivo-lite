@@ -13,9 +13,11 @@ import { GrantAgentConnectionHandler } from "./application/grant-agent-connectio
 import { ListAgentConnectionsHandler } from "./application/list-agent-connections.handler"
 import { ListAgentsHandler } from "./application/list-agents.handler"
 import { RenameAgentHandler } from "./application/rename-agent.handler"
+import { RequestAgentAvatarUploadHandler } from "./application/request-agent-avatar-upload.handler"
 import { RequestAgentSyncHandler } from "./application/request-agent-sync.handler"
 import { RequestGenerationHandler } from "./application/request-generation.handler"
 import { RevokeAgentConnectionHandler } from "./application/revoke-agent-connection.handler"
+import { SetAgentAvatarHandler } from "./application/set-agent-avatar.handler"
 import { SetAgentOwnershipHandler } from "./application/set-agent-ownership.handler"
 import { SetAgentStatusHandler } from "./application/set-agent-status.handler"
 import { SetAgentTextsHandler } from "./application/set-agent-texts.handler"
@@ -35,9 +37,11 @@ import { SetAgentTextsHandler } from "./application/set-agent-texts.handler"
         ListAgentConnectionsHandler,
         ListAgentsHandler,
         RenameAgentHandler,
+        RequestAgentAvatarUploadHandler,
         RequestAgentSyncHandler,
         RequestGenerationHandler,
         RevokeAgentConnectionHandler,
+        SetAgentAvatarHandler,
         SetAgentOwnershipHandler,
         SetAgentStatusHandler,
         SetAgentTextsHandler,

@@ -47,7 +47,7 @@ export type {
     PublicBookingPageData,
 } from "./booking"
 export type { ConsoleIconName, ConsoleNavItem, ConsolePending, ConsoleSession, ConsoleWorkspace } from "./console"
-export { ACCOUNT_ITEM, SIGN_OUT_ITEM } from "./console"
+export { ACCOUNT_ITEM, PROFILE_ITEM, SIGN_OUT_ITEM } from "./console"
 export type {
     Access,
     AgentOption,

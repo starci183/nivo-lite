@@ -28,7 +28,6 @@ import {
     FIND_FIRST_ACTIVE_AGENT,
     INSERT_AGENT,
     LIST_AGENTS,
-    RENAME_AGENT,
     SET_AGENT_STATUS,
     SET_AGENT_TEXTS,
 } from "./persistence/agents.sql"
@@ -46,6 +45,7 @@ const AGENT: AgentRow = {
     knowledge: "",
     approval_rule: "",
     status: "active",
+    avatar_url: null,
     created_at: "2026-10-01T00:00:00.000Z",
 }
 
@@ -180,6 +180,7 @@ describe("AgentsService", () => {
                     handle: "bot",
                     role: "Front desk",
                     status: "active",
+                    avatarUrl: null,
                     createdAt: "2026-10-01T00:00:00.000Z",
                 },
             ])
@@ -441,16 +442,6 @@ describe("AgentsService", () => {
 
 describe("AgentsService", () => {
     describe("edits", () => {
-        it("renames an agent", async () => {
-            const em = mockEntityManager({ query: [RENAME_AGENT, [{ id: "a1" }]] })
-            const { service, members } = await build(em)
-
-            await service.rename("u1", "w1", "a1", "New name")
-
-            expect(members.require).toHaveBeenCalledWith("u1", "w1", ["owner", "manager"])
-            expect(em.query).toHaveBeenCalledWith(RENAME_AGENT, ["a1", "w1", "New name"])
-        })
-
         it("pauses and resumes an agent", async () => {
             const em = mockEntityManager({ query: [SET_AGENT_STATUS, [{ id: "a1" }]] })
             const { service } = await build(em)
@@ -472,9 +463,9 @@ describe("AgentsService", () => {
         })
 
         it("refuses an agent that is not in the workspace", async () => {
-            const { service } = await build(mockEntityManager({ query: [RENAME_AGENT, []] }))
+            const { service } = await build(mockEntityManager({ query: [SET_AGENT_STATUS, []] }))
 
-            await expect(service.rename("u1", "w1", "ghost", "x")).rejects.toMatchObject({
+            await expect(service.setStatus("u1", "w1", "ghost", true)).rejects.toMatchObject({
                 code: AgentsErrorCode.AgentNotFound,
                 params: { id: "ghost" },
             })

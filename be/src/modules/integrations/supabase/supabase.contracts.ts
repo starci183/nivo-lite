@@ -38,6 +38,9 @@ export interface StoredObject {
     readonly contentType: string
 }
 
+/** The HTTPS address of a picture a person uploaded, or null to keep none. */
+export type UploadedAvatarUrl = string | null
+
 /** One Supabase Auth account as the domains need it. */
 export interface AuthAccount {
     /** The Auth user identifier. */
@@ -46,8 +49,10 @@ export interface AuthAccount {
     readonly email: string
     /** The last sign-in instant as Auth reports it. */
     readonly lastSignInAt: string | null
-    /** The avatar from the provider profile. */
+    /** The picture the team sees: the uploaded one, else the provider profile's. */
     readonly avatarUrl: string | null
+    /** The HTTPS address of the picture the person uploaded, or null when they use the provider's or the generated one. */
+    readonly uploadedAvatarUrl: string | null
     /** The name from the profile, else the email's local part. */
     readonly displayName: string
 }
