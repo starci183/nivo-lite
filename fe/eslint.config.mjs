@@ -1,3 +1,6 @@
 import { loadHfs, starciFeConfig } from "@starci/eslint-canon-fe"
+import { starciGrammarConfig } from "@starci/eslint-grammar-starci"
 
-export default starciFeConfig({ hfs: loadHfs(import.meta.url) })
+const hfs = loadHfs(import.meta.url)
+
+export default [...starciFeConfig({ hfs }), ...starciGrammarConfig({ hfs })]
